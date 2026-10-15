@@ -15,5 +15,3 @@ const generic6DOFJoint3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(generic6DOFJoint3DRegistration);
-
-export { generic6DOFJoint3DRegistration };

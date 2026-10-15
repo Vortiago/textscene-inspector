@@ -11,6 +11,7 @@ import type { ResourceProvider } from './ResourceProvider';
 import { ResourceEventBus, type ResourceChange, type ResourceType } from './ResourceEventBus';
 import { MetadataStore } from './MetadataStore';
 import { createTextureProcessor } from './processors/createTextureProcessor';
+import { createTexture3DProcessor } from './processors/createTexture3DProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
@@ -111,8 +112,8 @@ export class ResourceLoader {
   /**
    * Await a peer processor's resource for `dependent`: answer from cache, else request
    * it and wait on that processor's bus slot. Rejects with the peer's failure. Bounded,
-   * far above any real fetch: a processor whose `shouldProcess` refuses the bytes settles
-   * nothing, and an unbounded await would leave a GLB that never appears nor reports missing.
+   * far above any real fetch: an unbounded await would leave a GLB whose peer never settles
+   * neither appearing nor reporting missing.
    */
   private async peerRequire<T>(
     dependent: Dependent,
@@ -198,7 +199,8 @@ export class ResourceLoader {
     this.eventBus = new ResourceEventBus();
     this.metadata = new MetadataStore();
 
-    this.textures = createTextureProcessor(fileEventBus, this.eventBus);
+    // An image's **Import sidecar** decides the format its texture holds after import.
+    this.textures = createTextureProcessor(fileEventBus, this.eventBus, this.dependencies);
 
     // A GLB's **Import sidecar** can repoint a glTF material at an external `.tres`. The
     // processor tags the surface, and the scene root draws that `.tres` like any material.
@@ -244,6 +246,14 @@ export class ResourceLoader {
 
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
+      [
+        'texture3d',
+        createTexture3DProcessor(
+          fileEventBus,
+          this.eventBus,
+          this.dependencies
+        ) as ResourceProcessor<unknown>,
+      ],
       ['glb', this.glbMeshes as ResourceProcessor<unknown>],
       ['scene', this.scenes as ResourceProcessor<unknown>],
       ['resource', this.resources as ResourceProcessor<unknown>],

@@ -7,15 +7,16 @@
 
 import type { AnimNode } from './treeResources';
 import { unquoteLiteral } from '../../../parser/utils';
-import { parseGodotFloat } from '../../../godot/number.js';
+import { clamp } from '../../../godot/math/math.js';
+import { parseGodotFloat } from '../../../godot/variant/number.js';
 
-export interface ClipWeight {
+interface ClipWeight {
   clip: string;
   weight: number;
   timeScale: number;
 }
 
-export type BlendProgram = ClipWeight[];
+type BlendProgram = ClipWeight[];
 
 const WEIGHT_EPSILON = 1e-4;
 
@@ -43,7 +44,7 @@ function evaluate(
       return [{ clip: node.clip, weight, timeScale }];
 
     case 'blend2': {
-      const amount = clamp01(numberParam(params, `${node.name}/blend_amount`, 0));
+      const amount = clamp(numberParam(params, `${node.name}/blend_amount`, 0), 0, 1);
       return [
         ...evaluate(node.in0, params, weight * (1 - amount), timeScale),
         ...evaluate(node.in1, params, weight * amount, timeScale),
@@ -107,8 +108,4 @@ function numberParam(params: Record<string, string>, key: string, fallback: numb
 function stringParam(params: Record<string, string>, key: string): string | null {
   const raw = params[key];
   return raw === undefined ? null : unquoteLiteral(raw.trim());
-}
-
-function clamp01(n: number): number {
-  return Math.max(0, Math.min(1, n));
 }

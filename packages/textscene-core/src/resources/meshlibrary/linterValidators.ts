@@ -10,7 +10,7 @@ import '../resource/linterValidators.js';
 import { validatorRegistry, type PropertyValidator } from '../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
 import { arrayLiteralElements, layerBitmask, propertyError, v } from '../../linter/validators/index.js';
-import { dropTrailingComma, splitTopLevel } from '../../godot/index.js';
+import { dropTrailingComma, splitTopLevel } from '../../godot/string/string.js';
 
 /**
  * `RS::ShadowCastingSetting`, the same four constants `GeometryInstance3D`

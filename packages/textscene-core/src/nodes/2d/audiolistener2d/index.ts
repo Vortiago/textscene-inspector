@@ -14,5 +14,3 @@ const audioListener2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(audioListener2DRegistration);
-
-export { audioListener2DRegistration };

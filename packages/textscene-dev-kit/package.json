@@ -11,10 +11,12 @@
       "@textscene/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./skippedDirectories.json": "./skippedDirectories.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "skippedDirectories.json"
   ],
   "scripts": {
     "build": "tsc --build",

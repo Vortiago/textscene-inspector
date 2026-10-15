@@ -147,7 +147,7 @@ the range plus half the rectangle's diagonal (4.7.2 `scene_forward_clustered.gls
   lookups read the penumbra's size only times its scale. A spot light's lookup turns that spread
   into units of the atlas through its range and its cone (`light_storage.cpp:1015-1019`).
 - Godot's Soft Low kernel: four taps of `get_vogel_disk` (`renderer_scene_render_rd.cpp:45-55`,
-  `:1157-1160`), as `godot/softShadowKernel.ts` computes them.
+  `:1157-1160`), as `godot/rendering/lights/softShadowKernel.ts` computes them.
 - The kernel's turn: `quick_hash` of the fragment's position (`:278-281`, `:343-350`). Vulkan counts
   `gl_FragCoord` rows from the top and WebGL from the bottom, so the lookups count from the top of
   the framebuffer the render draws into (`../shadowFilter/framebufferRows.ts`). The same pixel then

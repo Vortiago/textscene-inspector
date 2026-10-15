@@ -5,6 +5,7 @@
  */
 
 import { useMemo, useRef } from 'react';
+import { visualLayersUserData } from '../../../r3f/visualLayers';
 import type * as THREE from 'three';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
@@ -30,7 +31,7 @@ const NO_PATHS: ReadonlySet<string> = new Set();
  * recursion never reached gets a zero-size proxy, the point Godot has for it. It is also all a
  * combiner root has to frame on while the library loads.
  */
-export const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
+const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 interface CsgPrimitiveProps {
   node: TscnNode;
@@ -174,6 +175,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       onBeforeShadow={shadow.onBeforeShadow}
       onAfterShadow={shadow.onAfterShadow}
       receiveShadow
+      userData={visualLayersUserData(properties.layers)}
     >
       {geometry}
       <SurfaceMaterialSlots sources={materialSources} />
@@ -185,7 +187,14 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh plan={plan} setup={setup} shadow={shadow} meshRef={drawnRef} fallback={ownMesh}>
+        <CsgRootMesh
+          plan={plan}
+          setup={setup}
+          shadow={shadow}
+          layers={properties.layers}
+          meshRef={drawnRef}
+          fallback={ownMesh}
+        >
           {children}
         </CsgRootMesh>
       </group>

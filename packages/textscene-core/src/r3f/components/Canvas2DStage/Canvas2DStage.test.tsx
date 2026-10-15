@@ -51,12 +51,14 @@ vi.mock('../../contexts/ProjectSettingsContext', async (importOriginal) => {
       settings: null,
       themeScale: 1,
       viewportSize: projectViewport.size,
+      msaaModes: { msaa2D: 0, msaa3D: 0 },
     }),
   };
 });
 
 import { Canvas2DStage } from './Canvas2DStage';
-import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
+import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
+import { useViewportActions } from '../../testing/ViewportActionsProbe';
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 

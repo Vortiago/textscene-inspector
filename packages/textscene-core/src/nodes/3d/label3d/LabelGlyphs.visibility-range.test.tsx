@@ -4,6 +4,7 @@
  * them, so the distance runs through the group's parent. Driven by one scene render from 11 units.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { visualLayersOf } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useRef } from 'react';
@@ -13,7 +14,6 @@ import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
@@ -23,12 +23,13 @@ import {
   castsSunShadowFrom,
   drawsColour,
 } from '../../../r3f/testing/threePasses';
-import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/opaquePrepass';
+import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../../../godot/rendering/opaquePrepass';
 import {
   NO_VISIBILITY_RANGE,
   VisibilityRangeFadeMode,
   type VisibilityRange,
-} from '../../../godot/visibilityRange';
+} from '../../../godot/rendering/visibilityRange';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
 const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
 vi.mock('../../../r3f/controls/native/text/sceneFontLoader', () => ({
@@ -124,5 +125,11 @@ describe('<LabelGlyphs> shadow casting', () => {
   it('still casts into an omni or spot shadow past its end (edge case)', async () => {
     const culled = props({ end: 10 }, { alpha_cut: AlphaCutMode.DISCARD });
     expect(castsFrom(textMesh(await renderFrames(culled)))).toBe(true);
+  });
+});
+
+describe('<LabelGlyphs> render layers', () => {
+  it("carries the label's layers on its glyphs, which a ReflectionProbe cull_mask tests", async () => {
+    expect(visualLayersOf(textMesh(await renderFrames(props({}, { layers: 2 }))))).toBe(2);
   });
 });

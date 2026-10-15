@@ -13,5 +13,3 @@ const xRController3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(xRController3DRegistration);
-
-export { xRController3DRegistration };

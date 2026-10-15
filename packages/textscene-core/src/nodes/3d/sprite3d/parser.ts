@@ -8,9 +8,11 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
-import { AlphaAntiAliasing, AlphaCutMode, TextureFilterMode, type Sprite3DProperties } from './types';
-import { frameCoords, replaySpriteFrames } from '../../../godot/spriteFrames.js';
+import { type Sprite3DProperties } from './types';
+import { frameCoords, replaySpriteFrames } from '../../../godot/scene/spriteFrames.js';
 import { parseSpriteQuad } from './quadParser';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export function parseSprite3D(
   heading: ParsedHeading,
@@ -22,15 +24,15 @@ export function parseSprite3D(
   const result: Sprite3DProperties = {
     ...baseProps,
     ...parseSpriteQuad(properties, 'Sprite3D'),
-    alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.ALPHA_CUT_DISABLED, [
-      AlphaCutMode.ALPHA_CUT_DISABLED,
-      AlphaCutMode.ALPHA_CUT_DISCARD,
-      AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
-      AlphaCutMode.ALPHA_CUT_HASH,
+    alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.DISABLED, [
+      AlphaCutMode.DISABLED,
+      AlphaCutMode.DISCARD,
+      AlphaCutMode.OPAQUE_PREPASS,
+      AlphaCutMode.HASH,
     ]),
     // The grid and frame Godot holds after replaying the body in file order:
     // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`
-    // re-maps one that landed (godot/spriteFrames.ts).
+    // re-maps one that landed (godot/scene/spriteFrames.ts).
     hframes: frames.hframes,
     vframes: frames.vframes,
     frame: frames.frame,
@@ -53,16 +55,8 @@ export function parseSprite3D(
       'Sprite3D alpha_scissor_threshold'
     ),
     alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'Sprite3D alpha_hash_scale'),
-    alpha_antialiasing_mode: enumOr(
-      properties.alpha_antialiasing_mode,
-      AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
-      [
-        AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
-        AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
-        AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE,
-      ],
-      'Sprite3D alpha_antialiasing_mode'
-    ),
+    // `set_alpha_antialiasing` stores any value (`sprite_3d.cpp:571-578`), and any but OFF ramps the edge.
+    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, 'Sprite3D alpha_antialiasing_mode'),
     alpha_antialiasing_edge: floatOr(
       properties.alpha_antialiasing_edge,
       0,
@@ -70,14 +64,14 @@ export function parseSprite3D(
     ),
     texture_filter: enumOr(
       properties.texture_filter,
-      TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
+      TextureFilter.LINEAR_WITH_MIPMAPS,
       [
-        TextureFilterMode.TEXTURE_FILTER_NEAREST,
-        TextureFilterMode.TEXTURE_FILTER_LINEAR,
-        TextureFilterMode.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS,
-        TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
-        TextureFilterMode.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC,
-        TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC,
+        TextureFilter.NEAREST,
+        TextureFilter.LINEAR,
+        TextureFilter.NEAREST_WITH_MIPMAPS,
+        TextureFilter.LINEAR_WITH_MIPMAPS,
+        TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
+        TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
       ],
       'Sprite3D texture_filter'
     ),

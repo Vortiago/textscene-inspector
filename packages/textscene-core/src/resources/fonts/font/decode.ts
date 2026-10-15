@@ -5,7 +5,7 @@
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { unquoteString } from '../../../parser/utils';
-import { stringArrayBodies } from '../../../godot/index.js';
+import { stringArrayBodies } from '../../../godot/variant/variantParser.js';
 import { findExtResource, findSubResource, parseResourceReference } from '../../SubResourceResolver';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';
@@ -22,7 +22,7 @@ export const FONT_SUB_RESOURCE_TYPES: ReadonlySet<string> = new Set([
  * `fallbacks = Array[Font]([ExtResource("a"), ExtResource("b")])` or a bare single
  * reference, which comes back as a one-element list.
  */
-export function extractResourceRefs(value: string): string[] {
+function extractResourceRefs(value: string): string[] {
   const refs: string[] = [];
   const re = /(?:ExtResource|SubResource)\s*\(\s*"[^"]+"\s*\)/g;
   let match: RegExpExecArray | null;
@@ -34,7 +34,7 @@ export function extractResourceRefs(value: string): string[] {
  * `PackedStringArray("a", "b")`, `Array[String](["a", "b"])` or `["a", "b"]` → `["a", "b"]`, each element decoded as
  * `unquoteString` decodes it, so `\n` is a newline and not the letter `n`. Empty for any other value.
  */
-export function parsePackedStringArray(value: string): string[] {
+function parsePackedStringArray(value: string): string[] {
   return stringArrayBodies(value)?.map(unquoteString) ?? [];
 }
 

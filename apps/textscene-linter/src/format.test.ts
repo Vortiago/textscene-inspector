@@ -157,7 +157,7 @@ describe('toJsonFindings', () => {
         makeDiagnostic({
           severity: 'error',
           message: 'Invalid Transform3D',
-          ruleName: 'strict-parser',
+          ruleName: 'format:transform',
           location: { line: 4, column: 10 },
         }),
       ],
@@ -169,7 +169,7 @@ describe('toJsonFindings', () => {
         line: 4,
         column: 10,
         severity: 'error',
-        rule: 'strict-parser',
+        rule: 'format:transform',
         message: 'Invalid Transform3D',
         nodeType: 'Camera3D',
         nodeName: 'Camera',
@@ -275,14 +275,14 @@ describe('formatGithubAnnotations', () => {
         makeDiagnostic({
           severity: 'error',
           message: 'Invalid Transform3D',
-          ruleName: 'strict-parser',
+          ruleName: 'format:transform',
           location: { line: 4, column: 10 },
         }),
       ],
     };
 
     expect(formatGithubAnnotations([file])).toEqual([
-      '::error file=bad.tscn,line=4,col=10::Invalid Transform3D (strict-parser)',
+      '::error file=bad.tscn,line=4,col=10::Invalid Transform3D (format:transform)',
     ]);
   });
 

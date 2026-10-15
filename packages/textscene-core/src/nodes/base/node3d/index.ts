@@ -14,7 +14,6 @@ const node3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(node3DRegistration);
 
-export { node3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

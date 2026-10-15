@@ -3,17 +3,14 @@
  * themselves, by the Node2D `diag(1,-1,1)` convention.
  */
 
-export interface Vec2 {
-  x: number;
-  y: number;
-}
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface Curve2DControlPoint {
   /** In-tangent handle, relative to `position`. */
-  in: Vec2;
+  in: Vector2;
   /** Out-tangent handle, relative to `position`. */
-  out: Vec2;
-  position: Vec2;
+  out: Vector2;
+  position: Vector2;
 }
 
 export interface Curve2DSample {

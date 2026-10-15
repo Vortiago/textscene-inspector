@@ -75,9 +75,14 @@ export const GEOMETRY_SCENES = [
   // Four spheres under one AreaLight3D, in the default, toon, specular-disabled
   // and clearcoat light modes. area-light-normalize draws only matte plates.
   { name: 'area-light-modes', file: 'unit-area-light-modes.tscn' },
+  // Two equal area lights, one half way through its camera distance fade.
+  { name: 'area-light-distance-fade', file: 'unit-area-light-distance-fade.tscn' },
   // An AreaLight3D's shadow: the box's paraboloid shadow on the ground. The
   // other area light goldens set no shadow.
   { name: 'area-light-shadow', file: 'unit-area-light3d.tscn' },
+  // The normalize scene's panel with a red-to-blue area_texture. The other area light goldens
+  // set no texture, so they draw the flat light_color.
+  { name: 'area-light-texture', file: 'unit-area-light-texture.tscn' },
   // A clearcoat sphere beside a bare one, under an omni light and a sky. The
   // coat dims only the sky's light beneath it. No other golden coats a sphere
   // under a punctual light or a sky.
@@ -91,6 +96,9 @@ export const GEOMETRY_SCENES = [
   // no .glb scene has. A missed buffer draws the placeholder, a missed image an
   // untextured quad, so the checker shows both arrived.
   { name: 'gltf-external', file: 'unit-gltf-external.tscn' },
+  // A glTF image takes its sidecar's texel passes: the default alpha-border pass turns the
+  // magenta behind a transparent edge green, as Godot's import does.
+  { name: 'gltf-alpha-border', file: 'unit-gltf-alpha-border.tscn' },
   // The same quad with a four-band atlas pins V orientation, which the
   // material-less `arraymesh` cannot see. Godot's V origin is the image top and
   // textures load with flipY=true, so a pass-through V samples upside down.
@@ -139,4 +147,7 @@ export const GEOMETRY_SCENES = [
   // depth prepass cast, and a blended surface or one with no depth test casts nothing.
   { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
+  // A whole-node FIXED_Y billboard takes the camera's axes, so sprites off the screen centre
+  // face the camera's forward axis, and a turned parent leaves no trace.
+  { name: 'sprite3d-billboard-fixed-y', file: 'unit-sprite3d-billboard-fixed-y.tscn' },
 ];

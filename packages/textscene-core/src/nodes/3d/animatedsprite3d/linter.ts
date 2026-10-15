@@ -7,7 +7,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource, resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
-import { DEFAULT_ANIMATION_NAME, literalText } from '../../../godot/index.js';
+import { DEFAULT_ANIMATION_NAME } from '../../../godot/scene/animation.js';
+import { literalText } from '../../../godot/string/string.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
@@ -71,5 +72,3 @@ const animatedSprite3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(animatedSprite3DValidationRule);
-
-export { animatedSprite3DValidationRule };

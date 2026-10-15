@@ -5,7 +5,8 @@
 import { describe, it, expect } from 'vitest';
 import { parseNode3D } from './parser';
 import { parseHeading } from '../../../parser/utils';
-import { parseTransform3D, decomposeTransform3D, identityTransform3D } from '../../../utils/transform';
+import { parseTransform3D, decomposeTransform3D } from '../../../utils/transform';
+import { identityTransform3D } from '../../../godot/math/transform3d.js';
 
 describe('Node3D Parser', () => {
   describe('parseNode3D', () => {

@@ -5,7 +5,7 @@
  * keep their authored pose, and every scroll and motion key is inert.
  */
 
-import type { Vector2 } from '../../base/node2d/types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** Stable empty result so an unmirrored layer never re-renders on identity. */
 const EMPTY_MIRROR: readonly Vector2[] = [];
@@ -32,7 +32,7 @@ export interface ParallaxScrollProperties {
 }
 
 /** What `_update_scroll` hands each `ParallaxLayer` child. */
-export interface ParallaxScroll {
+interface ParallaxScroll {
   /** `set_base_offset_and_scale`'s `p_offset`. */
   offset: Vector2;
   /** `set_base_offset_and_scale`'s `p_scale`: a scalar, not a Vector2. */
@@ -51,7 +51,7 @@ export interface ParallaxLayerMotion {
  * not compose, so `orig_offset` and `orig_scale` (recorded on
  * `NOTIFICATION_ENTER_TREE`) are inputs to the formula, not a transform below it.
  */
-export interface ParallaxLayerPose {
+interface ParallaxLayerPose {
   /** Godot canvas pixels, relative to the ParallaxBackground's canvas. */
   position: Vector2;
   /** Uniform factor applied on top of the layer's authored scale. */

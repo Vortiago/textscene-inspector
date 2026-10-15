@@ -8,8 +8,8 @@ import {
   SOFT_LOW_PENUMBRA_SAMPLES,
   SOFT_LOW_SHADOW_SAMPLES,
   vogelDisk,
-} from '../../godot/softShadowKernel.js';
-import { glslFloat } from '../../resources/environment/glslLiterals.js';
+} from '../../godot/rendering/lights/softShadowKernel.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
 import {
   applyChunkEdits,
   installChunkPatch,
@@ -40,7 +40,7 @@ function glslKernel(count: number): string {
  * (`atlasDepthMaterials.ts`). `godotRawDepth` filters four texels of it, as Godot's linear sampler
  * filters the depth (`:398`, `:498-551`).
  */
-export const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 1 ];
+const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 1 ];
 	const int GODOT_SOFT_SHADOW_SAMPLES = ${SOFT_LOW_SHADOW_SAMPLES};
 	const vec2 GODOT_SOFT_SHADOW_KERNEL[ ${SOFT_LOW_SHADOW_SAMPLES} ] = vec2[]( ${glslKernel(SOFT_LOW_SHADOW_SAMPLES)} );
 	const int GODOT_PENUMBRA_SHADOW_SAMPLES = ${SOFT_LOW_PENUMBRA_SAMPLES};
@@ -79,8 +79,8 @@ export const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[
 
 /**
  * The block goes inside `#ifdef USE_SHADOWMAP`, ahead of every shadow block, so every lookup that
- * calls it follows it. The anchor omits the slot count, which `splitShadowChunk.ts` rewrites, and
- * follows the line `shadowFade.ts` inserts after, so every install order gives the same chunk.
+ * calls it follows it. The anchor omits the slot count, which `splitShadowChunk.ts` rewrites, so
+ * every install order gives the same chunk.
  */
 const SUN_BLOCK_START = '\t#if NUM_SUN_LIGHT_SHADOWS > 0\n\t\t#define SUN_LIGHT_CASCADES';
 
@@ -91,7 +91,7 @@ const FILTER_EDIT: ChunkEdit<typeof CHUNK> = {
 };
 
 /** The shadow chunk with the filter in, or null when it lacks the sun block the filter precedes. */
-export function softShadowFilterChunk(chunk: string): string | null {
+function softShadowFilterChunk(chunk: string): string | null {
   return applyChunkEdits({ [CHUNK]: chunk }, [FILTER_EDIT])?.[CHUNK] ?? null;
 }
 

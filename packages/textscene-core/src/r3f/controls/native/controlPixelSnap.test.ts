@@ -6,12 +6,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Rect2 } from './rect';
 import {
-  SNAP_CONTROLS_TO_PIXELS_SETTING,
-  internalTransformTranslation,
   snapControlsToPixelsEnabled,
   snappedControlOrigin,
   type ControlDrawTransform,
 } from './controlPixelSnap';
+
+/** The key `parseProjectSettings` produces, section prefix and all (`main/main.cpp:4577`). */
+const SNAP_CONTROLS_TO_PIXELS_SETTING = 'gui/common/snap_controls_to_pixels';
 
 const IDENTITY: ControlDrawTransform = { rotation: 0, scale: { x: 1, y: 1 }, pivot: { x: 0, y: 0 } };
 
@@ -43,48 +44,8 @@ describe('snapControlsToPixelsEnabled', () => {
     expect(snapControlsToPixelsEnabled({ [SNAP_CONTROLS_TO_PIXELS_SETTING]: 'maybe' })).toBe(true);
   });
 
-  it('reads the key under the name `parseProjectSettings` produces, section prefix and all', () => {
-    expect(SNAP_CONTROLS_TO_PIXELS_SETTING).toBe('gui/common/snap_controls_to_pixels');
-    // The bare key, without the `[gui]` prefix, addresses nothing.
+  it('ignores the bare key without the `[gui]` section prefix', () => {
     expect(snapControlsToPixelsEnabled({ 'common/snap_controls_to_pixels': 'false' })).toBe(true);
-  });
-});
-
-describe('internalTransformTranslation', () => {
-  it('is zero for an identity basis, whatever the pivot', () => {
-    const t = internalTransformTranslation({ ...IDENTITY, pivot: { x: 37.5, y: -12.25 } });
-
-    expect(t.x).toBeCloseTo(0);
-    expect(t.y).toBeCloseTo(0);
-  });
-
-  it('is `pivot - basis * pivot` for a pure scale', () => {
-    const t = internalTransformTranslation({
-      rotation: 0,
-      scale: { x: 2, y: 3 },
-      pivot: { x: 10.25, y: 4 },
-    });
-
-    expect(t.x).toBeCloseTo(10.25 - 20.5);
-    expect(t.y).toBeCloseTo(4 - 12);
-  });
-
-  it('rotates the pivot through the Transform2D basis (+90° maps (x, y) to (-y, x))', () => {
-    const t = internalTransformTranslation({
-      rotation: Math.PI / 2,
-      scale: { x: 1, y: 1 },
-      pivot: { x: 10, y: 0 },
-    });
-
-    expect(t.x).toBeCloseTo(10 - 0);
-    expect(t.y).toBeCloseTo(0 - 10);
-  });
-
-  it('is zero when the pivot is zero, however the basis is built', () => {
-    const t = internalTransformTranslation({ rotation: 1.1, scale: { x: 4, y: -2 }, pivot: { x: 0, y: 0 } });
-
-    expect(t.x).toBe(0);
-    expect(t.y).toBe(0);
   });
 });
 
@@ -135,18 +96,52 @@ describe('snappedControlOrigin', () => {
   it('snaps the SUM of the position and the internal translation, returning the outer half', () => {
     // Measured through Godot 4.6.3: a ColorRect at (100, 100) with
     // pivot_offset (10.25, 10.25) and scale (2, 2) draws its top-left at
-    // exactly 90, floor(100 - 10.25 + 0.5), not at 89.75.
+    // exactly 90, floor(100 - 10.25 + 0.5), not at 89.75. The internal
+    // translation is `pivot - basis * pivot` = -10.25 (control.cpp:720-725).
     const transform: ControlDrawTransform = {
       rotation: 0,
       scale: { x: 2, y: 2 },
       pivot: { x: 10.25, y: 10.25 },
     };
     const origin = snappedControlOrigin({ x: 100, y: 100 }, transform, true);
-    const internal = internalTransformTranslation(transform);
 
-    expect(origin.x + internal.x).toBeCloseTo(90);
-    expect(origin.y + internal.y).toBeCloseTo(90);
     expect(origin.x).toBeCloseTo(100.25);
+    expect(origin.y).toBeCloseTo(100.25);
+  });
+
+  it('ignores the pivot of an identity basis, whose internal translation is zero', () => {
+    const origin = snappedControlOrigin(
+      { x: 400.5, y: 306.5 },
+      { ...IDENTITY, pivot: { x: 37.5, y: -12.25 } },
+      true
+    );
+
+    expect(origin.x).toBeCloseTo(401);
+    expect(origin.y).toBeCloseTo(307);
+  });
+
+  it('rotates the pivot through the Transform2D basis (+90° maps (x, y) to (-y, x))', () => {
+    // The internal translation is (10.25, 0) - (0, 10.25) = (10.25, -10.25):
+    // floor(0.3 + 10.25 + 0.5) - 10.25 = 0.75 and floor(0.7 - 10.25 + 0.5) + 10.25 = 0.25.
+    const transform: ControlDrawTransform = {
+      rotation: Math.PI / 2,
+      scale: { x: 1, y: 1 },
+      pivot: { x: 10.25, y: 0 },
+    };
+    const origin = snappedControlOrigin({ x: 0.3, y: 0.7 }, transform, true);
+
+    expect(origin.x).toBeCloseTo(0.75);
+    expect(origin.y).toBeCloseTo(0.25);
+  });
+
+  it('snaps a zero pivot as an untransformed Control, however the basis is built', () => {
+    const transform: ControlDrawTransform = {
+      rotation: Math.PI / 4,
+      scale: { x: 4, y: -2 },
+      pivot: { x: 0, y: 0 },
+    };
+
+    expect(snappedControlOrigin({ x: 10.5, y: 20.5 }, transform, true)).toEqual({ x: 11, y: 21 });
   });
 
   it('returns the position verbatim when the project disabled the snap', () => {

@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
-import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -22,7 +22,7 @@ const arms = {
 // carries these, and the pair is not parallel (BONE_AXIS_PLUS_Z maps to AXIS_Z,
 // the default primary axis is AXIS_Y), so two absent keys never trip this rule.
 const DEFAULT_FORWARD_AXIS = 4; // BONE_AXIS_PLUS_Z
-const DEFAULT_PRIMARY_ROTATION_AXIS = 1; // Vector3::AXIS_Y
+const DEFAULT_PRIMARY_ROTATION_AXIS = Vector3Axis.Y;
 
 /** A property's value, or the engine default when the scene omits it. */
 function axisNumber(properties: Record<string, string>, key: string, fallback: number): number {
@@ -46,7 +46,7 @@ function checkLookAtModifier3D(context: RuleContext): Diagnostic[] {
   if (axisFromBoneAxis(forwardAxis) !== primaryAxis) return [];
 
   const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);
-  const primaryLabel = VECTOR3_AXIS[primaryAxis] ?? String(primaryAxis);
+  const primaryLabel = VECTOR3_AXIS_NAMES[primaryAxis] ?? String(primaryAxis);
   return [
     armDiagnostic(
       arms.parallelRotationAxes,
@@ -69,5 +69,3 @@ const lookAtModifier3DAxisRule: LintRule = {
 };
 
 ruleRegistry.register(lookAtModifier3DAxisRule);
-
-export { lookAtModifier3DAxisRule };

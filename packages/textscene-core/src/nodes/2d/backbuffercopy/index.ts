@@ -12,5 +12,3 @@ const backBufferCopyRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(backBufferCopyRegistration);
-
-export { backBufferCopyRegistration };

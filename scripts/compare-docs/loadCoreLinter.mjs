@@ -2,18 +2,12 @@
  * Imports the built `@textscene/core` linter from a plain Node script. `dist/`
  * keeps extensionless relative specifiers, which Node's ESM resolver rejects, so
  * a process-wide resolve hook retries them with `.js` and `/index.js`. The hook
- * registers before the load, so the load is a dynamic import.
+ * registers before the load, so the load is a dynamic import. Each import names
+ * its file literally and destructures what it reads, so `testOnlyExports.mjs`
+ * sees which exports a script uses.
  */
 
 import { registerHooks } from 'node:module';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const DIST = join(here, '../../packages/textscene-core/dist');
-const LINTER_ENTRY = join(DIST, 'linter/index.js');
-const PARSER_ENTRY = join(DIST, 'parser/TscnParser.js');
-const NODE_REGISTRY_ENTRY = join(DIST, 'core/NodeRegistry.js');
 
 // `registerHooks` arrived in Node 22.15/23.5. `engines` requires >=24 but is
 // advisory, so this names the requirement instead of `is not a function`.
@@ -48,11 +42,13 @@ registerHooks({
  */
 export async function loadCoreLinter() {
   try {
-    return await import(pathToFileURL(LINTER_ENTRY).href);
+    const { validatorRegistry, ruleRegistry, resourceRuleRegistry, registeredTypes } =
+      await import('../../packages/textscene-core/dist/linter/index.js');
+    return { validatorRegistry, ruleRegistry, resourceRuleRegistry, registeredTypes };
   } catch (err) {
     throw new Error(
-      `Could not load the built linter at ${LINTER_ENTRY}.\n` +
-        `Run \`pnpm --filter @textscene/core build\` first.\n` +
+      'Could not load the built linter.\n' +
+        'Run `pnpm --filter @textscene/core build` first.\n' +
         `Underlying error: ${err.message}`,
       { cause: err }
     );
@@ -67,12 +63,13 @@ export async function loadCoreLinter() {
  */
 export async function loadCoreParser() {
   try {
-    await import(pathToFileURL(PARSER_ENTRY).href);
-    return await import(pathToFileURL(NODE_REGISTRY_ENTRY).href);
+    await import('../../packages/textscene-core/dist/parser/TscnParser.js');
+    const { nodeRegistry } = await import('../../packages/textscene-core/dist/core/NodeRegistry.js');
+    return { nodeRegistry };
   } catch (err) {
     throw new Error(
-      `Could not load the built parser at ${PARSER_ENTRY}.\n` +
-        `Run \`pnpm --filter @textscene/core build\` first.\n` +
+      'Could not load the built parser.\n' +
+        'Run `pnpm --filter @textscene/core build` first.\n' +
         `Underlying error: ${err.message}`,
       { cause: err }
     );
@@ -85,8 +82,9 @@ export async function loadCoreParser() {
  * `BaseMaterial3D`. The linter barrel does not re-export it.
  */
 export async function loadClassBaseTypes() {
-  const mod = await import(pathToFileURL(join(DIST, 'godot/classBaseTypes.js')).href);
-  return mod.CLASS_BASE_TYPES;
+  const { CLASS_BASE_TYPES } =
+    await import('../../packages/textscene-core/dist/godot/classdb/classBaseTypes.js');
+  return CLASS_BASE_TYPES;
 }
 
 /**
@@ -94,6 +92,16 @@ export async function loadClassBaseTypes() {
  * bound. Read from the built module, not retyped, so the ledger cannot drift.
  */
 export async function loadRadianEpsilon() {
-  const mod = await import(pathToFileURL(join(DIST, 'linter/validators/v/floats.js')).href);
-  return mod.RADIAN_ROUNDTRIP_EPSILON;
+  const { RADIAN_ROUNDTRIP_EPSILON } =
+    await import('../../packages/textscene-core/dist/linter/validators/v/floats.js');
+  return RADIAN_ROUNDTRIP_EPSILON;
+}
+
+/**
+ * `degToRad`, the Godot-rounding degree conversion. Read from the built module,
+ * not retyped, so a script converts as the previewer does.
+ */
+export async function loadDegToRad() {
+  const { degToRad } = await import('../../packages/textscene-core/dist/godot/math/math.js');
+  return degToRad;
 }

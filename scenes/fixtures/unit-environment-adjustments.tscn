@@ -1,0 +1,29 @@
+[gd_scene format=3 uid="uid://unitenvadjust"]
+
+; The Environment adjustments: brightness, contrast and saturation, which Godot's tonemap pass
+; applies to the whole frame after the tone curve. The unshaded box and the colour background show
+; them free of any light. No other golden sets adjustment_enabled.
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.2, 0.4, 0.8, 1)
+adjustment_enabled = true
+adjustment_brightness = 1.3
+adjustment_contrast = 1.25
+adjustment_saturation = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1.5, 1.5, 1.5)
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+shading_mode = 0
+albedo_color = Color(0.9, 0.3, 0.1, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_1")

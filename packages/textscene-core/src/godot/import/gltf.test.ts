@@ -1,0 +1,310 @@
+import { describe, expect, it } from 'vitest';
+import {
+  GLB_BIN_CHUNK,
+  GLB_JSON_CHUNK,
+  GLB_MAGIC,
+  dataUriMimeType,
+  godotSurfacePrimitives,
+  gltfObjects,
+  gltfRefusalMessage,
+  isGltfJsonObject,
+  isDataUri,
+  isGltfPath,
+  usesGodotSingleRoot,
+  readGltfRequiredExtensions,
+  requiredGltfExtensions,
+  targetCount,
+  unsupportedRequiredGltfExtensions,
+} from './gltf';
+
+describe('unsupportedRequiredGltfExtensions', () => {
+  it('passes a file whose required extensions Godot all imports', () => {
+    expect(unsupportedRequiredGltfExtensions(['KHR_texture_transform', 'EXT_texture_webp'])).toEqual([]);
+  });
+
+  it('names each required extension Godot does not import', () => {
+    expect(
+      unsupportedRequiredGltfExtensions([
+        'EXT_mesh_gpu_instancing',
+        'KHR_texture_transform',
+        'KHR_draco_mesh_compression',
+      ])
+    ).toEqual(['EXT_mesh_gpu_instancing', 'KHR_draco_mesh_compression']);
+  });
+
+  it('passes a file that requires nothing', () => {
+    expect(unsupportedRequiredGltfExtensions([])).toEqual([]);
+  });
+});
+
+/** A GLB container: the 12-byte header, then one chunk of `chunkType` holding `body`. */
+function glb(body: string, chunkType = GLB_JSON_CHUNK): ArrayBuffer {
+  const json = new TextEncoder().encode(body);
+  const file = new Uint8Array(20 + json.length);
+  const view = new DataView(file.buffer);
+  view.setUint32(0, GLB_MAGIC, true);
+  view.setUint32(4, 2, true);
+  view.setUint32(8, file.length, true);
+  view.setUint32(12, json.length, true);
+  view.setUint32(16, chunkType, true);
+  file.set(json, 20);
+  return file.buffer;
+}
+
+/** A text glTF as a provider hands it over: bytes, since the slice claims `.gltf` as binary. */
+const textBytes = (body: string): ArrayBuffer => new TextEncoder().encode(body).buffer;
+
+const REQUIRES_INSTANCING = JSON.stringify({
+  asset: { version: '2.0' },
+  extensionsUsed: ['EXT_mesh_gpu_instancing'],
+  extensionsRequired: ['EXT_mesh_gpu_instancing'],
+});
+
+describe('readGltfRequiredExtensions', () => {
+  it('reads extensionsRequired from the JSON chunk of a GLB', () => {
+    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING))).toEqual(['EXT_mesh_gpu_instancing']);
+  });
+
+  it('reads extensionsRequired from the bytes of a text glTF', () => {
+    expect(readGltfRequiredExtensions(textBytes(REQUIRES_INSTANCING))).toEqual(['EXT_mesh_gpu_instancing']);
+  });
+
+  it('reads extensionsRequired from a text glTF a provider decoded to a string', () => {
+    expect(readGltfRequiredExtensions(REQUIRES_INSTANCING)).toEqual(['EXT_mesh_gpu_instancing']);
+  });
+
+  it('reads a file as text when it lacks the GLB magic, whatever it is named', () => {
+    // `_parse` decides on the first four bytes alone (`gltf_document.cpp:6514-6523`).
+    expect(readGltfRequiredExtensions(textBytes(`  ${REQUIRES_INSTANCING}`))).toEqual([
+      'EXT_mesh_gpu_instancing',
+    ]);
+  });
+
+  it('reads the JSON chunk alone, not the chunks after it', () => {
+    const json = new Uint8Array(glb(REQUIRES_INSTANCING));
+    const bin = new Uint8Array(8);
+    new DataView(bin.buffer).setUint32(4, GLB_BIN_CHUNK, true);
+    const file = new Uint8Array(json.length + bin.length);
+    file.set(json);
+    file.set(bin, json.length);
+    expect(readGltfRequiredExtensions(file.buffer)).toEqual(['EXT_mesh_gpu_instancing']);
+  });
+
+  it('reads the JSON up to its first NUL, where Godot stops decoding, in a GLB chunk or a text glTF', () => {
+    expect(readGltfRequiredExtensions(glb(`${REQUIRES_INSTANCING}\0\0\0`))).toEqual([
+      'EXT_mesh_gpu_instancing',
+    ]);
+    expect(readGltfRequiredExtensions(textBytes(`${REQUIRES_INSTANCING}\0junk`))).toEqual([
+      'EXT_mesh_gpu_instancing',
+    ]);
+    expect(readGltfRequiredExtensions(`${REQUIRES_INSTANCING}\0`)).toEqual(['EXT_mesh_gpu_instancing']);
+  });
+
+  it('gives an empty list for a file that requires nothing', () => {
+    expect(readGltfRequiredExtensions(textBytes('{"asset":{"version":"2.0"}}'))).toEqual([]);
+  });
+
+  it('gives an empty list for a GLB too short to hold its first chunk header', () => {
+    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING).slice(0, 16))).toEqual([]);
+  });
+
+  it('gives an empty list for a GLB whose first chunk is shorter than its declared length', () => {
+    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING).slice(0, 30))).toEqual([]);
+  });
+
+  it('gives an empty list for a GLB whose first chunk is not JSON', () => {
+    expect(readGltfRequiredExtensions(glb(REQUIRES_INSTANCING, GLB_BIN_CHUNK))).toEqual([]);
+  });
+
+  it('gives an empty list for text that is not JSON', () => {
+    expect(readGltfRequiredExtensions(textBytes('{"asset": '))).toEqual([]);
+  });
+
+  it('gives an empty list for JSON that is not an object', () => {
+    expect(readGltfRequiredExtensions(textBytes('["EXT_mesh_gpu_instancing"]'))).toEqual([]);
+  });
+
+  it('gives an empty list for an empty file', () => {
+    expect(readGltfRequiredExtensions(new ArrayBuffer(0))).toEqual([]);
+  });
+});
+
+describe('requiredGltfExtensions', () => {
+  it('reads each string entry of extensionsRequired as written', () => {
+    expect(
+      requiredGltfExtensions({ extensionsRequired: ['EXT_mesh_gpu_instancing', 'KHR_texture_transform'] })
+    ).toEqual(['EXT_mesh_gpu_instancing', 'KHR_texture_transform']);
+  });
+
+  it('keeps a non-string entry, which Godot stringifies into a name no importer supports', () => {
+    const required = requiredGltfExtensions({ extensionsRequired: ['KHR_texture_transform', 7, null] });
+    expect(unsupportedRequiredGltfExtensions(required)).toEqual(['7', 'null']);
+  });
+
+  it('gives an empty list where extensionsRequired is absent or not an array', () => {
+    expect(requiredGltfExtensions({ asset: { version: '2.0' } })).toEqual([]);
+    expect(requiredGltfExtensions({ extensionsRequired: 'EXT_mesh_gpu_instancing' })).toEqual([]);
+  });
+
+  it('gives an empty list for a document that is not an object', () => {
+    expect(requiredGltfExtensions(null)).toEqual([]);
+    expect(requiredGltfExtensions(['EXT_mesh_gpu_instancing'])).toEqual([]);
+  });
+});
+
+describe('gltfRefusalMessage', () => {
+  it('names the one refused extension', () => {
+    expect(gltfRefusalMessage(['EXT_mesh_gpu_instancing'])).toBe(
+      "required extension 'EXT_mesh_gpu_instancing' is not supported by Godot's glTF importer"
+    );
+  });
+
+  it('names every refused extension', () => {
+    expect(gltfRefusalMessage(['EXT_mesh_gpu_instancing', 'KHR_draco_mesh_compression'])).toBe(
+      "required extensions 'EXT_mesh_gpu_instancing', 'KHR_draco_mesh_compression' are not supported by Godot's glTF importer"
+    );
+  });
+});
+
+describe('isGltfPath', () => {
+  it('matches .glb and .gltf', () => {
+    expect(isGltfPath('model.glb')).toBe(true);
+    expect(isGltfPath('res://meshes/rock.gltf')).toBe(true);
+  });
+
+  it('matches the extension case-insensitively, as the importer lowers it', () => {
+    expect(isGltfPath('MODEL.GLB')).toBe(true);
+    expect(isGltfPath('Model.GlTf')).toBe(true);
+  });
+
+  it('rejects other extensions and near-misses', () => {
+    expect(isGltfPath('model.obj')).toBe(false);
+    expect(isGltfPath('model.glbx')).toBe(false);
+    expect(isGltfPath('glb.png')).toBe(false);
+    expect(isGltfPath('model.gltf.import')).toBe(false);
+    expect(isGltfPath('model.glb?v=2')).toBe(false);
+    expect(isGltfPath('')).toBe(false);
+  });
+
+  it('rejects a name with no extension, even one spelled glb', () => {
+    expect(isGltfPath('glb')).toBe(false);
+    expect(isGltfPath('some/dir/glb')).toBe(false);
+  });
+});
+
+describe('isGltfJsonObject', () => {
+  it('accepts an object', () => {
+    expect(isGltfJsonObject({ asset: { version: '2.0' } })).toBe(true);
+  });
+
+  it('refuses an array, a primitive and null', () => {
+    expect([[], 'scene', 0, null, undefined].map(isGltfJsonObject)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('accepts an empty object', () => {
+    expect(isGltfJsonObject({})).toBe(true);
+  });
+});
+
+describe('usesGodotSingleRoot', () => {
+  it('is true for a document that lists the extension as used', () => {
+    expect(usesGodotSingleRoot({ extensionsUsed: ['KHR_lights_punctual', 'GODOT_single_root'] })).toBe(true);
+  });
+
+  it('is false for a document without it, or that is not an object', () => {
+    expect([{ extensionsUsed: ['KHR_lights_punctual'] }, [], null].map(usesGodotSingleRoot)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it('is false when `extensionsUsed` is not an array', () => {
+    expect(usesGodotSingleRoot({ extensionsUsed: 'GODOT_single_root' })).toBe(false);
+  });
+});
+
+describe('godotSurfacePrimitives', () => {
+  const target = { POSITION: 0 };
+
+  it('keeps every primitive when none has targets', () => {
+    expect(godotSurfacePrimitives([{}, {}, {}])).toEqual([0, 1, 2]);
+  });
+
+  it('drops a primitive whose target count differs from the first', () => {
+    expect(godotSurfacePrimitives([{ targets: [target] }, { targets: [] }, { targets: [target] }])).toEqual([
+      0, 2,
+    ]);
+  });
+
+  it('drops a later primitive with targets when the first has none (edge case)', () => {
+    expect(godotSurfacePrimitives([{}, { targets: [target] }, {}])).toEqual([0, 2]);
+  });
+});
+
+describe('targetCount', () => {
+  it('counts the targets', () => {
+    expect(targetCount({ targets: [{}, {}] })).toBe(2);
+  });
+
+  it('counts none for a primitive without them', () => {
+    expect(targetCount({})).toBe(0);
+  });
+
+  it('counts none for a targets value that is not an array (edge case)', () => {
+    expect(targetCount({ targets: 'two' })).toBe(0);
+  });
+});
+
+describe('gltfObjects', () => {
+  it('returns the objects of an array', () => {
+    expect(gltfObjects([{ name: 'Cube' }])).toEqual([{ name: 'Cube' }]);
+  });
+
+  it('reads an entry that is not an object as empty', () => {
+    expect(gltfObjects(['Cube', null])).toEqual([{}, {}]);
+  });
+
+  it('returns none for a value that is not an array (edge case)', () => {
+    expect(gltfObjects({ name: 'Cube' })).toEqual([]);
+  });
+});
+
+describe('isDataUri', () => {
+  it('reads a URI that starts with data: as inline bytes', () => {
+    expect(isDataUri('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
+  });
+
+  it('reads a relative file URI, or an empty one, as no data URI', () => {
+    expect([isDataUri('textures/crate.png'), isDataUri('')]).toEqual([false, false]);
+  });
+
+  it('matches the scheme case-sensitively, as begins_with does (edge case)', () => {
+    expect(isDataUri('DATA:image/png;base64,AAAA')).toBe(false);
+  });
+});
+
+describe('dataUriMimeType', () => {
+  it('reads the MIME type between data: and ;base64', () => {
+    expect(dataUriMimeType('data:image/jpeg;base64,/9g=')).toBe('image/jpeg');
+  });
+
+  it('gives undefined for a URI that is no data URI, or names no ;base64', () => {
+    expect([
+      dataUriMimeType('textures/crate.png'),
+      dataUriMimeType(undefined),
+      dataUriMimeType('data:image/png,raw'),
+      dataUriMimeType('data:image/png;charset=utf-8,raw'),
+    ]).toEqual([undefined, undefined, undefined, undefined]);
+  });
+
+  it('gives an empty type for a data URI with nothing before ;base64', () => {
+    expect(dataUriMimeType('data:;base64,AAAA')).toBe('');
+  });
+});

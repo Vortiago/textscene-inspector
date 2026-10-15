@@ -1,13 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { rasterizeGradientTexture2D } from './build';
-import { decodeGradient, decodeGradientTexture2D } from './decode';
+import { decodeGradientTexture2D } from './decode';
+import { gradientOf } from './gradient.testkit';
+import { sourceColorSpace } from '../sourceColorSpace';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
 import type { Gradient, GradientTexture2D } from './types';
 
 // A radial white-to-transparent falloff, cubic-interpolated.
 const coinGradient = (): Gradient =>
-  decodeGradient({
+  gradientOf({
     interpolation_mode: '2',
     offsets: 'PackedFloat32Array(0, 0.642276, 1)',
     colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)',
@@ -30,6 +32,28 @@ describe('rasterizeGradientTexture2D', () => {
     expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
     expect(texture.magFilter).toBe(THREE.LinearFilter);
     expect(texture.minFilter).toBe(THREE.LinearFilter);
+  });
+
+  it('keeps a use_hdr channel past 1 in a float texture', () => {
+    const tex: GradientTexture2D = { ...decodeGradientTexture2D({ width: '1', height: '1' }), useHdr: true };
+    const gradient: Gradient = {
+      interpolationMode: GradientInterpolationMode.Constant,
+      stops: [{ offset: 0, color: { r: 2, g: 0.5, b: 0, a: 1 } }],
+    };
+    const texture = rasterizeGradientTexture2D(tex, gradient);
+    expect(texture.type).toBe(THREE.HalfFloatType);
+    expect(texture.colorSpace).toBe(THREE.NoColorSpace);
+    expect(THREE.DataUtils.fromHalfFloat((texture.image.data as Uint16Array)[0]!)).toBe(2);
+  });
+
+  it('gives an RGBA8 texture an sRGB view (gradient_texture.cpp:239-270)', () => {
+    const texture = rasterizeGradientTexture2D(coinTexture(), coinGradient());
+    expect(sourceColorSpace(texture)).toBe(THREE.SRGBColorSpace);
+  });
+
+  it('gives a use_hdr texture none, as Godot stores it RGBAF', () => {
+    const tex: GradientTexture2D = { ...coinTexture(), useHdr: true };
+    expect(sourceColorSpace(rasterizeGradientTexture2D(tex, coinGradient()))).toBe(THREE.NoColorSpace);
   });
 
   it("puts Godot's TOP row at v = 1, matching a file-backed texture", () => {

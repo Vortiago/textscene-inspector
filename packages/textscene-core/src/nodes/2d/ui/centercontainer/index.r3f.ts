@@ -14,5 +14,3 @@ controlComponentRegistry.register({
 });
 controlSolverRegistry.registerMinimumSize('CenterContainer', centerContainerMinimumSize);
 controlSolverRegistry.registerContainerLayout('CenterContainer', centerContainerLayout);
-
-export { CenterContainer };

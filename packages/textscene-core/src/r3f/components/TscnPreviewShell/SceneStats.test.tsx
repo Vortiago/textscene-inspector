@@ -9,7 +9,7 @@ import { SceneStats } from './SceneStats';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { ResourceEventBus } from '../../../resources/ResourceEventBus';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene } from '../../../parser/types';

@@ -3,7 +3,7 @@
  * about competing cameras must compare scopes, never the whole scene.
  */
 
-import { descendsFrom } from '../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { searchAncestors } from './parentType.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 
@@ -20,7 +20,7 @@ export function viewportScopeOf(scene: RawScene, node: RawNode): RawNode | null 
   // `Window` is a Viewport (window.h:43), so the base chain scopes a dialog too.
   const search = searchAncestors(scene, node, (ancestor) =>
     // `visit` gets only ancestors whose type this file states and the catalog knows.
-    descendsFrom(ancestor.type, 'Viewport') ? ancestor : undefined
+    descendsFromClass(ancestor.type, 'Viewport') ? ancestor : undefined
   );
   if (search.kind === 'unknowable') return undefined;
   return search.kind === 'found' ? search.value : null;

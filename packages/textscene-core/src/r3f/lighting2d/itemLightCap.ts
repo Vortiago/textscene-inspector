@@ -15,7 +15,7 @@ import {
   type ItemPlacement,
 } from './itemLightList.js';
 import type { PassMesh } from './lightAccumulationPass.js';
-import { rect2Intersects, rect2Merge, type Rect2 } from '../../godot/rect2.js';
+import { rect2Intersects, rect2Merge, type Rect2 } from '../../godot/math/rect2.js';
 
 /** A lit item as the cap sees it. */
 export interface CappedItem {
@@ -27,7 +27,7 @@ export interface CappedItem {
   take(positionalLights: readonly number[] | null): void;
 }
 
-export interface ItemLightCap {
+interface ItemLightCap {
   readonly lights: ReadonlyMap<number, CanvasLightDeclaration>;
   /** Each registered item, with the positional lights it was last handed, null until crowded. */
   readonly items: Map<CappedItem, readonly number[] | null>;

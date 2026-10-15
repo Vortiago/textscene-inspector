@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { decodeBoxShape3D } from './decode';
-import { canonicalisePropertyBag } from '../../../godot/deprecated';
+import { canonicalisePropertyBag } from '../../../godot/classdb/deprecated';
 
 describe('decodeBoxShape3D', () => {
   it('honours a valid size', () => {
@@ -32,7 +32,7 @@ describe('decodeBoxShape3D negative size', () => {
 describe('decodeBoxShape3D on a Godot-3 extents', () => {
   it('reads the doubled size the scan resolved (box_shape_3d.cpp:81-83)', () => {
     // The scan rewrites `extents = Vector3(3, 1, 3)` to `size = Vector3(6, 2, 6)`
-    // (godot/deprecated.ts), and the decoder reads only the canonical slot.
+    // (godot/classdb/deprecated.ts), and the decoder reads only the canonical slot.
     expect(
       decodeBoxShape3D(canonicalisePropertyBag('BoxShape3D', { extents: 'Vector3(3, 1, 3)' })).size
     ).toEqual({

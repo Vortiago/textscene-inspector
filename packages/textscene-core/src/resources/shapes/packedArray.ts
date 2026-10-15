@@ -2,18 +2,17 @@
  * Readers for Godot's packed array slots, THREE-free: a flat float body, the three spellings
  * of a packed tuple slot, and the nested index arrays of a polygon list.
  */
-
+import { parseGodotFloat } from '../../godot/variant/number.js';
+import { parseGodotInt } from '../../godot/variant/int.js';
+import { splitTopLevel } from '../../godot/string/string.js';
 import {
   packedArrayBody,
   packedArrayCallAnywhere,
   packedArrayForms,
   packedArrayLiteral,
   packedElementType,
-  parseGodotFloat,
-  parseGodotInt,
-  splitTopLevel,
-} from '../../godot/index.js';
-import { arrayLiteralBody } from '../../godot/variantParser.js';
+  arrayLiteralBody,
+} from '../../godot/variant/variantParser.js';
 
 /**
  * A packed array of fixed-size tuples, named once: its type, the three spellings its slot
@@ -46,12 +45,11 @@ export function floatElements(inner: string, wrapper: string, value: string): nu
 }
 
 /**
- * A packed tuple slot in any of its three spellings, as the constructor's flat components at
- * double precision, so `Gradient`'s `0.6` stays `0.6`. The bare and typed bodies hold one element
- * per top-level comma, and another group size throws rather than add a short vertex: Godot makes
- * no such conversion.
+ * A packed tuple slot in any of its three spellings, as the constructor's flat components. The
+ * bare and typed bodies hold one element per top-level comma, and another group size throws
+ * rather than add a short vertex: Godot makes no such conversion.
  */
-export function packedTupleNumbers(value: string, type: PackedTupleType): number[] {
+function packedTupleNumbers(value: string, type: PackedTupleType): number[] {
   const { typeName, forms, groupSize } = type;
   const matched = packedArrayBody(forms, value);
   if (!matched) throw new Error(`Invalid ${typeName} format: ${value}`);
@@ -95,9 +93,6 @@ function float32Reader(type: PackedTupleType): (value: string) => Float32Array {
   return (value) => new Float32Array(packedTupleNumbers(value, type));
 }
 
-/** `PackedColorArray`, for a caller that groups its components itself. */
-export const PACKED_COLOR_ARRAY = packedTupleType('PackedColorArray', 4);
-
 /** A Godot `PackedVector3Array` slot as flat components. */
 export const parsePackedVector3Array = float32Reader(packedTupleType('PackedVector3Array', 3));
 
@@ -105,7 +100,7 @@ export const parsePackedVector3Array = float32Reader(packedTupleType('PackedVect
 export const parsePackedVector2Array = float32Reader(packedTupleType('PackedVector2Array', 2));
 
 /** A Godot `PackedColorArray` slot as flat components. */
-export const parsePackedColorArray = float32Reader(PACKED_COLOR_ARRAY);
+export const parsePackedColorArray = float32Reader(packedTupleType('PackedColorArray', 4));
 
 /** One `[...]` group nested inside an outer array, its body captured. */
 const BARE_INNER_ARRAY_RE = /\[([^[\]]*)\]/g;

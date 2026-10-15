@@ -17,12 +17,12 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
   (`light_3d.cpp:606`), and so does the editor's preview sun (`node_3d_editor_plugin.cpp:10383`).
 - `<SceneShadowFitter>` (`../SceneShadowFitter.tsx`) is mounted inside `<TscnSceneContents>`, so
   the web previewer, the VS Code extension and the visual harness all mount it. It fits every
-  declared light in Godot's list of shadowed lights to the camera of each render of the scene. It
-  also writes each shadow's fade for that render, through `scene.onBeforeRender`
-  (`r3f/sceneRenderCamera.ts`). three calls that hook after it updates the world matrices and before
-  the shadow pass. So each render gets a fit to its own camera: the main view, a SubViewport pass
-  that renders the shared world, and a screenshot. No render order matters. The positional fit runs
-  after this one, from the same walk of the scene's lights (`../positionalShadow/positionalShadow.md`).
+  declared light in Godot's list of shadowed lights to the camera of each render of the scene,
+  through `scene.onBeforeRender` (`r3f/sceneRenderCamera.ts`). three calls that hook after it
+  updates the world matrices and before the shadow pass. So each render gets a fit to its own
+  camera: the main view, a SubViewport pass that renders the shared world, and a screenshot. No
+  render order matters. The positional fit runs after this one, from the same walk of the scene's
+  lights (`../positionalShadow/positionalShadow.md`).
 - A 3D SubViewport that renders its own portal scene hooks that scene with
   `useSceneShadowFit`. Its unmount hands every declared light its own shading and layers
   back.
@@ -93,35 +93,20 @@ material's program and uploads its uniforms again, since the lights' state versi
 ## The fade
 
 three shadows every receiver inside a shadow camera's box. Each box is a square round a sphere,
-so the last one reaches past the slice's far end. `shadowFade.ts` patches three's chunks to mix
-each directional and sun shadow towards unshadowed by the receiver's view depth, as Godot does.
+so the last one reaches past the slice's far end. The split lookup (`splitShadowChunk.ts`) mixes
+each sun shadow towards unshadowed by the receiver's view depth, as Godot does
+(`scene_forward_clustered.glsl:2491`).
 
 - Godot's fade runs from `fade_start` of `shadow_split_offsets[3]` to that depth. Slot 3 holds
   the last split's far end in every mode (`light_storage.cpp:711`), which is the slice's far end
   (`renderer_scene_cull.cpp:2175`). The fade mixes whichever split the fragment sampled, after
-  the split lookup. So an orthogonal light and a light with splits fade over the same depths,
-  and a small `fade_start` reaches into the nearer splits too.
-- `installDirectionalShadowFade` runs through `installShaderPatches` when a canvas is created.
-  It declares one `vec2` uniform array outside both of three's shadow blocks, with an entry per
-  directional shadow and per sun shadow. It gives every built-in lit material and `UniformsLib.lights` that
-  uniform.
-- The uniform's value is one shared `Float32Array`. `UniformsUtils.cloneUniforms` keeps a typed
-  array by reference, so each material's clone reads the same buffer. The buffer has 32 entries.
-  The sun shadows are at most eight. An undeclared directional light binds its own sampler, so
-  texture units bound those, and a desktop GPU commonly reports 32.
-- three counts directional shadows and sun shadows apart (`WebGLLights.js:289-356`). The
-  directional loop reads entry `i`, and the sun loop reads entry `NUM_DIR_LIGHT_SHADOWS + i`.
-- The fitter writes the buffer before each render, after it fits every light. It writes in the
-  order three indexes its shadow uniforms: casting lights in visible pre-order, where the
-  camera's layers include them. A light in the shadow list fails that layer test, so its
-  `SplitSunLight` takes the light's fade at the sun's index. A dropped light fails it too, and
-  takes no index. An undeclared caster keeps its index with no fade.
-- A `ShaderMaterial` with `lights: true` that does not merge `UniformsLib.lights` lacks the
-  uniform. Its shadow reads zeros, which the shader treats as no fade.
-- The fade, the soft shadow filter and the split lookup all edit `shadowmap_pars_fragment`. The
-  fade inserts after `#ifdef USE_SHADOWMAP`, the filter inserts ahead of the sun block, and the
-  split lookup rewrites only the sun block, so every install order gives the same chunk. Each
-  install changes nothing on a second call.
+  the split lookup and the soft shadow. So an orthogonal light and a light with splits fade over
+  the same depths, and a small `fade_start` reaches into the nearer splits too.
+- The fit gives each split sun its fade with its slots. `sunShadowUniforms.ts` writes it with the
+  sun's other terms after each shadow pass, as one `vec2` per sun shadow, in the order of three's
+  sun shadows.
+- A sun no fit has placed holds a fade whose ends do not ascend, and the shader reads that as no
+  fade. A light without a declaration casts on three's directional path, unfaded.
 
 ## The split lookup
 
@@ -144,7 +129,7 @@ Godot's PCF kernel is a Vogel disk whose radius is `soft_shadow_scale` atlas tex
 without an angular size, `soft_shadow_scale` is `shadow_blur` times the quality radius
 (`light_storage.cpp:697-703`), which is 2 at the default Soft Low quality
 (`renderer_scene_render_rd.cpp:1204-1207`). So the default kernel reaches two texels. The fitter
-writes that radius to the light's `shadow.radius` before each render (`godot/softShadowScale.ts`),
+writes that radius to the light's `shadow.radius` before each render (`godot/rendering/lights/softShadowScale.ts`),
 and a split sun copies it.
 
 `splitShadowChunk.ts` replaces three's five-tap PCF with Godot's `sample_directional_pcf_shadow`
@@ -175,7 +160,7 @@ A light that lights surfaces, with a `light_angular_distance` above zero, a shad
 searches for blockers in place of the PCF (`scene_forward_clustered.glsl:2310-2398`), and lights a
 surface with its size term, `1 - cos` of the angle (`light_storage.cpp:670`,
 `scene_forward_clustered.glsl:2617`). Without the flag, the light keeps the PCF and no size term.
-`godot/directionalSoftShadow.ts` holds these facts.
+`godot/rendering/lights/directionalSoftShadow.ts` holds these facts.
 
 - The light pass defines `GODOT_USE_DIRECTIONAL_SOFT_SHADOWS` on every lit material while a light
   of any scene turns the flag on, drawn or not (`../shadowFilter/softShadowSearch.ts`). Only a
@@ -220,8 +205,9 @@ shades through three parts, whatever its split count:
   the splits where Godot puts them in that share. A slot past the light's last split draws nothing
   and repeats the last split's matrix.
 - `splitShadowChunk.ts`, which replaces three's cascade walk in `shadowmap_pars_fragment` with
-  Godot's split lookup and PCF, and gives every sun four slots. `installShaderPatches` installs it
-  when a canvas is created, before any program compiles.
+  Godot's split lookup and PCF, and gives every sun four slots. It reads each slot's matrix as the
+  three rows `sunShadowUniforms.ts` writes, in place of three's `mat4` (Fragment uniforms).
+  `installShaderPatches` installs it when a canvas is created, before any program compiles.
 
 `fitDirectionalShadowSplits.ts` holds the maths. It fits one box per split through
 `directionalShadowBoxFitter`, which computes the light's axes and caster reach once. It returns
@@ -338,32 +324,37 @@ moves each light's share and keeps the atlas.
 WebGL 2 guarantees 224 fragment uniform vectors (`MAX_FRAGMENT_UNIFORM_VECTORS`), and ANGLE
 packs a WebGL program's uniforms by the rule of GLSL ES 1.00 Appendix A.7. Every sun shadow
 declares four slots, since the shader finds a light's slots at `shadowIndex * SUN_LIGHT_CASCADES`.
-Each slot takes a matrix (four vectors) and a vec4. With the sun's light, its shadow and its fade, a
-shadowed sun takes about 24 vectors, whatever its split count.
+Each slot takes three vec4 rows of its matrix and a vec4. With the sun's light, its shadow and its
+fade, a shadowed sun takes about 20 vectors, whatever its split count.
 
-The shadow list holds at most eight lights, so a program samples at most eight sun shadows. Each
-lit program's fragment shader was linked again in the visual harness's Chromium, with a vertex
-shader that only declares its inputs. Its active non-sampler uniforms, packed by A.7, give the
-highest of the lit programs each scene compiles:
+three declares each slot's matrix as a `mat4`, which takes four vectors. The fourth row of every
+slot matrix is (0, 0, 0, 1): it is a bias times an orthographic projection times a view. So the
+patch declares three vec4 rows per slot in its place, and `sunShadowUniforms.ts` writes them from the
+slot matrices after each shadow pass. That saves four vectors per sun.
 
-| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
-| ------------- | ---------------------- | --------------------------------------------------------------- |
-| 1             | 35                     | 64                                                              |
-| 8             | 207                    | 235                                                             |
-| 9             | 207                    | 235                                                             |
-| 1, soft       | 38                     | 66                                                              |
-| 8, soft       | 224                    | 251                                                             |
+The shadow list holds at most eight lights, so a program samples at most eight sun shadows.
+`node scripts/uniform-vectors/measure.mjs` measures each case in the visual harness's Chromium. It
+uploads the scene, links each lit program's fragment shader again with a vertex shader that only
+declares its outputs, and packs its active non-sampler uniforms by A.7, as ANGLE's
+`VariablePacker` does. It prints the highest of the lit programs each scene compiles:
+
+| Shadowed suns           | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
+| ----------------------- | ---------------------- | --------------------------------------------------------------- |
+| 1                       | 33                     | 60                                                              |
+| 8                       | 173                    | 200                                                             |
+| 9 (8 sun shadows drawn) | 173                    | 200                                                             |
+| 1, soft                 | 35                     | 62                                                              |
+| 8, soft                 | 189                    | 216                                                             |
 
 A scene without a light draws the preview sun, so it counts as one sun. The ninth sun leaves the
-shadow list. Eight suns on the physical material exceed the 224 vectors WebGL 2 guarantees, so a GPU
-that reports only 224 fails to link it. The harness's SwiftShader reports 4096.
+shadow list. Every case fits the 224 vectors WebGL 2 guarantees. The harness's SwiftShader
+reports 4096.
 
 A sun with one or two splits costs the same as one with four. A program compiled with the soft
 shadow's define adds two vec4 per sun shadow: the direction towards the light with the angle, and
-the four slots' range starts. The slot matrices give the box sizes. The rows marked soft have the
-define. A slot count that varied by scene
-would need a define three's program key does not hold (`WebGLPrograms.js:476-483`), so a material would
-reuse a program compiled for another count.
+the four slots' range starts. The slot rows give the box sizes. The rows marked soft have the
+define. A slot count that varied by scene would need a define three's program key does not hold
+(`WebGLPrograms.js:476-483`), so a material would reuse a program compiled for another count.
 
 ## Where it differs from Godot
 

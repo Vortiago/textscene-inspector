@@ -1,6 +1,6 @@
 /**
  * Base Control strict validators. Registered once under `'Control'`, they reach every
- * Control subclass through the ValidatorRegistry base-walk (godot/nodeBaseTypes.ts).
+ * Control subclass through the ValidatorRegistry base-walk (godot/classdb/nodeBaseTypes.ts).
  * They reject malformed literals, and cite each value Godot reads but refuses or alters.
  */
 
@@ -11,13 +11,18 @@ import { accepts, hintedBitField, v, propertyError } from '../../../../linter/va
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
 import {
   arrayLiteralBody,
+  nodePathLiteral,
+  TYPED_WRAPPER_RE,
+} from '../../../../godot/variant/variantParser.js';
+import {
   CURSOR_MAX,
   CURSOR_SHAPES,
-  dropTrailingComma,
-  nodePathLiteral,
-  splitTopLevel,
-  TYPED_WRAPPER_RE,
-} from '../../../../godot/index.js';
+  GrowDirection,
+  LAYOUT_DIRECTION_MAX,
+  LAYOUT_DIRECTION_NAMES,
+  LayoutDirection,
+} from '../../../../godot/scene/control.js';
+import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 
 /**
  * The four `accessibility_*_nodes` properties (control.cpp:4313-4316) have `TypedArray<NodePath>`
@@ -112,10 +117,18 @@ validatorRegistry.registerAll(
     offset_bottom: v.float('offset_bottom'),
     // control.cpp:4261, ENUM "Left,Right,Both". set_h_grow_direction:
     // `ERR_FAIL_INDEX((int)p_direction, 3)` (control.cpp:861).
-    grow_horizontal: v.int('grow_horizontal', { min: 0, max: 2, enforced: 'control.cpp:861' }),
+    grow_horizontal: v.int('grow_horizontal', {
+      min: GrowDirection.GROW_DIRECTION_BEGIN,
+      max: GrowDirection.GROW_DIRECTION_BOTH,
+      enforced: 'control.cpp:861',
+    }),
     // control.cpp:4262, ENUM "Top,Bottom,Both". set_v_grow_direction:
     // `ERR_FAIL_INDEX((int)p_direction, 3)` (control.cpp:878).
-    grow_vertical: v.int('grow_vertical', { min: 0, max: 2, enforced: 'control.cpp:878' }),
+    grow_vertical: v.int('grow_vertical', {
+      min: GrowDirection.GROW_DIRECTION_BEGIN,
+      max: GrowDirection.GROW_DIRECTION_BOTH,
+      enforced: 'control.cpp:878',
+    }),
     rotation: v.float('rotation'),
     scale: v.vector2('scale'),
     pivot_offset: v.vector2('pivot_offset'),
@@ -212,21 +225,21 @@ validatorRegistry.registerAll(
     ),
     mouse_force_pass_scroll_events: v.boolean('mouse_force_pass_scroll_events'),
     // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX). The table lives in
-    // `godot/control.ts` because SubViewportContainer's rule reads it too.
+    // `godot/scene/control.ts` because SubViewportContainer's rule reads it too.
     mouse_default_cursor_shape: v.enumInt('mouse_default_cursor_shape', 0, CURSOR_MAX - 1, CURSOR_SHAPES, {
       enforced: 'control.cpp:2877',
     }),
 
     clip_contents: v.boolean('clip_contents'),
     localize_numeral_system: v.boolean('localize_numeral_system'),
-    // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX = 5) (control.h:154-160).
-    // The early return at :3536 compares with data.layout_dir, which holds only values
-    // that passed this guard, so it never catches an out-of-range write.
+    // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX). The early return at
+    // :3536 compares with data.layout_dir, which holds only values that passed this guard, so it
+    // never catches an out-of-range write.
     layout_direction: v.enumInt(
       'layout_direction',
-      0,
-      4,
-      { 0: 'INHERITED', 1: 'APPLICATION_LOCALE', 2: 'LTR', 3: 'RTL', 4: 'SYSTEM_LOCALE' },
+      LayoutDirection.INHERITED,
+      LAYOUT_DIRECTION_MAX - 1,
+      LAYOUT_DIRECTION_NAMES,
       { enforced: 'control.cpp:3539' }
     ),
     // Variant::OBJECT with PROPERTY_HINT_NODE_TYPE (control.cpp:4307): the writer stores

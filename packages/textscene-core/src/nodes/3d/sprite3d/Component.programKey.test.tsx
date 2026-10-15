@@ -11,18 +11,16 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
-import {
-  AlphaCutMode,
-  AxisMode,
-  BillboardMode,
-  type Sprite3DProperties,
-  AlphaAntiAliasing,
-  TextureFilterMode,
-} from './types';
+import { type Sprite3DProperties } from './types';
+import { Vector3Axis } from '../../../godot/math/vector3Axis';
+import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -41,9 +39,9 @@ function makeNode(overrides: Partial<Sprite3DProperties>): TscnNode {
     alpha_hash_scale: 1.0,
     alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
     alpha_antialiasing_edge: 0.0,
-    texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
-    alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
-    axis: AxisMode.AXIS_Y,
+    texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
+    alpha_cut: AlphaCutMode.DISABLED,
+    axis: Vector3Axis.Y,
     pixel_size: 0.01,
     hframes: 1,
     vframes: 1,
@@ -91,7 +89,7 @@ async function rebuilds(
 }
 
 /** The default sprite is already blended; only the alpha-cut arms leave that pass. */
-const OPAQUE_CUT: Partial<Sprite3DProperties> = { alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD };
+const OPAQUE_CUT: Partial<Sprite3DProperties> = { alpha_cut: AlphaCutMode.DISCARD };
 
 describe('<Sprite3D> rebuilds its material when a baked program parameter moves', () => {
   it('transparent true → false forces the sprite into the opaque pass', async () => {
@@ -105,7 +103,7 @@ describe('<Sprite3D> rebuilds its material when a baked program parameter moves'
   it('alpha_cut DISCARD → HASH, which nothing in three re-derives for us', async () => {
     // The isolating case: the sprite is opaque either side, so `alphaHash` is the only parameter
     // that moves, and `Material.js:134` is a plain field.
-    expect(await rebuilds(OPAQUE_CUT, { alpha_cut: AlphaCutMode.ALPHA_CUT_HASH })).toBe(true);
+    expect(await rebuilds(OPAQUE_CUT, { alpha_cut: AlphaCutMode.HASH })).toBe(true);
   });
 
   it('alpha_cut DISABLED → DISCARD leaves the blended pass', async () => {

@@ -32,7 +32,7 @@ applies Godot's rules before three reads the file (`formats/glb/extensionRules.t
 - every other extension outside that set is removed from the file's JSON, so three's
   plugin for it finds nothing to read. `extras` is the author's data and stays as written.
 
-Godot's set lives in `godot/gltf.ts`, beside the rest of the engine facts.
+Godot's set lives in `godot/import/gltf.ts`, beside the rest of the engine facts.
 
 The rules are one switch, `GltfExtensionRules`, a `ResourceLoader` option
 (`gltfExtensions`) and so a `createResourcePipeline` option. `godot-importer` is the

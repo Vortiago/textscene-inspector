@@ -4,12 +4,13 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildTileGeometryArrays } from './tileGeometry';
-import { TILE_SHAPE_SQUARE, type AtlasSourceModel, type TileGrid } from './types';
+import type { AtlasSourceModel, TileGrid } from './types';
+import { TileShape } from '../../godot/scene/tileSet';
 import type { DrawableCell } from './drawableCell';
 import { drawableCellOf } from './testing/drawableCellOf';
 
 const grid: TileGrid = {
-  shape: TILE_SHAPE_SQUARE,
+  shape: TileShape.TILE_SHAPE_SQUARE,
   layout: 0,
   offsetAxis: 0,
   tileSize: { x: 16, y: 16 },
@@ -20,6 +21,7 @@ const source: AtlasSourceModel = {
   margins: { x: 0, y: 0 },
   separation: { x: 0, y: 0 },
   textureRegionSize: { x: 16, y: 16 },
+  usesTexturePadding: false,
   tiles: new Map(),
 };
 
@@ -96,6 +98,20 @@ describe('buildTileGeometryArrays', () => {
       expect(uvsFor(TRANSPOSE | FLIP_H)).toEqual([0, 0.75, 0, 1, 0.5, 0.75, 0.5, 1]);
       expect(uvsFor(TRANSPOSE | FLIP_H | FLIP_V)).toEqual([0.5, 0.75, 0.5, 1, 0, 0.75, 0, 1]);
     });
+  });
+
+  it("bounds a padded source's samples to the tile's outer texel centres (tile_set.cpp:5622-5671)", () => {
+    // Atlas (1,0) spans x 16..32, y 0..16 of a 32×32 texture. Half a texel inside that is
+    // u 16.5/32..31.5/32 and v (flipY) 1 − 15.5/32..1 − 0.5/32, on all four corners.
+    const padded: AtlasSourceModel = { ...source, usesTexturePadding: true };
+    const { uvBounds } = buildTileGeometryArrays([cell(0, 0, 1, 0)], padded, grid, 32, 32);
+    const corner = [16.5 / 32, 1 - 15.5 / 32, 31.5 / 32, 1 - 0.5 / 32];
+    expect(Array.from(uvBounds!)).toEqual([...corner, ...corner, ...corner, ...corner].map(Math.fround));
+  });
+
+  it('leaves the samples unbounded for a source that does not pad', () => {
+    const { uvBounds } = buildTileGeometryArrays([cell(0, 0)], source, grid, 32, 32);
+    expect(uvBounds).toBeNull();
   });
 
   it('shifts the quad by the tile texture_origin (Godot: dest = map_to_local − size/2 − origin)', () => {

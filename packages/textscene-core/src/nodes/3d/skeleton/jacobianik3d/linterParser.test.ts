@@ -11,7 +11,8 @@ import {
   validatorRegistry,
   type PropertyValidator,
 } from '../../../../linter/ValidatorRegistry';
-import { NODE_BASE_TYPES, baseChain } from '../../../../godot/nodeBaseTypes';
+import { NODE_BASE_TYPES } from '../../../../godot/classdb/nodeBaseTypes';
+import { classBaseChain } from '../../../../godot/classdb/classBaseTypes';
 import { expectFixtureClean, readFixture } from '../../../../linter/testing/fixtureCheck';
 import { checkerFor } from '../../../../linter/testing/validatorCheck';
 import './linterParser';
@@ -103,9 +104,9 @@ describe('JacobianIK3D inherited validators', () => {
     // drops a whole tier's validators in silence. The nearest hop is pinned exactly, the rest by
     // membership. The ancestry table is generated from the node catalog, and
     // `baseChainCompleteness` owns the whole-table claim.
-    expect(baseChain('JacobianIK3D')[0]).toBe('IterateIK3D');
+    expect(classBaseChain('JacobianIK3D')[0]).toBe('IterateIK3D');
     for (const tier of ['ChainIK3D', 'IKModifier3D', 'SkeletonModifier3D', 'Node3D']) {
-      expect(baseChain('JacobianIK3D')).toContain(tier);
+      expect(classBaseChain('JacobianIK3D')).toContain(tier);
     }
   });
 

@@ -1,14 +1,15 @@
 /**
  * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
  * the committed engine captures (`pnpm nodes:base-types` writes
- * packages/textscene-core/src/godot/{node,resource}BaseTypes.generated.ts,
- * classProperties.generated.ts and resourceTypeExclusions.generated.ts). It never runs Godot: CI has no engine, and the test beside it
- * re-derives every output to prove it current.
+ * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts,
+ * classProperties.generated.ts and resourceTypeExclusions.generated.ts). It never runs Godot: CI
+ * has no engine, and the test beside it re-derives every output to prove it current.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { HINT_RESOURCE_TYPE } from './formatOnlyCorpus.data.mjs';
 
 const here = import.meta.dirname;
@@ -17,18 +18,18 @@ export const RESOURCE_BASES = join(here, 'resource-bases.json');
 export const NODE_PROPERTIES = join(here, 'node-properties.json');
 export const RESOURCE_PROPERTIES = join(here, 'resource-properties.json');
 
-/** `src/godot/<name>` in the core package. */
-function godotModule(name) {
-  return join(here, '..', '..', 'packages', 'textscene-core', 'src', 'godot', name);
+/** `src/godot/classdb/<name>` in the core package. */
+function classdbModule(name) {
+  return join(REPO_ROOT, 'packages/textscene-core/src/godot/classdb', name);
 }
 
-export const OUT = godotModule('nodeBaseTypes.generated.ts');
-export const RESOURCE_OUT = godotModule('resourceBaseTypes.generated.ts');
-export const PROPERTIES_OUT = godotModule('classProperties.generated.ts');
-export const EXCLUSIONS_OUT = godotModule('resourceTypeExclusions.generated.ts');
+export const OUT = classdbModule('nodeBaseTypes.generated.ts');
+export const RESOURCE_OUT = classdbModule('resourceBaseTypes.generated.ts');
+export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
+export const EXCLUSIONS_OUT = classdbModule('resourceTypeExclusions.generated.ts');
 
 /**
- * Refuses to write a table a walk cannot leave. Every consumer (`descendsFrom`, `baseChain`,
+ * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
  * `ValidatorRegistry`, the gallery's coverage) bounds its own walk, so a cycle hangs none of them
  * but truncates a class's ancestry: the "zero inherited validation" this file prevents.
  */

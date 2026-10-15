@@ -4,7 +4,7 @@
  * **channel** (a value the solver seals and the painter opens).
  */
 import { describe, expect, it } from 'vitest';
-import { defineChannel, defineShare, isSealedHandoff } from './solveHandoff';
+import { defineChannel, defineShare } from './solveHandoff';
 import { nativeTheme } from './nativeTheme';
 import { controlNode, solveNode } from './testing/solveNode';
 import type { SolveNode } from './solveTree';
@@ -133,16 +133,5 @@ describe('defineChannel', () => {
 
     expect(channel.open(channel.seal(undefined))).toBeUndefined();
     expect(channel.open(channel.seal(0))).toBe(0);
-  });
-});
-
-describe('isSealedHandoff', () => {
-  it("recognises any channel's sealed value, and nothing else", () => {
-    const channel = defineChannel<number>('c');
-
-    expect(isSealedHandoff(channel.seal(1))).toBe(true);
-    expect(isSealedHandoff(undefined)).toBe(false);
-    expect(isSealedHandoff(null)).toBe(false);
-    expect(isSealedHandoff({ value: 1 })).toBe(false);
   });
 });

@@ -8,12 +8,13 @@
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { unquoteStringName } from '../../../parser/utils';
 import { parseOptionalFloat } from '../../../parser/valueParsers';
-import { parseColorOrUndefined, type Color } from '../../../utils/colorParser';
+import { parseColorOrUndefined } from '../../../utils/colorParser';
 import { FONT_SUB_RESOURCE_TYPES, resolveInlineFontResource } from '../../fonts/font/decode';
 import type { FontCacheReader } from '../../fonts/font/types';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
-import { indexedKeyRegex } from '../../../godot/index.js';
+import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
+import type { Rgba } from '../../../godot/math/math.js';
 
 /** The type names this slice claims: Godot's Theme class alone. */
 export const THEME_TYPES: ReadonlySet<string> = new Set(['Theme']);
@@ -58,7 +59,7 @@ function scanTheme<T>(
   const fontSizes: Record<string, Record<string, number>> = Object.create(null);
   const styles: Record<string, Record<string, string>> = Object.create(null);
   const icons: Record<string, Record<string, string>> = Object.create(null);
-  const colors: Record<string, Record<string, Color>> = Object.create(null);
+  const colors: Record<string, Record<string, Rgba>> = Object.create(null);
   const constants: Record<string, Record<string, number>> = Object.create(null);
   const typeVariations: Record<string, string> = Object.create(null);
   const rest: Record<string, string> = Object.create(null);

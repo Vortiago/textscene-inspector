@@ -10,8 +10,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { NODE_BASE_TYPES, UNCATALOGUED_BASE_TYPES } from '../godot/nodeBaseTypes.js';
-import { CLASS_BASE_TYPES } from '../godot/classBaseTypes.js';
+import { NODE_BASE_TYPES } from '../godot/classdb/nodeBaseTypes.js';
+import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
 import { registeredTypes } from './registryPopulation.js';
@@ -118,8 +118,7 @@ describe('NODE_BASE_TYPES covers every registered node type', () => {
    */
   it('registers no type the catalog and the exception list both fail to name', () => {
     const unknown = registered
-      .filter((type) => type !== 'Node')
-      .filter((type) => !CATALOG_CHAINS.has(type) && UNCATALOGUED_BASE_TYPES[type] === undefined)
+      .filter((type) => type !== 'Node' && !Object.hasOwn(NODE_BASE_TYPES, type))
       .map(
         (type) =>
           `${type} is registered but is neither in node-catalog.json nor in UNCATALOGUED — a typo, or a type newer than the catalog's Godot`
@@ -128,14 +127,16 @@ describe('NODE_BASE_TYPES covers every registered node type', () => {
     expect(unknown).toEqual([]);
   });
 
-  it('keeps the exception list to types the catalog genuinely lacks', () => {
-    // An entry for a catalogued type would silently override the engine's own
+  it("lets no exception override the catalog's ancestry", () => {
+    // An UNCATALOGUED entry for a catalogued type would override the engine's own
     // answer, which is the hand-maintenance this table exists to end.
-    const shadowing = Object.keys(UNCATALOGUED_BASE_TYPES)
-      .filter((type) => CATALOG_CHAINS.has(type))
-      .map((type) => `${type} is in UNCATALOGUED but the catalog knows its ancestry`);
+    const shadowed = [...CATALOG_CHAINS]
+      .filter(([type, chain]) => type !== 'Node' && NODE_BASE_TYPES[type] !== chain[0])
+      .map(
+        ([type, chain]) => `${type} derives from ${NODE_BASE_TYPES[type]}, but the catalog says ${chain[0]}`
+      );
 
-    expect(shadowing).toEqual([]);
+    expect(shadowed).toEqual([]);
   });
 
   it('delivers a validator registered on an abstract intermediate to its leaves', () => {

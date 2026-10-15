@@ -17,6 +17,7 @@ import {
   POSITIONAL_SHADOW_ATLAS_UNIFORM,
 } from './shadowAtlasTarget.js';
 import { LIGHT_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
+import { PARABOLOID_UV_GLSL } from './paraboloidUv.js';
 
 const ATLAS = POSITIONAL_SHADOW_ATLAS_UNIFORM;
 const ATLAS_COLOUR = POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM;
@@ -56,11 +57,7 @@ export const ATLAS_SAMPLING = `
 			return shadow * ( 1.0 / float( GODOT_SOFT_SHADOW_SAMPLES ) );
 		}
 		#ifdef ${LIGHT_SOFT_SHADOWS}
-		vec2 godotParaboloidUv( vec3 direction, vec4 uvRect, vec2 flipOffset ) {
-			if ( direction.z >= 0.0 ) uvRect.xy += flipOffset;
-			direction.z = 1.0 + abs( direction.z );
-			return uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
-		}
+		${PARABOLOID_UV_GLSL}
 		float godotParaboloidSoftShadow( vec3 localVert, vec3 normalBias, vec4 uvRect, vec2 flipOffset, float depth, float referenceOffset, float spread ) {
 			mat2 rotation = godotDiskRotation();
 			vec3 shadowDir = normalize( localVert );

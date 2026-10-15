@@ -1,7 +1,7 @@
 ---
 type: TileMap
 category: 2D
-status: unreviewed
+status: limitation
 fixture: unit-tile-map.tscn
 image: unit-tile-map
 renders_as: batched textured tile quads
@@ -11,9 +11,11 @@ renders_as: batched textured tile quads
 
 TileMap draws each layer's cells as batched textured quads from its TileSet atlas. The
 previewer decodes the legacy `layer_N/tile_data` groups. It draws each layer's rendering
-quadrants as canvas items of their own, in Godot's cell order, as on TileMapLayer
-(`tile_map_layer.cpp:306-311`, `:412-566`).
-Each quadrant takes its own lights at its layer's `z_index`.
+quadrants in Godot's cell order, as on TileMapLayer (`tile_map_layer.cpp:306-311`,
+`:412-566`). A quadrant draws as one or more canvas items, a new one at each change of
+tile material or `z_index`. Each canvas item takes its own lights at its layer's
+`z_index` plus the tile's own. A tile samples its atlas as on TileMapLayer, with
+`use_texture_padding` honoured.
 
 ## Linting
 

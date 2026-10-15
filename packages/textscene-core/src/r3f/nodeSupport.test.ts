@@ -7,7 +7,7 @@ import './nodes/index'; // side-effect: populate the component registry
 import '../parser/TscnParser'; // side-effect: populate the parser registry
 import { nodeRegistry } from '../core/NodeRegistry';
 import { nodeComponentRegistry } from './NodeComponentRegistry';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/packedScene.js';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene.js';
 import { rendersOwnVisual } from './nodeSupport';
 
 describe('rendersOwnVisual', () => {

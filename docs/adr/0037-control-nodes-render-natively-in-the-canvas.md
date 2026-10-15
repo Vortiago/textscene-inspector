@@ -164,7 +164,7 @@ build time into a PNG atlas + per-glyph JSON table (`scripts/fonts/bake-metrics.
 `--check` mode so the artefacts cannot drift from the font, licensed OFL-1.1 and noticed
 in `THIRD-PARTY-NOTICES.md`. No worker, no runtime font parse, byte-deterministic for
 goldens. Line pitch ceiling-rounds ascent and descent to whole pixels *independently*
-before it sums them (`getLinePitchPx`), as Godot's TextServer reads FreeType's
+before it sums them (`getFontLinePitchPx`), as Godot's TextServer reads FreeType's
 pixel-quantised metrics and does not scale `hhea` directly. A raw float sum undershoots
 line pitch by about a pixel everywhere.
 

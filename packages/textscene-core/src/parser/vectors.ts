@@ -1,24 +1,15 @@
 /**
  * The lenient parser's vector decoders.
  *
- * The GRAMMAR they read is an engine fact and lives in `godot/number.ts`; this
+ * The GRAMMAR they read is an engine fact and lives in `godot/variant/number.ts`; this
  * file is the render-side decoding built on it, so its types may be domain
  * types. Anything here that a second domain would want belongs there instead.
  */
 
-import { slotTupleRegex, allFinite } from '../godot/number.js';
-import { slotComponents } from '../godot/int.js';
+import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
+import { slotComponents } from '../godot/variant/int.js';
 
-export interface Vector2 {
-  x: number;
-  y: number;
-}
-
-export interface Vector3 {
-  x: number;
-  y: number;
-  z: number;
-}
+import type { Vector2, Vector3 } from '../godot/math/vector.js';
 
 const VECTOR2_RE = slotTupleRegex('Vector2', 2);
 const VECTOR3_RE = slotTupleRegex('Vector3', 3);

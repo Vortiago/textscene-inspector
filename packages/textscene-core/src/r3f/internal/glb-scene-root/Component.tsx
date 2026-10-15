@@ -32,11 +32,9 @@ import type { LiveNode } from '../../../resources/liveNode';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
-import { forEachSurfaceMaterial, importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
-import { boolSlotValue } from '../../../godot/index.js';
-
-/** Reserved for a synthesised GLB root: no `.tscn` declares it, and the linter never sees it. */
-export const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';
+import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
+import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 interface GLBSceneRootProperties {
   /** The ExtResource's `res://` path to the .glb or .gltf file, verbatim. */

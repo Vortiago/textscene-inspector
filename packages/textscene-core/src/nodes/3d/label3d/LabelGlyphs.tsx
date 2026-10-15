@@ -6,7 +6,7 @@
  */
 import { useMemo, useSyncExternalStore, type RefObject } from 'react';
 import * as THREE from 'three';
-import { AutowrapMode, shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
+import { shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
 import {
   onSceneFontMetricsSettled,
@@ -23,9 +23,12 @@ import type { CanvasTextBlend } from '../../../r3f/controls/native/text/canvasTe
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
-import { labelBillboardAabb } from '../../../godot/billboard';
+import { labelBillboardAabb } from '../../../godot/scene/billboard';
 import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
-import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
+import { type Label3DProperties } from './types';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export interface LabelGlyphsProps {
   /** The label's node group, whose parent places it for the scene cull. */
@@ -50,7 +53,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
       shapeText(properties.text, {
         fontSizePx: properties.font_size,
         boxWidthPx: 0,
-        autowrapMode: AutowrapMode.OFF,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
         lineSpacingPx: properties.line_spacing,
         fontMetrics,
       }),
@@ -117,6 +120,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     scissorThreshold: properties.alpha_scissor_threshold,
     // Label3D's DrawFlags have no FLAG_TRANSPARENT (`label_3d.h:42-47`).
     transparentFlag: NO_TRANSPARENT_FLAG,
+    antialiasing: { mode: properties.alpha_antialiasing_mode, edge: properties.alpha_antialiasing_edge },
   });
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
   // blended pass is transparent. The geometry instance's fade can move both surfaces
@@ -154,6 +158,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   textureFilter={textureFilter}
                   blends={blends}
                   shadow={surfaceShadow}
+                  layers={properties.layers}
                   frameExcluded
                 />
               </group>
@@ -169,6 +174,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 textureFilter={textureFilter}
                 blends={blends}
                 shadow={surfaceShadow}
+                layers={properties.layers}
                 frameExcluded
               />
             </group>
@@ -180,8 +186,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
 }
 
 /**
- * Each pass's blend, with its opaque prepass, at the label's `alpha_hash_scale`, which
- * `label_3d.cpp:379` hands every surface.
+ * Each pass's blend, with its opaque prepass, at the label's `alpha_hash_scale` and alpha
+ * antialiasing, which `label_3d.cpp:379-397` hands every surface.
  */
 function labelBlends(
   cut: AlphaCutSurface,
@@ -190,8 +196,9 @@ function labelBlends(
 ): FadeVariants<CanvasTextBlend> {
   const blends = cutBlends(cut);
   const prepasses = cutOpaquePrepasses(cut, depthTest);
+  const { antialiasing } = cut;
   return {
-    unfaded: { ...blends.unfaded, alphaHashScale, opaquePrepass: prepasses.unfaded },
-    alphaPass: { ...blends.alphaPass, alphaHashScale, opaquePrepass: prepasses.alphaPass },
+    unfaded: { ...blends.unfaded, alphaHashScale, antialiasing, opaquePrepass: prepasses.unfaded },
+    alphaPass: { ...blends.alphaPass, alphaHashScale, antialiasing, opaquePrepass: prepasses.alphaPass },
   };
 }

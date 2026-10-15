@@ -10,18 +10,13 @@ import { SceneShadowFitter, useSceneShadowFit } from './SceneShadowFitter';
 import { directionalShadowUserData } from './directionalShadow/declaration';
 import { splitSunOf } from './directionalShadow/splitSun';
 import { positionalShadowUserData } from './positionalShadow/declaration';
-import {
-  SUN_SOFT_SHADOWS,
-  SUN_RANGE_BEGINS,
-  installSunSoftShadowUniforms,
-} from './directionalShadow/sunSoftShadow';
-import { litUniformArray } from './testing/litUniformArray';
 import { TscnSceneContents } from './TscnCanvas';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
+import { degToRad } from '../godot/math/math.js';
 
 import './nodes/index';
 
@@ -117,7 +112,7 @@ directional_shadow_max_distance = 80.0
     expect(splitWidth(light, 0)! * 2).toBeLessThan(splitWidth(light, 3)!);
   });
 
-  it('writes the soft shadow of an authored sun with an angular distance before a render', async () => {
+  it('sets the soft shadow of an authored sun with an angular distance before a render', async () => {
     const renderer = await renderScene(
       scene(`
 [node name="Sun" type="DirectionalLight3D" parent="."]
@@ -126,16 +121,12 @@ light_angular_distance = 5.0
 `)
     );
     renderThrough(renderer, cameraAt(0));
-    installSunSoftShadowUniforms();
-    expect(litUniformArray(SUN_SOFT_SHADOWS)[3]).toBeCloseTo(Math.tan((5 * Math.PI) / 180), 6);
-    expect(
-      litUniformArray(SUN_RANGE_BEGINS)
-        .subarray(0, 4)
-        .some((rangeBegin) => rangeBegin !== 0)
-    ).toBe(true);
+    const shadow = splitSunOf(onlyDirectionalLight(renderer))!.shadow;
+    expect(shadow.softShadowAngle).toBeCloseTo(Math.tan(degToRad(5)), 6);
+    expect(shadow.rangeBegins.toArray().some((rangeBegin) => rangeBegin !== 0)).toBe(true);
   });
 
-  it('writes no soft shadow angle for a sun whose blur is zero, as Godot takes the PCF (edge case)', async () => {
+  it('sets no soft shadow angle for a sun whose blur is zero, as Godot takes the PCF (edge case)', async () => {
     const renderer = await renderScene(
       scene(`
 [node name="Sun" type="DirectionalLight3D" parent="."]
@@ -145,8 +136,7 @@ light_angular_distance = 5.0
 `)
     );
     renderThrough(renderer, cameraAt(0));
-    installSunSoftShadowUniforms();
-    expect(litUniformArray(SUN_SOFT_SHADOWS)[3]).toBe(0);
+    expect(splitSunOf(onlyDirectionalLight(renderer))!.shadow.softShadowAngle).toBe(0);
   });
 
   it('leaves a sun without shadows alone (edge case)', async () => {

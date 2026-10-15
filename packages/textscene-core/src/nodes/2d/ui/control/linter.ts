@@ -6,7 +6,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { unquoteString } from '../../../../parser/utils.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { targetsBeforeLatestTrigger } from '../../../../linter/propertyOrder.js';
@@ -171,12 +171,10 @@ const controlRule: LintRule = {
       'Flags a tooltip that can never be displayed because the control resolves Mouse Filter to ' +
       'Ignore, and an anchor/offset/layout_mode file order the anchors_preset setter discards.',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Control'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'Control'),
     emits: armEmits(arms),
   },
   check: (context) => [...checkControlTooltip(context), ...checkControlPropertyOrder(context)],
 };
 
 ruleRegistry.register(controlRule);
-
-export { controlRule };

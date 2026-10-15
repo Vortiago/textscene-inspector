@@ -8,10 +8,10 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -40,7 +40,7 @@ function checkBoneAttachment3D(context: RuleContext): Diagnostic[] {
       // `external_skeleton_node_cache.is_null()` true at cpp:64, so Godot warns.
       const target = resolveNodePath(scene, node, path);
       if (target.status === 'unknowable') return [];
-      if (target.status === 'found' && descendsFrom(target.node.type, 'Skeleton3D')) return [];
+      if (target.status === 'found' && descendsFromClass(target.node.type, 'Skeleton3D')) return [];
 
       const because =
         target.status === 'missing'
@@ -89,12 +89,10 @@ const boneAttachment3DSkeletonRule: LintRule = {
     description:
       'Warns when a BoneAttachment3D can resolve no Skeleton3D (neither a Skeleton3D parent nor an external_skeleton path) and so relays nothing',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'BoneAttachment3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'BoneAttachment3D'),
     emits: armEmits(arms),
   },
   check: checkBoneAttachment3D,
 };
 
 ruleRegistry.register(boneAttachment3DSkeletonRule);
-
-export { boneAttachment3DSkeletonRule };

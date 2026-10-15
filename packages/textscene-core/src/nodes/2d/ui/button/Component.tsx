@@ -16,19 +16,13 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
-  AutowrapMode,
   clampAutowrapMode,
   shapedTextSizeWidthPx,
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  OverrunBehavior,
-  overrunFlagsForBehavior,
-  trimLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveButtonDrawState,
   pickButtonStyleBox,
@@ -36,12 +30,16 @@ import {
   layoutButtonContent,
   buttonTextAlignShiftPx,
   swapAlignmentSide,
+} from '../../../../r3f/controls/native/buttonBase';
+import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../r3f/controls/native/buttonBase';
+} from '../../../../godot/math/math';
 import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 interface IconImageLike {
   width?: number;
@@ -82,7 +80,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   // already-filtered sample once it sees this tag.
   const iconTexture = useCanvas2DTexture(iconSource);
 
-  const iconNaturalSize: Vec2 | null = useMemo(() => {
+  const iconNaturalSize: Vector2 | null = useMemo(() => {
     if (!props.icon || !iconTexture) return null;
     const image = iconTexture.image as IconImageLike | undefined;
     const w = image?.width ?? 0;
@@ -130,7 +128,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
    * reads the same `text_buf->get_size()` as the minimum size. The height needs no ceil: the
    * line pitch sums independently ceiled ascent and descent and an integral theme spacing.
    */
-  const naturalSize = (l: TextLayoutResult | null): Vec2 =>
+  const naturalSize = (l: TextLayoutResult | null): Vector2 =>
     l ? { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx } : { x: 0, y: 0 };
 
   // `button.cpp:262-276`: the same RTL side swap `layoutButtonContent` makes internally.
@@ -140,7 +138,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   // `button.cpp:428-432` re-shapes a wrapping label at the width the unwrapped pass measured:
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
-  const wraps = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF) !== AutowrapMode.OFF;
+  const wraps =
+    clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
   const drawableWidthPx = layoutButtonContent({
     ...contentInput,
     textNaturalSize: naturalSize(unwrapped),
@@ -154,7 +153,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   );
 
   const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
   const trimmedLayout: TextLayoutResult | null = useMemo(() => {

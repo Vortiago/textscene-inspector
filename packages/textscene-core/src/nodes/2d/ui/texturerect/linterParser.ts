@@ -6,7 +6,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { TEXTURE_STRETCH_MODE } from '../../../../linter/validators/sharedEnumLabels.js';
+import { TextureStretchMode, TEXTURE_STRETCH_MODE_NAMES } from '../../../../godot/scene/textureStretch.js';
 
 import { v } from '../../../../linter/validators/index.js';
 
@@ -22,7 +22,7 @@ const EXPAND_MODE = {
 };
 
 // The deprecated `_set` (texture_rect.cpp:171-173) maps Godot 3's `expand`/`ignore_texture_size`
-// to EXPAND_IGNORE_SIZE when true and drops them otherwise. `godot/deprecated.ts` resolves both
+// to EXPAND_IGNORE_SIZE when true and drops them otherwise. `godot/classdb/deprecated.ts` resolves both
 // into `expand_mode`, and neither refuses anything, so neither gets a validator.
 validatorRegistry.registerAll('TextureRect', {
   // texture_rect.cpp:207-215: set_expand_mode has no ERR_FAIL_INDEX, unlike
@@ -39,7 +39,13 @@ validatorRegistry.registerAll('TextureRect', {
   // The 7-label PROPERTY_HINT_ENUM at :149 only hints the range, so out of range warns.
   // texture_rect.h:48-56: enum StretchMode, 7 values, bound at texture_rect.cpp:160-166,
   // labelled from that hint string.
-  stretch_mode: v.enumInt('stretch_mode', 0, 6, TEXTURE_STRETCH_MODE, { hinted: 'texture_rect.cpp:149' }),
+  stretch_mode: v.enumInt(
+    'stretch_mode',
+    TextureStretchMode.STRETCH_SCALE,
+    TextureStretchMode.STRETCH_KEEP_ASPECT_COVERED,
+    TEXTURE_STRETCH_MODE_NAMES,
+    { hinted: 'texture_rect.cpp:149' }
+  ),
   // texture_rect.cpp:184-201: set_texture assigns straight through. ADD_PROPERTY at
   // :147 is PROPERTY_HINT_RESOURCE_TYPE "Texture2D", editor-picker only. Format-only.
   texture: v.resourceReference('texture'),

@@ -13,8 +13,8 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url)); // .../src/godot
 
 /**
- * Every non-test source file in this directory tree. Recursive, so a file in a subdirectory such as
- * `godot/tiles/` cannot import three unseen.
+ * Every non-test source file in this directory tree. Recursive, so a file in a group such as
+ * `godot/math/` cannot import three unseen.
  */
 function sourceFiles(dir: string = here, prefix = ''): string[] {
   const found: string[] = [];
@@ -44,8 +44,9 @@ function specifiersIn(source: string): string[] {
 
 describe('src/godot is a dependency-free leaf', () => {
   it('finds the source files, so the sweep cannot pass vacuously', () => {
-    expect(sourceFiles()).toContain('math.ts');
-    expect(sourceFiles()).toContain('index.ts');
+    const files = sourceFiles();
+    expect(files).toContain('math/math.ts');
+    expect(files).toContain('index.ts');
   });
 
   it('detects an import when one is present, before trusting its silence', () => {
@@ -63,10 +64,12 @@ describe('src/godot is a dependency-free leaf', () => {
   });
 
   it('sees every specifier this directory actually writes', () => {
-    // index.ts re-exports each sibling through a braced multi-line block, so a
-    // scraper blind to those reads the barrel as importing nothing.
     const specs = specifiersIn(readFileSync(resolve(here, 'index.ts'), 'utf8'));
-    for (const sibling of ['./number.js', './int.js', './variantParser.js', './rendering.js']) {
+    for (const sibling of [
+      './project/project.js',
+      './project/editorScan.js',
+      './project/resourceFormats.js',
+    ]) {
       expect(specs).toContain(sibling);
     }
   });
@@ -75,9 +78,9 @@ describe('src/godot is a dependency-free leaf', () => {
     const violations: string[] = [];
     for (const name of sourceFiles()) {
       for (const spec of specifiersIn(readFileSync(resolve(here, name), 'utf8'))) {
-        // Only a specifier inside this directory tree is legal: `index.ts` re-exports `./math.js`,
-        // and a subdirectory file reaches its root as `../math.js`. Resolved rather than
-        // pattern-matched, so `../../logger.js` is caught however many hops it takes.
+        // Only a specifier inside this directory tree is legal: `index.ts` re-exports
+        // `./project/project.js`, and a group file reaches another as `../math/math.js`. Resolved
+        // rather than pattern-matched, so `../../logger.js` is caught however many hops it takes.
         const resolved = resolve(dirname(resolve(here, name)), spec);
         if (!spec.startsWith('.') || relative(here, resolved).startsWith('..')) {
           violations.push(`${name} imports '${spec}'`);
@@ -85,5 +88,16 @@ describe('src/godot is a dependency-free leaf', () => {
       }
     }
     expect(violations, "src/godot must import nothing — see this file's docblock for why").toEqual([]);
+  });
+
+  it('keeps rendering/ from importing scene/, as a class default sits under scene/', () => {
+    const violations = sourceFiles()
+      .filter((name) => name.startsWith('rendering/'))
+      .flatMap((name) =>
+        specifiersIn(readFileSync(resolve(here, name), 'utf8'))
+          .filter((spec) => relative(here, resolve(dirname(resolve(here, name)), spec)).startsWith('scene/'))
+          .map((spec) => `${name} imports '${spec}'`)
+      );
+    expect(violations).toEqual([]);
   });
 });

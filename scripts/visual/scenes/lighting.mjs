@@ -17,6 +17,8 @@ export const LIGHTING_SCENES = [
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
+  { name: 'glow-specular', file: 'unit-glow-specular.tscn' },
+  { name: 'glow-map', file: 'unit-glow-map.tscn' },
   // A 4x4 checkerboard on two quads carries far more edge than a
   // silhouette-only scene.
   { name: 'material-emission-texture', file: 'unit-material-emission-texture.tscn' },
@@ -25,15 +27,42 @@ export const LIGHTING_SCENES = [
   // sphere. A normal map, or a missing displacementMap, reads as a flat ball.
   { name: 'material-heightmap', file: 'unit-material-heightmap.tscn' },
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },
+  // A WorldEnvironment that names no Environment: the root tonemaps LINEAR, as Godot's does.
+  { name: 'world-environment-none', file: 'unit-world-environment-none.tscn' },
+  // A WorldEnvironment whose Environment .tres is missing draws as one that names none.
+  { name: 'world-environment-missing', file: 'unit-world-environment-missing.tscn' },
+  // Two WorldEnvironments: the first in tree order applies, though it loads from a sub-scene last.
+  { name: 'world-environment-tree-order', file: 'unit-world-environment-tree-order.tscn' },
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
+  // The Environment's brightness, contrast and saturation over an unshaded box. The header states
+  // why no other golden shows them.
+  { name: 'environment-adjustments', file: 'unit-environment-adjustments.tscn' },
+  // An area light's scatter in volumetric fog, from Godot 4.7.2. The header states why no other
+  // golden shows it.
+  { name: 'area-light-fog', file: 'unit-area-light-fog.tscn' },
+  // An area light's shadow in volumetric fog, from Godot 4.7.2. The header states why no other
+  // golden shows it.
+  { name: 'area-light-fog-shadow', file: 'unit-area-light-fog-shadow.tscn' },
   // A directional shadow in the volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-shadow', file: 'unit-volumetric-fog-shadow.tscn' },
   // The spot shadow bias in the volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-spot-shadow-bias', file: 'unit-volumetric-fog-spot-shadow-bias.tscn' },
   // A colour background under thin volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
+  // A box FogVolume in the volumetric fog. The header states why no other golden shows it.
+  { name: 'fog-volume', file: 'unit-fog-volume.tscn' },
+  // A FogVolume whose density texture is an imported 3D texture. The header states why no other
+  // golden shows it.
+  { name: 'fog-volume-density-image', file: 'unit-fog-volume-density-image.tscn' },
+  // A FogVolume whose density texture is an ImageTexture3D saved as its own .tres. The header
+  // states why no other golden shows it.
+  { name: 'fog-volume-density-volume-tres', file: 'unit-fog-volume-density-volume-tres.tscn' },
+  { name: 'fog-volume-density-half-tres', file: 'unit-fog-volume-density-half-tres.tscn' },
+  // A FogVolume whose ShaderMaterial Godot cannot run as fog. The header states why no other
+  // golden shows it.
+  { name: 'fog-volume-shader-material', file: 'unit-fog-volume-shader-material.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.
@@ -54,9 +83,30 @@ export const LIGHTING_SCENES = [
   // they also pin that both previews yield.
   { name: 'sky-procedural', file: 'unit-sky-procedural.tscn' },
   { name: 'sky-physical', file: 'unit-sky-physical.tscn' },
+  // A 3 degree sun in the procedural sky, which Godot draws as a disc of that angular size.
+  { name: 'sky-sun-angular-distance', file: 'unit-sky-sun-angular-distance.tscn' },
+  // The procedural sky at sky_energy_multiplier 2, which Godot applies before the linear conversion.
+  { name: 'sky-energy', file: 'unit-sky-energy.tscn' },
+  // The procedural sky with Real-Time processing, which Godot bakes with its fast filter. The
+  // metallic sphere reads layers 4 and 5, and the default sphere's ambient reads layer 6.
+  { name: 'sky-realtime', file: 'unit-sky-realtime.tscn' },
+  // The procedural sky at radiance_size 32, the smallest: a mirror and a rough sphere read layers
+  // filtered from a 32-wide octmap and its short chain.
+  { name: 'sky-radiance-size-32', file: 'unit-sky-radiance-size-32.tscn' },
   // Locks the equirect V/U orientation, measured against Godot. The black grid
   // lines antialias.
   { name: 'sky-panorama', file: 'unit-sky-panorama.tscn' },
+  // A PanoramaSkyMaterial .tres whose panorama is its own sub-resource. The header states why no
+  // other golden shows it.
+  { name: 'sky-panorama-tres', file: 'unit-sky-panorama-tres.tscn' },
+  // Two overlapping ReflectionProbes that update ALWAYS: the floor takes its ambient and its
+  // reflection from the fast-filtered captures, which the blue background tints.
+  { name: 'reflection-probe-always', file: 'unit-reflection-probe-always.tscn' },
+  // box_projection on one ReflectionProbe: a mirror sphere reads its importance-sampled capture
+  // where the reflection leaves the box.
+  { name: 'reflection-probe-box-projection', file: 'unit-reflection-probe-box-projection.tscn' },
+  // AMBIENT_COLOR on one ReflectionProbe: the floor in its box takes a red ambient.
+  { name: 'reflection-probe-ambient-color', file: 'unit-reflection-probe-ambient-color.tscn' },
   // BG_SKY over a gold sky with AMBIENT_SOURCE_COLOR (grey 0.6, sky_contribution
   // 0) and AgX. The shadowed grass stays grey, with no sky IBL in diffuse, while
   // the metallic sphere reflects the gold sky in full. Matches Godot to ≤6/255,

@@ -8,8 +8,10 @@ its own res:// namespace (see the fixture manifest's `root` field).
 
 - Source commit: 419eae0c39be0234d5454ee491b16d938fa12d65
 - Vendored by: `scripts/vendor-godot-demos.mjs` (re-run against a fresh
-  checkout to update; editor artifacts (*.import, .godot/, screenshots/) and
-  source art (*.psd, *.xcf, *.blend) are pruned)
+  checkout to update). It prunes the editor artefacts (.godot/, screenshots/), the
+  source art (*.psd, *.xcf, *.blend) and every *.import sidecar the previewer does
+  not read. It keeps the sidecars of the scene, texture and 3D texture importers
+  (ADR-0028).
 - `2d/isometric` is intentionally absent — it lives at `scenes/isometric/`
   as the TileMapLayer integration corpus (issue #74).
 

@@ -12,11 +12,11 @@ import {
   areaLightShadowDepthScale,
   areaLightShadowFar,
   type AreaLightBox,
-} from '../../godot/areaLightShadow.js';
-import type { PositionalShadowSlot } from '../../godot/positionalShadowAtlas.js';
+} from '../../godot/rendering/lights/areaLightShadow.js';
+import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { lightPoseMatrix, readLightPose } from './lightPose.js';
-import { positionalShadowAtlas } from './shadowAtlasTarget.js';
+import { drawIntoAtlasSlot, positionalShadowAtlas } from './shadowAtlasTarget.js';
 import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
 
 /**
@@ -25,7 +25,7 @@ import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
  * writes `distance / z_far * 2 - 1` and renders through an identity projection
  * (`scene_forward_clustered.glsl:503-518`, `renderer_scene_cull.cpp:2661`).
  */
-export class ParaboloidCamera extends THREE.Camera {
+class ParaboloidCamera extends THREE.Camera {
   far = 1;
 
   updateProjectionMatrix(): void {
@@ -41,7 +41,7 @@ const casterBox = new THREE.Box3();
  * an instance's AABB against the volume's planes (`renderer_scene_cull.cpp:2599-2662`,
  * `dynamic_bvh.h:137-177`). three's own test takes the bounding sphere, which reaches past a corner.
  */
-export class AreaShadowVolume extends THREE.Frustum {
+class AreaShadowVolume extends THREE.Frustum {
   /** Sets the planes to the faces of `box`, a box in the space of `pose`. */
   enclose(box: AreaLightBox, pose: THREE.Matrix4): void {
     for (let axis = 0; axis < 3; axis++) {
@@ -96,20 +96,11 @@ export class AtlasAreaShadow extends AreaShadowBase implements SlottedShadow {
     this._frustum = new AreaShadowVolume();
   }
 
-  /**
-   * Draws into `slot` of the atlas from the next shadow pass on, or into nothing for null. `mapSize`
-   * is the slot and the frame extents are the atlas over the slot, as for a spot light
-   * (`atlasSpotShadow.ts`).
-   */
+  /** Draws into `slot` of the atlas from the next shadow pass on, or into nothing for null. */
   place(slot: PositionalShadowSlot | null): void {
     this.slot = slot;
     if (slot === null) return;
-    this.map = positionalShadowAtlas();
-    const atlasSize = this.map.width;
-    this.mapSize.set(slot.size, slot.size);
-    this._frameExtents.set(atlasSize / slot.size, atlasSize / slot.size);
-    this.slotRect.set(slot.x / slot.size, slot.y / slot.size, 1, 1);
-    this._viewports[0]!.copy(this.slotRect);
+    drawIntoAtlasSlot(this, slot, this.slotRect);
   }
 
   /**

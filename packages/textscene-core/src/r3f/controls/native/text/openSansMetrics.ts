@@ -7,8 +7,6 @@
 // licence OFL-1.1). Re-run the bake script to regenerate; its `--check` mode
 // fails if this file has drifted from the vendored font.
 
-import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
-
 /**
  * Font-wide scalar metrics for OpenSans_SemiBold, in font design units
  * (`unitsPerEm` = 2048), read via `fontkit` from the vendored
@@ -25,7 +23,7 @@ import { getFontAscentPx, getFontLinePitchPx } from './fontMetrics';
  * `getGlyphAdvanceUnits`'s own doc for why a shaper never wants the ATLAS's
  * copy.
  */
-export interface OpenSansMetrics {
+interface OpenSansMetrics {
   /** `font.unitsPerEm` (fontkit) — hhea/head design units per em. */
   unitsPerEm: number;
   /** hhea ascender, design units (positive, upward). */
@@ -88,8 +86,8 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
 /**
  * A baked character's own `hmtx` advance width, design units, or `null`
  * outside `advanceWidths` (the same charset as `OPEN_SANS_ATLAS_GLYPHS` —
- * `textLayout.ts`'s `glyphAdvancePx` falls back to `getAverageAdvancePx` in
- * that case, unchanged from before this table existed).
+ * `textLayout.ts`'s `glyphAdvancePx` falls back to `averageAdvanceUnits` in
+ * that case).
  *
  * This is the RAW design-unit value, at no size and quantized by nothing —
  * never `openSansAtlas.ts`'s own `xadvance`, which is msdf-bmfont-xml's OWN
@@ -114,48 +112,6 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
  */
 export function getGlyphAdvanceUnits(ch: string): number | null {
   return OPEN_SANS_METRICS.advanceWidths[ch] ?? null;
-}
-
-/**
- * `modules/text_server_adv/text_server_adv.cpp:1515-1516` — Godot's
- * TextServerAdvanced reads FreeType's PIXEL-QUANTIZED 26.6 fixed-point size
- * metrics (`face->size->metrics.ascender`), which rounds UP to a whole pixel.
- * Also `rich_text_label.cpp:1049`'s `off.y += l_ascent` (`l_ascent =
- * shaped_text_get_ascent`) — the SAME rounded value is where a line's
- * baseline sits, measured down from the line's own top; every other
- * baseline-relative pixel quantity (the italic shear's pivot, the underline
- * stroke's y) is this plus a further offset, never re-derived.
- *
- * At size 16: ceil(2189 * 16/2048) = 18.
- *
- * Delegates to `fontMetrics.ts`'s `getFontAscentPx` — the SAME pixel-
- * quantization rule any other `FontMetrics` implementation goes through, so
- * this generated convenience function can never drift from it.
- */
-export function getAscentPx(fontSizePx: number): number {
-  return getFontAscentPx(OPEN_SANS_METRICS, fontSizePx);
-}
-
-/**
- * Pixel line pitch at `fontSizePx`, replicating Godot's Label line-height
- * computation exactly rather than a raw float scale of the hhea table:
- *
- * - `modules/text_server_adv/text_server_adv.cpp:1515-1516` — ascent AND
- *   descent are each ceiling-rounded to a whole pixel INDEPENDENTLY before
- *   summing (not a raw float sum, THEN rounded once — that undershoots by
- *   ~1px system-wide, confirmed against real Godot pixels).
- * - `scene/theme/default_theme.cpp:392` — Label's `line_spacing` theme
- *   constant is `Math::round(3 * scale)`; `lineSpacingPx` defaults to 3 (UI
- *   scale 1.0).
- *
- * At size 16: 18 + ceil(600 * 16/2048) + 3 = 26.
- *
- * Delegates to `fontMetrics.ts`'s `getFontLinePitchPx` — see that
- * function's own doc for why the independent-ceiling-then-sum rule above
- * lives there, once, rather than here.
- */
-export function getLinePitchPx(fontSizePx: number, lineSpacingPx = 3): number {
-  return getFontLinePitchPx(OPEN_SANS_METRICS, fontSizePx, lineSpacingPx);
 }
 
 /**
@@ -207,22 +163,4 @@ export function getUnderlinePositionPx(fontSizePx: number): number {
 export function getUnderlineThicknessPx(fontSizePx: number): number {
   const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
   return OPEN_SANS_METRICS.underlineThickness * scale;
-}
-
-/**
- * Fallback advance for a character with no entry in `OPEN_SANS_ATLAS_GLYPHS`
- * (outside the baked charset) — this font's own OS/2 `xAvgCharWidth` scaled,
- * so a missing glyph still occupies roughly its own width rather than
- * collapsing the line to nothing (see `OPEN_SANS_ATLAS_GLYPHS`'s doc in the
- * atlas module and `textLayout.ts`'s `glyphAdvancePx`). This is a deliberate
- * approximation, not a Godot-measured value: real Godot would shape the
- * character against its own system-fallback fonts and draw real ink at that
- * character's real advance, which this renderer cannot do for a codepoint
- * outside the atlas.
- *
- * At size 16: 1214 * 16/2048 = 9.484375.
- */
-export function getAverageAdvancePx(fontSizePx: number): number {
-  const scale = fontSizePx / OPEN_SANS_METRICS.unitsPerEm;
-  return OPEN_SANS_METRICS.averageAdvanceUnits * scale;
 }

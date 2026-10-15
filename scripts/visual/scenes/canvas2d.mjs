@@ -139,6 +139,10 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite2d-gradienttexture.tscn',
     mode: '2d',
   },
+  // A Sprite2D whose `texture` is an ImageTexture saved as its own .tres, its pixels an inline
+  // Image. The header states why no other golden shows it.
+  { name: 'sprite2d-imagetexture-tres', file: 'unit-sprite2d-imagetexture-tres.tscn', mode: '2d' },
+  { name: 'sprite2d-imagetexture-half-tres', file: 'unit-sprite2d-imagetexture-half-tres.tscn', mode: '2d' },
   // Native Control rendering (ADR-0037): Controls draw into the WebGL canvas
   // like every other 2D item, captured in a 1:1 frame with no camera fit. Each
   // scene below moves one piece of that renderer. Its fixture header says which
@@ -179,6 +183,9 @@ export const CANVAS_2D_SCENES = [
   // the slice's sheet records. A span-layout change moves them here.
   { name: 'richtext-label-bbcode', file: 'unit-rich-text-label.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
+  // The one variable: a Theme item keyed on BaseButton, which a Button finds only by walking its
+  // ClassDB chain. Every other themed golden keys its items on the node's own class.
+  { name: 'control-theme-base-class', file: 'unit-control-theme-base-class.tscn', mode: '2d' },
   // The one variable: `anchors_preset` with no `anchor_*` and no `layout_mode`,
   // where Godot's setter does nothing. An editor-saved scene always writes the
   // matching `anchor_*`, so no other scene reaches this path.
@@ -367,6 +374,9 @@ export const CANVAS_2D_SCENES = [
   // fill alone. Godot 4.6.3 `--mode 2d`: mean 0.372 of 255, MSDF stem
   // antialiasing along the outline edge.
   { name: 'label-outline', file: 'unit-label-outline.tscn', mode: '2d' },
+  // The one variable: a `label_settings` loaded from its own `.tres` file, which beats the
+  // node-local theme overrides as an inline one does.
+  { name: 'label-label-settings-tres', file: 'unit-label-label-settings-tres.tscn', mode: '2d' },
   // The one variable: a control character reaching the shaper. Elsewhere it
   // advances zero, so only a field that opts into the hex box shows whether its
   // geometry and its advance agree. Godot 4.6.3 `--mode 2d`: mean 0.037 of 255.

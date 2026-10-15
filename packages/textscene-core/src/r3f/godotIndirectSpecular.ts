@@ -1,15 +1,16 @@
 /**
  * Godot's weights for a specular reflection in three's lighting chunks: its own DFG table
- * (`godot/dfg.ts`), the indirect specular Godot builds from it (`scene_forward_clustered.glsl:2221-2231`),
+ * (`godot/rendering/materials/dfg.ts`), the indirect specular Godot builds from it (`scene_forward_clustered.glsl:2221-2231`),
  * the compensation for the light that scatters more than once, on the direct specular too, and the
  * occlusion of a reflection by a dim ambient. three reads a coarser table of another geometry term,
  * adds the multiple scattering from the irradiance, and occludes a reflection by the AO map alone.
  */
 
 import * as THREE from 'three';
-import { DFG_SIZE, dfgHalfFloats } from '../godot/dfg.js';
+import { DFG_SIZE, dfgHalfFloats } from '../godot/rendering/materials/dfg.js';
 import { applyChunkEdits, installChunkPatch, type ChunkEdit, type Chunks } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
+import { releasedOnUnmount, sharedTexture } from './sharedTexture.js';
 import { defining, type ProgramInjection } from './materialProgramInputs.js';
 import { recordedOn } from './materials/recordedOnMaterial.js';
 
@@ -27,12 +28,18 @@ const GODOT_DFG = /* glsl */ `${THREE_DFG}
 
 /**
  * `F0` (`scene_forward_lights_inc.glsl:55-58`) is three's blended specular colour, and Godot's f90
- * for an indirect specular is `50 * f0.g` (`scene_forward_clustered.glsl:2230`).
+ * for an indirect specular is `50 * f0.g` (`scene_forward_clustered.glsl:2230`). A toon surface
+ * weighs it by `specular * metallic * albedo * 2` instead (`:2219-2220`). three's dielectric
+ * specular colour is Godot's `0.16 * specular * specular` (`materialBag.ts`), which gives `specular`.
  */
-const GODOT_INDIRECT_SPECULAR = /* glsl */ `vec3 godotF0 = material.specularColorBlended;
+const GODOT_INDIRECT_SPECULAR = /* glsl */ `#ifdef GODOT_DIFFUSE_TOON
+	vec3 indirectSpecular = radiance * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0;
+	#else
+	vec3 godotF0 = material.specularColorBlended;
 	float godotF90 = clamp( 50.0 * godotF0.g, material.metalness, 1.0 );
 	vec3 godotEnergyCompensation = 1.0 + godotF0 * ( 1.0 / material.godotDfg.y - 1.0 );
-	vec3 indirectSpecular = radiance * godotEnergyCompensation * ( ( godotF90 - godotF0 ) * material.godotDfg.x + godotF0 * material.godotDfg.y );`;
+	vec3 indirectSpecular = radiance * godotEnergyCompensation * ( ( godotF90 - godotF0 ) * material.godotDfg.x + godotF0 * material.godotDfg.y );
+	#endif`;
 
 /**
  * three's occlusion of a reflection by the AO map alone, the clearcoat's included, each line apart:
@@ -50,10 +57,11 @@ const OCCLUSION_DISABLED_DEFINE = 'GODOT_SPECULAR_OCCLUSION_DISABLED';
 /**
  * Godot's occlusion of a reflection by the luminance of the ambient light, after the AO map
  * (`scene_forward_clustered.glsl:2119-2162`): a dim ambient dims a rough or dielectric reflection,
- * and a smooth metal keeps more of it. Godot's ambient is three's irradiance over PI.
+ * and a smooth metal keeps more of it, with or without a sky, as a ReflectionProbe reflects without
+ * one. Godot's ambient is three's irradiance over PI.
  */
 const GODOT_SPECULAR_OCCLUSION = /* glsl */ `
-#if defined( USE_ENVMAP ) && defined( STANDARD ) && ! defined( ${OCCLUSION_DISABLED_DEFINE} )
+#if defined( STANDARD ) && ! defined( ${OCCLUSION_DISABLED_DEFINE} )
 
 	#ifdef USE_AOMAP
 		float godotAmbientOcclusion = ambientOcclusion;
@@ -114,19 +122,17 @@ function withSpecularOcclusion(chunks: Chunks<SpecularChunk>): Chunks<SpecularCh
   return { ...patched, aomap_fragment: `${patched.aomap_fragment}${GODOT_SPECULAR_OCCLUSION}` };
 }
 
-/** Godot's table as a texture, read at `(NdotV, roughness)` with Godot's linear clamped sampler. */
-function dfgTexture(): THREE.DataTexture {
-  const texture = new THREE.DataTexture(
-    dfgHalfFloats(),
-    DFG_SIZE,
-    DFG_SIZE,
-    THREE.RGFormat,
-    THREE.HalfFloatType
-  );
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearFilter;
-  texture.needsUpdate = true;
-  return texture;
+/**
+ * Godot's table as a texture, read at `(NdotV, roughness)` with Godot's linear clamped sampler. It is
+ * shared, not cloned per material, so the release on unmount frees the one object each renderer uploads.
+ */
+class DfgTexture extends sharedTexture(THREE.DataTexture) {
+  constructor() {
+    super(dfgHalfFloats(), DFG_SIZE, DFG_SIZE, THREE.RGFormat, THREE.HalfFloatType);
+    this.magFilter = THREE.LinearFilter;
+    this.minFilter = THREE.LinearFilter;
+    this.needsUpdate = true;
+  }
 }
 
 /**
@@ -142,5 +148,5 @@ export function installGodotIndirectSpecular(): void {
     missing:
       'lights_physical_pars_fragment, lights_fragment_begin or aomap_fragment lacks a text the specular patch replaces',
   });
-  if (isPatched) installLitUniform(DFG_UNIFORM, dfgTexture());
+  if (isPatched) installLitUniform(DFG_UNIFORM, releasedOnUnmount(new DfgTexture()));
 }

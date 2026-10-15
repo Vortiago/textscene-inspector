@@ -13,5 +13,3 @@ const xRBodyModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(xRBodyModifier3DRegistration);
-
-export { xRBodyModifier3DRegistration };

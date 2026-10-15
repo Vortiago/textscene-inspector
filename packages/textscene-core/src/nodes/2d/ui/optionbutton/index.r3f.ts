@@ -8,5 +8,3 @@ import { optionButtonMinimumSize, optionButtonTextureSlots } from './nativeSolve
 controlComponentRegistry.register({ typeName: 'OptionButton', Component: OptionButton });
 controlSolverRegistry.registerMinimumSize('OptionButton', optionButtonMinimumSize);
 controlSolverRegistry.registerTextureSlots('OptionButton', optionButtonTextureSlots);
-
-export { OptionButton };

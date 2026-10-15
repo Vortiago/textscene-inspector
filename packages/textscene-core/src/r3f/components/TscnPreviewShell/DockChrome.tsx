@@ -7,7 +7,7 @@ import { useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import styles from './TscnPreviewShell.module.css';
 
 /** Which half of the dock the narrow layout shows. */
-export type NarrowPane = 'tree' | 'details';
+type NarrowPane = 'tree' | 'details';
 
 export function isNarrowPane(value: unknown): value is NarrowPane {
   return value === 'tree' || value === 'details';

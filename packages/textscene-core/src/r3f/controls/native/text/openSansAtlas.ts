@@ -39,7 +39,7 @@ export interface OpenSansGlyph {
   y: number;
 }
 
-export interface OpenSansAtlasInfo {
+interface OpenSansAtlasInfo {
   /** Font size (px) the atlas was baked at. Scale render text by (targetSizePx / fontSize). */
   fontSize: number;
   /** MSDF distance field range, atlas-bake-size px (msdfgen `-r`). */

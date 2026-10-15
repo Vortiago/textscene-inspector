@@ -1,0 +1,62 @@
+[gd_scene format=3 uid="uid://unitalphaantialiasing"]
+
+; alpha_antialiasing_mode OFF, ALPHA_TO_COVERAGE and ALPHA_TO_COVERAGE_AND_TO_ONE, left to right, on
+; scissor-cut quads under this project's msaa_3d 2X. The other MSAA goldens draw no alpha to
+; coverage, so only this one shows the cut edge spread over the samples. Unshaded quads with a radial
+; alpha gradient leave nothing but the cut edge.
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.25, 0.3, 0.5, 1)
+
+[sub_resource type="Gradient" id="Gradient_1"]
+offsets = PackedFloat32Array(0, 0.6, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_1"]
+gradient = SubResource("Gradient_1")
+fill = 1
+fill_from = Vector2(0.5, 0.5)
+fill_to = Vector2(0.5, 0)
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(1.2, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="Material_off"]
+transparency = 2
+shading_mode = 0
+albedo_color = Color(1, 0.9, 0.3, 1)
+albedo_texture = SubResource("GradientTexture2D_1")
+
+[sub_resource type="StandardMaterial3D" id="Material_a2c"]
+transparency = 2
+alpha_antialiasing_mode = 1
+shading_mode = 0
+albedo_color = Color(1, 0.9, 0.3, 1)
+albedo_texture = SubResource("GradientTexture2D_1")
+
+[sub_resource type="StandardMaterial3D" id="Material_a2c_one"]
+transparency = 2
+alpha_antialiasing_mode = 2
+shading_mode = 0
+albedo_color = Color(1, 0.9, 0.3, 1)
+albedo_texture = SubResource("GradientTexture2D_1")
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Off" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.4, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Material_off")
+
+[node name="AlphaToCoverage" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Material_a2c")
+
+[node name="AlphaToCoverageAndOne" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Material_a2c_one")

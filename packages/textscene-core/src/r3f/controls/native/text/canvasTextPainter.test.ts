@@ -4,10 +4,10 @@ import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
-  CANVAS_TEXT_SUPERSAMPLE,
 } from './canvasTextPainter';
-import { shapeText, AutowrapMode } from './textLayout';
+import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
   scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
@@ -19,7 +19,7 @@ function layoutFor(text: string, lineSpacingPx = 3) {
   return shapeText(text, {
     fontSizePx: 16,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     fontMetrics: CANVAS_METRICS,
     lineSpacingPx,
   });
@@ -38,8 +38,9 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
   const [left, top] = [positions[0]!, positions[1]!];
   const [right, bottom] = [positions[3]!, positions[7]!];
   const { deviceWidthPx: deviceW, deviceHeightPx: deviceH } = canvasLayout;
-  const col = canvasLayout.offsetXPx * CANVAS_TEXT_SUPERSAMPLE;
-  const row = canvasLayout.offsetYPx * CANVAS_TEXT_SUPERSAMPLE;
+  const supersample = deviceW / canvasLayout.canvasWidthPx;
+  const col = canvasLayout.offsetXPx * supersample;
+  const row = canvasLayout.offsetYPx * supersample;
   return {
     x: left + (col / deviceW) * (right - left),
     // Quad Y is negated Godot Y (`buildCanvasTextQuadArrays`), so the

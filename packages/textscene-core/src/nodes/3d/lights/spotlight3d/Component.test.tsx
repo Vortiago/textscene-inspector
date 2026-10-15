@@ -11,6 +11,7 @@ import { SceneShadowFitter } from '../../../../r3f/SceneShadowFitter';
 function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
     name: 'Torch',
+    layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
     shadow_enabled: false,
@@ -70,6 +71,13 @@ describe('<SpotLight3D>', () => {
     const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ spot_angle: 90 })} />);
     const light = renderer.scene.findByType('SpotLight');
     expect(instanceAs<THREE.SpotLight>(light).angle).toBeCloseTo(Math.PI / 2, 5);
+  });
+
+  it('converts spot_angle as Godot rounds it, p_y * (PI / 180)', async () => {
+    // 0.05235987755982988 is what (3 * PI) / 180 gives; Godot's expression gives ...89.
+    const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ spot_angle: 3 })} />);
+    const light = renderer.scene.findByType('SpotLight');
+    expect(instanceAs<THREE.SpotLight>(light).angle).toBe(0.05235987755982989);
   });
 
   it('maps spot_range to distance', async () => {

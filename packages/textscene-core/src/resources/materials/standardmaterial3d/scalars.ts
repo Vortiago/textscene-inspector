@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { godotBlendState } from './blendState';
 import { decodeStandardMaterial3D } from './decode';
-import { textureChannelMask } from '../../../godot/textureChannel';
+import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import { CullMode, type StandardMaterial3DData, type StandardMaterial3DScalars } from './types';
 
 /**
@@ -21,7 +21,7 @@ const SIDE: Readonly<Record<CullMode, THREE.Side>> = {
   [CullMode.DISABLED]: THREE.DoubleSide,
 };
 
-export function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
+function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
   return {
     ...godotBlendState(data.blendMode),
     color: data.albedo,
@@ -31,16 +31,22 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     specular: data.specular,
     emissive: data.emission.emissive,
     emissiveIntensity: data.emission.emissiveIntensity,
+    emissionEnergy: data.emission.emissionEnergy,
     emissionOperator: data.emissionOperator,
     textureFilter: data.textureFilter,
     textureRepeat: data.textureRepeat,
     uv1Scale: data.uv1Scale,
     uv1Offset: data.uv1Offset,
+    uv2Scale: data.uv2Scale,
+    uv2Offset: data.uv2Offset,
+    uv2Triplanar: data.uv2Triplanar,
+    uv2Slots: data.uv2Slots,
     transparent: data.transparent,
     castsShadow: data.castsShadow,
     alphaTest: data.alphaTest,
     alphaHash: data.alphaHash,
     alphaHashScale: data.alphaHashScale,
+    alphaAntialiasing: data.alphaAntialiasing,
     depthWrite: data.depthWrite,
     alphaPassDepthWrite: data.alphaPassDepthWrite,
     depthInAlphaPass: data.depthInAlphaPass,

@@ -4,15 +4,8 @@
  * settings type without importing `build.ts`, which the render layer pulls in.
  */
 
-import type { Color } from '../../utils/colorParser';
-import type { Vector3 } from '../../parser/vectors';
-
-/**
- * Godot's `Environment.tonemap_agx_contrast` default (`environment.h`; `ADD_PROPERTY`
- * at `environment.cpp:1290`, hint `"1.0,2.0,0.01,or_greater"`). It lives with the data
- * because the decode needs it too, and routing must not import five tone-curve bodies.
- */
-export const DEFAULT_AGX_CONTRAST = 1.25;
+import type { Rgba } from '../../godot/math/math';
+import type { Vector3 } from '../../godot/math/vector';
 
 export enum BackgroundMode {
   BG_CLEAR_COLOR = 0,
@@ -26,7 +19,7 @@ export enum BackgroundMode {
 export interface EnvironmentProperties {
   // Background
   background_mode: BackgroundMode;
-  background_color: Color;
+  background_color: Rgba;
   background_energy_multiplier: number;
 
   /**
@@ -60,7 +53,7 @@ export interface EnvironmentProperties {
   // Ambient lighting (scene-wide constant illumination)
   /** 0 BG (default), 1 DISABLED, 2 COLOR, 3 SKY. Only 2 and 3 emit a flat ambient. */
   ambient_light_source: number;
-  ambient_light_color: Color;
+  ambient_light_color: Rgba;
   ambient_light_energy: number;
   /**
    * How much of the ambient comes from the sky rather than
@@ -73,7 +66,7 @@ export interface EnvironmentProperties {
   fog_enabled: boolean;
   /** 0 EXPONENTIAL (default), 1 DEPTH. */
   fog_mode: number;
-  fog_light_color: Color;
+  fog_light_color: Rgba;
   fog_light_energy: number;
   /** How much the directional lights tint the fog towards them. */
   fog_sun_scatter: number;
@@ -97,8 +90,8 @@ export interface EnvironmentProperties {
   volumetric_fog_enabled: boolean;
   volumetric_fog_density: number;
   /** The scattering colour, sRGB: the share of the light the medium scatters into the view. */
-  volumetric_fog_albedo: Color;
-  volumetric_fog_emission: Color;
+  volumetric_fog_albedo: Rgba;
+  volumetric_fog_emission: Rgba;
   volumetric_fog_emission_energy: number;
   /** The Henyey-Greenstein `g`: positive scatters forward, towards the light. */
   volumetric_fog_anisotropy: number;
@@ -146,15 +139,72 @@ export interface EnvironmentProperties {
   glow_hdr_luminance_cap: number;
   /** How far the glow map modulates the glow buffer, 0..1. Default 0.8. */
   glow_map_strength: number;
+  /** The texture that scales the glow per screen position, as its raw reference. */
+  glow_map?: string;
 
-  // Adjustments (parsed but warned in v1)
   adjustment_enabled: boolean;
   adjustment_brightness: number;
   adjustment_contrast: number;
   adjustment_saturation: number;
+}
 
-  // SSR (parsed but warned in v1)
-  ssr_enabled: boolean;
+/** The three scalars Godot's tonemap pass applies under `FLAG_USE_BCS`. */
+export interface EnvironmentAdjustments {
+  /** Linear: Godot converts the authored sRGB brightness on store. */
+  brightness: number;
+  contrast: number;
+  saturation: number;
+}
+
+/** Depth fog (Godot `fog_enabled`), apart from the volumetric fog. */
+export interface DepthFog {
+  /** 0 EXPONENTIAL, 1 DEPTH. */
+  mode: number;
+  /** sRGB, not yet times `lightEnergy`. */
+  color: Rgba;
+  lightEnergy: number;
+  sunScatter: number;
+  density: number;
+  aerialPerspective: number;
+  skyAffect: number;
+  height: number;
+  heightDensity: number;
+  depthCurve: number;
+  depthBegin: number;
+  /** 0 or below ends the fog at the camera's far plane. */
+  depthEnd: number;
+}
+
+/**
+ * Volumetric fog: a medium in a froxel volume in front of the camera, lit by
+ * the lights and the ambient, which every surface and the background sample. Colours stay in
+ * Godot space: the consumer converts sRGB to linear.
+ */
+export interface VolumetricFog {
+  density: number;
+  albedo: Rgba;
+  emission: Rgba;
+  emissionEnergy: number;
+  /** The Henyey-Greenstein `g` of every light the medium scatters. */
+  anisotropy: number;
+  length: number;
+  detailSpread: number;
+  /**
+   * The ambient the medium scatters, read whatever the ambient source (`fog.cpp:1067-1076`).
+   * `inject` already carries `ambient_light_energy`.
+   */
+  ambient: {
+    inject: number;
+    color: Rgba;
+    /** The sky's share of the injected ambient, against `color`. */
+    skyContribution: number;
+  };
+  skyAffect: number;
+  /**
+   * The share of the last frame each frame keeps while the cells jitter, or null to sample each
+   * cell at its centre with no history.
+   */
+  temporalReprojection: number | null;
 }
 
 /** `createEnvironmentSettings`'s output: one Environment as the render layer applies it. */
@@ -162,7 +212,7 @@ export interface EnvironmentSettings {
   background: {
     mode: number;
     /** The sRGB colour BG_CLEAR_COLOR or BG_COLOR draws, scaled by the energy multiplier. */
-    color: Color;
+    color: Rgba;
     /** The sky's intensity under BG_SKY. `color` already carries it. */
     energyMultiplier: number;
   };
@@ -171,7 +221,7 @@ export interface EnvironmentSettings {
    * a cubemap rather than a constant (a sky background).
    */
   ambient: {
-    color: Color;
+    color: Rgba;
     energy: number;
   } | null;
   /**
@@ -206,66 +256,14 @@ export interface EnvironmentSettings {
     /** `tonemap_agx_contrast`, carried whatever the mode. Only AgX reads it. */
     agxContrast: number;
   };
-  /** Depth fog (Godot `fog_enabled`), apart from the volumetric fog below. */
-  fog: {
-    /** 0 EXPONENTIAL, 1 DEPTH. */
-    mode: number;
-    /** sRGB, not yet times `lightEnergy`. */
-    color: Color;
-    lightEnergy: number;
-    sunScatter: number;
-    density: number;
-    aerialPerspective: number;
-    skyAffect: number;
-    height: number;
-    heightDensity: number;
-    depthCurve: number;
-    depthBegin: number;
-    /** 0 or below ends the fog at the camera's far plane. */
-    depthEnd: number;
-  } | null;
+  /** Null when disabled. */
+  fog: DepthFog | null;
   /** The sky's Euler rotation in radians, YXZ order: the background, its light and the fog read it. */
   skyRotation: Vector3;
-  /**
-   * Volumetric fog, null when disabled: a medium in a froxel volume in front of the camera, lit by
-   * the lights and the ambient, which every surface and the background sample. Colours stay in
-   * Godot space: the consumer converts sRGB to linear.
-   */
-  volumetricFog: {
-    density: number;
-    albedo: Color;
-    emission: Color;
-    emissionEnergy: number;
-    /** The Henyey-Greenstein `g` of every light the medium scatters. */
-    anisotropy: number;
-    length: number;
-    detailSpread: number;
-    /**
-     * The ambient the medium scatters, read whatever the ambient source (`fog.cpp:1067-1076`).
-     * `inject` already carries `ambient_light_energy`.
-     */
-    ambient: {
-      inject: number;
-      color: Color;
-      /** The sky's share of the injected ambient, against `color`. */
-      skyContribution: number;
-    };
-    skyAffect: number;
-    /**
-     * The share of the last frame each frame keeps while the cells jitter, or null to sample each
-     * cell at its centre with no history.
-     */
-    temporalReprojection: number | null;
-  } | null;
-  adjustments: {
-    enabled: boolean;
-    brightness: number;
-    contrast: number;
-    saturation: number;
-  } | null;
-  ssr: {
-    enabled: boolean;
-  } | null;
+  /** Null when disabled. */
+  volumetricFog: VolumetricFog | null;
+  /** The colour adjustments the tone-map pass applies after the curve, null when disabled. */
+  adjustments: EnvironmentAdjustments | null;
   /**
    * Glow post-process, null when disabled. The render layer that consumes it owns
    * tonemapping too: every blend mode but SOFTLIGHT composites into linear HDR before
@@ -290,5 +288,9 @@ export interface EnvironmentSettings {
     hdrScale: number;
     /** Per-channel ceiling on the bright-pass (`glow_hdr_luminance_cap`). */
     luminanceCap: number;
+    /** The screen-space texture that scales the glow (`glow_map`), as its raw reference. */
+    map: string | undefined;
+    /** How far the map scales the glow, 0..1 (`glow_map_strength`). */
+    mapStrength: number;
   } | null;
 }

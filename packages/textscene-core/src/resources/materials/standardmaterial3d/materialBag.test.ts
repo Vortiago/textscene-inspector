@@ -13,11 +13,12 @@ import {
   surfaceBillboard,
 } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
 import { lightModesUserData } from '../../../r3f/lightModes';
 import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
-import { DiffuseMode } from '../../../godot/diffuseMode';
-import { SpecularMode } from '../../../godot/specularMode';
+import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
+import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import {
   DRAWN_OPAQUE_PREPASS,
   FADED_OPAQUE_PREPASS,
@@ -26,20 +27,22 @@ import {
 } from '../../../r3f/materials/opaquePrepass';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
-import { BillboardMode } from '../../../godot/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { parseStandardMaterial3DScalars } from './scalars';
-import type { ResolvedTextureSlots } from './types';
+import type { ResolvedTextures } from './types';
+import { renderTargetMapUserData } from '../../../r3f/materials/renderTargetMap';
 import {
   DRAWS_LAMBERT_DIFFUSE,
   KEEPS_REFLECTION_UNOCCLUDED,
   DRAWS_TOON_SPECULAR,
   DROPS_ALBEDO_ALPHA,
   OCCLUDES_DIRECT_LIGHT,
+  REBUILDS_NORMAL_MAP_BLUE,
   WRITES_OPAQUE_AFTER_CUT,
   patchedFragment,
 } from '../../../r3f/testing/patchedFragment';
 
-function bag(properties: Record<string, string>, textures?: ResolvedTextureSlots) {
+function bag(properties: Record<string, string>, textures?: ResolvedTextures) {
   return standardMaterialBags(parseStandardMaterial3DScalars(properties), textures).unfaded;
 }
 
@@ -213,6 +216,63 @@ describe('standardMaterialBags — texture slots', () => {
   });
 });
 
+describe('standardMaterialBags — render-target albedo', () => {
+  const target = new THREE.WebGLRenderTarget(4, 4).texture;
+  const FLIPPED_V = { scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } };
+
+  it.each([
+    ['a lit', {}],
+    ['an unshaded', { shading_mode: '0' }],
+  ])('samples a render-target albedo through its UV transform on %s material', (_kind, properties) => {
+    const derived = bag(properties, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
+
+    expect(derived.injection?.cacheKey).toContain('godot-target-map-uv');
+    expect(derived.props.userData).toMatchObject(
+      renderTargetMapUserData({ uv: FLIPPED_V, repeats: true, isNearest: false })
+    );
+  });
+
+  it("wraps a render-target albedo under Godot's default texture_repeat", () => {
+    expect(bag({}, { albedo_texture: target, albedoTargetUv: FLIPPED_V }).injection?.cacheKey).toContain(
+      'godot_target_map_wraps'
+    );
+  });
+
+  it('keeps a render-target albedo clamped under texture_repeat off', () => {
+    const derived = bag({ texture_repeat: 'false' }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
+
+    expect(derived.injection?.cacheKey).not.toContain('godot_target_map_wraps');
+  });
+
+  it.each(['0', '2', '4'])(
+    'reads the nearest texel of a render-target albedo under texture_filter %s',
+    (filter) => {
+      const derived = bag({ texture_filter: filter }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
+
+      expect(derived.injection?.cacheKey).toContain('godot_target_map_nearest');
+    }
+  );
+
+  it('filters a render-target albedo linearly under a linear texture_filter', () => {
+    const derived = bag({ texture_filter: '5' }, { albedo_texture: target, albedoTargetUv: FLIPPED_V });
+
+    expect(derived.injection?.cacheKey).not.toContain('godot_target_map_nearest');
+  });
+
+  it("samples after the parallax shift, whose anchor the sample's inlined chunk replaces", () => {
+    const derived = bag(
+      { heightmap_enabled: 'true' },
+      { albedo_texture: target, albedoTargetUv: FLIPPED_V, heightmap_texture: new THREE.Texture() }
+    );
+
+    expect(derived.injection?.cacheKey).toMatch(/godot-parallax.*godot-target-map-sample/);
+  });
+
+  it('patches nothing for an albedo that carries its own transform', () => {
+    expect(bag({}, { albedo_texture: new THREE.Texture() }).injection).toBeUndefined();
+  });
+});
+
 describe('standardMaterialBags — fragment alpha', () => {
   it('patches nothing on an opaque surface', () => {
     expect(bag({}).injection).toBeUndefined();
@@ -261,6 +321,26 @@ describe('standardMaterialBags — AO on direct light', () => {
     const fragment = patchedFragment(materialFromBag(bag({ ...AO, blend_mode: '1' }, { ao_texture: aoMap })));
     expect(fragment).toContain(OCCLUDES_DIRECT_LIGHT);
     expect(fragment).toContain(DROPS_ALBEDO_ALPHA);
+  });
+});
+
+describe('standardMaterialBags — the normal map read', () => {
+  const normalMap = new THREE.Texture();
+  const NORMAL = { normal_enabled: 'true' };
+
+  it('rebuilds the blue of a normal map from its red and green', () => {
+    expect(patchedFragment(materialFromBag(bag(NORMAL, { normal_texture: normalMap })))).toContain(
+      REBUILDS_NORMAL_MAP_BLUE
+    );
+  });
+
+  it('patches nothing on a surface with no normal map', () => {
+    expect(bag(NORMAL).injection).toBeUndefined();
+  });
+
+  it('rebuilds the blue on a physical surface too (edge case)', () => {
+    const physical = bag({ ...NORMAL, clearcoat_enabled: 'true' }, { normal_texture: normalMap });
+    expect(patchedFragment(materialFromBag(physical))).toContain(REBUILDS_NORMAL_MAP_BLUE);
   });
 });
 
@@ -484,6 +564,50 @@ describe('standardMaterialBags — alpha hash', () => {
 
   it('hashes nothing on a material with no transparency (edge case)', () => {
     expect(standardMaterial({}).alphaHash).toBe(false);
+  });
+});
+
+describe('standardMaterialBags — alpha antialiasing', () => {
+  const scissorAntialiased = (mode: string) => ({
+    transparency: '2',
+    shading_mode: '0',
+    alpha_antialiasing_mode: mode,
+    alpha_antialiasing_edge: '0.2',
+  });
+
+  it.each([
+    ['ALPHA_TO_COVERAGE', '1', THREE.SrcAlphaFactor],
+    ['ALPHA_TO_COVERAGE_AND_TO_ONE', '2', THREE.OneFactor],
+  ])('turns alpha to coverage on with its blend under %s', (_name, mode, blendSrc) => {
+    const built = standardMaterial(scissorAntialiased(mode));
+    expect(built).toMatchObject({ alphaToCoverage: true, blending: THREE.CustomBlending, blendSrc });
+  });
+
+  it.each([
+    ['ALPHA_TO_COVERAGE', '1'],
+    ['ALPHA_TO_COVERAGE_AND_TO_ONE', '2'],
+  ])('ramps the edge past the scissor under %s', (_name, mode) => {
+    const built = standardMaterial(scissorAntialiased(mode));
+    expect(alphaAntialiasingOf(built)?.edge).toBeCloseTo(0.7, 6);
+    expect(patchedFragment(built)).toContain('godotEdgeCoverage(');
+  });
+
+  it('keeps alpha to coverage on in the alpha pass a fade forces', () => {
+    const props = alphaPassBag(scissorAntialiased('1')).props;
+    expect(props.alphaToCoverage).toBe(true);
+    expect(alphaAntialiasingOf({ userData: props.userData as Record<string, unknown> })).not.toBeNull();
+  });
+
+  it("blends with the material's own blend mode while the mode is OFF", () => {
+    const built = standardMaterial({ transparency: '2', blend_mode: '1' });
+    expect(built).toMatchObject({ alphaToCoverage: false, blending: THREE.AdditiveBlending });
+    expect(alphaAntialiasingOf(built)).toBeNull();
+  });
+
+  it('replaces an authored blend mode with the alpha-to-coverage blend (edge case)', () => {
+    // `scene_shader_forward_clustered.cpp:237-241`, and the editor hides `blend_mode` (`material.cpp:2655`).
+    const built = standardMaterial({ ...scissorAntialiased('1'), blend_mode: '1' });
+    expect(built.blending).toBe(THREE.CustomBlending);
   });
 });
 

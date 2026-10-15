@@ -8,9 +8,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
+import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
+import { useViewportActions } from '../../testing/ViewportActionsProbe';
 import { ViewportToolbar } from './ViewportToolbar';
-import { openDisplayMenu } from './displayMenuTesting';
+import { openDisplayMenu } from './DisplayMenu.testkit';
 
 function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolean) {
   return render(

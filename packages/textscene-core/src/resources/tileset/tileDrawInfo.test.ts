@@ -3,20 +3,20 @@
  * tile's centre sits, as `compute_transformed_tile_dest_rect` composes them.
  */
 import { describe, it, expect } from 'vitest';
+import { tileDrawInfo, type AtlasSourceModel } from './types';
+import { drawableCellOf } from './testing/drawableCellOf';
 import {
-  tileDrawInfo,
   TILE_TRANSFORM_FLIP_H,
   TILE_TRANSFORM_FLIP_V,
   TILE_TRANSFORM_TRANSPOSE,
-  type AtlasSourceModel,
-} from './types';
-import { drawableCellOf } from './testing/drawableCellOf';
+} from '../../godot/scene/tileSet';
 
 const source: AtlasSourceModel = {
   texturePath: 'res://t.png',
   margins: { x: 4, y: 6 },
   separation: { x: 2, y: 3 },
   textureRegionSize: { x: 16, y: 16 },
+  usesTexturePadding: false,
   tiles: new Map(),
 };
 

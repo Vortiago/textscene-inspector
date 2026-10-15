@@ -34,6 +34,35 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `resources/` | The resource loader, and one slice per resource type |
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
 
+`godot/` groups its files by the engine area they port, named for that area's directory in Godot's
+source, and a file's cites name its area. A file whose facts port from two areas splits into one
+file per area. A class default, and what the class's setters store, sits with its class under
+`scene/`: `scene/light.ts` holds every Light3D default, keyed by light type where the types differ.
+An enum or value the renderer branches on sits under `rendering/`, beside the code that reads it,
+even when its class lives in `scene/`. So `scene/` imports from `rendering/`, and `rendering/` does
+not import from `scene/`. `noDependencies.test.ts` checks that direction.
+
+A test sits beside its file. Core imports each fact from its file under a group. The root keeps
+`noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which re-exports only what
+a package outside core imports.
+
+| `godot/` group | Ports from Godot's |
+| --- | --- |
+| `math/` | `core/math`: vectors, bases, transforms, rectangles, AABBs, colours |
+| `variant/` | `core/variant`: the Variant parser, types, conversions, integers |
+| `string/` | `core/string`: strings, `StringName`, `NodePath` |
+| `classdb/` | `core/object`: ClassDB captures, base types, property hints, deprecated aliases |
+| `scene/` | `scene/`: `PackedScene`, nodes and resources with their class defaults and setters, animation, particles, CSG, the default theme |
+| `project/` | `core/config`, `core/io` and `editor/`: `project.godot`, the editor scan, resource formats, `Image` |
+| `import/` | `modules/gltf` and `editor/import`: glTF and scene import |
+| `text/` | `servers/text`, `modules/text_server_adv` and `text_server_fb`: the text server |
+| `audio/` | `servers/audio`: the audio server |
+| `rendering/` | `servers/rendering`: viewport, texture views, culling, fades, passes, byte quantisation |
+| `rendering/materials/` | The material shaders: UVs, diffuse, specular and billboard modes, DFG, blend attachments, alpha, alpha antialiasing, texture filters |
+| `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, the area light atlas, soft-shadow kernels |
+| `rendering/environment/` | Fog, sky reflection, reflection probes, tone mapping, glow |
+| `testing/` | Test helpers for the files above |
+
 ## The pipelines
 
 ```mermaid
@@ -58,7 +87,8 @@ flowchart LR
 registered component.
 
 **Lint.** The strict parser reports each syntax and format error with its line, and the
-`Linter` runs the semantic rules. This path imports no React and no three.js, so the CLI and
+`Linter` runs the semantic rules: a lint rule on each node of its type, and a resource rule on each
+resource section of its type. This path imports no React and no three.js, so the CLI and
 the VS Code extension host bundle it alone.
 
 **Language features.** `languageFeatures/` (`createLanguageDocument`) parses the text through
@@ -129,7 +159,7 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
 
 - **Scene tree.** `TscnCanvas` mounts the R3F `<Canvas>`. Each node gets its own `<group>`.
 - **Parent space.** A node follows its parent's transform only where Godot does
-  (`godot/parentSpace.ts`). Any other node attaches to the world root (`ParentSpaceScope`).
+  (`godot/scene/parentSpace.ts`). Any other node attaches to the world root (`ParentSpaceScope`).
 - **3D and 2D.** `ViewportModeContext` picks `TscnCanvas` or `Canvas2DStage` (ADR-0006).
 - **2D draw order.** One sort key for every canvas item becomes `renderOrder`
   (`canvasPaintOrder.ts`, ADR-0036).
@@ -220,6 +250,8 @@ A test or a script fails when one of these rules breaks.
 | The language-feature engine and the `tscn-lsp` server import no React or three.js | `languageFeatures/reactFree.test.ts`, an ESLint `no-restricted-imports` rule, `apps/textscene-lsp/src/reactFree.test.ts` |
 | `godot/` imports nothing | `noDependencies.test.ts` |
 | Every slice is wired into its barrels | `barrelCompleteness`, `parserBarrelCompleteness` |
+| Core imports each engine fact from its file, and `godot/index.ts` and the root `index.ts` re-export only what a package outside core imports | `packageExports.test.ts` |
+| No value export exists for tests alone. An entry point's export counts only when the apps, the dev kit or the scripts import it | `scripts/testOnlyExports.test.mjs` |
 | Every registered type has a Godot base chain | `baseChainCompleteness.test.ts` |
 | A rule reports only through its declared arms, and derives `emits` from them | the ESLint rule-arm guard, `ruleCoverage.emits.test.ts`, `ruleArms.test.ts` |
 | A resource slice has the slice shape | `resourceSliceConformance`, `resourceSliceIsolation` |

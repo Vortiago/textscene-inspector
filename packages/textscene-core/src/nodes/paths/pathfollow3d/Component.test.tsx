@@ -11,15 +11,21 @@ import { parsePathFollow3D } from './parser';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { decodeCurve3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
+import { resolveCurve3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
 import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 
 // Straight curve along +X, (0,0,0) → (10,0,0), length 10.
 const STRAIGHT: Curve3DSampler = tessellateCurve3D(
-  decodeCurve3D({
-    _data:
-      '{"points": PackedVector3Array(0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,10,0,0), "tilts": PackedFloat32Array(0, 0)}',
-  })
+  resolveCurve3D('SubResource("path")', [
+    {
+      id: 'path',
+      type: 'Curve3D',
+      data: {
+        _data:
+          '{"points": PackedVector3Array(0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,10,0,0), "tilts": PackedFloat32Array(0, 0)}',
+      },
+    },
+  ])
 );
 
 function followNode(name = 'MyFollow', props: Record<string, string> = {}): TscnNode {

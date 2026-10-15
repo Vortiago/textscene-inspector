@@ -6,5 +6,3 @@ nodeComponentRegistry.register({
   Component: NavigationRegion2D,
   canvasItem: true,
 });
-
-export { NavigationRegion2D };

@@ -1,11 +1,12 @@
 /** The GeometryInstance3D properties every drawn leaf reads. */
 
-import { ShadowCastingSetting } from '../../../godot/rendering';
-import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../../godot/visibilityRange';
-import type { Aabb } from '../../../godot/aabb';
-import type { Node3DProperties } from '../../base/node3d/types';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/scene/visualLayers';
+import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../../godot/rendering/visibilityRange';
+import type { Aabb } from '../../../godot/math/aabb';
+import type { VisualInstance3DProperties } from '../visualinstance3d/types';
 
-export interface GeometryInstance3DProperties extends Node3DProperties {
+export interface GeometryInstance3DProperties extends VisualInstance3DProperties {
   /** `transparency`: 0 is opaque, and 1 is fully transparent. */
   transparency: number;
   /** `cast_shadow`, a `ShadowCastingSetting`. */
@@ -18,8 +19,12 @@ export interface GeometryInstance3DProperties extends Node3DProperties {
 
 /** Godot's defaults (`visual_instance_3d.h:122-140`), which a scene that sets no value keeps. */
 export const GEOMETRY_INSTANCE_DEFAULTS: Readonly<
-  Pick<GeometryInstance3DProperties, 'transparency' | 'castShadow' | 'visibilityRange' | 'customAabb'>
+  Pick<
+    GeometryInstance3DProperties,
+    'layers' | 'transparency' | 'castShadow' | 'visibilityRange' | 'customAabb'
+  >
 > = Object.freeze({
+  layers: GODOT_DEFAULT_VISUAL_LAYERS,
   transparency: 0,
   castShadow: ShadowCastingSetting.ON,
   visibilityRange: NO_VISIBILITY_RANGE,

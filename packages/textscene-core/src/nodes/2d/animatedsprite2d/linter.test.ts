@@ -74,8 +74,8 @@ describe('AnimatedSprite2D Linter', () => {
           // fires beside the validator and a `frame` lookup finds it first.
           // Naming the phase pins each case to the diagnostic it is about.
           invalid: [
-            { value: -1, ruleName: 'strict-parser', contains: ['frame', 'non-negative'] },
-            { value: 1.5, ruleName: 'strict-parser', contains: ['frame', 'integer'] },
+            { value: -1, ruleName: 'format:frame', contains: ['frame', 'non-negative'] },
+            { value: 1.5, ruleName: 'format:frame', contains: ['frame', 'integer'] },
           ],
         },
         {

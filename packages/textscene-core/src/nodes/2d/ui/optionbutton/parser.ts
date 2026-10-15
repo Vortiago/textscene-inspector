@@ -8,8 +8,8 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { OptionItem, OptionButtonProperties } from './types';
 import { parseButton } from '../button/parser';
-import { ruleCount, ruleInt } from '../../../../godot/int.js';
-import { indexedElements } from '../../../../godot/index.js';
+import { ruleCount, ruleInt } from '../../../../godot/variant/int.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 
 export function parseOptionButton(

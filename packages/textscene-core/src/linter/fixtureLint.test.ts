@@ -10,14 +10,14 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import { Linter } from './Linter.js';
 import { parseHeading } from '../parser/utils.js';
 import { providerForRoot } from '../resources/diskProject.js';
-import { findProjectRoot, parentDir, projectFileIn } from '../resources/resPath.js';
+import { findResRoot, parentDir, projectFileIn } from '../resources/resPath.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import { FILE_DIAGNOSTIC_NAMES } from './fileDiagnostics.js';
+import { isUndeclaredRuleName } from './testing/ruleNames.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 import { errorsOf } from './testing/tierLists';
 import { fixturesDir, sceneFiles } from '../parser/testing/parserKit.js';
-import { isGodotTextResourcePath } from '../godot/index.js';
+import { isGodotTextResourcePath } from '../godot/project/resourceFormats.js';
 
 /**
  * `unit-*` fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set
@@ -36,8 +36,8 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason: 'exists to show unsupported types; the Area3D has no shape on purpose',
   },
   'unit-cpuparticles2d-unpreviewable.tscn': {
-    rules: ['cpuparticles2d-nondeterministic-emission-shape', 'cpuparticles2d-fract-delta-ignored'],
-    reason: 'named for the two advisories it carries; they are the fixture',
+    rules: ['cpuparticles2d-nondeterministic-emission-shape'],
+    reason: 'named for the advisory it carries; it is the fixture',
   },
   'unit-label-autowrap-in-container.tscn': {
     rules: ['label-autowrap-needs-custom-minimum-size'],
@@ -54,6 +54,10 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'the StaticBody3D holds CSG geometry rather than a CollisionShape3D; the fixture is about CSG boolean output, not collision',
   },
+  'unit-world-environment-none.tscn': {
+    rules: ['worldenvironment-requires-environment'],
+    reason: 'the WorldEnvironment names no Environment on purpose, to pin the root Godot draws with none',
+  },
   'unit-csg-mesh.tscn': {
     rules: ['csgmesh3d-requires-mesh'],
     reason:
@@ -63,6 +67,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['resource-type-excluded-by-hint'],
     reason:
       'named for it: the AtlasTexture on area_texture is the class the hint excludes, which is the advisory',
+  },
+  'unit-decal-atlas-texture.tscn': {
+    rules: ['resource-type-excluded-by-hint'],
+    reason:
+      'the AtlasTexture and CanvasTexture on texture_albedo are the classes the hint excludes; the fixture measures what Godot draws for them',
   },
   'unit-animation-tree-stateless.tscn': {
     rules: ['animationtree-inactive'],
@@ -115,9 +124,8 @@ const NEGATIVE_FIXTURE_COUNT = 5;
  */
 function projectRootOf(path: string): Promise<string | null> {
   const isFixturesDir = (dir: string) => resolve(dir) === fixtures;
-  return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) =>
-    existsSync(projectFileIn(dir))
-  );
+  const isProject = async (dir: string) => existsSync(projectFileIn(dir));
+  return findResRoot(dirname(path), parentDir, isFixturesDir, isProject, () => false);
 }
 
 /** One fixture: where it lies, its name relative to `scenes/fixtures`, and the project it is linted in. */
@@ -242,7 +250,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
           misplaced.push(`${file}: ${d.ruleName} carries no line`);
           continue;
         }
-        if (FILE_DIAGNOSTIC_NAMES.has(d.ruleName)) continue;
+        if (isUndeclaredRuleName(d.ruleName)) continue;
         checkedRuleDiagnostics++;
         const heading = parseHeading(text[line - 1] ?? '');
         if (heading?.type !== 'node' || (heading.attributes.name ?? '') !== d.nodeName) {

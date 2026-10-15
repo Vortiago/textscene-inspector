@@ -15,5 +15,3 @@ const dampedSpringJoint2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(dampedSpringJoint2DRegistration);
-
-export { dampedSpringJoint2DRegistration };

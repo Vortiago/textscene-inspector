@@ -5,20 +5,36 @@
  */
 
 import { useEffect, useMemo } from 'react';
+import * as THREE from 'three';
 import type { Effect } from 'postprocessing';
 import { EffectComposer } from '@react-three/postprocessing';
-import type { GlowParams } from '../../resources/environment/godotGlow';
-import type { EnvironmentSettings } from '../../resources/environment/types';
-import { GodotToneMapEffect } from './GodotToneMapEffect';
+import { samplesGlowMap, type GlowParams } from '../../resources/environment/godotGlow';
+import type { EnvironmentAdjustments, EnvironmentSettings } from '../../resources/environment/types';
+import { useTexture2D } from '../../resources/useTexture2D';
+import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
+import type { SceneResources } from '../SceneResourcesContext';
+import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
+import { projectTransparentBackground } from '../../parser/projectSettingsParser';
+import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { SCENE_BUFFER_TYPE } from './compositorPass';
 
-export interface ToneMapLayerProps {
-  /** Null when the environment has no glow, or nothing in the scene can bloom. */
+interface ToneMapLayerProps {
+  /** Null when the environment has no glow. */
   glow: GlowParams | null;
+  /** The scene buffer's samples per pixel, resolved before the tone curve, as Godot resolves it. */
+  samples: number;
+  /** Null when `adjustment_enabled` is false. */
+  adjustments: EnvironmentAdjustments | null;
   toneMapping: EnvironmentSettings['toneMapping'];
+  /** The pools `glow_map` resolves in: those of the Environment that names it. */
+  resources: SceneResources;
 }
 
-export function ToneMapLayer({ glow, toneMapping }: ToneMapLayerProps) {
+export function ToneMapLayer({ glow, samples, adjustments, toneMapping, resources }: ToneMapLayerProps) {
   const { mode, white, exposure, agxContrast } = toneMapping;
+  const glowMap = useGlowMap(glow, resources);
+  // The composer draws the canvas, which is the root window's surface.
+  const transparentBackground = projectTransparentBackground(useProjectSettings().settings);
 
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
   // extending postprocessing's `Effect` does not carry its inherited members
@@ -28,18 +44,36 @@ export function ToneMapLayer({ glow, toneMapping }: ToneMapLayerProps) {
     () =>
       new GodotToneMapEffect({
         glow,
-        toneMapMode: mode,
-        toneMapWhite: white,
-        toneMapExposure: exposure,
-        toneMapAgxContrast: agxContrast,
+        adjustments,
+        toneMapping: { mode, white, agxContrast },
+        exposure,
+        transparentBackground,
       }) as Effect,
-    [glow, mode, white, exposure, agxContrast]
+    [glow, adjustments, mode, white, exposure, agxContrast, transparentBackground]
   );
   useEffect(() => () => effect.dispose(), [effect]);
+  // A uniform, not an effect rebuild: the map's arrival changes no shader.
+  useEffect(() => {
+    const toneMap = effect as GodotToneMapEffect;
+    if (glowMap) toneMap.setGlowMap(glowMap);
+    else toneMap.clearGlowMap();
+  }, [effect, glowMap]);
 
   return (
-    <EffectComposer>
+    <EffectComposer multisampling={samples} frameBufferType={SCENE_BUFFER_TYPE}>
       <primitive object={effect} dispose={null} />
     </EffectComposer>
   );
+}
+
+/**
+ * The glow map's sampled view, or null while it loads and when the composite samples no map, so
+ * an unsampled map never loads.
+ */
+function useGlowMap(glow: GlowParams | null, resources: SceneResources): THREE.Texture | null {
+  const ref = glow && samplesGlowMap(glow) ? glow.map : undefined;
+  const loaded = useTexture2D(ref, resources.externalResources, resources.internalResources).texture;
+  const view = useMemo(() => (loaded ? glowMapView(loaded) : null), [loaded]);
+  useEffect(() => () => releaseBoundTexture(view), [view]);
+  return view;
 }

@@ -6,7 +6,7 @@
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
 import styles from './NodeDetailsPanel.module.css';
 
-export interface PropertySectionProps {
+interface PropertySectionProps {
   section: PropertySectionData;
 }
 

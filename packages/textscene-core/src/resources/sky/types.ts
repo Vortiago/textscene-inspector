@@ -1,19 +1,20 @@
 /**
- * Sky resource types: the three materials a Godot `Sky` can carry. Names and
- * units mirror Godot (`sun_angle_max` in degrees, `sky_curve` as authored). The
+ * Sky resource types: how a Godot `Sky` bakes its radiance, and the three materials it can carry.
+ * Names and units mirror Godot (`sun_angle_max` in degrees, `sky_curve` as authored). The
  * shader-uniform conversions happen on upload, in `build.ts`.
  */
 
-import type { Color } from '../../utils/colorParser';
+import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
+import type { Rgba } from '../../godot/math/math';
 
 export interface ProceduralSkyProperties {
   kind: 'procedural';
-  sky_top_color: Color;
-  sky_horizon_color: Color;
+  sky_top_color: Rgba;
+  sky_horizon_color: Rgba;
   sky_curve: number;
   sky_energy_multiplier: number;
-  ground_bottom_color: Color;
-  ground_horizon_color: Color;
+  ground_bottom_color: Rgba;
+  ground_horizon_color: Rgba;
   ground_curve: number;
   ground_energy_multiplier: number;
   /** Degrees. Godot uploads its cosine. */
@@ -33,14 +34,36 @@ export interface PanoramaSkyProperties {
 export interface PhysicalSkyProperties {
   kind: 'physical';
   rayleigh_coefficient: number;
-  rayleigh_color: Color;
+  rayleigh_color: Rgba;
   mie_coefficient: number;
   mie_eccentricity: number;
-  mie_color: Color;
+  mie_color: Rgba;
   turbidity: number;
   sun_disk_scale: number;
-  ground_color: Color;
+  ground_color: Rgba;
   energy_multiplier: number;
 }
 
 export type SkyProperties = ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties;
+
+/** `Sky.process_mode` (`scene/resources/sky.h:51-56`). */
+export type SkyProcessMode = 'automatic' | 'quality' | 'incremental' | 'real-time';
+
+/** The `Sky` resource's own properties, which decide how Godot bakes its radiance layers. */
+export interface SkyProcessing {
+  processMode: SkyProcessMode;
+  /** The radiance's size in pixels, which `radiance_size` names by index. */
+  radianceSize: number;
+}
+
+/**
+ * How Godot bakes a sky's radiance layers: GGX importance sampling, or the fast filter. The fast
+ * filter comes only with a real-time sky, which Godot bakes at `REAL_TIME_RADIANCE_SIZE` whatever
+ * its `radiance_size` (`sky.cpp:590-592`).
+ */
+export type SkyBake =
+  | { radianceFilter: 'fast'; radianceSize: typeof REAL_TIME_RADIANCE_SIZE }
+  | { radianceFilter: 'importance-sample'; radianceSize: number };
+
+/** A Godot `Sky` as the renderer draws it: its material, and how its radiance layers bake. */
+export type Sky = { material: SkyProperties } & SkyBake;

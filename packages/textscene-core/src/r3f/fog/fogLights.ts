@@ -1,31 +1,37 @@
 /**
  * The lights the volumetric fog scatters, packed as Godot's light buffers hold them for the fog
- * pass (`storage_rd/light_storage.cpp:636-760,840-1029`): view-space positions and directions, a
- * colour already times the light's energy and its fog energy, and each shadow's lookup from view
- * space. One row of texels per light.
+ * pass (`storage_rd/light_storage.cpp:636-760,840-1029`, 4.7.2 `:1054-1094` for the area light):
+ * view-space positions and directions, a colour already times the light's energy and its fog
+ * energy, each shadow's lookup from view space, and an area light's rectangle and texture. One row
+ * of texels per light.
  */
 
 import * as THREE from 'three';
+import { LIGHT_3D_DEFAULTS, SPOT_LIGHT_3D_DEFAULTS } from '../../godot/scene/light.js';
 import {
-  LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT,
-  SPOT_ANGLE_ATTENUATION_DEFAULT,
   VOLUMETRIC_FOG_LIGHT_ENERGY_MIN,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
-} from '../../godot/volumetricFog.js';
-import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/directionalShadow.js';
+} from '../../godot/rendering/environment/volumetricFog.js';
+import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/rendering/lights/directionalShadow.js';
 import { splitSunOf } from '../directionalShadow/splitSun.js';
+import { isAreaShadowLight } from '../positionalShadow/atlasAreaShadow.js';
 import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow.js';
 import { AtlasSpotShadow } from '../positionalShadow/atlasSpotShadow.js';
 import { lightPoseMatrix } from '../positionalShadow/lightPose.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { readFogLightDeclaration } from './fogLightDeclaration.js';
-import { writeVec4 } from './writeVec4.js';
+import { AREA_LIGHT_AXES, areaLightViewAxis, readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
+import { RowBuffer } from './packedRows.js';
+import { areaTexturePlacement } from '../areaLight/areaLightAtlas.js';
+import { writeVec4 } from '../writeVec4.js';
 
 /**
  * Where each value sits in a light's row, in texels of four floats. `CONE` holds the cone exponent,
  * the kind, the shadow opacity and a positional light's depth bias. `SHADOW_MATRICES` starts four
  * matrices of four columns: a directional light's splits, or one positional light's lookup.
- * `SHADOW_SPLITS` holds a directional light's split ends, or an omni light's paraboloid slot.
+ * `SHADOW_SPLITS` holds a directional light's split ends, or an omni or area light's paraboloid
+ * slot. An area light's direction carries its inverse centre range where a spot holds its cone
+ * cosine, and its width carries its texture's highest mip beside the texture's atlas rectangle.
  */
 export const FogLightTexel = {
   POSITION: 0,
@@ -36,6 +42,9 @@ export const FogLightTexel = {
   SHADOW_SPLITS: 20,
   SHADOW_RANGES: 21,
   SHADOW_FADE: 22,
+  AREA_WIDTH: 23,
+  AREA_HEIGHT: 24,
+  AREA_TEXTURE: 25,
 } as const;
 
 /** Where each value sits in the cone texel, as an index into the row. */
@@ -47,7 +56,7 @@ const Cone = {
 } as const;
 
 /** The texels in each row. */
-export const FOG_LIGHT_TEXELS = FogLightTexel.SHADOW_FADE + 1;
+export const FOG_LIGHT_TEXELS = FogLightTexel.AREA_TEXTURE + 1;
 
 const ROW_LENGTH = FOG_LIGHT_TEXELS * 4;
 
@@ -56,6 +65,7 @@ export const FogLightKind = {
   DIRECTIONAL: 0,
   OMNI: 1,
   SPOT: 2,
+  AREA: 3,
 } as const;
 
 type Kind = (typeof FogLightKind)[keyof typeof FogLightKind];
@@ -66,6 +76,7 @@ const RANGE_MIN = 0.001;
 /** Scratch for one row, overwritten by each light. */
 const position = new THREE.Vector3();
 const towards = new THREE.Vector3();
+const axis = new THREE.Vector3();
 const worldToLight = new THREE.Matrix4();
 const viewToShadow = new THREE.Matrix4();
 const paraboloidRect = new THREE.Vector4();
@@ -76,13 +87,14 @@ const row = new Float32Array(ROW_LENGTH);
  * `intensity` is already Godot's `light_energy * PI` with its sign and distance fade
  * (`lightConstants.ts`), and its colour is linear, as in Godot's buffer.
  */
-export class FogLightRows {
-  /** The rows, `count` of them, then unused space. */
-  data = new Float32Array(ROW_LENGTH);
-  count = 0;
+export class FogLightRows extends RowBuffer {
   /** Whether a row's shadow reads the directional atlas, and whether one reads the positional atlas. */
   readsDirectionalAtlas = false;
   readsPositionalAtlas = false;
+
+  constructor() {
+    super(ROW_LENGTH);
+  }
 
   /** Whether any row's shadow reads an atlas. */
   get readsShadowAtlas(): boolean {
@@ -91,8 +103,7 @@ export class FogLightRows {
 
   /** Packs `lights` as `camera` sees them, and answers whether any row changed. */
   pack(lights: readonly THREE.Light[], camera: THREE.Camera): boolean {
-    let count = 0;
-    let hasChanged = false;
+    this.begin();
     this.readsDirectionalAtlas = false;
     this.readsPositionalAtlas = false;
     for (const light of lights) {
@@ -101,24 +112,9 @@ export class FogLightRows {
         if (row[Cone.KIND] === FogLightKind.DIRECTIONAL) this.readsDirectionalAtlas = true;
         else this.readsPositionalAtlas = true;
       }
-      this.reserve(count + 1);
-      const start = count * ROW_LENGTH;
-      for (let i = 0; i < ROW_LENGTH; i++) {
-        if (this.data[start + i] !== row[i]) hasChanged = true;
-        this.data[start + i] = row[i]!;
-      }
-      count++;
+      this.append(row);
     }
-    hasChanged ||= count !== this.count;
-    this.count = count;
-    return hasChanged;
-  }
-
-  private reserve(rows: number): void {
-    if (this.data.length >= rows * ROW_LENGTH) return;
-    const grown = new Float32Array(rows * 2 * ROW_LENGTH);
-    grown.set(this.data);
-    this.data = grown;
+    return this.finish();
   }
 }
 
@@ -127,22 +123,23 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   const kind = fogLightKind(light);
   if (kind === null) return false;
   const declaration = readFogLightDeclaration(light);
-  const fogEnergy = declaration?.energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
+  const fogEnergy = declaration?.energy ?? LIGHT_3D_DEFAULTS.volumetricFogEnergy;
   if (fogEnergy <= VOLUMETRIC_FOG_LIGHT_ENERGY_MIN) return false;
   row.fill(0);
   const energy = light.intensity * fogEnergy;
-  writeTexel(FogLightTexel.COLOR, light.color.r * energy, light.color.g * energy, light.color.b * energy);
+  writeVec4(row, FogLightTexel.COLOR, light.color.r * energy, light.color.g * energy, light.color.b * energy);
   row[Cone.KIND] = kind;
   if (kind === FogLightKind.DIRECTIONAL) {
     // Godot's directional row points towards the light, its basis +Z (`light_storage.cpp:640`).
     const { x, y, z } = targetDirection(light as THREE.DirectionalLight, camera).negate();
-    writeTexel(FogLightTexel.DIRECTION, x, y, z);
+    writeVec4(row, FogLightTexel.DIRECTION, x, y, z);
     writeDirectionalShadow(light as THREE.DirectionalLight, camera);
     return true;
   }
-  const positional = light as THREE.PointLight | THREE.SpotLight;
+  if (kind === FogLightKind.AREA) return writeArea(light as THREE.RectAreaLight, camera);
   const { x, y, z } = viewPosition(light, camera);
-  writeTexel(FogLightTexel.POSITION, x, y, z, 1 / Math.max(RANGE_MIN, positional.distance));
+  const positional = light as THREE.PointLight | THREE.SpotLight;
+  writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / Math.max(RANGE_MIN, positional.distance));
   row[FogLightTexel.COLOR * 4 + 3] = positional.decay;
   if (kind === FogLightKind.OMNI) {
     writeOmniShadow(light as THREE.PointLight, camera);
@@ -150,11 +147,47 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   }
   const spot = light as THREE.SpotLight;
   const travel = targetDirection(spot, camera);
-  writeTexel(FogLightTexel.DIRECTION, travel.x, travel.y, travel.z, Math.cos(spot.angle));
+  writeVec4(row, FogLightTexel.DIRECTION, travel.x, travel.y, travel.z, Math.cos(spot.angle));
   // The cone exponent is the inverse of `spot_angle_attenuation` (`light_storage.cpp:914`).
-  row[Cone.EXPONENT] = 1 / (declaration?.spotAngleAttenuation ?? SPOT_ANGLE_ATTENUATION_DEFAULT);
+  row[Cone.EXPONENT] = 1 / (declaration?.spotAngleAttenuation ?? SPOT_LIGHT_3D_DEFAULTS.spotAngleAttenuation);
   writeSpotShadow(spot, camera);
   return true;
+}
+
+/**
+ * An area light's range, attenuation, facing, rectangle, texture and shadow, as 4.7.2 packs them
+ * (`light_storage.cpp:1059-1094`, `:1132-1141`, `:1150-1210`). Its rectangle ignores the node's scale, as Godot's does. A
+ * light without a falloff, such as a GLB light, is left out.
+ */
+function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
+  const falloff = readAreaLightFalloff(light);
+  if (!falloff) return false;
+  const range = Math.max(RANGE_MIN, falloff.range);
+  const { x, y, z } = viewPosition(light, camera);
+  writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / range);
+  // The fog's falloff takes the attenuation less one (4.7.2 `volumetric_fog_process.glsl:653`).
+  row[FogLightTexel.COLOR * 4 + 3] = falloff.attenuation - 1;
+  const inverseCentreRange = 1 / (range + Math.hypot(light.width, light.height) / 2);
+  writeViewAxis(FogLightTexel.DIRECTION, light, AREA_LIGHT_AXES.facing, 1, camera, inverseCentreRange);
+  const { rect, maxMipmap } = areaTexturePlacement(light);
+  writeVec4(row, FogLightTexel.AREA_TEXTURE, ...rect);
+  writeViewAxis(FogLightTexel.AREA_WIDTH, light, AREA_LIGHT_AXES.width, light.width, camera, maxMipmap);
+  writeViewAxis(FogLightTexel.AREA_HEIGHT, light, AREA_LIGHT_AXES.height, light.height, camera);
+  writeAreaShadow(light, camera);
+  return true;
+}
+
+/** The light's `local` axis in view space, `length` long, in `texel` of the row. */
+function writeViewAxis(
+  texel: number,
+  light: THREE.RectAreaLight,
+  local: THREE.Vector3,
+  length: number,
+  camera: THREE.Camera,
+  w = 0
+): void {
+  areaLightViewAxis(axis, local, light, camera);
+  writeVec4(row, texel, axis.x * length, axis.y * length, axis.z * length, w);
 }
 
 /**
@@ -173,7 +206,7 @@ function writeDirectionalShadow(light: THREE.DirectionalLight, camera: THREE.Cam
     row[FogLightTexel.SHADOW_SPLITS * 4 + slot] = shadow._cascadeData[slot]!.x;
     row[FogLightTexel.SHADOW_RANGES * 4 + slot] = split.far - split.near;
   }
-  writeTexel(FogLightTexel.SHADOW_FADE, shadow.fade.from, shadow.fade.to, 0);
+  writeVec4(row, FogLightTexel.SHADOW_FADE, shadow.fade.from, shadow.fade.to, 0);
 }
 
 /**
@@ -185,7 +218,20 @@ function writeOmniShadow(light: THREE.PointLight, camera: THREE.Camera): void {
   if (!light.castShadow || !(shadow instanceof AtlasOmniShadow)) return;
   const rect = shadow.paraboloidRect(paraboloidRect);
   if (!rect) return;
-  writeTexel(FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
+  writeVec4(row, FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
+  writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
+}
+
+/**
+ * An area light with a slot looks up from its own space into its one paraboloid's slot
+ * (`../positionalShadow/atlasAreaShadow.ts`).
+ */
+function writeAreaShadow(light: THREE.RectAreaLight, camera: THREE.Camera): void {
+  if (!light.castShadow || !isAreaShadowLight(light)) return;
+  const { shadow } = light;
+  if (shadow.slot === null) return;
+  const rect = shadow.slotUvRect(paraboloidRect);
+  writeVec4(row, FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
   writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
 }
 
@@ -212,14 +258,11 @@ function writeLookup(slot: number, worldToShadow: THREE.Matrix4, camera: THREE.C
   row.set(viewToShadow.elements, (FogLightTexel.SHADOW_MATRICES + slot * 4) * 4);
 }
 
-function writeTexel(texel: number, x: number, y: number, z: number, w = 0): void {
-  writeVec4(row, texel, x, y, z, w);
-}
-
 function fogLightKind(light: THREE.Light): Kind | null {
   if ((light as THREE.DirectionalLight).isDirectionalLight) return FogLightKind.DIRECTIONAL;
   if ((light as THREE.SpotLight).isSpotLight) return FogLightKind.SPOT;
   if ((light as THREE.PointLight).isPointLight) return FogLightKind.OMNI;
+  if ((light as THREE.RectAreaLight).isRectAreaLight) return FogLightKind.AREA;
   return null;
 }
 

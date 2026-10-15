@@ -24,10 +24,12 @@ describe('VFlowContainer strict validators', () => {
   });
 
   it('names `vertical` as its own removal, with a citation', () => {
-    const removals = validatorRegistry.getOwnRemovals('VFlowContainer');
-    expect(Object.keys(removals)).toEqual(['vertical']);
-    expect(removals['vertical']?.cite).toBe('flow_container.cpp:372');
-    expect(removals['vertical']?.reason.length).toBeGreaterThan(0);
+    // FlowContainer removes nothing, so every key VFlowContainer removes is its own.
+    expect(validatorRegistry.getUnavailableKeys('FlowContainer')).toEqual([]);
+    expect(validatorRegistry.getUnavailableKeys('VFlowContainer')).toEqual(['vertical']);
+    const validator = validatorRegistry.declarationFor('VFlowContainer', 'vertical');
+    expect(validator?.grounding).toEqual({ kind: 'enforced', cite: 'flow_container.cpp:372' });
+    expect(validator!('vertical', 'true', 1)!.message).toContain('its orientation is fixed by the class');
   });
 
   it('still accepts `vertical` on the plain FlowContainer', () => {

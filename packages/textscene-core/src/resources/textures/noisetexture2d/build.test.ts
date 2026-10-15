@@ -6,25 +6,20 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  bumpMapToNormalMap,
-  grayToRgba,
-  modulateWithGradient,
-  noiseImage,
-  noiseSampler,
-  noiseTextureFits,
-  noiseDataTexture,
-  seamlessNoiseImage,
-  seamlessSkirt,
-} from './build';
+import { noiseTextureFits, noiseDataTexture } from './build';
+import { bumpMapToNormalMap } from './normalMap';
+import { grayToRgba } from '../../noise/image/gradientModulation';
+import { noiseSampler } from '../../noise/image/noiseSampler';
+import { noiseImage, seamlessNoiseImage, seamlessSource } from '../../noise/image/noiseImage';
 import { decodeNoiseTexture2D } from './decode';
 import { noiseTexture2DPixels } from './pixels';
 import type { NoiseTexture2DData } from './types';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import { GradientInterpolationMode, type Gradient } from '../gradienttexture2d/types';
-import { IMAGE_MAX_PIXELS } from '../../../godot/index.js';
+import { IMAGE_MAX_PIXELS } from '../../../godot/project/image.js';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
+import { sourceColorSpace } from '../sourceColorSpace';
 
 /** A deterministic ramp: value 0 → black, value 1 → red. */
 const RAMP: Gradient = {
@@ -130,16 +125,6 @@ describe('seamlessNoiseImage', () => {
   });
 });
 
-describe('modulateWithGradient', () => {
-  it("maps each pixel's luminance through the ramp", () => {
-    // noise_texture_2d.cpp:183-198. A grayscale pixel's luminance is its own
-    // value, so 0 takes the ramp's first colour and 255 its last.
-    const rgba = modulateWithGradient(new Uint8Array([0, 255]), RAMP);
-    expect([...rgba.slice(0, 4)]).toEqual([0, 0, 0, 255]);
-    expect([...rgba.slice(4, 8)]).toEqual([255, 0, 0, 255]);
-  });
-});
-
 describe('bumpMapToNormalMap', () => {
   it('emits a flat +Z normal for a flat height field', () => {
     // image.cpp:4083-4128: every neighbour difference is zero, so the normal is
@@ -199,7 +184,8 @@ describe('noiseTexture2DPixels in a noiseDataTexture', () => {
     fastNoise: FastNoiseLiteData,
     colorRamp: Gradient | null
   ): THREE.DataTexture {
-    return noiseDataTexture(noiseTexture2DPixels({ tex, noise: fastNoise, colorRamp }), tex);
+    const input = { tex, noise: fastNoise, colorRamp };
+    return noiseDataTexture(noiseTexture2DPixels(input), input);
   }
 
   it('produces a DataTexture of the declared size', () => {
@@ -249,6 +235,21 @@ describe('noiseTexture2DPixels in a noiseDataTexture', () => {
     expect(albedo.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 
+  it('gives a texture with no colour ramp no sRGB view, as Godot keeps it L8 (noise.cpp:134)', () => {
+    const gray = rasterized(decodeNoiseTexture2D({ width: '4', height: '4' }), noise, null);
+    expect(sourceColorSpace(gray)).toBe(THREE.NoColorSpace);
+  });
+
+  it('gives a ramped texture an sRGB view, as the ramp writes RGBA8 (noise_texture_2d.cpp:187)', () => {
+    const ramped = rasterized(decodeNoiseTexture2D({ width: '4', height: '4' }), noise, RAMP);
+    expect(sourceColorSpace(ramped)).toBe(THREE.SRGBColorSpace);
+  });
+
+  it('gives a normal map an sRGB view, as the bump pass writes RGBA8 (image.cpp:4127)', () => {
+    const tex = decodeNoiseTexture2D({ width: '4', height: '4', as_normal_map: 'true' });
+    expect(sourceColorSpace(rasterized(tex, noise, null))).toBe(THREE.SRGBColorSpace);
+  });
+
   it('tiles a seamless texture and clamps a plain one', () => {
     const seamless = rasterized(
       decodeNoiseTexture2D({ width: '8', height: '8', seamless: 'true' }),
@@ -290,8 +291,7 @@ describe('noiseTextureFits', () => {
 
   /** The pixels of the source `_get_seamless_image` builds a skirt larger. */
   const skirtedSource = (tex: NoiseTexture2DData): number =>
-    (tex.width + seamlessSkirt(tex.width, tex.seamlessBlendSkirt)) *
-    (tex.height + seamlessSkirt(tex.height, tex.seamlessBlendSkirt));
+    seamlessSource(tex.width, tex.seamlessBlendSkirt) * seamlessSource(tex.height, tex.seamlessBlendSkirt);
 
   it("fits Godot's default 512x512 texture", () => {
     expect(noiseTextureFits(plain(512, 512))).toBe(true);
@@ -333,7 +333,9 @@ describe('noiseTextureFits', () => {
   });
 });
 
-describe('seamlessSkirt', () => {
+describe('the skirt seamlessSource adds to an axis', () => {
+  const seamlessSkirt = (size: number, blendSkirt: number) => seamlessSource(size, blendSkirt) - size;
+
   it('generates the blend fraction of the size, truncated', () => {
     expect(seamlessSkirt(512, 0.1)).toBe(51);
   });

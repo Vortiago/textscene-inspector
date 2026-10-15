@@ -4,10 +4,5 @@
  * `Rect2` to a three.js position (`[rect.x, -rect.y, 0]`). Pure data: no React, no THREE.
  */
 
-export interface Vec2 {
-  x: number;
-  y: number;
-}
-
 /** A Control's rect in Godot pixels, +Y down. */
-export type { Rect2 } from '../../../godot/rect2';
+export type { Rect2 } from '../../../godot/math/rect2';

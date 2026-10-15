@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { GLOW_LEVEL_COUNT, decodeEnvironment } from './decode';
+import { decodeEnvironment } from './decode';
 import { createEnvironmentSettings } from './build';
 import {
   blendGlsl,
   blendsAfterToneMapping,
-  unexposedBrightPassThreshold,
   brightPassGlsl,
   glowLevelSize,
-  GlowBlendMode,
-  glowNeedsEveryPixel,
   glowParamsFor,
+  samplesGlowMap,
 } from './godotGlow';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+
+/** `RS::MAX_GLOW_LEVELS` (`rendering_server.h:107`). */
+const GLOW_LEVEL_COUNT = 7;
 
 function settings(properties: Record<string, string>) {
   return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
@@ -99,50 +101,34 @@ describe('glowParamsFor', () => {
   });
 });
 
-describe('glowNeedsEveryPixel', () => {
-  it('is false for the editor preview defaults, so a dark scene skips the pass', () => {
-    expect(glowNeedsEveryPixel(glowOn())).toBe(false);
+describe('glowParamsFor — the glow map', () => {
+  it('carries the map and its strength when the environment sets one', () => {
+    const params = glowOn({ glow_map: 'SubResource("Gradient_1")', glow_map_strength: '0.5' });
+    expect(params.map).toBe('SubResource("Gradient_1")');
+    expect(params.mapStrength).toBeCloseTo(0.5, 6);
   });
 
-  it('is true above zero glow_bloom — the feedback floor lifts even dark pixels', () => {
-    expect(glowNeedsEveryPixel(glowOn({ glow_bloom: '0.2' }))).toBe(true);
-  });
-
-  it('is true for REPLACE and MIX, which rewrite every pixel even with a black glow', () => {
-    expect(glowNeedsEveryPixel(glowOn({ glow_blend_mode: String(GlowBlendMode.REPLACE) }))).toBe(true);
-    expect(glowNeedsEveryPixel(glowOn({ glow_blend_mode: String(GlowBlendMode.MIX) }))).toBe(true);
-  });
-
-  it('stays false for the blend modes that leave a black glow inert', () => {
-    for (const mode of [GlowBlendMode.ADDITIVE, GlowBlendMode.SCREEN, GlowBlendMode.SOFTLIGHT]) {
-      expect(glowNeedsEveryPixel(glowOn({ glow_blend_mode: String(mode) }))).toBe(false);
-    }
-  });
-
-  it('is true below a threshold of 1, where ordinary lit surfaces bloom', () => {
-    // The emissive scan only inspects materials' emission, so it cannot answer
-    // whether a merely well-lit surface crosses a lowered threshold.
-    expect(glowNeedsEveryPixel(glowOn({ glow_hdr_threshold: '0.5' }))).toBe(true);
-    expect(glowNeedsEveryPixel(glowOn({ glow_hdr_threshold: '1' }))).toBe(false);
+  it('zeroes the strength without a map, as Godot does for an invalid glow_map', () => {
+    // `renderer_scene_render_rd.cpp:705-710`: no map sets `glow_map_strength` to 0.
+    const params = glowOn({ glow_map_strength: '0.5' });
+    expect(params.map).toBeUndefined();
+    expect(params.mapStrength).toBe(0);
   });
 });
 
-describe('unexposedBrightPassThreshold', () => {
-  it('scales the threshold down by exposure, because the pass exposes before comparing', () => {
-    // The bright pass multiplies by `glow_exposure` and only then compares against
-    // `glow_hdr_threshold`, so at exposure 1.8 a colour peaking at 0.8 does cross a
-    // threshold of 1.0. Anything measuring unexposed colour has to be held to the
-    // lower bar or it disagrees with the shader about what blooms.
-    expect(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '1.8' }))).toBeCloseTo(1 / 1.8, 6);
-    expect(unexposedBrightPassThreshold(glowOn())).toBeCloseTo(1, 6);
-    expect(
-      unexposedBrightPassThreshold(glowOn({ glow_hdr_threshold: '2', tonemap_exposure: '4' }))
-    ).toBeCloseTo(0.5, 6);
+describe('samplesGlowMap', () => {
+  it("samples the map at Godot's default strength", () => {
+    expect(samplesGlowMap(glowOn({ glow_map: 'SubResource("Gradient_1")' }))).toBe(true);
   });
 
-  it('survives a zero or negative exposure rather than dividing by it', () => {
-    expect(Number.isFinite(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '0' })))).toBe(true);
-    expect(Number.isFinite(unexposedBrightPassThreshold(glowOn({ tonemap_exposure: '-2' })))).toBe(true);
+  it('skips the map at a strength of 0.001 or less, as tonemap.glsl:885 does (edge case)', () => {
+    const map = { glow_map: 'SubResource("Gradient_1")' };
+    expect(samplesGlowMap(glowOn({ ...map, glow_map_strength: '0.001' }))).toBe(false);
+    expect(samplesGlowMap(glowOn({ ...map, glow_map_strength: '0.0011' }))).toBe(true);
+  });
+
+  it('skips a strength with no map to scale', () => {
+    expect(samplesGlowMap(glowOn({ glow_map_strength: '1' }))).toBe(false);
   });
 });
 

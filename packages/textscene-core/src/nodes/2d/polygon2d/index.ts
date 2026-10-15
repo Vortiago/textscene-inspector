@@ -12,7 +12,6 @@ const polygon2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(polygon2DRegistration);
 
-export { polygon2DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

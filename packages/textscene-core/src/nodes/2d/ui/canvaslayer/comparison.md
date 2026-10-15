@@ -46,6 +46,8 @@ Strict parsing format-checks these `CanvasLayer` properties, plus 10 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-CanvasLayer has no validators of its own. `layer` and `index` go through
-`parseOptionalInt`, so an absent or unparseable value becomes `undefined` with no
-warning. `visible` is `true` for anything other than a value that reads as `false`.
+`layer` goes through `parseOptionalInt`, so an absent or unparseable value becomes
+`undefined` with no warning. `visible` is `true` for anything other than a value that
+reads as `false`. A malformed `transform` falls back to `offset`, `rotation` and `scale`.
+Each of those, and `follow_viewport_enabled` and `follow_viewport_scale`, falls back to
+its Godot default.

@@ -77,8 +77,9 @@ its own res:// namespace (see the fixture manifest's \`root\` field).
 
 - Source commit: ${commit}
 - Vendored by: \`scripts/vendor-godot-demos.mjs\` (re-run against a fresh
-  checkout to update; editor artifacts (*.import, .godot/, screenshots/) and
-  source art (*.psd, *.xcf, *.blend) are pruned)
+  checkout to update; editor artifacts (.godot/, screenshots/, the *.import
+  sidecars the previewer does not read) and source art (*.psd, *.xcf, *.blend)
+  are pruned)
 - \`2d/isometric\` is intentionally absent — it lives at \`scenes/isometric/\`
   as the TileMapLayer integration corpus (issue #74).
 

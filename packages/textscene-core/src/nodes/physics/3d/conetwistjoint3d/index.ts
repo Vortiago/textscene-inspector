@@ -15,5 +15,3 @@ const coneTwistJoint3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(coneTwistJoint3DRegistration);
-
-export { coneTwistJoint3DRegistration };

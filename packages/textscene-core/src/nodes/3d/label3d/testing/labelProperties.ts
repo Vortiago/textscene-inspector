@@ -1,13 +1,12 @@
 /** A parsed Label3D at Godot's defaults, with the text `Hi`, for a glyph test. */
 
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
-import {
-  AlphaCutMode,
-  BillboardMode,
-  HorizontalAlignment,
-  TextureFilter,
-  type Label3DProperties,
-} from '../types';
+import type { Label3DProperties } from '../types';
+import { AlphaCutMode } from '../../../../godot/rendering/materials/alphaCut';
+import { BillboardMode } from '../../../../godot/rendering/materials/billboardMode';
+import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
+import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../../godot/math/math';
+import { AlphaAntiAliasing } from '../../../../godot/rendering/materials/alphaAntialiasing';
 
 export function labelProperties(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
   return {
@@ -22,13 +21,15 @@ export function labelProperties(overrides: Partial<Label3DProperties> = {}): Lab
     double_sided: true,
     font_size: 32,
     line_spacing: 0,
-    horizontal_alignment: HorizontalAlignment.CENTER,
+    horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER,
     no_depth_test: false,
     render_priority: 0,
     outline_render_priority: -1,
     alpha_cut: AlphaCutMode.DISABLED,
     alpha_scissor_threshold: 0.5,
     alpha_hash_scale: 1,
+    alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+    alpha_antialiasing_edge: 0,
     fixed_size: false,
     texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,

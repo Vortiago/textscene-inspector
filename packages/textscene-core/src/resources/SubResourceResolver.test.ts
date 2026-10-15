@@ -5,7 +5,7 @@ import {
   findSubResource,
   findSubResourceOfType,
   parseResourceReference,
-  resolveExtAtlasTexturePath,
+  resolveExtTextResourcePath,
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
@@ -153,7 +153,7 @@ describe('unwrapCanvasTextureRef', () => {
   });
 });
 
-describe("resolveExtAtlasTexturePath — the declared type is the SLOT's", () => {
+describe("resolveExtTextResourcePath — the declared type is the SLOT's", () => {
   /**
    * Godot writes an `[ext_resource]`'s `type=` from the property slot, not the
    * target's class: an AtlasTexture in a `texture` slot is `type="Texture2D"`. So
@@ -161,36 +161,36 @@ describe("resolveExtAtlasTexturePath — the declared type is the SLOT's", () =>
    */
   it('matches a .tres the scene declares as the slot type Texture2D', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://icons/arrow_left.tres' }];
-    expect(resolveExtAtlasTexturePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
+    expect(resolveExtTextResourcePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
   });
 
   it('declines a plain image, which the texture bus decodes directly', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://sheet.png' }];
-    expect(resolveExtAtlasTexturePath('ExtResource("1")', ext)).toBeNull();
+    expect(resolveExtTextResourcePath('ExtResource("1")', ext)).toBeNull();
   });
 });
 
-describe('resolveExtAtlasTexturePath', () => {
+describe('resolveExtTextResourcePath', () => {
   const externals: readonly TscnExternalResource[] = [
     { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },
     { id: '2_sheet', type: 'Texture2D', path: 'res://sheet.png' },
   ];
 
   it('gives the path of an ExtResource declared AtlasTexture', () => {
-    expect(resolveExtAtlasTexturePath('ExtResource("1_atlas")', externals)).toBe(
+    expect(resolveExtTextResourcePath('ExtResource("1_atlas")', externals)).toBe(
       'res://icons/keyboard_arrow_left.tres'
     );
   });
 
   it('declines an ExtResource declared a different type', () => {
-    expect(resolveExtAtlasTexturePath('ExtResource("2_sheet")', externals)).toBeNull();
+    expect(resolveExtTextResourcePath('ExtResource("2_sheet")', externals)).toBeNull();
   });
 
   it('declines a SubResource, an unknown id, a malformed ref, and an absent value', () => {
-    expect(resolveExtAtlasTexturePath('SubResource("1_atlas")', externals)).toBeNull();
-    expect(resolveExtAtlasTexturePath('ExtResource("404")', externals)).toBeNull();
-    expect(resolveExtAtlasTexturePath('not a reference', externals)).toBeNull();
-    expect(resolveExtAtlasTexturePath(undefined, externals)).toBeNull();
+    expect(resolveExtTextResourcePath('SubResource("1_atlas")', externals)).toBeNull();
+    expect(resolveExtTextResourcePath('ExtResource("404")', externals)).toBeNull();
+    expect(resolveExtTextResourcePath('not a reference', externals)).toBeNull();
+    expect(resolveExtTextResourcePath(undefined, externals)).toBeNull();
   });
 });
 
@@ -252,10 +252,15 @@ describe('textResourcePath', () => {
   const resources = [
     { id: '1', type: 'ArrayMesh', path: 'res://rock.tres' },
     { id: '2', type: 'ArrayMesh', path: 'res://rock.res' },
+    { id: '3', type: 'Shader', path: 'res://fog.gdshader' },
   ];
 
   it('names the .tres an ExtResource loads', () => {
     expect(textResourcePath('ExtResource("1")', resources)).toBe('res://rock.tres');
+  });
+
+  it('names the .gdshader an ExtResource loads', () => {
+    expect(textResourcePath('ExtResource("3")', resources)).toBe('res://fog.gdshader');
   });
 
   it('names nothing for a binary .res, an undeclared id or no reference (error path)', () => {

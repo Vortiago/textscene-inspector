@@ -11,7 +11,7 @@ export const LIGHT_SOFT_SHADOWS = 'GODOT_USE_LIGHT_SOFT_SHADOWS';
 export const DIRECTIONAL_SOFT_SHADOWS = 'GODOT_USE_DIRECTIONAL_SOFT_SHADOWS';
 
 /** Which searches a scene's lights need for one render. */
-export interface SoftShadowSearch {
+interface SoftShadowSearch {
   /** An omni, spot or area light searches for blockers (`softShadowRadius.ts`). */
   positional: boolean;
   /** A directional light turns Godot's directional soft shadows on (`sunSoftShadow.ts`). */

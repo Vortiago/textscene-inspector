@@ -38,7 +38,6 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import {
   ViewportTextureProvider,
-  useRegisterViewportTexture,
   type ViewportTextureEntry,
 } from '../../../../r3f/contexts/ViewportTextureContext';
 import {
@@ -57,6 +56,7 @@ import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 // `viewportContentKind` classifies against.
 import '../../../../r3f/controls/index';
 import '../../../../r3f/nodes/index';
+import { ViewportTexturePublisher } from '../../../../r3f/testing/ViewportTexturePublisher';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -80,13 +80,6 @@ function containerSolveNode(
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 150 };
 
-/** Publishes a texture entry at `path` for the lifetime of this component. */
-function Publisher({ path, entry }: { path: string; entry: ViewportTextureEntry }) {
-  const register = useRegisterViewportTexture();
-  useEffect(() => register(path, entry), [register, path, entry]);
-  return null;
-}
-
 /** Registers a raw pass (no real render work) so a cycle can be manufactured directly. */
 function PassRegistrar({ path, dependsOn }: { path: string; dependsOn: string[] }) {
   const register = useRegisterViewportPass();
@@ -107,7 +100,7 @@ describe('<SubViewportContainer>', () => {
     const entry = fakeEntry();
     const renderer = await mount(
       <>
-        <Publisher path="Booth/View" entry={entry} />
+        <ViewportTexturePublisher path="Booth/View" entry={entry} />
         <SubViewportContainer
           {...painterEnv()}
           solveNode={containerSolveNode({})}
@@ -199,7 +192,7 @@ describe('<SubViewportContainer>', () => {
         <ViewportTextureProvider>
           <ViewportPassProvider>
             <CyclicRegistration />
-            <Publisher path="Booth/View" entry={entry} />
+            <ViewportTexturePublisher path="Booth/View" entry={entry} />
             <SubViewportContainer
               {...painterEnv()}
               solveNode={containerSolveNode({})}
@@ -254,7 +247,7 @@ describe('<SubViewportContainer> — one route per sub-viewport', () => {
   it('does not ALSO draw a Control-only sub-viewport live — the raster texture is the whole picture', async () => {
     const renderer = await mount(
       <>
-        <Publisher path="Booth/View" entry={fakeEntry()} />
+        <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />
         <SubViewportContainer
           {...painterEnv()}
           solveNode={containerSolveNode({}, {}, [node('Backdrop', 'ColorRect', {})])}
@@ -269,7 +262,7 @@ describe('<SubViewportContainer> — one route per sub-viewport', () => {
   it('still draws a MIXED viewport’s Controls live, over the pass that rendered its 3D half', async () => {
     const renderer = await mount(
       <>
-        <Publisher path="Booth/View" entry={fakeEntry()} />
+        <ViewportTexturePublisher path="Booth/View" entry={fakeEntry()} />
         <SubViewportContainer
           {...painterEnv()}
           solveNode={containerSolveNode({}, {}, [
@@ -342,7 +335,7 @@ describe('<SubViewportContainer> — the drawn rect', () => {
   ) {
     return mount(
       <ViewportRectProvider>
-        <Publisher path="Booth/View" entry={entry} />
+        <ViewportTexturePublisher path="Booth/View" entry={entry} />
         <SubViewportContainer
           {...painterEnv()}
           solveNode={containerSolveNode(containerProps, viewportProps)}

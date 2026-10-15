@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { visualLayersOf } from '../../../../r3f/visualLayers';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
@@ -100,5 +101,12 @@ describe('<CSGBox3D>', () => {
     const injected = renderer.scene.find((n) => (n.instance as THREE.Object3D).name === 'injected-child');
     expect(injected).toBeTruthy();
     void child;
+  });
+});
+
+describe('<CSGBox3D> render layers', () => {
+  it("carries a lone root's layers on its mesh, which a ReflectionProbe's masks test", async () => {
+    const renderer = await render(makeNode({ layers: 2 }));
+    expect(visualLayersOf(findMesh(renderer.scene))).toBe(2);
   });
 });

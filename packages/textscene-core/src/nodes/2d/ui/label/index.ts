@@ -10,6 +10,5 @@ const labelRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(labelRegistration);
 
-export { labelRegistration };
 export * from './parser';
 export * from './types';

@@ -5,7 +5,7 @@
  * the lenient skip-and-continue recovery.
  */
 
-import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/deprecated.js';
+import { resolveDeprecatedProperty, type ResolvedProperty } from '../godot/classdb/deprecated.js';
 import type {
   TscnScene,
   SceneNode,
@@ -43,7 +43,7 @@ export type NodeCreator<N extends SceneNode<N>> = (
 ) => N | null;
 
 /** What one scan returns: the tree, and the headings it was built from. */
-export interface CoreParseResult<N extends SceneNode<N>> {
+interface CoreParseResult<N extends SceneNode<N>> {
   scene: TscnScene<N>;
   /**
    * Each `[node]` heading's node beside its line, in scan order, for checks against the tree. A

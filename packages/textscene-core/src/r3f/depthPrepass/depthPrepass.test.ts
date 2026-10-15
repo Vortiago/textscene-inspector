@@ -7,7 +7,7 @@ import {
   opaquePrepassUserData,
   type OpaquePrepass,
 } from '../materials/opaquePrepass';
-import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/opaquePrepass';
+import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass';
 import { cameraLookingAt } from '../testing/threePasses';
 
 interface PrepassDraw {

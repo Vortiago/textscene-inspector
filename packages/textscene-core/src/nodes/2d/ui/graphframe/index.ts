@@ -10,6 +10,5 @@ const graphFrameRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(graphFrameRegistration);
 
-export { graphFrameRegistration };
 export * from './parser';
 export * from './types';

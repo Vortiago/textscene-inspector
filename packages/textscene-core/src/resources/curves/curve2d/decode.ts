@@ -7,9 +7,9 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector2Array } from '../../shapes/packedArray';
-import { bezierInterpolate } from '../../../godot/index.js';
+import { bezierInterpolate } from '../../../godot/math/math.js';
 import { CURVE2D_DATA } from '../shared/bezierData';
-import { decodeBezierCurve, resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
+import { resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
 import type { Curve2DControlPoint, Curve2DSample, Curve2DSampler } from './types';
 
 const CURVE2D: BezierCurveReader<Curve2DControlPoint> = {
@@ -22,11 +22,6 @@ const CURVE2D: BezierCurveReader<Curve2DControlPoint> = {
   }),
   origin: () => ({ in: { x: 0, y: 0 }, out: { x: 0, y: 0 }, position: { x: 0, y: 0 } }),
 };
-
-/** The control points of a Curve2D resource body, as Godot loads them. */
-export function decodeCurve2D(data: Readonly<Record<string, string>>): Curve2DControlPoint[] {
-  return decodeBezierCurve(data, CURVE2D);
-}
 
 /** The control points of the Curve2D a `SubResource("id")` value names, or none. */
 export function resolveCurve2D(

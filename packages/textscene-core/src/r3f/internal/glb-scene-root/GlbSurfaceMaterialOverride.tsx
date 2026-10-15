@@ -11,14 +11,18 @@ import {
   standardMaterialBags,
 } from '../../../resources/materials/standardmaterial3d/materialBag.js';
 import { materialFromBag } from '../../../resources/materials/standardmaterial3d/build.js';
-import { textureSlotsFromMaps } from '../../materials/materialTextureMaps.js';
-import { forEachSurfaceMaterial } from '../../../resources/formats/glb/glbProcessing.js';
-import { useMaterialScalars, useMaterialTextures } from '../../materials/SurfaceMaterialSlot.js';
+import { resolvedTexturesFromMaps } from '../../materials/materialTextureMaps.js';
+import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials.js';
+import {
+  GLTF_SURFACE,
+  useMaterialScalars,
+  useMaterialTextures,
+} from '../../materials/SurfaceMaterialSlot.js';
 import { readyMaterial, useMaterial } from '../../materials/useMaterial.js';
 import type { MaterialSource } from '../../materials/materialSource.js';
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 
-export interface GlbSurfaceMaterialOverrideProps {
+interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
   target: THREE.Object3D;
   /** Where the override material lives, already resolved. */
@@ -43,13 +47,13 @@ export function GlbSurfaceMaterialOverride({
   const loaded = useMaterial(source);
   const ready = readyMaterial(loaded);
   const scalars = useMaterialScalars(ready);
-  // No `triplanarMesh`: the geometry is the glTF's, so there is no Godot mesh
-  // sub-resource whose size a triplanar material could tile against.
-  const { maps, isUnresolved } = useMaterialTextures(scalars, ready);
+  // The geometry is the glTF's: no Godot mesh sub-resource for a triplanar material to tile
+  // against, and UVs in Godot's top-down V.
+  const { maps, isUnresolved } = useMaterialTextures(scalars, ready, GLTF_SURFACE);
   const isAbsent = loaded.status === 'absent';
   // No bags while unresolved, so a late map leaves the placeholder material as it is.
   const bags = useMemo(
-    () => (isUnresolved ? null : standardMaterialBags(scalars, textureSlotsFromMaps(maps))),
+    () => (isUnresolved ? null : standardMaterialBags(scalars, resolvedTexturesFromMaps(maps))),
     [isUnresolved, scalars, maps]
   );
   const material = useMemo(() => {

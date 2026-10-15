@@ -6,8 +6,8 @@
  */
 
 import { warn } from '../../../logger.js';
-import { ruleInt, toInt16, toUint32 } from '../../../godot/int.js';
-import { dictCallField } from '../../../godot/variantParser.js';
+import { ruleInt, toInt16, toUint32 } from '../../../godot/variant/int.js';
+import { dictCallField } from '../../../godot/variant/variantParser.js';
 
 /**
  * The int body of the `"cells"` entry of the `data` Dictionary, or null when it holds none.

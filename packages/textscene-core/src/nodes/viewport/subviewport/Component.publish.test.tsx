@@ -6,7 +6,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 import type { ReactNode } from 'react';
@@ -23,10 +22,13 @@ import {
   ViewportPassOrchestrator,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { SubViewport } from './Component';
+import { installToneCurve } from '../../../resources/environment/toneMapping';
+import { ToneMapper } from '../../../godot/rendering/environment/toneMapping.js';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
+import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
 
 /** A SubViewport with every default and no children, as the conformance guard builds one. */
 const bareSubViewport = new TscnParser().parse(
@@ -36,12 +38,6 @@ const bareSubViewport = new TscnParser().parse(
 /** Reports whatever is published at `path` on every render. */
 function Probe({ path, seen }: { path: string; seen: (ViewportTextureEntry | null)[] }) {
   seen.push(useViewportTexture(path));
-  return null;
-}
-
-/** Captures the canvas renderer so a test can observe the offscreen pass. */
-function GlSpy({ captured }: { captured: { current: THREE.WebGLRenderer | null } }) {
-  captured.current = useThree((state) => state.gl);
   return null;
 }
 
@@ -124,7 +120,7 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewpo
         <ViewportPassProvider>
           {nodes}
           <Probe path={viewportPath} seen={seen} />
-          <GlSpy captured={capturedGl} />
+          <CaptureRenderer captured={capturedGl} />
           <ViewportPassOrchestrator />
         </ViewportPassProvider>
       </ViewportTextureProvider>
@@ -262,6 +258,23 @@ mesh = SubResource("1")
     const { renderer, gl } = await renderScene(scene3D());
     gl().toneMapping = THREE.CustomToneMapping;
     expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
+  });
+
+  /**
+   * The glow compositor holds `gl.toneMapping` at `NoToneMapping` and tonemaps the main view in
+   * its own pass, which never reaches the target. A shared world's curve still applies inside the
+   * target, as above.
+   */
+  it('shared world: the offscreen pass applies the environment curve the compositor suspends', async () => {
+    const { renderer, gl } = await renderScene(scene3D());
+    const restore = installToneCurve(gl(), { mode: ToneMapper.FILMIC, exposure: 1 });
+    try {
+      gl().toneMapping = THREE.NoToneMapping;
+      expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
+      expect(gl().toneMapping).toBe(THREE.NoToneMapping);
+    } finally {
+      restore();
+    }
   });
 
   /**

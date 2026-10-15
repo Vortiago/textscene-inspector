@@ -53,27 +53,37 @@ describe('<Sprite3D> billboard', () => {
     expect(object.quaternion.z).toBeCloseTo(0, 6);
   });
 
+  // The test renderer's camera keeps the identity rotation, so a billboard's world basis is the
+  // identity whatever the sprite authored.
+  const yawed = 'Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 3, 2, 0)';
+
   it('overrides the authored rotation with the camera basis when ENABLED', async () => {
-    // A quarter turn about Y, which billboarding must throw away: Godot's
-    // ENABLED replaces the model basis with the camera's, so the sprite ends up
-    // carrying the camera's orientation whatever the scene authored.
-    const yawed = 'Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 3, 0, 0)';
     const authored = await objectAfterFrame({ transform: yawed });
     expect(Math.abs(authored.quaternion.y)).toBeGreaterThan(0.5);
 
     const billboarded = await objectAfterFrame({ billboard: '1', transform: yawed });
-    expect(billboarded.quaternion.x).toBeCloseTo(0, 6);
-    expect(billboarded.quaternion.y).toBeCloseTo(0, 6);
-    expect(billboarded.quaternion.z).toBeCloseTo(0, 6);
+    expectAxis(worldAxis(billboarded, 0), [1, 0, 0]);
+    expectAxis(worldAxis(billboarded, 1), [0, 1, 0]);
   });
 
-  it('turns only around Y when billboard is FIXED_Y', async () => {
-    const object = await objectAfterFrame({
-      billboard: '2',
-      transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 2, 0)',
-    });
-    expect(object.rotation.x).toBeCloseTo(0, 6);
-    expect(object.rotation.z).toBeCloseTo(0, 6);
-    expect(Math.abs(object.rotation.y)).toBeGreaterThan(0);
+  it('takes the camera axes about world up when billboard is FIXED_Y', async () => {
+    const object = await objectAfterFrame({ billboard: '2', transform: yawed });
+    expectAxis(worldAxis(object, 1), [0, 1, 0]);
+    expectAxis(worldAxis(object, 2), [0, 0, 1]);
+  });
+
+  it('keeps the node origin when it billboards', async () => {
+    const object = await objectAfterFrame({ billboard: '1', transform: yawed });
+    expectAxis(new THREE.Vector3().setFromMatrixPosition(object.matrixWorld), [3, 2, 0]);
   });
 });
+
+function worldAxis(object: THREE.Object3D, column: 0 | 1 | 2): THREE.Vector3 {
+  return new THREE.Vector3().setFromMatrixColumn(object.matrixWorld, column);
+}
+
+function expectAxis(actual: THREE.Vector3, expected: [number, number, number]): void {
+  expect(actual.x).toBeCloseTo(expected[0], 6);
+  expect(actual.y).toBeCloseTo(expected[1], 6);
+  expect(actual.z).toBeCloseTo(expected[2], 6);
+}

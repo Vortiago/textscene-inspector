@@ -4,8 +4,7 @@
  * Texture2D resolvers import with no cycle. A malformed Rect2 component leaves
  * Godot's zero default, not NaN. No THREE.
  */
-
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { parseOptionalRect2 } from '../../../parser/valueParsers';
 import { type AtlasRect, type AtlasTextureData, type AtlasTextureLayout } from './types';
 

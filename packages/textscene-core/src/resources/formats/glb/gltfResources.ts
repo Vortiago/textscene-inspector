@@ -6,9 +6,17 @@
  * without a renderer.
  */
 
-import { fileExtension } from '../../fileExtension';
 import { normalizeRelativePath, RES_SCHEME } from '../../resPath';
-import { GLB_BIN_CHUNK, GLB_JSON_CHUNK, GLB_MAGIC } from '../../../godot/gltf';
+import { SVG_MIME_TYPE, imageMimeType } from '../image/extensions';
+import {
+  GLB_BIN_CHUNK,
+  GLB_JSON_CHUNK,
+  GLB_MAGIC,
+  dataUriMimeType,
+  isDataUri,
+} from '../../../godot/import/gltf';
+import { getBaseDir, pathJoin } from '../../../godot/string/string';
+import { decodeBase64Bytes } from '../../../godot/variant/packedBytes';
 
 /** The parts of a glTF document this packs; every other member passes through untouched. */
 export interface GltfJson {
@@ -23,15 +31,6 @@ export interface GltfJson {
 const GLB_VERSION = 2;
 /** The glTF spec aligns every GLB chunk, and this packer every resource, to four bytes. */
 const ALIGNMENT = 4;
-
-/** The image MIME types glTF 2.0 and its common extensions name, by extension. */
-const IMAGE_MIME_TYPES: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.ktx2': 'image/ktx2',
-};
 
 /** The GLB file header: magic, version and total length, each a little-endian `uint32`. */
 const GLB_HEADER_BYTES = 12;
@@ -50,8 +49,9 @@ function isGlbContainer(data: ArrayBuffer): boolean {
  */
 export function gltfResourcePath(gltfPath: string, uri: string): string | null {
   const scheme = gltfPath.startsWith(RES_SCHEME) ? RES_SCHEME : '';
-  const directory = gltfPath.slice(scheme.length).split('/').slice(0, -1).join('/');
-  const relative = normalizeRelativePath(`${directory}/${percentDecoded(uri)}`);
+  const directory = getBaseDir(gltfPath.slice(scheme.length));
+  // `p_base_path.path_join(uri)` (`gltf_document.cpp:792`, `:2352`).
+  const relative = normalizeRelativePath(pathJoin(directory, percentDecoded(uri)));
   return relative === null ? null : scheme + relative;
 }
 
@@ -70,7 +70,7 @@ const padded = (length: number): number => Math.ceil(length / ALIGNMENT) * ALIGN
 function dataUriBytes(uri: string): Uint8Array {
   const comma = uri.indexOf(',');
   const payload = uri.slice(comma + 1);
-  if (uri.slice(0, comma).endsWith(';base64')) return Uint8Array.from(atob(payload), (c) => c.charCodeAt(0));
+  if (uri.slice(0, comma).endsWith(';base64')) return decodeBase64Bytes(payload);
   return new TextEncoder().encode(decodeURIComponent(payload));
 }
 
@@ -94,7 +94,7 @@ class BinaryChunk {
 }
 
 /** Reads a non-data URI a glTF names, and throws when it cannot. */
-export type ReadUri = (uri: string) => Promise<ArrayBuffer>;
+type ReadUri = (uri: string) => Promise<ArrayBuffer>;
 
 /** A GLB container's JSON document and the bytes of its binary chunk. */
 interface GlbChunks {
@@ -124,22 +124,33 @@ function glbChunks(glb: ArrayBuffer): GlbChunks {
   return { json: JSON.parse(text) as GltfJson, bin };
 }
 
+/** A text glTF's JSON document, with the empty binary chunk it has no container for. */
+function textGltfDocument(data: ArrayBuffer): GlbChunks {
+  return { json: JSON.parse(new TextDecoder().decode(data)) as GltfJson, bin: new Uint8Array() };
+}
+
 /** Whether a buffer or an image names its bytes by `uri`, which the glTF loader would fetch. */
 function namesUri(json: GltfJson): boolean {
   return [...(json.buffers ?? []), ...(json.images ?? [])].some((entry) => entry.uri !== undefined);
+}
+
+/** A glTF as a GLB that carries every buffer and image, and the images its own document names. */
+export interface SelfContainedGlb {
+  glb: ArrayBuffer;
+  /** The `images` of the document as read, before packing replaces each `uri` with a buffer view. */
+  images: NonNullable<GltfJson['images']>;
 }
 
 /**
  * `data` as a GLB that carries every buffer and image it names: a text glTF packed, a GLB
  * that names a `uri` repacked, and any other GLB as it is. The glTF loader then fetches nothing.
  */
-export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Promise<ArrayBuffer> {
-  if (!isGlbContainer(data)) {
-    const json = JSON.parse(new TextDecoder().decode(data)) as GltfJson;
-    return packGltfAsGlb(json, readUri);
-  }
-  const { json, bin } = glbChunks(data);
-  return namesUri(json) ? packGltfAsGlb(json, readUri, bin) : data;
+export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Promise<SelfContainedGlb> {
+  const isGlb = isGlbContainer(data);
+  const { json, bin } = isGlb ? glbChunks(data) : textGltfDocument(data);
+  const images = json.images ?? [];
+  if (isGlb && !namesUri(json)) return { glb: data, images };
+  return { glb: await packGltfAsGlb(json, readUri, bin), images };
 }
 
 /**
@@ -148,13 +159,13 @@ export async function selfContainedGlb(data: ArrayBuffer, readUri: ReadUri): Pro
  * GLB that `json` came from, which the first buffer names when it has no `uri`. The
  * input is not changed.
  */
-export async function packGltfAsGlb(
+async function packGltfAsGlb(
   json: GltfJson,
   readUri: ReadUri,
   glbBin: Uint8Array = new Uint8Array()
 ): Promise<ArrayBuffer> {
   const read = async (uri: string): Promise<Uint8Array> =>
-    uri.startsWith('data:') ? dataUriBytes(uri) : new Uint8Array(await readUri(uri));
+    isDataUri(uri) ? dataUriBytes(uri) : new Uint8Array(await readUri(uri));
   const chunk = new BinaryChunk();
   const bufferOffsets: number[] = [];
   for (const [index, buffer] of (json.buffers ?? []).entries()) {
@@ -175,12 +186,22 @@ export async function packGltfAsGlb(
     const { uri, ...rest } = image;
     const bytes = await read(uri);
     bufferViews.push({ buffer: 0, byteOffset: chunk.append(bytes), byteLength: bytes.byteLength });
-    const mimeType = rest.mimeType ?? IMAGE_MIME_TYPES[fileExtension(uri.split('?')[0]!) ?? ''];
+    const mimeType = rest.mimeType ?? dataUriMimeType(uri) ?? uriImageMimeType(uri);
     images.push({ ...rest, bufferView: bufferViews.length - 1, ...(mimeType && { mimeType }) });
   }
   const packed: GltfJson = { ...json, buffers: [{ byteLength: chunk.length }], bufferViews };
   if (json.images) packed.images = images;
   return glbOf(packed, chunk.bytes());
+}
+
+/**
+ * The MIME type of an image URI by its extension, its query left off. An SVG gets none: Godot's
+ * glTF importer loads no SVG (`gltf_document.cpp:2136-2177`), and the browser decodes an SVG only
+ * under its MIME type.
+ */
+function uriImageMimeType(uri: string): string | undefined {
+  const mimeType = imageMimeType(uri.split('?')[0]!);
+  return mimeType === SVG_MIME_TYPE ? undefined : mimeType;
 }
 
 /** The GLB container: a 12-byte header, the JSON chunk padded with spaces, the binary chunk. */

@@ -22,7 +22,7 @@ import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../../../r3f/canvasSrgbMultiply';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { godotColorToLinear, useGodotLinearColor } from '../../../../r3f/godotColor';
 import { parseColor } from '../../../../utils/colorParser';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
 import {
@@ -50,7 +50,6 @@ import {
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
-import type { ControlColor } from '../control/types';
 import {
   COLOR_MODE_NAMES,
   COLOR_PICKER_SAMPLE_HEIGHT_FRACTION,
@@ -110,12 +109,11 @@ import {
   type ColorModeChannel,
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
+import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 
-/** `control_font_color` in `default_theme.cpp` (`:100`), the default text colour of Label and Button. Only the pressed `mode_btns` entry reads another colour. */
-const CONTROL_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-
-/** `control_font_pressed_color` (`default_theme.cpp:105,156`): `Button`'s `font_pressed_color`, which the toggled-on `mode_btns[i]` reads. */
-const MODE_BUTTON_PRESSED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+/** `Button`'s `font_pressed_color` (`default_theme.cpp:157`), which the toggled-on `mode_btns[i]` reads. */
+const MODE_BUTTON_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 
 function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -178,7 +176,7 @@ interface LabelledTextProps {
   rect: Rect2;
   layout: TextLayoutResult | null;
   fontSizePx: number;
-  tint: ControlColor;
+  tint: Rgba;
   clippingPlanes: THREE.Plane[];
   renderOrder: number;
   /** Right-aligns within `rect`, as the SpinBox's `LineEdit` does for a number (`line_edit.cpp`). A plain `Label` aligns left. */
@@ -329,7 +327,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
   const spinArrowColor = useMemo(
-    () => srgbToLinearColor(multiplyModulate(tint.own, CONTROL_FONT_COLOR)),
+    () => godotColorToLinear(multiplyModulate(tint.own, CONTROL_FONT_COLOR)),
     [tint.own]
   );
 
@@ -403,8 +401,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
   interface SliderRowContent {
     label: string;
     valueText: string;
-    stops: ControlColor[];
-    overlay?: { base: ControlColor; alpha: number };
+    stops: Rgba[];
+    overlay?: { base: Rgba; alpha: number };
     /** The grabber position, `value/max`. Every channel's `min` is 0 except intensity's, which has its own ratio. */
     ratio: number;
     /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`): only the R, G and B rows of `MODE_LINEAR`. */
@@ -427,8 +425,8 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
     };
     for (let i = 0; i < 3; i++) {
       const c = channels[i]!;
-      let stops: ControlColor[] = [];
-      let overlay: { base: ControlColor; alpha: number } | undefined;
+      let stops: Rgba[] = [];
+      let overlay: { base: Rgba; alpha: number } | undefined;
       if (colorMode === MODE_RGB || colorMode === MODE_LINEAR) {
         stops = rgbChannelGradientStops(i, normalized);
       } else if (colorMode === MODE_HSV) {
@@ -736,7 +734,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                   <ControlQuad
                     width={sliderBox.w}
                     height={sliderBox.h}
-                    color={srgbToLinearColor(multiplyModulate(tint.own, row.overlay.base))}
+                    color={godotColorToLinear(multiplyModulate(tint.own, row.overlay.base))}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}
                   />
@@ -952,10 +950,4 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
       )}
     </CanvasItemGroup>
   );
-}
-
-/** The conversion of `useGodotLinearColor`, for a colour inside a `.map()` callback, where a hook cannot run. */
-function srgbToLinearColor(c: ControlColor): THREE.Color {
-  const toLinear = (v: number) => (v < 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
-  return new THREE.Color(toLinear(c.r), toLinear(c.g), toLinear(c.b));
 }

@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { extResourceAtlasTextureSize, inlineTexture2DSize, useTexture2D } from './useTexture2D';
+import { extResourceTexture2DSize, inlineTexture2DSize, useTexture2D, useTexture2DRid } from './useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
 import { TscnParser } from '../parser/TscnParser';
@@ -16,8 +16,7 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import type { ResourceLoader } from './ResourceLoader';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
-import { abortProceduralBuilds, type JobRunner } from './textures/proceduralBuilds';
-import { clearProceduralTextureCache } from './textures/proceduralTextureCache';
+import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { SceneStack } from '../r3f/testing/SceneStack';
 
 import '../r3f/nodes/index';
@@ -231,8 +230,7 @@ describe('useTexture2D — reference forms', () => {
   // A CanvasTexture's `diffuse_texture` can be an AtlasTexture. The atlas resolve against the
   // outer ref finds no atlas and hands back the whole sheet, so the unwrap runs first.
   it('crops an AtlasTexture that is reached through a CanvasTexture', () => {
-    const sheet = new THREE.Texture();
-    sheet.image = { width: 128, height: 128 };
+    const sheet = new THREE.DataTexture(new Uint8Array(128 * 128 * 4), 128, 128);
     const externalResources: TscnExternalResource[] = [
       { id: '1', type: 'Texture2D', path: 'res://sheet.png' },
     ];
@@ -257,6 +255,7 @@ describe('useTexture2D — reference forms', () => {
     expect(result.current.missing).toBe(false);
     // The whole sheet coming back unchanged is the failure this pins.
     expect(result.current.texture).not.toBe(sheet);
+    expect((result.current.texture?.image as { width: number } | undefined)?.width).toBe(64);
   });
 
   it('reports a reference it cannot resolve as missing', () => {
@@ -305,8 +304,7 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
   }
 
   afterEach(() => {
-    abortProceduralBuilds();
-    clearProceduralTextureCache();
+    resetProceduralTextures();
   });
 
   it('is not missing, and asks the file pipeline for nothing, while it builds', () => {
@@ -316,7 +314,7 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
       wrapper: Wrapper,
     });
 
-    expect(result.current).toEqual({ texture: null, missing: false });
+    expect(result.current).toEqual({ texture: null, missing: false, isArriving: true });
     expect(requested).toEqual([]);
   });
 
@@ -346,7 +344,7 @@ describe('useTexture2D — a NoiseTexture2D that builds as a job', () => {
       { wrapper: Wrapper }
     );
 
-    expect(result.current).toEqual({ texture: null, missing: false });
+    expect(result.current).toEqual({ texture: null, missing: false, isArriving: true });
   });
 });
 
@@ -402,6 +400,27 @@ describe('inlineTexture2DSize', () => {
       data: { atlas: 'ExtResource("1")' },
     },
   ];
+
+  it("reports an inline NoiseTexture2D's declared size before its build lands", () => {
+    const noise: TscnInternalResource[] = [
+      { id: 'NoiseTexture2D_a', type: 'NoiseTexture2D', data: { width: '48', height: '24' } },
+    ];
+    expect(inlineTexture2DSize('SubResource("NoiseTexture2D_a")', noise)).toEqual({ x: 48, y: 24 });
+  });
+
+  it("reports an inline ImageTexture's size as its image's", () => {
+    const saved: TscnInternalResource[] = [
+      {
+        id: 'Image_a',
+        type: 'Image',
+        data: { data: '{\n"data": PackedByteArray(),\n"format": "RGBAHalf",\n"height": 6,\n"width": 10\n}' },
+      },
+      { id: 'ImageTexture_a', type: 'ImageTexture', data: { image: 'SubResource("Image_a")' } },
+      { id: 'ImageTexture_empty', type: 'ImageTexture', data: {} },
+    ];
+    expect(inlineTexture2DSize('SubResource("ImageTexture_a")', saved)).toEqual({ x: 10, y: 6 });
+    expect(inlineTexture2DSize('SubResource("ImageTexture_empty")', saved)).toBeNull();
+  });
 
   it("reports an inline GradientTexture2D's declared pixel size", () => {
     expect(inlineTexture2DSize('SubResource("GradientTexture2D_a")', resources)).toEqual({
@@ -556,40 +575,27 @@ describe('useTexture2D — inline AtlasTexture', () => {
       type: 'AtlasTexture',
       data: { atlas: 'ExtResource("404")', region: 'Rect2(0, 0, 8, 8)' },
     },
+    { id: 'CanvasTexture_sheet', type: 'CanvasTexture', data: { diffuse_texture: 'ExtResource("1_sheet")' } },
+    {
+      id: 'AtlasTexture_canvas',
+      type: 'AtlasTexture',
+      data: { atlas: 'SubResource("CanvasTexture_sheet")', region: 'Rect2(0, 0, 8, 8)' },
+    },
   ];
 
-  function sheet(): THREE.Texture {
-    const texture = new THREE.Texture();
-    (texture as unknown as { image: { width: number; height: number } }).image = {
-      width: 128,
-      height: 128,
-    };
+  /** A 128x128 top-down sheet, as the alpha-border pass leaves one: red is x and green is y. */
+  function sheet(): THREE.DataTexture {
+    const data = new Uint8Array(128 * 128 * 4);
+    for (let i = 0; i < 128 * 128; i += 1) data.set([i % 128, Math.floor(i / 128), 0, 255], i * 4);
+    const texture = new THREE.DataTexture(data, 128, 128);
+    texture.flipY = true;
     return texture;
   }
 
-  /**
-   * happy-dom has no 2D context, so a fake on the prototype records the crop. Replacing
-   * `createElement` would break every other element, the R3F renderer's canvas included.
-   */
-  function stubCanvas() {
-    const calls: number[][] = [];
-    const cut = { canvas: null as HTMLCanvasElement | null };
-    const ctx = {
-      imageSmoothingEnabled: true,
-      drawImage: (_image: unknown, ...args: number[]) => void calls.push(args),
-    };
-    const proto = globalThis.HTMLCanvasElement.prototype;
-    const original = proto.getContext;
-    vi.spyOn(proto, 'getContext').mockImplementation(function (
-      this: HTMLCanvasElement,
-      type: string,
-      ...rest: unknown[]
-    ) {
-      if (type !== '2d') return (original as (...args: unknown[]) => unknown).call(this, type, ...rest);
-      cut.canvas = this;
-      return ctx as unknown as CanvasRenderingContext2D;
-    } as typeof proto.getContext);
-    return { calls, cut };
+  /** The crop's size and its top-left texel's red and green, the sheet coordinates it came from. */
+  function cropOf(texture: THREE.Texture | null) {
+    const image = texture?.image as { data: Uint8Array; width: number; height: number };
+    return { size: [image.width, image.height], topLeft: [image.data[0], image.data[1]] };
   }
 
   function withLoader(seeded?: { path: string; texture: THREE.Texture }) {
@@ -605,21 +611,16 @@ describe('useTexture2D — inline AtlasTexture', () => {
   });
 
   it('crops the sheet to the region, at the region size', () => {
-    const { calls, cut } = stubCanvas();
     const { result } = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
       { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
     );
 
-    expect(result.current.texture).toBeInstanceOf(THREE.CanvasTexture);
-    expect(result.current.texture!.image).toBe(cut.canvas);
-    expect([cut.canvas!.width, cut.canvas!.height]).toEqual([64, 64]);
-    expect(calls[0]).toEqual([32, 32, 64, 64, 0, 0, 64, 64]);
+    expect(cropOf(result.current.texture)).toEqual({ size: [64, 64], topLeft: [32, 32] });
     expect(result.current.missing).toBe(false);
   });
 
   it('shares ONE crop between consumers of the same cell', () => {
-    stubCanvas();
     const wrapper = withLoader({ path: 'res://sheet.png', texture: sheet() });
     const first = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
@@ -630,11 +631,11 @@ describe('useTexture2D — inline AtlasTexture', () => {
       { wrapper }
     );
 
+    expect(first.result.current.texture).not.toBeNull();
     expect(second.result.current.texture).toBe(first.result.current.texture);
   });
 
   it('shows nothing — not a placeholder — while the sheet is still loading', () => {
-    stubCanvas();
     const { result } = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_cell")', externalResources, resources),
       { wrapper: withLoader() }
@@ -645,7 +646,6 @@ describe('useTexture2D — inline AtlasTexture', () => {
   });
 
   it('reports an unresolvable or absent sheet as missing', () => {
-    stubCanvas();
     const wrapper = withLoader();
     const unknown = renderHook(
       () => useTexture2D('SubResource("AtlasTexture_unknownsheet")', externalResources, resources),
@@ -659,6 +659,54 @@ describe('useTexture2D — inline AtlasTexture', () => {
     expect(unknown.result.current.missing).toBe(true);
     expect(orphan.result.current.missing).toBe(true);
   });
+
+  it("gives a slot read by RID the AtlasTexture's whole sheet, uncropped", () => {
+    const whole = sheet();
+    const { result } = renderHook(
+      () => useTexture2DRid('SubResource("AtlasTexture_cell")', externalResources, resources),
+      { wrapper: withLoader({ path: 'res://sheet.png', texture: whole }) }
+    );
+
+    expect(result.current).toEqual({ texture: whole, missing: false, isArriving: false, namesTexture: true });
+  });
+
+  it('gives a slot read by RID a plain image as it is (edge case)', () => {
+    const image = sheet();
+    const { result } = renderHook(
+      () => useTexture2DRid('ExtResource("1_sheet")', externalResources, resources),
+      {
+        wrapper: withLoader({ path: 'res://sheet.png', texture: image }),
+      }
+    );
+
+    expect(result.current).toEqual({ texture: image, missing: false, isArriving: false, namesTexture: true });
+  });
+
+  it('reports an unresolvable sheet behind a slot read by RID as missing (error case)', () => {
+    const { result } = renderHook(
+      () => useTexture2DRid('SubResource("AtlasTexture_unknownsheet")', externalResources, resources),
+      { wrapper: withLoader() }
+    );
+
+    expect(result.current).toEqual({ texture: null, missing: true, isArriving: false, namesTexture: true });
+  });
+
+  it.each(['CanvasTexture_sheet', 'AtlasTexture_canvas'])(
+    'gives a slot read by RID no texture for %s, whose RID names a CanvasTexture',
+    (id) => {
+      const { result } = renderHook(
+        () => useTexture2DRid(`SubResource("${id}")`, externalResources, resources),
+        { wrapper: withLoader({ path: 'res://sheet.png', texture: sheet() }) }
+      );
+
+      expect(result.current).toEqual({
+        texture: null,
+        missing: false,
+        isArriving: false,
+        namesTexture: false,
+      });
+    }
+  );
 });
 
 /**
@@ -680,35 +728,19 @@ atlas = ExtResource("1_tk63f")
 region = Rect2(32, 32, 64, 64)
 `);
 
-  function sheet(): THREE.Texture {
-    const texture = new THREE.Texture();
-    (texture as unknown as { image: { width: number; height: number } }).image = {
-      width: 128,
-      height: 128,
-    };
+  /** A 128x128 top-down sheet, as the alpha-border pass leaves one: red is x and green is y. */
+  function sheet(): THREE.DataTexture {
+    const data = new Uint8Array(128 * 128 * 4);
+    for (let i = 0; i < 128 * 128; i += 1) data.set([i % 128, Math.floor(i / 128), 0, 255], i * 4);
+    const texture = new THREE.DataTexture(data, 128, 128);
+    texture.flipY = true;
     return texture;
   }
 
-  /** The inline block's fake: it records the crop the canvas 2D path draws. */
-  function stubCanvas() {
-    const calls: number[][] = [];
-    const cut = { canvas: null as HTMLCanvasElement | null };
-    const ctx = {
-      imageSmoothingEnabled: true,
-      drawImage: (_image: unknown, ...args: number[]) => void calls.push(args),
-    };
-    const proto = globalThis.HTMLCanvasElement.prototype;
-    const original = proto.getContext;
-    vi.spyOn(proto, 'getContext').mockImplementation(function (
-      this: HTMLCanvasElement,
-      type: string,
-      ...rest: unknown[]
-    ) {
-      if (type !== '2d') return (original as (...args: unknown[]) => unknown).call(this, type, ...rest);
-      cut.canvas = this;
-      return ctx as unknown as CanvasRenderingContext2D;
-    } as typeof proto.getContext);
-    return { calls, cut };
+  /** The crop's size and its top-left texel's red and green, the sheet coordinates it came from. */
+  function cropOf(texture: THREE.Texture | null) {
+    const image = texture?.image as { data: Uint8Array; width: number; height: number };
+    return { size: [image.width, image.height], topLeft: [image.data[0], image.data[1]] };
   }
 
   function withLoader() {
@@ -726,7 +758,6 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('crops the sheet to the region, at the region size', () => {
-    const { calls, cut } = stubCanvas();
     const { fake, Wrapper } = withLoader();
     fake.resources.seed('res://icons/keyboard_arrow_left.tres', atlasTres);
     fake.textures.seed('res://sheet.png', sheet());
@@ -735,15 +766,11 @@ region = Rect2(32, 32, 64, 64)
       wrapper: Wrapper,
     });
 
-    expect(result.current.texture).toBeInstanceOf(THREE.CanvasTexture);
-    expect(result.current.texture!.image).toBe(cut.canvas);
-    expect([cut.canvas!.width, cut.canvas!.height]).toEqual([64, 64]);
-    expect(calls[0]).toEqual([32, 32, 64, 64, 0, 0, 64, 64]);
+    expect(cropOf(result.current.texture)).toEqual({ size: [64, 64], topLeft: [32, 32] });
     expect(result.current.missing).toBe(false);
   });
 
   it('shows nothing — not missing — while the .tres itself is still loading', () => {
-    stubCanvas();
     // Nothing seeded: the resource-bus request stays pending.
     const { Wrapper } = withLoader();
 
@@ -756,7 +783,6 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('reports a missing .tres file as missing', () => {
-    stubCanvas();
     const { fake, Wrapper } = withLoader();
     fake.resources.seed('res://icons/keyboard_arrow_left.tres', null);
 
@@ -769,7 +795,6 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('reports a .tres whose own header names a different resource type as missing', () => {
-    stubCanvas();
     const { fake, Wrapper } = withLoader();
     fake.resources.seed('res://icons/keyboard_arrow_left.tres', {
       resourceType: 'StyleBoxFlat',
@@ -789,7 +814,6 @@ region = Rect2(32, 32, 64, 64)
   it('leaves an ExtResource declared some OTHER type to the ordinary image pipeline', () => {
     // The outer reference never reads as an atlas .tres, so it fails as any unloadable Texture2D
     // path does.
-    stubCanvas();
     const { Wrapper } = withLoader();
     const otherType: TscnExternalResource[] = [{ id: '1_box', type: 'StyleBoxFlat', path: 'res://box.tres' }];
 
@@ -801,7 +825,6 @@ region = Rect2(32, 32, 64, 64)
   });
 
   it('reports a .tres AtlasTexture that names no atlas as missing, not a crash', () => {
-    stubCanvas();
     const { fake, Wrapper } = withLoader();
     fake.resources.seed(
       'res://icons/keyboard_arrow_left.tres',
@@ -821,7 +844,103 @@ region = Rect2(0, 0, 8, 8)
   });
 });
 
-describe('extResourceAtlasTextureSize', () => {
+/** A procedural texture saved as its own `.tres`, which the scene names by `ExtResource`. */
+describe('useTexture2D — a .tres procedural texture', () => {
+  const externalResources: TscnExternalResource[] = [
+    { id: '1_tex', type: 'Texture2D', path: 'res://textures/procedural.tres' },
+  ];
+
+  const GRADIENT_TRES = parseTresFile(`[gd_resource type="GradientTexture2D" format=3]
+
+[sub_resource type="Gradient" id="Gradient_k2d7a"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[resource]
+gradient = SubResource("Gradient_k2d7a")
+width = 8
+height = 4
+`);
+
+  const NOISE_TRES = parseTresFile(`[gd_resource type="NoiseTexture2D" format=3]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_huop3"]
+
+[resource]
+width = 16
+height = 16
+noise = SubResource("FastNoiseLite_huop3")
+`);
+
+  function withLoader(runner: JobRunner = fakeJobRunner().runner) {
+    const fake = createFakeResourceLoader();
+    const loader = Object.assign(fake.loader, { jobRunner: runner }) as ResourceLoader;
+    const requested: string[] = [];
+    fake.textures.setRequestImpl((path) => requested.push(path));
+    function Wrapper({ children }: { children: ReactNode }) {
+      return <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
+    }
+    return { fake, Wrapper, requested };
+  }
+
+  afterEach(() => {
+    resetProceduralTextures();
+  });
+
+  it('rasterises a GradientTexture2D .tres against its own gradient', () => {
+    const { fake, Wrapper, requested } = withLoader();
+    fake.resources.seed('res://textures/procedural.tres', GRADIENT_TRES);
+
+    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
+      wrapper: Wrapper,
+    });
+
+    expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
+    expect(result.current.texture!.image).toMatchObject({ width: 8, height: 4 });
+    expect(result.current.missing).toBe(false);
+    expect(requested).toEqual([]);
+  });
+
+  it('builds a NoiseTexture2D .tres once its job lands', async () => {
+    const { runner, runs } = fakeJobRunner();
+    const { fake, Wrapper } = withLoader(runner);
+    fake.resources.seed('res://textures/procedural.tres', NOISE_TRES);
+
+    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
+      wrapper: Wrapper,
+    });
+    expect(result.current).toEqual({ texture: null, missing: false, isArriving: true });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
+      runs[0]?.complete();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
+    expect(result.current.missing).toBe(false);
+  });
+
+  it('reports a .tres of a texture type the previewer cannot build as missing (edge case)', () => {
+    const { fake, Wrapper } = withLoader();
+    fake.resources.seed(
+      'res://textures/procedural.tres',
+      parseTresFile(`[gd_resource type="ViewportTexture" format=3]
+
+[resource]
+viewport_path = NodePath("SubViewport")
+`)
+    );
+
+    const { result } = renderHook(() => useTexture2D('ExtResource("1_tex")', externalResources, []), {
+      wrapper: Wrapper,
+    });
+
+    expect(result.current).toEqual({ texture: null, missing: true, isArriving: false });
+  });
+});
+
+describe('extResourceTexture2DSize', () => {
   it("reports an ExtResource .tres AtlasTexture's region size", () => {
     const tres: ParsedResource = {
       resourceType: 'AtlasTexture',
@@ -829,20 +948,7 @@ describe('extResourceAtlasTextureSize', () => {
       extResources: [],
       subResources: [],
     };
-    expect(extResourceAtlasTextureSize(tres, null)).toEqual({ x: 48, y: 24 });
-  });
-
-  it('falls back to the sheet size on a zero-size region axis', () => {
-    const tres: ParsedResource = {
-      resourceType: 'AtlasTexture',
-      properties: {},
-      extResources: [],
-      subResources: [],
-    };
-    expect(extResourceAtlasTextureSize(tres, { width: 200, height: 100 })).toEqual({
-      x: 200,
-      y: 100,
-    });
+    expect(extResourceTexture2DSize(tres)).toEqual({ x: 48, y: 24 });
   });
 
   it('declines without the sheet size on a zero-size region axis', () => {
@@ -852,16 +958,26 @@ describe('extResourceAtlasTextureSize', () => {
       extResources: [],
       subResources: [],
     };
-    expect(extResourceAtlasTextureSize(tres, null)).toBeNull();
+    expect(extResourceTexture2DSize(tres)).toBeNull();
   });
 
-  it('declines a .tres whose own header names a different resource type', () => {
+  it("reports a .tres GradientTexture2D's declared size", () => {
     const tres: ParsedResource = {
       resourceType: 'GradientTexture2D',
-      properties: { width: '64', height: '64' },
+      properties: { width: '96', height: '32' },
       extResources: [],
       subResources: [],
     };
-    expect(extResourceAtlasTextureSize(tres, null)).toBeNull();
+    expect(extResourceTexture2DSize(tres)).toEqual({ x: 96, y: 32 });
+  });
+
+  it('declines a .tres that holds no texture (edge case)', () => {
+    const tres: ParsedResource = {
+      resourceType: 'StyleBoxFlat',
+      properties: {},
+      extResources: [],
+      subResources: [],
+    };
+    expect(extResourceTexture2DSize(tres)).toBeNull();
   });
 });

@@ -1,52 +1,11 @@
-export { TscnCanvas, TscnSceneContents } from './TscnCanvas.js';
-export { NodeDispatcher, type NodeDispatcherProps } from './NodeDispatcher.js';
-export { nodeComponentRegistry } from './NodeComponentRegistry.js';
-export type {
-  NodeComponent,
-  NodeComponentProps,
-  NodeComponentRegistration,
-} from './NodeComponentRegistry.js';
-// Ensure all node-type components self-register on first import.
+// Every node-type component registers itself on first import.
 import './nodes/index.js';
 
 export {
-  SelectionProvider,
-  useSelection,
-  HierarchyProvider,
-  useHierarchy,
-  ViewportActionsProvider,
-  useViewportActions,
-  useOptionalViewportActions,
-  NodePathProvider,
-  useNodePath,
-  MissingResourcesProvider,
   useMissingResources,
-  type SelectionContextValue,
-  type SelectionProviderProps,
-  type HierarchyContextValue,
-  type HierarchyProviderProps,
-  type ViewportActionsContextValue,
-  type ViewportActionsProviderProps,
-  type NodePathProviderProps,
   type MissingResourcesContextValue,
-  type MissingResourcesProviderProps,
-} from './contexts/index.js';
-
-export { SceneTreeViewer, type SceneTreeViewerProps } from './components/SceneTreeViewer/SceneTreeViewer.js';
-export { NodeDetailsPanel } from './components/NodeDetailsPanel/NodeDetailsPanel.js';
-export {
-  MissingResourcesPanel,
-  type MissingResourcesPanelProps,
-} from './components/MissingResourcesPanel/MissingResourcesPanel.js';
-export {
-  ViewportSelector,
-  type ViewportSelectorProps,
-  type ViewportSelectorOption,
-} from './components/ViewportSelector/ViewportSelector.js';
-export {
-  TscnPreviewShell,
-  type TscnPreviewShellProps,
-} from './components/TscnPreviewShell/TscnPreviewShell.js';
+} from './contexts/MissingResourcesContext.js';
+export { TscnPreviewShell } from './components/TscnPreviewShell/TscnPreviewShell.js';
 export {
   PENDING_CAPTURE,
   type PreviewCaptureState,
@@ -54,15 +13,8 @@ export {
 // The shell's narrow-layout queries, so a host's own chrome switches at the same width.
 export { COMPACT_LAYOUT_QUERY, isCompactLayout } from './components/TscnPreviewShell/narrowLayout.js';
 
-export {
-  useViewportSelection,
-  type UseViewportSelectionOptions,
-  type UseViewportSelectionResult,
-  type DelegatedPointerHandlers,
-} from './hooks/useViewportSelection.js';
-
 // The debounced persistence `<TscnPreviewShell>` uses, for a host such as the web app's Source pane.
-export { usePersistedState, readPersisted, writePersisted } from './hooks/usePersistedState.js';
+export { usePersistedState } from './hooks/usePersistedState.js';
 
 // The shell's parse pipeline, so a host makes the same renderability decision the shell makes.
-export { parseTscnContent, type ParseResult } from './hooks/useParsedScene.js';
+export { parseTscnContent } from './hooks/useParsedScene.js';

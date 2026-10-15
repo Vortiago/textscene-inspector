@@ -8,6 +8,9 @@ export const MATERIAL_SCENES = [
   { name: 'material-diffuse-mode', file: 'unit-material-diffuse-mode.tscn' },
   { name: 'material-specular-mode', file: 'unit-material-specular-mode.tscn' },
   { name: 'material-normal-map', file: 'unit-material-normal-map.tscn' },
+  // A normal map with blue 0: Godot rebuilds blue from red and green, so the flat texel shades as the
+  // bare plane. A read of the stored blue turns that half dark.
+  { name: 'material-normal-map-blue', file: 'unit-material-normal-map-blue.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
@@ -29,8 +32,7 @@ export const MATERIAL_SCENES = [
   { name: 'grid-map-billboard', file: 'unit-grid-map-billboard.tscn' },
 
   // The noise rasterisation pipeline on a Sprite2D: seeded FastNoiseLite
-  // ridged fBm → normalise → seamless blend skirt → Gradient ramp. These three
-  // are the only scenes with a noise texture.
+  // ridged fBm → normalise → seamless blend skirt → Gradient ramp.
   { name: 'noisetexture2d', file: 'unit-noisetexture2d.tscn', mode: '2d' },
   // A noise texture past one upload band, so it reaches the GPU in bands. Its
   // baseline is three's whole upload, so a pass means the bands give its pixels.
@@ -39,6 +41,8 @@ export const MATERIAL_SCENES = [
   // and the NoColorSpace tagging show only when a lit material perturbs its
   // normals with the result.
   { name: 'noisetexture2d-normal', file: 'unit-noisetexture2d-normal.tscn' },
+  // The FastNoiseLite domain warp, which no other noise scene turns on.
+  { name: 'noisetexture2d-domain-warp', file: 'unit-noisetexture2d-domain-warp.tscn', mode: '2d' },
 
   // Sprite2D, Sprite3D and 3D physics bodies.
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
@@ -69,14 +73,33 @@ export const MATERIAL_SCENES = [
     name: 'glb-surface-material-override',
     file: 'unit-glb-surface-material-override.tscn',
   },
+  // An emission map drawn through the UV2 Godot's importer unwrapped into the `.glb`'s unwrap
+  // cache, the only scene that samples UV2. Each face shows its own patch of the gradient bands.
+  { name: 'glb-lightmap-uv2', file: 'unit-glb-lightmap-uv2.tscn' },
   // The one variable, carried by no other fixture: a node-level
   // `surface_material_override/N` over a baked mesh's surface material. Surface
   // 1 is overridden and surface 0 is not, so a leak onto every surface, a
   // dropped override and a wrong index give three different images.
   { name: 'arraymesh-surface-override', file: 'unit-arraymesh-surface-override.tscn' },
+  // The saved format of an albedo ImageTexture: the same greys as Lum8, which has no sRGB view and
+  // reads raw, over RGB8, which reads as sRGB. A format read the wrong way darkens or lifts a strip.
+  { name: 'material-albedo-image-format', file: 'unit-material-albedo-image-format.tscn' },
+  // The import format of an albedo image file: a greyscale PNG with no sidecar imports as Lum8 and
+  // reads raw, the same PNG VRAM compressed reads as sRGB, as does an RGB PNG, and an RGB PNG imported
+  // as an RGTC normal map reads red and green raw with blue 0. A wrong read shifts a strip.
+  { name: 'material-albedo-image-import', file: 'unit-material-albedo-image-import.tscn' },
+  // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
+  // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
+  { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },
+  // ADD emission with a lit colour and a texture: each texel adds to the colour, so a multiply
+  // darkens the blue and green texels to black.
+  { name: 'material-emission-add', file: 'unit-material-emission-add.tscn' },
   // Decal `texture_albedo` as an inline GradientTexture2D. The albedo is all a
   // decal projects, so an unresolved slot leaves the floor bare.
   { name: 'decal-gradienttexture', file: 'unit-decal-gradienttexture.tscn' },
+  // Decal `texture_albedo` as an AtlasTexture: a decal takes the texture's RID, so it projects the
+  // whole sheet. A cropped region projects one red square.
+  { name: 'decal-atlas-texture', file: 'unit-decal-atlas-texture.tscn' },
   // The one MeshInstance3D material from an external `.tres`, and the one
   // roughness map with contrast: a glossy cap and a rough one meet at a hard
   // seam. If the map fails to arrive, both caps go matte. Other roughness

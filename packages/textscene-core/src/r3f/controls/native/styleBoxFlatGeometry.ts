@@ -11,14 +11,9 @@
  */
 
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import type { Rect2, Vec2 } from './rect';
-
-interface Rgba {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
+import type { Rect2 } from './rect';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 // `border_blend` and the AA rings use vertex colours, not a shader: a ring's inner
 // vertices take `border_color_inner` and its outer ones `border_color`, and three
@@ -62,7 +57,7 @@ function grow(r: Rect2, by: number): Rect2 {
 }
 
 /** `Rect2::position += offset`: moves a rect without resizing it. */
-function translate(r: Rect2, offset: Vec2): Rect2 {
+function translate(r: Rect2, offset: Vector2): Rect2 {
   return { x: r.x + offset.x, y: r.y + offset.y, w: r.w, h: r.h };
 }
 
@@ -277,7 +272,7 @@ function drawRoundedRectangle(
   styleRect: Rect2,
   cornerRadius: readonly number[],
   cornerDetail: number,
-  skew: Vec2,
+  skew: Vector2,
   ringRect: Rect2,
   innerRect: Rect2,
   innerColor: Rgba,

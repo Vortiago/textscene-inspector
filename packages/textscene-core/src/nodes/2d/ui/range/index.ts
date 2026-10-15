@@ -9,5 +9,3 @@ const rangeRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(rangeRegistration);
-
-export { rangeRegistration };

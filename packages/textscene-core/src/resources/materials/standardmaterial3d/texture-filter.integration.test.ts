@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
-import { GODOT_ANISOTROPY_MAX } from '../../textures/godotTextureFilter';
+import { godotTextureFilterState } from '../../textures/godotTextureFilter';
 
 function build(
   properties: Record<string, string>,
@@ -40,7 +40,7 @@ describe('texture_filter integration — shared textures', () => {
     expect(pixelArt.map!.magFilter).toBe(THREE.NearestFilter);
     expect(pixelArt.map!.generateMipmaps).toBe(false);
     expect(anisotropic.map!.magFilter).toBe(THREE.LinearFilter);
-    expect(anisotropic.map!.anisotropy).toBe(GODOT_ANISOTROPY_MAX);
+    expect(anisotropic.map!.anisotropy).toBe(godotTextureFilterState(5).anisotropy);
 
     expect(pixelArt.map).not.toBe(anisotropic.map);
     // The source must come back untouched, or every other consumer of this

@@ -7,9 +7,9 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict } from '../../../../linter/parentType.js';
-import { literalText } from '../../../../godot/index.js';
+import { literalText } from '../../../../godot/string/string.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -64,12 +64,10 @@ const xrNode3DValidationRule: LintRule = {
     description:
       "Mirrors two of XRNode3D::get_configuration_warnings' checks (a parent that is not an XROrigin3D, an explicitly emptied pose) across XRNode3D and the subclasses that inherit the check unmodified (XRAnchor3D, XRController3D)",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'XRNode3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'XRNode3D'),
     emits: armEmits(arms),
   },
   check: checkXRNode3D,
 };
 
 ruleRegistry.register(xrNode3DValidationRule);
-
-export { xrNode3DValidationRule };

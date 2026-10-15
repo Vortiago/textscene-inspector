@@ -5,41 +5,42 @@
  * Constants are `editor_settings.cpp` defaults and `node_3d_editor_plugin.cpp` speeds.
  */
 import * as THREE from 'three';
+import { degToRad } from '../godot/math/math.js';
 import { clampWheelNotches, wheelNotches, type WheelEventLike } from './pointerGesture.js';
 
 /** `editors/3d/navigation_feel/orbit_sensitivity`. */
-export const ORBIT_DEGREES_PER_PIXEL = 0.25;
+const ORBIT_DEGREES_PER_PIXEL = 0.25;
 
 /** `editors/3d/freelook/freelook_sensitivity`. */
-export const FREELOOK_DEGREES_PER_PIXEL = 0.25;
+const FREELOOK_DEGREES_PER_PIXEL = 0.25;
 
 /**
  * `_nav_pan`: `translation_sensitivity / 150`, at the editor default sensitivity of 1.0. Scaled
  * by `distance / DISTANCE_DEFAULT` at use, so a pan moves at about one rate at any zoom.
  */
-export const PAN_PIXELS_TO_UNITS = 1 / 150;
+const PAN_PIXELS_TO_UNITS = 1 / 150;
 
 /** `_nav_zoom`'s hard-coded `zoom_speed` for a drag-zoom. */
-export const DRAG_ZOOM_SPEED = 1 / 80;
+const DRAG_ZOOM_SPEED = 1 / 80;
 
 /** `ZOOM_FREELOOK_MULTIPLIER`: one wheel notch's distance scale. */
-export const WHEEL_ZOOM_MULTIPLIER = 1.08;
+const WHEEL_ZOOM_MULTIPLIER = 1.08;
 
 /**
  * `_nav_orbit` clamps the pitch to just short of ±90 degrees, which keeps the derived basis
  * non-degenerate mid-orbit.
  */
-export const X_ROT_LIMIT = 1.57;
+const X_ROT_LIMIT = 1.57;
 
 /** `editors/3d/freelook/freelook_base_speed`, in units per second. */
-export const FREELOOK_BASE_SPEED = 5.0;
+const FREELOOK_BASE_SPEED = 5.0;
 
 /** `_update_freelook`'s `freelook_speed_modifier` multiplier (Shift). */
-export const FREELOOK_SPRINT_MULTIPLIER = 3.0;
+const FREELOOK_SPRINT_MULTIPLIER = 3.0;
 
 /** `ZOOM_FREELOOK_MIN` / `ZOOM_FREELOOK_MAX` (single-precision editor build). */
-export const ZOOM_DISTANCE_MIN = 0.01;
-export const ZOOM_DISTANCE_MAX = 10000;
+const ZOOM_DISTANCE_MIN = 0.01;
+const ZOOM_DISTANCE_MAX = 10000;
 
 /** `DISTANCE_DEFAULT`: the reference radius pan speed is scaled against. */
 const DISTANCE_DEFAULT = 4;
@@ -68,7 +69,7 @@ export type GodotViewAngle = 'front' | 'rear' | 'left' | 'right' | 'top' | 'bott
  * `_menu_option`'s VIEW_TOP/BOTTOM/LEFT/RIGHT/FRONT/REAR cursor angles. A snap sets the two
  * rotations and leaves the focus point and radius alone.
  */
-export const VIEW_ANGLES: Readonly<Record<GodotViewAngle, { xRot: number; yRot: number }>> = {
+const VIEW_ANGLES: Readonly<Record<GodotViewAngle, { xRot: number; yRot: number }>> = {
   front: { xRot: 0, yRot: 0 },
   rear: { xRot: 0, yRot: Math.PI },
   left: { xRot: 0, yRot: Math.PI / 2 },
@@ -121,10 +122,6 @@ export interface FreelookKeys {
 const AXIS_X = new THREE.Vector3(1, 0, 0);
 const AXIS_Y = new THREE.Vector3(0, 1, 0);
 
-function degreesToRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
-
 function clampPitch(xRot: number): number {
   return THREE.MathUtils.clamp(xRot, -X_ROT_LIMIT, X_ROT_LIMIT);
 }
@@ -141,7 +138,7 @@ export function cursorQuaternion(cursor: EditorCursor): THREE.Quaternion {
 }
 
 /** The unit vector from the focus point towards the eye. */
-export function cursorDirection(cursor: EditorCursor): THREE.Vector3 {
+function cursorDirection(cursor: EditorCursor): THREE.Vector3 {
   return new THREE.Vector3(0, 0, 1).applyAxisAngle(AXIS_X, -cursor.xRot).applyAxisAngle(AXIS_Y, -cursor.yRot);
 }
 
@@ -176,7 +173,7 @@ export function cursorFromCamera(position: THREE.Vector3, target: THREE.Vector3)
  * accumulates without a wrap or a clamp, as in Godot.
  */
 export function orbitCursor(cursor: EditorCursor, dx: number, dy: number): EditorCursor {
-  const radiansPerPixel = degreesToRadians(ORBIT_DEGREES_PER_PIXEL);
+  const radiansPerPixel = degToRad(ORBIT_DEGREES_PER_PIXEL);
   return {
     ...cursor,
     xRot: clampPitch(cursor.xRot + dy * radiansPerPixel),
@@ -247,7 +244,7 @@ export function resolveWheelMode(mods: NavModifiers): 'pan' | 'zoom' {
  * then moves the focus point by how far the eye would have moved.
  */
 export function freelookCursor(cursor: EditorCursor, dx: number, dy: number): EditorCursor {
-  const radiansPerPixel = degreesToRadians(FREELOOK_DEGREES_PER_PIXEL);
+  const radiansPerPixel = degToRad(FREELOOK_DEGREES_PER_PIXEL);
   const rotated: EditorCursor = {
     ...cursor,
     xRot: clampPitch(cursor.xRot + dy * radiansPerPixel),
@@ -296,5 +293,5 @@ export function viewSnapCursor(cursor: EditorCursor, view: GodotViewAngle): Edit
  * point. Zoom therefore works in orthographic mode, where moving the eye changes nothing.
  */
 export function orthographicHeight(distance: number, fovDegrees: number): number {
-  return 2 * distance * Math.tan(degreesToRadians(fovDegrees) / 2);
+  return 2 * distance * Math.tan(degToRad(fovDegrees) / 2);
 }

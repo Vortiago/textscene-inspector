@@ -8,9 +8,8 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import type { ParseError } from './types.js';
-import { baseChain } from '../godot/nodeBaseTypes.js';
-import { CHAIN_IK_SETTING_LEAVES } from '../nodes/3d/skeleton/chainik3d/linterParser.js';
-import { BONE_CONSTRAINT_SETTING_LEAVES } from '../nodes/3d/skeleton/boneconstraint3d/linterParser.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { boneConstraintBaseLeaves } from '../nodes/3d/skeleton/boneconstraint3d/linterParser.js';
 // The whole barrel: a per-slice test loads only its own graph, where nothing
 // shadows anything and a missing forward passes.
 import './index.js';
@@ -20,10 +19,10 @@ interface Seam {
   /** The class that owns the leaves under test. */
   base: string;
   /**
-   * The base's own leaf table, imported rather than re-spelled, so a leaf added
-   * to the base joins the sweep.
+   * The leaves the base's `_get_property_list` writes under `settings/<i>/`, read from the base's
+   * own table where a production export carries it, so a leaf added there joins the sweep.
    */
-  leaves: Readonly<Record<string, unknown>>;
+  leaves: readonly string[];
   /** Leaves the base matches by regex rather than from the table above. */
   extraKeys?: readonly string[];
   /** One leaf with a real bound, as the anchor described below. */
@@ -43,7 +42,17 @@ interface Seam {
 const SEAMS: readonly Seam[] = [
   {
     base: 'ChainIK3D',
-    leaves: CHAIN_IK_SETTING_LEAVES,
+    // chain_ik_3d.cpp:126-133.
+    leaves: [
+      'root_bone_name',
+      'root_bone',
+      'end_bone_name',
+      'end_bone',
+      'extend_end_bone',
+      'end_bone/direction',
+      'end_bone/length',
+      'joint_count',
+    ],
     // Matched by JOINT_BONE_RE (chain_ik_3d.cpp:62-63), not from the table.
     extraKeys: ['settings/0/joints/0/bone', 'settings/0/joints/0/bone_name'],
     // root_bone is clamped to -1 (chain_ik_3d.cpp:186-188), so -2 is an error.
@@ -54,7 +63,7 @@ const SEAMS: readonly Seam[] = [
   },
   {
     base: 'BoneConstraint3D',
-    leaves: BONE_CONSTRAINT_SETTING_LEAVES,
+    leaves: Object.keys(boneConstraintBaseLeaves()),
     // amount is hinted 0..1 (bone_constraint_3d.cpp:102) with a bare-assign
     // setter, so 5 is a warning rather than an error.
     key: 'settings/0/amount',
@@ -88,7 +97,7 @@ function summarise(error: ParseError | null): unknown {
 
 describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
   const descendants = registeredTypes('declaring')
-    .filter((type) => type !== seam.base && baseChain(type).includes(seam.base))
+    .filter((type) => type !== seam.base && descendsFromClass(type, seam.base))
     .sort();
 
   it('finds descendants that SHADOW the key, so the assertions cannot pass vacuously', () => {
@@ -108,13 +117,10 @@ describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
     ).toBeGreaterThanOrEqual(seam.minShadowingDescendants);
   });
 
-  const sweptKeys = [
-    ...Object.keys(seam.leaves).map((leaf) => `settings/0/${leaf}`),
-    ...(seam.extraKeys ?? []),
-  ];
+  const sweptKeys = [...seam.leaves.map((leaf) => `settings/0/${leaf}`), ...(seam.extraKeys ?? [])];
 
   it('sweeps every leaf the base declares, not one canary', () => {
-    expect(sweptKeys.length).toBeGreaterThanOrEqual(Object.keys(seam.leaves).length);
+    expect(sweptKeys.length).toBeGreaterThanOrEqual(seam.leaves.length);
     expect(sweptKeys).toContain(seam.key);
   });
 

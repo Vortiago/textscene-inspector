@@ -1,5 +1,5 @@
 /**
- * Every configuration warning Godot raises is implemented as a rule, or declined (`configurationWarningCensus.ts`).
+ * Every configuration warning Godot raises is implemented as a rule, or declined (`testing/configurationWarningCensus.ts`).
  * Godot declares a warning on the class that owns the condition, often an abstract base such as `Light3D`, and
  * `RuleRegistry.getRulesForNodeType` matches exactly. So an implemented row passes only when its rule reaches every
  * concrete registered type descending from the declaring class, not when the rule merely exists.
@@ -9,8 +9,8 @@ import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { descendsFrom } from '../godot/nodeBaseTypes.js';
-import { WARNINGS, type WarningRow } from './configurationWarningCensus.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { WARNINGS, type WarningRow } from './testing/configurationWarningCensus.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its rules
 import { ENGINE_CITE_RE } from './testing/engineCite.js';
@@ -30,7 +30,7 @@ const UNIMPLEMENTED_ROWS: readonly string[] = ['CSGShape3D csg_shape.cpp:982'];
 function concreteHeirs(declaringClass: string, row?: WarningRow): string[] {
   const registered = nodeRegistry.getAllTypeNames();
   if (row?.appliesTo) return registered.filter((t) => row.appliesTo!.includes(t));
-  return registered.filter((t) => t === declaringClass || descendsFrom(t, declaringClass));
+  return registered.filter((t) => descendsFromClass(t, declaringClass));
 }
 
 function rulesEmitting(ruleName: string) {

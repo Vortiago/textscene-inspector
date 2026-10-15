@@ -11,12 +11,10 @@
  */
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
 import {
-  AutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -27,9 +25,11 @@ import { unquoteString } from '../../../../parser/utils';
 import type { TscnNode } from '../../../../parser/types';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import type { MenuBarProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)`, MenuBar's own theme font key (`menu_bar.cpp:748`). */
-export const MENU_BAR_THEME_FONT_KEY = 'font';
+const MENU_BAR_THEME_FONT_KEY = 'font';
 
 /** MenuBar's own `font_size` and `font_color` theme keys (`menu_bar.cpp:748,756`), spelled as Button's but declared apart. */
 export const MENU_BAR_TEXT_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -39,7 +39,7 @@ export interface MenuBarTitle {
   name: string;
   layout: TextLayoutResult;
   /** `text_buf->get_size() + style->get_minimum_size()` (`menu_bar.cpp:433,417`). */
-  size: Vec2;
+  size: Vector2;
 }
 
 /** `MenuBar::_get_popups` (`menu_bar.cpp:585-594`): direct `PopupMenu` children, in scene order. */
@@ -62,17 +62,17 @@ function menuTitleText(child: TscnNode): string {
  * Shapes every title once, as `MenuBar::shape()` (`menu_bar.cpp:520-527`): one `TextLine`, no wrap, no
  * `line_spacing`. It matches Button-family shaping but is spelled out, since a title is no Button label.
  */
-export function menuBarTitles(
+function menuBarTitles(
   n: ShareNode,
   fontSizePx: number,
   fontMetrics: FontMetrics,
-  marginSize: Vec2
+  marginSize: Vector2
 ): MenuBarTitle[] {
   return popupChildren(n).map((child) => {
     const layout = shapeText(menuTitleText(child), {
       fontSizePx,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
       fontMetrics,
     });
@@ -134,7 +134,7 @@ export const menuBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   return { x: width, y: height };
 };
 
-export interface MenuBarItemPlacement {
+interface MenuBarItemPlacement {
   title: MenuBarTitle;
   /** This item's x inside the bar. */
   x: number;

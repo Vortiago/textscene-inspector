@@ -15,7 +15,7 @@ import {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { DEFAULT_FONT_SIZE } from '../../../../r3f/controls/godotDefaultTheme';
 import {
@@ -25,11 +25,14 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { AutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveRangeValue, type RangeProperties, type RangeValueOrder } from '../shared/range';
-import { isEqualApprox, rect2Intersection } from '../../../../godot/index.js';
-import type { ControlColor } from '../control/types';
+import { rect2Intersection } from '../../../../godot/math/rect2.js';
 import type { ProgressBarProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector.js';
+import { isEqualApprox, type Rgba } from '../../../../godot/math/math.js';
+import { CONTROL_FONT_HOVER_COLOR } from '../../../../godot/scene/theme.js';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /**
  * `default_theme.cpp:440-441`: `make_flat_stylebox(color, 2, 2, 2, 2, 6)`, not
@@ -41,7 +44,7 @@ const PROGRESS_BAR_CORNER_RADIUS = 6;
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 /** `StyleBoxFlat`'s unset default (`style_box_flat.h:40`): `make_flat_stylebox` never sets the border colour. */
-const DEFAULT_BORDER_COLOR: ControlColor = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
+const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 
 /**
  * Recovers `gui/theme/default_theme_scale` from `theme.fontSize`
@@ -54,10 +57,7 @@ function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
 }
 
 /** `make_flat_stylebox` (`default_theme.cpp:57-70`) at ProgressBar's own margin/corner-radius literals. */
-function progressBarFlatStyleBox(
-  bgColor: ControlColor,
-  theme: Pick<NativeTheme, 'fontSize'>
-): StyleBoxFlatData {
+function progressBarFlatStyleBox(bgColor: Rgba, theme: Pick<NativeTheme, 'fontSize'>): StyleBoxFlatData {
   const scale = reconstructThemeScale(theme);
   const margin = Math.round(PROGRESS_BAR_STYLE_MARGIN * scale);
   const cornerRadius = Math.round(PROGRESS_BAR_CORNER_RADIUS * scale);
@@ -105,11 +105,11 @@ const PROGRESS_BAR_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey:
 /** `SceneStringName(font)` = `"font"` (`default_theme.cpp:283`: `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT, ProgressBar, font)`). */
 export const PROGRESS_BAR_THEME_FONT_KEY = 'font';
 
-/** ProgressBar's `font_color` default (`:446`) is `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`). */
-const PROGRESS_BAR_DEFAULT_FONT_COLOR: ControlColor = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
+/** ProgressBar's `font_color` default (`default_theme.cpp:446`). */
+const PROGRESS_BAR_DEFAULT_FONT_COLOR = CONTROL_FONT_HOVER_COLOR;
 
 /** `default_theme.cpp:447`: `font_outline_color` default `Color(0, 0, 0)`. */
-const PROGRESS_BAR_DEFAULT_OUTLINE_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
+const PROGRESS_BAR_DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
 /** `default_theme.cpp:449`: `outline_size` theme constant default `0`. */
 const PROGRESS_BAR_DEFAULT_OUTLINE_SIZE = 0;
@@ -128,7 +128,7 @@ export function progressBarTextTheme(
 }
 
 /** `theme_override_colors/font_outline_color`, else `Color(0, 0, 0)`. */
-export function progressBarOutlineColor(colors: SolveNode['colors']): ControlColor {
+export function progressBarOutlineColor(colors: SolveNode['colors']): Rgba {
   return colors.font_outline_color ?? PROGRESS_BAR_DEFAULT_OUTLINE_COLOR;
 }
 
@@ -143,7 +143,7 @@ export function progressBarOutlineSize(constants: SolveNode['constants']): numbe
  * `MAX(minimum_size.height, background.height + "100%".height)`, else
  * `maxf(1)`. With no `ctx.measureText`, the text adds nothing.
  */
-export const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
+const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ProgressBarProperties;
   const background = n.styleBoxes.background ?? progressBarDefaultBackground(ctx.theme);
   const fill = n.styleBoxes.fill ?? progressBarDefaultFill(ctx.theme);
@@ -159,7 +159,7 @@ export const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
     const layout = shapeText('100%', {
       fontSizePx,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
       fontMetrics,
     });
@@ -200,10 +200,10 @@ export function progressBarPercentRatio(props: RangeProperties, orderedKeys: Ran
 
 // ── Draw-time geometry: fill_mode to the fill StyleBox's rect ──
 
-export const FILL_BEGIN_TO_END = 0;
-export const FILL_END_TO_BEGIN = 1;
-export const FILL_TOP_TO_BOTTOM = 2;
-export const FILL_BOTTOM_TO_TOP = 3;
+const FILL_BEGIN_TO_END = 0;
+const FILL_END_TO_BEGIN = 1;
+const FILL_TOP_TO_BOTTOM = 2;
+const FILL_BOTTOM_TO_TOP = 3;
 
 /**
  * `set_fill_mode`'s `ERR_FAIL_INDEX` (`progress_bar.cpp:199-203`) refuses an
@@ -222,7 +222,7 @@ function normalizeProgressBarFillMode(fillMode: number | undefined): number {
  * `editor_preview_indeterminate` says. `null` means a zero-area rect.
  */
 export function progressBarIndeterminateFillRect(
-  size: Vec2,
+  size: Vector2,
   fillMode: number | undefined,
   rtl: boolean
 ): Rect2 | null {
@@ -265,10 +265,10 @@ function clampToZeroArea(rect: Rect2): Rect2 | null {
  * vertical modes ignore it.
  */
 export function progressBarFillRect(
-  size: Vec2,
+  size: Vector2,
   fillMode: number | undefined,
   ratio: number,
-  fillMinimumSize: Vec2,
+  fillMinimumSize: Vector2,
   rtl: boolean
 ): Rect2 | null {
   const mode = normalizeProgressBarFillMode(fillMode);

@@ -9,25 +9,32 @@ import { parseColorOrUndefined } from '../../../utils/colorParser';
 import { sRGBToLinearRGB } from '../../../utils/colorSpace';
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
-import { drawsInShadowPass, type PassMembership } from '../../../godot/shadowPass';
-import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/textureChannel';
-import { DiffuseMode } from '../../../godot/diffuseMode';
-import { SpecularMode } from '../../../godot/specularMode';
-import { clamp } from '../../../godot/math';
-import { emissionScalars } from './emission';
+import { drawsInShadowPass, type PassMembership } from '../../../godot/rendering/shadowPass';
+import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/materials/textureChannel';
+import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
+import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
+import { DetailUV } from '../../../godot/rendering/materials/detailUv';
+import { EMISSION_OPERATOR_DEFAULT } from '../../../godot/scene/baseMaterial3D';
+import { clamp } from '../../../godot/math/math';
 import {
-  BlendMode,
+  hashAntialiasing,
+  scissorAntialiasing,
+  type AlphaAntialiasingCut,
+} from '../../../godot/rendering/materials/alphaAntialiasing';
+import { emissionScalars } from './emission';
+import { BlendMode } from '../../../godot/rendering/materials/blendMode';
+import {
   CullMode,
   DepthDrawMode,
   HEIGHTMAP_DEFAULTS,
   TEXTURE_SLOTS,
   Transparency,
   type Heightmap,
-  type MaterialVec2,
   type StandardMaterial3DData,
   type TextureSlot,
   type TextureSlotReferences,
 } from './types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 const CONTEXT = 'StandardMaterial3D';
 
@@ -104,6 +111,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   // `uv1_world_triplanar` only picks the space of a triplanar mapping (`material.cpp:1386-1421`).
   // Triplanar mapping overrides height mapping (`:1541`).
   const triplanar = boolOr(properties['uv1_triplanar'], false, CONTEXT);
+  const uv2Triplanar = boolOr(properties['uv2_triplanar'], false, CONTEXT);
 
   // `_update_shader` emits `ALPHA *= albedo.a * albedo_tex.a` only when
   // `transparency != TRANSPARENCY_DISABLED` (or shadow-to-opacity, pixel-alpha
@@ -131,7 +139,14 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
         DEPTH_DRAW_MODES,
         `${CONTEXT}.depth_draw_mode`
       );
-  const alphaFlags = shaderAlphaFlags(properties, transparency, refractionEnabled);
+  const scissorThreshold = clamp(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT), 0, 1);
+  const alphaAntialiasing = decodeAlphaAntialiasing(properties, transparency, scissorThreshold);
+  const alphaFlags = shaderAlphaFlags(
+    properties,
+    transparency,
+    refractionEnabled,
+    alphaAntialiasing !== null
+  );
   const membership = alphaPassMembership(alphaFlags, {
     blendMode,
     refractionEnabled,
@@ -150,30 +165,35 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
 
   return {
     albedo: albedoLinear ?? [1, 1, 1],
-    alpha: readsAlbedoAlpha && albedo ? clamp01(albedo.a) : 1,
-    metallic: clamp01(floatOr(properties['metallic'], 0, CONTEXT)),
-    roughness: clamp01(floatOr(properties['roughness'], 1, CONTEXT)),
+    alpha: readsAlbedoAlpha && albedo ? clamp(albedo.a, 0, 1) : 1,
+    metallic: clamp(floatOr(properties['metallic'], 0, CONTEXT), 0, 1),
+    roughness: clamp(floatOr(properties['roughness'], 1, CONTEXT), 0, 1),
     // `material.cpp:2160-2163`: the setter checks no range.
     specular: floatOr(properties['metallic_specular'], 0.5, CONTEXT),
     emission,
-    emissionOperator: intOr(properties['emission_operator'], 0, CONTEXT),
+    emissionOperator: intOr(properties['emission_operator'], EMISSION_OPERATOR_DEFAULT, CONTEXT),
     textureFilter: intOr(properties['texture_filter'], TEXTURE_FILTER_DEFAULT, CONTEXT),
     textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
+    ...uv2Transform(properties, uv2Triplanar),
+    uv2Triplanar,
+    uv2Slots: uv2Slots(properties),
     transparency,
     transparent: alphaPass,
     castsShadow,
     // `alpha_scissor_threshold` hint is "0,1,0.001". 0 means "no cutout" to three,
     // which every non-scissor mode wants. A refractive surface's ALPHA is 1.0, which no
-    // threshold cuts, while three would cut on the texture alpha Godot never reads.
+    // threshold cuts, while three would cut on the texture alpha Godot never reads. Under
+    // alpha antialiasing the ramp cuts at the threshold itself.
     alphaTest:
-      transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha
-        ? clamp01(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT))
+      transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha && !alphaAntialiasing
+        ? scissorThreshold
         : 0,
     // `scene_forward_clustered.glsl:1398-1411`: the hash cuts the ALPHA the shader writes.
     alphaHash: transparency === Transparency.ALPHA_HASH && readsAlbedoAlpha,
     alphaHashScale: floatOr(properties['alpha_hash_scale'], 1, CONTEXT),
+    alphaAntialiasing,
     depthDrawMode,
     depthWrite: godotDepthWrite(alphaPass, depthDrawMode, depthTest),
     alphaPassDepthWrite: godotDepthWrite(true, depthDrawMode, depthTest),
@@ -201,12 +221,12 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     normalScale: { x: normalScale, y: normalScale },
     triplanar,
     heightmap: heightmapEnabled && !triplanar ? decodeHeightmap(properties) : null,
-    clearcoat: clearcoatEnabled ? clamp01(floatOr(properties['clearcoat'], 1, CONTEXT)) : 0,
+    clearcoat: clearcoatEnabled ? clamp(floatOr(properties['clearcoat'], 1, CONTEXT), 0, 1) : 0,
     clearcoatRoughness: clearcoatEnabled
-      ? clamp01(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT))
+      ? clamp(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT), 0, 1)
       : 0,
-    rim: rimEnabled ? clamp01(floatOr(properties['rim'], 1, CONTEXT)) : 0,
-    rimTint: rimEnabled ? clamp01(floatOr(properties['rim_tint'], 0.5, CONTEXT)) : 0,
+    rim: rimEnabled ? clamp(floatOr(properties['rim'], 1, CONTEXT), 0, 1) : 0,
+    rimTint: rimEnabled ? clamp(floatOr(properties['rim_tint'], 0.5, CONTEXT), 0, 1) : 0,
     billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
     anisotropy: anisotropyEnabled ? clamp(floatOr(properties['anisotropy'], 0, CONTEXT), -1, 1) : 0,
@@ -241,7 +261,8 @@ interface ShaderAlphaFlags {
 function shaderAlphaFlags(
   properties: Record<string, string>,
   transparency: Transparency,
-  refractionEnabled: boolean
+  refractionEnabled: boolean,
+  usesAlphaAntialiasing: boolean
 ): ShaderAlphaFlags {
   const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
   const distanceFadeMode = intOr(properties['distance_fade_mode'], 0, CONTEXT);
@@ -258,13 +279,25 @@ function shaderAlphaFlags(
   // The two cutout modes discard instead of blending, so they stay opaque.
   const usesAlphaClip =
     transparency === Transparency.ALPHA_SCISSOR || transparency === Transparency.ALPHA_HASH;
-  // `ALPHA_ANTIALIASING_EDGE` is written only under a cutout mode (`material.cpp:1843`),
-  // where it re-admits the cutout to the alpha pass (alpha-to-coverage).
-  const usesAlphaAntialiasing =
-    usesAlphaClip && intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT) !== 0;
   // `depth_prepass_alpha` is emitted for ALPHA_DEPTH_PRE_PASS alone (`material.cpp:898`).
   const usesDepthPrepassAlpha = transparency === Transparency.ALPHA_DEPTH_PRE_PASS;
   return { usesAlpha, usesAlphaClip, usesAlphaAntialiasing, usesDepthPrepassAlpha, proximityFade };
+}
+
+/**
+ * The cutout's alpha antialiasing. `ALPHA_ANTIALIASING_EDGE` is written for any mode but OFF, and
+ * only under a cutout (`material.cpp:1844-1847`). The edge defaults to 0.3 (`material.cpp:3977`).
+ */
+function decodeAlphaAntialiasing(
+  properties: Record<string, string>,
+  transparency: Transparency,
+  scissorThreshold: number
+): AlphaAntialiasingCut | null {
+  const mode = intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT);
+  const edge = floatOr(properties['alpha_antialiasing_edge'], 0.3, CONTEXT);
+  if (transparency === Transparency.ALPHA_SCISSOR) return scissorAntialiasing(mode, scissorThreshold, edge);
+  if (transparency === Transparency.ALPHA_HASH) return hashAntialiasing(mode, edge);
+  return null;
 }
 
 /**
@@ -322,10 +355,39 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
 }
 
 /**
+ * `uv2_scale` and `uv2_offset`, where Godot applies them: to UV2 under a UV2 detail layer
+ * (`material.cpp:1249-1256`), and to the projected position under UV2 triplanar mapping
+ * (:1439-1451). Elsewhere the shader reads UV2 as stored.
+ */
+function uv2Transform(
+  properties: Record<string, string>,
+  uv2Triplanar: boolean
+): { uv2Scale: Vector2; uv2Offset: Vector2 } {
+  const identity = { uv2Scale: { x: 1, y: 1 }, uv2Offset: { x: 0, y: 0 } };
+  const detailUv = intOr(properties['detail_uv_layer'], DetailUV.DETAIL_UV_1, CONTEXT);
+  if (!uv2Triplanar && detailUv !== DetailUV.DETAIL_UV_2) return identity;
+  return {
+    uv2Scale: vec2FromVector3(properties['uv2_scale'], identity.uv2Scale),
+    uv2Offset: vec2FromVector3(properties['uv2_offset'], identity.uv2Offset),
+  };
+}
+
+/**
+ * The slots that sample UV2: emission under `emission_on_uv2` (`material.cpp:1772-1776`) and
+ * AO under `ao_on_uv2` (:1942-1946).
+ */
+function uv2Slots(properties: Record<string, string>): TextureSlot[] {
+  const slots: TextureSlot[] = [];
+  if (boolOr(properties['emission_on_uv2'], false, CONTEXT)) slots.push('emission_texture');
+  if (boolOr(properties['ao_on_uv2'], false, CONTEXT)) slots.push('ao_texture');
+  return slots;
+}
+
+/**
  * Godot writes UV transforms as `Vector3`, and only x and y reach a 2D UV. It wraps the
  * throwing `parseVector3`, so the float grammar, scientific notation included, is shared.
  */
-function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): MaterialVec2 {
+function vec2FromVector3(raw: string | undefined, fallback: Vector2): Vector2 {
   if (!raw) return fallback;
   try {
     const { x, y } = parseVector3(raw);
@@ -333,10 +395,6 @@ function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): Mater
   } catch {
     return fallback;
   }
-}
-
-function clamp01(value: number): number {
-  return clamp(value, 0, 1);
 }
 
 /** Height mapping over Godot's defaults. The setters check no range. */

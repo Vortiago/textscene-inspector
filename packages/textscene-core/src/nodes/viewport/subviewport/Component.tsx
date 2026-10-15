@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
+import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -21,7 +22,7 @@ import {
   renderWithShadowAtlas,
   ViewportShadowAtlas,
 } from '../../../r3f/positionalShadow/viewportShadowAtlas';
-import { viewportPositionalShadowAtlas } from '../../../godot/positionalShadowAtlas';
+import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import {
@@ -34,7 +35,9 @@ import {
   selectViewportCamera,
   selectViewportCamera2D,
   viewportAspect,
+  viewportMsaaMode,
 } from './offscreenViewport';
+import { useMultisampledTarget } from '../../../r3f/multisampledTarget';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
@@ -42,6 +45,7 @@ import type { SubViewportProperties } from './types';
 import { viewportTargetSize } from './targetSize';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
+import { worldToneMapping } from '../../../resources/environment/toneMapping';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -110,9 +114,11 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
 
   // Carries the storage and the tonemap contracts: Godot tonemaps a
   // sub-viewport's render into its target as it tonemaps the main view's.
-  const target = useMemo(() => createOffscreenTarget(width, height, node.name), [width, height, node.name]);
-
-  useEffect(() => () => target.dispose(), [target]);
+  const createTarget = useCallback(
+    () => createOffscreenTarget(width, height, node.name),
+    [width, height, node.name]
+  );
+  const target = useMultisampledTarget(viewportMsaaMode(properties, kind), createTarget);
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
   // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
   // 2D portal holds no 3D surface.
@@ -169,10 +175,10 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         clearColor,
         transparentBg,
         // Godot tonemaps through the environment `find_world_3d()` resolves. A
-        // shared world's curve is the renderer's current one. An own world has no
-        // Environment, so LINEAR. Canvas items draw after the 3D tonemap pass, so
-        // a 2D canvas gets none.
-        toneMapping: properties.own_world_3d || kind === '2d' ? THREE.NoToneMapping : undefined,
+        // shared world's curve is the environment's, which the glow compositor keeps
+        // off the renderer. An own world has no Environment, so LINEAR. Canvas items
+        // draw after the 3D tonemap pass, so a 2D canvas gets none.
+        toneMapping: properties.own_world_3d || kind === '2d' ? THREE.NoToneMapping : worldToneMapping(gl),
         // `applyProps` stamps `SRGBColorSpace` on a texture bound to an albedo
         // `map`. With `isXRRenderTarget`, three reads this pass's output space
         // from that tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
@@ -217,11 +223,14 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // The portal declares the workspace its content needs, not the host's, which
   // could drop it. The portal scene is detached, so no host CanvasItem transform
   // reaches it and a canvas root inside cancels nothing (`canvasRootScope.tsx`).
-  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`).
+  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`), and the world a
+  // WorldEnvironment inside applies to.
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
       <WorldRootProvider value={portalScene}>
-        <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+        <WorldEnvironmentScope world="subViewport">
+          <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+        </WorldEnvironmentScope>
       </WorldRootProvider>
     </CanvasWorkspaceProvider>,
     portalScene

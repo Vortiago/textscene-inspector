@@ -17,12 +17,8 @@ export type Severity = 'error' | 'warning' | 'info';
  */
 export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
-/**
- * Whether a string is one of the three tiers: the test every reader needs
- * before it indexes a table by severity. The sort, the CLI formatter, the
- * VS Code squiggle map and the web gutter all share it.
- */
-export function isSeverity(value: string): value is Severity {
+/** Whether a string is one of the three tiers, the test before a table is indexed by severity. */
+function isSeverity(value: string): value is Severity {
   // `hasOwn`, not a bare index: `SEVERITY_ORDER['constructor']` reads
   // `Object.prototype`, and an unknown key yields `undefined`, which compares
   // false both ways and leaves a sort unordered.
@@ -70,6 +66,8 @@ export interface ParseError {
   column: number;
   /** Machine-readable error code. */
   code: string;
+  /** The key of the property a **Validator** refused, as the file writes it. Absent for a syntax or heading error. */
+  propertyKey?: string;
   /**
    * True when the refusal is about the key, not the value: an unrecognised leaf
    * name, a shape `_set` cannot resolve, a negative index. Every value fails it,
@@ -145,7 +143,7 @@ export interface RuleContext {
  * A typed category, not free text, as `DeclineCategory` is
  * (`configurationWarningCoverage.test.ts`), so a reader can sort the claims.
  */
-export type OutsideEngineScope =
+type OutsideEngineScope =
   /**
    * Names a node path or a clip name the file itself never declares. The
    * engine loads the file and the reference resolves to nothing; a resource id

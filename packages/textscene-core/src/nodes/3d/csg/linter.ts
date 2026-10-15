@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { polygonPointCount } from '../../../linter/polygonPoints.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -72,12 +72,10 @@ const csgShape3DDegenerateGeometryRule: LintRule = {
     category: 'validation',
     // Every concrete CSG type. `CSGShape3D` itself is `GDREGISTER_ABSTRACT_CLASS`
     // (`modules/csg/register_types.cpp:41`) and never a node type in a `.tscn`.
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CSGShape3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'CSGShape3D'),
     emits: armEmits(arms),
   },
   check: checkCSGShape3D,
 };
 
 ruleRegistry.register(csgShape3DDegenerateGeometryRule);
-
-export { csgShape3DDegenerateGeometryRule };

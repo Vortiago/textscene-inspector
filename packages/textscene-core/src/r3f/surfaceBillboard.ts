@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { BillboardMode } from '../godot/billboard';
+import { BillboardMode } from '../godot/rendering/materials/billboardMode';
 import type { SurfaceBillboard } from '../resources/materials/standardmaterial3d/materialBag';
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0);

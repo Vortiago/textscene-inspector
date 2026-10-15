@@ -18,7 +18,7 @@ import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { TscnSceneContents } from '../../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../../r3f/contexts/HierarchyContext';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
-import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
 import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
@@ -27,6 +27,7 @@ import '../../../../r3f/nodes/index';
 function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
     name,
+    layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
     shadow_enabled: false,
@@ -38,6 +39,7 @@ function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> 
 function omniNode(name: string, overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
   const props: OmniLight3DProperties = {
     name,
+    layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
     shadow_enabled: false,
@@ -51,6 +53,7 @@ function omniNode(name: string, overrides: Partial<OmniLight3DProperties> = {}):
 function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
     name,
+    layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
     shadow_enabled: false,

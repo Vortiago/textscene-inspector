@@ -12,7 +12,6 @@ const omniLight3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(omniLight3DRegistration);
 
-export { omniLight3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

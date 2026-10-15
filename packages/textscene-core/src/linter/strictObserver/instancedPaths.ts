@@ -7,9 +7,9 @@
 
 import type { ParsedHeading } from '../../parser/utils.js';
 import { SCENE_ROOT_PATH, getAncestorPaths, joinPath } from '../../utils/nodePath.js';
-import { resolveParentPath } from '../../godot/nodePath.js';
+import { resolveParentPath } from '../../godot/string/nodePath.js';
 
-export interface InstancedPaths {
+interface InstancedPaths {
   /** Records a `[node]` heading, in scan order. */
   record(heading: ParsedHeading, isRoot: boolean): void;
   /** Whether a heading under `parent=` sits inside content an earlier heading instanced. */

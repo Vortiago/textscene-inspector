@@ -26,7 +26,9 @@ import {
   createOffscreenTarget,
   orthoFrameForSize,
   renderToOffscreenTarget,
+  viewportMsaaMode,
 } from './offscreenViewport.js';
+import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportTargetSize } from './targetSize.js';
@@ -78,8 +80,15 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     return scene;
   }, [node.name]);
 
-  const target = useMemo(() => createRasterTarget(width, height, node.name), [width, height, node.name]);
-  useEffect(() => () => target.dispose(), [target]);
+  const createTarget = useCallback(
+    () => createRasterTarget(width, height, node.name),
+    [width, height, node.name]
+  );
+  // Controls are canvas items, so the 2D buffer's mode applies.
+  const target = useMultisampledTarget(
+    viewportMsaaMode(node.properties as SubViewportProperties, '2d'),
+    createTarget
+  );
 
   const camera = useMemo(() => new THREE.OrthographicCamera(), []);
   useEffect(() => {

@@ -16,8 +16,8 @@ import {
   PARAM_SLOTS,
 } from './types';
 
-/** Godot's inspector range for `amount` is `1,1000000,1,exp`. */
-export const MAX_PARTICLE_AMOUNT = 1_000_000;
+/** Godot's inspector range for `amount` is `1,1000000,1,exp` (`cpu_particles_2d.cpp:1492`). */
+const MAX_PARTICLE_AMOUNT = 1_000_000;
 
 export function parseCPUParticles2D(
   heading: ParsedHeading,

@@ -6,7 +6,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { decodeStandardMaterial3D } from './decode';
-import { BlendMode, CullMode, DepthDrawMode, Transparency } from './types';
+import { BlendMode } from '../../../godot/rendering/materials/blendMode';
+import { CullMode, DepthDrawMode, Transparency } from './types';
+import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 describe('decodeStandardMaterial3D — defaults', () => {
   it('reads every Godot default from an empty bag', () => {
@@ -15,7 +17,7 @@ describe('decodeStandardMaterial3D — defaults', () => {
     expect(data.alpha).toBe(1);
     expect(data.metallic).toBe(0);
     expect(data.roughness).toBe(1);
-    expect(data.emission).toEqual({ emissive: [0, 0, 0], emissiveIntensity: 0 });
+    expect(data.emission).toEqual({ emissive: [0, 0, 0], emissiveIntensity: 0, emissionEnergy: 0 });
     expect(data.emissionOperator).toBe(0);
     // TEXTURE_FILTER_LINEAR_WITH_MIPMAPS, which is three's default state too.
     expect(data.textureFilter).toBe(3);
@@ -133,7 +135,6 @@ describe('decodeStandardMaterial3D — alpha-pass classification', () => {
       alpha_antialiasing_mode: '1',
     });
     expect(data.transparent).toBe(true);
-    expect(data.alphaTest).toBeCloseTo(0.5, 5);
   });
 
   it('puts a proximity-fading surface in the alpha pass (it samples depth_texture)', () => {
@@ -230,6 +231,64 @@ describe('decodeStandardMaterial3D — shadow-pass membership', () => {
 
   it('casts nothing from a refractive surface', () => {
     expect(decodeStandardMaterial3D({ refraction_enabled: 'true' }).castsShadow).toBe(false);
+  });
+});
+
+describe('decodeStandardMaterial3D — alpha antialiasing', () => {
+  it.each([
+    ['ALPHA_TO_COVERAGE', '1', AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE],
+    ['ALPHA_TO_COVERAGE_AND_TO_ONE', '2', AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE],
+  ])(
+    'cuts a scissor cutout at its threshold, then ramps it past the threshold, under %s',
+    (_name, mode, expected) => {
+      // `scene_forward_clustered.glsl:1384-1424`: the edge sits at `threshold + edge`.
+      const data = decodeStandardMaterial3D({
+        transparency: '2',
+        alpha_scissor_threshold: '0.4',
+        alpha_antialiasing_mode: mode,
+        alpha_antialiasing_edge: '0.3',
+      });
+      expect(data.alphaAntialiasing).toEqual({ mode: expected, scissorThreshold: 0.4, edge: 0.7 });
+    }
+  );
+
+  it('ramps a hash cutout at the authored edge', () => {
+    const data = decodeStandardMaterial3D({
+      transparency: '3',
+      alpha_antialiasing_mode: '1',
+      alpha_antialiasing_edge: '0.6',
+    });
+    expect(data.alphaAntialiasing).toEqual({
+      mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
+      scissorThreshold: 0,
+      edge: 0.6,
+    });
+  });
+
+  it("ramps at the constructor's edge of 0.3 when none is authored (edge case)", () => {
+    // `material.cpp:3977`, past the default threshold of 0.5.
+    const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '1' });
+    expect(data.alphaAntialiasing?.edge).toBeCloseTo(0.8, 6);
+  });
+
+  it('leaves the scissor to the ramp, so three cuts nothing after it', () => {
+    const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '1' });
+    expect(data.alphaTest).toBe(0);
+  });
+
+  it('antialiases no surface without a cutout (error case)', () => {
+    // `material.cpp:905-912`: the render mode is emitted under SCISSOR or HASH only.
+    const data = decodeStandardMaterial3D({ transparency: '1', alpha_antialiasing_mode: '1' });
+    expect(data.alphaAntialiasing).toBeNull();
+  });
+
+  it('ramps the edge for a mode past the enum, as `material.cpp:1844` tests only for OFF (edge case)', () => {
+    const data = decodeStandardMaterial3D({ transparency: '2', alpha_antialiasing_mode: '3' });
+    expect(data.alphaAntialiasing?.mode).toBe(3);
+  });
+
+  it('antialiases nothing while the mode is OFF', () => {
+    expect(decodeStandardMaterial3D({ transparency: '2' }).alphaAntialiasing).toBeNull();
   });
 });
 
@@ -562,5 +621,40 @@ describe('decodeStandardMaterial3D — corpus materials', () => {
     expect(data.refractionThickness).toBeCloseTo(0.05, 6);
     // `uv1_world_triplanar` without `uv1_triplanar` maps nothing triplanar.
     expect(data.triplanar).toBe(false);
+  });
+});
+
+describe('decodeStandardMaterial3D — UV2', () => {
+  const UV2_TILING = { uv2_scale: 'Vector3(4, 2, 1)', uv2_offset: 'Vector3(0.5, 0.25, 0)' };
+
+  it('reads uv2_scale and uv2_offset under a UV2 detail layer', () => {
+    const data = decodeStandardMaterial3D({ ...UV2_TILING, detail_uv_layer: '1' });
+
+    expect(data.uv2Scale).toEqual({ x: 4, y: 2 });
+    expect(data.uv2Offset).toEqual({ x: 0.5, y: 0.25 });
+  });
+
+  it('reads uv2_scale and uv2_offset under UV2 triplanar mapping', () => {
+    const data = decodeStandardMaterial3D({ ...UV2_TILING, uv2_triplanar: 'true' });
+
+    expect(data.uv2Triplanar).toBe(true);
+    expect(data.uv2Scale).toEqual({ x: 4, y: 2 });
+  });
+
+  it('reads the UV2 transform as identity elsewhere, as Godot never applies it there', () => {
+    const data = decodeStandardMaterial3D({ ...UV2_TILING, emission_on_uv2: 'true' });
+
+    expect(data.uv2Scale).toEqual({ x: 1, y: 1 });
+    expect(data.uv2Offset).toEqual({ x: 0, y: 0 });
+  });
+
+  it('lists the slots that sample UV2', () => {
+    const data = decodeStandardMaterial3D({ ao_on_uv2: 'true', emission_on_uv2: 'true' });
+
+    expect(data.uv2Slots).toEqual(['emission_texture', 'ao_texture']);
+  });
+
+  it('lists no slot by default (edge case)', () => {
+    expect(decodeStandardMaterial3D({}).uv2Slots).toEqual([]);
   });
 });

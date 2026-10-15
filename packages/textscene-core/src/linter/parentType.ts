@@ -6,9 +6,10 @@
 
 import { isTypeUnknowable } from '../parser/typeUnknowable.js';
 import { findParentNode } from './linterUtils.js';
-import { descendsFrom, isCatalogedType } from '../godot/nodeBaseTypes.js';
+import { isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import type { RawNode, RawScene } from '../parser/types.js';
-import { boolSlotValue } from '../godot/index.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
 
 // Re-exported, not re-spelled: `buildSceneTree` asks the same question at
 // every descent of a `parent=` path, and the parser cannot import the linter.
@@ -45,7 +46,7 @@ export function parentTypeVerdict(scene: RawScene, node: RawNode, wantedType: st
   const step = knownParent(scene, node);
   if (step.kind !== 'known') return step;
   const { parent } = step;
-  if (descendsFrom(parent.type, wantedType)) return { kind: 'satisfied', parent };
+  if (descendsFromClass(parent.type, wantedType)) return { kind: 'satisfied', parent };
   return { kind: 'mismatch', parent };
 }
 
@@ -77,7 +78,7 @@ export function parentLookup(parent: RawNode | null | undefined): ParentLookup {
   if (!parent) return { kind: 'root' };
   // A type goes unread two ways: declared in another scene, or outside the catalog. Godot's
   // check is a runtime `cast_to` against a ClassDB with every extension registered
-  // (collision_shape_3d.cpp:125-128), and `descendsFrom` says false for "not a subclass"
+  // (collision_shape_3d.cpp:125-128), and `descendsFromClass` says false for "not a subclass"
   // and "never heard of it" alike.
   if (isTypeOpaque(parent)) return { kind: 'unknowable' };
   return { kind: 'known', parent };
@@ -103,7 +104,7 @@ export function parentIdentity(scene: RawScene, node: RawNode): RawNode | null {
 }
 
 /** Where an ancestor walk stopped. */
-export type AncestorSearch<T> =
+type AncestorSearch<T> =
   /** `visit` returned a value at some ancestor; the walk stopped there. */
   | { kind: 'found'; value: T }
   /** An ancestor the walk had to pass takes its type from another scene. */
@@ -114,7 +115,7 @@ export type AncestorSearch<T> =
 /**
  * Climb `node`'s ancestors, nearest first, until `visit` returns a value. `visit` sees only
  * an ancestor whose type this file states and the catalog knows: each step goes through
- * `knownParent`, so a bare `ancestor.type` or `descendsFrom` read inside `visit` is correct.
+ * `knownParent`, so a bare `ancestor.type` or `descendsFromClass` read inside `visit` is correct.
  * An instanced, override, typeless or GDExtension ancestor ends the walk at `unknowable`.
  */
 export function searchAncestors<T>(
@@ -197,7 +198,7 @@ export function isExplicitlyHidden(node: RawNode): boolean {
  * `Node3D` each declare their own over different chains, and a rule ported from a gated
  * `get_configuration_warnings()` gets its class's.
  */
-export type VisibilityVerdict =
+type VisibilityVerdict =
   /** Godot's `is_visible_in_tree()` would return true for this node. */
   | 'visible'
   /** The node, or an ancestor its family's chain consults, sets `visible = false`. */
@@ -214,11 +215,11 @@ function node3DCascade(scene: RawScene, node: RawNode): VisibilityVerdict {
   let current = findParentNode(scene.nodes, node);
   while (current) {
     if (isTypeUnknowable(current)) return 'unknowable';
-    // `descendsFrom` is false for two unrelated reasons, and only one of them
+    // `descendsFromClass` is false for two unrelated reasons, and only one of them
     // ends the chain: a GDExtension class this build has never heard of may
     // well be a Node3D. `parentTypeVerdict` guards the same case.
     if (!isCatalogedType(current.type)) return 'unknowable';
-    if (!descendsFrom(current.type, 'Node3D')) return 'visible';
+    if (!descendsFromClass(current.type, 'Node3D')) return 'visible';
     if (isExplicitlyHidden(current)) return 'hidden';
     current = findParentNode(scene.nodes, current);
   }
@@ -237,14 +238,14 @@ function canvasItemCascade(scene: RawScene, node: RawNode): VisibilityVerdict {
     if (isTypeUnknowable(current)) return 'unknowable';
     // See `node3DCascade`: an uncataloged ancestor may be a CanvasItem.
     if (!isCatalogedType(current.type)) return 'unknowable';
-    if (!descendsFrom(current.type, 'CanvasItem')) break;
+    if (!descendsFromClass(current.type, 'CanvasItem')) break;
     if (isExplicitlyHidden(current)) return 'hidden';
     current = findParentNode(scene.nodes, current);
   }
   if (!current) return 'visible';
 
   // The layer's own key only: the chain ends there.
-  if (descendsFrom(current.type, 'CanvasLayer')) {
+  if (descendsFromClass(current.type, 'CanvasLayer')) {
     return isExplicitlyHidden(current) ? 'hidden' : 'visible';
   }
 
@@ -253,14 +254,14 @@ function canvasItemCascade(scene: RawScene, node: RawNode): VisibilityVerdict {
   // (`window.cpp:1166-1169`), any other Viewport `true`, and a saved scene's root has none.
   while (current) {
     if (isTypeUnknowable(current)) return 'unknowable';
-    // Same reason the CanvasItem run declines on one: `descendsFrom` is false
+    // Same reason the CanvasItem run declines on one: `descendsFromClass` is false
     // for "not a Window" and for "never heard of it" alike, and a GDExtension
     // class in this position may well be a Window whose own `visible` decides.
     if (!isCatalogedType(current.type)) return 'unknowable';
-    if (descendsFrom(current.type, 'Window')) {
+    if (descendsFromClass(current.type, 'Window')) {
       return isExplicitlyHidden(current) ? 'hidden' : 'visible';
     }
-    if (descendsFrom(current.type, 'Viewport')) return 'visible';
+    if (descendsFromClass(current.type, 'Viewport')) return 'visible';
     current = findParentNode(scene.nodes, current);
   }
   return 'visible';
@@ -272,10 +273,10 @@ function canvasItemCascade(scene: RawScene, node: RawNode): VisibilityVerdict {
  * `AcceptDialog` (`dialogs.cpp:466`) `set_visible(false)` in their constructors, and
  * resolving absence would silence every warning under one.
  */
-export function visibleInTreeVerdict(scene: RawScene, node: RawNode): VisibilityVerdict {
+function visibleInTreeVerdict(scene: RawScene, node: RawNode): VisibilityVerdict {
   if (isExplicitlyHidden(node)) return 'hidden';
-  if (descendsFrom(node.type, 'CanvasItem')) return canvasItemCascade(scene, node);
-  if (descendsFrom(node.type, 'Node3D')) return node3DCascade(scene, node);
+  if (descendsFromClass(node.type, 'CanvasItem')) return canvasItemCascade(scene, node);
+  if (descendsFromClass(node.type, 'Node3D')) return node3DCascade(scene, node);
   // Neither family: no `is_visible_in_tree()` and no gated warning to suppress.
   return 'visible';
 }

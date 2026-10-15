@@ -1,16 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
-import {
-  MAX_SIM_STEPS,
-  particleExpired,
-  restartStep,
-  settleSeconds,
-  simulateFrozenPose,
-  type ParticleSimInput,
-} from './simulate';
+import { simulateFrozenPose, type ParticleSimInput } from './simulate';
 import { CPUParticles2DParam, type CPUParticles2DProperties } from './types';
-import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/transform2d.js';
+import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/math/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { GradientInterpolationMode } from '../../../resources/textures/gradienttexture2d/types';
 import { CurveTangentMode, type Curve } from '../../../resources/curves/curve/types';
@@ -38,86 +31,107 @@ function input(overrides: Partial<ParticleSimInput> = {}): ParticleSimInput {
   };
 }
 
-describe('settleSeconds', () => {
-  it('uses the authored preprocess (happy path)', () => {
-    expect(settleSeconds(props({ preprocess: '2.5', speed_scale: '3.0' }))).toBe(2.5);
+/** The age, in seconds, of a lone particle born on the first settle step. */
+function loneParticleAge(overrides: Record<string, string>): number {
+  const pose = simulateFrozenPose(input({ props: props({ amount: '1', ...overrides }) }));
+  return pose[0]!.age;
+}
+
+describe('the settle window', () => {
+  it('spends the authored preprocess (happy path)', () => {
+    // 2.51 s at 1/30 s is 76 whole frames, and the particle born on the first is 75 frames old.
+    expect(loneParticleAge({ lifetime: '10', preprocess: '2.51', speed_scale: '3.0' })).toBeCloseTo(2.5, 9);
   });
 
-  it('substitutes one lifetime when no preprocess is set', () => {
-    expect(settleSeconds(props({ preprocess: '0', lifetime: '0.8', speed_scale: '2' }))).toBe(0.8);
+  it('spends half a lifetime for a one_shot burst so it is caught mid-flight', () => {
+    const substituted = simulateFrozenPose(
+      input({ props: props({ preprocess: '0', lifetime: '0.4', one_shot: 'true' }) })
+    );
+    const half = simulateFrozenPose(
+      input({ props: props({ preprocess: '0.2', lifetime: '0.4', one_shot: 'true' }) })
+    );
+    const later = simulateFrozenPose(
+      input({ props: props({ preprocess: '0.3', lifetime: '0.4', one_shot: 'true' }) })
+    );
+    expect(substituted).toEqual(half);
+    expect(substituted).not.toEqual(later);
   });
 
-  it('substitutes half a lifetime for a one_shot burst so it is caught mid-flight', () => {
-    expect(settleSeconds(props({ preprocess: '0', lifetime: '0.4', one_shot: 'true' }))).toBe(0.2);
+  it('spends a positive window for a degenerate lifetime (edge case)', () => {
+    expect(
+      simulateFrozenPose(input({ props: props({ preprocess: '0', lifetime: '0' }) })).length
+    ).toBeGreaterThan(0);
   });
 
-  it('never returns a non-positive window for a degenerate lifetime (edge case)', () => {
-    expect(settleSeconds(props({ preprocess: '0', lifetime: '0' }))).toBeGreaterThan(0);
-  });
-});
-
-describe('restartStep (cpu_particles_2d.cpp:829-852)', () => {
-  // Godot's `local_delta` is seeded from `p_delta` each particle iteration and
-  // changes only in a restart branch. `restartStep` returns the pair, since it
-  // has no `Particle` to mutate.
-  it('branch A: time advancing normally, restart inside [prevTime, time) — local_delta = time - restartTime (:830-836)', () => {
-    // prevTime=0.2, time=0.3, restartTime=0.25, lifetime irrelevant here.
-    expect(restartStep(0.2, 0.3, 0.25, 1.0, 0.1, true)).toEqual({
-      restart: true,
-      localDelta: 0.3 - 0.25,
-    });
-  });
-
-  it('branch A: no restart when restartTime falls outside [prevTime, time)', () => {
-    expect(restartStep(0.2, 0.3, 0.35, 1.0, 0.1, true)).toEqual({
-      restart: false,
-      localDelta: 0.1,
-    });
-  });
-
-  it('branch B1: wrapped (time <= prevTime), restartTime >= prevTime — local_delta = lifetime - restartTime + time (:839-844)', () => {
-    // The restart phase sits at the tail of the cycle, just before the wrap, so
-    // its slice runs from restartTime to the old lifetime boundary plus `time`.
-    expect(restartStep(0.9, 0.05, 0.92, 1.0, 0.15, true)).toEqual({
-      restart: true,
-      localDelta: 1.0 - 0.92 + 0.05,
-    });
-  });
-
-  it('branch B2: wrapped (time <= prevTime), restartTime < time — local_delta = time - restartTime (:845-850)', () => {
-    // The particle's restart phase sits right after zero: the wrap carried
-    // `time` past it already this step.
-    expect(restartStep(0.9, 0.05, 0.02, 1.0, 0.15, true)).toEqual({
-      restart: true,
-      localDelta: 0.05 - 0.02,
-    });
-  });
-
-  it('wrapped, restartTime neither >= prevTime nor < time: no restart', () => {
-    expect(restartStep(0.9, 0.05, 0.5, 1.0, 0.15, true)).toEqual({
-      restart: false,
-      localDelta: 0.15,
-    });
-  });
-
-  it('fract_delta = false: every restart takes the WHOLE step, in every branch (:834,842,848 gated by `if (fractional_delta)`)', () => {
-    expect(restartStep(0.2, 0.3, 0.25, 1.0, 0.1, false)).toEqual({ restart: true, localDelta: 0.1 });
-    expect(restartStep(0.9, 0.05, 0.92, 1.0, 0.15, false)).toEqual({ restart: true, localDelta: 0.15 });
-    expect(restartStep(0.9, 0.05, 0.02, 1.0, 0.15, false)).toEqual({ restart: true, localDelta: 0.15 });
+  it('stops after 4096 steps so an absurd preprocess cannot hang the previewer (edge case)', () => {
+    expect(loneParticleAge({ lifetime: '1000', preprocess: '100000' })).toBeCloseTo(4095 / 30, 6);
   });
 });
 
-describe('particleExpired (cpu_particles_2d.cpp:971 `p.time > p.lifetime`)', () => {
-  it('is not expired one step before its lifetime', () => {
-    expect(particleExpired(0.9, 1.0)).toBe(false);
+// Godot's `local_delta` is `p_delta` unless a restart branch shortens it
+// (`cpu_particles_2d.cpp:829-852`). Eight steps of 1/8 s over a 0.9375 s cycle wrap
+// on the last step: `prev_time` 0.875, `time` 0.0625. Particle i restarts at
+// i × 0.05859375 and spawns at the origin moving at 120 px/s, so `tx` is 120 × its motion.
+describe('a restart on the step that wraps the cycle', () => {
+  const wrapProps = {
+    amount: '16',
+    lifetime: '0.9375',
+    fixed_fps: '8',
+    preprocess: '1.0',
+    direction: 'Vector2(1, 0)',
+    spread: '0',
+    initial_velocity_min: '120',
+    initial_velocity_max: '120',
+    gravity: 'Vector2(0, 0)',
+  };
+
+  function txOf(overrides: Record<string, string>, index: number): number {
+    const pose = simulateFrozenPose(input({ props: props({ ...wrapProps, ...overrides }) }));
+    return pose.find((p) => p.index === index)!.transform.tx;
+  }
+
+  it('gives a restart at the tail of the cycle the slice to the boundary plus time (:839-844)', () => {
+    expect(txOf({}, 15)).toBeCloseTo(120 * (0.9375 - 0.87890625 + 0.0625), 9);
   });
 
-  it('is NOT expired at exact equality — Godot advances it one more step first', () => {
-    expect(particleExpired(1.0, 1.0)).toBe(false);
+  it('gives a restart just after zero the slice since its instant (:845-850)', () => {
+    expect(txOf({}, 1)).toBeCloseTo(120 * (0.0625 - 0.05859375), 9);
   });
 
-  it('is expired once time has actually passed its lifetime', () => {
-    expect(particleExpired(1.0001, 1.0)).toBe(true);
+  it('advances a particle that does not restart by the whole step', () => {
+    // Particle 8 restarts at 0.46875, inside step 4, and then advances four whole steps.
+    expect(txOf({}, 8)).toBeCloseTo(120 * (0.5 - 0.46875 + 4 * 0.125), 9);
+  });
+
+  it('gives every wrapped restart the whole step with fract_delta disabled (:842,848)', () => {
+    expect(txOf({ fract_delta: 'false' }, 15)).toBeCloseTo(120 * 0.125, 9);
+    expect(txOf({ fract_delta: 'false' }, 1)).toBeCloseTo(120 * 0.125, 9);
+  });
+});
+
+describe('a particle past its own lifetime (cpu_particles_2d.cpp:971)', () => {
+  // Under full explosiveness every particle restarts only at the cycle start, so one whose
+  // randomised lifetime ends first leaves the pose before the cycle wraps.
+  const burst = { amount: '32', explosiveness: '1', lifetime: '1', preprocess: '0.9' };
+
+  it('keeps every particle alive while each lifetime spans the cycle', () => {
+    expect(simulateFrozenPose(input({ props: props(burst) }))).toHaveLength(32);
+  });
+
+  it('drops the particles whose randomised lifetime has passed', () => {
+    const pose = simulateFrozenPose(input({ props: props({ ...burst, lifetime_randomness: '0.9' }) }));
+    expect(pose.length).toBeGreaterThan(0);
+    expect(pose.length).toBeLessThan(32);
+  });
+
+  it('advances a particle exactly at its lifetime one more step before it expires', () => {
+    // Seed 4242's lifetime draw is 0.5929864645004272, so this randomness halves the lifetime
+    // to exactly 0.5 s. Six steps of 1/8 s check it at age 0.5 and leave it at 0.625.
+    const atLifetime = { ...burst, amount: '1', fixed_fps: '8', preprocess: '0.75' };
+    const pose = simulateFrozenPose(
+      input({ props: props({ ...atLifetime, lifetime_randomness: '0.8431895665969956' }) })
+    );
+    expect(pose.map((p) => p.age)).toEqual([0.625]);
   });
 });
 
@@ -531,14 +545,6 @@ describe('simulateFrozenPose', () => {
     for (const particle of local) {
       expect(Math.hypot(particle.transform.a, particle.transform.b)).toBeCloseTo(1, 5);
     }
-  });
-
-  it('caps the step loop so an absurd preprocess cannot hang the previewer (edge case)', () => {
-    const pose = simulateFrozenPose(
-      input({ props: props({ amount: '2', preprocess: '100000', fixed_fps: '30' }) })
-    );
-    expect(pose.length).toBeGreaterThanOrEqual(0);
-    expect(MAX_SIM_STEPS).toBeGreaterThan(100);
   });
 
   it('survives a degenerate emitter transform without producing NaN (error path)', () => {

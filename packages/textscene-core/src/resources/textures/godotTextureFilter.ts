@@ -18,9 +18,9 @@ export const GODOT_TEXTURE_FILTER_DEFAULT = 3;
  * setting whose default is level 2 (4x). Pinned at 16 (level 4), not plumbed:
  * three clamps to the GPU maximum at upload, so this is a ceiling, never an error.
  */
-export const GODOT_ANISOTROPY_MAX = 16;
+const GODOT_ANISOTROPY_MAX = 16;
 
-export interface TextureFilterState {
+interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;
   minFilter: THREE.MinificationTextureFilter;
   generateMipmaps: boolean;
@@ -119,6 +119,24 @@ const WITHOUT_MIPMAPS: Partial<Record<THREE.MinificationTextureFilter, THREE.Min
   [THREE.LinearMipmapLinearFilter]: THREE.LinearFilter,
   [THREE.LinearMipmapNearestFilter]: THREE.LinearFilter,
 };
+
+/** Marks a texture imported without a mip chain. In `userData`, so every `clone()` carries it. */
+const HAS_NO_MIP_CHAIN = 'textsceneHasNoMipChain';
+
+/**
+ * Removes the mip chain of a texture the caller owns, for an image Godot imports without one, and
+ * marks it, so a clone whose sampler the glTF loader rewrites can drop it again.
+ */
+export function dropMipChain(texture: THREE.Texture): void {
+  texture.generateMipmaps = false;
+  texture.minFilter = WITHOUT_MIPMAPS[texture.minFilter] ?? texture.minFilter;
+  texture.userData[HAS_NO_MIP_CHAIN] = true;
+}
+
+/** Whether `dropMipChain` removed the mip chain of `texture`, or of the texture it is cloned from. */
+export function hasDroppedMipChain(texture: THREE.Texture): boolean {
+  return texture.userData[HAS_NO_MIP_CHAIN] === true;
+}
 
 /**
  * Writes the sampler state onto a texture the caller owns. A `*_WITH_MIPMAPS`

@@ -6,19 +6,19 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useThree } from '@react-three/fiber';
+import { CaptureRenderer } from './testing/CaptureRenderer';
 import { AtlasSpotShadow } from './positionalShadow/atlasSpotShadow';
 import { SceneShadowFitter } from './SceneShadowFitter';
 import { positionalShadowAtlas } from './positionalShadow/shadowAtlasTarget';
 import { positionalShadowUserData } from './positionalShadow/declaration';
 import { renderWithShadowAtlas, ViewportShadowAtlas } from './positionalShadow/viewportShadowAtlas';
-import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/positionalShadowAtlas';
+import { ROOT_POSITIONAL_SHADOW_ATLAS } from '../godot/scene/viewport';
 import { TscnSceneContents } from './TscnCanvas';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { ViewportModeProvider } from './contexts/ViewportModeContext';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 
 import './nodes/index';
@@ -178,18 +178,14 @@ describe('<SceneShadowFitter> positional fit on its own', () => {
   });
 
   it('wraps the canvas renderer’s shadow pass, so each omni cube reaches the atlas', async () => {
-    let gl: THREE.WebGLRenderer | null = null;
-    function CaptureRenderer() {
-      gl = useThree((state) => state.gl);
-      return null;
-    }
+    const captured: { current: THREE.WebGLRenderer | null } = { current: null };
     await ReactThreeTestRenderer.create(
       <>
-        <CaptureRenderer />
+        <CaptureRenderer captured={captured} />
         <SceneShadowFitter />
       </>
     );
-    expect(Symbol.for('textscene.shadowPass') in gl!.shadowMap).toBe(true);
+    expect(Symbol.for('textscene.shadowPass') in captured.current!.shadowMap).toBe(true);
   });
 
   it('fits nothing for a light that declared nothing (edge case)', async () => {

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   comparablePath,
-  findProjectRoot,
   findResRoot,
   isWithinRoot,
   normalizeRelativePath,
@@ -137,16 +136,16 @@ describe('parentDir', () => {
   });
 });
 
-/** An upward walk over string paths that `isStop` ends. */
+/** An upward walk over string paths that `isStop` ends, from a scene outside any workspace. */
 function walk(
   start: string,
   hasProjectFile: (dir: string) => Promise<boolean>,
   isStop = (_dir: string) => false
 ) {
-  return findProjectRoot(start, parentDir, isStop, hasProjectFile);
+  return findResRoot(start, parentDir, isStop, hasProjectFile, () => false);
 }
 
-describe('findProjectRoot', () => {
+describe('findResRoot, the walk up to project.godot', () => {
   it('finds project.godot in the start directory', async () => {
     expect(await walk('/proj/scenes', projectsAt('/proj/scenes', '/proj'))).toBe('/proj/scenes');
   });
@@ -183,11 +182,12 @@ describe('findProjectRoot', () => {
       up: Dir | null;
     }
     const deep: Dir = { name: 'deep', up: { name: 'proj', up: null } };
-    const root = await findProjectRoot(
+    const root = await findResRoot(
       deep,
       (dir) => dir.up,
       () => false,
-      async (dir) => dir.name === 'proj'
+      async (dir) => dir.name === 'proj',
+      () => false
     );
     expect(root?.name).toBe('proj');
   });

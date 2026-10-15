@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
-  scrollBarAreaSize,
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
   scrollBarMinimumSize,
@@ -28,10 +27,10 @@ describe('scrollBarMinimumSize (scroll_bar.cpp:519-548)', () => {
   });
 });
 
-describe('scrollBarAreaSize (scroll_bar.cpp:491-513)', () => {
-  it('is barLength minus the grabber minimum — track/icon along-axis terms are 0 in the default theme', () => {
-    expect(scrollBarAreaSize(false, BAR_LENGTH, THEME)).toBe(AREA_SIZE);
-    expect(scrollBarAreaSize(true, BAR_LENGTH, THEME)).toBe(AREA_SIZE);
+describe('scrollBarGrabberGeometry travel, get_area_size (scroll_bar.cpp:491-513)', () => {
+  it('travels barLength minus the grabber minimum — track/icon along-axis terms are 0 in the default theme', () => {
+    expect(scrollBarGrabberGeometry(false, BAR_LENGTH, THEME, 0, 100, 0, 1).offset).toBe(AREA_SIZE);
+    expect(scrollBarGrabberGeometry(true, BAR_LENGTH, THEME, 0, 100, 0, 1).offset).toBe(AREA_SIZE);
   });
 });
 

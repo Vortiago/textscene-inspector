@@ -1,17 +1,14 @@
-/**
- * FogVolume registration: the parser. It reuses the Node3D parse, and property knowledge lives
- * in linterParser.ts. index.r3f.ts registers Node3D under `renderIntent: 'pending'`, so the tree
- * reports a gap while `visible` and the workspace split work.
- */
+/** FogVolume registration: the parser. Property knowledge for the linter lives in linterParser.ts. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseFogVolume } from './parser';
 
 const fogVolumeRegistration: NodeTypeRegistration = {
   typeName: 'FogVolume',
-  parser: parseNode3D,
+  parser: parseFogVolume,
 };
 
 nodeRegistry.register(fogVolumeRegistration);
 
-export { fogVolumeRegistration };
+export * from './parser';
+export * from './types';

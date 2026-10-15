@@ -4,7 +4,6 @@ import { LoopOnce, LoopPingPong, LoopRepeat, type AnimationAction } from 'three'
 import {
   applyLoopOverride,
   loopsUnderOverride,
-  LOOP_ONCE_SETTINGS,
   LOOP_REPEAT_SETTINGS,
   type ActionLoopSettings,
 } from './loopOverride';
@@ -25,7 +24,7 @@ describe('applyLoopOverride', () => {
 
   it("'loop' forces an infinite repeat regardless of the authored settings", () => {
     const action = makeAction();
-    applyLoopOverride(action, 'loop', LOOP_ONCE_SETTINGS);
+    applyLoopOverride(action, 'loop', { loop: LoopOnce, repetitions: 1, clampWhenFinished: true });
     expect(action.setLoop).toHaveBeenCalledWith(LoopRepeat, Infinity);
     expect(action.clampWhenFinished).toBe(false);
   });

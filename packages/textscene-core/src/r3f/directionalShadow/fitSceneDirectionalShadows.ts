@@ -1,13 +1,12 @@
 /**
  * Fits every declared light in Godot's list of shadowed directional lights to the camera about to
- * render the scene, in its share of Godot's directional shadow atlas, and writes each shadow's fade
- * for that render.
+ * render the scene, in its share of Godot's directional shadow atlas.
  * three r186 updates the world matrices before it calls `scene.onBeforeRender`, where this runs
  * (`WebGLRenderer.js:1663-1678`).
  */
 
 import * as THREE from 'three';
-import type { DirectionalShadowAtlasRect, DirectionalShadowFade } from '../../godot/directionalShadow.js';
+import type { DirectionalShadowAtlasRect } from '../../godot/rendering/lights/directionalShadow.js';
 import type { DirectionalShadowDeclaration } from './declaration.js';
 import { dropLight, isDropped, restoreDroppedLight } from './droppedLight.js';
 import { isViewingCamera, type DirectionalShadowBox, type ViewingCamera } from './fitDirectionalShadowBox.js';
@@ -20,13 +19,12 @@ import {
   type DirectionalLightLists,
   type SceneLight,
 } from './lightLists.js';
-import { writeDirectionalShadowFades, type ShadowFades } from './shadowFade.js';
 import {
   attachSplitSun,
   followDeclaredLight,
   releaseSplitSun,
   splitSunOf,
-  SplitSunLight,
+  type SplitSunLight,
 } from './splitSun.js';
 import { NO_SHADOW_FADE, SPLIT_CAMERA_UP } from './splitShadow.js';
 
@@ -42,8 +40,6 @@ interface LightPlacement {
   lightPosition: THREE.Vector3;
   targetPosition: THREE.Vector3;
 }
-
-const NO_FADES: ShadowFades = { directional: [], sun: [] };
 
 /**
  * The split suns each scene's last fit placed. Written only by `fitSceneDirectionalShadows`, on
@@ -65,10 +61,10 @@ export function sceneSplitsHold(scene: THREE.Object3D, box: THREE.Box3): boolean
 }
 
 /**
- * A camera without a depth range (a bare `THREE.Camera`) fits nothing and fades nothing. A light
- * without a declaration keeps its shadow camera untouched and casts unfaded. A declared light casts
- * only from Godot's list of shadowed lights, and a light past Godot's eighth leaves the render.
- * `lights` is `sceneLights(scene)` from before the fit.
+ * A camera without a depth range (a bare `THREE.Camera`) fits nothing. A light without a declaration
+ * keeps its shadow camera untouched and casts unfaded. A declared light casts only from Godot's list
+ * of shadowed lights, and a light past Godot's eighth leaves the render. `lights` is
+ * `sceneLights(scene)`.
  */
 export function fitSceneDirectionalShadows(
   scene: THREE.Object3D,
@@ -76,35 +72,12 @@ export function fitSceneDirectionalShadows(
   lights: readonly SceneLight[]
 ): void {
   fittedSuns.set(scene, NO_SUNS);
-  if (!isViewingCamera(camera)) {
-    writeDirectionalShadowFades(NO_FADES);
-    return;
-  }
+  if (!isViewingCamera(camera)) return;
   const declared = declaredDirectionalLights(lights);
-  // Every render shares the fade buffer, so a scene with nothing to fade still clears it.
-  if (declared.length === 0) {
-    writeDirectionalShadowFades(NO_FADES);
-    return;
-  }
+  if (declared.length === 0) return;
   const lists = directionalLightLists(declared);
-  let renderedChanged = false;
-  for (const declaredLight of declared) {
-    const before = renderedFor(declaredLight.light);
-    fitDeclaredLight(declaredLight, lists, camera);
-    if (renderedFor(declaredLight.light) !== before) renderedChanged = true;
-  }
+  for (const declaredLight of declared) fitDeclaredLight(declaredLight, lists, camera);
   fittedSuns.set(scene, sunsOf(declared));
-  // The walk lists what three renders for each light, so a change in that walks the scene again.
-  const casters = directionalShadowCasters(renderedChanged ? sceneLights(scene) : lights, camera);
-  // Only a split sun fades: a declared light casts through its sun, and any other casts unfaded.
-  writeDirectionalShadowFades({
-    directional: casters.directional.map(() => null),
-    sun: casters.sun.map(sunFade),
-  });
-}
-
-function sunFade(light: THREE.Light): DirectionalShadowFade | null {
-  return light instanceof SplitSunLight ? light.shadow.fade : null;
 }
 
 function sunsOf(declared: readonly DeclaredDirectionalLight[]): SplitSunLight[] {
@@ -122,39 +95,6 @@ export function releaseSceneLights(scene: THREE.Object3D): void {
     releaseSplitSun(light);
     restoreDroppedLight(light);
   }
-}
-
-/** What three renders for a declared light: its split sun, the light itself, or nothing once dropped. */
-function renderedFor(light: THREE.DirectionalLight): THREE.Light | null {
-  if (isDropped(light)) return null;
-  return splitSunOf(light) ?? light;
-}
-
-/** The lights three draws a directional or a sun shadow for, each list in three's index order. */
-export interface DirectionalShadowCasters {
-  directional: THREE.DirectionalLight[];
-  sun: THREE.Light[];
-}
-
-/**
- * The casting directional and sun lights this render draws, in three's shadow uniform order:
- * visible pre-order where the camera's layers include the light (r186 `WebGLRenderer.js:1860-1888`),
- * casters first (`WebGLLights.js:245`, a stable sort), sun and directional apart (`:289-356`). A
- * declared light that draws splits or that the fitter dropped fails the layer test, so only a split
- * sun counts for it.
- */
-export function directionalShadowCasters(
-  lights: readonly SceneLight[],
-  camera: THREE.Camera
-): DirectionalShadowCasters {
-  const casters: DirectionalShadowCasters = { directional: [], sun: [] };
-  for (const { light: object, isVisible } of lights) {
-    const light = object as THREE.Light & { isSunLight?: boolean; isDirectionalLight?: boolean };
-    if (!isVisible || !light.castShadow || !light.layers.test(camera.layers)) continue;
-    if (light.isSunLight) casters.sun.push(light);
-    else if (light.isDirectionalLight) casters.directional.push(light as THREE.DirectionalLight);
-  }
-  return casters;
 }
 
 /**

@@ -18,7 +18,7 @@ import { pinNoColorSpace } from './canvas2DTextureDecode';
  * (`Sprite2D::_get_rects`, and `Texture2D::get_rect_region` passes it through).
  * Required, since a default is the silent hand-syncing this module prevents.
  */
-export type SpriteWrapMode = 'clamp' | 'repeat';
+type SpriteWrapMode = 'clamp' | 'repeat';
 
 const WRAP: Record<SpriteWrapMode, THREE.Wrapping> = {
   // The 2D canvas: `default_canvas_item_texture_repeat` defaults to DISABLED
@@ -56,19 +56,17 @@ export const WHOLE_FRAME: SpriteFrameProps = Object.freeze({
 });
 
 /**
- * Clone the loaded texture with the sprite's sampler state, or undefined before it
- * loads. `useResource` shares one texture per path, so an in-place edit clobbers
- * other sprites. `colorSpace` is required like `wrap`: Sprite2D passes NoColorSpace
- * and Sprite3D SRGBColorSpace (`r3f/canvas2DTextureDecode.ts`). The frame's UVs are
- * not set here: `useUvWindow` sets them on the clone that draws.
+ * Clone the loaded texture with the sprite's sampler state. `useResource` shares one
+ * texture per path, so an in-place edit clobbers other sprites. `colorSpace` is required
+ * like `wrap`: Sprite2D passes NoColorSpace (`r3f/canvas2DTextureDecode.ts`), and Sprite3D
+ * the colour space its albedo sampler reads the texture in. The frame's UVs are not set
+ * here: `useUvWindow` sets them on the clone that draws.
  */
 export function spriteSamplerClone(
-  texture: THREE.Texture | undefined,
+  texture: THREE.Texture,
   wrap: SpriteWrapMode,
   colorSpace: THREE.ColorSpace
-): THREE.Texture | undefined {
-  if (!texture) return undefined;
-
+): THREE.Texture {
   const cloned = texture.clone();
   // A plain assignment loses to R3F's auto sRGB-tagging once the clone reaches a
   // `map` prop, so NoColorSpace is pinned, and Sprite2D pairs it with

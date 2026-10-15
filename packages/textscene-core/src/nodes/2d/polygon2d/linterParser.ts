@@ -7,14 +7,13 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import type { ParseError } from '../../../linter/types.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import {
   ARRAY_LITERAL_RE,
-  dropTrailingComma,
   packedArrayLiteral,
-  splitTopLevel,
   variantShape,
-} from '../../../godot/index.js';
-import { arrayLiteralBody } from '../../../godot/variantParser.js';
+  arrayLiteralBody,
+} from '../../../godot/variant/variantParser.js';
 import { markIntSlot } from '../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
 

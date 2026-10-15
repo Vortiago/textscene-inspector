@@ -7,7 +7,7 @@ import { TscnParser } from '../../parser/TscnParser.js';
 import { tscnSceneToParsedScene, buildSceneGraph } from '../../core/SceneGraph.js';
 import type { SceneGraph } from '../../core/SceneGraph.js';
 import type { TscnScene } from '../../parser/types.js';
-import { isGltfPath } from '../../godot/gltf.js';
+import { isGltfPath } from '../../godot/import/gltf.js';
 import { synthesiseGLBScene } from '../../resources/processors/createSceneProcessor.js';
 import { nodeComponentRegistry } from '../NodeComponentRegistry.js';
 

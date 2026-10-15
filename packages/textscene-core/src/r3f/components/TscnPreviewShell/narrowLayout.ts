@@ -1,14 +1,8 @@
 /**
- * The media queries of the narrow layout (ADR-0048). A VS Code webview is an iframe, so a
- * query measures the editor tab there and the window in the web app. The CSS modules repeat
- * this text, since a stylesheet cannot import it, and a test holds the two copies equal.
+ * The compact-chrome media query of the narrow layout (ADR-0048). A VS Code webview is an
+ * iframe, so the query measures the editor tab there and the window in the web app. The CSS
+ * modules repeat this text, since a stylesheet cannot import it, and a test holds the copies equal.
  */
-
-/**
- * The dock becomes a bottom sheet under the viewport. A short panel keeps the side dock,
- * since a sheet under a viewport less than 500px tall leaves neither one usable.
- */
-export const NARROW_LAYOUT_QUERY = '(max-width: 768px) and (min-height: 501px)';
 
 /**
  * The chrome gets compact: a scrolling top bar, and the web app's Source pane as an overlay.

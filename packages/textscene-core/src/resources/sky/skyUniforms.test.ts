@@ -50,21 +50,27 @@ describe('skyUniforms — colours', () => {
     expect(top.r).toBeCloseTo(0.214, 3);
   });
 
-  it('pre-multiplies the sky colours by sky_energy_multiplier', () => {
-    const one = value(skyUniforms(procedural(), []), 'sky_top_color') as THREE.Color;
-    const four = value(
-      skyUniforms(procedural({ sky_energy_multiplier: 4 }), []),
-      'sky_top_color'
-    ) as THREE.Color;
-    expect(four.r).toBeCloseTo(one.r * 4, 5);
+  it('multiplies the sky colours by sky_energy_multiplier in sRGB, before the linear conversion', () => {
+    // Godot scales the Color, then converts the `source_color` uniform (`sky_material.cpp:41`,
+    // `material_storage.cpp:459`): sRGB 0.5 × 4 is sRGB 2.0, about 4.95 linear, not 0.214 × 4.
+    const u = skyUniforms(
+      procedural({ sky_top_color: { r: 0.5, g: 0.5, b: 0.5, a: 1 }, sky_energy_multiplier: 4 }),
+      []
+    );
+    expect((value(u, 'sky_top_color') as THREE.Color).r).toBeCloseTo(4.95, 2);
   });
 
-  it('pre-multiplies the ground colours by ground_energy_multiplier, not the sky’s', () => {
-    const u = skyUniforms(procedural({ sky_energy_multiplier: 4, ground_energy_multiplier: 2 }), []);
-    const base = skyUniforms(procedural(), []);
-    const ground = value(u, 'ground_bottom_color') as THREE.Color;
-    const groundBase = value(base, 'ground_bottom_color') as THREE.Color;
-    expect(ground.r).toBeCloseTo(groundBase.r * 2, 5);
+  it('multiplies the ground colours by ground_energy_multiplier, not the sky’s', () => {
+    const u = skyUniforms(
+      procedural({
+        ground_bottom_color: { r: 0.2, g: 0.2, b: 0.2, a: 1 },
+        sky_energy_multiplier: 4,
+        ground_energy_multiplier: 2,
+      }),
+      []
+    );
+    // sRGB 0.2 × 2 is sRGB 0.4, about 0.133 linear.
+    expect((value(u, 'ground_bottom_color') as THREE.Color).r).toBeCloseTo(0.133, 3);
   });
 
   it('carries energy_multiplier through as the shader’s exposure', () => {
@@ -77,7 +83,7 @@ describe('skyUniforms — directional lights', () => {
     direction: new THREE.Vector3(0, 1, 0),
     color: new THREE.Color(1, 1, 1),
     energy: 1,
-    angularRadius: 0,
+    size: 0,
     ...overrides,
   });
 

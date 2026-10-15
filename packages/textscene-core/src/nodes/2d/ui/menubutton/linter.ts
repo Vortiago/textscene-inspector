@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
@@ -60,12 +60,10 @@ const menuButtonValidationRule: LintRule = {
     name: 'valid-menubutton-properties',
     description: "Validates MenuButton's dynamic popup/item_<N>/… indices stay within item_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'MenuButton'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'MenuButton'),
     emits: armEmits(arms),
   },
   check: checkMenuButton,
 };
 
 ruleRegistry.register(menuButtonValidationRule);
-
-export { menuButtonValidationRule };

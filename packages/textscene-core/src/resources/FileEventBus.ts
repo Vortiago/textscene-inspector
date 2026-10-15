@@ -9,7 +9,7 @@ import * as logger from '../logger.js';
 export type FileData = ArrayBuffer | string;
 export type FileLoadedHandler = (path: string, data: FileData) => void;
 export type FileFailedHandler = (path: string, error: Error) => void;
-export type FileInvalidatedHandler = (path: string) => void;
+type FileInvalidatedHandler = (path: string) => void;
 
 export class FileEventBus {
   private cache = new Map<string, FileData>();

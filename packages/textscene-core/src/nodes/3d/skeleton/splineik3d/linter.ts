@@ -7,8 +7,9 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
-import { indexedElements, nodePathLiteral } from '../../../../godot/index.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
+import { nodePathLiteral } from '../../../../godot/variant/variantParser.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { resolveSplineSettingLeaf } from './linterParser.js';
@@ -77,12 +78,10 @@ const splineIK3DPathRule: LintRule = {
     description:
       'Warns when a SplineIK3D setting names no Path3D, the configuration Godot itself flags and then skips',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SplineIK3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'SplineIK3D'),
     emits: armEmits(arms),
   },
   check: checkSplineIK3D,
 };
 
 ruleRegistry.register(splineIK3DPathRule);
-
-export { splineIK3DPathRule };

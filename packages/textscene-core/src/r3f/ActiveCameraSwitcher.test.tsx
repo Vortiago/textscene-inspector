@@ -7,10 +7,10 @@
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { ActiveCameraSwitcher } from './TscnCanvas';
+import { ActiveCameraSwitcher } from './ActiveCameraSwitcher';
 import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
-import { createSceneGraphFromTscnScene } from '../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 import { TscnParser } from '../parser/TscnParser';
 
 function graph() {

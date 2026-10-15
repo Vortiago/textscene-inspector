@@ -5,7 +5,7 @@
  */
 
 import { parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
-import { isEqualApprox, snapped } from '../../../../godot/index.js';
+import { isEqualApprox, snapped } from '../../../../godot/math/math.js';
 
 export interface RangeProperties {
   /** Current value. Godot default 0. */
@@ -39,7 +39,7 @@ export interface RangeProperties {
 }
 
 /** Godot `Range` property defaults (doc/classes/Range.xml). */
-export const RANGE_DEFAULT_VALUE = 0;
+const RANGE_DEFAULT_VALUE = 0;
 export const RANGE_DEFAULT_MIN = 0;
 export const RANGE_DEFAULT_MAX = 100;
 /** `range.h:43`. */
@@ -51,7 +51,7 @@ export const RANGE_DEFAULT_PAGE = 0;
  * and TextureProgressBar 1.0, ProgressBar 0.01 and the scrollbars 0.0 (no snap). An absent `step`
  * read as no snap draws a slider at a value Godot never holds.
  */
-export interface RangeDefaults {
+interface RangeDefaults {
   step?: number;
 }
 

@@ -6,23 +6,19 @@
  */
 
 import { warn } from '../../../../logger';
-import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/index.js';
-import { parseGodotInt } from '../../../../godot/int.js';
-import { decodeBase64Bytes } from '../../../../godot/packedBytes.js';
-
-export interface Vec2i {
-  x: number;
-  y: number;
-}
+import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
+import { parseGodotInt } from '../../../../godot/variant/int.js';
+import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes.js';
+import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** One placed cell, normalized across both tile-data serializations. */
 export interface PlacedCell {
   /** Grid coordinates of the cell (signed). */
-  coords: Vec2i;
+  coords: Vector2;
   /** TileSet atlas-source id the cell draws from. */
   sourceId: number;
   /** Tile coordinates within the atlas source. */
-  atlasCoords: Vec2i;
+  atlasCoords: Vector2;
   /** Alternative-tile id (may carry transform bits in its high bits). */
   alternativeId: number;
 }

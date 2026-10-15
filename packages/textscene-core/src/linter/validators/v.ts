@@ -16,8 +16,6 @@ import { vectorCombinators } from './v/vectors.js';
 export { accepts, shape, type Grounding } from './v/grounding.js';
 export { arrayLiteralElements } from './v/scalars.js';
 export { RADIAN_ROUNDTRIP_EPSILON } from './v/floats.js';
-export type { FloatOpts, IntOpts, EnumOpts } from './v/options.js';
-
 /** The declarative validator namespace: `v.float`, `v.enumInt` and the rest. */
 export const v = {
   ...floatCombinators,

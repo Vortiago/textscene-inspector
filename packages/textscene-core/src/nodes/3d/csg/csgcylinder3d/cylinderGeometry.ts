@@ -35,7 +35,7 @@
 import type * as THREE from 'three';
 import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
 
-export interface CsgCylinderSpec {
+interface CsgCylinderSpec {
   radius: number;
   height: number;
   sides: number;

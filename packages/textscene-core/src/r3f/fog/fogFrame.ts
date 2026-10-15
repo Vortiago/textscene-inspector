@@ -5,21 +5,21 @@
  */
 
 import * as THREE from 'three';
-import { renderedDepthFogRange } from '../../godot/depthFog.js';
-import type { VolumetricFogProjectSettings } from '../../godot/volumetricFog.js';
-import type { EnvironmentSettings } from '../../resources/environment/types.js';
+import { renderedDepthFogRange } from '../../godot/rendering/environment/depthFog.js';
+import type { VolumetricFogProjectSettings } from '../../godot/rendering/environment/volumetricFog.js';
+import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
+import { setGodotColorLinear } from '../godotColor.js';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
 import { skyLightEnergy } from '../sky/skyLight.js';
 import { worldToSky } from '../sky/skyRotation.js';
 import { visibleInTree } from '../visibleInTree.js';
 import type { FogPasses } from './fogPasses.js';
 import { shineDirection } from './fogLights.js';
+import type { FogVolumeObject } from './fogVolumeObject.js';
 import { skyRadiance } from './fogSky.js';
-import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
-import type { VolumetricFog } from './fogVolumePass.js';
-import { writeVec4 } from './writeVec4.js';
-
-export type DepthFog = NonNullable<EnvironmentSettings['fog']>;
+import { fogUniforms } from './fogUniforms.js';
+import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
+import { writeVec4 } from '../writeVec4.js';
 
 export interface FogSettings {
   depth: DepthFog | null;
@@ -29,10 +29,20 @@ export interface FogSettings {
   skyEnergy: number;
 }
 
-/** The objects of a scene the fog reads: its lights, and the meshes that may cast their shadows. */
-export interface FogObjects {
+/**
+ * The fog a reflection probe capture draws: an exterior probe's depth fog, and no volumetric fog, as
+ * a capture's buffers hold no fog volume (`render_forward_clustered.cpp:1680-1684`, `:1646-1650`). An
+ * interior probe draws without the environment, so without its fog.
+ */
+export function captureFog(settings: FogSettings, isInterior: boolean): FogSettings {
+  return { ...settings, depth: isInterior ? null : settings.depth, volumetric: null };
+}
+
+/** The objects of a scene the fog reads: its lights, the meshes that may cast their shadows, and its FogVolumes. */
+interface FogObjects {
   lights: readonly THREE.Light[];
   casters: readonly THREE.Mesh[];
+  volumes: readonly FogVolumeObject[];
 }
 
 /** World to sky space for the render being prepared. */
@@ -54,7 +64,7 @@ export function prepareFog(
   camera: THREE.Camera,
   settings: FogSettings,
   passes: FogPasses,
-  { lights, casters }: FogObjects
+  { lights, casters, volumes }: FogObjects
 ): boolean {
   fogUniforms.skyRotation.set(worldToSky(scene.environmentRotation, toSky).elements);
   writeDepthFog(settings.depth, camera);
@@ -70,6 +80,7 @@ export function prepareFog(
     skyEnergy: settings.skyEnergy,
     lights,
     casters,
+    volumes,
   });
 }
 
@@ -85,9 +96,7 @@ function writeDepthFog(fog: DepthFog | null, camera: THREE.Camera): void {
     fogUniforms.depthColor[3] = 0;
     return;
   }
-  const color = depthColor
-    .setRGB(fog.color.r, fog.color.g, fog.color.b, THREE.SRGBColorSpace)
-    .multiplyScalar(fog.lightEnergy);
+  const color = setGodotColorLinear(depthColor, fog.color).multiplyScalar(fog.lightEnergy);
   const { near, far } = camera as THREE.PerspectiveCamera;
   const range = renderedDepthFogRange({ begin: fog.depthBegin, end: fog.depthEnd }, far);
   writeVec4(fogUniforms.depthColor, 0, color.r, color.g, color.b, 1);
@@ -107,7 +116,7 @@ function writeSuns(lights: readonly THREE.Light[]): void {
   sunSkyColors.fill(0);
   let slot = 0;
   for (const light of lights) {
-    if (slot === FOG_SUN_MAX) break;
+    if (slot === MAX_DIRECTIONAL_LIGHTS) break;
     if (!(light as THREE.DirectionalLight).isDirectionalLight || !visibleInTree(light)) continue;
     const sun = light as THREE.DirectionalLight;
     shineDirection(sun, towards).normalize().negate();

@@ -2,7 +2,19 @@
  * Reads the viewport actions from inside a provider, for component tests. Test-only: the `testing/`
  * directories under `src` are excluded from the build.
  */
-import { useViewportActions, type ViewportActionsContextValue } from '../contexts/ViewportActionsContext';
+import {
+  useOptionalViewportActions,
+  type ViewportActionsContextValue,
+} from '../contexts/ViewportActionsContext';
+
+/** The viewport actions of the enclosing provider. Throws outside one, so a test that forgot it fails loudly. */
+export function useViewportActions(): ViewportActionsContextValue {
+  const actions = useOptionalViewportActions();
+  if (actions === null) {
+    throw new Error('expected a ViewportActionsProvider above the component, got none');
+  }
+  return actions;
+}
 
 /** A probe to mount under `ViewportActionsProvider`, and the actions it last read. */
 export function viewportActionsProbe(): { Probe: () => null; actions: () => ViewportActionsContextValue } {

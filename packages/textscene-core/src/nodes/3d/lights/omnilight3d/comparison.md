@@ -1,7 +1,7 @@
 ---
 type: OmniLight3D
 category: 3D
-status: unreviewed
+status: limitation
 fixture: unit-omni-light-3d.tscn
 image: unit-omni-light-3d
 renders_as: a THREE.PointLight
@@ -9,7 +9,7 @@ renders_as: a THREE.PointLight
 
 # OmniLight3D
 
-Godot's omnidirectional point light, emitting from a single point in every direction with distance attenuation. The previewer renders it as a `THREE.PointLight` inside the node's transform group, with energy scaled by PI to match Godot's brightness. Its highlight scales by twice `light_specular`, as Godot's does. `light_size` widens its lit side and its highlight by Godot's size term, so a large light near a surface reaches past the surface's horizon.
+Godot's omnidirectional point light, emitting from a single point in every direction with distance attenuation. The previewer renders it as a `THREE.PointLight` inside the node's transform group, with energy scaled by PI to match Godot's brightness. Its highlight scales by twice `light_specular`, as Godot's does. `light_size` widens its lit side and its highlight by Godot's size term, so a large light near a surface reaches past the surface's horizon. In volumetric fog, it scatters `light_volumetric_fog_energy` times its light into the medium, under its shadow.
 
 ## Linting
 

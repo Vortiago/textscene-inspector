@@ -10,7 +10,8 @@ import type { RuleContext } from '../../../linter/types';
 import type { RawNode, RawScene } from '../../../parser/types';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
-import { occluderInstance3DConfigurationWarningsRule } from './linter';
+import { ruleRegistry } from '../../../linter/RuleRegistry';
+import './linter';
 
 /** Depth-first search for the first node of a type, over a parsed scene tree. */
 function findByType(nodes: RawNode[], type: string): RawNode | undefined {
@@ -33,7 +34,7 @@ function makeContext(rawProperties: Record<string, string>): RuleContext {
   return { scene, node };
 }
 
-const RULE = occluderInstance3DConfigurationWarningsRule;
+const RULE = ruleRegistry.getRule('valid-occluderinstance3d-configuration')!;
 
 describe('OccluderInstance3D semantic rules', () => {
   describe('empty bake mask (occluder_instance_3d.cpp:700-702)', () => {

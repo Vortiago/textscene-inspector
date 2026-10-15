@@ -339,16 +339,6 @@ export function isIncompleteState(state: ValueScanState): boolean {
   return state.inString || state.depth > 0;
 }
 
-/**
- * True while a value's string is open or its brackets or parens are unbalanced.
- * Godot spans lines with strings, arrays such as `SpriteFrames` `animations`, and
- * nested `Object(…)` calls. One {@link scanValueChunk} from {@link INITIAL_SCAN_STATE}: the
- * hot path in `TscnParserCore` carries the state itself to avoid an O(length^2) rescan.
- */
-export function isIncompleteValue(value: string): boolean {
-  return isIncompleteState(scanValueChunk(value, INITIAL_SCAN_STATE));
-}
-
 /** The escapes the tokenizer maps to a control character (`variant_parser.cpp:299-312`). */
 const ESCAPE_MAP: Record<string, string> = {
   b: '\b',

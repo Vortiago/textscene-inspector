@@ -10,6 +10,5 @@ const aspectRatioContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(aspectRatioContainerRegistration);
 
-export { aspectRatioContainerRegistration };
 export * from './parser';
 export * from './types';

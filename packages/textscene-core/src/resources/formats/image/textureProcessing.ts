@@ -1,25 +1,30 @@
 /** The image slice's texture decode, which `processors/createTextureProcessor.ts` calls. */
 
 import * as THREE from 'three';
-import { readImagePixels, type ImagePixels } from '../../../r3f/controls/withImageCanvas';
-import { everyTransparentTexelHasASource, fixAlphaEdges } from '../../processing/fixAlphaEdges';
-import { IMAGE_EXTENSIONS } from './extensions';
+import { imageSize, readImagePixels, type ImagePixels } from './imagePixels';
+import { fixAlphaEdges } from '../../processing/fixAlphaEdges';
+import {
+  invertGreen,
+  invertGreyscaleGreen,
+  keepRedGreen,
+  premultiplyAlpha,
+} from '../../processing/importTexelPasses';
+import { copySampling } from '../../textures/copySampling';
+import { dropMipChain } from '../../textures/godotTextureFilter';
+import { recordGodotFormat } from '../../textures/sourceColorSpace';
+import { IMAGE_EXTENSIONS, SVG_MIME_TYPE, imageMimeType } from './extensions';
 import { fileExtension } from '../../fileExtension';
+import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
+import {
+  hasTranslucentTexel,
+  holdsRedGreenOnly,
+  textureImportFormat,
+  type TextureImportOptions,
+} from '../../../godot/import/textureImport.js';
 
+/** The MIME type of the image file `path` names, the generic binary type for no image format. */
 export function getMimeType(path: string): string {
-  switch (fileExtension(path)) {
-    case '.png':
-      return 'image/png';
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg';
-    case '.svg':
-      return 'image/svg+xml';
-    case '.webp':
-      return 'image/webp';
-    default:
-      return 'application/octet-stream';
-  }
+  return imageMimeType(path) ?? 'application/octet-stream';
 }
 
 export function isTexturePath(path: string): boolean {
@@ -27,96 +32,170 @@ export function isTexturePath(path: string): boolean {
   return extension !== null && IMAGE_EXTENSIONS.includes(extension);
 }
 
-/** Create a THREE.Texture from binary data through a blob URL, which it revokes. */
+/**
+ * How Godot imports an image file: the format its loader reads it in, null when no header names
+ * one, and the options of its import sidecar.
+ */
+export interface ImageImport {
+  source: ImageSourceFormat | null;
+  options: TextureImportOptions;
+}
+
+/** A pass over RGBA8 bytes, top row first, that returns whether any byte changed. */
+type TexelPass = (data: Uint8Array, width: number, height: number) => boolean;
+
+/** A texture after the texel passes, and its RGBA8 bytes when a pass read them. */
+interface PassedTexture {
+  texture: THREE.Texture;
+  /** Undefined when no pass ran or the pixels could not be read. */
+  texels: Uint8Array | undefined;
+}
+
+/**
+ * Create a THREE.Texture from image bytes as Godot's texture importer builds it: an SVG rasterised
+ * at its import scale, then the import of the decoded image.
+ */
 export async function createTextureFromBuffer(
+  data: ArrayBuffer,
+  mimeType: string,
+  imported: ImageImport,
+  manager?: THREE.LoadingManager
+): Promise<THREE.Texture> {
+  const decoded = await decodeImage(data, mimeType, manager);
+  const texture = mimeType === SVG_MIME_TYPE ? rasterisedAt(decoded, imported.options.svgScale) : decoded;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  // Wrapping stays at three's clamp-to-edge default. One entry is cached
+  // per path and shared, and Godot gives it two opposite defaults:
+  // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
+  // clamps. Each consumer states its own at bind time (ADR-0044).
+  return importDecodedImage(texture, imported);
+}
+
+/**
+ * A decoded image as Godot's texture importer stores it: the texel passes its sidecar asks for, its
+ * mip chain, and the format a colour slot reads it through. The caller hands over `texture`: it
+ * gets it back when no pass changes a byte, and it is disposed otherwise.
+ */
+export function importDecodedImage(texture: THREE.Texture, imported: ImageImport): THREE.Texture {
+  const passed = applyTexelPasses(texture, texelPassesFor(imported));
+  if (!imported.options.mipmaps) dropMipChain(passed.texture);
+  if (imported.source === null) return passed.texture;
+  const format = textureImportFormat(imported.source, imported.options, () => isTranslucent(passed));
+  return recordGodotFormat(passed.texture, format);
+}
+
+/**
+ * Whether a texel uses alpha, read from the bytes the passes left, or read back when no pass read
+ * them. A texture whose pixels cannot be read counts as translucent.
+ */
+function isTranslucent({ texture, texels }: PassedTexture): boolean {
+  const bytes = texels ?? readImagePixels(texture.image)?.data;
+  return bytes === undefined || hasTranslucentTexel(bytes);
+}
+
+/**
+ * The passes in the importer's order (`resource_importer_texture.cpp:861-874`), then the channels a
+ * compression to RGTC drops. The alpha-border pass and the premultiply return on any format but
+ * RGBA8 (`core/io/image.cpp:4225`, `:4247`). A source no header names reads as RGBA8.
+ */
+function texelPassesFor({ source, options }: ImageImport): TexelPass[] {
+  const isRgba8 = source === null || source === 'RGBA8';
+  const isGreyscale = source === 'Lum8' || source === 'LumAlpha8';
+  const passes: TexelPass[] = [];
+  if (options.fixAlphaBorder && isRgba8) passes.push(fixAlphaEdges);
+  if (options.premultAlpha && isRgba8) passes.push(premultiplyAlpha);
+  if (options.invertNormalY) passes.push(isGreyscale ? invertGreyscaleGreen : invertGreen);
+  if (holdsRedGreenOnly(options)) passes.push(keepRedGreen);
+  return passes;
+}
+
+/**
+ * An SVG drawn at `scale` times its own size, rounded, as Godot's SVG loader rasterises it
+ * (`modules/svg/image_loader_svg.cpp:91-103`). The browser draws the vector at the canvas size.
+ * The decoded image at scale 1, or when no 2D canvas is available.
+ */
+function rasterisedAt(texture: THREE.Texture, scale: number): THREE.Texture {
+  const size = imageSize(texture.image);
+  if (scale === 1 || !size) return texture;
+  const canvas = globalThis.document?.createElement('canvas');
+  const context = canvas?.getContext('2d');
+  if (!canvas || !context) return texture;
+  canvas.width = Math.min(SVG_MAX_DIMENSION, Math.max(1, Math.round(size.width * scale)));
+  canvas.height = Math.min(SVG_MAX_DIMENSION, Math.max(1, Math.round(size.height * scale)));
+  context.drawImage(texture.image as CanvasImageSource, 0, 0, canvas.width, canvas.height);
+  const rasterised = copySampling(new THREE.CanvasTexture(canvas), texture);
+  rasterised.flipY = texture.flipY;
+  texture.dispose();
+  return rasterised;
+}
+
+/** `max_dimension` in `image_loader_svg.cpp:94`. */
+const SVG_MAX_DIMENSION = 16384;
+
+/**
+ * The RGBA8 pixels of image bytes, top row first, as Godot's layered importer reads its source:
+ * with no alpha-border pass, which only the 2D importer runs.
+ */
+export async function decodeImagePixels(
+  data: ArrayBuffer,
+  mimeType: string,
+  manager?: THREE.LoadingManager
+): Promise<ImagePixels> {
+  const texture = await decodeImage(data, mimeType, manager);
+  const pixels = readImagePixels(texture.image);
+  texture.dispose();
+  if (!pixels) throw new Error(`Failed to read the pixels of a decoded ${mimeType} image`);
+  return pixels;
+}
+
+/** Decodes image bytes through a blob URL, which it revokes. */
+async function decodeImage(
   data: ArrayBuffer,
   mimeType: string,
   manager?: THREE.LoadingManager
 ): Promise<THREE.Texture> {
   const blob = new Blob([data], { type: mimeType });
   const blobUrl = URL.createObjectURL(blob);
-
   try {
     const loader = new THREE.TextureLoader(manager);
-    const texture = await new Promise<THREE.Texture>((resolve, reject) => {
-      loader.load(
-        blobUrl,
-        (loadedTexture: THREE.Texture) => {
-          loadedTexture.colorSpace = THREE.SRGBColorSpace;
-          // Wrapping stays at three's clamp-to-edge default. One entry is cached
-          // per path and shared, and Godot gives it two opposite defaults:
-          // `BaseMaterial3D` tiles (`FLAG_USE_TEXTURE_REPEAT`) and a `CanvasItem`
-          // clamps. Each consumer states its own at bind time (ADR-0044).
-          resolve(loadedTexture);
-        },
-        undefined,
-        () => {
-          reject(new Error('Failed to decode texture'));
-        }
-      );
+    return await new Promise<THREE.Texture>((resolve, reject) => {
+      loader.load(blobUrl, resolve, undefined, () => {
+        reject(new Error('Failed to decode texture'));
+      });
     });
-    return applyAlphaBorderFix(texture);
   } finally {
     URL.revokeObjectURL(blobUrl);
   }
 }
 
 /**
- * Whether every texel is fully transparent or fully opaque, the one case the readback
- * carries losslessly. The 2D canvas store is premultiplied 8-bit, so un-premultiplying
- * a partial alpha amplifies lost low bits. It is also the case the alpha-border pass
- * exists for: a paletted sprite whose transparent texels keep a key colour.
+ * Runs `passes` on a decoded texture's bytes. It returns the same texture when no pass changes a
+ * byte, and otherwise a `DataTexture` of the rewritten bytes, since a decoded image cannot be
+ * edited in place. It then disposes the decoded texture, which the caller hands over.
  */
-function hasOnlyBinaryAlpha(data: Uint8Array | Uint8ClampedArray): boolean {
-  for (let i = 3; i < data.length; i += 4) {
-    const alpha = data[i]!;
-    if (alpha !== 0 && alpha !== 255) return false;
-  }
-  return true;
-}
+function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): PassedTexture {
+  if (passes.length === 0) return { texture, texels: undefined };
+  const pixels = readImagePixels(texture.image);
+  if (!pixels) return { texture, texels: undefined };
 
-/**
- * Godot's import-time alpha-border pass (`fixAlphaEdges.ts`) on a decoded texture. It
- * returns the same texture when nothing needs rewriting, and otherwise a `DataTexture`,
- * since a premultiplied canvas zeroes the RGB written behind alpha 0. `readPixels` is a
- * test seam, as happy-dom cannot rasterize: production passes one argument.
- */
-export function applyAlphaBorderFix(
-  texture: THREE.Texture,
-  readPixels: (image: unknown) => ImagePixels | undefined = readImagePixels
-): THREE.Texture {
-  const pixels = readPixels(texture.image);
-  if (!pixels) return texture;
+  // A DataTexture's own buffer is a cached resource that other consumers share, so the passes
+  // edit a copy of it. A readback is already a fresh buffer.
+  const isOwnBuffer = pixels.data === (texture.image as { data?: unknown }).data;
+  const data =
+    isOwnBuffer || !(pixels.data instanceof Uint8Array) ? new Uint8Array(pixels.data) : pixels.data;
+  let changed = false;
+  for (const pass of passes) changed = pass(data, pixels.width, pixels.height) || changed;
+  if (!changed) return { texture, texels: data };
 
-  // A DataTexture replaces the whole image, not only the texels this pass rewrites,
-  // so on partial alpha the lossy round trip corrupts more than the pass repairs.
-  // On a radial light falloff, measured against Godot, it is a large net loss.
-  if (!hasOnlyBinaryAlpha(pixels.data)) return texture;
-
-  // A transparent texel with no opaque neighbour keeps its RGB in Godot, but the
-  // premultiplied store zeroed it here. Substituting is faithful only when the pass
-  // rewrites every transparent texel.
-  if (!everyTransparentTexelHasASource(pixels.data, pixels.width, pixels.height)) return texture;
-
-  // Copy rather than rewrite in place: a reader that hands back a texture's own
-  // buffer (a DataTexture already carries one) would otherwise have this pass
-  // mutate a cached resource, and the replacement below must own its pixels.
-  const data = new Uint8Array(pixels.data);
-  if (!fixAlphaEdges(data, pixels.width, pixels.height)) return texture;
-
-  const fixed = new THREE.DataTexture(data, pixels.width, pixels.height, THREE.RGBAFormat);
-  fixed.needsUpdate = true;
-  fixed.colorSpace = texture.colorSpace;
-  fixed.wrapS = texture.wrapS;
-  fixed.wrapT = texture.wrapT;
-  fixed.magFilter = texture.magFilter;
-  fixed.minFilter = texture.minFilter;
-  // A DataTexture defaults to no mipmaps, so a mipmapped minFilter alone would
-  // leave every distance sampling level 0. Carry the decoded texture's intent.
-  fixed.generateMipmaps = texture.generateMipmaps;
-  fixed.anisotropy = texture.anisotropy;
+  const rewritten = copySampling(
+    new THREE.DataTexture(data, pixels.width, pixels.height, THREE.RGBAFormat),
+    texture
+  );
+  rewritten.needsUpdate = true;
+  rewritten.colorSpace = texture.colorSpace;
   // The readback is top-row-first, the same orientation the decoded image
   // uploads in, so the loaded texture's own flip decides which way is up.
-  fixed.flipY = texture.flipY;
-  return fixed;
+  rewritten.flipY = texture.flipY;
+  texture.dispose();
+  return { texture: rewritten, texels: data };
 }

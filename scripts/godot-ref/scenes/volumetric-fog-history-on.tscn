@@ -1,0 +1,23 @@
+; Volumetric fog that only emits, with temporal reprojection on. Each frame blends 0.9 of the fog history, which starts black.
+; The pair calibrates the harness: a converged capture of one matches the other.
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0.1, 0.12, 0.2, 1)
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.03
+volumetric_fog_emission = Color(0.2, 0.05, 0, 1)
+volumetric_fog_emission_energy = 2.0
+volumetric_fog_temporal_reprojection_enabled = true
+
+[sub_resource type="PlaneMesh" id="Floor_1"]
+size = Vector2(200, 200)
+
+[node name="VolumetricFogHistory" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("Floor_1")

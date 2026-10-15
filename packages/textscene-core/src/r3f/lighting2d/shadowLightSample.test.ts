@@ -1,0 +1,153 @@
+/**
+ * The light pose a shadow radiates from, sampled with no renderer mounted. Godot builds the occluder cull rect from the cookie
+ * (`RendererCanvasCull::_light_find_shadow`: `texture_size * texture_scale`, offset by
+ * `texture_offset`) and radiates the shadow from the node's origin, which `offset` does not move.
+ */
+
+import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
+import { sameShadowLight, sampleShadowLight } from './shadowLightSample';
+
+/** A cookie quad of `size` at `offset`, under a CanvasItem group at `at`. */
+function quadUnder(
+  at: { x: number; y: number },
+  offset: { x: number; y: number } = { x: 0, y: 0 },
+  size = 200,
+  transform: (group: THREE.Group) => void = () => {}
+): THREE.Mesh {
+  const root = new THREE.Group();
+  const item = new THREE.Group();
+  item.position.set(at.x, at.y, 0);
+  transform(item);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size, size));
+  mesh.position.set(offset.x, offset.y, 0);
+  item.add(mesh);
+  root.add(item);
+  return mesh;
+}
+
+describe('sampleShadowLight', () => {
+  it('takes the shadow origin from the light node, not the cookie centre', () => {
+    const pose = sampleShadowLight(quadUnder({ x: 400, y: -324 }), false)!;
+    expect(pose.x).toBe(400);
+    expect(pose.y).toBe(-324);
+  });
+
+  it('bounds the rect by the cookie, which is what Godot culls occluders against', () => {
+    const pose = sampleShadowLight(quadUnder({ x: 400, y: -324 }, { x: 0, y: 0 }, 1024), false)!;
+    expect(pose.rect).toEqual({ minX: -112, minY: -836, maxX: 912, maxY: 188 });
+  });
+
+  it('moves the rect with offset but leaves the origin where the node is', () => {
+    const pose = sampleShadowLight(quadUnder({ x: 0, y: 0 }, { x: 50, y: -20 }, 200), false)!;
+    expect([pose.x, pose.y]).toEqual([0, 0]);
+    expect(pose.rect).toEqual({ minX: -50, minY: -120, maxX: 150, maxY: 80 });
+  });
+
+  it('scales the rect with the node transform', () => {
+    const pose = sampleShadowLight(
+      quadUnder({ x: 0, y: 0 }, { x: 0, y: 0 }, 200, (g) => g.scale.set(2, 0.5, 1)),
+      false
+    )!;
+    expect(pose.rect).toEqual({ minX: -200, minY: -50, maxX: 200, maxY: 50 });
+  });
+
+  it('bounds a rotated cookie by its corners, never by its edges', () => {
+    // A 45° square's AABB grows by √2, so an axis-aligned box built from the
+    // untransformed extents would under-cover it and cull a real occluder.
+    const pose = sampleShadowLight(
+      quadUnder({ x: 0, y: 0 }, { x: 0, y: 0 }, 200, (g) => {
+        g.rotation.z = Math.PI / 4;
+      }),
+      false
+    )!;
+    expect(pose.rect.maxX).toBeCloseTo(100 * Math.SQRT2, 4);
+    expect(pose.rect.minY).toBeCloseTo(-100 * Math.SQRT2, 4);
+  });
+
+  it('reports Godot radius_cache: the cookie rect diagonal in light-local units', () => {
+    // `renderer_viewport.cpp:485`: `local_rect.size.length()`, so a 200×200
+    // cookie gives 200√2 wherever the light sits and however it is scaled (the
+    // scale is already in `local_rect` through `texture_scale`, not in the node).
+    const pose = sampleShadowLight(quadUnder({ x: 400, y: -324 }, { x: 0, y: 0 }, 200), false)!;
+    expect(pose.radius).toBeCloseTo(200 * Math.SQRT2, 9);
+    const moved = sampleShadowLight(quadUnder({ x: 0, y: 0 }, { x: 90, y: 30 }, 200), false)!;
+    expect(moved.radius).toBeCloseTo(200 * Math.SQRT2, 9);
+  });
+
+  it('inverts the light NODE frame, so offset never enters the shadow space', () => {
+    // The polar map is stated in the light's own space; `offset` moves the
+    // cookie inside that space and must leave the mapping alone.
+    const pose = sampleShadowLight(quadUnder({ x: 400, y: -324 }, { x: 50, y: 20 }), false)!;
+    const [m00, m01, m02, m10, m11, m12] = pose.worldToLocal;
+    expect([m00, m01, m10, m11]).toEqual([1, 0, 0, 1]);
+    expect([m02, m12]).toEqual([-400, 324]);
+  });
+
+  it('carries the light rotation into the inverse frame', () => {
+    // A quarter-turn light: its local +X points along world +Y, so a world point
+    // 100 above the light maps to local (100, 0).
+    const pose = sampleShadowLight(
+      quadUnder({ x: 400, y: 300 }, { x: 0, y: 0 }, 200, (g) => {
+        g.rotation.z = Math.PI / 2;
+      }),
+      false
+    )!;
+    const [m00, m01, m02, m10, m11, m12] = pose.worldToLocal;
+    expect(m00 * 400 + m01 * 400 + m02).toBeCloseTo(100, 6);
+    expect(m10 * 400 + m11 * 400 + m12).toBeCloseTo(0, 6);
+  });
+
+  it('accumulates every ancestor transform, not just the immediate parent', () => {
+    const mesh = quadUnder({ x: 100, y: -50 });
+    (mesh.parent!.parent as THREE.Group).position.set(300, -90, 0);
+    const pose = sampleShadowLight(mesh, false)!;
+    expect([pose.x, pose.y]).toEqual([400, -140]);
+  });
+
+  it('is null for a quad that is not in a tree yet', () => {
+    expect(sampleShadowLight(null, false)).toBeNull();
+    expect(sampleShadowLight(new THREE.Mesh(new THREE.PlaneGeometry(1, 1)), false)).toBeNull();
+  });
+
+  it('is null for geometry with no bounds to take a rect from', () => {
+    const mesh = quadUnder({ x: 0, y: 0 });
+    mesh.geometry = new THREE.BufferGeometry();
+    expect(sampleShadowLight(mesh, false)).toBeNull();
+  });
+
+  it('trusts matrices the caller has just refreshed, and walks no ancestor (edge case)', () => {
+    const mesh = quadUnder({ x: 0, y: 0 });
+    mesh.updateWorldMatrix(true, false);
+    mesh.parent!.position.set(500, 0, 0);
+
+    expect(sampleShadowLight(mesh, true)!.x).toBe(0);
+    expect(sampleShadowLight(mesh, false)!.x).toBe(500);
+  });
+});
+
+describe('sameShadowLight', () => {
+  const pose = () => sampleShadowLight(quadUnder({ x: 10, y: 20 }), false);
+
+  it('holds for two samples of an unmoved light', () => {
+    expect(sameShadowLight(pose(), pose())).toBe(true);
+  });
+
+  it('holds for two nulls, so an absent light republishes nothing', () => {
+    expect(sameShadowLight(null, null)).toBe(true);
+  });
+
+  it('breaks when the light moves', () => {
+    expect(sameShadowLight(pose(), sampleShadowLight(quadUnder({ x: 11, y: 20 }), false))).toBe(false);
+  });
+
+  it('breaks when only the reach changed', () => {
+    const wider = sampleShadowLight(quadUnder({ x: 10, y: 20 }, { x: 0, y: 0 }, 400), false);
+    expect(sameShadowLight(pose(), wider)).toBe(false);
+  });
+
+  it('breaks between a pose and no pose', () => {
+    expect(sameShadowLight(pose(), null)).toBe(false);
+    expect(sameShadowLight(null, pose())).toBe(false);
+  });
+});

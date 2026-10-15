@@ -19,7 +19,7 @@ export interface ViewportTextureEntry {
 }
 
 /** Publishes the target at `path` and returns the cleanup. */
-export type RegisterViewportTexture = (path: string, entry: ViewportTextureEntry) => () => void;
+type RegisterViewportTexture = (path: string, entry: ViewportTextureEntry) => () => void;
 
 const NO_OP_REGISTER: RegisterViewportTexture = () => () => {};
 const EMPTY: ReadonlyMap<string, ViewportTextureEntry> = new Map();
@@ -31,7 +31,7 @@ const ViewportTexturesContext = createContext<ReadonlyMap<string, ViewportTextur
 ViewportTexturesContext.displayName = 'ViewportTexturesContext';
 
 /** Stable publisher, for `<SubViewport>`. */
-export function useRegisterViewportTexture(): RegisterViewportTexture {
+function useRegisterViewportTexture(): RegisterViewportTexture {
   return useContext(RegisterViewportTextureContext);
 }
 

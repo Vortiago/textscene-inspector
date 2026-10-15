@@ -55,5 +55,3 @@ const fogVolumeSizeRule: LintRule = {
 };
 
 ruleRegistry.register(fogVolumeSizeRule);
-
-export { fogVolumeSizeRule };

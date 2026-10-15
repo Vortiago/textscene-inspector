@@ -20,8 +20,12 @@ export class LightUniformArrays<Name extends string> {
    */
   private readonly sets: LightArrays<Name>[];
 
+  /** The uniform names, read once: a write runs on every shadow pass, so it allocates no list. */
+  private readonly names: readonly Name[];
+
   /** `floatsPerLight` names each uniform and the floats it holds for one light. */
   constructor(private readonly floatsPerLight: Readonly<Record<Name, number>>) {
+    this.names = Object.keys(floatsPerLight) as Name[];
     this.sets = [this.installedSet() ?? this.createSet(INITIAL_CAPACITY)];
   }
 
@@ -45,16 +49,16 @@ export class LightUniformArrays<Name extends string> {
     fill(newest);
     for (const set of this.sets) {
       if (set === newest) continue;
-      for (const [name, array] of this.entries(set)) {
-        const length = Math.min(count * this.floatsPerLight[name], array.length);
-        array.set(newest[name].subarray(0, length));
+      for (const name of this.names) {
+        const length = Math.min(count * this.floatsPerLight[name], set[name].length);
+        set[name].set(newest[name].subarray(0, length));
       }
     }
   }
 
   private growTo(count: number): void {
-    const [name, array] = this.entries(this.newest())[0]!;
-    const capacity = array.length / this.floatsPerLight[name];
+    const name = this.names[0]!;
+    const capacity = this.newest()[name].length / this.floatsPerLight[name];
     if (count <= capacity) return;
     this.sets.push(this.createSet(Math.max(count, capacity * 2)));
     this.install();
@@ -62,14 +66,14 @@ export class LightUniformArrays<Name extends string> {
 
   private createSet(capacity: number): LightArrays<Name> {
     const set = {} as LightArrays<Name>;
-    for (const name of this.names()) set[name] = new Float32Array(capacity * this.floatsPerLight[name]);
+    for (const name of this.names) set[name] = new Float32Array(capacity * this.floatsPerLight[name]);
     return set;
   }
 
   /** The arrays an earlier evaluation of the caller gave the lit materials, as after a dev server reloads it. */
   private installedSet(): LightArrays<Name> | null {
     const set = {} as LightArrays<Name>;
-    for (const name of this.names()) {
+    for (const name of this.names) {
       const array = installedUniformValue(name);
       if (!(array instanceof Float32Array)) return null;
       set[name] = array;
@@ -77,11 +81,7 @@ export class LightUniformArrays<Name extends string> {
     return set;
   }
 
-  private names(): Name[] {
-    return Object.keys(this.floatsPerLight) as Name[];
-  }
-
   private entries(set: LightArrays<Name>): [Name, Float32Array][] {
-    return this.names().map((name) => [name, set[name]]);
+    return this.names.map((name) => [name, set[name]]);
   }
 }

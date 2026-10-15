@@ -1,22 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import {
-  gradientFromResource,
-  decodeGradient,
-  decodeGradientTexture2D,
-  parseColorStops,
-  resolveGradient,
-} from './decode';
-import { parseTresFile } from '../../../parser/parsedResource';
+import { decodeGradientTexture2D, resolveGradient } from './decode';
+import { gradientOf } from './gradient.testkit';
 import type { TscnInternalResource } from '../../../parser/types';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
-import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/index.js';
+import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/scene/gradientTexture.js';
 
-describe('parseColorStops', () => {
-  it('groups the flat run into RGBA quadruples', () => {
-    const colors = parseColorStops('PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)');
+/** The stop colours a Gradient with this `colors` value decodes to. */
+function colorsOf(colors: string) {
+  return gradientOf({ colors }).stops.map((stop) => stop.color);
+}
+
+describe('the colors a Gradient reads', () => {
+  it('groups the flat run into RGBA quadruples of the float32 a Color stores', () => {
+    const colors = colorsOf('PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)');
     expect(colors).toEqual([
       { r: 1, g: 1, b: 1, a: 1 },
-      { r: 1, g: 1, b: 1, a: 0.180392 },
+      { r: 1, g: 1, b: 1, a: Math.fround(0.180392) },
       { r: 1, g: 1, b: 1, a: 0 },
     ]);
   });
@@ -29,20 +28,20 @@ describe('parseColorStops', () => {
       { r: 1, g: 0, b: 0, a: 1 },
       { r: 0, g: 0, b: 1, a: 1 },
     ];
-    expect(parseColorStops('[Color(1, 0, 0, 1), Color(0, 0, 1, 1)]')).toEqual(expected);
-    expect(parseColorStops('Array[Color]([Color(1, 0, 0, 1), Color(0, 0, 1, 1)])')).toEqual(expected);
-    expect(parseColorStops('[]')).toEqual([]);
+    expect(colorsOf('[Color(1, 0, 0, 1), Color(0, 0, 1, 1)]')).toEqual(expected);
+    expect(colorsOf('Array[Color]([Color(1, 0, 0, 1), Color(0, 0, 1, 1)])')).toEqual(expected);
+    expect(colorsOf('[]')).toEqual([]);
   });
 
   it('drops a trailing partial quadruple', () => {
-    const colors = parseColorStops('PackedColorArray(1, 0, 0, 1, 0, 1)');
+    const colors = colorsOf('PackedColorArray(1, 0, 0, 1, 0, 1)');
     expect(colors).toEqual([{ r: 1, g: 0, b: 0, a: 1 }]);
   });
 });
 
-describe('decodeGradient', () => {
-  it('pairs offsets with colors into sorted stops (the coin gradient)', () => {
-    const gradient = decodeGradient({
+describe('the Gradient body resolveGradient decodes', () => {
+  it('pairs offsets with colors into sorted float32 stops (the coin gradient)', () => {
+    const gradient = gradientOf({
       interpolation_mode: '2',
       offsets: 'PackedFloat32Array(0, 0.642276, 1)',
       colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)',
@@ -51,13 +50,13 @@ describe('decodeGradient', () => {
     expect(gradient.interpolationMode).toBe(GradientInterpolationMode.Cubic);
     expect(gradient.stops).toEqual([
       { offset: 0, color: { r: 1, g: 1, b: 1, a: 1 } },
-      { offset: 0.642276, color: { r: 1, g: 1, b: 1, a: 0.180392 } },
+      { offset: Math.fround(0.642276), color: { r: 1, g: 1, b: 1, a: Math.fround(0.180392) } },
       { offset: 1, color: { r: 1, g: 1, b: 1, a: 0 } },
     ]);
   });
 
   it('defaults interpolation_mode to linear and spreads colours evenly when offsets are absent', () => {
-    const gradient = decodeGradient({
+    const gradient = gradientOf({
       colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)',
     });
 
@@ -66,7 +65,7 @@ describe('decodeGradient', () => {
   });
 
   it('sorts stops ascending by offset', () => {
-    const gradient = decodeGradient({
+    const gradient = gradientOf({
       offsets: 'PackedFloat32Array(1, 0)',
       colors: 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)',
     });
@@ -75,8 +74,12 @@ describe('decodeGradient', () => {
   });
 
   it('is empty (not throwing) for malformed arrays', () => {
-    const gradient = decodeGradient({ colors: 'PackedColorArray(oops', offsets: 'garbage' });
+    const gradient = gradientOf({ colors: 'PackedColorArray(oops', offsets: 'garbage' });
     expect(gradient.stops).toEqual([]);
+  });
+
+  it('decodes an empty body to a stopless linear gradient (edge case)', () => {
+    expect(gradientOf({})).toEqual({ stops: [], interpolationMode: GradientInterpolationMode.Linear });
   });
 });
 
@@ -157,7 +160,7 @@ describe('resolveGradient', () => {
   it('decodes the Gradient a SubResource reference names (happy path)', () => {
     const gradient = resolveGradient('SubResource("3")', [RAMP_RESOURCE]);
     expect(gradient?.stops).toHaveLength(2);
-    expect(gradient?.stops[0]!.color).toEqual({ r: 1, g: 0.6, b: 0.2, a: 1 });
+    expect(gradient?.stops[0]!.color).toEqual({ r: 1, g: Math.fround(0.6), b: Math.fround(0.2), a: 1 });
   });
 
   it('returns null when the reference names a different resource type (error path)', () => {
@@ -169,37 +172,5 @@ describe('resolveGradient', () => {
     expect(resolveGradient(undefined, [RAMP_RESOURCE])).toBeNull();
     expect(resolveGradient('ExtResource("3")', [RAMP_RESOURCE])).toBeNull();
     expect(resolveGradient('SubResource("nope")', [RAMP_RESOURCE])).toBeNull();
-  });
-});
-
-/** The given properties as a standalone `.tres` file's `[resource]` body. */
-function tresFile(type: string, properties: Record<string, string>): string {
-  const body = Object.entries(properties)
-    .map(([key, value]) => `${key} = ${value}`)
-    .join('\n');
-  return `[gd_resource type="${type}" format=3 uid="uid://cgrad00"]\n\n[resource]\n${body}\n`;
-}
-
-describe('gradientFromResource', () => {
-  it('decodes a `.tres` body identically to the same properties arriving inline', () => {
-    // One property set drives both arrival paths, so they cannot drift.
-    const external = gradientFromResource(parseTresFile(tresFile('Gradient', ORANGE_RAMP)));
-    const inline = resolveGradient('SubResource("3")', [RAMP_RESOURCE]);
-
-    expect(external).toEqual(inline);
-    expect(external?.stops).toHaveLength(2);
-  });
-
-  it('returns null for a resource file of some other type (error path)', () => {
-    const parsed = parseTresFile(tresFile('Curve', { _data: '[Vector2(0, 0), 0.0, 0.0, 0, 0]' }));
-    expect(gradientFromResource(parsed)).toBeNull();
-  });
-
-  it('decodes an empty `[resource]` body to a stopless gradient (edge case)', () => {
-    const parsed = parseTresFile('[gd_resource type="Gradient" format=3]\n\n[resource]\n');
-    expect(gradientFromResource(parsed)).toEqual({
-      stops: [],
-      interpolationMode: GradientInterpolationMode.Linear,
-    });
   });
 });

@@ -11,5 +11,3 @@ const cSGTorus3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(cSGTorus3DRegistration);
-
-export { cSGTorus3DRegistration };

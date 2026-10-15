@@ -62,5 +62,3 @@ const springBoneCollisionCapsule3DShapeRule: LintRule = {
 };
 
 ruleRegistry.register(springBoneCollisionCapsule3DShapeRule);
-
-export { springBoneCollisionCapsule3DShapeRule };

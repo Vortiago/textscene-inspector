@@ -2,7 +2,7 @@
 
 import type { ControlProperties } from '../control/types';
 
-export interface Rect2 {
+interface Rect2 {
   x: number;
   y: number;
   width: number;

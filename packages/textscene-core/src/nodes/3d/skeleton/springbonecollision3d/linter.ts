@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -40,12 +40,10 @@ const springBoneCollision3DParentRule: LintRule = {
     description:
       'Warns when a SpringBoneCollision3D is not a direct child of a SpringBoneSimulator3D, where Godot never consults it',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SpringBoneCollision3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'SpringBoneCollision3D'),
     emits: armEmits(arms),
   },
   check: checkSpringBoneCollision3D,
 };
 
 ruleRegistry.register(springBoneCollision3DParentRule);
-
-export { springBoneCollision3DParentRule };

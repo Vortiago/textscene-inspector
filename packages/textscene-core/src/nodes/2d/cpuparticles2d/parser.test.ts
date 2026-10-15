@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
-import { parseCPUParticles2D, MAX_PARTICLE_AMOUNT } from './parser';
+import { parseCPUParticles2D } from './parser';
 import {
   CPUParticles2DDrawOrder,
   CPUParticles2DEmissionShape,
@@ -107,7 +107,8 @@ describe('parseCPUParticles2D', () => {
     const tooMany = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
       amount: '5000000',
     });
-    expect(tooMany.amount).toBe(MAX_PARTICLE_AMOUNT);
+    // cpu_particles_2d.cpp:1492 hints `amount` as "1,1000000,1,exp".
+    expect(tooMany.amount).toBe(1_000_000);
 
     const tooFew = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), { amount: '0' });
     expect(tooFew.amount).toBe(1);

@@ -6,7 +6,7 @@
  */
 
 /** Godot `Viewport` subclasses authorable in a `.tscn`. `Window` is not supported. */
-export const VIEWPORT_TYPES: ReadonlySet<string> = new Set(['SubViewport']);
+const VIEWPORT_TYPES: ReadonlySet<string> = new Set(['SubViewport']);
 
 /** True when this type scopes its canvas subtree to its own viewport surface. */
 export function isViewportBoundary(type: string): boolean {
@@ -27,7 +27,7 @@ export function keepsChildrenInViewport(node: { type: string }): boolean {
  * 3D content, which Godot draws in the 3D view unless `own_world_3d`. So the drop
  * rule subtracts this set.
  */
-export const VIEWPORT_SURFACE_TYPES: ReadonlySet<string> = new Set(['SubViewportContainer']);
+const VIEWPORT_SURFACE_TYPES: ReadonlySet<string> = new Set(['SubViewportContainer']);
 
 /** True when this Control displays a sub-viewport and must pass 3D content through. */
 export function isViewportSurface(type: string): boolean {

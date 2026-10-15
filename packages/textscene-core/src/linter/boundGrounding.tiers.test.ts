@@ -6,11 +6,23 @@
 
 import { describe, it, expect } from 'vitest';
 import { v } from './validators/v.js';
-import { outerEndIsReachable } from './validators/v/grounding.js';
-import { everyValidator } from './registryPopulation.js';
+import { everyValidator } from './testing/registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
 import { layerBitmask } from './validators/layerBitmask.js';
 import type { PropertyValidator } from './ValidatorRegistry.js';
+
+type Bounds = NonNullable<PropertyValidator['bounds']>;
+
+/**
+ * Whether a value can land between the hint's end and the setter's own. `exclusive` moves the endpoint, not the
+ * band: `[at, min)` and `(at, min)` are both non-empty exactly when `at < min`.
+ */
+function hintBandIsReachable(bounds: Bounds, end: 'min' | 'max'): boolean {
+  const hintEnd = bounds[end]!;
+  const setterEnd = end === 'min' ? bounds.enforcedMin : bounds.enforcedMax;
+  if (setterEnd === undefined) return true;
+  return end === 'min' ? setterEnd.at < hintEnd : setterEnd.at > hintEnd;
+}
 
 describe('the two tiers behave differently', () => {
   it('an enforced bound rejects out-of-range as an error', () => {
@@ -174,7 +186,7 @@ describe("an end no value can reach reports at the setter's tier", () => {
       for (const end of ['min', 'max'] as const) {
         if (bounds[end] === undefined) continue;
         examined += 1;
-        if (outerEndIsReachable(bounds, end)) continue;
+        if (hintBandIsReachable(bounds, end)) continue;
         if (validator.tiers![end] !== 'error') {
           wrong.push(`${label} ${end} is ${validator.tiers![end]}`);
         }

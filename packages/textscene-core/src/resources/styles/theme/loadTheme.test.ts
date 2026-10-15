@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { sectionLoaderServing } from '../../testing/sectionLoaderServing';
 import { THEME_TYPES } from './decode';
-import { buildThemeResource, resolveThemeResource } from './loadTheme';
-import type { ThemeAddresses } from './types';
+import { buildThemeResource } from './loadTheme';
 import type { FontLoaderFn, FontResource } from '../../fonts/font/types';
 
 const NO_OP_LOADER: FontLoaderFn = async () => null;
@@ -36,22 +35,26 @@ const THEME_TRES = [
   '',
 ].join('\n');
 
-describe('resolveThemeResource', () => {
+/** A Theme `.tres` whose `[resource]` body holds `lines`, with `ext_resource` lines for `fonts`. */
+function themeTres(fonts: string[], lines: string[]): string {
+  const extResources = fonts.map(
+    (path, index) => `[ext_resource type="FontFile" path="${path}" id="${index + 1}"]`
+  );
+  return ['[gd_resource type="Theme" format=3]', '', ...extResources, '', '[resource]', ...lines, ''].join(
+    '\n'
+  );
+}
+
+/** The theme `buildThemeResource` makes of `tres`, served at `res://theme.tres`. */
+async function themeOf(tres: string, loadFont: FontLoaderFn) {
+  const section = await sectionLoaderServing({ 'res://theme.tres': tres })('res://theme.tres', THEME_TYPES);
+  return buildThemeResource('res://theme.tres', section, loadFont);
+}
+
+describe('the fonts buildThemeResource resolves', () => {
   it('carries icons through unresolved, same as styles', async () => {
-    const addresses: ThemeAddresses = {
-      defaultFont: null,
-      defaultFontSize: undefined,
-      fonts: {},
-      fontSizes: {},
-      styles: {},
-      icons: { CheckBox: { checked: 'ExtResource("1")' } },
-      colors: {},
-      constants: {},
-      typeVariations: {},
-      properties: {},
-      resources: { externalResources: [], internalResources: [] },
-    };
-    const resource = await resolveThemeResource(addresses, NO_OP_LOADER);
+    const tres = themeTres([], ['CheckBox/icons/checked = ExtResource("1")']);
+    const resource = await themeOf(tres, NO_OP_LOADER);
     expect(resource.icons?.CheckBox?.checked).toBe('ExtResource("1")');
   });
 
@@ -59,20 +62,17 @@ describe('resolveThemeResource', () => {
     const loadFont = vi.fn(async (address: string) =>
       address === 'res://fonts/default.ttf' ? FONT_A : address === 'res://fonts/label.ttf' ? FONT_B : null
     );
-    const addresses: ThemeAddresses = {
-      defaultFont: 'res://fonts/default.ttf',
-      defaultFontSize: 20,
-      fonts: { Label: { font: 'res://fonts/label.ttf' } },
-      fontSizes: { Label: { font_size: 24 } },
-      styles: {},
-      colors: {},
-      constants: {},
-      typeVariations: {},
-      properties: {},
-      resources: { externalResources: [], internalResources: [] },
-    };
+    const tres = themeTres(
+      ['res://fonts/default.ttf', 'res://fonts/label.ttf'],
+      [
+        'default_font = ExtResource("1")',
+        'default_font_size = 20',
+        'Label/fonts/font = ExtResource("2")',
+        'Label/font_sizes/font_size = 24',
+      ]
+    );
 
-    const resource = await resolveThemeResource(addresses, loadFont);
+    const resource = await themeOf(tres, loadFont);
 
     expect(resource.defaultFont).toBe(FONT_A);
     expect(resource.fonts.Label?.font).toBe(FONT_B);
@@ -80,36 +80,13 @@ describe('resolveThemeResource', () => {
   });
 
   it('omits a font entry whose address fails to load (collapses to absent, not null)', async () => {
-    const addresses: ThemeAddresses = {
-      defaultFont: null,
-      defaultFontSize: undefined,
-      fonts: { Button: { font: 'res://fonts/missing.ttf' } },
-      fontSizes: {},
-      styles: {},
-      colors: {},
-      constants: {},
-      typeVariations: {},
-      properties: {},
-      resources: { externalResources: [], internalResources: [] },
-    };
-    const resource = await resolveThemeResource(addresses, NO_OP_LOADER);
+    const tres = themeTres(['res://fonts/missing.ttf'], ['Button/fonts/font = ExtResource("1")']);
+    const resource = await themeOf(tres, NO_OP_LOADER);
     expect(resource.fonts.Button).toBeUndefined();
   });
 
   it('defaultFont is null when the address is absent', async () => {
-    const addresses: ThemeAddresses = {
-      defaultFont: null,
-      defaultFontSize: undefined,
-      fonts: {},
-      fontSizes: {},
-      styles: {},
-      colors: {},
-      constants: {},
-      typeVariations: {},
-      properties: {},
-      resources: { externalResources: [], internalResources: [] },
-    };
-    const resource = await resolveThemeResource(addresses, NO_OP_LOADER);
+    const resource = await themeOf(themeTres([], ['default_font_size = 20']), NO_OP_LOADER);
     expect(resource.defaultFont).toBeNull();
   });
 });

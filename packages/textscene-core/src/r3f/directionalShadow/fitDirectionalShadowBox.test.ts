@@ -5,14 +5,14 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import {
-  cameraSliceCorners,
   directionalShadowBoxFitter,
   isViewingCamera,
   viewSlice,
   type DirectionalShadowBox,
   type DirectionalShadowFitInput,
 } from './fitDirectionalShadowBox';
-import type { DirectionalShadowSlice } from '../../godot/directionalShadow';
+import type { DirectionalShadowSlice } from '../../godot/rendering/lights/directionalShadow';
+import { cameraSliceCorners } from './fitDirectionalShadowBox.testkit';
 
 const MAP_SIZE = 2048;
 
@@ -246,41 +246,6 @@ describe('viewSlice', () => {
     const slice = viewSlice(fitInput({ camera: perspectiveCamera(0.01) }));
     expect(slice.far).toBeCloseTo(0.051, 9);
     expect(slice.near).toBe(0.05);
-  });
-});
-
-describe('cameraSliceCorners', () => {
-  it('widens with depth for a perspective camera', () => {
-    const camera = new THREE.PerspectiveCamera(90, 1, 1, 100);
-    camera.updateMatrixWorld();
-    const corners = cameraSliceCorners(camera, 2, 10);
-    const xs = corners.map((corner) => Math.abs(corner.x));
-    expect(Math.min(...xs)).toBeCloseTo(2, 9);
-    expect(Math.max(...xs)).toBeCloseTo(10, 9);
-    expect(corners.map((corner) => corner.z).sort((a, b) => a - b)[0]).toBeCloseTo(-10, 9);
-  });
-
-  it('keeps its width at every depth for an orthogonal camera', () => {
-    const camera = new THREE.OrthographicCamera(-4, 4, 3, -3, 0.1, 100);
-    camera.updateMatrixWorld();
-    for (const corner of cameraSliceCorners(camera, 1, 50)) {
-      expect(Math.abs(corner.x)).toBeCloseTo(4, 9);
-    }
-  });
-
-  it('answers eight identical-depth pairs for an empty slice (edge case)', () => {
-    const camera = new THREE.PerspectiveCamera(60, 1, 1, 100);
-    camera.updateMatrixWorld();
-    const depths = cameraSliceCorners(camera, 5, 5).map((corner) => corner.z);
-    depths.forEach((depth) => expect(depth).toBeCloseTo(-5, 9));
-  });
-
-  it('answers non-finite corners for a camera with no depth range (error case)', () => {
-    const camera = new THREE.PerspectiveCamera(60, 1, 1, 100);
-    camera.projectionMatrixInverse.identity().makeScale(1, 1, 0);
-    camera.updateMatrixWorld();
-    const corners = cameraSliceCorners(camera, 1, 10);
-    expect(corners.some((corner) => !Number.isFinite(corner.x))).toBe(true);
   });
 });
 

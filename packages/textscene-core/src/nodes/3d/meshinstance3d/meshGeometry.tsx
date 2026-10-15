@@ -8,7 +8,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { buildPrimitiveMeshGeometry } from './primitiveMeshGeometry';
 import { useContentMemo } from '../../../resources/useContentMemo';
 
-export interface MeshGeometryProps {
+interface MeshGeometryProps {
   resource: TscnInternalResource;
 }
 

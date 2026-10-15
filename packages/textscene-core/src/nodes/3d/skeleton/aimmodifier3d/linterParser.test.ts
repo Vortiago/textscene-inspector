@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
-import { BONE_CONSTRAINT_SETTING_LEAVES } from '../boneconstraint3d/linterParser';
+import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser';
 import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
@@ -45,7 +45,7 @@ describe('AimModifier3D strict validators', () => {
   it('covers every leaf BoneConstraint3D actually contributes', () => {
     // The sample values cannot be derived, but the key set can. Without this, a new base leaf
     // leaves the case below missing the one key that would be misreported as unknown.
-    expect(Object.keys(BASE_LEAF_KEYS).sort()).toEqual(Object.keys(BONE_CONSTRAINT_SETTING_LEAVES).sort());
+    expect(Object.keys(BASE_LEAF_KEYS).sort()).toEqual(Object.keys(boneConstraintBaseLeaves()).sort());
   });
 
   it('registers exactly what AimModifier3D binds', () => {

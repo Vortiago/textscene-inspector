@@ -14,5 +14,3 @@ const softBody3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(softBody3DRegistration);
-
-export { softBody3DRegistration };

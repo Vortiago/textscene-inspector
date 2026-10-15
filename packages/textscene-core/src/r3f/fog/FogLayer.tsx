@@ -1,7 +1,7 @@
 /**
  * Draws an Environment's depth fog and volumetric fog into its scene. The fog readies itself for
  * each render of the scene, through whichever camera renders it, so the main view, a SubViewport
- * pass and a screenshot each get their own.
+ * pass, a screenshot and a reflection probe capture each get their own.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -12,11 +12,13 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext.js';
 import { observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { readShadowMaps } from '../shadowPass.js';
 import { TrackedObjects } from '../trackedObjects.js';
-import { finishFog, prepareFog, type DepthFog, type FogSettings } from './fogFrame.js';
+import { probeCaptureOf } from '../reflectionProbe/captureCameras.js';
+import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame.js';
 import { acquireFogPasses } from './fogPasses.js';
-import type { VolumetricFog } from './fogVolumePass.js';
+import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
+import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 
-export interface FogLayerProps {
+interface FogLayerProps {
   depth: DepthFog | null;
   volumetric: VolumetricFog | null;
   skyEnergy: number;
@@ -30,8 +32,9 @@ function isMesh(object: THREE.Object3D): object is THREE.Mesh {
   return (object as THREE.Mesh).isMesh === true;
 }
 
-/** Depth fog reads no shadow, so it leaves the casters untracked. */
+/** Depth fog reads no shadow and draws no FogVolume, so it leaves both untracked. */
 const NO_CASTERS: readonly THREE.Mesh[] = [];
+const NO_VOLUMES: readonly FogVolumeObject[] = [];
 
 export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
   const gl = useThree((state) => state.gl);
@@ -59,13 +62,20 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
     const { passes, release } = acquireFogPasses(gl);
     const lights = new TrackedObjects(scene, isLight);
     const casters = new TrackedObjects(scene, isMesh);
+    const volumes = new TrackedObjects(scene, isFogVolume);
     // After the shadow pass, so the fog reads this render's shadow maps, and each light's distance
     // fade for this camera, which the scene's observers wrote before it.
     const stopPreparing = readShadowMaps(gl, (rendered, camera) => {
       if (rendered !== scene) return;
-      const isVolumetric = settings.current.volumetric !== null;
-      const objects = { lights: lights.current(), casters: isVolumetric ? casters.current() : NO_CASTERS };
-      if (prepareFog(gl, scene, camera, settings.current, passes, objects)) invalidate();
+      const capture = probeCaptureOf(camera);
+      const fog = capture ? captureFog(settings.current, capture.isInterior) : settings.current;
+      const isVolumetric = fog.volumetric !== null;
+      const objects = {
+        lights: lights.current(),
+        casters: isVolumetric ? casters.current() : NO_CASTERS,
+        volumes: isVolumetric ? volumes.current() : NO_VOLUMES,
+      };
+      if (prepareFog(gl, scene, camera, fog, passes, objects)) invalidate();
     });
     const stopFinishing = observeSceneRenderEnd(scene, finishFog);
     return () => {
@@ -73,6 +83,7 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
       stopFinishing();
       lights.dispose();
       casters.dispose();
+      volumes.dispose();
       passes.volume.forget(scene);
       release();
     };

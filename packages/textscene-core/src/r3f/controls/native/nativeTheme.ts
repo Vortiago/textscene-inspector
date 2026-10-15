@@ -5,7 +5,6 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-import type { ControlColor } from '../../../nodes/2d/ui/control/types';
 import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
 import {
   LINE_EDIT_BORDER_BOTTOM_WIDTH,
@@ -14,25 +13,26 @@ import {
   type ScaledGodotTheme,
 } from '../godotDefaultTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import type { Rgba } from '../../../godot/math/math';
 
 /**
  * The default flat stylebox's fill by draw state, from `scene/theme/default_theme.cpp`'s
  * `fill_default_theme`, which scales every length it passes to `make_flat_stylebox` but never a
  * `Color` literal, so the colours are not scaled.
  */
-export interface NativeThemeStyleFill {
+interface NativeThemeStyleFill {
   /** `style_normal_color` = `Color(0.1, 0.1, 0.1, 0.6)`. */
-  normal: ControlColor;
+  normal: Rgba;
   /** `style_hover_color` = `Color(0.225, 0.225, 0.225, 0.6)`. */
-  hover: ControlColor;
+  hover: Rgba;
   /** `style_pressed_color` = `Color(0, 0, 0, 0.6)`. */
-  pressed: ControlColor;
+  pressed: Rgba;
   /** `style_disabled_color` = `Color(0.1, 0.1, 0.1, 0.3)`. */
-  disabled: ControlColor;
+  disabled: Rgba;
   /** `style_popup_color` = `Color(0.25, 0.25, 0.25, 1)`. */
-  popup: ControlColor;
+  popup: Rgba;
   /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, the sliders' filled `grabber_area`. */
-  progress: ControlColor;
+  progress: Rgba;
 }
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
@@ -44,7 +44,7 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
  * defaults, and no widget here overrides `draw_center` (only a focus style does).
  */
 function flatStyleBox(
-  bgColor: ControlColor,
+  bgColor: Rgba,
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
@@ -58,8 +58,8 @@ function flatStyleBox(
  * so its width is a bare `2`, never `Math.round(2 * scale)`.
  */
 function lineEditStyleBox(
-  bgColor: ControlColor,
-  borderColor: ControlColor,
+  bgColor: Rgba,
+  borderColor: Rgba,
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
@@ -71,16 +71,16 @@ function lineEditStyleBox(
 }
 
 /** `style_pressed_color` (`default_theme.cpp:115`): LineEdit `normal`'s bottom-border colour (`:408`). */
-const LINE_EDIT_NORMAL_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.6 };
+const LINE_EDIT_NORMAL_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.6 };
 
 /** `style_pressed_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:416`): `read_only`'s bottom-border colour. */
-const LINE_EDIT_READ_ONLY_BORDER_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 0.3 };
+const LINE_EDIT_READ_ONLY_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.3 };
 
 /**
  * The default-theme StyleBoxFlat structs the Panel/Button/ScrollBar/
  * ScrollContainer Controls compose from.
  */
-export interface NativeThemeWidgets {
+interface NativeThemeWidgets {
   panel: StyleBoxFlatData;
   button: {
     normal: StyleBoxFlatData;

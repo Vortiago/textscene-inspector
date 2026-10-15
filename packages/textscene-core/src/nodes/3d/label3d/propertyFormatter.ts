@@ -2,9 +2,9 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Label3DProperties } from './types';
-import { BillboardMode } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 export function formatLabel3DProperties(properties: Label3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -60,8 +60,6 @@ function getBillboardModeName(mode: BillboardMode): string {
       return 'Enabled';
     case BillboardMode.BILLBOARD_FIXED_Y:
       return 'Y-Axis Only';
-    case BillboardMode.BILLBOARD_PARTICLES:
-      return 'Particles (Unsupported)';
     default:
       return 'Unknown';
   }

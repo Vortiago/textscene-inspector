@@ -2,7 +2,7 @@
  * The useResource contract: status transitions, identity for shared values against a clone per
  * consumer for an Object3D, and the late-arrival flow.
  */
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, render } from '@testing-library/react';
 import * as THREE from 'three';
 import { StrictMode, type ReactNode } from 'react';
@@ -10,7 +10,6 @@ import { useResource } from './useResource';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader, type FakeProcessor } from './testing/createFakeResourceLoader';
-import { initGlbModules } from './processing/glbProcessing';
 import { parseTresFile } from '../parser/parsedResource';
 
 /**
@@ -32,11 +31,6 @@ function withLoader(loader: ResourceLoader) {
     return <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
   };
 }
-
-// The hook's cloneWithMaterials needs SkeletonUtils loaded first.
-beforeAll(async () => {
-  await initGlbModules();
-});
 
 describe('useResource', () => {
   let loader: MockLoader;

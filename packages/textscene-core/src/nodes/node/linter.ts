@@ -7,7 +7,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../linter/types.js';
 import { ruleRegistry } from '../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../linter/ruleArms.js';
-import { resourceRef } from '../../godot/index.js';
+import { resourceRef } from '../../godot/variant/resourceRef.js';
 import { findExtResource } from '../../resources/SubResourceResolver.js';
 
 const BINARY_RESOURCE_RE = /\.(scn|res)$/i;
@@ -65,5 +65,3 @@ const binaryResourceRule: LintRule = {
 };
 
 ruleRegistry.register(binaryResourceRule);
-
-export { binaryResourceRule };

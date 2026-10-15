@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { WorldEnvironment } from './Component';
+import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
@@ -18,7 +19,9 @@ function makeNode(envRef = 'SubResource("Env")'): TscnNode {
 async function render(node: TscnNode, resources: TscnInternalResource[]) {
   return ReactThreeTestRenderer.create(
     <SceneResourcesProvider internalResources={resources}>
-      <WorldEnvironment node={node} />
+      <WorldEnvironmentScope world="root">
+        <WorldEnvironment node={node} />
+      </WorldEnvironmentScope>
     </SceneResourcesProvider>
   );
 }

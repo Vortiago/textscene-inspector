@@ -1,25 +1,16 @@
 /**
  * The Godot render-layer mask carried on THREE `userData`: the writer a slice
- * hands R3F, and the reader a consumer (currently `Decal.cull_mask`) filters with.
+ * hands R3F, and the reader a consumer (`Decal.cull_mask`, a ReflectionProbe's masks) filters with.
  */
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  GODOT_DEFAULT_VISUAL_LAYERS,
-  setVisualLayers,
-  visualLayersOf,
-  visualLayersUserData,
-} from './visualLayers';
+import { GODOT_DEFAULT_VISUAL_LAYERS } from '../godot/scene/visualLayers';
+import { isInMask, setVisualLayers, visualLayersOf, visualLayersUserData } from './visualLayers';
 
 describe('visualLayersUserData', () => {
   it('carries an authored layers mask', () => {
     expect(visualLayersUserData(2)).toEqual({ godotLayers: 2 });
-  });
-
-  it("resolves an absent layers property to Godot's default", () => {
-    expect(visualLayersUserData(undefined)).toEqual({ godotLayers: GODOT_DEFAULT_VISUAL_LAYERS });
-    expect(visualLayersUserData()).toEqual({ godotLayers: 1 });
   });
 
   it('keeps a zero mask rather than defaulting it — Godot allows "no layers"', () => {
@@ -80,5 +71,32 @@ describe('setVisualLayers', () => {
     setVisualLayers(mesh, 0);
 
     expect(visualLayersOf(mesh)).toBe(0);
+  });
+});
+
+describe('isInMask', () => {
+  it('admits an object whose layers share a bit with the mask', () => {
+    const mesh = new THREE.Mesh();
+    setVisualLayers(mesh, 0b110);
+
+    expect(isInMask(mesh, 0b010)).toBe(true);
+  });
+
+  it('refuses an object whose layers share no bit with the mask', () => {
+    const mesh = new THREE.Mesh();
+    setVisualLayers(mesh, 0b100);
+
+    expect(isInMask(mesh, 0b011)).toBe(false);
+  });
+
+  it("tests an untagged object on Godot's default layer (edge case)", () => {
+    expect([isInMask(new THREE.Mesh(), 1), isInMask(new THREE.Mesh(), 2)]).toEqual([true, false]);
+  });
+
+  it('admits a layer past bit 31 of a uint32 mask (edge case)', () => {
+    const mesh = new THREE.Mesh();
+    setVisualLayers(mesh, 0x8000_0000);
+
+    expect(isInMask(mesh, 0xffff_ffff)).toBe(true);
   });
 });

@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { visualLayersUserData } from '../visualLayers';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { SurfaceMaterialSlots } from '../materials/SurfaceMaterialSlots';
@@ -19,12 +20,14 @@ import type { CsgGeometrySetup } from './useCsgGeometryContext';
 import { usePendingWhile } from '../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../shadowCasting';
 
-export interface CsgRootMeshProps {
+interface CsgRootMeshProps {
   plan: CsgPlan;
   /** What the plan's solids build against. The boolean waits while a file a solid reads loads. */
   setup: CsgGeometrySetup;
   /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
   shadow: ShadowCastingEffects;
+  /** The ROOT's `layers`, as Godot draws the whole result as the root's instance. */
+  layers: number;
   /** Set to the evaluated mesh while it draws, for the root's visibility range to measure. */
   meshRef: RefObject<THREE.Mesh | null>;
   /**
@@ -41,6 +44,7 @@ export function CsgRootMesh({
   plan,
   setup: { context, isLoading },
   shadow,
+  layers,
   meshRef,
   fallback,
   children,
@@ -118,6 +122,7 @@ export function CsgRootMesh({
           onBeforeShadow={shadow.onBeforeShadow}
           onAfterShadow={shadow.onAfterShadow}
           receiveShadow
+          userData={visualLayersUserData(layers)}
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
           <SurfaceMaterialSlots sources={surfaces} />

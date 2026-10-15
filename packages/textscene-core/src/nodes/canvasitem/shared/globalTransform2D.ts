@@ -8,21 +8,21 @@
  */
 
 import { climbAncestors, type ParentLookup } from '../../../linter/parentType.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { VECTOR2_REGEX } from '../../../linter/validators/vectorValidators.js';
 import {
   TSCN_FLOAT_RE,
   parseGodotFloat,
   tupleComponent,
 } from '../../../linter/validators/commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
 import {
   TRANSFORM2D_IDENTITY,
-  boolSlotValue,
   multiplyTransform2D,
   transform2DFromParts,
   type Transform2DColumns,
-} from '../../../godot/index.js';
+} from '../../../godot/math/transform2d.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { RawNode } from '../../../parser/types.js';
 
 /** The vector as the slot holds it; `null` when the composition must not proceed. */
@@ -71,7 +71,7 @@ function isTopLevel(node: RawNode): boolean {
   return boolSlotValue(node.rawProperties.top_level) === true;
 }
 
-export type GlobalTransform2DVerdict =
+type GlobalTransform2DVerdict =
   | { readonly kind: 'known'; readonly transform: Transform2DColumns }
   /** An opaque ancestor, a non-Node2D CanvasItem, or an altered `Vector2i` component. */
   | { readonly kind: 'unknowable' };
@@ -87,9 +87,9 @@ function canvasChain(node: RawNode, parentOf: (child: RawNode) => ParentLookup):
   if (isTopLevel(node)) return chain;
 
   const search = climbAncestors<'terminus' | 'control'>(node, parentOf, (parent) => {
-    if (!descendsFrom(parent.type, 'CanvasItem')) return 'terminus';
+    if (!descendsFromClass(parent.type, 'CanvasItem')) return 'terminus';
     // A Control composes, but this decodes only a Node2D's discrete properties.
-    if (!descendsFrom(parent.type, 'Node2D')) return 'control';
+    if (!descendsFromClass(parent.type, 'Node2D')) return 'control';
     chain.push(parent);
     return isTopLevel(parent) ? 'terminus' : undefined;
   });

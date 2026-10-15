@@ -11,7 +11,11 @@ import type { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import type { WorkerJobInput, WorkerJobName, WorkerJobOutput } from '../../workers/jobs';
 import { unlessAllocationFails } from './pixelAllocation';
 import { allocationLabel, findTypedSubResource } from './resolveProceduralSubResource';
-import { cachedProceduralTexture, cacheProceduralTexture } from './proceduralTextureCache';
+import {
+  cachedProceduralTexture,
+  cacheProceduralTexture,
+  clearProceduralTextures,
+} from './proceduralTextureCache';
 import { beginTextureWork } from './textureWork';
 
 export type JobRunner = Pick<WorkerJobRunner, 'run'>;
@@ -26,7 +30,7 @@ export interface ProceduralBuildPlan<Name extends WorkerJobName = WorkerJobName>
 }
 
 /** A holder's share of a build. Release it when the texture is no longer wanted. */
-export interface ProceduralBuildHandle {
+interface ProceduralBuildHandle {
   /** The built texture, or null when the build was aborted or could not be allocated. */
   settled: Promise<THREE.Texture | null>;
   release(): void;
@@ -42,8 +46,21 @@ interface Build {
   controller: AbortController;
 }
 
-/** Written by `joinBuild`. An entry leaves when its build settles or its last holder aborts it. */
+/**
+ * Written by `joinBuild`. An entry leaves when its build settles, its last holder aborts it, or
+ * the cache resets.
+ */
 const builds = new Map<string, Build>();
+
+/**
+ * Aborts every build in flight and drops every cached texture. Only tests call it, to start from
+ * an empty cache: the one reset, owned beside both, so no test resets half of it.
+ */
+export function resetProceduralTextures(): void {
+  for (const build of builds.values()) build.controller.abort();
+  builds.clear();
+  clearProceduralTextures();
+}
 
 /**
  * Resolves `ref` as an inline `[sub_resource]` of `typeName`. Null for every other
@@ -149,10 +166,4 @@ function startBuild(key: string, plan: ProceduralBuildPlan, label: string, runne
   };
   settled.then(finish, finish);
   return build;
-}
-
-/** Test seam: abort every build in flight and forget it. */
-export function abortProceduralBuilds(): void {
-  for (const build of builds.values()) build.controller.abort();
-  builds.clear();
 }

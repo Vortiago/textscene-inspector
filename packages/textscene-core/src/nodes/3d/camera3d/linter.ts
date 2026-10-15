@@ -7,9 +7,9 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { nodesDescendingFrom } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode } from '../../../parser/types.js';
 
@@ -148,7 +148,7 @@ const camera3DValidationRule: LintRule = {
       "Validates the Camera3D near/far clipping-plane pair per projection mode, which neither plane's own bound can express, and reports cameras that contend for one viewport's current-camera slot",
     category: 'validation',
     emits: armEmits(arms),
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Camera3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'Camera3D'),
   },
   check: checkCamera3D,
 };
@@ -156,4 +156,3 @@ const camera3DValidationRule: LintRule = {
 ruleRegistry.register(camera3DValidationRule);
 
 // Export for testing
-export { camera3DValidationRule };

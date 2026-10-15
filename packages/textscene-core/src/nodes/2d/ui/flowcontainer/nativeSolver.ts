@@ -10,10 +10,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isZeroApprox } from '../../../../godot/math';
+import { isZeroApprox } from '../../../../godot/math/math';
 import type { ControlProperties } from '../control/types';
 import type { FlowContainerProperties } from './types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
@@ -30,11 +30,8 @@ import {
   hasFlag,
   isSortableControl,
 } from '../shared/fitChildInRect';
-
-// FlowContainer::AlignmentMode (flow_container.h:39-43).
-const ALIGNMENT_BEGIN = 0;
-const ALIGNMENT_CENTER = 1;
-const ALIGNMENT_END = 2;
+import type { Vector2 } from '../../../../godot/math/vector';
+import { ContainerAlignment } from '../../../../godot/scene/container';
 
 // FlowContainer::LastWrapAlignmentMode (flow_container.h:44-49).
 const LAST_WRAP_ALIGNMENT_INHERIT = 0;
@@ -80,7 +77,7 @@ function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation', theme:
 
 interface ChildMsc {
   /** Combined minimum size, truncated to `Size2i` (`:72`). */
-  msc: Vec2;
+  msc: Vector2;
   /** The child's size flags on the main axis have `SIZE_EXPAND`. */
   mainExpand: boolean;
   stretchRatio: number;
@@ -115,7 +112,7 @@ function computeLines(
   let lineLength = 0;
   let lineStretchRatioTotal = 0;
   let childrenInCurrentLine = 0;
-  let lastMsc: Vec2 | null = null;
+  let lastMsc: Vector2 | null = null;
 
   const pushLine = (isFilled: boolean) => {
     lines.push({
@@ -175,7 +172,7 @@ function computeLines(
 }
 
 function buildChildMscs(
-  entries: readonly { node: SolveNode; minSize: Vec2 }[],
+  entries: readonly { node: SolveNode; minSize: Vector2 }[],
   vertical: boolean
 ): ChildMsc[] {
   return entries.map(({ node, minSize }) => ({
@@ -190,7 +187,7 @@ function buildChildMscs(
  * the widest child minimum, and the cross axis is `cached_size`. With no sortable
  * child both are 0.
  */
-export const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
+const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const vertical = orientationOf(n);
   const sortable = n.children.filter(isSortableControl);
   if (sortable.length === 0) return { x: 0, y: 0 };
@@ -246,7 +243,7 @@ function alignmentOffset(
   const isNotFirstLineAndNotFilled = currentLineIdx !== 0 && !lineData.isFilled;
 
   switch (alignment) {
-    case ALIGNMENT_BEGIN:
+    case ContainerAlignment.ALIGNMENT_BEGIN:
       if (lastWrapAlignment !== LAST_WRAP_ALIGNMENT_INHERIT && isNotFirstLineAndNotFilled) {
         if (lastWrapAlignment === LAST_WRAP_ALIGNMENT_END) {
           return lineData.stretchAvail - priorStretchAvail;
@@ -256,7 +253,7 @@ function alignmentOffset(
         }
       }
       return 0;
-    case ALIGNMENT_CENTER:
+    case ContainerAlignment.ALIGNMENT_CENTER:
       if (
         lastWrapAlignment !== LAST_WRAP_ALIGNMENT_INHERIT &&
         lastWrapAlignment !== LAST_WRAP_ALIGNMENT_CENTER &&
@@ -267,7 +264,7 @@ function alignmentOffset(
           : Math.trunc(priorStretchAvail * 0.5);
       }
       return Math.trunc(lineData.stretchAvail * 0.5);
-    case ALIGNMENT_END:
+    case ContainerAlignment.ALIGNMENT_END:
       if (
         lastWrapAlignment !== LAST_WRAP_ALIGNMENT_INHERIT &&
         lastWrapAlignment !== LAST_WRAP_ALIGNMENT_END &&
@@ -289,11 +286,11 @@ function alignmentOffset(
  * share, `reverse_fill` and `fit_child_in_rect`. `contentRect` is the real rect on
  * both solve passes, so no size needs a stand-in.
  */
-export const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const vertical = orientationOf(n);
   const hSep = separationOf(n, 'h_separation', ctx.theme);
   const vSep = separationOf(n, 'v_separation', ctx.theme);
-  const alignment = props(n).alignment ?? ALIGNMENT_BEGIN;
+  const alignment = props(n).alignment ?? ContainerAlignment.ALIGNMENT_BEGIN;
   const lastWrapAlignment = props(n).lastWrapAlignment ?? LAST_WRAP_ALIGNMENT_INHERIT;
   const reverseFill = props(n).reverseFill === true;
   const rtl = n.rtl;

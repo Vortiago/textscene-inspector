@@ -5,7 +5,7 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
-import { CMP_EPSILON } from '../../../godot/math.js';
+import { CMP_EPSILON } from '../../../godot/math/math.js';
 
 const PROJECTION = { 0: 'PERSPECTIVE', 1: 'ORTHOGONAL', 2: 'FRUSTUM' };
 // camera_3d.h:50-52: `enum KeepAspect { KEEP_WIDTH, KEEP_HEIGHT };` has two members, and

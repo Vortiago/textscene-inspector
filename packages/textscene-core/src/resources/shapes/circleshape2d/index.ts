@@ -5,4 +5,3 @@ import { registerGenericResourceSlice } from '../../sliceRegistration';
 registerGenericResourceSlice('circleshape2d', ['CircleShape2D']);
 
 export { decodeCircleShape2D } from './decode';
-export type { CircleShape2DProperties } from './types';

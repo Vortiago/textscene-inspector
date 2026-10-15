@@ -30,7 +30,6 @@ describe('decodeEnvironment', () => {
     expect(result.adjustment_brightness).toBe(1.0);
     expect(result.adjustment_contrast).toBe(1.0);
     expect(result.adjustment_saturation).toBe(1.0);
-    expect(result.ssr_enabled).toBe(false);
   });
 
   it('should parse BG_COLOR mode with custom color', () => {
@@ -189,14 +188,6 @@ describe('decodeEnvironment', () => {
     expect(result.adjustment_saturation).toBe(1.2);
   });
 
-  it('should parse SSR enabled flag', () => {
-    const result = decodeEnvironment({
-      ssr_enabled: 'true',
-    });
-
-    expect(result.ssr_enabled).toBe(true);
-  });
-
   it('should parse background energy multiplier', () => {
     const result = decodeEnvironment({
       background_mode: '1',
@@ -299,6 +290,21 @@ describe('decodeEnvironment', () => {
   it('preserves each color field its own (non-black) default when malformed', () => {
     const r = decodeEnvironment({ fog_light_color: 'garbage' });
     expect(r.fog_light_color).toEqual({ r: 0.518, g: 0.553, b: 0.608, a: 1 });
+  });
+});
+
+describe('decodeEnvironment — the glow map', () => {
+  it('keeps the glow_map reference for the render layer to resolve', () => {
+    const result = decodeEnvironment({ glow_map: 'SubResource("Gradient_1")' });
+    expect(result.glow_map).toBe('SubResource("Gradient_1")');
+  });
+
+  it('has no glow map when the property is absent', () => {
+    expect(decodeEnvironment({}).glow_map).toBeUndefined();
+  });
+
+  it("takes Godot's default glow_map_strength of 0.8 when none is stored (edge case)", () => {
+    expect(decodeEnvironment({}).glow_map_strength).toBeCloseTo(0.8, 6);
   });
 });
 

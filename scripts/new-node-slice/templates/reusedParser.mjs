@@ -36,8 +36,6 @@ const ${camel}Registration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(${camel}Registration);
-
-export { ${camel}Registration };
 `
   );
   // A `pending` slice mounts the base under its own intent: `GenericNodeFallback` carries no

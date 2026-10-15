@@ -23,7 +23,7 @@ import {
   swapAlignmentSide,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -34,8 +34,14 @@ import type { CheckButtonIcons } from '../../../../r3f/controls/native/themeIcon
 import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import type { ControlColor } from '../control/types';
 import type { CheckButtonProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_PRESSED_COLOR,
+} from '../../../../godot/scene/theme';
 
 /** `SceneStringName(font)`, registered under CheckButton's own type (`scene/theme/default_theme.cpp:337`), not inherited from Button's. */
 export const CHECKBUTTON_THEME_FONT_KEY = 'font';
@@ -46,7 +52,7 @@ export { fitIconSize, tintColor };
  * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) without input: `status.hovering` and
  * `status.press_attempt` stay false, so `button_pressed` alone selects pressed, and `disabled` wins.
  */
-export type CheckButtonDrawState = 'normal' | 'pressed' | 'disabled';
+type CheckButtonDrawState = 'normal' | 'pressed' | 'disabled';
 
 export function resolveCheckButtonDrawState(props: CheckButtonProperties): CheckButtonDrawState {
   if (props.disabled) return 'disabled';
@@ -54,12 +60,12 @@ export function resolveCheckButtonDrawState(props: CheckButtonProperties): Check
   return 'normal';
 }
 
-/** `control_font_color` (`default_theme.cpp:101`), CheckButton's own `font_color` default (`:340`). */
-export const CHECKBUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), CheckButton's own `font_pressed_color` default (`:341`). */
-export const CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
-/** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), CheckButton's own `font_disabled_color` default (`:345`). */
-export const CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** CheckButton's own `font_color` default (`default_theme.cpp:340`). */
+const CHECKBUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
+/** CheckButton's own `font_pressed_color` default (`default_theme.cpp:341`). */
+const CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
+/** CheckButton's own `font_disabled_color` default (`default_theme.cpp:345`). */
+const CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
 const CHECKBUTTON_THEME_KEYS: Record<CheckButtonDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -86,7 +92,7 @@ export function checkButtonTextTheme(
   return resolveTextTheme(n, props, CHECKBUTTON_THEME_KEYS[state], defaults);
 }
 
-export type CheckButtonIconKey = keyof CheckButtonIcons;
+type CheckButtonIconKey = keyof CheckButtonIcons;
 
 /**
  * `NOTIFICATION_DRAW` (`check_button.cpp:105-127`): `is_layout_rtl()` swaps in the `_mirrored`
@@ -137,7 +143,7 @@ export function checkButtonIconNaturalSize(
   n: Pick<SolveNode, 'textureSlots'>,
   disabled: boolean,
   rtl: boolean
-): Vec2 {
+): Vector2 {
   const names: readonly CheckButtonIconKey[] = rtl
     ? disabled
       ? ['checkedDisabledMirrored', 'uncheckedDisabledMirrored']
@@ -156,12 +162,9 @@ export function checkButtonIconNaturalSize(
 }
 
 /** `button_checked_color` and `button_unchecked_color`, both `Color(1, 1, 1)` (`default_theme.cpp:352-353`) and overridable. Read whatever `disabled` says: the `_disabled` icons carry the dimming (`check_button.cpp:139-141`). */
-const CHECKBUTTON_ICON_MODULATE_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+const CHECKBUTTON_ICON_MODULATE_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
-export function checkButtonIconColor(
-  props: CheckButtonProperties,
-  colors: SolveNode['colors']
-): ControlColor {
+export function checkButtonIconColor(props: CheckButtonProperties, colors: SolveNode['colors']): Rgba {
   const key = props.buttonPressed ? 'button_checked_color' : 'button_unchecked_color';
   return colors[key] ?? CHECKBUTTON_ICON_MODULATE_DEFAULT;
 }
@@ -231,29 +234,29 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   return { x: width, y: height };
 };
 
-export interface CheckButtonContentInput {
+interface CheckButtonContentInput {
   /** The control's own solved rect size, Godot px. */
-  rectSize: Vec2;
+  rectSize: Vector2;
   marginX: number;
   marginY: number;
   /** The check icon's size, already fitted with `fitIconSize`. */
-  iconSize: Vec2;
+  iconSize: Vector2;
   checkVOffset: number;
   hSeparation: number;
   hasText: boolean;
   /** Text `alignment` (`HorizontalAlignment`). CheckButton's default is LEFT. */
   textAlignment: number;
   /** The shaped text's natural (unwrapped) size, ignored when `hasText` is false. */
-  textNaturalSize: Vec2;
+  textNaturalSize: Vector2;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the toggle to the left edge and swaps the label's alignment side. */
   rtl: boolean;
 }
 
-export interface CheckButtonContentLayout {
+interface CheckButtonContentLayout {
   /** Local to the control's own top-left, Godot px. */
   iconRect: Rect2;
   /** The text paragraph's box top-left, local Godot px. `null` when there is no text. */
-  textOffset: Vec2 | null;
+  textOffset: Vector2 | null;
 }
 
 /**
@@ -283,7 +286,7 @@ export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckB
     h: iconSize.y,
   };
 
-  let textOffset: Vec2 | null = null;
+  let textOffset: Vector2 | null = null;
   if (hasText) {
     const reserved = iconSize.x + hSeparation;
     const textBoxWidth = rectSize.x - 2 * marginX - reserved;

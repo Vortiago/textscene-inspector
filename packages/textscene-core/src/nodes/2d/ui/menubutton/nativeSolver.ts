@@ -13,15 +13,18 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
   fitIconSize,
   pickButtonStyleBox,
   resolveButtonDrawState,
   shapeButtonLabel,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  VERTICAL_ALIGNMENT_CENTER,
+  type Rgba,
+} from '../../../../godot/math/math';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -30,7 +33,6 @@ import {
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { ControlColor } from '../control/types';
 import {
   BUTTON_DEFAULT_FONT_COLOR,
   BUTTON_THEME_FONT_KEY,
@@ -43,8 +45,8 @@ import type { MenuButtonProperties } from './types';
 // ancestor fallback gives it Button's icon colours.
 export { buttonIconColor };
 
-/** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` = `Color(0.875, 0.875, 0.875, 0.5)` (`:161`). */
-export const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 0.3 };
+/** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` (`:161`). */
+const MENU_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.3 };
 
 /** MenuButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else MenuButton's literal. */
 export function menuButtonTextTheme(

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { decodeCurve3D, resolveCurve3D, tessellateCurve3D } from './decode';
+import { resolveCurve3D, tessellateCurve3D } from './decode';
+import { resolveOnlySubResource } from '../../../testing/subResource';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
+
+/** The control points a Curve3D sub-resource with this body decodes to. */
+function decode(data: Record<string, string>) {
+  return resolveOnlySubResource('Curve3D', data, resolveCurve3D);
+}
 
 /** A Curve3D body whose `_data` holds `points` as written and `tilts`, plus any other properties. */
 function body(
@@ -13,7 +19,7 @@ function body(
 }
 
 function pointsOf(points: string) {
-  return decodeCurve3D(body(points));
+  return decode(body(points));
 }
 
 const ORIGIN_POINT = {
@@ -22,7 +28,7 @@ const ORIGIN_POINT = {
   position: { x: 0, y: 0, z: 0 },
 };
 
-describe('decodeCurve3D', () => {
+describe('the Curve3D body resolveCurve3D decodes', () => {
   it('reads a straight path (zero tangents, 9 floats/point: in/out/pos)', () => {
     // in.xyz, out.xyz, pos.xyz per point.
     const points = pointsOf('PackedVector3Array(0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 10,0,0)');
@@ -44,7 +50,7 @@ describe('decodeCurve3D', () => {
   // is a strict source for PACKED_VECTOR3_ARRAY (variant.cpp:449-478), so both
   // array spellings load the same two points.
   it('reads the bare-array and typed-array spellings of points', () => {
-    const bare = decodeCurve3D(
+    const bare = decode(
       body(
         '[Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(10, 0, 0)]',
         {},
@@ -53,7 +59,7 @@ describe('decodeCurve3D', () => {
     );
     expect(bare).toHaveLength(2);
     expect(bare[1]!.position).toEqual({ x: 10, y: 0, z: 0 });
-    const typed = decodeCurve3D(
+    const typed = decode(
       body(
         'Array[Vector3]([Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(0, 0, 0), Vector3(10, 0, 0)])',
         {},
@@ -64,22 +70,22 @@ describe('decodeCurve3D', () => {
   });
 
   it('loads no points from an absent, empty or unreadable _data', () => {
-    expect(decodeCurve3D({})).toEqual([]);
-    expect(decodeCurve3D({ _data: '' })).toEqual([]);
+    expect(decode({})).toEqual([]);
+    expect(decode({ _data: '' })).toEqual([]);
     expect(pointsOf('PackedVector3Array()')).toEqual([]);
     expect(pointsOf('PackedVector3Array(0,0,0, 0,0,0, 0,0,x)')).toEqual([]);
   });
 
   // `_set_data` fails on `!p_data.has("points")` (curve.cpp:2279).
   it('loads no points from a _data without "points"', () => {
-    expect(decodeCurve3D({ _data: '{\n"tilts": PackedFloat32Array()\n}' })).toEqual([]);
+    expect(decode({ _data: '{\n"tilts": PackedFloat32Array()\n}' })).toEqual([]);
   });
 
   // `_set_data` fails on `!p_data.has("tilts")` (curve.cpp:2280), though the
   // renderer never reads a tilt.
   it('loads no points from a _data without "tilts"', () => {
     const noTilts = '{\n"points": PackedVector3Array(0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 10,0,0)\n}';
-    expect(decodeCurve3D({ _data: noTilts })).toEqual([]);
+    expect(decode({ _data: noTilts })).toEqual([]);
   });
 
   // `_set_data` fails on `pc % 3 != 0` (curve.cpp:2284) before it touches the list,
@@ -93,13 +99,13 @@ describe('decodeCurve3D', () => {
 
     // `set_point_count` resizes the list to the count (curve.cpp:1455-1456).
     it('drops the tail at a smaller point_count', () => {
-      const points = decodeCurve3D(body(TWO_POINTS, { point_count: '1' }));
+      const points = decode(body(TWO_POINTS, { point_count: '1' }));
       expect(points.map((p) => p.position)).toEqual([{ x: 10, y: 0, z: 0 }]);
     });
 
     // `_add_point(Vector3())` appends at the end (curve.cpp:1459-1460, 1471-1474).
     it('appends origin points after the authored ones at a larger point_count', () => {
-      const points = decodeCurve3D(body(TWO_POINTS, { point_count: '3' }));
+      const points = decode(body(TWO_POINTS, { point_count: '3' }));
       expect(points.map((p) => p.position)).toEqual([
         { x: 10, y: 0, z: 0 },
         { x: 20, y: 0, z: 0 },
@@ -109,21 +115,21 @@ describe('decodeCurve3D', () => {
     });
 
     it('keeps the authored points at an equal point_count', () => {
-      expect(decodeCurve3D(body(TWO_POINTS, { point_count: '2' }))).toHaveLength(2);
+      expect(decode(body(TWO_POINTS, { point_count: '2' }))).toHaveLength(2);
     });
 
     // `ERR_FAIL_COND(p_count < 0)` (curve.cpp:1449) leaves the list as `_data` set it.
     it('ignores a negative point_count', () => {
-      expect(decodeCurve3D(body(TWO_POINTS, { point_count: '-3' }))).toHaveLength(2);
+      expect(decode(body(TWO_POINTS, { point_count: '-3' }))).toHaveLength(2);
     });
 
     it('pads from zero points when _data is refused', () => {
-      const points = decodeCurve3D({ _data: '{}', point_count: '2' });
+      const points = decode({ _data: '{}', point_count: '2' });
       expect(points).toEqual([ORIGIN_POINT, ORIGIN_POINT]);
     });
 
     it(`stops padding at ${MAX_PADDED_POINTS} points`, () => {
-      const points = decodeCurve3D(body(TWO_POINTS, { point_count: '100000000' }));
+      const points = decode(body(TWO_POINTS, { point_count: '100000000' }));
       expect(points).toHaveLength(MAX_PADDED_POINTS);
     });
   });

@@ -39,5 +39,3 @@ const lightOccluder2DRequiresOccluderRule: LintRule = {
 };
 
 ruleRegistry.register(lightOccluder2DRequiresOccluderRule);
-
-export { lightOccluder2DRequiresOccluderRule };

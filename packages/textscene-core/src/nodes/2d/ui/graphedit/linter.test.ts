@@ -8,8 +8,10 @@ import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../../linter/StrictTscnParser';
 import { ruleRegistry } from '../../../../linter/RuleRegistry';
 import type { Diagnostic, RuleContext } from '../../../../linter/types';
-import { graphEditPropertiesRule } from './linter';
+import './linter';
 import './linterParser';
+
+const graphEditPropertiesRule = ruleRegistry.getRule('valid-graphedit-properties')!;
 
 /** Run the rule over the single GraphEdit in a one-node scene. */
 function diagnose(body: string): Diagnostic[] {

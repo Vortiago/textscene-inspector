@@ -7,11 +7,11 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../parser/types';
-import type { Transform3D } from '../../nodes/base/node3d/types';
+import type { Transform3D } from '../../godot/math/transform3d';
 import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { visibleInTree } from '../visibleInTree';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
@@ -25,7 +25,7 @@ import './index';
  */
 const TRANSFORM_ONLY_3D_TYPES = nodeComponentRegistry
   .getAllTypeNames()
-  .filter((type) => nodeComponentRegistry.isTransformOnly(type) && descendsFrom(type, 'Node3D'))
+  .filter((type) => nodeComponentRegistry.isTransformOnly(type) && descendsFromClass(type, 'Node3D'))
   .sort();
 
 // Identity basis translated to (2, 3, 4).

@@ -33,7 +33,7 @@ anisotropy = 1.0
 
 [node name="Scene" type="Node3D"]
 
-; three.js needs a channel repack (Godot strength = alpha, three.js reads blue) fed by a canvas
+; three.js needs a channel repack (Godot strength = alpha, three.js reads blue) fed by a WebGL
 ; readback of the decoded PNG. A lost readback makes this sphere a copy of the uniform one. A
 ; dropped repack zeroes the strength from the blue-0 texture and flattens its highlight.
 [node name="SphereWithFlowmap" type="MeshInstance3D" parent="."]

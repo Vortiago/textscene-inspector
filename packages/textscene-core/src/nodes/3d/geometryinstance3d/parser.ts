@@ -1,13 +1,13 @@
 /**
- * GeometryInstance3D parser: the Node3D transform plus the instance state, which every
+ * GeometryInstance3D parser: the VisualInstance3D fields plus the instance state, which every
  * GeometryInstance3D leaf parser starts from. An unreadable value keeps Godot's default.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseOptionalAabb, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
-import { isEmptyAabb, type Aabb } from '../../../godot/aabb';
-import type { VisibilityRange } from '../../../godot/visibilityRange';
-import { parseNode3D } from '../../base/node3d/parser';
+import { isEmptyAabb, type Aabb } from '../../../godot/math/aabb';
+import type { VisibilityRange } from '../../../godot/rendering/visibilityRange';
+import { parseVisualInstance3D } from '../visualinstance3d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS, type GeometryInstance3DProperties } from './types';
 
 export function parseGeometryInstance3D(
@@ -15,7 +15,7 @@ export function parseGeometryInstance3D(
   properties: Record<string, string>
 ): GeometryInstance3DProperties {
   return {
-    ...parseNode3D(heading, properties),
+    ...parseVisualInstance3D(heading, properties),
     transparency: parseOptionalFloat(properties.transparency) ?? GEOMETRY_INSTANCE_DEFAULTS.transparency,
     castShadow: parseOptionalInt(properties.cast_shadow) ?? GEOMETRY_INSTANCE_DEFAULTS.castShadow,
     visibilityRange: parseVisibilityRange(properties),

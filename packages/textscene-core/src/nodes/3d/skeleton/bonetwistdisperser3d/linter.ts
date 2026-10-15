@@ -8,9 +8,10 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../../godot/string/string.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -161,12 +162,10 @@ const boneTwistDisperser3DValidationRule: LintRule = {
     description:
       "Validates BoneTwistDisperser3D's settings/<i>/… indices against setting_count and its joint twist amounts against each setting's joint_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'BoneTwistDisperser3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'BoneTwistDisperser3D'),
     emits: armEmits(arms),
   },
   check: checkBoneTwistDisperser3D,
 };
 
 ruleRegistry.register(boneTwistDisperser3DValidationRule);
-
-export { boneTwistDisperser3DValidationRule };

@@ -1,11 +1,64 @@
-[gd_scene load_steps=2 format=3 uid="uid://unit_fog_volume"]
+[gd_scene format=3 uid="uid://unit_fog_volume"]
+
+; unit-world-environment-basic plus one 3x3x3 box FogVolume at (0, 1, -5) with a FogMaterial of
+; density 1. The variable is the FogVolume's density, albedo and edge fade added to the volumetric
+; fog. No other golden holds a FogVolume, so a regression in it shows nowhere else.
 
 [sub_resource type="FogMaterial" id="FogMaterial_1"]
+density = 1.0
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.15, 1)
+background_energy_multiplier = 1.0
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.05
+volumetric_fog_albedo = Color(0.6, 0.7, 0.9, 1)
+volumetric_fog_emission = Color(0, 0, 0, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_near"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_mid"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_far"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+albedo_color = Color(1, 0.3, 0.2, 1)
+metallic = 0.2
+roughness = 0.7
 
 [node name="Root" type="Node3D"]
 
-[node name="MyFogVolume" type="FogVolume" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-shape = 2
-size = Vector3(4, 3, 4)
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="BoxNear" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, -8)
+mesh = SubResource("BoxMesh_near")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="BoxMid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
+mesh = SubResource("BoxMesh_mid")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="BoxFar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, -40)
+mesh = SubResource("BoxMesh_far")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="Light" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8, 0)
+omni_range = 60.0
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 8)
+fov = 75.0
+
+[node name="FogVolume" type="FogVolume" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -5)
+size = Vector3(3, 3, 3)
 material = SubResource("FogMaterial_1")

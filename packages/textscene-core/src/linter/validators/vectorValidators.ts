@@ -5,8 +5,8 @@ import { propertyError } from './propertyError.js';
 import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
 import { ruleInt, tupleComponent } from './commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../godot/int.js';
-import { compositeTypeName, isConvertedSpelling } from '../../godot/variantConversion.js';
+import { slotComponents, slotComponentsAltered } from '../../godot/variant/int.js';
+import { compositeTypeName, isConvertedSpelling } from '../../godot/variant/variantConversion.js';
 
 /**
  * Vector3 format: Vector3(x, y, z), for the callers that `.exec()` it to reach
@@ -25,7 +25,7 @@ export const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
  * `_parse_construct<int32_t>` (variant_parser.cpp:577-592) accepts any number
  * token and truncates it toward zero, so `Vector2i(2e1, 0)` stores `(20, 0)`.
  */
-export const VECTOR2I_REGEX = makeFloatTupleRegex('Vector2i', 2);
+const VECTOR2I_REGEX = makeFloatTupleRegex('Vector2i', 2);
 
 /**
  * The two components a `Vector2i` slot holds, for every phase-2 rule over one,

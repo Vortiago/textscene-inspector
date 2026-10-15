@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { parseLabel3D } from './parser';
-import { BillboardMode } from './types';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 const heading = { type: 'node', attributes: { type: 'Label3D', name: 'L' } };
 

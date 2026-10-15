@@ -2,7 +2,8 @@
 
 - Status: Accepted
 - Related: ADR-0006 (viewport-mode seam), ADR-0008 (invisible render intent),
-  `r3f/TscnCanvas.tsx`, `nodes/3d/worldenvironment/`, `resources/environment/`.
+  `r3f/TscnCanvas.tsx`, `r3f/environment/WorldEnvironmentScope.tsx`, `nodes/3d/worldenvironment/`,
+  `resources/environment/`.
 
 ## Context
 
@@ -60,12 +61,13 @@ is in frame).
 
 **Ambient is an IBL, because in Godot it is one.** The sky cube feeds `PMREMGenerator` and
 then `scene.environment`, which drives reflections. Godot's `reflection_source` defaults to
-the background. The core bakes Godot's roughest radiance layers, 4 to 7, as Godot does: a chain of
-downsamples to an octmap 10 texels wide, then a GGX filter per layer. Two small shared cubes
-hold them. The diffuse light reads the last layer, and a reflection from layer 4 up reads the
-baked layers. A sharper reflection reads three's PMREM. The PMREM blurs a rough layer narrower
-than Godot's chain, and spherical harmonics of order 2 cannot hold the last layer's sharper
-terms. Godot's own DFG table weighs every reflection. A `HemisphereLight` approximation is
+the background. The core bakes Godot's radiance layers, 1 to 7, on the GPU as Godot does: a
+chain of downsamples to an octmap 10 texels wide, then a GGX filter per layer, or the fast filter
+for a real-time sky. Each sky keeps them in three small cubes of its own, and every lit material samples
+the cubes of the sky its scene shows. The diffuse light reads the last layer, and a reflection
+reads the baked layers. A mirror reflection reads layer 0, the radiance itself, as mip 0
+of three's PMREM. The PMREM blurs a layer differently from Godot's chain, and spherical harmonics of
+order 2 cannot hold the last layer's sharper terms. Godot's own DFG table weighs every reflection. A `HemisphereLight` approximation is
 rejected: it is diffuse-only, so each metallic or smooth material stays visibly wrong.
 `background_energy_multiplier` sets `scene.environmentIntensity`. `AMBIENT_SOURCE_COLOR` is a
 flat `ambientLight`. `AMBIENT_SOURCE_DISABLED` emits nothing. `AMBIENT_SOURCE_SKY` reads
@@ -77,6 +79,14 @@ contribution of 1.0.
 environment uses FILMIC. Ignoring it gives a measured 25/255 mean channel error, 20 times
 the goldens' threshold. A scene-owned environment defaults to LINEAR, so this changes only
 the preview environment and scenes that set the property.
+
+**One chooser per world applies the Environment.** Each `WorldEnvironment` publishes what its
+reference resolves to. The root's chooser applies the first `WorldEnvironment` that holds a valid
+Environment, as Godot's World3D does (`world_environment.cpp:40-41`, `:77-83`). With none, it
+applies the preview environment while the yield rule allows it, and no Environment otherwise. A
+missing reference and a `.tres` that fails to load both count as no valid Environment. The chooser
+applies nothing while that `.tres` still loads. A SubViewport's portal has its own chooser, which
+applies only a resolved Environment, because its pass sets its own clear colour.
 
 The two previews are also toolbar toggles on the viewport-mode seam. They mirror Godot's
 own sun and environment buttons, including the disabled state when the scene supplies its
@@ -113,6 +123,7 @@ the sky IBL must land together.
   `LIGHT0..3`), so sky generation reads the same live-tree query as the yield rule. One
   query has two consumers.
 - A compositor pass reproduces the glow that the preview environment enables. It ports
-  Godot's own bright pass, weighted mip pyramid and blend modes. The pass mounts only
-  when the scene has content that can bloom, so a scene with nothing bright pays nothing
-  and renders the same either way, as in Godot.
+  Godot's own bright pass, weighted mip pyramid and blend modes. The pass mounts whenever
+  the environment enables glow, as Godot runs its glow chain on that flag alone
+  (`renderer_scene_render_rd.cpp:575`). The bright pass then picks the pixels, so a lit
+  specular highlight blooms as much as an emissive surface.

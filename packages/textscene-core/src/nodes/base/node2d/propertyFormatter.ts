@@ -5,14 +5,12 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import type { Color, Node2DProperties } from './types';
+import type { Node2DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
+import type { Rgba } from '../../../godot/math/math';
+import { formatDegrees } from '../../../utils/transform';
 
-export { formatColorRgba };
-
-const radToDeg = (rad: number) => ((rad * 180) / Math.PI).toFixed(2);
-
-function isWhite(color: Color): boolean {
+function isWhite(color: Rgba): boolean {
   return color.r === 1 && color.g === 1 && color.b === 1 && color.a === 1;
 }
 
@@ -27,9 +25,11 @@ export function formatNode2DProperties(properties: Node2DProperties): PropertySe
     ],
   });
 
-  const rotationItems: PropertySection['items'] = [{ label: 'Angle', value: radToDeg(properties.rotation) }];
+  const rotationItems: PropertySection['items'] = [
+    { label: 'Angle', value: formatDegrees(properties.rotation) },
+  ];
   if (properties.skew !== 0) {
-    rotationItems.push({ label: 'Skew', value: radToDeg(properties.skew) });
+    rotationItems.push({ label: 'Skew', value: formatDegrees(properties.skew) });
   }
   sections.push({ title: 'Rotation (degrees)', items: rotationItems });
 

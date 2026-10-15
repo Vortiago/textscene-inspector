@@ -6,9 +6,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { nodePathLiteral } from '../../../godot/index.js';
+import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
 
 /**
  * Parse NodePath value to extract the actual path
@@ -78,7 +78,7 @@ const node3DValidationRule: LintRule = {
     // Node3D and every spatial descendant. getRulesForNodeType matches exact type names, so this
     // needs a predicate. It asks the real chain: `endsWith('3D')` would claim NavigationAgent3D
     // (a plain Node) and miss the unsuffixed spatial types (GridMap, Decal, ReflectionProbe, …).
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Node3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'Node3D'),
     emits: armEmits(arms),
   },
   check: checkNode3D,
@@ -87,4 +87,3 @@ const node3DValidationRule: LintRule = {
 ruleRegistry.register(node3DValidationRule);
 
 // Export for testing
-export { node3DValidationRule };

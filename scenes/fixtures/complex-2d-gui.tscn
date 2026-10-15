@@ -1,4 +1,4 @@
-; A composition fixture: 23 Control types in one panel, so it moves many variables on purpose
+; A composition fixture: 22 Control types in one panel, so it moves many variables on purpose
 ; and localises nothing. It witnesses what no one-type scene can: nested container solves,
 ; container-sized widgets, modulate down a chain, stylebox margins inside separations, scroll
 ; overflow, wrapped text and a CanvasLayer on top. Localise a regression in the unit-* fixture.

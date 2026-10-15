@@ -92,13 +92,13 @@ describe('installGodotClearcoat', () => {
     ).toContain('godotReflection( viewDir, clearcoatNormal, normal, roughness, horizon );');
   });
 
-  it("reads the coat's reflection from the PMREM alone, as its layer is below the first baked one", () => {
+  it("reads the coat's reflection from the radiance and layer 1, as its layer is below 1", () => {
     installWithItsPrerequisites();
 
     expect(
       functionBody(THREE.ShaderChunk.envmap_physical_pars_fragment, 'vec3 godotClearcoatRadiance')
     ).toContain(
-      'godotPmremLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * envMapIntensity * horizon * horizon'
+      'godotSkyLayer( reflectVec, pow2( mix( 0.001, 0.1, sqrt( roughness ) ) ) ) * horizon * horizon'
     );
   });
 
@@ -112,20 +112,19 @@ describe('installGodotClearcoat', () => {
     expect(THREE.ShaderChunk.lights_physical_pars_fragment).not.toContain('clearcoatSpecularIndirect +=');
   });
 
-  it("dims the ambient light by the coat's Fresnel", () => {
+  it("dims the ambient light by the coat's Fresnel before any light reads it", () => {
     installWithItsPrerequisites();
-    const end = THREE.ShaderChunk.lights_fragment_end;
+    const beforeIndirect = THREE.ShaderChunk.lights_fragment_end.split('RE_IndirectDiffuse(')[0];
 
-    expect(end.split('RE_IndirectSpecular(')[1]).toContain(
-      'reflectedLight.indirectDiffuse *= 1.0 - godotCoatFresnel;'
-    );
+    expect(beforeIndirect).toContain('irradiance *= 1.0 - godotCoatFresnel;');
+    expect(beforeIndirect).toContain('iblIrradiance *= 1.0 - godotCoatFresnel;');
   });
 
   it('dims nothing without a sky reflection, as Godot does (edge case)', () => {
     installWithItsPrerequisites();
     const end = THREE.ShaderChunk.lights_fragment_end;
 
-    expect(end.match(/#if defined\( USE_CLEARCOAT \) && defined\( USE_ENVMAP \)/g)).toHaveLength(2);
+    expect(end.match(/#if defined\( USE_CLEARCOAT \) && defined\( USE_ENVMAP \)/g)).toHaveLength(1);
   });
 
   it("adds the coat's lobe and dims no light beneath it in the layering", () => {

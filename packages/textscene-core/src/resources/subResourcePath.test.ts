@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseSubResourcePath, resourceFilePath, subResourcePath } from './subResourcePath';
+import { parseSubResourcePath, resolveRefToResourcePath, resourceFilePath } from './subResourcePath';
 
 describe('parseSubResourcePath', () => {
   it('splits a sub-resource path into the owning file and the sub-resource id', () => {
@@ -39,9 +39,13 @@ describe('parseSubResourcePath', () => {
   });
 });
 
-describe('subResourcePath', () => {
+describe('the sub-resource path resolveRefToResourcePath mints', () => {
   it('round-trips through parseSubResourcePath', () => {
-    const path = subResourcePath('res://vehicles/minivan.tres', 'StandardMaterial3D_fquq2');
+    const path = resolveRefToResourcePath(
+      'SubResource("StandardMaterial3D_fquq2")',
+      new Map(),
+      'res://vehicles/minivan.tres'
+    )!;
     expect(path).toBe('res://vehicles/minivan.tres::StandardMaterial3D_fquq2');
     expect(parseSubResourcePath(path)).toEqual({
       filePath: 'res://vehicles/minivan.tres',

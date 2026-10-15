@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import { releasedOnUnmount } from '../sharedTexture';
 import { slotColorSpace } from '../../resources/materials/standardmaterial3d/textureBinding';
 import type { TextureSlot } from '../../resources/materials/standardmaterial3d/types';
 
@@ -18,10 +19,10 @@ const BLACK: Rgb = [0, 0, 0];
 /**
  * The texel that leaves three's formula for each slot as it is without the map.
  * Albedo, roughness (G), metalness (B) and occlusion (the `ao_texture_channel` channel, alpha
- * included) multiply by the texel.
- * Displacement adds it. Emission multiplies by it, but a map turns a black emission
- * colour white (`emission.ts`), so only black keeps the surface dark. A normal and a
- * flowmap decode `2 * rg - 1`, so 128 points along the normal and 255 along the tangent.
+ * included) multiply by the texel. Displacement and ADD emission add it, and MULTIPLY emission,
+ * which emits nothing without a map, multiplies by it, so black leaves both as they are. Black is
+ * also Godot's heightmap default. A normal and a flowmap decode `2 * rg - 1`, so 128 points along
+ * the normal and 255 along the tangent.
  */
 const NEUTRAL_TEXEL: Readonly<Record<TextureSlot, Rgb>> = {
   albedo_texture: WHITE,
@@ -34,14 +35,16 @@ const NEUTRAL_TEXEL: Readonly<Record<TextureSlot, Rgb>> = {
   anisotropy_flowmap: [255, 128, 255],
 };
 
-/** Written once per slot, on its first request. Never disposed: every slot of that kind shares it. */
+/** Written once per slot, on its first request. Every slot of that kind shares it. */
 const standIns = new Map<TextureSlot, THREE.DataTexture>();
 
 export function pendingMapStandIn(slot: TextureSlot): THREE.DataTexture {
   const existing = standIns.get(slot);
   if (existing) return existing;
-  const standIn = new THREE.DataTexture(new Uint8Array([...NEUTRAL_TEXEL[slot], 255]), 1, 1);
-  standIn.colorSpace = slotColorSpace(slot);
+  const standIn = releasedOnUnmount(
+    new THREE.DataTexture(new Uint8Array([...NEUTRAL_TEXEL[slot], 255]), 1, 1)
+  );
+  standIn.colorSpace = slotColorSpace(slot, standIn);
   standIn.needsUpdate = true;
   standIns.set(slot, standIn);
   return standIn;

@@ -52,9 +52,6 @@ and applies no walk ceiling.
 
 ## Known limitations
 
-- **Approximated** The current tab draws in the unselected colour and StyleBox instead of
-  `font_selected_color` and `tab_selected`, though its position, width and underline are
-  exact.
 - **Approximated** Under `layout_direction = 3`, a tab title in a right-to-left script
   keeps left-to-right glyph order, while the strip and its tabs still mirror.
 - **Approximated** `tab_alignment = Right` never reclaims the strip's `side_margin`

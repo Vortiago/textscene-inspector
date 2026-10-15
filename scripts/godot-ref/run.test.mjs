@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PNG } from 'pngjs';
+import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_CAPTURE,
@@ -25,6 +26,8 @@ import {
   EDITOR_FOV,
   ENGINE_KILL_AFTER_S,
   ENGINE_TIMEOUT_S,
+  FOG_HISTORY_MAX_CYCLES,
+  FOG_JITTER_CYCLE_FRAMES,
   FRAME_MARGIN,
   godotSpawnPlan,
   PARTICLES_PROCESS_DEFAULT,
@@ -73,23 +76,30 @@ function bootstrap(overrides = {}) {
  */
 describe('editor-camera constants mirror the previewer', () => {
   it('matches godotEditorCamera.ts', async () => {
-    const {
-      editorCameraDirection,
-      EDITOR_CAMERA_DISTANCE: coreDistance,
-      EDITOR_CAMERA_FOV,
-    } = await import('../../packages/textscene-core/src/r3f/godotEditorCamera.ts');
+    const { editorCameraDirection, editorCameraPosition, EDITOR_CAMERA_FOV } =
+      await import('../../packages/textscene-core/src/r3f/godotEditorCamera.ts');
     const core = editorCameraDirection();
     expect(EDITOR_CAMERA_DIRECTION[0]).toBeCloseTo(core.x, 6);
     expect(EDITOR_CAMERA_DIRECTION[1]).toBeCloseTo(core.y, 6);
     expect(EDITOR_CAMERA_DIRECTION[2]).toBeCloseTo(core.z, 6);
-    expect(EDITOR_CAMERA_DISTANCE).toBe(coreDistance);
+    const position = editorCameraPosition();
+    EDITOR_CAMERA_DIRECTION.forEach((component, axis) => {
+      expect(position[axis]).toBeCloseTo(component * EDITOR_CAMERA_DISTANCE, 6);
+    });
     expect(EDITOR_FOV).toBe(EDITOR_CAMERA_FOV);
   });
 
   it('matches frameSceneBounds.ts’s framing margin', async () => {
-    const { FRAME_MARGIN: coreMargin } =
-      await import('../../packages/textscene-core/src/r3f/frameSceneBounds.ts');
-    expect(FRAME_MARGIN).toBe(coreMargin);
+    const THREE = await import('three');
+    const { frameSceneBounds } = await import('../../packages/textscene-core/src/r3f/frameSceneBounds.ts');
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2)));
+    const camera = new THREE.PerspectiveCamera(EDITOR_FOV);
+
+    frameSceneBounds(scene, camera, null);
+
+    const fitDistance = 1 / Math.tan(degToRad(EDITOR_FOV / 2));
+    expect(camera.position.length()).toBeCloseTo(fitDistance * FRAME_MARGIN, 6);
   });
 
   /**
@@ -97,14 +107,13 @@ describe('editor-camera constants mirror the previewer', () => {
    * previewer's stage at zoom 1 have the same size. A Control's anchors resolve against the
    * frame, so a one-sided edit moves the content and the two images cannot be compared.
    */
-  it('matches viewport2d.ts’s project-viewport rectangle and its fit preference', async () => {
-    const {
-      CANVAS_2D_WIDTH,
-      CANVAS_2D_HEIGHT,
-      FIT_ON_OPEN_2D_STORAGE_KEY: coreKey,
-    } = await import('../../packages/textscene-core/src/r3f/components/Canvas2DStage/viewport2d.ts');
-    expect(CANVAS_2D_CAPTURE.width).toBe(CANVAS_2D_WIDTH);
-    expect(CANVAS_2D_CAPTURE.height).toBe(CANVAS_2D_HEIGHT);
+  it('matches the default project viewport and viewport2d.ts’s fit preference', async () => {
+    const { DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT } =
+      await import('../../packages/textscene-core/src/parser/projectSettingsParser.ts');
+    const { FIT_ON_OPEN_2D_STORAGE_KEY: coreKey } =
+      await import('../../packages/textscene-core/src/r3f/components/Canvas2DStage/viewport2d.ts');
+    expect(CANVAS_2D_CAPTURE.width).toBe(DEFAULT_VIEWPORT_WIDTH);
+    expect(CANVAS_2D_CAPTURE.height).toBe(DEFAULT_VIEWPORT_HEIGHT);
     expect(FIT_ON_OPEN_2D_STORAGE_KEY).toBe(coreKey);
   });
 
@@ -615,7 +624,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     // The same derivation `_place_camera` performs, from the emitted bounds.
     const b = JSON.parse(await readFile(boundsOut, 'utf8'));
     const span = Math.max(...b.size);
-    const distance = (span / 2 / Math.tan((EDITOR_FOV * Math.PI) / 180 / 2)) * FRAME_MARGIN;
+    const distance = (span / 2 / Math.tan(degToRad(EDITOR_FOV / 2))) * FRAME_MARGIN;
     const focus = b.position.map((p, i) => p + b.size[i] / 2);
     const derived = join(dir, 'derived.png');
     await renderReference({
@@ -698,6 +707,70 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
       /gui\/common\/snap_controls_to_pixels/
     );
     await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(/--mode 2d-root/);
+  }, 360_000);
+
+  /** A calibration scene from `scenes/`, rendered at 160x120, as PNG bytes. */
+  async function renderCalibrationScene(file, options) {
+    const out = join(await scratchDir(), 'calibration.png');
+    await renderReference({
+      scene: join(import.meta.dirname, 'scenes', file),
+      out,
+      width: 160,
+      height: 120,
+      ...options,
+    });
+    return readFile(out);
+  }
+
+  const channelsOf = async (file, options) => PNG.sync.read(await renderCalibrationScene(file, options)).data;
+
+  /**
+   * Volumetric fog with temporal reprojection mixes 0.9 of a history that starts black
+   * (`volumetric_fog_process.glsl:683`, `fog.cpp:482`), so six frames leave it dark by 0.9^6.
+   * A converged capture shows the fog a running game shows, which reprojection off draws at once.
+   */
+  it('captures volumetric fog once its temporal history has converged', async () => {
+    const options = { previews: false, camera: [0, 2.5, 6], lookAt: [0, 1.5, 0] };
+    const blended = await channelsOf('volumetric-fog-history-on.tscn', options);
+    const direct = await channelsOf('volumetric-fog-history-off.tscn', options);
+
+    const largestGap = blended.reduce((gap, value, i) => Math.max(gap, Math.abs(value - direct[i])), 0);
+    expect(largestGap).toBeLessThanOrEqual(1);
+  }, 360_000);
+
+  /**
+   * An UPDATE_ONCE ReflectionProbe captures over several frames, and the scene renders one such
+   * probe at a time (`renderer_scene_cull.cpp:3739-3751`), so six frames leave a probe empty. A
+   * capture that waits them out shows what UPDATE_ALWAYS shows at once. The two filter the
+   * roughness layers differently (`renderer_rd/storage_rd/light_storage.cpp:1655,1661`), so a few
+   * texels differ.
+   */
+  it('captures every ReflectionProbe that updates once before it saves the frame', async () => {
+    const options = { camera: [0, 2.5, 6], lookAt: [0, 0.5, 0] };
+    const once = await channelsOf('reflection-probe-capture-once.tscn', options);
+    const always = await channelsOf('reflection-probe-capture-always.tscn', options);
+
+    const colourChannels = (once.length / 4) * 3;
+    const farOff = once.filter((value, i) => i % 4 !== 3 && Math.abs(value - always[i]) > 4).length;
+    expect(farOff / colourChannels).toBeLessThan(0.01);
+  }, 360_000);
+
+  /**
+   * The editor keeps the edited scene under its 2D viewport (`editor_node.cpp:8648-8652`), so the
+   * 3D editor viewport draws no CanvasItem, in a CanvasLayer or not. A running game draws both.
+   */
+  it('draws no 2D over a 3D scene under the previews', async () => {
+    const covers = async (previews) => {
+      const png = await renderCalibrationScene('2d-over-3d.tscn', { previews });
+      return probePixels(png, [
+        [40, 60],
+        [120, 60],
+      ]).map((pixel) => pixel.rgb);
+    };
+    const MAGENTA = [255, 0, 255];
+
+    for (const rgb of await covers(true)) expect(rgb).not.toEqual(MAGENTA);
+    expect(await covers(false)).toEqual([MAGENTA, MAGENTA]);
   }, 360_000);
 
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
@@ -827,6 +900,27 @@ describe('the reference renders on a fixed clock', () => {
     const ask = () => bootstrap({ simSeconds: 0.5 });
     expect(ask).toThrow(/paused before the scene is ever instantiated/);
     expect(ask).toThrow(/--particles/);
+  });
+});
+
+describe('the fog history fits inside the render pass', () => {
+  it('quits after more frames than the longest fog convergence draws', () => {
+    const argv = renderArgv('/tmp/work');
+    const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
+
+    expect(quitAfter).toBeGreaterThan(FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES);
+  });
+
+  it('cycles over the jitters the previewer averages', async () => {
+    const { VOLUMETRIC_FOG_TEMPORAL_JITTERS } =
+      await import('../../packages/textscene-core/src/godot/rendering/environment/volumetricFog.ts');
+
+    expect(FOG_JITTER_CYCLE_FRAMES).toBe(VOLUMETRIC_FOG_TEMPORAL_JITTERS.length);
+  });
+
+  it('gives the bootstrap the cycle length and cap (edge case: the GDScript holds its own copy)', () => {
+    expect(bootstrap()).toContain(`const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}`);
+    expect(bootstrap()).toContain(`const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}`);
   });
 });
 

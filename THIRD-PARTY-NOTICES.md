@@ -21,13 +21,18 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | File | Derived from |
 |---|---|
 | `packages/textscene-core/src/resources/sky/skyShaders.ts` | `scene/resources/3d/sky_material.cpp` |
+| `packages/textscene-core/src/resources/sky/skyLayerShaders.ts` | `servers/rendering/renderer_rd/shaders/oct_inc.glsl` (the octahedral map), `.../effects/octmap_downsampler.glsl` (the downsample chain), `.../effects/octmap_roughness.glsl` (the GGX importance-sampled filter) and `.../effects/octmap_filter.glsl` (the low-quality fast filter: its three frames, their weights and the eight taps of each) |
 | `packages/textscene-core/src/r3f/areaLight/ltcIntegral.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (the edge fit, the horizon clip and the LTC integrals for diffuse and specular) |
 | `packages/textscene-core/src/r3f/areaLight/areaLightChunk.ts` | `servers/rendering/renderer_rd/shaders/scene_forward_lights_inc.glsl` (`light_process_area` and `get_omni_attenuation`) |
-| `packages/textscene-core/src/godot/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
+| `packages/textscene-core/src/r3f/areaLight/areaTextureFetch.ts` | `servers/rendering/renderer_rd/shaders/area_lights_inc.glsl` (`fetch_ltc_lod` and the form-factor texture fetch) |
+| `packages/textscene-core/src/r3f/areaLight/atlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_area_light_atlas`: the cell sizes and the packing) |
+| `packages/textscene-core/src/r3f/areaLight/atlasMipmaps.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (the atlas's mip chain) and `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (the Gaussian blur) |
+| `packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
+| `packages/textscene-core/src/godot/rendering/environment/toneMapping.ts` | `servers/rendering/storage/environment_storage.cpp` (`environment_get_white` and the white of `environment_get_tonemap_parameters`) |
 | `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
 | `packages/textscene-core/src/utils/colorSpace.ts` | `core/math/color.h` (`Color::srgb_to_linear`, `Color::linear_to_srgb`) |
-| `packages/textscene-core/src/utils/godotNamedColor.ts` | `core/math/color_names.inc` (the X11 named-colour table, transcribed verbatim) and `core/math/color.cpp` (`Color::find_named_color`'s name normalization, `Color::named`) |
+| `packages/textscene-core/src/godot/math/color.ts` | `core/math/color_names.inc` (the X11 named-colour table, transcribed verbatim) and `core/math/color.cpp` (`Color::find_named_color`'s name normalisation, `Color::named`) |
 | `packages/textscene-core/src/resources/materials/standardmaterial3d/emission.ts` | `scene/resources/material.cpp` (`BaseMaterial3D::_update_shader` emission block, `set_emission_energy_multiplier`) |
 | `packages/textscene-core/src/nodes/3d/csg/smoothNormals.ts` | `modules/csg/csg_shape.cpp` (`CSGShape3D::update_shape` normal accumulation, `flip_faces`) and `core/math/plane.h` (`Plane(p1, p2, p3)`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgbox3d/boxGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGBox3D::_build_brush`) |
@@ -54,6 +59,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/controlRectSolver.ts` | `scene/gui/control.cpp` (`Control::_size_changed`'s anchor/offset edge solve, its minimum-size floor with `GROW_DIRECTION_*` and its right-to-left position mirror, `Control::set_rect`/`_compute_offsets`'s inverse of that mirror, `Control::get_combined_minimum_size`, `get_anchorable_rect`) |
 | `packages/textscene-core/src/r3f/controls/native/buildSolveTree.ts` | `scene/main/canvas_item.cpp` (`CanvasItem::get_parent_item`'s direct-parent-only cast and `_enter_canvas`'s reparent-at-CanvasLayer fallback when it fails) and `scene/gui/container.cpp` (`Container::as_sortable_control`'s Control cast and `top_level` rejection, which bound the `visible` a container writes onto its children) |
 | `packages/textscene-core/src/r3f/controls/native/controlPixelSnap.ts` | `scene/gui/control.cpp` (`Control::_update_canvas_item_transform`'s whole-pixel translation snap and its `is_inside_tree` / 45°-rotation gates), `core/config/project_settings.cpp` (the `gui/common/snap_controls_to_pixels` default and `_GLOBAL_DEF`'s keep-the-loaded-value rule) and `main/main.cpp` (the `bool` read that booleanizes the setting) |
+| `packages/textscene-core/src/r3f/controls/native/controlClipGeometry.ts` | `servers/rendering/renderer_canvas_cull.cpp` (`_cull_canvas_item`'s clip-rect intersection with the enclosing clipper and the separate `final_clip_rect.position` / `.size` rounding that becomes the scissor) and `core/math/vector2.cpp` / `core/math/math_funcs.h` (`Vector2::round` → `Math::round`, half away from zero) |
 | `packages/textscene-core/src/r3f/controls/native/controlClipping.tsx` | `servers/rendering/renderer_canvas_cull.cpp` (`_cull_canvas_item`'s clip-rect intersection with the enclosing clipper and the separate `final_clip_rect.position` / `.size` rounding that becomes the scissor) and `core/math/vector2.cpp` / `core/math/math_funcs.h` (`Vector2::round` → `Math::round`, half away from zero) |
 | `packages/textscene-core/src/nodes/2d/ui/margincontainer/nativeSolver.ts` | `scene/gui/margin_container.cpp` (`MarginContainer::get_minimum_size`, `MarginContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/centercontainer/nativeSolver.ts` | `scene/gui/center_container.cpp` (`CenterContainer::get_minimum_size`, `CenterContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
@@ -106,6 +112,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/shared/sliderSolver.ts` | `scene/gui/slider.cpp` (`Slider::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` track/`grabber_area`/grabber/tick rect math, including its per-axis `int` truncation vs `Math::round` asymmetry) and `scene/theme/default_theme.cpp` (HSlider/VSlider's `slider`/`grabber_area` styleboxes and grabber/tick icon registration) |
 | `packages/textscene-core/src/r3f/controls/native/styleBoxFlatGeometry.ts` | `scene/resources/style_box_flat.cpp` (`StyleBoxFlat::draw`, `draw_rounded_rectangle`, `adapt_values`, `set_inner_corner_radius`, `set_corner_scale`, including the anti-aliasing rings, `skew`, and the drop-shadow stage) |
 | `packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and the TextServer paragraph convention `Button::_notification`'s `text_buf->draw` shares; `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
+| `packages/textscene-core/src/r3f/controls/native/text/glyphQuads.ts` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/toolbar.ts` | `scene/gui/graph_edit.cpp` (the `menu_panel`/`menu_hbox` constructor assembly, the `set_show_*` setters and `GraphEdit::_update_zoom_label`) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/ToolbarChrome.tsx` | `scene/gui/graph_edit.cpp` (the toolbar's own `Button`/`Label` draw) and `scene/theme/default_theme.cpp` (the `FlatButton` variation) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/minimap.ts` | `scene/gui/graph_edit.cpp` (`GraphEditMinimap::update_minimap`, `get_camera_rect`, `_get_render_size`, `_get_graph_size`, `_convert_from_graph_position`) |
@@ -146,9 +153,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAdvance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s alive branch: the accelerations, orbit, damping and angular integration) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleAppearance.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`'s appearance pass) and `core/math/color.cpp` (the YIQ-style hue-rotation basis) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particleBuffer.ts` | `scene/2d/cpu_particles_2d.cpp` (`_update_particle_data_buffer`, `SortLifetime`) |
-| `packages/textscene-core/src/godot/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor) |
-| `scripts/godot-ref/bootstrap.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`) |
-| `scripts/godot-ref/refConstants.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditorViewport::Cursor()`) |
+| `packages/textscene-core/src/godot/math/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor) |
+| `scripts/godot-ref/run.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`, `Node3DEditorViewport::Cursor()`) |
 | `packages/textscene-core/src/nodes/2d/ui/videostreamplayer/nativeSolver.ts` | `scene/gui/video_stream_player.cpp` (`VideoStreamPlayer::get_minimum_size`) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPickerButton::_notification`'s `NOTIFICATION_DRAW`: the swatch rect from the "normal" StyleBox's offset/minimum size, the unconditional checkerboard, and the overbright check) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/AlphaCheckerboardQuad.tsx` | `scene/gui/color_picker.cpp` (`draw_texture_rect(theme_cache.background_icon, r, true)`'s tile semantics, ported the same way `nodes/2d/ui/texturerect/Component.tsx`'s `STRETCH_TILE` branch already does) |
@@ -382,6 +388,39 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+```
+
+---
+
+## Activision fast filter coefficients
+
+`packages/textscene-core/src/godot/rendering/environment/skyFastFilterCoefficients.ts` reproduces levels 0 to 5 of
+`low_quality_coeffs`, the tap table of the fast sky filter, because a Real-Time sky's reflections
+and ambient light ARE that table's output. Godot vendors it as `thirdparty/misc/cubemap_coeffs.h`.
+It is by Activision Publishing and is licensed MIT, separately from Godot's own MIT licence above.
+`packages/textscene-core/src/resources/sky/skyLayerShaders.ts` ports Godot's `octmap_downsampler.glsl`
+and `octmap_filter.glsl`, which carry the same Activision notice.
+
+```
+Copyright 2016 Activision Publishing, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ---

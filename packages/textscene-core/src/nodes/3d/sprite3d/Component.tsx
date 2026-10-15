@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useMemo, useRef } from 'react';
+import { visualLayersUserData } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
@@ -22,28 +23,31 @@ import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
 import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { sourceColorSpace } from '../../../resources/textures/sourceColorSpace';
 import {
   applyTextureFilterState,
   godotTextureFilterState,
 } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  alphaAntialiasingProps,
+  alphaAntialiasingUserData,
+} from '../../../r3f/materials/godotAlphaAntialiasing';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
+import { clamp } from '../../../godot/math/math';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
 
 export function Sprite3D({ node, children }: NodeComponentProps) {
-  // Godot's billboard is a material-side effect on the sprite quad; the shared
-  // hook applies the same modes Label3D uses.
   const spriteRef = useRef<THREE.Object3D | null>(null);
   const properties = node.properties as Sprite3DProperties;
-  useBillboard(spriteRef, properties.billboard);
   const { externalResources, internalResources } = useSceneResources();
 
   const { position, rotation, scale } = useMemo(
@@ -52,8 +56,12 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   );
 
   // `sprite_3d.cpp:299` hands the flag to the same cached shader the billboard
-  // mode does; both are per-frame effects on the sprite quad itself.
+  // mode does. Both are per-frame effects on the sprite quad itself. Fixed size first:
+  // the billboard freezes the world matrix, so a scale set after it lands a frame late.
   useFixedSize(spriteRef, properties.fixed_size, scale);
+  // Godot's billboard is a material-side effect on the sprite quad. The shared
+  // hook applies the same modes Label3D uses.
+  useBillboard(spriteRef, properties.billboard);
 
   // `texture` may be an image file, or a procedural texture described entirely
   // inside the scene; `useTexture2D` resolves either and reports a reference it
@@ -69,14 +77,14 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
   const textureFilter = properties.texture_filter;
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
-  // sampler state. SRGBColorSpace: Godot's 3D pipeline decodes sRGB in hardware before filtering
-  // (`canvas2DTextureDecode.ts`), so the clone keeps the cache entry's colour space, not the 2D
-  // canvas's `NoColorSpace` retag.
+  // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a
+  // `source_color` sampler, so the clone reads as an albedo does, not as the 2D canvas's retag.
   const samplerClone = useMemo(() => {
-    const cloned = spriteSamplerClone(sourceTexture ?? undefined, wrap, THREE.SRGBColorSpace);
+    if (!sourceTexture) return undefined;
+    const cloned = spriteSamplerClone(sourceTexture, wrap, sourceColorSpace(sourceTexture));
     // Sprite3D's texture is a node property, not a material slot, so the node's
     // own `texture_filter` (`material.cpp:3055`) lands on this clone.
-    if (cloned) applyTextureFilterState(cloned, godotTextureFilterState(textureFilter));
+    applyTextureFilterState(cloned, godotTextureFilterState(textureFilter));
     return cloned;
   }, [sourceTexture, wrap, textureFilter]);
   // The clone is this component's, never the loader's cached entry: `useUploadedClone`
@@ -129,11 +137,12 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     scissorThreshold: properties.alpha_scissor_threshold,
     // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
     transparentFlag: properties.transparent,
+    antialiasing: { mode: properties.alpha_antialiasing_mode, edge: properties.alpha_antialiasing_edge },
   });
   // The instance fade is per GeometryInstance3D, outside the accumulation: only `modulate`
   // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
-  const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp01(accum.a) : 1);
+  const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp(accum.a, 0, 1) : 1);
   const depthTest = !properties.no_depth_test;
   const castsShadow = shadow.castShadow && joinsShadowPass(cut, depthTest);
   const prepasses = cutOpaquePrepasses(cut, depthTest);
@@ -206,13 +215,16 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         map: displayedTexture,
         color,
         ...surfaceAlpha[pass],
+        ...alphaAntialiasingProps(cut.antialiasing),
         // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
         depthTest,
         // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
         side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
-        // `sprite_3d.cpp:282` hands the scale to every mode's material; only HASH reads it.
+        // `sprite_3d.cpp:281-283` hands the threshold, the scale and the edge to every mode's
+        // material. Only HASH reads the scale, and only an antialiased cut the edge.
         userData: {
           ...alphaHashScaleUserData(properties.alpha_hash_scale),
+          ...alphaAntialiasingUserData(cut.antialiasing),
           ...opaquePrepassUserData(prepasses[pass]),
         },
       },
@@ -242,6 +254,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         onAfterRender={shadow.onAfterRender}
         onBeforeShadow={shadow.onBeforeShadow}
         onAfterShadow={shadow.onAfterShadow}
+        userData={visualLayersUserData(properties.layers)}
       >
         <primitive object={geometry} attach="geometry" />
         <FadedMaterials>{material}</FadedMaterials>
@@ -249,8 +262,4 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       {subtree}
     </>
   );
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }

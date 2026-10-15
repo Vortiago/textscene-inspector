@@ -8,14 +8,9 @@
 import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import {
-  INT32_MAX,
-  parseGodotFloat,
-  readerLimitedInt,
-  storedFromFloat,
-  type IntWidth,
-  boolLiteralAsNumber,
-} from '../../godot/index.js';
+import { INT32_MAX, readerLimitedInt, storedFromFloat, type IntWidth } from '../../godot/variant/int.js';
+import { parseGodotFloat } from '../../godot/variant/number.js';
+import { boolLiteralAsNumber } from '../../godot/variant/variantBool.js';
 
 /**
  * `_to_int<T>` (`variant.h:360-377`): the conversion every int slot's write
@@ -77,7 +72,7 @@ export function slotWidth(max?: number | null): IntWidth {
  * double it came from, which the truncation check needs. `badIntElement` has
  * the same shape for an array element.
  */
-export interface IntSlotRead {
+interface IntSlotRead {
   /** The tokenizer's double, or `null` for text outside the grammar. */
   readonly asFloat: number | null;
   /** The integer stored: `null` unreadable, `NaN` read but unstorable. */

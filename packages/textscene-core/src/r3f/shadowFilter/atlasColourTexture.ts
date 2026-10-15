@@ -6,12 +6,9 @@
  */
 
 import * as THREE from 'three';
+import { sharedTexture } from '../sharedTexture.js';
 
-/**
- * A render target's texture would reach each material's clone as null (three r186
- * `UniformsUtils.js:32-35`), so a clone of this one is itself.
- */
-export class AtlasColourTexture extends THREE.Texture {
+export class AtlasColourTexture extends sharedTexture(THREE.Texture) {
   constructor(name: string, size: number) {
     super();
     this.name = name;
@@ -22,9 +19,5 @@ export class AtlasColourTexture extends THREE.Texture {
     this.magFilter = THREE.NearestFilter;
     this.generateMipmaps = false;
     this.flipY = false;
-  }
-
-  override clone(): this {
-    return this;
   }
 }

@@ -1,5 +1,5 @@
 /**
- * A node escapes a parent whose transform and visibility do not reach it (`godot/parentSpace.ts`):
+ * A node escapes a parent whose transform and visibility do not reach it (`godot/scene/parentSpace.ts`):
  * a Node3D composes both only through a Node3D parent (`node_3d.cpp:150`, `:656-660`,
  * `:1132-1143`), and a CanvasItem only through a CanvasItem parent (`canvas_item.cpp:309-348`).
  */
@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { NodeDispatcher } from './NodeDispatcher';
+import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope';
 import type { CanvasWorkspace } from './contexts/CanvasWorkspaceContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
@@ -30,7 +31,9 @@ async function renderWorld(tscn: string, options: RenderOptions = {}): Promise<T
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace={options.workspace ?? '3d'} loader={fake.loader} scene={parsed}>
       <HiddenSeeder paths={options.hiddenPaths ?? []} />
-      <NodeDispatcher nodes={parsed.nodes} />
+      <WorldEnvironmentScope world="root">
+        <NodeDispatcher nodes={parsed.nodes} />
+      </WorldEnvironmentScope>
     </SceneStack>
   );
   await new Promise<void>((r) => setTimeout(r, 10));
@@ -61,7 +64,9 @@ async function mountRerenderable(tscn: string) {
   const fake = createFakeResourceLoader();
   const tree = (nodes: typeof parsed.nodes) => (
     <SceneStack workspace="3d" loader={fake.loader} scene={parsed}>
-      <NodeDispatcher nodes={nodes} />
+      <WorldEnvironmentScope world="root">
+        <NodeDispatcher nodes={nodes} />
+      </WorldEnvironmentScope>
     </SceneStack>
   );
   const renderer = await ReactThreeTestRenderer.create(tree(parsed.nodes));

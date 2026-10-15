@@ -4,16 +4,16 @@
  * BoneAttachment3D of its own name.
  */
 
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
-import { createGLBMesh, initGlbModules } from '../../../resources/formats/glb/glbProcessing';
+import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
 import { NO_SIDECAR } from '../../../resources/formats/glb/testing/noSidecar';
 import { godotNodeName } from '../../../resources/formats/glb/nodeNames';
 import { flattenGlbObjects } from './glbHierarchy';
 import { matchGlbTarget } from './matchGlbTarget';
 
-const GODOT_4_4 = { naming: { ...NO_SIDECAR.naming, namingVersion: 1 } };
+const GODOT_4_4 = { ...NO_SIDECAR, naming: { ...NO_SIDECAR.naming, namingVersion: 1 } };
 
 /** The joint Hand holds the mesh Sword. */
 const SWORD = nodesGlb(
@@ -32,10 +32,6 @@ async function match(
   const root = await createGLBMesh(glb, options);
   return matchGlbTarget(flattenGlbObjects(root), godotPath, { allowAncestor: false })?.object;
 }
-
-beforeAll(async () => {
-  await initGlbModules();
-});
 
 describe('matchGlbTarget in a skeleton', () => {
   it('finds a node in the BoneAttachment3D of the bone above it', async () => {
@@ -86,7 +82,7 @@ describe('matchGlbTarget in a skeleton', () => {
         skins: [{ joints: [0] }],
       }
     );
-    const options = { naming: { ...NO_SIDECAR.naming, importAsSkeletonBones: true } };
+    const options = { ...NO_SIDECAR, naming: { ...NO_SIDECAR.naming, importAsSkeletonBones: true } };
     expect((await match(glb, 'Skeleton3D/Body', options))?.name).toBe('Body');
   });
 

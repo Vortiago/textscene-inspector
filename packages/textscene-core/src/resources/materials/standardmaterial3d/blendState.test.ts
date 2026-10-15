@@ -1,61 +1,20 @@
 /**
- * The ported Godot blend table, pinned as data against
- * `blend_mode_to_blend_attachment`, and the claim that three's presets equal it. That
- * claim is about three's internals, so a change in `WebGLState.setBlending` fails here.
+ * The claim that three's presets equal Godot's blend attachments. That claim is about three's
+ * internals, so a change in `WebGLState.setBlending` fails here.
  */
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { GODOT_BLEND_ATTACHMENTS, godotBlendState, type GodotBlendAttachment } from './blendState';
-import { BlendMode } from './types';
+import { alphaToCoverageBlendState, godotBlendState } from './blendState';
+import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
+import {
+  BlendMode,
+  GODOT_BLEND_ATTACHMENTS,
+  type GodotBlendAttachment,
+} from '../../../godot/rendering/materials/blendMode';
 
-describe('GODOT_BLEND_ATTACHMENTS', () => {
-  it('transcribes blend_mode_to_blend_attachment exactly', () => {
-    expect(GODOT_BLEND_ATTACHMENTS).toEqual({
-      [BlendMode.MIX]: {
-        colorOp: 'add',
-        srcColor: 'src-alpha',
-        dstColor: 'one-minus-src-alpha',
-        alphaOp: 'add',
-        srcAlpha: 'one',
-        dstAlpha: 'one-minus-src-alpha',
-      },
-      [BlendMode.ADD]: {
-        colorOp: 'add',
-        srcColor: 'src-alpha',
-        dstColor: 'one',
-        alphaOp: 'add',
-        srcAlpha: 'src-alpha',
-        dstAlpha: 'one',
-      },
-      [BlendMode.SUB]: {
-        colorOp: 'reverse-subtract',
-        srcColor: 'src-alpha',
-        dstColor: 'one',
-        alphaOp: 'reverse-subtract',
-        srcAlpha: 'src-alpha',
-        dstAlpha: 'one',
-      },
-      [BlendMode.MUL]: {
-        colorOp: 'add',
-        srcColor: 'dst-color',
-        dstColor: 'zero',
-        alphaOp: 'add',
-        srcAlpha: 'dst-alpha',
-        dstAlpha: 'zero',
-      },
-      [BlendMode.PREMULT_ALPHA]: {
-        colorOp: 'add',
-        srcColor: 'one',
-        dstColor: 'one-minus-src-alpha',
-        alphaOp: 'add',
-        srcAlpha: 'one',
-        dstAlpha: 'one-minus-src-alpha',
-      },
-    });
-  });
-
-  it('covers every blend mode the enum declares', () => {
+describe('godotBlendState over every mode', () => {
+  it('resolves every blend mode the enum declares', () => {
     for (const mode of [
       BlendMode.MIX,
       BlendMode.ADD,
@@ -63,7 +22,7 @@ describe('GODOT_BLEND_ATTACHMENTS', () => {
       BlendMode.MUL,
       BlendMode.PREMULT_ALPHA,
     ]) {
-      expect(GODOT_BLEND_ATTACHMENTS[mode]).toBeDefined();
+      expect(godotBlendState(mode).blending, `blend mode ${mode}`).toBeDefined();
     }
   });
 });
@@ -159,5 +118,36 @@ describe('godotBlendState', () => {
     // `undefined` would make `Material.setValues` warn and would let R3F assign
     // over three's own state; the keys must simply be absent.
     expect(Object.keys(godotBlendState(BlendMode.ADD))).toEqual(['blending']);
+  });
+});
+
+describe('alphaToCoverageBlendState', () => {
+  it("blends ALPHA_TO_COVERAGE with BLEND_MODE_ALPHA_TO_COVERAGE's factors", () => {
+    // `material_storage.cpp:691-698`: MIX's colour pair, and the source alpha stored as it is.
+    expect(alphaToCoverageBlendState(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE)).toEqual({
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.SrcAlphaFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+      blendEquationAlpha: THREE.AddEquation,
+      blendSrcAlpha: THREE.OneFactor,
+      blendDstAlpha: THREE.ZeroFactor,
+    });
+  });
+
+  it('overwrites the colour under ALPHA_TO_COVERAGE_AND_TO_ONE, whose source alpha is 1', () => {
+    // `scene_shader_forward_clustered.cpp:435-437`: alpha to one replaces the source alpha
+    // before the same attachment blends.
+    const state = alphaToCoverageBlendState(
+      AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE
+    );
+    expect(state).toMatchObject({ blendSrc: THREE.OneFactor, blendDst: THREE.ZeroFactor });
+  });
+
+  it('keeps the alpha pair of the attachment under ALPHA_TO_COVERAGE_AND_TO_ONE (edge case)', () => {
+    const state = alphaToCoverageBlendState(
+      AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE
+    );
+    expect(state).toMatchObject({ blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.ZeroFactor });
   });
 });

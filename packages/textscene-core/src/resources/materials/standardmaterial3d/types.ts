@@ -7,7 +7,11 @@
 
 import type * as THREE from 'three';
 import type { EmissionScalars } from './emission';
-import type { TextureChannel, TextureChannelMask } from '../../../godot/textureChannel';
+import type { TextureChannel, TextureChannelMask } from '../../../godot/rendering/materials/textureChannel';
+import type { UVTransform } from '../../textures/applyTextureState';
+import type { Vector2 } from '../../../godot/math/vector';
+import type { BlendMode } from '../../../godot/rendering/materials/blendMode';
+import type { AlphaAntialiasingCut } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 /** Godot's height mapping of a surface. */
 export interface Heightmap {
@@ -32,10 +36,6 @@ export const HEIGHTMAP_DEFAULTS: Heightmap = {
   readsHeight: false,
 };
 
-// One Color declaration repo-wide, re-exported here because this slice's
-// consumers (sky, environment, preview lighting) import it from this module.
-export type { Color } from '../../../utils/colorParser';
-
 /** Godot `BaseMaterial3D.Transparency`. */
 export enum Transparency {
   DISABLED = 0,
@@ -47,15 +47,6 @@ export enum Transparency {
   ALPHA_HASH = 3,
   /** Alpha blending after a depth prepass, so it DOES write depth. */
   ALPHA_DEPTH_PRE_PASS = 4,
-}
-
-/** Godot `BaseMaterial3D.BlendMode`, the same enum `CanvasItemMaterial` uses. */
-export enum BlendMode {
-  MIX = 0,
-  ADD = 1,
-  SUB = 2,
-  MUL = 3,
-  PREMULT_ALPHA = 4,
 }
 
 /** Godot `BaseMaterial3D.CullMode`. BACK culls back faces, so it draws the front. */
@@ -101,18 +92,18 @@ export type TextureSlot = (typeof TEXTURE_SLOTS)[number];
 export type ResolvedTextureSlots = Partial<Record<TextureSlot, THREE.Texture | null>>;
 
 /**
+ * The bound textures a material derives from: each slot's map, and the UV transform a
+ * render-target albedo samples through, which the shared target cannot carry.
+ */
+export type ResolvedTextures = ResolvedTextureSlots & { albedoTargetUv?: UVTransform };
+
+/**
  * A slot's raw reference (`ExtResource("1_x")`, `SubResource("NoiseTexture2D_y")`,
  * a bare `res://` path), present only when the slot's feature gate is on. Decode
  * stops at the string: the inline path resolves it against the scene's tables,
  * the `.tres` path against the owning file's.
  */
 export type TextureSlotReferences = Readonly<Partial<Record<TextureSlot, string>>>;
-
-/** `uv1_scale` / `uv1_offset` / `normal_scale`, reduced to the two axes UVs use. */
-export interface MaterialVec2 {
-  x: number;
-  y: number;
-}
 
 /**
  * The decoded material: Godot's own semantics, no renderer types. One decode
@@ -147,8 +138,16 @@ export interface StandardMaterial3DData {
   textureFilter: number;
   /** `texture_repeat` (default true): whether a UV outside 0..1 tiles or clamps. */
   textureRepeat: boolean;
-  uv1Scale: MaterialVec2;
-  uv1Offset: MaterialVec2;
+  uv1Scale: Vector2;
+  uv1Offset: Vector2;
+  /** `uv2_scale`, identity where Godot never applies it (see `decode.ts`). */
+  uv2Scale: Vector2;
+  /** `uv2_offset`, identity where Godot never applies it. */
+  uv2Offset: Vector2;
+  /** `uv2_triplanar`: triplanar mapping of the second UV set. */
+  uv2Triplanar: boolean;
+  /** The slots that sample UV2 (`emission_on_uv2`, `ao_on_uv2`). */
+  uv2Slots: readonly TextureSlot[];
   /** The authored `transparency` mode. */
   transparency: Transparency;
   /**
@@ -168,6 +167,8 @@ export interface StandardMaterial3DData {
   alphaHash: boolean;
   /** `alpha_hash_scale`: the hash's grain, which `material.cpp:1840` hands the shader. */
   alphaHashScale: number;
+  /** The cutout's alpha antialiasing, or null where its shader runs none. */
+  alphaAntialiasing: AlphaAntialiasingCut | null;
   /** The authored `depth_draw_mode`, with refraction's forced ALWAYS applied. */
   depthDrawMode: DepthDrawMode;
   /** Whether this surface's fragments reach the depth buffer. */
@@ -210,7 +211,7 @@ export interface StandardMaterial3DData {
   /** `ao_texture_channel`: the AO map channel the shader reads. */
   aoTextureChannel: TextureChannel;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
-  normalScale: MaterialVec2;
+  normalScale: Vector2;
   /** `uv1_triplanar`: triplanar mapping of the first UV set. */
   triplanar: boolean;
   /** `clearcoat` strength (0..1), gated on `clearcoat_enabled`. */
@@ -278,13 +279,18 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   emissionOperator: number;
   textureFilter: number;
   textureRepeat: boolean;
-  uv1Scale: MaterialVec2;
-  uv1Offset: MaterialVec2;
+  uv1Scale: Vector2;
+  uv1Offset: Vector2;
+  uv2Scale: Vector2;
+  uv2Offset: Vector2;
+  uv2Triplanar: boolean;
+  uv2Slots: readonly TextureSlot[];
   transparent: boolean;
   castsShadow: boolean;
   alphaTest: number;
   alphaHash: boolean;
   alphaHashScale: number;
+  alphaAntialiasing: AlphaAntialiasingCut | null;
   depthWrite: boolean;
   alphaPassDepthWrite: boolean;
   depthInAlphaPass: boolean;
@@ -300,7 +306,7 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   aoTextureChannelMask: TextureChannelMask;
   side: THREE.Side;
   cullModeExplicit: boolean;
-  normalScale: MaterialVec2;
+  normalScale: Vector2;
   triplanar: boolean;
   clearcoat: number;
   clearcoatRoughness: number;

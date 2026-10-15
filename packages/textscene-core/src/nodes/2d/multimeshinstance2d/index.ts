@@ -12,5 +12,3 @@ const multiMeshInstance2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(multiMeshInstance2DRegistration);
-
-export { multiMeshInstance2DRegistration };

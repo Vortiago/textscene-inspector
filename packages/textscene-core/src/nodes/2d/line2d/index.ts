@@ -12,7 +12,5 @@ const line2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(line2DRegistration);
 
-export { line2DRegistration };
-export type { Line2DProperties } from './types';
 export * from './parser';
 export * from './propertyFormatter';

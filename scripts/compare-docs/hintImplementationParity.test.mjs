@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { requireFreshDist } from '../distFreshness.mjs';
-import { loadCoreLinter, loadRadianEpsilon } from './loadCoreLinter.mjs';
+import { loadCoreLinter, loadDegToRad, loadRadianEpsilon } from './loadCoreLinter.mjs';
 
 const PROPS = join(import.meta.dirname, 'node-properties.json');
 const RESOURCE_PROPS = join(import.meta.dirname, 'resource-properties.json');
@@ -21,6 +21,7 @@ const HINT_ENUM = 2;
 
 /** Loaded from the built combinator in `beforeAll`; see {@link hintBounds}. */
 let RADIAN_ROUNDTRIP_EPSILON;
+let degToRad;
 
 /**
  * Ends where the setter leaves no reachable band for the hint to warn on, since
@@ -88,8 +89,8 @@ function parseHint(hintString) {
 function hintBounds(hint) {
   if (!hint.degrees) return { lo: hint.lo, hi: hint.hi, tolerance: 0 };
   return {
-    lo: (hint.lo * Math.PI) / 180 - RADIAN_ROUNDTRIP_EPSILON,
-    hi: (hint.hi * Math.PI) / 180 + RADIAN_ROUNDTRIP_EPSILON,
+    lo: degToRad(hint.lo) - RADIAN_ROUNDTRIP_EPSILON,
+    hi: degToRad(hint.hi) + RADIAN_ROUNDTRIP_EPSILON,
     // A float32 round-trip near PI is ~2.4e-7, so this is wider than any real
     // drift and still catches a bound in the wrong place.
     tolerance: RADIAN_ROUNDTRIP_EPSILON / 100,
@@ -255,6 +256,7 @@ describe('the bound we implement against the bound Godot declared', () => {
   // a full `--project scripts` run.
   beforeAll(async () => {
     RADIAN_ROUNDTRIP_EPSILON = await loadRadianEpsilon();
+    degToRad = await loadDegToRad();
     rows = await rangedProperties();
     enumRows = await enumProperties();
   }, 60_000);

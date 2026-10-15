@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseCanvasLayer } from './parser';
-import { TRANSFORM2D_IDENTITY } from '../../../../godot/transform2d';
+import { TRANSFORM2D_IDENTITY } from '../../../../godot/math/transform2d';
 
 function h(attributes: Record<string, string>): ParsedHeading {
   return { type: 'node', attributes };

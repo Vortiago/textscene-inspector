@@ -20,7 +20,7 @@ import {
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { fixturesDir } from '../../../parser/testing/parserKit';
-import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
 
 import '../../../r3f/nodes/index';

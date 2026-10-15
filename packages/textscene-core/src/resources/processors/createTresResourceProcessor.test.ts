@@ -52,6 +52,21 @@ describe('createTresResourceProcessor', () => {
     expect(processor.getCached('res://t.tres')).toBe(parsed); // identity caching
   });
 
+  it('reads a requested .gdshader file as a Shader with its code', async () => {
+    const file = mockFileBus();
+    const eventBus = new ResourceEventBus();
+    const processor = createTresResourceProcessor(file.bus, eventBus);
+
+    const loaded = eventBus.once<ParsedResource>('resource', 'loaded', 'res://fog.gdshader', 1000);
+    processor.request('res://fog.gdshader');
+    file.emitLoaded('res://fog.gdshader', 'shader_type fog;\n');
+
+    expect(await loaded).toMatchObject({
+      resourceType: 'Shader',
+      properties: { code: '"shader_type fog;\n"' },
+    });
+  });
+
   it('emits resource:failed and caches null for malformed content', async () => {
     const file = mockFileBus();
     const eventBus = new ResourceEventBus();

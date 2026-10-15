@@ -10,6 +10,5 @@ const vSplitContainerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(vSplitContainerRegistration);
 
-export { vSplitContainerRegistration };
 export * from './parser';
 export * from './types';

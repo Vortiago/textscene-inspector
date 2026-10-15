@@ -6,7 +6,7 @@ renders_as: THREE scene.environment / background / tone mapping / fog
 
 # Environment
 
-The resource a `WorldEnvironment` holds: background and sky, ambient light, tone mapping, glow, depth fog and volumetric fog. The editor injects a preview Environment on a scene that declares none (ADR-0025). Each section drives one feature from its own fixture.
+The resource a `WorldEnvironment` holds: background and sky, ambient light, tone mapping, glow, colour adjustments, depth fog and volumetric fog. The editor injects a preview Environment on a scene that declares none (ADR-0025). Each section drives one feature from its own fixture.
 
 ## Background sky
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
@@ -28,10 +28,14 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 ## Glow (bloom)
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
-The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders.
+The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders. The glow runs whenever the environment enables it, so a lit specular highlight blooms as well, as in Godot. A `glow_map` scales the glow per screen position, as Godot's tonemap pass does.
 
-- **Approximated** The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) differs slightly. A specular highlight's halo also spreads less.
-- **Approximated** `glow_map` is not resolved, so a scene supplying one gets unmodulated glow.
+- **Approximated** The pyramid blurs with a 13-tap downsample and a 9-tap tent upsample rather than Godot's gaussian, so a bare glow buffer (REPLACE) differs slightly.
+
+## Adjustments
+<!-- compare: image=unit-environment-adjustments status=done fixture=unit-environment-adjustments.tscn -->
+
+`adjustment_enabled` with brightness 1.3, contrast 1.25 and saturation 0.5 over an unshaded box and a colour background. The whole frame, background included, is brighter, harder and greyer, as in Godot. The adjustments act after the tone curve and the glow under every tone mapper.
 
 ## Depth fog
 <!-- compare: image=unit-depth-fog status=done fixture=unit-depth-fog.tscn -->
@@ -44,7 +48,6 @@ The preview environment enables glow, which blooms the emissive sphere. Both eng
 `volumetric_fog_enabled` over a colour background, lit by one OmniLight3D. The fog thickens with distance over the three boxes and the background, and brightens around the light, as in Godot. A moving camera blends each frame into the last, as Godot's temporal reprojection does. A still camera shows the mean of Godot's 16 jitters, which Godot converges to. Under either fog, Godot converts a colour background to linear twice, so the background is darker than with no fog, and the previewer matches it.
 
 - **Not drawn** `volumetric_fog_gi_inject` adds no light, because the previewer draws no VoxelGI or SDFGI.
-- **Not drawn** A FogVolume adds no density, colour or emission to the fog.
 
 ## Volumetric fog shadow
 <!-- compare: image=unit-volumetric-fog-shadow status=done fixture=unit-volumetric-fog-shadow.tscn -->
@@ -160,4 +163,6 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 ## Known limitations
 
-- **Approximated** `tonemap_exposure` under the default LINEAR tonemapper is ignored, because three applies exposure only while a tone curve is active.
+- **Approximated** `tonemap_exposure` under LINEAR is ignored when no glow, blended surface or adjustment runs the tone-map pass: three applies exposure only under a tone curve.
+- **Shader missing** `ssr_enabled` draws no screen-space reflections.
+- **Resource gap** `adjustment_color_correction` is not applied, so a colour-correction texture leaves the frame unchanged.

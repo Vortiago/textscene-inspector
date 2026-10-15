@@ -6,11 +6,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
-});
-
 import { ResourceLoader } from '@textscene/core';
 import { R3FApp } from './r3f-main';
 import { WebResourceProvider } from './providers/WebResourceProvider';

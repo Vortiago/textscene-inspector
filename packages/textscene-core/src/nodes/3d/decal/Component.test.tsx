@@ -17,10 +17,11 @@ import {
   useAnimatedValueRegistry,
   type AnimatedValueRegistry,
 } from '../../../r3f/contexts/AnimatedValueContext';
-import type { TscnExternalResource, TscnNode } from '../../../parser/types';
+import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import { parseDecal } from './parser';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
+import { dropMipChain } from '../../../resources/textures/godotTextureFilter';
 
 const TEXTURE_PATH = 'res://textures/decal.png';
 const NODE_NAME = 'MyDecal';
@@ -44,6 +45,10 @@ function makeSrgbTexture(wrap: THREE.Wrapping, width = 64, height = 64): THREE.T
   return t;
 }
 
+function wrapper(id: string, type: string, data: Record<string, string>): TscnInternalResource {
+  return { id, type, data };
+}
+
 function makeNode(props: Record<string, string> = {}, name = NODE_NAME): TscnNode {
   return {
     rawProperties: {},
@@ -61,6 +66,7 @@ function extRef(id: string, path: string): TscnExternalResource {
 interface RenderOptions {
   node: TscnNode;
   externals?: TscnExternalResource[];
+  internals?: TscnInternalResource[];
   cached?: Array<{ path: string; texture: THREE.Texture | 'missing' }>;
   children?: ReactNode;
   selectedPath?: string;
@@ -71,7 +77,7 @@ function decalTree(opts: RenderOptions, loader: ReturnType<typeof createFakeReso
   return (
     <SceneStack
       loader={loader}
-      scene={{ externalResources: opts.externals ?? [] }}
+      scene={{ externalResources: opts.externals ?? [], internalResources: opts.internals ?? [] }}
       selectedPath={opts.selectedPath}
     >
       <NodePathProvider path={opts.node.name}>
@@ -179,6 +185,21 @@ describe('<Decal>', () => {
     expect(map).toBe(entry);
   });
 
+  it('mipmaps an import without a mip chain, as the decal atlas builds its own', async () => {
+    const producer = makeSrgbTexture(THREE.ClampToEdgeWrapping);
+    dropMipChain(producer);
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: producer }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map.generateMipmaps).toBe(true);
+    expect(map.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    expect(producer.generateMipmaps).toBe(false);
+  });
+
   it('samples a raw-tagged producer as sRGB, as Godot samples the albedo', async () => {
     // `texture_albedo` is a `source_color`, so the projection samples it as sRGB
     // whatever the producer tagged (a NoiseTexture2D baked `as_normal_map` arrives
@@ -193,6 +214,35 @@ describe('<Decal>', () => {
     const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
     expect(map.colorSpace).toBe(THREE.SRGBColorSpace);
     expect(producer.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it("projects an AtlasTexture's whole sheet, which its RID names", async () => {
+    const entry = makeSrgbTexture(THREE.ClampToEdgeWrapping);
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'SubResource("AtlasTexture_cell")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      internals: [
+        wrapper('AtlasTexture_cell', 'AtlasTexture', {
+          atlas: 'ExtResource("1_tex")',
+          region: 'Rect2(0, 0, 8, 8)',
+        }),
+      ],
+      cached: [{ path: TEXTURE_PATH, texture: entry }],
+      children: <Receiver />,
+    });
+    const map = (projections(renderer)[0]!.material as THREE.MeshStandardMaterial).map!;
+    expect(map).toBe(entry);
+  });
+
+  it('projects nothing for a CanvasTexture, whose RID the decal refuses (edge case)', async () => {
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'SubResource("CanvasTexture_a")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      internals: [wrapper('CanvasTexture_a', 'CanvasTexture', { diffuse_texture: 'ExtResource("1_tex")' })],
+      cached: [{ path: TEXTURE_PATH, texture: makeSrgbTexture(THREE.ClampToEdgeWrapping) }],
+      children: <Receiver />,
+    });
+    expect(projections(renderer)).toHaveLength(0);
   });
 
   it('never disposes the shared cache entry when the projection unmounts', async () => {

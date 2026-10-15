@@ -8,8 +8,9 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/int.js';
-import { isEqualApprox } from '../../../godot/index.js';
+import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
+import { isEqualApprox } from '../../../godot/math/math.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
 const arms = {
   coincidentEndpoints: groundedArm('navigationlink2d-coincident-endpoints', {
@@ -17,21 +18,16 @@ const arms = {
   }),
 } as const satisfies RuleArms<string>;
 
-interface Vec2 {
-  x: number;
-  y: number;
-}
-
 /**
  * navigation_link_2d.h:43-44 declares both fields with no initializer, and
  * doc/classes/NavigationLink2D.xml:81,92 documents the zero default. An absent
  * key takes it, as in the engine: this reads absence as the default and never
  * requires the key.
  */
-const DEFAULT_POSITION: Vec2 = { x: 0, y: 0 };
+const DEFAULT_POSITION: Vector2 = { x: 0, y: 0 };
 
 /** `null` for a present-but-malformed value, so the caller can stay quiet and leave the format error to `linterParser.ts`. */
-function parseVector2Literal(raw: string): Vec2 | null {
+function parseVector2Literal(raw: string): Vector2 | null {
   const trimmed = raw.trim();
   const match = VECTOR2_REGEX.exec(trimmed);
   if (!match) return null;
@@ -47,7 +43,7 @@ function parseVector2Literal(raw: string): Vec2 | null {
 }
 
 /** The `Vector2(x, y)` a property carries, its documented default when absent, or null when malformed. */
-function readPosition(properties: Record<string, string>, key: string): Vec2 | null {
+function readPosition(properties: Record<string, string>, key: string): Vector2 | null {
   const raw = properties[key];
   if (raw === undefined) return DEFAULT_POSITION;
   return parseVector2Literal(raw);
@@ -57,7 +53,7 @@ function readPosition(properties: Record<string, string>, key: string): Vec2 | n
  * core/math/vector2.cpp:193-195, Vector2::is_equal_approx: per component, with a
  * tolerance scaled by the left operand, so `start_position` goes first.
  */
-function isEqualApproxVector2(left: Vec2, right: Vec2): boolean {
+function isEqualApproxVector2(left: Vector2, right: Vector2): boolean {
   return isEqualApprox(left.x, right.x) && isEqualApprox(left.y, right.y);
 }
 
@@ -94,5 +90,3 @@ const navigationLink2DEndpointsRule: LintRule = {
 };
 
 ruleRegistry.register(navigationLink2DEndpointsRule);
-
-export { navigationLink2DEndpointsRule };

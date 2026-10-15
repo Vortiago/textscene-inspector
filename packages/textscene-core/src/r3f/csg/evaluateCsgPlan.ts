@@ -21,7 +21,7 @@ export interface CsgEvaluation {
 }
 
 /** Resolve a contribution's own solid, in its own local space. */
-export type ResolveSolid = (contribution: CsgContribution) => CsgSolid | null;
+type ResolveSolid = (contribution: CsgContribution) => CsgSolid | null;
 
 function godotToLibraryOperation(operation: number, csg: CsgModule): number {
   switch (operation) {

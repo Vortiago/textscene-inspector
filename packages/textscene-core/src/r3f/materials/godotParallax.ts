@@ -8,14 +8,18 @@ import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { recordedOn } from './recordedOnMaterial';
+import { pendingMapStandIn } from './pendingMapStandIn';
 import { HEIGHTMAP_DEFAULTS, type Heightmap } from '../../resources/materials/standardmaterial3d/types';
 
 /** The last declaration before `main`, after the normal and the varyings the parallax reads. */
 const PARS_ANCHOR = '#include <clipping_planes_pars_fragment>';
 const MAP_ANCHOR = '#include <map_fragment>';
 
-/** three's texture coordinates that Godot's `base_uv` stands for: all but the lightmap's. */
-const SHIFTED_UVS = [
+/**
+ * three's texture coordinates that Godot's `base_uv` can stand for: all but the lightmap's. Each
+ * is `v<Map>Uv`, the coordinate of the material's `<map>`.
+ */
+const MAP_UVS = [
   'vMapUv',
   'vAlphaMapUv',
   'vAoMapUv',
@@ -114,12 +118,26 @@ vec2 godotParallax( const in vec2 uv ) {
 }`;
 
 /**
- * The shift, then each coordinate redefined to carry it, before the first map is read. A macro
- * never expands inside itself, so each reads its own varying.
+ * The shift, then each UV1 coordinate of `material` redefined to carry it, before the first map is
+ * read. A macro never expands inside itself, so each reads its own varying.
  */
-const PARALLAX_SHIFT = `vec2 godotParallaxShift = godotParallax( vGodotHeightmapUv ) - vGodotHeightmapUv;
-${SHIFTED_UVS.map((uv) => `#define ${uv} ( ${uv} + godotParallaxShift )`).join('\n')}
+function parallaxShift(material: Material): string {
+  const shifted = MAP_UVS.filter((uv) => readsUv1(material, uv));
+  return `vec2 godotParallaxShift = godotParallax( vGodotHeightmapUv ) - vGodotHeightmapUv;
+${shifted.map((uv) => `#define ${uv} ( ${uv} + godotParallaxShift )`).join('\n')}
 ${MAP_ANCHOR}`;
+}
+
+/**
+ * Whether the map behind coordinate `uv` reads UV1. Godot shifts `base_uv2` only under a UV2
+ * detail layer (`material.cpp:1604-1607`), which no map here draws. three keys each map's UV
+ * channel into the program, so a rebind to another channel compiles this again.
+ */
+function readsUv1(material: Material, uv: string): boolean {
+  const mapName = uv.charAt(1).toLowerCase() + uv.slice(2, -'Uv'.length);
+  const map = (material as unknown as Record<string, unknown>)[mapName];
+  return !(map instanceof THREE.Texture) || map.channel === 0;
+}
 
 /** Where a material records its height mapping. */
 const HEIGHTMAP_KEY = 'godotHeightmap';
@@ -141,12 +159,12 @@ export function bindHeightmap(material: Material, texture: THREE.Texture | null)
   else heightmapTextures.delete(material);
 }
 
-/** Godot's sampler is `hint_default_black` (`material.cpp:1172`): a heightmap with no texture reads black. */
-const BLACK_HEIGHTMAP = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
-BLACK_HEIGHTMAP.needsUpdate = true;
-
+/**
+ * Godot's sampler is `hint_default_black` (`material.cpp:1172`), so a heightmap with no texture reads
+ * the heightmap slot's stand-in, which is black.
+ */
 function heightmapTextureOf(material: Material): THREE.Texture {
-  return heightmapTextures.get(material) ?? BLACK_HEIGHTMAP;
+  return heightmapTextures.get(material) ?? pendingMapStandIn('heightmap_texture');
 }
 
 /** Uniforms that read `material` at each upload, so a re-parse that changes only a value needs no remount. */
@@ -236,7 +254,7 @@ const GODOT_PARALLAX: ProgramInjection = {
       .replace('#include <uv_vertex>', HEIGHTMAP_UV);
     shader.fragmentShader = shader.fragmentShader
       .replace(PARS_ANCHOR, PARALLAX_PARS)
-      .replace(MAP_ANCHOR, PARALLAX_SHIFT);
+      .replace(MAP_ANCHOR, parallaxShift(this));
   },
 };
 

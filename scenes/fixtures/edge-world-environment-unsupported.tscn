@@ -1,14 +1,13 @@
 [gd_scene format=3]
 
+; An Environment that enables a feature the previewer does not draw: screen-space reflections.
+; The scene loads and draws the rest of the Environment, and the linter accepts ssr_enabled.
+
 [sub_resource type="Environment" id="Environment_1"]
 background_mode = 2
 background_color = Color(0.1, 0.1, 0.15, 1)
 background_energy_multiplier = 1.2
 volumetric_fog_enabled = false
-adjustment_enabled = true
-adjustment_brightness = 1.15
-adjustment_contrast = 1.1
-adjustment_saturation = 1.25
 ssr_enabled = true
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_1"]

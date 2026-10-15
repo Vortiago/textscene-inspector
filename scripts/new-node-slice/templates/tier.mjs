@@ -86,7 +86,7 @@ describe('${typeName} shared validators', () => {
 import type { Diagnostic, LintRule, RuleContext } from '${toSrc}linter/types.js';
 import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
 import { armEmits, type RuleArms } from '${toSrc}linter/ruleArms.js';
-import { descendsFrom } from '${toSrc}godot/nodeBaseTypes.js';
+import { descendsFromClass } from '${toSrc}godot/classdb/classBaseTypes.js';
 
 /**
  * One arm per diagnostic \`check\` reports, each with its grounding (ADR-0032): an
@@ -109,15 +109,13 @@ const ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule: LintRule =
     name: 'valid-${typeName.toLowerCase()}',
     description: 'TBD',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, '${typeName}'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, '${typeName}'),
     emits: armEmits(arms),
   },
   check: check${typeName},
 };
 
 ruleRegistry.register(${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule);
-
-export { ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule };
 `
     );
     files.set(
@@ -128,14 +126,11 @@ export { ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule };
 
 import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
-import { ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule } from './linter.js';
 import '${toSrc}linter/index.js';
 
 describe('${typeName} family rule', () => {
   it('registers one rule for the family', () => {
-    expect(ruleRegistry.getRules().find((r) => r.meta.name === 'valid-${typeName.toLowerCase()}')).toBe(
-      ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule
-    );
+    expect(ruleRegistry.getRules().filter((r) => r.meta.name === 'valid-${typeName.toLowerCase()}')).toHaveLength(1);
   });
 });
 `

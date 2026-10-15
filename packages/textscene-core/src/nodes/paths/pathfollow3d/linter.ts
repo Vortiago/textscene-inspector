@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode, RawScene } from '../../../parser/types.js';
 
@@ -141,5 +141,3 @@ const pathFollow3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(pathFollow3DValidationRule);
-
-export { pathFollow3DValidationRule };

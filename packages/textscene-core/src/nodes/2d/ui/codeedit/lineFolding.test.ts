@@ -5,15 +5,7 @@
  * block-comment pair on a block comment, and none for `PackedStringArray()`.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  buildFoldContext,
-  canFoldLine,
-  getIndentLevel,
-  isInComment,
-  isInString,
-  isLineCodeRegionEnd,
-  isLineCodeRegionStart,
-} from './lineFolding';
+import { buildFoldContext, canFoldLine, isLineCodeRegionStart } from './lineFolding';
 import { buildDelimiters } from './delimiterRegions';
 
 const TAB_SIZE = 4;
@@ -56,56 +48,17 @@ describe('buildDelimiters (code_edit.cpp:3418-3508)', () => {
   });
 });
 
-describe('isInComment / isInString (code_edit.cpp:3369-3415)', () => {
-  it('reports a whole line inside a line-only comment', () => {
-    const c = ctx('# one\n# two', ['#']);
-    expect(isInComment(c, 0)).not.toBe(-1);
-    expect(isInComment(c, 1)).not.toBe(-1);
+describe('isLineCodeRegionStart (code_edit.cpp:1990-2000,3186-3207)', () => {
+  it('builds the tag off the single-line comment delimiter', () => {
+    expect(isLineCodeRegionStart(ctx('#region a\nvar b\n#endregion', ['#']), 0)).toBe(true);
   });
 
-  it('reports nothing when no comment delimiter is registered', () => {
-    expect(isInComment(ctx('# one\n# two', []), 0)).toBe(-1);
+  it('has no tag at all without a single-line comment delimiter (:3201)', () => {
+    expect(isLineCodeRegionStart(ctx('#region a\nvar b\n#endregion', ['/* */']), 0)).toBe(false);
   });
 
-  it('reports a line INSIDE a block comment, and the code line after it as outside', () => {
-    const c = ctx('/* one\ntwo\n*/\nvar b', ['/* */']);
-    expect(isInComment(c, 1)).not.toBe(-1);
-    expect(isInComment(c, 3)).toBe(-1);
-  });
-
-  it('does not report a line with code before the comment key', () => {
-    expect(isInComment(ctx('var b # tail', ['#']), 0)).toBe(-1);
-  });
-
-  it('reports a line inside a multi-line string region', () => {
-    const c = ctx('`one\ntwo\n`\nvar b', [], ['` `']);
-    expect(isInString(c, 1)).not.toBe(-1);
-    expect(isInString(c, 3)).toBe(-1);
-  });
-});
-
-describe('getIndentLevel (text_edit.cpp:4145-4161)', () => {
-  it('counts a tab as tab_size columns', () => {
-    expect(getIndentLevel('\tpass', TAB_SIZE)).toBe(4);
-  });
-  it('counts spaces one apiece', () => {
-    expect(getIndentLevel('  pass', TAB_SIZE)).toBe(2);
-  });
-  it('stops one character short, so an all-tab line never counts its last', () => {
-    expect(getIndentLevel('\t\t', TAB_SIZE)).toBe(4);
-  });
-});
-
-describe('code region tags (code_edit.cpp:1990-2012,3186-3207)', () => {
-  it('builds the tags off the single-line comment delimiter', () => {
-    const c = ctx('#region a\nvar b\n#endregion', ['#']);
-    expect(isLineCodeRegionStart(c, 0)).toBe(true);
-    expect(isLineCodeRegionEnd(c, 2)).toBe(true);
-  });
-
-  it('has no tags at all without a single-line comment delimiter (:3201)', () => {
-    const c = ctx('#region a\nvar b\n#endregion', ['/* */']);
-    expect(isLineCodeRegionStart(c, 0)).toBe(false);
+  it('ignores a tag inside a multi-line string (edge case)', () => {
+    expect(isLineCodeRegionStart(ctx('`one\n#region a\n`', ['#'], ['` `']), 1)).toBe(false);
   });
 });
 
@@ -157,5 +110,30 @@ describe('canFoldLine (code_edit.cpp:1662-1735)', () => {
 
   it('skips a comment line when comparing indents, so a commented gap does not break the block (:1734)', () => {
     expect(canFoldLine(ctx('func a():\n# note\n\tpass\nvar b', ['#']), 0, true)).toBe(true);
+  });
+
+  it('reads a line with code before the comment key as code (code_edit.cpp:3369-3415)', () => {
+    expect(canFoldLine(ctx('func a(): # tail\n\tpass', ['#']), 0, true)).toBe(true);
+  });
+
+  it('skips every line of a block comment and resumes at the code line after it (:3369-3415)', () => {
+    expect(canFoldLine(ctx('func a():\n/* x\ny */\n\tpass', ['/* */']), 0, true)).toBe(true);
+  });
+
+  it('folds the opening line of a multi-line string (:1721)', () => {
+    expect(canFoldLine(ctx('`one\ntwo\n`\nvar b', [], ['` `']), 0, true)).toBe(true);
+  });
+
+  it('skips every line of a multi-line string when comparing indents', () => {
+    expect(canFoldLine(ctx('func a():\n`one\ntwo`\n\tpass', [], ['` `']), 0, true)).toBe(true);
+  });
+
+  it('counts a tab as tab_size columns when comparing indents (text_edit.cpp:4145-4161)', () => {
+    expect(canFoldLine(ctx('   func a():\n\tpass', ['#']), 0, true)).toBe(true);
+  });
+
+  it('counts a space as one column when comparing indents', () => {
+    expect(canFoldLine(ctx('  func a():\n   pass', ['#']), 0, true)).toBe(true);
+    expect(canFoldLine(ctx('  func a():\n  pass', ['#']), 0, true)).toBe(false);
   });
 });

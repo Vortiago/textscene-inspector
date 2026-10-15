@@ -6,47 +6,61 @@
 
 import { useMemo } from 'react';
 import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { useResourceResolution, useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
-import type { EnvironmentSettings } from '../../../resources/environment/types';
-import { decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
-import type { SkyProperties } from '../../../resources/sky/types';
-
-export interface ResolvedEnvironment {
-  settings: EnvironmentSettings;
-  /** Null while a sky `.tres` is loading, and for an environment with no sky. */
-  sky: SkyProperties | null;
-}
+import {
+  NO_ENVIRONMENT,
+  PENDING_ENVIRONMENT,
+  type EnvironmentResolution,
+} from '../../../r3f/environment/WorldEnvironmentScope';
+import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
 
 /**
  * A hook, not a pure function, because the external form loads through the resource pipeline.
- * `useSubOrExtResource` returns the inline case on the first render, so an all-inline scene resolves
- * in one pass. Each level applies as it resolves (**Progressive fill-in**). Each level's references
- * resolve in the pools of the level that holds them, so a `.tres` reads its own sub-resources.
+ * The resolution is `pending` only while the Environment itself loads. The inline case resolves on
+ * the first render, so an all-inline scene resolves in one pass. Each level applies as it resolves
+ * (**Progressive fill-in**). Each level's references resolve in the pools of the level that holds
+ * them, so a `.tres` reads its own sub-resources.
  */
-export function useResolvedEnvironment(environmentRef: string | undefined): ResolvedEnvironment | null {
-  const environment = useSubOrExtResource(environmentRef, useSceneResources());
+export function useResolvedEnvironment(environmentRef: string | undefined): EnvironmentResolution {
+  const { scoped: environment, status } = useResourceResolution(environmentRef, useSceneResources());
   const envProps = useMemo(
     () =>
       environment?.resource.type === 'Environment' ? decodeEnvironment(environment.resource.data) : null,
     [environment]
   );
 
-  // Hooks run unconditionally with `undefined` when the level above did not resolve;
+  // Hooks run unconditionally with `undefined` when the level above did not resolve.
   // `useSubOrExtResource` short-circuits that to "nothing", so rules of hooks holds
   // whatever shape the chain takes.
   const skyResource = useSubOrExtResource(envProps?.sky, environment?.resources ?? NO_RESOURCES);
   const materialRef = skyMaterialRef(skyResource?.resource.type, skyResource?.resource.data);
-  const material = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES)?.resource;
+  const scopedMaterial = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES);
+  const material = scopedMaterial?.resource;
+  const skyResources = scopedMaterial?.resources ?? NO_RESOURCES;
 
-  const sky = useMemo(() => (material ? decodeSkyMaterial(material.type, material.data) : null), [material]);
+  const skyData = skyResource?.resource.data;
+  const sky = useMemo(() => {
+    const decoded = material ? decodeSkyMaterial(material.type, material.data) : null;
+    return decoded && skyData ? decodeSky(skyData, decoded) : null;
+  }, [material, skyData]);
 
   const clearColor = useProjectClearColorSrgb();
-
-  return useMemo(
-    () => (envProps ? { settings: createEnvironmentSettings(envProps, clearColor), sky } : null),
-    [envProps, clearColor, sky]
+  // Apart from the sky, so a sky `.tres` that loads later keeps `settings`, and with it the
+  // compositor's effect.
+  const settings = useMemo(
+    () => (envProps ? createEnvironmentSettings(envProps, clearColor) : null),
+    [envProps, clearColor]
   );
+
+  return useMemo((): EnvironmentResolution => {
+    if (status === 'pending') return PENDING_ENVIRONMENT;
+    if (!settings || !environment) return NO_ENVIRONMENT;
+    return {
+      status: 'resolved',
+      environment: { settings, sky, resources: environment.resources, skyResources },
+    };
+  }, [status, settings, environment, sky, skyResources]);
 }

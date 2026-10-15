@@ -10,8 +10,9 @@ import type { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import { isGltfPath } from '../../godot/gltf';
-import { fileBaseName } from '../../godot/string';
+import { isGltfPath } from '../../godot/import/gltf';
+import { fileBaseName } from '../../godot/string/string';
+import { GLB_SCENE_ROOT_TYPE } from '../glbSceneRoot';
 
 /**
  * The `[gd_scene]` tag after any leading `;` comment and blank lines, which Godot
@@ -21,7 +22,7 @@ import { fileBaseName } from '../../godot/string';
  */
 const SCENE_HEADER = /^(?:[ \t]*(?:;[^\r\n]*)?\r?\n)*[ \t]*\[gd_scene/;
 
-export interface SceneProcessorOptions {
+interface SceneProcessorOptions {
   eventBus: ResourceEventBus;
   /**
    * An ExtResource id ("scene1") or `res://` path to a path and its registered type
@@ -112,7 +113,7 @@ export function synthesiseGLBScene(glbPath: string): TscnScene {
     // No file wrote the synthetic root, so it has no raw properties.
     rawProperties: {},
     name: basename || 'GLBRoot',
-    type: 'GLBSceneRoot',
+    type: GLB_SCENE_ROOT_TYPE,
     children: [],
     properties: { glbPath } as Record<string, unknown>,
   };

@@ -5,7 +5,13 @@
  */
 
 import * as THREE from 'three';
-import { composeInjections, injectProgram, type ProgramInjection } from '../materialProgramInputs';
+import {
+  composeInjections,
+  injectProgram,
+  stateInjectionKey,
+  type ProgramInjection,
+} from '../materialProgramInputs';
+import { renderTargetMapInjection } from './renderTargetMap';
 
 /** The material state a depth draw of a surface reads. */
 type DepthSurface = THREE.Material & {
@@ -50,6 +56,7 @@ export function surfaceDepthMaterial<M extends DepthMaterial>(surface: THREE.Mat
   if (!copy) {
     copy = base.clone() as M;
     copy.alphaHash = surface.alphaHash;
+    copy.userData = surface.userData;
     injectProgram(copy, surfaceAlphaOf(copy));
     copies.set(base, copy);
   }
@@ -72,15 +79,17 @@ function copiesOf(surface: THREE.Material): Map<DepthMaterial, DepthMaterial> {
 
 /**
  * Gives `depth` the alpha state of `surface` for one draw, cut at `alphaTest`. A change three keys
- * no program on, a slot's presence or the hash, recompiles it.
+ * no program on, a slot's presence, the hash, the edge ramp or a render-target map's sampler,
+ * recompiles it.
  */
 export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, alphaTest: number): void {
   const source = surface as DepthSurface;
   const recompiles =
-    depth.alphaHash !== surface.alphaHash ||
+    stateInjectionKey(depth) !== stateInjectionKey(surface) ||
     depth.vertexColors !== surface.vertexColors ||
     !depth.map !== !source.map ||
-    !depth.alphaMap !== !source.alphaMap;
+    !depth.alphaMap !== !source.alphaMap ||
+    renderTargetMapInjection(depth.userData) !== renderTargetMapInjection(surface.userData);
   depth.map = source.map ?? null;
   depth.alphaMap = source.alphaMap ?? null;
   depth.opacity = surface.opacity;
@@ -96,7 +105,10 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
   depth.needsUpdate = true;
 }
 
-/** The surface's alpha cut, after the depth program's own injection. */
+/**
+ * The surface's alpha cut, after the depth program's own injection, and the sampler of a
+ * render-target map that `depth.userData` records. That sample replaces the map chunk, so it is last.
+ */
 function surfaceAlphaOf(depth: DepthMaterial): ProgramInjection | undefined {
-  return composeInjections([depth.depthInjection, SURFACE_ALPHA]);
+  return composeInjections([depth.depthInjection, SURFACE_ALPHA, renderTargetMapInjection(depth.userData)]);
 }

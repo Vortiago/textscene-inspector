@@ -10,7 +10,7 @@ import {
   findSubResource,
   parseResourceReference,
 } from '../resources/SubResourceResolver.js';
-import { isNilLiteral } from '../godot/index.js';
+import { isNilLiteral } from '../godot/variant/variantParser.js';
 import type { RawScene } from '../parser/types.js';
 
 /**
@@ -45,7 +45,7 @@ export function heldResource(resourceRef: string | undefined): string | undefine
  * What a resource slot holds. Only `dangling` owes a "resource not found", and
  * only `resolved` has a `type`, so "not a reference" never reads as "names nothing".
  */
-export type ResourceSlot =
+type ResourceSlot =
   // Absent, blank, or cleared: {@link resourceSlotIsEmpty}'s question.
   | { readonly kind: 'empty' }
   // `variant_parser.cpp:1089` takes only `Resource`, `SubResource` and

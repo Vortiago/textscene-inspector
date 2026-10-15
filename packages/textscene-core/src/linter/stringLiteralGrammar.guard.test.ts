@@ -1,5 +1,5 @@
 /**
- * One grammar for a `"…"` string literal, `STRING_LITERAL_SOURCE` in `godot/string.ts`. A copy
+ * One grammar for a `"…"` string literal, `STRING_LITERAL_SOURCE` in `godot/string/string.ts`. A copy
  * drifts from the tokenizer: `\\.` for its escape refuses a backslash before a raw newline, which
  * `variant_parser.cpp:276-290` reads as one escape, so a copy rejects a scene Godot loads.
  */
@@ -23,13 +23,13 @@ function spellsStringLiteral(source: string): boolean {
 }
 
 describe('Godot string literal grammar', () => {
-  it('is spelled once, in godot/string.ts', () => {
+  it('is spelled once, in godot/string/string.ts', () => {
     // Exactly one file, not an empty list: the definition is the anti-vacuity term.
     const spellers = allSourceFiles()
       .filter((file) => spellsStringLiteral(readFileSync(file, 'utf8')))
       .map(srcLabel)
       .sort();
-    expect(spellers).toEqual(['godot/string.ts']);
+    expect(spellers).toEqual(['godot/string/string.ts']);
   });
 
   it('sees the class in each spelling, and leaves an escape-free body alone', () => {

@@ -8,7 +8,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict, searchAncestors } from '../../../../linter/parentType.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
-import { descendsFrom } from '../../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import type { RawNode, RawScene } from '../../../../parser/types.js';
@@ -27,12 +27,12 @@ type SkeletonAncestry = 'found' | 'absent' | 'unknowable';
 /**
  * physical_bone_2d.cpp:79-95 `_find_skeleton_parent()`: walks up a chain of PhysicalBone2D
  * ancestors to a Skeleton2D. Any other type stops the walk. The casts are `cast_to`, so
- * subclasses count (`descendsFrom`).
+ * subclasses count (`descendsFromClass`).
  */
 function skeletonAncestry(scene: RawScene, node: RawNode): SkeletonAncestry {
   const search = searchAncestors<'found' | 'absent'>(scene, node, (ancestor) => {
-    if (descendsFrom(ancestor.type, 'Skeleton2D')) return 'found';
-    if (!descendsFrom(ancestor.type, 'PhysicalBone2D')) return 'absent';
+    if (descendsFromClass(ancestor.type, 'Skeleton2D')) return 'found';
+    if (!descendsFromClass(ancestor.type, 'PhysicalBone2D')) return 'absent';
     return undefined;
   });
   // `unknowable` is not `absent`: an ancestor whose class its instanced scene declares could be
@@ -100,5 +100,3 @@ const physicalBone2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(physicalBone2DValidationRule);
-
-export { physicalBone2DValidationRule };

@@ -6,7 +6,8 @@
 
 import * as THREE from 'three';
 import { LIGHT_PASS_LAYER, SEED_RENDER_ORDER } from './lightPassLayers.js';
-import { FULL_SCREEN_VERTEX, FullScreenQuad } from './fullScreenQuad.js';
+import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
+import { FullScreenQuad } from './fullScreenQuad.js';
 
 const SEED_FRAGMENT = /* glsl */ `
 uniform vec3 uSeed;

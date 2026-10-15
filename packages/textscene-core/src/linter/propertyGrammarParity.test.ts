@@ -8,8 +8,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { baseChain } from '../godot/nodeBaseTypes.js';
-import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './propertyGrammarParityAllowlist.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
+import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './testing/propertyGrammarParityAllowlist.js';
 import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
 import { extractNodeType, findLinterParserDirs, nodesRoot } from './testing/propertyGrammarParityScan.js';
 import './index.js';
@@ -103,7 +103,7 @@ describe('property-grammar parity guard', () => {
     const staleSections = findStaleEntries({
       allowlist: ASYMMETRY_ALLOWLIST,
       slices: collectSlices(),
-      baseChainOf: baseChain,
+      baseChainOf: classBaseChain,
       validatorKeysOf: getFullValidatorKeys,
     });
 
@@ -242,7 +242,7 @@ describe('property-grammar parity guard', () => {
   // equality: it moves only when a slice is added or a gap closes. A new
   // validator makes an unread key visible, so a rise usually means the list
   // became honest.
-  const EXPECTED_RENDER_GAP_KEYS = 239;
+  const EXPECTED_RENDER_GAP_KEYS = 236;
 
   it('the render-gap surface matches its recorded size', () => {
     const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
@@ -263,8 +263,8 @@ describe('property-grammar parity guard', () => {
   // Both are ratchets, not derived, or the assertion compares a number to
   // itself. A transform-only type draws nothing, and a `pending` type is one
   // gap `renderIntent` already declares, so neither widens the population.
-  const SWEPT_SLICES = 110;
-  const PARSER_REUSING_SLICES = 141;
+  const SWEPT_SLICES = 113;
+  const PARSER_REUSING_SLICES = 138;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

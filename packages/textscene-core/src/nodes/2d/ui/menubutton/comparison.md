@@ -50,5 +50,5 @@ default this slice does not inherit from Button.
 ## Known limitations
 
 - **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
-  keep left-to-right order for a right-to-left script or trailing punctuation, while the
-  label, icon and chrome swap sides.
+  keep left-to-right order for a right-to-left script or trailing punctuation, though
+  `layout_direction = 3` swaps the label, icon and chrome.

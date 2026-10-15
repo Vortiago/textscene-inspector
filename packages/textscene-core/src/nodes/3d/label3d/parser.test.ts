@@ -3,9 +3,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../../logger';
 import { parseLabel3D } from './parser';
-import { BillboardMode } from './types';
 import { heading } from '../../../parser/testing/parserKit';
-import { ShadowCastingSetting } from '../../../godot/rendering';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
+import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -37,6 +38,29 @@ describe('Label3D Parser', () => {
 
     it("defaults alpha_hash_scale to Godot's 1.0 (edge case)", () => {
       expect(parseLabel3D(heading('Label3D', { name: 'Label' }), {}).alpha_hash_scale).toBe(1);
+    });
+
+    it('reads alpha_antialiasing_mode and alpha_antialiasing_edge', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
+        alpha_antialiasing_mode: '2',
+        alpha_antialiasing_edge: '0.4',
+      });
+      expect(props.alpha_antialiasing_mode).toBe(
+        AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE
+      );
+      expect(props.alpha_antialiasing_edge).toBe(0.4);
+    });
+
+    it("defaults alpha antialiasing to Godot's OFF and an edge of 0 (edge case)", () => {
+      // `label_3d.h:64-65`.
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
+      expect(props.alpha_antialiasing_mode).toBe(AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF);
+      expect(props.alpha_antialiasing_edge).toBe(0);
+    });
+
+    it('keeps a mode past the enum, which `set_alpha_antialiasing` stores (error case)', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { alpha_antialiasing_mode: '5' });
+      expect(props.alpha_antialiasing_mode).toBe(5);
     });
 
     it('should parse text property with quotes removed', () => {
@@ -89,6 +113,17 @@ describe('Label3D Parser', () => {
       });
 
       expect(props.billboard).toBe(BillboardMode.BILLBOARD_FIXED_Y);
+    });
+
+    // `Label3D::set_billboard_mode` refuses an index outside 0-2 (`label_3d.cpp:1001`), PARTICLES
+    // included, so the label keeps its default.
+    it.each(['3', '7', '-1'])('keeps billboard DISABLED for the refused mode %s', (mode) => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
+        text: '"Test"',
+        billboard: mode,
+      });
+
+      expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
     });
 
     it('should parse modulate color', () => {

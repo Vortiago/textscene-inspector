@@ -8,6 +8,14 @@
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import {
+  LINE_CAP_MODE_NAMES,
+  LINE_JOINT_MODE_NAMES,
+  LINE_TEXTURE_MODE_NAMES,
+  LineCapMode,
+  LineJointMode,
+  LineTextureMode,
+} from '../../../godot/scene/line2d.js';
 
 validatorRegistry.registerAll('Line2D', {
   // line_2d.cpp:394 (PACKED_VECTOR2_ARRAY, no hint). get_points
@@ -31,48 +39,32 @@ validatorRegistry.registerAll('Line2D', {
   // line_2d.cpp:401, OBJECT + RESOURCE_TYPE "Texture2D". set_texture
   // (line_2d.cpp:190-193) is a bare assignment: format-only.
   texture: v.resourceReference('texture'),
-  // line_2d.cpp:402, ENUM "None,Tile,Stretch" (LineTextureMode: NONE 0, TILE 1,
-  // STRETCH 2, line_2d.h:52-55, 3 BIND_ENUM_CONSTANTs match the 3 labels).
+  // line_2d.cpp:402, ENUM "None,Tile,Stretch", whose 3 labels match LineTextureMode.
   // set_texture_mode (line_2d.cpp:199-202) assigns unconditionally: hinted,
   // not enforced (ADR-0032).
   texture_mode: v.enumInt(
     'texture_mode',
-    0,
-    2,
-    { 0: 'NONE', 1: 'TILE', 2: 'STRETCH' },
+    LineTextureMode.NONE,
+    LineTextureMode.STRETCH,
+    LINE_TEXTURE_MODE_NAMES,
     { hinted: 'line_2d.cpp:402' }
   ),
   closed: v.boolean('closed'),
-  // line_2d.cpp:404, ENUM "Sharp,Bevel,Round" (LineJointMode: SHARP 0, BEVEL 1,
-  // ROUND 2, no MAX sentinel, but 3 real values match the 3 labels).
-  // set_joint_mode (line_2d.cpp:208-211) assigns unconditionally, no
-  // ERR_FAIL_INDEX, so out of range is a warning (ADR-0032).
-  joint_mode: v.enumInt(
-    'joint_mode',
-    0,
-    2,
-    { 0: 'SHARP', 1: 'BEVEL', 2: 'ROUND' },
-    { hinted: 'line_2d.cpp:404' }
-  ),
-  // line_2d.cpp:405, ENUM "None,Box,Round" (LineCapMode: NONE 0, BOX 1, ROUND
-  // 2, line_2d.h:46-49, 3 constants match the 3 labels). set_begin_cap_mode
-  // (line_2d.cpp:217-220) assigns unconditionally: hinted, not enforced.
-  begin_cap_mode: v.enumInt(
-    'begin_cap_mode',
-    0,
-    2,
-    { 0: 'NONE', 1: 'BOX', 2: 'ROUND' },
-    { hinted: 'line_2d.cpp:405' }
-  ),
+  // line_2d.cpp:404, ENUM "Sharp,Bevel,Round". set_joint_mode (line_2d.cpp:208-211)
+  // assigns unconditionally, no ERR_FAIL_INDEX, so out of range is a warning (ADR-0032).
+  joint_mode: v.enumInt('joint_mode', LineJointMode.SHARP, LineJointMode.ROUND, LINE_JOINT_MODE_NAMES, {
+    hinted: 'line_2d.cpp:404',
+  }),
+  // line_2d.cpp:405, ENUM "None,Box,Round", whose 3 labels match LineCapMode.
+  // set_begin_cap_mode (line_2d.cpp:217-220) assigns unconditionally: hinted, not enforced.
+  begin_cap_mode: v.enumInt('begin_cap_mode', LineCapMode.NONE, LineCapMode.ROUND, LINE_CAP_MODE_NAMES, {
+    hinted: 'line_2d.cpp:405',
+  }),
   // line_2d.cpp:406, same enum and shape as begin_cap_mode. set_end_cap_mode
   // (line_2d.cpp:226-229) assigns unconditionally: hinted, not enforced.
-  end_cap_mode: v.enumInt(
-    'end_cap_mode',
-    0,
-    2,
-    { 0: 'NONE', 1: 'BOX', 2: 'ROUND' },
-    { hinted: 'line_2d.cpp:406' }
-  ),
+  end_cap_mode: v.enumInt('end_cap_mode', LineCapMode.NONE, LineCapMode.ROUND, LINE_CAP_MODE_NAMES, {
+    hinted: 'line_2d.cpp:406',
+  }),
   // line_2d.cpp:408 carries no hint. set_sharp_limit (line_2d.cpp:243-249) clamps a
   // negative value to 0 (`if (p_limit < 0.f) p_limit = 0.f;`), a silent correction
   // ADR-0032 treats as enforced. The same clamp shape as `width`, and

@@ -10,7 +10,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 // The surface is a hand-built `settings/<i>/<leaf>` family: `_set` (chain_ik_3d.cpp:33) and `_get`
@@ -152,7 +152,3 @@ validatorRegistry.registerAll('ChainIK3D', {
   // `end_bone/direction` and `joints/<j>/bone` reach this dispatcher, which reads the leaf itself.
   'settings/*': settingsFamily,
 });
-
-// Exported for `settingsFamilySeam.test.ts`, which checks every leaf a base declares across every
-// descendant. It derives the list from this table, so a new leaf joins the check.
-export { SETTING_LEAVES as CHAIN_IK_SETTING_LEAVES };

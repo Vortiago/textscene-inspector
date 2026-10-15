@@ -5,15 +5,15 @@
  * class the pinned build lacks. The chain comes from the base-type tables.
  */
 
-import { classBaseChain } from '../godot/classBaseTypes.js';
-import { NODE_BASE_TYPES, isCatalogedType } from '../godot/nodeBaseTypes.js';
-import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
+import { classInheritanceChain } from '../godot/classdb/classBaseTypes.js';
+import { NODE_BASE_TYPES, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
+import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import {
   NODE_CLASS_PROPERTIES,
   RESOURCE_CLASS_PROPERTIES,
   type ClassPropertyRow,
-} from '../godot/classProperties.generated.js';
-import { UNCATALOGUED_PROPERTIES } from '../godot/uncataloguedProperties.js';
+} from '../godot/classdb/classProperties.generated.js';
+import { UNCATALOGUED_PROPERTIES } from '../godot/classdb/uncataloguedProperties.js';
 import type { PropertyLocation } from './document.js';
 
 /** One serialised property, with the class nearest the queried type that declares it. */
@@ -36,11 +36,6 @@ function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
   return undefined;
 }
 
-/** The class itself, then each ancestor, nearest first. */
-function selfAndAncestors(className: string): readonly string[] {
-  return [className, ...classBaseChain(className)];
-}
-
 function toClassProperty(
   [name, type, hint, hintString]: ClassPropertyRow,
   declaredBy: string
@@ -55,7 +50,7 @@ function toClassProperty(
 export function classProperties(className: string): readonly ClassProperty[] {
   const properties: ClassProperty[] = [];
   const seen = new Set<string>();
-  for (const declaredBy of selfAndAncestors(className)) {
+  for (const declaredBy of classInheritanceChain(className)) {
     for (const row of ownRows(declaredBy) ?? []) {
       const name = row[0];
       if (seen.has(name)) continue;
@@ -68,7 +63,7 @@ export function classProperties(className: string): readonly ClassProperty[] {
 
 /** The property `className` serialises under `name`, or undefined when it has none. */
 export function findClassProperty(className: string, name: string): ClassProperty | undefined {
-  for (const declaredBy of selfAndAncestors(className)) {
+  for (const declaredBy of classInheritanceChain(className)) {
     const row = ownRows(declaredBy)?.find(([rowName]) => rowName === name);
     if (row) return toClassProperty(row, declaredBy);
   }

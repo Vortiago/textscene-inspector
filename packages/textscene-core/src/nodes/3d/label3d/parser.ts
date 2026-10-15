@@ -2,13 +2,20 @@
 
 import { type ParsedHeading, unquoteString } from '../../../parser/utils';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, BillboardMode, HorizontalAlignment, TextureFilter } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
-import { floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
-import { ShadowCastingSetting } from '../../../godot/rendering';
-import { ruleInt } from '../../../godot/int.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  type HorizontalAlignment,
+} from '../../../godot/math/math';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseGeometryInstance3D(heading, properties);
@@ -19,7 +26,14 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     castShadow: parseOptionalInt(properties.cast_shadow) ?? ShadowCastingSetting.OFF,
     text: properties.text === undefined ? '' : unquoteString(properties.text),
     pixel_size: floatOr(properties.pixel_size, 0.005, 'pixel_size'),
-    billboard: parseBillboardMode(properties.billboard),
+    // The setter refuses an index outside 0-2, PARTICLES included (`label_3d.cpp:1001`), so the
+    // label keeps its DISABLED default.
+    billboard: enumOr(
+      properties.billboard,
+      BillboardMode.BILLBOARD_DISABLED,
+      [BillboardMode.BILLBOARD_DISABLED, BillboardMode.BILLBOARD_ENABLED, BillboardMode.BILLBOARD_FIXED_Y],
+      'billboard'
+    ),
     modulate: parseColor(properties.modulate),
     // `intOr`, not `floatOr`: label_3d.cpp declares both sizes Variant::INT with
     // an `int` setter, so Godot truncates the fraction, and the renderer sizes
@@ -36,6 +50,9 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     alpha_cut: parseAlphaCutMode(properties.alpha_cut),
     alpha_scissor_threshold: floatOr(properties.alpha_scissor_threshold, 0.5, 'alpha_scissor_threshold'),
     alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'alpha_hash_scale'),
+    // `set_alpha_antialiasing` stores any value (`label_3d.cpp:1058-1063`), and any but OFF ramps the edge.
+    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, 'alpha_antialiasing_mode'),
+    alpha_antialiasing_edge: floatOr(properties.alpha_antialiasing_edge, 0, 'alpha_antialiasing_edge'),
     fixed_size: boolSlotValue(properties.fixed_size) === true,
     texture_filter: parseTextureFilter(properties.texture_filter),
   };
@@ -56,18 +73,8 @@ function parseTextureFilter(value: string | undefined): TextureFilter {
 }
 
 function parseHorizontalAlignment(value: string | undefined): HorizontalAlignment {
-  const num = intOr(value, HorizontalAlignment.CENTER, 'horizontal_alignment');
-  return num >= HorizontalAlignment.LEFT && num <= HorizontalAlignment.FILL
+  const num = intOr(value, HORIZONTAL_ALIGNMENT_CENTER, 'horizontal_alignment');
+  return num >= HORIZONTAL_ALIGNMENT_LEFT && num <= HORIZONTAL_ALIGNMENT_FILL
     ? (num as HorizontalAlignment)
-    : HorizontalAlignment.CENTER;
-}
-
-function parseBillboardMode(value: string | undefined): BillboardMode {
-  const num = ruleInt(value);
-  if (num === null) return BillboardMode.BILLBOARD_DISABLED; // Godot default
-
-  if (num === 0) return BillboardMode.BILLBOARD_DISABLED;
-  if (num === 2) return BillboardMode.BILLBOARD_FIXED_Y;
-
-  return BillboardMode.BILLBOARD_ENABLED; // 1, and any other value
+    : HORIZONTAL_ALIGNMENT_CENTER;
 }

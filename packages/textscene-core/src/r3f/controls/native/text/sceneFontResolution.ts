@@ -5,7 +5,7 @@
  */
 import type { FontFileResource, FontResource } from '../../../../resources/fonts/font/types';
 
-export interface ResolvedFontBytes {
+interface ResolvedFontBytes {
   /** Raw font bytes, ready for `new FontFace(name, bytes)`. */
   readonly bytes: ArrayBuffer;
   /** The `FontFileResource` the bytes came from. `sceneFontLoader.ts` keys its load cache on its identity. */

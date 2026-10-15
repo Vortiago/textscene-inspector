@@ -11,6 +11,7 @@ import { SceneShadowFitter } from '../../../../r3f/SceneShadowFitter';
 function makeNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
   const props: OmniLight3DProperties = {
     name: 'Lamp',
+    layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
     shadow_enabled: false,

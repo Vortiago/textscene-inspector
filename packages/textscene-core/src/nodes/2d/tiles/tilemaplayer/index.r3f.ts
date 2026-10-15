@@ -9,5 +9,3 @@ nodeComponentRegistry.register({
   // A y_sort_enabled layer is drawn per row by the y-sort pass rather than whole.
   ySortGroup: { describe: describeYSortLayer, Renderer: TileGroupRenderer },
 });
-
-export { TileMapLayer };

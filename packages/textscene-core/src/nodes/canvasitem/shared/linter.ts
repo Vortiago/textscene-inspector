@@ -6,7 +6,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { clipAncestry, clipsChildren } from './clipAncestry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -53,12 +53,10 @@ const canvasItemClipAncestryRule: LintRule = {
     description:
       'Warns when a CanvasItem that clips its own children has an ancestor that also clips, or is a CanvasGroup, either of which wins over this node',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CanvasItem'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'CanvasItem'),
     emits: armEmits(arms),
   },
   check: checkCanvasItemClipAncestry,
 };
 
 ruleRegistry.register(canvasItemClipAncestryRule);
-
-export { canvasItemClipAncestryRule };

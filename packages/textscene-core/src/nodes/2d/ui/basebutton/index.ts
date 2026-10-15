@@ -12,5 +12,3 @@ const baseButtonRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(baseButtonRegistration);
-
-export { baseButtonRegistration };

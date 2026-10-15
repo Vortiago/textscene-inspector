@@ -4,49 +4,9 @@
  * so selection and bounds keep working.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { TscnParser } from '../../parser/TscnParser';
-import { clearEvaluationCache } from './csgEvaluationCache';
-import { resetCsgModuleForTests } from './csgModule';
-import '../nodes/index';
-import { NodeTree } from '../testing/NodeTree';
-import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
-
-function parse(body: string) {
-  return new TscnParser().parse(`[gd_scene format=3]\n\n${body}\n`);
-}
-
-function mount(body: string) {
-  clearEvaluationCache();
-  const scene = parse(body);
-  const root = scene.nodes[0]!.children[0]!;
-  return ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={scene.internalResources}>
-      <NodeTree node={root} path={`Root/${root.name}`} />
-    </SceneResourcesProvider>
-  );
-}
-
-/** Mounts, then waits until the evaluated result lands. */
-async function render(body: string) {
-  const renderer = await mount(body);
-  await settleCsgEvaluation(renderer);
-  return renderer;
-}
-
-const SUBTRACTION = `[node name="Root" type="Node3D"]
-
-[node name="Block" type="CSGBox3D" parent="."]
-size = Vector3(2, 2, 2)
-
-[node name="Hole" type="CSGSphere3D" parent="Block"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)
-operation = 2
-radius = 1.25
-`;
+import { drawnMeshes, renderCsgScene, SUBTRACTION } from './testing/csgScene';
 
 const LONE_BOX = `[node name="Root" type="Node3D"]
 
@@ -72,12 +32,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0.9, 0.9)
 size = Vector3(1.2, 1.2, 1.2)
 `;
 
-function meshes(renderer: Awaited<ReturnType<typeof render>>) {
+function meshes(renderer: Awaited<ReturnType<typeof renderCsgScene>>) {
   return renderer.scene.findAllByType('Mesh');
-}
-
-function drawnMeshes(renderer: Awaited<ReturnType<typeof render>>) {
-  return meshes(renderer).filter((m) => (m.instance as THREE.Mesh).visible);
 }
 
 function volumeOf(geometry: THREE.BufferGeometry): number {
@@ -94,7 +50,7 @@ function volumeOf(geometry: THREE.BufferGeometry): number {
 
 describe('CSG boolean evaluation, end to end', () => {
   it('subtracts a sphere from a box, leaving ONE drawn mesh with less volume', async () => {
-    const renderer = await render(SUBTRACTION);
+    const renderer = await renderCsgScene(SUBTRACTION);
     const drawn = drawnMeshes(renderer);
     expect(drawn).toHaveLength(1);
 
@@ -109,7 +65,7 @@ describe('CSG boolean evaluation, end to end', () => {
   it('keeps the contributor MOUNTED, with an invisible bounds proxy', async () => {
     // Unmounting it instead would strip its selection box, its highlight and its row's
     // hidden-eye toggle, because PlainNode is what registers those.
-    const renderer = await render(SUBTRACTION);
+    const renderer = await renderCsgScene(SUBTRACTION);
     const proxies = meshes(renderer).filter(
       (m) => (m.instance as THREE.Mesh).userData?.tscnBoundsProxy === true
     );
@@ -123,14 +79,14 @@ describe('CSG boolean evaluation, end to end', () => {
 
   it('takes the no-evaluator path for a lone root', async () => {
     // The short-circuit that keeps every pre-existing CSG golden byte-identical.
-    const renderer = await render(LONE_BOX);
+    const renderer = await renderCsgScene(LONE_BOX);
     const drawn = drawnMeshes(renderer);
     expect(drawn).toHaveLength(1);
     expect(volumeOf((drawn[0]!.instance as THREE.Mesh).geometry)).toBeCloseTo(8, 5);
   });
 
   it('folds a CSGCombiner3D subtree into one mesh', async () => {
-    const renderer = await render(`[node name="Root" type="Node3D"]
+    const renderer = await renderCsgScene(`[node name="Root" type="Node3D"]
 
 [node name="Comb" type="CSGCombiner3D" parent="."]
 
@@ -150,7 +106,7 @@ size = Vector3(2, 2, 2)
   it('leaves a CSG grandchild under a plain Node3D as its OWN drawn mesh', async () => {
     // Godot's parent_shape is set only for a direct CSG parent, so this is two roots and
     // two meshes, not one boolean.
-    const renderer = await render(`[node name="Root" type="Node3D"]
+    const renderer = await renderCsgScene(`[node name="Root" type="Node3D"]
 
 [node name="Block" type="CSGBox3D" parent="."]
 size = Vector3(2, 2, 2)
@@ -163,29 +119,11 @@ radius = 0.5
     expect(drawnMeshes(renderer)).toHaveLength(2);
   });
 
-  it('degrades to base primitives when the CSG library cannot load', async () => {
-    // The terminal rung of the degradation ladder: every contributor un-prunes and draws
-    // itself, which is exactly the retired CSG-as-primitive behaviour.
-    // Reset the instance the mounted components import: a reset after `vi.resetModules`
-    // reaches a fresh copy, and the components keep the loaded library.
-    resetCsgModuleForTests();
-    vi.doMock('three-bvh-csg', () => {
-      throw new Error('chunk failed to load');
-    });
-
-    const renderer = await render(SUBTRACTION);
-    // Both solids drawn again rather than one merged result, or nothing at all.
-    expect(drawnMeshes(renderer)).toHaveLength(2);
-
-    vi.doUnmock('three-bvh-csg');
-    resetCsgModuleForTests();
-  });
-
   it("applies a nested combiner's own operation to its whole fold", async () => {
     // Block 2^3 = 8. The blade spans [0.3, 1.5]^3, so it overlaps the block in
     // [0.3, 1]^3 = 0.343. Subtracting the combiner's fold leaves 8 - 0.343; unioning
     // its child in at root level instead would give 8 + (1.728 - 0.343) = 9.385.
-    const drawn = drawnMeshes(await render(NESTED_COMBINER_OP));
+    const drawn = drawnMeshes(await renderCsgScene(NESTED_COMBINER_OP));
     const geometry = (drawn[0]!.instance as THREE.Mesh).geometry;
 
     expect(volumeOf(geometry)).toBeCloseTo(7.657, 3);

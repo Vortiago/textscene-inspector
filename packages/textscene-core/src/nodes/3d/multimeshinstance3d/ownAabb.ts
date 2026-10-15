@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { Aabb } from '../../../godot/aabb';
+import type { Aabb } from '../../../godot/math/aabb';
 import { warn } from '../../../logger';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';

@@ -11,13 +11,13 @@ import type { NodeComponent, NodeComponentProps } from '../../../r3f/NodeCompone
 import { boxPlacement } from '../../../r3f/visibilityRange/placements';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
-import type { Aabb } from '../../../godot/aabb';
+import type { Aabb } from '../../../godot/math/aabb';
 
 /**
  * The box the node's base gives its instance, in node space, or null while it is unknown. The
  * same object while the box holds, as the cull's placement is rebuilt on each new one.
  */
-export type UseOwnAabb = (node: TscnNode) => Aabb | null;
+type UseOwnAabb = (node: TscnNode) => Aabb | null;
 
 /** The component an undrawn GeometryInstance3D type registers, culled by the box `useOwnAabb` gives. */
 export function undrawnGeometryInstance(useOwnAabb: UseOwnAabb): NodeComponent {
@@ -35,5 +35,5 @@ export function undrawnGeometryInstance(useOwnAabb: UseOwnAabb): NodeComponent {
   return UndrawnGeometryInstance;
 }
 
-/** A bare GeometryInstance3D gives its instance no base (`godot/geometryBase.ts`), so no box. */
+/** A bare GeometryInstance3D gives its instance no base (`godot/scene/geometryBase.ts`), so no box. */
 export const GeometryInstance3D = undrawnGeometryInstance(() => null);

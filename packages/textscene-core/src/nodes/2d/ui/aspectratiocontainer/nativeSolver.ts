@@ -19,17 +19,13 @@ import {
 import type { AspectRatioContainerProperties } from './types';
 import type { TextureRectProperties } from '../texturerect/types';
 import { SIZE_FILL, fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
+import { ContainerAlignment } from '../../../../godot/scene/container';
 
 // AspectRatioContainer::StretchMode (aspect_ratio_container.h:44-49).
 const STRETCH_WIDTH_CONTROLS_HEIGHT = 0;
 const STRETCH_HEIGHT_CONTROLS_WIDTH = 1;
 const STRETCH_FIT = 2;
 const STRETCH_COVER = 3;
-
-// AspectRatioContainer::AlignmentMode (aspect_ratio_container.h:50-54).
-const ALIGNMENT_BEGIN = 0;
-const ALIGNMENT_CENTER = 1;
-const ALIGNMENT_END = 2;
 
 // The two proportional modes of TextureRect::ExpandMode (texture_rect.h:40-45).
 const EXPAND_FIT_WIDTH_PROPORTIONAL = 3;
@@ -53,7 +49,7 @@ function isUnsupportedTextureRect(child: SolveNode): boolean {
  * componentwise max of each visible child's combined minimum size. `ratio`,
  * `stretch_mode` and alignment play no part in it.
  */
-export const aspectRatioContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
+const aspectRatioContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let maxW = 0;
   let maxH = 0;
   for (const child of n.children) {
@@ -73,13 +69,13 @@ controlSolverRegistry.registerMinimumSize('AspectRatioContainer', aspectRatioCon
  * (`:136-137`) and aligned (`:139-163`). `fit_child_in_rect` then applies the child's
  * own size flags, so a child without `SIZE_FILL` stays at its minimum.
  */
-export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, contentRect, _ctx) => {
+const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, contentRect, _ctx) => {
   const p = props(n);
   const rtl = n.rtl;
   const ratio = p.ratio ?? 1.0;
   const stretchMode = p.stretchMode ?? STRETCH_FIT;
-  const alignH = p.alignmentHorizontal ?? ALIGNMENT_CENTER; // aspect_ratio_container.h:59
-  const alignV = p.alignmentVertical ?? ALIGNMENT_CENTER; // aspect_ratio_container.h:60
+  const alignH = p.alignmentHorizontal ?? ContainerAlignment.ALIGNMENT_CENTER; // aspect_ratio_container.h:59
+  const alignV = p.alignmentVertical ?? ContainerAlignment.ALIGNMENT_CENTER; // aspect_ratio_container.h:60
 
   const size = { x: contentRect.w, y: contentRect.h };
   const baseW = ratio;
@@ -117,8 +113,18 @@ export const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, conte
     const childW = Math.max(baseW * scaleFactor, minSize.x);
     const childH = Math.max(baseH * scaleFactor, minSize.y);
 
-    const alignX = alignH === ALIGNMENT_BEGIN ? 0 : alignH === ALIGNMENT_END ? 1 : 0.5;
-    const alignY = alignV === ALIGNMENT_BEGIN ? 0 : alignV === ALIGNMENT_END ? 1 : 0.5;
+    const alignX =
+      alignH === ContainerAlignment.ALIGNMENT_BEGIN
+        ? 0
+        : alignH === ContainerAlignment.ALIGNMENT_END
+          ? 1
+          : 0.5;
+    const alignY =
+      alignV === ContainerAlignment.ALIGNMENT_BEGIN
+        ? 0
+        : alignV === ContainerAlignment.ALIGNMENT_END
+          ? 1
+          : 0.5;
 
     const offsetX = (size.x - childW) * alignX;
     const offsetY = (size.y - childH) * alignY;

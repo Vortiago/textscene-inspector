@@ -8,14 +8,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
 import {
+  alphaAntialiasingUserData,
+  coverOneSampleTarget,
+  GODOT_ALPHA_ANTIALIASING,
+} from './materials/godotAlphaAntialiasing';
+import { AlphaAntiAliasing, scissorAntialiasing } from '../godot/rendering/materials/alphaAntialiasing';
+import {
   composeInjections,
   injectProgram,
   materialProgramInputs,
+  stateInjectionKey,
   type MaterialProgramBag,
   type ProgramInjection,
 } from './materialProgramInputs';
-import { GodotToneMapper } from '../resources/environment/godotToneMapping';
-import { applyToneMapping, toneMappingProgramKey } from '../resources/environment/toneMapping';
+import { ToneMapper } from '../godot/rendering/environment/toneMapping.js';
+import { applyToneMapping } from '../resources/environment/toneMapping';
 
 /** A key from the factory: the only thing about a program a caller can compare. */
 function keyOf<P extends object, M extends readonly object[] = []>(
@@ -24,6 +31,8 @@ function keyOf<P extends object, M extends readonly object[] = []>(
 ): string {
   return materialProgramInputs<P, M>({ props, merge }).key;
 }
+
+const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3);
 
 describe('materialProgramInputs', () => {
   const texture = (colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture => {
@@ -290,7 +299,7 @@ describe('materialProgramInputs', () => {
       // The injected key is an own property, so it shadows the prototype key that
       // `applyToneMapping` extends. FILMIC then AGX is the editor preview environment
       // yielding to a WorldEnvironment that an instanced sub-scene brings in.
-      const { FILMIC, AGX } = GodotToneMapper;
+      const { FILMIC, AGX } = ToneMapper;
       const ORIGINAL_CHUNK = THREE.ShaderChunk.tonemapping_pars_fragment;
 
       afterEach(() => {
@@ -298,9 +307,9 @@ describe('materialProgramInputs', () => {
       });
 
       /** A material as R3F's `applyProps` leaves it: every factory prop assigned onto it. */
-      function injectedMaterial(toneMapped: boolean): THREE.MeshBasicMaterial {
+      function injectedMaterial(toneMapped: boolean, cacheKey = 'stylebox'): THREE.MeshBasicMaterial {
         const program = materialProgramInputs({
-          props: { toneMapped, injection: injection('stylebox', 'A') },
+          props: { toneMapped, injection: injection(cacheKey, 'A') },
         });
         return Object.assign(new THREE.MeshBasicMaterial(), program.props);
       }
@@ -320,10 +329,10 @@ describe('materialProgramInputs', () => {
         expect(agx).not.toBe(filmic);
       });
 
-      it('keeps the injection in the key beside the prototype key and its curve term', () => {
-        const material = injectedMaterial(true);
-        const { agx } = keysAcrossSwap(material);
-        expect(agx).toBe(`stylebox${material.onBeforeCompile.toString()}${toneMappingProgramKey(material)}`);
+      it('keeps the injection in the key under the new curve', () => {
+        const agxKeyOf = (cacheKey: string): string => keysAcrossSwap(injectedMaterial(true, cacheKey)).agx;
+        expect(agxKeyOf('stylebox')).toBe(agxKeyOf('stylebox'));
+        expect(agxKeyOf('stylebox')).not.toBe(agxKeyOf('light'));
       });
 
       it('leaves the key of an injected material that is not tone-mapped', () => {
@@ -401,6 +410,18 @@ describe('injectProgram', () => {
     expect(material.onBeforeCompile).toBe(GODOT_ALPHA_HASH.onBeforeCompile);
   });
 
+  it("adds Godot's edge ramp to a material that records alpha antialiasing", () => {
+    const material = new THREE.MeshBasicMaterial({ userData: alphaAntialiasingUserData(SCISSOR_CUT) });
+    injectProgram(material, undefined);
+    expect(material.onBeforeCompile).toBe(GODOT_ALPHA_ANTIALIASING.onBeforeCompile);
+  });
+
+  it('gives an antialiased material the draw hook that reads the target samples', () => {
+    const material = new THREE.MeshBasicMaterial({ userData: alphaAntialiasingUserData(SCISSOR_CUT) });
+    injectProgram(material, undefined);
+    expect(material.onBeforeRender).toBe(coverOneSampleTarget);
+  });
+
   it('leaves an unhashed material with no injection unpatched (error case)', () => {
     const material = new THREE.MeshBasicMaterial();
     injectProgram(material, undefined);
@@ -476,5 +497,47 @@ describe("materialProgramInputs with Godot's alpha hash", () => {
   it('adds no hash to a material whose merge turns it off (edge case)', () => {
     const program = materialProgramInputs({ props: { alphaHash: true }, merge: [{ alphaHash: false }] });
     expect(program.props.onBeforeCompile).toBeUndefined();
+  });
+});
+
+describe("materialProgramInputs with Godot's alpha antialiasing", () => {
+  it("patches a material that records alpha antialiasing with Godot's edge ramp", () => {
+    const program = materialProgramInputs({ props: { userData: alphaAntialiasingUserData(SCISSOR_CUT) } });
+    expect(program.props.onBeforeCompile).toBe(GODOT_ALPHA_ANTIALIASING.onBeforeCompile);
+    expect(program.key).toContain(`inject:${GODOT_ALPHA_ANTIALIASING.cacheKey}`);
+  });
+
+  it('mounts the draw hook that reads the target samples', () => {
+    const program = materialProgramInputs({ props: { userData: alphaAntialiasingUserData(SCISSOR_CUT) } });
+    expect(program.props.onBeforeRender).toBe(coverOneSampleTarget);
+  });
+
+  it('ramps after the hash, which a hashed cutout runs first', () => {
+    const program = materialProgramInputs({
+      props: { alphaHash: true, userData: alphaAntialiasingUserData(SCISSOR_CUT) },
+    });
+    expect(program.key).toContain(`${GODOT_ALPHA_HASH.cacheKey}+${GODOT_ALPHA_ANTIALIASING.cacheKey}`);
+  });
+
+  it('adds no ramp to a material whose userData records none (edge case)', () => {
+    const program = materialProgramInputs({ props: { userData: {} } });
+    expect(program.props.onBeforeCompile).toBeUndefined();
+    expect(program.props.onBeforeRender).toBeUndefined();
+  });
+});
+
+describe('stateInjectionKey', () => {
+  it("keys a hashed, antialiased material by both of Godot's patches", () => {
+    const material = new THREE.MeshBasicMaterial({
+      alphaHash: true,
+      userData: alphaAntialiasingUserData(SCISSOR_CUT),
+    });
+    expect(stateInjectionKey(material)).toBe(
+      `${GODOT_ALPHA_HASH.cacheKey}+${GODOT_ALPHA_ANTIALIASING.cacheKey}`
+    );
+  });
+
+  it('keys a material with no such state as empty (edge case)', () => {
+    expect(stateInjectionKey(new THREE.MeshBasicMaterial())).toBe('');
   });
 });

@@ -14,5 +14,3 @@ const characterBody3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(characterBody3DRegistration);
-
-export { characterBody3DRegistration };

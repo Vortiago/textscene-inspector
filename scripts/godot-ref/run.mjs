@@ -39,6 +39,19 @@ export const EDITOR_FOV = 70;
  */
 export const REFERENCE_FIXED_FPS = 1000;
 
+/** `VolumetricFog::MAX_TEMPORAL_FRAMES` (`servers/rendering/renderer_rd/environment/fog.h:303`). */
+export const FOG_JITTER_CYCLE_FRAMES = 16;
+
+/**
+ * Jitter cycles the bootstrap draws while volumetric fog's temporal history converges. At the
+ * largest `temporal_reprojection_amount`, 0.99 (`scene/resources/environment.cpp:1548`), the
+ * history needs about 620 frames to come within half a step of 255.
+ */
+export const FOG_HISTORY_MAX_CYCLES = 48;
+
+/** `--quit-after`: a backstop for a bootstrap that never quits, above the fog history's frames. */
+const RENDER_QUIT_AFTER_FRAMES = 1200;
+
 /**
  * Default seconds `--particles` advances: zero. Unlike the preview sun, a particle instant has no
  * value Godot defines: the editor runs the emitter on wall clock (`cpu_particles_2d.cpp:1262`
@@ -525,10 +538,9 @@ export function projectConfig(sourceIni, { width, height, pinWindowToViewport = 
 }
 
 /**
- * The per-channel median of a `patch`-sided square (odd, default 1) at each probe. Our 3D canvas
- * multisamples and these references do not, so one pixel near an edge carries a blend weight on
- * one side only. Our 2D canvas matches the engine's `msaa_2d = Disabled`
- * (`scene/main/viewport.h:309`). The median, not the mean, discards a stray outlier.
+ * The per-channel median of a `patch`-sided square (odd, default 1) at each probe. Two rasterisers
+ * can cover an edge pixel differently, so a probe near an edge reads a colour from one side only.
+ * The median, not the mean, discards such a stray outlier.
  */
 export function probePixels(buffer, probes, { patch = 1 } = {}) {
   const png = PNG.sync.read(buffer);
@@ -570,8 +582,64 @@ const gdColor = (c) => `Color(${c[0]}, ${c[1]}, ${c[2]})`;
  * escaped, so a path containing a quote, backslash or newline produces valid
  * GDScript instead of a syntax error that never compiles the bootstrap.
  */
-const gdString = (s) =>
+export const gdString = (s) =>
   `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\t/g, '\\t')}"`;
+
+/** Godot's editor preview sun and sky, added only where the scene has none of its own. */
+export const PREVIEW_LIGHTING_GD = `# Node3DEditor::_node_added — two INDEPENDENT presence checks, by node type,
+# with no regard for visibility.
+func _contains(node: Node, want_light: bool) -> bool:
+	if want_light:
+		if node is DirectionalLight3D:
+			return true
+	elif node is WorldEnvironment:
+		return true
+	for child in node.get_children():
+		if _contains(child, want_light):
+			return true
+	return false
+
+func _apply_preview_lighting(target: Node) -> void:
+	if not _contains(target, true):
+		var sun := DirectionalLight3D.new()
+		sun.light_color = Color(1, 1, 1)
+		sun.light_energy = 1.0
+		sun.shadow_enabled = true
+		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+		sun.directional_shadow_max_distance = 100.0
+		sun.transform = Transform3D(
+			Basis.from_euler(Vector3(deg_to_rad(${PREVIEW_SUN_ALTITUDE_DEG}), deg_to_rad(${PREVIEW_SUN_AZIMUTH_DEG}), 0.0)),
+			Vector3.ZERO
+		)
+		add_child(sun)
+
+	if not _contains(target, false):
+		var sky_material := ProceduralSkyMaterial.new()
+		var sky_top := ${gdColor(PREVIEW_SKY_TOP)}
+		var ground_bottom := ${gdColor(PREVIEW_GROUND_BOTTOM)}
+		# Node3DEditor::_preview_settings_changed derives the horizon from the
+		# two authored colours, then pushes it halfway to its own luminance.
+		var hz: Color = sky_top.lerp(ground_bottom, 0.5)
+		var hz_lum: float = hz.get_luminance() * 3.333
+		hz = hz.lerp(Color(hz_lum, hz_lum, hz_lum), 0.5)
+		sky_material.sky_top_color = sky_top
+		sky_material.sky_horizon_color = hz
+		sky_material.ground_bottom_color = ground_bottom
+		sky_material.ground_horizon_color = hz
+		sky_material.energy_multiplier = 1.0
+
+		var sky := Sky.new()
+		sky.sky_material = sky_material
+
+		var env := Environment.new()
+		env.background_mode = Environment.BG_SKY
+		env.sky = sky
+		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+		env.glow_enabled = true
+
+		var world_env := WorldEnvironment.new()
+		world_env.environment = env
+		add_child(world_env)`;
 
 /**
  * The bootstrap scene's script: it instantiates the target scene, picks its 2D or 3D path and
@@ -636,6 +704,8 @@ const FOV := ${fov}
 const PARTICLES_PROCESS := ${particles}
 const CANVAS_2D_SIZE := Vector2i(${canvas2DSize.width}, ${canvas2DSize.height})
 const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
+const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}
+const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
 # exit code. A mid-walk quit() would be reset to 0 by that same call.
@@ -692,13 +762,16 @@ func _render_3d(target: Node) -> void:
 	_advance_particles(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
+		_hide_2d()
 		_apply_preview_lighting(target)
 	# A refusal must not reach _place_camera: rendering nothing is the whole point.
 	if not _build_csg(target):
 		return
 	_place_camera(target)
 	await _converge()
-	get_viewport().get_texture().get_image().save_png(OUT)
+	await _await_reflection_probe_captures(target)
+	var frame: Image = await _converged_frame()
+	frame.save_png(OUT)
 	_write_bounds(target)
 
 # A 2D scene has nothing to point a camera at: Godot draws it through the
@@ -874,6 +947,12 @@ func _freeze_game_logic(node: Node) -> void:
 	for child in node.get_children():
 		_freeze_game_logic(child)
 
+# The editor keeps the edited scene under the 2D editor's viewport, which draws
+# no 3D (editor_node.cpp:8648-8652). Every CanvasItem and CanvasLayer draws on
+# that viewport's canvas, so the 3D editor view shows none of them.
+func _hide_2d() -> void:
+	RenderingServer.viewport_set_disable_2d(get_viewport().get_viewport_rid(), true)
+
 # EDITOR-MODE PARTICLES. The pause above stops game logic, which is what the
 # Node3D editor does — except for one thing it does NOT do: particles keep
 # running there. CPUParticles2D::_notification's ENTER_TREE arm is a bare
@@ -926,6 +1005,50 @@ func _converge() -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+
+# An UPDATE_ONCE ReflectionProbe renders its faces in one frame, then filters one
+# roughness layer per frame: at most roughness_layers frames in all on Forward+
+# (renderer_rd/storage_rd/light_storage.cpp:1525,1661-1668), and 1 + 8 on
+# Compatibility (drivers/gles3/storage/light_storage.cpp:832-833,1026-1033). The
+# scene renders one such probe at a time (renderer_scene_cull.cpp:3739-3751).
+const COMPATIBILITY_PROBE_FRAMES := 9
+
+func _await_reflection_probe_captures(target: Node) -> void:
+	var layers: int = ProjectSettings.get_setting("rendering/reflections/sky_reflections/roughness_layers")
+	var probes := target.find_children("*", "ReflectionProbe", true, false) \
+		.filter(func(probe): return probe.update_mode == ReflectionProbe.UPDATE_ONCE)
+	for _frame in probes.size() * maxi(layers, COMPATIBILITY_PROBE_FRAMES):
+		await RenderingServer.frame_post_draw
+
+# The frame to capture. Temporal volumetric fog mixes temporal_reprojection_amount
+# of a history that starts black (volumetric_fog_process.glsl:683, fog.cpp:482),
+# so it draws on until a frame repeats the one a jitter cycle earlier, as each
+# frame jitters by frame % 16 (fog.cpp:1113).
+func _converged_frame() -> Image:
+	var earlier := get_viewport().get_texture().get_image()
+	if not _has_fog_history():
+		return earlier
+	for _cycle in FOG_HISTORY_MAX_CYCLES:
+		for _frame in FOG_JITTER_CYCLE_FRAMES:
+			await RenderingServer.frame_post_draw
+		var current := get_viewport().get_texture().get_image()
+		if current.get_data() == earlier.get_data():
+			return current
+		earlier = current
+	return earlier
+
+func _has_fog_history() -> bool:
+	var environment := _environment_in_effect()
+	return environment != null and environment.volumetric_fog_enabled \
+		and environment.volumetric_fog_temporal_reprojection_enabled
+
+# Camera3D.environment overrides the world's, which falls back to the project's.
+func _environment_in_effect() -> Environment:
+	var camera := get_viewport().get_camera_3d()
+	if camera != null and camera.environment != null:
+		return camera.environment
+	var world := get_viewport().find_world_3d()
+	return world.environment if world.environment != null else world.fallback_environment
 
 # The method and driver that drew this frame, which the caller compares with
 # the ones it asked for: a fallback renders without failing.
@@ -999,60 +1122,7 @@ func _build_csg(node: Node) -> bool:
 			return false
 	return true
 
-# Node3DEditor::_node_added — two INDEPENDENT presence checks, by node type,
-# with no regard for visibility.
-func _contains(node: Node, want_light: bool) -> bool:
-	if want_light:
-		if node is DirectionalLight3D:
-			return true
-	elif node is WorldEnvironment:
-		return true
-	for child in node.get_children():
-		if _contains(child, want_light):
-			return true
-	return false
-
-func _apply_preview_lighting(target: Node) -> void:
-	if not _contains(target, true):
-		var sun := DirectionalLight3D.new()
-		sun.light_color = Color(1, 1, 1)
-		sun.light_energy = 1.0
-		sun.shadow_enabled = true
-		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-		sun.directional_shadow_max_distance = 100.0
-		sun.transform = Transform3D(
-			Basis.from_euler(Vector3(deg_to_rad(${PREVIEW_SUN_ALTITUDE_DEG}), deg_to_rad(${PREVIEW_SUN_AZIMUTH_DEG}), 0.0)),
-			Vector3.ZERO
-		)
-		add_child(sun)
-
-	if not _contains(target, false):
-		var sky_material := ProceduralSkyMaterial.new()
-		var sky_top := ${gdColor(PREVIEW_SKY_TOP)}
-		var ground_bottom := ${gdColor(PREVIEW_GROUND_BOTTOM)}
-		# Node3DEditor::_preview_settings_changed derives the horizon from the
-		# two authored colours, then pushes it halfway to its own luminance.
-		var hz: Color = sky_top.lerp(ground_bottom, 0.5)
-		var hz_lum: float = hz.get_luminance() * 3.333
-		hz = hz.lerp(Color(hz_lum, hz_lum, hz_lum), 0.5)
-		sky_material.sky_top_color = sky_top
-		sky_material.sky_horizon_color = hz
-		sky_material.ground_bottom_color = ground_bottom
-		sky_material.ground_horizon_color = hz
-		sky_material.energy_multiplier = 1.0
-
-		var sky := Sky.new()
-		sky.sky_material = sky_material
-
-		var env := Environment.new()
-		env.background_mode = Environment.BG_SKY
-		env.sky = sky
-		env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-		env.glow_enabled = true
-
-		var world_env := WorldEnvironment.new()
-		world_env.environment = env
-		add_child(world_env)
+${PREVIEW_LIGHTING_GD}
 
 func _place_camera(target: Node) -> void:
 ${
@@ -1176,7 +1246,14 @@ script = ExtResource("1")
  * host, only sometimes, and the reference still renders.
  */
 export function renderArgv(work, { renderingDriver = null } = {}) {
-  const argv = ['--path', work, '--fixed-fps', String(REFERENCE_FIXED_FPS), '--quit-after', '400'];
+  const argv = [
+    '--path',
+    work,
+    '--fixed-fps',
+    String(REFERENCE_FIXED_FPS),
+    '--quit-after',
+    String(RENDER_QUIT_AFTER_FRAMES),
+  ];
   // main.cpp:2582 aborts on a driver its method does not offer, so the driver alone would abort
   // under the default `forward_plus`.
   if (renderingDriver) {

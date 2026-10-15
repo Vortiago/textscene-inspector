@@ -11,11 +11,11 @@
  */
 
 import * as THREE from 'three';
-import type { Color } from '../../nodes/base/node2d/types.js';
 import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
 // Type-only, so the pair of modules never form a runtime cycle: the filter
 // constants are declared beside the quads that branch on them.
 import type { SHADOW_FILTER_PCF5, SHADOW_FILTER_PCF13 } from './lightQuad.js';
+import type { Rgba } from '../../godot/math/math.js';
 
 /**
  * `rasterizer_canvas_gles3.cpp:182`:
@@ -28,7 +28,7 @@ export function shadowPixelSize(smooth: number): number {
 
 /** Everything a quad needs to evaluate one light's filtered shadow per fragment. */
 export interface ShadowSampling {
-  /** The light's polar map, from `createShadowPolarTexture`. */
+  /** The light's polar map, from `updateShadowPolarTexture`. */
   readonly map: THREE.Texture;
   /** `Light2D.shadow_filter`. `SHADOW_FILTER_NONE` never reaches here. */
   readonly filter: typeof SHADOW_FILTER_PCF5 | typeof SHADOW_FILTER_PCF13;
@@ -43,7 +43,7 @@ export interface ShadowSampling {
    * mechanism splits the two terms between two quads. The tint quad carries the
    * colour itself, filtered or not.
    */
-  readonly shadowColor: Color;
+  readonly shadowColor: Rgba;
 }
 
 /**
@@ -52,7 +52,7 @@ export interface ShadowSampling {
  * linear filtering of half-float is core WebGL2 and float32 an extension: on
  * [0, 1] it costs under a tenth of a pixel of occluder distance.
  */
-export function createShadowPolarTexture(bins: Float32Array): THREE.DataTexture {
+function createShadowPolarTexture(bins: Float32Array): THREE.DataTexture {
   const texture = new THREE.DataTexture(
     new Uint16Array(bins.length),
     bins.length,

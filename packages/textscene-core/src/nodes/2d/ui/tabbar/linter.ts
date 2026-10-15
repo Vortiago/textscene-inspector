@@ -101,5 +101,3 @@ const tabBarValidationRule: LintRule = {
 };
 
 ruleRegistry.register(tabBarValidationRule);
-
-export { tabBarValidationRule };

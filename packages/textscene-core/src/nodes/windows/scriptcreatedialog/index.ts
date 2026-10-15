@@ -12,5 +12,3 @@ const scriptCreateDialogRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(scriptCreateDialogRegistration);
-
-export { scriptCreateDialogRegistration };

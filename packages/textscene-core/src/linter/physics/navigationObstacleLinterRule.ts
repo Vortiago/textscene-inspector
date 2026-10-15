@@ -12,12 +12,12 @@ import { parseGodotFloat } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import {
-  boolSlotValue,
   transform2DGetScale,
   transform2DHasZeroSkew,
   transform2DIsConformal,
-} from '../../godot/index.js';
+} from '../../godot/math/transform2d.js';
 
 /**
  * `navigation_obstacle_2d.cpp:332`, the floor `get_global_scale()` must clear on both

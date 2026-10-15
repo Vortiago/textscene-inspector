@@ -12,13 +12,22 @@ import {
   GODOT_DEFAULT_METALLIC,
   GODOT_DEFAULT_ROUGHNESS,
 } from '../../../r3f/materials/godotDefaultMaterial';
-import { BillboardMode } from '../../../godot/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  alphaAntialiasingProps,
+  alphaAntialiasingUserData,
+} from '../../../r3f/materials/godotAlphaAntialiasing';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
+import {
+  emissionTextureAddInjection,
+  emissionTextureAddUserData,
+} from '../../../r3f/materials/emissionTextureAdd';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
+import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
 import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
@@ -36,13 +45,14 @@ import {
   opaquePrepassUserData,
   type OpaquePrepass,
 } from '../../../r3f/materials/opaquePrepass';
+import {
+  renderTargetMapInjection,
+  renderTargetMapUserData,
+  type TargetMapSampler,
+} from '../../../r3f/materials/renderTargetMap';
+import { godotTextureFilterState } from '../../textures/godotTextureFilter';
 import { resolveEmission } from './emission';
-import type {
-  MaterialBlendState,
-  ResolvedTextureSlots,
-  StandardMaterial3DScalars,
-  TextureSlot,
-} from './types';
+import type { MaterialBlendState, ResolvedTextures, StandardMaterial3DScalars, TextureSlot } from './types';
 
 // Godot's default COLOR buffer is white (`mesh_storage.cpp:86-97`). three declares it on
 // ShaderMaterial alone, so another class reads (0,0,0) and blacks out albedo. On the
@@ -185,15 +195,16 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
- * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO and height uniforms read theirs at
- * upload, and a decal reads the light modes and the specular occlusion. A fresh object per bag, as the `.tres` loader writes
- * keys into it.
+ * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO, height and edge-ramp uniforms read
+ * theirs at upload, and a decal reads the light modes and the specular occlusion. A fresh object per
+ * bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
     [BILLBOARD_KEY]: surfaceBillboard(scalars),
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
     ...alphaHashScaleUserData(scalars.alphaHashScale),
+    ...alphaAntialiasingUserData(scalars.alphaAntialiasing),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
     ...lightModesUserData(scalars),
     ...specularOcclusionUserData(scalars.disablesSpecularOcclusion),
@@ -256,7 +267,7 @@ export function castsShadowOf(material: THREE.Material): boolean {
  */
 export function standardMaterialBags(
   scalars: StandardMaterial3DScalars | null,
-  textures: ResolvedTextureSlots = {}
+  textures: ResolvedTextures = {}
 ): FadeVariants<StandardMaterialBag> {
   const bag = scalars ? classBag(scalars, textures) : noMaterialBag();
   const source = scalars ?? NO_MATERIAL_ALPHA;
@@ -285,12 +296,28 @@ function withSurfaceAlpha(
   return { ...bag, props, injection: composeInjections([bag.injection, injection]) };
 }
 
+/** How the albedo samples when it is a render target, which carries no sampler state of its own. */
+function targetMapSampler(
+  { textureRepeat, textureFilter }: StandardMaterial3DScalars,
+  { albedoTargetUv }: ResolvedTextures
+): TargetMapSampler | undefined {
+  if (!albedoTargetUv) return undefined;
+  const isNearest = godotTextureFilterState(textureFilter).magFilter === THREE.NearestFilter;
+  return { uv: albedoTargetUv, repeats: textureRepeat, isNearest };
+}
+
 /** The class `scalars` need, and its props. */
-function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureSlots): StandardMaterialBag {
+function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures): StandardMaterialBag {
   const slot = (name: TextureSlot): THREE.Texture | null => textures[name] ?? null;
+  const userData = {
+    ...surfaceUserData(scalars),
+    ...renderTargetMapUserData(targetMapSampler(scalars, textures)),
+  };
+  const targetMap = renderTargetMapInjection(userData);
   const { heightmap } = scalars;
   const heightmapTexture = heightmap ? slot('heightmap_texture') : null;
-  const blend = materialBlendProps(scalars);
+  // Alpha antialiasing replaces the material's own blend mode (`scene_shader_forward_clustered.cpp:237-241`).
+  const blend = { ...materialBlendProps(scalars), ...alphaAntialiasingProps(scalars.alphaAntialiasing) };
   // `fromArray` keeps the values linear. A hex would go through
   // `setHex(…, SRGBColorSpace)` and decode these already-linear channels a
   // second time, rendering everything too dark.
@@ -313,10 +340,10 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
         depthWrite: scalars.depthWrite,
         depthTest: scalars.depthTest,
         side: scalars.side,
-        userData: surfaceUserData(scalars),
+        userData,
         ...blend,
       },
-      injection: heightmap ? unshadedParallaxInjection(heightmap) : undefined,
+      injection: composeInjections([heightmap ? unshadedParallaxInjection(heightmap) : undefined, targetMap]),
       heightmapTexture,
     };
   }
@@ -349,7 +376,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
     // pass-through in `resolveEmission` would splat every scalar onto the material.
     emissive: new THREE.Color().fromArray(emission.emissive),
     emissiveIntensity: emission.emissiveIntensity,
-    userData: surfaceUserData(scalars),
+    userData: { ...userData, ...emissionTextureAddUserData(emission.addedTextureEnergy) },
     ...blend,
   };
 
@@ -358,8 +385,11 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextureS
   const injection = composeInjections([
     lightModesInjection(scalars),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
+    pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
+    emissionTextureAddInjection(emission.addedTextureEnergy),
+    targetMap,
   ]);
   if (!needsPhysicalMaterial(scalars)) {
     return { materialClass: 'standard', props: pbr, injection, heightmapTexture };

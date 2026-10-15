@@ -1,71 +1,51 @@
 /**
  * Godot's tonemap pass as one effect: the tone curve, plus the glow gather and blend under
- * `FLAG_USE_GLOW`, as in `tonemap.glsl`. One shader lets SOFTLIGHT composite after the curve, with
- * the glow buffer tonemapped, and every other mode before it, which a fixed pass order cannot express.
+ * `FLAG_USE_GLOW` and the colour adjustments under `FLAG_USE_BCS`, as in `tonemap.glsl`. One shader
+ * lets SOFTLIGHT composite after the curve, with the glow buffer tonemapped, and every other mode
+ * before it, which a fixed pass order cannot express.
  */
 
 import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
 import { brightPassGlsl, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
-import { compositeGlsl } from '../../resources/environment/godotCompositor';
-import { glslFloat } from '../../resources/environment/glslLiterals';
-
-export interface GodotToneMapOptions {
-  /** Null when the environment has no glow: `FLAG_USE_GLOW` clear. */
-  glow: GlowParams | null;
-  /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
-  toneMapMode: number;
-  /**
-   * Godot's `env->white`: the value the curve maps to 1.0, and, after the per-curve floor, the
-   * point SCREEN normalises the glow against.
-   */
-  toneMapWhite: number;
-  /**
-   * Godot `tonemap_exposure`, applied to the scene colour once at the top of
-   * `main()`. The bright pass has already applied the same value to the glow.
-   */
-  toneMapExposure: number;
-  /**
-   * Godot `tonemap_agx_contrast`, read only by AgX. Threaded, not defaulted, so this path and the
-   * in-material one draw the same curve.
-   */
-  toneMapAgxContrast?: number;
-}
-
-/** Shared by every pyramid material so they agree on how `vUv` is derived. */
-const FULLSCREEN_VERTEX_SHADER = /* glsl */ `
-varying vec2 vUv;
-void main() {
-  vUv = position.xy * 0.5 + 0.5;
-  gl_Position = vec4(position.xy, 1.0, 1.0);
-}
-`;
+import {
+  compositeProgram,
+  GLOW_BUFFER_UNIFORM,
+  GLOW_MAP_UNIFORM,
+  type CompositeOptions,
+} from '../../resources/environment/godotCompositor';
+import { applyTextureState } from '../../resources/textures/applyTextureState';
+import { glslFloat } from '../../utils/glslLiterals';
+import { defaultWhiteTexture } from '../materials/defaultWhiteTexture';
+import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
+import { drawOffscreen } from '../offscreen';
 
 export class GodotToneMapEffect extends Effect {
   /** Null when the environment has no glow: nothing to gather, nothing to own. */
   private readonly pyramid: GlowPyramid | null;
 
-  constructor({ glow, toneMapMode, toneMapWhite, toneMapExposure, toneMapAgxContrast }: GodotToneMapOptions) {
-    const uniforms = new Map<string, THREE.Uniform>([['godotExposure', new THREE.Uniform(toneMapExposure)]]);
-    // Only the glow arm of the shader reads it.
-    if (glow) uniforms.set('godotGlowBuffer', new THREE.Uniform(null));
+  constructor(options: CompositeOptions) {
+    const { fragmentShader, uniforms } = compositeProgram(options);
+    super('GodotToneMapEffect', fragmentShader, {
+      // The effect writes the finished frame, glow and curve applied, so the composer must not
+      // blend it into the scene again.
+      blendFunction: BlendFunction.SRC,
+      uniforms: new Map(Object.entries(uniforms).map(([name, value]) => [name, new THREE.Uniform(value)])),
+    });
 
-    super(
-      'GodotToneMapEffect',
-      compositeGlsl(glow, {
-        mode: toneMapMode,
-        white: toneMapWhite,
-        agxContrast: toneMapAgxContrast,
-      }),
-      {
-        // The effect writes the finished frame, glow and curve applied, so the composer must not
-        // blend it into the scene again.
-        blendFunction: BlendFunction.SRC,
-        uniforms,
-      }
-    );
+    this.clearGlowMap();
+    this.pyramid = options.glow ? new GlowPyramid(options.glow) : null;
+  }
 
-    this.pyramid = glow ? new GlowPyramid(glow) : null;
+  /** Samples `map` as the glow map. The caller owns `map`. A no-op when the composite samples no map. */
+  setGlowMap(map: THREE.Texture): void {
+    const uniform = this.uniforms.get(GLOW_MAP_UNIFORM);
+    if (uniform) uniform.value = map;
+  }
+
+  /** Samples white, which leaves the glow unscaled: the state while the map loads. */
+  clearGlowMap(): void {
+    this.setGlowMap(defaultWhiteTexture());
   }
 
   override setSize(width: number, height: number): void {
@@ -75,13 +55,22 @@ export class GodotToneMapEffect extends Effect {
   /** Builds the pyramid, then hands the composite shader the weighted sum. */
   override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
     if (!this.pyramid) return;
-    this.uniforms.get('godotGlowBuffer')!.value = this.pyramid.gather(renderer, inputBuffer);
+    this.uniforms.get(GLOW_BUFFER_UNIFORM)!.value = this.pyramid.gather(renderer, inputBuffer);
   }
 
   override dispose(): void {
     this.pyramid?.dispose();
     super.dispose();
   }
+}
+
+/**
+ * The view of `glowMap` Godot samples: the raw texels, through the texture's non-sRGB view
+ * (`renderer_scene_render_rd.cpp:707`), clamped (`tone_mapper.cpp:177`). A clone when the shared
+ * texture diverges, which the caller frees with `releaseBoundTexture`.
+ */
+export function glowMapView(glowMap: THREE.Texture): THREE.Texture {
+  return applyTextureState(glowMap, { colorSpace: THREE.NoColorSpace, repeat: false });
 }
 
 /**
@@ -95,8 +84,6 @@ class GlowPyramid {
   private readonly brightPassMaterial: THREE.ShaderMaterial;
   private readonly downsampleMaterial: THREE.ShaderMaterial;
   private readonly accumulateMaterial: THREE.ShaderMaterial;
-  private readonly screen: THREE.Mesh;
-  private readonly pyramidCamera: THREE.OrthographicCamera;
   private readonly weights: number[];
   private readonly maxLevel: number;
 
@@ -106,15 +93,15 @@ class GlowPyramid {
     this.maxLevel = glow.maxLevel;
     this.weights = glow.levels;
 
-    this.brightPassMaterial = pyramidMaterial('BrightPass', brightPassFragmentShader(glow), {
+    this.brightPassMaterial = fullScreenPass('GodotGlow.BrightPass', brightPassFragmentShader(glow), {
       inputBuffer: { value: null },
       texelSize: { value: new THREE.Vector2() },
     });
-    this.downsampleMaterial = pyramidMaterial('Downsample', downsampleFragmentShader(glow), {
+    this.downsampleMaterial = fullScreenPass('GodotGlow.Downsample', downsampleFragmentShader(glow), {
       inputBuffer: { value: null },
       texelSize: { value: new THREE.Vector2() },
     });
-    this.accumulateMaterial = pyramidMaterial('Accumulate', ACCUMULATE_FRAGMENT_SHADER, {
+    this.accumulateMaterial = fullScreenPass('GodotGlow.Accumulate', ACCUMULATE_FRAGMENT_SHADER, {
       coarserBuffer: { value: null },
       levelBuffer: { value: null },
       levelWeight: { value: 0 },
@@ -132,12 +119,6 @@ class GlowPyramid {
       this.levelTargets.push(createTarget(`GodotGlow.Level${level}`));
       this.accumulationTargets.push(createTarget(`GodotGlow.Accumulation${level}`));
     }
-
-    this.pyramidCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    // Spans NDC exactly, so `vUv = position.xy * 0.5 + 0.5` covers 0..1. Rendered as its own root,
-    // since `WebGLRenderer.render` takes any `Object3D`.
-    this.screen = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.brightPassMaterial);
-    this.screen.frustumCulled = false;
   }
 
   setSize(width: number, height: number): void {
@@ -154,46 +135,35 @@ class GlowPyramid {
    * textures live instead of binding all seven as samplers.
    */
   gather(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): THREE.Texture {
-    const previousTarget = renderer.getRenderTarget();
+    drawOffscreen(renderer, () => {
+      const brightUniforms = this.brightPassMaterial.uniforms;
+      brightUniforms['inputBuffer']!.value = inputBuffer.texture;
+      setTexelSize(brightUniforms, inputBuffer);
+      drawFullScreen(renderer, this.brightPassMaterial, this.levelTargets[0]!);
 
-    this.screen.material = this.brightPassMaterial;
-    const brightUniforms = this.brightPassMaterial.uniforms;
-    brightUniforms['inputBuffer']!.value = inputBuffer.texture;
-    setTexelSize(brightUniforms, inputBuffer);
-    this.renderTo(renderer, this.levelTargets[0]!);
+      const downsampleUniforms = this.downsampleMaterial.uniforms;
+      for (let level = 1; level <= this.maxLevel; level++) {
+        const source = this.levelTargets[level - 1]!;
+        downsampleUniforms['inputBuffer']!.value = source.texture;
+        setTexelSize(downsampleUniforms, source);
+        drawFullScreen(renderer, this.downsampleMaterial, this.levelTargets[level]!);
+      }
 
-    this.screen.material = this.downsampleMaterial;
-    const downsampleUniforms = this.downsampleMaterial.uniforms;
-    for (let level = 1; level <= this.maxLevel; level++) {
-      const source = this.levelTargets[level - 1]!;
-      downsampleUniforms['inputBuffer']!.value = source.texture;
-      setTexelSize(downsampleUniforms, source);
-      this.renderTo(renderer, this.levelTargets[level]!);
-    }
-
-    this.screen.material = this.accumulateMaterial;
-    const uniforms = this.accumulateMaterial.uniforms;
-    for (let level = this.maxLevel; level >= 0; level--) {
-      const coarser = level === this.maxLevel ? null : this.accumulationTargets[level + 1]!;
-      // On the coarsest rung `coarserFactor` zeroes the contribution, but the binding must be valid:
-      // an unbound sampler2D is undefined, not zero. Its own level serves, and cannot alias, since
-      // this pass writes an accumulation target.
-      uniforms['coarserBuffer']!.value = (coarser ?? this.levelTargets[level]!).texture;
-      uniforms['coarserFactor']!.value = coarser ? 1 : 0;
-      uniforms['levelBuffer']!.value = this.levelTargets[level]!.texture;
-      uniforms['levelWeight']!.value = this.weights[level]!;
-      const source = coarser ?? this.levelTargets[level]!;
-      setTexelSize(uniforms, source);
-      this.renderTo(renderer, this.accumulationTargets[level]!);
-    }
-
-    renderer.setRenderTarget(previousTarget);
+      const uniforms = this.accumulateMaterial.uniforms;
+      for (let level = this.maxLevel; level >= 0; level--) {
+        const coarser = level === this.maxLevel ? null : this.accumulationTargets[level + 1]!;
+        // On the coarsest rung `coarserFactor` zeroes the contribution, but the binding must be valid:
+        // an unbound sampler2D is undefined, not zero. Its own level serves, and cannot alias, since
+        // this pass writes an accumulation target.
+        uniforms['coarserBuffer']!.value = (coarser ?? this.levelTargets[level]!).texture;
+        uniforms['coarserFactor']!.value = coarser ? 1 : 0;
+        uniforms['levelBuffer']!.value = this.levelTargets[level]!.texture;
+        uniforms['levelWeight']!.value = this.weights[level]!;
+        setTexelSize(uniforms, coarser ?? this.levelTargets[level]!);
+        drawFullScreen(renderer, this.accumulateMaterial, this.accumulationTargets[level]!);
+      }
+    });
     return this.accumulationTargets[0]!.texture;
-  }
-
-  private renderTo(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget): void {
-    renderer.setRenderTarget(target);
-    renderer.render(this.screen, this.pyramidCamera);
   }
 
   dispose(): void {
@@ -203,28 +173,7 @@ class GlowPyramid {
     this.brightPassMaterial.dispose();
     this.downsampleMaterial.dispose();
     this.accumulateMaterial.dispose();
-    this.screen.geometry.dispose();
   }
-}
-
-/**
- * Every pyramid pass is the same fullscreen draw with a different fragment: same
- * vertex shader (so they agree on how `vUv` is derived) and no depth, because
- * none of them has geometry to sort. Only the uniforms and the fragment differ.
- */
-function pyramidMaterial(
-  name: string,
-  fragmentShader: string,
-  uniforms: Record<string, THREE.IUniform>
-): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
-    name: `GodotGlow.${name}`,
-    uniforms,
-    vertexShader: FULLSCREEN_VERTEX_SHADER,
-    fragmentShader,
-    depthWrite: false,
-    depthTest: false,
-  });
 }
 
 /** Confines the `IUniform` cast the three pyramid passes would each repeat. */

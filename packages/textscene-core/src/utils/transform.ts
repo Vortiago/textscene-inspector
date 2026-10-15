@@ -2,9 +2,11 @@
  * Parses and decomposes Transform3D literals.
  */
 
-import type { Transform3D, DecomposedTransform } from '../nodes/base/node3d/types';
+import type { DecomposedTransform } from '../nodes/base/node3d/types';
 import { warn } from '../logger';
-import { slotTupleRegex, matchedFloat, allFinite } from '../godot/number.js';
+import { slotTupleRegex, matchedFloat, allFinite } from '../godot/variant/number.js';
+import { radToDeg } from '../godot/math/math.js';
+import { identityTransform3D, type Transform3D } from '../godot/math/transform3d.js';
 
 const TRANSFORM3D_RE = slotTupleRegex('Transform3D', 12);
 const CALL_PREFIX = 'Transform3D(';
@@ -175,15 +177,6 @@ export function decomposeTransform3D(transform: Transform3D): DecomposedTransfor
   };
 }
 
-export function identityTransform3D(): Transform3D {
-  return {
-    basis_x: { x: 1, y: 0, z: 0 },
-    basis_y: { x: 0, y: 1, z: 0 },
-    basis_z: { x: 0, y: 0, z: 1 },
-    origin: { x: 0, y: 0, z: 0 },
-  };
-}
-
 /**
  * Undefined for an absent transform, and identity with a logged warning for a malformed one.
  */
@@ -205,4 +198,9 @@ export function parseOptionalTransform(
     );
     return identityTransform3D();
   }
+}
+
+/** A rotation in radians as the inspector shows it: degrees to two places. */
+export function formatDegrees(radians: number): string {
+  return radToDeg(radians).toFixed(2);
 }

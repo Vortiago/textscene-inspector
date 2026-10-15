@@ -4,11 +4,17 @@
  * the renderer and scene it applies to outlive it, and the r3f layer owns them.
  */
 
-import { BackgroundMode, type EnvironmentProperties, type EnvironmentSettings } from './types';
-import type { Color } from '../../utils/colorParser';
-import { GodotToneMapper } from './godotToneMapping';
-
-export type { EnvironmentSettings } from './types';
+import {
+  BackgroundMode,
+  type DepthFog,
+  type EnvironmentProperties,
+  type EnvironmentSettings,
+  type VolumetricFog,
+} from './types';
+import { scaledRgb } from '../../utils/colorParser';
+import { sRGBChannelToLinear } from '../../utils/colorSpace';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
+import type { Rgba } from '../../godot/math/math';
 
 /**
  * The white the tonemapper gets, as `Environment::_update_tonemap` (`scene/resources/environment.cpp`)
@@ -17,17 +23,7 @@ export type { EnvironmentSettings } from './types';
  * The authored value: `resolvedWhite` applies the per-curve floors (`environment_get_white`).
  */
 function whiteFor(properties: EnvironmentProperties): number {
-  return properties.tonemap_mode === GodotToneMapper.AGX
-    ? properties.tonemap_agx_white
-    : properties.tonemap_white;
-}
-
-/**
- * A background colour as Godot clears to it: each sRGB channel times the energy, alpha kept
- * (`render_forward_clustered.cpp:1999-2001`).
- */
-function scaledRgb({ r, g, b, a }: Color, energy: number): Color {
-  return { r: r * energy, g: g * energy, b: b * energy, a };
+  return properties.tonemap_mode === ToneMapper.AGX ? properties.tonemap_agx_white : properties.tonemap_white;
 }
 
 /**
@@ -36,7 +32,7 @@ function scaledRgb({ r, g, b, a }: Color, energy: number): Color {
  */
 export function createEnvironmentSettings(
   properties: EnvironmentProperties,
-  clearColor: Color
+  clearColor: Rgba
 ): EnvironmentSettings {
   const backgroundColor =
     properties.background_mode === BackgroundMode.BG_CLEAR_COLOR ? clearColor : properties.background_color;
@@ -56,19 +52,7 @@ export function createEnvironmentSettings(
     fog: properties.fog_enabled ? depthFogFor(properties) : null,
     skyRotation: properties.sky_rotation,
     volumetricFog: properties.volumetric_fog_enabled ? volumetricFogFor(properties) : null,
-    adjustments: properties.adjustment_enabled
-      ? {
-          enabled: true,
-          brightness: properties.adjustment_brightness,
-          contrast: properties.adjustment_contrast,
-          saturation: properties.adjustment_saturation,
-        }
-      : null,
-    ssr: properties.ssr_enabled
-      ? {
-          enabled: true,
-        }
-      : null,
+    adjustments: properties.adjustment_enabled ? adjustmentsFor(properties) : null,
     glow: properties.glow_enabled
       ? {
           levels: glowLevelsFor(properties),
@@ -80,12 +64,26 @@ export function createEnvironmentSettings(
           hdrThreshold: properties.glow_hdr_threshold,
           hdrScale: properties.glow_hdr_scale,
           luminanceCap: properties.glow_hdr_luminance_cap,
+          map: properties.glow_map,
+          mapStrength: properties.glow_map_strength,
         }
       : null,
   };
 }
 
-function depthFogFor(properties: EnvironmentProperties): NonNullable<EnvironmentSettings['fog']> {
+/**
+ * `environment_set_adjustment` stores the brightness converted from sRGB to linear
+ * (`environment_storage.cpp:906`), and the shader multiplies linear values by it.
+ */
+function adjustmentsFor(properties: EnvironmentProperties): NonNullable<EnvironmentSettings['adjustments']> {
+  return {
+    brightness: sRGBChannelToLinear(properties.adjustment_brightness),
+    contrast: properties.adjustment_contrast,
+    saturation: properties.adjustment_saturation,
+  };
+}
+
+function depthFogFor(properties: EnvironmentProperties): DepthFog {
   return {
     mode: properties.fog_mode,
     color: properties.fog_light_color,
@@ -102,9 +100,7 @@ function depthFogFor(properties: EnvironmentProperties): NonNullable<Environment
   };
 }
 
-function volumetricFogFor(
-  properties: EnvironmentProperties
-): NonNullable<EnvironmentSettings['volumetricFog']> {
+function volumetricFogFor(properties: EnvironmentProperties): VolumetricFog {
   return {
     density: properties.volumetric_fog_density,
     albedo: properties.volumetric_fog_albedo,
@@ -150,7 +146,7 @@ const AMBIENT_SOURCE_SKY = 3;
  */
 function ambientFor(
   properties: EnvironmentProperties,
-  backgroundColor: Color
+  backgroundColor: Rgba
 ): {
   ambient: EnvironmentSettings['ambient'];
   skyAmbient: EnvironmentSettings['skyAmbient'];

@@ -10,6 +10,5 @@ const referenceRectRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(referenceRectRegistration);
 
-export { referenceRectRegistration };
 export * from './parser';
 export * from './types';

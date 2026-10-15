@@ -23,8 +23,9 @@ import { materialFromBag } from './build';
 import { buildMaterial } from './buildMaterial.testkit';
 import { standardMaterialBags, type StandardMaterialBag, type StandardMaterialClass } from './materialBag';
 import { GODOT_ALPHA_HASH } from '../../../r3f/materials/godotAlphaHash';
+import { alphaAntialiasingOf, GODOT_ALPHA_ANTIALIASING } from '../../../r3f/materials/godotAlphaAntialiasing';
 import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
-import { bindSlotTexture, materialTextureState } from './textureBinding';
+import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { mapSampledBy } from '../../../r3f/testing/patchedFragment';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
@@ -45,7 +46,7 @@ const FLOWMAP = 'res://textures/flowmap.png';
 
 /**
  * Not claimed: `uv1_triplanar` density needs the mesh size, which only the node component
- * has. The `.tres` path fetches no `anisotropy_flowmap`. `normal_enabled` gates the fetch
+ * has. `normal_enabled` gates the fetch
  * on the `.tres` path only, as the node component resolves its own texture slots.
  */
 const CASES: ParityCase[] = [
@@ -294,8 +295,8 @@ const EVERY_SLOT_TRANSFORMED: ParityCase = {
 };
 
 /**
- * Outside CASES: the `.tres` path fetches no flowmap (its alpha→blue repack lives in the
- * node layer), so only the reactive pass-through can be checked.
+ * Outside CASES: the flowmap's alpha→blue repack reads the pixels, so only the
+ * reactive pass-through is checked.
  */
 const ANISOTROPIC: ParityCase = {
   name: 'anisotropy with a flowmap',
@@ -406,14 +407,14 @@ function meshTresCarryingIt(testCase: ParityCase): string {
  */
 function inlineTextures(testCase: ParityCase): ResolvedTextureSlots {
   const scalars = parseStandardMaterial3DScalars(testCase.properties);
-  const state = materialTextureState(scalars);
+  const states = materialTextureStates(scalars);
   const resolved: ResolvedTextureSlots = {};
   for (const slot of TEXTURE_SLOTS) {
     const reference = scalars.textureSlots[slot];
     if (reference === undefined) continue;
     const path = resolveExtResourcePath(reference, testCase.extResources ?? []);
     if (path === null) continue;
-    resolved[slot] = bindSlotTexture(textureFor(path), slot, state);
+    resolved[slot] = bindSlotTexture(textureFor(path), slot, states);
   }
   return resolved;
 }
@@ -592,6 +593,8 @@ type CompileHook = ProgramInjection['onBeforeCompile'];
 function bagInjections(bag: StandardMaterialBag): CompileHook[] {
   const hooks = bag.injection ? [bag.injection.onBeforeCompile] : [];
   if (bag.props.alphaHash === true) hooks.push(GODOT_ALPHA_HASH.onBeforeCompile);
+  if (alphaAntialiasingOf({ userData: bag.props.userData ?? {} }))
+    hooks.push(GODOT_ALPHA_ANTIALIASING.onBeforeCompile);
   return hooks;
 }
 
@@ -655,6 +658,7 @@ describe('StandardMaterial3D arrival parity', () => {
         // program factory's output. The hooks are compared by the program they patch.
         const {
           onBeforeCompile,
+          onBeforeRender: _drawHook,
           customProgramCacheKey: _cacheKey,
           attach: _attach,
           ...mounted

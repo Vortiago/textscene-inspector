@@ -18,7 +18,8 @@ enemy and coins under a blue sky. Both sides use the same editor orbit.
 - StandardMaterial3D albedo textures
 - Textured mesh characters and props, including a GLB enemy that self-shadows
 - Coin instances with additive glow sprites
-- The stage's own WorldEnvironment: AgX tonemapping and a flat colour ambient
+- The stage's own WorldEnvironment: AgX tonemapping, a flat colour ambient and depth fog
+- Seven ReflectionProbes that update once
 
 Framing, terrain, props and shadow shapes match.
 
@@ -26,5 +27,3 @@ Framing, terrain, props and shadow shapes match.
 
 - **Shader missing** The previewer does not run the custom `sky` shader over a
   `CompressedCubemap`, so smooth metal reflects black and the coins read grey, not gold.
-- **Resource gap** The ReflectionProbe nodes have no effect, so recesses are lighter and the
-  coin halos look faint.

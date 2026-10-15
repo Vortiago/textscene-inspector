@@ -7,15 +7,13 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import '../../../parser/TscnParser.js';
 import '../../../linter/index.js';
 
 describe('CanvasItem clip-ancestry rule reach', () => {
   it('runs on every concrete registered CanvasItem descendant, in both trees', () => {
-    const heirs = nodeRegistry
-      .getAllTypeNames()
-      .filter((t) => t === 'CanvasItem' || descendsFrom(t, 'CanvasItem'));
+    const heirs = nodeRegistry.getAllTypeNames().filter((t) => descendsFromClass(t, 'CanvasItem'));
 
     // Pinned: 108 concrete types across the Node2D and Control trees.
     expect(heirs.length).toBe(108);

@@ -1,28 +1,27 @@
 /**
- * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its roughest layers
- * and its share of the ambient to every lit material before each render of the scene
- * (`skyLayersMap.ts`). Godot's sky
- * shader draws the discs of the first four DirectionalLights that are not Light Only as
- * `LIGHT0..3`. The lights are read from the rendered three.js scene, where an instanced
- * or GLB light has its real world transform.
+ * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its baked layers and
+ * its share of the ambient to every lit material before each render of the scene
+ * (`skyLayerCubes.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
+ * are not Light Only as `LIGHT0..3`. The lights are read from the rendered three.js scene, where an
+ * instanced or GLB light has its real world transform.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { visibleInTree } from '../visibleInTree';
 import { useFrame, useThree } from '@react-three/fiber';
-import type { SkyProperties } from '../../resources/sky/types';
+import type { Sky } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
-import { useSceneResources } from '../SceneResourcesContext';
+import type { SceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
-import { skyLightEnergy } from './skyLight';
+import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
-import type { Vector3 } from '../../parser/vectors';
-import { showSkyLayers } from './skyLayersMap';
+import { SkyLayerCubes } from './skyLayerCubes';
 import { observeSceneCamera } from '../sceneRenderCamera';
+import type { Vector3 } from '../../godot/math/vector';
 
-export interface SkyLayerProps {
-  sky: SkyProperties;
+interface SkyLayerProps {
+  sky: Sky;
   /**
    * The sky's full reflection strength (`background_energy_multiplier`), as
    * `scene.environmentIntensity`: a surface reflects the whole sky whatever the
@@ -47,6 +46,8 @@ export interface SkyLayerProps {
   backgroundIntensity?: number;
   /** `sky_rotation`, which turns the background and the light the sky gives. */
   rotation: Vector3;
+  /** The pools the sky material's references, such as a panorama, resolve in. */
+  resources: SceneResources;
 }
 
 /** Godot's sky shader has four light slots. The other lights do not reach it. */
@@ -59,19 +60,23 @@ export function SkyLayer({
   asBackground = true,
   backgroundIntensity = 1,
   rotation,
+  resources,
 }: SkyLayerProps) {
   const gl = useThree((state) => state.gl);
   const scene = useThree((state) => state.scene);
-  const { externalResources, internalResources } = useSceneResources();
 
   // `useTexture2D`, not the path-only resolver: a PanoramaSkyMaterial's
   // equirectangular texture may be an inline procedural one (a
   // GradientTexture2D sub-resource), which has no path to load from. Every
   // other sky kind passes `undefined` and the hook idles.
   const panorama =
-    useTexture2D(sky.kind === 'panorama' ? sky.panorama : undefined, externalResources, internalResources)
-      .texture ?? null;
+    useTexture2D(
+      sky.material.kind === 'panorama' ? sky.material.panorama : undefined,
+      resources.externalResources,
+      resources.internalResources
+    ).texture ?? null;
   const lightsKey = useSkyLightsKey(scene);
+  const contextRestores = useContextRestores(gl);
   const { x: rotationX, y: rotationY, z: rotationZ } = rotation;
   // A ref, not an effect dependency: a new share needs no new bake.
   const contributionRef = useRef(contribution);
@@ -79,13 +84,15 @@ export function SkyLayer({
 
   useEffect(() => {
     // No frame has read the lights yet. A bake now would be replaced before it
-    // is seen, and each bake costs a six-face cube render and a PMREM prefilter.
+    // is seen, and each bake costs a six-face cube render, the layer passes and a
+    // PMREM prefilter.
     if (lightsKey === null) return undefined;
 
     const built = buildSkyEnvironment(gl, {
       sky,
       lights: directionalLights(scene),
       panorama,
+      asBackground,
     });
     if (!built) return undefined;
 
@@ -100,10 +107,9 @@ export function SkyLayer({
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
     scene.environmentRotation.copy(skyRotation);
+    const layerCubes = new SkyLayerCubes(gl, built.layers);
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-    const stopShowingLayers = observeSceneCamera(scene, () =>
-      showSkyLayers(built.layers, contributionRef.current)
-    );
+    const stopShowingLayers = observeSceneCamera(scene, () => layerCubes.show(contributionRef.current));
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
@@ -120,6 +126,7 @@ export function SkyLayer({
         scene.backgroundIntensity = previousBackgroundIntensity;
         scene.backgroundRotation.copy(previousBackgroundRotation);
       }
+      layerCubes.hide();
       built.dispose();
     };
   }, [
@@ -131,12 +138,27 @@ export function SkyLayer({
     asBackground,
     backgroundIntensity,
     lightsKey,
+    contextRestores,
     rotationX,
     rotationY,
     rotationZ,
   ]);
 
   return null;
+}
+
+/**
+ * Counts the contexts `gl` restores. A lost context loses every texture the bake drew, and the bake
+ * keeps nothing on the CPU to upload again, so the sky bakes again on each.
+ */
+function useContextRestores(gl: THREE.WebGLRenderer): number {
+  const [restores, setRestores] = useState(0);
+  useEffect(() => {
+    const restored = () => setRestores((count) => count + 1);
+    gl.domElement.addEventListener('webglcontextrestored', restored);
+    return () => gl.domElement.removeEventListener('webglcontextrestored', restored);
+  }, [gl]);
+  return restores;
 }
 
 /**
@@ -159,9 +181,7 @@ function useSkyLightsKey(scene: THREE.Scene): string | null {
 
 function skyLightsKey(lights: readonly SkyLight[]): string {
   return lights
-    .map(({ direction: d, color: c, energy, angularRadius }) =>
-      [d.x, d.y, d.z, c.r, c.g, c.b, energy, angularRadius].join(',')
-    )
+    .map(({ direction: d, color: c, energy, size }) => [d.x, d.y, d.z, c.r, c.g, c.b, energy, size].join(','))
     .join(';');
 }
 
@@ -197,9 +217,7 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
       // `sky.cpp` sets `sky_light_data.energy` from LIGHT_PARAM_ENERGY with no PI,
       // unlike the scene shader.
       energy,
-      // `light_angular_distance` defaults to 0: a point sun with only the soft
-      // falloff `sun_curve` gives it.
-      angularRadius: 0,
+      size: skyLightSize(light),
     });
   });
 

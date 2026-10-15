@@ -8,8 +8,8 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { baseChain, MAX_BASE_CHAIN_HOPS } from '../godot/nodeBaseTypes.js';
-import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/resourceBaseTypes.generated.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
+import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import { resourceSliceRegistry } from '../resources/sliceRegistration.js';
 import '../resources/sliceRegistrations.js'; // side-effect: every resource slice claims its types
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
@@ -94,7 +94,7 @@ const UNDECLARED: readonly string[] = [];
 function typesUnderGuard(): string[] {
   const all = new Set(nodeRegistry.getAllTypeNames());
   for (const type of [...all]) {
-    for (const ancestor of baseChain(type)) all.add(ancestor);
+    for (const ancestor of classBaseChain(type)) all.add(ancestor);
   }
   return [...all].sort();
 }
@@ -135,10 +135,6 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'ImageTexture',
   'NavigationMesh',
   'NavigationPolygon',
-  // `Noise` and `Texture` are abstract tiers with zero `ADD_PROPERTY` calls in
-  // 4.6.3, so there is nothing of their own to validate; they are listed to
-  // record that, not as work.
-  'Noise',
   'NoiseTexture2D',
   'PackedScene',
   'PanoramaSkyMaterial',
@@ -148,14 +144,11 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'QuadMesh',
   'RectangleShape2D',
   'ShaderMaterial',
-  'Sky',
   'SphereMesh',
   'SpriteFrames',
   'StandardMaterial3D',
   'StyleBoxEmpty',
   'StyleBoxFlat',
-  'Texture',
-  'Texture2D',
   'TorusMesh',
   'ViewportTexture',
   // The font and theme slices decode enough to draw (a `.tres` wrapper's fallbacks,
@@ -167,12 +160,23 @@ const UNDECLARED_RESOURCES: readonly string[] = [
   'SystemFont',
   'Theme',
   // The highlighter and label-settings slices decode enough to draw and validate
-  // none of it. `SyntaxHighlighter`, the abstract tier `CodeHighlighter` descends
-  // from, declares zero `ADD_PROPERTY` of its own in 4.6.3: listed as a record.
+  // none of it.
   'CodeHighlighter',
   'LabelSettings',
-  'SyntaxHighlighter',
 ];
+
+/**
+ * Claimed resource tiers Godot gives no property of their own: an abstract class with no
+ * `ADD_PROPERTY` in 4.6.3, each with the source that shows it. Nothing here is work.
+ */
+const NO_OWN_PROPERTIES_RESOURCES: Readonly<Record<string, string>> = {
+  Noise: '`modules/noise/noise.cpp:184` binds methods only',
+  Texture: '`scene/resources/texture.h:38-40` declares no `_bind_methods`',
+  Texture2D: '`scene/resources/texture.cpp:98` binds methods only',
+  Texture3D: '`scene/resources/texture.cpp:176` binds methods only',
+  SyntaxHighlighter:
+    "`scene/resources/syntax_highlighter.cpp:105` binds methods only; :604-611 are CodeHighlighter's",
+};
 
 /**
  * Claimed resource types Godot's ClassDB also declares, closed over the resource base
@@ -183,18 +187,14 @@ const UNDECLARED_RESOURCES: readonly string[] = [
 function claimedResourceClasses(): string[] {
   const claimed = new Set(resourceSliceRegistry.all().flatMap((r) => r.typeNames));
   for (const type of [...claimed]) {
-    let current: string | undefined = type;
-    for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-      claimed.add(current);
-      current = RESOURCE_BASE_TYPES_GENERATED[current];
-    }
+    for (const ancestor of classBaseChain(type)) claimed.add(ancestor);
   }
   return [...claimed].filter((type) => type === 'Resource' || type in RESOURCE_BASE_TYPES_GENERATED).sort();
 }
 
 describe('own-validator coverage for resource slices', () => {
   it('accounts for every claimed resource type that declares no validators', () => {
-    const accounted = new Set(UNDECLARED_RESOURCES);
+    const accounted = new Set([...Object.keys(NO_OWN_PROPERTIES_RESOURCES), ...UNDECLARED_RESOURCES]);
     const unaccounted = claimedResourceClasses()
       .filter((type) => validatorRegistry.getOwnKeys(type).length === 0)
       .filter((type) => !accounted.has(type));
@@ -204,8 +204,10 @@ describe('own-validator coverage for resource slices', () => {
     expect(unaccounted).toEqual([]);
   });
 
-  it('keeps the list free of types that now declare validators', () => {
-    const stale = UNDECLARED_RESOURCES.filter((type) => validatorRegistry.getOwnKeys(type).length > 0);
+  it('keeps both lists free of types that now declare validators', () => {
+    const stale = [...Object.keys(NO_OWN_PROPERTIES_RESOURCES), ...UNDECLARED_RESOURCES].filter(
+      (type) => validatorRegistry.getOwnKeys(type).length > 0
+    );
     expect(stale).toEqual([]);
   });
 
@@ -213,7 +215,7 @@ describe('own-validator coverage for resource slices', () => {
     // The ratchet, exact rather than a ceiling: a ceiling above the current length is
     // a free slot for the next unvalidated slice. Raising it records slices that draw
     // without validating, and the only correct edit afterwards is lowering it.
-    expect(UNDECLARED_RESOURCES.length).toBe(47);
+    expect(UNDECLARED_RESOURCES.length).toBe(42);
   });
 
   it('sweeps a population that cannot quietly empty', () => {

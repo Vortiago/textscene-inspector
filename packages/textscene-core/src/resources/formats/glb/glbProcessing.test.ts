@@ -5,15 +5,16 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials, initGlbModules } from './glbProcessing';
+import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials } from './glbProcessing';
 // Statically, so the identity check below is immune to the `vi.resetModules()` calls in
 // this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
 import { glbOfChunks, jsonChunk, triangleGlb } from './testing/triangleGlb';
 import { NO_SIDECAR } from './testing/noSidecar';
+import { REBUILDS_NORMAL_MAP_BLUE, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { nodesGlb } from './testing/nodesGlb';
 import {
   DRAWN_OPAQUE_PREPASS,
@@ -41,33 +42,16 @@ function findRepoAsset(relative: string): string {
   throw new Error(`Asset not found walking up from ${process.cwd()}: ${relative}`);
 }
 
-// cloneWithMaterials needs the lazily imported SkeletonUtils, so load it once here for
-// the tests that do not go through createGLBMesh.
-beforeAll(async () => {
-  await initGlbModules();
-});
-
-describe('initGlbModules', () => {
-  it('returns the same cached promise on repeated calls, resolved with the loaded modules', async () => {
-    const first = initGlbModules();
-    expect(initGlbModules()).toBe(first);
-
-    const modules = await first;
-    expect(modules.GLTFLoader).toBeTypeOf('function');
-    expect(modules.skeletonClone).toBeTypeOf('function');
-  });
-
-  it('cloneWithMaterials throws a clear error when called before initialisation', async () => {
-    // A fresh module instance has an empty lazy cache, so the guard must fire.
+describe('the lazily loaded GLTFLoader', () => {
+  it('lets a fresh module clone before it builds any mesh', async () => {
     vi.resetModules();
     const fresh = await import('./glbProcessing');
+    const mesh = new THREE.Object3D();
 
-    expect(() => fresh.cloneWithMaterials(new THREE.Object3D())).toThrow(
-      /cloneWithMaterials called before initGlbModules/
-    );
+    expect(fresh.cloneWithMaterials(mesh)).not.toBe(mesh);
   });
 
-  it('does not cache a failed module load — the next call retries and succeeds', async () => {
+  it('does not cache a failed module load: the next mesh retries and succeeds', async () => {
     vi.resetModules();
     vi.doMock('three/addons/loaders/GLTFLoader.js', () => {
       throw new Error('simulated chunk load failure');
@@ -76,12 +60,11 @@ describe('initGlbModules', () => {
       const fresh = await import('./glbProcessing');
       // Vitest wraps a throwing mock factory in its own error message, so assert
       // only that the load rejects. The retry below is the contract.
-      await expect(fresh.initGlbModules()).rejects.toThrow();
+      await expect(fresh.createGLBMesh(triangleGlb(), NO_SIDECAR)).rejects.toThrow();
 
       vi.doUnmock('three/addons/loaders/GLTFLoader.js');
-      const modules = await fresh.initGlbModules();
-      expect(modules.GLTFLoader).toBeTypeOf('function');
-      expect(modules.skeletonClone).toBeTypeOf('function');
+      const mesh = await fresh.createGLBMesh(triangleGlb(), NO_SIDECAR);
+      expect(fresh.cloneWithMaterials(mesh)).not.toBe(mesh);
     } finally {
       vi.doUnmock('three/addons/loaders/GLTFLoader.js');
     }
@@ -272,6 +255,18 @@ describe('cloneWithMaterials', () => {
     expectSameRotation(drawn, TEST_CAMERA.matrixWorld);
   });
 
+  it('rebuilds the blue of a glTF normal map from its red and green, as Godot does', () => {
+    const { root, meshSingle } = makeSource();
+    (meshSingle.material as THREE.MeshStandardMaterial).normalMap = new THREE.Texture();
+    const cloned = findMesh(cloneWithMaterials(root), 'single');
+    expect(patchedFragment(cloned.material as THREE.Material)).toContain(REBUILDS_NORMAL_MAP_BLUE);
+  });
+
+  it('patches no glTF material without a normal map', () => {
+    const cloned = findMesh(cloneWithMaterials(makeSource().root), 'single');
+    expect(patchedFragment(cloned.material as THREE.Material)).not.toContain(REBUILDS_NORMAL_MAP_BLUE);
+  });
+
   it('clones single-material references (different uuid)', () => {
     const { root, meshSingle } = makeSource();
     const cloned = cloneWithMaterials(root);
@@ -446,11 +441,9 @@ describe('disposeClonedMaterials', () => {
 });
 
 describe('processing/ re-export shim', () => {
-  it('serves the one module instance, so the lazy module cache stays shared', () => {
+  it('serves the one module instance, so the lazy GLTFLoader cache stays shared', () => {
     // `useResource` and the r3f GLB hooks import the shim path. A second instance
-    // would give them an empty `initGlbModules` cache and make `cloneWithMaterials`
-    // throw its not-initialised guard in production.
-    expect(processingShim.initGlbModules).toBe(initGlbModules);
+    // would load GLTFLoader a second time.
     expect(processingShim.cloneWithMaterials).toBe(cloneWithMaterials);
     expect(processingShim.disposeClonedMaterials).toBe(disposeClonedMaterials);
   });

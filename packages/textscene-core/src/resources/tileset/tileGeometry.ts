@@ -6,19 +6,25 @@
  */
 
 import { mapToLocalPx } from './tilePlacement';
-import type { Color } from '../../utils/colorParser';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
+import type { Rgba } from '../../godot/math/math';
 
-export interface TileGeometryArrays {
+interface TileGeometryArrays {
   positions: Float32Array;
   uvs: Float32Array;
   /** RGBA per vertex: the tile's `modulate` as stored, sRGB, which the draw multiplies onto its pixels. */
   colors: Float32Array;
   indices: Uint32Array;
+  /**
+   * Per vertex, the tile's UV rect inset by half a texel (u min, v min, u max, v max), or null for
+   * a source that does not pad. A sample clamped to it reads the tile's own edge, as a sample of
+   * Godot's padded atlas does (`tile_set.cpp:5622-5671`).
+   */
+  uvBounds: Float32Array | null;
 }
 
-export interface UvRect {
+interface UvRect {
   u0: number;
   u1: number;
   vTop: number;
@@ -26,7 +32,7 @@ export interface UvRect {
 }
 
 /** Pixel rect (image-Y top-left) → UV rect under the flipY=true convention. */
-export function pxRectToUv(
+function pxRectToUv(
   rect: { x: number; y: number; width: number; height: number },
   texW: number,
   texH: number
@@ -50,6 +56,7 @@ export function buildTileGeometryArrays(
   const uvs = new Float32Array(cells.length * 4 * 2);
   const colors = new Float32Array(cells.length * 4 * 4);
   const indices = new Uint32Array(cells.length * 6);
+  const uvBounds = source.usesTexturePadding ? new Float32Array(cells.length * 4 * 4) : null;
 
   cells.forEach((cell, i) => {
     const center = mapToLocalPx(grid, cell.coords);
@@ -91,16 +98,31 @@ export function buildTileGeometryArrays(
     positions.set([left, top, 0, right, top, 0, left, bottom, 0, right, bottom, 0], i * 12);
     uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
     writeCornerColors(colors, i * 16, cell.tileData.modulate);
+    if (uvBounds) writeCornerUvBounds(uvBounds, i * 16, uv, texW, texH);
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);
   });
 
-  return { positions, uvs, colors, indices };
+  return { positions, uvs, colors, indices, uvBounds };
+}
+
+/** The UV rect inset by half a texel, on a quad's four corners. */
+function writeCornerUvBounds(
+  bounds: Float32Array,
+  offset: number,
+  uv: UvRect,
+  texW: number,
+  texH: number
+): void {
+  const halfU = 0.5 / texW;
+  const halfV = 0.5 / texH;
+  const rect = [uv.u0 + halfU, uv.vBottom + halfV, uv.u1 - halfU, uv.vTop - halfV];
+  for (let k = offset; k < offset + 16; k += 4) bounds.set(rect, k);
 }
 
 /** One colour on each of a quad's four corners, from `offset`, with no array per corner. */
-function writeCornerColors(colors: Float32Array, offset: number, { r, g, b, a }: Color): void {
+function writeCornerColors(colors: Float32Array, offset: number, { r, g, b, a }: Rgba): void {
   for (let k = offset; k < offset + 16; k += 4) {
     colors[k] = r;
     colors[k + 1] = g;

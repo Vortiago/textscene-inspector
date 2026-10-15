@@ -9,7 +9,7 @@ renders_as: a textured THREE.Mesh quad
 
 # Sprite3D
 
-Draws a 2D texture on a quad in 3D space. The previewer renders it as an unlit textured plane sized by `pixel_size` times the texture. `modulate` drives colour and opacity, and `billboard` applies as a per-frame look-at.
+Draws a 2D texture on a quad in 3D space. The previewer renders it as a textured plane sized by `pixel_size` times the texture, unlit by default and lit when `shaded` is on. `modulate` drives colour and opacity, and `billboard` takes the camera's axes each frame, as Godot's shader does.
 
 The quad lies on the plane its `axis` faces, the XY plane by default. A centred quad centres on the node. An uncentred one puts its bottom-left corner there, and a positive `offset.y` moves it up, as Godot draws the 2D rect with its Y unflipped. The quad's AABB, grown as a billboard can turn it, places it for the visibility range.
 
@@ -48,5 +48,6 @@ Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` 
 
 ## Known limitations
 
-- **Shader missing** `alpha_antialiasing_mode` and `alpha_antialiasing_edge` have no
-  counterpart, so a cut sprite's edges are not feathered.
+- **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
+- **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
+- **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).

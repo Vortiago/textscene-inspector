@@ -8,7 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { GODOT_TO_SRGB_GLSL } from './srgbTransfer.js';
+import { GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
 
 export const VERTEX = /* glsl */ `
 varying vec2 vLightUv;

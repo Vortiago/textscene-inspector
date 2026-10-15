@@ -5,17 +5,10 @@
  * the MIT licence (see THIRD-PARTY-NOTICES.md). Pure, so the arithmetic is testable.
  */
 
+import { clamp } from '../../godot/math/math.js';
+import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
 import type { EnvironmentSettings } from './types';
-import { glslFloat } from './glslLiterals';
-
-/** Godot `Environment.GlowBlendMode`. */
-export const GlowBlendMode = {
-  ADDITIVE: 0,
-  SCREEN: 1,
-  SOFTLIGHT: 2,
-  REPLACE: 3,
-  MIX: 4,
-} as const;
+import { glslFloat } from '../../utils/glslLiterals';
 
 export interface GlowParams {
   /**
@@ -56,6 +49,10 @@ export interface GlowParams {
    * one value, and the composite must not apply it to the glow a second time.
    */
   exposure: number;
+  /** The `glow_map` reference the composite samples, resolved by the render layer. */
+  map: string | undefined;
+  /** Zero without a map, as Godot sets it (`renderer_scene_render_rd.cpp:705-710`). */
+  mapStrength: number;
 }
 
 /**
@@ -113,29 +110,23 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
     maxLevel,
     hdrThreshold: Math.max(0, glow.hdrThreshold),
     hdrScale: Math.max(0, glow.hdrScale),
-    bloom: clamp01(glow.bloom),
+    bloom: clamp(glow.bloom, 0, 1),
     luminanceCap: Math.max(0, glow.luminanceCap),
     strength: Math.max(0, glow.strength),
-    intensity: blendMode === GlowBlendMode.MIX ? clamp01(glow.mix) : glow.intensity,
+    intensity: blendMode === GlowBlendMode.MIX ? clamp(glow.mix, 0, 1) : glow.intensity,
     blendMode,
     exposure: settings.toneMapping.exposure,
+    map: glow.map,
+    mapStrength: glow.map ? glow.mapStrength : 0,
   };
 }
 
-/**
- * Whether this glow changes the frame everywhere, so a consumer cannot skip it when
- * nothing in the scene is bright enough to bloom.
- */
-export function glowNeedsEveryPixel(params: GlowParams): boolean {
-  return (
-    // `glow_bloom` floors the bright-pass feedback, so every pixel enters the buffer.
-    params.bloom > 0 ||
-    // REPLACE and MIX rewrite every pixel even when the glow buffer is black.
-    params.blendMode === GlowBlendMode.REPLACE ||
-    params.blendMode === GlowBlendMode.MIX ||
-    // Below 1 it catches lit surfaces, and the emissive scan reads only emission.
-    params.hdrThreshold < 1
-  );
+/** Godot skips the map at or below this strength (`tonemap.glsl:885`). */
+const GLOW_MAP_EPSILON = 0.001;
+
+/** Whether the composite scales the glow by `glow_map`. */
+export function samplesGlowMap(params: GlowParams): boolean {
+  return params.mapStrength > GLOW_MAP_EPSILON;
 }
 
 /**
@@ -145,15 +136,6 @@ export function glowNeedsEveryPixel(params: GlowParams): boolean {
  */
 export function blendsAfterToneMapping(params: GlowParams): boolean {
   return params.blendMode === GlowBlendMode.SOFTLIGHT;
-}
-
-/**
- * `glow_hdr_threshold` restated for unexposed colour. The bright pass multiplies by
- * `glow_exposure` before the comparison, so code that inspects colour upstream of it
- * needs this bar, or it disagrees with the shader about what blooms.
- */
-export function unexposedBrightPassThreshold(params: GlowParams): number {
-  return params.hdrThreshold / Math.max(params.exposure, GLSL_EPSILON);
 }
 
 /**
@@ -196,10 +178,6 @@ vec3 godotGlowBlend(vec3 color, vec3 glow) {
 ${body(params, white)}
 }
 `;
-}
-
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
 }
 
 /**

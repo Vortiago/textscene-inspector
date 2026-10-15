@@ -4,11 +4,10 @@
  * pixels and the magnification. DRAG_CENTER centres the view on the camera, and
  * FIXED_TOP_LEFT puts the camera at its corner.
  */
-
-import { isZeroApprox } from '../../../godot/index.js';
+import { isZeroApprox } from '../../../godot/math/math.js';
 import { Camera2DAnchorMode, type Camera2DProperties } from './types';
 
-export interface Camera2DView {
+interface Camera2DView {
   /** View center in Godot canvas pixels. */
   center: { x: number; y: number };
   /**
@@ -30,7 +29,7 @@ export interface Camera2DView {
  * `userData.camera2d`. The position is absent: a consumer reads it from where it
  * holds the camera, the live tree or an Object3D's world matrix.
  */
-export type Camera2DFraming = Pick<
+type Camera2DFraming = Pick<
   Camera2DProperties,
   'zoom' | 'offset' | 'anchor_mode' | 'limitLeft' | 'limitTop' | 'limitRight' | 'limitBottom' | 'limitEnabled'
 >;

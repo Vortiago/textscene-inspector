@@ -5,9 +5,9 @@
  * differ only in the gate and the wording, which the two rules keep.
  */
 
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { sweepAncestors } from '../../../linter/parentType.js';
-import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX } from '../../../godot/index.js';
+import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX } from '../../../godot/scene/canvasItem.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import type { RawNode, RawScene } from '../../../parser/types.js';
 
@@ -27,7 +27,7 @@ export function clipsChildren(candidate: RawNode): boolean {
   return mode !== CLIP_CHILDREN_DISABLED && mode < CLIP_CHILDREN_MAX;
 }
 
-export interface ClipAncestry {
+interface ClipAncestry {
   /** The nearest CanvasItem ancestor that clips its own children. */
   clippingAncestor?: RawNode;
   /** The nearest CanvasGroup ancestor, which clips through backbuffer compositing. */
@@ -44,12 +44,12 @@ export function clipAncestry(scene: RawScene, node: RawNode): ClipAncestry {
   sweepAncestors(scene, node, (ancestor) => {
     if (
       found.clippingAncestor === undefined &&
-      descendsFrom(ancestor.type, 'CanvasItem') &&
+      descendsFromClass(ancestor.type, 'CanvasItem') &&
       clipsChildren(ancestor)
     ) {
       found.clippingAncestor = ancestor;
     }
-    if (found.canvasGroupAncestor === undefined && descendsFrom(ancestor.type, 'CanvasGroup')) {
+    if (found.canvasGroupAncestor === undefined && descendsFromClass(ancestor.type, 'CanvasGroup')) {
       found.canvasGroupAncestor = ancestor;
     }
   });

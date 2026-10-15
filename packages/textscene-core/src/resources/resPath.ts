@@ -5,7 +5,8 @@
  * accepts.
  */
 
-import { PROJECT_FILE_NAME } from '../godot/project.js';
+import { PROJECT_FILE_NAME } from '../godot/project/project.js';
+import { pathJoin } from '../godot/string/string.js';
 
 export const RES_SCHEME = 'res://';
 
@@ -60,13 +61,12 @@ export function isWithinRoot(root: string, candidate: string, pathCase: PathCase
 
 /** `relative` under `dir`, with one separator between them. */
 function joinUnder(dir: string, relative: string): string {
-  const root = forwardSlashes(dir);
-  return root.endsWith('/') ? `${root}${relative}` : `${root}/${relative}`;
+  return pathJoin(forwardSlashes(dir), relative);
 }
 
 /**
  * The directory holding `path`, or null for a filesystem root or a bare name: the top of an upward walk over string
- * paths, as `findProjectRoot`'s `parent`.
+ * paths, as `findResRoot`'s `parent`.
  */
 export function parentDir(path: string): string | null {
   const dir = forwardSlashes(path);
@@ -107,7 +107,7 @@ export function resolveResPath(projectRoot: string, resPath: string): string | n
  * for none. The walk ends after the first directory `isStop` accepts, or at the top, where `parent` gives null. Generic
  * over the directory handle, so each host walks its own kind: a string path, or a `Uri` that keeps its scheme.
  */
-export async function findProjectRoot<Dir>(
+async function findProjectRoot<Dir>(
   start: Dir,
   parent: (dir: Dir) => Dir | null,
   isStop: (dir: Dir) => boolean,

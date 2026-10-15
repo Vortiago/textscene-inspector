@@ -11,9 +11,10 @@
  * types share the generic `resource` slot (a ParsedResource) and give it
  * meaning in their own decode.
  */
-export type ResourceBusType = 'texture' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
+export type ResourceBusType =
+  'texture' | 'texture3d' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
 
-export interface ResourceSliceRegistration {
+interface ResourceSliceRegistration {
   /** Slice folder name under `resources/<category>/`, for example 'standardmaterial3d'. */
   slice: string;
   /**

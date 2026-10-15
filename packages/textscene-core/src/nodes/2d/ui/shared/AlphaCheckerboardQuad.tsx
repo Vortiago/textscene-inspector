@@ -11,7 +11,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import type { ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
 import { MINI_CHECKERBOARD_ICON, MINI_CHECKERBOARD_SIZE } from '../../../../r3f/controls/native/themeIcons';
 
-export interface AlphaCheckerboardQuadProps {
+interface AlphaCheckerboardQuadProps {
   width: number;
   height: number;
   color: THREE.Color;

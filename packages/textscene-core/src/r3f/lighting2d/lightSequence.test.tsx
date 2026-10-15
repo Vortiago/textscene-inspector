@@ -23,7 +23,7 @@ import {
 import { CanvasLightSequenceProvider, useDirectionalLightSlot, useLightSequence } from './useLightSequence';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
-import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import { SceneStack } from '../testing/SceneStack';
 import '../nodes'; // side-effect: registers every node's r3f component
 

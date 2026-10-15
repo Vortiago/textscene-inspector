@@ -1,0 +1,76 @@
+[gd_resource type="ImageTexture3D" format=4]
+
+[sub_resource type="Image" id="Image_awwai"]
+data = {
+"data": PackedByteArray("f8f2+9WRRxAAHFun5P7stH++5+zLj00dEClgotjv361/pr/CrolhQzpKbJS2xLqbf4SHiIWAe3d2eHyChoiHg39hTktbeJattKiOblVKUml/RSAcOnGs2OXOnF8uGShVfzgJBCptt+394aJYGwETS388EAsubrTn9tugWiAIGU5/UDEuR3OkyNK/lmU9LDhdf3BmZW17i5aalId3amRodH+ToaKXhG9fW2N1ipyjno5/stPXvIxXMCU5ZpvH2cykf8Tx9tKQSRQFIF2l4PnosX/F8/jTkUgSAx9cpuL76bJ/tdndwI1UKx81ZJ3L39Gnf5ioqp2Fa1hTXXONoqulkQ=="),
+"format": "Lum8",
+"height": 16,
+"mipmaps": false,
+"width": 16
+}
+
+[sub_resource type="Image" id="Image_onn8g"]
+data = {
+"data": PackedByteArray("4/7ttWsnAgk5gcn3+9SPRdfv4K9tMhIXQYHA6OzJjUy1xLqcdFA8P1mAp8DCrYhfhoiHg355dnd6f4SHiIWAe1VKUWiHo7OwnH5gTUxceJcvGSdTj8Xj3rd9RB8cO3KuHAESSZPW+vTFfTYJBStvuSEIGEyS0fTuwX06DwswcLY+LDdbjLjQzK1+TzEuSHWlamRodIORmZiOf29mZW18i5ujno55Zlxea4CUoaKXhG7G2c2mcUEnK02Bs9TXu4pW3/nps2wrBw48gcby9tCOR+H76rRrKQUMOoHH9PjSjkbK39KocD0hJkqBt9ncv4tToqulknhhVFZngJmoqpyFaw=="),
+"format": "Lum8",
+"height": 16,
+"mipmaps": false,
+"width": 16
+}
+
+[sub_resource type="Image" id="Image_d6ghl"]
+data = {
+"data": PackedByteArray("+9WRRxAAHFun5P7stGkmAuzLj00dEClgotjv361rMRHCrolhQzpKbJS2xLqbc087iIWAe3d2eHyChoiHg315dktbeJattKiOblVKUmmIpLMcOnGs2OXOnF8uGShVkcbjBCptt+394aJYGwETS5XX+wsubrTn9tugWiAIGU6U0/QuR3OkyNK/lmU9LDhdjrnRZW17i5aalId3amRodISSmaKXhG9fW2N1ipyjno55ZlzXvIxXMCU5ZpvH2cykb0Am9tKQSRQFIF2l4PnosWopB/jTkUgSAx9cpuL76bJpKAXdwI1UKx81ZJ3L39Gnbjwhqp2Fa1hTXXONoqulkXdgVA=="),
+"format": "Lum8",
+"height": 16,
+"mipmaps": false,
+"width": 16
+}
+
+[sub_resource type="Image" id="Image_bkhe2"]
+data = {
+"data": PackedByteArray("tWsnAgk5gcn3+9SPRQ8AHq9tMhIXQYHA6OzJjUwdECqcdFA8P1mAp8DCrYhfQjpLg355dnd6f4SHiIWAe3d2eGiHo7OwnH5gTUxceJeutKdTj8Xj3rd9RB8cO3Ku2eXNSZPW+vTFfTYJBStvue7930yS0fTuwX06DwswcLbo9tpbjLjQzK1+TzEuSHWlyNK/dIORmZiOf29mZW18i5eak455Zlxea4CUoaKXhG5fW2OmcUEnK02Bs9TXu4pWMCU6s2wrBw48gcby9tCORxMFIrRrKQUMOoHH9PjSjkYRAyCocD0hJkqBt9ncv4tTKh82knhhVFZngJmoqpyFa1hTXQ=="),
+"format": "Lum8",
+"height": 16,
+"mipmaps": false,
+"width": 16
+}
+
+[sub_resource type="Image" id="Image_u7ev0"]
+data = {
+"data": PackedByteArray("RxAAHFun5P7stGkmAgo7g00dEClgotjv361rMREYQ4NhQzpKbJS2xLqbc087QFqBe3d2eHyChoiHg315dnd6f5attKiOblVKUmmIpLOwm32s2OXOnF8uGShVkcbj3bZ8t+394aJYGwETS5XX+/PDe7Tn9tugWiAIGU6U0/Ttv3ukyNK/lmU9LDhdjrnRzKx8i5aalId3amRodISSmZiNfm9fW2N1ipyjno55ZlxebIBXMCU5ZpvH2cykb0AmLE+CSRQFIF2l4PnosWopBw49g0gSAx9cpuL76bJpKAUNPINUKx81ZJ3L39GnbjwhJ0uCa1hTXXONoqulkXdgVFZngA=="),
+"format": "Lum8",
+"height": 16,
+"mipmaps": false,
+"width": 16
+}
+
+[sub_resource type="Image" id="Image_mplxf"]
+data = {
+"data": PackedByteArray("Agk5gcn3+9SPRQ8AHl2p5RIXQYHA6OzJjUwdECpipNk8P1mAp8DCrYhfQjpLbZa2dnd6f4SHiIWAe3d2eH2ChrOwnH5gTUxceJeutKeNblTj3rd9RB8cO3Ku2eXNml4t+vTFfTYJBStvue7936BWGvTuwX06DwswcLbo9tqeWB/QzK1+TzEuSHWlyNK/lWQ8mZiOf29mZW18i5eak4Z2aVxea4CUoaKXhG5fW2N1i5wnK02Bs9TXu4pWMCU6Z53IBw48gcby9tCORxMFIl+n4QUMOoHH9PjSjkYRAyBeqOMhJkqBt9ncv4tTKh82Zp7MVFZngJmoqpyFa1hTXXONow=="),
+"format": "Lum8",
+"height": 16,
+"mipmaps": false,
+"width": 16
+}
+
+[sub_resource type="Image" id="Image_25v5n"]
+data = {
+"data": PackedByteArray("HFun5P7stGkmAgo7g8r3+ilgotjv361rMREYQ4PB6etKbJS2xLqbc087QFqBqMDCeHyChoiHg315dnd6f4SIiKiOblVKUmmIpLOwm31gTUzOnF8uGShVkcbj3bZ8Qx8c4aJYGwETS5XX+/PDezQIBdugWiAIGU6U0/Ttv3s4Dgy/lmU9LDhdjrnRzKx8TjAvlId3amRodISSmZiNfm9mZWN1ipyjno55ZlxebICUoaI5ZpvH2cykb0AmLE+CtNTWIF2l4PnosWopBw49g8fz9R9cpuL76bJpKAUNPIPJ9fc1ZJ3L39GnbjwhJ0uCuNrcXXONoqulkXdgVFZngJmpqg=="),
+"format": "Lum8",
+"height": 16,
+"mipmaps": false,
+"width": 16
+}
+
+[sub_resource type="Image" id="Image_q50b8"]
+data = {
+"data": PackedByteArray("gcn3+9SPRQ8AHl2p5f7rsoHA6OzJjUwdECpipNnv3quAp8DCrYhfQjpLbZa2xLmaf4SHiIWAe3d2eH2ChoiHg35gTUxceJeutKeNblRKUmp9RB8cO3Ku2eXNml4tGSlWfTYJBStvue7936BWGgEUTX06DwswcLbo9tqeWB8IGlB+TzEuSHWlyNK/lWQ8LDlef29mZW18i5eak4Z2aWRodICUoaKXhG5fW2N1i5yjno2Bs9TXu4pWMCU6Z53I2cujgcby9tCORxMFIl+n4fnnsIHH9PjSjkYRAyBeqOP76LCBt9ncv4tTKh82Zp7M39ClgJmoqpyFa1hTXXONo6ukkQ=="),
+"format": "Lum8",
+"height": 16,
+"mipmaps": false,
+"width": 16
+}
+
+[resource]
+_images = Array[Image]([SubResource("Image_awwai"), SubResource("Image_onn8g"), SubResource("Image_d6ghl"), SubResource("Image_bkhe2"), SubResource("Image_u7ev0"), SubResource("Image_mplxf"), SubResource("Image_25v5n"), SubResource("Image_q50b8")])

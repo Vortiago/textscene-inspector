@@ -10,8 +10,7 @@ import type { TscnInternalResource } from '../../parser/types';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { resolveGradientTexture2D } from './gradienttexture2d/resolveGradientTexture';
 import { resolveNoiseTexture2D } from './noisetexture2d/resolveNoiseTexture';
-import { abortProceduralBuilds } from './proceduralBuilds';
-import { clearProceduralTextureCache } from './proceduralTextureCache';
+import { resetProceduralTextures } from './proceduralBuilds';
 
 /** What each mocked rasteriser throws, or null to run the real one. */
 const failure = vi.hoisted(() => ({ error: null as Error | null }));
@@ -28,8 +27,8 @@ vi.mock('./gradienttexture2d/build', async (importOriginal) => {
 });
 
 // `noiseImage` is the NoiseTexture2D pipeline's first typed array.
-vi.mock('./noisetexture2d/noiseImage', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./noisetexture2d/noiseImage')>();
+vi.mock('../noise/image/noiseImage', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../noise/image/noiseImage')>();
   return {
     ...actual,
     noiseImage: (...args: Parameters<typeof actual.noiseImage>) => {
@@ -42,8 +41,7 @@ vi.mock('./noisetexture2d/noiseImage', async (importOriginal) => {
 afterEach(() => {
   failure.error = null;
   vi.restoreAllMocks();
-  abortProceduralBuilds();
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 /**

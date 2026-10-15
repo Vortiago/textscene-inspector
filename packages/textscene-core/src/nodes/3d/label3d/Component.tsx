@@ -24,7 +24,7 @@ const LabelGlyphs = lazy(() => import('./LabelGlyphs'));
  * `frameSceneBounds.ts` unions mesh AABBs, and the lazy glyphs can land after
  * `CameraFit`'s last retry, so without a synchronous stand-in the fit ignores the label.
  */
-export const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
+const LABEL3D_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
 export function Label3D({ node, children }: NodeComponentProps) {
   const { showLabels } = useViewportMode();
@@ -36,12 +36,13 @@ export function Label3D({ node, children }: NodeComponentProps) {
 
   const groupRef = useRef<THREE.Group | null>(null);
 
+  // `label_3d.cpp:396` hands the flag to the same cached shader the billboard
+  // mode does; both are per-frame effects on the label's own group. Fixed size first:
+  // the billboard freezes the world matrix, so a scale set after it lands a frame late.
+  useFixedSize(groupRef, properties.fixed_size, scale);
+
   // Shared with Sprite3D, so both implement Godot's billboard modes identically.
   useBillboard(groupRef, properties.billboard);
-
-  // `label_3d.cpp:396` hands the flag to the same cached shader the billboard
-  // mode does; both are per-frame effects on the label's own group.
-  useFixedSize(groupRef, properties.fixed_size, scale);
 
   // On by default to match Godot (the ADR-0008 amendment). The Labels toggle
   // hides it, and a marker group still positions any children and stays selectable.
@@ -78,7 +79,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
         </mesh>
       </group>
       {/* Descendants sit in a sibling group with the same transform: `billboard`
-          rewrites the label group's quaternion every frame, and in Godot it is a
+          rewrites the label group's world matrix every frame, and in Godot it is a
           shader effect that never spins the node's children. */}
       {children === undefined ? null : (
         <group position={position} rotation={rotation} scale={scale}>

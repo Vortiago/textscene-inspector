@@ -8,20 +8,21 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { parseVector3, type Vector3 } from '../../../parser/vectors';
+import { parseVector3 } from '../../../parser/vectors';
 import { boolOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { warn } from '../../../logger';
+import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/scene/visualLayers.js';
 import type { DecalProperties } from './types';
+import type { Vector3 } from '../../../godot/math/vector.js';
 
 /** Godot Decal default box size. */
 const DEFAULT_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
 
 /**
- * Godot Decal default `cull_mask`: all 20 render layers enabled
- * (`Decal::cull_mask = (1 << 20) - 1`). Exported so the projection's own default
- * argument cannot drift from what the parser hands it.
+ * Godot Decal default `cull_mask`. Exported so the projection's own default argument cannot drift
+ * from what the parser hands it.
  */
-export const DECAL_DEFAULT_CULL_MASK = 0xfffff;
+export const DECAL_DEFAULT_CULL_MASK = GODOT_EDITOR_LAYERS_MASK;
 
 export function parseDecal(heading: ParsedHeading, properties: Record<string, string>): DecalProperties {
   const baseProperties = parseNode3D(heading, properties);

@@ -7,7 +7,7 @@ import type { ParsedProperty } from '../../parser/TscnParserCore.js';
 import type { ParseError } from '../types.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import { ownsNilMessage } from '../propertyValidator.js';
-import { isNilLiteral } from '../../godot/index.js';
+import { isNilLiteral } from '../../godot/variant/variantParser.js';
 
 /** The refusal for one property, or null where no validator claims it or the value passes. */
 export function propertyRefusal({
@@ -23,7 +23,7 @@ export function propertyRefusal({
   if (isMultiline || !ownerType) return null;
 
   // The key as written first. Where nothing claims that spelling, the pair the engine applies
-  // (`godot/deprecated.ts` resolves the alias and transforms the value), and the diagnostic names both,
+  // (`godot/classdb/deprecated.ts` resolves the alias and transforms the value), and the diagnostic names both,
   // because the canonical key appears nowhere in the file.
   let lookupKey = key;
   let lookupValue = value;
@@ -38,11 +38,12 @@ export function propertyRefusal({
 
   const found = validator(lookupKey, lookupValue, line);
   if (!found) return null;
-  const error =
+  const keyed: ParseError = { ...found, propertyKey: key };
+  const error: ParseError =
     lookupKey === key
-      ? found
+      ? keyed
       : {
-          ...found,
+          ...keyed,
           // The validator's `propertyError` anchors the column on the key it was handed. The rebase
           // lands it on the value after the key as written.
           column: found.column - lookupKey.length + key.length,

@@ -42,7 +42,7 @@ describe('MeshInstance3D Linter', () => {
         expect(diagnostics).toHaveLength(1);
         expect(diagnostics[0]).toBeAtTier('warning');
         expect(diagnostics[0]).toMatchObject({
-          ruleName: 'strict-parser',
+          ruleName: 'format:cast_shadow',
         });
         expect(diagnostics[0]!.message).toContain('cast_shadow');
         expect(diagnostics[0]!.message).toContain('0-3');
@@ -146,7 +146,7 @@ describe('MeshInstance3D Linter', () => {
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]).toBeAtTier('error');
       expect(diagnostics[0]).toMatchObject({
-        ruleName: 'strict-parser',
+        ruleName: 'format:transform',
       });
       expect(diagnostics[0]!.message).toContain('transform');
     });
@@ -250,7 +250,7 @@ describe('MeshInstance3D Linter', () => {
 
   // The real condition (visual_instance_3d.cpp: `!is_zero_approx(end) && end <=
   // begin`) belongs to `valid-geometryinstance3d-visibility-range`, which
-  // reaches MeshInstance3D through its descendsFrom matcher. This slice reports
+  // reaches MeshInstance3D through its descendsFromClass matcher. This slice reports
   // nothing of its own.
   describe('Semantic Validation (Visibility Range)', () => {
     it('reports nothing for any begin/end pairing', () => {

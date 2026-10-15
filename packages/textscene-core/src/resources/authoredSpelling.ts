@@ -4,7 +4,7 @@
  * file's table (`resource_format_text.h:73`, `resource_format_text.cpp:137-142`), so no rename
  * exists there, and the inspector spells each reference with the copy's `authoredId`.
  */
-import { renameResourceRefs } from '../godot/resourceRef.js';
+import { renameResourceRefs } from '../godot/variant/resourceRef.js';
 import type { SceneScope } from '../parser/types.js';
 import { findExtResource, findSubResource } from './SubResourceResolver.js';
 

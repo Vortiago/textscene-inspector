@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://unitarealightfog"]
+
+; One AreaLight3D in volumetric fog, for the one variable no other golden moves: the area light's
+; scatter in the fog, which Godot 4.7.2 lights from the rectangle's diffuse integral. The other
+; volumetric fog goldens hold no area light, and the area light goldens hold no fog. A hidden
+; DirectionalLight3D turns the editor preview sun off, and a black background keeps the glow alone.
+
+[sub_resource type="Environment" id="Env_1"]
+background_mode = 1
+background_color = Color(0, 0, 0, 1)
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.08
+
+[sub_resource type="PlaneMesh" id="Floor_1"]
+size = Vector2(40, 40)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_1")
+
+[node name="SunOff" type="DirectionalLight3D" parent="."]
+visible = false
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("Floor_1")
+
+[node name="Panel" type="AreaLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1.5, -1)
+light_energy = 4.0
+area_size = Vector2(2, 1)
+area_range = 6.0

@@ -14,8 +14,16 @@ import { usePendingWhile } from './usePendingWhile.js';
 import { beginTextureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
-import { resolveProceduralTexture } from './textures/resolveProceduralTexture.js';
-import { pinProceduralTexture, unpinProceduralTexture } from './textures/proceduralTextureCache.js';
+import { resolveProceduralTexture, resolveProceduralTexture3D } from './textures/resolveProceduralTexture.js';
+import {
+  pinProceduralTexture,
+  releaseProceduralTextures,
+  unpinProceduralTexture,
+} from './textures/proceduralTextureCache.js';
+import { releasedOnUnmount } from '../r3f/sharedTexture.js';
+
+// The cache outlives every canvas, so a canvas that unmounts frees its textures from each renderer.
+releasedOnUnmount({ dispose: releaseProceduralTextures });
 
 /** One slot's procedural texture. */
 export interface ProceduralSlot {
@@ -32,8 +40,6 @@ interface Shown {
   key: string;
 }
 
-const UNCLAIMED: ProceduralSlot = { texture: null, claimed: false, building: false };
-
 /**
  * The procedural texture a `SubResource` ref names, held resident while the caller is mounted.
  * Unclaimed for every other form, which the caller's async path handles. `resolveProceduralTexture`
@@ -44,19 +50,34 @@ export function useProceduralTexture(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): ProceduralSlot {
-  return useProceduralTextures([ref], internalResources)[0] ?? UNCLAIMED;
+  return useProceduralSlots([ref], internalResources, resolveProceduralTexture)[0]!;
 }
 
-/** {@link useProceduralTexture} for several slots at once, one result per ref, in order. */
-export function useProceduralTextures(
-  refs: readonly (string | undefined)[],
+/** {@link useProceduralTexture} for a Texture3D slot, which `useTexture3D` reads through. */
+export function useProceduralTexture3D(
+  ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
+): ProceduralSlot {
+  return useProceduralSlots([ref], internalResources, resolveProceduralTexture3D)[0]!;
+}
+
+/** Resolves a ref to the procedural texture of one kind of slot. Module-level, so a memo holds it. */
+type ProceduralResolver = (
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+) => ProceduralTextureLookup | null;
+
+function useProceduralSlots(
+  refs: readonly (string | undefined)[],
+  internalResources: readonly TscnInternalResource[],
+  resolve: ProceduralResolver
 ): ProceduralSlot[] {
   // Keyed on the refs' text: callers rebuild the array every render.
   const refsText = JSON.stringify(refs);
   const lookups = useMemo(
-    () => lookupAll(JSON.parse(refsText) as (string | null)[], internalResources),
-    [refsText, internalResources]
+    () =>
+      (JSON.parse(refsText) as (string | null)[]).map((ref) => resolve(ref ?? undefined, internalResources)),
+    [refsText, internalResources, resolve]
   );
   // Builds that finished after `lookups` read the cache. Scoped to those lookups: a new
   // read of the cache answers for itself, and an entry evicted since is never shown.
@@ -149,13 +170,6 @@ function landOne(
 ): Landed {
   const textures = new Map(prev.lookups === lookups ? prev.textures : []);
   return { lookups, textures: textures.set(key, texture) };
-}
-
-function lookupAll(
-  refs: readonly (string | null)[],
-  internalResources: readonly TscnInternalResource[]
-): (ProceduralTextureLookup | null)[] {
-  return refs.map((ref) => resolveProceduralTexture(ref ?? undefined, internalResources));
 }
 
 function isPendingBuild(

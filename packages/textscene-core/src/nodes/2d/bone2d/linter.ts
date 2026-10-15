@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { knownParent, searchAncestors } from '../../../linter/parentType.js';
 import { tupleComponent } from '../../../linter/validators/commonValidators.js';
 import { makeFloatTupleRegex } from '../../../linter/validators/floatTupleValidator.js';
@@ -34,19 +34,19 @@ type AncestryVerdict =
  * Mirrors `Bone2D::_notification(NOTIFICATION_ENTER_TREE)` (skeleton_2d.cpp:99-113),
  * which resolves once (skeleton_2d.cpp:97-119): `parent_bone` is the immediate parent
  * cast to Bone2D, and `skeleton` walks up through Bone2D links to the first Skeleton2D
- * or non-bone. `descendsFrom` stands in for `cast_to`, which accepts subclasses.
+ * or non-bone. `descendsFromClass` stands in for `cast_to`, which accepts subclasses.
  */
 function ancestryVerdict(scene: RawScene, node: RawNode): AncestryVerdict {
   const parent = knownParent(scene, node);
   if (parent.kind === 'root') return 'invalid-parent'; // parent_bone and skeleton both stay null
   if (parent.kind === 'unknowable') return 'unknowable';
-  const parentIsBone2D = descendsFrom(parent.parent.type, 'Bone2D');
+  const parentIsBone2D = descendsFromClass(parent.parent.type, 'Bone2D');
 
   // The chain ends at the first ancestor that is neither, so an ancestor whose
   // class this file never states could be the Skeleton2D or the terminator.
   const search = searchAncestors<'satisfied' | 'chain-end'>(scene, node, (ancestor) => {
-    if (descendsFrom(ancestor.type, 'Skeleton2D')) return 'satisfied';
-    if (!descendsFrom(ancestor.type, 'Bone2D')) return 'chain-end';
+    if (descendsFromClass(ancestor.type, 'Skeleton2D')) return 'satisfied';
+    if (!descendsFromClass(ancestor.type, 'Bone2D')) return 'chain-end';
     return undefined;
   });
   if (search.kind === 'unknowable') return 'unknowable';
@@ -125,5 +125,3 @@ const bone2DAncestryRule: LintRule = {
 };
 
 ruleRegistry.register(bone2DAncestryRule);
-
-export { bone2DAncestryRule };

@@ -1,25 +1,26 @@
 /**
- * Rasterises a decoded `GradientTexture2D` into a `THREE.DataTexture`: the only
- * place a gradient becomes a GPU texture. Parity limitation: `use_hdr` is
- * ignored and the output is always RGBA8, so an HDR gradient clamps.
+ * Rasterises a decoded `GradientTexture2D` into a `THREE.DataTexture`: the only place a gradient
+ * becomes a GPU texture.
  */
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import { channelToByte } from '../../../utils/colorSpace';
+import { colourDataTexture } from '../colourDataTexture';
 import { gradientOffsetAt, sampleGradientColor } from './sample';
 import type { Gradient, GradientTexture2D } from './types';
 
 /**
- * An RGBA8 texture of `tex.width × tex.height` sRGB bytes (Godot's
- * `Color::get_r8()`), tagged `SRGBColorSpace` like an albedo texture. Alpha passes
- * through linearly. `LinearFilter`, not DataTexture's `NearestFilter`, matches
- * Godot's smooth sampling. `decodeGradientTexture2D` bounds both axes to what
- * Godot's size setters accept, 16384 each, and `resolveGradientTexture` draws no
+ * A texture of `tex.width × tex.height` texels, as `GradientTexture2D::_update` fills its image
+ * (`scene/resources/gradient_texture.cpp:239-270`): RGBA8 bytes from `Color::get_r8()`, or the raw
+ * float colour with `use_hdr`, so a channel past 1 survives. `decodeGradientTexture2D` bounds both
+ * axes to what Godot's size setters accept, 16384 each, and `resolveGradientTexture` draws no
  * texture where the tab cannot allocate that much.
  */
 export function rasterizeGradientTexture2D(tex: GradientTexture2D, gradient: Gradient): THREE.DataTexture {
   const { width, height } = tex;
-  const data = new Uint8Array(width * height * 4);
+  const texelCount = width * height * 4;
+  const data = tex.useHdr ? new Float32Array(texelCount) : new Uint8Array(texelCount);
+  const store = tex.useHdr ? Math.fround : channelToByte;
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -29,19 +30,11 @@ export function rasterizeGradientTexture2D(tex: GradientTexture2D, gradient: Gra
       // assumes a file texture's flipY=true layout (polygon2d emits `1 - godot_v`).
       // So Godot's top row lands at v = 1, the buffer's last row.
       const i = (x + (height - 1 - y) * width) * 4;
-      data[i] = channelToByte(color.r);
-      data[i + 1] = channelToByte(color.g);
-      data[i + 2] = channelToByte(color.b);
-      data[i + 3] = channelToByte(color.a);
+      data[i] = store(color.r);
+      data[i + 1] = store(color.g);
+      data[i + 2] = store(color.b);
+      data[i + 3] = store(color.a);
     }
   }
-
-  const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearFilter;
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.needsUpdate = true;
-  return texture;
+  return colourDataTexture(data, width, height, tex.useHdr ? 'RGBAFloat' : 'RGBA8');
 }

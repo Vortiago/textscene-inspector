@@ -9,16 +9,15 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
-import { controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
-import { ninePatchGeometry, NINE_PATCH_STRETCH } from '../../../../r3f/controls/native/ninePatchGeometry';
+import { ninePatchGeometry, AxisStretchMode } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { resolveTextureRectFilter } from '../texturerect/nativeSolver';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';
@@ -28,19 +27,14 @@ import {
   radialRelativeCenter,
   clampRadialFillDegrees,
   normalizeRadialInitialAngle,
-  FILL_CLOCKWISE,
-  FILL_COUNTER_CLOCKWISE,
-  FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE,
 } from './radialFill';
 import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
-import type { ControlColor } from '../control/types';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
-import type { TextureProgressBarProperties } from './types';
+import { FillMode, type TextureProgressBarProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
+import type { Vector2 } from '../../../../godot/math/vector';
 
-const WHITE: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
-const ZERO: Vec2 = { x: 0, y: 0 };
+const ZERO: Vector2 = { x: 0, y: 0 };
 
 const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
   nearest: THREE.NearestFilter,
@@ -52,7 +46,7 @@ interface ImageLike {
   height?: number;
 }
 
-function naturalSize(texture: THREE.Texture | null): Vec2 | null {
+function naturalSize(texture: THREE.Texture | null): Vector2 | null {
   const image = texture?.image as ImageLike | undefined;
   const w = image?.width ?? 0;
   const h = image?.height ?? 0;
@@ -87,7 +81,7 @@ function useLayerTexture(
 function useCroppedTexture(
   texture: THREE.Texture | null,
   region: { x: number; y: number; w: number; h: number } | undefined,
-  textureSize: Vec2 | null
+  textureSize: Vector2 | null
 ): THREE.Texture | null {
   // Keyed on the numbers: the caller builds `region` and `textureSize` afresh each
   // render, and a clone per render would upload the texture again each time.
@@ -117,7 +111,7 @@ function useCroppedTexture(
 /** `region`'s UV window in `textureSize`, as repeat x, repeat y, offset x, offset y. */
 function cropWindow(
   region: { x: number; y: number; w: number; h: number },
-  textureSize: Vec2
+  textureSize: Vector2
 ): [number, number, number, number] {
   return [
     region.w / textureSize.x,
@@ -160,20 +154,20 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
     }),
     [stretchMarginLeft, stretchMarginTop, stretchMarginRight, stretchMarginBottom]
   );
-  const controlSize: Vec2 = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
+  const controlSize: Vector2 = useMemo(() => ({ x: rect.w, y: rect.h }), [rect.w, rect.h]);
 
   // `tint_under`/`tint_progress`/`tint_over` (raw sRGB) multiply into `tint.own` before the one
   // sRGB-to-linear conversion, as Button's icon does (`buttonBase.ts`).
   const underColorSrgb = useMemo(
-    () => multiplyModulate(props.tintUnder ?? WHITE, tint.own),
+    () => multiplyModulate(props.tintUnder ?? WHITE_MODULATE, tint.own),
     [props.tintUnder, tint.own]
   );
   const progressColorSrgb = useMemo(
-    () => multiplyModulate(props.tintProgress ?? WHITE, tint.own),
+    () => multiplyModulate(props.tintProgress ?? WHITE_MODULATE, tint.own),
     [props.tintProgress, tint.own]
   );
   const overColorSrgb = useMemo(
-    () => multiplyModulate(props.tintOver ?? WHITE, tint.own),
+    () => multiplyModulate(props.tintOver ?? WHITE_MODULATE, tint.own),
     [props.tintOver, tint.own]
   );
   const underColor = useGodotLinearColor(underColorSrgb);
@@ -182,9 +176,9 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
 
   const fillMode = normalizeTextureProgressBarFillMode(props.fillMode);
   const isRadialMode =
-    fillMode === FILL_CLOCKWISE ||
-    fillMode === FILL_COUNTER_CLOCKWISE ||
-    fillMode === FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE;
+    fillMode === FillMode.CLOCKWISE ||
+    fillMode === FillMode.COUNTER_CLOCKWISE ||
+    fillMode === FillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE;
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
   const progressOffset = props.textureProgressOffset ?? ZERO;
 
@@ -199,8 +193,8 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         regionOffset: draw.srcOffset,
         regionSize: draw.srcSize,
         margin: draw.margin,
-        axisH: NINE_PATCH_STRETCH,
-        axisV: NINE_PATCH_STRETCH,
+        axisH: AxisStretchMode.STRETCH,
+        axisV: AxisStretchMode.STRETCH,
         drawCenter: true,
       }),
     };
@@ -217,8 +211,8 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         regionOffset: draw.srcOffset,
         regionSize: draw.srcSize,
         margin: draw.margin,
-        axisH: NINE_PATCH_STRETCH,
-        axisV: NINE_PATCH_STRETCH,
+        axisH: AxisStretchMode.STRETCH,
+        axisV: AxisStretchMode.STRETCH,
         drawCenter: true,
       }),
     };
@@ -242,8 +236,8 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         regionOffset: draw.srcOffset,
         regionSize: draw.srcSize,
         margin: draw.margin,
-        axisH: NINE_PATCH_STRETCH,
-        axisV: NINE_PATCH_STRETCH,
+        axisH: AxisStretchMode.STRETCH,
+        axisV: AxisStretchMode.STRETCH,
         drawCenter: true,
       }),
     };

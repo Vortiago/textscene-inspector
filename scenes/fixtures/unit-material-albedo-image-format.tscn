@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+; One variable: the saved format of an albedo ImageTexture. Both strips hold the greys 64, 128, 192
+; and 255. The top one saves them as Lum8, which has no sRGB view, so Godot samples the bytes raw
+; (`material_storage.cpp:1073`). The bottom one saves RGB8, which Godot decodes from sRGB. Every
+; other albedo texture is an image file or an RGBA8 gradient, so none shows a format with no view.
+
+[sub_resource type="Image" id="Image_lum8"]
+data = {
+"data": PackedByteArray(64, 128, 192, 255),
+"format": "Lum8",
+"height": 1,
+"mipmaps": false,
+"width": 4
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_lum8"]
+image = SubResource("Image_lum8")
+
+[sub_resource type="Image" id="Image_rgb8"]
+data = {
+"data": PackedByteArray(64, 64, 64, 128, 128, 128, 192, 192, 192, 255, 255, 255),
+"format": "RGB8",
+"height": 1,
+"mipmaps": false,
+"width": 4
+}
+
+[sub_resource type="ImageTexture" id="ImageTexture_rgb8"]
+image = SubResource("Image_rgb8")
+
+[sub_resource type="QuadMesh" id="QuadMesh_strip"]
+size = Vector2(4, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lum8"]
+shading_mode = 0
+albedo_texture = SubResource("ImageTexture_lum8")
+texture_filter = 0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rgb8"]
+shading_mode = 0
+albedo_texture = SubResource("ImageTexture_rgb8")
+texture_filter = 0
+
+[node name="AlbedoImageFormat" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 5.0
+
+[node name="Lum8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("QuadMesh_strip")
+surface_material_override/0 = SubResource("StandardMaterial3D_lum8")
+
+[node name="RGB8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6, 0)
+mesh = SubResource("QuadMesh_strip")
+surface_material_override/0 = SubResource("StandardMaterial3D_rgb8")

@@ -6,8 +6,8 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/nodeBaseTypes.js';
-import { isZeroApprox } from '../../../godot/index.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
+import { isZeroApprox } from '../../../godot/math/math.js';
 import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -45,7 +45,7 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
   // so no warning here reaches a CSG shape. Every other override chains through
   // this class (gpu_particles_3d.cpp:337, cpu_particles_3d.cpp:215,
   // soft_body_3d.cpp:402, sprite_3d.cpp:1470).
-  if (descendsFrom(node.type, 'CSGShape3D')) return diagnostics;
+  if (descendsFromClass(node.type, 'CSGShape3D')) return diagnostics;
 
   const props = node.rawProperties;
   // `ruleInt`, not a string compare: the slot is an INT, so `1.0` and `01` are
@@ -102,15 +102,13 @@ const geometryInstance3DValidationRule: LintRule = {
     description:
       "Validates GeometryInstance3D's visibility-range cross-field consistency (End vs Begin distance, fade transitions needing a non-zero margin)",
     category: 'validation',
-    // `descendsFrom`, not `applicableNodeTypes`: RuleRegistry matches that by exact
+    // `descendsFromClass`, not `applicableNodeTypes`: RuleRegistry matches that by exact
     // name, so it would miss MeshInstance3D, Sprite3D, Label3D and GPUParticles3D.
     // The matcher keeps the CSG shapes, as the Viewport size rule keeps SubViewport.
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GeometryInstance3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'GeometryInstance3D'),
     emits: armEmits(arms),
   },
   check: checkGeometryInstance3D,
 };
 
 ruleRegistry.register(geometryInstance3DValidationRule);
-
-export { geometryInstance3DValidationRule };

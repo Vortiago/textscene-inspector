@@ -5,7 +5,8 @@
 
 import * as THREE from 'three';
 import type { ArrayMeshData } from './types.js';
-import { bottomUpV } from '../../../godot/uv.js';
+import { bottomUpV } from '../../../godot/math/uv.js';
+import { UV2_ATTRIBUTE } from '../uv2.js';
 
 export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
@@ -19,6 +20,9 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
 
   const positions = new Float32Array(totalVertices * 3);
   const uvs = hasUV ? new Float32Array(totalVertices * 2) : undefined;
+  // UV2 keeps Godot's top-down V, which the UV2 binding samples, and a surface without one keeps
+  // (0, 0), where Godot samples it.
+  const uv2s = mesh.surfaces.some((s) => s.uv2s) ? new Float32Array(totalVertices * 2) : undefined;
   const normals = useDecodedNormals ? new Float32Array(totalVertices * 3) : undefined;
   const indices = totalVertices > 65535 ? new Uint32Array(totalIndices) : new Uint16Array(totalIndices);
 
@@ -36,6 +40,7 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
         uvs[v] = bottomUpV(uvs[v]!);
       }
     }
+    if (uv2s && surface.uv2s) uv2s.set(surface.uv2s, vertexBase * 2);
     if (normals && surface.normals) normals.set(surface.normals, vertexBase * 3);
     // Re-base each surface's indices into the merged vertex array and reverse
     // each triangle's winding: Godot fronts triangles clockwise and three.js
@@ -52,6 +57,7 @@ export function buildArrayMeshGeometry(mesh: ArrayMeshData): THREE.BufferGeometr
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   if (uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  if (uv2s) geometry.setAttribute(UV2_ATTRIBUTE, new THREE.BufferAttribute(uv2s, 2));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   if (normals) {
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));

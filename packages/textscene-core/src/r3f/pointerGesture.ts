@@ -24,7 +24,7 @@ export function isGesturePointer(pointerType: string): boolean {
  * Below this the fingers are coincident and a pinch has no scale to read. In
  * client pixels, the unit both viewports receive.
  */
-export const DEGENERATE_SPAN_PX = 1e-3;
+const DEGENERATE_SPAN_PX = 1e-3;
 
 /**
  * Which navigation a touch gesture drives in the 3D viewport: one finger orbits,
@@ -82,10 +82,10 @@ const WHEEL_LINE_PIXELS = WHEEL_NOTCH_PIXELS / 3;
  * fractions of a notch; a kinetic fling or a coarse driver can deliver a
  * whole screenful in one event, which without a cap would teleport the view.
  */
-export const WHEEL_MAX_NOTCHES = 4;
+const WHEEL_MAX_NOTCHES = 4;
 
 /** The axes of a wheel event, in CSS pixels whatever `deltaMode` it used. */
-export interface WheelDelta {
+interface WheelDelta {
   dx: number;
   dy: number;
 }

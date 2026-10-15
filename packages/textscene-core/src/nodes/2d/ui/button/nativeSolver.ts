@@ -14,9 +14,6 @@ import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  VERTICAL_ALIGNMENT_CENTER,
   fitIconSize,
   pickButtonStyleBox,
   resolveButtonDrawState,
@@ -24,21 +21,23 @@ import {
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  VERTICAL_ALIGNMENT_CENTER,
+  type Rgba,
+} from '../../../../godot/math/math';
+import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  AutowrapMode,
-  clampAutowrapMode,
-  shapedTextSizeWidthPx,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { clampAutowrapMode, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
-import type { ControlColor } from '../control/types';
 import type { ButtonProperties } from './types';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
+import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /**
  * Button's theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:152`). Only
@@ -56,15 +55,11 @@ export const BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
 };
 
-/** `control_font_color` = `Color(0.875, 0.875, 0.875)` (`default_theme.cpp:101`), Button's own `font_color` default (`:156`). */
-export const BUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+/** Button's own `font_color` default (`default_theme.cpp:156`). */
+export const BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 
-/**
- * `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:106`),
- * Button's `font_disabled_color` default (`:161`). The numeric twin of `godotDefaultTheme.ts`'s
- * `CONTROL_FONT_DISABLED_COLOR` (`rgba(223, 223, 223, 0.5)`).
- */
-export const BUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** Button's `font_disabled_color` default (`default_theme.cpp:161`). */
+const BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
 /** `icon_normal_color` / `icon_disabled_color` theme_override_colors keys (`default_theme.cpp:164,169`). */
 const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {
@@ -77,13 +72,13 @@ const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {
  * (`default_theme.cpp:164`) and `icon_disabled_color = Color(1, 1, 1, 0.4)` (`:169`). No other
  * builtin widget sets either key.
  */
-const BUTTON_ICON_MODULATE: Record<ButtonDrawState, ControlColor> = {
+const BUTTON_ICON_MODULATE: Record<ButtonDrawState, Rgba> = {
   normal: { r: 1, g: 1, b: 1, a: 1 },
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
 };
 
 /** Resolves this Button's icon modulate colour for `state`: `n.colors` (a local override or the ancestor Theme chain) wins, else the default-theme literal. */
-export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawState): ControlColor {
+export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawState): Rgba {
   return colors[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
 }
 
@@ -117,14 +112,14 @@ export function buttonLabelShape(
   if (text.length === 0) return null;
   const state = resolveButtonDrawState(props.disabled);
   const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
-  const mode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  // Not `ctx.measureText`: its `Vec2` drops the layout the painter needs, and its readiness
+  const mode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
+  // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
   return shapeButtonLabel(
     text,
     fontSizePx,
     resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY),
-    mode === AutowrapMode.OFF ? 0 : boxWidthPx,
+    mode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx,
     mode,
     props.autowrapTrimFlags
   );
@@ -176,12 +171,12 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
   // button.cpp:492-494: `clip_text`, a trimming overrun behaviour or autowrap zeroes the
   // text's width contribution, since a narrower box trims or wraps it. The icon still counts.
-  const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING;
-  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
+  const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING;
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
   if (
     props.clipText ||
-    overrunBehavior !== OverrunBehavior.NO_TRIMMING ||
-    autowrapMode !== AutowrapMode.OFF
+    overrunBehavior !== OverrunBehavior.OVERRUN_NO_TRIMMING ||
+    autowrapMode !== AutowrapMode.AUTOWRAP_OFF
   ) {
     textSize.x = 0;
   }

@@ -9,17 +9,12 @@ import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import {
-  AutowrapMode,
   clampAutowrapMode,
   shapeText,
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  OverrunBehavior,
-  overrunFlagsForBehavior,
-  trimLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { JustificationFlag } from '../../../../r3f/controls/native/text/textJustify';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -38,11 +33,11 @@ import {
   labelUnwrappedShape,
   labelVisibleLineRange,
   layoutLabelLines,
-  resolveNodeLabelSettings,
   windowLabelLines,
   type LabelLinePlacement,
 } from './nativeSolver';
 import type { LabelProperties } from './types';
+import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /**
  * The per-line `TextLayoutResult`s, memoised with their placements. `TextRun`
@@ -59,10 +54,7 @@ function useSoloLineLayouts(placements: LabelLinePlacement[], layout: TextLayout
 export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LabelProperties>(solveNode);
   const themeResolved = useMemo(() => labelTextTheme(solveNode, props, { theme }), [solveNode, props, theme]);
-  const labelSettings = useMemo(
-    () => resolveNodeLabelSettings(props, solveNode.resources.internalResources),
-    [props, solveNode.resources.internalResources]
-  );
+  const labelSettings = solveNode.labelSettings;
   // A valid `label_settings` beats the theme outright: see its own doc.
   const textTheme = useMemo(
     () => labelEffectiveTextTheme(themeResolved, labelSettings),
@@ -75,8 +67,8 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // label.cpp:762-767,876-878: the outline draws over the fill at the same pen
   // position, so `<TextRun>` composites both in one pass. The shadow draws behind,
   // at its own offset, colour and outline size.
-  const outlineTheme = useMemo(() => labelOutlineTheme(solveNode, labelSettings), [solveNode, labelSettings]);
-  const shadowTheme = useMemo(() => labelShadowTheme(solveNode, labelSettings), [solveNode, labelSettings]);
+  const outlineTheme = useMemo(() => labelOutlineTheme(solveNode), [solveNode]);
+  const shadowTheme = useMemo(() => labelShadowTheme(solveNode), [solveNode]);
   const outlineColor = multiplyModulate(tint.own, outlineTheme.color);
   const shadowColor = multiplyModulate(tint.own, shadowTheme.color);
   const hasOutline = outlineTheme.size > 0 && outlineColor.a !== 0;
@@ -94,11 +86,12 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // below.
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   // Label's own default is OFF (`label.h`'s `autowrap_mode` initialiser).
-  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
   // Autowrap off reuses `labelUnwrappedShape`, the solve handoff `labelMinimumSize`
   // shares. Autowrap on shapes against `rect.w`, which no share knows. The share
   // is already windowed to lines_skipped/max_lines_visible, so it is not windowed again.
-  const sharedLayout = autowrapMode === AutowrapMode.OFF ? labelUnwrappedShape(solveNode, theme) : null;
+  const sharedLayout =
+    autowrapMode === AutowrapMode.AUTOWRAP_OFF ? labelUnwrappedShape(solveNode, theme) : null;
   // Read in the render body, not the `useMemo`: `peekSceneFontMetrics` reads a
   // WeakMap cache that a later async load fills in place, so each render must look.
   // The `useMemo` dependency on `fontMetrics` limits re-shaping to an identity change.
@@ -172,11 +165,11 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // the line `max_lines_visible` hides, which is not modelled
   // (`LabelProperties.overrunBehavior`).
   const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
   const trimmedPlacements = useMemo(() => {
-    if (autowrapMode !== AutowrapMode.OFF || !overrunFlags.trim) return placements;
+    if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return placements;
     const widthPx = labelShapingWidthPx(rect.w);
     return placements.map((placement) => ({
       ...placement,

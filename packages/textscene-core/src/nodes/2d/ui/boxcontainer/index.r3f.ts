@@ -8,5 +8,3 @@ import { BoxContainer } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'BoxContainer', Component: BoxContainer });
-
-export { BoxContainer };

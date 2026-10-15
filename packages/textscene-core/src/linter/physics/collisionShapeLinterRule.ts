@@ -8,14 +8,14 @@
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { resolveResourceSlot } from '../resourceChecker.js';
 import { parentTypeVerdict, verdictParent } from '../parentType.js';
-import { descendsFrom } from '../../godot/nodeBaseTypes.js';
-import { isZeroApprox } from '../../godot/math.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
+import { isZeroApprox } from '../../godot/math/math.js';
 import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
-import { boolSlotValue, descendsFromClass } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   // `one_way_collision` carries PROPERTY_HINT_GROUP_ENABLE for the
@@ -116,8 +116,8 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // `cast_to<RigidBody3D>(col_object)` passes for VehicleBody3D too, so Godot's message
     // picks `body_type` from a nested cast. The push ignores freeze and freeze_mode.
     if (arms.concaveUnderRigidBody && parent && shape.kind === 'resolved') {
-      if (descendsFrom(parent.type, 'RigidBody3D')) {
-        const bodyType = descendsFrom(parent.type, 'VehicleBody3D') ? 'VehicleBody3D' : 'RigidBody3D';
+      if (descendsFromClass(parent.type, 'RigidBody3D')) {
+        const bodyType = descendsFromClass(parent.type, 'VehicleBody3D') ? 'VehicleBody3D' : 'RigidBody3D';
         // `descendsFromClass`: `cast_to<ConcavePolygonShape3D>` (:140, :142) passes for
         // a subclass, and only the merged node and resource table holds a Shape's ancestry.
         if (descendsFromClass(shape.type, 'ConcavePolygonShape3D')) {
@@ -135,7 +135,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
           );
         }
       } else if (
-        descendsFrom(parent.type, 'CharacterBody3D') &&
+        descendsFromClass(parent.type, 'CharacterBody3D') &&
         descendsFromClass(shape.type, 'ConcavePolygonShape3D')
       ) {
         report(
@@ -167,7 +167,11 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
     // collision_shape_2d.cpp:182, `one_way_collision && cast_to<Area2D>(col_object)`).
     // This fires on the flag under an Area2D parent. `unused-one-way-margin` fires on a
     // margin without the flag, whatever the parent.
-    if (boolSlotValue(rawProps.one_way_collision) === true && parent && descendsFrom(parent.type, 'Area2D')) {
+    if (
+      boolSlotValue(rawProps.one_way_collision) === true &&
+      parent &&
+      descendsFromClass(parent.type, 'Area2D')
+    ) {
       report(
         arms.oneWayIgnoredUnderArea2D,
         `${type} '${node.name}' has 'one_way_collision' enabled under an Area2D ('${parent.name}'). One Way Collision is ignored when the collision object is an Area2D.`

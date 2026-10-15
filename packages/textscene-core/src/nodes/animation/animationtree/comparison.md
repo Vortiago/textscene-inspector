@@ -39,4 +39,4 @@ Strict parsing format-checks these `AnimationTree` properties, plus 13 inherited
 
 - **Approximated** Blend weights are per clip, not per bone, so a filtered `AnimationNodeBlend2` moves the whole skeleton.
 - **Approximated** `AnimationNodeTransition` always takes input 0.
-- **Needs runtime** A `StateMachine` root evaluates its start state only, with no travel or transition timing.
+- **Needs runtime** A `StateMachine` root evaluates its saved `current_state` or its start state, with no travel or transition timing.

@@ -7,13 +7,15 @@
 
 import * as THREE from 'three';
 import type { TscnNode } from '../../parser/types';
-import type { Color } from '../../utils/colorParser';
 import { createEnvironmentSettings } from '../../resources/environment/build';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { lerpColor } from '../../godot/math/math';
 import type { EnvironmentSettings } from '../../resources/environment/types';
-import { decodeSkyMaterial } from '../../resources/sky/decode';
-import type { ProceduralSkyProperties, SkyProperties } from '../../resources/sky/types';
+import { decodeSky, decodeSkyMaterial } from '../../resources/sky/decode';
+import type { ProceduralSkyProperties, Sky } from '../../resources/sky/types';
 import { decodeEnvironment } from '../../resources/environment/decode';
+import type { Rgba } from '../../godot/math/math';
+import { degToRad } from '../../godot/math/math.js';
 
 /** The node types the editor counts, one independent counter each. */
 export const PREVIEW_SUN_YIELD_TYPE = 'DirectionalLight3D';
@@ -24,16 +26,16 @@ export const PREVIEW_ENVIRONMENT_YIELD_TYPE = 'WorldEnvironment';
  * degrees (must be negative) and an azimuth of 30 degrees clockwise from north
  * (or 150 CCW from south), from north east, facing south west."
  */
-export const PREVIEW_SUN_ALTITUDE_DEG = -60;
-export const PREVIEW_SUN_AZIMUTH_DEG = 150;
+const PREVIEW_SUN_ALTITUDE_DEG = -60;
+const PREVIEW_SUN_AZIMUTH_DEG = 150;
 
 /** Godot's preview sun is white at energy 1.0 with shadows enabled. */
 export const PREVIEW_SUN_COLOR = 0xffffff;
 export const PREVIEW_SUN_ENERGY = 1;
 export const PREVIEW_SUN_SHADOW_MAX_DISTANCE = 100;
 
-const PREVIEW_SKY_TOP: Color = { r: 0.385, g: 0.454, b: 0.55, a: 1 };
-const PREVIEW_GROUND_BOTTOM: Color = { r: 0.2, g: 0.169, b: 0.133, a: 1 };
+const PREVIEW_SKY_TOP: Rgba = { r: 0.385, g: 0.454, b: 0.55, a: 1 };
+const PREVIEW_GROUND_BOTTOM: Rgba = { r: 0.2, g: 0.169, b: 0.133, a: 1 };
 
 /**
  * The nodes Godot's two counters watch. A stable module-level predicate: the
@@ -73,8 +75,8 @@ export function previewYield(sceneNodeTypes: Iterable<string>, toggles: PreviewT
  */
 export function previewSunDirection(): THREE.Vector3 {
   const euler = new THREE.Euler(
-    THREE.MathUtils.degToRad(PREVIEW_SUN_ALTITUDE_DEG),
-    THREE.MathUtils.degToRad(PREVIEW_SUN_AZIMUTH_DEG),
+    degToRad(PREVIEW_SUN_ALTITUDE_DEG),
+    degToRad(PREVIEW_SUN_AZIMUTH_DEG),
     0,
     'YXZ'
   );
@@ -82,17 +84,8 @@ export function previewSunDirection(): THREE.Vector3 {
 }
 
 /** Godot's `Color::get_luminance()`, with Rec. 709 coefficients. */
-function luminance({ r, g, b }: Color): number {
+function luminance({ r, g, b }: Rgba): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function lerp(a: Color, b: Color, t: number): Color {
-  return {
-    r: a.r + (b.r - a.r) * t,
-    g: a.g + (b.g - a.g) * t,
-    b: a.b + (b.b - a.b) * t,
-    a: 1,
-  };
 }
 
 /**
@@ -101,10 +94,10 @@ function lerp(a: Color, b: Color, t: number): Color {
  * halfway towards that grey. The push is what keeps the horizon bright rather
  * than muddy.
  */
-function previewHorizonColor(): Color {
-  const midpoint = lerp(PREVIEW_SKY_TOP, PREVIEW_GROUND_BOTTOM, 0.5);
+function previewHorizonColor(): Rgba {
+  const midpoint = lerpColor(PREVIEW_SKY_TOP, PREVIEW_GROUND_BOTTOM, 0.5);
   const lum = luminance(midpoint) * 3.333;
-  return lerp(midpoint, { r: lum, g: lum, b: lum, a: 1 }, 0.5);
+  return lerpColor(midpoint, { r: lum, g: lum, b: lum, a: 1 }, 0.5);
 }
 
 /**
@@ -112,7 +105,7 @@ function previewHorizonColor(): Color {
  * authored `WorldEnvironment`, so the two cannot diverge. Its glow becomes a
  * bloom pass in `ToneMapLayer`.
  */
-export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyProperties } {
+export function previewEnvironment(): { settings: EnvironmentSettings; sky: Sky } {
   const settings = createEnvironmentSettings(
     decodeEnvironment({
       background_mode: String(2), // BG_SKY
@@ -127,16 +120,20 @@ export function previewEnvironment(): { settings: EnvironmentSettings; sky: SkyP
   );
 
   const horizon = previewHorizonColor();
-  const sky = decodeSkyMaterial('ProceduralSkyMaterial', {}) as ProceduralSkyProperties;
+  const material = decodeSkyMaterial('ProceduralSkyMaterial', {}) as ProceduralSkyProperties;
 
   return {
     settings,
-    sky: {
-      ...sky,
-      sky_top_color: PREVIEW_SKY_TOP,
-      sky_horizon_color: horizon,
-      ground_bottom_color: PREVIEW_GROUND_BOTTOM,
-      ground_horizon_color: horizon,
-    },
+    // The editor's Sky keeps every default but its material (`node_3d_editor_plugin.cpp:10394`).
+    sky: decodeSky(
+      {},
+      {
+        ...material,
+        sky_top_color: PREVIEW_SKY_TOP,
+        sky_horizon_color: horizon,
+        ground_bottom_color: PREVIEW_GROUND_BOTTOM,
+        ground_horizon_color: horizon,
+      }
+    ),
   };
 }

@@ -13,7 +13,7 @@ export interface ActionLoopSettings {
 }
 
 /** 'once': a single pass, clamped at the last frame instead of snapping back. */
-export const LOOP_ONCE_SETTINGS: ActionLoopSettings = Object.freeze({
+const LOOP_ONCE_SETTINGS: ActionLoopSettings = Object.freeze({
   loop: LoopOnce,
   repetitions: 1,
   clampWhenFinished: true,

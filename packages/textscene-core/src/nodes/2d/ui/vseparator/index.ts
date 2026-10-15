@@ -13,5 +13,3 @@ const vSeparatorRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(vSeparatorRegistration);
-
-export { vSeparatorRegistration };

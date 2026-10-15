@@ -10,6 +10,5 @@ const graphEditRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(graphEditRegistration);
 
-export { graphEditRegistration };
 export * from './parser';
 export * from './types';

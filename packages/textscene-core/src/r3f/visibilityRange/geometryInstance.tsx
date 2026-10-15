@@ -7,7 +7,7 @@
 
 import { useThree } from '@react-three/fiber';
 import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
-import { hasGeometryBase } from '../../godot/geometryBase';
+import { hasGeometryBase } from '../../godot/scene/geometryBase';
 import type { GeometryInstance3DProperties } from '../../nodes/3d/geometryinstance3d/types';
 import { useNodePath } from '../contexts/NodePathContext';
 import { useTreeOrder } from '../contexts/TreeOrderContext';

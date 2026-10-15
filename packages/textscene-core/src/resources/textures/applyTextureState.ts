@@ -1,9 +1,8 @@
 /**
- * Per-slot texture state (UV transform, filter, wrapping, colour space), applied
+ * Per-slot texture state (UV set and transform, filter, wrapping, colour space), applied
  * by cloning only when the binding diverges from the shared source. Not a
- * resource slice (ADR-0031): it decodes nothing. In production only
- * `standardmaterial3d/textureBinding.ts` and the panorama sky (`sky/build.ts`)
- * call it, and each decides the state its sampler needs.
+ * resource slice (ADR-0031): it decodes nothing. Each caller decides the state its
+ * sampler needs.
  */
 
 import * as THREE from 'three';
@@ -12,8 +11,8 @@ import { applyTextureFilterState, godotTextureFilterState, textureFilterMatches 
 /** Below this, a UV transform is indistinguishable from identity. */
 const IDENTITY_EPSILON = 1e-6;
 
-/** Marks a texture this module cloned, so its owning material may dispose it. */
-const MATERIAL_OWNED = 'textsceneClonedForMaterial';
+/** Marks a texture this module cloned, so its binder may dispose it. */
+const BINDING_OWNED = 'textsceneClonedForBinding';
 
 export interface UVTransform {
   scale: { x: number; y: number };
@@ -25,8 +24,10 @@ export interface UVTransform {
  * It applies at material build: `createTextureFromBuffer` knows no material or slot.
  */
 export interface MaterialTextureState {
-  /** Godot `uv1_scale` / `uv1_offset`. Omitted means no tiling transform. */
+  /** The UV set's scale and offset. Omitted means no tiling transform. */
   uv?: UVTransform;
+  /** three's UV channel the slot samples, `UV2_CHANNEL` for Godot's UV2. Omitted means UV1. */
+  channel?: number;
   /** Godot `BaseMaterial3D.texture_filter` ordinal. Omitted means its default. */
   filter?: number;
   /**
@@ -40,7 +41,12 @@ export interface MaterialTextureState {
   repeat?: boolean;
 }
 
-export interface TextureState extends MaterialTextureState {
+interface TextureState extends MaterialTextureState {
+  /**
+   * The sampler reads a copy with its own mip chain, whatever the import gives, as Godot's decal
+   * atlas does (`texture_storage.cpp:3169-3226`). Omitted means the import's chain.
+   */
+  buildsMipChain?: boolean;
   /**
    * The colour space this binding samples in. Required: only the binding knows
    * what the sampler needs, whatever the producer tagged.
@@ -90,9 +96,14 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   // Only an authored filter diverges. Otherwise a GradientTexture2D, which has no
   // mipmaps, would clone per material and slot for a filter nobody asked for.
   const filterDiverges = state.filter !== undefined && !textureFilterMatches(texture, filterState);
+  const mipChainDiverges = state.buildsMipChain === true && !texture.generateMipmaps;
   // A texture whose tag already matches the sampler is shared untouched.
   const colorSpaceDiverges = texture.colorSpace !== state.colorSpace;
-  if (!uvDiverges && !filterDiverges && !wrapDiverges && !colorSpaceDiverges) return texture;
+  const channel = state.channel ?? 0;
+  const channelDiverges = texture.channel !== channel;
+  const diverges =
+    uvDiverges || filterDiverges || mipChainDiverges || wrapDiverges || colorSpaceDiverges || channelDiverges;
+  if (!diverges) return texture;
 
   // One clone, however many reasons. `clone()` shares `source`, so the image
   // bytes are not duplicated.
@@ -101,25 +112,35 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
     cloned.repeat.set(state.uv!.scale.x, state.uv!.scale.y);
     cloned.offset.set(state.uv!.offset.x, state.uv!.offset.y);
   }
-  // Every clone carries the wanted wrapping, whatever the reason it was made.
+  // Every clone carries the wanted wrapping and UV set, whatever the reason it was made.
   cloned.wrapS = wrapping;
   cloned.wrapT = wrapping;
-  if (filterDiverges) applyTextureFilterState(cloned, filterState);
+  cloned.channel = channel;
+  if (mipChainDiverges) cloned.generateMipmaps = true;
+  if (filterDiverges || mipChainDiverges) applyTextureFilterState(cloned, filterState);
   // Pinned, not assigned: R3F reasserts `SRGBColorSpace` every commit. The sRGB
   // case wants what R3F reasserts, so it needs no pin.
   if (state.colorSpace === THREE.NoColorSpace) pinNoColorSpace(cloned);
   else cloned.colorSpace = state.colorSpace;
-  cloned.userData[MATERIAL_OWNED] = true;
+  cloned.userData[BINDING_OWNED] = true;
   cloned.needsUpdate = true;
   return cloned;
 }
 
 /**
- * Whether a texture belongs to the material holding it, not the loader's cache,
- * so that disposing the material disposes it too.
+ * Whether a texture is a clone `applyTextureState` made for its binder, not the loader's cache
+ * entry, so that the binder disposes it.
  */
-export function isMaterialOwnedTexture(texture: THREE.Texture): boolean {
-  return texture.userData[MATERIAL_OWNED] === true;
+function isBindingOwnedTexture(texture: THREE.Texture): boolean {
+  return texture.userData[BINDING_OWNED] === true;
+}
+
+/**
+ * Release a texture `applyTextureState` returned: a dispose on a clone it made, and a no-op on a
+ * shared cache entry, which the loader owns.
+ */
+export function releaseBoundTexture(texture: THREE.Texture | null | undefined): void {
+  if (texture && isBindingOwnedTexture(texture)) texture.dispose();
 }
 
 function isIdentity(uv: UVTransform): boolean {

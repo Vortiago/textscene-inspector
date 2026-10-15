@@ -1,12 +1,12 @@
 /** The fog uniforms one render writes, and the clear after it. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
-import { VOLUMETRIC_FOG_DEFAULTS } from '../../godot/volumetricFog';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { VOLUMETRIC_FOG_DEFAULTS } from '../../godot/rendering/environment/volumetricFog';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { skyLightUserData } from '../sky/skyLight';
-import { finishFog, prepareFog, type FogSettings } from './fogFrame';
+import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame';
 import type { FogPasses } from './fogPasses';
 import { fogUniforms } from './fogUniforms';
 
@@ -31,7 +31,7 @@ function settings(properties: Record<string, string>): FogSettings {
 
 const camera = new THREE.PerspectiveCamera(75, 1, 0.05, 400);
 
-const NO_OBJECTS = { lights: [], casters: [] };
+const NO_OBJECTS = { lights: [], casters: [], volumes: [] };
 
 function sun(intensity: number): THREE.DirectionalLight {
   const light = new THREE.DirectionalLight(0xffffff, intensity);
@@ -90,10 +90,11 @@ describe('prepareFog', () => {
 
   it('writes each sun for the surfaces and for the sky apart', () => {
     const lightOnly = sun(2);
-    lightOnly.userData = skyLightUserData({ drawsInSky: false, energy: 2 / Math.PI });
+    lightOnly.userData = skyLightUserData({ drawsInSky: false, energy: 2 / Math.PI, size: 0 });
     prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), {
       lights: [sun(Math.PI), lightOnly],
       casters: [],
+      volumes: [],
     });
 
     expect(fogUniforms.sunDirections[1]).toBe(1);
@@ -158,5 +159,22 @@ describe('finishFog', () => {
 
     expect(fogUniforms.depthColor[3]).toBe(0);
     expect(fogUniforms.volumeLookup[0]).toBe(0);
+  });
+});
+
+describe('captureFog', () => {
+  const foggy = () => settings({ fog_enabled: 'true', volumetric_fog_enabled: 'true' });
+
+  it("keeps an exterior capture's depth fog and drops its volumetric fog", () => {
+    const fog = captureFog(foggy(), false);
+
+    expect([fog.depth, fog.volumetric]).toEqual([foggy().depth, null]);
+    expect(fog.depth).not.toBeNull();
+  });
+
+  it('drops both fogs from an interior capture, which draws without the environment', () => {
+    const fog = captureFog(foggy(), true);
+
+    expect([fog.depth, fog.volumetric]).toEqual([null, null]);
   });
 });

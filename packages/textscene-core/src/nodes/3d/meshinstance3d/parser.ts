@@ -4,7 +4,8 @@ import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseOptionalInt } from '../../../parser/valueParsers';
-import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
+import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../godot/string/string.js';
 
 /** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
 function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
@@ -57,7 +58,6 @@ export function parseMeshInstance3D(
 
   assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
   assignIfDefined(meshInstance3DProps, 'giLightmapScale', parseOptionalInt(properties.gi_lightmap_scale));
-  assignIfDefined(meshInstance3DProps, 'layers', parseOptionalInt(properties.layers, 'uint32'));
 
   if (properties.skeleton) {
     meshInstance3DProps.skeleton = properties.skeleton;

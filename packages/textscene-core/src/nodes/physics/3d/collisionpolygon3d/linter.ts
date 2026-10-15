@@ -6,5 +6,3 @@ import { makeCollisionPolygonLinterRule } from '../../../../linter/physics/colli
 const collisionPolygon3DValidationRule = makeCollisionPolygonLinterRule('3D');
 
 ruleRegistry.register(collisionPolygon3DValidationRule);
-
-export { collisionPolygon3DValidationRule };

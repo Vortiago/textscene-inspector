@@ -6,16 +6,16 @@
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseVisualInstance3D } from './parser';
 import { Node3D } from '../../base/node3d/Component';
 import './index';
 import './index.r3f';
 
 describe('VisualInstance3D registration', () => {
-  it('registers the Node3D base parser', () => {
+  it('registers its own parser, which reads layers on top of the Node3D fields', () => {
     const registration = nodeRegistry.getRegistration('VisualInstance3D');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+    expect(registration!.parser).toBe(parseVisualInstance3D);
   });
 
   it('reuses the Node3D component so children keep their transform space', () => {

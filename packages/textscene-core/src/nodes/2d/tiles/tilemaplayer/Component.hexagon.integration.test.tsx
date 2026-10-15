@@ -12,8 +12,8 @@ import { TscnParser } from '../../../../parser/TscnParser';
 import { parseTresFile } from '../../../../parser/parsedResource';
 import { tileSetFromTres } from '../../../../resources/tileset/decode';
 import { mapToLocalPx } from '../../../../resources/tileset/tilePlacement';
-import { TILE_SHAPE_HEXAGON } from '../../../../resources/tileset/types';
-import { findByType } from './findByType';
+import { TileShape } from '../../../../godot/scene/tileSet';
+import { findByType } from './findByType.testkit';
 import type { TileMapLayerProperties } from './types';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -35,7 +35,7 @@ describe('hexagonal map integration', () => {
   it('resolves the real tileset.tres: HEXAGON, vertical offset axis, 110×94, 26 sources', () => {
     const model = tileSetFromTres(parseTresFile(tilesetContent));
     expect(model).not.toBeNull();
-    expect(model!.shape).toBe(TILE_SHAPE_HEXAGON);
+    expect(model!.shape).toBe(TileShape.TILE_SHAPE_HEXAGON);
     expect(model!.offsetAxis).toBe(1);
     expect(model!.tileSize).toEqual({ x: 110, y: 94 });
     expect(model!.sources.size).toBe(26);

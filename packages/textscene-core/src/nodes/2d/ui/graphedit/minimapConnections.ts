@@ -10,30 +10,20 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { lerp } from '../../../../godot/math';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
-import type { ControlColor } from '../control/types';
+import { lerpColor } from '../../../../godot/math/math';
 import { connectionControlPoints, tessellateConnectionLine } from './connectionCurve';
 import type { ResolvedConnection } from './connectionEndpoints';
 import { minimapConvertFromGraph, type GraphScrollBounds, type MinimapTransform } from './minimap';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** One `draw_polyline_colors` call: the mapped points and their per-point colours. */
-export interface MinimapConnectionLine {
-  points: Vec2[];
-  colors: ControlColor[];
+interface MinimapConnectionLine {
+  points: Vector2[];
+  colors: Rgba[];
 }
 
-/** `Color::lerp`: component-wise, alpha included. */
-function lerpColor(from: ControlColor, to: ControlColor, weight: number): ControlColor {
-  return {
-    r: lerp(from.r, to.r, weight),
-    g: lerp(from.g, to.g, weight),
-    b: lerp(from.b, to.b, weight),
-    a: lerp(from.a, to.a, weight),
-  };
-}
-
-function distance(a: Vec2, b: Vec2): number {
+function distance(a: Vector2, b: Vector2): number {
   return Math.hypot(b.x - a.x, b.y - a.y);
 }
 

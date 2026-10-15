@@ -3,12 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree, type RootState } from '@react-three/fiber';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering';
+import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { createEnvironmentSettings } from '../../resources/environment/build';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { fireSceneRender } from '../testing/fireSceneRender';
 import { FogLayer } from './FogLayer';
-import { FogVolumePass } from './fogVolumePass';
+import { FogVolumeObject } from './fogVolumeObject';
+import { VolumetricFogPass } from './volumetricFogPass';
 
 const volumetric = createEnvironmentSettings(
   decodeEnvironment({ volumetric_fog_enabled: 'true' }),
@@ -19,7 +20,7 @@ afterEach(() => vi.restoreAllMocks());
 
 /** The fog on a canvas, its volume pass watched, and the canvas's renderer, scene and camera. */
 async function mountedFog() {
-  const prepare = vi.spyOn(FogVolumePass.prototype, 'prepare').mockReturnValue(false);
+  const prepare = vi.spyOn(VolumetricFogPass.prototype, 'prepare').mockReturnValue(false);
   let state: RootState | null = null;
   function Capture() {
     state = useThree();
@@ -51,6 +52,16 @@ describe('FogLayer', () => {
     fireSceneRender(scene, camera);
 
     expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it("hands the volume pass the scene's FogVolumes", async () => {
+    const { prepare, gl, scene, camera } = await mountedFog();
+    const volume = new FogVolumeObject();
+    scene.add(volume);
+
+    gl.shadowMap.render([], scene, camera);
+
+    expect(prepare.mock.calls[0]![3].volumes).toEqual([volume]);
   });
 
   it("readies nothing for another scene's shadow pass (edge case)", async () => {

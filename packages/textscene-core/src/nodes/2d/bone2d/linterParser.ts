@@ -2,7 +2,7 @@
  * Bone2D strict validators for linting: `rest` (skeleton_2d.cpp:380) and four
  * `_get_property_list` keys that doc/classes/Bone2D.xml documents as methods only.
  * `default_length`, an alias for `length` with no `PropertyInfo`
- * (skeleton_2d.cpp:48-49,70-71), is resolved by `godot/deprecated.ts`.
+ * (skeleton_2d.cpp:48-49,70-71), is resolved by `godot/classdb/deprecated.ts`.
  */
 
 import '../../base/node2d/linterParser.js';

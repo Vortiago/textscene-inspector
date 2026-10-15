@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
-import { NO_VISIBILITY_RANGE, VisibilityRangeFadeMode } from '../../../godot/visibilityRange';
+import { NO_VISIBILITY_RANGE, VisibilityRangeFadeMode } from '../../../godot/rendering/visibilityRange';
 import { parseGeometryInstance3D } from './parser';
 
 const HEADING = heading('GeometryInstance3D', { name: 'Geometry', parent: '.' });
@@ -8,6 +8,10 @@ const HEADING = heading('GeometryInstance3D', { name: 'Geometry', parent: '.' })
 describe('parseGeometryInstance3D', () => {
   it('keeps the Node3D fields', () => {
     expect(parseGeometryInstance3D(HEADING, {}).name).toBe('Geometry');
+  });
+
+  it('reads the VisualInstance3D layers', () => {
+    expect(parseGeometryInstance3D(HEADING, { layers: '2' }).layers).toBe(2);
   });
 
   it('reads transparency', () => {

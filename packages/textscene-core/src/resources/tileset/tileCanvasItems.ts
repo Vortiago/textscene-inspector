@@ -4,12 +4,12 @@
  * into runs of consecutive cells that share an atlas source.
  */
 
-import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering';
+import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering/rendering';
 import type { DrawableCell } from './drawableCell';
 import type { AtlasSourceModel, TileMaterial } from './types';
 
 /** One batch: consecutive cells of a canvas item that draw from one atlas source. */
-export interface TileSourceRun {
+interface TileSourceRun {
   sourceId: number;
   source: AtlasSourceModel;
   cells: readonly DrawableCell[];

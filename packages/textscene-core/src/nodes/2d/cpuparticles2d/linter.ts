@@ -1,7 +1,7 @@
 /**
- * Semantic rules for CPUParticles2D: the two settings whose result the frozen pose
+ * Semantic rules for CPUParticles2D: an emission shape whose result the frozen pose
  * cannot reproduce, and a `*_min` above its `*_max`, which the setters resolve by
- * moving one of the two. The preview two are info: each is legal Godot, and the
+ * moving one of the two. The emission shape is info: it is legal Godot, and the
  * emitter still draws particles, only not where the property puts them.
  */
 
@@ -9,18 +9,13 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
-import { ruleInt, boolSlotValue } from '../../../godot/index.js';
+import { ruleInt } from '../../../godot/variant/int.js';
 
 const arms = {
   nondeterministicEmissionShape: groundedArm('cpuparticles2d-nondeterministic-emission-shape', {
     kind: 'no-engine-counterpart',
     scope: 'previewer-limitation',
     because: 'the emitter samples an unserialised global RNG, so no static pose can place it',
-  }),
-  fractDeltaIgnored: groundedArm('cpuparticles2d-fract-delta-ignored', {
-    kind: 'no-engine-counterpart',
-    scope: 'previewer-limitation',
-    because: 'the frozen pose steps at a fixed rate, so a partial first step is unreachable',
   }),
   paramMinAboveMax: paramMinAboveMaxArm('cpuparticles2d', 'cpu_particles_2d.cpp:352-376'),
 } as const satisfies RuleArms<string>;
@@ -53,17 +48,6 @@ function checkPreviewLimits(node: RuleContext['node'], props: Record<string, str
     );
   }
 
-  // Godot's default is true, so only an explicit setting is reported: a report on
-  // every emitter that omits the property would say nothing.
-  if (boolSlotValue(props.fract_delta) === true) {
-    reportArm(
-      diagnostics,
-      arms.fractDeltaIgnored,
-      node,
-      `CPUParticles2D 'fract_delta' gives a restarting particle a partial first step. The previewer's frozen pose steps at a fixed rate and ignores it, so particles land up to one frame behind Godot's.`
-    );
-  }
-
   return diagnostics;
 }
 
@@ -80,7 +64,7 @@ const cpuParticles2DValidationRule: LintRule = {
   meta: {
     name: 'valid-cpuparticles2d-properties',
     description:
-      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce (global-RNG emission shapes, fract_delta), and a *_min above its *_max, where one of the two loads as the other',
+      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce (global-RNG emission shapes), and a *_min above its *_max, where one of the two loads as the other',
     category: 'validation',
     applicableNodeTypes: ['CPUParticles2D'],
     emits: armEmits(arms),
@@ -89,5 +73,3 @@ const cpuParticles2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(cpuParticles2DValidationRule);
-
-export { cpuParticles2DValidationRule };

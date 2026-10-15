@@ -7,12 +7,19 @@ renders_as: a THREE.RectAreaLight shaded as Godot 4.7.2's area light
 
 # AreaLight3D
 
-Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: `light_energy` spread over `area_size`, faded by `area_range` and `area_attenuation`, with `light_specular` on the highlight. It shades each material in its `diffuse_mode` and `specular_mode`, and a clearcoat dims the light beneath it. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.
+Godot's rectangular area lamp, which lights the side its local -Z faces. The previewer draws Godot 4.7.2's area light: `light_energy` spread over `area_size`, faded by `area_range` and `area_attenuation`, with `light_specular` on the highlight. `area_texture` colours the light. It shades each material in its `diffuse_mode` and `specular_mode`, and a clearcoat dims the light beneath it. With `distance_fade_enabled`, the light fades by Godot's smoothstep over the distance from the rendering camera. In volumetric fog, it scatters `light_volumetric_fog_energy` times its light into the medium, under its shadow. The reference images come from Godot 4.7.2, as Godot 4.6.3 emits no light from the node.
 
 ## Energy over the rectangle
-<!-- compare: image=unit-area-light-normalize status=unreviewed fixture=unit-area-light-normalize.tscn -->
+<!-- compare: image=unit-area-light-normalize status=done fixture=unit-area-light-normalize.tscn -->
 
 A 1×1 panel and a 4×0.05 strip at the same energy, over matte plates. `area_normalize_energy` divides each light's colour by its area, so both plates receive the same total light.
+
+## Texture
+<!-- compare: image=unit-area-light-texture status=done fixture=unit-area-light-texture.tscn -->
+
+The 1×1 panel of the energy scene with a red-to-blue gradient as its `area_texture`. The plate below the panel turns purple: at that distance the light reads a blurred mip of the texture, which mixes the two colours. A surface closer to the panel reads a sharper mip and shows the red and the blue apart.
+
+An `AtlasTexture` as the `area_texture` colours the light with its whole sheet, not its region, as Godot does. Godot reads the texture by its RID, which is the sheet's.
 
 ## Shadow
 <!-- compare: image=unit-area-light3d status=done fixture=unit-area-light3d.tscn -->
@@ -36,13 +43,10 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 | --- | --- | --- |
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-arealight3d-properties` | `arealight3d-projector-unsupported` | warning |
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
 The linter warns (`resource-type-excluded-by-hint`) when `area_texture` or `light_projector` holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (4.7.2 `light_3d.cpp:698-716`).
 
 The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `area_range` to `5.0`, `area_attenuation` to `1.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to `true`, `light_size` to `0.5`.
-
-## Known limitations
-
-- **Shader missing** `area_texture` is not drawn, so the light emits its flat `light_color`.

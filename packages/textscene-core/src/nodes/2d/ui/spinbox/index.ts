@@ -10,6 +10,5 @@ const spinBoxRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(spinBoxRegistration);
 
-export { spinBoxRegistration };
 export * from './parser';
 export * from './types';

@@ -11,12 +11,13 @@
  */
 
 import * as THREE from 'three';
-import type { Color } from '../../nodes/base/node2d/types.js';
 import type { Light2DShadowFilter } from '../../nodes/2d/lights/shared/types.js';
 import { accumulationState } from './lightQuad.js';
-import { FULL_SCREEN_VERTEX } from './fullScreenQuad.js';
+import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';
 import { shadowPixelSize } from './shadowSampling.js';
+import { glslFloat } from '../../utils/glslLiterals.js';
+import type { Rgba } from '../../godot/math/math.js';
 
 /** The depth an empty bin compares as: past any fragment, so `step` leaves it lit. */
 const EMPTY_BIN_DEPTH = '1e30';
@@ -32,7 +33,7 @@ export interface DirectionalShadowSampling {
   /** The quad's NDC position to the map's `(u, depth)`: the view and `shadow.directional_xform` composed. */
   readonly ndcToShadow: THREE.Matrix3;
   /** `Light2D.shadow_color`, which replaces the light where the shadow falls. */
-  readonly shadowColor: Color;
+  readonly shadowColor: Rgba;
 }
 
 const SHADOW_VERTEX = /* glsl */ `
@@ -58,12 +59,12 @@ varying vec2 vShadow;
 // An empty bin never shadows. The camera can show past the viewport's far edge, where depth
 // exceeds SHADOW_MAP_FAR, and a bin left at SHADOW_MAP_FAR would shadow all of it.
 float shadowTexel(float texel) {
-  float binDepth = texture2D(uShadowMap, vec2((clamp(texel, 0.0, ${SHADOW_MAP_BINS - 1}.0) + 0.5) / ${SHADOW_MAP_BINS}.0, 0.5)).r;
+  float binDepth = texture2D(uShadowMap, vec2((clamp(texel, 0.0, ${glslFloat(SHADOW_MAP_BINS - 1)}) + 0.5) / ${glslFloat(SHADOW_MAP_BINS)}, 0.5)).r;
   return binDepth >= float(${SHADOW_MAP_FAR}) ? ${EMPTY_BIN_DEPTH} : binDepth;
 }
 
 float textureShadow(float u, float depth) {
-  float scaled = u * ${SHADOW_MAP_BINS}.0;
+  float scaled = u * ${glslFloat(SHADOW_MAP_BINS)};
   float texel = floor(scaled);
   return mix(step(shadowTexel(texel - 1.0), depth), step(shadowTexel(texel), depth), scaled - texel);
 }
@@ -72,7 +73,7 @@ float shadowFraction() {
   float u = vShadow.x;
   float depth = vShadow.y;
 #if SHADOW_FILTER == 0
-  return step(shadowTexel(floor(u * ${SHADOW_MAP_BINS}.0)), depth);
+  return step(shadowTexel(floor(u * ${glslFloat(SHADOW_MAP_BINS)})), depth);
 #elif SHADOW_FILTER == 2
   float shadow = 0.0;
   for (int tap = -6; tap <= 6; tap++) shadow += textureShadow(u + uShadowPixelSize * float(tap), depth);
@@ -133,7 +134,7 @@ void main() {
 
 interface DirectionalLightQuadOptions {
   /** `Light2D.color`, in Godot's sRGB canvas space. */
-  readonly color: Color;
+  readonly color: Rgba;
   /** `Light2D.energy`. */
   readonly energy: number;
   readonly blendMode: number;

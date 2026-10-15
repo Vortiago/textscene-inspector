@@ -5,59 +5,18 @@
  */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import type { Color } from '../../../utils/colorParser';
-import type { Vector2 } from '../../../parser/vectors';
-import { BillboardMode } from '../../../godot/billboard';
-import { AxisMode } from '../../../godot/vector3Axis';
-
-/** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
-export { BillboardMode };
-
-/**
- * Alpha-cut modes. Controls how transparent regions of the texture are
- * handled with respect to depth writes.
- */
-export enum AlphaCutMode {
-  /** No alpha cut: the material uses regular transparency. */
-  ALPHA_CUT_DISABLED = 0,
-  /** Discard fragments below alpha threshold; opaque pixels write depth. */
-  ALPHA_CUT_DISCARD = 1,
-  /** Opaque prepass for sharp-edge-with-shadow scenarios. */
-  ALPHA_CUT_OPAQUE_PREPASS = 2,
-  /** Hashed (stochastic) alpha; maps to TRANSPARENCY_ALPHA_HASH (scene/3d/sprite_3d.cpp:291). */
-  ALPHA_CUT_HASH = 3,
-}
-
-/**
- * `BaseMaterial3D::AlphaAntiAliasing` (`material.h:197-200`), shared verbatim
- * by SpriteBase3D.
- */
-export enum AlphaAntiAliasing {
-  ALPHA_ANTIALIASING_OFF = 0,
-  ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE = 1,
-  ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE = 2,
-}
-
-/**
- * `BaseMaterial3D::TextureFilter` (`material.h:172-178`). The sampler state per
- * ordinal lives in `resources/textures/godotTextureFilter.ts`.
- */
-export enum TextureFilterMode {
-  TEXTURE_FILTER_NEAREST = 0,
-  TEXTURE_FILTER_LINEAR = 1,
-  TEXTURE_FILTER_NEAREST_WITH_MIPMAPS = 2,
-  TEXTURE_FILTER_LINEAR_WITH_MIPMAPS = 3,
-  TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 4,
-  TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC = 5,
-}
-
-/** `Vector3::Axis`, the axis the quad's normal points along. */
-export { AxisMode };
+import type { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
+import type { Vector3Axis } from '../../../godot/math/vector3Axis';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
+import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 /**
  * Rect2 (Godot rect resource): a rectangle in 2D space with float coords.
  */
-export interface Rect2 {
+interface Rect2 {
   x: number;
   y: number;
   width: number;
@@ -74,8 +33,8 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   /** Alpha-cut mode (default: DISABLED). */
   alpha_cut: AlphaCutMode;
 
-  /** Axis used when billboard is FIXED_Y (default: Y_AXIS). */
-  axis: AxisMode;
+  /** The axis the sprite faces (default: Z, `sprite_3d.h:77`). */
+  axis: Vector3Axis;
 
   /** Size of one texture pixel in 3D world units (default: 0.01). */
   pixel_size: number;
@@ -115,7 +74,7 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   region_rect?: Rect2;
 
   /** Color tint applied to the sprite (default: white). */
-  modulate: Color;
+  modulate: Rgba;
 
   /**
    * `FLAG_SHADED`: false (SHADING_MODE_UNSHADED) by default. The `SpriteBase3D()` flag loop sets
@@ -145,7 +104,7 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   alpha_antialiasing_edge: number;
 
   /** Sampler filter for the sprite texture (`sprite_3d.h:94`). Default LINEAR_WITH_MIPMAPS. */
-  texture_filter: TextureFilterMode;
+  texture_filter: TextureFilter;
 
   /** Render priority within the alpha-blended bucket (default: 0). */
   render_priority: number;

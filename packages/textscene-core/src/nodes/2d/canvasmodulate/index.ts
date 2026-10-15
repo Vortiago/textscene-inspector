@@ -10,6 +10,5 @@ const canvasModulateRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(canvasModulateRegistration);
 
-export { canvasModulateRegistration };
 export * from './parser';
 export * from './types';

@@ -4,7 +4,6 @@ import {
   MODE_LINEAR,
   MODE_OKHSL,
   MODE_RGB,
-  colorIntensity,
   colorModeAlphaChannel,
   colorModeChannels,
   colorModeIntensityChannel,
@@ -31,12 +30,6 @@ describe('colorNormalized', () => {
     expect(n.g).toBeCloseTo(0, 9);
     expect(n.b).toBeCloseTo(0, 9);
     expect(n.a).toBe(1);
-  });
-});
-
-describe('colorIntensity', () => {
-  it('is 0 for a non-overbright colour — log2(1)', () => {
-    expect(colorIntensity(RED)).toBe(0);
   });
 });
 

@@ -9,13 +9,14 @@ import { propertyError } from '../propertyError.js';
 import { createBooleanValidator } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { accepts, shape } from './grounding.js';
+
 import {
   ARRAY_LITERAL_RE,
   JACKETED_STRING_RE,
   NODE_PATH_LITERAL_RE,
   TYPED_WRAPPER_RE,
-} from '../../../godot/index.js';
-import { arrayLiteralBody } from '../../../godot/variantParser.js';
+  arrayLiteralBody,
+} from '../../../godot/variant/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { valueCode } from './codes.js';
 
@@ -135,7 +136,7 @@ export const scalarCombinators = {
  * fails on another typed array (`array.cpp:275-277`), an error. `hinted`: a bare
  * `const Array &` setter behind a `PROPERTY_HINT_ARRAY_TYPE`, a warning.
  */
-export type TypedArraySlot = { typedAs: string } & (
+type TypedArraySlot = { typedAs: string } & (
   { enforced: string; hinted?: never } | { hinted: string; enforced?: never }
 );
 

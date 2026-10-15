@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { surfaceDepthMaterial, syncSurfaceDepth } from './surfaceDepthMaterial';
 import type { ProgramShader } from '../materialProgramInputs';
+import { renderTargetMapUserData } from './renderTargetMap';
+import { alphaAntialiasingUserData } from './godotAlphaAntialiasing';
+import { AlphaAntiAliasing, scissorAntialiasing } from '../../godot/rendering/materials/alphaAntialiasing';
+
+const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3);
 
 /** The depth program as `depth`'s `onBeforeCompile` leaves it. */
 function compiled(depth: THREE.Material): ProgramShader {
@@ -39,6 +44,20 @@ describe('surfaceDepthMaterial', () => {
     const copy = surfaceDepthMaterial(surface, new THREE.MeshDistanceMaterial());
     expect(copy.alphaHash).toBe(true);
     expect(compiled(copy).fragmentShader).toContain('godotAlphaHashScale');
+  });
+
+  it('ramps the edge on the copy of an antialiased surface, as Godot’s depth draws do', () => {
+    const surface = new THREE.MeshBasicMaterial({ userData: alphaAntialiasingUserData(SCISSOR_CUT) });
+    const copy = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+    expect(compiled(copy).fragmentShader).toContain('godotEdgeCoverage(');
+  });
+
+  it('leaves alpha to coverage off on the copy, as only the colour pass turns it on', () => {
+    const surface = new THREE.MeshBasicMaterial({
+      alphaToCoverage: true,
+      userData: alphaAntialiasingUserData(SCISSOR_CUT),
+    });
+    expect(surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial()).alphaToCoverage).toBe(false);
   });
 
   it('disposes its copies with the surface (edge case)', () => {
@@ -88,6 +107,16 @@ describe('syncSurfaceDepth', () => {
     expect(compiled(depth).fragmentShader).toContain('godotAlphaHashScale');
   });
 
+  it('recompiles a copy whose surface starts antialiasing, with the edge ramp in its program', () => {
+    const surface = new THREE.MeshBasicMaterial();
+    const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+    surface.userData = alphaAntialiasingUserData(SCISSOR_CUT);
+
+    syncSurfaceDepth(depth, surface, 0.99);
+
+    expect(compiled(depth).fragmentShader).toContain('godotEdgeCoverage(');
+  });
+
   it('leaves the program alone when only a value moves (edge case)', () => {
     const surface = new THREE.MeshBasicMaterial();
     const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
@@ -98,5 +127,42 @@ describe('syncSurfaceDepth', () => {
     syncSurfaceDepth(depth, surface, 0.1);
 
     expect(depth.version).toBe(version);
+  });
+
+  it("cuts a render-target albedo where the surface samples it, through Godot's sampler", () => {
+    const sampler = {
+      uv: { scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } },
+      repeats: true,
+      isNearest: true,
+    };
+    const surface = new THREE.MeshBasicMaterial({
+      map: new THREE.WebGLRenderTarget(4, 4).texture,
+      userData: renderTargetMapUserData(sampler),
+    });
+    const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+
+    syncSurfaceDepth(depth, surface, 0.5);
+
+    const { vertexShader, fragmentShader } = compiled(depth);
+    expect(vertexShader).toContain('godotTargetMapTransform');
+    expect(fragmentShader).toContain('#define GODOT_TARGET_MAP_NEAREST');
+    expect(fragmentShader).toContain('godotTargetMapSample( vMapUv )');
+  });
+
+  it('recompiles when the sampler of a render-target albedo changes', () => {
+    const uv = { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
+    const surface = new THREE.MeshBasicMaterial({
+      map: new THREE.WebGLRenderTarget(4, 4).texture,
+      userData: renderTargetMapUserData({ uv, repeats: true, isNearest: false }),
+    });
+    const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+    syncSurfaceDepth(depth, surface, 0.5);
+    const version = depth.version;
+    surface.userData = renderTargetMapUserData({ uv, repeats: false, isNearest: false });
+
+    syncSurfaceDepth(depth, surface, 0.5);
+
+    expect(depth.version).toBeGreaterThan(version);
+    expect(compiled(depth).fragmentShader).toContain('#include <map_fragment>');
   });
 });

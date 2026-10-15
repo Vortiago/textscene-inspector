@@ -9,7 +9,7 @@ import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
-import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
 
 /** `LookAtModifier3D::OriginFrom`, hinted "Self,SpecificBone,ExternalNode" at :478. */
 const ORIGIN_FROM = { 0: 'Self', 1: 'SpecificBone', 2: 'ExternalNode' } as const;
@@ -63,15 +63,17 @@ validatorRegistry.registerAll('LookAtModifier3D', {
   // SkeletonModifier3D::get_hint_bone_axis(), values 0-5. set_forward_axis
   // (:121-124) stores the static_cast unchecked, so the hint governs the
   // inspector only: warning.
-  forward_axis: v.enumInt('forward_axis', 0, 5, BONE_AXIS, {
-    hinted: 'look_at_modifier_3d.cpp:472',
-  }),
+  forward_axis: v.enumInt('forward_axis', 0, 5, BONE_AXIS, { hinted: 'look_at_modifier_3d.cpp:472' }),
 
   // look_at_modifier_3d.cpp:473. set_primary_rotation_axis (:130-133) likewise
   // assigns the static_cast and only refreshes the configuration warning.
-  primary_rotation_axis: v.enumInt('primary_rotation_axis', 0, 2, VECTOR3_AXIS, {
-    hinted: 'look_at_modifier_3d.cpp:473',
-  }),
+  primary_rotation_axis: v.enumInt(
+    'primary_rotation_axis',
+    Vector3Axis.X,
+    Vector3Axis.Z,
+    VECTOR3_AXIS_NAMES,
+    { hinted: 'look_at_modifier_3d.cpp:473' }
+  ),
 
   // look_at_modifier_3d.cpp:474 and :475, bare Variant::BOOL with no hint.
   use_secondary_rotation: v.boolean('use_secondary_rotation'),
@@ -80,9 +82,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
   // look_at_modifier_3d.cpp:478, PROPERTY_HINT_ENUM "Self,SpecificBone,ExternalNode".
   // set_origin_from (:169-172) assigns and notifies the property list, which is
   // what hides the origin_bone/origin_external_node keys, not a refusal.
-  origin_from: v.enumInt('origin_from', 0, 2, ORIGIN_FROM, {
-    hinted: 'look_at_modifier_3d.cpp:478',
-  }),
+  origin_from: v.enumInt('origin_from', 0, 2, ORIGIN_FROM, { hinted: 'look_at_modifier_3d.cpp:478' }),
 
   // look_at_modifier_3d.cpp:479, as bone_name. set_origin_bone_name is :178-184.
   origin_bone_name: v.quotedString('origin_bone_name'),
@@ -124,9 +124,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
   transition_type: v.enumInt('transition_type', 0, 11, TRANSITION_TYPE, {
     hinted: 'look_at_modifier_3d.cpp:487',
   }),
-  ease_type: v.enumInt('ease_type', 0, 3, EASE_TYPE, {
-    hinted: 'look_at_modifier_3d.cpp:488',
-  }),
+  ease_type: v.enumInt('ease_type', 0, 3, EASE_TYPE, { hinted: 'look_at_modifier_3d.cpp:488' }),
 
   // look_at_modifier_3d.cpp:491 and :492, bare Variant::BOOL. Both setters
   // (:265-281) assign and notify the property list.

@@ -12,7 +12,6 @@ const areaLight3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(areaLight3DRegistration);
 
-export { areaLight3DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

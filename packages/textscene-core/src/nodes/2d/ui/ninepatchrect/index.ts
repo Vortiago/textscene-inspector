@@ -9,5 +9,3 @@ const ninePatchRectRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(ninePatchRectRegistration);
-
-export { ninePatchRectRegistration };

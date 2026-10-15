@@ -10,7 +10,7 @@ import type { TscnNode } from '../../parser/types';
 import { TscnSceneContents } from '../TscnCanvas';
 import { HierarchyProvider } from '../contexts/HierarchyContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
-import { createSceneGraphFromTscnScene } from '../../core/SceneGraph';
+import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
 import { HoverSeeder } from '../testing/HoverSeeder';
 import { SelectSeeder } from '../testing/SelectSeeder';

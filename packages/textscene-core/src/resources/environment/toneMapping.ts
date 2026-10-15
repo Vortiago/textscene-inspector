@@ -5,13 +5,8 @@
  */
 
 import * as THREE from 'three';
-import { glslFloat } from './glslLiterals';
-import {
-  GodotToneMapper,
-  hasGodotCurve,
-  toneMappingShaderChunk,
-  toneMappingWhiteParam,
-} from './godotToneMapping';
+import { hasGodotCurve, toneMappingShaderChunk } from './godotToneMapping';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 
 /** The subset of `THREE.WebGLRenderer` this module touches. */
 export interface ToneMappedRenderer {
@@ -19,7 +14,7 @@ export interface ToneMappedRenderer {
   toneMappingExposure: number;
 }
 
-export interface ToneMappingSettings {
+interface ToneMappingSettings {
   /** Godot `tonemap_mode`: 0 LINEAR, 1 REINHARDT, 2 FILMIC, 3 ACES, 4 AGX. */
   mode: number;
   /** Godot `tonemap_exposure`, default 1.0. */
@@ -38,16 +33,16 @@ const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
  * inside a tone curve, so a `tonemap_exposure` authored under LINEAR is
  * dropped. Faithful at the 1.0 default.
  */
-export function toneMappingFor(mode: number): THREE.ToneMapping {
-  if (mode === GodotToneMapper.LINEAR) return THREE.NoToneMapping;
+function toneMappingFor(mode: number): THREE.ToneMapping {
+  if (mode === ToneMapper.LINEAR) return THREE.NoToneMapping;
   return hasGodotCurve(mode) ? THREE.CustomToneMapping : THREE.NoToneMapping;
 }
 
 /**
- * Applies a tonemapper and returns the undo, as the renderer and three's shader chunks
- * outlive an environment. `THREE.ShaderChunk` is module-global, so one environment applies
- * at a time: the web app mounts one shell, each VS Code webview is its own realm, and
- * Godot allows one `WorldEnvironment` per scene. With two, last mount wins, as in Godot.
+ * Applies a tonemapper and returns the undo, as the renderer and three's shader chunks outlive an
+ * environment. `THREE.ShaderChunk` is module-global, so one environment applies at a time: the web
+ * app mounts one shell, each VS Code webview is its own realm, and only the root world's Environment
+ * applies, never a sub-viewport's (`r3f/environment/EnvironmentLayer.tsx`).
  */
 export function applyToneMapping(
   gl: ToneMappedRenderer,
@@ -55,36 +50,78 @@ export function applyToneMapping(
   scene?: THREE.Object3D
 ): () => void {
   const previousMapping = gl.toneMapping;
-  const previousExposure = gl.toneMappingExposure;
-  const previousChunk = THREE.ShaderChunk[TONEMAP_CHUNK];
-
   const mapping = toneMappingFor(settings.mode);
-  const exposure = settings.exposure ?? 1;
-  const custom = mapping === THREE.CustomToneMapping;
-
-  if (custom) {
-    keyProgramsOnToneMappingChunk();
-    // The white normalisation is a constant per environment, so it is baked
-    // into the chunk rather than plumbed through as a uniform every material
-    // would have to declare.
-    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(settings.mode, settings.agxContrast).replace(
-      'uniform float godotToneMapWhite;',
-      `const float godotToneMapWhite = ${glslFloat(
-        toneMappingWhiteParam(settings.mode, settings.white ?? 1)
-      )};`
-    );
-  }
-
-  const changed = mapping !== previousMapping || custom;
+  const restoreCurve = swapToneCurve(gl, settings);
   if (mapping !== previousMapping) gl.toneMapping = mapping;
-  if (exposure !== previousExposure) gl.toneMappingExposure = exposure;
+  const changed = mapping !== previousMapping || mapping === THREE.CustomToneMapping;
   if (changed) markMaterialsDirty(scene);
 
   return () => {
-    THREE.ShaderChunk[TONEMAP_CHUNK] = previousChunk;
+    restoreCurve();
     if (gl.toneMapping !== previousMapping) gl.toneMapping = previousMapping;
-    if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
     if (changed) markMaterialsDirty(scene);
+  };
+}
+
+/**
+ * Written only by `swapToneCurve`, and restored by its undo. The mapping the shared world
+ * tonemaps with, kept apart from `gl.toneMapping`, which the glow compositor holds at
+ * `NoToneMapping` while its own pass applies the curve.
+ */
+const worldToneMappings = new WeakMap<ToneMappedRenderer, THREE.ToneMapping>();
+
+/**
+ * The mapping a pass that renders the shared world without the compositor applies: a
+ * `SubViewport` target, which Godot tonemaps with the environment of its `find_world_3d()`.
+ * The renderer's own mapping when no environment has installed a curve.
+ */
+export function worldToneMapping(gl: ToneMappedRenderer): THREE.ToneMapping {
+  return worldToneMappings.get(gl) ?? gl.toneMapping;
+}
+
+/**
+ * Installs the environment's curve and exposure, and records its mapping for
+ * `worldToneMapping`, but leaves `gl.toneMapping` to its owner. Returns the undo.
+ */
+export function installToneCurve(
+  gl: ToneMappedRenderer,
+  settings: ToneMappingSettings,
+  scene?: THREE.Object3D
+): () => void {
+  const custom = toneMappingFor(settings.mode) === THREE.CustomToneMapping;
+  const restoreCurve = swapToneCurve(gl, settings);
+  if (custom) markMaterialsDirty(scene);
+  return () => {
+    restoreCurve();
+    if (custom) markMaterialsDirty(scene);
+  };
+}
+
+/** The chunk, exposure and world-mapping half of both installs, with no material marked. */
+function swapToneCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): () => void {
+  const previousExposure = gl.toneMappingExposure;
+  const previousChunk = THREE.ShaderChunk[TONEMAP_CHUNK];
+  const previousWorldMapping = worldToneMappings.get(gl);
+
+  const mapping = toneMappingFor(settings.mode);
+  const exposure = settings.exposure ?? 1;
+
+  if (mapping === THREE.CustomToneMapping) {
+    keyProgramsOnToneMappingChunk();
+    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(
+      settings.mode,
+      settings.white ?? 1,
+      settings.agxContrast
+    );
+  }
+  if (exposure !== previousExposure) gl.toneMappingExposure = exposure;
+  worldToneMappings.set(gl, mapping);
+
+  return () => {
+    THREE.ShaderChunk[TONEMAP_CHUNK] = previousChunk;
+    if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
+    if (previousWorldMapping === undefined) worldToneMappings.delete(gl);
+    else worldToneMappings.set(gl, previousWorldMapping);
   };
 }
 
@@ -94,7 +131,7 @@ export function applyToneMapping(
  * the `renderer.toneMapping` enum (`WebGLPrograms.js:490`) and reads the chunk only at compile
  * (`WebGLProgram.js:775`), so without this term two curves share one program.
  */
-export function toneMappingProgramKey(material: Pick<THREE.Material, 'toneMapped'>): string {
+function toneMappingProgramKey(material: Pick<THREE.Material, 'toneMapped'>): string {
   if (!material.toneMapped) return '';
   return `,toneMappingChunk:${chunkId(THREE.ShaderChunk[TONEMAP_CHUNK])}`;
 }

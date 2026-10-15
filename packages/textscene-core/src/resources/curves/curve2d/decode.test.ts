@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { decodeCurve2D, resolveCurve2D, tessellateCurve2D } from './decode';
+import { resolveCurve2D, tessellateCurve2D } from './decode';
+import { resolveOnlySubResource } from '../../../testing/subResource';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
+
+/** The control points a Curve2D sub-resource with this body decodes to. */
+function decode(data: Record<string, string>) {
+  return resolveOnlySubResource('Curve2D', data, resolveCurve2D);
+}
 
 /** A Curve2D body whose `_data` holds `points` as written, plus any other properties. */
 function body(points: string, properties: Record<string, string> = {}): Record<string, string> {
@@ -9,12 +15,12 @@ function body(points: string, properties: Record<string, string> = {}): Record<s
 }
 
 function pointsOf(points: string) {
-  return decodeCurve2D(body(points));
+  return decode(body(points));
 }
 
 const ORIGIN_POINT = { in: { x: 0, y: 0 }, out: { x: 0, y: 0 }, position: { x: 0, y: 0 } };
 
-describe('decodeCurve2D', () => {
+describe('the Curve2D body resolveCurve2D decodes', () => {
   it('reads the dodge_the_creeps rectangle path (zero tangents, 6 floats/point)', () => {
     // in.x, in.y, out.x, out.y, pos.x, pos.y per point.
     const points = pointsOf('PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 480, 0)');
@@ -52,15 +58,15 @@ describe('decodeCurve2D', () => {
   });
 
   it('loads no points from an absent, empty or unreadable _data', () => {
-    expect(decodeCurve2D({})).toEqual([]);
-    expect(decodeCurve2D({ _data: '' })).toEqual([]);
+    expect(decode({})).toEqual([]);
+    expect(decode({ _data: '' })).toEqual([]);
     expect(pointsOf('PackedVector2Array()')).toEqual([]);
     expect(pointsOf('PackedVector2Array(0, 0, 0, 0, 0, x)')).toEqual([]);
   });
 
   // `_set_data` fails on `!p_data.has("points")` (curve.cpp:1239).
   it('loads no points from a _data without "points"', () => {
-    expect(decodeCurve2D({ _data: '{}' })).toEqual([]);
+    expect(decode({ _data: '{}' })).toEqual([]);
   });
 
   // `_set_data` fails on `pc % 3 != 0` (curve.cpp:1243) before it touches the list,
@@ -82,14 +88,14 @@ describe('decodeCurve2D', () => {
 
     // `set_point_count` resizes the list to the count (curve.cpp:728-729).
     it('drops the tail at a smaller point_count', () => {
-      const points = decodeCurve2D(body(TWO_POINTS, { point_count: '1' }));
+      const points = decode(body(TWO_POINTS, { point_count: '1' }));
       expect(points.map((p) => p.position)).toEqual([{ x: 10, y: 0 }]);
     });
 
     // `_add_point(Vector2())` appends at the end (curve.cpp:732-733, 744-747),
     // unlike `Curve`, which seats a padded point in offset order.
     it('appends origin points after the authored ones at a larger point_count', () => {
-      const points = decodeCurve2D(body(TWO_POINTS, { point_count: '4' }));
+      const points = decode(body(TWO_POINTS, { point_count: '4' }));
       expect(points.map((p) => p.position)).toEqual([
         { x: 10, y: 0 },
         { x: 20, y: 0 },
@@ -100,7 +106,7 @@ describe('decodeCurve2D', () => {
     });
 
     it('keeps the authored points at an equal point_count', () => {
-      const points = decodeCurve2D(body(TWO_POINTS, { point_count: '2' }));
+      const points = decode(body(TWO_POINTS, { point_count: '2' }));
       expect(points.map((p) => p.position)).toEqual([
         { x: 10, y: 0 },
         { x: 20, y: 0 },
@@ -109,17 +115,17 @@ describe('decodeCurve2D', () => {
 
     // `ERR_FAIL_COND(p_count < 0)` (curve.cpp:722) leaves the list as `_data` set it.
     it('ignores a negative point_count', () => {
-      expect(decodeCurve2D(body(TWO_POINTS, { point_count: '-1' }))).toHaveLength(2);
+      expect(decode(body(TWO_POINTS, { point_count: '-1' }))).toHaveLength(2);
     });
 
     // A refused `_data` leaves the list empty, and the count still pads it.
     it('pads from zero points when _data is refused', () => {
-      const points = decodeCurve2D({ _data: '{}', point_count: '2' });
+      const points = decode({ _data: '{}', point_count: '2' });
       expect(points).toEqual([ORIGIN_POINT, ORIGIN_POINT]);
     });
 
     it(`stops padding at ${MAX_PADDED_POINTS} points`, () => {
-      const points = decodeCurve2D(body(TWO_POINTS, { point_count: '100000000' }));
+      const points = decode(body(TWO_POINTS, { point_count: '100000000' }));
       expect(points).toHaveLength(MAX_PADDED_POINTS);
     });
   });

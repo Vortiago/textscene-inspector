@@ -93,6 +93,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Alpha Antialiasing One Sample",
+    "file": "unit-alpha-antialiasing-one-sample.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatable Body 2d",
     "file": "unit-animatable-body-2d.tscn",
     "category": "Other"
@@ -403,6 +408,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Atlas Texture",
+    "file": "unit-decal-atlas-texture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal Cull Mask",
     "file": "unit-decal-cull-mask.tscn",
     "category": "Other"
@@ -473,6 +483,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Environment Adjustments",
+    "file": "unit-environment-adjustments.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Environment Sky Tonemap",
     "file": "unit-environment-sky-tonemap.tscn",
     "category": "Other"
@@ -503,6 +518,31 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Density Half Tres",
+    "file": "unit-fog-volume-density-half-tres.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fog Volume Density Image",
+    "file": "unit-fog-volume-density-image.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fog Volume Density Noise Tres",
+    "file": "unit-fog-volume-density-noise-tres.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fog Volume Density Volume Tres",
+    "file": "unit-fog-volume-density-volume-tres.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Fog Volume Shader Material",
+    "file": "unit-fog-volume-shader-material.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
     "category": "Other"
@@ -528,8 +568,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Lightmap Uv2",
+    "file": "unit-glb-lightmap-uv2.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Surface Material Override",
     "file": "unit-glb-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Viewport Texture",
+    "file": "unit-glb-viewport-texture.tscn",
     "category": "Other"
   },
   {
@@ -553,6 +603,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glow Map",
+    "file": "unit-glow-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glow Mix",
     "file": "unit-glow-mix.tscn",
     "category": "Other"
@@ -573,8 +628,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glow Specular",
+    "file": "unit-glow-specular.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glow Strength",
     "file": "unit-glow-strength.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gltf Alpha Border",
+    "file": "unit-gltf-alpha-border.tscn",
     "category": "Other"
   },
   {
@@ -815,6 +880,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label Autowrap In Container",
     "file": "unit-label-autowrap-in-container.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Label Settings Tres",
+    "file": "unit-label-label-settings-tres.tscn",
     "category": "Other"
   },
   {
@@ -1073,6 +1143,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Noisetexture2d Domain Warp",
+    "file": "unit-noisetexture2d-domain-warp.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Noisetexture2d Normal",
     "file": "unit-noisetexture2d-normal.tscn",
     "category": "Other"
@@ -1318,6 +1393,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflection Probe Always",
+    "file": "unit-reflection-probe-always.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Reflection Probe Ambient Color",
+    "file": "unit-reflection-probe-ambient-color.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Reflection Probe Box Projection",
+    "file": "unit-reflection-probe-box-projection.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Reflection Probe",
     "file": "unit-reflection-probe.tscn",
     "category": "Other"
@@ -1413,6 +1503,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Energy",
+    "file": "unit-sky-energy.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Panorama Tres",
+    "file": "unit-sky-panorama-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sky Panorama",
     "file": "unit-sky-panorama.tscn",
     "category": "Other"
@@ -1425,6 +1525,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sky Procedural",
     "file": "unit-sky-procedural.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Radiance Size 32",
+    "file": "unit-sky-radiance-size-32.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Realtime",
+    "file": "unit-sky-realtime.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Sun Angular Distance",
+    "file": "unit-sky-sun-angular-distance.tscn",
     "category": "Other"
   },
   {
@@ -1515,6 +1630,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Spring Bone Simulator 3d",
     "file": "unit-spring-bone-simulator-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d Billboard Fixed Y",
+    "file": "unit-sprite3d-billboard-fixed-y.tscn",
     "category": "Other"
   },
   {
@@ -1783,8 +1903,28 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "World Environment Missing",
+    "file": "unit-world-environment-missing.tscn",
+    "category": "Other"
+  },
+  {
     "name": "World Environment No Fog",
     "file": "unit-world-environment-no-fog.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "World Environment None",
+    "file": "unit-world-environment-none.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "World Environment Tree Order Child",
+    "file": "unit-world-environment-tree-order-child.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "World Environment Tree Order",
+    "file": "unit-world-environment-tree-order.tscn",
     "category": "Other"
   },
   {
@@ -1831,6 +1971,30 @@ export const fixtures: Fixture[] = [
     "name": "Ysort Own Body",
     "file": "unit-ysort-own-body.tscn",
     "category": "Other"
+  },
+  {
+    "name": "Alpha Antialiasing",
+    "file": "alpha-antialiasing/unit-alpha-antialiasing.tscn",
+    "category": "Other",
+    "root": "alpha-antialiasing"
+  },
+  {
+    "name": "Msaa 2d",
+    "file": "msaa-2d/unit-msaa-2d.tscn",
+    "category": "Other",
+    "root": "msaa-2d"
+  },
+  {
+    "name": "Msaa 3d",
+    "file": "msaa-3d/unit-msaa-3d.tscn",
+    "category": "Other",
+    "root": "msaa-3d"
+  },
+  {
+    "name": "Subviewport Snap Off",
+    "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
+    "category": "Other",
+    "root": "subviewport-snap-off"
   },
   {
     "name": "Animation Empty Library",
@@ -1986,6 +2150,12 @@ export const fixtures: Fixture[] = [
     "name": "World Environment Unsupported",
     "file": "edge-world-environment-unsupported.tscn",
     "category": "Edge Cases"
+  },
+  {
+    "name": "Gltf Unsupported Required Extension",
+    "file": "gltf-unsupported-required-extension/edge-gltf-unsupported-required-extension.tscn",
+    "category": "Edge Cases",
+    "root": "gltf-unsupported-required-extension"
   },
   {
     "name": "Dodge Player",
@@ -2168,8 +2338,23 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Imagetexture Half Tres",
+    "file": "unit-sprite2d-imagetexture-half-tres.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Imagetexture Tres",
+    "file": "unit-sprite2d-imagetexture-tres.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d Magnified",
     "file": "unit-sprite2d-magnified.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Noisetexture Tres",
+    "file": "unit-sprite2d-noisetexture-tres.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -2200,6 +2385,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map Layer Mixed Sources",
     "file": "unit-tile-map-layer-mixed-sources.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Texture Padding",
+    "file": "unit-tile-map-layer-texture-padding.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -2238,6 +2428,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Lights"
   },
   {
+    "name": "Area Light Distance Fade",
+    "file": "unit-area-light-distance-fade.tscn",
+    "category": "Unit - Lights"
+  },
+  {
+    "name": "Area Light Fog Shadow",
+    "file": "unit-area-light-fog-shadow.tscn",
+    "category": "Unit - Lights"
+  },
+  {
+    "name": "Area Light Fog",
+    "file": "unit-area-light-fog.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light Modes",
     "file": "unit-area-light-modes.tscn",
     "category": "Unit - Lights"
@@ -2245,6 +2450,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Area Light Normalize",
     "file": "unit-area-light-normalize.tscn",
+    "category": "Unit - Lights"
+  },
+  {
+    "name": "Area Light Texture",
+    "file": "unit-area-light-texture.tscn",
     "category": "Unit - Lights"
   },
   {
@@ -2558,6 +2768,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Control Theme Base Class",
+    "file": "unit-control-theme-base-class.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Control Theme Stylebox Color",
     "file": "unit-control-theme-stylebox-color.tscn",
     "category": "Unit - 2D UI Controls"
@@ -2741,6 +2956,24 @@ export const fixtures: Fixture[] = [
     "name": "Vbox Container",
     "file": "unit-vbox-container.tscn",
     "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Control Layout Direction Force",
+    "file": "layout-direction-force-rtl/unit-control-layout-direction-force.tscn",
+    "category": "Unit - 2D UI Controls",
+    "root": "layout-direction-force-rtl"
+  },
+  {
+    "name": "Control Layout Direction Locale",
+    "file": "layout-direction-locale-rtl/unit-control-layout-direction-locale.tscn",
+    "category": "Unit - 2D UI Controls",
+    "root": "layout-direction-locale-rtl"
+  },
+  {
+    "name": "Control Layout Direction Root",
+    "file": "layout-direction-root-rtl/unit-control-layout-direction-root.tscn",
+    "category": "Unit - 2D UI Controls",
+    "root": "layout-direction-root-rtl"
   },
   {
     "name": "Camera Basic",
@@ -2943,6 +3176,21 @@ export const fixtures: Fixture[] = [
     "category": "Unit - External Resources"
   },
   {
+    "name": "Material Albedo Atlas Texture",
+    "file": "unit-material-albedo-atlas-texture.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Albedo Image Format",
+    "file": "unit-material-albedo-image-format.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Albedo Image Import",
+    "file": "unit-material-albedo-image-import.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Anisotropy Flowmap",
     "file": "unit-material-anisotropy-flowmap.tscn",
     "category": "Unit - Materials"
@@ -2978,6 +3226,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Emission Add",
+    "file": "unit-material-emission-add.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Emission Hdr",
     "file": "unit-material-emission-hdr.tscn",
     "category": "Unit - Materials"
@@ -3000,6 +3253,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Metallic",
     "file": "unit-material-metallic.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Normal Map Blue",
+    "file": "unit-material-normal-map-blue.tscn",
     "category": "Unit - Materials"
   },
   {
@@ -3123,6 +3381,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Control Msaa",
+    "file": "unit-sub-viewport-control-msaa.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Control Texture",
     "file": "unit-sub-viewport-control-texture.tscn",
     "category": "Unit - Viewports"
@@ -3133,8 +3396,28 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Msaa",
+    "file": "unit-sub-viewport-msaa.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Own World Glow",
+    "file": "unit-sub-viewport-own-world-glow.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Own World Tonemap",
+    "file": "unit-sub-viewport-own-world-tonemap.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Own World",
     "file": "unit-sub-viewport-own-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Texture Emission",
+    "file": "unit-sub-viewport-texture-emission.tscn",
     "category": "Unit - Viewports"
   },
   {

@@ -6,15 +6,17 @@
  * over the list. The store itself is the sibling `RuleRegistry.test.ts`.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { RuleRegistry } from './RuleRegistry.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { ruleRegistry } from './RuleRegistry.js';
 import type { LintRule } from './types.js';
 
 describe('RuleRegistry', () => {
-  let registry: RuleRegistry;
+  let registry: typeof ruleRegistry;
 
-  beforeEach(() => {
-    registry = new RuleRegistry();
+  beforeEach(async () => {
+    // A fresh evaluation of the module, so the registry starts empty.
+    vi.resetModules();
+    registry = (await import('./RuleRegistry.js')).ruleRegistry;
   });
 
   const createMockRule = (name: string, applicableNodeTypes?: string[]): LintRule => ({

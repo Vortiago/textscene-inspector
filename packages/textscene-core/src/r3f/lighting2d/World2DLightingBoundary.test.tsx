@@ -11,7 +11,7 @@ import { CanvasLighting2DProvider, useCanvasLighting2D, type CanvasLighting2D } 
 import { directionalLightCullKey } from './lightCullKey';
 import { useRegisterCanvasLight2D, useRegisterLitItem } from './lightPassDeclarations';
 import { useLightShadowCasters } from './ShadowCasterStage';
-import { useShadowCaster, useShadowCasterRegistry } from './shadowCasterRegistry';
+import { useShadowCaster, type ShadowCaster } from './shadowCasterRegistry';
 import { OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 import { World2DLightingBoundary } from './World2DLightingBoundary';
 
@@ -24,27 +24,35 @@ const SUN = {
 
 interface Seen {
   outerLighting?: CanvasLighting2D;
-  hasRegistry?: boolean;
+  outerCasterCount?: number;
   casterCount?: number;
+}
+
+/** An occluder of `light_mask` 1 under `object`. */
+function occluder(object: THREE.Object3D): ShadowCaster {
+  return {
+    segments: new Float32Array([0, 0, 0, 10, 0, 0]),
+    cullMode: OCCLUDER_CULL_DISABLED,
+    occluderLightMask: 1,
+    object,
+  };
 }
 
 /** Reads the outer canvas's light pass, beside an occluder and a lit item of the outer canvas. */
 function Outer({ seen }: { seen: Seen }) {
   const [object] = useState(() => new THREE.Group());
   useRegisterLitItem({ lightMask: 1, z: 0, layer: 0, positionalLights: null }, false);
-  useShadowCaster({
-    segments: new Float32Array([0, 0, 0, 10, 0, 0]),
-    cullMode: OCCLUDER_CULL_DISABLED,
-    occluderLightMask: 1,
-    object,
-  });
+  const [caster] = useState(() => occluder(object));
+  useShadowCaster(caster);
   seen.outerLighting = useCanvasLighting2D();
+  seen.outerCasterCount = useLightShadowCasters(true, 1).length;
   return null;
 }
 
 function Read({ seen }: { seen: Seen }) {
+  const [caster] = useState(() => occluder(new THREE.Group()));
   useRegisterCanvasLight2D(true, SUN);
-  seen.hasRegistry = useShadowCasterRegistry() !== null;
+  useShadowCaster(caster);
   seen.casterCount = useLightShadowCasters(true, 1).length;
   return null;
 }
@@ -69,7 +77,7 @@ describe('World2DLightingBoundary', () => {
   });
 
   it('withholds the occluder registry, so an occluder inside shadows no outer light', async () => {
-    expect((await readInside()).hasRegistry).toBe(false);
+    expect((await readInside()).outerCasterCount).toBe(1);
   });
 
   it("hands a light inside none of the outer canvas's occluders", async () => {

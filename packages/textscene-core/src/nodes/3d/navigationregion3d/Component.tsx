@@ -12,6 +12,7 @@ import { Node3D } from '../../base/node3d/Component';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
+import { editorHelperUserData } from '../../../r3f/editorHelpers';
 import { decodeNavigationMesh } from '../../../resources/navigation/navigationmesh';
 import {
   buildNavFaceGeometry,
@@ -37,6 +38,7 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion3DProperties;
   const sceneResources = useSceneResources();
   const { showNavigation } = useViewportMode();
+  const helperUserData = useMemo(editorHelperUserData, []);
 
   // A NavigationMesh is as often an inline `[sub_resource]` as a `.tres`.
   const resource = useSubOrExtResource(properties.navigationMesh, sceneResources)?.resource;
@@ -64,7 +66,7 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
   return (
     <Node3D node={node}>
       {showNavigation && overlay && (
-        <>
+        <group userData={helperUserData}>
           <mesh renderOrder={1}>
             <primitive object={overlay.faces} attach="geometry" />
             <meshBasicMaterial key={NAV_FACES_MATERIAL.key} {...NAV_FACES_MATERIAL.props} />
@@ -73,7 +75,7 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
             <primitive object={overlay.edges} attach="geometry" />
             <lineBasicMaterial key={NAV_EDGES_MATERIAL.key} {...NAV_EDGES_MATERIAL.props} />
           </lineSegments>
-        </>
+        </group>
       )}
       {children}
     </Node3D>

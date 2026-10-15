@@ -4,7 +4,7 @@
  * imports neither `glbProcessing.ts` nor `rootScale.ts`, so the linter and a host's
  * provider read the claim table without pulling in a renderer.
  */
-
+import { UNWRAP_CACHE_SUFFIX } from '../../../godot/project/resourceFormats.js';
 import { registerResourceSlice } from '../../sliceRegistration';
 
 registerResourceSlice({
@@ -13,13 +13,12 @@ registerResourceSlice({
   // `GLBMesh` is this previewer's own request tag for a `.glb`/`.gltf` a scene
   // instances; `GLB`/`GLTF` are the type names an ext_resource can carry.
   typeNames: ['GLB', 'GLTF', 'GLBMesh'],
-  // `.bin` is a text glTF's external buffer: binary, and watched with its glTF.
-  extensions: ['.glb', '.gltf', '.bin'],
+  // `.bin` is a text glTF's external buffer, and `.unwrap_cache` the importer's lightmap UV2 of
+  // an asset: binary, and watched with its glTF.
+  extensions: ['.glb', '.gltf', '.bin', UNWRAP_CACHE_SUFFIX],
   binaryBytes: true,
   // A loaded glTF is one Object3D tree; two consumers of the same file each need
   // their own, or the second mount reparents the first's.
   clonePerConsumer: true,
   busType: 'glb',
 });
-
-export type { RootScale } from './types';

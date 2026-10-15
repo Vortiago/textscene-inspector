@@ -1,0 +1,66 @@
+[gd_scene format=3]
+
+; glow_map with a black-to-white horizontal GradientTexture2D at full strength. Godot scales the
+; glow by the map per screen position, so the left sphere's halo vanishes and the right one's stays.
+; No other golden sets glow_map.
+
+[sub_resource type="Gradient" id="Gradient_map"]
+colors = PackedColorArray(0, 0, 0, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GlowMap"]
+gradient = SubResource("Gradient_map")
+fill_to = Vector2(1, 0)
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
+sky_top_color = Color(0.02, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.04, 0.04, 0.06, 1)
+ground_bottom_color = Color(0.02, 0.02, 0.02, 1)
+ground_horizon_color = Color(0.04, 0.04, 0.06, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_dark")
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+glow_enabled = true
+glow_intensity = 1.0
+glow_map = SubResource("GlowMap")
+glow_map_strength = 1.0
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.35
+height = 0.7
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_emissive"]
+albedo_color = Color(0.2, 0.6, 0.3, 1)
+emission_enabled = true
+emission = Color(1, 0.8, 0.4, 1)
+emission_energy_multiplier = 3.0
+
+[node name="GlowMapRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_glow")
+
+[node name="Left" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")
+
+[node name="Middle" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")
+
+[node name="Right" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")
+
+[node name="Top" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_emissive")

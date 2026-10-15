@@ -1,98 +1,47 @@
 /**
- * The GLB slice's glTF/GLB parser (ADR-0031) and the per-consumer clone. GLTFLoader
- * and SkeletonUtils are large addons, so they load lazily on the first GLB request, in
- * a chunk outside the webview's initial-paint closure.
+ * The GLB slice's glTF/GLB parser (ADR-0031) and the per-consumer clone. GLTFLoader is a
+ * large addon, so it loads lazily on the first GLB request, in a chunk outside the webview's
+ * initial-paint closure. SkeletonUtils is about 3 KB gzipped, so it loads statically and
+ * `cloneWithMaterials` works on any mesh, built or not.
  */
 
 import * as THREE from 'three';
+import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { applyShadowCasting, shadowCastingEffects } from '../../../r3f/shadowCasting';
-import { ShadowCastingSetting } from '../../../godot/rendering';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { withExtensionRules } from './extensionRules';
 import { tagMeshInstances } from './meshInstances';
 import { tagGodotNodeNames } from './nodeNames';
-import { gltfNodeNames, type GltfNamingOptions } from '../../../godot/gltfNodeNames';
+import { gltfImportNames, type GltfNamingOptions } from '../../../godot/import/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
+import { withImportedNormalMapRead } from '../../../r3f/materials/godotNormalMap';
 import type { GltfExtensionRules } from './types';
 import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
-import { usesGodotSingleRoot } from '../../../godot/gltf';
+import { usesGodotSingleRoot } from '../../../godot/import/gltf';
+import { applyLightmapUv, type LightmapUvImport } from './lightmapUv/lightmapUv';
+import { godotPrimitives } from './godotPrimitives';
+import { importingImages, restoreImportedSampling, type GltfImageImport } from './imageImport';
+import { forEachSurfaceMaterial } from './surfaceMaterials';
 
-interface GlbModules {
-  GLTFLoader: (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
-  skeletonClone: (typeof import('three/addons/utils/SkeletonUtils.js'))['clone'];
-}
+type GLTFLoaderClass = (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
 
-/** Null until the first GLB load. Written only when `initPromise` resolves. */
-let glbModules: GlbModules | null = null;
-let initPromise: Promise<GlbModules> | null = null;
+/** Written only by `loadGLTFLoader`. Cleared when the chunk load fails, so the next request retries. */
+let loaderPromise: Promise<GLTFLoaderClass> | null = null;
 
-/**
- * Load GLTFLoader and SkeletonUtils once, caching the promise. A test that calls
- * `cloneWithMaterials` directly awaits this first.
- */
-export function initGlbModules(): Promise<GlbModules> {
-  initPromise ??= Promise.all([
-    import('three/addons/loaders/GLTFLoader.js'),
-    import('three/addons/utils/SkeletonUtils.js'),
-  ])
-    .then(([loaderMod, skeletonMod]) => {
-      glbModules = { GLTFLoader: loaderMod.GLTFLoader, skeletonClone: skeletonMod.clone };
-      return glbModules;
-    })
+/** Loads GLTFLoader once, caching the promise. */
+function loadGLTFLoader(): Promise<GLTFLoaderClass> {
+  loaderPromise ??= import('three/addons/loaders/GLTFLoader.js')
+    .then((loaderModule) => loaderModule.GLTFLoader)
     .catch((error: unknown) => {
       // A failed chunk load must not poison the cache: the next GLB request retries
       // the import, and this caller still gets the rejection as a missing resource.
-      initPromise = null;
+      loaderPromise = null;
       throw error;
     });
-  return initPromise;
+  return loaderPromise;
 }
 
 // Synchronous helpers, with no addons, safe in the initial bundle.
-
-/**
- * A material slot visitor: the material, the setter that replaces it in place, and a reader
- * for what the slot holds later, after other writers may have replaced it.
- */
-type SurfaceVisitor = (
-  material: THREE.Material,
-  assign: (replacement: THREE.Material) => void,
-  read: () => THREE.Material | undefined
-) => void;
-
-/**
- * One node's material slot or slots, the one place that owns the array-or-single branch.
- * Gated on the slot, not on `isMesh`, because a glTF's non-triangle primitives arrive as
- * `Points`/`Line` with a material the importer's per-surface rules reach too.
- */
-function visitNodeMaterials(node: THREE.Object3D, visit: SurfaceVisitor): void {
-  const holder = node as THREE.Mesh;
-  const slot = holder.material as THREE.Material | THREE.Material[] | undefined;
-  if (!slot) return;
-  if (Array.isArray(slot)) {
-    slot.forEach((material, index) => {
-      visit(
-        material,
-        (replacement) => {
-          slot[index] = replacement;
-        },
-        () => slot[index]
-      );
-    });
-  } else {
-    visit(
-      slot,
-      (replacement) => {
-        holder.material = replacement;
-      },
-      () => holder.material as THREE.Material
-    );
-  }
-}
-
-/** Visit every surface material under `object`, with the setter for its own slot. */
-export function forEachSurfaceMaterial(object: THREE.Object3D, visit: SurfaceVisitor): void {
-  object.traverse((node) => visitNodeMaterials(node, visit));
-}
 
 /**
  * The `.tres` an **Import sidecar** remaps a surface's material to. The GLB processor writes
@@ -153,6 +102,10 @@ export interface GlbLoadOptions {
   extensionRules?: GltfExtensionRules;
   /** The **Import sidecar**'s naming options. */
   naming: GltfNamingOptions;
+  /** The lightmap UV2 to give the meshes Godot unwraps, absent when the sidecar unwraps none. */
+  lightmapUv?: LightmapUvImport;
+  /** How Godot imports each image. */
+  imageImport: GltfImageImport;
 }
 
 /**
@@ -161,19 +114,23 @@ export interface GlbLoadOptions {
  */
 export async function createGLBMesh(
   data: ArrayBuffer,
-  { extensionRules = 'godot-importer', naming }: GlbLoadOptions
+  { extensionRules = 'godot-importer', naming, lightmapUv, imageImport }: GlbLoadOptions
 ): Promise<THREE.Object3D> {
-  const { GLTFLoader } = await initGlbModules();
-  const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules).register(
-    decodeImagesInImageElements
-  );
+  const GLTFLoader = await loadGLTFLoader();
+  const loader = withExtensionRules(new GLTFLoader(inMemoryOnlyManager()), extensionRules)
+    .register(decodeImagesInImageElements)
+    .register(importingImages(imageImport))
+    .register(godotPrimitives);
   const gltf = await loader.parseAsync(data, '');
   const root = await godotSceneRoot(gltf);
+  restoreImportedSampling(root);
+  const names = gltfImportNames(gltf.parser.json, naming);
+  if (lightmapUv) await applyLightmapUv(gltf, root, lightmapUv, names.meshes);
   // GLTFLoader returns embedded clips on `gltf.animations`. The root's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
   root.animations = gltf.animations;
   tagMeshInstances(root, gltf.parser.associations);
-  tagGodotNodeNames(root, gltf.parser.associations, gltfNodeNames(gltf.parser.json, naming));
+  tagGodotNodeNames(root, gltf.parser.associations, names.nodes);
   importBlendAsDepthPrepass(root);
   return root;
 }
@@ -205,26 +162,15 @@ function importBlendAsDepthPrepass(object: THREE.Object3D): void {
   });
 }
 
-/**
- * Clone an Object3D and its materials, since an Object3D has one parent. Requires an
- * awaited `initGlbModules()`, which a successful `createGLBMesh` always did before a
- * consumer holds a clone.
- */
+/** Clone an Object3D and its materials, since an Object3D has one parent. */
 export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
-  if (!glbModules) {
-    throw new Error(
-      '[glbProcessing] cloneWithMaterials called before initGlbModules(). ' +
-        'Await initGlbModules() in a beforeAll/beforeEach in tests, or ensure ' +
-        'createGLBMesh has been called at least once before cloning.'
-    );
-  }
   // SkeletonUtils, not `clone(true)`: a plain clone leaves a SkinnedMesh bound to the
   // source bones, so animating one instance deforms the template and every other one.
-  const cloned = glbModules.skeletonClone(mesh);
+  const cloned = skeletonClone(mesh);
 
   // SkeletonUtils shares material references, so clone every slot the sidecar writer
   // can reach, and a per-instance material change stays in its instance.
-  forEachSurfaceMaterial(cloned, (material, assign) => assign(material.clone()));
+  forEachSurfaceMaterial(cloned, (material, assign) => assign(withImportedNormalMapRead(material.clone())));
 
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {

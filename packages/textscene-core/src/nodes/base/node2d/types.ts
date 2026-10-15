@@ -1,16 +1,7 @@
 /** Node2D: the base of Godot's 2D (CanvasItem) world hierarchy. */
 
-export interface Vector2 {
-  x: number;
-  y: number;
-}
-
-export interface Color {
-  r: number;
-  g: number;
-  b: number;
-  a: number;
-}
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /** The decomposed 2D local transform (pixels, radians; Godot +Y-down space). */
 export interface Node2DLocalTransform {
@@ -50,9 +41,9 @@ export interface Node2DProperties {
   top_level: boolean;
 
   /** CanvasItem RGBA tint; multiplies onto this node and all descendants. */
-  modulate: Color;
+  modulate: Rgba;
   /** CanvasItem RGBA tint; multiplies onto this node's own pixels only (not inherited). */
-  self_modulate: Color;
+  self_modulate: Rgba;
   /**
    * CanvasItem `light_mask`: which 2D lights may reach this item. A light
    * applies iff `light_mask & light.range_item_cull_mask != 0`, so the Godot

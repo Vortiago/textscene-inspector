@@ -9,7 +9,7 @@
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { joinPath } from '../utils/nodePath.js';
-import { UNIQUE_NODE_PREFIX } from '../godot/nodePath.js';
+import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
 import {
   cachedUniqueNameClaims,
   cachedUniqueNameOwnership,
@@ -17,8 +17,9 @@ import {
 } from '../utils/uniqueNames.js';
 import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
+import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 
-export interface ClaimOwner {
+interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
   readonly path: string;
   /** The authored roots of the file this owner is the root of. */
@@ -98,17 +99,21 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
     }
     const scope = scopeOf(match, found.group.scope);
     const subRoots = cachedSubRoots(match, scope, ctx);
+    // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
+    // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
+    const isGlbRoot = found.rootOf !== undefined && match.type === GLB_SCENE_ROOT_TYPE;
+    const contentOwner: ClaimOwner = found.rootOf
+      ? { path: isGlbRoot ? parentPath : livePath, roots: found.rootOf, parent: owner }
+      : owner;
     candidates = liveChildGroups(match, scope, ctx.sceneCache, ctx.glbCache).map((group) => ({
       group,
       owner:
         group.origin === 'merged' && subRoots
           ? { path: livePath, roots: subRoots, parent: owner }
-          : found.rootOf
-            ? { path: livePath, roots: found.rootOf, parent: owner }
-            : owner,
+          : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
-    into = candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner;
+    into = isGlbRoot ? contentOwner : (candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner);
     parentPath = livePath;
   }
   return { owner, into, node: match };

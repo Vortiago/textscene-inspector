@@ -148,7 +148,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the light pass quad: its callers hand it the accumulator seed, with fixed shaders and one uniform, or a directional light material, memoised on every input and disposed on replacement',
   'packages/textscene-core/src/r3f/parentSpaceScope.tsx':
     'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
-  'packages/textscene-core/src/r3f/preview/PreviewLighting.tsx':
+  'packages/textscene-core/src/r3f/preview/PreviewSun.tsx':
     "mounts the preview sun's aim target — an empty Object3D, added as a child",
 };
 
@@ -165,6 +165,8 @@ export function materialConstructorLines(source: string): number[] {
  * absent because its `new THREE.ShaderMaterial({…})` is inside a doc comment.
  */
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/fullScreenPass.ts':
+    'one material per call, its shaders fixed at construction and owned by the caller that draws it; callers move only uniforms, and each `defines` change, the sky radiance layout and the volumetric fog integrate depth, sets `needsUpdate`',
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
     'the depth prepass base, cloned per surface and never drawn itself, and the sentinel, which writes nothing; neither is ever mutated',
   'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
@@ -177,20 +179,10 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one invisible stand-in that hides the draw groups another surface draw owns; three skips an invisible group material, so it is never rendered, so never compiled',
   'packages/textscene-core/src/r3f/csg/evaluateCsgPlan.ts':
     'per-surface sentinels handed to the CSG library so it can group faces — never rendered, so never compiled',
-  'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
-    'the glow pyramid passes: shaders fixed at construction, only uniforms move, disposed with the effect',
   'packages/textscene-core/src/r3f/lighting2d/lightSeedQuad.tsx':
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
-  'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
-    'the cube-to-paraboloid copy: shaders fixed at construction, only uniforms move, one instance per renderer',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
     'one depth material per light kind for the whole app, its program fixed at construction and never mutated',
-  'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
-    'the fog volume passes: shaders fixed at construction, only uniforms move, and a `defines` change sets `needsUpdate`; one instance per renderer',
-  'packages/textscene-core/src/r3f/fog/fogRadiancePass.ts':
-    'the sky radiance bake: shaders fixed at construction, only uniforms move, and a new sky layout sets `needsUpdate`; one instance per renderer',
-  'packages/textscene-core/src/r3f/testing/threePasses.ts':
-    "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
   'packages/textscene-core/src/r3f/lighting2d/directionalLightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
@@ -254,20 +246,18 @@ export function meshArgumentMounts(source: string): MeshArgumentMount[] {
  * to mount one.
  */
 const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/r3f/fullScreenPass.ts':
+    'lends the shared quad, which is not React state, the material of the pass it draws, each built with its shaders fixed at construction, so only uniforms and `needsUpdate`-flagged `defines` move',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
     'lends each caster, which is not React state, the atlas depth material for one shadow draw and gives its own back after it, so no mount ever sees the swap',
-  'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
-    'swaps the screen quad between the three pass materials, each built with its shaders fixed at construction, so only uniforms ever move',
-  'packages/textscene-core/src/r3f/fog/fogVolumePass.ts':
-    'swaps the slice quad between the four fog pass materials, each built with its shaders fixed at construction, so only uniforms and `needsUpdate`-flagged `defines` move',
   'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
     'moves a projection mesh, which is not React state, to the material built for its receiver’s new shading, each built with its program fixed, so a swap changes which material draws and never a program input of one',
   'packages/textscene-core/src/r3f/materials/fadedMeshMaterials.ts':
     'puts a GLB surface’s own material or its alpha-pass copy on the mesh, which is not React state, and the copy is built once from its source, so only its opacity moves',
   'packages/textscene-core/src/r3f/materials/swappedMaterials.ts':
     'puts one of a surface’s two mounted materials on its mesh, each keyed by its own mount, so a swap changes which material draws and never a program input of one',
-  'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
-    'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
+  'packages/textscene-core/src/resources/formats/glb/surfaceMaterials.ts':
+    'the GLB slot writer: `forEachSurfaceMaterial` hands `cloneWithMaterials` and a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
 };
 
 /**
@@ -279,12 +269,6 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the depth prepass sentinel: its material writes nothing and is never mutated, and the sentinel is removed with its scene',
   'packages/textscene-core/src/nodes/3d/decal/decalProjectionMaterials.ts':
     'the projection meshes and the materials they carry are built by one effect and disposed together, so neither can outlive an input the other was built from',
-  'packages/textscene-core/src/r3f/environment/GodotToneMapEffect.ts':
-    'the screen quad: its pass materials have their shaders fixed at construction, and it is disposed with the effect',
-  'packages/textscene-core/src/r3f/positionalShadow/omniShadowCopy.ts':
-    'the copy quad: its material has its shaders fixed at construction, and only its uniforms move',
-  'packages/textscene-core/src/r3f/fog/fogRadiancePass.ts':
-    'the radiance bake quad: its material has its shaders fixed at construction, and quad and material are built and disposed together',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
 };

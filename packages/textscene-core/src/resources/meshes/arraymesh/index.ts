@@ -13,6 +13,3 @@ registerResourceSlice({
   typeNames: [...ARRAY_MESH_TYPES],
   busType: 'arraymesh',
 });
-
-export { decodeArrayMesh, decodeSceneArrayMesh } from './decode.js';
-export type { ArrayMeshData, ArrayMeshSurface } from './types.js';

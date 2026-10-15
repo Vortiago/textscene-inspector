@@ -4,7 +4,10 @@
  * written them.
  */
 import { describe, expect, it } from 'vitest';
-import { GpuPacer, IN_FLIGHT_BANDS, type GpuFence } from './gpuPacer';
+import { GpuPacer, type GpuFence } from './gpuPacer';
+
+/** The bands the pacer lets be on their way to the GPU at once. */
+const IN_FLIGHT_BANDS = 4;
 
 /** A fence per call, each done only when the test says so, and each counting its disposals. */
 function fakeFences() {

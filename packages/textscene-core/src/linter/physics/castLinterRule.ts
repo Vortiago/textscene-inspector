@@ -11,7 +11,8 @@ import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '.
 import type { PhysicsDim } from './dim.js';
 import { resolveResourceSlot } from '../resourceChecker.js';
 import { dimSuffix } from './dim.js';
-import { boolSlotValue, descendsFromClass } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 
 /** Which of the two cast families, which differ only by the `shape` property. */
 export type CastKind = 'Ray' | 'Shape';

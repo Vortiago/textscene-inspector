@@ -9,8 +9,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { bezierInterpolate } from '../../../../godot/index.js';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import { bezierInterpolate, degToRad } from '../../../../godot/math/math.js';
+import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES` (`graph_edit.cpp:54`). */
 const MAX_STAGES = 5;
@@ -19,17 +19,17 @@ const MAX_STAGES = 5;
 const CURVED_TOLERANCE_DEG = 2;
 const STRAIGHT_TOLERANCE_DEG = 4;
 
-export interface ConnectionCurveControlPoints {
-  p0: Vec2;
-  p1: Vec2;
-  p2: Vec2;
-  p3: Vec2;
+interface ConnectionCurveControlPoints {
+  p0: Vector2;
+  p1: Vector2;
+  p2: Vector2;
+  p3: Vector2;
 }
 
 /** `graph_edit.cpp:1523-1533`: the two anchors, plus a horizontal tangent-handle control point on each. */
 export function connectionControlPoints(
-  from: Vec2,
-  to: Vec2,
+  from: Vector2,
+  to: Vector2,
   curvature: number
 ): ConnectionCurveControlPoints {
   const xDiff = to.x - from.x;
@@ -43,7 +43,7 @@ export function connectionControlPoints(
   };
 }
 
-function bezierPoint(cp: ConnectionCurveControlPoints, t: number): Vec2 {
+function bezierPoint(cp: ConnectionCurveControlPoints, t: number): Vector2 {
   return {
     x: bezierInterpolate(cp.p0.x, cp.p1.x, cp.p2.x, cp.p3.x, t),
     y: bezierInterpolate(cp.p0.y, cp.p1.y, cp.p2.y, cp.p3.y, t),
@@ -51,14 +51,14 @@ function bezierPoint(cp: ConnectionCurveControlPoints, t: number): Vec2 {
 }
 
 /** `Vector2::normalized()`: a zero-length vector stays `(0, 0)` (`core/math/vector2.h`). */
-function normalized(v: Vec2): Vec2 {
+function normalized(v: Vector2): Vector2 {
   const len = Math.hypot(v.x, v.y);
   return len === 0 ? { x: 0, y: 0 } : { x: v.x / len, y: v.y / len };
 }
 
 /** `Curve2D::_bake_segment2d` (`curve.cpp:846-863`), specialised to one Bezier segment (`p_a`/`p_b` fixed as `cp.p0`/`cp.p3`). */
 function bakeSegment(
-  bake: Map<number, Vec2>,
+  bake: Map<number, Vector2>,
   cp: ConnectionCurveControlPoints,
   begin: number,
   end: number,
@@ -74,7 +74,7 @@ function bakeSegment(
   const na = normalized({ x: mid.x - beg.x, y: mid.y - beg.y });
   const nb = normalized({ x: fin.x - mid.x, y: fin.y - mid.y });
   const dp = na.x * nb.x + na.y * nb.y;
-  if (dp < Math.cos((toleranceDeg * Math.PI) / 180)) {
+  if (dp < Math.cos(degToRad(toleranceDeg))) {
     bake.set(mp, mid);
   }
 
@@ -89,10 +89,10 @@ function bakeSegment(
  * (`graph_edit.cpp:1538-1541`): the polyline points `Line2D::set_points` receives,
  * anchors included.
  */
-export function tessellateConnectionLine(cp: ConnectionCurveControlPoints, curvature: number): Vec2[] {
+export function tessellateConnectionLine(cp: ConnectionCurveControlPoints, curvature: number): Vector2[] {
   const maxDepth = curvature > 0 ? MAX_STAGES : 1;
   const toleranceDeg = curvature > 0 ? CURVED_TOLERANCE_DEG : STRAIGHT_TOLERANCE_DEG;
-  const bake = new Map<number, Vec2>();
+  const bake = new Map<number, Vector2>();
   bakeSegment(bake, cp, 0, 1, 0, maxDepth, toleranceDeg);
   const sortedKeys = [...bake.keys()].sort((a, b) => a - b);
   return [cp.p0, ...sortedKeys.map((k) => bake.get(k)!), cp.p3];

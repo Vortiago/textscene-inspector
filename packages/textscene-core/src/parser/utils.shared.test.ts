@@ -5,40 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isIncompleteValue, stripLineComment, unquoteLiteral, unquoteString } from './utils';
-
-describe('isIncompleteValue', () => {
-  it('flags an open string', () => {
-    expect(isIncompleteValue('"Field Notes')).toBe(true);
-    expect(isIncompleteValue('"closed"')).toBe(false);
-  });
-  it('flags a value with more open brackets than close (spans more lines)', () => {
-    expect(isIncompleteValue('[{')).toBe(true); // SpriteFrames `animations = [{` first line
-    expect(isIncompleteValue('"frames": [{')).toBe(true);
-    expect(isIncompleteValue('animations = [')).toBe(true);
-  });
-  it('accepts a balanced single-line array/dict', () => {
-    expect(isIncompleteValue('[1, 2, 3]')).toBe(false);
-    expect(isIncompleteValue('Rect2(0, 0, 16, 16)')).toBe(false);
-    expect(isIncompleteValue('[{"a": 1}]')).toBe(false);
-  });
-  it('accepts the full accumulated SpriteFrames value as complete', () => {
-    expect(isIncompleteValue('[{"frames": [{"texture": ExtResource("2")}], "name": &"right"}]')).toBe(false);
-  });
-  it('ignores brackets inside strings', () => {
-    expect(isIncompleteValue('"a [ b { c"')).toBe(false);
-  });
-  it('flags a constructor call whose paren closes on a later line', () => {
-    // Godot's writer ends every nested `Object(…)` with `)\n`
-    // (variant_parser.cpp:2234) and its reader takes a newline as whitespace,
-    // so both the engine's own output and a hand-written
-    // `points = PackedVector2Array(` continue on the next line.
-    expect(isIncompleteValue('PackedVector2Array(')).toBe(true);
-    expect(isIncompleteValue('Object(Area3D,"a":1,"audio":Object(Timer,"b":2)')).toBe(true);
-    expect(isIncompleteValue('Vector2(1, 2)')).toBe(false);
-    expect(isIncompleteValue('"a ( b"')).toBe(false);
-  });
-});
+import { stripLineComment, unquoteLiteral, unquoteString } from './utils';
 
 describe('stripLineComment', () => {
   it('drops an unquoted `;` and the rest of the line — VariantParser skips to end of line (variant_parser.cpp:214)', () => {

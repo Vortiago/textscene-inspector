@@ -14,6 +14,7 @@ import {
   selectViewportCamera,
   selectViewportCamera2D,
   viewportAspect,
+  viewportMsaaMode,
 } from './offscreenViewport';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { Camera2DAnchorMode } from '../../2d/camera2d/types';
@@ -424,5 +425,21 @@ describe('createOffscreenTarget', () => {
     expect(target.width).toBe(320);
     expect(target.height).toBe(240);
     target.dispose();
+  });
+});
+
+describe('viewportMsaaMode', () => {
+  const modes = { msaa_2d: 1, msaa_3d: 3 };
+
+  it('takes msaa_3d for a pass that draws the 3D world', () => {
+    expect(viewportMsaaMode(modes, '3d')).toBe(3);
+  });
+
+  it('takes msaa_2d for a pass that draws canvas items', () => {
+    expect(viewportMsaaMode(modes, '2d')).toBe(1);
+  });
+
+  it('keeps Disabled at the defaults (edge case)', () => {
+    expect(viewportMsaaMode({ msaa_2d: 0, msaa_3d: 0 }, '3d')).toBe(0);
   });
 });

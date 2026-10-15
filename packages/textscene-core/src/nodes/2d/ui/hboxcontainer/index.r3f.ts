@@ -12,5 +12,3 @@ controlComponentRegistry.register({
   typeName: 'HBoxContainer',
   Component: HBoxContainer,
 });
-
-export { HBoxContainer };

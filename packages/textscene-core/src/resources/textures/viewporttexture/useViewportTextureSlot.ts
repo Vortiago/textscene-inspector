@@ -16,7 +16,7 @@ import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistry
 import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { useLocalScene } from '../../../r3f/useUniqueNames.js';
 import { resolveViewportTexturePath, viewportTextureRegistryKey } from '../../../r3f/viewportTexturePath.js';
-import { unclaimedUniqueNames } from '../../../godot/nodePath.js';
+import { unclaimedUniqueNames } from '../../../godot/string/nodePath.js';
 import { warn } from '../../../logger.js';
 import { VIEWPORT_TEXTURE_TYPE } from './types.js';
 
@@ -32,7 +32,7 @@ export function isViewportTextureRef(
 }
 
 /** What a ViewportTexture slot resolves to, once cycles are accounted for. */
-export interface ViewportTextureSlotResult {
+interface ViewportTextureSlotResult {
   /**
    * The live target's texture. Null for no ViewportTexture, an unpublished one,
    * or one in an unrenderable pass cycle, which `cyclic` tells apart. A caller

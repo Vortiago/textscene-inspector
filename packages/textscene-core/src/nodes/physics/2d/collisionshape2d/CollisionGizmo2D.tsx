@@ -11,17 +11,11 @@ import { decodeCapsuleShape2D } from '../../../../resources/shapes/capsuleshape2
 import type * as THREE from 'three';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { warn } from '../../../../logger';
-
-const CIRCLE_SEGMENTS = 32;
-const CAPSULE_CAP_SEGMENTS = 16;
-
-interface Point2D {
-  x: number;
-  y: number;
-}
+import type { Vector2 } from '../../../../godot/math/vector';
+import { capsulePoints, circlePoints, rectanglePoints } from './collisionOutlines';
 
 /** Godot-local (x, y) to three-local (x, -y), matching Sprite2D/Polygon2D's Y-negation. */
-function toThreeLocal(points: Point2D[]): Float32Array {
+function toThreeLocal(points: Vector2[]): Float32Array {
   const out = new Float32Array(points.length * 3);
   for (let i = 0; i < points.length; i++) {
     out[i * 3] = points[i]!.x;
@@ -32,7 +26,7 @@ function toThreeLocal(points: Point2D[]): Float32Array {
 }
 
 /** Closed polygon vertices to line-segment pairs (v0,v1),(v1,v2),…,(vN-1,v0) for `<lineSegments>`. */
-function loopToSegments(points: Point2D[]): Float32Array {
+function loopToSegments(points: Vector2[]): Float32Array {
   const vertices = toThreeLocal(points);
   const n = points.length;
   const out = new Float32Array(n * 2 * 3);
@@ -44,59 +38,6 @@ function loopToSegments(points: Point2D[]): Float32Array {
   return out;
 }
 
-function rectanglePoints(size: { x: number; y: number }): Point2D[] {
-  const hw = size.x / 2;
-  const hh = size.y / 2;
-  return [
-    { x: -hw, y: -hh },
-    { x: hw, y: -hh },
-    { x: hw, y: hh },
-    { x: -hw, y: hh },
-  ];
-}
-
-function circlePoints(radius: number): Point2D[] {
-  const points: Point2D[] = [];
-  for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
-    const t = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
-    points.push({ x: radius * Math.cos(t), y: radius * Math.sin(t) });
-  }
-  return points;
-}
-
-/**
- * Vertical capsule: two semicircle caps joined by straight sides. Exported so a test can
- * assert the point sequence, which a rendered `<lineSegments>` buffer does not expose.
- */
-export function capsulePoints(radius: number, height: number): Point2D[] {
-  const halfHeight = Math.max(0, height / 2 - radius);
-  const points: Point2D[] = [];
-
-  // Right side, bottom to top.
-  points.push({ x: radius, y: -halfHeight });
-  points.push({ x: radius, y: halfHeight });
-
-  // Top cap: 0°..180° around (0, halfHeight), from the right connection point over
-  // the top to the left connection point.
-  for (let i = 1; i < CAPSULE_CAP_SEGMENTS; i++) {
-    const t = (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
-    points.push({ x: radius * Math.cos(t), y: halfHeight + radius * Math.sin(t) });
-  }
-
-  // Left side, top to bottom.
-  points.push({ x: -radius, y: halfHeight });
-  points.push({ x: -radius, y: -halfHeight });
-
-  // Bottom cap: 180°..360° around (0, -halfHeight), from the left connection point
-  // under the bottom back to the right connection point, closing the loop.
-  for (let i = 1; i < CAPSULE_CAP_SEGMENTS; i++) {
-    const t = Math.PI + (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
-    points.push({ x: radius * Math.cos(t), y: -halfHeight + radius * Math.sin(t) });
-  }
-
-  return points;
-}
-
 export function CollisionGizmo2D({
   shape,
   color,
@@ -105,7 +46,7 @@ export function CollisionGizmo2D({
   /** The node's `debug_color`, already resolved to a three colour. */
   color: THREE.Color;
 }) {
-  const points = useMemo((): Point2D[] => {
+  const points = useMemo((): Vector2[] => {
     switch (shape.type) {
       case 'RectangleShape2D':
         return rectanglePoints(decodeRectangleShape2D(shape.data).size);

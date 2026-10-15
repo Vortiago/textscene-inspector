@@ -5,18 +5,21 @@
  */
 
 import type { EnvironmentProperties } from './types';
-import { BackgroundMode, DEFAULT_AGX_CONTRAST } from './types';
+import { BackgroundMode } from './types';
+import { TONEMAP_AGX_CONTRAST_DEFAULT } from '../../godot/rendering/environment/toneMapping.js';
 import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
-import { boolSlotValue } from '../../godot/index.js';
-import { volumetricFogDetailSpread } from '../../godot/volumetricFog.js';
-import { FogMode, depthFogDensityDefault, depthFogRange } from '../../godot/depthFog.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
+import { volumetricFogDetailSpread } from '../../godot/rendering/environment/volumetricFog.js';
+import { FogMode } from '../../godot/rendering/environment/depthFog.js';
+import {
+  depthFogDensityDefault,
+  depthFogRange,
+  GLOW_BLEND_MODE_DEFAULT,
+} from '../../godot/scene/environment.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
-
-/** Godot's `RS::MAX_GLOW_LEVELS`, derived so an eighth weight cannot outrun it. */
-export const GLOW_LEVEL_COUNT = DEFAULT_GLOW_LEVELS.length;
 
 /**
  * `glow_levels/1`..`glow_levels/7` are seven independent properties, 1-based in
@@ -55,7 +58,7 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     tonemap_agx_white: floatOr(properties.tonemap_agx_white, 16.29, 'tonemap_agx_white'),
     tonemap_agx_contrast: floatOr(
       properties.tonemap_agx_contrast,
-      DEFAULT_AGX_CONTRAST,
+      TONEMAP_AGX_CONTRAST_DEFAULT,
       'tonemap_agx_contrast'
     ),
     tonemap_exposure: floatOr(properties.tonemap_exposure, 1.0, 'tonemap_exposure'),
@@ -130,19 +133,16 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     glow_strength: floatOr(properties.glow_strength, 1.0, 'glow_strength'),
     glow_mix: floatOr(properties.glow_mix, 0.05, 'glow_mix'),
     glow_bloom: floatOr(properties.glow_bloom, 0.0, 'glow_bloom'),
-    glow_blend_mode: intOr(properties.glow_blend_mode, 1, 'glow_blend_mode'),
+    glow_blend_mode: intOr(properties.glow_blend_mode, GLOW_BLEND_MODE_DEFAULT, 'glow_blend_mode'),
     glow_hdr_threshold: floatOr(properties.glow_hdr_threshold, 1.0, 'glow_hdr_threshold'),
     glow_hdr_scale: floatOr(properties.glow_hdr_scale, 2.0, 'glow_hdr_scale'),
     glow_hdr_luminance_cap: floatOr(properties.glow_hdr_luminance_cap, 12.0, 'glow_hdr_luminance_cap'),
     glow_map_strength: floatOr(properties.glow_map_strength, 0.8, 'glow_map_strength'),
+    glow_map: properties.glow_map,
 
-    // Adjustments
     adjustment_enabled: boolSlotValue(properties.adjustment_enabled) === true,
     adjustment_brightness: floatOr(properties.adjustment_brightness, 1.0, 'adjustment_brightness'),
     adjustment_contrast: floatOr(properties.adjustment_contrast, 1.0, 'adjustment_contrast'),
     adjustment_saturation: floatOr(properties.adjustment_saturation, 1.0, 'adjustment_saturation'),
-
-    // SSR
-    ssr_enabled: boolSlotValue(properties.ssr_enabled) === true,
   };
 }

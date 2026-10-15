@@ -15,5 +15,3 @@ const statusIndicatorRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(statusIndicatorRegistration);
-
-export { statusIndicatorRegistration };

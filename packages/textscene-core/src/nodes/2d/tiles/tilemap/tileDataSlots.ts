@@ -8,13 +8,11 @@ import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
-import {
-  boolLiteralAsNumber,
-  packedArrayLiteral,
-  parseGodotFloat,
-  ruleInt,
-} from '../../../../godot/index.js';
-import { replayPositions } from '../../../../godot/propertyReplay.js';
+import { boolLiteralAsNumber } from '../../../../godot/variant/variantBool.js';
+import { packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
+import { parseGodotFloat } from '../../../../godot/variant/number.js';
+import { ruleInt } from '../../../../godot/variant/int.js';
+import { replayPositions } from '../../../../godot/scene/propertyReplay.js';
 
 /** `format` initialises to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). */
 export const TILE_MAP_DATA_FORMAT_DEFAULT = 2;
@@ -67,7 +65,7 @@ export function formatWhenApplied(rawProps: Record<string, string>, key: string)
 
 // `\s*` at both ends and before the paren: Godot's tokenizer discards any
 // character <= 32 before a token (variant_parser.cpp:415-417), so a padded
-// `PackedInt32Array ( … )` loads, the same reasoning godot/variantParser.ts
+// `PackedInt32Array ( … )` loads, the same reasoning godot/variant/variantParser.ts
 // states for the NodePath and resource-ref literals.
 const TILE_DATA_RE = packedArrayLiteral('PackedInt32Array');
 

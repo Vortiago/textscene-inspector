@@ -6,10 +6,13 @@
  */
 
 import { warn } from '../../logger';
-import { indexedKeyRegex, ruleInt, boolSlotValue, stringToInt } from '../../godot/index.js';
+import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
+import { ruleInt } from '../../godot/variant/int.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
+import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
-import { parseColorOrUndefined, type Color } from '../../utils/colorParser';
+import { parseColorOrUndefined } from '../../utils/colorParser';
 import { canvasItemMaterialOf } from '../materials/canvasitemmaterial/decode';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 // Aliased: `TileSetSourceData` has a `findSubResource` key of its own, which the adapters fill.
@@ -18,18 +21,20 @@ import {
   parseResourceReference,
   resolveExtResourcePath,
 } from '../SubResourceResolver';
-import { defaultTileData, TILE_SHAPE_HEXAGON, TILE_SHAPE_SQUARE } from './types';
+import { defaultTileData } from './types';
+import { TileLayout, TileOffsetAxis, TileShape } from '../../godot/scene/tileSet';
 import type {
   AlternativeTileModel,
   AtlasSourceModel,
   AtlasTileModel,
   TileMaterial,
   TileSetModel,
-  Vec2i,
 } from './types';
+import type { Rgba } from '../../godot/math/math.js';
+import type { Vector2 } from '../../godot/math/vector.js';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
-export interface TileSetSourceData {
+interface TileSetSourceData {
   /** The TileSet resource's own properties (raw value strings). */
   properties: Record<string, string>;
   findSubResource(id: string): TscnInternalResource | undefined;
@@ -44,7 +49,7 @@ export interface TileSetSourceData {
  */
 const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 
-export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
+function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   const sources = new Map<number, AtlasSourceModel>();
   const tileMaterial = tileMaterialResolver(data);
 
@@ -76,15 +81,23 @@ export function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     sources.set(sourceId, resolveAtlasSource(sub.data, data, tileMaterial));
   }
 
-  const shape = intEnumOr(data.properties.tile_shape, 0, 'tile_shape');
-  if (shape < TILE_SHAPE_SQUARE || shape > TILE_SHAPE_HEXAGON) {
+  const shape = intEnumOr(data.properties.tile_shape, TileShape.TILE_SHAPE_SQUARE, 'tile_shape');
+  if (shape < TileShape.TILE_SHAPE_SQUARE || shape > TileShape.TILE_SHAPE_HEXAGON) {
     warn(`[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`);
   }
 
   return {
     shape,
-    layout: intEnumOr(data.properties.tile_layout, 0, 'tile_layout') as TileSetModel['layout'],
-    offsetAxis: intEnumOr(data.properties.tile_offset_axis, 0, 'tile_offset_axis') as 0 | 1,
+    layout: intEnumOr(
+      data.properties.tile_layout,
+      TileLayout.TILE_LAYOUT_STACKED,
+      'tile_layout'
+    ) as TileLayout,
+    offsetAxis: intEnumOr(
+      data.properties.tile_offset_axis,
+      TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL,
+      'tile_offset_axis'
+    ) as TileOffsetAxis,
     tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
   };
@@ -181,6 +194,8 @@ function resolveAtlasSource(
     margins: tileSetVec2i(props.margins, { x: 0, y: 0 }, 'margins'),
     separation: tileSetVec2i(props.separation, { x: 0, y: 0 }, 'separation'),
     textureRegionSize: tileSetVec2i(props.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
+    // On unless the file says `false` (`tile_set.h:673`).
+    usesTexturePadding: boolSlotValue(props.use_texture_padding) !== false,
     tiles: resolveTiles(props, tileMaterial),
   };
 }
@@ -308,13 +323,13 @@ function decodeTileData(
   };
 }
 
-function tileModulate(value: string, key: string): Color {
+function tileModulate(value: string, key: string): Rgba {
   const color = parseColorOrUndefined(value);
   if (color) return color;
   warn(`[TileSet] ${key}: invalid Color "${value}" — using white`);
   return defaultTileData().modulate;
 }
 
-function tileSetVec2i(value: string | undefined, fallback: Vec2i, key: string): Vec2i {
+function tileSetVec2i(value: string | undefined, fallback: Vector2, key: string): Vector2 {
   return vec2iOr(value, fallback, `[TileSet] ${key}`);
 }

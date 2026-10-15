@@ -8,9 +8,9 @@
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
-import type { GltfNodeRole } from '../../../godot/gltfNodeNames.js';
+import type { GltfNodeRole } from '../../../godot/import/gltfImportNames.js';
 
-export interface GlbHierarchyNode {
+interface GlbHierarchyNode {
   /** Display name, from `glbObjectName`. */
   name: string;
   /** Relative to the GLB root, unique and stable across structurally equal clones. */
@@ -23,7 +23,7 @@ export interface GlbHierarchyNode {
 }
 
 /** Map a THREE.Object3D.type onto a Godot-ish display type. */
-export function glbDisplayType(threeType: string): string {
+function glbDisplayType(threeType: string): string {
   if (threeType === 'Mesh' || threeType === 'SkinnedMesh' || threeType === 'InstancedMesh') {
     return 'Mesh';
   }
@@ -65,7 +65,7 @@ function buildNode(object: THREE.Object3D, parentPath: string, segment: string):
 }
 
 /** Returns the root's children: the root itself is the GLB node. */
-export function buildGlbHierarchy(root: THREE.Object3D): GlbHierarchyNode[] {
+function buildGlbHierarchy(root: THREE.Object3D): GlbHierarchyNode[] {
   const segments = segmentsForSiblings(root.children);
   return root.children.map((child, i) => buildNode(child, '', segments[i]!));
 }
@@ -110,7 +110,7 @@ export function flattenGlbObjects(root: THREE.Object3D): GlbObjectEntry[] {
 }
 
 /** A `GLB`-prefixed type, which counts as a supported display type. */
-export function glbInternalNodeType(displayType: string): string {
+function glbInternalNodeType(displayType: string): string {
   switch (displayType) {
     case 'Mesh':
       return 'GLBMesh';
@@ -129,7 +129,7 @@ export function glbInternalNodeType(displayType: string): string {
  * Synthetic `TscnNode`s for the scene tree. Each name is the disambiguated relPath segment, so
  * `joinPath(parent, name)` reproduces `relPath` exactly.
  */
-export function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): TscnNode[] {
+function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): TscnNode[] {
   return nodes.map((n) => ({
     // No file wrote a synthetic node, so it has no raw properties.
     rawProperties: {},
@@ -145,11 +145,11 @@ export function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): Tsc
  * does this tree. The type is `GLB`-prefixed so `rendersOwnVisual` reports it as drawing.
  */
 export const GLB_ANIMATION_PLAYER_NAME = 'AnimationPlayer';
-export const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
+const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
 
 /**
  * A `GLBSceneRoot`'s tree children: the GLB hierarchy, plus an `AnimationPlayer` when it has clips.
- * One source, so `useGlbChildren` and `resolveLiveNode` produce the same children.
+ * One source, so `useGlbChildren` and `resolveLiveEntry` produce the same children.
  */
 export function glbSceneRootChildren(root: THREE.Object3D): TscnNode[] {
   const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));

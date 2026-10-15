@@ -5,8 +5,10 @@ Godot does not load `scene.gltf` at runtime. Its importer turns the source asset
 game loads that artefact. The artefact is gitignored, binary and hash-named, so this
 previewer cannot have it as an input. The previewer therefore performs an **asset
 re-import**: it loads the source asset and re-derives the scene. It honours
-`nodes/root_scale`, `nodes/apply_root_scale` and, from `_subresources`, the per-material
-`use_external` remaps and the per-node `mesh_instance/layers`, and nothing else.
+`nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
+`meshes/lightmap_texel_size` and, from `_subresources`, the per-material `use_external`
+remaps, the per-node `mesh_instance/layers` and the per-mesh `generate/lightmap_uv`, and
+nothing else.
 
 ## Why the sidecars matter
 
@@ -22,12 +24,13 @@ get the inputs the engine has.
 
 ## Why the allowlist is short
 
-Of the corpus's scene `.import` files, one parameter has a visual consequence: the
-tree's root scale. Each other non-default value is either something three's
-`GLTFLoader` already does (`meshes/ensure_tangents`), or a bake or performance concern
-with no effect on a preview (`meshes/generate_lods`, `create_shadow_meshes`,
-`light_baking`, `lightmap_texel_size`, `force_disable_compression`). The `.obj` sidecars
-are identity (`scale_mesh=Vector3(1, 1, 1)`, `offset_mesh=Vector3(0, 0, 0)`).
+Of the corpus's scene `.import` files, few parameters have a visual consequence: the
+tree's root scale, and the lightmap UV2 of the `global_illumination` demo (see the
+amendment below). Each other non-default value is either something three's `GLTFLoader`
+already does (`meshes/ensure_tangents`), or a bake or performance concern with no effect
+on a preview (`meshes/generate_lods`, `create_shadow_meshes`, `force_disable_compression`).
+The `.obj` sidecars are identity (`scale_mesh=Vector3(1, 1, 1)`,
+`offset_mesh=Vector3(0, 0, 0)`) and unwrap nothing (`generate_lightmap_uv2=false`).
 
 More parameters would cost work for no measurable gain. But an unread parameter is the
 failure this ADR prevents, so a test guards the boundary. It asserts that no vendored
@@ -65,6 +68,60 @@ newly vendored demo needs a decision.
   from 1". The discoverable version is an inspector row, which needs a special case in
   shared inspector code, because `GLBSceneRoot` is synthetic and has no `nodeRegistry`
   registration for the `propertyFormatter` path to find.
-- **Only scene sidecars are vendored.** Texture, audio and font sidecars govern
-  compression, mipmaps and sRGB, and this pipeline reads none of them. Vendoring those
-  inert files would hide the ones that matter.
+- **The corpus keeps only the sidecars the previewer reads.** These are scene, `.obj`, texture
+  and 3D texture sidecars (see the amendment below). `scripts/vendor-prune.mjs` prunes every other
+  sidecar. Audio and font sidecars change nothing the previewer draws, and vendoring those inert
+  files would hide the ones that matter.
+
+## Amendment: lightmap UV2 from the unwrap cache
+
+A baked lightmap is sampled with the mesh's UV2. A GLB imported at `meshes/light_baking=2`
+(Static Lightmaps) gets its UV2 from an xatlas unwrap at import, so the source asset has
+none: `global_illumination/zdm2.glb` has no `TEXCOORD_1`. The light-baking parameters
+therefore have a visual consequence, and the previewer honours them. A mesh is unwrapped at
+Static Lightmaps unless its `_subresources` `generate/lightmap_uv` is Disable, and at any
+bake mode when it is Enable (`resource_importer_scene.cpp:2622`, `:2649-2655`).
+
+The previewer reads the layout from the **Unwrap cache** that Godot keeps beside the asset,
+and never unwraps. xatlas output is not stable across machines: a fresh import of `zdm2.glb`
+gives the same input hash but 91265 vertices against the cache's 91276, with 3.6 % of
+corners at the same UV2. The bake shipped with a demo matches its cached layout, so the cache
+is the only input that reproduces it. Godot keys each entry by the MD5 of the unwrap input,
+so the previewer rebuilds that input in float32 in Godot's operation order and looks the hash
+up. A mesh without a matching entry keeps the GLB's own attributes, and one log line names it.
+
+- **The cache is fetched like the sidecar.** It is found by convention and its absence is
+  ordinary, so it is read through the FileEventBus, only when the sidecar unwraps a mesh, and
+  an edit to it reloads the asset.
+- **Godot's quirks are matched, not fixed.** A trailing surface without normals is dropped
+  from the rebuilt mesh, a mesh on a `GODOT_single_root` file's root node gets no UV2, and a
+  mesh whose surface without normals precedes one with them keeps its attributes, since
+  Godot 4.6.3 crashes on it.
+
+## Amendment: the texture importer
+
+A texture sidecar changes what an image file draws, so the previewer honours the texture
+importer's parameters that do. `textureBinding.md` in the StandardMaterial3D slice has the rules
+and their cites.
+
+- **`compress/mode`, `compress/high_quality` and `compress/normal_map` decide the import format.**
+  A `source_color` sampler reads a texture's sRGB view only when its format has one
+  (`material_storage.cpp:1073`). Godot loads a greyscale PNG or JPEG as L8 or LA8, which have none,
+  and keeps that format unless the mode is VRAM Compressed or Basis Universal
+  (`resource_importer_texture.cpp:934-947`). So the sidecar decides whether a colour slot reads the
+  image raw or sRGB.
+- **`mipmaps/generate` decides the mip chain.** It is off in the Detect preset, so an image with no
+  sidecar samples its base level under every `texture_filter`.
+- **`process/fix_alpha_border`, `process/premult_alpha`, `process/normal_map_invert_y` and
+  `svg/scale` rewrite the texels.** The previewer runs them in the importer's order.
+- **The parameters that change the channels stay at their default.** A channel remap, a channel
+  pack, a size limit or a mipmap limit changes the texels a slot reads, and the previewer reads
+  none of them. The allowlist test asserts their default on every vendored texture sidecar.
+- **The storage parameters are inert.** The previewer reads the source image, not the compressed
+  one, so the lossy quality and the roughness limiter change nothing it draws. The compression
+  error is not drawn (#786). The re-imports the editor starts when it first sees a texture in 3D or
+  as a normal map happen in the editor, so the previewer does not predict them.
+- **A glTF image follows the sidecar of the file Godot imports it as.** An embedded image is
+  extracted beside the glTF, and that file's sidecar decides. This holds only while the scene's
+  `gltf/embedded_image_handling` is Extract Textures, its default, so the allowlist test asserts
+  it.

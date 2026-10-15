@@ -15,8 +15,8 @@ import {
   meshInstanceSurfaces,
   type MeshSurface,
 } from '../../../resources/formats/glb/meshInstances';
-import { ShadowCastingSetting } from '../../../godot/rendering';
-import { visibilityParentOf } from '../../../godot/visibilityParent';
+import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
+import { visibilityParentOf } from '../../../godot/scene/visibilityParent';
 import { joinPath } from '../../../utils/nodePath';
 import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from '../../shadowCasting';
 import { FadedMeshMaterials } from '../../materials/fadedMeshMaterials';

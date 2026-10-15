@@ -52,6 +52,15 @@ reproduced:
 - **Relay chains** resolve in document (pre-order) order. A feedback loop is not
   iterated to a fixed point.
 
+## Why a 2D background reads 77 here and 76 in Godot
+
+Both sides clear a 2D scene to `default_clear_color`, 0.3 grey. The Godot images
+read 76 there, and the previewer reads 77. The value is 76.5 in 8 bits, so the
+driver's rounding decides the byte. `pnpm ref:godot` renders on Vulkan through
+lavapipe, which gives 76, and `--rendering-driver opengl3` gives 77. The
+previewer clears through WebGL, which gives 77. This 1/255 gap is not a parity
+defect.
+
 ## 3D
 
 - [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md): nothing yet, Godot rotates a bone toward its target, the previewer does not
@@ -85,7 +94,7 @@ reproduced:
 - [Decal](../../packages/textscene-core/src/nodes/3d/decal/comparison.md): a texture projected onto the surfaces its box intersects
 - [DirectionalLight3D](../../packages/textscene-core/src/nodes/3d/lights/directionallight3d/comparison.md): a THREE.DirectionalLight
 - [FABRIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/fabrik3d/comparison.md): nothing yet, Godot drags its chain onto the target each frame, the previewer does not
-- [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md): invisible transform-only fallback
+- [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md): density, scattering and emission added to the volumetric fog
 - [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md): nothing (a transform-only group)
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md): a transform-only group
 - [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not
@@ -129,7 +138,7 @@ reproduced:
 - [PhysicalBoneSimulator3D](../../packages/textscene-core/src/nodes/3d/skeleton/physicalbonesimulator3d/comparison.md): nothing yet, Godot drives its ragdoll through the physics server, the previewer does not
 - [PinJoint3D](../../packages/textscene-core/src/nodes/physics/3d/pinjoint3d/comparison.md): nothing (a transform-only group)
 - [RayCast3D](../../packages/textscene-core/src/nodes/physics/3d/raycast3d/comparison.md): nothing (a transform-only group)
-- [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md): invisible transform-only fallback
+- [ReflectionProbe](../../packages/textscene-core/src/nodes/3d/reflectionprobe/comparison.md): a capture of the scene, baked into an atlas layer that lit surfaces in its box read
 - [RemoteTransform3D](../../packages/textscene-core/src/nodes/3d/remotetransform3d/comparison.md): nothing (a transform-only group that drives its target)
 - [RetargetModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/retargetmodifier3d/comparison.md): nothing yet, Godot retargets poses onto child skeletons, the previewer does not
 - [RigidBody3D](../../packages/textscene-core/src/nodes/physics/3d/rigidbody3d/comparison.md): an invisible transform-only group
@@ -234,7 +243,7 @@ reproduced:
 - [NinePatchRect](../../packages/textscene-core/src/nodes/2d/ui/ninepatchrect/comparison.md): a 9-sliced textured quad in the control's rect
 - [Node2D](../../packages/textscene-core/src/nodes/base/node2d/comparison.md): a transform-only THREE.Group
 - [OpenXRBindingModifierEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrbindingmodifiereditor/comparison.md): nothing yet, not implemented
-- [OpenXRInteractionProfileEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrinteractionprofileeditor/comparison.md): invisible transform-only fallback, editor-only UI that no exported game scene ever instantiates
+- [OpenXRInteractionProfileEditor](../../packages/textscene-core/src/nodes/2d/ui/openxrinteractionprofileeditor/comparison.md): nothing, editor-only UI that no exported game scene ever instantiates
 - [OptionButton](../../packages/textscene-core/src/nodes/2d/ui/optionbutton/comparison.md): a collapsed dropdown box
 - [Panel](../../packages/textscene-core/src/nodes/2d/ui/panel/comparison.md): a StyleBox quad
 - [PanelContainer](../../packages/textscene-core/src/nodes/2d/ui/panelcontainer/comparison.md): a StyleBox panel around its child
@@ -286,17 +295,17 @@ reproduced:
 
 - [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md): nothing yet, not implemented
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md): nothing (a non-spatial audio node)
-- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md): invisible transform-only fallback
-- [FileDialog](../../packages/textscene-core/src/nodes/windows/filedialog/comparison.md): invisible transform-only fallback
+- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md): nothing yet, not implemented
+- [FileDialog](../../packages/textscene-core/src/nodes/windows/filedialog/comparison.md): nothing yet, not implemented
 - [HTTPRequest](../../packages/textscene-core/src/nodes/networking/httprequest/comparison.md): nothing (a transform-only group)
 - [MultiplayerSpawner](../../packages/textscene-core/src/nodes/networking/multiplayerspawner/comparison.md): nothing (a transform-only group)
 - [MultiplayerSynchronizer](../../packages/textscene-core/src/nodes/networking/multiplayersynchronizer/comparison.md): nothing (a transform-only group)
 - [Node](../../packages/textscene-core/src/nodes/node/comparison.md): nothing, a non-spatial base node
 - [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): nothing yet, not implemented
-- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): invisible transform-only fallback
+- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): nothing yet, not implemented
 - [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): nothing yet, not implemented
 - [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md): nothing (a transform-only group)
-- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): invisible transform-only fallback
+- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing yet, not implemented
 - [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not
 - [StatusIndicator](../../packages/textscene-core/src/nodes/os/statusindicator/comparison.md): nothing (a transform-only group)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md): nothing (a countdown timer node)

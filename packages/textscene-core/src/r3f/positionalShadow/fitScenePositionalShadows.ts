@@ -4,8 +4,8 @@
  */
 
 import * as THREE from 'three';
-import { positionalLightBounds } from '../../godot/positionalShadow.js';
-import type { PositionalShadowRequest } from '../../godot/positionalShadowAtlas.js';
+import { positionalLightBounds } from '../../godot/rendering/lights/positionalShadow.js';
+import type { PositionalShadowRequest } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { isViewingCamera, type ViewingCamera } from '../directionalShadow/fitDirectionalShadowBox.js';
 import { declaredLights, type DeclaredLight, type SceneLight } from '../directionalShadow/lightLists.js';
 import { readPositionalShadowDeclaration, type PositionalShadowDeclaration } from './declaration.js';
@@ -99,7 +99,7 @@ function lightVolume(light: PositionalLight): THREE.Box3 {
 
 function localBounds(light: PositionalLight): ReturnType<typeof positionalLightBounds> {
   if (isAreaShadowLight(light)) return light.shadow.bounds();
-  const spotAngle = isSpotLight(light) ? THREE.MathUtils.radToDeg(light.angle) : null;
+  const spotAngle = isSpotLight(light) ? light.angle : null;
   return positionalLightBounds(light.distance, spotAngle);
 }
 

@@ -13,7 +13,7 @@ const IS_VITEST = (() => {
   return proc?.env?.VITEST === 'true';
 })();
 
-export interface InternalTextLabelProps {
+interface InternalTextLabelProps {
   text: string;
   position?: [number, number, number];
   fontSize?: number;

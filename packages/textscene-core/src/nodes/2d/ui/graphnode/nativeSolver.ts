@@ -10,9 +10,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { ControlColor } from '../control/types';
 import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../r3f/controls/godotDefaultTheme';
@@ -26,6 +25,9 @@ import { SIZE_EXPAND, SIZE_FILL, fitChildInRect, hasFlag, isSortableControl } fr
 import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
+import type { Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
@@ -33,16 +35,16 @@ const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 /** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
 export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 
-/** `control_font_color`: `default_theme.cpp:819`, `GraphNodeTitleLabel`'s own `font_color`. */
-export const GRAPH_NODE_TITLE_DEFAULT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+/** `GraphNodeTitleLabel`'s own `font_color` (`default_theme.cpp:819`). */
+export const GRAPH_NODE_TITLE_DEFAULT_COLOR = CONTROL_FONT_COLOR;
 
 /** `Color::lightened` (`core/math/color.cpp`): moves each channel toward white by `amount`. */
-function lightened(c: ControlColor, amount: number): ControlColor {
+function lightened(c: Rgba, amount: number): Rgba {
   return { r: c.r + (1 - c.r) * amount, g: c.g + (1 - c.g) * amount, b: c.b + (1 - c.b) * amount, a: c.a };
 }
 
 function flatBox(
-  bgColor: ControlColor,
+  bgColor: Rgba,
   margin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: number
 ): StyleBoxFlatData {
@@ -125,11 +127,11 @@ function declaredSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): Grap
  * `Slot()` (`draw_stylebox = true`) for an undeclared index, so the child gets the `sb_slot` margin
  * and the draw pass boxes that slot under a real `theme_override_styles/slot`.
  */
-export function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): GraphNodeSlot {
+function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: number): GraphNodeSlot {
   return slots.get(rawIndex) ?? defaultGraphNodeSlot();
 }
 
-export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vec2 {
+export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2 {
   const props = n.node.properties as GraphNodeProperties;
   const fontTheme = resolveTitleFontTheme(
     n,
@@ -142,7 +144,7 @@ export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vec2 {
 
 // --- get_minimum_size ---------------------------------------------------------
 
-export const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
+const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
   const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
   const textMin = graphNodeTitleTextMin(n, ctx.theme);
@@ -184,10 +186,10 @@ interface StretchEntry {
   stretchRatio: number;
   hFlags: number;
   vFlags: number;
-  minSize: Vec2;
+  minSize: Vector2;
 }
 
-export const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
   const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
   const separation = separationOf(n, ctx.theme);
@@ -276,7 +278,7 @@ controlSolverRegistry.registerContainerLayout('GraphNode', graphNodeLayout);
 
 // --- Draw-time row geometry (NOTIFICATION_DRAW's port/slot-stylebox loop) -----
 
-export interface GraphNodeDrawRow {
+interface GraphNodeDrawRow {
   rawIndex: number;
   slot: GraphNodeSlot;
   /** `slot_y_cache[slot_index]`: the row's vertical centre, Godot px. */

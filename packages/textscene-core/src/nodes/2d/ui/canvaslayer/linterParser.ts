@@ -7,7 +7,7 @@
 import '../../../node/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { CANVAS_LAYER_MIN, CANVAS_LAYER_MAX } from '../../../../godot/rendering.js';
+import { CANVAS_LAYER_MIN, CANVAS_LAYER_MAX } from '../../../../godot/rendering/rendering.js';
 
 validatorRegistry.registerAll('CanvasLayer', {
   // canvas_layer.cpp:340, PROPERTY_HINT_RANGE over all of int32 (RS::CANVAS_LAYER_MIN/MAX,

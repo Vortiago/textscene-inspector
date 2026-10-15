@@ -7,13 +7,11 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import {
-  applyTextureState,
-  isMaterialOwnedTexture,
-  type MaterialTextureState,
-  type UVTransform,
-} from './applyTextureState';
-import { GODOT_ANISOTROPY_MAX } from './godotTextureFilter';
+import { applyTextureState, releaseBoundTexture, type UVTransform } from './applyTextureState';
+import { UV2_CHANNEL } from '../meshes/uv2';
+import { dropMipChain, godotTextureFilterState } from './godotTextureFilter';
+
+type TextureState = Parameters<typeof applyTextureState>[1];
 
 function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
   return { scale: { x: sx, y: sy }, offset: { x: ox, y: oy } };
@@ -24,7 +22,7 @@ function uv(sx: number, sy: number, ox = 0, oy = 0): UVTransform {
  * UV, filter or wrapping isolates that reason alone. The colour-space cases
  * below name theirs.
  */
-function state(material: MaterialTextureState = {}) {
+function state(material: Omit<TextureState, 'colorSpace'> = {}): TextureState {
   return { ...material, colorSpace: THREE.NoColorSpace };
 }
 
@@ -230,6 +228,36 @@ describe('applyTextureState', () => {
     });
   });
 
+  describe('a sampler that builds its own mip chain', () => {
+    function withoutMipChain(): THREE.Texture {
+      const texture = tiling();
+      dropMipChain(texture);
+      return texture;
+    }
+
+    it('clones an import without mipmaps onto a mip chain and the mipmap filter', () => {
+      const texture = withoutMipChain();
+      const result = applyTextureState(texture, state({ buildsMipChain: true }));
+
+      expect(result).not.toBe(texture);
+      expect(result.generateMipmaps).toBe(true);
+      expect(result.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+      expect(texture.generateMipmaps).toBe(false);
+    });
+
+    it('shares a texture that already has a mip chain', () => {
+      const texture = tiling();
+      expect(applyTextureState(texture, state({ buildsMipChain: true }))).toBe(texture);
+    });
+
+    it('keeps an authored filter without mipmaps on the rebuilt chain (edge case)', () => {
+      const result = applyTextureState(withoutMipChain(), state({ buildsMipChain: true, filter: 1 }));
+
+      expect(result.minFilter).toBe(THREE.LinearFilter);
+      expect(result.generateMipmaps).toBe(false);
+    });
+  });
+
   describe('both reasons at once', () => {
     it('produces ONE clone carrying both, not a clone of a clone', () => {
       const texture = new THREE.Texture();
@@ -260,7 +288,7 @@ describe('applyTextureState', () => {
 
       expect(nearest).not.toBe(anisotropic);
       expect(nearest.magFilter).toBe(THREE.NearestFilter);
-      expect(anisotropic.anisotropy).toBe(GODOT_ANISOTROPY_MAX);
+      expect(anisotropic.anisotropy).toBe(godotTextureFilterState(5).anisotropy);
       expect(shared.magFilter).toBe(THREE.LinearFilter);
       expect(shared.anisotropy).toBe(1);
     });
@@ -342,13 +370,62 @@ describe('applyTextureState', () => {
     });
   });
 
-  describe('clone tagging', () => {
-    it('tags clones so the owning material can dispose them', () => {
-      const original = new THREE.Texture();
-      const clone = applyTextureState(original, state({ filter: 0 }));
+  describe('UV set', () => {
+    it('clones onto the UV set the binding samples', () => {
+      const texture = tiling();
+      const result = applyTextureState(texture, state({ channel: UV2_CHANNEL }));
 
-      expect(isMaterialOwnedTexture(clone)).toBe(true);
-      expect(isMaterialOwnedTexture(original)).toBe(false);
+      expect(result).not.toBe(texture);
+      expect(result.channel).toBe(UV2_CHANNEL);
+      expect(texture.channel).toBe(0);
     });
+
+    it('returns the original when it already samples that UV set', () => {
+      const texture = tiling();
+      texture.channel = UV2_CHANNEL;
+
+      expect(applyTextureState(texture, state({ channel: UV2_CHANNEL }))).toBe(texture);
+    });
+
+    it('reads an omitted UV set as the first, so a UV2 texture clones back (edge case)', () => {
+      const texture = tiling();
+      texture.channel = UV2_CHANNEL;
+
+      expect(applyTextureState(texture, state({})).channel).toBe(0);
+    });
+  });
+});
+
+describe('releaseBoundTexture', () => {
+  function disposals(texture: THREE.Texture): { count: number } {
+    const seen = { count: 0 };
+    texture.addEventListener('dispose', () => {
+      seen.count += 1;
+    });
+    return seen;
+  }
+
+  it('disposes a clone applyTextureState made', () => {
+    const clone = applyTextureState(new THREE.Texture(), state({ filter: 0 }));
+    const seen = disposals(clone);
+
+    releaseBoundTexture(clone);
+
+    expect(seen.count).toBe(1);
+  });
+
+  it('leaves the loader’s shared entry alone', () => {
+    const shared = new THREE.Texture();
+    const seen = disposals(shared);
+
+    releaseBoundTexture(applyTextureState(shared, state({ filter: 0 })));
+    releaseBoundTexture(shared);
+
+    expect(seen.count).toBe(0);
+  });
+
+  it('tolerates an empty slot (edge case)', () => {
+    expect(() => releaseBoundTexture(undefined)).not.toThrow();
+    expect(() => releaseBoundTexture(null)).not.toThrow();
   });
 });

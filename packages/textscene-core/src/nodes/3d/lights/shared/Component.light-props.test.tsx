@@ -13,13 +13,15 @@ import type { OmniLight3DProperties } from '../omnilight3d/types';
 import type { SpotLight3DProperties } from '../spotlight3d/types';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { readFogLightDeclaration } from '../../../../r3f/fog/fogLightDeclaration';
-import { readSkyLightDeclaration } from '../../../../r3f/sky/skyLight';
-import { fireSceneRender } from '../../../../r3f/testing/fireSceneRender';
+import { skyLightEnergy } from '../../../../r3f/sky/skyLight';
+import { fireSceneRenderFrom } from '../../../../r3f/testing/fireSceneRender';
+import { visualLayersOf } from '../../../../r3f/visualLayers';
 
 function dirNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
     name: 'Sun',
     light_color: 'Color(1, 0.95, 0.9, 1)',
+    layers: 1,
     light_energy: 1,
     shadow_enabled: false,
     ...overrides,
@@ -37,6 +39,7 @@ function omniNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
   const props: OmniLight3DProperties = {
     name: 'Lamp',
     light_color: 'Color(1, 1, 1, 1)',
+    layers: 1,
     light_energy: 1,
     shadow_enabled: false,
     omni_range: 5,
@@ -56,6 +59,7 @@ function spotNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
   const props: SpotLight3DProperties = {
     name: 'Torch',
     light_color: 'Color(1, 1, 1, 1)',
+    layers: 1,
     light_energy: 1,
     shadow_enabled: false,
     spot_range: 10,
@@ -202,15 +206,6 @@ describe('Lights — volumetric fog declaration', () => {
   });
 });
 
-/** Runs the hooks a render of the test scene runs, through a camera `distance` along +Z. */
-function renderFrom(scene: THREE.Scene, distance: number): void {
-  const camera = new THREE.PerspectiveCamera();
-  camera.position.set(0, 0, distance);
-  camera.updateMatrixWorld();
-  scene.updateMatrixWorld();
-  fireSceneRender(scene, camera);
-}
-
 describe('Lights: sign, shadow opacity and distance fade', () => {
   it('subtracts a light_negative OmniLight3D through a negative intensity', async () => {
     const r = await ReactThreeTestRenderer.create(
@@ -225,7 +220,7 @@ describe('Lights: sign, shadow opacity and distance fade', () => {
       <DirectionalLight3D node={dirNode({ light_energy: 2, light_negative: true })} />
     );
     const sun = instanceAs<THREE.DirectionalLight>(r.scene.findByType('DirectionalLight'));
-    expect(readSkyLightDeclaration(sun)?.energy).toBe(-2);
+    expect(skyLightEnergy(sun)).toBe(-2);
   });
 
   it('maps shadow_opacity onto shadow.intensity, defaulting to 1', async () => {
@@ -252,7 +247,7 @@ describe('Lights: sign, shadow opacity and distance fade', () => {
     );
     const lamp = instanceAs<THREE.PointLight>(r.scene.findByType('PointLight'));
 
-    renderFrom(r.scene.instance as THREE.Scene, 12);
+    fireSceneRenderFrom(r.scene.instance as THREE.Scene, 12);
     // smoothstep(0, 1, 1 - (12 - 10) / 4) is 0.5, and the shadow is past 6 + 4.
     expect(lamp.intensity).toBeCloseTo(0.5 * LIGHT_INTENSITY_SCALE, 6);
     expect(lamp.shadow.intensity).toBe(0);
@@ -264,19 +259,41 @@ describe('Lights: sign, shadow opacity and distance fade', () => {
     );
     const spot = instanceAs<THREE.SpotLight>(r.scene.findByType('SpotLight'));
 
-    renderFrom(r.scene.instance as THREE.Scene, 50);
+    fireSceneRenderFrom(r.scene.instance as THREE.Scene, 50);
     expect(spot.intensity).toBeCloseTo(LIGHT_INTENSITY_SCALE, 6);
   });
 
   it('restores the unfaded light when the fade turns off (edge case)', async () => {
     const faded = omniNode({ distance_fade_enabled: true, distance_fade_begin: 1, distance_fade_length: 1 });
     const r = await ReactThreeTestRenderer.create(<OmniLight3D node={faded} />);
-    renderFrom(r.scene.instance as THREE.Scene, 50);
+    fireSceneRenderFrom(r.scene.instance as THREE.Scene, 50);
 
     await r.update(<OmniLight3D node={omniNode()} />);
     expect(instanceAs<THREE.PointLight>(r.scene.findByType('PointLight')).intensity).toBeCloseTo(
       LIGHT_INTENSITY_SCALE,
       6
     );
+  });
+});
+
+describe('Lights: render layers, which a ReflectionProbe cull_mask tests', () => {
+  it("carries a DirectionalLight3D's layers", async () => {
+    const r = await ReactThreeTestRenderer.create(<DirectionalLight3D node={dirNode({ layers: 2 })} />);
+    expect(visualLayersOf(r.scene.findByType('DirectionalLight').instance)).toBe(2);
+  });
+
+  it("carries an OmniLight3D's layers", async () => {
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode({ layers: 4 })} />);
+    expect(visualLayersOf(r.scene.findByType('PointLight').instance)).toBe(4);
+  });
+
+  it("carries a SpotLight3D's layers", async () => {
+    const r = await ReactThreeTestRenderer.create(<SpotLight3D node={spotNode({ layers: 8 })} />);
+    expect(visualLayersOf(r.scene.findByType('SpotLight').instance)).toBe(8);
+  });
+
+  it('carries a layers mask of 0, which no cull_mask matches (edge case)', async () => {
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode({ layers: 0 })} />);
+    expect(visualLayersOf(r.scene.findByType('PointLight').instance)).toBe(0);
   });
 });

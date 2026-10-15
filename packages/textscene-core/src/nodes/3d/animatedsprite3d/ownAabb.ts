@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
-import { EMPTY_AABB, type Aabb } from '../../../godot/aabb';
+import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
 import { useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
 import { useTexture2D } from '../../../resources/useTexture2D';

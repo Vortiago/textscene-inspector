@@ -4,7 +4,7 @@
  * `inf` for a `PackedInt32Array`, is a format error that tests nothing.
  */
 
-import { everyValidator } from '../registryPopulation.js';
+import { everyValidator } from './registryPopulation.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
 const NESTED_INT_ARRAY = /^Array\[PackedInt32Array\]|index lists/;

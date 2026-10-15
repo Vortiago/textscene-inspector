@@ -1,110 +1,200 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
-  LAST_LAYER_FACE_SIZE,
-  ROUGH_LAYER_FACE_SIZES,
-  readCubeRadiance,
-  skyLayers,
-  type SkyLayers,
+  SKY_LAYER_GROUPS,
+  SKY_LAYER_GROUP_NAMES,
+  bakeAtlasLayers,
+  bakeSkyLayers,
+  byGroup,
+  createReflectionAtlas,
+  disposeSkyLayers,
 } from './skyLayers';
+import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflectionProbe';
+import { fastFilter } from './fastFilter';
+import { testRenderer } from '../../testing/recordingWebGL';
+import type { SkyBake } from './types';
 
-const SIZE = 8;
+const IMPORTANCE_SAMPLED: SkyBake = { radianceFilter: 'importance-sample', radianceSize: 32 };
+const FAST: SkyBake = { radianceFilter: 'fast', radianceSize: 256 };
 
-/** Six RGBA faces, each filled with the radiance `radiance` gives its index. */
-function cube(radiance: (face: number) => number): Float32Array[] {
-  return Array.from({ length: 6 }, (_, face) => new Float32Array(SIZE * SIZE * 4).fill(radiance(face)));
+/** A radiance cube set up on `renderer`, as the sky's cube render leaves it. */
+function radianceCube(renderer: THREE.WebGLRenderer): THREE.CubeTexture {
+  const target = new THREE.WebGLCubeRenderTarget(32, { type: THREE.HalfFloatType });
+  renderer.initRenderTarget(target);
+  return target.texture;
 }
 
-const CENTRE = LAST_LAYER_FACE_SIZE / 2;
-const LAST = LAST_LAYER_FACE_SIZE - 1;
-
-/** The red channel of the last layer's texel at `col`, `row` of `face`. */
-function ambientAt(layers: SkyLayers, face: number, col: number, row: number): number {
-  return THREE.DataUtils.fromHalfFloat(layers.last[face]![(row * LAST_LAYER_FACE_SIZE + col) * 4]!);
+/** The materials `renderer` draws with while `bake` runs, each read at its draw as the quad is reused. */
+function passesDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void): Set<THREE.Material> {
+  const passes = new Set<THREE.Material>();
+  const render = renderer.render.bind(renderer);
+  vi.spyOn(renderer, 'render').mockImplementation((drawn, camera) => {
+    passes.add((drawn as THREE.Mesh).material as THREE.Material);
+    render(drawn, camera);
+  });
+  bake();
+  return passes;
 }
 
-describe('skyLayers', () => {
-  it('bakes each rough layer at half the size of the one before, as a mip chain', () => {
-    const layers = skyLayers(
-      cube(() => 0.5),
-      SIZE
-    );
-    expect(layers.rough.map((faces) => faces[0]!.length)).toEqual([32 * 32 * 4, 16 * 16 * 4, 8 * 8 * 4]);
-    expect(layers.last[0]).toHaveLength(LAST_LAYER_FACE_SIZE * LAST_LAYER_FACE_SIZE * 4);
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('byGroup', () => {
+  it("gives each group of layers `make`'s value", () => {
+    expect(byGroup((group) => SKY_LAYER_GROUPS[group].firstLayer)).toEqual({ sharp: 1, rough: 4, last: 7 });
   });
 
-  it('gives a uniform sky its own radiance in every direction of the last layer', () => {
-    const layers = skyLayers(
-      cube(() => 0.5),
-      SIZE
-    );
-    for (const [face, col, row] of [
-      [0, CENTRE, CENTRE],
-      [3, 0, 0],
-      [5, LAST, 2],
-    ] as const) {
-      expect(ambientAt(layers, face, col, row)).toBeCloseTo(0.5, 3);
-    }
-  });
+  it('calls `make` once per group, in the order of the groups (edge case)', () => {
+    const make = vi.fn((group: string) => group);
 
-  it.each([0, 1, 2, 3, 4, 5])('lights the side cube face %i faces more than its opposite', (face) => {
-    const layers = skyLayers(
-      cube((f) => (f === face ? 1 : 0)),
-      SIZE
-    );
-    const opposite = face ^ 1;
-    expect(ambientAt(layers, face, CENTRE, CENTRE)).toBeGreaterThan(0.4);
-    expect(ambientAt(layers, opposite, CENTRE, CENTRE)).toBeLessThan(0.05);
-  });
+    byGroup(make);
 
-  it('keeps a lit face sharper in the first layer than in the last', () => {
-    const layers = skyLayers(
-      cube((f) => (f === 2 ? 1 : 0)),
-      SIZE
-    );
-    const firstSize = ROUGH_LAYER_FACE_SIZES[0]!;
-    const firstCentre = THREE.DataUtils.fromHalfFloat(
-      layers.rough[0]![2]![((firstSize / 2) * firstSize + firstSize / 2) * 4]!
-    );
-    expect(firstCentre).toBeGreaterThan(ambientAt(layers, 2, CENTRE, CENTRE));
-  });
-
-  it('puts the up direction in the first texel row of the +X face, as WebGL samples it', () => {
-    const layers = skyLayers(
-      cube((f) => (f === 2 ? 1 : 0)),
-      SIZE
-    );
-    expect(ambientAt(layers, 0, CENTRE, 0)).toBeGreaterThan(ambientAt(layers, 0, CENTRE, LAST));
-  });
-
-  it('refuses a cube without six faces', () => {
-    expect(() => skyLayers(cube(() => 1).slice(1), SIZE)).toThrow('expected 6 cube faces, got 5');
-  });
-
-  it('refuses a face whose length is not the face size squared in RGBA', () => {
-    const faces = cube(() => 1);
-    faces[3] = new Float32Array(4);
-    expect(() => skyLayers(faces, SIZE)).toThrow(
-      `expected 6 RGBA faces of ${SIZE}x${SIZE}, got face 3 with 4 values`
-    );
+    expect(make.mock.calls.map(([group]) => group)).toEqual([...SKY_LAYER_GROUP_NAMES]);
   });
 });
 
-describe('readCubeRadiance', () => {
-  it('reads each face of a half-float cube as floats', () => {
-    const target = new THREE.WebGLCubeRenderTarget(2, { type: THREE.HalfFloatType });
-    const faces: number[] = [];
-    const gl = {
-      readRenderTargetPixels: vi.fn((_target, _x, _y, _w, _h, buffer: Uint16Array, face: number) => {
-        faces.push(face);
-        buffer.fill(THREE.DataUtils.toHalfFloat(face + 0.5));
-      }),
-    } as unknown as THREE.WebGLRenderer;
+describe('bakeSkyLayers', () => {
+  it('bakes each group into a cube as wide as its first layer, a mip per layer', async () => {
+    const { renderer } = await testRenderer();
 
-    const radiance = readCubeRadiance(gl, target);
+    const layers = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED);
 
-    expect(faces).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(radiance.map((face) => face[0])).toEqual([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]);
-    expect(radiance[0]).toHaveLength(2 * 2 * 4);
+    expect(
+      SKY_LAYER_GROUP_NAMES.map((group) => [layers[group].width, layers[group].texture.minFilter])
+    ).toEqual([
+      [128, THREE.LinearMipmapLinearFilter],
+      [32, THREE.LinearMipmapLinearFilter],
+      [16, THREE.LinearFilter],
+    ]);
+  });
+
+  it('filters each of the layers 1 to 7 of a real-time sky with the fast filter (edge case)', async () => {
+    const { renderer } = await testRenderer();
+    const selected = vi.spyOn(fastFilter, 'layerUniforms');
+
+    bakeSkyLayers(renderer, radianceCube(renderer), FAST);
+
+    expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+  });
+
+  it('draws with passes of its own on each renderer (edge case)', async () => {
+    const { renderer: first } = await testRenderer();
+    const { renderer: second } = await testRenderer();
+
+    const firstPasses = passesDrawnBy(first, () => bakeSkyLayers(first, radianceCube(first), FAST));
+    const secondPasses = passesDrawnBy(second, () => bakeSkyLayers(second, radianceCube(second), FAST));
+
+    expect(firstPasses.size).toBe(3);
+    expect([...firstPasses].filter((pass) => secondPasses.has(pass))).toEqual([]);
+  });
+
+  it('leaves the renderer on the target it had', async () => {
+    const { renderer } = await testRenderer();
+    const target = new THREE.WebGLRenderTarget(4, 4);
+    renderer.setRenderTarget(target);
+
+    bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED);
+
+    expect(renderer.getRenderTarget()).toBe(target);
+  });
+
+  it('frees the cubes it made when a pass fails (error case)', async () => {
+    const { renderer } = await testRenderer();
+    const radiance = radianceCube(renderer);
+    const disposed = vi.spyOn(THREE.WebGLCubeRenderTarget.prototype, 'dispose');
+    vi.spyOn(renderer, 'copyTextureToTexture').mockImplementation(() => {
+      throw new Error('lost context');
+    });
+
+    expect(() => bakeSkyLayers(renderer, radiance, IMPORTANCE_SAMPLED)).toThrow('lost context');
+    expect(disposed).toHaveBeenCalledTimes(SKY_LAYER_GROUP_NAMES.length);
+  });
+});
+
+describe('disposeSkyLayers', () => {
+  it('frees every cube', async () => {
+    const { renderer } = await testRenderer();
+    const layers = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED);
+    const disposed = SKY_LAYER_GROUP_NAMES.map((group) => vi.spyOn(layers[group], 'dispose'));
+
+    disposeSkyLayers(layers);
+
+    expect(disposed.map((dispose) => dispose.mock.calls.length)).toEqual([1, 1, 1]);
+  });
+
+  it('frees cubes that were never drawn (edge case)', () => {
+    const layers = byGroup(() => new THREE.WebGLCubeRenderTarget(1));
+
+    expect(() => disposeSkyLayers(layers)).not.toThrow();
+  });
+});
+
+describe('createReflectionAtlas', () => {
+  it('holds an octmap layer per probe, as wide as the layout', () => {
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 3);
+
+    expect([atlas.target.width, atlas.target.height, atlas.target.depth]).toEqual([768, 768, 3]);
+  });
+
+  it("holds every mip down to one texel past Godot's layers, so the texture is complete (edge case)", () => {
+    expect(createReflectionAtlas(reflectionAtlasLayout(false), 1).target.texture.mipmaps).toHaveLength(10);
+  });
+
+  it('holds one layer for an atlas of no probes, as a texture array needs a layer (edge case)', () => {
+    expect(createReflectionAtlas(reflectionAtlasLayout(true), 0).target.depth).toBe(1);
+  });
+});
+
+describe('bakeAtlasLayers', () => {
+  /** The layer and the mip of each draw into `atlas`'s target. */
+  function drawsInto(renderer: THREE.WebGLRenderer, target: THREE.WebGLRenderTarget) {
+    const set = vi.spyOn(renderer, 'setRenderTarget');
+    return () => set.mock.calls.filter(([drawn]) => drawn === target).map(([, layer, mip]) => [layer, mip]);
+  }
+
+  it("draws the capture into mip 0 of the probe's layer, and each filtered layer into its own mip", async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 3);
+    const draws = drawsInto(renderer, atlas.target);
+
+    bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 2, 'importance-sample');
+
+    expect(draws()).toEqual([0, 1, 2, 3, 4, 5, 6, 7].map((mip) => [2, mip]));
+  });
+
+  it("filters an update-always probe's layers 1 to 6 with the fast filter", async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(true), 1);
+    const selected = vi.spyOn(fastFilter, 'layerUniforms');
+
+    bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 0, 'fast');
+
+    expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('leaves the renderer on the target it had', async () => {
+    const { renderer } = await testRenderer();
+    const target = new THREE.WebGLRenderTarget(4, 4);
+    renderer.setRenderTarget(target);
+
+    bakeAtlasLayers(
+      renderer,
+      radianceCube(renderer),
+      createReflectionAtlas(reflectionAtlasLayout(false), 1),
+      0,
+      'importance-sample'
+    );
+
+    expect(renderer.getRenderTarget()).toBe(target);
+  });
+
+  it('refuses a layer the atlas lacks (error case)', async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 2);
+
+    expect(() => bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 2, 'importance-sample')).toThrow(
+      'expected an atlas layer from 0 to 1, got 2'
+    );
   });
 });

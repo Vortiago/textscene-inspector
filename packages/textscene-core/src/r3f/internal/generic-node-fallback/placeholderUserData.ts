@@ -11,7 +11,7 @@ import type { TscnNode } from '../../../parser/types';
  * type, and only an alias carries the implicit index signature that assignment
  * needs.
  */
-export type PlaceholderUserData = {
+type PlaceholderUserData = {
   isPlaceholder: true;
   nodeType: string;
   nodeName: string;

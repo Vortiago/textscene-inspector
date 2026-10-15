@@ -10,7 +10,8 @@
  */
 
 import type { TscnNode } from '../parser/types';
-import { descendsFrom } from '../godot/nodeBaseTypes';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes';
+import { DEFAULT_CANVAS_LAYER } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import {
   CANVAS_ITEM_Z_MAX,
@@ -28,14 +29,14 @@ const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
  * or items tie: a thousand layers against the ±4096 z envelope stay four orders
  * of magnitude under `Number.MAX_SAFE_INTEGER`.
  */
-export const PAINT_SEQUENCE_STRIDE = 2 ** 24;
+const PAINT_SEQUENCE_STRIDE = 2 ** 24;
 
 /**
  * Room held back inside a node whose drawn pieces the tree does not list
  * (`reservesRoom`). It keeps the allocation a pure function of the tree, so the
  * world walk and the Control walk agree without waiting on a resource.
  */
-export const DYNAMIC_CHILD_RESERVE = 4096;
+const DYNAMIC_CHILD_RESERVE = 4096;
 
 /** A contiguous run of draw-sequence values owned by one node and its subtree. */
 export interface PaintRange {
@@ -44,7 +45,7 @@ export interface PaintRange {
 }
 
 /** Where a canvas item sits in Godot's three-part order. */
-export interface CanvasPlacement {
+interface CanvasPlacement {
   /** The item's canvas, as a dense rank (`layerRanks`). */
   layerRank: number;
   /** The item's accumulated `z_index` (`accumulateCanvasItemZ`). */
@@ -113,13 +114,13 @@ export function layerRankOf(declared: readonly number[], layer: number): number 
  * counts. `controls/canvasBoundary.driftguard.test.ts` holds the Control walk to it.
  */
 export function isCanvasLayerType(type: string): boolean {
-  return descendsFrom(type, 'CanvasLayer');
+  return descendsFromClass(type, 'CanvasLayer');
 }
 
 /** The `layer` a canvas-layer node declares, or Godot's own default of 1. */
 export function canvasLayerOf(node: TscnNode): number {
   const layer = (node.properties as { layer?: number }).layer;
-  return typeof layer === 'number' ? layer : DEFAULT_CANVAS_LAYER_VALUE;
+  return typeof layer === 'number' ? layer : DEFAULT_CANVAS_LAYER;
 }
 
 /** Every canvas layer declared anywhere in the given trees. */
@@ -132,9 +133,6 @@ export function declaredCanvasLayers(nodes: readonly TscnNode[]): number[] {
   for (const node of nodes) visit(node);
   return found;
 }
-
-/** `CanvasLayer.layer`'s own Godot default, for a layer node that authors none. */
-const DEFAULT_CANVAS_LAYER_VALUE = 1;
 
 /**
  * Whether a node draws pieces the tree does not list: a tile layer, which a
@@ -177,7 +175,7 @@ export function paintRangeSize(node: TscnNode): number {
  * an item nests under it or parents at the canvas.
  */
 function isCanvasItem(node: TscnNode): boolean {
-  return descendsFrom(node.type, 'CanvasItem');
+  return descendsFromClass(node.type, 'CanvasItem');
 }
 
 /**
@@ -212,7 +210,7 @@ function hostsOwnCanvas(node: TscnNode): boolean {
  * at the canvas (`canvas_item.cpp:246-267`). The descent stops at each root, whose
  * own nested roots ride in its range, and at a node that hosts a canvas.
  */
-export function nestedCanvasRoots(node: TscnNode): TscnNode[] {
+function nestedCanvasRoots(node: TscnNode): TscnNode[] {
   const found: TscnNode[] = [];
   const visit = (parent: TscnNode): void => {
     const parentIsItem = isCanvasItem(parent);
@@ -278,7 +276,7 @@ export function canvasRootRanges(
 }
 
 /** A parent's own sequence value, and the range each of its children owns. */
-export interface AllocatedPaintRange {
+interface AllocatedPaintRange {
   /** The sequence the parent itself draws at. */
   self: number;
   /** The run the parent's internal front children draw from (`internalFrontRoom`). */
@@ -300,7 +298,7 @@ function drawsBehindParent(node: TscnNode): boolean {
 }
 
 /** How a parent's own children split its range. */
-export interface PaintRangeLayout {
+interface PaintRangeLayout {
   /** `y_sort_enabled`: the children are re-packed in sort order after the parent. */
   sortsChildren?: boolean;
   /** Values the parent's internal front children take (`internalFrontRoom`). */

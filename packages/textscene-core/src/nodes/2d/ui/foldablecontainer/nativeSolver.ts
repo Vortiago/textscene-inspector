@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -27,18 +27,20 @@ import { STYLE_FILL } from '../../../../r3f/controls/godotDefaultTheme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  AutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
-import type { ControlColor } from '../control/types';
 import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
-export const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
+const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
 
 /** `Math::round(2 * scale)` (`default_theme.cpp:1336`), from the raw, unrounded `gui/theme/default_theme_scale`. */
 export function foldableContainerHSeparation(theme: NativeTheme): number {
@@ -46,15 +48,15 @@ export function foldableContainerHSeparation(theme: NativeTheme): number {
 }
 
 /** The 16x16 size of the arrow icons (`scene/theme/icons/arrow_*.svg`), scaled as `generate_icon(..., scale)` rasterises them. */
-export function foldableContainerArrowSize(theme: NativeTheme): Vec2 {
+function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
   const size = Math.round(16 * theme.scale);
   return { x: size, y: size };
 }
 
-/** `control_font_color` (`default_theme.cpp:101`): the default `font_color` of FoldableContainer (`:1324`). */
-const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`): the default `collapsed_font_color` (`:1326`). */
-const FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+/** The default `font_color` of FoldableContainer (`default_theme.cpp:1324`). */
+const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
+/** The default `collapsed_font_color` of FoldableContainer (`default_theme.cpp:1326`). */
+const FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 
 const FOLDABLE_CONTAINER_TITLE_THEME_KEYS: Record<'expanded' | 'folded', TextThemeKeys> = {
   expanded: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -67,7 +69,7 @@ type CornerRadius = StyleBoxFlatData['cornerRadius'];
  * `make_flat_stylebox` (`default_theme.cpp:57-70`), with the fields `StyleBoxFlatData` models.
  */
 function flatStyleBox(
-  bgColor: ControlColor,
+  bgColor: Rgba,
   contentMargin: { left: number; top: number; right: number; bottom: number },
   cornerRadius: CornerRadius
 ): StyleBoxFlatData {
@@ -155,7 +157,7 @@ function resolveArrowSize(
   n: Pick<SolveNode, 'textureSlots'>,
   arrow: FoldableContainerArrow,
   theme: NativeTheme
-): Vec2 {
+): Vector2 {
   return n.textureSlots[FOLDABLE_CONTAINER_ARROW_THEME_NAME[arrow]] ?? foldableContainerArrowSize(theme);
 }
 
@@ -166,9 +168,9 @@ export interface FoldableContainerTitleMetrics {
   panelStyle: StyleBoxFlatData;
   arrow: FoldableContainerArrow;
   /** The resolved size of the current arrow (`resolveArrowSize`). */
-  arrowSize: Vec2;
+  arrowSize: Vector2;
   fontSizePx: number;
-  color: ControlColor;
+  color: Rgba;
   /** The shaped title text, or `null` for an empty title or before a measurer exists. */
   layout: TextLayoutResult | null;
   /**
@@ -176,7 +178,7 @@ export interface FoldableContainerTitleMetrics {
    * no `title_controls` term: `add_title_bar_control` is a method with no `ADD_PROPERTY`
    * (`foldable_container.cpp:552-553`), so no `.tscn` can author one.
    */
-  size: Vec2;
+  size: Vector2;
 }
 
 /**
@@ -185,7 +187,7 @@ export interface FoldableContainerTitleMetrics {
  * The shaped result is the share {@link foldableContainerTitleShape}. The unshaped one
  * stays a plain call: a memoised unshaped title would outlive the readiness gate.
  */
-export function foldableContainerTitleMetrics(
+function foldableContainerTitleMetrics(
   n: ShareNode,
   props: FoldableContainerProperties,
   ctx: Pick<SolveContext, 'theme'>,
@@ -219,7 +221,7 @@ export function foldableContainerTitleMetrics(
       ? shapeText(title, {
           fontSizePx,
           boxWidthPx: 0,
-          autowrapMode: AutowrapMode.OFF,
+          autowrapMode: AutowrapMode.AUTOWRAP_OFF,
           lineSpacingPx: 0,
           fontMetrics,
         })

@@ -2,7 +2,7 @@
  * `ExtResource("…")` and `SubResource("…")` references, as an editor sees them: the
  * declaration each id names, every use of it, and the span a cursor can land on. The
  * ids are per file and per kind, so an `ext` id and a `sub` id may share a spelling.
- * The grammar is `godot/resourceRef.ts`, the one the linter and the renderer read.
+ * The grammar is `godot/variant/resourceRef.ts`, the one the linter and the renderer read.
  */
 
 import {
@@ -10,7 +10,7 @@ import {
   resourceRef,
   resourceRefSpansByLine,
   type ResourceRef,
-} from '../godot/resourceRef.js';
+} from '../godot/variant/resourceRef.js';
 import type { LanguageDocument, DocumentSection } from './document.js';
 import { headingAttribute, lineRange, lineRangeContains, spanContains } from './ranges.js';
 import type { Position, Range } from './types.js';
@@ -23,7 +23,7 @@ export interface ResourceReference {
 }
 
 /** A reference occurrence and where it sits. */
-export interface ResourceReferenceSpan extends ResourceReference {
+interface ResourceReferenceSpan extends ResourceReference {
   readonly range: Range;
 }
 
@@ -81,7 +81,7 @@ export function resourceReferences(document: LanguageDocument): readonly Resourc
 }
 
 /** A declared resource id and the heading that declares it. */
-export interface ResourceDeclaration extends ResourceReference {
+interface ResourceDeclaration extends ResourceReference {
   readonly section: DocumentSection;
 }
 

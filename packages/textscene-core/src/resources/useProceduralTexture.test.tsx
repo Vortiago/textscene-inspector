@@ -13,15 +13,15 @@ import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import type { ResourceLoader } from './ResourceLoader';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
-import { abortProceduralBuilds, type JobRunner } from './textures/proceduralBuilds';
+import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { pendingTextureWork, subscribeTextureWork } from './textures/textureWork';
 import {
   useProceduralTexture,
+  useProceduralTexture3D,
   useProceduralTexturePins,
-  useProceduralTextures,
   type ProceduralSlot,
 } from './useProceduralTexture';
-import { clearProceduralTextureCache, proceduralTextureKey } from './textures/proceduralTextureCache';
+import { proceduralTextureKey } from './textures/proceduralTextureCache';
 
 /** The cache exposes no pin counter, so the two entry points are wrapped, calling through. */
 const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));
@@ -70,11 +70,11 @@ function strict({ children }: { children: ReactNode }) {
 beforeEach(() => {
   traffic.pinned.length = 0;
   traffic.unpinned.length = 0;
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 afterEach(() => {
-  abortProceduralBuilds();
+  resetProceduralTextures();
 });
 
 describe('useProceduralTexture', () => {
@@ -253,13 +253,16 @@ function withRunner(runner: JobRunner, strictMode = false) {
 function renderSlots(runner: JobRunner, resources: TscnInternalResource[], strictMode = false) {
   const { loader, wrapper } = withRunner(runner, strictMode);
   const hook = renderHook(
-    ({ scene }: { scene: TscnInternalResource[] }) => useProceduralTextures([NOISE, GRADIENT], scene),
+    ({ scene }: { scene: TscnInternalResource[] }) => [
+      useProceduralTexture(NOISE, scene),
+      useProceduralTexture(GRADIENT, scene),
+    ],
     { initialProps: { scene: resources }, wrapper }
   );
   return { ...hook, loader };
 }
 
-describe('useProceduralTextures with a NoiseTexture2D', () => {
+describe('useProceduralTexture with a NoiseTexture2D', () => {
   it('claims the slot and draws nothing in it until the build lands', () => {
     const { runner } = fakeJobRunner();
     const { result } = renderSlots(runner, noiseScene(1));
@@ -295,7 +298,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     let isShown = false;
     renderHook(
       () => {
-        const slots = useProceduralTextures([NOISE], noiseScene(1));
+        const slots = [useProceduralTexture(NOISE, noiseScene(1))];
         useLayoutEffect(() => {
           isShown = slots[0]?.texture instanceof THREE.DataTexture;
         });
@@ -405,7 +408,7 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
     const caught: unknown[] = [];
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     function Consumer(): null {
-      useProceduralTextures([NOISE], noiseScene(1));
+      useProceduralTexture(NOISE, noiseScene(1));
       return null;
     }
     render(
@@ -423,11 +426,46 @@ describe('useProceduralTextures with a NoiseTexture2D', () => {
   });
 
   it('builds in-thread outside a loader provider', async () => {
-    const { result } = renderHook(() => useProceduralTextures([NOISE], noiseScene(1)));
+    const { result } = renderHook(() => [useProceduralTexture(NOISE, noiseScene(1))]);
     await flush();
 
     const [slot] = result.current as ProceduralSlot[];
     expect(slot?.texture).toBeInstanceOf(THREE.DataTexture);
+  });
+});
+
+/** A 4x3x2 NoiseTexture3D, and a NoiseTexture2D a Texture3D slot must not claim. */
+function noiseVolumeScene(): TscnInternalResource[] {
+  return [
+    ...noiseScene(1),
+    {
+      id: 'NoiseTexture3D_a',
+      type: 'NoiseTexture3D',
+      data: { noise: 'SubResource("FastNoiseLite_a")', width: '4', height: '3', depth: '2' },
+    },
+  ];
+}
+
+describe('useProceduralTexture3D', () => {
+  it('builds the NoiseTexture3D a SubResource reference names', async () => {
+    const { result } = renderHook(() =>
+      useProceduralTexture3D('SubResource("NoiseTexture3D_a")', noiseVolumeScene())
+    );
+    await flush();
+
+    expect(result.current.texture).toBeInstanceOf(THREE.Data3DTexture);
+  });
+
+  it('leaves a NoiseTexture2D unclaimed, since a Texture3D slot cannot draw it', () => {
+    const { result } = renderHook(() => useProceduralTexture3D(NOISE, noiseVolumeScene()));
+
+    expect(result.current).toEqual({ texture: null, claimed: false, building: false });
+  });
+
+  it('leaves a missing reference unclaimed (edge case)', () => {
+    const { result } = renderHook(() => useProceduralTexture3D(undefined, noiseVolumeScene()));
+
+    expect(result.current.claimed).toBe(false);
   });
 });
 

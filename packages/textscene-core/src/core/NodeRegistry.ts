@@ -5,7 +5,7 @@
  */
 
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene';
 import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
 import { createTypeRegistry } from './createTypeRegistry';
@@ -21,7 +21,7 @@ export interface PropertySection {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Generic formatter accepts any parsed properties
-export type PropertyFormatter = (properties: any) => PropertySection[];
+type PropertyFormatter = (properties: any) => PropertySection[];
 
 export interface NodeTypeRegistration {
   /** Node type name, such as 'MeshInstance3D' or 'Node3D'. */

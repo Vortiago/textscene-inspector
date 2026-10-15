@@ -32,6 +32,11 @@ The `.import` file Godot writes beside a source asset to record its importer and
 No scene references it, so a missing one is an ordinary outcome and not a **Missing resource**.
 _Avoid_: "import file" for the asset itself.
 
+**Unwrap cache**:
+The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
+Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.
+_Avoid_: "lightmap cache", which suggests the baked lightmap.
+
 **Project settings**:
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.
@@ -91,7 +96,7 @@ _Avoid_: "error" for a diagnostic of unknown severity, "issue".
 
 **Validator** (format check):
 A per-property format or range check that judges one property's value alone during strict parsing and inherits down the node base-type chain.
-Its **Severity** comes from what the engine does (`linter/validators/v/grounding.ts`).
+Its **Severity** comes from what the engine does (`linter/validators/v/grounding.ts`), and its **Diagnostic** is named `format:<property>`, with the key as the file writes it.
 _Avoid_: "validator" for a **Value decoder**.
 
 **Format-only validator**:
@@ -103,6 +108,10 @@ _Avoid_: `formatOnly` on a refusal of a value the setter receives.
 A per-node-type check on the parsed scene for a condition no single property settles, matched to its exact node type with no base-type inheritance.
 _Avoid_: bare "rule" for a **Validator**.
 
+**Resource rule** (`linter/ResourceRuleRegistry.ts`):
+A per-resource-type check on one `[sub_resource]` or `.tres` body, for a condition Godot reports when it loads that resource, whatever holds it. It reports once per section, on the line of the property it names, and declares its **Rule arm**s in `emits` as a **Lint rule** does.
+_Avoid_: a **Lint rule** on each node that holds the resource.
+
 **Raw view** (`RawNode`, `RawScene` in `parser/types.ts`):
 A node or scene with `rawProperties` and no `properties`, which is what a **Lint rule** receives. Both parsers publish the same `rawProperties`, so a helper typed on the view reads the same values from either tree.
 _Avoid_: reading `properties` in a rule, or casting it to a string map.
@@ -113,7 +122,7 @@ Only the linter reads them, so only the strict parser's `StrictScene` carries th
 _Avoid_: putting a linter-only field on `TscnScene`.
 
 **Rule arm** (`linter/ruleArms.ts`):
-One diagnostic a **Lint rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
+One diagnostic a **Lint rule** or a **Resource rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
 A rule reports only through its arms (`reportArm`, `armDiagnostic`), and `armEmits` derives its `emits` from them.
 _Avoid_: a hand-written diagnostic object in a rule.
 
@@ -195,7 +204,7 @@ How much behaviour a caller or test can exercise per unit of interface it must l
 _Avoid_: bare "depth" for a dependency-chain distance or a test suite's size.
 
 **Conformance guard**:
-A test that walks a registry or scrapes source to prove every registered thing has its promised shape (`barrelCompleteness`, `parserBarrelCompleteness`, `resourceSliceConformance`, `baseChainCompleteness`, `reactFree`, `noDependencies`).
+A test that walks a registry or scrapes source to prove every registered thing has its promised shape (`barrelCompleteness`, `parserBarrelCompleteness`, `resourceSliceConformance`, `baseChainCompleteness`, `reactFree`, `noDependencies`, `packageExports`).
 Its failure list is the work list, and a green guard proves only what it scraped.
 _Avoid_: a per-slice test as a substitute. "coverage" for a guard.
 
@@ -351,6 +360,22 @@ _Avoid_: "override", "fallback".
 The illumination a sky background gives the scene, which in Godot is a radiance map that both lights and reflects, unlike the flat `AMBIENT_SOURCE_COLOR`.
 _Avoid_: "ambient light" alone for the sky case. "IBL" in user-facing text.
 
+**Radiance layer**:
+One of the blurred copies of a sky's radiance that Godot bakes, each for a wider roughness, which rough reflections and the **Sky ambient** read.
+_Avoid_: "mip" for a layer, "PMREM" for Godot's layers.
+
+**Fast filter**:
+Godot's tap-table filter that bakes the **Radiance layers** of a sky in Real-Time process mode, in place of GGX importance sampling.
+_Avoid_: "real-time filter", "low-quality filter".
+
+**Reflection probe capture** (`r3f/reflectionProbe/`):
+The six 90-degree renders of the scene from a ReflectionProbe's `origin_offset`, with its `cull_mask` and its `interior` rule, that the previewer bakes into **Radiance layers** as Godot does.
+_Avoid_: "probe cubemap", "probe bake".
+
+**Reflection atlas** (`resources/sky/skyLayers.ts`):
+The array texture that holds every **Reflection probe capture**, one layer per probe, each with its **Radiance layers** as mips.
+_Avoid_: "probe texture", "cube array".
+
 **Depth fog**:
 The Environment's `fog_*` fog, which fades a surface towards the fog colour with its distance from the camera.
 _Avoid_: "screen-space fog". Bare "fog" where **volumetric fog** is on too.
@@ -362,6 +387,19 @@ _Avoid_: "fog volume", which names the FogVolume node.
 **Froxel**:
 One cell of the volume that **volumetric fog** fills: a screen tile at one depth slice, shaped like a piece of the camera frustum.
 _Avoid_: "voxel", which names a cube in world space.
+
+**Fog volume**:
+A FogVolume node's shape, which adds the density, albedo and emission of its FogMaterial to every **froxel** it covers. A negative density removes fog.
+_Avoid_: "local fog", "fog area".
+
+**Density texture**:
+The 3D texture a FogMaterial multiplies a **fog volume**'s density by, sampled across the volume's size.
+_Avoid_: "fog texture", "noise volume".
+
+**Area light atlas** (`r3f/areaLight/areaLightAtlas.ts`, `atlasLayout.ts`, `atlasMipmaps.ts`):
+The one texture that holds the `area_texture` of every AreaLight3D, each in a cell with a border and a chain of blurred mips, as Godot 4.7.2 builds it.
+A surface reads the mip its distance to the light asks for, so a far surface sees the texture's average colour.
+_Avoid_: "projector atlas", which names the omni and spot lights' `light_projector` textures.
 
 **Geometry instance**:
 A drawn 3D Node (a GeometryInstance3D) whose own render state, such as `transparency` and `cast_shadow`, applies to every surface it draws.
@@ -466,6 +504,10 @@ _Avoid_: "sample", "template".
 **Fixture catalog**:
 The browsable, categorised manifest of every **Fixture**, generated by `pnpm generate:fixtures`.
 _Avoid_: "scene library".
+
+**Fixture project**:
+A `scenes/fixtures` subdirectory with its own `project.godot`, for a **Fixture** that needs a project setting no `.tscn` can carry. The subdirectory is its **Corpus root**, so the setting reaches no other fixture.
+_Avoid_: "nested fixture".
 
 **Uploaded scene**:
 A user's `.tscn` opened as the active scene, kept only in the browser (ADR-0022).

@@ -1,21 +1,32 @@
 /**
  * <AreaLight3D>: a three.js RectAreaLight sized from `area_size`, which the patched chunks shade
- * with Godot's area light (`r3f/areaLight/`). It carries its range, attenuation and specular to the
- * shader, and casts its shadow through the positional shadow atlas (`AtlasAreaShadow`).
+ * with Godot's area light (`r3f/areaLight/`). It carries its range, attenuation, specular and
+ * `area_texture` to the shader and its fog energy to the volumetric fog, and casts its shadow
+ * through the positional shadow atlas (`AtlasAreaShadow`).
  */
 
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { visualLayersUserData } from '../../../../r3f/visualLayers';
+import type * as THREE from 'three';
 import type { AreaLight3DProperties } from './types';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
-import { lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
+import { lightFogEnergy, lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
 import { useLightDistanceFade } from '../shared/lightDistanceFade';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
+import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { positionalShadowUserData } from '../../../../r3f/positionalShadow/declaration';
 import { AtlasAreaShadow, type AreaShadowLight } from '../../../../r3f/positionalShadow/atlasAreaShadow';
-import { AREA_LIGHT_SHADOW_BIAS_DEFAULT } from '../../../../godot/areaLightShadow';
-import { areaShadowDeclaration } from './areaLightShadow';
+import { AREA_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
+import { positionalShadowDeclaration } from '../shared/positionalShadowDeclaration';
+import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
+import { useTexture2DRid } from '../../../../resources/useTexture2D';
+import {
+  areaTextureUserData,
+  holdAreaTexture,
+  releaseAreaTexture,
+} from '../../../../r3f/areaLight/areaLightAtlas';
 
 /**
  * Godot's colour scale: `energy * PI`, negated for a negative light, divided by the rectangle's
@@ -28,16 +39,55 @@ function areaLightIntensity(properties: AreaLight3DProperties): number {
   return properties.area_normalize_energy && area > 0 ? intensity / area : intensity;
 }
 
-/** The falloff the shader reads and the shadow the fitter reads, rebuilt only when either changes. */
+/** The `area_texture`, held in the area light atlas while the light shows it. */
+function useAreaTexture(ref: string | undefined): THREE.Texture | null {
+  const { externalResources, internalResources } = useSceneResources();
+  const { texture } = useTexture2DRid(ref, externalResources, internalResources);
+  useEffect(() => {
+    if (!texture) return;
+    holdAreaTexture(texture);
+    return () => releaseAreaTexture(texture);
+  }, [texture]);
+  return texture;
+}
+
+/**
+ * The falloff and texture the shader reads, the shadow the fitter reads and the energy the fog
+ * reads, rebuilt only when one of them changes.
+ */
 function useAreaLightUserData(properties: AreaLight3DProperties): Record<string, unknown> {
-  const { area_range, area_attenuation, light_specular, light_size, shadow_blur, shadow_normal_bias } =
-    properties;
+  const {
+    layers,
+    area_range,
+    area_attenuation,
+    light_specular,
+    light_size,
+    shadow_blur,
+    shadow_normal_bias,
+  } = properties;
+  const texture = useAreaTexture(properties.area_texture);
+  const fogEnergy = lightFogEnergy(properties);
   return useMemo(
     () => ({
       ...areaLightUserData({ range: area_range, attenuation: area_attenuation, specular: light_specular }),
-      ...positionalShadowUserData(areaShadowDeclaration({ light_size, shadow_blur, shadow_normal_bias })),
+      ...areaTextureUserData(texture),
+      ...positionalShadowUserData(
+        positionalShadowDeclaration({ light_size, shadow_blur, shadow_normal_bias })
+      ),
+      ...fogLightUserData({ energy: fogEnergy }),
+      ...visualLayersUserData(layers),
     }),
-    [area_range, area_attenuation, light_specular, light_size, shadow_blur, shadow_normal_bias]
+    [
+      layers,
+      area_range,
+      area_attenuation,
+      light_specular,
+      texture,
+      light_size,
+      shadow_blur,
+      shadow_normal_bias,
+      fogEnergy,
+    ]
   );
 }
 
@@ -69,7 +119,7 @@ export function AreaLight3D({ node, children }: NodeComponentProps) {
           object={shadow}
           attach="shadow"
           intensity={shadowOpacity}
-          bias={properties.shadow_bias ?? AREA_LIGHT_SHADOW_BIAS_DEFAULT}
+          bias={properties.shadow_bias ?? AREA_LIGHT_3D_DEFAULTS.shadowBias}
           range={properties.area_range}
           size={[properties.area_size.x, properties.area_size.y]}
         />

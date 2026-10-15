@@ -1,15 +1,22 @@
 ---
 type: Decal
 category: 3D
-status: unreviewed
-fixture: unit-decal.tscn
-image: unit-decal
 renders_as: a texture projected onto the surfaces its box intersects
 ---
 
 # Decal
 
-Godot's texture projector: it casts `texture_albedo` down the node's local -Y axis onto the surfaces inside its `size` box, blended onto the lit surface. The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring `cull_mask` and the three fades. The projection samples its texture clamped, as Godot samples the decal atlas: the blit disables repeat (`copy_effects.cpp:592`), and fragments outside the box are discarded (`scene_forward_clustered.glsl:1585-1587`).
+Godot's texture projector: it casts `texture_albedo` down the node's local -Y axis onto the surfaces inside its `size` box, blended onto the lit surface.
+
+## Projection
+<!-- compare: image=unit-decal status=limitation fixture=unit-decal.tscn -->
+
+The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring `cull_mask` and the three fades. The projection samples its texture clamped, as Godot samples the decal atlas: the blit disables repeat (`copy_effects.cpp:592`), and fragments outside the box are discarded (`scene_forward_clustered.glsl:1585-1587`).
+
+## Texture wrappers
+<!-- compare: image=unit-decal-atlas-texture status=done fixture=unit-decal-atlas-texture.tscn -->
+
+A decal takes its texture's RID (`scene/3d/decal.cpp:46`), as a material slot does. An AtlasTexture's RID is its whole sheet, so the decal projects all four quadrants, not the red region. The decal atlas refuses a CanvasTexture's RID (`texture_storage.cpp:2941`), so the far decal projects nothing.
 
 ## Linting
 
@@ -54,4 +61,5 @@ The linter warns (`resource-type-excluded-by-hint`) when one of the four `textur
 - **Approximated** The depth and normal fades are baked per vertex, so a large decal on a low-poly tilted or curved receiver bands where Godot's is smooth.
 - **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so the projection carries albedo alone.
 - **Approximated** The projection takes the scalar roughness, metallic and `diffuse_mode` of its receiver's first surface, not its maps.
+- **Approximated** In Godot 4.6 an untextured decal hides each decal sorted after it (`texture_storage.cpp:3420`, `:3485`), where the previewer draws each decal on its own.
 - **Approximated** At the projection rim Godot fades the outer half-texel toward the transparent padding of its atlas, where the clamped sample here stays crisp.

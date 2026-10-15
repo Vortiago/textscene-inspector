@@ -7,7 +7,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { baseChain } from '../../godot/nodeBaseTypes.js';
+import { classBaseChain } from '../../godot/classdb/classBaseTypes.js';
 
 // Re-exported, not re-derived: two modules in this directory resolving the same
 // directory from their own `import.meta.url` is two `..` counts to keep right.
@@ -24,6 +24,7 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   Node2D: 'base/node2d/parser.ts',
   Light3D: '3d/lights/shared/parser.ts',
   Light2D: '2d/lights/shared/parser.ts',
+  VisualInstance3D: '3d/visualinstance3d/parser.ts',
   GeometryInstance3D: '3d/geometryinstance3d/parser.ts',
   // A Button subclass that chains through `parseButton` reads `text`, `flat`,
   // `alignment` and the icon trio. Without this hop each looks linter-only.
@@ -130,7 +131,7 @@ function resolveImport(from: string, specifier: string): string {
  */
 export function getInheritedParserProps(nodeType: string): Set<string> {
   const result = new Set<string>();
-  for (const base of baseChain(nodeType)) {
+  for (const base of classBaseChain(nodeType)) {
     const subpath = BASE_TYPE_TO_PARSER_SUBPATH[base];
     if (!subpath) continue;
     const parserPath = join(nodesRoot, subpath);

@@ -11,7 +11,7 @@ import {
   specularOcclusionUserData,
 } from './godotIndirectSpecular';
 import { warningsOf } from './testing/logWarnings';
-import { DFG_SIZE } from '../godot/dfg';
+import { DFG_SIZE } from '../godot/rendering/materials/dfg';
 
 const CHUNKS = ['lights_physical_pars_fragment', 'lights_fragment_begin', 'aomap_fragment'] as const;
 const threeChunks = Object.fromEntries(CHUNKS.map((name) => [name, THREE.ShaderChunk[name]]));
@@ -44,6 +44,15 @@ describe('installGodotIndirectSpecular', () => {
     expect(pars).not.toContain('indirectSpecular += multiScattering * cosineWeightedIrradiance;');
   });
 
+  it("weighs a toon surface's reflection by its specular, metallic and albedo instead", () => {
+    const { pars } = patchedChunks();
+
+    expect(pars).toContain('#ifdef GODOT_DIFFUSE_TOON');
+    expect(pars).toContain(
+      'radiance * sqrt( material.specularColor.g / 0.16 ) * material.metalness * material.diffuseColor * 2.0'
+    );
+  });
+
   it("compensates the direct specular from Godot's table", () => {
     expect(patchedChunks().begin).toContain('( 1.0 / material.godotDfg.y - 1.0 )');
   });
@@ -55,6 +64,12 @@ describe('installGodotIndirectSpecular', () => {
     expect(ao).toContain('min( dot( godotAmbientLight, vec3( 0.3, 0.59, 0.11 ) ) * 8.0, 1.0 )');
     expect(ao.indexOf('reflectedLight.indirectSpecular *= godotSpecularOcclusion;')).toBeGreaterThan(
       ao.indexOf('ambientOcclusion = (')
+    );
+  });
+
+  it('occludes a reflection without a sky too, as a ReflectionProbe reflects without one (edge case)', () => {
+    expect(patchedChunks().ao).toContain(
+      '#if defined( STANDARD ) && ! defined( GODOT_SPECULAR_OCCLUSION_DISABLED )'
     );
   });
 
@@ -85,6 +100,13 @@ describe('installGodotIndirectSpecular', () => {
 
     expect(table.image.width).toBe(DFG_SIZE);
     expect(table.type).toBe(THREE.HalfFloatType);
+  });
+
+  it('gives every lit material the one table, not a clone', () => {
+    installGodotIndirectSpecular();
+    const table = THREE.ShaderLib.standard.uniforms.godotDfgTable?.value;
+
+    expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms).godotDfgTable?.value).toBe(table);
   });
 
   it('leaves every chunk alone when the AO chunk lacks its line, and warns (error case)', () => {
