@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://unitglowspecular"]
+
+; Glow with no emissive material: the only pixels past the bright pass are a directional light's
+; specular highlight on a smooth metal sphere. Godot runs the glow chain whenever the Environment
+; enables glow, so the highlight blooms. Every other glow golden blooms an emissive surface, so a
+; glow that waits for emission shows only here.
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
+sky_top_color = Color(0.02, 0.02, 0.04, 1)
+sky_horizon_color = Color(0.04, 0.04, 0.06, 1)
+ground_bottom_color = Color(0.02, 0.02, 0.02, 1)
+ground_horizon_color = Color(0.04, 0.04, 0.06, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("Sky_dark")
+
+[sub_resource type="Environment" id="Env_glow"]
+background_mode = 2
+sky = SubResource("Sky_1")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.6
+height = 1.2
+radial_segments = 32
+rings = 16
+
+[sub_resource type="StandardMaterial3D" id="Mat_metal"]
+metallic = 1.0
+roughness = 0.3
+
+[node name="GlowSpecularRoot" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_glow")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+light_energy = 2.0
+
+[node name="MetalSphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_metal")

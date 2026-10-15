@@ -1,0 +1,14 @@
+[gd_resource type="PanoramaSkyMaterial" load_steps=3 format=3 uid="uid://unitskypanoramatres"]
+
+[sub_resource type="Gradient" id="Gradient_1"]
+offsets = PackedFloat32Array(0.4, 0.5, 0.6)
+colors = PackedColorArray(0.15, 0.35, 0.9, 1, 0.95, 0.75, 0.3, 1, 0.25, 0.15, 0.05, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_1"]
+gradient = SubResource("Gradient_1")
+width = 256
+height = 128
+fill_to = Vector2(0, 1)
+
+[resource]
+panorama = SubResource("GradientTexture2D_1")

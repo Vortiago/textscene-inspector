@@ -146,6 +146,8 @@ export interface EnvironmentProperties {
   glow_hdr_luminance_cap: number;
   /** How far the glow map modulates the glow buffer, 0..1. Default 0.8. */
   glow_map_strength: number;
+  /** The texture that scales the glow per screen position, as its raw reference. */
+  glow_map?: string;
 
   adjustment_enabled: boolean;
   adjustment_brightness: number;
@@ -287,5 +289,9 @@ export interface EnvironmentSettings {
     hdrScale: number;
     /** Per-channel ceiling on the bright-pass (`glow_hdr_luminance_cap`). */
     luminanceCap: number;
+    /** The screen-space texture that scales the glow (`glow_map`), as its raw reference. */
+    map: string | undefined;
+    /** How far the map scales the glow, 0..1 (`glow_map_strength`). */
+    mapStrength: number;
   } | null;
 }

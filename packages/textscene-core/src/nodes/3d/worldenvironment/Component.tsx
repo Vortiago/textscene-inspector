@@ -16,7 +16,14 @@ export function WorldEnvironment({ node, children }: NodeComponentProps) {
 
   return (
     <group name={node.name}>
-      {resolved && <EnvironmentLayer settings={resolved.settings} sky={resolved.sky} />}
+      {resolved && (
+        <EnvironmentLayer
+          settings={resolved.settings}
+          sky={resolved.sky}
+          resources={resolved.resources}
+          skyResources={resolved.skyResources}
+        />
+      )}
       {children}
     </group>
   );

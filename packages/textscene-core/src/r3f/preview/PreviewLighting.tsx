@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
+import { NO_RESOURCES } from '../SceneResourcesContext';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { DirectionalShadowMode } from '../../godot/directionalShadow';
 import { directionalShadowUserData } from '../directionalShadow/declaration';
@@ -95,5 +96,8 @@ function PreviewSun() {
 /** Godot's preview environment, applied through the same layer an authored one uses. */
 function PreviewEnvironment() {
   const { settings, sky } = useMemo(() => previewEnvironment(), []);
-  return <EnvironmentLayer settings={settings} sky={sky} />;
+  // The preview environment and its sky hold no references.
+  return (
+    <EnvironmentLayer settings={settings} sky={sky} resources={NO_RESOURCES} skyResources={NO_RESOURCES} />
+  );
 }

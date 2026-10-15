@@ -9,7 +9,7 @@
  * used under the MIT licence: see THIRD-PARTY-NOTICES.md.
  */
 
-import { blendGlsl, blendsAfterToneMapping, type GlowParams } from './godotGlow';
+import { blendGlsl, blendsAfterToneMapping, samplesGlowMap, type GlowParams } from './godotGlow';
 import { glslFloat } from './glslLiterals';
 import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
 import type { EnvironmentAdjustments, EnvironmentSettings } from './types';
@@ -55,18 +55,25 @@ ${adjustments ? adjustmentsGlsl(adjustments) : ''}
 function glowDefinitionsGlsl(glow: GlowParams, toneMapping: CompositeToneMapping): string {
   return /* glsl */ `
 uniform sampler2D godotGlowBuffer;
+${samplesGlowMap(glow) ? 'uniform sampler2D godotGlowMap;' : ''}
 ${blendGlsl(glow, resolvedWhite(toneMapping.mode, toneMapping.white))}`;
 }
 
-/** `tonemap.glsl:869-914`: SOFTLIGHT blends after the curve, with the glow tonemapped too. */
+/**
+ * `tonemap.glsl:869-914`: SOFTLIGHT blends after the curve, with the glow tonemapped too. Both
+ * arms scale the glow by the map first (`:886`, `:908`).
+ */
 function glowAndToneMapGlsl(glow: GlowParams): string {
   const blend = blendsAfterToneMapping(glow)
     ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
   color = godotGlowBlend(color, godotToneMap(glow, 1.0));`
     : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * godotExposure, glow);
   color = godotToneMap(color, 1.0);`;
+  const map = samplesGlowMap(glow)
+    ? /* glsl */ `  glow = mix(glow, texture2D(godotGlowMap, uv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
+    : '';
   return /* glsl */ `  vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslFloat(glow.intensity)};
-${blend}`;
+${map}${blend}`;
 }
 
 /** `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. */
