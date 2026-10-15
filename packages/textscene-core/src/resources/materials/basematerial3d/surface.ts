@@ -6,6 +6,11 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { relabelEnumNames } from '../../../godot/classdb/enumNames.js';
+import {
+  AlphaAntiAliasing,
+  ALPHA_ANTIALIASING_NAMES,
+} from '../../../godot/rendering/materials/alphaAntialiasing.js';
 import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../../../godot/rendering/materials/diffuseMode.js';
 import { SPECULAR_MODE_NAMES, SpecularMode } from '../../../godot/rendering/materials/specularMode.js';
 
@@ -33,13 +38,9 @@ export const surfaceKeys: Record<string, PropertyValidator> = {
   alpha_hash_scale: v.float('alpha_hash_scale', { min: 0, max: 2, hinted: 'material.cpp:3590' }),
   alpha_antialiasing_mode: v.enumInt(
     'alpha_antialiasing_mode',
-    0,
-    2,
-    {
-      0: 'ALPHA_ANTIALIASING_OFF',
-      1: 'ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE',
-      2: 'ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE',
-    },
+    AlphaAntiAliasing.OFF,
+    AlphaAntiAliasing.ALPHA_TO_COVERAGE_AND_TO_ONE,
+    relabelEnumNames(ALPHA_ANTIALIASING_NAMES, (mode) => `ALPHA_ANTIALIASING_${mode}`),
     { hinted: 'material.cpp:3591' }
   ),
   // material.cpp:3592 ("0,1,0.01"), set_alpha_antialiasing_edge (:2933) bare assigns.

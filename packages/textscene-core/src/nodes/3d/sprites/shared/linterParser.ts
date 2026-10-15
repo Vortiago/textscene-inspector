@@ -14,10 +14,12 @@ import {
 } from '../../../../godot/rendering/materials/alphaAntialiasing.js';
 import { AlphaCutMode, ALPHA_CUT_NAMES } from '../../../../godot/rendering/materials/alphaCut.js';
 import { TextureFilter, TEXTURE_FILTER_NAMES } from '../../../../godot/rendering/materials/textureFilter.js';
-import { BillboardMode, SPRITE_BILLBOARD_MODE_NAMES } from '../../../../godot/scene/billboard.js';
+import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../../godot/scene/billboard.js';
+import { relabelEnumNames } from '../../../../godot/classdb/enumNames.js';
+import { Vector3Axis, VECTOR3_AXIS_NAMES } from '../../../../godot/math/vector3Axis.js';
 import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../../godot/index.js';
 
-const AXIS = { 0: 'X_AXIS', 1: 'Y_AXIS', 2: 'Z_AXIS' };
+const AXIS_NAMES = relabelEnumNames(VECTOR3_AXIS_NAMES, (axis) => `${axis}_AXIS`);
 
 validatorRegistry.registerAll('SpriteBase3D', {
   // set_centered:316-323 is a bare bool assignment, guarded only against a
@@ -36,13 +38,13 @@ validatorRegistry.registerAll('SpriteBase3D', {
   // carries the numbers, not only the cite, so `pixel_size = 500.0` warns as on the Label3D twin.
   pixel_size: v.float('pixel_size', { min: 0.0001, max: 128, hinted: 'sprite_3d.cpp:682' }),
   // set_axis:410-411, ERR_FAIL_INDEX(p_axis, 3): the setter refuses.
-  axis: v.enumInt('axis', 0, 2, AXIS, { enforced: 'sprite_3d.cpp:411' }),
+  axis: v.enumInt('axis', Vector3Axis.X, Vector3Axis.Z, AXIS_NAMES, { enforced: 'sprite_3d.cpp:411' }),
   // set_billboard_mode:597-598, ERR_FAIL_INDEX(p_mode, 3): the setter refuses.
   billboard: v.enumInt(
     'billboard',
     BillboardMode.BILLBOARD_DISABLED,
     BillboardMode.BILLBOARD_FIXED_Y,
-    SPRITE_BILLBOARD_MODE_NAMES,
+    BILLBOARD_MODE_NAMES,
     { enforced: 'sprite_3d.cpp:598' }
   ),
   // ADD_PROPERTYI(..., "transparent", ..., set_draw_flag, get_draw_flag,

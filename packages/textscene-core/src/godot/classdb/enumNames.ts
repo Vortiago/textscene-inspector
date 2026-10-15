@@ -14,3 +14,17 @@ export function enumNamesByValue(enumObject: object): Readonly<Record<number, st
     )
   );
 }
+
+/**
+ * Each name in `names` turned by `label`, for a property whose hint prints an enum's names in
+ * another form, so the label table still comes from the enum.
+ */
+/* @__NO_SIDE_EFFECTS__ */
+export function relabelEnumNames(
+  names: Readonly<Record<number, string>>,
+  label: (name: string) => string
+): Readonly<Record<number, string>> {
+  return Object.freeze(
+    Object.fromEntries(Object.entries(names).map(([value, name]) => [value, label(name)]))
+  );
+}

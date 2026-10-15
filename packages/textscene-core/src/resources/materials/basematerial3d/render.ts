@@ -6,13 +6,14 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/scene/billboard.js';
 
 export const renderKeys: Record<string, PropertyValidator> = {
   billboard_mode: v.enumInt(
     'billboard_mode',
-    0,
-    3,
-    { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y', 3: 'PARTICLES' },
+    BillboardMode.BILLBOARD_DISABLED,
+    BillboardMode.BILLBOARD_PARTICLES,
+    BILLBOARD_MODE_NAMES,
     { hinted: 'material.cpp:3740' }
   ),
   billboard_keep_scale: v.boolean('billboard_keep_scale'),

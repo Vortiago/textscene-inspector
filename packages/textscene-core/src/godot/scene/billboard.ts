@@ -1,6 +1,7 @@
 /** Billboard modes, and the AABB a billboarded Sprite3D or Label3D gives the scene cull. */
 
 import type { Aabb } from '../math/aabb.js';
+import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
 import { Vector3Axis } from '../math/vector3Axis.js';
 
 /**
@@ -15,11 +16,10 @@ export enum BillboardMode {
   BILLBOARD_PARTICLES = 3,
 }
 
-/**
- * The billboard modes a SpriteBase3D or a Label3D accepts, by the names a validator prints. Each
- * setter refuses PARTICLES: `sprite_3d.cpp:597-598` and `label_3d.cpp:1001`.
- */
-export const SPRITE_BILLBOARD_MODE_NAMES = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' } as const;
+/** Each billboard mode's name without its `BILLBOARD_` prefix, as the validators print it. */
+export const BILLBOARD_MODE_NAMES = relabelEnumNames(enumNamesByValue(BillboardMode), (name) =>
+  name.replace(/^BILLBOARD_/, '')
+);
 
 /**
  * A Label3D's AABB under its billboard mode (`label_3d.cpp:624-642`). ENABLED grows the line box

@@ -20,7 +20,7 @@ import {
   VERTICAL_ALIGNMENT_NAMES,
   VERTICAL_ALIGNMENT_TOP,
 } from '../../../godot/math/math.js';
-import { BillboardMode, SPRITE_BILLBOARD_MODE_NAMES } from '../../../godot/scene/billboard.js';
+import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/scene/billboard.js';
 import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../godot/index.js';
 import {
   AutowrapMode,
@@ -45,7 +45,7 @@ validatorRegistry.registerAll('Label3D', {
     'billboard',
     BillboardMode.BILLBOARD_DISABLED,
     BillboardMode.BILLBOARD_FIXED_Y,
-    SPRITE_BILLBOARD_MODE_NAMES,
+    BILLBOARD_MODE_NAMES,
     { enforced: 'label_3d.cpp:1001' }
   ),
   modulate: v.color('modulate'),
