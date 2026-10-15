@@ -37,6 +37,7 @@ Strict and lenient parsing diverge only on out-of-range enums. The lenient parse
 - **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass, so the target is re-rendered and cleared every frame.
 - **Approximated** `use_debanding` and `canvas_item_default_texture_filter` do not affect the target, which renders at `size` with linear filtering.
 - **Approximated** A shared-world target takes the environment's tone curve but not its glow or `adjustment_*`, which Godot also runs inside the target.
+- **Approximated** A multisampled 3D target resolves after the tone curve, where Godot resolves in linear HDR before it (`render_forward_clustered.cpp:2402`, `:2514`).
 - **Approximated** Selection highlights and gizmos leak into a shared-world target, because that target is a render of the main scene.
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
 - **Not drawn** A `TextureRect` draws nothing for a `ViewportTexture`, which only `albedo_texture` and `Sprite2D.texture` accept.
