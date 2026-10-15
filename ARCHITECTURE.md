@@ -50,7 +50,7 @@ the package's `./godot` export, and `noDependencies.test.ts`.
 | `import/` | `modules/gltf` and `editor/import`: glTF and scene import |
 | `text/` | `modules/text_server_adv` and `text_server_fb`: the text server |
 | `rendering/` | `servers/rendering`: viewport, textures, culling, fades, passes |
-| `rendering/materials/` | The material shaders: UVs, diffuse and specular modes, DFG |
+| `rendering/materials/` | The material shaders: UVs, diffuse and specular modes, DFG, blend attachments, alpha antialiasing |
 | `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, soft-shadow kernels |
 | `rendering/environment/` | Fog, sky reflection, reflection probes |
 | `testing/` | Test helpers for the files above |

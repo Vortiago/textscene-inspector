@@ -22,8 +22,8 @@ import {
   type AlphaAntialiasingCut,
 } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { emissionScalars } from './emission';
+import { BlendMode } from '../../../godot/rendering/materials/blendMode';
 import {
-  BlendMode,
   CullMode,
   DepthDrawMode,
   HEIGHTMAP_DEFAULTS,

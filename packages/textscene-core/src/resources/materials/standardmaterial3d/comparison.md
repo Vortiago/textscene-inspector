@@ -136,6 +136,7 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
+- **Approximated** `ALPHA_HASH` keeps about the share of pixels Godot keeps, but not the same pixels. The hash is Godot's (`scene_forward_aa_inc.glsl:12-39`), and its `fract(1e4 * sin())` rounds differently on each GPU.
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.

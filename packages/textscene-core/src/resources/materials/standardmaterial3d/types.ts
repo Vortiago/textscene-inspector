@@ -10,6 +10,7 @@ import type { EmissionScalars } from './emission';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import type { UVTransform } from '../../textures/applyTextureState';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { BlendMode } from '../../../godot/rendering/materials/blendMode';
 import type { AlphaAntialiasingCut } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 /** Godot's height mapping of a surface. */
@@ -46,15 +47,6 @@ export enum Transparency {
   ALPHA_HASH = 3,
   /** Alpha blending after a depth prepass, so it DOES write depth. */
   ALPHA_DEPTH_PRE_PASS = 4,
-}
-
-/** Godot `BaseMaterial3D.BlendMode`, the same enum `CanvasItemMaterial` uses. */
-export enum BlendMode {
-  MIX = 0,
-  ADD = 1,
-  SUB = 2,
-  MUL = 3,
-  PREMULT_ALPHA = 4,
 }
 
 /** Godot `BaseMaterial3D.CullMode`. BACK culls back faces, so it draws the front. */

@@ -1,80 +1,23 @@
 /**
  * `BaseMaterial3D.blend_mode` → three.js blending state. `_update_shader` in
  * `scene/resources/material.cpp` emits `render_mode blend_*`, which
- * `scene_shader_forward_clustered.cpp` maps to a `BlendMode`. `GODOT_BLEND_ATTACHMENTS`
- * transcribes the factors of `servers/rendering/renderer_rd/storage_rd/material_storage.cpp`.
+ * `scene_shader_forward_clustered.cpp` maps to a `BlendMode`, whose attachment `godot/` holds.
  */
 
 import * as THREE from 'three';
-import { BlendMode, type MaterialBlendState } from './types';
+import type { MaterialBlendState } from './types';
+import {
+  ALPHA_TO_COVERAGE_ATTACHMENT,
+  BlendMode,
+  GODOT_BLEND_ATTACHMENTS,
+  type GodotBlendAttachment,
+  type GodotBlendFactor,
+  type GodotBlendOp,
+} from '../../../godot/rendering/materials/blendMode';
 import {
   AlphaAntiAliasing,
   type AlphaToCoverageMode,
 } from '../../../godot/rendering/materials/alphaAntialiasing';
-
-/** Godot `RD::BlendOperation`, only the two values this table uses. */
-type GodotBlendOp = 'add' | 'reverse-subtract';
-
-/** Godot `RD::BlendFactor`, only the values this table uses. */
-type GodotBlendFactor = 'zero' | 'one' | 'src-alpha' | 'one-minus-src-alpha' | 'dst-color' | 'dst-alpha';
-
-/** One `RD::PipelineColorBlendState::Attachment`, in Godot's vocabulary. */
-export interface GodotBlendAttachment {
-  colorOp: GodotBlendOp;
-  srcColor: GodotBlendFactor;
-  dstColor: GodotBlendFactor;
-  alphaOp: GodotBlendOp;
-  srcAlpha: GodotBlendFactor;
-  dstAlpha: GodotBlendFactor;
-}
-
-/**
- * `blend_mode_to_blend_attachment`, verbatim. Every mode enables blending, and the alpha
- * channel gets its own factors in all five, so no colour-only `gl.blendFunc` reading
- * expresses a mode.
- */
-const GODOT_BLEND_ATTACHMENTS: Readonly<Record<BlendMode, GodotBlendAttachment>> = {
-  [BlendMode.MIX]: {
-    colorOp: 'add',
-    srcColor: 'src-alpha',
-    dstColor: 'one-minus-src-alpha',
-    alphaOp: 'add',
-    srcAlpha: 'one',
-    dstAlpha: 'one-minus-src-alpha',
-  },
-  [BlendMode.ADD]: {
-    colorOp: 'add',
-    srcColor: 'src-alpha',
-    dstColor: 'one',
-    alphaOp: 'add',
-    srcAlpha: 'src-alpha',
-    dstAlpha: 'one',
-  },
-  [BlendMode.SUB]: {
-    colorOp: 'reverse-subtract',
-    srcColor: 'src-alpha',
-    dstColor: 'one',
-    alphaOp: 'reverse-subtract',
-    srcAlpha: 'src-alpha',
-    dstAlpha: 'one',
-  },
-  [BlendMode.MUL]: {
-    colorOp: 'add',
-    srcColor: 'dst-color',
-    dstColor: 'zero',
-    alphaOp: 'add',
-    srcAlpha: 'dst-alpha',
-    dstAlpha: 'zero',
-  },
-  [BlendMode.PREMULT_ALPHA]: {
-    colorOp: 'add',
-    srcColor: 'one',
-    dstColor: 'one-minus-src-alpha',
-    alphaOp: 'add',
-    srcAlpha: 'one',
-    dstAlpha: 'one-minus-src-alpha',
-  },
-};
 
 const THREE_EQUATION: Readonly<Record<GodotBlendOp, THREE.BlendingEquation>> = {
   add: THREE.AddEquation,
@@ -104,19 +47,6 @@ const PRESETS: Readonly<Partial<Record<BlendMode, THREE.Blending>>> = {
   // `blendFunc(ZERO, SRC_COLOR)`: `src × dst` and `a_src × a_dst`, Godot's
   // `DST_COLOR/ZERO` and `DST_ALPHA/ZERO` products with the operands swapped.
   [BlendMode.MUL]: THREE.MultiplyBlending,
-};
-
-/**
- * `BLEND_MODE_ALPHA_TO_COVERAGE` (`material_storage.cpp:691-698`), which any alpha antialiasing mode
- * puts in place of the material's own blend mode (`scene_shader_forward_clustered.cpp:237-241`).
- */
-const ALPHA_TO_COVERAGE_ATTACHMENT: GodotBlendAttachment = {
-  colorOp: 'add',
-  srcColor: 'src-alpha',
-  dstColor: 'one-minus-src-alpha',
-  alphaOp: 'add',
-  srcAlpha: 'one',
-  dstAlpha: 'zero',
 };
 
 /**

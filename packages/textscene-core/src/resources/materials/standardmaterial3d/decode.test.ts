@@ -6,7 +6,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { decodeStandardMaterial3D } from './decode';
-import { BlendMode, CullMode, DepthDrawMode, Transparency } from './types';
+import { BlendMode } from '../../../godot/rendering/materials/blendMode';
+import { CullMode, DepthDrawMode, Transparency } from './types';
 import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 describe('decodeStandardMaterial3D — defaults', () => {
