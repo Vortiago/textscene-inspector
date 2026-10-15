@@ -22,8 +22,6 @@ function makeNode(props: Record<string, unknown> = {}): TscnNode {
   };
 }
 
-const DEFAULT_ASPECT = 16 / 9;
-
 describe('Camera3D projection parity', () => {
   it('orthographic size is the full dimension → half-extent = size/2', async () => {
     const r = await ReactThreeTestRenderer.create(
@@ -39,10 +37,17 @@ describe('Camera3D projection parity', () => {
       <Camera3D node={makeNode({ fov: 90, keep_aspect: KeepAspectMode.KEEP_WIDTH })} />
     );
     const cam = instanceAs<THREE.PerspectiveCamera>(r.scene.findByType('PerspectiveCamera'));
-    const expectedVertical =
-      (2 * Math.atan(Math.tan((90 * Math.PI) / 180 / 2) / DEFAULT_ASPECT) * 180) / Math.PI;
-    expect(cam.fov).toBeCloseTo(expectedVertical, 3);
+    expect(cam.fov).toBeCloseTo(58.7155, 3);
     expect(cam.fov).toBeLessThan(90); // vertical fov is narrower than the horizontal
+  });
+
+  it('perspective fov with KEEP_WIDTH rounds as Projection::get_fovy does', async () => {
+    // (2 * atan(tan((31 * PI) / 180 / 2) / aspect) * 180) / PI gives ...277; Godot's expression gives ...273.
+    const r = await ReactThreeTestRenderer.create(
+      <Camera3D node={makeNode({ fov: 31, keep_aspect: KeepAspectMode.KEEP_WIDTH })} />
+    );
+    const cam = instanceAs<THREE.PerspectiveCamera>(r.scene.findByType('PerspectiveCamera'));
+    expect(cam.fov).toBe(17.732799010746273);
   });
 
   it('perspective fov with KEEP_HEIGHT (default) is used verbatim', async () => {
