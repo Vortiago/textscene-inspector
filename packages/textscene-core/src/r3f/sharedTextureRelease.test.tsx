@@ -7,6 +7,7 @@ import { defaultWhiteTexture } from './materials/defaultWhiteTexture';
 import { pendingMapStandIn } from './materials/pendingMapStandIn';
 import { getAtlasTexture } from './controls/native/text/atlasTexture';
 import { installLtcTextures } from './areaLight/ltcTextures';
+import { installGodotIndirectSpecular } from './godotIndirectSpecular';
 
 /** A canvas with the release mounted, its renderer, and the unmount that ends it. */
 async function canvas() {
@@ -32,18 +33,20 @@ const uniformsLib = THREE.UniformsLib as unknown as Record<string, THREE.Texture
 describe('SharedTextureRelease', () => {
   it('leaves no listener of an unmounted canvas on each shared texture', async () => {
     installLtcTextures();
+    installGodotIndirectSpecular();
     const textures = [
       defaultWhiteTexture(),
       pendingMapStandIn('heightmap_texture'),
       getAtlasTexture(),
       uniformsLib.LTC_FLOAT_1!,
+      THREE.ShaderLib.standard.uniforms.godotDfgTable!.value as THREE.Texture,
     ];
     const { renderer, unmount } = await canvas();
     for (const texture of textures) renderer.initTexture(texture);
 
     await unmount();
 
-    expect(textures.map(disposeListeners)).toEqual([0, 0, 0, 0]);
+    expect(textures.map(disposeListeners)).toEqual([0, 0, 0, 0, 0]);
   });
 
   it('lets a live canvas upload a shared texture again at its next draw (edge case)', async () => {
