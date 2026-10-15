@@ -17,13 +17,19 @@ void main() {
 }`;
 
 /**
+ * One copy pass for every frame, which each frame points at its own texture before it draws. A
+ * pass per frame would go with the frame's `dispose`, which `setSize` calls on every resize, and
+ * recompile its shader.
+ */
+const copyPass = fullScreenPass('Canvas2D::msaaCopy', COPY_FRAGMENT, { frame: { value: null } });
+
+/**
  * RGBA8 storage under an sRGB tag. Taking output like the drawing buffer, three encodes each
  * fragment to the tag's space (`WebGLPrograms.js:213`), so the frame holds what the drawing buffer
  * would hold and items blend in the same space. The default sRGB format, SRGB8_ALPHA8, would blend
  * in linear.
  */
 export class CanvasMsaaFrame extends THREE.WebGLRenderTarget {
-  private readonly copyPass: THREE.ShaderMaterial;
   private readonly drawingBuffer = new THREE.Vector2();
 
   constructor() {
@@ -35,7 +41,6 @@ export class CanvasMsaaFrame extends THREE.WebGLRenderTarget {
     this.texture.generateMipmaps = false;
     this.texture.name = 'Canvas2D::msaaFrame';
     takeOutputLikeDrawingBuffer(this);
-    this.copyPass = fullScreenPass('Canvas2D::msaaCopy', COPY_FRAGMENT, { frame: { value: this.texture } });
   }
 
   /** Draws `scene` into the frame and copies the result to the target bound before. */
@@ -47,11 +52,7 @@ export class CanvasMsaaFrame extends THREE.WebGLRenderTarget {
     const previous = gl.getRenderTarget();
     gl.setRenderTarget(this);
     gl.render(scene, camera);
-    drawFullScreen(gl, this.copyPass, previous);
-  }
-
-  override dispose(): void {
-    this.copyPass.dispose();
-    super.dispose();
+    copyPass.uniforms.frame!.value = this.texture;
+    drawFullScreen(gl, copyPass, previous);
   }
 }

@@ -42,18 +42,16 @@ describe('CanvasMsaaFrame', () => {
 
     frame.render(gl, scene, camera);
 
-    expect(draws[0]).toMatchObject({ drawn: scene, target: frame });
+    expect(draws[0]!.drawn).toBe(scene);
+    expect(draws[0]!.target).toBe(frame);
     expect(frame).toMatchObject({ samples: 4, width: 640, height: 360 });
     frame.dispose();
   });
 
   it('stores sRGB-encoded values in RGBA8, so items blend in the space the drawing buffer blends in', () => {
-    const { gl, draws } = recordingRenderer(64, 64);
     const frame = multisampledFrame(2);
 
-    frame.render(gl, scene, camera);
-
-    const texture = draws[0]!.target!.texture;
+    const texture = frame.texture;
     expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
     expect(texture.internalFormat).toBe('RGBA8');
     frame.dispose();
@@ -68,6 +66,20 @@ describe('CanvasMsaaFrame', () => {
     expect(draws).toHaveLength(2);
     expect(draws[1]!.drawn).not.toBe(scene);
     expect(draws[1]!.target).toBeNull();
+    frame.dispose();
+  });
+
+  it('copies its own texture when another frame copied before it (edge case)', () => {
+    const other = multisampledFrame(4);
+    other.render(recordingRenderer(64, 64).gl, scene, camera);
+    const { gl, draws } = recordingRenderer(64, 64);
+    const frame = multisampledFrame(4);
+
+    frame.render(gl, scene, camera);
+
+    const copy = (draws[1]!.drawn as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(copy.uniforms.frame!.value).toBe(frame.texture);
+    other.dispose();
     frame.dispose();
   });
 
