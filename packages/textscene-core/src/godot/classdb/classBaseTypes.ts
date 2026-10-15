@@ -44,3 +44,22 @@ export function classBaseChain(className: string): readonly string[] {
   }
   return chain;
 }
+
+/**
+ * The classes the tables end on, with the ancestry above them (`node.h:51`, `resource.h:54`,
+ * `ref_counted.h:37`). The tables stop at `Node` and `Resource`, so `Object` has no entry there.
+ */
+const TERMINAL_ANCESTRY: Readonly<Record<string, readonly string[]>> = {
+  Node: ['Object'],
+  Resource: ['RefCounted', 'Object'],
+};
+
+/**
+ * `ClassDB::get_inheritance_chain_nocheck` (`core/object/class_db.cpp:333-354`): `className`, then
+ * each ancestor through `Object`, nearest first. A class neither table knows yields only its name.
+ */
+export function classInheritanceChain(className: string): readonly string[] {
+  const chain = [className, ...classBaseChain(className)];
+  const terminal = chain.at(-1)!;
+  return Object.hasOwn(TERMINAL_ANCESTRY, terminal) ? [...chain, ...TERMINAL_ANCESTRY[terminal]!] : chain;
+}

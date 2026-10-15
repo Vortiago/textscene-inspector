@@ -4,7 +4,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CLASS_BASE_TYPES, classBaseChain, descendsFromClass } from './classBaseTypes.js';
+import {
+  CLASS_BASE_TYPES,
+  classBaseChain,
+  descendsFromClass,
+  classInheritanceChain,
+} from './classBaseTypes.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 
@@ -59,5 +64,33 @@ describe('classBaseChain', () => {
 
   it('gives an unknown class no ancestors', () => {
     expect(classBaseChain('NotAClass')).toEqual([]);
+  });
+});
+
+describe('classInheritanceChain', () => {
+  it('leads with the class, then its ancestry nearest first through Object', () => {
+    expect(classInheritanceChain('Button')).toEqual([
+      'Button',
+      'BaseButton',
+      'Control',
+      'CanvasItem',
+      'Node',
+      'Object',
+    ]);
+  });
+
+  it('walks a resource through RefCounted to Object', () => {
+    expect(classInheritanceChain('StandardMaterial3D')).toEqual([
+      'StandardMaterial3D',
+      'BaseMaterial3D',
+      'Material',
+      'Resource',
+      'RefCounted',
+      'Object',
+    ]);
+  });
+
+  it('is only the name for a class neither hierarchy knows (edge case)', () => {
+    expect(classInheritanceChain('constructor')).toEqual(['constructor']);
   });
 });

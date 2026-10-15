@@ -3,7 +3,7 @@
  * `ThemeResource`s `decode.ts` produces. Pure: no I/O, no parsing.
  */
 
-import { classBaseChain } from '../../../godot/classdb/classBaseTypes.js';
+import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import type { FontResource } from '../../fonts/font/types';
 import type { ThemeResource } from './types';
 
@@ -13,17 +13,12 @@ import type { ThemeResource } from './types';
  */
 const nativeTypeChainCache = new Map<string, readonly string[]>();
 
-/**
- * `ThemeDB::get_native_type_dependencies` (`scene/theme/theme_db.cpp:198-208`): the class name, then
- * its ClassDB ancestry through `Object` (`core/object/class_db.cpp:342-351`). The catalog stops at
- * `Node`, so `Object` is appended. An unknown class yields only its own name.
- */
+/** `ThemeDB::get_native_type_dependencies` (`scene/theme/theme_db.cpp:198-208`). */
 function nativeTypeChain(nativeType: string): readonly string[] {
   const cached = nativeTypeChainCache.get(nativeType);
   if (cached) return cached;
 
-  const chain = [nativeType, ...classBaseChain(nativeType)];
-  if (chain.at(-1) === 'Node') chain.push('Object');
+  const chain = classInheritanceChain(nativeType);
   nativeTypeChainCache.set(nativeType, chain);
   return chain;
 }
