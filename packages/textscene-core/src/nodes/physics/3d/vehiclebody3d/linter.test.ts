@@ -9,7 +9,7 @@ import {
   expectNoDiagnostic,
   runPropertyValidation,
 } from '../../../../linter/testing/testkit';
-// RigidBody3D's validators and its descendsFrom rule reach VehicleBody3D only
+// RigidBody3D's validators and its descendsFromClass rule reach VehicleBody3D only
 // while the sibling slice is registered, so both are imported. The full linter
 // barrel is not: its CollisionShape3D rule would error on the testkit's
 // shapeless accept-child in every case.
@@ -80,7 +80,7 @@ describe('VehicleBody3D Linter', () => {
   });
 
   // The shared body checks below are RigidBody3D's, reaching VehicleBody3D
-  // through `rigidBodyLinterRule`'s descendsFrom matcher, so each rule name is
+  // through `rigidBodyLinterRule`'s descendsFromClass matcher, so each rule name is
   // `rigidbody3d-*` by design.
   describe('Semantic Validation (Resource References)', () => {
     it('errors when physics_material_override points at a missing resource', () => {
@@ -154,7 +154,7 @@ describe('VehicleBody3D Linter', () => {
 
   describe('Semantic Validation (Scaled Transform, inherited from RigidBody3D)', () => {
     // rigid_body_3d.cpp:667 is RigidBodyLinterRule's (rigidbody3d-scale-overridden-at-runtime),
-    // reaching VehicleBody3D through `descendsFrom`. The vehicle rule has no
+    // reaching VehicleBody3D through `descendsFromClass`. The vehicle rule has no
     // copy, so a scaled VehicleBody3D is not warned about twice.
     it('warns on a scaled transform — the physics engine overrides it at runtime', () => {
       expectDiagnostic(

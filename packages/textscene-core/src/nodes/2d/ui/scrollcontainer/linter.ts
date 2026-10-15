@@ -7,8 +7,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import type { RawNode } from '../../../../parser/types.js';
 
@@ -22,7 +22,7 @@ const arms = {
  * visibility does not count.
  */
 function isSortableControl(child: RawNode): boolean {
-  if (!descendsFrom(child.type, 'Control')) return false;
+  if (!descendsFromClass(child.type, 'Control')) return false;
   const props = child.rawProperties;
   if (boolSlotValue(props.top_level) === true) return false;
   if (boolSlotValue(props.visible) === false) return false;

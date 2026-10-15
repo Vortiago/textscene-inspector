@@ -2,12 +2,12 @@
  * The configuration warning every collision object shares: no shape child.
  * `CollisionObject2D::get_configuration_warnings` (collision_object_2d.cpp:588)
  * and `CollisionObject3D`'s (:739) push it for every subclass, so one rule per
- * dimension reaches the whole family through `descendsFrom`.
+ * dimension reaches the whole family through `descendsFromClass`.
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../types.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
-import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { collisionShapeTypesPhrase, hasCollisionShapeChild } from './hasCollisionShapeChild.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
@@ -40,7 +40,7 @@ export function makeCollisionObjectLinterRule(dim: PhysicsDim): LintRule {
       name: `valid-${prefix}`,
       description: `Warns when a ${base}-derived node has no collision shape child`,
       category: 'validation',
-      applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, base),
+      applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, base),
       emits: armEmits(arms),
     },
     check,

@@ -6,7 +6,7 @@
 
 // The base Control slice (nodes/2d/ui/control) registers the layout, anchor,
 // offset and theme-override validators that every Control subclass inherits
-// through the ValidatorRegistry base-walk (godot/classdb/nodeBaseTypes.ts).
+// through the ValidatorRegistry base-walk (godot/classdb/classBaseTypes.ts).
 import '../nodes/node/index.linter.js';
 import '../nodes/canvasitem/shared/index.linter.js';
 import '../nodes/2d/ui/canvaslayer/index.linter.js';
@@ -279,18 +279,14 @@ import '../nodes/rendering/shaderglobalsoverride/index.linter.js';
 import '../nodes/resources/resourcepreloader/index.linter.js';
 import '../nodes/os/statusindicator/index.linter.js';
 
-// Re-export core linter classes
 export { Linter } from './Linter.js';
-export { StrictTscnParser } from './StrictTscnParser.js';
+// The registries serve the `scripts/` ledgers, which load the built linter through
+// `compare-docs/loadCoreLinter.mjs`.
 export { validatorRegistry } from './ValidatorRegistry.js';
-// Re-exported for the `scripts/` ledgers that scope their coverage by the built
-// package: `coverage-report/collect.mjs`, `compare-docs/loadCoreLinter.test.mjs`,
-// `enginePropertyCoverage.test.mjs` and `resourcePropertyCoverage.test.mjs`. The
-// rest of the module stays off the published surface.
 export { registeredTypes } from './registryPopulation.js';
 export { ruleRegistry } from './RuleRegistry.js';
 export { resourceRuleRegistry } from './ResourceRuleRegistry.js';
-export { SEVERITY_ORDER, flooredSeverity, isSeverity } from './types.js';
+export { SEVERITY_ORDER, flooredSeverity } from './types.js';
 export {
   diagnosticLine,
   diagnosticRange,

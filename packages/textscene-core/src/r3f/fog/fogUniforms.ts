@@ -7,10 +7,8 @@
 import * as THREE from 'three';
 import { sharedTexture } from '../sharedTexture.js';
 import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
+import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 import { installedUniformValue } from '../shaderPatch/litUniform.js';
-
-/** The directional lights the sun scatter reads (`MAX_DIRECTIONAL_LIGHTS`, `light_storage.h:51`). */
-export const FOG_SUN_MAX = 8;
 
 /** The width and height of one roughness band of the radiance atlas, an equirectangular map. */
 export const FOG_RADIANCE_BAND_WIDTH = 128;
@@ -78,7 +76,7 @@ function installed<Value>(key: FogUniformKey, create: () => Value): Value {
 }
 
 const vec4 = () => new Float32Array(4);
-const vec4Array = () => new Float32Array(4 * FOG_SUN_MAX);
+const vec4Array = () => new Float32Array(4 * MAX_DIRECTIONAL_LIGHTS);
 
 /** Written only by `prepareFog`, before each render of a fogged scene, and cleared by `finishFog`. */
 export const fogUniforms = {

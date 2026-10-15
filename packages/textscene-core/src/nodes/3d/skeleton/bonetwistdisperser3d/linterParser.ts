@@ -12,7 +12,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
+import { indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**

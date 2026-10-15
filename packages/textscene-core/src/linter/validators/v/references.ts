@@ -4,7 +4,7 @@ import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { createNodePathValidator, createResourceReferenceValidator } from '../resourceValidators.js';
 import { formatCode } from './codes.js';
 import { shape } from './grounding.js';
-import { isNilLiteral } from '../../../godot/index.js';
+import { isNilLiteral } from '../../../godot/variant/variantParser.js';
 
 export const referenceCombinators = {
   /**

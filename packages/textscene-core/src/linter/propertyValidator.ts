@@ -3,8 +3,7 @@
  * writes one, while only the linter touches the registry, so the type has its
  * own file. `ValidatorRegistry.ts` re-exports it.
  */
-
-import type { IntWidth } from '../godot/index.js';
+import type { IntWidth } from '../godot/variant/int.js';
 import type { ParseError } from './types.js';
 
 /**

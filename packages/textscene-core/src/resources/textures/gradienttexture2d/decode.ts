@@ -8,7 +8,8 @@
 import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { GRADIENT_TEXTURE_MAX_SIZE, boolSlotValue } from '../../../godot/index.js';
+import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/rendering/texture.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { parsePackedColorArray, parsePackedFloat32Array } from '../../shapes/packedArray';
 import {
   GradientFill,

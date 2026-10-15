@@ -8,7 +8,7 @@
 
 import type { TscnExternalResource, StrictScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import { gltfRefusalMessage, isGltfPath } from '../godot/index.js';
+import { gltfRefusalMessage, isGltfPath } from '../godot/import/gltf.js';
 import type { Diagnostic, SourceLines } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import type { GltfVerdicts } from './gltfVerdicts.js';

@@ -9,7 +9,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from './contexts/SelectionContext';
 import { HierarchyProvider } from './contexts/HierarchyContext';
-import { ViewportActionsProvider, useViewportActions } from './contexts/ViewportActionsContext';
+import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
+import { useViewportActions } from './testing/ViewportActionsProbe';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
 
 vi.mock('./frameSceneBounds.js', () => ({

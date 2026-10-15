@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
-import { ruleInt } from '../../../godot/index.js';
+import { ruleInt } from '../../../godot/variant/int.js';
 
 const arms = {
   nondeterministicEmissionShape: groundedArm('cpuparticles2d-nondeterministic-emission-shape', {

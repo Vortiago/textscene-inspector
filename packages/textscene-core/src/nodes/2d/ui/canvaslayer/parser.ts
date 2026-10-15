@@ -14,7 +14,7 @@ import {
 } from '../../../../parser/valueParsers';
 import { decomposeTransform2D } from '../../../base/node2d/parser';
 import type { CanvasLayerProperties } from './types';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { transform2DFromParts, type Transform2DColumns } from '../../../../godot/math/transform2d.js';
 
 /**

@@ -1,13 +1,13 @@
 /**
  * The non-uniform-scale rule shared by every CollisionObject3D-derived node,
- * reached through `applicableNodeTypeMatcher` and `descendsFrom`, since
+ * reached through `applicableNodeTypeMatcher` and `descendsFromClass`, since
  * `RuleRegistry` matches exact types. It checks the body's own transform
  * (collision_object_3d.cpp:744), not a child's (collision_shape_3d.cpp:155).
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { isZeroApprox } from '../../../godot/math/math.js';
 import { basisColumnScales } from '../../../linter/physics/basisColumnScales.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -45,7 +45,7 @@ const collisionObject3DScaleRule: LintRule = {
     description:
       "Warns when a CollisionObject3D-derived node's own transform is scaled non-uniformly, which the physics engine cannot honour",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CollisionObject3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'CollisionObject3D'),
     emits: armEmits(arms),
   },
   check: checkCollisionObject3DScale,

@@ -10,7 +10,7 @@ import { placementFacts } from './placementFacts.js';
 import { strictObserver } from './strictObserver/strictObserver.js';
 import { TscnParserCore } from '../parser/TscnParserCore.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils.js';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/index.js';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene.js';
 
 /**
  * A **Raw view** node, built without NodeRegistry, so without three.js. It has no typed `properties`: a helper the

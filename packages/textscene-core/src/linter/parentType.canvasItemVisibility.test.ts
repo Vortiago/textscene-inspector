@@ -126,7 +126,7 @@ visible = false
     });
 
     it('cannot rule out a hidden Window behind an uncataloged ancestor', () => {
-      // `descendsFrom` is false for "not a Window" and for a class this build
+      // `descendsFromClass` is false for "not a Window" and for a class this build
       // has never heard of alike, so the search has to decline on the second.
       // A GDExtension type in this position may be a Window, and then its own
       // `visible` is what decides.

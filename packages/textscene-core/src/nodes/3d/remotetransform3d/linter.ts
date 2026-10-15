@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -47,8 +47,8 @@ function checkRemoteTransform3D(context: RuleContext): Diagnostic[] {
     ];
   }
 
-  // `descendsFrom` is reflexive (nodeBaseTypes.ts), so it also answers the exact-match case.
-  if (target.status === 'found' && !descendsFrom(target.node.type, 'Node3D')) {
+  // `descendsFromClass` is reflexive (classBaseTypes.ts), so it also answers the exact-match case.
+  if (target.status === 'found' && !descendsFromClass(target.node.type, 'Node3D')) {
     return [
       armDiagnostic(
         arms.invalidRemotePath,

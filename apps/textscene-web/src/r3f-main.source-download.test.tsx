@@ -6,11 +6,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
-});
-
 import { R3FApp } from './r3f-main';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]

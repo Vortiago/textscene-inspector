@@ -5,11 +5,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
-});
-
 import { R3FApp } from './r3f-main';
 import { fixtures } from './fixturesAll';
 import { IS_PUBLIC_SITE } from './siteEdition';

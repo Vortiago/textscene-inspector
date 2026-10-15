@@ -9,7 +9,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { SelectionProvider, useSelection } from './contexts/SelectionContext';
-import { ViewportActionsProvider, useViewportActions } from './contexts/ViewportActionsContext';
+import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
+import { useViewportActions } from './testing/ViewportActionsProbe';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut';
 import { SelectSeeder } from './testing/SelectSeeder';
 

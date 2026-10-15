@@ -7,8 +7,7 @@
 
 import { literalText } from '../string/string.js';
 import { TSCN_FLOAT_RE } from '../variant/number.js';
-import { CLASS_BASE_TYPES } from './classBaseTypes.js';
-import { MAX_BASE_CHAIN_HOPS } from './nodeBaseTypes.js';
+import { findInClassChain } from './classBaseTypes.js';
 import { indexedKeyRegex } from './indexedKey.js';
 import { doubledVector, isTruthy } from './deprecatedTransforms.js';
 
@@ -143,11 +142,5 @@ function ownRow(type: string, key: string): AliasRow | undefined {
 
 /** The row `key` matches on `nodeType` or any catalogued ancestor, nearest first. */
 export function findRow(nodeType: string | undefined, key: string): AliasRow | undefined {
-  let current = nodeType;
-  for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-    const row = ownRow(current, key);
-    if (row !== undefined) return row;
-    current = Object.hasOwn(CLASS_BASE_TYPES, current) ? CLASS_BASE_TYPES[current] : undefined;
-  }
-  return undefined;
+  return nodeType === undefined ? undefined : findInClassChain(nodeType, (type) => ownRow(type, key));
 }

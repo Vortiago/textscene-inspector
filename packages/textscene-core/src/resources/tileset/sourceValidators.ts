@@ -13,13 +13,9 @@ import {
   propertyError,
   v,
 } from '../../linter/validators/index.js';
-import {
-  dropTrailingComma,
-  indexedKeyRegex,
-  isNilLiteral,
-  splitTopLevel,
-  stringToInt,
-} from '../../godot/index.js';
+import { dropTrailingComma, splitTopLevel, stringToInt } from '../../godot/string/string.js';
+import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
+import { isNilLiteral } from '../../godot/variant/variantParser.js';
 import { negativeIndexError, writtenIndex } from '../../linter/reportedIndices.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 

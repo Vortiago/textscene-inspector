@@ -7,12 +7,12 @@ import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
 import { slotComponents, slotComponentsAltered } from '../../godot/variant/int.js';
 import { ruleInt, tupleComponent } from '../validators/commonValidators.js';
-import { boolSlotValue } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 
 /**
  * Per-axis scale tolerance: rigid_body_3d.cpp:667 and rigid_body_2d.cpp:648,
@@ -158,7 +158,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
       name: `valid-${prefix}`,
       description: `Validates ${type} resource references, collision shapes, mass values, and physics configuration`,
       category: 'validation',
-      applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, type),
+      applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, type),
       emits: armEmits(arms),
     },
     check,

@@ -7,7 +7,7 @@
 
 import type { TscnNode } from '../../../parser/types.js';
 import type { ControlProperties } from '../../2d/ui/control/types.js';
-import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
+import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import { liveChildGroups, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { joinPath } from '../../../utils/nodePath.js';

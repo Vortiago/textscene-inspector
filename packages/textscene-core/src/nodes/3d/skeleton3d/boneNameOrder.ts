@@ -4,8 +4,8 @@
  * (skeleton_3d.cpp:85), and `name` has no arm below the index guard at :90, so a name for any other
  * slot is dropped. A refused bone (:605, :606) is never added, which shifts every later slot.
  */
-
-import { indexedKeyRegex, literalText, stringToInt } from '../../../godot/index.js';
+import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
+import { literalText, stringToInt } from '../../../godot/string/string.js';
 import { unquoteString } from '../../../parser/utils.js';
 
 /**

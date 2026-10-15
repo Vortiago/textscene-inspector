@@ -4,7 +4,8 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { RichTextLabelProperties } from './types';
 import { parseControl } from '../control/parser';
-import { boolSlotValue, packedArrayBody, packedArrayForms } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
 
 const PACKED_FLOAT32_ARRAY_FORMS = packedArrayForms('PackedFloat32Array');

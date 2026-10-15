@@ -9,13 +9,14 @@ import { propertyError } from '../propertyError.js';
 import { createBooleanValidator } from '../commonValidators.js';
 import { formatCode } from './codes.js';
 import { accepts, shape } from './grounding.js';
+
 import {
   ARRAY_LITERAL_RE,
   JACKETED_STRING_RE,
   NODE_PATH_LITERAL_RE,
   TYPED_WRAPPER_RE,
-} from '../../../godot/index.js';
-import { arrayLiteralBody } from '../../../godot/variant/variantParser.js';
+  arrayLiteralBody,
+} from '../../../godot/variant/variantParser.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { valueCode } from './codes.js';
 

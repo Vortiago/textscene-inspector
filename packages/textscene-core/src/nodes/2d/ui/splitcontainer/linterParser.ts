@@ -8,7 +8,7 @@
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
-import { packedArrayBody, packedArrayForms } from '../../../../godot/index.js';
+import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';

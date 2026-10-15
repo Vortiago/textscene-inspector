@@ -6,7 +6,8 @@
 
 import type { Diagnostic } from '../../../../linter/types.js';
 import { armDiagnostic, groundedArm, type RuleArm } from '../../../../linter/ruleArms.js';
-import { resourceRef, boolSlotValue } from '../../../../godot/index.js';
+import { resourceRef } from '../../../../godot/variant/resourceRef.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import type { RawNode } from '../../../../parser/types.js';
 
 /** The warning's arm under `rulePrefix`, the node-type slug, so each light keeps its own rule. */

@@ -5,7 +5,7 @@
 
 import type { TscnExternalResource } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
-import { readGltfRequiredExtensions, unsupportedRequiredGltfExtensions } from '../godot/index.js';
+import { readGltfRequiredExtensions, unsupportedRequiredGltfExtensions } from '../godot/import/gltf.js';
 import { StampedReads, loadOrNull } from './stampedReads.js';
 
 /**

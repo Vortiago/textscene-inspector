@@ -5,7 +5,7 @@
  */
 
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot';
+import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene';
 import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
 import { createTypeRegistry } from './createTypeRegistry';

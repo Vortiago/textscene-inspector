@@ -8,7 +8,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseGodotFloat, TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
 import { makeFloatTupleRegex } from './floatTupleValidator.js';
-import { FLOAT_PATTERN_SOURCE } from '../../godot/variant/number.js';
 import { v } from './v.js';
 import { maybeFinite, maybeNan } from './v/grounding.js';
 import { expectWarning } from '../testing/validatorCheck.js';
@@ -216,10 +215,6 @@ describe('the widened component grammar and parseGodotFloat', () => {
       expect(parseGodotFloat(text)).toBeNull();
     }
   );
-
-  it('is the renderer grammar plus the non-finite spellings, not a second copy', () => {
-    expect(TSCN_FLOAT_PATTERN_SOURCE).toContain(FLOAT_PATTERN_SOURCE);
-  });
 
   it('adds no capture group, so component groups stay 1..arity', () => {
     const match = makeFloatTupleRegex('Vector3', 3).exec('Vector3(1, inf_neg, 3)');

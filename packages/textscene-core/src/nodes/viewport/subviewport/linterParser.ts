@@ -8,7 +8,7 @@
 import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { VIEWPORT_MIN_SIZE } from '../../../godot/index.js';
+import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
 
 const UPDATE_MODE = {
   0: 'DISABLED',

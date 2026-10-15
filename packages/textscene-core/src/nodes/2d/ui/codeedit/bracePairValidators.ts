@@ -7,7 +7,7 @@ import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { isGodotSymbol } from './symbolChars.js';
 import { unquoteString } from '../../../../parser/utils.js';
-import { dropTrailingComma, splitTopLevel, STRING_LITERAL_SOURCE } from '../../../../godot/index.js';
+import { dropTrailingComma, splitTopLevel, STRING_LITERAL_SOURCE } from '../../../../godot/string/string.js';
 
 const DICT_WRAPPER_RE = /^\s*\{([\s\S]*)\}\s*$/;
 /** One `"key": "value"` entry, each literal captured with its quotes. */

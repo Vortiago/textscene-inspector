@@ -209,15 +209,7 @@ export function ViewportActionsProvider({
   return <ViewportActionsContext.Provider value={value}>{children}</ViewportActionsContext.Provider>;
 }
 
-export function useViewportActions(): ViewportActionsContextValue {
-  const value = useContext(ViewportActionsContext);
-  if (value === null) {
-    throw new Error('useViewportActions must be used inside a <TscnPreviewShell> (ViewportActionsProvider).');
-  }
-  return value;
-}
-
-/** Returns null instead of throwing when no provider is mounted. */
+/** The viewport actions, or null when no provider is mounted. */
 export function useOptionalViewportActions(): ViewportActionsContextValue | null {
   return useContext(ViewportActionsContext);
 }

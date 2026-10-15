@@ -3,7 +3,7 @@
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import type { CheckBoxProperties } from './types';
 import { parseControl } from '../control/parser';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseCheckBox(
   heading: ParsedHeading,

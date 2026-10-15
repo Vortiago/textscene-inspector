@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   DirectionalLightSkyMode,
+  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   directionalLightDrawsInSky,
   directionalLightLightsSurfaces,
 } from './directionalLightSkyMode.js';

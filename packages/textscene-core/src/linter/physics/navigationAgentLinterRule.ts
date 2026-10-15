@@ -44,7 +44,7 @@ export function makeNavigationAgentLinterRule(dim: PhysicsDim): LintRule {
       name: `valid-navigationagent${suffix}`,
       description: `Warns when a ${type} is not a child of a ${parentType}-inheriting node, where Godot never places it on the navigation map`,
       category: 'validation',
-      // No subclasses, so the exact type, not `descendsFrom`.
+      // No subclasses, so the exact type, not `descendsFromClass`.
       applicableNodeTypes: [type],
       emits: armEmits(arms),
     },

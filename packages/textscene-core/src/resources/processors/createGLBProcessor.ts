@@ -26,7 +26,7 @@ import {
   importTextureOptions,
   type ParsedImportFile,
 } from '../../parser/importParser';
-import { unwrapCachePath } from '../../godot/index.js';
+import { unwrapCachePath } from '../../godot/project/resourceFormats.js';
 import {
   gltfImageFiles,
   gltfImageSourceFormat,

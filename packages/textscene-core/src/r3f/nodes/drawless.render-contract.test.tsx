@@ -11,7 +11,7 @@ import { NodeDispatcher } from '../NodeDispatcher';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { CanvasWorkspaceProvider, type CanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
-import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { parseNode2D } from '../../nodes/base/node2d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 
@@ -30,8 +30,8 @@ const DRAWLESS_TYPES = nodeComponentRegistry
 type Base = 'Node3D' | 'Node2D' | 'Node';
 
 function baseOf(type: string): Base {
-  if (descendsFrom(type, 'Node3D')) return 'Node3D';
-  if (descendsFrom(type, 'Node2D')) return 'Node2D';
+  if (descendsFromClass(type, 'Node3D')) return 'Node3D';
+  if (descendsFromClass(type, 'Node2D')) return 'Node2D';
   return 'Node';
 }
 
