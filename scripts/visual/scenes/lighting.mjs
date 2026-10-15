@@ -60,6 +60,9 @@ export const LIGHTING_SCENES = [
   // states why no other golden shows it.
   { name: 'fog-volume-density-volume-tres', file: 'unit-fog-volume-density-volume-tres.tscn' },
   { name: 'fog-volume-density-half-tres', file: 'unit-fog-volume-density-half-tres.tscn' },
+  // A FogVolume whose ShaderMaterial Godot cannot run as fog. The header states why no other
+  // golden shows it.
+  { name: 'fog-volume-shader-material', file: 'unit-fog-volume-shader-material.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.
