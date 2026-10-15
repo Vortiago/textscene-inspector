@@ -9,8 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { ProjectSettings } from '../../../parser/projectSettingsParser.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 

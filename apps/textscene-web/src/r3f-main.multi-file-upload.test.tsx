@@ -19,8 +19,6 @@ vi.mock('@textscene/core', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
     ...real,
-    TscnCanvas: () => null,
-    TscnSceneContents: () => null,
     TscnPreviewShell: (props: Parameters<typeof real.TscnPreviewShell>[0]) =>
       // At the provider's own observer seam, so no parent effect races the provider's report.
       React.createElement(real.TscnPreviewShell, {

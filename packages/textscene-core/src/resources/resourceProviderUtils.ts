@@ -11,7 +11,8 @@
 import './sliceRegistrations.js';
 import { resourceSliceRegistry } from './sliceRegistration';
 import { fileExtension } from './fileExtension';
-import { GODOT_TEXT_RESOURCE_EXTENSIONS, IMPORT_SIDECAR_SUFFIX, PROJECT_FILE_PATH } from '../godot/index.js';
+import { GODOT_TEXT_RESOURCE_EXTENSIONS, IMPORT_SIDECAR_SUFFIX } from '../godot/project/resourceFormats.js';
+import { PROJECT_FILE_PATH } from '../godot/project/project.js';
 
 /**
  * Every file extension a scene's resources can have, dotted: the slices' claims, Godot's
@@ -87,16 +88,4 @@ export function resourceContent(
   const spansBuffer =
     buffer instanceof ArrayBuffer && bytes.byteOffset === 0 && bytes.byteLength === buffer.byteLength;
   return spansBuffer ? buffer : new Uint8Array(bytes).buffer;
-}
-
-/**
- * Strip the "res://" prefix from a Godot resource path.
- * @param godotPath - Path with format "res://scenes/Door.tscn"
- * @returns Relative path without "res://" prefix
- */
-export function stripResPrefix(godotPath: string): string {
-  if (godotPath.startsWith('res://')) {
-    return godotPath.substring(6);
-  }
-  return godotPath;
 }

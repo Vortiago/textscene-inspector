@@ -9,7 +9,7 @@ import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { is2DUIType } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
 import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../../r3f/liveSceneTree.js';
-import { compositeCallPrefix } from '../../../godot/index.js';
+import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
 
 /**
  * The `i`-suffixed spellings are listed: `Vector2i` is as 2D as `Vector2`, and it

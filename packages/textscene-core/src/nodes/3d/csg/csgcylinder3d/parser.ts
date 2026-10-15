@@ -5,7 +5,7 @@ import type { CSGCylinder3DProperties } from './types';
 import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import { finishCsgParse } from '../sharedParser';
 import { boolOr, floatOr, intOr } from '../../../../parser/valueParsers';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 // Godot's own defaults (class_csgcylinder3d): radius 0.5, height 2.0, sides 8,
 // cone false. An omitted property means Godot's value, so ours must match or a

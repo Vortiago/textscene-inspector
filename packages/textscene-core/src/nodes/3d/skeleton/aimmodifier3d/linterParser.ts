@@ -16,7 +16,7 @@ import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
 import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
-import { declaredLeafResolver } from '../../../../godot/index.js';
+import { declaredLeafResolver } from '../../../../godot/classdb/indexedKey.js';
 
 /**
  * The five leaves AimModifier3D itself pushes (aim_modifier_3d.cpp:91-95). `primary_rotation_axis`

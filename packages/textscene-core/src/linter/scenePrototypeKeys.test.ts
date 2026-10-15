@@ -7,7 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { lint, node, scene } from './testing/testkit.js';
-import { descendsFrom, isCatalogedType, baseChain } from '../godot/classdb/nodeBaseTypes.js';
+import { isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
+import { classBaseChain, descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import '../linter/index.js';
 
 /**
@@ -29,13 +30,13 @@ const PROTOTYPE_KEYS = [
 describe('the node-type table answers only for types it declares', () => {
   it.each(PROTOTYPE_KEYS)('does not catalogue %s', (key) => {
     expect(isCatalogedType(key)).toBe(false);
-    expect(descendsFrom(key, 'CanvasItem')).toBe(false);
-    expect(descendsFrom(key, 'Node')).toBe(false);
+    expect(descendsFromClass(key, 'CanvasItem')).toBe(false);
+    expect(descendsFromClass(key, 'Node')).toBe(false);
   });
 
   it('answers for a real type, so the sweep is not vacuous', () => {
     expect(isCatalogedType('Node2D')).toBe(true);
-    expect(descendsFrom('Sprite2D', 'CanvasItem')).toBe(true);
+    expect(descendsFromClass('Sprite2D', 'CanvasItem')).toBe(true);
   });
 
   it('keeps an unknown GDExtension class unknowable rather than mismatched', () => {
@@ -45,7 +46,7 @@ describe('the node-type table answers only for types it declares', () => {
   });
 
   it.each(PROTOTYPE_KEYS)('returns a chain of plain strings for %s', (key) => {
-    for (const ancestor of baseChain(key)) {
+    for (const ancestor of classBaseChain(key)) {
       expect(typeof ancestor).toBe('string');
     }
   });

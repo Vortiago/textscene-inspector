@@ -5,7 +5,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
-import { packedArrayBody, packedArrayForms } from '../../../../godot/index.js';
+import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { ruleInt } from '../../../../godot/variant/int.js';
 import type { ControlProperties } from '../control/types';
 import { parseControl } from '../control/parser';

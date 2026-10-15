@@ -9,7 +9,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
 import { RotationMode, type PathFollow3DProperties } from './types';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 export function parsePathFollow3D(
   heading: ParsedHeading,

@@ -5,7 +5,8 @@
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { resourceRef, simplifyResPath } from '../godot/index.js';
+import { resourceRef } from '../godot/variant/resourceRef.js';
+import { simplifyResPath } from '../godot/string/string.js';
 
 /** One resource table's ids, and how many of its leading entries they cover. */
 interface IdIndex<T> {

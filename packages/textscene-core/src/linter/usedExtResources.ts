@@ -3,8 +3,7 @@
  * value names it, and a failed load there raises `ERR_FILE_MISSING_DEPENDENCIES` (`resource_format_text.cpp:146-154`).
  * A node body skips that error (`:288-289`). Every other read returns it, and the load fails.
  */
-
-import { extResourceIdsIn } from '../godot/index.js';
+import { extResourceIdsIn } from '../godot/variant/resourceRef.js';
 import type { RawNode, StrictScene } from '../parser/types.js';
 
 /**

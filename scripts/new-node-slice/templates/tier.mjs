@@ -86,7 +86,7 @@ describe('${typeName} shared validators', () => {
 import type { Diagnostic, LintRule, RuleContext } from '${toSrc}linter/types.js';
 import { ruleRegistry } from '${toSrc}linter/RuleRegistry.js';
 import { armEmits, type RuleArms } from '${toSrc}linter/ruleArms.js';
-import { descendsFrom } from '${toSrc}godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '${toSrc}godot/classdb/classBaseTypes.js';
 
 /**
  * One arm per diagnostic \`check\` reports, each with its grounding (ADR-0032): an
@@ -109,7 +109,7 @@ const ${typeName[0].toLowerCase() + typeName.slice(1)}ValidationRule: LintRule =
     name: 'valid-${typeName.toLowerCase()}',
     description: 'TBD',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, '${typeName}'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, '${typeName}'),
     emits: armEmits(arms),
   },
   check: check${typeName},

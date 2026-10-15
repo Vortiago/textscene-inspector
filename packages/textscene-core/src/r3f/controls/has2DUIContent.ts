@@ -4,7 +4,7 @@
  * No component or THREE import: the shell's initial-paint bundle loads it.
  */
 
-import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 
 /**
  * What this previewer can draw: a hand-kept mirror of ControlComponentRegistry,
@@ -85,5 +85,5 @@ export const TWO_D_UI_TYPES = new Set<string>([
  * `Node`, so it is named: it roots a 2D UI subtree.
  */
 export function is2DUIType(type: string): boolean {
-  return type === 'CanvasLayer' || descendsFrom(type, 'Control');
+  return type === 'CanvasLayer' || descendsFromClass(type, 'Control');
 }

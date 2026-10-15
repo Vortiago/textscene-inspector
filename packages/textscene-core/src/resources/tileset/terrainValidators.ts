@@ -6,7 +6,7 @@
 
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../linter/validators/index.js';
-import { indexedKeyRegex } from '../../godot/index.js';
+import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../../linter/reportedIndices.js';
 import { terrainColor } from './terrainColor.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';

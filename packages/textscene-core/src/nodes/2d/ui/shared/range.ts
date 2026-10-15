@@ -5,7 +5,7 @@
  */
 
 import { parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
-import { isEqualApprox, snapped } from '../../../../godot/index.js';
+import { isEqualApprox, snapped } from '../../../../godot/math/math.js';
 
 export interface RangeProperties {
   /** Current value. Godot default 0. */

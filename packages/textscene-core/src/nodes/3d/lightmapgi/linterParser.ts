@@ -8,7 +8,7 @@
 import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { CMP_EPSILON } from '../../../godot/index.js';
+import { CMP_EPSILON } from '../../../godot/math/math.js';
 
 const BAKE_QUALITY = { 0: 'LOW', 1: 'MEDIUM', 2: 'HIGH', 3: 'ULTRA' };
 const ENVIRONMENT_MODE = { 0: 'DISABLED', 1: 'SCENE', 2: 'CUSTOM_SKY', 3: 'CUSTOM_COLOR' };

@@ -5,15 +5,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return {
-    ...real,
-    TscnCanvas: () => null,
-    TscnSceneContents: () => null,
-  };
-});
-
 import { R3FApp } from './r3f-main';
 
 // Any TSCN that produces a sceneGraph: the test asserts the requested fixture through the

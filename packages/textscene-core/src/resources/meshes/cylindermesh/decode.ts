@@ -8,7 +8,7 @@
 import { floatOr, settableIntOr } from '../../../parser/valueParsers';
 import { flooredCount } from '../meshCounts';
 import type { CylinderMeshProperties } from './types';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 export function decodeCylinderMesh(properties: Record<string, string>): CylinderMeshProperties {
   return {

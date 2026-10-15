@@ -3,7 +3,7 @@
  *
  * `CollisionObject2D`/`CollisionObject3D` each declare one "needs a collision
  * shape" `push_back`, implemented as one rule per dimension that reaches every
- * subclass through `descendsFrom`.
+ * subclass through `descendsFromClass`.
  */
 import type { WarningRow } from './types.js';
 

@@ -9,10 +9,11 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 import { rangeAdvisories, type RangeThreshold } from '../../../../linter/rangeAdvisory.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { firstSegment, indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { firstSegment, indexedElements, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../../godot/string/string.js';
 import { resolveConvertSettingLeaf } from './linterParser.js';
 
 const arms = {
@@ -129,7 +130,7 @@ const convertTransformModifier3DValidationRule: LintRule = {
     description:
       'Validates each ConvertTransformModifier3D settings/<i>/ range against the PROPERTY_HINT_RANGE its sibling transform_mode selects',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'ConvertTransformModifier3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'ConvertTransformModifier3D'),
     emits: armEmits(arms),
   },
   check: checkConvertTransformModifier3D,

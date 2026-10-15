@@ -6,7 +6,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import type { Node3DProperties } from './types';
 import { parseOptionalTransform } from '../../../utils/transform';
 import { parseHeadingIndex } from '../../../parser/valueParsers';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
 
 export function parseNode3D(heading: ParsedHeading, properties: Record<string, string>): Node3DProperties {

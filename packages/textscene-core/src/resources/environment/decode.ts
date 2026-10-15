@@ -8,7 +8,7 @@ import type { EnvironmentProperties } from './types';
 import { BackgroundMode, DEFAULT_AGX_CONTRAST } from './types';
 import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
-import { boolSlotValue } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { volumetricFogDetailSpread } from '../../godot/rendering/environment/volumetricFog.js';
 import {
   FogMode,

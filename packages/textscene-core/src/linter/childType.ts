@@ -5,7 +5,7 @@
  */
 
 import { isTypeOpaque } from './parentType.js';
-import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import type { RawNode } from '../parser/types.js';
 
 /**
@@ -16,6 +16,6 @@ import type { RawNode } from '../parser/types.js';
  */
 export function hasChildOfType(node: RawNode, types: readonly string[]): boolean {
   return node.children.some(
-    (child) => isTypeOpaque(child) || types.some((type) => descendsFrom(child.type, type))
+    (child) => isTypeOpaque(child) || types.some((type) => descendsFromClass(child.type, type))
   );
 }

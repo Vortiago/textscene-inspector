@@ -6,7 +6,7 @@
  */
 
 import type { RawNode } from '../parser/types.js';
-import { boolSlotValue } from '../godot/index.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
 
 /** The node a `%Name` addresses, with the two spellings of the path that reaches it. */

@@ -11,8 +11,9 @@ import { parseVector2, parseVector3 } from './vectors';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/variant/number.js';
 import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/variant/int.js';
 import type { Aabb } from '../godot/math/aabb.js';
-
-import { nodePathLiteral, stringToInt, boolSlotValue } from '../godot/index.js';
+import { nodePathLiteral } from '../godot/variant/variantParser.js';
+import { stringToInt } from '../godot/string/string.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
 import type { Vector2, Vector3 } from '../godot/math/vector.js';
 
 /**

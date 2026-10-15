@@ -15,8 +15,8 @@ import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes';
-import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
+import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
 import {
@@ -247,7 +247,7 @@ interface ForestResult {
  * only non-Control CanvasItem a scene can author below a Control.
  */
 function isCanvasItem(node: TscnNode): boolean {
-  return descendsFrom(node.type, 'Node2D');
+  return descendsFromClass(node.type, 'Node2D');
 }
 
 /**
@@ -297,7 +297,7 @@ function childParentVisibleInTree(
   ownVisible: boolean,
   parentVisibleInTree: boolean
 ): boolean {
-  if (descendsFrom(node.type, 'CanvasItem')) return parentVisibleInTree && ownVisible;
+  if (descendsFromClass(node.type, 'CanvasItem')) return parentVisibleInTree && ownVisible;
   if (isCanvasLayerType(node.type)) return ownVisible;
   return true;
 }

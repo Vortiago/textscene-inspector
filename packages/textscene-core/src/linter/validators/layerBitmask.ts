@@ -6,7 +6,7 @@
  */
 
 import { v, type Grounding } from './v.js';
-import type { IntWidth } from '../../godot/index.js';
+import type { IntWidth } from '../../godot/variant/int.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
 /**

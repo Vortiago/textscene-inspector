@@ -1,7 +1,6 @@
 /** Small shared helpers for node-type semantic linters. */
-
-import { nodePathLiteral } from '../godot/index.js';
-import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
+import { nodePathLiteral } from '../godot/variant/variantParser.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
 import type { RawNode } from '../parser/types.js';
 
@@ -103,7 +102,7 @@ export function nodesDescendingFrom(roots: RawNode[], base: string): readonly Ra
   // One ancestry test per distinct class, not per node: a scene repeats its classes.
   const heirClasses = new Set<string>();
   for (const type of index.nodesByType.keys()) {
-    if (descendsFrom(type, base)) heirClasses.add(type);
+    if (descendsFromClass(type, base)) heirClasses.add(type);
   }
   if (heirClasses.size === 0) return NO_MATCHES;
   const heirs: RawNode[] = [];

@@ -4,7 +4,7 @@ import { type ParsedHeading, unquoteString, unquoteStringName } from '../../../.
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { LinkButtonProperties } from './types';
 import { parseControl } from '../control/parser';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseLinkButton(
   heading: ParsedHeading,

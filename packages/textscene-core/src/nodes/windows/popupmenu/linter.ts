@@ -6,7 +6,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { ruleCount } from '../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../linter/reportedIndices.js';
 import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -74,7 +74,7 @@ const popupMenuValidationRule: LintRule = {
     name: 'valid-popupmenu-properties',
     description: "Validates PopupMenu's dynamic item_<N>/… indices stay within item_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'PopupMenu'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'PopupMenu'),
     emits: armEmits(arms),
   },
   check: checkPopupMenu,

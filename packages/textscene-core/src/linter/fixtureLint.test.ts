@@ -10,14 +10,14 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import { Linter } from './Linter.js';
 import { parseHeading } from '../parser/utils.js';
 import { providerForRoot } from '../resources/diskProject.js';
-import { findProjectRoot, parentDir, projectFileIn } from '../resources/resPath.js';
+import { findResRoot, parentDir, projectFileIn } from '../resources/resPath.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { isUndeclaredRuleName } from './testing/ruleNames.js';
 import type { Diagnostic } from './types.js';
 import './index.js';
 import { errorsOf } from './testing/tierLists';
 import { fixturesDir, sceneFiles } from '../parser/testing/parserKit.js';
-import { isGodotTextResourcePath } from '../godot/index.js';
+import { isGodotTextResourcePath } from '../godot/project/resourceFormats.js';
 
 /**
  * `unit-*` fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set
@@ -114,9 +114,8 @@ const NEGATIVE_FIXTURE_COUNT = 5;
  */
 function projectRootOf(path: string): Promise<string | null> {
   const isFixturesDir = (dir: string) => resolve(dir) === fixtures;
-  return findProjectRoot(dirname(path), parentDir, isFixturesDir, async (dir) =>
-    existsSync(projectFileIn(dir))
-  );
+  const isProject = async (dir: string) => existsSync(projectFileIn(dir));
+  return findResRoot(dirname(path), parentDir, isFixturesDir, isProject, () => false);
 }
 
 /** One fixture: where it lies, its name relative to `scenes/fixtures`, and the project it is linted in. */

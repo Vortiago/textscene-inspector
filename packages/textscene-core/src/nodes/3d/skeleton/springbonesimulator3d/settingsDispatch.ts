@@ -6,7 +6,7 @@
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
+import { indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 import { JOINT_LEAVES } from './jointLeaves.js';
 import { SETTING_LEAVES } from './settingLeaves.js';

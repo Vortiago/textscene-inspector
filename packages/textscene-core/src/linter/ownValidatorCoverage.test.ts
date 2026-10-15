@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { baseChain, MAX_BASE_CHAIN_HOPS } from '../godot/classdb/nodeBaseTypes.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import { resourceSliceRegistry } from '../resources/sliceRegistration.js';
 import '../resources/sliceRegistrations.js'; // side-effect: every resource slice claims its types
@@ -94,7 +94,7 @@ const UNDECLARED: readonly string[] = [];
 function typesUnderGuard(): string[] {
   const all = new Set(nodeRegistry.getAllTypeNames());
   for (const type of [...all]) {
-    for (const ancestor of baseChain(type)) all.add(ancestor);
+    for (const ancestor of classBaseChain(type)) all.add(ancestor);
   }
   return [...all].sort();
 }
@@ -187,11 +187,7 @@ const NO_OWN_PROPERTIES_RESOURCES: Readonly<Record<string, string>> = {
 function claimedResourceClasses(): string[] {
   const claimed = new Set(resourceSliceRegistry.all().flatMap((r) => r.typeNames));
   for (const type of [...claimed]) {
-    let current: string | undefined = type;
-    for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-      claimed.add(current);
-      current = RESOURCE_BASE_TYPES_GENERATED[current];
-    }
+    for (const ancestor of classBaseChain(type)) claimed.add(ancestor);
   }
   return [...claimed].filter((type) => type === 'Resource' || type in RESOURCE_BASE_TYPES_GENERATED).sort();
 }

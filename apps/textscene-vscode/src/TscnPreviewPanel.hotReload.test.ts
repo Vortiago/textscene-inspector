@@ -60,7 +60,7 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({
       uri: createMockUri('/workspace'),
     });
-    // fs.stat resolves by default, so findProjectRoot treats /workspace as the root.
+    // fs.stat resolves by default, so findResRoot treats /workspace as the root.
 
     // Establish relevance: the webview must have requested this resource at
     // least once before a disk change to it is considered worth invalidating.

@@ -12,29 +12,29 @@ import { nextPowerOfTwo } from '../../math/powerOfTwo.js';
  * the project settings, so the default stands. The editor's 3D viewport takes the same setting
  * (`editor/scene/3d/node_3d_editor_plugin.cpp:3157`).
  */
-export const POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT = 4096;
+const POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT = 4096;
 
 /** A `Viewport`'s own atlas side, which a SubViewport keeps (`scene/main/viewport.h:305`). */
-export const VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT = 2048;
+const VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT = 2048;
 
 /**
  * The shadow count of each `PositionalShadowAtlasQuadrantSubdiv` value, from Disabled to 1024
  * Shadows (`scene/main/viewport.cpp:1420`).
  */
-export const POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS = [0, 1, 4, 16, 64, 256, 1024] as const;
+const POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS = [0, 1, 4, 16, 64, 256, 1024] as const;
 
 /**
  * The quadrant subdivisions, as `PositionalShadowAtlasQuadrantSubdiv` values: 4, 4, 16 and 64
  * shadows. The root takes them from the project settings (`scene_tree.cpp:2133-2136`), and a
  * `Viewport` sets the same values itself (`viewport.cpp:5363-5366`).
  */
-export const POSITIONAL_SHADOW_QUADRANT_SUBDIV_DEFAULT = [2, 2, 3, 4] as const;
+const POSITIONAL_SHADOW_QUADRANT_SUBDIV_DEFAULT = [2, 2, 3, 4] as const;
 
 /**
  * How long, in milliseconds, a slot stays with its light before the atlas may move the light or
  * give the slot to another light (`servers/rendering/renderer_rd/storage_rd/light_storage.h:383`).
  */
-export const POSITIONAL_SHADOW_REALLOC_TOLERANCE_MSEC = 500;
+const POSITIONAL_SHADOW_REALLOC_TOLERANCE_MSEC = 500;
 
 /** A viewport's atlas: its side in texels and each quadrant's shadow count. */
 export interface PositionalShadowAtlasSettings {
@@ -77,7 +77,7 @@ export function viewportPositionalShadowAtlas(
  * root (`servers/rendering/renderer_rd/storage_rd/light_storage.cpp:2196-2201`). Zero leaves the
  * quadrant unused.
  */
-export function positionalShadowQuadrantSubdivision(shadows: number): number {
+function positionalShadowQuadrantSubdivision(shadows: number): number {
   let count = nextPowerOfTwo(shadows);
   // `0xaaaaaaaa` holds the odd bit positions: an odd power of two has no integer square root.
   if (Math.log2(count) % 2 === 1) count *= 2;

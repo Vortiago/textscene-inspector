@@ -1,12 +1,19 @@
 /**
- * Every class → base hop the linter resolves a property against, the node and resource
- * hierarchies in one table, so a Resource's validators sit on the class that declares them
- * (`BaseMaterial3D`). The hierarchies are disjoint under `Object`, and a test asserts it, since
+ * Every class → base hop in one table, the node and resource hierarchies together, and the walks
+ * over it: the linter resolves a validator, the theme lookup a type and the language features a
+ * property through them. The hierarchies are disjoint under `Object`, and a test asserts it, since
  * a spread keeps the last of a colliding pair.
  */
 
-import { MAX_BASE_CHAIN_HOPS, NODE_BASE_TYPES } from './nodeBaseTypes.js';
+import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
+
+/**
+ * How many hops a base-chain walk takes before giving up: the deepest catalogued chain is 7
+ * (`OpenXRInteractionProfileEditor` → … → `Node`), and 32 never binds yet stops a malformed table.
+ * Exported, as `ValidatorRegistry` walks the merged class table with the same bound.
+ */
+export const MAX_BASE_CHAIN_HOPS = 32;
 
 export const CLASS_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...NODE_BASE_TYPES,
@@ -19,28 +26,66 @@ function classBaseOf(className: string): string | undefined {
 }
 
 /**
- * Whether `className` descends from or equals `ancestor`, over both hierarchies. `descendsFrom`
- * answers false for every resource, so an `[ext_resource type="…"]` heading needs this. A hop
- * bound guards against a malformed table.
+ * The first answer `visit` gives for `className` or an ancestor, nearest first, over both
+ * hierarchies, or `undefined`. The one walk over the table. It builds no chain, so a per-key lookup
+ * stops at the first hop that answers. `undefined` from `visit` means no answer: any other value,
+ * `false` and `null` included, ends the walk. A hop bound guards against a malformed table.
  */
-export function descendsFromClass(className: string, ancestor: string): boolean {
+export function findInClassChain<T>(
+  className: string,
+  visit: (type: string) => T | undefined
+): T | undefined {
   let current: string | undefined = className;
   for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-    if (current === ancestor) return true;
+    const found = visit(current);
+    if (found !== undefined) return found;
     current = classBaseOf(current);
   }
-  return false;
+  return undefined;
+}
+
+/**
+ * Whether `className` descends from or equals `ancestor` in Godot's class tree, a node or a resource.
+ * `RuleRegistry` matches `applicableNodeTypes` by exact name, so a rule for an inherited
+ * `get_configuration_warnings` pairs `applicableNodeTypeMatcher` with this. A name test such as
+ * `endsWith('3D')` is wrong for `NavigationAgent3D` (base `Node`) and for `GridMap` and `Decal`.
+ */
+export function descendsFromClass(className: string, ancestor: string): boolean {
+  return findInClassChain(className, (type) => type === ancestor || undefined) ?? false;
+}
+
+/** `className`, then each ancestor nearest first, over both hierarchies. A repeated class ends it. */
+function classAndBaseChain(className: string): string[] {
+  const chain = new Set<string>();
+  findInClassChain(className, (type) => (chain.has(type) ? true : void chain.add(type)));
+  return [...chain];
 }
 
 /** Every ancestor of `className`, nearest first, over both hierarchies. Cycle-safe and hop-bounded. */
 export function classBaseChain(className: string): readonly string[] {
-  const chain: string[] = [];
-  const seen = new Set([className]);
-  let current = classBaseOf(className);
-  for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS && !seen.has(current); hops++) {
-    seen.add(current);
-    chain.push(current);
-    current = classBaseOf(current);
-  }
+  return classAndBaseChain(className).slice(1);
+}
+
+/**
+ * The hops above the classes the tables end on (`node.h:51`, `resource.h:54`, `ref_counted.h:37`).
+ * The tables stop at `Node` and `Resource`, so `RefCounted` and `Object` have no entry there.
+ */
+const ROOT_BASE_TYPES: Readonly<Record<string, string>> = {
+  Node: 'Object',
+  Resource: 'RefCounted',
+  RefCounted: 'Object',
+};
+
+function rootBaseOf(className: string): string | undefined {
+  return Object.hasOwn(ROOT_BASE_TYPES, className) ? ROOT_BASE_TYPES[className] : undefined;
+}
+
+/**
+ * `ClassDB::get_inheritance_chain_nocheck` (`core/object/class_db.cpp:333-354`): `className`, then
+ * each ancestor through `Object`, nearest first. A class neither table knows yields only its name.
+ */
+export function classInheritanceChain(className: string): readonly string[] {
+  const chain = classAndBaseChain(className);
+  for (let base = rootBaseOf(chain.at(-1)!); base !== undefined; base = rootBaseOf(base)) chain.push(base);
   return chain;
 }

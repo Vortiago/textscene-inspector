@@ -4,7 +4,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import type { CollisionShape2DProperties } from './types';
 import { parseNode2D } from '../../../base/node2d/parser';
 import { parseDebugColor } from '../../shared/debugColor';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseCollisionShape2D(
   heading: ParsedHeading,

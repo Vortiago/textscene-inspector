@@ -10,8 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isEqualApprox, isZeroApprox } from '../../../../godot/index.js';
-import { clamp, type Rgba } from '../../../../godot/math/math';
+import { isEqualApprox, isZeroApprox, clamp, type Rgba } from '../../../../godot/math/math';
 import type { GeometryBuffers } from './connectionStroke';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 
