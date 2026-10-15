@@ -12,6 +12,8 @@ import { tagMeshInstances } from './meshInstances';
 import { tagGodotNodeNames } from './nodeNames';
 import { gltfImportNames, type GltfNamingOptions } from '../../../godot/import/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
+import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
+import { injectProgram } from '../../../r3f/materialProgramInputs';
 import type { GltfExtensionRules } from './types';
 import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 import { usesGodotSingleRoot } from '../../../godot/import/gltf';
@@ -172,6 +174,16 @@ function importBlendAsDepthPrepass(object: THREE.Object3D): void {
 }
 
 /**
+ * Godot imports a glTF material as a StandardMaterial3D (`gltf_document.cpp:2939-2940`), so its
+ * normal map rebuilds blue from red and green. A clone carries no `onBeforeCompile`, so each clone
+ * takes the patch.
+ */
+function withGodotNormalMapRead(material: THREE.Material): THREE.Material {
+  if ((material as THREE.MeshStandardMaterial).normalMap) injectProgram(material, GODOT_NORMAL_MAP_READ);
+  return material;
+}
+
+/**
  * Clone an Object3D and its materials, since an Object3D has one parent. Requires an
  * awaited `initGlbModules()`, which a successful `createGLBMesh` always did before a
  * consumer holds a clone.
@@ -190,7 +202,7 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
 
   // SkeletonUtils shares material references, so clone every slot the sidecar writer
   // can reach, and a per-instance material change stays in its instance.
-  forEachSurfaceMaterial(cloned, (material, assign) => assign(material.clone()));
+  forEachSurfaceMaterial(cloned, (material, assign) => assign(withGodotNormalMapRead(material.clone())));
 
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {

@@ -39,9 +39,9 @@ A SubViewport's target in the emission slot, over a black albedo. A material bin
 
 <!-- compare: image=unit-material-normal-map-blue status=done fixture=unit-material-normal-map-blue.tscn -->
 
-`normal_texture` reads red and green only. Both engines rebuild blue as `sqrt(max(0, 1 - dot(xy, xy)))` (`scene_forward_clustered.glsl:1437-1438`), so a map with blue 0 shades its flat texel as the bare plane and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it.
+`normal_texture` reads red and green only. Both engines rebuild blue from them (`scene_forward_clustered.glsl:1437-1438`). So a map with blue 0 shades its flat texel as the bare plane, and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it. A glTF material reads its normal map the same way, as Godot imports it as a StandardMaterial3D.
 
-- **Approximated** The tilted texel shades 8/255 darker than Godot's under Lambert diffuse with specular off, while the flat texel matches exactly. The blue it rebuilds is not the cause, since a map with a matching blue shades the same.
+- **Approximated** The tilted texel shades darker than Godot's, while the flat texel matches (#789).
 
 ## Clearcoat
 

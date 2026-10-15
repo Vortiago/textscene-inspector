@@ -14,6 +14,7 @@ import * as processingShim from '../../processing/glbProcessing';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
 import { glbOfChunks, jsonChunk, triangleGlb } from './testing/triangleGlb';
 import { NO_SIDECAR } from './testing/noSidecar';
+import { REBUILDS_NORMAL_MAP_BLUE, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { nodesGlb } from './testing/nodesGlb';
 import {
   DRAWN_OPAQUE_PREPASS,
@@ -270,6 +271,18 @@ describe('cloneWithMaterials', () => {
     clonedSingle.updateMatrixWorld(true);
     const drawn = drawColourGroup(clonedSingle, TEST_CAMERA, 0, (s) => s.matrixWorld);
     expectSameRotation(drawn, TEST_CAMERA.matrixWorld);
+  });
+
+  it('rebuilds the blue of a glTF normal map from its red and green, as Godot does', () => {
+    const { root, meshSingle } = makeSource();
+    (meshSingle.material as THREE.MeshStandardMaterial).normalMap = new THREE.Texture();
+    const cloned = findMesh(cloneWithMaterials(root), 'single');
+    expect(patchedFragment(cloned.material as THREE.Material)).toContain(REBUILDS_NORMAL_MAP_BLUE);
+  });
+
+  it('patches no glTF material without a normal map', () => {
+    const cloned = findMesh(cloneWithMaterials(makeSource().root), 'single');
+    expect(patchedFragment(cloned.material as THREE.Material)).not.toContain(REBUILDS_NORMAL_MAP_BLUE);
   });
 
   it('clones single-material references (different uuid)', () => {
