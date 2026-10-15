@@ -1,10 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import {
-  addedEmissionTextureEnergy,
-  emissionTextureAddInjection,
-  emissionTextureAddUserData,
-} from './emissionTextureAdd';
+import { emissionTextureAddInjection, emissionTextureAddUserData } from './emissionTextureAdd';
 import type { ProgramShader } from '../materialProgramInputs';
 
 function recording(energy: number): THREE.MeshStandardMaterial {
@@ -18,7 +14,7 @@ function patched(material: THREE.Material): ProgramShader {
     fragmentShader: THREE.ShaderLib.standard.fragmentShader,
     uniforms: {},
   };
-  emissionTextureAddInjection(addedEmissionTextureEnergy(material))!.onBeforeCompile.call(material, shader);
+  emissionTextureAddInjection(0)!.onBeforeCompile.call(material, shader);
   return shader;
 }
 
@@ -47,6 +43,8 @@ describe('emissionTextureAddInjection', () => {
   });
 
   it('reads zero from a material that records no energy (error case)', () => {
-    expect(addedEmissionTextureEnergy(new THREE.MeshStandardMaterial())).toBe(0);
+    const uniform = patched(new THREE.MeshStandardMaterial()).uniforms['godotEmissionTextureEnergy']!;
+
+    expect(uniform.value).toBe(0);
   });
 });

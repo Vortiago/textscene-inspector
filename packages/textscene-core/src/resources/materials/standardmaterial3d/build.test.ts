@@ -9,8 +9,12 @@ import { buildMaterial } from './buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextureSlots } from './types';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
-import { heightmapSampledBy, patchedFragment } from '../../../r3f/testing/patchedFragment';
-import { addedEmissionTextureEnergy } from '../../../r3f/materials/emissionTextureAdd';
+import { heightmapSampledBy, patchedFragment, patchedUniforms } from '../../../r3f/testing/patchedFragment';
+
+/** The energy the compiled ADD patch adds the emission texture at. */
+function addedTextureEnergy(material: THREE.Material): number | undefined {
+  return patchedUniforms(material)['godotEmissionTextureEnergy']?.value as number | undefined;
+}
 
 function build(
   properties: Record<string, string>,
@@ -407,7 +411,7 @@ describe('the imperative adapter — texture slots', () => {
       { emission_texture: loadedTexture() }
     );
     expect(material.emissive.getHex()).toBe(0x000000);
-    expect(addedEmissionTextureEnergy(material)).toBe(2);
+    expect(addedTextureEnergy(material)).toBe(2);
   });
 
   it('adds an emission texture to a lit colour, not multiplies it', () => {
@@ -417,7 +421,7 @@ describe('the imperative adapter — texture slots', () => {
     );
     expect(material.emissive.getHex()).toBe(0xff0000);
     expect(material.emissiveIntensity).toBe(3);
-    expect(addedEmissionTextureEnergy(material)).toBe(3);
+    expect(addedTextureEnergy(material)).toBe(3);
     expect(patchedFragment(material)).toContain('totalEmissiveRadiance += emissiveColor.rgb');
   });
 
@@ -426,7 +430,6 @@ describe('the imperative adapter — texture slots', () => {
       { emission_enabled: 'true', emission: 'Color(1, 0, 0, 1)', emission_operator: '1' },
       { emission_texture: loadedTexture() }
     );
-    expect(addedEmissionTextureEnergy(material)).toBe(0);
     expect(patchedFragment(material)).not.toContain('godotEmissionTextureEnergy');
   });
 

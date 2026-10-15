@@ -16,16 +16,14 @@ export function emissionTextureAddUserData(energy: number | null): Record<string
   return energy === null ? {} : { [ADDED_TEXTURE_ENERGY]: energy };
 }
 
-/** The energy `material`'s emission texture adds at, zero for a material that adds none. */
-export function addedEmissionTextureEnergy(material: THREE.Material): number {
-  return recordedOn(material, ADDED_TEXTURE_ENERGY, 0);
-}
-
-/** A uniform that reads the recorded energy at each upload, so an energy edit needs no recompile. */
+/**
+ * A uniform that reads the recorded energy at each upload, so an energy edit needs no recompile.
+ * A material that records none reads zero.
+ */
 function addedEnergyUniform(material: THREE.Material): THREE.IUniform<number> {
   return {
     get value() {
-      return addedEmissionTextureEnergy(material);
+      return recordedOn(material, ADDED_TEXTURE_ENERGY, 0);
     },
   };
 }
