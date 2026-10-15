@@ -2428,6 +2428,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Area Light Atlas Texture",
+    "file": "unit-area-light-atlas-texture.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light Distance Fade",
     "file": "unit-area-light-distance-fade.tscn",
     "category": "Unit - Lights"

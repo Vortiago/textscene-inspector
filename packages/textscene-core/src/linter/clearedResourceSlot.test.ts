@@ -18,8 +18,10 @@ interface Slot {
   site: string;
   /** The node type under test. */
   type: string;
-  /** The resource-slot property whose two spellings must agree. */
+  /** The resource-slot property whose two spellings must agree, or {@link EVERY_KEY} for a sweep over every key. */
   prop: string;
+  /** The property a {@link EVERY_KEY} row sets, since such a sweep names no key of its own. */
+  probe?: string;
   /** Other properties the rule is gated on (autoplay, a layer count, a sibling texture). */
   props?: Record<string, string | number | boolean>;
   /** A parent heading the node needs to be legal, and the node's `parent` path. */
@@ -32,6 +34,9 @@ interface Slot {
    */
   expected: string[];
 }
+
+/** The key a call site stands for when it passes the value of every property a section holds. */
+const EVERY_KEY = '*';
 
 const staticBody3d = node('StaticBody3D', {}, { name: 'Body' });
 const staticBody2d = node('StaticBody2D', {}, { name: 'Body' });
@@ -68,6 +73,9 @@ const SLOTS: Slot[] = [
       parent: { block: staticBody3d, path: '.' },
       expected: ['warning collisionshape3d-requires-shape'],
     },
+  ]),
+  ...at('linter/excludedResourceTypes.ts', [
+    { type: 'OmniLight3D', prop: EVERY_KEY, probe: 'light_projector', expected: [] },
   ]),
   ...at('linter/physics/navigationRegionLinterRule.ts', [
     {
@@ -267,7 +275,7 @@ const SLOTS: Slot[] = [
 /** The scene for one slot, with the property absent or explicitly cleared. */
 function sceneFor(slot: Slot, value: 'absent' | 'null' | 'nil'): string {
   const props = { ...(slot.props ?? {}) };
-  if (value !== 'absent') props[slot.prop] = value;
+  if (value !== 'absent') props[slot.probe ?? slot.prop] = value;
   const heading = node(slot.type, props, slot.parent ? { parent: slot.parent.path } : {});
   const blocks = [...(slot.extra ?? [])];
   if (slot.parent) blocks.push(slot.parent.block);
@@ -339,13 +347,20 @@ function keysOf(source: string, argument: string, hops = 0): string[] {
   return identifier ? keysBehind(source, identifier, hops) : [];
 }
 
+/** Whether `identifier` is the value half of a `for (const [key, value] of Object.entries(…))` loop. */
+function isBoundToEveryValue(source: string, identifier: string): boolean {
+  return new RegExp(
+    `\\bfor\\s*\\(\\s*const\\s+\\[\\s*\\w+\\s*,\\s*${identifier}\\s*\\]\\s+of\\s+Object\\.entries\\(`
+  ).test(source);
+}
+
 /**
  * The property keys a source-level identifier stands for.
  *
  * Follows the binding back to the literals: a `const` whose initialiser holds them
  * (an array of keys, or a ternary between two), one predicate call over a property
  * read, or a name bound over such a const by a `for`-`of` or an array callback, one
- * derivation at a time.
+ * derivation at a time. A value bound by a loop over `Object.entries` stands for every key.
  */
 function keysBehind(source: string, identifier: string, hops = 0): string[] {
   if (hops > 3) return [];
@@ -359,6 +374,7 @@ function keysBehind(source: string, identifier: string, hops = 0): string[] {
     const receiver = /^\s*(\w+)\s*\./.exec(initialiser)?.[1];
     return receiver ? keysBehind(source, receiver, hops + 1) : [];
   }
+  if (isBoundToEveryValue(source, identifier)) return [EVERY_KEY];
   const boundOver =
     new RegExp(`\\bfor\\s*\\(\\s*const\\s+${identifier}\\s+of\\s+(\\w+)`).exec(source)?.[1] ??
     new RegExp(`(\\w+)\\.\\w+\\(\\s*\\(?\\s*${identifier}\\s*\\)?\\s*=>`).exec(source)?.[1];
@@ -426,6 +442,11 @@ describe('an explicitly cleared resource slot reads as an empty one', () => {
     const source =
       'const script = heldResource(rawProps.script);\nif (!checkResourceExists(scene, script)) {}';
     expect(keysOf(source, 'scene, script')).toEqual(['script']);
+  });
+
+  it('reads a value bound by a loop over Object.entries as every key', () => {
+    const source = 'for (const [key, value] of Object.entries(rawProps)) resolveResourceSlot(scene, value);';
+    expect(keysOf(source, 'scene, value')).toEqual([EVERY_KEY]);
   });
 
   it('answers for every slot the shared predicates are asked about', () => {

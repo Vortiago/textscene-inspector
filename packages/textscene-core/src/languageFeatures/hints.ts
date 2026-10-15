@@ -6,6 +6,7 @@
  */
 
 import { PROPERTY_HINT } from '../godot/classdb/propertyHint.js';
+import { resourceTypeHint } from '../godot/classdb/resourceTypeHint.js';
 import { VARIANT_TYPE } from '../godot/variant/variantType.js';
 
 /** One `PROPERTY_HINT_ENUM` label, with the integer the engine stores for it. */
@@ -60,10 +61,7 @@ export function flagLabels(hint: number, hintString: string): readonly string[] 
  */
 export function acceptedResourceTypes(hint: number, hintString: string): readonly string[] | undefined {
   if (hint !== PROPERTY_HINT.RESOURCE_TYPE || hintString.length === 0) return undefined;
-  return hintString
-    .split(',')
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0 && !part.startsWith('-'));
+  return resourceTypeHint(hintString).bases;
 }
 
 /** A bounds hint, split into its parts. `or_greater` or `or_less` leaves an end open. */

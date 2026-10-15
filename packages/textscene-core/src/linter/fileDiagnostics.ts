@@ -82,6 +82,16 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'resource_format_text.cpp:113' },
   },
   /**
+   * A node resource slot whose reference resolves to a class its `PROPERTY_HINT_RESOURCE_TYPE` hint excludes with a
+   * `-` prefix (`object.h:68`, `excludedResourceTypes.ts`). The editor erases the exact name from the classes it offers,
+   * and the setter keeps the value, so the value is outside the property's UI hint.
+   */
+  resourceTypeExcludedByHint: {
+    severity: 'warning',
+    ruleName: 'resource-type-excluded-by-hint',
+    grounding: { kind: 'engine', at: 'editor_resource_picker.cpp:827-833' },
+  },
+  /**
    * An `[ext_resource]` whose `.glb`/`.gltf` requires a glTF extension outside Godot's importer set, used where a failed
    * load fails the file's load (`usedExtResources.ts`), in a project whose readable `project.godot` enables no editor
    * plugin and declares no autoload, and whose listing holds no GDExtension, so nothing can add the extension. The

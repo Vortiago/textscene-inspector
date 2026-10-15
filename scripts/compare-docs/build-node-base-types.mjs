@@ -1,15 +1,17 @@
 /**
  * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
  * the committed engine captures (`pnpm nodes:base-types` writes
- * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts and
- * classProperties.generated.ts). It never runs Godot: CI has no engine, and the test beside it
- * re-derives every output to prove it current.
+ * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts,
+ * classProperties.generated.ts and resourceTypeExclusions.generated.ts). It never runs Godot: CI
+ * has no engine, and the test beside it re-derives every output to prove it current.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/propertyHint.ts';
+import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
 
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
@@ -25,6 +27,7 @@ function classdbModule(name) {
 export const OUT = classdbModule('nodeBaseTypes.generated.ts');
 export const RESOURCE_OUT = classdbModule('resourceBaseTypes.generated.ts');
 export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
+export const EXCLUSIONS_OUT = classdbModule('resourceTypeExclusions.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
@@ -95,7 +98,7 @@ function renderEntries(table) {
  * @param version - the catalog's Godot version, quoted in the header so a
  *   reader can tell which engine the ancestry came from.
  */
-export function renderModule(table, version) {
+function renderModule(table, version) {
   const entries = renderEntries(table);
   return `/**
  * Node-type → base-type table, derived from Godot ${version}'s ClassDB.
@@ -122,7 +125,7 @@ ${entries}
  * @param table - `resource-bases.json`, class → immediate base.
  * @param version - the engine both captures came from.
  */
-export function renderResourceModule(table, version) {
+function renderResourceModule(table, version) {
   return `/**
  * Resource-type → base-type table, derived from Godot ${version}'s ClassDB.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
@@ -175,7 +178,7 @@ function renderPropertyTable(name, properties) {
  * @param resourceProperties - `resource-properties.json`, class → own rows.
  * @param version - the catalog's Godot version.
  */
-export function renderPropertiesModule(nodeProperties, resourceProperties, version) {
+function renderPropertiesModule(nodeProperties, resourceProperties, version) {
   return `/**
  * ClassDB property rows, derived from Godot ${version}'s ClassDB captures.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
@@ -190,6 +193,100 @@ export type ClassPropertyRow = readonly [name: string, type: number, hint: numbe
 
 ${renderPropertyTable('NODE_CLASS_PROPERTIES', nodeProperties)}
 ${renderPropertyTable('RESOURCE_CLASS_PROPERTIES', resourceProperties)}`;
+}
+
+/** Whether a resource hint excludes a class. */
+function excludesAClass(row) {
+  return row.hint === PROPERTY_HINT.RESOURCE_TYPE && resourceTypeHint(row.hint_string).excluded.length > 0;
+}
+
+/** A row's resource hint string, or `''` for another hint, which excludes nothing. */
+function resourceHintOf(row) {
+  return row.hint === PROPERTY_HINT.RESOURCE_TYPE ? row.hint_string : '';
+}
+
+/** Whether `className` declares `name` again below an ancestor whose slot of that name excludes a class. */
+function redeclaresExcludingSlot(className, name, excludingByClass, bases) {
+  for (let at = bases[className]; at !== undefined; at = bases[at]) {
+    if (excludingByClass.get(at)?.has(name)) return true;
+  }
+  return false;
+}
+
+/**
+ * Class → property → hint string, for each resource slot whose hint excludes a class and for each
+ * nearer declaration of such a slot, under the class that declares it. The linter walks this
+ * table alone, so a nearer row must be here for its hint to win. The full property table is too
+ * large for the linter's bundles.
+ *
+ * @param properties - class → own rows, the node and resource captures merged.
+ * @param bases - class → immediate base over both hierarchies, acyclic.
+ */
+export function deriveResourceTypeExclusions(properties, bases) {
+  const excludingByClass = new Map(
+    Object.entries(properties).map(([className, rows]) => [
+      className,
+      new Set(rows.filter(excludesAClass).map((row) => row.name)),
+    ])
+  );
+  const exclusions = {};
+  for (const className of Object.keys(properties).sort((a, b) => a.localeCompare(b))) {
+    const kept = properties[className].filter(
+      (row) => excludesAClass(row) || redeclaresExcludingSlot(className, row.name, excludingByClass, bases)
+    );
+    if (kept.length > 0)
+      exclusions[className] = Object.fromEntries(kept.map((row) => [row.name, resourceHintOf(row)]));
+  }
+  return exclusions;
+}
+
+/**
+ * The module source for the exclusion table.
+ *
+ * @param exclusions - output of {@link deriveResourceTypeExclusions}.
+ * @param version - the catalog's Godot version.
+ */
+function renderExclusionsModule(exclusions, version) {
+  const classes = Object.entries(exclusions)
+    .map(([className, slots]) => {
+      const rows = Object.entries(slots)
+        .map(([name, hintString]) => `    ${JSON.stringify(name)}: ${JSON.stringify(hintString)},`)
+        .join('\n');
+      return `  ${JSON.stringify(className)}: {\n${rows}\n  },`;
+    })
+    .join('\n');
+  return `/**
+ * The resource slots whose \`PROPERTY_HINT_RESOURCE_TYPE\` hint excludes a class with a \`-\` prefix,
+ * and each nearer declaration of such a slot, derived from Godot ${version}'s ClassDB captures.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ *
+ * Each entry is class → property → hint string, under the class that declares the property. A
+ * reader finds an inherited slot by walking the base chain in \`classBaseTypes\`.
+ */
+
+export const RESOURCE_TYPE_EXCLUSIONS: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
+${classes}
+});
+`;
+}
+
+/** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
+function readResourceBases() {
+  return assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
+}
+
+/** The exclusion module the committed artifact must equal. */
+export function renderFromExclusionCaptures() {
+  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const properties = {
+    ...JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8')),
+    ...JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8')),
+  };
+  const bases = { ...deriveBaseTypes(catalog.nodes), ...readResourceBases() };
+  return renderExclusionsModule(
+    deriveResourceTypeExclusions(properties, bases),
+    catalog.godotVersion ?? 'unknown'
+  );
 }
 
 /** The property module the committed artifact must equal. */
@@ -214,19 +311,19 @@ export function renderFromCatalog() {
  */
 export function renderFromResourceBases() {
   const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  // Flattened, so unlike the node side no chain shape rules a cycle out. It is asserted here.
-  const bases = assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
-  return renderResourceModule(bases, catalog.godotVersion ?? 'unknown');
+  return renderResourceModule(readResourceBases(), catalog.godotVersion ?? 'unknown');
 }
 
 // Only write when run as a CLI, so the test can import the derivation.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const describeBaseTypes = (source) => `${source.match(/^ {2}\w+: '/gm)?.length ?? 0} base-type entries`;
   const describeProperties = (source) => `${source.match(/^\s*\["/gm)?.length ?? 0} property rows`;
+  const describeExclusions = (source) => `${source.match(/^ {4}"/gm)?.length ?? 0} excluding slots`;
   const artifacts = [
     [OUT, renderFromCatalog(), describeBaseTypes],
     [RESOURCE_OUT, renderFromResourceBases(), describeBaseTypes],
     [PROPERTIES_OUT, renderFromPropertyCaptures(), describeProperties],
+    [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeExclusions],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);

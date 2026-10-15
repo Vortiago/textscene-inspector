@@ -1,8 +1,8 @@
 /**
  * Resolves a class's serialised properties through the same base chain Godot's
  * `_get_property_list` walks, so hover and completion name a property on the class that
- * declares it. The rows come from the committed ClassDB captures. The chain comes from
- * the generated base-type tables, never by hand.
+ * declares it. The rows come from the committed ClassDB captures, and from the hand rows of a
+ * class the pinned build lacks. The chain comes from the base-type tables.
  */
 
 import { classInheritanceChain } from '../godot/classdb/classBaseTypes.js';
@@ -13,6 +13,7 @@ import {
   RESOURCE_CLASS_PROPERTIES,
   type ClassPropertyRow,
 } from '../godot/classdb/classProperties.generated.js';
+import { UNCATALOGUED_PROPERTIES } from '../godot/classdb/uncataloguedProperties.js';
 import type { PropertyLocation } from './document.js';
 
 /** One serialised property, with the class nearest the queried type that declares it. */
@@ -26,9 +27,12 @@ export interface ClassProperty {
   readonly declaredBy: string;
 }
 
+const PROPERTY_TABLES = [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES, UNCATALOGUED_PROPERTIES];
+
 function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
-  if (Object.hasOwn(NODE_CLASS_PROPERTIES, className)) return NODE_CLASS_PROPERTIES[className];
-  if (Object.hasOwn(RESOURCE_CLASS_PROPERTIES, className)) return RESOURCE_CLASS_PROPERTIES[className];
+  for (const table of PROPERTY_TABLES) {
+    if (Object.hasOwn(table, className)) return table[className];
+  }
   return undefined;
 }
 
