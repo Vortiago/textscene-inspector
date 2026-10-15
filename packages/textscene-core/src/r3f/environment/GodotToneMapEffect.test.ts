@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
+import { GLOW_MAP_UNIFORM } from '../../resources/environment/godotCompositor';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../resources/environment/build';
@@ -32,7 +33,7 @@ function srgbTexture(): THREE.Texture {
 }
 
 function sampledMap(effect: GodotToneMapEffect): THREE.Texture {
-  return effect.uniforms.get('godotGlowMap')!.value as THREE.Texture;
+  return effect.uniforms.get(GLOW_MAP_UNIFORM)!.value as THREE.Texture;
 }
 
 const MAP = { glow_map: 'SubResource("Gradient_1")' };
@@ -66,6 +67,6 @@ describe('GodotToneMapEffect.setGlowMap', () => {
   it('binds no map when the environment names none (edge case)', () => {
     const effect = effectWith({});
     effect.setGlowMap(srgbTexture());
-    expect(effect.uniforms.has('godotGlowMap')).toBe(false);
+    expect(effect.uniforms.has(GLOW_MAP_UNIFORM)).toBe(false);
   });
 });

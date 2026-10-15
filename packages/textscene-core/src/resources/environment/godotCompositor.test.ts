@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { compositeGlsl } from './godotCompositor';
+import { compositeProgram, EXPOSURE_UNIFORM, GLOW_BUFFER_UNIFORM, GLOW_MAP_UNIFORM } from './godotCompositor';
 import { decodeEnvironment } from './decode';
 import { createEnvironmentSettings } from './build';
 import { glowParamsFor, type GlowParams } from './godotGlow';
@@ -28,7 +28,15 @@ const FILMIC: CompositeToneMapping = { mode: ToneMapper.FILMIC, white: 1 };
 
 /** The whole shader with `FLAG_USE_BCS` clear. */
 function composite(glow: GlowParams | null, toneMapping: CompositeToneMapping = FILMIC): string {
-  return compositeGlsl({ glow, toneMapping, adjustments: null });
+  return shaderOf(glow, toneMapping, null);
+}
+
+function shaderOf(
+  glow: GlowParams | null,
+  toneMapping: CompositeToneMapping,
+  adjustments: EnvironmentAdjustments | null
+): string {
+  return compositeProgram({ glow, toneMapping, adjustments, exposure: 1 }).fragmentShader;
 }
 
 /** `mainImage`'s body: above it sit the definitions, not the call order. */
@@ -37,11 +45,11 @@ function body(
   toneMapping: CompositeToneMapping = FILMIC,
   adjustments: EnvironmentAdjustments | null = null
 ) {
-  const glsl = compositeGlsl({ glow, toneMapping, adjustments });
+  const glsl = shaderOf(glow, toneMapping, adjustments);
   return glsl.slice(glsl.indexOf('void mainImage'));
 }
 
-describe('compositeGlsl — the shader it emits', () => {
+describe('compositeProgram — the shader it emits', () => {
   it('is self-contained: the curve and the blend are defined above mainImage', () => {
     // The effect compiles this one string. A function it only calls would be a
     // link error at shader-compile time: a black frame.
@@ -62,7 +70,7 @@ describe('compositeGlsl — the shader it emits', () => {
   });
 });
 
-describe('compositeGlsl — the glow gather', () => {
+describe('compositeProgram — the glow gather', () => {
   it('scales the gathered buffer by glow_intensity, as gather_glow’s caller does', () => {
     expect(body(glowOn({ glow_intensity: '0.75' }))).toContain('texture2D(godotGlowBuffer, uv).rgb * 0.75');
   });
@@ -75,7 +83,7 @@ describe('compositeGlsl — the glow gather', () => {
   });
 });
 
-describe('compositeGlsl — the glow map', () => {
+describe('compositeProgram — the glow map', () => {
   const MAP = { glow_map: 'SubResource("Gradient_1")' };
 
   it('scales the gathered glow by the map, mixed in by glow_map_strength (tonemap.glsl:886)', () => {
@@ -96,7 +104,7 @@ describe('compositeGlsl — the glow map', () => {
   });
 });
 
-describe('compositeGlsl — exposure', () => {
+describe('compositeProgram — exposure', () => {
   // `tonemap.glsl` runs `color.rgb *= exposure` on the scene once before the blend;
   // the bright pass already exposed the glow. Every glow fixture leaves
   // `tonemap_exposure` at 1.0, where a double-exposed glow or a scaled sum looks the same.
@@ -127,7 +135,7 @@ describe('compositeGlsl — exposure', () => {
   });
 });
 
-describe('compositeGlsl — which side of the tone curve the blend falls on', () => {
+describe('compositeProgram — which side of the tone curve the blend falls on', () => {
   it('tonemaps both operands and neither twice, SOFTLIGHT', () => {
     const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
     expect(glsl).toContain('godotToneMap(glow, 1.0)');
@@ -156,7 +164,7 @@ describe('compositeGlsl — which side of the tone curve the blend falls on', ()
   });
 });
 
-describe('compositeGlsl — the white SCREEN normalises against', () => {
+describe('compositeProgram — the white SCREEN normalises against', () => {
   it('uses Godot’s FLOORED white, not the authored property (regression)', () => {
     // `apply_glow` divides by `params.white`, which `renderer_scene_render_rd.cpp` fills
     // from `environment_get_white`, floored at 1.0 for every SDR curve: "white cannot be
@@ -190,7 +198,7 @@ describe('compositeGlsl — the white SCREEN normalises against', () => {
   });
 });
 
-describe('compositeGlsl — malformed input', () => {
+describe('compositeProgram — malformed input', () => {
   it('falls back to ADDITIVE for a blend mode outside the enum (error path)', () => {
     // `glow_blend_mode` is decoded leniently, so a hand-edited scene can carry
     // anything. An unknown mode must still compile.
@@ -210,7 +218,7 @@ describe('compositeGlsl — malformed input', () => {
   });
 });
 
-describe('compositeGlsl — the AgX contrast', () => {
+describe('compositeProgram — the AgX contrast', () => {
   it('threads an authored tonemap_agx_contrast into the composed curve', () => {
     const glsl = composite(glowOn(), { mode: ToneMapper.AGX, white: 16.29, agxContrast: 1.8 });
     expect(glsl).toContain('awp_contrast = 1.8;');
@@ -222,7 +230,7 @@ describe('compositeGlsl — the AgX contrast', () => {
   });
 });
 
-describe('compositeGlsl — with the glow flag clear', () => {
+describe('compositeProgram — with the glow flag clear', () => {
   // `tonemap.glsl:859-899` guards every glow line on FLAG_USE_GLOW. With it clear,
   // the same pass reduces to exposure and the curve.
   const tone = { mode: ToneMapper.FILMIC, white: 1 };
@@ -249,7 +257,7 @@ describe('compositeGlsl — with the glow flag clear', () => {
   });
 });
 
-describe('compositeGlsl — the adjustments (FLAG_USE_BCS, tonemap.glsl:916-949)', () => {
+describe('compositeProgram — the adjustments (FLAG_USE_BCS, tonemap.glsl:916-949)', () => {
   const tone = { mode: ToneMapper.LINEAR, white: 1 };
   const neutral: EnvironmentAdjustments = { brightness: 1, contrast: 1, saturation: 1 };
 
@@ -311,5 +319,42 @@ describe('compositeGlsl — the adjustments (FLAG_USE_BCS, tonemap.glsl:916-949)
   it('emits no uncompilable literal for a malformed adjustment (error path)', () => {
     const glsl = adjusted({ brightness: Number.NaN, contrast: Number.POSITIVE_INFINITY });
     expect(glsl).not.toMatch(/[=*,]\s*(NaN|Infinity)/);
+  });
+});
+
+describe('compositeProgram — the uniforms it returns', () => {
+  const GLOW_MAP = { glow_map: 'SubResource("Gradient_1")' };
+
+  function program(glow: GlowParams | null, exposure = 1) {
+    return compositeProgram({ glow, toneMapping: FILMIC, adjustments: null, exposure });
+  }
+
+  function declaredUniforms(fragmentShader: string): string[] {
+    return [...fragmentShader.matchAll(/^uniform \w+ (\w+);$/gm)].map((match) => match[1]!);
+  }
+
+  it.each([
+    ['no glow', null],
+    ['a glow', glowOn()],
+    ['a glow map', glowOn(GLOW_MAP)],
+  ])('lists exactly the uniforms the shader declares, with %s', (_label, glow) => {
+    const { fragmentShader, uniforms } = program(glow);
+    expect(Object.keys(uniforms).sort()).toEqual(declaredUniforms(fragmentShader).sort());
+  });
+
+  it('adds the glow buffer with a glow and the glow map with a map', () => {
+    expect(Object.keys(program(glowOn()).uniforms)).toEqual([EXPOSURE_UNIFORM, GLOW_BUFFER_UNIFORM]);
+    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([
+      EXPOSURE_UNIFORM,
+      GLOW_BUFFER_UNIFORM,
+      GLOW_MAP_UNIFORM,
+    ]);
+  });
+
+  it('starts the exposure at the authored value and each texture unbound', () => {
+    const { uniforms } = program(glowOn(GLOW_MAP), 2.5);
+    expect(uniforms[EXPOSURE_UNIFORM]).toBe(2.5);
+    expect(uniforms[GLOW_BUFFER_UNIFORM]).toBeNull();
+    expect(uniforms[GLOW_MAP_UNIFORM]).toBeNull();
   });
 });
