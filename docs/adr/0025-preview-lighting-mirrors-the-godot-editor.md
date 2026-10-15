@@ -61,13 +61,15 @@ is in frame).
 
 **Ambient is an IBL, because in Godot it is one.** The sky cube feeds `PMREMGenerator` and
 then `scene.environment`, which drives reflections. Godot's `reflection_source` defaults to
-the background. The core bakes Godot's radiance layers, 1 to 7, on the GPU as Godot does: a
+the background. The core bakes Godot's radiance layers on the GPU as Godot does: a
 chain of downsamples to an octmap 10 texels wide, then a GGX filter per layer, or the fast filter
-for a real-time sky. Each sky keeps them in three small cubes of its own, and every lit material samples
-the cubes of the sky its scene shows. The diffuse light reads the last layer, and a reflection
-reads the baked layers. A mirror reflection reads layer 0, the radiance itself, as mip 0
-of three's PMREM. The PMREM blurs a layer differently from Godot's chain, and spherical harmonics of
-order 2 cannot hold the last layer's sharper terms. Godot's own DFG table weighs every reflection. A `HemisphereLight` approximation is
+for a real-time sky. Each sky keeps them in an octmap array of its own, as Godot does: layer 0 is
+the radiance itself, and each layer has its own mip chain. Every lit material samples the array of
+the sky its scene shows, at the mip the screen derivatives of the direction pick. The diffuse light
+reads the last layer, and a reflection reads the two layers around its roughness. The PMREM still
+turns three's environment lighting on, and the volumetric fog reads it, but no surface reads it. The
+PMREM blurs a layer differently from Godot's chain, and spherical harmonics of order 2 cannot hold
+the last layer's sharper terms. Godot's own DFG table weighs every reflection. A `HemisphereLight` approximation is
 rejected: it is diffuse-only, so each metallic or smooth material stays visibly wrong.
 `background_energy_multiplier` sets `scene.environmentIntensity`. `AMBIENT_SOURCE_COLOR` is a
 flat `ambientLight`. `AMBIENT_SOURCE_DISABLED` emits nothing. `AMBIENT_SOURCE_SKY` reads

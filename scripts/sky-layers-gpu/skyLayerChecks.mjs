@@ -5,9 +5,10 @@
 
 /**
  * A half float holds 11 significant bits, and each pass rounds once: the octmap, up to six
- * downsamples and the filter. Eight rounding steps stay under this.
+ * downsamples of the chain, the filter and up to six downsamples of the layer's own mips.
+ * Fourteen rounding steps stay under this.
  */
-export const HALF_FLOAT_TOLERANCE = 8 * 2 ** -11;
+export const HALF_FLOAT_TOLERANCE = 14 * 2 ** -11;
 
 /** A sky of one colour filters to that colour, as every filter's weights sum to one. */
 export function uniformSkyFailure(name, range, radiance) {

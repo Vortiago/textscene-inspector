@@ -1,12 +1,12 @@
 ---
 type: Sky
 category: Resources
-renders_as: a THREE PMREM environment + Godot's radiance layers 1 to 7 + background
+renders_as: Godot's radiance layers as an octmap array + a THREE PMREM environment + background
 ---
 
 # Sky
 
-A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers 1 to 7, baked as Godot bakes them, give every reflection but a mirror and the ambient light. A mirror reflects the radiance itself, mip 0 of a PMREM-filtered environment map. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
+A `Sky` resource's `sky_material` is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, baked as Godot bakes them into an octmap array with a mip chain per layer, give every reflection and the ambient light. Each read picks its mip from the screen derivatives of its direction, as Godot does, so a small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's `radiance_size`, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.
 
 ## ProceduralSkyMaterial
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->

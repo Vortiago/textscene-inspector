@@ -43,8 +43,13 @@ import {
 } from '../../godot/rendering/environment/skyReflection.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 
-/** `oct_inc.glsl:2-41`. `borderSize` is 1 minus twice the padding in UV. */
+/**
+ * `oct_inc.glsl:2-41`. `borderSize` is 1 minus twice the padding in UV. The guard lets the sky's and
+ * the probes' chunks both hold it in one program.
+ */
 export const OCTMAP_GLSL = /* glsl */ `
+#ifndef GODOT_OCTMAP
+#define GODOT_OCTMAP
 vec3 octToVec3(vec2 e) {
   vec3 v = vec3(e.xy, 1.0 - abs(e.x) - abs(e.y));
   float t = max(-v.z, 0.0);
@@ -70,6 +75,7 @@ vec2 vec3ToOctWithBorder(vec3 n, float borderSize) {
   n.xy = n.z >= 0.0 ? n.xy : octWrap(n.xy);
   return (n.xy * 0.5 + 0.5) * borderSize + (1.0 - borderSize) * 0.5;
 }
+#endif
 `;
 
 /**
@@ -120,32 +126,18 @@ void main() {
 }
 `;
 
-/** The `face` that draws a filtered layer into an octmap `faceSize` wide, as a reflection atlas holds it. */
-export const OCTMAP_FACE = -1;
-
 /**
- * What both filters share: the chain they read, and the direction through the centre of the texel
- * the fragment writes. A cube's faces are +X, -X, +Y, -Y, +Z, -Z, with `s` along a texel row and `t`
- * across the rows from the first row up (OpenGL ES 3.0 table 3.21). `OCTMAP_FACE` writes an octmap.
+ * What both filters share: the chain they read, and the direction through the centre of the octmap
+ * texel the fragment writes, in a layer `layerSize` wide.
  */
 const LAYER_FILTER_GLSL = /* glsl */ `
 uniform sampler2D chain;
 uniform float lastMip;
 uniform float borderSize;
-uniform int face;
-uniform float faceSize;
+uniform float layerSize;
 ${OCTMAP_GLSL}
 vec3 texelDirection() {
-  if (face == ${OCTMAP_FACE}) return octToVec3WithBorder(gl_FragCoord.xy / faceSize, borderSize);
-  vec2 st = gl_FragCoord.xy * 2.0 / faceSize - 1.0;
-  float s = st.x;
-  float t = st.y;
-  if (face == 0) return normalize(vec3(1.0, -t, -s));
-  if (face == 1) return normalize(vec3(-1.0, -t, s));
-  if (face == 2) return normalize(vec3(s, 1.0, t));
-  if (face == 3) return normalize(vec3(s, -1.0, -t));
-  if (face == 4) return normalize(vec3(s, -t, 1.0));
-  return normalize(vec3(-s, -t, -1.0));
+  return octToVec3WithBorder(gl_FragCoord.xy / layerSize, borderSize);
 }
 
 vec3 chainAt(vec3 direction, float lod) {

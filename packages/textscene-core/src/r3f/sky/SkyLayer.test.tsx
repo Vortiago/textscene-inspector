@@ -11,9 +11,9 @@ import type { Sky } from '../../resources/sky/types';
 import { SkyLayer } from './SkyLayer';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { skyContribution, skyLayerSlots } from './skyLayerCubes';
+import { shownSky, skyLayersSlot } from './skyLayerArray';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
-import type { SkyLayers } from '../../resources/sky/skyLayers';
+import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
@@ -59,15 +59,12 @@ afterEach(() => {
   built.next = null;
 });
 
-/** An environment as a bake on `gl` leaves it, its layer cubes set up, freed by `dispose`. */
+/** An environment as a bake on `gl` leaves it, its layer array set up, freed by `dispose`. */
 function skyEnvironment(dispose: () => void = () => {}): (gl: THREE.WebGLRenderer) => SkyEnvironment {
   return (gl) => {
-    const cube = () => {
-      const target = new THREE.WebGLCubeRenderTarget(1);
-      gl.initRenderTarget(target);
-      return target;
-    };
-    const layers: SkyLayers = { sharp: cube(), rough: cube(), last: cube() };
+    const target = new THREE.WebGLArrayRenderTarget(1, 1, 8);
+    gl.initRenderTarget(target);
+    const layers = { layout: skyOctmapLayout(32, 8), target };
     return { background: new THREE.Texture(), environment: new THREE.Texture(), layers, dispose };
   };
 }
@@ -99,10 +96,10 @@ async function mount(element: React.ReactNode): Promise<Mounted> {
   return { scene, gl: gl!, update: (next) => root.update(withProbe(next)) };
 }
 
-/** Starts a render of `scene`, and gives the last-layer cube every lit material samples in it. */
+/** Starts a render of `scene`, and gives the layer array every lit material samples in it. */
 function sampledInRender(gl: THREE.WebGLRenderer, scene: THREE.Scene): unknown {
   (scene.onBeforeRender as () => void)();
-  return boundHandle(gl, skyLayerSlots.last);
+  return boundHandle(gl, skyLayersSlot);
 }
 
 /** A sky in the root scene, and one in a scene of its own, as a sub-viewport renders it. */
@@ -198,7 +195,7 @@ describe('SkyLayer', () => {
     expect(lastBake()?.lights[0]?.energy).toBeCloseTo(3);
   });
 
-  it("points the lit materials at its sky's cubes before each render of its scene", async () => {
+  it("points the lit materials at its sky's layer array before each render of its scene", async () => {
     built.next = skyEnvironment();
     const { scene, gl } = await mount(<Scene lights={1} />);
 
@@ -224,7 +221,7 @@ describe('SkyLayer', () => {
 
     sampledInRender(gl, scene);
 
-    expect(skyContribution[0]).toBe(0.25);
+    expect(shownSky[0]).toBe(0.25);
   });
 
   it('shows a new share of the ambient without a new bake', async () => {
@@ -237,7 +234,7 @@ describe('SkyLayer', () => {
     await update(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} contribution={0.5} />);
     sampledInRender(gl, scene);
 
-    expect([bakes.length, skyContribution[0]]).toEqual([bakeCount, 0.5]);
+    expect([bakes.length, shownSky[0]]).toEqual([bakeCount, 0.5]);
   });
 
   it("keeps the scene's other render observers running, as the visibility cull is", async () => {

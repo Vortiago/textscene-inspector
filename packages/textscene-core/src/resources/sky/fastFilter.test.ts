@@ -17,8 +17,8 @@ describe('fastFilter', () => {
     );
   });
 
-  it('gives a layer past the last of a real-time sky the last level (edge case)', () => {
-    expect(tapWeights(7)).toBe(tapWeights(6));
+  it('refuses layer 7, which a real-time sky lacks (error case)', () => {
+    expect(() => fastFilter.layerUniforms(7)).toThrow("expected a level of the fast filter's table, got 6");
   });
 
   it('refuses layer 0, which is the radiance itself (error case)', () => {
