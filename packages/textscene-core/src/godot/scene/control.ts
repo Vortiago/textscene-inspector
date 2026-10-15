@@ -42,6 +42,13 @@ export const CURSOR_SHAPES = {
   16: 'HELP',
 };
 
+/** `Control::GrowDirection` (`scene/gui/control.h:59-63`), as `grow_horizontal` and `grow_vertical` store it. */
+export enum GrowDirection {
+  GROW_DIRECTION_BEGIN = 0,
+  GROW_DIRECTION_END = 1,
+  GROW_DIRECTION_BOTH = 2,
+}
+
 /** `Control::LayoutDirection` (`scene/gui/control.h:155-160`). */
 export const LayoutDirection = {
   INHERITED: 0,

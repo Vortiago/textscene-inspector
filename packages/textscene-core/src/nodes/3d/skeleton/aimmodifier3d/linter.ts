@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { resolveAimSettingLeaf } from './linterParser.js';
-import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
@@ -28,7 +28,7 @@ const SETTING_PREFIX = 'settings/';
 // (BONE_AXIS_PLUS_Y maps to AXIS_Y, the default primary axis is AXIS_X), so an
 // absent key never trips this rule.
 const DEFAULT_FORWARD_AXIS = 2; // BONE_AXIS_PLUS_Y
-const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
+const DEFAULT_PRIMARY_ROTATION_AXIS = Vector3Axis.X;
 
 /**
  * Every setting the scene declares, keyed by the index `_set` resolves it to. `_set` reads the index
@@ -71,7 +71,7 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
     if (axisFromBoneAxis(forwardAxis) !== primaryAxis) continue;
 
     const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);
-    const primaryLabel = VECTOR3_AXIS[primaryAxis] ?? String(primaryAxis);
+    const primaryLabel = VECTOR3_AXIS_NAMES[primaryAxis] ?? String(primaryAxis);
     reportArm(
       diagnostics,
       arms.parallelRotationAxes,

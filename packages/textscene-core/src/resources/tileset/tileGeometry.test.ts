@@ -4,12 +4,13 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildTileGeometryArrays } from './tileGeometry';
-import { TILE_SHAPE_SQUARE, type AtlasSourceModel, type TileGrid } from './types';
+import type { AtlasSourceModel, TileGrid } from './types';
+import { TileShape } from '../../godot/scene/tileSet';
 import type { DrawableCell } from './drawableCell';
 import { drawableCellOf } from './testing/drawableCellOf';
 
 const grid: TileGrid = {
-  shape: TILE_SHAPE_SQUARE,
+  shape: TileShape.TILE_SHAPE_SQUARE,
   layout: 0,
   offsetAxis: 0,
   tileSize: { x: 16, y: 16 },

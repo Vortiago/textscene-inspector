@@ -22,7 +22,7 @@ import {
   fitIconSize,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HORIZONTAL_ALIGNMENT_RIGHT, type Rgba } from '../../../../godot/math/math';
+import { HORIZONTAL_ALIGNMENT_RIGHT } from '../../../../godot/math/math';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
@@ -35,6 +35,11 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_PRESSED_COLOR,
+} from '../../../../godot/scene/theme';
 
 /**
  * CheckBox's theme font key, `SceneStringName(font)`, registered under CheckBox's own type
@@ -51,7 +56,7 @@ export { fitIconSize, tintColor };
  * `BaseButton::get_draw_mode` (`scene/gui/base_button.cpp:325-358`) without input: `status.hovering`
  * and `status.press_attempt` stay false, so `DRAW_PRESSED` fires exactly when `button_pressed` is true, and `disabled`
  * wins first. Measured with `pnpm ref:godot --mode 2d`: a checked row's label reads (255,255,255),
- * `font_pressed_color`, not the 0.875 grey of `DRAW_NORMAL`.
+ * `font_pressed_color`, not the `control_font_color` grey of `DRAW_NORMAL`.
  */
 type CheckBoxDrawState = 'normal' | 'pressed' | 'disabled';
 
@@ -61,12 +66,12 @@ export function resolveCheckBoxDrawState(props: CheckBoxProperties): CheckBoxDra
   return 'normal';
 }
 
-/** `control_font_color` (`default_theme.cpp:101`), CheckBox's own `font_color` default (`:300`). */
-const CHECKBOX_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), CheckBox's own `font_pressed_color` default (`:301`). */
-const CHECKBOX_DEFAULT_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-/** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), CheckBox's own `font_disabled_color` default (`:305`). */
-const CHECKBOX_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** CheckBox's own `font_color` default (`default_theme.cpp:300`). */
+const CHECKBOX_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
+/** CheckBox's own `font_pressed_color` default (`default_theme.cpp:301`). */
+const CHECKBOX_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
+/** CheckBox's own `font_disabled_color` default (`default_theme.cpp:305`). */
+const CHECKBOX_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
 const CHECKBOX_THEME_KEYS: Record<CheckBoxDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },

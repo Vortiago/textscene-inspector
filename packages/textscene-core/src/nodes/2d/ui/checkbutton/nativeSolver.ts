@@ -37,6 +37,11 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import type { CheckButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_PRESSED_COLOR,
+} from '../../../../godot/scene/theme';
 
 /** `SceneStringName(font)`, registered under CheckButton's own type (`scene/theme/default_theme.cpp:337`), not inherited from Button's. */
 export const CHECKBUTTON_THEME_FONT_KEY = 'font';
@@ -55,12 +60,12 @@ export function resolveCheckButtonDrawState(props: CheckButtonProperties): Check
   return 'normal';
 }
 
-/** `control_font_color` (`default_theme.cpp:101`), CheckButton's own `font_color` default (`:340`). */
-const CHECKBUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), CheckButton's own `font_pressed_color` default (`:341`). */
-const CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-/** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), CheckButton's own `font_disabled_color` default (`:345`). */
-const CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** CheckButton's own `font_color` default (`default_theme.cpp:340`). */
+const CHECKBUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
+/** CheckButton's own `font_pressed_color` default (`default_theme.cpp:341`). */
+const CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
+/** CheckButton's own `font_disabled_color` default (`default_theme.cpp:345`). */
+const CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
 const CHECKBUTTON_THEME_KEYS: Record<CheckButtonDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },

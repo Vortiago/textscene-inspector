@@ -1,7 +1,10 @@
 /** A parsed Label3D at Godot's defaults, with the text `Hi`, for a glyph test. */
 
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
-import { AlphaCutMode, BillboardMode, TextureFilter, type Label3DProperties } from '../types';
+import type { Label3DProperties } from '../types';
+import { AlphaCutMode } from '../../../../godot/rendering/materials/alphaCut';
+import { BillboardMode } from '../../../../godot/rendering/materials/billboardMode';
+import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../../godot/math/math';
 import { AlphaAntiAliasing } from '../../../../godot/rendering/materials/alphaAntialiasing';
 

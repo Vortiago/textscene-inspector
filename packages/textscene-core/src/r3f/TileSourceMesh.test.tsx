@@ -10,10 +10,16 @@ import { TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { drawableCellOf } from '../resources/tileset/testing/drawableCellOf';
-import { TILE_SHAPE_SQUARE, type AtlasSourceModel, type TileGrid } from '../resources/tileset/types';
+import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
+import { TileShape } from '../godot/scene/tileSet';
 
 const TEXTURE = 'res://tiles.png';
-const grid: TileGrid = { shape: TILE_SHAPE_SQUARE, layout: 0, offsetAxis: 0, tileSize: { x: 16, y: 16 } };
+const grid: TileGrid = {
+  shape: TileShape.TILE_SHAPE_SQUARE,
+  layout: 0,
+  offsetAxis: 0,
+  tileSize: { x: 16, y: 16 },
+};
 
 function sourceOf(usesTexturePadding: boolean): AtlasSourceModel {
   return {

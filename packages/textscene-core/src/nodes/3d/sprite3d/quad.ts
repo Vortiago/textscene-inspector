@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import type { Aabb } from '../../../godot/math/aabb';
 import { spriteBillboardAabb } from '../../../godot/scene/billboard';
-import { AxisMode, type Sprite3DProperties } from './types';
+import { Vector3Axis } from '../../../godot/math/vector3Axis';
+import type { Sprite3DProperties } from './types';
 
 /** The quad's size in world units: the frame's pixels times `pixel_size`. */
 interface QuadSize {
@@ -37,27 +38,27 @@ export function spriteQuadRect(
  * The quad on the plane `axis` faces, with its normal along the axis (`sprite_3d.cpp:166-198`).
  * AXIS_Y takes the rect's Y to -Z and AXIS_X takes its X to -Z.
  */
-export function spriteQuadGeometry({ position, size }: Aabb, axis: AxisMode): THREE.PlaneGeometry {
+export function spriteQuadGeometry({ position, size }: Aabb, axis: Vector3Axis): THREE.PlaneGeometry {
   const geometry = new THREE.PlaneGeometry(size.x, size.y);
   geometry.translate(position.x + size.x / 2, position.y + size.y / 2, 0);
-  if (axis === AxisMode.AXIS_Y) geometry.rotateX(-Math.PI / 2);
-  else if (axis === AxisMode.AXIS_X) geometry.rotateY(Math.PI / 2);
+  if (axis === Vector3Axis.Y) geometry.rotateX(-Math.PI / 2);
+  else if (axis === Vector3Axis.X) geometry.rotateY(Math.PI / 2);
   return geometry;
 }
 
 /** The quad's AABB in node space under `billboard`, as `_draw` sets it (`sprite_3d.cpp:252-273`). */
-export function spriteQuadAabb(rect: Aabb, axis: AxisMode, billboard: number): Aabb {
+export function spriteQuadAabb(rect: Aabb, axis: Vector3Axis, billboard: number): Aabb {
   return spriteBillboardAabb(quadOnAxis(rect, axis), rect, billboard, axis);
 }
 
-function quadOnAxis({ position, size }: Aabb, axis: AxisMode): Aabb {
+function quadOnAxis({ position, size }: Aabb, axis: Vector3Axis): Aabb {
   switch (axis) {
-    case AxisMode.AXIS_Y:
+    case Vector3Axis.Y:
       return {
         position: { x: position.x, y: 0, z: -(position.y + size.y) },
         size: { x: size.x, y: 0, z: size.y },
       };
-    case AxisMode.AXIS_X:
+    case Vector3Axis.X:
       return {
         position: { x: 0, y: position.y, z: -(position.x + size.x) },
         size: { x: 0, y: size.y, z: size.x },

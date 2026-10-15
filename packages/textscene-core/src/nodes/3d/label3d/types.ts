@@ -1,12 +1,11 @@
-/** Label3D node data and its enums. */
+/** Label3D node data. */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import type { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import type { HorizontalAlignment, Rgba } from '../../../godot/math/math';
+import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
-
-/** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
-export { BillboardMode };
 
 export interface Label3DProperties extends GeometryInstance3DProperties {
   text: string;
@@ -73,22 +72,4 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
 
   /** Glyph-texture sampling (`label_3d.h:140`, default LINEAR_WITH_MIPMAPS). */
   texture_filter: TextureFilter;
-}
-
-/** `BaseMaterial3D::TextureFilter` (`scene/resources/material.h:172-178`). */
-export enum TextureFilter {
-  NEAREST = 0,
-  LINEAR = 1,
-  NEAREST_WITH_MIPMAPS = 2,
-  LINEAR_WITH_MIPMAPS = 3,
-  NEAREST_WITH_MIPMAPS_ANISOTROPIC = 4,
-  LINEAR_WITH_MIPMAPS_ANISOTROPIC = 5,
-}
-
-/** `Label3D::AlphaCutMode` (`scene/3d/label_3d.h:50-56`). */
-export enum AlphaCutMode {
-  DISABLED = 0,
-  DISCARD = 1,
-  OPAQUE_PREPASS = 2,
-  HASH = 3,
 }

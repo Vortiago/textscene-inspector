@@ -1,5 +1,7 @@
 /** Engine math constants, as Godot declares them. */
 
+import { enumNamesByValue } from '../classdb/enumNames.js';
+
 /** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
 const f = Math.fround;
 
@@ -192,6 +194,21 @@ export function snapped(value: number, step: number): number {
   return step !== 0 ? Math.floor(value / step + 0.5) * step : value;
 }
 
+/** `Math::posmod` (`core/math/math_funcs.h:313-320`): the remainder, folded to the divisor's sign. */
+export function posmod(x: number, y: number): number {
+  const value = x % y;
+  return (value < 0 && y > 0) || (value > 0 && y < 0) ? value + y : value;
+}
+
+/**
+ * `Math::fposmodp` (`core/math/math_funcs.h:296-303`): `fmod`, folded non-negative. Adding 0 turns
+ * a negative zero positive, as Godot's `value += 0.0` does.
+ */
+export function fposmodp(x: number, y: number): number {
+  const value = x % y;
+  return (value < 0 ? value + y : value) + 0;
+}
+
 /** `HorizontalAlignment` (`core/math/math_defs.h:80-85`). */
 export const HORIZONTAL_ALIGNMENT_LEFT = 0;
 export const HORIZONTAL_ALIGNMENT_CENTER = 1;
@@ -203,7 +220,22 @@ export type HorizontalAlignment =
   | typeof HORIZONTAL_ALIGNMENT_RIGHT
   | typeof HORIZONTAL_ALIGNMENT_FILL;
 
+export const HORIZONTAL_ALIGNMENT_NAMES = enumNamesByValue({
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  HORIZONTAL_ALIGNMENT_FILL,
+});
+
 /** `VerticalAlignment` (`core/math/math_defs.h:87-92`). */
 export const VERTICAL_ALIGNMENT_TOP = 0;
 export const VERTICAL_ALIGNMENT_CENTER = 1;
 export const VERTICAL_ALIGNMENT_BOTTOM = 2;
+export const VERTICAL_ALIGNMENT_FILL = 3;
+
+export const VERTICAL_ALIGNMENT_NAMES = enumNamesByValue({
+  VERTICAL_ALIGNMENT_TOP,
+  VERTICAL_ALIGNMENT_CENTER,
+  VERTICAL_ALIGNMENT_BOTTOM,
+  VERTICAL_ALIGNMENT_FILL,
+});

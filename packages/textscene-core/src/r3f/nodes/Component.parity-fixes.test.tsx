@@ -14,7 +14,6 @@ import type { TscnNode } from '../../parser/types';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
 import type { Camera3DProperties } from '../../nodes/3d/camera3d/types';
 import { ProjectionMode, KeepAspectMode } from '../../nodes/3d/camera3d/types';
-import { BillboardMode } from '../../nodes/3d/label3d/types';
 import { labelProperties } from '../../nodes/3d/label3d/testing/labelProperties';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 import { depthSideOf, drawsColour } from '../testing/threePasses';
@@ -23,6 +22,7 @@ import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/ty
 import '../../nodes/3d/meshinstance3d/index.r3f';
 import '../../nodes/3d/label3d/index.r3f';
 import { registeredComponent } from '../testing/registeredComponent';
+import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 const Label3D = registeredComponent('Label3D');

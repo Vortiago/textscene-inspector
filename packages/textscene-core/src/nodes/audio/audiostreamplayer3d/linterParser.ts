@@ -9,7 +9,7 @@ import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
-import { PLAYBACK_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
+import { PlaybackType, PLAYBACK_TYPE_NAMES } from '../../../godot/audio/audioServer.js';
 
 const ATTENUATION_MODEL = {
   0: 'INVERSE_DISTANCE',
@@ -55,7 +55,7 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   // (:789-791) forwards to AudioStreamPlayerInternal::set_playback_type
   // (audio_stream_player_internal.cpp:337-339), the setter and enum AudioStreamPlayer's
   // `playback_type` grounds against: a bare assignment, so out of range only warns.
-  playback_type: v.enumInt('playback_type', 0, 2, PLAYBACK_TYPE, {
+  playback_type: v.enumInt('playback_type', PlaybackType.DEFAULT, PlaybackType.SAMPLE, PLAYBACK_TYPE_NAMES, {
     hinted: 'audio_stream_player_3d.cpp:896',
   }),
   // audio_stream_player_3d.cpp:721, ERR_FAIL_INDEX((int)p_model, 4).

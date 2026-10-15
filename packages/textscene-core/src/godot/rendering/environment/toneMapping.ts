@@ -9,6 +9,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { enumNamesByValue } from '../../classdb/enumNames.js';
+
 /** `Environment.ToneMapper` (`scene/resources/environment.h:64-70`). */
 export const ToneMapper = {
   LINEAR: 0,
@@ -17,6 +19,15 @@ export const ToneMapper = {
   ACES: 3,
   AGX: 4,
 } as const;
+
+/**
+ * `tonemap_agx_contrast` when a scene stores none (`scene/resources/environment.h:119`), inside its
+ * hint `"1.0,2.0,0.01,or_greater"` (`environment.cpp:1290`).
+ */
+export const TONEMAP_AGX_CONTRAST_DEFAULT = 1.25;
+
+/** Each tone mapper's name by the integer a `.tscn` stores, as a validator names it. */
+export const TONE_MAPPER_NAMES = enumNamesByValue(ToneMapper);
 
 /** `exposure_bias` per curve (`environment_storage.cpp:292,303`). The shaders bake the same. */
 const FILMIC_EXPOSURE_BIAS = 2.0;

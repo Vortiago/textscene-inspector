@@ -19,6 +19,7 @@ import type {
 import type { TextureRectDraw } from '../texturerect/nativeSolver';
 import type { TextureButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
 
 /** The keys `textureButtonTextureSlots`/`textureButtonMinimumSize` share for `SolveNode.textureSlots`. */
 const TEXTURE_NORMAL_KEY = 'texture_normal';
@@ -92,14 +93,6 @@ export const textureButtonMinimumSize: MinimumSizeFn = (n, _ctx) => {
   return { x: Math.abs(size.x), y: Math.abs(size.y) };
 };
 
-const STRETCH_SCALE = 0;
-const STRETCH_TILE = 1;
-const STRETCH_KEEP = 2;
-const STRETCH_KEEP_CENTERED = 3;
-const STRETCH_KEEP_ASPECT = 4;
-const STRETCH_KEEP_ASPECT_CENTERED = 5;
-const STRETCH_KEEP_ASPECT_COVERED = 6;
-
 /**
  * The `NOTIFICATION_DRAW` switch on `stretch_mode` (`texture_button.cpp:163-220`), short of the
  * draw call and the flip (`Component.tsx`, `applyFlip`). `rectSize` is `get_size()`. Every mode
@@ -119,8 +112,8 @@ export function textureButtonDraw(
   };
   if (textureSize.x <= 0 || textureSize.y <= 0) return noDraw;
 
-  switch (stretchMode ?? STRETCH_KEEP) {
-    case STRETCH_SCALE:
+  switch (stretchMode ?? TextureStretchMode.STRETCH_KEEP) {
+    case TextureStretchMode.STRETCH_SCALE:
       return {
         offset: { x: 0, y: 0 },
         size: { x: rectSize.x, y: rectSize.y },
@@ -128,7 +121,7 @@ export function textureButtonDraw(
         tile: false,
       };
 
-    case STRETCH_TILE:
+    case TextureStretchMode.STRETCH_TILE:
       return {
         offset: { x: 0, y: 0 },
         size: { x: rectSize.x, y: rectSize.y },
@@ -136,7 +129,7 @@ export function textureButtonDraw(
         tile: true,
       };
 
-    case STRETCH_KEEP:
+    case TextureStretchMode.STRETCH_KEEP:
       return {
         offset: { x: 0, y: 0 },
         size: { x: textureSize.x, y: textureSize.y },
@@ -144,7 +137,7 @@ export function textureButtonDraw(
         tile: false,
       };
 
-    case STRETCH_KEEP_CENTERED:
+    case TextureStretchMode.STRETCH_KEEP_CENTERED:
       return {
         offset: { x: (rectSize.x - textureSize.x) / 2, y: (rectSize.y - textureSize.y) / 2 },
         size: { x: textureSize.x, y: textureSize.y },
@@ -152,8 +145,8 @@ export function textureButtonDraw(
         tile: false,
       };
 
-    case STRETCH_KEEP_ASPECT:
-    case STRETCH_KEEP_ASPECT_CENTERED: {
+    case TextureStretchMode.STRETCH_KEEP_ASPECT:
+    case TextureStretchMode.STRETCH_KEEP_ASPECT_CENTERED: {
       // Pure float, no truncation (`texture_button.cpp:206-219`), unlike TextureRect's `int` arms for the
       // same modes (`texture_rect.cpp:63-69`). So this ports its own switch, though `StretchMode`
       // (`texture_button.h:39-47`) matches `TextureRect::StretchMode` (`texture_rect.h`).
@@ -165,7 +158,7 @@ export function textureButtonDraw(
       }
       let offsetX = 0;
       let offsetY = 0;
-      if (stretchMode === STRETCH_KEEP_ASPECT_CENTERED) {
+      if (stretchMode === TextureStretchMode.STRETCH_KEEP_ASPECT_CENTERED) {
         offsetX = (rectSize.x - texWidth) / 2;
         offsetY = (rectSize.y - texHeight) / 2;
       }
@@ -177,7 +170,7 @@ export function textureButtonDraw(
       };
     }
 
-    case STRETCH_KEEP_ASPECT_COVERED: {
+    case TextureStretchMode.STRETCH_KEEP_ASPECT_COVERED: {
       const scaleX = rectSize.x / textureSize.x;
       const scaleY = rectSize.y / textureSize.y;
       const scale = Math.max(scaleX, scaleY);

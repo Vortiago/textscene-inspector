@@ -16,17 +16,12 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
-  AutowrapMode,
   clampAutowrapMode,
   shapedTextSizeWidthPx,
   soloLineLayout,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  OverrunBehavior,
-  overrunFlagsForBehavior,
-  trimLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
   resolveButtonDrawState,
@@ -44,6 +39,7 @@ import {
 import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 interface IconImageLike {
   width?: number;
@@ -142,7 +138,8 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   // `button.cpp:428-432` re-shapes a wrapping label at the width the unwrapped pass measured:
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
-  const wraps = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF) !== AutowrapMode.OFF;
+  const wraps =
+    clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
   const drawableWidthPx = layoutButtonContent({
     ...contentInput,
     textNaturalSize: naturalSize(unwrapped),
@@ -156,7 +153,7 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
   );
 
   const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
   const trimmedLayout: TextLayoutResult | null = useMemo(() => {

@@ -45,6 +45,7 @@ import {
 } from './nativeSolver';
 import type { GraphNodeProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 interface ImageLike {
   width?: number;
@@ -187,9 +188,8 @@ export function GraphNode({
     props.resizable === true ? solveNode.icons.resizer : undefined,
     props.resizable === true ? RESIZER_SE_ICON : null
   );
-  // `resizer_color`'s default (`default_theme.cpp:800`) is `control_font_color`:
-  // the same literal `GRAPH_NODE_TITLE_DEFAULT_COLOR` already names.
-  const resizerTint = useTintedColor(tint.own, GRAPH_NODE_TITLE_DEFAULT_COLOR);
+  // `resizer_color` defaults to `control_font_color` (`default_theme.cpp:808`).
+  const resizerTint = useTintedColor(tint.own, CONTROL_FONT_COLOR);
 
   return (
     <>

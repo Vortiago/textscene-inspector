@@ -1,5 +1,6 @@
 /** Alpha antialiasing: how a BaseMaterial3D cutout turns its alpha into an edge that MSAA smooths. */
 
+import { enumNamesByValue, relabelEnumNames } from '../../classdb/enumNames';
 import { clamp } from '../../math/math';
 
 /**
@@ -59,3 +60,11 @@ export function turnsOnAlphaToCoverage(mode: AlphaAntiAliasing): mode is AlphaTo
     mode === AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE
   );
 }
+
+/** Each mode's name by the integer a `.tscn` stores, as the BaseMaterial3D validator prints it. */
+export const ALPHA_ANTIALIASING_NAMES = enumNamesByValue(AlphaAntiAliasing);
+
+/** Each mode's name without its `ALPHA_ANTIALIASING_` prefix, as the Label3D and Sprite3D validators print it. */
+export const ALPHA_ANTIALIASING_SHORT_NAMES = relabelEnumNames(ALPHA_ANTIALIASING_NAMES, (name) =>
+  name.replace(/^ALPHA_ANTIALIASING_/, '')
+);

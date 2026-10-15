@@ -14,7 +14,6 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  AutowrapMode,
   clampAutowrapMode,
   isWhitespace,
   shapeText,
@@ -22,7 +21,6 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { OverrunBehavior } from '../../../../r3f/controls/native/text/textOverrun';
 import { JustificationFlag, fitLineToWidth } from '../../../../r3f/controls/native/text/textJustify';
 import {
   resolveTextTheme,
@@ -33,6 +31,7 @@ import {
 import type { LabelProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -289,7 +288,7 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
   const layout = shapeText(text, {
     fontSizePx,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx,
     uppercase: props.uppercase,
     fontMetrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY),
@@ -342,8 +341,8 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // An absent measurer means the text contributes nothing.
   if (!ctx.measureText) return { x: 0, y: 0 };
 
-  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.OFF);
-  if (autowrapMode !== AutowrapMode.OFF) {
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
+  if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF) {
     // A bottom-up pass has no rect yet, so the first pass shapes unwrapped and the second reads the
     // width the first resolved (`SolveContext.tentativeRect`, `registerSizeDependentMinimum`). One
     // extra pass suffices: the width floor is 1 on every pass, so this height cannot move the width.
@@ -352,7 +351,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
     const wrapped = shapeText(text, {
       fontSizePx,
       boxWidthPx: shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx),
-      autowrapMode: shapedWidthPx === undefined ? AutowrapMode.OFF : autowrapMode,
+      autowrapMode: shapedWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
       lineSpacingPx,
       uppercase: props.uppercase,
       fontMetrics,
@@ -373,9 +372,9 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // The max of the ceils is the ceil of the max, so the widest raw line converts once.
   // `clip_text` or an overrun behaviour other than NO_TRIMMING drops the width floor to 1
   // (label.cpp:993-995), since a narrower box trims the text.
-  const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING;
+  const overrunBehavior = props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING;
   const widthPx =
-    props.clipText || overrunBehavior !== OverrunBehavior.NO_TRIMMING
+    props.clipText || overrunBehavior !== OverrunBehavior.OVERRUN_NO_TRIMMING
       ? 1
       : shapedTextSizeWidthPx(windowed.widthPx);
   return { x: widthPx, y: height };

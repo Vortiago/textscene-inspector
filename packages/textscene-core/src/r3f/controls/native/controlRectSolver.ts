@@ -28,6 +28,7 @@ import {
 import type { SealedHandoff } from './solveHandoff';
 import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import { GrowDirection } from '../../../godot/scene/control.js';
 
 export interface SolvedControl {
   rect: Rect2;
@@ -76,10 +77,6 @@ function resolveNodeLayout(n: SolveNode, ctx: SolveContext, orderedKeys: Control
 
 // --- Minimum-size floor + grow direction ------------------------------------
 
-/** `Control::GrowDirection` (`control.h:59-62`). */
-const GROW_DIRECTION_BEGIN = 0;
-const GROW_DIRECTION_BOTH = 2;
-
 /**
  * `Control::_size_changed`'s floor (`control.cpp:1773-1797`) clamps a size up to
  * the combined minimum. `GROW_DIRECTION_END`, the default (`control.h:209-210`),
@@ -94,13 +91,13 @@ function floorAtMinimumSize(
   let { x, y, w, h } = rect;
 
   if (minSize.x > w) {
-    if (growHorizontal === GROW_DIRECTION_BEGIN) x += w - minSize.x;
-    else if (growHorizontal === GROW_DIRECTION_BOTH) x += 0.5 * (w - minSize.x);
+    if (growHorizontal === GrowDirection.GROW_DIRECTION_BEGIN) x += w - minSize.x;
+    else if (growHorizontal === GrowDirection.GROW_DIRECTION_BOTH) x += 0.5 * (w - minSize.x);
     w = minSize.x;
   }
   if (minSize.y > h) {
-    if (growVertical === GROW_DIRECTION_BEGIN) y += h - minSize.y;
-    else if (growVertical === GROW_DIRECTION_BOTH) y += 0.5 * (h - minSize.y);
+    if (growVertical === GrowDirection.GROW_DIRECTION_BEGIN) y += h - minSize.y;
+    else if (growVertical === GrowDirection.GROW_DIRECTION_BOTH) y += 0.5 * (h - minSize.y);
     h = minSize.y;
   }
 

@@ -8,9 +8,11 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
-import { AlphaCutMode, TextureFilterMode, type Sprite3DProperties } from './types';
+import { type Sprite3DProperties } from './types';
 import { frameCoords, replaySpriteFrames } from '../../../godot/scene/spriteFrames.js';
 import { parseSpriteQuad } from './quadParser';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export function parseSprite3D(
   heading: ParsedHeading,
@@ -22,11 +24,11 @@ export function parseSprite3D(
   const result: Sprite3DProperties = {
     ...baseProps,
     ...parseSpriteQuad(properties, 'Sprite3D'),
-    alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.ALPHA_CUT_DISABLED, [
-      AlphaCutMode.ALPHA_CUT_DISABLED,
-      AlphaCutMode.ALPHA_CUT_DISCARD,
-      AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
-      AlphaCutMode.ALPHA_CUT_HASH,
+    alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.DISABLED, [
+      AlphaCutMode.DISABLED,
+      AlphaCutMode.DISCARD,
+      AlphaCutMode.OPAQUE_PREPASS,
+      AlphaCutMode.HASH,
     ]),
     // The grid and frame Godot holds after replaying the body in file order:
     // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`
@@ -62,14 +64,14 @@ export function parseSprite3D(
     ),
     texture_filter: enumOr(
       properties.texture_filter,
-      TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
+      TextureFilter.LINEAR_WITH_MIPMAPS,
       [
-        TextureFilterMode.TEXTURE_FILTER_NEAREST,
-        TextureFilterMode.TEXTURE_FILTER_LINEAR,
-        TextureFilterMode.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS,
-        TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
-        TextureFilterMode.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC,
-        TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC,
+        TextureFilter.NEAREST,
+        TextureFilter.LINEAR,
+        TextureFilter.NEAREST_WITH_MIPMAPS,
+        TextureFilter.LINEAR_WITH_MIPMAPS,
+        TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
+        TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
       ],
       'Sprite3D texture_filter'
     ),

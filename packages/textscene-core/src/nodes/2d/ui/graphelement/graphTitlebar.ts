@@ -20,13 +20,13 @@ import {
 } from '../../../../resources/styles/theme/lookup';
 import { peekSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
 import {
-  AutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
 const TITLE_LABEL_NATIVE_TYPE = 'Label';
@@ -68,7 +68,7 @@ export function shapeTitleText(text: string, fontTheme: TitlebarFontTheme): Text
   return shapeText(text, {
     fontSizePx: fontTheme.fontSizePx,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: LABEL_LINE_SPACING_PX,
     fontMetrics: fontTheme.fontMetrics,
     paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,

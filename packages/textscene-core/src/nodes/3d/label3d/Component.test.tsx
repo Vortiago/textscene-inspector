@@ -8,11 +8,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { Label3DProperties } from './types';
-import { BillboardMode } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 const Label3D = registeredComponent('Label3D');
 

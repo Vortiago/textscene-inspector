@@ -5,9 +5,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { measureText } from './measurer';
-import { shapeText, AutowrapMode } from './textLayout';
+import { shapeText } from './textLayout';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import type { FontMetrics } from './fontMetrics';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** A `FontMetrics` unlike Open Sans: every advance is 2x an 'A', so a caller that drops `fontMetrics` measures a different width. */
 const WIDE_FONT_METRICS: FontMetrics = {
@@ -26,7 +27,7 @@ describe('measureText', () => {
     const layout = shapeText('AAAA BBBB CCCC', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
     });
     expect(size).toEqual({ x: layout.widthPx, y: layout.heightPx });
@@ -51,7 +52,7 @@ describe('measureText', () => {
     const layout = shapeText('a very long single line of text indeed', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
     expect(layout.lines).toHaveLength(1);
@@ -84,14 +85,14 @@ describe('measureText', () => {
       x: shapeText('AB', {
         fontSizePx: 16,
         boxWidthPx: 0,
-        autowrapMode: AutowrapMode.OFF,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
         lineSpacingPx: 0,
         fontMetrics: WIDE_FONT_METRICS,
       }).widthPx,
       y: shapeText('AB', {
         fontSizePx: 16,
         boxWidthPx: 0,
-        autowrapMode: AutowrapMode.OFF,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
         lineSpacingPx: 0,
         fontMetrics: WIDE_FONT_METRICS,
       }).heightPx,

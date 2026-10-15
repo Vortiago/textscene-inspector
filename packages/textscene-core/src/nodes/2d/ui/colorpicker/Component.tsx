@@ -110,12 +110,10 @@ import {
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 
-/** `control_font_color` in `default_theme.cpp` (`:100`), the default text colour of Label and Button. Only the pressed `mode_btns` entry reads another colour. */
-const CONTROL_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-
-/** `control_font_pressed_color` (`default_theme.cpp:105,156`): `Button`'s `font_pressed_color`, which the toggled-on `mode_btns[i]` reads. */
-const MODE_BUTTON_PRESSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+/** `Button`'s `font_pressed_color` (`default_theme.cpp:157`), which the toggled-on `mode_btns[i]` reads. */
+const MODE_BUTTON_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 
 function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();

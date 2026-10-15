@@ -18,7 +18,6 @@ import {
 } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  AutowrapMode,
   clampAutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
@@ -38,6 +37,8 @@ import type { CodeHighlighterColorSpan } from '../../../../resources/styles/code
 import type { TextEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
 export const TEXT_EDIT_THEME_FONT_KEY = 'font';
@@ -79,11 +80,11 @@ export function pickTextEditStyleBox(
   return overrides[state] ?? lineEditDefaults[key];
 }
 
-/** `control_font_color` = `Color(0.875, 0.875, 0.875)` (`default_theme.cpp:101`): the `font_color` default of TextEdit and CodeEdit (`:466`, `:512`). */
-const TEXT_EDIT_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+/** The `font_color` default of TextEdit and CodeEdit (`default_theme.cpp:466`, `:514`). */
+const TEXT_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 
-/** `control_font_disabled_color` = `control_font_color * Color(1,1,1,0.5)` (`:106`): TextEdit's `font_readonly_color` default (`:468`). CodeEdit computes the same value inline (`:513`). */
-const TEXT_EDIT_DEFAULT_READONLY_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** TextEdit's `font_readonly_color` default (`default_theme.cpp:468`). CodeEdit computes the same value inline (`:516`). */
+const TEXT_EDIT_DEFAULT_READONLY_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
 const TEXT_EDIT_THEME_KEYS: Record<TextEditStyleState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -132,12 +133,15 @@ export function shapeTextEditLines(
   preserveControl = false,
   indentWrappedLines = false
 ): TextEditLineLayout[] {
-  const mode = wrapMode === 1 ? clampAutowrapMode(autowrapMode, AutowrapMode.WORD_SMART) : AutowrapMode.OFF;
+  const mode =
+    wrapMode === 1
+      ? clampAutowrapMode(autowrapMode, AutowrapMode.AUTOWRAP_WORD_SMART)
+      : AutowrapMode.AUTOWRAP_OFF;
   let row = 0;
   return lines.map((line) => {
     const layout = shapeText(line, {
       fontSizePx,
-      boxWidthPx: mode === AutowrapMode.OFF ? 0 : wrapWidthPx,
+      boxWidthPx: mode === AutowrapMode.AUTOWRAP_OFF ? 0 : wrapWidthPx,
       autowrapMode: mode,
       lineSpacingPx: 0,
       fontMetrics,

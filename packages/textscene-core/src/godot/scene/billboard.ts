@@ -1,7 +1,7 @@
 /** The AABB a billboarded Sprite3D or Label3D gives the scene cull. */
 
 import type { Aabb } from '../math/aabb.js';
-import { AxisMode } from '../math/vector3Axis.js';
+import { Vector3Axis } from '../math/vector3Axis.js';
 import { BillboardMode } from '../rendering/materials/billboardMode.js';
 
 /**
@@ -29,7 +29,7 @@ export function spriteBillboardAabb(box: Aabb, rect: Aabb, mode: number, axis: n
       return cube(Math.max(reachX(rect), reachY(rect)));
     case BillboardMode.BILLBOARD_FIXED_Y:
       // Only AXIS_Y reads the rect height (`sprite_3d.cpp:266`).
-      return prism(box, axis === AxisMode.AXIS_Y ? Math.max(reachX(rect), reachY(rect)) : reachX(rect));
+      return prism(box, axis === Vector3Axis.Y ? Math.max(reachX(rect), reachY(rect)) : reachX(rect));
     default:
       return box;
   }

@@ -13,11 +13,7 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  AutowrapMode,
-  shapeText,
-  shapedTextSizeWidthPx,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 // A 2D Control outlines text through the same TextServer path as Label3D.
@@ -37,6 +33,7 @@ import {
   PROGRESS_BAR_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { ProgressBarProperties } from './types';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<ProgressBarProperties>(solveNode);
@@ -77,7 +74,7 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
     return shapeText(percentText, {
       fontSizePx,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
       fontMetrics,
     });

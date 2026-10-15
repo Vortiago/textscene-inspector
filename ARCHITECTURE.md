@@ -51,14 +51,15 @@ a package outside core imports.
 | `variant/` | `core/variant`: the Variant parser, types, conversions, integers |
 | `string/` | `core/string`: strings, `StringName`, `NodePath` |
 | `classdb/` | `core/object`: ClassDB captures, base types, property hints, deprecated aliases |
-| `scene/` | `scene/`: `PackedScene`, nodes and their class defaults, animation, particles, CSG |
+| `scene/` | `scene/`: `PackedScene`, nodes and their class defaults, animation, particles, CSG, the default theme |
 | `project/` | `core/config`, `core/io` and `editor/`: `project.godot`, the editor scan, resource formats, `Image` |
 | `import/` | `modules/gltf` and `editor/import`: glTF and scene import |
-| `text/` | `modules/text_server_adv` and `text_server_fb`: the text server |
+| `text/` | `servers/text`, `modules/text_server_adv` and `text_server_fb`: the text server |
+| `audio/` | `servers/audio`: the audio server |
 | `rendering/` | `servers/rendering`: viewport, texture views, culling, fades, passes, byte quantisation |
-| `rendering/materials/` | The material shaders: UVs, diffuse, specular and billboard modes, DFG, blend attachments, alpha antialiasing |
-| `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, soft-shadow kernels |
-| `rendering/environment/` | Fog, sky reflection, reflection probes |
+| `rendering/materials/` | The material shaders: UVs, diffuse, specular and billboard modes, DFG, blend attachments, alpha, alpha antialiasing, texture filters |
+| `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, the area light atlas, soft-shadow kernels |
+| `rendering/environment/` | Fog, sky reflection, reflection probes, tone mapping, glow |
 | `testing/` | Test helpers for the files above |
 
 ## The pipelines

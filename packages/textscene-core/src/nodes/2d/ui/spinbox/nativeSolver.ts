@@ -35,6 +35,7 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SpinBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
 const SPIN_BOX_STEP_DEFAULT = 1;
@@ -212,10 +213,10 @@ export function spinBoxDownButtonState(props: SpinBoxProperties, resolvedValue: 
 
 /** `up_icon_modulate`/`up_disabled_icon_modulate` (`default_theme.cpp:634,637`). The icon asset is the same either way (`:616-619`), and only the modulate differs. */
 const SPIN_BOX_UP_ICON_COLOR: Record<SpinBoxButtonState, Rgba> = {
-  normal: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
-  disabled: { r: 0.875, g: 0.875, b: 0.875, a: 0.5 },
+  normal: CONTROL_FONT_COLOR,
+  disabled: CONTROL_FONT_DISABLED_COLOR,
 };
-/** `down_icon_modulate`/`down_disabled_icon_modulate` (`default_theme.cpp:638,641`): the same literals as the up pair. */
+/** `down_icon_modulate`/`down_disabled_icon_modulate` (`default_theme.cpp:638,641`): the same colours as the up pair. */
 const SPIN_BOX_DOWN_ICON_COLOR = SPIN_BOX_UP_ICON_COLOR;
 
 const SPIN_BOX_ICON_COLOR_KEYS: Record<'up' | 'down', Record<SpinBoxButtonState, string>> = {

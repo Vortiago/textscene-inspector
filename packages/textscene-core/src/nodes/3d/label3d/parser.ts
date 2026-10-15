@@ -2,7 +2,6 @@
 
 import { type ParsedHeading, unquoteString } from '../../../parser/utils';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, BillboardMode, TextureFilter } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
 import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
@@ -14,6 +13,9 @@ import {
   HORIZONTAL_ALIGNMENT_LEFT,
   type HorizontalAlignment,
 } from '../../../godot/math/math';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseGeometryInstance3D(heading, properties);

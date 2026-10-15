@@ -8,8 +8,17 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { STRUCTURED_TEXT_PARSER, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
+import {
+  StructuredTextParser,
+  STRUCTURED_TEXT_PARSER_NAMES,
+  TextDirection,
+  TEXT_DIRECTION_NAMES,
+} from '../../../../godot/text/textServerEnums.js';
+import {
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_NAMES,
+} from '../../../../godot/math/math.js';
 
 /** `LineEdit::VirtualKeyboardType` (line_edit.h, BIND_ENUM_CONSTANT line_edit.cpp:3470-3477). */
 const VIRTUAL_KEYBOARD_TYPE = {
@@ -53,7 +62,13 @@ validatorRegistry.registerAll('LineEdit', {
   // line_edit.cpp:3485, PROPERTY_HINT_ENUM "Left,Center,Right,Fill". set_horizontal_alignment
   // (line_edit.cpp:1071-1079) enforces `ERR_FAIL_INDEX((int)p_alignment, 4)` (line_edit.cpp:1072), the
   // bound SpinBox's `alignment` cites.
-  alignment: v.enumInt('alignment', 0, 3, HORIZONTAL_ALIGNMENT, { enforced: 'line_edit.cpp:1072' }),
+  alignment: v.enumInt(
+    'alignment',
+    HORIZONTAL_ALIGNMENT_LEFT,
+    HORIZONTAL_ALIGNMENT_FILL,
+    HORIZONTAL_ALIGNMENT_NAMES,
+    { enforced: 'line_edit.cpp:1072' }
+  ),
   // line_edit.cpp:3486, PROPERTY_HINT_RANGE "0,1000,1,or_greater". set_max_length (line_edit.cpp:2520-2524)
   // enforces `ERR_FAIL_COND(p_max_length < 0)` (line_edit.cpp:2521), and `or_greater` opens the ceiling.
   max_length: v.int('max_length', { min: 0, enforced: 'line_edit.cpp:2521' }),
@@ -110,17 +125,27 @@ validatorRegistry.registerAll('LineEdit', {
   // line_edit.cpp:3520, PROPERTY_HINT_ENUM "Auto,Left-to-Right,Right-to-Left,Inherited". set_text_direction
   // (line_edit.cpp:2155-2171) enforces `ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3)`
   // (line_edit.cpp:2156). -1 is a legal inherited spelling with no named constant, as in TextEdit and Button.
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
-    hinted: 'line_edit.cpp:3520',
-    enforced: 'line_edit.cpp:2156',
-    enforcedMin: { at: -1 },
-  }),
+  text_direction: v.enumInt(
+    'text_direction',
+    TextDirection.TEXT_DIRECTION_AUTO,
+    TextDirection.TEXT_DIRECTION_INHERITED,
+    TEXT_DIRECTION_NAMES,
+    {
+      hinted: 'line_edit.cpp:3520',
+      enforced: 'line_edit.cpp:2156',
+      enforcedMin: { at: -1 },
+    }
+  ),
   // line_edit.cpp:3521, PROPERTY_HINT_LOCALE_ID. set_language (line_edit.cpp:2178-2184) assigns unconditionally.
   language: v.quotedString('language'),
   // line_edit.cpp:3522, PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override (line_edit.cpp:2205-2211) assigns unconditionally.
-  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
-    hinted: 'line_edit.cpp:3522',
-  }),
+  structured_text_bidi_override: v.enumInt(
+    'structured_text_bidi_override',
+    StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
+    StructuredTextParser.STRUCTURED_TEXT_CUSTOM,
+    STRUCTURED_TEXT_PARSER_NAMES,
+    { hinted: 'line_edit.cpp:3522' }
+  ),
   // line_edit.cpp:3523: an ARRAY with no hint, so never written wrapped, of parser-specific arguments
   // with no fixed arity or type. set_structured_text_bidi_override_options (line_edit.cpp:2217-2220)
   // assigns straight through, so only the literal shape is checked.
@@ -131,9 +156,7 @@ validatorRegistry.registerAll('LineEdit', {
   // assigns unconditionally past an identity check.
   right_icon: v.resourceReference('right_icon'),
   // line_edit.cpp:3527, PROPERTY_HINT_ENUM, 3 labels. set_icon_expand_mode (line_edit.cpp:3010-3019) assigns unconditionally.
-  icon_expand_mode: v.enumInt('icon_expand_mode', 0, 2, EXPAND_MODE, {
-    hinted: 'line_edit.cpp:3527',
-  }),
+  icon_expand_mode: v.enumInt('icon_expand_mode', 0, 2, EXPAND_MODE, { hinted: 'line_edit.cpp:3527' }),
   // line_edit.cpp:3528, PROPERTY_HINT_RANGE "0.1,1.0,0.01", closed at both ends. set_right_icon_scale
   // (line_edit.cpp:3025-3033) assigns unconditionally past an equality check.
   right_icon_scale: v.float('right_icon_scale', {

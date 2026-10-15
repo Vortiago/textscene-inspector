@@ -27,7 +27,6 @@ import { STYLE_FILL } from '../../../../r3f/controls/godotDefaultTheme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  AutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -37,6 +36,8 @@ import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
 const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
@@ -52,10 +53,10 @@ function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
   return { x: size, y: size };
 }
 
-/** `control_font_color` (`default_theme.cpp:101`): the default `font_color` of FoldableContainer (`:1324`). */
-const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`): the default `collapsed_font_color` (`:1326`). */
-const FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+/** The default `font_color` of FoldableContainer (`default_theme.cpp:1324`). */
+const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
+/** The default `collapsed_font_color` of FoldableContainer (`default_theme.cpp:1326`). */
+const FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 
 const FOLDABLE_CONTAINER_TITLE_THEME_KEYS: Record<'expanded' | 'folded', TextThemeKeys> = {
   expanded: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -220,7 +221,7 @@ function foldableContainerTitleMetrics(
       ? shapeText(title, {
           fontSizePx,
           boxWidthPx: 0,
-          autowrapMode: AutowrapMode.OFF,
+          autowrapMode: AutowrapMode.AUTOWRAP_OFF,
           lineSpacingPx: 0,
           fontMetrics,
         })

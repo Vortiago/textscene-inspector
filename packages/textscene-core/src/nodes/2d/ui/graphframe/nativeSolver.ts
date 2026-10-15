@@ -25,6 +25,7 @@ import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '.
 import type { GraphFrameProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 
@@ -40,8 +41,8 @@ export const GRAPH_FRAME_TITLE_DEFAULT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
  */
 export const GRAPH_FRAME_TITLE_FONT_SIZE_PX = 22;
 
-/** `control_font_color`: `default_theme.cpp:841`, `GraphFrame`'s own `resizer_color`. */
-export const GRAPH_FRAME_RESIZER_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+/** `GraphFrame`'s own `resizer_color` (`default_theme.cpp:841`). */
+export const GRAPH_FRAME_RESIZER_COLOR = CONTROL_FONT_COLOR;
 
 function flatBox(
   bgColor: Rgba,

@@ -10,12 +10,7 @@
  */
 import { FillMode } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-
-/** `Math::fposmodp` (`core/math/math_funcs.h:296-302`): `fmod`, folded non-negative. */
-function fposmodp(x: number, y: number): number {
-  const value = x % y;
-  return value < 0 ? value + y : value;
-}
+import { fposmodp } from '../../../../godot/math/math';
 
 /** `set_fill_degrees` (`texture_progress_bar.cpp:610-619`): `CLAMP(p_angle, 0, 360)`, always applied. */
 export function clampRadialFillDegrees(radialFillDegrees: number | undefined): number {

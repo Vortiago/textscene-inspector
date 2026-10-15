@@ -6,7 +6,7 @@
  */
 import { useMemo, useSyncExternalStore, type RefObject } from 'react';
 import * as THREE from 'three';
-import { AutowrapMode, shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
+import { shapeText, soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
 import {
   onSceneFontMetricsSettled,
@@ -25,7 +25,10 @@ import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstan
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/scene/billboard';
 import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
-import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
+import { type Label3DProperties } from './types';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export interface LabelGlyphsProps {
   /** The label's node group, whose parent places it for the scene cull. */
@@ -50,7 +53,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
       shapeText(properties.text, {
         fontSizePx: properties.font_size,
         boxWidthPx: 0,
-        autowrapMode: AutowrapMode.OFF,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
         lineSpacingPx: properties.line_spacing,
         fontMetrics,
       }),

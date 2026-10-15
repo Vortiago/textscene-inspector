@@ -25,7 +25,7 @@ import {
   tintColor,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HORIZONTAL_ALIGNMENT_RIGHT, type Rgba } from '../../../../godot/math/math';
+import { HORIZONTAL_ALIGNMENT_RIGHT } from '../../../../godot/math/math';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,
@@ -37,6 +37,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { OptionButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
 // Re-exported so Component.tsx imports the shared Button pieces under one name.
 export { pickButtonStyleBox, resolveButtonDrawState, tintColor };
@@ -49,15 +50,10 @@ export const OPTION_BUTTON_THEME_FONT_KEY = 'font';
 
 // Theme font colours
 
-/** `control_font_color` (`default_theme.cpp:101`), OptionButton's `font_color` default (`:240`). */
-const OPTION_BUTTON_DEFAULT_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`), OptionButton's `font_disabled_color` default (`:245`). */
-const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = {
-  r: 0.875,
-  g: 0.875,
-  b: 0.875,
-  a: 0.5,
-};
+/** OptionButton's `font_color` default (`default_theme.cpp:240`). */
+const OPTION_BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
+/** OptionButton's `font_disabled_color` default (`default_theme.cpp:245`). */
+const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
 const OPTION_BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
