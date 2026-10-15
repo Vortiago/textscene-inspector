@@ -15,18 +15,19 @@ export interface CompositorPass {
 }
 
 /**
- * Null when nothing needs the pass. Glow mounts whenever the environment enables it, as Godot runs
+ * Null when nothing needs the pass. A null `settings` is a root with no Environment, which still
+ * multisamples and blends in the HDR buffer, with no glow and no adjustments. Glow mounts whenever the environment enables it, as Godot runs
  * the glow chain on that flag alone (`renderer_scene_render_rd.cpp:575`, `:686`) and its bright pass
  * picks the pixels, a lit specular highlight as much as an emissive surface. MSAA mounts it too:
  * Godot resolves the multisampled 3D buffer in linear HDR (`render_forward_clustered.cpp:2402`), before
  * the tonemap pass reads it (`:2514`).
  */
 export function compositorPassFor(
-  settings: EnvironmentSettings,
+  settings: EnvironmentSettings | null,
   hasBlendedSurface: boolean,
   msaa3DSamples: number
 ): CompositorPass | null {
-  const glow = glowParamsFor(settings);
-  const needed = glow || hasBlendedSurface || settings.adjustments || msaa3DSamples > 0;
+  const glow = settings && glowParamsFor(settings);
+  const needed = glow || hasBlendedSurface || settings?.adjustments || msaa3DSamples > 0;
   return needed ? { glow, samples: msaa3DSamples } : null;
 }

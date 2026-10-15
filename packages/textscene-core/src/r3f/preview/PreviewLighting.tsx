@@ -1,6 +1,7 @@
 /**
  * `<PreviewLighting>`: Godot's editor preview sun and environment, each mounted
- * only while the scene supplies none (ADR-0025). It reads the live tree, so a
+ * only while the scene supplies none (ADR-0025), and the bare compositor of a root left with no
+ * Environment. It reads the live tree, so a
  * node inside an instanced sub-scene counts, as in Godot's editor.
  */
 
@@ -9,6 +10,7 @@ import * as THREE from 'three';
 import { useViewportMode } from '../contexts/ViewportModeContext';
 import { useLiveSceneNodes } from '../useLiveSceneTree';
 import { EnvironmentLayer } from '../environment/EnvironmentLayer';
+import { NoEnvironmentCompositor } from '../environment/NoEnvironmentCompositor';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { DirectionalShadowMode } from '../../godot/directionalShadow';
@@ -19,6 +21,7 @@ import {
   PREVIEW_SUN_ENERGY,
   PREVIEW_SUN_SHADOW_MAX_DISTANCE,
   YIELDS_A_PREVIEW,
+  drawsWithoutEnvironment,
   previewEnvironment,
   previewSunDirection,
   previewYield,
@@ -47,19 +50,20 @@ export function PreviewLighting() {
   const { showPreviewSun, showPreviewEnvironment } = useViewportMode();
   const yielding = useLiveSceneNodes(YIELDS_A_PREVIEW);
 
-  const decision = useMemo(
-    () =>
-      previewYield(
-        yielding.map((entry) => entry.node.type),
-        { sun: showPreviewSun, environment: showPreviewEnvironment }
-      ),
-    [yielding, showPreviewSun, showPreviewEnvironment]
-  );
+  const { decision, withoutEnvironment } = useMemo(() => {
+    const types = yielding.map((entry) => entry.node.type);
+    const toggles = { sun: showPreviewSun, environment: showPreviewEnvironment };
+    return {
+      decision: previewYield(types, toggles),
+      withoutEnvironment: drawsWithoutEnvironment(types, toggles),
+    };
+  }, [yielding, showPreviewSun, showPreviewEnvironment]);
 
   return (
     <>
       {decision.sun && <PreviewSun />}
       {decision.environment && <PreviewEnvironment />}
+      {withoutEnvironment && <NoEnvironmentCompositor />}
     </>
   );
 }

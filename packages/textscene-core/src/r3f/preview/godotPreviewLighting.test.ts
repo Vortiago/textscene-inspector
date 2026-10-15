@@ -10,6 +10,7 @@ import {
   previewEnvironment,
   previewSunDirection,
   previewYield,
+  drawsWithoutEnvironment,
 } from './godotPreviewLighting';
 import type { ProceduralSkyProperties } from '../../resources/sky/types';
 
@@ -69,6 +70,20 @@ describe('previewYield', () => {
       sun: true,
       environment: false,
     });
+  });
+});
+
+describe('drawsWithoutEnvironment', () => {
+  it('is false while the preview environment is on', () => {
+    expect(drawsWithoutEnvironment(['MeshInstance3D'], { sun: true, environment: true })).toBe(false);
+  });
+
+  it('is true when the user turns the preview environment off and the scene brings none', () => {
+    expect(drawsWithoutEnvironment(['MeshInstance3D'], { sun: true, environment: false })).toBe(true);
+  });
+
+  it('is false when the scene brings a WorldEnvironment, which draws in its place', () => {
+    expect(drawsWithoutEnvironment(['WorldEnvironment'], { sun: true, environment: false })).toBe(false);
   });
 });
 

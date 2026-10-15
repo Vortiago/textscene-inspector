@@ -5,7 +5,7 @@
  * Each restores what it found on unmount, because the renderer and scene outlive an environment.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
@@ -13,12 +13,7 @@ import { applyToneMapping, installToneCurve } from '../../resources/environment/
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
-import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import { deviceSampleCount } from '../deviceSampleCount';
-import { sceneHasBlendedSurface } from './alphaPassScan';
-import { useLatchedSceneScan } from './useLatchedSceneScan';
-import { compositorPassFor } from './compositorPass';
+import { useCompositorPass, useDraws3D } from './useCompositorPass';
 import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
@@ -43,15 +38,9 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  const hasBlended = useSceneHasBlendedSurface();
   const draws3D = useDraws3D();
-  const msaa3D = useDeviceMsaa3D();
-  // One value decides the pass and the suppression, so they cannot disagree. Memoised, since a new
-  // glow object rebuilds the compositor's effect.
-  const composited = useMemo(
-    () => (draws3D ? compositorPassFor(settings, hasBlended, msaa3D) : null),
-    [draws3D, settings, hasBlended, msaa3D]
-  );
+  // One value decides the pass and the suppression, so they cannot disagree.
+  const composited = useCompositorPass(settings);
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
 
@@ -102,40 +91,6 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
       )}
     </>
   );
-}
-
-/** The samples the project's `msaa_3d` draws on this device. */
-function useDeviceMsaa3D(): number {
-  const gl = useThree((s) => s.gl);
-  const { msaa3D } = useProjectSettings().msaaSamples;
-  return useMemo(() => deviceSampleCount(gl, msaa3D), [gl, msaa3D]);
-}
-
-/** Whether the live scene draws anything through the blend equation. */
-function useSceneHasBlendedSurface(): boolean {
-  return useLatchedSceneScan(sceneHasBlendedSurface);
-}
-
-/**
- * Whether this canvas draws the 3D passes: the tone-map compositor and the volumetric fog. Both need
- * a real GL context, which test-renderer and a headless DOM lack. Godot composites canvas items
- * after `_render_buffers_post_process_and_tonemap`, so a 2D canvas gets neither, and every canvas
- * item there blends.
- */
-function useDraws3D(): boolean {
-  const gl = useThree((s) => s.gl);
-  const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
-  const is2D = useCanvasWorkspace() === '2d';
-  return glReady && !is2D;
-}
-
-function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {
-  try {
-    const ctx = gl.getContext?.() as { getContextAttributes?: () => unknown } | null;
-    return !!ctx && typeof ctx.getContextAttributes === 'function' && !!ctx.getContextAttributes();
-  } catch {
-    return false;
-  }
 }
 
 interface EnvironmentApplierProps {

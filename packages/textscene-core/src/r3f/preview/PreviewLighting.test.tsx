@@ -3,7 +3,7 @@
  * go through the real parser and the whole `<TscnSceneContents>` tree mounts,
  * since the question is how many lights the scene ends up with.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type * as THREE from 'three';
 import { TscnSceneContents } from '../TscnCanvas';
@@ -17,6 +17,11 @@ import { TscnParser } from '../../parser/TscnParser';
 import { SOFT_LOW_QUALITY_RADIUS } from '../../godot/softShadowScale';
 
 import '../nodes/index';
+
+// The compositor needs a real GL context, so a marker stands in for it.
+vi.mock('../environment/NoEnvironmentCompositor', () => ({
+  NoEnvironmentCompositor: () => <group name="NoEnvironmentCompositor" />,
+}));
 
 async function render(sceneText: string, viewport?: { sun?: boolean; environment?: boolean }) {
   const graph = createSceneGraphFromTscnScene(new TscnParser().parse(sceneText));
@@ -102,6 +107,21 @@ describe('preview environment yielding', () => {
 
   it('still lights a scene carrying both, with exactly the scene’s own sun', async () => {
     expect(directionalCount(await render(scene(`${DIRECTIONAL}${WORLD_ENV}`)))).toBe(1);
+  });
+
+  const compositorCount = (renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>) =>
+    renderer.scene.findAll((node) => node.props.name === 'NoEnvironmentCompositor').length;
+
+  it('mounts the no-Environment compositor when the user turns the preview environment off', async () => {
+    expect(compositorCount(await render(scene(MESH), { environment: false }))).toBe(1);
+  });
+
+  it('mounts no such compositor while the preview environment draws', async () => {
+    expect(compositorCount(await render(scene(MESH)))).toBe(0);
+  });
+
+  it('mounts it for a WorldEnvironment that names no Environment', async () => {
+    expect(compositorCount(await render(scene(WORLD_ENV), { environment: false }))).toBe(1);
   });
 
   // The preview environment applies itself through a GPU render the headless

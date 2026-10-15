@@ -54,3 +54,18 @@ describe('compositorPassFor', () => {
     ).toBeNull();
   });
 });
+
+describe('compositorPassFor with no Environment', () => {
+  it('mounts no pass when nothing blends and MSAA is off', () => {
+    expect(compositorPassFor(null, NOTHING_BLENDED, NO_MSAA)).toBeNull();
+  });
+
+  it('mounts a multisampled pass without glow for MSAA alone', () => {
+    // Godot multisamples and resolves the 3D buffer with or without an Environment.
+    expect(compositorPassFor(null, NOTHING_BLENDED, 4)).toEqual({ glow: null, samples: 4 });
+  });
+
+  it('mounts a pass without glow for a blended surface', () => {
+    expect(compositorPassFor(null, true, NO_MSAA)).toEqual({ glow: null, samples: 0 });
+  });
+});

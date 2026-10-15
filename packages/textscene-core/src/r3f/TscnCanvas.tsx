@@ -248,11 +248,13 @@ export function TscnCanvas() {
           as well as on the 2D world canvas. */}
       {/* `antialias: false`: Godot's `msaa_3d` defaults to Disabled (`rendering_server.cpp:3774`).
           A project that turns it on gets the compositor's multisampled buffer, which resolves
-          before the tone curve as Godot's does. */}
+          before the tone curve as Godot's does. `flat`: a root with no Environment tonemaps LINEAR
+          (`tone_mapper.h:177`), where R3F would apply ACES. */}
       <Canvas
         camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
         shadows="percentage"
         gl={{ localClippingEnabled: true, antialias: false }}
+        flat
         onCreated={installShaderPatches}
       >
         <TscnSceneContents />

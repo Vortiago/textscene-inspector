@@ -67,6 +67,16 @@ export function previewYield(sceneNodeTypes: Iterable<string>, toggles: PreviewT
 }
 
 /**
+ * Whether the root draws with no Environment: the user turned the preview environment off and the
+ * scene brings no WorldEnvironment to draw in its place.
+ */
+export function drawsWithoutEnvironment(sceneNodeTypes: Iterable<string>, toggles: PreviewToggles): boolean {
+  if (toggles.environment) return false;
+  for (const type of sceneNodeTypes) if (type === PREVIEW_ENVIRONMENT_YIELD_TYPE) return false;
+  return true;
+}
+
+/**
  * The direction the preview sun's light travels: Godot's euler applied to a
  * light's local -Z, in the YXZ order `Basis::from_euler` defaults to, which three
  * spells the same way.
