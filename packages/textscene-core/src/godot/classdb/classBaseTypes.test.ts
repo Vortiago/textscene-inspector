@@ -9,6 +9,7 @@ import {
   classBaseChain,
   descendsFromClass,
   classInheritanceChain,
+  findInClassChain,
 } from './classBaseTypes.js';
 import { NODE_BASE_TYPES } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
@@ -53,6 +54,28 @@ describe('CLASS_BASE_TYPES', () => {
   it('reads no key off Object.prototype for a type name a .tscn chose', () => {
     expect(descendsFromClass('constructor', 'Material')).toBe(false);
     expect(descendsFromClass('__proto__', 'Material')).toBe(false);
+  });
+});
+
+describe('findInClassChain', () => {
+  it('returns the answer of the nearest class that gives one', () => {
+    const visited: string[] = [];
+    const found = findInClassChain('Sprite2D', (type) => {
+      visited.push(type);
+      return type === 'CanvasItem' ? type : undefined;
+    });
+    expect(found).toBe('CanvasItem');
+    expect(visited).toEqual(['Sprite2D', 'Node2D', 'CanvasItem']);
+  });
+
+  it('returns undefined when no class in the chain answers', () => {
+    expect(findInClassChain('StandardMaterial3D', () => undefined)).toBeUndefined();
+  });
+
+  it('visits only the class itself when neither table knows it (edge case)', () => {
+    const visited: string[] = [];
+    findInClassChain('__proto__', (type) => void visited.push(type));
+    expect(visited).toEqual(['__proto__']);
   });
 });
 

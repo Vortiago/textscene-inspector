@@ -19,29 +19,42 @@ function classBaseOf(className: string): string | undefined {
 }
 
 /**
- * Whether `className` descends from or equals `ancestor`, over both hierarchies. `descendsFrom`
- * answers false for every resource, so an `[ext_resource type="…"]` heading needs this. A hop
- * bound guards against a malformed table.
+ * The first answer `visit` gives for `className` or an ancestor, nearest first, over both
+ * hierarchies, or `undefined`. The one walk over the table: it allocates nothing, so a per-key
+ * lookup can use it. A hop bound guards against a malformed table.
  */
-export function descendsFromClass(className: string, ancestor: string): boolean {
+export function findInClassChain<T>(
+  className: string,
+  visit: (type: string) => T | undefined
+): T | undefined {
   let current: string | undefined = className;
   for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS; hops++) {
-    if (current === ancestor) return true;
+    const found = visit(current);
+    if (found !== undefined) return found;
     current = classBaseOf(current);
   }
-  return false;
+  return undefined;
 }
 
-/** Every ancestor of `className`, nearest first, over both hierarchies. Cycle-safe and hop-bounded. */
+/**
+ * Whether `className` descends from or equals `ancestor`, over both hierarchies. `descendsFrom`
+ * answers false for every resource, so an `[ext_resource type="…"]` heading needs this.
+ */
+export function descendsFromClass(className: string, ancestor: string): boolean {
+  return findInClassChain(className, (type) => type === ancestor || undefined) ?? false;
+}
+
+/** Every ancestor of `className`, nearest first, over both hierarchies. A cycle truncates the chain. */
 export function classBaseChain(className: string): readonly string[] {
   const chain: string[] = [];
-  const seen = new Set([className]);
-  let current = classBaseOf(className);
-  for (let hops = 0; current !== undefined && hops < MAX_BASE_CHAIN_HOPS && !seen.has(current); hops++) {
-    seen.add(current);
-    chain.push(current);
-    current = classBaseOf(current);
-  }
+  const seen = new Set<string>();
+  findInClassChain(className, (type) => {
+    if (seen.has(type)) return true;
+    // The first visit is `className` itself, which the chain leaves out.
+    if (seen.size > 0) chain.push(type);
+    seen.add(type);
+    return undefined;
+  });
   return chain;
 }
 
