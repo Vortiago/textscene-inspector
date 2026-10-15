@@ -44,6 +44,8 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 |  | `decal-empty-cull-mask` | warning |
 <!-- lint:end -->
 
+The linter warns (`resource-type-excluded-by-hint`) when one of the four `texture_*` slots holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`decal.cpp:49-58`).
+
 `size` falls back to Godot's default `Vector3(2, 2, 2)` with a warning when malformed. `albedo_mix`, `emission_energy`, `normal_fade`, `upper_fade`, `lower_fade` and `cull_mask` fall back the same way to `1`, `1`, `0`, `0.3`, `0.3` and `1048575`. The two fade exponents are also clamped at zero, as Godot's setters clamp them. `modulate` falls back silently to opaque white, and the four `texture_*` references are copied through unvalidated.
 
 ## Known limitations

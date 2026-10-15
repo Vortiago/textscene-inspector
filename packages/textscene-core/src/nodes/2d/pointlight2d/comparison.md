@@ -142,6 +142,8 @@ Strict parsing format-checks these `PointLight2D` properties, plus 15 inherited 
 |  | `pointlight2d-inverted-layer-range` | info |
 <!-- lint:end -->
 
+The linter warns (`resource-type-excluded-by-hint`) when `texture` holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`light_2d.cpp:396-405`).
+
 `enabled` falls back to `true`, `energy` and `texture_scale` to `1.0`, `offset` to `(0,
 0)` and `blend_mode` to `0` (ADD), each with a warning. `color` falls back to opaque
 white silently. `texture` is stored with no reference check.

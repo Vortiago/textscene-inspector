@@ -25,6 +25,16 @@ describe('classInfo', () => {
     expect(findClassProperty('MeshInstance3D', 'not_a_property')).toBeUndefined();
   });
 
+  it('reads a class the pinned ClassDB lacks from its hand rows', () => {
+    expect(findClassProperty('AreaLight3D', 'area_size')).toEqual({
+      name: 'area_size',
+      type: 5,
+      hint: 5,
+      hintString: 'suffix:m',
+      declaredBy: 'AreaLight3D',
+    });
+  });
+
   it('knows a node class, a resource class and neither for an invented name', () => {
     expect(isKnownClass('MeshInstance3D')).toBe(true);
     expect(isKnownClass('BoxMesh')).toBe(true);

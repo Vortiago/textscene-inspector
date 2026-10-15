@@ -30,6 +30,8 @@ Strict parsing format-checks these `OmniLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
+The linter warns (`resource-type-excluded-by-hint`) when `light_projector` holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`light_3d.cpp:204-213`).
+
 The lenient parser falls back silently when `omni_range` or `omni_attenuation` is absent. When one is unparseable, it warns and falls back to `5.0` and `1.0`. `omni_shadow_mode` goes through `parseOptionalInt`, so an absent or invalid value quietly becomes `undefined`.
 
 Godot's positional shadow atlas gives the light two slots for the camera. As in Godot's default Cube mode, each slot holds one paraboloid of the shadow. A light that covers less of the view gets smaller slots and a coarser, softer shadow. When other lights fill the larger slots, a light earlier in the scene tree takes smaller slots, as in Godot. A sub-viewport gives its lights slots in its own atlas. Every omni and spot shadow lies in one atlas texture, so many shadowed lights fit beside a material with many textures. The soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter spans `shadow_blur` times two texels of the paraboloid. With a `light_size` and a `shadow_blur`, the shadow searches for blockers, as Godot's does. Its penumbra widens with the light's size and with the distance from the caster. `shadow_bias` and `shadow_normal_bias` move the receiver as Godot's lookup does, so the shadow edge sits where Godot puts it.

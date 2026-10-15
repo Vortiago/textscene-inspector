@@ -2233,6 +2233,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Area Light Atlas Texture",
+    "file": "unit-area-light-atlas-texture.tscn",
+    "category": "Unit - Lights"
+  },
+  {
     "name": "Area Light Modes",
     "file": "unit-area-light-modes.tscn",
     "category": "Unit - Lights"

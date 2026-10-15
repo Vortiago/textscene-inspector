@@ -9,6 +9,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   deriveBaseTypes,
+  deriveResourceTypeExclusions,
+  EXCLUSIONS_OUT,
   NODE_PROPERTIES,
   OUT,
   PROPERTIES_OUT,
@@ -16,10 +18,35 @@ import {
   RESOURCE_OUT,
   RESOURCE_PROPERTIES,
   renderFromCatalog,
+  renderFromExclusionCaptures,
   renderFromPropertyCaptures,
   renderFromResourceBases,
 } from './build-node-base-types.mjs';
 import { RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
+
+describe('deriveResourceTypeExclusions', () => {
+  const row = (name, hint, hint_string) => ({ name, type: 24, hint, hint_string });
+
+  it('keeps only the resource slots whose hint excludes a class, under the class that declares them', () => {
+    const properties = {
+      Light3D: [row('light_projector', 17, 'Texture2D,-AtlasTexture'), row('light_energy', 1, '0,16')],
+      MeshInstance3D: [row('mesh', 17, 'Mesh')],
+    };
+    expect(deriveResourceTypeExclusions(properties, { MeshInstance3D: 'Node3D' })).toEqual({
+      Light3D: { light_projector: 'Texture2D,-AtlasTexture' },
+    });
+  });
+
+  it('refuses a subclass that declares an excluding slot again, which a walk of this table would misread', () => {
+    const properties = {
+      Light3D: [row('light_projector', 17, 'Texture2D,-AtlasTexture')],
+      OmniLight3D: [row('light_projector', 17, 'Texture2D')],
+    };
+    expect(() => deriveResourceTypeExclusions(properties, { OmniLight3D: 'Light3D' })).toThrow(
+      /OmniLight3D declares light_projector again/
+    );
+  });
+});
 
 describe('deriveBaseTypes', () => {
   it('emits one entry per hop, not just the leaf', () => {
@@ -91,6 +118,10 @@ describe('deriveBaseTypes', () => {
     // The property rows ship to the editor for hover and completion, so a capture that
     // gains a property without a re-run would leave the host describing an older ClassDB.
     expect(readFileSync(PROPERTIES_OUT, 'utf8')).toBe(renderFromPropertyCaptures());
+  });
+
+  it('the committed resourceTypeExclusions.generated.ts matches the captures', () => {
+    expect(readFileSync(EXCLUSIONS_OUT, 'utf8')).toBe(renderFromExclusionCaptures());
   });
 
   it('renders one row per captured property, so no class is dropped', () => {

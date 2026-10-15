@@ -13,6 +13,7 @@ import {
   RESOURCE_CLASS_PROPERTIES,
   type ClassPropertyRow,
 } from '../godot/classProperties.generated.js';
+import { UNCATALOGUED_PROPERTIES } from '../godot/uncataloguedProperties.js';
 import type { PropertyLocation } from './document.js';
 
 /** One serialised property, with the class nearest the queried type that declares it. */
@@ -27,8 +28,9 @@ export interface ClassProperty {
 }
 
 function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
-  if (Object.hasOwn(NODE_CLASS_PROPERTIES, className)) return NODE_CLASS_PROPERTIES[className];
-  if (Object.hasOwn(RESOURCE_CLASS_PROPERTIES, className)) return RESOURCE_CLASS_PROPERTIES[className];
+  for (const table of [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES, UNCATALOGUED_PROPERTIES]) {
+    if (Object.hasOwn(table, className)) return table[className];
+  }
   return undefined;
 }
 
