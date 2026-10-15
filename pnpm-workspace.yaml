@@ -18,8 +18,8 @@ catalog:
   '@vscode/test-electron': ^3.1.0
   '@vscode/test-web': ^0.0.81
   '@vitest/ui': ^5.0.3
-  '@types/node': ^26.6.4
-  vite: ^8.3.1
+  '@types/node': ^26.6.5
+  vite: ^8.3.4
   esbuild: ^0.28.2
   happy-dom: ^20.14.5
   jsdom: ^30
@@ -39,7 +39,7 @@ catalog:
   '@types/react-dom': ^19.3
   '@react-three/fiber': ^9.8
   '@react-three/drei': ^10.7
-  '@react-three/postprocessing': ^3.1
+  '@react-three/postprocessing': ^3.2
   postprocessing: ^6.39
   '@react-three/test-renderer': ^9.1
   # NOTE: ^5 latest (5.2.0) declares peer vite ^4.2 || ^5 || ^6 || ^7 || ^8,
@@ -70,7 +70,7 @@ catalog:
   # three-mesh-bvh is a DIRECT dependency so pnpm satisfies the peer with this
   # version rather than resolving to drei's nested 0.8.3.
   three-bvh-csg: ^0.0.18
-  three-mesh-bvh: ^0.9.15
+  three-mesh-bvh: ^0.9.16
 
   # React Testing Library (WI-R3F-4) — DOM-level UI tests under jsdom
   '@testing-library/react': ^16.3.3
@@ -82,7 +82,7 @@ catalog:
 
   # Formatting (prettier.config.mjs). Exact: a patch release can change the output, and
   # `pnpm format:check` fails on every file it reflows.
-  prettier: 3.9.9
+  prettier: 3.9.10
 
   # Font baking (scripts/fonts/bake-metrics.mjs) — devDependencies
   # of the repo root only, never shipped: fontkit reads hhea/OS-2/hmtx from
