@@ -5,13 +5,11 @@
 // without this line just the full barrel ever registers it.
 import '../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import {
-  BASE_MATERIAL_ALPHA_ANTIALIASING,
-  LABEL_SPRITE_ALPHA_CUT,
-  BASE_MATERIAL_TEXTURE_FILTER,
-} from '../../../linter/validators/sharedEnumLabels.js';
+import { BASE_MATERIAL_ALPHA_ANTIALIASING } from '../../../godot/rendering/materials/alphaAntialiasing.js';
+import { LABEL_SPRITE_ALPHA_CUT } from '../../../godot/rendering/materials/alphaCut.js';
+import { BASE_MATERIAL_TEXTURE_FILTER } from '../../../godot/rendering/materials/textureFilter.js';
 import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
-import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../linter/validators/globalScopeEnums.js';
+import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../godot/math/math.js';
 import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../godot/index.js';
 import {
   AUTOWRAP_MODE,
@@ -21,7 +19,7 @@ import {
   JUSTIFICATION_HINTED_BITS,
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
-} from '../../../linter/validators/textServerEnums.js';
+} from '../../../godot/text/textServerEnums.js';
 
 const BILLBOARD = { 0: 'DISABLED', 1: 'ENABLED', 2: 'FIXED_Y' };
 // `VerticalAlignment` (core/math/math_defs.h:87-92). label_3d.cpp:157 hints

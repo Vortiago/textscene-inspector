@@ -222,3 +222,25 @@ export type HorizontalAlignment =
 export const VERTICAL_ALIGNMENT_TOP = 0;
 export const VERTICAL_ALIGNMENT_CENTER = 1;
 export const VERTICAL_ALIGNMENT_BOTTOM = 2;
+
+/**
+ * `HorizontalAlignment`: HORIZONTAL_ALIGNMENT_LEFT=0 … _FILL=3
+ * (core/math/math_defs.h:80-85).
+ */
+export const HORIZONTAL_ALIGNMENT = {
+  0: 'HORIZONTAL_ALIGNMENT_LEFT',
+  1: 'HORIZONTAL_ALIGNMENT_CENTER',
+  2: 'HORIZONTAL_ALIGNMENT_RIGHT',
+  3: 'HORIZONTAL_ALIGNMENT_FILL',
+} as const;
+
+/**
+ * `VerticalAlignment`: VERTICAL_ALIGNMENT_TOP=0 … _FILL=3
+ * (core/math/math_defs.h:87-92).
+ */
+export const VERTICAL_ALIGNMENT = {
+  0: 'VERTICAL_ALIGNMENT_TOP',
+  1: 'VERTICAL_ALIGNMENT_CENTER',
+  2: 'VERTICAL_ALIGNMENT_BOTTOM',
+  3: 'VERTICAL_ALIGNMENT_FILL',
+} as const;

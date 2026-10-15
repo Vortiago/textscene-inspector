@@ -8,7 +8,7 @@
 import '../visibleonscreennotifier2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { ENABLE_MODE } from '../../../linter/validators/sharedEnumLabels.js';
+import { ENABLE_MODE } from '../../../godot/scene/visibleOnScreen.js';
 
 validatorRegistry.registerAll('VisibleOnScreenEnabler2D', {
   // visible_on_screen_notifier_2d.cpp:241, PROPERTY_HINT_ENUM

@@ -17,8 +17,8 @@ import {
   OVERRUN_BEHAVIOR,
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
+} from '../../../../godot/text/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../godot/math/math.js';
 
 /**
  * `TextServer::VisibleCharactersBehavior` (servers/text/text_server.h:90-96),

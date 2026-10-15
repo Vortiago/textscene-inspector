@@ -16,8 +16,11 @@
  */
 
 import { glslFloat } from '../../utils/glslLiterals';
-import { DEFAULT_AGX_CONTRAST } from './types';
-import { ToneMapper, toneMappingWhiteParam } from '../../godot/rendering/environment/toneMapping.js';
+import {
+  TONEMAP_AGX_CONTRAST_DEFAULT,
+  ToneMapper,
+  toneMappingWhiteParam,
+} from '../../godot/rendering/environment/toneMapping.js';
 
 /**
  * The GLSL body for `CustomToneMapping`, per mode. three calls this after its
@@ -29,7 +32,7 @@ import { ToneMapper, toneMappingWhiteParam } from '../../godot/rendering/environ
 export function toneMappingShaderChunk(
   mode: number,
   white: number,
-  agxContrast = DEFAULT_AGX_CONTRAST
+  agxContrast = TONEMAP_AGX_CONTRAST_DEFAULT
 ): string {
   return /* glsl */ `
 uniform float toneMappingExposure;
@@ -49,7 +52,7 @@ ${curveGlsl(mode, white, agxContrast)}
 export function toneMappingEffectGlsl(
   mode: number,
   white: number,
-  agxContrast = DEFAULT_AGX_CONTRAST
+  agxContrast = TONEMAP_AGX_CONTRAST_DEFAULT
 ): string {
   return /* glsl */ `
 vec3 godotToneMap(vec3 color, float exposure) {

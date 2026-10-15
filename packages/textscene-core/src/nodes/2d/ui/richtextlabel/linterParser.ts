@@ -16,8 +16,8 @@ import {
   JUSTIFICATION_HINTED_BITS,
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
+} from '../../../../godot/text/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../godot/math/math.js';
 
 // rich_text_label.cpp:7789: PROPERTY_HINT_ENUM "Characters Before
 // Shaping,Characters After Shaping,Glyphs (Layout Direction),Glyphs

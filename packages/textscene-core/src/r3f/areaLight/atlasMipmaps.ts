@@ -17,9 +17,7 @@
 
 import { channelToByte, sRGBChannelToLinear } from '../../utils/colorSpace.js';
 import type { AreaTextureImage } from './atlasLayout.js';
-
-/** The atlas's mip count (`texture_storage.h:279`). */
-export const AREA_LIGHT_ATLAS_MIPMAPS = 8;
+import { AREA_LIGHT_ATLAS_MIPMAPS } from '../../godot/rendering/lights/areaLightAtlas.js';
 
 /** A texture where the atlas holds it, in mip 0's texels. */
 export interface PlacedTexture {

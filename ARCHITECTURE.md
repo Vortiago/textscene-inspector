@@ -45,14 +45,15 @@ the package's `./godot` export, and `noDependencies.test.ts`.
 | `variant/` | `core/variant`: the Variant parser, types, conversions, colours, integers |
 | `string/` | `core/string`: strings, `StringName`, `NodePath` |
 | `classdb/` | `core/object`: ClassDB captures, base types, property hints, deprecated aliases |
-| `scene/` | `scene/`: `PackedScene`, nodes, animation, particles, CSG |
+| `scene/` | `scene/`: `PackedScene`, nodes, animation, particles, CSG, the default theme |
 | `project/` | `core/config`, `core/io` and `editor/`: `project.godot`, the editor scan, resource formats |
 | `import/` | `modules/gltf` and `editor/import`: glTF and scene import |
-| `text/` | `modules/text_server_adv` and `text_server_fb`: the text server |
+| `text/` | `servers/text`, `modules/text_server_adv` and `text_server_fb`: the text server |
+| `audio/` | `servers/audio`: the audio server |
 | `rendering/` | `servers/rendering`: viewport, textures, culling, fades, passes |
-| `rendering/materials/` | The material shaders: UVs, diffuse and specular modes, DFG |
-| `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, soft-shadow kernels |
-| `rendering/environment/` | Fog, sky reflection, reflection probes |
+| `rendering/materials/` | The material shaders: UVs, diffuse and specular modes, DFG, alpha, texture filters |
+| `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, the area light atlas, soft-shadow kernels |
+| `rendering/environment/` | Fog, sky reflection, reflection probes, tone mapping, glow |
 | `testing/` | Test helpers for the files above |
 
 ## The pipelines

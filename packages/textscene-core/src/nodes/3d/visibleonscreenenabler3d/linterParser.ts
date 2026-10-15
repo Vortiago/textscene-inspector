@@ -7,7 +7,7 @@
 import '../visibleonscreennotifier3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { ENABLE_MODE } from '../../../linter/validators/sharedEnumLabels.js';
+import { ENABLE_MODE } from '../../../godot/scene/visibleOnScreen.js';
 
 // The whole own surface is the two `ADD_PROPERTY` calls at
 // visible_on_screen_notifier_3d.cpp:198-199. The class binds no `PropertyListHelper`, no

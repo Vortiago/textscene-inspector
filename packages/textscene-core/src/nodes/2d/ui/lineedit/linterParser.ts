@@ -8,8 +8,8 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { STRUCTURED_TEXT_PARSER, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
+import { STRUCTURED_TEXT_PARSER, TEXT_DIRECTION } from '../../../../godot/text/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT } from '../../../../godot/math/math.js';
 
 /** `LineEdit::VirtualKeyboardType` (line_edit.h, BIND_ENUM_CONSTANT line_edit.cpp:3470-3477). */
 const VIRTUAL_KEYBOARD_TYPE = {

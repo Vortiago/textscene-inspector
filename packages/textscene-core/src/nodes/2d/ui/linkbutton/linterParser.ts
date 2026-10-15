@@ -12,7 +12,7 @@ import {
   OVERRUN_BEHAVIOR,
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
+} from '../../../../godot/text/textServerEnums.js';
 
 const UNDERLINE_MODE = {
   0: 'UNDERLINE_MODE_ALWAYS',

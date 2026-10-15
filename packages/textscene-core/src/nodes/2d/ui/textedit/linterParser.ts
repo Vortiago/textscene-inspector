@@ -12,7 +12,7 @@ import {
   AUTOWRAP_MODE,
   STRUCTURED_TEXT_PARSER,
   TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
+} from '../../../../godot/text/textServerEnums.js';
 
 validatorRegistry.registerAll('TextEdit', {
   // Text & behaviour (ungrouped run, text_edit.cpp:7545-7561).

@@ -6,7 +6,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { OVERRUN_BEHAVIOR } from '../../../../linter/validators/textServerEnums.js';
+import { OVERRUN_BEHAVIOR } from '../../../../godot/text/textServerEnums.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';

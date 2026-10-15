@@ -8,7 +8,7 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
+import { TEXT_DIRECTION } from '../../../../godot/text/textServerEnums.js';
 
 validatorRegistry.registerAll('MenuBar', {
   // menu_bar.cpp:751 `PropertyInfo(Variant::BOOL, "flat")`, no hint.

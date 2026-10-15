@@ -7,13 +7,6 @@
 import type { Rgba } from '../../godot/math/math';
 import type { Vector3 } from '../../godot/math/vector';
 
-/**
- * Godot's `Environment.tonemap_agx_contrast` default (`environment.h`; `ADD_PROPERTY`
- * at `environment.cpp:1290`, hint `"1.0,2.0,0.01,or_greater"`). It lives with the data
- * because the decode needs it too, and routing must not import five tone-curve bodies.
- */
-export const DEFAULT_AGX_CONTRAST = 1.25;
-
 export enum BackgroundMode {
   BG_CLEAR_COLOR = 0,
   BG_COLOR = 1,

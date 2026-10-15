@@ -20,6 +20,12 @@ export const ToneMapper = {
   AGX: 4,
 } as const;
 
+/**
+ * `tonemap_agx_contrast` when a scene stores none (`scene/resources/environment.h:119`), inside its
+ * hint `"1.0,2.0,0.01,or_greater"` (`environment.cpp:1290`).
+ */
+export const TONEMAP_AGX_CONTRAST_DEFAULT = 1.25;
+
 /** Each tone mapper's name by the integer a `.tscn` stores, as a validator names it. */
 export const TONE_MAPPER_NAMES = enumNamesByValue(ToneMapper);
 

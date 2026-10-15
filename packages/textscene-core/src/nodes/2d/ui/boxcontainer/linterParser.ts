@@ -6,7 +6,7 @@
 
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { CONTAINER_ALIGNMENT } from '../../../../linter/validators/containerAlignment.js';
+import { CONTAINER_ALIGNMENT } from '../../../../godot/scene/container.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('BoxContainer', {

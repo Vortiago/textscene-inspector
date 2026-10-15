@@ -7,7 +7,7 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { BASE_MATERIAL_TEXTURE_FILTER } from '../../../linter/validators/sharedEnumLabels.js';
+import { BASE_MATERIAL_TEXTURE_FILTER } from '../../../godot/rendering/materials/textureFilter.js';
 
 export const uvKeys: Record<string, PropertyValidator> = {
   // A zero component is legal grammar but a degenerate scale; catching it needs

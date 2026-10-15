@@ -6,7 +6,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { CONTAINER_ALIGNMENT } from '../../../../linter/validators/containerAlignment.js';
+import { CONTAINER_ALIGNMENT } from '../../../../godot/scene/container.js';
 import { v } from '../../../../linter/validators/index.js';
 
 // aspect_ratio_container.cpp:189, PROPERTY_HINT_ENUM "Width Controls

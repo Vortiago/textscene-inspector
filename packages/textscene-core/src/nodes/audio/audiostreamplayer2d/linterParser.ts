@@ -6,7 +6,7 @@ import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
-import { PLAYBACK_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
+import { PLAYBACK_TYPE } from '../../../godot/audio/audioServer.js';
 
 validatorRegistry.registerAll('AudioStreamPlayer2D', {
   // audio_stream_player_2d.cpp:429 hints PROPERTY_HINT_RESOURCE_TYPE

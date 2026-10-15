@@ -1,8 +1,7 @@
 /**
- * TextServer enums (`servers/text/text_server.h`) that Godot re-binds on many
- * classes with no common ancestor, so only the label tables are shared. Each
- * slice keeps its bound: TextEdit's hint offers `"Arbitrary:1,Word:2,Word (Smart):3"`
- * while Button's offers `"Off,Arbitrary,Word,Word (Smart)"`.
+ * TextServer enums (`servers/text/text_server.h`) that Godot re-binds on many classes with no
+ * common ancestor, so each slice keeps its own bound: TextEdit's hint offers
+ * `"Arbitrary:1,Word:2,Word (Smart):3"` while Button's offers `"Off,Arbitrary,Word,Word (Smart)"`.
  */
 
 /**

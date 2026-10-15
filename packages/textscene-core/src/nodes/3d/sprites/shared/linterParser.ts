@@ -8,11 +8,9 @@
 import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import {
-  BASE_MATERIAL_ALPHA_ANTIALIASING,
-  LABEL_SPRITE_ALPHA_CUT,
-  BASE_MATERIAL_TEXTURE_FILTER,
-} from '../../../../linter/validators/sharedEnumLabels.js';
+import { BASE_MATERIAL_ALPHA_ANTIALIASING } from '../../../../godot/rendering/materials/alphaAntialiasing.js';
+import { LABEL_SPRITE_ALPHA_CUT } from '../../../../godot/rendering/materials/alphaCut.js';
+import { BASE_MATERIAL_TEXTURE_FILTER } from '../../../../godot/rendering/materials/textureFilter.js';
 import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../../godot/index.js';
 
 // sprite_3d.cpp:685 hints only 3 labels ("Disabled,Enabled,Y-Billboard"), and

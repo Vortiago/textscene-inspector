@@ -9,7 +9,7 @@ import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
-import { PLAYBACK_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
+import { PLAYBACK_TYPE } from '../../../godot/audio/audioServer.js';
 
 const ATTENUATION_MODEL = {
   0: 'INVERSE_DISTANCE',

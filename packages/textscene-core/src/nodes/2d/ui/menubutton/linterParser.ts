@@ -8,7 +8,7 @@
 import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import { ITEM_CHECKABLE_TYPE } from '../../../../linter/validators/sharedEnumLabels.js';
+import { ITEM_CHECKABLE_TYPE } from '../../../../godot/scene/popupMenu.js';
 
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';

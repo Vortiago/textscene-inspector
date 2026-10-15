@@ -9,8 +9,8 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
+import { TEXT_DIRECTION } from '../../../../godot/text/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT } from '../../../../godot/math/math.js';
 
 validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:558, PROPERTY_HINT_NONE. set_folded

@@ -14,12 +14,12 @@ import {
   TILE_TRANSFORM_TRANSPOSE,
   type TileLayout,
   type TileOffsetAxis,
-  type TileShape,
 } from '../../godot/scene/tileSet';
 
 /** The grid surface of a TileSet that placement math needs. */
 export interface TileGrid {
-  shape: TileShape;
+  /** A `TileShape`, or any integer a scene stores: placement treats an unknown one as square. */
+  shape: number;
   layout: TileLayout;
   offsetAxis: TileOffsetAxis;
   tileSize: Vector2;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { areaTextureMipmaps, mipSize, AREA_LIGHT_ATLAS_MIPMAPS } from './atlasMipmaps';
+import { areaTextureMipmaps, mipSize } from './atlasMipmaps';
+import { AREA_LIGHT_ATLAS_MIPMAPS } from '../../godot/rendering/lights/areaLightAtlas';
 
 describe('mipSize', () => {
   it('halves the side once per level', () => {
