@@ -42,11 +42,35 @@ function owner(node: ts.Node): ts.Node | undefined {
   return undefined;
 }
 
-/** A module's view of its own source: its top-level names, texture classes and texture factories. */
+/** A top-level function: a declaration, or a `const` that holds an arrow or a function expression. */
+function topLevelFunction(statement: ts.Statement): { name: string; body: ts.Node } | undefined {
+  if (ts.isFunctionDeclaration(statement) && statement.name)
+    return { name: statement.name.text, body: statement };
+  if (!ts.isVariableStatement(statement)) return undefined;
+  const [declaration] = statement.declarationList.declarations;
+  const { initializer } = declaration ?? {};
+  if (!declaration || !ts.isIdentifier(declaration.name) || !initializer) return undefined;
+  if (!ts.isArrowFunction(initializer) && !ts.isFunctionExpression(initializer)) return undefined;
+  return { name: declaration.name.text, body: initializer };
+}
+
+function isReleaseCall(node: ts.Node): boolean {
+  return (
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === 'releasedOnUnmount'
+  );
+}
+
+/**
+ * A module's view of its own source: its top-level names, its texture classes, the factories that
+ * build a texture and the factories that release each texture they build.
+ */
 class Module {
   readonly bindings = new Set<string>();
   readonly textureClasses = new Set<string>();
   readonly factories = new Set<string>();
+  readonly releasingFactories = new Set<string>();
 
   constructor(readonly source: ts.SourceFile) {
     for (const statement of source.statements) {
@@ -62,7 +86,11 @@ class Module {
       )
         this.textureClasses.add(statement.name.text);
     }
-    this.findFactories();
+    this.findFactories(this.factories, (node) => this.builds(node));
+    this.findFactories(
+      this.releasingFactories,
+      (node) => isReleaseCall(node) || this.calls(node, this.releasingFactories)
+    );
   }
 
   /** Whether `node` builds a texture: a constructor, a loader, or a call of this module's factory. */
@@ -73,7 +101,7 @@ class Module {
     }
     if (!ts.isCallExpression(node)) return false;
     const callee = node.expression;
-    if (ts.isIdentifier(callee)) return this.factories.has(callee.text);
+    if (ts.isIdentifier(callee)) return this.calls(node, this.factories);
     return (
       ts.isPropertyAccessExpression(callee) &&
       callee.name.text === 'load' &&
@@ -81,34 +109,46 @@ class Module {
     );
   }
 
-  /** The lines of each texture this module keeps past every component. */
-  heldTextureLines(): number[] {
-    const lines: number[] = [];
+  /** Each texture this module keeps past every component, with whether it is released on unmount. */
+  heldTextures(): { line: number; isReleased: boolean }[] {
+    const held: { line: number; isReleased: boolean }[] = [];
     this.visit(this.source, (node) => {
-      if (this.builds(node) && this.isHeld(node))
-        lines.push(this.source.getLineAndCharacterOfPosition(node.getStart()).line + 1);
+      if (!this.builds(node) || !this.isHeld(node)) return;
+      const line = this.source.getLineAndCharacterOfPosition(node.getStart()).line + 1;
+      held.push({ line, isReleased: this.isReleased(node) });
     });
-    return lines;
+    return held;
   }
 
-  /** A top-level function that builds a texture hands it on, so a call of it builds one too. */
-  private findFactories(): void {
-    let found = true;
-    while (found) {
-      found = false;
+  private calls(node: ts.Node, functions: ReadonlySet<string>): boolean {
+    return (
+      ts.isCallExpression(node) && ts.isIdentifier(node.expression) && functions.has(node.expression.text)
+    );
+  }
+
+  /** Adds to `found` each top-level function whose body passes `test`, until no more join. */
+  private findFactories(found: Set<string>, test: (node: ts.Node) => boolean): void {
+    let isGrowing = true;
+    while (isGrowing) {
+      isGrowing = false;
       for (const statement of this.source.statements) {
-        if (
-          !ts.isFunctionDeclaration(statement) ||
-          !statement.name ||
-          this.factories.has(statement.name.text)
-        )
-          continue;
-        if (this.some(statement, (node) => this.builds(node))) {
-          this.factories.add(statement.name.text);
-          found = true;
-        }
+        const fn = topLevelFunction(statement);
+        if (!fn || found.has(fn.name) || !this.some(fn.body, test)) continue;
+        found.add(fn.name);
+        isGrowing = true;
       }
     }
+  }
+
+  /**
+   * Whether `node` reaches `releasedOnUnmount`: as its argument through any wrapper, as a call of a
+   * factory that releases, or in a function that releases what it builds.
+   */
+  private isReleased(node: ts.Node): boolean {
+    if (this.calls(node, this.releasingFactories)) return true;
+    for (let at = node.parent; at; at = at.parent) if (isReleaseCall(at)) return true;
+    const scope = owner(node);
+    return scope !== undefined && ts.isFunctionLike(scope) && this.some(scope, isReleaseCall);
   }
 
   private isHeld(node: ts.Node): boolean {
@@ -179,8 +219,8 @@ function moduleOf(path: string): Module {
 }
 
 const holders = sourceFiles(srcDir)
-  .map((path) => ({ path, lines: moduleOf(path).heldTextureLines() }))
-  .filter(({ lines }) => lines.length > 0);
+  .map((path) => ({ path, textures: moduleOf(path).heldTextures() }))
+  .filter(({ textures }) => textures.length > 0);
 
 describe('module-held textures', () => {
   it('finds the modules known to hold one, so the sweep cannot pass vacuously', () => {
@@ -199,8 +239,8 @@ describe('module-held textures', () => {
     expect(Object.keys(FREED_OTHERWISE).filter((path) => !paths.includes(path))).toEqual([]);
   });
 
-  it.each(holders)('$path releases each texture it holds on unmount', ({ path, lines }) => {
-    const releases = readFileSync(resolve(srcDir, path), 'utf8').includes('releasedOnUnmount(');
-    expect(releases || path in FREED_OTHERWISE, `textures held at lines ${lines.join(', ')}`).toBe(true);
+  it.each(holders)('$path releases each texture it holds on unmount', ({ path, textures }) => {
+    const unreleasedLines = textures.filter(({ isReleased }) => !isReleased).map(({ line }) => line);
+    expect(path in FREED_OTHERWISE ? [] : unreleasedLines).toEqual([]);
   });
 });

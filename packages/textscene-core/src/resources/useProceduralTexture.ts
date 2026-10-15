@@ -15,7 +15,15 @@ import { beginTextureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
 import { resolveProceduralTexture, resolveProceduralTexture3D } from './textures/resolveProceduralTexture.js';
-import { pinProceduralTexture, unpinProceduralTexture } from './textures/proceduralTextureCache.js';
+import {
+  pinProceduralTexture,
+  releaseProceduralTextures,
+  unpinProceduralTexture,
+} from './textures/proceduralTextureCache.js';
+import { releasedOnUnmount } from '../r3f/sharedTexture.js';
+
+// The cache outlives every canvas, so a canvas that unmounts frees its textures from each renderer.
+releasedOnUnmount({ dispose: releaseProceduralTextures });
 
 /** One slot's procedural texture. */
 export interface ProceduralSlot {

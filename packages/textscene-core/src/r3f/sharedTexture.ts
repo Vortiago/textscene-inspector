@@ -51,10 +51,10 @@ export function leaveSlot(renderer: THREE.WebGLRenderer, slot: THREE.Texture, te
  * its canvas keeps that renderer reachable. These stay shared, not per renderer like a pass, as a
  * uniform getter and three's `UniformsLib` read them with no renderer at hand.
  */
-const releasedTextures = new Set<THREE.Texture>();
+const releasedTextures = new Set<Pick<THREE.Texture, 'dispose'>>();
 
-/** `texture`, which each canvas that unmounts frees from every renderer. */
-export function releasedOnUnmount<T extends THREE.Texture>(texture: T): T {
+/** `texture`, which each canvas that unmounts frees from every renderer, or a cache that frees its own. */
+export function releasedOnUnmount<T extends Pick<THREE.Texture, 'dispose'>>(texture: T): T {
   releasedTextures.add(texture);
   return texture;
 }

@@ -46,10 +46,14 @@ class AreaLightAtlasTexture extends sharedTexture(THREE.DataTexture) {
   }
 }
 
-/** The atlas an earlier evaluation of this module gave the lit materials, as after a dev server reloads it. */
-const atlasTexture =
+/**
+ * The atlas an earlier evaluation of this module gave the lit materials, as after a dev server
+ * reloads it. A reload of `sharedTexture.ts` starts an empty release list, so the reused atlas joins it.
+ */
+const atlasTexture = releasedOnUnmount(
   (installedUniformValue(AREA_LIGHT_ATLAS_UNIFORM) as AreaLightAtlasTexture | undefined) ??
-  releasedOnUnmount(new AreaLightAtlasTexture());
+    new AreaLightAtlasTexture()
+);
 
 /** A held texture: its holders, and the pixel version the atlas last read. */
 interface Held {

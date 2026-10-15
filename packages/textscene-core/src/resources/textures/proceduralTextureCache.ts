@@ -75,6 +75,11 @@ export function cacheProceduralTexture(key: string, texture: THREE.Texture): voi
   cache.set(key, texture);
 }
 
+/** Frees each cached texture from every renderer, and keeps it cached: a renderer uploads it again. */
+export function releaseProceduralTextures(): void {
+  for (const texture of cache.values()) texture.dispose();
+}
+
 /** Hold `key` resident for as long as a consumer is mounted. */
 export function pinProceduralTexture(key: string): void {
   cache.pin(key);
