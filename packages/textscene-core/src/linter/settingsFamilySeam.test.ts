@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import type { ParseError } from './types.js';
-import { baseChain } from '../godot/testing/baseChain.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { boneConstraintBaseLeaves } from '../nodes/3d/skeleton/boneconstraint3d/linterParser.js';
 // The whole barrel: a per-slice test loads only its own graph, where nothing
 // shadows anything and a missing forward passes.
@@ -97,7 +97,7 @@ function summarise(error: ParseError | null): unknown {
 
 describe.each(SEAMS)('$base settings/ seam under the full barrel', (seam) => {
   const descendants = registeredTypes('declaring')
-    .filter((type) => type !== seam.base && baseChain(type).includes(seam.base))
+    .filter((type) => type !== seam.base && classBaseChain(type).includes(seam.base))
     .sort();
 
   it('finds descendants that SHADOW the key, so the assertions cannot pass vacuously', () => {

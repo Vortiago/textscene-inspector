@@ -7,7 +7,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { baseChain } from '../../godot/testing/baseChain.js';
+import { classBaseChain } from '../../godot/classdb/classBaseTypes.js';
 
 // Re-exported, not re-derived: two modules in this directory resolving the same
 // directory from their own `import.meta.url` is two `..` counts to keep right.
@@ -131,7 +131,7 @@ function resolveImport(from: string, specifier: string): string {
  */
 export function getInheritedParserProps(nodeType: string): Set<string> {
   const result = new Set<string>();
-  for (const base of baseChain(nodeType)) {
+  for (const base of classBaseChain(nodeType)) {
     const subpath = BASE_TYPE_TO_PARSER_SUBPATH[base];
     if (!subpath) continue;
     const parserPath = join(nodesRoot, subpath);

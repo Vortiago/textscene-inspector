@@ -6,7 +6,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { baseChain } from '../../godot/testing/baseChain.js';
+import { classBaseChain } from '../../godot/classdb/classBaseTypes.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
 import {
@@ -20,7 +20,7 @@ import {
 /** Validator keys registered directly for a node type or any of its ancestors. */
 export function getFullValidatorKeys(nodeType: string): Set<string> {
   const result = new Set(validatorRegistry.getOwnKeys(nodeType));
-  for (const base of baseChain(nodeType)) {
+  for (const base of classBaseChain(nodeType)) {
     for (const k of validatorRegistry.getOwnKeys(base)) result.add(k);
   }
   return result;
@@ -73,7 +73,7 @@ export function checkParity(): ParityViolation[] {
     // A base-type entry, such as Node3D.linterOnly, applies to every leaf slice.
     const allowedParserOnly = new Set<string>();
     const allowedLinterOnly = new Set<string>();
-    for (const t of [nodeType, ...baseChain(nodeType)]) {
+    for (const t of [nodeType, ...classBaseChain(nodeType)]) {
       const e = ASYMMETRY_ALLOWLIST[t];
       if (!e) continue;
       for (const k of e.parserOnly ?? []) allowedParserOnly.add(k);

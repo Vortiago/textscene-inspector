@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { MAX_BASE_CHAIN_HOPS } from '../godot/classdb/nodeBaseTypes.js';
-import { baseChain } from '../godot/testing/baseChain.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import { resourceSliceRegistry } from '../resources/sliceRegistration.js';
 import '../resources/sliceRegistrations.js'; // side-effect: every resource slice claims its types
@@ -95,7 +95,7 @@ const UNDECLARED: readonly string[] = [];
 function typesUnderGuard(): string[] {
   const all = new Set(nodeRegistry.getAllTypeNames());
   for (const type of [...all]) {
-    for (const ancestor of baseChain(type)) all.add(ancestor);
+    for (const ancestor of classBaseChain(type)) all.add(ancestor);
   }
   return [...all].sort();
 }

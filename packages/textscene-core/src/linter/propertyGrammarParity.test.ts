@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { baseChain } from '../godot/testing/baseChain.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './testing/propertyGrammarParityAllowlist.js';
 import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
 import { extractNodeType, findLinterParserDirs, nodesRoot } from './testing/propertyGrammarParityScan.js';
@@ -103,7 +103,7 @@ describe('property-grammar parity guard', () => {
     const staleSections = findStaleEntries({
       allowlist: ASYMMETRY_ALLOWLIST,
       slices: collectSlices(),
-      baseChainOf: baseChain,
+      baseChainOf: classBaseChain,
       validatorKeysOf: getFullValidatorKeys,
     });
 

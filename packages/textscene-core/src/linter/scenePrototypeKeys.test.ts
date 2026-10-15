@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { lint, node, scene } from './testing/testkit.js';
 import { descendsFrom, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
-import { baseChain } from '../godot/testing/baseChain.js';
+import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import '../linter/index.js';
 
 /**
@@ -46,7 +46,7 @@ describe('the node-type table answers only for types it declares', () => {
   });
 
   it.each(PROTOTYPE_KEYS)('returns a chain of plain strings for %s', (key) => {
-    for (const ancestor of baseChain(key)) {
+    for (const ancestor of classBaseChain(key)) {
       expect(typeof ancestor).toBe('string');
     }
   });

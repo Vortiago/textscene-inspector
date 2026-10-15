@@ -10,7 +10,7 @@ import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative } from 'node:path';
 import { NODE_BASE_TYPES } from '../../godot/classdb/nodeBaseTypes.js';
-import { baseChain } from '../../godot/testing/baseChain.js';
+import { classBaseChain } from '../../godot/classdb/classBaseTypes.js';
 import { walk } from './ruleNameScrape.js';
 import {
   BASE_TYPE_TO_PARSER_SUBPATH,
@@ -52,7 +52,7 @@ describe('base-parser lookup', () => {
     for (const dir of findSliceDirs(nodesRoot)) {
       const type = typeOf(dir);
       if (!type) continue;
-      for (const base of baseChain(type)) {
+      for (const base of classBaseChain(type)) {
         if (base in BASE_TYPE_TO_PARSER_SUBPATH) continue;
         const baseDir = parserDirOf(base);
         if (baseDir) {

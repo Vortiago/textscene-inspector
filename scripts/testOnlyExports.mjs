@@ -9,21 +9,14 @@
 import ts from 'typescript';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, posix, relative } from 'node:path';
+import skippedDirectories from '../packages/textscene-dev-kit/skippedDirectories.json' with { type: 'json' };
 
 const SOURCE_RE = /\.tsx?$/;
 const IMPORTER_RE = /\.(tsx?|m?js)$/;
 const TEST_RE = /\.(test|spec|testkit)\.(tsx?|m?js)$|(^|\/)testing\//;
 
-/** Never walked: generated output, installed packages and a downloaded VS Code are nobody's source. */
-const SKIPPED_DIRECTORIES = new Set([
-  'node_modules',
-  'dist',
-  'out',
-  'build',
-  'coverage',
-  '.git',
-  '.vscode-test',
-]);
+/** Never walked: the list `sourceScan.ts` reads, so both scans see the same files. */
+const SKIPPED_DIRECTORIES = new Set(skippedDirectories);
 const DYNAMIC_IMPORT_RE = /\bimport\s*\(/;
 
 /** A test, a test kit or a file under `testing/` is a test file. Its imports prove nothing. */
