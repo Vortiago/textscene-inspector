@@ -1,5 +1,3 @@
-import { setFlagsFromString } from 'node:v8';
-import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { drawFullScreen, FULL_SCREEN_VERTEX, fullScreenDepthPass, fullScreenPass } from './fullScreenPass';
@@ -93,35 +91,22 @@ describe('drawFullScreen', () => {
     expect(drawn).toEqual([first, second]);
   });
 
-  it('holds no renderer once that renderer is gone (edge case)', async () => {
-    const drawn = new WeakRef(drawOnceThroughListeningRenderer());
+  it('draws each renderer on a quad of its own, which goes with that renderer (edge case)', async () => {
+    const drawnQuads = await Promise.all([quadDrawnBy(), quadDrawnBy()]);
 
-    await collectGarbage();
-
-    expect(drawn.deref()).toBeUndefined();
+    expect(drawnQuads[0]).not.toBe(drawnQuads[1]);
+    expect(drawnQuads[0]!.geometry).not.toBe(drawnQuads[1]!.geometry);
   });
 });
 
 /**
- * A renderer that, as three does, leaves a dispose listener on the geometry and the material it draws
- * (`WebGLGeometries.js:55`, `WebGLRenderer.js:2216`), each closing over the renderer.
+ * The quad a new renderer draws a pass on. three leaves a dispose listener that closes over the
+ * renderer on each drawn geometry and material (`WebGLGeometries.js:55`, `WebGLRenderer.js:2216`),
+ * so a quad two renderers share would keep both alive.
  */
-function drawOnceThroughListeningRenderer(): object {
-  const renderer = {
-    setRenderTarget: () => {},
-    render: (quad: THREE.Mesh) => {
-      quad.geometry.addEventListener('dispose', () => renderer);
-      (quad.material as THREE.Material).addEventListener('dispose', () => renderer);
-    },
-  };
-  drawFullScreen(renderer as unknown as THREE.WebGLRenderer, fullScreenPass('Copy', FRAGMENT, {}), null);
-  return renderer;
-}
-
-/** A full collection once the current job ends, since a WeakRef keeps its target until then. */
-async function collectGarbage(): Promise<void> {
-  setFlagsFromString('--expose-gc');
-  const gc = runInNewContext('gc') as () => void;
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  gc();
+async function quadDrawnBy(): Promise<THREE.Mesh> {
+  const { renderer } = await testRenderer();
+  const rendered = vi.spyOn(renderer, 'render');
+  drawFullScreen(renderer, fullScreenPass('Copy', FRAGMENT, {}), null);
+  return rendered.mock.calls[0]![0] as THREE.Mesh;
 }

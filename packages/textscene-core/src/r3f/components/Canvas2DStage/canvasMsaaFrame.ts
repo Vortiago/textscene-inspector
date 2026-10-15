@@ -73,8 +73,9 @@ export class CanvasMsaaFrame extends THREE.WebGLRenderTarget {
     try {
       gl.setRenderTarget(this);
       gl.render(scene, camera);
-    } finally {
+    } catch (error) {
       gl.setRenderTarget(previous);
+      throw error;
     }
     copyToTarget(gl, this, previous);
   }

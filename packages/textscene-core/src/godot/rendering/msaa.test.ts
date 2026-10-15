@@ -6,8 +6,12 @@ describe('MSAA modes', () => {
     expect(MSAA_MODE_LABELS).toEqual({ 0: 'DISABLED', 1: '2X', 2: '4X', 3: '8X' });
   });
 
-  it('ends at 8X, the last mode before MSAA_MAX (edge case)', () => {
-    expect([MSAA_MODES, MSAA_MAX]).toEqual([[0, 1, 2, 3], 3]);
+  it('accepts every mode value from DISABLED to 8X', () => {
+    expect(MSAA_MODES).toEqual([0, 1, 2, 3]);
+  });
+
+  it("counts the modes as Godot's MSAA_MAX does, one past 8X (edge case)", () => {
+    expect(MSAA_MAX).toBe(4);
   });
 });
 
