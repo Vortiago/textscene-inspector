@@ -7,7 +7,8 @@ import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseSprite3D } from './parser';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
-import { AlphaCutMode, BillboardMode } from './types';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { BillboardMode } from '../../../godot/scene/billboard';
 
 const HEADING: ParsedHeading = {
   type: 'node',
@@ -18,7 +19,7 @@ describe('parseSprite3D defaults', () => {
   it('applies Godot defaults when only the node heading is supplied', () => {
     const props = parseSprite3D(HEADING, {});
     expect(props.billboard).toBe(BillboardMode.BILLBOARD_DISABLED);
-    expect(props.alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_DISABLED);
+    expect(props.alpha_cut).toBe(AlphaCutMode.DISABLED);
     expect(props.axis).toBe(Vector3Axis.Z);
     expect(props.pixel_size).toBe(0.01);
     expect(props.hframes).toBe(1);
@@ -52,8 +53,8 @@ describe('parseSprite3D properties', () => {
   });
 
   it('parses alpha_cut enum', () => {
-    expect(parseSprite3D(HEADING, { alpha_cut: '1' }).alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_DISCARD);
-    expect(parseSprite3D(HEADING, { alpha_cut: '2' }).alpha_cut).toBe(AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS);
+    expect(parseSprite3D(HEADING, { alpha_cut: '1' }).alpha_cut).toBe(AlphaCutMode.DISCARD);
+    expect(parseSprite3D(HEADING, { alpha_cut: '2' }).alpha_cut).toBe(AlphaCutMode.OPAQUE_PREPASS);
   });
 
   it('parses pixel_size and transparency as floats', () => {

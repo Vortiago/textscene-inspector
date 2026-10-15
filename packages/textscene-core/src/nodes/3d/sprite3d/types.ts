@@ -5,42 +5,13 @@
  */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import { BillboardMode } from '../../../godot/scene/billboard';
-import { Vector3Axis } from '../../../godot/math/vector3Axis';
+import type { BillboardMode } from '../../../godot/scene/billboard';
+import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
+import type { Vector3Axis } from '../../../godot/math/vector3Axis';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
-
-/** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
-export { BillboardMode };
-
-/**
- * Alpha-cut modes. Controls how transparent regions of the texture are
- * handled with respect to depth writes.
- */
-export enum AlphaCutMode {
-  /** No alpha cut: the material uses regular transparency. */
-  ALPHA_CUT_DISABLED = 0,
-  /** Discard fragments below alpha threshold; opaque pixels write depth. */
-  ALPHA_CUT_DISCARD = 1,
-  /** Opaque prepass for sharp-edge-with-shadow scenarios. */
-  ALPHA_CUT_OPAQUE_PREPASS = 2,
-  /** Hashed (stochastic) alpha; maps to TRANSPARENCY_ALPHA_HASH (scene/3d/sprite_3d.cpp:291). */
-  ALPHA_CUT_HASH = 3,
-}
-
-/**
- * `BaseMaterial3D::TextureFilter` (`material.h:172-178`). The sampler state per
- * ordinal lives in `resources/textures/godotTextureFilter.ts`.
- */
-export enum TextureFilterMode {
-  TEXTURE_FILTER_NEAREST = 0,
-  TEXTURE_FILTER_LINEAR = 1,
-  TEXTURE_FILTER_NEAREST_WITH_MIPMAPS = 2,
-  TEXTURE_FILTER_LINEAR_WITH_MIPMAPS = 3,
-  TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 4,
-  TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC = 5,
-}
 
 /**
  * Rect2 (Godot rect resource): a rectangle in 2D space with float coords.
@@ -133,7 +104,7 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   alpha_antialiasing_edge: number;
 
   /** Sampler filter for the sprite texture (`sprite_3d.h:94`). Default LINEAR_WITH_MIPMAPS. */
-  texture_filter: TextureFilterMode;
+  texture_filter: TextureFilter;
 
   /** Render priority within the alpha-blended bucket (default: 0). */
   render_priority: number;

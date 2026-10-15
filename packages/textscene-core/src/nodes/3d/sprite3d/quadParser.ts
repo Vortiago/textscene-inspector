@@ -2,7 +2,8 @@
 
 import { boolOr, enumOr, floatOr, vec2Or } from '../../../parser/valueParsers';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
-import { BillboardMode, type Sprite3DProperties } from './types';
+import { type Sprite3DProperties } from './types';
+import { BillboardMode } from '../../../godot/scene/billboard';
 
 /** What places the quad. */
 export type SpriteQuadProperties = Pick<

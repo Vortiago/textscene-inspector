@@ -1,17 +1,11 @@
-/** Label3D node data and its enums. */
+/** Label3D node data. */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import type { BillboardMode } from '../../../godot/scene/billboard';
 import type { HorizontalAlignment, Rgba } from '../../../godot/math/math';
-import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
+import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
-
-/** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
-export { BillboardMode };
-
-/** `Label3D::AlphaCutMode` and `BaseMaterial3D::TextureFilter`, as `godot/` declares them. */
-export { AlphaCutMode, TextureFilter };
 
 export interface Label3DProperties extends GeometryInstance3DProperties {
   text: string;

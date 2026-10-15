@@ -19,7 +19,6 @@ import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, TextureFilter } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
@@ -29,6 +28,8 @@ import {
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_RIGHT,
 } from '../../../godot/math/math';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 /** The canvas text painter's raster supersampling factor. */
 const CANVAS_TEXT_SUPERSAMPLE = 3;

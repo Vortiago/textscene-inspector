@@ -16,7 +16,6 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { Sprite3DProperties } from './types';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
-import { AlphaCutMode, BillboardMode, TextureFilterMode } from './types';
 import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
@@ -27,6 +26,9 @@ import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 import { recordGodotFormat } from '../../../resources/textures/sourceColorSpace';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { BillboardMode } from '../../../godot/scene/billboard';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -56,8 +58,8 @@ function makeNode(overrides: Partial<Sprite3DProperties> = {}): TscnNode {
     alpha_hash_scale: 1.0,
     alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
     alpha_antialiasing_edge: 0.0,
-    texture_filter: TextureFilterMode.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS,
-    alpha_cut: AlphaCutMode.ALPHA_CUT_DISABLED,
+    texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
+    alpha_cut: AlphaCutMode.DISABLED,
     axis: Vector3Axis.Z,
     pixel_size: 0.01,
     hframes: 1,
@@ -254,7 +256,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        alpha_cut: AlphaCutMode.DISCARD,
         transparency: 0.5,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -351,7 +353,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        alpha_cut: AlphaCutMode.DISCARD,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
@@ -368,7 +370,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        alpha_cut: AlphaCutMode.DISCARD,
         alpha_scissor_threshold: 0.25,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -404,7 +406,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        alpha_cut: AlphaCutMode.DISCARD,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
@@ -422,7 +424,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS,
+        alpha_cut: AlphaCutMode.OPAQUE_PREPASS,
         alpha_scissor_threshold: 0.25,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -444,7 +446,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+        alpha_cut: AlphaCutMode.HASH,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
@@ -461,7 +463,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+        alpha_cut: AlphaCutMode.HASH,
         alpha_hash_scale: 0.3,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -477,7 +479,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_HASH,
+        alpha_cut: AlphaCutMode.HASH,
         transparent: false,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -493,7 +495,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        alpha_cut: AlphaCutMode.DISCARD,
         alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
       }),
       externals: [extRef('1_tex', TEXTURE_PATH)],
@@ -509,7 +511,7 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     const renderer = await render({
       node: makeNode({
         texture: 'ExtResource("1_tex")',
-        alpha_cut: AlphaCutMode.ALPHA_CUT_DISCARD,
+        alpha_cut: AlphaCutMode.DISCARD,
         alpha_scissor_threshold: 0.4,
         alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE,
         alpha_antialiasing_edge: 0.2,

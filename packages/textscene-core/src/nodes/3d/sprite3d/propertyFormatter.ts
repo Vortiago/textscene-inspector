@@ -2,9 +2,11 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import { VECTOR3_AXIS_NAMES } from '../../../godot/math/vector3Axis';
-import { AlphaCutMode, BillboardMode, type Sprite3DProperties } from './types';
+import { type Sprite3DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { BillboardMode } from '../../../godot/scene/billboard';
 
 export function formatSprite3DProperties(properties: Sprite3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -79,13 +81,13 @@ function billboardName(mode: BillboardMode): string {
 
 function alphaCutName(mode: AlphaCutMode): string {
   switch (mode) {
-    case AlphaCutMode.ALPHA_CUT_DISABLED:
+    case AlphaCutMode.DISABLED:
       return 'Disabled';
-    case AlphaCutMode.ALPHA_CUT_DISCARD:
+    case AlphaCutMode.DISCARD:
       return 'Discard';
-    case AlphaCutMode.ALPHA_CUT_OPAQUE_PREPASS:
+    case AlphaCutMode.OPAQUE_PREPASS:
       return 'Opaque Prepass';
-    case AlphaCutMode.ALPHA_CUT_HASH:
+    case AlphaCutMode.HASH:
       return 'Alpha Hash';
     default:
       return 'Unknown';

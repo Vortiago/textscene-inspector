@@ -25,8 +25,10 @@ import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstan
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/scene/billboard';
 import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLayout';
-import { AlphaCutMode, TextureFilter, type Label3DProperties } from './types';
+import { type Label3DProperties } from './types';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export interface LabelGlyphsProps {
   /** The label's node group, whose parent places it for the scene cull. */
