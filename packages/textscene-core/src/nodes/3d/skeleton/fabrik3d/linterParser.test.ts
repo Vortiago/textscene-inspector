@@ -7,7 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import { ValidatorRegistry, validatorRegistry } from '../../../../linter/ValidatorRegistry';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry';
-import { NODE_BASE_TYPES, baseChain } from '../../../../godot/classdb/nodeBaseTypes';
+import { NODE_BASE_TYPES } from '../../../../godot/classdb/nodeBaseTypes';
+import { classBaseChain } from '../../../../godot/classdb/classBaseTypes';
 import { expectFixtureClean } from '../../../../linter/testing/fixtureCheck';
 import { checkerFor } from '../../../../linter/testing/validatorCheck';
 import './linterParser';
@@ -60,7 +61,7 @@ describe('FABRIK3D inherits its whole property surface', () => {
    * lost `IterateIK3D` would make them pass against a shorter walk.
    */
   it('sits at the bottom of the IK chain Godot declares', () => {
-    expect(baseChain('FABRIK3D')).toEqual([
+    expect(classBaseChain('FABRIK3D')).toEqual([
       'IterateIK3D',
       'ChainIK3D',
       'IKModifier3D',

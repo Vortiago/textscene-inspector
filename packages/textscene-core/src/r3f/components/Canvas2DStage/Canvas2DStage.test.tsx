@@ -57,7 +57,8 @@ vi.mock('../../contexts/ProjectSettingsContext', async (importOriginal) => {
 });
 
 import { Canvas2DStage } from './Canvas2DStage';
-import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
+import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
+import { useViewportActions } from '../../testing/ViewportActionsProbe';
 import { FIT_ON_OPEN_2D_STORAGE_KEY } from './viewport2d';
 import type { TscnNode } from '../../../parser/types';
 

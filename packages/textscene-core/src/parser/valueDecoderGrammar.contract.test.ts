@@ -11,7 +11,6 @@ import { join } from 'node:path';
 import * as logger from '../logger';
 import { parseOptionalVector2 } from './valueParsers';
 import { parseVector2 } from './vectors';
-import { FLOAT_PATTERN_SOURCE } from '../godot/variant/number.js';
 import { heading } from './testing/parserKit';
 import { parseControl } from '../nodes/2d/ui/control/parser';
 import { parseBaseLightWithNormalBias } from '../nodes/3d/lights/shared/parser';
@@ -61,8 +60,6 @@ describe('#175 parseOptionalVector2 — the promoted optional reader on the shar
     expect(parseOptionalVector2('Vector2(1.2.3, 4)')).toBeUndefined();
     expect(parseVector2('Vector2(1e-05, 2)')).toEqual({ x: 1e-5, y: 2 });
     expect(parseOptionalVector2('Vector2(1e-05, 2)')).toEqual({ x: 1e-5, y: 2 });
-    // It genuinely reuses the shared source, not a hand-copied regex.
-    expect(FLOAT_PATTERN_SOURCE).toContain('eE');
   });
 });
 

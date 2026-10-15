@@ -5,6 +5,7 @@
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import skippedDirectories from '@textscene/dev-kit/skippedDirectories.json' with { type: 'json' };
 import { repoRoot } from '../../parser/testing/parserKit';
 
 export interface SourceFile {
@@ -14,11 +15,11 @@ export interface SourceFile {
 }
 
 /**
- * Never walked: generated output and installed packages are nobody's source.
- * `.vscode-test` is a downloaded, gitignored VS Code, so walking it makes every
- * corpus depend on whether the machine has run the extension gate.
+ * Never walked: generated output and installed packages are nobody's source. `.vscode-test` is a
+ * downloaded, gitignored VS Code, so walking it makes every corpus depend on whether the machine has
+ * run the extension gate. `scripts/testOnlyExports.mjs` reads the same list.
  */
-const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'build', 'coverage', '.git', '.vscode-test']);
+const SKIPPED_DIRECTORIES = new Set<string>(skippedDirectories);
 
 const REPO_ROOT = repoRoot();
 

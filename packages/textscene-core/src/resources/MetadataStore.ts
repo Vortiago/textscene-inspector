@@ -2,7 +2,7 @@
 
 import type { ExtResource } from '../parser/types';
 import * as logger from '../logger';
-import { simplifyResPath } from '../godot/index.js';
+import { simplifyResPath } from '../godot/string/string.js';
 
 export class MetadataStore {
   private resources = new Map<string, ExtResource>();

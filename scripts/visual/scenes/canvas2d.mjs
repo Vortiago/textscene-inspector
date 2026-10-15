@@ -183,6 +183,9 @@ export const CANVAS_2D_SCENES = [
   // the slice's sheet records. A span-layout change moves them here.
   { name: 'richtext-label-bbcode', file: 'unit-rich-text-label.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
+  // The one variable: a Theme item keyed on BaseButton, which a Button finds only by walking its
+  // ClassDB chain. Every other themed golden keys its items on the node's own class.
+  { name: 'control-theme-base-class', file: 'unit-control-theme-base-class.tscn', mode: '2d' },
   // The one variable: `anchors_preset` with no `anchor_*` and no `layout_mode`,
   // where Godot's setter does nothing. An editor-saved scene always writes the
   // matching `anchor_*`, so no other scene reaches this path.

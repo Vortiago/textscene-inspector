@@ -9,8 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { bezierInterpolate } from '../../../../godot/index.js';
-import { degToRad } from '../../../../godot/math/math.js';
+import { bezierInterpolate, degToRad } from '../../../../godot/math/math.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES` (`graph_edit.cpp:54`). */

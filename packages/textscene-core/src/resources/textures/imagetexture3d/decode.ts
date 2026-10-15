@@ -4,7 +4,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { splitTopLevel } from '../../../godot/index.js';
+import { splitTopLevel } from '../../../godot/string/string.js';
 import { arrayLiteralBody } from '../../../godot/variant/variantParser.js';
 import type { Texture3DTexels } from '../../formats/image3d/texels';
 import { decodeImageRef, type DecodedImage } from '../image/decode';

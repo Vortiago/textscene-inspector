@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { ruleRegistry } from './RuleRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { WARNINGS, type WarningRow } from './testing/configurationWarningCensus.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its rules
@@ -30,7 +30,7 @@ const UNIMPLEMENTED_ROWS: readonly string[] = ['CSGShape3D csg_shape.cpp:982'];
 function concreteHeirs(declaringClass: string, row?: WarningRow): string[] {
   const registered = nodeRegistry.getAllTypeNames();
   if (row?.appliesTo) return registered.filter((t) => row.appliesTo!.includes(t));
-  return registered.filter((t) => t === declaringClass || descendsFrom(t, declaringClass));
+  return registered.filter((t) => descendsFromClass(t, declaringClass));
 }
 
 function rulesEmitting(ruleName: string) {

@@ -17,12 +17,8 @@ export type Severity = 'error' | 'warning' | 'info';
  */
 export const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
-/**
- * Whether a string is one of the three tiers: the test every reader needs
- * before it indexes a table by severity. The sort, the CLI formatter, the
- * VS Code squiggle map and the web gutter all share it.
- */
-export function isSeverity(value: string): value is Severity {
+/** Whether a string is one of the three tiers, the test before a table is indexed by severity. */
+function isSeverity(value: string): value is Severity {
   // `hasOwn`, not a bare index: `SEVERITY_ORDER['constructor']` reads
   // `Object.prototype`, and an unknown key yields `undefined`, which compares
   // false both ways and leaves a sort unordered.

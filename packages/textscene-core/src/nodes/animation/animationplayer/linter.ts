@@ -6,7 +6,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { extractLibraries, isActive } from './parser.js';
-import { EXT_RESOURCE_CALL_ANYWHERE_RE, literalText } from '../../../godot/index.js';
+import { EXT_RESOURCE_CALL_ANYWHERE_RE } from '../../../godot/variant/resourceRef.js';
+import { literalText } from '../../../godot/string/string.js';
 import { hasUnresolvableClips, resolveAnimations } from './animationResolver.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 

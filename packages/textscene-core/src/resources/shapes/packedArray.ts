@@ -2,18 +2,17 @@
  * Readers for Godot's packed array slots, THREE-free: a flat float body, the three spellings
  * of a packed tuple slot, and the nested index arrays of a polygon list.
  */
-
+import { parseGodotFloat } from '../../godot/variant/number.js';
+import { parseGodotInt } from '../../godot/variant/int.js';
+import { splitTopLevel } from '../../godot/string/string.js';
 import {
   packedArrayBody,
   packedArrayCallAnywhere,
   packedArrayForms,
   packedArrayLiteral,
   packedElementType,
-  parseGodotFloat,
-  parseGodotInt,
-  splitTopLevel,
-} from '../../godot/index.js';
-import { arrayLiteralBody } from '../../godot/variant/variantParser.js';
+  arrayLiteralBody,
+} from '../../godot/variant/variantParser.js';
 
 /**
  * A packed array of fixed-size tuples, named once: its type, the three spellings its slot

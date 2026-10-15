@@ -8,13 +8,8 @@
 import { keyShapeError } from './propertyError.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
-import {
-  IS_VALID_INT_RE,
-  declaredLeafResolver,
-  stringToInt,
-  type IndexParse,
-  type LeafResolver,
-} from '../../godot/index.js';
+import { IS_VALID_INT_RE, stringToInt } from '../../godot/string/string.js';
+import { declaredLeafResolver, type IndexParse, type LeafResolver } from '../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../reportedIndices.js';
 
 /**

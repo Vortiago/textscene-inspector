@@ -88,6 +88,6 @@ export function resolveNodePath(scene: RawScene, referencingNode: RawNode, path:
 
   // An `instance=` heading names a PackedScene, not a class, and a heading with
   // neither `type=` nor `instance=` overrides a node declared elsewhere, so a
-  // caller's `descendsFrom(target.node.type, …)` would read a non-class.
+  // caller's `descendsFromClass(target.node.type, …)` would read a non-class.
   return isTypeUnknowable(current) ? UNKNOWABLE : { status: 'found', node: current };
 }

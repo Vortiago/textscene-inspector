@@ -6,7 +6,7 @@
  */
 
 import { warn } from '../../../../logger';
-import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/index.js';
+import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
 import { parseGodotInt } from '../../../../godot/variant/int.js';
 import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';

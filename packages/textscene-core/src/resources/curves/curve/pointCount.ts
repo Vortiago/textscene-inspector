@@ -2,8 +2,7 @@
  * `Curve.point_count` applied to a decoded point list: what Godot's setter does with
  * the count, apart from how `decode.ts` reads the `_data` literal. No THREE.
  */
-
-import { clamp } from '../../../godot/index.js';
+import { clamp } from '../../../godot/math/math.js';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { curveIndex } from './sample';
 import { CurveTangentMode, type Curve, type CurvePoint } from './types';

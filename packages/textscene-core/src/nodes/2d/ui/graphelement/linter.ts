@@ -8,8 +8,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 const arms = {
   selectedNotSelectable: {
@@ -51,7 +51,7 @@ const selectedRequiresSelectableRule: LintRule = {
       'Flags a GraphElement authored with selected = true and selectable = false — Godot ' +
       'always forces the element back to deselected regardless of load order',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GraphElement'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'GraphElement'),
     emits: armEmits(arms),
   },
   check: checkSelectedRequiresSelectable,

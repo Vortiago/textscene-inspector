@@ -9,7 +9,7 @@ import { createTypeRegistry } from '../core/createTypeRegistry';
 import type { CsgShapeRegistration } from './csg/csgRegistration';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { YSortItem } from './ySortItems';
-import { descendsFrom } from '../godot/classdb/nodeBaseTypes';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes';
 import { withGeometryInstance } from './visibilityRange/geometryInstance';
 
 export interface NodeComponentProps {
@@ -111,7 +111,7 @@ class NodeComponentRegistryImpl {
    */
   register(registration: NodeComponentRegistration): void {
     const { typeName, Component } = registration;
-    const mounted = descendsFrom(typeName, 'GeometryInstance3D')
+    const mounted = descendsFromClass(typeName, 'GeometryInstance3D')
       ? withGeometryInstance(Component)
       : Component;
     this.registry.register(typeName, { ...registration, Component: mounted });

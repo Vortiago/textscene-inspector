@@ -16,7 +16,7 @@ import {
   type Grounding,
 } from './grounding.js';
 import type { FloatOpts } from './options.js';
-import { degToRad } from '../../../godot/index.js';
+import { degToRad } from '../../../godot/math/math.js';
 
 /**
  * How far past a radian bound a value may sit, a tolerance this repo picks:

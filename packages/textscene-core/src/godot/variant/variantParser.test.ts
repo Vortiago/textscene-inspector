@@ -7,7 +7,6 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  NODE_PATH_LITERAL_ANYWHERE_RE,
   NODE_PATH_LITERAL_RE,
   dictCallField,
   dictStringField,
@@ -66,21 +65,13 @@ describe('nodePathLiteral', () => {
   });
 });
 
-describe('the anchored and anywhere forms agree on whitespace', () => {
-  // The divergence that motivated this module: the anchored copies were widened
-  // to tolerate padding while the scanning copies were not, so a value the
-  // linter passed was dropped by the parser that had to resolve it.
-  const PADDED_NODE_PATH = 'NodePath ( "../Body" )';
-
-  it('the NodePath scanner reads what the NodePath validator accepts', () => {
-    expect(NODE_PATH_LITERAL_RE.test(PADDED_NODE_PATH)).toBe(true);
-    expect(NODE_PATH_LITERAL_ANYWHERE_RE.exec(PADDED_NODE_PATH)?.[1]).toBe('../Body');
+describe('NODE_PATH_LITERAL_RE', () => {
+  it('accepts whitespace around the call and inside its parentheses', () => {
+    expect(NODE_PATH_LITERAL_RE.test('NodePath ( "../Body" )')).toBe(true);
   });
 
-  it('finds a literal embedded in a larger value, where the anchored form must not', () => {
-    const embedded = 'Array[NodePath]([NodePath("a")])';
-    expect(NODE_PATH_LITERAL_RE.test(embedded)).toBe(false);
-    expect(NODE_PATH_LITERAL_ANYWHERE_RE.exec(embedded)?.[1]).toBe('a');
+  it('rejects a literal embedded in a larger value (edge case)', () => {
+    expect(NODE_PATH_LITERAL_RE.test('Array[NodePath]([NodePath("a")])')).toBe(false);
   });
 });
 

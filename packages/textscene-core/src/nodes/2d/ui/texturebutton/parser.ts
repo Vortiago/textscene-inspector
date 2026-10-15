@@ -8,7 +8,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { TextureButtonProperties } from './types';
 import { parseControl } from '../control/parser';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseTextureButton(
   heading: ParsedHeading,

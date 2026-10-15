@@ -12,7 +12,10 @@ import {
 } from '../../../linter/validators/sharedEnumLabels.js';
 import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
 import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../linter/validators/globalScopeEnums.js';
-import { MATERIAL_RENDER_PRIORITY_MIN, MATERIAL_RENDER_PRIORITY_MAX } from '../../../godot/index.js';
+import {
+  MATERIAL_RENDER_PRIORITY_MIN,
+  MATERIAL_RENDER_PRIORITY_MAX,
+} from '../../../godot/rendering/rendering.js';
 import {
   AUTOWRAP_MODE,
   BREAK_TRIM_HINTED_BITS,

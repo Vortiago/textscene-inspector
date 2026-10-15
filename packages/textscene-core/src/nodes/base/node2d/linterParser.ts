@@ -7,7 +7,7 @@
 import '../../canvasitem/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { isZeroApprox } from '../../../godot/index.js';
+import { isZeroApprox } from '../../../godot/math/math.js';
 
 // node_2d.cpp:187-199: set_scale substitutes CMP_EPSILON for a component that
 // `Math::is_zero_approx`s ("Avoid having 0 scale values, can lead to errors in

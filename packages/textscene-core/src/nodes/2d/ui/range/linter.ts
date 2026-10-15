@@ -2,9 +2,9 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -67,7 +67,7 @@ const rangeBoundsRule: LintRule = {
     description:
       'Flags a Range whose max_value is authored below min_value, or whose Exp Edit is enabled with a negative min_value',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Range'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'Range'),
     emits: armEmits(arms),
   },
   check: checkRangeBounds,

@@ -4,7 +4,8 @@ import type { ParsedHeading } from '../../../parser/utils';
 import type { MeshInstance3DProperties } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseOptionalInt } from '../../../parser/valueParsers';
-import { indexedKeyRegex, stringToInt } from '../../../godot/index.js';
+import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../godot/string/string.js';
 
 /** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
 function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {

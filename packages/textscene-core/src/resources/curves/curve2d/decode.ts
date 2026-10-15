@@ -7,7 +7,7 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector2Array } from '../../shapes/packedArray';
-import { bezierInterpolate } from '../../../godot/index.js';
+import { bezierInterpolate } from '../../../godot/math/math.js';
 import { CURVE2D_DATA } from '../shared/bezierData';
 import { resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
 import type { Curve2DControlPoint, Curve2DSample, Curve2DSampler } from './types';

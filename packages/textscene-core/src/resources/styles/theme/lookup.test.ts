@@ -45,18 +45,33 @@ function typeChain(...args: Parameters<typeof themeResolutionScope>): readonly s
   return themeResolutionScope(...args).typeChain;
 }
 
+/** Control's ClassDB ancestry through `Object`, the tail of every Control's native chain. */
+const CONTROL_ANCESTRY = ['Control', 'CanvasItem', 'Node', 'Object'];
+
 describe('the type chain themeResolutionScope builds', () => {
   it('is just the native inheritance chain when no type variation is set', () => {
-    expect(typeChain('Label', undefined, [], null)).toEqual(['Label', 'Control', 'Node']);
+    expect(typeChain('Label', undefined, [], null)).toEqual(['Label', ...CONTROL_ANCESTRY]);
+  });
+
+  it('tries every ClassDB ancestor, so an item a theme keys on an intermediate class applies', () => {
+    expect(typeChain('Button', undefined, [], null)).toEqual(['Button', 'BaseButton', ...CONTROL_ANCESTRY]);
+  });
+
+  it('is only the class name for a class ClassDB does not know (edge case)', () => {
+    expect(typeChain('MyExtensionControl', undefined, [], null)).toEqual(['MyExtensionControl']);
   });
 
   it('walks the variation base_type chain from the theme that registers it, then appends the native chain', () => {
     const t = theme({ typeVariations: { title_panel: 'Panel' } });
-    expect(typeChain('Panel', 'title_panel', [t], null)).toEqual(['title_panel', 'Panel', 'Control', 'Node']);
+    expect(typeChain('Panel', 'title_panel', [t], null)).toEqual([
+      'title_panel',
+      'Panel',
+      ...CONTROL_ANCESTRY,
+    ]);
   });
 
   it('falls back to the native chain alone when no ancestor/project theme registers the variation', () => {
-    expect(typeChain('Label', 'HeaderLabel', [theme()], null)).toEqual(['Label', 'Control', 'Node']);
+    expect(typeChain('Label', 'HeaderLabel', [theme()], null)).toEqual(['Label', ...CONTROL_ANCESTRY]);
   });
 
   it('uses the FIRST theme (nearest ancestor before project) that registers the variation', () => {
@@ -65,8 +80,7 @@ describe('the type chain themeResolutionScope builds', () => {
     expect(typeChain('Panel', 'title_panel', [nearest], project)).toEqual([
       'title_panel',
       'Panel',
-      'Control',
-      'Node',
+      ...CONTROL_ANCESTRY,
     ]);
   });
 
@@ -75,8 +89,7 @@ describe('the type chain themeResolutionScope builds', () => {
     expect(typeChain('Panel', 'title_panel', [], project)).toEqual([
       'title_panel',
       'Panel',
-      'Control',
-      'Node',
+      ...CONTROL_ANCESTRY,
     ]);
   });
 });
@@ -247,7 +260,7 @@ describe('mergeThemedRecord', () => {
     const nearest = theme({ colors: { Control: { font_color: { r: 1, g: 0, b: 0, a: 1 } } } });
     const farther = theme({ colors: { PanelContainer: { font_color: { r: 0, g: 1, b: 0, a: 1 } } } });
     const scope = themeResolutionScope('PanelContainer', undefined, [nearest, farther], null);
-    expect(scope.typeChain).toEqual(['PanelContainer', 'Control', 'Node']);
+    expect(scope.typeChain).toEqual(['PanelContainer', 'Container', ...CONTROL_ANCESTRY]);
     const merged = mergeThemedRecord(scope, {}, (t) => t.colors);
     expect(merged.font_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });

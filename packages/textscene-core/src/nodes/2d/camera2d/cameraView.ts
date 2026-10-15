@@ -4,8 +4,7 @@
  * pixels and the magnification. DRAG_CENTER centres the view on the camera, and
  * FIXED_TOP_LEFT puts the camera at its corner.
  */
-
-import { isZeroApprox } from '../../../godot/index.js';
+import { isZeroApprox } from '../../../godot/math/math.js';
 import { Camera2DAnchorMode, type Camera2DProperties } from './types';
 
 interface Camera2DView {

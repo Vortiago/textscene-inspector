@@ -5,7 +5,7 @@
 import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { CMP_EPSILON } from '../../../../godot/index.js';
+import { CMP_EPSILON } from '../../../../godot/math/math.js';
 
 // gpu_particles_3d.cpp:843 hints "Index,Lifetime,Reverse Lifetime,View Depth", and
 // BIND_ENUM_CONSTANT binds all 4 (:857-860).

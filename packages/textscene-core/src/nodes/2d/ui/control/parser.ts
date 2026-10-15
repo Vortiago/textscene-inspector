@@ -10,8 +10,8 @@ import {
   parseOptionalVector2,
   parseHeadingIndex,
 } from '../../../../parser/valueParsers';
-import { LAYOUT_DIRECTION_INHERITED } from '../../../../godot/index.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { LayoutDirection } from '../../../../godot/scene/control.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import type { Rgba } from '../../../../godot/math/math.js';
 
 /** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
@@ -97,7 +97,7 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
   // Never left undefined: an unset Control holds INHERITED in Godot too.
   result.layoutDirection = intOr(
     properties.layout_direction,
-    LAYOUT_DIRECTION_INHERITED,
+    LayoutDirection.INHERITED,
     `${result.name || 'Control'}.layout_direction`
   );
   result.growVertical = parseOptionalFloat(properties.grow_vertical);

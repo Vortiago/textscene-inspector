@@ -11,7 +11,7 @@ import { compositeSpellings } from './variantConversion.js';
  * Anchored and finite by choice: it refuses `inf` and `nan`, so a decoder falls back to its
  * default. `number.md` gives each clause with its source line, measured load and ReDoS reason.
  */
-export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
+const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
 
 /**
  * A whole value that `get_token` reads as an INT: digits after an optional `-`, with no `.` or

@@ -2,7 +2,7 @@
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { parseControl } from '../control/parser';
 import type { FoldableContainerProperties } from './types';
 

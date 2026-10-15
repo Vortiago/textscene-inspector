@@ -3,7 +3,7 @@ import { decodeGradientTexture2D, resolveGradient } from './decode';
 import { gradientOf } from './gradient.testkit';
 import type { TscnInternalResource } from '../../../parser/types';
 import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
-import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/index.js';
+import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/rendering/texture.js';
 
 /** The stop colours a Gradient with this `colors` value decodes to. */
 function colorsOf(colors: string) {

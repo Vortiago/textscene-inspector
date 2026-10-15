@@ -13,7 +13,7 @@ import { FONT_SUB_RESOURCE_TYPES, resolveInlineFontResource } from '../../fonts/
 import type { FontCacheReader } from '../../fonts/font/types';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { ScannedTheme, ThemeAddresses, ThemeResource } from './types';
-import { indexedKeyRegex } from '../../../godot/index.js';
+import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
 import type { Rgba } from '../../../godot/math/math.js';
 
 /** The type names this slice claims: Godot's Theme class alone. */

@@ -207,7 +207,7 @@ describe("an ancestor Godot's catalog does not know", () => {
   const bone = byName(scene.nodes, 'Bone');
 
   it('is unknowable at the walk, not a mismatch at each caller', () => {
-    // `descendsFrom` is false for "not a subclass" and "never heard of it"
+    // `descendsFromClass` is false for "not a subclass" and "never heard of it"
     // alike, so a GDExtension parent read as the former warns about a correct
     // scene. The check lives in `knownParent`, so every caller reading
     // `ancestor.type` through `searchAncestors` gets it.
