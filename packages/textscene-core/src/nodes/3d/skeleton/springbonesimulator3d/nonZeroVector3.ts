@@ -5,7 +5,7 @@
 
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { CMP_EPSILON, isZeroApprox } from '../../../../godot/index.js';
+import { CMP_EPSILON, isZeroApprox } from '../../../../godot/math/math.js';
 
 /**
  * A gravity direction, which `set_gravity_direction` and `set_joint_gravity_direction` refuse

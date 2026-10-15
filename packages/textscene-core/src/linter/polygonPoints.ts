@@ -4,8 +4,8 @@
  * grammar, such as `inf`, which Godot loads and counts. A rule asks what Godot
  * loaded, not what the previewer can draw.
  */
-
-import { packedArrayBody, packedArrayForms, splitTopLevel } from '../godot/index.js';
+import { packedArrayBody, packedArrayForms } from '../godot/variant/variantParser.js';
+import { splitTopLevel } from '../godot/string/string.js';
 
 /**
  * The three spellings a packed slot takes, the instances `v.packedVector2Array`

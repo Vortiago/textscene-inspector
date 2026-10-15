@@ -6,7 +6,8 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import type { ImageSize } from '../../formats/image/imagePixels';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { literalText, parseGodotInt } from '../../../godot/index.js';
+import { literalText } from '../../../godot/string/string.js';
+import { parseGodotInt } from '../../../godot/variant/int.js';
 import { parsePackedByteArrayBody } from '../../../godot/variant/packedBytes.js';
 import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
 import { warn } from '../../../logger';

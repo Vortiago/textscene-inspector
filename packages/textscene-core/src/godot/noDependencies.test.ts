@@ -64,14 +64,11 @@ describe('src/godot is a dependency-free leaf', () => {
   });
 
   it('sees every specifier this directory actually writes', () => {
-    // index.ts re-exports each sibling through a braced multi-line block, so a
-    // scraper blind to those reads the barrel as importing nothing.
     const specs = specifiersIn(readFileSync(resolve(here, 'index.ts'), 'utf8'));
     for (const sibling of [
-      './variant/number.js',
-      './variant/int.js',
-      './variant/variantParser.js',
-      './rendering/rendering.js',
+      './project/project.js',
+      './project/editorScan.js',
+      './project/resourceFormats.js',
     ]) {
       expect(specs).toContain(sibling);
     }

@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 const arms = {
   selectedNotSelectable: {

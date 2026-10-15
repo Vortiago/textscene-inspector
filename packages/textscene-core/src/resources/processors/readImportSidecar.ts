@@ -7,7 +7,7 @@
 import type { FileEventBus } from '../FileEventBus';
 import type { DependencyGraph, Dependent } from '../dependencyGraph';
 import { parseImportFile, type ParsedImportFile } from '../../parser/importParser';
-import { importSidecarPath } from '../../godot/index.js';
+import { importSidecarPath } from '../../godot/project/resourceFormats.js';
 
 /**
  * The sidecar of `assetPath`, or null for none. `dependent` is recorded as its reader before the

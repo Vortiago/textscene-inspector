@@ -3,11 +3,10 @@
  * reads only its props and the shell's missing-resources context.
  */
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { useMissingResources, type ViewportSelectorOption } from '@textscene/core';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useMissingResources } from '@textscene/core';
 import { fixtures } from './fixturesAll';
 import { FixtureTreeView } from './FixtureTree';
-import { NO_FIXTURE } from './sceneSelection';
 import { IS_PUBLIC_SITE } from './siteEdition';
 import styles from './r3f-main.module.css';
 import { PROVIDED_FILE_EXTENSIONS } from '@textscene/core/resources/resourceProviderUtils';
@@ -15,7 +14,6 @@ import { PROVIDED_FILE_EXTENSIONS } from '@textscene/core/resources/resourceProv
 const ACCEPTED_FILES = PROVIDED_FILE_EXTENSIONS.join(',');
 
 export interface ToolbarProps {
-  options: readonly ViewportSelectorOption[];
   fixtureFile: string;
   uploadedTscnName: string | null;
   loadError: string | null;
@@ -44,11 +42,10 @@ function SceneGlyph() {
 /**
  * A scene chip in the shell top bar that opens a command palette (click, or
  * Ctrl/Cmd+K) to open a `.tscn` or switch scenes. The palette leads with "Open a
- * .tscn from disk…" and lists the dev-only fixtures below it. With `options` empty,
- * it keeps only the open action and the current-file chip.
+ * .tscn from disk…" and lists the dev-only fixtures below it. With no fixtures, it
+ * keeps only the open action and the current-file chip.
  */
 export function Toolbar({
-  options,
   fixtureFile,
   uploadedTscnName,
   loadError,
@@ -69,11 +66,7 @@ export function Toolbar({
   // opening a scene, so a picked file maps to a known target. The badge points there.
   const { missingPaths } = useMissingResources();
 
-  // The dev fixtures, without the uploaded placeholder, whose value is the empty
-  // sentinel.
-  const scenes = useMemo(() => options.filter((o) => o.value !== NO_FIXTURE), [options]);
-
-  const currentLabel = uploadedTscnName ?? scenes.find((o) => o.value === fixtureFile)?.label ?? 'No scene';
+  const currentLabel = uploadedTscnName ?? fixtures.find((f) => f.file === fixtureFile)?.name ?? 'No scene';
 
   // Ctrl/Cmd+K toggles the palette; Escape closes it.
   useEffect(() => {
@@ -226,7 +219,7 @@ export function Toolbar({
               Open a <code>.tscn</code> from disk…
             </button>
 
-            {scenes.length > 0 && (
+            {fixtures.length > 0 && (
               <>
                 <input
                   ref={searchRef}

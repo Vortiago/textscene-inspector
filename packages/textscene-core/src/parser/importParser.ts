@@ -13,7 +13,7 @@ import {
   type ValueScanState,
 } from './utils';
 import * as logger from '../logger';
-import { boolSlotValue } from '../godot/index.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
 import { DEFAULT_GLTF_NAMING_VERSION, type GltfNamingOptions } from '../godot/import/gltfImportNames.js';
 import { parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
 import {

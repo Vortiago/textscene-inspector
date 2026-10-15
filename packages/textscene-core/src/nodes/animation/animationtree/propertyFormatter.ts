@@ -9,7 +9,7 @@ import {
   CallbackModeDiscrete,
   CallbackModeMethod,
 } from './types';
-import { nodePathLiteral } from '../../../godot/index.js';
+import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
 
 export function formatAnimationTreeProperties(properties: AnimationTreeProperties): PropertySection[] {
   const sections: PropertySection[] = [];

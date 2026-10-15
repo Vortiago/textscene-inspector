@@ -2,7 +2,8 @@
 
 import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
-import { isNilLiteral, isPathResourceLiteral, nodePathLiteral, resourceRef } from '../../godot/index.js';
+import { isNilLiteral, nodePathLiteral } from '../../godot/variant/variantParser.js';
+import { isPathResourceLiteral, resourceRef } from '../../godot/variant/resourceRef.js';
 
 /**
  * Every resource-reference validator, so a sweep can ask whether a registered

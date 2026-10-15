@@ -8,7 +8,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { isTypeUnknowable } from '../../../../linter/parentType.js';
 import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import type { RawNode } from '../../../../parser/types.js';
 

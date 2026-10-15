@@ -8,7 +8,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
-import { boolSlotValue } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 
 export function makeAreaLinterRule(dim: PhysicsDim): LintRule {
   // What an area pair does with the two monitor flags: detection needs the

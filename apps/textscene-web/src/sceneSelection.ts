@@ -1,15 +1,9 @@
-/**
- * Which built-in scene the app opens on, and how "none of them" is spelled.
- *
- * A leaf so both `r3f-main.tsx` and its toolbar can read the sentinel without
- * importing each other.
- */
+/** Which built-in scene the app opens on, and how "none of them" is spelled. */
 
-import type { ViewportSelectorOption } from '@textscene/core';
 import { fixtures } from './fixturesAll';
 import { IS_PUBLIC_SITE } from './siteEdition';
 
-/** The `<ViewportSelector>` value while no fixture is active, on an uploaded .tscn. */
+/** The fixture value while no fixture is active, on an uploaded .tscn. */
 export const NO_FIXTURE = '';
 
 /**
@@ -23,19 +17,3 @@ export const DEFAULT_FIXTURE = IS_PUBLIC_SITE
     fixtures.find((f) => f.file === 'integration-all-primitives.tscn')?.file ??
     fixtures[0]?.file ??
     NO_FIXTURE);
-
-/**
- * The scene palette's option list. On an upload the `value` is `''`, and a native `<select>`
- * shows its first `<option>` when none matches, so a placeholder names the uploaded file.
- */
-export function fixtureOptions(uploadedTscnName: string | null): ViewportSelectorOption[] {
-  const options: ViewportSelectorOption[] = fixtures.map((f) => ({
-    value: f.file,
-    label: f.name,
-    category: f.category,
-  }));
-  if (uploadedTscnName) {
-    return [{ value: NO_FIXTURE, label: `(Uploaded: ${uploadedTscnName})` }, ...options];
-  }
-  return options;
-}

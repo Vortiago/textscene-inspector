@@ -22,8 +22,6 @@ export const NODE_BASE_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ...UNCATALOGUED,
 });
 
-export { UNCATALOGUED as UNCATALOGUED_BASE_TYPES };
-
 /**
  * Whether Godot's ClassDB knows this class name. `Node` is the terminal, with no entry of its own.
  * `descendsFrom` returns false both for a known non-subclass and for an unknown class, and a rule
@@ -63,21 +61,4 @@ export function descendsFrom(nodeType: string, ancestor: string): boolean {
     current = baseTypeOf(current);
   }
   return false;
-}
-
-/**
- * Every ancestor of `nodeType`, nearest first, excluding the type itself. Cycle-safe, so a malformed
- * table truncates. `nodeBaseTypes.test.ts` and `baseChainCompleteness.test.ts` do not use it: a guard
- * on the table must not read it through this helper.
- */
-export function baseChain(nodeType: string): string[] {
-  const chain: string[] = [];
-  const seen = new Set<string>([nodeType]);
-  let current: string | undefined = baseTypeOf(nodeType);
-  while (current && !seen.has(current)) {
-    seen.add(current);
-    chain.push(current);
-    current = baseTypeOf(current);
-  }
-  return chain;
 }

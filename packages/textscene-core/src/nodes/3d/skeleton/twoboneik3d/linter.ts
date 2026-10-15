@@ -11,7 +11,8 @@ import { extractNodePath } from '../../../../linter/linterUtils.js';
 import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, listWrittenIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
-import { indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { indexedElements, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../../godot/string/string.js';
 import { resolveTwoBoneSettingLeaf } from './linterParser.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 

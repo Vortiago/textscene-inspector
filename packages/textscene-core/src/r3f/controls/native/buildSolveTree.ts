@@ -16,7 +16,7 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes';
-import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
+import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
 import {

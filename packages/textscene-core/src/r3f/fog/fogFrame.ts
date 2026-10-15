@@ -17,7 +17,8 @@ import type { FogPasses } from './fogPasses.js';
 import { shineDirection } from './fogLights.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { skyRadiance } from './fogSky.js';
-import { FOG_SUN_MAX, fogUniforms } from './fogUniforms.js';
+import { fogUniforms } from './fogUniforms.js';
+import { MAX_DIRECTIONAL_LIGHTS } from '../../godot/rendering/lights/directionalShadow.js';
 import { writeVec4 } from '../writeVec4.js';
 
 export interface FogSettings {
@@ -115,7 +116,7 @@ function writeSuns(lights: readonly THREE.Light[]): void {
   sunSkyColors.fill(0);
   let slot = 0;
   for (const light of lights) {
-    if (slot === FOG_SUN_MAX) break;
+    if (slot === MAX_DIRECTIONAL_LIGHTS) break;
     if (!(light as THREE.DirectionalLight).isDirectionalLight || !visibleInTree(light)) continue;
     const sun = light as THREE.DirectionalLight;
     shineDirection(sun, towards).normalize().negate();

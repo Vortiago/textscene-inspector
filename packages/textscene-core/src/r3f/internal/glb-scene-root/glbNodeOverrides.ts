@@ -14,7 +14,7 @@ import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInst
 import { joinPath } from '../../../utils/nodePath';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
 import { matchGlbTarget } from './matchGlbTarget.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /**
  * The GLB object an override names, or `undefined` when nothing could be it. Both the writer here

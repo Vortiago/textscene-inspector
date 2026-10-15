@@ -12,7 +12,7 @@ import { slotTupleRegex, matchedFloat, allFinite } from '../../../godot/variant/
 import { degToRad } from '../../../godot/math/math.js';
 import { warn } from '../../../logger';
 import type { Node2DProperties } from './types';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
 const TRANSFORM2D_RE = slotTupleRegex('Transform2D', 6);

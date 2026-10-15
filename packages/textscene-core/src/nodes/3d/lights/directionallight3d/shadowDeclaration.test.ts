@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { directionalShadowDeclaration } from './shadowDeclaration';
 import { directionalShadowBias } from '../shared/shadowBias';
 import { DirectionalShadowMode } from '../../../../godot/rendering/lights/directionalShadow';
-import { DirectionalLightSkyMode } from '../../../../godot/rendering/lights/directionalLightSkyMode';
+
+/** `DirectionalLight3D::SkyMode` values a scene stores (`scene/3d/light_3d.h:172-176`). */
+const SKY_ONLY = 2;
 
 describe('directionalShadowDeclaration', () => {
   it('declares the authored shadow properties', () => {
@@ -92,7 +94,7 @@ describe('directionalShadowDeclaration', () => {
     const declaration = directionalShadowDeclaration({
       shadow_enabled: true,
       light_angular_distance: 2,
-      sky_mode: DirectionalLightSkyMode.SKY_ONLY,
+      sky_mode: SKY_ONLY,
     });
     expect(declaration.drawsSoftShadow).toBe(false);
   });
@@ -100,7 +102,7 @@ describe('directionalShadowDeclaration', () => {
   it('declares no share of the atlas for a light that lights only the sky (edge case)', () => {
     const declaration = directionalShadowDeclaration({
       shadow_enabled: true,
-      sky_mode: DirectionalLightSkyMode.SKY_ONLY,
+      sky_mode: SKY_ONLY,
     });
     expect(declaration.sharesAtlas).toBe(false);
   });

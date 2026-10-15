@@ -3,12 +3,17 @@
  * light apart, so a light can light surfaces, draw its sun in the sky, or both.
  */
 
+import { enumNamesByValue } from '../../classdb/enumNames.js';
+
 /** `DirectionalLight3D::SkyMode` (`scene/3d/light_3d.h:172-176`). */
-export const DirectionalLightSkyMode = {
+const DirectionalLightSkyMode = {
   LIGHT_AND_SKY: 0,
   LIGHT_ONLY: 1,
   SKY_ONLY: 2,
 } as const;
+
+/** The sky mode names, for a diagnostic that reports the legal values. */
+export const DIRECTIONAL_LIGHT_SKY_MODE_NAMES = enumNamesByValue(DirectionalLightSkyMode);
 
 /** `DirectionalLight3D()` lights both the scene and the sky (`scene/3d/light_3d.cpp:608`). */
 export const DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT = DirectionalLightSkyMode.LIGHT_AND_SKY;

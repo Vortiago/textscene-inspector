@@ -15,7 +15,7 @@ import { dimSuffix } from './dim.js';
 import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { ruleInt } from '../validators/commonValidators.js';
 import { polygonPointCount } from '../polygonPoints.js';
-import { boolSlotValue } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 
 export function makeCollisionPolygonLinterRule(dim: PhysicsDim): LintRule {
   const type = `CollisionPolygon${dim}`;

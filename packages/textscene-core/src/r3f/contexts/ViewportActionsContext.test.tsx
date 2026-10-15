@@ -7,11 +7,8 @@ import { useEffect, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook } from '@testing-library/react';
 import { buildSceneGraph, type SceneGraph } from '../../core/SceneGraph';
-import {
-  ViewportActionsProvider,
-  useViewportActions,
-  useOptionalViewportActions,
-} from './ViewportActionsContext';
+import { ViewportActionsProvider, useOptionalViewportActions } from './ViewportActionsContext';
+import { useViewportActions } from '../testing/ViewportActionsProbe';
 
 /** A scene graph with no nodes. The context compares graphs by identity only. */
 function emptySceneGraph(): SceneGraph {
@@ -216,13 +213,6 @@ describe('ViewportActionsContext', () => {
   it('useOptionalViewportActions returns null without a provider', () => {
     const { result } = renderHook(() => useOptionalViewportActions());
     expect(result.current).toBeNull();
-  });
-
-  it('useViewportActions throws without a provider', () => {
-    // The throw is expected, so React's error log is silenced.
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => renderHook(() => useViewportActions())).toThrow(/ViewportActionsProvider/);
-    consoleErrorSpy.mockRestore();
   });
 });
 

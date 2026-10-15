@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useViewportActions } from '../../contexts/ViewportActionsContext';
+import { useViewportActions } from '../../testing/ViewportActionsProbe';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext';
 import { useResourceLoader } from '../../../resources/useResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';

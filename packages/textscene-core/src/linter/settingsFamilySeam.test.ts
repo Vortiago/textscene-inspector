@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import type { ParseError } from './types.js';
-import { baseChain } from '../godot/classdb/nodeBaseTypes.js';
+import { baseChain } from '../godot/testing/baseChain.js';
 import { boneConstraintBaseLeaves } from '../nodes/3d/skeleton/boneconstraint3d/linterParser.js';
 // The whole barrel: a per-slice test loads only its own graph, where nothing
 // shadows anything and a missing forward passes.

@@ -10,7 +10,9 @@ import {
   storedNotWritten,
   unrepresentableInt,
 } from './intSlot.js';
-import { boolLiteralAsNumber, boolSlotValue, parseGodotFloat, type IntWidth } from '../../godot/index.js';
+import { boolLiteralAsNumber, boolSlotValue } from '../../godot/variant/variantBool.js';
+import { parseGodotFloat } from '../../godot/variant/number.js';
+import type { IntWidth } from '../../godot/variant/int.js';
 
 /**
  * The Variant-literal readers, re-exported from `src/godot/`. They live there

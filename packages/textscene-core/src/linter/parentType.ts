@@ -8,7 +8,7 @@ import { isTypeUnknowable } from '../parser/typeUnknowable.js';
 import { findParentNode } from './linterUtils.js';
 import { descendsFrom, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
 import type { RawNode, RawScene } from '../parser/types.js';
-import { boolSlotValue } from '../godot/index.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
 
 // Re-exported, not re-spelled: `buildSceneTree` asks the same question at
 // every descent of a `parent=` path, and the parser cannot import the linter.

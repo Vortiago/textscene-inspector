@@ -10,7 +10,8 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../../godot/string/string.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {

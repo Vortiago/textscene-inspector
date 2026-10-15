@@ -34,7 +34,7 @@ import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 interface GLBSceneRootProperties {
   /** The ExtResource's `res://` path to the .glb or .gltf file, verbatim. */

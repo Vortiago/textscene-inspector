@@ -10,14 +10,14 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import {
-  boolSlotValue,
   declaredLeafResolver,
   firstSegment,
   indexedElements,
   indexedKeyRegex,
-  stringToInt,
-} from '../../../../godot/index.js';
+} from '../../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../../godot/string/string.js';
 import { SETTING_LEAVES } from './settingLeaves.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 

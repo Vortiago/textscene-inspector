@@ -2,7 +2,9 @@
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
-import { boolSlotValue, indexedElements, ruleCount } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
+import { ruleCount } from '../../../../godot/variant/int.js';
 import { parseControl } from '../control/parser';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { TabBarProperties, TabBarTabProperties } from './types';

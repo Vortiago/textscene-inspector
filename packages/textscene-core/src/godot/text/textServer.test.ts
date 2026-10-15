@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLocaleRightToLeft, RTL_LANGUAGE_CODES } from './textServer.js';
+import { isLocaleRightToLeft } from './textServer.js';
 
 describe('isLocaleRightToLeft', () => {
   it('answers true for each of the seven language codes the table lists', () => {
@@ -7,8 +7,7 @@ describe('isLocaleRightToLeft', () => {
     // (`modules/text_server_adv/text_server_adv.cpp:534-541`):
     //   if ((l == "ar") || (l == "dv") || (l == "he") || (l == "fa") ||
     //       (l == "ff") || (l == "ku") || (l == "ur")) return true;
-    expect([...RTL_LANGUAGE_CODES]).toEqual(['ar', 'dv', 'he', 'fa', 'ff', 'ku', 'ur']);
-    for (const code of RTL_LANGUAGE_CODES) {
+    for (const code of ['ar', 'dv', 'he', 'fa', 'ff', 'ku', 'ur']) {
       expect(isLocaleRightToLeft(code), code).toBe(true);
     }
   });

@@ -15,7 +15,8 @@ import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
 import { parseGodotFloat } from '../validators/commonValidators.js';
-import { boolSlotValue, descendsFromClass } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   // `one_way_collision` carries PROPERTY_HINT_GROUP_ENABLE for the

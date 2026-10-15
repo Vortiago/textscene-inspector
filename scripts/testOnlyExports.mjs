@@ -1,8 +1,9 @@
 /**
  * Lists the value exports of a package's source tree that no production file imports. Such an
  * export widens a module's interface for its tests alone, so a test reaches past the interface it
- * should go through. The scan is syntactic: it follows relative imports and re-exports, so it runs
- * in seconds over thousands of files where a type-checker program takes minutes.
+ * should go through. An entry point's export counts as imported only when a file outside the tree
+ * imports it. The scan is syntactic: it follows relative imports and re-exports, so it runs in
+ * seconds over thousands of files where a type-checker program takes minutes.
  */
 
 import ts from 'typescript';
@@ -10,7 +11,11 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, posix, relative } from 'node:path';
 
 const SOURCE_RE = /\.tsx?$/;
-const TEST_RE = /\.(test|spec|testkit)\.tsx?$|(^|\/)testing\//;
+const IMPORTER_RE = /\.(tsx?|m?js)$/;
+const TEST_RE = /\.(test|spec|testkit)\.(tsx?|m?js)$|(^|\/)testing\//;
+
+/** Never walked: generated output, installed packages and a downloaded VS Code are nobody's source. */
+const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'out', 'build', 'coverage', '.vscode-test']);
 const DYNAMIC_IMPORT_RE = /\bimport\s*\(/;
 
 /** A test, a test kit or a file under `testing/` is a test file. Its imports prove nothing. */
@@ -20,31 +25,66 @@ export function isTestFile(path) {
 
 /** Every `.ts` and `.tsx` file under `dir`, keyed by its path relative to `dir`, POSIX-style. */
 export function readSourceTree(dir) {
+  return readFiles(dir, [dir], SOURCE_RE);
+}
+
+/**
+ * Every source file under `dirs` that may import a package's tree, script files included, keyed by
+ * its path relative to `root`, POSIX-style.
+ */
+export function readImporters(root, dirs) {
+  return readFiles(root, dirs, IMPORTER_RE);
+}
+
+function readFiles(root, dirs, nameRe) {
   const files = new Map();
   const walk = (abs) => {
     for (const entry of readdirSync(abs, { withFileTypes: true })) {
       const child = join(abs, entry.name);
       if (entry.isDirectory()) {
-        if (entry.name !== 'node_modules') walk(child);
-      } else if (SOURCE_RE.test(entry.name) && !entry.name.endsWith('.d.ts')) {
-        files.set(relative(dir, child).split('\\').join('/'), readFileSync(child, 'utf8'));
+        if (!SKIPPED_DIRECTORIES.has(entry.name)) walk(child);
+      } else if (nameRe.test(entry.name) && !entry.name.endsWith('.d.ts')) {
+        files.set(relative(root, child).split('\\').join('/'), readFileSync(child, 'utf8'));
       }
     }
   };
-  walk(dir);
+  for (const dir of dirs) walk(dir);
   return files;
 }
 
 /**
  * The resolved file for a relative specifier, or nothing for a bare package or a file outside
- * the tree. Bundler resolution maps `./x.js` to `./x.ts`, and `./dir` to `./dir/index.ts`.
+ * the tree.
  */
 function resolveSpecifier(files, fromPath, specifier) {
   if (!specifier.startsWith('.')) return undefined;
-  const base = posix.normalize(posix.join(posix.dirname(fromPath), specifier));
+  return resolveTreePath(files, posix.normalize(posix.join(posix.dirname(fromPath), specifier)));
+}
+
+/** The tree file at `base`. Bundler resolution maps `x.js` to `x.ts`, and `dir` to `dir/index.ts`. */
+function resolveTreePath(files, base) {
   const stem = base.replace(/\.(m?js|jsx)$/, '');
   const candidates = [base, `${stem}.ts`, `${stem}.tsx`, `${base}/index.ts`, `${base}/index.tsx`];
   return candidates.find((candidate) => files.has(candidate));
+}
+
+/**
+ * A resolver for an importer outside the tree. A package specifier reaches its entry point. A
+ * relative one reaches the tree file it names, as a script imports a source file directly or the
+ * file `dist`, the tree's build with the same layout, holds for it. It does so
+ * only from a production file: an outside test that reaches past the entry points proves nothing,
+ * while one that imports a package specifier goes through the package interface.
+ */
+function outsideResolver(files, { tree, dist, entries }) {
+  return (fromPath, specifier) => {
+    if (!specifier.startsWith('.')) return entries.get(specifier);
+    if (isTestFile(fromPath)) return undefined;
+    const target = posix.normalize(posix.join(posix.dirname(fromPath), specifier));
+    for (const root of [tree, dist]) {
+      if (root && target.startsWith(`${root}/`)) return resolveTreePath(files, target.slice(root.length + 1));
+    }
+    return undefined;
+  };
 }
 
 function isTypeDeclaration(statement) {
@@ -63,39 +103,48 @@ function declaredNames(statement) {
 /**
  * One file's module record. `own` holds the names it declares and exports. `aliases` maps an
  * exported name to the `[file, name]` it forwards, and `stars` holds the files `export *` forwards.
- * `uses` holds the `[file, name]` pairs it imports, with `*` for a whole module.
+ * `uses` holds the `[file, name]` pairs it imports, with `*` for a whole module, and `typeUses`
+ * the pairs a type position names through `import('…')`.
  */
-function parseModule(files, path, text) {
+function parseModule(path, text, resolve) {
   const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, false);
-  const record = { own: new Map(), aliases: new Map(), stars: [], uses: [] };
+  const record = { own: new Map(), aliases: new Map(), stars: [], uses: [], typeUses: [] };
   const imported = new Map();
   const localTypes = new Set(
     source.statements.filter(isTypeDeclaration).flatMap((statement) => declaredNames(statement))
   );
 
   const visitDynamic = (node) => {
+    const destructured = destructuredImport(node);
+    if (destructured) {
+      const target = resolveDynamic(resolve, path, destructured.call);
+      if (target) for (const name of destructured.names) record.uses.push([target, name]);
+      return;
+    }
+    // `await import('./x')` alone loads the module for its side effects and reads no export.
+    if (ts.isExpressionStatement(node) && importCallIn(node.expression)) return;
     const thenImport = dynamicImportOfThen(node);
     if (thenImport) {
-      const target = resolveDynamic(files, path, thenImport.call);
+      const target = resolveDynamic(resolve, path, thenImport.call);
       if (target) for (const name of thenImport.names) record.uses.push([target, name]);
       for (const arg of node.arguments) ts.forEachChild(arg, visitDynamic);
       return;
     }
     if (isDynamicImport(node)) {
-      const target = resolveDynamic(files, path, node);
+      const target = resolveDynamic(resolve, path, node);
       if (target) record.uses.push([target, '*']);
     }
     if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
       const literal = node.argument.literal;
-      const target = ts.isStringLiteral(literal) && resolveSpecifier(files, path, literal.text);
-      if (target) record.uses.push([target, node.qualifier ? qualifierHead(node.qualifier) : '*']);
+      const target = ts.isStringLiteral(literal) && resolve(path, literal.text);
+      if (target) record.typeUses.push([target, node.qualifier ? qualifierHead(node.qualifier) : '*']);
     }
     ts.forEachChild(node, visitDynamic);
   };
 
   for (const statement of source.statements) {
     if (ts.isImportDeclaration(statement)) {
-      const target = resolveSpecifier(files, path, statement.moduleSpecifier.text);
+      const target = resolve(path, statement.moduleSpecifier.text);
       const clause = statement.importClause;
       if (!target || !clause) continue;
       if (clause.name) {
@@ -113,7 +162,7 @@ function parseModule(files, path, text) {
       }
     } else if (ts.isExportDeclaration(statement)) {
       const specifier = statement.moduleSpecifier;
-      const target = specifier && resolveSpecifier(files, path, specifier.text);
+      const target = specifier && resolve(path, specifier.text);
       const clause = statement.exportClause;
       if (specifier && !target) continue;
       if (!clause) record.stars.push(target);
@@ -144,9 +193,26 @@ function isDynamicImport(node) {
   return ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword;
 }
 
-function resolveDynamic(files, path, call) {
+function resolveDynamic(resolve, path, call) {
   const [arg] = call.arguments;
-  return arg && ts.isStringLiteral(arg) && resolveSpecifier(files, path, arg.text);
+  return arg && ts.isStringLiteral(arg) && resolve(path, arg.text);
+}
+
+/** The `import('…')` call `expression` awaits or holds, or nothing. */
+function importCallIn(expression) {
+  let inner = expression;
+  while (ts.isAwaitExpression(inner) || ts.isParenthesizedExpression(inner)) inner = inner.expression;
+  return isDynamicImport(inner) ? inner : undefined;
+}
+
+/** For `const { A, B: b } = await import('./x')`, the import call and the names it binds. */
+function destructuredImport(node) {
+  if (!ts.isVariableDeclaration(node) || !ts.isObjectBindingPattern(node.name) || !node.initializer) {
+    return undefined;
+  }
+  const call = importCallIn(node.initializer);
+  if (!call || node.name.elements.some((element) => element.dotDotDotToken)) return undefined;
+  return { call, names: node.name.elements.map((element) => (element.propertyName ?? element.name).text) };
 }
 
 /**
@@ -213,15 +279,21 @@ function allExports(modules, path, seen) {
 /**
  * The `file#name` of every value export in `files` that no production file outside its own file
  * imports. A type export is left out: a type that names an export's argument or result is part of
- * that interface, and the declaration emitter needs it exported (TS4023). An entry point's exports
- * are the package interface, so they count as imported, as does everything an entry point
- * forwards. A whole-module use (`import *`, a bare `import()`) imports every export of that module.
+ * that interface, and the declaration emitter needs it exported (TS4023). An entry point's export
+ * is imported only when an `outside` importer imports it, so an entry point hides no export that
+ * only tests reach. A whole-module use (`import *`, a bare `import()`) imports every export of
+ * that module.
+ *
+ * `outside.importers` maps each importer's path to its text, relative to the root that `tree`, the
+ * path of `files`, and `dist`, the path of its build, are relative to. `outside.entries` maps a
+ * package specifier to its entry file.
  */
-export function testOnlyExports(files, entryPoints) {
+export function testOnlyExports(files, outside) {
   // A test file's imports prove nothing, so only production files are parsed. `files` still
   // holds every path, so a specifier resolves to a test file as it does to any other.
   const production = [...files].filter(([path]) => !isTestFile(path));
-  const modules = new Map(production.map(([path, text]) => [path, parseModule(files, path, text)]));
+  const insideResolver = (fromPath, specifier) => resolveSpecifier(files, fromPath, specifier);
+  const modules = new Map(production.map(([path, text]) => [path, parseModule(path, text, insideResolver)]));
   const imported = new Set();
   // Every hop counts, so a barrel's forwarding name is imported when an importer goes through it.
   const markImported = (file, name) => {
@@ -236,9 +308,16 @@ export function testOnlyExports(files, entryPoints) {
     return owners.length > 0 && owners.every(([owner, own]) => modules.get(owner).own.get(own));
   };
 
-  for (const entry of entryPoints) markImported(entry, '*');
+  const resolveOutside = outsideResolver(files, outside);
+  for (const [path, text] of outside.importers) {
+    const { uses, typeUses, aliases, stars } = parseModule(path, text, resolveOutside);
+    // A test types its mock as `typeof import('pkg')`, which names the module, not a use of each export.
+    const typed = isTestFile(path) ? [] : typeUses;
+    for (const [file, name] of [...uses, ...typed, ...aliases.values()]) markImported(file, name);
+    for (const star of stars) if (star) markImported(star, '*');
+  }
   for (const [path, record] of modules) {
-    for (const [file, name] of record.uses) {
+    for (const [file, name] of [...record.uses, ...record.typeUses]) {
       if (file !== path) markImported(file, name);
     }
   }
@@ -254,9 +333,15 @@ export function testOnlyExports(files, entryPoints) {
   return unimported.sort();
 }
 
-/** The source files a package's `exports` map names under the `@textscene/source` condition. */
+/**
+ * Each package specifier mapped to the source file its `exports` entry names under the
+ * `@textscene/source` condition: `@textscene/core/godot` to `godot/index.ts`.
+ */
 export function entryPointsOf(packageJson, sourceDir) {
-  return Object.values(packageJson.exports).map((conditions) =>
-    posix.relative(sourceDir, posix.normalize(conditions['@textscene/source']))
+  return new Map(
+    Object.entries(packageJson.exports).map(([subpath, conditions]) => [
+      posix.join(packageJson.name, subpath),
+      posix.relative(sourceDir, posix.normalize(conditions['@textscene/source'])),
+    ])
   );
 }

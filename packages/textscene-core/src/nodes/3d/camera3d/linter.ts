@@ -9,7 +9,7 @@ import { nodesDescendingFrom } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode } from '../../../parser/types.js';
 

@@ -18,11 +18,11 @@ import {
 import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
 import {
   TRANSFORM2D_IDENTITY,
-  boolSlotValue,
   multiplyTransform2D,
   transform2DFromParts,
   type Transform2DColumns,
-} from '../../../godot/index.js';
+} from '../../../godot/math/transform2d.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { RawNode } from '../../../parser/types.js';
 
 /** The vector as the slot holds it; `null` when the composition must not proceed. */

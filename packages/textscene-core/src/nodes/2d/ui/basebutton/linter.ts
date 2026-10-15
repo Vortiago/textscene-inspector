@@ -9,7 +9,7 @@ import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 const arms = {
   groupWithoutToggleMode: groundedArm('button-group-without-toggle-mode', { kind: 'configuration-warning' }),

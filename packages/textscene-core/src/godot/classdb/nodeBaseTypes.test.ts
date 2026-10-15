@@ -1,18 +1,11 @@
 /**
  * The ancestry readers `godot/` exports, against the table itself. The sibling
  * `linter/nodeBaseTypes.test.ts` asks the linter question of registered types. The walks are
- * longhand rather than through `baseChain`: a guard on the table must not read it through a helper.
+ * longhand rather than through a helper: a guard on the table must not read it through one.
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  MAX_BASE_CHAIN_HOPS,
-  NODE_BASE_TYPES,
-  UNCATALOGUED_BASE_TYPES,
-  baseChain,
-  descendsFrom,
-  isCatalogedType,
-} from './nodeBaseTypes.js';
+import { MAX_BASE_CHAIN_HOPS, NODE_BASE_TYPES, descendsFrom, isCatalogedType } from './nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from './resourceBaseTypes.generated.js';
 
 /** Hops from `type` to its root, walking the raw table. */
@@ -33,7 +26,7 @@ describe('NODE_BASE_TYPES', () => {
     // The catalog is the engine's answer; UNCATALOGUED holds only what a
     // 4.6.3 ClassDB cannot supply.
     expect(NODE_BASE_TYPES.Sprite2D).toBe('Node2D');
-    expect(NODE_BASE_TYPES.AreaLight3D).toBe(UNCATALOGUED_BASE_TYPES.AreaLight3D);
+    expect(NODE_BASE_TYPES.AreaLight3D).toBe('Light3D');
     expect(Object.isFrozen(NODE_BASE_TYPES)).toBe(true);
   });
 
@@ -70,18 +63,6 @@ describe('descendsFrom', () => {
     expect(descendsFrom('__proto__', 'Node')).toBe(false);
     expect(descendsFrom('constructor', 'Node')).toBe(false);
     expect(descendsFrom('toString', 'Node')).toBe(false);
-  });
-});
-
-describe('baseChain', () => {
-  it('lists every ancestor nearest first, excluding the type itself', () => {
-    expect(baseChain('Sprite2D')).toEqual(['Node2D', 'CanvasItem', 'Node']);
-  });
-
-  it('is empty for the terminal and for an unknown type', () => {
-    expect(baseChain('Node')).toEqual([]);
-    expect(baseChain('SomeGDExtensionNode')).toEqual([]);
-    expect(baseChain('__proto__')).toEqual([]);
   });
 });
 

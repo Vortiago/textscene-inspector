@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict } from '../../../../linter/parentType.js';
-import { literalText } from '../../../../godot/index.js';
+import { literalText } from '../../../../godot/string/string.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {

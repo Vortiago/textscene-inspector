@@ -12,7 +12,7 @@ import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
 import { slotComponents, slotComponentsAltered } from '../../godot/variant/int.js';
 import { ruleInt, tupleComponent } from '../validators/commonValidators.js';
-import { boolSlotValue } from '../../godot/index.js';
+import { boolSlotValue } from '../../godot/variant/variantBool.js';
 
 /**
  * Per-axis scale tolerance: rigid_body_3d.cpp:667 and rigid_body_2d.cpp:648,

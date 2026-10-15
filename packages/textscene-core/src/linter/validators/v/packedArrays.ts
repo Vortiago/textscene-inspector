@@ -10,12 +10,10 @@ import {
   packedArrayForms,
   packedArrayLiteral,
   packedElementType,
-  readerLimitedInt,
-  splitTopLevel,
   STRING_ARRAY_FORMS,
-  stringLiteralBodies,
-  type IntWidth,
-} from '../../../godot/index.js';
+} from '../../../godot/variant/variantParser.js';
+import { readerLimitedInt, type IntWidth } from '../../../godot/variant/int.js';
+import { splitTopLevel, stringLiteralBodies } from '../../../godot/string/string.js';
 import { compositeSpellings } from '../../../godot/variant/variantConversion.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';

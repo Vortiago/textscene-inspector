@@ -7,7 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { lint, node, scene } from './testing/testkit.js';
-import { descendsFrom, isCatalogedType, baseChain } from '../godot/classdb/nodeBaseTypes.js';
+import { descendsFrom, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
+import { baseChain } from '../godot/testing/baseChain.js';
 import '../linter/index.js';
 
 /**

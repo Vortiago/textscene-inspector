@@ -3,21 +3,18 @@
  * keyed by full name. A foreign-format parser outside the resource-slice registry (ADR-0031): no
  * scene names it, so it claims no type name and no bus slot.
  */
-
+import { STRING_ARRAY_FORMS, packedArrayBody } from '../godot/variant/variantParser.js';
 import {
-  STRING_ARRAY_FORMS,
   STRING_LITERAL_RE,
   STRING_LITERAL_SOURCE,
-  boolSlotValue,
-  dataDirectoryPath,
   dropTrailingComma,
-  extensionListPath,
-  isLocaleRightToLeft,
-  packedArrayBody,
   splitTopLevel,
-  type LayoutDirectionEnv,
-  DEFAULT_CLEAR_COLOR,
-} from '../godot/index.js';
+} from '../godot/string/string.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
+import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
+import { isLocaleRightToLeft } from '../godot/text/textServer.js';
+import type { LayoutDirectionEnv } from '../godot/scene/control.js';
+import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
 import { unquoteLiteral } from './utils.js';
 import { colorOr } from '../utils/colorParser.js';
 import { parseOptionalInt } from './valueParsers.js';

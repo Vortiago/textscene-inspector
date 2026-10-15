@@ -7,7 +7,7 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { baseChain } from '../../godot/classdb/nodeBaseTypes.js';
+import { baseChain } from '../../godot/testing/baseChain.js';
 
 // Re-exported, not re-derived: two modules in this directory resolving the same
 // directory from their own `import.meta.url` is two `..` counts to keep right.

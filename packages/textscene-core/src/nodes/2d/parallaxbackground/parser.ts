@@ -8,7 +8,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { boolOr, floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { parseCanvasLayerTransform } from '../ui/canvaslayer/parser';
 import type { ParallaxBackgroundProperties } from './types';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /**
  * `ParallaxBackground::ParallaxBackground()` runs `set_layer(-100)`, and a

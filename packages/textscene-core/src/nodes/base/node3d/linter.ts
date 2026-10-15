@@ -8,7 +8,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { nodePathLiteral } from '../../../godot/index.js';
+import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
 
 /**
  * Parse NodePath value to extract the actual path

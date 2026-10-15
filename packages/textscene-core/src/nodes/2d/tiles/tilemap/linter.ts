@@ -11,7 +11,7 @@ import { resourceSlotIsEmpty } from '../../../../linter/resourceChecker.js';
 import { decodeLegacyTileData } from '../shared/tileData.js';
 import { TILE_MAP_DATA_FORMAT_DEFAULT, formatWhenApplied, tileDataValidator } from './tileDataSlots.js';
 import { tileMapLayerVector } from '../shared/layerVector';
-import { visitIndexedKeys } from '../../../../godot/index.js';
+import { visitIndexedKeys } from '../../../../godot/classdb/indexedKey.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { ySortArms, ySortDiagnostics } from './ySortRules.js';
 

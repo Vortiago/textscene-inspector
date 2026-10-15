@@ -12,7 +12,8 @@ import { rangeAdvisories, type RangeThreshold } from '../../../../linter/rangeAd
 import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { firstSegment, indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { firstSegment, indexedElements, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../../godot/string/string.js';
 import { resolveConvertSettingLeaf } from './linterParser.js';
 
 const arms = {
