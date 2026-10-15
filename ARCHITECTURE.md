@@ -52,7 +52,7 @@ a package outside core imports.
 | `text/` | `servers/text`, `modules/text_server_adv` and `text_server_fb`: the text server |
 | `audio/` | `servers/audio`: the audio server |
 | `rendering/` | `servers/rendering`: viewport, textures, culling, fades, passes |
-| `rendering/materials/` | The material shaders: UVs, diffuse and specular modes, DFG, alpha, texture filters |
+| `rendering/materials/` | The material shaders: UVs, diffuse and specular modes, DFG, blend attachments, alpha, alpha antialiasing, texture filters |
 | `rendering/lights/` | Light shading and shadows: LTC, shadow atlases, the area light atlas, soft-shadow kernels |
 | `rendering/environment/` | Fog, sky reflection, reflection probes, tone mapping, glow |
 | `testing/` | Test helpers for the files above |

@@ -8,7 +8,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
-import { AlphaAntiAliasing, AlphaCutMode, TextureFilterMode, type Sprite3DProperties } from './types';
+import { AlphaCutMode, TextureFilterMode, type Sprite3DProperties } from './types';
 import { frameCoords, replaySpriteFrames } from '../../../godot/scene/spriteFrames.js';
 import { parseSpriteQuad } from './quadParser';
 
@@ -53,16 +53,8 @@ export function parseSprite3D(
       'Sprite3D alpha_scissor_threshold'
     ),
     alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'Sprite3D alpha_hash_scale'),
-    alpha_antialiasing_mode: enumOr(
-      properties.alpha_antialiasing_mode,
-      AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
-      [
-        AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
-        AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
-        AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE,
-      ],
-      'Sprite3D alpha_antialiasing_mode'
-    ),
+    // `set_alpha_antialiasing` stores any value (`sprite_3d.cpp:571-578`), and any but OFF ramps the edge.
+    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, 'Sprite3D alpha_antialiasing_mode'),
     alpha_antialiasing_edge: floatOr(
       properties.alpha_antialiasing_edge,
       0,

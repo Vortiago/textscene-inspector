@@ -93,6 +93,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Alpha Antialiasing One Sample",
+    "file": "unit-alpha-antialiasing-one-sample.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatable Body 2d",
     "file": "unit-animatable-body-2d.tscn",
     "category": "Other"
@@ -1956,6 +1961,12 @@ export const fixtures: Fixture[] = [
     "name": "Ysort Own Body",
     "file": "unit-ysort-own-body.tscn",
     "category": "Other"
+  },
+  {
+    "name": "Alpha Antialiasing",
+    "file": "alpha-antialiasing/unit-alpha-antialiasing.tscn",
+    "category": "Other",
+    "root": "alpha-antialiasing"
   },
   {
     "name": "Msaa 2d",

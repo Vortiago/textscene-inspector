@@ -7,6 +7,12 @@
 import { drawsInShadowPass } from '../godot/rendering/shadowPass';
 import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
 import type { SurfaceAlphaSource } from './materials/surfaceAlphaPatch';
+import {
+  hashAntialiasing,
+  scissorAntialiasing,
+  type AlphaAntiAliasing,
+  type AlphaAntialiasingCut,
+} from '../godot/rendering/materials/alphaAntialiasing';
 
 /** Passed as `transparentFlag` by a node whose DrawFlags have no `FLAG_TRANSPARENT` member. */
 export const NO_TRANSPARENT_FLAG = 'no-transparent-flag';
@@ -22,6 +28,8 @@ interface AlphaCutInput {
    * always enters it, and passes `NO_TRANSPARENT_FLAG`.
    */
   transparentFlag: boolean | typeof NO_TRANSPARENT_FLAG;
+  /** `alpha_antialiasing_mode` and `alpha_antialiasing_edge`, which `get_material_for_2d` hands on. */
+  antialiasing: { mode: AlphaAntiAliasing; edge: number };
 }
 
 export interface AlphaCutSurface extends SurfaceAlphaSource {
@@ -40,6 +48,8 @@ export interface AlphaCutSurface extends SurfaceAlphaSource {
    * the surface at `render_forward_clustered.cpp:4079-4090`.
    */
   blended: boolean;
+  /** The cut's alpha antialiasing, or null where its shader runs none. */
+  antialiasing: AlphaAntialiasingCut | null;
 }
 
 type CutArm = Omit<AlphaCutSurface, 'readsAlbedoAlpha'>;
@@ -52,27 +62,55 @@ const OPAQUE_ARM: CutArm = {
   depthWrite: true,
   blended: false,
   opaqueAfterCut: false,
+  antialiasing: null,
+};
+
+/**
+ * A cut under alpha antialiasing: `uses_alpha_antialiasing` re-admits it to the alpha pass with a
+ * depth prepass, and its shader keeps the ramped alpha (`scene_shader_forward_clustered.h:279-293`).
+ */
+const ANTIALIASED_ARM: CutArm = {
+  ...OPAQUE_ARM,
+  depthPrepass: true,
+  depthWrite: false,
+  blended: true,
 };
 
 /** Godot's `mat_transparency` switch in three's terms. */
-export function alphaCutSurface({ mode, scissorThreshold, transparentFlag }: AlphaCutInput): AlphaCutSurface {
+export function alphaCutSurface({
+  mode,
+  scissorThreshold,
+  transparentFlag,
+  antialiasing,
+}: AlphaCutInput): AlphaCutSurface {
   // TRANSPARENCY_DISABLED is the initialiser the switch never reaches (`sprite_3d.cpp:284-286`).
   // Its shader writes no ALPHA, so the texture alpha never reaches the blend.
   if (transparentFlag === false) {
     return { ...OPAQUE_ARM, readsAlbedoAlpha: false };
   }
-  return { ...cutArm(mode, scissorThreshold), readsAlbedoAlpha: true };
+  return { ...cutArm(mode, scissorThreshold, antialiasing), readsAlbedoAlpha: true };
 }
 
 /** One arm of the switch, each of which multiplies the albedo alpha into ALPHA. */
-function cutArm(mode: number, scissorThreshold: number): CutArm {
-  // SCISSOR and HASH force `alpha = 1.0` past the cut (`scene_forward_clustered.glsl:1413-1415`),
-  // so they land in the opaque list (`scene_shader_forward_clustered.cpp:252`), which writes depth.
+function cutArm(
+  mode: number,
+  scissorThreshold: number,
+  { mode: antialiasingMode, edge }: AlphaCutInput['antialiasing']
+): CutArm {
+  // Without alpha antialiasing, SCISSOR and HASH force `alpha = 1.0` past the cut
+  // (`scene_forward_clustered.glsl:1413-1415`), so they land in the opaque list
+  // (`scene_shader_forward_clustered.cpp:252`), which writes depth.
   switch (mode) {
-    case AlphaCutMode.DISCARD:
+    case AlphaCutMode.DISCARD: {
+      const antialiasing = scissorAntialiasing(antialiasingMode, scissorThreshold, edge);
+      if (antialiasing) return { ...ANTIALIASED_ARM, antialiasing };
       return { ...OPAQUE_ARM, alphaTest: scissorThreshold, opaqueAfterCut: true };
-    case AlphaCutMode.HASH:
+    }
+    case AlphaCutMode.HASH: {
+      const antialiasing = hashAntialiasing(antialiasingMode, edge);
+      if (antialiasing) return { ...ANTIALIASED_ARM, alphaHash: true, antialiasing };
       return { ...OPAQUE_ARM, alphaHash: true, opaqueAfterCut: true };
+    }
     case AlphaCutMode.OPAQUE_PREPASS:
       // Blended and uncut in colour. `get_material_for_2d` keeps DEPTH_DRAW_OPAQUE_ONLY, so only
       // the depth prepass writes depth.

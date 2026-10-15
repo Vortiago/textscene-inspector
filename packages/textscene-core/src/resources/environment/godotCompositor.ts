@@ -33,6 +33,12 @@ export interface CompositeOptions {
   toneMapping: CompositeToneMapping;
   /** Null when `adjustment_enabled` is false: `FLAG_USE_BCS` clear. */
   adjustments: EnvironmentAdjustments | null;
+  /**
+   * `rendering/viewport/transparent_background`. `tonemap.glsl` writes the buffer's alpha through,
+   * and only a transparent window shows it: the screen blit copies it with blending off
+   * (`renderer_compositor_rd.cpp:138`) into an opaque surface.
+   */
+  transparentBackground: boolean;
   /** Godot `tonemap_exposure`, the starting value of the exposure uniform. */
   exposure: number;
 }
@@ -62,6 +68,7 @@ export function compositeProgram({
   toneMapping,
   adjustments,
   exposure,
+  transparentBackground,
 }: CompositeOptions): CompositeProgram {
   const declarations: Record<string, UniformDeclaration> = {
     [EXPOSURE_UNIFORM]: { glslType: 'float', value: exposure },
@@ -80,7 +87,7 @@ ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
 ${adjustments ? adjustmentsGlsl(adjustments) : ''}
-  outputColor = vec4(color, inputColor.a);
+  outputColor = vec4(color, ${transparentBackground ? 'inputColor.a' : '1.0'});
 }
 `;
   return {

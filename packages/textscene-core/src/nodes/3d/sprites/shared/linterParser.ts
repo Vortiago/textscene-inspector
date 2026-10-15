@@ -10,7 +10,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
   AlphaAntiAliasing,
-  ALPHA_ANTIALIASING_NAMES,
+  ALPHA_ANTIALIASING_SHORT_NAMES,
 } from '../../../../godot/rendering/materials/alphaAntialiasing.js';
 import { AlphaCutMode, ALPHA_CUT_NAMES } from '../../../../godot/rendering/materials/alphaCut.js';
 import { TextureFilter, TEXTURE_FILTER_NAMES } from '../../../../godot/rendering/materials/textureFilter.js';
@@ -78,9 +78,9 @@ validatorRegistry.registerAll('SpriteBase3D', {
   // bare assignment (no ERR_FAIL), so out-of-hint is a warning.
   alpha_antialiasing_mode: v.enumInt(
     'alpha_antialiasing_mode',
-    AlphaAntiAliasing.OFF,
-    AlphaAntiAliasing.ALPHA_TO_COVERAGE_AND_TO_ONE,
-    ALPHA_ANTIALIASING_NAMES,
+    AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+    AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE,
+    ALPHA_ANTIALIASING_SHORT_NAMES,
     { hinted: 'sprite_3d.cpp:694' }
   ),
   // sprite_3d.cpp:695 hints "0,1,0.01" (closed); set_alpha_antialiasing_edge:

@@ -118,6 +118,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     scissorThreshold: properties.alpha_scissor_threshold,
     // Label3D's DrawFlags have no FLAG_TRANSPARENT (`label_3d.h:42-47`).
     transparentFlag: NO_TRANSPARENT_FLAG,
+    antialiasing: { mode: properties.alpha_antialiasing_mode, edge: properties.alpha_antialiasing_edge },
   });
   // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
   // blended pass is transparent. The geometry instance's fade can move both surfaces
@@ -183,8 +184,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
 }
 
 /**
- * Each pass's blend, with its opaque prepass, at the label's `alpha_hash_scale`, which
- * `label_3d.cpp:379` hands every surface.
+ * Each pass's blend, with its opaque prepass, at the label's `alpha_hash_scale` and alpha
+ * antialiasing, which `label_3d.cpp:379-397` hands every surface.
  */
 function labelBlends(
   cut: AlphaCutSurface,
@@ -193,8 +194,9 @@ function labelBlends(
 ): FadeVariants<CanvasTextBlend> {
   const blends = cutBlends(cut);
   const prepasses = cutOpaquePrepasses(cut, depthTest);
+  const { antialiasing } = cut;
   return {
-    unfaded: { ...blends.unfaded, alphaHashScale, opaquePrepass: prepasses.unfaded },
-    alphaPass: { ...blends.alphaPass, alphaHashScale, opaquePrepass: prepasses.alphaPass },
+    unfaded: { ...blends.unfaded, alphaHashScale, antialiasing, opaquePrepass: prepasses.unfaded },
+    alphaPass: { ...blends.alphaPass, alphaHashScale, antialiasing, opaquePrepass: prepasses.alphaPass },
   };
 }

@@ -7,6 +7,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  alphaAntialiasingOf,
+  alphaAntialiasingUserData,
+} from '../../../r3f/materials/godotAlphaAntialiasing';
+import { AlphaAntiAliasing, scissorAntialiasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
@@ -333,6 +338,61 @@ describe('<LabelGlyphs>', () => {
       const renderer = await render(labelProperties({ alpha_cut: AlphaCutMode.HASH, alpha_hash_scale: 0.3 }));
       const [material] = materials(renderer);
       expect(material!.userData).toMatchObject(alphaHashScaleUserData(0.3));
+    });
+
+    it('DISCARD under alpha_antialiasing_mode turns alpha to coverage on and ramps past the threshold', async () => {
+      // `label_3d.cpp:397` hands the mode and edge to `get_material_for_2d`, whose shader ramps at
+      // `clamp(threshold + edge)` (`scene_forward_clustered.glsl:1408-1410`).
+      const renderer = await render(
+        labelProperties({
+          alpha_cut: AlphaCutMode.DISCARD,
+          alpha_scissor_threshold: 0.25,
+          alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
+          alpha_antialiasing_edge: 0.5,
+        })
+      );
+      const [material] = materials(renderer);
+      expect(material!.alphaToCoverage).toBe(true);
+      expect(material!.alphaTest).toBe(0);
+      expect(material!.transparent).toBe(true);
+      expect(alphaAntialiasingOf(material!)).toEqual(
+        scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.25, 0.5)
+      );
+    });
+
+    it("measures the edge's mip level in Godot's glyph texels, one per font pixel", async () => {
+      // `label_3d.cpp:345-350` caches the glyph at its font size; the raster supersamples it.
+      const cut = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0);
+      const renderer = await render(
+        labelProperties({
+          alpha_cut: AlphaCutMode.DISCARD,
+          alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
+        })
+      );
+      const [material] = materials(renderer);
+      expect(material!.userData).toMatchObject(alphaAntialiasingUserData(cut, 1 / CANVAS_TEXT_SUPERSAMPLE));
+    });
+
+    it('HASH under ALPHA_TO_COVERAGE_AND_TO_ONE overwrites the colour with the coverage blend', async () => {
+      const renderer = await render(
+        labelProperties({
+          alpha_cut: AlphaCutMode.HASH,
+          alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE,
+        })
+      );
+      const [material] = materials(renderer);
+      expect(material!.alphaToCoverage).toBe(true);
+      expect(material!.alphaHash).toBe(true);
+      expect(material!.blendSrc).toBe(THREE.OneFactor);
+    });
+
+    it('DISABLED ignores alpha_antialiasing_mode, as the switch never reaches a cut (edge case)', async () => {
+      const renderer = await render(
+        labelProperties({ alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE })
+      );
+      const [material] = materials(renderer);
+      expect(material!.alphaToCoverage).toBe(false);
+      expect(alphaAntialiasingOf(material!)).toBeNull();
     });
 
     it('DISABLED (default) paints TRANSPARENCY_ALPHA — blended, no cut, no depth write', async () => {

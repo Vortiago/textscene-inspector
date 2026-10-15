@@ -63,7 +63,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-`pixel_size`, `outline_size`, `font_size` and `line_spacing` warn and fall back through `floatOr` to `0.005`, `12`, `32` and `0`. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the label opaque. A `billboard` outside `0` to `2` keeps `DISABLED`, as Godot's setter refuses it. `no_depth_test` is a raw `=== 'true'` comparison, so any other value renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
+`pixel_size`, `outline_size`, `font_size`, `line_spacing` and `alpha_antialiasing_edge` warn and fall back through `floatOr` to `0.005`, `12`, `32`, `0` and `0`. `alpha_antialiasing_mode` warns and falls back to `OFF`. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the label opaque. A `billboard` outside `0` to `2` keeps `DISABLED`, as Godot's setter refuses it. `no_depth_test` is a raw `=== 'true'` comparison, so any other value renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
 
 ## Known limitations
 
@@ -72,5 +72,6 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 - **Approximated** The glyph texture carries no mipmaps, so a label seen small sparkles
   where Godot's stays smooth.
 - **Approximated** Godot draws the glyphs softer, and an `outline_size = 8` outline as a faint grey halo, where here it is a crisp black ring.
-- **Shader missing** `alpha_antialiasing_mode` and `alpha_antialiasing_edge` have no
-  counterpart, so a cut label's edges are not feathered.
+- **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
+- **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
+- **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).

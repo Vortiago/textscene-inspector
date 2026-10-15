@@ -3,6 +3,7 @@
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 import { AlphaCutMode, BillboardMode, TextureFilter, type Label3DProperties } from '../types';
 import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../../godot/math/math';
+import { AlphaAntiAliasing } from '../../../../godot/rendering/materials/alphaAntialiasing';
 
 export function labelProperties(overrides: Partial<Label3DProperties> = {}): Label3DProperties {
   return {
@@ -24,6 +25,8 @@ export function labelProperties(overrides: Partial<Label3DProperties> = {}): Lab
     alpha_cut: AlphaCutMode.DISABLED,
     alpha_scissor_threshold: 0.5,
     alpha_hash_scale: 1,
+    alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+    alpha_antialiasing_edge: 0,
     fixed_size: false,
     texture_filter: TextureFilter.LINEAR_WITH_MIPMAPS,
     ...overrides,

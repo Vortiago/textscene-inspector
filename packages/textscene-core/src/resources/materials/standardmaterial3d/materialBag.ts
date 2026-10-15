@@ -16,6 +16,10 @@ import { BillboardMode } from '../../../godot/scene/billboard';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  alphaAntialiasingProps,
+  alphaAntialiasingUserData,
+} from '../../../r3f/materials/godotAlphaAntialiasing';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import {
   emissionTextureAddInjection,
@@ -191,15 +195,16 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
- * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO and height uniforms read theirs at
- * upload, and a decal reads the light modes and the specular occlusion. A fresh object per bag, as the `.tres` loader writes
- * keys into it.
+ * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO, height and edge-ramp uniforms read
+ * theirs at upload, and a decal reads the light modes and the specular occlusion. A fresh object per
+ * bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
     [BILLBOARD_KEY]: surfaceBillboard(scalars),
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
     ...alphaHashScaleUserData(scalars.alphaHashScale),
+    ...alphaAntialiasingUserData(scalars.alphaAntialiasing),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
     ...lightModesUserData(scalars),
     ...specularOcclusionUserData(scalars.disablesSpecularOcclusion),
@@ -311,7 +316,8 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   const targetMap = renderTargetMapInjection(userData);
   const { heightmap } = scalars;
   const heightmapTexture = heightmap ? slot('heightmap_texture') : null;
-  const blend = materialBlendProps(scalars);
+  // Alpha antialiasing replaces the material's own blend mode (`scene_shader_forward_clustered.cpp:237-241`).
+  const blend = { ...materialBlendProps(scalars), ...alphaAntialiasingProps(scalars.alphaAntialiasing) };
   // `fromArray` keeps the values linear. A hex would go through
   // `setHex(…, SRGBColorSpace)` and decode these already-linear channels a
   // second time, rendering everything too dark.
