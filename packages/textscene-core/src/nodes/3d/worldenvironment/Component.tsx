@@ -18,16 +18,16 @@ export function WorldEnvironment({ node, children }: NodeComponentProps) {
 
   return (
     <group name={node.name}>
-      {resolved ? (
+      {resolved && (
         <EnvironmentLayer
           settings={resolved.settings}
           sky={resolved.sky}
           resources={resolved.resources}
           skyResources={resolved.skyResources}
         />
-      ) : (
-        <NoEnvironmentLayer />
       )}
+      {/* Only an unnamed Environment: a named one resolves to null while its `.tres` loads. */}
+      {!properties.environment && <NoEnvironmentLayer />}
       {children}
     </group>
   );

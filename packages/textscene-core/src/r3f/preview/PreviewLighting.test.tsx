@@ -124,6 +124,19 @@ describe('preview environment yielding', () => {
     expect(noEnvironmentCount(await render(scene(WORLD_ENV), { environment: false }))).toBe(1);
   });
 
+  it('mounts none while a named Environment is still loading', async () => {
+    const loading = `[gd_scene format=3]
+
+[ext_resource type="Environment" path="res://env.tres" id="1_env"]
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("1_env")
+`;
+    expect(noEnvironmentCount(await render(loading, { environment: false }))).toBe(0);
+  });
+
   // The preview environment applies itself through a GPU render the headless
   // renderer cannot run. godotPreviewLighting.test.ts covers the decision, and
   // the `preview-lighting` visual golden the pixels.
