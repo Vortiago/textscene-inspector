@@ -1,16 +1,13 @@
 /**
  * The class defaults of `Light3D` and of each light type, as their constructors set them. A light
- * type's table starts from `LIGHT_3D_DEFAULTS` and lists only what its own constructor overrides.
- * Keys follow `Light3D::Param`, so `spotAttenuation` is the default of `spot_angle_attenuation`.
+ * type's table starts from `LIGHT_3D_DEFAULTS` and lists what its own constructor sets.
  */
 
 import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSkyMode.js';
 import { DirectionalShadowMode } from '../rendering/lights/directionalShadow.js';
 
-/** `Light3D(LightType)` (`scene/3d/light_3d.cpp:468-493`) and its field initialisers (`light_3d.h:79-81`). */
+/** `Light3D(LightType)` (`scene/3d/light_3d.cpp:473-491`) and its field initialisers (`light_3d.h:79-81`). */
 export const LIGHT_3D_DEFAULTS = {
-  /** `light_color`, as a `.tscn` writes it. */
-  color: 'Color(1, 1, 1, 1)', // :468
   energy: 1, // :473
   volumetricFogEnergy: 1, // :475
   specular: 0.5, // :476
@@ -21,8 +18,7 @@ export const LIGHT_3D_DEFAULTS = {
   /** `omni_attenuation`, `spot_attenuation` and `area_attenuation`. */
   attenuation: 1, // :479
   spotAngle: 45, // :480
-  /** `spot_angle_attenuation`. */
-  spotAttenuation: 1, // :481
+  spotAngleAttenuation: 1, // :481
   shadowSplitOffsets: [0.1, 0.2, 0.5], // :483-485, fractions of the shadowed range
   shadowPancakeSize: 20, // :487
   shadowOpacity: 1, // :488
@@ -40,7 +36,6 @@ export const DIRECTIONAL_LIGHT_3D_DEFAULTS = {
   /** In texels of the shadow map. */
   shadowNormalBias: 2, // :603
   specular: 1, // :605
-  /** Four splits, as the editor's preview sun has (`editor/scene/3d/node_3d_editor_plugin.cpp:10383`). */
   shadowMode: DirectionalShadowMode.PARALLEL_4_SPLITS, // :606
   blendSplits: false, // :607
   skyMode: DirectionalLightSkyMode.LIGHT_AND_SKY, // :608

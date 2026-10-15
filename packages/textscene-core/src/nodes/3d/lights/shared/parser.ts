@@ -10,7 +10,7 @@ import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 function parseBaseLightProperties(properties: Record<string, string>): BaseLightProperties {
   return {
     layers: parseVisualLayers(properties),
-    light_color: properties.light_color || LIGHT_3D_DEFAULTS.color,
+    light_color: properties.light_color || 'Color(1, 1, 1, 1)', // light_3d.cpp:468
     light_energy: floatOr(properties.light_energy, LIGHT_3D_DEFAULTS.energy, 'light_energy'),
     light_negative: parseOptionalBool(properties.light_negative),
     light_specular: parseOptionalFloat(properties.light_specular),

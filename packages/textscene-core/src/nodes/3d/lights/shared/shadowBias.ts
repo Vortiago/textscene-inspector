@@ -16,8 +16,8 @@ import type { PositionalLightProperties } from './types';
  * and `scene_forward_clustered.glsl:2304` spends it inside that range, so in
  * normalised depth the range cancels.
  */
-export function directionalShadowBias(shadowBias: number | undefined, softShadowScale: number): number {
-  return -((shadowBias ?? LIGHT_3D_DEFAULTS.shadowBias) / 100) * softShadowScale;
+export function directionalShadowBias(shadowBias: number, softShadowScale: number): number {
+  return -(shadowBias / 100) * softShadowScale;
 }
 
 /**

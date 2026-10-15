@@ -36,12 +36,14 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 
 `godot/` groups its files by the engine area they port, named for that area's directory in Godot's
 source, and a file's cites name its area. A file whose facts port from two areas splits into one
-file per area. A class default sits with its class: `scene/light.ts` holds every Light3D default,
-keyed by light type where the types differ. A rendering fact sits under `rendering/` even when its
-setter lives in `scene/`.
+file per area. A class default sits with its class under `scene/`: `scene/light.ts` holds every
+Light3D default, keyed by light type where the types differ. An enum or value the renderer branches
+on sits under `rendering/`, beside the code that reads it, even when its class lives in `scene/`.
+So `scene/` imports from `rendering/`, and `rendering/` does not import from `scene/`.
 
-A test sits beside its file. Core imports each fact from its file under a group. The root keeps `noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which
-re-exports only what a package outside core imports.
+A test sits beside its file. Core imports each fact from its file under a group. The root keeps
+`noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which re-exports only what
+a package outside core imports.
 
 | `godot/` group | Ports from Godot's |
 | --- | --- |

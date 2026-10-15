@@ -149,7 +149,7 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   const travel = targetDirection(spot, camera);
   writeVec4(row, FogLightTexel.DIRECTION, travel.x, travel.y, travel.z, Math.cos(spot.angle));
   // The cone exponent is the inverse of `spot_angle_attenuation` (`light_storage.cpp:914`).
-  row[Cone.EXPONENT] = 1 / (declaration?.spotAngleAttenuation ?? LIGHT_3D_DEFAULTS.spotAttenuation);
+  row[Cone.EXPONENT] = 1 / (declaration?.spotAngleAttenuation ?? LIGHT_3D_DEFAULTS.spotAngleAttenuation);
   writeSpotShadow(spot, camera);
   return true;
 }

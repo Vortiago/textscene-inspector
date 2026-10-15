@@ -5,8 +5,8 @@ describe('directionalShadowBias', () => {
   it('is Godot’s own depth-range-free fraction, negated for three’s compare', () => {
     // `light_storage.cpp:722-723` sends `shadow_bias / 100 * bias_scale`, and
     // `renderer_scene_cull.cpp:2348` and `scene_forward_clustered.glsl:2304` cancel
-    // the range. The default 0.1 (`light_3d.cpp:490`) at PCF radius 2 is 0.1 / 100 * 2 = 0.002.
-    expect(directionalShadowBias(undefined, 2)).toBeCloseTo(-0.002, 12);
+    // the range. 0.1 at PCF radius 2 is 0.1 / 100 * 2 = 0.002.
+    expect(directionalShadowBias(0.1, 2)).toBeCloseTo(-0.002, 12);
   });
 
   it('scales linearly with shadow_bias', () => {

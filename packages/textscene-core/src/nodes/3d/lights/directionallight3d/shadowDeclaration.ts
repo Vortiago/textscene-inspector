@@ -4,7 +4,7 @@
  * suns cannot drift apart.
  */
 
-import { DIRECTIONAL_LIGHT_3D_DEFAULTS as DEFAULTS } from '../../../../godot/scene/light';
+import { DIRECTIONAL_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import {
   directionalShadowSplitCount,
   sharesDirectionalShadowAtlas,
@@ -41,30 +41,38 @@ type DirectionalShadowProperties = Pick<
 export function directionalShadowDeclaration(
   properties: DirectionalShadowProperties
 ): DirectionalShadowDeclaration {
-  const angularDistance = properties.light_angular_distance ?? DEFAULTS.size;
-  const skyMode = properties.sky_mode ?? DEFAULTS.skyMode;
-  const filterRadius = softShadowScale(properties.shadow_blur, angularDistance);
+  const angularDistance = properties.light_angular_distance ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.size;
+  const skyMode = properties.sky_mode ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.skyMode;
+  const shadowBlur = properties.shadow_blur ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowBlur;
+  const filterRadius = softShadowScale(shadowBlur, angularDistance);
   return {
-    maxDistance: properties.directional_shadow_max_distance ?? DEFAULTS.shadowMaxDistance,
-    pancakeSize: properties.directional_shadow_pancake_size ?? DEFAULTS.shadowPancakeSize,
-    fadeStart: properties.directional_shadow_fade_start ?? DEFAULTS.shadowFadeStart,
-    depthBias: directionalShadowBias(properties.shadow_bias, filterRadius),
-    normalBias: properties.shadow_normal_bias ?? DEFAULTS.shadowNormalBias,
+    maxDistance:
+      properties.directional_shadow_max_distance ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowMaxDistance,
+    pancakeSize:
+      properties.directional_shadow_pancake_size ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowPancakeSize,
+    fadeStart: properties.directional_shadow_fade_start ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowFadeStart,
+    depthBias: directionalShadowBias(
+      properties.shadow_bias ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowBias,
+      filterRadius
+    ),
+    normalBias: properties.shadow_normal_bias ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowNormalBias,
     filterRadius,
     softShadowAngle: softShadowAngle(angularDistance),
     drawsSoftShadow: drawsDirectionalSoftShadow({
       angularDistance,
       shadowEnabled: properties.shadow_enabled,
-      shadowBlur: properties.shadow_blur ?? DEFAULTS.shadowBlur,
+      shadowBlur,
       lightsSurfaces: directionalLightLightsSurfaces(skyMode),
     }),
-    splitCount: directionalShadowSplitCount(properties.directional_shadow_mode ?? DEFAULTS.shadowMode),
+    splitCount: directionalShadowSplitCount(
+      properties.directional_shadow_mode ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowMode
+    ),
     splitOffsets: [
-      properties.directional_shadow_split_1 ?? DEFAULTS.shadowSplitOffsets[0],
-      properties.directional_shadow_split_2 ?? DEFAULTS.shadowSplitOffsets[1],
-      properties.directional_shadow_split_3 ?? DEFAULTS.shadowSplitOffsets[2],
+      properties.directional_shadow_split_1 ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowSplitOffsets[0],
+      properties.directional_shadow_split_2 ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowSplitOffsets[1],
+      properties.directional_shadow_split_3 ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.shadowSplitOffsets[2],
     ],
-    blendSplits: properties.directional_shadow_blend_splits ?? DEFAULTS.blendSplits,
+    blendSplits: properties.directional_shadow_blend_splits ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.blendSplits,
     sharesAtlas: sharesDirectionalShadowAtlas(properties.shadow_enabled, skyMode),
   };
 }
