@@ -85,6 +85,9 @@ export const LIGHTING_SCENES = [
   // Locks the equirect V/U orientation, measured against Godot. The black grid
   // lines antialias.
   { name: 'sky-panorama', file: 'unit-sky-panorama.tscn' },
+  // A PanoramaSkyMaterial .tres whose panorama is its own sub-resource. The header states why no
+  // other golden shows it.
+  { name: 'sky-panorama-tres', file: 'unit-sky-panorama-tres.tscn' },
   // Two overlapping ReflectionProbes that update ALWAYS: the floor takes its ambient and its
   // reflection from the fast-filtered captures, which the blue background tints.
   { name: 'reflection-probe-always', file: 'unit-reflection-probe-always.tscn' },

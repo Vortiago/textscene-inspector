@@ -9,7 +9,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
-import { applyToneMapping } from '../../resources/environment/toneMapping';
+import { applyToneMapping, installToneCurve } from '../../resources/environment/toneMapping';
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
@@ -18,6 +18,7 @@ import { sceneHasBlendedSurface } from './alphaPassScan';
 import { useLatchedSceneScan } from './useLatchedSceneScan';
 import { compositorPassFor } from './compositorPass';
 import { SkyLayer } from '../sky/SkyLayer';
+import { NO_RESOURCES, SceneResourcesProvider, type SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorCube } from './colorBackground';
@@ -26,9 +27,15 @@ export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
   /** The resolved sky, or null when there is none to render. */
   sky: Sky | null;
+  /**
+   * The pools the sky material's references, such as a panorama, resolve in. They shadow the
+   * Environment's, so a material `.tres` reads its own sub-resources. Absent for the preview sky,
+   * which holds no reference.
+   */
+  skyResources?: SceneResources;
 }
 
-export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
+export function EnvironmentLayer({ settings, sky, skyResources = NO_RESOURCES }: EnvironmentLayerProps) {
   // Godot draws the sky as the background under BG_SKY and takes ambient from
   // it whenever the source resolves to a cubemap. The two are independent: a
   // sky can light the scene without being shown (AMBIENT_SOURCE_SKY over a
@@ -70,15 +77,20 @@ export function EnvironmentLayer({ settings, sky }: EnvironmentLayerProps) {
         />
       )}
       {sky && (showsSky || skyAmbient) && (
-        <SkyLayer
-          sky={sky}
-          asBackground={showsSky}
-          backgroundIntensity={settings.background.energyMultiplier}
-          rotation={settings.skyRotation}
-          // Godot reflects the sky at `background_energy_multiplier` whatever the ambient source.
-          intensity={skyAmbient ? skyAmbient.energy : 0}
-          contribution={skyAmbient ? skyAmbient.contribution : 1}
-        />
+        <SceneResourcesProvider
+          internalResources={skyResources.internalResources}
+          externalResources={skyResources.externalResources}
+        >
+          <SkyLayer
+            sky={sky}
+            asBackground={showsSky}
+            backgroundIntensity={settings.background.energyMultiplier}
+            rotation={settings.skyRotation}
+            // Godot reflects the sky at `background_energy_multiplier` whatever the ambient source.
+            intensity={skyAmbient ? skyAmbient.energy : 0}
+            contribution={skyAmbient ? skyAmbient.contribution : 1}
+          />
+        </SceneResourcesProvider>
       )}
       {flatAmbient && flatAmbient.energy > 0 && (
         // `* LIGHT_INTENSITY_SCALE`: Godot adds `ambient_light * albedo` with no 1/PI, while three
@@ -128,7 +140,8 @@ interface EnvironmentApplierProps {
   hasFog: boolean;
   /**
    * The composer forces `NoToneMapping` while mounted and `GodotToneMapEffect` applies the curve,
-   * so the in-material tonemap is not applied here.
+   * so the renderer's mapping is not set here. The curve still installs for a `SubViewport` pass,
+   * which renders the shared world without the composer.
    */
   suppressToneMapping: boolean;
 }
@@ -171,17 +184,15 @@ function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: E
     agxContrast: toneMapAgxContrast,
   } = settings.toneMapping;
   useEffect(() => {
-    if (suppressToneMapping) return undefined;
-    return applyToneMapping(
-      gl,
-      {
-        mode: toneMapMode,
-        exposure: toneMapExposure,
-        white: toneMapWhite,
-        agxContrast: toneMapAgxContrast,
-      },
-      scene
-    );
+    const toneMapping = {
+      mode: toneMapMode,
+      exposure: toneMapExposure,
+      white: toneMapWhite,
+      agxContrast: toneMapAgxContrast,
+    };
+    return suppressToneMapping
+      ? installToneCurve(gl, toneMapping, scene)
+      : applyToneMapping(gl, toneMapping, scene);
   }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
 
   return null;

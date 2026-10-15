@@ -23,7 +23,11 @@ export function WorldEnvironment({ node, children }: NodeComponentProps) {
           internalResources={resolved.resources.internalResources}
           externalResources={resolved.resources.externalResources}
         >
-          <EnvironmentLayer settings={resolved.settings} sky={resolved.sky} />
+          <EnvironmentLayer
+            settings={resolved.settings}
+            sky={resolved.sky}
+            skyResources={resolved.skyResources}
+          />
         </SceneResourcesProvider>
       )}
       {children}

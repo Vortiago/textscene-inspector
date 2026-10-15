@@ -1488,6 +1488,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Panorama Tres",
+    "file": "unit-sky-panorama-tres.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sky Panorama",
     "file": "unit-sky-panorama.tscn",
     "category": "Other"

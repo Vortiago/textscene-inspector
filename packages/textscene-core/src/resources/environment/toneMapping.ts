@@ -55,8 +55,51 @@ export function applyToneMapping(
   scene?: THREE.Object3D
 ): () => void {
   const previousMapping = gl.toneMapping;
+  const mapping = toneMappingFor(settings.mode);
+  const restoreCurve = installToneCurve(gl, settings, scene);
+
+  const changed = mapping !== previousMapping;
+  if (changed) {
+    gl.toneMapping = mapping;
+    markMaterialsDirty(scene);
+  }
+
+  return () => {
+    restoreCurve();
+    if (gl.toneMapping === previousMapping) return;
+    gl.toneMapping = previousMapping;
+    markMaterialsDirty(scene);
+  };
+}
+
+/**
+ * Written only by `installToneCurve`, and restored by its undo. The mapping the shared world
+ * tonemaps with, kept apart from `gl.toneMapping`, which the glow compositor holds at
+ * `NoToneMapping` while its own pass applies the curve.
+ */
+const worldToneMappings = new WeakMap<ToneMappedRenderer, THREE.ToneMapping>();
+
+/**
+ * The mapping a pass that renders the shared world without the compositor applies: a
+ * `SubViewport` target, which Godot tonemaps with the environment of its `find_world_3d()`.
+ * The renderer's own mapping when no environment has installed a curve.
+ */
+export function worldToneMapping(gl: ToneMappedRenderer): THREE.ToneMapping {
+  return worldToneMappings.get(gl) ?? gl.toneMapping;
+}
+
+/**
+ * Installs the environment's curve and exposure, and records its mapping for
+ * `worldToneMapping`, but leaves `gl.toneMapping` to its owner. Returns the undo.
+ */
+export function installToneCurve(
+  gl: ToneMappedRenderer,
+  settings: ToneMappingSettings,
+  scene?: THREE.Object3D
+): () => void {
   const previousExposure = gl.toneMappingExposure;
   const previousChunk = THREE.ShaderChunk[TONEMAP_CHUNK];
+  const previousWorldMapping = worldToneMappings.get(gl);
 
   const mapping = toneMappingFor(settings.mode);
   const exposure = settings.exposure ?? 1;
@@ -73,18 +116,17 @@ export function applyToneMapping(
         toneMappingWhiteParam(settings.mode, settings.white ?? 1)
       )};`
     );
+    markMaterialsDirty(scene);
   }
-
-  const changed = mapping !== previousMapping || custom;
-  if (mapping !== previousMapping) gl.toneMapping = mapping;
   if (exposure !== previousExposure) gl.toneMappingExposure = exposure;
-  if (changed) markMaterialsDirty(scene);
+  worldToneMappings.set(gl, mapping);
 
   return () => {
     THREE.ShaderChunk[TONEMAP_CHUNK] = previousChunk;
-    if (gl.toneMapping !== previousMapping) gl.toneMapping = previousMapping;
     if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
-    if (changed) markMaterialsDirty(scene);
+    if (previousWorldMapping === undefined) worldToneMappings.delete(gl);
+    else worldToneMappings.set(gl, previousWorldMapping);
+    if (custom) markMaterialsDirty(scene);
   };
 }
 

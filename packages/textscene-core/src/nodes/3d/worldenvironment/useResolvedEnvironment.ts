@@ -20,6 +20,8 @@ export interface ResolvedEnvironment {
   sky: Sky | null;
   /** The pools the Environment's own references, such as `glow_map`, resolve in. */
   resources: SceneResources;
+  /** The pools the sky material's references, such as a panorama, resolve in. */
+  skyResources: SceneResources;
 }
 
 /**
@@ -41,7 +43,9 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   // whatever shape the chain takes.
   const skyResource = useSubOrExtResource(envProps?.sky, environment?.resources ?? NO_RESOURCES);
   const materialRef = skyMaterialRef(skyResource?.resource.type, skyResource?.resource.data);
-  const material = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES)?.resource;
+  const scopedMaterial = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES);
+  const material = scopedMaterial?.resource;
+  const skyResources = scopedMaterial?.resources ?? NO_RESOURCES;
 
   const skyData = skyResource?.resource.data;
   const sky = useMemo(() => {
@@ -54,8 +58,13 @@ export function useResolvedEnvironment(environmentRef: string | undefined): Reso
   return useMemo(
     () =>
       envProps && environment
-        ? { settings: createEnvironmentSettings(envProps, clearColor), sky, resources: environment.resources }
+        ? {
+            settings: createEnvironmentSettings(envProps, clearColor),
+            sky,
+            resources: environment.resources,
+            skyResources,
+          }
         : null,
-    [envProps, environment, clearColor, sky]
+    [envProps, environment, clearColor, sky, skyResources]
   );
 }

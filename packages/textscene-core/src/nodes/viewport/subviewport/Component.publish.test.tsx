@@ -23,6 +23,8 @@ import {
   ViewportPassOrchestrator,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { SubViewport } from './Component';
+import { installToneCurve } from '../../../resources/environment/toneMapping';
+import { GodotToneMapper } from '../../../resources/environment/godotToneMapping';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
@@ -262,6 +264,20 @@ mesh = SubResource("1")
     const { renderer, gl } = await renderScene(scene3D());
     gl().toneMapping = THREE.CustomToneMapping;
     expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
+  });
+
+  /**
+   * The glow compositor holds `gl.toneMapping` at `NoToneMapping` and tonemaps the main view in
+   * its own pass, which never reaches the target. A shared world's curve still applies inside the
+   * target, as above.
+   */
+  it('shared world: the offscreen pass applies the environment curve the compositor suspends', async () => {
+    const { renderer, gl } = await renderScene(scene3D());
+    const restore = installToneCurve(gl(), { mode: GodotToneMapper.FILMIC, exposure: 1 });
+    gl().toneMapping = THREE.NoToneMapping;
+    expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
+    expect(gl().toneMapping).toBe(THREE.NoToneMapping);
+    restore();
   });
 
   /**
