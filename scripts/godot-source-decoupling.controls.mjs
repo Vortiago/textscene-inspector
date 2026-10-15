@@ -68,8 +68,10 @@ export const CHECKOUT_CONTROLS = [
   {
     file: 'scratch/own-module.ts',
     hit: false,
-    body: "import { CURSOR_MAX } from '../godot/scene/control.js'; // see `godot/scene/csg.ts`",
+    body: "import { CURSOR_MAX } from '../godot/scene/control.js'; // see `godot/scene/csg.test.ts`",
   },
+  { file: 'scratch/own-group.md', hit: false, body: 'A new node fact goes in `godot/scene/`.' },
+  { file: 'scratch/engine-dir.ts', hit: true, body: "const gltf = '/home/dev/godot/modules/gltf';" },
   {
     file: 'scratch/sibling-dir.ts',
     hit: true,

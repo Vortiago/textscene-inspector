@@ -44,8 +44,9 @@ function specifiersIn(source: string): string[] {
 
 describe('src/godot is a dependency-free leaf', () => {
   it('finds the source files, so the sweep cannot pass vacuously', () => {
-    expect(sourceFiles()).toContain('math/math.ts');
-    expect(sourceFiles()).toContain('index.ts');
+    const files = sourceFiles();
+    expect(files).toContain('math/math.ts');
+    expect(files).toContain('index.ts');
   });
 
   it('detects an import when one is present, before trusting its silence', () => {

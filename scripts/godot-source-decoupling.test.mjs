@@ -21,15 +21,16 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
  */
 const ENGINE_DIRS = 'scene|core|doc|modules|servers|main|platform|editor';
 /**
- * A path into core's own scene group, such as `godot/scene/control.ts`, ends at one module, while a
- * checkout path goes on into an engine directory or names a `.cpp` or `.h` file.
+ * `scene` alone also names core's own `godot/scene/` group, so a checkout path through it needs a
+ * further engine directory or an engine source file after it.
  */
-const OWN_MODULE = '(?![\\\\/]\\w+(?:\\.(?:ts|js))?(?![\\w.\\\\/]))';
+const PATH_ENGINE_DIRS = 'core|doc|modules|servers|main|platform|editor';
+const CHECKOUT_SCENE = 'scene(?=[\\\\/](?:\\w+[\\\\/]|\\w+\\.(?:cpp|h|inc|glsl)\\b))';
 const CHECKOUT_RE = new RegExp(
   [
     'godot-4\\.\\d+(\\.\\d+)?(-stable)?\\b',
     '[\\\\/]repos[\\\\/]godot',
-    `\\bgodot[\\\\/](?:${ENGINE_DIRS})\\b${OWN_MODULE}`,
+    `\\bgodot[\\\\/](?:(?:${PATH_ENGINE_DIRS})\\b|${CHECKOUT_SCENE})`,
     `['"]godot['"]\\s*,\\s*['"](?:${ENGINE_DIRS})['"]`,
   ].join('|')
 );

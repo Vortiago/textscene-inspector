@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { REPO_ROOT } from '../repoRoot.mjs';
 
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
@@ -17,13 +18,13 @@ export const NODE_PROPERTIES = join(here, 'node-properties.json');
 export const RESOURCE_PROPERTIES = join(here, 'resource-properties.json');
 
 /** `src/godot/classdb/<name>` in the core package. */
-function godotModule(name) {
-  return join(here, '..', '..', 'packages', 'textscene-core', 'src', 'godot', 'classdb', name);
+function classdbModule(name) {
+  return join(REPO_ROOT, 'packages/textscene-core/src/godot/classdb', name);
 }
 
-export const OUT = godotModule('nodeBaseTypes.generated.ts');
-export const RESOURCE_OUT = godotModule('resourceBaseTypes.generated.ts');
-export const PROPERTIES_OUT = godotModule('classProperties.generated.ts');
+export const OUT = classdbModule('nodeBaseTypes.generated.ts');
+export const RESOURCE_OUT = classdbModule('resourceBaseTypes.generated.ts');
+export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFrom`, `baseChain`,

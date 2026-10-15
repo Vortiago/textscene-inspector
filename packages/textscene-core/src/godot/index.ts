@@ -234,6 +234,12 @@ export {
   packedArrayLiteral,
   nodePathLiteral,
   arrayLiteralBody,
+  packedArrayBody,
+  packedArrayForms,
+  packedElementType,
+  STRING_ARRAY_FORMS,
+  stringArrayBodies,
+  type PackedArrayBody,
 } from './variant/variantParser.js';
 export {
   EXT_RESOURCE_CALL_ANYWHERE_RE,
@@ -266,11 +272,3 @@ export {
   isGodotTextResourcePath,
 } from './project/resourceFormats.js';
 export { boolSlotValue, boolLiteralAsNumber } from './variant/variantBool.js';
-export {
-  packedArrayBody,
-  packedArrayForms,
-  packedElementType,
-  STRING_ARRAY_FORMS,
-  stringArrayBodies,
-  type PackedArrayBody,
-} from './variant/variantParser.js';
