@@ -7,34 +7,18 @@
 
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
 import {
-  assertPortFree,
   createCaptureContext,
-  ensureWebBuilt,
   findCaptureTarget,
   gotoFixture,
-  killPreviewGroup,
-  startPreview,
-  waitForServer,
-  warmUpGLContext,
+  withPreviewBrowser,
 } from '../../visual/previewServer.mjs';
 import { FRAMES } from './clip.mjs';
 
 const PORT = Number(process.env.COMPARE_PORT) || 4323;
 
-export async function captureOurFrames(fixture, framesDir, mode, driverText) {
-  ensureWebBuilt();
-  await assertPortFree(PORT, 'COMPARE_PORT');
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
-  try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    // Burn the first-WebGL-context-lost risk before any published image is captured (see
-    // warmUpGLContext).
-    await warmUpGLContext(browser);
+export function captureOurFrames(fixture, framesDir, mode, driverText) {
+  return withPreviewBrowser({ port: PORT, portEnvName: 'COMPARE_PORT' }, async (browser, baseUrl) => {
     const context = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: mode === '2d' });
     const page = await context.newPage();
     await gotoFixture(page, baseUrl, fixture);
@@ -84,8 +68,5 @@ export async function captureOurFrames(fixture, framesDir, mode, driverText) {
       await page.waitForTimeout(220);
       await target.screenshot({ path: join(framesDir, `frame_${String(i).padStart(2, '0')}.png`) });
     }
-  } finally {
-    await browser?.close();
-    killPreviewGroup(proc);
-  }
+  });
 }

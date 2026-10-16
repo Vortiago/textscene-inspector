@@ -30,8 +30,9 @@ import { compareToBudget, parseWorkCounts } from './workCounts.mjs';
 
 const BUDGETS_PATH = resolve(import.meta.dirname, 'budgets.json');
 
-// Clear of the visual gate's 4317 and the parity capture's 4319, so all three can run on one host.
-const PORT = Number(process.env.PERF_PORT) || 4321;
+// Clear of the golden gate's 4317, the parity capture's 4319 and the comparison captures' 4321 and
+// 4323, so each can run beside the others.
+const PORT = Number(process.env.PERF_PORT) || 4325;
 
 /** Shorter than the overlay's 500 ms window, so no window goes unread. */
 const READ_INTERVAL_MS = 250;

@@ -1,19 +1,11 @@
 /** Our side: one build, one preview server, one browser, one context per workspace. */
 
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
 import {
-  assertPortFree,
   createCaptureContext,
-  ensureWebBuilt,
-  findCaptureTarget,
-  gotoFixture,
-  killPreviewGroup,
+  openScene,
   readViewportMode,
   settleCanvas,
-  startPreview,
-  waitForServer,
-  warmUpGLContext,
+  withPreviewBrowser,
   writeCaptureImage,
 } from '../../visual/previewServer.mjs';
 import { imgPath, modeOfExistingGodot } from './targets.mjs';
@@ -34,15 +26,7 @@ export async function captureOurs(targets, godotModes) {
     });
   if (!withMode.length) return failures;
 
-  ensureWebBuilt();
-  await assertPortFree(PORT, 'COMPARE_PORT');
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
-  try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    // Spends the first-context-lost risk before any published image.
-    await warmUpGLContext(browser);
+  await withPreviewBrowser({ port: PORT, portEnvName: 'COMPARE_PORT' }, async (browser, baseUrl) => {
     let done = 0;
     for (const mode of ['3d', '2d']) {
       const group = withMode.filter((t) => t.mode === mode);
@@ -53,8 +37,10 @@ export async function captureOurs(targets, godotModes) {
         for (const t of group) {
           process.stdout.write(`[ours] ${++done}/${withMode.length} ${t.image} (${mode}) … `);
           try {
-            await gotoFixture(page, baseUrl, t.fixture, () => {}, t.camera ? { camera: t.camera } : {});
-            const { target, reason } = await findCaptureTarget(page, { canvas2D: mode === '2d' });
+            const { target, reason } = await openScene(page, baseUrl, t.fixture, {
+              canvas2D: mode === '2d',
+              camera: t.camera,
+            });
             if (!target) throw new Error(reason);
             const { buffer, reason: settleReason } = await settleCanvas(page, target);
             if (!buffer) throw new Error(settleReason);
@@ -75,9 +61,6 @@ export async function captureOurs(targets, godotModes) {
         await context.close();
       }
     }
-  } finally {
-    await browser?.close();
-    killPreviewGroup(proc);
-  }
+  });
   return failures;
 }

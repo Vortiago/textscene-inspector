@@ -5,20 +5,12 @@
  */
 
 import { existsSync, mkdirSync } from 'node:fs';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
 import {
-  assertPortFree,
   createCaptureContext,
-  ensureWebBuilt,
-  findCaptureTarget,
-  gotoFixture,
-  killPreviewGroup,
+  openScene,
   readViewportMode,
   settleCanvas,
-  startPreview,
-  waitForServer,
-  warmUpGLContext,
+  withPreviewBrowser,
   writeCaptureImage,
 } from '../../visual/previewServer.mjs';
 import { resolveModes } from './modes.mjs';
@@ -44,16 +36,7 @@ export async function captureOurs(fixtures, force, godotModes) {
   const capturable = pending.filter((f) => modes.has(f));
   if (capturable.length === 0) return failures;
 
-  ensureWebBuilt();
-  await assertPortFree(PORT, 'COMPARE_PORT');
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
-  try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    // Spends the first-context-lost risk before any published image.
-    await warmUpGLContext(browser);
-
+  await withPreviewBrowser({ port: PORT, portEnvName: 'COMPARE_PORT' }, async (browser, baseUrl) => {
     // One context per workspace, not per fixture: the workspaces need different
     // viewports and seeded preferences, and a context costs far more than a
     // navigation.
@@ -72,8 +55,7 @@ export async function captureOurs(fixtures, force, godotModes) {
         for (const fixture of group) {
           process.stdout.write(`[ours] ${++done}/${capturable.length} ${fixture} (${mode}) … `);
           try {
-            await gotoFixture(page, baseUrl, fixture);
-            const { target, reason: targetReason } = await findCaptureTarget(page, {
+            const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
               canvas2D: mode === '2d',
             });
             if (!target) throw new Error(targetReason);
@@ -99,9 +81,6 @@ export async function captureOurs(fixtures, force, godotModes) {
         await context.close();
       }
     }
-  } finally {
-    await browser?.close();
-    killPreviewGroup(proc);
-  }
+  });
   return failures;
 }
