@@ -33,9 +33,19 @@ export function createOffscreenTarget(
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;
-  // Without it the target misses a curve (0.60-0.65x under FILMIC).
-  if (preTonemapped) takeOutputLikeDrawingBuffer(target);
+  if (preTonemapped) storeTonemappedOutput(target);
   return target;
+}
+
+/**
+ * Has three tonemap the pass into `target`, which it does only for an output-like target: without it
+ * the target misses a curve (0.60-0.65x under FILMIC). Godot's tonemap pass writes sRGB-encoded
+ * 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which encodes on
+ * write and decodes on sample in hardware. In linear 8-bit, a dark value loses up to 4/255.
+ */
+function storeTonemappedOutput(target: THREE.WebGLRenderTarget): void {
+  takeOutputLikeDrawingBuffer(target);
+  target.texture.internalFormat = 'SRGB8_ALPHA8';
 }
 
 /**
