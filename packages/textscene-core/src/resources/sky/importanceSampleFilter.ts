@@ -25,7 +25,6 @@ export function importanceSampleFilter(layout: SkyOctmapLayout): LayerFilter {
     return { samples, sampleCount: samples.length / 4 };
   });
   filter = {
-    layout,
     chainSizes: layout.downsampledSizes,
     passFor: importanceSamplePassFor,
     layerUniforms(layer) {

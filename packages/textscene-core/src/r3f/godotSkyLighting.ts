@@ -1,21 +1,15 @@
 /**
  * How the sky lights a surface in Godot: its ambient light and its reflection. Both read Godot's
- * radiance layers, which `<SkyLayer>` shows through three shared slots (`sky/skyLayerCubes.ts`),
- * and a mirror reflection reads the radiance itself, mip 0 of three's PMREM
- * (`scene_forward_clustered.glsl:1704-1756`).
+ * radiance layers, which `<SkyLayer>` shows through one shared slot (`sky/skyLayerArray.ts`), at the
+ * mip the screen derivatives of the direction pick (`scene_forward_clustered.glsl:1704-1756`).
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
 import { MAX_ROUGHNESS_LOD } from '../godot/rendering/environment/skyReflection.js';
+import { OCTMAP_GLSL } from '../resources/sky/skyLayerShaders.js';
 import { glslFloat } from '../utils/glslLiterals.js';
-import {
-  SKY_CONTRIBUTION_UNIFORM,
-  SKY_LAYER_UNIFORMS,
-  skyContribution,
-  skyLayerSlots,
-} from './sky/skyLayerCubes.js';
-import { SKY_LAYER_GROUPS, SKY_LAYER_GROUP_NAMES, type SkyLayerGroup } from '../resources/sky/skyLayers.js';
+import { SKY_UNIFORMS, shownSky, skyLayersSlot } from './sky/skyLayerArray.js';
 
 type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
 
@@ -23,7 +17,32 @@ type SkyChunk = 'lights_fragment_maps' | 'envmap_physical_pars_fragment';
 export const THREE_IBL_RADIANCE_FUNCTION =
   'vec3 getIBLRadiance( const in vec3 viewDir, const in vec3 normal, const in float roughness ) {';
 
-const { sharp, rough, last } = SKY_LAYER_GROUPS;
+const { layers, shown } = SKY_UNIFORMS;
+const LAST_LAYER = glslFloat(MAX_ROUGHNESS_LOD);
+
+/**
+ * `vec3_to_oct_lod` (`oct_inc.glsl:43-51`): the mip whose texels span the octmap distance the
+ * direction moves across a pixel, at most the array's last.
+ */
+const GODOT_SKY_LOD = /* glsl */ `float godotSkyLod( const in vec3 direction ) {
+
+		vec3 directionDdx = dFdx( direction );
+		vec3 directionDdy = dFdy( direction );
+		float texelsSqr = max( dot( directionDdx, directionDdx ), dot( directionDdy, directionDdy ) ) * GODOT_SKY_DERIVATIVE_SCALE;
+		return min( 0.25 * log2( texelsSqr + 1e-6 ), GODOT_SKY_LAST_MIP );
+
+	}
+
+	`;
+
+/** Radiance layer `layer` at the octmap texel `uv`, at mip `lod`. A layer past the last reads the last. */
+const GODOT_SKY_READ = /* glsl */ `vec3 godotSkyRead( const in vec2 uv, const in float layer, const in float lod ) {
+
+		return textureLod( ${layers}, vec3( uv, layer ), lod ).rgb;
+
+	}
+
+	`;
 
 /**
  * Godot's sky ambient: its last radiance layer in the normal's direction, at the sky's share of the
@@ -32,47 +51,27 @@ const { sharp, rough, last } = SKY_LAYER_GROUPS;
  */
 const GODOT_IBL_IRRADIANCE = /* glsl */ `vec3 godotIBLIrradiance( const in vec3 normal ) {
 
-		vec3 worldNormal = transformNormalByInverseViewMatrix( normal, viewMatrix );
-		return PI * textureCube( ${SKY_LAYER_UNIFORMS.last}, envMapRotation * worldNormal ).rgb * envMapIntensity * ${SKY_CONTRIBUTION_UNIFORM}[ 0 ];
+		vec3 ambientDir = envMapRotation * ( vec4( normal, 0.0 ) * viewMatrix ).xyz;
+		vec2 uv = vec3ToOctWithBorder( ambientDir, GODOT_SKY_BORDER_SIZE );
+		return PI * godotSkyRead( uv, ${LAST_LAYER}, godotSkyLod( ambientDir ) ) * envMapIntensity * GODOT_SKY_CONTRIBUTION;
 
 	}
 
 	`;
 
-/** A group's first layer and its last mip, as GLSL literals, for the read that clamps to them. */
-function layerRange({ firstLayer, faceSizes }: SkyLayerGroup) {
-  return { first: glslFloat(firstLayer), lastMip: glslFloat(faceSizes.length - 1) };
-}
-
-const SHARP = layerRange(sharp);
-const ROUGH = layerRange(rough);
-
 /**
  * Godot's radiance layer `sqrt( roughness )` times the last layer's index, in the world direction
- * `reflectVec`, blending the two layers around it (`:1714-1721`). Layer 0 is the radiance, mip 0 of
- * the PMREM. Each group's cube clamps its read to its own layers, so the mix between two groups
- * blends the last layer of one with the first of the next, and a trilinear read inside a group is
- * the blend. It scales by `envMapIntensity`.
+ * `reflectVec`, blending the two layers around it (`:1714-1721`). It scales by `envMapIntensity`.
  */
 const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec, const in float roughness ) {
 
-		#ifdef ENVMAP_TYPE_CUBE_UV
-
-			float layer = sqrt( roughness ) * ${glslFloat(MAX_ROUGHNESS_LOD)};
-			vec3 radiance = textureCubeUV( envMap, reflectVec, 0.0 ).rgb;
-			vec3 sharpLayer = textureLod( ${SKY_LAYER_UNIFORMS.sharp}, reflectVec, clamp( layer - ${SHARP.first}, 0.0, ${SHARP.lastMip} ) ).rgb;
-			vec3 roughLayer = textureLod( ${SKY_LAYER_UNIFORMS.rough}, reflectVec, clamp( layer - ${ROUGH.first}, 0.0, ${ROUGH.lastMip} ) ).rgb;
-			vec3 lastLayer = textureCube( ${SKY_LAYER_UNIFORMS.last}, reflectVec ).rgb;
-			vec3 skyLayer = mix( radiance, sharpLayer, clamp( layer, 0.0, 1.0 ) );
-			skyLayer = mix( skyLayer, roughLayer, clamp( layer - ${glslFloat(rough.firstLayer - 1)}, 0.0, 1.0 ) );
-			skyLayer = mix( skyLayer, lastLayer, clamp( layer - ${glslFloat(last.firstLayer - 1)}, 0.0, 1.0 ) );
-			return skyLayer * envMapIntensity;
-
-		#else
-
-			return vec3( 0.0 );
-
-		#endif
+		float roughnessLod;
+		float blend = modf( sqrt( roughness ) * ${LAST_LAYER}, roughnessLod );
+		vec2 uv = vec3ToOctWithBorder( reflectVec, GODOT_SKY_BORDER_SIZE );
+		float lod = godotSkyLod( reflectVec );
+		vec3 sharper = godotSkyRead( uv, roughnessLod, lod );
+		vec3 rougher = godotSkyRead( uv, roughnessLod + 1.0, lod );
+		return mix( sharper, rougher, blend ) * envMapIntensity;
 
 	}
 
@@ -82,12 +81,13 @@ const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec
  * Godot's reflection direction in the world (`:1704-1708`): the view reflected about `normal`, bent
  * towards it by the roughness squared. The caller dims it by `horizon` squared, which falls below
  * the horizon of `surfaceNormal`: the clearcoat's reflection takes it from the surface under the coat.
+ * It stays unnormalised, as Godot's does, since its derivatives pick the mip.
  */
 const GODOT_REFLECTION = /* glsl */ `vec3 godotReflection( const in vec3 viewDir, const in vec3 normal, const in vec3 surfaceNormal, const in float roughness, out float horizon ) {
 
 		vec3 reflectVec = mix( reflect( - viewDir, normal ), normal, pow2( roughness ) );
 		horizon = min( 1.0 + dot( reflectVec, surfaceNormal ), 1.0 );
-		return envMapRotation * transformDirectionByInverseViewMatrix( reflectVec, viewMatrix );
+		return envMapRotation * ( vec4( reflectVec, 0.0 ) * viewMatrix ).xyz;
 
 	}
 
@@ -105,14 +105,17 @@ const GODOT_IBL_RADIANCE = /* glsl */ `vec3 godotIBLRadiance( const in vec3 view
 	`;
 
 /**
- * The share is a one-element array, not a float: three caches a float uniform by its value's
- * identity (r186 `WebGLUniforms.js:163-173`), so a rewritten buffer would never reach the GPU.
+ * The shown sky is a one-element array, not a `vec4`: three caches a uniform by its value's identity
+ * (r186 `WebGLUniforms.js:163-173`), so a rewritten buffer would never reach the GPU. Its fields
+ * are in the order `SkyLayerArray.show` writes them.
  */
-const SKY_LAYER_DECLARATIONS = /* glsl */ `uniform samplerCube ${SKY_LAYER_UNIFORMS.sharp};
-	uniform samplerCube ${SKY_LAYER_UNIFORMS.rough};
-	uniform samplerCube ${SKY_LAYER_UNIFORMS.last};
-	uniform float ${SKY_CONTRIBUTION_UNIFORM}[ 1 ];
-
+const SKY_LAYER_DECLARATIONS = /* glsl */ `uniform highp sampler2DArray ${layers};
+	uniform vec4 ${shown}[ 1 ];
+	#define GODOT_SKY_CONTRIBUTION ${shown}[ 0 ].x
+	#define GODOT_SKY_BORDER_SIZE ${shown}[ 0 ].y
+	#define GODOT_SKY_DERIVATIVE_SCALE ${shown}[ 0 ].z
+	#define GODOT_SKY_LAST_MIP ${shown}[ 0 ].w
+	${OCTMAP_GLSL}
 	`;
 
 const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
@@ -129,7 +132,7 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
   {
     chunk: 'envmap_physical_pars_fragment',
     three: THREE_IBL_RADIANCE_FUNCTION,
-    godot: `${SKY_LAYER_DECLARATIONS}${GODOT_IBL_IRRADIANCE}${GODOT_SKY_LAYER}${GODOT_REFLECTION}${GODOT_IBL_RADIANCE}${THREE_IBL_RADIANCE_FUNCTION}`,
+    godot: `${SKY_LAYER_DECLARATIONS}${GODOT_SKY_LOD}${GODOT_SKY_READ}${GODOT_IBL_IRRADIANCE}${GODOT_SKY_LAYER}${GODOT_REFLECTION}${GODOT_IBL_RADIANCE}${THREE_IBL_RADIANCE_FUNCTION}`,
   },
   {
     chunk: 'envmap_physical_pars_fragment',
@@ -142,7 +145,7 @@ const SKY_LIGHTING_EDITS: readonly ChunkEdit<SkyChunk>[] = [
 export const SKY_LIGHTING_MARK = GODOT_IBL_RADIANCE;
 
 /**
- * Replaces three's chunks and gives the layer slots and the sky's share to every built-in lit
+ * Replaces three's chunks and gives the layer slot and the shown sky to every built-in lit
  * material and to `UniformsLib.lights`, for every program compiled after the call. A three release
  * that rewrites a replaced line keeps all its chunks, and `godotSkyLighting.test.ts` fails on that
  * release. A second call changes nothing.
@@ -156,8 +159,6 @@ export function installGodotSkyLighting(): void {
       'lights_fragment_maps or envmap_physical_pars_fragment lacks a line the sky lighting patch replaces',
   });
   if (!isPatched) return;
-  for (const group of SKY_LAYER_GROUP_NAMES) {
-    installLitUniform(SKY_LAYER_UNIFORMS[group], skyLayerSlots[group]);
-  }
-  installLitUniform(SKY_CONTRIBUTION_UNIFORM, skyContribution);
+  installLitUniform(layers, skyLayersSlot);
+  installLitUniform(shown, shownSky);
 }
