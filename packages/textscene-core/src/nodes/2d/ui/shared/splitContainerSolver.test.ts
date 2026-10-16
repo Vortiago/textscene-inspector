@@ -33,6 +33,7 @@ import {
 } from './splitContainerSolver';
 import type { SplitContainerProperties } from './splitContainer';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 /**
  * The two-child case of `computeSplitDraggerPositions`: one boundary and the deprecated singular
@@ -52,7 +53,7 @@ function computeSplitDraggerPosition(
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const FILL = 1;
-const EXPAND_FILL = 3; // SIZE_FILL | SIZE_EXPAND
+const EXPAND_FILL = SizeFlags.FILL | SizeFlags.EXPAND;
 
 function child(overrides: Partial<SplitChildInput> = {}): SplitChildInput {
   return {

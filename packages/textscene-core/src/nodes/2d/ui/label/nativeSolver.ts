@@ -31,7 +31,11 @@ import {
 import type { LabelProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import {
+  AutowrapMode,
+  OverrunBehavior,
+  VisibleCharactersBehavior,
+} from '../../../../godot/text/textServerEnums';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -202,12 +206,6 @@ export function windowLabelLines(layout: TextLayoutResult, range: LabelLineRange
 
 // visible_characters and visible_characters_behavior: label.cpp:778-883
 
-/** `TextServer::VisibleCharactersBehavior` (`servers/text/text_server.h:90-96`). Godot default 0 (`label.h:74`). */
-export const VC_CHARS_BEFORE_SHAPING = 0;
-const VC_CHARS_AFTER_SHAPING = 1;
-const VC_GLYPHS_AUTO = 2;
-const VC_GLYPHS_RTL = 4;
-
 /**
  * `Label::_shape`'s pre-shape reveal (`label.cpp:155-156`): `txt.substr(0, visible_chars)` before
  * line-breaking, so a typewriter reveal re-wraps as it grows. Other behaviours trim at draw time
@@ -219,7 +217,11 @@ export function labelPreShapeText(
   behavior: number | undefined
 ): string {
   if (visibleChars === undefined || visibleChars < 0) return text;
-  if ((behavior ?? VC_CHARS_BEFORE_SHAPING) !== VC_CHARS_BEFORE_SHAPING) return text;
+  if (
+    (behavior ?? VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) !==
+    VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING
+  )
+    return text;
   return text.slice(0, visibleChars);
 }
 
@@ -243,11 +245,11 @@ export function applyVisibleCharsReveal(
   lines: readonly TextLineLayout[],
   budget: VisibleCharsBudget
 ): TextLineLayout[] {
-  if (budget.behavior === VC_CHARS_BEFORE_SHAPING) return [...lines];
+  if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return [...lines];
 
   let limit: number;
   let fromEnd = false;
-  if (budget.behavior === VC_CHARS_AFTER_SHAPING) {
+  if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
     if (budget.visibleChars === undefined || budget.visibleChars < 0) return [...lines];
     limit = budget.visibleChars;
   } else {
@@ -255,7 +257,8 @@ export function applyVisibleCharsReveal(
     const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
     limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
     fromEnd =
-      budget.behavior === VC_GLYPHS_RTL || (budget.behavior === VC_GLYPHS_AUTO && budget.rtl === true);
+      budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
+      (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
   }
 
   const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);

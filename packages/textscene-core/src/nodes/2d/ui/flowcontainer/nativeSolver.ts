@@ -21,17 +21,10 @@ import {
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import {
-  SIZE_EXPAND,
-  SIZE_FILL,
-  SIZE_SHRINK_CENTER,
-  SIZE_SHRINK_END,
-  fitChildInRect,
-  hasFlag,
-  isSortableControl,
-} from '../shared/fitChildInRect';
+import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ContainerAlignment } from '../../../../godot/scene/container';
+import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
 // FlowContainer::LastWrapAlignmentMode (flow_container.h:44-49).
 const LAST_WRAP_ALIGNMENT_INHERIT = 0;
@@ -41,8 +34,6 @@ const LAST_WRAP_ALIGNMENT_END = 3;
 
 // Control's stretch-ratio default (control.cpp:1868-1878, "1.0").
 const DEFAULT_STRETCH_RATIO = 1;
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
-
 function props(n: SolveNode): FlowContainerProperties {
   return n.node.properties as FlowContainerProperties;
 }
@@ -177,7 +168,7 @@ function buildChildMscs(
 ): ChildMsc[] {
   return entries.map(({ node, minSize }) => ({
     msc: { x: Math.trunc(minSize.x), y: Math.trunc(minSize.y) },
-    mainExpand: hasFlag(vertical ? vFlagsOf(node) : hFlagsOf(node), SIZE_EXPAND),
+    mainExpand: hasFlag(vertical ? vFlagsOf(node) : hFlagsOf(node), SizeFlags.EXPAND),
     stretchRatio: stretchRatioOf(node),
   }));
 }
@@ -203,7 +194,7 @@ const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     mainAxisMax = Math.max(mainAxisMax, vertical ? msc.y : msc.x);
     childMscs.push({
       msc,
-      mainExpand: hasFlag(vertical ? vFlagsOf(child) : hFlagsOf(child), SIZE_EXPAND),
+      mainExpand: hasFlag(vertical ? vFlagsOf(child) : hFlagsOf(child), SizeFlags.EXPAND),
       stretchRatio: stretchRatioOf(child),
     });
   }
@@ -341,13 +332,13 @@ const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) =
     if (vertical) {
       const hFlags = hFlagsOf(child);
       if (
-        hasFlag(hFlags, SIZE_FILL) ||
-        hasFlag(hFlags, SIZE_SHRINK_CENTER) ||
-        hasFlag(hFlags, SIZE_SHRINK_END)
+        hasFlag(hFlags, SizeFlags.FILL) ||
+        hasFlag(hFlags, SizeFlags.SHRINK_CENTER) ||
+        hasFlag(hFlags, SizeFlags.SHRINK_END)
       ) {
         childW = lineData.minLineHeight;
       }
-      if (hasFlag(vFlagsOf(child), SIZE_EXPAND) && !isZeroApprox(lineData.stretchRatioTotal)) {
+      if (hasFlag(vFlagsOf(child), SizeFlags.EXPAND) && !isZeroApprox(lineData.stretchRatioTotal)) {
         childH += Math.trunc(
           (lineData.stretchAvail * childMscs[index]!.stretchRatio) / lineData.stretchRatioTotal
         );
@@ -355,13 +346,13 @@ const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) =
     } else {
       const vFlags = vFlagsOf(child);
       if (
-        hasFlag(vFlags, SIZE_FILL) ||
-        hasFlag(vFlags, SIZE_SHRINK_CENTER) ||
-        hasFlag(vFlags, SIZE_SHRINK_END)
+        hasFlag(vFlags, SizeFlags.FILL) ||
+        hasFlag(vFlags, SizeFlags.SHRINK_CENTER) ||
+        hasFlag(vFlags, SizeFlags.SHRINK_END)
       ) {
         childH = lineData.minLineHeight;
       }
-      if (hasFlag(hFlagsOf(child), SIZE_EXPAND) && !isZeroApprox(lineData.stretchRatioTotal)) {
+      if (hasFlag(hFlagsOf(child), SizeFlags.EXPAND) && !isZeroApprox(lineData.stretchRatioTotal)) {
         childW += Math.trunc(
           (lineData.stretchAvail * childMscs[index]!.stretchRatio) / lineData.stretchRatioTotal
         );

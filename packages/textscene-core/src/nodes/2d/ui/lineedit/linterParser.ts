@@ -19,28 +19,10 @@ import {
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_NAMES,
 } from '../../../../godot/math/math.js';
-
-/** `LineEdit::VirtualKeyboardType` (line_edit.h, BIND_ENUM_CONSTANT line_edit.cpp:3470-3477). */
-const VIRTUAL_KEYBOARD_TYPE = {
-  0: 'KEYBOARD_TYPE_DEFAULT',
-  1: 'KEYBOARD_TYPE_MULTILINE',
-  2: 'KEYBOARD_TYPE_NUMBER',
-  3: 'KEYBOARD_TYPE_NUMBER_DECIMAL',
-  4: 'KEYBOARD_TYPE_PHONE',
-  5: 'KEYBOARD_TYPE_EMAIL_ADDRESS',
-  6: 'KEYBOARD_TYPE_PASSWORD',
-  7: 'KEYBOARD_TYPE_URL',
-};
-
-/**
- * `LineEdit::ExpandMode` (line_edit.cpp:3527 hint "Original,Fit to Text,Fit to
- * LineEdit"; BIND_ENUM_CONSTANT line_edit.cpp:3479-3481).
- */
-const EXPAND_MODE = {
-  0: 'EXPAND_MODE_ORIGINAL_SIZE',
-  1: 'EXPAND_MODE_FIT_TO_TEXT',
-  2: 'EXPAND_MODE_FIT_TO_LINE_EDIT',
-};
+import {
+  LINE_EDIT_EXPAND_MODE_NAMES,
+  LINE_EDIT_VIRTUAL_KEYBOARD_TYPE_NAMES,
+} from '../../../../godot/scene/gui.js';
 
 /**
  * line_edit.cpp:2608-2621: `set_secret_character` truncates a longer literal with `c = c.left(1)`
@@ -94,7 +76,7 @@ validatorRegistry.registerAll('LineEdit', {
   virtual_keyboard_enabled: v.boolean('virtual_keyboard_enabled'),
   virtual_keyboard_show_on_focus: v.boolean('virtual_keyboard_show_on_focus'),
   // line_edit.cpp:3506, PROPERTY_HINT_ENUM, 8 labels. set_virtual_keyboard_type (line_edit.cpp:2925-2927) assigns unconditionally.
-  virtual_keyboard_type: v.enumInt('virtual_keyboard_type', 0, 7, VIRTUAL_KEYBOARD_TYPE, {
+  virtual_keyboard_type: v.enumInt('virtual_keyboard_type', 0, 7, LINE_EDIT_VIRTUAL_KEYBOARD_TYPE_NAMES, {
     hinted: 'line_edit.cpp:3506',
   }),
 
@@ -156,7 +138,9 @@ validatorRegistry.registerAll('LineEdit', {
   // assigns unconditionally past an identity check.
   right_icon: v.resourceReference('right_icon'),
   // line_edit.cpp:3527, PROPERTY_HINT_ENUM, 3 labels. set_icon_expand_mode (line_edit.cpp:3010-3019) assigns unconditionally.
-  icon_expand_mode: v.enumInt('icon_expand_mode', 0, 2, EXPAND_MODE, { hinted: 'line_edit.cpp:3527' }),
+  icon_expand_mode: v.enumInt('icon_expand_mode', 0, 2, LINE_EDIT_EXPAND_MODE_NAMES, {
+    hinted: 'line_edit.cpp:3527',
+  }),
   // line_edit.cpp:3528, PROPERTY_HINT_RANGE "0.1,1.0,0.01", closed at both ends. set_right_icon_scale
   // (line_edit.cpp:3025-3033) assigns unconditionally past an equality check.
   right_icon_scale: v.float('right_icon_scale', {

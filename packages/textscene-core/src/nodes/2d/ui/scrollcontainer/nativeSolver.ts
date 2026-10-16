@@ -19,19 +19,12 @@ import type {
   MinimumSizeFn,
   SolveContext,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from '../shared/fitChildInRect';
+import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
 import { scrollBarGrabberGeometry, scrollBarMinimumSize } from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-
-/** `ScrollContainer::ScrollMode` (`scroll_container.h:44-50`). */
-const ScrollMode = {
-  DISABLED: 0,
-  AUTO: 1,
-  SHOW_ALWAYS: 2,
-  SHOW_NEVER: 3,
-  RESERVE: 4,
-} as const;
+import { SizeFlags } from '../../../../godot/scene/control';
+import { ScrollContainerScrollHintMode, ScrollMode } from '../../../../godot/scene/gui';
 
 /** `scrollbar_h_separation`/`scrollbar_v_separation` default to 0 (`scroll_container.h:104-105`), and `default_theme.cpp` overrides them only for `Tree`. */
 const SCROLLBAR_SEPARATION = 0;
@@ -143,10 +136,6 @@ export interface ScrollBarPlacement {
 }
 
 // ScrollContainer::ScrollHintMode (scroll_container.h:52-57).
-const SCROLL_HINT_MODE_DISABLED = 0;
-const SCROLL_HINT_MODE_ALL = 1;
-const SCROLL_HINT_MODE_TOP_AND_LEFT = 2;
-const SCROLL_HINT_MODE_BOTTOM_AND_RIGHT = 3;
 
 /**
  * `scroll_hint_vertical.svg`/`scroll_hint_horizontal.svg` (`scene/theme/icons/`) are 32x24 and
@@ -201,7 +190,7 @@ function scrollContainerHints(
 ): ScrollContainerHints {
   // `tile_scroll_hint` only picks `STRETCH_TILE` over `STRETCH_SCALE` (`:751-752`). Both icons are
   // gradients uniform along the tiled axis and texture-sized on the other, so the modes match.
-  if (mode === SCROLL_HINT_MODE_DISABLED) return { topLeft: null, bottomRight: null };
+  if (mode === ScrollContainerScrollHintMode.DISABLED) return { topLeft: null, bottomRight: null };
 
   const vBelowMax = scroll.y < largest.y - innerSize.y - 1;
   const showVertical = scroll.y > 1 || vBelowMax;
@@ -210,8 +199,10 @@ function scrollContainerHints(
 
   if (showVertical) {
     const rectAt = (y: number): Rect2 => ({ x: 0, y, w: size.x * 2, h: SCROLL_HINT_VERTICAL_HEIGHT });
-    const wantsTopLeft = mode === SCROLL_HINT_MODE_ALL || mode === SCROLL_HINT_MODE_TOP_AND_LEFT;
-    const wantsBottomRight = mode === SCROLL_HINT_MODE_ALL || mode === SCROLL_HINT_MODE_BOTTOM_AND_RIGHT;
+    const wantsTopLeft =
+      mode === ScrollContainerScrollHintMode.ALL || mode === ScrollContainerScrollHintMode.TOP_AND_LEFT;
+    const wantsBottomRight =
+      mode === ScrollContainerScrollHintMode.ALL || mode === ScrollContainerScrollHintMode.BOTTOM_AND_RIGHT;
     return {
       topLeft:
         !showHorizontal && wantsTopLeft && scroll.y > 1
@@ -233,15 +224,19 @@ function scrollContainerHints(
   // Each hint is anchored, and the RTL arms of `set_anchor_and_offset` cancel
   // `Control::_size_changed`'s mirror, so RTL keeps the LTR rect. It changes only which end
   // `SCROLL_HINT_MODE_TOP_AND_LEFT` names on this axis (`:641,651`).
-  const leading = rtl ? SCROLL_HINT_MODE_BOTTOM_AND_RIGHT : SCROLL_HINT_MODE_TOP_AND_LEFT;
-  const trailing = rtl ? SCROLL_HINT_MODE_TOP_AND_LEFT : SCROLL_HINT_MODE_BOTTOM_AND_RIGHT;
+  const leading = rtl
+    ? ScrollContainerScrollHintMode.BOTTOM_AND_RIGHT
+    : ScrollContainerScrollHintMode.TOP_AND_LEFT;
+  const trailing = rtl
+    ? ScrollContainerScrollHintMode.TOP_AND_LEFT
+    : ScrollContainerScrollHintMode.BOTTOM_AND_RIGHT;
   return {
     topLeft:
-      (mode === SCROLL_HINT_MODE_ALL || mode === leading) && scroll.x > 1
+      (mode === ScrollContainerScrollHintMode.ALL || mode === leading) && scroll.x > 1
         ? { rect: rectAt(0), vertical: false, flipH: false, flipV: false }
         : null,
     bottomRight:
-      (mode === SCROLL_HINT_MODE_ALL || mode === trailing) && hBelowMax
+      (mode === ScrollContainerScrollHintMode.ALL || mode === trailing) && hBelowMax
         ? {
             rect: rectAt(size.x - SCROLL_HINT_HORIZONTAL_WIDTH),
             vertical: false,
@@ -370,7 +365,7 @@ export function scrollContainerScrollBars(
     contentSize,
     scroll,
     hints: scrollContainerHints(
-      p.scrollHintMode ?? SCROLL_HINT_MODE_DISABLED,
+      p.scrollHintMode ?? ScrollContainerScrollHintMode.DISABLED,
       n.rtl,
       { x: rect.w, y: rect.h },
       { x: innerW, y: innerH },
@@ -412,11 +407,11 @@ export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx)
   for (const { node: child, minSize } of children) {
     if (!isSortableControl(child)) continue;
     const cp = child.node.properties as ControlProperties;
-    const hFlags = cp.sizeFlagsHorizontal ?? SIZE_FILL;
-    const vFlags = cp.sizeFlagsVertical ?? SIZE_FILL;
+    const hFlags = cp.sizeFlagsHorizontal ?? SizeFlags.FILL;
+    const vFlags = cp.sizeFlagsVertical ?? SizeFlags.FILL;
 
-    const w = hasFlag(hFlags, SIZE_EXPAND) ? Math.max(contentSize.x, minSize.x) : minSize.x;
-    const h = hasFlag(vFlags, SIZE_EXPAND) ? Math.max(contentSize.y, minSize.y) : minSize.y;
+    const w = hasFlag(hFlags, SizeFlags.EXPAND) ? Math.max(contentSize.x, minSize.x) : minSize.x;
+    const h = hasFlag(vFlags, SizeFlags.EXPAND) ? Math.max(contentSize.y, minSize.y) : minSize.y;
     // `0 - scrollX` rather than `-scrollX`: unary negation of 0 produces -0,
     // which fails a strict rect comparison against the unscrolled +0 case.
     const r: Rect2 = { x: Math.floor(ofsX - scrollX), y: Math.floor(ofsY - scrollY), w, h };

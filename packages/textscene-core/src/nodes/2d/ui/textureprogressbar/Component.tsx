@@ -17,7 +17,7 @@ import { canvasItemThreeFilter, useInheritedTextureSampler } from '../../../../r
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
-import { ninePatchGeometry, AxisStretchMode } from '../../../../r3f/controls/native/ninePatchGeometry';
+import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';
 import {
@@ -29,9 +29,10 @@ import {
 } from './radialFill';
 import { normalizeTextureProgressBarFillMode } from './nativeSolver';
 import { TexturedFillMesh } from './TexturedFillMesh';
-import { FillMode, type TextureProgressBarProperties } from './types';
+import type { TextureProgressBarProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { AxisStretchMode, TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
 
@@ -169,9 +170,9 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
 
   const fillMode = normalizeTextureProgressBarFillMode(props.fillMode);
   const isRadialMode =
-    fillMode === FillMode.CLOCKWISE ||
-    fillMode === FillMode.COUNTER_CLOCKWISE ||
-    fillMode === FillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE;
+    fillMode === TextureProgressBarFillMode.CLOCKWISE ||
+    fillMode === TextureProgressBarFillMode.COUNTER_CLOCKWISE ||
+    fillMode === TextureProgressBarFillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE;
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
   const progressOffset = props.textureProgressOffset ?? ZERO;
 

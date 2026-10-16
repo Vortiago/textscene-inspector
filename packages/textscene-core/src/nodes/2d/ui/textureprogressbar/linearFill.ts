@@ -10,8 +10,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
-import { FillMode } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 interface LinearProgressDraw {
   /** Where the cropped region draws, control-local Godot px (`progress_offset` folded in). */
@@ -31,7 +31,7 @@ export function linearProgressDraw(
 ): LinearProgressDraw | null {
   const s = textureSize;
   switch (mode) {
-    case FillMode.LEFT_TO_RIGHT: {
+    case TextureProgressBarFillMode.LEFT_TO_RIGHT: {
       const w = s.x * ratio;
       return {
         region: { x: 0, y: 0, w, h: s.y },
@@ -39,7 +39,7 @@ export function linearProgressDraw(
         size: { x: w, y: s.y },
       };
     }
-    case FillMode.RIGHT_TO_LEFT: {
+    case TextureProgressBarFillMode.RIGHT_TO_LEFT: {
       const w = s.x * ratio;
       const x = s.x - w;
       return {
@@ -48,7 +48,7 @@ export function linearProgressDraw(
         size: { x: w, y: s.y },
       };
     }
-    case FillMode.TOP_TO_BOTTOM: {
+    case TextureProgressBarFillMode.TOP_TO_BOTTOM: {
       const h = s.y * ratio;
       return {
         region: { x: 0, y: 0, w: s.x, h },
@@ -56,7 +56,7 @@ export function linearProgressDraw(
         size: { x: s.x, y: h },
       };
     }
-    case FillMode.BOTTOM_TO_TOP: {
+    case TextureProgressBarFillMode.BOTTOM_TO_TOP: {
       const h = s.y * ratio;
       const y = s.y - h;
       return {
@@ -65,7 +65,7 @@ export function linearProgressDraw(
         size: { x: s.x, y: h },
       };
     }
-    case FillMode.BILINEAR_LEFT_AND_RIGHT: {
+    case TextureProgressBarFillMode.BILINEAR_LEFT_AND_RIGHT: {
       const w = s.x * ratio;
       const x = s.x / 2 - w / 2;
       return {
@@ -74,7 +74,7 @@ export function linearProgressDraw(
         size: { x: w, y: s.y },
       };
     }
-    case FillMode.BILINEAR_TOP_AND_BOTTOM: {
+    case TextureProgressBarFillMode.BILINEAR_TOP_AND_BOTTOM: {
       const h = s.y * ratio;
       const y = s.y / 2 - h / 2;
       return {

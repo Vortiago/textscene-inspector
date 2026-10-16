@@ -4,55 +4,67 @@
  */
 import { describe, expect, it } from 'vitest';
 import { linearProgressDraw } from './linearFill';
-import { FillMode } from './types';
+import { TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 const TEXTURE_SIZE = { x: 100, y: 20 };
 const OFFSET = { x: 5, y: 2 };
 const RATIO = 0.4;
 
 describe('linearProgressDraw (texture_progress_bar.cpp:445-482)', () => {
-  it('FillMode.LEFT_TO_RIGHT crops the left 40% and places it at progress_offset', () => {
-    expect(linearProgressDraw(FillMode.LEFT_TO_RIGHT, RATIO, TEXTURE_SIZE, OFFSET)).toEqual({
-      region: { x: 0, y: 0, w: 40, h: 20 },
-      offset: { x: 5, y: 2 },
-      size: { x: 40, y: 20 },
-    });
+  it('LEFT_TO_RIGHT crops the left 40% and places it at progress_offset', () => {
+    expect(linearProgressDraw(TextureProgressBarFillMode.LEFT_TO_RIGHT, RATIO, TEXTURE_SIZE, OFFSET)).toEqual(
+      {
+        region: { x: 0, y: 0, w: 40, h: 20 },
+        offset: { x: 5, y: 2 },
+        size: { x: 40, y: 20 },
+      }
+    );
   });
 
-  it('FillMode.RIGHT_TO_LEFT crops the right 40% and offsets the dest by the same amount', () => {
-    expect(linearProgressDraw(FillMode.RIGHT_TO_LEFT, RATIO, TEXTURE_SIZE, OFFSET)).toEqual({
-      region: { x: 60, y: 0, w: 40, h: 20 },
-      offset: { x: 65, y: 2 },
-      size: { x: 40, y: 20 },
-    });
+  it('RIGHT_TO_LEFT crops the right 40% and offsets the dest by the same amount', () => {
+    expect(linearProgressDraw(TextureProgressBarFillMode.RIGHT_TO_LEFT, RATIO, TEXTURE_SIZE, OFFSET)).toEqual(
+      {
+        region: { x: 60, y: 0, w: 40, h: 20 },
+        offset: { x: 65, y: 2 },
+        size: { x: 40, y: 20 },
+      }
+    );
   });
 
-  it('FillMode.TOP_TO_BOTTOM crops the top 40%', () => {
-    expect(linearProgressDraw(FillMode.TOP_TO_BOTTOM, RATIO, TEXTURE_SIZE, OFFSET)).toEqual({
-      region: { x: 0, y: 0, w: 100, h: 8 },
-      offset: { x: 5, y: 2 },
-      size: { x: 100, y: 8 },
-    });
+  it('TOP_TO_BOTTOM crops the top 40%', () => {
+    expect(linearProgressDraw(TextureProgressBarFillMode.TOP_TO_BOTTOM, RATIO, TEXTURE_SIZE, OFFSET)).toEqual(
+      {
+        region: { x: 0, y: 0, w: 100, h: 8 },
+        offset: { x: 5, y: 2 },
+        size: { x: 100, y: 8 },
+      }
+    );
   });
 
-  it('FillMode.BOTTOM_TO_TOP crops the bottom 40%', () => {
-    expect(linearProgressDraw(FillMode.BOTTOM_TO_TOP, RATIO, TEXTURE_SIZE, OFFSET)).toEqual({
-      region: { x: 0, y: 12, w: 100, h: 8 },
-      offset: { x: 5, y: 14 },
-      size: { x: 100, y: 8 },
-    });
+  it('BOTTOM_TO_TOP crops the bottom 40%', () => {
+    expect(linearProgressDraw(TextureProgressBarFillMode.BOTTOM_TO_TOP, RATIO, TEXTURE_SIZE, OFFSET)).toEqual(
+      {
+        region: { x: 0, y: 12, w: 100, h: 8 },
+        offset: { x: 5, y: 14 },
+        size: { x: 100, y: 8 },
+      }
+    );
   });
 
-  it('FillMode.BILINEAR_LEFT_AND_RIGHT crops a centred 40%-wide band', () => {
-    expect(linearProgressDraw(FillMode.BILINEAR_LEFT_AND_RIGHT, RATIO, TEXTURE_SIZE, OFFSET)).toEqual({
+  it('BILINEAR_LEFT_AND_RIGHT crops a centred 40%-wide band', () => {
+    expect(
+      linearProgressDraw(TextureProgressBarFillMode.BILINEAR_LEFT_AND_RIGHT, RATIO, TEXTURE_SIZE, OFFSET)
+    ).toEqual({
       region: { x: 30, y: 0, w: 40, h: 20 },
       offset: { x: 35, y: 2 },
       size: { x: 40, y: 20 },
     });
   });
 
-  it('FillMode.BILINEAR_TOP_AND_BOTTOM crops a centred 40%-tall band', () => {
-    expect(linearProgressDraw(FillMode.BILINEAR_TOP_AND_BOTTOM, RATIO, TEXTURE_SIZE, OFFSET)).toEqual({
+  it('BILINEAR_TOP_AND_BOTTOM crops a centred 40%-tall band', () => {
+    expect(
+      linearProgressDraw(TextureProgressBarFillMode.BILINEAR_TOP_AND_BOTTOM, RATIO, TEXTURE_SIZE, OFFSET)
+    ).toEqual({
       region: { x: 0, y: 6, w: 100, h: 8 },
       offset: { x: 5, y: 8 },
       size: { x: 100, y: 8 },

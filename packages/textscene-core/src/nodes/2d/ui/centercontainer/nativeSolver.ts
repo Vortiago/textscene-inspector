@@ -14,11 +14,8 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { CenterContainerProperties } from './types';
-import { SIZE_FILL, fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
-
-// Control::SizeFlags (control.h:78-85). The flags never change this container's result,
-// since `fit_child_in_rect` (container.cpp:95-128) receives the child's minimum size.
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
+import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
+import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
 
 function props(n: SolveNode): CenterContainerProperties {
   return n.node.properties as CenterContainerProperties;

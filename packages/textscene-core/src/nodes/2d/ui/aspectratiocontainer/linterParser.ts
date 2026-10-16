@@ -8,16 +8,7 @@ import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { ContainerAlignment, CONTAINER_ALIGNMENT_NAMES } from '../../../../godot/scene/container.js';
 import { v } from '../../../../linter/validators/index.js';
-
-// aspect_ratio_container.cpp:189, PROPERTY_HINT_ENUM "Width Controls
-// Height,Height Controls Width,Fit,Cover", matching StretchMode
-// STRETCH_WIDTH_CONTROLS_HEIGHT=0 through STRETCH_COVER=3 (aspect_ratio_container.h:44-49).
-const STRETCH_MODE = {
-  0: 'STRETCH_WIDTH_CONTROLS_HEIGHT',
-  1: 'STRETCH_HEIGHT_CONTROLS_WIDTH',
-  2: 'STRETCH_FIT',
-  3: 'STRETCH_COVER',
-};
+import { ASPECT_RATIO_STRETCH_MODE_NAMES } from '../../../../godot/scene/gui.js';
 
 // Own members only, those doc/classes/AspectRatioContainer.xml lists without `overrides=`. Container's
 // keys arrive through the NODE_BASE_TYPES walk, and a re-declared one shadows it and duplicates the rule.
@@ -29,7 +20,9 @@ validatorRegistry.registerAll('AspectRatioContainer', {
   ratio: v.float('ratio', { min: 0.001, hinted: 'aspect_ratio_container.cpp:188' }),
   // aspect_ratio_container.cpp:189. set_stretch_mode
   // (aspect_ratio_container.cpp:56-62) assigns unconditionally, no ERR_FAIL.
-  stretch_mode: v.enumInt('stretch_mode', 0, 3, STRETCH_MODE, { hinted: 'aspect_ratio_container.cpp:189' }),
+  stretch_mode: v.enumInt('stretch_mode', 0, 3, ASPECT_RATIO_STRETCH_MODE_NAMES, {
+    hinted: 'aspect_ratio_container.cpp:189',
+  }),
   // aspect_ratio_container.cpp:192, PROPERTY_HINT_ENUM "Begin,Center,End", the same
   // AlignmentMode values as BoxContainer's (aspect_ratio_container.h:50-54).
   // set_alignment_horizontal (aspect_ratio_container.cpp:64-70) assigns unconditionally.

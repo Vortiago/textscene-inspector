@@ -19,13 +19,13 @@ import {
   resortBoxContainer,
   type BoxChildInput,
 } from '../shared/boxContainerSolver';
-import { SIZE_FILL, SIZE_SHRINK_CENTER } from '../shared/fitChildInRect';
 import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
 import type { GraphEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
 const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
@@ -180,7 +180,7 @@ export function graphEditToolbar(
     kind: 'button',
     pressed,
     disabled,
-    box: { minSize: buttonMin, hSizeFlags: SIZE_FILL, vSizeFlags: SIZE_FILL, stretchRatio: 1 },
+    box: { minSize: buttonMin, hSizeFlags: SizeFlags.FILL, vSizeFlags: SizeFlags.FILL, stretchRatio: 1 },
   });
 
   const entries: ToolbarEntry[] = [];
@@ -192,8 +192,8 @@ export function graphEditToolbar(
       disabled: false,
       box: {
         minSize: zoomLabelMinSize(theme, metrics, props.zoom ?? 1),
-        hSizeFlags: SIZE_FILL,
-        vSizeFlags: SIZE_SHRINK_CENTER,
+        hSizeFlags: SizeFlags.FILL,
+        vSizeFlags: SizeFlags.SHRINK_CENTER,
         stretchRatio: 1,
       },
     });
@@ -217,8 +217,8 @@ export function graphEditToolbar(
       disabled: false,
       box: {
         minSize: toolbarSpinBoxMinSize(theme, metrics),
-        hSizeFlags: SIZE_FILL,
-        vSizeFlags: SIZE_FILL,
+        hSizeFlags: SizeFlags.FILL,
+        vSizeFlags: SizeFlags.FILL,
         stretchRatio: 1,
       },
     });
