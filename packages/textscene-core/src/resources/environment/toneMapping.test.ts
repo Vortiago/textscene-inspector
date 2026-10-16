@@ -197,31 +197,28 @@ describe('a pass that renders the shared world', () => {
 });
 
 describe('recompileOnCurveChange', () => {
-  function sceneWith(material: THREE.Material): THREE.Scene {
+  /** A scene the pass has already seen once, and its material's version after that pass. */
+  function seenScene() {
+    const material = new THREE.MeshBasicMaterial();
     const scene = new THREE.Scene();
     scene.add(new THREE.Mesh(new THREE.BufferGeometry(), material));
-    return scene;
+    const seen = { revision: -1 };
+    recompileOnCurveChange(scene, seen);
+    return { scene, seen, material, versionBefore: material.version };
   }
 
   it('marks a scene the install never walks dirty once a new curve installs', () => {
-    const material = new THREE.MeshBasicMaterial();
-    const scene = sceneWith(material);
-    const seen = { revision: -1 };
-    recompileOnCurveChange(scene, seen);
-    const versionBefore = material.version;
+    const { scene, seen, material, versionBefore } = seenScene();
 
-    installToneMapping(fakeRenderer(), { mode: AGX }, 'material');
+    const restore = installToneMapping(fakeRenderer(), { mode: AGX }, 'material');
     recompileOnCurveChange(scene, seen);
+    restore();
 
     expect(material.version).toBe(versionBefore + 1);
   });
 
   it('leaves the scene alone while the curve stays the same', () => {
-    const material = new THREE.MeshBasicMaterial();
-    const scene = sceneWith(material);
-    const seen = { revision: -1 };
-    recompileOnCurveChange(scene, seen);
-    const versionBefore = material.version;
+    const { scene, seen, material, versionBefore } = seenScene();
 
     recompileOnCurveChange(scene, seen);
 
@@ -229,12 +226,8 @@ describe('recompileOnCurveChange', () => {
   });
 
   it('marks the scene dirty again when the curve is restored (edge case)', () => {
-    const material = new THREE.MeshBasicMaterial();
-    const scene = sceneWith(material);
     const restore = installToneMapping(fakeRenderer(), { mode: FILMIC }, 'material');
-    const seen = { revision: -1 };
-    recompileOnCurveChange(scene, seen);
-    const versionBefore = material.version;
+    const { scene, seen, material, versionBefore } = seenScene();
 
     restore();
     recompileOnCurveChange(scene, seen);

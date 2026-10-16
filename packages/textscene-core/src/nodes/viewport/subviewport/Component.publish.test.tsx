@@ -247,15 +247,20 @@ describe('<SubViewport> offscreen publisher', () => {
     expect(published()).not.toBeNull();
   });
 
+  /** The 2D workspace's portal after one frame, and the version of the mesh material inside it. */
+  async function renderedPortal() {
+    const { renderer, gl } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
+    const [portal] = await scenesRenderedNextFrame(renderer, gl());
+    const material = (portal!.getObjectByName('Inside') as THREE.Mesh).material as THREE.Material;
+    return { renderer, gl, material, versionBefore: material.version };
+  }
+
   /**
    * A portal scene is one the root's install never walks, so the pass recompiles it itself when
    * the curve changes: three keys a compiled program on the chunk only when a material is dirty.
    */
   it('2D workspace: recompiles the portal when a new curve installs', async () => {
-    const { renderer, gl } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
-    const [portal] = await scenesRenderedNextFrame(renderer, gl());
-    const material = (portal!.getObjectByName('Inside') as THREE.Mesh).material as THREE.Material;
-    const versionBefore = material.version;
+    const { renderer, gl, material, versionBefore } = await renderedPortal();
 
     const restore = installToneMapping(gl(), { mode: ToneMapper.FILMIC }, 'material');
     try {
@@ -267,10 +272,7 @@ describe('<SubViewport> offscreen publisher', () => {
   });
 
   it('2D workspace: leaves the portal compiled while the curve stays the same', async () => {
-    const { renderer, gl } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
-    const [portal] = await scenesRenderedNextFrame(renderer, gl());
-    const material = (portal!.getObjectByName('Inside') as THREE.Mesh).material as THREE.Material;
-    const versionBefore = material.version;
+    const { renderer, gl, material, versionBefore } = await renderedPortal();
 
     await scenesRenderedNextFrame(renderer, gl());
 

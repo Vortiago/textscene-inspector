@@ -77,9 +77,6 @@ function curveGlsl(mode: number, white: number, agxContrast: number): string {
  */
 type CurveBody = (agxContrast: number) => string;
 
-/** LINEAR: exposure is the whole transform. */
-const LINEAR_CURVE: CurveBody = () => /* glsl */ `  return color;`;
-
 /**
  * A mode outside the enum takes the AgX branch (`tonemap.glsl:266-268`) with the parameters
  * `environment_get_tonemap_parameters` leaves zeroed (`environment_storage.cpp:279-339`). A channel
@@ -91,7 +88,8 @@ const UNKNOWN_MODE_CURVE: CurveBody = () => /* glsl */ `  return vec3(1.0);`;
 const NON_NEGATIVE_GLSL = /* glsl */ `  color = max(color, vec3(0.0));`;
 
 const CURVES: Record<number, CurveBody> = {
-  [ToneMapper.LINEAR]: LINEAR_CURVE,
+  // LINEAR: exposure is the whole transform.
+  [ToneMapper.LINEAR]: () => /* glsl */ `  return color;`,
 
   // Reinhard's extended formula, equation 4 in https://doi.org/cjbgrt
   [ToneMapper.REINHARDT]: () => /* glsl */ `

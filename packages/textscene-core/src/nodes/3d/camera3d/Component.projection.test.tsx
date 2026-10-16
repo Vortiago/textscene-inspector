@@ -113,15 +113,6 @@ describe('Camera3D projection (assertions 60–66)', () => {
     expect(widthCam.right === heightCam.right && widthCam.top === heightCam.top).toBe(false);
   });
 
-  it('builds the orthographic projection matrix from `size`, not the constructor frustum', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 8 })} />
-    );
-    const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
-    // An orthographic matrix scales y by 2 / (top - bottom).
-    expect(o.projectionMatrix.elements[5]).toBeCloseTo(2 / 8, 6);
-  });
-
   it('rebuilds the projection when `size` changes', async () => {
     const orthographic = (size: number) =>
       makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size });

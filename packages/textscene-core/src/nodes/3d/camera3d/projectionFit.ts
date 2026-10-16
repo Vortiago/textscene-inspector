@@ -18,11 +18,16 @@ interface LensFit {
   aspect: number | null;
 }
 
-type FittableCamera = THREE.Camera & {
+/**
+ * A three camera identified by its own flags, not `instanceof`, so detection survives a second
+ * copy of three, such as the test renderer's.
+ */
+export type CameraLike = THREE.Camera & {
   isPerspectiveCamera?: boolean;
   isOrthographicCamera?: boolean;
-  userData: { lensFit?: LensFit };
 };
+
+type FittableCamera = CameraLike & { userData: { lensFit?: LensFit } };
 
 /** Records the lens that `fitToAspect` reads. The aspect of an earlier fit stays. */
 export function setLens(camera: THREE.Camera, lens: CameraLens): void {

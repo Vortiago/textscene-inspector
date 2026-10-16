@@ -4,16 +4,7 @@ import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
-import { fitToAspect, fittedAspect } from '../nodes/3d/camera3d/projectionFit.js';
-
-/**
- * A three camera identified by its own flags, not `instanceof`, so detection
- * survives a second copy of three, such as the test renderer's.
- */
-type CameraLike = THREE.Camera & {
-  isPerspectiveCamera?: boolean;
-  isOrthographicCamera?: boolean;
-};
+import { fitToAspect, fittedAspect, type CameraLike } from '../nodes/3d/camera3d/projectionFit.js';
 
 /**
  * Makes the Camera3D the user picks with "Use This Camera" the active render camera of the 3D

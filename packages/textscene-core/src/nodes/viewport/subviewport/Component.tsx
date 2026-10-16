@@ -164,19 +164,18 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
 
     const camera = kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
     // Godot tonemaps through the environment `find_world_3d()` resolves. A shared world's curve is
-    // the root environment's, on either of its routes. An own world's own Environment does not
-    // reach the target, so it draws none. Canvas items draw after the 3D tonemap pass, so a 2D
-    // canvas gets none.
-    const toneMapping =
-      properties.own_world_3d || kind === '2d' ? THREE.NoToneMapping : SHARED_WORLD_TONE_MAPPING;
-    if (toneMapping === SHARED_WORLD_TONE_MAPPING && !rendersInline) {
-      recompileOnCurveChange(source, portalCurve.current);
-    }
+    // the root environment's, on either of its routes. This pass reads only the root's curve, so an
+    // own world draws none. Canvas items draw after the 3D tonemap pass, so a 2D canvas gets none.
+    const isSharedWorld = !properties.own_world_3d && kind === '3d';
+    const toneMapping = isSharedWorld ? SHARED_WORLD_TONE_MAPPING : THREE.NoToneMapping;
+    if (isSharedWorld && !rendersInline) recompileOnCurveChange(source, portalCurve.current);
 
     // A `<Camera3D>` camera carries the canvas aspect. Inside the viewport it frames the target
     // rect, and it is restored after, since the main canvas may render through the same camera.
+    const aspect = viewportAspect({ x: width, y: height });
     const restoreAspect = camera ? fittedAspect(camera) : null;
-    if (camera) fitToAspect(camera, viewportAspect({ x: width, y: height }));
+    const isRefitted = camera !== null && restoreAspect !== aspect;
+    if (isRefitted) fitToAspect(camera, aspect);
 
     try {
       renderToOffscreenTarget(gl, {
@@ -197,7 +196,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         },
       });
     } finally {
-      if (camera && restoreAspect !== null) fitToAspect(camera, restoreAspect);
+      if (isRefitted && restoreAspect !== null) fitToAspect(camera, restoreAspect);
     }
   }, [
     rendersInline,
