@@ -11,7 +11,7 @@ A `Sky` resource's `sky_material` is the source of the background and of the ima
 ## ProceduralSkyMaterial
 <!-- compare: image=unit-sky-procedural status=done fixture=unit-sky-procedural.tscn -->
 
-A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot. Godot multiplies each sRGB colour by its energy multiplier before the linear conversion, and so does the previewer. The sky carries Godot's debanding noise, up to 1/255 per pixel, and `use_debanding = false` turns it off.
+A gradient sky from top, horizon and ground colours. The warm-top, green-horizon gradient and the sphere and floor it lights match Godot. Godot multiplies each sRGB colour by its energy multiplier before the linear conversion, and so does the previewer. The sky carries Godot's debanding noise, and `use_debanding = false` turns it off.
 
 ## PanoramaSkyMaterial
 <!-- compare: image=unit-sky-panorama status=done fixture=unit-sky-panorama.tscn -->
