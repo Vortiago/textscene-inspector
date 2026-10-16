@@ -66,7 +66,7 @@ ${curveGlsl(mode, white, agxContrast)}
 
 /** The mode's curve on an exposed `color`, with the white it reads baked in, so both paths draw alike. */
 function curveGlsl(mode: number, white: number, agxContrast: number): string {
-  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
+  const body = (CURVES[mode] ?? UNKNOWN_MODE_CURVE)(agxContrast);
   return `  const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};\n${body}`;
 }
 
@@ -80,10 +80,19 @@ type CurveBody = (agxContrast: number) => string;
 /** LINEAR: exposure is the whole transform. */
 const LINEAR_CURVE: CurveBody = () => /* glsl */ `  return color;`;
 
+/**
+ * A mode outside the enum takes the AgX branch (`tonemap.glsl:266-268`) with the parameters
+ * `environment_get_tonemap_parameters` leaves zeroed (`environment_storage.cpp:279-339`). A channel
+ * under 0.18 maps to x^0 / (x^0 + 0) = 1 and one above divides 0 by 0, so Godot writes white.
+ */
+const UNKNOWN_MODE_CURVE: CurveBody = () => /* glsl */ `  return vec3(1.0);`;
+
 /** `tonemap.glsl:256-258`: every curve but LINEAR starts at black, so a negative light cannot drive it. */
 const NON_NEGATIVE_GLSL = /* glsl */ `  color = max(color, vec3(0.0));`;
 
 const CURVES: Record<number, CurveBody> = {
+  [ToneMapper.LINEAR]: LINEAR_CURVE,
+
   // Reinhard's extended formula, equation 4 in https://doi.org/cjbgrt
   [ToneMapper.REINHARDT]: () => /* glsl */ `
 ${NON_NEGATIVE_GLSL}

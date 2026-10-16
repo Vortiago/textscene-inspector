@@ -84,10 +84,10 @@ describe('installToneMapping on the material route', () => {
     expect(greyThroughInstalledCurve(gl, -0.5)).toBe(-0.5);
   });
 
-  it('draws a mode outside the enum with the LINEAR curve (error path)', () => {
+  it('draws a mode outside the enum white, as Godot does (error path)', () => {
     const gl = fakeRenderer();
     installToneMapping(gl, { mode: 99, exposure: 2 }, 'material');
-    expect(greyThroughInstalledCurve(gl, 0.2)).toBeCloseTo(0.4, 12);
+    expect(greyThroughInstalledCurve(gl, 0.2)).toBe(1);
   });
 
   it('takes a missing exposure as Godot’s 1.0 default, not the renderer’s old one', () => {

@@ -32,8 +32,12 @@ describe('toneMappingShaderChunk — the per-material CustomToneMapping hook', (
     expect(toneMappingShaderChunk(ToneMapper.LINEAR, 1)).toContain('return color;');
   });
 
-  it('falls back to the LINEAR body for a mode with no curve (error path)', () => {
-    expect(toneMappingShaderChunk(99, 1)).toBe(toneMappingShaderChunk(ToneMapper.LINEAR, 1));
+  it('saturates every channel for a mode with no curve, as Godot does (error path)', () => {
+    // `tonemap.glsl:266-268` sends an unknown mode down the AgX branch with the parameters
+    // `environment_get_tonemap_parameters` leaves zeroed, which writes white (`pnpm ref:godot`).
+    for (const mode of [5, 99, -1]) {
+      expect(toneMappingShaderChunk(mode, 1), `mode ${mode}`).toContain('return vec3(1.0);');
+    }
   });
 
   it('carries the AgX matrices rather than three’s different approximation', () => {
