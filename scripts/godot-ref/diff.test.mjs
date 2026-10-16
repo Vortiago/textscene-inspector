@@ -80,6 +80,12 @@ describe('catalogName', () => {
     expect(catalogName(`${REPO_ROOT}/scenes/fixtures/unit-plane-mesh.tscn`)).toBe('unit-plane-mesh.tscn');
   });
 
+  it('names an ld-58 scene relative to its project root, as the catalog lists it', () => {
+    expect(catalogName(`${REPO_ROOT}/scenes/ld58/Scenes/Hallway/Hallway.tscn`)).toBe(
+      'Scenes/Hallway/Hallway.tscn'
+    );
+  });
+
   it('keeps every other subtree as a path relative to scenes/', () => {
     expect(catalogName(`${REPO_ROOT}/scenes/demos/3d/town/town_scene.tscn`)).toBe(
       'demos/3d/town/town_scene.tscn'

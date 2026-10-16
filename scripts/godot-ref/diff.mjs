@@ -17,6 +17,8 @@ import { captureOurs } from './capture-ours.mjs';
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const FIXTURE_DIR = join(REPO_ROOT, 'scenes', 'fixtures');
 const OUT_DIR = join(import.meta.dirname, 'output');
+/** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
+const FLATTENED_ROOTS = ['fixtures/', 'ld58/'];
 
 function usage() {
   console.error(
@@ -50,8 +52,8 @@ export function parseArgs(argv) {
 
 /**
  * Accepts a path on disk or a catalog name and produces both: `ref:godot` wants
- * the path, `ref:ours` the name. The catalog flattens `scenes/fixtures/` to a bare
- * filename but keeps any other subtree as a relative path
+ * the path, `ref:ours` the name. The catalog names a scene under `scenes/fixtures/` or
+ * `scenes/ld58/` from that root, and keeps any other subtree as a relative path
  * (`demos/3d/truck_town/town/town_scene.tscn`).
  */
 export function resolveFixture(input) {
@@ -79,7 +81,8 @@ export function catalogName(scenePath) {
   const relative = relativePath(REPO_ROOT, scenePath).split(sep).join('/');
   if (!relative.startsWith('scenes/')) throw new Error(`scene is outside scenes/: ${scenePath}`);
   const withinScenes = relative.slice('scenes/'.length);
-  return withinScenes.startsWith('fixtures/') ? withinScenes.slice('fixtures/'.length) : withinScenes;
+  const projectRoot = FLATTENED_ROOTS.find((root) => withinScenes.startsWith(root));
+  return projectRoot ? withinScenes.slice(projectRoot.length) : withinScenes;
 }
 
 /**
