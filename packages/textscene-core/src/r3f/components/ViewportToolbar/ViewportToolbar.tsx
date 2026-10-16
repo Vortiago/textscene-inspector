@@ -8,6 +8,7 @@
 import {
   useViewportMode,
   FRAME_ON_OPEN_STORAGE_KEY,
+  SHOW_FOG_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
@@ -43,6 +44,8 @@ interface DisplayToggleState {
   setShowPreviewEnvironment: (show: boolean) => void;
   frameOnOpen: boolean;
   setFrameOnOpen: (frame: boolean) => void;
+  showFog: boolean;
+  setShowFog: (show: boolean) => void;
   sceneHasSun: boolean;
   sceneHasEnvironment: boolean;
 }
@@ -71,7 +74,7 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
       checked: state.showNavigation,
       onChange: state.setShowNavigation,
     },
-    // 3D-only: the grid, the framing preference and both preview-lighting
+    // 3D-only: the grid, the framing preference, the fog and both preview-lighting
     // stand-ins have no meaning over the 2D Control overlay.
     ...(state.mode === '3D'
       ? ([
@@ -87,6 +90,12 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
             title: 'Show a ground-plane reference grid',
             checked: state.showGrid,
             onChange: state.setShowGrid,
+          },
+          {
+            label: 'Fog',
+            title: "Draw the Environment's depth and volumetric fog. Off skips the fog passes.",
+            checked: state.showFog,
+            onChange: state.setShowFog,
           },
           {
             label: 'Preview Sun',
@@ -139,6 +148,8 @@ export function ViewportToolbar() {
     setShowPreviewEnvironment,
     frameOnOpen,
     setFrameOnOpen,
+    showFog,
+    setShowFog,
   } = useViewportMode();
   const camera = useOptionalViewportActions();
   const hierarchy = useOptionalHierarchy();
@@ -170,6 +181,10 @@ export function ViewportToolbar() {
     setFrameOnOpen(frame);
     writePersisted(FRAME_ON_OPEN_STORAGE_KEY, frame);
   }
+  function handleFogChange(show: boolean) {
+    setShowFog(show);
+    writePersisted(SHOW_FOG_STORAGE_KEY, show);
+  }
 
   const displayToggles = buildDisplayToggles({
     mode,
@@ -187,6 +202,8 @@ export function ViewportToolbar() {
     setShowPreviewEnvironment,
     frameOnOpen,
     setFrameOnOpen: handleFrameOnOpenChange,
+    showFog,
+    setShowFog: handleFogChange,
     sceneHasSun,
     sceneHasEnvironment,
   });

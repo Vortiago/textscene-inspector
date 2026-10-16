@@ -11,6 +11,7 @@ import { environmentSettingsOf } from '../../resources/environment/testing/envir
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { fakeWebGL2Context, rendererOver } from '../testing/fakeWebGL2Context';
+import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 
 vi.mock('./Compositor', () => ({
   Compositor: () => <group name="Compositor" />,
@@ -21,24 +22,36 @@ const FILMIC = '2';
 
 type CapturedRenderer = { current: THREE.WebGLRenderer | null };
 
-function layer(world: WorldKind, properties: Record<string, string>, captured: CapturedRenderer) {
+function layer(
+  world: WorldKind,
+  properties: Record<string, string>,
+  captured: CapturedRenderer,
+  showFog = true
+) {
   return (
-    <WorldKindProvider world={world}>
-      <CaptureRenderer captured={captured} />
-      <EnvironmentLayer
-        settings={environmentSettingsOf(properties)}
-        sky={null}
-        resources={NO_RESOURCES}
-        skyResources={NO_RESOURCES}
-      />
-    </WorldKindProvider>
+    <ViewportModeProvider initialShowFog={showFog}>
+      <WorldKindProvider world={world}>
+        <CaptureRenderer captured={captured} />
+        <EnvironmentLayer
+          settings={environmentSettingsOf(properties)}
+          sky={null}
+          resources={NO_RESOURCES}
+          skyResources={NO_RESOURCES}
+        />
+      </WorldKindProvider>
+    </ViewportModeProvider>
   );
 }
 
-async function mountLayer(world: WorldKind, properties: Record<string, string>, hasGlContext = false) {
+async function mountLayer(
+  world: WorldKind,
+  properties: Record<string, string>,
+  hasGlContext = false,
+  showFog = true
+) {
   const captured: CapturedRenderer = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    layer(world, properties, captured),
+    layer(world, properties, captured, showFog),
     hasGlContext ? { gl: rendererOver(fakeWebGL2Context()) } : undefined
   );
   const compositors = renderer.scene.findAll((node) => node.props.name === 'Compositor').length;
@@ -97,6 +110,28 @@ describe('<EnvironmentLayer> background', () => {
     const { scene, unmount } = await mountLayer('root', { background_mode: '1' });
     await unmount();
     expect(scene.background).toBeNull();
+  });
+});
+
+describe('<EnvironmentLayer> fog', () => {
+  it('draws the fog of an Environment that enables it', async () => {
+    const { scene } = await mountLayer('root', { volumetric_fog_enabled: 'true' }, true);
+    expect(scene.fog).not.toBeNull();
+  });
+
+  it('draws no fog while the viewport hides it', async () => {
+    const { scene } = await mountLayer(
+      'root',
+      { fog_enabled: 'true', volumetric_fog_enabled: 'true' },
+      true,
+      false
+    );
+    expect(scene.fog).toBeNull();
+  });
+
+  it('draws no fog for an Environment without one (edge case)', async () => {
+    const { scene } = await mountLayer('root', {});
+    expect(scene.fog).toBeNull();
   });
 });
 

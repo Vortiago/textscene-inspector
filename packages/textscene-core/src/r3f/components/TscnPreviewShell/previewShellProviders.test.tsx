@@ -20,7 +20,7 @@ function withShellProviders() {
     initialActiveCameraPath: undefined,
     onMissingPathsChange: undefined,
     initialViewportMode: undefined,
-    initialViewport: { mode: '2D', showGrid: false, frameOnOpen: false },
+    initialViewport: { mode: '2D', showGrid: false, frameOnOpen: false, showFog: true },
     panelId: 'p',
     rootScenePath: 'main.tscn',
   });

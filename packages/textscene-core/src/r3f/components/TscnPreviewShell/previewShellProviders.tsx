@@ -24,8 +24,8 @@ interface PreviewShellProviderOptions {
   onMissingPathsChange: ((paths: ReadonlySet<string>) => void) | undefined;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode: ViewportMode | undefined;
-  /** The mode, grid and frame persisted last session. */
-  initialViewport: { mode: ViewportMode; showGrid: boolean; frameOnOpen: boolean };
+  /** The mode, grid, frame and fog persisted last session. */
+  initialViewport: { mode: ViewportMode; showGrid: boolean; frameOnOpen: boolean; showFog: boolean };
   panelId: string;
   rootScenePath: string;
 }
@@ -62,6 +62,7 @@ export function previewShellProviders({
         initialMode={initialViewportMode ?? initialViewport.mode}
         initialShowGrid={initialViewport.showGrid}
         initialFrameOnOpen={initialViewport.frameOnOpen}
+        initialShowFog={initialViewport.showFog}
       >
         {children}
       </ViewportModeProvider>
