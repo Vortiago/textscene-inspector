@@ -17,8 +17,6 @@ import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
 
-// Control::SizeFlags (control.h:78-85): the bits `fit_child_in_rect` tests.
-
 /** `default_theme.cpp:1252-1255`: MarginContainer's four margins default to 0, unscaled. */
 const DEFAULT_MARGIN = 0;
 

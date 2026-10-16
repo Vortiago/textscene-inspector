@@ -135,8 +135,6 @@ export interface ScrollBarPlacement {
   grabberRect: Rect2;
 }
 
-// ScrollContainer::ScrollHintMode (scroll_container.h:52-57).
-
 /**
  * `scroll_hint_vertical.svg`/`scroll_hint_horizontal.svg` (`scene/theme/icons/`) are 32x24 and
  * 24x32 at scale 1. Only the extent across each fade is read (`get_height()` at
