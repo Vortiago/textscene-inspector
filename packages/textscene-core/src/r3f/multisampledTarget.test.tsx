@@ -3,37 +3,20 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useMultisampledTarget, useSampleCount } from './multisampledTarget';
 import { MSAA_DISABLED } from '../godot/rendering/msaa';
-import { SCENE_BUFFER_TYPE } from './environment/compositorPass';
-
-const RGBA8 = 0x8058;
-const SRGB8_ALPHA8 = 0x8c43;
-const RGBA16F = 0x881a;
-const DEPTH_COMPONENT24 = 0x81a6;
+import { SCENE_BUFFER_TYPE } from './environment/useCompositorPass';
+import {
+  DEPTH_COMPONENT24,
+  fakeWebGL2Context,
+  type FakeContextOptions,
+  rendererOver,
+  RGBA16F,
+  RGBA8,
+  SRGB8_ALPHA8,
+} from './testing/fakeWebGL2Context';
 
 /** `Viewport.MSAA` modes (`scene/main/viewport.h`). */
 const MSAA_4X = 2;
 const MSAA_8X = 3;
-
-/** A WebGL 2 context that lists `counts` per renderbuffer format, lost while `lost.current`. */
-function contextWith(
-  counts: Record<number, number[]>,
-  queries: number[] = [],
-  lost = { current: false }
-): object {
-  return {
-    RENDERBUFFER: 0x8d41,
-    SAMPLES: 0x80a9,
-    RGBA8,
-    SRGB8_ALPHA8,
-    RGBA16F,
-    DEPTH_COMPONENT24,
-    isContextLost: () => lost.current,
-    getInternalformatParameter: (_target: number, format: number) => {
-      queries.push(format);
-      return lost.current ? null : Int32Array.from(counts[format] ?? []);
-    },
-  };
-}
 
 /** A device whose 8-bit linear storage lists 8, its sRGB storage only 4, and its half float only 2. */
 const SPLIT_DEVICE = {
@@ -43,6 +26,10 @@ const SPLIT_DEVICE = {
   [DEPTH_COMPONENT24]: [8, 4, 2],
 };
 
+function splitDevice(options: Omit<FakeContextOptions, 'counts'> = {}): object {
+  return fakeWebGL2Context({ counts: SPLIT_DEVICE, ...options });
+}
+
 /** Mounts `read` as a hook on a canvas over `context`, and returns what it gave. */
 async function onCanvas<T>(context: object, read: () => T): Promise<T> {
   let seen: T | undefined;
@@ -50,13 +37,7 @@ async function onCanvas<T>(context: object, read: () => T): Promise<T> {
     seen = read();
     return null;
   }
-  const renderer = await ReactThreeTestRenderer.create(<Probe />, {
-    gl: (defaults) => {
-      const gl = new THREE.WebGLRenderer(defaults);
-      gl.getContext = () => context as WebGL2RenderingContext;
-      return gl;
-    },
-  });
+  const renderer = await ReactThreeTestRenderer.create(<Probe />, { gl: rendererOver(context) });
   await renderer.unmount();
   return seen as T;
 }
@@ -75,11 +56,11 @@ async function targetSamples(context: object, mode: number, create: () => THREE.
 
 describe('useMultisampledTarget', () => {
   it('multisamples an 8-bit linear target at the count RGBA8 and depth share', async () => {
-    expect(await targetSamples(contextWith(SPLIT_DEVICE), MSAA_8X, linearTarget)).toBe(8);
+    expect(await targetSamples(splitDevice(), MSAA_8X, linearTarget)).toBe(8);
   });
 
   it('gives an sRGB-tagged target with no pinned format the count SRGB8_ALPHA8 lists', async () => {
-    expect(await targetSamples(contextWith(SPLIT_DEVICE), MSAA_8X, srgbTarget)).toBe(4);
+    expect(await targetSamples(splitDevice(), MSAA_8X, srgbTarget)).toBe(4);
   });
 
   it('follows a pinned internal format over the colour space tag', async () => {
@@ -88,16 +69,16 @@ describe('useMultisampledTarget', () => {
       target.texture.internalFormat = 'RGBA8';
       return target;
     };
-    expect(await targetSamples(contextWith(SPLIT_DEVICE), MSAA_8X, pinned)).toBe(8);
+    expect(await targetSamples(splitDevice(), MSAA_8X, pinned)).toBe(8);
   });
 
   it('falls to the closest lower count that colour and depth share', async () => {
-    const context = contextWith({ [RGBA8]: [8, 4, 2], [DEPTH_COMPONENT24]: [4, 2] });
+    const context = fakeWebGL2Context({ counts: { [RGBA8]: [8, 4, 2], [DEPTH_COMPONENT24]: [4, 2] } });
     expect(await targetSamples(context, MSAA_8X, linearTarget)).toBe(4);
   });
 
   it('draws one sample per pixel at MSAA_DISABLED', async () => {
-    expect(await targetSamples(contextWith(SPLIT_DEVICE), MSAA_DISABLED, linearTarget)).toBe(0);
+    expect(await targetSamples(splitDevice(), MSAA_DISABLED, linearTarget)).toBe(0);
   });
 
   it('draws one sample per pixel on a device without multisampled targets (error path)', async () => {
@@ -106,7 +87,7 @@ describe('useMultisampledTarget', () => {
 
   it('queries a lost context again once the browser restores it (edge case)', async () => {
     const lost = { current: true };
-    const context = contextWith(SPLIT_DEVICE, [], lost);
+    const context = splitDevice({ lost });
     expect(await targetSamples(context, MSAA_4X, linearTarget)).toBe(0);
     lost.current = false;
     expect(await targetSamples(context, MSAA_4X, linearTarget)).toBe(4);
@@ -114,7 +95,7 @@ describe('useMultisampledTarget', () => {
 
   it('queries each storage of a context once, however many targets ask', async () => {
     const queries: number[] = [];
-    const context = contextWith(SPLIT_DEVICE, queries);
+    const context = splitDevice({ queries });
     await targetSamples(context, MSAA_4X, linearTarget);
     await targetSamples(context, MSAA_8X, linearTarget);
     expect(queries).toEqual([DEPTH_COMPONENT24, RGBA8]);
@@ -123,9 +104,7 @@ describe('useMultisampledTarget', () => {
 
 describe('useSampleCount', () => {
   it("takes the counts RGBA16F lists for the compositor's half-float scene buffer", async () => {
-    expect(await onCanvas(contextWith(SPLIT_DEVICE), () => useSampleCount(MSAA_8X, SCENE_BUFFER_TYPE))).toBe(
-      2
-    );
+    expect(await onCanvas(splitDevice(), () => useSampleCount(MSAA_8X, SCENE_BUFFER_TYPE))).toBe(2);
   });
 
   it('draws one sample per pixel on a device without multisampled targets (error path)', async () => {
@@ -133,8 +112,6 @@ describe('useSampleCount', () => {
   });
 
   it('draws one sample per pixel at MSAA_DISABLED (edge case)', async () => {
-    expect(
-      await onCanvas(contextWith(SPLIT_DEVICE), () => useSampleCount(MSAA_DISABLED, SCENE_BUFFER_TYPE))
-    ).toBe(0);
+    expect(await onCanvas(splitDevice(), () => useSampleCount(MSAA_DISABLED, SCENE_BUFFER_TYPE))).toBe(0);
   });
 });

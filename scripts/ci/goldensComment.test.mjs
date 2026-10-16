@@ -25,6 +25,15 @@ describe('goldensComment', () => {
     );
   });
 
+  it('opens a golden that names a camera through that Camera3D', () => {
+    const scenes = [
+      { name: 'sky-orthographic', file: 'unit-sky-orthographic.tscn', camera: 'Root/Camera3D' },
+    ];
+    const comment = goldensComment(nameStatus('A', 'sky-orthographic'), scenes, PULL_REQUEST);
+
+    expect(comment).toContain('?fixture=unit-sky-orthographic.tscn&camera=Root%2FCamera3D)');
+  });
+
   it('writes nothing when no baseline changed', () => {
     const changes = 'M\tpackages/textscene-core/src/r3f/TscnCanvas.tsx\nM\tscripts/visual/scenes.mjs\n';
 

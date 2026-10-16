@@ -1,6 +1,7 @@
 /**
- * Godot 4.6.3's tone-mapping white on the CPU: the floor `environment_get_white` puts on the
- * authored white and the parameter `environment_get_tonemap_parameters` derives from it, both in
+ * Godot 4.6.3's tone-mapping facts: the curve constants, which the CPU white and the ported shaders
+ * both read, and the white on the CPU, that is the floor `environment_get_white` puts on the authored
+ * white and the parameter `environment_get_tonemap_parameters` derives from it, both in
  * `servers/rendering/storage/environment_storage.cpp`. The shaders divide by that parameter.
  *
  * Portions ported from Godot Engine (MIT).
@@ -29,33 +30,59 @@ export const TONEMAP_AGX_CONTRAST_DEFAULT = 1.25;
 /** Each tone mapper's name by the integer a `.tscn` stores, as a validator names it. */
 export const TONE_MAPPER_NAMES = enumNamesByValue(ToneMapper);
 
-/** `exposure_bias` per curve (`environment_storage.cpp:292,303`). The shaders bake the same. */
-const FILMIC_EXPOSURE_BIAS = 2.0;
-const ACES_EXPOSURE_BIAS = 1.8;
+/**
+ * Hable's filmic curve with Godot's bias (`environment_storage.cpp:292-300`, `tonemap.glsl`
+ * `tonemap_filmic`). The bias scales A by its square and B by itself, inside the curve.
+ */
+export const FILMIC_CURVE = {
+  exposureBias: 2.0,
+  A: 0.22,
+  B: 0.3,
+  C: 0.1,
+  D: 0.2,
+  E: 0.01,
+  F: 0.3,
+} as const;
 
-/** Hable's filmic curve with Godot's bias folded into A and B (`environment_storage.cpp:292-300`). */
+/**
+ * Godot's fitted ACES (`environment_storage.cpp:303-312`, `tonemap.glsl` `tonemap_aces`). The bias
+ * scales the colour before the curve.
+ */
+export const ACES_CURVE = {
+  exposureBias: 1.8,
+  A: 0.0245786,
+  B: 0.000090537,
+  C: 0.983729,
+  D: 0.432951,
+  E: 0.238081,
+} as const;
+
+/**
+ * The tonemap pass's own defaults (`tone_mapper.h:177-180`), which a 3D root with no Environment
+ * keeps (`renderer_scene_render_rd.cpp:724-731`). They equal the Environment defaults
+ * (`environment.h:115-117`) only by chance, so neither is read from the other.
+ */
+export const NO_ENVIRONMENT_TONE_MAPPING = {
+  mode: ToneMapper.LINEAR,
+  exposure: 1,
+  white: 1,
+  agxContrast: TONEMAP_AGX_CONTRAST_DEFAULT,
+};
+
 function filmic(x: number): number {
-  const A = 0.22 * FILMIC_EXPOSURE_BIAS * FILMIC_EXPOSURE_BIAS;
-  const B = 0.3 * FILMIC_EXPOSURE_BIAS;
-  const C = 0.1;
-  const D = 0.2;
-  const E = 0.01;
-  const F = 0.3;
-  return (x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F) - E / F;
+  const { exposureBias: bias, A, B, C, D, E, F } = FILMIC_CURVE;
+  const biasedA = A * bias * bias;
+  const biasedB = B * bias;
+  return (x * (biasedA * x + C * biasedB) + D * E) / (x * (biasedA * x + biasedB) + D * F) - E / F;
 }
 
 /**
- * ACES for a neutral grey, which is all the white needs (`environment_storage.cpp:303-312`). Both
- * of Godot's colour matrices have rows summing to 1, so a grey passes through them as a plain scale
- * by the exposure bias.
+ * ACES for a neutral grey, which is all the white needs. Both of Godot's colour matrices have rows
+ * summing to 1, so a grey passes through them as a plain scale by the exposure bias.
  */
 function acesGrey(x: number): number {
-  const A = 0.0245786;
-  const B = 0.000090537;
-  const C = 0.983729;
-  const D = 0.432951;
-  const E = 0.238081;
-  const biased = x * ACES_EXPOSURE_BIAS;
+  const { exposureBias, A, B, C, D, E } = ACES_CURVE;
+  const biased = x * exposureBias;
   return (biased * (biased + A) - B) / (biased * (C * biased + D) + E);
 }
 
@@ -78,8 +105,9 @@ export function resolvedWhite(mode: number, white: number): number {
 
 /**
  * The `tonemapper_params.x` of `environment_get_tonemap_parameters`
- * (`environment_storage.cpp:274-344`): white squared for Reinhard, and the curve at white for FILMIC and ACES, so white maps to 1.0. For
- * AgX it is the high-clip point, where the curve reaches `output_max`. LINEAR has none, so 1.
+ * (`environment_storage.cpp:274-344`): white squared for Reinhard, and the curve at white for
+ * FILMIC and ACES, so white maps to 1.0. For AgX it is the high-clip point, where the curve
+ * reaches `output_max`. LINEAR has none, so 1.
  */
 export function toneMappingWhiteParam(mode: number, white: number): number {
   const resolved = resolvedWhite(mode, white);

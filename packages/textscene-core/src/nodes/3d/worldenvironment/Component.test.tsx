@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { WorldEnvironment } from './Component';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
@@ -7,6 +7,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
 import { instanceAs } from '../testing/reactThreeTestInstance';
+import { textureTexel } from '../../../r3f/testing/backgroundTexel';
 
 function makeNode(envRef?: string): TscnNode {
   const properties: WorldEnvironmentProperties = {
@@ -50,10 +51,9 @@ describe('<WorldEnvironment>', () => {
     });
     const renderer = await render(node, [resource]);
     const scene = instanceAs<THREE.Scene>(renderer.scene);
-    const bg = scene.background as { getHexString(): string } | null;
-    expect(bg).not.toBeNull();
-    // Godot Color is sRGB and three.js stores linear, so compare the sRGB hex.
-    expect(bg!.getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
+    // A texture of the linear colour, so the tone curve reaches it. Compared as the sRGB hex.
+    const texel = textureTexel(scene.background as THREE.DataTexture);
+    expect(new THREE.Color().fromArray(texel).getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
   });
 
   it('leaves the scene without fog in a canvas with no GL context, which the fog passes need', async () => {

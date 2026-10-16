@@ -428,6 +428,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Depth Fog Orthographic",
+    "file": "unit-depth-fog-orthographic.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Depth Fog",
     "file": "unit-depth-fog.tscn",
     "category": "Other"
@@ -485,6 +490,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Environment Adjustments",
     "file": "unit-environment-adjustments.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Environment Linear Exposure",
+    "file": "unit-environment-linear-exposure.tscn",
     "category": "Other"
   },
   {
@@ -1505,6 +1515,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sky Energy",
     "file": "unit-sky-energy.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sky Orthographic",
+    "file": "unit-sky-orthographic.tscn",
     "category": "Other"
   },
   {
@@ -2986,6 +3001,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Camera Frustum",
+    "file": "unit-camera-frustum.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Camera3d",
     "file": "unit-camera3d.tscn",
     "category": "Unit - Basic Nodes"
@@ -3418,6 +3438,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Own World",
     "file": "unit-sub-viewport-own-world.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Shared World Exposure",
+    "file": "unit-sub-viewport-shared-world-exposure.tscn",
     "category": "Unit - Viewports"
   },
   {

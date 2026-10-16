@@ -28,7 +28,7 @@ const OPEN_ROW_LIMIT = 10;
 
 /**
  * @param {string} nameStatus - `git diff --name-status --no-renames` output.
- * @param {{ name: string, file: string }[]} scenes - the golden-scene manifest of the branch.
+ * @param {{ name: string, file: string, camera?: string }[]} scenes - the golden-scene manifest of the branch.
  * @param {{ repository: string, number: number, branch: string }} pullRequest
  * @returns {string | null} the comment body, or null when no baseline changed.
  */
@@ -60,16 +60,17 @@ function changeWord(status) {
 
 /** An added golden has no scene on main, and a removed one has none on the branch. */
 function row({ path, name, change }, scenes, { repository, number }, preview) {
-  const fixture = scenes.find((scene) => scene.name === name)?.file;
+  const scene = scenes.find((candidate) => candidate.name === name);
   const diffAnchor = createHash('sha256').update(path).digest('hex');
   const diff = `[diff](https://github.com/${repository}/pull/${number}/files#diff-${diffAnchor})`;
-  const onBranch = fixture && change !== 'removed' ? sceneLink('preview', preview, fixture) : '';
-  const onMain = fixture && change === 'changed' ? sceneLink('main', PREVIEW_URL, fixture) : '';
+  const onBranch = scene && change !== 'removed' ? sceneLink('preview', preview, scene) : '';
+  const onMain = scene && change === 'changed' ? sceneLink('main', PREVIEW_URL, scene) : '';
   return `| \`${name}\` | ${change} | ${diff} | ${onBranch} | ${onMain} |`;
 }
 
-function sceneLink(label, site, fixture) {
-  return `[${label}](${fixtureUrl(site, fixture)})`;
+/** The scene as its golden captures it, through the Camera3D the manifest names. */
+function sceneLink(label, site, { file, camera }) {
+  return `[${label}](${fixtureUrl(site, file, { camera })})`;
 }
 
 /** The branch's Cloudflare Pages preview. A DNS label ends in a letter or digit, never a hyphen. */

@@ -59,6 +59,9 @@ export const TILE_AND_TARGET_SCENES = [
   // The same target in the emission slot over a black albedo: every material slot binds a
   // ViewportTexture. A slot that drops it leaves a black quad.
   { name: 'sub-viewport-texture-emission', file: 'unit-sub-viewport-texture-emission.tscn' },
+  // `tonemap_exposure` under LINEAR inside the target while glow holds the renderer for the
+  // compositor: the exposure applies inside the target and again on the quad.
+  { name: 'sub-viewport-shared-world-exposure', file: 'unit-sub-viewport-shared-world-exposure.tscn' },
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },
