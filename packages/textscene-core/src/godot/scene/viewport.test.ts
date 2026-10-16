@@ -101,13 +101,14 @@ describe('Viewport enum label tables (viewport.h:99-234)', () => {
     expect(ANISOTROPIC_FILTERING_NAMES).toEqual({ 0: 'DISABLED', 1: '2X', 2: '4X', 3: '8X', 4: '16X' });
   });
 
-  it('names the 3D scaling modes before SCALING_3D_MODE_MAX', () => {
+  it('names the 3D scaling modes, with NEAREST last from 4.7.2 (viewport.h:99-107)', () => {
     expect(SCALING_3D_MODE_NAMES).toEqual({
       0: 'BILINEAR',
       1: 'FSR',
       2: 'FSR2',
       3: 'METALFX_SPATIAL',
       4: 'METALFX_TEMPORAL',
+      5: 'NEAREST',
     });
   });
 
@@ -116,11 +117,15 @@ describe('Viewport enum label tables (viewport.h:99-234)', () => {
     expect(VRS_UPDATE_MODE_NAMES).toEqual({ 0: 'DISABLED', 1: 'ONCE', 2: 'ALWAYS' });
   });
 
-  it('names the debug draw modes from DISABLED to INTERNAL_BUFFER (edge case: no MAX sentinel)', () => {
-    expect(Object.keys(DEBUG_DRAW_NAMES)).toHaveLength(27);
+  it('names the debug draw modes from DISABLED to AREA_LIGHT_ATLAS (edge case: no MAX sentinel)', () => {
+    expect(Object.keys(DEBUG_DRAW_NAMES)).toHaveLength(29);
     expect(DEBUG_DRAW_NAMES[DebugDraw.DISABLED]).toBe('DISABLED');
-    expect(DEBUG_DRAW_NAMES[DebugDraw.INTERNAL_BUFFER]).toBe('INTERNAL_BUFFER');
     expect(DebugDraw.INTERNAL_BUFFER).toBe(26);
+  });
+
+  it('adds the two area light debug draws after INTERNAL_BUFFER in 4.7.2 (viewport.h:188-189)', () => {
+    expect(DEBUG_DRAW_NAMES[27]).toBe('CLUSTER_AREA_LIGHTS');
+    expect(DEBUG_DRAW_NAMES[28]).toBe('AREA_LIGHT_ATLAS');
   });
 });
 

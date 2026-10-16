@@ -90,20 +90,20 @@ validatorRegistry.registerAll('Viewport', {
   // viewport.cpp:5171 hints RANGE "0,1024,0.1", both ends closed. set_mesh_lod_threshold
   // (viewport.cpp:3819-3823) bare-assigns, so this is hinted, not enforced.
   mesh_lod_threshold: v.float('mesh_lod_threshold', { min: 0, max: 1024, hinted: 'viewport.cpp:5171' }),
-  // viewport.cpp:5172, PROPERTY_HINT_ENUM with 27 labels (0-26, no MAX
-  // sentinel). set_debug_draw (viewport.cpp:3847-3850) bare-assigns.
-  debug_draw: v.enumInt('debug_draw', DebugDraw.DISABLED, DebugDraw.INTERNAL_BUFFER, DEBUG_DRAW_NAMES, {
+  // viewport.cpp:5172, PROPERTY_HINT_ENUM with 27 labels (0-26, no MAX sentinel); 4.7.2 adds two
+  // (0-28, viewport.cpp:5367). set_debug_draw (viewport.cpp:3847-3850) bare-assigns.
+  debug_draw: v.enumInt('debug_draw', DebugDraw.DISABLED, DebugDraw.AREA_LIGHT_ATLAS, DEBUG_DRAW_NAMES, {
     hinted: 'viewport.cpp:5172',
   }),
   use_hdr_2d: v.boolean('use_hdr_2d'),
 
   // "Scaling 3D" group, viewport.cpp:5177-5181.
-  // viewport.cpp:5177, PROPERTY_HINT_ENUM 5 labels. set_scaling_3d_mode
-  // (viewport.cpp:4855-4862) bare-assigns, no ERR_FAIL_INDEX.
+  // viewport.cpp:5177, PROPERTY_HINT_ENUM 5 labels; 4.7.2 adds Nearest as 5 (viewport.cpp:5372).
+  // set_scaling_3d_mode (viewport.cpp:4855-4862) bare-assigns, no ERR_FAIL_INDEX.
   scaling_3d_mode: v.enumInt(
     'scaling_3d_mode',
     Scaling3DMode.BILINEAR,
-    Scaling3DMode.METALFX_TEMPORAL,
+    Scaling3DMode.NEAREST,
     SCALING_3D_MODE_NAMES,
     {
       hinted: 'viewport.cpp:5177',

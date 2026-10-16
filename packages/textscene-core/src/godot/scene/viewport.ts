@@ -34,13 +34,14 @@ export enum AnisotropicFiltering {
 
 export const ANISOTROPIC_FILTERING_NAMES = enumNamesByValue(AnisotropicFiltering);
 
-/** `Viewport::Scaling3DMode` (`viewport.h:99-106`), without its `_MAX`. */
+/** `Viewport::Scaling3DMode` (`viewport.h:99-106`), without its `_MAX`. 4.7.2 adds NEAREST (`viewport.h:106`). */
 export enum Scaling3DMode {
   BILINEAR = 0,
   FSR = 1,
   FSR2 = 2,
   METALFX_SPATIAL = 3,
   METALFX_TEMPORAL = 4,
+  NEAREST = 5,
 }
 
 export const SCALING_3D_MODE_NAMES = enumNamesByValue(Scaling3DMode);
@@ -55,8 +56,8 @@ export enum ScreenSpaceAA {
 export const SCREEN_SPACE_AA_NAMES = enumNamesByValue(ScreenSpaceAA);
 
 /**
- * `Viewport::DebugDraw` (`viewport.h:158-186`). The enum ends with INTERNAL_BUFFER and has no
- * `_MAX` sentinel.
+ * `Viewport::DebugDraw` (`viewport.h:158-186`). The enum has no `_MAX` sentinel: it ends with
+ * INTERNAL_BUFFER in 4.6.3 and with AREA_LIGHT_ATLAS in 4.7.2 (`viewport.h:188-189`).
  */
 export enum DebugDraw {
   DISABLED = 0,
@@ -86,6 +87,8 @@ export enum DebugDraw {
   OCCLUDERS = 24,
   MOTION_VECTORS = 25,
   INTERNAL_BUFFER = 26,
+  CLUSTER_AREA_LIGHTS = 27,
+  AREA_LIGHT_ATLAS = 28,
 }
 
 export const DEBUG_DRAW_NAMES = enumNamesByValue(DebugDraw);
