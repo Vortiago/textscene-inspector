@@ -23,8 +23,8 @@ import { PARABOLOID_UV_GLSL } from '../positionalShadow/paraboloidUv.js';
  * scatter (`.glsl:252-255`, an area light's from 4.7.2) under its shadow (`.glsl:388-422,488-510,552-574`,
  * 4.7.2 `:671-691`), and the ambient with its sky (`.glsl:430-445`), times the scattering, plus the
  * emission (`.glsl:681`). A moving camera's froxel blends this frame's jitter into its reprojected
- * history (`.glsl:311-335,683`). A still one adds one jitter a render to the sum of those before it,
- * towards the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
+ * history (`.glsl:311-335,683`). A still one blends one jitter a render into the mean of those
+ * before it, towards the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
  */
 export const FOG_LIGHT_FRAGMENT = /* glsl */ `
 #include <common>
@@ -51,8 +51,6 @@ uniform int lightCount;
 uniform highp sampler2D directionalShadowAtlas;
 uniform highp sampler2D positionalShadowAtlas;
 uniform vec3 sampleOffset;
-uniform bool addsToSum;
-uniform highp sampler3D sum;
 uniform highp sampler3D history;
 uniform mat4 toPreviousView;
 uniform float historyAmount;
@@ -320,8 +318,7 @@ void main() {
 		gl_FragColor = reprojects ? mix( medium, texture( history, unit ), historyAmount ) : medium;
 		return;
 	}
-	vec4 medium = froxelMedium( froxel, sampleOffset );
-	gl_FragColor = addsToSum ? texelFetch( sum, ivec3( froxel ), 0 ) + medium : medium;
+	gl_FragColor = froxelMedium( froxel, sampleOffset );
 }
 `;
 
@@ -370,16 +367,12 @@ void main() {
 }
 `;
 
-/**
- * One slice of `source` times `scale`: at 1, the history's copy of the medium
- * (`environment/fog.cpp:1163-1169`), and below it, a sum of jitters as their mean.
- */
+/** One slice of `source`, as it is: the history's copy of the medium (`environment/fog.cpp:1163-1169`). */
 export const FOG_COPY_FRAGMENT = /* glsl */ `
 uniform highp sampler3D source;
 uniform float slice;
-uniform float scale;
 
 void main() {
-	gl_FragColor = texelFetch( source, ivec3( ivec2( gl_FragCoord.xy ), int( slice ) ), 0 ) * scale;
+	gl_FragColor = texelFetch( source, ivec3( ivec2( gl_FragCoord.xy ), int( slice ) ), 0 );
 }
 `;

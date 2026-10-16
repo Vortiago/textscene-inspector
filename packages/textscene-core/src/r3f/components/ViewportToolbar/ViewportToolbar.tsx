@@ -120,6 +120,14 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
   ];
 }
 
+/** A handler that sets a viewport preference and persists it under `key`. */
+function persisting<T>(set: (value: T) => void, key: string): (value: T) => void {
+  return (value) => {
+    set(value);
+    writePersisted(key, value);
+  };
+}
+
 /** Downloads a data URL through a throwaway anchor element. */
 function downloadDataUrl(dataUrl: string, filename: string): void {
   const link = document.createElement('a');
@@ -169,22 +177,10 @@ export function ViewportToolbar() {
 
   // Only the user's click persists: a programmatic writer, such as
   // WorkspaceAutoSelect, must not overwrite the stored preference.
-  function handleModeClick(m: ViewportMode) {
-    setMode(m);
-    writePersisted(VIEWPORT_MODE_STORAGE_KEY, m);
-  }
-  function handleGridChange(show: boolean) {
-    setShowGrid(show);
-    writePersisted(SHOW_GRID_STORAGE_KEY, show);
-  }
-  function handleFrameOnOpenChange(frame: boolean) {
-    setFrameOnOpen(frame);
-    writePersisted(FRAME_ON_OPEN_STORAGE_KEY, frame);
-  }
-  function handleFogChange(show: boolean) {
-    setShowFog(show);
-    writePersisted(SHOW_FOG_STORAGE_KEY, show);
-  }
+  const handleModeClick = persisting(setMode, VIEWPORT_MODE_STORAGE_KEY);
+  const handleGridChange = persisting(setShowGrid, SHOW_GRID_STORAGE_KEY);
+  const handleFrameOnOpenChange = persisting(setFrameOnOpen, FRAME_ON_OPEN_STORAGE_KEY);
+  const handleFogChange = persisting(setShowFog, SHOW_FOG_STORAGE_KEY);
 
   const displayToggles = buildDisplayToggles({
     mode,

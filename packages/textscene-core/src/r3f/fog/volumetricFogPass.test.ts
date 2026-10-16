@@ -21,8 +21,6 @@ type VolumetricFogInputs = Parameters<VolumetricFogPass['prepare']>[3];
 /** One light pass slice as it was drawn. */
 interface LightDraw {
   sampleOffset: THREE.Vector3;
-  /** Whether the draw adds its sample to the sum of the jitters before it. */
-  addsToSum: boolean;
   historyAmount: number;
   frustumBegin: THREE.Vector2;
   frustumEnd: THREE.Vector2;
@@ -35,9 +33,6 @@ class RecordingRenderer {
   autoClear = true;
   lightDraws: LightDraw[] = [];
   copies = 0;
-  /** The scale of each copy, in draw order. */
-  copyScales: number[] = [];
-  readonly extensions = { has: (name: string) => name === 'EXT_color_buffer_float' };
   private target: THREE.WebGLRenderTarget | null = null;
 
   constructor(private readonly size = new THREE.Vector2(64, 32)) {}
@@ -59,15 +54,11 @@ class RecordingRenderer {
   }
   render(quad: THREE.Mesh): void {
     const material = quad.material as THREE.ShaderMaterial;
-    if (material.name === 'VolumetricFog.Copy') {
-      this.copies++;
-      this.copyScales.push(material.uniforms['scale']!.value as number);
-    }
+    if (material.name === 'VolumetricFog.Copy') this.copies++;
     if (material.name !== 'VolumetricFog.Light') return;
     const uniforms = material.uniforms;
     this.lightDraws.push({
       sampleOffset: (uniforms['sampleOffset']!.value as THREE.Vector3).clone(),
-      addsToSum: uniforms['addsToSum']!.value as boolean,
       historyAmount: uniforms['historyAmount']!.value as number,
       frustumBegin: (uniforms['frustumBegin']!.value as THREE.Vector2).clone(),
       frustumEnd: (uniforms['frustumEnd']!.value as THREE.Vector2).clone(),
@@ -81,7 +72,6 @@ class RecordingRenderer {
     const taken = { lightDraws: this.lightDraws, copies: this.copies };
     this.lightDraws = [];
     this.copies = 0;
-    this.copyScales = [];
     return taken;
   }
 
@@ -128,6 +118,9 @@ const CENTRE = new THREE.Vector3(0.5, 0.5, 0.5);
 /** The volume's rows run bottom-up, so a jitter's top-down y flips. */
 const JITTERS = VOLUMETRIC_FOG_TEMPORAL_JITTERS.map(([x, y, z]) => new THREE.Vector3(x, 1 - y, z));
 
+/** A new view's first render steps, and each still render after it adds one jitter. */
+const RENDERS_TO_SETTLE = 1 + JITTERS.length;
+
 /** Prepares `view` until it stops settling, so the next render starts from a converged view. */
 function settle(
   pass: VolumetricFogPass,
@@ -136,8 +129,8 @@ function settle(
   view: THREE.Camera,
   fog: VolumetricFogInputs
 ) {
-  for (let render = 0; render <= JITTERS.length + 1; render++) {
-    if (!pass.prepare(renderer.asWebGL, scene, view, fog)) break;
+  for (let render = 0; render < RENDERS_TO_SETTLE; render++) {
+    if (!pass.prepare(renderer.asWebGL, scene, view, fog)) return;
   }
 }
 
@@ -148,7 +141,7 @@ describe('VolumetricFogPass.prepare', () => {
 
     const { lightDraws } = renderer.take();
     expect(lightDraws).toHaveLength(PROJECT.volumeDepth);
-    expect(lightDraws[0]).toMatchObject({ sampleOffset: CENTRE, addsToSum: false, historyAmount: 0 });
+    expect(lightDraws[0]).toMatchObject({ sampleOffset: CENTRE, historyAmount: 0 });
   });
 
   it("binds the area light atlas, which an area light's texture colours the fog through", () => {
@@ -187,7 +180,7 @@ describe('VolumetricFogPass.prepare', () => {
     expect(renderer.take()).toEqual({ lightDraws: [], copies: 0 });
   });
 
-  it('sums one jitter a render once the view holds still, as Godot converges, and keeps settling', () => {
+  it('adds one jitter a render once the view holds still, as Godot converges, and keeps settling', () => {
     const renderer = new RecordingRenderer();
     const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
@@ -201,7 +194,7 @@ describe('VolumetricFogPass.prepare', () => {
     expect(settling).toEqual([...JITTERS.slice(1).map(() => true), false]);
   });
 
-  it('draws the 16 jitters in order, each added to the sum of those before it', () => {
+  it('draws the 16 jitters in order, each blended into the mean of those before it', () => {
     const renderer = new RecordingRenderer();
     const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
@@ -216,27 +209,8 @@ describe('VolumetricFogPass.prepare', () => {
     slices.forEach((draw, jitter) => {
       expect(draw.sampleOffset.x).toBe(JITTERS[jitter]!.x);
       expect(draw.sampleOffset.y).toBeCloseTo(JITTERS[jitter]!.y, 6);
-      expect(draw.addsToSum).toBe(jitter > 0);
+      expect(draw.historyAmount).toBe(jitter / (jitter + 1));
     });
-  });
-
-  it('shows the mean of the jitters summed so far, the 16-jitter mean once settled', () => {
-    const renderer = new RecordingRenderer();
-    const pass = new VolumetricFogPass();
-    const scene = new THREE.Scene();
-    const view = camera();
-    const fog = inputs();
-    pass.prepare(renderer.asWebGL, scene, view, fog);
-    renderer.take();
-
-    const meanScales = JITTERS.map(() => {
-      pass.prepare(renderer.asWebGL, scene, view, fog);
-      const [scale] = renderer.copyScales;
-      renderer.take();
-      return scale;
-    });
-
-    expect(meanScales).toEqual(JITTERS.map((_, summed) => 1 / (summed + 1)));
   });
 
   it('draws nothing more for a view that has converged', () => {
@@ -265,7 +239,7 @@ describe('VolumetricFogPass.prepare', () => {
     expect(pass.prepare(renderer.asWebGL, scene, view, fog)).toBe(true);
     const [draw] = renderer.take().lightDraws;
     const [x, y, z] = VOLUMETRIC_FOG_TEMPORAL_JITTERS[1]!;
-    expect(draw).toMatchObject({ addsToSum: false, historyAmount: 0.6 });
+    expect(draw).toMatchObject({ historyAmount: 0.6 });
     expect(draw!.sampleOffset.x).toBe(x);
     expect(draw!.sampleOffset.y).toBeCloseTo(1 - y, 6);
     expect(draw!.sampleOffset.z).toBe(z);
@@ -283,7 +257,6 @@ describe('VolumetricFogPass.prepare', () => {
     pass.prepare(renderer.asWebGL, scene, view, fog);
     expect(renderer.take().lightDraws.at(-1)).toMatchObject({
       sampleOffset: CENTRE,
-      addsToSum: false,
       historyAmount: 0,
     });
   });
@@ -311,7 +284,7 @@ describe('VolumetricFogPass.prepare', () => {
     const other = camera();
     moved(other);
     const fog = inputs();
-    for (let render = 0; render <= JITTERS.length; render++) {
+    for (let render = 0; render < RENDERS_TO_SETTLE; render++) {
       pass.prepare(renderer.asWebGL, scene, main, fog);
       pass.prepare(renderer.asWebGL, scene, other, fog);
     }
@@ -322,7 +295,7 @@ describe('VolumetricFogPass.prepare', () => {
     expect(renderer.take().lightDraws).toEqual([]);
   });
 
-  it("frees every camera's volume, history and sums when the scene is forgotten", () => {
+  it("frees every camera's volume and history when the scene is forgotten", () => {
     const renderer = new RecordingRenderer();
     const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
@@ -332,7 +305,7 @@ describe('VolumetricFogPass.prepare', () => {
 
     pass.forget(scene);
 
-    expect(dispose).toHaveBeenCalledTimes(2 * 4);
+    expect(dispose).toHaveBeenCalledTimes(2 * 2);
     dispose.mockRestore();
   });
 

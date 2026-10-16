@@ -13,12 +13,13 @@ import { PNG } from 'pngjs';
 import { compareImages } from '../visual/imageDelta.mjs';
 import { renderReference } from './run.mjs';
 import { captureOurs } from './capture-ours.mjs';
+import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const FIXTURE_DIR = join(REPO_ROOT, 'scenes', 'fixtures');
 const OUT_DIR = join(import.meta.dirname, 'output');
 /** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
-const FLATTENED_ROOTS = ['fixtures/', 'ld58/'];
+const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 
 function usage() {
   console.error(

@@ -86,6 +86,10 @@ describe('catalogName', () => {
     );
   });
 
+  it('names an isometric scene relative to its project root (edge case)', () => {
+    expect(catalogName(`${REPO_ROOT}/scenes/isometric/dungeon.tscn`)).toBe('dungeon.tscn');
+  });
+
   it('keeps every other subtree as a path relative to scenes/', () => {
     expect(catalogName(`${REPO_ROOT}/scenes/demos/3d/town/town_scene.tscn`)).toBe(
       'demos/3d/town/town_scene.tscn'
