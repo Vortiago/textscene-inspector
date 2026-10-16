@@ -5,7 +5,7 @@ import { propertyError } from './propertyError.js';
 import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
 import { ruleInt, tupleComponent } from './commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../godot/variant/int.js';
+import { readSlotTuple } from '../../godot/variant/int.js';
 import { compositeTypeName, isConvertedSpelling } from '../../godot/variant/variantConversion.js';
 
 /**
@@ -66,15 +66,10 @@ export function matchVector3(raw: string): { x: number; y: number; z: number } |
 
 /** The components a float tuple slot holds, or `null` when malformed or altered. */
 function matchFloatTuple(raw: string, regex: RegExp, typeName: string): number[] | null {
-  const trimmed = raw.trim();
-  const match = regex.exec(trimmed);
-  if (!match) return null;
-  const captures = match.slice(1);
+  const tuple = readSlotTuple(raw, typeName, regex, tupleComponent);
   // Withheld, not NaN: the engine stores a number, but not the one written, and
   // `_to_int`'s float branch is undefined behaviour (variant.h:369-370).
-  if (slotComponentsAltered(trimmed, typeName, captures)) return null;
-  // The `i` spelling Godot converts narrows its arguments to int32 before the widening.
-  return slotComponents(trimmed, typeName, captures, tupleComponent);
+  return tuple && !tuple.altered ? tuple.components : null;
 }
 
 /** A `Vector2(x, y)` format validator. */

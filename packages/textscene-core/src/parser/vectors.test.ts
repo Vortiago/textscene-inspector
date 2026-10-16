@@ -1,5 +1,5 @@
 /**
- * parseVector2 and parseVector3 match a strict anchored regex from FLOAT_PATTERN_SOURCE:
+ * parseVector2 and parseVector3 match a trimmed literal against an anchored regex from FLOAT_PATTERN_SOURCE:
  * scientific notation parses (Godot emits `1e-05`), and `1.2.3` or a lone `-` throws.
  * The `vec2Or` family in valueParsers.ts adds fallback-on-error.
  */
@@ -20,9 +20,8 @@ describe('parseVector2', () => {
     expect(parseVector2('Vector2 (  1 ,  2  )')).toEqual({ x: 1, y: 2 });
   });
 
-  it('rejects surrounding whitespace (anchored match)', () => {
-    expect(() => parseVector2(' Vector2(1, 2)')).toThrow('Invalid Vector2 format');
-    expect(() => parseVector2('Vector2(1, 2) ')).toThrow('Invalid Vector2 format');
+  it('reads a literal with surrounding white space, which `get_token` skips (variant_parser.cpp:416-418)', () => {
+    expect(parseVector2(' Vector2(1, 2) ')).toEqual({ x: 1, y: 2 });
   });
 
   it('parses scientific notation (Godot emits exponents for small values)', () => {
@@ -101,5 +100,15 @@ describe('an i-suffixed spelling in a float slot', () => {
   it('leaves the canonical float spelling alone', () => {
     expect(parseVector2('Vector2(4294967295, 1.5)')).toEqual({ x: 4294967295, y: 1.5 });
     expect(parseVector3('Vector3(1.5, 2.5, 3.5)')).toEqual({ x: 1.5, y: 2.5, z: 3.5 });
+  });
+});
+
+describe('parseVector2 on a Vector2i spelling', () => {
+  it('reads the int32 pair Godot stores', () => {
+    expect(parseVector2('Vector2i(4294967295, 0.5)')).toEqual({ x: -1, y: 0 });
+  });
+
+  it('throws on a component past the round-trip band, so the caller falls back', () => {
+    expect(() => parseVector2('Vector2i(4294967296, 0)')).toThrow('Non-finite Vector2');
   });
 });
