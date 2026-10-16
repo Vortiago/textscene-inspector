@@ -69,9 +69,18 @@ describe('every published image goes through the guarded writer', () => {
 
   /**
    * The cause: the first WebGL context in a fresh SwiftShader process can die
-   * under load, so it is spent on a throwaway page.
+   * under load, so it is spent on a throwaway page. `withPreviewBrowser` spends
+   * it before it hands the browser over.
    */
-  it.each([...WRITERS, 'animation/previewFrames.mjs'])('%s warms up GL before capturing', (file) => {
-    expect(readFileSync(join(here, file), 'utf8')).toContain('await warmUpGLContext(browser)');
+  it.each([...WRITERS, 'animation/previewFrames.mjs'])('%s captures through withPreviewBrowser', (file) => {
+    expect(readFileSync(join(here, file), 'utf8')).toContain('withPreviewBrowser(');
+  });
+
+  it('withPreviewBrowser warms up GL before it hands the browser over', () => {
+    const session = readFileSync(join(here, '../visual/preview/session.mjs'), 'utf8');
+    expect(session.indexOf('await warmUpGLContext(browser)')).toBeGreaterThan(-1);
+    expect(session.indexOf('await warmUpGLContext(browser)')).toBeLessThan(
+      session.indexOf('await work(browser')
+    );
   });
 });
