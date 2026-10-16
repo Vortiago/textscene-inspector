@@ -9,6 +9,7 @@ import {
   SOFT_LOW_SHADOW_SAMPLES,
   vogelDisk,
 } from '../../godot/rendering/lights/softShadowKernel.js';
+import { GODOT_QUICK_HASH_GLSL } from '../../godot/rendering/quickHash.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import {
   applyChunkEdits,
@@ -41,13 +42,14 @@ function glslKernel(count: number): string {
  * filters the depth (`:398`, `:498-551`).
  */
 const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 1 ];
+${GODOT_QUICK_HASH_GLSL}
 	const int GODOT_SOFT_SHADOW_SAMPLES = ${SOFT_LOW_SHADOW_SAMPLES};
 	const vec2 GODOT_SOFT_SHADOW_KERNEL[ ${SOFT_LOW_SHADOW_SAMPLES} ] = vec2[]( ${glslKernel(SOFT_LOW_SHADOW_SAMPLES)} );
 	const int GODOT_PENUMBRA_SHADOW_SAMPLES = ${SOFT_LOW_PENUMBRA_SAMPLES};
 	const vec2 GODOT_PENUMBRA_SHADOW_KERNEL[ ${SOFT_LOW_PENUMBRA_SAMPLES} ] = vec2[]( ${glslKernel(SOFT_LOW_PENUMBRA_SAMPLES)} );
 	mat2 godotDiskRotation() {
 		vec2 fragCoord = vec2( gl_FragCoord.x, ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 0 ] - gl_FragCoord.y );
-		float r = fract( 52.9829189 * fract( dot( fragCoord, vec2( 0.06711056, 0.00583715 ) ) ) ) * PI2;
+		float r = godotQuickHash( fragCoord ) * PI2;
 		float sr = sin( r );
 		float cr = cos( r );
 		return mat2( vec2( cr, - sr ), vec2( sr, cr ) );

@@ -5,6 +5,7 @@ import { reflectionAtlasLayout } from '../../godot/rendering/environment/reflect
 import { fastFilter } from './fastFilter';
 import { testRenderer } from '../../testing/recordingWebGL';
 import type { SkyBake } from './types';
+import { debandingDrawnBy } from './skyLayers.testkit';
 
 const IMPORTANCE_SAMPLED: SkyBake = { radianceFilter: 'importance-sample', radianceSize: 32 };
 const FAST: SkyBake = { radianceFilter: 'fast', radianceSize: 256 };
@@ -28,19 +29,6 @@ function passesDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void): Set<THR
   });
   bake();
   return passes;
-}
-
-/** The debanding scale of each radiance octmap `renderer` draws while `bake` runs. */
-function debandingDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void): number[] {
-  const drawn: number[] = [];
-  const render = renderer.render.bind(renderer);
-  vi.spyOn(renderer, 'render').mockImplementation((mesh, camera) => {
-    const { uniforms } = (mesh as THREE.Mesh).material as THREE.ShaderMaterial;
-    if (uniforms['radiance']) drawn.push(uniforms['debanding']!.value as number);
-    render(mesh, camera);
-  });
-  bake();
-  return drawn;
 }
 
 afterEach(() => {

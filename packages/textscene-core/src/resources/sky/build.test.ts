@@ -4,6 +4,7 @@ import { buildSkyEnvironment } from './build';
 import { decodeSky, decodeSkyMaterial } from './decode';
 import type { Sky } from './types';
 import { testRenderer } from '../../testing/recordingWebGL';
+import { debandingDrawnBy } from './skyLayers.testkit';
 
 /** A sky of `materialType` with every property at Godot's default. */
 function defaultSky(materialType: string): Sky {
@@ -50,18 +51,12 @@ describe('buildSkyEnvironment debanding', () => {
   });
 
   /** The debanding scale of the radiance octmap the build of `sky` at `energy` draws. */
-  async function radianceDebanding(sky: Sky, energy: number): Promise<number> {
+  async function radianceDebanding(sky: Sky, energy: number): Promise<number | undefined> {
     const { renderer } = await testRenderer();
-    const drawn: number[] = [];
-    const render = renderer.render.bind(renderer);
-    // The cube camera renders a scene, which has no material.
-    vi.spyOn(renderer, 'render').mockImplementation((object, camera) => {
-      const uniforms = ((object as THREE.Mesh).material as THREE.ShaderMaterial | undefined)?.uniforms;
-      if (uniforms?.['radiance']) drawn.push(uniforms['debanding']!.value as number);
-      render(object, camera);
-    });
-    buildSkyEnvironment(renderer, { sky, lights: [], asBackground: false, energy });
-    return drawn[0]!;
+    const drawn = debandingDrawnBy(renderer, () =>
+      buildSkyEnvironment(renderer, { sky, lights: [], asBackground: false, energy })
+    );
+    return drawn[0];
   }
 
   it("adds the noise to a debanded sky's radiance at the inverse of the energy a surface reads it at", async () => {
