@@ -10,7 +10,6 @@ import { rasterizeAtlasTexture } from './build';
 import { recordGodotFormat, sourceColorSpace } from '../sourceColorSpace';
 import type { AtlasTextureLayout } from './types';
 import { mipChain, type MipLevel } from '../../processing/mipChain';
-import { recordRenormalizedChain } from '../renormalizedChain';
 
 /**
  * A `w`x`h` top-down RGBA sheet with `flipY`, as `applyAlphaBorderFix` makes, whose red channel
@@ -157,42 +156,65 @@ describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
 });
 
 describe('rasterizeAtlasTexture — a sheet with an imported mip chain', () => {
-  /** A 4 × 4 sheet carrying the byte-space chain its import built. */
-  function sheetWithChain(): THREE.DataTexture {
-    const texture = sheet(4, 4);
-    texture.mipmaps = mipChain(texture.image as MipLevel, false) as unknown as THREE.Texture['mipmaps'];
+  /** `texture` carrying the chain `levels` builds from its bytes, as its import stores it. */
+  function sheetWithChain(
+    texture: THREE.DataTexture,
+    levels: (base: MipLevel) => MipLevel[] = (base) => mipChain(base, false)
+  ): THREE.DataTexture {
+    texture.mipmaps = levels(texture.image as MipLevel) as unknown as THREE.Texture['mipmaps'];
     texture.generateMipmaps = false;
     return texture;
   }
 
-  it('averages the bytes of the crop, as the sheet averages its own', () => {
+  /** A 2 × 2 normal map whose 1 × 1 level Godot renormalises to 129, 178, 245. */
+  function normalSheet(): THREE.DataTexture {
+    const normals = [218, 128, 128, 255, 128, 218, 128, 255, 128, 128, 255, 255, 38, 128, 218, 255];
+    const texture = new THREE.DataTexture(new Uint8Array(normals), 2, 2, THREE.RGBAFormat);
+    texture.flipY = true;
+    return texture;
+  }
+
+  const levelOf = (texture: THREE.Texture, i: number) => Array.from((texture.mipmaps[i] as MipLevel).data);
+
+  it("cuts each level from the same window of the sheet's chain", () => {
     const texture = rasterizeAtlasTexture(
-      sheetWithChain(),
+      sheetWithChain(sheet(4, 4)),
       layout({ source: { x: 2, y: 2, width: 2, height: 2 } })
     )!;
 
-    expect(Array.from((texture.mipmaps[1] as MipLevel).data)).toEqual([13, 0, 0, 255]);
+    expect(levelOf(texture, 1)).toEqual([13, 0, 0, 255]);
   });
 
-  it('renormalises the crop of a sheet whose import renormalises its chain', () => {
-    // The 1 × 1 level Godot renormalises from these four normals is 129, 178, 245.
-    const normals = new Uint8Array([
-      218, 128, 128, 255, 128, 218, 128, 255, 128, 128, 255, 255, 38, 128, 218, 255,
+  it("keeps a level the sheet's import renormalised", () => {
+    const renormalized = sheetWithChain(normalSheet(), (base) => mipChain(base, true));
+    expect(levelOf(rasterizeAtlasTexture(renormalized, layout())!, 1)).toEqual([129, 178, 245, 255]);
+  });
+
+  it('keeps the blue a compression pass dropped from every level, renormalising nothing again', () => {
+    const redGreenOnly = (base: MipLevel) =>
+      mipChain(base, true).map((level) => ({
+        ...level,
+        data: level.data.map((v, i) => (i % 4 === 2 ? 0 : v)),
+      }));
+    const texture = rasterizeAtlasTexture(sheetWithChain(normalSheet(), redGreenOnly), layout())!;
+    expect(levelOf(texture, 1)).toEqual([129, 178, 0, 255]);
+  });
+
+  it("averages its own last levels where the crop outlasts the sheet's chain (edge case)", () => {
+    const short = sheetWithChain(sheet(4, 4), (base) => mipChain(base, false).slice(0, 2));
+    const texture = rasterizeAtlasTexture(
+      short,
+      layout({ width: 4, height: 4, source: { x: 0, y: 0, width: 4, height: 4 } })
+    )!;
+    expect(texture.mipmaps.map((level) => [(level as MipLevel).width, (level as MipLevel).height])).toEqual([
+      [4, 4],
+      [2, 2],
+      [1, 1],
     ]);
-    const normalSheet = new THREE.DataTexture(normals, 2, 2, THREE.RGBAFormat);
-    normalSheet.flipY = true;
-    normalSheet.mipmaps = mipChain(
-      normalSheet.image as MipLevel,
-      true
-    ) as unknown as THREE.Texture['mipmaps'];
-
-    const texture = rasterizeAtlasTexture(recordRenormalizedChain(normalSheet), layout())!;
-
-    expect(Array.from((texture.mipmaps[1] as MipLevel).data)).toEqual([129, 178, 245, 255]);
   });
 
   it('asks the GPU for no chain over the crop', () => {
-    const texture = rasterizeAtlasTexture(sheetWithChain(), layout())!;
+    const texture = rasterizeAtlasTexture(sheetWithChain(sheet(4, 4)), layout())!;
 
     expect(texture.generateMipmaps).toBe(false);
   });

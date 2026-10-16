@@ -6,7 +6,6 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { hasRenormalizedChain } from '../../textures/renormalizedChain';
 import * as THREE from 'three';
 import {
   createTextureFromBuffer,
@@ -464,19 +463,6 @@ describe('importDecodedImage', () => {
         imported('RGBA8', { ...mipmapped, normalMap: true })
       );
       expect(levelsOf(texture)[1]).toEqual([129, 178, 245, 255]);
-    });
-
-    it('records that a normal map renormalises its chain, so a crop of it does too', () => {
-      const texture = importDecodedImage(
-        imageTexture(normals, 2),
-        imported('RGBA8', { ...mipmapped, normalMap: true })
-      );
-      expect(hasRenormalizedChain(texture)).toBe(true);
-    });
-
-    it('records no renormalised chain for an image imported as colour (edge case)', () => {
-      const texture = importDecodedImage(imageTexture(normals, 2), imported('RGBA8', mipmapped));
-      expect(hasRenormalizedChain(texture)).toBe(false);
     });
 
     it('renormalises a normal map before its compression drops blue', () => {

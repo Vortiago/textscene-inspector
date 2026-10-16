@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
-import { recordedOn } from './recordedOnMaterial';
+import { recordedUniform } from './recordedOnMaterial';
 
 /** The uniform the patch reads, and the `userData` key a material records its value under. */
 const ADDED_TEXTURE_ENERGY = 'godotEmissionTextureEnergy';
@@ -14,18 +14,6 @@ const ADDED_TEXTURE_ENERGY = 'godotEmissionTextureEnergy';
 /** The `userData` that gives a material an added emission texture, none for null. */
 export function emissionTextureAddUserData(energy: number | null): Record<string, unknown> {
   return energy === null ? {} : { [ADDED_TEXTURE_ENERGY]: energy };
-}
-
-/**
- * A uniform that reads the recorded energy at each upload, so an energy edit needs no recompile.
- * A material that records none reads zero.
- */
-function addedEnergyUniform(material: THREE.Material): THREE.IUniform<number> {
-  return {
-    get value() {
-      return recordedOn(material, ADDED_TEXTURE_ENERGY, 0);
-    },
-  };
 }
 
 const EMISSIVE_PARS = '#include <emissivemap_pars_fragment>';
@@ -40,7 +28,8 @@ const ADD = `totalEmissiveRadiance += emissiveColor.rgb * ${ADDED_TEXTURE_ENERGY
 const EMISSION_TEXTURE_ADD: ProgramInjection = {
   cacheKey: 'godot-emission-texture-add',
   onBeforeCompile(shader) {
-    shader.uniforms[ADDED_TEXTURE_ENERGY] = addedEnergyUniform(this);
+    // A material that records no energy adds nothing.
+    shader.uniforms[ADDED_TEXTURE_ENERGY] = recordedUniform(this, ADDED_TEXTURE_ENERGY, 0);
     shader.fragmentShader = shader.fragmentShader
       .replace(EMISSIVE_PARS, `${EMISSIVE_PARS}\nuniform float ${ADDED_TEXTURE_ENERGY};`)
       .replace(EMISSIVE_MAP, addingEmissiveMapChunk());

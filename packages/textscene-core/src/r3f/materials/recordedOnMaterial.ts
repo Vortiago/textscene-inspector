@@ -9,3 +9,19 @@ import type * as THREE from 'three';
 export function recordedOn<T>(material: Pick<THREE.Material, 'userData'>, key: string, fallback: T): T {
   return (material.userData[key] as T | undefined) ?? fallback;
 }
+
+/**
+ * A uniform that reads the value `material` records under `key` at each upload, so a re-parse that
+ * changes only that value needs no recompile.
+ */
+export function recordedUniform<T>(
+  material: Pick<THREE.Material, 'userData'>,
+  key: string,
+  fallback: T
+): THREE.IUniform<T> {
+  return {
+    get value() {
+      return recordedOn(material, key, fallback);
+    },
+  };
+}

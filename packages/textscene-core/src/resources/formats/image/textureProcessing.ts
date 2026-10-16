@@ -15,7 +15,6 @@ import { copySampling } from '../../textures/copySampling';
 import { texelTexture, textureMipChain } from '../../textures/texelTexture';
 import { dropMipChain } from '../../textures/godotTextureFilter';
 import { recordGodotFormat } from '../../textures/sourceColorSpace';
-import { recordRenormalizedChain } from '../../textures/renormalizedChain';
 import { IMAGE_EXTENSIONS, SVG_MIME_TYPE, imageMimeType } from './extensions';
 import { fileExtension } from '../../fileExtension';
 import { isGreyscaleSource, type ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
@@ -150,15 +149,13 @@ function withMipChain(texture: THREE.Texture, imported: ImageImport): PassedText
   const { width, height } = pixels;
   const base = { data: writableTexels(pixels, texture), width, height };
   for (const pass of texelPassesFor(imported)) pass(base.data, width, height);
-  const renormalizes = renormalizesChain(imported);
-  const levels = textureMipChain(texture, base, renormalizes);
+  const levels = textureMipChain(texture, base, renormalizesChain(imported));
   limitChainRoughness(levels, imported);
   const compressionPasses = compressionPassesFor(imported.options);
   for (const level of levels) {
     for (const pass of compressionPasses) pass(level.data, level.width, level.height);
   }
-  const stored = replacedByTexels(texture, levels);
-  return { texture: renormalizes ? recordRenormalizedChain(stored) : stored, texels: base.data };
+  return { texture: replacedByTexels(texture, levels), texels: base.data };
 }
 
 /**
