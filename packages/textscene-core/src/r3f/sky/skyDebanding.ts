@@ -5,32 +5,19 @@
  */
 
 import * as THREE from 'three';
-import type { SkyProperties } from '../../resources/sky/types';
 import { applyEdits, installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
+import { installedOr } from '../shaderPatch/litUniform.js';
+import { backgroundCube, SKY_FOG, THREE_BACKGROUND_TONE_CURVE } from '../fog/fogComposite.js';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 
 const DEBANDING_UNIFORM = 'godotSkyDebanding';
 
 /**
- * Whether Godot adds the noise to this sky. ProceduralSkyMaterial and PhysicalSkyMaterial write
- * `render_mode use_debanding` from their `use_debanding` (`sky_material.cpp:377`, `:819`), and
- * PanoramaSkyMaterial writes no such mode.
- */
-export function isDebanded(material: SkyProperties): boolean {
-  return material.kind !== 'panorama' && material.use_debanding;
-}
-
-/**
  * The noise's strength, 1 or 0, then the viewport's left edge and top edge in framebuffer pixels.
  * Written only by `debandSky`'s observer before each render of a debanded scene, and cleared to 0
- * when that render ends, so a scene without a debanded sky draws none. One array: `cloneUniforms`
- * passes a typed array by reference (three r186 `UniformsUtils.js:28-39`).
+ * when that render ends, so a scene without a debanded sky draws none.
  */
-const debanding: Float32Array =
-  (THREE.ShaderLib.backgroundCube?.uniforms[DEBANDING_UNIFORM]?.value as Float32Array | undefined) ??
-  new Float32Array(3);
-
-const THREE_BACKGROUND_TONE_CURVE = '\t#include <tonemapping_fragment>';
+const debanding = installedOr(DEBANDING_UNIFORM, Float32Array, () => new Float32Array(3), 'backgroundCube');
 
 /**
  * Godot's noise at Godot's pixel position: Vulkan counts rows from the top, and WebGL from the
@@ -63,12 +50,11 @@ export function installSkyDebanding(): void {
     isApplied: (chunks) => chunks.backgroundCube_frag.includes(DEBANDING_UNIFORM),
     apply: debandCube,
     missing: `backgroundCube_frag has no ${THREE_BACKGROUND_TONE_CURVE.trim()}`,
-    requires: { backgroundCube_frag: 'godotSkyFog' },
+    requires: { backgroundCube_frag: SKY_FOG },
   });
   if (!isPatched) return;
-  const backgroundCube = THREE.ShaderLib.backgroundCube!;
-  backgroundCube.fragmentShader = THREE.ShaderChunk.backgroundCube_frag;
-  backgroundCube.uniforms[DEBANDING_UNIFORM] = { value: debanding };
+  backgroundCube().fragmentShader = THREE.ShaderChunk.backgroundCube_frag;
+  backgroundCube().uniforms[DEBANDING_UNIFORM] = { value: debanding };
 }
 
 /** Scratch for the viewport each render reads: the render hooks never interleave. */
@@ -78,7 +64,9 @@ const viewport = new THREE.Vector4();
 export function debandSky(gl: THREE.WebGLRenderer, scene: THREE.Scene): () => void {
   const stopObserving = observeSceneCamera(scene, () => {
     gl.getCurrentViewport(viewport);
-    debanding.set([1, viewport.x, viewport.y + viewport.w]);
+    debanding[0] = 1;
+    debanding[1] = viewport.x;
+    debanding[2] = viewport.y + viewport.w;
   });
   const stopClearing = observeSceneRenderEnd(scene, () => {
     debanding[0] = 0;

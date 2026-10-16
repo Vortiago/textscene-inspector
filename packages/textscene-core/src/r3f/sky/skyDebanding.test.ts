@@ -3,45 +3,15 @@
  * counts from its viewport's top-left corner. The tests read the installed three, so a release
  * that rewrites the replaced line fails here.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { debandSky, installSkyDebanding, isDebanded } from './skyDebanding';
-import { installFogComposite } from '../fog/fogComposite';
-import { decodeSkyMaterial } from '../../resources/sky/decode';
-import type { SkyProperties } from '../../resources/sky/types';
+import { debandSky, installSkyDebanding } from './skyDebanding';
+import { backgroundCube, installFogComposite } from '../fog/fogComposite';
+import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
+import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { warningsOf } from '../testing/logWarnings';
 
-const backgroundCube = THREE.ShaderLib.backgroundCube!;
-const threeCubeFragment = THREE.ShaderChunk.backgroundCube_frag;
-const threeProgramFragment = backgroundCube.fragmentShader;
-
-afterEach(() => {
-  THREE.ShaderChunk.backgroundCube_frag = threeCubeFragment;
-  backgroundCube.fragmentShader = threeProgramFragment;
-  delete backgroundCube.uniforms.godotSkyDebanding;
-});
-
-function material(type: string, data: Record<string, string> = {}): SkyProperties {
-  return decodeSkyMaterial(type, data)!;
-}
-
-describe('isDebanded', () => {
-  it('debands a ProceduralSkyMaterial by default, as its constructor sets', () => {
-    expect(isDebanded(material('ProceduralSkyMaterial'))).toBe(true);
-  });
-
-  it('debands a PhysicalSkyMaterial by default, as its constructor sets', () => {
-    expect(isDebanded(material('PhysicalSkyMaterial'))).toBe(true);
-  });
-
-  it('does not deband a sky that turns use_debanding off', () => {
-    expect(isDebanded(material('ProceduralSkyMaterial', { use_debanding: 'false' }))).toBe(false);
-  });
-
-  it('never debands a PanoramaSkyMaterial, which has no such mode (edge case)', () => {
-    expect(isDebanded(material('PanoramaSkyMaterial'))).toBe(false);
-  });
-});
+restoreShaderGlobalsAfterEach();
 
 /** The background fragment as both patches leave it. */
 function installedFragment(): string {
@@ -62,8 +32,8 @@ describe('installSkyDebanding', () => {
   it('hands the patched fragment and its uniform to the program three compiles', () => {
     const fragment = installedFragment();
 
-    expect(backgroundCube.fragmentShader).toBe(fragment);
-    expect(backgroundCube.uniforms.godotSkyDebanding?.value).toBeInstanceOf(Float32Array);
+    expect(backgroundCube().fragmentShader).toBe(fragment);
+    expect(backgroundCube().uniforms.godotSkyDebanding?.value).toBeInstanceOf(Float32Array);
   });
 
   it('changes nothing on a second call (edge case)', () => {
@@ -73,7 +43,7 @@ describe('installSkyDebanding', () => {
     expect(THREE.ShaderChunk.backgroundCube_frag).toBe(once);
   });
 
-  it('keeps three’s fragment and warns when three lacks the tone curve line (error case)', () => {
+  it("keeps three's fragment and warns when three lacks the tone curve line (error case)", () => {
     THREE.ShaderChunk.backgroundCube_frag = 'godotSkyFog void main() {}';
     const warnings = warningsOf(() => installSkyDebanding());
 
@@ -89,61 +59,53 @@ function rendererAt(viewport: THREE.Vector4): THREE.WebGLRenderer {
   } as unknown as THREE.WebGLRenderer;
 }
 
-function debandingValue(): Float32Array {
-  installedFragment();
-  return backgroundCube.uniforms.godotSkyDebanding!.value as Float32Array;
-}
-
-const startRender = (scene: THREE.Scene) =>
-  (scene.onBeforeRender as (...args: unknown[]) => void)(null, scene, new THREE.Camera(), null);
-const endRender = (scene: THREE.Scene) => (scene.onAfterRender as (...args: unknown[]) => void)();
-
 describe('debandSky', () => {
-  it("turns the noise on in each render, at the viewport's left and top edges", () => {
-    const debanding = debandingValue();
-    const scene = new THREE.Scene();
-    const stop = debandSky(rendererAt(new THREE.Vector4(0, 0, 955, 756)), scene);
+  const camera = new THREE.Camera();
+  let debanding: Float32Array;
+  let scene: THREE.Scene;
 
-    startRender(scene);
-    const inRender = [...debanding];
-    endRender(scene);
-    stop();
-
-    expect(inRender).toEqual([1, 0, 756]);
+  beforeEach(() => {
+    installedFragment();
+    debanding = backgroundCube().uniforms.godotSkyDebanding!.value as Float32Array;
+    scene = new THREE.Scene();
   });
 
-  it('counts the rows from the top of a viewport that sits off the origin (edge case)', () => {
-    const debanding = debandingValue();
-    const scene = new THREE.Scene();
-    const stop = debandSky(rendererAt(new THREE.Vector4(10, 20, 100, 50)), scene);
-
-    startRender(scene);
+  /** The uniform during one render of the scene, which ends before the call returns. */
+  function debandingInRender(): number[] {
+    fireSceneRender(scene, camera);
     const inRender = [...debanding];
-    endRender(scene);
+    fireSceneRenderEnd(scene, camera);
+    return inRender;
+  }
+
+  it.each([
+    ["at the canvas's left and top edges", new THREE.Vector4(0, 0, 955, 756), [1, 0, 756]],
+    [
+      'at the edges of a viewport off the origin (edge case)',
+      new THREE.Vector4(10, 20, 100, 50),
+      [1, 10, 70],
+    ],
+  ])('turns the noise on in each render, %s', (_, viewport, expected) => {
+    const stop = debandSky(rendererAt(viewport), scene);
+
+    const inRender = debandingInRender();
     stop();
 
-    expect(inRender).toEqual([1, 10, 70]);
+    expect(inRender).toEqual(expected);
   });
 
   it('turns the noise off when the render ends, so another scene draws none', () => {
-    const debanding = debandingValue();
-    const scene = new THREE.Scene();
     const stop = debandSky(rendererAt(new THREE.Vector4(0, 0, 4, 4)), scene);
 
-    startRender(scene);
-    endRender(scene);
+    debandingInRender();
     stop();
 
     expect(debanding[0]).toBe(0);
   });
 
   it('leaves the noise off in a render after its disposer runs (error case)', () => {
-    const debanding = debandingValue();
-    const scene = new THREE.Scene();
     debandSky(rendererAt(new THREE.Vector4(0, 0, 4, 4)), scene)();
 
-    startRender(scene);
-
-    expect(debanding[0]).toBe(0);
+    expect(debandingInRender()[0]).toBe(0);
   });
 });

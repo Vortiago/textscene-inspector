@@ -1,7 +1,7 @@
 /**
  * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its baked layers and
  * its share of the ambient to every lit material before each render of the scene
- * (`skyLayerArray.ts`). A background that debands gets Godot's noise in each render (`skyDebanding.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
+ * (`skyLayerArray.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
  * are not Light Only as `LIGHT0..3`. The lights are read from the rendered three.js scene, where an
  * instanced or GLB light has its real world transform.
  */
@@ -18,7 +18,8 @@ import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { SkyLayerArray } from './skyLayerArray';
 import { observeSceneCamera } from '../sceneRenderCamera';
-import { debandSky, isDebanded } from './skyDebanding';
+import { debandSky } from './skyDebanding';
+import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
 
 interface SkyLayerProps {
