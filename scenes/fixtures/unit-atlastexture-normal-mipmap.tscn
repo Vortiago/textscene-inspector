@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; One variable: the mip chain of an AtlasTexture crop of a sheet imported as a normal map. The sheet
+; holds 1-pixel stripes leaning 0 and 90 degrees towards +X, and both sprites draw it at a quarter
+; of its size, so they sample a level that averages the stripes. Godot renormalises that level to
+; lean 45 degrees, so it draws 218, 128, 218. The left sprite draws the sheet and the right one a
+; crop of all of it, so both draw that colour. A crop chain left unnormalised draws 191, 128, 191.
+; No other golden minifies an AtlasTexture of a normal map.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-normal-sheet.png" id="1_sheet"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_crop"]
+atlas = ExtResource("1_sheet")
+region = Rect2(0, 0, 128, 128)
+
+[node name="AtlasNormalMipmap" type="Node2D"]
+
+[node name="Sheet" type="Sprite2D" parent="."]
+texture_filter = 4
+position = Vector2(100, 120)
+scale = Vector2(0.25, 0.25)
+texture = ExtResource("1_sheet")
+
+[node name="Crop" type="Sprite2D" parent="."]
+texture_filter = 4
+position = Vector2(200, 120)
+scale = Vector2(0.25, 0.25)
+texture = SubResource("AtlasTexture_crop")

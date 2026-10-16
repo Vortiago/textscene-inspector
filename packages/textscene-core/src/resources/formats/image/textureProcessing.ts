@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { imageSize, readImagePixels, type ImagePixels } from './imagePixels';
 import { fixAlphaEdges } from '../../processing/fixAlphaEdges';
+import type { MipLevel } from '../../processing/mipChain';
+import { limitRoughness } from '../../processing/roughnessLimit';
 import {
   invertGreen,
   invertGreyscaleGreen,
@@ -10,11 +12,12 @@ import {
   premultiplyAlpha,
 } from '../../processing/importTexelPasses';
 import { copySampling } from '../../textures/copySampling';
+import { texelTexture, textureMipChain } from '../../textures/texelTexture';
 import { dropMipChain } from '../../textures/godotTextureFilter';
 import { recordGodotFormat } from '../../textures/sourceColorSpace';
 import { IMAGE_EXTENSIONS, SVG_MIME_TYPE, imageMimeType } from './extensions';
 import { fileExtension } from '../../fileExtension';
-import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
+import { isGreyscaleSource, type ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
 import {
   hasTranslucentTexel,
   holdsRedGreenOnly,
@@ -34,11 +37,13 @@ export function isTexturePath(path: string): boolean {
 
 /**
  * How Godot imports an image file: the format its loader reads it in, null when no header names
- * one, and the options of its import sidecar.
+ * one, the options of its import sidecar, and the normal map its roughness limiter reads.
  */
 export interface ImageImport {
   source: ImageSourceFormat | null;
   options: TextureImportOptions;
+  /** Null when the sidecar asks for no roughness limiter or its normal map did not load. */
+  roughnessNormal: ImagePixels | null;
 }
 
 /** A pass over RGBA8 bytes, top row first, that returns whether any byte changed. */
@@ -74,14 +79,15 @@ export async function createTextureFromBuffer(
 /**
  * A decoded image as Godot's texture importer stores it: the texel passes its sidecar asks for, its
  * mip chain, and the format a colour slot reads it through. The caller hands over `texture`: it
- * gets it back when no pass changes a byte, and it is disposed otherwise.
+ * gets it back when nothing rewrites a byte, and it is disposed otherwise.
  */
 export function importDecodedImage(texture: THREE.Texture, imported: ImageImport): THREE.Texture {
-  const passed = applyTexelPasses(texture, texelPassesFor(imported));
-  if (!imported.options.mipmaps) dropMipChain(passed.texture);
-  if (imported.source === null) return passed.texture;
-  const format = textureImportFormat(imported.source, imported.options, () => isTranslucent(passed));
-  return recordGodotFormat(passed.texture, format);
+  const stored = imported.options.mipmaps
+    ? withMipChain(texture, imported)
+    : withoutMipChain(texture, imported);
+  if (imported.source === null) return stored.texture;
+  const format = textureImportFormat(imported.source, imported.options, () => isTranslucent(stored));
+  return recordGodotFormat(stored.texture, format);
 }
 
 /**
@@ -94,19 +100,71 @@ function isTranslucent({ texture, texels }: PassedTexture): boolean {
 }
 
 /**
- * The passes in the importer's order (`resource_importer_texture.cpp:861-874`), then the channels a
- * compression to RGTC drops. The alpha-border pass and the premultiply return on any format but
- * RGBA8 (`core/io/image.cpp:4225`, `:4247`). A source no header names reads as RGBA8.
+ * The passes in the importer's order (`resource_importer_texture.cpp:861-874`), before it builds
+ * the mip chain. The alpha-border pass and the premultiply return on any format but RGBA8
+ * (`core/io/image.cpp:4225`, `:4247`). A source no header names reads as RGBA8.
  */
 function texelPassesFor({ source, options }: ImageImport): TexelPass[] {
   const isRgba8 = source === null || source === 'RGBA8';
-  const isGreyscale = source === 'Lum8' || source === 'LumAlpha8';
   const passes: TexelPass[] = [];
   if (options.fixAlphaBorder && isRgba8) passes.push(fixAlphaEdges);
   if (options.premultAlpha && isRgba8) passes.push(premultiplyAlpha);
-  if (options.invertNormalY) passes.push(isGreyscale ? invertGreyscaleGreen : invertGreen);
-  if (holdsRedGreenOnly(options)) passes.push(keepRedGreen);
+  if (options.invertNormalY) passes.push(isGreyscaleSource(source) ? invertGreyscaleGreen : invertGreen);
   return passes;
+}
+
+/**
+ * The channels the compression drops, from each level once the chain is built
+ * (`resource_importer_texture.cpp:423-431`).
+ */
+function compressionPassesFor(options: TextureImportOptions): TexelPass[] {
+  return holdsRedGreenOnly(options) ? [keepRedGreen] : [];
+}
+
+/**
+ * Whether the chain renormalises its normals: `compress/normal_map` Enable asks for it
+ * (`resource_importer_texture.cpp:407-409`), and only an RGB8 or RGBA8 image honours it
+ * (`core/io/image.cpp:1981-2015`).
+ */
+function renormalizesChain({ source, options }: ImageImport): boolean {
+  return options.normalMap && !isGreyscaleSource(source);
+}
+
+/** The texels passed, then the compression's channels, with no mip chain to sample. */
+function withoutMipChain(texture: THREE.Texture, imported: ImageImport): PassedTexture {
+  const passes = [...texelPassesFor(imported), ...compressionPassesFor(imported.options)];
+  const stored = applyTexelPasses(texture, passes);
+  dropMipChain(stored.texture);
+  return stored;
+}
+
+/**
+ * The texels passed, then the mip chain Godot's importer builds from them on the CPU
+ * (`resource_importer_texture.cpp:401-412`), then the compression's channels per level. A texture
+ * whose pixels cannot be read keeps the GPU's chain, which averages an sRGB image in linear space.
+ */
+function withMipChain(texture: THREE.Texture, imported: ImageImport): PassedTexture {
+  const pixels = readImagePixels(texture.image);
+  if (!pixels) return { texture, texels: undefined };
+  const { width, height } = pixels;
+  const base = { data: writableTexels(pixels, texture), width, height };
+  for (const pass of texelPassesFor(imported)) pass(base.data, width, height);
+  const levels = textureMipChain(texture, base, renormalizesChain(imported));
+  limitChainRoughness(levels, imported);
+  const compressionPasses = compressionPassesFor(imported.options);
+  for (const level of levels) {
+    for (const pass of compressionPasses) pass(level.data, level.width, level.height);
+  }
+  return { texture: replacedByTexels(texture, levels), texels: base.data };
+}
+
+/**
+ * The roughness limiter on the chain, after it is built and before the compression
+ * (`resource_importer_texture.cpp:415-418`), when the sidecar names a normal map that loaded.
+ */
+function limitChainRoughness(levels: MipLevel[], { source, options, roughnessNormal }: ImageImport): void {
+  if (!options.roughnessLimit || !roughnessNormal) return;
+  limitRoughness(levels, roughnessNormal, { channel: options.roughnessLimit.channel, source });
 }
 
 /**
@@ -171,31 +229,35 @@ async function decodeImage(
 /**
  * Runs `passes` on a decoded texture's bytes. It returns the same texture when no pass changes a
  * byte, and otherwise a `DataTexture` of the rewritten bytes, since a decoded image cannot be
- * edited in place. It then disposes the decoded texture, which the caller hands over.
+ * edited in place.
  */
 function applyTexelPasses(texture: THREE.Texture, passes: TexelPass[]): PassedTexture {
   if (passes.length === 0) return { texture, texels: undefined };
   const pixels = readImagePixels(texture.image);
   if (!pixels) return { texture, texels: undefined };
 
-  // A DataTexture's own buffer is a cached resource that other consumers share, so the passes
-  // edit a copy of it. A readback is already a fresh buffer.
-  const isOwnBuffer = pixels.data === (texture.image as { data?: unknown }).data;
-  const data =
-    isOwnBuffer || !(pixels.data instanceof Uint8Array) ? new Uint8Array(pixels.data) : pixels.data;
+  const data = writableTexels(pixels, texture);
   let changed = false;
   for (const pass of passes) changed = pass(data, pixels.width, pixels.height) || changed;
   if (!changed) return { texture, texels: data };
+  return {
+    texture: replacedByTexels(texture, [{ data, width: pixels.width, height: pixels.height }]),
+    texels: data,
+  };
+}
 
-  const rewritten = copySampling(
-    new THREE.DataTexture(data, pixels.width, pixels.height, THREE.RGBAFormat),
-    texture
-  );
-  rewritten.needsUpdate = true;
-  rewritten.colorSpace = texture.colorSpace;
-  // The readback is top-row-first, the same orientation the decoded image
-  // uploads in, so the loaded texture's own flip decides which way is up.
-  rewritten.flipY = texture.flipY;
+/**
+ * Bytes of `pixels` a pass may rewrite. A `DataTexture`'s own buffer is a cached resource that
+ * other consumers share, so it is copied. A readback is already a fresh buffer.
+ */
+function writableTexels(pixels: ImagePixels, texture: THREE.Texture): Uint8Array {
+  const isOwnBuffer = pixels.data === (texture.image as { data?: unknown }).data;
+  return isOwnBuffer || !(pixels.data instanceof Uint8Array) ? new Uint8Array(pixels.data) : pixels.data;
+}
+
+/** `texelTexture` of `levels`, which replaces `texture` and disposes it. */
+function replacedByTexels(texture: THREE.Texture, levels: MipLevel[]): THREE.DataTexture {
+  const replaced = texelTexture(texture, levels);
   texture.dispose();
-  return { texture: rewritten, texels: data };
+  return replaced;
 }

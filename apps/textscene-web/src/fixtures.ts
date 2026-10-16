@@ -208,6 +208,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Atlastexture Normal Mipmap",
+    "file": "unit-atlastexture-normal-mipmap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Back Buffer Copy",
     "file": "unit-back-buffer-copy.tscn",
     "category": "Other"
@@ -420,6 +425,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Decal Gradienttexture",
     "file": "unit-decal-gradienttexture.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Decal Mipmap Import",
+    "file": "unit-decal-mipmap-import.tscn",
     "category": "Other"
   },
   {
@@ -3286,6 +3296,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Mipmap Import",
+    "file": "unit-material-mipmap-import.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Normal Map Blue",
     "file": "unit-material-normal-map-blue.tscn",
     "category": "Unit - Materials"
@@ -3311,8 +3326,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Roughness Limiter",
+    "file": "unit-material-roughness-limiter.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Specular Mode",
     "file": "unit-material-specular-mode.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Texture Channel",
+    "file": "unit-material-texture-channel.tscn",
     "category": "Unit - Materials"
   },
   {

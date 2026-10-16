@@ -13,7 +13,7 @@ import {
   importTextureOptions,
   parseImportFile,
 } from './importParser';
-import { DEFAULT_TEXTURE_IMPORT } from '../godot/import/textureImport';
+import { DEFAULT_TEXTURE_IMPORT, RoughnessChannel } from '../godot/import/textureImport';
 
 const TREE_IMPORT = `[remap]
 
@@ -369,7 +369,9 @@ describe('importTextureOptions', () => {
       'process/fix_alpha_border=false',
       'process/premult_alpha=true',
       'process/normal_map_invert_y=true',
-      'svg/scale=2.5'
+      'svg/scale=2.5',
+      'roughness/mode=6',
+      'roughness/src_normal="res://bumps.png"'
     );
     expect(importTextureOptions(parseImportFile(sidecar))).toEqual({
       mode: 'VramCompressed',
@@ -380,7 +382,17 @@ describe('importTextureOptions', () => {
       premultAlpha: true,
       invertNormalY: true,
       svgScale: 2.5,
+      roughnessLimit: { channel: RoughnessChannel.L, normalPath: 'res://bumps.png' },
     });
+  });
+
+  it('reads Detect, Disabled or a roughness mode with no normal map as no limiter (edge case)', () => {
+    const limits = [
+      ['roughness/mode=0', 'roughness/src_normal="res://bumps.png"'],
+      ['roughness/mode=1', 'roughness/src_normal="res://bumps.png"'],
+      ['roughness/mode=2', 'roughness/src_normal=""'],
+    ].map((lines) => importTextureOptions(parseImportFile(textureSidecar(...lines))).roughnessLimit);
+    expect(limits).toEqual([null, null, null]);
   });
 
   it('reads no sidecar, or one of another importer, as the Detect preset', () => {

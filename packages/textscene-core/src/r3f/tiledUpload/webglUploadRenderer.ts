@@ -7,7 +7,8 @@
  */
 
 import type * as THREE from 'three';
-import { RGBA_BYTES, type UploadRenderer } from './TiledUploadQueue';
+import { RGBA_BYTES } from '../../resources/processing/mipChain';
+import { levelImage, type UploadRenderer } from './TiledUploadQueue';
 
 export function webglUploadRenderer(renderer: THREE.WebGLRenderer): UploadRenderer {
   // three has required WebGL2 since r163.
@@ -21,8 +22,8 @@ export function webglUploadRenderer(renderer: THREE.WebGLRenderer): UploadRender
 
   return {
     initTexture: (texture) => renderer.initTexture(texture),
-    writeRows: (texture, fromRow, toRow) => {
-      const { data, width } = texture.image as { data: Uint8Array; width: number };
+    writeRows: (texture, { level, fromRow, toRow }) => {
+      const { data, width, height } = levelImage(texture, level);
       bind(texture);
       // Through three's cache: its writes skip an unchanged value and its reads stay local.
       const { state } = renderer;
@@ -40,11 +41,13 @@ export function webglUploadRenderer(renderer: THREE.WebGLRenderer): UploadRender
         state.pixelStorei(windowParameter, 0);
       }
       const rowBytes = width * RGBA_BYTES;
+      // `UNPACK_FLIP_Y_WEBGL` flips a typed-array band within its own rectangle only, so a flipped
+      // texture's band goes to the mirrored rows, where the whole-level upload would put it.
       gl.texSubImage2D(
         gl.TEXTURE_2D,
+        level,
         0,
-        0,
-        levelRow(texture, fromRow, toRow),
+        texture.flipY ? height - toRow : fromRow,
         width,
         toRow - fromRow,
         gl.RGBA,
@@ -57,14 +60,4 @@ export function webglUploadRenderer(renderer: THREE.WebGLRenderer): UploadRender
       gl.generateMipmap(gl.TEXTURE_2D);
     },
   };
-}
-
-/**
- * The level row a band of rows `[fromRow, toRow)` starts at. `UNPACK_FLIP_Y_WEBGL` flips a
- * typed-array band within its own rectangle only, so a flipped texture's band goes to the
- * mirrored rows, where the whole-image upload would put it.
- */
-function levelRow(texture: THREE.Texture, fromRow: number, toRow: number): number {
-  const { height } = texture.image as { height: number };
-  return texture.flipY ? height - toRow : fromRow;
 }

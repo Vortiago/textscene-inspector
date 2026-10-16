@@ -25,6 +25,11 @@ A Texture2D that wraps an image with optional normal and specular maps. The spri
 
 A Texture2D that windows a region of another texture. A 2D consumer draws the region. A material slot binds the whole sheet, as Godot does. A material reads a texture by its RID, and an AtlasTexture's RID is its sheet's (`atlas_texture.cpp:55-58`). The left quad names the top-left texel and draws all four. The right quad binds a CanvasTexture and draws white.
 
+## AtlasTexture mip chain
+<!-- compare: image=unit-atlastexture-normal-mipmap status=done fixture=unit-atlastexture-normal-mipmap.tscn -->
+
+A minified AtlasTexture samples the chain its sheet's import built. The sheet holds stripes leaning 0 and 90 degrees, imported as a normal map, so each level is renormalised. The left sprite draws the sheet and the right one a crop of all of it, at a quarter of its size. Both draw the 45-degree colour, as in Godot.
+
 ## ImageTexture
 <!-- compare: image=unit-material-albedo-image-format status=done fixture=unit-material-albedo-image-format.tscn -->
 
@@ -39,6 +44,16 @@ An `Image` can also save the S3TC and RGTC blocks of a compressed texture. The p
 <!-- compare: image=unit-material-albedo-image-import status=limitation fixture=unit-material-albedo-image-import.tscn -->
 
 A scene names a PNG, JPEG, WebP or SVG file by path. Godot imports it as its `.import` sidecar says. A colour slot reads it through the format Godot imports it in, which comes from the file's own header and the sidecar's `compress/mode`. A greyscale PNG or JPEG imports as Lum8 or LumAlpha8 unless the sidecar asks for VRAM or Basis Universal compression, so it reads raw. The top strip is a greyscale PNG with no sidecar, the second is the same PNG VRAM compressed, and the third is an RGB PNG. The bottom strip is that RGB PNG imported as a VRAM compressed normal map. So it is RGTC, which keeps red and green raw and samples blue as 0. The sidecar also decides the mip chain, the alpha-border pass, the alpha premultiply, the normal map's green and an SVG's scale. `standardmaterial3d/textureBinding.md` has the rules and their cites.
+
+## Imported mip chain
+<!-- compare: image=unit-material-mipmap-import status=done fixture=unit-material-mipmap-import.tscn -->
+
+An image file whose sidecar sets `mipmaps/generate` samples the mip chain Godot's importer builds on the CPU. Each level averages the bytes of the level above, so an sRGB image averages its encoded values. Both strips tile an 8 × 8 image so densely that they sample its smallest levels. The top strip is a red and green checker, which averages to a dark yellow, as in Godot. The bottom strip is a normal map of stripes, imported as a normal map, so each level is renormalised and leans 45 degrees towards the light.
+
+## Roughness limiter
+<!-- compare: image=unit-material-roughness-limiter status=done fixture=unit-material-roughness-limiter.tscn -->
+
+A roughness map whose sidecar sets `roughness/mode` and `roughness/src_normal` runs Godot's roughness limiter on its mip chain. Each level gets rougher by the spread of the normals it covers in the named normal map. Both spheres tile the same smooth roughness map and bumpy normal map. The left map's sidecar names the normal map, so its minified highlight spreads and dims, as in Godot. The right map's sidecar turns the limiter off.
 
 ## glTF image
 <!-- compare: image=unit-gltf-alpha-border status=done fixture=unit-gltf-alpha-border.tscn -->
@@ -68,6 +83,7 @@ The lenient parser never rejects a texture property. An unreadable value falls b
 - **Approximated** A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.
 - **Approximated** A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds.
 - **Approximated** A file with no sidecar reads as a fresh import, not as the editor re-imports a texture it sees in 3D.
-- **Approximated** The GPU builds an image file's mip chain, where Godot averages the bytes on the CPU (`core/io/image.cpp:2146-2175`).
+- **Approximated** An imported image keeps its bytes and mip chain in memory after the upload for later readers (decals, crops, flowmaps, context loss), where Godot frees them.
+- **Approximated** An image file past the GPU's `MAX_TEXTURE_SIZE` cannot be read back, so its GPU-built chain averages an sRGB image in linear space.
 - **Resource gap** An ImageTexture saved in a BPTC, ETC, EAC, ASTC or integer format draws no texture.
 - **Not drawn** A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.

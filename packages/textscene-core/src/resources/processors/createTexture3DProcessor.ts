@@ -22,12 +22,12 @@ export function createTexture3DProcessor(
 ): ResourceProcessor<THREE.Data3DTexture> {
   /** The slices the sidecar names, read first so a missing one costs no decode. */
   const slicesOf = async (path: string) => {
-    const sidecar = await readImportSidecar(
-      path,
-      { busType: 'texture3d', key: path },
+    const sidecar = await readImportSidecar({
+      assetPath: path,
+      dependent: { busType: 'texture3d', key: path },
       fileEventBus,
-      dependencies
-    );
+      dependencies,
+    });
     const slices = importTexture3DSlices(sidecar);
     if (!slices) throw new Error(`${path} has no sidecar that imports it as a 3D texture`);
     return slices;

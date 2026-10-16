@@ -28,6 +28,19 @@ describe('copySampling', () => {
     expect(target.generateMipmaps).toBe(false);
   });
 
+  it('asks the GPU for a chain over a source that uploads its own chain', () => {
+    const source = new THREE.DataTexture(new Uint8Array(8), 2, 1);
+    source.mipmaps = [
+      { data: new Uint8Array(8), width: 2, height: 1 },
+      { data: new Uint8Array(4), width: 1, height: 1 },
+    ] as unknown as THREE.Texture['mipmaps'];
+    source.generateMipmaps = false;
+
+    const target = copySampling(new THREE.DataTexture(new Uint8Array(4), 1, 1), source);
+
+    expect(target.generateMipmaps).toBe(true);
+  });
+
   it('returns the target it writes, not a copy', () => {
     const target = new THREE.DataTexture(new Uint8Array(4), 1, 1);
 

@@ -249,6 +249,18 @@ describe('createTextureProcessor: the import format of an image file', () => {
     await flush();
     expect(dependencies.release(SIDECAR_PATH)).toEqual([{ busType: 'texture', key: PNG_PATH }]);
   });
+
+  it('records the normal map its roughness limiter names, so creating or editing it reloads the texture', async () => {
+    const sidecar = textureSidecar(
+      'mipmaps/generate=true',
+      'roughness/mode=2',
+      'roughness/src_normal="res://art/bumps.png"'
+    );
+    const { processor, dependencies } = harness({ [PNG_PATH]: GREY_PNG, [SIDECAR_PATH]: sidecar });
+    processor.request(PNG_PATH);
+    await flush();
+    expect(dependencies.release('res://art/bumps.png')).toEqual([{ busType: 'texture', key: PNG_PATH }]);
+  });
 });
 
 /** The texture at `PNG_PATH`, served `files`. */

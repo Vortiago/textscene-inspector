@@ -5,6 +5,8 @@
  * original image.
  */
 
+import { byteOf, channelOf } from '../../godot/project/image.js';
+
 /** `Image::premultiply_alpha` (`core/io/image.cpp:4220-4240`), which runs only on an RGBA8 image. */
 export function premultiplyAlpha(data: Uint8Array): boolean {
   let changed = false;
@@ -64,14 +66,9 @@ export function keepRedGreen(data: Uint8Array): boolean {
   return changed;
 }
 
-/** A byte as `get_pixel` reads it: divided in double precision, stored as a float32. */
-function channelOf(byte: number): number {
-  return Math.fround(byte / 255);
-}
-
-/** Writes `value` as `set_pixel` does, truncated, and returns whether the byte moved. */
+/** Writes `value` as `set_pixel` does, and returns whether the byte moved. */
 function writeChannel(data: Uint8Array, index: number, value: number): boolean {
-  const byte = Math.trunc(value * 255);
+  const byte = byteOf(value);
   if (byte === data[index]) return false;
   data[index] = byte;
   return true;

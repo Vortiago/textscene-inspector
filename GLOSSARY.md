@@ -32,6 +32,14 @@ The `.import` file Godot writes beside a source asset to record its importer and
 No scene references it, so a missing one is an ordinary outcome and not a **Missing resource**.
 _Avoid_: "import file" for the asset itself.
 
+**Imported mip chain** (`resources/processing/mipChain.ts`):
+The levels Godot's texture importer builds on the CPU for an image whose **Import sidecar** sets `mipmaps/generate`: each level averages the bytes of the one above, renormalised for a normal map.
+The texture carries them as its own levels, so the GPU builds no chain over them.
+_Avoid_: "mipmaps" for a chain the GPU generates.
+
+**Roughness limiter** (`resources/processing/roughnessLimit.ts`):
+The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
+
 **Unwrap cache**:
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
 Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.

@@ -8,16 +8,24 @@
 
 import * as THREE from 'three';
 import { GpuResidency, residencyKey } from './gpuResidency';
+import { RGBA_BYTES, type MipLevel } from '../../resources/processing/mipChain';
 import { UNPACED, type UploadPacer } from './gpuPacer';
 
 /** What the queue asks of the GPU, so a test can stand in for it (`webglUploadRenderer.ts`). */
 export interface UploadRenderer {
   /** three's own init, which allocates the texture's storage. */
   initTexture(texture: THREE.Texture): void;
-  /** Writes rows `[fromRow, toRow)` of `texture`'s own bytes into its storage. */
-  writeRows(texture: THREE.Texture, fromRow: number, toRow: number): void;
+  /** Writes a band of `texture`'s own bytes into its storage. */
+  writeRows(texture: THREE.Texture, band: Band): void;
   /** Builds the mip chain from the filled base level. */
   generateMipmaps(texture: THREE.Texture): void;
+}
+
+/** Rows `[fromRow, toRow)` of mip level `level`, where level 0 is the texture's image. */
+export interface Band {
+  level: number;
+  fromRow: number;
+  toRow: number;
 }
 
 /** A consumer's place in the queue. A texture whose upload was cancelled must not be drawn. */
@@ -32,9 +40,6 @@ export interface TiledUpload {
  * in headless Chromium, so a frame fits several within its budget.
  */
 const BAND_BYTES = 2 * 1024 * 1024;
-
-/** The only layout the queue tiles: 8-bit RGBA, as every procedural build writes. */
-export const RGBA_BYTES = 4;
 
 /** Rows per band for a texture `width` pixels wide, at least one. */
 function bandRows(width: number): number {
@@ -52,8 +57,8 @@ interface QueuedUpload {
   texture: THREE.Texture;
   /** three's cache key for `texture`, so a matching clone joins this upload. */
   key: string;
-  width: number;
-  height: number;
+  /** The level being written: 0 for the image, then each level of a chain built on the CPU. */
+  level: number;
   nextRow: number;
   /** Every consumer of this GPU texture: the one that started it, and matching clones that joined. */
   waiters: Waiter[];
@@ -98,9 +103,8 @@ export class TiledUploadQueue {
 
   /** Allocates `texture` empty now, and queues its rows. */
   private start(texture: THREE.Texture, key: string): QueuedUpload {
-    const { width, height } = texture.image as { width: number; height: number };
     this.initWithoutData(texture);
-    const entry: QueuedUpload = { texture, key, width, height, nextRow: 0, waiters: [] };
+    const entry: QueuedUpload = { texture, key, level: 0, nextRow: 0, waiters: [] };
     this.queue.push(entry);
     return entry;
   }
@@ -151,12 +155,18 @@ export class TiledUploadQueue {
   }
 
   private copyBand(entry: QueuedUpload): void {
-    const { width, height, texture } = entry;
+    const { texture, level } = entry;
+    const { width, height } = levelImage(texture, level);
     const fromRow = entry.nextRow;
     const toRow = Math.min(height, fromRow + bandRows(width));
-    this.renderer.writeRows(texture, fromRow, toRow);
+    this.renderer.writeRows(texture, { level, fromRow, toRow });
     entry.nextRow = toRow;
     if (toRow < height) return;
+    if (level + 1 < levelCount(texture)) {
+      entry.level = level + 1;
+      entry.nextRow = 0;
+      return;
+    }
     if (texture.generateMipmaps) this.renderer.generateMipmaps(texture);
     this.complete(entry);
   }
@@ -188,4 +198,14 @@ export class TiledUploadQueue {
     this.initWithoutData(next.texture);
     entry.texture = next.texture;
   }
+}
+
+/** How many levels the queue writes: three uploads `mipmaps` in place of the image when it holds any. */
+function levelCount(texture: THREE.Texture): number {
+  return texture.mipmaps.length || 1;
+}
+
+/** The 8-bit RGBA bytes of `level`. A chain built on the CPU starts with the image. */
+export function levelImage(texture: THREE.Texture, level: number): MipLevel {
+  return (texture.mipmaps.length > 0 ? texture.mipmaps[level] : texture.image) as MipLevel;
 }
