@@ -3,6 +3,7 @@
  * own defaults, and what its setters store.
  */
 
+import { enumNamesByValue } from '../classdb/enumNames.js';
 import type { PositionalShadowAtlasSettings } from '../rendering/lights/positionalShadowAtlas.js';
 
 /**
@@ -58,3 +59,35 @@ export function viewportPositionalShadowAtlas(
   const isServerSize = size !== undefined && Number.isFinite(size) && size >= 0;
   return { size: isServerSize ? size : VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT, quadrantShadows };
 }
+
+/**
+ * `Viewport::DefaultCanvasItemTextureFilter` (`scene/main/viewport.h:188-193`), without its `_MAX`, as the
+ * integers a `.tscn` stores for `canvas_item_default_texture_filter`. LINEAR_WITH_MIPMAPS is 2 and
+ * NEAREST_WITH_MIPMAPS is 3, the opposite of the order the two names suggest.
+ */
+export enum DefaultCanvasItemTextureFilter {
+  NEAREST = 0,
+  LINEAR = 1,
+  LINEAR_WITH_MIPMAPS = 2,
+  NEAREST_WITH_MIPMAPS = 3,
+}
+
+/**
+ * `Viewport::DefaultCanvasItemTextureRepeat` (`scene/main/viewport.h:195-200`), as the integers a `.tscn`
+ * stores for `canvas_item_default_texture_repeat`. 4.7.2 adds PARENT_NODE after them (viewport.h:200-206).
+ */
+enum DefaultCanvasItemTextureRepeat {
+  DISABLED = 0,
+  ENABLED = 1,
+  MIRROR = 2,
+  PARENT_NODE = 3,
+}
+
+/** Each repeat's name by the integer a `.tscn` stores, as a validator names it. */
+export const DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES = enumNamesByValue(DefaultCanvasItemTextureRepeat);
+
+/** Each filter's name by the integer a `.tscn` stores, as a validator names it. */
+export const DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(DefaultCanvasItemTextureFilter);
+
+/** A Viewport's default filter for a CanvasItem that defers to its ancestors (`viewport.h:419`). */
+export const VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER = DefaultCanvasItemTextureFilter.LINEAR;

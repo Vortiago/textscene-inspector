@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
+import { SHADER_ALPHA_HASH_SCALE_DEFAULT } from '../../godot/rendering/materials/defaultMaterial';
 import { recordedOn } from './recordedOnMaterial';
 
 const HASH_PARS_CHUNK = '#include <alphahash_pars_fragment>';
@@ -60,16 +61,13 @@ const GODOT_OBJECT_POSITION = /* glsl */ `
 /** Where a material records its `alpha_hash_scale`. */
 const ALPHA_HASH_SCALE_KEY = 'godotAlphaHashScale';
 
-/** `ALPHA_HASH_SCALE`'s value where no material sets it (`scene_forward_clustered.glsl:1303`). */
-const DEFAULT_ALPHA_HASH_SCALE = 1;
-
 /** The `userData` that gives a material its `alpha_hash_scale`. */
 export function alphaHashScaleUserData(scale: number): Record<string, number> {
   return { [ALPHA_HASH_SCALE_KEY]: scale };
 }
 
 function alphaHashScaleOf(material: THREE.Material): number {
-  return recordedOn(material, ALPHA_HASH_SCALE_KEY, DEFAULT_ALPHA_HASH_SCALE);
+  return recordedOn(material, ALPHA_HASH_SCALE_KEY, SHADER_ALPHA_HASH_SCALE_DEFAULT);
 }
 
 /** The uniforms of one hashed material's program. */

@@ -6,13 +6,13 @@
  */
 
 import * as THREE from 'three';
+import { GODOT_DEFAULT_ALBEDO, GODOT_DEFAULT_LIGHT_MODES } from '../../../r3f/materials/godotDefaultMaterial';
 import {
-  GODOT_DEFAULT_ALBEDO,
-  GODOT_DEFAULT_LIGHT_MODES,
-  GODOT_DEFAULT_METALLIC,
-  GODOT_DEFAULT_ROUGHNESS,
-} from '../../../r3f/materials/godotDefaultMaterial';
+  DEFAULT_MATERIAL_METALLIC,
+  DEFAULT_MATERIAL_ROUGHNESS,
+} from '../../../godot/rendering/materials/defaultMaterial';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
@@ -92,8 +92,8 @@ function noMaterialBag(): StandardMaterialBag {
     materialClass: 'standard',
     props: {
       color: GODOT_DEFAULT_ALBEDO,
-      metalness: GODOT_DEFAULT_METALLIC,
-      roughness: GODOT_DEFAULT_ROUGHNESS,
+      metalness: DEFAULT_MATERIAL_METALLIC,
+      roughness: DEFAULT_MATERIAL_ROUGHNESS,
       side: THREE.FrontSide,
       userData: lightModesUserData(GODOT_DEFAULT_LIGHT_MODES),
     },
@@ -128,12 +128,9 @@ function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
     scalars.rim > 0 ||
     isAnisotropic(scalars) ||
     scalars.transmission > 0 ||
-    scalars.specular !== DEFAULT_SPECULAR
+    scalars.specular !== BASE_MATERIAL_3D_DEFAULTS.specular
   );
 }
-
-/** `metallic_specular`'s default (`material.cpp:3941`), whose F0 is three's fixed 0.04. */
-const DEFAULT_SPECULAR = 0.5;
 
 /**
  * three's `specularIntensity` for Godot's dielectric F0 of `0.16 * specular * specular`

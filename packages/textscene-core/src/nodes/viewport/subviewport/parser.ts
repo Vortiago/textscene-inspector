@@ -9,6 +9,10 @@ import { boolOr, enumOr, parseOptionalInt, vec2iOr } from '../../../parser/value
 import { parseNode } from '../../node/parser';
 import { MSAA_DISABLED, MSAA_MODES } from '../../../godot/rendering/msaa';
 import {
+  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
+  DefaultCanvasItemTextureFilter,
+} from '../../../godot/scene/viewport';
+import {
   CLEAR_MODE_ALWAYS,
   CLEAR_MODE_NEVER,
   CLEAR_MODE_ONCE,
@@ -31,7 +35,12 @@ const UPDATE_MODES = [
 const CLEAR_MODES = [CLEAR_MODE_ALWAYS, CLEAR_MODE_NEVER, CLEAR_MODE_ONCE] as const;
 
 /** `Viewport.DefaultCanvasItemTextureFilter`: NEAREST, LINEAR and the mipmap variants. */
-const TEXTURE_FILTERS = [0, 1, 2, 3] as const;
+const TEXTURE_FILTERS = [
+  DefaultCanvasItemTextureFilter.NEAREST,
+  DefaultCanvasItemTextureFilter.LINEAR,
+  DefaultCanvasItemTextureFilter.LINEAR_WITH_MIPMAPS,
+  DefaultCanvasItemTextureFilter.NEAREST_WITH_MIPMAPS,
+] as const;
 
 export function parseSubViewport(
   heading: ParsedHeading,
@@ -70,7 +79,7 @@ export function parseSubViewport(
     audio_listener_enable_2d: boolOr(properties.audio_listener_enable_2d, false, context),
     canvas_item_default_texture_filter: enumOr(
       properties.canvas_item_default_texture_filter,
-      1,
+      VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
       TEXTURE_FILTERS,
       context
     ),

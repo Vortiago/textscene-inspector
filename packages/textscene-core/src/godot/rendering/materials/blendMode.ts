@@ -1,5 +1,7 @@
 /** A BaseMaterial3D's blend mode and the colour blend attachment Godot programs for each. */
 
+import { enumNamesByValue } from '../../classdb/enumNames.js';
+
 /**
  * `BaseMaterial3D::BlendMode` (`scene/resources/material.h:227-233`), as the integers a `.tscn`
  * stores for `blend_mode`. The default is MIX (`material.h:601`).
@@ -11,6 +13,9 @@ export enum BlendMode {
   MUL = 3,
   PREMULT_ALPHA = 4,
 }
+
+/** Each mode's name by the integer a `.tscn` stores, as a validator names it. */
+export const BLEND_MODE_NAMES = enumNamesByValue(BlendMode);
 
 /** `RD::BlendOperation`, only the two values the attachments use. */
 export type GodotBlendOp = 'add' | 'reverse-subtract';

@@ -18,7 +18,7 @@ import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry, AxisStretchMode } from '../../../../r3f/controls/native/ninePatchGeometry';
-import { resolveTextureRectFilter } from '../texturerect/nativeSolver';
+import { canvasItemSamplerFilter } from '../../../../godot/scene/canvasItem';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';
 import {
@@ -124,7 +124,7 @@ function cropWindow(
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TextureProgressBarProperties>(solveNode);
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
-  const filter = resolveTextureRectFilter(sampler.filter);
+  const filter = canvasItemSamplerFilter(sampler.filter);
 
   const { externalResources, internalResources } = solveNode.resources;
   const underTexture = useLayerTexture(props.textureUnder, externalResources, internalResources, filter);

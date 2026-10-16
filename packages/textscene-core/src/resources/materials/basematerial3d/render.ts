@@ -6,6 +6,10 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import {
+  DISTANCE_FADE_MODE_NAMES,
+  DistanceFadeMode,
+} from '../../../godot/rendering/materials/distanceFadeMode.js';
 import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/rendering/materials/billboardMode.js';
 
 export const renderKeys: Record<string, PropertyValidator> = {
@@ -71,9 +75,9 @@ export const renderKeys: Record<string, PropertyValidator> = {
 
   distance_fade_mode: v.enumInt(
     'distance_fade_mode',
-    0,
-    3,
-    { 0: 'DISABLED', 1: 'PIXEL_ALPHA', 2: 'PIXEL_DITHER', 3: 'OBJECT_DITHER' },
+    DistanceFadeMode.DISABLED,
+    DistanceFadeMode.OBJECT_DITHER,
+    DISTANCE_FADE_MODE_NAMES,
     { hinted: 'material.cpp:3770' }
   ),
   // material.cpp:3771-3772 (both "0,4096,0.01,suffix:m"); set_distance_fade_min_distance

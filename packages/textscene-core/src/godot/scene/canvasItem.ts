@@ -1,5 +1,7 @@
 /** CanvasItem's own enums, as the engine declares them. */
 
+import { enumNamesByValue } from '../classdb/enumNames.js';
+
 /**
  * `CanvasItem::ClipChildrenMode` (`scene/main/canvas_item.h:71-75`), the serialised values of
  * `clip_children`. CanvasGroup's rule asks only whether an ancestor clips, as Godot tests
@@ -21,3 +23,52 @@ export const CLIP_CHILDREN_MAX = 3;
  * diagnostic that reports the legal values. {@link CLIP_CHILDREN_MAX} says why it ends at 2.
  */
 export const CLIP_CHILDREN_MODES = { 0: 'DISABLED', 1: 'ONLY', 2: 'AND_DRAW' };
+
+/**
+ * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`), without `TEXTURE_FILTER_MAX`, as the
+ * integers a `.tscn` stores for `texture_filter`. PARENT_NODE at 0 defers to the ancestors, and the
+ * default is PARENT_NODE (`canvas_item.h:123`). `BaseMaterial3D::TextureFilter` has no PARENT_NODE
+ * (`rendering/materials/textureFilter.ts`).
+ */
+export enum CanvasItemTextureFilter {
+  PARENT_NODE = 0,
+  NEAREST = 1,
+  LINEAR = 2,
+  NEAREST_WITH_MIPMAPS = 3,
+  LINEAR_WITH_MIPMAPS = 4,
+  NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5,
+  LINEAR_WITH_MIPMAPS_ANISOTROPIC = 6,
+}
+
+/** Each filter's name by the integer a `.tscn` stores (`canvas_item.cpp:1510-1516`), as a validator names it. */
+export const CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(CanvasItemTextureFilter);
+
+/**
+ * The texel a filter, already resolved up the ancestors, samples. Mipmapped and anisotropic variants
+ * collapse to their base filter. Anything else, including no filter at all, is linear: the
+ * `Viewport::default_canvas_item_texture_filter` default (`scene/main/viewport.h:419`).
+ */
+export function canvasItemSamplerFilter(filter: number | undefined): 'nearest' | 'linear' {
+  switch (filter) {
+    case CanvasItemTextureFilter.NEAREST:
+    case CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS:
+    case CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC:
+      return 'nearest';
+    default:
+      return 'linear';
+  }
+}
+
+/**
+ * `CanvasItem::TextureRepeat` (`scene/main/canvas_item.h:63-69`), without `TEXTURE_REPEAT_MAX`, as the
+ * integers a `.tscn` stores for `texture_repeat`. PARENT_NODE at 0 defers to the ancestors.
+ */
+export enum CanvasItemTextureRepeat {
+  PARENT_NODE = 0,
+  DISABLED = 1,
+  ENABLED = 2,
+  MIRROR = 3,
+}
+
+/** Each repeat's name by the integer a `.tscn` stores (`canvas_item.cpp:1519-1522`), as a validator names it. */
+export const CANVAS_ITEM_TEXTURE_REPEAT_NAMES = enumNamesByValue(CanvasItemTextureRepeat);

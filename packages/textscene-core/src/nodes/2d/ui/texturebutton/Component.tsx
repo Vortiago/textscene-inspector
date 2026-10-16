@@ -14,7 +14,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
 import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
-import { applyFlip, resolveTextureRectFilter, resolveTextureRectRepeat } from '../texturerect/nativeSolver';
+import { applyFlip, resolveTextureRectRepeat } from '../texturerect/nativeSolver';
+import { canvasItemSamplerFilter } from '../../../../godot/scene/canvasItem';
 import {
   resolveTextureButtonDrawState,
   resolveTextureButtonSlot,
@@ -83,7 +84,7 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     // `@react-three/fiber` sRGB auto-tagging would overwrite it on commit.
     pinNoColorSpace(cloned);
 
-    const filter = FILTER[resolveTextureRectFilter(sampler.filter)];
+    const filter = FILTER[canvasItemSamplerFilter(sampler.filter)];
     cloned.magFilter = filter;
     cloned.minFilter = filter;
 

@@ -11,7 +11,7 @@ import {
   type MaterialTextureState,
   type UVTransform,
 } from '../../textures/applyTextureState';
-import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../textures/godotTextureFilter';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { sourceColorSpace } from '../../textures/sourceColorSpace';
 import { UV2_CHANNEL } from '../../meshes/uv2';
 import { bottomUpV } from '../../../godot/math/uv';
@@ -63,7 +63,8 @@ export interface MaterialTextureStates {
  */
 export function materialTextureStates(scalars: StandardMaterial3DScalars): MaterialTextureStates {
   const sampler = {
-    filter: scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
+    filter:
+      scalars.textureFilter === BASE_MATERIAL_3D_DEFAULTS.textureFilter ? undefined : scalars.textureFilter,
     repeat: scalars.textureRepeat,
   };
   const uv2 = { ...sampler, uv: { scale: scalars.uv2Scale, offset: scalars.uv2Offset } };

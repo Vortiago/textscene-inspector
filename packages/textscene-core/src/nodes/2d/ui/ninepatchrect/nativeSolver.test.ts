@@ -8,7 +8,7 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { NinePatchRectProperties } from './types';
-import { ninePatchRectMinimumSize, resolveNinePatchFilter } from './nativeSolver';
+import { ninePatchRectMinimumSize } from './nativeSolver';
 
 const CTX: SolveContext = {
   theme: nativeTheme(1),
@@ -38,21 +38,5 @@ describe('ninePatchRectMinimumSize', () => {
   it('does not gate on a texture — unlike TextureRect, the source runs unconditionally', () => {
     const n = { ...node({ patchMarginLeft: 3, patchMarginRight: 3 }), textureSize: null };
     expect(ninePatchRectMinimumSize(n, CTX)).toEqual({ x: 6, y: 0 });
-  });
-});
-
-describe('resolveNinePatchFilter', () => {
-  it('maps every NEAREST variant (1, 3, 5) to nearest', () => {
-    expect(resolveNinePatchFilter(1)).toBe('nearest');
-    expect(resolveNinePatchFilter(3)).toBe('nearest');
-    expect(resolveNinePatchFilter(5)).toBe('nearest');
-  });
-
-  it('maps LINEAR (2) to linear', () => {
-    expect(resolveNinePatchFilter(2)).toBe('linear');
-  });
-
-  it('an absent filter (PARENT_NODE) resolves to linear, the CanvasItem root default', () => {
-    expect(resolveNinePatchFilter(undefined)).toBe('linear');
   });
 });

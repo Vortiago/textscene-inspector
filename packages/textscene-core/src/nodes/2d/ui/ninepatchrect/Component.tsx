@@ -19,7 +19,7 @@ import {
   axisStretchModeOf,
   type NinePatchGeometryBuffers,
 } from '../../../../r3f/controls/native/ninePatchGeometry';
-import { resolveNinePatchFilter } from './nativeSolver';
+import { canvasItemSamplerFilter } from '../../../../godot/scene/canvasItem';
 import type { NinePatchRectProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
@@ -102,7 +102,7 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     if (!rawTexture || !geometry) return null;
     const cloned = rawTexture.clone();
     pinNoColorSpace(cloned);
-    const filter = FILTER[resolveNinePatchFilter(sampler.filter)];
+    const filter = FILTER[canvasItemSamplerFilter(sampler.filter)];
     cloned.magFilter = filter;
     cloned.minFilter = filter;
     // Every UV stays inside the texture or region: TILE and TILE_FIT emit repeated quads, not a wrapping

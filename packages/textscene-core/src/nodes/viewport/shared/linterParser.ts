@@ -10,10 +10,11 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
+import {
+  DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
+  DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
+} from '../../../godot/scene/viewport.js';
 import { MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
-
-/** 4.7.2: viewport.h:200-206. DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX = 4. */
-const TEXTURE_REPEAT = { 0: 'DISABLED', 1: 'ENABLED', 2: 'MIRROR', 3: 'PARENT_NODE' };
 
 /** viewport.h:137-142. SCREEN_SPACE_AA_MAX = 3. */
 const SCREEN_SPACE_AA = { 0: 'DISABLED', 1: 'FXAA', 2: 'SMAA' };
@@ -91,17 +92,8 @@ const DEBUG_DRAW = {
   26: 'INTERNAL_BUFFER',
 };
 
-/**
- * scene/main/viewport.h:188-193. LINEAR_WITH_MIPMAPS is 2 and
- * NEAREST_WITH_MIPMAPS is 3, the opposite of the order the two names suggest.
- */
-const TEXTURE_FILTER = {
-  0: 'NEAREST',
-  1: 'LINEAR',
-  2: 'LINEAR_WITH_MIPMAPS',
-  3: 'NEAREST_WITH_MIPMAPS',
-  4: 'PARENT_NODE',
-};
+/** 4.7.2 adds PARENT_NODE after the four filters of viewport.h:188-193. */
+const TEXTURE_FILTER = { ...DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES, 4: 'PARENT_NODE' };
 
 validatorRegistry.registerAll('Viewport', {
   own_world_3d: v.boolean('own_world_3d'),
@@ -203,9 +195,15 @@ validatorRegistry.registerAll('Viewport', {
 
   // 4.7.2: viewport.cpp:4184 `ERR_FAIL_INDEX(p_repeat,
   // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:200-206).
-  canvas_item_default_texture_repeat: v.enumInt('canvas_item_default_texture_repeat', 0, 3, TEXTURE_REPEAT, {
-    enforced: 'viewport.cpp:4184',
-  }),
+  canvas_item_default_texture_repeat: v.enumInt(
+    'canvas_item_default_texture_repeat',
+    0,
+    3,
+    DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
+    {
+      enforced: 'viewport.cpp:4184',
+    }
+  ),
 
   // "Audio Listener" group, viewport.cpp:5193. Bare bool assign, same shape as
   // audio_listener_enable_2d above.

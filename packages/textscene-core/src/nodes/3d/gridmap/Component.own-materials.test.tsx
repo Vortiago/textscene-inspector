@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { act } from 'react';
 import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.testkit';
-import { GODOT_DEFAULT_ROUGHNESS } from '../../../r3f/materials/godotDefaultMaterial';
+import { DEFAULT_MATERIAL_ROUGHNESS } from '../../../godot/rendering/materials/defaultMaterial';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
 import { isInstancedMesh } from '../../../r3f/testing/threeNarrow';
 import {
@@ -44,7 +44,7 @@ describe('<GridMap> tile of two surfaces', () => {
     const [unset, blue] = (
       await renderInstancedTiles({ secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)' })
     ).map((batch) => drawnMaterials(batch)[0]!);
-    expect(unset!.roughness).toBeCloseTo(GODOT_DEFAULT_ROUGHNESS, 5);
+    expect(unset!.roughness).toBeCloseTo(DEFAULT_MATERIAL_ROUGHNESS, 5);
     expect(blue!.color.getHex()).toBe(0x0000ff);
   });
 });

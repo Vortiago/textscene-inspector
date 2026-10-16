@@ -10,7 +10,7 @@ import type { TscnInternalResource } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
-import { GODOT_DEFAULT_ROUGHNESS } from './godotDefaultMaterial';
+import { DEFAULT_MATERIAL_ROUGHNESS } from '../../godot/rendering/materials/defaultMaterial';
 import type { MaterialSource } from './materialSource';
 import { SurfaceMaterialSlots, surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
 
@@ -55,14 +55,14 @@ describe('<SurfaceMaterialSlots>', () => {
 
   it("draws Godot's default material for a surface with no source", async () => {
     const [unset, blue] = (await renderedMaterial([undefined, BLUE])) as THREE.MeshStandardMaterial[];
-    expect(unset!.roughness).toBeCloseTo(GODOT_DEFAULT_ROUGHNESS, 5);
+    expect(unset!.roughness).toBeCloseTo(DEFAULT_MATERIAL_ROUGHNESS, 5);
     expect(blue!.color.getHex()).toBe(0x0000ff);
   });
 
   it("draws Godot's default surface for a mesh that declares no surfaces", async () => {
     const material = await renderedMaterial([]);
     expect(Array.isArray(material)).toBe(false);
-    expect((material as THREE.MeshStandardMaterial).roughness).toBeCloseTo(GODOT_DEFAULT_ROUGHNESS, 5);
+    expect((material as THREE.MeshStandardMaterial).roughness).toBeCloseTo(DEFAULT_MATERIAL_ROUGHNESS, 5);
   });
 });
 

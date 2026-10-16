@@ -5,9 +5,10 @@
  * (`scene/main/canvas_item.cpp:1625-1699`). Only the Control walk reads it so far.
  */
 import { createContext, useContext, useMemo } from 'react';
+import { CanvasItemTextureFilter } from '../godot/scene/canvasItem';
 
-/** `TEXTURE_FILTER_PARENT_NODE` and `TEXTURE_REPEAT_PARENT_NODE`, both 0. */
-const CANVAS_ITEM_SAMPLER_INHERIT = 0;
+/** `TEXTURE_FILTER_PARENT_NODE`, which is `TEXTURE_REPEAT_PARENT_NODE` too: both are 0. */
+const CANVAS_ITEM_SAMPLER_INHERIT = CanvasItemTextureFilter.PARENT_NODE;
 
 export interface CanvasItemTextureSampler {
   /** Effective `texture_filter` ordinal, or `undefined` when no ancestor ever named one (viewport default). */

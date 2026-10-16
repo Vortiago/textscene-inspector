@@ -14,7 +14,7 @@ import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/mater
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import { DetailUV } from '../../../godot/rendering/materials/detailUv';
-import { EMISSION_OPERATOR_DEFAULT } from '../../../godot/scene/baseMaterial3D';
+import { BASE_MATERIAL_3D_DEFAULTS, EMISSION_OPERATOR_DEFAULT } from '../../../godot/scene/baseMaterial3D';
 import { clamp } from '../../../godot/math/math';
 import {
   hashAntialiasing,
@@ -23,12 +23,13 @@ import {
 } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { emissionScalars } from './emission';
 import { BlendMode } from '../../../godot/rendering/materials/blendMode';
+import { CullMode } from '../../../godot/rendering/materials/cullMode';
+import { DepthDrawMode } from '../../../godot/rendering/materials/depthDrawMode';
+import { ShadingMode } from '../../../godot/rendering/materials/shadingMode';
+import { Transparency } from '../../../godot/rendering/materials/transparency';
 import {
-  CullMode,
-  DepthDrawMode,
   HEIGHTMAP_DEFAULTS,
   TEXTURE_SLOTS,
-  Transparency,
   type Heightmap,
   type StandardMaterial3DData,
   type TextureSlot,
@@ -37,13 +38,6 @@ import {
 import type { Vector2 } from '../../../godot/math/vector';
 
 const CONTEXT = 'StandardMaterial3D';
-
-/**
- * `BaseMaterial3D::texture_filter` default, `TEXTURE_FILTER_LINEAR_WITH_MIPMAPS` (= 3).
- * Restated, not imported from `resources/textures/godotTextureFilter.ts`, which
- * value-imports `three`.
- */
-const TEXTURE_FILTER_DEFAULT = 3;
 
 const TRANSPARENCY_MODES = [
   Transparency.DISABLED,
@@ -139,7 +133,11 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
         DEPTH_DRAW_MODES,
         `${CONTEXT}.depth_draw_mode`
       );
-  const scissorThreshold = clamp(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT), 0, 1);
+  const scissorThreshold = clamp(
+    floatOr(properties['alpha_scissor_threshold'], BASE_MATERIAL_3D_DEFAULTS.alphaScissorThreshold, CONTEXT),
+    0,
+    1
+  );
   const alphaAntialiasing = decodeAlphaAntialiasing(properties, transparency, scissorThreshold);
   const alphaFlags = shaderAlphaFlags(
     properties,
@@ -156,7 +154,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   const { alphaPass, depthInAlphaPass } = membership;
   const castsShadow = drawsInShadowPass(membership);
 
-  const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
+  const normalScale = floatOr(properties['normal_scale'], BASE_MATERIAL_3D_DEFAULTS.normalScale, CONTEXT);
 
   // FEATURE_REFRACTION replaces the `ALPHA *= albedo.a * albedo_tex.a` line with
   // `ALPHA = 1.0` (`material.cpp:1832-1837`), so a refractive surface is fully opaque however
@@ -166,13 +164,13 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   return {
     albedo: albedoLinear ?? [1, 1, 1],
     alpha: readsAlbedoAlpha && albedo ? clamp(albedo.a, 0, 1) : 1,
-    metallic: clamp(floatOr(properties['metallic'], 0, CONTEXT), 0, 1),
-    roughness: clamp(floatOr(properties['roughness'], 1, CONTEXT), 0, 1),
+    metallic: clamp(floatOr(properties['metallic'], BASE_MATERIAL_3D_DEFAULTS.metallic, CONTEXT), 0, 1),
+    roughness: clamp(floatOr(properties['roughness'], BASE_MATERIAL_3D_DEFAULTS.roughness, CONTEXT), 0, 1),
     // `material.cpp:2160-2163`: the setter checks no range.
-    specular: floatOr(properties['metallic_specular'], 0.5, CONTEXT),
+    specular: floatOr(properties['metallic_specular'], BASE_MATERIAL_3D_DEFAULTS.specular, CONTEXT),
     emission,
     emissionOperator: intOr(properties['emission_operator'], EMISSION_OPERATOR_DEFAULT, CONTEXT),
-    textureFilter: intOr(properties['texture_filter'], TEXTURE_FILTER_DEFAULT, CONTEXT),
+    textureFilter: intOr(properties['texture_filter'], BASE_MATERIAL_3D_DEFAULTS.textureFilter, CONTEXT),
     textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
@@ -192,7 +190,11 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
         : 0,
     // `scene_forward_clustered.glsl:1398-1411`: the hash cuts the ALPHA the shader writes.
     alphaHash: transparency === Transparency.ALPHA_HASH && readsAlbedoAlpha,
-    alphaHashScale: floatOr(properties['alpha_hash_scale'], 1, CONTEXT),
+    alphaHashScale: floatOr(
+      properties['alpha_hash_scale'],
+      BASE_MATERIAL_3D_DEFAULTS.alphaHashScale,
+      CONTEXT
+    ),
     alphaAntialiasing,
     depthDrawMode,
     depthWrite: godotDepthWrite(alphaPass, depthDrawMode, depthTest),
@@ -205,13 +207,13 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     blendMode,
     cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),
     cullModeExplicit: properties['cull_mode'] !== undefined,
-    shadingMode: properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel',
+    shadingMode: properties['shading_mode'] === String(ShadingMode.UNSHADED) ? 'unshaded' : 'per_pixel',
     // `material.cpp:2462-2468`: the setter checks no range.
     diffuseMode: intOr(properties['diffuse_mode'], DiffuseMode.DIFFUSE_BURLEY, CONTEXT),
     specularMode: intOr(properties['specular_mode'], SpecularMode.SPECULAR_SCHLICK_GGX, CONTEXT),
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
     disablesSpecularOcclusion: boolOr(properties['disable_specular_occlusion'], false, CONTEXT),
-    aoLightAffect: floatOr(properties['ao_light_affect'], 0, CONTEXT),
+    aoLightAffect: floatOr(properties['ao_light_affect'], BASE_MATERIAL_3D_DEFAULTS.aoLightAffect, CONTEXT),
     aoTextureChannel: enumOr(
       properties['ao_texture_channel'],
       TextureChannel.TEXTURE_CHANNEL_RED,
@@ -221,21 +223,34 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     normalScale: { x: normalScale, y: normalScale },
     triplanar,
     heightmap: heightmapEnabled && !triplanar ? decodeHeightmap(properties) : null,
-    clearcoat: clearcoatEnabled ? clamp(floatOr(properties['clearcoat'], 1, CONTEXT), 0, 1) : 0,
-    clearcoatRoughness: clearcoatEnabled
-      ? clamp(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT), 0, 1)
+    clearcoat: clearcoatEnabled
+      ? clamp(floatOr(properties['clearcoat'], BASE_MATERIAL_3D_DEFAULTS.clearcoat, CONTEXT), 0, 1)
       : 0,
-    rim: rimEnabled ? clamp(floatOr(properties['rim'], 1, CONTEXT), 0, 1) : 0,
-    rimTint: rimEnabled ? clamp(floatOr(properties['rim_tint'], 0.5, CONTEXT), 0, 1) : 0,
+    clearcoatRoughness: clearcoatEnabled
+      ? clamp(
+          floatOr(properties['clearcoat_roughness'], BASE_MATERIAL_3D_DEFAULTS.clearcoatRoughness, CONTEXT),
+          0,
+          1
+        )
+      : 0,
+    rim: rimEnabled ? clamp(floatOr(properties['rim'], BASE_MATERIAL_3D_DEFAULTS.rim, CONTEXT), 0, 1) : 0,
+    rimTint: rimEnabled
+      ? clamp(floatOr(properties['rim_tint'], BASE_MATERIAL_3D_DEFAULTS.rimTint, CONTEXT), 0, 1)
+      : 0,
     billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
-    anisotropy: anisotropyEnabled ? clamp(floatOr(properties['anisotropy'], 0, CONTEXT), -1, 1) : 0,
+    anisotropy: anisotropyEnabled
+      ? clamp(floatOr(properties['anisotropy'], BASE_MATERIAL_3D_DEFAULTS.anisotropy, CONTEXT), -1, 1)
+      : 0,
     // Godot refraction is a screen-space distortion; three models the same
     // "see the background through this surface" effect volumetrically, so
     // `refraction_scale` drives `thickness` and cannot go negative there.
     transmission: refractionEnabled ? 1 : 0,
     refractionThickness: refractionEnabled
-      ? Math.max(0, floatOr(properties['refraction_scale'], 0.05, CONTEXT))
+      ? Math.max(
+          0,
+          floatOr(properties['refraction_scale'], BASE_MATERIAL_3D_DEFAULTS.refractionScale, CONTEXT)
+        )
       : 0,
     textureSlots: decodeTextureSlots(properties),
   };

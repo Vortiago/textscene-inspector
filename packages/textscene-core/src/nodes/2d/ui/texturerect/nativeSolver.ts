@@ -15,6 +15,7 @@ import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegist
 import type { TextureRectProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
+import { CanvasItemTextureRepeat } from '../../../../godot/scene/canvasItem';
 
 const EXPAND_KEEP_SIZE = 0;
 const EXPAND_IGNORE_SIZE = 1;
@@ -163,37 +164,6 @@ export function textureRectDraw(
   }
 }
 
-const TEXTURE_FILTER_NEAREST = 1;
-const TEXTURE_FILTER_LINEAR = 2;
-const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS = 3;
-const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS = 4;
-const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5;
-const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC = 6;
-
-type TextureRectFilter = 'nearest' | 'linear';
-
-/**
- * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`), already resolved up the ancestors,
- * to a three.js filter. `undefined` maps to LINEAR, the `Viewport::default_canvas_item_texture_filter`
- * default (`scene/main/viewport.h:419`). Mipmapped and anisotropic variants collapse to the base filter.
- */
-export function resolveTextureRectFilter(filter: number | undefined): TextureRectFilter {
-  switch (filter) {
-    case TEXTURE_FILTER_NEAREST:
-    case TEXTURE_FILTER_NEAREST_WITH_MIPMAPS:
-    case TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC:
-      return 'nearest';
-    case TEXTURE_FILTER_LINEAR:
-    case TEXTURE_FILTER_LINEAR_WITH_MIPMAPS:
-    case TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC:
-    default:
-      return 'linear';
-  }
-}
-
-const TEXTURE_REPEAT_ENABLED = 2;
-const TEXTURE_REPEAT_MIRROR = 3;
-
 type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
 
 /**
@@ -203,9 +173,9 @@ type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
  */
 export function resolveTextureRectRepeat(repeat: number | undefined): TextureRectRepeat {
   switch (repeat) {
-    case TEXTURE_REPEAT_ENABLED:
+    case CanvasItemTextureRepeat.ENABLED:
       return 'repeat';
-    case TEXTURE_REPEAT_MIRROR:
+    case CanvasItemTextureRepeat.MIRROR:
       return 'mirror';
     default:
       return 'clamp';
