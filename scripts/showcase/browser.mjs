@@ -15,7 +15,7 @@ export const SWIFTSHADER_GL_ARGS = [
   '--use-gl=angle',
 ];
 
-const SWIFTSHADER_BACKEND_ARG = '--use-angle=swiftshader';
+const GPU_COMPOSITED_ARGS = [...SWIFTSHADER_GL_ARGS, '--use-angle=swiftshader'];
 
 export function launchShowcaseBrowser() {
   return launchWithArgs(SWIFTSHADER_GL_ARGS);
@@ -28,7 +28,7 @@ export function launchShowcaseBrowser() {
  * SwiftShader backend also rasterises differently, so a golden never uses this launch.
  */
 export function launchGpuCompositedBrowser() {
-  return launchWithArgs([...SWIFTSHADER_GL_ARGS, SWIFTSHADER_BACKEND_ARG]);
+  return launchWithArgs(GPU_COMPOSITED_ARGS);
 }
 
 /**
@@ -38,7 +38,7 @@ export function launchGpuCompositedBrowser() {
  * this launch, since its baselines carry that ring.
  */
 export function launchGodotComparisonBrowser() {
-  return chromium.launch({ headless: true, args: [...SWIFTSHADER_GL_ARGS, SWIFTSHADER_BACKEND_ARG] });
+  return chromium.launch({ headless: true, args: GPU_COMPOSITED_ARGS });
 }
 
 function launchWithArgs(args) {
