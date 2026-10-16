@@ -98,6 +98,15 @@ export const TEXTURE_WORK_STATUS_TESTID = 'texture-work-status';
 export const TEXTURE_WORK_WAIT_MS = 120000;
 
 /**
+ * The shell's "Loading resources…" status (`TscnPreviewShell/resourceLoadStatusTestId.ts`).
+ * It is attached while the loader waits on a resource. The work budget check waits for it to
+ * detach, because a scene still loading draws the same work frame after frame and reads as steady.
+ */
+export const RESOURCE_LOAD_STATUS_TESTID = 'resource-load-status';
+// Ceiling for that wait: the largest budget demo loads in tens of seconds under software GL.
+export const RESOURCE_LOAD_WAIT_MS = 180000;
+
+/**
  * The settle contract: the instant on the scene's simulated clock, in seconds, at which both
  * harnesses open the shutter (`scripts/godot-ref/run.mjs` reads it too). The previewer runs no
  * simulated clock (ADR-0011, ADR-0012), so only its load instant exists, and Godot matches it by

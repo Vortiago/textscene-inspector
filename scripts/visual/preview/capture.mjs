@@ -5,6 +5,8 @@
 
 import {
   NETWORK_IDLE_MS,
+  RESOURCE_LOAD_STATUS_TESTID,
+  RESOURCE_LOAD_WAIT_MS,
   SETTLE_INITIAL_MS,
   SETTLE_INTERVAL_MS,
   SETTLE_MAX_ATTEMPTS,
@@ -140,14 +142,34 @@ export async function settleCanvas(
  * True once the texture work status is detached; false when it outlives
  * `TEXTURE_WORK_WAIT_MS`. `status` is its locator, in the page or in a webview frame.
  */
-export async function textureWorkCleared(status) {
+export function textureWorkCleared(status) {
+  return isDetached(status, TEXTURE_WORK_WAIT_MS, 'the texture work status');
+}
+
+/**
+ * No reason once the scene's resources have landed and its texture work has ended, else the
+ * reason it is still loading. Only then does a frame do the scene's settled work.
+ */
+export async function sceneLoaded(page) {
+  const resources = page.getByTestId(RESOURCE_LOAD_STATUS_TESTID);
+  if (!(await isDetached(resources, RESOURCE_LOAD_WAIT_MS, 'the resource load status'))) {
+    return `resources still loading after ${RESOURCE_LOAD_WAIT_MS}ms`;
+  }
+  if (!(await textureWorkCleared(page.getByTestId(TEXTURE_WORK_STATUS_TESTID)))) {
+    return `texture work still pending after ${TEXTURE_WORK_WAIT_MS}ms`;
+  }
+  return null;
+}
+
+/** True once `status` is detached; false when it outlives `timeoutMs`. */
+async function isDetached(status, timeoutMs, name) {
   try {
-    await status.waitFor({ state: 'detached', timeout: TEXTURE_WORK_WAIT_MS });
+    await status.waitFor({ state: 'detached', timeout: timeoutMs });
     return true;
   } catch (error) {
     // Playwright's timeout is the answer here. A closed page or a crashed tab is not.
     if (error?.name === 'TimeoutError') return false;
-    throw new Error(`waiting for the texture work status to detach: ${error}`, { cause: error });
+    throw new Error(`waiting for ${name} to detach: ${error}`, { cause: error });
   }
 }
 

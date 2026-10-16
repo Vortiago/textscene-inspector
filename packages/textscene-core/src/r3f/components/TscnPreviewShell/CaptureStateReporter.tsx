@@ -5,8 +5,8 @@
  * scene and the scene's resources and textures have landed, so a capture shows it whole.
  */
 
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
-import { useResourceLoader } from '../../../resources/useResource.js';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { usePendingResourceCount } from '../../../resources/usePendingResourceCount.js';
 import { usePendingTextureWork } from '../../../resources/usePendingTextureWork.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
@@ -15,16 +15,6 @@ import { PENDING_CAPTURE, previewCaptureStateOf, type PreviewCaptureState } from
 const NO_SUBSCRIPTION = () => () => {};
 const NO_HANDLER = () => false;
 const NO_SCENE = () => null;
-
-/** How many resources the shell's loader still waits for, or zero outside a loader. */
-function usePendingResourceCount(): number {
-  const loader = useResourceLoader();
-  const subscribe = useCallback(
-    (listener: () => void) => (loader ? loader.subscribePending(listener) : () => {}),
-    [loader]
-  );
-  return useSyncExternalStore(subscribe, () => loader?.pendingResourceCount ?? 0);
-}
 
 /**
  * Whether a frame now would show the current scene whole: the shell has a scene, the canvas has

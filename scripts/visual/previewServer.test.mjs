@@ -15,6 +15,8 @@ import {
   CANVAS_2D_CHROME,
   canvas2DViewportFor,
   isUniformImage,
+  RESOURCE_LOAD_STATUS_TESTID,
+  sceneLoaded,
   settleCanvas,
   startPreview,
   writeCaptureImage,
@@ -193,6 +195,47 @@ describe('settleCanvas', () => {
   });
 });
 
+/** A page whose statuses are the given locators, keyed by test id, and that records each id asked. */
+function stubStatusPage(statuses) {
+  const asked = [];
+  const page = {
+    getByTestId: (id) => {
+      asked.push(id);
+      return statuses[id] ?? NO_TEXTURE_WORK;
+    },
+  };
+  return { page, asked };
+}
+
+describe('sceneLoaded', () => {
+  function timedOut() {
+    const error = new Error('Timeout exceeded');
+    error.name = 'TimeoutError';
+    return { waitFor: async () => Promise.reject(error), count: async () => 1 };
+  }
+
+  it('answers no reason once neither status is on the page', async () => {
+    const { page } = stubStatusPage({});
+    expect(await sceneLoaded(page)).toBeNull();
+  });
+
+  it('waits for the resource load status as well as the texture work status', async () => {
+    const { page, asked } = stubStatusPage({});
+    await sceneLoaded(page);
+    expect(new Set(asked)).toEqual(new Set([RESOURCE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID]));
+  });
+
+  it('names resources still loading once the wait runs out (error case)', async () => {
+    const { page } = stubStatusPage({ [RESOURCE_LOAD_STATUS_TESTID]: timedOut() });
+    expect(await sceneLoaded(page)).toMatch(/resources still loading/);
+  });
+
+  it('names texture work still pending once its resources have landed (edge case)', async () => {
+    const { page } = stubStatusPage({ [TEXTURE_WORK_STATUS_TESTID]: timedOut() });
+    expect(await sceneLoaded(page)).toMatch(/texture work still pending/);
+  });
+});
+
 /**
  * One settle number for both harnesses. With a second copy each side would stay deterministic
  * while capturing a different moment, and every later comparison would fail to notice.
@@ -202,6 +245,14 @@ describe('the texture work status id is shared, not duplicated', () => {
     const { TEXTURE_WORK_STATUS_TESTID: shellId } =
       await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/textureWorkStatusTestId.ts');
     expect(TEXTURE_WORK_STATUS_TESTID).toBe(shellId);
+  });
+});
+
+describe('the resource load status id is shared, not duplicated', () => {
+  it('matches the id the shell renders', async () => {
+    const { RESOURCE_LOAD_STATUS_TESTID: shellId } =
+      await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/resourceLoadStatusTestId.ts');
+    expect(RESOURCE_LOAD_STATUS_TESTID).toBe(shellId);
   });
 });
 
