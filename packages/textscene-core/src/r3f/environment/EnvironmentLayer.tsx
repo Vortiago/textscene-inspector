@@ -13,6 +13,7 @@ import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
 import { useDraws3D } from './useCompositorPass';
 import { useWorldKind } from './WorldKindContext';
+import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
@@ -42,8 +43,9 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   // world's curve would replace the root's, and a portal store shares the root's internal state, so
   // its compositor would draw the portal scene onto the canvas, not into the target.
   const tonesCanvas = useWorldKind() === 'root';
+  const { showFog } = useViewportMode();
   // One value decides the fog programs, the fogged colour background and the fog passes.
-  const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
+  const hasFog = draws3D && showFog && (!!settings.fog || !!settings.volumetricFog);
   useColorBackground(settings, !!sky, hasFog);
 
   return (
