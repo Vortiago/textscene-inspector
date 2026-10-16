@@ -6,9 +6,11 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { TiledUploadQueue, type UploadRenderer } from './TiledUploadQueue';
+import { mipChain, type MipLevel } from '../../resources/processing/mipChain';
 
 interface Copy {
   destination: THREE.Texture;
+  level: number;
   fromRow: number;
   toRow: number;
 }
@@ -24,9 +26,9 @@ function fakeRenderer(msPerCopy = 1) {
     initTexture: (texture) => {
       allocations.push({ texture, dataReady: texture.source.dataReady });
     },
-    writeRows: (texture, fromRow, toRow) => {
-      copies.push({ destination: texture, fromRow, toRow });
-      calls.push(`rows ${fromRow}-${toRow}`);
+    writeRows: (texture, { level, fromRow, toRow }) => {
+      copies.push({ destination: texture, level, fromRow, toRow });
+      calls.push(level === 0 ? `rows ${fromRow}-${toRow}` : `level ${level} rows ${fromRow}-${toRow}`);
       clock += msPerCopy;
     },
     generateMipmaps: () => {
@@ -50,6 +52,13 @@ function fakePacer(bands: number) {
     },
   };
   return pacer;
+}
+
+/** `texture` with the levels a CPU-built chain gives it, `mipmaps[0]` its own bytes. */
+function withUploadedChain(texture: THREE.DataTexture): THREE.DataTexture {
+  texture.mipmaps = mipChain(texture.image as MipLevel, false) as unknown as THREE.DataTexture['mipmaps'];
+  texture.generateMipmaps = false;
+  return texture;
 }
 
 function dataTexture(width: number, height: number): THREE.DataTexture {
@@ -172,6 +181,39 @@ describe('TiledUploadQueue', () => {
     await upload.done;
 
     expect(calls).toEqual(['rows 0-128', 'rows 128-256', 'rows 256-300', 'mipmaps']);
+  });
+
+  it('writes each level of a chain built on the CPU after the base, in bands of its own width', async () => {
+    const { renderer, calls, now } = fakeRenderer();
+    const texture = withUploadedChain(dataTexture(4096, 600));
+    const queue = new TiledUploadQueue(renderer, now);
+    const upload = queue.enqueue(texture);
+    queue.tick(1000);
+    await upload.done;
+
+    expect(calls.slice(4, 7)).toEqual(['rows 512-600', 'level 1 rows 0-256', 'level 1 rows 256-300']);
+  });
+
+  it('writes every level of a CPU-built chain down to 1 × 1', async () => {
+    const { renderer, copies, now } = fakeRenderer();
+    const texture = withUploadedChain(dataTexture(4096, 600));
+    const queue = new TiledUploadQueue(renderer, now);
+    const upload = queue.enqueue(texture);
+    queue.tick(1000);
+    await upload.done;
+
+    expect(new Set(copies.map(({ level }) => level)).size).toBe(13);
+  });
+
+  it('asks the GPU for no chain over a CPU-built one', async () => {
+    const { renderer, calls, now } = fakeRenderer();
+    const texture = withUploadedChain(dataTexture(4096, 600));
+    const queue = new TiledUploadQueue(renderer, now);
+    const upload = queue.enqueue(texture);
+    queue.tick(1000);
+    await upload.done;
+
+    expect(calls).not.toContain('mipmaps');
   });
 
   it('generates no mipmaps for a texture that wants none', async () => {

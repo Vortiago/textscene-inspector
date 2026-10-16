@@ -113,9 +113,6 @@ export function useMaterialTextures(
     textureStates,
     'normal_texture'
   );
-  // PARITY LIMITATION (metallic/roughness texture channel): Godot reads the
-  // channel named by `metallic_texture_channel` / `roughness_texture_channel`
-  // (default RED); three's metalnessMap/roughnessMap read BLUE / GREEN.
   const roughnessMap = useTransformedTexture(
     slotTextures.roughness_texture.texture,
     textureStates,

@@ -49,7 +49,7 @@ describe('webglUploadRenderer', () => {
   it("writes only the band's own rows, at their place in the level", () => {
     const { renderer, gl } = fakeThreeRenderer();
     const texture = dataTexture(8, 6);
-    webglUploadRenderer(renderer).writeRows(texture, 2, 5);
+    webglUploadRenderer(renderer).writeRows(texture, { level: 0, fromRow: 2, toRow: 5 });
 
     const [target, level, x, y, width, rows, format, type, pixels] = gl.texSubImage2D.mock.calls[0]!;
     expect([target, level, x, y, width, rows, format, type]).toEqual([
@@ -71,7 +71,7 @@ describe('webglUploadRenderer', () => {
     const { renderer, gl } = fakeThreeRenderer();
     const texture = dataTexture(8, 6);
     texture.flipY = true;
-    webglUploadRenderer(renderer).writeRows(texture, 1, 3);
+    webglUploadRenderer(renderer).writeRows(texture, { level: 0, fromRow: 1, toRow: 3 });
 
     const [, , , y, , rows, , , pixels] = gl.texSubImage2D.mock.calls[0]!;
     expect([y, rows]).toEqual([3, 2]);
@@ -79,9 +79,21 @@ describe('webglUploadRenderer', () => {
     expect(pixels).toEqual(data.subarray(1 * 8 * 4, 3 * 8 * 4));
   });
 
+  it("writes a mip level's rows from that level's own bytes, at their place in it", () => {
+    const { renderer, gl } = fakeThreeRenderer();
+    const texture = dataTexture(8, 6);
+    const level1 = { data: new Uint8Array(4 * 3 * 4).fill(7), width: 4, height: 3 };
+    texture.mipmaps = [texture.image, level1] as unknown as THREE.DataTexture['mipmaps'];
+    texture.flipY = true;
+    webglUploadRenderer(renderer).writeRows(texture, { level: 1, fromRow: 0, toRow: 1 });
+
+    const [, level, , y, width, rows, , , pixels] = gl.texSubImage2D.mock.calls[0]!;
+    expect([level, y, width, rows, pixels]).toEqual([1, 2, 4, 1, level1.data.subarray(0, 4 * 4)]);
+  });
+
   it('writes into the storage three allocated for the texture, on unit 0', () => {
     const { renderer, state, handle } = fakeThreeRenderer();
-    webglUploadRenderer(renderer).writeRows(dataTexture(8, 6), 0, 1);
+    webglUploadRenderer(renderer).writeRows(dataTexture(8, 6), { level: 0, fromRow: 0, toRow: 1 });
 
     expect(state.bindTexture).toHaveBeenCalledWith(GL.TEXTURE_2D, handle, GL.TEXTURE0);
   });
@@ -92,7 +104,7 @@ describe('webglUploadRenderer', () => {
     texture.flipY = true;
     texture.premultiplyAlpha = true;
     texture.unpackAlignment = 1;
-    webglUploadRenderer(renderer).writeRows(texture, 0, 1);
+    webglUploadRenderer(renderer).writeRows(texture, { level: 0, fromRow: 0, toRow: 1 });
 
     expect(new Map(state.pixelStorei.mock.calls as unknown as [number, unknown][])).toEqual(
       new Map<number, unknown>([
@@ -112,7 +124,7 @@ describe('webglUploadRenderer', () => {
     const { renderer, gl } = fakeThreeRenderer();
     const upload = webglUploadRenderer(renderer);
     const texture = dataTexture(8, 6);
-    upload.writeRows(texture, 0, 6);
+    upload.writeRows(texture, { level: 0, fromRow: 0, toRow: 6 });
     upload.generateMipmaps(texture);
 
     expect(gl.getParameter).not.toHaveBeenCalled();

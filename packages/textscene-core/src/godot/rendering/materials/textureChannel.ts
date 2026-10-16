@@ -41,3 +41,6 @@ const MASKS: Readonly<Record<TextureChannel, TextureChannelMask>> = {
 export function textureChannelMask(channel: TextureChannel): TextureChannelMask {
   return MASKS[channel];
 }
+
+/** The mask of red, every `*_texture_channel` default (`material.cpp:3985-3988`). */
+export const DEFAULT_TEXTURE_CHANNEL_MASK = MASKS[TextureChannel.TEXTURE_CHANNEL_RED];

@@ -235,7 +235,62 @@ describe('applyTextureState', () => {
       return texture;
     }
 
-    it('clones an import without mipmaps onto a mip chain and the mipmap filter', () => {
+    /** A 2 × 1 red and blue strip with no chain, its texels readable. */
+    function readableWithoutMipChain(): THREE.DataTexture {
+      const texture = new THREE.DataTexture(new Uint8Array([255, 0, 0, 255, 0, 0, 255, 255]), 2, 1);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      dropMipChain(texture);
+      return texture;
+    }
+
+    it('averages the bytes of each level, as the decal atlas blits them', () => {
+      const result = applyTextureState(readableWithoutMipChain(), state({ buildsMipChain: true }));
+
+      expect(Array.from((result.mipmaps[1] as { data: Uint8Array }).data)).toEqual([128, 0, 128, 255]);
+    });
+
+    it('uploads the byte-space chain and asks the GPU for none', () => {
+      const result = applyTextureState(readableWithoutMipChain(), state({ buildsMipChain: true }));
+
+      expect(result.generateMipmaps).toBe(false);
+      expect(result.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    });
+
+    it('builds the chain of a source once, however many bindings rebuild it', () => {
+      const texture = readableWithoutMipChain();
+      const first = applyTextureState(texture, state({ buildsMipChain: true }));
+      const second = applyTextureState(texture, state({ buildsMipChain: true }));
+
+      expect(second.mipmaps[1]).toBe(first.mipmaps[1]);
+    });
+
+    it('builds the chain again once the source bytes change (edge case)', () => {
+      const texture = readableWithoutMipChain();
+      const before = applyTextureState(texture, state({ buildsMipChain: true }));
+      texture.needsUpdate = true;
+      const after = applyTextureState(texture, state({ buildsMipChain: true }));
+
+      expect(after.mipmaps[1]).not.toBe(before.mipmaps[1]);
+    });
+
+    it('carries the source user data and UV transform onto the rebuilt chain, as a clone does', () => {
+      const texture = readableWithoutMipChain();
+      texture.userData.recorded = 'RGBA8';
+      texture.offset.set(0.25, 0.5);
+      const result = applyTextureState(texture, state({ buildsMipChain: true }));
+
+      expect([result.userData.recorded, result.offset.toArray()]).toEqual(['RGBA8', [0.25, 0.5]]);
+    });
+
+    it('leaves the shared texture without a chain', () => {
+      const texture = readableWithoutMipChain();
+      applyTextureState(texture, state({ buildsMipChain: true }));
+
+      expect(texture.mipmaps).toEqual([]);
+    });
+
+    it('asks the GPU for the chain of an image whose pixels cannot be read (edge case)', () => {
       const texture = withoutMipChain();
       const result = applyTextureState(texture, state({ buildsMipChain: true }));
 
@@ -245,8 +300,25 @@ describe('applyTextureState', () => {
       expect(texture.generateMipmaps).toBe(false);
     });
 
+    it('asks the GPU for the chain of a float texture, which has no bytes to halve (edge case)', () => {
+      const texture = new THREE.DataTexture(new Float32Array(8), 2, 1, THREE.RGBAFormat, THREE.FloatType);
+      dropMipChain(texture);
+
+      expect(applyTextureState(texture, state({ buildsMipChain: true })).generateMipmaps).toBe(true);
+    });
+
     it('shares a texture that already has a mip chain', () => {
       const texture = tiling();
+      expect(applyTextureState(texture, state({ buildsMipChain: true }))).toBe(texture);
+    });
+
+    it('shares a texture whose import built its chain in byte space, as the atlas blits it', () => {
+      const texture = tiling();
+      texture.generateMipmaps = false;
+      texture.mipmaps = [
+        { width: 2, height: 2 },
+        { width: 1, height: 1 },
+      ] as unknown as THREE.Texture['mipmaps'];
       expect(applyTextureState(texture, state({ buildsMipChain: true }))).toBe(texture);
     });
 

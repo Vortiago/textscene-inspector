@@ -72,6 +72,7 @@ describe('one loader texture, two consumers', () => {
     const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png', {
       source: 'RGBA8',
       options: DEFAULT_TEXTURE_IMPORT,
+      roughnessNormal: null,
     });
     // Set after the decode so the alpha-border pass has no pixels to read.
     (entry as unknown as { image: { width: number; height: number } }).image = {

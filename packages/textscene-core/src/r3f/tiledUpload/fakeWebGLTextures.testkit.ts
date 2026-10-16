@@ -60,9 +60,11 @@ export function fakeWebGLTextures(): {
       storage.usedTimes += 1;
       bound.set(texture, storage);
     },
-    writeRows: (texture, fromRow, toRow) => {
+    writeRows: (texture, { level, fromRow, toRow }) => {
       const storage = bound.get(texture);
       if (!storage) throw new Error(`rows written into a texture with no storage: ${texture.uuid}`);
+      // The rows it counts are the base level's, the rows a consumer sees drawn.
+      if (level > 0) return;
       for (let row = fromRow; row < toRow; row += 1) {
         storage.writesPerRow[row] = (storage.writesPerRow[row] ?? 0) + 1;
       }

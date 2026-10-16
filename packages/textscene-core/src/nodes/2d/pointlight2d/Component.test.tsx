@@ -190,6 +190,7 @@ describe('PointLight2D Component', () => {
     const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png', {
       source: 'RGBA8',
       options: DEFAULT_TEXTURE_IMPORT,
+      roughnessNormal: null,
     });
     const cookie = lightMaterial(await render(node(), entry)).uniforms.uCookie!.value as THREE.Texture;
     expect(cookie.wrapS).toBe(THREE.ClampToEdgeWrapping);
@@ -226,6 +227,7 @@ describe('PointLight2D Component', () => {
     const entry = await createTextureFromBuffer(new ArrayBuffer(8), 'image/png', {
       source: 'RGBA8',
       options: DEFAULT_TEXTURE_IMPORT,
+      roughnessNormal: null,
     });
     let disposed = false;
     entry.addEventListener('dispose', () => {

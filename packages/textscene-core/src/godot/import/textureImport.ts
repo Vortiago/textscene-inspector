@@ -3,7 +3,7 @@
  * change an image file's texture, and the format the texture holds after import.
  */
 
-import type { ImageSourceFormat } from './imageSourceFormat.js';
+import { storesAlpha, type ImageSourceFormat } from './imageSourceFormat.js';
 
 /** The importer a sidecar names for a 2D texture (`resource_importer_texture.cpp:164-166`). */
 export const TEXTURE_IMPORTER = 'texture';
@@ -30,6 +30,38 @@ export enum TextureNormalMapMode {
   Disabled = 2,
 }
 
+/** `Image::RoughnessChannel` (`core/io/image.h:153-159`): the channel the roughness limiter raises. */
+export enum RoughnessChannel {
+  R = 0,
+  G = 1,
+  B = 2,
+  A = 3,
+  /** The grey of red, green and blue. */
+  L = 4,
+}
+
+/** `roughness/mode` from Red on, as `Image::RoughnessChannel` (`resource_importer_texture.cpp:247`, `:783`). */
+const ROUGHNESS_MODE_FIRST_CHANNEL = 2;
+
+/**
+ * The roughness limiter a `roughness/mode` and `roughness/src_normal` ask for, or null for Detect,
+ * Disabled, a mode outside the enum or no normal map (`resource_importer_texture.cpp:777-786`).
+ */
+export function roughnessLimitOption(
+  mode: number | undefined,
+  normalPath: string | undefined
+): RoughnessLimitOption | null {
+  if (mode === undefined || !normalPath) return null;
+  const channel = mode - ROUGHNESS_MODE_FIRST_CHANNEL;
+  return channel >= RoughnessChannel.R && channel <= RoughnessChannel.L ? { channel, normalPath } : null;
+}
+
+/** The roughness channel the limiter raises, and the path of the normal map it reads. */
+export interface RoughnessLimitOption {
+  channel: RoughnessChannel;
+  normalPath: string;
+}
+
 /** The sidecar parameters that change what the imported texture samples (`:234-262`). */
 export interface TextureImportOptions {
   mode: TextureCompressMode;
@@ -47,6 +79,8 @@ export interface TextureImportOptions {
   invertNormalY: boolean;
   /** `svg/scale`: the rasterisation scale of an SVG source. */
   svgScale: number;
+  /** `roughness/mode` and `roughness/src_normal`: the limiter on the mip chain, or null for none. */
+  roughnessLimit: RoughnessLimitOption | null;
 }
 
 /**
@@ -63,6 +97,7 @@ export const DEFAULT_TEXTURE_IMPORT: TextureImportOptions = {
   premultAlpha: false,
   invertNormalY: false,
   svgScale: 1,
+  roughnessLimit: null,
 };
 
 /**
@@ -107,8 +142,7 @@ export function holdsRedGreenOnly({ mode, highQuality, normalMap }: TextureImpor
  * sRGB-friendly channel pack turns red-only and red-green into RGB (`core/io/image.cpp:3800-3802`).
  */
 function s3tcFormat(source: ImageSourceFormat, isTranslucent: () => boolean): string {
-  const hasAlphaChannel = source === 'LumAlpha8' || source === 'RGBA8';
-  return hasAlphaChannel && isTranslucent() ? 'DXT5 RGBA8' : 'DXT1 RGB8';
+  return storesAlpha(source) && isTranslucent() ? 'DXT5 RGBA8' : 'DXT1 RGB8';
 }
 
 /** `Image::detect_used_channels` counts a texel with alpha below this as using alpha (`core/io/image.cpp:3760`). */
