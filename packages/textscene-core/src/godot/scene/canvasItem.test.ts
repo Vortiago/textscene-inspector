@@ -8,6 +8,7 @@ import {
   CanvasItemTextureFilter,
   CanvasItemTextureRepeat,
   canvasItemSamplerFilter,
+  canvasItemSamplerRepeat,
 } from './canvasItem';
 
 describe('CanvasItem texture filter', () => {
@@ -59,5 +60,21 @@ describe('CanvasItem clip children mode', () => {
 
   it('counts the modes as CLIP_CHILDREN_MAX does, one past AND_DRAW (edge case)', () => {
     expect(CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT).toBe(CanvasItemClipChildrenMode.AND_DRAW + 1);
+  });
+});
+
+describe('canvasItemSamplerRepeat (canvas_item.h:63-69)', () => {
+  it('maps ENABLED to repeat and MIRROR to mirror', () => {
+    expect(canvasItemSamplerRepeat(CanvasItemTextureRepeat.ENABLED)).toBe('repeat');
+    expect(canvasItemSamplerRepeat(CanvasItemTextureRepeat.MIRROR)).toBe('mirror');
+  });
+
+  it('maps DISABLED to clamp', () => {
+    expect(canvasItemSamplerRepeat(CanvasItemTextureRepeat.DISABLED)).toBe('clamp');
+  });
+
+  it('clamps where the repeat defers to a parent or is absent (edge case, canvas_item.h:122)', () => {
+    expect(canvasItemSamplerRepeat(CanvasItemTextureRepeat.PARENT_NODE)).toBe('clamp');
+    expect(canvasItemSamplerRepeat(undefined)).toBe('clamp');
   });
 });

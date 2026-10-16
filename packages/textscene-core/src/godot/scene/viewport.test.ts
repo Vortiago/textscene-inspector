@@ -31,7 +31,7 @@ describe('viewportPositionalShadowAtlas', () => {
 });
 
 describe('Viewport.DefaultCanvasItemTextureFilter', () => {
-  it('lists LINEAR_WITH_MIPMAPS before NEAREST_WITH_MIPMAPS (viewport.h:188-193)', () => {
+  it('lists LINEAR_WITH_MIPMAPS before NEAREST_WITH_MIPMAPS (4.6.3 viewport.h:188-193)', () => {
     expect(DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES).toEqual({
       0: 'NEAREST',
       1: 'LINEAR',
@@ -47,7 +47,7 @@ describe('Viewport.DefaultCanvasItemTextureFilter', () => {
 });
 
 describe('Viewport.DefaultCanvasItemTextureRepeat', () => {
-  it('puts PARENT_NODE last, unlike CanvasItem.TextureRepeat (viewport.h:195-206)', () => {
+  it('puts PARENT_NODE last, unlike CanvasItem.TextureRepeat (4.7.2 viewport.h:201-206)', () => {
     expect(DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES).toEqual({
       0: 'DISABLED',
       1: 'ENABLED',

@@ -10,11 +10,23 @@ import {
   CanvasItemTextureFilter,
   CanvasItemTextureRepeat,
   canvasItemSamplerFilter,
+  canvasItemSamplerRepeat,
 } from '../godot/scene/canvasItem';
 
 /** The three.js filter a CanvasItem's effective `texture_filter` samples with. */
 export function canvasItemThreeFilter(filter: number | undefined): THREE.MagnificationTextureFilter {
   return canvasItemSamplerFilter(filter) === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
+}
+
+const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
+  clamp: THREE.ClampToEdgeWrapping,
+  repeat: THREE.RepeatWrapping,
+  mirror: THREE.MirroredRepeatWrapping,
+};
+
+/** The three.js wrap mode a CanvasItem's effective `texture_repeat` samples with. */
+export function canvasItemThreeWrap(repeat: number | undefined): THREE.Wrapping {
+  return WRAP[canvasItemSamplerRepeat(repeat)];
 }
 
 export interface CanvasItemTextureSampler {

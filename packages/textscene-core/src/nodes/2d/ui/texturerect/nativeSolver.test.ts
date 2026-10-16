@@ -15,7 +15,7 @@ import { createSolveContext, solveControlTree } from '../../../../r3f/controls/n
 // below runs the real second pass.
 import '../../../../r3f/controls/index';
 import type { TextureRectProperties } from './types';
-import { textureRectMinimumSize, textureRectDraw, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
+import { textureRectMinimumSize, textureRectDraw, applyFlip } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const TEXTURE = { x: 320, y: 160 };
@@ -287,25 +287,6 @@ describe('textureRectDraw (texture_rect.cpp:33-100, NOTIFICATION_DRAW)', () => {
     const draw = textureRectDraw(RECT, { x: 0, y: 160 }, 4);
     expect(Number.isFinite(draw.size.x)).toBe(true);
     expect(Number.isFinite(draw.size.y)).toBe(true);
-  });
-});
-
-describe('resolveTextureRectRepeat (scene/main/canvas_item.h:63-69)', () => {
-  it('maps TEXTURE_REPEAT_ENABLED (2) to repeat', () => {
-    expect(resolveTextureRectRepeat(2)).toBe('repeat');
-  });
-
-  it('maps TEXTURE_REPEAT_MIRROR (3) to mirror', () => {
-    expect(resolveTextureRectRepeat(3)).toBe('mirror');
-  });
-
-  it('maps TEXTURE_REPEAT_DISABLED (1) to clamp', () => {
-    expect(resolveTextureRectRepeat(1)).toBe('clamp');
-  });
-
-  it('TEXTURE_REPEAT_PARENT_NODE (0) and an absent value resolve to the CanvasItem root default, clamp/disabled (canvas_item.h:122)', () => {
-    expect(resolveTextureRectRepeat(0)).toBe('clamp');
-    expect(resolveTextureRectRepeat(undefined)).toBe('clamp');
   });
 });
 

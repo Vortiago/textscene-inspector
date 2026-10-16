@@ -109,7 +109,7 @@ validatorRegistry.registerAll('Viewport', {
     enforced: 'viewport.cpp:3763',
   }),
   // 4.7.2: viewport.cpp:4101 `ERR_FAIL_INDEX(p_filter,
-  // DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 5 (viewport.h:191-198).
+  // DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 5 (viewport.h:192-198).
   // 4.6.3 stops one lower, without PARENT_NODE.
   canvas_item_default_texture_filter: v.enumInt(
     'canvas_item_default_texture_filter',
@@ -199,7 +199,7 @@ validatorRegistry.registerAll('Viewport', {
   vrs_texture: v.resourceReference('vrs_texture'),
 
   // 4.7.2: viewport.cpp:4184 `ERR_FAIL_INDEX(p_repeat,
-  // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:200-206).
+  // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:201-206).
   canvas_item_default_texture_repeat: v.enumInt(
     'canvas_item_default_texture_repeat',
     DefaultCanvasItemTextureRepeat.DISABLED,

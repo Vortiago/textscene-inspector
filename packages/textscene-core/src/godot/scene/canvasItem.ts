@@ -73,3 +73,19 @@ export enum CanvasItemTextureRepeat {
 
 /** Each repeat's name by the integer a `.tscn` stores (`canvas_item.cpp:1519-1522`), as a validator names it. */
 export const CANVAS_ITEM_TEXTURE_REPEAT_NAMES = enumNamesByValue(CanvasItemTextureRepeat);
+
+/**
+ * How a repeat, already resolved up the ancestors, wraps a texture. Anything but ENABLED and MIRROR,
+ * including no repeat at all, clamps: DISABLED is the `Viewport::default_canvas_item_texture_repeat`
+ * default (`scene/main/viewport.h:420`).
+ */
+export function canvasItemSamplerRepeat(repeat: number | undefined): 'clamp' | 'repeat' | 'mirror' {
+  switch (repeat) {
+    case CanvasItemTextureRepeat.ENABLED:
+      return 'repeat';
+    case CanvasItemTextureRepeat.MIRROR:
+      return 'mirror';
+    default:
+      return 'clamp';
+  }
+}

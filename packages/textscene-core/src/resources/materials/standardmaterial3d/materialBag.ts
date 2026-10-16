@@ -128,6 +128,7 @@ function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
     scalars.rim > 0 ||
     isAnisotropic(scalars) ||
     scalars.transmission > 0 ||
+    // The default 0.5 maps to three's fixed F0 of 0.04, so only another value needs `specularIntensity`.
     scalars.specular !== BASE_MATERIAL_3D_DEFAULTS.specular
   );
 }

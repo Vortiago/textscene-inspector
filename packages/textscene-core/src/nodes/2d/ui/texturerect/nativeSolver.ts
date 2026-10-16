@@ -15,7 +15,6 @@ import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegist
 import type { TextureRectProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
-import { CanvasItemTextureRepeat } from '../../../../godot/scene/canvasItem';
 
 const EXPAND_KEEP_SIZE = 0;
 const EXPAND_IGNORE_SIZE = 1;
@@ -161,24 +160,6 @@ export function textureRectDraw(
 
     default:
       return fullRect;
-  }
-}
-
-type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
-
-/**
- * `CanvasItem::TextureRepeat` (`scene/main/canvas_item.h:63-69`), already resolved up the ancestors,
- * to a three.js wrap mode. `undefined` maps to `'clamp'`: `DISABLED`, the
- * `Viewport::default_canvas_item_texture_repeat` default (`scene/main/viewport.h:420`).
- */
-export function resolveTextureRectRepeat(repeat: number | undefined): TextureRectRepeat {
-  switch (repeat) {
-    case CanvasItemTextureRepeat.ENABLED:
-      return 'repeat';
-    case CanvasItemTextureRepeat.MIRROR:
-      return 'mirror';
-    default:
-      return 'clamp';
   }
 }
 

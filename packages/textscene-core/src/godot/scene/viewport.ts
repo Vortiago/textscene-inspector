@@ -75,7 +75,7 @@ export enum DefaultCanvasItemTextureFilter {
 }
 
 /**
- * `Viewport::DefaultCanvasItemTextureRepeat` (`scene/main/viewport.h:195-200`), as the integers a `.tscn`
+ * `Viewport::DefaultCanvasItemTextureRepeat` (`scene/main/viewport.h:196-200`), as the integers a `.tscn`
  * stores for `canvas_item_default_texture_repeat`. 4.7.2 adds PARENT_NODE (`viewport.h:205`), which
  * 4.6.3 refuses.
  */

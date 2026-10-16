@@ -12,17 +12,15 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
-import { canvasItemThreeFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import {
+  canvasItemThreeFilter,
+  canvasItemThreeWrap,
+  useInheritedTextureSampler,
+} from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { textureRectDraw, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
+import { textureRectDraw, applyFlip } from './nativeSolver';
 import type { TextureRectProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-
-const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
-  clamp: THREE.ClampToEdgeWrapping,
-  repeat: THREE.RepeatWrapping,
-  mirror: THREE.MirroredRepeatWrapping,
-};
 
 interface ImageLike {
   width?: number;
@@ -76,7 +74,7 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
       // on the image's top row, as the region branch does. `u` is not flipped.
       offset = { x: 0, y: 1 - repeat.y };
     } else {
-      cloned.wrapS = cloned.wrapT = WRAP[resolveTextureRectRepeat(sampler.repeat)];
+      cloned.wrapS = cloned.wrapT = canvasItemThreeWrap(sampler.repeat);
       if (draw.region) {
         // Texture-pixel-space crop (KEEP_ASPECT_COVERED) → normalized UV
         // repeat/offset. three.js UV-Y is bottom-left and image-Y is top-left,
