@@ -25,7 +25,10 @@ const arms = {
  */
 const DEFAULT_POSITION: Vector2 = { x: 0, y: 0 };
 
-/** The `Vector2(x, y)` a property carries, its documented default when absent, or null when malformed. */
+/**
+ * The `Vector2(x, y)` a property carries, its documented default when absent, or null when
+ * malformed or when a component narrows to a number the file does not state.
+ */
 function readPosition(properties: Record<string, string>, key: string): Vector2 | null {
   const raw = properties[key];
   if (raw === undefined) return DEFAULT_POSITION;

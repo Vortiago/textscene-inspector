@@ -24,7 +24,8 @@ const RIGID_BODY_SCALE_TOLERANCE = 0.05;
 /**
  * Node2D's own `scale` (node_2d.cpp:499), `(1, 1)` when absent, since the field
  * default (node_2d.h:39) and the serialised default agree. Not `transform`: Node2D's
- * `transform` carries `PROPERTY_USAGE_NONE` (node_2d.cpp:501) and is never written.
+ * `transform` carries `PROPERTY_USAGE_NONE` (node_2d.cpp:501) and is never written. Null when
+ * the literal is malformed or a component narrows to a number the file does not state.
  */
 function readScale2D(raw: string | undefined): { x: number; y: number } | null {
   if (raw === undefined) return { x: 1, y: 1 };

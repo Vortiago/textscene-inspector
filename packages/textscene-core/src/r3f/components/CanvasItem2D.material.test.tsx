@@ -200,10 +200,11 @@ material = SubResource("lightOnly")
 polygon = ${TRI}
 `);
     for (const name of ['Normal', 'Unshaded', 'LightOnly']) {
-      const mat = mats.get(name)!;
-      expect(mat.transparent, `${name} should blend`).toBe(true);
-      expect(mat.side, `${name} should face both ways`).toBe(THREE.DoubleSide);
-      expect(mat.forceSinglePass, `${name} should draw once`).toBe(true);
+      const mat = mats.get(name);
+      expect(mat, `${name} should render a mesh`).toBeDefined();
+      expect(mat!.transparent, `${name} should blend`).toBe(true);
+      expect(mat!.side, `${name} should face both ways`).toBe(THREE.DoubleSide);
+      expect(mat!.forceSinglePass, `${name} should draw once`).toBe(true);
     }
   });
 
