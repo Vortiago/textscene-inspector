@@ -22,6 +22,7 @@ describe('parseVector2', () => {
 
   it('reads a literal with surrounding white space, which `get_token` skips (variant_parser.cpp:416-418)', () => {
     expect(parseVector2(' Vector2(1, 2) ')).toEqual({ x: 1, y: 2 });
+    expect(parseVector2('\tVector2( 1 ,\t2 )\t')).toEqual({ x: 1, y: 2 });
   });
 
   it('parses scientific notation (Godot emits exponents for small values)', () => {
@@ -110,5 +111,11 @@ describe('parseVector2 on a Vector2i spelling', () => {
 
   it('throws on a component past the round-trip band, so the caller falls back', () => {
     expect(() => parseVector2('Vector2i(4294967296, 0)')).toThrow('Non-finite Vector2');
+  });
+});
+
+describe('parseVector3 white space', () => {
+  it('reads a literal with surrounding white space, which `get_token` skips (variant_parser.cpp:416-418)', () => {
+    expect(parseVector3(' \tVector3(1, 2, 3) \t ')).toEqual({ x: 1, y: 2, z: 3 });
   });
 });
