@@ -40,6 +40,7 @@ export interface FrameStats {
   cpuMs: number;
   /** The mean GPU time of the frame's commands, or null while no GPU result has arrived. */
   gpuMs: number | null;
+  /** The mean draw calls of the frame, over every render in it. */
   drawCallsPerFrame: number;
   /** False when the context offers no timer query, so every GPU time stays null. */
   hasGpuTimer: boolean;

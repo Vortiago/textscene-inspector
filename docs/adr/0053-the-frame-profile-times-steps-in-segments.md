@@ -6,9 +6,9 @@
 ## Context
 
 A slow preview needs a number per render step: how long the shadow pass, the volumetric fog or the
-compositor takes, on the CPU and on the GPU, and how many draw calls it makes. The steps nest. The fog's prepare runs inside the
-shadow pass, the shadow pass inside a scene draw, and a scene draw inside a sub-viewport pass or the
-compositor. WebGL 2 runs one `TIME_ELAPSED_EXT` query at a time, so nested GPU queries are not
+compositor takes, on the CPU and on the GPU, and how many draw calls it makes. The steps nest. The
+fog's prepare runs inside the shadow pass, the shadow pass inside a scene draw, and a scene draw
+inside a sub-viewport pass or the compositor. WebGL 2 runs one `TIME_ELAPSED_EXT` query at a time, so nested GPU queries are not
 possible. A measurement must also cost nothing while nobody looks at it.
 
 ## Decision

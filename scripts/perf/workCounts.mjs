@@ -5,15 +5,15 @@
 
 /**
  * Parses an overlay snapshot: the draws total, and each step row's cells in the overlay's column
- * order (step, CPU ms, GPU ms, draws, runs).
+ * order (step, CPU ms, GPU ms, draws, runs). A row with no runs holds only a late GPU result, which
+ * comes and goes between windows, so it is left out.
  */
 export function parseWorkCounts({ drawCalls, rows }) {
   const steps = {};
-  for (const [step, , , stepDrawCalls, runs] of rows) {
-    steps[step] = {
-      drawCalls: parseCount(stepDrawCalls, `${step} draws`),
-      runs: parseCount(runs, `${step} runs`),
-    };
+  for (const [step, , , stepDrawCalls, runsText] of rows) {
+    const runs = parseCount(runsText, `${step} runs`);
+    if (runs === 0) continue;
+    steps[step] = { drawCalls: parseCount(stepDrawCalls, `${step} draws`), runs };
   }
   return { drawCalls: parseCount(drawCalls, 'draws total'), steps };
 }

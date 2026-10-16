@@ -1,7 +1,7 @@
 /**
  * The frame profile: the CPU time, GPU time and draw calls of each render step on one renderer,
- * averaged over a window of frames and published. While no profile runs on a renderer, a step marker is one map lookup and
- * records nothing.
+ * averaged over a window of frames and published. While no profile runs on a renderer, a step marker
+ * is one map lookup and records nothing.
  */
 
 import type * as THREE from 'three';
@@ -161,8 +161,10 @@ class Profile implements FrameProfile {
   stop(): void {
     this.isFrameOpen = false;
     this.gpu?.dispose();
+    // A replaced profile's second stop leaves the renderer to the profile that replaced it.
+    if (profiles.get(this.renderer) !== this) return;
     this.renderer.info.autoReset = this.wasAutoReset;
-    if (profiles.get(this.renderer) === this) profiles.delete(this.renderer);
+    profiles.delete(this.renderer);
   }
 
   /** Ends the running step's segment and starts `next`'s. */

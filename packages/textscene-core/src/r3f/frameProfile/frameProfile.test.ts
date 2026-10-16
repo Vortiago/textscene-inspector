@@ -167,6 +167,14 @@ describe('startFrameProfile', () => {
     expect(renderer.info.autoReset).toBe(true);
   });
 
+  it('keeps the count across renders while a replaced profile stops again (edge case)', () => {
+    const renderer = cpuOnlyRenderer();
+    const replaced = startFrameProfile(renderer, () => {});
+    startFrameProfile(renderer, () => {});
+    replaced.stop();
+    expect(renderer.info.autoReset).toBe(false);
+  });
+
   it('reports no GPU time when the context offers no timer query', () => {
     const { window } = cpuOnly();
     expect(window(() => {})).toMatchObject({ hasGpuTimer: false, gpuMs: null });

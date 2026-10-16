@@ -148,7 +148,10 @@ async function steadyWork(page) {
   };
 }
 
-/** The overlay's frame interval, draws total and each step row's cells. The capture paints it out, so it reads text. */
+/**
+ * The overlay's frame interval, draws total and each step row's cells. The capture paints the
+ * overlay out, so this reads its text.
+ */
 function readOverlay(page) {
   return page.evaluate(({ overlay, frameMs, drawCalls }) => {
     const panel = document.querySelector(`[data-testid="${overlay}"]`);

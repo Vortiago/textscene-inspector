@@ -25,6 +25,14 @@ describe('parseWorkCounts', () => {
     expect(parseWorkCounts(snapshot).steps.Fog).toEqual({ drawCalls: 0.5, runs: 0.5 });
   });
 
+  it('leaves out a row with no runs, which holds only a late GPU result (edge case)', () => {
+    const snapshot = {
+      ...SNAPSHOT,
+      rows: [...SNAPSHOT.rows, ['Reflection probes', '0.00', '5.00', '0', '0']],
+    };
+    expect(parseWorkCounts(snapshot)).toEqual(WORK);
+  });
+
   it('refuses a snapshot taken before the first window, with no count to read (error case)', () => {
     expect(() => parseWorkCounts({ drawCalls: '', rows: [] })).toThrow(
       'expected a count such as "12 draws" in the draws total, got ""'
