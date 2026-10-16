@@ -3,9 +3,10 @@
  * the requested scene confirmed, and the canvas proven settled before it is read.
  */
 
-/* global document */ // The `sceneLoaded` predicate runs in the browser.
+/* global document */ // The `sceneStillLoading` predicate runs in the browser.
 
 import {
+  FIXTURE_LOADING_TESTID,
   NETWORK_IDLE_MS,
   SCENE_LOAD_STATUS_TESTID,
   SCENE_LOAD_WAIT_MS,
@@ -156,14 +157,14 @@ export async function textureWorkCleared(status) {
 }
 
 /**
- * No reason once the scene is whole: drawn, its resources landed and its texture work ended. Else
- * the reason it is still loading. One check reads both statuses, since one gives way to the other.
+ * The reason the scene is still loading, or null once it is whole: fetched, drawn, its resources
+ * landed and its texture work ended. One check reads every status, since each gives way to the next.
  */
-export async function sceneLoaded(page) {
+export async function sceneStillLoading(page) {
   try {
     await page.waitForFunction(
       (ids) => ids.every((id) => !document.querySelector(`[data-testid="${id}"]`)),
-      [SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID],
+      [FIXTURE_LOADING_TESTID, SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID],
       { timeout: SCENE_LOAD_WAIT_MS }
     );
     return null;

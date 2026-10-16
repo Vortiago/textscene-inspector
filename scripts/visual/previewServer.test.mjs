@@ -13,10 +13,11 @@ import { PNG } from 'pngjs';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_2D_CHROME,
+  FIXTURE_LOADING_TESTID,
   canvas2DViewportFor,
   isUniformImage,
   SCENE_LOAD_STATUS_TESTID,
-  sceneLoaded,
+  sceneStillLoading,
   settleCanvas,
   startPreview,
   writeCaptureImage,
@@ -195,33 +196,35 @@ describe('settleCanvas', () => {
   });
 });
 
-describe('sceneLoaded', () => {
+describe('sceneStillLoading', () => {
   function timeoutError() {
     const error = new Error('Timeout exceeded');
     error.name = 'TimeoutError';
     return error;
   }
 
-  it('answers no reason once neither status is on the page', async () => {
+  it('answers no reason once no loading status is on the page', async () => {
     const page = { waitForFunction: async () => {} };
-    expect(await sceneLoaded(page)).toBeNull();
+    expect(await sceneStillLoading(page)).toBeNull();
   });
 
-  it('waits until neither the scene load nor the texture work status is on the page', async () => {
+  it('waits until the fixture fetch, scene load and texture work statuses are all gone', async () => {
     const waitForFunction = vi.fn(async () => {});
-    await sceneLoaded({ waitForFunction });
+    await sceneStillLoading({ waitForFunction });
     const [, ids] = waitForFunction.mock.calls[0];
-    expect(new Set(ids)).toEqual(new Set([SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID]));
+    expect(new Set(ids)).toEqual(
+      new Set([FIXTURE_LOADING_TESTID, SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID])
+    );
   });
 
   it('names a scene still loading once the wait runs out (error case)', async () => {
     const page = { waitForFunction: async () => Promise.reject(timeoutError()) };
-    expect(await sceneLoaded(page)).toMatch(/scene still loading/);
+    expect(await sceneStillLoading(page)).toMatch(/scene still loading/);
   });
 
   it('throws when the wait fails for a reason other than its timeout (edge case)', async () => {
     const page = { waitForFunction: async () => Promise.reject(new Error('Target page has been closed')) };
-    await expect(sceneLoaded(page)).rejects.toThrow(/scene to load.*Target page has been closed/);
+    await expect(sceneStillLoading(page)).rejects.toThrow(/scene to load.*Target page has been closed/);
   });
 });
 
@@ -230,6 +233,11 @@ describe('the status ids are shared, not duplicated', () => {
     const shell =
       await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/statusTestIds.ts');
     expect({ SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID }).toEqual({ ...shell });
+  });
+
+  it('matches the id the web previewer renders while it fetches the fixture', async () => {
+    const web = await import('../../apps/textscene-web/src/fixtureLoadingTestId.ts');
+    expect(FIXTURE_LOADING_TESTID).toBe(web.FIXTURE_LOADING_TESTID);
   });
 });
 

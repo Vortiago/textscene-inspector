@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { PENDING_CAPTURE, previewCaptureStateOf, type PreviewCaptureState } from './previewCaptureState.js';
-import { useIsSceneComplete } from './useIsSceneComplete.js';
+import { useSceneLoad } from './useSceneLoad.js';
 
 const NO_SUBSCRIPTION = () => () => {};
 const NO_HANDLER = () => false;
@@ -26,7 +26,7 @@ export function CaptureStateReporter({
     control?.hasScreenshotHandler ?? NO_HANDLER
   );
   const takeScreenshot = control?.takeScreenshot;
-  const isSceneComplete = useIsSceneComplete();
+  const isSceneComplete = useSceneLoad().isComplete;
 
   const state = useMemo(
     () =>

@@ -103,6 +103,12 @@ export const TEXTURE_WORK_WAIT_MS = 120000;
  * gives way to the texture work status. The work budget check waits until neither is attached.
  */
 export const SCENE_LOAD_STATUS_TESTID = 'scene-load-status';
+/**
+ * The web previewer's "Loading scene…" status while it fetches the fixture
+ * (`apps/textscene-web/src/fixtureLoadingTestId.ts`). Until the fetch ends the shell has no scene,
+ * so it shows no scene load status, and the work budget check waits for this one too.
+ */
+export const FIXTURE_LOADING_TESTID = 'fixture-loading';
 // Ceiling for that wait: the largest budget demo loads in tens of seconds under software GL.
 export const SCENE_LOAD_WAIT_MS = 180000;
 

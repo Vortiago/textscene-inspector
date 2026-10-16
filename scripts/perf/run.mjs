@@ -19,7 +19,7 @@ import {
   createCaptureContext,
   openScene,
   PERFORMANCE_TESTIDS,
-  sceneLoaded,
+  sceneStillLoading,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
 import { attachConsoleGate } from '../visual/run/sceneCapture.mjs';
@@ -95,7 +95,7 @@ async function measureScene({ page, errors }, baseUrl, scene) {
     onSlow: (ms) => console.log(`[perf]   ${scene.name}: no network idle within ${ms}ms`),
   });
   if (!target) return { work: null, reason };
-  const loading = await sceneLoaded(page);
+  const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
   const { work, reason: unsteady } = await steadyWork(page);
   if (errors.length > 0) return { work: null, reason: `console error(s): ${errors.join(' | ')}` };
