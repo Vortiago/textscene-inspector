@@ -57,6 +57,10 @@ const HINT_PREDATES_CAPTURE = new Map([
   // 4.7.2: gpu_particles_3d.h:55 TRANSFORM_ALIGN_LOCAL_BILLBOARD, listed by the
   // hint at gpu_particles_3d.cpp:894.
   ['GPUParticles3D.transform_align', { values: [4], cite: 'gpu_particles_3d.h:55' }],
+  // 4.7.2: viewport.h:106 SCALING_3D_MODE_NEAREST.
+  ['Viewport.scaling_3d_mode', { values: [5], cite: 'viewport.h:106' }],
+  // 4.7.2: viewport.h:188-189 DEBUG_DRAW_CLUSTER_AREA_LIGHTS and DEBUG_DRAW_AREA_LIGHT_ATLAS.
+  ['Viewport.debug_draw', { values: [27, 28], cite: 'viewport.h:188-189' }],
 ]);
 
 /**

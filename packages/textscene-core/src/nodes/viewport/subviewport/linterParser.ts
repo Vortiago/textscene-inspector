@@ -9,16 +9,12 @@ import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
-
-const UPDATE_MODE = {
-  0: 'DISABLED',
-  1: 'ONCE',
-  2: 'WHEN_VISIBLE',
-  3: 'WHEN_PARENT_VISIBLE',
-  4: 'ALWAYS',
-};
-
-const CLEAR_MODE = { 0: 'ALWAYS', 1: 'NEVER', 2: 'ONCE' };
+import {
+  SUB_VIEWPORT_CLEAR_MODE_NAMES,
+  SUB_VIEWPORT_UPDATE_MODE_NAMES,
+  SubViewportClearMode,
+  SubViewportUpdateMode,
+} from '../../../godot/scene/viewport.js';
 
 validatorRegistry.registerAll('SubViewport', {
   // set_size reaches Viewport::_set_size, whose `Size2i new_size = p_size.maxi(2)`
@@ -29,12 +25,24 @@ validatorRegistry.registerAll('SubViewport', {
   size_2d_override_stretch: v.boolean('size_2d_override_stretch'),
   // viewport.cpp:5584: PROPERTY_HINT_ENUM, 5 labels. set_update_mode
   // (viewport.cpp:5475-5479) assigns unconditionally, no ERR_FAIL.
-  render_target_update_mode: v.enumInt('render_target_update_mode', 0, 4, UPDATE_MODE, {
-    hinted: 'viewport.cpp:5584',
-  }),
+  render_target_update_mode: v.enumInt(
+    'render_target_update_mode',
+    SubViewportUpdateMode.DISABLED,
+    SubViewportUpdateMode.ALWAYS,
+    SUB_VIEWPORT_UPDATE_MODE_NAMES,
+    {
+      hinted: 'viewport.cpp:5584',
+    }
+  ),
   // viewport.cpp:5583: PROPERTY_HINT_ENUM, 3 labels. set_clear_mode
   // (viewport.cpp:5486-5490) assigns unconditionally, no ERR_FAIL.
-  render_target_clear_mode: v.enumInt('render_target_clear_mode', 0, 2, CLEAR_MODE, {
-    hinted: 'viewport.cpp:5583',
-  }),
+  render_target_clear_mode: v.enumInt(
+    'render_target_clear_mode',
+    SubViewportClearMode.ALWAYS,
+    SubViewportClearMode.ONCE,
+    SUB_VIEWPORT_CLEAR_MODE_NAMES,
+    {
+      hinted: 'viewport.cpp:5583',
+    }
+  ),
 });
