@@ -8,18 +8,13 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import { probePixels } from './run.mjs';
+import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import {
-  assertPortFree,
   createCaptureContext,
-  ensureWebBuilt,
-  findCaptureTarget,
-  gotoFixture,
-  killPreviewGroup,
+  openScene,
   settleCanvas,
-  startPreview,
-  waitForServer,
+  withPreviewBrowser,
 } from '../visual/previewServer.mjs';
 
 // Distinct from the visual harness's 4317, so a capture and a golden run can
@@ -63,29 +58,25 @@ function parseArgs(argv) {
   return args;
 }
 
-export async function captureOurs({ fixture, frame = false, canvas2D = false, canvas2DFrame = null }) {
-  ensureWebBuilt();
-  await assertPortFree(PORT, 'PARITY_PORT');
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
-  try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await launchGodotComparisonBrowser();
-    // Godot's editor orbit (ADR-0025) on both sides, so a probe at (x, y)
-    // addresses one surface point. `--frame` opts both into fit-the-bounds for
-    // a scene too large to read at distance 4.
-    const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
-    const page = await context.newPage();
-    await gotoFixture(page, baseUrl, fixture, (ms) => console.log(`[ours] no network idle within ${ms}ms`));
-    const { target, reason: targetReason } = await findCaptureTarget(page, { canvas2D });
-    if (!target) throw new Error(targetReason);
-    const { buffer, reason } = await settleCanvas(page, target);
-    if (!buffer) throw new Error(reason);
-    return buffer;
-  } finally {
-    await browser?.close();
-    killPreviewGroup(proc);
-  }
+export function captureOurs({ fixture, frame = false, canvas2D = false, canvas2DFrame = null }) {
+  return withPreviewBrowser(
+    { port: PORT, portEnvName: 'PARITY_PORT', launchBrowser: launchGodotComparisonBrowser },
+    async (browser, baseUrl) => {
+      // Godot's editor orbit (ADR-0025) on both sides, so a probe at (x, y)
+      // addresses one surface point. `--frame` opts both into fit-the-bounds for
+      // a scene too large to read at distance 4.
+      const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
+      const page = await context.newPage();
+      const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
+        canvas2D,
+        onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
+      });
+      if (!target) throw new Error(targetReason);
+      const { buffer, reason } = await settleCanvas(page, target);
+      if (!buffer) throw new Error(reason);
+      return buffer;
+    }
+  );
 }
 
 async function main() {

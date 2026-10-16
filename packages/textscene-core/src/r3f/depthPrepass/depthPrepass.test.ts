@@ -9,6 +9,7 @@ import {
 } from '../materials/opaquePrepass';
 import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass';
 import { cameraLookingAt } from '../testing/threePasses';
+import { profiledRendererMembers, profiledWindow, stepCpuMs } from '../frameProfile/frameProfile.testkit';
 
 interface PrepassDraw {
   object: THREE.Object3D;
@@ -135,5 +136,31 @@ describe('createDepthPrepassSentinel', () => {
     expect(hits).toEqual([]);
     expect(sentinel.material).toMatchObject({ colorWrite: false, depthWrite: false });
     expect(sentinel.castShadow).toBe(false);
+  });
+});
+
+describe('the depth prepass under a frame profile', () => {
+  it('times its draws as the Depth prepass step', () => {
+    let time = 0;
+    const renderer = {
+      renderBufferDirect: () => (time += 1),
+      ...profiledRendererMembers(),
+    } as unknown as THREE.WebGLRenderer;
+    const sentinel = createDepthPrepassSentinel();
+    const scene = new THREE.Scene();
+    scene.add(meshOf(surface(DRAWN_OPAQUE_PREPASS)), meshOf(surface(DRAWN_OPAQUE_PREPASS)), sentinel);
+    scene.updateMatrixWorld(true);
+    const args = [renderer, scene, CAMERA] as unknown as Parameters<THREE.Object3D['onBeforeRender']>;
+
+    const stats = profiledWindow(
+      renderer,
+      () => time,
+      () => sentinel.onBeforeRender(...args)
+    );
+
+    expect(stepCpuMs(stats)).toEqual([
+      ['Depth prepass', 2],
+      ['Other', 0],
+    ]);
   });
 });

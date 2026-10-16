@@ -9,20 +9,15 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import { renderReference } from '../godot-ref/run.mjs';
 import { parseCaptureFlags } from './captureFlags.mjs';
+import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import {
-  assertPortFree,
   createCaptureContext,
-  ensureWebBuilt,
   findCaptureTarget,
   gotoFixture,
-  killPreviewGroup,
   settleCanvas,
-  startPreview,
-  waitForServer,
-  warmUpGLContext,
+  withPreviewBrowser,
   writeCaptureImage,
 } from '../visual/previewServer.mjs';
 
@@ -128,51 +123,43 @@ async function captureGodot(scenes) {
 }
 
 async function captureOurs(scenes) {
-  ensureWebBuilt();
-  await assertPortFree(PORT, 'COMPARE_PORT');
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
   const failures = [];
-  try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await launchGodotComparisonBrowser();
-    // Spends the first-context-lost risk before any published image.
-    await warmUpGLContext(browser);
-    for (const c of scenes) {
-      process.stdout.write(`[complex ours] ${c.slug} (${c.mode}) … `);
-      // A 3D scene is fit only when Godot fits it (`frame`). Otherwise both use
-      // the editor orbit, or the named `oursCamera`.
-      const context = await createCaptureContext(browser, {
-        frameOnOpen: c.mode === '3d' && (c.frame ?? false),
-        canvas2D: c.mode === '2d',
-      });
-      const page = await context.newPage();
-      try {
-        await gotoFixture(page, baseUrl, c.ours, () => {}, c.oursCamera ? { camera: c.oursCamera } : {});
-        // A scene with both 3D and 2D content floats a "switch to 2D" button over
-        // the canvas. It carries no testid, so this hides it by its title.
-        await page
-          .addStyleTag({ content: 'button[title*="switch to the 2D view"]{display:none !important}' })
-          .catch(() => {});
-        const { target, reason } = await findCaptureTarget(page, { canvas2D: c.mode === '2d' });
-        if (!target) throw new Error(reason);
-        const { buffer, reason: settleReason } = await settleCanvas(page, target, {
-          screenshotTimeout: c.settleTimeout,
+  await withPreviewBrowser(
+    { port: PORT, portEnvName: 'COMPARE_PORT', launchBrowser: launchGodotComparisonBrowser },
+    async (browser, baseUrl) => {
+      for (const c of scenes) {
+        process.stdout.write(`[complex ours] ${c.slug} (${c.mode}) … `);
+        // A 3D scene is fit only when Godot fits it (`frame`). Otherwise both use
+        // the editor orbit, or the named `oursCamera`.
+        const context = await createCaptureContext(browser, {
+          frameOnOpen: c.mode === '3d' && (c.frame ?? false),
+          canvas2D: c.mode === '2d',
         });
-        if (!buffer) throw new Error(settleReason);
-        writeCaptureImage(join(IMAGES, `${c.slug}-ours.png`), buffer, `${c.slug} ours`);
-        console.log('ok');
-      } catch (error) {
-        console.log(`FAILED: ${error.message}`);
-        failures.push({ slug: c.slug, error: error.message });
-      } finally {
-        await context.close();
+        const page = await context.newPage();
+        try {
+          await gotoFixture(page, baseUrl, c.ours, () => {}, c.oursCamera ? { camera: c.oursCamera } : {});
+          // A scene with both 3D and 2D content floats a "switch to 2D" button over
+          // the canvas. It carries no testid, so this hides it by its title.
+          await page
+            .addStyleTag({ content: 'button[title*="switch to the 2D view"]{display:none !important}' })
+            .catch(() => {});
+          const { target, reason } = await findCaptureTarget(page, { canvas2D: c.mode === '2d' });
+          if (!target) throw new Error(reason);
+          const { buffer, reason: settleReason } = await settleCanvas(page, target, {
+            screenshotTimeout: c.settleTimeout,
+          });
+          if (!buffer) throw new Error(settleReason);
+          writeCaptureImage(join(IMAGES, `${c.slug}-ours.png`), buffer, `${c.slug} ours`);
+          console.log('ok');
+        } catch (error) {
+          console.log(`FAILED: ${error.message}`);
+          failures.push({ slug: c.slug, error: error.message });
+        } finally {
+          await context.close();
+        }
       }
     }
-  } finally {
-    await browser?.close();
-    killPreviewGroup(proc);
-  }
+  );
   return failures;
 }
 
