@@ -180,7 +180,9 @@ class Profile implements FrameProfile {
     const steps: StepStats[] = [];
     for (const step of STEP_KEYS) {
       const calls = step === 'Other' ? frames : (stepCalls.get(step) ?? 0);
-      if (calls === 0) continue;
+      // A GPU result arrives frames after its step ran, so a step can have one in a window it did
+      // not run in. Its row keeps the rows summing to the frame's GPU time.
+      if (calls === 0 && !stepGpuNs.has(step)) continue;
       steps.push({
         step,
         cpuMs: (stepCpuMs.get(step) ?? 0) / frames,

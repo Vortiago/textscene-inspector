@@ -15,7 +15,7 @@ interface TimerQueryExtension {
 
 /**
  * A driver resolves a query two or three frames on. A frame still unresolved after this many has
- * lost its results, as to a lost context, so its queries go back to the pool.
+ * lost its results, so its queries are deleted, never reused.
  */
 const MAX_PENDING_FRAMES = 10;
 
@@ -42,9 +42,11 @@ export class GpuTimer {
     private readonly ext: TimerQueryExtension
   ) {}
 
-  /** Ends the running segment and starts one for `step`. */
+  /** Ends the running segment and starts one for `step`. A lost context times nothing. */
   switchTo(step: StepKey): void {
     this.endSegment();
+    // A lost context's `createQuery` returns null, which `beginQuery` refuses with a TypeError.
+    if (this.gl.isContextLost()) return;
     const query = this.pool.pop() ?? this.gl.createQuery();
     this.gl.beginQuery(this.ext.TIME_ELAPSED_EXT, query);
     this.running = { step, query };
@@ -56,15 +58,21 @@ export class GpuTimer {
     if (this.frame.length === 0) return;
     this.pending.push(this.frame);
     this.frame = [];
-    if (this.pending.length > MAX_PENDING_FRAMES) this.recycle(this.pending.shift()!);
+    if (this.pending.length > MAX_PENDING_FRAMES) this.delete(this.pending.shift()!);
   }
 
   /**
    * Hands each segment of every frame whose results have all arrived to `onSegment`, oldest first,
    * and answers how many frames that was. A disjoint operation, such as a clock change, voids every
-   * result in flight, so those frames are dropped.
+   * result in flight, so those frames are dropped. A lost context voids every query it made, so
+   * the pool empties too and a restored context gets new queries.
    */
   collect(onSegment: (step: StepKey, ns: number) => void): number {
+    if (this.gl.isContextLost()) {
+      this.pending.length = 0;
+      this.pool.length = 0;
+      return 0;
+    }
     if (this.gl.getParameter(this.ext.GPU_DISJOINT_EXT)) {
       for (const frame of this.pending.splice(0)) this.recycle(frame);
       return 0;
@@ -102,5 +110,9 @@ export class GpuTimer {
 
   private recycle(frame: readonly Segment[]): void {
     for (const { query } of frame) this.pool.push(query);
+  }
+
+  private delete(frame: readonly Segment[]): void {
+    for (const { query } of frame) this.gl.deleteQuery(query);
   }
 }

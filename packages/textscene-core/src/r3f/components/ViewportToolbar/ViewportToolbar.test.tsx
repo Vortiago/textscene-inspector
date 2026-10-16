@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { SHOW_PERFORMANCE_STORAGE_KEY, ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
@@ -22,6 +22,10 @@ function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolea
 }
 
 describe('ViewportToolbar', () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
   it('defaults to 3D pressed, 2D not pressed', () => {
     renderToolbar();
     expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
@@ -81,7 +85,6 @@ describe('ViewportToolbar', () => {
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
     expect(window.localStorage.getItem(SHOW_PERFORMANCE_STORAGE_KEY)).toBe('true');
-    window.localStorage.clear();
   });
 
   it('offers the performance checkbox in 2D mode, whose canvas renders frames too', () => {
