@@ -5,10 +5,10 @@
  * (`scene_forward_clustered.glsl:2213,2944-2945`).
  */
 
-import { ShaderChunk, type IUniform, type Material } from 'three';
+import type { IUniform, Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { recordedUniform } from './recordedOnMaterial';
-import { applyEdits } from '../shaderPatch/chunkPatch';
+import { editedChunk, type TextEdit } from '../shaderPatch/chunkPatch';
 import {
   DEFAULT_TEXTURE_CHANNEL_MASK,
   type TextureChannelMask,
@@ -16,9 +16,8 @@ import {
 
 const AO_PARS_CHUNK = '#include <aomap_pars_fragment>';
 const AO_CHUNK = '#include <aomap_fragment>';
-const RED_SAMPLE = 'texture2D( aoMap, vAoMapUv ).r';
-const MASKED_SAMPLE = {
-  three: RED_SAMPLE,
+const MASKED_SAMPLE: TextEdit = {
+  three: 'texture2D( aoMap, vAoMapUv ).r',
   godot: 'dot( texture2D( aoMap, vAoMapUv ), godotAoTextureChannel )',
 };
 
@@ -46,11 +45,7 @@ const DIRECT_OCCLUSION = /* glsl */ `
  * the chunk as the shader patches leave it.
  */
 function godotAoFragment(): string {
-  const chunk = ShaderChunk.aomap_fragment;
-  const masked = applyEdits(chunk, [MASKED_SAMPLE]);
-  if (masked === null)
-    throw new Error(`expected three's aomap_fragment to hold "${RED_SAMPLE}" once, got:\n${chunk}`);
-  return `${masked}${DIRECT_OCCLUSION}`;
+  return `${editedChunk('aomap_fragment', MASKED_SAMPLE)}${DIRECT_OCCLUSION}`;
 }
 
 const GODOT_AO_PARS = `${AO_PARS_CHUNK}

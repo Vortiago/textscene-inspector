@@ -291,15 +291,13 @@ describe('standardMaterialBags — fragment alpha', () => {
 });
 
 describe('standardMaterialBags — metallic and roughness map channels', () => {
-  const READS_ROUGHNESS_CHANNEL = 'dot( texelRoughness, godotRoughnessTextureChannel )';
-
-  it.each(['roughness_texture', 'metallic_texture'] as const)(
-    'reads the named channels on a surface with a %s',
-    (slot) => {
-      const built = materialFromBag(bag({}, { [slot]: new THREE.Texture() }));
-      expect(patchedFragment(built)).toContain(READS_ROUGHNESS_CHANNEL);
-    }
-  );
+  it.each([
+    ['roughness_texture', 'dot( texelRoughness, godotRoughnessTextureChannel )'],
+    ['metallic_texture', 'dot( texelMetalness, godotMetallicTextureChannel )'],
+  ] as const)('reads the named channel on a surface with a %s', (slot, read) => {
+    const built = materialFromBag(bag({}, { [slot]: new THREE.Texture() }));
+    expect(patchedFragment(built)).toContain(read);
+  });
 
   it('records both channels for the uniforms to read', () => {
     const properties = { roughness_texture_channel: '3', metallic_texture_channel: '2' };

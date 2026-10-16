@@ -4,9 +4,9 @@
  * patch adds the texel at the recorded energy where three multiplies the colour by it.
  */
 
-import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { recordedUniform } from './recordedOnMaterial';
+import { editedChunk } from '../shaderPatch/chunkPatch';
 
 /** The uniform the patch reads, and the `userData` key a material records its value under. */
 const ADDED_TEXTURE_ENERGY = 'godotEmissionTextureEnergy';
@@ -32,23 +32,9 @@ const EMISSION_TEXTURE_ADD: ProgramInjection = {
     shader.uniforms[ADDED_TEXTURE_ENERGY] = recordedUniform(this, ADDED_TEXTURE_ENERGY, 0);
     shader.fragmentShader = shader.fragmentShader
       .replace(EMISSIVE_PARS, `${EMISSIVE_PARS}\nuniform float ${ADDED_TEXTURE_ENERGY};`)
-      .replace(EMISSIVE_MAP, addingEmissiveMapChunk());
+      .replace(EMISSIVE_MAP, editedChunk('emissivemap_fragment', { three: MULTIPLY, godot: ADD }));
   },
 };
-
-/** Written once, by the first compile that patches. The chunk is fixed for one build of three. */
-let addingChunk: string | undefined;
-
-/** Checked at the first compile, so a three whose chunk lost the multiply fails loudly, not dark. */
-function addingEmissiveMapChunk(): string {
-  if (addingChunk !== undefined) return addingChunk;
-  const chunk = THREE.ShaderChunk.emissivemap_fragment;
-  if (!chunk.includes(MULTIPLY)) {
-    throw new Error(`expected three's emissivemap_fragment to hold "${MULTIPLY}", got:\n${chunk}`);
-  }
-  addingChunk = chunk.replace(MULTIPLY, ADD);
-  return addingChunk;
-}
 
 /** What a material whose emission texture adds at `energy` compiles with, none for null. */
 export function emissionTextureAddInjection(energy: number | null): ProgramInjection | undefined {
