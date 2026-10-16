@@ -47,20 +47,18 @@ A sky with `process_mode = 3` bakes its layers with Godot's fast filter, at a ra
 ## Linting
 
 <!-- lint:begin Sky -->
-
 Strict parsing format-checks these `Sky` properties, plus 2 inherited from Resource. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property        | Accepts                                                                                                                                  | Out of range |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `process_mode`  | enum 0-3 (PROCESS_MODE_AUTOMATIC/PROCESS_MODE_QUALITY/PROCESS_MODE_INCREMENTAL/PROCESS_MODE_REALTIME)                                    | warning      |
-| `radiance_size` | enum 0-6 (RADIANCE_SIZE_32/RADIANCE_SIZE_64/RADIANCE_SIZE_128/RADIANCE_SIZE_256/RADIANCE_SIZE_512/RADIANCE_SIZE_1024/RADIANCE_SIZE_2048) | error        |
-| `sky_material`  | null, SubResource("id"), ExtResource("id") or Resource("path")                                                                           |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `process_mode` | enum 0-3 (PROCESS_MODE_AUTOMATIC/PROCESS_MODE_QUALITY/PROCESS_MODE_INCREMENTAL/PROCESS_MODE_REALTIME) | warning |
+| `radiance_size` | enum 0-6 (RADIANCE_SIZE_32/RADIANCE_SIZE_64/RADIANCE_SIZE_128/RADIANCE_SIZE_256/RADIANCE_SIZE_512/RADIANCE_SIZE_1024/RADIANCE_SIZE_2048) | error |
+| `sky_material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
-| Rule                                    | Reports                       | Severity |
-| --------------------------------------- | ----------------------------- | -------- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference`   | info     |
-| `valid-sky`                             | `real-time-sky-radiance-size` | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-sky` | `real-time-sky-radiance-size` | warning |
 <!-- lint:end -->
 
 The lenient parser never rejects. An unreadable Sky property falls back to Godot's default through the shared value decoders. An unresolvable material or panorama leaves the background at its fallback rather than failing the scene.
