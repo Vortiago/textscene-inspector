@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://unitcamerafrustum"]
+
+; One variable: a Camera3D with PROJECTION_FRUSTUM and a `frustum_offset`. Godot spans `size` by
+; `size × aspect` at the near plane and shifts it by the offset (`projection.cpp:396-402`), so the
+; box sits off centre and its sides converge as in a perspective view. Every other camera golden
+; uses a perspective or orthographic projection, so none shows a shifted frustum.
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+shading_mode = 0
+albedo_color = Color(0.9, 0.4, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_2"]
+shading_mode = 0
+albedo_color = Color(0.2, 0.5, 0.9, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 2
+size = 0.2
+frustum_offset = Vector2(0.05, 0.03)
+near = 0.2
+
+[node name="Front" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_1")
+
+[node name="Back" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1, -3)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_2")

@@ -3001,6 +3001,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Basic Nodes"
   },
   {
+    "name": "Camera Frustum",
+    "file": "unit-camera-frustum.tscn",
+    "category": "Unit - Basic Nodes"
+  },
+  {
     "name": "Camera3d",
     "file": "unit-camera3d.tscn",
     "category": "Unit - Basic Nodes"
