@@ -29,6 +29,10 @@ import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
+import { fittedAspect } from '../../3d/camera3d/projectionFit';
+import { useEffect } from 'react';
+import { useThree } from '@react-three/fiber';
 
 /** A SubViewport with every default and no children, as the conformance guard builds one. */
 const bareSubViewport = new TscnParser().parse(
@@ -109,7 +113,12 @@ async function toneMappingAtNextBind(
   return seen;
 }
 
-async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewportPath = 'Root/Viewport') {
+async function renderScene(
+  source: string,
+  workspace: '2d' | '3d' = '3d',
+  viewportPath = 'Root/Viewport',
+  canvasCamera: ReactNode = null
+) {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
   const seen: (ViewportTextureEntry | null)[] = [];
@@ -120,6 +129,7 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewpo
         <ViewportPassProvider>
           {nodes}
           <Probe path={viewportPath} seen={seen} />
+          {canvasCamera}
           <CaptureRenderer captured={capturedGl} />
           <ViewportPassOrchestrator />
         </ViewportPassProvider>
@@ -134,6 +144,25 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewpo
     /** Re-render with the scene removed, so the publisher unmounts. */
     removeScene: () => renderer.update(wrap(null)),
   };
+}
+
+/** Makes the named camera the one the canvas renders through, as "Use This Camera" does. */
+function CanvasRendersThrough({ name }: { name: string }) {
+  const scene = useThree((state) => state.scene);
+  const set = useThree((state) => state.set);
+  useEffect(() => {
+    const camera = scene.getObjectByName(name) as THREE.PerspectiveCamera | undefined;
+    if (camera) set({ camera });
+  }, [scene, set, name]);
+  return null;
+}
+
+/** The sub-viewport's Camera3D after two passes, and the aspect each pass last fitted it to. */
+async function viewportCameraAfterTwoPasses(canvasCamera: ReactNode = null) {
+  const { renderer, gl } = await renderScene(scene3D(), '3d', 'Root/Viewport', canvasCamera);
+  await advanceFrameWithStubbedGl(renderer, gl());
+  await advanceFrameWithStubbedGl(renderer, gl());
+  return instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByProps({ name: 'Camera3D' }));
 }
 
 /** 3D content inside the sub-viewport, with a camera to render it through. */
@@ -473,5 +502,15 @@ size = Vector2i(300, 300)
 mesh = SubResource("1")
 `);
     expect(published()).not.toBeNull();
+  });
+
+  it('leaves its own camera fitted to the target, which only the pass renders through', async () => {
+    const camera = await viewportCameraAfterTwoPasses();
+    expect(fittedAspect(camera)).toBeCloseTo(320 / 240, 6);
+  });
+
+  it('gives the canvas its camera back when the canvas renders through it too (edge case)', async () => {
+    const camera = await viewportCameraAfterTwoPasses(<CanvasRendersThrough name="Camera3D" />);
+    expect(fittedAspect(camera)).not.toBeCloseTo(320 / 240, 6);
   });
 });

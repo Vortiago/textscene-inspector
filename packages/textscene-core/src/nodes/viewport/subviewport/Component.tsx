@@ -110,6 +110,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();
   const mainScene = useThree((state) => state.scene);
+  const canvasCamera = useThree((state) => state.camera);
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
     scene.name = `${node.name}::offscreen`;
@@ -170,12 +171,11 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     const toneMapping = isSharedWorld ? SHARED_WORLD_TONE_MAPPING : THREE.NoToneMapping;
     if (isSharedWorld && !rendersInline) recompileOnCurveChange(source, portalCurve.current);
 
-    // A `<Camera3D>` camera carries the canvas aspect. Inside the viewport it frames the target
-    // rect, and it is restored after, since the main canvas may render through the same camera.
+    // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
+    // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
     const aspect = viewportAspect({ x: width, y: height });
-    const restoreAspect = camera ? fittedAspect(camera) : null;
-    const refitted = camera && restoreAspect !== null && restoreAspect !== aspect ? camera : null;
-    if (refitted) fitToAspect(refitted, aspect);
+    const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
+    if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
     try {
       renderToOffscreenTarget(gl, {
@@ -196,11 +196,12 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         },
       });
     } finally {
-      if (refitted && restoreAspect !== null) fitToAspect(refitted, restoreAspect);
+      if (camera && restoreAspect !== null && restoreAspect !== aspect) fitToAspect(camera, restoreAspect);
     }
   }, [
     rendersInline,
     mainScene,
+    canvasCamera,
     portalScene,
     kind,
     path,
