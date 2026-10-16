@@ -6682,6 +6682,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>A Texture2D that windows a region of another texture. A 2D consumer draws the region. A material slot binds the whole sheet, as Godot does. A material reads a texture by its RID, and an AtlasTexture's RID is its sheet's (<code>atlas_texture.cpp:55-58</code>). The left quad names the top-left texel and draws all four. The right quad binds a CanvasTexture and draws white.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>AtlasTexture mip chain</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-atlastexture-normal-mipmap-godot.png" alt="Godot render of AtlasTexture mip chain">
+          <img class="img-ours" src="images/unit-atlastexture-normal-mipmap-ours.png" alt="Our render of AtlasTexture mip chain">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A minified AtlasTexture samples the chain its sheet's import built. The sheet holds stripes leaning 0 and 90 degrees, imported as a normal map, so each level is renormalised. The left sprite draws the sheet and the right one a crop of all of it, at a quarter of its size. Both draw the 45-degree colour, as in Godot.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>ImageTexture</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">

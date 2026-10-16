@@ -208,6 +208,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Atlastexture Normal Mipmap",
+    "file": "unit-atlastexture-normal-mipmap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Back Buffer Copy",
     "file": "unit-back-buffer-copy.tscn",
     "category": "Other"

@@ -47,6 +47,9 @@ export const MATERIAL_SCENES = [
   // Sprite2D, Sprite3D and 3D physics bodies.
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // An AtlasTexture crop of a normal-map sheet, minified: Godot samples the sheet's renormalised
+  // chain, so the crop draws the same 45-degree colour as the sheet. An unnormalised crop draws duller.
+  { name: 'atlastexture-normal-mipmap', file: 'unit-atlastexture-normal-mipmap.tscn', mode: '2d' },
   // A region_rect bigger than its texture: Godot clips neither, so the sampler
   // decides the overrun, and the two families disagree. A pair, so the shared UV
   // compositor cannot be "fixed" to agree with the wrong one.

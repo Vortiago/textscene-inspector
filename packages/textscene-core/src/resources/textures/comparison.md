@@ -25,6 +25,11 @@ A Texture2D that wraps an image with optional normal and specular maps. The spri
 
 A Texture2D that windows a region of another texture. A 2D consumer draws the region. A material slot binds the whole sheet, as Godot does. A material reads a texture by its RID, and an AtlasTexture's RID is its sheet's (`atlas_texture.cpp:55-58`). The left quad names the top-left texel and draws all four. The right quad binds a CanvasTexture and draws white.
 
+## AtlasTexture mip chain
+<!-- compare: image=unit-atlastexture-normal-mipmap status=done fixture=unit-atlastexture-normal-mipmap.tscn -->
+
+A minified AtlasTexture samples the chain its sheet's import built. The sheet holds stripes leaning 0 and 90 degrees, imported as a normal map, so each level is renormalised. The left sprite draws the sheet and the right one a crop of all of it, at a quarter of its size. Both draw the 45-degree colour, as in Godot.
+
 ## ImageTexture
 <!-- compare: image=unit-material-albedo-image-format status=done fixture=unit-material-albedo-image-format.tscn -->
 
