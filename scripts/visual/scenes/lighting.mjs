@@ -52,6 +52,8 @@ export const LIGHTING_SCENES = [
   { name: 'volumetric-fog-shadow', file: 'unit-volumetric-fog-shadow.tscn' },
   // The spot shadow bias in the volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-spot-shadow-bias', file: 'unit-volumetric-fog-spot-shadow-bias.tscn' },
+  // A shadowed spot's origin inside the volumetric fog in view. The header states why no other golden shows it.
+  { name: 'volumetric-fog-spot-origin', file: 'unit-volumetric-fog-spot-origin.tscn', camera: 'Root/Camera' },
   // A colour background under thin volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
   // A box FogVolume in the volumetric fog. The header states why no other golden shows it.

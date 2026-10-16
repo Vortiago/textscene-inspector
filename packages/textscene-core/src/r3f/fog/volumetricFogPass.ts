@@ -1,8 +1,8 @@
 /**
  * One renderer's volumetric fog: Godot's froxel passes, drawn slice by slice into 3D targets, and
  * the volume every fog program samples. Each scene keeps its own volume and history, so a scene
- * that holds still redraws nothing, and the renderer's volume takes a copy of whichever scene
- * renders next.
+ * that holds still redraws nothing once it converges, and the renderer's volume takes a copy of
+ * whichever scene renders next.
  */
 
 import * as THREE from 'three';
@@ -41,7 +41,6 @@ import {
   FOG_FILTER_FRAGMENT,
   FOG_INTEGRATE_FRAGMENT,
   FOG_LIGHT_FRAGMENT,
-  FOG_SAMPLE_OFFSETS_MAX,
 } from './volumetricFogShaders.js';
 
 interface VolumetricFogInputs {
@@ -61,7 +60,10 @@ interface VolumetricFogInputs {
 
 /** The volume's rows run bottom-up, so a jitter's top-down y flips. */
 const JITTER_OFFSETS = VOLUMETRIC_FOG_TEMPORAL_JITTERS.map(([x, y, z]) => new THREE.Vector3(x, 1 - y, z));
-const CENTRE_OFFSETS = [new THREE.Vector3(...VOLUMETRIC_FOG_CELL_CENTRE)];
+const CENTRE_OFFSET = new THREE.Vector3(...VOLUMETRIC_FOG_CELL_CENTRE);
+
+/** A target's size while it holds nothing, which frees its texture. */
+const NO_GRID: VolumetricFogGrid = { width: 1, height: 1, depth: 1 };
 
 const FILTER_X = new THREE.Vector3(1, 0, 0);
 const FILTER_Y = new THREE.Vector3(0, 1, 0);
@@ -113,9 +115,12 @@ function sliceMaterial(name: string, fragmentShader: string, uniforms: Record<st
   return fullScreenPass(`VolumetricFog.${name}`, fragmentShader, { slice: { value: 0 }, ...uniforms });
 }
 
-function volumeTarget(name: string): THREE.WebGL3DRenderTarget {
+function volumeTarget(
+  name: string,
+  type: THREE.TextureDataType = THREE.HalfFloatType
+): THREE.WebGL3DRenderTarget {
   const target = new THREE.WebGL3DRenderTarget(1, 1, 1, {
-    type: THREE.HalfFloatType,
+    type,
     format: THREE.RGBAFormat,
     depthBuffer: false,
     stencilBuffer: false,
@@ -176,10 +181,20 @@ class VolumeKey {
   }
 }
 
+/**
+ * The sum of a still view's jitters, in 32-bit floats where the renderer can draw them, so the sum
+ * of 16 rounds as the shader's own registers do. A half float rounds each partial sum.
+ */
+function sumType(renderer: THREE.WebGLRenderer): THREE.TextureDataType {
+  return renderer.extensions.has('EXT_color_buffer_float') ? THREE.FloatType : THREE.HalfFloatType;
+}
+
 /** A view's volume, the history its temporal reprojection blends into, and what drew them. */
 class ViewVolume {
   readonly integrated = volumeTarget('VolumetricFogViewVolume');
   readonly history = volumeTarget('VolumetricFogHistory');
+  /** The running sum of a still view's jitters, in turn the one a render writes and the one it reads. */
+  private readonly sums: readonly [THREE.WebGL3DRenderTarget, THREE.WebGL3DRenderTarget];
   readonly key = new VolumeKey();
   readonly lights = new FogLightRows();
   readonly volumes = new FogVolumeRows();
@@ -191,25 +206,49 @@ class ViewVolume {
   grid: VolumetricFogGrid = { width: 0, height: 0, depth: 0 };
   /** Whether `history` holds a draw of the current grid. */
   hasHistory = false;
-  /** Whether the last draw was a moving camera's step, which a still frame converges. */
+  /** Whether the view still converges: after a moving camera's step, until all 16 jitters are summed. */
   isSettling = false;
   /** Each step's jitter is the next of Godot's 16 (`environment/fog.cpp:1113`). */
   frame = 0;
+  /** How many jitters the sum holds since the view last changed. */
+  summedJitters = 0;
+
+  constructor(renderer: THREE.WebGLRenderer) {
+    const type = sumType(renderer);
+    this.sums = [volumeTarget('VolumetricFogSum', type), volumeTarget('VolumetricFogSum', type)];
+  }
+
+  /** The sum target the next jitter writes, sized to `grid`, and the sum it adds to, null for the first. */
+  nextSum(grid: VolumetricFogGrid): { target: THREE.WebGL3DRenderTarget; previous: THREE.Texture | null } {
+    const target = this.sums[this.summedJitters % 2]!;
+    const previous = this.sums[(this.summedJitters + 1) % 2]!;
+    resize(target, grid);
+    return { target, previous: this.summedJitters > 0 ? previous.texture : null };
+  }
+
+  /** Frees both sums, which a converged view no longer reads. */
+  releaseSums(): void {
+    for (const sum of this.sums) resize(sum, NO_GRID);
+  }
 
   dispose(): void {
     this.integrated.dispose();
     this.history.dispose();
+    for (const sum of this.sums) sum.dispose();
     this.densityAtlas.dispose();
   }
 }
 
 /** How a draw samples each froxel. */
-type Sampling = 'centre' | 'converged' | 'step';
+type Sampling = 'centre' | 'converge' | 'step';
 
-/** A changed view samples centres, or steps its history, and a still one converges once after a step. */
+/**
+ * A changed view samples centres, or steps its history. A still one after a step converges one
+ * jitter a render, so no render costs more than a moving camera's.
+ */
 function samplingFor(hasChanged: boolean, temporal: number | null, isSettling: boolean): Sampling | null {
   if (hasChanged) return temporal === null ? 'centre' : 'step';
-  return isSettling ? 'converged' : null;
+  return isSettling ? 'converge' : null;
 }
 
 export class VolumetricFogPass {
@@ -248,8 +287,9 @@ export class VolumetricFogPass {
     directionalShadowAtlas: { value: null },
     positionalShadowAtlas: { value: null },
     [AREA_LIGHT_ATLAS_UNIFORM]: { value: areaLightAtlasTexture() },
-    sampleOffsets: { value: Array.from({ length: FOG_SAMPLE_OFFSETS_MAX }, () => new THREE.Vector3()) },
-    sampleCount: { value: 1 },
+    sampleOffset: { value: new THREE.Vector3() },
+    addsToSum: { value: false },
+    sum: { value: null },
     history: { value: null },
     toPreviousView: { value: new THREE.Matrix4() },
     historyAmount: { value: 0 },
@@ -263,7 +303,10 @@ export class VolumetricFogPass {
     source: { value: null },
     sliceDepths: { value: new Float32Array(1) },
   });
-  private readonly copyMaterial = sliceMaterial('Copy', FOG_COPY_FRAGMENT, { source: { value: null } });
+  private readonly copyMaterial = sliceMaterial('Copy', FOG_COPY_FRAGMENT, {
+    source: { value: null },
+    scale: { value: 1 },
+  });
   /** What `sliceDepths` holds the depths of. */
   private slices = { depth: 0, length: 0, detailSpread: 0 };
   /** Each scene's volume per camera, so each camera keeps its own history, as each Godot viewport does. */
@@ -299,7 +342,7 @@ export class VolumetricFogPass {
     if (this.viewport.z < 1 || this.viewport.w < 1) return false;
     const grid = volumetricFogGrid({ width: this.viewport.z, height: this.viewport.w }, inputs.project);
     if (grid.width < 1 || grid.height < 1) return false;
-    const state = this.viewOf(scene, camera);
+    const state = this.viewOf(scene, camera, renderer);
     const sky = skyRadiance(scene);
     const hasLightsChanged = state.lights.pack(inputs.lights, camera);
     if (hasLightsChanged) this.lights.invalidate(state.lights);
@@ -346,7 +389,7 @@ export class VolumetricFogPass {
     this.copyMaterial.dispose();
   }
 
-  private viewOf(scene: THREE.Scene, camera: THREE.Camera): ViewVolume {
+  private viewOf(scene: THREE.Scene, camera: THREE.Camera, renderer: THREE.WebGLRenderer): ViewVolume {
     let views = this.views.get(scene);
     let live = this.liveViews.get(scene);
     if (!views || !live) {
@@ -357,7 +400,7 @@ export class VolumetricFogPass {
     }
     const existing = views.get(camera);
     if (existing) return existing;
-    const state = new ViewVolume();
+    const state = new ViewVolume(renderer);
     views.set(camera, state);
     live.add(state);
     this.cameraGone.register(camera, { live, state }, state);
@@ -396,13 +439,21 @@ export class VolumetricFogPass {
     this.writeView(camera, inputs, grid);
     this.writeSky(sky, inputs.skyEnergy);
     this.writeRows(state);
-    this.writeSampling(state, camera, inputs.fog.temporalReprojection, sampling);
     this.writeIntegrate(inputs.fog, grid);
-
     const atlases = this.writeShadowAtlases(state.lights);
-    drawWithUncomparedDepth(renderer, atlases, () =>
-      this.fill(renderer, this.density, this.lightMaterial, grid)
-    );
+
+    if (sampling === 'converge') {
+      const sum = this.writeConverge(state, grid);
+      drawWithUncomparedDepth(renderer, atlases, () => this.fill(renderer, sum, this.lightMaterial, grid));
+      this.copy(renderer, sum, this.density, grid, 1 / state.summedJitters);
+      if (!state.isSettling) state.releaseSums();
+    } else {
+      this.writeSampling(state, camera, inputs.fog.temporalReprojection, sampling);
+      drawWithUncomparedDepth(renderer, atlases, () =>
+        this.fill(renderer, this.density, this.lightMaterial, grid)
+      );
+    }
+    state.previousCamera.copy(camera.matrixWorld);
     if (inputs.fog.temporalReprojection !== null) {
       // Godot keeps the medium before the filter, so the history is never blurred twice (`fog.cpp:1163`).
       this.copy(renderer, this.density, state.history, grid);
@@ -491,38 +542,52 @@ export class VolumetricFogPass {
   }
 
   /**
-   * A step samples this frame's jitter and reprojects into the last draw's history, while a still
-   * frame averages all 16 jitters, the mean Godot's history converges to (`.glsl:311-335`).
+   * A step samples this frame's jitter and reprojects into the last draw's history
+   * (`.glsl:311-335`). A step's cell that cannot reproject samples its centre, so a step without
+   * history samples centres.
    */
   private writeSampling(
     state: ViewVolume,
     camera: THREE.Camera,
     temporal: number | null,
-    sampling: Sampling
+    sampling: 'centre' | 'step'
   ): void {
     const uniforms = this.lightMaterial.uniforms;
     const isStep = sampling === 'step';
     const reprojects = isStep && state.hasHistory && temporal !== null;
-    // A step's cell that cannot reproject samples its centre, so a step without history samples centres.
-    const offsets =
-      sampling === 'converged'
-        ? JITTER_OFFSETS
-        : reprojects
-          ? [JITTER_OFFSETS[state.frame % JITTER_OFFSETS.length]!]
-          : CENTRE_OFFSETS;
-    (uniforms['sampleOffsets']!.value as THREE.Vector3[]).forEach((offset, i) =>
-      offset.copy(offsets[i] ?? offset)
-    );
-    uniforms['sampleCount']!.value = offsets.length;
+    const offset = reprojects ? JITTER_OFFSETS[state.frame % JITTER_OFFSETS.length]! : CENTRE_OFFSET;
+    (uniforms['sampleOffset']!.value as THREE.Vector3).copy(offset);
+    this.writeSum(null);
     uniforms['historyAmount']!.value = reprojects ? temporal : 0;
     uniforms['history']!.value = reprojects ? state.history.texture : null;
     (uniforms['toPreviousView']!.value as THREE.Matrix4)
       .copy(state.previousCamera)
       .invert()
       .multiply(camera.matrixWorld);
-    state.previousCamera.copy(camera.matrixWorld);
     if (isStep) state.frame++;
+    state.summedJitters = 0;
     state.isSettling = isStep;
+  }
+
+  /**
+   * A still view adds the next of the 16 jitters to the sum of those before it, which the composite
+   * reads as their mean: all 16 is the mean Godot's history converges to. Answers the sum target.
+   */
+  private writeConverge(state: ViewVolume, grid: VolumetricFogGrid): THREE.WebGL3DRenderTarget {
+    const uniforms = this.lightMaterial.uniforms;
+    const { target, previous } = state.nextSum(grid);
+    (uniforms['sampleOffset']!.value as THREE.Vector3).copy(JITTER_OFFSETS[state.summedJitters]!);
+    this.writeSum(previous);
+    uniforms['historyAmount']!.value = 0;
+    uniforms['history']!.value = null;
+    state.summedJitters++;
+    state.isSettling = state.summedJitters < JITTER_OFFSETS.length;
+    return target;
+  }
+
+  private writeSum(previous: THREE.Texture | null): void {
+    this.lightMaterial.uniforms['addsToSum']!.value = previous !== null;
+    this.lightMaterial.uniforms['sum']!.value = previous;
   }
 
   /** The integration's slice depths, one uniform per slice, so a new slice count recompiles. */
@@ -554,9 +619,11 @@ export class VolumetricFogPass {
     renderer: THREE.WebGLRenderer,
     source: THREE.WebGL3DRenderTarget,
     target: THREE.WebGL3DRenderTarget,
-    grid: VolumetricFogGrid
+    grid: VolumetricFogGrid,
+    scale = 1
   ): void {
     this.copyMaterial.uniforms['source']!.value = source.texture;
+    this.copyMaterial.uniforms['scale']!.value = scale;
     this.fill(renderer, target, this.copyMaterial, grid);
   }
 
