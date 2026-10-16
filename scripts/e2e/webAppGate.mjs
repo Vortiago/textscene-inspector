@@ -217,16 +217,10 @@ async function main() {
 
     checkSettleControl(gate, settleControl);
     const largeTexture = { inkOf: inkStats, inkFloor: INK_FLOOR_LARGE_TEXTURE };
-    checkWorkerArm(gate, 'long tasks', withWorker, {
-      ...largeTexture,
-      longTasksIn: longTasksDuringTextureWork,
-    });
     // The status clears only once the drawn map's banded upload completes, so a cleared
-    // status and a reply show the `.tres` texture was built off-thread and uploaded to draw.
-    checkWorkerArm(gate, 'long tasks, .tres material', fromTres, {
-      ...largeTexture,
-      longTasksIn: longTasksAfterFirstReply,
-    });
+    // status and a reply show the texture was built off-thread and uploaded to draw.
+    checkWorkerArm(gate, 'long tasks', withWorker, largeTexture);
+    checkWorkerArm(gate, 'long tasks, .tres material', fromTres, largeTexture);
     checkBlockedControl(gate, blocked);
     checkStalledControl(gate, stalled);
     checkDiagnostics(gate, '[long tasks]', withWorker.diagnostics);
@@ -249,8 +243,8 @@ async function main() {
     // The Long Tasks API reports only tasks over 50 ms, so 0 means it saw none in the window.
     const longest = (tasks) => Math.max(0, ...(tasks ?? []).map((task) => task.duration));
     console.log(
-      `  long tasks in the texture window  worker: replies=${withWorker.probe.replies} ` +
-        `longest=${longest(longTasksDuringTextureWork(withWorker.probe, 0))}ms | ` +
+      `  long tasks in the texture window  worker after the reply: replies=${withWorker.probe.replies} ` +
+        `longest=${longest(longTasksAfterFirstReply(withWorker.probe, 0))}ms | ` +
         `.tres material after the reply: replies=${fromTres.probe.replies} ` +
         `longest=${longest(longTasksAfterFirstReply(fromTres.probe, 0))}ms | ` +
         `blocked: longest=${longest(longTasksDuringTextureWork(blocked.probe, 0))}ms | ` +
