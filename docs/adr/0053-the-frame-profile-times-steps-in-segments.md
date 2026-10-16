@@ -47,8 +47,13 @@ Fog. The Fog step times the fog's own passes, which a static scene skips once it
 The timer queries add a little GPU work per segment while the profile runs.
 
 The work budget check (`pnpm test:perf`, `scripts/perf/`) holds the counts in CI, not the times.
-It opens each budget scene in headless Chromium with the overlay on, waits until the counts stay the
-same over 30 frames, and fails when a scene's draw calls or a step's runs or draw calls per frame
+It opens each budget scene in headless Chromium with the overlay on, waits until the scene has
+loaded, waits until the counts stay the same over 30 frames, and fails when a scene's draw calls or a step's runs or draw calls per frame
 go over `scripts/perf/budgets.json`. Software GL on a shared runner gives times that change from run
 to run, and the counts do not change. A step that runs more often, or a draw that goes uncached,
 shows in the counts as well as in the times.
+
+A scene has loaded once no loading status is on the page: the previewer's fixture fetch, the shell's
+"Loading scene…" (the canvas has yet to draw the scene, or a resource is on its way) and "Building
+textures…". A scene that is still loading draws the same work frame after frame, so the counts alone
+would read it as steady.

@@ -9,7 +9,7 @@ import path from 'node:path';
 import { act, render, screen } from '@testing-library/react';
 import { beginTextureWork } from '../../../resources/textures/textureWork';
 import { TextureWorkStatus } from './TextureWorkStatus';
-import { TEXTURE_WORK_STATUS_TESTID } from './textureWorkStatusTestId';
+import { TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 
 describe('<TextureWorkStatus>', () => {
   it('is absent while no texture work is pending', () => {

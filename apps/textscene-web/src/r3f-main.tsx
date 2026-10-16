@@ -31,6 +31,7 @@ import { downloadFilename, downloadTscn } from './downloadTscn';
 import { createFileIngest } from './fileIngest';
 import { useFileDrop } from './useFileDrop';
 import { useUploadError } from './useUploadError';
+import { FIXTURE_LOADING_TESTID } from './fixtureLoadingTestId';
 import { Toolbar } from './R3FToolbar';
 import styles from './r3f-main.module.css';
 
@@ -312,7 +313,7 @@ export function R3FApp() {
           />
           {isFetchingFixture ? (
             <div
-              data-testid="fixture-loading"
+              data-testid={FIXTURE_LOADING_TESTID}
               role="status"
               aria-live="polite"
               className={styles.fixtureLoading}
