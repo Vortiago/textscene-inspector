@@ -152,11 +152,16 @@ export function checkSettleControl(gate, { baseline, delayed, unwaited }) {
 
 /**
  * The long-task claims for each worker arm, labelled by `label`: the worker answered, no task
- * over the limit ran in the window `longTasksIn` measures, and the texture drew.
+ * over the limit ran from its first reply until the status cleared, and the texture drew. The
+ * window opens at the reply, not at the status: the scene's start-up tasks, such as its first
+ * program link, can still run after the status attaches.
  */
-export function checkWorkerArm(gate, label, arm, { inkOf, inkFloor, longTasksIn }) {
-  const during = longTasksIn(arm.probe, LONG_TASK_LIMIT_MS);
-  gate.check(during !== null, `[${label}] the texture work status never came and went: nothing was measured`);
+export function checkWorkerArm(gate, label, arm, { inkOf, inkFloor }) {
+  const during = longTasksAfterFirstReply(arm.probe, LONG_TASK_LIMIT_MS);
+  gate.check(
+    during !== null,
+    `[${label}] the texture work status never came and went, or no worker replied: nothing was measured`
+  );
   gate.check(
     arm.probe.replies > 0,
     `[${label}] no job worker answered: the build did not run off the main thread`
