@@ -63,6 +63,20 @@ export function installToneMapping(
   };
 }
 
+/**
+ * Marks `scene`'s materials dirty when the installed curve changed since `seen`, so a scene the
+ * install never walks, such as a sub-viewport's portal, compiles the new curve. `seen` belongs to
+ * the caller and starts at -1.
+ */
+export function recompileOnCurveChange(scene: THREE.Object3D, seen: { revision: number }): void {
+  if (seen.revision === curveRevision) return;
+  seen.revision = curveRevision;
+  markMaterialsDirty(scene);
+}
+
+/** Written only by `installCurve` and its undo, once per change to three's chunk. Never cleared. */
+let curveRevision = 0;
+
 /** Puts the settings' curve in three's chunk and their exposure on the renderer. Returns the undo. */
 function installCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): () => void {
   const previousExposure = gl.toneMappingExposure;
@@ -73,9 +87,11 @@ function installCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): ()
     settings.white ?? 1,
     settings.agxContrast
   );
+  curveRevision += 1;
   gl.toneMappingExposure = settings.exposure ?? 1;
   return () => {
     THREE.ShaderChunk[TONEMAP_CHUNK] = previousChunk;
+    curveRevision += 1;
     gl.toneMappingExposure = previousExposure;
   };
 }

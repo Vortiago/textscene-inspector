@@ -5,7 +5,12 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { installToneMapping, SHARED_WORLD_TONE_MAPPING, type ToneMapRoute } from './toneMapping';
+import {
+  installToneMapping,
+  recompileOnCurveChange,
+  SHARED_WORLD_TONE_MAPPING,
+  type ToneMapRoute,
+} from './toneMapping';
 import { compositeProgram } from './godotCompositor';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import { functionBody } from '../../r3f/testing/glslSource';
@@ -188,6 +193,53 @@ describe('a pass that renders the shared world', () => {
     const gl = fakeRenderer();
     gl.toneMapping = SHARED_WORLD_TONE_MAPPING;
     expect(greyThroughInstalledCurve(gl, 0.37)).toBe(0.37);
+  });
+});
+
+describe('recompileOnCurveChange', () => {
+  function sceneWith(material: THREE.Material): THREE.Scene {
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(new THREE.BufferGeometry(), material));
+    return scene;
+  }
+
+  it('marks a scene the install never walks dirty once a new curve installs', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const scene = sceneWith(material);
+    const seen = { revision: -1 };
+    recompileOnCurveChange(scene, seen);
+    const versionBefore = material.version;
+
+    installToneMapping(fakeRenderer(), { mode: AGX }, 'material');
+    recompileOnCurveChange(scene, seen);
+
+    expect(material.version).toBe(versionBefore + 1);
+  });
+
+  it('leaves the scene alone while the curve stays the same', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const scene = sceneWith(material);
+    const seen = { revision: -1 };
+    recompileOnCurveChange(scene, seen);
+    const versionBefore = material.version;
+
+    recompileOnCurveChange(scene, seen);
+
+    expect(material.version).toBe(versionBefore);
+  });
+
+  it('marks the scene dirty again when the curve is restored (edge case)', () => {
+    const material = new THREE.MeshBasicMaterial();
+    const scene = sceneWith(material);
+    const restore = installToneMapping(fakeRenderer(), { mode: FILMIC }, 'material');
+    const seen = { revision: -1 };
+    recompileOnCurveChange(scene, seen);
+    const versionBefore = material.version;
+
+    restore();
+    recompileOnCurveChange(scene, seen);
+
+    expect(material.version).toBe(versionBefore + 1);
   });
 });
 

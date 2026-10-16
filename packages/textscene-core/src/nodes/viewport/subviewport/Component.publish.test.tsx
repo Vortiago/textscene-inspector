@@ -153,6 +153,22 @@ mesh = SubResource("1")
 [node name="Camera3D" type="Camera3D" parent="Viewport"]
 `;
 
+/** A shared-world sub-viewport of 3D content in a 2D scene, which renders through a portal. */
+const scene2DWorkspace = `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="1"]
+
+[node name="Stage" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+size = Vector2i(300, 300)
+
+[node name="Inside" type="MeshInstance3D" parent="Viewport"]
+mesh = SubResource("1")
+
+[node name="Camera3D" type="Camera3D" parent="Viewport"]
+`;
+
 describe('<SubViewport> offscreen publisher', () => {
   it('publishes a target under its own dispatcher-absolute node path', async () => {
     const { published } = await renderScene(scene3D());
@@ -226,26 +242,39 @@ describe('<SubViewport> offscreen publisher', () => {
    * since a Node3D root opens in the 3D workspace.
    */
   it('2D workspace: publishes a target even though 3D content never reaches the canvas', async () => {
-    const { renderer, published } = await renderScene(
-      `[gd_scene format=3]
-
-[sub_resource type="BoxMesh" id="1"]
-
-[node name="Stage" type="Node2D"]
-
-[node name="Viewport" type="SubViewport" parent="."]
-size = Vector2i(300, 300)
-
-[node name="Inside" type="MeshInstance3D" parent="Viewport"]
-mesh = SubResource("1")
-
-[node name="Camera3D" type="Camera3D" parent="Viewport"]
-`,
-      '2d',
-      'Stage/Viewport'
-    );
+    const { renderer, published } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
     expect(renderer.scene.findAllByProps({ name: 'Inside' })).toHaveLength(0);
     expect(published()).not.toBeNull();
+  });
+
+  /**
+   * A portal scene is one the root's install never walks, so the pass recompiles it itself when
+   * the curve changes: three keys a compiled program on the chunk only when a material is dirty.
+   */
+  it('2D workspace: recompiles the portal when a new curve installs', async () => {
+    const { renderer, gl } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
+    const [portal] = await scenesRenderedNextFrame(renderer, gl());
+    const material = (portal!.getObjectByName('Inside') as THREE.Mesh).material as THREE.Material;
+    const versionBefore = material.version;
+
+    const restore = installToneMapping(gl(), { mode: ToneMapper.FILMIC }, 'material');
+    try {
+      await scenesRenderedNextFrame(renderer, gl());
+      expect(material.version).toBe(versionBefore + 1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('2D workspace: leaves the portal compiled while the curve stays the same', async () => {
+    const { renderer, gl } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
+    const [portal] = await scenesRenderedNextFrame(renderer, gl());
+    const material = (portal!.getObjectByName('Inside') as THREE.Mesh).material as THREE.Material;
+    const versionBefore = material.version;
+
+    await scenesRenderedNextFrame(renderer, gl());
+
+    expect(material.version).toBe(versionBefore);
   });
 
   /**
