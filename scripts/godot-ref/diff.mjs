@@ -63,15 +63,17 @@ export function resolveFixture(input) {
   const scenePath = input.includes('/') ? resolve(REPO_ROOT, input) : join(FIXTURE_DIR, name);
   if (!existsSync(scenePath)) throw new Error(`no such scene: ${scenePath}`);
   const fixtureName = catalogName(scenePath);
-  return { scenePath, fixtureName, label: labelFor(fixtureName) };
+  return { scenePath, fixtureName, label: labelFor(scenePath) };
 }
 
 /**
- * What a run's PNGs are named after: the catalog name, not the basename, since
- * two projects in one sweep can both hold a `settings_menu.tscn`.
+ * What a run's PNGs are named after: the path under `scenes/`, not the basename, since two projects
+ * in one sweep can both hold a `settings_menu.tscn`. A corpus keeps its folder, since the catalog
+ * flattens it beside the fixtures, which alone drop theirs.
  */
-function labelFor(fixtureName) {
-  return fixtureName
+function labelFor(scenePath) {
+  return pathWithinScenes(scenePath)
+    .replace(/^fixtures\//, '')
     .replace(/\.tscn$/, '')
     .split('/')
     .join('-');
@@ -79,11 +81,15 @@ function labelFor(fixtureName) {
 
 /** The `?fixture=` value the web catalog lists for a scene on disk. */
 export function catalogName(scenePath) {
-  const relative = relativePath(REPO_ROOT, scenePath).split(sep).join('/');
-  if (!relative.startsWith('scenes/')) throw new Error(`scene is outside scenes/: ${scenePath}`);
-  const withinScenes = relative.slice('scenes/'.length);
+  const withinScenes = pathWithinScenes(scenePath);
   const projectRoot = FLATTENED_ROOTS.find((root) => withinScenes.startsWith(root));
   return projectRoot ? withinScenes.slice(projectRoot.length) : withinScenes;
+}
+
+function pathWithinScenes(scenePath) {
+  const relative = relativePath(REPO_ROOT, scenePath).split(sep).join('/');
+  if (!relative.startsWith('scenes/')) throw new Error(`scene is outside scenes/: ${scenePath}`);
+  return relative.slice('scenes/'.length);
 }
 
 /**

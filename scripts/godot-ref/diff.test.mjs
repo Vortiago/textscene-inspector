@@ -66,6 +66,12 @@ describe('resolveFixture', () => {
     expect(target.label).toBe('demos-gui-control_gallery-control_gallery');
   });
 
+  it('labels a flattened corpus scene by its corpus, so it never shares a fixture label', () => {
+    const target = resolveFixture('scenes/isometric/previews/candle_preview.tscn');
+    expect(target.fixtureName).toBe('previews/candle_preview.tscn');
+    expect(target.label).toBe('isometric-previews-candle_preview');
+  });
+
   it('rejects a file that is not a .tscn', () => {
     expect(() => resolveFixture('unit-plane-mesh.tres')).toThrow(/not a \.tscn/);
   });
