@@ -7,18 +7,6 @@
 import type { NodeProperties } from '../../node/types';
 import type { Vector2 } from '../../../godot/math/vector';
 
-/** `SubViewport.UpdateMode`: when the target is re-rendered. */
-export const UPDATE_MODE_DISABLED = 0;
-export const UPDATE_MODE_ONCE = 1;
-export const UPDATE_MODE_WHEN_VISIBLE = 2;
-export const UPDATE_MODE_WHEN_PARENT_VISIBLE = 3;
-export const UPDATE_MODE_ALWAYS = 4;
-
-/** `SubViewport.ClearMode`: how the target is cleared before a render. */
-export const CLEAR_MODE_ALWAYS = 0;
-export const CLEAR_MODE_NEVER = 1;
-export const CLEAR_MODE_ONCE = 2;
-
 /**
  * `transform` is dropped from the base: a Viewport is not a spatial node, so
  * Godot never serialises one. The slice parser deletes the field the base

@@ -11,14 +11,10 @@ import '../../base/node3d/linterParser.js';
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
-
-/**
- * scene/2d/physics/collision_object_2d.cpp:652-654 and its 3D twin at :514-516
- * bind the same three constants. The 2D hint lives at :642, the 3D one at
- * :503, both "Remove,Make Static,Keep Active". Neither setter guards the
- * value (bare assignment), so out-of-range is hinted, not enforced.
- */
-const DISABLE_MODE = { 0: 'REMOVE', 1: 'MAKE_STATIC', 2: 'KEEP_ACTIVE' };
+import {
+  COLLISION_OBJECT_DISABLE_MODE_NAMES,
+  CollisionObjectDisableMode,
+} from '../../../godot/scene/physicsBody.js';
 
 /**
  * The keys both dimensions declare identically, apart from the disable_mode hint.
@@ -27,7 +23,15 @@ const DISABLE_MODE = { 0: 'REMOVE', 1: 'MAKE_STATIC', 2: 'KEEP_ACTIVE' };
  * PROPERTY_HINT_LAYERS_{2D,3D}_PHYSICS, not an engine limit: out of range warns.
  */
 const shared = (disableModeHint: string, layerHint: string, maskHint: string) => ({
-  disable_mode: v.enumInt('disable_mode', 0, 2, DISABLE_MODE, { hinted: disableModeHint }),
+  // The hint reads "Remove,Make Static,Keep Active" (collision_object_2d.cpp:642,
+  // collision_object_3d.cpp:503). Neither setter guards the value, so out-of-range is hinted.
+  disable_mode: v.enumInt(
+    'disable_mode',
+    CollisionObjectDisableMode.REMOVE,
+    CollisionObjectDisableMode.KEEP_ACTIVE,
+    COLLISION_OBJECT_DISABLE_MODE_NAMES,
+    { hinted: disableModeHint }
+  ),
   collision_layer: layerBitmask('collision_layer', {
     hinted: layerHint,
     width: 'uint32' /* collision_object_2d.h:121 / collision_object_3d.h:130 */,
