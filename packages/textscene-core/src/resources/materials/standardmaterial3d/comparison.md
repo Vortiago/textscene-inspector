@@ -14,7 +14,11 @@ Godot's default 3D surface. The scalar PBR base maps onto `MeshStandardMaterial`
 
 A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engines render the same blue-grey mirror. The preview glow blooms the sun's highlight into the same halo in both.
 
-- **Approximated** Godot reads the map channel named by `metallic_texture_channel` and `roughness_texture_channel`. three reads fixed channels, so a map packed in RED is misread.
+## Metallic and roughness map channels
+
+<!-- compare: image=unit-material-texture-channel status=done fixture=unit-material-texture-channel.tscn -->
+
+Godot reads a roughness map and a metallic map from the channel that `roughness_texture_channel` and `metallic_texture_channel` name, red by default. One map holds red 20 and green and blue 235. The left sphere takes it as roughness from red, so it is glossy. The right sphere takes it as metallic from red, so it is a dielectric, as in Godot.
 
 ## Emission
 

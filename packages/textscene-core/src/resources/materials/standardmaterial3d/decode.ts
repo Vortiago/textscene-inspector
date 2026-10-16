@@ -212,12 +212,9 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
     disablesSpecularOcclusion: boolOr(properties['disable_specular_occlusion'], false, CONTEXT),
     aoLightAffect: floatOr(properties['ao_light_affect'], 0, CONTEXT),
-    aoTextureChannel: enumOr(
-      properties['ao_texture_channel'],
-      TextureChannel.TEXTURE_CHANNEL_RED,
-      TEXTURE_CHANNELS,
-      `${CONTEXT}.ao_texture_channel`
-    ),
+    aoTextureChannel: textureChannel(properties, 'ao_texture_channel'),
+    roughnessTextureChannel: textureChannel(properties, 'roughness_texture_channel'),
+    metallicTextureChannel: textureChannel(properties, 'metallic_texture_channel'),
     normalScale: { x: normalScale, y: normalScale },
     triplanar,
     heightmap: heightmapEnabled && !triplanar ? decodeHeightmap(properties) : null,
@@ -255,6 +252,16 @@ interface ShaderAlphaFlags {
   usesAlphaAntialiasing: boolean;
   usesDepthPrepassAlpha: boolean;
   proximityFade: boolean;
+}
+
+/** A `*_texture_channel` enum, red by default (`material.cpp:3985-3987`). */
+function textureChannel(properties: Record<string, string>, property: string): TextureChannel {
+  return enumOr(
+    properties[property],
+    TextureChannel.TEXTURE_CHANNEL_RED,
+    TEXTURE_CHANNELS,
+    `${CONTEXT}.${property}`
+  );
 }
 
 /** What `BaseMaterial3D::_update_shader` emits for alpha, which every alpha decision reads. */

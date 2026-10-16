@@ -75,7 +75,6 @@ The lenient parser never rejects a texture property. An unreadable value falls b
 
 - **Approximated** An AtlasTexture's `margin` is not applied, so a trimmed-atlas layout sits off by the margin.
 - **Approximated** An AtlasTexture's `filter_clip` is not applied, so a filtered cell edge can bleed one texel from its neighbour.
-- **Approximated** A 2D AtlasTexture crop of a normal-map sheet averages its mip levels without renormalising them, where Godot samples the sheet's renormalised chain.
 - **Approximated** A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.
 - **Approximated** A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds.
 - **Approximated** A file with no sidecar reads as a fresh import, not as the editor re-imports a texture it sees in 3D.

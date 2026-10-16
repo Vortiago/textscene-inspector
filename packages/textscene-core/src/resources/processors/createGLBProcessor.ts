@@ -131,10 +131,11 @@ function importedImages(
     // A URI above res:// names no project file, so Godot extracts the image (`gltf_document.cpp:2203`).
     const externalPath = file.uri === null ? null : gltfResourcePath(path, file.uri);
     const imagePath = externalPath ?? file.extracted;
-    const sidecar = await readImportSidecar(imagePath, reader, fileEventBus, dependencies);
+    const read = { assetPath: imagePath, dependent: reader, fileEventBus, dependencies };
+    const sidecar = await readImportSidecar(read);
     const sidecarOptions = importTextureOptions(sidecar);
     const options = externalPath === null ? { ...sidecarOptions, mipmaps: true } : sidecarOptions;
-    const roughnessNormal = await readRoughnessNormal(options, imagePath, reader, fileEventBus, dependencies);
+    const roughnessNormal = await readRoughnessNormal({ ...read, options });
     return { source, options, roughnessNormal };
   };
 }
@@ -226,7 +227,12 @@ export function createGLBProcessor(
     shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
       const { glb, images } = await glbBytes(path, data as ArrayBuffer, fileEventBus, dependencies);
-      const sidecar = await readImportSidecar(path, glbReader(path), fileEventBus, dependencies);
+      const sidecar = await readImportSidecar({
+        assetPath: path,
+        dependent: glbReader(path),
+        fileEventBus,
+        dependencies,
+      });
       const object = await createGLBMesh(glb, {
         extensionRules,
         naming: { ...importGltfNaming(sidecar), fileName: fileBaseName(path) },

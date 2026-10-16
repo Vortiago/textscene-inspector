@@ -4,21 +4,17 @@
  * defaults, not a **Missing resource**.
  */
 
-import type { FileEventBus } from '../FileEventBus';
-import type { DependencyGraph, Dependent } from '../dependencyGraph';
+import type { DependentRead } from './dependentRead';
 import { parseImportFile, type ParsedImportFile } from '../../parser/importParser';
 import { importSidecarPath } from '../../godot/project/resourceFormats.js';
 
-/**
- * The sidecar of `assetPath`, or null for none. `dependent` is recorded as its reader before the
- * read, so a sidecar created, edited or deleted later reloads it.
- */
-export async function readImportSidecar(
-  assetPath: string,
-  dependent: Dependent,
-  fileEventBus: FileEventBus | undefined,
-  dependencies: DependencyGraph
-): Promise<ParsedImportFile | null> {
+/** The sidecar of the read's asset, or null for none. */
+export async function readImportSidecar({
+  assetPath,
+  dependent,
+  fileEventBus,
+  dependencies,
+}: DependentRead): Promise<ParsedImportFile | null> {
   if (!fileEventBus) return null;
   const sidecar = importSidecarPath(assetPath);
   dependencies.record(dependent, sidecar);

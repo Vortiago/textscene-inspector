@@ -10,6 +10,7 @@ import { rasterizeAtlasTexture } from './build';
 import { recordGodotFormat, sourceColorSpace } from '../sourceColorSpace';
 import type { AtlasTextureLayout } from './types';
 import { mipChain, type MipLevel } from '../../processing/mipChain';
+import { recordRenormalizedChain } from '../renormalizedChain';
 
 /**
  * A `w`x`h` top-down RGBA sheet with `flipY`, as `applyAlphaBorderFix` makes, whose red channel
@@ -171,6 +172,23 @@ describe('rasterizeAtlasTexture — a sheet with an imported mip chain', () => {
     )!;
 
     expect(Array.from((texture.mipmaps[1] as MipLevel).data)).toEqual([13, 0, 0, 255]);
+  });
+
+  it('renormalises the crop of a sheet whose import renormalises its chain', () => {
+    // The 1 × 1 level Godot renormalises from these four normals is 129, 178, 245.
+    const normals = new Uint8Array([
+      218, 128, 128, 255, 128, 218, 128, 255, 128, 128, 255, 255, 38, 128, 218, 255,
+    ]);
+    const normalSheet = new THREE.DataTexture(normals, 2, 2, THREE.RGBAFormat);
+    normalSheet.flipY = true;
+    normalSheet.mipmaps = mipChain(
+      normalSheet.image as MipLevel,
+      true
+    ) as unknown as THREE.Texture['mipmaps'];
+
+    const texture = rasterizeAtlasTexture(recordRenormalizedChain(normalSheet), layout())!;
+
+    expect(Array.from((texture.mipmaps[1] as MipLevel).data)).toEqual([129, 178, 245, 255]);
   });
 
   it('asks the GPU for no chain over the crop', () => {

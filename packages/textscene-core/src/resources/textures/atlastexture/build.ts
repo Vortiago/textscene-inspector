@@ -11,6 +11,7 @@ import { copySampling } from '../copySampling';
 import { texelTexture, textureMipChain } from '../texelTexture';
 import type { MipLevel } from '../../processing/mipChain';
 import { copyGodotFormat } from '../sourceColorSpace';
+import { hasRenormalizedChain, recordRenormalizedChain } from '../renormalizedChain';
 import { isBottomUp } from '../../../utils/reversedRows';
 import type { AtlasTextureLayout } from './types';
 
@@ -84,15 +85,17 @@ export function rasterizeAtlasTexture(
   if (!raw) return null;
   // A material binds the atlas's own texture (`atlas_texture.cpp:55-58`), so the crop reads as it.
   const crop = copySampling(cropRawPixels(raw, layout, left, top, sw, sh), sheet);
-  return copyGodotFormat(sheet.mipmaps.length > 1 ? withByteMipChain(crop) : crop, sheet);
+  return copyGodotFormat(sheet.mipmaps.length > 1 ? withByteMipChain(crop, sheet) : crop, sheet);
 }
 
 /**
- * `crop` with the chain the sheet's import built over its own bytes, averaged in byte space. A
- * chain the GPU built would average an sRGB crop in linear light.
+ * `crop` with the chain the sheet's import built over its own bytes, averaged in byte space and
+ * renormalised where the sheet's is. A chain the GPU built would average an sRGB crop in linear light.
  */
-function withByteMipChain(crop: THREE.DataTexture): THREE.DataTexture {
-  return texelTexture(crop, textureMipChain(crop, crop.image as MipLevel, false));
+function withByteMipChain(crop: THREE.DataTexture, sheet: THREE.Texture): THREE.DataTexture {
+  const renormalizes = hasRenormalizedChain(sheet);
+  const cropped = texelTexture(crop, textureMipChain(crop, crop.image as MipLevel, renormalizes));
+  return renormalizes ? recordRenormalizedChain(cropped) : cropped;
 }
 
 /**

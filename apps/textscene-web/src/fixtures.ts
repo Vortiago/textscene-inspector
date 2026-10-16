@@ -3331,6 +3331,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Texture Channel",
+    "file": "unit-material-texture-channel.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Texture Filter",
     "file": "unit-material-texture-filter.tscn",
     "category": "Unit - Materials"

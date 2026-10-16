@@ -35,6 +35,10 @@ import {
   unshadedParallaxInjection,
 } from '../../../r3f/materials/godotParallax';
 import {
+  GODOT_METALLIC_ROUGHNESS_CHANNELS,
+  metallicRoughnessChannelsUserData,
+} from '../../../r3f/materials/godotMetallicRoughnessChannels';
+import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
 } from '../../../r3f/materials/godotAmbientOcclusion';
@@ -206,6 +210,10 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     ...alphaHashScaleUserData(scalars.alphaHashScale),
     ...alphaAntialiasingUserData(scalars.alphaAntialiasing),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
+    ...metallicRoughnessChannelsUserData(
+      scalars.roughnessTextureChannelMask,
+      scalars.metallicTextureChannelMask
+    ),
     ...lightModesUserData(scalars),
     ...specularOcclusionUserData(scalars.disablesSpecularOcclusion),
     ...heightmapUserData(scalars.heightmap),
@@ -385,6 +393,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   const injection = composeInjections([
     lightModesInjection(scalars),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
+    pbr.roughnessMap || pbr.metalnessMap ? GODOT_METALLIC_ROUGHNESS_CHANNELS : undefined,
     pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,

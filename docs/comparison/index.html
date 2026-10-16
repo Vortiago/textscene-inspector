@@ -6145,8 +6145,24 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A <code>metallic = 1.0</code>, <code>roughness = 0.1</code> sphere reflects the preview sky. Both engines render the same blue-grey mirror. The preview glow blooms the sun's highlight into the same halo in both.</p>
-<ul><li><strong>Approximated</strong> Godot reads the map channel named by <code>metallic_texture_channel</code> and <code>roughness_texture_channel</code>. three reads fixed channels, so a map packed in RED is misread.</li></ul></div>
+        <div class="prose"><p>A <code>metallic = 1.0</code>, <code>roughness = 0.1</code> sphere reflects the preview sky. Both engines render the same blue-grey mirror. The preview glow blooms the sun's highlight into the same halo in both.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Metallic and roughness map channels</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-texture-channel-godot.png" alt="Godot render of Metallic and roughness map channels">
+          <img class="img-ours" src="images/unit-material-texture-channel-ours.png" alt="Our render of Metallic and roughness map channels">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>Godot reads a roughness map and a metallic map from the channel that <code>roughness_texture_channel</code> and <code>metallic_texture_channel</code> name, red by default. One map holds red 20 and green and blue 235. The left sphere takes it as roughness from red, so it is glossy. The right sphere takes it as metallic from red, so it is a dielectric, as in Godot.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Emission</h3><span class="status st-done">Done</span></div>
@@ -6773,7 +6789,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects a texture property. An unreadable value falls back to Godot's default through the shared value decoders. A reference it cannot resolve leaves the slot empty, so the consumer renders untextured.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> An AtlasTexture's <code>margin</code> is not applied, so a trimmed-atlas layout sits off by the margin.</li><li><strong>Approximated</strong> An AtlasTexture's <code>filter_clip</code> is not applied, so a filtered cell edge can bleed one texel from its neighbour.</li><li><strong>Approximated</strong> A 2D AtlasTexture crop of a normal-map sheet averages its mip levels without renormalising them, where Godot samples the sheet's renormalised chain.</li><li><strong>Approximated</strong> A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.</li><li><strong>Approximated</strong> A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds.</li><li><strong>Approximated</strong> A file with no sidecar reads as a fresh import, not as the editor re-imports a texture it sees in 3D.</li><li><strong>Approximated</strong> An imported image keeps its bytes and mip chain in memory after the upload for later readers (decals, crops, flowmaps, context loss), where Godot frees them.</li><li><strong>Approximated</strong> An image file past the GPU's <code>MAX_TEXTURE_SIZE</code> cannot be read back, so its GPU-built chain averages an sRGB image in linear space.</li><li><strong>Resource gap</strong> An ImageTexture saved in a BPTC, ETC, EAC, ASTC or integer format draws no texture.</li><li><strong>Not drawn</strong> A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.</li></ul></div>
+<ul><li><strong>Approximated</strong> An AtlasTexture's <code>margin</code> is not applied, so a trimmed-atlas layout sits off by the margin.</li><li><strong>Approximated</strong> An AtlasTexture's <code>filter_clip</code> is not applied, so a filtered cell edge can bleed one texel from its neighbour.</li><li><strong>Approximated</strong> A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.</li><li><strong>Approximated</strong> A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds.</li><li><strong>Approximated</strong> A file with no sidecar reads as a fresh import, not as the editor re-imports a texture it sees in 3D.</li><li><strong>Approximated</strong> An imported image keeps its bytes and mip chain in memory after the upload for later readers (decals, crops, flowmaps, context loss), where Godot frees them.</li><li><strong>Approximated</strong> An image file past the GPU's <code>MAX_TEXTURE_SIZE</code> cannot be read back, so its GPU-built chain averages an sRGB image in linear space.</li><li><strong>Resource gap</strong> An ImageTexture saved in a BPTC, ETC, EAC, ASTC or integer format draws no texture.</li><li><strong>Not drawn</strong> A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.</li></ul></div>
     </article>
     <article class="sheet" data-type="TextureButton" hidden>
       <header class="sheet-head">

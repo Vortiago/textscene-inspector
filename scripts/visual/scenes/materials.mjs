@@ -95,6 +95,10 @@ export const MATERIAL_SCENES = [
   // The roughness limiter on an imported roughness map's chain: the left sphere's sidecar names its
   // normal map, so its minified highlight spreads and dims. A chain left unlimited keeps it tight.
   { name: 'material-roughness-limiter', file: 'unit-material-roughness-limiter.tscn' },
+  // The channel a roughness or metallic map is read from: one map holds red 20 and green and blue
+  // 235, read from red. A green roughness read turns the left sphere matte, and a blue metallic read
+  // turns the right one metal.
+  { name: 'material-texture-channel', file: 'unit-material-texture-channel.tscn' },
   // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
   // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
   { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },

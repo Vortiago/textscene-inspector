@@ -60,6 +60,8 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     disablesSpecularOcclusion: data.disablesSpecularOcclusion,
     aoLightAffect: data.aoLightAffect,
     aoTextureChannelMask: textureChannelMask(data.aoTextureChannel),
+    roughnessTextureChannelMask: textureChannelMask(data.roughnessTextureChannel),
+    metallicTextureChannelMask: textureChannelMask(data.metallicTextureChannel),
     side: SIDE[data.cullMode],
     cullModeExplicit: data.cullModeExplicit,
     normalScale: data.normalScale,

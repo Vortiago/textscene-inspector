@@ -210,6 +210,10 @@ export interface StandardMaterial3DData {
   aoLightAffect: number;
   /** `ao_texture_channel`: the AO map channel the shader reads. */
   aoTextureChannel: TextureChannel;
+  /** `roughness_texture_channel`: the roughness map channel the shader reads. */
+  roughnessTextureChannel: TextureChannel;
+  /** `metallic_texture_channel`: the metallic map channel the shader reads. */
+  metallicTextureChannel: TextureChannel;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
   normalScale: Vector2;
   /** `uv1_triplanar`: triplanar mapping of the first UV set. */
@@ -304,6 +308,8 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   disablesSpecularOcclusion: boolean;
   aoLightAffect: number;
   aoTextureChannelMask: TextureChannelMask;
+  roughnessTextureChannelMask: TextureChannelMask;
+  metallicTextureChannelMask: TextureChannelMask;
   side: THREE.Side;
   cullModeExplicit: boolean;
   normalScale: Vector2;

@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+; One variable: the channel a roughness or metallic map is read from. One map holds red 20 and green
+; and blue 235, and both materials read its red channel, Godot's default. The left sphere takes the
+; map as roughness, so it is glossy. The right sphere takes it as metallic, so it is a dielectric.
+; A read of green for roughness turns the left matte, and a read of blue for metallic turns the right
+; metal. No other golden packs different values into a map's channels.
+
+[ext_resource type="Texture2D" path="res://textures/channel-pack.png" id="1_pack"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.6
+height = 1.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_roughness"]
+albedo_color = Color(0.8, 0.3, 0.2, 1)
+roughness_texture = ExtResource("1_pack")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_metallic"]
+albedo_color = Color(0.8, 0.3, 0.2, 1)
+metallic = 1.0
+metallic_texture = ExtResource("1_pack")
+roughness = 0.2
+
+[node name="TextureChannel" type="Node3D"]
+
+[node name="Roughness" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0, 0)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("StandardMaterial3D_roughness")
+
+[node name="Metallic" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0, 0)
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("StandardMaterial3D_metallic")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 0, 0)
