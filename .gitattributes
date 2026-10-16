@@ -1,7 +1,8 @@
 
-# Vendored game and demo corpora: exclude them from language stats and diffs by default.
-scenes/demos/** linguist-vendored
-scenes/isometric/** linguist-vendored
+# The local changes to the godot-demo-projects corpora apply to upstream's LF bytes, so a CRLF
+# checkout must not convert them. The text resources are Godot's output, not ours.
+scripts/vendor-godot-demos/local-changes.patch -text
+scripts/vendor-godot-demos/text-resources/** -text linguist-vendored
 
 # answers.json gives each expected position as a line and a character, so a CRLF checkout would move them.
 scenes/language-features/**/*.tscn text eol=lf
