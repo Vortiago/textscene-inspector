@@ -86,6 +86,7 @@ export const LIGHTING_SCENES = [
   // they also pin that both previews yield.
   { name: 'sky-procedural', file: 'unit-sky-procedural.tscn' },
   { name: 'sky-orthographic', file: 'unit-sky-orthographic.tscn', camera: 'Root/Camera3D' },
+  { name: 'sky-debanding-off', file: 'unit-sky-debanding-off.tscn', camera: 'Root/Camera3D' },
   { name: 'sky-physical', file: 'unit-sky-physical.tscn' },
   // A 3 degree sun in the procedural sky, which Godot draws as a disc of that angular size.
   { name: 'sky-sun-angular-distance', file: 'unit-sky-sun-angular-distance.tscn' },

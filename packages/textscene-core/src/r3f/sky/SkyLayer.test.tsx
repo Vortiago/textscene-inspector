@@ -8,6 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createPortal } from '@react-three/fiber';
 import type { SkyEnvironment, SkyEnvironmentInput } from '../../resources/sky/build';
 import type { Sky } from '../../resources/sky/types';
+import { decodeSkyMaterial } from '../../resources/sky/decode';
 import { SkyLayer } from './SkyLayer';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
@@ -15,6 +16,8 @@ import { shownSky, skyLayersSlot } from './skyLayerArray';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { NO_RESOURCES } from '../SceneResourcesContext';
+import { installFogComposite } from '../fog/fogComposite';
+import { installSkyDebanding } from './skyDebanding';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
 /** What the next bake returns on its renderer: null, as a headless renderer gives, unless a test sets it. */
@@ -301,5 +304,55 @@ describe('SkyLayer', () => {
     const { scene, gl } = await mount(<Scene lights={1} />);
 
     expect(sampledInRender(gl, scene)).toBeUndefined();
+  });
+});
+
+const PROCEDURAL_SKY: Sky = { ...SKY, material: decodeSkyMaterial('ProceduralSkyMaterial', {})! };
+
+/** The debanding noise's strength in a render of `scene`, which a debanded sky turns to 1. */
+function debandingInRender(scene: THREE.Scene): number {
+  installFogComposite();
+  installSkyDebanding();
+  (scene.onBeforeRender as () => void)();
+  const strength = (THREE.ShaderLib.backgroundCube!.uniforms.godotSkyDebanding!.value as Float32Array)[0]!;
+  (scene.onAfterRender as () => void)();
+  return strength;
+}
+
+describe('SkyLayer debanding', () => {
+  it('adds the noise to the background of a sky that debands', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(
+      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+
+    expect(debandingInRender(scene)).toBe(1);
+  });
+
+  it('adds none to a panorama sky, which never debands', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />);
+
+    expect(debandingInRender(scene)).toBe(0);
+  });
+
+  it('adds none when the sky paints no background (edge case)', async () => {
+    built.next = skyEnvironment();
+    const { scene } = await mount(
+      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} asBackground={false} />
+    );
+
+    expect(debandingInRender(scene)).toBe(0);
+  });
+
+  it('adds none once the sky unmounts (error case)', async () => {
+    built.next = skyEnvironment();
+    const { scene, update } = await mount(
+      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+
+    await update(<directionalLight />);
+
+    expect(debandingInRender(scene)).toBe(0);
   });
 });

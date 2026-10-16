@@ -22,6 +22,7 @@ export interface ProceduralSkyProperties {
   sun_curve: number;
   /** The sky's overall exposure. */
   energy_multiplier: number;
+  use_debanding: boolean;
 }
 
 export interface PanoramaSkyProperties {
@@ -42,6 +43,7 @@ export interface PhysicalSkyProperties {
   sun_disk_scale: number;
   ground_color: Rgba;
   energy_multiplier: number;
+  use_debanding: boolean;
 }
 
 export type SkyProperties = ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties;

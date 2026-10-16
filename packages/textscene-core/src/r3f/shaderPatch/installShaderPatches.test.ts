@@ -25,6 +25,14 @@ describe('installShaderPatches', () => {
     );
   });
 
+  it("installs the sky's debanding after the sky fog it follows", () => {
+    installShaderPatches();
+    const fragment = THREE.ShaderChunk.backgroundCube_frag;
+    expect(fragment.indexOf('godotSkyDebanding.x *')).toBeGreaterThan(
+      fragment.indexOf('godotSkyFog( gl_FragColor')
+    );
+  });
+
   it('changes nothing on a second call', () => {
     installShaderPatches();
     const chunks = { ...THREE.ShaderChunk };
