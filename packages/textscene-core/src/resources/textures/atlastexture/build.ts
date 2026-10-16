@@ -85,7 +85,10 @@ export function rasterizeAtlasTexture(
   if (!raw) return null;
   // A material binds the atlas's own texture (`atlas_texture.cpp:55-58`), so the crop reads as it.
   const crop = copySampling(cropRawPixels(raw, layout, region), sheet);
-  return copyGodotFormat(sheet.mipmaps.length > 1 ? withSheetMipChain(crop, sheet, layout) : crop, sheet);
+  const sheetLevels = sheet.mipmaps as MipLevel[];
+  if (sheetLevels.length <= 1) return copyGodotFormat(crop, sheet);
+  const rawLevels = sheetLevels.map((level) => ({ ...level, isBottomUp: raw.isBottomUp }));
+  return copyGodotFormat(withSheetMipChain(crop, rawLevels, layout), sheet);
 }
 
 /**
@@ -108,14 +111,12 @@ function clippedRegion({ source }: AtlasTextureLayout, atlas: ImageSize): Region
  */
 function withSheetMipChain(
   crop: THREE.DataTexture,
-  sheet: THREE.Texture,
+  sheetLevels: RawPixels[],
   layout: AtlasTextureLayout
 ): THREE.DataTexture {
-  const sheetLevels = sheet.mipmaps as MipLevel[];
   const levels: MipLevel[] = [crop.image as MipLevel];
   for (let i = 1; i < sheetLevels.length && !isLastLevel(levels.at(-1)!); i++) {
-    const level = sheetLevels[i]!;
-    levels.push(croppedLevel({ ...level, isBottomUp: isBottomUp(sheet) }, layoutAtLevel(layout, i)));
+    levels.push(croppedLevel(sheetLevels[i]!, layoutAtLevel(layout, i)));
   }
   const [, ...averaged] = textureMipChain(crop, levels.at(-1)!, false);
   return texelTexture(crop, [...levels, ...averaged]);
