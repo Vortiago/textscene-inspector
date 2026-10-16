@@ -3,8 +3,13 @@
  * the requested scene confirmed, and the canvas proven settled before it is read.
  */
 
+/* global document */ // The `sceneStillLoading` predicate runs in the browser.
+
 import {
+  FIXTURE_LOADING_TESTID,
   NETWORK_IDLE_MS,
+  SCENE_LOAD_STATUS_TESTID,
+  SCENE_LOAD_WAIT_MS,
   SETTLE_INITIAL_MS,
   SETTLE_INTERVAL_MS,
   SETTLE_MAX_ATTEMPTS,
@@ -148,6 +153,24 @@ export async function textureWorkCleared(status) {
     // Playwright's timeout is the answer here. A closed page or a crashed tab is not.
     if (error?.name === 'TimeoutError') return false;
     throw new Error(`waiting for the texture work status to detach: ${error}`, { cause: error });
+  }
+}
+
+/**
+ * The reason the scene is still loading, or null once it is whole: fetched, drawn, its resources
+ * landed and its texture work ended. One check reads every status, since each gives way to the next.
+ */
+export async function sceneStillLoading(page) {
+  try {
+    await page.waitForFunction(
+      (ids) => ids.every((id) => !document.querySelector(`[data-testid="${id}"]`)),
+      [FIXTURE_LOADING_TESTID, SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID],
+      { timeout: SCENE_LOAD_WAIT_MS }
+    );
+    return null;
+  } catch (error) {
+    if (error?.name === 'TimeoutError') return `scene still loading after ${SCENE_LOAD_WAIT_MS}ms`;
+    throw new Error(`waiting for the scene to load: ${error}`, { cause: error });
   }
 }
 
