@@ -9,11 +9,21 @@ import { warmUpGLContext } from './captureContext.mjs';
 import { assertPortFree, killPreviewGroup, startPreview, waitForServer } from './server.mjs';
 import { ensureWebBuilt } from './webBuild.mjs';
 
+// Playwright's bundled Chromium, pinned by the lockfile, and SwiftShader software GL, so local and
+// CI render the same bits with no GPU or driver variance.
+function launchSwiftShaderBrowser() {
+  return chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+}
+
 /**
  * Runs `work(browser, baseUrl)` against the previewer on `port`, and answers what it answers.
- * `portEnvName` is the variable a user sets when another process holds the port.
+ * `portEnvName` is the variable a user sets when another process holds the port. `launchBrowser`
+ * starts the browser: a capture that measures against Godot passes `launchGodotComparisonBrowser`.
  */
-export async function withPreviewBrowser({ port, portEnvName }, work) {
+export async function withPreviewBrowser(
+  { port, portEnvName, launchBrowser = launchSwiftShaderBrowser },
+  work
+) {
   // Build before the port check: a cold build is long enough for another worktree's harness to
   // claim the port in between.
   ensureWebBuilt();
@@ -22,9 +32,7 @@ export async function withPreviewBrowser({ port, portEnvName }, work) {
   let browser;
   try {
     await waitForServer(`${baseUrl}/`);
-    // Playwright's bundled Chromium, pinned by the lockfile, and SwiftShader software GL, so local
-    // and CI render the same bits with no GPU or driver variance.
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    browser = await launchBrowser();
     // Takes the first-context-lost risk before any real capture page opens.
     await warmUpGLContext(browser);
     return await work(browser, baseUrl);
