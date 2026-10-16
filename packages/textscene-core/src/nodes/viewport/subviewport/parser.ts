@@ -7,6 +7,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { boolOr, enumOr, parseOptionalInt, vec2iOr } from '../../../parser/valueParsers';
 import { parseNode } from '../../node/parser';
+import { enumValues } from '../../../godot/classdb/enumNames';
 import { MSAA_DISABLED, MSAA_MODES } from '../../../godot/rendering/msaa';
 import {
   VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
@@ -16,19 +17,8 @@ import {
 } from '../../../godot/scene/viewport';
 import type { SubViewportProperties } from './types';
 
-const UPDATE_MODES = [
-  SubViewportUpdateMode.DISABLED,
-  SubViewportUpdateMode.ONCE,
-  SubViewportUpdateMode.WHEN_VISIBLE,
-  SubViewportUpdateMode.WHEN_PARENT_VISIBLE,
-  SubViewportUpdateMode.ALWAYS,
-] as const;
-
-const CLEAR_MODES = [
-  SubViewportClearMode.ALWAYS,
-  SubViewportClearMode.NEVER,
-  SubViewportClearMode.ONCE,
-] as const;
+const UPDATE_MODES = enumValues(SubViewportUpdateMode);
+const CLEAR_MODES = enumValues(SubViewportClearMode);
 
 /** `Viewport.DefaultCanvasItemTextureFilter`: NEAREST, LINEAR and the mipmap variants. */
 const TEXTURE_FILTERS = [

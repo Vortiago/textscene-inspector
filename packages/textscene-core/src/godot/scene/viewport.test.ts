@@ -21,6 +21,15 @@ import {
 } from './viewport';
 
 describe('viewportPositionalShadowAtlas', () => {
+  it('counts the shadows each subdivision label names, 0 for Disabled', () => {
+    for (const [value, label] of Object.entries(POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES)) {
+      const subdiv = Number(value);
+      expect(viewportPositionalShadowAtlas(undefined, [subdiv]).quadrantShadows[0]).toBe(
+        label === 'DISABLED' ? 0 : Number(label)
+      );
+    }
+  });
+
   it('reads the authored size and quadrant subdivisions', () => {
     expect(viewportPositionalShadowAtlas(4096, [1, 2, 3, 6])).toEqual({
       size: 4096,

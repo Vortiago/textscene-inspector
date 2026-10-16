@@ -85,7 +85,7 @@ export enum CcdMode {
 
 export const CCD_MODE_NAMES = enumNamesByValue(CcdMode);
 
-/** `PhysicalBone3D::PhysicalBoneJointType` (`scene/3d/physics/physical_bone_3d.h:47-54`). */
+/** `PhysicalBone3D::JointType` (`scene/3d/physics/physical_bone_3d.h:47-54`). */
 export enum PhysicalBoneJointType {
   NONE = 0,
   PIN = 1,

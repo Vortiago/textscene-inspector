@@ -36,6 +36,15 @@ import {
 } from '../../../godot/scene/viewport.js';
 import { MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
 
+const shadowAtlasQuadrant = (key: string) =>
+  v.enumInt(
+    key,
+    PositionalShadowAtlasQuadrantSubdiv.DISABLED,
+    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_1024,
+    POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
+    { enforced: 'viewport.cpp:1413' }
+  );
+
 validatorRegistry.registerAll('Viewport', {
   own_world_3d: v.boolean('own_world_3d'),
   disable_3d: v.boolean('disable_3d'),
@@ -90,15 +99,15 @@ validatorRegistry.registerAll('Viewport', {
   // viewport.cpp:5171 hints RANGE "0,1024,0.1", both ends closed. set_mesh_lod_threshold
   // (viewport.cpp:3819-3823) bare-assigns, so this is hinted, not enforced.
   mesh_lod_threshold: v.float('mesh_lod_threshold', { min: 0, max: 1024, hinted: 'viewport.cpp:5171' }),
-  // viewport.cpp:5172, PROPERTY_HINT_ENUM with 27 labels (0-26, no MAX sentinel); 4.7.2 adds two
-  // (0-28, viewport.cpp:5367). set_debug_draw (viewport.cpp:3847-3850) bare-assigns.
+  // viewport.cpp:5172, PROPERTY_HINT_ENUM with 29 labels, 0-28; the last two are 4.7.2
+  // (viewport.cpp:5367). set_debug_draw (viewport.cpp:3847-3850) bare-assigns.
   debug_draw: v.enumInt('debug_draw', DebugDraw.DISABLED, DebugDraw.AREA_LIGHT_ATLAS, DEBUG_DRAW_NAMES, {
     hinted: 'viewport.cpp:5172',
   }),
   use_hdr_2d: v.boolean('use_hdr_2d'),
 
   // "Scaling 3D" group, viewport.cpp:5177-5181.
-  // viewport.cpp:5177, PROPERTY_HINT_ENUM 5 labels; 4.7.2 adds Nearest as 5 (viewport.cpp:5372).
+  // viewport.cpp:5177, PROPERTY_HINT_ENUM with 6 labels, 0-5; Nearest is 4.7.2 (viewport.cpp:5372).
   // set_scaling_3d_mode (viewport.cpp:4855-4862) bare-assigns, no ERR_FAIL_INDEX.
   scaling_3d_mode: v.enumInt(
     'scaling_3d_mode',
@@ -220,34 +229,10 @@ validatorRegistry.registerAll('Viewport', {
   // set_positional_shadow_atlas_quadrant_subdiv (viewport.cpp:1410-1413):
   // `ERR_FAIL_INDEX(p_subdiv, SHADOW_ATLAS_QUADRANT_SUBDIV_MAX)` on the value.
   // Its `ERR_FAIL_INDEX(p_quadrant, 4)` is fixed per key and never fails here.
-  positional_shadow_atlas_quad_0: v.enumInt(
-    'positional_shadow_atlas_quad_0',
-    PositionalShadowAtlasQuadrantSubdiv.DISABLED,
-    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_1024,
-    POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
-    { enforced: 'viewport.cpp:1413' }
-  ),
-  positional_shadow_atlas_quad_1: v.enumInt(
-    'positional_shadow_atlas_quad_1',
-    PositionalShadowAtlasQuadrantSubdiv.DISABLED,
-    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_1024,
-    POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
-    { enforced: 'viewport.cpp:1413' }
-  ),
-  positional_shadow_atlas_quad_2: v.enumInt(
-    'positional_shadow_atlas_quad_2',
-    PositionalShadowAtlasQuadrantSubdiv.DISABLED,
-    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_1024,
-    POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
-    { enforced: 'viewport.cpp:1413' }
-  ),
-  positional_shadow_atlas_quad_3: v.enumInt(
-    'positional_shadow_atlas_quad_3',
-    PositionalShadowAtlasQuadrantSubdiv.DISABLED,
-    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_1024,
-    POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
-    { enforced: 'viewport.cpp:1413' }
-  ),
+  positional_shadow_atlas_quad_0: shadowAtlasQuadrant('positional_shadow_atlas_quad_0'),
+  positional_shadow_atlas_quad_1: shadowAtlasQuadrant('positional_shadow_atlas_quad_1'),
+  positional_shadow_atlas_quad_2: shadowAtlasQuadrant('positional_shadow_atlas_quad_2'),
+  positional_shadow_atlas_quad_3: shadowAtlasQuadrant('positional_shadow_atlas_quad_3'),
 
   // viewport.cpp:5218, PROPERTY_HINT_LAYERS_2D_RENDER: a UI-control hint, so
   // out-of-range is a warning, never an error. set_canvas_cull_mask

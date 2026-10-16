@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enumNamesByValue, relabelEnumNames } from './enumNames';
+import { enumNamesByValue, enumValues, relabelEnumNames } from './enumNames';
 
 enum Shade {
   DARK = 0,
@@ -30,5 +30,16 @@ describe('relabelEnumNames', () => {
 
   it('gives an empty map for an empty table', () => {
     expect(relabelEnumNames({}, (name) => name)).toEqual({});
+  });
+});
+
+describe('enumValues', () => {
+  enum Sample {
+    A = 0,
+    B = 3,
+  }
+
+  it('lists the integers in declaration order, without the reverse-mapped names', () => {
+    expect(enumValues(Sample)).toEqual([0, 3]);
   });
 });

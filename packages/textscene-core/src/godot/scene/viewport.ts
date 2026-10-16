@@ -143,7 +143,8 @@ const VIEWPORT_POSITIONAL_SHADOW_ATLAS_SIZE_DEFAULT = 2048;
 
 /**
  * The shadow count of each `PositionalShadowAtlasQuadrantSubdiv` value, from Disabled to 1024
- * Shadows (`scene/main/viewport.cpp:1420`).
+ * Shadows (`scene/main/viewport.cpp:1420`). A tuple, so an enum member indexes it without
+ * `undefined`; viewport.test.ts pins it against the enum labels.
  */
 const POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS = [0, 1, 4, 16, 64, 256, 1024] as const;
 
