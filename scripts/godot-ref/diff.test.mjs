@@ -66,6 +66,12 @@ describe('resolveFixture', () => {
     expect(target.label).toBe('demos-gui-control_gallery-control_gallery');
   });
 
+  it('labels a flattened corpus scene by its corpus, so it never shares a fixture label', () => {
+    const target = resolveFixture('scenes/isometric/previews/candle_preview.tscn');
+    expect(target.fixtureName).toBe('previews/candle_preview.tscn');
+    expect(target.label).toBe('isometric-previews-candle_preview');
+  });
+
   it('rejects a file that is not a .tscn', () => {
     expect(() => resolveFixture('unit-plane-mesh.tres')).toThrow(/not a \.tscn/);
   });
@@ -78,6 +84,16 @@ describe('resolveFixture', () => {
 describe('catalogName', () => {
   it('flattens scenes/fixtures to a bare filename', () => {
     expect(catalogName(`${REPO_ROOT}/scenes/fixtures/unit-plane-mesh.tscn`)).toBe('unit-plane-mesh.tscn');
+  });
+
+  it('names an ld-58 scene relative to its project root, as the catalog lists it', () => {
+    expect(catalogName(`${REPO_ROOT}/scenes/ld58/Scenes/Hallway/Hallway.tscn`)).toBe(
+      'Scenes/Hallway/Hallway.tscn'
+    );
+  });
+
+  it('names an isometric scene relative to its project root (edge case)', () => {
+    expect(catalogName(`${REPO_ROOT}/scenes/isometric/dungeon.tscn`)).toBe('dungeon.tscn');
   });
 
   it('keeps every other subtree as a path relative to scenes/', () => {

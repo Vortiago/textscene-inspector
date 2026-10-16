@@ -1,0 +1,48 @@
+[gd_scene format=3 uid="uid://unitvolfogspotorigin"]
+
+; Two SpotLight3D origins inside thin volumetric fog in view, as in an ld-58 window: a shadowed
+; "Spot" and an unshadowed "Glow". The fog cell around the shadowed origin sits behind the light's
+; plane, outside its cone, where the shadow lookup's texel runs far past the atlas. Godot's clamping
+; sampler reads the atlas edge there, and the cell scatters nothing. The nested Window transform
+; places those cells, so a flattened transform does not show the variable. No other golden puts a
+; shadowed spot's origin in view inside the fog. The zero-energy sun keeps the editor's preview sun
+; out (ADR-0025).
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.15, 0.12, 0.1, 1)
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.0003
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Window" type="Node3D" parent="."]
+transform = Transform3D(4.371139e-08, -3.821371e-15, 1, -8.742278e-08, -1, 0, 1, -8.742278e-08, -4.371139e-08, 12, 1.6, 5.8)
+
+[node name="Spot" type="SpotLight3D" parent="Window"]
+transform = Transform3D(0.9250308, 8.0503835e-09, -0.37989208, 0.17676589, 0.88515013, 0.43042204, 0.33626148, -0.46530557, 0.81879115, -0.17676401, 0.12476301, 0.5)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+shadow_enabled = true
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="Glow" type="SpotLight3D" parent="Window"]
+transform = Transform3D(0.8141454, -0.4104396, 0.41073903, 0.25548857, 0.88842106, 0.3813575, -0.5214334, -0.20554131, 0.8281666, 0.3575077, 0.36064374, 0.51123047)
+light_color = Color(1, 0.7, 0.4, 1)
+light_energy = 2.5
+light_volumetric_fog_energy = 15000.0
+spot_range = 13.0
+spot_attenuation = 1.5
+spot_angle = 30.0
+
+[node name="Dark" type="DirectionalLight3D" parent="."]
+light_energy = 0.0
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(0.813733, 0.05763, -0.578374, 0, 0.995073, 0.09915, 0.581238, -0.080682, 0.809724, 0, 1.6, 3)
