@@ -5,6 +5,7 @@
  */
 
 import { existsSync, mkdirSync } from 'node:fs';
+import { launchGodotComparisonBrowser } from '../../showcase/browser.mjs';
 import {
   createCaptureContext,
   openScene,
@@ -36,51 +37,54 @@ export async function captureOurs(fixtures, force, godotModes) {
   const capturable = pending.filter((f) => modes.has(f));
   if (capturable.length === 0) return failures;
 
-  await withPreviewBrowser({ port: PORT, portEnvName: 'COMPARE_PORT' }, async (browser, baseUrl) => {
-    // One context per workspace, not per fixture: the workspaces need different
-    // viewports and seeded preferences, and a context costs far more than a
-    // navigation.
-    let done = 0;
-    for (const mode of ['3d', '2d']) {
-      const group = capturable.filter((f) => modes.get(f) === mode);
-      if (group.length === 0) continue;
-      // 3D: Godot's editor camera, matching the reference side. 2D: the project
-      // viewport rectangle at zoom 1, with the stage's chrome painted out.
-      const context = await createCaptureContext(browser, {
-        frameOnOpen: false,
-        canvas2D: mode === '2d',
-      });
-      const page = await context.newPage();
-      try {
-        for (const fixture of group) {
-          process.stdout.write(`[ours] ${++done}/${capturable.length} ${fixture} (${mode}) … `);
-          try {
-            const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
-              canvas2D: mode === '2d',
-            });
-            if (!target) throw new Error(targetReason);
-            const { buffer, reason } = await settleCanvas(page, target);
-            if (!buffer) throw new Error(reason);
-            // Asked after the frame settles: the workspace is re-derived as
-            // sub-resources land, so an early read can show the 3D default.
-            const opened = await readViewportMode(page);
-            if (opened !== mode) {
-              throw new Error(
-                `the previewer opened this scene in ${opened.toUpperCase()} but Godot rendered ` +
-                  `it as ${mode.toUpperCase()} — the two frames are not comparable`
-              );
+  await withPreviewBrowser(
+    { port: PORT, portEnvName: 'COMPARE_PORT', launchBrowser: launchGodotComparisonBrowser },
+    async (browser, baseUrl) => {
+      // One context per workspace, not per fixture: the workspaces need different
+      // viewports and seeded preferences, and a context costs far more than a
+      // navigation.
+      let done = 0;
+      for (const mode of ['3d', '2d']) {
+        const group = capturable.filter((f) => modes.get(f) === mode);
+        if (group.length === 0) continue;
+        // 3D: Godot's editor camera, matching the reference side. 2D: the project
+        // viewport rectangle at zoom 1, with the stage's chrome painted out.
+        const context = await createCaptureContext(browser, {
+          frameOnOpen: false,
+          canvas2D: mode === '2d',
+        });
+        const page = await context.newPage();
+        try {
+          for (const fixture of group) {
+            process.stdout.write(`[ours] ${++done}/${capturable.length} ${fixture} (${mode}) … `);
+            try {
+              const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
+                canvas2D: mode === '2d',
+              });
+              if (!target) throw new Error(targetReason);
+              const { buffer, reason } = await settleCanvas(page, target);
+              if (!buffer) throw new Error(reason);
+              // Asked after the frame settles: the workspace is re-derived as
+              // sub-resources land, so an early read can show the 3D default.
+              const opened = await readViewportMode(page);
+              if (opened !== mode) {
+                throw new Error(
+                  `the previewer opened this scene in ${opened.toUpperCase()} but Godot rendered ` +
+                    `it as ${mode.toUpperCase()} — the two frames are not comparable`
+                );
+              }
+              writeCaptureImage(imagePath(fixture, 'ours'), buffer, `${fixture} ours`);
+              console.log('ok');
+            } catch (error) {
+              console.log(`FAILED: ${error.message}`);
+              failures.push({ fixture, error: error.message });
             }
-            writeCaptureImage(imagePath(fixture, 'ours'), buffer, `${fixture} ours`);
-            console.log('ok');
-          } catch (error) {
-            console.log(`FAILED: ${error.message}`);
-            failures.push({ fixture, error: error.message });
           }
+        } finally {
+          await context.close();
         }
-      } finally {
-        await context.close();
       }
     }
-  });
+  );
   return failures;
 }
