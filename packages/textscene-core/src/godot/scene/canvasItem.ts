@@ -3,12 +3,19 @@
 import { enumNamesByValue } from '../classdb/enumNames.js';
 
 /**
- * `CanvasItem::ClipChildrenMode` (`scene/main/canvas_item.h:71-75`), the serialised values of
- * `clip_children`. CanvasGroup's rule asks only whether an ancestor clips, as Godot tests
- * `get_clip_children_mode() != CLIP_CHILDREN_DISABLED` (`canvas_group.cpp:76`,
- * `canvas_item.cpp:1308`), so this is a named engine fact rather than a bare `!== 0`.
+ * `CanvasItem::ClipChildrenMode` (`scene/main/canvas_item.h:71-74`), the serialised values of
+ * `clip_children`, without its `_MAX`. CanvasGroup's rule asks only whether an ancestor clips, as
+ * Godot tests `get_clip_children_mode() != CLIP_CHILDREN_DISABLED` (`canvas_group.cpp:76`,
+ * `canvas_item.cpp:1308`).
  */
-export const CLIP_CHILDREN_DISABLED = 0;
+export enum CanvasItemClipChildrenMode {
+  DISABLED = 0,
+  ONLY = 1,
+  AND_DRAW = 2,
+}
+
+/** The names Godot binds (`BIND_ENUM_CONSTANT`, `canvas_item.cpp:1525-1527`). */
+export const CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES = enumNamesByValue(CanvasItemClipChildrenMode);
 
 /**
  * `CLIP_CHILDREN_MAX` (`canvas_item.h:75`), a count sentinel, not a mode, so the legal span is
@@ -16,13 +23,7 @@ export const CLIP_CHILDREN_DISABLED = 0;
  * int32 narrowing, so only 3..2147483647 trips it. Measured on 4.6.3: `4294967295`, the
  * serialiser's `-1`, lands negative, passes the guard and clips.
  */
-export const CLIP_CHILDREN_MAX = 3;
-
-/**
- * The mode names Godot binds (`BIND_ENUM_CONSTANT`, `canvas_item.cpp:1525-1527`), for a
- * diagnostic that reports the legal values. {@link CLIP_CHILDREN_MAX} says why it ends at 2.
- */
-export const CLIP_CHILDREN_MODES = { 0: 'DISABLED', 1: 'ONLY', 2: 'AND_DRAW' };
+export const CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT = 3;
 
 /**
  * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`), without `TEXTURE_FILTER_MAX`, as the

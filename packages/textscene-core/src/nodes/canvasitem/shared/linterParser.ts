@@ -17,7 +17,8 @@ import {
   CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
   CanvasItemTextureFilter,
   CanvasItemTextureRepeat,
-  CLIP_CHILDREN_MODES,
+  CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES,
+  CanvasItemClipChildrenMode,
 } from '../../../godot/scene/canvasItem.js';
 import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../../godot/rendering/rendering.js';
 
@@ -31,10 +32,16 @@ validatorRegistry.registerAll('CanvasItem', {
   // floor, so the PROPERTY_HINT_ENUM at :1476 grounds the rest. Measured on 4.6.3, `4294967295`,
   // which the serialiser writes for -1, narrows to -1, passes the guard and clips, while `3` and
   // `-3000000000` trip it and keep 0.
-  clip_children: v.enumInt('clip_children', 0, 2, CLIP_CHILDREN_MODES, {
-    hinted: { min: 'canvas_item.cpp:1476' },
-    enforced: { max: 'canvas_item.cpp:1733' },
-  }),
+  clip_children: v.enumInt(
+    'clip_children',
+    CanvasItemClipChildrenMode.DISABLED,
+    CanvasItemClipChildrenMode.AND_DRAW,
+    CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES,
+    {
+      hinted: { min: 'canvas_item.cpp:1476' },
+      enforced: { max: 'canvas_item.cpp:1733' },
+    }
+  ),
   // canvas_item.cpp:1477, PROPERTY_HINT_LAYERS_2D_RENDER, not a PROPERTY_HINT_RANGE, so no numeric
   // hint grounds a bound. set_light_mask (canvas_item.cpp:589-596) assigns unconditionally, with no
   // ERR_FAIL and no clamp, so no 0..2^32-1 bound is declared (ADR-0032 "none").

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   CANVAS_ITEM_TEXTURE_FILTER_NAMES,
   CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
+  CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES,
+  CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT,
+  CanvasItemClipChildrenMode,
   CanvasItemTextureFilter,
   CanvasItemTextureRepeat,
   canvasItemSamplerFilter,
@@ -46,5 +49,15 @@ describe('CanvasItem texture repeat', () => {
       3: 'MIRROR',
     });
     expect(CanvasItemTextureRepeat.MIRROR).toBe(3);
+  });
+});
+
+describe('CanvasItem clip children mode', () => {
+  it('names the three modes before CLIP_CHILDREN_MAX (canvas_item.h:71-75)', () => {
+    expect(CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES).toEqual({ 0: 'DISABLED', 1: 'ONLY', 2: 'AND_DRAW' });
+  });
+
+  it('counts the modes as CLIP_CHILDREN_MAX does, one past AND_DRAW (edge case)', () => {
+    expect(CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT).toBe(CanvasItemClipChildrenMode.AND_DRAW + 1);
   });
 });
