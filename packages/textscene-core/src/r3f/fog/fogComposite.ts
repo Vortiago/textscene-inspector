@@ -125,7 +125,7 @@ export function installFogComposite(): void {
     names: ['background_vert', 'background_frag'],
     isApplied: (chunks) => chunks.background_frag.includes('godotSkyFog'),
     apply: fogBackgroundPlane,
-    missing: `background_vert has no ${THREE_PLANE_POSITION}`,
+    missing: `background_vert has no ${THREE_PLANE_POSITION}, or background_frag has no ${THREE_BACKGROUND_TONE_CURVE.trim()}`,
   });
   if (isPlaneFogged) {
     backgroundPlane().vertexShader = THREE.ShaderChunk.background_vert;

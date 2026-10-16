@@ -225,6 +225,19 @@ describe('recompileOnCurveChange', () => {
     expect(material.version).toBe(versionBefore);
   });
 
+  it('leaves the scene alone when only the exposure changes', () => {
+    const gl = fakeRenderer();
+    const restoreFirst = installToneMapping(gl, { mode: AGX, exposure: 1 }, 'material');
+    const { scene, seen, material, versionBefore } = seenScene();
+
+    const restoreSecond = installToneMapping(gl, { mode: AGX, exposure: 2 }, 'material');
+    recompileOnCurveChange(scene, seen);
+    restoreSecond();
+    restoreFirst();
+
+    expect(material.version).toBe(versionBefore);
+  });
+
   it('marks the scene dirty again when the curve is restored (edge case)', () => {
     const restore = installToneMapping(fakeRenderer(), { mode: FILMIC }, 'material');
     const { scene, seen, material, versionBefore } = seenScene();

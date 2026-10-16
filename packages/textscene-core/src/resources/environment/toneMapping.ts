@@ -74,7 +74,7 @@ export function recompileOnCurveChange(scene: THREE.Object3D, seen: { revision: 
   markMaterialsDirty(scene);
 }
 
-/** Written only by `installCurve` and its undo, once per change to three's chunk. Never cleared. */
+/** Written only by `setCurveChunk`, once per change to three's chunk. Never cleared. */
 let curveRevision = 0;
 
 /** Puts the settings' curve in three's chunk and their exposure on the renderer. Returns the undo. */
@@ -82,18 +82,19 @@ function installCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): ()
   const previousExposure = gl.toneMappingExposure;
   const previousChunk = THREE.ShaderChunk[TONEMAP_CHUNK];
   keyProgramsOnToneMappingChunk();
-  THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(
-    settings.mode,
-    settings.white ?? 1,
-    settings.agxContrast
-  );
-  curveRevision += 1;
+  setCurveChunk(toneMappingShaderChunk(settings.mode, settings.white ?? 1, settings.agxContrast));
   gl.toneMappingExposure = settings.exposure ?? 1;
   return () => {
-    THREE.ShaderChunk[TONEMAP_CHUNK] = previousChunk;
-    curveRevision += 1;
+    setCurveChunk(previousChunk);
     gl.toneMappingExposure = previousExposure;
   };
+}
+
+/** An exposure-only change reinstalls the same text, which no program needs to recompile for. */
+function setCurveChunk(chunk: string): void {
+  if (THREE.ShaderChunk[TONEMAP_CHUNK] === chunk) return;
+  THREE.ShaderChunk[TONEMAP_CHUNK] = chunk;
+  curveRevision += 1;
 }
 
 /** Points the renderer's own mapping at the installed curve. Returns the undo. */

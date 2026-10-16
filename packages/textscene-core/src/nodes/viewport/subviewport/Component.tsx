@@ -174,8 +174,8 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     // rect, and it is restored after, since the main canvas may render through the same camera.
     const aspect = viewportAspect({ x: width, y: height });
     const restoreAspect = camera ? fittedAspect(camera) : null;
-    const isRefitted = camera !== null && restoreAspect !== aspect;
-    if (isRefitted) fitToAspect(camera, aspect);
+    const refitted = camera && restoreAspect !== null && restoreAspect !== aspect ? camera : null;
+    if (refitted) fitToAspect(refitted, aspect);
 
     try {
       renderToOffscreenTarget(gl, {
@@ -196,7 +196,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         },
       });
     } finally {
-      if (isRefitted && restoreAspect !== null) fitToAspect(camera, restoreAspect);
+      if (refitted && restoreAspect !== null) fitToAspect(refitted, restoreAspect);
     }
   }, [
     rendersInline,

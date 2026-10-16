@@ -53,9 +53,11 @@ export function Camera3D({ node, children }: NodeComponentProps) {
       ? 'orthographicCamera'
       : 'perspectiveCamera';
 
-  // PROJECTION_FRUSTUM is not yet supported and falls back to perspective.
+  // PROJECTION_FRUSTUM is not yet supported and falls back to perspective. A new projection is a
+  // new three camera, so the key remounts the tag, the lens fit and the gizmo with it.
   return (
     <SceneCamera
+      key={CameraElement}
       element={CameraElement}
       name={node.name}
       tscnPath={tscnPath}
@@ -118,7 +120,7 @@ function SceneCamera({
     camera.manual = true;
     setLens(camera, lens);
     fitToAspect(camera, fittedAspect(camera) ?? DEFAULT_ASPECT);
-  }, [CameraElement, lens, near, far]);
+  }, [lens, near, far]);
   return (
     <>
       <CameraElement

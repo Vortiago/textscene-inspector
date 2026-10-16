@@ -122,6 +122,13 @@ describe('Camera3D projection (assertions 60–66)', () => {
     expect(o.projectionMatrix.elements[5]).toBeCloseTo(2 / 2, 6);
   });
 
+  it('tags the new camera with its node path when the projection changes (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode()} />);
+    await renderer.update(<Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL })} />);
+    const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
+    expect(o.userData.tscnPath).toBe('Cam');
+  });
+
   it('builds the perspective projection matrix from `fov`', async () => {
     const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ fov: 90 })} />);
     const p = instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByType('PerspectiveCamera'));

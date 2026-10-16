@@ -68,3 +68,23 @@ describe('fittedAspect', () => {
     expect(fittedAspect(new THREE.OrthographicCamera())).toBeNull();
   });
 });
+
+describe('setLens', () => {
+  it('keeps the aspect of an earlier fit for the new lens', () => {
+    const camera = orthographic(2, KeepAspectMode.KEEP_HEIGHT);
+    fitToAspect(camera, 1.5);
+    setLens(camera, { fov: 75, size: 4, keepAspect: KeepAspectMode.KEEP_HEIGHT });
+    expect(fittedAspect(camera)).toBe(1.5);
+  });
+
+  it('leaves the projection alone until the next fit (edge case)', () => {
+    const camera = orthographic(2, KeepAspectMode.KEEP_HEIGHT);
+    fitToAspect(camera, 1);
+    setLens(camera, { fov: 75, size: 4, keepAspect: KeepAspectMode.KEEP_HEIGHT });
+    expect(camera.top).toBe(1);
+  });
+
+  it('records no aspect on a camera never fitted (error case)', () => {
+    expect(fittedAspect(orthographic(2, KeepAspectMode.KEEP_HEIGHT))).toBeNull();
+  });
+});
