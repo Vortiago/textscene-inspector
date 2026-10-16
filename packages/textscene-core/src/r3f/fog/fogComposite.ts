@@ -10,6 +10,7 @@ import { applyChunkEdits, installChunkPatch, onChunk } from '../shaderPatch/chun
 import { installMergedUniform, FOG_UNIFORMS_MERGE } from '../shaderPatch/litUniform.js';
 import { GODOT_FOG_PARS, GODOT_FOG_PARS_CHUNK } from './fogChunks.js';
 import { fogUniformRecord } from './fogUniforms.js';
+import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection.js';
 
 const VIEW_VARYING = 'vGodotFogView';
 
@@ -66,19 +67,14 @@ const fogBackgroundCube = onChunk('backgroundCube_frag', (shader) => {
 /** three's flat background vertex, which hands on the world direction of each pixel's view ray. */
 const THREE_PLANE_POSITION = 'gl_Position = vec4( position.xy, 1.0, 1.0 );';
 
-/**
- * three's flat background, a colour background, fogged after its intensity as the cube is. An
- * orthographic camera looks along one direction, which the clip-space quad does not encode.
- */
+/** three's flat background, a colour background, fogged after its intensity as the cube is. */
 function fogBackgroundPlane(chunks: Record<'background_vert' | 'background_frag', string>) {
   const fogged = applyChunkEdits(chunks, [
     {
       chunk: 'background_vert',
       three: THREE_PLANE_POSITION,
       godot: /* glsl */ `${THREE_PLANE_POSITION}
-	vec4 viewRay = inverse( projectionMatrix ) * vec4( position.xy, 1.0, 1.0 );
-	vec3 viewDirection = isOrthographic ? vec3( 0.0, 0.0, - 1.0 ) : viewRay.xyz / viewRay.w;
-	vWorldDirection = normalize( ( vec4( viewDirection, 0.0 ) * viewMatrix ).xyz );`,
+	vWorldDirection = normalize( ( vec4( ${GODOT_SKY_VIEW_RAY}, 0.0 ) * viewMatrix ).xyz );`,
     },
     {
       chunk: 'background_frag',

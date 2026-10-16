@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { installFogComposite } from './fogComposite';
 import { GODOT_FOG_PARS_CHUNK } from './fogChunks';
 import { fogUniforms } from './fogUniforms';
+import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection';
 import { warningsOf } from '../testing/logWarnings';
 
 const threeChunks = {
@@ -83,18 +84,12 @@ describe('installFogComposite', () => {
     );
   });
 
-  it('gives the flat background the view direction of each pixel', () => {
+  it('gives the flat background the view direction of each pixel, as Godot’s sky pass casts it', () => {
     installFogComposite();
 
     const shader = backgroundPlane.vertexShader;
     expect(shader).toContain('varying vec3 vWorldDirection;');
-    expect(shader).toContain('inverse( projectionMatrix )');
-  });
-
-  it('gives the flat background one direction under an orthographic camera (edge case)', () => {
-    installFogComposite();
-
-    expect(backgroundPlane.vertexShader).toContain('isOrthographic ? vec3( 0.0, 0.0, - 1.0 )');
+    expect(shader).toContain(GODOT_SKY_VIEW_RAY);
   });
 
   it('gives every fog material and the background the same uniform values', () => {
