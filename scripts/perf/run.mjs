@@ -15,21 +15,13 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import {
-  assertPortFree,
   createCaptureContext,
-  ensureWebBuilt,
-  findCanvas,
-  gotoFixture,
-  killPreviewGroup,
+  openScene,
   PERFORMANCE_TESTIDS,
-  startPreview,
   TEXTURE_WORK_STATUS_TESTID,
   textureWorkCleared,
-  waitForServer,
-  warmUpGLContext,
+  withPreviewBrowser,
 } from '../visual/previewServer.mjs';
 import { attachConsoleGate } from '../visual/run/sceneCapture.mjs';
 import { BUDGET_SCENES } from './scenes.mjs';
@@ -38,8 +30,8 @@ import { compareToBudget, parseWorkCounts } from './workCounts.mjs';
 
 const BUDGETS_PATH = resolve(import.meta.dirname, 'budgets.json');
 
-// Clear of the visual gate's 4317, so both can run on one host.
-const PORT = Number(process.env.PERF_PORT) || 4319;
+// Clear of the visual gate's 4317 and the parity capture's 4319, so all three can run on one host.
+const PORT = Number(process.env.PERF_PORT) || 4321;
 
 /** Shorter than the overlay's 500 ms window, so no window goes unread. */
 const READ_INTERVAL_MS = 250;
@@ -53,16 +45,9 @@ async function main() {
     fail(`no budget scene named "${only}". Known: ${BUDGET_SCENES.map((s) => s.name).join(', ')}`, 2);
   }
 
-  ensureWebBuilt();
-  await assertPortFree(PORT);
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
   const measured = {};
   const unmeasured = [];
-  try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    await warmUpGLContext(browser);
+  await withPreviewBrowser({ port: PORT, portEnvName: 'PERF_PORT' }, async (browser, baseUrl) => {
     const profiled = await profiledPage(browser);
     for (const scene of scenes) {
       const { work, reason } = await measureScene(profiled, baseUrl, scene);
@@ -70,14 +55,7 @@ async function main() {
       else unmeasured.push(`${scene.name}: ${reason}`);
       console.log(`[perf] ${scene.name} ${work ? `${work.drawCalls} draw calls` : 'not measured'}`);
     }
-  } finally {
-    try {
-      await browser?.close();
-    } catch {
-      /* already gone */
-    }
-    killPreviewGroup(proc);
-  }
+  });
 
   if (unmeasured.length > 0) fail(`scene(s) not measured:\n  ${unmeasured.join('\n  ')}`);
   if (update) writeBudgets(measured);
@@ -113,11 +91,10 @@ async function profiledPage(browser) {
  */
 async function measureScene({ page, errors }, baseUrl, scene) {
   errors.length = 0;
-  await gotoFixture(page, baseUrl, scene.file, (ms) =>
-    console.log(`[perf]   ${scene.name}: no network idle within ${ms}ms`)
-  );
-  const { canvas, reason } = await findCanvas(page);
-  if (!canvas) return { work: null, reason };
+  const { target, reason } = await openScene(page, baseUrl, scene.file, {
+    onSlow: (ms) => console.log(`[perf]   ${scene.name}: no network idle within ${ms}ms`),
+  });
+  if (!target) return { work: null, reason };
   if (!(await textureWorkCleared(page.getByTestId(TEXTURE_WORK_STATUS_TESTID)))) {
     return { work: null, reason: 'texture work still pending' };
   }

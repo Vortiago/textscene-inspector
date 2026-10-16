@@ -64,6 +64,15 @@ export async function findCanvas(page) {
 }
 
 /**
+ * Opens `fixture` and finds the element a capture clips to: the start every capture shares. Answers
+ * `{ target, reason }`, with a null target and a reason when there is none.
+ */
+export async function openScene(page, baseUrl, fixture, { canvas2D = false, camera, onSlow } = {}) {
+  await gotoFixture(page, baseUrl, fixture, onSlow, { camera });
+  return findCaptureTarget(page, { canvas2D });
+}
+
+/**
  * The element a capture clips to: the 2D comparison frame when the scene opened
  * in the 2D workspace, the scene canvas otherwise. One call so a caller cannot
  * pick the 2D context and then screenshot the 3D element.

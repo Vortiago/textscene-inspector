@@ -39,11 +39,13 @@ export {
   warmUpGLContext,
 } from './preview/captureContext.mjs';
 export { findCanvas2DFrame, readViewportMode, setDisplayToggle } from './preview/viewportProbes.mjs';
+export { withPreviewBrowser } from './preview/session.mjs';
 export {
   findCanvas,
   findCaptureTarget,
   gotoFixture,
   isUniformImage,
+  openScene,
   settleCanvas,
   textureWorkCleared,
   writeCaptureImage,

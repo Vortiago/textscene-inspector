@@ -13,17 +13,7 @@
  */
 
 import { resolve } from 'node:path';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
-import {
-  assertPortFree,
-  createCaptureContext,
-  ensureWebBuilt,
-  killPreviewGroup,
-  startPreview,
-  waitForServer,
-  warmUpGLContext,
-} from './previewServer.mjs';
+import { createCaptureContext, withPreviewBrowser } from './previewServer.mjs';
 import { BASELINE_DIR } from './baselinePath.mjs';
 import { parseArgs, selectScenes, summarize } from './run/cli.mjs';
 import { attachConsoleGate, captureScene } from './run/sceneCapture.mjs';
@@ -37,45 +27,10 @@ const PORT = Number(process.env.VISUAL_PORT) || 4317;
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const scenes = selectScenes(opts);
-
-  // Build before the port check: a cold build is long enough for another worktree's harness to
-  // claim the port in between.
-  ensureWebBuilt();
-  await assertPortFree(PORT);
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
   const results = [];
-  try {
-    await waitForServer(`${baseUrl}/`);
+  await withPreviewBrowser({ port: PORT, portEnvName: 'VISUAL_PORT' }, async (browser, baseUrl) => {
     console.log(`[visual] preview at ${baseUrl}`);
-
-    // Playwright's bundled Chromium, pinned by the lockfile, and SwiftShader software GL, so local
-    // and CI render the same bits with no GPU or driver variance.
-    browser = await chromium.launch({
-      headless: true,
-      args: SWIFTSHADER_GL_ARGS,
-    });
-    // Takes the first-context-lost risk before either real capture page opens.
-    await warmUpGLContext(browser);
-
-    // Frames each scene on load: the app's default fixed orbit (ADR-0025) leaves the larger
-    // fixtures mostly out of frame, and a baseline of empty space cannot fail. The parity harness
-    // keeps the fixed orbit, since Godot opens there.
-    const context = await createCaptureContext(browser, { frameOnOpen: true });
-    const page = await context.newPage();
-    const pages = { default: { page, errors: attachConsoleGate(page) }, canvas2D: null };
-
-    // The 2D capture context has its own viewport and localStorage, so it is created only when a
-    // scene needs it.
-    if (scenes.some((s) => s.mode === '2d')) {
-      const context2D = await createCaptureContext(browser, {
-        frameOnOpen: false,
-        canvas2D: true,
-      });
-      const page2D = await context2D.newPage();
-      pages.canvas2D = { page: page2D, errors: attachConsoleGate(page2D) };
-    }
-
+    const pages = await capturePages(browser, scenes);
     // shards/measure.mjs starts the first scene's clock here, so the browser launch stays out of
     // the scene's seconds.
     console.log('[visual] browser ready');
@@ -85,16 +40,7 @@ async function main() {
       // One line per scene, so a slow run shows progress and a cancelled one shows how far it got.
       console.log(`[visual] ${results.length}/${scenes.length} ${scene.name} ${result.status}`);
     }
-  } finally {
-    // A crashed browser rejects close(), which would skip the kill below and leave `vite preview`
-    // holding the port.
-    try {
-      await browser?.close();
-    } catch {
-      /* already gone */
-    }
-    killPreviewGroup(proc);
-  }
+  });
 
   console.log('\n=== visual regression summary ===');
   const { lines, failed } = summarize(results);
@@ -115,6 +61,24 @@ async function main() {
   // A lingering handle from the killed preview group would keep the event loop open after
   // success, so the script exits explicitly.
   process.exit(0);
+}
+
+/**
+ * The pages the scenes capture on. Each scene is framed on load: the app's default fixed orbit
+ * (ADR-0025) leaves the larger fixtures mostly out of frame, and a baseline of empty space cannot
+ * fail. The parity harness keeps the fixed orbit, since Godot opens there. The 2D capture context
+ * has its own viewport and localStorage, so it exists only when a scene needs it.
+ */
+async function capturePages(browser, scenes) {
+  const context = await createCaptureContext(browser, { frameOnOpen: true });
+  const page = await context.newPage();
+  const pages = { default: { page, errors: attachConsoleGate(page) }, canvas2D: null };
+  if (scenes.some((s) => s.mode === '2d')) {
+    const context2D = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: true });
+    const page2D = await context2D.newPage();
+    pages.canvas2D = { page: page2D, errors: attachConsoleGate(page2D) };
+  }
+  return pages;
 }
 
 /** Captures one scene and compares it with its baseline, or writes the baseline under --update. */
