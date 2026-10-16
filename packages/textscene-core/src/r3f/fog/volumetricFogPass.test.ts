@@ -305,7 +305,9 @@ describe('VolumetricFogPass.prepare', () => {
 
     pass.forget(scene);
 
-    expect(dispose).toHaveBeenCalledTimes(2 * 2);
+    const cameras = 2;
+    const targetsPerView = 2;
+    expect(dispose).toHaveBeenCalledTimes(cameras * targetsPerView);
     dispose.mockRestore();
   });
 

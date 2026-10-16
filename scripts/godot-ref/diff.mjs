@@ -53,9 +53,9 @@ export function parseArgs(argv) {
 
 /**
  * Accepts a path on disk or a catalog name and produces both: `ref:godot` wants
- * the path, `ref:ours` the name. The catalog names a scene under `scenes/fixtures/` or
- * `scenes/ld58/` from that root, and keeps any other subtree as a relative path
- * (`demos/3d/truck_town/town/town_scene.tscn`).
+ * the path, `ref:ours` the name. The catalog names a scene under `scenes/fixtures/` or a
+ * flattened corpus root (`scenes/ld58/`, `scenes/isometric/`) from that root, and keeps any
+ * other subtree as a relative path (`demos/3d/truck_town/town/town_scene.tscn`).
  */
 export function resolveFixture(input) {
   const name = basename(input);
