@@ -9,8 +9,9 @@ const STATS: FrameStats = {
   frameMs: 16.7,
   cpuMs: 2,
   gpuMs: null,
+  drawCallsPerFrame: 0,
   hasGpuTimer: false,
-  steps: [{ step: 'Other', cpuMs: 2, gpuMs: null, callsPerFrame: 1 }],
+  steps: [{ step: 'Other', cpuMs: 2, gpuMs: null, runsPerFrame: 1, drawCallsPerFrame: 0 }],
 };
 
 function provider({ children }: { children: ReactNode }) {

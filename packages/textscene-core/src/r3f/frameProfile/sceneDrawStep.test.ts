@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { beginStep, endStep } from './frameProfile';
-import { CPU_ONLY_CONTEXT, profiledWindow, stepCpuMs } from './frameProfile.testkit';
+import { cpuOnlyRenderer, profiledWindow, stepCpuMs } from './frameProfile.testkit';
 import { timeSceneDraws } from './sceneDrawStep';
 
 function setup() {
-  const renderer = { getContext: () => CPU_ONLY_CONTEXT } as unknown as THREE.WebGLRenderer;
+  const renderer = cpuOnlyRenderer();
   const scene = new THREE.Scene();
   const canvasCamera = new THREE.PerspectiveCamera();
   const clock = { time: 0 };

@@ -22,7 +22,7 @@ import {
   SUN_SHADOW_ROWS,
 } from './directionalShadow/sunShadowUniforms';
 import { litUniformArray } from './testing/litUniformArray';
-import { CPU_ONLY_CONTEXT, profiledWindow, stepCpuMs } from './frameProfile/frameProfile.testkit';
+import { profiledRendererMembers, profiledWindow, stepCpuMs } from './frameProfile/frameProfile.testkit';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -37,7 +37,7 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
     getActiveMipmapLevel: () => 0,
     setRenderTarget: vi.fn(),
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(955, 756),
-    getContext: () => CPU_ONLY_CONTEXT,
+    ...profiledRendererMembers(),
   };
   return { renderer: renderer as unknown as THREE.WebGLRenderer, threePass };
 }
@@ -317,7 +317,7 @@ describe('the shadow pass under a frame profile', () => {
       () => renderer.shadowMap.render([new THREE.DirectionalLight()], fogged, camera)
     );
 
-    expect(stats.steps.map((s) => [s.step, s.cpuMs, s.callsPerFrame])).toEqual([
+    expect(stats.steps.map((s) => [s.step, s.cpuMs, s.runsPerFrame])).toEqual([
       ['Shadows', 3, 1],
       ['Fog', 5, 1],
       ['Other', 0, 1],

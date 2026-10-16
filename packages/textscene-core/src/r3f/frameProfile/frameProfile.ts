@@ -1,6 +1,6 @@
 /**
- * The frame profile: the CPU and GPU time of each render step on one renderer, averaged over a window of
- * frames and published. While no profile runs on a renderer, a step marker is one map lookup and
+ * The frame profile: the CPU time, GPU time and draw calls of each render step on one renderer,
+ * averaged over a window of frames and published. While no profile runs on a renderer, a step marker is one map lookup and
  * records nothing.
  */
 
@@ -62,8 +62,10 @@ class WindowSums {
   intervals = 0;
   intervalMs = 0;
   cpuMs = 0;
+  drawCalls = 0;
   readonly stepCpuMs = new Map<StepKey, number>();
-  readonly stepCalls = new Map<StepKey, number>();
+  readonly stepRuns = new Map<StepKey, number>();
+  readonly stepDrawCalls = new Map<StepKey, number>();
   gpuFrames = 0;
   gpuNs = 0;
   readonly stepGpuNs = new Map<StepKey, number>();
@@ -89,10 +91,12 @@ class Profile implements FrameProfile {
   private frameStart = 0;
   /** The open steps, innermost last. */
   private readonly openSteps: RenderStep[] = [];
-  /** The step whose own time runs now, and the clock reading it started at. */
+  /** The step whose own time runs now, and the clock reading and draw count it started at. */
   private current: StepKey = 'Other';
   private segmentStart = 0;
+  private segmentDrawCalls = 0;
   private readonly gpu: GpuTimer | null;
+  private readonly wasAutoReset: boolean;
 
   constructor(
     private readonly renderer: THREE.WebGLRenderer,
@@ -100,6 +104,10 @@ class Profile implements FrameProfile {
     private readonly now: () => number
   ) {
     this.gpu = GpuTimer.create(renderer.getContext() as WebGL2RenderingContext);
+    // three zeroes the count at each render's start (`WebGLRenderer.js:1731`), so a frame of several
+    // renders keeps only its last one's. The profile zeroes it per frame instead.
+    this.wasAutoReset = renderer.info.autoReset;
+    renderer.info.autoReset = false;
   }
 
   beginFrame(timestamp: number): void {
@@ -114,8 +122,10 @@ class Profile implements FrameProfile {
     this.lastTimestamp = timestamp;
     this.isFrameOpen = true;
     this.frameStart = this.now();
+    this.renderer.info.reset();
     this.current = 'Other';
     this.segmentStart = this.frameStart;
+    this.segmentDrawCalls = 0;
     this.gpu?.switchTo('Other');
   }
 
@@ -127,12 +137,13 @@ class Profile implements FrameProfile {
     this.isFrameOpen = false;
     this.sums.frames += 1;
     this.sums.cpuMs += this.now() - this.frameStart;
+    this.sums.drawCalls += this.renderer.info.render.calls;
     if (this.lastTimestamp! - this.windowStart! >= STATS_WINDOW_MS) this.publishWindow();
   }
 
   beginStep(step: RenderStep): void {
     if (!this.isFrameOpen) return;
-    add(this.sums.stepCalls, step, 1);
+    add(this.sums.stepRuns, step, 1);
     this.openSteps.push(step);
     this.switchTo(step);
   }
@@ -150,6 +161,7 @@ class Profile implements FrameProfile {
   stop(): void {
     this.isFrameOpen = false;
     this.gpu?.dispose();
+    this.renderer.info.autoReset = this.wasAutoReset;
     if (profiles.get(this.renderer) === this) profiles.delete(this.renderer);
   }
 
@@ -165,6 +177,9 @@ class Profile implements FrameProfile {
     const time = this.now();
     add(this.sums.stepCpuMs, this.current, time - this.segmentStart);
     this.segmentStart = time;
+    const drawCalls = this.renderer.info.render.calls;
+    add(this.sums.stepDrawCalls, this.current, drawCalls - this.segmentDrawCalls);
+    this.segmentDrawCalls = drawCalls;
   }
 
   private readonly addGpuTime = (step: StepKey, ns: number): void => {
@@ -173,21 +188,22 @@ class Profile implements FrameProfile {
   };
 
   private publishWindow(): void {
-    const { frames, intervals, intervalMs, cpuMs, stepCpuMs, stepCalls, gpuFrames, gpuNs, stepGpuNs } =
-      this.sums;
+    const { frames, intervals, intervalMs, cpuMs, drawCalls, gpuFrames, gpuNs } = this.sums;
+    const { stepCpuMs, stepRuns, stepDrawCalls, stepGpuNs } = this.sums;
     const gpuMsPerFrame = (ns: number) => (gpuFrames > 0 ? ns / NS_PER_MS / gpuFrames : null);
     const frameMs = intervalMs / intervals;
     const steps: StepStats[] = [];
     for (const step of STEP_KEYS) {
-      const calls = step === 'Other' ? frames : (stepCalls.get(step) ?? 0);
+      const runs = step === 'Other' ? frames : (stepRuns.get(step) ?? 0);
       // A GPU result arrives frames after its step ran, so a step can have one in a window it did
       // not run in. Its row keeps the rows summing to the frame's GPU time.
-      if (calls === 0 && !stepGpuNs.has(step)) continue;
+      if (runs === 0 && !stepGpuNs.has(step)) continue;
       steps.push({
         step,
         cpuMs: (stepCpuMs.get(step) ?? 0) / frames,
         gpuMs: gpuMsPerFrame(stepGpuNs.get(step) ?? 0),
-        callsPerFrame: calls / frames,
+        runsPerFrame: runs / frames,
+        drawCallsPerFrame: (stepDrawCalls.get(step) ?? 0) / frames,
       });
     }
     this.publish({
@@ -195,6 +211,7 @@ class Profile implements FrameProfile {
       frameMs,
       cpuMs: cpuMs / frames,
       gpuMs: gpuMsPerFrame(gpuNs),
+      drawCallsPerFrame: drawCalls / frames,
       hasGpuTimer: this.gpu !== null,
       steps,
     });

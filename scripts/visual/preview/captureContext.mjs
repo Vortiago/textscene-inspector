@@ -9,6 +9,7 @@ import {
   canvas2DViewportFor,
   CANVAS_2D_TESTIDS,
   FIT_ON_OPEN_2D_STORAGE_KEY,
+  PERFORMANCE_TESTIDS,
   FRAME_ON_OPEN_STORAGE_KEY,
   SOURCE_PANE_STORAGE_KEY,
   VIEWPORT,
@@ -59,7 +60,7 @@ export async function createCaptureContext(browser, { frameOnOpen, canvas2D = fa
  * goes from every capture. `canvas2D` also paints out the 2D stage's frame, zoom label and origin axes.
  */
 export function paintedOutChromeCss({ canvas2D }) {
-  const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help'];
+  const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help', PERFORMANCE_TESTIDS.overlay];
   if (canvas2D) {
     hidden.push(
       CANVAS_2D_TESTIDS.frame,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CANVAS_2D_TESTIDS } from './appContract.mjs';
+import { CANVAS_2D_TESTIDS, PERFORMANCE_TESTIDS } from './appContract.mjs';
 import { paintedOutChromeCss } from './captureContext.mjs';
 
 describe('paintedOutChromeCss', () => {
@@ -8,6 +8,7 @@ describe('paintedOutChromeCss', () => {
       const css = paintedOutChromeCss({ canvas2D });
       expect(css).toContain('[data-testid="viewport-toolbar-overlay"]');
       expect(css).toContain('[data-testid="viewport-controls-help"]');
+      expect(css).toContain(`[data-testid="${PERFORMANCE_TESTIDS.overlay}"]`);
       expect(css).toContain('{display:none !important}');
     }
   });

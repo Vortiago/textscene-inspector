@@ -3,17 +3,14 @@ import type * as THREE from 'three';
 import { beginStep, endStep, innermostStep, startFrameProfile } from './frameProfile';
 import type { FrameStats } from './frameStats';
 import {
-  CPU_ONLY_CONTEXT,
+  cpuOnlyRenderer,
+  profiledRendererMembers,
   FRAME_INTERVAL_MS,
   FRAMES_PER_WINDOW,
   manualClock,
   profiledWindow,
   stepCpuMs,
 } from './frameProfile.testkit';
-
-function cpuOnlyRenderer(): THREE.WebGLRenderer {
-  return { getContext: () => CPU_ONLY_CONTEXT } as unknown as THREE.WebGLRenderer;
-}
 
 /**
  * A WebGL 2 context with the timer query extension, whose queries measure a GPU clock the test moves
@@ -64,7 +61,7 @@ function timerContext() {
     getParameter: (pname: number) => (pname === ext.GPU_DISJOINT_EXT ? state.isDisjoint : null),
   };
   return {
-    renderer: { getContext: () => context } as unknown as THREE.WebGLRenderer,
+    renderer: { ...profiledRendererMembers(), getContext: () => context } as unknown as THREE.WebGLRenderer,
     advanceGpu: (ms: number) => (gpuNs += ms * 1e6),
     resolve: () => live.forEach((query) => (query.isAvailable = true)),
     loseContext: () => (state.isLost = true),
@@ -135,7 +132,39 @@ describe('startFrameProfile', () => {
         endStep(renderer, 'Shadows');
       }
     });
-    expect(stats.steps.find((s) => s.step === 'Shadows')).toMatchObject({ cpuMs: 3, callsPerFrame: 3 });
+    expect(stats.steps.find((s) => s.step === 'Shadows')).toMatchObject({ cpuMs: 3, runsPerFrame: 3 });
+  });
+
+  it("counts each step's own draw calls per frame, and the frame's", () => {
+    const { renderer, window } = cpuOnly();
+    const stats = window(() => {
+      renderer.info.render.calls += 1;
+      beginStep(renderer, 'Scene draw');
+      renderer.info.render.calls += 5;
+      beginStep(renderer, 'Shadows');
+      renderer.info.render.calls += 3;
+      endStep(renderer, 'Shadows');
+      endStep(renderer, 'Scene draw');
+    });
+    expect(stats.steps.map((s) => [s.step, s.drawCallsPerFrame])).toEqual([
+      ['Scene draw', 5],
+      ['Shadows', 3],
+      ['Other', 1],
+    ]);
+    expect(stats.drawCallsPerFrame).toBe(9);
+  });
+
+  it("keeps the count across a frame's renders, which three's renderer resets per render", () => {
+    const renderer = cpuOnlyRenderer();
+    startFrameProfile(renderer, () => {});
+    expect(renderer.info.autoReset).toBe(false);
+  });
+
+  it("leaves the renderer's count resetting per render once stopped (error case)", () => {
+    const renderer = cpuOnlyRenderer();
+    startFrameProfile(renderer, () => {});
+    startFrameProfile(renderer, () => {}).stop();
+    expect(renderer.info.autoReset).toBe(true);
   });
 
   it('reports no GPU time when the context offers no timer query', () => {
@@ -355,7 +384,7 @@ describe('startFrameProfile on a context with a GPU timer', () => {
     profile.stop();
 
     const [, second] = published;
-    expect(second!.steps.map((s) => [s.step, s.gpuMs, s.callsPerFrame])).toEqual([
+    expect(second!.steps.map((s) => [s.step, s.gpuMs, s.runsPerFrame])).toEqual([
       ['Reflection probes', 5, 0],
       ['Other', 1, 1],
     ]);

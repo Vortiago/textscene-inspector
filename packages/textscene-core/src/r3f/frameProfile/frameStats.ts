@@ -27,7 +27,9 @@ export interface StepStats {
   /** The step's own GPU time per frame, or null while no GPU result has arrived. */
   gpuMs: number | null;
   /** How many times the step ran per frame. */
-  callsPerFrame: number;
+  runsPerFrame: number;
+  /** The step's own draw calls per frame, without those of the steps nested in it. */
+  drawCallsPerFrame: number;
 }
 
 export interface FrameStats {
@@ -38,6 +40,7 @@ export interface FrameStats {
   cpuMs: number;
   /** The mean GPU time of the frame's commands, or null while no GPU result has arrived. */
   gpuMs: number | null;
+  drawCallsPerFrame: number;
   /** False when the context offers no timer query, so every GPU time stays null. */
   hasGpuTimer: boolean;
   /**

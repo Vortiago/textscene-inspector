@@ -9,7 +9,7 @@ import {
 } from '../materials/opaquePrepass';
 import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass';
 import { cameraLookingAt } from '../testing/threePasses';
-import { CPU_ONLY_CONTEXT, profiledWindow, stepCpuMs } from '../frameProfile/frameProfile.testkit';
+import { profiledRendererMembers, profiledWindow, stepCpuMs } from '../frameProfile/frameProfile.testkit';
 
 interface PrepassDraw {
   object: THREE.Object3D;
@@ -144,7 +144,7 @@ describe('the depth prepass under a frame profile', () => {
     let time = 0;
     const renderer = {
       renderBufferDirect: () => (time += 1),
-      getContext: () => CPU_ONLY_CONTEXT,
+      ...profiledRendererMembers(),
     } as unknown as THREE.WebGLRenderer;
     const sentinel = createDepthPrepassSentinel();
     const scene = new THREE.Scene();

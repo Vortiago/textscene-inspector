@@ -260,12 +260,16 @@ A heuristic on the scene root type picks the default, and the toolbar toggle ove
 _Avoid_: "2D mode" alone.
 
 **Frame profile** (`r3f/frameProfile/`):
-The timing of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU and GPU time of each **render step**, averaged over half a second (ADR-0053).
+The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053).
 _Avoid_: "profiler" for the overlay. "stats" for the timing itself.
 
 **Render step**:
-A named part of a frame that a **frame profile** times, such as Shadows or Fog. Its time is its own time: a step nested in it keeps its own, and a step that runs again inside itself counts as one run.
+A named part of a frame that a **frame profile** times, such as Shadows or Fog. Its time and draw calls are its own: a step nested in it keeps its own.
 _Avoid_: "pass" (a pass is one render, and a step can hold many). "phase".
+
+**Work budget**:
+The draw calls per frame, and the runs and draw calls of each **render step** per frame, that a budget scene may reach in `scripts/perf/budgets.json`. `pnpm test:perf` fails on a scene over its budget (ADR-0053).
+_Avoid_: "performance budget" (it holds counts, not times). "baseline" (a golden's image).
 
 **Sub-viewport**:
 Godot's `SubViewport` Node, a canvas boundary but not a world boundary: it owns its World2D and shares the parent's World3D unless `own_world_3d` is set (ADR-0033).

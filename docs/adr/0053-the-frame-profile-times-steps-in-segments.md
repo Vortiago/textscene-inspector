@@ -6,7 +6,7 @@
 ## Context
 
 A slow preview needs a number per render step: how long the shadow pass, the volumetric fog or the
-compositor takes, on the CPU and on the GPU. The steps nest. The fog's prepare runs inside the
+compositor takes, on the CPU and on the GPU, and how many draw calls it makes. The steps nest. The fog's prepare runs inside the
 shadow pass, the shadow pass inside a scene draw, and a scene draw inside a sub-viewport pass or the
 compositor. WebGL 2 runs one `TIME_ELAPSED_EXT` query at a time, so nested GPU queries are not
 possible. A measurement must also cost nothing while nobody looks at it.
@@ -22,6 +22,9 @@ window.
   only while the toggle is on.
 - The profile splits the frame into segments at each marker. A segment's time belongs to the
   innermost open step, so each step reports its own time and the steps sum to the frame.
+- Each segment also counts its draw calls from `renderer.info`. three resets that count at the
+  start of each render, so the profile turns the reset off while it runs and resets the count once
+  per frame.
 - Each segment is one GPU timer query (`EXT_disjoint_timer_query_webgl2`). The results arrive some
   frames later, and a disjoint flag drops every frame in flight. Without the extension, the overlay
   shows CPU time only.
@@ -42,3 +45,10 @@ Per-fragment fog and lighting run inside the materials, so their cost shows in S
 Fog. The Fog step times the fog's own passes, which a static scene skips once its volume settles.
 
 The timer queries add a little GPU work per segment while the profile runs.
+
+The work budget check (`pnpm test:perf`, `scripts/perf/`) holds the counts in CI, not the times.
+It opens each budget scene in headless Chromium with the overlay on, waits until the counts stay the
+same over 30 frames, and fails when a scene's draw calls or a step's runs or draw calls per frame
+go over `scripts/perf/budgets.json`. Software GL on a shared runner gives times that change from run
+to run, and the counts do not change. A step that runs more often, or a draw that goes uncached,
+shows in the counts as well as in the times.

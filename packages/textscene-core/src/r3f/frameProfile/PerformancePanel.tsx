@@ -1,6 +1,6 @@
 /**
  * The frame profile's latest window as a small table: the frame totals, then each step's own time
- * per frame, without the steps nested in it.
+ * and draw calls per frame, without the steps nested in it.
  */
 
 import type { FrameStats } from './frameStats.js';
@@ -11,6 +11,11 @@ const PENDING = '–';
 
 function formatMs(ms: number): string {
   return ms.toFixed(2);
+}
+
+/** A per-frame count, with one decimal only where the window's frames differ. */
+function formatCount(perFrame: number): string {
+  return String(Number(perFrame.toFixed(1)));
 }
 
 function formatGpuMs(ms: number | null): string {
@@ -39,6 +44,7 @@ function WindowStats({ stats }: { stats: FrameStats }) {
         <span data-testid="performance-frame">{formatMs(stats.frameMs)} ms</span>
         <span data-testid="performance-cpu">CPU {formatMs(stats.cpuMs)} ms</span>
         <span data-testid="performance-gpu">{gpuTotalText(stats)}</span>
+        <span data-testid="performance-draws">{formatCount(stats.drawCallsPerFrame)} draws</span>
       </div>
       <table className={styles.steps}>
         <thead>
@@ -46,18 +52,22 @@ function WindowStats({ stats }: { stats: FrameStats }) {
             <th scope="col">Step</th>
             <th scope="col">CPU ms</th>
             <th scope="col">GPU ms</th>
+            <th scope="col" title="Draw calls per frame">
+              Draws
+            </th>
             <th scope="col" title="Runs per frame">
               ×
             </th>
           </tr>
         </thead>
         <tbody>
-          {stats.steps.map(({ step, cpuMs, gpuMs, callsPerFrame }) => (
+          {stats.steps.map(({ step, cpuMs, gpuMs, drawCallsPerFrame, runsPerFrame }) => (
             <tr key={step}>
               <th scope="row">{step}</th>
               <td>{formatMs(cpuMs)}</td>
               <td>{formatGpuMs(gpuMs)}</td>
-              <td>{Number(callsPerFrame.toFixed(1))}</td>
+              <td>{formatCount(drawCallsPerFrame)}</td>
+              <td>{formatCount(runsPerFrame)}</td>
             </tr>
           ))}
         </tbody>

@@ -14,6 +14,7 @@ const STATS: FrameStats = {
   frameMs: 20,
   cpuMs: 4,
   gpuMs: null,
+  drawCallsPerFrame: 0,
   hasGpuTimer: false,
   steps: [],
 };
