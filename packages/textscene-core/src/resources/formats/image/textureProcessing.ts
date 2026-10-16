@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { imageSize, readImagePixels, type ImagePixels } from './imagePixels';
 import { fixAlphaEdges } from '../../processing/fixAlphaEdges';
 import type { MipLevel } from '../../processing/mipChain';
+import { limitRoughness } from '../../processing/roughnessLimit';
 import {
   invertGreen,
   invertGreyscaleGreen,
@@ -16,7 +17,7 @@ import { dropMipChain } from '../../textures/godotTextureFilter';
 import { recordGodotFormat } from '../../textures/sourceColorSpace';
 import { IMAGE_EXTENSIONS, SVG_MIME_TYPE, imageMimeType } from './extensions';
 import { fileExtension } from '../../fileExtension';
-import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
+import { isGreyscaleSource, type ImageSourceFormat } from '../../../godot/import/imageSourceFormat.js';
 import {
   hasTranslucentTexel,
   holdsRedGreenOnly,
@@ -36,11 +37,13 @@ export function isTexturePath(path: string): boolean {
 
 /**
  * How Godot imports an image file: the format its loader reads it in, null when no header names
- * one, and the options of its import sidecar.
+ * one, the options of its import sidecar, and the normal map its roughness limiter reads.
  */
 export interface ImageImport {
   source: ImageSourceFormat | null;
   options: TextureImportOptions;
+  /** Null when the sidecar asks for no roughness limiter or its normal map did not load. */
+  roughnessNormal: ImagePixels | null;
 }
 
 /** A pass over RGBA8 bytes, top row first, that returns whether any byte changed. */
@@ -103,11 +106,10 @@ function isTranslucent({ texture, texels }: PassedTexture): boolean {
  */
 function texelPassesFor({ source, options }: ImageImport): TexelPass[] {
   const isRgba8 = source === null || source === 'RGBA8';
-  const isGreyscale = source === 'Lum8' || source === 'LumAlpha8';
   const passes: TexelPass[] = [];
   if (options.fixAlphaBorder && isRgba8) passes.push(fixAlphaEdges);
   if (options.premultAlpha && isRgba8) passes.push(premultiplyAlpha);
-  if (options.invertNormalY) passes.push(isGreyscale ? invertGreyscaleGreen : invertGreen);
+  if (options.invertNormalY) passes.push(isGreyscaleSource(source) ? invertGreyscaleGreen : invertGreen);
   return passes;
 }
 
@@ -125,7 +127,7 @@ function compressionPassesFor(options: TextureImportOptions): TexelPass[] {
  * (`core/io/image.cpp:1981-2015`).
  */
 function renormalizesChain({ source, options }: ImageImport): boolean {
-  return options.normalMap && (source === null || source === 'RGB8' || source === 'RGBA8');
+  return options.normalMap && !isGreyscaleSource(source);
 }
 
 /** The texels passed, then the compression's channels, with no mip chain to sample. */
@@ -148,11 +150,21 @@ function withMipChain(texture: THREE.Texture, imported: ImageImport): PassedText
   const base = { data: writableTexels(pixels, texture), width, height };
   for (const pass of texelPassesFor(imported)) pass(base.data, width, height);
   const levels = textureMipChain(texture, base, renormalizesChain(imported));
+  limitChainRoughness(levels, imported);
   const compressionPasses = compressionPassesFor(imported.options);
   for (const level of levels) {
     for (const pass of compressionPasses) pass(level.data, level.width, level.height);
   }
   return { texture: replacedByTexels(texture, levels), texels: base.data };
+}
+
+/**
+ * The roughness limiter on the chain, after it is built and before the compression
+ * (`resource_importer_texture.cpp:415-418`), when the sidecar names a normal map that loaded.
+ */
+function limitChainRoughness(levels: MipLevel[], { source, options, roughnessNormal }: ImageImport): void {
+  if (!options.roughnessLimit || !roughnessNormal) return;
+  limitRoughness(levels, roughnessNormal, { channel: options.roughnessLimit.channel, source });
 }
 
 /**

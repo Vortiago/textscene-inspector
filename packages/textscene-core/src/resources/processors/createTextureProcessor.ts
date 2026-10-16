@@ -12,6 +12,7 @@ import { createResourceProcessor, type ResourceProcessor } from '../createResour
 import type { DependencyGraph } from '../dependencyGraph';
 import { createTextureFromBuffer, getMimeType, isTexturePath } from '../formats/image/textureProcessing';
 import { readImportSidecar } from './readImportSidecar';
+import { readRoughnessNormal } from './readRoughnessNormal';
 import { importTextureOptions } from '../../parser/importParser';
 import { imageSourceFormat } from '../../godot/import/imageSourceFormat.js';
 
@@ -31,18 +32,19 @@ export function createTextureProcessor(
       const bytes = data as ArrayBuffer;
       const mimeType = getMimeType(path);
       const source = imageSourceFormat(new Uint8Array(bytes), mimeType);
-      const sidecar = await readImportSidecar(
+      const reader = { busType: 'texture', key: path } as const;
+      const sidecar = await readImportSidecar(path, reader, fileEventBus, dependencies);
+      const options = importTextureOptions(sidecar);
+      const manager = eventBus.getThreeManager();
+      const roughnessNormal = await readRoughnessNormal(
+        options,
         path,
-        { busType: 'texture', key: path },
+        reader,
         fileEventBus,
-        dependencies
+        dependencies,
+        manager
       );
-      return createTextureFromBuffer(
-        bytes,
-        mimeType,
-        { source, options: importTextureOptions(sidecar) },
-        eventBus.getThreeManager()
-      );
+      return createTextureFromBuffer(bytes, mimeType, { source, options, roughnessNormal }, manager);
     },
     dispose: (texture) => texture.dispose(),
   });

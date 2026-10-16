@@ -74,6 +74,13 @@ or RGBA8 image is renormalised to unit normals (`:2003-2014`, `:4577-4588`). The
 stores each level, so an RGTC normal map drops blue after the renormalise. The previewer builds the
 same chain and uploads it as the texture's levels (`processing/mipChain.ts`).
 
+With `roughness/mode` set to a channel and `roughness/src_normal` naming a normal map, the importer
+then runs the roughness limiter on the chain (`resource_importer_texture.cpp:415-418`,
+`core/io/image.cpp:2177-2343`). Each level's roughness rises by the spread of the normals it covers,
+read from the normal map's source file. The previewer reads the same file and runs the same limiter
+(`processing/roughnessLimit.ts`). The editor sets these options when it sees a roughness map paired
+with a normal map in 3D, and the previewer does not predict that re-import.
+
 A Decal reads its copy in the decal atlas, which builds its own mip chain
 (`texture_storage.cpp:3162-3226`), so a decal mipmaps whatever the import says. The atlas halves
 each level in its RGBA8 bytes too. So a decal shares an imported chain, and over an import with no

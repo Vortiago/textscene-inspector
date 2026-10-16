@@ -37,6 +37,9 @@ The levels Godot's texture importer builds on the CPU for an image whose **Impor
 The texture carries them as its own levels, so the GPU builds no chain over them.
 _Avoid_: "mipmaps" for a chain the GPU generates.
 
+**Roughness limiter** (`resources/processing/roughnessLimit.ts`):
+The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
+
 **Unwrap cache**:
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
 Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.

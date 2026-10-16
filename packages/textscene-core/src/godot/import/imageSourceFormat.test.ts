@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { imageSourceFormat } from './imageSourceFormat';
+import { imageSourceFormat, isGreyscaleSource, storesAlpha } from './imageSourceFormat';
 import { jpeg, png, pngChunk, vp8l, webp } from '../../resources/formats/image/testing/imageBytes';
 
 describe('imageSourceFormat: PNG', () => {
@@ -98,5 +98,33 @@ describe('imageSourceFormat: other files', () => {
 
   it('reads nothing from bytes that are no image', () => {
     expect(imageSourceFormat(new Uint8Array([1, 2, 3, 4]), 'application/octet-stream')).toBeNull();
+  });
+});
+
+describe('isGreyscaleSource', () => {
+  it('holds for Lum8 and LumAlpha8', () => {
+    expect([isGreyscaleSource('Lum8'), isGreyscaleSource('LumAlpha8')]).toEqual([true, true]);
+  });
+
+  it('fails for RGB8 and RGBA8', () => {
+    expect([isGreyscaleSource('RGB8'), isGreyscaleSource('RGBA8')]).toEqual([false, false]);
+  });
+
+  it('fails for a source no header names, which reads as RGBA8 (edge case)', () => {
+    expect(isGreyscaleSource(null)).toBe(false);
+  });
+});
+
+describe('storesAlpha', () => {
+  it('holds for LumAlpha8 and RGBA8', () => {
+    expect([storesAlpha('LumAlpha8'), storesAlpha('RGBA8')]).toEqual([true, true]);
+  });
+
+  it('fails for Lum8 and RGB8', () => {
+    expect([storesAlpha('Lum8'), storesAlpha('RGB8')]).toEqual([false, false]);
+  });
+
+  it('holds for a source no header names, which reads as RGBA8 (edge case)', () => {
+    expect(storesAlpha(null)).toBe(true);
   });
 });

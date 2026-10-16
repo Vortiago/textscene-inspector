@@ -164,6 +164,16 @@ export class FileEventBus {
   }
 
   /**
+   * `tryLoad` for a caller that keeps what it needs from the file: the bus drops its copy after,
+   * unless a processor is also loading the file and needs the bytes.
+   */
+  async readOnce(path: string, type?: string): Promise<FileData | null> {
+    const data = await this.tryLoad(path, type);
+    if (data !== null && !this.isLoading(path)) this.clearCache(path);
+    return data;
+  }
+
+  /**
    * A file changed under the bus: drop its bytes and flights, then tell the
    * `invalidated` handlers, which read it again. `clearCache` is the silent
    * memory drop a processor makes after every load.

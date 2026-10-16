@@ -34,7 +34,7 @@ describe('importingImages', () => {
     const parser = fakeParser();
     importingImages(async () => {
       imports++;
-      return { source: 'RGBA8', options: DEFAULT_TEXTURE_IMPORT };
+      return { source: 'RGBA8', options: DEFAULT_TEXTURE_IMPORT, roughnessNormal: null };
     })(parser);
     const first = await parser.loadImageSource(0, new THREE.TextureLoader());
     const repeat = await parser.loadImageSource(0, new THREE.TextureLoader());
@@ -47,6 +47,7 @@ describe('restoreImportedSampling', () => {
     const texture = await importFirstImage(async () => ({
       source: 'RGBA8',
       options: DEFAULT_TEXTURE_IMPORT,
+      roughnessNormal: null,
     }));
     const map = texture.clone();
     restoreImportedSampling(rootSampling(map));

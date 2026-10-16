@@ -92,6 +92,9 @@ export const MATERIAL_SCENES = [
   // averages its bytes to a dark yellow, and a normal map renormalises each level. A chain averaged
   // in linear space brightens the checker, and one left unnormalised tilts the lit strip less.
   { name: 'material-mipmap-import', file: 'unit-material-mipmap-import.tscn' },
+  // The roughness limiter on an imported roughness map's chain: the left sphere's sidecar names its
+  // normal map, so its minified highlight spreads and dims. A chain left unlimited keeps it tight.
+  { name: 'material-roughness-limiter', file: 'unit-material-roughness-limiter.tscn' },
   // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
   // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
   { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },

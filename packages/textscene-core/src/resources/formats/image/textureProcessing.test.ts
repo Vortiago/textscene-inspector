@@ -18,14 +18,18 @@ import {
 import { readImagePixels } from './imagePixels';
 import { sourceColorSpace } from '../../textures/sourceColorSpace';
 import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat';
-import { DEFAULT_TEXTURE_IMPORT, type TextureImportOptions } from '../../../godot/import/textureImport';
+import {
+  DEFAULT_TEXTURE_IMPORT,
+  RoughnessChannel,
+  type TextureImportOptions,
+} from '../../../godot/import/textureImport';
 
 /** An image in `source` format under its import sidecar's `options`, the rest at their defaults. */
 function imported(
   source: ImageSourceFormat | null,
   options: Partial<TextureImportOptions> = {}
 ): ImageImport {
-  return { source, options: { ...DEFAULT_TEXTURE_IMPORT, ...options } };
+  return { source, options: { ...DEFAULT_TEXTURE_IMPORT, ...options }, roughnessNormal: null };
 }
 
 const fakeLoader = vi.hoisted(() => ({
@@ -495,6 +499,36 @@ describe('importDecodedImage', () => {
         imported('Lum8', { ...mipmapped, normalMap: true })
       );
       expect(levelsOf(texture)[1]).toEqual([150, 150, 150, 255]);
+    });
+
+    /** A roughness map of four smooth texels, limited by a normal map leaning left and right. */
+    const roughnessImport = (roughnessNormal: ImageImport['roughnessNormal']): ImageImport => ({
+      ...imported('RGB8', {
+        ...mipmapped,
+        roughnessLimit: { channel: RoughnessChannel.R, normalPath: 'res://bumps.png' },
+      }),
+      roughnessNormal,
+    });
+    const smooth = [
+      [0, 0, 0, 255],
+      [0, 0, 0, 255],
+      [0, 0, 0, 255],
+      [0, 0, 0, 255],
+    ];
+    const leaning = {
+      data: new Uint8Array([255, 128, 0, 255, 0, 128, 0, 255, 255, 128, 0, 255, 0, 128, 0, 255]),
+      width: 2,
+      height: 2,
+    };
+
+    it('raises the roughness of each level by the spread of the normals it covers', () => {
+      const texture = importDecodedImage(imageTexture(smooth, 2), roughnessImport(leaning));
+      expect(levelsOf(texture)[1]).toEqual([102, 0, 0, 255]);
+    });
+
+    it('limits no roughness when the normal map did not load (edge case)', () => {
+      const texture = importDecodedImage(imageTexture(smooth, 2), roughnessImport(null));
+      expect(levelsOf(texture)[1]).toEqual([0, 0, 0, 255]);
     });
 
     it('disposes the decoded texture that the chain replaces', () => {

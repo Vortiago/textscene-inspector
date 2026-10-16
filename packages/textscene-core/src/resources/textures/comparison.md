@@ -45,6 +45,11 @@ A scene names a PNG, JPEG, WebP or SVG file by path. Godot imports it as its `.i
 
 An image file whose sidecar sets `mipmaps/generate` samples the mip chain Godot's importer builds on the CPU. Each level averages the bytes of the level above, so an sRGB image averages its encoded values. Both strips tile an 8 × 8 image so densely that they sample its smallest levels. The top strip is a red and green checker, which averages to a dark yellow, as in Godot. The bottom strip is a normal map of stripes, imported as a normal map, so each level is renormalised and leans 45 degrees towards the light.
 
+## Roughness limiter
+<!-- compare: image=unit-material-roughness-limiter status=done fixture=unit-material-roughness-limiter.tscn -->
+
+A roughness map whose sidecar sets `roughness/mode` and `roughness/src_normal` runs Godot's roughness limiter on its mip chain. Each level gets rougher by the spread of the normals it covers in the named normal map. Both spheres tile the same smooth roughness map and bumpy normal map. The left map's sidecar names the normal map, so its minified highlight spreads and dims, as in Godot. The right map's sidecar turns the limiter off.
+
 ## glTF image
 <!-- compare: image=unit-gltf-alpha-border status=done fixture=unit-gltf-alpha-border.tscn -->
 
@@ -70,11 +75,11 @@ The lenient parser never rejects a texture property. An unreadable value falls b
 
 - **Approximated** An AtlasTexture's `margin` is not applied, so a trimmed-atlas layout sits off by the margin.
 - **Approximated** An AtlasTexture's `filter_clip` is not applied, so a filtered cell edge can bleed one texel from its neighbour.
+- **Approximated** A 2D AtlasTexture crop of a normal-map sheet averages its mip levels without renormalising them, where Godot samples the sheet's renormalised chain.
 - **Approximated** A NoiseTexture2D slot draws empty on first load until its build finishes, where Godot waits and draws the texture on its first frame.
 - **Approximated** A VRAM-compressed or lossy image file draws its source texels, without the compression error Godot's import adds.
 - **Approximated** A file with no sidecar reads as a fresh import, not as the editor re-imports a texture it sees in 3D.
 - **Approximated** An imported image keeps its bytes and mip chain in memory after the upload for later readers (decals, crops, flowmaps, context loss), where Godot frees them.
 - **Approximated** An image file past the GPU's `MAX_TEXTURE_SIZE` cannot be read back, so its GPU-built chain averages an sRGB image in linear space.
 - **Resource gap** An ImageTexture saved in a BPTC, ETC, EAC, ASTC or integer format draws no texture.
-- **Not drawn** `roughness/mode` and `roughness/src_normal` are not applied, so the mip levels keep the roughness that Godot raises from the normal map's variance.
 - **Not drawn** A NoiseTexture2D wider or taller than 16384 pixels draws no texture, where Godot draws one on a GPU that uploads larger textures.

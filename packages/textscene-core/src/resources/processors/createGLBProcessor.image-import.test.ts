@@ -162,7 +162,10 @@ describe('createGLBProcessor: the texels of a glTF image', () => {
   });
 
   /** An embedded RGBA PNG whose two texels decode to `texels`. */
-  async function loadTexels(texels: number[][], files: Record<string, string> = {}): Promise<THREE.Texture> {
+  async function loadTexels(
+    texels: number[][],
+    files: Record<string, ArrayBuffer | string> = {}
+  ): Promise<THREE.Texture> {
     decoded.image = { data: new Uint8Array(texels.flat()), width: texels.length, height: 1 };
     const gltf = texturedGltf({ name: 'albedo', uri: pngDataUri(png(6)) });
     const root = await harness({ [GLTF_PATH]: gltf, ...files }).load();
@@ -186,6 +189,21 @@ describe('createGLBProcessor: the texels of a glTF image', () => {
       [`${EXTRACTED_PATH}.import`]: textureSidecar(0, 'process/normal_map_invert_y=true\n'),
     });
     expect(bytesOf(map)).toEqual([10, 255, 30, 255]);
+  });
+
+  it("limits the roughness of the chain by the normal map the extracted file's sidecar names", async () => {
+    const leaning = [
+      [255, 128, 0, 255],
+      [0, 128, 0, 255],
+    ];
+    const map = await loadTexels(leaning, {
+      'res://props/bumps.png': png(6).slice().buffer,
+      [`${EXTRACTED_PATH}.import`]: textureSidecar(
+        0,
+        'roughness/mode=2\nroughness/src_normal="res://props/bumps.png"\n'
+      ),
+    });
+    expect(Array.from((map.mipmaps[1] as { data: Uint8Array }).data)).toEqual([163, 128, 0, 255]);
   });
 
   /** The base colour map of a glTF that names the external RGBA PNG at `EXTERNAL_PATH`. */

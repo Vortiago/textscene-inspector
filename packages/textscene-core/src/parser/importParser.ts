@@ -28,6 +28,7 @@ import {
   TEXTURE_COMPRESS_MODES,
   TEXTURE_IMPORTER,
   TextureNormalMapMode,
+  roughnessLimitOption,
   type TextureImportOptions,
 } from '../godot/import/textureImport.js';
 import { DEFAULT_SLICES, TEXTURE_3D_IMPORTER, type ImportSlices } from '../godot/import/texture3DImport.js';
@@ -162,6 +163,10 @@ export function importTextureOptions(parsed: ParsedImportFile | null): TextureIm
     premultAlpha: flag('process/premult_alpha', DEFAULT_TEXTURE_IMPORT.premultAlpha),
     invertNormalY: flag('process/normal_map_invert_y', DEFAULT_TEXTURE_IMPORT.invertNormalY),
     svgScale: parseOptionalFloat(params['svg/scale']) ?? DEFAULT_TEXTURE_IMPORT.svgScale,
+    roughnessLimit: roughnessLimitOption(
+      parseOptionalInt(params['roughness/mode']),
+      params['roughness/src_normal']
+    ),
   };
 }
 
