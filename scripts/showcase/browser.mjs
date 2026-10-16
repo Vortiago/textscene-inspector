@@ -15,6 +15,8 @@ export const SWIFTSHADER_GL_ARGS = [
   '--use-gl=angle',
 ];
 
+const GPU_COMPOSITED_ARGS = [...SWIFTSHADER_GL_ARGS, '--use-angle=swiftshader'];
+
 export function launchShowcaseBrowser() {
   return launchWithArgs(SWIFTSHADER_GL_ARGS);
 }
@@ -26,7 +28,17 @@ export function launchShowcaseBrowser() {
  * SwiftShader backend also rasterises differently, so a golden never uses this launch.
  */
 export function launchGpuCompositedBrowser() {
-  return launchWithArgs([...SWIFTSHADER_GL_ARGS, '--use-angle=swiftshader']);
+  return launchWithArgs(GPU_COMPOSITED_ARGS);
+}
+
+/**
+ * The bundled Chromium for a capture that measures against Godot. It composites in the GPU
+ * process, so a screenshot is the drawing buffer. The default software compositor adds a ring of
+ * about 6% outside each hard top and left edge, which Godot does not draw. A golden never uses
+ * this launch, since its baselines carry that ring.
+ */
+export function launchGodotComparisonBrowser() {
+  return chromium.launch({ headless: true, args: GPU_COMPOSITED_ARGS });
 }
 
 function launchWithArgs(args) {

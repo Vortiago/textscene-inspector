@@ -9,6 +9,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { probePixels } from './run.mjs';
+import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import {
   createCaptureContext,
   openScene,
@@ -58,21 +59,24 @@ function parseArgs(argv) {
 }
 
 export function captureOurs({ fixture, frame = false, canvas2D = false, canvas2DFrame = null }) {
-  return withPreviewBrowser({ port: PORT, portEnvName: 'PARITY_PORT' }, async (browser, baseUrl) => {
-    // Godot's editor orbit (ADR-0025) on both sides, so a probe at (x, y)
-    // addresses one surface point. `--frame` opts both into fit-the-bounds for
-    // a scene too large to read at distance 4.
-    const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
-    const page = await context.newPage();
-    const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
-      canvas2D,
-      onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
-    });
-    if (!target) throw new Error(targetReason);
-    const { buffer, reason } = await settleCanvas(page, target);
-    if (!buffer) throw new Error(reason);
-    return buffer;
-  });
+  return withPreviewBrowser(
+    { port: PORT, portEnvName: 'PARITY_PORT', launchBrowser: launchGodotComparisonBrowser },
+    async (browser, baseUrl) => {
+      // Godot's editor orbit (ADR-0025) on both sides, so a probe at (x, y)
+      // addresses one surface point. `--frame` opts both into fit-the-bounds for
+      // a scene too large to read at distance 4.
+      const context = await createCaptureContext(browser, { frameOnOpen: frame, canvas2D, canvas2DFrame });
+      const page = await context.newPage();
+      const { target, reason: targetReason } = await openScene(page, baseUrl, fixture, {
+        canvas2D,
+        onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
+      });
+      if (!target) throw new Error(targetReason);
+      const { buffer, reason } = await settleCanvas(page, target);
+      if (!buffer) throw new Error(reason);
+      return buffer;
+    }
+  );
 }
 
 async function main() {

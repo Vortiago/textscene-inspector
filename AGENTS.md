@@ -62,6 +62,8 @@ CI job fails, fix the cause.
 and prints exact pixels. It is a tool, not a gate.
 
 - Measure, never derive. Put a measurement in the pull request, never in a comparison sheet.
+- Every capture that measures against Godot launches through `launchGodotComparisonBrowser`, so a
+  screenshot is the drawing buffer. Never launch one another way.
 - `--particles <seconds>` advances every CPUParticles emitter. Choose the instant. Never
   derive it from the scene.
 - `--mode 2d-root` measures a root-only setting. Add a new one to
