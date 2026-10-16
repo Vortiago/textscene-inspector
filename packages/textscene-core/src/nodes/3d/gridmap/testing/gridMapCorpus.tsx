@@ -159,7 +159,7 @@ export async function mountGridMap({
   };
 }
 
-/** Every mesh the GridMap mounts once the library, the tile and its material resolve. */
+/** Every mesh the GridMap mounts once its loads resolve, or once the held load stops them. */
 export async function renderGridMapTiles(corpus: GridMapCorpus = {}): Promise<THREE.Mesh[]> {
   return (await mountGridMap(corpus)).tiles();
 }

@@ -27,8 +27,8 @@ import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/sh
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 import type { Vector3 } from '../../../godot/math/vector';
 
-/** Literal-only, so the key is constant and a placeholder cell never remounts. */
-const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
+/** Literal-only, so the key is constant and the placeholder batch never remounts its material. */
+const PLACEHOLDER_TILE_MATERIAL = wireGizmoProgram(0x4488cc);
 
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
 function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
@@ -267,20 +267,34 @@ function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
  * grid costs one draw as its tiles would.
  */
 function PlaceholderTiles({ matrices, cellSize }: { matrices: THREE.Matrix4[]; cellSize: Vector3 }) {
-  const centres = useMemo(() => matrices.map((m) => new THREE.Matrix4().copyPosition(m)), [matrices]);
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => writeInstanceMatrices(meshRef.current, centres), [centres]);
+  useLayoutEffect(() => writeInstanceMatrices(meshRef.current, matrices, cellCentre), [matrices]);
   return (
-    <instancedMesh key={centres.length} ref={meshRef} args={[undefined, undefined, centres.length]}>
+    <instancedMesh key={matrices.length} ref={meshRef} args={[undefined, undefined, matrices.length]}>
       <boxGeometry args={[cellSize.x, cellSize.y, cellSize.z]} />
-      <meshBasicMaterial key={PLACEHOLDER_CELL_MATERIAL.key} {...PLACEHOLDER_CELL_MATERIAL.props} />
+      <meshBasicMaterial key={PLACEHOLDER_TILE_MATERIAL.key} {...PLACEHOLDER_TILE_MATERIAL.props} />
     </instancedMesh>
   );
 }
 
-/** Sets each instance of `mesh` to its matrix. A mesh not yet mounted waits for the next call. */
-function writeInstanceMatrices(mesh: THREE.InstancedMesh | null, matrices: THREE.Matrix4[]): void {
+/** Written only by `cellCentre`. `copyPosition` leaves its basis at identity. */
+const centreMatrix = new THREE.Matrix4();
+
+/** A cell matrix's translation alone, in one shared matrix, so a large grid allocates none. */
+function cellCentre(matrix: THREE.Matrix4): THREE.Matrix4 {
+  return centreMatrix.copyPosition(matrix);
+}
+
+/**
+ * Sets each instance of `mesh` to `place` of its matrix. A mesh not yet mounted waits for the next
+ * call. `setMatrixAt` copies, so `place` may return one reused matrix.
+ */
+function writeInstanceMatrices(
+  mesh: THREE.InstancedMesh | null,
+  matrices: THREE.Matrix4[],
+  place: (matrix: THREE.Matrix4) => THREE.Matrix4 = (matrix) => matrix
+): void {
   if (!mesh) return;
-  matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+  matrices.forEach((m, i) => mesh.setMatrixAt(i, place(m)));
   mesh.instanceMatrix.needsUpdate = true;
 }

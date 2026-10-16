@@ -30,24 +30,23 @@ function gridMapNode(properties: Record<string, string>): TscnNode {
 }
 
 /** The wireframe box draws <GridMap> falls back to when no MeshLibrary resolves. */
-function placeholderDraws(renderer: Awaited<ReturnType<typeof render>>) {
+function placeholderDraws(renderer: Awaited<ReturnType<typeof render>>): THREE.InstancedMesh[] {
   return renderer.scene
     .findAllByType('Mesh')
     .map((m) => instanceAs<THREE.Mesh>(m))
+    .filter(isInstancedMesh)
     .filter((m) => (m.material as THREE.MeshBasicMaterial)?.wireframe);
 }
 
 /** The centre of each wireframe box, in the order of its cells. */
 function placeholderCentres(renderer: Awaited<ReturnType<typeof render>>): number[][] {
-  return placeholderDraws(renderer)
-    .filter(isInstancedMesh)
-    .flatMap((batch) =>
-      Array.from({ length: batch.count }, (_, i) => {
-        const matrix = new THREE.Matrix4();
-        batch.getMatrixAt(i, matrix);
-        return new THREE.Vector3().setFromMatrixPosition(matrix).toArray();
-      })
-    );
+  return placeholderDraws(renderer).flatMap((batch) =>
+    Array.from({ length: batch.count }, (_, i) => {
+      const matrix = new THREE.Matrix4();
+      batch.getMatrixAt(i, matrix);
+      return new THREE.Vector3().setFromMatrixPosition(matrix).toArray();
+    })
+  );
 }
 
 function render(node: TscnNode, children?: ReactNode) {
