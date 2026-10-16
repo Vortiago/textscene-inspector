@@ -15,7 +15,7 @@ import {
   CANVAS_2D_CHROME,
   canvas2DViewportFor,
   isUniformImage,
-  RESOURCE_LOAD_STATUS_TESTID,
+  SCENE_LOAD_STATUS_TESTID,
   sceneLoaded,
   settleCanvas,
   startPreview,
@@ -195,44 +195,41 @@ describe('settleCanvas', () => {
   });
 });
 
-/** A page whose statuses are the given locators, keyed by test id, and that records each id asked. */
-function stubStatusPage(statuses) {
-  const asked = [];
-  const page = {
-    getByTestId: (id) => {
-      asked.push(id);
-      return statuses[id] ?? NO_TEXTURE_WORK;
-    },
-  };
-  return { page, asked };
-}
-
 describe('sceneLoaded', () => {
-  function timedOut() {
+  function timeoutError() {
     const error = new Error('Timeout exceeded');
     error.name = 'TimeoutError';
-    return { waitFor: async () => Promise.reject(error), count: async () => 1 };
+    return error;
   }
 
   it('answers no reason once neither status is on the page', async () => {
-    const { page } = stubStatusPage({});
+    const page = { waitForFunction: async () => {} };
     expect(await sceneLoaded(page)).toBeNull();
   });
 
-  it('waits for the resource load status as well as the texture work status', async () => {
-    const { page, asked } = stubStatusPage({});
-    await sceneLoaded(page);
-    expect(new Set(asked)).toEqual(new Set([RESOURCE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID]));
+  it('waits until neither the scene load nor the texture work status is on the page', async () => {
+    const waitForFunction = vi.fn(async () => {});
+    await sceneLoaded({ waitForFunction });
+    const [, ids] = waitForFunction.mock.calls[0];
+    expect(new Set(ids)).toEqual(new Set([SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID]));
   });
 
-  it('names resources still loading once the wait runs out (error case)', async () => {
-    const { page } = stubStatusPage({ [RESOURCE_LOAD_STATUS_TESTID]: timedOut() });
-    expect(await sceneLoaded(page)).toMatch(/resources still loading/);
+  it('names a scene still loading once the wait runs out (error case)', async () => {
+    const page = { waitForFunction: async () => Promise.reject(timeoutError()) };
+    expect(await sceneLoaded(page)).toMatch(/scene still loading/);
   });
 
-  it('names texture work still pending once its resources have landed (edge case)', async () => {
-    const { page } = stubStatusPage({ [TEXTURE_WORK_STATUS_TESTID]: timedOut() });
-    expect(await sceneLoaded(page)).toMatch(/texture work still pending/);
+  it('throws when the wait fails for a reason other than its timeout (edge case)', async () => {
+    const page = { waitForFunction: async () => Promise.reject(new Error('Target page has been closed')) };
+    await expect(sceneLoaded(page)).rejects.toThrow(/scene to load.*Target page has been closed/);
+  });
+});
+
+describe('the status ids are shared, not duplicated', () => {
+  it('match the ids the shell renders', async () => {
+    const shell =
+      await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/statusTestIds.ts');
+    expect({ SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID }).toEqual({ ...shell });
   });
 });
 
@@ -240,22 +237,6 @@ describe('sceneLoaded', () => {
  * One settle number for both harnesses. With a second copy each side would stay deterministic
  * while capturing a different moment, and every later comparison would fail to notice.
  */
-describe('the texture work status id is shared, not duplicated', () => {
-  it('matches the id the shell renders', async () => {
-    const { TEXTURE_WORK_STATUS_TESTID: shellId } =
-      await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/textureWorkStatusTestId.ts');
-    expect(TEXTURE_WORK_STATUS_TESTID).toBe(shellId);
-  });
-});
-
-describe('the resource load status id is shared, not duplicated', () => {
-  it('matches the id the shell renders', async () => {
-    const { RESOURCE_LOAD_STATUS_TESTID: shellId } =
-      await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/resourceLoadStatusTestId.ts');
-    expect(RESOURCE_LOAD_STATUS_TESTID).toBe(shellId);
-  });
-});
-
 describe('the settle contract is shared, not duplicated', () => {
   const godotScript = (simSeconds) =>
     bootstrapScript({

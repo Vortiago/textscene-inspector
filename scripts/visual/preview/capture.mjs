@@ -3,10 +3,12 @@
  * the requested scene confirmed, and the canvas proven settled before it is read.
  */
 
+/* global document */ // The `sceneLoaded` predicate runs in the browser.
+
 import {
   NETWORK_IDLE_MS,
-  RESOURCE_LOAD_STATUS_TESTID,
-  RESOURCE_LOAD_WAIT_MS,
+  SCENE_LOAD_STATUS_TESTID,
+  SCENE_LOAD_WAIT_MS,
   SETTLE_INITIAL_MS,
   SETTLE_INTERVAL_MS,
   SETTLE_MAX_ATTEMPTS,
@@ -142,34 +144,32 @@ export async function settleCanvas(
  * True once the texture work status is detached; false when it outlives
  * `TEXTURE_WORK_WAIT_MS`. `status` is its locator, in the page or in a webview frame.
  */
-export function textureWorkCleared(status) {
-  return isDetached(status, TEXTURE_WORK_WAIT_MS, 'the texture work status');
-}
-
-/**
- * No reason once the scene's resources have landed and its texture work has ended, else the
- * reason it is still loading. Only then does a frame do the scene's settled work.
- */
-export async function sceneLoaded(page) {
-  const resources = page.getByTestId(RESOURCE_LOAD_STATUS_TESTID);
-  if (!(await isDetached(resources, RESOURCE_LOAD_WAIT_MS, 'the resource load status'))) {
-    return `resources still loading after ${RESOURCE_LOAD_WAIT_MS}ms`;
-  }
-  if (!(await textureWorkCleared(page.getByTestId(TEXTURE_WORK_STATUS_TESTID)))) {
-    return `texture work still pending after ${TEXTURE_WORK_WAIT_MS}ms`;
-  }
-  return null;
-}
-
-/** True once `status` is detached; false when it outlives `timeoutMs`. */
-async function isDetached(status, timeoutMs, name) {
+export async function textureWorkCleared(status) {
   try {
-    await status.waitFor({ state: 'detached', timeout: timeoutMs });
+    await status.waitFor({ state: 'detached', timeout: TEXTURE_WORK_WAIT_MS });
     return true;
   } catch (error) {
     // Playwright's timeout is the answer here. A closed page or a crashed tab is not.
     if (error?.name === 'TimeoutError') return false;
-    throw new Error(`waiting for ${name} to detach: ${error}`, { cause: error });
+    throw new Error(`waiting for the texture work status to detach: ${error}`, { cause: error });
+  }
+}
+
+/**
+ * No reason once the scene is whole: drawn, its resources landed and its texture work ended. Else
+ * the reason it is still loading. One check reads both statuses, since one gives way to the other.
+ */
+export async function sceneLoaded(page) {
+  try {
+    await page.waitForFunction(
+      (ids) => ids.every((id) => !document.querySelector(`[data-testid="${id}"]`)),
+      [SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID],
+      { timeout: SCENE_LOAD_WAIT_MS }
+    );
+    return null;
+  } catch (error) {
+    if (error?.name === 'TimeoutError') return `scene still loading after ${SCENE_LOAD_WAIT_MS}ms`;
+    throw new Error(`waiting for the scene to load: ${error}`, { cause: error });
   }
 }
 

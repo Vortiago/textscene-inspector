@@ -89,7 +89,7 @@ export const SETTLE_INTERVAL_MS = 350;
 export const SETTLE_MAX_ATTEMPTS = 12;
 
 /**
- * The shell's "Building textures…" status (`TscnPreviewShell/textureWorkStatusTestId.ts`).
+ * The shell's "Building textures…" status (`TscnPreviewShell/statusTestIds.ts`).
  * It is attached while a procedural texture builds or uploads, and a capture waits for it
  * to detach, because a texture that lands later gives a stable, wrong frame.
  */
@@ -98,13 +98,13 @@ export const TEXTURE_WORK_STATUS_TESTID = 'texture-work-status';
 export const TEXTURE_WORK_WAIT_MS = 120000;
 
 /**
- * The shell's "Loading resources…" status (`TscnPreviewShell/resourceLoadStatusTestId.ts`).
- * It is attached while the loader waits on a resource. The work budget check waits for it to
- * detach, because a scene still loading draws the same work frame after frame and reads as steady.
+ * The shell's "Loading scene…" status (`TscnPreviewShell/statusTestIds.ts`). It is attached from
+ * the scene's first render until the canvas has drawn it and its resources have landed, and it
+ * gives way to the texture work status. The work budget check waits until neither is attached.
  */
-export const RESOURCE_LOAD_STATUS_TESTID = 'resource-load-status';
+export const SCENE_LOAD_STATUS_TESTID = 'scene-load-status';
 // Ceiling for that wait: the largest budget demo loads in tens of seconds under software GL.
-export const RESOURCE_LOAD_WAIT_MS = 180000;
+export const SCENE_LOAD_WAIT_MS = 180000;
 
 /**
  * The settle contract: the instant on the scene's simulated clock, in seconds, at which both
