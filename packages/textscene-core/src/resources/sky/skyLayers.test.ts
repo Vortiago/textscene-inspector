@@ -30,6 +30,19 @@ function passesDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void): Set<THR
   return passes;
 }
 
+/** The debanding scale of each radiance octmap `renderer` draws while `bake` runs. */
+function debandingDrawnBy(renderer: THREE.WebGLRenderer, bake: () => void): number[] {
+  const drawn: number[] = [];
+  const render = renderer.render.bind(renderer);
+  vi.spyOn(renderer, 'render').mockImplementation((mesh, camera) => {
+    const { uniforms } = (mesh as THREE.Mesh).material as THREE.ShaderMaterial;
+    if (uniforms['radiance']) drawn.push(uniforms['debanding']!.value as number);
+    render(mesh, camera);
+  });
+  bake();
+  return drawn;
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -38,7 +51,7 @@ describe('bakeSkyLayers', () => {
   it("holds Godot's eight layers in one array as wide as the radiance's octmap", async () => {
     const { renderer } = await testRenderer();
 
-    const { target } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED);
+    const { target } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, 0);
 
     expect([target.width, target.height, target.depth]).toEqual([80, 80, 8]);
   });
@@ -54,7 +67,7 @@ describe('bakeSkyLayers', () => {
       render(drawn, camera);
     });
 
-    bakeSkyLayers(renderer, radianceCube(renderer), FAST_AT_GATE_SIZE);
+    bakeSkyLayers(renderer, radianceCube(renderer), FAST_AT_GATE_SIZE, 0);
 
     expect(feedbackDraws).toEqual([]);
   });
@@ -62,14 +75,14 @@ describe('bakeSkyLayers', () => {
   it('holds the seven layers of a real-time sky (edge case)', async () => {
     const { renderer } = await testRenderer();
 
-    expect(bakeSkyLayers(renderer, radianceCube(renderer), FAST).target.depth).toBe(7);
+    expect(bakeSkyLayers(renderer, radianceCube(renderer), FAST, 0).target.depth).toBe(7);
   });
 
   it("draws every mip of Godot's chain into each layer, from mip 0", async () => {
     const { renderer } = await testRenderer();
     const copies = vi.spyOn(renderer, 'copyTextureToTexture');
 
-    const { target } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED);
+    const { target } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, 0);
 
     const drawn = copies.mock.calls
       .filter(([, destination]) => destination === target.texture)
@@ -83,7 +96,7 @@ describe('bakeSkyLayers', () => {
   it('filters with linear reads between mips, clamped to the edge', async () => {
     const { renderer } = await testRenderer();
 
-    const { texture } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED).target;
+    const { texture } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, 0).target;
 
     expect([texture.minFilter, texture.magFilter, texture.wrapS, texture.wrapT]).toEqual([
       THREE.LinearMipmapLinearFilter,
@@ -97,7 +110,7 @@ describe('bakeSkyLayers', () => {
     const { renderer } = await testRenderer();
     const selected = vi.spyOn(fastFilter, 'layerUniforms');
 
-    bakeSkyLayers(renderer, radianceCube(renderer), FAST);
+    bakeSkyLayers(renderer, radianceCube(renderer), FAST, 0);
 
     expect(selected.mock.calls.map(([layer]) => layer)).toEqual([1, 2, 3, 4, 5, 6]);
   });
@@ -106,11 +119,21 @@ describe('bakeSkyLayers', () => {
     const { renderer: first } = await testRenderer();
     const { renderer: second } = await testRenderer();
 
-    const firstPasses = passesDrawnBy(first, () => bakeSkyLayers(first, radianceCube(first), FAST));
-    const secondPasses = passesDrawnBy(second, () => bakeSkyLayers(second, radianceCube(second), FAST));
+    const firstPasses = passesDrawnBy(first, () => bakeSkyLayers(first, radianceCube(first), FAST, 0));
+    const secondPasses = passesDrawnBy(second, () => bakeSkyLayers(second, radianceCube(second), FAST, 0));
 
     expect(firstPasses.size).toBe(3);
     expect([...firstPasses].filter((pass) => secondPasses.has(pass))).toEqual([]);
+  });
+
+  it("adds the debanding noise to the radiance's octmap at the scale given", async () => {
+    const { renderer } = await testRenderer();
+
+    const drawn = debandingDrawnBy(renderer, () =>
+      bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, 0.5)
+    );
+
+    expect(drawn).toEqual([0.5]);
   });
 
   it('leaves the renderer on the target it had', async () => {
@@ -118,7 +141,7 @@ describe('bakeSkyLayers', () => {
     const target = new THREE.WebGLRenderTarget(4, 4);
     renderer.setRenderTarget(target);
 
-    bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED);
+    bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, 0);
 
     expect(renderer.getRenderTarget()).toBe(target);
   });
@@ -131,7 +154,7 @@ describe('bakeSkyLayers', () => {
       throw new Error('lost context');
     });
 
-    expect(() => bakeSkyLayers(renderer, radiance, IMPORTANCE_SAMPLED)).toThrow('lost context');
+    expect(() => bakeSkyLayers(renderer, radiance, IMPORTANCE_SAMPLED, 0)).toThrow('lost context');
     expect(disposed).toHaveBeenCalledOnce();
   });
 });
@@ -139,7 +162,7 @@ describe('bakeSkyLayers', () => {
 describe('disposeSkyLayers', () => {
   it('frees the array', async () => {
     const { renderer } = await testRenderer();
-    const layers = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED);
+    const layers = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, 0);
     const disposed = vi.spyOn(layers.target, 'dispose');
 
     disposeSkyLayers(layers);
@@ -224,6 +247,18 @@ describe('bakeAtlasLayers', () => {
     );
 
     expect(renderer.getRenderTarget()).toBe(target);
+  });
+
+  it("adds no debanding noise to a capture's octmap, as Godot copies a capture with no sky shader", async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 1);
+    bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED, 1);
+
+    const drawn = debandingDrawnBy(renderer, () =>
+      bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 0, 'importance-sample')
+    );
+
+    expect(drawn).toEqual([0]);
   });
 
   it('refuses a layer the atlas lacks (error case)', async () => {

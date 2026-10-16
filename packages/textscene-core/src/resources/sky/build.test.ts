@@ -23,6 +23,7 @@ describe('buildSkyEnvironment layers', () => {
       sky: defaultSky('ProceduralSkyMaterial'),
       lights: [],
       asBackground: true,
+      energy: 1,
     });
 
     expect(env).not.toBeNull();
@@ -37,9 +38,48 @@ describe('buildSkyEnvironment layers', () => {
       radianceSize: 1024,
     };
 
-    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground: false });
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground: false, energy: 1 });
 
     expect(env!.layers.target.width).toBe(640);
+  });
+});
+
+describe('buildSkyEnvironment debanding', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** The debanding scale of the radiance octmap the build of `sky` at `energy` draws. */
+  async function radianceDebanding(sky: Sky, energy: number): Promise<number> {
+    const { renderer } = await testRenderer();
+    const drawn: number[] = [];
+    const render = renderer.render.bind(renderer);
+    // The cube camera renders a scene, which has no material.
+    vi.spyOn(renderer, 'render').mockImplementation((object, camera) => {
+      const uniforms = ((object as THREE.Mesh).material as THREE.ShaderMaterial | undefined)?.uniforms;
+      if (uniforms?.['radiance']) drawn.push(uniforms['debanding']!.value as number);
+      render(object, camera);
+    });
+    buildSkyEnvironment(renderer, { sky, lights: [], asBackground: false, energy });
+    return drawn[0]!;
+  }
+
+  it("adds the noise to a debanded sky's radiance at the inverse of the energy a surface reads it at", async () => {
+    expect(await radianceDebanding(defaultSky('ProceduralSkyMaterial'), 2)).toBe(0.5);
+  });
+
+  it.each([
+    [
+      'a sky that turns use_debanding off',
+      decodeSky({}, decodeSkyMaterial('ProceduralSkyMaterial', { use_debanding: 'false' })!),
+    ],
+    ['a PanoramaSkyMaterial', defaultSky('PanoramaSkyMaterial')],
+  ])('adds no noise to the radiance of %s', async (_label, sky) => {
+    expect(await radianceDebanding(sky, 1)).toBe(0);
+  });
+
+  it('adds no noise to the radiance of a sky no surface reads (edge case)', async () => {
+    expect(await radianceDebanding(defaultSky('ProceduralSkyMaterial'), 0)).toBe(0);
   });
 });
 
@@ -65,7 +105,7 @@ describe('buildSkyEnvironment radiance size', () => {
       radianceFilter: 'importance-sample',
       radianceSize,
     };
-    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground });
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground, energy: 1 });
     return { rendered, prefiltered, hasBackground: env!.background !== null };
   }
 
@@ -108,7 +148,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
       new THREE.WebGLRenderTarget(1, 1)
     );
     const sky = defaultSky('PanoramaSkyMaterial');
-    const env = buildSkyEnvironment(renderer, { sky, lights: [], panorama, asBackground: true });
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], panorama, asBackground: true, energy: 1 });
     return { env, sampled: sampled as THREE.Texture | null };
   }
 

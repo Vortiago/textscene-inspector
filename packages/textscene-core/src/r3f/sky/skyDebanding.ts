@@ -10,6 +10,7 @@ import { installedOr } from '../shaderPatch/litUniform.js';
 import { backgroundCube } from '../shaderPatch/backgroundPrograms.js';
 import { SKY_FOG, THREE_BACKGROUND_TONE_CURVE } from '../fog/fogComposite.js';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
+import { GODOT_DEBANDING_NOISE_GLSL } from '../../godot/rendering/environment/skyDebanding.js';
 
 const DEBANDING_UNIFORM = 'godotSkyDebanding';
 
@@ -22,23 +23,20 @@ const debanding = installedOr(DEBANDING_UNIFORM, Float32Array, () => new Float32
 
 /**
  * Godot's noise at Godot's pixel position: Vulkan counts rows from the top, and WebGL from the
- * bottom. The noise is `interleaved_gradient_noise` (`sky.glsl:143-147`). Godot scales it by the
- * `luminance_multiplier` that scales the colour (`sky.glsl:305`, `:314`), so the noise reaches the
- * tone curve at up to 1/255 on every renderer.
+ * bottom. Godot scales the noise by the `luminance_multiplier` that scales the colour
+ * (`sky.glsl:305`, `:314`), so the noise reaches the tone curve at up to 1/255 on every renderer.
  */
-const GODOT_DEBANDING_NOISE = /* glsl */ `	{
+const GODOT_DEBANDING = /* glsl */ `	{
 		vec2 godotPixel = vec2(
 			gl_FragCoord.x - ${DEBANDING_UNIFORM}.y,
 			${DEBANDING_UNIFORM}.z - gl_FragCoord.y );
-		const vec3 magic = vec3( 0.06711056, 0.00583715, 52.9829189 );
-		float noise = fract( magic.z * fract( dot( godotPixel, magic.xy ) ) ) * 2.0 - 1.0;
-		gl_FragColor.rgb += ${DEBANDING_UNIFORM}.x * vec3( noise, - noise, noise ) / 255.0;
+		gl_FragColor.rgb += ${DEBANDING_UNIFORM}.x * godotDebandingNoise( godotPixel );
 	}
 ${THREE_BACKGROUND_TONE_CURVE}`;
 
 const debandCube = onChunk('backgroundCube_frag', (shader) => {
-  const patched = applyEdits(shader, [{ three: THREE_BACKGROUND_TONE_CURVE, godot: GODOT_DEBANDING_NOISE }]);
-  return patched && `uniform vec3 ${DEBANDING_UNIFORM};\n${patched}`;
+  const patched = applyEdits(shader, [{ three: THREE_BACKGROUND_TONE_CURVE, godot: GODOT_DEBANDING }]);
+  return patched && `uniform vec3 ${DEBANDING_UNIFORM};\n${GODOT_DEBANDING_NOISE_GLSL}${patched}`;
 });
 
 /**

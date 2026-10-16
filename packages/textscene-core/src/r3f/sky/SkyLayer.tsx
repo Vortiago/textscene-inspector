@@ -95,6 +95,7 @@ export function SkyLayer({
       lights: directionalLights(scene),
       panorama,
       asBackground,
+      energy: intensity,
     });
     if (!built) return undefined;
 
