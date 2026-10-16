@@ -10,7 +10,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { subResource } from '../../../testing/subResource';
-import { textureTexel } from '../../../r3f/testing/backgroundTexels';
+import { textureTexel } from '../../../r3f/testing/backgroundTexel';
 
 function makeNode(envRef = 'SubResource("Env")'): TscnNode {
   const properties: WorldEnvironmentProperties = { name: 'WE', environment: envRef };

@@ -19,38 +19,27 @@ type LinearRgb = [number, number, number];
  * The caller disposes of it.
  */
 export function clearColorTexture(color: SrgbColor): THREE.DataTexture {
-  const texture = linearTexel(sRGBToLinearRGB(color.r, color.g, color.b));
-  sampleExactly(texture);
-  texture.needsUpdate = true;
-  return texture;
+  return linearTexture(sRGBToLinearRGB(color.r, color.g, color.b));
 }
 
 /**
  * The clear colour under fog, which Godot linearises twice: once as it sets the fog material's
  * `clear_color` (`:2014`), and once more because a sky material converts every Color parameter
  * (`environment/sky.cpp:193`, `material_storage.cpp:801`). Its brightness (`:2045`) applies the
- * energy again as `backgroundIntensity`. A cube, since the fog patches three's cube background,
- * which carries the view direction the fog reads. The caller disposes of it.
+ * energy again as `backgroundIntensity`. The caller disposes of it.
  */
-export function foggedClearColorCube(color: SrgbColor): THREE.CubeTexture {
-  const linear = sRGBToLinearRGB(...sRGBToLinearRGB(color.r, color.g, color.b));
-  const cube = new THREE.CubeTexture(Array.from({ length: 6 }, () => linearTexel(linear)));
-  sampleExactly(cube);
-  cube.needsUpdate = true;
-  return cube;
-}
-
-function linearTexel([r, g, b]: LinearRgb): THREE.DataTexture {
-  const texel = new THREE.DataTexture(new Float32Array([r, g, b, 1]), 1, 1);
-  texel.type = THREE.FloatType;
-  return texel;
+export function foggedClearColorTexture(color: SrgbColor): THREE.DataTexture {
+  return linearTexture(sRGBToLinearRGB(...sRGBToLinearRGB(color.r, color.g, color.b)));
 }
 
 /** Linear float texels with no mipmaps or filtering, so a channel above 1 reaches the curve as is. */
-function sampleExactly(texture: THREE.Texture): void {
+function linearTexture([r, g, b]: LinearRgb): THREE.DataTexture {
+  const texture = new THREE.DataTexture(new Float32Array([r, g, b, 1]), 1, 1);
   texture.type = THREE.FloatType;
   texture.colorSpace = THREE.LinearSRGBColorSpace;
   texture.generateMipmaps = false;
   texture.minFilter = THREE.NearestFilter;
   texture.magFilter = THREE.NearestFilter;
+  texture.needsUpdate = true;
+  return texture;
 }

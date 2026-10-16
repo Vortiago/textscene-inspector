@@ -1,7 +1,8 @@
 /**
  * Installs Godot's fog into three's programs: every fog program blends the depth fog and the
  * volumetric fog in one step before the tone curve (`scene_forward_clustered.glsl:2988`), and the
- * cube background fogs the sky as Godot's sky shader does (`sky.glsl:281-295`).
+ * cube and flat backgrounds fog the sky and the clear colour as Godot's sky shader does
+ * (`sky.glsl:281-295`).
  */
 
 import * as THREE from 'three';
@@ -62,9 +63,45 @@ const fogBackgroundCube = onChunk('backgroundCube_frag', (shader) => {
   return fogged && `#include <${GODOT_FOG_PARS_CHUNK}>\n${fogged.backgroundCube_frag}`;
 });
 
+/** three's flat background vertex, which hands on the world direction of each pixel's view ray. */
+const THREE_PLANE_POSITION = 'gl_Position = vec4( position.xy, 1.0, 1.0 );';
+
+/**
+ * three's flat background, a colour background, fogged after its intensity as the cube is. An
+ * orthographic camera looks along one direction, which the clip-space quad does not encode.
+ */
+function fogBackgroundPlane(chunks: Record<'background_vert' | 'background_frag', string>) {
+  const fogged = applyChunkEdits(chunks, [
+    {
+      chunk: 'background_vert',
+      three: THREE_PLANE_POSITION,
+      godot: /* glsl */ `${THREE_PLANE_POSITION}
+	vec4 viewRay = inverse( projectionMatrix ) * vec4( position.xy, 1.0, 1.0 );
+	vec3 viewDirection = isOrthographic ? vec3( 0.0, 0.0, - 1.0 ) : viewRay.xyz / viewRay.w;
+	vWorldDirection = normalize( ( vec4( viewDirection, 0.0 ) * viewMatrix ).xyz );`,
+    },
+    {
+      chunk: 'background_frag',
+      three: THREE_BACKGROUND_TONE_CURVE,
+      godot: `\tgl_FragColor.rgb = godotSkyFog( gl_FragColor.rgb, vWorldDirection );\n${THREE_BACKGROUND_TONE_CURVE}`,
+    },
+  ]);
+  return (
+    fogged && {
+      background_vert: `varying vec3 vWorldDirection;\n${fogged.background_vert}`,
+      background_frag: `#include <${GODOT_FOG_PARS_CHUNK}>\nvarying vec3 vWorldDirection;\n${fogged.background_frag}`,
+    }
+  );
+}
+
 /** three's cube background shader (r186 `ShaderLib.js:231-243`), which its types leave optional. */
 function backgroundCube(): THREE.ShaderLibShader {
   return THREE.ShaderLib.backgroundCube!;
+}
+
+/** three's flat background shader (r186 `ShaderLib.js:218-229`), which its types leave optional. */
+function backgroundPlane(): THREE.ShaderLibShader {
+  return THREE.ShaderLib.background!;
 }
 
 /**
@@ -88,8 +125,19 @@ export function installFogComposite(): void {
     missing: `backgroundCube_frag has no ${THREE_BACKGROUND_TONE_CURVE.trim()}`,
   });
   if (isBackgroundFogged) backgroundCube().fragmentShader = THREE.ShaderChunk.backgroundCube_frag;
+  const isPlaneFogged = installChunkPatch({
+    names: ['background_vert', 'background_frag'],
+    isApplied: (chunks) => chunks.background_frag.includes('godotSkyFog'),
+    apply: fogBackgroundPlane,
+    missing: `background_vert has no ${THREE_PLANE_POSITION}`,
+  });
+  if (isPlaneFogged) {
+    backgroundPlane().vertexShader = THREE.ShaderChunk.background_vert;
+    backgroundPlane().fragmentShader = THREE.ShaderChunk.background_frag;
+  }
   for (const [name, uniform] of Object.entries(fogUniformRecord())) {
     installMergedUniform(FOG_UNIFORMS_MERGE, name, uniform.value);
     backgroundCube().uniforms[name] = { value: uniform.value };
+    backgroundPlane().uniforms[name] = { value: uniform.value };
   }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { clearColorTexture, foggedClearColorCube } from './colorBackground';
-import { cubeFaceTexels, textureTexel } from '../testing/backgroundTexels';
+import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
+import { textureTexel } from '../testing/backgroundTexel';
 
 describe('clearColorTexture', () => {
   it('holds the sRGB colour linearised once, opaque', () => {
@@ -31,26 +31,25 @@ describe('clearColorTexture', () => {
   });
 });
 
-describe('foggedClearColorCube', () => {
-  it('fills all six faces with the sRGB colour linearised twice, opaque', () => {
-    const cube = foggedClearColorCube({ r: 0.5, g: 1, b: 0 });
+describe('foggedClearColorTexture', () => {
+  it('holds the sRGB colour linearised twice, opaque', () => {
+    const [r, g, b, a] = textureTexel(foggedClearColorTexture({ r: 0.5, g: 1, b: 0 }));
 
-    for (const [r, g, b, a] of cubeFaceTexels(cube)) {
-      expect(r).toBeCloseTo(0.0376, 4);
-      expect([g, b, a]).toEqual([1, 0, 1]);
-    }
+    expect(r).toBeCloseTo(0.0376, 4);
+    expect([g, b, a]).toEqual([1, 0, 1]);
   });
 
   it('linearises a channel below the knee twice through its linear segment (edge case)', () => {
-    const r = cubeFaceTexels(foggedClearColorCube({ r: 0.02, g: 0, b: 0 }))[0]?.[0];
+    const [r] = textureTexel(foggedClearColorTexture({ r: 0.02, g: 0, b: 0 }));
 
     expect(r).toBeCloseTo(0.02 / 12.92 / 12.92, 8);
   });
 
-  it('samples as linear float texels with no mipmaps, so a bright channel is not clamped', () => {
-    const cube = foggedClearColorCube({ r: 4, g: 0, b: 0 });
+  it('is a flat texture, so the fogged colour fills an orthographic view too', () => {
+    const texture = foggedClearColorTexture({ r: 4, g: 0, b: 0 });
 
-    expect(cube).toMatchObject({
+    expect(texture).not.toBeInstanceOf(THREE.CubeTexture);
+    expect(texture).toMatchObject({
       type: THREE.FloatType,
       colorSpace: THREE.LinearSRGBColorSpace,
       generateMipmaps: false,
@@ -59,9 +58,9 @@ describe('foggedClearColorCube', () => {
     });
   });
 
-  it('builds an independent cube per call, which each caller disposes (edge case)', () => {
+  it('builds an independent texture per call, which each caller disposes (edge case)', () => {
     const color = { r: 0.1, g: 0.2, b: 0.3 };
 
-    expect(foggedClearColorCube(color)).not.toBe(foggedClearColorCube(color));
+    expect(foggedClearColorTexture(color)).not.toBe(foggedClearColorTexture(color));
   });
 });

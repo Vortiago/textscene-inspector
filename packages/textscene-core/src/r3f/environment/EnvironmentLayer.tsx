@@ -17,7 +17,7 @@ import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
-import { clearColorTexture, foggedClearColorCube } from './colorBackground';
+import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -98,7 +98,7 @@ function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasF
   useEffect(() => {
     if (showsColor) {
       return hasFog
-        ? showBackground(scene, foggedClearColorCube(backgroundColor), backgroundEnergy)
+        ? showBackground(scene, foggedClearColorTexture(backgroundColor), backgroundEnergy)
         : showBackground(scene, clearColorTexture(backgroundColor), 1);
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
