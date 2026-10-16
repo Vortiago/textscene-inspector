@@ -6,11 +6,16 @@ import { v } from '../../../../linter/validators/index.js';
 import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
-
-const CENTER_OF_MASS_MODE = { 0: 'AUTO', 1: 'CUSTOM' };
-const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
-const FREEZE_MODE = { 0: 'STATIC', 1: 'KINEMATIC' };
-const CCD_MODE = { 0: 'DISABLED', 1: 'CAST_RAY', 2: 'CAST_SHAPE' };
+import {
+  CCD_MODE_NAMES,
+  CENTER_OF_MASS_MODE_NAMES,
+  CcdMode,
+  CenterOfMassMode,
+  DAMP_MODE_NAMES,
+  DampMode,
+  FREEZE_MODE_NAMES,
+  FreezeMode,
+} from '../../../../godot/scene/physicsBody.js';
 
 /** 2D inertia is a scalar (rotational mass around Z), unlike 3D's Vector3. */
 const inertia2d: PropertyValidator = (key, value, line) => {
@@ -58,9 +63,15 @@ validatorRegistry.registerAll('RigidBody2D', {
   gravity_scale: v.float('gravity_scale'),
   // rigid_body_2d.cpp:746 "Auto,Custom". set_center_of_mass_mode (:337-358) is a
   // bare assignment, so out-of-range warns.
-  center_of_mass_mode: v.enumInt('center_of_mass_mode', 0, 1, CENTER_OF_MASS_MODE, {
-    hinted: 'rigid_body_2d.cpp:746',
-  }),
+  center_of_mass_mode: v.enumInt(
+    'center_of_mass_mode',
+    CenterOfMassMode.AUTO,
+    CenterOfMassMode.CUSTOM,
+    CENTER_OF_MASS_MODE_NAMES,
+    {
+      hinted: 'rigid_body_2d.cpp:746',
+    }
+  ),
   center_of_mass: v.vector2('center_of_mass'),
   inertia: inertia2d,
   sleeping: v.boolean('sleeping'),
@@ -70,13 +81,17 @@ validatorRegistry.registerAll('RigidBody2D', {
   // rigid_body_2d.cpp:754 "Static,Kinematic". set_freeze_mode (:304-310) is a
   // bare assignment (only an early-return-if-unchanged guard), so out-of-range
   // warns. RigidBody3D carries the same enum.
-  freeze_mode: v.enumInt('freeze_mode', 0, 1, FREEZE_MODE, { hinted: 'rigid_body_2d.cpp:754' }),
+  freeze_mode: v.enumInt('freeze_mode', FreezeMode.STATIC, FreezeMode.KINEMATIC, FREEZE_MODE_NAMES, {
+    hinted: 'rigid_body_2d.cpp:754',
+  }),
   custom_integrator: v.boolean('custom_integrator'),
   // rigid_body_2d.cpp:757 "Disabled,Cast Ray,Cast Shape". Unlike RigidBody3D's
   // plain bool, 2D's continuous_cd is an INT enum (CCDMode).
   // set_continuous_collision_detection_mode (:566-569) is a bare assignment,
   // so out-of-range warns.
-  continuous_cd: v.enumInt('continuous_cd', 0, 2, CCD_MODE, { hinted: 'rigid_body_2d.cpp:757' }),
+  continuous_cd: v.enumInt('continuous_cd', CcdMode.DISABLED, CcdMode.CAST_SHAPE, CCD_MODE_NAMES, {
+    hinted: 'rigid_body_2d.cpp:757',
+  }),
   contact_monitor: v.boolean('contact_monitor'),
   // rigid_body_2d.cpp:759 hints "0,64,1,or_greater", so 64 is only a slider extent.
   // rigid_body_2d.cpp:501, ERR_FAIL_INDEX_MSG(p_amount, MAX_CONTACTS_REPORTED_2D_MAX), closes
@@ -90,7 +105,7 @@ validatorRegistry.registerAll('RigidBody2D', {
   linear_velocity: v.vector2('linear_velocity'),
   // rigid_body_2d.cpp:762 "Combine,Replace". set_linear_damp_mode (:406-409) is
   // a bare assignment, so out-of-range warns.
-  linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE, {
+  linear_damp_mode: v.enumInt('linear_damp_mode', DampMode.COMBINE, DampMode.REPLACE, DAMP_MODE_NAMES, {
     hinted: 'rigid_body_2d.cpp:762',
   }),
   // rigid_body_2d.cpp:425, ERR_FAIL_COND(p_linear_damp < -1). -1 is legal in 2D
@@ -106,7 +121,7 @@ validatorRegistry.registerAll('RigidBody2D', {
   angular_velocity: v.float('angular_velocity'),
   // rigid_body_2d.cpp:766 "Combine,Replace". set_angular_damp_mode (:415-418) is
   // a bare assignment, so out-of-range warns.
-  angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE, {
+  angular_damp_mode: v.enumInt('angular_damp_mode', DampMode.COMBINE, DampMode.REPLACE, DAMP_MODE_NAMES, {
     hinted: 'rigid_body_2d.cpp:766',
   }),
   // rigid_body_2d.cpp:435, ERR_FAIL_COND(p_angular_damp < -1). Hint :767 starts at -1.

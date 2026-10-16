@@ -28,3 +28,9 @@ export function relabelEnumNames(
     Object.fromEntries(Object.entries(names).map(([value, name]) => [value, label(name)]))
   );
 }
+
+/** Every integer a numeric TypeScript enum holds, in declaration order, without the name-to-integer entries. */
+/* @__NO_SIDE_EFFECTS__ */
+export function enumValues<T extends number>(enumObject: Record<string, string | T>): readonly T[] {
+  return Object.values(enumObject).filter((value): value is T => typeof value === 'number');
+}

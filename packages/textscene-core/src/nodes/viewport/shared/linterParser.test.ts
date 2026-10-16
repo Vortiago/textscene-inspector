@@ -234,21 +234,32 @@ describe('Viewport shared validators', () => {
       expect(warned).toBeAtTier('warning');
     });
 
-    it('accepts debug_draw 26 (Internal Buffer); warns at 27, one past the 27-label hint (viewport.cpp:5172)', () => {
+    it('accepts debug_draw 26 (Internal Buffer), the last 4.6.3 label (viewport.cpp:5172)', () => {
       const validator = find('debug_draw');
       expect(validator('debug_draw', '0', 1)).toBeNull();
       expect(validator('debug_draw', '26', 1)).toBeNull();
-      const warned = validator('debug_draw', '27', 1);
+    });
+
+    it('accepts debug_draw 27 and 28, the two area light labels 4.7.2 adds; warns at 29 (viewport.cpp:5367)', () => {
+      const validator = find('debug_draw');
+      expect(validator('debug_draw', '27', 1)).toBeNull();
+      expect(validator('debug_draw', '28', 1)).toBeNull();
+      const warned = validator('debug_draw', '29', 1);
       expect(warned).not.toBeNull();
       expect(warned).toBeAtTier('warning');
     });
 
-    it('accepts scaling_3d_mode 4 (MetalFX Temporal); warns at 5, past SCALING_3D_MODE_MAX hint (viewport.cpp:5177)', () => {
+    it('accepts scaling_3d_mode 4 (MetalFX Temporal), the last 4.6.3 mode (viewport.cpp:5177)', () => {
       const validator = find('scaling_3d_mode');
       for (const value of ['0', '1', '2', '3', '4']) {
         expect(validator('scaling_3d_mode', value, 1)).toBeNull();
       }
-      const warned = validator('scaling_3d_mode', '5', 1);
+    });
+
+    it('accepts scaling_3d_mode 5 (Nearest), which 4.7.2 adds; warns at 6 (viewport.cpp:5372)', () => {
+      const validator = find('scaling_3d_mode');
+      expect(validator('scaling_3d_mode', '5', 1)).toBeNull();
+      const warned = validator('scaling_3d_mode', '6', 1);
       expect(warned).not.toBeNull();
       expect(warned).toBeAtTier('warning');
     });
