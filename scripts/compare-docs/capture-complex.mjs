@@ -9,21 +9,14 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
 import { renderReference } from '../godot-ref/run.mjs';
 import { parseCaptureFlags } from './captureFlags.mjs';
 import {
-  assertPortFree,
   createCaptureContext,
-  ensureWebBuilt,
   findCaptureTarget,
   gotoFixture,
-  killPreviewGroup,
   settleCanvas,
-  startPreview,
-  waitForServer,
-  warmUpGLContext,
+  withPreviewBrowser,
   writeCaptureImage,
 } from '../visual/previewServer.mjs';
 
@@ -129,16 +122,8 @@ async function captureGodot(scenes) {
 }
 
 async function captureOurs(scenes) {
-  ensureWebBuilt();
-  await assertPortFree(PORT, 'COMPARE_PORT');
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
   const failures = [];
-  try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    // Spends the first-context-lost risk before any published image.
-    await warmUpGLContext(browser);
+  await withPreviewBrowser({ port: PORT, portEnvName: 'COMPARE_PORT' }, async (browser, baseUrl) => {
     for (const c of scenes) {
       process.stdout.write(`[complex ours] ${c.slug} (${c.mode}) … `);
       // A 3D scene is fit only when Godot fits it (`frame`). Otherwise both use
@@ -170,10 +155,7 @@ async function captureOurs(scenes) {
         await context.close();
       }
     }
-  } finally {
-    await browser?.close();
-    killPreviewGroup(proc);
-  }
+  });
   return failures;
 }
 

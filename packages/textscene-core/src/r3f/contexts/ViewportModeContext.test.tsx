@@ -21,6 +21,17 @@ describe('ViewportModeContext', () => {
     expect(result.current.showGrid).toBe(false);
   });
 
+  it('defaults showPerformance to false, so no frame is profiled unasked', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    expect(result.current.showPerformance).toBe(false);
+  });
+
+  it('toggles showPerformance', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    act(() => result.current.setShowPerformance(true));
+    expect(result.current.showPerformance).toBe(true);
+  });
+
   it('toggles showGrid', () => {
     const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
     act(() => result.current.setShowGrid(true));

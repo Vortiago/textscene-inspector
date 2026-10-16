@@ -17,6 +17,10 @@ import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 import { projectTransparentBackground } from '../../parser/projectSettingsParser';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { SCENE_BUFFER_TYPE, type CompositorPass } from './useCompositorPass';
+import { SubscriberStep } from '../frameProfile/FrameProfiler';
+
+/** The composer's `useFrame` priority. A positive one takes the canvas's render over from R3F. */
+const COMPOSER_PRIORITY = 1;
 
 interface CompositorProps {
   /** The glow, and the scene buffer's samples, which resolve before the curve as Godot resolves them. */
@@ -59,9 +63,16 @@ export function Compositor({ pass, adjustments, toneMapping, resources }: Compos
   }, [effect, glowMap]);
 
   return (
-    <EffectComposer multisampling={samples} frameBufferType={SCENE_BUFFER_TYPE}>
-      <primitive object={effect} dispose={null} />
-    </EffectComposer>
+    <>
+      <SubscriberStep step="Compositor" priority={COMPOSER_PRIORITY} />
+      <EffectComposer
+        multisampling={samples}
+        frameBufferType={SCENE_BUFFER_TYPE}
+        renderPriority={COMPOSER_PRIORITY}
+      >
+        <primitive object={effect} dispose={null} />
+      </EffectComposer>
+    </>
   );
 }
 
