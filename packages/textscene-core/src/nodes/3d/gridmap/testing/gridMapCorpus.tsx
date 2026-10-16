@@ -82,6 +82,8 @@ export interface GridMapCorpus {
   subResources?: string;
   /** Wraps the GridMap inside the providers, such as a tiled-upload queue. */
   wrapper?: ComponentType<{ children: ReactNode }>;
+  /** The load that never settles, to hold the GridMap mid-load. */
+  held?: 'library' | 'tile';
 }
 
 /** A mounted GridMap, for a test that changes something after the loads settle. */
@@ -108,7 +110,12 @@ function gridMapNode(cells: string): TscnNode {
   };
 }
 
-/** Mounts the GridMap and waits until the library, the tile and its material resolve. */
+const HELD_PATHS = { library: LIBRARY_PATH, tile: TILE_MESH_PATH };
+
+/**
+ * Mounts the GridMap and waits until the library, the tile and its material resolve, or the held
+ * load stops them.
+ */
 export async function mountGridMap({
   itemLines = '',
   materialLines = null,
@@ -116,11 +123,15 @@ export async function mountGridMap({
   cells = '0, 0, 0',
   subResources = '',
   wrapper: Wrapper,
+  held,
 }: GridMapCorpus = {}): Promise<MountedGridMap> {
-  const loader = loaderServing({
-    [LIBRARY_PATH]: meshLibrary(itemLines),
-    [TILE_MESH_PATH]: tileMesh({ materialLines, secondMaterialLines, subResources }),
-  });
+  const loader = loaderServing(
+    {
+      [LIBRARY_PATH]: meshLibrary(itemLines),
+      [TILE_MESH_PATH]: tileMesh({ materialLines, secondMaterialLines, subResources }),
+    },
+    held ? [HELD_PATHS[held]] : []
+  );
 
   const gridMap = <GridMap node={gridMapNode(cells)} />;
   const tree = (
@@ -148,7 +159,7 @@ export async function mountGridMap({
   };
 }
 
-/** Every mesh the GridMap mounts once the library, the tile and its material resolve. */
+/** Every mesh the GridMap mounts once its loads resolve, or once the held load stops them. */
 export async function renderGridMapTiles(corpus: GridMapCorpus = {}): Promise<THREE.Mesh[]> {
   return (await mountGridMap(corpus)).tiles();
 }
