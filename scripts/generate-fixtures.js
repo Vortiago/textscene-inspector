@@ -7,9 +7,12 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { DEMO_CATEGORY_LABELS } from './generate-fixtures/demoCategories.mjs';
 import { fixtureProjects } from './generate-fixtures/fixtureProjects.mjs';
+import { ensureGodotDemos } from './vendor-godot-demos/vendor.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+ensureGodotDemos();
 
 /**
  * @param {string} filename
@@ -155,14 +158,8 @@ const isometricFiles = walkTscn(isometricDir).sort();
 // entry's `root` scopes res://. Every scene is listed, subscenes included.
 const demosDir = join(rootDir, 'scenes/demos');
 function demoProjects() {
-  let tops;
-  try {
-    tops = readdirSync(demosDir, { withFileTypes: true });
-  } catch {
-    return []; // No demos vendored.
-  }
   const out = [];
-  for (const top of tops) {
+  for (const top of readdirSync(demosDir, { withFileTypes: true })) {
     if (!top.isDirectory() || !DEMO_CATEGORY_LABELS[top.name]) continue;
     for (const project of readdirSync(join(demosDir, top.name), { withFileTypes: true })) {
       if (!project.isDirectory()) continue;

@@ -11,5 +11,19 @@ runs:
         node-version-file: .nvmrc
         cache: pnpm
 
+    # The install's postinstall vendors the demo corpora, and fetches nothing when the restored
+    # corpora hold the current recipe. The script prints that recipe's key.
+    - id: demos
+      run: echo "key=$(node scripts/vendor-godot-demos.mjs --key)" >> "$GITHUB_OUTPUT"
+      shell: bash
+
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          scenes/demos
+          scenes/isometric
+          !scenes/isometric/previews
+        key: godot-demos-${{ steps.demos.outputs.key }}
+
     - run: pnpm install --frozen-lockfile
       shell: bash
