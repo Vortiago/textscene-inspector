@@ -229,7 +229,7 @@ describe('readShadowMaps', () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera();
     const reader = vi.fn(() => order.push('read'));
-    readShadowMaps(renderer, reader);
+    readShadowMaps(renderer, 'Fog', reader);
 
     renderer.shadowMap.render([omniLight()], scene, camera);
 
@@ -240,7 +240,7 @@ describe('readShadowMaps', () => {
 
   it('records the height of the draw’s target after a reader renders into another (edge case)', () => {
     const { renderer } = fakeRenderer();
-    readShadowMaps(renderer, () => {
+    readShadowMaps(renderer, 'Fog', () => {
       installedFramebufferHeight()[0] = 1;
     });
 
@@ -255,7 +255,7 @@ describe('readShadowMaps', () => {
     vi.resetModules();
     const reloaded = await import('./shadowPass');
     const reader = vi.fn();
-    reloaded.readShadowMaps(renderer, reader);
+    reloaded.readShadowMaps(renderer, 'Fog', reader);
 
     runPass(renderer, []);
 
@@ -265,7 +265,7 @@ describe('readShadowMaps', () => {
   it('stops calling a reader once its disposer runs (error case)', () => {
     const { renderer } = fakeRenderer();
     const reader = vi.fn();
-    const stop = readShadowMaps(renderer, reader);
+    const stop = readShadowMaps(renderer, 'Fog', reader);
     stop();
 
     runPass(renderer, []);
@@ -284,7 +284,7 @@ describe('the shadow pass under a frame profile', () => {
     let time = 0;
     const { renderer, threePass } = fakeRenderer();
     threePass.mockImplementation(() => (time += 3));
-    readShadowMaps(renderer, () => (time += 2));
+    readShadowMaps(renderer, 'Fog', () => (time += 2));
 
     const stats = profiledWindow(
       renderer,
@@ -299,12 +299,32 @@ describe('the shadow pass under a frame profile', () => {
     ]);
   });
 
+  it('times each reader as the step it names', () => {
+    let time = 0;
+    const { renderer } = fakeRenderer();
+    readShadowMaps(renderer, 'Fog', () => (time += 2));
+    readShadowMaps(renderer, 'Reflection probes', () => (time += 5));
+
+    const stats = profiledWindow(
+      renderer,
+      () => time,
+      () => runPass(renderer, [new THREE.DirectionalLight()])
+    );
+
+    expect(stepCpuMs(stats)).toEqual([
+      ['Reflection probes', 5],
+      ['Shadows', 0],
+      ['Fog', 2],
+      ['Other', 0],
+    ]);
+  });
+
   it('times a render a reader makes as part of the Fog step, not as another run', () => {
     let time = 0;
     const { renderer, threePass } = fakeRenderer();
     threePass.mockImplementation(() => (time += 3));
     const fogged = new THREE.Scene();
-    readShadowMaps(renderer, (rendered) => {
+    readShadowMaps(renderer, 'Fog', (rendered) => {
       if (rendered !== fogged) return;
       time += 2;
       runPass(renderer, [new THREE.DirectionalLight()]);
@@ -362,7 +382,7 @@ describe('the sun shadow rows', () => {
     const { renderer } = fakeRenderer();
     const readerSun = sunAt(7);
     let isReading = false;
-    readShadowMaps(renderer, () => {
+    readShadowMaps(renderer, 'Fog', () => {
       if (isReading) return;
       isReading = true;
       runPass(renderer, [readerSun]);

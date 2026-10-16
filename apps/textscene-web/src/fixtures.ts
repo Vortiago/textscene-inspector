@@ -1898,6 +1898,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Volumetric Fog Spot Origin",
+    "file": "unit-volumetric-fog-spot-origin.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Volumetric Fog Spot Shadow Bias",
     "file": "unit-volumetric-fog-spot-shadow-bias.tscn",
     "category": "Other"
