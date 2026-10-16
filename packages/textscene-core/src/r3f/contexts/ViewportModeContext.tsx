@@ -1,7 +1,8 @@
 /**
  * How the centre viewport shows the scene (ADR-0006). `'3D'` mounts the R3F
  * canvas, `'2D'` the Control overlay. The default (3D, collisions off, labels
- * on, grid off, fog on) needs no provider, and the host layers persistence on top.
+ * on, grid off, fog on, performance off) needs no provider, and the host layers
+ * persistence on top.
  */
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
@@ -23,6 +24,16 @@ export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 /** Whether to draw the fog. A user who hides it for speed keeps it hidden on the next open. */
 export const SHOW_FOG_STORAGE_KEY = 'tsi.showFog';
+export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';
+
+/** The viewport preferences a session persists, read once to seed the provider. */
+export interface PersistedViewport {
+  mode: ViewportMode;
+  showGrid: boolean;
+  frameOnOpen: boolean;
+  showFog: boolean;
+  showPerformance: boolean;
+}
 
 interface ViewportModeValue {
   mode: ViewportMode;
@@ -52,6 +63,9 @@ interface ViewportModeValue {
   /** The Environment's depth and volumetric fog, on by default as Godot draws it. Off skips its passes. */
   showFog: boolean;
   setShowFog: (show: boolean) => void;
+  /** The performance overlay, off by default, since only a running frame profile fills it. */
+  showPerformance: boolean;
+  setShowPerformance: (show: boolean) => void;
 }
 
 const DEFAULT_VALUE: ViewportModeValue = {
@@ -73,6 +87,8 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setFrameOnOpen: () => {},
   showFog: true,
   setShowFog: () => {},
+  showPerformance: false,
+  setShowPerformance: () => {},
 };
 
 const ViewportModeContext = createContext<ViewportModeValue>(DEFAULT_VALUE);
@@ -89,6 +105,7 @@ export interface ViewportModeProviderProps {
   initialShowPreviewEnvironment?: boolean;
   initialFrameOnOpen?: boolean;
   initialShowFog?: boolean;
+  initialShowPerformance?: boolean;
 }
 
 export function ViewportModeProvider({
@@ -102,6 +119,7 @@ export function ViewportModeProvider({
   initialShowPreviewEnvironment = true,
   initialFrameOnOpen = false,
   initialShowFog = true,
+  initialShowPerformance = false,
 }: ViewportModeProviderProps) {
   const [mode, setMode] = useState<ViewportMode>(initialMode);
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);
@@ -112,6 +130,7 @@ export function ViewportModeProvider({
   const [showPreviewEnvironment, setShowPreviewEnvironment] = useState(initialShowPreviewEnvironment);
   const [frameOnOpen, setFrameOnOpen] = useState(initialFrameOnOpen);
   const [showFog, setShowFog] = useState(initialShowFog);
+  const [showPerformance, setShowPerformance] = useState(initialShowPerformance);
   const value = useMemo<ViewportModeValue>(
     () => ({
       mode,
@@ -132,6 +151,8 @@ export function ViewportModeProvider({
       setFrameOnOpen,
       showFog,
       setShowFog,
+      showPerformance,
+      setShowPerformance,
     }),
     [
       mode,
@@ -143,6 +164,7 @@ export function ViewportModeProvider({
       showPreviewEnvironment,
       frameOnOpen,
       showFog,
+      showPerformance,
     ]
   );
   return <ViewportModeContext.Provider value={value}>{children}</ViewportModeContext.Provider>;

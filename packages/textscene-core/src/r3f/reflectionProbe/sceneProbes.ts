@@ -21,6 +21,7 @@ import {
 import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext.js';
 import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
 import { drawOffscreen } from '../offscreen.js';
+import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import { observeSceneCamera, observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
 import { TrackedObjects } from '../trackedObjects.js';
@@ -104,7 +105,11 @@ export class SceneProbes {
     if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
     this.markCapturesStale(clearColor);
     const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
-    if (stale !== -1) this.capture(probes[stale]!, stale, atlas, clearColor);
+    if (stale !== -1) {
+      beginStep(this.renderer, 'Reflection probes');
+      this.capture(probes[stale]!, stale, atlas, clearColor);
+      endStep(this.renderer, 'Reflection probes');
+    }
     const captured = probes.filter((probe) => this.captures.has(probe));
     if (stale !== -1 || !sameProbes(captured, this.packed)) this.pack(captured);
     return stale !== -1;

@@ -43,6 +43,17 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
     expect(screen.queryByLabelText('Collapse the side panel')).toBeNull();
   });
 
+  it('shows the performance overlay when the last session turned it on', () => {
+    globalThis.window.localStorage.setItem('tsi.showPerformance', 'true');
+    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    expect(screen.getByTestId('performance-overlay')).toBeTruthy();
+  });
+
+  it('a session with no persisted value shows no performance overlay (default)', () => {
+    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    expect(screen.queryByTestId('performance-overlay')).toBeNull();
+  });
+
   it('a session with no persisted value starts with the dock expanded (default)', () => {
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByLabelText('Collapse the side panel')).toBeTruthy();

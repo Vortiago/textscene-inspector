@@ -8,6 +8,7 @@ import { Canvas } from '@react-three/fiber';
 import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
 import { SharedTextureRelease } from '../../sharedTexture.js';
 import { World2DContents, type World2DCanvasProps } from './World2DContents.js';
+import { FrameProfiler } from '../../frameProfile/FrameProfiler.js';
 
 export function World2DCanvas(props: World2DCanvasProps) {
   return (
@@ -30,6 +31,7 @@ export function World2DCanvas(props: World2DCanvasProps) {
       style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
     >
       <SharedTextureRelease />
+      <FrameProfiler />
       <World2DContents {...props} />
     </Canvas>
   );

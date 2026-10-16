@@ -17,6 +17,7 @@ import {
 import { useFrame } from '@react-three/fiber';
 import * as logger from '../../logger.js';
 import { orderViewportPasses, type ViewportPassCycle } from '../../nodes/viewport/passOrder.js';
+import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 
 export interface ViewportPass {
   /** ids (dispatcher-absolute node paths) of the OTHER passes this pass's content samples. */
@@ -126,11 +127,14 @@ export function ViewportPassProvider({ children }: { children: ReactNode }) {
 export function ViewportPassOrchestrator(): null {
   const { passes, order, cycles } = useContext(StateContext);
 
-  useFrame(() => {
+  useFrame(({ gl }) => {
+    if (order.length === 0) return;
+    beginStep(gl, 'SubViewports');
     for (const id of order) {
       if (cycles.has(id)) continue;
       passes.get(id)?.render();
     }
+    endStep(gl, 'SubViewports');
   });
 
   return null;

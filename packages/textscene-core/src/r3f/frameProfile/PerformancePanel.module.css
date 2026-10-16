@@ -1,0 +1,51 @@
+/* The performance overlay's styles. Every colour comes from a --tsi token. */
+
+/* Top-left, clear of the viewport toolbar in the top-right corner and below it in z-order, so a
+   narrow viewport never hides a control. It takes no pointer events, so a drag over it still orbits
+   the camera. */
+.panel {
+  position: absolute;
+  top: var(--tsi-space-2);
+  left: var(--tsi-space-2);
+  z-index: 5;
+  pointer-events: none;
+  padding: var(--tsi-space-1) var(--tsi-space-2);
+  border: 1px solid var(--tsi-border);
+  border-radius: var(--tsi-radius-md);
+  background: var(--tsi-bg-panel);
+  color: var(--tsi-fg-default);
+  font-family: var(--tsi-font-mono);
+  font-size: var(--tsi-font-sm);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two columns, so the panel stays narrow beside the viewport toolbar. */
+.totals {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: var(--tsi-space-3);
+  white-space: nowrap;
+}
+
+.steps {
+  margin-top: var(--tsi-space-1);
+  border-collapse: collapse;
+}
+
+.steps th,
+.steps td {
+  padding: 0 var(--tsi-space-1);
+  font-weight: normal;
+  text-align: right;
+}
+
+.steps th[scope='row'],
+.steps thead th:first-child {
+  padding-left: 0;
+  text-align: left;
+}
+
+.steps thead th {
+  color: var(--tsi-fg-muted);
+}
