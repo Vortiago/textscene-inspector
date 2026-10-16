@@ -20,26 +20,3 @@ export const ninePatchRectMinimumSize: MinimumSizeFn = (n): Vector2 => {
   const bottom = props.patchMarginBottom ?? 0;
   return { x: left + right, y: top + bottom };
 };
-
-const TEXTURE_FILTER_NEAREST = 1;
-const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS = 3;
-const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5;
-
-type NinePatchRectFilter = 'nearest' | 'linear';
-
-/**
- * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`) as three.js filters: the mapping of
- * `texturerect/nativeSolver.ts`'s `resolveTextureRectFilter`, copied, not imported across slices. `filter`
- * is already resolved up the ancestors by `useInheritedTextureSampler`. Undefined maps to LINEAR, the class
- * default of `Viewport::default_canvas_item_texture_filter` (`scene/main/viewport.h:419`).
- */
-export function resolveNinePatchFilter(filter: number | undefined): NinePatchRectFilter {
-  switch (filter) {
-    case TEXTURE_FILTER_NEAREST:
-    case TEXTURE_FILTER_NEAREST_WITH_MIPMAPS:
-    case TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC:
-      return 'nearest';
-    default:
-      return 'linear';
-  }
-}

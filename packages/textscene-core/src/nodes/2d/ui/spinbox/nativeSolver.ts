@@ -24,7 +24,7 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../../resources/styles/theme/lookup';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../r3f/controls/godotDefaultTheme';
+import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   pickLineEditStyleBox,

@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { godotBlendState } from './blendState';
 import { decodeStandardMaterial3D } from './decode';
 import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
-import { CullMode, type StandardMaterial3DData, type StandardMaterial3DScalars } from './types';
+import { CullMode } from '../../../godot/rendering/materials/cullMode';
+import type { StandardMaterial3DData, StandardMaterial3DScalars } from './types';
 
 /**
  * Godot's cull mode names the faces it discards, and three's `side` names the ones it

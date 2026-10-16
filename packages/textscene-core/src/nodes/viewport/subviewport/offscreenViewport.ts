@@ -28,8 +28,8 @@ export function createOffscreenTarget(
   // and darken every sample.
   target.texture.colorSpace = colorSpace;
   target.texture.name = `${name}::target`;
-  // The sub-viewport's own filter enum is not reproduced. Linear matches
-  // Godot's default `canvas_item_default_texture_filter` (1, LINEAR).
+  // Not the SubViewport's `canvas_item_default_texture_filter`: Godot passes that to the items drawn
+  // into the viewport (`renderer_viewport.cpp:688`), not to sampling its texture. Linear is the root default.
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;

@@ -7,7 +7,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  GODOT_TEXTURE_FILTER_DEFAULT,
   applyTextureFilterState,
   dropMipChain,
   godotTextureFilterState,
@@ -61,7 +60,6 @@ describe('godotTextureFilterState', () => {
 
   it("falls back to Godot's default for an absent or out-of-range value", () => {
     // `BaseMaterial3D::texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`.
-    expect(GODOT_TEXTURE_FILTER_DEFAULT).toBe(3);
     const fallback = godotTextureFilterState(3);
     expect(godotTextureFilterState(undefined)).toEqual(fallback);
     expect(godotTextureFilterState(99)).toEqual(fallback);

@@ -7,6 +7,7 @@
 
 import type { IUniform, Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 import { recordedUniform } from './recordedOnMaterial';
 import { editedChunk, type TextEdit } from '../shaderPatch/chunkPatch';
 import {
@@ -57,9 +58,6 @@ const LIGHT_AFFECT_KEY = 'godotAoLightAffect';
 /** Where a material records its `ao_texture_channel` mask. */
 const CHANNEL_MASK_KEY = 'godotAoTextureChannel';
 
-/** `ao_light_affect`'s default (`material.cpp:3983`). */
-const DEFAULT_LIGHT_AFFECT = 0;
-
 /** The `userData` that gives a material its `ao_light_affect` and `ao_texture_channel`. */
 export function ambientOcclusionUserData(
   lightAffect: number,
@@ -70,7 +68,7 @@ export function ambientOcclusionUserData(
 
 function ambientOcclusionUniforms(material: Material): Record<string, IUniform> {
   return {
-    godotAoLightAffect: recordedUniform(material, LIGHT_AFFECT_KEY, DEFAULT_LIGHT_AFFECT),
+    godotAoLightAffect: recordedUniform(material, LIGHT_AFFECT_KEY, BASE_MATERIAL_3D_DEFAULTS.aoLightAffect),
     godotAoTextureChannel: recordedUniform(material, CHANNEL_MASK_KEY, DEFAULT_TEXTURE_CHANNEL_MASK),
   };
 }

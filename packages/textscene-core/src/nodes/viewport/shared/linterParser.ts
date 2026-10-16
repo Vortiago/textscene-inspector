@@ -10,10 +10,13 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
+import {
+  DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
+  DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
+  DefaultCanvasItemTextureFilter,
+  DefaultCanvasItemTextureRepeat,
+} from '../../../godot/scene/viewport.js';
 import { MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
-
-/** 4.7.2: viewport.h:200-206. DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX = 4. */
-const TEXTURE_REPEAT = { 0: 'DISABLED', 1: 'ENABLED', 2: 'MIRROR', 3: 'PARENT_NODE' };
 
 /** viewport.h:137-142. SCREEN_SPACE_AA_MAX = 3. */
 const SCREEN_SPACE_AA = { 0: 'DISABLED', 1: 'FXAA', 2: 'SMAA' };
@@ -91,18 +94,6 @@ const DEBUG_DRAW = {
   26: 'INTERNAL_BUFFER',
 };
 
-/**
- * scene/main/viewport.h:188-193. LINEAR_WITH_MIPMAPS is 2 and
- * NEAREST_WITH_MIPMAPS is 3, the opposite of the order the two names suggest.
- */
-const TEXTURE_FILTER = {
-  0: 'NEAREST',
-  1: 'LINEAR',
-  2: 'LINEAR_WITH_MIPMAPS',
-  3: 'NEAREST_WITH_MIPMAPS',
-  4: 'PARENT_NODE',
-};
-
 validatorRegistry.registerAll('Viewport', {
   own_world_3d: v.boolean('own_world_3d'),
   disable_3d: v.boolean('disable_3d'),
@@ -118,11 +109,17 @@ validatorRegistry.registerAll('Viewport', {
     enforced: 'viewport.cpp:3763',
   }),
   // 4.7.2: viewport.cpp:4101 `ERR_FAIL_INDEX(p_filter,
-  // DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 5 (viewport.h:191-198).
+  // DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 5 (viewport.h:192-198).
   // 4.6.3 stops one lower, without PARENT_NODE.
-  canvas_item_default_texture_filter: v.enumInt('canvas_item_default_texture_filter', 0, 4, TEXTURE_FILTER, {
-    enforced: 'viewport.cpp:4101',
-  }),
+  canvas_item_default_texture_filter: v.enumInt(
+    'canvas_item_default_texture_filter',
+    DefaultCanvasItemTextureFilter.NEAREST,
+    DefaultCanvasItemTextureFilter.PARENT_NODE,
+    DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
+    {
+      enforced: 'viewport.cpp:4101',
+    }
+  ),
 
   // Top-level bools, viewport.cpp:5154-5163. Bare assigns, no format beyond
   // true/false.
@@ -202,10 +199,16 @@ validatorRegistry.registerAll('Viewport', {
   vrs_texture: v.resourceReference('vrs_texture'),
 
   // 4.7.2: viewport.cpp:4184 `ERR_FAIL_INDEX(p_repeat,
-  // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:200-206).
-  canvas_item_default_texture_repeat: v.enumInt('canvas_item_default_texture_repeat', 0, 3, TEXTURE_REPEAT, {
-    enforced: 'viewport.cpp:4184',
-  }),
+  // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:201-206).
+  canvas_item_default_texture_repeat: v.enumInt(
+    'canvas_item_default_texture_repeat',
+    DefaultCanvasItemTextureRepeat.DISABLED,
+    DefaultCanvasItemTextureRepeat.PARENT_NODE,
+    DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
+    {
+      enforced: 'viewport.cpp:4184',
+    }
+  ),
 
   // "Audio Listener" group, viewport.cpp:5193. Bare bool assign, same shape as
   // audio_listener_enable_2d above.

@@ -7,7 +7,10 @@
 
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { sweepAncestors } from '../../../linter/parentType.js';
-import { CLIP_CHILDREN_DISABLED, CLIP_CHILDREN_MAX } from '../../../godot/scene/canvasItem.js';
+import {
+  CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT,
+  CanvasItemClipChildrenMode,
+} from '../../../godot/scene/canvasItem.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import type { RawNode, RawScene } from '../../../parser/types.js';
 
@@ -24,7 +27,7 @@ export function clipsChildren(candidate: RawNode): boolean {
   // `ruleInt` already narrows: the setter sees int32, so `4294967295` is -1.
   const mode = ruleInt(raw);
   if (mode === null) return false;
-  return mode !== CLIP_CHILDREN_DISABLED && mode < CLIP_CHILDREN_MAX;
+  return mode !== CanvasItemClipChildrenMode.DISABLED && mode < CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT;
 }
 
 interface ClipAncestry {

@@ -5,13 +5,7 @@
  */
 
 import * as THREE from 'three';
-
-/**
- * `BaseMaterial3D::texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`. This enum
- * is `BaseMaterial3D::TextureFilter`, shared by `SpriteBase3D`. `CanvasItem.texture_filter`
- * is a different enum whose 0 means "inherit from parent node", not NEAREST.
- */
-export const GODOT_TEXTURE_FILTER_DEFAULT = 3;
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 
 /**
  * Godot's anisotropy ceiling is `1 << anisotropic_filtering_level`, a project
@@ -88,7 +82,8 @@ const STATES: Record<number, TextureFilterState> = {
  * outside `TEXTURE_FILTER_MAX`.
  */
 export function godotTextureFilterState(filter: number | undefined): TextureFilterState {
-  return STATES[filter ?? GODOT_TEXTURE_FILTER_DEFAULT] ?? STATES[GODOT_TEXTURE_FILTER_DEFAULT]!;
+  const defaultFilter = BASE_MATERIAL_3D_DEFAULTS.textureFilter;
+  return STATES[filter ?? defaultFilter] ?? STATES[defaultFilter]!;
 }
 
 /**

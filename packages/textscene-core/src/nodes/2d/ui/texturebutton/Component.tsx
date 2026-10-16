@@ -12,9 +12,13 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
-import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import {
+  canvasItemThreeFilter,
+  canvasItemThreeWrap,
+  useInheritedTextureSampler,
+} from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
-import { applyFlip, resolveTextureRectFilter, resolveTextureRectRepeat } from '../texturerect/nativeSolver';
+import { applyFlip } from '../texturerect/nativeSolver';
 import {
   resolveTextureButtonDrawState,
   resolveTextureButtonSlot,
@@ -23,17 +27,6 @@ import {
 } from './nativeSolver';
 import type { TextureButtonProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-
-const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
-  nearest: THREE.NearestFilter,
-  linear: THREE.LinearFilter,
-};
-
-const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
-  clamp: THREE.ClampToEdgeWrapping,
-  repeat: THREE.RepeatWrapping,
-  mirror: THREE.MirroredRepeatWrapping,
-};
 
 interface ImageLike {
   width?: number;
@@ -83,7 +76,7 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     // `@react-three/fiber` sRGB auto-tagging would overwrite it on commit.
     pinNoColorSpace(cloned);
 
-    const filter = FILTER[resolveTextureRectFilter(sampler.filter)];
+    const filter = canvasItemThreeFilter(sampler.filter);
     cloned.magFilter = filter;
     cloned.minFilter = filter;
 
@@ -99,7 +92,7 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
       // `v = 1` (the quad's top edge) on the image's top row.
       offset = { x: 0, y: 1 - repeat.y };
     } else {
-      cloned.wrapS = cloned.wrapT = WRAP[resolveTextureRectRepeat(sampler.repeat)];
+      cloned.wrapS = cloned.wrapT = canvasItemThreeWrap(sampler.repeat);
       if (draw.region) {
         // Texture-pixel-space crop (KEEP_ASPECT_COVERED) -> normalized UV
         // repeat/offset; three.js UV-Y is bottom-left, image-Y is top-left.
