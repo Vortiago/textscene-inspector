@@ -150,4 +150,6 @@ export const GEOMETRY_SCENES = [
   // A whole-node FIXED_Y billboard takes the camera's axes, so sprites off the screen centre
   // face the camera's forward axis, and a turned parent leaves no trace.
   { name: 'sprite3d-billboard-fixed-y', file: 'unit-sprite3d-billboard-fixed-y.tscn' },
+  // A shifted PROJECTION_FRUSTUM camera, looked through as the scene renders it.
+  { name: 'camera-frustum', file: 'unit-camera-frustum.tscn', camera: 'Root/Camera3D' },
 ];

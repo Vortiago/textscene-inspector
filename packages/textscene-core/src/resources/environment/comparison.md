@@ -18,6 +18,11 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 
 `tonemap_mode = AGX`. The lit grass and the crushed shadow match Godot.
 
+## Tone mapping exposure
+<!-- compare: image=unit-environment-linear-exposure status=done fixture=unit-environment-linear-exposure.tscn -->
+
+`tonemap_exposure = 1.6` under LINEAR, with nothing that needs the tone-map pass. The three boxes and the colour background are 1.6 times their colours, and the brightest box clips at white, as in Godot. The exposure multiplies the colour before every tone mapper, LINEAR included, in the main view and in a shared-world SubViewport alike.
+
 ## Ambient light + sky reflection
 <!-- compare: image=unit-stage-ambient-ibl status=limitation fixture=unit-stage-ambient-ibl.tscn -->
 
@@ -163,6 +168,5 @@ The lenient parser never rejects. Every scalar goes through the shared `floatOr`
 
 ## Known limitations
 
-- **Approximated** `tonemap_exposure` under LINEAR is ignored when no glow, blended surface or adjustment runs the tone-map pass: three applies exposure only under a tone curve.
 - **Shader missing** `ssr_enabled` draws no screen-space reflections.
 - **Resource gap** `adjustment_color_correction` is not applied, so a colour-correction texture leaves the frame unchanged.

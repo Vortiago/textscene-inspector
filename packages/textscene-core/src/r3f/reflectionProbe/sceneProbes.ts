@@ -18,8 +18,8 @@ import {
   createReflectionAtlas,
   type ReflectionAtlas,
 } from '../../resources/sky/skyLayers.js';
+import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext.js';
 import { compareTreeOrder } from '../contexts/TreeOrderContext.js';
-import { SCAN_FRAMES_AFTER_SETTLE } from '../environment/useLatchedSceneScan.js';
 import { drawOffscreen } from '../offscreen.js';
 import { observeSceneCamera, observeSceneCull, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 import { leaveSlot, showInSlot } from '../sharedTexture.js';
@@ -101,7 +101,7 @@ export class SceneProbes {
       .sort((a, b) => compareTreeOrder(a.treeOrder, b.treeOrder))
       .slice(0, REFLECTION_ATLAS_COUNT);
     const atlas = this.atlasFor(probes);
-    if (this.settledFrames < SCAN_FRAMES_AFTER_SETTLE) return false;
+    if (this.settledFrames < COMMIT_FRAMES_AFTER_SETTLE) return false;
     this.markCapturesStale(clearColor);
     const stale = probes.findIndex((probe, layer) => !this.isCaptured(probe, layer));
     if (stale !== -1) this.capture(probes[stale]!, stale, atlas, clearColor);

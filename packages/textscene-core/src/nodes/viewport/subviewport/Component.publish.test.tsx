@@ -22,13 +22,17 @@ import {
   ViewportPassOrchestrator,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import { SubViewport } from './Component';
-import { installToneCurve } from '../../../resources/environment/toneMapping';
+import { installToneMapping } from '../../../resources/environment/toneMapping';
 import { ToneMapper } from '../../../godot/rendering/environment/toneMapping.js';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
+import { fittedAspect } from '../../3d/camera3d/projectionFit';
+import { useEffect } from 'react';
+import { useThree } from '@react-three/fiber';
 
 /** A SubViewport with every default and no children, as the conformance guard builds one. */
 const bareSubViewport = new TscnParser().parse(
@@ -109,7 +113,12 @@ async function toneMappingAtNextBind(
   return seen;
 }
 
-async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewportPath = 'Root/Viewport') {
+async function renderScene(
+  source: string,
+  workspace: '2d' | '3d' = '3d',
+  viewportPath = 'Root/Viewport',
+  canvasCamera: ReactNode = null
+) {
   const parsed = new TscnParser().parse(source);
   const fake = createFakeResourceLoader();
   const seen: (ViewportTextureEntry | null)[] = [];
@@ -120,6 +129,7 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewpo
         <ViewportPassProvider>
           {nodes}
           <Probe path={viewportPath} seen={seen} />
+          {canvasCamera}
           <CaptureRenderer captured={capturedGl} />
           <ViewportPassOrchestrator />
         </ViewportPassProvider>
@@ -136,6 +146,25 @@ async function renderScene(source: string, workspace: '2d' | '3d' = '3d', viewpo
   };
 }
 
+/** Makes the named camera the one the canvas renders through, as "Use This Camera" does. */
+function CanvasRendersThrough({ name }: { name: string }) {
+  const scene = useThree((state) => state.scene);
+  const set = useThree((state) => state.set);
+  useEffect(() => {
+    const camera = scene.getObjectByName(name) as THREE.PerspectiveCamera | undefined;
+    if (camera) set({ camera });
+  }, [scene, set, name]);
+  return null;
+}
+
+/** The sub-viewport's Camera3D after two passes, and the aspect each pass last fitted it to. */
+async function viewportCameraAfterTwoPasses(canvasCamera: ReactNode = null) {
+  const { renderer, gl } = await renderScene(scene3D(), '3d', 'Root/Viewport', canvasCamera);
+  await advanceFrameWithStubbedGl(renderer, gl());
+  await advanceFrameWithStubbedGl(renderer, gl());
+  return instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByProps({ name: 'Camera3D' }));
+}
+
 /** 3D content inside the sub-viewport, with a camera to render it through. */
 const scene3D = (viewportProps = '') => `[gd_scene format=3]
 
@@ -146,6 +175,22 @@ const scene3D = (viewportProps = '') => `[gd_scene format=3]
 [node name="Viewport" type="SubViewport" parent="."]
 size = Vector2i(320, 240)
 ${viewportProps}
+
+[node name="Inside" type="MeshInstance3D" parent="Viewport"]
+mesh = SubResource("1")
+
+[node name="Camera3D" type="Camera3D" parent="Viewport"]
+`;
+
+/** A shared-world sub-viewport of 3D content in a 2D scene, which renders through a portal. */
+const scene2DWorkspace = `[gd_scene format=3]
+
+[sub_resource type="BoxMesh" id="1"]
+
+[node name="Stage" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+size = Vector2i(300, 300)
 
 [node name="Inside" type="MeshInstance3D" parent="Viewport"]
 mesh = SubResource("1")
@@ -226,26 +271,41 @@ describe('<SubViewport> offscreen publisher', () => {
    * since a Node3D root opens in the 3D workspace.
    */
   it('2D workspace: publishes a target even though 3D content never reaches the canvas', async () => {
-    const { renderer, published } = await renderScene(
-      `[gd_scene format=3]
-
-[sub_resource type="BoxMesh" id="1"]
-
-[node name="Stage" type="Node2D"]
-
-[node name="Viewport" type="SubViewport" parent="."]
-size = Vector2i(300, 300)
-
-[node name="Inside" type="MeshInstance3D" parent="Viewport"]
-mesh = SubResource("1")
-
-[node name="Camera3D" type="Camera3D" parent="Viewport"]
-`,
-      '2d',
-      'Stage/Viewport'
-    );
+    const { renderer, published } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
     expect(renderer.scene.findAllByProps({ name: 'Inside' })).toHaveLength(0);
     expect(published()).not.toBeNull();
+  });
+
+  /** The 2D workspace's portal after one frame, and the version of the mesh material inside it. */
+  async function renderedPortal() {
+    const { renderer, gl } = await renderScene(scene2DWorkspace, '2d', 'Stage/Viewport');
+    const [portal] = await scenesRenderedNextFrame(renderer, gl());
+    const material = (portal!.getObjectByName('Inside') as THREE.Mesh).material as THREE.Material;
+    return { renderer, gl, material, versionBefore: material.version };
+  }
+
+  /**
+   * A portal scene is one the root's install never walks, so the pass recompiles it itself when
+   * the curve changes: three keys a compiled program on the chunk only when a material is dirty.
+   */
+  it('2D workspace: recompiles the portal when a new curve installs', async () => {
+    const { renderer, gl, material, versionBefore } = await renderedPortal();
+
+    const restore = installToneMapping(gl(), { mode: ToneMapper.FILMIC }, 'material');
+    try {
+      await scenesRenderedNextFrame(renderer, gl());
+      expect(material.version).toBe(versionBefore + 1);
+    } finally {
+      restore();
+    }
+  });
+
+  it('2D workspace: leaves the portal compiled while the curve stays the same', async () => {
+    const { renderer, gl, material, versionBefore } = await renderedPortal();
+
+    await scenesRenderedNextFrame(renderer, gl());
+
+    expect(material.version).toBe(versionBefore);
   });
 
   /**
@@ -267,7 +327,7 @@ mesh = SubResource("1")
    */
   it('shared world: the offscreen pass applies the environment curve the compositor suspends', async () => {
     const { renderer, gl } = await renderScene(scene3D());
-    const restore = installToneCurve(gl(), { mode: ToneMapper.FILMIC, exposure: 1 });
+    const restore = installToneMapping(gl(), { mode: ToneMapper.FILMIC, exposure: 1 }, 'compositor');
     try {
       gl().toneMapping = THREE.NoToneMapping;
       expect(await toneMappingAtNextBind(renderer, gl())).toBe(THREE.CustomToneMapping);
@@ -442,5 +502,15 @@ size = Vector2i(300, 300)
 mesh = SubResource("1")
 `);
     expect(published()).not.toBeNull();
+  });
+
+  it('leaves its own camera fitted to the target, which only the pass renders through', async () => {
+    const camera = await viewportCameraAfterTwoPasses();
+    expect(fittedAspect(camera)).toBeCloseTo(320 / 240, 6);
+  });
+
+  it('gives the canvas its camera back when the canvas renders through it too (edge case)', async () => {
+    const camera = await viewportCameraAfterTwoPasses(<CanvasRendersThrough name="Camera3D" />);
+    expect(fittedAspect(camera)).not.toBeCloseTo(320 / 240, 6);
   });
 });

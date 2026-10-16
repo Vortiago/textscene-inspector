@@ -29,8 +29,12 @@ export async function captureScene(pages, baseUrl, scene) {
   errors.length = 0;
 
   // A silent stalled resource chain would become a baseline, so it is logged.
-  await gotoFixture(page, baseUrl, scene.file, (ms) =>
-    console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`)
+  await gotoFixture(
+    page,
+    baseUrl,
+    scene.file,
+    (ms) => console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`),
+    { camera: scene.camera }
   );
   const { target: canvas, reason: canvasReason } = await findCaptureTarget(page, { canvas2D });
   if (!canvas) return { buffer: null, reason: canvasReason };

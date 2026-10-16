@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { SCAN_FRAMES_AFTER_SETTLE } from '../environment/useLatchedSceneScan';
+import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext';
 import { heading } from '../../parser/testing/parserKit';
 import { parseReflectionProbe } from '../../nodes/3d/reflectionprobe/parser';
 import { testRenderer } from '../../testing/recordingWebGL';
@@ -39,7 +39,7 @@ async function sceneWith(...probes: ReflectionProbeObject[]) {
     return sceneRenders() - before;
   };
   const settle = () => {
-    for (let frame = 1; frame < SCAN_FRAMES_AFTER_SETTLE; frame += 1) facesDrawn();
+    for (let frame = 1; frame < COMMIT_FRAMES_AFTER_SETTLE; frame += 1) facesDrawn();
   };
   return { renderer, scene, sceneProbes, facesDrawn, settle };
 }
@@ -49,7 +49,7 @@ describe('SceneProbes.update', () => {
     const { facesDrawn } = await sceneWith(probeObject());
 
     expect(facesDrawn(1)).toBe(0);
-    expect(Array.from({ length: SCAN_FRAMES_AFTER_SETTLE - 1 }, () => facesDrawn())).not.toContain(6);
+    expect(Array.from({ length: COMMIT_FRAMES_AFTER_SETTLE - 1 }, () => facesDrawn())).not.toContain(6);
   });
 
   it("captures a probe's six faces once the scene settles", async () => {

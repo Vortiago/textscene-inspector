@@ -17,6 +17,8 @@ export const LIGHTING_SCENES = [
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
+  // `tonemap_exposure` under LINEAR with no compositor: three draws the curve per material.
+  { name: 'environment-linear-exposure', file: 'unit-environment-linear-exposure.tscn' },
   { name: 'glow-specular', file: 'unit-glow-specular.tscn' },
   { name: 'glow-map', file: 'unit-glow-map.tscn' },
   // A 4x4 checkerboard on two quads carries far more edge than a
@@ -36,6 +38,7 @@ export const LIGHTING_SCENES = [
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
+  { name: 'depth-fog-orthographic', file: 'unit-depth-fog-orthographic.tscn', camera: 'Root/Camera3D' },
   // The Environment's brightness, contrast and saturation over an unshaded box. The header states
   // why no other golden shows them.
   { name: 'environment-adjustments', file: 'unit-environment-adjustments.tscn' },
@@ -82,6 +85,7 @@ export const LIGHTING_SCENES = [
   // the sun disc are legible. Both carry their own light and environment, so
   // they also pin that both previews yield.
   { name: 'sky-procedural', file: 'unit-sky-procedural.tscn' },
+  { name: 'sky-orthographic', file: 'unit-sky-orthographic.tscn', camera: 'Root/Camera3D' },
   { name: 'sky-physical', file: 'unit-sky-physical.tscn' },
   // A 3 degree sun in the procedural sky, which Godot draws as a disc of that angular size.
   { name: 'sky-sun-angular-distance', file: 'unit-sky-sun-angular-distance.tscn' },

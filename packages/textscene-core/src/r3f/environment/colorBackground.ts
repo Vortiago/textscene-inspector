@@ -1,32 +1,45 @@
 /**
- * The colour background under fog, as a cube three draws through its cube background, which the
- * fog patches as Godot's fog-only sky pass fogs the clear colour
- * (`forward_clustered/render_forward_clustered.cpp:1996-2014`).
+ * The colour background as a texture three draws through its background mesh, so it passes through
+ * the tone curve, as Godot tonemaps its clear colour, and under fog through the fog, as Godot fogs it
+ * in the fog-only sky pass (`forward_clustered/render_forward_clustered.cpp:1996-2014`). three's
+ * clear skips both.
  */
 
 import * as THREE from 'three';
 import { sRGBToLinearRGB } from '../../utils/colorSpace';
 import type { Rgba } from '../../godot/math/math';
 
+type SrgbColor = Pick<Rgba, 'r' | 'g' | 'b'>;
+type LinearRgb = [number, number, number];
+
 /**
- * A cube of the sRGB clear `color`, which already carries the background energy. Godot linearises it
- * twice: once as it sets the fog material's `clear_color` (`:2014`), and once more because a sky
- * material converts every Color parameter (`environment/sky.cpp:193`, `material_storage.cpp:801`).
- * Its brightness (`:2045`) applies the energy again as `backgroundIntensity`. The caller disposes of it.
+ * A 1x1 texture of the sRGB clear `color`, which already carries the background energy, linearised
+ * once. A flat texture, not a cube: three draws it as a clip-space quad, which fills the view under
+ * any camera, while its cube background is a unit box that an orthographic view covers only in part.
+ * The caller disposes of it.
  */
-export function clearColorCube(color: Pick<Rgba, 'r' | 'g' | 'b'>): THREE.CubeTexture {
-  const [r, g, b] = sRGBToLinearRGB(...sRGBToLinearRGB(color.r, color.g, color.b));
-  const faces = Array.from({ length: 6 }, () => {
-    const face = new THREE.DataTexture(new Float32Array([r, g, b, 1]), 1, 1);
-    face.type = THREE.FloatType;
-    return face;
-  });
-  const cube = new THREE.CubeTexture(faces);
-  cube.type = THREE.FloatType;
-  cube.colorSpace = THREE.LinearSRGBColorSpace;
-  cube.generateMipmaps = false;
-  cube.minFilter = THREE.NearestFilter;
-  cube.magFilter = THREE.NearestFilter;
-  cube.needsUpdate = true;
-  return cube;
+export function clearColorTexture(color: SrgbColor): THREE.DataTexture {
+  return linearTexture(sRGBToLinearRGB(color.r, color.g, color.b));
+}
+
+/**
+ * The clear colour under fog, which Godot linearises twice: once as it sets the fog material's
+ * `clear_color` (`:2014`), and once more because a sky material converts every Color parameter
+ * (`environment/sky.cpp:193`, `material_storage.cpp:801`). Its brightness (`:2045`) applies the
+ * energy again as `backgroundIntensity`. The caller disposes of it.
+ */
+export function foggedClearColorTexture(color: SrgbColor): THREE.DataTexture {
+  return linearTexture(sRGBToLinearRGB(...sRGBToLinearRGB(color.r, color.g, color.b)));
+}
+
+/** Linear float texels with no mipmaps or filtering, so a channel above 1 reaches the curve as is. */
+function linearTexture([r, g, b]: LinearRgb): THREE.DataTexture {
+  const texture = new THREE.DataTexture(new Float32Array([r, g, b, 1]), 1, 1);
+  texture.type = THREE.FloatType;
+  texture.colorSpace = THREE.LinearSRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  texture.needsUpdate = true;
+  return texture;
 }

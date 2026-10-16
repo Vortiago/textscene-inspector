@@ -4,15 +4,7 @@ import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
-
-/**
- * A three camera identified by its own flags, not `instanceof`, so detection
- * survives a second copy of three, such as the test renderer's.
- */
-type CameraLike = THREE.Camera & {
-  isPerspectiveCamera?: boolean;
-  isOrthographicCamera?: boolean;
-};
+import { fitToAspect, fittedAspect, type CameraLike } from '../nodes/3d/camera3d/projectionFit.js';
 
 /**
  * Makes the Camera3D the user picks with "Use This Camera" the active render camera of the 3D
@@ -51,16 +43,11 @@ export function ActiveCameraSwitcher() {
     const target =
       cameras.find((c) => (c.userData as { tscnPath?: string }).tscnPath === activeCameraPath) ?? null;
     if (!target) return;
-    // Matched to the live canvas: a node camera mounts with a placeholder 16/9
-    // aspect, and R3F re-syncs it only on a resize, which a fixed-size headless
-    // canvas never fires. It runs on every re-render, outside the activation gate.
-    const persp = target as THREE.PerspectiveCamera;
-    if (persp.isPerspectiveCamera && size.height > 0) {
+    // Matched to the live canvas: a node camera mounts at a placeholder 16/9
+    // aspect. It runs on every re-render, outside the activation gate.
+    if (size.height > 0) {
       const aspect = size.width / size.height;
-      if (persp.aspect !== aspect) {
-        persp.aspect = aspect;
-        persp.updateProjectionMatrix();
-      }
+      if (fittedAspect(target) !== aspect) fitToAspect(target, aspect);
     }
 
     // Swap only on a pick or the one-shot deep-link seed. A scene switch re-runs

@@ -1,249 +1,266 @@
 /**
- * `Environment.tonemap_mode` → three.js `WebGLRenderer.toneMapping`. Godot's editor
- * preview environment uses FILMIC, and drawing it as LINEAR measures a 25/255 mean
- * channel error against a Godot render (`scripts/godot-ref`).
+ * The root world's tone mapping on each route: three's per-material hook, the compositor's tone
+ * pass, and a pass that renders the shared world. Godot multiplies by `tonemap_exposure` before
+ * every curve, LINEAR included (`tonemap.glsl:868-874`), and each route must draw the same curve.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyToneMapping, installToneCurve, worldToneMapping } from './toneMapping';
-import type { ToneMappedRenderer } from './toneMapping';
-import { toneMappingEffectGlsl, toneMappingShaderChunk } from './godotToneMapping';
+import {
+  installToneMapping,
+  recompileOnCurveChange,
+  SHARED_WORLD_TONE_MAPPING,
+  type ToneMapRoute,
+} from './toneMapping';
+import { compositeProgram } from './godotCompositor';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
+import { functionBody } from '../../r3f/testing/glslSource';
+import { scalarGlslFunction } from '../../r3f/testing/glslScalar';
 
 const ORIGINAL_CHUNK = THREE.ShaderChunk.tonemapping_pars_fragment;
+const { LINEAR, REINHARDT, FILMIC, ACES, AGX } = ToneMapper;
+const EVERY_MODE = [LINEAR, REINHARDT, FILMIC, ACES, AGX];
+const ROUTES: ToneMapRoute[] = ['material', 'compositor'];
 
-function fakeRenderer(): ToneMappedRenderer {
+type Renderer = Parameters<typeof installToneMapping>[0];
+
+function fakeRenderer(): Renderer {
   return { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
 }
 
-/** The mapping `applyToneMapping` gives a fresh renderer for `mode`, with the renderer restored after. */
-function mappingFor(mode: number): THREE.ToneMapping {
-  const gl = fakeRenderer();
-  const restore = applyToneMapping(gl, { mode });
-  const mapping = gl.toneMapping;
-  restore();
-  return mapping;
+function installedChunk(): string {
+  return THREE.ShaderChunk.tonemapping_pars_fragment;
 }
 
-describe('the mapping applyToneMapping installs', () => {
-  it('draws Godot\u2019s own curve for the three modes we ported', () => {
-    // three's Reinhard, Cineon and ACESFilmic lack Godot's exposure bias and white
-    // normalisation, so each goes through CustomToneMapping instead.
-    expect(mappingFor(1)).toBe(THREE.CustomToneMapping); // REINHARDT
-    expect(mappingFor(2)).toBe(THREE.CustomToneMapping); // FILMIC
-    expect(mappingFor(3)).toBe(THREE.CustomToneMapping); // ACES
-  });
+/**
+ * A grey `x` through the installed `CustomToneMapping` at the renderer's exposure. Only a curve
+ * that acts per channel translates: LINEAR, REINHARDT and FILMIC.
+ */
+function greyThroughInstalledCurve(gl: Renderer, x: number): number {
+  const body = functionBody(installedChunk(), 'vec3 CustomToneMapping')
+    .replace(/vec3\(/g, '(')
+    .replace(/vec3/g, 'float')
+    .replace(/const float/g, 'const');
+  const curve = scalarGlslFunction(`float curve(float color, float toneMappingExposure) {${body}}`, 'curve');
+  return curve(x, gl.toneMappingExposure);
+}
 
-  it('treats LINEAR as no tone mapping, which is what Godot means by it', () => {
-    expect(mappingFor(0)).toBe(THREE.NoToneMapping);
-  });
+/** The curve's lines after its exposure line, which each route words in its own uniform. */
+function curveAfterExposure(body: string): string {
+  return body.slice(body.indexOf(';') + 1);
+}
 
-  it('draws AGX with Godot\u2019s own AgX, not three\u2019s different approximation', () => {
-    // three's AgX (a log2 EV encoding + polynomial sigmoid) renders a
-    // shallower shadow toe than Godot 4.6's allenwp curve, so AGX goes through
-    // CustomToneMapping with the ported curve like the other three modes.
-    expect(mappingFor(4)).toBe(THREE.CustomToneMapping);
-  });
-
-  it('falls back to no tone mapping for an unknown mode', () => {
-    expect(mappingFor(99)).toBe(THREE.NoToneMapping);
-    expect(mappingFor(-1)).toBe(THREE.NoToneMapping);
-  });
+afterEach(() => {
+  THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
 });
 
-describe('Godot\u2019s curves', () => {
-  it('emits a compilable CustomToneMapping body that consumes the exposure', () => {
-    const chunk = toneMappingShaderChunk(2, 1);
-    expect(chunk).toMatch(/vec3 CustomToneMapping\(vec3 color\)/);
-    // three applies toneMappingExposure for its built-in curves only. A custom one
-    // that forgets it ignores tonemap_exposure.
-    expect(chunk).toMatch(/color \*= toneMappingExposure/);
+describe('installToneMapping on the material route', () => {
+  it('draws every tone mapper, LINEAR included, through the installed curve', () => {
+    for (const mode of EVERY_MODE) {
+      const gl = fakeRenderer();
+      installToneMapping(gl, { mode }, 'material');
+      expect(gl.toneMapping, `mode ${mode}`).toBe(THREE.CustomToneMapping);
+    }
   });
 
-  it('emits an AGX body carrying Godot’s allenwp curve and matrices', () => {
-    const chunk = toneMappingShaderChunk(4, 1);
-    expect(chunk).toMatch(/vec3 CustomToneMapping\(vec3 color\)/);
-    expect(chunk).toMatch(/color \*= toneMappingExposure/);
-    // Load-bearing AgX constants: the inset matrix's leading coefficient and the
-    // middle-grey crossover the piecewise curve pivots on.
-    expect(chunk).toMatch(/0\.544814746488245/);
-    expect(chunk).toMatch(/awp_crossover_point = 0\.18/);
-  });
-
-  it('emits the same AGX curve on the glow-composer path, keyed on the mode', () => {
-    // Both paths must tone-map AGX identically: the composer path returns the ported
-    // curve, with the floored high-clip white baked in.
-    const glsl = toneMappingEffectGlsl(4, 1);
-    expect(glsl).toMatch(/0\.544814746488245/);
-    expect(glsl).toMatch(/awp_crossover_point = 0\.18/);
-    expect(glsl).toMatch(/const float godotToneMapWhite = 2\.0;/);
-  });
-
-  it('LINEAR emits a real curve that applies exposure and nothing else', () => {
-    // Not a null sentinel for a consumer to fill: the builder owns all five modes.
-    const glsl = toneMappingEffectGlsl(0, 1);
-    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
-    expect(glsl).toContain('color *= exposure;');
-    expect(glsl).toContain('return color;');
-  });
-});
-
-describe('applyToneMapping', () => {
-  it('sets both the curve and the exposure on the renderer', () => {
+  it('doubles a LINEAR grey at tonemap_exposure 2.0', () => {
     const gl = fakeRenderer();
-    applyToneMapping(gl, { mode: 3, exposure: 1.5 });
-    expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
-    expect(gl.toneMappingExposure).toBe(1.5);
+    installToneMapping(gl, { mode: LINEAR, exposure: 2 }, 'material');
+    expect(greyThroughInstalledCurve(gl, 0.2)).toBeCloseTo(0.4, 12);
   });
 
-  it('installs the curve into three\u2019s shader chunk and takes it back out', () => {
-    const original = THREE.ShaderChunk.tonemapping_pars_fragment;
-    const restore = applyToneMapping(fakeRenderer(), { mode: 2, exposure: 1 });
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/exposure_bias/);
-    restore();
-    // The chunk is global to three; leaving a scene's curve behind would
-    // change how the next scene renders.
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toBe(original);
+  it('maps the authored white to 1.0 under REINHARDT and FILMIC', () => {
+    for (const mode of [REINHARDT, FILMIC]) {
+      const gl = fakeRenderer();
+      installToneMapping(gl, { mode, white: 6 }, 'material');
+      expect(greyThroughInstalledCurve(gl, 6), `mode ${mode}`).toBeCloseTo(1, 6);
+    }
   });
 
-  it('bakes the white normalisation in as a valid GLSL float literal', () => {
-    applyToneMapping(fakeRenderer(), { mode: 1, exposure: 1, white: 2 });
-    // `4` alone is an int in GLSL and fails to compile against a float const.
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/const float godotToneMapWhite = 4\.0;/);
-    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
-  });
-
-  it('installs the AGX curve and bakes its floored high-clip white', () => {
+  it('clamps a negative colour to black before a curve, as Godot does', () => {
+    // `tonemap.glsl:256-258`: a negative light must not drive a curve below its toe.
     const gl = fakeRenderer();
-    const restore = applyToneMapping(gl, { mode: 4, exposure: 1 });
-    expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
-    // white defaults to 1, which Godot floors to 2.0 for AgX.
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/const float godotToneMapWhite = 2\.0;/);
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/awp_crossover_point = 0\.18/);
-    restore();
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toBe(ORIGINAL_CHUNK);
+    installToneMapping(gl, { mode: FILMIC }, 'material');
+    expect(greyThroughInstalledCurve(gl, -0.5)).toBe(greyThroughInstalledCurve(gl, 0));
   });
 
-  it('restores what it found, so an unmounting environment cannot leak its curve', () => {
+  it('keeps a negative colour under LINEAR, which applies no curve', () => {
+    const gl = fakeRenderer();
+    installToneMapping(gl, { mode: LINEAR }, 'material');
+    expect(greyThroughInstalledCurve(gl, -0.5)).toBe(-0.5);
+  });
+
+  it('draws a mode outside the enum white, as Godot does (error path)', () => {
+    const gl = fakeRenderer();
+    installToneMapping(gl, { mode: 99, exposure: 2 }, 'material');
+    expect(greyThroughInstalledCurve(gl, 0.2)).toBe(1);
+  });
+
+  it('takes a missing exposure as Godot’s 1.0 default, not the renderer’s old one', () => {
+    const gl = fakeRenderer();
+    gl.toneMappingExposure = 4;
+    installToneMapping(gl, { mode: LINEAR }, 'material');
+    expect(gl.toneMappingExposure).toBe(1);
+  });
+
+  it('restores the mapping, the exposure and three’s chunk', () => {
     const gl = fakeRenderer();
     gl.toneMapping = THREE.ReinhardToneMapping;
     gl.toneMappingExposure = 2;
-
-    const restore = applyToneMapping(gl, { mode: 2, exposure: 0.5 });
-    expect(gl.toneMapping).toBe(THREE.CustomToneMapping);
-    restore();
-
+    installToneMapping(gl, { mode: FILMIC, exposure: 0.5 }, 'material')();
     expect(gl.toneMapping).toBe(THREE.ReinhardToneMapping);
     expect(gl.toneMappingExposure).toBe(2);
+    expect(installedChunk()).toBe(ORIGINAL_CHUNK);
   });
 
-  it('treats a missing exposure as Godot’s 1.0 default rather than leaving the old one', () => {
-    const gl = fakeRenderer();
-    gl.toneMappingExposure = 4;
-    applyToneMapping(gl, { mode: 0 });
-    expect(gl.toneMappingExposure).toBe(1);
+  it('bakes the white normalisation in as a GLSL float literal', () => {
+    // `4` alone is an int in GLSL and fails to compile against a float const.
+    installToneMapping(fakeRenderer(), { mode: REINHARDT, white: 2 }, 'material');
+    expect(installedChunk()).toContain('const float godotToneMapWhite = 4.0;');
   });
 
-  it('marks the materials dirty — three compiles the tonemapper into every shader', () => {
-    // toneMapping is a #define, so a renderer that already has compiled
-    // programs keeps rendering the old curve until they are recompiled.
-    // `needsUpdate` is setter-only in three. The observable effect is the
-    // material's version counter, which makes three derive the program key again.
+  it('marks the materials dirty on install and on restore, as three compiles the curve in', () => {
+    // `needsUpdate` is setter-only in three. The version counter is what re-derives the program.
     const scene = new THREE.Scene();
     const material = new THREE.MeshStandardMaterial();
     scene.add(new THREE.Mesh(new THREE.BoxGeometry(), material));
     const before = material.version;
-
-    applyToneMapping(fakeRenderer(), { mode: 3, exposure: 1 }, scene);
-    expect(material.version).toBeGreaterThan(before);
-  });
-
-  it('does not churn material versions when the curve is unchanged', () => {
-    const scene = new THREE.Scene();
-    const material = new THREE.MeshStandardMaterial();
-    scene.add(new THREE.Mesh(new THREE.BoxGeometry(), material));
-    const before = material.version;
-
-    applyToneMapping(fakeRenderer(), { mode: 0, exposure: 1 }, scene);
-    expect(material.version).toBe(before);
-  });
-
-  it('leaves the renderer alone when nothing changes', () => {
-    const gl = fakeRenderer();
-    const spy = vi.fn();
-    Object.defineProperty(gl, 'toneMapping', {
-      get: () => THREE.NoToneMapping,
-      set: spy,
-      configurable: true,
-    });
-    applyToneMapping(gl, { mode: 0, exposure: 1 });
-    expect(spy).not.toHaveBeenCalled();
+    const restore = installToneMapping(fakeRenderer(), { mode: LINEAR }, 'material', scene);
+    const installed = material.version;
+    restore();
+    expect(installed).toBeGreaterThan(before);
+    expect(material.version).toBeGreaterThan(installed);
   });
 });
 
-describe('installToneCurve', () => {
-  afterEach(() => {
-    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
-  });
-
-  it('installs the curve and the exposure but leaves the renderer\u2019s mapping to the compositor', () => {
+describe('installToneMapping on the compositor route', () => {
+  it('leaves the renderer’s mapping to the compositor', () => {
     const gl = fakeRenderer();
-    const before = THREE.ShaderChunk.tonemapping_pars_fragment;
-    const restore = installToneCurve(gl, { mode: 2, exposure: 1.5 });
+    installToneMapping(gl, { mode: FILMIC, exposure: 1.5 }, 'compositor');
     expect(gl.toneMapping).toBe(THREE.NoToneMapping);
-    expect(gl.toneMappingExposure).toBe(1.5);
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toMatch(/exposure_bias/);
-    restore();
-    expect(THREE.ShaderChunk.tonemapping_pars_fragment).toBe(before);
+  });
+
+  it('installs the same curve and exposure as the material route, for every tone mapper', () => {
+    for (const mode of EVERY_MODE) {
+      const settings = { mode, exposure: 1.5, white: 6, agxContrast: 1.6 };
+      const installed = ROUTES.map((route) => {
+        const gl = fakeRenderer();
+        const restore = installToneMapping(gl, settings, route);
+        const state = { chunk: installedChunk(), exposure: gl.toneMappingExposure };
+        restore();
+        return state;
+      });
+      expect(installed[1], `mode ${mode}`).toEqual(installed[0]);
+    }
+  });
+
+  it('restores the exposure and three’s chunk', () => {
+    const gl = fakeRenderer();
+    installToneMapping(gl, { mode: ACES, exposure: 3 }, 'compositor')();
     expect(gl.toneMappingExposure).toBe(1);
+    expect(installedChunk()).toBe(ORIGINAL_CHUNK);
   });
 });
 
-describe('worldToneMapping', () => {
-  afterEach(() => {
-    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
-  });
-
-  it('answers the installed curve while the compositor holds the renderer at NoToneMapping', () => {
-    const gl = fakeRenderer();
-    const restore = installToneCurve(gl, { mode: 2, exposure: 1 });
-    expect(worldToneMapping(gl)).toBe(THREE.CustomToneMapping);
-    restore();
-  });
-
-  it('answers LINEAR as NoToneMapping, whatever the renderer holds', () => {
-    const gl = fakeRenderer();
-    gl.toneMapping = THREE.CustomToneMapping;
-    const restore = installToneCurve(gl, { mode: ToneMapper.LINEAR, exposure: 1 });
-    expect(worldToneMapping(gl)).toBe(THREE.NoToneMapping);
-    restore();
-  });
-
-  it('falls back to the renderer\u2019s mapping once the curve is restored', () => {
-    const gl = fakeRenderer();
-    gl.toneMapping = THREE.ReinhardToneMapping;
-    installToneCurve(gl, { mode: 2, exposure: 1 })();
-    expect(worldToneMapping(gl)).toBe(THREE.ReinhardToneMapping);
+describe('the compositor’s tone pass', () => {
+  it('draws the curve the routes install, for every tone mapper', () => {
+    for (const mode of EVERY_MODE) {
+      const toneMapping = { mode, white: 6, agxContrast: 1.6 };
+      installToneMapping(fakeRenderer(), toneMapping, 'compositor');
+      const composite = compositeProgram({
+        glow: null,
+        adjustments: null,
+        toneMapping,
+        exposure: 1,
+        transparentBackground: false,
+      }).fragmentShader;
+      expect(curveAfterExposure(functionBody(composite, 'vec3 godotToneMap')), `mode ${mode}`).toBe(
+        curveAfterExposure(functionBody(installedChunk(), 'vec3 CustomToneMapping'))
+      );
+    }
   });
 });
 
-describe('applyToneMapping program keys', () => {
+describe('a pass that renders the shared world', () => {
+  it('doubles a LINEAR grey at tonemap_exposure 2.0 while the compositor holds the renderer', () => {
+    const gl = fakeRenderer();
+    installToneMapping(gl, { mode: LINEAR, exposure: 2 }, 'compositor');
+    gl.toneMapping = SHARED_WORLD_TONE_MAPPING;
+    expect(greyThroughInstalledCurve(gl, 0.2)).toBeCloseTo(0.4, 12);
+  });
+
+  it('draws three’s identity placeholder when no Environment installed a curve (edge case)', () => {
+    // Godot's tonemap pass defaults to LINEAR at exposure 1 with no Environment (`tone_mapper.h:177-180`).
+    const gl = fakeRenderer();
+    gl.toneMapping = SHARED_WORLD_TONE_MAPPING;
+    expect(greyThroughInstalledCurve(gl, 0.37)).toBe(0.37);
+  });
+});
+
+describe('recompileOnCurveChange', () => {
+  /** A scene the pass has already seen once, and its material's version after that pass. */
+  function seenScene() {
+    const material = new THREE.MeshBasicMaterial();
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(new THREE.BufferGeometry(), material));
+    const seen = { revision: -1 };
+    recompileOnCurveChange(scene, seen);
+    return { scene, seen, material, versionBefore: material.version };
+  }
+
+  it('marks a scene the install never walks dirty once a new curve installs', () => {
+    const { scene, seen, material, versionBefore } = seenScene();
+
+    const restore = installToneMapping(fakeRenderer(), { mode: AGX }, 'material');
+    recompileOnCurveChange(scene, seen);
+    restore();
+
+    expect(material.version).toBe(versionBefore + 1);
+  });
+
+  it('leaves the scene alone while the curve stays the same', () => {
+    const { scene, seen, material, versionBefore } = seenScene();
+
+    recompileOnCurveChange(scene, seen);
+
+    expect(material.version).toBe(versionBefore);
+  });
+
+  it('leaves the scene alone when only the exposure changes', () => {
+    const gl = fakeRenderer();
+    const restoreFirst = installToneMapping(gl, { mode: AGX, exposure: 1 }, 'material');
+    const { scene, seen, material, versionBefore } = seenScene();
+
+    const restoreSecond = installToneMapping(gl, { mode: AGX, exposure: 2 }, 'material');
+    recompileOnCurveChange(scene, seen);
+    restoreSecond();
+    restoreFirst();
+
+    expect(material.version).toBe(versionBefore);
+  });
+
+  it('marks the scene dirty again when the curve is restored (edge case)', () => {
+    const restore = installToneMapping(fakeRenderer(), { mode: FILMIC }, 'material');
+    const { scene, seen, material, versionBefore } = seenScene();
+
+    restore();
+    recompileOnCurveChange(scene, seen);
+
+    expect(material.version).toBe(versionBefore + 1);
+  });
+});
+
+describe('installToneMapping program keys', () => {
   // three reuses a compiled program whose key is equal, so a new curve reaches a material that
   // has compiled only when the key changes with the curve. FILMIC then AGX is the editor preview
   // environment yielding to a WorldEnvironment that an instanced sub-scene brings in.
-  const { FILMIC, AGX } = ToneMapper;
-
-  afterEach(() => {
-    THREE.ShaderChunk.tonemapping_pars_fragment = ORIGINAL_CHUNK;
-  });
 
   /** Each material's key under FILMIC, then under AGX after FILMIC is undone. */
   function keysAcrossSwap(...materials: THREE.Material[]): { filmic: string[]; agx: string[] } {
     const gl = fakeRenderer();
-    const restoreFilmic = applyToneMapping(gl, { mode: FILMIC });
+    const restoreFilmic = installToneMapping(gl, { mode: FILMIC }, 'material');
     const filmic = materials.map((material) => material.customProgramCacheKey());
     restoreFilmic();
-    applyToneMapping(gl, { mode: AGX });
+    installToneMapping(gl, { mode: AGX }, 'material');
     return { filmic, agx: materials.map((material) => material.customProgramCacheKey()) };
   }
 
@@ -254,10 +271,10 @@ describe('applyToneMapping program keys', () => {
 
   it('gives an equal chunk the same key when it is installed again', () => {
     const material = new THREE.MeshBasicMaterial();
-    applyToneMapping(fakeRenderer(), { mode: AGX });
+    installToneMapping(fakeRenderer(), { mode: AGX }, 'material');
     const first = material.customProgramCacheKey();
-    applyToneMapping(fakeRenderer(), { mode: FILMIC });
-    applyToneMapping(fakeRenderer(), { mode: AGX });
+    installToneMapping(fakeRenderer(), { mode: FILMIC }, 'material');
+    installToneMapping(fakeRenderer(), { mode: AGX }, 'material');
     expect(material.customProgramCacheKey()).toBe(first);
   });
 
@@ -279,9 +296,9 @@ describe('applyToneMapping program keys', () => {
   it('gives the replaced curve its key back on restore, so its programs are reused', () => {
     const material = new THREE.MeshStandardMaterial();
     const gl = fakeRenderer();
-    const restoreFilmic = applyToneMapping(gl, { mode: FILMIC });
+    const restoreFilmic = installToneMapping(gl, { mode: FILMIC }, 'material');
     const underFilmic = material.customProgramCacheKey();
-    const restoreAgx = applyToneMapping(gl, { mode: AGX });
+    const restoreAgx = installToneMapping(gl, { mode: AGX }, 'material');
     const underAgx = material.customProgramCacheKey();
     restoreAgx();
 
@@ -291,21 +308,12 @@ describe('applyToneMapping program keys', () => {
   });
 
   it('keeps three’s own key, so two shader patches still compile two programs', () => {
-    applyToneMapping(fakeRenderer(), { mode: AGX });
+    installToneMapping(fakeRenderer(), { mode: AGX }, 'material');
     const tinted = new THREE.MeshStandardMaterial();
     tinted.onBeforeCompile = (shader) => {
       shader.fragmentShader += '\n// tinted';
     };
     const plain = new THREE.MeshStandardMaterial();
     expect(tinted.customProgramCacheKey()).not.toBe(plain.customProgramCacheKey());
-  });
-
-  it('moves no key for an unknown mode, which installs no curve', () => {
-    const material = new THREE.MeshStandardMaterial();
-    const gl = fakeRenderer();
-    applyToneMapping(gl, { mode: FILMIC });
-    const underFilmic = material.customProgramCacheKey();
-    applyToneMapping(gl, { mode: 99 });
-    expect(material.customProgramCacheKey()).toBe(underFilmic);
   });
 });

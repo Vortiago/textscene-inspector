@@ -1,15 +1,15 @@
 /**
- * `Environment.tonemap_mode` → three's tone mapping. Godot's curves, AgX included, are
- * not three's, so the ports in `godotToneMapping.ts` install through
- * `THREE.CustomToneMapping`, three's documented hook for this.
+ * The root world's tone mapping. Every tone mapper, LINEAR included, draws through three's
+ * `CustomToneMapping` hook with Godot's own curve from `godotToneMapping.ts`, because Godot
+ * multiplies by `tonemap_exposure` before every curve (`tonemap.glsl:868-874`) and three applies
+ * `toneMappingExposure` only inside a curve.
  */
 
 import * as THREE from 'three';
-import { hasGodotCurve, toneMappingShaderChunk } from './godotToneMapping';
-import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
+import { toneMappingShaderChunk } from './godotToneMapping';
 
 /** The subset of `THREE.WebGLRenderer` this module touches. */
-export interface ToneMappedRenderer {
+interface ToneMappedRenderer {
   toneMapping: THREE.ToneMapping;
   toneMappingExposure: number;
 }
@@ -25,103 +25,84 @@ interface ToneMappingSettings {
   agxContrast?: number;
 }
 
+/**
+ * Who draws the root world's own frame through the curve: three, per material, or the
+ * compositor's tone pass, which holds the renderer at `NoToneMapping` while it is mounted.
+ */
+export type ToneMapRoute = 'material' | 'compositor';
+
+/**
+ * The mapping a pass that renders the shared world applies: a `SubViewport` target, which Godot
+ * tonemaps with the environment of its `find_world_3d()`. It draws the curve the root world
+ * installed on either route, which is LINEAR at exposure 1 for a root with no Environment.
+ */
+export const SHARED_WORLD_TONE_MAPPING = THREE.CustomToneMapping;
+
 /** The chunk name three expands into every material's fragment shader. */
 const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
 
 /**
- * LINEAR maps to `NoToneMapping`, and three applies `toneMappingExposure` only
- * inside a tone curve, so a `tonemap_exposure` authored under LINEAR is
- * dropped. Faithful at the 1.0 default.
+ * Installs the curve and its exposure for every pass that renders the root world, and on the
+ * material route the renderer's mapping too. Returns the undo, as the renderer and three's chunks
+ * outlive an environment. `THREE.ShaderChunk` is module-global, so only the root world's
+ * Environment installs (`r3f/environment/EnvironmentLayer.tsx`).
  */
-function toneMappingFor(mode: number): THREE.ToneMapping {
-  if (mode === ToneMapper.LINEAR) return THREE.NoToneMapping;
-  return hasGodotCurve(mode) ? THREE.CustomToneMapping : THREE.NoToneMapping;
-}
-
-/**
- * Applies a tonemapper and returns the undo, as the renderer and three's shader chunks outlive an
- * environment. `THREE.ShaderChunk` is module-global, so one environment applies at a time: the web
- * app mounts one shell, each VS Code webview is its own realm, and only the root world's Environment
- * applies, never a sub-viewport's (`r3f/environment/EnvironmentLayer.tsx`).
- */
-export function applyToneMapping(
+export function installToneMapping(
   gl: ToneMappedRenderer,
   settings: ToneMappingSettings,
+  route: ToneMapRoute,
   scene?: THREE.Object3D
 ): () => void {
-  const previousMapping = gl.toneMapping;
-  const mapping = toneMappingFor(settings.mode);
-  const restoreCurve = swapToneCurve(gl, settings);
-  if (mapping !== previousMapping) gl.toneMapping = mapping;
-  const changed = mapping !== previousMapping || mapping === THREE.CustomToneMapping;
-  if (changed) markMaterialsDirty(scene);
-
+  const restoreCurve = installCurve(gl, settings);
+  const restoreMapping = route === 'material' ? drawThroughCurve(gl) : undefined;
+  markMaterialsDirty(scene);
   return () => {
+    restoreMapping?.();
     restoreCurve();
-    if (gl.toneMapping !== previousMapping) gl.toneMapping = previousMapping;
-    if (changed) markMaterialsDirty(scene);
+    markMaterialsDirty(scene);
   };
 }
 
 /**
- * Written only by `swapToneCurve`, and restored by its undo. The mapping the shared world
- * tonemaps with, kept apart from `gl.toneMapping`, which the glow compositor holds at
- * `NoToneMapping` while its own pass applies the curve.
+ * Marks `scene`'s materials dirty when the installed curve changed since `seen`, so a scene the
+ * install never walks, such as a sub-viewport's portal, compiles the new curve. `seen` belongs to
+ * the caller and starts at -1.
  */
-const worldToneMappings = new WeakMap<ToneMappedRenderer, THREE.ToneMapping>();
-
-/**
- * The mapping a pass that renders the shared world without the compositor applies: a
- * `SubViewport` target, which Godot tonemaps with the environment of its `find_world_3d()`.
- * The renderer's own mapping when no environment has installed a curve.
- */
-export function worldToneMapping(gl: ToneMappedRenderer): THREE.ToneMapping {
-  return worldToneMappings.get(gl) ?? gl.toneMapping;
+export function recompileOnCurveChange(scene: THREE.Object3D, seen: { revision: number }): void {
+  if (seen.revision === curveRevision) return;
+  seen.revision = curveRevision;
+  markMaterialsDirty(scene);
 }
 
-/**
- * Installs the environment's curve and exposure, and records its mapping for
- * `worldToneMapping`, but leaves `gl.toneMapping` to its owner. Returns the undo.
- */
-export function installToneCurve(
-  gl: ToneMappedRenderer,
-  settings: ToneMappingSettings,
-  scene?: THREE.Object3D
-): () => void {
-  const custom = toneMappingFor(settings.mode) === THREE.CustomToneMapping;
-  const restoreCurve = swapToneCurve(gl, settings);
-  if (custom) markMaterialsDirty(scene);
-  return () => {
-    restoreCurve();
-    if (custom) markMaterialsDirty(scene);
-  };
-}
+/** Written only by `setCurveChunk`, once per change to three's chunk. Never cleared. */
+let curveRevision = 0;
 
-/** The chunk, exposure and world-mapping half of both installs, with no material marked. */
-function swapToneCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): () => void {
+/** Puts the settings' curve in three's chunk and their exposure on the renderer. Returns the undo. */
+function installCurve(gl: ToneMappedRenderer, settings: ToneMappingSettings): () => void {
   const previousExposure = gl.toneMappingExposure;
   const previousChunk = THREE.ShaderChunk[TONEMAP_CHUNK];
-  const previousWorldMapping = worldToneMappings.get(gl);
-
-  const mapping = toneMappingFor(settings.mode);
-  const exposure = settings.exposure ?? 1;
-
-  if (mapping === THREE.CustomToneMapping) {
-    keyProgramsOnToneMappingChunk();
-    THREE.ShaderChunk[TONEMAP_CHUNK] = toneMappingShaderChunk(
-      settings.mode,
-      settings.white ?? 1,
-      settings.agxContrast
-    );
-  }
-  if (exposure !== previousExposure) gl.toneMappingExposure = exposure;
-  worldToneMappings.set(gl, mapping);
-
+  keyProgramsOnToneMappingChunk();
+  setCurveChunk(toneMappingShaderChunk(settings.mode, settings.white ?? 1, settings.agxContrast));
+  gl.toneMappingExposure = settings.exposure ?? 1;
   return () => {
-    THREE.ShaderChunk[TONEMAP_CHUNK] = previousChunk;
-    if (gl.toneMappingExposure !== previousExposure) gl.toneMappingExposure = previousExposure;
-    if (previousWorldMapping === undefined) worldToneMappings.delete(gl);
-    else worldToneMappings.set(gl, previousWorldMapping);
+    setCurveChunk(previousChunk);
+    gl.toneMappingExposure = previousExposure;
+  };
+}
+
+/** An exposure-only change reinstalls the same text, which no program needs to recompile for. */
+function setCurveChunk(chunk: string): void {
+  if (THREE.ShaderChunk[TONEMAP_CHUNK] === chunk) return;
+  THREE.ShaderChunk[TONEMAP_CHUNK] = chunk;
+  curveRevision += 1;
+}
+
+/** Points the renderer's own mapping at the installed curve. Returns the undo. */
+function drawThroughCurve(gl: ToneMappedRenderer): () => void {
+  const previousMapping = gl.toneMapping;
+  gl.toneMapping = THREE.CustomToneMapping;
+  return () => {
+    gl.toneMapping = previousMapping;
   };
 }
 

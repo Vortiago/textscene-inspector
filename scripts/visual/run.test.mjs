@@ -58,13 +58,15 @@ describe('captureScene seam selection', () => {
       pages.canvas2D.page,
       'http://localhost:1',
       'unit-two-d.tscn',
-      expect.any(Function)
+      expect.any(Function),
+      { camera: undefined }
     );
     expect(findCaptureTarget).toHaveBeenCalledWith(pages.canvas2D.page, { canvas2D: true });
     expect(settleCanvas).toHaveBeenCalledWith(pages.canvas2D.page, expect.anything(), expect.anything());
     // Never touches the 3D page at all.
     expect(gotoFixture).not.toHaveBeenCalledWith(
       pages.default.page,
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything()
@@ -82,9 +84,26 @@ describe('captureScene seam selection', () => {
       pages.default.page,
       'http://localhost:1',
       'unit-three-d.tscn',
-      expect.any(Function)
+      expect.any(Function),
+      { camera: undefined }
     );
     expect(findCaptureTarget).toHaveBeenCalledWith(pages.default.page, { canvas2D: false });
+  });
+
+  it('opens a scene that names a camera through that Camera3D', async () => {
+    stubHappyCapture();
+    const pages = fakePages();
+    const scene = { name: 'ortho', file: 'unit-ortho.tscn', camera: 'Root/Camera3D' };
+
+    await captureScene(pages, 'http://localhost:1', scene);
+
+    expect(gotoFixture).toHaveBeenLastCalledWith(
+      pages.default.page,
+      'http://localhost:1',
+      'unit-ortho.tscn',
+      expect.any(Function),
+      { camera: 'Root/Camera3D' }
+    );
   });
 
   it('throws rather than silently falling back to 3D when no canvas2D context exists', async () => {
