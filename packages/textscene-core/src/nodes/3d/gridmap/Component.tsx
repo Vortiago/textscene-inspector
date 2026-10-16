@@ -297,4 +297,7 @@ function writeInstanceMatrices(
   if (!mesh) return;
   matrices.forEach((m, i) => mesh.setMatrixAt(i, place(m)));
   mesh.instanceMatrix.needsUpdate = true;
+  // three computes these once and culls by them, so a moved cell would stay culled at its old place.
+  mesh.boundingSphere = null;
+  mesh.boundingBox = null;
 }

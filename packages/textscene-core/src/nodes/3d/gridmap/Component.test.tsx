@@ -12,6 +12,7 @@ import { GridMap } from './Component';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../index';
 import { instanceAs } from '../testing/reactThreeTestInstance';
+import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { isInstancedMesh } from '../../../r3f/testing/threeNarrow';
 import { renderGridMapTiles } from './testing/gridMapCorpus';
@@ -49,14 +50,24 @@ function placeholderCentres(renderer: Awaited<ReturnType<typeof render>>): numbe
   );
 }
 
-function render(node: TscnNode, children?: ReactNode) {
-  return ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={loaderServing()}>
+function gridMapTree(loader: ResourceLoader, node: TscnNode, children?: ReactNode) {
+  return (
+    <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider internalResources={[]} externalResources={[]}>
         <GridMap node={node}>{children}</GridMap>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
+}
+
+function render(node: TscnNode, children?: ReactNode) {
+  return ReactThreeTestRenderer.create(gridMapTree(loaderServing(), node, children));
+}
+
+/** The sphere three culls `batch` by, computed only when missing, as three's frustum test does. */
+function cullingSphere(batch: THREE.InstancedMesh): THREE.Sphere {
+  if (!batch.boundingSphere) batch.computeBoundingSphere();
+  return batch.boundingSphere!;
 }
 
 describe('<GridMap>', () => {
@@ -81,6 +92,21 @@ describe('<GridMap>', () => {
   it("draws every wireframe box of an item in one draw, as Godot draws an item's cells", async () => {
     const renderer = await render(gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0, 1, 0, 0)}' }));
     expect(placeholderDraws(renderer)).toHaveLength(1);
+  });
+
+  it('culls a moved wireframe box by where it now sits', async () => {
+    const loader = loaderServing();
+    const renderer = await ReactThreeTestRenderer.create(
+      gridMapTree(loader, gridMapNode({ data: '{"cells": PackedInt32Array(0, 0, 0)}' }))
+    );
+    const [batch] = placeholderDraws(renderer);
+    cullingSphere(batch!);
+
+    await renderer.update(
+      gridMapTree(loader, gridMapNode({ data: '{"cells": PackedInt32Array(10, 0, 0)}' }))
+    );
+
+    expect(cullingSphere(batch!).containsPoint(new THREE.Vector3(21, 1, 1))).toBe(true);
   });
 
   it('draws nothing while the mesh library loads', async () => {
