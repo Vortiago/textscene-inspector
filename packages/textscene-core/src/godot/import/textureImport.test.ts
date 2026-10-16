@@ -3,6 +3,8 @@ import {
   DEFAULT_TEXTURE_IMPORT,
   hasTranslucentTexel,
   holdsRedGreenOnly,
+  RoughnessChannel,
+  roughnessLimitOption,
   textureImportFormat,
   type TextureCompressMode,
 } from './textureImport';
@@ -100,5 +102,28 @@ describe('hasTranslucentTexel', () => {
 
   it('counts alpha 254, which is below 0.999, as translucent (edge case)', () => {
     expect(hasTranslucentTexel(new Uint8Array([9, 9, 9, 254]))).toBe(true);
+  });
+});
+
+describe('roughnessLimitOption', () => {
+  it('reads Red to Gray as the channel the limiter raises', () => {
+    expect([2, 5, 6].map((mode) => roughnessLimitOption(mode, 'res://n.png')?.channel)).toEqual([
+      RoughnessChannel.R,
+      RoughnessChannel.A,
+      RoughnessChannel.L,
+    ]);
+  });
+
+  it('reads Detect, Disabled and a mode outside the enum as no limiter', () => {
+    expect([0, 1, 7, undefined].map((mode) => roughnessLimitOption(mode, 'res://n.png'))).toEqual([
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it('reads a mode with no normal map as no limiter (edge case)', () => {
+    expect([roughnessLimitOption(2, ''), roughnessLimitOption(2, undefined)]).toEqual([null, null]);
   });
 });

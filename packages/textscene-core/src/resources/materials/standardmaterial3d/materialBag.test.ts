@@ -15,6 +15,7 @@ import {
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
+import { metallicRoughnessChannelsUserData } from '../../../r3f/materials/godotMetallicRoughnessChannels';
 import { lightModesUserData } from '../../../r3f/lightModes';
 import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
@@ -286,6 +287,26 @@ describe('standardMaterialBags — fragment alpha', () => {
     expect(patchedFragment(materialFromBag(bag({ blend_mode: '1', transparency: '2' })))).toContain(
       WRITES_OPAQUE_AFTER_CUT
     );
+  });
+});
+
+describe('standardMaterialBags — metallic and roughness map channels', () => {
+  it.each([
+    ['roughness_texture', 'dot( texelRoughness, godotRoughnessTextureChannel )'],
+    ['metallic_texture', 'dot( texelMetalness, godotMetallicTextureChannel )'],
+  ] as const)('reads the named channel on a surface with a %s', (slot, read) => {
+    const built = materialFromBag(bag({}, { [slot]: new THREE.Texture() }));
+    expect(patchedFragment(built)).toContain(read);
+  });
+
+  it('records both channels for the uniforms to read', () => {
+    const properties = { roughness_texture_channel: '3', metallic_texture_channel: '2' };
+    const built = materialFromBag(bag(properties, { roughness_texture: new THREE.Texture() }));
+    expect(built.userData).toMatchObject(metallicRoughnessChannelsUserData([0, 0, 0, 1], [0, 0, 1, 0]));
+  });
+
+  it('patches nothing on a surface with neither map (edge case)', () => {
+    expect(bag({ roughness_texture_channel: '3' }).injection).toBeUndefined();
   });
 });
 

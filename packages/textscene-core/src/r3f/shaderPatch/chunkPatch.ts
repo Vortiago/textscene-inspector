@@ -44,6 +44,19 @@ export function applyEdits(text: string, edits: readonly TextEdit[]): string | n
   return patched;
 }
 
+/**
+ * three's chunk `name` as it stands now, the patches installed so far included, with `edit` applied.
+ * It throws when three's text is missing or occurs more than once, so a three that lost the text
+ * fails loudly, not with a silently unpatched read.
+ */
+export function editedChunk(name: ChunkName, edit: TextEdit): string {
+  const chunk = THREE.ShaderChunk[name];
+  const edited = applyEdit(chunk, edit);
+  if (edited === null)
+    throw new Error(`expected three's ${name} to hold "${edit.three}" once, got:\n${chunk}`);
+  return edited;
+}
+
 /** The chunks with every edit applied in order, or null when one is missing, as `applyEdit`. */
 export function applyChunkEdits<Name extends ChunkName>(
   chunks: Chunks<Name>,

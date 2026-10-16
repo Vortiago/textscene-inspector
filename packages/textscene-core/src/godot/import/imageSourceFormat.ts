@@ -6,6 +6,16 @@
 /** The loaders' outputs (`core/io/image.cpp:42-47`). */
 export type ImageSourceFormat = 'Lum8' | 'LumAlpha8' | 'RGB8' | 'RGBA8';
 
+/** Lum8 or LumAlpha8: each texel holds one grey. */
+export function isGreyscaleSource(source: ImageSourceFormat | null): boolean {
+  return source === 'Lum8' || source === 'LumAlpha8';
+}
+
+/** LumAlpha8 or RGBA8: the format stores alpha. A source no header names reads as RGBA8. */
+export function storesAlpha(source: ImageSourceFormat | null): boolean {
+  return source === null || source === 'LumAlpha8' || source === 'RGBA8';
+}
+
 /**
  * The format Godot's loader for `mimeType` gives `bytes`, or null when that loader would refuse
  * them. Godot picks the loader by the file's extension, so a PNG named `.jpg` is no JPEG here.
