@@ -44,10 +44,10 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   const tonesCanvas = useWorldKind() === 'root';
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
+  useColorBackground(settings.background, !!sky, hasFog);
 
   return (
     <>
-      <EnvironmentApplier settings={settings} hasSky={!!sky} hasFog={hasFog} />
       {tonesCanvas && <ToneMapLayer settings={settings} resources={resources} />}
       {hasFog && (
         <FogLayer
@@ -81,18 +81,17 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   );
 }
 
-interface EnvironmentApplierProps {
-  settings: EnvironmentSettings;
-  /** When a real sky renders, it owns the background and this must not fight it. */
-  hasSky: boolean;
-  /** Whether the depth fog or the volumetric fog draws, which fog every program and the background. */
-  hasFog: boolean;
-}
-
-function EnvironmentApplier({ settings, hasSky, hasFog }: EnvironmentApplierProps) {
+/**
+ * Draws a colour background, or a placeholder for a sky that cannot render. `hasSky` is true when a
+ * real sky renders, which owns the background. `hasFog` is true when a fog draws, which fogs it.
+ */
+function useColorBackground(
+  background: EnvironmentSettings['background'],
+  hasSky: boolean,
+  hasFog: boolean
+): void {
   const scene = useThree((state) => state.scene);
-
-  const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
+  const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = background;
   const showsColor = showsBackgroundColor(mode);
 
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
@@ -110,8 +109,6 @@ function EnvironmentApplier({ settings, hasSky, hasFog }: EnvironmentApplierProp
     }
     return undefined;
   }, [scene, showsColor, mode, backgroundColor, backgroundEnergy, hasSky, hasFog]);
-
-  return null;
 }
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };

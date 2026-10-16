@@ -34,8 +34,7 @@ export type ToneMapRoute = 'material' | 'compositor';
 /**
  * The mapping a pass that renders the shared world applies: a `SubViewport` target, which Godot
  * tonemaps with the environment of its `find_world_3d()`. It draws the curve the root world
- * installed, on either route, or three's identity placeholder when no Environment installed one,
- * which is Godot's tonemap pass with no Environment: LINEAR at exposure 1.
+ * installed on either route, which is LINEAR at exposure 1 for a root with no Environment.
  */
 export const SHARED_WORLD_TONE_MAPPING = THREE.CustomToneMapping;
 

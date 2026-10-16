@@ -7,6 +7,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
 import { instanceAs } from '../testing/reactThreeTestInstance';
+import { cubeFaceTexels } from '../../../r3f/testing/cubeTexels';
 
 function makeNode(envRef?: string): TscnNode {
   const properties: WorldEnvironmentProperties = {
@@ -51,9 +52,8 @@ describe('<WorldEnvironment>', () => {
     const renderer = await render(node, [resource]);
     const scene = instanceAs<THREE.Scene>(renderer.scene);
     // A cube of the linear colour, so the tone curve reaches it. Compared as the sRGB hex.
-    const texel = ((scene.background as THREE.CubeTexture).image as THREE.DataTexture[])[0]!.image
-      .data as Float32Array;
-    expect(new THREE.Color().fromArray(texel).getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
+    const [texel] = cubeFaceTexels(scene.background as THREE.CubeTexture);
+    expect(new THREE.Color().fromArray(texel!).getHexString()).toBe('3366cc'); // (0.2,0.4,0.8) → 8-bit sRGB
   });
 
   it('leaves the scene without fog in a canvas with no GL context, which the fog passes need', async () => {

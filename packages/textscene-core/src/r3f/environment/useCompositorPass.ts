@@ -75,10 +75,7 @@ function useBlendedSurfaceLatch(): boolean {
       framesLeft.current = pending ? Infinity : COMMIT_FRAMES_AFTER_SETTLE;
     };
     onPendingChange();
-    const unsubscribe = loader?.subscribePending(onPendingChange);
-    return () => {
-      unsubscribe?.();
-    };
+    return loader?.subscribePending(onPendingChange);
   }, [scene, rootKey, loader]);
 
   useFrame(() => {

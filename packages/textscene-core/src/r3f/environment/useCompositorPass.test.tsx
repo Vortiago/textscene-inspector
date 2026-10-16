@@ -6,46 +6,23 @@
  * still counts, and one a later click adds does not.
  */
 import { describe, expect, it } from 'vitest';
+import { Fragment, type ComponentType, type ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { useCompositorPass, type CompositorPass } from './useCompositorPass';
-import { decodeEnvironment } from '../../resources/environment/decode';
-import { createEnvironmentSettings } from '../../resources/environment/build';
+import { environmentSettingsOf as settingsOf } from '../../resources/environment/testing/environmentSettings';
 import type { EnvironmentSettings } from '../../resources/environment/types';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { ResourceLoader } from '../../resources/ResourceLoader';
 import { COMMIT_FRAMES_AFTER_SETTLE, ResourceLoaderContext } from '../../resources/ResourceLoaderContext';
 import { withProject } from '../testing/ProjectFixture';
-import { useProjectSettings } from '../contexts/ProjectSettingsContext';
+import { DEPTH_COMPONENT24, fakeWebGL2Context, rendererOver, RGBA16F } from '../testing/fakeWebGL2Context';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-function settingsOf(properties: Record<string, string>): EnvironmentSettings {
-  return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
-}
-
-/** A WebGL 2 context that reports attributes and lists 4 samples for every renderbuffer format. */
-function glContext(): object {
-  return {
-    RENDERBUFFER: 0x8d41,
-    SAMPLES: 0x80a9,
-    RGBA16F: 0x881a,
-    DEPTH_COMPONENT24: 0x81a6,
-    getContextAttributes: () => ({}),
-    isContextLost: () => false,
-    getInternalformatParameter: () => Int32Array.from([4]),
-  };
-}
-
-function rendererOn(context: object | null) {
-  return (defaults: THREE.WebGLRendererParameters) => {
-    const gl = new THREE.WebGLRenderer(defaults);
-    if (context) gl.getContext = () => context as WebGL2RenderingContext;
-    return gl;
-  };
-}
+/** A device that lists 4 samples for the half-float scene buffer and its depth. */
+const glContext = () => fakeWebGL2Context({ counts: { [RGBA16F]: [4], [DEPTH_COMPONENT24]: [4] } });
 
 /** A mesh whose material the test turns blended, standing in for a texture that loads with alpha. */
 function switchableMesh() {
@@ -67,6 +44,7 @@ async function mount(
     context = glContext() as object | null,
     loader = new ResourceLoader(),
     content = new THREE.Object3D(),
+    Wrapper = Fragment as ComponentType<{ children: ReactNode }>,
   } = {}
 ): Promise<Mounted> {
   const seen: { pass: CompositorPass | null } = { pass: null };
@@ -78,9 +56,11 @@ async function mount(
   }
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderContext.Provider value={loader}>
-      <Probe />
+      <Wrapper>
+        <Probe />
+      </Wrapper>
     </ResourceLoaderContext.Provider>,
-    { gl: rendererOn(context) }
+    { gl: rendererOver(context) }
   );
   return { renderer, pass: () => seen.pass };
 }
@@ -123,21 +103,9 @@ describe('useCompositorPass with no Environment', () => {
   });
 
   it('mounts a multisampled pass without glow for MSAA alone', async () => {
-    const ProjectFixture = withProject('[rendering]\nanti_aliasing/quality/msaa_3d=2\n');
-    const seen: { pass: CompositorPass | null; hasProject: boolean } = { pass: null, hasProject: false };
-    function Probe() {
-      seen.hasProject = useProjectSettings().settings !== null;
-      seen.pass = useCompositorPass(null);
-      return null;
-    }
-    await ReactThreeTestRenderer.create(
-      <ProjectFixture>
-        <Probe />
-      </ProjectFixture>,
-      { gl: rendererOn(glContext()) }
-    );
-    await waitFor(() => expect(seen.hasProject).toBe(true));
-    expect(seen.pass).toEqual({ glow: null, samples: 4 });
+    const Wrapper = withProject('[rendering]\nanti_aliasing/quality/msaa_3d=2\n');
+    const { pass } = await mount(null, { Wrapper });
+    await waitFor(() => expect(pass()).toEqual({ glow: null, samples: 4 }));
   });
 
   it('mounts a pass without glow for a blended surface', async () => {

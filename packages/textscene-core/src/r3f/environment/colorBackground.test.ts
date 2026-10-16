@@ -1,22 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { clearColorCube, foggedClearColorCube } from './colorBackground';
-
-/** The one texel of each of `cube`'s faces. */
-function faceTexels(cube: THREE.CubeTexture): number[][] {
-  return (cube.image as THREE.DataTexture[]).map((face) => Array.from(face.image.data as Float32Array));
-}
+import { cubeFaceTexels } from '../testing/cubeTexels';
 
 describe('clearColorCube', () => {
   it('fills all six faces with the sRGB colour linearised once, opaque', () => {
-    for (const [r, g, b, a] of faceTexels(clearColorCube({ r: 0.5, g: 1, b: 0 }))) {
+    for (const [r, g, b, a] of cubeFaceTexels(clearColorCube({ r: 0.5, g: 1, b: 0 }))) {
       expect(r).toBeCloseTo(0.214, 4);
       expect([g, b, a]).toEqual([1, 0, 1]);
     }
   });
 
   it('keeps a channel above 1, which the background energy scales it to (edge case)', () => {
-    const r = faceTexels(clearColorCube({ r: 2, g: 0, b: 0 }))[0]?.[0];
+    const r = cubeFaceTexels(clearColorCube({ r: 2, g: 0, b: 0 }))[0]?.[0];
 
     expect(r).toBeGreaterThan(1);
   });
@@ -26,14 +22,14 @@ describe('foggedClearColorCube', () => {
   it('fills all six faces with the sRGB colour linearised twice, opaque', () => {
     const cube = foggedClearColorCube({ r: 0.5, g: 1, b: 0 });
 
-    for (const [r, g, b, a] of faceTexels(cube)) {
+    for (const [r, g, b, a] of cubeFaceTexels(cube)) {
       expect(r).toBeCloseTo(0.0376, 4);
       expect([g, b, a]).toEqual([1, 0, 1]);
     }
   });
 
   it('linearises a channel below the knee twice through its linear segment (edge case)', () => {
-    const r = faceTexels(foggedClearColorCube({ r: 0.02, g: 0, b: 0 }))[0]?.[0];
+    const r = cubeFaceTexels(foggedClearColorCube({ r: 0.02, g: 0, b: 0 }))[0]?.[0];
 
     expect(r).toBeCloseTo(0.02 / 12.92 / 12.92, 8);
   });

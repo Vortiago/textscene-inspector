@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeEnvironment } from './decode';
-import { createEnvironmentSettings } from './build';
+import { environmentSettingsOf as settings } from './testing/environmentSettings';
 import {
   blendGlsl,
   blendsAfterToneMapping,
@@ -10,14 +9,9 @@ import {
   samplesGlowMap,
 } from './godotGlow';
 import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 
 /** `RS::MAX_GLOW_LEVELS` (`rendering_server.h:107`). */
 const GLOW_LEVEL_COUNT = 7;
-
-function settings(properties: Record<string, string>) {
-  return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
-}
 
 function glowOn(extra: Record<string, string> = {}) {
   const params = glowParamsFor(settings({ glow_enabled: 'true', ...extra }));

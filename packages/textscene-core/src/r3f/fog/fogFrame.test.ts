@@ -1,10 +1,8 @@
 /** The fog uniforms one render writes, and the clear after it. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { VOLUMETRIC_FOG_DEFAULTS } from '../../godot/rendering/environment/volumetricFog';
-import { createEnvironmentSettings } from '../../resources/environment/build';
-import { decodeEnvironment } from '../../resources/environment/decode';
+import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { skyLightUserData } from '../sky/skyLight';
 import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame';
 import type { FogPasses } from './fogPasses';
@@ -20,7 +18,7 @@ function passes(): FogPasses {
 }
 
 function settings(properties: Record<string, string>): FogSettings {
-  const environment = createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
+  const environment = environmentSettingsOf(properties);
   return {
     depth: environment.fog,
     volumetric: environment.volumetricFog,

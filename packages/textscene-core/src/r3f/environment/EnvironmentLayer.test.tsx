@@ -7,11 +7,10 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { EnvironmentLayer } from './EnvironmentLayer';
 import { WorldKindProvider, type WorldKind } from './WorldKindContext';
-import { decodeEnvironment } from '../../resources/environment/decode';
-import { createEnvironmentSettings } from '../../resources/environment/build';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
+import { fakeWebGL2Context, rendererOver } from '../testing/fakeWebGL2Context';
 
 vi.mock('./Compositor', () => ({
   Compositor: () => <group name="Compositor" />,
@@ -20,30 +19,19 @@ vi.mock('./Compositor', () => ({
 const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
 const FILMIC = '2';
 
-/** A renderer whose context reports attributes, so the 3D passes take it for a real GL context. */
-function rendererWithGlContext(defaults: THREE.WebGLRendererParameters): THREE.WebGLRenderer {
-  const gl = new THREE.WebGLRenderer(defaults);
-  gl.getContext = () => ({ getContextAttributes: () => ({}) }) as unknown as WebGL2RenderingContext;
-  return gl;
-}
-
-function settingsOf(properties: Record<string, string>) {
-  return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
-}
-
 async function mountLayer(world: WorldKind, properties: Record<string, string>, hasGlContext = false) {
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
     <WorldKindProvider world={world}>
       <CaptureRenderer captured={captured} />
       <EnvironmentLayer
-        settings={settingsOf(properties)}
+        settings={environmentSettingsOf(properties)}
         sky={null}
         resources={NO_RESOURCES}
         skyResources={NO_RESOURCES}
       />
     </WorldKindProvider>,
-    hasGlContext ? { gl: rendererWithGlContext } : undefined
+    hasGlContext ? { gl: rendererOver(fakeWebGL2Context()) } : undefined
   );
   const compositors = renderer.scene.findAll((node) => node.props.name === 'Compositor').length;
   const scene = renderer.scene.instance as THREE.Scene;

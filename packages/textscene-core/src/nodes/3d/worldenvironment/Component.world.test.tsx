@@ -10,6 +10,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { subResource } from '../../../testing/subResource';
+import { cubeFaceTexels } from '../../../r3f/testing/cubeTexels';
 
 function makeNode(envRef = 'SubResource("Env")'): TscnNode {
   const properties: WorldEnvironmentProperties = { name: 'WE', environment: envRef };
@@ -51,8 +52,8 @@ describe('WorldEnvironment (assertions 81–87)', () => {
       }),
     ]);
     const bg = instanceAs<THREE.Scene>(renderer.scene).background as THREE.CubeTexture;
-    const texel = (bg.image as THREE.DataTexture[])[0]!.image.data as Float32Array;
-    expect(new THREE.Color().fromArray(texel).getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
+    const [texel] = cubeFaceTexels(bg);
+    expect(new THREE.Color().fromArray(texel!).getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
   });
 
   it('#84 ambient_light_color (COLOR source) → ambient light color matches', async () => {
