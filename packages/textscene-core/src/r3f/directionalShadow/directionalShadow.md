@@ -261,24 +261,25 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
 
 WebGL 2 guarantees 16 texture units per program (`MAX_TEXTURE_IMAGE_UNITS`). Measured from the
 active samplers of programs three r186 linked in the visual harness's Chromium, with every chunk
-patch `installShaderPatches` installs, for a light with four splits:
+patch `installShaderPatches` installs, for a light with four splits. A scene with no sky of its own
+takes the preview sky:
 
-| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, an environment and transmission | The same, with an omni and a spot shadow |
-| ------------- | ---------------------- | ----------------------------------------------------------------------- | ---------------------------------------- |
-| 0             | 1                      | 10                                                                      | 11                                       |
-| 1             | 2                      | 11                                                                      | 12                                       |
-| 4             | 2                      | 11                                                                      | 12                                       |
-| 8             | 2                      | 11                                                                      | 12                                       |
+| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, a sky and transmission | The same, with an omni and a spot shadow |
+| ------------- | ---------------------- | -------------------------------------------------------------- | ---------------------------------------- |
+| 1             | 6                      | 13                                                             | 14                                       |
+| 4             | 6                      | 13                                                             | 14                                       |
+| 8             | 6                      | 13                                                             | 14                                       |
 
-A light with one split counts the same. The one unit of a plain material is three's `dfgLUT`. The
-omni and spot shadows share the one unit of the positional shadow atlas
-(`../positionalShadow/positionalShadow.md`). A program compiled with the soft shadow's define adds one
-unit, the atlas colour: eight soft suns on `MeshStandardMaterial` measure one unit more than eight
-suns without it.
+A light with one split counts the same. The suns share the one unit of the sun shadow atlas. A plain
+material's other five units are three's `dfgLUT`, Godot's DFG table, the sky's layer array, and the
+reflection atlas and its rows. The omni and spot shadows share the one unit of the positional shadow
+atlas (`../positionalShadow/positionalShadow.md`). A program compiled with the soft shadow's define
+adds one unit, the atlas colour: eight soft suns on `MeshStandardMaterial` measure one unit more than
+eight suns without it.
 
-A sampler per sun would take 9 units with eight suns and the plain material, 18 with the physical
-one, and one more with any omni or spot shadow. A GPU with only 16 units fails to link the last
-two, and the scene draws nothing lit.
+A sampler per sun would take 13 units with eight suns and the plain material, 20 with the physical
+one, and one more with any omni or spot shadow. A GPU with only 16 units fails to link the physical
+one, and the scene draws nothing lit.
 
 ### The other designs
 

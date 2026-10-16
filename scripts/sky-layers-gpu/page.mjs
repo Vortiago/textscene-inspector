@@ -4,9 +4,8 @@
  */
 import * as THREE from 'three';
 import {
-  SKY_LAYER_GROUPS,
-  SKY_LAYER_GROUP_NAMES,
   bakeSkyLayers,
+  disposeSkyLayers,
 } from '../../packages/textscene-core/src/resources/sky/skyLayers.ts';
 
 /* global window, document */
@@ -38,27 +37,33 @@ function radianceCube(colourOf) {
 }
 
 /**
- * The range of every channel over every texel of every layer the bake wrote, and how many values
- * are not finite. The range is enough for each check, and keeps the page's answer small.
+ * The range of every channel over each mip of each layer the bake wrote, and how many of its values
+ * are not finite. The ranges are enough for each check, and keep the page's answer small.
  */
-function rangeOf(layers) {
+function rangesOf({ layout, target }) {
   const gl = renderer.getContext();
-  const range = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity], nonFinite: 0 };
-  for (const group of SKY_LAYER_GROUP_NAMES) {
-    SKY_LAYER_GROUPS[group].faceSizes.forEach((size, mip) => {
+  const mipSizes = [layout.size, ...layout.downsampledSizes];
+  const ranges = [];
+  for (let layer = 0; layer < target.depth; layer += 1) {
+    mipSizes.forEach((size, mip) => {
       const pixels = new Float32Array(size * size * 4);
-      for (let face = 0; face < 6; face += 1) {
-        renderer.setRenderTarget(layers[group], face, mip);
-        gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, pixels);
-        addToRange(range, pixels);
-      }
+      renderer.setRenderTarget(target, layer, mip);
+      gl.readPixels(0, 0, size, size, gl.RGBA, gl.FLOAT, pixels);
+      ranges.push(rangeOf(layer, mip, pixels));
     });
   }
   renderer.setRenderTarget(null);
-  return range;
+  return ranges;
 }
 
-function addToRange(range, pixels) {
+function rangeOf(layer, mip, pixels) {
+  const range = {
+    layer,
+    mip,
+    min: [Infinity, Infinity, Infinity],
+    max: [-Infinity, -Infinity, -Infinity],
+    nonFinite: 0,
+  };
   for (let at = 0; at < pixels.length; at += 4) {
     for (let channel = 0; channel < 3; channel += 1) {
       const value = pixels[at + channel];
@@ -69,16 +74,17 @@ function addToRange(range, pixels) {
       }
     }
   }
+  return range;
 }
 
-/** The range of the layers `radianceFilter` bakes from the sky `colourOf` describes. */
+/** The ranges of the layers `radianceFilter` bakes from the sky `colourOf` describes. */
 function bake(colourOf, radianceFilter) {
   const radiance = radianceCube(colourOf);
   const layers = bakeSkyLayers(renderer, radiance.texture, { radianceFilter, radianceSize: RADIANCE_SIZE });
-  const range = rangeOf(layers);
-  for (const group of SKY_LAYER_GROUP_NAMES) layers[group].dispose();
+  const ranges = rangesOf(layers);
+  disposeSkyLayers(layers);
   radiance.dispose();
-  return range;
+  return ranges;
 }
 
 const highContrast = (face) => (face === BRIGHT_FACE ? BRIGHT_RADIANCE : [0, 0, 0]);
