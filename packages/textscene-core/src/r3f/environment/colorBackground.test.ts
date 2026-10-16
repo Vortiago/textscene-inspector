@@ -1,20 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { clearColorCube, foggedClearColorCube } from './colorBackground';
-import { cubeFaceTexels } from '../testing/cubeTexels';
+import { clearColorTexture, foggedClearColorCube } from './colorBackground';
+import { cubeFaceTexels, textureTexel } from '../testing/backgroundTexels';
 
-describe('clearColorCube', () => {
-  it('fills all six faces with the sRGB colour linearised once, opaque', () => {
-    for (const [r, g, b, a] of cubeFaceTexels(clearColorCube({ r: 0.5, g: 1, b: 0 }))) {
-      expect(r).toBeCloseTo(0.214, 4);
-      expect([g, b, a]).toEqual([1, 0, 1]);
-    }
+describe('clearColorTexture', () => {
+  it('holds the sRGB colour linearised once, opaque', () => {
+    const [r, g, b, a] = textureTexel(clearColorTexture({ r: 0.5, g: 1, b: 0 }));
+
+    expect(r).toBeCloseTo(0.214, 4);
+    expect([g, b, a]).toEqual([1, 0, 1]);
   });
 
   it('keeps a channel above 1, which the background energy scales it to (edge case)', () => {
-    const r = cubeFaceTexels(clearColorCube({ r: 2, g: 0, b: 0 }))[0]?.[0];
+    const [r] = textureTexel(clearColorTexture({ r: 2, g: 0, b: 0 }));
 
     expect(r).toBeGreaterThan(1);
+  });
+
+  it('is a flat texture, which three draws as a quad that fills an orthographic view too', () => {
+    const texture = clearColorTexture({ r: 0.1, g: 0.2, b: 0.3 });
+
+    expect(texture).not.toBeInstanceOf(THREE.CubeTexture);
+    expect(texture).toMatchObject({
+      type: THREE.FloatType,
+      colorSpace: THREE.LinearSRGBColorSpace,
+      generateMipmaps: false,
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+    });
   });
 });
 

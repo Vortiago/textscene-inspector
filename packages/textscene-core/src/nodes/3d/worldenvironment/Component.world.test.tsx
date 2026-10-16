@@ -10,7 +10,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { WorldEnvironmentProperties } from './types';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { subResource } from '../../../testing/subResource';
-import { cubeFaceTexels } from '../../../r3f/testing/cubeTexels';
+import { textureTexel } from '../../../r3f/testing/backgroundTexels';
 
 function makeNode(envRef = 'SubResource("Env")'): TscnNode {
   const properties: WorldEnvironmentProperties = { name: 'WE', environment: envRef };
@@ -34,12 +34,12 @@ describe('WorldEnvironment (assertions 81–87)', () => {
     expect(instanceAs<THREE.Scene>(renderer.scene).background).not.toBeNull();
   });
 
-  it('#82 background_mode COLOR → scene.background is a cube the tone curve reaches', async () => {
+  it('#82 background_mode COLOR → scene.background is a texture the tone curve reaches', async () => {
     const renderer = await render(makeNode(), [
       subResource('Environment', 'Env', { background_mode: '1', background_color: 'Color(1, 0, 0, 1)' }),
     ]);
-    const bg = instanceAs<THREE.Scene>(renderer.scene).background as THREE.CubeTexture | null;
-    expect(bg?.isCubeTexture).toBe(true);
+    const bg = instanceAs<THREE.Scene>(renderer.scene).background as THREE.DataTexture | null;
+    expect(bg?.isDataTexture).toBe(true);
   });
 
   it('#83 background_color → scene.background reflects RGB values (sRGB)', async () => {
@@ -51,9 +51,8 @@ describe('WorldEnvironment (assertions 81–87)', () => {
         background_color: 'Color(0.25, 0.5, 0.75, 1)',
       }),
     ]);
-    const bg = instanceAs<THREE.Scene>(renderer.scene).background as THREE.CubeTexture;
-    const [texel] = cubeFaceTexels(bg);
-    expect(new THREE.Color().fromArray(texel!).getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
+    const bg = instanceAs<THREE.Scene>(renderer.scene).background as THREE.DataTexture;
+    expect(new THREE.Color().fromArray(textureTexel(bg)).getHexString()).toBe('4080bf'); // (0.25,0.5,0.75) → 8-bit sRGB
   });
 
   it('#84 ambient_light_color (COLOR source) → ambient light color matches', async () => {

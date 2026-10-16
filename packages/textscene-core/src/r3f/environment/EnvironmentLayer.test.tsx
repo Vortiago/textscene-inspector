@@ -19,9 +19,10 @@ vi.mock('./Compositor', () => ({
 const TONEMAP_CHUNK = 'tonemapping_pars_fragment';
 const FILMIC = '2';
 
-async function mountLayer(world: WorldKind, properties: Record<string, string>, hasGlContext = false) {
-  const captured: { current: THREE.WebGLRenderer | null } = { current: null };
-  const renderer = await ReactThreeTestRenderer.create(
+type CapturedRenderer = { current: THREE.WebGLRenderer | null };
+
+function layer(world: WorldKind, properties: Record<string, string>, captured: CapturedRenderer) {
+  return (
     <WorldKindProvider world={world}>
       <CaptureRenderer captured={captured} />
       <EnvironmentLayer
@@ -30,7 +31,14 @@ async function mountLayer(world: WorldKind, properties: Record<string, string>, 
         resources={NO_RESOURCES}
         skyResources={NO_RESOURCES}
       />
-    </WorldKindProvider>,
+    </WorldKindProvider>
+  );
+}
+
+async function mountLayer(world: WorldKind, properties: Record<string, string>, hasGlContext = false) {
+  const captured: CapturedRenderer = { current: null };
+  const renderer = await ReactThreeTestRenderer.create(
+    layer(world, properties, captured),
     hasGlContext ? { gl: rendererOver(fakeWebGL2Context()) } : undefined
   );
   const compositors = renderer.scene.findAll((node) => node.props.name === 'Compositor').length;
@@ -63,14 +71,26 @@ describe('<EnvironmentLayer> in the root world', () => {
 });
 
 describe('<EnvironmentLayer> background', () => {
-  it('draws a colour background as a cube, so the tone curve and its exposure reach it', async () => {
+  it('draws a colour background as a texture, so the tone curve and its exposure reach it', async () => {
     // Godot tonemaps the clear colour with the frame (`tonemap.glsl:868-898`). three's clear skips the curve.
     const { scene } = await mountLayer('root', {
       background_mode: '1',
       background_color: 'Color(0.2, 0.3, 0.4, 1)',
       tonemap_exposure: '2.0',
     });
-    expect((scene.background as THREE.CubeTexture | null)?.isCubeTexture).toBe(true);
+    expect((scene.background as THREE.DataTexture | null)?.isDataTexture).toBe(true);
+  });
+
+  it('builds a new colour background for a new curve, so three recompiles its background material', async () => {
+    const captured: CapturedRenderer = { current: null };
+    const renderer = await ReactThreeTestRenderer.create(layer('root', { background_mode: '1' }, captured));
+    const scene = renderer.scene.instance as THREE.Scene;
+    const linear = scene.background;
+
+    await renderer.update(layer('root', { background_mode: '1', tonemap_mode: FILMIC }, captured));
+
+    expect(scene.background).not.toBe(linear);
+    await renderer.unmount();
   });
 
   it('restores the background it found on unmount', async () => {

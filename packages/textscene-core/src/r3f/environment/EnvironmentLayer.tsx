@@ -17,7 +17,7 @@ import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
-import { clearColorCube, foggedClearColorCube } from './colorBackground';
+import { clearColorTexture, foggedClearColorCube } from './colorBackground';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -44,7 +44,7 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   const tonesCanvas = useWorldKind() === 'root';
   // One value decides the fog programs, the fogged colour background and the fog passes.
   const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
-  useColorBackground(settings.background, !!sky, hasFog);
+  useColorBackground(settings, !!sky, hasFog);
 
   return (
     <>
@@ -85,44 +85,57 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
  * Draws a colour background, or a placeholder for a sky that does not resolve. `hasSky` is true when
  * a sky resolves, so `<SkyLayer>` owns the background. `hasFog` is true when a fog draws, which fogs it.
  */
-function useColorBackground(
-  background: EnvironmentSettings['background'],
-  hasSky: boolean,
-  hasFog: boolean
-): void {
+function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasFog: boolean): void {
   const scene = useThree((state) => state.scene);
-  const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = background;
+  const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
+  const { mode: curveMode, white: curveWhite, agxContrast: curveAgxContrast } = settings.toneMapping;
   const showsColor = showsBackgroundColor(mode);
 
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
-  // A colour draws as a cube, not a clear, since three's clear skips the curve Godot applies to it.
+  // A colour draws as a texture, not a clear, since three's clear skips the curve Godot applies to it.
+  // A new texture per curve: three recompiles its background material only for a new texture or a new
+  // `toneMapping` enum, and every curve draws under the one `CustomToneMapping`.
   useEffect(() => {
     if (showsColor) {
       return hasFog
-        ? showCube(scene, foggedClearColorCube(backgroundColor), backgroundEnergy)
-        : showCube(scene, clearColorCube(backgroundColor), 1);
+        ? showBackground(scene, foggedClearColorCube(backgroundColor), backgroundEnergy)
+        : showBackground(scene, clearColorTexture(backgroundColor), 1);
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
       // A sky we cannot resolve, such as a ShaderMaterial sky. A mid-blue solid reads as
       // "sky here" rather than as a black void.
-      return showCube(scene, clearColorCube(UNRESOLVED_SKY_COLOR), 1);
+      return showBackground(scene, clearColorTexture(UNRESOLVED_SKY_COLOR), 1);
     }
     return undefined;
-  }, [scene, showsColor, mode, backgroundColor, backgroundEnergy, hasSky, hasFog]);
+  }, [
+    scene,
+    showsColor,
+    mode,
+    backgroundColor,
+    backgroundEnergy,
+    hasSky,
+    hasFog,
+    curveMode,
+    curveWhite,
+    curveAgxContrast,
+  ]);
 }
 
 const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };
 
-/** Draws `cube` at `intensity` behind `scene`, and answers the restore of what it found, which frees `cube`. */
-function showCube(scene: THREE.Scene, cube: THREE.CubeTexture, intensity: number): () => void {
+/**
+ * Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found, which
+ * frees `texture`.
+ */
+function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: number): () => void {
   const previousBackground = scene.background;
   const previousIntensity = scene.backgroundIntensity;
-  scene.background = cube;
+  scene.background = texture;
   scene.backgroundIntensity = intensity;
   return () => {
     scene.background = previousBackground;
     scene.backgroundIntensity = previousIntensity;
-    cube.dispose();
+    texture.dispose();
   };
 }
 
