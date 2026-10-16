@@ -13,7 +13,6 @@ export enum StencilMode {
   CUSTOM = 3,
 }
 
-/** Each mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const STENCIL_MODE_NAMES = enumNamesByValue(StencilMode);
 
 /**
@@ -43,5 +42,4 @@ export enum StencilCompare {
   GREATER_OR_EQUAL = 6,
 }
 
-/** Each comparison's name by the integer a `.tscn` stores, as a validator names it. */
 export const STENCIL_COMPARE_NAMES = enumNamesByValue(StencilCompare);

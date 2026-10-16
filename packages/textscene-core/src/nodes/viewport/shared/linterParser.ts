@@ -14,6 +14,7 @@ import {
   DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
   DefaultCanvasItemTextureFilter,
+  DefaultCanvasItemTextureRepeat,
 } from '../../../godot/scene/viewport.js';
 import { MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
 
@@ -201,8 +202,8 @@ validatorRegistry.registerAll('Viewport', {
   // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:200-206).
   canvas_item_default_texture_repeat: v.enumInt(
     'canvas_item_default_texture_repeat',
-    0,
-    3,
+    DefaultCanvasItemTextureRepeat.DISABLED,
+    DefaultCanvasItemTextureRepeat.PARENT_NODE,
     DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
     {
       enforced: 'viewport.cpp:4184',

@@ -18,5 +18,4 @@ export enum Transparency {
   ALPHA_DEPTH_PRE_PASS = 4,
 }
 
-/** Each mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const TRANSPARENCY_NAMES = enumNamesByValue(Transparency);

@@ -24,6 +24,7 @@ import {
 import { emissionScalars } from './emission';
 import { BlendMode } from '../../../godot/rendering/materials/blendMode';
 import { CullMode } from '../../../godot/rendering/materials/cullMode';
+import { DistanceFadeMode } from '../../../godot/rendering/materials/distanceFadeMode';
 import { DepthDrawMode } from '../../../godot/rendering/materials/depthDrawMode';
 import { ShadingMode } from '../../../godot/rendering/materials/shadingMode';
 import { Transparency } from '../../../godot/rendering/materials/transparency';
@@ -58,9 +59,6 @@ const BLEND_MODES = [
 const CULL_MODES = [CullMode.BACK, CullMode.FRONT, CullMode.DISABLED] as const;
 
 const DEPTH_DRAW_MODES = [DepthDrawMode.OPAQUE_ONLY, DepthDrawMode.ALWAYS, DepthDrawMode.DISABLED] as const;
-
-/** Godot `BaseMaterial3D.DistanceFadeMode`; only PIXEL_ALPHA writes ALPHA. */
-const DISTANCE_FADE_PIXEL_ALPHA = 1;
 
 /**
  * The feature flag Godot gates each texture slot behind. A gated slot applies only when
@@ -280,7 +278,7 @@ function shaderAlphaFlags(
   usesAlphaAntialiasing: boolean
 ): ShaderAlphaFlags {
   const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
-  const distanceFadeMode = intOr(properties['distance_fade_mode'], 0, CONTEXT);
+  const distanceFadeMode = intOr(properties['distance_fade_mode'], DistanceFadeMode.DISABLED, CONTEXT);
   const shadowToOpacity = boolOr(properties['shadow_to_opacity'], false, CONTEXT);
 
   // The shader writes ALPHA: for a transparency mode, for refraction (`ALPHA = 1.0`),
@@ -289,7 +287,7 @@ function shaderAlphaFlags(
     refractionEnabled ||
     transparency !== Transparency.DISABLED ||
     shadowToOpacity ||
-    distanceFadeMode === DISTANCE_FADE_PIXEL_ALPHA ||
+    distanceFadeMode === DistanceFadeMode.PIXEL_ALPHA ||
     proximityFade;
   // The two cutout modes discard instead of blending, so they stay opaque.
   const usesAlphaClip =

@@ -9,10 +9,6 @@ import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
-import {
-  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
-  viewportSamplerFilter,
-} from '../../../godot/scene/viewport';
 
 /**
  * The offscreen pass's render target, carrying the storage and the tonemap
@@ -32,12 +28,10 @@ export function createOffscreenTarget(
   // and darken every sample.
   target.texture.colorSpace = colorSpace;
   target.texture.name = `${name}::target`;
-  const filter =
-    viewportSamplerFilter(VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER) === 'nearest'
-      ? THREE.NearestFilter
-      : THREE.LinearFilter;
-  target.texture.minFilter = filter;
-  target.texture.magFilter = filter;
+  // The sub-viewport's own filter enum is not reproduced. Linear matches
+  // Godot's default `canvas_item_default_texture_filter` (1, LINEAR).
+  target.texture.minFilter = THREE.LinearFilter;
+  target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;
   if (preTonemapped) storeTonemappedOutput(target);
   return target;

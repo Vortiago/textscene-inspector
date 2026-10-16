@@ -14,7 +14,6 @@ export enum BlendMode {
   PREMULT_ALPHA = 4,
 }
 
-/** Each mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const BLEND_MODE_NAMES = enumNamesByValue(BlendMode);
 
 /** `RD::BlendOperation`, only the two values the attachments use. */

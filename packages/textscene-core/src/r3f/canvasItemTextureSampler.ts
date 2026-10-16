@@ -5,10 +5,17 @@
  * (`scene/main/canvas_item.cpp:1625-1699`). Only the Control walk reads it so far.
  */
 import { createContext, useContext, useMemo } from 'react';
-import { CanvasItemTextureFilter } from '../godot/scene/canvasItem';
+import * as THREE from 'three';
+import {
+  CanvasItemTextureFilter,
+  CanvasItemTextureRepeat,
+  canvasItemSamplerFilter,
+} from '../godot/scene/canvasItem';
 
-/** `TEXTURE_FILTER_PARENT_NODE`, which is `TEXTURE_REPEAT_PARENT_NODE` too: both are 0. */
-const CANVAS_ITEM_SAMPLER_INHERIT = CanvasItemTextureFilter.PARENT_NODE;
+/** The three.js filter a CanvasItem's effective `texture_filter` samples with. */
+export function canvasItemThreeFilter(filter: number | undefined): THREE.MagnificationTextureFilter {
+  return canvasItemSamplerFilter(filter) === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
+}
 
 export interface CanvasItemTextureSampler {
   /** Effective `texture_filter` ordinal, or `undefined` when no ancestor ever named one (viewport default). */
@@ -28,15 +35,15 @@ function useParentTextureSampler(): CanvasItemTextureSampler {
 }
 
 /**
- * One property's resolution rule, shared by filter and repeat since both
- * enums use 0 for PARENT_NODE: an unnamed own value defers to the ambient;
- * a concrete one wins and is what gets published back out.
+ * One property's resolution rule, shared by filter and repeat: an unnamed own value or the
+ * property's PARENT_NODE defers to the ambient; a concrete one wins and is what gets published back out.
  */
 function resolveInheritedSamplerValue(
   own: number | undefined,
-  ambient: number | undefined
+  ambient: number | undefined,
+  parentNode: number
 ): number | undefined {
-  return own === undefined || own === CANVAS_ITEM_SAMPLER_INHERIT ? ambient : own;
+  return own === undefined || own === parentNode ? ambient : own;
 }
 
 /**
@@ -51,8 +58,8 @@ export function useInheritedTextureSampler(
   const parent = useParentTextureSampler();
   return useMemo(
     () => ({
-      filter: resolveInheritedSamplerValue(ownFilter, parent.filter),
-      repeat: resolveInheritedSamplerValue(ownRepeat, parent.repeat),
+      filter: resolveInheritedSamplerValue(ownFilter, parent.filter, CanvasItemTextureFilter.PARENT_NODE),
+      repeat: resolveInheritedSamplerValue(ownRepeat, parent.repeat, CanvasItemTextureRepeat.PARENT_NODE),
     }),
     [ownFilter, ownRepeat, parent]
   );

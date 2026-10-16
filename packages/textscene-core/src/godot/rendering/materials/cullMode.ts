@@ -13,5 +13,4 @@ export enum CullMode {
   DISABLED = 2,
 }
 
-/** Each mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const CULL_MODE_NAMES = enumNamesByValue(CullMode);

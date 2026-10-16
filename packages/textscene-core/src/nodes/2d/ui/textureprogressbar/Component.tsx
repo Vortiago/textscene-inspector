@@ -13,12 +13,11 @@ import { controlLayoutOrder, painterView } from '../../../../r3f/controls/native
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { canvasItemThreeFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry, AxisStretchMode } from '../../../../r3f/controls/native/ninePatchGeometry';
-import { canvasItemSamplerFilter } from '../../../../godot/scene/canvasItem';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';
 import {
@@ -35,11 +34,6 @@ import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 const ZERO: Vector2 = { x: 0, y: 0 };
-
-const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
-  nearest: THREE.NearestFilter,
-  linear: THREE.LinearFilter,
-};
 
 interface ImageLike {
   width?: number;
@@ -58,7 +52,7 @@ function useLayerTexture(
   ref: string | undefined,
   externalResources: NativeControlComponentProps['solveNode']['resources']['externalResources'],
   internalResources: NativeControlComponentProps['solveNode']['resources']['internalResources'],
-  filter: 'nearest' | 'linear'
+  filter: THREE.MagnificationTextureFilter
 ): THREE.Texture | null {
   const { texture: raw } = useTexture2D(ref, externalResources, internalResources);
   // One clone from the shared texture, not a clone of `useCanvas2DTexture`'s: that one
@@ -69,9 +63,8 @@ function useLayerTexture(
     // The canvas default, as `useCanvas2DTexture` sets it (`scene/main/viewport.h:420`).
     cloned.wrapS = THREE.ClampToEdgeWrapping;
     cloned.wrapT = THREE.ClampToEdgeWrapping;
-    const mag = FILTER[filter];
-    cloned.magFilter = mag;
-    cloned.minFilter = mag;
+    cloned.magFilter = filter;
+    cloned.minFilter = filter;
     return cloned;
   }, [raw, filter]);
   return useUploadedClone(layer);
@@ -124,7 +117,7 @@ function cropWindow(
 export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TextureProgressBarProperties>(solveNode);
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
-  const filter = canvasItemSamplerFilter(sampler.filter);
+  const filter = canvasItemThreeFilter(sampler.filter);
 
   const { externalResources, internalResources } = solveNode.resources;
   const underTexture = useLayerTexture(props.textureUnder, externalResources, internalResources, filter);

@@ -23,7 +23,7 @@ export const CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES = enumNamesByValue(CanvasItemC
  * int32 narrowing, so only 3..2147483647 trips it. Measured on 4.6.3: `4294967295`, the
  * serialiser's `-1`, lands negative, passes the guard and clips.
  */
-export const CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT = 3;
+export const CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT = CanvasItemClipChildrenMode.AND_DRAW + 1;
 
 /**
  * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`), without `TEXTURE_FILTER_MAX`, as the

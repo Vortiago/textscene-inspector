@@ -12,5 +12,4 @@ export enum ShadingMode {
   PER_VERTEX = 2,
 }
 
-/** Each mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const SHADING_MODE_NAMES = enumNamesByValue(ShadingMode);

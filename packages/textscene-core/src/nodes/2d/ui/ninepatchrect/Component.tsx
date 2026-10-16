@@ -10,7 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { pinNoColorSpace, useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
-import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { canvasItemThreeFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../../resources/useTexture2D';
@@ -19,14 +19,8 @@ import {
   axisStretchModeOf,
   type NinePatchGeometryBuffers,
 } from '../../../../r3f/controls/native/ninePatchGeometry';
-import { canvasItemSamplerFilter } from '../../../../godot/scene/canvasItem';
 import type { NinePatchRectProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-
-const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
-  nearest: THREE.NearestFilter,
-  linear: THREE.LinearFilter,
-};
 
 interface ImageLike {
   width?: number;
@@ -102,7 +96,7 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     if (!rawTexture || !geometry) return null;
     const cloned = rawTexture.clone();
     pinNoColorSpace(cloned);
-    const filter = FILTER[canvasItemSamplerFilter(sampler.filter)];
+    const filter = canvasItemThreeFilter(sampler.filter);
     cloned.magFilter = filter;
     cloned.minFilter = filter;
     // Every UV stays inside the texture or region: TILE and TILE_FIT emit repeated quads, not a wrapping

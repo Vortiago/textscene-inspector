@@ -13,5 +13,4 @@ export enum DistanceFadeMode {
   OBJECT_DITHER = 3,
 }
 
-/** Each mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const DISTANCE_FADE_MODE_NAMES = enumNamesByValue(DistanceFadeMode);

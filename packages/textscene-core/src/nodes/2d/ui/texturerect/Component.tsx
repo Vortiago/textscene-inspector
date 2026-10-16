@@ -12,17 +12,11 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
-import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { canvasItemThreeFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { textureRectDraw, resolveTextureRectRepeat, applyFlip } from './nativeSolver';
 import type { TextureRectProperties } from './types';
-import { canvasItemSamplerFilter } from '../../../../godot/scene/canvasItem';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-
-const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
-  nearest: THREE.NearestFilter,
-  linear: THREE.LinearFilter,
-};
 
 const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
   clamp: THREE.ClampToEdgeWrapping,
@@ -66,7 +60,7 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     // prop, whose `@react-three/fiber` sRGB auto-tagging would overwrite a plain assignment.
     pinNoColorSpace(cloned);
 
-    const filter = FILTER[canvasItemSamplerFilter(sampler.filter)];
+    const filter = canvasItemThreeFilter(sampler.filter);
     cloned.magFilter = filter;
     cloned.minFilter = filter;
 

@@ -11,5 +11,4 @@ export enum DepthTest {
   INVERTED = 1,
 }
 
-/** Each test's name by the integer a `.tscn` stores, as a validator names it. */
 export const DEPTH_TEST_NAMES = enumNamesByValue(DepthTest);

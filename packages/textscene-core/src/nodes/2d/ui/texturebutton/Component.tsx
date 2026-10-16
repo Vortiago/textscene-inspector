@@ -12,10 +12,9 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
-import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { canvasItemThreeFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
 import { applyFlip, resolveTextureRectRepeat } from '../texturerect/nativeSolver';
-import { canvasItemSamplerFilter } from '../../../../godot/scene/canvasItem';
 import {
   resolveTextureButtonDrawState,
   resolveTextureButtonSlot,
@@ -24,11 +23,6 @@ import {
 } from './nativeSolver';
 import type { TextureButtonProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
-
-const FILTER: Record<'nearest' | 'linear', THREE.MagnificationTextureFilter> = {
-  nearest: THREE.NearestFilter,
-  linear: THREE.LinearFilter,
-};
 
 const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
   clamp: THREE.ClampToEdgeWrapping,
@@ -84,7 +78,7 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     // `@react-three/fiber` sRGB auto-tagging would overwrite it on commit.
     pinNoColorSpace(cloned);
 
-    const filter = FILTER[canvasItemSamplerFilter(sampler.filter)];
+    const filter = canvasItemThreeFilter(sampler.filter);
     cloned.magFilter = filter;
     cloned.minFilter = filter;
 

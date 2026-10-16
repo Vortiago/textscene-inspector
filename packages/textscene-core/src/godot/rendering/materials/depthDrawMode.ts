@@ -13,5 +13,4 @@ export enum DepthDrawMode {
   DISABLED = 2,
 }
 
-/** Each mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const DEPTH_DRAW_MODE_NAMES = enumNamesByValue(DepthDrawMode);

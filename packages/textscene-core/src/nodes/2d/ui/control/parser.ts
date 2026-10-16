@@ -10,6 +10,7 @@ import {
   parseOptionalVector2,
   parseHeadingIndex,
 } from '../../../../parser/valueParsers';
+import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../../godot/scene/canvasItem.js';
 import { LayoutDirection } from '../../../../godot/scene/control.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import type { Rgba } from '../../../../godot/math/math.js';
@@ -119,8 +120,16 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
   result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
   result.topLevel = boolSlotValue(properties.top_level) === true;
   result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
-  result.textureFilter = intOr(properties.texture_filter, 0, `${result.name || 'Control'}.texture_filter`);
-  result.textureRepeat = intOr(properties.texture_repeat, 0, `${result.name || 'Control'}.texture_repeat`);
+  result.textureFilter = intOr(
+    properties.texture_filter,
+    CanvasItemTextureFilter.PARENT_NODE,
+    `${result.name || 'Control'}.texture_filter`
+  );
+  result.textureRepeat = intOr(
+    properties.texture_repeat,
+    CanvasItemTextureRepeat.PARENT_NODE,
+    `${result.name || 'Control'}.texture_repeat`
+  );
 
   Object.assign(result, parseThemeOverrides(properties));
 

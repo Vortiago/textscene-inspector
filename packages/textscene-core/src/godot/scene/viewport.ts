@@ -79,30 +79,16 @@ export enum DefaultCanvasItemTextureFilter {
  * stores for `canvas_item_default_texture_repeat`. 4.7.2 adds PARENT_NODE (`viewport.h:205`), which
  * 4.6.3 refuses.
  */
-enum DefaultCanvasItemTextureRepeat {
+export enum DefaultCanvasItemTextureRepeat {
   DISABLED = 0,
   ENABLED = 1,
   MIRROR = 2,
   PARENT_NODE = 3,
 }
 
-/** Each repeat's name by the integer a `.tscn` stores, as a validator names it. */
 export const DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES = enumNamesByValue(DefaultCanvasItemTextureRepeat);
 
-/** Each filter's name by the integer a `.tscn` stores, as a validator names it. */
 export const DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(DefaultCanvasItemTextureFilter);
 
 /** A Viewport's default filter for a CanvasItem that defers to its ancestors (`viewport.h:419`). */
 export const VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER = DefaultCanvasItemTextureFilter.LINEAR;
-
-/**
- * The texel a Viewport's default filter samples. The mipmapped variants collapse to their base filter,
- * and a default that defers to a parent has no ancestor to defer to, so it is linear like
- * {@link VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER}.
- */
-export function viewportSamplerFilter(filter: DefaultCanvasItemTextureFilter): 'nearest' | 'linear' {
-  return filter === DefaultCanvasItemTextureFilter.NEAREST ||
-    filter === DefaultCanvasItemTextureFilter.NEAREST_WITH_MIPMAPS
-    ? 'nearest'
-    : 'linear';
-}
