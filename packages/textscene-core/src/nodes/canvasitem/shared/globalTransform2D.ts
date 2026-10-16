@@ -9,13 +9,8 @@
 
 import { climbAncestors, type ParentLookup } from '../../../linter/parentType.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { VECTOR2_REGEX } from '../../../linter/validators/vectorValidators.js';
-import {
-  TSCN_FLOAT_RE,
-  parseGodotFloat,
-  tupleComponent,
-} from '../../../linter/validators/commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
+import { VECTOR2_REGEX, matchVector2 } from '../../../linter/validators/vectorValidators.js';
+import { TSCN_FLOAT_RE, parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 import {
   TRANSFORM2D_IDENTITY,
   multiplyTransform2D,
@@ -25,24 +20,19 @@ import {
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { RawNode } from '../../../parser/types.js';
 
-/** The vector as the slot holds it; `null` when the composition must not proceed. */
-function parseVector2(
+/**
+ * The vector as the slot holds it, `fallback` when absent or malformed, or `null` when
+ * a component narrows to a number the file does not state. A NaN in its place would
+ * report skew on a node Godot finds unskewed, so the composition stops.
+ */
+function readVector2Property(
   raw: string | undefined,
   fallback: { x: number; y: number }
 ): { x: number; y: number } | null {
   if (raw === undefined) return fallback;
-  const match = VECTOR2_REGEX.exec(raw);
-  if (!match) return fallback; // malformed is linterParser.ts's job, not this helper's
-  const captures = [match[1], match[2]];
-  // An altered component withholds the whole answer: `_to_int`'s float branch is
-  // undefined behaviour (`variant.h:369-370`), and the NaN `slotComponents` answers
-  // with would report skew on a node Godot finds unskewed, and scale nowhere.
-  if (slotComponentsAltered(raw, 'Vector2', captures)) return null;
-  // `slotComponents`: the grammar admits the `Vector2i(...)` spelling Godot
-  // converts, whose arguments are narrowed to int32 before the widening, so a
-  // fractional or wrapping component stores a different number than it states.
-  const [x, y] = slotComponents(raw, 'Vector2', captures, tupleComponent);
-  return { x: x!, y: y! };
+  // Malformed is linterParser.ts's job, not this helper's.
+  if (!VECTOR2_REGEX.test(raw.trim())) return fallback;
+  return matchVector2(raw);
 }
 
 function parseScalar(raw: string | undefined, fallback: number): number {
@@ -58,9 +48,9 @@ function parseScalar(raw: string | undefined, fallback: number): number {
  */
 function localTransform2D(node: RawNode): Transform2DColumns | null {
   const props = node.rawProperties;
-  const position = parseVector2(props.position, { x: 0, y: 0 });
+  const position = readVector2Property(props.position, { x: 0, y: 0 });
   const rotation = parseScalar(props.rotation, 0);
-  const scale = parseVector2(props.scale, { x: 1, y: 1 });
+  const scale = readVector2Property(props.scale, { x: 1, y: 1 });
   if (position === null || scale === null) return null;
   const skew = parseScalar(props.skew, 0);
 

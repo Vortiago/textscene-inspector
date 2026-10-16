@@ -9,9 +9,8 @@ import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
-import { VECTOR2_REGEX } from '../validators/vectorValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../godot/variant/int.js';
-import { ruleInt, tupleComponent } from '../validators/commonValidators.js';
+import { matchVector2 } from '../validators/vectorValidators.js';
+import { ruleInt } from '../validators/commonValidators.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 
 /**
@@ -29,18 +28,7 @@ const RIGID_BODY_SCALE_TOLERANCE = 0.05;
  */
 function parseScale2D(raw: string | undefined): { x: number; y: number } | null {
   if (raw === undefined) return { x: 1, y: 1 };
-  const match = VECTOR2_REGEX.exec(raw);
-  if (!match) return { x: 1, y: 1 }; // malformed is linterParser.ts's job, not this rule's
-  const captures = [match[1], match[2]];
-  // `null`, not the NaN `slotComponents` answers with: the engine stores a number
-  // the file does not state, and none this rule may name, since `_to_int`'s float
-  // branch is undefined behaviour (variant.h:369-370). A NaN would reach the message.
-  if (slotComponentsAltered(raw, 'Vector2', captures)) return null;
-  // `slotComponents`: the grammar admits the `Vector2i(...)` spelling Godot
-  // converts, whose arguments are narrowed to int32 before the widening, so
-  // `Vector2i(0.5, 1)` scales by the (0, 1) the engine stores.
-  const [x, y] = slotComponents(raw, 'Vector2', captures, tupleComponent);
-  return { x: x!, y: y! };
+  return matchVector2(raw);
 }
 
 export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
@@ -132,9 +120,9 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // `Math::abs(t.columns[n].length() - 1.0) > 0.05`). An unsigned column length is
     // `|scale.n|` whatever the rotation or skew, so reading `scale` needs no matrix.
     const scale2D = dim === '2D' ? parseScale2D(rawProps.scale) : null;
-    // PhysicalBone2D inherits this check (physical_bone_2d.cpp:109). A narrowed
-    // component gives `null` and no report, since no scale may be quoted, and
-    // `v.vector2('scale')` on Node2D checks only the shape.
+    // PhysicalBone2D inherits this check (physical_bone_2d.cpp:109). A malformed
+    // literal or a narrowed component gives `null` and no report, since no scale
+    // may be quoted, and `v.vector2('scale')` on Node2D checks the shape.
     if (scale2D !== null) {
       const sx = Math.abs(scale2D.x);
       const sy = Math.abs(scale2D.y);
