@@ -77,6 +77,21 @@ describe('ViewportToolbar', () => {
     expect(checkbox.checked).toBe(true);
   });
 
+  it('fog checkbox is checked by default and toggles showFog', () => {
+    renderToolbar('3D', false);
+    openDisplayMenu();
+    const checkbox = screen.getByRole('checkbox', { name: 'Fog' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('hides the fog checkbox in 2D mode, where nothing draws fog', () => {
+    renderToolbar('2D');
+    openDisplayMenu();
+    expect(screen.queryByRole('checkbox', { name: 'Fog' })).toBeNull();
+  });
+
   it('performance checkbox is unchecked by default and persists a click', () => {
     renderToolbar('3D');
     openDisplayMenu();

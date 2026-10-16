@@ -53,6 +53,18 @@ describe('ViewportModeContext', () => {
     expect(result.current.showCollisions).toBe(true);
   });
 
+  it('shows the fog by default, as Godot draws it', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    expect(result.current.showFog).toBe(true);
+  });
+
+  it('hides and shows the fog', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper({ initialShowFog: false }) });
+    expect(result.current.showFog).toBe(false);
+    act(() => result.current.setShowFog(true));
+    expect(result.current.showFog).toBe(true);
+  });
+
   it('switches mode', () => {
     const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
     act(() => result.current.setMode('2D'));

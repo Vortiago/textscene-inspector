@@ -13,10 +13,13 @@ import { PNG } from 'pngjs';
 import { compareImages } from '../visual/imageDelta.mjs';
 import { renderReference } from './run.mjs';
 import { captureOurs } from './capture-ours.mjs';
+import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const FIXTURE_DIR = join(REPO_ROOT, 'scenes', 'fixtures');
 const OUT_DIR = join(import.meta.dirname, 'output');
+/** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
+const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 
 function usage() {
   console.error(
@@ -50,9 +53,9 @@ export function parseArgs(argv) {
 
 /**
  * Accepts a path on disk or a catalog name and produces both: `ref:godot` wants
- * the path, `ref:ours` the name. The catalog flattens `scenes/fixtures/` to a bare
- * filename but keeps any other subtree as a relative path
- * (`demos/3d/truck_town/town/town_scene.tscn`).
+ * the path, `ref:ours` the name. The catalog names a scene under `scenes/fixtures/` or a
+ * flattened corpus root (`scenes/ld58/`, `scenes/isometric/`) from that root, and keeps any
+ * other subtree as a relative path (`demos/3d/truck_town/town/town_scene.tscn`).
  */
 export function resolveFixture(input) {
   const name = basename(input);
@@ -60,15 +63,17 @@ export function resolveFixture(input) {
   const scenePath = input.includes('/') ? resolve(REPO_ROOT, input) : join(FIXTURE_DIR, name);
   if (!existsSync(scenePath)) throw new Error(`no such scene: ${scenePath}`);
   const fixtureName = catalogName(scenePath);
-  return { scenePath, fixtureName, label: labelFor(fixtureName) };
+  return { scenePath, fixtureName, label: labelFor(scenePath) };
 }
 
 /**
- * What a run's PNGs are named after: the catalog name, not the basename, since
- * two projects in one sweep can both hold a `settings_menu.tscn`.
+ * What a run's PNGs are named after: the path under `scenes/`, not the basename, since two projects
+ * in one sweep can both hold a `settings_menu.tscn`. A corpus keeps its folder, since the catalog
+ * flattens it beside the fixtures, which alone drop theirs.
  */
-function labelFor(fixtureName) {
-  return fixtureName
+function labelFor(scenePath) {
+  return pathWithinScenes(scenePath)
+    .replace(/^fixtures\//, '')
     .replace(/\.tscn$/, '')
     .split('/')
     .join('-');
@@ -76,10 +81,15 @@ function labelFor(fixtureName) {
 
 /** The `?fixture=` value the web catalog lists for a scene on disk. */
 export function catalogName(scenePath) {
+  const withinScenes = pathWithinScenes(scenePath);
+  const projectRoot = FLATTENED_ROOTS.find((root) => withinScenes.startsWith(root));
+  return projectRoot ? withinScenes.slice(projectRoot.length) : withinScenes;
+}
+
+function pathWithinScenes(scenePath) {
   const relative = relativePath(REPO_ROOT, scenePath).split(sep).join('/');
   if (!relative.startsWith('scenes/')) throw new Error(`scene is outside scenes/: ${scenePath}`);
-  const withinScenes = relative.slice('scenes/'.length);
-  return withinScenes.startsWith('fixtures/') ? withinScenes.slice('fixtures/'.length) : withinScenes;
+  return relative.slice('scenes/'.length);
 }
 
 /**

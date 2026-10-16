@@ -11,6 +11,7 @@ import { environmentSettingsOf } from '../../resources/environment/testing/envir
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { CaptureRenderer } from '../testing/CaptureRenderer';
 import { fakeWebGL2Context, rendererOver } from '../testing/fakeWebGL2Context';
+import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 
 vi.mock('./Compositor', () => ({
   Compositor: () => <group name="Compositor" />,
@@ -21,24 +22,41 @@ const FILMIC = '2';
 
 type CapturedRenderer = { current: THREE.WebGLRenderer | null };
 
-function layer(world: WorldKind, properties: Record<string, string>, captured: CapturedRenderer) {
+function layer(
+  world: WorldKind,
+  properties: Record<string, string>,
+  captured: CapturedRenderer,
+  showFog = true
+) {
   return (
-    <WorldKindProvider world={world}>
-      <CaptureRenderer captured={captured} />
-      <EnvironmentLayer
-        settings={environmentSettingsOf(properties)}
-        sky={null}
-        resources={NO_RESOURCES}
-        skyResources={NO_RESOURCES}
-      />
-    </WorldKindProvider>
+    <ViewportModeProvider initialShowFog={showFog}>
+      <WorldKindProvider world={world}>
+        <CaptureRenderer captured={captured} />
+        <EnvironmentLayer
+          settings={environmentSettingsOf(properties)}
+          sky={null}
+          resources={NO_RESOURCES}
+          skyResources={NO_RESOURCES}
+        />
+      </WorldKindProvider>
+    </ViewportModeProvider>
   );
 }
 
-async function mountLayer(world: WorldKind, properties: Record<string, string>, hasGlContext = false) {
+/** `hasGlContext` gives the layer a WebGL2 context. `showFog` is the viewport's Fog toggle. */
+interface MountOptions {
+  hasGlContext?: boolean;
+  showFog?: boolean;
+}
+
+async function mountLayer(
+  world: WorldKind,
+  properties: Record<string, string>,
+  { hasGlContext = false, showFog = true }: MountOptions = {}
+) {
   const captured: CapturedRenderer = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    layer(world, properties, captured),
+    layer(world, properties, captured, showFog),
     hasGlContext ? { gl: rendererOver(fakeWebGL2Context()) } : undefined
   );
   const compositors = renderer.scene.findAll((node) => node.props.name === 'Compositor').length;
@@ -48,13 +66,17 @@ async function mountLayer(world: WorldKind, properties: Record<string, string>, 
 
 describe('<EnvironmentLayer> in the root world', () => {
   it('mounts the compositor for a glowing Environment', async () => {
-    const { compositors } = await mountLayer('root', { glow_enabled: 'true' }, true);
+    const { compositors } = await mountLayer('root', { glow_enabled: 'true' }, { hasGlContext: true });
     expect(compositors).toBe(1);
   });
 
   it("leaves the renderer's mapping to the compositor, but installs the curve for a shared-world pass", async () => {
     const chunkBefore = THREE.ShaderChunk[TONEMAP_CHUNK];
-    const { gl, unmount } = await mountLayer('root', { tonemap_mode: FILMIC, glow_enabled: 'true' }, true);
+    const { gl, unmount } = await mountLayer(
+      'root',
+      { tonemap_mode: FILMIC, glow_enabled: 'true' },
+      { hasGlContext: true }
+    );
     expect(gl.toneMapping).not.toBe(THREE.CustomToneMapping);
     expect(THREE.ShaderChunk[TONEMAP_CHUNK]).not.toBe(chunkBefore);
     await unmount();
@@ -100,9 +122,30 @@ describe('<EnvironmentLayer> background', () => {
   });
 });
 
+describe('<EnvironmentLayer> fog', () => {
+  it('draws the fog of an Environment that enables it', async () => {
+    const { scene } = await mountLayer('root', { volumetric_fog_enabled: 'true' }, { hasGlContext: true });
+    expect(scene.fog).not.toBeNull();
+  });
+
+  it('draws no fog while the viewport hides it', async () => {
+    const { scene } = await mountLayer(
+      'root',
+      { fog_enabled: 'true', volumetric_fog_enabled: 'true' },
+      { hasGlContext: true, showFog: false }
+    );
+    expect(scene.fog).toBeNull();
+  });
+
+  it('draws no fog for an Environment without one (edge case)', async () => {
+    const { scene } = await mountLayer('root', {});
+    expect(scene.fog).toBeNull();
+  });
+});
+
 describe('<EnvironmentLayer> in a sub-viewport world', () => {
   it('mounts no compositor, which would draw to the canvas, not the sub-viewport target', async () => {
-    const { compositors } = await mountLayer('subViewport', { glow_enabled: 'true' }, true);
+    const { compositors } = await mountLayer('subViewport', { glow_enabled: 'true' }, { hasGlContext: true });
     expect(compositors).toBe(0);
   });
 

@@ -1,8 +1,8 @@
 /**
  * One renderer's volumetric fog: Godot's froxel passes, drawn slice by slice into 3D targets, and
  * the volume every fog program samples. Each scene keeps its own volume and history, so a scene
- * that holds still redraws nothing, and the renderer's volume takes a copy of whichever scene
- * renders next.
+ * that holds still redraws nothing once it converges, and the renderer's volume takes a copy of
+ * whichever scene renders next.
  */
 
 import * as THREE from 'three';
@@ -41,7 +41,6 @@ import {
   FOG_FILTER_FRAGMENT,
   FOG_INTEGRATE_FRAGMENT,
   FOG_LIGHT_FRAGMENT,
-  FOG_SAMPLE_OFFSETS_MAX,
 } from './volumetricFogShaders.js';
 
 interface VolumetricFogInputs {
@@ -61,7 +60,7 @@ interface VolumetricFogInputs {
 
 /** The volume's rows run bottom-up, so a jitter's top-down y flips. */
 const JITTER_OFFSETS = VOLUMETRIC_FOG_TEMPORAL_JITTERS.map(([x, y, z]) => new THREE.Vector3(x, 1 - y, z));
-const CENTRE_OFFSETS = [new THREE.Vector3(...VOLUMETRIC_FOG_CELL_CENTRE)];
+const CENTRE_OFFSET = new THREE.Vector3(...VOLUMETRIC_FOG_CELL_CENTRE);
 
 const FILTER_X = new THREE.Vector3(1, 0, 0);
 const FILTER_Y = new THREE.Vector3(0, 1, 0);
@@ -191,10 +190,15 @@ class ViewVolume {
   grid: VolumetricFogGrid = { width: 0, height: 0, depth: 0 };
   /** Whether `history` holds a draw of the current grid. */
   hasHistory = false;
-  /** Whether the last draw was a moving camera's step, which a still frame converges. */
-  isSettling = false;
   /** Each step's jitter is the next of Godot's 16 (`environment/fog.cpp:1113`). */
   frame = 0;
+  /** The jitters a still view has yet to add to its mean: all 16 after a moving camera's step. */
+  jittersToConverge = 0;
+
+  /** Whether the view still converges, which a still render continues. */
+  get isSettling(): boolean {
+    return this.jittersToConverge > 0;
+  }
 
   dispose(): void {
     this.integrated.dispose();
@@ -204,12 +208,36 @@ class ViewVolume {
 }
 
 /** How a draw samples each froxel. */
-type Sampling = 'centre' | 'converged' | 'step';
+type Sampling = 'centre' | 'converge' | 'step';
 
-/** A changed view samples centres, or steps its history, and a still one converges once after a step. */
+/**
+ * A changed view samples centres, or steps its history. A still one after a step converges one
+ * jitter a render, so no render costs more than a moving camera's.
+ */
 function samplingFor(hasChanged: boolean, temporal: number | null, isSettling: boolean): Sampling | null {
   if (hasChanged) return temporal === null ? 'centre' : 'step';
-  return isSettling ? 'converged' : null;
+  return isSettling ? 'converge' : null;
+}
+
+/**
+ * The jitter a draw samples and the weight of the history it blends into. A step reprojects into
+ * the last draw's history (`.glsl:311-335`), and its cell that cannot reproject samples its centre,
+ * so a step without history samples centres. A still view adds the next jitter to the mean in its
+ * history: the mean of n jitters weighs n / (n + 1) against the next. All 16 is the mean Godot's
+ * history converges to.
+ */
+function sampleOf(
+  state: ViewVolume,
+  temporal: number | null,
+  sampling: Sampling
+): { offset: THREE.Vector3; historyAmount: number } {
+  if (sampling === 'converge') {
+    const averaged = JITTER_OFFSETS.length - state.jittersToConverge;
+    return { offset: JITTER_OFFSETS[averaged]!, historyAmount: averaged / (averaged + 1) };
+  }
+  const reprojects = sampling === 'step' && state.hasHistory && temporal !== null;
+  if (!reprojects) return { offset: CENTRE_OFFSET, historyAmount: 0 };
+  return { offset: JITTER_OFFSETS[state.frame % JITTER_OFFSETS.length]!, historyAmount: temporal };
 }
 
 export class VolumetricFogPass {
@@ -248,8 +276,7 @@ export class VolumetricFogPass {
     directionalShadowAtlas: { value: null },
     positionalShadowAtlas: { value: null },
     [AREA_LIGHT_ATLAS_UNIFORM]: { value: areaLightAtlasTexture() },
-    sampleOffsets: { value: Array.from({ length: FOG_SAMPLE_OFFSETS_MAX }, () => new THREE.Vector3()) },
-    sampleCount: { value: 1 },
+    sampleOffset: { value: new THREE.Vector3() },
     history: { value: null },
     toPreviousView: { value: new THREE.Matrix4() },
     historyAmount: { value: 0 },
@@ -396,10 +423,10 @@ export class VolumetricFogPass {
     this.writeView(camera, inputs, grid);
     this.writeSky(sky, inputs.skyEnergy);
     this.writeRows(state);
-    this.writeSampling(state, camera, inputs.fog.temporalReprojection, sampling);
     this.writeIntegrate(inputs.fog, grid);
-
     const atlases = this.writeShadowAtlases(state.lights);
+
+    this.writeSampling(state, camera, inputs.fog.temporalReprojection, sampling);
     drawWithUncomparedDepth(renderer, atlases, () =>
       this.fill(renderer, this.density, this.lightMaterial, grid)
     );
@@ -490,10 +517,7 @@ export class VolumetricFogPass {
     return [directional, positional];
   }
 
-  /**
-   * A step samples this frame's jitter and reprojects into the last draw's history, while a still
-   * frame averages all 16 jitters, the mean Godot's history converges to (`.glsl:311-335`).
-   */
+  /** Writes how the light pass samples each froxel, and moves the view's sampling on. */
   private writeSampling(
     state: ViewVolume,
     camera: THREE.Camera,
@@ -501,28 +525,18 @@ export class VolumetricFogPass {
     sampling: Sampling
   ): void {
     const uniforms = this.lightMaterial.uniforms;
-    const isStep = sampling === 'step';
-    const reprojects = isStep && state.hasHistory && temporal !== null;
-    // A step's cell that cannot reproject samples its centre, so a step without history samples centres.
-    const offsets =
-      sampling === 'converged'
-        ? JITTER_OFFSETS
-        : reprojects
-          ? [JITTER_OFFSETS[state.frame % JITTER_OFFSETS.length]!]
-          : CENTRE_OFFSETS;
-    (uniforms['sampleOffsets']!.value as THREE.Vector3[]).forEach((offset, i) =>
-      offset.copy(offsets[i] ?? offset)
-    );
-    uniforms['sampleCount']!.value = offsets.length;
-    uniforms['historyAmount']!.value = reprojects ? temporal : 0;
-    uniforms['history']!.value = reprojects ? state.history.texture : null;
+    const { offset, historyAmount } = sampleOf(state, temporal, sampling);
+    (uniforms['sampleOffset']!.value as THREE.Vector3).copy(offset);
+    uniforms['historyAmount']!.value = historyAmount;
+    uniforms['history']!.value = historyAmount > 0 ? state.history.texture : null;
     (uniforms['toPreviousView']!.value as THREE.Matrix4)
       .copy(state.previousCamera)
       .invert()
       .multiply(camera.matrixWorld);
     state.previousCamera.copy(camera.matrixWorld);
-    if (isStep) state.frame++;
-    state.isSettling = isStep;
+    if (sampling === 'step') state.frame++;
+    state.jittersToConverge =
+      sampling === 'converge' ? state.jittersToConverge - 1 : sampling === 'step' ? JITTER_OFFSETS.length : 0;
   }
 
   /** The integration's slice depths, one uniform per slice, so a new slice count recompiles. */
