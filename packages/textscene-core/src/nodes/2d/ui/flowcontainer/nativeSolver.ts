@@ -34,6 +34,7 @@ const LAST_WRAP_ALIGNMENT_END = 3;
 
 // Control's stretch-ratio default (control.cpp:1868-1878, "1.0").
 const DEFAULT_STRETCH_RATIO = 1;
+
 function props(n: SolveNode): FlowContainerProperties {
   return n.node.properties as FlowContainerProperties;
 }

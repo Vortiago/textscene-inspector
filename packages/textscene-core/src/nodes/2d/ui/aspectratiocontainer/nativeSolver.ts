@@ -23,10 +23,6 @@ import { ContainerAlignment } from '../../../../godot/scene/container';
 import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
 import { AspectRatioStretchMode, TextureRectExpandMode } from '../../../../godot/scene/gui';
 
-// AspectRatioContainer::StretchMode (aspect_ratio_container.h:44-49).
-
-// The two proportional modes of TextureRect::ExpandMode (texture_rect.h:40-45).
-
 function props(n: SolveNode): AspectRatioContainerProperties {
   return n.node.properties as AspectRatioContainerProperties;
 }

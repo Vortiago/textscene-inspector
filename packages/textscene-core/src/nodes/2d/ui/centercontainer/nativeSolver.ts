@@ -58,6 +58,8 @@ export const centerContainerLayout: ContainerLayoutFn = (n, children, contentRec
     const ofsY = useTopLeft ? Math.floor(-minSize.y * 0.5) : Math.floor((contentRect.h - minSize.y) / 2);
 
     const cp = child.node.properties as CenterContainerProperties;
+    // The flags never change the result, since `fit_child_in_rect` (container.cpp:95-128)
+    // receives the child's minimum size.
     const hFlags = cp.sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
     const vFlags = cp.sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
     // `Rect2(ofs, minsize)` is already the child's minimum size (center_container.cpp:84),
