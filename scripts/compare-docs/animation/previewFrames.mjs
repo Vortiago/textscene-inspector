@@ -7,8 +7,7 @@
 
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
+import { launchGodotComparisonBrowser } from '../../showcase/browser.mjs';
 import {
   assertPortFree,
   createCaptureContext,
@@ -31,7 +30,7 @@ export async function captureOurFrames(fixture, framesDir, mode, driverText) {
   let browser;
   try {
     await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    browser = await launchGodotComparisonBrowser();
     // Burn the first-WebGL-context-lost risk before any published image is captured (see
     // warmUpGLContext).
     await warmUpGLContext(browser);

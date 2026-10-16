@@ -8,8 +8,7 @@
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
+import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import { probePixels } from './run.mjs';
 import {
   assertPortFree,
@@ -71,7 +70,7 @@ export async function captureOurs({ fixture, frame = false, canvas2D = false, ca
   let browser;
   try {
     await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    browser = await launchGodotComparisonBrowser();
     // Godot's editor orbit (ADR-0025) on both sides, so a probe at (x, y)
     // addresses one surface point. `--frame` opts both into fit-the-bounds for
     // a scene too large to read at distance 4.

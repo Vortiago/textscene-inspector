@@ -9,8 +9,7 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
+import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import { renderReference } from '../godot-ref/run.mjs';
 import { parseCaptureFlags } from './captureFlags.mjs';
 import {
@@ -136,7 +135,7 @@ async function captureOurs(scenes) {
   const failures = [];
   try {
     await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    browser = await launchGodotComparisonBrowser();
     // Spends the first-context-lost risk before any published image.
     await warmUpGLContext(browser);
     for (const c of scenes) {

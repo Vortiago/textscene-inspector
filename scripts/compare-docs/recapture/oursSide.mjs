@@ -1,7 +1,6 @@
 /** Our side: one build, one preview server, one browser, one context per workspace. */
 
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
+import { launchGodotComparisonBrowser } from '../../showcase/browser.mjs';
 import {
   assertPortFree,
   createCaptureContext,
@@ -40,7 +39,7 @@ export async function captureOurs(targets, godotModes) {
   let browser;
   try {
     await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+    browser = await launchGodotComparisonBrowser();
     // Spends the first-context-lost risk before any published image.
     await warmUpGLContext(browser);
     let done = 0;
