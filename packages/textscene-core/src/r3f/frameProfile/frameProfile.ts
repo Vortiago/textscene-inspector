@@ -22,8 +22,8 @@ const STATS_WINDOW_MS = 500;
 
 const STEP_KEYS: readonly StepKey[] = [...RENDER_STEPS, 'Other'];
 
-/** Written only by `startFrameProfile` and `FrameProfile.stop`. */
-const profiles = new WeakMap<THREE.WebGLRenderer, FrameProfile>();
+/** Written only by `startFrameProfile` and `Profile.stop`. */
+const profiles = new WeakMap<THREE.WebGLRenderer, Profile>();
 
 /** Starts timing `step` on `renderer`, when a profile runs there and a frame is open. */
 export function beginStep(renderer: THREE.WebGLRenderer, step: RenderStep): void {
@@ -51,7 +51,7 @@ export function startFrameProfile(
   now: () => number = () => performance.now()
 ): FrameProfile {
   profiles.get(renderer)?.stop();
-  const profile = new FrameProfile(renderer, publish, now);
+  const profile = new Profile(renderer, publish, now);
   profiles.set(renderer, profile);
   return profile;
 }
@@ -71,7 +71,16 @@ class WindowSums {
 
 const NS_PER_MS = 1e6;
 
-export class FrameProfile {
+/** A running profile. Its starter marks each frame and stops it. */
+export interface FrameProfile {
+  /** Opens a frame at `timestamp`, the animation frame's time. */
+  beginFrame(timestamp: number): void;
+  /** Closes the frame, with every step still open in it. */
+  endFrame(): void;
+  stop(): void;
+}
+
+class Profile implements FrameProfile {
   private sums = new WindowSums();
   /** The `beginFrame` timestamp the window opened at, null before the first frame. */
   private windowStart: number | null = null;
@@ -93,7 +102,6 @@ export class FrameProfile {
     this.gpu = GpuTimer.create(renderer.getContext() as WebGL2RenderingContext);
   }
 
-  /** Opens a frame at `timestamp`, the animation frame's time. */
   beginFrame(timestamp: number): void {
     if (profiles.get(this.renderer) !== this) return;
     if (this.isFrameOpen) this.endFrame();
@@ -111,7 +119,6 @@ export class FrameProfile {
     this.gpu?.switchTo('Other');
   }
 
-  /** Closes the frame, with every step still open in it. */
   endFrame(): void {
     if (!this.isFrameOpen) return;
     this.endSegment();
