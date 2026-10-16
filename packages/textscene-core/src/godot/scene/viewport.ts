@@ -3,8 +3,129 @@
  * own defaults, and what its setters store.
  */
 
-import { enumNamesByValue } from '../classdb/enumNames.js';
+import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
 import type { PositionalShadowAtlasSettings } from '../rendering/lights/positionalShadowAtlas.js';
+
+/** `Viewport::PositionalShadowAtlasQuadrantSubdiv` (`scene/main/viewport.h:108-117`), without its `_MAX`. */
+export enum PositionalShadowAtlasQuadrantSubdiv {
+  DISABLED = 0,
+  SHADOWS_1 = 1,
+  SHADOWS_4 = 2,
+  SHADOWS_16 = 3,
+  SHADOWS_64 = 4,
+  SHADOWS_256 = 5,
+  SHADOWS_1024 = 6,
+}
+
+/** Godot's names for the subdivisions are the shadow counts: `SHADOW_ATLAS_QUADRANT_SUBDIV_4` is "4". */
+export const POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES = relabelEnumNames(
+  enumNamesByValue(PositionalShadowAtlasQuadrantSubdiv),
+  (name) => name.replace('SHADOWS_', '')
+);
+
+/** `Viewport::AnisotropicFiltering` (`viewport.h:128-135`), without its `_MAX`. */
+export enum AnisotropicFiltering {
+  DISABLED = 0,
+  '2X' = 1,
+  '4X' = 2,
+  '8X' = 3,
+  '16X' = 4,
+}
+
+export const ANISOTROPIC_FILTERING_NAMES = enumNamesByValue(AnisotropicFiltering);
+
+/** `Viewport::Scaling3DMode` (`viewport.h:99-106`), without its `_MAX`. */
+export enum Scaling3DMode {
+  BILINEAR = 0,
+  FSR = 1,
+  FSR2 = 2,
+  METALFX_SPATIAL = 3,
+  METALFX_TEMPORAL = 4,
+}
+
+export const SCALING_3D_MODE_NAMES = enumNamesByValue(Scaling3DMode);
+
+/** `Viewport::ScreenSpaceAA` (`viewport.h:137-142`), without its `_MAX`. */
+export enum ScreenSpaceAA {
+  DISABLED = 0,
+  FXAA = 1,
+  SMAA = 2,
+}
+
+export const SCREEN_SPACE_AA_NAMES = enumNamesByValue(ScreenSpaceAA);
+
+/**
+ * `Viewport::DebugDraw` (`viewport.h:158-186`). The enum ends with INTERNAL_BUFFER and has no
+ * `_MAX` sentinel.
+ */
+export enum DebugDraw {
+  DISABLED = 0,
+  UNSHADED = 1,
+  LIGHTING = 2,
+  OVERDRAW = 3,
+  WIREFRAME = 4,
+  NORMAL_BUFFER = 5,
+  VOXEL_GI_ALBEDO = 6,
+  VOXEL_GI_LIGHTING = 7,
+  VOXEL_GI_EMISSION = 8,
+  SHADOW_ATLAS = 9,
+  DIRECTIONAL_SHADOW_ATLAS = 10,
+  SCENE_LUMINANCE = 11,
+  SSAO = 12,
+  SSIL = 13,
+  PSSM_SPLITS = 14,
+  DECAL_ATLAS = 15,
+  SDFGI = 16,
+  SDFGI_PROBES = 17,
+  GI_BUFFER = 18,
+  DISABLE_LOD = 19,
+  CLUSTER_OMNI_LIGHTS = 20,
+  CLUSTER_SPOT_LIGHTS = 21,
+  CLUSTER_DECALS = 22,
+  CLUSTER_REFLECTION_PROBES = 23,
+  OCCLUDERS = 24,
+  MOTION_VECTORS = 25,
+  INTERNAL_BUFFER = 26,
+}
+
+export const DEBUG_DRAW_NAMES = enumNamesByValue(DebugDraw);
+
+/** `Viewport::SDFOversize` (`viewport.h:203-209`), without its `_MAX`. */
+export enum SdfOversize {
+  '100_PERCENT' = 0,
+  '120_PERCENT' = 1,
+  '150_PERCENT' = 2,
+  '200_PERCENT' = 3,
+}
+
+export const SDF_OVERSIZE_NAMES = enumNamesByValue(SdfOversize);
+
+/** `Viewport::SDFScale` (`viewport.h:211-216`), without its `_MAX`. */
+export enum SdfScale {
+  '100_PERCENT' = 0,
+  '50_PERCENT' = 1,
+  '25_PERCENT' = 2,
+}
+
+export const SDF_SCALE_NAMES = enumNamesByValue(SdfScale);
+
+/** `Viewport::VRSMode` (`viewport.h:222-227`), without its `_MAX`. */
+export enum VrsMode {
+  DISABLED = 0,
+  TEXTURE = 1,
+  XR = 2,
+}
+
+export const VRS_MODE_NAMES = enumNamesByValue(VrsMode);
+
+/** `Viewport::VRSUpdateMode` (`viewport.h:229-234`), without its `_MAX`. */
+export enum VrsUpdateMode {
+  DISABLED = 0,
+  ONCE = 1,
+  ALWAYS = 2,
+}
+
+export const VRS_UPDATE_MODE_NAMES = enumNamesByValue(VrsUpdateMode);
 
 /**
  * The root viewport's atlas side: `rendering/lights_and_shadows/positional_shadow/atlas_size`
@@ -28,7 +149,12 @@ const POSITIONAL_SHADOW_QUADRANT_SUBDIV_SHADOWS = [0, 1, 4, 16, 64, 256, 1024] a
  * shadows. The root takes them from the project settings (`scene_tree.cpp:2133-2136`), and a
  * `Viewport` sets the same values itself (`viewport.cpp:5363-5366`).
  */
-const POSITIONAL_SHADOW_QUADRANT_SUBDIV_DEFAULT = [2, 2, 3, 4] as const;
+const POSITIONAL_SHADOW_QUADRANT_SUBDIV_DEFAULT = [
+  PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
+  PositionalShadowAtlasQuadrantSubdiv.SHADOWS_4,
+  PositionalShadowAtlasQuadrantSubdiv.SHADOWS_16,
+  PositionalShadowAtlasQuadrantSubdiv.SHADOWS_64,
+] as const;
 
 /** The root viewport's atlas at the project defaults. */
 export const ROOT_POSITIONAL_SHADOW_ATLAS: PositionalShadowAtlasSettings = {
@@ -92,3 +218,23 @@ export const DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(Default
 
 /** A Viewport's default filter for a CanvasItem that defers to its ancestors (`viewport.h:419`). */
 export const VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER = DefaultCanvasItemTextureFilter.LINEAR;
+
+/** `SubViewport::UpdateMode` (`viewport.h:877-883`): when the target is re-rendered. */
+export enum SubViewportUpdateMode {
+  DISABLED = 0,
+  ONCE = 1,
+  WHEN_VISIBLE = 2,
+  WHEN_PARENT_VISIBLE = 3,
+  ALWAYS = 4,
+}
+
+export const SUB_VIEWPORT_UPDATE_MODE_NAMES = enumNamesByValue(SubViewportUpdateMode);
+
+/** `SubViewport::ClearMode` (`viewport.h:871-875`): how the target is cleared before a render. */
+export enum SubViewportClearMode {
+  ALWAYS = 0,
+  NEVER = 1,
+  ONCE = 2,
+}
+
+export const SUB_VIEWPORT_CLEAR_MODE_NAMES = enumNamesByValue(SubViewportClearMode);

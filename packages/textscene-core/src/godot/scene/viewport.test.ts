@@ -1,10 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ANISOTROPIC_FILTERING_NAMES,
+  DEBUG_DRAW_NAMES,
+  DebugDraw,
   DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
   DefaultCanvasItemTextureFilter,
   VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
+  POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
+  SCALING_3D_MODE_NAMES,
+  SCREEN_SPACE_AA_NAMES,
+  SUB_VIEWPORT_CLEAR_MODE_NAMES,
+  SUB_VIEWPORT_UPDATE_MODE_NAMES,
+  SubViewportUpdateMode,
+  SDF_OVERSIZE_NAMES,
+  SDF_SCALE_NAMES,
   viewportPositionalShadowAtlas,
+  VRS_MODE_NAMES,
+  VRS_UPDATE_MODE_NAMES,
 } from './viewport';
 
 describe('viewportPositionalShadowAtlas', () => {
@@ -54,5 +67,76 @@ describe('Viewport.DefaultCanvasItemTextureRepeat', () => {
       2: 'MIRROR',
       3: 'PARENT_NODE',
     });
+  });
+});
+
+describe('Viewport enum label tables (viewport.h:99-234)', () => {
+  it('names the screen space AA modes before SCREEN_SPACE_AA_MAX', () => {
+    expect(SCREEN_SPACE_AA_NAMES).toEqual({ 0: 'DISABLED', 1: 'FXAA', 2: 'SMAA' });
+  });
+
+  it('names the SDF oversize and scale steps as Godot spells them', () => {
+    expect(SDF_OVERSIZE_NAMES).toEqual({
+      0: '100_PERCENT',
+      1: '120_PERCENT',
+      2: '150_PERCENT',
+      3: '200_PERCENT',
+    });
+    expect(SDF_SCALE_NAMES).toEqual({ 0: '100_PERCENT', 1: '50_PERCENT', 2: '25_PERCENT' });
+  });
+
+  it('names a shadow atlas quadrant subdivision by its shadow count', () => {
+    expect(POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES).toEqual({
+      0: 'DISABLED',
+      1: '1',
+      2: '4',
+      3: '16',
+      4: '64',
+      5: '256',
+      6: '1024',
+    });
+  });
+
+  it('names the anisotropic filtering levels', () => {
+    expect(ANISOTROPIC_FILTERING_NAMES).toEqual({ 0: 'DISABLED', 1: '2X', 2: '4X', 3: '8X', 4: '16X' });
+  });
+
+  it('names the 3D scaling modes before SCALING_3D_MODE_MAX', () => {
+    expect(SCALING_3D_MODE_NAMES).toEqual({
+      0: 'BILINEAR',
+      1: 'FSR',
+      2: 'FSR2',
+      3: 'METALFX_SPATIAL',
+      4: 'METALFX_TEMPORAL',
+    });
+  });
+
+  it('names the VRS modes and update modes', () => {
+    expect(VRS_MODE_NAMES).toEqual({ 0: 'DISABLED', 1: 'TEXTURE', 2: 'XR' });
+    expect(VRS_UPDATE_MODE_NAMES).toEqual({ 0: 'DISABLED', 1: 'ONCE', 2: 'ALWAYS' });
+  });
+
+  it('names the debug draw modes from DISABLED to INTERNAL_BUFFER (edge case: no MAX sentinel)', () => {
+    expect(Object.keys(DEBUG_DRAW_NAMES)).toHaveLength(27);
+    expect(DEBUG_DRAW_NAMES[DebugDraw.DISABLED]).toBe('DISABLED');
+    expect(DEBUG_DRAW_NAMES[DebugDraw.INTERNAL_BUFFER]).toBe('INTERNAL_BUFFER');
+    expect(DebugDraw.INTERNAL_BUFFER).toBe(26);
+  });
+});
+
+describe('SubViewport enum label tables (viewport.h:871-883)', () => {
+  it('names the update modes with WHEN_VISIBLE at 2', () => {
+    expect(SUB_VIEWPORT_UPDATE_MODE_NAMES).toEqual({
+      0: 'DISABLED',
+      1: 'ONCE',
+      2: 'WHEN_VISIBLE',
+      3: 'WHEN_PARENT_VISIBLE',
+      4: 'ALWAYS',
+    });
+    expect(SubViewportUpdateMode.WHEN_VISIBLE).toBe(2);
+  });
+
+  it('names the clear modes', () => {
+    expect(SUB_VIEWPORT_CLEAR_MODE_NAMES).toEqual({ 0: 'ALWAYS', 1: 'NEVER', 2: 'ONCE' });
   });
 });
