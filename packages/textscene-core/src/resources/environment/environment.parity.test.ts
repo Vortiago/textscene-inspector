@@ -5,8 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { decodeEnvironment } from './decode';
-import { createEnvironmentSettings } from './build';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { environmentSettingsOf } from './testing/environmentSettings';
 
 describe('Environment Godot parity', () => {
   it('ambient_light_color defaults to black (not white)', () => {
@@ -21,17 +20,15 @@ describe('Environment Godot parity', () => {
   it('emits none for DISABLED; emits for BG (from the background) and COLOR', () => {
     // BG(0) is the default source AND CLEAR_COLOR(0) the default mode, so a
     // bare Environment lights the scene with Godot's default clear colour.
-    expect(createEnvironmentSettings(decodeEnvironment({}), DEFAULT_CLEAR_COLOR).ambient).toEqual({
+    expect(environmentSettingsOf({}).ambient).toEqual({
       color: { r: 0.3, g: 0.3, b: 0.3, a: 1 },
       energy: 1,
     });
-    expect(
-      createEnvironmentSettings(decodeEnvironment({ ambient_light_source: '1' }), DEFAULT_CLEAR_COLOR).ambient
-    ).toBeNull(); // DISABLED
-    const colored = createEnvironmentSettings(
-      decodeEnvironment({ ambient_light_source: '2', ambient_light_color: 'Color(0.2, 0.2, 0.2, 1)' }),
-      DEFAULT_CLEAR_COLOR
-    );
+    expect(environmentSettingsOf({ ambient_light_source: '1' }).ambient).toBeNull(); // DISABLED
+    const colored = environmentSettingsOf({
+      ambient_light_source: '2',
+      ambient_light_color: 'Color(0.2, 0.2, 0.2, 1)',
+    });
     expect(colored.ambient).not.toBeNull();
   });
 
@@ -43,18 +40,12 @@ describe('Environment Godot parity', () => {
   });
 
   it('drives the depth fog from fog_enabled, not volumetric_fog', () => {
-    const screen = createEnvironmentSettings(
-      decodeEnvironment({ fog_enabled: 'true', fog_density: '0.01' }),
-      DEFAULT_CLEAR_COLOR
-    );
+    const screen = environmentSettingsOf({ fog_enabled: 'true', fog_density: '0.01' });
     expect(screen.fog).not.toBeNull();
     expect(screen.fog?.density).toBeCloseTo(0.01, 5);
 
     // Volumetric fog alone leaves the depth fog off: the two are separate media.
-    const volOnly = createEnvironmentSettings(
-      decodeEnvironment({ volumetric_fog_enabled: 'true', volumetric_fog_density: '0.05' }),
-      DEFAULT_CLEAR_COLOR
-    );
+    const volOnly = environmentSettingsOf({ volumetric_fog_enabled: 'true', volumetric_fog_density: '0.05' });
     expect(volOnly.fog).toBeNull();
   });
 });

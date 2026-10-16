@@ -82,8 +82,8 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
 }
 
 /**
- * Draws a colour background, or a placeholder for a sky that cannot render. `hasSky` is true when a
- * real sky renders, which owns the background. `hasFog` is true when a fog draws, which fogs it.
+ * Draws a colour background, or a placeholder for a sky that does not resolve. `hasSky` is true when
+ * a sky resolves, so `<SkyLayer>` owns the background. `hasFog` is true when a fog draws, which fogs it.
  */
 function useColorBackground(
   background: EnvironmentSettings['background'],

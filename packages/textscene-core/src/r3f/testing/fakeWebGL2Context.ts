@@ -5,13 +5,13 @@
 
 import * as THREE from 'three';
 
-/** WebGL 2 renderbuffer internal formats. */
+// WebGL 2 renderbuffer internal formats.
 export const RGBA8 = 0x8058;
 export const SRGB8_ALPHA8 = 0x8c43;
 export const RGBA16F = 0x881a;
 export const DEPTH_COMPONENT24 = 0x81a6;
 
-interface FakeContextOptions {
+export interface FakeContextOptions {
   /** The sample counts listed per format. A format with no entry lists none. */
   counts?: Record<number, number[]>;
   /** Collects each format a caller queries, in order. */

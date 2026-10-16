@@ -12,7 +12,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { useCompositorPass, type CompositorPass } from './useCompositorPass';
-import { environmentSettingsOf as settingsOf } from '../../resources/environment/testing/environmentSettings';
+import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import { ResourceLoader } from '../../resources/ResourceLoader';
 import { COMMIT_FRAMES_AFTER_SETTLE, ResourceLoaderContext } from '../../resources/ResourceLoaderContext';
@@ -70,28 +70,28 @@ const advance = (renderer: Renderer, frames: number) =>
 
 describe('useCompositorPass for an Environment', () => {
   it('carries glow when the environment enables it, with nothing emissive in the scene', async () => {
-    const { pass } = await mount(settingsOf({ glow_enabled: 'true' }));
+    const { pass } = await mount(environmentSettingsOf({ glow_enabled: 'true' }));
     expect(pass()?.glow).not.toBeNull();
   });
 
   it('mounts no pass when glow is disabled and nothing else needs one', async () => {
-    const { pass } = await mount(settingsOf({ glow_enabled: 'false' }));
+    const { pass } = await mount(environmentSettingsOf({ glow_enabled: 'false' }));
     expect(pass()).toBeNull();
   });
 
   it('mounts a pass without glow for the adjustments alone', async () => {
-    const { pass } = await mount(settingsOf({ adjustment_enabled: 'true' }));
+    const { pass } = await mount(environmentSettingsOf({ adjustment_enabled: 'true' }));
     expect(pass()).toEqual({ glow: null, samples: 0 });
   });
 
   it('mounts no pass for an enabled glow whose every level weight is zero (edge case)', async () => {
     const levels = Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map((level) => [`glow_levels/${level}`, '0.0']));
-    const { pass } = await mount(settingsOf({ glow_enabled: 'true', ...levels }));
+    const { pass } = await mount(environmentSettingsOf({ glow_enabled: 'true', ...levels }));
     expect(pass()).toBeNull();
   });
 
   it('mounts no pass on a canvas without a real GL context, even for glow (error path)', async () => {
-    const { pass } = await mount(settingsOf({ glow_enabled: 'true' }), { context: null });
+    const { pass } = await mount(environmentSettingsOf({ glow_enabled: 'true' }), { context: null });
     expect(pass()).toBeNull();
   });
 });
