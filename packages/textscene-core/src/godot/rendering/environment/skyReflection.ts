@@ -55,12 +55,13 @@ export interface SkyOctmapLayout {
   downsampledSizes: number[];
 }
 
-/** A sky's octmap array, whose every layer has a mip chain of its own. */
+/**
+ * A sky's octmap array, whose every layer has a mip chain of its own: the layer's own width, then
+ * each of `downsampledSizes`.
+ */
 export interface SkyRadianceLayout extends SkyOctmapLayout {
-  /** The width of each mip of every layer, from the layer's own width. */
-  mipSizes: number[];
   /**
-   * `radiance_pixel_size`, one over the radiance size (`renderer_scene_render_rd.cpp:1394-1396`): a
+   * `radiance_pixel_size`, one over the radiance size (`renderer_scene_render_rd.cpp:1395-1396`): a
    * read picks its mip from the screen derivatives of its direction in these units.
    */
   pixelSize: number;
@@ -80,7 +81,6 @@ export function skyOctmapLayout(radianceSize: number, layers: number): SkyRadian
     borderSize,
     layerSizes: Array.from({ length: layers }, () => size),
     downsampledSizes: halvingSizes(size >> 1, mipmaps - 1),
-    mipSizes: halvingSizes(size, mipmaps),
     pixelSize: 1 / radianceSize,
   };
 }

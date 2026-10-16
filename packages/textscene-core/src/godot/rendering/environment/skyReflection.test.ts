@@ -18,7 +18,7 @@ describe('skyOctmapLayout', () => {
     "lays out a radiance of %i as Godot's array: %i texels wide, %i mips, 0.8 inside the border",
     (radianceSize, size, mips) => {
       const layout = skyOctmapLayout(radianceSize, 8);
-      expect([layout.size, layout.mipSizes.length, layout.borderSize]).toEqual([
+      expect([layout.size, layout.downsampledSizes.length + 1, layout.borderSize]).toEqual([
         size,
         mips,
         expect.closeTo(0.8, 10),
@@ -26,8 +26,8 @@ describe('skyOctmapLayout', () => {
     }
   );
 
-  it('halves each mip of a layer down to 10 texels', () => {
-    expect(skyOctmapLayout(256, 8).mipSizes).toEqual([640, 320, 160, 80, 40, 20, 10]);
+  it("halves each of a layer's other mips down to 10 texels", () => {
+    expect(skyOctmapLayout(256, 8).downsampledSizes).toEqual([320, 160, 80, 40, 20, 10]);
   });
 
   it("counts a read's derivative mip in texels of the radiance size", () => {

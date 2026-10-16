@@ -36,10 +36,10 @@ export const skyLayersSlot = installedOr(
 );
 
 /**
- * The shown sky's `ambient_light_sky_contribution`, its layers' border size, its
- * `radiance_pixel_size` and its last mip. `UniformsUtils.cloneUniforms` keeps a typed array by
- * reference (three r186 `UniformsUtils.js:43-64`), so every material reads this buffer. After a dev
- * server reloads this module, it is the buffer the earlier evaluation installed.
+ * The shown sky's `ambient_light_sky_contribution`, its layers' border size, the scale from a
+ * squared screen derivative to squared texels, and its last mip. `UniformsUtils.cloneUniforms` keeps
+ * a typed array by reference (three r186 `UniformsUtils.js:43-64`), so every material reads this
+ * buffer. After a dev server reloads this module, it is the buffer the earlier evaluation installed.
  */
 export const shownSky = installedOr(SKY_UNIFORMS.shown, Float32Array, () => Float32Array.of(1, 1, 1, 0));
 
@@ -61,8 +61,12 @@ export class SkyLayerArray {
    * array's handle.
    */
   show(contribution: number): void {
-    const { borderSize, pixelSize, mipSizes } = this.layers.layout;
-    shownSky.set([contribution, borderSize, pixelSize, mipSizes.length - 1]);
+    const { borderSize, pixelSize, downsampledSizes } = this.layers.layout;
+    shownSky[0] = contribution;
+    shownSky[1] = borderSize;
+    // One over `vec3_to_oct_lod`'s `pixel_size_sqr` (`oct_inc.glsl:46`), so a fragment multiplies.
+    shownSky[2] = 1 / (4 * pixelSize * pixelSize);
+    shownSky[3] = downsampledSizes.length;
     showInSlot(this.renderer, skyLayersSlot, this.layers.target.texture);
   }
 

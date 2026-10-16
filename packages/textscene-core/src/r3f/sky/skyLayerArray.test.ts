@@ -57,12 +57,13 @@ describe('SkyLayerArray', () => {
     expect(recording.uploads()).toBe(bakedUploads);
   });
 
-  it("shows the sky's share of the ambient, its border size, its pixel size and its last mip", async () => {
+  it("shows the sky's share of the ambient, its border size, its derivative scale and its last mip", async () => {
     const { renderer } = await testRenderer();
 
     new SkyLayerArray(renderer, bakedLayers(renderer, 256)).show(0.25);
 
-    expect(Array.from(shownSky)).toEqual([0.25, Math.fround(0.8), 1 / 256, 6]);
+    // One over `4 * pixel_size * pixel_size` at a pixel size of 1/256.
+    expect(Array.from(shownSky)).toEqual([0.25, Math.fround(0.8), 256 ** 2 / 4, 6]);
   });
 
   it('shows the layout of the sky shown last (edge case)', async () => {
@@ -71,7 +72,7 @@ describe('SkyLayerArray', () => {
 
     new SkyLayerArray(renderer, bakedLayers(renderer, 32)).show(1);
 
-    expect([shownSky[2], shownSky[3]]).toEqual([1 / 32, 3]);
+    expect([shownSky[2], shownSky[3]]).toEqual([32 ** 2 / 4, 3]);
   });
 
   it('leaves the lit materials sampling none of its array when hidden, as it is freed next (error case)', async () => {

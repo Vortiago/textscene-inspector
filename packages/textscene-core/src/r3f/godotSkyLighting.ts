@@ -28,20 +28,17 @@ const GODOT_SKY_LOD = /* glsl */ `float godotSkyLod( const in vec3 direction ) {
 
 		vec3 directionDdx = dFdx( direction );
 		vec3 directionDdy = dFdy( direction );
-		float pixelSizeSqr = 4.0 * ${shown}[ 0 ].z * ${shown}[ 0 ].z;
-		float ddx = dot( directionDdx, directionDdx ) / pixelSizeSqr;
-		float ddy = dot( directionDdy, directionDdy ) / pixelSizeSqr;
-		float lod = 0.25 * log2( max( ddx, ddy ) + 1e-6 );
-		return min( lod, ${shown}[ 0 ].w );
+		float texelsSqr = max( dot( directionDdx, directionDdx ), dot( directionDdy, directionDdy ) ) * GODOT_SKY_DERIVATIVE_SCALE;
+		return min( 0.25 * log2( texelsSqr + 1e-6 ), GODOT_SKY_LAST_MIP );
 
 	}
 
 	`;
 
-/** Radiance layer `layer` in the world direction `direction`, at mip `lod`. A layer past the last reads the last. */
-const GODOT_SKY_READ = /* glsl */ `vec3 godotSkyRead( const in vec3 direction, const in float layer, const in float lod ) {
+/** Radiance layer `layer` at the octmap texel `uv`, at mip `lod`. A layer past the last reads the last. */
+const GODOT_SKY_READ = /* glsl */ `vec3 godotSkyRead( const in vec2 uv, const in float layer, const in float lod ) {
 
-		return textureLod( ${layers}, vec3( vec3ToOctWithBorder( direction, ${shown}[ 0 ].y ), layer ), lod ).rgb;
+		return textureLod( ${layers}, vec3( uv, layer ), lod ).rgb;
 
 	}
 
@@ -55,7 +52,8 @@ const GODOT_SKY_READ = /* glsl */ `vec3 godotSkyRead( const in vec3 direction, c
 const GODOT_IBL_IRRADIANCE = /* glsl */ `vec3 godotIBLIrradiance( const in vec3 normal ) {
 
 		vec3 ambientDir = envMapRotation * ( vec4( normal, 0.0 ) * viewMatrix ).xyz;
-		return PI * godotSkyRead( ambientDir, ${LAST_LAYER}, godotSkyLod( ambientDir ) ) * envMapIntensity * ${shown}[ 0 ].x;
+		vec2 uv = vec3ToOctWithBorder( ambientDir, GODOT_SKY_BORDER_SIZE );
+		return PI * godotSkyRead( uv, ${LAST_LAYER}, godotSkyLod( ambientDir ) ) * envMapIntensity * GODOT_SKY_CONTRIBUTION;
 
 	}
 
@@ -69,9 +67,10 @@ const GODOT_SKY_LAYER = /* glsl */ `vec3 godotSkyLayer( const in vec3 reflectVec
 
 		float roughnessLod;
 		float blend = modf( sqrt( roughness ) * ${LAST_LAYER}, roughnessLod );
+		vec2 uv = vec3ToOctWithBorder( reflectVec, GODOT_SKY_BORDER_SIZE );
 		float lod = godotSkyLod( reflectVec );
-		vec3 sharper = godotSkyRead( reflectVec, roughnessLod, lod );
-		vec3 rougher = godotSkyRead( reflectVec, roughnessLod + 1.0, lod );
+		vec3 sharper = godotSkyRead( uv, roughnessLod, lod );
+		vec3 rougher = godotSkyRead( uv, roughnessLod + 1.0, lod );
 		return mix( sharper, rougher, blend ) * envMapIntensity;
 
 	}
@@ -107,10 +106,15 @@ const GODOT_IBL_RADIANCE = /* glsl */ `vec3 godotIBLRadiance( const in vec3 view
 
 /**
  * The shown sky is a one-element array, not a `vec4`: three caches a uniform by its value's identity
- * (r186 `WebGLUniforms.js:163-173`), so a rewritten buffer would never reach the GPU.
+ * (r186 `WebGLUniforms.js:163-173`), so a rewritten buffer would never reach the GPU. Its fields
+ * are in the order `SkyLayerArray.show` writes them.
  */
 const SKY_LAYER_DECLARATIONS = /* glsl */ `uniform highp sampler2DArray ${layers};
 	uniform vec4 ${shown}[ 1 ];
+	#define GODOT_SKY_CONTRIBUTION ${shown}[ 0 ].x
+	#define GODOT_SKY_BORDER_SIZE ${shown}[ 0 ].y
+	#define GODOT_SKY_DERIVATIVE_SCALE ${shown}[ 0 ].z
+	#define GODOT_SKY_LAST_MIP ${shown}[ 0 ].w
 	${OCTMAP_GLSL}
 	`;
 

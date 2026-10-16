@@ -159,14 +159,27 @@ describe('bakeAtlasLayers', () => {
     return () => set.mock.calls.filter(([drawn]) => drawn === target).map(([, layer, mip]) => [layer, mip]);
   }
 
-  it("draws the capture into mip 0 of the probe's layer, and each filtered layer into its own mip", async () => {
+  it("copies the capture's octmap into mip 0 of the probe's layer", async () => {
+    const { renderer } = await testRenderer();
+    const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 3);
+    const copies = vi.spyOn(renderer, 'copyTextureToTexture');
+
+    bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 2, 'importance-sample');
+
+    const intoAtlas = copies.mock.calls.filter(([, destination]) => destination === atlas.target.texture);
+    expect(intoAtlas.map(([, , , position, , mip]) => [(position as THREE.Vector3).z, mip ?? 0])).toEqual([
+      [2, 0],
+    ]);
+  });
+
+  it("draws each filtered layer into its own mip of the probe's layer", async () => {
     const { renderer } = await testRenderer();
     const atlas = createReflectionAtlas(reflectionAtlasLayout(false), 3);
     const draws = drawsInto(renderer, atlas.target);
 
     bakeAtlasLayers(renderer, radianceCube(renderer), atlas, 2, 'importance-sample');
 
-    expect(draws()).toEqual([0, 1, 2, 3, 4, 5, 6, 7].map((mip) => [2, mip]));
+    expect(draws()).toEqual([1, 2, 3, 4, 5, 6, 7].map((mip) => [2, mip]));
   });
 
   it("filters an update-always probe's layers 1 to 6 with the fast filter", async () => {
