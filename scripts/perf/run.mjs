@@ -11,7 +11,7 @@
  *   node scripts/perf/run.mjs --scene glow
  */
 
-/* global document, window */ // The addInitScript and evaluate callbacks run in the browser.
+/* global document */ // The evaluate callback runs in the browser.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -25,8 +25,6 @@ import {
   gotoFixture,
   killPreviewGroup,
   PERFORMANCE_TESTIDS,
-  SETTLE_INITIAL_MS,
-  SHOW_PERFORMANCE_STORAGE_KEY,
   startPreview,
   TEXTURE_WORK_STATUS_TESTID,
   textureWorkCleared,
@@ -51,7 +49,9 @@ const MAX_STEADY_WAIT_MS = 180000;
 async function main() {
   const { update, scene: only } = parseArgs(process.argv.slice(2));
   const scenes = only ? BUDGET_SCENES.filter((s) => s.name === only) : BUDGET_SCENES;
-  if (scenes.length === 0) fail(`no budget scene named "${only}"`, 2);
+  if (scenes.length === 0) {
+    fail(`no budget scene named "${only}". Known: ${BUDGET_SCENES.map((s) => s.name).join(', ')}`, 2);
+  }
 
   ensureWebBuilt();
   await assertPortFree(PORT);
@@ -85,11 +85,12 @@ async function main() {
   process.exit(0);
 }
 
+/** Parses `--update` and `--scene <name>`. Anything else is a usage error (exit 2). */
 function parseArgs(argv) {
   const opts = { update: false, scene: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--update') opts.update = true;
-    else if (argv[i] === '--scene' && argv[i + 1]) opts.scene = argv[++i];
+    else if (argv[i] === '--scene') opts.scene = argv[++i] || fail('--scene needs a scene name', 2);
     else fail(`unknown argument: ${argv[i]}`, 2);
   }
   return opts;
@@ -100,11 +101,7 @@ function parseArgs(argv) {
  * scene in its 2D workspace, so one page serves both.
  */
 async function profiledPage(browser) {
-  const context = await createCaptureContext(browser, { frameOnOpen: true });
-  await context.addInitScript(
-    ([key, value]) => window.localStorage.setItem(key, value),
-    [SHOW_PERFORMANCE_STORAGE_KEY, 'true']
-  );
+  const context = await createCaptureContext(browser, { frameOnOpen: true, showPerformance: true });
   const page = await context.newPage();
   return { page, errors: attachConsoleGate(page) };
 }
@@ -121,7 +118,6 @@ async function measureScene({ page, errors }, baseUrl, scene) {
   );
   const { canvas, reason } = await findCanvas(page);
   if (!canvas) return { work: null, reason };
-  await page.waitForTimeout(SETTLE_INITIAL_MS);
   if (!(await textureWorkCleared(page.getByTestId(TEXTURE_WORK_STATUS_TESTID)))) {
     return { work: null, reason: 'texture work still pending' };
   }
@@ -167,7 +163,7 @@ function readOverlay(page) {
 }
 
 function checkBudgets(measured) {
-  const budgets = JSON.parse(readFileSync(BUDGETS_PATH, 'utf8'));
+  const budgets = readBudgets();
   let overrunScenes = 0;
   for (const [name, work] of Object.entries(measured)) {
     const budget = budgets[name];
@@ -192,12 +188,16 @@ function checkBudgets(measured) {
 
 /** Writes the measured work over the budgets of the scenes this run measured, and keeps the rest. */
 function writeBudgets(measured) {
-  const budgets = { ...JSON.parse(readFileSync(BUDGETS_PATH, 'utf8')), ...measured };
+  const budgets = { ...readBudgets(), ...measured };
   const ordered = Object.fromEntries(BUDGET_SCENES.map(({ name }) => [name, budgets[name]]));
   writeFileSync(BUDGETS_PATH, `${JSON.stringify(ordered, null, 2)}\n`);
   console.log(
     `[perf] ${Object.keys(measured).length} budget(s) written to ${BUDGETS_PATH}. Review, then commit.`
   );
+}
+
+function readBudgets() {
+  return JSON.parse(readFileSync(BUDGETS_PATH, 'utf8'));
 }
 
 function fail(message, code = 1) {

@@ -14,9 +14,6 @@ export function manualClock(): { now: () => number; advance: (ms: number) => voi
   return { now: () => time, advance: (ms) => (time += ms) };
 }
 
-/** A context with no timer query. */
-const CPU_ONLY_CONTEXT = { getExtension: () => null };
-
 /**
  * The members of a renderer a profile reads: a context with no timer query, and a draw-call counter
  * a test moves by adding to `info.render.calls`. A fake renderer spreads them beside its own.
@@ -27,7 +24,7 @@ export function profiledRendererMembers() {
     render: { calls: 0 },
     reset: () => (info.render.calls = 0),
   };
-  return { getContext: () => CPU_ONLY_CONTEXT, info };
+  return { getContext: () => ({ getExtension: () => null }), info };
 }
 
 /** A renderer with only the members a profile reads. */
