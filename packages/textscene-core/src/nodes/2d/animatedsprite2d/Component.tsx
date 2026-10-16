@@ -10,12 +10,9 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
-import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
 import { frameSizePx, spriteSamplerClone, WHOLE_FRAME } from '../../../r3f/spriteFrame';
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
-import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
@@ -180,7 +177,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={({ color, opacity }, material, lighting) => {
+      body={({ color, opacity }, _material, pixelMaterial) => {
         if (showPlaceholder) return <MissingResourcePlaceholder shape="plane" name={node.name} />;
         if (!displayedTexture) return null;
 
@@ -195,11 +192,7 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
             depthWrite: false,
             defines: srgbDefines,
           },
-          merge: [
-            canvasItemFacing(),
-            canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX),
-            lighting,
-          ],
+          merge: [pixelMaterial],
         });
 
         return (

@@ -8,15 +8,9 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import {
-  canvasItemBlendState,
-  type CanvasItemBlendState,
-} from '../../../resources/materials/canvasitemmaterial/renderer';
-import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
-import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
+import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../r3f/godotColor';
-import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { Line2DProperties } from './types';
 import { jointWedge, type JointOptions } from './lineJoints';
@@ -41,20 +35,16 @@ export function Line2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={(tint, material, lighting) => {
-        if (!geometry) {
-          return null;
-        }
-        return (
+      body={(tint, _material, pixelMaterial) =>
+        geometry ? (
           <LineMesh
             geometry={geometry}
             tint={tint}
             color={props.defaultColor}
-            blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
-            lighting={lighting}
+            pixelMaterial={pixelMaterial}
           />
-        );
-      }}
+        ) : null
+      }
     >
       {children}
     </CanvasItem2D>
@@ -65,14 +55,12 @@ function LineMesh({
   geometry,
   tint,
   color,
-  blend,
-  lighting,
+  pixelMaterial,
 }: {
   geometry: THREE.BufferGeometry;
   tint: CanvasItemTint;
   color: Line2DProperties['defaultColor'];
-  blend: CanvasItemBlendState;
-  lighting: CanvasItemLightingProps;
+  pixelMaterial: CanvasItemPixelMaterial;
 }) {
   const { fill, opacity } = useMemo(() => {
     const composed = multiplyModulate(tint.own, color);
@@ -86,9 +74,9 @@ function LineMesh({
     props: { color: fill, opacity, transparent: true, depthWrite: false },
     // `lineJoints.ts` picks a corner's outward normal from the sign of the turn,
     // so left and right wedges wind opposite ways while the quads all wind alike.
-    // `canvasItemFacing()` draws them in one pass. A split by facing would draw the
+    // The canvas-item facing draws them in one pass. A split by facing would draw the
     // wedges apart from their quads, hidden only by the one flat colour.
-    merge: [canvasItemFacing(), blend, lighting],
+    merge: [pixelMaterial],
   });
 
   return (
