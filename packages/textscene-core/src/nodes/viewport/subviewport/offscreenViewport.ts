@@ -209,8 +209,8 @@ export function applyOrthoFrame(camera: THREE.OrthographicCamera, frame: OrthoFr
 }
 
 /**
- * The projection aspect for a target of `size` pixels. `<Camera3D>` builds every
- * camera at the canvas's 16:9, so the offscreen pass overrides it for its render.
+ * The projection aspect for a target of `size` pixels, which the offscreen pass fits its
+ * `<Camera3D>` to for its render.
  */
 export function viewportAspect(size: Vector2): number {
   if (!(size.x > 0) || !(size.y > 0)) return 1;

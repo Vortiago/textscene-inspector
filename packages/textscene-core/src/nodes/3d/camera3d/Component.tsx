@@ -4,13 +4,14 @@
  * <Canvas>. This is a passive scene-tree node.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
+import type { Camera as FiberCamera } from '@react-three/fiber';
 import type { Camera3DProperties } from './types';
-import { KeepAspectMode, ProjectionMode } from './types';
+import { ProjectionMode } from './types';
+import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { getFovy } from '../../../godot/math/projection.js';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useGizmoVisible } from '../lights/shared/lightHelpers';
@@ -43,51 +44,36 @@ export function Camera3D({ node, children }: NodeComponentProps) {
 
   const safeNear = Math.max(0.001, properties.near);
   const safeFar = Math.max(safeNear + 0.1, properties.far);
+  const lens = useMemo<CameraLens>(
+    () => ({ fov: properties.fov, size: properties.size, keepAspect: properties.keep_aspect }),
+    [properties.fov, properties.size, properties.keep_aspect]
+  );
+  const CameraElement =
+    properties.projection === ProjectionMode.PROJECTION_ORTHOGONAL
+      ? 'orthographicCamera'
+      : 'perspectiveCamera';
 
-  if (properties.projection === ProjectionMode.PROJECTION_ORTHOGONAL) {
-    return (
-      <OrthographicCamera3D
-        name={node.name}
-        tscnPath={tscnPath}
-        current={properties.current}
-        position={offsetPosition}
-        rotation={rotation}
-        scale={scale}
-        size={properties.size}
-        keepAspect={properties.keep_aspect}
-        near={safeNear}
-        far={safeFar}
-      >
-        {children}
-      </OrthographicCamera3D>
-    );
-  }
-
-  // PROJECTION_FRUSTUM is not yet supported and falls back to perspective. With keep_aspect =
-  // KEEP_WIDTH the stored fov is horizontal, and three.js PerspectiveCamera.fov is vertical, so
-  // convert (Godot's get_fovy).
-  const perspectiveFov =
-    properties.keep_aspect === KeepAspectMode.KEEP_WIDTH
-      ? getFovy(properties.fov, 1 / DEFAULT_ASPECT)
-      : properties.fov;
+  // PROJECTION_FRUSTUM is not yet supported and falls back to perspective.
   return (
-    <PerspectiveCamera3D
+    <SceneCamera
+      element={CameraElement}
       name={node.name}
       tscnPath={tscnPath}
       current={properties.current}
       position={offsetPosition}
       rotation={rotation}
       scale={scale}
-      fov={perspectiveFov}
+      lens={lens}
       near={safeNear}
       far={safeFar}
     >
       {children}
-    </PerspectiveCamera3D>
+    </SceneCamera>
   );
 }
 
-interface PerspectiveCamera3DProps {
+interface SceneCameraProps {
+  element: 'perspectiveCamera' | 'orthographicCamera';
   name: string;
   tscnPath: string;
   /** Godot's `Camera3D.current`: which camera the owning viewport renders through. */
@@ -95,25 +81,26 @@ interface PerspectiveCamera3DProps {
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
-  fov: number;
+  lens: CameraLens;
   near: number;
   far: number;
   children?: ReactNode;
 }
 
-function PerspectiveCamera3D({
+function SceneCamera({
+  element: CameraElement,
   name,
   tscnPath,
   current,
   position,
   rotation,
   scale,
-  fov,
+  lens,
   near,
   far,
   children,
-}: PerspectiveCamera3DProps) {
-  const cameraRef = useRef<THREE.PerspectiveCamera>(null);
+}: SceneCameraProps) {
+  const cameraRef = useRef<FiberCamera>(null);
   useEffect(() => {
     if (cameraRef.current) {
       // Tag the camera with its TSCN path so ActiveCameraSwitcher can find it,
@@ -123,85 +110,28 @@ function PerspectiveCamera3D({
       cameraRef.current.userData.tscnCurrent = current;
     }
   }, [tscnPath, current]);
+  // `manual` keeps R3F's resize from refitting the projection to the canvas in pixels. The viewport
+  // that renders through the camera refits it to its own aspect, and a lens change keeps that aspect.
+  useLayoutEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    camera.manual = true;
+    setLens(camera, lens);
+    fitToAspect(camera, fittedAspect(camera) ?? DEFAULT_ASPECT);
+  }, [CameraElement, lens, near, far]);
   return (
     <>
-      <perspectiveCamera
+      <CameraElement
         ref={cameraRef}
         name={name}
         position={position}
         rotation={rotation}
         scale={scale}
-        fov={fov}
-        aspect={DEFAULT_ASPECT}
         near={near}
         far={far}
       >
         {children}
-      </perspectiveCamera>
-      <CameraGizmo cameraRef={cameraRef} name={`${name}_helper`} />
-    </>
-  );
-}
-
-interface OrthographicCamera3DProps {
-  name: string;
-  tscnPath: string;
-  /** Godot's `Camera3D.current`: which camera the owning viewport renders through. */
-  current: boolean;
-  position: [number, number, number];
-  rotation: [number, number, number];
-  scale: [number, number, number];
-  size: number;
-  keepAspect: KeepAspectMode;
-  near: number;
-  far: number;
-  children?: ReactNode;
-}
-
-function OrthographicCamera3D({
-  name,
-  tscnPath,
-  current,
-  position,
-  rotation,
-  scale,
-  size,
-  keepAspect,
-  near,
-  far,
-  children,
-}: OrthographicCamera3DProps) {
-  const cameraRef = useRef<THREE.OrthographicCamera>(null);
-  // Godot `size` is the full frustum dimension (diameter), so the half-extent
-  // is size/2 (Projection::set_orthogonal divides by 2). KEEP_HEIGHT (1,
-  // default): `size` is the vertical dimension, width derived from aspect.
-  // KEEP_WIDTH (0): `size` is horizontal, height derived from aspect.
-  const isKeepWidth = keepAspect === KeepAspectMode.KEEP_WIDTH;
-  const halfHeight = (isKeepWidth ? size / DEFAULT_ASPECT : size) / 2;
-  const halfWidth = (isKeepWidth ? size : size * DEFAULT_ASPECT) / 2;
-  useEffect(() => {
-    if (cameraRef.current) {
-      cameraRef.current.userData.tscnPath = tscnPath;
-      cameraRef.current.userData.tscnCurrent = current;
-    }
-  }, [tscnPath, current]);
-  return (
-    <>
-      <orthographicCamera
-        ref={cameraRef}
-        name={name}
-        position={position}
-        rotation={rotation}
-        scale={scale}
-        left={-halfWidth}
-        right={halfWidth}
-        top={halfHeight}
-        bottom={-halfHeight}
-        near={near}
-        far={far}
-      >
-        {children}
-      </orthographicCamera>
+      </CameraElement>
       <CameraGizmo cameraRef={cameraRef} name={`${name}_helper`} />
     </>
   );

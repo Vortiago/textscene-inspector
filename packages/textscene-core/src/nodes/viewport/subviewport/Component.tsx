@@ -39,6 +39,7 @@ import {
 } from './offscreenViewport';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
+import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
@@ -172,16 +173,10 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
       recompileOnCurveChange(source, portalCurve.current);
     }
 
-    // A `<Camera3D>` perspective camera carries the canvas aspect (16:9). Inside
-    // the viewport it frames the target rect, and it is restored after, since
-    // the main canvas may render through the same camera. Only this pass touches
-    // that state, so it stays out of the shared helper.
-    const perspective = camera as THREE.PerspectiveCamera | null;
-    const restoreAspect = perspective?.isPerspectiveCamera ? perspective.aspect : null;
-    if (perspective?.isPerspectiveCamera) {
-      perspective.aspect = viewportAspect({ x: width, y: height });
-      perspective.updateProjectionMatrix();
-    }
+    // A `<Camera3D>` camera carries the canvas aspect. Inside the viewport it frames the target
+    // rect, and it is restored after, since the main canvas may render through the same camera.
+    const restoreAspect = camera ? fittedAspect(camera) : null;
+    if (camera) fitToAspect(camera, viewportAspect({ x: width, y: height }));
 
     try {
       renderToOffscreenTarget(gl, {
@@ -202,10 +197,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         },
       });
     } finally {
-      if (perspective?.isPerspectiveCamera && restoreAspect !== null) {
-        perspective.aspect = restoreAspect;
-        perspective.updateProjectionMatrix();
-      }
+      if (camera && restoreAspect !== null) fitToAspect(camera, restoreAspect);
     }
   }, [
     rendersInline,

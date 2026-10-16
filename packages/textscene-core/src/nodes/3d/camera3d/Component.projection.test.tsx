@@ -112,4 +112,29 @@ describe('Camera3D projection (assertions 60–66)', () => {
     // same `size`. If this fails, keep_aspect is being ignored.
     expect(widthCam.right === heightCam.right && widthCam.top === heightCam.top).toBe(false);
   });
+
+  it('builds the orthographic projection matrix from `size`, not the constructor frustum', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 8 })} />
+    );
+    const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
+    // An orthographic matrix scales y by 2 / (top - bottom).
+    expect(o.projectionMatrix.elements[5]).toBeCloseTo(2 / 8, 6);
+  });
+
+  it('rebuilds the projection when `size` changes', async () => {
+    const orthographic = (size: number) =>
+      makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size });
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={orthographic(8)} />);
+    await renderer.update(<Camera3D node={orthographic(2)} />);
+    const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
+    expect(o.projectionMatrix.elements[5]).toBeCloseTo(2 / 2, 6);
+  });
+
+  it('builds the perspective projection matrix from `fov`', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ fov: 90 })} />);
+    const p = instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByType('PerspectiveCamera'));
+    // A perspective matrix scales y by 1 / tan(fovy / 2), and tan(45°) is 1.
+    expect(p.projectionMatrix.elements[5]).toBeCloseTo(1, 6);
+  });
 });
