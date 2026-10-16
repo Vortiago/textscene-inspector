@@ -22,6 +22,7 @@ export {
   CANVAS_CAPTURE,
   FIT_ON_OPEN_2D_STORAGE_KEY,
   NETWORK_IDLE_MS,
+  PERFORMANCE_TESTIDS,
   SETTLE_INITIAL_MS,
   SETTLE_INTERVAL_MS,
   SETTLE_MAX_ATTEMPTS,
@@ -38,11 +39,13 @@ export {
   warmUpGLContext,
 } from './preview/captureContext.mjs';
 export { findCanvas2DFrame, readViewportMode, setDisplayToggle } from './preview/viewportProbes.mjs';
+export { withPreviewBrowser } from './preview/session.mjs';
 export {
   findCanvas,
   findCaptureTarget,
   gotoFixture,
   isUniformImage,
+  openScene,
   settleCanvas,
   textureWorkCleared,
   writeCaptureImage,
