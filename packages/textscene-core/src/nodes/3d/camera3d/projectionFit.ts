@@ -1,16 +1,20 @@
 /**
  * Fits a Camera3D's three camera to the aspect of the viewport it renders, as Godot rebuilds the
- * projection from `fov` or `size` and `keep_aspect` for each viewport (`camera_3d.cpp:268-283`).
+ * projection from `fov`, `size`, `keep_aspect` and `frustum_offset` for each viewport
+ * (`camera_3d.cpp:268-283`).
  */
 import type * as THREE from 'three';
 import { getFovy } from '../../../godot/math/projection.js';
-import { KeepAspectMode } from './types';
+import { radToDeg } from '../../../godot/math/math.js';
+import { KeepAspectMode, ProjectionMode } from './types';
 
 /** The Camera3D properties that the projection takes, before the viewport aspect. */
 export interface CameraLens {
+  projection: ProjectionMode;
   fov: number;
   size: number;
   keepAspect: KeepAspectMode;
+  frustumOffset: { x: number; y: number };
 }
 
 interface LensFit {
@@ -43,6 +47,10 @@ export function fitToAspect(camera: THREE.Camera, aspect: number): void {
   fit.aspect = aspect;
   if (fittable.isOrthographicCamera) fitOrthographic(camera as THREE.OrthographicCamera, fit.lens, aspect);
   if (fittable.isPerspectiveCamera) fitPerspective(camera as THREE.PerspectiveCamera, fit.lens, aspect);
+  // After the perspective fit, which sets the aspect the frustum's width reads.
+  if (fit.lens.projection === ProjectionMode.PROJECTION_FRUSTUM) {
+    fitFrustum(camera as THREE.PerspectiveCamera, fit.lens, aspect);
+  }
 }
 
 /** The aspect of the last fit, or null for a camera never fitted. */
@@ -65,4 +73,17 @@ function fitPerspective(camera: THREE.PerspectiveCamera, lens: CameraLens, aspec
   camera.fov = lens.keepAspect === KeepAspectMode.KEEP_WIDTH ? getFovy(lens.fov, 1 / aspect) : lens.fov;
   camera.aspect = aspect;
   camera.updateProjectionMatrix();
+}
+
+/**
+ * `Projection::set_frustum` (`projection.cpp:396-402`), which `camera_3d.cpp:280` calls without
+ * `keep_aspect`: `size` is the height at the near plane, the width is `size × aspect`, and
+ * `frustum_offset` shifts both in near-plane units. three's view offset holds the shift, so a later
+ * `updateProjectionMatrix` keeps it.
+ */
+function fitFrustum(camera: THREE.PerspectiveCamera, lens: CameraLens, aspect: number): void {
+  const height = lens.size;
+  const width = lens.size * aspect;
+  camera.fov = radToDeg(2 * Math.atan(height / 2 / camera.near));
+  camera.setViewOffset(width, height, lens.frustumOffset.x, -lens.frustumOffset.y, width, height);
 }

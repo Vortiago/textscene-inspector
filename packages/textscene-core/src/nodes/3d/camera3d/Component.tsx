@@ -45,16 +45,28 @@ export function Camera3D({ node, children }: NodeComponentProps) {
   const safeNear = Math.max(0.001, properties.near);
   const safeFar = Math.max(safeNear + 0.1, properties.far);
   const lens = useMemo<CameraLens>(
-    () => ({ fov: properties.fov, size: properties.size, keepAspect: properties.keep_aspect }),
-    [properties.fov, properties.size, properties.keep_aspect]
+    () => ({
+      projection: properties.projection,
+      fov: properties.fov,
+      size: properties.size,
+      keepAspect: properties.keep_aspect,
+      frustumOffset: properties.frustum_offset,
+    }),
+    [
+      properties.projection,
+      properties.fov,
+      properties.size,
+      properties.keep_aspect,
+      properties.frustum_offset,
+    ]
   );
   const CameraElement =
     properties.projection === ProjectionMode.PROJECTION_ORTHOGONAL
       ? 'orthographicCamera'
       : 'perspectiveCamera';
 
-  // PROJECTION_FRUSTUM is not yet supported and falls back to perspective. A new projection is a
-  // new three camera, so the key remounts the tag, the lens fit and the gizmo with it.
+  // PROJECTION_FRUSTUM draws through a perspective camera with a view offset. A new three camera
+  // class remounts, through the key, the tag, the lens fit and the gizmo with it.
   return (
     <SceneCamera
       key={CameraElement}

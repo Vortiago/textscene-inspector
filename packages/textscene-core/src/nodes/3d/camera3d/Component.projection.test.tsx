@@ -135,4 +135,18 @@ describe('Camera3D projection (assertions 60–66)', () => {
     // A perspective matrix scales y by 1 / tan(fovy / 2), and tan(45°) is 1.
     expect(p.projectionMatrix.elements[5]).toBeCloseTo(1, 6);
   });
+
+  it('draws PROJECTION_FRUSTUM through `size` and `frustum_offset` at the near plane', async () => {
+    const node = makeNode({
+      projection: ProjectionMode.PROJECTION_FRUSTUM,
+      size: 2,
+      near: 1,
+      frustum_offset: { x: 0.5, y: 0.25 },
+    });
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={node} />);
+    const p = instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByType('PerspectiveCamera'));
+    // The near plane spans 2 × 16/9 by 2, shifted by the offset: (t + b) / (t - b) is 0.5 / 2.
+    expect(p.projectionMatrix.elements[5]).toBeCloseTo(1, 6);
+    expect(p.projectionMatrix.elements[9]).toBeCloseTo(0.25, 6);
+  });
 });

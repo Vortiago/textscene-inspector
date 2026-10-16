@@ -1,18 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { fitToAspect, fittedAspect, setLens } from './projectionFit';
-import { KeepAspectMode } from './types';
+import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
+import { KeepAspectMode, ProjectionMode } from './types';
 import { radToDeg } from '../../../godot/math/math';
+
+/** A lens at Godot's Camera3D defaults, with the given properties. */
+function lensOf(properties: Partial<CameraLens>): CameraLens {
+  return {
+    projection: ProjectionMode.PROJECTION_PERSPECTIVE,
+    fov: 75,
+    size: 1,
+    keepAspect: KeepAspectMode.KEEP_HEIGHT,
+    frustumOffset: { x: 0, y: 0 },
+    ...properties,
+  };
+}
 
 function orthographic(size: number, keepAspect: KeepAspectMode) {
   const camera = new THREE.OrthographicCamera();
-  setLens(camera, { fov: 75, size, keepAspect });
+  setLens(camera, lensOf({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size, keepAspect }));
   return camera;
 }
 
 function perspective(fov: number, keepAspect: KeepAspectMode) {
   const camera = new THREE.PerspectiveCamera();
-  setLens(camera, { fov, size: 1, keepAspect });
+  setLens(camera, lensOf({ fov, keepAspect }));
+  return camera;
+}
+
+/** A frustum camera with its near plane at 1, where `size` and the offset are measured. */
+function frustum(size: number, frustumOffset: { x: number; y: number }) {
+  const camera = new THREE.PerspectiveCamera(50, 1, 1, 100);
+  setLens(camera, lensOf({ projection: ProjectionMode.PROJECTION_FRUSTUM, size, frustumOffset }));
   return camera;
 }
 
@@ -50,6 +69,29 @@ describe('fitToAspect', () => {
     expect(camera.fov).toBeCloseTo(radToDeg(Math.atan(0.5) * 2), 6);
   });
 
+  it('frames `size` by `size × aspect` at the near plane under PROJECTION_FRUSTUM', () => {
+    const camera = frustum(2, { x: 0, y: 0 });
+    fitToAspect(camera, 2);
+    // A frustum matrix scales x by 2n / (r - l) and y by 2n / (t - b).
+    expect(camera.projectionMatrix.elements[0]).toBeCloseTo(2 / 4, 6);
+    expect(camera.projectionMatrix.elements[5]).toBeCloseTo(2 / 2, 6);
+  });
+
+  it('shifts the frustum by `frustum_offset`, as `Projection::set_frustum` does', () => {
+    const camera = frustum(2, { x: 0.5, y: 0.25 });
+    fitToAspect(camera, 2);
+    // (r + l) / (r - l) and (t + b) / (t - b): the planes run from -1.5 to 2.5 and -0.75 to 1.25.
+    expect(camera.projectionMatrix.elements[8]).toBeCloseTo(1 / 4, 6);
+    expect(camera.projectionMatrix.elements[9]).toBeCloseTo(0.5 / 2, 6);
+  });
+
+  it('keeps the frustum through a later rebuild of three’s own projection (edge case)', () => {
+    const camera = frustum(2, { x: 0.5, y: 0.25 });
+    fitToAspect(camera, 2);
+    camera.updateProjectionMatrix();
+    expect(camera.projectionMatrix.elements[8]).toBeCloseTo(1 / 4, 6);
+  });
+
   it('leaves a camera with no lens unchanged (edge case)', () => {
     const camera = new THREE.PerspectiveCamera(50, 1);
     fitToAspect(camera, 2);
@@ -73,14 +115,14 @@ describe('setLens', () => {
   it('keeps the aspect of an earlier fit for the new lens', () => {
     const camera = orthographic(2, KeepAspectMode.KEEP_HEIGHT);
     fitToAspect(camera, 1.5);
-    setLens(camera, { fov: 75, size: 4, keepAspect: KeepAspectMode.KEEP_HEIGHT });
+    setLens(camera, lensOf({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 }));
     expect(fittedAspect(camera)).toBe(1.5);
   });
 
   it('leaves the projection alone until the next fit (edge case)', () => {
     const camera = orthographic(2, KeepAspectMode.KEEP_HEIGHT);
     fitToAspect(camera, 1);
-    setLens(camera, { fov: 75, size: 4, keepAspect: KeepAspectMode.KEEP_HEIGHT });
+    setLens(camera, lensOf({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 }));
     expect(camera.top).toBe(1);
   });
 
