@@ -22,6 +22,7 @@ import {
   type AlphaAntialiasingCut,
 } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { emissionScalars } from './emission';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { BlendMode } from '../../../godot/rendering/materials/blendMode';
 import { CullMode } from '../../../godot/rendering/materials/cullMode';
 import { DistanceFadeMode } from '../../../godot/rendering/materials/distanceFadeMode';
@@ -205,7 +206,11 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     blendMode,
     cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),
     cullModeExplicit: properties['cull_mode'] !== undefined,
-    shadingMode: properties['shading_mode'] === String(ShadingMode.UNSHADED) ? 'unshaded' : 'per_pixel',
+    shadingMode:
+      intOr(properties['shading_mode'], ShadingMode.PER_PIXEL, `${CONTEXT}.shading_mode`) ===
+      ShadingMode.UNSHADED
+        ? 'unshaded'
+        : 'per_pixel',
     // `material.cpp:2462-2468`: the setter checks no range.
     diffuseMode: intOr(properties['diffuse_mode'], DiffuseMode.DIFFUSE_BURLEY, CONTEXT),
     specularMode: intOr(properties['specular_mode'], SpecularMode.SPECULAR_SCHLICK_GGX, CONTEXT),
@@ -235,7 +240,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     rimTint: rimEnabled
       ? clamp(floatOr(properties['rim_tint'], BASE_MATERIAL_3D_DEFAULTS.rimTint, CONTEXT), 0, 1)
       : 0,
-    billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
+    billboardMode: intOr(properties['billboard_mode'], BillboardMode.BILLBOARD_DISABLED, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
     anisotropy: anisotropyEnabled
       ? clamp(floatOr(properties['anisotropy'], BASE_MATERIAL_3D_DEFAULTS.anisotropy, CONTEXT), -1, 1)
