@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
   DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
+  viewportSamplerFilter,
   DefaultCanvasItemTextureFilter,
+  VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
   viewportPositionalShadowAtlas,
 } from './viewport';
 
@@ -37,6 +38,7 @@ describe('Viewport.DefaultCanvasItemTextureFilter', () => {
       1: 'LINEAR',
       2: 'LINEAR_WITH_MIPMAPS',
       3: 'NEAREST_WITH_MIPMAPS',
+      4: 'PARENT_NODE',
     });
   });
 
@@ -53,5 +55,25 @@ describe('Viewport.DefaultCanvasItemTextureRepeat', () => {
       2: 'MIRROR',
       3: 'PARENT_NODE',
     });
+  });
+});
+
+describe('viewportSamplerFilter', () => {
+  it('samples the nearest texel for both NEAREST variants', () => {
+    expect(viewportSamplerFilter(DefaultCanvasItemTextureFilter.NEAREST)).toBe('nearest');
+    expect(viewportSamplerFilter(DefaultCanvasItemTextureFilter.NEAREST_WITH_MIPMAPS)).toBe('nearest');
+  });
+
+  it('samples linearly for both LINEAR variants', () => {
+    expect(viewportSamplerFilter(DefaultCanvasItemTextureFilter.LINEAR)).toBe('linear');
+    expect(viewportSamplerFilter(DefaultCanvasItemTextureFilter.LINEAR_WITH_MIPMAPS)).toBe('linear');
+  });
+
+  it('samples linearly where the default itself defers to a parent (edge case)', () => {
+    expect(viewportSamplerFilter(DefaultCanvasItemTextureFilter.PARENT_NODE)).toBe('linear');
+  });
+
+  it('gives the default filter a linear sampler', () => {
+    expect(viewportSamplerFilter(VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER)).toBe('linear');
   });
 });

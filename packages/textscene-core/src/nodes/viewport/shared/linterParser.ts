@@ -13,6 +13,7 @@ import { layerBitmask, v } from '../../../linter/validators/index.js';
 import {
   DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
+  DefaultCanvasItemTextureFilter,
 } from '../../../godot/scene/viewport.js';
 import { MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
 
@@ -92,9 +93,6 @@ const DEBUG_DRAW = {
   26: 'INTERNAL_BUFFER',
 };
 
-/** 4.7.2 adds PARENT_NODE after the four filters of viewport.h:188-193. */
-const TEXTURE_FILTER = { ...DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES, 4: 'PARENT_NODE' };
-
 validatorRegistry.registerAll('Viewport', {
   own_world_3d: v.boolean('own_world_3d'),
   disable_3d: v.boolean('disable_3d'),
@@ -112,9 +110,15 @@ validatorRegistry.registerAll('Viewport', {
   // 4.7.2: viewport.cpp:4101 `ERR_FAIL_INDEX(p_filter,
   // DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 5 (viewport.h:191-198).
   // 4.6.3 stops one lower, without PARENT_NODE.
-  canvas_item_default_texture_filter: v.enumInt('canvas_item_default_texture_filter', 0, 4, TEXTURE_FILTER, {
-    enforced: 'viewport.cpp:4101',
-  }),
+  canvas_item_default_texture_filter: v.enumInt(
+    'canvas_item_default_texture_filter',
+    DefaultCanvasItemTextureFilter.NEAREST,
+    DefaultCanvasItemTextureFilter.PARENT_NODE,
+    DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
+    {
+      enforced: 'viewport.cpp:4101',
+    }
+  ),
 
   // Top-level bools, viewport.cpp:5154-5163. Bare assigns, no format beyond
   // true/false.
