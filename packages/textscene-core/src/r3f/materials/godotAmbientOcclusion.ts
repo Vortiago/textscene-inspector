@@ -7,6 +7,7 @@
 
 import { ShaderChunk, type IUniform, type Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 import { recordedOn } from './recordedOnMaterial';
 import {
   TextureChannel,
@@ -57,8 +58,6 @@ const LIGHT_AFFECT_KEY = 'godotAoLightAffect';
 /** Where a material records its `ao_texture_channel` mask. */
 const CHANNEL_MASK_KEY = 'godotAoTextureChannel';
 
-/** `ao_light_affect`'s default (`material.cpp:3983`). */
-const DEFAULT_LIGHT_AFFECT = 0;
 /** `ao_texture_channel`'s default, red (`material.cpp:3987`). */
 const DEFAULT_CHANNEL_MASK = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_RED);
 
@@ -75,7 +74,7 @@ function ambientOcclusionUniforms(material: Material): Record<string, IUniform> 
   return {
     godotAoLightAffect: {
       get value() {
-        return recordedOn(material, LIGHT_AFFECT_KEY, DEFAULT_LIGHT_AFFECT);
+        return recordedOn(material, LIGHT_AFFECT_KEY, BASE_MATERIAL_3D_DEFAULTS.aoLightAffect);
       },
     },
     godotAoTextureChannel: {

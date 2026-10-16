@@ -26,7 +26,7 @@ import {
   resolveNodeFontSizePx,
 } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
-import { DEFAULT_FONT_SIZE } from '../../../../r3f/controls/godotDefaultTheme';
+import { DEFAULT_FONT_SIZE } from '../../../../godot/scene/theme';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import type { Vector2 } from '../../../../godot/math/vector';

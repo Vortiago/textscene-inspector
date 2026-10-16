@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { DEFAULT_MATERIAL_ALBEDO } from '../../godot/rendering/materials/defaultMaterial';
 import { DiffuseMode } from '../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../godot/rendering/materials/specularMode';
 import type { LightModes } from '../lightModes';
@@ -15,15 +16,13 @@ import type { LightModes } from '../lightModes';
 // GridMap tile, whose `MeshLibrary::Item` (`scene/resources/3d/mesh_library.h`)
 // holds no material.
 
-/**
- * `ALBEDO = vec3(0.6)` in `fragment()`, a shader constant and so linear: three
- * reads a plain hex literal as sRGB, which lands at 0.318 linear.
- */
-export const GODOT_DEFAULT_ALBEDO = new THREE.Color().setRGB(0.6, 0.6, 0.6, THREE.LinearSRGBColorSpace);
-/** `ROUGHNESS = 0.8`, in both `vertex()` and `fragment()`. */
-export const GODOT_DEFAULT_ROUGHNESS = 0.8;
-/** `METALLIC = 0.2` in `fragment()`. */
-export const GODOT_DEFAULT_METALLIC = 0.2;
+/** The albedo as a linear colour: three reads a plain hex literal as sRGB, which lands at 0.318 linear. */
+export const GODOT_DEFAULT_ALBEDO = new THREE.Color().setRGB(
+  DEFAULT_MATERIAL_ALBEDO,
+  DEFAULT_MATERIAL_ALBEDO,
+  DEFAULT_MATERIAL_ALBEDO,
+  THREE.LinearSRGBColorSpace
+);
 /**
  * The shader names no render mode, and a spatial shader without one draws Lambert diffuse
  * (`shader_types.cpp:241`) and GGX specular (`scene_forward_clustered.glsl:1078-1080`).

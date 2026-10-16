@@ -29,7 +29,7 @@ import {
   GRAPH_EDIT_ICON_SIZE,
   GRAPH_EDIT_MINIMAP_RESIZER_ICON,
 } from '../../../../r3f/controls/native/themeIcons';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../r3f/controls/godotDefaultTheme';
+import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { ResolvedConnection } from './connectionEndpoints';

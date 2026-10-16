@@ -7,11 +7,7 @@ import type { ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {
-  GODOT_DEFAULT_ALBEDO,
-  GODOT_DEFAULT_METALLIC,
-  GODOT_DEFAULT_ROUGHNESS,
-} from './godotDefaultMaterial';
+import { GODOT_DEFAULT_ALBEDO } from './godotDefaultMaterial';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
@@ -44,13 +40,11 @@ function expectGodotDefault(material: THREE.MeshStandardMaterial) {
 }
 
 describe('Godot default 3D material constants', () => {
-  it('carries ALBEDO vec3(0.6), ROUGHNESS 0.8, METALLIC 0.2', () => {
+  it('carries ALBEDO vec3(0.6)', () => {
     const rgb = linear(GODOT_DEFAULT_ALBEDO);
     expect(rgb.r).toBeCloseTo(0.6, 5);
     expect(rgb.g).toBeCloseTo(0.6, 5);
     expect(rgb.b).toBeCloseTo(0.6, 5);
-    expect(GODOT_DEFAULT_ROUGHNESS).toBe(0.8);
-    expect(GODOT_DEFAULT_METALLIC).toBe(0.2);
   });
 
   it('builds the albedo in LINEAR space, not as an sRGB hex literal', () => {

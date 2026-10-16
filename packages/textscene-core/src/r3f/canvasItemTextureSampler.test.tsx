@@ -7,8 +7,11 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import * as THREE from 'three';
 import {
   ROOT_TEXTURE_SAMPLER,
+  canvasItemThreeFilter,
+  canvasItemThreeWrap,
   TextureSampler2DContext,
   useInheritedTextureSampler,
   type CanvasItemTextureSampler,
@@ -63,5 +66,30 @@ describe('useInheritedTextureSampler', () => {
       filter: NEAREST,
       repeat: undefined,
     });
+  });
+});
+
+describe('canvasItemThreeFilter', () => {
+  it('samples a nearest filter with three.js NearestFilter', () => {
+    expect(canvasItemThreeFilter(NEAREST)).toBe(THREE.NearestFilter);
+  });
+
+  it('samples a linear filter with three.js LinearFilter', () => {
+    expect(canvasItemThreeFilter(LINEAR)).toBe(THREE.LinearFilter);
+  });
+
+  it('samples linearly where no ancestor names a filter (edge case)', () => {
+    expect(canvasItemThreeFilter(undefined)).toBe(THREE.LinearFilter);
+  });
+});
+
+describe('canvasItemThreeWrap', () => {
+  it('wraps an enabled repeat with RepeatWrapping and a mirror with MirroredRepeatWrapping', () => {
+    expect(canvasItemThreeWrap(REPEAT_ENABLED)).toBe(THREE.RepeatWrapping);
+    expect(canvasItemThreeWrap(REPEAT_MIRROR)).toBe(THREE.MirroredRepeatWrapping);
+  });
+
+  it('clamps where no ancestor names a repeat (edge case)', () => {
+    expect(canvasItemThreeWrap(undefined)).toBe(THREE.ClampToEdgeWrapping);
   });
 });
