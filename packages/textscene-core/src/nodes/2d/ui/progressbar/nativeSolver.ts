@@ -17,7 +17,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { DEFAULT_FONT_SIZE } from '../../../../r3f/controls/godotDefaultTheme';
+import { DEFAULT_FONT_SIZE } from '../../../../godot/scene/theme';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,

@@ -15,13 +15,7 @@ import { createSolveContext, solveControlTree } from '../../../../r3f/controls/n
 // below runs the real second pass.
 import '../../../../r3f/controls/index';
 import type { TextureRectProperties } from './types';
-import {
-  textureRectMinimumSize,
-  textureRectDraw,
-  resolveTextureRectFilter,
-  resolveTextureRectRepeat,
-  applyFlip,
-} from './nativeSolver';
+import { textureRectMinimumSize, textureRectDraw, applyFlip } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 const TEXTURE = { x: 320, y: 160 };
@@ -293,44 +287,6 @@ describe('textureRectDraw (texture_rect.cpp:33-100, NOTIFICATION_DRAW)', () => {
     const draw = textureRectDraw(RECT, { x: 0, y: 160 }, 4);
     expect(Number.isFinite(draw.size.x)).toBe(true);
     expect(Number.isFinite(draw.size.y)).toBe(true);
-  });
-});
-
-describe('resolveTextureRectFilter (scene/main/canvas_item.h:52-60)', () => {
-  it('maps every NEAREST* variant to nearest', () => {
-    expect(resolveTextureRectFilter(1)).toBe('nearest'); // TEXTURE_FILTER_NEAREST
-    expect(resolveTextureRectFilter(3)).toBe('nearest'); // TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
-    expect(resolveTextureRectFilter(5)).toBe('nearest'); // TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC
-  });
-
-  it('maps every LINEAR* variant to linear', () => {
-    expect(resolveTextureRectFilter(2)).toBe('linear'); // TEXTURE_FILTER_LINEAR
-    expect(resolveTextureRectFilter(4)).toBe('linear'); // TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-    expect(resolveTextureRectFilter(6)).toBe('linear'); // TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-  });
-
-  it('TEXTURE_FILTER_PARENT_NODE (0) and an absent value resolve to the CanvasItem root default, linear (canvas_item.h:121)', () => {
-    expect(resolveTextureRectFilter(0)).toBe('linear');
-    expect(resolveTextureRectFilter(undefined)).toBe('linear');
-  });
-});
-
-describe('resolveTextureRectRepeat (scene/main/canvas_item.h:63-69)', () => {
-  it('maps TEXTURE_REPEAT_ENABLED (2) to repeat', () => {
-    expect(resolveTextureRectRepeat(2)).toBe('repeat');
-  });
-
-  it('maps TEXTURE_REPEAT_MIRROR (3) to mirror', () => {
-    expect(resolveTextureRectRepeat(3)).toBe('mirror');
-  });
-
-  it('maps TEXTURE_REPEAT_DISABLED (1) to clamp', () => {
-    expect(resolveTextureRectRepeat(1)).toBe('clamp');
-  });
-
-  it('TEXTURE_REPEAT_PARENT_NODE (0) and an absent value resolve to the CanvasItem root default, clamp/disabled (canvas_item.h:122)', () => {
-    expect(resolveTextureRectRepeat(0)).toBe('clamp');
-    expect(resolveTextureRectRepeat(undefined)).toBe('clamp');
   });
 });
 

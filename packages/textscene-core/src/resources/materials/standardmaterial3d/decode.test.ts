@@ -4,10 +4,13 @@
  * per-feature scalars live in the `scalars.*.test.ts` files.
  */
 
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { describe, expect, it } from 'vitest';
 import { decodeStandardMaterial3D } from './decode';
 import { BlendMode } from '../../../godot/rendering/materials/blendMode';
-import { CullMode, DepthDrawMode, Transparency } from './types';
+import { CullMode } from '../../../godot/rendering/materials/cullMode';
+import { DepthDrawMode } from '../../../godot/rendering/materials/depthDrawMode';
+import { Transparency } from '../../../godot/rendering/materials/transparency';
 import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 describe('decodeStandardMaterial3D — defaults', () => {
@@ -572,6 +575,26 @@ describe('decodeStandardMaterial3D — value-decoder edges', () => {
     expect(decodeStandardMaterial3D({ shading_mode: '0' }).shadingMode).toBe('unshaded');
     expect(decodeStandardMaterial3D({ shading_mode: '1' }).shadingMode).toBe('per_pixel');
     expect(decodeStandardMaterial3D({ shading_mode: '2' }).shadingMode).toBe('per_pixel');
+  });
+
+  it('reads shading_mode "00" as the integer 0, unshaded, as the variant parser does', () => {
+    expect(decodeStandardMaterial3D({ shading_mode: '00' }).shadingMode).toBe('unshaded');
+  });
+
+  it('keeps per-pixel shading for a shading_mode that is not an integer (error case)', () => {
+    expect(decodeStandardMaterial3D({ shading_mode: 'unshaded' }).shadingMode).toBe('per_pixel');
+  });
+
+  it('reads billboard_mode "02" as the integer 2, fixed Y (material.h:300-306)', () => {
+    expect(decodeStandardMaterial3D({ billboard_mode: '02' }).billboardMode).toBe(
+      BillboardMode.BILLBOARD_FIXED_Y
+    );
+  });
+
+  it('keeps the billboard disabled for a billboard_mode that is not an integer (error case)', () => {
+    expect(decodeStandardMaterial3D({ billboard_mode: 'enabled' }).billboardMode).toBe(
+      BillboardMode.BILLBOARD_DISABLED
+    );
   });
 });
 

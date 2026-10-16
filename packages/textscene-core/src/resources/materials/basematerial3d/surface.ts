@@ -10,21 +10,21 @@ import {
   AlphaAntiAliasing,
   ALPHA_ANTIALIASING_NAMES,
 } from '../../../godot/rendering/materials/alphaAntialiasing.js';
+import { BLEND_MODE_NAMES, BlendMode } from '../../../godot/rendering/materials/blendMode.js';
+import { CULL_MODE_NAMES, CullMode } from '../../../godot/rendering/materials/cullMode.js';
+import { DEPTH_DRAW_MODE_NAMES, DepthDrawMode } from '../../../godot/rendering/materials/depthDrawMode.js';
+import { DEPTH_TEST_NAMES, DepthTest } from '../../../godot/rendering/materials/depthTest.js';
+import { SHADING_MODE_NAMES, ShadingMode } from '../../../godot/rendering/materials/shadingMode.js';
+import { TRANSPARENCY_NAMES, Transparency } from '../../../godot/rendering/materials/transparency.js';
 import { DIFFUSE_MODE_NAMES, DiffuseMode } from '../../../godot/rendering/materials/diffuseMode.js';
 import { SPECULAR_MODE_NAMES, SpecularMode } from '../../../godot/rendering/materials/specularMode.js';
 
 export const surfaceKeys: Record<string, PropertyValidator> = {
   transparency: v.enumInt(
     'transparency',
-    0,
-    4,
-    {
-      0: 'DISABLED',
-      1: 'ALPHA',
-      2: 'ALPHA_SCISSOR',
-      3: 'ALPHA_HASH',
-      4: 'ALPHA_DEPTH_PRE_PASS',
-    },
+    Transparency.DISABLED,
+    Transparency.ALPHA_DEPTH_PRE_PASS,
+    TRANSPARENCY_NAMES,
     { hinted: 'material.cpp:3588' }
   ),
   // material.cpp:3589 ("0,1,0.001"), set_alpha_scissor_threshold (:2915) bare assigns.
@@ -48,38 +48,28 @@ export const surfaceKeys: Record<string, PropertyValidator> = {
     max: 1,
     hinted: 'material.cpp:3592',
   }),
-  blend_mode: v.enumInt(
-    'blend_mode',
-    0,
-    4,
-    { 0: 'MIX', 1: 'ADD', 2: 'SUB', 3: 'MUL', 4: 'PREMULT_ALPHA' },
-    { hinted: 'material.cpp:3593' }
-  ),
-  cull_mode: v.enumInt(
-    'cull_mode',
-    0,
-    2,
-    { 0: 'BACK', 1: 'FRONT', 2: 'DISABLED' },
-    { hinted: 'material.cpp:3594' }
-  ),
+  blend_mode: v.enumInt('blend_mode', BlendMode.MIX, BlendMode.PREMULT_ALPHA, BLEND_MODE_NAMES, {
+    hinted: 'material.cpp:3593',
+  }),
+  cull_mode: v.enumInt('cull_mode', CullMode.BACK, CullMode.DISABLED, CULL_MODE_NAMES, {
+    hinted: 'material.cpp:3594',
+  }),
   depth_draw_mode: v.enumInt(
     'depth_draw_mode',
-    0,
-    2,
-    { 0: 'OPAQUE_ONLY', 1: 'ALWAYS', 2: 'DISABLED' },
+    DepthDrawMode.OPAQUE_ONLY,
+    DepthDrawMode.DISABLED,
+    DEPTH_DRAW_MODE_NAMES,
     { hinted: 'material.cpp:3595' }
   ),
   // material.cpp:3596, one of the FLAG_* booleans routed through set_flag.
   no_depth_test: v.boolean('no_depth_test'),
-  depth_test: v.enumInt('depth_test', 0, 1, { 0: 'DEFAULT', 1: 'INVERTED' }, { hinted: 'material.cpp:3597' }),
+  depth_test: v.enumInt('depth_test', DepthTest.DEFAULT, DepthTest.INVERTED, DEPTH_TEST_NAMES, {
+    hinted: 'material.cpp:3597',
+  }),
 
-  shading_mode: v.enumInt(
-    'shading_mode',
-    0,
-    2,
-    { 0: 'UNSHADED', 1: 'PER_PIXEL', 2: 'PER_VERTEX' },
-    { hinted: 'material.cpp:3600' }
-  ),
+  shading_mode: v.enumInt('shading_mode', ShadingMode.UNSHADED, ShadingMode.PER_VERTEX, SHADING_MODE_NAMES, {
+    hinted: 'material.cpp:3600',
+  }),
   diffuse_mode: v.enumInt(
     'diffuse_mode',
     DiffuseMode.DIFFUSE_BURLEY,

@@ -10,7 +10,11 @@ import type { EmissionScalars } from './emission';
 import type { TextureChannel, TextureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import type { UVTransform } from '../../textures/applyTextureState';
 import type { Vector2 } from '../../../godot/math/vector';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import type { BlendMode } from '../../../godot/rendering/materials/blendMode';
+import type { CullMode } from '../../../godot/rendering/materials/cullMode';
+import type { DepthDrawMode } from '../../../godot/rendering/materials/depthDrawMode';
+import type { Transparency } from '../../../godot/rendering/materials/transparency';
 import type { AlphaAntialiasingCut } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 /** Godot's height mapping of a surface. */
@@ -29,43 +33,12 @@ export interface Heightmap {
 
 /** Godot's height mapping defaults (`material.cpp:3952`, `:3995-3997`). */
 export const HEIGHTMAP_DEFAULTS: Heightmap = {
-  scale: 5,
+  scale: BASE_MATERIAL_3D_DEFAULTS.heightmapScale,
   isDeep: false,
-  layers: [8, 32],
+  layers: [BASE_MATERIAL_3D_DEFAULTS.heightmapMinLayers, BASE_MATERIAL_3D_DEFAULTS.heightmapMaxLayers],
   flip: [1, 1],
   readsHeight: false,
 };
-
-/** Godot `BaseMaterial3D.Transparency`. */
-export enum Transparency {
-  DISABLED = 0,
-  /** Alpha blending, without depth writes, so surfaces behind stay visible. */
-  ALPHA = 1,
-  /** Hard cutout at `alpha_scissor_threshold`, on the opaque pass. */
-  ALPHA_SCISSOR = 2,
-  /** Stochastic cutout, on the opaque pass. */
-  ALPHA_HASH = 3,
-  /** Alpha blending after a depth prepass, so it DOES write depth. */
-  ALPHA_DEPTH_PRE_PASS = 4,
-}
-
-/** Godot `BaseMaterial3D.CullMode`. BACK culls back faces, so it draws the front. */
-export enum CullMode {
-  BACK = 0,
-  FRONT = 1,
-  DISABLED = 2,
-}
-
-/**
- * Godot `BaseMaterial3D.DepthDrawMode`. OPAQUE_ONLY is the default and means
- * "write depth in the opaque pass only": a surface that lands in the alpha pass
- * under it writes none.
- */
-export enum DepthDrawMode {
-  OPAQUE_ONLY = 0,
-  ALWAYS = 1,
-  DISABLED = 2,
-}
 
 /**
  * The texture slots this slice renders, in the order the component's hooks call

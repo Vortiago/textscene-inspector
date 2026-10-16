@@ -153,7 +153,7 @@ export function resolveThemeFontIn(
  * @param override Wins only when `> 0` (`if (font_size && (*font_size) > 0)`,
  *   `control.cpp:3114-3117`). A `0` falls through like an unauthored one.
  * @param builtInDefaultPx Stands in for `ThemeDB::get_fallback_font_size()`:
- *   `DEFAULT_FONT_SIZE` (`r3f/controls/godotDefaultTheme.ts`), scaled.
+ *   `DEFAULT_FONT_SIZE` (`godot/scene/theme.ts`), scaled.
  */
 export function resolveThemeFontSizeIn(
   scope: ThemeResolutionScope,

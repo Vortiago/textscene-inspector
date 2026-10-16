@@ -9,21 +9,21 @@ import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v, hintedBitField } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/propertyError.js';
 import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import {
+  STENCIL_COMPARE_NAMES,
+  STENCIL_FLAG_LABELS,
+  STENCIL_MODE_NAMES,
+  StencilCompare,
+  StencilFlag,
+  StencilMode,
+} from '../../../godot/rendering/materials/stencil.js';
 
-/** material.h:340-342. */
-const STENCIL_FLAG_READ = 1;
-const STENCIL_FLAG_WRITE = 2;
-const STENCIL_FLAG_WRITE_DEPTH_FAIL = 4;
-const STENCIL_WRITE_FLAGS = STENCIL_FLAG_WRITE | STENCIL_FLAG_WRITE_DEPTH_FAIL;
+const STENCIL_WRITE_FLAGS = StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL;
 
 function stencilFlags(): PropertyValidator {
   const listed = hintedBitField('stencil_flags', {
     hinted: 'material.cpp:3776',
-    labels: {
-      [STENCIL_FLAG_READ]: 'READ',
-      [STENCIL_FLAG_WRITE]: 'WRITE',
-      [STENCIL_FLAG_WRITE_DEPTH_FAIL]: 'WRITE_DEPTH_FAIL',
-    },
+    labels: STENCIL_FLAG_LABELS,
   });
 
   const validator: PropertyValidator = (key, value, line) => {
@@ -36,11 +36,11 @@ function stencilFlags(): PropertyValidator {
     // 32 bits reads NaN and drops the warning `listed` produced.
     const bits = parseGodotInt(value, 'int64');
     if (bits === null || Number.isNaN(bits)) return null;
-    if ((bits & STENCIL_FLAG_READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {
+    if ((bits & StencilFlag.READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {
       return propertyError(
         key,
         line,
-        `Property 'stencil_flags' cannot READ and WRITE at once; Godot keeps only READ, so this stores ${STENCIL_FLAG_READ} rather than ${bits}`,
+        `Property 'stencil_flags' cannot READ and WRITE at once; Godot keeps only READ, so this stores ${StencilFlag.READ} rather than ${bits}`,
         'INVALID_STENCIL_FLAGS_VALUE'
       );
     }
@@ -57,27 +57,15 @@ function stencilFlags(): PropertyValidator {
 }
 
 export const stencilKeys: Record<string, PropertyValidator> = {
-  stencil_mode: v.enumInt(
-    'stencil_mode',
-    0,
-    3,
-    { 0: 'DISABLED', 1: 'OUTLINE', 2: 'XRAY', 3: 'CUSTOM' },
-    { hinted: 'material.cpp:3775' }
-  ),
+  stencil_mode: v.enumInt('stencil_mode', StencilMode.DISABLED, StencilMode.CUSTOM, STENCIL_MODE_NAMES, {
+    hinted: 'material.cpp:3775',
+  }),
   stencil_flags: stencilFlags(),
   stencil_compare: v.enumInt(
     'stencil_compare',
-    0,
-    6,
-    {
-      0: 'ALWAYS',
-      1: 'LESS',
-      2: 'EQUAL',
-      3: 'LESS_OR_EQUAL',
-      4: 'GREATER',
-      5: 'NOT_EQUAL',
-      6: 'GREATER_OR_EQUAL',
-    },
+    StencilCompare.ALWAYS,
+    StencilCompare.GREATER_OR_EQUAL,
+    STENCIL_COMPARE_NAMES,
     { hinted: 'material.cpp:3777' }
   ),
   // material.cpp:3778 ("0,255,1"); set_stencil_reference (:3292) bare assigns.

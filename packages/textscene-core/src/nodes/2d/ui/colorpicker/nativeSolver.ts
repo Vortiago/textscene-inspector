@@ -14,7 +14,7 @@ import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegist
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../r3f/controls/godotDefaultTheme';
+import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
 import { sliderMinimumSize } from '../shared/sliderSolver';
 import type { ColorPickerProperties } from './types';
@@ -108,7 +108,7 @@ function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>
   return { x: icon + margin.x, y: icon + margin.y };
 }
 
-/** `ScaledGodotTheme.scale` (`godotDefaultTheme.ts`): the raw `gui/theme/default_theme_scale`. */
+/** `ScaledGodotTheme.scale` (`godot/scene/theme.ts`): the raw `gui/theme/default_theme_scale`. */
 export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
   return theme.scale;
 }

@@ -11,7 +11,7 @@ import {
   scaledGodotTheme,
   STYLE_FILL,
   type ScaledGodotTheme,
-} from '../godotDefaultTheme';
+} from '../../../godot/scene/theme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rgba } from '../../../godot/math/math';
 
