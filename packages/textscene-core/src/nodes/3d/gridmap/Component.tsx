@@ -1,7 +1,8 @@
 /**
  * <GridMap> instances each MeshLibrary item's ArrayMesh at its populated cells. Each
  * surface draws as one THREE.InstancedMesh, or as one mesh per cell when its material
- * billboards. An unresolved mesh draws a cell-sized wireframe box.
+ * billboards. A loading item draws nothing, and an unresolved one draws cell-sized
+ * wireframe boxes in one InstancedMesh.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
@@ -106,9 +107,11 @@ export function GridMap({ node, children }: NodeComponentProps) {
     return grouped;
   }, [properties.cells]);
 
+  // Godot draws a cell only once its library holds the item (`modules/gridmap/grid_map.cpp:676-678`).
+  const items = library.status === 'pending' ? [] : Array.from(cellsByItem.entries());
   return (
     <Node3D node={node}>
-      {Array.from(cellsByItem.entries()).map(([itemId, cells]) => (
+      {items.map(([itemId, cells]) => (
         <GridMapItem
           key={itemId}
           item={library.model?.get(itemId) ?? null}
@@ -151,17 +154,10 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
+  // Godot draws a cell only once its item has a mesh (`modules/gridmap/grid_map.cpp:688`).
+  if (item?.meshPath && meshResult.status === 'pending') return null;
   const geometry = meshResult.value?.geometry;
-  if (!geometry) {
-    // A pending or missing item draws cell-sized wireframe boxes.
-    return (
-      <>
-        {matrices.map((m, i) => (
-          <PlaceholderCell key={i} matrix={m} cellSize={cellSize} />
-        ))}
-      </>
-    );
-  }
+  if (!geometry) return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
   const surfaces = surfaceSources(materials);
   return (
     <>
@@ -214,12 +210,10 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
   const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
   const meshRef = useRef<THREE.InstancedMesh>(null);
   // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [matrices, geometry, startingMaterial]);
+  useLayoutEffect(
+    () => writeInstanceMatrices(meshRef.current, matrices),
+    [matrices, geometry, startingMaterial]
+  );
 
   return (
     <instancedMesh
@@ -268,15 +262,25 @@ function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
   return <SurfaceMaterialSlot source={draw.source} attach={surfaceAttach(draw.surface, draw.surfaceCount)} />;
 }
 
-function PlaceholderCell({ matrix, cellSize }: { matrix: THREE.Matrix4; cellSize: Vector3 }) {
-  const position = useMemo((): [number, number, number] => {
-    const v = new THREE.Vector3().setFromMatrixPosition(matrix);
-    return [v.x, v.y, v.z];
-  }, [matrix]);
+/**
+ * A cell-sized wireframe box at each cell's centre, all in one draw, so a missing item in a large
+ * grid costs one draw as its tiles would.
+ */
+function PlaceholderTiles({ matrices, cellSize }: { matrices: THREE.Matrix4[]; cellSize: Vector3 }) {
+  const centres = useMemo(() => matrices.map((m) => new THREE.Matrix4().copyPosition(m)), [matrices]);
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => writeInstanceMatrices(meshRef.current, centres), [centres]);
   return (
-    <mesh position={position}>
+    <instancedMesh key={centres.length} ref={meshRef} args={[undefined, undefined, centres.length]}>
       <boxGeometry args={[cellSize.x, cellSize.y, cellSize.z]} />
       <meshBasicMaterial key={PLACEHOLDER_CELL_MATERIAL.key} {...PLACEHOLDER_CELL_MATERIAL.props} />
-    </mesh>
+    </instancedMesh>
   );
+}
+
+/** Sets each instance of `mesh` to its matrix. A mesh not yet mounted waits for the next call. */
+function writeInstanceMatrices(mesh: THREE.InstancedMesh | null, matrices: THREE.Matrix4[]): void {
+  if (!mesh) return;
+  matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+  mesh.instanceMatrix.needsUpdate = true;
 }
