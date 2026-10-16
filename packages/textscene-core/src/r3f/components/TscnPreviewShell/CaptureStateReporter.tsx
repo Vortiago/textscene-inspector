@@ -5,45 +5,13 @@
  * scene and the scene's resources and textures have landed, so a capture shows it whole.
  */
 
-import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
-import { useResourceLoader } from '../../../resources/useResource.js';
-import { usePendingTextureWork } from '../../../resources/usePendingTextureWork.js';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
-import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { PENDING_CAPTURE, previewCaptureStateOf, type PreviewCaptureState } from './previewCaptureState.js';
+import { useSceneLoad } from './useSceneLoad.js';
 
 const NO_SUBSCRIPTION = () => () => {};
 const NO_HANDLER = () => false;
-const NO_SCENE = () => null;
-
-/** How many resources the shell's loader still waits for, or zero outside a loader. */
-function usePendingResourceCount(): number {
-  const loader = useResourceLoader();
-  const subscribe = useCallback(
-    (listener: () => void) => (loader ? loader.subscribePending(listener) : () => {}),
-    [loader]
-  );
-  return useSyncExternalStore(subscribe, () => loader?.pendingResourceCount ?? 0);
-}
-
-/**
- * Whether a frame now would show the current scene whole: the shell has a scene, the canvas has
- * rendered it, and no resource or texture it uses is still on its way.
- */
-function useIsSceneComplete(): boolean {
-  const control = useOptionalViewportActions();
-  const currentScene = useOptionalHierarchy()?.sceneGraph ?? null;
-  const renderedScene = useSyncExternalStore(
-    control?.subscribeScreenshotHandler ?? NO_SUBSCRIPTION,
-    control?.screenshotScene ?? NO_SCENE
-  );
-  // Every hook runs on every render, so React sees one hook order.
-  const pendingResources = usePendingResourceCount();
-  const pendingTextures = usePendingTextureWork();
-  return (
-    currentScene !== null && renderedScene === currentScene && pendingResources === 0 && pendingTextures === 0
-  );
-}
 
 export function CaptureStateReporter({
   onCaptureStateChange,
@@ -58,7 +26,7 @@ export function CaptureStateReporter({
     control?.hasScreenshotHandler ?? NO_HANDLER
   );
   const takeScreenshot = control?.takeScreenshot;
-  const isSceneComplete = useIsSceneComplete();
+  const isSceneComplete = useSceneLoad().isComplete;
 
   const state = useMemo(
     () =>

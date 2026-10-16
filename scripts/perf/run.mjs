@@ -19,8 +19,7 @@ import {
   createCaptureContext,
   openScene,
   PERFORMANCE_TESTIDS,
-  TEXTURE_WORK_STATUS_TESTID,
-  textureWorkCleared,
+  sceneStillLoading,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
 import { attachConsoleGate } from '../visual/run/sceneCapture.mjs';
@@ -96,9 +95,8 @@ async function measureScene({ page, errors }, baseUrl, scene) {
     onSlow: (ms) => console.log(`[perf]   ${scene.name}: no network idle within ${ms}ms`),
   });
   if (!target) return { work: null, reason };
-  if (!(await textureWorkCleared(page.getByTestId(TEXTURE_WORK_STATUS_TESTID)))) {
-    return { work: null, reason: 'texture work still pending' };
-  }
+  const loading = await sceneStillLoading(page);
+  if (loading) return { work: null, reason: loading };
   const { work, reason: unsteady } = await steadyWork(page);
   if (errors.length > 0) return { work: null, reason: `console error(s): ${errors.join(' | ')}` };
   return { work, reason: unsteady };
