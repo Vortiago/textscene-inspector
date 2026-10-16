@@ -7,7 +7,8 @@
 import * as THREE from 'three';
 import { applyEdits, installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
 import { installedOr } from '../shaderPatch/litUniform.js';
-import { backgroundCube, SKY_FOG, THREE_BACKGROUND_TONE_CURVE } from '../fog/fogComposite.js';
+import { backgroundCube } from '../shaderPatch/backgroundPrograms.js';
+import { SKY_FOG, THREE_BACKGROUND_TONE_CURVE } from '../fog/fogComposite.js';
 import { observeSceneCamera, observeSceneRenderEnd } from '../sceneRenderCamera.js';
 
 const DEBANDING_UNIFORM = 'godotSkyDebanding';

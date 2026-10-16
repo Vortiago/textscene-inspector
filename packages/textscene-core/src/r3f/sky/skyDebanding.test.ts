@@ -6,7 +6,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { debandSky, installSkyDebanding } from './skyDebanding';
-import { backgroundCube, installFogComposite } from '../fog/fogComposite';
+import { installFogComposite } from '../fog/fogComposite';
+import { backgroundCube } from '../shaderPatch/backgroundPrograms';
 import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
 import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 import { warningsOf } from '../testing/logWarnings';

@@ -11,6 +11,7 @@ import { installMergedUniform, FOG_UNIFORMS_MERGE } from '../shaderPatch/litUnif
 import { GODOT_FOG_PARS, GODOT_FOG_PARS_CHUNK } from './fogChunks.js';
 import { fogUniformRecord } from './fogUniforms.js';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection.js';
+import { backgroundCube, backgroundPlane } from '../shaderPatch/backgroundPrograms.js';
 
 const VIEW_VARYING = 'vGodotFogView';
 
@@ -92,16 +93,6 @@ function fogBackgroundPlane(chunks: Record<'background_vert' | 'background_frag'
       background_frag: `#include <${GODOT_FOG_PARS_CHUNK}>\nvarying vec3 vWorldDirection;\n${fogged.background_frag}`,
     }
   );
-}
-
-/** three's cube background shader (r186 `ShaderLib.js:231-243`), which its types leave optional. */
-export function backgroundCube(): THREE.ShaderLibShader {
-  return THREE.ShaderLib.backgroundCube!;
-}
-
-/** three's flat background shader (r186 `ShaderLib.js:218-229`), which its types leave optional. */
-function backgroundPlane(): THREE.ShaderLibShader {
-  return THREE.ShaderLib.background!;
 }
 
 /**

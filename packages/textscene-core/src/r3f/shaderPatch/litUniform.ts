@@ -47,8 +47,8 @@ export function installLitUniform(name: string, value: unknown): void {
 
 /**
  * The value an earlier evaluation of a module gave `program`, as after a dev server reloads it, or
- * undefined before any install. `standard` makes both merges, and every program compiled since
- * reads that value, so the caller keeps writing it. The caller narrows the type.
+ * undefined before any install. Every program compiled since reads that value, so the caller keeps
+ * writing it. The default, `standard`, makes both merges. The caller narrows the type.
  */
 export function installedUniformValue(
   name: string,
