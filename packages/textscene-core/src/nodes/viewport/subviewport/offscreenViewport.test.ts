@@ -405,6 +405,26 @@ describe('createOffscreenTarget', () => {
   });
 
   /**
+   * Godot's tonemap pass writes sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so a
+   * dark value keeps sRGB precision. SRGB8_ALPHA8 storage encodes on write and decodes on sample
+   * in hardware, while the LINEAR tag keeps the shader from doing either.
+   */
+  it('stores a tonemapped pass with sRGB precision', () => {
+    const target = createOffscreenTarget(64, 64, 'Probe');
+    expect(target.texture.internalFormat).toBe('SRGB8_ALPHA8');
+    target.dispose();
+  });
+
+  it('leaves the storage to the colour space for a pass that is not tonemapped (edge case)', () => {
+    const target = createOffscreenTarget(64, 64, 'Probe', {
+      colorSpace: THREE.SRGBColorSpace,
+      preTonemapped: false,
+    });
+    expect(target.texture.internalFormat).toBeNull();
+    target.dispose();
+  });
+
+  /**
    * Linear min/mag with no mipmaps matches Godot's default
    * `canvas_item_default_texture_filter` (1, LINEAR). Depth without stencil is
    * what a 3D pass needs and nothing more.

@@ -7,10 +7,10 @@
 import { describe, expect, it } from 'vitest';
 import { decodeEnvironment } from './decode';
 import { createEnvironmentSettings } from './build';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { environmentSettingsOf } from './testing/environmentSettings';
 
 function ambientFor(properties: Record<string, string>) {
-  return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR).ambient;
+  return environmentSettingsOf(properties).ambient;
 }
 
 describe('ambient from the background source', () => {

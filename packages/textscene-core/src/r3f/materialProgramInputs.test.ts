@@ -22,7 +22,7 @@ import {
   type ProgramInjection,
 } from './materialProgramInputs';
 import { ToneMapper } from '../godot/rendering/environment/toneMapping.js';
-import { applyToneMapping } from '../resources/environment/toneMapping';
+import { installToneMapping } from '../resources/environment/toneMapping';
 
 /** A key from the factory: the only thing about a program a caller can compare. */
 function keyOf<P extends object, M extends readonly object[] = []>(
@@ -297,7 +297,7 @@ describe('materialProgramInputs', () => {
 
     describe('under a tone-curve swap', () => {
       // The injected key is an own property, so it shadows the prototype key that
-      // `applyToneMapping` extends. FILMIC then AGX is the editor preview environment
+      // `installToneMapping` extends. FILMIC then AGX is the editor preview environment
       // yielding to a WorldEnvironment that an instanced sub-scene brings in.
       const { FILMIC, AGX } = ToneMapper;
       const ORIGINAL_CHUNK = THREE.ShaderChunk.tonemapping_pars_fragment;
@@ -317,10 +317,10 @@ describe('materialProgramInputs', () => {
       /** The material's program key under FILMIC, then under AGX after FILMIC is undone. */
       function keysAcrossSwap(material: THREE.Material): { filmic: string; agx: string } {
         const gl = { toneMapping: THREE.NoToneMapping, toneMappingExposure: 1 };
-        const restoreFilmic = applyToneMapping(gl, { mode: FILMIC });
+        const restoreFilmic = installToneMapping(gl, { mode: FILMIC }, 'material');
         const filmic = material.customProgramCacheKey();
         restoreFilmic();
-        applyToneMapping(gl, { mode: AGX });
+        installToneMapping(gl, { mode: AGX }, 'material');
         return { filmic, agx: material.customProgramCacheKey() };
       }
 

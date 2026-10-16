@@ -7,19 +7,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { compositeProgram, GLOW_BUFFER_UNIFORM, GLOW_MAP_UNIFORM } from './godotCompositor';
-import { decodeEnvironment } from './decode';
-import { createEnvironmentSettings } from './build';
 import { glowParamsFor, type GlowParams } from './godotGlow';
 import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import type { EnvironmentAdjustments } from './types';
 import type { CompositeToneMapping } from './godotCompositor';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { environmentSettingsOf } from './testing/environmentSettings';
 
 function glowOn(extra: Record<string, string> = {}): GlowParams {
-  const params = glowParamsFor(
-    createEnvironmentSettings(decodeEnvironment({ glow_enabled: 'true', ...extra }), DEFAULT_CLEAR_COLOR)
-  );
+  const params = glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...extra }));
   if (!params) throw new Error('expected glow to be enabled');
   return params;
 }

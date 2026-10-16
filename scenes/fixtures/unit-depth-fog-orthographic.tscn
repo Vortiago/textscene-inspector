@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://unitdepthfogortho"]
+
+; One variable: an orthographic Camera3D over unit-depth-fog's fogged colour background. Godot
+; fills the whole view with the fogged clear colour under any projection. Every other golden with a
+; colour background looks through a perspective camera, so none shows a background that covers only
+; the middle of an orthographic view.
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 1
+background_color = Color(0.05, 0.05, 0.15, 1)
+fog_enabled = true
+fog_light_color = Color(0.6, 0.65, 0.75, 1)
+fog_density = 0.05
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="StandardMaterial3D" id="Material_1"]
+shading_mode = 0
+albedo_color = Color(1, 0.3, 0.2, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 10)
+projection = 1
+size = 8.0
+
+[node name="Box" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Material_1")
