@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+; One variable: the mip chain of a decal's texture whose import generates none. Godot's decal atlas
+; blits each level by halving the level above in its RGBA8 bytes, so the 512 x 512 red and green
+; checker, minified to under 100 pixels at the editor orbit, averages to a dark yellow. A chain
+; averaged in linear space draws a brighter yellow, and no chain at all shimmers red and green. No
+; other decal scene minifies its texture.
+
+[ext_resource type="Texture2D" path="res://textures/decal-checker.png" id="1_checker"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(8, 8)
+
+[node name="Scene" type="Node3D"]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 3, 0)
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_floor")
+
+[node name="CheckerDecal" type="Decal" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+texture_albedo = ExtResource("1_checker")
+size = Vector3(1, 2, 1)

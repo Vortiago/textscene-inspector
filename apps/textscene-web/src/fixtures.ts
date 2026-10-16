@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Decal Mipmap Import",
+    "file": "unit-decal-mipmap-import.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Decal",
     "file": "unit-decal.tscn",
     "category": "Other"
@@ -3278,6 +3283,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Metallic",
     "file": "unit-material-metallic.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Mipmap Import",
+    "file": "unit-material-mipmap-import.tscn",
     "category": "Unit - Materials"
   },
   {

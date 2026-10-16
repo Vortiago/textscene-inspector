@@ -88,6 +88,10 @@ export const MATERIAL_SCENES = [
   // reads raw, the same PNG VRAM compressed reads as sRGB, as does an RGB PNG, and an RGB PNG imported
   // as an RGTC normal map reads red and green raw with blue 0. A wrong read shifts a strip.
   { name: 'material-albedo-image-import', file: 'unit-material-albedo-image-import.tscn' },
+  // The mip chain of an imported image, which Godot builds on the CPU: a red and green checker
+  // averages its bytes to a dark yellow, and a normal map renormalises each level. A chain averaged
+  // in linear space brightens the checker, and one left unnormalised tilts the lit strip less.
+  { name: 'material-mipmap-import', file: 'unit-material-mipmap-import.tscn' },
   // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
   // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
   { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },
@@ -100,6 +104,9 @@ export const MATERIAL_SCENES = [
   // Decal `texture_albedo` as an AtlasTexture: a decal takes the texture's RID, so it projects the
   // whole sheet. A cropped region projects one red square.
   { name: 'decal-atlas-texture', file: 'unit-decal-atlas-texture.tscn' },
+  // A minified decal over an import with no mipmaps: the atlas halves each level in bytes, so the
+  // red and green checker draws dark yellow. A chain averaged in linear space draws it brighter.
+  { name: 'decal-mipmap-import', file: 'unit-decal-mipmap-import.tscn' },
   // The one MeshInstance3D material from an external `.tres`, and the one
   // roughness map with contrast: a glossy cap and a rough one meet at a hard
   // seam. If the map fails to arrive, both caps go matte. Other roughness

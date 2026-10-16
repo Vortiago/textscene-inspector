@@ -64,9 +64,20 @@ The importer rewrites the texels in this order (`:861-874`):
 `mipmaps/generate`, off by default, decides whether the texture has a mip chain. A texture without
 one samples its base level under every `texture_filter`. Godot forces it on for every glTF image it
 extracts (`modules/gltf/gltf_document.cpp:2251-2255`). An external glTF image keeps its own
-sidecar's (`:2356-2363`). A Decal reads
-its copy in the decal atlas, which builds its own mip chain (`texture_storage.cpp:3169-3226`), so a
-decal mipmaps whatever the import says.
+sidecar's (`:2356-2363`).
+
+The importer builds the chain on the CPU, after the texel passes (`resource_importer_texture.cpp:401-412`).
+Each level averages each 2 × 2 block of the level above in the image's own bytes
+(`core/io/image.cpp:1947-1979`), so an sRGB image averages its encoded values, not its linear light.
+An odd size drops its last column or row. With `compress/normal_map` Enable, each level of an RGB8
+or RGBA8 image is renormalised to unit normals (`:2003-2014`, `:4577-4588`). The compression then
+stores each level, so an RGTC normal map drops blue after the renormalise. The previewer builds the
+same chain and uploads it as the texture's levels (`processing/mipChain.ts`).
+
+A Decal reads its copy in the decal atlas, which builds its own mip chain
+(`texture_storage.cpp:3162-3226`), so a decal mipmaps whatever the import says. The atlas halves
+each level in its RGBA8 bytes too. So a decal shares an imported chain, and over an import with no
+chain the previewer builds one with the same byte average.
 
 `compress/mode` then gives the import format (`godot/import/textureImport.ts`):
 

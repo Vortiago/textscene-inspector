@@ -369,7 +369,7 @@ describe('createTextureFromBuffer: the import texel passes', () => {
 
   it('keeps the sampling of the texture it replaces', async () => {
     const { texture } = await importedRow([[1, 2, 3, 255]], 'RGB8', { invertNormalY: true, mipmaps: true });
-    expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearMipmapLinearFilter, true]);
+    expect(texture.minFilter).toBe(THREE.LinearMipmapLinearFilter);
   });
 
   it('returns the decoded texture when no pass changes a byte', async () => {
@@ -402,9 +402,108 @@ describe('importDecodedImage', () => {
     expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearFilter, false]);
   });
 
-  it('keeps the mip chain of an import that generates mipmaps', () => {
+  it('leaves the GPU to build the chain of an image whose pixels cannot be read (edge case)', () => {
     const texture = importDecodedImage(new THREE.Texture(), imported('RGBA8', { mipmaps: true }));
-    expect(texture.generateMipmaps).toBe(true);
+    expect([texture.generateMipmaps, texture.mipmaps]).toEqual([true, []]);
+  });
+
+  describe('the mip chain', () => {
+    /** A texture of raw RGBA8 texels, `width` to a row. */
+    const imageTexture = (texels: number[][], width: number) =>
+      new THREE.Texture({ data: new Uint8Array(texels.flat()), width, height: texels.length / width });
+    const levelsOf = (texture: THREE.Texture) =>
+      (texture.mipmaps as { data: Uint8Array }[]).map((level) => Array.from(level.data));
+    const mipmapped = { mipmaps: true, fixAlphaBorder: false } as const;
+    /** A 2 × 2 normal map whose 1 × 1 level Godot renormalises to 129, 178, 245. */
+    const normals = [
+      [218, 128, 128, 255],
+      [128, 218, 128, 255],
+      [128, 128, 255, 255],
+      [38, 128, 218, 255],
+    ];
+
+    it("stores the chain Godot's importer generates, averaged in byte space", () => {
+      const texture = importDecodedImage(
+        imageTexture(
+          [
+            [255, 0, 0, 255],
+            [0, 0, 255, 255],
+          ],
+          2
+        ),
+        imported('RGBA8', mipmapped)
+      );
+      expect(levelsOf(texture)).toEqual([
+        [255, 0, 0, 255, 0, 0, 255, 255],
+        [128, 0, 128, 255],
+      ]);
+    });
+
+    it('asks the GPU for no chain of its own', () => {
+      const texture = importDecodedImage(
+        imageTexture(
+          [
+            [1, 2, 3, 255],
+            [4, 5, 6, 255],
+          ],
+          2
+        ),
+        imported('RGBA8', mipmapped)
+      );
+      expect([texture.generateMipmaps, texture.minFilter]).toEqual([false, THREE.LinearMipmapLinearFilter]);
+    });
+
+    it('renormalises each level of a normal map', () => {
+      const texture = importDecodedImage(
+        imageTexture(normals, 2),
+        imported('RGBA8', { ...mipmapped, normalMap: true })
+      );
+      expect(levelsOf(texture)[1]).toEqual([129, 178, 245, 255]);
+    });
+
+    it('renormalises a normal map before its compression drops blue', () => {
+      const texture = importDecodedImage(
+        imageTexture(normals, 2),
+        imported('RGBA8', { ...mipmapped, normalMap: true, mode: 'VramCompressed' })
+      );
+      expect(levelsOf(texture)[1]).toEqual([129, 178, 0, 255]);
+    });
+
+    it('averages the bytes the texel passes leave', () => {
+      const texture = importDecodedImage(
+        imageTexture(
+          [
+            [0, 0, 0, 255],
+            [0, 100, 0, 255],
+          ],
+          2
+        ),
+        imported('RGB8', { ...mipmapped, invertNormalY: true })
+      );
+      expect(levelsOf(texture)[1]).toEqual([0, 205, 0, 255]);
+    });
+
+    it('renormalises no greyscale normal map, as Godot renormalises only RGB (edge case)', () => {
+      const texture = importDecodedImage(
+        imageTexture(
+          [
+            [200, 200, 200, 255],
+            [100, 100, 100, 255],
+          ],
+          2
+        ),
+        imported('Lum8', { ...mipmapped, normalMap: true })
+      );
+      expect(levelsOf(texture)[1]).toEqual([150, 150, 150, 255]);
+    });
+
+    it('disposes the decoded texture that the chain replaces', () => {
+      const disposed = vi.fn();
+      const decoded = imageTexture([[1, 2, 3, 255]], 1);
+      decoded.addEventListener('dispose', disposed);
+      importDecodedImage(decoded, imported('RGBA8', mipmapped));
+      expect(disposed).toHaveBeenCalledOnce();
+    });
   });
 
   it('records the format a colour slot reads the import through', () => {

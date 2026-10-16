@@ -91,14 +91,26 @@ export function godotTextureFilterState(filter: number | undefined): TextureFilt
   return STATES[filter ?? GODOT_TEXTURE_FILTER_DEFAULT] ?? STATES[GODOT_TEXTURE_FILTER_DEFAULT]!;
 }
 
-/** The state as it lands on THIS texture, once its own mip availability is honoured. */
+/**
+ * The state as it lands on THIS texture, once its own mip availability is honoured. A chain built
+ * on the CPU keeps the mip filter, and the GPU builds no chain over it.
+ */
 function effectiveState(texture: THREE.Texture, state: TextureFilterState): TextureFilterState {
-  if (!state.generateMipmaps || texture.generateMipmaps) return state;
+  if (!state.generateMipmaps) return state;
+  if (hasMipChain(texture)) return { ...state, generateMipmaps: texture.generateMipmaps };
   return {
     ...state,
     minFilter: WITHOUT_MIPMAPS[state.minFilter] ?? state.minFilter,
     generateMipmaps: false,
   };
+}
+
+/**
+ * Whether `texture` samples a mip chain: one the GPU generates, or its own levels below the base,
+ * which three uploads as they are.
+ */
+export function hasMipChain(texture: THREE.Texture): boolean {
+  return texture.generateMipmaps || texture.mipmaps.length > 1;
 }
 
 /** Whether a texture already samples the way this state asks, so no clone is needed. */

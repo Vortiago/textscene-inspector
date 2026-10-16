@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { rasterizeAtlasTexture } from './build';
 import { recordGodotFormat, sourceColorSpace } from '../sourceColorSpace';
 import type { AtlasTextureLayout } from './types';
+import { mipChain, type MipLevel } from '../../processing/mipChain';
 
 /**
  * A `w`x`h` top-down RGBA sheet with `flipY`, as `applyAlphaBorderFix` makes, whose red channel
@@ -151,5 +152,30 @@ describe('rasterizeAtlasTexture — raw-pixel sheets', () => {
     expect(crop?.type).toBe(THREE.HalfFloatType);
     expect(crop?.colorSpace).toBe(THREE.LinearSRGBColorSpace);
     expect(Array.from((crop?.image as { data: Uint16Array }).data)).toEqual([two, 0, 0, two]);
+  });
+});
+
+describe('rasterizeAtlasTexture — a sheet with an imported mip chain', () => {
+  /** A 4 × 4 sheet carrying the byte-space chain its import built. */
+  function sheetWithChain(): THREE.DataTexture {
+    const texture = sheet(4, 4);
+    texture.mipmaps = mipChain(texture.image as MipLevel, false) as unknown as THREE.Texture['mipmaps'];
+    texture.generateMipmaps = false;
+    return texture;
+  }
+
+  it('averages the bytes of the crop, as the sheet averages its own', () => {
+    const texture = rasterizeAtlasTexture(
+      sheetWithChain(),
+      layout({ source: { x: 2, y: 2, width: 2, height: 2 } })
+    )!;
+
+    expect(Array.from((texture.mipmaps[1] as MipLevel).data)).toEqual([13, 0, 0, 255]);
+  });
+
+  it('asks the GPU for no chain over the crop', () => {
+    const texture = rasterizeAtlasTexture(sheetWithChain(), layout())!;
+
+    expect(texture.generateMipmaps).toBe(false);
   });
 });

@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { repackAnisotropyFlowmap } from './repackFlowmap';
+import { mipChain, type MipLevel } from '../processing/mipChain';
 
 /** A decoded-image-shaped object: dimensions but no raw `.data`. */
 function imageLike(width = 2, height = 1): HTMLImageElement {
@@ -31,6 +32,24 @@ describe('repackAnisotropyFlowmap', () => {
     // The cached input is shared by every consumer of that flowmap path.
     expect(Array.from((source.image as { data: Uint8Array }).data)).toEqual(Array.from(SOURCE));
     expect(out.colorSpace).toBe(THREE.NoColorSpace);
+  });
+
+  it('repacks each level of the chain its import built', () => {
+    const source = dataTexture();
+    source.mipmaps = mipChain(source.image as MipLevel, false) as unknown as THREE.Texture['mipmaps'];
+    source.generateMipmaps = false;
+
+    const out = repackAnisotropyFlowmap(source)!;
+
+    expect(Array.from((out.mipmaps[1] as MipLevel).data)).toEqual([69, 74, 115, 115]);
+  });
+
+  it('asks the GPU for no chain over a repacked chain', () => {
+    const source = dataTexture();
+    source.mipmaps = mipChain(source.image as MipLevel, false) as unknown as THREE.Texture['mipmaps'];
+    source.generateMipmaps = false;
+
+    expect(repackAnisotropyFlowmap(source)!.generateMipmaps).toBe(false);
   });
 
   it('carries the source texture sampling settings onto the repacked texture', () => {
