@@ -24,9 +24,6 @@ interface Segment {
   readonly query: WebGLQuery;
 }
 
-/** The GPU nanoseconds of one frame's steps. */
-export type GpuFrame = ReadonlyMap<StepKey, number>;
-
 export class GpuTimer {
   private running: Segment | null = null;
   private frame: Segment[] = [];
@@ -63,22 +60,25 @@ export class GpuTimer {
   }
 
   /**
-   * The frames whose results have all arrived, oldest first. A disjoint operation, such as a clock
-   * change, voids every result in flight, so those frames are dropped.
+   * Hands each segment of every frame whose results have all arrived to `onSegment`, oldest first,
+   * and answers how many frames that was. A disjoint operation, such as a clock change, voids every
+   * result in flight, so those frames are dropped.
    */
-  collect(): GpuFrame[] {
+  collect(onSegment: (step: StepKey, ns: number) => void): number {
     if (this.gl.getParameter(this.ext.GPU_DISJOINT_EXT)) {
       for (const frame of this.pending.splice(0)) this.recycle(frame);
-      return [];
+      return 0;
     }
-    const resolved: GpuFrame[] = [];
-    // Queries resolve in order, so the first frame still waiting holds back every later one.
+    let frames = 0;
     while (this.pending.length > 0 && this.hasArrived(this.pending[0]!)) {
       const frame = this.pending.shift()!;
-      resolved.push(this.read(frame));
+      for (const { step, query } of frame) {
+        onSegment(step, this.gl.getQueryParameter(query, this.gl.QUERY_RESULT) as number);
+      }
       this.recycle(frame);
+      frames += 1;
     }
-    return resolved;
+    return frames;
   }
 
   dispose(): void {
@@ -95,17 +95,9 @@ export class GpuTimer {
     this.running = null;
   }
 
+  /** Queries resolve in order, so a frame whose last query has resolved has resolved whole. */
   private hasArrived(frame: readonly Segment[]): boolean {
-    return frame.every(({ query }) => this.gl.getQueryParameter(query, this.gl.QUERY_RESULT_AVAILABLE));
-  }
-
-  private read(frame: readonly Segment[]): GpuFrame {
-    const stepNs = new Map<StepKey, number>();
-    for (const { step, query } of frame) {
-      const ns = this.gl.getQueryParameter(query, this.gl.QUERY_RESULT) as number;
-      stepNs.set(step, (stepNs.get(step) ?? 0) + ns);
-    }
-    return stepNs;
+    return this.gl.getQueryParameter(frame.at(-1)!.query, this.gl.QUERY_RESULT_AVAILABLE) as boolean;
   }
 
   private recycle(frame: readonly Segment[]): void {

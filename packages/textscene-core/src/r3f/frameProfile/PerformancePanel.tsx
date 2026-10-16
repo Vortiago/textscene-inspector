@@ -24,15 +24,16 @@ function gpuTotalText({ hasGpuTimer, gpuMs }: FrameStats): string {
 
 /** Null `stats` is a profile that has not published its first window. */
 export function PerformancePanel({ stats }: { stats: FrameStats | null }) {
-  if (!stats) {
-    return (
-      <div className={styles.panel} data-testid="performance-overlay">
-        Measuring…
-      </div>
-    );
-  }
   return (
     <div className={styles.panel} data-testid="performance-overlay">
+      {stats ? <WindowStats stats={stats} /> : 'Measuring…'}
+    </div>
+  );
+}
+
+function WindowStats({ stats }: { stats: FrameStats }) {
+  return (
+    <>
       <div className={styles.totals}>
         <strong data-testid="performance-fps">{Math.round(stats.fps)} FPS</strong>
         <span data-testid="performance-frame">{formatMs(stats.frameMs)} ms</span>
@@ -61,6 +62,6 @@ export function PerformancePanel({ stats }: { stats: FrameStats | null }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </>
   );
 }

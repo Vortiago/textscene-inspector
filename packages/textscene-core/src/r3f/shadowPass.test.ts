@@ -299,6 +299,31 @@ describe('the shadow pass under a frame profile', () => {
     ]);
   });
 
+  it('times a render a reader makes as part of the Fog step, not as another run', () => {
+    let time = 0;
+    const { renderer, threePass } = fakeRenderer();
+    threePass.mockImplementation(() => (time += 3));
+    const fogged = new THREE.Scene();
+    readShadowMaps(renderer, (rendered) => {
+      if (rendered !== fogged) return;
+      time += 2;
+      runPass(renderer, [new THREE.DirectionalLight()]);
+    });
+    const camera = new THREE.PerspectiveCamera();
+
+    const stats = profiledWindow(
+      renderer,
+      () => time,
+      () => renderer.shadowMap.render([new THREE.DirectionalLight()], fogged, camera)
+    );
+
+    expect(stats.steps.map((s) => [s.step, s.cpuMs, s.callsPerFrame])).toEqual([
+      ['Shadows', 3, 1],
+      ['Fog', 5, 1],
+      ['Other', 0, 1],
+    ]);
+  });
+
   it('times no Shadows step for a render with no light, such as a fog pass (edge case)', () => {
     const { renderer } = fakeRenderer();
     installShadowPass(renderer);

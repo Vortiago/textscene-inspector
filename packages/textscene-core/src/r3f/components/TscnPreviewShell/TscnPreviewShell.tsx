@@ -11,6 +11,7 @@ import {
   SHOW_GRID_STORAGE_KEY,
   SHOW_PERFORMANCE_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
+  type PersistedViewport,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
@@ -98,7 +99,7 @@ export function TscnPreviewShell({
   // Read once to seed the provider, which holds the live value. Only the
   // toolbar's click handlers write back, so a programmatic mode change never
   // persists.
-  const [initialViewport] = useState(() => ({
+  const [initialViewport] = useState<PersistedViewport>(() => ({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
     showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, false, isBoolean),

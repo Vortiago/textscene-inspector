@@ -5,7 +5,7 @@
  */
 
 import type * as THREE from 'three';
-import { GpuTimer, type GpuFrame } from './gpuTimer.js';
+import { GpuTimer } from './gpuTimer.js';
 import {
   RENDER_STEPS,
   type FrameStats,
@@ -101,7 +101,7 @@ export class FrameProfile {
       this.sums.intervals += 1;
       this.sums.intervalMs += timestamp - this.lastTimestamp;
     }
-    for (const frame of this.gpu?.collect() ?? []) this.addGpuFrame(frame);
+    if (this.gpu) this.sums.gpuFrames += this.gpu.collect(this.addGpuTime);
     this.windowStart ??= timestamp;
     this.lastTimestamp = timestamp;
     this.isFrameOpen = true;
@@ -123,10 +123,9 @@ export class FrameProfile {
     if (this.lastTimestamp! - this.windowStart! >= STATS_WINDOW_MS) this.publishWindow();
   }
 
-  /** A step that a render inside it runs again, such as the fog's own shadow pass, counts one run. */
   beginStep(step: RenderStep): void {
     if (!this.isFrameOpen) return;
-    if (!this.openSteps.includes(step)) add(this.sums.stepCalls, step, 1);
+    add(this.sums.stepCalls, step, 1);
     this.openSteps.push(step);
     this.switchTo(step);
   }
@@ -161,13 +160,10 @@ export class FrameProfile {
     this.segmentStart = time;
   }
 
-  private addGpuFrame(frame: GpuFrame): void {
-    this.sums.gpuFrames += 1;
-    for (const [step, ns] of frame) {
-      this.sums.gpuNs += ns;
-      add(this.sums.stepGpuNs, step, ns);
-    }
-  }
+  private readonly addGpuTime = (step: StepKey, ns: number): void => {
+    this.sums.gpuNs += ns;
+    add(this.sums.stepGpuNs, step, ns);
+  };
 
   private publishWindow(): void {
     const { frames, intervals, intervalMs, cpuMs, stepCpuMs, stepCalls, gpuFrames, gpuNs, stepGpuNs } =

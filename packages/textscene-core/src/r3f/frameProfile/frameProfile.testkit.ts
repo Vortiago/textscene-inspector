@@ -4,9 +4,15 @@ import type * as THREE from 'three';
 import { startFrameProfile } from './frameProfile';
 import type { FrameStats, StepKey } from './frameStats';
 
-/** A frame interval that publishes the first window on the 26th frame. */
-const FRAME_INTERVAL_MS = 20;
-const FRAMES_PER_WINDOW = 26;
+/** A frame interval that publishes the first window, of 25 intervals, on the 26th frame. */
+export const FRAME_INTERVAL_MS = 20;
+export const FRAMES_PER_WINDOW = 26;
+
+/** A clock the test moves by hand. */
+export function manualClock(): { now: () => number; advance: (ms: number) => void } {
+  let time = 0;
+  return { now: () => time, advance: (ms) => (time += ms) };
+}
 
 /** A context with no timer query, which a fake renderer answers from `getContext`. */
 export const CPU_ONLY_CONTEXT = { getExtension: () => null };

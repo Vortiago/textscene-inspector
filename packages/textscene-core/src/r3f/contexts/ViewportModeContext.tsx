@@ -24,6 +24,14 @@ export const SHOW_GRID_STORAGE_KEY = 'tsi.showGrid';
 export const FRAME_ON_OPEN_STORAGE_KEY = 'tsi.frameOnOpen';
 export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';
 
+/** The viewport preferences a session persists, read once to seed the provider. */
+export interface PersistedViewport {
+  mode: ViewportMode;
+  showGrid: boolean;
+  frameOnOpen: boolean;
+  showPerformance: boolean;
+}
+
 interface ViewportModeValue {
   mode: ViewportMode;
   setMode: (mode: ViewportMode) => void;

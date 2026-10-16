@@ -8,7 +8,11 @@ import { HierarchyProvider, type HierarchyContextValue } from '../../contexts/Hi
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
-import { ViewportModeProvider, type ViewportMode } from '../../contexts/ViewportModeContext.js';
+import {
+  ViewportModeProvider,
+  type PersistedViewport,
+  type ViewportMode,
+} from '../../contexts/ViewportModeContext.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
@@ -26,7 +30,7 @@ interface PreviewShellProviderOptions {
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode: ViewportMode | undefined;
   /** The mode, grid, framing and performance overlay persisted last session. */
-  initialViewport: { mode: ViewportMode; showGrid: boolean; frameOnOpen: boolean; showPerformance: boolean };
+  initialViewport: PersistedViewport;
   panelId: string;
   rootScenePath: string;
 }

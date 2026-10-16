@@ -73,20 +73,34 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
   shadowMap[READERS] = readers;
   const threePass: ThreeShadowPass = { shadowMap, draw: shadowMap.render.bind(shadowMap) };
   const copy = new OmniShadowCopy();
+  /**
+   * True while the readers run. A reader's own render runs this pass again, and its time belongs to
+   * the reader's step, so that pass marks no step of its own.
+   */
+  let isReading = false;
   shadowMap.render = (lights, scene, camera) => {
     const draws = passDraws(shadowMap);
     const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
     const projected = draws ? collected(lights, isProjectedShadowLight) : NO_LIGHTS;
     const areas = draws ? collected(lights, isSlottedAreaLight) : NO_LIGHTS;
-    // A render with no light draws no map (`WebGLShadowMap.js:97`), as each of the fog's own passes.
-    const isTimed = lights.length > 0;
+    // Three's pass draws no map with none to draw (`WebGLShadowMap.js:94-97`).
+    const isTimed = draws && lights.length > 0 && !isReading;
     if (isTimed) beginStep(renderer, 'Shadows');
     threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
     drawProjectedShadows(threePass, projected, scene, camera);
     drawAreaShadows(threePass, areas, scene, camera);
     if (isTimed) endStep(renderer, 'Shadows');
-    readMaps(renderer, readers, scene, camera);
+    if (isReading) {
+      readMaps(readers, scene, camera);
+    } else {
+      isReading = true;
+      try {
+        readMapsTimed(renderer, readers, scene, camera);
+      } finally {
+        isReading = false;
+      }
+    }
     // Last: each copy and each reader's render writes its own suns' terms and target's height.
     writeSunShadowUniforms(lights);
     writeFramebufferHeight(renderer);
@@ -94,8 +108,12 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
   return readers;
 }
 
-/** Calls each reader, timed as the Fog step: the volumetric fog is the one reader (`FogLayer`). */
-function readMaps(
+function readMaps(readers: ReadonlySet<ShadowMapReader>, scene: THREE.Object3D, camera: THREE.Camera): void {
+  for (const read of readers) read(scene, camera);
+}
+
+/** {@link readMaps}, timed as the Fog step: the volumetric fog is the one reader (`FogLayer`). */
+function readMapsTimed(
   renderer: THREE.WebGLRenderer,
   readers: ReadonlySet<ShadowMapReader>,
   scene: THREE.Object3D,
@@ -103,7 +121,7 @@ function readMaps(
 ): void {
   if (readers.size === 0) return;
   beginStep(renderer, 'Fog');
-  for (const read of readers) read(scene, camera);
+  readMaps(readers, scene, camera);
   endStep(renderer, 'Fog');
 }
 

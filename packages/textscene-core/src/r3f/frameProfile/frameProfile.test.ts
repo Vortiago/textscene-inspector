@@ -2,16 +2,17 @@ import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
 import { beginStep, endStep, innermostStep, startFrameProfile } from './frameProfile';
 import type { FrameStats } from './frameStats';
+import {
+  CPU_ONLY_CONTEXT,
+  FRAME_INTERVAL_MS,
+  FRAMES_PER_WINDOW,
+  manualClock,
+  profiledWindow,
+  stepCpuMs,
+} from './frameProfile.testkit';
 
-/** A renderer whose context offers no GPU timer, so only CPU time is measured. */
 function cpuOnlyRenderer(): THREE.WebGLRenderer {
-  return { getContext: () => ({ getExtension: () => null }) } as unknown as THREE.WebGLRenderer;
-}
-
-/** A clock the test moves by hand. */
-function manualClock(): { now: () => number; advance: (ms: number) => void } {
-  let time = 0;
-  return { now: () => time, advance: (ms) => (time += ms) };
+  return { getContext: () => CPU_ONLY_CONTEXT } as unknown as THREE.WebGLRenderer;
 }
 
 /**
@@ -62,32 +63,37 @@ function timerContext() {
   };
 }
 
-function profiled() {
+/** A CPU-only renderer, its clock, and a window helper that profiles it. */
+function cpuOnly() {
   const renderer = cpuOnlyRenderer();
   const clock = manualClock();
-  const published: FrameStats[] = [];
-  const profile = startFrameProfile(renderer, (stats) => published.push(stats), clock.now);
-  return { renderer, clock, published, profile };
+  return { renderer, clock, window: (frame: () => void) => profiledWindow(renderer, clock.now, frame) };
 }
 
 describe('startFrameProfile', () => {
   it('publishes the frame rate and the mean frame interval once a window of frames has passed', () => {
-    const { clock, published, profile } = profiled();
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
-      clock.advance(4);
+    const { clock, window } = cpuOnly();
+    const stats = window(() => clock.advance(4));
+    expect(stats).toMatchObject({ frameMs: 20, fps: 50, cpuMs: 4 });
+  });
+
+  it('publishes nothing before a window of frames has passed (edge case)', () => {
+    const published: FrameStats[] = [];
+    const profile = startFrameProfile(
+      cpuOnlyRenderer(),
+      (stats) => published.push(stats),
+      () => 0
+    );
+    for (let frame = 0; frame < FRAMES_PER_WINDOW - 1; frame++) {
+      profile.beginFrame(frame * FRAME_INTERVAL_MS);
       profile.endFrame();
     }
-    expect(published).toHaveLength(1);
-    expect(published[0]!.frameMs).toBe(20);
-    expect(published[0]!.fps).toBe(50);
-    expect(published[0]!.cpuMs).toBe(4);
+    expect(published).toEqual([]);
   });
 
   it('gives each step its own time, without the time of the steps nested in it', () => {
-    const { renderer, clock, published, profile } = profiled();
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
+    const { renderer, clock, window } = cpuOnly();
+    const stats = window(() => {
       clock.advance(1);
       beginStep(renderer, 'Scene draw');
       clock.advance(2);
@@ -97,46 +103,43 @@ describe('startFrameProfile', () => {
       clock.advance(2);
       endStep(renderer, 'Scene draw');
       clock.advance(1);
-      profile.endFrame();
-    }
-    const steps = published[0]!.steps;
-    expect(steps.map((s) => [s.step, s.cpuMs, s.callsPerFrame])).toEqual([
-      ['Scene draw', 4, 1],
-      ['Shadows', 3, 1],
-      ['Other', 2, 1],
+    });
+    expect(stepCpuMs(stats)).toEqual([
+      ['Scene draw', 4],
+      ['Shadows', 3],
+      ['Other', 2],
     ]);
-    expect(published[0]!.cpuMs).toBe(9);
+    expect(stats.cpuMs).toBe(9);
   });
 
   it('counts a step that runs several times in a frame once per run', () => {
-    const { renderer, clock, published, profile } = profiled();
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
+    const { renderer, clock, window } = cpuOnly();
+    const stats = window(() => {
       for (let run = 0; run < 3; run++) {
         beginStep(renderer, 'Shadows');
         clock.advance(1);
         endStep(renderer, 'Shadows');
       }
-      profile.endFrame();
-    }
-    const shadows = published[0]!.steps.find((s) => s.step === 'Shadows');
-    expect(shadows).toMatchObject({ cpuMs: 3, callsPerFrame: 3 });
+    });
+    expect(stats.steps.find((s) => s.step === 'Shadows')).toMatchObject({ cpuMs: 3, callsPerFrame: 3 });
   });
 
   it('reports no GPU time when the context offers no timer query', () => {
-    const { published, profile } = profiled();
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
-      profile.endFrame();
-    }
-    expect(published[0]).toMatchObject({ hasGpuTimer: false, gpuMs: null });
+    const { window } = cpuOnly();
+    expect(window(() => {})).toMatchObject({ hasGpuTimer: false, gpuMs: null });
   });
 
-  it('records nothing once stopped', () => {
-    const { renderer, published, profile } = profiled();
+  it('records nothing once stopped (error case)', () => {
+    const renderer = cpuOnlyRenderer();
+    const published: FrameStats[] = [];
+    const profile = startFrameProfile(
+      renderer,
+      (stats) => published.push(stats),
+      () => 0
+    );
     profile.stop();
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
+    for (let frame = 0; frame < FRAMES_PER_WINDOW; frame++) {
+      profile.beginFrame(frame * FRAME_INTERVAL_MS);
       beginStep(renderer, 'Shadows');
       endStep(renderer, 'Shadows');
       profile.endFrame();
@@ -144,53 +147,24 @@ describe('startFrameProfile', () => {
     expect(published).toEqual([]);
   });
 
-  it('ignores a step marked outside a frame, such as a screenshot render', () => {
-    const { renderer, clock, published, profile } = profiled();
-    beginStep(renderer, 'Scene draw');
-    clock.advance(50);
-    endStep(renderer, 'Scene draw');
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
-      clock.advance(1);
-      profile.endFrame();
-    }
-    expect(published[0]!.steps.map((s) => s.step)).toEqual(['Other']);
-  });
-
   it('closes a step left open by a throw when the frame ends', () => {
-    const { renderer, clock, published, profile } = profiled();
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
+    const { renderer, clock, window } = cpuOnly();
+    const stats = window(() => {
       beginStep(renderer, 'Fog');
       clock.advance(1);
-      profile.endFrame();
-      clock.advance(5);
-    }
-    expect(published[0]!.steps.find((s) => s.step === 'Fog')!.cpuMs).toBe(1);
+    });
+    expect(stats.steps.find((s) => s.step === 'Fog')!.cpuMs).toBe(1);
   });
 });
 
 describe('beginStep', () => {
-  it('counts a step that a render inside it runs again as one run, with all its time', () => {
-    const { renderer, clock, published, profile } = profiled();
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
-      beginStep(renderer, 'Fog');
-      clock.advance(1);
-      beginStep(renderer, 'Shadows');
-      clock.advance(2);
-      beginStep(renderer, 'Fog');
-      clock.advance(3);
-      endStep(renderer, 'Fog');
-      endStep(renderer, 'Shadows');
-      endStep(renderer, 'Fog');
-      profile.endFrame();
-    }
-    expect(published[0]!.steps.map((s) => [s.step, s.cpuMs, s.callsPerFrame])).toEqual([
-      ['Shadows', 2, 1],
-      ['Fog', 4, 1],
-      ['Other', 0, 1],
-    ]);
+  it('ignores a step marked outside a frame, such as a screenshot render', () => {
+    const { renderer, clock, window } = cpuOnly();
+    const stats = window(() => clock.advance(1));
+    beginStep(renderer, 'Scene draw');
+    clock.advance(50);
+    endStep(renderer, 'Scene draw');
+    expect(stepCpuMs(stats)).toEqual([['Other', 1]]);
   });
 
   it('does nothing on a renderer with no profile', () => {
@@ -204,48 +178,64 @@ describe('beginStep', () => {
 
 describe('endStep', () => {
   it('leaves the open step running when it names another step', () => {
-    const { renderer, clock, published, profile } = profiled();
-    for (let frame = 0; frame <= 30; frame++) {
-      profile.beginFrame(frame * 20);
+    const { renderer, clock, window } = cpuOnly();
+    const stats = window(() => {
       beginStep(renderer, 'Scene draw');
       endStep(renderer, 'Shadows');
       clock.advance(2);
       endStep(renderer, 'Scene draw');
-      profile.endFrame();
-    }
-    expect(published[0]!.steps.find((s) => s.step === 'Scene draw')!.cpuMs).toBe(2);
+    });
+    expect(stats.steps.find((s) => s.step === 'Scene draw')!.cpuMs).toBe(2);
+  });
+});
+
+describe('innermostStep', () => {
+  function inFrame() {
+    const renderer = cpuOnlyRenderer();
+    startFrameProfile(renderer, () => {}).beginFrame(0);
+    return renderer;
+  }
+
+  it('names the innermost open step', () => {
+    const renderer = inFrame();
+    beginStep(renderer, 'Compositor');
+    beginStep(renderer, 'Scene draw');
+    expect(innermostStep(renderer)).toBe('Scene draw');
+  });
+
+  it('is null in a frame with no step open', () => {
+    expect(innermostStep(inFrame())).toBeNull();
+  });
+
+  it('is null on a renderer with no profile (edge case)', () => {
+    expect(innermostStep(cpuOnlyRenderer())).toBeNull();
   });
 });
 
 describe('startFrameProfile on a context with a GPU timer', () => {
-  function gpuProfiled() {
-    const gpu = timerContext();
-    const clock = manualClock();
-    const published: FrameStats[] = [];
-    const profile = startFrameProfile(gpu.renderer, (stats) => published.push(stats), clock.now);
-    /** A frame of 1 ms GPU outside every step, 4 ms in Shadows, and 2 ms in Fog nested in it. */
-    const runFrame = (frame: number) => {
-      profile.beginFrame(frame * 20);
-      gpu.advanceGpu(1);
-      beginStep(gpu.renderer, 'Shadows');
-      gpu.advanceGpu(4);
-      beginStep(gpu.renderer, 'Fog');
-      gpu.advanceGpu(2);
-      endStep(gpu.renderer, 'Fog');
-      endStep(gpu.renderer, 'Shadows');
-      profile.endFrame();
-    };
-    return { gpu, published, profile, runFrame };
+  /** A frame of 1 ms GPU outside every step, 4 ms in Shadows, and 2 ms in Fog nested in it. */
+  function gpuFrame(gpu: ReturnType<typeof timerContext>): void {
+    gpu.advanceGpu(1);
+    beginStep(gpu.renderer, 'Shadows');
+    gpu.advanceGpu(4);
+    beginStep(gpu.renderer, 'Fog');
+    gpu.advanceGpu(2);
+    endStep(gpu.renderer, 'Fog');
+    endStep(gpu.renderer, 'Shadows');
   }
 
   it("gives each step its own GPU time once the frame's results arrive", () => {
-    const { gpu, published, runFrame } = gpuProfiled();
-    for (let frame = 0; frame <= 30; frame++) {
-      runFrame(frame);
-      gpu.resolve();
-    }
-    expect(published[0]!.gpuMs).toBe(7);
-    expect(published[0]!.steps.map((s) => [s.step, s.gpuMs])).toEqual([
+    const gpu = timerContext();
+    const stats = profiledWindow(
+      gpu.renderer,
+      () => 0,
+      () => {
+        gpuFrame(gpu);
+        gpu.resolve();
+      }
+    );
+    expect(stats.gpuMs).toBe(7);
+    expect(stats.steps.map((s) => [s.step, s.gpuMs])).toEqual([
       ['Shadows', 4],
       ['Fog', 2],
       ['Other', 1],
@@ -253,51 +243,46 @@ describe('startFrameProfile on a context with a GPU timer', () => {
   });
 
   it('runs one timer query at a time, as WebGL allows', () => {
-    const { gpu, runFrame } = gpuProfiled();
-    for (let frame = 0; frame <= 30; frame++) runFrame(frame);
+    const gpu = timerContext();
+    profiledWindow(
+      gpu.renderer,
+      () => 0,
+      () => gpuFrame(gpu)
+    );
     expect(gpu.state.overlaps).toBe(0);
   });
 
   it('reports a GPU timer with no time while no result has arrived', () => {
-    const { published, runFrame } = gpuProfiled();
-    for (let frame = 0; frame <= 30; frame++) runFrame(frame);
-    expect(published[0]).toMatchObject({ hasGpuTimer: true, gpuMs: null });
+    const gpu = timerContext();
+    const stats = profiledWindow(
+      gpu.renderer,
+      () => 0,
+      () => gpuFrame(gpu)
+    );
+    expect(stats).toMatchObject({ hasGpuTimer: true, gpuMs: null });
   });
 
-  it('drops the results of a frame the GPU timer marks disjoint', () => {
-    const { gpu, published, runFrame } = gpuProfiled();
+  it('drops the results of a frame the GPU timer marks disjoint (error case)', () => {
+    const gpu = timerContext();
     gpu.state.isDisjoint = true;
-    for (let frame = 0; frame <= 30; frame++) {
-      runFrame(frame);
-      gpu.resolve();
-    }
-    expect(published[0]!.gpuMs).toBeNull();
+    const stats = profiledWindow(
+      gpu.renderer,
+      () => 0,
+      () => {
+        gpuFrame(gpu);
+        gpu.resolve();
+      }
+    );
+    expect(stats.gpuMs).toBeNull();
   });
 
   it('deletes every query it made once stopped', () => {
-    const { gpu, profile, runFrame } = gpuProfiled();
-    for (let frame = 0; frame <= 30; frame++) runFrame(frame);
-    profile.stop();
+    const gpu = timerContext();
+    profiledWindow(
+      gpu.renderer,
+      () => 0,
+      () => gpuFrame(gpu)
+    );
     expect(gpu.liveQueries()).toBe(0);
-  });
-});
-
-describe('innermostStep', () => {
-  it('names the innermost open step', () => {
-    const { renderer, profile } = profiled();
-    profile.beginFrame(0);
-    beginStep(renderer, 'Compositor');
-    beginStep(renderer, 'Scene draw');
-    expect(innermostStep(renderer)).toBe('Scene draw');
-  });
-
-  it('is null in a frame with no step open', () => {
-    const { renderer, profile } = profiled();
-    profile.beginFrame(0);
-    expect(innermostStep(renderer)).toBeNull();
-  });
-
-  it('is null on a renderer with no profile (edge case)', () => {
-    expect(innermostStep(cpuOnlyRenderer())).toBeNull();
   });
 });

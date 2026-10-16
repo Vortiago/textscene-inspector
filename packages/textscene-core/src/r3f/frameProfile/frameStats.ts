@@ -14,6 +14,9 @@ export const RENDER_STEPS = [
 
 export type RenderStep = (typeof RENDER_STEPS)[number];
 
+/** The steps whose work includes the canvas's own draw of its scene, as the compositor's scene pass. */
+export const WRAPS_CANVAS_DRAW: ReadonlySet<RenderStep> = new Set<RenderStep>(['Compositor']);
+
 /** A render step, or the frame's own time outside every step. */
 export type StepKey = RenderStep | 'Other';
 

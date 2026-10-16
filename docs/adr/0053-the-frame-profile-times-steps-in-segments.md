@@ -25,10 +25,13 @@ window.
 - Each segment is one GPU timer query (`EXT_disjoint_timer_query_webgl2`). The results arrive some
   frames later, and a disjoint flag drops every frame in flight. Without the extension, the overlay
   shows CPU time only.
-- A step that runs again inside itself counts as one run, and a render with no light times no
-  Shadows step, so the fog's own passes do not multiply the counts.
-- A render through the canvas's camera at the frame's top level, or in the compositor, is the Scene
-  draw. A render inside another step belongs to that step.
+- The shadow pass times its maps as Shadows wherever it runs, inside a sub-viewport pass or a
+  probe capture too, since a shadow map costs the same there. A pass that draws no map times
+  nothing. The shadow-map readers time as Fog, and a render a reader makes counts in Fog, so the
+  fog's own passes do not multiply the counts.
+- A render through the canvas's camera at the frame's top level, or in a step that wraps the canvas
+  draw (`WRAPS_CANVAS_DRAW`, the compositor), is the Scene draw. A render inside another step, such
+  as the 2D light pass, belongs to that step.
 
 ## Consequences
 
