@@ -30,9 +30,10 @@ function readVector2Property(
   fallback: { x: number; y: number }
 ): { x: number; y: number } | null {
   if (raw === undefined) return fallback;
+  const vector = matchVector2(raw);
+  if (vector) return vector;
   // Malformed is linterParser.ts's job, not this helper's.
-  if (!VECTOR2_REGEX.test(raw.trim())) return fallback;
-  return matchVector2(raw);
+  return VECTOR2_REGEX.test(raw.trim()) ? null : fallback;
 }
 
 function parseScalar(raw: string | undefined, fallback: number): number {

@@ -5,7 +5,7 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { useCanvasItemLighting, type CanvasItemLightingProps } from '../lighting2d/useCanvasItemLighting';
-import { canvasItemFacing } from '../canvasItemFacing';
+import { canvasItemFacing, type CanvasItemFacing } from '../canvasItemFacing';
 import {
   canvasItemBlendState,
   type CanvasItemBlendState,
@@ -20,9 +20,7 @@ import {
  * facing, the blend state of the material in force and the light-list sampling, in that order, so
  * the lighting's forced `transparent` wins.
  */
-export type CanvasItemPixelMaterial = ReturnType<typeof canvasItemFacing> &
-  CanvasItemBlendState &
-  CanvasItemLightingProps;
+export type CanvasItemPixelMaterial = CanvasItemFacing & CanvasItemBlendState & CanvasItemLightingProps;
 
 interface LitCanvasItemPixelsProps {
   material: CanvasItemMaterialProperties | null;

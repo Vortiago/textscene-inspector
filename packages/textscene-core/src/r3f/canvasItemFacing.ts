@@ -12,7 +12,7 @@ import * as THREE from 'three';
  * `forceSinglePass`. A flat item in painter's order has no facing, and a split
  * reorders mixed winding and double-counts an additive blend.
  */
-interface CanvasItemFacing {
+export interface CanvasItemFacing {
   readonly side: THREE.Side;
   // `lineJoints.ts` joints wind by the sign of the turn and CPUParticles2D quads by
   // their transform: both paint one uniform colour, so their reorder does not show.

@@ -26,7 +26,7 @@ const RIGID_BODY_SCALE_TOLERANCE = 0.05;
  * default (node_2d.h:39) and the serialised default agree. Not `transform`: Node2D's
  * `transform` carries `PROPERTY_USAGE_NONE` (node_2d.cpp:501) and is never written.
  */
-function parseScale2D(raw: string | undefined): { x: number; y: number } | null {
+function readScale2D(raw: string | undefined): { x: number; y: number } | null {
   if (raw === undefined) return { x: 1, y: 1 };
   return matchVector2(raw);
 }
@@ -119,7 +119,7 @@ export function makeRigidBodyLinterRule(dim: PhysicsDim): LintRule {
     // Per-axis scale overridden at runtime (2D: rigid_body_2d.cpp:648,
     // `Math::abs(t.columns[n].length() - 1.0) > 0.05`). An unsigned column length is
     // `|scale.n|` whatever the rotation or skew, so reading `scale` needs no matrix.
-    const scale2D = dim === '2D' ? parseScale2D(rawProps.scale) : null;
+    const scale2D = dim === '2D' ? readScale2D(rawProps.scale) : null;
     // PhysicalBone2D inherits this check (physical_bone_2d.cpp:109). A malformed
     // literal or a narrowed component gives `null` and no report, since no scale
     // may be quoted, and `v.vector2('scale')` on Node2D checks the shape.
