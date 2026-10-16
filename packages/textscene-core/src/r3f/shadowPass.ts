@@ -21,6 +21,7 @@ import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
 import { beginStep, endStep } from './frameProfile/frameProfile.js';
+import type { RenderStep } from './frameProfile/frameStats.js';
 
 /**
  * Reads the maps a render's shadow pass has just drawn, for `scene`, the object that render draws,
@@ -35,7 +36,10 @@ type ShadowMapReader = (scene: THREE.Object3D, camera: THREE.Camera) => void;
  */
 const READERS = Symbol.for('textscene.shadowPass');
 
-type WrappedShadowMap = THREE.WebGLShadowMap & { [READERS]?: Set<ShadowMapReader> };
+/** Each reader, and the render step a frame profile times it as. */
+type Readers = Map<ShadowMapReader, RenderStep>;
+
+type WrappedShadowMap = THREE.WebGLShadowMap & { [READERS]?: Readers };
 
 interface OmniLight extends THREE.PointLight {
   shadow: AtlasOmniShadow;
@@ -53,23 +57,27 @@ export function installShadowPass(renderer: THREE.WebGLRenderer): void {
 }
 
 /**
- * Calls `reader` after each shadow pass of `renderer`, until the returned disposer runs. The pass
- * wraps itself on the first reader.
+ * Calls `reader` after each shadow pass of `renderer`, until the returned disposer runs, and a frame
+ * profile times it as `step`. The pass wraps itself on the first reader.
  */
-export function readShadowMaps(renderer: THREE.WebGLRenderer, reader: ShadowMapReader): () => void {
+export function readShadowMaps(
+  renderer: THREE.WebGLRenderer,
+  step: RenderStep,
+  reader: ShadowMapReader
+): () => void {
   const readers = readersOf(renderer);
-  readers.add(reader);
+  readers.set(reader, step);
   return () => {
     readers.delete(reader);
   };
 }
 
 /** The readers the wrapped pass of `renderer` calls, the pass wrapped on the first call. */
-function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
+function readersOf(renderer: THREE.WebGLRenderer): Readers {
   const shadowMap = renderer.shadowMap as WrappedShadowMap;
   const existing = shadowMap[READERS];
   if (existing) return existing;
-  const readers = new Set<ShadowMapReader>();
+  const readers: Readers = new Map();
   shadowMap[READERS] = readers;
   const threePass: ThreeShadowPass = { shadowMap, draw: shadowMap.render.bind(shadowMap) };
   const copy = new OmniShadowCopy();
@@ -108,21 +116,22 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
   return readers;
 }
 
-function readMaps(readers: ReadonlySet<ShadowMapReader>, scene: THREE.Object3D, camera: THREE.Camera): void {
-  for (const read of readers) read(scene, camera);
+function readMaps(readers: Readers, scene: THREE.Object3D, camera: THREE.Camera): void {
+  for (const read of readers.keys()) read(scene, camera);
 }
 
-/** {@link readMaps}, timed as the Fog step: the volumetric fog is the one reader (`FogLayer`). */
+/** {@link readMaps}, each reader timed as its own step. */
 function readMapsTimed(
   renderer: THREE.WebGLRenderer,
-  readers: ReadonlySet<ShadowMapReader>,
+  readers: Readers,
   scene: THREE.Object3D,
   camera: THREE.Camera
 ): void {
-  if (readers.size === 0) return;
-  beginStep(renderer, 'Fog');
-  readMaps(readers, scene, camera);
-  endStep(renderer, 'Fog');
+  for (const [read, step] of readers) {
+    beginStep(renderer, step);
+    read(scene, camera);
+    endStep(renderer, step);
+  }
 }
 
 /** Copies each light's cube into the atlas. Each copy leaves the render target as it found it. */

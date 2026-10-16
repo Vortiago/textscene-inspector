@@ -8,7 +8,6 @@
 import {
   VOLUMETRIC_FOG_SHADOW_FADE,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
-  VOLUMETRIC_FOG_TEMPORAL_JITTERS,
 } from '../../godot/rendering/environment/volumetricFog.js';
 import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
@@ -19,16 +18,13 @@ import { FOG_VOLUME_GLSL } from './fogVolumeShader.js';
 import { LTC_INTEGRAL } from '../areaLight/ltcIntegral.js';
 import { PARABOLOID_UV_GLSL } from '../positionalShadow/paraboloidUv.js';
 
-/** The offsets a still froxel samples and averages: Godot's 16 jitters, or its centre alone. */
-export const FOG_SAMPLE_OFFSETS_MAX = VOLUMETRIC_FOG_TEMPORAL_JITTERS.length;
-
 /**
  * Lights one froxel: the Environment's medium plus each FogVolume's (`.glsl:354-378`), each light's
  * scatter (`.glsl:252-255`, an area light's from 4.7.2) under its shadow (`.glsl:388-422,488-510,552-574`,
  * 4.7.2 `:671-691`), and the ambient with its sky (`.glsl:430-445`), times the scattering, plus the
  * emission (`.glsl:681`). A moving camera's froxel blends this frame's jitter into its reprojected
- * history (`.glsl:311-335,683`). A still one averages its sample offsets, the mean the history
- * converges to. A clear cell scatters nothing (`.glsl:383`).
+ * history (`.glsl:311-335,683`). A still one blends one jitter a render into the mean of those
+ * before it, towards the mean the history converges to. A clear cell scatters nothing (`.glsl:383`).
  */
 export const FOG_LIGHT_FRAGMENT = /* glsl */ `
 #include <common>
@@ -54,8 +50,7 @@ uniform highp sampler2D fogLights;
 uniform int lightCount;
 uniform highp sampler2D directionalShadowAtlas;
 uniform highp sampler2D positionalShadowAtlas;
-uniform vec3 sampleOffsets[${FOG_SAMPLE_OFFSETS_MAX}];
-uniform int sampleCount;
+uniform vec3 sampleOffset;
 uniform highp sampler3D history;
 uniform mat4 toPreviousView;
 uniform float historyAmount;
@@ -138,9 +133,11 @@ vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 faci
 
 // Godot reads an atlas's depth through a linear sampler that clamps at the edge (.glsl:417, :507,
 // :571). The pass reads the atlas uncompared and unfiltered, so it filters the four nearest texels.
+// The uv clamps before it turns into a texel: a cell beside a light's origin projects past the int
+// range, where the conversion is undefined and the cell turns NaN.
 float atlasDepth( highp sampler2D atlas, vec2 uv ) {
 	ivec2 last = textureSize( atlas, 0 ) - 1;
-	vec2 texel = uv * vec2( last + 1 ) - 0.5;
+	vec2 texel = clamp( uv, 0.0, 1.0 ) * vec2( last + 1 ) - 0.5;
 	ivec2 base = ivec2( floor( texel ) );
 	vec2 weight = texel - floor( texel );
 	float d00 = texelFetch( atlas, clamp( base, ivec2( 0 ), last ), 0 ).r;
@@ -250,6 +247,8 @@ vec3 lightsAt( vec3 view ) {
 			float rim = max( 0.0001, ( 1.0 - spotCos ) / ( 1.0 - direction.w ) );
 			attenuation *= 1.0 - pow( rim, cone.x );
 		}
+		// A cell outside the range or the cone scatters nothing, so its shadow goes unread.
+		if ( attenuation <= 0.0 ) continue;
 		if ( isShadowed ) {
 			float depthRange = 1.0 / position.w;
 			float shadow = kind == ${FogLightKind.SPOT} ? spotShadow( i, view, cone.w, depthRange ) : omniShadow( i, view, cone.w, depthRange );
@@ -315,13 +314,11 @@ void main() {
 		vec3 unit = previousUnit( froxelView( ( froxel + 0.5 ) / gridSize ) );
 		bool reprojects = all( greaterThan( unit, vec3( 0.0 ) ) ) && all( lessThan( unit, vec3( 1.0 ) ) );
 		// A cell that cannot reproject keeps its centre and no history.
-		vec4 medium = froxelMedium( froxel, reprojects ? sampleOffsets[ 0 ] : vec3( 0.5 ) );
+		vec4 medium = froxelMedium( froxel, reprojects ? sampleOffset : vec3( 0.5 ) );
 		gl_FragColor = reprojects ? mix( medium, texture( history, unit ), historyAmount ) : medium;
 		return;
 	}
-	vec4 medium = vec4( 0.0 );
-	for ( int i = 0; i < sampleCount; i ++ ) medium += froxelMedium( froxel, sampleOffsets[ i ] );
-	gl_FragColor = medium / float( sampleCount );
+	gl_FragColor = froxelMedium( froxel, sampleOffset );
 }
 `;
 

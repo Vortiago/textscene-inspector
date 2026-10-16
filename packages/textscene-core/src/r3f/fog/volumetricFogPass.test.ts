@@ -20,8 +20,7 @@ type VolumetricFogInputs = Parameters<VolumetricFogPass['prepare']>[3];
 
 /** One light pass slice as it was drawn. */
 interface LightDraw {
-  sampleCount: number;
-  firstOffset: THREE.Vector3;
+  sampleOffset: THREE.Vector3;
   historyAmount: number;
   frustumBegin: THREE.Vector2;
   frustumEnd: THREE.Vector2;
@@ -59,8 +58,7 @@ class RecordingRenderer {
     if (material.name !== 'VolumetricFog.Light') return;
     const uniforms = material.uniforms;
     this.lightDraws.push({
-      sampleCount: uniforms['sampleCount']!.value as number,
-      firstOffset: (uniforms['sampleOffsets']!.value as THREE.Vector3[])[0]!.clone(),
+      sampleOffset: (uniforms['sampleOffset']!.value as THREE.Vector3).clone(),
       historyAmount: uniforms['historyAmount']!.value as number,
       frustumBegin: (uniforms['frustumBegin']!.value as THREE.Vector2).clone(),
       frustumEnd: (uniforms['frustumEnd']!.value as THREE.Vector2).clone(),
@@ -117,6 +115,25 @@ function moved(view: THREE.Camera): void {
 
 const CENTRE = new THREE.Vector3(0.5, 0.5, 0.5);
 
+/** The volume's rows run bottom-up, so a jitter's top-down y flips. */
+const JITTERS = VOLUMETRIC_FOG_TEMPORAL_JITTERS.map(([x, y, z]) => new THREE.Vector3(x, 1 - y, z));
+
+/** A new view's first render steps, and each still render after it adds one jitter. */
+const RENDERS_TO_SETTLE = 1 + JITTERS.length;
+
+/** Prepares `view` until it stops settling, so the next render starts from a converged view. */
+function settle(
+  pass: VolumetricFogPass,
+  renderer: RecordingRenderer,
+  scene: THREE.Scene,
+  view: THREE.Camera,
+  fog: VolumetricFogInputs
+) {
+  for (let render = 0; render < RENDERS_TO_SETTLE; render++) {
+    if (!pass.prepare(renderer.asWebGL, scene, view, fog)) return;
+  }
+}
+
 describe('VolumetricFogPass.prepare', () => {
   it('samples each cell centre with no history on the first render', () => {
     const renderer = new RecordingRenderer();
@@ -124,7 +141,7 @@ describe('VolumetricFogPass.prepare', () => {
 
     const { lightDraws } = renderer.take();
     expect(lightDraws).toHaveLength(PROJECT.volumeDepth);
-    expect(lightDraws[0]).toMatchObject({ sampleCount: 1, firstOffset: CENTRE, historyAmount: 0 });
+    expect(lightDraws[0]).toMatchObject({ sampleOffset: CENTRE, historyAmount: 0 });
   });
 
   it("binds the area light atlas, which an area light's texture colours the fog through", () => {
@@ -163,17 +180,37 @@ describe('VolumetricFogPass.prepare', () => {
     expect(renderer.take()).toEqual({ lightDraws: [], copies: 0 });
   });
 
-  it('draws the mean of the 16 jitters once the view holds still, as Godot converges', () => {
+  it('adds one jitter a render once the view holds still, as Godot converges, and keeps settling', () => {
     const renderer = new RecordingRenderer();
     const pass = new VolumetricFogPass();
     const scene = new THREE.Scene();
     const view = camera();
     const fog = inputs();
-    expect(pass.prepare(renderer.asWebGL, scene, view, fog)).toBe(true);
+    pass.prepare(renderer.asWebGL, scene, view, fog);
     renderer.take();
 
-    expect(pass.prepare(renderer.asWebGL, scene, view, fog)).toBe(false);
-    expect(renderer.take().lightDraws[0]?.sampleCount).toBe(VOLUMETRIC_FOG_TEMPORAL_JITTERS.length);
+    const settling = JITTERS.map(() => pass.prepare(renderer.asWebGL, scene, view, fog));
+
+    expect(settling).toEqual([...JITTERS.slice(1).map(() => true), false]);
+  });
+
+  it('draws the 16 jitters in order, each blended into the mean of those before it', () => {
+    const renderer = new RecordingRenderer();
+    const pass = new VolumetricFogPass();
+    const scene = new THREE.Scene();
+    const view = camera();
+    const fog = inputs();
+    pass.prepare(renderer.asWebGL, scene, view, fog);
+    renderer.take();
+
+    JITTERS.forEach(() => pass.prepare(renderer.asWebGL, scene, view, fog));
+
+    const slices = renderer.take().lightDraws.filter((_, i) => i % PROJECT.volumeDepth === 0);
+    slices.forEach((draw, jitter) => {
+      expect(draw.sampleOffset.x).toBe(JITTERS[jitter]!.x);
+      expect(draw.sampleOffset.y).toBeCloseTo(JITTERS[jitter]!.y, 6);
+      expect(draw.historyAmount).toBe(jitter / (jitter + 1));
+    });
   });
 
   it('draws nothing more for a view that has converged', () => {
@@ -182,8 +219,7 @@ describe('VolumetricFogPass.prepare', () => {
     const scene = new THREE.Scene();
     const view = camera();
     const fog = inputs();
-    pass.prepare(renderer.asWebGL, scene, view, fog);
-    pass.prepare(renderer.asWebGL, scene, view, fog);
+    settle(pass, renderer, scene, view, fog);
     renderer.take();
 
     expect(pass.prepare(renderer.asWebGL, scene, view, fog)).toBe(false);
@@ -203,10 +239,10 @@ describe('VolumetricFogPass.prepare', () => {
     expect(pass.prepare(renderer.asWebGL, scene, view, fog)).toBe(true);
     const [draw] = renderer.take().lightDraws;
     const [x, y, z] = VOLUMETRIC_FOG_TEMPORAL_JITTERS[1]!;
-    expect(draw).toMatchObject({ sampleCount: 1, historyAmount: 0.6 });
-    expect(draw!.firstOffset.x).toBe(x);
-    expect(draw!.firstOffset.y).toBeCloseTo(1 - y, 6);
-    expect(draw!.firstOffset.z).toBe(z);
+    expect(draw).toMatchObject({ historyAmount: 0.6 });
+    expect(draw!.sampleOffset.x).toBe(x);
+    expect(draw!.sampleOffset.y).toBeCloseTo(1 - y, 6);
+    expect(draw!.sampleOffset.z).toBe(z);
   });
 
   it('samples the centres and keeps no history without temporal reprojection', () => {
@@ -220,8 +256,7 @@ describe('VolumetricFogPass.prepare', () => {
     moved(view);
     pass.prepare(renderer.asWebGL, scene, view, fog);
     expect(renderer.take().lightDraws.at(-1)).toMatchObject({
-      sampleCount: 1,
-      firstOffset: CENTRE,
+      sampleOffset: CENTRE,
       historyAmount: 0,
     });
   });
@@ -249,7 +284,7 @@ describe('VolumetricFogPass.prepare', () => {
     const other = camera();
     moved(other);
     const fog = inputs();
-    for (let frame = 0; frame < 2; frame++) {
+    for (let render = 0; render < RENDERS_TO_SETTLE; render++) {
       pass.prepare(renderer.asWebGL, scene, main, fog);
       pass.prepare(renderer.asWebGL, scene, other, fog);
     }
@@ -270,7 +305,9 @@ describe('VolumetricFogPass.prepare', () => {
 
     pass.forget(scene);
 
-    expect(dispose).toHaveBeenCalledTimes(4);
+    const cameras = 2;
+    const targetsPerView = 2;
+    expect(dispose).toHaveBeenCalledTimes(cameras * targetsPerView);
     dispose.mockRestore();
   });
 
@@ -327,8 +364,7 @@ describe('VolumetricFogPass.prepare', () => {
     const view = camera();
     const box = Object.assign(new THREE.Mesh(), { castShadow: true });
     const fog = { ...inputs(), lights: [castingSun()], casters: [box] };
-    pass.prepare(renderer.asWebGL, scene, view, fog);
-    pass.prepare(renderer.asWebGL, scene, view, fog);
+    settle(pass, renderer, scene, view, fog);
     renderer.take();
 
     box.position.y = 1;
@@ -346,8 +382,7 @@ describe('VolumetricFogPass.prepare', () => {
     volume.position.z = -5;
     volume.updateMatrixWorld();
     const fog = { ...inputs(), volumes: [volume] };
-    pass.prepare(renderer.asWebGL, scene, view, fog);
-    pass.prepare(renderer.asWebGL, scene, view, fog);
+    settle(pass, renderer, scene, view, fog);
     renderer.take();
 
     volume.position.y = 1;
@@ -371,8 +406,7 @@ describe('VolumetricFogPass.prepare', () => {
       densityTexture: new THREE.Data3DTexture(new Uint8Array(8), 2, 2, 2),
     };
     const fog = { ...inputs(), volumes: [volume] };
-    pass.prepare(renderer.asWebGL, scene, view, fog);
-    pass.prepare(renderer.asWebGL, scene, view, fog);
+    settle(pass, renderer, scene, view, fog);
     renderer.take();
 
     // Same size, so every row stays the same: only the stacked texels differ.
@@ -389,8 +423,7 @@ describe('VolumetricFogPass.prepare', () => {
     const view = camera();
     const box = Object.assign(new THREE.Mesh(), { castShadow: true });
     const fog = { ...inputs(), casters: [box] };
-    pass.prepare(renderer.asWebGL, scene, view, fog);
-    pass.prepare(renderer.asWebGL, scene, view, fog);
+    settle(pass, renderer, scene, view, fog);
     renderer.take();
 
     box.position.y = 1;

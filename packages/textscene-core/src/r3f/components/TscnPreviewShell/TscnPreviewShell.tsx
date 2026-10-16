@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   FRAME_ON_OPEN_STORAGE_KEY,
+  SHOW_FOG_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
   SHOW_PERFORMANCE_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
@@ -103,6 +104,7 @@ export function TscnPreviewShell({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
     showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, false, isBoolean),
+    showFog: readPersisted(SHOW_FOG_STORAGE_KEY, true, isBoolean),
     showPerformance: readPersisted(SHOW_PERFORMANCE_STORAGE_KEY, false, isBoolean),
   }));
 
