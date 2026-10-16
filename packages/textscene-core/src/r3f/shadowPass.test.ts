@@ -22,6 +22,7 @@ import {
   SUN_SHADOW_ROWS,
 } from './directionalShadow/sunShadowUniforms';
 import { litUniformArray } from './testing/litUniformArray';
+import { CPU_ONLY_CONTEXT, profiledWindow, stepCpuMs } from './frameProfile/frameProfile.testkit';
 
 holdPositionalShadowAtlas({}, 4096);
 
@@ -36,6 +37,7 @@ function fakeRenderer(): { renderer: THREE.WebGLRenderer; threePass: ReturnType<
     getActiveMipmapLevel: () => 0,
     setRenderTarget: vi.fn(),
     getDrawingBufferSize: (size: THREE.Vector2) => size.set(955, 756),
+    getContext: () => CPU_ONLY_CONTEXT,
   };
   return { renderer: renderer as unknown as THREE.WebGLRenderer, threePass };
 }
@@ -276,6 +278,40 @@ describe('readShadowMaps', () => {
 function threeSource(path: string): string {
   return readFileSync(createRequire(import.meta.url).resolve(`three/src/${path}`), 'utf8');
 }
+
+describe('the shadow pass under a frame profile', () => {
+  it('times three’s pass as the Shadows step and the readers as the Fog step', () => {
+    let time = 0;
+    const { renderer, threePass } = fakeRenderer();
+    threePass.mockImplementation(() => (time += 3));
+    readShadowMaps(renderer, () => (time += 2));
+
+    const stats = profiledWindow(
+      renderer,
+      () => time,
+      () => runPass(renderer, [new THREE.DirectionalLight()])
+    );
+
+    expect(stepCpuMs(stats)).toEqual([
+      ['Shadows', 3],
+      ['Fog', 2],
+      ['Other', 0],
+    ]);
+  });
+
+  it('times no Shadows step for a render with no light, such as a fog pass (edge case)', () => {
+    const { renderer } = fakeRenderer();
+    installShadowPass(renderer);
+
+    const stats = profiledWindow(
+      renderer,
+      () => 0,
+      () => runPass(renderer, [])
+    );
+
+    expect(stepCpuMs(stats)).toEqual([['Other', 0]]);
+  });
+});
 
 describe('the sun shadow rows', () => {
   /** A split sun whose first slot matrix moves by `x`. */

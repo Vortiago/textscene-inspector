@@ -20,6 +20,7 @@ import { DirectionalSplitShadow } from './directionalShadow/splitShadow.js';
 import { writeFramebufferHeight } from './shadowFilter/framebufferRows.js';
 import { writeSunShadowUniforms } from './directionalShadow/sunShadowUniforms.js';
 import { OmniShadowCopy } from './positionalShadow/omniShadowCopy.js';
+import { beginStep, endStep } from './frameProfile/frameProfile.js';
 
 /**
  * Reads the maps a render's shadow pass has just drawn, for `scene`, the object that render draws,
@@ -77,16 +78,33 @@ function readersOf(renderer: THREE.WebGLRenderer): Set<ShadowMapReader> {
     const copied = draws ? collected(lights, needsCopy) : NO_LIGHTS;
     const projected = draws ? collected(lights, isProjectedShadowLight) : NO_LIGHTS;
     const areas = draws ? collected(lights, isSlottedAreaLight) : NO_LIGHTS;
+    // A render with no light draws no map (`WebGLShadowMap.js:97`), as each of the fog's own passes.
+    const isTimed = lights.length > 0;
+    if (isTimed) beginStep(renderer, 'Shadows');
     threePass.draw(lights, scene, camera);
     copyOmniShadows(renderer, copy, copied);
     drawProjectedShadows(threePass, projected, scene, camera);
     drawAreaShadows(threePass, areas, scene, camera);
-    for (const read of readers) read(scene, camera);
+    if (isTimed) endStep(renderer, 'Shadows');
+    readMaps(renderer, readers, scene, camera);
     // Last: each copy and each reader's render writes its own suns' terms and target's height.
     writeSunShadowUniforms(lights);
     writeFramebufferHeight(renderer);
   };
   return readers;
+}
+
+/** Calls each reader, timed as the Fog step: the volumetric fog is the one reader (`FogLayer`). */
+function readMaps(
+  renderer: THREE.WebGLRenderer,
+  readers: ReadonlySet<ShadowMapReader>,
+  scene: THREE.Object3D,
+  camera: THREE.Camera
+): void {
+  if (readers.size === 0) return;
+  beginStep(renderer, 'Fog');
+  for (const read of readers) read(scene, camera);
+  endStep(renderer, 'Fog');
 }
 
 /** Copies each light's cube into the atlas. Each copy leaves the render target as it found it. */

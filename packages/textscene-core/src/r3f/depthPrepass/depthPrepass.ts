@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { DEPTH_PREPASS_OPAQUE_THRESHOLD } from '../../godot/rendering/opaquePrepass';
 import { opaquePrepassOf } from '../materials/opaquePrepass';
 import { surfaceDepthMaterial, syncSurfaceDepth } from '../materials/surfaceDepthMaterial';
+import { beginStep, endStep } from '../frameProfile/frameProfile';
 
 /** Below every `render_priority` (`material.h:66-67`), so three's opaque sort puts it first. */
 const PREPASS_RENDER_ORDER = Number.MIN_SAFE_INTEGER;
@@ -43,12 +44,14 @@ export function createDepthPrepassSentinel(): THREE.Mesh {
 function drawDepthPrepass(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera): void {
   viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   frustum.setFromProjectionMatrix(viewProjection);
+  beginStep(renderer, 'Depth prepass');
   scene.traverseVisible((object) => {
     const mesh = object as THREE.Mesh;
     if (!mesh.isMesh || !mesh.layers.test(camera.layers)) return;
     if (mesh.frustumCulled && !frustum.intersectsObject(mesh)) return;
     drawMeshPrepass(renderer, scene, camera, mesh);
   });
+  endStep(renderer, 'Depth prepass');
 }
 
 function drawMeshPrepass(

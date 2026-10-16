@@ -17,6 +17,7 @@ import { ViewportRectProvider } from '../../contexts/ViewportRectContext.js';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.js';
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
 import { composeProviders } from '../../composeProviders.js';
+import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
@@ -24,8 +25,8 @@ interface PreviewShellProviderOptions {
   onMissingPathsChange: ((paths: ReadonlySet<string>) => void) | undefined;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode: ViewportMode | undefined;
-  /** The mode, grid and frame persisted last session. */
-  initialViewport: { mode: ViewportMode; showGrid: boolean; frameOnOpen: boolean };
+  /** The mode, grid, framing and performance overlay persisted last session. */
+  initialViewport: { mode: ViewportMode; showGrid: boolean; frameOnOpen: boolean; showPerformance: boolean };
   panelId: string;
   rootScenePath: string;
 }
@@ -62,10 +63,13 @@ export function previewShellProviders({
         initialMode={initialViewportMode ?? initialViewport.mode}
         initialShowGrid={initialViewport.showGrid}
         initialFrameOnOpen={initialViewport.frameOnOpen}
+        initialShowPerformance={initialViewport.showPerformance}
       >
         {children}
       </ViewportModeProvider>
     ),
+    // The frame profile in the canvas publishes here, and the overlay beside the canvas reads it.
+    (children) => <FrameStatsProvider>{children}</FrameStatsProvider>,
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
     // A `<SubViewport>` publishes its target here and a `ViewportTexture` resolves

@@ -10,6 +10,7 @@ import { useResourceLoader } from '../../resources/useResource.js';
 import { pendingTextureWork } from '../../resources/textures/textureWork.js';
 import { useProjectClearColor } from '../useProjectClearColor.js';
 import { SceneProbes } from './sceneProbes.js';
+import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 
 interface Held {
   probes: SceneProbes;
@@ -45,6 +46,9 @@ export function useSceneProbes(): void {
     const held = heldByScene.get(scene);
     if (!held || held.holders.values().next().value !== holder) return;
     const pending = (loader?.pendingResourceCount ?? 0) + pendingTextureWork();
-    if (held.probes.update(pending, clearColor.current)) invalidate();
+    beginStep(gl, 'Reflection probes');
+    const hasDrawn = held.probes.update(pending, clearColor.current);
+    endStep(gl, 'Reflection probes');
+    if (hasDrawn) invalidate();
   });
 }

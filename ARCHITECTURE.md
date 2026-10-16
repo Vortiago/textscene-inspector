@@ -170,6 +170,8 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
   (`ViewportPassRegistryContext.tsx`).
 - **Shadows.** `<SceneShadowFitter>` fits each declared shadow
   (`r3f/directionalShadow/directionalShadow.md`, `r3f/positionalShadow/positionalShadow.md`).
+- **Frame profile.** The Display menu's Performance toggle times each render step on the CPU and
+  the GPU, and the overlay shows the result (`r3f/frameProfile/`, ADR-0053).
 
 **Axis conventions.** Convert each axis where Godot data becomes a three.js object, never in a
 parser:
