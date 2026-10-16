@@ -99,7 +99,7 @@ export function bakeSkyLayers(
       gl.initRenderTarget(layers.target);
       storeSkyLayer(gl, layers, 0, octmap, scratch);
       for (let layer = 1; layer < layout.layerSizes.length; layer += 1) {
-        drawFilteredLayer(gl, filter, layer, layout, octmap);
+        drawFilteredLayer(gl, filter, layer, layout, octmap, 0, 0);
         storeSkyLayer(gl, layers, layer, octmap, scratch);
       }
     });
@@ -165,9 +165,11 @@ function bakeFromChain(
   drawLayers: (bake: ChainBake) => void
 ): void {
   const scratch = new ScratchOctmaps();
+  // Not a scratch octmap: a chain's first mip can be as wide as the radiance's octmap, as the fast
+  // filter's 160 is at a radiance size of 64, and a downsample would then draw into its own source.
+  const octmap = new THREE.WebGLRenderTarget(layout.size, layout.size, TARGET_OPTIONS);
   try {
     drawOffscreen(gl, () => {
-      const octmap = scratch.octmap(layout.size);
       drawRadianceOctmap(gl, radiance, layout, octmap);
       const chain = downsampleChain(gl, octmap, layout.borderSize, filter.chainSizes, scratch);
       try {
@@ -182,6 +184,7 @@ function bakeFromChain(
       }
     });
   } finally {
+    octmap.dispose();
     scratch.dispose();
     releasePasses(gl, filter);
   }
@@ -230,8 +233,8 @@ function drawFilteredLayer(
   layer: number,
   layout: SkyOctmapLayout,
   target: THREE.WebGLRenderTarget,
-  targetLayer = 0,
-  mip = 0
+  targetLayer: number,
+  mip: number
 ): void {
   const pass = filter.passFor(gl);
   setUniforms(pass, { layerSize: layout.layerSizes[layer], ...filter.layerUniforms(layer) });
@@ -281,8 +284,9 @@ function storeSkyLayer(
 }
 
 /**
- * The octmaps a bake draws into before it copies them out, one per width, so every layer draws into
- * the same few. Each width differs from the next, so a downsample never reads the octmap it draws into.
+ * The octmaps a bake downsamples into before it copies them out, one per width, so every layer draws
+ * into the same few. Each width of a run differs from the next, so a downsample never reads the octmap
+ * it draws into.
  */
 class ScratchOctmaps {
   private readonly targets = new Map<number, THREE.WebGLRenderTarget>();

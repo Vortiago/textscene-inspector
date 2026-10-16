@@ -18,11 +18,11 @@ describe('fastFilter', () => {
   });
 
   it('refuses layer 7, which a real-time sky lacks (error case)', () => {
-    expect(() => fastFilter.layerUniforms(7)).toThrow("expected a level of the fast filter's table, got 6");
+    expect(() => fastFilter.layerUniforms(7)).toThrow('expected a layer from 1 to 6, got 7');
   });
 
   it('refuses layer 0, which is the radiance itself (error case)', () => {
-    expect(() => fastFilter.layerUniforms(0)).toThrow("expected a level of the fast filter's table, got -1");
+    expect(() => fastFilter.layerUniforms(0)).toThrow('expected a layer from 1 to 6, got 0');
   });
 
   it('draws every layer with one pass on a renderer', async () => {

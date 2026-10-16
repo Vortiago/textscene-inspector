@@ -37,9 +37,8 @@ export const fastFilter: LayerFilter = {
    * 5 (`sky.cpp:410-411`, `octmap_filter.glsl:80`).
    */
   layerUniforms(layer) {
-    const level = layer - 1;
-    const taps = tapsByLevel[level];
-    if (!taps) throw new Error(`expected a level of the fast filter's table, got ${level}`);
+    const taps = tapsByLevel[layer - 1];
+    if (!taps) throw new Error(`expected a layer from 1 to ${tapsByLevel.length}, got ${layer}`);
     return taps;
   },
 };

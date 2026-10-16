@@ -8,6 +8,8 @@ import type { SkyBake } from './types';
 
 const IMPORTANCE_SAMPLED: SkyBake = { radianceFilter: 'importance-sample', radianceSize: 32 };
 const FAST: SkyBake = { radianceFilter: 'fast', radianceSize: 256 };
+/** The GPU gate's fast bake, at a size no real-time sky has: its octmap is as wide as the fast chain. */
+const FAST_AT_GATE_SIZE = { radianceFilter: 'fast', radianceSize: 64 } as unknown as SkyBake;
 
 /** A radiance cube set up on `renderer`, as the sky's cube render leaves it. */
 function radianceCube(renderer: THREE.WebGLRenderer): THREE.CubeTexture {
@@ -39,6 +41,22 @@ describe('bakeSkyLayers', () => {
     const { target } = bakeSkyLayers(renderer, radianceCube(renderer), IMPORTANCE_SAMPLED);
 
     expect([target.width, target.height, target.depth]).toEqual([80, 80, 8]);
+  });
+
+  it('never draws a pass into the octmap it reads, at a radiance as wide as the fast chain (edge case)', async () => {
+    const { renderer } = await testRenderer();
+    const feedbackDraws: THREE.Texture[] = [];
+    const render = renderer.render.bind(renderer);
+    vi.spyOn(renderer, 'render').mockImplementation((drawn, camera) => {
+      const read = ((drawn as THREE.Mesh).material as THREE.ShaderMaterial).uniforms['source']?.value;
+      const drawnInto = renderer.getRenderTarget()?.texture;
+      if (read && read === drawnInto) feedbackDraws.push(read);
+      render(drawn, camera);
+    });
+
+    bakeSkyLayers(renderer, radianceCube(renderer), FAST_AT_GATE_SIZE);
+
+    expect(feedbackDraws).toEqual([]);
   });
 
   it('holds the seven layers of a real-time sky (edge case)', async () => {

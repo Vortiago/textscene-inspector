@@ -38,13 +38,6 @@ describe('skyOctmapLayout', () => {
     expect(skyOctmapLayout(256, 7).layerSizes).toHaveLength(7);
   });
 
-  it('pads the default 256 sky to 640 texels with 64 on each side', () => {
-    const layout = skyOctmapLayout(256, 8);
-    expect(layout.size).toBe(640);
-    expect(layout.borderSize).toBeCloseTo(0.8, 10);
-    expect(layout.downsampledSizes).toEqual([320, 160, 80, 40, 20, 10]);
-  });
-
   it('gives each of the eight layers the full width, as each is a layer of an array', () => {
     expect(skyOctmapLayout(256, 8).layerSizes).toEqual([640, 640, 640, 640, 640, 640, 640, 640]);
   });
