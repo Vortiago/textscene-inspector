@@ -5642,14 +5642,14 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="Sky" hidden>
       <header class="sheet-head">
         <h2>Sky</h2>
-        <span class="renders">renders as a THREE PMREM environment + Godot's radiance layers 1 to 7 + background</span>
+        <span class="renders">renders as Godot's radiance layers as an octmap array + a THREE PMREM environment + background</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_sky.html" target="_blank" rel="noopener" title="Godot class reference for Sky">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/scene/resources/sky.h" target="_blank" rel="noopener" title="Godot engine source for Sky">source ↗</a>
         
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers 1 to 7, baked as Godot bakes them, give every reflection but a mirror and the ambient light. A mirror reflects the radiance itself, mip 0 of a PMREM-filtered environment map. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p></div>
+      <div class="prose intro"><p>A <code>Sky</code> resource's <code>sky_material</code> is the source of the background and of the image-based ambient and reflection. Each of Godot's three material types renders here as a background and two light sources. Godot's radiance layers, baked as Godot bakes them into an octmap array with a mip chain per layer, give every reflection and the ambient light. Each read picks its mip from the screen derivatives of its direction, as Godot does. A small, strongly curved mirror reads a coarser mip than a large one. The radiance renders at the sky's <code>radiance_size</code>, so a small size blurs a mirror as in Godot. A size above 256 renders at 256, as Godot draws rough metal at 512 and at 256 alike.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>ProceduralSkyMaterial</h3><span class="status st-done">Done</span></div>
