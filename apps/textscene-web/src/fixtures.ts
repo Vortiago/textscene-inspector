@@ -1518,6 +1518,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sky Orthographic",
+    "file": "unit-sky-orthographic.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sky Panorama Tres",
     "file": "unit-sky-panorama-tres.tscn",
     "category": "Other"
