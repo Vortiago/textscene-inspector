@@ -38,6 +38,7 @@ export const LIGHTING_SCENES = [
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
+  { name: 'depth-fog-orthographic', file: 'unit-depth-fog-orthographic.tscn', camera: 'Root/Camera3D' },
   // The Environment's brightness, contrast and saturation over an unshaded box. The header states
   // why no other golden shows them.
   { name: 'environment-adjustments', file: 'unit-environment-adjustments.tscn' },

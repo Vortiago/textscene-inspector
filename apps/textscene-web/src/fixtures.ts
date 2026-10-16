@@ -428,6 +428,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Depth Fog Orthographic",
+    "file": "unit-depth-fog-orthographic.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Depth Fog",
     "file": "unit-depth-fog.tscn",
     "category": "Other"
