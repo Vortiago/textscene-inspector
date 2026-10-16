@@ -1,0 +1,165 @@
+{
+  "depth-fog": {
+    "drawCalls": 12,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 8,
+        "runs": 1
+      },
+      "Fog": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "fog-volume": {
+    "drawCalls": 12,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 8,
+        "runs": 1
+      },
+      "Fog": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "glow": {
+    "drawCalls": 15,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 2,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 9,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "reflection-probe": {
+    "drawCalls": 10,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Compositor": {
+        "drawCalls": 9,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "pointlight2d": {
+    "drawCalls": 5,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "demo-3d-platformer": {
+    "drawCalls": 298,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 184,
+        "runs": 1
+      },
+      "Depth prepass": {
+        "drawCalls": 0,
+        "runs": 1
+      },
+      "Shadows": {
+        "drawCalls": 113,
+        "runs": 1
+      },
+      "Fog": {
+        "drawCalls": 0,
+        "runs": 2
+      },
+      "Compositor": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
+  "demo-2d-lights-and-shadows": {
+    "drawCalls": 35,
+    "steps": {
+      "2D lights": {
+        "drawCalls": 4,
+        "runs": 1
+      },
+      "Scene draw": {
+        "drawCalls": 31,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  }
+}

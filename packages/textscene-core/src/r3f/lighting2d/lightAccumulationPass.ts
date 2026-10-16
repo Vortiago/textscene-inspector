@@ -10,6 +10,7 @@ import type { Camera } from '@react-three/fiber';
 import { LIGHT_PASS_LAYER } from './lightPassLayers.js';
 import { drawsInPass, type LightListEntry, type PassKind, type PassMeshRole } from './itemLightList.js';
 import { listWindow, windowScissor } from './lightListWindow.js';
+import { beginStep, endStep } from '../frameProfile/frameProfile.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 
 /** One light mesh the pass shows or hides per list. */
@@ -110,6 +111,7 @@ function renderLightLists({
   // `finally`, as in the SubViewport pass: a throw out of `gl.render` (a link failure, a lost
   // context) would leave the renderer on an accumulation buffer with most layers masked, and
   // r3f's main render would draw the scene into it: a black canvas, not one broken light.
+  beginStep(gl, '2D lights');
   try {
     camera.layers.set(LIGHT_PASS_LAYER);
     for (const list of lists) {
@@ -129,6 +131,7 @@ function renderLightLists({
   } finally {
     gl.setRenderTarget(previousTarget);
     camera.layers.mask = previousMask;
+    endStep(gl, '2D lights');
   }
 }
 

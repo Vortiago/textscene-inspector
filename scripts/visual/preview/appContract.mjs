@@ -21,6 +21,14 @@ export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
  * capture opens in the 3D workspace.
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
+/** `SHOW_PERFORMANCE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the Performance toggle. */
+export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';
+/** The Performance overlay's testids, in r3f/frameProfile/PerformancePanel.tsx. */
+export const PERFORMANCE_TESTIDS = {
+  overlay: 'performance-overlay',
+  frameMs: 'performance-frame',
+  drawCalls: 'performance-draws',
+};
 
 export const VIEWPORT = { width: 1280, height: 800 };
 

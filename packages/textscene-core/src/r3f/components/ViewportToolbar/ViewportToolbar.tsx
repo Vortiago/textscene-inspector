@@ -9,6 +9,7 @@ import {
   useViewportMode,
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
+  SHOW_PERFORMANCE_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
@@ -43,6 +44,8 @@ interface DisplayToggleState {
   setShowPreviewEnvironment: (show: boolean) => void;
   frameOnOpen: boolean;
   setFrameOnOpen: (frame: boolean) => void;
+  showPerformance: boolean;
+  setShowPerformance: (show: boolean) => void;
   sceneHasSun: boolean;
   sceneHasEnvironment: boolean;
 }
@@ -70,6 +73,12 @@ function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[
       title: 'Show NavigationRegion overlays',
       checked: state.showNavigation,
       onChange: state.setShowNavigation,
+    },
+    {
+      label: 'Performance',
+      title: 'Show the frame rate and the time each render step takes',
+      checked: state.showPerformance,
+      onChange: state.setShowPerformance,
     },
     // 3D-only: the grid, the framing preference and both preview-lighting
     // stand-ins have no meaning over the 2D Control overlay.
@@ -139,6 +148,8 @@ export function ViewportToolbar() {
     setShowPreviewEnvironment,
     frameOnOpen,
     setFrameOnOpen,
+    showPerformance,
+    setShowPerformance,
   } = useViewportMode();
   const camera = useOptionalViewportActions();
   const hierarchy = useOptionalHierarchy();
@@ -170,6 +181,10 @@ export function ViewportToolbar() {
     setFrameOnOpen(frame);
     writePersisted(FRAME_ON_OPEN_STORAGE_KEY, frame);
   }
+  function handlePerformanceChange(show: boolean) {
+    setShowPerformance(show);
+    writePersisted(SHOW_PERFORMANCE_STORAGE_KEY, show);
+  }
 
   const displayToggles = buildDisplayToggles({
     mode,
@@ -187,6 +202,8 @@ export function ViewportToolbar() {
     setShowPreviewEnvironment,
     frameOnOpen,
     setFrameOnOpen: handleFrameOnOpenChange,
+    showPerformance,
+    setShowPerformance: handlePerformanceChange,
     sceneHasSun,
     sceneHasEnvironment,
   });
