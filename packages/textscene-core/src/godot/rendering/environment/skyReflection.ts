@@ -56,18 +56,32 @@ export interface SkyOctmapLayout {
 }
 
 /**
- * The layout of the octmap array the radiance layers live in, a layer as wide as the radiance's
- * octmap (`sky.cpp:1545-1559`), and of its half-size copy with one mip fewer (`sky.cpp:338-343`).
+ * A sky's octmap array, whose every layer has a mip chain of its own: the layer's own width, then
+ * each of `downsampledSizes`.
  */
-export function skyOctmapLayout(radianceSize: number): SkyOctmapLayout {
+export interface SkyRadianceLayout extends SkyOctmapLayout {
+  /**
+   * `radiance_pixel_size`, one over the radiance size (`renderer_scene_render_rd.cpp:1395-1396`): a
+   * read picks its mip from the screen derivatives of its direction in these units.
+   */
+  pixelSize: number;
+}
+
+/**
+ * The layout of the octmap array of `layers` radiance layers, each as wide as the radiance's octmap
+ * with a mip chain of its own (`sky.cpp:1545-1559`, `:289-310`), and of its half-size copy with one
+ * mip fewer (`sky.cpp:339-343`).
+ */
+export function skyOctmapLayout(radianceSize: number, layers: number): SkyRadianceLayout {
   // `get_image_required_mipmaps` + 1 counts the mips down to 1x1, and Godot drops two.
   const mipmaps = Math.log2(radianceSize) + 1 - 2;
   const { size, borderSize } = paddedOctmap(radianceSize, 2 ** (mipmaps - 1));
   return {
     size,
     borderSize,
-    layerSizes: Array.from({ length: SKY_ROUGHNESS_LAYERS_DEFAULT }, () => size),
+    layerSizes: Array.from({ length: layers }, () => size),
     downsampledSizes: halvingSizes(size >> 1, mipmaps - 1),
+    pixelSize: 1 / radianceSize,
   };
 }
 

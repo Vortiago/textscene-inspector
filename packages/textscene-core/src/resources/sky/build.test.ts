@@ -29,32 +29,17 @@ describe('buildSkyEnvironment layers', () => {
     expect(readBack).not.toHaveBeenCalled();
   });
 
-  it("draws each of Godot's layers 1 to 7 into a mip of its group's cube, on all six faces", async () => {
+  it('bakes the layers of a radiance above 256 at 256, 640 texels wide (edge case)', async () => {
     const { renderer } = await testRenderer();
-    const context = renderer.getContext();
-    // Each draw writes to the texture level attached last.
-    let attached: unknown[] = [];
-    const draws: unknown[][] = [];
-    vi.spyOn(context, 'framebufferTexture2D').mockImplementation((...args) => void (attached = args));
-    vi.spyOn(context, 'drawArrays').mockImplementation(() => void draws.push(attached));
-    vi.spyOn(context, 'drawElements').mockImplementation(() => void draws.push(attached));
-
-    const env = buildSkyEnvironment(renderer, {
-      sky: defaultSky('ProceduralSkyMaterial'),
-      lights: [],
-      asBackground: true,
-    });
-
-    const drawnFacesAndMips = (cube: THREE.WebGLCubeRenderTarget) => {
-      const handle = (renderer.properties.get(cube.texture) as { __webglTexture: unknown }).__webglTexture;
-      const drawn = draws
-        .filter(([, , , texture]) => texture === handle)
-        .map(([, , face, , level]) => `${(face as number) - context.TEXTURE_CUBE_MAP_POSITIVE_X}@${level}`);
-      return new Set(drawn).size;
+    const sky: Sky = {
+      material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
+      radianceFilter: 'importance-sample',
+      radianceSize: 1024,
     };
-    expect([env!.layers.sharp, env!.layers.rough, env!.layers.last].map(drawnFacesAndMips)).toEqual([
-      18, 18, 6,
-    ]);
+
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground: false });
+
+    expect(env!.layers.target.width).toBe(640);
   });
 });
 

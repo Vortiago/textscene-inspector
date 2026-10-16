@@ -30,17 +30,19 @@ const LARGEST_RADIANCE_SIZE = 256;
 /**
  * Godot's sky ambient is the sky's own radiance: it lights surfaces and is what
  * they reflect (`Environment.reflection_source` defaults to the background).
- * So a cube render at the radiance size feeds the PMREM-prefiltered
- * `scene.environment` and Godot's layers 1 to 7 of it. A sky that paints the
- * background renders a cube for `scene.background` too, the same cube when the
- * sizes match.
+ * So a cube render at the radiance size feeds Godot's layers of it and the
+ * PMREM-prefiltered `scene.environment`. A sky that paints the background renders
+ * a cube for `scene.background` too, the same cube when the sizes match.
  */
 export interface SkyEnvironment {
   /** Sharp cubemap for `scene.background`, or null for a sky that does not paint it. */
   background: THREE.Texture | null;
-  /** PMREM-prefiltered radiance for `scene.environment`, whose mip 0 a mirror reflects. */
+  /**
+   * PMREM-prefiltered radiance for `scene.environment`, which turns three's environment lighting on
+   * and which the volumetric fog reads. No surface reads it.
+   */
   environment: THREE.Texture;
-  /** Godot's layers 1 to 7, which its ambient and its reflections read. */
+  /** Godot's radiance layers, which its ambient and its reflections read. */
   layers: SkyLayers;
   /** Frees the background, the environment and the layers. */
   dispose: () => void;
