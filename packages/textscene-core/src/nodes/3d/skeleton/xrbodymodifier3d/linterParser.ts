@@ -10,7 +10,10 @@
 import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { hintedBitField, v } from '../../../../linter/validators/index.js';
-import { BODY_UPDATE_NAMES, XR_BONE_UPDATE_NAMES } from '../../../../godot/scene/skeletonModifier.js';
+import {
+  BODY_UPDATE_NAMES,
+  XR_BODY_MODIFIER_BONE_UPDATE_NAMES,
+} from '../../../../godot/scene/skeletonModifier.js';
 
 validatorRegistry.registerAll('XRBodyModifier3D', {
   // xr_body_modifier_3d.cpp:46: PROPERTY_HINT_ENUM_SUGGESTION "/user/body_tracker" still accepts
@@ -29,5 +32,7 @@ validatorRegistry.registerAll('XRBodyModifier3D', {
   // ERR_FAIL_INDEX(p_bone_update, BONE_UPDATE_MAX) (:80), and BONE_UPDATE_MAX is 2
   // (xr_body_modifier_3d.h:56), so the setter refuses anything outside 0-1: the error tier, unlike
   // `body_update`.
-  bone_update: v.enumInt('bone_update', XR_BONE_UPDATE_NAMES, { enforced: 'xr_body_modifier_3d.cpp:80' }),
+  bone_update: v.enumInt('bone_update', XR_BODY_MODIFIER_BONE_UPDATE_NAMES, {
+    enforced: 'xr_body_modifier_3d.cpp:80',
+  }),
 });

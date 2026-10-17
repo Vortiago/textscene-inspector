@@ -18,6 +18,9 @@ const TransitionType = {
   SPRING: 11,
 } as const;
 
+/** Each transition type by its integer, as `look_at_modifier_3d.cpp:487` hints it. */
+export const TRANSITION_TYPE_NAMES = relabelEnumNames(enumNamesByValue(TransitionType), pascalCaseLabel);
+
 /** `Tween::EaseType` (`tween.h:98-104`), `EASE_MAX` left out as a size marker. */
 const EaseType = {
   IN: 0,
@@ -25,9 +28,6 @@ const EaseType = {
   IN_OUT: 2,
   OUT_IN: 3,
 } as const;
-
-/** Each transition type by its integer, as `look_at_modifier_3d.cpp:487` hints it. */
-export const TRANSITION_TYPE_NAMES = relabelEnumNames(enumNamesByValue(TransitionType), pascalCaseLabel);
 
 /** Each ease type by its integer, as `look_at_modifier_3d.cpp:488` hints it. */
 export const EASE_TYPE_NAMES = relabelEnumNames(enumNamesByValue(EaseType), pascalCaseLabel);

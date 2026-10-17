@@ -3,7 +3,7 @@ import {
   AXIS_FLAG_NAMES,
   BONE_AXIS_NAMES,
   BONE_DIRECTION_NAMES,
-  BONE_UPDATE_NAMES,
+  XR_HAND_MODIFIER_BONE_UPDATE_NAMES,
   BODY_UPDATE_NAMES,
   BoneAxis,
   CENTER_FROM_NAMES,
@@ -17,7 +17,7 @@ import {
   SecondaryDirection,
   TRANSFORM_MODE_NAMES,
   TransformMode,
-  XR_BONE_UPDATE_NAMES,
+  XR_BODY_MODIFIER_BONE_UPDATE_NAMES,
 } from './skeletonModifier.js';
 
 describe('SkeletonModifier3D axis names', () => {
@@ -103,10 +103,13 @@ describe('XR modifier names', () => {
   });
 
   it('leaves BONE_UPDATE_MAX out of the bone update modes', () => {
-    expect(BONE_UPDATE_NAMES).toEqual({ 0: 'FULL', 1: 'ROTATION_ONLY' });
+    expect(XR_HAND_MODIFIER_BONE_UPDATE_NAMES).toEqual({ 0: 'FULL', 1: 'ROTATION_ONLY' });
   });
 
   it('prefixes the bone update modes as `xr_body_modifier_3d.h:53-55` spells them', () => {
-    expect(XR_BONE_UPDATE_NAMES).toEqual({ 0: 'BONE_UPDATE_FULL', 1: 'BONE_UPDATE_ROTATION_ONLY' });
+    expect(XR_BODY_MODIFIER_BONE_UPDATE_NAMES).toEqual({
+      0: 'BONE_UPDATE_FULL',
+      1: 'BONE_UPDATE_ROTATION_ONLY',
+    });
   });
 });

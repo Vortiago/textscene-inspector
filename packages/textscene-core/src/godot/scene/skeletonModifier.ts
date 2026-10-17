@@ -176,7 +176,10 @@ const BoneUpdate = {
 } as const;
 
 /** Each bone update mode by its integer, in the spelling of `BIND_ENUM_CONSTANT` minus its prefix. */
-export const BONE_UPDATE_NAMES = enumNamesByValue(BoneUpdate);
+export const XR_HAND_MODIFIER_BONE_UPDATE_NAMES = enumNamesByValue(BoneUpdate);
 
 /** Each bone update mode by its integer, spelled as `XRBodyModifier3D`'s constant. */
-export const XR_BONE_UPDATE_NAMES = relabelEnumNames(BONE_UPDATE_NAMES, (name) => `BONE_UPDATE_${name}`);
+export const XR_BODY_MODIFIER_BONE_UPDATE_NAMES = relabelEnumNames(
+  XR_HAND_MODIFIER_BONE_UPDATE_NAMES,
+  (name) => `BONE_UPDATE_${name}`
+);

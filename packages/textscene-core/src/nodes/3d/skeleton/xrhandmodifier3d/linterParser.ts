@@ -11,14 +11,14 @@
 import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { BONE_UPDATE_NAMES } from '../../../../godot/scene/skeletonModifier.js';
+import { XR_HAND_MODIFIER_BONE_UPDATE_NAMES } from '../../../../godot/scene/skeletonModifier.js';
 
 validatorRegistry.registerAll('XRHandModifier3D', {
   // xr_hand_modifier_3d.cpp:44, PROPERTY_HINT_ENUM "Full,Rotation Only".
   // set_bone_update (:63-66) opens with ERR_FAIL_INDEX(p_bone_update,
   // BONE_UPDATE_MAX), which returns before the assignment for anything below 0
   // or at/above 2. A refused write is an error, not a hint warning.
-  bone_update: v.enumInt('bone_update', BONE_UPDATE_NAMES, {
+  bone_update: v.enumInt('bone_update', XR_HAND_MODIFIER_BONE_UPDATE_NAMES, {
     enforced: 'xr_hand_modifier_3d.cpp:64',
   }),
 
