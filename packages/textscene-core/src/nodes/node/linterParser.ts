@@ -17,8 +17,6 @@ validatorRegistry.registerAll('Node', {
   // under INHERIT, so out of range is a warning, not an error.
   process_mode: v.enumInt(
     'process_mode',
-    0,
-    4,
     {
       0: 'PROCESS_MODE_INHERIT',
       1: 'PROCESS_MODE_PAUSABLE',
@@ -38,8 +36,6 @@ validatorRegistry.registerAll('Node', {
   // equal-check and a main-thread guard); no engine-side range check.
   process_thread_group: v.enumInt(
     'process_thread_group',
-    0,
-    2,
     {
       0: 'PROCESS_THREAD_GROUP_INHERIT',
       1: 'PROCESS_THREAD_GROUP_MAIN_THREAD',
@@ -64,8 +60,6 @@ validatorRegistry.registerAll('Node', {
   // (node.cpp:935-949) is a bare assignment; no engine-side range check.
   physics_interpolation_mode: v.enumInt(
     'physics_interpolation_mode',
-    0,
-    2,
     {
       0: 'PHYSICS_INTERPOLATION_MODE_INHERIT',
       1: 'PHYSICS_INTERPOLATION_MODE_ON',
@@ -78,8 +72,6 @@ validatorRegistry.registerAll('Node', {
   // for the root node under INHERIT; no range check on the raw int.
   auto_translate_mode: v.enumInt(
     'auto_translate_mode',
-    0,
-    2,
     {
       0: 'AUTO_TRANSLATE_MODE_INHERIT',
       1: 'AUTO_TRANSLATE_MODE_ALWAYS',

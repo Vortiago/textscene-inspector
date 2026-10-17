@@ -73,7 +73,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // chain_ik_3d.cpp:131, PROPERTY_HINT_ENUM "+X,-X,+Y,-Y,+Z,-Z,FromParent" (skeleton_modifier_3d.h:64),
   // values 0-6 in BoneDirection order (skeleton_modifier_3d.h:56-62). set_end_bone_direction (:260)
   // stores the static_cast unchecked, so the hint governs the inspector only: warning.
-  'end_bone/direction': v.enumInt('end_bone/direction', 0, 6, BONE_DIRECTION, {
+  'end_bone/direction': v.enumInt('end_bone/direction', BONE_DIRECTION, {
     hinted: 'chain_ik_3d.cpp:131',
   }),
 

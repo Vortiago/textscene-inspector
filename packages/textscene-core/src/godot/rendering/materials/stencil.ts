@@ -6,7 +6,7 @@ import { enumNamesByValue } from '../../classdb/enumNames.js';
  * `BaseMaterial3D::StencilMode` (`scene/resources/material.h:331-337`), as the integers a `.tscn`
  * stores for `stencil_mode`. The default is DISABLED (`material.h:622`).
  */
-export enum StencilMode {
+enum StencilMode {
   DISABLED = 0,
   OUTLINE = 1,
   XRAY = 2,
@@ -32,7 +32,7 @@ export const STENCIL_FLAG_LABELS = enumNamesByValue(StencilFlag);
  * `BaseMaterial3D::StencilCompare` (`scene/resources/material.h:347-355`), as the integers a
  * `.tscn` stores for `stencil_compare`. The default is ALWAYS (`material.h:624`).
  */
-export enum StencilCompare {
+enum StencilCompare {
   ALWAYS = 0,
   LESS = 1,
   EQUAL = 2,

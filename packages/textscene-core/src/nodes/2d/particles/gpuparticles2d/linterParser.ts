@@ -100,7 +100,7 @@ validatorRegistry.registerAll('GPUParticles2D', {
   // gpu_particles_2d.cpp:964 hints PROPERTY_HINT_ENUM "Index,Lifetime,Reverse
   // Lifetime". set_draw_order (:308-311) is `draw_order = p_order;` with no
   // ERR_FAIL_INDEX and no CLAMP, so an out-of-range value warns.
-  draw_order: v.enumInt('draw_order', 0, 2, DRAW_ORDER, { hinted: 'gpu_particles_2d.cpp:964' }),
+  draw_order: v.enumInt('draw_order', DRAW_ORDER, { hinted: 'gpu_particles_2d.cpp:964' }),
 
   // gpu_particles_2d.cpp:966, PROPERTY_HINT_GROUP_ENABLE is an editor-only
   // grouping hint, not a range.

@@ -13,7 +13,7 @@ import { TEXTURE_PROGRESS_BAR_FILL_MODE_NAMES } from '../../../../godot/scene/gu
 validatorRegistry.registerAll('TextureProgressBar', {
   // texture_progress_bar.cpp:576: set_fill_mode's `ERR_FAIL_INDEX(p_fill, FILL_MODE_MAX)`
   // refuses the write, so out of range is an error.
-  fill_mode: v.enumInt('fill_mode', 0, 8, TEXTURE_PROGRESS_BAR_FILL_MODE_NAMES, {
+  fill_mode: v.enumInt('fill_mode', TEXTURE_PROGRESS_BAR_FILL_MODE_NAMES, {
     enforced: 'texture_progress_bar.cpp:576',
   }),
 

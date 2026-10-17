@@ -14,7 +14,7 @@ validatorRegistry.registerAll('ProgressBar', {
   // progress_bar.cpp:200: `ERR_FAIL_INDEX(p_fill, FILL_MODE_MAX)` refuses the
   // write. `p_fill` is the value itself, so this is an error, as for
   // Label3D.billboard at label_3d.cpp:1001.
-  fill_mode: v.enumInt('fill_mode', 0, 3, PROGRESS_BAR_FILL_MODE_NAMES, { enforced: 'progress_bar.cpp:200' }),
+  fill_mode: v.enumInt('fill_mode', PROGRESS_BAR_FILL_MODE_NAMES, { enforced: 'progress_bar.cpp:200' }),
   // progress_bar.cpp:210-217 assigns straight through, and ADD_PROPERTY at :270
   // carries no hint. Format-only.
   show_percentage: v.boolean('show_percentage'),

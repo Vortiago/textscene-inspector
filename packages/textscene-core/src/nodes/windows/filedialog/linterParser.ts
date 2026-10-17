@@ -78,9 +78,9 @@ validatorRegistry.registerAll('FileDialog', {
   // file_dialog.cpp:2113, BOOL, no hint. set_mode_overrides_title (:1354-1356)
   // is a bare assignment.
   mode_overrides_title: v.boolean('mode_overrides_title'),
-  file_mode: v.enumInt('file_mode', 0, 4, FILE_MODE, { enforced: 'file_dialog.cpp:1363' }),
-  display_mode: v.enumInt('display_mode', 0, 1, DISPLAY_MODE, { enforced: 'file_dialog.cpp:1417' }),
-  access: v.enumInt('access', 0, 2, ACCESS, { enforced: 'file_dialog.cpp:1510' }),
+  file_mode: v.enumInt('file_mode', FILE_MODE, { enforced: 'file_dialog.cpp:1363' }),
+  display_mode: v.enumInt('display_mode', DISPLAY_MODE, { enforced: 'file_dialog.cpp:1417' }),
+  access: v.enumInt('access', ACCESS, { enforced: 'file_dialog.cpp:1510' }),
   // file_dialog.cpp:2117, STRING, no hint. set_root_subfolder (:1332-1348) assigns
   // before its `dir_exists` guard, and the offline linter has no filesystem to
   // check that guard against.

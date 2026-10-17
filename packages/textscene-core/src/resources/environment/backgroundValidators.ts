@@ -11,8 +11,6 @@ export const backgroundKeys: Record<string, PropertyValidator> = {
   // environment.cpp:1237, set_background (:43-49) is a bare assignment.
   background_mode: v.enumInt(
     'background_mode',
-    0,
-    5,
     {
       0: 'BG_CLEAR_COLOR',
       1: 'BG_COLOR',
@@ -60,8 +58,6 @@ export const backgroundKeys: Record<string, PropertyValidator> = {
   // environment.cpp:1264, set_ambient_source (:151-155) is a bare assignment.
   ambient_light_source: v.enumInt(
     'ambient_light_source',
-    0,
-    3,
     {
       0: 'BG',
       1: 'DISABLED',
@@ -88,8 +84,6 @@ export const backgroundKeys: Record<string, PropertyValidator> = {
   // environment.cpp:1270, set_reflection_source (:181) is a bare assignment.
   reflected_light_source: v.enumInt(
     'reflected_light_source',
-    0,
-    2,
     { 0: 'BG', 1: 'DISABLED', 2: 'SKY' },
     { hinted: 'environment.cpp:1270' }
   ),

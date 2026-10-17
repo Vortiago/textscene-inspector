@@ -45,8 +45,6 @@ validatorRegistry.registerAll('TabContainer', {
   // `ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX)` (tab_bar.cpp:1671, ALIGNMENT_MAX=3) agrees with the hint.
   tab_alignment: v.enumInt(
     'tab_alignment',
-    0,
-    2,
     { 0: 'Left', 1: 'Center', 2: 'Right' },
     { enforced: 'tab_bar.cpp:1671' }
   ),
@@ -64,13 +62,7 @@ validatorRegistry.registerAll('TabContainer', {
 
   // tab_container.cpp:1210, PROPERTY_HINT_ENUM "Top,Bottom". set_tabs_position's
   // `ERR_FAIL_INDEX(p_tabs_position, POSITION_MAX)` (tab_container.cpp:820, POSITION_MAX=2) agrees.
-  tabs_position: v.enumInt(
-    'tabs_position',
-    0,
-    1,
-    { 0: 'Top', 1: 'Bottom' },
-    { enforced: 'tab_container.cpp:820' }
-  ),
+  tabs_position: v.enumInt('tabs_position', { 0: 'Top', 1: 'Bottom' }, { enforced: 'tab_container.cpp:820' }),
 
   // tab_container.cpp:1211, plain BOOL, no hint. set_clip_tabs bare-assigns.
   clip_tabs: v.boolean('clip_tabs'),
@@ -102,8 +94,6 @@ validatorRegistry.registerAll('TabContainer', {
   // accepts 3 (Accessibility), which the hint never lists, so 3 warns and does not error.
   tab_focus_mode: v.enumInt(
     'tab_focus_mode',
-    0,
-    2,
     { 0: 'None', 1: 'Click', 2: 'All' },
     { hinted: 'tab_container.cpp:1218' }
   ),

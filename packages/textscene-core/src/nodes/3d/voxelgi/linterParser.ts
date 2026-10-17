@@ -15,8 +15,6 @@ validatorRegistry.registerAll('VoxelGI', {
   // out-of-range write.
   subdiv: v.enumInt(
     'subdiv',
-    0,
-    3,
     { 0: 'SUBDIV_64', 1: 'SUBDIV_128', 2: 'SUBDIV_256', 3: 'SUBDIV_512' },
     { enforced: 'voxel_gi.cpp:286' }
   ),

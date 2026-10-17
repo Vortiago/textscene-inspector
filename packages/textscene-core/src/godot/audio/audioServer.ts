@@ -7,7 +7,7 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
  * three AudioStreamPlayers forward to `AudioStreamPlayerInternal::set_playback_type`
  * (audio_stream_player_internal.cpp:337-339), and no common ancestor declares it.
  */
-export enum PlaybackType {
+enum PlaybackType {
   DEFAULT = 0,
   STREAM = 1,
   SAMPLE = 2,

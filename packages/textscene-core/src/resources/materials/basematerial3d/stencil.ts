@@ -13,9 +13,7 @@ import {
   STENCIL_COMPARE_NAMES,
   STENCIL_FLAG_LABELS,
   STENCIL_MODE_NAMES,
-  StencilCompare,
   StencilFlag,
-  StencilMode,
 } from '../../../godot/rendering/materials/stencil.js';
 
 const STENCIL_WRITE_FLAGS = StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL;
@@ -57,17 +55,11 @@ function stencilFlags(): PropertyValidator {
 }
 
 export const stencilKeys: Record<string, PropertyValidator> = {
-  stencil_mode: v.enumInt('stencil_mode', StencilMode.DISABLED, StencilMode.CUSTOM, STENCIL_MODE_NAMES, {
+  stencil_mode: v.enumInt('stencil_mode', STENCIL_MODE_NAMES, {
     hinted: 'material.cpp:3775',
   }),
   stencil_flags: stencilFlags(),
-  stencil_compare: v.enumInt(
-    'stencil_compare',
-    StencilCompare.ALWAYS,
-    StencilCompare.GREATER_OR_EQUAL,
-    STENCIL_COMPARE_NAMES,
-    { hinted: 'material.cpp:3777' }
-  ),
+  stencil_compare: v.enumInt('stencil_compare', STENCIL_COMPARE_NAMES, { hinted: 'material.cpp:3777' }),
   // material.cpp:3778 ("0,255,1"); set_stencil_reference (:3292) bare assigns.
   stencil_reference: v.int('stencil_reference', {
     min: 0,

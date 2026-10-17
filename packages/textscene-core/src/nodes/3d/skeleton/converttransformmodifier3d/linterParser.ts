@@ -14,7 +14,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
+import { VECTOR3_AXIS_NAMES } from '../../../../godot/math/vector3Axis.js';
 import { declaredLeafResolver } from '../../../../godot/classdb/indexedKey.js';
 
 /** ConvertTransformModifier3D::TransformMode (convert_transform_modifier_3d.h:39-43). */
@@ -39,11 +39,11 @@ function transformGroup(
     // PROPERTY_HINT_ENUM "Position,Rotation,Scale". The setter static_casts an
     // arbitrary int to TransformMode and assigns it, so an out-of-range value
     // loads intact and only the inspector's dropdown is exceeded: a warning.
-    [`${group}/transform_mode`]: v.enumInt(`${group}/transform_mode`, 0, 2, TRANSFORM_MODE, {
+    [`${group}/transform_mode`]: v.enumInt(`${group}/transform_mode`, TRANSFORM_MODE, {
       hinted: modeCite,
     }),
     // PROPERTY_HINT_ENUM "X,Y,Z", the same static_cast-and-assign shape.
-    [`${group}/axis`]: v.enumInt(`${group}/axis`, Vector3Axis.X, Vector3Axis.Z, VECTOR3_AXIS_NAMES, {
+    [`${group}/axis`]: v.enumInt(`${group}/axis`, VECTOR3_AXIS_NAMES, {
       hinted: axisCite,
     }),
     // PROPERTY_HINT_RANGE, with the hint picked from the sibling transform_mode (:133-140, :146-153).

@@ -8,12 +8,12 @@
 
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 import { v } from '../../linter/validators/index.js';
-import { GLOW_BLEND_MODE_NAMES, GlowBlendMode } from '../../godot/rendering/environment/glow.js';
-import { TONE_MAPPER_NAMES, ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
+import { GLOW_BLEND_MODE_NAMES } from '../../godot/rendering/environment/glow.js';
+import { TONE_MAPPER_NAMES } from '../../godot/rendering/environment/toneMapping.js';
 
 export const postProcessKeys: Record<string, PropertyValidator> = {
   // environment.cpp:1286, set_tonemapper (:202-206) bare-assigns.
-  tonemap_mode: v.enumInt('tonemap_mode', ToneMapper.LINEAR, ToneMapper.AGX, TONE_MAPPER_NAMES, {
+  tonemap_mode: v.enumInt('tonemap_mode', TONE_MAPPER_NAMES, {
     hinted: 'environment.cpp:1286',
   }),
   // environment.cpp:1288 hints "1,16,0.01,or_greater": the real floor is 1, not 0.
@@ -49,13 +49,7 @@ export const postProcessKeys: Record<string, PropertyValidator> = {
   glow_mix: v.float('glow_mix', { min: 0, max: 1, hinted: 'environment.cpp:1446' }),
   glow_bloom: v.float('glow_bloom', { min: 0, max: 1, hinted: 'environment.cpp:1447' }),
   // environment.cpp:1448, set_glow_blend_mode (:672-676) bare-assigns.
-  glow_blend_mode: v.enumInt(
-    'glow_blend_mode',
-    GlowBlendMode.ADDITIVE,
-    GlowBlendMode.MIX,
-    GLOW_BLEND_MODE_NAMES,
-    { hinted: 'environment.cpp:1448' }
-  ),
+  glow_blend_mode: v.enumInt('glow_blend_mode', GLOW_BLEND_MODE_NAMES, { hinted: 'environment.cpp:1448' }),
   // environment.cpp:1449-1452, setters (:682, :691, :700, :709) bare-assign.
   glow_hdr_threshold: v.float('glow_hdr_threshold', {
     min: 0,

@@ -66,8 +66,6 @@ validatorRegistry.registerAll('TabBar', {
   // ALIGNMENT_MAX)` (tab_bar.cpp:1671) refuses both ends. ALIGNMENT_MAX is 3 (tab_bar.h:47).
   tab_alignment: v.enumInt(
     'tab_alignment',
-    0,
-    2,
     { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT' },
     { enforced: 'tab_bar.cpp:1671' }
   ),
@@ -75,8 +73,6 @@ validatorRegistry.registerAll('TabBar', {
   // `ERR_FAIL_INDEX(p_policy, CLOSE_BUTTON_MAX)` (tab_bar.cpp:1944), CLOSE_BUTTON_MAX is 3 (tab_bar.h:54).
   tab_close_display_policy: v.enumInt(
     'tab_close_display_policy',
-    0,
-    2,
     { 0: 'SHOW_NEVER', 1: 'SHOW_ACTIVE_ONLY', 2: 'SHOW_ALWAYS' },
     { enforced: 'tab_bar.cpp:1944' }
   ),

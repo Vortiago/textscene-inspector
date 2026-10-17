@@ -60,7 +60,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // rather than the hint warning GeometryInstance3D.cast_shadow carries for the
   // same constants: `_set`'s switch maps every other value to
   // SHADOW_CASTING_SETTING_ON (:66-68), so what was written is altered.
-  mesh_cast_shadow: v.enumInt('mesh_cast_shadow', 0, 3, CAST_SHADOW, {
+  mesh_cast_shadow: v.enumInt('mesh_cast_shadow', CAST_SHADOW, {
     enforced: 'mesh_library.cpp:66',
   }),
   // :150, Variant::ARRAY, no hint and no element type.

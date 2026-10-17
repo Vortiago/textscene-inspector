@@ -6,20 +6,14 @@
 
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { ContainerAlignment, CONTAINER_ALIGNMENT_NAMES } from '../../../../godot/scene/container.js';
+import { CONTAINER_ALIGNMENT_NAMES } from '../../../../godot/scene/container.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('BoxContainer', {
   // box_container.cpp:379, PROPERTY_HINT_ENUM "Begin,Center,End", matching the bound
   // ALIGNMENT_* constants. set_alignment (box_container.cpp:299-305) assigns
   // unconditionally, no ERR_FAIL.
-  alignment: v.enumInt(
-    'alignment',
-    ContainerAlignment.ALIGNMENT_BEGIN,
-    ContainerAlignment.ALIGNMENT_END,
-    CONTAINER_ALIGNMENT_NAMES,
-    { hinted: 'box_container.cpp:379' }
-  ),
+  alignment: v.enumInt('alignment', CONTAINER_ALIGNMENT_NAMES, { hinted: 'box_container.cpp:379' }),
   // `_validate_property` (box_container.cpp) hides `vertical` only when `is_fixed`, which only the
   // HBoxContainer and VBoxContainer constructors set (box_container.h). A plain
   // BoxContainer serialises it.

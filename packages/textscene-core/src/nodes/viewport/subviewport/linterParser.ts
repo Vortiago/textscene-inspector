@@ -12,8 +12,6 @@ import { VIEWPORT_MIN_SIZE } from '../../../godot/rendering/viewport.js';
 import {
   SUB_VIEWPORT_CLEAR_MODE_NAMES,
   SUB_VIEWPORT_UPDATE_MODE_NAMES,
-  SubViewportClearMode,
-  SubViewportUpdateMode,
 } from '../../../godot/scene/viewport.js';
 
 validatorRegistry.registerAll('SubViewport', {
@@ -25,24 +23,12 @@ validatorRegistry.registerAll('SubViewport', {
   size_2d_override_stretch: v.boolean('size_2d_override_stretch'),
   // viewport.cpp:5584: PROPERTY_HINT_ENUM, 5 labels. set_update_mode
   // (viewport.cpp:5475-5479) assigns unconditionally, no ERR_FAIL.
-  render_target_update_mode: v.enumInt(
-    'render_target_update_mode',
-    SubViewportUpdateMode.DISABLED,
-    SubViewportUpdateMode.ALWAYS,
-    SUB_VIEWPORT_UPDATE_MODE_NAMES,
-    {
-      hinted: 'viewport.cpp:5584',
-    }
-  ),
+  render_target_update_mode: v.enumInt('render_target_update_mode', SUB_VIEWPORT_UPDATE_MODE_NAMES, {
+    hinted: 'viewport.cpp:5584',
+  }),
   // viewport.cpp:5583: PROPERTY_HINT_ENUM, 3 labels. set_clear_mode
   // (viewport.cpp:5486-5490) assigns unconditionally, no ERR_FAIL.
-  render_target_clear_mode: v.enumInt(
-    'render_target_clear_mode',
-    SubViewportClearMode.ALWAYS,
-    SubViewportClearMode.ONCE,
-    SUB_VIEWPORT_CLEAR_MODE_NAMES,
-    {
-      hinted: 'viewport.cpp:5583',
-    }
-  ),
+  render_target_clear_mode: v.enumInt('render_target_clear_mode', SUB_VIEWPORT_CLEAR_MODE_NAMES, {
+    hinted: 'viewport.cpp:5583',
+  }),
 });

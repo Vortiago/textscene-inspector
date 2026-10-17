@@ -17,14 +17,12 @@ validatorRegistry.registerAll('OpenXRHand', {
   // (cpp:83-87) opens with ERR_FAIL_INDEX(p_hand, HAND_MAX), which returns
   // before the assignment, so an out-of-range value is refused, not merely
   // hinted.
-  hand: v.enumInt('hand', 0, 1, { 0: 'Left', 1: 'Right' }, { enforced: 'openxr_hand.cpp:84' }),
+  hand: v.enumInt('hand', { 0: 'Left', 1: 'Right' }, { enforced: 'openxr_hand.cpp:84' }),
   // openxr_hand.cpp:56, PROPERTY_HINT_ENUM "Unobstructed,Conform to
   // controller". set_motion_range (cpp:99-104) opens with
   // ERR_FAIL_INDEX(p_motion_range, MOTION_RANGE_MAX), refusing out-of-range.
   motion_range: v.enumInt(
     'motion_range',
-    0,
-    1,
     { 0: 'Unobstructed', 1: 'Conform to controller' },
     { enforced: 'openxr_hand.cpp:100' }
   ),
@@ -37,8 +35,6 @@ validatorRegistry.registerAll('OpenXRHand', {
   // refusing out-of-range.
   skeleton_rig: v.enumInt(
     'skeleton_rig',
-    0,
-    1,
     { 0: 'OpenXR', 1: 'Humanoid' },
     { enforced: 'openxr_hand.cpp:136' }
   ),
@@ -47,8 +43,6 @@ validatorRegistry.registerAll('OpenXRHand', {
   // BONE_UPDATE_MAX), refusing out-of-range.
   bone_update: v.enumInt(
     'bone_update',
-    0,
-    1,
     { 0: 'Full', 1: 'Rotation Only' },
     { enforced: 'openxr_hand.cpp:146' }
   ),

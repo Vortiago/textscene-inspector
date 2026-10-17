@@ -57,8 +57,6 @@ validatorRegistry.registerAll('NavigationAgent3D', {
   // lists only "AStar", the one PathfindingAlgorithm (navigation_path_query_parameters_3d.h:43-45).
   pathfinding_algorithm: v.enumInt(
     'pathfinding_algorithm',
-    0,
-    0,
     { 0: 'PATHFINDING_ALGORITHM_ASTAR' },
     { hinted: 'navigation_agent_3d.cpp:160' }
   ),
@@ -67,8 +65,6 @@ validatorRegistry.registerAll('NavigationAgent3D', {
   // (navigation_path_query_parameters_3d.h:47-51).
   path_postprocessing: v.enumInt(
     'path_postprocessing',
-    0,
-    2,
     {
       0: 'PATH_POSTPROCESSING_CORRIDORFUNNEL',
       1: 'PATH_POSTPROCESSING_EDGECENTERED',

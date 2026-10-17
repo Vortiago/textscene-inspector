@@ -9,7 +9,7 @@ import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
-import { PlaybackType, PLAYBACK_TYPE_NAMES } from '../../../godot/audio/audioServer.js';
+import { PLAYBACK_TYPE_NAMES } from '../../../godot/audio/audioServer.js';
 
 const ATTENUATION_MODEL = {
   0: 'INVERSE_DISTANCE',
@@ -55,11 +55,11 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   // (:789-791) forwards to AudioStreamPlayerInternal::set_playback_type
   // (audio_stream_player_internal.cpp:337-339), the setter and enum AudioStreamPlayer's
   // `playback_type` grounds against: a bare assignment, so out of range only warns.
-  playback_type: v.enumInt('playback_type', PlaybackType.DEFAULT, PlaybackType.SAMPLE, PLAYBACK_TYPE_NAMES, {
+  playback_type: v.enumInt('playback_type', PLAYBACK_TYPE_NAMES, {
     hinted: 'audio_stream_player_3d.cpp:896',
   }),
   // audio_stream_player_3d.cpp:721, ERR_FAIL_INDEX((int)p_model, 4).
-  attenuation_model: v.enumInt('attenuation_model', 0, 3, ATTENUATION_MODEL, {
+  attenuation_model: v.enumInt('attenuation_model', ATTENUATION_MODEL, {
     enforced: 'audio_stream_player_3d.cpp:721',
   }),
   // audio_stream_player_3d.cpp:885, PROPERTY_HINT_RANGE "0.1,100,0.01,or_greater":
@@ -87,7 +87,7 @@ validatorRegistry.registerAll('AudioStreamPlayer3D', {
   }),
   // audio_stream_player_3d.cpp:730 is a bare assignment (only an equal-check early
   // return); no engine-side range check on the raw int.
-  doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING, {
+  doppler_tracking: v.enumInt('doppler_tracking', DOPPLER_TRACKING, {
     hinted: 'audio_stream_player_3d.cpp:905',
   }),
   // audio_stream_player_3d.cpp:777, ERR_FAIL_COND_MSG(p_panning_strength < 0, ...)

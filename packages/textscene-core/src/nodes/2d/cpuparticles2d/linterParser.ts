@@ -70,15 +70,13 @@ validatorRegistry.registerAll('CPUParticles2D', {
   // set_draw_order (cpu_particles_2d.cpp:173-175) is `draw_order = p_order;` with
   // no ERR_FAIL_INDEX and no CLAMP, so out of range is a warning: the engine
   // reads `draw_order = 215832976` as Index.
-  draw_order: v.enumInt('draw_order', 0, 1, DRAW_ORDER, { hinted: 'cpu_particles_2d.cpp:1509' }),
+  draw_order: v.enumInt('draw_order', DRAW_ORDER, { hinted: 'cpu_particles_2d.cpp:1509' }),
 
   // cpu_particles_2d.cpp:1586, ENUM 7 labels (matches BIND_ENUM_CONSTANT x7 +
   // EMISSION_SHAPE_MAX=7). set_emission_shape (cpu_particles_2d.cpp:480-481)
   // ERR_FAIL_INDEXes against EMISSION_SHAPE_MAX.
   emission_shape: v.enumInt(
     'emission_shape',
-    0,
-    6,
     {
       0: 'POINT',
       1: 'SPHERE',

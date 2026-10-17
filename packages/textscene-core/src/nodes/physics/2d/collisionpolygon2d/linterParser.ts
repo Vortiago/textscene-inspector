@@ -14,8 +14,6 @@ validatorRegistry.registerAll('CollisionPolygon2D', {
   // (:204), which refuses the assignment outright: enforced both ends.
   build_mode: v.enumInt(
     'build_mode',
-    0,
-    1,
     { 0: 'BUILD_SOLIDS', 1: 'BUILD_SEGMENTS' },
     { enforced: 'collision_polygon_2d.cpp:204' }
   ),

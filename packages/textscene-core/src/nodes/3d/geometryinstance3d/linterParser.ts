@@ -17,7 +17,7 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::INT, "cast_shadow",
   // PROPERTY_HINT_ENUM, "Off,On,Double-Sided,Shadows Only"), ...). set_cast_shadows_setting
   // (:366-370) is a bare assignment.
-  cast_shadow: v.enumInt('cast_shadow', 0, 3, SHADOW_CASTING_SETTING_NAMES, {
+  cast_shadow: v.enumInt('cast_shadow', SHADOW_CASTING_SETTING_NAMES, {
     hinted: 'visual_instance_3d.cpp:601',
   }),
 
@@ -48,7 +48,7 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "gi_mode", PROPERTY_HINT_ENUM,
   // "Disabled,Static,Dynamic"). set_gi_mode:472-489 switches on 3 known cases then
   // assigns unconditionally afterward, so an out-of-range value is not dropped.
-  gi_mode: v.enumInt('gi_mode', 0, 2, GI_MODE, { hinted: 'visual_instance_3d.cpp:608' }),
+  gi_mode: v.enumInt('gi_mode', GI_MODE, { hinted: 'visual_instance_3d.cpp:608' }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::BOOL,
   // "ignore_occlusion_culling"), ...)
@@ -112,15 +112,9 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "visibility_range_fade_mode",
   // PROPERTY_HINT_ENUM, "Disabled,Self,Dependencies"). set_visibility_range_fade_mode:285-289
   // is a bare assignment.
-  visibility_range_fade_mode: v.enumInt(
-    'visibility_range_fade_mode',
-    0,
-    2,
-    VISIBILITY_RANGE_FADE_MODE_NAMES,
-    {
-      hinted: 'visual_instance_3d.cpp:619',
-    }
-  ),
+  visibility_range_fade_mode: v.enumInt('visibility_range_fade_mode', VISIBILITY_RANGE_FADE_MODE_NAMES, {
+    hinted: 'visual_instance_3d.cpp:619',
+  }),
 
   // VisualInstance3D declares both sorting keys `PROPERTY_USAGE_NONE`, and
   // `GeometryInstance3D::_validate_property` restores `PROPERTY_USAGE_DEFAULT`, so

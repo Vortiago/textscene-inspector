@@ -9,14 +9,11 @@ import '../basebutton/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { maskedBitField, v } from '../../../../linter/validators/index.js';
 import {
-  AutowrapMode,
   AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
-  OverrunBehavior,
   OVERRUN_BEHAVIOR_NAMES,
-  TextDirection,
   TEXT_DIRECTION_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
 import {
@@ -47,23 +44,13 @@ validatorRegistry.registerAll('Button', {
   // button.cpp:815, PROPERTY_HINT_ENUM with 7 entries: TextServer::OverrunBehavior 0-6
   // (servers/text/text_server.h:124-130). set_text_overrun_behavior
   // (button.cpp:574-585) assigns unconditionally, no ERR_FAIL.
-  text_overrun_behavior: v.enumInt(
-    'text_overrun_behavior',
-    OverrunBehavior.OVERRUN_NO_TRIMMING,
-    OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE,
-    OVERRUN_BEHAVIOR_NAMES,
-    { hinted: 'button.cpp:815' }
-  ),
+  text_overrun_behavior: v.enumInt('text_overrun_behavior', OVERRUN_BEHAVIOR_NAMES, {
+    hinted: 'button.cpp:815',
+  }),
   // button.cpp:816, PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)", so
   // Button offers the whole enum and the bound is the hint's own width.
   // set_autowrap_mode (button.cpp:610-615) assigns unconditionally.
-  autowrap_mode: v.enumInt(
-    'autowrap_mode',
-    AutowrapMode.AUTOWRAP_OFF,
-    AutowrapMode.AUTOWRAP_WORD_SMART,
-    AUTOWRAP_MODE_NAMES,
-    { hinted: 'button.cpp:816' }
-  ),
+  autowrap_mode: v.enumInt('autowrap_mode', AUTOWRAP_MODE_NAMES, { hinted: 'button.cpp:816' }),
   // set_autowrap_trim_flags (button.cpp:625) stores `p_flags & BREAK_TRIM_MASK`, so a
   // bit outside the mask is dropped. button.cpp:817 hints only the two edge-space bits,
   // so BREAK_TRIM_INDENT is kept but the inspector does not offer it.
@@ -98,17 +85,11 @@ validatorRegistry.registerAll('Button', {
   // button.cpp:826, PROPERTY_HINT_ENUM over Control::TextDirection 0-3 (scene/gui/control.h:166-171).
   // set_text_direction (button.cpp:637) refuses below -1 or above 3. -1 is a legacy
   // inherited spelling with no named constant: engine-legal, so the enforced floor is -1.
-  text_direction: v.enumInt(
-    'text_direction',
-    TextDirection.TEXT_DIRECTION_AUTO,
-    TextDirection.TEXT_DIRECTION_INHERITED,
-    TEXT_DIRECTION_NAMES,
-    {
-      hinted: 'button.cpp:826',
-      enforced: 'button.cpp:637',
-      enforcedMin: { at: -1 },
-    }
-  ),
+  text_direction: v.enumInt('text_direction', TEXT_DIRECTION_NAMES, {
+    hinted: 'button.cpp:826',
+    enforced: 'button.cpp:637',
+    enforcedMin: { at: -1 },
+  }),
   // button.cpp:827, PROPERTY_HINT_LOCALE_ID: any locale string parses.
   language: v.quotedString('language'),
 });
