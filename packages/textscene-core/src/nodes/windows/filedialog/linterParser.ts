@@ -6,30 +6,15 @@
  */
 
 import '../confirmationdialog/linterParser.js';
+import {
+  FILE_DIALOG_ACCESS_NAMES,
+  FILE_DIALOG_DISPLAY_MODE_NAMES,
+  FILE_DIALOG_FILE_MODE_NAMES,
+} from '../../../godot/scene/fileDialog.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
 import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-
-// file_dialog.cpp:2114, PROPERTY_HINT_ENUM, 5 labels ("Open File,Open Files,
-// Open Folder,Open Any,Save"). set_file_mode (:1362-1363) is
-// `ERR_FAIL_INDEX((int)p_mode, 5)`: enforced, matching the hint's own labels.
-const FILE_MODE = {
-  0: 'OPEN_FILE',
-  1: 'OPEN_FILES',
-  2: 'OPEN_DIR',
-  3: 'OPEN_ANY',
-  4: 'SAVE_FILE',
-};
-
-// file_dialog.cpp:2115, PROPERTY_HINT_ENUM "Thumbnails,List". set_display_mode
-// (:1416-1417) is `ERR_FAIL_INDEX((int)p_mode, DISPLAY_MAX)` with DISPLAY_MAX = 2
-// (file_dialog.h:127-131): enforced.
-const DISPLAY_MODE = { 0: 'THUMBNAILS', 1: 'LIST' };
-
-// file_dialog.cpp:2116, PROPERTY_HINT_ENUM "Resources,User Data,File System".
-// set_access (:1509-1510) is `ERR_FAIL_INDEX(p_access, 3)`: enforced.
-const ACCESS = { 0: 'RESOURCES', 1: 'USERDATA', 2: 'FILESYSTEM' };
 
 /**
  * The three leaves `PropertyListHelper` emits per option (file_dialog.cpp:2201-2203).
@@ -78,9 +63,11 @@ validatorRegistry.registerAll('FileDialog', {
   // file_dialog.cpp:2113, BOOL, no hint. set_mode_overrides_title (:1354-1356)
   // is a bare assignment.
   mode_overrides_title: v.boolean('mode_overrides_title'),
-  file_mode: v.enumInt('file_mode', FILE_MODE, { enforced: 'file_dialog.cpp:1363' }),
-  display_mode: v.enumInt('display_mode', DISPLAY_MODE, { enforced: 'file_dialog.cpp:1417' }),
-  access: v.enumInt('access', ACCESS, { enforced: 'file_dialog.cpp:1510' }),
+  file_mode: v.enumInt('file_mode', FILE_DIALOG_FILE_MODE_NAMES, { enforced: 'file_dialog.cpp:1363' }),
+  display_mode: v.enumInt('display_mode', FILE_DIALOG_DISPLAY_MODE_NAMES, {
+    enforced: 'file_dialog.cpp:1417',
+  }),
+  access: v.enumInt('access', FILE_DIALOG_ACCESS_NAMES, { enforced: 'file_dialog.cpp:1510' }),
   // file_dialog.cpp:2117, STRING, no hint. set_root_subfolder (:1332-1348) assigns
   // before its `dir_exists` guard, and the offline linter has no filesystem to
   // check that guard against.
