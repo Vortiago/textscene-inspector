@@ -10,7 +10,7 @@ export interface ParsedHeading {
 }
 
 /** A heading read from a line, with where each attribute's value sits on that line. */
-export interface ScannedHeading extends ParsedHeading {
+export interface SpannedHeading extends ParsedHeading {
   /** Inside its quotes for a string, the raw text for any other value. */
   valueSpans: Record<string, ValueSpan>;
 }
@@ -189,7 +189,7 @@ function keyedByAttribute<T>(): Record<string, T> {
   return Object.create(null) as Record<string, T>;
 }
 
-export function parseHeading(line: string): ScannedHeading | null {
+export function parseHeading(line: string): SpannedHeading | null {
   const trimmed = line.trim();
 
   if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
