@@ -8,6 +8,10 @@ import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import {
+  TAB_BAR_ALIGNMENT_NAMES,
+  TAB_BAR_CLOSE_BUTTON_DISPLAY_POLICY_NAMES,
+} from '../../../../godot/scene/tabs.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
@@ -64,18 +68,12 @@ validatorRegistry.registerAll('TabBar', {
   }),
   // tab_bar.cpp:2124, PROPERTY_HINT_ENUM "Left,Center,Right". `ERR_FAIL_INDEX(p_alignment,
   // ALIGNMENT_MAX)` (tab_bar.cpp:1671) refuses both ends. ALIGNMENT_MAX is 3 (tab_bar.h:47).
-  tab_alignment: v.enumInt(
-    'tab_alignment',
-    { 0: 'LEFT', 1: 'CENTER', 2: 'RIGHT' },
-    { enforced: 'tab_bar.cpp:1671' }
-  ),
+  tab_alignment: v.enumInt('tab_alignment', TAB_BAR_ALIGNMENT_NAMES, { enforced: 'tab_bar.cpp:1671' }),
   // tab_bar.cpp:2127, PROPERTY_HINT_ENUM "Show Never,Show Active Only,Show Always".
   // `ERR_FAIL_INDEX(p_policy, CLOSE_BUTTON_MAX)` (tab_bar.cpp:1944), CLOSE_BUTTON_MAX is 3 (tab_bar.h:54).
-  tab_close_display_policy: v.enumInt(
-    'tab_close_display_policy',
-    { 0: 'SHOW_NEVER', 1: 'SHOW_ACTIVE_ONLY', 2: 'SHOW_ALWAYS' },
-    { enforced: 'tab_bar.cpp:1944' }
-  ),
+  tab_close_display_policy: v.enumInt('tab_close_display_policy', TAB_BAR_CLOSE_BUTTON_DISPLAY_POLICY_NAMES, {
+    enforced: 'tab_bar.cpp:1944',
+  }),
   // tab_bar.cpp:2128, PROPERTY_HINT_RANGE "0,99999,1,suffix:px". `set_max_tab_width`
   // refuses only `p_width < 0` (tab_bar.cpp:1966), so the ceiling is the hint's warning.
   max_tab_width: v.int('max_tab_width', {

@@ -7,6 +7,7 @@
 
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
 import { hintedBitField, v } from '../../linter/validators/index.js';
+import { NODE_AUTO_TRANSLATE_MODE_NAMES } from '../../godot/scene/node.js';
 
 validatorRegistry.registerAll('Node', {
   // node.cpp:4050: PROPERTY_USAGE_NO_EDITOR only hides it from the inspector, so it is serialised.
@@ -70,15 +71,9 @@ validatorRegistry.registerAll('Node', {
   // node.cpp:4069, PROPERTY_HINT_ENUM "Inherit,Always,Disabled". set_auto_translate_mode
   // (node.cpp:1331-1340) is a bare assignment plus a special-cased ERR_FAIL_MSG
   // for the root node under INHERIT; no range check on the raw int.
-  auto_translate_mode: v.enumInt(
-    'auto_translate_mode',
-    {
-      0: 'AUTO_TRANSLATE_MODE_INHERIT',
-      1: 'AUTO_TRANSLATE_MODE_ALWAYS',
-      2: 'AUTO_TRANSLATE_MODE_DISABLED',
-    },
-    { hinted: 'node.cpp:4069' }
-  ),
+  auto_translate_mode: v.enumInt('auto_translate_mode', NODE_AUTO_TRANSLATE_MODE_NAMES, {
+    hinted: 'node.cpp:4069',
+  }),
   // node.cpp:4072: PROPERTY_HINT_MULTILINE_TEXT. The scanner accumulates the
   // continuation lines before validating, so the value arrives fully quoted.
   editor_description: v.quotedString('editor_description'),
