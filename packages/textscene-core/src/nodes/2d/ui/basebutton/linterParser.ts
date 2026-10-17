@@ -21,8 +21,6 @@ validatorRegistry.registerAll('BaseButton', {
   // unconditionally, no ERR_FAIL.
   action_mode: v.enumInt(
     'action_mode',
-    0,
-    1,
     {
       0: 'ACTION_MODE_BUTTON_PRESS',
       1: 'ACTION_MODE_BUTTON_RELEASE',

@@ -9,28 +9,17 @@ import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { hintedBitField, maskedBitField, v } from '../../../../linter/validators/index.js';
 import {
-  AutowrapMode,
   AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
   JUSTIFICATION_HINTED_BITS,
-  OverrunBehavior,
   OVERRUN_BEHAVIOR_NAMES,
-  StructuredTextParser,
   STRUCTURED_TEXT_PARSER_NAMES,
-  TextDirection,
   TEXT_DIRECTION_NAMES,
   VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
-import {
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_NAMES,
-  VERTICAL_ALIGNMENT_FILL,
-  VERTICAL_ALIGNMENT_NAMES,
-  VERTICAL_ALIGNMENT_TOP,
-} from '../../../../godot/math/math.js';
+import { HORIZONTAL_ALIGNMENT_NAMES, VERTICAL_ALIGNMENT_NAMES } from '../../../../godot/math/math.js';
 
 /**
  * label.cpp:1258-1275: `set_ellipsis_char` truncates a longer literal with
@@ -63,37 +52,19 @@ validatorRegistry.registerAll('Label', {
   // label.cpp:1433: PROPERTY_HINT_ENUM "Left,Center,Right,Fill", the 4
   // HorizontalAlignment constants. set_horizontal_alignment (label.cpp:1064-1078),
   // `ERR_FAIL_INDEX((int)p_alignment, 4)` (label.cpp:1065), enforced.
-  horizontal_alignment: v.enumInt(
-    'horizontal_alignment',
-    HORIZONTAL_ALIGNMENT_LEFT,
-    HORIZONTAL_ALIGNMENT_FILL,
-    HORIZONTAL_ALIGNMENT_NAMES,
-    {
-      enforced: 'label.cpp:1065',
-    }
-  ),
+  horizontal_alignment: v.enumInt('horizontal_alignment', HORIZONTAL_ALIGNMENT_NAMES, {
+    enforced: 'label.cpp:1065',
+  }),
   // label.cpp:1434: PROPERTY_HINT_ENUM "Top,Center,Bottom,Fill", the 4
   // VerticalAlignment constants. set_vertical_alignment (label.cpp:1084-1093),
   // `ERR_FAIL_INDEX((int)p_alignment, 4)` (label.cpp:1085), enforced.
-  vertical_alignment: v.enumInt(
-    'vertical_alignment',
-    VERTICAL_ALIGNMENT_TOP,
-    VERTICAL_ALIGNMENT_FILL,
-    VERTICAL_ALIGNMENT_NAMES,
-    {
-      enforced: 'label.cpp:1085',
-    }
-  ),
+  vertical_alignment: v.enumInt('vertical_alignment', VERTICAL_ALIGNMENT_NAMES, {
+    enforced: 'label.cpp:1085',
+  }),
   // label.cpp:1435: PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)", the
   // whole 4-value AutowrapMode enum. set_autowrap_mode (label.cpp:37-52)
   // assigns unconditionally, no ERR_FAIL.
-  autowrap_mode: v.enumInt(
-    'autowrap_mode',
-    AutowrapMode.AUTOWRAP_OFF,
-    AutowrapMode.AUTOWRAP_WORD_SMART,
-    AUTOWRAP_MODE_NAMES,
-    { hinted: 'label.cpp:1435' }
-  ),
+  autowrap_mode: v.enumInt('autowrap_mode', AUTOWRAP_MODE_NAMES, { hinted: 'label.cpp:1435' }),
   // set_autowrap_trim_flags (label.cpp:63) stores `p_flags & BREAK_TRIM_MASK`, so
   // bits outside the mask drop. label.cpp:1436 hints only the two edge-space bits,
   // so BREAK_TRIM_INDENT is kept but not offered by the inspector.
@@ -119,13 +90,9 @@ validatorRegistry.registerAll('Label', {
   // label.cpp:1441: PROPERTY_HINT_ENUM with 7 entries; TextServer::OverrunBehavior
   // OVERRUN_NO_TRIMMING=0 .. OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6. set_text_overrun_behavior
   // (label.cpp:1239-1252) assigns unconditionally, no ERR_FAIL.
-  text_overrun_behavior: v.enumInt(
-    'text_overrun_behavior',
-    OverrunBehavior.OVERRUN_NO_TRIMMING,
-    OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE,
-    OVERRUN_BEHAVIOR_NAMES,
-    { hinted: 'label.cpp:1441' }
-  ),
+  text_overrun_behavior: v.enumInt('text_overrun_behavior', OVERRUN_BEHAVIOR_NAMES, {
+    hinted: 'label.cpp:1441',
+  }),
   // label.cpp:1442: see ellipsisCharValidator above.
   ellipsis_char: ellipsisCharValidator,
   // label.cpp:1443: Variant::BOOL. set_uppercase (label.cpp:95-105) assigns
@@ -161,15 +128,9 @@ validatorRegistry.registerAll('Label', {
   // label.cpp:1451: PROPERTY_HINT_ENUM with 5 entries.
   // set_visible_characters_behavior (label.cpp:1334-1343) assigns
   // unconditionally, no ERR_FAIL.
-  visible_characters_behavior: v.enumInt(
-    'visible_characters_behavior',
-    0,
-    4,
-    VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
-    {
-      hinted: 'label.cpp:1451',
-    }
-  ),
+  visible_characters_behavior: v.enumInt('visible_characters_behavior', VISIBLE_CHARACTERS_BEHAVIOR_NAMES, {
+    hinted: 'label.cpp:1451',
+  }),
   // label.cpp:1452: PROPERTY_HINT_RANGE "0,1,0.001", a warning (ADR-0032), since the clamp
   // at label.cpp:1307-1312 sits behind `if (visible_ratio != p_ratio)` (label.cpp:1305) and
   // properties apply in file order (packed_scene.cpp:492). After `text = "0"` and
@@ -186,29 +147,19 @@ validatorRegistry.registerAll('Label', {
   // set_text_direction (label.cpp:1139-1148) enforces
   // `ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3)` (label.cpp:1140).
   // -1 is a legacy inherited spelling with no named constant: legal but unlabelled.
-  text_direction: v.enumInt(
-    'text_direction',
-    TextDirection.TEXT_DIRECTION_AUTO,
-    TextDirection.TEXT_DIRECTION_INHERITED,
-    TEXT_DIRECTION_NAMES,
-    {
-      hinted: 'label.cpp:1455',
-      enforced: 'label.cpp:1140',
-      enforcedMin: { at: -1 },
-    }
-  ),
+  text_direction: v.enumInt('text_direction', TEXT_DIRECTION_NAMES, {
+    hinted: 'label.cpp:1455',
+    enforced: 'label.cpp:1140',
+    enforcedMin: { at: -1 },
+  }),
   // label.cpp:1456: PROPERTY_HINT_LOCALE_ID; any locale string parses.
   // set_language (label.cpp:1184-1192) assigns unconditionally.
   language: v.quotedString('language'),
   // label.cpp:1457: PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override
   // (label.cpp:1150-1158) assigns unconditionally, no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt(
-    'structured_text_bidi_override',
-    StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
-    StructuredTextParser.STRUCTURED_TEXT_CUSTOM,
-    STRUCTURED_TEXT_PARSER_NAMES,
-    { hinted: 'label.cpp:1457' }
-  ),
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', STRUCTURED_TEXT_PARSER_NAMES, {
+    hinted: 'label.cpp:1457',
+  }),
   // label.cpp:1458: Variant::ARRAY with no hint at all, so it is never written
   // wrapped. set_structured_text_bidi_override_options (label.cpp:1164-1174)
   // assigns straight through, leaving only the literal shape to reject.

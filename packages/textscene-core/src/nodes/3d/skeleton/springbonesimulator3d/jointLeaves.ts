@@ -21,7 +21,7 @@ export const JOINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
   // :321, PROPERTY_HINT_ENUM over get_hint_rotation_axis().
   // set_joint_rotation_axis (:1001) assigns the static_cast: warning.
-  rotation_axis: v.enumInt('rotation_axis', 0, 4, ROTATION_AXIS, {
+  rotation_axis: v.enumInt('rotation_axis', ROTATION_AXIS, {
     hinted: 'spring_bone_simulator_3d.cpp:321',
   }),
 

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  LAYOUT_DIRECTION_MAX,
   LAYOUT_DIRECTION_NAMES,
   LayoutDirection,
   LTR_LAYOUT_ENV,
@@ -19,7 +18,6 @@ describe('LAYOUT_DIRECTION_NAMES', () => {
       3: 'RTL',
       4: 'SYSTEM_LOCALE',
     });
-    expect(Object.keys(LAYOUT_DIRECTION_NAMES)).toHaveLength(LAYOUT_DIRECTION_MAX);
   });
 });
 

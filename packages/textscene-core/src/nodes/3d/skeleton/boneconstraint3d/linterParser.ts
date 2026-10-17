@@ -35,8 +35,6 @@ const SETTING_LEAVES = {
   // an ERR_FAIL_INDEX on the value.
   reference_type: v.enumInt(
     'reference_type',
-    0,
-    1,
     { 0: 'REFERENCE_TYPE_BONE', 1: 'REFERENCE_TYPE_NODE' },
     { hinted: 'bone_constraint_3d.cpp:105' }
   ),

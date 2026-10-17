@@ -45,8 +45,6 @@ validatorRegistry.registerAll('Tree', {
   // ERR_FAIL or clamp, so out of range only warns.
   select_mode: v.enumInt(
     'select_mode',
-    0,
-    2,
     { 0: 'SELECT_SINGLE', 1: 'SELECT_ROW', 2: 'SELECT_MULTI' },
     { hinted: 'tree.cpp:6817' }
   ),
@@ -63,8 +61,6 @@ validatorRegistry.registerAll('Tree', {
   // (tree.cpp:6086-6093) rejects and clamps nothing, so the hint bounds the dropdown only.
   scroll_hint_mode: v.enumInt(
     'scroll_hint_mode',
-    0,
-    3,
     {
       0: 'SCROLL_HINT_MODE_DISABLED',
       1: 'SCROLL_HINT_MODE_BOTH',

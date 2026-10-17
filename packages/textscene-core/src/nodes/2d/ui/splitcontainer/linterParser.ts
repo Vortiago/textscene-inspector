@@ -70,8 +70,6 @@ validatorRegistry.registerAll('SplitContainer', {
   // (cpp:1308-1310) grounds nothing, so the hint warns, as for `action_mode` (`base_button.cpp:570`).
   dragger_visibility: v.enumInt(
     'dragger_visibility',
-    0,
-    2,
     {
       0: 'DRAGGER_VISIBLE',
       1: 'DRAGGER_HIDDEN',

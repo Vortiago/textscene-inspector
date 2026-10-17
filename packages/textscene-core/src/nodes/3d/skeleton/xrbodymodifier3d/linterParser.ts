@@ -41,8 +41,6 @@ validatorRegistry.registerAll('XRBodyModifier3D', {
   // `body_update`.
   bone_update: v.enumInt(
     'bone_update',
-    0,
-    1,
     { 0: 'BONE_UPDATE_FULL', 1: 'BONE_UPDATE_ROTATION_ONLY' },
     { enforced: 'xr_body_modifier_3d.cpp:80' }
   ),

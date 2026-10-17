@@ -25,7 +25,7 @@ validatorRegistry.registerAll('AnimationTree', {
   // through the base walk. The 3.x compat alias below is AnimationTree's own:
   // animation_player.cpp:57-58, redirected through callback_mode_process
   // (animation_mixer.cpp:501-509), a bare assignment with no range check on the raw int.
-  process_callback: v.enumInt('process_callback', 0, 2, PROCESS_MODE, {
+  process_callback: v.enumInt('process_callback', PROCESS_MODE, {
     hinted: 'animation_mixer.cpp:2471',
   }),
   // animation_tree.cpp:1019, PROPERTY_HINT_NODE_PATH_VALID_TYPES "Node".

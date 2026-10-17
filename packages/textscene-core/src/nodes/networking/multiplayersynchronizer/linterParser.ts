@@ -40,8 +40,6 @@ validatorRegistry.registerAll('MultiplayerSynchronizer', {
   // is a warning.
   visibility_update_mode: v.enumInt(
     'visibility_update_mode',
-    0,
-    2,
     {
       0: 'VISIBILITY_PROCESS_IDLE',
       1: 'VISIBILITY_PROCESS_PHYSICS',

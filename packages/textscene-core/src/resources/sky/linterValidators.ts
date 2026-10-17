@@ -12,8 +12,6 @@ import { v } from '../../linter/validators/index.js';
 validatorRegistry.registerAll('Sky', {
   process_mode: v.enumInt(
     'process_mode',
-    0,
-    3,
     {
       0: 'PROCESS_MODE_AUTOMATIC',
       1: 'PROCESS_MODE_QUALITY',
@@ -24,8 +22,6 @@ validatorRegistry.registerAll('Sky', {
   ),
   radiance_size: v.enumInt(
     'radiance_size',
-    0,
-    6,
     {
       0: 'RADIANCE_SIZE_32',
       1: 'RADIANCE_SIZE_64',

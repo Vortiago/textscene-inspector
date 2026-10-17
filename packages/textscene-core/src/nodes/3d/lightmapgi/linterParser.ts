@@ -30,7 +30,7 @@ const SHADOWMASK_MODE = { 0: 'NONE', 1: 'REPLACE', 2: 'OVERLAY' };
 validatorRegistry.registerAll('LightmapGI', {
   // lightmap_gi.cpp:1919, PROPERTY_HINT_ENUM "Low,Medium,High,Ultra". set_bake_quality
   // (:1614-1616) is a bare assignment, so the hint is advisory only.
-  quality: v.enumInt('quality', 0, 3, BAKE_QUALITY, { hinted: 'lightmap_gi.cpp:1919' }),
+  quality: v.enumInt('quality', BAKE_QUALITY, { hinted: 'lightmap_gi.cpp:1919' }),
 
   // lightmap_gi.cpp:1920, plain BOOL, no hint.
   supersampling: v.boolean('supersampling'),
@@ -70,7 +70,7 @@ validatorRegistry.registerAll('LightmapGI', {
 
   // lightmap_gi.cpp:1925, PROPERTY_HINT_ENUM "None,Replace,Overlay". set_shadowmask_mode
   // (:1659-1666) is a bare assignment, so the hint is advisory only.
-  shadowmask_mode: v.enumInt('shadowmask_mode', 0, 2, SHADOWMASK_MODE, {
+  shadowmask_mode: v.enumInt('shadowmask_mode', SHADOWMASK_MODE, {
     hinted: 'lightmap_gi.cpp:1925',
   }),
 
@@ -126,7 +126,7 @@ validatorRegistry.registerAll('LightmapGI', {
   // lightmap_gi.cpp:1935, PROPERTY_HINT_ENUM "Disabled,Scene,Custom Sky,Custom
   // Color". set_environment_mode (:1688-1691) is a bare assignment, so the hint
   // is advisory only.
-  environment_mode: v.enumInt('environment_mode', 0, 3, ENVIRONMENT_MODE, {
+  environment_mode: v.enumInt('environment_mode', ENVIRONMENT_MODE, {
     hinted: 'lightmap_gi.cpp:1935',
   }),
 
@@ -157,7 +157,7 @@ validatorRegistry.registerAll('LightmapGI', {
   // lightmap_gi.cpp:1941, PROPERTY_HINT_ENUM "Disabled,4,8,16,32".
   // set_generate_probes (:1787-1789) is a bare assignment, so the hint is
   // advisory only.
-  generate_probes_subdiv: v.enumInt('generate_probes_subdiv', 0, 4, GENERATE_PROBES, {
+  generate_probes_subdiv: v.enumInt('generate_probes_subdiv', GENERATE_PROBES, {
     hinted: 'lightmap_gi.cpp:1941',
   }),
 

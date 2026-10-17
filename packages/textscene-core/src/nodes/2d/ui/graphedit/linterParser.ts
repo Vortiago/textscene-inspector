@@ -29,8 +29,6 @@ validatorRegistry.registerAll('GraphEdit', {
   // set_grid_pattern (graph_edit.cpp:2743-2750) keeps any int, so a third value is a warning.
   grid_pattern: v.enumInt(
     'grid_pattern',
-    0,
-    1,
     { 0: 'GRID_PATTERN_LINES', 1: 'GRID_PATTERN_DOTS' },
     { hinted: 'graph_edit.cpp:3071' }
   ),
@@ -49,8 +47,6 @@ validatorRegistry.registerAll('GraphEdit', {
   // (graph_edit.h:141-144). set_panning_scheme (graph_edit.cpp:2418-2421) casts unchecked: a warning.
   panning_scheme: v.enumInt(
     'panning_scheme',
-    0,
-    1,
     { 0: 'SCROLL_ZOOMS', 1: 'SCROLL_PANS' },
     { hinted: 'graph_edit.cpp:3074' }
   ),

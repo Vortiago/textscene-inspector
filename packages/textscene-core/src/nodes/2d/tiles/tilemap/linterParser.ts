@@ -79,12 +79,12 @@ validatorRegistry.registerAll('TileMap', {
   // tile_map.cpp:417-426, bare assignment, forwarded verbatim to every child
   // TileMapLayer::set_collision_visibility_mode. Hint at ADD_PROPERTY
   // tile_map.cpp:998.
-  collision_visibility_mode: v.enumInt('collision_visibility_mode', 0, 2, VISIBILITY_MODE, {
+  collision_visibility_mode: v.enumInt('collision_visibility_mode', VISIBILITY_MODE, {
     hinted: 'tile_map.cpp:998',
   }),
   // tile_map.cpp:433-442, bare assignment, forwarded to every child layer.
   // Hint at ADD_PROPERTY tile_map.cpp:1000.
-  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', 0, 2, VISIBILITY_MODE, {
+  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', VISIBILITY_MODE, {
     hinted: 'tile_map.cpp:1000',
   }),
   // tile_map.cpp:223-231: ERR_FAIL_COND_MSG(p_size < 1) floors it, and each child

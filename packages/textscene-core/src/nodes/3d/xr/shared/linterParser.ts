@@ -43,31 +43,31 @@ validatorRegistry.registerAll('OpenXRCompositionLayer', {
   // setter (:455-579) that assigns unconditionally after an equality
   // short-circuit, with no ERR_FAIL_INDEX anywhere in the group, so the
   // PROPERTY_HINT_ENUM string is the only authority and out-of-range warns.
-  swapchain_state_min_filter: v.enumInt('swapchain_state_min_filter', 0, 2, FILTER_LABELS, {
+  swapchain_state_min_filter: v.enumInt('swapchain_state_min_filter', FILTER_LABELS, {
     hinted: 'openxr_composition_layer.cpp:160',
   }),
-  swapchain_state_mag_filter: v.enumInt('swapchain_state_mag_filter', 0, 2, FILTER_LABELS, {
+  swapchain_state_mag_filter: v.enumInt('swapchain_state_mag_filter', FILTER_LABELS, {
     hinted: 'openxr_composition_layer.cpp:161',
   }),
-  swapchain_state_mipmap_mode: v.enumInt('swapchain_state_mipmap_mode', 0, 2, MIPMAP_MODE_LABELS, {
+  swapchain_state_mipmap_mode: v.enumInt('swapchain_state_mipmap_mode', MIPMAP_MODE_LABELS, {
     hinted: 'openxr_composition_layer.cpp:162',
   }),
-  swapchain_state_horizontal_wrap: v.enumInt('swapchain_state_horizontal_wrap', 0, 4, WRAP_LABELS, {
+  swapchain_state_horizontal_wrap: v.enumInt('swapchain_state_horizontal_wrap', WRAP_LABELS, {
     hinted: 'openxr_composition_layer.cpp:163',
   }),
-  swapchain_state_vertical_wrap: v.enumInt('swapchain_state_vertical_wrap', 0, 4, WRAP_LABELS, {
+  swapchain_state_vertical_wrap: v.enumInt('swapchain_state_vertical_wrap', WRAP_LABELS, {
     hinted: 'openxr_composition_layer.cpp:164',
   }),
-  swapchain_state_red_swizzle: v.enumInt('swapchain_state_red_swizzle', 0, 5, SWIZZLE_LABELS, {
+  swapchain_state_red_swizzle: v.enumInt('swapchain_state_red_swizzle', SWIZZLE_LABELS, {
     hinted: 'openxr_composition_layer.cpp:165',
   }),
-  swapchain_state_green_swizzle: v.enumInt('swapchain_state_green_swizzle', 0, 5, SWIZZLE_LABELS, {
+  swapchain_state_green_swizzle: v.enumInt('swapchain_state_green_swizzle', SWIZZLE_LABELS, {
     hinted: 'openxr_composition_layer.cpp:166',
   }),
-  swapchain_state_blue_swizzle: v.enumInt('swapchain_state_blue_swizzle', 0, 5, SWIZZLE_LABELS, {
+  swapchain_state_blue_swizzle: v.enumInt('swapchain_state_blue_swizzle', SWIZZLE_LABELS, {
     hinted: 'openxr_composition_layer.cpp:167',
   }),
-  swapchain_state_alpha_swizzle: v.enumInt('swapchain_state_alpha_swizzle', 0, 5, SWIZZLE_LABELS, {
+  swapchain_state_alpha_swizzle: v.enumInt('swapchain_state_alpha_swizzle', SWIZZLE_LABELS, {
     hinted: 'openxr_composition_layer.cpp:168',
   }),
   // :169 hints "1.0,16.0,0.001"; set_max_anisotropy (:581-589) assigns

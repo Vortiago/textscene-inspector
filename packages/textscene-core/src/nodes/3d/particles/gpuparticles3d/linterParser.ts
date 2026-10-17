@@ -97,11 +97,11 @@ validatorRegistry.registerAll('GPUParticles3D', {
   visibility_aabb: v.aabb('visibility_aabb'),
   local_coords: v.boolean('local_coords'),
   // gpu_particles_3d.cpp:236-239, set_draw_order is a bare assignment.
-  draw_order: v.enumInt('draw_order', 0, 3, DRAW_ORDER, { hinted: 'gpu_particles_3d.cpp:843' }),
+  draw_order: v.enumInt('draw_order', DRAW_ORDER, { hinted: 'gpu_particles_3d.cpp:843' }),
   // 4.7.2 assigns bare (gpu_particles_3d.cpp:652-656), where 4.6.3 refused with
   // `ERR_FAIL_INDEX(uint32_t(p_align), 4)`. The newer release wins, so only the hint
   // bounds this: 4.7.2's :894 lists five labels.
-  transform_align: v.enumInt('transform_align', 0, 4, TRANSFORM_ALIGN, {
+  transform_align: v.enumInt('transform_align', TRANSFORM_ALIGN, {
     hinted: 'gpu_particles_3d.cpp:894',
   }),
   trail_enabled: v.boolean('trail_enabled'),

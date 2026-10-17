@@ -8,7 +8,7 @@
 import '../window/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
-import { ItemCheckableType, ITEM_CHECKABLE_TYPE_NAMES } from '../../../godot/scene/popupMenu.js';
+import { ITEM_CHECKABLE_TYPE_NAMES } from '../../../godot/scene/popupMenu.js';
 
 import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
@@ -55,13 +55,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // popup_menu.cpp:3323, INT, PROPERTY_HINT_ENUM 0-2 (popup_menu.h:65-67).
   // `_set_item_checkable_type` (popup_menu.cpp:62-73) has no default case, so a value
   // outside 0-2 leaves the item unchanged: a dropped write (ADR-0032), so enforced.
-  checkable: v.enumInt(
-    'checkable',
-    ItemCheckableType.NONE,
-    ItemCheckableType.RADIO_BUTTON,
-    ITEM_CHECKABLE_TYPE_NAMES,
-    { enforced: 'popup_menu.cpp:62' }
-  ),
+  checkable: v.enumInt('checkable', ITEM_CHECKABLE_TYPE_NAMES, { enforced: 'popup_menu.cpp:62' }),
   // popup_menu.cpp:3324, Variant::BOOL, no hint.
   checked: v.boolean('checked'),
   // popup_menu.cpp:3325, Variant::INT, PROPERTY_HINT_RANGE "0,10,1,or_greater":

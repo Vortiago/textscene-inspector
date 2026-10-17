@@ -12,38 +12,21 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import {
   ANISOTROPIC_FILTERING_NAMES,
-  AnisotropicFiltering,
   DEBUG_DRAW_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
-  DebugDraw,
-  DefaultCanvasItemTextureFilter,
-  DefaultCanvasItemTextureRepeat,
   POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
-  PositionalShadowAtlasQuadrantSubdiv,
   SCALING_3D_MODE_NAMES,
   SCREEN_SPACE_AA_NAMES,
   SDF_OVERSIZE_NAMES,
   SDF_SCALE_NAMES,
-  Scaling3DMode,
-  ScreenSpaceAA,
-  SdfOversize,
-  SdfScale,
   VRS_MODE_NAMES,
   VRS_UPDATE_MODE_NAMES,
-  VrsMode,
-  VrsUpdateMode,
 } from '../../../godot/scene/viewport.js';
-import { MSAA_DISABLED, MSAA_MAX, MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
+import { MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
 
 const shadowAtlasQuadrant = (key: string) =>
-  v.enumInt(
-    key,
-    PositionalShadowAtlasQuadrantSubdiv.DISABLED,
-    PositionalShadowAtlasQuadrantSubdiv.SHADOWS_1024,
-    POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES,
-    { enforced: 'viewport.cpp:1413' }
-  );
+  v.enumInt(key, POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES, { enforced: 'viewport.cpp:1413' });
 
 validatorRegistry.registerAll('Viewport', {
   own_world_3d: v.boolean('own_world_3d'),
@@ -56,7 +39,7 @@ validatorRegistry.registerAll('Viewport', {
   // viewport.cpp:5166: PROPERTY_HINT_ENUM, 4 labels. set_msaa_3d
   // (viewport.cpp:3763) enforces `ERR_FAIL_INDEX(p_msaa, MSAA_MAX)`, with
   // MSAA_MAX=4 (scene/main/viewport.h:119-125).
-  msaa_3d: v.enumInt('msaa_3d', MSAA_DISABLED, MSAA_MAX - 1, MSAA_MODE_LABELS, {
+  msaa_3d: v.enumInt('msaa_3d', MSAA_MODE_LABELS, {
     enforced: 'viewport.cpp:3763',
   }),
   // 4.7.2: viewport.cpp:4101 `ERR_FAIL_INDEX(p_filter,
@@ -64,8 +47,6 @@ validatorRegistry.registerAll('Viewport', {
   // 4.6.3 stops one lower, without PARENT_NODE.
   canvas_item_default_texture_filter: v.enumInt(
     'canvas_item_default_texture_filter',
-    DefaultCanvasItemTextureFilter.NEAREST,
-    DefaultCanvasItemTextureFilter.PARENT_NODE,
     DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
     {
       enforced: 'viewport.cpp:4101',
@@ -81,19 +62,13 @@ validatorRegistry.registerAll('Viewport', {
   // "Rendering" group, viewport.cpp:5164-5173.
   // viewport.cpp:3748: `ERR_FAIL_INDEX(p_msaa, MSAA_MAX)`, same enum and
   // guard shape as msaa_3d above.
-  msaa_2d: v.enumInt('msaa_2d', MSAA_DISABLED, MSAA_MAX - 1, MSAA_MODE_LABELS, {
+  msaa_2d: v.enumInt('msaa_2d', MSAA_MODE_LABELS, {
     enforced: 'viewport.cpp:3748',
   }),
   // viewport.cpp:3778: `ERR_FAIL_INDEX(p_screen_space_aa, SCREEN_SPACE_AA_MAX)`.
-  screen_space_aa: v.enumInt(
-    'screen_space_aa',
-    ScreenSpaceAA.DISABLED,
-    ScreenSpaceAA.SMAA,
-    SCREEN_SPACE_AA_NAMES,
-    {
-      enforced: 'viewport.cpp:3778',
-    }
-  ),
+  screen_space_aa: v.enumInt('screen_space_aa', SCREEN_SPACE_AA_NAMES, {
+    enforced: 'viewport.cpp:3778',
+  }),
   use_taa: v.boolean('use_taa'),
   use_occlusion_culling: v.boolean('use_occlusion_culling'),
   // viewport.cpp:5171 hints RANGE "0,1024,0.1", both ends closed. set_mesh_lod_threshold
@@ -101,7 +76,7 @@ validatorRegistry.registerAll('Viewport', {
   mesh_lod_threshold: v.float('mesh_lod_threshold', { min: 0, max: 1024, hinted: 'viewport.cpp:5171' }),
   // viewport.cpp:5172, PROPERTY_HINT_ENUM with 29 labels, 0-28; the last two are 4.7.2
   // (viewport.cpp:5367). set_debug_draw (viewport.cpp:3847-3850) bare-assigns.
-  debug_draw: v.enumInt('debug_draw', DebugDraw.DISABLED, DebugDraw.AREA_LIGHT_ATLAS, DEBUG_DRAW_NAMES, {
+  debug_draw: v.enumInt('debug_draw', DEBUG_DRAW_NAMES, {
     hinted: 'viewport.cpp:5172',
   }),
   use_hdr_2d: v.boolean('use_hdr_2d'),
@@ -109,15 +84,9 @@ validatorRegistry.registerAll('Viewport', {
   // "Scaling 3D" group, viewport.cpp:5177-5181.
   // viewport.cpp:5177, PROPERTY_HINT_ENUM with 6 labels, 0-5; Nearest is 4.7.2 (viewport.cpp:5372).
   // set_scaling_3d_mode (viewport.cpp:4855-4862) bare-assigns, no ERR_FAIL_INDEX.
-  scaling_3d_mode: v.enumInt(
-    'scaling_3d_mode',
-    Scaling3DMode.BILINEAR,
-    Scaling3DMode.NEAREST,
-    SCALING_3D_MODE_NAMES,
-    {
-      hinted: 'viewport.cpp:5177',
-    }
-  ),
+  scaling_3d_mode: v.enumInt('scaling_3d_mode', SCALING_3D_MODE_NAMES, {
+    hinted: 'viewport.cpp:5177',
+  }),
   // `CLAMP(p, 0.1, 2.0)` (viewport.cpp:4875) against the hint `0.25,2.0,0.01`
   // (viewport.cpp:5178): below 0.1 is altered and errors, and [0.1, 0.25) loads
   // but the inspector excludes it, so it warns. Both ceilings are 2.0, so
@@ -138,15 +107,9 @@ validatorRegistry.registerAll('Viewport', {
   }),
   // viewport.cpp:5180, PROPERTY_HINT_ENUM 5 labels. set_anisotropic_filtering_level
   // (viewport.cpp:4919-4926) bare-assigns, no ERR_FAIL_INDEX.
-  anisotropic_filtering_level: v.enumInt(
-    'anisotropic_filtering_level',
-    AnisotropicFiltering.DISABLED,
-    AnisotropicFiltering['16X'],
-    ANISOTROPIC_FILTERING_NAMES,
-    {
-      hinted: 'viewport.cpp:5180',
-    }
-  ),
+  anisotropic_filtering_level: v.enumInt('anisotropic_filtering_level', ANISOTROPIC_FILTERING_NAMES, {
+    hinted: 'viewport.cpp:5180',
+  }),
   // set_fsr_sharpness (viewport.cpp:4885-4897) clamps the floor to 0 (error).
   // The ceiling comes only from the RANGE hint "0,2,0.1" (viewport.cpp:5181),
   // which the setter never checks (warning).
@@ -161,18 +124,12 @@ validatorRegistry.registerAll('Viewport', {
   // set_vrs_update_mode (viewport.cpp:4027-4067) both bare-assign the member
   // before the switch that reports to RenderingServer, so an out-of-hint value
   // is stored as written: hinted, not enforced.
-  vrs_mode: v.enumInt('vrs_mode', VrsMode.DISABLED, VrsMode.XR, VRS_MODE_NAMES, {
+  vrs_mode: v.enumInt('vrs_mode', VRS_MODE_NAMES, {
     hinted: 'viewport.cpp:5183',
   }),
-  vrs_update_mode: v.enumInt(
-    'vrs_update_mode',
-    VrsUpdateMode.DISABLED,
-    VrsUpdateMode.ALWAYS,
-    VRS_UPDATE_MODE_NAMES,
-    {
-      hinted: 'viewport.cpp:5184',
-    }
-  ),
+  vrs_update_mode: v.enumInt('vrs_update_mode', VRS_UPDATE_MODE_NAMES, {
+    hinted: 'viewport.cpp:5184',
+  }),
   // viewport.cpp:5185, PROPERTY_HINT_RESOURCE_TYPE "Texture2D". set_vrs_texture
   // (viewport.cpp:4074-4081) bare-assigns; Godot omits the key when cleared.
   vrs_texture: v.resourceReference('vrs_texture'),
@@ -181,8 +138,6 @@ validatorRegistry.registerAll('Viewport', {
   // DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX)`, MAX = 4 (viewport.h:201-206).
   canvas_item_default_texture_repeat: v.enumInt(
     'canvas_item_default_texture_repeat',
-    DefaultCanvasItemTextureRepeat.DISABLED,
-    DefaultCanvasItemTextureRepeat.PARENT_NODE,
     DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
     {
       enforced: 'viewport.cpp:4184',
@@ -209,15 +164,9 @@ validatorRegistry.registerAll('Viewport', {
 
   // "SDF" group, viewport.cpp:5207-5208.
   // viewport.cpp:4202: `ERR_FAIL_INDEX(p_sdf_oversize, SDF_OVERSIZE_MAX)`.
-  sdf_oversize: v.enumInt(
-    'sdf_oversize',
-    SdfOversize['100_PERCENT'],
-    SdfOversize['200_PERCENT'],
-    SDF_OVERSIZE_NAMES,
-    { enforced: 'viewport.cpp:4202' }
-  ),
+  sdf_oversize: v.enumInt('sdf_oversize', SDF_OVERSIZE_NAMES, { enforced: 'viewport.cpp:4202' }),
   // viewport.cpp:4214: `ERR_FAIL_INDEX(p_sdf_scale, SDF_SCALE_MAX)`.
-  sdf_scale: v.enumInt('sdf_scale', SdfScale['100_PERCENT'], SdfScale['25_PERCENT'], SDF_SCALE_NAMES, {
+  sdf_scale: v.enumInt('sdf_scale', SDF_SCALE_NAMES, {
     enforced: 'viewport.cpp:4214',
   }),
 
