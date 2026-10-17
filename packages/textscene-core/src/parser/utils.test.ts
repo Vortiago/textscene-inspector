@@ -108,6 +108,49 @@ describe('parseHeading', () => {
   });
 });
 
+describe('parseHeading valueSpans', () => {
+  it('spans a quoted value inside its quotes', () => {
+    const line = '[node name="Box" type="MeshInstance3D"]';
+
+    expect(parseHeading(line)!.valueSpans.type).toEqual({ start: 23, end: 37 });
+  });
+
+  it('spans a quoted value that holds an escaped quote', () => {
+    const line = '[node name="say \\" type=Fake" type="Node3D"]';
+    const { type } = parseHeading(line)!.valueSpans;
+
+    expect(line.slice(type!.start, type!.end)).toBe('Node3D');
+  });
+
+  it('spans a value after white space around the equals sign', () => {
+    const line = '[node name = "Root" type = "Node3D"]';
+    const { name } = parseHeading(line)!.valueSpans;
+
+    expect(line.slice(name!.start, name!.end)).toBe('Root');
+  });
+
+  it('spans a bracketed value whole', () => {
+    const line = '[node name="N" groups=["a", "b"]]';
+    const { groups } = parseHeading(line)!.valueSpans;
+
+    expect(line.slice(groups!.start, groups!.end)).toBe('["a", "b"]');
+  });
+
+  it('spans a constructor value whole', () => {
+    const line = '[node name="N" node_paths=PackedStringArray("a")]';
+    const { node_paths } = parseHeading(line)!.valueSpans;
+
+    expect(line.slice(node_paths!.start, node_paths!.end)).toBe('PackedStringArray("a")');
+  });
+
+  it('counts the white space before the heading', () => {
+    const line = '  [sub_resource type="Mesh" id=1]';
+    const { id } = parseHeading(line)!.valueSpans;
+
+    expect(line.slice(id!.start, id!.end)).toBe('1');
+  });
+});
+
 describe('parseProperty', () => {
   it('should parse simple property', () => {
     const result = parseProperty('position = Vector3(1, 2, 3)');

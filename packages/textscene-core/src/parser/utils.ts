@@ -1,6 +1,18 @@
+/** Zero-based character offsets on the heading line, `end` exclusive. */
+export interface ValueSpan {
+  start: number;
+  end: number;
+}
+
 export interface ParsedHeading {
   type: string;
   attributes: Record<string, string>;
+}
+
+/** A heading read from a line, with where each attribute's value sits on that line. */
+export interface ScannedHeading extends ParsedHeading {
+  /** Inside its quotes for a string, the raw text for any other value. */
+  valueSpans: Record<string, ValueSpan>;
 }
 
 /**
@@ -168,14 +180,17 @@ function unquoteHeadingValue(value: string): string {
   return inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner;
 }
 
-export function parseHeading(line: string): ParsedHeading | null {
+export function parseHeading(line: string): ScannedHeading | null {
   const trimmed = line.trim();
 
   if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
     return null;
   }
 
-  const content = trimmed.slice(1, -1).trim();
+  const inner = trimmed.slice(1, -1);
+  const content = inner.trim();
+  // Offset of `content` within `line`: the white space before `[` and before the type.
+  const contentOffset = line.length - line.trimStart().length + 1 + (inner.length - inner.trimStart().length);
 
   // No whitespace means `spaceIndex === content.length`, so the type is the
   // whole content and the attribute scan runs over an empty string.
@@ -184,6 +199,8 @@ export function parseHeading(line: string): ParsedHeading | null {
   const attributesStr = content.slice(spaceIndex);
 
   const attributes: Record<string, string> = {};
+  const valueSpans: Record<string, ValueSpan> = {};
+  const attributesOffset = contentOffset + spaceIndex;
   let pos = 0;
   const len = attributesStr.length;
 
@@ -233,9 +250,14 @@ export function parseHeading(line: string): ParsedHeading | null {
     if (!rawValue) continue;
 
     attributes[key] = unquoteHeadingValue(rawValue);
+    const quoteWidth = isWholeString(rawValue) ? 1 : 0;
+    valueSpans[key] = {
+      start: attributesOffset + nextPos - rawValue.length + quoteWidth,
+      end: attributesOffset + nextPos - quoteWidth,
+    };
   }
 
-  return { type, attributes };
+  return { type, attributes, valueSpans };
 }
 
 export function parseProperty(line: string): { key: string; value: string } | null {
