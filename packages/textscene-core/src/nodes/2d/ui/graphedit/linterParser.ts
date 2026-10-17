@@ -6,6 +6,10 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
+import {
+  GRAPH_EDIT_GRID_PATTERN_NAMES,
+  GRAPH_EDIT_PANNING_SCHEME_NAMES,
+} from '../../../../godot/scene/gui.js';
 import { shape, v } from '../../../../linter/validators/v.js';
 import { propertyError } from '../../../../linter/validators/propertyError.js';
 
@@ -27,11 +31,7 @@ validatorRegistry.registerAll('GraphEdit', {
   show_grid: v.boolean('show_grid'),
   // graph_edit.cpp:3071: PROPERTY_HINT_ENUM "Lines,Dots" over GridPattern (graph_edit.h:146-149).
   // set_grid_pattern (graph_edit.cpp:2743-2750) keeps any int, so a third value is a warning.
-  grid_pattern: v.enumInt(
-    'grid_pattern',
-    { 0: 'GRID_PATTERN_LINES', 1: 'GRID_PATTERN_DOTS' },
-    { hinted: 'graph_edit.cpp:3071' }
-  ),
+  grid_pattern: v.enumInt('grid_pattern', GRAPH_EDIT_GRID_PATTERN_NAMES, { hinted: 'graph_edit.cpp:3071' }),
   // graph_edit.cpp:3072: bare BOOL. set_snapping_enabled (graph_edit.cpp:2703-2711)
   // assigns and syncs the toolbar toggle.
   snapping_enabled: v.boolean('snapping_enabled'),
@@ -45,11 +45,9 @@ validatorRegistry.registerAll('GraphEdit', {
   }),
   // graph_edit.cpp:3074: PROPERTY_HINT_ENUM "Scroll Zooms,Scroll Pans" over PanningScheme
   // (graph_edit.h:141-144). set_panning_scheme (graph_edit.cpp:2418-2421) casts unchecked: a warning.
-  panning_scheme: v.enumInt(
-    'panning_scheme',
-    { 0: 'SCROLL_ZOOMS', 1: 'SCROLL_PANS' },
-    { hinted: 'graph_edit.cpp:3074' }
-  ),
+  panning_scheme: v.enumInt('panning_scheme', GRAPH_EDIT_PANNING_SCHEME_NAMES, {
+    hinted: 'graph_edit.cpp:3074',
+  }),
   // graph_edit.cpp:3075: bare BOOL. set_right_disconnects
   // (graph_edit.cpp:2509-2511) is an assignment.
   right_disconnects: v.boolean('right_disconnects'),

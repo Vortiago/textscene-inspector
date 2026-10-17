@@ -1,6 +1,6 @@
 /** Control's own enums, as the engine declares them. */
 
-import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
+import { enumNamesByValue, pascalCaseLabel, relabelEnumNames } from '../classdb/enumNames.js';
 
 /**
  * `Control::SizeFlags` (`scene/gui/control.h:64-69`), the bits the `size_flags_*` properties store.
@@ -130,3 +130,54 @@ export function resolveLayoutRtl(
       return inherited ?? env.rootRtl;
   }
 }
+
+/** `Control::MouseFilter` (`scene/gui/control.h:88-92`). */
+const MouseFilter = {
+  STOP: 0,
+  PASS: 1,
+  IGNORE: 2,
+} as const;
+
+/** Each mouse filter by its integer, spelled as its constant without `MOUSE_FILTER_` (`control.cpp:4394-4396`). */
+export const MOUSE_FILTER_NAMES = enumNamesByValue(MouseFilter);
+
+/** `Control::FocusMode` (`control.h:65-70`). */
+const FocusMode = {
+  NONE: 0,
+  CLICK: 1,
+  ALL: 2,
+  ACCESSIBILITY: 3,
+} as const;
+
+/** Each focus mode by its integer, spelled as its constant without `FOCUS_`. */
+export const FOCUS_MODE_NAMES = enumNamesByValue(FocusMode);
+
+/**
+ * Each focus mode by its integer, as the hints of `control.cpp:4297`, `tab_container.cpp:1218` and
+ * `graph_node.cpp:1301` print it. The last two list only part of the enum.
+ */
+export const FOCUS_MODE_HINT_NAMES = relabelEnumNames(FOCUS_MODE_NAMES, pascalCaseLabel);
+
+/**
+ * `Control::FocusBehaviorRecursive` (`control.h:72-76`) and `Control::MouseBehaviorRecursive`
+ * (`control.h:94-98`): two C++ enums with the same members, so one table serves
+ * `focus_behavior_recursive` and `mouse_behavior_recursive`.
+ */
+const RecursiveBehavior = {
+  INHERITED: 0,
+  DISABLED: 1,
+  ENABLED: 2,
+} as const;
+
+/** Each recursive behaviour by its integer, spelled as its constant without its prefix. */
+export const CONTROL_RECURSIVE_BEHAVIOR_NAMES = enumNamesByValue(RecursiveBehavior);
+
+/** `DisplayServer::AccessibilityLiveMode` (`servers/display/display_server.h:657-661`). */
+const AccessibilityLiveMode = {
+  OFF: 0,
+  POLITE: 1,
+  ASSERTIVE: 2,
+} as const;
+
+/** Each accessibility live mode by its integer, spelled as its constant without `LIVE_` (`display/display_server.cpp:1768-1770`). */
+export const ACCESSIBILITY_LIVE_NAMES = enumNamesByValue(AccessibilityLiveMode);
