@@ -3,6 +3,7 @@ import {
   CPU_PARTICLES_3D_DRAW_ORDER_NAMES,
   CPU_PARTICLES_3D_EMISSION_SHAPE_NAMES,
   GPU_PARTICLES_3D_DRAW_ORDER_NAMES,
+  GPU_PARTICLES_3D_TRANSFORM_ALIGN_NAMES,
 } from './particles3d.js';
 
 describe('particle enum label tables (3D)', () => {
@@ -16,6 +17,16 @@ describe('particle enum label tables (3D)', () => {
       1: 'LIFETIME',
       2: 'REVERSE_LIFETIME',
       3: 'VIEW_DEPTH',
+    });
+  });
+
+  it('names the 4.6.3 alignments and the 4.7.2 LOCAL_BILLBOARD (gpu_particles_3d.h:50-56)', () => {
+    expect(GPU_PARTICLES_3D_TRANSFORM_ALIGN_NAMES).toEqual({
+      0: 'DISABLED',
+      1: 'Z_BILLBOARD',
+      2: 'Y_TO_VELOCITY',
+      3: 'Z_BILLBOARD_Y_TO_VELOCITY',
+      4: 'LOCAL_BILLBOARD',
     });
   });
 

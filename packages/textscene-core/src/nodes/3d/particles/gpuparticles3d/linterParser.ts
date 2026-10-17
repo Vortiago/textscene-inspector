@@ -6,17 +6,10 @@ import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { CMP_EPSILON } from '../../../../godot/math/math.js';
-import { GPU_PARTICLES_3D_DRAW_ORDER_NAMES } from '../../../../godot/scene/particles3d.js';
-
-// gpu_particles_3d.cpp:844 hints "Disabled,Z-Billboard,Y to Velocity,Z-Billboard + Y to
-// Velocity", bound at :870-873. The 4.7.2 hint (:894) adds LOCAL_BILLBOARD.
-const TRANSFORM_ALIGN = {
-  0: 'DISABLED',
-  1: 'Z_BILLBOARD',
-  2: 'Y_TO_VELOCITY',
-  3: 'Z_BILLBOARD_Y_TO_VELOCITY',
-  4: 'LOCAL_BILLBOARD',
-};
+import {
+  GPU_PARTICLES_3D_DRAW_ORDER_NAMES,
+  GPU_PARTICLES_3D_TRANSFORM_ALIGN_NAMES,
+} from '../../../../godot/scene/particles3d.js';
 
 validatorRegistry.registerAll('GPUParticles3D', {
   emitting: v.boolean('emitting'),
@@ -100,7 +93,7 @@ validatorRegistry.registerAll('GPUParticles3D', {
   // 4.7.2 assigns bare (gpu_particles_3d.cpp:652-656), where 4.6.3 refused with
   // `ERR_FAIL_INDEX(uint32_t(p_align), 4)`. The newer release wins, so only the hint
   // bounds this: 4.7.2's :894 lists five labels.
-  transform_align: v.enumInt('transform_align', TRANSFORM_ALIGN, {
+  transform_align: v.enumInt('transform_align', GPU_PARTICLES_3D_TRANSFORM_ALIGN_NAMES, {
     hinted: 'gpu_particles_3d.cpp:894',
   }),
   trail_enabled: v.boolean('trail_enabled'),
