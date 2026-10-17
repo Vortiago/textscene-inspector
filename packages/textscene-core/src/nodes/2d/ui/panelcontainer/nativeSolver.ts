@@ -21,8 +21,9 @@ import type {
   MinimumSizeFn,
   SolveContext,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
+import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 /** The resolved `theme_override_styles/panel`, or the default-theme `panel` struct. */
 function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {
@@ -58,8 +59,8 @@ function fitChild(child: SolveNode, minSize: Vector2, rect: Rect2, rtl: boolean)
   return fitChildInRect(
     rect,
     minSize,
-    props.sizeFlagsHorizontal ?? SIZE_FILL,
-    props.sizeFlagsVertical ?? SIZE_FILL,
+    props.sizeFlagsHorizontal ?? SizeFlags.FILL,
+    props.sizeFlagsVertical ?? SizeFlags.FILL,
     rtl
   );
 }

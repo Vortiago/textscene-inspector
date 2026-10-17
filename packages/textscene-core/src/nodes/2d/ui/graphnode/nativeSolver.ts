@@ -21,15 +21,15 @@ import {
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { SIZE_EXPAND, SIZE_FILL, fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
+import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
 import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
+import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
@@ -208,7 +208,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
     const extra = eff.drawStylebox ? slot.contentMargin.top + slot.contentMargin.bottom : 0;
     const minHeight = minSize.y + extra;
     stretchMin += minHeight;
-    const willStretch = hasFlag(vFlagsOf(child), SIZE_EXPAND);
+    const willStretch = hasFlag(vFlagsOf(child), SizeFlags.EXPAND);
     const stretchRatio = stretchRatioOf(child);
     if (willStretch) {
       availableStretch += minHeight;

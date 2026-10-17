@@ -22,7 +22,6 @@ import {
   LABEL_DEFAULT_JUSTIFICATION_FLAGS,
   LABEL_PARAGRAPH_SEPARATOR,
   LABEL_THEME_FONT_KEY,
-  VC_CHARS_BEFORE_SHAPING,
   applyVisibleCharsReveal,
   labelEffectiveTextTheme,
   labelOutlineTheme,
@@ -37,7 +36,11 @@ import {
   type LabelLinePlacement,
 } from './nativeSolver';
 import type { LabelProperties } from './types';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import {
+  AutowrapMode,
+  OverrunBehavior,
+  VisibleCharactersBehavior,
+} from '../../../../godot/text/textServerEnums';
 
 /**
  * The per-line `TextLayoutResult`s, memoised with their placements. `TextRun`
@@ -188,7 +191,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     const revealed = applyVisibleCharsReveal(
       trimmedPlacements.map((placement) => placement.line),
       {
-        behavior: props.visibleCharactersBehavior ?? VC_CHARS_BEFORE_SHAPING,
+        behavior: props.visibleCharactersBehavior ?? VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
         visibleChars: props.visibleCharacters,
         visibleRatio: props.visibleRatio,
         rtl: solveNode.rtl,

@@ -8,9 +8,9 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { FillMode } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { fposmodp } from '../../../../godot/math/math';
+import { TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 /** `set_fill_degrees` (`texture_progress_bar.cpp:610-619`): `CLAMP(p_angle, 0, 360)`, always applied. */
 export function clampRadialFillDegrees(radialFillDegrees: number | undefined): number {
@@ -119,9 +119,9 @@ export function radialFillGeometry(
   size: Vector2,
   offset: Vector2
 ): RadialFillGeometry | null {
-  const direction = mode === FillMode.COUNTER_CLOCKWISE ? -1 : 1;
+  const direction = mode === TextureProgressBarFillMode.COUNTER_CLOCKWISE ? -1 : 1;
   const start =
-    mode === FillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE
+    mode === TextureProgressBarFillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE
       ? radInitAngleDegrees / 360 - val / 2
       : radInitAngleDegrees / 360;
   const end = start + direction * val;

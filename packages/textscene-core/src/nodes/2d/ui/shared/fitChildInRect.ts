@@ -14,12 +14,7 @@ import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
 import type { Vector2 } from '../../../../godot/math/vector';
-
-/** `Control::SizeFlags` (`scene/gui/control.h:64-69`). */
-export const SIZE_FILL = 1;
-export const SIZE_EXPAND = 2;
-export const SIZE_SHRINK_CENTER = 4;
-export const SIZE_SHRINK_END = 8;
+import { SizeFlags } from '../../../../godot/scene/control';
 
 export const hasFlag = (flags: number, bit: number): boolean => (flags & bit) !== 0;
 
@@ -41,22 +36,22 @@ export function fitChildInRect(
   // `CenterContainer` (cell equal to the child's minimum) met only by accident.
   let { x, y, w, h } = rect;
 
-  if (!hasFlag(hFlags, SIZE_FILL)) {
+  if (!hasFlag(hFlags, SizeFlags.FILL)) {
     w = minSize.x;
-    if (hasFlag(hFlags, SIZE_SHRINK_END)) {
+    if (hasFlag(hFlags, SizeFlags.SHRINK_END)) {
       x += rtl ? 0 : rect.w - minSize.x;
-    } else if (hasFlag(hFlags, SIZE_SHRINK_CENTER)) {
+    } else if (hasFlag(hFlags, SizeFlags.SHRINK_CENTER)) {
       x += Math.floor((rect.w - minSize.x) / 2);
     } else {
       x += rtl ? rect.w - minSize.x : 0;
     }
   }
 
-  if (!hasFlag(vFlags, SIZE_FILL)) {
+  if (!hasFlag(vFlags, SizeFlags.FILL)) {
     h = minSize.y;
-    if (hasFlag(vFlags, SIZE_SHRINK_END)) {
+    if (hasFlag(vFlags, SizeFlags.SHRINK_END)) {
       y += rect.h - minSize.y;
-    } else if (hasFlag(vFlags, SIZE_SHRINK_CENTER)) {
+    } else if (hasFlag(vFlags, SizeFlags.SHRINK_CENTER)) {
       y += Math.floor((rect.h - minSize.y) / 2);
     }
     // SHRINK_BEGIN (no bit set): no vertical offset, matching the C++'s empty branch.

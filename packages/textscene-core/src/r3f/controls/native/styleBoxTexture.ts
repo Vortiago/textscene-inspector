@@ -14,9 +14,10 @@ import type { SceneScope, TscnExternalResource, TscnInternalResource } from '../
 import { parseResourceReference, findSubResource } from '../../../resources/SubResourceResolver';
 import { colorOr } from '../../../utils/colorParser';
 import { floatOr, intOr, boolOr, parseOptionalRect2, type Rect2Value } from '../../../parser/valueParsers';
-import { AxisStretchMode, axisStretchModeOf, type NinePatchAxisMode } from './ninePatchGeometry';
+import { axisStretchModeOf } from './ninePatchGeometry';
 import type { Rgba } from '../../../godot/math/math';
 import { contentMarginOr, expandMarginOf } from '../../../resources/styles/stylebox/decode';
+import { AxisStretchMode } from '../../../godot/scene/gui';
 
 export interface StyleBoxTextureData {
   /**
@@ -42,8 +43,8 @@ export interface StyleBoxTextureData {
   expandMargin: { left: number; top: number; right: number; bottom: number };
   /** `region_rect`: `undefined` or all-zero means the whole texture. */
   regionRect: Rect2Value | undefined;
-  axisStretchHorizontal: NinePatchAxisMode;
-  axisStretchVertical: NinePatchAxisMode;
+  axisStretchHorizontal: AxisStretchMode;
+  axisStretchVertical: AxisStretchMode;
   /** `draw_center`, default `true`. */
   drawCenter: boolean;
   /** `modulate_color`, default `Color(1, 1, 1, 1)`. */

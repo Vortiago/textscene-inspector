@@ -20,11 +20,10 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import { splitOffsetsOf, type SplitContainerProperties } from './splitContainer';
-import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
+import { fitChildInRect, hasFlag, isSortableControl } from './fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
-/** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). */
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 /** `Control::stretch_ratio` default (`control.h:231`). */
 const DEFAULT_STRETCH_RATIO = 1;
 
@@ -213,7 +212,7 @@ function toSplitAxisChild(vertical: boolean, c: SplitChildInput): SplitAxisChild
   const flags = vertical ? c.vSizeFlags : c.hSizeFlags;
   return {
     minSize: vertical ? c.minSize.y : c.minSize.x,
-    expands: hasFlag(flags, SIZE_EXPAND) && c.stretchRatio > 0,
+    expands: hasFlag(flags, SizeFlags.EXPAND) && c.stretchRatio > 0,
     stretchRatio: c.stretchRatio,
   };
 }
@@ -521,5 +520,5 @@ export function axisChildFromCustomMinimumSize(node: SolveNode, vertical: boolea
   const minSize = (vertical ? props.customMinimumSize?.y : props.customMinimumSize?.x) ?? 0;
   const flags = (vertical ? props.sizeFlagsVertical : props.sizeFlagsHorizontal) ?? DEFAULT_SIZE_FLAGS;
   const stretchRatio = props.sizeFlagsStretchRatio ?? DEFAULT_STRETCH_RATIO;
-  return { minSize, expands: hasFlag(flags, SIZE_EXPAND) && stretchRatio > 0, stretchRatio };
+  return { minSize, expands: hasFlag(flags, SizeFlags.EXPAND) && stretchRatio > 0, stretchRatio };
 }

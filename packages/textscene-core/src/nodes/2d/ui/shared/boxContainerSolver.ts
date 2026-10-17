@@ -18,11 +18,10 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import type { BoxContainerProperties } from './boxContainer';
-import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
+import { fitChildInRect, hasFlag, isSortableControl } from './fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
-/** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). A type whose parser overrides the flag (Label's `v_size_flags`, for example) has already baked the override into its properties. */
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 /** `Control::stretch_ratio` default (`control.h:231`). */
 const DEFAULT_STRETCH_RATIO = 1;
 
@@ -65,7 +64,9 @@ export function resortBoxContainer(
     // bookkeeping only. `fit_child_in_rect`'s re-floor (`native/controlRectSolver.ts`
     // `dispatchChildren`) reads the child's full-precision `minSize`, so `c.minSize` stays intact.
     const minSize = Math.trunc(vertical ? c.minSize.y : c.minSize.x);
-    const willStretch = vertical ? hasFlag(c.vSizeFlags, SIZE_EXPAND) : hasFlag(c.hSizeFlags, SIZE_EXPAND);
+    const willStretch = vertical
+      ? hasFlag(c.vSizeFlags, SizeFlags.EXPAND)
+      : hasFlag(c.hSizeFlags, SizeFlags.EXPAND);
     return { minSize, willStretch, finalSize: minSize };
   });
 

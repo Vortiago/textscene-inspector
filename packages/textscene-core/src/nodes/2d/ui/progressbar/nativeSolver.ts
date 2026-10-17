@@ -33,6 +33,7 @@ import type { Vector2 } from '../../../../godot/math/vector.js';
 import { isEqualApprox, type Rgba } from '../../../../godot/math/math.js';
 import { CONTROL_FONT_HOVER_COLOR } from '../../../../godot/scene/theme.js';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { ProgressBarFillMode } from '../../../../godot/scene/gui';
 
 /**
  * `default_theme.cpp:440-441`: `make_flat_stylebox(color, 2, 2, 2, 2, 6)`, not
@@ -200,19 +201,16 @@ export function progressBarPercentRatio(props: RangeProperties, orderedKeys: Ran
 
 // ── Draw-time geometry: fill_mode to the fill StyleBox's rect ──
 
-const FILL_BEGIN_TO_END = 0;
-const FILL_END_TO_BEGIN = 1;
-const FILL_TOP_TO_BOTTOM = 2;
-const FILL_BOTTOM_TO_TOP = 3;
-
 /**
  * `set_fill_mode`'s `ERR_FAIL_INDEX` (`progress_bar.cpp:199-203`) refuses an
  * out-of-range write, so `mode` keeps its default `FILL_BEGIN_TO_END`
  * (`progress_bar.h:88`) and `fill_mode="99"` draws as that.
  */
 function normalizeProgressBarFillMode(fillMode: number | undefined): number {
-  const mode = fillMode ?? FILL_BEGIN_TO_END;
-  return mode >= FILL_BEGIN_TO_END && mode <= FILL_BOTTOM_TO_TOP ? mode : FILL_BEGIN_TO_END;
+  const mode = fillMode ?? ProgressBarFillMode.BEGIN_TO_END;
+  return mode >= ProgressBarFillMode.BEGIN_TO_END && mode <= ProgressBarFillMode.BOTTOM_TO_TOP
+    ? mode
+    : ProgressBarFillMode.BEGIN_TO_END;
 }
 
 /**
@@ -233,19 +231,20 @@ export function progressBarIndeterminateFillRect(
   const full: Rect2 = { x: 0, y: 0, w: size.x, h: size.y };
 
   switch (mode) {
-    case FILL_BEGIN_TO_END:
-    case FILL_END_TO_BEGIN: {
+    case ProgressBarFillMode.BEGIN_TO_END:
+    case ProgressBarFillMode.END_TO_BEGIN: {
       // `rtl` swaps the two horizontal modes (`:82`), not the band's position.
-      const rightToLeft = mode === (rtl ? FILL_BEGIN_TO_END : FILL_END_TO_BEGIN);
+      const rightToLeft =
+        mode === (rtl ? ProgressBarFillMode.BEGIN_TO_END : ProgressBarFillMode.END_TO_BEGIN);
       if (ifp > size.x + fillSize) ifp = rightToLeft ? -fillSize : 0;
       const x = rightToLeft ? size.x - ifp : ifp - fillSize;
       return clampToZeroArea(rect2Intersection({ x, y: 0, w: fillSize, h: size.y }, full));
     }
-    case FILL_TOP_TO_BOTTOM: {
+    case ProgressBarFillMode.TOP_TO_BOTTOM: {
       if (ifp > size.y + fillSize) ifp = 0;
       return clampToZeroArea(rect2Intersection({ x: 0, y: ifp - fillSize, w: size.x, h: fillSize }, full));
     }
-    case FILL_BOTTOM_TO_TOP: {
+    case ProgressBarFillMode.BOTTOM_TO_TOP: {
       if (ifp > size.y + fillSize) ifp = -fillSize;
       return clampToZeroArea(rect2Intersection({ x: 0, y: size.y - ifp, w: size.x, h: fillSize }, full));
     }
@@ -273,11 +272,12 @@ export function progressBarFillRect(
 ): Rect2 | null {
   const mode = normalizeProgressBarFillMode(fillMode);
   switch (mode) {
-    case FILL_BEGIN_TO_END:
-    case FILL_END_TO_BEGIN: {
+    case ProgressBarFillMode.BEGIN_TO_END:
+    case ProgressBarFillMode.END_TO_BEGIN: {
       const mp = fillMinimumSize.x;
       const p = Math.round(ratio * (size.x - mp));
-      const rightToLeft = mode === (rtl ? FILL_BEGIN_TO_END : FILL_END_TO_BEGIN);
+      const rightToLeft =
+        mode === (rtl ? ProgressBarFillMode.BEGIN_TO_END : ProgressBarFillMode.END_TO_BEGIN);
       if (p <= 0) return null;
       if (rightToLeft) {
         const pRemaining = Math.round((1 - ratio) * (size.x - mp));
@@ -285,12 +285,12 @@ export function progressBarFillRect(
       }
       return { x: 0, y: 0, w: p + mp, h: size.y };
     }
-    case FILL_TOP_TO_BOTTOM:
-    case FILL_BOTTOM_TO_TOP: {
+    case ProgressBarFillMode.TOP_TO_BOTTOM:
+    case ProgressBarFillMode.BOTTOM_TO_TOP: {
       const mp = fillMinimumSize.y;
       const p = Math.round(ratio * (size.y - mp));
       if (p <= 0) return null;
-      if (mode === FILL_TOP_TO_BOTTOM) {
+      if (mode === ProgressBarFillMode.TOP_TO_BOTTOM) {
         return { x: 0, y: 0, w: size.x, h: p + mp };
       }
       const pRemaining = Math.round((1 - ratio) * (size.y - mp));
