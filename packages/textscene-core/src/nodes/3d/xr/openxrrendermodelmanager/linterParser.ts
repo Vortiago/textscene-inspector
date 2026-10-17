@@ -7,6 +7,7 @@
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { RENDER_MODEL_TRACKER_NAMES } from '../../../../godot/scene/openxr.js';
 
 // Both ADD_PROPERTY calls sit in `_bind_methods` (openxr_render_model_manager.cpp:41-57), each with
 // a non-empty setter and getter. openxr_render_model_manager.h declares no `_set`/`_get`/
@@ -17,11 +18,9 @@ validatorRegistry.registerAll('OpenXRRenderModelManager', {
   // set_tracker (cpp:228-266) assigns `tracker = p_tracker` before any check. Its only guard, the
   // `ERR_FAIL_MSG` at cpp:248, runs only at runtime (`!is_editor_hint()`) and does not revert the
   // assignment, so an out-of-range value is kept and the hint tier warns.
-  tracker: v.enumInt(
-    'tracker',
-    { 0: 'Any', 1: 'None set', 2: 'Left Hand', 3: 'Right Hand' },
-    { hinted: 'openxr_render_model_manager.cpp:44' }
-  ),
+  tracker: v.enumInt('tracker', RENDER_MODEL_TRACKER_NAMES, {
+    hinted: 'openxr_render_model_manager.cpp:44',
+  }),
   // openxr_render_model_manager.cpp:48, Variant::STRING with PROPERTY_HINT_ENUM_SUGGESTION
   // "aim,grip", so any string is legal. set_make_local_to_pose (cpp:272-282) does no validation.
   // Godot always quotes a plain STRING, so the grammar is `v.quotedString`, not `v.string`, which

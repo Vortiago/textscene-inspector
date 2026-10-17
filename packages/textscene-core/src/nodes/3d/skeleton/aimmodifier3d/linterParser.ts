@@ -14,7 +14,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { BONE_AXIS } from '../skeletonmodifier3d/linterParser.js';
+import { BONE_AXIS_NAMES } from '../../../../godot/scene/skeletonModifier.js';
 import { VECTOR3_AXIS_NAMES } from '../../../../godot/math/vector3Axis.js';
 import { declaredLeafResolver } from '../../../../godot/classdb/indexedKey.js';
 
@@ -28,7 +28,7 @@ const AIM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // (skeleton_modifier_3d.h:52), values 0-5. The static_cast at aim_modifier_3d.cpp:43 does not
   // clamp, and set_forward_axis (aim_modifier_3d.cpp:117) and set_primary_rotation_axis
   // (aim_modifier_3d.cpp:144) assign past an index guard, so both axis enums warn (ADR-0032).
-  forward_axis: v.enumInt('forward_axis', BONE_AXIS, { hinted: 'aim_modifier_3d.cpp:91' }),
+  forward_axis: v.enumInt('forward_axis', BONE_AXIS_NAMES, { hinted: 'aim_modifier_3d.cpp:91' }),
   // aim_modifier_3d.cpp:92, Variant::BOOL, no hint.
   use_euler: v.boolean('use_euler'),
   // aim_modifier_3d.cpp:93, Variant::INT, PROPERTY_HINT_ENUM "X,Y,Z", values 0-2.

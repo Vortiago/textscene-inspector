@@ -10,66 +10,6 @@ import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
-/*
- * The enum label tables below are SkeletonModifier3D's own: its header declares them, and its
- * `get_hint_*()` helpers build the hint strings the subclasses pass to `PROPERTY_HINT_ENUM`. Every
- * descendant already imports this module.
- */
-
-/** `SkeletonModifier3D::BoneAxis` declaration order (skeleton_modifier_3d.h:45-50). */
-export const BONE_AXIS: Readonly<Record<number, string>> = {
-  0: '+X',
-  1: '-X',
-  2: '+Y',
-  3: '-Y',
-  4: '+Z',
-  5: '-Z',
-};
-
-/**
- * `SkeletonModifier3D::BoneDirection`, skeleton_modifier_3d.h:55-62, in the order of
- * `get_hint_bone_direction()` (skeleton_modifier_3d.h:64). Spelled out, not derived from {@link
- * BONE_AXIS}: the two agree on 0-5, but they are separate C++ enums and either can be reordered
- * alone.
- */
-export const BONE_DIRECTION: Readonly<Record<number, string>> = {
-  0: '+X',
-  1: '-X',
-  2: '+Y',
-  3: '-Y',
-  4: '+Z',
-  5: '-Z',
-  6: 'FromParent',
-};
-
-/**
- * `SkeletonModifier3D::SecondaryDirection`, skeleton_modifier_3d.h:67-75, in the order of
- * `get_hint_secondary_direction()`: PROPERTY_HINT_ENUM "None,+X,-X,+Y,-Y,+Z,-Z,Custom"
- * (skeleton_modifier_3d.h:77).
- */
-export const SECONDARY_DIRECTION: Readonly<Record<number, string>> = {
-  0: 'None',
-  1: '+X',
-  2: '-X',
-  3: '+Y',
-  4: '-Y',
-  5: '+Z',
-  6: '-Z',
-  7: 'Custom',
-};
-
-/**
- * `SkeletonModifier3D::RotationAxis`: PROPERTY_HINT_ENUM "X,Y,Z,All,Custom"
- * (skeleton_modifier_3d.h:87).
- */
-export const ROTATION_AXIS: Readonly<Record<number, string>> = {
-  0: 'X',
-  1: 'Y',
-  2: 'Z',
-  3: 'All',
-  4: 'Custom',
-};
-
 /**
  * `SkeletonModifier3D::get_axis_from_bone_axis` (skeleton_modifier_3d.cpp:244-260): a `BoneAxis`
  * reduced to the `Vector3::Axis` it lies along, so `+X` and `-X` both give 0. The switch has no

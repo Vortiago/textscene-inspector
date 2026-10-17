@@ -11,6 +11,7 @@
 import '../boneconstraint3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { AXIS_FLAG_NAMES, COPY_TRANSFORM_FLAG_NAMES } from '../../../../godot/scene/skeletonModifier.js';
 import { settingCount } from '../shared/settingCount.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { boneConstraintBaseLeaves } from '../boneconstraint3d/linterParser.js';
@@ -38,16 +39,6 @@ function flagsField(name: string, labels: Record<number, string>, hinted: string
   return validator;
 }
 
-/** copy_transform_modifier_3d.h:40-42, the TransformFlag bits. */
-const TRANSFORM_FLAGS: Record<number, string> = {
-  1: 'Position',
-  2: 'Rotation',
-  4: 'Scale',
-};
-
-/** copy_transform_modifier_3d.h:47-49, the AxisFlag bits. */
-const AXIS_FLAGS: Record<number, string> = { 1: 'X', 2: 'Y', 4: 'Z' };
-
 /**
  * The five leaves CopyTransformModifier3D adds to `settings/<i>/`
  * (copy_transform_modifier_3d.cpp:90-94). Keyed by leaf name.
@@ -56,13 +47,13 @@ const OWN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // copy_transform_modifier_3d.cpp:90, PROPERTY_HINT_FLAGS
   // "Position,Rotation,Scale". set_copy_flags assigns straight through
   // (copy_transform_modifier_3d.cpp:120).
-  copy: flagsField('copy', TRANSFORM_FLAGS, 'copy_transform_modifier_3d.cpp:90'),
+  copy: flagsField('copy', COPY_TRANSFORM_FLAG_NAMES, 'copy_transform_modifier_3d.cpp:90'),
   // copy_transform_modifier_3d.cpp:91, PROPERTY_HINT_FLAGS "X,Y,Z".
   // set_axis_flags assigns straight through (copy_transform_modifier_3d.cpp:133).
-  axes: flagsField('axes', AXIS_FLAGS, 'copy_transform_modifier_3d.cpp:91'),
+  axes: flagsField('axes', AXIS_FLAG_NAMES, 'copy_transform_modifier_3d.cpp:91'),
   // copy_transform_modifier_3d.cpp:92, PROPERTY_HINT_FLAGS "X,Y,Z".
   // set_invert_flags assigns straight through (copy_transform_modifier_3d.cpp:146).
-  invert: flagsField('invert', AXIS_FLAGS, 'copy_transform_modifier_3d.cpp:92'),
+  invert: flagsField('invert', AXIS_FLAG_NAMES, 'copy_transform_modifier_3d.cpp:92'),
   // copy_transform_modifier_3d.cpp:93, BOOL, no hint, and set_relative assigns
   // (copy_transform_modifier_3d.cpp:303). The key is hidden while the setting references a node
   // (copy_transform_modifier_3d.cpp:107-109), and `is_relative()` then reads false
