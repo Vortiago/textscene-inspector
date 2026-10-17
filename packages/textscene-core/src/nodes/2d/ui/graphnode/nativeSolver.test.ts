@@ -16,6 +16,7 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { graphNodeDrawRows } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;
 const graphNodeMinimumSize = controlSolverRegistry.minimumSize('GraphNode')!;
@@ -165,7 +166,7 @@ describe('graphNodeLayout (graph_node.cpp:153-293)', () => {
     const a = leaf('a', { customMinimumSize: { x: 10, y: 10 } });
     const b = leaf('b', {
       customMinimumSize: { x: 10, y: 5 },
-      sizeFlagsVertical: 3 /* SIZE_FILL | SIZE_EXPAND */,
+      sizeFlagsVertical: SizeFlags.FILL | SizeFlags.EXPAND,
     });
     const n = graphNode('N', {}, [a, b]);
     const rects = asMap(

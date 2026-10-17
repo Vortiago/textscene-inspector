@@ -15,13 +15,7 @@ import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegist
 import type { TextureRectProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
-
-const EXPAND_KEEP_SIZE = 0;
-const EXPAND_IGNORE_SIZE = 1;
-const EXPAND_FIT_WIDTH = 2;
-const EXPAND_FIT_WIDTH_PROPORTIONAL = 3;
-const EXPAND_FIT_HEIGHT = 4;
-const EXPAND_FIT_HEIGHT_PROPORTIONAL = 5;
+import { TextureRectExpandMode } from '../../../../godot/scene/gui';
 
 /**
  * `TextureRect::get_minimum_size()` (`texture_rect.cpp:107-133`): `Size2()` (`:132`) until a texture
@@ -41,22 +35,22 @@ export const textureRectMinimumSize: MinimumSizeFn = (n, ctx) => {
   const currentHeight = tentative?.h ?? textureSize.y;
   const currentWidth = tentative?.w ?? textureSize.x;
 
-  switch (props.expandMode ?? EXPAND_KEEP_SIZE) {
-    case EXPAND_KEEP_SIZE:
+  switch (props.expandMode ?? TextureRectExpandMode.EXPAND_KEEP_SIZE) {
+    case TextureRectExpandMode.EXPAND_KEEP_SIZE:
       return { x: textureSize.x, y: textureSize.y };
-    case EXPAND_FIT_WIDTH:
+    case TextureRectExpandMode.EXPAND_FIT_WIDTH:
       return { x: currentHeight, y: 0 };
-    case EXPAND_FIT_WIDTH_PROPORTIONAL: {
+    case TextureRectExpandMode.EXPAND_FIT_WIDTH_PROPORTIONAL: {
       const ratio = textureSize.x / textureSize.y;
       return { x: currentHeight * ratio, y: 0 };
     }
-    case EXPAND_FIT_HEIGHT:
+    case TextureRectExpandMode.EXPAND_FIT_HEIGHT:
       return { x: 0, y: currentWidth };
-    case EXPAND_FIT_HEIGHT_PROPORTIONAL: {
+    case TextureRectExpandMode.EXPAND_FIT_HEIGHT_PROPORTIONAL: {
       const ratio = textureSize.y / textureSize.x;
       return { x: 0, y: currentWidth * ratio };
     }
-    case EXPAND_IGNORE_SIZE:
+    case TextureRectExpandMode.EXPAND_IGNORE_SIZE:
     default:
       return { x: 0, y: 0 };
   }

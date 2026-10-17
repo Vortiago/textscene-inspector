@@ -4,12 +4,10 @@
  * `StyleBoxTexture::draw` (`scene/resources/style_box_texture.cpp:165-184`).
  */
 
-/** `NinePatchRect::AxisStretchMode` (`nine_patch_rect.h:39-43`) and `StyleBoxTexture::AxisStretchMode`, in the same order. */
-export const AxisStretchMode = { STRETCH: 0, TILE: 1, TILE_FIT: 2 } as const;
-export type NinePatchAxisMode = (typeof AxisStretchMode)[keyof typeof AxisStretchMode];
+import { AxisStretchMode } from '../../../godot/scene/gui';
 
 /** A stored axis stretch mode, with an absent or unknown value read as `STRETCH`. */
-export function axisStretchModeOf(value: number | undefined): NinePatchAxisMode {
+export function axisStretchModeOf(value: number | undefined): AxisStretchMode {
   return value === AxisStretchMode.TILE || value === AxisStretchMode.TILE_FIT
     ? value
     : AxisStretchMode.STRETCH;
@@ -38,8 +36,8 @@ export interface NinePatchInput {
   /** The source window's size; equals `textureSize` when no region is authored. */
   regionSize: { x: number; y: number };
   margin: NinePatchMargins;
-  axisH: NinePatchAxisMode;
-  axisV: NinePatchAxisMode;
+  axisH: AxisStretchMode;
+  axisV: AxisStretchMode;
   drawCenter: boolean;
 }
 
@@ -73,7 +71,7 @@ function solveAxisCells(
   marginEnd: number,
   regionOrigin: number,
   regionSize: number,
-  mode: NinePatchAxisMode
+  mode: AxisStretchMode
 ): AxisCell[] {
   const cells: AxisCell[] = [];
   if (drawSize <= 0 || regionSize <= 0) return cells;

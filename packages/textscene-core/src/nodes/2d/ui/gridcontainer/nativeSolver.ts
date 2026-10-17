@@ -20,10 +20,8 @@ import {
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { SIZE_EXPAND, SIZE_FILL, fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
-
-/** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`, flags at `control.h:79-85`). A parser that overrides a flag, as Label's `v_size_flags`, bakes it into the parsed properties. */
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
+import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
+import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
 function props(n: SolveNode): ControlProperties {
   return n.node.properties as ControlProperties;
@@ -166,8 +164,8 @@ const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) =
     const col = index % columns;
     colMinW.set(col, Math.max(colMinW.get(col) ?? 0, Math.trunc(minSize.x)));
     rowMinH.set(row, Math.max(rowMinH.get(row) ?? 0, Math.trunc(minSize.y)));
-    if (hasFlag(hFlagsOf(child), SIZE_EXPAND)) colExpanded.add(col);
-    if (hasFlag(vFlagsOf(child), SIZE_EXPAND)) rowExpanded.add(row);
+    if (hasFlag(hFlagsOf(child), SizeFlags.EXPAND)) colExpanded.add(col);
+    if (hasFlag(vFlagsOf(child), SizeFlags.EXPAND)) rowExpanded.add(row);
   });
 
   const usedColumnCount = Math.min(validCount, columns);

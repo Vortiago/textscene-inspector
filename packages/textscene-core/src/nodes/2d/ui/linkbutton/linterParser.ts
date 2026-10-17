@@ -16,12 +16,7 @@ import {
   TextDirection,
   TEXT_DIRECTION_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
-
-const UNDERLINE_MODE = {
-  0: 'UNDERLINE_MODE_ALWAYS',
-  1: 'UNDERLINE_MODE_ON_HOVER',
-  2: 'UNDERLINE_MODE_NEVER',
-};
+import { LINK_BUTTON_UNDERLINE_MODE_NAMES } from '../../../../godot/scene/gui.js';
 
 /**
  * link_button.cpp:91-108: `set_ellipsis_char` truncates a longer literal with `c = c.left(1)`
@@ -40,7 +35,9 @@ validatorRegistry.registerAll('LinkButton', {
   uri: v.quotedString('uri'),
   // link_button.cpp:345: PROPERTY_HINT_ENUM "Always,On Hover,Never", LinkButton::UnderlineMode
   // (link_button.h:40-44). set_underline_mode (link_button.cpp:164-175) assigns unconditionally.
-  underline: v.enumInt('underline', 0, 2, UNDERLINE_MODE, { hinted: 'link_button.cpp:345' }),
+  underline: v.enumInt('underline', 0, 2, LINK_BUTTON_UNDERLINE_MODE_NAMES, {
+    hinted: 'link_button.cpp:345',
+  }),
   ellipsis_char: ellipsisCharValidator,
   // link_button.cpp:349: PROPERTY_HINT_ENUM, 7 entries, TextServer::OverrunBehavior 0 .. 6
   // (servers/text/text_server.h:123-130). set_text_overrun_behavior (link_button.cpp:70-77) assigns

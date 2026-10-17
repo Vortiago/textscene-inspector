@@ -21,6 +21,7 @@ import {
   LAYOUT_DIRECTION_MAX,
   LAYOUT_DIRECTION_NAMES,
   LayoutDirection,
+  SIZE_FLAGS_LABELS,
 } from '../../../../godot/scene/control.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 
@@ -79,18 +80,6 @@ function nodePathArray(name: string): PropertyValidator {
   };
   return accepts(validator, 'Array[NodePath]([NodePath("path"), …]) or [NodePath("path") or "path", …]');
 }
-
-/**
- * The `Control::SizeFlags` bits the `size_flags_*` hints name (control.h:80-83,
- * control.cpp:4388-4392). `SIZE_SHRINK_BEGIN = 0` (control.h:79) is the empty set and
- * `SIZE_EXPAND_FILL = 3` (control.h:85, control.cpp:4390) is `SIZE_EXPAND | SIZE_FILL`.
- */
-const SIZE_FLAGS_LABELS = {
-  1: 'SIZE_FILL',
-  2: 'SIZE_EXPAND',
-  4: 'SIZE_SHRINK_CENTER',
-  8: 'SIZE_SHRINK_END',
-};
 
 validatorRegistry.registerAll(
   'Control',

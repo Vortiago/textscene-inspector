@@ -14,7 +14,8 @@ import {
   type TextureSlotRequest,
   type TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { FillMode, type TextureProgressBarProperties } from './types';
+import type { TextureProgressBarProperties } from './types';
+import { TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 /** The keys `textureProgressBarTextureSlots`/`textureProgressBarMinimumSize` share for `SolveNode.textureSlots`. */
 const TEXTURE_UNDER_KEY = 'texture_under';
@@ -40,10 +41,11 @@ const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) => {
  * `ERR_FAIL_INDEX`, so `mode` keeps its default (`FILL_LEFT_TO_RIGHT`, `texture_progress_bar.h:105`).
  */
 export function normalizeTextureProgressBarFillMode(fillMode: number | undefined): number {
-  const mode = fillMode ?? FillMode.LEFT_TO_RIGHT;
-  return mode >= FillMode.LEFT_TO_RIGHT && mode <= FillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE
+  const mode = fillMode ?? TextureProgressBarFillMode.LEFT_TO_RIGHT;
+  return mode >= TextureProgressBarFillMode.LEFT_TO_RIGHT &&
+    mode <= TextureProgressBarFillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE
     ? mode
-    : FillMode.LEFT_TO_RIGHT;
+    : TextureProgressBarFillMode.LEFT_TO_RIGHT;
 }
 
 const textureProgressBarMinimumSize: MinimumSizeFn = (n) => {

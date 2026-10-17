@@ -18,20 +18,10 @@ import {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { AspectRatioContainerProperties } from './types';
 import type { TextureRectProperties } from '../texturerect/types';
-import { SIZE_FILL, fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
+import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import { ContainerAlignment } from '../../../../godot/scene/container';
-
-// AspectRatioContainer::StretchMode (aspect_ratio_container.h:44-49).
-const STRETCH_WIDTH_CONTROLS_HEIGHT = 0;
-const STRETCH_HEIGHT_CONTROLS_WIDTH = 1;
-const STRETCH_FIT = 2;
-const STRETCH_COVER = 3;
-
-// The two proportional modes of TextureRect::ExpandMode (texture_rect.h:40-45).
-const EXPAND_FIT_WIDTH_PROPORTIONAL = 3;
-const EXPAND_FIT_HEIGHT_PROPORTIONAL = 5;
-
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
+import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
+import { AspectRatioStretchMode, TextureRectExpandMode } from '../../../../godot/scene/gui';
 
 function props(n: SolveNode): AspectRatioContainerProperties {
   return n.node.properties as AspectRatioContainerProperties;
@@ -41,7 +31,10 @@ function props(n: SolveNode): AspectRatioContainerProperties {
 function isUnsupportedTextureRect(child: SolveNode): boolean {
   if (child.node.type !== 'TextureRect') return false;
   const mode = (child.node.properties as TextureRectProperties).expandMode;
-  return mode === EXPAND_FIT_WIDTH_PROPORTIONAL || mode === EXPAND_FIT_HEIGHT_PROPORTIONAL;
+  return (
+    mode === TextureRectExpandMode.EXPAND_FIT_WIDTH_PROPORTIONAL ||
+    mode === TextureRectExpandMode.EXPAND_FIT_HEIGHT_PROPORTIONAL
+  );
 }
 
 /**
@@ -73,7 +66,7 @@ const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, contentRect,
   const p = props(n);
   const rtl = n.rtl;
   const ratio = p.ratio ?? 1.0;
-  const stretchMode = p.stretchMode ?? STRETCH_FIT;
+  const stretchMode = p.stretchMode ?? AspectRatioStretchMode.STRETCH_FIT;
   const alignH = p.alignmentHorizontal ?? ContainerAlignment.ALIGNMENT_CENTER; // aspect_ratio_container.h:59
   const alignV = p.alignmentVertical ?? ContainerAlignment.ALIGNMENT_CENTER; // aspect_ratio_container.h:60
 
@@ -91,16 +84,16 @@ const aspectRatioContainerLayout: ContainerLayoutFn = (n, children, contentRect,
 
     let scaleFactor = 1.0;
     switch (stretchMode) {
-      case STRETCH_WIDTH_CONTROLS_HEIGHT:
+      case AspectRatioStretchMode.STRETCH_WIDTH_CONTROLS_HEIGHT:
         scaleFactor = size.x / baseW;
         break;
-      case STRETCH_HEIGHT_CONTROLS_WIDTH:
+      case AspectRatioStretchMode.STRETCH_HEIGHT_CONTROLS_WIDTH:
         scaleFactor = size.y / baseH;
         break;
-      case STRETCH_FIT:
+      case AspectRatioStretchMode.STRETCH_FIT:
         scaleFactor = Math.min(size.x / baseW, size.y / baseH);
         break;
-      case STRETCH_COVER:
+      case AspectRatioStretchMode.STRETCH_COVER:
         scaleFactor = Math.max(size.x / baseW, size.y / baseH);
         break;
       default:

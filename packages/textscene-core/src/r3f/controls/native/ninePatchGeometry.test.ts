@@ -7,11 +7,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   ninePatchGeometry,
-  AxisStretchMode,
   axisStretchModeOf,
   type NinePatchInput,
   type NinePatchGeometryBuffers,
 } from './ninePatchGeometry';
+import { AxisStretchMode } from '../../../godot/scene/gui';
 
 interface Quad {
   x0: number;

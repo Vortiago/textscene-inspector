@@ -4,13 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import {
-  fitChildInRect,
-  isSortableControl,
-  SIZE_FILL,
-  SIZE_SHRINK_CENTER,
-  SIZE_SHRINK_END,
-} from './fitChildInRect';
+import { fitChildInRect, isSortableControl } from './fitChildInRect';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 function child(properties: Record<string, unknown>, extra: Partial<SolveNode> = {}): SolveNode {
   return {
@@ -61,13 +56,13 @@ describe('fitChildInRect — the horizontal shrink arms under RTL', () => {
 
   it('SHRINK_END takes the LEFT edge under RTL and the right edge under LTR', () => {
     //   r.position.x += rtl ? 0 : (p_rect.size.width - minsize.width);
-    expect(fitChildInRect(CELL, MIN, SIZE_SHRINK_END, SIZE_FILL, true)).toEqual({
+    expect(fitChildInRect(CELL, MIN, SizeFlags.SHRINK_END, SizeFlags.FILL, true)).toEqual({
       x: 10,
       y: 0,
       w: 30,
       h: 40,
     });
-    expect(fitChildInRect(CELL, MIN, SIZE_SHRINK_END, SIZE_FILL, false)).toEqual({
+    expect(fitChildInRect(CELL, MIN, SizeFlags.SHRINK_END, SizeFlags.FILL, false)).toEqual({
       x: 80,
       y: 0,
       w: 30,
@@ -77,13 +72,13 @@ describe('fitChildInRect — the horizontal shrink arms under RTL', () => {
 
   it('no shrink bit takes the RIGHT edge under RTL and the left edge under LTR', () => {
     //   r.position.x += rtl ? (p_rect.size.width - minsize.width) : 0;
-    expect(fitChildInRect(CELL, MIN, NO_FLAGS, SIZE_FILL, true)).toEqual({
+    expect(fitChildInRect(CELL, MIN, NO_FLAGS, SizeFlags.FILL, true)).toEqual({
       x: 80,
       y: 0,
       w: 30,
       h: 40,
     });
-    expect(fitChildInRect(CELL, MIN, NO_FLAGS, SIZE_FILL, false)).toEqual({
+    expect(fitChildInRect(CELL, MIN, NO_FLAGS, SizeFlags.FILL, false)).toEqual({
       x: 10,
       y: 0,
       w: 30,
@@ -94,10 +89,10 @@ describe('fitChildInRect — the horizontal shrink arms under RTL', () => {
   it('SHRINK_CENTER and the vertical axis ignore the direction entirely', () => {
     // `container.cpp:107` has no `rtl` ternary, and `:114-122` names no `rtl`: only the horizontal
     // begin/end pair mirrors.
-    expect(fitChildInRect(CELL, MIN, SIZE_SHRINK_CENTER, SIZE_SHRINK_END, true)).toEqual(
-      fitChildInRect(CELL, MIN, SIZE_SHRINK_CENTER, SIZE_SHRINK_END, false)
+    expect(fitChildInRect(CELL, MIN, SizeFlags.SHRINK_CENTER, SizeFlags.SHRINK_END, true)).toEqual(
+      fitChildInRect(CELL, MIN, SizeFlags.SHRINK_CENTER, SizeFlags.SHRINK_END, false)
     );
-    expect(fitChildInRect(CELL, { x: 30, y: 10 }, SIZE_FILL, SIZE_SHRINK_END, true)).toEqual({
+    expect(fitChildInRect(CELL, { x: 30, y: 10 }, SizeFlags.FILL, SizeFlags.SHRINK_END, true)).toEqual({
       x: 10,
       y: 30,
       w: 100,
@@ -106,6 +101,8 @@ describe('fitChildInRect — the horizontal shrink arms under RTL', () => {
   });
 
   it('SIZE_FILL short-circuits the whole horizontal arm, so RTL cannot move it', () => {
-    expect(fitChildInRect(CELL, MIN, SIZE_FILL | SIZE_SHRINK_END, SIZE_FILL, true)).toEqual(CELL);
+    expect(fitChildInRect(CELL, MIN, SizeFlags.FILL | SizeFlags.SHRINK_END, SizeFlags.FILL, true)).toEqual(
+      CELL
+    );
   });
 });

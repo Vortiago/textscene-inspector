@@ -12,8 +12,8 @@ import {
   clampRadialFillDegrees,
   normalizeRadialInitialAngle,
 } from './radialFill';
-import { FillMode } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 describe('radialRelativeCenter (texture_progress_bar.cpp:245-256)', () => {
   it('centres the offset within the texture and normalises to [0, 1]', () => {
@@ -37,7 +37,7 @@ const CENTER = { x: 0.5, y: 0.5 };
  */
 function fanStartUv(val: number): Vector2 {
   const geometry = radialFillGeometry(
-    FillMode.CLOCKWISE,
+    TextureProgressBarFillMode.CLOCKWISE,
     0.1,
     val * 360,
     CENTER,
@@ -83,7 +83,7 @@ describe('radialFillValue (texture_progress_bar.cpp:483)', () => {
 describe('radialFillGeometry (texture_progress_bar.cpp:483-524)', () => {
   it('a quarter turn (top to right) fans two triangles around the appended centre', () => {
     const geometry = radialFillGeometry(
-      FillMode.CLOCKWISE,
+      TextureProgressBarFillMode.CLOCKWISE,
       0.25,
       0,
       CENTER,
@@ -106,7 +106,14 @@ describe('radialFillGeometry (texture_progress_bar.cpp:483-524)', () => {
 
   it('is null when the boundary walk collapses to a single point (points.size() >= 2 guard, :518)', () => {
     expect(
-      radialFillGeometry(FillMode.CLOCKWISE, 0, 0, CENTER, { x: 100, y: 100 }, { x: 0, y: 0 })
+      radialFillGeometry(
+        TextureProgressBarFillMode.CLOCKWISE,
+        0,
+        0,
+        CENTER,
+        { x: 100, y: 100 },
+        { x: 0, y: 0 }
+      )
     ).toBeNull();
   });
 });

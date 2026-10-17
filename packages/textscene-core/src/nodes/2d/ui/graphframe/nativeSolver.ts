@@ -20,14 +20,13 @@ import {
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
+import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
 import type { GraphFrameProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
-
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
+import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
 
 /** `graph_frame.cpp` theme type variation for its internal title Label: `graph_frame.cpp:354`. */
 export const GRAPH_FRAME_TITLE_VARIATION = 'GraphFrameTitleLabel';

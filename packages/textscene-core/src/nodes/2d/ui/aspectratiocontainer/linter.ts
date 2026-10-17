@@ -11,6 +11,7 @@ import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../lin
 import { hiddenOrUnknowableInTree } from '../../../../linter/parentType.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { TextureRectExpandMode } from '../../../../godot/scene/gui';
 
 const arms = {
   unsupportedExpandMode: groundedArm('aspectratiocontainer-unsupported-texturerect-expand-mode', {
@@ -20,10 +21,10 @@ const arms = {
   }),
 } as const satisfies RuleArms<string>;
 
-// texture_rect.h:39-45 TextureRect::ExpandMode: EXPAND_KEEP_SIZE=0,
-// EXPAND_IGNORE_SIZE=1, EXPAND_FIT_WIDTH=2, EXPAND_FIT_WIDTH_PROPORTIONAL=3,
-// EXPAND_FIT_HEIGHT=4, EXPAND_FIT_HEIGHT_PROPORTIONAL=5.
-const UNSUPPORTED_EXPAND_MODES = new Set([3, 5]);
+const UNSUPPORTED_EXPAND_MODES = new Set([
+  TextureRectExpandMode.EXPAND_FIT_WIDTH_PROPORTIONAL,
+  TextureRectExpandMode.EXPAND_FIT_HEIGHT_PROPORTIONAL,
+]);
 
 function checkAspectRatioContainer(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];

@@ -2,22 +2,9 @@ import type { ControlProperties } from '../control/types';
 import type { RangeProperties } from '../shared/range';
 import type { Rgba } from '../../../../godot/math/math';
 
-/** `TextureProgressBar::FillMode` (`texture_progress_bar.h:48-58`). */
-export const FillMode = {
-  LEFT_TO_RIGHT: 0,
-  RIGHT_TO_LEFT: 1,
-  TOP_TO_BOTTOM: 2,
-  BOTTOM_TO_TOP: 3,
-  CLOCKWISE: 4,
-  COUNTER_CLOCKWISE: 5,
-  BILINEAR_LEFT_AND_RIGHT: 6,
-  BILINEAR_TOP_AND_BOTTOM: 7,
-  CLOCKWISE_AND_COUNTER_CLOCKWISE: 8,
-} as const;
-
 /** `TextureProgressBar`'s own members (`doc/classes/TextureProgressBar.xml`), plus its Control + Range bases. */
 export interface TextureProgressBarProperties extends ControlProperties, RangeProperties {
-  /** A `FillMode` value. */
+  /** A `TextureProgressBarFillMode` value. */
   fillMode?: number;
   /** Window `texture_progress` (and, when set, `texture_under`/`texture_over` at ratio 1) as a 9-patch. Godot default false. */
   ninePatchStretch?: boolean;
