@@ -6,7 +6,8 @@
 
 import * as THREE from 'three';
 import { warn } from '../../logger';
-import { CsgOperation, type CsgContribution, type CsgPlan } from './csgPlan';
+import { type CsgContribution, type CsgPlan } from './csgPlan';
+import { CsgOperation } from '../../godot/scene/csg';
 import type { CsgModule } from './csgModule';
 import type { CsgSolid } from './csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from './csgMaterials';

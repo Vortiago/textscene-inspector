@@ -12,8 +12,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
 import { PLAYBACK_TYPE_NAMES } from '../../../godot/audio/audioServer.js';
-
-const MIX_TARGET = { 0: 'STEREO', 1: 'SURROUND', 2: 'CENTER' };
+import { AUDIO_STREAM_PLAYER_MIX_TARGET_NAMES } from '../../../godot/scene/audio.js';
 
 validatorRegistry.registerAll('AudioStreamPlayer', {
   stream: v.resourceReference('stream'),
@@ -44,7 +43,9 @@ validatorRegistry.registerAll('AudioStreamPlayer', {
   max_polyphony: v.int('max_polyphony', { min: 1, enforced: 'audio_stream_player_internal.cpp:323' }),
   // audio_stream_player.cpp:288, PROPERTY_HINT_ENUM "Stereo,Surround,Center".
   // set_mix_target (:161-163) is a bare assignment: out-of-range only warns.
-  mix_target: v.enumInt('mix_target', MIX_TARGET, { hinted: 'audio_stream_player.cpp:288' }),
+  mix_target: v.enumInt('mix_target', AUDIO_STREAM_PLAYER_MIX_TARGET_NAMES, {
+    hinted: 'audio_stream_player.cpp:288',
+  }),
   // audio_stream_player.cpp:291, PROPERTY_HINT_ENUM "Default,Stream,Sample".
   // set_playback_type (:234-236) forwards to
   // AudioStreamPlayerInternal::set_playback_type (audio_stream_player_internal.cpp:337-339),

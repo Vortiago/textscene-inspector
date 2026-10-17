@@ -3,6 +3,7 @@
  * type's table starts from `LIGHT_3D_DEFAULTS` and lists what its own constructor sets.
  */
 
+import { enumNamesByValue } from '../classdb/enumNames.js';
 import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSkyMode.js';
 import { DirectionalShadowMode } from '../rendering/lights/directionalShadow.js';
 
@@ -57,3 +58,22 @@ export const AREA_LIGHT_3D_DEFAULTS = {
   areaSize: { x: 1, y: 1 }, // :749
   areaNormalizeEnergy: true, // :750
 } as const;
+
+/** `Light3D::BakeMode` (`scene/3d/light_3d.h:64-68`). */
+const BakeMode = {
+  DISABLED: 0,
+  STATIC: 1,
+  DYNAMIC: 2,
+} as const;
+
+/** Each light bake mode by its integer, spelled as its constant without `BAKE_`. */
+export const LIGHT_3D_BAKE_MODE_NAMES = enumNamesByValue(BakeMode);
+
+/** `OmniLight3D::ShadowMode` (`light_3d.h:208-211`). */
+const OmniShadowMode = {
+  DUAL_PARABOLOID: 0,
+  CUBE: 1,
+} as const;
+
+/** Each omni shadow mode by its integer, spelled as its constant without `SHADOW_`. */
+export const OMNI_LIGHT_3D_SHADOW_MODE_NAMES = enumNamesByValue(OmniShadowMode);

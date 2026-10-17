@@ -8,13 +8,12 @@
 import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../../linter/validators/index.js';
-
-const OPERATION = { 0: 'UNION', 1: 'INTERSECTION', 2: 'SUBTRACTION' };
+import { CSG_OPERATION_NAMES } from '../../../../godot/scene/csg.js';
 
 validatorRegistry.registerAll('CSGShape3D', {
   // csg_shape.cpp:1040 hints "Union,Intersection,Subtraction";
   // set_operation:933-937 is a bare assignment.
-  operation: v.enumInt('operation', OPERATION, { hinted: 'csg_shape.cpp:1040' }),
+  operation: v.enumInt('operation', CSG_OPERATION_NAMES, { hinted: 'csg_shape.cpp:1040' }),
   // csg_shape.cpp:1044; set_calculate_tangents:943-946 is a bare assignment.
   calculate_tangents: v.boolean('calculate_tangents'),
   // csg_shape.cpp:1048; set_use_collision:85-95 assigns and rebuilds.
