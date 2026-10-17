@@ -119,3 +119,35 @@ export function slotComponentsAltered(
   if (!isConvertedSpelling(floatTypeName, compositeTypeName(literal))) return false;
   return captures.some((capture) => storedInt(capture) === null);
 }
+
+/** A composite literal in a FLOAT slot, as every reader of one sees it. */
+export interface SlotTuple {
+  /** Each component as {@link slotComponents} reads it. */
+  readonly components: number[];
+  /** Whether the `i` spelling narrows a component to a number the file does not state. */
+  readonly altered: boolean;
+}
+
+/**
+ * The one read of a composite in a FLOAT slot, or `null` when the caller's `grammar` refuses the
+ * literal. Each reader keeps its own contract on top: the linter withholds an altered value, and
+ * the renderer falls back on a non-finite component.
+ */
+export function readSlotTuple(
+  literal: string,
+  /** The slot's own type name, such as `Vector2`, not the spelling in the file. */
+  floatTypeName: string,
+  /** The caller's anchored tuple grammar, one capture per component. */
+  grammar: RegExp,
+  /** See {@link slotComponents}. */
+  readFloat: (text: string) => number = matchedFloat
+): SlotTuple | null {
+  const trimmed = literal.trim();
+  const match = grammar.exec(trimmed);
+  if (!match) return null;
+  const captures = match.slice(1);
+  return {
+    components: slotComponents(trimmed, floatTypeName, captures, readFloat),
+    altered: slotComponentsAltered(trimmed, floatTypeName, captures),
+  };
+}

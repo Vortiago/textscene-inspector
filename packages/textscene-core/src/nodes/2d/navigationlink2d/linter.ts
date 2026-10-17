@@ -7,8 +7,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
-import { VECTOR2_REGEX, tupleComponent } from '../../../linter/validators/index.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
+import { matchVector2 } from '../../../linter/validators/index.js';
 import { isEqualApprox } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 
@@ -26,27 +25,14 @@ const arms = {
  */
 const DEFAULT_POSITION: Vector2 = { x: 0, y: 0 };
 
-/** `null` for a present-but-malformed value, so the caller can stay quiet and leave the format error to `linterParser.ts`. */
-function parseVector2Literal(raw: string): Vector2 | null {
-  const trimmed = raw.trim();
-  const match = VECTOR2_REGEX.exec(trimmed);
-  if (!match) return null;
-  const captures = [match[1], match[2]];
-  // Withheld, not NaN: the engine stores a number here, but not the one
-  // written, and `_to_int`'s float branch is undefined behaviour
-  // (variant.h:369-370), so this rule cannot name it.
-  if (slotComponentsAltered(trimmed, 'Vector2', captures)) return null;
-  // `slotComponents`: VECTOR2_REGEX admits the `Vector2i(...)` spelling Godot
-  // converts, whose arguments are narrowed to int32 before the widening.
-  const [x, y] = slotComponents(trimmed, 'Vector2', captures, tupleComponent);
-  return { x: x!, y: y! };
-}
-
-/** The `Vector2(x, y)` a property carries, its documented default when absent, or null when malformed. */
+/**
+ * The `Vector2(x, y)` a property carries, its documented default when absent, or null when
+ * malformed or when a component narrows to a number the file does not state.
+ */
 function readPosition(properties: Record<string, string>, key: string): Vector2 | null {
   const raw = properties[key];
   if (raw === undefined) return DEFAULT_POSITION;
-  return parseVector2Literal(raw);
+  return matchVector2(raw);
 }
 
 /**

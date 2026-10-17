@@ -12,8 +12,7 @@ import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
 import { useCanvasModulateFor } from '../canvasModulate';
-import type { CanvasItemLightingProps } from '../lighting2d/useCanvasItemLighting';
-import { LitCanvasItemPixels } from './LitCanvasItemPixels';
+import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
 import { EffectiveZProvider, accumulateCanvasItemZ, useEffectiveZ } from '../lighting2d/canvasItemPlacement';
 import { useCanvasItemRenderOrder } from '../contexts/PaintOrderContext';
 import { CanvasItemKeyProvider } from './CanvasItemGroup';
@@ -25,18 +24,13 @@ interface CanvasItem2DProps {
   props: Node2DProperties;
   /**
    * Renders this node's own pixels with the own-pixel tint and the CanvasItemMaterial
-   * in force, resolved through `use_parent_material`, or `null`. A slice that ignores
-   * the material draws with Godot's default MIX blending.
+   * in force, resolved through `use_parent_material`, or `null`. Each mesh merges
+   * `pixelMaterial`, which carries that material's blend state and the light list.
    */
   body?: (
     tint: CanvasItemTint,
     material: CanvasItemMaterialProperties | null,
-    /**
-     * Material props that sample the 2D light accumulation, spread like the blend
-     * state. They declare `transparent` and are the same for every light mode and
-     * count, both uniforms (`lighting2d/canvasItemLighting`).
-     */
-    lighting: CanvasItemLightingProps
+    pixelMaterial: CanvasItemPixelMaterial
   ) => ReactNode;
   /**
    * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
@@ -85,7 +79,7 @@ export function CanvasItem2D({ node, props, body, ownItems, children }: CanvasIt
       <CanvasItemKeyProvider value={renderOrder}>
         {body && (
           <LitCanvasItemPixels material={material} lightMask={props.light_mask} zFinal={effectiveZ}>
-            {(lighting) => body(tint, material, lighting)}
+            {(pixelMaterial) => body(tint, material, pixelMaterial)}
           </LitCanvasItemPixels>
         )}
         {ownItems?.(tint, material, effectiveZ)}

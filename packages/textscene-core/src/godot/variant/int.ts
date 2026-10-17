@@ -15,4 +15,6 @@ export {
   storedVector2i,
   slotComponents,
   slotComponentsAltered,
+  readSlotTuple,
 } from './intSlots.js';
+export type { SlotTuple } from './intSlots.js';

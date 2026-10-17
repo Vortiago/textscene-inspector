@@ -7,7 +7,7 @@
  */
 
 import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
-import { slotComponents } from '../godot/variant/int.js';
+import { readSlotTuple } from '../godot/variant/int.js';
 
 import type { Vector2, Vector3 } from '../godot/math/vector.js';
 
@@ -22,28 +22,23 @@ const VECTOR3_RE = slotTupleRegex('Vector3', 3);
 export const COLOR_RE = slotTupleRegex('Color', 4);
 
 export function parseVector2(value: string): Vector2 {
-  const match = value.match(VECTOR2_RE);
-
-  if (!match || !match[1] || !match[2]) {
-    throw new Error(`Invalid Vector2 format: ${value}`);
-  }
-
-  // An overflowing exponent is inside the finite grammar but not inside what a
-  // viewport can draw, so it takes the same warn-then-fall-back path as a
-  // literal the grammar refuses. A `Vector2i` spelling narrows to int32 first.
-  const components = slotComponents(value, 'Vector2', [match[1], match[2]]);
-  if (!allFinite(components)) throw new Error(`Non-finite Vector2: ${value}`);
-  return { x: components[0]!, y: components[1]! };
+  const [x, y] = finiteSlotTuple(value, 'Vector2', VECTOR2_RE);
+  return { x: x!, y: y! };
 }
 
 export function parseVector3(value: string): Vector3 {
-  const match = value.match(VECTOR3_RE);
+  const [x, y, z] = finiteSlotTuple(value, 'Vector3', VECTOR3_RE);
+  return { x: x!, y: y!, z: z! };
+}
 
-  if (!match || !match[1] || !match[2] || !match[3]) {
-    throw new Error(`Invalid Vector3 format: ${value}`);
-  }
-
-  const components = slotComponents(value, 'Vector3', [match[1], match[2], match[3]]);
-  if (!allFinite(components)) throw new Error(`Non-finite Vector3: ${value}`);
-  return { x: components[0]!, y: components[1]!, z: components[2]! };
+/**
+ * The components of a vector literal, or a throw the caller turns into its fallback. An
+ * overflowing exponent is inside the finite grammar but not inside what a viewport can draw.
+ * An `i` spelling narrows to int32 first, and a component no int32 holds reads NaN.
+ */
+function finiteSlotTuple(value: string, typeName: string, grammar: RegExp): number[] {
+  const tuple = readSlotTuple(value, typeName, grammar);
+  if (!tuple) throw new Error(`Invalid ${typeName} format: ${value}`);
+  if (!allFinite(tuple.components)) throw new Error(`Non-finite ${typeName}: ${value}`);
+  return tuple.components;
 }
