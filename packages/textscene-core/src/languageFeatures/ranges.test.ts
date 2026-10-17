@@ -26,4 +26,8 @@ describe('headingAttribute', () => {
 
     expect(headingAttribute(line, 'type')?.value).toBe('MeshInstanc3D');
   });
+
+  it('gives nothing for a string whose closing quote is missing', () => {
+    expect(headingAttribute('[node name="Box" type="Mesh]', 'type')).toBeUndefined();
+  });
 });
