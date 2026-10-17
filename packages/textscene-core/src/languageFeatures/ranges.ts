@@ -27,7 +27,10 @@ export function headingAttribute(
   const heading = parseHeading(line);
   const span = heading?.valueSpans[key];
   const value = heading?.attributes[key];
-  return span === undefined || value === undefined ? undefined : { span, value };
+  if (span === undefined || value === undefined) return undefined;
+  // An unclosed string keeps its opening quote in `value`: it has no value to name yet.
+  if (value.startsWith('"')) return undefined;
+  return { span, value };
 }
 
 /** Where the first `=` sits, or -1. A property's key is left of it, its value right. */
