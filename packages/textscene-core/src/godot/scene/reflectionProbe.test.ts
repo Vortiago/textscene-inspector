@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { loadedOriginOffset } from './reflectionProbe';
+import {
+  loadedOriginOffset,
+  REFLECTION_PROBE_AMBIENT_MODE_NAMES,
+  REFLECTION_PROBE_UPDATE_MODE_NAMES,
+} from './reflectionProbe';
 
 const ZERO = { x: 0, y: 0, z: 0 };
 
@@ -28,5 +32,21 @@ describe('loadedOriginOffset', () => {
 
   it('is the origin when no line sets an offset', () => {
     expect(loadedOriginOffset([['size', { x: 4, y: 4, z: 4 }]])).toEqual(ZERO);
+  });
+});
+
+describe('REFLECTION_PROBE_UPDATE_MODE_NAMES', () => {
+  it('names the two update modes as their constants (reflection_probe.h:39-42)', () => {
+    expect(REFLECTION_PROBE_UPDATE_MODE_NAMES).toEqual({ 0: 'UPDATE_ONCE', 1: 'UPDATE_ALWAYS' });
+  });
+});
+
+describe('REFLECTION_PROBE_AMBIENT_MODE_NAMES', () => {
+  it('names the three ambient modes as their constants (reflection_probe.h:44-48)', () => {
+    expect(REFLECTION_PROBE_AMBIENT_MODE_NAMES).toEqual({
+      0: 'AMBIENT_DISABLED',
+      1: 'AMBIENT_ENVIRONMENT',
+      2: 'AMBIENT_COLOR',
+    });
   });
 });
