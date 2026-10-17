@@ -116,7 +116,7 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 );
 
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
-const NEGATIVE_FIXTURE_COUNT = 5;
+const NEGATIVE_FIXTURE_COUNT = 6;
 
 /**
  * The project a fixture's `res://` paths resolve in: the nearest `project.godot` from its folder up to

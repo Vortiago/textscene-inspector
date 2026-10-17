@@ -46,7 +46,7 @@ export function strictObserver(): StrictObserver {
     },
 
     onSectionStart: (heading, section, line) => {
-      reads.read(heading);
+      reads.read(heading, line);
       lines.start();
       if (section !== 'node') {
         owner = sectionOwnerOf(heading, section);
