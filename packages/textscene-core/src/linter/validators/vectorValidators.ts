@@ -5,7 +5,7 @@ import { propertyError } from './propertyError.js';
 import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
 import { ruleInt, tupleComponent } from './commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../godot/variant/int.js';
+import { readSlotTuple } from '../../godot/variant/int.js';
 import { compositeTypeName, isConvertedSpelling } from '../../godot/variant/variantConversion.js';
 
 /**
@@ -15,8 +15,8 @@ import { compositeTypeName, isConvertedSpelling } from '../../godot/variant/vari
 export const VECTOR3_REGEX = makeFloatTupleRegex('Vector3', 3);
 
 /**
- * Vector2 format: Vector2(x, y), for the callers that `.exec()` it to reach the
- * two components. Use this, not a local `makeFloatTupleRegex('Vector2', 2)`.
+ * Vector2 format: Vector2(x, y), for a format check. Read a slot's components with
+ * {@link matchVector2}, and never build a local `makeFloatTupleRegex('Vector2', 2)`.
  */
 export const VECTOR2_REGEX = makeFloatTupleRegex('Vector2', 2);
 
@@ -45,22 +45,31 @@ export function matchVector2i(raw: string): { x: number; y: number } | null {
 }
 
 /**
+ * The two components a `Vector2` slot holds, for every phase-2 rule over one, or
+ * `null` when the literal is malformed or one component does not survive. On `null`
+ * the rule skips and the format validator's finding stands.
+ */
+export function matchVector2(raw: string): { x: number; y: number } | null {
+  const components = matchFloatTuple(raw, VECTOR2_REGEX, 'Vector2');
+  return components && { x: components[0]!, y: components[1]! };
+}
+
+/**
  * The three components a `Vector3` slot holds, for every phase-2 rule over one, or
  * `null` when the literal is malformed or one component does not survive. On `null`
  * the rule skips and the format validator's finding stands.
  */
 export function matchVector3(raw: string): { x: number; y: number; z: number } | null {
-  const trimmed = raw.trim();
-  const match = VECTOR3_REGEX.exec(trimmed);
-  if (!match) return null;
-  const captures = [match[1], match[2], match[3]];
+  const components = matchFloatTuple(raw, VECTOR3_REGEX, 'Vector3');
+  return components && { x: components[0]!, y: components[1]!, z: components[2]! };
+}
+
+/** The components a float tuple slot holds, or `null` when malformed or altered. */
+function matchFloatTuple(raw: string, regex: RegExp, typeName: string): number[] | null {
+  const tuple = readSlotTuple(raw, typeName, regex, tupleComponent);
   // Withheld, not NaN: the engine stores a number, but not the one written, and
   // `_to_int`'s float branch is undefined behaviour (variant.h:369-370).
-  if (slotComponentsAltered(trimmed, 'Vector3', captures)) return null;
-  // The `Vector3i(...)` spelling Godot converts narrows its arguments to int32
-  // before the widening.
-  const [x, y, z] = slotComponents(trimmed, 'Vector3', captures, tupleComponent);
-  return { x: x!, y: y!, z: z! };
+  return tuple && !tuple.altered ? tuple.components : null;
 }
 
 /** A `Vector2(x, y)` format validator. */

@@ -136,6 +136,17 @@ polygon = ${TRI}
 [sub_resource type="CanvasItemMaterial" id="1"]
 blend_mode = 1
 
+[sub_resource type="SpriteFrames" id="frames"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("tex")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
 [node name="Root" type="Node2D"]
 
 [node name="Sprite" type="Sprite2D" parent="."]
@@ -149,12 +160,51 @@ points = PackedVector2Array(0, 0, 32, 32)
 [node name="Poly" type="Polygon2D" parent="."]
 material = SubResource("1")
 polygon = ${TRI}
+
+[node name="Animated" type="AnimatedSprite2D" parent="."]
+material = SubResource("1")
+sprite_frames = SubResource("frames")
+
+[node name="Particles" type="CPUParticles2D" parent="."]
+material = SubResource("1")
 `);
-    for (const name of ['Sprite', 'Line', 'Poly']) {
+    // A particle field names its own group after the emitter.
+    for (const name of ['Sprite', 'Line', 'Poly', 'Animated', 'Particles_Particles']) {
       const mat = mats.get(name);
       expect(mat, `${name} should render a mesh`).toBeDefined();
       expect(mat!.blending, `${name} should blend additively`).toBe(THREE.CustomBlending);
       expect(mat!.blendDst, `${name} should blend additively`).toBe(THREE.OneFactor);
+    }
+  });
+
+  it('draws every light mode as one double-sided transparent pass', async () => {
+    const mats = await materialsByNodeName(`[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="unshaded"]
+light_mode = 1
+
+[sub_resource type="CanvasItemMaterial" id="lightOnly"]
+light_mode = 2
+
+[node name="Root" type="Node2D"]
+
+[node name="Normal" type="Polygon2D" parent="."]
+polygon = ${TRI}
+
+[node name="Unshaded" type="Polygon2D" parent="."]
+material = SubResource("unshaded")
+polygon = ${TRI}
+
+[node name="LightOnly" type="Polygon2D" parent="."]
+material = SubResource("lightOnly")
+polygon = ${TRI}
+`);
+    for (const name of ['Normal', 'Unshaded', 'LightOnly']) {
+      const mat = mats.get(name);
+      expect(mat, `${name} should render a mesh`).toBeDefined();
+      expect(mat!.transparent, `${name} should blend`).toBe(true);
+      expect(mat!.side, `${name} should face both ways`).toBe(THREE.DoubleSide);
+      expect(mat!.forceSinglePass, `${name} should draw once`).toBe(true);
     }
   });
 
