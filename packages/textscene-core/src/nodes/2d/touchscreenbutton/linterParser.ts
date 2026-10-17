@@ -8,6 +8,7 @@
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { TOUCH_SCREEN_BUTTON_VISIBILITY_MODE_NAMES } from '../../../godot/scene/canvasNodes.js';
 
 // Own members only, those doc/classes/TouchScreenButton.xml lists without `overrides=`. Node2D's keys
 // arrive through the NODE_BASE_TYPES walk, and a re-declared one shadows it and duplicates the rule.
@@ -42,9 +43,7 @@ validatorRegistry.registerAll('TouchScreenButton', {
   // touch_screen_button.cpp:442, PROPERTY_HINT_ENUM "Always,TouchScreen Only" (0-1), BIND_ENUM_CONSTANT at
   // cpp:447-448. set_visibility_mode (cpp:374-377) has no ERR_FAIL_INDEX and the header enum
   // (touch_screen_button.h:42-45) has no MAX sentinel, so out of range is only hinted: a warning.
-  visibility_mode: v.enumInt(
-    'visibility_mode',
-    { 0: 'ALWAYS', 1: 'TOUCHSCREEN_ONLY' },
-    { hinted: 'touch_screen_button.cpp:442' }
-  ),
+  visibility_mode: v.enumInt('visibility_mode', TOUCH_SCREEN_BUTTON_VISIBILITY_MODE_NAMES, {
+    hinted: 'touch_screen_button.cpp:442',
+  }),
 });

@@ -10,14 +10,9 @@ import { v } from '../../../../linter/validators/index.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../../godot/rendering/rendering.js';
+import { TILE_MAP_VISIBILITY_MODE_NAMES } from '../../../../godot/scene/tileMap.js';
 import type { LayerLeaf } from '../shared/layerVector.js';
 import { formatValidator, tileDataValidator } from './tileDataSlots.js';
-
-/**
- * tile_map.h:56-59, VisibilityMode: 3 BIND_ENUM_CONSTANTs, the same shape and hint
- * string as TileMapLayer's DebugVisibilityMode (tilemaplayer/linterParser.ts).
- */
-const VISIBILITY_MODE = { 0: 'DEFAULT', 1: 'FORCE_SHOW', 2: 'FORCE_HIDE' };
 
 // Keyed by the shared name list, so a leaf declared in only one of the two
 // places is a compile error.
@@ -79,12 +74,12 @@ validatorRegistry.registerAll('TileMap', {
   // tile_map.cpp:417-426, bare assignment, forwarded verbatim to every child
   // TileMapLayer::set_collision_visibility_mode. Hint at ADD_PROPERTY
   // tile_map.cpp:998.
-  collision_visibility_mode: v.enumInt('collision_visibility_mode', VISIBILITY_MODE, {
+  collision_visibility_mode: v.enumInt('collision_visibility_mode', TILE_MAP_VISIBILITY_MODE_NAMES, {
     hinted: 'tile_map.cpp:998',
   }),
   // tile_map.cpp:433-442, bare assignment, forwarded to every child layer.
   // Hint at ADD_PROPERTY tile_map.cpp:1000.
-  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', VISIBILITY_MODE, {
+  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', TILE_MAP_VISIBILITY_MODE_NAMES, {
     hinted: 'tile_map.cpp:1000',
   }),
   // tile_map.cpp:223-231: ERR_FAIL_COND_MSG(p_size < 1) floors it, and each child
