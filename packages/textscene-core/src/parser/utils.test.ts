@@ -149,6 +149,20 @@ describe('parseHeading valueSpans', () => {
 
     expect(line.slice(id!.start, id!.end)).toBe('1');
   });
+  it('keeps an attribute named __proto__ as a plain key', () => {
+    const heading = parseHeading('[node __proto__="x" name="N"]')!;
+
+    expect(Object.keys(heading.valueSpans)).toEqual(['__proto__', 'name']);
+    expect(heading.attributes.__proto__).toBe('x');
+  });
+
+  it('reads the last occurrence of a repeated key', () => {
+    const line = '[ext_resource id="1" id="2"]';
+    const heading = parseHeading(line)!;
+
+    expect(heading.attributes.id).toBe('2');
+    expect(line.slice(heading.valueSpans.id!.start, heading.valueSpans.id!.end)).toBe('2');
+  });
 });
 
 describe('parseProperty', () => {
