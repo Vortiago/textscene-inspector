@@ -8,6 +8,11 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { hintedBitField, layerBitmask, v } from '../../../linter/validators/index.js';
+import {
+  NAVIGATION_3D_PATHFINDING_ALGORITHM_NAMES,
+  NAVIGATION_3D_PATH_METADATA_FLAG_NAMES,
+  NAVIGATION_3D_PATH_POSTPROCESSING_NAMES,
+} from '../../../godot/scene/navigation.js';
 
 // Every `ADD_PROPERTY` in `navigation_agent_3d.cpp` is below. A cite names the setter body, not the
 // hint, where a setter calls `ERR_FAIL_COND` or clamps with `MAX(0.0, …)` (ADR-0032). The
@@ -55,33 +60,21 @@ validatorRegistry.registerAll('NavigationAgent3D', {
   }),
   // set_pathfinding_algorithm (cpp:483-491) is a bare assignment. The HINT_ENUM at :160
   // lists only "AStar", the one PathfindingAlgorithm (navigation_path_query_parameters_3d.h:43-45).
-  pathfinding_algorithm: v.enumInt(
-    'pathfinding_algorithm',
-    { 0: 'PATHFINDING_ALGORITHM_ASTAR' },
-    { hinted: 'navigation_agent_3d.cpp:160' }
-  ),
+  pathfinding_algorithm: v.enumInt('pathfinding_algorithm', NAVIGATION_3D_PATHFINDING_ALGORITHM_NAMES, {
+    hinted: 'navigation_agent_3d.cpp:160',
+  }),
   // set_path_postprocessing (cpp:493-501) is a bare assignment. The HINT_ENUM at :161
   // ("Corridorfunnel,Edgecentered,None") matches PathPostProcessing 0-2
   // (navigation_path_query_parameters_3d.h:47-51).
-  path_postprocessing: v.enumInt(
-    'path_postprocessing',
-    {
-      0: 'PATH_POSTPROCESSING_CORRIDORFUNNEL',
-      1: 'PATH_POSTPROCESSING_EDGECENTERED',
-      2: 'PATH_POSTPROCESSING_NONE',
-    },
-    { hinted: 'navigation_agent_3d.cpp:161' }
-  ),
+  path_postprocessing: v.enumInt('path_postprocessing', NAVIGATION_3D_PATH_POSTPROCESSING_NAMES, {
+    hinted: 'navigation_agent_3d.cpp:161',
+  }),
   // set_path_metadata_flags (cpp:561-567) keeps every bit, with no `p_flags & MASK`. A bit
   // outside the HINT_FLAGS at :162 (1|2|4, navigation_constants_3d.h:52-54) loads but is
   // unreachable from the inspector, so it warns.
   path_metadata_flags: hintedBitField('path_metadata_flags', {
     hinted: 'navigation_agent_3d.cpp:162',
-    labels: {
-      1: 'PATH_METADATA_INCLUDE_TYPES',
-      2: 'PATH_METADATA_INCLUDE_RIDS',
-      4: 'PATH_METADATA_INCLUDE_OWNERS',
-    },
+    labels: NAVIGATION_3D_PATH_METADATA_FLAG_NAMES,
   }),
   simplify_path: v.boolean('simplify_path'),
   // set_simplify_epsilon (cpp:512-515) clamps with `MAX(0.0, p_epsilon)`, altering the
