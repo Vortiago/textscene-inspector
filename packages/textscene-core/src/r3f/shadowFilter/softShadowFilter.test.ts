@@ -5,6 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/rendering/lights/softShadowKernel';
+import { GODOT_QUICK_HASH_GLSL } from '../../godot/rendering/quickHash';
 import { FRAMEBUFFER_HEIGHT_UNIFORM } from './framebufferRows';
 import { installedFramebufferHeight } from './framebufferRows.testkit';
 import { installSoftShadowFilter } from './softShadowFilter';
@@ -52,9 +53,8 @@ describe('the soft shadow filter', () => {
     expect(installedChunk()).toContain(
       'vec2 fragCoord = vec2( gl_FragCoord.x, godotFramebufferHeight[ 0 ] - gl_FragCoord.y );'
     );
-    expect(installedChunk()).toContain(
-      'fract( 52.9829189 * fract( dot( fragCoord, vec2( 0.06711056, 0.00583715 ) ) ) ) * PI2'
-    );
+    expect(installedChunk()).toContain(GODOT_QUICK_HASH_GLSL);
+    expect(installedChunk()).toContain('float r = godotQuickHash( fragCoord ) * PI2;');
     expect(installedChunk()).toContain('return mat2( vec2( cr, - sr ), vec2( sr, cr ) );');
   });
 

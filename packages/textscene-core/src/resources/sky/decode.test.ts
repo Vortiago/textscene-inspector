@@ -25,6 +25,7 @@ describe('decodeSkyMaterial — ProceduralSkyMaterial', () => {
       sun_angle_max: 30,
       sun_curve: 0.15,
       energy_multiplier: 1,
+      use_debanding: true,
     });
   });
 
@@ -51,6 +52,20 @@ describe('decodeSkyMaterial — ProceduralSkyMaterial', () => {
   it('falls back to the default for a malformed scalar rather than NaN', () => {
     const sky = decodeSkyMaterial('ProceduralSkyMaterial', { sky_curve: 'not-a-number' });
     expect(sky).toMatchObject({ sky_curve: 0.15 });
+  });
+
+  it('reads an authored use_debanding', () => {
+    const sky = decodeSkyMaterial('ProceduralSkyMaterial', { use_debanding: 'false' });
+    expect(sky).toMatchObject({ use_debanding: false });
+  });
+
+  it('keeps the debanding default and warns for a malformed use_debanding (error case)', () => {
+    let sky: unknown;
+    const warnings = warningsOf(() => {
+      sky = decodeSkyMaterial('ProceduralSkyMaterial', { use_debanding: 'maybe' });
+    });
+    expect(sky).toMatchObject({ use_debanding: true });
+    expect(warnings.join('\n')).toContain('use_debanding');
   });
 });
 
@@ -88,6 +103,13 @@ describe('decodeSkyMaterial — PhysicalSkyMaterial', () => {
       sun_disk_scale: 1,
       ground_color: { r: 0.1, g: 0.07, b: 0.034, a: 1 },
       energy_multiplier: 1,
+      use_debanding: true,
+    });
+  });
+
+  it('reads an authored use_debanding', () => {
+    expect(decodeSkyMaterial('PhysicalSkyMaterial', { use_debanding: 'false' })).toMatchObject({
+      use_debanding: false,
     });
   });
 
