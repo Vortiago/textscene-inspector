@@ -10,8 +10,7 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { shape, v } from '../../../linter/validators/index.js';
 import { SHADOW_CASTING_SETTING_NAMES } from '../../../godot/rendering/rendering.js';
 import { VISIBILITY_RANGE_FADE_MODE_NAMES } from '../../../godot/rendering/visibilityRange.js';
-
-const GI_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
+import { GEOMETRY_INSTANCE_3D_GI_MODE_NAMES } from '../../../godot/scene/geometryInstance.js';
 
 validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::INT, "cast_shadow",
@@ -48,7 +47,7 @@ validatorRegistry.registerAll('GeometryInstance3D', {
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(..., "gi_mode", PROPERTY_HINT_ENUM,
   // "Disabled,Static,Dynamic"). set_gi_mode:472-489 switches on 3 known cases then
   // assigns unconditionally afterward, so an out-of-range value is not dropped.
-  gi_mode: v.enumInt('gi_mode', GI_MODE, { hinted: 'visual_instance_3d.cpp:608' }),
+  gi_mode: v.enumInt('gi_mode', GEOMETRY_INSTANCE_3D_GI_MODE_NAMES, { hinted: 'visual_instance_3d.cpp:608' }),
 
   // scene/3d/visual_instance_3d.cpp: ADD_PROPERTY(PropertyInfo(Variant::BOOL,
   // "ignore_occlusion_culling"), ...)

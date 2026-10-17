@@ -3,17 +3,18 @@
 import '../csgprimitive3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-const MODE = { 0: 'DEPTH', 1: 'SPIN', 2: 'PATH' };
-const INTERVAL_TYPE = { 0: 'DISTANCE', 1: 'SUBDIVIDE' };
-const PATH_ROTATION = { 0: 'POLYGON', 1: 'PATH', 2: 'PATH_FOLLOW' };
+import {
+  CSG_POLYGON_MODE_NAMES,
+  CSG_POLYGON_PATH_INTERVAL_TYPE_NAMES,
+  CSG_POLYGON_PATH_ROTATION_NAMES,
+} from '../../../../godot/scene/csg.js';
 
 // Ranges are Godot's own editor hints (csg_shape.cpp:2601-2612). `transform` comes from
 // the Node3D base walk and is deliberately not shadowed here.
 validatorRegistry.registerAll('CSGPolygon3D', {
   polygon: v.packedVector2Array('polygon'),
   // set_mode:2639-2645 is a bare assignment; the hint (:2600) is advisory.
-  mode: v.enumInt('mode', MODE, { hinted: 'csg_shape.cpp:2600' }),
+  mode: v.enumInt('mode', CSG_POLYGON_MODE_NAMES, { hinted: 'csg_shape.cpp:2600' }),
   // Two tiers on the floor. set_depth:2651 `ERR_FAIL_COND(p_depth < 0.001)`
   // refuses below 0.001; the hint (:2601,
   // "0.01,100.0,0.01,or_greater,exp,suffix:m") floors an order above, so
@@ -47,7 +48,7 @@ validatorRegistry.registerAll('CSGPolygon3D', {
   path_node: v.nodePath('path_node'),
   // set_path_interval_type:2711-2714 is a bare assignment; the hint (:2605)
   // is advisory.
-  path_interval_type: v.enumInt('path_interval_type', INTERVAL_TYPE, {
+  path_interval_type: v.enumInt('path_interval_type', CSG_POLYGON_PATH_INTERVAL_TYPE_NAMES, {
     hinted: 'csg_shape.cpp:2605',
   }),
   // set_path_interval:2716-2719 is a bare assignment; the hint (:2606) is
@@ -62,7 +63,7 @@ validatorRegistry.registerAll('CSGPolygon3D', {
   }),
   // set_path_rotation:2743-2748 is a bare assignment; the hint (:2608) is
   // advisory.
-  path_rotation: v.enumInt('path_rotation', PATH_ROTATION, {
+  path_rotation: v.enumInt('path_rotation', CSG_POLYGON_PATH_ROTATION_NAMES, {
     hinted: 'csg_shape.cpp:2608',
   }),
   path_rotation_accurate: v.boolean('path_rotation_accurate'),
