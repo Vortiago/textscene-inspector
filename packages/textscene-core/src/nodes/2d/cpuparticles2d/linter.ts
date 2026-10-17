@@ -10,6 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
 import { ruleInt } from '../../../godot/variant/int.js';
+import { CPU_PARTICLES_2D_EMISSION_SHAPE_NAMES } from '../../../godot/scene/particles2d.js';
 
 const arms = {
   nondeterministicEmissionShape: groundedArm('cpuparticles2d-nondeterministic-emission-shape', {
@@ -21,16 +22,14 @@ const arms = {
 } as const satisfies RuleArms<string>;
 
 /**
- * The EMISSION_SHAPE_* ordinals (enum at `cpu_particles_2d.cpp:1586`) placed by
+ * The EMISSION_SHAPE_* ordinals (enum at `cpu_particles_2d.h:71-80`) placed by
  * Godot's unsaved process-wide RNG: `Math::rand()` for POINTS/DIRECTED_POINTS
  * (`cpu_particles_2d.cpp:936`) and `Math::randf()` for RING (`:953`, `:956`). Two
  * runs of Godot itself differ, so no static pose can match.
  */
-const GLOBAL_RNG_SHAPES = new Map<number, string>([
-  [4, 'POINTS'],
-  [5, 'DIRECTED_POINTS'],
-  [6, 'RING'],
-]);
+const GLOBAL_RNG_SHAPES = new Map<number, string>(
+  [4, 5, 6].map((shape) => [shape, CPU_PARTICLES_2D_EMISSION_SHAPE_NAMES[shape]!])
+);
 
 function checkPreviewLimits(node: RuleContext['node'], props: Record<string, string>): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
