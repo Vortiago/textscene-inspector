@@ -2077,6 +2077,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Connection Missing Field",
+    "file": "edge-connection-missing-field.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Csg Invalid Operation",
     "file": "edge-csg-invalid-operation.tscn",
     "category": "Edge Cases"
