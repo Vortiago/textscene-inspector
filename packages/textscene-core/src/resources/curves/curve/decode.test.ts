@@ -143,6 +143,10 @@ describe('the Curve body resolveCurve decodes', () => {
     });
   });
 
+  it('drops a `Vector2i` point past the round-trip band rather than place it', () => {
+    expect(decode({ _data: '[Vector2i(4294967296, 0), 0.0, 0.0, 0, 0]' }).points).toEqual([]);
+  });
+
   it('returns Godot resource defaults for an empty resource body (edge case)', () => {
     const curve = decode({});
     expect(curve).toEqual({

@@ -7,7 +7,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
-import { ruleInt, slotComponents } from '../../../godot/variant/int.js';
+import { readSlotTuple, ruleInt } from '../../../godot/variant/int.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { resizePoints } from './pointCount';
 
@@ -112,14 +112,11 @@ const VECTOR2_RE = slotTupleRegex('Vector2', 2);
  * finite pattern and reads as `Infinity`, which would reach the particle geometry.
  */
 function parseVector2Entry(entry: string): { x: number; y: number } | null {
-  const match = VECTOR2_RE.exec(entry);
-  if (!match) return null;
-  // `slotComponents`, not bare `matchedFloat`: the slot grammar admits the
-  // `Vector2i` spelling, whose arguments Godot narrows to int32 before widening
-  // into the float slot, so `Vector2i(4294967295, 0)` is the point `(-1, 0)`.
-  const components = slotComponents(entry, 'Vector2', [match[1], match[2]]);
-  if (!allFinite(components)) return null;
-  return { x: components[0]!, y: components[1]! };
+  // The slot read narrows a `Vector2i` spelling's arguments to int32 before the
+  // widening into the float slot, so `Vector2i(4294967295, 0)` is the point `(-1, 0)`.
+  const tuple = readSlotTuple(entry, 'Vector2', VECTOR2_RE);
+  if (!tuple || !allFinite(tuple.components)) return null;
+  return { x: tuple.components[0]!, y: tuple.components[1]! };
 }
 
 /**

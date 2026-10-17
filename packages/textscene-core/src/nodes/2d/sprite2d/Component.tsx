@@ -9,17 +9,11 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import {
-  canvasItemBlendState,
-  type CanvasItemBlendState,
-} from '../../../resources/materials/canvasitemmaterial/renderer';
-import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
-import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
+import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow, spriteSamplerClone } from '../../../r3f/spriteFrame';
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
-import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
@@ -99,7 +93,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={({ color, opacity }, material, lighting) =>
+      body={({ color, opacity }, _material, pixelMaterial) =>
         showPlaceholder ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : displayedTexture ? (
@@ -110,8 +104,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
             width={width}
             height={height}
             props={props}
-            blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
-            lighting={lighting}
+            pixelMaterial={pixelMaterial}
             srgbDefines={srgbDefines}
           />
         ) : null
@@ -129,8 +122,7 @@ function QuadMesh({
   width,
   height,
   props,
-  blend,
-  lighting,
+  pixelMaterial,
   srgbDefines,
 }: {
   texture: THREE.Texture;
@@ -139,8 +131,7 @@ function QuadMesh({
   width: number;
   height: number;
   props: Sprite2DProperties;
-  blend: CanvasItemBlendState;
-  lighting: CanvasItemLightingProps;
+  pixelMaterial: CanvasItemPixelMaterial;
   srgbDefines: Record<string, string> | undefined;
 }) {
   // Quad centre in Godot 2D space (+Y down), then Y-negated. Centred, it sits at
@@ -161,7 +152,7 @@ function QuadMesh({
       depthWrite: false,
       defines: srgbDefines,
     },
-    merge: [canvasItemFacing(), blend, lighting],
+    merge: [pixelMaterial],
   });
 
   return (

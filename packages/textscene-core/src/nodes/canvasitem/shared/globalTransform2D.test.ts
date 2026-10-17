@@ -51,6 +51,18 @@ describe('resolveGlobalTransform2D', () => {
     expect(originOf(target, chainOf(root, target))).toEqual({ x: 100, y: 50 });
   });
 
+  it('reads a malformed position as the identity', () => {
+    const root = node('Node2D', { position: 'Vector2(100, 50)' });
+    const target = node('Node2D', { position: 'Vector2(10)' });
+    expect(originOf(target, chainOf(root, target))).toEqual({ x: 100, y: 50 });
+  });
+
+  it('declines a chain whose scale narrows to a number the file does not state', () => {
+    const root = node('Node2D', { scale: 'Vector2i(4294967296, 1)' });
+    const target = node('Node2D', { position: 'Vector2(10, 5)' });
+    expect(originOf(target, chainOf(root, target))).toBe('unknowable');
+  });
+
   it('declines a chain through a Control', () => {
     const target = node('Node2D', { position: 'Vector2(10, 5)' });
     expect(originOf(target, chainOf(node('Control'), target))).toBe('unknowable');

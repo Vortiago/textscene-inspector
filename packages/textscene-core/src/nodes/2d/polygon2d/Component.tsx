@@ -13,18 +13,12 @@ import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Polygon2DProperties } from './types';
 import { polygonRings, type PolygonRings } from './polygonShapes';
 import { quantizeVertexColor } from './vertexColorQuantize';
-import { canvasItemBlendState } from '../../../resources/materials/canvasitemmaterial/renderer';
-import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
-import {
-  CanvasItemBlendMode,
-  type CanvasItemMaterialProperties,
-} from '../../../resources/materials/canvasitemmaterial/types';
+import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { Vector2 } from '../../../godot/math/vector';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
@@ -63,7 +57,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={(tint, material, lighting) =>
+      body={(tint, _material, pixelMaterial) =>
         geometry ? (
           <FilledPolygon
             geometry={geometry}
@@ -71,8 +65,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
             color={props.color}
             texture={texture}
             vertexColors={geometry.hasAttribute('color')}
-            material={material}
-            lighting={lighting}
+            pixelMaterial={pixelMaterial}
           />
         ) : null
       }
@@ -88,16 +81,14 @@ function FilledPolygon({
   color,
   texture,
   vertexColors,
-  material,
-  lighting,
+  pixelMaterial,
 }: {
   geometry: THREE.BufferGeometry;
   tint: CanvasItemTint;
   color: Polygon2DProperties['color'];
   texture: THREE.Texture | null;
   vertexColors: boolean;
-  material: CanvasItemMaterialProperties | null;
-  lighting: CanvasItemLightingProps;
+  pixelMaterial: CanvasItemPixelMaterial;
 }) {
   // Godot multiplies fill × modulate × self_modulate in sRGB, then converts once.
   // `color` is quantized first, as Godot's 8-bit mesh upload stores it
@@ -117,8 +108,6 @@ function FilledPolygon({
       tintOnlyOpacity: tint.own.a,
     };
   }, [tint.own, color]);
-
-  const blend = canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX);
 
   // `USE_MAP` is baked into the program source, so without
   // `materialProgramInputs` a texture resolving after the first compile would
@@ -141,7 +130,7 @@ function FilledPolygon({
     // vertex carries its own colour and alpha. It is safe only because earcut
     // (`THREE.ShapeUtils.triangulateShape`) winds every ring one way, a property
     // `triangulateRing` does not ask for.
-    merge: [canvasItemFacing(), blend, lighting],
+    merge: [pixelMaterial],
   });
 
   return (

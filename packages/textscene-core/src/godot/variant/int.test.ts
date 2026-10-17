@@ -9,12 +9,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseGodotInt,
+  readSlotTuple,
   ruleInt,
   slotComponents,
   slotComponentsAltered,
   storedInt,
   storedVector2i,
 } from './int.js';
+import { slotTupleRegex } from './number.js';
 
 describe('an INT-typed literal', () => {
   // `token_text.as_int()` (variant_parser.cpp:489) yields an int64, and
@@ -230,5 +232,36 @@ describe('storedVector2i — a Vector2i slot literal', () => {
     expect(storedVector2i('Vector2i(1)')).toBe('malformed');
     expect(storedVector2i('Vector2i(inf, 0)')).toBe('malformed');
     expect(storedVector2i('')).toBe('malformed');
+  });
+});
+
+describe('readSlotTuple — the one read of a composite in a FLOAT slot', () => {
+  const VECTOR2 = slotTupleRegex('Vector2', 2);
+
+  it('reads each component of a trimmed literal', () => {
+    expect(readSlotTuple(' Vector2(1.5, -2) ', 'Vector2', VECTOR2)).toEqual({
+      components: [1.5, -2],
+      altered: false,
+    });
+  });
+
+  it('answers null for a literal the grammar refuses', () => {
+    expect(readSlotTuple('Vector2(1)', 'Vector2', VECTOR2)).toBeNull();
+  });
+
+  it('narrows a Vector2i spelling to the int32 pair Godot stores', () => {
+    expect(readSlotTuple('Vector2i(4294967295, 0.5)', 'Vector2', VECTOR2)).toEqual({
+      components: [-1, 0],
+      altered: false,
+    });
+  });
+
+  it('marks Vector2i(4294967296, 0) altered and names no component for it', () => {
+    // Godot 4.6.3 stores (0, 0): `_parse_construct<int32_t>` (variant_parser.cpp:723) narrows the
+    // INT token through `T(_data._int)` (variant.h:367-368). Past the round-trip band the file no
+    // longer states that number (ADR-0032), so the read gives NaN and every reader refuses it.
+    const tuple = readSlotTuple('Vector2i(4294967296, 0)', 'Vector2', VECTOR2)!;
+    expect(tuple.altered).toBe(true);
+    expect(tuple.components[0]).toBeNaN();
   });
 });
