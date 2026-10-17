@@ -23,7 +23,7 @@ validatorRegistry.registerAll('GPUParticlesCollisionSDF3D', {
   size: v.boundedVector3('size', { min: 0.01, hinted: 'gpu_particles_collision_3d.cpp:554' }),
   // gpu_particles_collision_3d.cpp:555, see RESOLUTION above.
   // set_resolution:605-608 is a bare assignment.
-  resolution: v.enumInt('resolution', 0, 5, RESOLUTION, {
+  resolution: v.enumInt('resolution', RESOLUTION, {
     hinted: 'gpu_particles_collision_3d.cpp:555',
   }),
   // gpu_particles_collision_3d.cpp:556, PROPERTY_HINT_RANGE "0.0,2.0,0.01,suffix:m":

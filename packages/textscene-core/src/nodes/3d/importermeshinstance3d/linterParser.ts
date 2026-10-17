@@ -31,7 +31,7 @@ validatorRegistry.registerAll('ImporterMeshInstance3D', {
   }),
   // importer_mesh_instance_3d.cpp:169, PROPERTY_HINT_ENUM "Off,On,Double-Sided,
   // Shadows Only". set_cast_shadows_setting (:80-82) is a bare assignment.
-  cast_shadow: v.enumInt('cast_shadow', 0, 3, SHADOW_CASTING_SETTING_NAMES, {
+  cast_shadow: v.enumInt('cast_shadow', SHADOW_CASTING_SETTING_NAMES, {
     hinted: 'importer_mesh_instance_3d.cpp:169',
   }),
   // importer_mesh_instance_3d.cpp:172, PROPERTY_HINT_RANGE
@@ -57,13 +57,7 @@ validatorRegistry.registerAll('ImporterMeshInstance3D', {
   }),
   // importer_mesh_instance_3d.cpp:176, PROPERTY_HINT_ENUM "Disabled,Self,
   // Dependencies". set_visibility_range_fade_mode (:124-127) is a bare assignment.
-  visibility_range_fade_mode: v.enumInt(
-    'visibility_range_fade_mode',
-    0,
-    2,
-    VISIBILITY_RANGE_FADE_MODE_NAMES,
-    {
-      hinted: 'importer_mesh_instance_3d.cpp:176',
-    }
-  ),
+  visibility_range_fade_mode: v.enumInt('visibility_range_fade_mode', VISIBILITY_RANGE_FADE_MODE_NAMES, {
+    hinted: 'importer_mesh_instance_3d.cpp:176',
+  }),
 });

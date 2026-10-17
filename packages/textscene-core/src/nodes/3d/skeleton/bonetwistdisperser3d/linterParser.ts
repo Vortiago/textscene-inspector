@@ -80,7 +80,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // "+X,-X,+Y,-Y,+Z,-Z,FromParent" (skeleton_modifier_3d.h:64), values 0-6.
   // set_end_bone_direction (:333-336) stores the static_cast unchecked, so the
   // hint governs the inspector dropdown only: out of range is a warning.
-  end_bone_direction: v.enumInt('end_bone_direction', 0, 6, BONE_DIRECTION, {
+  end_bone_direction: v.enumInt('end_bone_direction', BONE_DIRECTION, {
     hinted: 'bone_twist_disperser_3d.cpp:149',
   }),
 
@@ -104,7 +104,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
   // :154, PROPERTY_HINT_ENUM "Even,Weighted,Custom", values 0-2.
   // set_disperse_mode (:411-415) stores the static_cast unchecked: warning.
-  disperse_mode: v.enumInt('disperse_mode', 0, 2, DISPERSE_MODE, {
+  disperse_mode: v.enumInt('disperse_mode', DISPERSE_MODE, {
     hinted: 'bone_twist_disperser_3d.cpp:154',
   }),
 

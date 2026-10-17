@@ -43,14 +43,14 @@ validatorRegistry.registerAll('Node3D', {
   top_level: v.boolean('top_level'),
   visibility_parent: v.nodePath('visibility_parent'),
   // node_3d.cpp:759, ERR_FAIL_INDEX(int32_t(p_order), 6).
-  rotation_order: v.enumInt('rotation_order', 0, 5, ROTATION_ORDER, {
+  rotation_order: v.enumInt('rotation_order', ROTATION_ORDER, {
     enforced: 'node_3d.cpp:759',
   }),
   // node_3d.cpp:1532, PROPERTY_HINT_ENUM "Euler,Quaternion,Basis". Unlike
   // rotation_order's neighbouring ERR_FAIL_INDEX, set_rotation_edit_mode
   // (node_3d.cpp:717-746) has no range guard at all, so out-of-range is
   // hinted only.
-  rotation_edit_mode: v.enumInt('rotation_edit_mode', 0, 2, ROTATION_EDIT_MODE, {
+  rotation_edit_mode: v.enumInt('rotation_edit_mode', ROTATION_EDIT_MODE, {
     hinted: 'node_3d.cpp:1532',
   }),
 });

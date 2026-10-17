@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   ANISOTROPIC_FILTERING_NAMES,
   DEBUG_DRAW_NAMES,
-  DebugDraw,
   DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES,
   DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
   DefaultCanvasItemTextureFilter,
@@ -128,8 +127,8 @@ describe('Viewport enum label tables (viewport.h:99-234)', () => {
 
   it('names the debug draw modes from DISABLED to AREA_LIGHT_ATLAS (edge case: no MAX sentinel)', () => {
     expect(Object.keys(DEBUG_DRAW_NAMES)).toHaveLength(29);
-    expect(DEBUG_DRAW_NAMES[DebugDraw.DISABLED]).toBe('DISABLED');
-    expect(DebugDraw.INTERNAL_BUFFER).toBe(26);
+    expect(DEBUG_DRAW_NAMES[0]).toBe('DISABLED');
+    expect(DEBUG_DRAW_NAMES[26]).toBe('INTERNAL_BUFFER');
   });
 
   it('adds the two area light debug draws after INTERNAL_BUFFER in 4.7.2 (viewport.h:188-189)', () => {

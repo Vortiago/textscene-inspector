@@ -7,7 +7,7 @@ import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
 import type { PositionalShadowAtlasSettings } from '../rendering/lights/positionalShadowAtlas.js';
 
 /** `Viewport::PositionalShadowAtlasQuadrantSubdiv` (`scene/main/viewport.h:108-117`), without its `_MAX`. */
-export enum PositionalShadowAtlasQuadrantSubdiv {
+enum PositionalShadowAtlasQuadrantSubdiv {
   DISABLED = 0,
   SHADOWS_1 = 1,
   SHADOWS_4 = 2,
@@ -24,7 +24,7 @@ export const POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES = relabelEnumNames(
 );
 
 /** `Viewport::AnisotropicFiltering` (`viewport.h:128-135`), without its `_MAX`. */
-export enum AnisotropicFiltering {
+enum AnisotropicFiltering {
   DISABLED = 0,
   '2X' = 1,
   '4X' = 2,
@@ -35,7 +35,7 @@ export enum AnisotropicFiltering {
 export const ANISOTROPIC_FILTERING_NAMES = enumNamesByValue(AnisotropicFiltering);
 
 /** `Viewport::Scaling3DMode` (`viewport.h:99-106`), without its `_MAX`. 4.7.2 adds NEAREST (`viewport.h:106`). */
-export enum Scaling3DMode {
+enum Scaling3DMode {
   BILINEAR = 0,
   FSR = 1,
   FSR2 = 2,
@@ -47,7 +47,7 @@ export enum Scaling3DMode {
 export const SCALING_3D_MODE_NAMES = enumNamesByValue(Scaling3DMode);
 
 /** `Viewport::ScreenSpaceAA` (`viewport.h:137-142`), without its `_MAX`. */
-export enum ScreenSpaceAA {
+enum ScreenSpaceAA {
   DISABLED = 0,
   FXAA = 1,
   SMAA = 2,
@@ -59,7 +59,7 @@ export const SCREEN_SPACE_AA_NAMES = enumNamesByValue(ScreenSpaceAA);
  * `Viewport::DebugDraw` (`viewport.h:158-186`). The enum has no `_MAX` sentinel: it ends with
  * INTERNAL_BUFFER in 4.6.3 and with AREA_LIGHT_ATLAS in 4.7.2 (`viewport.h:188-189`).
  */
-export enum DebugDraw {
+enum DebugDraw {
   DISABLED = 0,
   UNSHADED = 1,
   LIGHTING = 2,
@@ -94,7 +94,7 @@ export enum DebugDraw {
 export const DEBUG_DRAW_NAMES = enumNamesByValue(DebugDraw);
 
 /** `Viewport::SDFOversize` (`viewport.h:203-209`), without its `_MAX`. */
-export enum SdfOversize {
+enum SdfOversize {
   '100_PERCENT' = 0,
   '120_PERCENT' = 1,
   '150_PERCENT' = 2,
@@ -104,7 +104,7 @@ export enum SdfOversize {
 export const SDF_OVERSIZE_NAMES = enumNamesByValue(SdfOversize);
 
 /** `Viewport::SDFScale` (`viewport.h:211-216`), without its `_MAX`. */
-export enum SdfScale {
+enum SdfScale {
   '100_PERCENT' = 0,
   '50_PERCENT' = 1,
   '25_PERCENT' = 2,
@@ -113,7 +113,7 @@ export enum SdfScale {
 export const SDF_SCALE_NAMES = enumNamesByValue(SdfScale);
 
 /** `Viewport::VRSMode` (`viewport.h:222-227`), without its `_MAX`. */
-export enum VrsMode {
+enum VrsMode {
   DISABLED = 0,
   TEXTURE = 1,
   XR = 2,
@@ -122,7 +122,7 @@ export enum VrsMode {
 export const VRS_MODE_NAMES = enumNamesByValue(VrsMode);
 
 /** `Viewport::VRSUpdateMode` (`viewport.h:229-234`), without its `_MAX`. */
-export enum VrsUpdateMode {
+enum VrsUpdateMode {
   DISABLED = 0,
   ONCE = 1,
   ALWAYS = 2,
@@ -209,7 +209,7 @@ export enum DefaultCanvasItemTextureFilter {
  * stores for `canvas_item_default_texture_repeat`. 4.7.2 adds PARENT_NODE (`viewport.h:205`), which
  * 4.6.3 refuses.
  */
-export enum DefaultCanvasItemTextureRepeat {
+enum DefaultCanvasItemTextureRepeat {
   DISABLED = 0,
   ENABLED = 1,
   MIRROR = 2,

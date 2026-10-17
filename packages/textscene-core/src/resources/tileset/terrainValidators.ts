@@ -56,7 +56,7 @@ const terrainSetLeaves = indexedFamilyValidator({
   leaves: {
     // tile_set.cpp:4190, PROPERTY_HINT_ENUM. set_terrain_set_mode (:773) casts
     // the int into the enum and assigns it. Its only guard is on the index.
-    mode: v.enumInt('mode', 0, 2, TERRAIN_MODE, { hinted: 'tile_set.cpp:4190' }),
+    mode: v.enumInt('mode', TERRAIN_MODE, { hinted: 'tile_set.cpp:4190' }),
   },
   unknownCode: 'INVALID_TILESET_TERRAIN_SET_KEY',
   describes: 'TileSet terrain set',

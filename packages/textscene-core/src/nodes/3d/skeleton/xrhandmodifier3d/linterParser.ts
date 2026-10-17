@@ -25,7 +25,7 @@ validatorRegistry.registerAll('XRHandModifier3D', {
   // set_bone_update (:63-66) opens with ERR_FAIL_INDEX(p_bone_update,
   // BONE_UPDATE_MAX), which returns before the assignment for anything below 0
   // or at/above 2. A refused write is an error, not a hint warning.
-  bone_update: v.enumInt('bone_update', 0, 1, BONE_UPDATE, {
+  bone_update: v.enumInt('bone_update', BONE_UPDATE, {
     enforced: 'xr_hand_modifier_3d.cpp:64',
   }),
 

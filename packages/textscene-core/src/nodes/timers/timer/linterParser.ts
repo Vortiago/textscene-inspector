@@ -25,7 +25,7 @@ validatorRegistry.registerAll('Timer', {
   paused: v.boolean('paused'),
   // timer.cpp:163-179: set_timer_process_callback is a bare switch and assign
   // with no range check on the raw int.
-  process_callback: v.enumInt('process_callback', 0, 1, PROCESS_CALLBACK_VALUES, {
+  process_callback: v.enumInt('process_callback', PROCESS_CALLBACK_VALUES, {
     hinted: 'timer.cpp:239',
   }),
   ignore_time_scale: v.boolean('ignore_time_scale'),

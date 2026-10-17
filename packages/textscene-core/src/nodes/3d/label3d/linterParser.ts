@@ -5,16 +5,11 @@
 // without this line just the full barrel ever registers it.
 import '../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import {
-  AlphaAntiAliasing,
-  ALPHA_ANTIALIASING_SHORT_NAMES,
-} from '../../../godot/rendering/materials/alphaAntialiasing.js';
-import { AlphaCutMode, ALPHA_CUT_NAMES } from '../../../godot/rendering/materials/alphaCut.js';
-import { TextureFilter, TEXTURE_FILTER_NAMES } from '../../../godot/rendering/materials/textureFilter.js';
+import { ALPHA_ANTIALIASING_SHORT_NAMES } from '../../../godot/rendering/materials/alphaAntialiasing.js';
+import { ALPHA_CUT_NAMES } from '../../../godot/rendering/materials/alphaCut.js';
+import { TEXTURE_FILTER_NAMES } from '../../../godot/rendering/materials/textureFilter.js';
 import { hintedBitField, maskedBitField, v } from '../../../linter/validators/index.js';
 import {
-  HORIZONTAL_ALIGNMENT_FILL,
-  HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_NAMES,
   VERTICAL_ALIGNMENT_BOTTOM,
   VERTICAL_ALIGNMENT_NAMES,
@@ -26,13 +21,11 @@ import {
   MATERIAL_RENDER_PRIORITY_MAX,
 } from '../../../godot/rendering/rendering.js';
 import {
-  AutowrapMode,
   AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
   JUSTIFICATION_HINTED_BITS,
-  StructuredTextParser,
   STRUCTURED_TEXT_PARSER_NAMES,
   TextDirection,
   TEXT_DIRECTION_NAMES,
@@ -70,15 +63,9 @@ validatorRegistry.registerAll('Label3D', {
   line_spacing: v.float('line_spacing'),
   // set_horizontal_alignment:678, ERR_FAIL_INDEX((int)p_alignment, 4): the
   // setter refuses.
-  horizontal_alignment: v.enumInt(
-    'horizontal_alignment',
-    HORIZONTAL_ALIGNMENT_LEFT,
-    HORIZONTAL_ALIGNMENT_FILL,
-    HORIZONTAL_ALIGNMENT_NAMES,
-    {
-      enforced: 'label_3d.cpp:678',
-    }
-  ),
+  horizontal_alignment: v.enumInt('horizontal_alignment', HORIZONTAL_ALIGNMENT_NAMES, {
+    enforced: 'label_3d.cpp:678',
+  }),
   no_depth_test: v.boolean('no_depth_test'),
   // label_3d.cpp:146, PROPERTY_HINT_RANGE built from
   // RS::MATERIAL_RENDER_PRIORITY_MIN/MAX. set_render_priority:766 opens with
@@ -140,44 +127,24 @@ validatorRegistry.registerAll('Label3D', {
   }),
   // label_3d.cpp:143 hints 3 labels (0-2); set_alpha_antialiasing:1058-1063
   // is a bare assignment (no ERR_FAIL), so out-of-hint is a warning.
-  alpha_antialiasing_mode: v.enumInt(
-    'alpha_antialiasing_mode',
-    AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
-    AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE,
-    ALPHA_ANTIALIASING_SHORT_NAMES,
-    { hinted: 'label_3d.cpp:143' }
-  ),
+  alpha_antialiasing_mode: v.enumInt('alpha_antialiasing_mode', ALPHA_ANTIALIASING_SHORT_NAMES, {
+    hinted: 'label_3d.cpp:143',
+  }),
   // label_3d.cpp:168: PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override
   // (label_3d.cpp:729-735) assigns unconditionally, no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt(
-    'structured_text_bidi_override',
-    StructuredTextParser.STRUCTURED_TEXT_DEFAULT,
-    StructuredTextParser.STRUCTURED_TEXT_CUSTOM,
-    STRUCTURED_TEXT_PARSER_NAMES,
-    { hinted: 'label_3d.cpp:168' }
-  ),
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', STRUCTURED_TEXT_PARSER_NAMES, {
+    hinted: 'label_3d.cpp:168',
+  }),
   // label_3d.cpp:160: PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)",
   // the whole 4-value AutowrapMode enum. set_autowrap_mode:906-912 assigns
   // unconditionally, no ERR_FAIL.
-  autowrap_mode: v.enumInt(
-    'autowrap_mode',
-    AutowrapMode.AUTOWRAP_OFF,
-    AutowrapMode.AUTOWRAP_WORD_SMART,
-    AUTOWRAP_MODE_NAMES,
-    { hinted: 'label_3d.cpp:160' }
-  ),
+  autowrap_mode: v.enumInt('autowrap_mode', AUTOWRAP_MODE_NAMES, { hinted: 'label_3d.cpp:160' }),
   // label_3d.cpp:145 hints 6 labels (0-5); set_texture_filter:1021-1026 is a
   // bare assignment (no ERR_FAIL), so out-of-hint is a warning.
-  texture_filter: v.enumInt(
-    'texture_filter',
-    TextureFilter.NEAREST,
-    TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
-    TEXTURE_FILTER_NAMES,
-    { hinted: 'label_3d.cpp:145' }
-  ),
+  texture_filter: v.enumInt('texture_filter', TEXTURE_FILTER_NAMES, { hinted: 'label_3d.cpp:145' }),
   // set_alpha_cut_mode:1013, ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX): the setter
   // refuses.
-  alpha_cut: v.enumInt('alpha_cut', AlphaCutMode.DISABLED, AlphaCutMode.HASH, ALPHA_CUT_NAMES, {
+  alpha_cut: v.enumInt('alpha_cut', ALPHA_CUT_NAMES, {
     enforced: 'label_3d.cpp:1013',
   }),
   // Two tiers, both reachable: label_3d.cpp:157 hints "Top,Center,Bottom" and

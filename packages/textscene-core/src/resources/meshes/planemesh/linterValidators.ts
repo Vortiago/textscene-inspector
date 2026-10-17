@@ -24,8 +24,6 @@ validatorRegistry.registerAll('PlaneMesh', {
   // primitive_meshes.cpp:1519. `set_orientation` (:1575) is a bare assignment.
   orientation: v.enumInt(
     'orientation',
-    0,
-    2,
     { 0: 'FACE_X', 1: 'FACE_Y', 2: 'FACE_Z' },
     { hinted: 'primitive_meshes.cpp:1519' }
   ),

@@ -95,7 +95,7 @@ validatorRegistry.registerAll('TileMapLayer', {
   use_kinematic_bodies: v.boolean('use_kinematic_bodies'),
   // set_collision_visibility_mode (:3412-3420), bare assignment. Hint at
   // ADD_PROPERTY tile_map_layer.cpp:2279.
-  collision_visibility_mode: v.enumInt('collision_visibility_mode', 0, 2, DEBUG_VISIBILITY_MODE, {
+  collision_visibility_mode: v.enumInt('collision_visibility_mode', DEBUG_VISIBILITY_MODE, {
     hinted: 'tile_map_layer.cpp:2279',
   }),
   // set_physics_quadrant_size (:3426-3436): ERR_FAIL_COND_MSG(p_size < 1)
@@ -111,7 +111,7 @@ validatorRegistry.registerAll('TileMapLayer', {
   navigation_enabled: v.boolean('navigation_enabled'),
   // set_navigation_visibility_mode (:3490-3498), bare assignment. Hint at
   // ADD_PROPERTY tile_map_layer.cpp:2284.
-  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', 0, 2, DEBUG_VISIBILITY_MODE, {
+  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', DEBUG_VISIBILITY_MODE, {
     hinted: 'tile_map_layer.cpp:2284',
   }),
 });

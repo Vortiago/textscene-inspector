@@ -21,9 +21,6 @@ export const MSAA_DISABLED = 0;
 /** Every mode value, as a parser's enum accepts them. */
 export const MSAA_MODES: readonly number[] = MSAA_MODE_TABLE.map((_, mode) => mode);
 
-/** Godot's `MSAA_MAX`: the count of modes, one past 8X, the bound `ERR_FAIL_INDEX` checks against. */
-export const MSAA_MAX = MSAA_MODES.length;
-
 /** The name Godot binds for each mode, for a diagnostic that reports the legal values. */
 export const MSAA_MODE_LABELS: Record<number, string> = Object.fromEntries(
   MSAA_MODE_TABLE.map(({ label }, mode) => [mode, label])

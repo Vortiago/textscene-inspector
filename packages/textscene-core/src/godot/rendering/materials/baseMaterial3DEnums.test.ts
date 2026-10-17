@@ -2,17 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { BLEND_MODE_NAMES } from './blendMode';
 import { CULL_MODE_NAMES, CullMode } from './cullMode';
 import { DEPTH_DRAW_MODE_NAMES, DepthDrawMode } from './depthDrawMode';
-import { DEPTH_TEST_NAMES, DepthTest } from './depthTest';
+import { DEPTH_TEST_NAMES } from './depthTest';
 import { DISTANCE_FADE_MODE_NAMES, DistanceFadeMode } from './distanceFadeMode';
 import { SHADING_MODE_NAMES, ShadingMode } from './shadingMode';
-import {
-  STENCIL_COMPARE_NAMES,
-  STENCIL_FLAG_LABELS,
-  STENCIL_MODE_NAMES,
-  StencilCompare,
-  StencilFlag,
-  StencilMode,
-} from './stencil';
+import { STENCIL_COMPARE_NAMES, STENCIL_FLAG_LABELS, STENCIL_MODE_NAMES, StencilFlag } from './stencil';
 import { TRANSPARENCY_NAMES, Transparency } from './transparency';
 
 /** The BaseMaterial3D enums of `scene/resources/material.h:187-352`, as the integers a `.tscn` stores. */
@@ -44,7 +37,6 @@ describe('BaseMaterial3D enums', () => {
 
   it('stores DepthTest as DEFAULT, INVERTED (material.h:243-247)', () => {
     expect(DEPTH_TEST_NAMES).toEqual({ 0: 'DEFAULT', 1: 'INVERTED' });
-    expect(DepthTest.INVERTED).toBe(1);
   });
 
   it('stores ShadingMode as UNSHADED, PER_PIXEL, PER_VERTEX (material.h:203-207)', () => {
@@ -64,7 +56,6 @@ describe('BaseMaterial3D enums', () => {
 
   it('stores StencilMode in the order of material.h:331-337', () => {
     expect(STENCIL_MODE_NAMES).toEqual({ 0: 'DISABLED', 1: 'OUTLINE', 2: 'XRAY', 3: 'CUSTOM' });
-    expect(StencilMode.CUSTOM).toBe(3);
   });
 
   it('stores StencilCompare in the order of material.h:347-355', () => {
@@ -77,7 +68,6 @@ describe('BaseMaterial3D enums', () => {
       5: 'NOT_EQUAL',
       6: 'GREATER_OR_EQUAL',
     });
-    expect(StencilCompare.GREATER_OR_EQUAL).toBe(6);
   });
 
   it('stores StencilFlag as the bits 1, 2 and 4 (material.h:339-344)', () => {

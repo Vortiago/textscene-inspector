@@ -22,7 +22,7 @@ validatorRegistry.registerAll('AudioListener3D', {
   // audio_listener_3d.cpp:146-158, `set_doppler_tracking` is a bare assignment behind an
   // equality early-return, with no ERR_FAIL_INDEX, so an out-of-range value is only hinted
   // (audio_listener_3d.cpp:172's PROPERTY_HINT_ENUM): a warning, not an error.
-  doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING, {
+  doppler_tracking: v.enumInt('doppler_tracking', DOPPLER_TRACKING, {
     hinted: 'audio_listener_3d.cpp:172',
   }),
 });

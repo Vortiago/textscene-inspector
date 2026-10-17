@@ -14,7 +14,7 @@ const OPERATION = { 0: 'UNION', 1: 'INTERSECTION', 2: 'SUBTRACTION' };
 validatorRegistry.registerAll('CSGShape3D', {
   // csg_shape.cpp:1040 hints "Union,Intersection,Subtraction";
   // set_operation:933-937 is a bare assignment.
-  operation: v.enumInt('operation', 0, 2, OPERATION, { hinted: 'csg_shape.cpp:1040' }),
+  operation: v.enumInt('operation', OPERATION, { hinted: 'csg_shape.cpp:1040' }),
   // csg_shape.cpp:1044; set_calculate_tangents:943-946 is a bare assignment.
   calculate_tangents: v.boolean('calculate_tangents'),
   // csg_shape.cpp:1048; set_use_collision:85-95 assigns and rebuilds.

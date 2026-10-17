@@ -6,20 +6,11 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import {
-  DISTANCE_FADE_MODE_NAMES,
-  DistanceFadeMode,
-} from '../../../godot/rendering/materials/distanceFadeMode.js';
-import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/rendering/materials/billboardMode.js';
+import { DISTANCE_FADE_MODE_NAMES } from '../../../godot/rendering/materials/distanceFadeMode.js';
+import { BILLBOARD_MODE_NAMES } from '../../../godot/rendering/materials/billboardMode.js';
 
 export const renderKeys: Record<string, PropertyValidator> = {
-  billboard_mode: v.enumInt(
-    'billboard_mode',
-    BillboardMode.BILLBOARD_DISABLED,
-    BillboardMode.BILLBOARD_PARTICLES,
-    BILLBOARD_MODE_NAMES,
-    { hinted: 'material.cpp:3740' }
-  ),
+  billboard_mode: v.enumInt('billboard_mode', BILLBOARD_MODE_NAMES, { hinted: 'material.cpp:3740' }),
   billboard_keep_scale: v.boolean('billboard_keep_scale'),
 
   // material.cpp:3744-3745 (both "1,128,1"); set_particles_anim_h_frames (:2832)
@@ -73,13 +64,9 @@ export const renderKeys: Record<string, PropertyValidator> = {
     hinted: 'material.cpp:3767',
   }),
 
-  distance_fade_mode: v.enumInt(
-    'distance_fade_mode',
-    DistanceFadeMode.DISABLED,
-    DistanceFadeMode.OBJECT_DITHER,
-    DISTANCE_FADE_MODE_NAMES,
-    { hinted: 'material.cpp:3770' }
-  ),
+  distance_fade_mode: v.enumInt('distance_fade_mode', DISTANCE_FADE_MODE_NAMES, {
+    hinted: 'material.cpp:3770',
+  }),
   // material.cpp:3771-3772 (both "0,4096,0.01,suffix:m"); set_distance_fade_min_distance
   // (:3132) and _max_distance (:3123) bare assign. min > max is a real mistake
   // and not one a per-property bound can see.

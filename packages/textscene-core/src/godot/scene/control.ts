@@ -76,9 +76,6 @@ export const LayoutDirection = {
   SYSTEM_LOCALE: 4,
 } as const;
 
-/** The count sentinel `set_layout_direction`'s `ERR_FAIL_INDEX` bounds against (`control.cpp:3539`). */
-export const LAYOUT_DIRECTION_MAX = 5;
-
 /** The direction names Godot binds (`control.cpp:4405-4409`), for a diagnostic that reports the legal values. */
 export const LAYOUT_DIRECTION_NAMES = enumNamesByValue(LayoutDirection);
 

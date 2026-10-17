@@ -6,7 +6,7 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
  * `Area2D.SpaceOverride` and `Area3D.SpaceOverride`, enforced separately by
  * each class: `area_2d.cpp:653` and `area_3d.cpp:778`.
  */
-export enum SpaceOverride {
+enum SpaceOverride {
   DISABLED = 0,
   COMBINE = 1,
   COMBINE_REPLACE = 2,

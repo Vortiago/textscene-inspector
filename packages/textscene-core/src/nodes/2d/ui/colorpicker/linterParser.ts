@@ -22,7 +22,7 @@ validatorRegistry.registerAll('ColorPicker', {
   edit_intensity: v.boolean('edit_intensity'),
   // color_picker.cpp:1996. set_color_mode (color_picker.cpp:1242-1243)
   // ERR_FAIL_INDEXes on MODE_MAX before assigning.
-  color_mode: v.enumInt('color_mode', 0, 3, COLOR_PICKER_COLOR_MODE_NAMES, {
+  color_mode: v.enumInt('color_mode', COLOR_PICKER_COLOR_MODE_NAMES, {
     enforced: 'color_picker.cpp:1243',
   }),
   // color_picker.cpp:1997. set_deferred_mode (color_picker.cpp:1311-1313) is
@@ -30,7 +30,7 @@ validatorRegistry.registerAll('ColorPicker', {
   deferred_mode: v.boolean('deferred_mode'),
   // color_picker.cpp:1998. set_picker_shape (color_picker.cpp:853-854)
   // ERR_FAIL_INDEXes on SHAPE_MAX before assigning.
-  picker_shape: v.enumInt('picker_shape', 0, 6, COLOR_PICKER_SHAPE_NAMES, {
+  picker_shape: v.enumInt('picker_shape', COLOR_PICKER_SHAPE_NAMES, {
     enforced: 'color_picker.cpp:854',
   }),
   // color_picker.cpp:1999. set_can_add_swatches (color_picker.cpp:1883-1895)

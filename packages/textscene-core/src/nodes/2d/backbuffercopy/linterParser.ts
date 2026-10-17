@@ -14,8 +14,6 @@ validatorRegistry.registerAll('BackBufferCopy', {
   // range is only the PROPERTY_HINT_ENUM bound (back_buffer_copy.cpp:98): a warning.
   copy_mode: v.enumInt(
     'copy_mode',
-    0,
-    2,
     { 0: 'Disabled', 1: 'Rect', 2: 'Viewport' },
     { hinted: 'back_buffer_copy.cpp:98' }
   ),

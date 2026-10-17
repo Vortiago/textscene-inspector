@@ -13,7 +13,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
-import { SOFT_BODY_DISABLE_MODE_NAMES, SoftBodyDisableMode } from '../../../../godot/scene/physicsBody.js';
+import { SOFT_BODY_DISABLE_MODE_NAMES } from '../../../../godot/scene/physicsBody.js';
 
 /**
  * `pinned_points` and `attachments/<i>/*` reach a `.tscn` through a hand-rolled
@@ -110,15 +110,9 @@ validatorRegistry.registerAll('SoftBody3D', {
   // CollisionObject3D::DisableMode's 0-2 range. This one only has 2 constants.
   // set_disable_mode is a bare assignment (plus an early-return-if-unchanged
   // guard), so out-of-range warns.
-  disable_mode: v.enumInt(
-    'disable_mode',
-    SoftBodyDisableMode.REMOVE,
-    SoftBodyDisableMode.KEEP_ACTIVE,
-    SOFT_BODY_DISABLE_MODE_NAMES,
-    {
-      hinted: 'soft_body_3d.cpp:395',
-    }
-  ),
+  disable_mode: v.enumInt('disable_mode', SOFT_BODY_DISABLE_MODE_NAMES, {
+    hinted: 'soft_body_3d.cpp:395',
+  }),
   // soft_body_3d.cpp:391: PROPERTY_HINT_RANGE "0,1,0.01", no or_greater/or_less.
   // set_drag_coefficient passes straight to the physics server with no guard,
   // so out-of-range warns.
