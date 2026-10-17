@@ -5,6 +5,7 @@ import {
   LayoutDirection,
   LTR_LAYOUT_ENV,
   resolveLayoutRtl,
+  SIZE_FLAGS_LABELS,
   type LayoutDirectionEnv,
 } from './control.js';
 
@@ -82,5 +83,16 @@ describe('resolveLayoutRtl — the deterministic arms', () => {
     expect(resolveLayoutRtl(undefined, true, LTR_LAYOUT_ENV)).toBe(true);
     expect(resolveLayoutRtl(5, true, LTR_LAYOUT_ENV)).toBe(true);
     expect(resolveLayoutRtl(-1, true, LTR_LAYOUT_ENV)).toBe(true);
+  });
+});
+
+describe('SIZE_FLAGS_LABELS', () => {
+  it('prints the four size flag bits with the SIZE_ prefix (control.cpp:4388-4392)', () => {
+    expect(SIZE_FLAGS_LABELS).toEqual({
+      1: 'SIZE_FILL',
+      2: 'SIZE_EXPAND',
+      4: 'SIZE_SHRINK_CENTER',
+      8: 'SIZE_SHRINK_END',
+    });
   });
 });

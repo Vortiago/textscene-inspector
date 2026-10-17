@@ -19,6 +19,7 @@ import {
   STRUCTURED_TEXT_PARSER_NAMES,
   TextDirection,
   TEXT_DIRECTION_NAMES,
+  VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
 import {
   HORIZONTAL_ALIGNMENT_FILL,
@@ -28,18 +29,6 @@ import {
   VERTICAL_ALIGNMENT_NAMES,
   VERTICAL_ALIGNMENT_TOP,
 } from '../../../../godot/math/math.js';
-
-// rich_text_label.cpp:7789: PROPERTY_HINT_ENUM "Characters Before
-// Shaping,Characters After Shaping,Glyphs (Layout Direction),Glyphs
-// (Left-to-Right),Glyphs (Right-to-Left)", TextServer::VisibleCharactersBehavior
-// (servers/text/text_server.h:90-96, declaration order == bind order).
-const VISIBLE_CHARACTERS_BEHAVIOR = {
-  0: 'VC_CHARS_BEFORE_SHAPING',
-  1: 'VC_CHARS_AFTER_SHAPING',
-  2: 'VC_GLYPHS_AUTO',
-  3: 'VC_GLYPHS_LTR',
-  4: 'VC_GLYPHS_RTL',
-} as const;
 
 validatorRegistry.registerAll('RichTextLabel', {
   // Ungrouped run (rich_text_label.cpp:7754-7770).
@@ -170,9 +159,15 @@ validatorRegistry.registerAll('RichTextLabel', {
   }),
   // rich_text_label.cpp:7789: PROPERTY_HINT_ENUM, 5 entries (0-4).
   // set_visible_characters_behavior (rich_text_label.cpp:7880-7890) is a bare assignment.
-  visible_characters_behavior: v.enumInt('visible_characters_behavior', 0, 4, VISIBLE_CHARACTERS_BEHAVIOR, {
-    hinted: 'rich_text_label.cpp:7789',
-  }),
+  visible_characters_behavior: v.enumInt(
+    'visible_characters_behavior',
+    0,
+    4,
+    VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
+    {
+      hinted: 'rich_text_label.cpp:7789',
+    }
+  ),
   // rich_text_label.cpp:7790: PROPERTY_HINT_RANGE "0,1,0.001". The clamp sits
   // behind `if (visible_ratio != p_ratio)` (rich_text_label.cpp:7402), which a
   // preceding `visible_characters` can skip, so this is hint-tier, as Label's.

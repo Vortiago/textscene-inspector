@@ -31,13 +31,14 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
+import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
 const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
@@ -338,8 +339,8 @@ export const foldableContainerLayout: ContainerLayoutFn = (n, children, rect, ct
       fitChildInRect(
         contentRect,
         minSize,
-        childProps.sizeFlagsHorizontal ?? SIZE_FILL,
-        childProps.sizeFlagsVertical ?? SIZE_FILL,
+        childProps.sizeFlagsHorizontal ?? SizeFlags.FILL,
+        childProps.sizeFlagsVertical ?? SizeFlags.FILL,
         n.rtl
       )
     );

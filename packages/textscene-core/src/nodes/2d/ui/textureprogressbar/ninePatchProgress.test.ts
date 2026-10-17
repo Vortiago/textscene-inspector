@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { drawNinePatchStretched } from './ninePatchProgress';
-import { FillMode } from './types';
+import { TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 const TEXTURE_SIZE = { x: 64, y: 16 };
 const MARGIN = { left: 4, top: 4, right: 4, bottom: 4 };
@@ -16,7 +16,7 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
     const draw = drawNinePatchStretched(
       TEXTURE_SIZE,
       MARGIN,
-      FillMode.LEFT_TO_RIGHT,
+      TextureProgressBarFillMode.LEFT_TO_RIGHT,
       1.0,
       { x: 100, y: 32 },
       null
@@ -34,7 +34,7 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
     const draw = drawNinePatchStretched(
       TEXTURE_SIZE,
       MARGIN,
-      FillMode.LEFT_TO_RIGHT,
+      TextureProgressBarFillMode.LEFT_TO_RIGHT,
       1.0,
       { x: 100, y: 32 },
       { x: 1, y: 2 }
@@ -42,11 +42,11 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
     expect(draw.dstOffset).toEqual({ x: 1, y: 2 });
   });
 
-  it('FillMode.LEFT_TO_RIGHT at ratio 0.5 shrinks the source window from the RIGHT and floors bottomright to 0', () => {
+  it('LEFT_TO_RIGHT at ratio 0.5 shrinks the source window from the RIGHT and floors bottomright to 0', () => {
     const draw = drawNinePatchStretched(
       TEXTURE_SIZE,
       MARGIN,
-      FillMode.LEFT_TO_RIGHT,
+      TextureProgressBarFillMode.LEFT_TO_RIGHT,
       0.5,
       { x: 100, y: 20 },
       null
@@ -60,11 +60,11 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
     });
   });
 
-  it("FillMode.RIGHT_TO_LEFT at ratio 0.5 mirrors the same shrink from the source's own right edge", () => {
+  it("RIGHT_TO_LEFT at ratio 0.5 mirrors the same shrink from the source's own right edge", () => {
     const draw = drawNinePatchStretched(
       TEXTURE_SIZE,
       MARGIN,
-      FillMode.RIGHT_TO_LEFT,
+      TextureProgressBarFillMode.RIGHT_TO_LEFT,
       0.5,
       { x: 100, y: 20 },
       null
@@ -81,11 +81,11 @@ describe('drawNinePatchStretched (texture_progress_bar.cpp:257-425)', () => {
     });
   });
 
-  it('FillMode.BILINEAR_LEFT_AND_RIGHT at ratio 0.5 shrinks the source symmetrically from its own centre', () => {
+  it('BILINEAR_LEFT_AND_RIGHT at ratio 0.5 shrinks the source symmetrically from its own centre', () => {
     const draw = drawNinePatchStretched(
       TEXTURE_SIZE,
       MARGIN,
-      FillMode.BILINEAR_LEFT_AND_RIGHT,
+      TextureProgressBarFillMode.BILINEAR_LEFT_AND_RIGHT,
       0.5,
       { x: 100, y: 20 },
       null

@@ -18,9 +18,8 @@ import {
   type ContainerLayoutFn,
   type MinimumSizeFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { SIZE_FILL, fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
-
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
+import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
+import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
 
 function hFlagsOf(n: SolveNode): number {
   return (n.node.properties as ControlProperties).sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;

@@ -1,6 +1,24 @@
 /** Control's own enums, as the engine declares them. */
 
-import { enumNamesByValue } from '../classdb/enumNames.js';
+import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
+
+/**
+ * `Control::SizeFlags` (`scene/gui/control.h:64-69`), the bits the `size_flags_*` properties store.
+ * `SIZE_SHRINK_BEGIN = 0` (`control.h:79`) is the empty set and `SIZE_EXPAND_FILL = 3`
+ * (`control.h:85`, `control.cpp:4390`) is `EXPAND | FILL`, so neither is a member.
+ */
+export enum SizeFlags {
+  FILL = 1,
+  EXPAND = 2,
+  SHRINK_CENTER = 4,
+  SHRINK_END = 8,
+}
+
+/** What both `size_flags_*` properties hold until a scene sets them (`control.h:229-230`). */
+export const DEFAULT_SIZE_FLAGS = SizeFlags.FILL;
+
+/** The labels the `size_flags_*` hints print (`control.cpp:4388-4392`). */
+export const SIZE_FLAGS_LABELS = relabelEnumNames(enumNamesByValue(SizeFlags), (name) => `SIZE_${name}`);
 
 /**
  * `Control::CURSOR_ARROW` (`scene/gui/control.h:101`), the first `CursorShape` and the field's

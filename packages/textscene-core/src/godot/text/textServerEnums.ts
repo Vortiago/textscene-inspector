@@ -89,6 +89,20 @@ export enum TextDirection {
 export const TEXT_DIRECTION_NAMES = enumNamesByValue(TextDirection);
 
 /**
+ * `TextServer::VisibleCharactersBehavior` (`servers/text/text_server.h:90-96`), hinted with five
+ * entries at `label.cpp:1451` and `rich_text_label.cpp:7789`. Label's default is `VC_CHARS_BEFORE_SHAPING` (`label.h:74`).
+ */
+export enum VisibleCharactersBehavior {
+  VC_CHARS_BEFORE_SHAPING = 0,
+  VC_CHARS_AFTER_SHAPING = 1,
+  VC_GLYPHS_AUTO = 2,
+  VC_GLYPHS_LTR = 3,
+  VC_GLYPHS_RTL = 4,
+}
+
+export const VISIBLE_CHARACTERS_BEHAVIOR_NAMES = enumNamesByValue(VisibleCharactersBehavior);
+
+/**
  * `TextServer::StructuredTextParser`: STRUCTURED_TEXT_DEFAULT=0 …
  * STRUCTURED_TEXT_CUSTOM=6 (servers/text/text_server.h:214-221). Every hint
  * labels index 5 "None", but the labels follow the enum, so a diagnostic names

@@ -21,6 +21,7 @@ import {
   STRUCTURED_TEXT_PARSER_NAMES,
   TextDirection,
   TEXT_DIRECTION_NAMES,
+  VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
 import {
   HORIZONTAL_ALIGNMENT_FILL,
@@ -30,18 +31,6 @@ import {
   VERTICAL_ALIGNMENT_NAMES,
   VERTICAL_ALIGNMENT_TOP,
 } from '../../../../godot/math/math.js';
-
-/**
- * `TextServer::VisibleCharactersBehavior` (servers/text/text_server.h:90-96),
- * label.cpp:1451 hint with 5 entries.
- */
-const VISIBLE_CHARACTERS_BEHAVIOR = {
-  0: 'VC_CHARS_BEFORE_SHAPING',
-  1: 'VC_CHARS_AFTER_SHAPING',
-  2: 'VC_GLYPHS_AUTO',
-  3: 'VC_GLYPHS_LTR',
-  4: 'VC_GLYPHS_RTL',
-};
 
 /**
  * label.cpp:1258-1275: `set_ellipsis_char` truncates a longer literal with
@@ -172,9 +161,15 @@ validatorRegistry.registerAll('Label', {
   // label.cpp:1451: PROPERTY_HINT_ENUM with 5 entries.
   // set_visible_characters_behavior (label.cpp:1334-1343) assigns
   // unconditionally, no ERR_FAIL.
-  visible_characters_behavior: v.enumInt('visible_characters_behavior', 0, 4, VISIBLE_CHARACTERS_BEHAVIOR, {
-    hinted: 'label.cpp:1451',
-  }),
+  visible_characters_behavior: v.enumInt(
+    'visible_characters_behavior',
+    0,
+    4,
+    VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
+    {
+      hinted: 'label.cpp:1451',
+    }
+  ),
   // label.cpp:1452: PROPERTY_HINT_RANGE "0,1,0.001", a warning (ADR-0032), since the clamp
   // at label.cpp:1307-1312 sits behind `if (visible_ratio != p_ratio)` (label.cpp:1305) and
   // properties apply in file order (packed_scene.cpp:492). After `text = "0"` and

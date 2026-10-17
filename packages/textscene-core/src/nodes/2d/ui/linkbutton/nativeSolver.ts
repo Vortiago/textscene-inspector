@@ -32,6 +32,7 @@ import type { LinkButtonProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { LinkButtonUnderlineMode } from '../../../../godot/scene/gui';
 
 /** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';
@@ -88,18 +89,15 @@ export function linkButtonTextTheme(
   return resolveTextTheme(n, props, LINKBUTTON_THEME_KEYS[state], defaults);
 }
 
-const UNDERLINE_MODE_ALWAYS = 0;
-const UNDERLINE_MODE_NEVER = 2;
-
 /**
  * `NOTIFICATION_DRAW`'s switch on `get_draw_mode()` (`link_button.cpp:249-278`): NORMAL and DISABLED
  * underline only on `UNDERLINE_MODE_ALWAYS`, and PRESSED (like the unreachable hover states) whenever
  * the mode is not `UNDERLINE_MODE_NEVER`.
  */
 export function shouldUnderline(state: LinkButtonDrawState, underlineMode: number | undefined): boolean {
-  const mode = underlineMode ?? UNDERLINE_MODE_ALWAYS;
-  if (state === 'pressed') return mode !== UNDERLINE_MODE_NEVER;
-  return mode === UNDERLINE_MODE_ALWAYS;
+  const mode = underlineMode ?? LinkButtonUnderlineMode.UNDERLINE_MODE_ALWAYS;
+  if (state === 'pressed') return mode !== LinkButtonUnderlineMode.UNDERLINE_MODE_NEVER;
+  return mode === LinkButtonUnderlineMode.UNDERLINE_MODE_ALWAYS;
 }
 
 /** `underline_spacing` theme constant, `round(2*scale)` (`default_theme.cpp:210`). */

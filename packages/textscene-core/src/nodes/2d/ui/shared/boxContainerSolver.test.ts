@@ -24,9 +24,10 @@ import {
   type BoxChildInput,
 } from './boxContainerSolver';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
-const HORIZONTAL = 3; // Control.SIZE_FILL | SIZE_EXPAND
+const HORIZONTAL = SizeFlags.FILL | SizeFlags.EXPAND;
 const FILL = 1;
 const EXPAND = 2;
 const SHRINK_CENTER = 4;
@@ -116,7 +117,7 @@ describe("resortBoxContainer — float32 fractional-error accumulator (unit-vbox
     // [P:(0,214), S:(400,213)], Amber [P:(0,451), S:(400,90)]. Blue's 320/3 and Green's 640/3 sum in
     // float32 (box_container.cpp:114,121) to 0.9999923706054688, under the carry (:134), leaving 1px
     // free. A float64 port sums 1.0000000000000142, carries into Green (214) and shifts Amber down.
-    const VERTICAL_EXPAND = 3; // Control.SIZE_FILL | SIZE_EXPAND
+    const VERTICAL_EXPAND = SizeFlags.FILL | SizeFlags.EXPAND;
     const children = [
       child({ minSize: { x: 0, y: 60 } }),
       child({ minSize: { x: 0, y: 40 }, vSizeFlags: VERTICAL_EXPAND, stretchRatio: 1 }),

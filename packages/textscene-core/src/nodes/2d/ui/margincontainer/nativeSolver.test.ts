@@ -12,6 +12,7 @@ import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/contro
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { marginContainerMinimumSize, marginContainerLayout } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 /** `marginContainerLayout`'s `rects` half only (`ContainerLayoutResult` says why the union exists). */
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
@@ -100,8 +101,8 @@ describe('marginContainerLayout', () => {
   it('shrinks a non-FILL child to its own minimum, SHRINK_CENTER one axis + SHRINK_END the other — oracle: Leaf rect=[525,537,101,61]', () => {
     const child = leaf('Leaf', {
       customMinimumSize: { x: 101, y: 61 },
-      sizeFlagsHorizontal: 4, // SIZE_SHRINK_CENTER
-      sizeFlagsVertical: 8, // SIZE_SHRINK_END
+      sizeFlagsHorizontal: SizeFlags.SHRINK_CENTER,
+      sizeFlagsVertical: SizeFlags.SHRINK_END,
     });
     const n = container(
       'M',
