@@ -8,11 +8,7 @@ import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { CMP_EPSILON } from '../../../../godot/math/math.js';
-
-// gpu_particles_2d.cpp:964 hints 3 labels, and BIND_ENUM_CONSTANT binds all 3
-// (:972-974). CPUParticles2D's DrawOrder has only 2 (cpu_particles_2d.h:43-45),
-// despite the identical property name.
-const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'REVERSE_LIFETIME' };
+import { GPU_PARTICLES_2D_DRAW_ORDER_NAMES } from '../../../../godot/scene/particles2d.js';
 
 validatorRegistry.registerAll('GPUParticles2D', {
   emitting: v.boolean('emitting'),
@@ -100,7 +96,9 @@ validatorRegistry.registerAll('GPUParticles2D', {
   // gpu_particles_2d.cpp:964 hints PROPERTY_HINT_ENUM "Index,Lifetime,Reverse
   // Lifetime". set_draw_order (:308-311) is `draw_order = p_order;` with no
   // ERR_FAIL_INDEX and no CLAMP, so an out-of-range value warns.
-  draw_order: v.enumInt('draw_order', DRAW_ORDER, { hinted: 'gpu_particles_2d.cpp:964' }),
+  draw_order: v.enumInt('draw_order', GPU_PARTICLES_2D_DRAW_ORDER_NAMES, {
+    hinted: 'gpu_particles_2d.cpp:964',
+  }),
 
   // gpu_particles_2d.cpp:966, PROPERTY_HINT_GROUP_ENABLE is an editor-only
   // grouping hint, not a range.
