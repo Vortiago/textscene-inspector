@@ -16,7 +16,7 @@ export const LineJointMode = {
 export const LINE_JOINT_MODE_NAMES = enumNamesByValue(LineJointMode);
 
 /** `Line2D::LineCapMode` (`line_2d.h:46-50`), as the integers `begin_cap_mode` and `end_cap_mode` store. */
-export const LineCapMode = {
+const LineCapMode = {
   NONE: 0,
   BOX: 1,
   ROUND: 2,
@@ -26,7 +26,7 @@ export const LineCapMode = {
 export const LINE_CAP_MODE_NAMES = enumNamesByValue(LineCapMode);
 
 /** `Line2D::LineTextureMode` (`line_2d.h:52-56`), as the integers `texture_mode` stores. */
-export const LineTextureMode = {
+const LineTextureMode = {
   NONE: 0,
   TILE: 1,
   STRETCH: 2,

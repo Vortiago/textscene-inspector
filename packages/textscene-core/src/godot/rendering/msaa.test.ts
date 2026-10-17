@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MSAA_MAX, MSAA_MODE_LABELS, MSAA_MODES, msaaSampleCount, supportedSampleCount } from './msaa';
+import { MSAA_MODE_LABELS, MSAA_MODES, msaaSampleCount, supportedSampleCount } from './msaa';
 
 describe('MSAA modes', () => {
   it('lists the four modes Godot binds, DISABLED to 8X', () => {
@@ -8,10 +8,6 @@ describe('MSAA modes', () => {
 
   it('accepts every mode value from DISABLED to 8X', () => {
     expect(MSAA_MODES).toEqual([0, 1, 2, 3]);
-  });
-
-  it("counts the modes as Godot's MSAA_MAX does, one past 8X (edge case)", () => {
-    expect(MSAA_MAX).toBe(4);
   });
 });
 

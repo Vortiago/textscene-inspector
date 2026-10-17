@@ -108,7 +108,7 @@ export const VISIBLE_CHARACTERS_BEHAVIOR_NAMES = enumNamesByValue(VisibleCharact
  * labels index 5 "None", but the labels follow the enum, so a diagnostic names
  * STRUCTURED_TEXT_GDSCRIPT, as the engine does.
  */
-export enum StructuredTextParser {
+enum StructuredTextParser {
   STRUCTURED_TEXT_DEFAULT = 0,
   STRUCTURED_TEXT_URI = 1,
   STRUCTURED_TEXT_FILE = 2,

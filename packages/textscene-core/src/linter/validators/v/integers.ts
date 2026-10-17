@@ -122,10 +122,10 @@ export const integerCombinators = {
   /**
    * Integer enum whose hint leaves a gap, since a `PROPERTY_HINT_ENUM` label can
    * carry its own `:value`: `v.enumSet('system_menu_id', {0: 'NONE',
-   * 2: 'APPLICATION_MENU_ID', …})`. The labels are the bound, with no separate
-   * min/max as {@link enumInt} has.
+   * 2: 'APPLICATION_MENU_ID', …})`. Only the label keys are legal, where
+   * {@link enumInt} accepts every integer between the lowest and highest key.
    */
-  enumSet(name: string, labels: Record<number, string>, opts: Grounding = {}): PropertyValidator {
+  enumSet(name: string, labels: EnumLabels, opts: Grounding = {}): PropertyValidator {
     const values = Object.keys(labels)
       .map(Number)
       .sort((a, b) => a - b);
