@@ -2,12 +2,13 @@
  * The sky bakes the lights the scene draws after they settle, and bakes again when they change.
  * The build itself needs a real GL context, so it is replaced by a spy on the lights it receives.
  */
-import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createPortal } from '@react-three/fiber';
 import type { SkyEnvironment, SkyEnvironmentInput } from '../../resources/sky/build';
 import type { Sky } from '../../resources/sky/types';
+import { decodeSkyMaterial } from '../../resources/sky/decode';
 import { SkyLayer } from './SkyLayer';
 import { skyLightUserData } from './skyLight';
 import { observeSceneCamera } from '../sceneRenderCamera';
@@ -15,6 +16,11 @@ import { shownSky, skyLayersSlot } from './skyLayerArray';
 import { boundHandle, recordTextures, RendererProbe, withRenderTargets } from '../../testing/recordingWebGL';
 import { skyOctmapLayout } from '../../godot/rendering/environment/skyReflection';
 import { NO_RESOURCES } from '../SceneResourcesContext';
+import { installFogComposite } from '../fog/fogComposite';
+import { backgroundCube } from '../shaderPatch/backgroundPrograms';
+import { fireSceneRender, fireSceneRenderEnd } from '../testing/fireSceneRender';
+import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
+import { installSkyDebanding } from './skyDebanding';
 
 const bakes = vi.hoisted((): SkyEnvironmentInput[] => []);
 /** What the next bake returns on its renderer: null, as a headless renderer gives, unless a test sets it. */
@@ -301,5 +307,58 @@ describe('SkyLayer', () => {
     const { scene, gl } = await mount(<Scene lights={1} />);
 
     expect(sampledInRender(gl, scene)).toBeUndefined();
+  });
+});
+
+const PROCEDURAL_SKY: Sky = { ...SKY, material: decodeSkyMaterial('ProceduralSkyMaterial', {})! };
+
+describe('SkyLayer debanding', () => {
+  restoreShaderGlobalsAfterEach();
+
+  beforeEach(() => {
+    installFogComposite();
+    installSkyDebanding();
+    built.next = skyEnvironment();
+  });
+
+  /** The debanding noise's strength in a render of `scene`, which a debanded sky turns to 1. */
+  function debandingInRender(scene: THREE.Scene): number {
+    const camera = new THREE.Camera();
+    fireSceneRender(scene, camera);
+    const strength = (backgroundCube().uniforms.godotSkyDebanding!.value as Float32Array)[0]!;
+    fireSceneRenderEnd(scene, camera);
+    return strength;
+  }
+
+  it('adds the noise to the background of a sky that debands', async () => {
+    const { scene } = await mount(
+      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+
+    expect(debandingInRender(scene)).toBe(1);
+  });
+
+  it('adds none to a panorama sky, which never debands', async () => {
+    const { scene } = await mount(<SkyLayer sky={SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />);
+
+    expect(debandingInRender(scene)).toBe(0);
+  });
+
+  it('adds none when the sky paints no background (edge case)', async () => {
+    const { scene } = await mount(
+      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} asBackground={false} />
+    );
+
+    expect(debandingInRender(scene)).toBe(0);
+  });
+
+  it('adds none once the sky unmounts (error case)', async () => {
+    const { scene, update } = await mount(
+      <SkyLayer sky={PROCEDURAL_SKY} rotation={NO_ROTATION} resources={NO_RESOURCES} />
+    );
+
+    await update(<directionalLight />);
+
+    expect(debandingInRender(scene)).toBe(0);
   });
 });

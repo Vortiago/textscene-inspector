@@ -12,6 +12,7 @@ import { skyFragmentShader, SKY_VERTEX_SHADER } from './skyShaders';
 import { skyUniforms, type SkyLight } from './skyUniforms';
 import { applyTextureState, releaseBoundTexture } from '../textures/applyTextureState';
 import { bakeSkyLayers, disposeSkyLayers, type SkyLayers } from './skyLayers';
+import { isDebanded } from './debanding';
 
 export type { SkyLight } from './skyUniforms';
 
@@ -54,6 +55,8 @@ export interface SkyEnvironmentInput {
   panorama?: THREE.Texture | null;
   /** Whether the sky paints the background, which then needs a cube of its own size. */
   asBackground: boolean;
+  /** The scale a surface reads the radiance at, `scene.environmentIntensity`. */
+  energy: number;
 }
 
 /**
@@ -77,7 +80,7 @@ function skyPanoramaTexture(panorama?: THREE.Texture | null): THREE.Texture | nu
  */
 export function buildSkyEnvironment(
   gl: THREE.WebGLRenderer,
-  { sky, lights, panorama, asBackground }: SkyEnvironmentInput
+  { sky, lights, panorama, asBackground, energy }: SkyEnvironmentInput
 ): SkyEnvironment | null {
   const tiledPanorama = skyPanoramaTexture(panorama);
   const geometry = new THREE.BoxGeometry(2, 2, 2);
@@ -109,7 +112,7 @@ export function buildSkyEnvironment(
     // samples the same directions Godot's `EYEDIR` covers.
     if (backgroundTarget) renderCube(gl, skyScene, backgroundTarget);
     if (hasOwnRadianceCube) renderCube(gl, skyScene, radianceTarget);
-    layers = bakeSkyLayers(gl, radianceTarget.texture, bake);
+    layers = bakeSkyLayers(gl, radianceTarget.texture, bake, radianceDebanding(sky, energy));
 
     pmrem = new THREE.PMREMGenerator(gl);
     prefiltered = pmrem.fromCubemap(radianceTarget.texture);
@@ -140,6 +143,16 @@ export function buildSkyEnvironment(
       disposeSkyLayers(layers);
     },
   };
+}
+
+/**
+ * The scale of the debanding noise in a sky's radiance. Godot adds the noise after
+ * `background_energy_multiplier` scales the sky (`sky.glsl:277`, `:313-315`), and a surface here
+ * reads the radiance scaled by that energy, so the noise scales by its inverse. At energy 0 Godot's
+ * surfaces still read the noise, which a read scaled by 0 cannot show.
+ */
+function radianceDebanding(sky: Sky, energy: number): number {
+  return isDebanded(sky.material) && energy > 0 ? 1 / energy : 0;
 }
 
 /** The bake the previewer runs: an importance-sampled sky above `LARGEST_RADIANCE_SIZE` bakes at it. */

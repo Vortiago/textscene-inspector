@@ -46,16 +46,24 @@ export function installLitUniform(name: string, value: unknown): void {
 }
 
 /**
- * The value an earlier evaluation of a module gave the built-in materials, as after a dev server
- * reloads it, or undefined before any install. `standard` makes both merges, and every program
- * compiled since reads that value, so the caller keeps writing it. The caller narrows the type.
+ * The value an earlier evaluation of a module gave `program`, as after a dev server reloads it, or
+ * undefined before any install. Every program compiled since reads that value, so the caller keeps
+ * writing it. The default, `standard`, makes both merges. The caller narrows the type.
  */
-export function installedUniformValue(name: string): unknown {
-  return THREE.ShaderLib.standard.uniforms[name]?.value;
+export function installedUniformValue(
+  name: string,
+  program: keyof typeof THREE.ShaderLib = 'standard'
+): unknown {
+  return THREE.ShaderLib[program]?.uniforms[name]?.value;
 }
 
 /** The value installed under `name` when it is a `type`, as after a reload, or else `make`'s. */
-export function installedOr<T>(name: string, type: abstract new (...args: never[]) => T, make: () => T): T {
-  const value = installedUniformValue(name);
+export function installedOr<T>(
+  name: string,
+  type: abstract new (...args: never[]) => T,
+  make: () => T,
+  program: keyof typeof THREE.ShaderLib = 'standard'
+): T {
+  const value = installedUniformValue(name, program);
   return value instanceof type ? value : make();
 }

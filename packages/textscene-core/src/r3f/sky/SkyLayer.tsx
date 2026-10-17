@@ -18,6 +18,8 @@ import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
 import { SkyLayerArray } from './skyLayerArray';
 import { observeSceneCamera } from '../sceneRenderCamera';
+import { debandSky } from './skyDebanding';
+import { isDebanded } from '../../resources/sky/debanding';
 import type { Vector3 } from '../../godot/math/vector';
 
 interface SkyLayerProps {
@@ -93,6 +95,7 @@ export function SkyLayer({
       lights: directionalLights(scene),
       panorama,
       asBackground,
+      energy: intensity,
     });
     if (!built) return undefined;
 
@@ -115,9 +118,11 @@ export function SkyLayer({
       scene.backgroundIntensity = backgroundIntensity;
       scene.backgroundRotation.copy(skyRotation);
     }
+    const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
 
     return () => {
       stopShowingLayers();
+      stopDebanding?.();
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
       scene.environmentRotation.copy(previousEnvironmentRotation);
