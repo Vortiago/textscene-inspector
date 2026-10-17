@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enumNamesByValue, enumValues, relabelEnumNames } from './enumNames';
+import { enumNamesByValue, enumValues, labelEnumNames, pascalCaseLabel, relabelEnumNames } from './enumNames';
 
 enum Shade {
   DARK = 0,
@@ -41,5 +41,25 @@ describe('enumValues', () => {
 
   it('lists the integers in declaration order, without the reverse-mapped names', () => {
     expect(enumValues(Sample)).toEqual([0, 3]);
+  });
+});
+
+describe('pascalCaseLabel', () => {
+  it('joins the words of a member name in PascalCase', () => {
+    expect(pascalCaseLabel('SPECIFIC_BONE')).toBe('SpecificBone');
+  });
+
+  it('capitalises a one-word member name', () => {
+    expect(pascalCaseLabel('LINEAR')).toBe('Linear');
+  });
+});
+
+describe('labelEnumNames', () => {
+  it('labels each member by its integer', () => {
+    const Pair = { OPEN_XR: 0, HUMANOID: 1 } as const;
+    expect(labelEnumNames(Pair, { OPEN_XR: 'OpenXR', HUMANOID: 'Humanoid' })).toEqual({
+      0: 'OpenXR',
+      1: 'Humanoid',
+    });
   });
 });
