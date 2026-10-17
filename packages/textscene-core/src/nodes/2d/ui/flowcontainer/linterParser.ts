@@ -7,6 +7,7 @@
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { CONTAINER_ALIGNMENT_NAMES } from '../../../../godot/scene/container.js';
+import { FLOW_CONTAINER_LAST_WRAP_ALIGNMENT_NAMES } from '../../../../godot/scene/gui.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('FlowContainer', {
@@ -17,16 +18,9 @@ validatorRegistry.registerAll('FlowContainer', {
   // flow_container.cpp:419, PROPERTY_HINT_ENUM "Inherit,Begin,Center,End", values 0-3
   // (flow_container.cpp:413-416), default 0 (doc/classes/FlowContainer.xml).
   // set_last_wrap_alignment (flow_container.cpp:359-365) assigns unconditionally.
-  last_wrap_alignment: v.enumInt(
-    'last_wrap_alignment',
-    {
-      0: 'LAST_WRAP_ALIGNMENT_INHERIT',
-      1: 'LAST_WRAP_ALIGNMENT_BEGIN',
-      2: 'LAST_WRAP_ALIGNMENT_CENTER',
-      3: 'LAST_WRAP_ALIGNMENT_END',
-    },
-    { hinted: 'flow_container.cpp:419' }
-  ),
+  last_wrap_alignment: v.enumInt('last_wrap_alignment', FLOW_CONTAINER_LAST_WRAP_ALIGNMENT_NAMES, {
+    hinted: 'flow_container.cpp:419',
+  }),
   // flow_container.cpp:420. `_validate_property` hides it only `if (is_fixed && ...)`
   // (flow_container.cpp:333-336). A plain FlowContainer leaves `is_fixed` false (flow_container.h:69,
   // flow_container.cpp:394-396), and only the H and V constructors set it (flow_container.h:104,112).

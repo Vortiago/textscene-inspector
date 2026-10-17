@@ -15,11 +15,16 @@ import {
   TYPED_WRAPPER_RE,
 } from '../../../../godot/variant/variantParser.js';
 import {
+  ACCESSIBILITY_LIVE_NAMES,
+  CONTROL_RECURSIVE_BEHAVIOR_NAMES,
   CURSOR_SHAPES,
+  FOCUS_MODE_NAMES,
   GrowDirection,
   LAYOUT_DIRECTION_NAMES,
+  MOUSE_FILTER_NAMES,
   SIZE_FLAGS_LABELS,
 } from '../../../../godot/scene/control.js';
+import { AUTO_TRANSLATE_MODE_NAMES } from '../../../../godot/scene/node.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 
 /**
@@ -143,18 +148,10 @@ validatorRegistry.registerAll(
 
     // control.cpp:4301, ENUM "Stop,Pass (Propagate Up),Ignore" (MouseFilter 0-2,
     // control.h:88-92). set_mouse_filter (control.cpp:1923) is `ERR_FAIL_INDEX(p_filter, 3)`.
-    mouse_filter: v.enumInt(
-      'mouse_filter',
-      { 0: 'STOP', 1: 'PASS', 2: 'IGNORE' },
-      { enforced: 'control.cpp:1923' }
-    ),
+    mouse_filter: v.enumInt('mouse_filter', MOUSE_FILTER_NAMES, { enforced: 'control.cpp:1923' }),
     // control.cpp:4297, ENUM "None,Click,All,Accessibility" (FocusMode 0-3, control.h:65-70).
     // set_focus_mode (control.cpp:2267) is `ERR_FAIL_INDEX((int)p_focus_mode, 4)`.
-    focus_mode: v.enumInt(
-      'focus_mode',
-      { 0: 'NONE', 1: 'CLICK', 2: 'ALL', 3: 'ACCESSIBILITY' },
-      { enforced: 'control.cpp:2267' }
-    ),
+    focus_mode: v.enumInt('focus_mode', FOCUS_MODE_NAMES, { enforced: 'control.cpp:2267' }),
   },
   // Shared with Window: control.cpp:432/446 state the same two hints as window.cpp:183/207.
   // linter/validators/themeOverrides.ts holds the grounding.
@@ -165,11 +162,9 @@ validatorRegistry.registerAll(
     accessibility_description: v.quotedString('accessibility_description'),
     // control.cpp:4312, ENUM "Off,Polite,Assertive" = DisplayServer::AccessibilityLiveMode
     // (display/display_server.cpp:1768-1770). The field is full-width (control.h:259): hinted, not enforced.
-    accessibility_live: v.enumInt(
-      'accessibility_live',
-      { 0: 'OFF', 1: 'POLITE', 2: 'ASSERTIVE' },
-      { hinted: 'control.cpp:4312' }
-    ),
+    accessibility_live: v.enumInt('accessibility_live', ACCESSIBILITY_LIVE_NAMES, {
+      hinted: 'control.cpp:4312',
+    }),
     accessibility_controls_nodes: nodePathArray('accessibility_controls_nodes'),
     accessibility_described_by_nodes: nodePathArray('accessibility_described_by_nodes'),
     accessibility_labeled_by_nodes: nodePathArray('accessibility_labeled_by_nodes'),
@@ -186,19 +181,15 @@ validatorRegistry.registerAll(
     focus_previous: v.nodePath('focus_previous'),
     // control.cpp:2295, ERR_FAIL_INDEX((int)p_focus_behavior_recursive, 3).
     // ENUM "Inherited,Disabled,Enabled" (control.h:72-76).
-    focus_behavior_recursive: v.enumInt(
-      'focus_behavior_recursive',
-      { 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' },
-      { enforced: 'control.cpp:2295' }
-    ),
+    focus_behavior_recursive: v.enumInt('focus_behavior_recursive', CONTROL_RECURSIVE_BEHAVIOR_NAMES, {
+      enforced: 'control.cpp:2295',
+    }),
 
     // "Mouse" group. control.cpp:1953, ERR_FAIL_INDEX(p_mouse_behavior_recursive, 3).
     // The values of focus_behavior_recursive (control.h:94-98).
-    mouse_behavior_recursive: v.enumInt(
-      'mouse_behavior_recursive',
-      { 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' },
-      { enforced: 'control.cpp:1953' }
-    ),
+    mouse_behavior_recursive: v.enumInt('mouse_behavior_recursive', CONTROL_RECURSIVE_BEHAVIOR_NAMES, {
+      enforced: 'control.cpp:1953',
+    }),
     mouse_force_pass_scroll_events: v.boolean('mouse_force_pass_scroll_events'),
     // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX). The table lives in
     // `godot/scene/control.ts` because SubViewportContainer's rule reads it too.
@@ -225,11 +216,9 @@ validatorRegistry.registerAll(
     theme_type_variation: v.stringName('theme_type_variation'),
     // control.cpp:3657-3660 assigns a full-width field (control.h:298). ENUM "Inherit,Always,Disabled"
     // = Node::AutoTranslateMode (main/node.cpp:4032-4034). Hinted, not enforced.
-    tooltip_auto_translate_mode: v.enumInt(
-      'tooltip_auto_translate_mode',
-      { 0: 'INHERIT', 1: 'ALWAYS', 2: 'DISABLED' },
-      { hinted: 'control.cpp:4288' }
-    ),
+    tooltip_auto_translate_mode: v.enumInt('tooltip_auto_translate_mode', AUTO_TRANSLATE_MODE_NAMES, {
+      hinted: 'control.cpp:4288',
+    }),
     tooltip_text: v.quotedString('tooltip_text'),
   }
 );
