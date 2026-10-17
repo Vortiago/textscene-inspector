@@ -29,6 +29,30 @@ export function relabelEnumNames(
   );
 }
 
+/**
+ * Each member's label by its integer, for a hint that spells the names with no rule to derive
+ * them from. `labels` must name every member, so a member added to the enum fails the type check.
+ */
+/* @__NO_SIDE_EFFECTS__ */
+export function labelEnumNames<T extends Record<string, number>>(
+  enumObject: T,
+  labels: Readonly<Record<keyof T, string>>
+): Readonly<Record<number, string>> {
+  return Object.freeze(
+    Object.fromEntries(Object.entries(enumObject).map(([name, value]) => [value, labels[name as keyof T]]))
+  );
+}
+
+/** A `SPECIFIC_BONE` member as the PascalCase word a hint string prints, `SpecificBone`. */
+/* @__NO_SIDE_EFFECTS__ */
+export function pascalCaseLabel(name: string): string {
+  return name
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+}
+
 /** Every integer a numeric TypeScript enum holds, in declaration order, without the name-to-integer entries. */
 /* @__NO_SIDE_EFFECTS__ */
 export function enumValues<T extends number>(enumObject: Record<string, string | T>): readonly T[] {

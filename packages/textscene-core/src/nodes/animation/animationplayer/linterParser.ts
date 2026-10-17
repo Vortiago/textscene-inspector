@@ -13,29 +13,12 @@ import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import { EASE_TYPE_CONSTANT_NAMES, TRANSITION_TYPE_CONSTANT_NAMES } from '../../../godot/scene/tween.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { ARRAY_LITERAL_RE } from '../../../godot/variant/variantParser.js';
 
 const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
 const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
-// Tween::TransitionType / Tween::EaseType (tween.h:82-95, :98-103): the
-// hint_string order at animation_player.cpp:1044/:1045 matches the C++ enum
-// declaration order, so these count and label straight from it.
-const AUTO_CAPTURE_TRANSITION_TYPE = {
-  0: 'LINEAR',
-  1: 'SINE',
-  2: 'QUINT',
-  3: 'QUART',
-  4: 'QUAD',
-  5: 'EXPO',
-  6: 'ELASTIC',
-  7: 'CUBIC',
-  8: 'CIRC',
-  9: 'BOUNCE',
-  10: 'BACK',
-  11: 'SPRING',
-};
-const AUTO_CAPTURE_EASE_TYPE = { 0: 'IN', 1: 'OUT', 2: 'IN_OUT', 3: 'OUT_IN' };
 
 /**
  * `blend_times`: a flat Array of (from: StringName, to: StringName, time: float) triples
@@ -91,13 +74,13 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // (:874-876) is a bare assignment, so out-of-range only warns.
   playback_auto_capture_transition_type: v.enumInt(
     'playback_auto_capture_transition_type',
-    AUTO_CAPTURE_TRANSITION_TYPE,
+    TRANSITION_TYPE_CONSTANT_NAMES,
     { hinted: 'animation_player.cpp:1044' }
   ),
   // animation_player.cpp:1045, PROPERTY_HINT_ENUM "In,Out,InOut,OutIn"
   // (4 values, Tween::EaseType). set_auto_capture_ease_type (:882-884) is a
   // bare assignment, so out-of-range only warns.
-  playback_auto_capture_ease_type: v.enumInt('playback_auto_capture_ease_type', AUTO_CAPTURE_EASE_TYPE, {
+  playback_auto_capture_ease_type: v.enumInt('playback_auto_capture_ease_type', EASE_TYPE_CONSTANT_NAMES, {
     hinted: 'animation_player.cpp:1045',
   }),
   // animation_player.cpp:1046 hints "0,4096,0.01,suffix:s", closed both ends.

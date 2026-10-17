@@ -14,7 +14,7 @@ import { indexedFamilyValidator } from '../../../../linter/validators/indexedFam
 import { v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
 import { declaredLeafResolver } from '../../../../godot/classdb/indexedKey.js';
-import { BONE_DIRECTION, SECONDARY_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
+import { BONE_DIRECTION_NAMES, SECONDARY_DIRECTION_NAMES } from '../../../../godot/scene/skeletonModifier.js';
 
 /** Error code for a `settings/…` key whose shape or leaf name is unrecognised. */
 const UNKNOWN_SETTING_CODE = 'INVALID_SETTING_KEY';
@@ -57,7 +57,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // two_bone_ik_3d.cpp:146, Variant::INT, PROPERTY_HINT_ENUM "None,+X,-X,+Y,-Y,+Z,-Z,Custom"
   // (skeleton_modifier_3d.h:77), values 0-7. set_pole_direction (two_bone_ik_3d.cpp:425-437)
   // static_casts and assigns with no range guard, so an out-of-range value loads and only warns.
-  pole_direction: v.enumInt('pole_direction', SECONDARY_DIRECTION, {
+  pole_direction: v.enumInt('pole_direction', SECONDARY_DIRECTION_NAMES, {
     hinted: 'two_bone_ik_3d.cpp:146',
   }),
   // two_bone_ik_3d.cpp:147, Variant::VECTOR3, no hint. set_pole_direction_vector
@@ -79,7 +79,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // two_bone_ik_3d.cpp:152, Variant::INT, PROPERTY_HINT_ENUM "+X,-X,+Y,-Y,+Z,-Z,FromParent"
   // (skeleton_modifier_3d.h:64), values 0-6. set_end_bone_direction (two_bone_ik_3d.cpp:364-378)
   // static_casts and assigns with no range guard: a warning.
-  'end_bone/direction': v.enumInt('end_bone/direction', BONE_DIRECTION, {
+  'end_bone/direction': v.enumInt('end_bone/direction', BONE_DIRECTION_NAMES, {
     hinted: 'two_bone_ik_3d.cpp:152',
   }),
   // two_bone_ik_3d.cpp:153, Variant::FLOAT, PROPERTY_HINT_RANGE "0,1,0.001,or_greater,suffix:m":

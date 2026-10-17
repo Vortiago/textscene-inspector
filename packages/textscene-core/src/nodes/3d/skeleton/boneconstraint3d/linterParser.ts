@@ -9,6 +9,7 @@ import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry, type PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import { REFERENCE_TYPE_NAMES } from '../../../../godot/scene/skeletonModifier.js';
 
 /**
  * Here, not in each subclass: the leaf set is identical across all of them and the cites are the
@@ -33,11 +34,9 @@ const SETTING_LEAVES = {
   // :105, PROPERTY_HINT_ENUM "Bone,Node" over the two-value ReferenceType
   // (bone_constraint_3d.h:39-42). set_reference_type (:207-211) assigns without
   // an ERR_FAIL_INDEX on the value.
-  reference_type: v.enumInt(
-    'reference_type',
-    { 0: 'REFERENCE_TYPE_BONE', 1: 'REFERENCE_TYPE_NODE' },
-    { hinted: 'bone_constraint_3d.cpp:105' }
-  ),
+  reference_type: v.enumInt('reference_type', REFERENCE_TYPE_NAMES, {
+    hinted: 'bone_constraint_3d.cpp:105',
+  }),
   // :108, PROPERTY_HINT_NODE_PATH_VALID_TYPES "Node3D". The type restriction is
   // an editor picker filter, and any NodePath parses.
   reference_node: v.nodePath('reference_node'),

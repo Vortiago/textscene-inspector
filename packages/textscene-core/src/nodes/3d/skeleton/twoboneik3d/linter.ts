@@ -14,6 +14,7 @@ import { listIndices, listWrittenIndices, unsatisfiedIndices } from '../../../..
 import { indexedElements, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { stringToInt } from '../../../../godot/string/string.js';
 import { resolveTwoBoneSettingLeaf } from './linterParser.js';
+import { SecondaryDirection } from '../../../../godot/scene/skeletonModifier.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -39,11 +40,6 @@ const arms = {
  * grammar, so a key it admits is always one its siblings can look up.
  */
 const SETTING_KEY_RE = indexedKeyRegex('^settings/(#)/(.*)$', 'to_int');
-
-/** `SECONDARY_DIRECTION_CUSTOM`, skeleton_modifier_3d.h:75. */
-const SECONDARY_DIRECTION_CUSTOM = 7;
-/** `SecondaryDirection pole_direction = SECONDARY_DIRECTION_NONE`, two_bone_ik_3d.h:53. */
-const SECONDARY_DIRECTION_NONE = 0;
 
 function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -105,9 +101,10 @@ function checkTwoBoneIK3D(context: RuleContext): Diagnostic[] {
     // hides the key in that state, and the getter returns the axis the enum names.
     if (resolveTwoBoneSettingLeaf(indexed[2]!) !== 'pole_direction_vector') continue;
     const directionRaw = settings.get(index)?.get('pole_direction');
-    const direction = ruleInt(directionRaw, SECONDARY_DIRECTION_NONE);
+    // An absent `pole_direction` is the default NONE (two_bone_ik_3d.h:53).
+    const direction = ruleInt(directionRaw, SecondaryDirection.NONE);
     if (direction === null) continue;
-    if (direction !== SECONDARY_DIRECTION_CUSTOM) ignoredVectors.set(indexText, index);
+    if (direction !== SecondaryDirection.CUSTOM) ignoredVectors.set(indexText, index);
   }
 
   if (outOfRange.size > 0) {
