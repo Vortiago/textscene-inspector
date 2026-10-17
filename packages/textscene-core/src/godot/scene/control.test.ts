@@ -1,12 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ACCESSIBILITY_LIVE_NAMES,
+  CONTROL_RECURSIVE_BEHAVIOR_NAMES,
+  FOCUS_MODE_HINT_NAMES,
+  FOCUS_MODE_NAMES,
   LAYOUT_DIRECTION_NAMES,
   LayoutDirection,
   LTR_LAYOUT_ENV,
+  MOUSE_FILTER_NAMES,
   resolveLayoutRtl,
   SIZE_FLAGS_LABELS,
   type LayoutDirectionEnv,
 } from './control.js';
+import { AUTO_TRANSLATE_MODE_NAMES, NODE_AUTO_TRANSLATE_MODE_NAMES } from './node.js';
 
 /** `Control::LayoutDirection` (`scene/gui/control.h:155-160`, bound at `control.cpp:4405-4409`). */
 describe('LAYOUT_DIRECTION_NAMES', () => {
@@ -91,6 +97,40 @@ describe('SIZE_FLAGS_LABELS', () => {
       2: 'SIZE_EXPAND',
       4: 'SIZE_SHRINK_CENTER',
       8: 'SIZE_SHRINK_END',
+    });
+  });
+});
+
+describe('Control input and accessibility names', () => {
+  it('names each mouse filter by its constant, `control.h:88-92`', () => {
+    expect(MOUSE_FILTER_NAMES).toEqual({ 0: 'STOP', 1: 'PASS', 2: 'IGNORE' });
+  });
+
+  it('names each focus mode by its constant, `control.h:65-70`', () => {
+    expect(FOCUS_MODE_NAMES).toEqual({ 0: 'NONE', 1: 'CLICK', 2: 'ALL', 3: 'ACCESSIBILITY' });
+  });
+
+  it('names each focus mode as `control.cpp:4297` hints it', () => {
+    expect(FOCUS_MODE_HINT_NAMES).toEqual({ 0: 'None', 1: 'Click', 2: 'All', 3: 'Accessibility' });
+  });
+
+  it('names the recursive behaviours of both focus and mouse, `control.h:72-76` and `:94-98`', () => {
+    expect(CONTROL_RECURSIVE_BEHAVIOR_NAMES).toEqual({ 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' });
+  });
+
+  it('names each accessibility live mode without its LIVE prefix', () => {
+    expect(ACCESSIBILITY_LIVE_NAMES).toEqual({ 0: 'OFF', 1: 'POLITE', 2: 'ASSERTIVE' });
+  });
+
+  it('names each auto translate mode without its prefix', () => {
+    expect(AUTO_TRANSLATE_MODE_NAMES).toEqual({ 0: 'INHERIT', 1: 'ALWAYS', 2: 'DISABLED' });
+  });
+
+  it('names each auto translate mode with its prefix, as the Node property prints it', () => {
+    expect(NODE_AUTO_TRANSLATE_MODE_NAMES).toEqual({
+      0: 'AUTO_TRANSLATE_MODE_INHERIT',
+      1: 'AUTO_TRANSLATE_MODE_ALWAYS',
+      2: 'AUTO_TRANSLATE_MODE_DISABLED',
     });
   });
 });

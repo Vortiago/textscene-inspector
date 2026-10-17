@@ -14,6 +14,7 @@ import {
   OVERRUN_BEHAVIOR_NAMES,
   TEXT_DIRECTION_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
+import { FOLDABLE_CONTAINER_TITLE_POSITION_NAMES } from '../../../../godot/scene/gui.js';
 import {
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_NAMES,
@@ -40,14 +41,9 @@ validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:561, PROPERTY_HINT_ENUM "Top,Bottom" (0-1). set_title_position:
   // `ERR_FAIL_INDEX(p_title_position, POSITION_MAX)`, POSITION_MAX=2 (foldable_container.h:42-46,
   // foldable_container.cpp:184).
-  title_position: v.enumInt(
-    'title_position',
-    {
-      0: 'POSITION_TOP',
-      1: 'POSITION_BOTTOM',
-    },
-    { enforced: 'foldable_container.cpp:184' }
-  ),
+  title_position: v.enumInt('title_position', FOLDABLE_CONTAINER_TITLE_POSITION_NAMES, {
+    enforced: 'foldable_container.cpp:184',
+  }),
   // foldable_container.cpp:562, PROPERTY_HINT_ENUM of 5 entries (0-4), named from
   // TextServer::OverrunBehavior (servers/text/text_server.h:123-128). The setter
   // (foldable_container.cpp:169-177) has no ERR_FAIL, so the hint warns. The TextServer enum

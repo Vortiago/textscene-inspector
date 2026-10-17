@@ -1,8 +1,9 @@
 /**
  * The enums of Godot's GUI controls (`scene/gui/`) that the linter validates and the 2D UI solvers
  * branch on: TextureRect, NinePatchRect, AspectRatioContainer, ScrollContainer, ItemList, LineEdit,
- * ProgressBar, TextureProgressBar, LinkButton and ColorPicker. A label table keeps the spelling its
- * property's hint prints.
+ * ProgressBar, TextureProgressBar, LinkButton, ColorPicker, BaseButton, SplitContainer,
+ * FlowContainer, FoldableContainer, GraphEdit and TextEdit. A label table keeps the spelling its
+ * property's hint or its constant prints.
  */
 
 import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
@@ -199,3 +200,64 @@ enum ColorPickerShape {
 }
 
 export const COLOR_PICKER_SHAPE_NAMES = enumNamesByValue(ColorPickerShape);
+
+/** `BaseButton::ActionMode` (`base_button.h:43-46`). */
+const BaseButtonActionMode = { BUTTON_PRESS: 0, BUTTON_RELEASE: 1 } as const;
+
+export const BASE_BUTTON_ACTION_MODE_NAMES = relabelEnumNames(
+  enumNamesByValue(BaseButtonActionMode),
+  (name) => `ACTION_MODE_${name}`
+);
+
+/** `SplitContainer::DraggerVisibility` (`split_container.h:78-82`). */
+const SplitContainerDraggerVisibility = { VISIBLE: 0, HIDDEN: 1, HIDDEN_COLLAPSED: 2 } as const;
+
+export const SPLIT_CONTAINER_DRAGGER_VISIBILITY_NAMES = relabelEnumNames(
+  enumNamesByValue(SplitContainerDraggerVisibility),
+  (name) => `DRAGGER_${name}`
+);
+
+/** `FlowContainer::LastWrapAlignment` (`flow_container.h:44-49`). */
+const FlowContainerLastWrapAlignment = { INHERIT: 0, BEGIN: 1, CENTER: 2, END: 3 } as const;
+
+export const FLOW_CONTAINER_LAST_WRAP_ALIGNMENT_NAMES = relabelEnumNames(
+  enumNamesByValue(FlowContainerLastWrapAlignment),
+  (name) => `LAST_WRAP_ALIGNMENT_${name}`
+);
+
+/** `FoldableContainer::TitlePosition` (`foldable_container.h:42-46`), `POSITION_MAX` left out. */
+const FoldableContainerTitlePosition = { TOP: 0, BOTTOM: 1 } as const;
+
+export const FOLDABLE_CONTAINER_TITLE_POSITION_NAMES = relabelEnumNames(
+  enumNamesByValue(FoldableContainerTitlePosition),
+  (name) => `POSITION_${name}`
+);
+
+/** `GraphEdit::GridPattern` (`graph_edit.h:146-149`). */
+const GraphEditGridPattern = { LINES: 0, DOTS: 1 } as const;
+
+export const GRAPH_EDIT_GRID_PATTERN_NAMES = relabelEnumNames(
+  enumNamesByValue(GraphEditGridPattern),
+  (name) => `GRID_PATTERN_${name}`
+);
+
+/** `GraphEdit::PanningScheme` (`graph_edit.h:141-144`). */
+const GraphEditPanningScheme = { SCROLL_ZOOMS: 0, SCROLL_PANS: 1 } as const;
+
+export const GRAPH_EDIT_PANNING_SCHEME_NAMES = enumNamesByValue(GraphEditPanningScheme);
+
+/** `TextEdit::LineWrappingMode` (`text_edit.h:68-71`). */
+const TextEditLineWrappingMode = { NONE: 0, BOUNDARY: 1 } as const;
+
+export const TEXT_EDIT_LINE_WRAPPING_MODE_NAMES = relabelEnumNames(
+  enumNamesByValue(TextEditLineWrappingMode),
+  (name) => `LINE_WRAPPING_${name}`
+);
+
+/** `TextEdit::CaretType` (`text_edit.h:53-56`). */
+const TextEditCaretType = { LINE: 0, BLOCK: 1 } as const;
+
+export const TEXT_EDIT_CARET_TYPE_NAMES = relabelEnumNames(
+  enumNamesByValue(TextEditCaretType),
+  (name) => `CARET_TYPE_${name}`
+);

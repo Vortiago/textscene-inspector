@@ -9,6 +9,10 @@ import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
+  TEXT_EDIT_CARET_TYPE_NAMES,
+  TEXT_EDIT_LINE_WRAPPING_MODE_NAMES,
+} from '../../../../godot/scene/gui.js';
+import {
   AutowrapMode,
   AUTOWRAP_MODE_NAMES,
   STRUCTURED_TEXT_PARSER_NAMES,
@@ -45,14 +49,7 @@ validatorRegistry.registerAll('TextEdit', {
   // LINE_WRAPPING_NONE=0, LINE_WRAPPING_BOUNDARY=1 (text_edit.cpp:7402-7403,
   // enum declared text_edit.h:68-71). set_line_wrapping_mode (text_edit.cpp:6341-6351)
   // assigns unconditionally, no ERR_FAIL.
-  wrap_mode: v.enumInt(
-    'wrap_mode',
-    {
-      0: 'LINE_WRAPPING_NONE',
-      1: 'LINE_WRAPPING_BOUNDARY',
-    },
-    { hinted: 'text_edit.cpp:7558' }
-  ),
+  wrap_mode: v.enumInt('wrap_mode', TEXT_EDIT_LINE_WRAPPING_MODE_NAMES, { hinted: 'text_edit.cpp:7558' }),
   // text_edit.cpp:7559: PROPERTY_HINT_ENUM "Arbitrary:1,Word:2,Word (Smart):3", so the bound is 1-3.
   // TextServer::AutowrapMode starts at AUTOWRAP_OFF=0 (servers/text/text_server.h:98-102,
   // BIND_ENUM_CONSTANT text_server.cpp:574-577), and set_autowrap_mode has no CLAMP or ERR_FAIL
@@ -100,14 +97,7 @@ validatorRegistry.registerAll('TextEdit', {
   // Caret (ADD_GROUP "Caret", text_edit.cpp:7580-7587).
   // text_edit.cpp:7581: PROPERTY_HINT_ENUM "Line,Block", CARET_TYPE_LINE=0, CARET_TYPE_BLOCK=1
   // (text_edit.cpp:7293-7294, text_edit.h:53-56). set_caret_type (text_edit.cpp:5159-5166) has no ERR_FAIL.
-  caret_type: v.enumInt(
-    'caret_type',
-    {
-      0: 'CARET_TYPE_LINE',
-      1: 'CARET_TYPE_BLOCK',
-    },
-    { hinted: 'text_edit.cpp:7581' }
-  ),
+  caret_type: v.enumInt('caret_type', TEXT_EDIT_CARET_TYPE_NAMES, { hinted: 'text_edit.cpp:7581' }),
   caret_blink: v.boolean('caret_blink'),
   // text_edit.cpp:7583 hints "0.1,10,0.01,suffix:s", closed both ends.
   // text_edit.cpp:5198, ERR_FAIL_COND(p_interval <= 0): the setter refuses at

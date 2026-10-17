@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   ASPECT_RATIO_STRETCH_MODE_NAMES,
   AXIS_STRETCH_MODE_NAMES,
+  BASE_BUTTON_ACTION_MODE_NAMES,
   COLOR_PICKER_COLOR_MODE_NAMES,
   COLOR_PICKER_SHAPE_NAMES,
+  FLOW_CONTAINER_LAST_WRAP_ALIGNMENT_NAMES,
+  FOLDABLE_CONTAINER_TITLE_POSITION_NAMES,
+  GRAPH_EDIT_GRID_PATTERN_NAMES,
+  GRAPH_EDIT_PANNING_SCHEME_NAMES,
   ITEM_LIST_ICON_MODE_NAMES,
   ITEM_LIST_SCROLL_HINT_MODE_NAMES,
   ITEM_LIST_SELECT_MODE_NAMES,
@@ -13,6 +18,9 @@ import {
   PROGRESS_BAR_FILL_MODE_NAMES,
   SCROLL_CONTAINER_SCROLL_HINT_MODE_NAMES,
   SCROLL_MODE_NAMES,
+  SPLIT_CONTAINER_DRAGGER_VISIBILITY_NAMES,
+  TEXT_EDIT_CARET_TYPE_NAMES,
+  TEXT_EDIT_LINE_WRAPPING_MODE_NAMES,
   TEXTURE_PROGRESS_BAR_FILL_MODE_NAMES,
   TEXTURE_RECT_EXPAND_MODE_NAMES,
 } from './gui';
@@ -119,5 +127,54 @@ describe('GUI control enum label tables', () => {
     expect(COLOR_PICKER_SHAPE_NAMES[4]).toBe('SHAPE_NONE');
     expect(COLOR_PICKER_SHAPE_NAMES[5]).toBe('SHAPE_OK_HS_RECTANGLE');
     expect(Object.keys(COLOR_PICKER_SHAPE_NAMES)).toHaveLength(7);
+  });
+});
+
+describe('container and editor control enum label tables', () => {
+  it('names the BaseButton action modes (base_button.h:43-46)', () => {
+    expect(BASE_BUTTON_ACTION_MODE_NAMES).toEqual({
+      0: 'ACTION_MODE_BUTTON_PRESS',
+      1: 'ACTION_MODE_BUTTON_RELEASE',
+    });
+  });
+
+  it('names the SplitContainer dragger visibilities (split_container.h:78-82)', () => {
+    expect(SPLIT_CONTAINER_DRAGGER_VISIBILITY_NAMES).toEqual({
+      0: 'DRAGGER_VISIBLE',
+      1: 'DRAGGER_HIDDEN',
+      2: 'DRAGGER_HIDDEN_COLLAPSED',
+    });
+  });
+
+  it('names the FlowContainer last wrap alignments (flow_container.h:44-49)', () => {
+    expect(FLOW_CONTAINER_LAST_WRAP_ALIGNMENT_NAMES).toEqual({
+      0: 'LAST_WRAP_ALIGNMENT_INHERIT',
+      1: 'LAST_WRAP_ALIGNMENT_BEGIN',
+      2: 'LAST_WRAP_ALIGNMENT_CENTER',
+      3: 'LAST_WRAP_ALIGNMENT_END',
+    });
+  });
+
+  it('names the FoldableContainer title positions, POSITION_MAX left out (foldable_container.h:42-46)', () => {
+    expect(FOLDABLE_CONTAINER_TITLE_POSITION_NAMES).toEqual({
+      0: 'POSITION_TOP',
+      1: 'POSITION_BOTTOM',
+    });
+  });
+
+  it('names the GraphEdit grid patterns and panning schemes (graph_edit.h:141-149)', () => {
+    expect(GRAPH_EDIT_GRID_PATTERN_NAMES).toEqual({
+      0: 'GRID_PATTERN_LINES',
+      1: 'GRID_PATTERN_DOTS',
+    });
+    expect(GRAPH_EDIT_PANNING_SCHEME_NAMES).toEqual({ 0: 'SCROLL_ZOOMS', 1: 'SCROLL_PANS' });
+  });
+
+  it('names the TextEdit line wrapping modes and caret types (text_edit.h:53-71)', () => {
+    expect(TEXT_EDIT_LINE_WRAPPING_MODE_NAMES).toEqual({
+      0: 'LINE_WRAPPING_NONE',
+      1: 'LINE_WRAPPING_BOUNDARY',
+    });
+    expect(TEXT_EDIT_CARET_TYPE_NAMES).toEqual({ 0: 'CARET_TYPE_LINE', 1: 'CARET_TYPE_BLOCK' });
   });
 });

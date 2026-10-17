@@ -8,6 +8,7 @@ import '../graphelement/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
+import { FOCUS_MODE_HINT_NAMES } from '../../../../godot/scene/control.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
@@ -66,11 +67,9 @@ validatorRegistry.registerAll('GraphNode', {
   // ERR_FAIL_COND at graph_node.cpp:1223 (`(int)p_focus_mode < 1 || (int)p_focus_mode > 3`)
   // refuses anything else, FOCUS_NONE=0 included, so both ends are enforced. The
   // default, FOCUS_ACCESSIBILITY=3 (graph_node.h:90), is inside.
-  slots_focus_mode: v.enumInt(
-    'slots_focus_mode',
-    { 1: 'Click', 2: 'All', 3: 'Accessibility' },
-    { enforced: 'graph_node.cpp:1223' }
-  ),
+  slots_focus_mode: v.enumInt('slots_focus_mode', 1, 3, FOCUS_MODE_HINT_NAMES, {
+    enforced: 'graph_node.cpp:1223',
+  }),
 
   'slot/*': slotValidator,
 });
