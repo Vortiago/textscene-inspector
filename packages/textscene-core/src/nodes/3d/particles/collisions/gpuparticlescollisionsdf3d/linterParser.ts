@@ -6,14 +6,9 @@
  */
 
 import '../shared/linterParser.js';
+import { GPU_PARTICLES_COLLISION_SDF_3D_RESOLUTION_NAMES } from '../../../../../godot/scene/particlesCollision3d.js';
 import { validatorRegistry } from '../../../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../../../linter/validators/index.js';
-
-// gpu_particles_collision_3d.cpp:555, PROPERTY_HINT_ENUM "16,32,64,128,256,512": 6
-// entries, so the .tscn stores the INDEX (0-5), not the literal texel count.
-// RESOLUTION_MAX (6) is a sentinel for array sizing, absent from the hint's enum
-// list, so it is not a legal stored value.
-const RESOLUTION = { 0: '16', 1: '32', 2: '64', 3: '128', 4: '256', 5: '512' };
 
 validatorRegistry.registerAll('GPUParticlesCollisionSDF3D', {
   // gpu_particles_collision_3d.cpp:554, PROPERTY_HINT_RANGE
@@ -21,9 +16,9 @@ validatorRegistry.registerAll('GPUParticlesCollisionSDF3D', {
   // max, so 1024 is not a cap; the min carries no `or_less`, so 0.01 is the
   // hint's floor. set_size:595-599 is a bare assignment, so it is a warning.
   size: v.boundedVector3('size', { min: 0.01, hinted: 'gpu_particles_collision_3d.cpp:554' }),
-  // gpu_particles_collision_3d.cpp:555, see RESOLUTION above.
+  // gpu_particles_collision_3d.cpp:555, the .tscn stores the index 0-5, not the texel count; RESOLUTION_MAX is no stored value.
   // set_resolution:605-608 is a bare assignment.
-  resolution: v.enumInt('resolution', RESOLUTION, {
+  resolution: v.enumInt('resolution', GPU_PARTICLES_COLLISION_SDF_3D_RESOLUTION_NAMES, {
     hinted: 'gpu_particles_collision_3d.cpp:555',
   }),
   // gpu_particles_collision_3d.cpp:556, PROPERTY_HINT_RANGE "0.0,2.0,0.01,suffix:m":
