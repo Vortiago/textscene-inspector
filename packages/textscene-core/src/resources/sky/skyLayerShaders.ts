@@ -41,6 +41,7 @@ import {
   FAST_FILTER_SUPER_TAPS_PER_FRAME,
   MOST_LAYER_SAMPLES,
 } from '../../godot/rendering/environment/skyReflection.js';
+import { GODOT_DEBANDING_NOISE_GLSL } from '../../godot/rendering/environment/skyDebanding.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 
 /**
@@ -80,16 +81,21 @@ vec2 vec3ToOctWithBorder(vec3 n, float borderSize) {
 
 /**
  * Godot's radiance octmap, read from the sky's cube: each texel takes the radiance in its direction,
- * padding included, as Godot draws the sky into it.
+ * padding included, as Godot draws the sky into it. `debanding` scales the debanding noise Godot adds
+ * at each texel of a debanded sky's octmap (`sky.glsl:313-315`), 0 for none. Godot's texel and
+ * WebGL's share their `gl_FragCoord`, as both count the octmap's rows from its first.
  */
 export const RADIANCE_OCTMAP_FRAGMENT_SHADER = /* glsl */ `
 uniform samplerCube radiance;
 uniform float size;
 uniform float borderSize;
+uniform float debanding;
 ${OCTMAP_GLSL}
+${GODOT_DEBANDING_NOISE_GLSL}
 void main() {
   vec3 direction = octToVec3WithBorder(gl_FragCoord.xy / size, borderSize);
-  gl_FragColor = vec4(textureLod(radiance, direction, 0.0).rgb, 1.0);
+  vec3 color = textureLod(radiance, direction, 0.0).rgb;
+  gl_FragColor = vec4(color + debanding * godotDebandingNoise(gl_FragCoord.xy), 1.0);
 }
 `;
 

@@ -41,6 +41,16 @@ describe('installedUniformValue', () => {
   it('is undefined before any install (edge case)', () => {
     expect(installedUniformValue(UNIFORM)).toBeUndefined();
   });
+
+  it('reads the value installed on the program it names', () => {
+    THREE.ShaderLib.backgroundCube!.uniforms[UNIFORM] = { value: 3 };
+    expect(installedUniformValue(UNIFORM, 'backgroundCube')).toBe(3);
+  });
+
+  it('is undefined for a program the install never reached (edge case)', () => {
+    installLitUniform(UNIFORM, 7);
+    expect(installedUniformValue(UNIFORM, 'backgroundCube')).toBeUndefined();
+  });
 });
 
 describe('installedOr', () => {
@@ -62,5 +72,12 @@ describe('installedOr', () => {
     const made = new Float32Array(1);
 
     expect(installedOr(UNIFORM, Float32Array, () => made)).toBe(made);
+  });
+
+  it('answers the value installed on the program it names', () => {
+    const installed = new Float32Array(1);
+    THREE.ShaderLib.backgroundCube!.uniforms[UNIFORM] = { value: installed };
+
+    expect(installedOr(UNIFORM, Float32Array, () => new Float32Array(1), 'backgroundCube')).toBe(installed);
   });
 });

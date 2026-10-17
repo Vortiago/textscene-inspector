@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { applyEdits, installChunkPatch, onChunk } from '../shaderPatch/chunkPatch.js';
+import { backgroundCube } from '../shaderPatch/backgroundPrograms.js';
 
 /** GLSL: the view-space ray of a clip-space `xy`, as `sky.glsl:218-220` builds it. */
 export const GODOT_SKY_VIEW_RAY = /* glsl */ `vec3(
@@ -46,5 +47,5 @@ export function installSkyProjection(): void {
     apply: projectCube,
     missing: `backgroundCube_vert has no ${THREE_CUBE_FAR_PLANE}`,
   });
-  if (isPatched) THREE.ShaderLib.backgroundCube!.vertexShader = THREE.ShaderChunk.backgroundCube_vert;
+  if (isPatched) backgroundCube().vertexShader = THREE.ShaderChunk.backgroundCube_vert;
 }

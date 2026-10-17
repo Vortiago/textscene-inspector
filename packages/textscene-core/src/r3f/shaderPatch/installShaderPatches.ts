@@ -20,6 +20,7 @@ import { installGodotSplitShadow } from '../directionalShadow/splitShadowChunk.j
 import { installGodotPositionalShadow } from '../positionalShadow/positionalShadowChunk.js';
 import { installFogComposite } from '../fog/fogComposite.js';
 import { installSkyProjection } from '../sky/skyProjection.js';
+import { installSkyDebanding } from '../sky/skyDebanding.js';
 
 export function installShaderPatches(): void {
   installGodotIndirectSpecular();
@@ -37,4 +38,5 @@ export function installShaderPatches(): void {
   installCanvasSrgbMultiply();
   installFogComposite();
   installSkyProjection();
+  installSkyDebanding();
 }
