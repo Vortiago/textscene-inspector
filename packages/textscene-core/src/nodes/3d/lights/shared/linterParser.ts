@@ -10,8 +10,7 @@
 import '../../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../../linter/validators/index.js';
-
-const LIGHT_BAKE_MODE = { 0: 'DISABLED', 1: 'STATIC', 2: 'DYNAMIC' };
+import { LIGHT_3D_BAKE_MODE_NAMES } from '../../../../godot/scene/light.js';
 
 validatorRegistry.registerAll('Light3D', {
   // light_3d.cpp:389, PROPERTY_HINT_RANGE "0,16,0.001,or_greater": `or_greater`
@@ -32,7 +31,7 @@ validatorRegistry.registerAll('Light3D', {
   // Light3D::set_param:36 guards only the index, as for light_energy, so the
   // floor warns.
   light_specular: v.nonNegativeFloat('light_specular', { hinted: 'light_3d.cpp:397' }),
-  light_bake_mode: v.enumInt('light_bake_mode', LIGHT_BAKE_MODE, {
+  light_bake_mode: v.enumInt('light_bake_mode', LIGHT_3D_BAKE_MODE_NAMES, {
     hinted: 'light_3d.cpp:398',
   }),
   light_cull_mask: layerBitmask('light_cull_mask', {

@@ -7,12 +7,7 @@
 import type * as THREE from 'three';
 import type { Curve3DSampler } from '../../../../resources/curves/curve3d/index.js';
 
-/** Godot `CSGPolygon3D.Mode`. */
-export const PolygonMode = { DEPTH: 0, SPIN: 1, PATH: 2 } as const;
-/** Godot `CSGPolygon3D.PathRotation`. */
-export const PathRotation = { POLYGON: 0, PATH: 1, PATH_FOLLOW: 2 } as const;
-/** Godot `CSGPolygon3D.PathIntervalType`. */
-export const PathIntervalType = { DISTANCE: 0, SUBDIVIDE: 1 } as const;
+export { PathIntervalType, PathRotation, PolygonMode } from '../../../../godot/scene/csg.js';
 
 /**
  * Everything MODE_PATH needs that lives outside this node, resolved beforehand by the

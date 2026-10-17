@@ -9,19 +9,12 @@ import '../visualinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { CMP_EPSILON } from '../../../godot/math/math.js';
-
-const BAKE_QUALITY = { 0: 'LOW', 1: 'MEDIUM', 2: 'HIGH', 3: 'ULTRA' };
-const ENVIRONMENT_MODE = { 0: 'DISABLED', 1: 'SCENE', 2: 'CUSTOM_SKY', 3: 'CUSTOM_COLOR' };
-const GENERATE_PROBES = {
-  0: 'DISABLED',
-  1: 'SUBDIV_4',
-  2: 'SUBDIV_8',
-  3: 'SUBDIV_16',
-  4: 'SUBDIV_32',
-};
-// lightmap_gi.h:46-51 declares a fourth value, SHADOWMASK_MODE_ONLY = 3, but the
-// hint string (cpp:1925) offers only "None,Replace,Overlay", so 3 warns.
-const SHADOWMASK_MODE = { 0: 'NONE', 1: 'REPLACE', 2: 'OVERLAY' };
+import {
+  LIGHTMAP_GI_BAKE_QUALITY_NAMES,
+  LIGHTMAP_GI_ENVIRONMENT_MODE_NAMES,
+  LIGHTMAP_GI_GENERATE_PROBES_NAMES,
+  LIGHTMAP_GI_SHADOWMASK_MODE_NAMES,
+} from '../../../godot/scene/lightmapGi.js';
 
 // `_validate_property` (lightmap_gi.cpp:1825-1847) hides six keys from the
 // inspector while their enabling sibling is off, with `PROPERTY_USAGE_NO_EDITOR`,
@@ -30,7 +23,7 @@ const SHADOWMASK_MODE = { 0: 'NONE', 1: 'REPLACE', 2: 'OVERLAY' };
 validatorRegistry.registerAll('LightmapGI', {
   // lightmap_gi.cpp:1919, PROPERTY_HINT_ENUM "Low,Medium,High,Ultra". set_bake_quality
   // (:1614-1616) is a bare assignment, so the hint is advisory only.
-  quality: v.enumInt('quality', BAKE_QUALITY, { hinted: 'lightmap_gi.cpp:1919' }),
+  quality: v.enumInt('quality', LIGHTMAP_GI_BAKE_QUALITY_NAMES, { hinted: 'lightmap_gi.cpp:1919' }),
 
   // lightmap_gi.cpp:1920, plain BOOL, no hint.
   supersampling: v.boolean('supersampling'),
@@ -70,7 +63,7 @@ validatorRegistry.registerAll('LightmapGI', {
 
   // lightmap_gi.cpp:1925, PROPERTY_HINT_ENUM "None,Replace,Overlay". set_shadowmask_mode
   // (:1659-1666) is a bare assignment, so the hint is advisory only.
-  shadowmask_mode: v.enumInt('shadowmask_mode', SHADOWMASK_MODE, {
+  shadowmask_mode: v.enumInt('shadowmask_mode', LIGHTMAP_GI_SHADOWMASK_MODE_NAMES, {
     hinted: 'lightmap_gi.cpp:1925',
   }),
 
@@ -126,7 +119,7 @@ validatorRegistry.registerAll('LightmapGI', {
   // lightmap_gi.cpp:1935, PROPERTY_HINT_ENUM "Disabled,Scene,Custom Sky,Custom
   // Color". set_environment_mode (:1688-1691) is a bare assignment, so the hint
   // is advisory only.
-  environment_mode: v.enumInt('environment_mode', ENVIRONMENT_MODE, {
+  environment_mode: v.enumInt('environment_mode', LIGHTMAP_GI_ENVIRONMENT_MODE_NAMES, {
     hinted: 'lightmap_gi.cpp:1935',
   }),
 
@@ -157,7 +150,7 @@ validatorRegistry.registerAll('LightmapGI', {
   // lightmap_gi.cpp:1941, PROPERTY_HINT_ENUM "Disabled,4,8,16,32".
   // set_generate_probes (:1787-1789) is a bare assignment, so the hint is
   // advisory only.
-  generate_probes_subdiv: v.enumInt('generate_probes_subdiv', GENERATE_PROBES, {
+  generate_probes_subdiv: v.enumInt('generate_probes_subdiv', LIGHTMAP_GI_GENERATE_PROBES_NAMES, {
     hinted: 'lightmap_gi.cpp:1941',
   }),
 
