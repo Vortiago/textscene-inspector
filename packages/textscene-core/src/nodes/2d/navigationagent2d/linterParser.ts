@@ -8,6 +8,11 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { hintedBitField, layerBitmask, v } from '../../../linter/validators/index.js';
+import {
+  NAVIGATION_2D_PATHFINDING_ALGORITHM_NAMES,
+  NAVIGATION_2D_PATH_METADATA_FLAG_NAMES,
+  NAVIGATION_2D_PATH_POSTPROCESSING_NAMES,
+} from '../../../godot/scene/navigation.js';
 
 validatorRegistry.registerAll('NavigationAgent2D', {
   // --- Pathfinding ---
@@ -49,34 +54,22 @@ validatorRegistry.registerAll('NavigationAgent2D', {
   // equal-check). The HINT_ENUM at :149 lists one value, "AStar", the only member
   // of NavigationPathQueryParameters2D::PathfindingAlgorithm
   // (navigation_path_query_parameters_2d.h:43-45).
-  pathfinding_algorithm: v.enumInt(
-    'pathfinding_algorithm',
-    { 0: 'PATHFINDING_ALGORITHM_ASTAR' },
-    { hinted: 'navigation_agent_2d.cpp:149' }
-  ),
+  pathfinding_algorithm: v.enumInt('pathfinding_algorithm', NAVIGATION_2D_PATHFINDING_ALGORITHM_NAMES, {
+    hinted: 'navigation_agent_2d.cpp:149',
+  }),
   // set_path_postprocessing (cpp:456-464) is a bare assignment (plus an
   // equal-check). HINT_ENUM at :150 ("Corridorfunnel,Edgecentered,None") matches
   // PathPostProcessing 0-2 (navigation_path_query_parameters_2d.h:47-51).
-  path_postprocessing: v.enumInt(
-    'path_postprocessing',
-    {
-      0: 'PATH_POSTPROCESSING_CORRIDORFUNNEL',
-      1: 'PATH_POSTPROCESSING_EDGECENTERED',
-      2: 'PATH_POSTPROCESSING_NONE',
-    },
-    { hinted: 'navigation_agent_2d.cpp:150' }
-  ),
+  path_postprocessing: v.enumInt('path_postprocessing', NAVIGATION_2D_PATH_POSTPROCESSING_NAMES, {
+    hinted: 'navigation_agent_2d.cpp:150',
+  }),
   // set_path_metadata_flags (cpp:524-530) is a bare BitField assignment with no
   // `p_flags & MASK`, so every bit is kept. A bit outside the HINT_FLAGS at :151
   // (1|2|4, navigation_constants_2d.h:52-54) is unreachable from the inspector:
   // `hintedBitField`'s warning tier.
   path_metadata_flags: hintedBitField('path_metadata_flags', {
     hinted: 'navigation_agent_2d.cpp:151',
-    labels: {
-      1: 'PATH_METADATA_INCLUDE_TYPES',
-      2: 'PATH_METADATA_INCLUDE_RIDS',
-      4: 'PATH_METADATA_INCLUDE_OWNERS',
-    },
+    labels: NAVIGATION_2D_PATH_METADATA_FLAG_NAMES,
   }),
   simplify_path: v.boolean('simplify_path'),
   // set_simplify_epsilon (cpp:475-478) clamps: `simplify_epsilon = MAX(0.0, p_epsilon);`

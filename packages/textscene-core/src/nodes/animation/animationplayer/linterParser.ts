@@ -13,12 +13,13 @@ import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import {
+  ANIMATION_CALLBACK_MODE_METHOD_NAMES,
+  ANIMATION_CALLBACK_MODE_PROCESS_NAMES,
+} from '../../../godot/scene/animation.js';
 import { EASE_TYPE_CONSTANT_NAMES, TRANSITION_TYPE_CONSTANT_NAMES } from '../../../godot/scene/tween.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { ARRAY_LITERAL_RE } from '../../../godot/variant/variantParser.js';
-
-const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
-const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
 
 /**
  * `blend_times`: a flat Array of (from: StringName, to: StringName, time: float) triples
@@ -94,10 +95,10 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // animation_player.cpp:1035/:57-59, redirected through AnimationMixer's
   // callback_mode_process/method (animation_mixer.cpp:501-509,522-525): both
   // bare assignments, no engine-side range check on the raw int.
-  playback_process_mode: v.enumInt('playback_process_mode', PROCESS_MODE, {
+  playback_process_mode: v.enumInt('playback_process_mode', ANIMATION_CALLBACK_MODE_PROCESS_NAMES, {
     hinted: 'animation_mixer.cpp:2471',
   }),
-  method_call_mode: v.enumInt('method_call_mode', METHOD_CALL_MODE, {
+  method_call_mode: v.enumInt('method_call_mode', ANIMATION_CALLBACK_MODE_METHOD_NAMES, {
     hinted: 'animation_mixer.cpp:2472',
   }),
   playback_active: v.boolean('playback_active'),

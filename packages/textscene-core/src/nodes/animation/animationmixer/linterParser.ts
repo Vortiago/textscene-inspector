@@ -9,6 +9,11 @@ import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import {
+  ANIMATION_CALLBACK_MODE_DISCRETE_NAMES,
+  ANIMATION_CALLBACK_MODE_METHOD_NAMES,
+  ANIMATION_CALLBACK_MODE_PROCESS_NAMES,
+} from '../../../godot/scene/animation.js';
 
 /**
  * `{ "name": SubResource/ExtResource(...), ... }`, the whole library set at once
@@ -74,19 +79,13 @@ validatorRegistry.registerAll('AnimationMixer', {
   }),
   // :2471-2473, three ENUM hints whose setters (:501, :522, :531) all assign
   // straight through with no ERR_FAIL_INDEX, so out of range is a warning.
-  callback_mode_process: v.enumInt(
-    'callback_mode_process',
-    { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' },
-    { hinted: 'animation_mixer.cpp:2471' }
-  ),
-  callback_mode_method: v.enumInt(
-    'callback_mode_method',
-    { 0: 'DEFERRED', 1: 'IMMEDIATE' },
-    { hinted: 'animation_mixer.cpp:2472' }
-  ),
-  callback_mode_discrete: v.enumInt(
-    'callback_mode_discrete',
-    { 0: 'DOMINANT', 1: 'RECESSIVE', 2: 'FORCE_CONTINUOUS' },
-    { hinted: 'animation_mixer.cpp:2473' }
-  ),
+  callback_mode_process: v.enumInt('callback_mode_process', ANIMATION_CALLBACK_MODE_PROCESS_NAMES, {
+    hinted: 'animation_mixer.cpp:2471',
+  }),
+  callback_mode_method: v.enumInt('callback_mode_method', ANIMATION_CALLBACK_MODE_METHOD_NAMES, {
+    hinted: 'animation_mixer.cpp:2472',
+  }),
+  callback_mode_discrete: v.enumInt('callback_mode_discrete', ANIMATION_CALLBACK_MODE_DISCRETE_NAMES, {
+    hinted: 'animation_mixer.cpp:2473',
+  }),
 });
