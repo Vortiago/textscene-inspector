@@ -8,17 +8,12 @@
 import '../../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-const FILTER_LABELS = { 0: 'NEAREST', 1: 'LINEAR', 2: 'CUBIC' };
-const MIPMAP_MODE_LABELS = { 0: 'DISABLED', 1: 'NEAREST', 2: 'LINEAR' };
-const WRAP_LABELS = {
-  0: 'CLAMP_TO_BORDER',
-  1: 'CLAMP_TO_EDGE',
-  2: 'REPEAT',
-  3: 'MIRRORED_REPEAT',
-  4: 'MIRROR_CLAMP_TO_EDGE',
-};
-const SWIZZLE_LABELS = { 0: 'RED', 1: 'GREEN', 2: 'BLUE', 3: 'ALPHA', 4: 'ZERO', 5: 'ONE' };
+import {
+  COMPOSITION_FILTER_NAMES,
+  COMPOSITION_MIPMAP_MODE_NAMES,
+  COMPOSITION_SWIZZLE_NAMES,
+  COMPOSITION_WRAP_NAMES,
+} from '../../../../godot/scene/openxr.js';
 
 // `_get_property_list` (:705-719) adds keys from the OpenXR extension wrappers registered at
 // runtime, and `_set` (:730-737) stores any name. The list drops a name with no `/` (:713-716),
@@ -43,31 +38,31 @@ validatorRegistry.registerAll('OpenXRCompositionLayer', {
   // setter (:455-579) that assigns unconditionally after an equality
   // short-circuit, with no ERR_FAIL_INDEX anywhere in the group, so the
   // PROPERTY_HINT_ENUM string is the only authority and out-of-range warns.
-  swapchain_state_min_filter: v.enumInt('swapchain_state_min_filter', FILTER_LABELS, {
+  swapchain_state_min_filter: v.enumInt('swapchain_state_min_filter', COMPOSITION_FILTER_NAMES, {
     hinted: 'openxr_composition_layer.cpp:160',
   }),
-  swapchain_state_mag_filter: v.enumInt('swapchain_state_mag_filter', FILTER_LABELS, {
+  swapchain_state_mag_filter: v.enumInt('swapchain_state_mag_filter', COMPOSITION_FILTER_NAMES, {
     hinted: 'openxr_composition_layer.cpp:161',
   }),
-  swapchain_state_mipmap_mode: v.enumInt('swapchain_state_mipmap_mode', MIPMAP_MODE_LABELS, {
+  swapchain_state_mipmap_mode: v.enumInt('swapchain_state_mipmap_mode', COMPOSITION_MIPMAP_MODE_NAMES, {
     hinted: 'openxr_composition_layer.cpp:162',
   }),
-  swapchain_state_horizontal_wrap: v.enumInt('swapchain_state_horizontal_wrap', WRAP_LABELS, {
+  swapchain_state_horizontal_wrap: v.enumInt('swapchain_state_horizontal_wrap', COMPOSITION_WRAP_NAMES, {
     hinted: 'openxr_composition_layer.cpp:163',
   }),
-  swapchain_state_vertical_wrap: v.enumInt('swapchain_state_vertical_wrap', WRAP_LABELS, {
+  swapchain_state_vertical_wrap: v.enumInt('swapchain_state_vertical_wrap', COMPOSITION_WRAP_NAMES, {
     hinted: 'openxr_composition_layer.cpp:164',
   }),
-  swapchain_state_red_swizzle: v.enumInt('swapchain_state_red_swizzle', SWIZZLE_LABELS, {
+  swapchain_state_red_swizzle: v.enumInt('swapchain_state_red_swizzle', COMPOSITION_SWIZZLE_NAMES, {
     hinted: 'openxr_composition_layer.cpp:165',
   }),
-  swapchain_state_green_swizzle: v.enumInt('swapchain_state_green_swizzle', SWIZZLE_LABELS, {
+  swapchain_state_green_swizzle: v.enumInt('swapchain_state_green_swizzle', COMPOSITION_SWIZZLE_NAMES, {
     hinted: 'openxr_composition_layer.cpp:166',
   }),
-  swapchain_state_blue_swizzle: v.enumInt('swapchain_state_blue_swizzle', SWIZZLE_LABELS, {
+  swapchain_state_blue_swizzle: v.enumInt('swapchain_state_blue_swizzle', COMPOSITION_SWIZZLE_NAMES, {
     hinted: 'openxr_composition_layer.cpp:167',
   }),
-  swapchain_state_alpha_swizzle: v.enumInt('swapchain_state_alpha_swizzle', SWIZZLE_LABELS, {
+  swapchain_state_alpha_swizzle: v.enumInt('swapchain_state_alpha_swizzle', COMPOSITION_SWIZZLE_NAMES, {
     hinted: 'openxr_composition_layer.cpp:168',
   }),
   // :169 hints "1.0,16.0,0.001"; set_max_anisotropy (:581-589) assigns
