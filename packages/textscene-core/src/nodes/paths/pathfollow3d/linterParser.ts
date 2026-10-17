@@ -19,7 +19,7 @@ validatorRegistry.registerAll('PathFollow3D', {
   v_offset: v.float('v_offset'),
   // path_3d.cpp:517-524 is a bare assignment with an equal-check early return, and no
   // range check on the raw int.
-  rotation_mode: v.enumInt('rotation_mode', 0, 4, ROTATION_MODE, { hinted: 'path_3d.cpp:436' }),
+  rotation_mode: v.enumInt('rotation_mode', ROTATION_MODE, { hinted: 'path_3d.cpp:436' }),
   cubic_interp: v.boolean('cubic_interp'),
   loop: v.boolean('loop'),
   tilt_enabled: v.boolean('tilt_enabled'),

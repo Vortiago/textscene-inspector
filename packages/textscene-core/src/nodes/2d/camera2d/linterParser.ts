@@ -27,7 +27,7 @@ validatorRegistry.registerAll('Camera2D', {
   // camera_2d.cpp:961, ENUM "Fixed Top Left,Drag Center" (2 labels, matches
   // BIND_ENUM_CONSTANT x2). set_anchor_mode (camera_2d.cpp:469-476) assigns
   // unconditionally, no ERR_FAIL_INDEX.
-  anchor_mode: v.enumInt('anchor_mode', 0, 1, ANCHOR_MODE, { hinted: 'camera_2d.cpp:961' }),
+  anchor_mode: v.enumInt('anchor_mode', ANCHOR_MODE, { hinted: 'camera_2d.cpp:961' }),
   enabled: v.boolean('enabled'),
   ignore_rotation: v.boolean('ignore_rotation'),
   offset: v.vector2('offset'),
@@ -35,7 +35,7 @@ validatorRegistry.registerAll('Camera2D', {
   // camera_2d.cpp:966, ENUM "Physics,Idle" (2 labels, matches BIND_ENUM_CONSTANT
   // x2). set_process_callback (camera_2d.cpp:513-519) assigns unconditionally,
   // no ERR_FAIL_INDEX.
-  process_callback: v.enumInt('process_callback', 0, 1, PROCESS_CALLBACK, { hinted: 'camera_2d.cpp:966' }),
+  process_callback: v.enumInt('process_callback', PROCESS_CALLBACK, { hinted: 'camera_2d.cpp:966' }),
   limit_left: v.lenientInt('limit_left'),
   limit_top: v.lenientInt('limit_top'),
   limit_right: v.lenientInt('limit_right'),

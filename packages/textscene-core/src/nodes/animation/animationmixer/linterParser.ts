@@ -76,22 +76,16 @@ validatorRegistry.registerAll('AnimationMixer', {
   // straight through with no ERR_FAIL_INDEX, so out of range is a warning.
   callback_mode_process: v.enumInt(
     'callback_mode_process',
-    0,
-    2,
     { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' },
     { hinted: 'animation_mixer.cpp:2471' }
   ),
   callback_mode_method: v.enumInt(
     'callback_mode_method',
-    0,
-    1,
     { 0: 'DEFERRED', 1: 'IMMEDIATE' },
     { hinted: 'animation_mixer.cpp:2472' }
   ),
   callback_mode_discrete: v.enumInt(
     'callback_mode_discrete',
-    0,
-    2,
     { 0: 'DOMINANT', 1: 'RECESSIVE', 2: 'FORCE_CONTINUOUS' },
     { hinted: 'animation_mixer.cpp:2473' }
   ),

@@ -20,8 +20,6 @@ validatorRegistry.registerAll(
     // set_mode (window.cpp:523-531) assigns unconditionally, no ERR_FAIL.
     mode: v.enumInt(
       'mode',
-      0,
-      4,
       {
         0: 'WINDOWED',
         1: 'MINIMIZED',
@@ -36,8 +34,6 @@ validatorRegistry.registerAll(
     // (window.cpp:331-337) assigns unconditionally, no ERR_FAIL.
     initial_position: v.enumInt(
       'initial_position',
-      0,
-      5,
       {
         0: 'ABSOLUTE',
         1: 'CENTER_PRIMARY_SCREEN',
@@ -94,8 +90,6 @@ validatorRegistry.registerAll(
     // (window.cpp:1727-1731) assigns unconditionally, no ERR_FAIL.
     content_scale_mode: v.enumInt(
       'content_scale_mode',
-      0,
-      2,
       {
         0: 'DISABLED',
         1: 'CANVAS_ITEMS',
@@ -107,8 +101,6 @@ validatorRegistry.registerAll(
     // (window.cpp:1738-1742) assigns unconditionally, no ERR_FAIL.
     content_scale_aspect: v.enumInt(
       'content_scale_aspect',
-      0,
-      4,
       {
         0: 'IGNORE',
         1: 'KEEP',
@@ -122,8 +114,6 @@ validatorRegistry.registerAll(
     // (window.cpp:1749-1752) assigns unconditionally, no ERR_FAIL.
     content_scale_stretch: v.enumInt(
       'content_scale_stretch',
-      0,
-      1,
       {
         0: 'FRACTIONAL',
         1: 'INTEGER',

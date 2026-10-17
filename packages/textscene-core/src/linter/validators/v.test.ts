@@ -192,6 +192,29 @@ describe('v.enumInt', () => {
     expect(err).not.toBeNull();
     expect(err!.message).toContain('100');
   });
+
+  describe('without a window', () => {
+    const labels = { 0: 'A', 1: 'B', 2: 'C' };
+
+    it('judges every value as the window over the whole label range does', () => {
+      const whole = v.enumInt('mode', labels);
+      const windowed = v.enumInt('mode', 0, 2, labels);
+      for (const value of ['-1', '0', '1', '2', '3', 'abc', '1e2']) {
+        expect(whole('mode', value, 1)).toEqual(windowed('mode', value, 1));
+      }
+    });
+
+    it('names the whole label range in the message', () => {
+      const err = v.enumInt('mode', labels)('mode', '9', 1);
+      expect(err!.message).toContain('0-2');
+      expect(err!.message).toContain('C');
+    });
+
+    it('passes the grounding options through', () => {
+      const err = v.enumInt('mode', labels, { hinted: 'x.cpp:1' })('mode', '9', 1);
+      expect(err).toBeAtTier('warning');
+    });
+  });
 });
 
 describe('v.boolean', () => {

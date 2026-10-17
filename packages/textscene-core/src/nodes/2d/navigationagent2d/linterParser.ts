@@ -51,8 +51,6 @@ validatorRegistry.registerAll('NavigationAgent2D', {
   // (navigation_path_query_parameters_2d.h:43-45).
   pathfinding_algorithm: v.enumInt(
     'pathfinding_algorithm',
-    0,
-    0,
     { 0: 'PATHFINDING_ALGORITHM_ASTAR' },
     { hinted: 'navigation_agent_2d.cpp:149' }
   ),
@@ -61,8 +59,6 @@ validatorRegistry.registerAll('NavigationAgent2D', {
   // PathPostProcessing 0-2 (navigation_path_query_parameters_2d.h:47-51).
   path_postprocessing: v.enumInt(
     'path_postprocessing',
-    0,
-    2,
     {
       0: 'PATH_POSTPROCESSING_CORRIDORFUNNEL',
       1: 'PATH_POSTPROCESSING_EDGECENTERED',

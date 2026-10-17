@@ -76,8 +76,6 @@ export const screenSpaceKeys: Record<string, PropertyValidator> = {
   // environment.cpp:1400, set_sdfgi_y_scale (:524) bare-assigns.
   sdfgi_y_scale: v.enumInt(
     'sdfgi_y_scale',
-    0,
-    2,
     { 0: 'Y_SCALE_50_PERCENT', 1: 'Y_SCALE_75_PERCENT', 2: 'Y_SCALE_100_PERCENT' },
     { hinted: 'environment.cpp:1400' }
   ),

@@ -15,12 +15,9 @@ import {
   TYPED_WRAPPER_RE,
 } from '../../../../godot/variant/variantParser.js';
 import {
-  CURSOR_MAX,
   CURSOR_SHAPES,
   GrowDirection,
-  LAYOUT_DIRECTION_MAX,
   LAYOUT_DIRECTION_NAMES,
-  LayoutDirection,
   SIZE_FLAGS_LABELS,
 } from '../../../../godot/scene/control.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
@@ -148,8 +145,6 @@ validatorRegistry.registerAll(
     // control.h:88-92). set_mouse_filter (control.cpp:1923) is `ERR_FAIL_INDEX(p_filter, 3)`.
     mouse_filter: v.enumInt(
       'mouse_filter',
-      0,
-      2,
       { 0: 'STOP', 1: 'PASS', 2: 'IGNORE' },
       { enforced: 'control.cpp:1923' }
     ),
@@ -157,8 +152,6 @@ validatorRegistry.registerAll(
     // set_focus_mode (control.cpp:2267) is `ERR_FAIL_INDEX((int)p_focus_mode, 4)`.
     focus_mode: v.enumInt(
       'focus_mode',
-      0,
-      3,
       { 0: 'NONE', 1: 'CLICK', 2: 'ALL', 3: 'ACCESSIBILITY' },
       { enforced: 'control.cpp:2267' }
     ),
@@ -174,8 +167,6 @@ validatorRegistry.registerAll(
     // (display/display_server.cpp:1768-1770). The field is full-width (control.h:259): hinted, not enforced.
     accessibility_live: v.enumInt(
       'accessibility_live',
-      0,
-      2,
       { 0: 'OFF', 1: 'POLITE', 2: 'ASSERTIVE' },
       { hinted: 'control.cpp:4312' }
     ),
@@ -197,8 +188,6 @@ validatorRegistry.registerAll(
     // ENUM "Inherited,Disabled,Enabled" (control.h:72-76).
     focus_behavior_recursive: v.enumInt(
       'focus_behavior_recursive',
-      0,
-      2,
       { 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' },
       { enforced: 'control.cpp:2295' }
     ),
@@ -207,15 +196,13 @@ validatorRegistry.registerAll(
     // The values of focus_behavior_recursive (control.h:94-98).
     mouse_behavior_recursive: v.enumInt(
       'mouse_behavior_recursive',
-      0,
-      2,
       { 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' },
       { enforced: 'control.cpp:1953' }
     ),
     mouse_force_pass_scroll_events: v.boolean('mouse_force_pass_scroll_events'),
     // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX). The table lives in
     // `godot/scene/control.ts` because SubViewportContainer's rule reads it too.
-    mouse_default_cursor_shape: v.enumInt('mouse_default_cursor_shape', 0, CURSOR_MAX - 1, CURSOR_SHAPES, {
+    mouse_default_cursor_shape: v.enumInt('mouse_default_cursor_shape', CURSOR_SHAPES, {
       enforced: 'control.cpp:2877',
     }),
 
@@ -224,13 +211,7 @@ validatorRegistry.registerAll(
     // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX). The early return at
     // :3536 compares with data.layout_dir, which holds only values that passed this guard, so it
     // never catches an out-of-range write.
-    layout_direction: v.enumInt(
-      'layout_direction',
-      LayoutDirection.INHERITED,
-      LAYOUT_DIRECTION_MAX - 1,
-      LAYOUT_DIRECTION_NAMES,
-      { enforced: 'control.cpp:3539' }
-    ),
+    layout_direction: v.enumInt('layout_direction', LAYOUT_DIRECTION_NAMES, { enforced: 'control.cpp:3539' }),
     // Variant::OBJECT with PROPERTY_HINT_NODE_TYPE (control.cpp:4307): the writer stores
     // `get_path_to(n)`, a NodePath (packed_scene.cpp:884-891). `null` loads too: NIL converts to
     // OBJECT (variant.cpp:543-545), and the setter stores an empty ObjectID (control.cpp:2022-2027).
@@ -246,8 +227,6 @@ validatorRegistry.registerAll(
     // = Node::AutoTranslateMode (main/node.cpp:4032-4034). Hinted, not enforced.
     tooltip_auto_translate_mode: v.enumInt(
       'tooltip_auto_translate_mode',
-      0,
-      2,
       { 0: 'INHERIT', 1: 'ALWAYS', 2: 'DISABLED' },
       { hinted: 'control.cpp:4288' }
     ),

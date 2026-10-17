@@ -12,7 +12,6 @@ import { v } from '../../../../linter/validators/index.js';
 import {
   OverrunBehavior,
   OVERRUN_BEHAVIOR_NAMES,
-  TextDirection,
   TEXT_DIRECTION_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
 import {
@@ -43,8 +42,6 @@ validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:184).
   title_position: v.enumInt(
     'title_position',
-    0,
-    1,
     {
       0: 'POSITION_TOP',
       1: 'POSITION_BOTTOM',
@@ -68,13 +65,9 @@ validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:566, PROPERTY_HINT_ENUM over TextDirection (0-3).
   // `ERR_FAIL_INDEX(int(p_text_direction), 4)` (foldable_container.cpp:156) refuses -1 too,
   // where Button's `text_direction` accepts it (button.cpp:637).
-  title_text_direction: v.enumInt(
-    'title_text_direction',
-    TextDirection.TEXT_DIRECTION_AUTO,
-    TextDirection.TEXT_DIRECTION_INHERITED,
-    TEXT_DIRECTION_NAMES,
-    { enforced: 'foldable_container.cpp:156' }
-  ),
+  title_text_direction: v.enumInt('title_text_direction', TEXT_DIRECTION_NAMES, {
+    enforced: 'foldable_container.cpp:156',
+  }),
   // foldable_container.cpp:567, PROPERTY_HINT_LOCALE_ID. set_language
   // (foldable_container.cpp:141-149) assigns any locale string.
   language: v.quotedString('language'),

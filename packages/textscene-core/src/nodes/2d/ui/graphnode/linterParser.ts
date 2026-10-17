@@ -68,8 +68,6 @@ validatorRegistry.registerAll('GraphNode', {
   // default, FOCUS_ACCESSIBILITY=3 (graph_node.h:90), is inside.
   slots_focus_mode: v.enumInt(
     'slots_focus_mode',
-    1,
-    3,
     { 1: 'Click', 2: 'All', 3: 'Accessibility' },
     { enforced: 'graph_node.cpp:1223' }
   ),

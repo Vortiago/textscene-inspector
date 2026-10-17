@@ -14,8 +14,6 @@ validatorRegistry.registerAll('MultiMesh', {
   // instances exist, an order the value alone cannot show.
   transform_format: v.enumInt(
     'transform_format',
-    0,
-    1,
     { 0: 'TRANSFORM_2D', 1: 'TRANSFORM_3D' },
     {
       hinted: 'multimesh.cpp:399',
@@ -38,8 +36,6 @@ validatorRegistry.registerAll('MultiMesh', {
   // multimesh.cpp:426 hints "Fast,High". set_physics_interpolation_quality (:252-255) is bare.
   physics_interpolation_quality: v.enumInt(
     'physics_interpolation_quality',
-    0,
-    1,
     { 0: 'FAST', 1: 'HIGH' },
     {
       hinted: 'multimesh.cpp:426',

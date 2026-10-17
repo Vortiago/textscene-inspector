@@ -34,13 +34,13 @@ validatorRegistry.registerAll('GPUParticlesCollisionHeightField3D', {
   // gpu_particles_collision_3d.cpp:734: the .tscn stores the enum index, RESOLUTION_256=0
   // to RESOLUTION_8192=5 (gpu_particles_collision_3d.cpp:739-744), never the literal
   // resolution. set_resolution:780-785 is a bare assignment.
-  resolution: v.enumInt('resolution', 0, 5, RESOLUTION, {
+  resolution: v.enumInt('resolution', RESOLUTION, {
     hinted: 'gpu_particles_collision_3d.cpp:734',
   }),
   // gpu_particles_collision_3d.cpp:735, PROPERTY_HINT_ENUM with 2 entries:
   // UPDATE_MODE_WHEN_MOVED=0, UPDATE_MODE_ALWAYS=1 (gpu_particles_collision_3d.cpp:747-748).
   // set_update_mode:791-794 is a bare assignment.
-  update_mode: v.enumInt('update_mode', 0, 1, UPDATE_MODE, {
+  update_mode: v.enumInt('update_mode', UPDATE_MODE, {
     hinted: 'gpu_particles_collision_3d.cpp:735',
   }),
   // gpu_particles_collision_3d.cpp:736, plain BOOL with no hint.

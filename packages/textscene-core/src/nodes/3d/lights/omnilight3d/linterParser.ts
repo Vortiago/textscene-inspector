@@ -19,7 +19,7 @@ validatorRegistry.registerAll('OmniLight3D', {
   // the range starts below zero and both ends are soft, so a negative is legal
   // and means an inverse falloff curve.
   omni_attenuation: v.float('omni_attenuation'),
-  omni_shadow_mode: v.enumInt('omni_shadow_mode', 0, 1, OMNI_SHADOW_MODE, {
+  omni_shadow_mode: v.enumInt('omni_shadow_mode', OMNI_SHADOW_MODE, {
     hinted: 'light_3d.cpp:641',
   }),
 });

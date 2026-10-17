@@ -5,11 +5,8 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
   CENTER_OF_MASS_MODE_NAMES,
-  CenterOfMassMode,
   DAMP_MODE_NAMES,
-  DampMode,
   FREEZE_MODE_NAMES,
-  FreezeMode,
 } from '../../../../godot/scene/physicsBody.js';
 
 validatorRegistry.registerAll('RigidBody3D', {
@@ -26,15 +23,9 @@ validatorRegistry.registerAll('RigidBody3D', {
   gravity_scale: v.float('gravity_scale'),
   // rigid_body_3d.cpp:768 "Auto,Custom". set_center_of_mass_mode (:356-377) is a
   // bare assignment, so out-of-range warns.
-  center_of_mass_mode: v.enumInt(
-    'center_of_mass_mode',
-    CenterOfMassMode.AUTO,
-    CenterOfMassMode.CUSTOM,
-    CENTER_OF_MASS_MODE_NAMES,
-    {
-      hinted: 'rigid_body_3d.cpp:768',
-    }
-  ),
+  center_of_mass_mode: v.enumInt('center_of_mass_mode', CENTER_OF_MASS_MODE_NAMES, {
+    hinted: 'rigid_body_3d.cpp:768',
+  }),
   center_of_mass: v.vector3('center_of_mass'),
   // Vector3(0, 0, 0) means "compute automatically", so zero is legal and the
   // bound is only that no component is negative. rigid_body_3d.cpp:344-346,
@@ -43,7 +34,7 @@ validatorRegistry.registerAll('RigidBody3D', {
   linear_velocity: v.vector3('linear_velocity'),
   // rigid_body_3d.cpp:784 "Combine,Replace". set_linear_damp_mode (:425-428) is
   // a bare assignment, so out-of-range warns.
-  linear_damp_mode: v.enumInt('linear_damp_mode', DampMode.COMBINE, DampMode.REPLACE, DAMP_MODE_NAMES, {
+  linear_damp_mode: v.enumInt('linear_damp_mode', DAMP_MODE_NAMES, {
     hinted: 'rigid_body_3d.cpp:784',
   }),
   // rigid_body_3d.cpp:444, ERR_FAIL_COND(p_linear_damp < 0.0).
@@ -58,7 +49,7 @@ validatorRegistry.registerAll('RigidBody3D', {
   angular_velocity: v.vector3('angular_velocity'),
   // rigid_body_3d.cpp:788 "Combine,Replace". set_angular_damp_mode (:434-437) is
   // a bare assignment, so out-of-range warns.
-  angular_damp_mode: v.enumInt('angular_damp_mode', DampMode.COMBINE, DampMode.REPLACE, DAMP_MODE_NAMES, {
+  angular_damp_mode: v.enumInt('angular_damp_mode', DAMP_MODE_NAMES, {
     hinted: 'rigid_body_3d.cpp:788',
   }),
   // rigid_body_3d.cpp:454, ERR_FAIL_COND(p_angular_damp < 0.0).
@@ -76,7 +67,7 @@ validatorRegistry.registerAll('RigidBody3D', {
   // rigid_body_3d.cpp:776 "Static,Kinematic". set_freeze_mode (:320-326) is a
   // bare assignment (only an early-return-if-unchanged guard), so out-of-range
   // warns.
-  freeze_mode: v.enumInt('freeze_mode', FreezeMode.STATIC, FreezeMode.KINEMATIC, FREEZE_MODE_NAMES, {
+  freeze_mode: v.enumInt('freeze_mode', FREEZE_MODE_NAMES, {
     hinted: 'rigid_body_3d.cpp:776',
   }),
   freeze: v.boolean('freeze'),

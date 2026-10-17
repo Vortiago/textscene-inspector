@@ -44,8 +44,6 @@ validatorRegistry.registerAll('TouchScreenButton', {
   // (touch_screen_button.h:42-45) has no MAX sentinel, so out of range is only hinted: a warning.
   visibility_mode: v.enumInt(
     'visibility_mode',
-    0,
-    1,
     { 0: 'ALWAYS', 1: 'TOUCHSCREEN_ONLY' },
     { hinted: 'touch_screen_button.cpp:442' }
   ),

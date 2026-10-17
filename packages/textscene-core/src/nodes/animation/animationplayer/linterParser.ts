@@ -91,21 +91,15 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // (:874-876) is a bare assignment, so out-of-range only warns.
   playback_auto_capture_transition_type: v.enumInt(
     'playback_auto_capture_transition_type',
-    0,
-    11,
     AUTO_CAPTURE_TRANSITION_TYPE,
     { hinted: 'animation_player.cpp:1044' }
   ),
   // animation_player.cpp:1045, PROPERTY_HINT_ENUM "In,Out,InOut,OutIn"
   // (4 values, Tween::EaseType). set_auto_capture_ease_type (:882-884) is a
   // bare assignment, so out-of-range only warns.
-  playback_auto_capture_ease_type: v.enumInt(
-    'playback_auto_capture_ease_type',
-    0,
-    3,
-    AUTO_CAPTURE_EASE_TYPE,
-    { hinted: 'animation_player.cpp:1045' }
-  ),
+  playback_auto_capture_ease_type: v.enumInt('playback_auto_capture_ease_type', AUTO_CAPTURE_EASE_TYPE, {
+    hinted: 'animation_player.cpp:1045',
+  }),
   // animation_player.cpp:1046 hints "0,4096,0.01,suffix:s", closed both ends.
   // set_default_blend_time (animation_player.cpp:823) is a bare assignment, so
   // both ends are the hint's alone and warn.
@@ -117,10 +111,10 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // animation_player.cpp:1035/:57-59, redirected through AnimationMixer's
   // callback_mode_process/method (animation_mixer.cpp:501-509,522-525): both
   // bare assignments, no engine-side range check on the raw int.
-  playback_process_mode: v.enumInt('playback_process_mode', 0, 2, PROCESS_MODE, {
+  playback_process_mode: v.enumInt('playback_process_mode', PROCESS_MODE, {
     hinted: 'animation_mixer.cpp:2471',
   }),
-  method_call_mode: v.enumInt('method_call_mode', 0, 1, METHOD_CALL_MODE, {
+  method_call_mode: v.enumInt('method_call_mode', METHOD_CALL_MODE, {
     hinted: 'animation_mixer.cpp:2472',
   }),
   playback_active: v.boolean('playback_active'),

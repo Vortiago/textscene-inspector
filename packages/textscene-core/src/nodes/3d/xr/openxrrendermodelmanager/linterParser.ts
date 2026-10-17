@@ -19,8 +19,6 @@ validatorRegistry.registerAll('OpenXRRenderModelManager', {
   // assignment, so an out-of-range value is kept and the hint tier warns.
   tracker: v.enumInt(
     'tracker',
-    0,
-    3,
     { 0: 'Any', 1: 'None set', 2: 'Left Hand', 3: 'Right Hand' },
     { hinted: 'openxr_render_model_manager.cpp:44' }
   ),

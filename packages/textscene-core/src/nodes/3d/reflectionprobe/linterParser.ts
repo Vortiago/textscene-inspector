@@ -30,7 +30,7 @@ const AMBIENT_MODE = {
 validatorRegistry.registerAll('ReflectionProbe', {
   // reflection_probe.cpp:260, PROPERTY_HINT_ENUM. set_update_mode (:187-190) is a bare
   // assignment, so an out-of-range int warns.
-  update_mode: v.enumInt('update_mode', 0, 1, UPDATE_MODE, { hinted: 'reflection_probe.cpp:260' }),
+  update_mode: v.enumInt('update_mode', UPDATE_MODE, { hinted: 'reflection_probe.cpp:260' }),
 
   // reflection_probe.cpp:261, PROPERTY_HINT_RANGE "0,1,0.01". set_intensity (:33-36)
   // stores the value unchecked, so both ends are hinted only.
@@ -88,7 +88,7 @@ validatorRegistry.registerAll('ReflectionProbe', {
 
   // reflection_probe.cpp:274, PROPERTY_HINT_ENUM. set_ambient_mode (:52-56) stores the
   // value unchecked, so out-of-range warns.
-  ambient_mode: v.enumInt('ambient_mode', 0, 2, AMBIENT_MODE, { hinted: 'reflection_probe.cpp:274' }),
+  ambient_mode: v.enumInt('ambient_mode', AMBIENT_MODE, { hinted: 'reflection_probe.cpp:274' }),
 
   // reflection_probe.cpp:275, PROPERTY_HINT_COLOR_NO_ALPHA only hides the alpha slider.
   // set_ambient_color (:62-65) is a bare assignment.
