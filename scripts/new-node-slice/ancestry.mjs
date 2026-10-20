@@ -5,7 +5,7 @@
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
+import { NODES_ROOT, REPO_ROOT, fail } from './paths.mjs';
 
 /**
  * Every slice file of one basename, read once per invocation. A scaffold asks about five to eight
@@ -22,7 +22,7 @@ function slicesNamed(basename) {
       if (entry.isDirectory()) walk(full);
       else if (entry.name === basename) found.push({ dir: dirname(full), src: readFileSync(full, 'utf8') });
     }
-  })(join(CORE_SRC, 'nodes'));
+  })(NODES_ROOT);
   sliceSources.set(basename, found);
   return found;
 }

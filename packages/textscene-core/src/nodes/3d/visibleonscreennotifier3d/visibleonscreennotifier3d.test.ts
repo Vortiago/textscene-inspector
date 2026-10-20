@@ -23,6 +23,6 @@ describe('VisibleOnScreenNotifier3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('VisibleOnScreenNotifier3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('VisibleOnScreenNotifier3D')).toBe('transform-only');
   });
 });

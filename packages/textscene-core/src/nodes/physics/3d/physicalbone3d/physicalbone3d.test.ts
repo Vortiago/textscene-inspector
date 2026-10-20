@@ -24,7 +24,7 @@ describe('PhysicalBone3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('PhysicalBone3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('PhysicalBone3D')).toBe('transform-only');
   });
 
   it('reads bone_name and joint_type nowhere: parseNode3D only knows transform and visible', () => {

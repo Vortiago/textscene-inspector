@@ -9,7 +9,7 @@ renders_as: nothing yet, not implemented
 
 # CPUParticles3D
 
-A CPU-simulated particle emitter that draws its `mesh` once per live particle. The previewer does not draw the cloud yet, so the node is an invisible transform-only fallback and its children still show.
+A CPU-simulated particle emitter that draws its `mesh` once per live particle. The previewer does not draw the cloud yet, so the node draws nothing and its children still show.
 
 ## Linting
 

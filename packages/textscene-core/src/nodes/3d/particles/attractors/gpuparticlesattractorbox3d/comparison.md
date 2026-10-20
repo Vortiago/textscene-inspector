@@ -9,7 +9,7 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesAttractorBox3D
 
-A box-shaped attractor that pulls or pushes particles from nearby `GPUParticles3D` nodes toward or away from its origin. The previewer does not draw the box or apply its force yet, so the node is an invisible transform-only fallback and its children still show.
+A box-shaped attractor that pulls or pushes particles from nearby `GPUParticles3D` nodes toward or away from its origin. The previewer does not draw the box or apply its force yet, so the node draws nothing and its children still show.
 
 ## Linting
 

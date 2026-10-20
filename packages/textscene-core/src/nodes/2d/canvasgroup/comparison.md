@@ -4,14 +4,14 @@ category: 2D
 status: unimplemented
 fixture: unit-canvas-group.tscn
 # image: unit-canvas-group
-renders_as: invisible transform-only fallback, the children's composite into one offscreen buffer is not reproduced
+renders_as: nothing yet, Godot composites its children into one offscreen buffer, the previewer does not
 ---
 
 # CanvasGroup
 
 CanvasGroup composites its children into one offscreen buffer and blends that buffer
 once. The previewer parses and validates it but does not reproduce the compositing, so
-it renders as a transform-only fallback and its children still show.
+it draws nothing and its children still show.
 
 ## Linting
 

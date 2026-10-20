@@ -78,7 +78,7 @@ export function renderPanels(nodes) {
         n.notes
           ? `<div class="prose">${n.html}</div>`
           : n.unimplemented
-            ? `<div class="novisual">Not yet implemented — the previewer renders this as a transform-only fallback (children still show, the node itself draws nothing). In Godot it is a <strong>${escapeHtml(
+            ? `<div class="novisual">Not yet implemented: the previewer draws nothing for this node, and its children still show. In Godot it is a <strong>${escapeHtml(
                 n.group
               )}</strong> node.</div>${n.html ? `<div class="prose">${n.html}</div>` : ''}`
             : n.sectioned

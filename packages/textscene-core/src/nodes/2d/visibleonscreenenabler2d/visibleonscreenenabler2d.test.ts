@@ -23,6 +23,6 @@ describe('VisibleOnScreenEnabler2D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('VisibleOnScreenEnabler2D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('VisibleOnScreenEnabler2D')).toBe('transform-only');
   });
 });

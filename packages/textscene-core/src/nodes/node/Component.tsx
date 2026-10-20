@@ -8,6 +8,7 @@
 import { useMemo } from 'react';
 import type { NodeProperties } from './types';
 import type { NodeComponentProps } from '../../r3f/NodeComponentRegistry';
+import { invisibleBase } from '../../r3f/invisibleBase';
 import { transformFromNode3DProperties } from '../../r3f/nodeTransform';
 
 export function Node({ node, children }: NodeComponentProps) {
@@ -23,3 +24,5 @@ export function Node({ node, children }: NodeComponentProps) {
     </group>
   );
 }
+
+invisibleBase(Node);

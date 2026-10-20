@@ -23,6 +23,6 @@ describe('BackBufferCopy registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('BackBufferCopy')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('BackBufferCopy')).toBe('transform-only');
   });
 });

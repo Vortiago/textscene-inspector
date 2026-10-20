@@ -256,6 +256,7 @@ A test or a script fails when one of these rules breaks.
 | Core imports each engine fact from its file, and `godot/index.ts` and the root `index.ts` re-export only what a package outside core imports | `packageExports.test.ts` |
 | No value export exists for tests alone. An entry point's export counts only when the apps, the dev kit or the scripts import it | `scripts/testOnlyExports.test.mjs` |
 | Every registered type has a Godot base chain | `baseChainCompleteness.test.ts` |
+| A `pending` registration mounts an **invisible base**, and a `draws` one mounts a component that draws | `NodeComponentRegistry.register`, `NodeComponentRegistry.test.ts`, `sheets.test.mjs` |
 | A rule reports only through its declared arms, and derives `emits` from them | the ESLint rule-arm guard, `ruleCoverage.emits.test.ts`, `ruleArms.test.ts` |
 | A resource slice has the slice shape | `resourceSliceConformance`, `resourceSliceIsolation` |
 | The raw properties agree between parsers | `parser/rawPropertyParity.test.ts` |

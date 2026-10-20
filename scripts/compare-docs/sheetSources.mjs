@@ -8,14 +8,12 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { NODES_ROOT } from '../new-node-slice/paths.mjs';
 
 export { REPO_ROOT };
 
 /** Slice roots, walked for `comparison.md`. */
-const SLICE_ROOTS = [
-  join(REPO_ROOT, 'packages/textscene-core/src/nodes'),
-  join(REPO_ROOT, 'packages/textscene-core/src/resources'),
-];
+const SLICE_ROOTS = [NODES_ROOT, join(REPO_ROOT, 'packages/textscene-core/src/resources')];
 
 /** The whole-scene showcases, read as plain `*.md`. */
 const LOOSE_SHEETS_DIR = join(REPO_ROOT, 'docs/comparison/sheets');
