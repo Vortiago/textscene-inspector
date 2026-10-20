@@ -63,7 +63,7 @@ export function assignedUsers(
 const frustum = new THREE.Frustum();
 const worldBounds = new THREE.Box3();
 
-export class SceneLightmaps {
+class SceneLightmaps {
   private readonly instances = new Set<LightmapInstance>();
   private readonly listeners = new Set<() => void>();
   /** Each node's assignment, kept until the instances change so a reader sees one object. */
