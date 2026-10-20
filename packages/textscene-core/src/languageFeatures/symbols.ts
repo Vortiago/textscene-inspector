@@ -5,8 +5,8 @@
  * its parent's, as an outline, breadcrumbs and sticky scroll expect.
  */
 
-import type { LanguageDocument } from './document.js';
-import { nodePathOf } from './nodePath.js';
+import type { DocumentSection, LanguageDocument } from './document.js';
+import { nodeSectionOfPath } from './nodePathRefs.js';
 import { linesRange } from './ranges.js';
 import type { DocumentSymbol, SymbolKind } from './types.js';
 
@@ -32,28 +32,27 @@ interface PendingSymbol {
 }
 
 /**
- * The tree stores the root under `"."`, the value its direct children give in `parent=`, and a
- * deeper node under its own path. A node whose parent is missing, as in a malformed file, becomes a
- * second root, so no symbol is lost.
+ * Each node attaches under the node its `parent=` resolves to, among those already seen. A node
+ * whose parent is missing, as in a malformed file, becomes a second root, so no symbol is lost.
  */
 function buildTree(document: LanguageDocument): PendingSymbol[] {
   const roots: PendingSymbol[] = [];
-  const byPath = new Map<string, PendingSymbol>();
+  const bySection = new Map<DocumentSection, PendingSymbol>();
   for (const section of document.sections) {
-    if (section.kind !== 'node') continue;
-    const path = nodePathOf(section);
+    const name = section.attributes.name;
     // VS Code refuses a symbol with an empty name, and a heading being typed has one.
-    if (path === undefined) continue;
+    if (section.kind !== 'node' || !name) continue;
     const symbol: PendingSymbol = {
-      name: section.attributes.name!,
+      name,
       type: section.attributes.type ?? '',
       headingLine: section.headingLine,
       endLine: section.endLine,
       children: [],
     };
     const parent = section.attributes.parent;
-    const parentSymbol = parent === undefined ? undefined : byPath.get(parent);
-    byPath.set(path, symbol);
+    const parentSection = parent === undefined ? undefined : nodeSectionOfPath(document, parent);
+    const parentSymbol = parentSection && bySection.get(parentSection);
+    bySection.set(section, symbol);
     if (parentSymbol) parentSymbol.children.push(symbol);
     else roots.push(symbol);
   }

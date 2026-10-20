@@ -198,3 +198,20 @@ describe('nodeDeclarationRangeAt on a heading tag named like an Object property'
     expect(nodeDeclarationRangeAt(odd, { line: 0, character: 5 })).toBeUndefined();
   });
 });
+
+describe('nodeDeclarationRangeAt under a %Name parent', () => {
+  const UNIQUE = [
+    '[node name="Root" type="Node3D"]',
+    '[node name="Player" type="Node3D" parent="."]',
+    'unique_name_in_owner = true',
+    '[node name="Hand" type="Node3D" parent="%Player"]',
+    '[node name="Mesh" type="Node3D" parent="Player/Hand"]',
+  ].join('\n');
+
+  it('resolves the path of a node seated under a claimed name', () => {
+    const unique = new LanguageDocument(UNIQUE);
+    const character = unique.lines[4]!.indexOf('Player/Hand') + 1;
+
+    expect(nodeDeclarationRangeAt(unique, { line: 4, character })?.start.line).toBe(3);
+  });
+});
