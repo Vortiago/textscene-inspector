@@ -11,7 +11,8 @@ renders_as: an unlit textured quad
 
 TouchScreenButton is an on-screen button for touch input that draws `texture_normal` or
 `texture_pressed`. The previewer draws `texture_normal` with its top-left corner at the node
-origin, as the editor does whatever `visibility_mode` says, and never draws `texture_pressed`.
+origin, as the editor does whatever `visibility_mode` says, and never draws `texture_pressed`. Its
+collision `shape` is an outline gizmo gated behind "Visible Collision Shapes", as CollisionShape2D's is.
 
 ## Linting
 
@@ -37,10 +38,11 @@ Strict parsing format-checks these `TouchScreenButton` properties, plus 12 inher
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-`parser.ts` reads `texture_normal` alone. A `null` `texture_normal` is no texture, so the
-button draws nothing. The other eight keys are validated and never rendered.
+`parser.ts` reads `texture_normal`, `shape`, `shape_centered` and `shape_visible`. A `null`
+`texture_normal` or `shape` is none, so the button draws nothing. The other five keys are
+validated and never rendered.
 
 ## Known limitations
 
-- **Editor only** The editor draws the collision `shape` over the button while
-  `shape_visible` holds, and the previewer draws no shape.
+- **Editor only** The editor always draws the collision `shape` over the button as a filled shape.
+  Here it is an outline that shows only while Visible Collision Shapes is on.

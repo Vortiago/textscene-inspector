@@ -197,15 +197,7 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // The editor draws `texture_normal` whatever the mode says (touch_screen_button.cpp:140).
       'visibility_mode',
     ],
-    renderGap: [
-      // The editor draws the collision shape over the button while `shape_visible` holds
-      // (touch_screen_button.cpp:151-171). The renderer draws no shape.
-      'shape',
-      'shape_centered',
-      'shape_visible',
-    ],
-    reason:
-      'The renderer draws texture_normal. The input keys change no frame, and the shape overlay is not drawn yet.',
+    reason: 'The input keys of a button change no frame, since no finger is down in a preview.',
   },
 
   Area2D: {
