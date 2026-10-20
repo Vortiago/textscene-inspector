@@ -130,11 +130,6 @@ export const RUNTIME_EFFECT_NODE_TYPES = [
     cite: 'skeleton_2d.cpp `NOTIFICATION_INTERNAL_PROCESS` calls `execute_modifications` on its stack',
   },
   {
-    type: 'SpringArm3D',
-    effect: 'drives',
-    cite: 'spring_arm_3d.cpp `NOTIFICATION_INTERNAL_PHYSICS_PROCESS` calls `process_spring`, which places each child',
-  },
-  {
     type: 'ShaderGlobalsOverride',
     effect: 'drives',
     cite: 'shader_globals_override.cpp `global_shader_parameter_set_override` re-shades each material that reads it',
