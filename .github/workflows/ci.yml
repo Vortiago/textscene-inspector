@@ -15,9 +15,9 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  # A pull request that changes no file a golden scene renders through skips the golden run, and
-  # so does a tree whose rendering files already passed it (renderInputsKey.mjs). Every other event
-  # runs it.
+  # A pull request that changes no file a golden scene renders through skips the golden run. A push
+  # or pull request whose rendering files already passed it skips it too (renderInputsKey.mjs). A
+  # manual run always runs it.
   changes:
     name: Changed files
     runs-on: ubuntu-latest
@@ -41,10 +41,11 @@ jobs:
           git diff --name-only HEAD^1 HEAD | node scripts/ci/visualScope.mjs >> "$GITHUB_OUTPUT"
       - id: inputs
         if: steps.scope.outputs.visual == 'true'
-        run: git ls-tree -r HEAD | node scripts/ci/renderInputsKey.mjs >> "$GITHUB_OUTPUT"
+        # Unquoted paths, so a non-ASCII path still matches its NON_RENDERING_PATHS pattern.
+        run: git -c core.quotePath=false ls-tree -r HEAD | node scripts/ci/renderInputsKey.mjs >> "$GITHUB_OUTPUT"
       # A pull request reads the passes of its own earlier runs and of main, never another branch's.
       - id: passed
-        if: steps.scope.outputs.visual == 'true'
+        if: steps.scope.outputs.visual == 'true' && github.event_name != 'workflow_dispatch'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .visual-pass

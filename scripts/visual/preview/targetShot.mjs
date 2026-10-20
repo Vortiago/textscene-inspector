@@ -5,16 +5,19 @@
  * busy: 4 to 7 s a shot on a 3D golden, against under 1 s here.
  */
 
+/* global window */ // used only inside the page.evaluate callback, which runs in the browser.
+
 /** Playwright's default action timeout, which the element screenshot used when a scene set none. */
 const DEFAULT_SHOT_TIMEOUT_MS = 30000;
 
-/** Written only by `cdpSessionOf`. An entry goes with its page. */
+/** Written only by `cdpSessionOf`. An entry goes with its page, or with a session that failed to open. */
 const cdpSessions = new WeakMap();
 
 /**
- * A function that answers the target's whole-pixel box as a PNG buffer on each call. It measures
- * the box once, at the first call, since a capture target keeps its layout between shots. A call
- * rejects with a `TimeoutError` when the shot outlasts `timeout`, as Playwright's own screenshot does.
+ * A function that answers the target's whole-pixel box as a PNG buffer on each call. It scrolls
+ * the target into view and measures its box once, at the first call, since a capture target keeps
+ * its layout between shots. A call rejects with a `TimeoutError` when the shot outlasts `timeout`,
+ * as Playwright's own screenshot does, and a `timeout` of 0 waits without limit, as Playwright's does.
  *
  * @param {import('playwright').Locator} target - the canvas, or the 2D frame, in the page or a frame.
  * @param {{ timeout?: number }} [options]
@@ -33,14 +36,25 @@ export function targetShooter(target, { timeout = DEFAULT_SHOT_TIMEOUT_MS } = {}
   };
 }
 
+/**
+ * The target's box in document coordinates, which `Page.captureScreenshot` clips by. Playwright's
+ * box is relative to the viewport, so a scrolled page adds its scroll offset.
+ */
 async function clipOf(target, timeout) {
+  await target.scrollIntoViewIfNeeded({ timeout });
   const box = await target.boundingBox({ timeout });
   if (!box) throw new Error('expected a visible capture target, but the capture target is not visible');
-  return { ...enclosingIntRect(box), scale: 1 };
+  const scroll = await target.page().evaluate(() => ({ x: window.scrollX, y: window.scrollY }));
+  return { ...enclosingIntRect({ ...box, x: box.x + scroll.x, y: box.y + scroll.y }), scale: 1 };
 }
 
 function cdpSessionOf(page) {
-  if (!cdpSessions.has(page)) cdpSessions.set(page, page.context().newCDPSession(page));
+  if (!cdpSessions.has(page)) {
+    const session = page.context().newCDPSession(page);
+    // A session that failed to open is not cached, so the next shot tries again.
+    session.catch(() => cdpSessions.delete(page));
+    cdpSessions.set(page, session);
+  }
   return cdpSessions.get(page);
 }
 
@@ -54,6 +68,7 @@ function enclosingIntRect({ x, y, width, height }) {
 }
 
 function withTimeout(promise, timeout) {
+  if (timeout === 0) return promise;
   let timer;
   const expired = new Promise((_, reject) => {
     timer = setTimeout(() => {
