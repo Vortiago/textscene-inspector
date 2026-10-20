@@ -8,23 +8,12 @@
 // imports `Node` explicitly, or every Node-level key (`process_mode`, `process_priority`,
 // `editor_description`) resolves to null in isolation.
 import '../../node/linterParser.js';
+import {
+  NODE_3D_ROTATION_EDIT_MODE_NAMES,
+  NODE_3D_ROTATION_ORDER_NAMES,
+} from '../../../godot/scene/node3d.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-
-const ROTATION_ORDER = {
-  0: 'XYZ',
-  1: 'XZY',
-  2: 'YXZ',
-  3: 'YZX',
-  4: 'ZXY',
-  5: 'ZYX',
-};
-
-const ROTATION_EDIT_MODE = {
-  0: 'Euler',
-  1: 'Quaternion',
-  2: 'Basis',
-};
 
 validatorRegistry.registerAll('Node3D', {
   transform: v.transform3d('transform'),
@@ -43,14 +32,14 @@ validatorRegistry.registerAll('Node3D', {
   top_level: v.boolean('top_level'),
   visibility_parent: v.nodePath('visibility_parent'),
   // node_3d.cpp:759, ERR_FAIL_INDEX(int32_t(p_order), 6).
-  rotation_order: v.enumInt('rotation_order', ROTATION_ORDER, {
+  rotation_order: v.enumInt('rotation_order', NODE_3D_ROTATION_ORDER_NAMES, {
     enforced: 'node_3d.cpp:759',
   }),
   // node_3d.cpp:1532, PROPERTY_HINT_ENUM "Euler,Quaternion,Basis". Unlike
   // rotation_order's neighbouring ERR_FAIL_INDEX, set_rotation_edit_mode
   // (node_3d.cpp:717-746) has no range guard at all, so out-of-range is
   // hinted only.
-  rotation_edit_mode: v.enumInt('rotation_edit_mode', ROTATION_EDIT_MODE, {
+  rotation_edit_mode: v.enumInt('rotation_edit_mode', NODE_3D_ROTATION_EDIT_MODE_NAMES, {
     hinted: 'node_3d.cpp:1532',
   }),
 });
