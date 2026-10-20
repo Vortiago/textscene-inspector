@@ -98,27 +98,30 @@ export async function runLongTaskArms(baseUrl) {
   }
 }
 
-/** True when a task over the limit ran after the reply: the one verdict the arm retries on and fails on. */
-function hasStallAfterReply({ probe }) {
-  return longTasksAfterFirstReply(probe, LONG_TASK_LIMIT_MS)?.length > 0;
+function tasksAfterReply({ probe }) {
+  return longTasksAfterFirstReply(probe, LONG_TASK_LIMIT_MS) ?? [];
 }
 
 /**
- * A shared runner under load adds 50 to 100 ms tasks after the reply to any scene,
- * so a stall fails the arm only when a second run stalls too. The retry is logged.
+ * A shared runner under load adds 50 to 100 ms tasks after the reply to any scene, so a
+ * stall fails the arm only when a second run stalls too. Both runs' tasks are logged.
  */
-function runWorkerArm(browser, baseUrl, fixture) {
-  return runAgainIfStalled(
+async function runWorkerArm(browser, baseUrl, fixture) {
+  let firstRunTasks = [];
+  const arm = await runAgainIfStalled(
     () => runLongTaskScenario(browser, baseUrl, fixture, []),
-    (arm) => {
-      const isStalled = hasStallAfterReply(arm);
-      if (isStalled)
-        console.log(
-          `[gate] ${fixture}: a task over ${LONG_TASK_LIMIT_MS} ms after the reply, running it again`
-        );
-      return isStalled;
+    (first) => {
+      firstRunTasks = tasksAfterReply(first);
+      return firstRunTasks.length > 0;
     }
   );
+  if (firstRunTasks.length > 0) {
+    console.log(
+      `[gate] ${fixture}: tasks over ${LONG_TASK_LIMIT_MS} ms after the reply, first run ` +
+        `${JSON.stringify(firstRunTasks)}, second run ${JSON.stringify(tasksAfterReply(arm))}`
+    );
+  }
+  return arm;
 }
 
 /**
