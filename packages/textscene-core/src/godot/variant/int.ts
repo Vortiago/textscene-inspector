@@ -7,8 +7,10 @@
 
 export { toUint32, toInt16, INT32_MAX, readerLimitedInt } from './intWidth.js';
 export type { IntWidth } from './intWidth.js';
-export { parseGodotInt, statedFromFloat, storedFromFloat } from './intReader.js';
+export { parseGodotInt, parseSlotInt, statedFromFloat, storedFromFloat } from './intReader.js';
 export {
+  readIntSlot,
+  slotWidth,
   ruleInt,
   ruleCount,
   slotCount,
@@ -19,4 +21,4 @@ export {
   slotComponentsAltered,
   readSlotTuple,
 } from './intSlots.js';
-export type { SlotTuple } from './intSlots.js';
+export type { IntSlotRead, SlotTuple } from './intSlots.js';

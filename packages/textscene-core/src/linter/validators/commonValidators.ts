@@ -3,16 +3,10 @@
 import type { ParseError } from '../../linter/types.js';
 import type { PropertyValidator } from '../propertyValidator.js';
 import { propertyError } from './propertyError.js';
-import {
-  convertedSpelling,
-  readIntSlot,
-  slotWidth,
-  storedNotWritten,
-  unrepresentableInt,
-} from './intSlot.js';
-import { boolLiteralAsNumber, boolSlotValue } from '../../godot/variant/variantBool.js';
+import { convertedSpelling, storedNotWritten, unrepresentableInt } from './intSlot.js';
+import { boolLiteralAsNumber, boolSlotValue, scalarSlotValue } from '../../godot/variant/variantBool.js';
 import { parseGodotFloat } from '../../godot/variant/number.js';
-import type { IntWidth } from '../../godot/variant/int.js';
+import { readIntSlot, slotWidth, type IntWidth } from '../../godot/variant/int.js';
 
 /**
  * The Variant-literal readers, re-exported from `src/godot/`. They live there
@@ -238,7 +232,7 @@ export function createNumericRangeValidator(spec: NumericRangeSpec): PropertyVal
     // the range checks, which it never trips. `read` is null for a float slot,
     // and the truncation check at the end reads that flag.
     const read = parseAsInt ? readIntSlot(value, max, spec.width) : null;
-    const num = read ? read.stored : (boolLiteralAsNumber(value) ?? parseGodotFloat(value));
+    const num = read ? read.stored : scalarSlotValue(value);
     // An int slot narrows a non-finite at parse time to a value the file does
     // not state (see `asStoredInt`), so it errors. A float slot stores it
     // verbatim and says nothing, as the engine does.

@@ -12,12 +12,8 @@ import { resourceRef } from '../../../godot/variant/resourceRef.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { badIntElement } from '../../../linter/validators/v/packedArrays.js';
-import {
-  markIntSlot,
-  readIntSlot,
-  storedNotWritten,
-  unrepresentableInt,
-} from '../../../linter/validators/intSlot.js';
+import { markIntSlot, storedNotWritten, unrepresentableInt } from '../../../linter/validators/intSlot.js';
+import { readIntSlot } from '../../../godot/variant/int.js';
 import { readCellsField } from './cellData.js';
 
 const DICT_LITERAL_RE = /^\{[\s\S]*\}$/;

@@ -8,7 +8,7 @@
 import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import { INT32_MAX, readerLimitedInt, statedFromFloat, type IntWidth } from '../../godot/variant/int.js';
+import { readerLimitedInt, type IntSlotRead, type IntWidth } from '../../godot/variant/int.js';
 import { parseGodotFloat } from '../../godot/variant/number.js';
 import { boolLiteralAsNumber } from '../../godot/variant/variantBool.js';
 
@@ -56,39 +56,6 @@ export function unrepresentableInt(
     errorCodeValue,
     'error'
   );
-}
-
-/**
- * The width a slot reads at, from its own declared ceiling: a maximum above
- * int32 is unreachable unless the slot is unsigned. `MeshInstance3D.layers =
- * 4294967295` stores 4294967295 (uint32), and `Node2D.light_mask` stores -1 (int32).
- */
-export function slotWidth(max?: number | null): IntWidth {
-  return (max ?? 0) > INT32_MAX ? 'uint32' : 'int32';
-}
-
-/**
- * Both readings of one literal, from one parse: what the slot stores, and the
- * double it came from, which the truncation check needs. `badIntElement` has
- * the same shape for an array element.
- */
-interface IntSlotRead {
-  /** The tokenizer's double, or `null` for text outside the grammar. */
-  readonly asFloat: number | null;
-  /** The integer stored: `null` unreadable, `NaN` read but unstorable. */
-  readonly stored: number | null;
-}
-
-/**
- * A literal as an {@link IntSlotRead}: the integer this slot stores, beside the
- * double it came from.
- * The width goes in, not onto the result: `_to_int`'s FLOAT branch is undefined
- * outside the target type's range, so a uint32 `seed = 4294967295.0` is legal.
- */
-export function readIntSlot(value: string, max?: number | null, width?: IntWidth): IntSlotRead {
-  const asFloat = boolLiteralAsNumber(value) ?? parseGodotFloat(value);
-  if (asFloat === null) return { asFloat: null, stored: null };
-  return { asFloat, stored: statedFromFloat(asFloat, value, width ?? slotWidth(max)) };
 }
 
 /**

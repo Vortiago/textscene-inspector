@@ -32,3 +32,12 @@ export function boolLiteralAsNumber(text: string): 1 | 0 | undefined {
   if (trimmed === 'false') return 0;
   return undefined;
 }
+
+/**
+ * The double a literal holds in an INT or FLOAT slot, or `null` for text the tokenizer cannot read:
+ * the BOOL arm first, then the TSCN float grammar. Every reader of a numeric property starts here.
+ * A packed-array element is no property write and reads {@link parseGodotFloat} alone.
+ */
+export function scalarSlotValue(text: string): number | null {
+  return boolLiteralAsNumber(text) ?? parseGodotFloat(text);
+}
