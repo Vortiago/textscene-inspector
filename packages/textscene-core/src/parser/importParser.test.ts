@@ -10,6 +10,7 @@ import {
   importLightmapUnwrap,
   importNodeLayers,
   importRootScale,
+  importTexture2DArraySlices,
   importTexture3DSlices,
   importTextureOptions,
   parseImportFile,
@@ -477,5 +478,23 @@ describe('importTexture3DSlices', () => {
 
   it('imports nothing for a count of 0, which Godot divides by (edge case)', () => {
     expect(importTexture3DSlices(texture3DSidecar('3d_texture', 'slices/horizontal=0'))).toBeNull();
+  });
+});
+
+describe('importTexture2DArraySlices', () => {
+  const sidecar = (importer: string, ...params: string[]) =>
+    parseImportFile([`[remap]`, '', `importer="${importer}"`, '', '[params]', '', ...params].join('\n'));
+
+  it('reads the slices a lightmap bake writes into its atlas sidecar', () => {
+    const atlas = sidecar('2d_array_texture', 'slices/horizontal=1', 'slices/vertical=2');
+    expect(importTexture2DArraySlices(atlas)).toEqual({ horizontal: 1, vertical: 2 });
+  });
+
+  it('imports no texture array under the 3D importer (error case)', () => {
+    expect(importTexture2DArraySlices(sidecar('3d_texture', 'slices/vertical=2'))).toBeNull();
+  });
+
+  it("takes the importer's 8 for a count the sidecar omits (edge case)", () => {
+    expect(importTexture2DArraySlices(sidecar('2d_array_texture'))).toEqual({ horizontal: 8, vertical: 8 });
   });
 });

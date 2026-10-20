@@ -33,7 +33,12 @@ import {
 } from '../godot/import/textureImport.js';
 import { AnimationLoopMode } from '../godot/scene/animation.js';
 import type { ClipImportOptions } from '../godot/import/animationImport.js';
-import { DEFAULT_SLICES, TEXTURE_3D_IMPORTER, type ImportSlices } from '../godot/import/texture3DImport.js';
+import {
+  DEFAULT_SLICES,
+  TEXTURE_2D_ARRAY_IMPORTER,
+  TEXTURE_3D_IMPORTER,
+  type ImportSlices,
+} from '../godot/import/layeredTextureImport.js';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
 const KEY_VALUE = /^([A-Za-z_][A-Za-z0-9_/]*)=(.*)$/;
@@ -185,7 +190,16 @@ function compressMode(value: string | undefined): TextureImportOptions['mode'] {
  * (`resource_importer_layered_texture.cpp:372-373`).
  */
 export function importTexture3DSlices(parsed: ParsedImportFile | null): ImportSlices | null {
-  if (parsed?.importer !== TEXTURE_3D_IMPORTER) return null;
+  return layeredSlices(parsed, TEXTURE_3D_IMPORTER);
+}
+
+/** The slices a texture array's sidecar names, as {@link importTexture3DSlices} reads a 3D texture's. */
+export function importTexture2DArraySlices(parsed: ParsedImportFile | null): ImportSlices | null {
+  return layeredSlices(parsed, TEXTURE_2D_ARRAY_IMPORTER);
+}
+
+function layeredSlices(parsed: ParsedImportFile | null, importer: string): ImportSlices | null {
+  if (parsed?.importer !== importer) return null;
   const horizontal = sliceCount(parsed.params['slices/horizontal']);
   const vertical = sliceCount(parsed.params['slices/vertical']);
   return horizontal >= 1 && vertical >= 1 ? { horizontal, vertical } : null;

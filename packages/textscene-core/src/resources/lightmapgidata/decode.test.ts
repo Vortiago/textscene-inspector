@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { parseBinaryResource } from '../formats/binaryresource/parse';
-import { ragdollBytes } from '../formats/binaryresource/testing/ragdollBake';
+import { ragdollBytes } from '../testing/ragdollBake';
 import { decodeLightmapGIData } from './decode';
 
 /** A `.tres` LightmapGIData whose `[resource]` body is `body`. */

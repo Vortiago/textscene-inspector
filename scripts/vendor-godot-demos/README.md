@@ -23,8 +23,8 @@ previewer does not read (ADR-0028).
 The script applies these to the checkout before the prune:
 
 - `text-resources/` holds the Godot text copy of 38 binary resources (`.res`, `.mesh`, `.scn`).
-  Each copy replaces the binary file of the same stem, because the previewer reads no binary
-  resource (issue #110).
+  Each copy replaces the binary file of the same stem, because the only binary resource the
+  previewer reads is a lightmap bake (`.lmbake`) (issue #110).
 - `local-changes.patch` edits 17 upstream files:
   - 15 scenes and resources point their `ext_resource` paths at the text copies.
   - `3d/decals/decal.tscn` animates `Decal:size`, not the Godot 3 `Decal:extents`, with doubled

@@ -1,6 +1,6 @@
-/** An image cut into the slices of a 3D texture, as Godot's layered importer cuts it. */
+/** An image cut into layers, as Godot's layered importer cuts it. */
 import { describe, expect, it } from 'vitest';
-import { sliceImage } from './texels';
+import { sliceImage } from './layeredTexels';
 
 /** An image `width` by `height` whose every pixel's red is its index, so each texel names its source. */
 function indexedImage(width: number, height: number) {
@@ -10,7 +10,7 @@ function indexedImage(width: number, height: number) {
 }
 
 /** The red of each texel, in the volume's order. */
-function reds(texels: Uint8Array): number[] {
+function reds(texels: Uint8Array | Uint16Array): number[] {
   return [...texels].filter((_, i) => i % 4 === 0);
 }
 
@@ -33,6 +33,13 @@ describe('sliceImage', () => {
     const volume = sliceImage(indexedImage(5, 3), { horizontal: 2, vertical: 1 });
     expect(volume).toMatchObject({ width: 2, height: 3, depth: 2 });
     expect(reds(volume!.texels)).toEqual([0, 1, 5, 6, 10, 11, 2, 3, 7, 8, 12, 13]);
+  });
+
+  it('keeps the half-float bits of an HDR image, such as a lightmap atlas', () => {
+    const data = Uint16Array.of(0x4100, 0, 0, 0x3c00, 0x4740, 0, 0, 0x3c00);
+    const layers = sliceImage({ data, width: 1, height: 2 }, { horizontal: 1, vertical: 2 });
+    expect(layers!.texels).toBeInstanceOf(Uint16Array);
+    expect(reds(layers!.texels)).toEqual([0x4100, 0x4740]);
   });
 
   it('cuts nothing from an image narrower than its slice count (edge case)', () => {

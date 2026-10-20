@@ -4,7 +4,7 @@
  * without a browser.
  */
 
-import type { Texture3DTexels } from '../../formats/image3d/texels';
+import type { LayeredTexels } from '../layeredTexels';
 import type { DecodedImage } from '../image/decode';
 
 /**
@@ -14,7 +14,7 @@ import type { DecodedImage } from '../image/decode';
  */
 export function stackSlices(
   images: readonly Omit<DecodedImage, 'format'>[]
-): Texture3DTexels<Uint8Array | Float32Array> | null {
+): LayeredTexels<Uint8Array | Float32Array> | null {
   const first = images[0];
   if (!first) return null;
   const { width, height } = first;

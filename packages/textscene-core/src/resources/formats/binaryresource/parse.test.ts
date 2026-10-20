@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseBinaryResource } from './parse';
-import { ragdollBytes } from './testing/ragdollBake';
+import { ragdollBytes } from '../../testing/ragdollBake';
 import { binaryResourceBytes, ByteWriter, type BinaryResourceLayout } from './testing/binaryResourceBytes';
 
 describe('parseBinaryResource on a Godot bake', () => {

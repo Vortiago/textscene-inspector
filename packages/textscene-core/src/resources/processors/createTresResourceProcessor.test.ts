@@ -7,7 +7,7 @@ import { ResourceEventBus } from '../ResourceEventBus';
 import type { FileEventBus, FileData } from '../FileEventBus';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { createTresResourceProcessor } from './createTresResourceProcessor';
-import { ragdollBytes } from '../formats/binaryresource/testing/ragdollBake';
+import { ragdollBytes } from '../testing/ragdollBake';
 
 const TILESET_TRES = `[gd_resource type="TileSet" format=3]
 
