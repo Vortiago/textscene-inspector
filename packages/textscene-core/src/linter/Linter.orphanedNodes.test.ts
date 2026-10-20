@@ -257,6 +257,19 @@ describe('a parent path this file never defines', () => {
       expect(bodyMessage).toContain('"Gone#Body"');
     });
 
+    it('re-roots an orphan whose trail names an orphan the trail recovered', () => {
+      // `get_node_path` rebuilds the named heading's AUTHORED path (`packed_scene.cpp:2015-2055`), which
+      // does not walk for a node seated by recovery, so the lookup at `:2005` fails. Measured on 4.6.3:
+      // a trail naming a recovered node leaves the orphan at the root as `Gone#Leaf`.
+      const messages = messagesOf(
+        '[node name="Mid" type="Node2D" parent="." unique_id=10]',
+        '[node name="Body" type="Node2D" parent="Gone" parent_id_path=PackedInt32Array(10) unique_id=20]',
+        '[node name="Leaf" type="Node2D" parent="Gone" parent_id_path=PackedInt32Array(20)]'
+      );
+      expect(messages[0]).toContain('lands under "Mid"');
+      expect(messages[1]).toContain('"Gone#Leaf"');
+    });
+
     it('matches id 0 to the first heading without a unique_id, the root here', () => {
       const message = messageOf('[node name="Mid" type="Node2D" parent="."]', headingWithTrail('0'));
       expect(message).toContain('lands under the scene root');

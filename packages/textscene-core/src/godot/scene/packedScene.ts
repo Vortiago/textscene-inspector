@@ -6,6 +6,7 @@
  */
 
 import { parseGodotInt } from '../variant/intReader.js';
+import { INT32_MIN } from '../variant/intWidth.js';
 import { packedArrayLiteral } from '../variant/variantParser.js';
 
 /**
@@ -17,10 +18,15 @@ export const INSTANCE_PLACEHOLDER_TYPE = 'InstancePlaceholder';
 
 const ID_TRAIL_RE = packedArrayLiteral('PackedInt32Array');
 
-/** The integer an `int32` slot stores for `literal`, or undefined where the tokenizer cannot read it. */
+/**
+ * The integer an `int32` slot stores for `literal`, or undefined where the tokenizer cannot read it.
+ * An unstorable value (`inf`, `nan`) reads as `INT32_MIN`, which Godot 4.6.3 x86_64 stores for a
+ * `unique_id=` and for an id of a `parent_id_path=`.
+ */
 function readInt32(literal: string): number | undefined {
   const stored = parseGodotInt(literal);
-  return stored === null || Number.isNaN(stored) ? undefined : stored;
+  if (stored === null) return undefined;
+  return Number.isNaN(stored) ? INT32_MIN : stored;
 }
 
 /**

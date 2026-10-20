@@ -18,6 +18,10 @@ describe('parseIdTrail', () => {
     expect(parseIdTrail('PackedInt32Array( 1 , 2 )')).toEqual([1, 2]);
   });
 
+  it('reads an id Godot cannot store as INT32_MIN', () => {
+    expect(parseIdTrail('PackedInt32Array(inf, nan)')).toEqual([-2147483648, -2147483648]);
+  });
+
   it('reads a negative id', () => {
     expect(parseIdTrail('PackedInt32Array(-5)')).toEqual([-5]);
   });
@@ -33,6 +37,16 @@ describe('parseIdTrail', () => {
 describe('parseUniqueId', () => {
   it('reads the integer a heading carries', () => {
     expect(parseUniqueId('1234')).toBe(1234);
+  });
+
+  it.each([
+    ['inf', -2147483648],
+    ['-inf', -2147483648],
+    ['nan', -2147483648],
+    ['3000000000', -1294967296],
+    ['2.9', 2],
+  ])('reads %s as the %i Godot 4.6.3 stores', (literal, stored) => {
+    expect(parseUniqueId(literal)).toBe(stored);
   });
 
   it.each([undefined, '', 'abc'])('reads %j as unassigned', (literal) => {
