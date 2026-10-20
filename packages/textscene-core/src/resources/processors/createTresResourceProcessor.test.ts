@@ -7,6 +7,7 @@ import { ResourceEventBus } from '../ResourceEventBus';
 import type { FileEventBus, FileData } from '../FileEventBus';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { createTresResourceProcessor } from './createTresResourceProcessor';
+import { ragdollBytes } from '../formats/binaryresource/testing/ragdollBake';
 
 const TILESET_TRES = `[gd_resource type="TileSet" format=3]
 
@@ -67,6 +68,18 @@ describe('createTresResourceProcessor', () => {
     });
   });
 
+  it('reads a binary resource into the same ParsedResource shape', async () => {
+    const file = mockFileBus();
+    const eventBus = new ResourceEventBus();
+    const processor = createTresResourceProcessor(file.bus, eventBus);
+
+    const loaded = eventBus.once<ParsedResource>('resource', 'loaded', 'res://ragdoll_physics.lmbake', 1000);
+    processor.request('res://ragdoll_physics.lmbake');
+    file.emitLoaded('res://ragdoll_physics.lmbake', ragdollBytes('ragdoll_physics.lmbake'));
+
+    expect((await loaded).resourceType).toBe('LightmapGIData');
+  });
+
   it('emits resource:failed and caches null for malformed content', async () => {
     const file = mockFileBus();
     const eventBus = new ResourceEventBus();
@@ -93,7 +106,7 @@ describe('createTresResourceProcessor', () => {
     expect(processor.isLoading('res://scene.tscn')).toBe(false);
   });
 
-  it('emits resource:failed for binary data, which no text parse reads', async () => {
+  it('emits resource:failed for bytes that are no binary resource', async () => {
     const file = mockFileBus();
     const eventBus = new ResourceEventBus();
     const processor = createTresResourceProcessor(file.bus, eventBus);
@@ -102,7 +115,9 @@ describe('createTresResourceProcessor', () => {
     processor.request('res://theme.res');
     file.emitLoaded('res://theme.res', new ArrayBuffer(4));
 
-    expect((await failed).message).toBe('res://theme.res is binary: only a text resource parses');
+    expect((await failed).message).toBe(
+      'expected a binary resource starting with RSRC, got "\\u0000\\u0000\\u0000\\u0000"'
+    );
     expect(processor.getCached('res://theme.res')).toBeNull();
   });
 });

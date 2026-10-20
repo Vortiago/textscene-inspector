@@ -18,9 +18,10 @@ import './styles/labelsettings/index.js';
 // Fonts
 import './fonts/font/index.js';
 
-// Environment + sky
+// Environment + sky + baked light
 import './environment/index.js';
 import './sky/index.js';
+import './lightmapgidata/index.js';
 
 // Meshes
 import './meshes/arraymesh/index.js';
@@ -69,6 +70,7 @@ import './tileset/index.js';
 import './meshlibrary/index.js';
 
 // Foreign formats
+import './formats/binaryresource/index.js';
 import './formats/glb/index.js';
 import './formats/image/index.js';
 import './formats/image3d/index.js';
