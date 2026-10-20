@@ -37,11 +37,13 @@ describe('rule-layer integer reads', () => {
   });
 
   it('never calls a reader that can hand back NaN', () => {
-    // All three: `asStoredInt` and `storedFromFloat` return the same NaN, and
+    // All four: `asStoredInt`, `storedFromFloat` and `statedFromFloat` return the same NaN, and
     // the barrel exports them. Comment-stripped, since prose naming the reader
     // is not a call to it.
     const offenders = files
-      .filter(({ src }) => /\b(?:parseGodotInt|asStoredInt|storedFromFloat)\s*\(/.test(stripComments(src)))
+      .filter(({ src }) =>
+        /\b(?:parseGodotInt|asStoredInt|storedFromFloat|statedFromFloat)\s*\(/.test(stripComments(src))
+      )
       .map(({ rel }) => rel)
       .sort();
     expect(offenders).toEqual([]);

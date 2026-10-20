@@ -20,7 +20,7 @@ import type { IntWidth } from '../../godot/variant/int.js';
  * Godot does without pulling diagnostics into the webview bundle.
  */
 export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/variant/number.js';
-export { parseGodotInt, ruleCount, ruleInt, storedFromFloat } from '../../godot/variant/int.js';
+export { parseGodotInt, ruleCount, ruleInt, statedFromFloat, statedInt } from '../../godot/variant/int.js';
 
 /**
  * One capture group of an already-matched float tuple, as a number. The regex

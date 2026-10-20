@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  isAlteredInt,
   parseGodotInt,
   readSlotTuple,
   ruleInt,
@@ -29,11 +30,31 @@ describe('an INT-typed literal', () => {
     expect(parseGodotInt('-1', 'uint32')).toBe(4294967295);
   });
 
-  it('refuses a value outside that band, in either direction', () => {
-    // Nothing serialises these, and the engine wraps them to a number the file does not state:
-    // the alteration ADR-0032 calls an error.
-    expect(parseGodotInt('4294967296')).toBeNaN();
-    expect(parseGodotInt('-3000000000')).toBeNaN();
+  it('wraps a value outside that band to the number Godot stores', () => {
+    // Measured on 4.6.3 (`Node2D.position` after load): `Vector2i(4294967296, 5)` is (0, 5).
+    expect(parseGodotInt('4294967296')).toBe(0);
+    expect(parseGodotInt('-3000000000')).toBe(1294967296);
+    expect(parseGodotInt('8589934593')).toBe(1);
+    expect(parseGodotInt('-4294967297')).toBe(-1);
+  });
+
+  it('names the stored number of each probe component', () => {
+    expect(storedInt('4294967295')).toBe(-1);
+    expect(storedInt('2147483648')).toBe(-2147483648);
+  });
+
+  it('is an alteration outside the band the slot round-trips, and not inside it', () => {
+    // The linter asks whether the file states the stored number (ADR-0032), apart from what is stored.
+    expect(isAlteredInt(4294967296, '4294967296', 'int32')).toBe(true);
+    expect(isAlteredInt(-3000000000, '-3000000000', 'int32')).toBe(true);
+    expect(isAlteredInt(4294967295, '4294967295', 'int32')).toBe(false);
+    expect(isAlteredInt(-1, '-1', 'uint32')).toBe(false);
+    expect(isAlteredInt(4294967297, '4294967297', 'int64')).toBe(false);
+  });
+
+  it('is an alteration for a FLOAT outside the range, which stays unreadable', () => {
+    expect(isAlteredInt(3e9, '3e9', 'int32')).toBe(true);
+    expect(isAlteredInt(5.5, '5.5', 'int32')).toBe(false);
   });
 
   it('wraps the unsigned spelling Godot writes for a negative', () => {
@@ -104,14 +125,21 @@ describe('a byte slot', () => {
     expect(parseGodotInt('-0.5', 'uint8')).toBe(0);
   });
 
-  it('refuses an INT literal outside a byte, in either direction', () => {
-    expect(parseGodotInt('256', 'uint8')).toBeNaN();
-    expect(parseGodotInt('300', 'uint8')).toBeNaN();
-    expect(parseGodotInt('1000000000', 'uint8')).toBeNaN();
+  it('wraps an INT literal outside a byte, in either direction', () => {
+    expect(parseGodotInt('256', 'uint8')).toBe(0);
+    expect(parseGodotInt('300', 'uint8')).toBe(44);
+    expect(parseGodotInt('1000000000', 'uint8')).toBe(0);
+    expect(parseGodotInt('-1', 'uint8')).toBe(255);
+  });
+
+  it('calls every INT literal outside a byte an alteration', () => {
     // No opposite-spelling band here: the writer emits `itos` off a
     // `const uint8_t *` (variant_parser.cpp:2408), so no Godot-written file
     // holds a negative byte and 255 is an alteration of -1, not its spelling.
-    expect(parseGodotInt('-1', 'uint8')).toBeNaN();
+    for (const spelling of ['256', '300', '1000000000', '-1']) {
+      expect(isAlteredInt(Number(spelling), spelling, 'uint8')).toBe(true);
+    }
+    expect(isAlteredInt(255, '255', 'uint8')).toBe(false);
   });
 
   it('refuses a FLOAT literal outside a byte, where the conversion is undefined', () => {
@@ -256,12 +284,24 @@ describe('readSlotTuple — the one read of a composite in a FLOAT slot', () => 
     });
   });
 
-  it('marks Vector2i(4294967296, 0) altered and names no component for it', () => {
-    // Godot 4.6.3 stores (0, 0): `_parse_construct<int32_t>` (variant_parser.cpp:723) narrows the
+  it('marks Vector2i(4294967296, 5) altered and reads the pair Godot stores', () => {
+    // Godot 4.6.3 stores (0, 5): `_parse_construct<int32_t>` (variant_parser.cpp:723) narrows the
     // INT token through `T(_data._int)` (variant.h:367-368). Past the round-trip band the file no
-    // longer states that number (ADR-0032), so the read gives NaN and every reader refuses it.
-    const tuple = readSlotTuple('Vector2i(4294967296, 0)', 'Vector2', VECTOR2)!;
-    expect(tuple.altered).toBe(true);
-    expect(tuple.components[0]).toBeNaN();
+    // longer states that number (ADR-0032): the linter withholds it and the renderer draws it.
+    expect(readSlotTuple('Vector2i(4294967296, 5)', 'Vector2', VECTOR2)).toEqual({
+      components: [0, 5],
+      altered: true,
+    });
+  });
+
+  it('reads the other probe pairs Godot stores', () => {
+    const components = (literal: string): number[] => readSlotTuple(literal, 'Vector2', VECTOR2)!.components;
+    expect(components('Vector2i(4294967295, 2147483648)')).toEqual([-1, -2147483648]);
+    expect(components('Vector2i(8589934593, -4294967297)')).toEqual([1, -1]);
+  });
+
+  it('keeps a FLOAT token outside int32 unreadable', () => {
+    // `T(_data._float)` is undefined there (variant.h:369-370), so no number is named.
+    expect(readSlotTuple('Vector2i(1e10, 0.5)', 'Vector2', VECTOR2)!.components[0]).toBeNaN();
   });
 });

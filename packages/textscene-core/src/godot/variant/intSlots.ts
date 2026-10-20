@@ -3,10 +3,10 @@
  * composite in a float slot. See `int.ts` for the whole picture.
  */
 
-import { matchedFloat, slotTupleRegex } from './number.js';
+import { matchedFloat, parseGodotFloat, slotTupleRegex } from './number.js';
 import { compositeTypeName, isConvertedSpelling } from './variantConversion.js';
 import type { IntWidth } from './intWidth.js';
-import { parseGodotInt, storedFromFloat } from './intReader.js';
+import { isAlteredInt, parseGodotInt, storedFromFloat } from './intReader.js';
 
 /**
  * The int a rule may compare, or `null` for anything it must not: `parseGodotInt`'s `NaN` fails every
@@ -24,6 +24,21 @@ export function ruleInt(
   if (raw === undefined) return whenAbsent;
   const parsed = parseGodotInt(raw, width, alwaysFloatBranch);
   return parsed === null || Number.isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * {@link ruleInt} for a validator: `null` also when the file does not state the number Godot stores
+ * ({@link isAlteredInt}), so a phase-2 rule skips and phase 1's alteration finding stands.
+ */
+export function statedInt(
+  raw: string,
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}: set for a component of a float-typed composite. */
+  alwaysFloatBranch = false
+): number | null {
+  const asFloat = parseGodotFloat(raw);
+  if (asFloat === null || isAlteredInt(asFloat, raw, width, alwaysFloatBranch)) return null;
+  return ruleInt(raw, null, width, alwaysFloatBranch);
 }
 
 /**
@@ -47,6 +62,7 @@ export function ruleCount(raw: string | undefined, whenAbsent = 0): number | nul
  * One matched component of an `i`-suffixed composite as the int32 Godot stores (`vector2i.h:56-57`),
  * or `null` when no int32 holds it. Narrowed, so renderer and linter read one number. It takes a
  * capture the finite grammar matched: text from a file goes through {@link parseGodotInt}.
+ * Whether the file states that number is {@link isAlteredComponent}.
  */
 export function storedInt(
   text: string | undefined,
@@ -57,6 +73,12 @@ export function storedInt(
   if (!Number.isFinite(num)) return null;
   const stored = storedFromFloat(num, text ?? '', 'int32', alwaysFloatBranch);
   return Number.isNaN(stored) ? null : stored;
+}
+
+/** Whether a component's stored int32 differs from the number the file states (ADR-0032). */
+function isAlteredComponent(text: string | undefined, alwaysFloatBranch = false): boolean {
+  const num = parseFloat(text ?? '');
+  return isAlteredInt(num, text ?? '', 'int32', alwaysFloatBranch);
 }
 
 /** The `Vector2i` slot grammar: every spelling `can_convert_strict` converts into it. */
@@ -108,7 +130,7 @@ export function slotComponents(
  * Whether the `i` spelling in a FLOAT slot narrows a component to a number the file does not state,
  * which a NaN from {@link slotComponents} cannot show. Same reader as {@link slotComponents}. A non-finite
  * one reads (`variant_parser.cpp:149-159`, `:577-586`) and narrows undefined outside int32 (`variant.h:369-370`),
- * and `4294967296` wraps. Neither is namable, so a caller reports the alteration (ADR-0032) and the literal.
+ * and `4294967296` wraps to a number the file does not state. A caller reports the alteration (ADR-0032) and the literal.
  */
 export function slotComponentsAltered(
   literal: string,
@@ -117,7 +139,7 @@ export function slotComponentsAltered(
   captures: readonly (string | undefined)[]
 ): boolean {
   if (!isConvertedSpelling(floatTypeName, compositeTypeName(literal))) return false;
-  return captures.some((capture) => storedInt(capture) === null);
+  return captures.some((capture) => isAlteredComponent(capture));
 }
 
 /** A composite literal in a FLOAT slot, as every reader of one sees it. */

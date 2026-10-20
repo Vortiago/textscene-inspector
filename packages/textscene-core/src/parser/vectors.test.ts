@@ -109,8 +109,12 @@ describe('parseVector2 on a Vector2i spelling', () => {
     expect(parseVector2('Vector2i(4294967295, 0.5)')).toEqual({ x: -1, y: 0 });
   });
 
-  it('throws on a component past the round-trip band, so the caller falls back', () => {
-    expect(() => parseVector2('Vector2i(4294967296, 0)')).toThrow('Non-finite Vector2');
+  it('wraps a component past the round-trip band to the number Godot stores', () => {
+    expect(parseVector2('Vector2i(4294967296, 5)')).toEqual({ x: 0, y: 5 });
+  });
+
+  it('throws on a FLOAT component outside int32, which Godot leaves undefined', () => {
+    expect(() => parseVector2('Vector2i(1e10, 0.5)')).toThrow('Non-finite Vector2');
   });
 });
 

@@ -185,6 +185,15 @@ its range. It also records the slot's `width`, because the refusable set depends
 `BitField<T>` properties read at `'int64'`, and all others at `'int32'` or `'uint32'` as
 the setter's signature dictates.
 
+**The stored value and the alteration finding are two questions.** The shared integer reader
+(`godot/variant/intReader.ts`) answers what Godot stores. An INT literal wraps to the slot's
+width (`T(_data._int)`, `variant.h:367-368`), so `Vector2i(4294967296, 5)` stores `(0, 5)`, and the
+renderer draws that. A FLOAT literal converts only inside the width's range, because the
+conversion is undefined outside it (`variant.h:369-370`). `isAlteredInt` answers whether the file
+states the stored number: an INT literal outside the band the slot round-trips is an alteration,
+an error. The linter reads through `statedFromFloat` and `statedInt`, which give no number for
+an altered literal, so a bound cannot pass it and the alteration finding is the only one reported.
+
 The guard counts hand-rolled validators, not only those built through the DSL. A sweep
 keyed on the DSL alone reads zero while a hand-rolled validator ships an invented bound.
 For example, `set_visibility_aabb` assigns a negative extent unaltered, so a hand-rolled

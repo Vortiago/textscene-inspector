@@ -8,7 +8,7 @@
 import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import { INT32_MAX, readerLimitedInt, storedFromFloat, type IntWidth } from '../../godot/variant/int.js';
+import { INT32_MAX, readerLimitedInt, statedFromFloat, type IntWidth } from '../../godot/variant/int.js';
 import { parseGodotFloat } from '../../godot/variant/number.js';
 import { boolLiteralAsNumber } from '../../godot/variant/variantBool.js';
 
@@ -88,7 +88,7 @@ interface IntSlotRead {
 export function readIntSlot(value: string, max?: number | null, width?: IntWidth): IntSlotRead {
   const asFloat = boolLiteralAsNumber(value) ?? parseGodotFloat(value);
   if (asFloat === null) return { asFloat: null, stored: null };
-  return { asFloat, stored: storedFromFloat(asFloat, value, width ?? slotWidth(max)) };
+  return { asFloat, stored: statedFromFloat(asFloat, value, width ?? slotWidth(max)) };
 }
 
 /**
