@@ -1,7 +1,7 @@
 /**
  * The INT-slot verdicts, shared by every combinator that reads one.
- * `parseGodotInt` returns `null` for text the tokenizer cannot read and `NaN`
- * for a literal that reads but the slot cannot hold, and NaN fails every
+ * `statedFromFloat` returns `NaN` for a literal that reads but whose stored number
+ * the file does not state, `readIntSlot` gives `null` for text the tokenizer cannot read, and NaN fails every
  * comparison, so each combinator gates both.
  */
 

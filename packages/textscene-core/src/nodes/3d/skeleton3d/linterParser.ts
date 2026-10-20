@@ -10,7 +10,7 @@ import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { keyShapeError, propertyError, v } from '../../../linter/validators/index.js';
 import { firstSegment, indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
-import { parseGodotInt } from '../../../godot/variant/int.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { stringToInt } from '../../../godot/string/string.js';
 import { writtenIndex } from '../../../linter/reportedIndices.js';
 import { BONE_LEAVES } from './boneLeaves.js';
@@ -85,7 +85,7 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
   // (`which` from the path, the parent from the value), so the dispatcher can answer it. Compared
   // as numbers, because `bones/03/parent = 3` names bone 3 twice.
   if (what === 'parent') {
-    const parent = parseGodotInt(value);
+    const parent = ruleInt(value);
     if (parent !== null && parent === which) {
       return propertyError(
         key,

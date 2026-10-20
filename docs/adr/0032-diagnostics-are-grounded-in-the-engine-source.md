@@ -191,7 +191,7 @@ width (`T(_data._int)`, `variant.h:367-368`), so `Vector2i(4294967296, 5)` store
 renderer draws that. A FLOAT literal converts only inside the width's range, because the
 conversion is undefined outside it (`variant.h:369-370`). `isAlteredInt` answers whether the file
 states the stored number: an INT literal outside the band the slot round-trips is an alteration,
-an error. The linter reads through `statedFromFloat` and `statedInt`, which give no number for
+an error. The linter reads through `statedFromFloat` and `ruleInt`, which give no number for
 an altered literal, so a bound cannot pass it and the alteration finding is the only one reported.
 
 The guard counts hand-rolled validators, not only those built through the DSL. A sweep
