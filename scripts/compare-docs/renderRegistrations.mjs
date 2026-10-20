@@ -26,22 +26,45 @@ function invisibleBaseModules() {
   );
 }
 
+/** A family loop over a type list, which registers each name in it. */
+const TYPE_LOOP = /for \(const typeName of ([A-Z0-9_]+)\)/g;
+
+/** The list the last family loop before `offset` iterates, or null when no loop precedes it. */
+function loopConstantBefore(source, offset) {
+  let constant = null;
+  for (const loop of source.matchAll(TYPE_LOOP)) {
+    if (loop.index > offset) break;
+    constant = loop[1];
+  }
+  return constant;
+}
+
+/**
+ * The `renderIntent` literal of one call body, or `draws` when the call declares none. A
+ * shorthand or a constant throws, since reading it as `draws` would pass the guards unseen.
+ */
+function declaredIntent(body) {
+  if (!/\brenderIntent\b/.test(body)) return 'draws';
+  const literal = /renderIntent:\s*'([a-z-]+)'/.exec(body)?.[1];
+  if (!literal) throw new Error(`expected renderIntent as a quoted literal, got: ${body.trim()}`);
+  return literal;
+}
+
 /**
  * Each `register({...})` call in one `*.r3f.ts` source. `typeName` is null for a family loop,
  * whose `loopConstant` names the list its sibling `index.ts` exports. `componentFrom` is the
  * component's module specifier, or null for a component the file defines itself.
  */
 export function parseRegistrationCalls(source) {
-  const loopConstant = /for \(const typeName of ([A-Z0-9_]+)\)/.exec(source)?.[1] ?? null;
-  return [...source.matchAll(REGISTER_CALL)].map(([, registry, body]) => {
+  return [...source.matchAll(REGISTER_CALL)].map(({ 1: registry, 2: body, index }) => {
     const component = /Component:\s*([A-Za-z0-9_]+)/.exec(body)?.[1];
     const typeName = /typeName:\s*'([A-Za-z0-9_]+)'/.exec(body)?.[1] ?? null;
     return {
       registry,
       typeName,
-      loopConstant: typeName === null ? loopConstant : null,
+      loopConstant: typeName === null ? loopConstantBefore(source, index) : null,
       componentFrom: (component && importSourceOf(source, component)) ?? null,
-      intent: /renderIntent:\s*'([a-z-]+)'/.exec(body)?.[1] ?? 'draws',
+      intent: declaredIntent(body),
       scenePass: /scenePass:/.test(body),
     };
   });

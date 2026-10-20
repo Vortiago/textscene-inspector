@@ -413,13 +413,22 @@ describe('comparison sheets', () => {
       expect(bad).toEqual([]);
     });
 
-    it('says "nothing yet" for every pending node that draws nothing', () => {
-      // `renders_as` heads the sheet and its index row. A gap that mounts only its base
-      // draws nothing yet, and "transform-only" there would claim the finished nil effect.
-      const bad = sliceSheets
-        .filter((s) => s.pending && !s.drawsOwnVisual)
-        .filter((s) => !/^nothing yet\b/.test(s.meta.renders_as ?? '') || /transform-only/.test(s.body))
+    /** Pending gaps that mount only their base, so they draw nothing yet. */
+    const undrawnPending = sliceSheets.filter((s) => s.pending && !s.drawsOwnVisual);
+
+    it('says "nothing yet" in renders_as for every pending node that draws nothing', () => {
+      // `renders_as` heads the sheet and its index row, so it names the gap, not a finished nil effect.
+      const bad = undrawnPending
+        .filter((s) => !/^nothing yet\b/.test(s.meta.renders_as ?? ''))
         .map((s) => `${s.label}: pending and undrawn, but renders_as is '${s.meta.renders_as}'`);
+      expect(bad).toEqual([]);
+    });
+
+    it('never calls a pending node that draws nothing transform-only in its body', () => {
+      // "transform-only" claims the finished nil effect of ADR-0008, which a gap does not have.
+      const bad = undrawnPending
+        .filter((s) => /transform-only/.test(s.body))
+        .map((s) => `${s.label}: pending and undrawn, but its body calls it transform-only`);
       expect(bad).toEqual([]);
     });
 

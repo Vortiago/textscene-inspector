@@ -54,6 +54,25 @@ describe('parseRegistrationCalls', () => {
     expect(call.intent).toBe('draws');
   });
 
+  it('names, for each call in a family loop, the list of the loop that holds it', () => {
+    const source = `
+      for (const typeName of FIRST_TYPES) {
+        nodeComponentRegistry.register({ typeName, Component: Node2D });
+      }
+      for (const typeName of SECOND_TYPES) {
+        nodeComponentRegistry.register({ typeName, Component: Node3D });
+      }`;
+    expect(parseRegistrationCalls(source).map((call) => call.loopConstant)).toEqual([
+      'FIRST_TYPES',
+      'SECOND_TYPES',
+    ]);
+  });
+
+  it('refuses an intent it cannot read as a literal', () => {
+    const source = "nodeComponentRegistry.register({ typeName: 'X', Component: Node3D, renderIntent });";
+    expect(() => parseRegistrationCalls(source)).toThrow(/renderIntent as a quoted literal/);
+  });
+
   it('finds no call in a source without a registration', () => {
     expect(parseRegistrationCalls("export const X = ['A'];")).toEqual([]);
   });
