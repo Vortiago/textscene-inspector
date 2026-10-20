@@ -14,4 +14,9 @@ describe('holdsResource', () => {
     expect(holdsResource('null')).toBe(false);
     expect(holdsResource('  null ')).toBe(false);
   });
+
+  it('holds none for an empty or blank value', () => {
+    expect(holdsResource('')).toBe(false);
+    expect(holdsResource('   ')).toBe(false);
+  });
 });
