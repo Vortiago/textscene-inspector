@@ -43,30 +43,30 @@ export function buildTorusMeshSurface(
   p: TorusMeshProperties,
   uv2Padding: number | null
 ): GodotSurface | null {
-  const { rings, ringSegments } = p;
-  // Godot holds each radius in a `float`, so two radii equal in single precision are equal.
-  const innerRadius = storedReal(p.innerRadius);
-  const outerRadius = storedReal(p.outerRadius);
+  const { innerRadius, outerRadius, rings, ringSegments } = p;
   if (innerRadius === outerRadius) {
-    warn(`[TorusMesh] inner_radius equals outer_radius (${p.innerRadius}): Godot builds no surface for it`);
+    warn(`[TorusMesh] inner_radius equals outer_radius (${innerRadius}): Godot builds no surface for it`);
     return null;
   }
+  // Godot holds each value below in a `float`, and does `float` arithmetic on two of them, so each
+  // such step rounds to single precision. A step with a `double` constant such as TAU does not.
   const minRadius = Math.min(innerRadius, outerRadius);
   const maxRadius = Math.max(innerRadius, outerRadius);
-  const tubeRadius = (maxRadius - minRadius) * 0.5;
+  const radiusDelta = storedReal(maxRadius - minRadius);
+  const tubeRadius = storedReal(radiusDelta * 0.5);
+  const ringCentreRadius = storedReal(minRadius + tubeRadius);
 
   // UV2 lays each row out by its length round the axis, padded on the right and the bottom (`:2244-2250`).
   const padding = uv2Padding ?? 0;
-  const horizontalTotal = maxRadius * TAU + padding;
-  const maxH = (maxRadius * TAU) / horizontalTotal;
-  const deltaH = ((maxRadius - minRadius) * TAU) / horizontalTotal;
-  const heightV = (tubeRadius * TAU) / (tubeRadius * TAU + padding);
+  const horizontalTotal = storedReal(maxRadius * TAU + padding);
+  const maxH = storedReal((maxRadius * TAU) / horizontalTotal);
+  const deltaH = storedReal((radiusDelta * TAU) / horizontalTotal);
+  const heightV = storedReal((tubeRadius * TAU) / (tubeRadius * TAU + padding));
 
   const writer = new SurfaceWriter(uv2Padding !== null);
   for (let i = 0; i <= rings; i++) {
     const prevrow = (i - 1) * (ringSegments + 1);
     const thisrow = i * (ringSegments + 1);
-    // Godot holds each fraction, angle and normal in a `float`, so each rounds to single precision.
     const inci = storedReal(i / rings);
     const angi = storedReal(inci * TAU);
     const [normaliX, normaliY] =
@@ -77,16 +77,17 @@ export function buildTorusMeshSurface(
       const angj = storedReal(incj * TAU);
       const [normaljX, normaljY] =
         j === ringSegments ? [-1, 0] : [storedReal(-Math.cos(angj)), storedReal(Math.sin(angj))];
-      const normalkX = normaljX * tubeRadius + minRadius + tubeRadius;
-      const normalkY = normaljY * tubeRadius;
-      const offsetH = 0.5 * (1 - normaljX) * deltaH;
+      const normalkX = storedReal(storedReal(normaljX * tubeRadius) + ringCentreRadius);
+      const normalkY = storedReal(normaljY * tubeRadius);
+      const offsetH = storedReal(0.5 * (1 - normaljX) * deltaH);
+      const adjH = storedReal(maxH - offsetH);
 
       writer.vertex(
         [normaliX * normalkX, normalkY, normaliY * normalkX],
         [normaliX * normaljX, normaljY, normaliY * normaljX],
         [normaliY, 0, -normaliX, 1],
         [inci, incj],
-        [offsetH * 0.5 + inci * (maxH - offsetH), incj * heightV]
+        [storedReal(offsetH * 0.5) + storedReal(inci * adjH), incj * heightV]
       );
       if (i > 0 && j > 0) {
         writer.triangle(thisrow + j - 1, prevrow + j, prevrow + j - 1);

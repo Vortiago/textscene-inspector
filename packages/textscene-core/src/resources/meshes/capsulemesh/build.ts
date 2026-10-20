@@ -52,22 +52,25 @@ export function buildCapsuleMeshSurface(p: CapsuleMeshProperties, uv2Padding: nu
   const { radius, height, radialSegments, rings } = p;
   const middle = height - 2 * radius;
   const capCentre = 0.5 * height - radius;
+  const storedCapCentre = storedReal(capCentre);
 
   // UV2 lays the capsule out by length, padded on the right and the bottom (`:416-422`).
   const padding = uv2Padding ?? 0;
-  const radialWidth = 2 * radius * Math.PI;
-  const radialH = radialWidth / (radialWidth + padding);
-  const radialLength = radius * Math.PI * 0.5;
-  const verticalLength = radialLength * 2 + middle + padding;
-  const radialV = radialLength / verticalLength;
-  const heightV = middle / verticalLength;
+  // Godot holds each value below in a `float`, and does `float` arithmetic on two of them, so each
+  // such step rounds to single precision. A step with a `double` constant such as PI does not.
+  const radialWidth = storedReal(2 * radius * Math.PI);
+  const radialH = storedReal(radialWidth / (radialWidth + padding));
+  const radialLength = storedReal(radius * Math.PI * 0.5);
+  const verticalLength = storedReal(radialLength * 2 + (height - 2 * radius) + padding);
+  const radialV = storedReal(radialLength / verticalLength);
+  const heightV = storedReal((height - 2 * radius) / verticalLength);
 
   const writer = new SurfaceWriter(uv2Padding !== null);
   const section = (vertexAt: SectionVertex): void => {
     let thisrow = writer.vertexCount;
     let prevrow = 0;
     for (let j = 0; j <= rings + 1; j++) {
-      const v = j / (rings + 1);
+      const v = storedReal(j / (rings + 1));
       for (let i = 0; i <= radialSegments; i++) {
         const u = storedReal(i / radialSegments);
         const [sine, z] = rimPoint(i, radialSegments);
@@ -83,11 +86,11 @@ export function buildCapsuleMeshSurface(p: CapsuleMeshProperties, uv2Padding: nu
 
   // The top hemisphere (`:451`).
   section((v, lastRow, x, z) => {
-    const w = lastRow ? 1 : Math.sin(0.5 * Math.PI * v);
-    const y = lastRow ? 0 : Math.cos(0.5 * Math.PI * v);
-    const unit: [number, number, number] = [x * w, y, -z * w];
+    const w = lastRow ? 1 : storedReal(Math.sin(0.5 * Math.PI * v));
+    const y = lastRow ? 0 : storedReal(Math.cos(0.5 * Math.PI * v));
+    const unit: [number, number, number] = [storedReal(x * w), y, storedReal(-z * w)];
     return {
-      position: [unit[0] * radius, unit[1] * radius + capCentre, unit[2] * radius],
+      position: [unit[0] * radius, storedReal(unit[1] * radius) + storedCapCentre, unit[2] * radius],
       normal: unit,
       uvV: v * ONE_THIRD,
       uv2V: v * radialV,
@@ -96,22 +99,22 @@ export function buildCapsuleMeshSurface(p: CapsuleMeshProperties, uv2Padding: nu
 
   // The cylinder (`:503`).
   section((v, _lastRow, x, z) => ({
-    position: [x * radius, capCentre - middle * v, -z * radius],
+    position: [x * radius, storedReal(capCentre - storedReal(middle * v)), -z * radius],
     normal: [x, 0, -z],
-    uvV: ONE_THIRD + v * ONE_THIRD,
-    uv2V: radialV + v * heightV,
+    uvV: ONE_THIRD + storedReal(v * ONE_THIRD),
+    uv2V: radialV + storedReal(v * heightV),
   }));
 
   // The bottom hemisphere (`:550`).
   section((v, lastRow, x, z) => {
-    const w = lastRow ? 0 : Math.cos(0.5 * Math.PI * v);
-    const y = lastRow ? -1 : -Math.sin(0.5 * Math.PI * v);
-    const unit: [number, number, number] = [x * w, y, -z * w];
+    const w = lastRow ? 0 : storedReal(Math.cos(0.5 * Math.PI * v));
+    const y = lastRow ? -1 : storedReal(-Math.sin(0.5 * Math.PI * v));
+    const unit: [number, number, number] = [storedReal(x * w), y, storedReal(-z * w)];
     return {
-      position: [unit[0] * radius, unit[1] * radius - capCentre, unit[2] * radius],
+      position: [unit[0] * radius, storedReal(unit[1] * radius) - storedCapCentre, unit[2] * radius],
       normal: unit,
-      uvV: TWO_THIRDS + v * ONE_THIRD,
-      uv2V: radialV + heightV + v * radialV,
+      uvV: TWO_THIRDS + storedReal(v * ONE_THIRD),
+      uv2V: storedReal(radialV + heightV) + storedReal(v * radialV),
     };
   });
 

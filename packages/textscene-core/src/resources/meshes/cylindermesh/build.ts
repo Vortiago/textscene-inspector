@@ -63,46 +63,57 @@ export function buildCylinderMeshSurface(p: CylinderMeshProperties, uv2Padding: 
   return writer.surface();
 }
 
-/** The UV2 islands, padded between each (`:1074-1085`, `:1159-1163`). */
+/**
+ * The UV2 islands, padded between each (`:1074-1085`, `:1159-1163`). Godot holds each in a `float`,
+ * so each rounds to single precision.
+ */
 function uv2Layout(p: CylinderMeshProperties, padding: number): Uv2Layout {
   const { topRadius, bottomRadius, height } = p;
-  const topCircumference = topRadius * TAU;
-  const bottomCircumference = bottomRadius * TAU;
-  const maxRadius = Math.max(topRadius, bottomRadius);
-  const verticalLength = height + 2 * maxRadius + 2 * padding;
-  const heightV = height / verticalLength;
-  const horizontalLength = Math.max(
-    2 * (topRadius + bottomRadius + padding),
-    topCircumference + padding,
-    bottomCircumference + padding
+  const topCircumference = storedReal(topRadius * TAU);
+  const bottomCircumference = storedReal(bottomRadius * TAU);
+  const verticalLength = storedReal(height + Math.max(2 * topRadius, 2 * bottomRadius) + 2 * padding);
+  const heightV = storedReal(height / verticalLength);
+  const paddingV = storedReal(padding / verticalLength);
+  const horizontalLength = storedReal(
+    Math.max(
+      2 * (topRadius + bottomRadius + padding),
+      topCircumference + padding,
+      bottomCircumference + padding
+    )
   );
-  const topH = topRadius / horizontalLength;
-  const bottomH = bottomRadius / horizontalLength;
+  const topH = storedReal(topRadius / horizontalLength);
+  const topV = storedReal(topRadius / verticalLength);
+  const bottomH = storedReal(bottomRadius / horizontalLength);
+  const bottomV = storedReal(bottomRadius / verticalLength);
   return {
-    sideCentreH: (0.5 * (horizontalLength - padding)) / horizontalLength,
-    sideTopH: topCircumference / horizontalLength,
-    sideBottomH: bottomCircumference / horizontalLength,
+    sideCentreH: storedReal((0.5 * (horizontalLength - padding)) / horizontalLength),
+    sideTopH: storedReal(topCircumference / horizontalLength),
+    sideBottomH: storedReal(bottomCircumference / horizontalLength),
     heightV,
     topH,
-    topV: topRadius / verticalLength,
-    bottomCentreH: 2 * topH + padding / horizontalLength + bottomH,
+    topV,
+    bottomCentreH: storedReal(
+      storedReal(storedReal(topH + topH) + storedReal(padding / horizontalLength)) + bottomH
+    ),
     bottomH,
-    bottomV: bottomRadius / verticalLength,
-    capCentreV: heightV + padding / verticalLength + maxRadius / verticalLength,
+    bottomV,
+    capCentreV: storedReal(storedReal(heightV + paddingV) + Math.max(topV, bottomV)),
   };
 }
 
 /** The side as rows from the top edge down, U from +Z towards +X and V in the top half (`:1114`). */
 function writeSide(writer: SurfaceWriter, p: CylinderMeshProperties, layout: Uv2Layout): void {
   const { topRadius, bottomRadius, height, radialSegments, rings } = p;
-  const sideNormalY = storedReal((bottomRadius - topRadius) / height);
+  const sideNormalY = storedReal(storedReal(bottomRadius - topRadius) / height);
   let thisrow = 0;
   let prevrow = 0;
   for (let j = 0; j <= rings + 1; j++) {
-    const v = j / (rings + 1);
-    const radius = topRadius + (bottomRadius - topRadius) * v;
-    const radiusH = layout.sideTopH + (layout.sideBottomH - layout.sideTopH) * v;
-    const y = height * 0.5 - height * v;
+    const v = storedReal(j / (rings + 1));
+    const radius = storedReal(topRadius + storedReal(storedReal(bottomRadius - topRadius) * v));
+    const radiusH = storedReal(
+      layout.sideTopH + storedReal(storedReal(layout.sideBottomH - layout.sideTopH) * v)
+    );
+    const y = storedReal(height * 0.5 - storedReal(height * v));
 
     for (let i = 0; i <= radialSegments; i++) {
       const u = storedReal(i / radialSegments);
@@ -135,8 +146,8 @@ function writeTopCap(writer: SurfaceWriter, p: CylinderMeshProperties, layout: U
       [x * topRadius, y, z * topRadius],
       [0, 1, 0],
       CAP_TANGENT,
-      [(x + 1) * 0.25, 0.5 + (z + 1) * 0.25],
-      [topH + x * topH, capCentreV + z * topV]
+      [storedReal((x + 1) * 0.25), storedReal(0.5 + (z + 1) * 0.25)],
+      [topH + storedReal(x * topH), capCentreV + storedReal(z * topV)]
     );
     const point = writer.vertexCount;
     if (i > 0) writer.triangle(centre, point - 1, point - 2);
@@ -156,8 +167,8 @@ function writeBottomCap(writer: SurfaceWriter, p: CylinderMeshProperties, layout
       [x * bottomRadius, y, z * bottomRadius],
       [0, -1, 0],
       CAP_TANGENT,
-      [0.5 + (x + 1) * 0.25, 1 - (z + 1) * 0.25],
-      [bottomCentreH + x * bottomH, capCentreV - z * bottomV]
+      [storedReal(0.5 + (x + 1) * 0.25), storedReal(1 - (z + 1) * 0.25)],
+      [bottomCentreH + storedReal(x * bottomH), capCentreV - storedReal(z * bottomV)]
     );
     const point = writer.vertexCount;
     if (i > 0) writer.triangle(centre, point - 2, point - 1);

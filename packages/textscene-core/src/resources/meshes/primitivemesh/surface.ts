@@ -6,6 +6,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
+import { storedReal } from '../../../godot/math/real';
 import type { GodotSurface } from '../godotSurface';
 import { decodePrimitiveMesh } from './decode';
 import { flipFaces } from './flipFaces';
@@ -92,7 +93,9 @@ export function primitiveMeshSurface(resource: TscnInternalResource, texelSize: 
 function buildSurface(resource: TscnInternalResource, texelSize: number): GodotSurface | null {
   const build = BUILDERS[resource.type]!;
   const base = decodePrimitiveMesh(resource.data);
-  const built = build(resource.data, base.addUv2 ? base.uv2Padding * texelSize : null);
+  // Godot holds the padding and the texel size in a `float` (`:1065`), so each rounds to single precision.
+  const uv2Padding = base.addUv2 ? storedReal(base.uv2Padding * storedReal(texelSize)) : null;
+  const built = build(resource.data, uv2Padding);
   if (!built) return null;
   const hint = FALLBACK_UV2_HINTS[resource.type];
   const surface =

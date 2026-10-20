@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../../logger';
 import { buildTorusMeshSurface } from './build';
+import { decodeTorusMesh } from './decode';
 import { expectClockwiseFronts, expectClose, vertexOf } from '../primitivemesh/surface.testkit';
 import type { TorusMeshProperties } from './types';
 
@@ -80,7 +81,9 @@ describe('buildTorusMeshSurface', () => {
   });
 
   it('builds nothing when the radii are equal only in single precision (edge case)', () => {
-    expect(buildTorusMeshSurface({ ...COARSE, innerRadius: 1, outerRadius: 1 + 1e-9 }, null)).toBeNull();
+    const p = decodeTorusMesh({ inner_radius: '1', outer_radius: '1.000000001' });
+
+    expect(buildTorusMeshSurface(p, null)).toBeNull();
   });
 
   it('writes no UV2 without a padding', () => {

@@ -39,33 +39,39 @@ import type { SphereMeshProperties } from './types.js';
 /** `uv2Padding` is in world units, or null for a mesh with no UV2 (`add_uv2` off). */
 export function buildSphereMeshSurface(p: SphereMeshProperties, uv2Padding: number | null): GodotSurface {
   const { radius, height, radialSegments, rings, isHemisphere } = p;
-  const scale = (height / radius) * (isHemisphere ? 1 : 0.5);
+  // Godot holds each value below in a `float`, and does `float` arithmetic on two of them, so each
+  // such step rounds to single precision. A step with a `double` constant such as TAU does not.
+  const scale = storedReal(storedReal(height / radius) * (isHemisphere ? 1 : 0.5));
 
   // UV2 lays the sphere out as one island, padded on the right and the bottom (`:1989-1993`).
   const padding = uv2Padding ?? 0;
-  const circumference = radius * TAU;
-  const centerH = (0.5 * circumference) / (circumference + padding);
-  const heightV = (scale * Math.PI) / (scale * Math.PI + padding / radius);
+  const circumference = storedReal(radius * TAU);
+  const centerH = storedReal((0.5 * circumference) / storedReal(circumference + padding));
+  const heightV = storedReal((scale * Math.PI) / (scale * Math.PI + storedReal(padding / radius)));
 
   const writer = new SurfaceWriter(uv2Padding !== null);
   let thisrow = 0;
   let prevrow = 0;
   for (let j = 0; j <= rings + 1; j++) {
-    const v = j / (rings + 1);
+    const v = storedReal(j / (rings + 1));
     const lastRow = j === rings + 1;
-    const w = lastRow ? 0 : Math.sin(Math.PI * v);
-    const y = lastRow ? -1 : Math.cos(Math.PI * v);
+    const w = lastRow ? 0 : storedReal(Math.sin(Math.PI * v));
+    const y = lastRow ? -1 : storedReal(Math.cos(Math.PI * v));
 
     for (let i = 0; i <= radialSegments; i++) {
       const u = storedReal(i / radialSegments);
       const [x, z] = rimPoint(i, radialSegments);
 
       const folded = isHemisphere && y < 0;
+      const xw = storedReal(x * w);
+      const zw = storedReal(z * w);
       const position: [number, number, number] = folded
-        ? [x * radius * w, 0, z * radius * w]
-        : [x * w * radius, y * scale * radius, z * w * radius];
-      const normal = folded ? ([0, -1, 0] as const) : normalizedVector3(x * w * scale, y, z * w * scale);
-      const wH = w * 2 * centerH;
+        ? [storedReal(x * radius) * w, 0, storedReal(z * radius) * w]
+        : [xw * radius, storedReal(y * scale) * radius, zw * radius];
+      const normal = folded
+        ? ([0, -1, 0] as const)
+        : normalizedVector3(storedReal(xw * scale), y, storedReal(zw * scale));
+      const wH = storedReal(w * 2 * centerH);
       writer.vertex(position, normal, [z, 0, -x, 1], [u, v], [centerH + (u - 0.5) * wH, v * heightV]);
 
       if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);
