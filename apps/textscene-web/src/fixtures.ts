@@ -2558,6 +2558,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Tangents",
+    "file": "unit-arraymesh-tangents.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Uv",
     "file": "unit-arraymesh-uv.tscn",
     "category": "Unit - Primitive Meshes"
