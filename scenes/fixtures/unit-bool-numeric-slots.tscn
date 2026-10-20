@@ -1,0 +1,34 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: a `true` literal in an INT or FLOAT slot, which Godot stores as 1. Each item varies
+; only the slot it writes. No other fixture or golden writes a BOOL into a numeric slot, so a reader
+; that falls back to 0 moves no other baseline.
+
+[ext_resource type="Texture2D" path="res://textures/hard-edge-split.png" id="1_split"]
+
+[node name="World" type="Node2D"]
+
+; `frame = true` with `hframes = 2` lands the second half of the texture.
+[node name="Frame" type="Sprite2D" parent="."]
+texture = ExtResource("1_split")
+position = Vector2(200, 160)
+scale = Vector2(16, 16)
+hframes = 2
+frame = true
+
+; `z_index = true` is 1, so green draws over the later yellow sibling at z 0.
+[node name="Green" type="Polygon2D" parent="."]
+z_index = true
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(400, 100, 600, 100, 600, 200, 400, 200)
+
+[node name="Yellow" type="Polygon2D" parent="."]
+color = Color(1, 1, 0, 1)
+polygon = PackedVector2Array(500, 120, 700, 120, 700, 220, 500, 220)
+
+; `rotation = true` is 1 rad, so the bar tilts about 57 degrees.
+[node name="Bar" type="Polygon2D" parent="."]
+position = Vector2(900, 324)
+rotation = true
+color = Color(0, 0.4, 1, 1)
+polygon = PackedVector2Array(-100, -6, 100, -6, 100, 6, -100, 6)

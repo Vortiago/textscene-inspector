@@ -8,8 +8,8 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { nodesOfType } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
-import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { RawNode } from '../../../parser/types.js';
 
 const arms = {
@@ -59,7 +59,7 @@ const countEnabledCamerasInScope = viewportScopeCounter((roots) =>
 function smoothingIsFrozen(rawProps: Record<string, string>, enabledKey: string, speedKey: string): boolean {
   const raw = rawProps[speedKey];
   if (boolSlotValue(rawProps[enabledKey]) !== true || raw === undefined) return false;
-  return parseGodotFloat(raw) === 0;
+  return scalarSlotValue(raw) === 0;
 }
 
 function checkCamera2D(context: RuleContext): Diagnostic[] {

@@ -8,11 +8,10 @@
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { knownParent } from '../parentType.js';
 import { resolveGlobalTransform2D } from '../../nodes/canvasitem/shared/globalTransform2D.js';
-import { parseGodotFloat } from '../validators/commonValidators.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
-import { boolSlotValue } from '../../godot/variant/variantBool.js';
+import { boolSlotValue, scalarSlotValue } from '../../godot/variant/variantBool.js';
 import {
   transform2DGetScale,
   transform2DHasZeroSkew,
@@ -90,7 +89,7 @@ export function makeNavigationObstacleLinterRule(dim: PhysicsDim): LintRule {
 
         // radius > 0.0 gate: navigation_obstacle_2d.h:46 defaults radius to
         // 0.0, so a bare node never reaches either of the next two checks.
-        const radius = props.radius !== undefined ? parseGodotFloat(props.radius) : 0;
+        const radius = props.radius !== undefined ? scalarSlotValue(props.radius) : 0;
         // No finiteness guard: `set_radius` has none either, so `inf` is a
         // radius the obstacle holds and both warnings below apply to it.
         // `nan > 0` is false in JS exactly as in C++.
