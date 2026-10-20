@@ -98,8 +98,15 @@ describe('csgMesh3DGeometry: mesh sources', () => {
     expect(frontsOutward(solid.geometry, new THREE.Vector3())).toBe(true);
   });
 
-  it('fronts an inline PrimitiveMesh outward, as three built it', () => {
+  it('fronts an inline PrimitiveMesh outward', () => {
     expect(frontsOutward(build('SubResource("Box")')!.geometry, new THREE.Vector3())).toBe(true);
+  });
+
+  it("carries an inline BoxMesh's UVs in Godot's 3x2 atlas, a third of the image per face", () => {
+    const uv = build('SubResource("Box")')!.geometry.getAttribute('uv');
+    const columns = new Set(Array.from({ length: uv.count }, (_, i) => Math.round(uv.getX(i) * 3)));
+
+    expect([...columns].sort()).toEqual([0, 1, 2, 3]);
   });
 
   it('takes an inline ArrayMesh’s surface materials as references into the scene', () => {

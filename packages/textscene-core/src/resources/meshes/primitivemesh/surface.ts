@@ -12,13 +12,16 @@ import type { GodotSurface } from '../godotSurface';
 import { drawOrderIndices } from '../arraymesh/decode';
 import { decodePrimitiveMesh } from './decode';
 import { flipFaces } from './flipFaces';
+import { withFallbackUv2 } from './fallbackUv2';
 import { decodeBoxMesh } from '../boxmesh/decode';
-import { buildBoxMeshGeometry } from '../boxmesh/build';
+import { buildBoxMeshSurface } from '../boxmesh/build';
 import { decodeSphereMesh } from '../spheremesh/decode';
 import { buildSphereMeshSurface } from '../spheremesh/build';
+import type { Vector2 } from '../../../godot/math/vector';
 import { decodePlaneMesh } from '../planemesh/decode';
-import { buildPlaneMeshGeometry } from '../planemesh/build';
-import { decodeQuadMesh } from '../quadmesh/decode';
+import { buildPlaneMeshSurface } from '../planemesh/build';
+import { planeMeshLightmapSizeHint } from '../planemesh/lightmapSizeHint';
+import { decodeQuadMesh, QUAD_MESH_DEFAULTS } from '../quadmesh/decode';
 import { decodeCylinderMesh } from '../cylindermesh/decode';
 import { buildCylinderMeshGeometry } from '../cylindermesh/build';
 import { decodeCapsuleMesh } from '../capsulemesh/decode';
@@ -48,17 +51,29 @@ const fromThree =
 /**
  * Godot `type=` → the slice that decodes and builds it. QuadMesh has no `build.ts` of its own: it
  * is a PlaneMesh subclass differing only in defaults, so it decodes with its own defaults and
- * builds through PlaneMesh's geometry.
+ * builds through PlaneMesh's surface.
  */
 const BUILDERS: Record<string, SurfaceBuilder> = {
-  BoxMesh: fromThree((data) => buildBoxMeshGeometry(decodeBoxMesh(data))),
+  BoxMesh: (data, uv2Padding) => buildBoxMeshSurface(decodeBoxMesh(data), uv2Padding),
   SphereMesh: (data, uv2Padding) => buildSphereMeshSurface(decodeSphereMesh(data), uv2Padding),
-  PlaneMesh: fromThree((data) => buildPlaneMeshGeometry(decodePlaneMesh(data))),
-  QuadMesh: fromThree((data) => buildPlaneMeshGeometry(decodeQuadMesh(data))),
+  PlaneMesh: (data) => buildPlaneMeshSurface(decodePlaneMesh(data)),
+  QuadMesh: (data) => buildPlaneMeshSurface(decodeQuadMesh(data)),
   CylinderMesh: fromThree((data) => buildCylinderMeshGeometry(decodeCylinderMesh(data))),
   CapsuleMesh: (data, uv2Padding) => buildCapsuleMeshSurface(decodeCapsuleMesh(data), uv2Padding),
   TorusMesh: fromThree((data) => buildTorusMeshGeometry(decodeTorusMesh(data))),
-  PrismMesh: (data) => buildPrismMeshSurface(decodePrismMesh(data)),
+  PrismMesh: (data, uv2Padding) => buildPrismMeshSurface(decodePrismMesh(data), uv2Padding),
+};
+
+/** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */
+type LightmapSizeHint = (data: Record<string, string>, texelSize: number) => Vector2;
+
+/**
+ * The lightmap size hint of each type whose builder writes no UV2, PlaneMesh and its QuadMesh
+ * subclass (`primitive_meshes.cpp:1416`). `PrimitiveMesh::_update` scales their UV by it instead.
+ */
+const FALLBACK_UV2_HINTS: Record<string, LightmapSizeHint> = {
+  PlaneMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize),
+  QuadMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize, QUAD_MESH_DEFAULTS),
 };
 
 /** Whether a slice here builds `type`. */
@@ -91,8 +106,11 @@ export function primitiveMeshSurface(resource: TscnInternalResource, texelSize: 
 function buildSurface(resource: TscnInternalResource, texelSize: number): GodotSurface | null {
   const build = BUILDERS[resource.type]!;
   const base = decodePrimitiveMesh(resource.data);
-  const surface = build(resource.data, base.addUv2 ? base.uv2Padding * texelSize : null);
-  if (!surface) return null;
+  const built = build(resource.data, base.addUv2 ? base.uv2Padding * texelSize : null);
+  if (!built) return null;
+  const hint = FALLBACK_UV2_HINTS[resource.type];
+  const surface =
+    base.addUv2 && hint ? withFallbackUv2(built, base.uv2Padding, hint(resource.data, texelSize)) : built;
   return base.flipFaces ? flipFaces(surface) : surface;
 }
 

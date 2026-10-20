@@ -31,6 +31,20 @@ describe('SurfaceWriter', () => {
     expect(Array.from(writer.surface().indices)).toEqual([0, 1, 2, 1, 3, 2]);
   });
 
+  it('pushes the quads of two faces written a vertex apart, the even face first', () => {
+    const writer = new SurfaceWriter(false);
+    writer.quadPairBetweenRows(0, 4, 1);
+
+    expect(Array.from(writer.surface().indices)).toEqual([0, 2, 4, 2, 6, 4, 1, 3, 5, 3, 7, 5]);
+  });
+
+  it('pushes one triangle as given', () => {
+    const writer = new SurfaceWriter(false);
+    writer.triangle(2, 0, 1);
+
+    expect(Array.from(writer.surface().indices)).toEqual([2, 0, 1]);
+  });
+
   it('drops the UV2 of a surface without add_uv2 (edge case)', () => {
     const writer = new SurfaceWriter(false);
     writeQuad(writer);

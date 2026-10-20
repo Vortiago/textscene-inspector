@@ -1,9 +1,8 @@
 import type { PlaneMeshProperties } from './types';
-import { parseVector3 } from '../../../parser/vectors';
-import { warn } from '../../../logger';
-import { enumOr, vec2Or } from '../../../parser/valueParsers';
+import { enumOr, vec2Or, vec3Or } from '../../../parser/valueParsers';
+import { storedVector2 } from '../../../godot/math/real';
 import { flooredCount } from '../meshCounts';
-import type { Vector2, Vector3 } from '../../../godot/math/vector';
+import type { Vector2 } from '../../../godot/math/vector';
 import { PlaneMeshOrientation } from '../../../godot/scene/planeMesh.js';
 import { enumValues } from '../../../godot/classdb/enumNames.js';
 
@@ -12,12 +11,12 @@ import { enumValues } from '../../../godot/classdb/enumNames.js';
  * (FACE_Z, 1×1). Everything else is shared, so QuadMesh reuses this decode by
  * passing its own defaults rather than duplicating the field-by-field reading.
  */
-interface PlaneMeshDefaults {
+export interface PlaneMeshDefaults {
   size: Vector2;
   orientation: PlaneMeshOrientation;
 }
 
-const PLANE_MESH_DEFAULTS: PlaneMeshDefaults = {
+export const PLANE_MESH_DEFAULTS: PlaneMeshDefaults = {
   size: { x: 2, y: 2 },
   orientation: PlaneMeshOrientation.FACE_Y,
 };
@@ -26,20 +25,8 @@ export function decodePlaneMesh(
   properties: Record<string, string>,
   defaults: PlaneMeshDefaults = PLANE_MESH_DEFAULTS
 ): PlaneMeshProperties {
-  let centerOffset: Vector3 | undefined = undefined;
-
-  if (properties.center_offset) {
-    try {
-      centerOffset = parseVector3(properties.center_offset);
-    } catch (error) {
-      warn(
-        `Failed to parse PlaneMesh center_offset: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
   return {
-    size: vec2Or(properties.size, defaults.size, 'PlaneMesh size'),
+    size: storedVector2(vec2Or(properties.size, defaults.size, 'PlaneMesh size')),
     subdivideWidth: flooredCount(properties.subdivide_width, 0, 0, 'PlaneMesh subdivideWidth'),
     subdivideDepth: flooredCount(properties.subdivide_depth, 0, 0, 'PlaneMesh subdivideDepth'),
     orientation: enumOr(
@@ -48,6 +35,6 @@ export function decodePlaneMesh(
       enumValues(PlaneMeshOrientation),
       'PlaneMesh orientation'
     ),
-    centerOffset,
+    centerOffset: vec3Or(properties.center_offset, { x: 0, y: 0, z: 0 }, 'PlaneMesh center_offset'),
   };
 }
