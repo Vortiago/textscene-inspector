@@ -186,6 +186,28 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'region_filter_clip_enabled prevents atlas-edge bleed at the region seam; the renderer samples the region without it.',
   },
 
+  TouchScreenButton: {
+    linterOnly: [
+      // Input routing and state: no finger is down in a preview, so `texture_pressed`
+      // never shows and `action` never fires.
+      'action',
+      'bitmask',
+      'passby_press',
+      'texture_pressed',
+      // The editor draws `texture_normal` whatever the mode says (touch_screen_button.cpp:140).
+      'visibility_mode',
+    ],
+    renderGap: [
+      // The editor draws the collision shape over the button while `shape_visible` holds
+      // (touch_screen_button.cpp:151-171). The renderer draws no shape.
+      'shape',
+      'shape_centered',
+      'shape_visible',
+    ],
+    reason:
+      'The renderer draws texture_normal. The input keys change no frame, and the shape overlay is not drawn yet.',
+  },
+
   Area2D: {
     linterOnly: [
       // Physics simulation: the renderer reads only collision_layer and

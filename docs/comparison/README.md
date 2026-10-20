@@ -279,7 +279,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [TextureRect](../../packages/textscene-core/src/nodes/2d/ui/texturerect/comparison.md): a textured quad in the control's rect
 - [TileMap](../../packages/textscene-core/src/nodes/2d/tiles/tilemap/comparison.md): batched textured tile quads
 - [TileMapLayer](../../packages/textscene-core/src/nodes/2d/tiles/tilemaplayer/comparison.md): batched textured tile quads
-- [TouchScreenButton](../../packages/textscene-core/src/nodes/2d/touchscreenbutton/comparison.md): invisible transform-only fallback
+- [TouchScreenButton](../../packages/textscene-core/src/nodes/2d/touchscreenbutton/comparison.md): an unlit textured quad
 - [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md): an empty panel, with a blank header row when column_titles_visible
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md): children laid out down a column
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md): children flowed down a column, wrapping to a new column

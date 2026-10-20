@@ -1,17 +1,17 @@
 ---
 type: TouchScreenButton
 category: 2D
-status: unimplemented
-fixture: unit-touch-screen-button.tscn
-# image: unit-touch-screen-button
-renders_as: invisible transform-only fallback
+status: limitation
+fixture: touch-screen-button/unit-touch-screen-button.tscn
+image: unit-touch-screen-button
+renders_as: an unlit textured quad
 ---
 
 # TouchScreenButton
 
 TouchScreenButton is an on-screen button for touch input that draws `texture_normal` or
-`texture_pressed`. The previewer parses and validates it but does not draw it, so it
-renders as a transform-only fallback and its children still show.
+`texture_pressed`. The previewer draws `texture_normal` with its top-left corner at the node
+origin, as the editor does whatever `visibility_mode` says, and never draws `texture_pressed`.
 
 ## Linting
 
@@ -37,11 +37,10 @@ Strict parsing format-checks these `TouchScreenButton` properties, plus 12 inher
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-The slice has no `parser.ts`. `index.ts` registers `parseNode2D`, which reads none of
-the nine keys, so an unquoted `action` or an out-of-range `visibility_mode` is carried
-through raw and never rendered.
+`parser.ts` reads `texture_normal` alone. A `null` `texture_normal` is no texture, so the
+button draws nothing. The other eight keys are validated and never rendered.
 
 ## Known limitations
 
-- **Not drawn** Godot draws the button's texture, but the previewer draws nothing for
-  this node.
+- **Editor only** The editor draws the collision `shape` over the button while
+  `shape_visible` holds, and the previewer draws no shape.

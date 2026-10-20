@@ -1813,11 +1813,6 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
-    "name": "Touch Screen Button",
-    "file": "unit-touch-screen-button.tscn",
-    "category": "Other"
-  },
-  {
     "name": "Transform Only 3d Hidden",
     "file": "unit-transform-only-3d-hidden.tscn",
     "category": "Other"
@@ -2035,6 +2030,12 @@ export const fixtures: Fixture[] = [
     "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
     "category": "Other",
     "root": "subviewport-snap-off"
+  },
+  {
+    "name": "Touch Screen Button",
+    "file": "touch-screen-button/unit-touch-screen-button.tscn",
+    "category": "Other",
+    "root": "touch-screen-button"
   },
   {
     "name": "Animation Empty Library",

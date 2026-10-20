@@ -291,6 +291,9 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-translucent.tscn',
     mode: '2d',
   },
+  // The one scene with a TouchScreenButton, which draws `texture_normal` at its origin in the
+  // editor whatever `visibility_mode` says (touch_screen_button.cpp:140).
+  { name: 'touch-screen-button', file: 'touch-screen-button/unit-touch-screen-button.tscn', mode: '2d' },
   // A Sprite2D samples a ViewportTexture minified over 1 px stripes. Godot 4.6.3 `--mode 2d`:
   // rgb(128,51,0), the byte average.
   {

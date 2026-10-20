@@ -1,0 +1,53 @@
+[gd_scene load_steps=5 format=3]
+
+; One variable: a TouchScreenButton, which draws `texture_normal` at its origin. The sibling
+; fixtures draw no button, so only this scene shows the draw. The marker texture has distinct
+; mid-tone channels, so a swapped or shifted channel moves a probe. `shape_visible = false` keeps
+; Godot's editor-only collision overlay out of the picture, so a probe compares the texture alone.
+
+[ext_resource type="Texture2D" path="res://sprite2d-marker.png" id="1_marker"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 32.0
+
+[sub_resource type="BitMap" id="BitMap_1"]
+data = {
+"data": PackedByteArray(255, 255),
+"size": Vector2i(4, 4)
+}
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_pressed"]
+size = Vector2(64, 64)
+
+[node name="World" type="Node2D"]
+position = Vector2(576, 324)
+
+; Draws in the editor with the default `visibility_mode`. The pressed texture, the bitmask, the
+; shape and the action never show with no finger down.
+[node name="Always" type="TouchScreenButton" parent="."]
+position = Vector2(-200, -150)
+texture_normal = ExtResource("1_marker")
+texture_pressed = SubResource("PlaceholderTexture2D_pressed")
+bitmask = SubResource("BitMap_1")
+shape = SubResource("CircleShape2D_1")
+shape_centered = true
+shape_visible = false
+passby_press = false
+action = "ui_accept"
+
+; The editor skips the touchscreen test, so this still draws (touch_screen_button.cpp:140).
+[node name="TouchScreenOnly" type="TouchScreenButton" parent="."]
+position = Vector2(-60, -150)
+texture_normal = ExtResource("1_marker")
+visibility_mode = 1
+
+[node name="ScaledAndRotated" type="TouchScreenButton" parent="."]
+position = Vector2(100, -100)
+rotation = 0.5
+scale = Vector2(1.5, 0.75)
+texture_normal = ExtResource("1_marker")
+
+[node name="Modulated" type="TouchScreenButton" parent="."]
+position = Vector2(-200, 20)
+modulate = Color(1, 0.5, 0.5, 0.75)
+texture_normal = ExtResource("1_marker")
