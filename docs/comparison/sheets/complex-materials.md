@@ -37,7 +37,5 @@ emissive spheres bloom on both sides, with Godot's cyan-green halo and cyan-whit
 
 ## Known limitations
 
-- **Approximated** The glow blurs with a 13-tap kernel, not Godot's gaussian, so the emission
-  halos spread less wide than Godot's.
-- **Approximated** The chrome sphere's sun highlight has the same core as Godot's but a brighter,
-  wider soft edge.
+- **Approximated** The glow blurs with a 13-tap kernel, not Godot's gaussian, so the halos round
+  the emissive spheres and the chrome sphere's sun highlight read brighter and wider than Godot's.
