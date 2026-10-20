@@ -68,16 +68,14 @@ function stubCanvas(shots, { status = NO_TEXTURE_WORK } = {}) {
       return { data: Buffer.from(shots[Math.min(i++, shots.length - 1)]).toString('base64') };
     },
   };
-  const targetPage = {
-    context: () => ({ newCDPSession: async () => session }),
-    evaluate: async () => ({ x: 0, y: 0 }),
-  };
+  const targetPage = { context: () => ({ newCDPSession: async () => session }) };
+  // `evaluate` answers what the in-page measurement reads: the viewport box and the scroll.
   const canvas = {
-    boxOptions: [],
-    scrollIntoViewIfNeeded: async () => {},
-    boundingBox: async (options) => {
-      canvas.boxOptions.push(options);
-      return { x: 0, y: 0, width: 8, height: 8 };
+    box: { x: 0, y: 0, width: 8, height: 8 },
+    measureOptions: [],
+    evaluate: async (_measure, _arg, options) => {
+      canvas.measureOptions.push(options);
+      return { rect: canvas.box, scroll: { x: 0, y: 0 }, inTopFrame: true };
     },
     page: () => targetPage,
   };
@@ -106,22 +104,20 @@ describe('settleCanvas', () => {
     // action timeout; without the passthrough that reads as a hang, not as slow.
     const { page, canvas } = stubCanvas(['x', 'x']);
     await settleCanvas(page, canvas, { screenshotTimeout: 120000 });
-    expect(canvas.boxOptions.at(-1)).toEqual({ timeout: 120000 });
+    expect(canvas.measureOptions.at(-1)).toEqual({ timeout: 120000 });
 
     const bare = stubCanvas(['y', 'y']);
     await settleCanvas(bare.page, bare.canvas);
-    expect(bare.canvas.boxOptions.at(-1)).toEqual({ timeout: 30000 });
+    expect(bare.canvas.measureOptions.at(-1)).toEqual({ timeout: 30000 });
   });
 
   it('re-shoots a matching pair whose target resized after the box was measured', async () => {
     // The canvas grows after the first measurement. Every shot through the old box matches the
     // one before it, so only a second measurement shows the pair is a crop.
     const { page, canvas, session } = stubCanvas([]);
-    const boxes = [{ x: 0, y: 0, width: 8, height: 8 }];
-    canvas.boundingBox = async () => boxes.at(-1);
     session.send = async (method, params) => {
       session.calls.push({ method, params });
-      if (session.calls.length === 1) boxes.push({ x: 0, y: 0, width: 16, height: 8 });
+      if (session.calls.length === 1) canvas.box = { x: 0, y: 0, width: 16, height: 8 };
       return { data: Buffer.from(`width ${params.clip.width}`).toString('base64') };
     };
     const { buffer } = await settleCanvas(page, canvas);

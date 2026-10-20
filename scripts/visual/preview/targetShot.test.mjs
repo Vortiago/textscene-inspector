@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { targetShooter } from './targetShot.mjs';
 
 /** A Locator reduced to what `targetShooter` touches, on a page whose CDP session answers `send`. */
-function stubTarget({ box = { x: 0, y: 0, width: 8, height: 8 }, scroll = { x: 0, y: 0 }, send } = {}) {
+function stubTarget({
+  box = { x: 0, y: 0, width: 8, height: 8 },
+  scroll = { x: 0, y: 0 },
+  inTopFrame = true,
+  send,
+} = {}) {
   const session = {
     calls: [],
     send: async (method, params) => {
@@ -11,16 +16,14 @@ function stubTarget({ box = { x: 0, y: 0, width: 8, height: 8 }, scroll = { x: 0
       return send ? send() : { data: Buffer.from('png').toString('base64') };
     },
   };
-  const page = {
-    context: () => ({ newCDPSession: async () => session }),
-    evaluate: async () => scroll,
-  };
+  const page = { context: () => ({ newCDPSession: async () => session }) };
+  // `evaluate` answers what the in-page measurement reads: the viewport box and the scroll.
   const target = {
-    boxCalls: 0,
-    scrollIntoViewIfNeeded: async () => {},
-    boundingBox: async () => {
-      target.boxCalls++;
-      return box;
+    box,
+    measures: 0,
+    evaluate: async () => {
+      target.measures++;
+      return { rect: target.box, scroll, inTopFrame };
     },
     page: () => page,
   };
@@ -60,7 +63,7 @@ describe('targetShooter', () => {
     await shoot();
     await shoot();
     expect(session.calls).toHaveLength(3);
-    expect(target.boxCalls).toBe(1);
+    expect(target.measures).toBe(1);
   });
 
   it('answers whether the box moved since the last measurement', async () => {
@@ -68,14 +71,19 @@ describe('targetShooter', () => {
     const shooter = targetShooter(target);
     await shooter.shoot();
     expect(await shooter.boxChanged()).toBe(false);
-    target.boundingBox = async () => ({ x: 0, y: 0, width: 16, height: 8 });
+    target.box = { x: 0, y: 0, width: 16, height: 8 };
     expect(await shooter.boxChanged()).toBe(true);
     expect(await shooter.boxChanged()).toBe(false);
   });
 
   it('refuses a target with no box rather than capturing the wrong region', async () => {
-    const { target } = stubTarget({ box: null });
+    const { target } = stubTarget({ box: { x: 0, y: 0, width: 0, height: 0 } });
     await expect(targetShooter(target).shoot()).rejects.toThrow(/not visible/);
+  });
+
+  it('refuses a target inside a frame, whose box is not in the page coordinates the clip takes', async () => {
+    const { target } = stubTarget({ inTopFrame: false });
+    await expect(targetShooter(target).shoot()).rejects.toThrow(/top frame/);
   });
 
   it('reports a shot that outlasts its timeout as a TimeoutError', async () => {
