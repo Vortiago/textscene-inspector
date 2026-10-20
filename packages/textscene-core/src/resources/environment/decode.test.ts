@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../logger';
 import { decodeEnvironment } from './decode';
-import { BackgroundMode } from './types';
+import { BackgroundMode } from '../../godot/scene/environment';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {

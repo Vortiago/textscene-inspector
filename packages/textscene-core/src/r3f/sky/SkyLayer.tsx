@@ -37,7 +37,7 @@ interface SkyLayerProps {
   contribution?: number;
   /**
    * Whether this sky also paints the background. Godot's ambient can come from
-   * the sky while the background shows something else (`AMBIENT_SOURCE_SKY`
+   * the sky while the background shows something else (`AmbientSource.SKY`
    * over a colour background).
    */
   asBackground?: boolean;

@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { depthFogDensityDefault, depthFogRange, GLOW_BLEND_MODE_DEFAULT } from './environment';
+import {
+  AMBIENT_SOURCE_NAMES,
+  AmbientSource,
+  BACKGROUND_MODE_NAMES,
+  BackgroundMode,
+  depthFogDensityDefault,
+  depthFogRange,
+  FOG_MODE_NAMES,
+  GLOW_BLEND_MODE_DEFAULT,
+  REFLECTION_SOURCE_NAMES,
+  SDFGI_Y_SCALE_NAMES,
+} from './environment';
 import { FogMode } from '../rendering/environment/depthFog';
 import { GlowBlendMode } from '../rendering/environment/glow';
 
@@ -35,5 +46,54 @@ describe('GLOW_BLEND_MODE_DEFAULT', () => {
   it('is Screen, which Environment() sets', () => {
     // `scene/resources/environment.h:172`.
     expect(GLOW_BLEND_MODE_DEFAULT).toBe(GlowBlendMode.SCREEN);
+  });
+});
+
+describe('BACKGROUND_MODE_NAMES', () => {
+  it('names the six modes by their constants, without BG_MAX (environment.h:41-48)', () => {
+    expect(BACKGROUND_MODE_NAMES).toEqual({
+      0: 'BG_CLEAR_COLOR',
+      1: 'BG_COLOR',
+      2: 'BG_SKY',
+      3: 'BG_CANVAS',
+      4: 'BG_KEEP',
+      5: 'BG_CAMERA_FEED',
+    });
+  });
+
+  it('keeps the integers the enum stores', () => {
+    expect(BackgroundMode.BG_CAMERA_FEED).toBe(5);
+  });
+});
+
+describe('AMBIENT_SOURCE_NAMES', () => {
+  it('names the four sources without AMBIENT_SOURCE_ (environment.h:51-56)', () => {
+    expect(AMBIENT_SOURCE_NAMES).toEqual({ 0: 'BG', 1: 'DISABLED', 2: 'COLOR', 3: 'SKY' });
+  });
+
+  it('keeps the integers the enum stores', () => {
+    expect(AmbientSource.SKY).toBe(3);
+  });
+});
+
+describe('REFLECTION_SOURCE_NAMES', () => {
+  it('names the three sources without REFLECTION_SOURCE_ (environment.h:58-62)', () => {
+    expect(REFLECTION_SOURCE_NAMES).toEqual({ 0: 'BG', 1: 'DISABLED', 2: 'SKY' });
+  });
+});
+
+describe('SDFGI_Y_SCALE_NAMES', () => {
+  it('names the three scales as the constants spell them (environment.h:72-76)', () => {
+    expect(SDFGI_Y_SCALE_NAMES).toEqual({
+      0: 'Y_SCALE_50_PERCENT',
+      1: 'Y_SCALE_75_PERCENT',
+      2: 'Y_SCALE_100_PERCENT',
+    });
+  });
+});
+
+describe('FOG_MODE_NAMES', () => {
+  it('names the two modes without FOG_MODE_ (environment.h:78-81)', () => {
+    expect(FOG_MODE_NAMES).toEqual({ 0: 'EXPONENTIAL', 1: 'DEPTH' });
   });
 });

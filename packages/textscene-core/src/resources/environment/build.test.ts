@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { createEnvironmentSettings } from './build';
 import { decodeEnvironment } from './decode';
-import { BackgroundMode } from './types';
+import { BackgroundMode } from '../../godot/scene/environment';
 import type { EnvironmentProperties } from './types';
 import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { ToneMapper, toneMappingWhiteParam } from '../../godot/rendering/environment/toneMapping.js';
