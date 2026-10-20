@@ -2,8 +2,10 @@
 
 TextScene Inspector parses, lints and renders Godot `.tscn` files with react-three-fiber. The
 pnpm monorepo holds `packages/textscene-core` (parser, linter, r3f components),
-`apps/textscene-web` (web previewer), `apps/textscene-vscode` (VS Code extension) and
-`apps/textscene-linter` (CLI linter, free of React and THREE).
+`packages/textscene-dev-kit` (shared test helpers, never published), `apps/textscene-web` (web
+previewer), `apps/textscene-vscode` (VS Code extension), `apps/textscene-lsp` (`tscn-lsp`
+language server) and `apps/textscene-linter` (CLI linter). The CLI linter and the language server
+are free of React and THREE.
 
 ## Docs
 
@@ -64,12 +66,15 @@ and prints exact pixels. It is a tool, not a gate.
 - Measure, never derive. Put a measurement in the pull request, never in a comparison sheet.
 - Every capture that measures against Godot launches through `launchGodotComparisonBrowser`, so a
   screenshot is the drawing buffer. Never launch one another way.
-- `--particles <seconds>` advances every CPUParticles emitter. Choose the instant. Never
-  derive it from the scene.
+- `--particles <seconds>` advances every CPUParticles emitter, on top of its authored
+  `preprocess`. The harness never picks the instant. Pass it yourself. For a comparison sheet,
+  `SHEET-STANDARD.md` names it.
 - `--mode 2d-root` measures a root-only setting. Add a new one to
   `ROOT_ONLY_VIEWPORT_PROPERTIES` in `scripts/godot-ref/run.mjs`.
-- A 1/255 gap on a channel whose value × 255 is fractional is not a parity defect. Compare
-  `--rendering-driver opengl3` with the default vulkan before you believe one.
+- A 1/255 gap on a channel whose value × 255 is fractional is not a parity defect. The driver
+  rounds it: Godot clears `Color(0.3)` (76.5) to 76 under vulkan and to 77 under opengl3
+  (measured, `run.test.mjs`). Compare `--rendering-driver opengl3` with the default vulkan before
+  you believe one.
 
 ## Vertical slices
 
@@ -88,13 +93,14 @@ imports.
 
 Scaffold a node type with `pnpm new:node <TypeName> <category-dir> --intent
 <draws|transform-only|pending> [--base node3d|node2d|node|control] [--linter]`. It creates the
-`unit-*.tscn` fixture. `--intent` sets the slice shape, the render registration and the sheet status:
+`unit-*.tscn` fixture. `--intent` sets the slice shape, the render registration and the sheet
+status:
 
 - `draws`: its own types, parser and Component. Status `unreviewed`.
 - `transform-only`: the base under `renderIntent: 'transform-only'`. Status `linter-only`.
-- `pending`: the base under `renderIntent: 'pending'`, except `--base control`. Status
-  `unimplemented`. Its Godot effect, an own visual or a drive of other nodes, is missing
-  (ADR-0045).
+- `pending`: the base under `renderIntent: 'pending'`. A `--base control` slice takes only
+  `pending`, and it does not mount the base. Status `unimplemented`. Its Godot effect, an own
+  visual or a drive of other nodes, is missing (ADR-0045).
 
 Never drop a registration to mark a type undrawn.
 
