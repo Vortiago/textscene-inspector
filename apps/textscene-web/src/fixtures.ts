@@ -123,6 +123,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animatedsprite2d Untextured",
+    "file": "unit-animatedsprite2d-untextured.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d",
     "file": "unit-animatedsprite2d.tscn",
     "category": "Other"
@@ -1363,6 +1368,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Untextured",
+    "file": "unit-pointlight2d-untextured.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d",
     "file": "unit-pointlight2d.tscn",
     "category": "Other"
@@ -1385,6 +1395,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Preview Lighting",
     "file": "unit-preview-lighting.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Primitive Mesh Flip Faces",
+    "file": "unit-primitive-mesh-flip-faces.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Primitive Mesh Uv2",
+    "file": "unit-primitive-mesh-uv2.tscn",
     "category": "Other"
   },
   {
@@ -1703,6 +1723,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Untextured",
+    "file": "unit-sprite3d-untextured.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d",
     "file": "unit-sprite3d.tscn",
     "category": "Other"
@@ -1815,11 +1840,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tonemap Agx Shadow",
     "file": "unit-tonemap-agx-shadow.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Touch Screen Button",
-    "file": "unit-touch-screen-button.tscn",
     "category": "Other"
   },
   {
@@ -2040,6 +2060,12 @@ export const fixtures: Fixture[] = [
     "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
     "category": "Other",
     "root": "subviewport-snap-off"
+  },
+  {
+    "name": "Touch Screen Button",
+    "file": "touch-screen-button/unit-touch-screen-button.tscn",
+    "category": "Other",
+    "root": "touch-screen-button"
   },
   {
     "name": "Animation Empty Library",
@@ -2423,6 +2449,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Untextured",
+    "file": "unit-sprite2d-untextured.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d",
     "file": "unit-sprite2d.tscn",
     "category": "Unit - 2D Canvas"
@@ -2470,6 +2501,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map Layer Tile Z Index",
     "file": "unit-tile-map-layer-tile-z-index.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Untextured Source",
+    "file": "unit-tile-map-layer-untextured-source.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -2548,6 +2584,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Tangents",
+    "file": "unit-arraymesh-tangents.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Uv",
     "file": "unit-arraymesh-uv.tscn",
     "category": "Unit - Primitive Meshes"
@@ -2565,6 +2606,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Box Mesh",
     "file": "unit-box-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Capsule Mesh Texture Uv",
+    "file": "unit-capsule-mesh-texture-uv.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -2620,6 +2666,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Quadmesh",
     "file": "unit-quadmesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Sphere Mesh Texture Uv",
+    "file": "unit-sphere-mesh-texture-uv.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

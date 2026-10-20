@@ -47,6 +47,9 @@ export const MATERIAL_SCENES = [
   // Sprite2D, Sprite3D and 3D physics bodies.
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // The one scene with a Sprite3D that has no texture. Godot's draw drops the mesh for both an unset
+  // and a null texture (sprite_3d.cpp:798), so neither shows a placeholder between the anchors.
+  { name: 'sprite3d-untextured', file: 'unit-sprite3d-untextured.tscn' },
   // An AtlasTexture crop of a normal-map sheet, minified: Godot samples the sheet's renormalised
   // chain, so the crop draws the same 45-degree colour as the sheet. An unnormalised crop draws duller.
   { name: 'atlastexture-normal-mipmap', file: 'unit-atlastexture-normal-mipmap.tscn', mode: '2d' },

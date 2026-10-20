@@ -7,10 +7,15 @@ export const PRIMITIVE_SCENES = [
   // Mesh primitives and StandardMaterial3D features.
   { name: 'box-mesh', file: 'unit-box-mesh.tscn' },
   { name: 'capsule-mesh', file: 'unit-capsule-mesh.tscn' },
+  { name: 'capsule-mesh-texture-uv', file: 'unit-capsule-mesh-texture-uv.tscn' },
   { name: 'cylinder-mesh', file: 'unit-cylinder-mesh.tscn' },
   { name: 'prism-mesh', file: 'unit-prism-mesh.tscn' },
   { name: 'quadmesh', file: 'unit-quadmesh.tscn' },
+  { name: 'sphere-mesh-texture-uv', file: 'unit-sphere-mesh-texture-uv.tscn' },
   { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
+  // The steps PrimitiveMesh applies after every builder: the UV2 layout and `flip_faces`.
+  { name: 'primitive-mesh-uv2', file: 'unit-primitive-mesh-uv2.tscn' },
+  { name: 'primitive-mesh-flip-faces', file: 'unit-primitive-mesh-flip-faces.tscn' },
   { name: 'csg-box-3d', file: 'unit-csg-box.tscn' },
   { name: 'csg-sphere-3d', file: 'unit-csg-sphere.tscn' },
   { name: 'csg-cylinder-3d', file: 'unit-csg-cylinder.tscn' },

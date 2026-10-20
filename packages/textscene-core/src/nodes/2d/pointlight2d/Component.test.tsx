@@ -238,10 +238,27 @@ describe('PointLight2D Component', () => {
     expect(disposed).toBe(false);
   });
 
-  it('shows missing resource placeholder when no texture resolves', async () => {
-    // No texture property, so the placeholder shows.
-    const r = await render(node({ texture: 'ExtResource("missing")' }));
-    const groups = r.scene.findAllByType('Group');
-    expect(groups.length).toBeGreaterThan(0);
+  describe('without a usable texture', () => {
+    const isPlaceholder = (m: { instance: unknown }) =>
+      ((m.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).color?.getHexString() === 'ff00ff';
+
+    function unsetNode(raw: Record<string, string> = {}): TscnNode {
+      return { ...node(), properties: parsePointLight2D(nodeHeading, raw) };
+    }
+
+    it('draws nothing when the texture is unset (Godot lights nothing: measured with pnpm ref:godot)', async () => {
+      const r = await render(unsetNode());
+      expect(r.scene.findAllByType('Mesh').filter(isPlaceholder)).toHaveLength(0);
+    });
+
+    it('draws nothing when the texture is null', async () => {
+      const r = await render(unsetNode({ texture: 'null' }));
+      expect(r.scene.findAllByType('Mesh').filter(isPlaceholder)).toHaveLength(0);
+    });
+
+    it('draws the placeholder when the texture is set but does not resolve', async () => {
+      const r = await render(node({ texture: 'ExtResource("missing")' }));
+      expect(r.scene.findAllByType('Mesh').filter(isPlaceholder)).toHaveLength(1);
+    });
   });
 });

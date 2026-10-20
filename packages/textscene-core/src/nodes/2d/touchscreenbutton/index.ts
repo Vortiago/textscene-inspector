@@ -1,14 +1,14 @@
-/**
- * TouchScreenButton registration: the parser. It reuses the Node2D parse, and
- * property knowledge lives in linterParser.ts.
- */
+/** TouchScreenButton registration: the parser. Property knowledge lives in linterParser.ts. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode2D } from '../../base/node2d/parser';
+import { parseTouchScreenButton } from './parser';
 
 const touchScreenButtonRegistration: NodeTypeRegistration = {
   typeName: 'TouchScreenButton',
-  parser: parseNode2D,
+  parser: parseTouchScreenButton,
 };
 
 nodeRegistry.register(touchScreenButtonRegistration);
+
+export * from './parser';
+export * from './types';

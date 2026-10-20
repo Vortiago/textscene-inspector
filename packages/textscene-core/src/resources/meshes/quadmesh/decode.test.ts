@@ -13,17 +13,15 @@ describe('decodeQuadMesh', () => {
     expect(props.size).toEqual({ x: 200, y: 200 });
   });
 
-  it('reuses PlaneMesh field reading (subdivide_*, center_offset, flip_faces)', () => {
+  it('reuses PlaneMesh field reading (subdivide_* and center_offset)', () => {
     const props = decodeQuadMesh({
       subdivide_width: '2',
       subdivide_depth: '3',
       center_offset: 'Vector3(1, 2, 3)',
-      flip_faces: 'true',
     });
     expect(props.subdivideWidth).toBe(2);
     expect(props.subdivideDepth).toBe(3);
     expect(props.centerOffset).toEqual({ x: 1, y: 2, z: 3 });
-    expect(props.flipFaces).toBe(true);
   });
 
   it('tolerates a malformed size by falling back to the 1×1 default', () => {

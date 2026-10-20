@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  projectPrimitiveMeshTexelSize,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
@@ -213,6 +214,24 @@ describe('projectTransparentBackground', () => {
   it('is opaque with no project or a malformed value', () => {
     expect(projectTransparentBackground(null)).toBe(false);
     expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'yes' })).toBe(false);
+  });
+});
+
+describe('projectPrimitiveMeshTexelSize', () => {
+  const KEY = 'rendering/lightmapping/primitive_meshes/texel_size';
+
+  it('reads the texel size the project sets', () => {
+    expect(projectPrimitiveMeshTexelSize({ [KEY]: '0.5' })).toBe(0.5);
+  });
+
+  it('is 0.2 with no project or a malformed value', () => {
+    expect(projectPrimitiveMeshTexelSize(null)).toBe(0.2);
+    expect(projectPrimitiveMeshTexelSize({ [KEY]: 'big' })).toBe(0.2);
+  });
+
+  it('takes a size at or below zero as 0.2, as every PrimitiveMesh does (edge case)', () => {
+    expect(projectPrimitiveMeshTexelSize({ [KEY]: '0' })).toBe(0.2);
+    expect(projectPrimitiveMeshTexelSize({ [KEY]: '-1' })).toBe(0.2);
   });
 });
 

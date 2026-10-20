@@ -12,7 +12,7 @@ import { decodePrismMesh } from './prismmesh/decode';
 describe('primitive mesh Godot default parity', () => {
   it('SphereMesh defaults: radial_segments=64, rings=32', () => {
     const p = decodeSphereMesh({});
-    expect(p.radial_segments).toBe(64);
+    expect(p.radialSegments).toBe(64);
     expect(p.rings).toBe(32);
   });
 

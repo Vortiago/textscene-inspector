@@ -43,6 +43,7 @@ export {
 } from './preview/captureContext.mjs';
 export { findCanvas2DFrame, readViewportMode, setDisplayToggle } from './preview/viewportProbes.mjs';
 export { withPreviewBrowser } from './preview/session.mjs';
+export { targetShooter } from './preview/targetShot.mjs';
 export {
   findCanvas,
   findCaptureTarget,

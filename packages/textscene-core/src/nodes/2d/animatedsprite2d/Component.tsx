@@ -165,9 +165,10 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
     [frameTexture]
   );
 
-  // A `.tres` SpriteFrames still loading renders nothing, as Sprite2D does. The
-  // placeholder is for an absent or failed resource.
-  const showPlaceholder = spriteFramesStatus !== 'pending' && (!frameRef || frameMissing);
+  // No SpriteFrames, no animation or no frame texture draws nothing (`animated_sprite_2d.cpp:270-278`),
+  // and so does a `.tres` still loading. The placeholder is for a resource that is set but failed.
+  const spriteFramesFailed = !!props.sprite_frames && spriteFramesStatus === 'unavailable';
+  const showPlaceholder = spriteFramesFailed || (!!frameRef && frameMissing);
 
   const cgx = props.offset.x + (props.centered ? 0 : width / 2);
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);

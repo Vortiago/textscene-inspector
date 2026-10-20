@@ -3,6 +3,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseLight2D } from '../lights/shared/parser';
 import { floatOr, vec2Or } from '../../../parser/valueParsers';
+import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 import type { PointLight2DProperties } from './types';
 
 export function parsePointLight2D(
@@ -15,7 +16,7 @@ export function parsePointLight2D(
     offset: vec2Or(properties.offset, { x: 0, y: 0 }, 'PointLight2D'),
   };
 
-  if (properties.texture) result.texture = properties.texture;
+  if (holdsResource(properties.texture)) result.texture = properties.texture;
 
   return result;
 }

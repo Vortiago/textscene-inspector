@@ -4,7 +4,7 @@
  * that lacks the animation picks its first, and `frame` clamps to the animation it lands on.
  */
 
-import { holdsResource } from '../../../godot/scene/geometryBase';
+import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { parseOptionalInt } from '../../../parser/valueParsers';
 import { unquoteLiteral } from '../../../parser/utils';
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';

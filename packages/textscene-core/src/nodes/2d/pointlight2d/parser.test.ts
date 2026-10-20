@@ -37,6 +37,10 @@ describe('parsePointLight2D', () => {
     expect(p.offset).toEqual({ x: 0, y: 0 });
   });
 
+  it('reads a texture of null as no texture', () => {
+    expect(parsePointLight2D(nodeHeading, { texture: 'null' }).texture).toBeUndefined();
+  });
+
   it('warns and falls back on invalid energy', () => {
     const p = parsePointLight2D(nodeHeading, { energy: 'not_a_number' });
     expect(p.energy).toBe(1.0);
