@@ -16,11 +16,14 @@ export class SurfaceWriter {
   private readonly uvs: number[] = [];
   private readonly uv2s: number[] = [];
   private readonly indices: number[] = [];
-  /** The index the next `vertex` takes, Godot's `point`. */
-  vertexCount = 0;
 
   /** `hasUv2` is Godot's `p_add_uv2`: without it, `vertex` drops its UV2. */
   constructor(private readonly hasUv2: boolean) {}
+
+  /** The index the next `vertex` takes, Godot's `point`. */
+  get vertexCount(): number {
+    return this.positions.length / 3;
+  }
 
   vertex(position: Vec3, normal: Vec3, tangent: Vec4, uv: Vec2, uv2: Vec2): void {
     this.positions.push(...position);
@@ -28,7 +31,6 @@ export class SurfaceWriter {
     this.tangents.push(...tangent);
     this.uvs.push(...uv);
     if (this.hasUv2) this.uv2s.push(...uv2);
-    this.vertexCount++;
   }
 
   /**

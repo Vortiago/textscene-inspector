@@ -1,8 +1,7 @@
 /**
- * PrismMesh geometry, ported from Godot `PrismMesh::_create_mesh_array`
+ * PrismMesh surface, ported from Godot `PrismMesh::_create_mesh_array`
  * (`primitive_meshes.cpp:1610-1873`): a triangle in the XY plane, apex at the top,
- * extruded along Z. It reverses each index triple and flips V, the two
- * conversions `godotSurface.ts` applies to baked Godot geometry.
+ * extruded along Z.
  *
  * Derived from Godot Engine (`scene/resources/3d/primitive_meshes.cpp`), used under the MIT licence:
  *
@@ -29,14 +28,14 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as THREE from 'three';
 import type { PrismMeshProperties } from './types.js';
 import { normalizedVector3 } from '../../../godot/math/vector.js';
+import type { GodotSurface } from '../godotSurface.js';
 
 const ONE_THIRD = 1 / 3;
 const TWO_THIRDS = 2 / 3;
 
-export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeometry {
+export function buildPrismMeshSurface(p: PrismMeshProperties): GodotSurface {
   const { size, leftToRight } = p;
   const subdivideW = p.subdivideWidth;
   const subdivideH = p.subdivideHeight;
@@ -58,13 +57,11 @@ export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeom
   ): void => {
     positions.push(position[0], position[1], position[2]);
     normals.push(normal[0], normal[1], normal[2]);
-    // Godot's UV origin is the image's top left.
-    uvs.push(u, 1 - v);
+    uvs.push(u, v);
     point++;
   };
-  /** Godot's clockwise-front triple, emitted counter-clockwise for three. */
   const triangle = (a: number, b: number, c: number): void => {
-    indices.push(a, c, b);
+    indices.push(a, b, c);
   };
 
   /* front + back: the triangular caps (`:1663`), apex X by `left_to_right` (`:1670`) */
@@ -170,12 +167,10 @@ export function buildPrismMeshGeometry(p: PrismMeshProperties): THREE.BufferGeom
     thisrow = point;
   }
 
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geometry.setIndex(
-    point > 65535 ? new THREE.Uint32BufferAttribute(indices, 1) : new THREE.Uint16BufferAttribute(indices, 1)
-  );
-  return geometry;
+  return {
+    positions: new Float32Array(positions),
+    normals: new Float32Array(normals),
+    uvs: new Float32Array(uvs),
+    indices: point > 65535 ? new Uint32Array(indices) : new Uint16Array(indices),
+  };
 }

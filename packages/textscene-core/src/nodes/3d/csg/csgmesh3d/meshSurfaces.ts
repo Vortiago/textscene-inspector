@@ -16,7 +16,7 @@ import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/mes
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
 import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
 import { materialPathInFile } from '../../../../resources/materials/materialPathInFile';
-import { primitiveMeshSurface } from '../../meshinstance3d/primitiveMeshGeometry';
+import { primitiveMeshSurface } from '../../../../resources/meshes/primitivemesh/surface';
 
 /** The arrays of a Godot surface the brush builder reads, and the surface's material. */
 export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normals' | 'uvs' | 'indices'> {
@@ -109,6 +109,5 @@ function primitiveMeshSurfaces(
   // The brush reads no UV2 (`csg_shape.cpp:1147-1172`), the only array the texel size scales.
   const surface = primitiveMeshSurface(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
   if (!surface) return [];
-  const { positions, normals, uvs, indices } = surface;
-  return [{ positions, normals, uvs, indices, material }];
+  return [{ ...surface, material }];
 }

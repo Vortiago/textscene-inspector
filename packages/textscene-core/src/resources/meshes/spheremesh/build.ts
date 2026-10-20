@@ -28,12 +28,11 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { TAU } from '../../../godot/math/math.js';
 import { normalizedVector3 } from '../../../godot/math/vector.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
 import type { SphereMeshProperties } from './types.js';
-
-const TAU = Math.PI * 2;
 
 /** `uv2Padding` is in world units, or null for a mesh with no UV2 (`add_uv2` off). */
 export function buildSphereMeshSurface(p: SphereMeshProperties, uv2Padding: number | null): GodotSurface {

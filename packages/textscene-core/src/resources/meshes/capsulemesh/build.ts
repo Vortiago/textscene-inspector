@@ -28,11 +28,11 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { TAU } from '../../../godot/math/math.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
 import type { CapsuleMeshProperties } from './types.js';
 
-const TAU = Math.PI * 2;
 const ONE_THIRD = 1 / 3;
 const TWO_THIRDS = 2 / 3;
 

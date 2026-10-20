@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_AABB } from '../../../godot/math/aabb';
 import { UV2_ATTRIBUTE } from '../../../resources/meshes/uv2';
-import { buildPrimitiveMeshGeometry, primitiveMeshAabb, primitiveMeshSurface } from './primitiveMeshGeometry';
+import { buildPrimitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
 
 const TEXEL_SIZE = 0.2;
 /** Four segments round and one ring: vertex 6 sits on the equator, a quarter turn from the seam. */
@@ -43,42 +43,6 @@ describe('buildPrimitiveMeshGeometry', () => {
 
   it('is null for a type with no slice here', () => {
     expect(buildPrimitiveMeshGeometry({ id: 'text', type: 'TextMesh', data: {} }, TEXEL_SIZE)).toBeNull();
-  });
-});
-
-describe('primitiveMeshSurface', () => {
-  it('under flip_faces, negates the normals and swaps the first two corners of each triangle', () => {
-    const plain = primitiveMeshSurface(sphere(), TEXEL_SIZE)!;
-    const flipped = primitiveMeshSurface(sphere({ flip_faces: 'true' }), TEXEL_SIZE)!;
-
-    expect(Array.from(flipped.indices).slice(0, 6)).toEqual([1, 0, 5, 6, 1, 5]);
-    expect(Array.from(flipped.normals!.slice(18, 21))).toEqual(
-      Array.from(plain.normals!.slice(18, 21), (n) => -n)
-    );
-  });
-
-  it('under flip_faces, keeps the positions, the UVs and the tangents', () => {
-    const plain = primitiveMeshSurface(sphere(), TEXEL_SIZE)!;
-    const flipped = primitiveMeshSurface(sphere({ flip_faces: 'true' }), TEXEL_SIZE)!;
-
-    expect(flipped.positions).toEqual(plain.positions);
-    expect(flipped.uvs).toEqual(plain.uvs);
-    expect(flipped.tangents).toEqual(plain.tangents);
-  });
-
-  it('flips a primitive still built by three too (edge case)', () => {
-    const plain = primitiveMeshSurface({ id: 'box', type: 'BoxMesh', data: {} }, TEXEL_SIZE)!;
-    const flipped = primitiveMeshSurface(
-      { id: 'box', type: 'BoxMesh', data: { flip_faces: 'true' } },
-      TEXEL_SIZE
-    )!;
-
-    expect(flipped.normals![0]).toBe(-plain.normals![0]!);
-    expect(Array.from(flipped.indices).slice(0, 3)).toEqual([
-      plain.indices[1],
-      plain.indices[0],
-      plain.indices[2],
-    ]);
   });
 });
 
