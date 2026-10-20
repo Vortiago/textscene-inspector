@@ -14,7 +14,12 @@ import {
   type UniqueNameClaim,
   type UniqueNameOwnership,
 } from './nodeOwner.js';
-import { UNIQUE_NODE_PREFIX, UNLISTED, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath.js';
+import {
+  UNIQUE_NODE_PREFIX,
+  walkFromRoot,
+  type RootWalkTables,
+  type UnlistedEnd,
+} from '../godot/string/nodePath.js';
 import { serialChildName } from '../godot/string/nodeName.js';
 import { reparentedName } from '../godot/scene/packedScene.js';
 import { idTrailEnd } from './idTrail.js';
@@ -48,9 +53,9 @@ export const MISSING = { status: 'missing' } as const;
 export const UNKNOWABLE = { status: 'unknowable' } as const;
 
 /**
- * Written only by {@link seatScene}, for the roots it returns. A seated tree is never mutated in
- * place, so an entry never goes stale, and it dies with its tree. It holds the walk and the
- * claims alone, not `seated`, so the headings' own nodes die once the parse returns.
+ * Written only by {@link seatScene}, once per call, keyed by the roots array it returns. An entry
+ * clears when nothing holds that array any more. Nothing mutates a seated tree, so an entry never
+ * goes stale. It keeps the walk and the claims, not `seated`, so the heading nodes die with the parse.
  */
 const seatings = new WeakMap<readonly RawNode[], SeatedPaths<RawNode>>();
 
@@ -86,13 +91,16 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // A second parentless node is orphaned here. `orphanedNodes` finds it by walking
     // the returned tree, so it holds no second copy of the resolution rules.
     if (!node.parent) continue;
-    const parentPath = walkFromRoot(node.parent, tables.tree);
-    // The walk passed content another file lists, where Godot may still find the parent, so
-    // nothing here says the path vanished.
-    if (parentPath === UNLISTED) continue;
-    if (parentPath !== null && seatBelowParent(tables, node, parentPath)) {
-      seatedByPath.add(node);
-      continue;
+    const end = walkFromRoot(node.parent, tables.tree);
+    if (end !== null) {
+      // An unlisted end passed content another file lists, where Godot may still find the
+      // parent, so nothing here says the path vanished and it never re-roots.
+      const isUnlisted = typeof end !== 'string';
+      if (seatBelowParent(tables, node, isUnlisted ? unlistedPath(end) : end)) {
+        seatedByPath.add(node);
+        continue;
+      }
+      if (isUnlisted) continue;
     }
     // The path has vanished. A `parent_id_path=` is tried first (`:161-163`) and, where it
     // lands, seats the node somewhere this parse cannot name, so that node, like every node
@@ -122,8 +130,8 @@ export function sceneSeating(roots: readonly RawNode[]): SeatedPaths<RawNode> {
 
 /**
  * Seats one heading under the node at the path its `parent=` walks to, else below the instance
- * enclosing that path, whose sub-scene or GLB the path descends into. False where the path names no node of this
- * file. The map IS the child lookup the walk asks at every descent, so `./Mid`, `Mid/` and `Mid`
+ * enclosing that path, whose sub-scene or GLB the path descends into. False where the path names
+ * no node of this file. The map IS the child lookup the walk asks at every descent, so `./Mid`, `Mid/` and `Mid`
  * name the one node Godot resolves them all to while `Missing/../Mid` names none.
  */
 function seatBelowParent<N extends SceneNode<N>>(
@@ -147,6 +155,15 @@ function seatBelowParent<N extends SceneNode<N>>(
   anchor.node.children.push(seat);
   register(tables, anchor.foldedParentPath, seat, anchor.node);
   return true;
+}
+
+/**
+ * The path an unlisted walk end names, for the instance enclosing it to anchor: the opaque node's
+ * path, then the rest, `%Name` included, which the instanced scene's own table answers when it is
+ * grafted in.
+ */
+function unlistedPath({ unlistedAt, rest }: UnlistedEnd): string {
+  return joinPath(unlistedAt, rest);
 }
 
 /**
@@ -181,7 +198,7 @@ function seatedResolver<N extends RawNode>({
   return (path) => {
     const end = walkFromRoot(path, tree);
     if (end === null) return MISSING;
-    const node = end === UNLISTED ? undefined : byPath.get(end);
+    const node = typeof end === 'string' ? byPath.get(end) : undefined;
     return node ? { status: 'found', node } : UNKNOWABLE;
   };
 }

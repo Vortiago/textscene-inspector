@@ -27,7 +27,12 @@ export function nodePathWalkNames(path: string): string[] {
 export const UNIQUE_NODE_PREFIX = '%';
 
 /** A walk that reached content this file does not list, where Godot may yet find a node. */
-export const UNLISTED = Symbol('unlisted');
+export interface UnlistedEnd {
+  /** The opaque node the walk stopped at, spelt as the walk spells paths. */
+  readonly unlistedAt: string;
+  /** The rest of the path from there, from the `%Name` that node's own table answers. */
+  readonly rest: string;
+}
 
 /**
  * The tables Godot's walk reads over the scene seated so far. {@link walk} takes each as optional,
@@ -54,9 +59,10 @@ function walk(
   relative: string,
   floor: number,
   { uniquePaths, exists, isOpaque }: Partial<RootWalkTables> = {}
-): string[] | null | typeof UNLISTED {
+): string[] | null | UnlistedEnd {
   let segments = [...base];
-  for (const part of nodePathWalkNames(relative)) {
+  const parts = nodePathWalkNames(relative);
+  for (const [index, part] of parts.entries()) {
     if (part === '.') continue;
     if (part === '..') {
       // Nothing above the root: `!current->data.parent` returns nullptr (node.cpp:1919-1922).
@@ -72,7 +78,7 @@ function walk(
       const current = segments.join('/');
       const isOpaqueHere = isOpaque?.(current) === true;
       const claimed = isOpaqueHere && segments.length > floor ? undefined : uniquePaths?.get(part);
-      if (!claimed) return isOpaqueHere ? UNLISTED : null;
+      if (!claimed) return isOpaqueHere ? { unlistedAt: current, rest: parts.slice(index).join('/') } : null;
       segments = claimed.split('/');
       continue;
     }
@@ -110,15 +116,12 @@ function isRootWalkable(path: string | undefined): path is string {
 
 /**
  * The node a root-relative path names, spelt from the root without its name (the root is the
- * empty path), null when Godot's walk finds nothing, or {@link UNLISTED}. A `.tscn` stores a
+ * empty path), null when Godot's walk finds nothing, or {@link UnlistedEnd}. A `.tscn` stores a
  * `parent=`, `from=` and `to=` path (`resource_format_text.cpp:212`) that instantiate resolves from
  * the root with `get_node_or_null` (`packed_scene.cpp:161`), so the root is the floor. Without a
  * `tree`, a missing name folds away under a later `..`, the wider answer, and a `%Name` is null.
  */
-export function walkFromRoot(
-  path: string | undefined,
-  tree?: RootWalkTables
-): string | null | typeof UNLISTED {
+export function walkFromRoot(path: string | undefined, tree?: RootWalkTables): string | null | UnlistedEnd {
   // The saver never writes a `%Name` (resource_format_text.cpp:2018), yet on 4.7.2 the loader seats
   // `parent="%Player"` under its claimant and warns only when nothing claims it.
   if (!isRootWalkable(path)) return null;

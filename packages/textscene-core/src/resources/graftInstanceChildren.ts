@@ -10,6 +10,7 @@ import { scopeOf, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
+import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
 
 /** The two scopes a graft joins. */
 export interface InstanceScopes {
@@ -20,17 +21,25 @@ export interface InstanceScopes {
 }
 
 /**
+ * The path below the instanced scene's root that its own table gives a `%Name` key, or undefined
+ * where nothing there claims it.
+ */
+export type ClaimedPath = (key: string) => string | undefined;
+
+/**
  * The sub-scene root's children with the host's overrides folded in. A grafted node
  * carries the outer scope, and a node an override reached carries its own scope plus
  * the resources the override names (`rehomeOverride`).
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
+ * @param claimedPath the sub-scene's own `%Name` table, which a sub-path's `%Name` reads
  */
 export function graftInstanceChildren(
   rootChildren: readonly LiveNode[],
   hostChildren: readonly LiveNode[],
-  scopes: InstanceScopes
+  scopes: InstanceScopes,
+  claimedPath: ClaimedPath
 ): LiveNode[] {
   if (hostChildren.length === 0) return [...rootChildren];
 
@@ -47,7 +56,8 @@ export function graftInstanceChildren(
       continue;
     }
 
-    const next = graftAt(grafted, child.instanceSubPath.split('/'), stamped, scopes.content);
+    const segments = expandUniqueNames(child.instanceSubPath.split('/'), grafted, claimedPath);
+    const next = graftAt(grafted, segments, stamped, scopes.content);
     if (next) {
       grafted = next;
     } else {
@@ -61,6 +71,44 @@ export function graftInstanceChildren(
   }
 
   return [...grafted, ...appendedAtRoot];
+}
+
+/**
+ * `segments` with each `%Name` the sub-scene's own table answers replaced by the path it claims,
+ * since the walk restarts there (node.cpp:1930-1938). It stops at a nested instance, whose own
+ * graft reads that scene's table, and leaves an unclaimed name for the graft to miss.
+ */
+function expandUniqueNames(
+  segments: readonly string[],
+  rootChildren: readonly LiveNode[],
+  claimedPath: ClaimedPath
+): string[] {
+  let path: string[] = [];
+  for (const [index, segment] of segments.entries()) {
+    if (segment.startsWith(UNIQUE_NODE_PREFIX)) {
+      const claimed = claimedPath(segment);
+      if (claimed === undefined) return [...path, ...segments.slice(index)];
+      path = claimed.split('/');
+    } else if (segment === '..') {
+      path.pop();
+    } else if (segment !== '.') {
+      path.push(segment);
+    }
+    if (nodeAt(rootChildren, path)?.instance) return [...path, ...segments.slice(index + 1)];
+  }
+  return path;
+}
+
+/** The node at `path` below the sub-scene root, or undefined where none sits there. */
+function nodeAt(rootChildren: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {
+  let siblings = rootChildren;
+  let found: LiveNode | undefined;
+  for (const name of path) {
+    found = siblings.find((n) => n.name === name);
+    if (!found) return undefined;
+    siblings = found.children;
+  }
+  return found;
 }
 
 /**

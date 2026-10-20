@@ -9,6 +9,7 @@ import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChild
 import { rehomeOverride } from './rehomeOverride.js';
 import { layerRawOverride } from './layerRawOverride.js';
 import { GLB_SCENE_ROOT_TYPE } from './glbSceneRoot.js';
+import { cachedUniqueNameClaims } from '../utils/uniqueNames.js';
 
 /**
  * The instance node's keys were written against the outer scope, the root's against the
@@ -18,6 +19,13 @@ import { GLB_SCENE_ROOT_TYPE } from './glbSceneRoot.js';
 function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: InstanceScopes) {
   const rehomed = rehomeOverride(instanceNode.rawProperties, scopes.outer, scopes.content);
   return { ...layerRawOverride(instanceNode, root, rehomed.raw), scope: rehomed.scope };
+}
+
+/** The path below the sub-scene root that its own table gives `key`, read only when a sub-path holds a `%Name`. */
+function claimedBelowRoot(roots: readonly LiveNode[], key: string): string | undefined {
+  const claim = cachedUniqueNameClaims(roots).get(key);
+  // The root claims nothing (it has no owner), so a claim's path always continues below it.
+  return claim?.path.slice(claim.path.indexOf('/') + 1);
 }
 
 /**
@@ -48,6 +56,8 @@ export function mergeInstanceRoot(
     ...merged,
     // A host child whose parent path descends into this instance is grafted at
     // the sub-path it names (`graftInstanceChildren`). Direct children append.
-    children: graftInstanceChildren(root.children, instanceNode.children, scopes),
+    children: graftInstanceChildren(root.children, instanceNode.children, scopes, (key) =>
+      claimedBelowRoot(loadedScene.nodes, key)
+    ),
   };
 }

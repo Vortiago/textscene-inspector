@@ -177,6 +177,26 @@ describe('a parent path this file never defines', () => {
     );
   });
 
+  it('leaves a %Name parent only an inherited base can claim alone', () => {
+    // The instanced root's own table holds the base scene's claims (node.cpp:1930-1933), which this file cannot read.
+    expectNoDiagnostic(
+      scene(packedScene, instanced('Root'), node('Sprite2D', {}, { name: 'Hat', parent: '%BaseClaim' })),
+      { ruleName: ORPHAN }
+    );
+  });
+
+  it('leaves a %Name parent read inside an instance alone', () => {
+    expectNoDiagnostic(
+      scene(
+        packedScene,
+        node('Node2D', {}, { name: 'Root' }),
+        instanced('Player', { parent: '.' }),
+        node('Sprite2D', {}, { name: 'Hat', parent: 'Player/%Head' })
+      ),
+      { ruleName: ORPHAN }
+    );
+  });
+
   it('warns on a %Name whose claim is declared later, as Godot does', () => {
     // Same two headings, swapped: the claim table holds only what the earlier
     // headings seated, so 4.7.2 warns the path vanished and renames the node.

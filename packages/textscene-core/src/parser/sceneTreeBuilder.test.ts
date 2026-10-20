@@ -686,13 +686,25 @@ describe('seatScene resolve', () => {
     expect(statusOf(nodes, 'Inst/Sub/Added/%Part')).toBe('unknowable');
   });
 
-  it('leaves a heading whose parent= walks into content another file lists out of the tree, unrenamed', () => {
-    // The walk cannot say the parent vanished, so it re-roots nothing (packed_scene.cpp:208-215).
+  it('seats a heading whose parent= reads a %Name an inherited base claims under the root, keeping the rest', () => {
+    // The base scene fills the root's table (node.cpp:1930-1933), and the graft resolves the rest there.
     const nodes = [instance('Root'), node('Hat', '%BaseClaim')];
     const origins = originsOf(nodes);
+    const [root] = seatScene(origins).roots;
 
-    expect(seatScene(origins).seated.has(nodes[1]!)).toBe(false);
-    expect(orphanedNodes(origins, seatScene(origins)).map(({ node }) => node.name)).toEqual(['Hat']);
+    expect(root!.children.map(({ name, instanceSubPath }) => [name, instanceSubPath])).toEqual([
+      ['Hat', '%BaseClaim'],
+    ]);
+    expect(orphanedNodes(origins, seatScene(origins))).toEqual([]);
+  });
+
+  it('seats a heading whose parent= reads a %Name inside an instance under that instance, keeping the rest', () => {
+    const nodes = [node('Root'), instance('Inst', '.'), node('Hat', 'Inst/Sub/%Part/Deep')];
+    const inst = seatScene(originsOf(nodes)).roots[0]!.children[0]!;
+
+    expect(inst.children.map(({ name, instanceSubPath }) => [name, instanceSubPath])).toEqual([
+      ['Hat', 'Sub/%Part/Deep'],
+    ]);
   });
 
   it('leaves an override claim under an instance out of the root table', () => {
