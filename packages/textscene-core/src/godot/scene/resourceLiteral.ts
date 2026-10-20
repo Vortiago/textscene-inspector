@@ -1,7 +1,14 @@
-/** How a scene file spells a resource property that holds no resource. */
+/**
+ * The one answer to "does this resource property hold a resource", for the renderer's parsers and the
+ * linter's rules alike.
+ */
 
-/** Whether a resource property holds a resource: Godot's `null` literal and a blank value clear it, as absence does. */
+import { isNilLiteral } from '../variant/variantParser.js';
+
+/**
+ * Whether a resource property holds a resource. Absent, blank, `null` and `nil` all reach the `Ref<T>` setter
+ * as an invalid Ref (`variant_parser.cpp:699`). Use this, not `!ref`: `'null'` is a truthy string.
+ */
 export function holdsResource(value: string | undefined): boolean {
-  const trimmed = value?.trim();
-  return !!trimmed && trimmed !== 'null';
+  return !!value?.trim() && !isNilLiteral(value);
 }

@@ -19,4 +19,9 @@ describe('holdsResource', () => {
     expect(holdsResource('')).toBe(false);
     expect(holdsResource('   ')).toBe(false);
   });
+
+  it('holds none for the nil literal, which Godot reads as null (variant_parser.cpp:699)', () => {
+    expect(holdsResource('nil')).toBe(false);
+    expect(holdsResource(' nil ')).toBe(false);
+  });
 });
