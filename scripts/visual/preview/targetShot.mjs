@@ -20,7 +20,7 @@ const cdpSessions = new WeakMap();
  * is no crop of a resized target. A call rejects with a `TimeoutError` when it outlasts `timeout`,
  * as Playwright's own screenshot does, and a `timeout` of 0 waits without limit, as Playwright's does.
  *
- * @param {import('playwright').Locator} target - the canvas, or the 2D frame, in the page or a frame.
+ * @param {import('playwright').Locator} target - the canvas, or the 2D frame, in the page's top frame.
  * @param {{ timeout?: number }} [options]
  * @returns {{ shoot: () => Promise<Buffer>, boxChanged: () => Promise<boolean> }}
  */
