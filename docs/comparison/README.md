@@ -151,7 +151,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): nothing yet, Godot draws a deformable mesh, the previewer does not
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md): a THREE.SpotLight
-- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): nothing yet, Godot places its children along the arm each physics frame, the previewer does not
+- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): a transform group with a selection-gated length line, and no placement of its children along the arm
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
 - [SpringBoneCollisionCapsule3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisioncapsule3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
 - [SpringBoneCollisionPlane3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisionplane3d/comparison.md): nothing yet, Godot's spring solver pushes bones off its plane, the previewer does not

@@ -5,7 +5,7 @@ status: unimplemented
 fixture: unit-spring-arm-3d.tscn
 # image: unit-spring-arm-3d
 visual: false
-renders_as: nothing yet, Godot places its children along the arm each physics frame, the previewer does not
+renders_as: a transform group with a selection-gated length line, and no placement of its children along the arm
 ---
 
 # SpringArm3D
@@ -30,8 +30,13 @@ Strict parsing format-checks these `SpringArm3D` properties, plus 17 inherited f
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-SpringArm3D registers `parseNode3D` directly, so `collision_mask`, `shape`, `spring_length` and `margin` are never read. An out-of-range `collision_mask` or a non-numeric `spring_length` is dropped rather than substituted or warned on.
+The lenient parser reads `spring_length` on top of the Node3D transform. An unauthored or unreadable key stays `undefined`, not Godot's default. The gizmo substitutes `spring_length = 1` where it draws. `collision_mask`, `shape` and `margin` are never read, because they steer the cast that the previewer does not run.
+
+## Gizmo
+
+While the node is selected, it draws one segment from the origin to `Vector3(0, 0, 1) * spring_length` in the collision debug colour (`spring_arm_3d_gizmo_plugin.cpp:35-54`). A length of 0 gives a zero-length segment and a negative length runs along -Z, as in Godot, which guards neither.
 
 ## Known limitations
 
+- **Editor only** Godot's editor draws the length line for every spring arm, but here it draws only for the selected node (ADR-0018).
 - **Needs runtime** Godot moves each child to `spring_length` along the arm or to the hit point minus `margin`, but here the children hold their authored transforms.
