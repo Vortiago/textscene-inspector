@@ -5,6 +5,8 @@
  * renders and what lints diverge silently.
  */
 
+import { nodePathNames } from '../string/nodePath.js';
+import { validateNodeName } from '../string/nodeName.js';
 import { parseSlotInt } from '../variant/intReader.js';
 import { int32Elements } from '../variant/packedInt32.js';
 import { INT32_MIN } from '../variant/intWidth.js';
@@ -96,4 +98,24 @@ export function recoverByIdTrail(
   // The instance must also be built already, or the final lookup finds nothing (`:2005`).
   const isBuiltInstance = named.instance === 'scene' && index < builtCount && named.isPlaced;
   return isBuiltInstance ? { kind: 'inBase', heading: index } : undefined;
+}
+
+/**
+ * Godot's name for a re-parented orphan: the vanished path with `./` stripped, every
+ * `/` turned into `@`, then `#` and the node's name (`packed_scene.cpp:212`, `:561-563`).
+ * `set_name` stores the validated form, replacing `.`, `:`, `@`, `/`, `"` and `%` with
+ * `_` (`node.cpp:1441`), so `Gone/Deeper` renames to `Gone_Deeper#Name`.
+ */
+export function reparentedName(parentPath: string, name: string): string {
+  // The prefix is the NodePath's spelling, not the heading's: `:212` reads
+  // `String(node_paths[…])`, stored through `prepend_period()` (`resource_format_text.cpp:207`),
+  // which inserts a `.` unless one is first and ignores `absolute` (`node_path.cpp:43-49`).
+  const names = nodePathNames(parentPath);
+  // `prepend_period` skips a NodePath holding no names at all, so `/` stays `/`.
+  const withPeriod = names.length === 0 || names[0] === '.' ? names : ['.', ...names];
+  // `trim_prefix` removes the added `./` from a relative path. An absolute one keeps
+  // its `/` and the period, so `/root/Gone` spells `/./root/Gone`.
+  const spelled = (parentPath.startsWith('/') ? '/' : '') + withPeriod.join('/');
+  const prefix = spelled.replace(/^\.\//, '').replaceAll('/', '@');
+  return validateNodeName(`${prefix}#${name}`);
 }

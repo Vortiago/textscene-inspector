@@ -1258,6 +1258,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Orphan Reroot",
+    "file": "unit-orphan-reroot.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Path3d",
     "file": "unit-path3d.tscn",
     "category": "Other"
@@ -1405,6 +1410,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Primitive Mesh Flip Faces",
     "file": "unit-primitive-mesh-flip-faces.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Primitive Mesh Normal Map",
+    "file": "unit-primitive-mesh-normal-map.tscn",
     "category": "Other"
   },
   {
@@ -2609,6 +2619,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Box Mesh Texture Uv",
+    "file": "unit-box-mesh-texture-uv.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Box Mesh",
     "file": "unit-box-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -2664,8 +2679,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Prism Mesh Texture Uv",
+    "file": "unit-prism-mesh-texture-uv.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Prism Mesh",
     "file": "unit-prism-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Quadmesh Orientation",
+    "file": "unit-quadmesh-orientation.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -3384,6 +3409,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Normal Map Blue",
     "file": "unit-material-normal-map-blue.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Normal Map Uv Density",
+    "file": "unit-material-normal-map-uv-density.tscn",
     "category": "Unit - Materials"
   },
   {

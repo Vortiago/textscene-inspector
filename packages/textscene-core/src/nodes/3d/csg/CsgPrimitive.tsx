@@ -27,11 +27,14 @@ const NO_PATHS: ReadonlySet<string> = new Set();
 
 /**
  * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's AABB for a visible
- * contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). An invisible one the
- * recursion never reached gets a zero-size proxy, the point Godot has for it. It is also all a
- * combiner root has to frame on while the library loads.
+ * contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). A node with no brush,
+ * an invisible one the recursion never reached or one with no shape, gets a zero-size proxy, the
+ * point Godot has for it. It is also all a combiner root has to frame on while the library loads.
  */
 const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
+
+/** The point an empty brush bounds to: a skipped node's, or one whose shape builds nothing. */
+const EMPTY_BRUSH = <boxGeometry args={[0, 0, 0]} />;
 
 interface CsgPrimitiveProps {
   node: TscnNode;
@@ -144,21 +147,12 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // tree-selection, highlighting and the hidden-eye toggle keep working.
   if (absorbed || skipped) {
     // The proxy is invisible, so THREE's raycaster skips it and clicks resolve to the root as in
-    // Godot's editor, but `bounds.ts` keys on `.geometry` alone. Only its size differs: a
-    // contributor's own brush, against a point for a skipped node, all Godot has for it.
+    // Godot's editor, but `bounds.ts` keys on `.geometry` alone.
     return (
       <group {...transform}>
-        {skipped ? (
-          <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
-            <boxGeometry args={[0, 0, 0]} />
-          </mesh>
-        ) : (
-          geometry && (
-            <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
-              {geometry}
-            </mesh>
-          )
-        )}
+        <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
+          {geometry ?? EMPTY_BRUSH}
+        </mesh>
         {scope}
       </group>
     );
@@ -205,7 +199,11 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // It still publishes what it skipped: absorbing nothing is not skipping nothing.
   return (
     <group {...transform}>
-      {ownMesh}
+      {ownMesh || (
+        <mesh visible={false} userData={CSG_BOUNDS_PROXY}>
+          {EMPTY_BRUSH}
+        </mesh>
+      )}
       {scope}
     </group>
   );

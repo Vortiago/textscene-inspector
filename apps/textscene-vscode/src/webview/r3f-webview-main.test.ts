@@ -226,6 +226,18 @@ describe('jumpToNode forwarding', () => {
   });
 });
 
+describe('jumpToNode forwarding of a re-rooted node', () => {
+  it('posts the name the heading wrote, not the rename the tree carries', async () => {
+    const { vscodeApi } = await mountFresh();
+
+    const reRooted = { name: 'Gone#Leaf', authoredName: 'Leaf', parent: 'Gone' } as unknown as TscnNode;
+    captured.shellProps?.onNodeReveal?.('Root/Gone#Leaf', reRooted);
+
+    const jumpMessages = postedMessages(vscodeApi).filter((m) => m.type === 'jumpToNode');
+    expect(jumpMessages).toEqual([{ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Gone#Leaf' }]);
+  });
+});
+
 describe('log adapter', () => {
   const levels = ['trace', 'debug', 'info', 'warn', 'error'] as const;
 

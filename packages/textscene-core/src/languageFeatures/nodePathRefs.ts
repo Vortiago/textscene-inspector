@@ -6,9 +6,10 @@
  */
 
 import { resolveParentPath, simplifiedNodePath, type ParentPathTree } from '../godot/string/nodePath.js';
+import { parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
 import { createRawNode } from '../parser/rawNode.js';
-import { seatSceneTree } from '../parser/sceneTreeBuilder.js';
-import type { RawNode } from '../parser/types.js';
+import { buildSceneTree, parentPathTree } from '../parser/sceneTreeBuilder.js';
+import type { NodeOrigin, RawNode } from '../parser/types.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 import { headingAttribute, lineRange, lineRangeContains } from './ranges.js';
 import type { Position, Range } from './types.js';
@@ -60,31 +61,34 @@ function rawPropertiesOf(section: DocumentSection): Record<string, string> {
   return Object.fromEntries(section.properties.map(({ storedKey, value }) => [storedKey, value]));
 }
 
-/** The table of a file with no `[node]` heading, where no path names a node. */
-const NO_NODES: Pick<NodeTable, 'byPath' | 'pathOf' | 'tree'> = {
-  byPath: new Map(),
-  pathOf: new Map(),
-  tree: { exists: () => false, uniquePaths: new Map() },
-};
+/** A `[node]` heading as the tree builder reads it. */
+function originOf(section: DocumentSection): NodeOrigin<RawNode> {
+  const { attributes } = section;
+  return {
+    node: createRawNode({ type: section.tag, attributes: { ...attributes } }, rawPropertiesOf(section)),
+    line: section.headingLine,
+    declaredParent: attributes.parent,
+    idTrail: parseIdTrail(attributes.parent_id_path),
+    uniqueId: parseUniqueId(attributes.unique_id),
+  };
+}
 
-/** The node headings seated by the tree builder the parser and linter use, mapped back to their sections. */
+/**
+ * The node headings seated by the tree builder the parser and linter use, mapped back to their
+ * sections, so a re-rooted node sits at its rename and a recovered id trail is followed.
+ */
 function seatedNodes(document: LanguageDocument): Pick<NodeTable, 'byPath' | 'pathOf' | 'tree'> {
-  const sectionOf = new Map<RawNode, DocumentSection>();
-  const nodes = document.sections
-    .filter(({ tag }) => tag === 'node')
-    .map((section) => {
-      const node = createRawNode(
-        { type: section.tag, attributes: { ...section.attributes } },
-        rawPropertiesOf(section)
-      );
-      sectionOf.set(node, section);
-      return node;
-    });
-  const seating = seatSceneTree(nodes);
-  if (!seating) return NO_NODES;
-  const byPath = new Map([...seating.byPath].map(([path, node]) => [path, sectionOf.get(node)!]));
-  const pathOf = new Map([...seating.pathOf].map(([node, path]) => [sectionOf.get(node)!, path]));
-  return { byPath, pathOf, tree: seating.tree };
+  const sectionOfSeat = new Map<RawNode, DocumentSection>();
+  const sections = document.sections.filter(({ tag }) => tag === 'node');
+  const origins = sections.map(originOf);
+  const built = buildSceneTree(origins);
+  origins.forEach(({ node }, index) => {
+    const seat = built.seated.get(node);
+    if (seat) sectionOfSeat.set(seat, sections[index]!);
+  });
+  const byPath = new Map([...built.byPath].map(([path, seat]) => [path, sectionOfSeat.get(seat)!]));
+  const pathOf = new Map([...built.pathOf].map(([seat, path]) => [sectionOfSeat.get(seat)!, path]));
+  return { byPath, pathOf, tree: parentPathTree(built) };
 }
 
 function buildNodeTable(document: LanguageDocument): NodeTable {

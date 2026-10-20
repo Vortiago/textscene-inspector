@@ -49,6 +49,13 @@ describe('nodeHeadingLine', () => {
     expect([nodeHeadingLine(text, 'Root'), nodeHeadingLine(text, 'Root/Arm')]).toEqual([0, 1]);
   });
 
+  it('resolves a re-rooted node by the rename the tree path carries', () => {
+    const text = ['[node name="Root" type="Node3D"]', '[node name="Leaf" type="Node3D" parent="Gone"]'].join(
+      '\n'
+    );
+    expect(nodeHeadingLine(text, 'Root/Gone#Leaf')).toBe(1);
+  });
+
   it('gives nothing for a node the file does not declare', () => {
     expect(nodeHeadingLine(TWO_SIBLINGS, 'Root/Nope')).toBeUndefined();
   });

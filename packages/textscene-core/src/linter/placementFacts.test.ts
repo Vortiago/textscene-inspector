@@ -28,7 +28,7 @@ function factsOf(...headings: [name: string, declaredParent?: string, ids?: Head
     uniqueId: ids?.uniqueId ?? 0,
     idTrail: ids?.idTrail,
   }));
-  return placementFacts(origins, buildSceneTree(origins.map((o) => o.node)));
+  return placementFacts(origins, buildSceneTree(origins));
 }
 
 const names = (origins: readonly NodeOrigin<RawNode>[]) => origins.map((o) => o.node.name);
@@ -37,8 +37,10 @@ describe('placementFacts', () => {
   it('reports nothing for a well-formed scene', () => {
     expect(factsOf(['Root'], ['Child', '.'])).toEqual({
       orphanedNodes: [],
+      reRootedNames: new Map(),
       rootWithParent: undefined,
       emptyParentHeadings: [],
+      refusesToInstantiate: false,
       idRecoveries: new Map(),
       idHeadings: [
         { uniqueId: 0, instance: undefined, isPlaced: true },
@@ -47,23 +49,40 @@ describe('placementFacts', () => {
     });
   });
 
-  it('marks a stranded heading unplaced in the id headings', () => {
-    expect(factsOf(['Root'], ['Orphan', 'Missing']).idHeadings.map((h) => h.isPlaced)).toEqual([true, false]);
+  it('marks a re-rooted heading placed in the id headings, since Godot builds it', () => {
+    expect(factsOf(['Root'], ['Orphan', 'Missing']).idHeadings.map((h) => h.isPlaced)).toEqual([true, true]);
+  });
+
+  it('marks a heading unplaced where Godot refuses the scene and re-roots nothing', () => {
+    const facts = factsOf(['Root'], ['Orphan', 'Missing'], ['Stray']);
+    expect(facts.idHeadings.map((h) => h.isPlaced)).toEqual([true, false, false]);
   });
 
   it("follows an orphan's id trail to the heading it names", () => {
     const facts = factsOf(['Root'], ['Mid', '.', { uniqueId: 20 }], ['Orphan', 'Gone', { idTrail: [20] }]);
     const [orphan, recovery] = [...facts.idRecoveries][0]!;
     expect(orphan.node.name).toBe('Orphan');
-    expect(recovery).toMatchObject({ kind: 'lands', via: { node: { name: 'Mid' } } });
+    expect(recovery).toMatchObject({ kind: 'lands', via: { node: { name: 'Mid' } }, viaPath: 'Mid' });
   });
 
   it('omits an orphan whose id trail names no heading', () => {
     expect(factsOf(['Root'], ['Orphan', 'Gone', { idTrail: [20] }]).idRecoveries.size).toBe(0);
   });
 
-  it('names a heading whose parent path resolves against nothing', () => {
-    expect(names(factsOf(['Root'], ['Orphan', 'Missing']).orphanedNodes)).toEqual(['Orphan']);
+  it('names a re-rooted heading, and the rename the builder gave it', () => {
+    const facts = factsOf(['Root'], ['Orphan', 'Missing']);
+    expect(names(facts.orphanedNodes)).toEqual(['Orphan']);
+    expect([...facts.reRootedNames.values()]).toEqual(['Missing#Orphan']);
+  });
+
+  it('names a heading the builder leaves out, for a trail Godot follows', () => {
+    const facts = factsOf(['Root'], ['Mid', '.', { uniqueId: 5 }], ['Orphan', 'Missing', { idTrail: [5] }]);
+    expect(names(facts.orphanedNodes)).toEqual(['Orphan']);
+    expect(facts.reRootedNames.size).toBe(0);
+  });
+
+  it('reports a file Godot refuses to instantiate', () => {
+    expect(factsOf(['Root'], ['Stray'], ['Orphan', 'Missing']).refusesToInstantiate).toBe(true);
   });
 
   it('names heading 0 as the root when it declares a parent', () => {
