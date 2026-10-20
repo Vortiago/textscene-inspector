@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSphereMeshSurface } from './build';
-import { expectClose, vertexOf } from '../primitivemesh/surfaceTesting';
+import { expectClose, vertexOf } from '../primitivemesh/surface.testkit';
 import type { SphereMeshProperties } from './types';
 
 /** The coarsest sphere: four segments round, one ring, so every vertex is a hand-worked literal. */

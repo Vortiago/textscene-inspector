@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildCapsuleMeshSurface } from './build';
-import { expectClose, vertexOf } from '../primitivemesh/surfaceTesting';
+import { expectClose, vertexOf } from '../primitivemesh/surface.testkit';
 import type { CapsuleMeshProperties } from './types';
 
 /** Four segments round and no extra rings, so each section is two rows of five vertices. */
@@ -26,9 +26,10 @@ describe('buildCapsuleMeshSurface', () => {
     expectClose(vertexOf(surface.uvs, 0, 2), [0, 0]);
   });
 
-  it('turns U from +Z towards -X', () => {
+  it('turns U from -Z towards -X', () => {
     const surface = buildCapsuleMeshSurface(COARSE, null);
 
+    expectClose(vertexOf(surface.positions, 5), [0, 0.5, -0.5]);
     expectClose(vertexOf(surface.positions, 6), [-0.5, 0.5, 0]);
     expectClose(vertexOf(surface.normals, 6), [-1, 0, 0]);
     expectClose(vertexOf(surface.tangents, 6, 4), [0, 0, 1, 1]);

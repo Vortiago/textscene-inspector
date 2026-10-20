@@ -1,7 +1,7 @@
 /**
  * CapsuleMesh surface, ported from Godot 4.6.3 `CapsuleMesh::create_mesh_array`
  * (`scene/resources/3d/primitive_meshes.cpp:410-609`): a top hemisphere, a cylinder and a bottom
- * hemisphere, each its own grid of rows, U from +Z towards -X, and V a third per section.
+ * hemisphere, each its own grid of rows, U from -Z towards -X, and V a third per section.
  *
  * Derived from Godot Engine (`scene/resources/3d/primitive_meshes.cpp`), used under the MIT licence:
  *

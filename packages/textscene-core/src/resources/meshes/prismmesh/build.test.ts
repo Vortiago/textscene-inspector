@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { buildPrismMeshSurface } from './build';
-import { expectClose, pointsOf, vertexOf } from '../primitivemesh/surfaceTesting';
+import { expectClose, pointsOf, vertexOf } from '../primitivemesh/surface.testkit';
 import type { GodotSurface } from '../godotSurface';
 import type { PrismMeshProperties } from './types';
 
