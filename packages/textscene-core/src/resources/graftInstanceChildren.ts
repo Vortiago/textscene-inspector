@@ -11,6 +11,7 @@ import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
+import { boolSlotValue } from '../godot/variant/variantBool';
 
 /** The two scopes a graft joins. */
 export interface InstanceScopes {
@@ -33,7 +34,7 @@ export type ClaimedPath = (key: string) => string | undefined;
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
- * @param claimedPath the sub-scene's own `%Name` table, which a sub-path's `%Name` reads
+ * @param claimedPath the sub-scene's own `%Name` table, which the host's overrides then change
  */
 export function graftInstanceChildren(
   rootChildren: readonly LiveNode[],
@@ -45,6 +46,7 @@ export function graftInstanceChildren(
 
   let grafted = [...rootChildren];
   const appendedAtRoot: LiveNode[] = [];
+  const claims = withOverrideClaims(rootChildren, hostChildren, claimedPath);
 
   for (const child of hostChildren) {
     // A child re-anchored at a nested instance keeps the scene it was authored in.
@@ -56,7 +58,7 @@ export function graftInstanceChildren(
       continue;
     }
 
-    const segments = expandUniqueNames(child.instanceSubPath.split('/'), grafted, claimedPath);
+    const segments = expandUniqueNames(child.instanceSubPath.split('/'), grafted, claims);
     const next = graftAt(grafted, segments, stamped, scopes.content);
     if (next) {
       grafted = next;
@@ -71,6 +73,41 @@ export function graftInstanceChildren(
   }
 
   return [...grafted, ...appendedAtRoot];
+}
+
+/**
+ * The instance's `%Name` table once the host's overrides land. Instantiate acquires the sub-scene's
+ * own names first. Each override heading then sets `unique_name_in_owner` in file order on a node
+ * that keeps the sub-scene's owner (resource_format_text.cpp:264-265): a set acquires a free name,
+ * a clear releases the node's own (node.cpp:2236-2249), and the first claimant keeps a name.
+ */
+function withOverrideClaims(
+  rootChildren: readonly LiveNode[],
+  hostChildren: readonly LiveNode[],
+  own: ClaimedPath
+): ClaimedPath {
+  const changed = new Map<string, string | null>();
+  const claims: ClaimedPath = (key) => (changed.has(key) ? (changed.get(key) ?? undefined) : own(key));
+  const visit = (overrides: readonly LiveNode[], parentPath: readonly string[] | undefined) => {
+    for (const override of overrides) {
+      // An explicit `owner=` names another table, and Godot's writer never emits one (packed_scene.cpp:1036-1044).
+      if (!override.overridesExistingNode || override.owner !== undefined) continue;
+      const below =
+        parentPath ?? expandUniqueNames(override.instanceSubPath?.split('/') ?? [], rootChildren, claims);
+      const path = [...below, override.name];
+      const along = nodesAlong(rootChildren, path);
+      // A node inside a nested instance belongs to that instance's table, which its own graft reads.
+      if (!along || along.slice(0, -1).some((n) => n.instance)) continue;
+      const key = UNIQUE_NODE_PREFIX + override.name;
+      const isUnique = boolSlotValue(override.rawProperties.unique_name_in_owner);
+      const holder = claims(key);
+      if (isUnique === true && holder === undefined) changed.set(key, path.join('/'));
+      if (isUnique === false && holder === path.join('/')) changed.set(key, null);
+      if (!along.at(-1)!.instance) visit(override.children, path);
+    }
+  };
+  visit(hostChildren, undefined);
+  return claims;
 }
 
 /**
@@ -94,21 +131,22 @@ function expandUniqueNames(
     } else if (segment !== '.') {
       path.push(segment);
     }
-    if (nodeAt(rootChildren, path)?.instance) return [...path, ...segments.slice(index + 1)];
+    if (nodesAlong(rootChildren, path)?.at(-1)?.instance) return [...path, ...segments.slice(index + 1)];
   }
   return path;
 }
 
-/** The node at `path` below the sub-scene root, or undefined where none sits there. */
-function nodeAt(rootChildren: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {
+/** The nodes `path` passes below the sub-scene root, its end last, or undefined where it names nothing. */
+function nodesAlong(rootChildren: readonly LiveNode[], path: readonly string[]): LiveNode[] | undefined {
   let siblings = rootChildren;
-  let found: LiveNode | undefined;
+  const along: LiveNode[] = [];
   for (const name of path) {
-    found = siblings.find((n) => n.name === name);
+    const found = siblings.find((n) => n.name === name);
     if (!found) return undefined;
+    along.push(found);
     siblings = found.children;
   }
-  return found;
+  return along;
 }
 
 /**

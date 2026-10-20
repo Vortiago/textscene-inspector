@@ -292,6 +292,68 @@ describe('graftInstanceChildren', () => {
     expect(sprite.children.map((c) => c.name)).toEqual(['Pivot', 'Hat']);
   });
 
+  it('grafts at the node a host override claims in the instance table', () => {
+    // The override keeps the sub-scene's owner (resource_format_text.cpp:264-265), so its
+    // `unique_name_in_owner` acquires the name there (node.cpp:2236-2249).
+    const claim = node('Pivot', {
+      instanceSubPath: 'Sprite2D',
+      overridesExistingNode: true,
+      rawProperties: { unique_name_in_owner: 'true' },
+    });
+    const hat = node('Hat', { instanceSubPath: '%Pivot' });
+
+    const pivot = graftInstanceChildren(subScene(), [claim, hat], NO_SCOPES, NO_CLAIMS)[0]!.children[0]!;
+
+    expect(pivot.children.map((c) => c.name)).toEqual(['Hat']);
+  });
+
+  it('keeps the sub-scene claim over a host override that claims the same name', () => {
+    // Instantiate acquires the sub-scene's names first, and the first claimant keeps one (node.cpp:2225-2231).
+    const claims = (key: string) => (key === '%Pivot' ? 'Sprite2D/Pivot' : undefined);
+    const rival = node('Pivot', {
+      overridesExistingNode: true,
+      rawProperties: { unique_name_in_owner: 'true' },
+    });
+    const subTree = [...subScene(), node('Pivot')];
+    const hat = node('Hat', { instanceSubPath: '%Pivot' });
+
+    const grafted = graftInstanceChildren(subTree, [rival, hat], NO_SCOPES, claims);
+
+    expect(grafted[0]!.children[0]!.children.map((c) => c.name)).toEqual(['Hat']);
+  });
+
+  it('misses a %Name a host override releases', () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const claims = (key: string) => (key === '%Pivot' ? 'Sprite2D/Pivot' : undefined);
+    const release = node('Pivot', {
+      instanceSubPath: 'Sprite2D',
+      overridesExistingNode: true,
+      rawProperties: { unique_name_in_owner: 'false' },
+    });
+    const hat = node('Hat', { instanceSubPath: '%Pivot' });
+
+    const grafted = graftInstanceChildren(subScene(), [release, hat], NO_SCOPES, claims);
+
+    expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Hat']);
+    warnSpy.mockRestore();
+  });
+
+  it('leaves a claim on an override inside a nested instance to that instance', () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const subTree = [node('Inner', { instance: 'ExtResource("2")' })];
+    const claim = node('Deep', {
+      instanceSubPath: 'Inner',
+      overridesExistingNode: true,
+      rawProperties: { unique_name_in_owner: 'true' },
+    });
+    const hat = node('Hat', { instanceSubPath: '%Deep' });
+
+    const grafted = graftInstanceChildren(subTree, [claim, hat], NO_SCOPES, NO_CLAIMS);
+
+    expect(grafted.map((c) => c.name)).toEqual(['Inner', 'Hat']);
+    warnSpy.mockRestore();
+  });
+
   it('appends at the root and warns for a %Name the sub-scene does not claim', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const grafted = graftInstanceChildren(
