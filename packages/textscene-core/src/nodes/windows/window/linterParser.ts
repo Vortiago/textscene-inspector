@@ -8,6 +8,13 @@
 import '../../viewport/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import {
+  WINDOW_CONTENT_SCALE_ASPECT_NAMES,
+  WINDOW_CONTENT_SCALE_MODE_NAMES,
+  WINDOW_CONTENT_SCALE_STRETCH_NAMES,
+  WINDOW_INITIAL_POSITION_NAMES,
+  WINDOW_MODE_NAMES,
+} from '../../../godot/scene/window.js';
 import { THEME_OVERRIDE_VALIDATORS } from '../../../linter/validators/themeOverrides.js';
 
 // Re-declaring an inherited key shadows it and duplicates the rule. `auto_translate`
@@ -18,32 +25,13 @@ validatorRegistry.registerAll(
   {
     // window.cpp:3422, PROPERTY_HINT_ENUM "Windowed,Minimized,Maximized,Fullscreen,Exclusive Fullscreen".
     // set_mode (window.cpp:523-531) assigns unconditionally, no ERR_FAIL.
-    mode: v.enumInt(
-      'mode',
-      {
-        0: 'WINDOWED',
-        1: 'MINIMIZED',
-        2: 'MAXIMIZED',
-        3: 'FULLSCREEN',
-        4: 'EXCLUSIVE_FULLSCREEN',
-      },
-      { hinted: 'window.cpp:3422' }
-    ),
+    mode: v.enumInt('mode', WINDOW_MODE_NAMES, { hinted: 'window.cpp:3422' }),
     title: v.quotedString('title'),
     // window.cpp:3427, PROPERTY_HINT_ENUM, 6 labels. set_initial_position
     // (window.cpp:331-337) assigns unconditionally, no ERR_FAIL.
-    initial_position: v.enumInt(
-      'initial_position',
-      {
-        0: 'ABSOLUTE',
-        1: 'CENTER_PRIMARY_SCREEN',
-        2: 'CENTER_MAIN_WINDOW_SCREEN',
-        3: 'CENTER_OTHER_SCREEN',
-        4: 'CENTER_SCREEN_WITH_MOUSE_FOCUS',
-        5: 'CENTER_SCREEN_WITH_KEYBOARD_FOCUS',
-      },
-      { hinted: 'window.cpp:3427' }
-    ),
+    initial_position: v.enumInt('initial_position', WINDOW_INITIAL_POSITION_NAMES, {
+      hinted: 'window.cpp:3427',
+    }),
     position: v.vector2i('position'),
     // set_size (window.cpp:401) bare-assigns, but calls _update_window_size, whose
     // `size = size.max(size_limit)` (window.cpp:1190) floors it: size_limit comes from
@@ -88,38 +76,19 @@ validatorRegistry.registerAll(
     content_scale_size: v.vector2i('content_scale_size', { min: 0, enforced: 'window.cpp:1716' }),
     // window.cpp:3463, PROPERTY_HINT_ENUM, 3 labels. set_content_scale_mode
     // (window.cpp:1727-1731) assigns unconditionally, no ERR_FAIL.
-    content_scale_mode: v.enumInt(
-      'content_scale_mode',
-      {
-        0: 'DISABLED',
-        1: 'CANVAS_ITEMS',
-        2: 'VIEWPORT',
-      },
-      { hinted: 'window.cpp:3463' }
-    ),
+    content_scale_mode: v.enumInt('content_scale_mode', WINDOW_CONTENT_SCALE_MODE_NAMES, {
+      hinted: 'window.cpp:3463',
+    }),
     // window.cpp:3464, PROPERTY_HINT_ENUM, 5 labels. set_content_scale_aspect
     // (window.cpp:1738-1742) assigns unconditionally, no ERR_FAIL.
-    content_scale_aspect: v.enumInt(
-      'content_scale_aspect',
-      {
-        0: 'IGNORE',
-        1: 'KEEP',
-        2: 'KEEP_WIDTH',
-        3: 'KEEP_HEIGHT',
-        4: 'EXPAND',
-      },
-      { hinted: 'window.cpp:3464' }
-    ),
+    content_scale_aspect: v.enumInt('content_scale_aspect', WINDOW_CONTENT_SCALE_ASPECT_NAMES, {
+      hinted: 'window.cpp:3464',
+    }),
     // window.cpp:3465, PROPERTY_HINT_ENUM, 2 labels. set_content_scale_stretch
     // (window.cpp:1749-1752) assigns unconditionally, no ERR_FAIL.
-    content_scale_stretch: v.enumInt(
-      'content_scale_stretch',
-      {
-        0: 'FRACTIONAL',
-        1: 'INTEGER',
-      },
-      { hinted: 'window.cpp:3465' }
-    ),
+    content_scale_stretch: v.enumInt('content_scale_stretch', WINDOW_CONTENT_SCALE_STRETCH_NAMES, {
+      hinted: 'window.cpp:3465',
+    }),
     // At or below 0 errors: set_content_scale_factor (window.cpp:1772-1776) only does
     // `ERR_FAIL_COND(p_factor <= 0)` (:1774). The hint's [0.5, 8.0] (window.cpp:3466)
     // warns on both sides. The floor to a whole number >= 1 under INTEGER stretch
