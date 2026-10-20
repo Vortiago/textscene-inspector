@@ -29,6 +29,7 @@
  */
 
 import { normalizedVector3 } from '../../../godot/math/vector.js';
+import { storedReal } from '../../../godot/math/real.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { ONE_THIRD, SurfaceWriter, TWO_THIRDS } from '../primitivemesh/surfaceWriter.js';
 import type { PrismMeshProperties } from './types.js';
@@ -59,7 +60,7 @@ export function buildPrismMeshSurface(p: PrismMeshProperties, uv2Padding: number
   let thisrow = 0;
   let prevrow = 0;
   for (let j = 0; j <= subdivideH + 1; j++) {
-    const scale = j / (subdivideH + 1);
+    const scale = storedReal(j / (subdivideH + 1));
     const scaledSizeX = size.x * scale;
     const startX = start.x + (1 - scale) * size.x * leftToRight;
     const offsetFront = (1 - scale) * ONE_THIRD * leftToRight;
@@ -97,10 +98,11 @@ export function buildPrismMeshSurface(p: PrismMeshProperties, uv2Padding: number
         writer.quadPairBetweenRows(prevrow, thisrow, i);
       }
 
-      x += (scale * size.x) / (subdivideW + 1);
+      // Godot steps in a `float`, so each step rounds to single precision.
+      x = storedReal(x + storedReal(scale * size.x) / (subdivideW + 1));
     }
 
-    y += size.y / (subdivideH + 1);
+    y = storedReal(y + size.y / (subdivideH + 1));
     prevrow = thisrow;
     thisrow = writer.vertexCount;
   }
@@ -113,7 +115,7 @@ export function buildPrismMeshSurface(p: PrismMeshProperties, uv2Padding: number
   thisrow = writer.vertexCount;
   prevrow = 0;
   for (let j = 0; j <= subdivideH + 1; j++) {
-    const scale = j / (subdivideH + 1);
+    const scale = storedReal(j / (subdivideH + 1));
     const left = start.x + size.x * (1 - scale) * leftToRight;
     const right = left + size.x * scale;
     const v = j / (2 * (subdivideH + 1));
@@ -135,10 +137,10 @@ export function buildPrismMeshSurface(p: PrismMeshProperties, uv2Padding: number
 
       if (i > 0 && j > 0) writer.quadPairBetweenRows(prevrow, thisrow, i);
 
-      z += size.z / (subdivideD + 1);
+      z = storedReal(z + size.z / (subdivideD + 1));
     }
 
-    y += size.y / (subdivideH + 1);
+    y = storedReal(y + size.y / (subdivideH + 1));
     prevrow = thisrow;
     thisrow = writer.vertexCount;
   }
@@ -167,10 +169,10 @@ export function buildPrismMeshSurface(p: PrismMeshProperties, uv2Padding: number
 
       if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);
 
-      x += size.x / (subdivideW + 1);
+      x = storedReal(x + size.x / (subdivideW + 1));
     }
 
-    z += size.z / (subdivideD + 1);
+    z = storedReal(z + size.z / (subdivideD + 1));
     prevrow = thisrow;
     thisrow = writer.vertexCount;
   }

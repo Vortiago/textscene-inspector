@@ -28,6 +28,7 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { storedReal } from '../../../godot/math/real.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { SurfaceWriter, type Vec3, type Vec4 } from '../primitivemesh/surfaceWriter.js';
 import { PlaneMeshOrientation } from '../../../godot/scene/planeMesh.js';
@@ -66,10 +67,11 @@ export function buildPlaneMeshSurface(p: PlaneMeshProperties): GodotSurface {
 
       if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);
 
-      x += size.x / (subdivideW + 1);
+      // Godot steps in a `float`, so each step rounds to single precision.
+      x = storedReal(x + size.x / (subdivideW + 1));
     }
 
-    z += size.y / (subdivideD + 1);
+    z = storedReal(z + size.y / (subdivideD + 1));
     prevrow = thisrow;
     thisrow = writer.vertexCount;
   }

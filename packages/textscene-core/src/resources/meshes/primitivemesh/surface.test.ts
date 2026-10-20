@@ -33,9 +33,9 @@ describe('primitiveMeshSurface', () => {
   });
 
   it('flips a primitive still built by three too (edge case)', () => {
-    const plain = primitiveMeshSurface({ id: 'box', type: 'BoxMesh', data: {} }, TEXEL_SIZE)!;
+    const plain = primitiveMeshSurface({ id: 'cylinder', type: 'CylinderMesh', data: {} }, TEXEL_SIZE)!;
     const flipped = primitiveMeshSurface(
-      { id: 'box', type: 'BoxMesh', data: { flip_faces: 'true' } },
+      { id: 'cylinder', type: 'CylinderMesh', data: { flip_faces: 'true' } },
       TEXEL_SIZE
     )!;
 

@@ -47,6 +47,13 @@ describe('buildBoxMeshSurface', () => {
     expect([0, 1, 2].map((a) => Math.max(...axis(a)))).toEqual([1, 2, 3]);
   });
 
+  it("accumulates each row in single precision, as Godot's float does", () => {
+    // Godot 4.6.3 writes x = 0.49999997 for the last front vertex of this box, not 0.5.
+    const surface = buildBoxMeshSurface(box({ subdivideWidth: 9 }), null);
+
+    expect(vertexOf(surface.positions, 20)[0]).toBe(Math.fround(0.4999999702));
+  });
+
   it('starts the front face at its top left, facing +Z with its tangent along +X', () => {
     const surface = buildBoxMeshSurface(box(), null);
 

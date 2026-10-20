@@ -51,6 +51,13 @@ describe('buildPlaneMeshSurface', () => {
     }
   );
 
+  it("accumulates each row in single precision, as Godot's float does", () => {
+    // Ten steps of 0.1 from -0.5 end a float short of 0.5, as in Godot's BoxMesh.
+    const surface = buildPlaneMeshSurface(plane({ size: { x: 1, y: 1 }, subdivideWidth: 9 }));
+
+    expect(vertexOf(surface.positions, 10)[0]).toBe(Math.fround(-0.4999999702));
+  });
+
   it('moves every vertex by center_offset', () => {
     const centered = pointsOf(buildPlaneMeshSurface(plane()));
     const offset = pointsOf(buildPlaneMeshSurface(plane({ centerOffset: { x: 0.5, y: -1, z: 3 } })));

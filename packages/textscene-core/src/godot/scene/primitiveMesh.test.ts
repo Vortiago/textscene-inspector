@@ -10,6 +10,10 @@ describe('primitiveMeshUv2Scale', () => {
     expect(primitiveMeshUv2Scale(256, 0)).toBe(0.75);
   });
 
+  it('computes in single precision, as Godot 4.6.3 measures', () => {
+    expect(primitiveMeshUv2Scale(Math.fround(7.3), 17)).toBe(Math.fround(0.5705882311));
+  });
+
   it('keeps the whole UV for no padding', () => {
     expect(primitiveMeshUv2Scale(0, 8)).toBe(1);
   });

@@ -23,6 +23,14 @@ describe('decodePrimitiveMesh', () => {
     });
   });
 
+  it('keeps the default padding for a value Godot holds equal to it (edge case)', () => {
+    expect(decodePrimitiveMesh({ uv2_padding: '2.00001' }).uv2Padding).toBe(2);
+  });
+
+  it('holds the padding in single precision', () => {
+    expect(decodePrimitiveMesh({ uv2_padding: '7.3' }).uv2Padding).toBe(Math.fround(7.3));
+  });
+
   it('warns and keeps the default padding for a malformed value', () => {
     expect(decodePrimitiveMesh({ uv2_padding: 'wide' }).uv2Padding).toBe(2);
     expect(warnSpy).toHaveBeenCalled();

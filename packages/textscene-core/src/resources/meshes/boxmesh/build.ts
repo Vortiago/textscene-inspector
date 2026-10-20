@@ -28,6 +28,7 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { storedReal } from '../../../godot/math/real.js';
 import type { GodotSurface } from '../godotSurface.js';
 import { ONE_THIRD, SurfaceWriter, TWO_THIRDS } from '../primitivemesh/surfaceWriter.js';
 import type { BoxMeshProperties } from './types.js';
@@ -80,10 +81,11 @@ export function buildBoxMeshSurface(p: BoxMeshProperties, uv2Padding: number | n
 
       if (i > 0 && j > 0) writer.quadPairBetweenRows(prevrow, thisrow, i);
 
-      x += size.x / (subdivideW + 1);
+      // Godot steps in a `float`, so each step rounds to single precision.
+      x = storedReal(x + size.x / (subdivideW + 1));
     }
 
-    y += size.y / (subdivideH + 1);
+    y = storedReal(y + size.y / (subdivideH + 1));
     prevrow = thisrow;
     thisrow = writer.vertexCount;
   }
@@ -113,10 +115,10 @@ export function buildBoxMeshSurface(p: BoxMeshProperties, uv2Padding: number | n
 
       if (i > 0 && j > 0) writer.quadPairBetweenRows(prevrow, thisrow, i);
 
-      z += size.z / (subdivideD + 1);
+      z = storedReal(z + size.z / (subdivideD + 1));
     }
 
-    y += size.y / (subdivideH + 1);
+    y = storedReal(y + size.y / (subdivideH + 1));
     prevrow = thisrow;
     thisrow = writer.vertexCount;
   }
@@ -153,10 +155,10 @@ export function buildBoxMeshSurface(p: BoxMeshProperties, uv2Padding: number | n
 
       if (i > 0 && j > 0) writer.quadPairBetweenRows(prevrow, thisrow, i);
 
-      x += size.x / (subdivideW + 1);
+      x = storedReal(x + size.x / (subdivideW + 1));
     }
 
-    z += size.z / (subdivideD + 1);
+    z = storedReal(z + size.z / (subdivideD + 1));
     prevrow = thisrow;
     thisrow = writer.vertexCount;
   }

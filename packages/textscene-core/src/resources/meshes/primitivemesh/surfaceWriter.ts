@@ -9,7 +9,10 @@ type Vec2 = readonly [number, number];
 export type Vec3 = readonly [number, number, number];
 export type Vec4 = readonly [number, number, number, number];
 
-/** The atlas cells a `create_mesh_array` lays its faces in: three across and three down. */
+/**
+ * The thirds a `create_mesh_array` splits its UV atlas into: the columns of a BoxMesh or PrismMesh,
+ * the rows of a CapsuleMesh.
+ */
 export const ONE_THIRD = 1 / 3;
 export const TWO_THIRDS = 2 / 3;
 
@@ -48,7 +51,7 @@ export class SurfaceWriter {
 
   /**
    * `quadBetweenRows` for two faces a loop writes a vertex apart, the even face first: the
-   * front and back, the right and left, and the top and bottom of a BoxMesh or PrismMesh.
+   * front and back and the right and left of a BoxMesh or PrismMesh, and a BoxMesh's top and bottom.
    */
   quadPairBetweenRows(prevrow: number, thisrow: number, i: number): void {
     const i2 = i * 2;

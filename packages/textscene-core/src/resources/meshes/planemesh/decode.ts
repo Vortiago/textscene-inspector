@@ -1,5 +1,6 @@
 import type { PlaneMeshProperties } from './types';
 import { enumOr, vec2Or, vec3Or } from '../../../parser/valueParsers';
+import { storedVector2 } from '../../../godot/math/real';
 import { flooredCount } from '../meshCounts';
 import type { Vector2 } from '../../../godot/math/vector';
 import { PlaneMeshOrientation } from '../../../godot/scene/planeMesh.js';
@@ -25,7 +26,7 @@ export function decodePlaneMesh(
   defaults: PlaneMeshDefaults = PLANE_MESH_DEFAULTS
 ): PlaneMeshProperties {
   return {
-    size: vec2Or(properties.size, defaults.size, 'PlaneMesh size'),
+    size: storedVector2(vec2Or(properties.size, defaults.size, 'PlaneMesh size')),
     subdivideWidth: flooredCount(properties.subdivide_width, 0, 0, 'PlaneMesh subdivideWidth'),
     subdivideDepth: flooredCount(properties.subdivide_depth, 0, 0, 'PlaneMesh subdivideDepth'),
     orientation: enumOr(

@@ -17,7 +17,8 @@ import { decodeBoxMesh } from '../boxmesh/decode';
 import { buildBoxMeshSurface } from '../boxmesh/build';
 import { decodeSphereMesh } from '../spheremesh/decode';
 import { buildSphereMeshSurface } from '../spheremesh/build';
-import { decodePlaneMesh, PLANE_MESH_DEFAULTS, type PlaneMeshDefaults } from '../planemesh/decode';
+import type { Vector2 } from '../../../godot/math/vector';
+import { decodePlaneMesh } from '../planemesh/decode';
 import { buildPlaneMeshSurface } from '../planemesh/build';
 import { planeMeshLightmapSizeHint } from '../planemesh/lightmapSizeHint';
 import { decodeQuadMesh, QUAD_MESH_DEFAULTS } from '../quadmesh/decode';
@@ -63,14 +64,16 @@ const BUILDERS: Record<string, SurfaceBuilder> = {
   PrismMesh: (data, uv2Padding) => buildPrismMeshSurface(decodePrismMesh(data), uv2Padding),
 };
 
+/** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */
+type LightmapSizeHint = (data: Record<string, string>, texelSize: number) => Vector2;
+
 /**
- * The types whose builder writes no UV2, PlaneMesh and its QuadMesh subclass
- * (`primitive_meshes.cpp:1416`), by the defaults their lightmap size hint starts from.
- * `PrimitiveMesh::_update` scales their UV by that hint instead.
+ * The lightmap size hint of each type whose builder writes no UV2, PlaneMesh and its QuadMesh
+ * subclass (`primitive_meshes.cpp:1416`). `PrimitiveMesh::_update` scales their UV by it instead.
  */
-const FALLBACK_UV2_DEFAULTS: Record<string, PlaneMeshDefaults> = {
-  PlaneMesh: PLANE_MESH_DEFAULTS,
-  QuadMesh: QUAD_MESH_DEFAULTS,
+const FALLBACK_UV2_HINTS: Record<string, LightmapSizeHint> = {
+  PlaneMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize),
+  QuadMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize, QUAD_MESH_DEFAULTS),
 };
 
 /** Whether a slice here builds `type`. */
@@ -105,11 +108,9 @@ function buildSurface(resource: TscnInternalResource, texelSize: number): GodotS
   const base = decodePrimitiveMesh(resource.data);
   const built = build(resource.data, base.addUv2 ? base.uv2Padding * texelSize : null);
   if (!built) return null;
-  const defaults = FALLBACK_UV2_DEFAULTS[resource.type];
+  const hint = FALLBACK_UV2_HINTS[resource.type];
   const surface =
-    base.addUv2 && defaults
-      ? withFallbackUv2(built, base.uv2Padding, planeMeshLightmapSizeHint(resource.data, texelSize, defaults))
-      : built;
+    base.addUv2 && hint ? withFallbackUv2(built, base.uv2Padding, hint(resource.data, texelSize)) : built;
   return base.flipFaces ? flipFaces(surface) : surface;
 }
 

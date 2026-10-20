@@ -3,6 +3,8 @@
  * scale that pads a UV2 made from UV.
  */
 
+import { storedReal } from '../math/real.js';
+
 /** `rendering/lightmapping/primitive_meshes/texel_size`'s default (`servers/rendering/rendering_server.cpp:3821`). */
 export const DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE = 0.2;
 
@@ -19,8 +21,9 @@ const PADDING_REF_SIZE = 1024;
 
 /**
  * `PrimitiveMesh::get_uv2_scale` on one axis (`primitive_meshes.cpp:329-341`): one less the padding
- * over the axis's lightmap size hint, in texels. A zero hint measures against 1024 texels.
+ * over the axis's lightmap size hint, in texels, in single precision. A zero hint measures against
+ * 1024 texels.
  */
 export function primitiveMeshUv2Scale(uv2Padding: number, lightmapSize: number): number {
-  return 1 - uv2Padding / (lightmapSize === 0 ? PADDING_REF_SIZE : lightmapSize);
+  return storedReal(1 - storedReal(uv2Padding / (lightmapSize === 0 ? PADDING_REF_SIZE : lightmapSize)));
 }
