@@ -65,7 +65,7 @@ export function parseRegistrationCalls(source) {
       loopConstant: typeName === null ? loopConstantBefore(source, index) : null,
       componentFrom: (component && importSourceOf(source, component)) ?? null,
       intent: declaredIntent(body),
-      scenePass: /scenePass:/.test(body),
+      scenePass: /\bscenePass\b/.test(body),
     };
   });
 }
