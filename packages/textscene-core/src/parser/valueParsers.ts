@@ -306,6 +306,15 @@ export function parseOptionalFloat(value: string | undefined): number | undefine
 }
 
 /**
+ * `parseOptionalFloat` that keeps `inf`, `inf_neg` and `nan`, for a property whose consumer
+ * draws what Godot draws for them.
+ */
+export function parseOptionalGodotFloat(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  return parseGodotFloat(value) ?? undefined;
+}
+
+/**
  * `undefined` for an absent or unparseable Vector2, with no warning, through
  * `parseVector2` and its `FLOAT_PATTERN_SOURCE`. For Control `custom_minimum_size`.
  * StyleBox `shadow_offset` needs a concrete offset, so it uses `vec2Or`.
