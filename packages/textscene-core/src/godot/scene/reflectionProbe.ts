@@ -1,9 +1,13 @@
 /** Godot 4.6.3's ReflectionProbe node: its class defaults and what its setters store. */
 
+import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
 import { sign } from '../math/math.js';
 import { storedReal, storedVector3 } from '../math/real.js';
 import type { Vector3 } from '../math/vector.js';
-import { ReflectionProbeAmbientMode } from '../rendering/environment/reflectionProbe.js';
+import {
+  ReflectionProbeAmbientMode,
+  ReflectionProbeUpdateMode,
+} from '../rendering/environment/reflectionProbe.js';
 import { GODOT_EDITOR_LAYERS_MASK } from './visualLayers.js';
 
 /** `ReflectionProbe`'s defaults (`reflection_probe.h:52-67`). */
@@ -17,6 +21,18 @@ export const REFLECTION_PROBE_DEFAULTS = {
   ambientColorEnergy: 1,
   layerMask: GODOT_EDITOR_LAYERS_MASK,
 } as const;
+
+/** Each update mode by its integer, spelled as its constant (`reflection_probe.cpp:278-279`). */
+export const REFLECTION_PROBE_UPDATE_MODE_NAMES = relabelEnumNames(
+  enumNamesByValue(ReflectionProbeUpdateMode),
+  (name) => `UPDATE_${name}`
+);
+
+/** Each ambient mode by its integer, spelled as its constant (`reflection_probe.cpp:281-283`). */
+export const REFLECTION_PROBE_AMBIENT_MODE_NAMES = relabelEnumNames(
+  enumNamesByValue(ReflectionProbeAmbientMode),
+  (name) => `AMBIENT_${name}`
+);
 
 /** `set_max_distance` clamps to this (`reflection_probe.cpp:81`). */
 export const REFLECTION_PROBE_MAX_DISTANCE = 262_144;
