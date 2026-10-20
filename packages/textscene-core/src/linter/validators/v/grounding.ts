@@ -5,10 +5,11 @@
  * goes through one, so `boundGrounding.test.ts` can sweep the live registry.
  */
 
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import type { Severity } from '../../types.js';
 import { propertyError } from '../propertyError.js';
-import { parseGodotFloat, type EnforcedEnd } from '../commonValidators.js';
+import { type EnforcedEnd } from '../commonValidators.js';
 import { valueCode } from './codes.js';
 
 /**
@@ -96,7 +97,7 @@ function withLiteralGuard(
   requirement: string
 ): PropertyValidator {
   const guarded: PropertyValidator = (key, value, line) => {
-    const parsed = parseGodotFloat(value);
+    const parsed = scalarSlotValue(value);
     if (parsed !== null && refuses(parsed)) {
       return propertyError(
         key,

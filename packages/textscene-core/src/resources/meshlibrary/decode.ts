@@ -7,7 +7,7 @@
 
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
-import { parseGodotInt } from '../../godot/variant/int.js';
+import { parseSlotInt } from '../../godot/variant/int.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { ARRAY_MESH_TYPES } from '../meshes/arraymesh/decode';
@@ -35,10 +35,10 @@ const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
  * (`scene/resources/3d/mesh_library.cpp:65-67`).
  */
 function decodeCastShadow(rawValue: string): ShadowCastingSetting {
-  // `parseGodotInt`, not `parseInt`: Godot converts a FLOAT spelling into an int
+  // `parseSlotInt`, not `parseInt`: Godot converts a FLOAT spelling into an int
   // slot (`variant.cpp`), so `cast_shadow = 2.0` is DOUBLE_SIDED, and a raw
   // `parseInt` would read `2` out of text the engine refuses outright.
-  switch (parseGodotInt(rawValue)) {
+  switch (parseSlotInt(rawValue)) {
     case 0:
       return ShadowCastingSetting.OFF;
     case 2:

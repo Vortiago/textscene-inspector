@@ -37,6 +37,16 @@ function asStoredInt(num: number): number {
   return Number.isFinite(num) ? Math.trunc(num) : NaN;
 }
 
+/** The stored integer for a read `asFloat`, or `null` where the tokenizer read nothing. */
+function storedOrNull(
+  asFloat: number | null,
+  literal: string,
+  width: IntWidth,
+  alwaysFloatBranch: boolean
+): number | null {
+  return asFloat === null ? null : storedFromFloat(asFloat, literal, width, alwaysFloatBranch);
+}
+
 /**
  * A TSCN literal as the integer a Godot constructor argument or header attribute stores: `null` when
  * the tokenizer cannot read it, `NaN` when the conversion is undefined, else the number the engine
@@ -53,8 +63,7 @@ export function parseGodotInt(
   // No grammar pre-test or trim: `parseGodotFloat` applies TSCN_FLOAT_RE and trims, and this runs
   // once per packed-array element. `FLOAT_TYPED` looks for `.` or `e`, never whitespace, so the raw
   // text answers it.
-  const asFloat = parseGodotFloat(value);
-  return asFloat === null ? null : storedFromFloat(asFloat, value, width, alwaysFloatBranch);
+  return storedOrNull(parseGodotFloat(value), value, width, alwaysFloatBranch);
 }
 
 /**
@@ -67,8 +76,7 @@ export function parseSlotInt(
   /** See {@link storedFromFloat}. */
   alwaysFloatBranch = false
 ): number | null {
-  const asFloat = scalarSlotValue(value);
-  return asFloat === null ? null : storedFromFloat(asFloat, value, width, alwaysFloatBranch);
+  return storedOrNull(scalarSlotValue(value), value, width, alwaysFloatBranch);
 }
 
 /** Whether the tokenizer typed the literal FLOAT, which picks the `_to_int` branch. */

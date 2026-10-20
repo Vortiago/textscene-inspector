@@ -9,8 +9,7 @@ import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
 import { readerLimitedInt, type IntSlotRead, type IntWidth } from '../../godot/variant/int.js';
-import { parseGodotFloat } from '../../godot/variant/number.js';
-import { boolLiteralAsNumber } from '../../godot/variant/variantBool.js';
+import { boolLiteralAsNumber, scalarSlotValue } from '../../godot/variant/variantBool.js';
 
 /**
  * `_to_int<T>` (`variant.h:360-377`): the conversion every int slot's write
@@ -37,7 +36,7 @@ export function unrepresentableInt(
   // Past 2^53 an int64 slot still holds the value exactly, so the limit is this
   // reader's and only warns. It is not silence: the caller reads NaN as
   // "already reported". At narrower widths the engine alters the value, an error.
-  const beyondReader = readerLimitedInt(parseGodotFloat(value) ?? NaN, width);
+  const beyondReader = readerLimitedInt(scalarSlotValue(value) ?? NaN, width);
   if (beyondReader) {
     return propertyError(
       key,
@@ -156,7 +155,7 @@ export function truncatedComponent(
 ): ParseError | null {
   for (const text of components) {
     if (text === undefined) continue;
-    const asFloat = parseGodotFloat(text);
+    const asFloat = scalarSlotValue(text);
     // `Number.isFinite` first: `Number.isInteger` is false for Infinity and NaN,
     // and ADR-0032 forbids naming an undefined conversion's result. A non-finite
     // component is the unstorable refusal, reported by the caller's own arm.

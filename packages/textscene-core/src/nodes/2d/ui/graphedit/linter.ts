@@ -3,10 +3,10 @@
  * the load clamps away. linterParser.ts holds the format validators.
  */
 
+import { scalarSlotValue } from '../../../../godot/variant/variantBool.js';
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { parseOptionalVector2 } from '../../../../parser/valueParsers.js';
 import { resolveGraphEditLoadState } from './loadOrder.js';
 
@@ -38,8 +38,8 @@ function checkZoomLimits(context: RuleContext): Diagnostic[] {
   const maxRaw = props.zoom_max;
   if (minRaw === undefined || maxRaw === undefined) return [];
 
-  const min = parseGodotFloat(minRaw);
-  const max = parseGodotFloat(maxRaw);
+  const min = scalarSlotValue(minRaw);
+  const max = scalarSlotValue(maxRaw);
   // `nan` trips neither ERR_FAIL_COND (graph_edit.cpp:2480/2495), so a nan pair is
   // installed intact and no limit is dropped.
   if (min === null || max === null || Number.isNaN(min) || Number.isNaN(max)) return [];
