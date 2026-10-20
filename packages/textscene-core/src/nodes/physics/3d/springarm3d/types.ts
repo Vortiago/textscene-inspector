@@ -1,8 +1,4 @@
-/**
- * SpringArm3D property surface. `spring_length` stays `undefined` when unauthored, so
- * the gizmo applies Godot's default. The cast keys (`shape`, `collision_mask`, `margin`)
- * are unread: the drive of the children is a gap (ADR-0045).
- */
+/** SpringArm3D property surface. `spring_length` stays `undefined` when unauthored, so the consumer applies Godot's default. */
 
 import type { Node3DProperties } from '../../../base/node3d/types';
 

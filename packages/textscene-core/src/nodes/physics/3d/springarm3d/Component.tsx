@@ -1,8 +1,7 @@
 /**
  * <SpringArm3D>: a Node3D group that draws Godot's length line while selected (ADR-0018):
  * one segment from the origin to (0, 0, spring_length), unguarded, so 0 and a negative
- * length draw as in spring_arm_3d_gizmo_plugin.cpp:35-54. A non-finite length ends the
- * segment at (nan, nan, ±inf), which GizmoLine draws as nothing.
+ * length draw as in spring_arm_3d_gizmo_plugin.cpp:35-54.
  */
 
 import { useMemo } from 'react';

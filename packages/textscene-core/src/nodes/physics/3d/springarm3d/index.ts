@@ -1,8 +1,4 @@
-/**
- * SpringArm3D parser registration: the Node3D parse plus `spring_length`. Property
- * knowledge lives in linterParser.ts. Its Godot effect on its children is not
- * implemented here yet (ADR-0045), so index.r3f.ts registers it as `pending`.
- */
+/** SpringArm3D parser registration. Property knowledge lives in linterParser.ts. */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseSpringArm3D } from './parser';
