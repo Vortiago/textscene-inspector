@@ -11,7 +11,8 @@ export { isAlteredInt, parseGodotInt, statedFromFloat, storedFromFloat } from '.
 export {
   ruleInt,
   ruleCount,
-  statedInt,
+  slotCount,
+  slotInt,
   storedInt,
   storedVector2i,
   slotComponents,

@@ -6,7 +6,7 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { statedInt, tupleComponent } from '../commonValidators.js';
+import { ruleInt, tupleComponent } from '../commonValidators.js';
 import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
 import { convertedSpelling, markIntSlot, truncatedComponent } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
@@ -139,7 +139,7 @@ export const vectorCombinators = {
         // `Rect2(...)` in a Rect2i slot holds four doubles, so every component
         // takes the `double -> int32` branch whatever the token looks like.
         const converted = isConvertedSpelling('Rect2i', compositeTypeName(value));
-        if (components.some((component) => statedInt(component, 'int32', converted) === null)) {
+        if (components.some((component) => ruleInt(component, null, 'int32', converted) === null)) {
           return propertyError(
             key,
             line,

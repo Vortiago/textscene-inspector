@@ -92,27 +92,11 @@ export function storedFromFloat(
 }
 
 /**
- * Whether the stored number differs from the one the file states (ADR-0032). `String::to_int`
+ * {@link storedFromFloat} for the linter: NaN when the file does not state the number (ADR-0032),
+ * so a bound cannot pass it and the alteration finding is the only one reported. `String::to_int`
  * saturates (`ustring.cpp:2650-2658`) and Godot writes either signedness of a 32-bit pattern, so an
  * INT literal inside `ROUND_TRIPS` is a spelling and one outside it is an alteration. A FLOAT literal
- * is an alteration outside the width's range, and so is anything {@link storedFromFloat} cannot name.
- */
-export function isAlteredInt(
-  asFloat: number,
-  literal: string,
-  width: IntWidth = 'int32',
-  /** See {@link storedFromFloat}. */
-  alwaysFloatBranch = false
-): boolean {
-  const stored = asStoredInt(asFloat);
-  if (!Number.isSafeInteger(stored)) return true;
-  const [low, high] = isFloatBranch(literal, alwaysFloatBranch) ? REPRESENTABLE[width] : ROUND_TRIPS[width];
-  return stored < low || stored > high;
-}
-
-/**
- * {@link storedFromFloat} for the linter: NaN when the file does not state the number, so a bound
- * cannot pass it and {@link isAlteredInt}'s finding is the only one reported.
+ * is stated only inside the width's range.
  */
 export function statedFromFloat(
   asFloat: number,
@@ -121,7 +105,19 @@ export function statedFromFloat(
   /** See {@link storedFromFloat}. */
   alwaysFloatBranch = false
 ): number {
-  return isAlteredInt(asFloat, literal, width, alwaysFloatBranch)
-    ? NaN
-    : storedFromFloat(asFloat, literal, width, alwaysFloatBranch);
+  const stored = asStoredInt(asFloat);
+  if (!Number.isSafeInteger(stored)) return NaN;
+  const [low, high] = isFloatBranch(literal, alwaysFloatBranch) ? REPRESENTABLE[width] : ROUND_TRIPS[width];
+  return stored < low || stored > high ? NaN : wrapToWidth(stored, width);
+}
+
+/** Whether the stored number differs from the one the file states: the finding ADR-0032 reports. */
+export function isAlteredInt(
+  asFloat: number,
+  literal: string,
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}. */
+  alwaysFloatBranch = false
+): boolean {
+  return Number.isNaN(statedFromFloat(asFloat, literal, width, alwaysFloatBranch));
 }

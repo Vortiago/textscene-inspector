@@ -7,7 +7,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
-import { readSlotTuple, ruleInt } from '../../../godot/variant/int.js';
+import { readSlotTuple, slotInt } from '../../../godot/variant/int.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { resizePoints } from './pointCount';
 
@@ -35,7 +35,7 @@ function decodeCurve(data: Record<string, string>): Curve {
   // `point_count` is written after `_data`, and Godot's setter resizes the point
   // list to it (curve.cpp:41-57): a smaller count drops the tail, a larger one
   // pads with default points, and a negative one is refused, leaving `_data` alone.
-  const declared = ruleInt(data.point_count);
+  const declared = slotInt(data.point_count);
   if (declared !== null && declared >= 0) curve.points = resizePoints(curve, declared);
 
   return curve;
@@ -130,5 +130,5 @@ function numberOr(entry: string, fallback: number): number {
 }
 
 function tangentMode(entry: string): CurveTangentMode {
-  return ruleInt(entry) === CurveTangentMode.Linear ? CurveTangentMode.Linear : CurveTangentMode.Free;
+  return slotInt(entry) === CurveTangentMode.Linear ? CurveTangentMode.Linear : CurveTangentMode.Free;
 }

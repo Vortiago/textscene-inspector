@@ -6,7 +6,7 @@
  */
 
 import { warn } from '../../../logger.js';
-import { ruleInt, toInt16, toUint32 } from '../../../godot/variant/int.js';
+import { slotInt, toInt16, toUint32 } from '../../../godot/variant/int.js';
 import { dictCallField } from '../../../godot/variant/variantParser.js';
 
 /**
@@ -30,14 +30,14 @@ export interface GridMapCell {
 const INTS_PER_CELL = 3;
 
 export function decodeGridMapCells(packedInt32: string): GridMapCell[] {
-  // `ruleInt` rather than `Number`: `Number('inf')` is NaN, while `inf` is a
+  // `slotInt` rather than `Number`: `Number('inf')` is NaN, while `inf` is a
   // literal Godot writes into an INT array, and the two must stay
   // distinguishable.
   const ints = packedInt32
     .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0)
-    .map((s) => ruleInt(s));
+    .map((s) => slotInt(s));
 
   const cells: GridMapCell[] = [];
   for (let i = 0; i + 2 < ints.length; i += INTS_PER_CELL) {

@@ -37,7 +37,7 @@ describe('rule-layer integer reads', () => {
   });
 
   it('never calls a reader that can hand back NaN', () => {
-    // All four: `asStoredInt`, `storedFromFloat` and `statedFromFloat` return the same NaN, and
+    // All of them: `asStoredInt`, `storedFromFloat` and `statedFromFloat` return the same NaN, and
     // the barrel exports them. Comment-stripped, since prose naming the reader
     // is not a call to it.
     const offenders = files

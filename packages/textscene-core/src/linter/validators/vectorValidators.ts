@@ -4,7 +4,7 @@ import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
-import { statedInt, tupleComponent } from './commonValidators.js';
+import { ruleInt, tupleComponent } from './commonValidators.js';
 import { readSlotTuple } from '../../godot/variant/int.js';
 import { compositeTypeName, isConvertedSpelling } from '../../godot/variant/variantConversion.js';
 
@@ -39,8 +39,8 @@ export function matchVector2i(raw: string): { x: number; y: number } | null {
   // A `Vector2(...)` in a Vector2i slot holds doubles, so both components take
   // the `double -> int32` branch whatever the token looks like.
   const converted = isConvertedSpelling('Vector2i', compositeTypeName(raw));
-  const x = statedInt(match[1]!, 'int32', converted);
-  const y = statedInt(match[2]!, 'int32', converted);
+  const x = ruleInt(match[1], null, 'int32', converted);
+  const y = ruleInt(match[2], null, 'int32', converted);
   return x === null || y === null ? null : { x, y };
 }
 
@@ -117,8 +117,8 @@ export function createVector2iValidator(
     // Truncated toward zero, as the int32 conversion does, so `0.9` is bounded as
     // the 0 Godot stores. A `Vector2(...)` spelling holds doubles, so
     // `Vector2(4294967295, 64)` takes the `double -> int32` branch to the UB sentinel.
-    const x = statedInt(match[1]!, 'int32', converted);
-    const y = statedInt(match[2]!, 'int32', converted);
+    const x = ruleInt(match[1], null, 'int32', converted);
+    const y = ruleInt(match[2], null, 'int32', converted);
     if (x === null || y === null) {
       return propertyError(
         key,

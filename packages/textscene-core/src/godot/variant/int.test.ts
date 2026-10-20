@@ -11,7 +11,10 @@ import {
   isAlteredInt,
   parseGodotInt,
   readSlotTuple,
+  ruleCount,
   ruleInt,
+  slotCount,
+  slotInt,
   slotComponents,
   slotComponentsAltered,
   storedInt,
@@ -169,6 +172,29 @@ describe('storedInt — a capture the composite grammar already matched', () => 
   it('is null for a component no int32 can hold', () => {
     expect(storedInt('inf')).toBeNull();
     expect(storedInt('1e20')).toBeNull();
+  });
+});
+
+describe('ruleInt and slotInt over a literal the file does not state', () => {
+  it('gives the rule no number, so phase 1 alone reports the alteration', () => {
+    expect(ruleInt('4294967296')).toBeNull();
+    expect(ruleInt('4294967295')).toBe(-1);
+  });
+
+  it('gives the renderer the number Godot stores', () => {
+    expect(slotInt('4294967296')).toBe(0);
+    expect(slotInt('8589934593')).toBe(1);
+  });
+
+  it('reads a count the same two ways', () => {
+    expect(ruleCount('4294967297')).toBeNull();
+    expect(slotCount('4294967297')).toBe(1);
+    expect(slotCount('-4294967297')).toBe(0);
+  });
+
+  it('reads a FLOAT outside the width as nothing in both', () => {
+    expect(ruleInt('1e10')).toBeNull();
+    expect(slotInt('1e10')).toBeNull();
   });
 });
 
