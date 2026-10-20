@@ -43,3 +43,11 @@ export function drawnMaterials<T extends THREE.Material>(scene: ReactThreeTestIn
     .flatMap((node) => instanceAs<THREE.Mesh>(node).material)
     .filter((material): material is T => material.type === type);
 }
+
+/** The scene's visible meshes: a hidden bounds proxy frames the scene but draws nothing. */
+export function drawnMeshes(scene: ReactThreeTestInstance): THREE.Mesh[] {
+  return scene
+    .findAllByType('Mesh')
+    .map((node) => instanceAs<THREE.Mesh>(node))
+    .filter((mesh) => mesh.visible);
+}
