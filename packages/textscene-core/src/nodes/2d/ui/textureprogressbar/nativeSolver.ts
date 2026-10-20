@@ -15,18 +15,19 @@ import {
   type TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureProgressBarProperties } from './types';
+import { TextureProgressBarFillMode } from '../../../../godot/scene/gui';
 
 /** The keys `textureProgressBarTextureSlots`/`textureProgressBarMinimumSize` share for `SolveNode.textureSlots`. */
-export const TEXTURE_UNDER_KEY = 'texture_under';
-export const TEXTURE_PROGRESS_KEY = 'texture_progress';
-export const TEXTURE_OVER_KEY = 'texture_over';
+const TEXTURE_UNDER_KEY = 'texture_under';
+const TEXTURE_PROGRESS_KEY = 'texture_progress';
+const TEXTURE_OVER_KEY = 'texture_over';
 
 /**
  * `TextureProgressBar`'s own three Texture2D properties (`texture_progress_bar.h:38-40`). Without
  * `nine_patch_stretch`, `get_minimum_size` maxes their natural sizes (`texture_progress_bar.cpp:86-96`).
  * `buildSolveTree.ts` resolves none of them by default, so this declares them for the walker.
  */
-export const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) => {
+const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   const props = node.properties as TextureProgressBarProperties;
   const requests: TextureSlotRequest[] = [];
   if (props.textureUnder) requests.push({ key: TEXTURE_UNDER_KEY, ref: props.textureUnder });
@@ -35,21 +36,19 @@ export const textureProgressBarTextureSlots: TextureSlotsFn = (node: TscnNode) =
   return requests;
 };
 
-export const TEXTURE_FILL_LEFT_TO_RIGHT = 0;
-export const TEXTURE_FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE = 8;
-
 /**
  * `set_fill_mode` (`texture_progress_bar.cpp:575-583`) refuses an out-of-range write with
  * `ERR_FAIL_INDEX`, so `mode` keeps its default (`FILL_LEFT_TO_RIGHT`, `texture_progress_bar.h:105`).
  */
 export function normalizeTextureProgressBarFillMode(fillMode: number | undefined): number {
-  const mode = fillMode ?? TEXTURE_FILL_LEFT_TO_RIGHT;
-  return mode >= TEXTURE_FILL_LEFT_TO_RIGHT && mode <= TEXTURE_FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE
+  const mode = fillMode ?? TextureProgressBarFillMode.LEFT_TO_RIGHT;
+  return mode >= TextureProgressBarFillMode.LEFT_TO_RIGHT &&
+    mode <= TextureProgressBarFillMode.CLOCKWISE_AND_COUNTER_CLOCKWISE
     ? mode
-    : TEXTURE_FILL_LEFT_TO_RIGHT;
+    : TextureProgressBarFillMode.LEFT_TO_RIGHT;
 }
 
-export const textureProgressBarMinimumSize: MinimumSizeFn = (n) => {
+const textureProgressBarMinimumSize: MinimumSizeFn = (n) => {
   const props = n.node.properties as TextureProgressBarProperties;
 
   if (props.ninePatchStretch) {

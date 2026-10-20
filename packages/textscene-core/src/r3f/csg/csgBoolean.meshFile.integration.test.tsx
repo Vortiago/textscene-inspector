@@ -18,9 +18,10 @@ import {
   type FakeResourceLoader,
 } from '../../resources/testing/createFakeResourceLoader';
 import { instanceAs } from '../../nodes/3d/testing/reactThreeTestInstance';
-import { clearEvaluationCache } from './csgEvaluationCache';
-import '../nodes/index';
+import '../../nodes/3d/csg/csgbox3d/index.r3f';
+import '../../nodes/3d/csg/csgmesh3d/index.r3f';
 import { NodeTree } from '../testing/NodeTree';
+import { drawnMeshes } from './testing/csgScene';
 import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
 
 const MESH_PATH = 'res://two-boxes.tres';
@@ -41,14 +42,10 @@ mesh = ExtResource("1")
 
 /** The root's drawn mesh: the one mesh that is not a contributor's invisible bounds proxy. */
 function drawnMesh(renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>): THREE.Mesh {
-  return renderer.scene
-    .findAllByType('Mesh')
-    .map((m) => instanceAs<THREE.Mesh>(m))
-    .find((mesh) => mesh.visible)!;
+  return instanceAs<THREE.Mesh>(drawnMeshes(renderer)[0]!);
 }
 
 async function renderScene(fake: FakeResourceLoader) {
-  clearEvaluationCache();
   const scene = new TscnParser().parse(SCENE);
   const root = scene.nodes[0]!.children[0]!;
   return ReactThreeTestRenderer.create(

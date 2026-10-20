@@ -6,7 +6,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { spriteFrameArms, spriteFrameDiagnostics } from '../../../linter/spriteFrameGrid.js';
 
@@ -84,5 +84,3 @@ const sprite3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(sprite3DValidationRule);
-
-export { sprite3DValidationRule };

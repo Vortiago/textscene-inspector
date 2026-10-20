@@ -13,5 +13,3 @@ const openXRInteractionProfileEditorRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(openXRInteractionProfileEditorRegistration);
-
-export { openXRInteractionProfileEditorRegistration };

@@ -9,10 +9,15 @@ import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
-  AUTOWRAP_MODE,
-  STRUCTURED_TEXT_PARSER,
-  TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
+  TEXT_EDIT_CARET_TYPE_NAMES,
+  TEXT_EDIT_LINE_WRAPPING_MODE_NAMES,
+} from '../../../../godot/scene/gui.js';
+import {
+  AutowrapMode,
+  AUTOWRAP_MODE_NAMES,
+  STRUCTURED_TEXT_PARSER_NAMES,
+  TEXT_DIRECTION_NAMES,
+} from '../../../../godot/text/textServerEnums.js';
 
 validatorRegistry.registerAll('TextEdit', {
   // Text & behaviour (ungrouped run, text_edit.cpp:7545-7561).
@@ -44,21 +49,18 @@ validatorRegistry.registerAll('TextEdit', {
   // LINE_WRAPPING_NONE=0, LINE_WRAPPING_BOUNDARY=1 (text_edit.cpp:7402-7403,
   // enum declared text_edit.h:68-71). set_line_wrapping_mode (text_edit.cpp:6341-6351)
   // assigns unconditionally, no ERR_FAIL.
-  wrap_mode: v.enumInt(
-    'wrap_mode',
-    0,
-    1,
-    {
-      0: 'LINE_WRAPPING_NONE',
-      1: 'LINE_WRAPPING_BOUNDARY',
-    },
-    { hinted: 'text_edit.cpp:7558' }
-  ),
+  wrap_mode: v.enumInt('wrap_mode', TEXT_EDIT_LINE_WRAPPING_MODE_NAMES, { hinted: 'text_edit.cpp:7558' }),
   // text_edit.cpp:7559: PROPERTY_HINT_ENUM "Arbitrary:1,Word:2,Word (Smart):3", so the bound is 1-3.
   // TextServer::AutowrapMode starts at AUTOWRAP_OFF=0 (servers/text/text_server.h:98-102,
   // BIND_ENUM_CONSTANT text_server.cpp:574-577), and set_autowrap_mode has no CLAMP or ERR_FAIL
   // (text_edit.cpp:6354-6360), so 0 warns rather than errors.
-  autowrap_mode: v.enumInt('autowrap_mode', 1, 3, AUTOWRAP_MODE, { hinted: 'text_edit.cpp:7559' }),
+  autowrap_mode: v.enumInt(
+    'autowrap_mode',
+    AutowrapMode.AUTOWRAP_ARBITRARY,
+    AutowrapMode.AUTOWRAP_WORD_SMART,
+    AUTOWRAP_MODE_NAMES,
+    { hinted: 'text_edit.cpp:7559' }
+  ),
   // text_edit.cpp:7560
   indent_wrapped_lines: v.boolean('indent_wrapped_lines'),
   // text_edit.cpp:7561
@@ -95,16 +97,7 @@ validatorRegistry.registerAll('TextEdit', {
   // Caret (ADD_GROUP "Caret", text_edit.cpp:7580-7587).
   // text_edit.cpp:7581: PROPERTY_HINT_ENUM "Line,Block", CARET_TYPE_LINE=0, CARET_TYPE_BLOCK=1
   // (text_edit.cpp:7293-7294, text_edit.h:53-56). set_caret_type (text_edit.cpp:5159-5166) has no ERR_FAIL.
-  caret_type: v.enumInt(
-    'caret_type',
-    0,
-    1,
-    {
-      0: 'CARET_TYPE_LINE',
-      1: 'CARET_TYPE_BLOCK',
-    },
-    { hinted: 'text_edit.cpp:7581' }
-  ),
+  caret_type: v.enumInt('caret_type', TEXT_EDIT_CARET_TYPE_NAMES, { hinted: 'text_edit.cpp:7581' }),
   caret_blink: v.boolean('caret_blink'),
   // text_edit.cpp:7583 hints "0.1,10,0.01,suffix:s", closed both ends.
   // text_edit.cpp:5198, ERR_FAIL_COND(p_interval <= 0): the setter refuses at
@@ -143,7 +136,7 @@ validatorRegistry.registerAll('TextEdit', {
   // "Auto,Left-to-Right,Right-to-Left,Inherited", AUTO=0 to INHERITED=3 (scene/gui/control.cpp:4415-4418,
   // control.h:166-171, as in servers/text/text_server.h:66-71). set_text_direction (text_edit.cpp:3724)
   // refuses below -1 or above 3. -1 is a legacy inherited spelling with no constant, outside the hint.
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', TEXT_DIRECTION_NAMES, {
     hinted: 'text_edit.cpp:7605',
     enforced: 'text_edit.cpp:3724',
     enforcedMin: { at: -1 },
@@ -153,7 +146,7 @@ validatorRegistry.registerAll('TextEdit', {
   // text_edit.cpp:7607: PROPERTY_HINT_ENUM "Default,URI,File,Email,List,None,Custom",
   // STRUCTURED_TEXT_DEFAULT=0 .. STRUCTURED_TEXT_CUSTOM=6 (servers/text/text_server.cpp:681-687,
   // text_server.h:214-222). set_structured_text_bidi_override (text_edit.cpp:3778-3786) has no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', STRUCTURED_TEXT_PARSER_NAMES, {
     hinted: 'text_edit.cpp:7607',
   }),
   // text_edit.cpp:7608: Variant::ARRAY with no hint, so never written wrapped.

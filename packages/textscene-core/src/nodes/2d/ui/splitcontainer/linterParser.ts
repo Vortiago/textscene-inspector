@@ -8,7 +8,8 @@
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v, accepts, propertyError } from '../../../../linter/validators/index.js';
-import { packedArrayBody, packedArrayForms } from '../../../../godot/index.js';
+import { SPLIT_CONTAINER_DRAGGER_VISIBILITY_NAMES } from '../../../../godot/scene/gui.js';
+import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
@@ -68,17 +69,9 @@ validatorRegistry.registerAll('SplitContainer', {
   // PROPERTY_HINT_ENUM, "Visible,Hidden,Hidden and Collapsed"), ...). set_dragger_visibility
   // (split_container.cpp:1103-1109) has no ERR_FAIL_INDEX or clamp, and BIND_ENUM_CONSTANT
   // (cpp:1308-1310) grounds nothing, so the hint warns, as for `action_mode` (`base_button.cpp:570`).
-  dragger_visibility: v.enumInt(
-    'dragger_visibility',
-    0,
-    2,
-    {
-      0: 'DRAGGER_VISIBLE',
-      1: 'DRAGGER_HIDDEN',
-      2: 'DRAGGER_HIDDEN_COLLAPSED',
-    },
-    { hinted: 'split_container.cpp:1298' }
-  ),
+  dragger_visibility: v.enumInt('dragger_visibility', SPLIT_CONTAINER_DRAGGER_VISIBILITY_NAMES, {
+    hinted: 'split_container.cpp:1298',
+  }),
   // split_container.cpp:1299: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "vertical"), ...)
   vertical: v.boolean('vertical'),
   // split_container.cpp:1300: ADD_PROPERTY(PropertyInfo(Variant::BOOL, "touch_dragger_enabled"), ...)

@@ -18,9 +18,8 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../r3f/controls/godotDefaultTheme';
+import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { ControlColor } from '../control/types';
 import {
   computeGridDots,
   computeGridLines,
@@ -55,6 +54,7 @@ import {
   type ControlDrawTransform,
 } from '../../../../r3f/controls/native/controlPixelSnap';
 import type { GraphEditProperties } from './types';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `default_theme.cpp:1287`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, with a larger bottom margin. */
 function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlatData {
@@ -89,9 +89,9 @@ function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlat
 }
 
 /** `default_theme.cpp:1293`: `Color(1, 1, 1, 0.05)`. */
-const GRID_MINOR_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 0.05 };
+const GRID_MINOR_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 0.05 };
 /** `default_theme.cpp:1294`: `Color(1, 1, 1, 0.2)`. */
-const GRID_MAJOR_DEFAULT: ControlColor = { r: 1, g: 1, b: 1, a: 0.2 };
+const GRID_MAJOR_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 0.2 };
 
 /** Every internal Label and LineEdit reads the plain "font" theme key, as `Label` and `Button` do. */
 const GRAPH_EDIT_THEME_FONT_KEY = 'font';
@@ -105,7 +105,7 @@ const LINE_THICKNESS_PX = 1;
 const DOT_SIZE_PX = 3;
 
 /** Grid and connection colours take the tint while both are sRGB, before the one linear conversion. */
-function useColorQuad(base: ControlColor, tintOwn: NativeControlComponentProps['tint']['own']) {
+function useColorQuad(base: Rgba, tintOwn: NativeControlComponentProps['tint']['own']) {
   const combined = useMemo(() => multiplyModulate(tintOwn, base), [tintOwn, base]);
   const color = useGodotLinearColor(combined);
   return { color, opacity: combined.a };

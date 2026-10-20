@@ -31,6 +31,14 @@ export function literalText(raw: string): string {
 }
 
 /**
+ * `text` as Godot writes a `String` value: in quotes, with its backslashes and quotes escaped
+ * (`String::c_escape_multiline`, ustring.cpp:4493-4499, written by variant_parser.cpp:2033).
+ */
+export function stringLiteral(text: string): string {
+  return `"${text.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
+}
+
+/**
  * Depth- and quote-aware split of a bracket body's top-level comma-separated elements. Empty input yields no elements.
  * `(`/`[` both open a level and `)`/`]` both close one, because Godot's writer nests the two interchangeably
  * (`Array[NodePath]([NodePath("a"), NodePath("b")])`). Inside a quoted run a backslash escapes the next character.
@@ -228,4 +236,53 @@ export function fileBaseName(path: string): string {
   const file = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
   const dot = file.lastIndexOf('.');
   return dot < 0 ? file : file.slice(0, dot);
+}
+
+/** The characters `String::validate_filename` replaces (`ustring.cpp:4927`). */
+const INVALID_FILENAME_CHARACTERS = /[:/\\?*"|%<>]/g;
+
+/** `String::validate_filename` (`ustring.cpp:4947-4953`): stripped edges, each invalid character an underscore. */
+export function validateFilename(name: string): string {
+  return stripEdges(name).replace(INVALID_FILENAME_CHARACTERS, '_');
+}
+
+/**
+ * `String::get_base_dir` (`ustring.cpp:4967-5026`): the path up to its last `/` or `\`, keeping the
+ * root a scheme (`res://`), a drive (`C:/`), a network share (`//server/share/`) or `/` names.
+ */
+export function getBaseDir(path: string): string {
+  const rootEnd = pathRootEnd(path);
+  const base = path.slice(0, rootEnd);
+  const rest = path.slice(rootEnd);
+  const separator = Math.max(rest.lastIndexOf('/'), rest.lastIndexOf('\\'));
+  return separator === -1 ? base : base + rest.slice(0, separator);
+}
+
+/** Where the root of `path` ends, as `get_base_dir` finds it (`ustring.cpp:4968-5009`), or 0. */
+function pathRootEnd(path: string): number {
+  const scheme = path.indexOf('://');
+  if (scheme !== -1) return scheme + 3;
+  const drive = indexOfEither(path, ':/', ':\\');
+  if (drive !== -1) return drive + 2;
+  if (path.startsWith('//') || path.startsWith('\\\\')) return networkShareRootEnd(path);
+  return path.startsWith('/') ? 1 : 0;
+}
+
+/** The end of a `//server/share/` root, or 0 when the share has no closing separator (`:4988-5002`). */
+function networkShareRootEnd(path: string): number {
+  const server = indexOfEither(path, '/', '\\', 2);
+  const share = indexOfEither(path, '/', '\\', server + 1);
+  return share === -1 ? 0 : share + 1;
+}
+
+/** The first `first` from `from`, else the first `second`, as `get_base_dir` searches. */
+function indexOfEither(path: string, first: string, second: string, from = 0): number {
+  const found = path.indexOf(first, from);
+  return found === -1 ? path.indexOf(second, from) : found;
+}
+
+/** `String::path_join` (`ustring.cpp:5046-5054`): one `/` between the two, unless one side has it. */
+export function pathJoin(base: string, file: string): string {
+  if (base === '') return file;
+  return base.endsWith('/') || file.startsWith('/') ? base + file : `${base}/${file}`;
 }

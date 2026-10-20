@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { acceptedResourceTypes, enumEntries, flagLabels, isEnumHint, rangeHint, rangeSuffix } from './hints';
+import { acceptedResourceTypes, enumEntriesOf, flagLabels, rangeHint, rangeSuffix } from './hints';
+
+/** `Variant::INT` (`variant.h:96-145`) and `PROPERTY_HINT_ENUM` (`object.h:50-96`). */
+const INT = 2;
+const ENUM = 2;
+
+/** The labels an integer property with an enum hint over `hintString` offers. */
+const enumEntries = (hintString: string) => enumEntriesOf({ type: INT, hint: ENUM, hintString });
 
 describe('hints', () => {
   it('numbers an enum label by its index when the label carries no value', () => {
@@ -23,9 +30,15 @@ describe('hints', () => {
   });
 
   it('separates an enum and a suggestion hint from every other hint', () => {
-    expect(isEnumHint(2)).toBe(true);
-    expect(isEnumHint(3)).toBe(true);
-    expect(isEnumHint(6)).toBe(false);
+    const offered = (hint: number) => enumEntriesOf({ type: INT, hint, hintString: 'A,B' }).length > 0;
+    expect(offered(2)).toBe(true);
+    expect(offered(3)).toBe(true);
+    expect(offered(6)).toBe(false);
+  });
+
+  it('offers no labels for an enum hint on a property that is not an integer (edge case)', () => {
+    // `Variant::STRING` is 4.
+    expect(enumEntriesOf({ type: 4, hint: ENUM, hintString: 'A,B' })).toEqual([]);
   });
 
   it('names the resource classes a slot accepts, dropping an excluded subclass', () => {

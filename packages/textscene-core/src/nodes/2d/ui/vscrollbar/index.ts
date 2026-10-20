@@ -10,6 +10,5 @@ const vScrollBarRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(vScrollBarRegistration);
 
-export { vScrollBarRegistration };
 export * from './parser';
 export * from './types';

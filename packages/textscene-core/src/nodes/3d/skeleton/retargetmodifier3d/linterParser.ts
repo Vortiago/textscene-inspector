@@ -8,16 +8,7 @@
 import '../skeletonmodifier3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { hintedBitField, v } from '../../../../linter/validators/index.js';
-
-/**
- * RetargetModifier3D::TransformFlag (retarget_modifier_3d.h:41-43). TRANSFORM_FLAG_ALL (:44) is
- * absent on purpose: it is the OR of the three, not a fourth bit.
- */
-const TRANSFORM_FLAGS: Record<number, string> = {
-  1: 'TRANSFORM_FLAG_POSITION',
-  2: 'TRANSFORM_FLAG_ROTATION',
-  4: 'TRANSFORM_FLAG_SCALE',
-};
+import { RETARGET_TRANSFORM_FLAG_NAMES } from '../../../../godot/scene/skeletonModifier.js';
 
 validatorRegistry.registerAll('RetargetModifier3D', {
   // retarget_modifier_3d.cpp:273: Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE "SkeletonProfile".
@@ -32,6 +23,6 @@ validatorRegistry.registerAll('RetargetModifier3D', {
   // unreachable from the inspector: the hint tier, not the setter tier (contrast `maskedBitField`).
   enable: hintedBitField('enable', {
     hinted: 'retarget_modifier_3d.cpp:275',
-    labels: TRANSFORM_FLAGS,
+    labels: RETARGET_TRANSFORM_FLAG_NAMES,
   }),
 });

@@ -6,7 +6,8 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { DETAIL_UV_NAMES, DetailUV } from '../../../godot/rendering/materials/detailUv.js';
+import { BLEND_MODE_NAMES, BlendMode } from '../../../godot/rendering/materials/blendMode.js';
+import { DETAIL_UV_NAMES } from '../../../godot/rendering/materials/detailUv.js';
 import { textureChannelValidator } from './pbr.js';
 
 export const featureKeys: Record<string, PropertyValidator> = {
@@ -102,14 +103,10 @@ export const featureKeys: Record<string, PropertyValidator> = {
 
   detail_enabled: v.boolean('detail_enabled'),
   detail_mask: v.resourceReference('detail_mask'),
-  detail_blend_mode: v.enumInt(
-    'detail_blend_mode',
-    0,
-    3,
-    { 0: 'MIX', 1: 'ADD', 2: 'SUB', 3: 'MUL' },
-    { hinted: 'material.cpp:3712' }
-  ),
-  detail_uv_layer: v.enumInt('detail_uv_layer', DetailUV.DETAIL_UV_1, DetailUV.DETAIL_UV_2, DETAIL_UV_NAMES, {
+  detail_blend_mode: v.enumInt('detail_blend_mode', BlendMode.MIX, BlendMode.MUL, BLEND_MODE_NAMES, {
+    hinted: 'material.cpp:3712',
+  }),
+  detail_uv_layer: v.enumInt('detail_uv_layer', DETAIL_UV_NAMES, {
     hinted: 'material.cpp:3713',
   }),
   detail_albedo: v.resourceReference('detail_albedo'),

@@ -11,7 +11,7 @@ import { compositeSpellings } from './variantConversion.js';
  * Anchored and finite by choice: it refuses `inf` and `nan`, so a decoder falls back to its
  * default. `number.md` gives each clause with its source line, measured load and ReDoS reason.
  */
-export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
+const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`;
 
 /**
  * A whole value that `get_token` reads as an INT: digits after an optional `-`, with no `.` or
@@ -19,14 +19,6 @@ export const FLOAT_PATTERN_SOURCE = String.raw`-?\d+(?:\.\d*)?(?:[eE][-+]?\d*)?`
  * slot type that converts from INT and not FLOAT, such as COLOR, needs the difference.
  */
 export const INT_TOKEN_RE = /^-?\d+$/;
-
-/**
- * The anchored form, for a whole string that must be one finite number. Here, because
- * `godotLiteralGrammar.guard` refuses a scalar grammar outside this directory. The header's
- * `format=` reads it, a Variant number into an `int` (`resource_format_text.cpp:1140`).
- * `1e999` still overflows, so a caller that must not see an infinity tests the result.
- */
-export const FLOAT_RE = new RegExp(`^${FLOAT_PATTERN_SOURCE}$`);
 
 /**
  * The anchored regex for a fixed-arity composite in the finite grammar, one capture per

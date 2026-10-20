@@ -8,35 +8,10 @@
 import '../window/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
-import { ITEM_CHECKABLE_TYPE } from '../../../linter/validators/sharedEnumLabels.js';
+import { ITEM_CHECKABLE_TYPE_NAMES, OFFERED_SYSTEM_MENU_NAMES } from '../../../godot/scene/popupMenu.js';
 
 import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-
-// NativeMenu::SystemMenus, contiguous 0-5 (native_menu.h:59-66), bound
-// (native_menu.cpp:125-130) and documented (doc/classes/NativeMenu.xml:757-774).
-// PopupMenu.xml:673 types the member as the whole enum, so 1 is in range, although
-// popup_menu.cpp:3262's hint omits MAIN_MENU_ID from the dropdown.
-const SYSTEM_MENU = {
-  0: 'INVALID_MENU_ID',
-  1: 'MAIN_MENU_ID',
-  2: 'APPLICATION_MENU_ID',
-  3: 'WINDOW_MENU_ID',
-  4: 'HELP_MENU_ID',
-  5: 'DOCK_MENU_ID',
-};
-
-/**
- * The ids `popup_menu.cpp:3262` offers: every SYSTEM_MENU id but MAIN_MENU_ID, which
- * the hint's `:value` suffixes skip. Derived so the constant names have one home.
- */
-const OFFERED_SYSTEM_MENUS = {
-  0: SYSTEM_MENU[0],
-  2: SYSTEM_MENU[2],
-  3: SYSTEM_MENU[3],
-  4: SYSTEM_MENU[4],
-  5: SYSTEM_MENU[5],
-};
 
 /**
  * The 7 `item_<idx>/<leaf>` leaves (popup_menu.cpp:3321-3327). `_call_setter` forwards
@@ -55,7 +30,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // popup_menu.cpp:3323, INT, PROPERTY_HINT_ENUM 0-2 (popup_menu.h:65-67).
   // `_set_item_checkable_type` (popup_menu.cpp:62-73) has no default case, so a value
   // outside 0-2 leaves the item unchanged: a dropped write (ADR-0032), so enforced.
-  checkable: v.enumInt('checkable', 0, 2, ITEM_CHECKABLE_TYPE, { enforced: 'popup_menu.cpp:62' }),
+  checkable: v.enumInt('checkable', ITEM_CHECKABLE_TYPE_NAMES, { enforced: 'popup_menu.cpp:62' }),
   // popup_menu.cpp:3324, Variant::BOOL, no hint.
   checked: v.boolean('checked'),
   // popup_menu.cpp:3325, Variant::INT, PROPERTY_HINT_RANGE "0,10,1,or_greater":
@@ -109,19 +84,15 @@ validatorRegistry.registerAll('PopupMenu', {
   // only, no range). set_submenu_popup_delay (popup_menu.cpp:3040-3045)
   // clamps any value <= 0 up to 0.01, a genuine alteration, so the floor is
   // enforced despite the absent hint.
-  submenu_popup_delay: v.positiveFloat('submenu_popup_delay', undefined, {
-    enforced: 'popup_menu.cpp:3041',
-  }),
+  submenu_popup_delay: v.positiveFloat('submenu_popup_delay', undefined, { enforced: 'popup_menu.cpp:3041' }),
   // popup_menu.cpp:3261, Variant::BOOL, no hint. set_allow_search
   // (popup_menu.cpp:3052-3054) is a bare assignment.
   allow_search: v.boolean('allow_search'),
-  // popup_menu.cpp:3262, hinted (see SYSTEM_MENU above). set_system_menu
+  // popup_menu.cpp:3262, hinted (see OFFERED_SYSTEM_MENU_NAMES). set_system_menu
   // (popup_menu.cpp:185-193) assigns unconditionally, so this is hinted, not
   // enforced. The hint's `:value` suffixes leave a gap at MAIN_MENU_ID, which a
   // range cannot state even though the engine enum behind it is contiguous.
-  system_menu_id: v.enumSet('system_menu_id', OFFERED_SYSTEM_MENUS, {
-    hinted: 'popup_menu.cpp:3262',
-  }),
+  system_menu_id: v.enumSet('system_menu_id', OFFERED_SYSTEM_MENU_NAMES, { hinted: 'popup_menu.cpp:3262' }),
   // popup_menu.cpp:3263, Variant::BOOL, no hint. set_prefer_native_menu
   // (popup_menu.cpp:2755-2763) is a bare assignment guarded only by an
   // equality early-out.

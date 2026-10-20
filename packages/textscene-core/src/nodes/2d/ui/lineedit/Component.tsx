@@ -14,17 +14,12 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  shapeText,
-  AutowrapMode,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useUndecodedTexture } from '../../../../r3f/undecodedTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import type { ControlColor } from '../control/types';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON, LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import {
@@ -41,12 +36,13 @@ import {
   EXPAND_MODE_ORIGINAL_SIZE,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
+import { HORIZONTAL_ALIGNMENT_LEFT, type Rgba } from '../../../../godot/math/math';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
-const HORIZONTAL_ALIGNMENT_LEFT = 0;
 const DEFAULT_CARET_WIDTH_PX = 1;
 
 /** `Color(1, 1, 1, !is_editable() ? .5*.9 : .9)`: `right_icon`'s draw-time tint (`line_edit.cpp:1443`), never the clear button's. */
-function rightIconLocalColor(editable: boolean): ControlColor {
+function rightIconLocalColor(editable: boolean): Rgba {
   return { r: 1, g: 1, b: 1, a: editable ? 0.9 : 0.5 * 0.9 };
 }
 
@@ -79,7 +75,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         ? shapeText(text, {
             fontSizePx,
             boxWidthPx: 0,
-            autowrapMode: AutowrapMode.OFF,
+            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
             lineSpacingPx: 0,
             fontMetrics,
             preserveControl: props.drawControlChars,
@@ -156,7 +152,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const activeIconTexture =
     activeIcon === 'clear' ? clearIconTexture : activeIcon === 'right' ? rightIconTexture : null;
 
-  const iconLocalColor: ControlColor =
+  const iconLocalColor: Rgba =
     activeIcon === 'clear'
       ? (solveNode.colors['clear_button_color'] ?? LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR)
       : rightIconLocalColor(editable);

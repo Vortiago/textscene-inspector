@@ -9,6 +9,7 @@ import {
   SOFT_LOW_SHADOW_SAMPLES,
   vogelDisk,
 } from '../../godot/rendering/lights/softShadowKernel.js';
+import { GODOT_QUICK_HASH_GLSL } from '../../godot/rendering/quickHash.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import {
   applyChunkEdits,
@@ -40,14 +41,15 @@ function glslKernel(count: number): string {
  * (`atlasDepthMaterials.ts`). `godotRawDepth` filters four texels of it, as Godot's linear sampler
  * filters the depth (`:398`, `:498-551`).
  */
-export const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 1 ];
+const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 1 ];
+${GODOT_QUICK_HASH_GLSL}
 	const int GODOT_SOFT_SHADOW_SAMPLES = ${SOFT_LOW_SHADOW_SAMPLES};
 	const vec2 GODOT_SOFT_SHADOW_KERNEL[ ${SOFT_LOW_SHADOW_SAMPLES} ] = vec2[]( ${glslKernel(SOFT_LOW_SHADOW_SAMPLES)} );
 	const int GODOT_PENUMBRA_SHADOW_SAMPLES = ${SOFT_LOW_PENUMBRA_SAMPLES};
 	const vec2 GODOT_PENUMBRA_SHADOW_KERNEL[ ${SOFT_LOW_PENUMBRA_SAMPLES} ] = vec2[]( ${glslKernel(SOFT_LOW_PENUMBRA_SAMPLES)} );
 	mat2 godotDiskRotation() {
 		vec2 fragCoord = vec2( gl_FragCoord.x, ${FRAMEBUFFER_HEIGHT_UNIFORM}[ 0 ] - gl_FragCoord.y );
-		float r = fract( 52.9829189 * fract( dot( fragCoord, vec2( 0.06711056, 0.00583715 ) ) ) ) * PI2;
+		float r = godotQuickHash( fragCoord ) * PI2;
 		float sr = sin( r );
 		float cr = cos( r );
 		return mat2( vec2( cr, - sr ), vec2( sr, cr ) );
@@ -65,10 +67,12 @@ export const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[
 		vec2 bytes = floor( texelFetch( atlasColour, clamp( texel, ivec2( 0 ), last ), 0 ).rg * 255.0 + 0.5 );
 		return dot( bytes, vec2( 256.0, 1.0 ) ) / 65535.0;
 	}
+	// The uv clamps before it turns into a texel, as the fog's atlasDepth does: past the int range the
+	// conversion is undefined.
 	float godotRawDepth( sampler2D atlasColour, vec2 uv ) {
 		ivec2 size = textureSize( atlasColour, 0 );
 		ivec2 last = size - 1;
-		vec2 position = uv * vec2( size ) - 0.5;
+		vec2 position = clamp( uv, 0.0, 1.0 ) * vec2( size ) - 0.5;
 		ivec2 corner = ivec2( floor( position ) );
 		vec2 weight = fract( position );
 		float bottom = mix( godotRawDepthAt( atlasColour, corner, last ), godotRawDepthAt( atlasColour, corner + ivec2( 1, 0 ), last ), weight.x );
@@ -79,8 +83,8 @@ export const SOFT_SHADOW_FILTER = `	uniform float ${FRAMEBUFFER_HEIGHT_UNIFORM}[
 
 /**
  * The block goes inside `#ifdef USE_SHADOWMAP`, ahead of every shadow block, so every lookup that
- * calls it follows it. The anchor omits the slot count, which `splitShadowChunk.ts` rewrites, and
- * follows the line `shadowFade.ts` inserts after, so every install order gives the same chunk.
+ * calls it follows it. The anchor omits the slot count, which `splitShadowChunk.ts` rewrites, so
+ * every install order gives the same chunk.
  */
 const SUN_BLOCK_START = '\t#if NUM_SUN_LIGHT_SHADOWS > 0\n\t\t#define SUN_LIGHT_CASCADES';
 
@@ -91,7 +95,7 @@ const FILTER_EDIT: ChunkEdit<typeof CHUNK> = {
 };
 
 /** The shadow chunk with the filter in, or null when it lacks the sun block the filter precedes. */
-export function softShadowFilterChunk(chunk: string): string | null {
+function softShadowFilterChunk(chunk: string): string | null {
   return applyChunkEdits({ [CHUNK]: chunk }, [FILTER_EDIT])?.[CHUNK] ?? null;
 }
 

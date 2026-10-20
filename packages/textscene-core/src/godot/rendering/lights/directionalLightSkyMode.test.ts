@@ -1,14 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT,
   DirectionalLightSkyMode,
   directionalLightDrawsInSky,
   directionalLightLightsSurfaces,
 } from './directionalLightSkyMode.js';
 
 describe('directionalLightLightsSurfaces', () => {
-  it('lights surfaces for a light of the default sky mode', () => {
-    expect(directionalLightLightsSurfaces(DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT)).toBe(true);
+  it('lights surfaces for a light that lights both', () => {
+    expect(directionalLightLightsSurfaces(DirectionalLightSkyMode.LIGHT_AND_SKY)).toBe(true);
     expect(directionalLightLightsSurfaces(DirectionalLightSkyMode.LIGHT_ONLY)).toBe(true);
   });
 
@@ -22,8 +21,8 @@ describe('directionalLightLightsSurfaces', () => {
 });
 
 describe('directionalLightDrawsInSky', () => {
-  it('draws in the sky for a light of the default sky mode', () => {
-    expect(directionalLightDrawsInSky(DIRECTIONAL_LIGHT_SKY_MODE_DEFAULT)).toBe(true);
+  it('draws in the sky for a light that lights both', () => {
+    expect(directionalLightDrawsInSky(DirectionalLightSkyMode.LIGHT_AND_SKY)).toBe(true);
     expect(directionalLightDrawsInSky(DirectionalLightSkyMode.SKY_ONLY)).toBe(true);
   });
 

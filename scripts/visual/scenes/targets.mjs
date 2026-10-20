@@ -1,6 +1,7 @@
 /**
  * Batched tile geometry, the RemoteTransform relays that drive another node,
- * and the one golden that samples content through a SubViewport target.
+ * the goldens that sample content through a SubViewport target, the own-world
+ * SubViewports that must leave the root image alone, and MSAA.
  */
 
 export const TILE_AND_TARGET_SCENES = [
@@ -50,15 +51,36 @@ export const TILE_AND_TARGET_SCENES = [
   // upper right.
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
 
-  // ViewportTexture: one of three goldens that sample through a render target. The
-  // offscreen pass tonemaps like Godot's: the shared environment applies inside
-  // the target and again on the consuming quad (curve squared). The target's linear storage survives the
-  // consumer's sRGB tag. Within 1% linear per sample of Godot 4.6.3.
+  // ViewportTexture on a 3D material. The offscreen pass tonemaps like Godot's: the shared
+  // environment applies inside the target and again on the consuming quad (curve squared). The
+  // target's SRGB8 storage decodes before the filter, whatever tag the consumer stamps. Within 1%
+  // linear per sample of Godot 4.6.3.
   { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
+  // Control content with a translucent fill on the albedo, through the Control target's decoding
+  // view. Godot 4.6.3: the Panel at (480,320) rgb(84,84,84), the backdrop at (370,240) rgb(162).
+  { name: 'sub-viewport-control-texture', file: 'unit-sub-viewport-control-texture.tscn' },
   // The same target in the emission slot over a black albedo: every material slot binds a
   // ViewportTexture. A slot that drops it leaves a black quad.
   { name: 'sub-viewport-texture-emission', file: 'unit-sub-viewport-texture-emission.tscn' },
+  // `tonemap_exposure` under LINEAR inside the target while glow holds the renderer for the
+  // compositor: the exposure applies inside the target and again on the quad.
+  { name: 'sub-viewport-shared-world-exposure', file: 'unit-sub-viewport-shared-world-exposure.tscn' },
   // A ViewportTexture on a `.glb` surface override: its `viewport_path` resolves from the GLB
   // instance, and the target samples in the glTF's top-down V, so each face shows its own band.
   { name: 'glb-viewport-texture', file: 'unit-glb-viewport-texture.tscn' },
+  // An own-world SubViewport's Environment stays in its world: its glow mounts no compositor
+  // over the canvas, and its tone curve leaves the root's LINEAR box untouched.
+  { name: 'sub-viewport-own-world-glow', file: 'unit-sub-viewport-own-world-glow.tscn' },
+  { name: 'sub-viewport-own-world-tonemap', file: 'unit-sub-viewport-own-world-tonemap.tscn' },
+  // MSAA, each from the setting that turns it on: the root viewport's msaa_3d and msaa_2d, from a
+  // Fixture project's project.godot, and a SubViewport's own msaa_3d and msaa_2d. The headers state
+  // why no other golden shows them.
+  { name: 'msaa-3d', file: 'msaa-3d/unit-msaa-3d.tscn' },
+  { name: 'msaa-2d', file: 'msaa-2d/unit-msaa-2d.tscn', mode: '2d' },
+  { name: 'sub-viewport-msaa', file: 'unit-sub-viewport-msaa.tscn', mode: '2d' },
+  // Alpha antialiasing's three modes on a scissor cut: under msaa_3d 2X, from its own Fixture project,
+  // and at one sample, where the coverage is all or none.
+  { name: 'alpha-antialiasing', file: 'alpha-antialiasing/unit-alpha-antialiasing.tscn' },
+  { name: 'alpha-antialiasing-one-sample', file: 'unit-alpha-antialiasing-one-sample.tscn' },
+  { name: 'sub-viewport-control-msaa', file: 'unit-sub-viewport-control-msaa.tscn', mode: '2d' },
 ];

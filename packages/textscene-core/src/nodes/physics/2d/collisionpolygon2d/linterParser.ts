@@ -5,6 +5,7 @@
  */
 
 import '../../../base/node2d/linterParser.js';
+import { COLLISION_POLYGON_2D_BUILD_MODE_NAMES } from '../../../../godot/scene/collisionPolygon2d.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 
@@ -12,13 +13,9 @@ validatorRegistry.registerAll('CollisionPolygon2D', {
   // collision_polygon_2d.cpp:308, PROPERTY_HINT_ENUM "Solids,Segments".
   // set_build_mode (:203-212) opens with `ERR_FAIL_INDEX((int)p_mode, 2)`
   // (:204), which refuses the assignment outright: enforced both ends.
-  build_mode: v.enumInt(
-    'build_mode',
-    0,
-    1,
-    { 0: 'BUILD_SOLIDS', 1: 'BUILD_SEGMENTS' },
-    { enforced: 'collision_polygon_2d.cpp:204' }
-  ),
+  build_mode: v.enumInt('build_mode', COLLISION_POLYGON_2D_BUILD_MODE_NAMES, {
+    enforced: 'collision_polygon_2d.cpp:204',
+  }),
   // collision_polygon_2d.cpp:309: PropertyInfo(Variant::PACKED_VECTOR2_ARRAY, "polygon").
   // get_polygon (:199-201) returns the Vector<Point2> field, not a TypedArray, so it
   // serialises as PackedVector2Array(...). set_polygon (:172-197) assigns unconditionally,

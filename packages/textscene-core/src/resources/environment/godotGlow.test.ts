@@ -1,30 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { GLOW_LEVEL_COUNT, decodeEnvironment } from './decode';
-import { createEnvironmentSettings } from './build';
+import { environmentSettingsOf } from './testing/environmentSettings';
 import {
   blendGlsl,
   blendsAfterToneMapping,
   brightPassGlsl,
   glowLevelSize,
-  GlowBlendMode,
   glowParamsFor,
   samplesGlowMap,
 } from './godotGlow';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
+import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
 
-function settings(properties: Record<string, string>) {
-  return createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
-}
+/** `RS::MAX_GLOW_LEVELS` (`rendering_server.h:107`). */
+const GLOW_LEVEL_COUNT = 7;
 
 function glowOn(extra: Record<string, string> = {}) {
-  const params = glowParamsFor(settings({ glow_enabled: 'true', ...extra }));
+  const params = glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...extra }));
   if (!params) throw new Error('expected glow to be enabled');
   return params;
 }
 
 describe('glowParamsFor', () => {
   it('is null when the environment has no glow', () => {
-    expect(glowParamsFor(settings({}))).toBeNull();
+    expect(glowParamsFor(environmentSettingsOf({}))).toBeNull();
   });
 
   it('carries Godot 4.6 Environment defaults', () => {
@@ -54,7 +51,7 @@ describe('glowParamsFor', () => {
     // so a non-null result always carries a real `maxLevel`.
     const off: Record<string, string> = { glow_bloom: '1', glow_intensity: '4' };
     for (let level = 1; level <= GLOW_LEVEL_COUNT; level++) off[`glow_levels/${level}`] = '0';
-    expect(glowParamsFor(settings({ glow_enabled: 'true', ...off }))).toBeNull();
+    expect(glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...off }))).toBeNull();
   });
 
   it('sum-normalises the level weights under glow_normalized', () => {

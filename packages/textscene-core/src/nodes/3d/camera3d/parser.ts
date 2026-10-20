@@ -7,8 +7,8 @@ import type { Camera3DProperties } from './types';
 import { ProjectionMode, KeepAspectMode } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import { ruleInt } from '../../../godot/variant/int.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { slotInt } from '../../../godot/variant/int.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/scene/visualLayers.js';
 
 export function parseCamera3D(
@@ -35,7 +35,7 @@ export function parseCamera3D(
 }
 
 function parseProjectionMode(value: string | undefined): ProjectionMode {
-  const num = ruleInt(value);
+  const num = slotInt(value);
   if (num === null) return ProjectionMode.PROJECTION_PERSPECTIVE;
   if (num === 1) return ProjectionMode.PROJECTION_ORTHOGONAL;
   if (num === 2) return ProjectionMode.PROJECTION_FRUSTUM;
@@ -48,5 +48,5 @@ function parseProjectionMode(value: string | undefined): ProjectionMode {
  * KEEP_HEIGHT. There is no third mode: `camera_3d.h:50-53` declares two.
  */
 function parseKeepAspectMode(value: string | undefined): KeepAspectMode {
-  return ruleInt(value) === 0 ? KeepAspectMode.KEEP_WIDTH : KeepAspectMode.KEEP_HEIGHT;
+  return slotInt(value) === 0 ? KeepAspectMode.KEEP_WIDTH : KeepAspectMode.KEEP_HEIGHT;
 }

@@ -10,16 +10,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { TextureRectProperties } from './types';
-
-const EXPAND_KEEP_SIZE = 0;
-const EXPAND_IGNORE_SIZE = 1;
-const EXPAND_FIT_WIDTH = 2;
-const EXPAND_FIT_WIDTH_PROPORTIONAL = 3;
-const EXPAND_FIT_HEIGHT = 4;
-const EXPAND_FIT_HEIGHT_PROPORTIONAL = 5;
+import type { Vector2 } from '../../../../godot/math/vector';
+import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
+import { TextureRectExpandMode } from '../../../../godot/scene/gui';
 
 /**
  * `TextureRect::get_minimum_size()` (`texture_rect.cpp:107-133`): `Size2()` (`:132`) until a texture
@@ -39,43 +35,35 @@ export const textureRectMinimumSize: MinimumSizeFn = (n, ctx) => {
   const currentHeight = tentative?.h ?? textureSize.y;
   const currentWidth = tentative?.w ?? textureSize.x;
 
-  switch (props.expandMode ?? EXPAND_KEEP_SIZE) {
-    case EXPAND_KEEP_SIZE:
+  switch (props.expandMode ?? TextureRectExpandMode.EXPAND_KEEP_SIZE) {
+    case TextureRectExpandMode.EXPAND_KEEP_SIZE:
       return { x: textureSize.x, y: textureSize.y };
-    case EXPAND_FIT_WIDTH:
+    case TextureRectExpandMode.EXPAND_FIT_WIDTH:
       return { x: currentHeight, y: 0 };
-    case EXPAND_FIT_WIDTH_PROPORTIONAL: {
+    case TextureRectExpandMode.EXPAND_FIT_WIDTH_PROPORTIONAL: {
       const ratio = textureSize.x / textureSize.y;
       return { x: currentHeight * ratio, y: 0 };
     }
-    case EXPAND_FIT_HEIGHT:
+    case TextureRectExpandMode.EXPAND_FIT_HEIGHT:
       return { x: 0, y: currentWidth };
-    case EXPAND_FIT_HEIGHT_PROPORTIONAL: {
+    case TextureRectExpandMode.EXPAND_FIT_HEIGHT_PROPORTIONAL: {
       const ratio = textureSize.y / textureSize.x;
       return { x: 0, y: currentWidth * ratio };
     }
-    case EXPAND_IGNORE_SIZE:
+    case TextureRectExpandMode.EXPAND_IGNORE_SIZE:
     default:
       return { x: 0, y: 0 };
   }
 };
 
-const STRETCH_SCALE = 0;
-const STRETCH_TILE = 1;
-const STRETCH_KEEP = 2;
-const STRETCH_KEEP_CENTERED = 3;
-const STRETCH_KEEP_ASPECT = 4;
-const STRETCH_KEEP_ASPECT_CENTERED = 5;
-const STRETCH_KEEP_ASPECT_COVERED = 6;
-
 export interface TextureRectDraw {
   /** Where the drawn image's top-left sits, Godot pixels, relative to the control's own top-left. */
-  offset: Vec2;
+  offset: Vector2;
   /** The drawn image's size, Godot pixels. It may differ from the control's rect. */
-  size: Vec2;
+  size: Vector2;
   /** A texture-pixel-space UV crop (KEEP_ASPECT_COVERED only). Every other mode samples the whole texture. */
   region?: Rect2;
-  /** STRETCH_TILE: the sampler repeats `size` (the natural texture size) across the full control rect. */
+  /** `STRETCH_TILE`: the sampler repeats `size` (the natural texture size) across the full control rect. */
   tile: boolean;
 }
 
@@ -85,8 +73,8 @@ export interface TextureRectDraw {
  * `rectSize` is `get_size()`, known here because painting follows the rect pass.
  */
 export function textureRectDraw(
-  rectSize: Vec2,
-  textureSize: Vec2,
+  rectSize: Vector2,
+  textureSize: Vector2,
   stretchMode: number | undefined
 ): TextureRectDraw {
   const fullRect: TextureRectDraw = {
@@ -100,14 +88,14 @@ export function textureRectDraw(
   // (`:36-38`) implies positive dimensions, so this guard only stops NaN geometry.
   if (textureSize.x <= 0 || textureSize.y <= 0) return fullRect;
 
-  switch (stretchMode ?? STRETCH_SCALE) {
-    case STRETCH_SCALE:
+  switch (stretchMode ?? TextureStretchMode.STRETCH_SCALE) {
+    case TextureStretchMode.STRETCH_SCALE:
       return fullRect;
 
-    case STRETCH_TILE:
+    case TextureStretchMode.STRETCH_TILE:
       return { ...fullRect, tile: true };
 
-    case STRETCH_KEEP:
+    case TextureStretchMode.STRETCH_KEEP:
       return {
         offset: { x: 0, y: 0 },
         size: { x: textureSize.x, y: textureSize.y },
@@ -115,7 +103,7 @@ export function textureRectDraw(
         tile: false,
       };
 
-    case STRETCH_KEEP_CENTERED:
+    case TextureStretchMode.STRETCH_KEEP_CENTERED:
       return {
         offset: { x: (rectSize.x - textureSize.x) / 2, y: (rectSize.y - textureSize.y) / 2 },
         size: { x: textureSize.x, y: textureSize.y },
@@ -123,8 +111,8 @@ export function textureRectDraw(
         tile: false,
       };
 
-    case STRETCH_KEEP_ASPECT:
-    case STRETCH_KEEP_ASPECT_CENTERED: {
+    case TextureStretchMode.STRETCH_KEEP_ASPECT:
+    case TextureStretchMode.STRETCH_KEEP_ASPECT_CENTERED: {
       // `int tex_width` / `int tex_height` (`texture_rect.cpp:63-69`): both
       // sides of the aspect fit truncate, and so does the `size.height` /
       // `size.width` each falls back to. The offsets below stay fractional:
@@ -137,7 +125,7 @@ export function textureRectDraw(
       }
       let offsetX = 0;
       let offsetY = 0;
-      if (stretchMode === STRETCH_KEEP_ASPECT_CENTERED) {
+      if (stretchMode === TextureStretchMode.STRETCH_KEEP_ASPECT_CENTERED) {
         offsetX = (rectSize.x - texWidth) / 2;
         offsetY = (rectSize.y - texHeight) / 2;
       }
@@ -149,7 +137,7 @@ export function textureRectDraw(
       };
     }
 
-    case STRETCH_KEEP_ASPECT_COVERED: {
+    case TextureStretchMode.STRETCH_KEEP_ASPECT_COVERED: {
       const scaleX = rectSize.x / textureSize.x;
       const scaleY = rectSize.y / textureSize.y;
       const scale = Math.max(scaleX, scaleY);
@@ -169,55 +157,6 @@ export function textureRectDraw(
   }
 }
 
-const TEXTURE_FILTER_NEAREST = 1;
-const TEXTURE_FILTER_LINEAR = 2;
-const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS = 3;
-const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS = 4;
-const TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5;
-const TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC = 6;
-
-export type TextureRectFilter = 'nearest' | 'linear';
-
-/**
- * `CanvasItem::TextureFilter` (`scene/main/canvas_item.h:52-60`), already resolved up the ancestors,
- * to a three.js filter. `undefined` maps to LINEAR, the `Viewport::default_canvas_item_texture_filter`
- * default (`scene/main/viewport.h:419`). Mipmapped and anisotropic variants collapse to the base filter.
- */
-export function resolveTextureRectFilter(filter: number | undefined): TextureRectFilter {
-  switch (filter) {
-    case TEXTURE_FILTER_NEAREST:
-    case TEXTURE_FILTER_NEAREST_WITH_MIPMAPS:
-    case TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC:
-      return 'nearest';
-    case TEXTURE_FILTER_LINEAR:
-    case TEXTURE_FILTER_LINEAR_WITH_MIPMAPS:
-    case TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC:
-    default:
-      return 'linear';
-  }
-}
-
-const TEXTURE_REPEAT_ENABLED = 2;
-const TEXTURE_REPEAT_MIRROR = 3;
-
-export type TextureRectRepeat = 'clamp' | 'repeat' | 'mirror';
-
-/**
- * `CanvasItem::TextureRepeat` (`scene/main/canvas_item.h:63-69`), already resolved up the ancestors,
- * to a three.js wrap mode. `undefined` maps to `'clamp'`: `DISABLED`, the
- * `Viewport::default_canvas_item_texture_repeat` default (`scene/main/viewport.h:420`).
- */
-export function resolveTextureRectRepeat(repeat: number | undefined): TextureRectRepeat {
-  switch (repeat) {
-    case TEXTURE_REPEAT_ENABLED:
-      return 'repeat';
-    case TEXTURE_REPEAT_MIRROR:
-      return 'mirror';
-    default:
-      return 'clamp';
-  }
-}
-
 /**
  * `size *= flip ? -1 : 1` (`texture_rect.cpp:92-93`) mirrors the destination quad, crop and all.
  * three.js has no negative-size quad, so this reverses the UV sweep over the same window (`offset +
@@ -225,11 +164,11 @@ export function resolveTextureRectRepeat(repeat: number | undefined): TextureRec
  * `RepeatWrapping`, GLSL's floor-mod `fract()` lands on Godot's `(rectSize - x) mod textureSize`.
  */
 export function applyFlip(
-  repeat: Vec2,
-  offset: Vec2,
+  repeat: Vector2,
+  offset: Vector2,
   flipH: boolean,
   flipV: boolean
-): { repeat: Vec2; offset: Vec2 } {
+): { repeat: Vector2; offset: Vector2 } {
   return {
     repeat: { x: flipH ? -repeat.x : repeat.x, y: flipV ? -repeat.y : repeat.y },
     offset: { x: flipH ? offset.x + repeat.x : offset.x, y: flipV ? offset.y + repeat.y : offset.y },

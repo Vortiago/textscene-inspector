@@ -18,24 +18,25 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  AutowrapMode,
-  isTextLayoutResult,
-  shapeText,
-  shapedTextSizeWidthPx,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import {
   resolveNodeFontMetrics,
   resolveNodeFontSizePx,
 } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
-import { DEFAULT_FONT_SIZE } from '../../../../r3f/controls/godotDefaultTheme';
-import type { ControlColor } from '../control/types';
+import { DEFAULT_FONT_SIZE } from '../../../../godot/scene/theme';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
+import {
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_HOVER_COLOR,
+  CONTROL_FONT_LOW_COLOR,
+} from '../../../../godot/scene/theme';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export type TabDrawState = 'selected' | 'unselected' | 'disabled';
 
@@ -54,17 +55,17 @@ export function resolveTabDrawState(
 }
 
 /** `Color(1, 1, 1, 0.75)`: `style_focus_color` (`default_theme.cpp:117`), `style_tab_selected`'s top border (`:975-976`). */
-const TAB_SELECTED_BORDER_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 0.75 };
+const TAB_SELECTED_BORDER_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.75 };
 /** `Color(0.175, 0.175, 0.175, 1)`: `style_popup_border_color` (`default_theme.cpp:119`), `style_tab_unselected`'s left and right border (`:981`), inherited by `tab_disabled`/`tab_hovered`. */
-const TAB_UNSELECTED_BORDER_COLOR: ControlColor = { r: 0.175, g: 0.175, b: 0.175, a: 1 };
+const TAB_UNSELECTED_BORDER_COLOR: Rgba = { r: 0.175, g: 0.175, b: 0.175, a: 1 };
 /** `style_pressed_color` (`default_theme.cpp:115`): `style_tab_unselected`'s fill (`:977`). */
-const TAB_UNSELECTED_FILL: ControlColor = { r: 0, g: 0, b: 0, a: 0.6 };
+const TAB_UNSELECTED_FILL: Rgba = { r: 0, g: 0, b: 0, a: 0.6 };
 /** `style_disabled_color` (`default_theme.cpp:116`): `style_tab_disabled`'s fill, set on the `duplicate()` (`:983`). */
-const TAB_DISABLED_FILL: ControlColor = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
+const TAB_DISABLED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
 /** `style_normal_color` (`default_theme.cpp:112`): `style_tab_selected`'s fill (`:974`). */
-const TAB_SELECTED_FILL: ControlColor = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };
+const TAB_SELECTED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };
 /** A `Color(0.1, 0.1, 0.1, 0.3)` literal: `style_tab_hovered`'s fill (`default_theme.cpp:985`), apart from `TAB_DISABLED_FILL` although the numbers match. */
-const TAB_HOVERED_FILL: ControlColor = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
+const TAB_HOVERED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
@@ -82,7 +83,7 @@ export function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): num
  * `nativeTheme.ts`'s private `flatStyleBox`, which is not exported.
  */
 function flatBox(
-  bgColor: ControlColor,
+  bgColor: Rgba,
   marginLeft: number,
   marginTop: number,
   marginRight: number,
@@ -119,7 +120,7 @@ function flatBox(
   };
 }
 
-export interface TabBarStyleBoxes {
+interface TabBarStyleBoxes {
   selected: StyleBoxFlatData;
   unselected: StyleBoxFlatData;
   disabled: StyleBoxFlatData;
@@ -188,14 +189,14 @@ const TAB_BAR_FONT_COLOR_KEYS: Record<TabDrawState, string> = {
   disabled: 'font_disabled_color',
 };
 
-/** `control_font_hover_color` = `Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`), the `font_selected_color` default (`:1044`). */
-const TAB_BAR_SELECTED_FONT_COLOR: ControlColor = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
-/** `control_font_low_color` = `Color(0.7, 0.7, 0.7)` (`default_theme.cpp:103`), the `font_unselected_color` default (`:1046`). */
-const TAB_BAR_UNSELECTED_FONT_COLOR: ControlColor = { r: 0.7, g: 0.7, b: 0.7, a: 1 };
-/** `control_font_disabled_color = control_font_color * Color(1,1,1,0.5)` (`default_theme.cpp:106`), the `font_disabled_color` default (`:1047`). */
-const TAB_BAR_DISABLED_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** TabBar's `font_selected_color` default (`default_theme.cpp:1044`). */
+const TAB_BAR_SELECTED_FONT_COLOR = CONTROL_FONT_HOVER_COLOR;
+/** TabBar's `font_unselected_color` default (`default_theme.cpp:1046`). */
+const TAB_BAR_UNSELECTED_FONT_COLOR = CONTROL_FONT_LOW_COLOR;
+/** TabBar's `font_disabled_color` default (`default_theme.cpp:1047`). */
+const TAB_BAR_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, ControlColor> = {
+const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, Rgba> = {
   selected: TAB_BAR_SELECTED_FONT_COLOR,
   unselected: TAB_BAR_UNSELECTED_FONT_COLOR,
   disabled: TAB_BAR_DISABLED_FONT_COLOR,
@@ -221,7 +222,7 @@ export function tabBarFontSizePx(
 }
 
 /** This tab state's font colour: the resolved `font_<state>_color` (`n.colors`), else the default theme's literal. */
-export function tabBarFontColor(colors: SolveNode['colors'], state: TabDrawState): ControlColor {
+export function tabBarFontColor(colors: SolveNode['colors'], state: TabDrawState): Rgba {
   return colors[TAB_BAR_FONT_COLOR_KEYS[state]] ?? TAB_BAR_FONT_DEFAULTS[state];
 }
 
@@ -232,9 +233,9 @@ const TAB_BAR_ICON_COLOR_KEYS: Record<TabDrawState, string> = {
 };
 
 /** `default_theme.cpp:1051-1054`: all four icon-colour states default to `Color(1, 1, 1, 1)`, so no state dims the icon. */
-const TAB_BAR_DEFAULT_ICON_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+const TAB_BAR_DEFAULT_ICON_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
-export function tabBarIconColor(colors: SolveNode['colors'], state: TabDrawState): ControlColor {
+export function tabBarIconColor(colors: SolveNode['colors'], state: TabDrawState): Rgba {
   return colors[TAB_BAR_ICON_COLOR_KEYS[state]] ?? TAB_BAR_DEFAULT_ICON_COLOR;
 }
 
@@ -247,7 +248,7 @@ type TabBarThemeIconName = (typeof TAB_BAR_THEME_ICON_NAMES)[number];
  * themed close/increment/decrement icon in `SolveNode.icons`. `buildSolveTree.ts`'s
  * generic path models one texture property per node and cannot see an indexed family.
  */
-export const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
+const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   const tabs = (node.properties as TabBarProperties).tabs ?? [];
   const requests: TextureSlotRequest[] = [];
   tabs.forEach((tab, i) => {
@@ -261,15 +262,15 @@ export const tabBarTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
 };
 
 /** This tab's icon natural size from `n.textureSlots`: `null` before it resolves or when the tab carries no icon. */
-export function tabIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>, index: number): Vec2 | null {
+export function tabIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>, index: number): Vector2 | null {
   return n.textureSlots[String(index)] ?? null;
 }
 
 /** The vendored default's own size (`native/themeIcons.ts`'s `TAB_BAR_ICON_SIZE`, 16x16 square) for every close/increment/decrement icon alike. */
-const TAB_BAR_VENDORED_ICON_SIZE: Vec2 = { x: TAB_BAR_ICON_SIZE, y: TAB_BAR_ICON_SIZE };
+const TAB_BAR_VENDORED_ICON_SIZE: Vector2 = { x: TAB_BAR_ICON_SIZE, y: TAB_BAR_ICON_SIZE };
 
 /** `close`/`increment`/`decrement`'s resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
-export function tabBarThemeIconSize(n: Pick<SolveNode, 'textureSlots'>, name: TabBarThemeIconName): Vec2 {
+export function tabBarThemeIconSize(n: Pick<SolveNode, 'textureSlots'>, name: TabBarThemeIconName): Vector2 {
   return n.textureSlots[name] ?? TAB_BAR_VENDORED_ICON_SIZE;
 }
 
@@ -321,13 +322,11 @@ export function shapeTabLabel(
   return shapeText(text, {
     fontSizePx,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
     fontMetrics,
   });
 }
-
-export { isTextLayoutResult };
 
 /**
  * `TabBar::get_minimum_size` (`tab_bar.cpp:44-122`). A hidden tab contributes nothing
@@ -335,7 +334,7 @@ export { isTextLayoutResult };
  * summed width with the widest tab plus the scroll arrows (`:117-119`). Only
  * `_update_cache` reads `max_tab_width`.
  */
-export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vec2 => {
+export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
   const props = n.node.properties as TabBarProperties;
   const tabs = props.tabs ?? [];
   const currentTab = props.currentTab ?? -1;
@@ -439,7 +438,7 @@ export interface TabLayoutItem {
   truncated: boolean;
 }
 
-export interface TabBarDrawLayout {
+interface TabBarDrawLayout {
   /** Every non-hidden tab from `offset` to `maxDrawnTab` inclusive, matching `if (tabs[i].hidden) continue`. */
   items: readonly TabLayoutItem[];
   offset: number;
@@ -559,12 +558,10 @@ export function computeTabBarDrawLayout(
 /** `TabBar::_get_tab_icon_size` (`:1806-1826`), restricted to the theme-constant clamp: a per-tab `icon_max_width` is `set_tab_icon_max_width`-only (script, never serialised), always 0. */
 export { fitIconSize as fitTabIconSize };
 
-export { contentMarginSize };
-
-export interface TabContentLayout {
+interface TabContentLayout {
   icon: { rect: Rect2 } | null;
-  text: { offset: Vec2 } | null;
-  close: { rect: Rect2; iconOffset: Vec2 } | null;
+  text: { offset: Vector2 } | null;
+  close: { rect: Rect2; iconOffset: Vector2 } | null;
 }
 
 /**
@@ -577,14 +574,14 @@ export function layoutTabContent(input: {
   style: StyleBoxFlatData;
   /** `tabs[p_index].size_cache`: the drawn tab's width, the RTL pen's origin. */
   tabWidthPx: number;
-  iconSize: Vec2 | null;
+  iconSize: Vector2 | null;
   hasText: boolean;
   textNaturalHeightPx: number;
   /** `tabs[i].size_text`: the draw width the pen advances by, possibly truncated. */
   textAdvanceWidthPx: number;
   hSeparation: number;
   closeVisible: boolean;
-  closeIconSize: Vec2;
+  closeIconSize: Vector2;
   buttonHlMargin: { left: number; top: number; right: number; bottom: number };
   /**
    * `Control::is_layout_rtl()` (`SolveNode.rtl`). The pen starts at `tabWidthPx - contentMargin.left`
@@ -635,14 +632,14 @@ export function tabDrawX(ofsPx: number, tabWidthPx: number, barWidthPx: number, 
   return rtl ? barWidthPx - ofsPx - tabWidthPx : ofsPx;
 }
 
-export interface ScrollArrowPlacement {
+interface ScrollArrowPlacement {
   x: number;
   y: number;
   /** `Color(1, 1, 1, 0.5)` rather than full opacity. */
   dim: boolean;
 }
 
-export interface ScrollArrowsLayout {
+interface ScrollArrowsLayout {
   decrement: ScrollArrowPlacement;
   increment: ScrollArrowPlacement;
 }
@@ -656,8 +653,8 @@ export interface ScrollArrowsLayout {
 export function layoutScrollArrows(input: {
   barWidthPx: number;
   barHeightPx: number;
-  incrementIconSize: Vec2;
-  decrementIconSize: Vec2;
+  incrementIconSize: Vector2;
+  decrementIconSize: Vector2;
   missingRight: boolean;
   rtl: boolean;
 }): ScrollArrowsLayout {

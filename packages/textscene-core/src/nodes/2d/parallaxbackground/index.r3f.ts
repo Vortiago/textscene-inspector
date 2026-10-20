@@ -24,5 +24,3 @@ controlComponentRegistry.register({
   wrapsChildren: true,
 });
 controlSolverRegistry.registerCanvasBoundary('ParallaxBackground');
-
-export { ParallaxBackground };

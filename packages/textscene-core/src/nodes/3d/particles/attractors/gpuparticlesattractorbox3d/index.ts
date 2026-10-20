@@ -15,5 +15,3 @@ const gPUParticlesAttractorBox3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(gPUParticlesAttractorBox3DRegistration);
-
-export { gPUParticlesAttractorBox3DRegistration };

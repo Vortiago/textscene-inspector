@@ -21,6 +21,17 @@ describe('ViewportModeContext', () => {
     expect(result.current.showGrid).toBe(false);
   });
 
+  it('defaults showPerformance to false, so no frame is profiled unasked', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    expect(result.current.showPerformance).toBe(false);
+  });
+
+  it('toggles showPerformance', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    act(() => result.current.setShowPerformance(true));
+    expect(result.current.showPerformance).toBe(true);
+  });
+
   it('toggles showGrid', () => {
     const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
     act(() => result.current.setShowGrid(true));
@@ -40,6 +51,18 @@ describe('ViewportModeContext', () => {
     expect(result.current.showCollisions).toBe(false);
     act(() => result.current.setShowCollisions(true));
     expect(result.current.showCollisions).toBe(true);
+  });
+
+  it('shows the fog by default, as Godot draws it', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper() });
+    expect(result.current.showFog).toBe(true);
+  });
+
+  it('hides and shows the fog', () => {
+    const { result } = renderHook(() => useViewportMode(), { wrapper: wrapper({ initialShowFog: false }) });
+    expect(result.current.showFog).toBe(false);
+    act(() => result.current.setShowFog(true));
+    expect(result.current.showFog).toBe(true);
   });
 
   it('switches mode', () => {

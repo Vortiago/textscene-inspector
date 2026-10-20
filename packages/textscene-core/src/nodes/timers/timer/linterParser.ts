@@ -5,8 +5,7 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-
-const PROCESS_CALLBACK_VALUES = { 0: 'PHYSICS', 1: 'IDLE' };
+import { TIMER_PROCESS_CALLBACK_NAMES } from '../../../godot/scene/timer.js';
 
 // Timer is a plain Node (nodeBaseTypes.ts), so only its own property surface
 // is registered here.
@@ -25,7 +24,7 @@ validatorRegistry.registerAll('Timer', {
   paused: v.boolean('paused'),
   // timer.cpp:163-179: set_timer_process_callback is a bare switch and assign
   // with no range check on the raw int.
-  process_callback: v.enumInt('process_callback', 0, 1, PROCESS_CALLBACK_VALUES, {
+  process_callback: v.enumInt('process_callback', TIMER_PROCESS_CALLBACK_NAMES, {
     hinted: 'timer.cpp:239',
   }),
   ignore_time_scale: v.boolean('ignore_time_scale'),

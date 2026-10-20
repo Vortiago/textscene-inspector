@@ -3,28 +3,27 @@
  * keyed by full name. A foreign-format parser outside the resource-slice registry (ADR-0031): no
  * scene names it, so it claims no type name and no bus slot.
  */
-
+import { STRING_ARRAY_FORMS, packedArrayBody } from '../godot/variant/variantParser.js';
 import {
-  STRING_ARRAY_FORMS,
   STRING_LITERAL_RE,
   STRING_LITERAL_SOURCE,
-  boolSlotValue,
-  dataDirectoryPath,
   dropTrailingComma,
-  extensionListPath,
-  isLocaleRightToLeft,
-  packedArrayBody,
   splitTopLevel,
-  type LayoutDirectionEnv,
-  DEFAULT_CLEAR_COLOR,
-} from '../godot/index.js';
+} from '../godot/string/string.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
+import { dataDirectoryPath, extensionListPath } from '../godot/project/project.js';
+import { isLocaleRightToLeft } from '../godot/text/textServer.js';
+import type { LayoutDirectionEnv } from '../godot/scene/control.js';
+import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
 import { unquoteLiteral } from './utils.js';
-import { colorOr, type Color } from '../utils/colorParser.js';
+import { colorOr } from '../utils/colorParser.js';
 import { parseOptionalInt } from './valueParsers.js';
 import {
   VOLUMETRIC_FOG_DEFAULTS,
   type VolumetricFogProjectSettings,
 } from '../godot/rendering/environment/volumetricFog.js';
+import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
+import type { Rgba } from '../godot/math/math.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -140,7 +139,7 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
  * `rendering/environment/defaults/default_clear_color`, sRGB, which every opaque viewport clears to
  * (`renderer_viewport.cpp:371,751`), or Godot's default for an absent or malformed value.
  */
-export function projectClearColor(settings: ProjectSettings | null): Color {
+export function projectClearColor(settings: ProjectSettings | null): Rgba {
   return colorOr(settings?.['rendering/environment/defaults/default_clear_color'], DEFAULT_CLEAR_COLOR);
 }
 
@@ -166,6 +165,25 @@ export function projectVolumetricFogSettings(settings: ProjectSettings | null): 
       'rendering/environment/fog/use_legacy_blending',
       VOLUMETRIC_FOG_DEFAULTS.useLegacyBlending
     ),
+  };
+}
+
+/** The `Viewport.MSAA` modes of a viewport's 2D and 3D buffers. */
+export interface MsaaModes {
+  msaa2D: number;
+  msaa3D: number;
+}
+
+/**
+ * `rendering/anti_aliasing/quality/msaa_2d` and `msaa_3d`, which the root viewport takes
+ * (`scene/main/scene_tree.cpp:2079-2083`) and the editor's 3D view too
+ * (`node_3d_editor_plugin.cpp:3166-3167`). Both default to Disabled.
+ */
+export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
+  const mode = (key: string): number => parseOptionalInt(settings?.[key]) ?? MSAA_DISABLED;
+  return {
+    msaa2D: mode('rendering/anti_aliasing/quality/msaa_2d'),
+    msaa3D: mode('rendering/anti_aliasing/quality/msaa_3d'),
   };
 }
 

@@ -8,30 +8,7 @@
 import '../vboxcontainer/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-// color_picker.cpp:1996, PROPERTY_HINT_ENUM "RGB,HSV,LINEAR,OKHSL". MODE_RAW is a
-// deprecated alias for 2 (color_picker.h:105-107). The setter refuses a value
-// outside the enum (color_picker.cpp:1243), and that outranks the agreeing hint (ADR-0032).
-const COLOR_MODE = {
-  0: 'MODE_RGB',
-  1: 'MODE_HSV',
-  2: 'MODE_LINEAR',
-  3: 'MODE_OKHSL',
-};
-
-// color_picker.cpp:1998, PROPERTY_HINT_ENUM "HSV Rectangle,HSV Rectangle
-// Wheel,VHS Circle,OKHSL Circle,OK HS Rectangle:5,OK HL Rectangle,None:4":
-// by value the hint covers 0-6, as PickerShapeType does (color_picker.h:113-122).
-// The setter refuses a value outside it (color_picker.cpp:854).
-const PICKER_SHAPE = {
-  0: 'SHAPE_HSV_RECTANGLE',
-  1: 'SHAPE_HSV_WHEEL',
-  2: 'SHAPE_VHS_CIRCLE',
-  3: 'SHAPE_OKHSL_CIRCLE',
-  4: 'SHAPE_NONE',
-  5: 'SHAPE_OK_HS_RECTANGLE',
-  6: 'SHAPE_OK_HL_RECTANGLE',
-};
+import { COLOR_PICKER_COLOR_MODE_NAMES, COLOR_PICKER_SHAPE_NAMES } from '../../../../godot/scene/gui.js';
 
 validatorRegistry.registerAll('ColorPicker', {
   // color_picker.cpp:1993. set_pick_color delegates to _set_pick_color
@@ -45,13 +22,15 @@ validatorRegistry.registerAll('ColorPicker', {
   edit_intensity: v.boolean('edit_intensity'),
   // color_picker.cpp:1996. set_color_mode (color_picker.cpp:1242-1243)
   // ERR_FAIL_INDEXes on MODE_MAX before assigning.
-  color_mode: v.enumInt('color_mode', 0, 3, COLOR_MODE, { enforced: 'color_picker.cpp:1243' }),
+  color_mode: v.enumInt('color_mode', COLOR_PICKER_COLOR_MODE_NAMES, {
+    enforced: 'color_picker.cpp:1243',
+  }),
   // color_picker.cpp:1997. set_deferred_mode (color_picker.cpp:1311-1313) is
   // a bare bool assignment.
   deferred_mode: v.boolean('deferred_mode'),
   // color_picker.cpp:1998. set_picker_shape (color_picker.cpp:853-854)
   // ERR_FAIL_INDEXes on SHAPE_MAX before assigning.
-  picker_shape: v.enumInt('picker_shape', 0, 6, PICKER_SHAPE, {
+  picker_shape: v.enumInt('picker_shape', COLOR_PICKER_SHAPE_NAMES, {
     enforced: 'color_picker.cpp:854',
   }),
   // color_picker.cpp:1999. set_can_add_swatches (color_picker.cpp:1883-1895)

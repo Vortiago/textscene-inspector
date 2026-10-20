@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { parsePackedStringArray } from './arrayForms.js';
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js';
 
@@ -71,12 +71,10 @@ const codeEditDelimiterCollisionRule: LintRule = {
     name: 'valid-codeedit-properties',
     description: "Validates CodeEdit's delimiter_strings and delimiter_comments do not share a start key",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'CodeEdit'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'CodeEdit'),
     emits: armEmits(arms),
   },
   check: checkCodeEdit,
 };
 
 ruleRegistry.register(codeEditDelimiterCollisionRule);
-
-export { codeEditDelimiterCollisionRule };

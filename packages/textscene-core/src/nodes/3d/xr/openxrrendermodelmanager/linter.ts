@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict, type ParentVerdict } from '../../../../linter/parentType.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { literalText } from '../../../../godot/index.js';
+import { literalText } from '../../../../godot/string/string.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import type { RawNode, RawScene } from '../../../../parser/types.js';
 
@@ -103,5 +103,3 @@ const openXRRenderModelManagerRule: LintRule = {
 };
 
 ruleRegistry.register(openXRRenderModelManagerRule);
-
-export { openXRRenderModelManagerRule };

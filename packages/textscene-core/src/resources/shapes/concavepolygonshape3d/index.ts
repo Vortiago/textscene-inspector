@@ -5,4 +5,3 @@ import { registerGenericResourceSlice } from '../../sliceRegistration';
 registerGenericResourceSlice('concavepolygonshape3d', ['ConcavePolygonShape3D']);
 
 export { decodeConcavePolygonShape3D } from './decode';
-export type { ConcavePolygonShape3DProperties } from './types';

@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
   ContainerLayoutFn,
@@ -18,16 +18,16 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import type { BoxContainerProperties } from './boxContainer';
-import { fitChildInRect, hasFlag, isSortableControl, SIZE_EXPAND, SIZE_FILL } from './fitChildInRect';
+import { fitChildInRect, hasFlag, isSortableControl } from './fitChildInRect';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
-/** `Control` defaults both axes to `SIZE_FILL` (`control.h:229-230`). A type whose parser overrides the flag (Label's `v_size_flags`, for example) has already baked the override into its properties. */
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
 /** `Control::stretch_ratio` default (`control.h:231`). */
 const DEFAULT_STRETCH_RATIO = 1;
 
 /** One child's inputs to the box solve: its combined minimum size and the three `Control` fields `_resort`/`fit_child_in_rect` read. */
 export interface BoxChildInput {
-  minSize: Vec2;
+  minSize: Vector2;
   hSizeFlags: number;
   vSizeFlags: number;
   stretchRatio: number;
@@ -64,7 +64,9 @@ export function resortBoxContainer(
     // bookkeeping only. `fit_child_in_rect`'s re-floor (`native/controlRectSolver.ts`
     // `dispatchChildren`) reads the child's full-precision `minSize`, so `c.minSize` stays intact.
     const minSize = Math.trunc(vertical ? c.minSize.y : c.minSize.x);
-    const willStretch = vertical ? hasFlag(c.vSizeFlags, SIZE_EXPAND) : hasFlag(c.hSizeFlags, SIZE_EXPAND);
+    const willStretch = vertical
+      ? hasFlag(c.vSizeFlags, SizeFlags.EXPAND)
+      : hasFlag(c.hSizeFlags, SizeFlags.EXPAND);
     return { minSize, willStretch, finalSize: minSize };
   });
 
@@ -182,8 +184,8 @@ export function resortBoxContainer(
 export function boxContainerMinimumSize(
   vertical: boolean,
   separation: number,
-  childMinSizes: readonly Vec2[]
-): Vec2 {
+  childMinSizes: readonly Vector2[]
+): Vector2 {
   let mainAxis = 0;
   let crossAxis = 0;
 
@@ -216,7 +218,7 @@ function alignmentOf(n: SolveNode): 0 | 1 | 2 {
   return alignment === 1 || alignment === 2 ? alignment : 0;
 }
 
-function toChildInput(node: SolveNode, minSize: Vec2): BoxChildInput {
+function toChildInput(node: SolveNode, minSize: Vector2): BoxChildInput {
   const props = node.node.properties as ControlProperties;
   return {
     minSize,

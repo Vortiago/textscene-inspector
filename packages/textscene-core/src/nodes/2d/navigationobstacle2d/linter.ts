@@ -6,5 +6,3 @@ import { makeNavigationObstacleLinterRule } from '../../../linter/physics/naviga
 const navigationObstacle2DCarveRule = makeNavigationObstacleLinterRule('2D');
 
 ruleRegistry.register(navigationObstacle2DCarveRule);
-
-export { navigationObstacle2DCarveRule };

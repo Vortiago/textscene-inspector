@@ -15,7 +15,8 @@
  */
 
 import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
-import { AREA_LIGHT_ATLAS_MIPMAPS, areaTextureMipmaps, type PlacedTexture } from './atlasMipmaps.js';
+import { areaTextureMipmaps, type PlacedTexture } from './atlasMipmaps.js';
+import { AREA_LIGHT_ATLAS_MIPMAPS } from '../../godot/rendering/lights/areaLightAtlas.js';
 
 /** A texture's sRGB RGBA8 pixels, first row the top row. */
 export interface AreaTextureImage {

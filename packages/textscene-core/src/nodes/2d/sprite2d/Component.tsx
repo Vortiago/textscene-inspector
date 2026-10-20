@@ -9,17 +9,11 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import {
-  canvasItemBlendState,
-  type CanvasItemBlendState,
-} from '../../../resources/materials/canvasitemmaterial/renderer';
-import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
-import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
+import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow, spriteSamplerClone } from '../../../r3f/spriteFrame';
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
-import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
@@ -46,7 +40,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const isViewportSlot = isViewportTextureRef(props.texture, internalResources);
   const { texture: viewportTexture, cyclic: viewportCyclic } = useViewportTextureSlot(
     props.texture,
-    internalResources
+    internalResources,
+    'plain'
   );
 
   // `useTexture2D`, not the path-only resolver: `texture` may name an inline
@@ -79,8 +74,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   useUvWindow(drawnTexture, frameWindow);
 
   const displayedTexture = viewportTexture ?? drawnTexture;
-  // A ViewportTexture keeps its publisher's colour space, not the NoColorSpace
-  // retag, so this resolves to `undefined` for it.
+  // A canvas-content ViewportTexture holds sRGB bytes, so it multiplies in sRGB
+  // as a retagged file does. A 3D-content one keeps the linear multiply.
   const srgbDefines = useCanvasSrgbDefines(displayedTexture);
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
   // target reports its rect through the same `image` shape a loaded texture
@@ -99,7 +94,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={({ color, opacity }, material, lighting) =>
+      body={({ color, opacity }, _material, pixelMaterial) =>
         showPlaceholder ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : displayedTexture ? (
@@ -110,8 +105,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
             width={width}
             height={height}
             props={props}
-            blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
-            lighting={lighting}
+            pixelMaterial={pixelMaterial}
             srgbDefines={srgbDefines}
           />
         ) : null
@@ -129,8 +123,7 @@ function QuadMesh({
   width,
   height,
   props,
-  blend,
-  lighting,
+  pixelMaterial,
   srgbDefines,
 }: {
   texture: THREE.Texture;
@@ -139,8 +132,7 @@ function QuadMesh({
   width: number;
   height: number;
   props: Sprite2DProperties;
-  blend: CanvasItemBlendState;
-  lighting: CanvasItemLightingProps;
+  pixelMaterial: CanvasItemPixelMaterial;
   srgbDefines: Record<string, string> | undefined;
 }) {
   // Quad centre in Godot 2D space (+Y down), then Y-negated. Centred, it sits at
@@ -149,9 +141,9 @@ function QuadMesh({
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
-  // The map is here at the first compile, but the decode can change: a
-  // ViewportTexture keeps its colour space where a `res://` file gets the canvas
-  // retag, and a swap changes the program (`materialProgramInputs.ts`).
+  // The map is here at the first compile, but the define can change: a 3D-content
+  // ViewportTexture multiplies linearly where a `res://` file multiplies in sRGB,
+  // and a swap changes the program (`materialProgramInputs.ts`).
   const program = materialProgramInputs({
     props: {
       map: texture,
@@ -161,7 +153,7 @@ function QuadMesh({
       depthWrite: false,
       defines: srgbDefines,
     },
-    merge: [canvasItemFacing(), blend, lighting],
+    merge: [pixelMaterial],
   });
 
   return (

@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { sharedTexture } from '../sharedTexture.js';
+import { releasedOnUnmount, sharedTexture } from '../sharedTexture.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 import {
   buildAreaLightAtlas,
@@ -46,10 +46,14 @@ class AreaLightAtlasTexture extends sharedTexture(THREE.DataTexture) {
   }
 }
 
-/** The atlas an earlier evaluation of this module gave the lit materials, as after a dev server reloads it. */
-const atlasTexture =
+/**
+ * The atlas an earlier evaluation of this module gave the lit materials, as after a dev server
+ * reloads it. A reload of `sharedTexture.ts` starts an empty release list, so the reused atlas joins it.
+ */
+const atlasTexture = releasedOnUnmount(
   (installedUniformValue(AREA_LIGHT_ATLAS_UNIFORM) as AreaLightAtlasTexture | undefined) ??
-  new AreaLightAtlasTexture();
+    new AreaLightAtlasTexture()
+);
 
 /** A held texture: its holders, and the pixel version the atlas last read. */
 interface Held {
@@ -118,7 +122,7 @@ export function areaTextureUserData(texture: THREE.Texture | null): Record<strin
 }
 
 /** An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`). */
-export const NO_AREA_TEXTURE: AreaTexturePlacement = { rect: [0, 0, 0, 0], maxMipmap: 0 };
+const NO_AREA_TEXTURE: AreaTexturePlacement = { rect: [0, 0, 0, 0], maxMipmap: 0 };
 
 /**
  * Where `light`'s texture lies in the atlas, or `NO_AREA_TEXTURE` for a light without one or a

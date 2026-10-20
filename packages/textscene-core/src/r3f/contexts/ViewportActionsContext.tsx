@@ -18,7 +18,7 @@ import {
 } from 'react';
 
 /** One-shot 2D framing request: frame the Canvas2DStage on a Camera2D's view. */
-export interface Frame2DRequest {
+interface Frame2DRequest {
   /** The view centre in Godot canvas pixels. */
   center: { x: number; y: number };
   /** Stage magnification. */
@@ -209,15 +209,7 @@ export function ViewportActionsProvider({
   return <ViewportActionsContext.Provider value={value}>{children}</ViewportActionsContext.Provider>;
 }
 
-export function useViewportActions(): ViewportActionsContextValue {
-  const value = useContext(ViewportActionsContext);
-  if (value === null) {
-    throw new Error('useViewportActions must be used inside a <TscnPreviewShell> (ViewportActionsProvider).');
-  }
-  return value;
-}
-
-/** Returns null instead of throwing when no provider is mounted. */
+/** The viewport actions, or null when no provider is mounted. */
 export function useOptionalViewportActions(): ViewportActionsContextValue | null {
   return useContext(ViewportActionsContext);
 }

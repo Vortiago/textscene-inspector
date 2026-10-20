@@ -6,6 +6,11 @@
  */
 import * as THREE from 'three';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
+import {
+  alphaAntialiasingOf,
+  coverOneSampleTarget,
+  GODOT_ALPHA_ANTIALIASING,
+} from './materials/godotAlphaAntialiasing';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -22,7 +27,7 @@ export interface ProgramShader {
 export interface ProgramInjection {
   /** Distinguishes this patched program from an unpatched one. */
   readonly cacheKey: string;
-  /** three calls it as a method of the material it compiles (`WebGLRenderer.js:2248`). */
+  /** three calls it as a method of the material it compiles, with itself (`WebGLRenderer.js:2248`). */
   readonly onBeforeCompile: (this: THREE.Material, shader: ProgramShader) => void;
 }
 
@@ -35,6 +40,7 @@ export interface ProgramInjection {
 export interface MaterialProgramBag {
   key?: never;
   onBeforeCompile?: never;
+  onBeforeRender?: never;
   customProgramCacheKey?: never;
   injection?: ProgramInjection;
 }
@@ -45,6 +51,7 @@ export interface MaterialProgramBag {
  */
 export interface InjectedProps {
   onBeforeCompile?: ProgramInjection['onBeforeCompile'];
+  onBeforeRender?: THREE.Material['onBeforeRender'];
   customProgramCacheKey?: () => string;
 }
 
@@ -95,9 +102,11 @@ type PhysicalFeature = (typeof PHYSICAL_FEATURES)[number];
  * Every `!! material.<slot>` presence term, keyed as its `…MapUv` term
  * (`:444-466`), with the feature three also requires (`:147-169`) or `null`. One
  * table, so no slot is added without its gate decided. It lists what three bakes,
- * bound here or not.
+ * bound here or not, except `bumpMap`: Godot binds no bump slot, and three reads
+ * it as `!!bumpMap && wireframe === false` (`:132`), so keying it would key
+ * `wireframe` for a slot nothing can fill.
  */
-export const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>> = {
+const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>> = {
   map: null,
   alphaMap: null,
   aoMap: null,
@@ -127,16 +136,6 @@ export const TEXTURE_SLOT_GATES: Readonly<Record<string, PhysicalFeature | null>
 /** Iterated per call, so the entry list is built once rather than per key. */
 const TEXTURE_SLOT_ENTRIES = Object.entries(TEXTURE_SLOT_GATES);
 
-/**
- * A `getParameters` texture slot this codebase declines to model, and why. The
- * upgrade guard requires every such field to be here or in the table above, so
- * a slot cannot go missing by omission.
- */
-export const NOT_BOUND_TEXTURE_SLOTS: Readonly<Record<string, string>> = {
-  bumpMap:
-    'Godot binds no bump slot; three reads the term as `!!bumpMap && wireframe === false` (`:132`), so modelling it would key `wireframe` for a slot nothing can fill',
-};
-
 export function materialProgramInputs<
   P extends object,
   M extends readonly (object | undefined)[] = [],
@@ -161,7 +160,8 @@ export function materialProgramInputs<
     injections.push((bag as MaterialProgramBag).injection);
     Object.assign(merged, bag);
   }
-  if (merged.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
+  injections.push(...stateInjections(merged));
+  if (recordsAlphaAntialiasing(merged.userData)) merged.onBeforeRender = coverOneSampleTarget;
 
   const composed = composeInjections(injections);
   if (composed) {
@@ -185,14 +185,33 @@ export function materialProgramInputs<
 
 /**
  * `injection` on a material built outside JSX, which `materialProgramInputs` cannot reach, with
- * Godot's hash on a hashed one. The cache key is the injections' own, so the patched program never
- * serves an unpatched material.
+ * Godot's hash on a hashed one and its edge ramp on an antialiased one. The cache key is the
+ * injections' own, so the patched program never serves an unpatched material.
  */
 export function injectProgram(material: THREE.Material, injection: ProgramInjection | undefined): void {
-  const composed = composeInjections([injection, material.alphaHash ? GODOT_ALPHA_HASH : undefined]);
+  if (recordsAlphaAntialiasing(material.userData)) material.onBeforeRender = coverOneSampleTarget;
+  const composed = composeInjections([injection, ...stateInjections(material)]);
   if (!composed) return;
   material.onBeforeCompile = composed.onBeforeCompile;
   material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
+}
+
+/** The injections a material's own state turns on: Godot's hash, then its edge ramp. */
+function stateInjections(state: { alphaHash?: unknown; userData?: unknown }): ProgramInjection[] {
+  const injections: ProgramInjection[] = [];
+  if (state.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
+  if (recordsAlphaAntialiasing(state.userData)) injections.push(GODOT_ALPHA_ANTIALIASING);
+  return injections;
+}
+
+/** The cache key of the injections a material's own state turns on, empty for none. */
+export function stateInjectionKey(material: THREE.Material): string {
+  return composeInjections(stateInjections(material))?.cacheKey ?? '';
+}
+
+/** Whether a material's `userData` records the alpha antialiasing whose edge ramp it compiles with. */
+function recordsAlphaAntialiasing(userData: unknown): boolean {
+  return typeof userData === 'object' && userData !== null && alphaAntialiasingOf({ userData }) !== null;
 }
 
 /** The injection that defines `define` in the fragment shader, its cache key the define's name. */
@@ -260,7 +279,7 @@ function cacheKeyThunk(cacheKey: string): () => string {
   const existing = CACHE_KEY_THUNKS.get(cacheKey);
   if (existing) return existing;
   // A method, not an arrow, since it reads the material three calls it on. This own property
-  // shadows the prototype key, so it appends that key whatever extends it (`applyToneMapping`
+  // shadows the prototype key, so it appends that key whatever extends it (`installToneMapping`
   // adds the curve term), read per call as a later patch replaces it.
   const thunk = function (this: THREE.Material): string {
     return cacheKey + THREE.Material.prototype.customProgramCacheKey.call(this);
@@ -311,7 +330,7 @@ function programKey(props: Record<string, unknown>, cacheKey: string): string {
   if (props.fog !== undefined) add(`fog:${String(props.fog)}`);
   // `:317`, first arm only: the second reads geometry and the material's brand,
   // out of reach like `vertexAlphas`. `wireframe` alone reaches only this and the
-  // `bumpMap` term (`:132`), whose slot is in `NOT_BOUND_TEXTURE_SLOTS`.
+  // `bumpMap` term (`:132`), a slot this factory declines.
   if (props.flatShading === true && props.wireframe !== true) add('flat');
 
   let features = '';

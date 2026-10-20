@@ -47,4 +47,6 @@ Strict parsing format-checks these `AreaLight3D` properties, plus 27 inherited f
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
+The linter warns (`resource-type-excluded-by-hint`) when `area_texture` or `light_projector` holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (4.7.2 `light_3d.cpp:698-716`).
+
 The lenient parser falls back silently when a key is absent. When a key is unparseable, it warns and falls back: `area_range` to `5.0`, `area_attenuation` to `1.0`, `area_size` to `Vector2(1, 1)`, `area_normalize_energy` to `true`, `light_size` to `0.5`.

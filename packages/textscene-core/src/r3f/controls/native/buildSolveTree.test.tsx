@@ -10,27 +10,25 @@ import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode, TscnScene } from '../../../parser/types';
 import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';
-import { FileEventBus } from '../../../resources/FileEventBus';
-import { ResourceLoader } from '../../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
-import type { ResourceProvider } from '../../../resources/ResourceProvider';
 import {
   createFakeResourceLoader,
   recordSceneRequests,
 } from '../../../resources/testing/createFakeResourceLoader';
 import { countedTable } from '../../../resources/testing/countedTable';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
 import { SelectionProvider } from '../../contexts/SelectionContext';
 import { HiddenSeeder } from '../../testing/HiddenSeeder';
-import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { FontResource } from '../../../resources/fonts/font/types';
-import { resolveSceneFontMetrics } from './text/sceneFontLoader';
+import { peekSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree } from './buildSolveTree';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parsedNode } from '../../../parser/testing/parserKit';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
+import { themeResource } from './testing/themeResource';
 import type { Rect2 } from './rect';
 // Side-effect imports: the node parsers that turn the `.tscn` text below into
 // typed Control properties, and the solvers/minimum-size functions the solved
@@ -1021,19 +1019,6 @@ const FONT_A: FontResource = {
   properties: {},
 };
 
-/** An empty `ThemeResource`, overridden per test. */
-function theme(overrides: Partial<ThemeResource> = {}): ThemeResource {
-  return {
-    defaultFont: null,
-    defaultFontSize: undefined,
-    fonts: {},
-    fontSizes: {},
-    typeVariations: {},
-    properties: {},
-    ...overrides,
-  };
-}
-
 function control(name: string, extra: Record<string, unknown> = {}, children: TscnNode[] = []): TscnNode {
   return node(name, 'Control', { properties: { name, ...extra } as Record<string, unknown>, children });
 }
@@ -1047,7 +1032,7 @@ describe('useBuildSolveTree — ExtResource lookups', () => {
 
   it('reads each ExtResource entry once however many Controls name the same theme', () => {
     const loader = createFakeResourceLoader();
-    const shared = theme({ defaultFontSize: 24 });
+    const shared = themeResource({ defaultFontSize: 24 });
     loader.themes.seed('res://theme.tres', shared);
     const { table, entryReads } = countedTable(
       tableEndingIn({ id: '1_theme', path: 'res://theme.tres', type: 'Theme' })
@@ -1083,7 +1068,7 @@ describe('useBuildSolveTree — theme resolution', () => {
     // A node-local read finds nothing for a themed root over plain Labels. Only
     // the ancestor chain does.
     const loader = createFakeResourceLoader();
-    const rootTheme = theme({ defaultFontSize: 24 });
+    const rootTheme = themeResource({ defaultFontSize: 24 });
     loader.themes.seed('res://theme.tres', rootTheme);
 
     const nodes = [control('Root', { theme: 'ExtResource("1_theme")' })];
@@ -1125,8 +1110,8 @@ describe('useBuildSolveTree — theme resolution', () => {
 
   it('the nearest ancestor theme is index 0, a farther one comes after it', () => {
     const loader = createFakeResourceLoader();
-    const outer = theme({ defaultFontSize: 10 });
-    const inner = theme({ defaultFontSize: 20 });
+    const outer = themeResource({ defaultFontSize: 10 });
+    const inner = themeResource({ defaultFontSize: 20 });
     loader.themes.seed('res://outer.tres', outer);
     loader.themes.seed('res://inner.tres', inner);
 
@@ -1150,7 +1135,7 @@ describe('useBuildSolveTree — theme resolution', () => {
 
   it('theme inheritance BREAKS at a non-Control ancestor (Node3D), matching ThemeOwner::propagate_theme_changed', () => {
     const loader = createFakeResourceLoader();
-    loader.themes.seed('res://theme.tres', theme({ defaultFontSize: 24 }));
+    loader.themes.seed('res://theme.tres', themeResource({ defaultFontSize: 24 }));
 
     const nodes = [control('Root', { theme: 'ExtResource("1_theme")' })];
     (nodes[0] as TscnNode).children = [node('Bridge', 'Node3D', { children: [label('Leaf')] })];
@@ -1211,7 +1196,7 @@ describe('useBuildSolveTree — theme resolution', () => {
     // resolves until `_resolve` is called.
     expect(loader.themes.cache.has('res://theme.tres')).toBe(false);
 
-    const resolved = theme({ defaultFontSize: 24 });
+    const resolved = themeResource({ defaultFontSize: 24 });
     await act(async () => {
       loader.themes._resolve('res://theme.tres', resolved);
     });
@@ -1252,12 +1237,13 @@ describe('useBuildSolveTree — theme resolution', () => {
     const initialGeneration = result.current.generation;
 
     await act(async () => {
-      // `peekSceneFontMetrics`'s async pipeline, started from the solve itself,
+      // `peekSceneFontMetrics`'s async pipeline, as the solve itself starts it,
       // outside `loader` and its event bus.
-      await resolveSceneFontMetrics(
+      peekSceneFontMetrics(
         { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
         'Root/Title'
       );
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);
@@ -1270,10 +1256,11 @@ describe('useBuildSolveTree — theme resolution', () => {
     const initialGeneration = result.current.generation;
 
     await act(async () => {
-      await resolveSceneFontMetrics(
+      peekSceneFontMetrics(
         { kind: 'file', bytes: new ArrayBuffer(4), mimeType: 'font/ttf', fallbacks: [], properties: {} },
         'Root/Title'
       );
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(result.current.generation).toBeGreaterThan(initialGeneration);
@@ -1302,16 +1289,7 @@ describe('useBuildSolveTree — theme resolution', () => {
       'res://project.godot': projectGodot,
       'res://project_theme.tres': themeTres,
     };
-    const provider: ResourceProvider = {
-      async loadResource(path: string) {
-        const content = files[path];
-        if (content === undefined) throw new Error(`Resource not found: ${path}`);
-        return content;
-      },
-    };
-    const bus = new FileEventBus(provider);
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
+    const loader = loaderServing(files);
 
     const nodes = [label('Plain')];
 
@@ -1342,7 +1320,7 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
     };
     loader.themes.seed(
       'res://theme.tres',
-      theme({
+      themeResource({
         styles: { Panel: { panel: 'SubResource("flat1")' } },
         resources: { externalResources: [], internalResources: [flatBox] },
       })
@@ -1372,7 +1350,7 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
     };
     loader.themes.seed(
       'res://theme.tres',
-      theme({
+      themeResource({
         styles: { Panel: { panel: 'SubResource("flat1")' } },
         resources: { externalResources: [], internalResources: [themedBox] },
       })
@@ -1400,7 +1378,7 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
     const loader = createFakeResourceLoader();
     loader.themes.seed(
       'res://theme.tres',
-      theme({ colors: { Panel: { font_color: { r: 0, g: 0, b: 1, a: 1 } } } })
+      themeResource({ colors: { Panel: { font_color: { r: 0, g: 0, b: 1, a: 1 } } } })
     );
 
     const nodes = [node('Root', 'Panel', { properties: { name: 'Root', theme: 'ExtResource("1_theme")' } })];
@@ -1444,16 +1422,7 @@ describe('useBuildSolveTree — theme StyleBox/Color/Constant resolution', () =>
       'res://project.godot': projectGodot,
       'res://project_theme.tres': themeTres,
     };
-    const provider: ResourceProvider = {
-      async loadResource(path: string) {
-        const content = files[path];
-        if (content === undefined) throw new Error(`Resource not found: ${path}`);
-        return content;
-      },
-    };
-    const bus = new FileEventBus(provider);
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
+    const loader = loaderServing(files);
 
     const nodes = [node('Root', 'Panel', { properties: { name: 'Root' } })];
 
@@ -1969,16 +1938,7 @@ describe('useBuildSolveTree — layout direction', () => {
         '',
       ].join('\n'),
     };
-    const provider: ResourceProvider = {
-      async loadResource(path: string) {
-        const content = files[path];
-        if (content === undefined) throw new Error(`Resource not found: ${path}`);
-        return content;
-      },
-    };
-    const bus = new FileEventBus(provider);
-    const loader = new ResourceLoader(bus);
-    loader.setProvider(provider);
+    const loader = loaderServing(files);
 
     const { result } = renderHook(() => useBuildSolveTree([label('Lone')], [], []), {
       wrapper: ({ children }: { children: ReactNode }) => (

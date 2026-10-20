@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
-import { AxisMode } from './types';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { Vector3Axis } from '../../../godot/math/vector3Axis';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 
 const SIZE = { width: 2, height: 1 };
 
@@ -35,28 +35,28 @@ describe('spriteQuadGeometry', () => {
   const rect = spriteQuadRect(SIZE, { centered: false, offset: { x: 0, y: 0 }, pixel_size: 0.01 });
 
   it('lays the quad on the XY plane for AXIS_Z', () => {
-    expect(corners(spriteQuadGeometry(rect, AxisMode.AXIS_Z))).toEqual([
+    expect(corners(spriteQuadGeometry(rect, Vector3Axis.Z))).toEqual([
       [0, 0, 0],
       [2, 1, 0],
     ]);
   });
 
   it('lays the quad on the XZ plane for AXIS_Y, with its 2D up towards -Z', () => {
-    expect(corners(spriteQuadGeometry(rect, AxisMode.AXIS_Y))).toEqual([
+    expect(corners(spriteQuadGeometry(rect, Vector3Axis.Y))).toEqual([
       [0, 0, -1],
       [2, 0, 0],
     ]);
   });
 
   it('lays the quad on the ZY plane for AXIS_X, with its 2D right towards -Z', () => {
-    expect(corners(spriteQuadGeometry(rect, AxisMode.AXIS_X))).toEqual([
+    expect(corners(spriteQuadGeometry(rect, Vector3Axis.X))).toEqual([
       [0, 0, -2],
       [0, 1, 0],
     ]);
   });
 
   it('faces the normal along the axis', () => {
-    const geometry = spriteQuadGeometry(rect, AxisMode.AXIS_Y);
+    const geometry = spriteQuadGeometry(rect, Vector3Axis.Y);
     const normal = new THREE.Vector3().fromBufferAttribute(geometry.getAttribute('normal'), 0);
     expect(normal.toArray().map((v) => Math.round(v) + 0)).toEqual([0, 1, 0]);
   });
@@ -66,14 +66,14 @@ describe('spriteQuadAabb', () => {
   const rect = spriteQuadRect(SIZE, { centered: false, offset: { x: 0, y: 0 }, pixel_size: 0.01 });
 
   it('is the quad itself with no billboard', () => {
-    expect(spriteQuadAabb(rect, AxisMode.AXIS_Y, BillboardMode.BILLBOARD_DISABLED)).toEqual({
+    expect(spriteQuadAabb(rect, Vector3Axis.Y, BillboardMode.BILLBOARD_DISABLED)).toEqual({
       position: { x: 0, y: 0, z: -1 },
       size: { x: 2, y: 0, z: 1 },
     });
   });
 
   it('grows to the cube a billboard can turn through', () => {
-    expect(spriteQuadAabb(rect, AxisMode.AXIS_Z, BillboardMode.BILLBOARD_ENABLED).size).toEqual({
+    expect(spriteQuadAabb(rect, Vector3Axis.Z, BillboardMode.BILLBOARD_ENABLED).size).toEqual({
       x: 4,
       y: 4,
       z: 4,

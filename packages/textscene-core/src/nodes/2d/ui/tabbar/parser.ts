@@ -2,7 +2,9 @@
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
-import { boolSlotValue, indexedElements, ruleCount } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
+import { slotCount } from '../../../../godot/variant/int.js';
 import { parseControl } from '../control/parser';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { TabBarProperties, TabBarTabProperties } from './types';
@@ -27,7 +29,7 @@ export function parseTabBar(heading: ParsedHeading, properties: Record<string, s
   // Dense one slot per index, same shape as OptionButton's `item_N/*` walk:
   // `current_tab` can point past the last NAMED index, and alignment with it
   // matters more than trimming a tail nothing reads.
-  const tabCount = ruleCount(properties.tab_count) ?? 0;
+  const tabCount = slotCount(properties.tab_count) ?? 0;
   const declared = indexedElements(properties, 'tab_', 'is_valid_int');
   let observed = -1;
   for (const index of declared.keys()) if (index > observed) observed = index;

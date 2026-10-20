@@ -1,5 +1,5 @@
 /**
- * The routing claim (ADR-0031): the two box types this slice decodes, on the
+ * The routing claim (ADR-0031): `StyleBoxFlat` and `StyleBoxEmpty`, on the
  * generic resource bus.
  */
 
@@ -24,9 +24,9 @@ describe('stylebox slice registration', () => {
     expect(resourceSliceRegistry.byTypeName('StyleBoxEmpty')?.busType ?? null).toBe('resource');
   });
 
-  it('leaves the box types it cannot decode unclaimed', () => {
-    // A claim would promise a decode; StyleBoxTexture and StyleBoxLine have none
-    // here, so they must not resolve to this slice.
+  it('leaves the other box types unclaimed', () => {
+    // StyleBoxTexture and StyleBoxLine have no consumer here, so they must not
+    // resolve to this slice.
     expect(resourceSliceRegistry.byTypeName('StyleBoxTexture')).toBeNull();
     expect(resourceSliceRegistry.byTypeName('StyleBoxLine')).toBeNull();
   });

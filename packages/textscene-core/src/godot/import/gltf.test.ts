@@ -3,10 +3,12 @@ import {
   GLB_BIN_CHUNK,
   GLB_JSON_CHUNK,
   GLB_MAGIC,
+  dataUriMimeType,
   godotSurfacePrimitives,
   gltfObjects,
   gltfRefusalMessage,
   isGltfJsonObject,
+  isDataUri,
   isGltfPath,
   usesGodotSingleRoot,
   readGltfRequiredExtensions,
@@ -271,5 +273,38 @@ describe('gltfObjects', () => {
 
   it('returns none for a value that is not an array (edge case)', () => {
     expect(gltfObjects({ name: 'Cube' })).toEqual([]);
+  });
+});
+
+describe('isDataUri', () => {
+  it('reads a URI that starts with data: as inline bytes', () => {
+    expect(isDataUri('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
+  });
+
+  it('reads a relative file URI, or an empty one, as no data URI', () => {
+    expect([isDataUri('textures/crate.png'), isDataUri('')]).toEqual([false, false]);
+  });
+
+  it('matches the scheme case-sensitively, as begins_with does (edge case)', () => {
+    expect(isDataUri('DATA:image/png;base64,AAAA')).toBe(false);
+  });
+});
+
+describe('dataUriMimeType', () => {
+  it('reads the MIME type between data: and ;base64', () => {
+    expect(dataUriMimeType('data:image/jpeg;base64,/9g=')).toBe('image/jpeg');
+  });
+
+  it('gives undefined for a URI that is no data URI, or names no ;base64', () => {
+    expect([
+      dataUriMimeType('textures/crate.png'),
+      dataUriMimeType(undefined),
+      dataUriMimeType('data:image/png,raw'),
+      dataUriMimeType('data:image/png;charset=utf-8,raw'),
+    ]).toEqual([undefined, undefined, undefined, undefined]);
+  });
+
+  it('gives an empty type for a data URI with nothing before ;base64', () => {
+    expect(dataUriMimeType('data:;base64,AAAA')).toBe('');
   });
 });

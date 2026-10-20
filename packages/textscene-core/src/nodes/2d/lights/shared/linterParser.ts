@@ -11,6 +11,7 @@ import '../../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../../linter/validators/layerBitmask.js';
 import { v } from '../../../../linter/validators/index.js';
+import { LIGHT_2D_BLEND_MODE_NAMES, LIGHT_2D_SHADOW_FILTER_NAMES } from '../../../../godot/scene/light2d.js';
 import {
   CANVAS_ITEM_Z_MIN,
   CANVAS_ITEM_Z_MAX,
@@ -30,7 +31,7 @@ validatorRegistry.registerAll('Light2D', {
   // but 3 real values match the 3 labels). set_blend_mode
   // (light_2d.cpp:190-192) assigns unconditionally, no ERR_FAIL_INDEX, so out
   // of range is a warning (ADR-0032).
-  blend_mode: v.enumInt('blend_mode', 0, 2, { 0: 'ADD', 1: 'SUB', 2: 'MIX' }, { hinted: 'light_2d.cpp:307' }),
+  blend_mode: v.enumInt('blend_mode', LIGHT_2D_BLEND_MODE_NAMES, { hinted: 'light_2d.cpp:307' }),
   // light_2d.cpp:309-310 hints the closed range CANVAS_ITEM_Z_MIN..MAX.
   // `Light2D::set_z_range_min`/`_max` only assign and forward, with no CLAMP (4.6.3
   // keeps -99999), so the bound is a warning under ADR-0032.
@@ -75,13 +76,7 @@ validatorRegistry.registerAll('Light2D', {
   // light_2d.cpp:318, ENUM 3 labels (matches SHADOW_FILTER_MAX=3,
   // light_2d.h:39-44). set_shadow_filter (light_2d.cpp:170-171)
   // ERR_FAIL_INDEXes against SHADOW_FILTER_MAX.
-  shadow_filter: v.enumInt(
-    'shadow_filter',
-    0,
-    2,
-    { 0: 'NONE', 1: 'PCF5', 2: 'PCF13' },
-    { enforced: 'light_2d.cpp:171' }
-  ),
+  shadow_filter: v.enumInt('shadow_filter', LIGHT_2D_SHADOW_FILTER_NAMES, { enforced: 'light_2d.cpp:171' }),
   // light_2d.cpp:319 hints "0,64,0.1" hard both ends. set_shadow_smooth
   // (light_2d.cpp:236-238) assigns unconditionally, so out of range is a
   // warning, not an error (ADR-0032).

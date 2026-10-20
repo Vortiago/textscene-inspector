@@ -7,14 +7,17 @@ import * as THREE from 'three';
 
 import {
   applyOrthoFrame,
-  createOffscreenTarget,
+  createCanvasTarget,
+  createSceneTarget,
   godotCanvasPosition,
   orthoFrameForCamera2D,
   orthoFrameForSize,
   selectViewportCamera,
   selectViewportCamera2D,
   viewportAspect,
+  viewportMsaaMode,
 } from './offscreenViewport';
+import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { Camera2DAnchorMode } from '../../2d/camera2d/types';
 
@@ -379,7 +382,7 @@ describe('orthoFrameForSize', () => {
   });
 });
 
-describe('createOffscreenTarget', () => {
+describe('createSceneTarget', () => {
   /**
    * `renderer_scene_render_rd.cpp` tonemaps every viewport render into its own
    * target, and a shared world (`viewport.cpp`) shares the main environment, so the
@@ -387,7 +390,7 @@ describe('createOffscreenTarget', () => {
    * with `isXRRenderTarget`: without it the quad measured 0.60-0.65x of Godot.
    */
   it('marks the target so three tonemaps the offscreen pass like the main pass', () => {
-    const target = createOffscreenTarget(64, 64, 'Probe');
+    const target = createSceneTarget(64, 64, 'Probe');
     expect((target as { isXRRenderTarget?: boolean }).isXRRenderTarget).toBe(true);
     target.dispose();
   });
@@ -398,8 +401,25 @@ describe('createOffscreenTarget', () => {
    * a shader encode on the SRGB8 hardware encode and darken every sample.
    */
   it('stores the working colour space, so write and sample round-trip exactly', () => {
-    const target = createOffscreenTarget(64, 64, 'Probe');
+    const target = createSceneTarget(64, 64, 'Probe');
     expect(target.texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    target.dispose();
+  });
+
+  /**
+   * Godot's tonemap pass writes sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so a
+   * dark value keeps sRGB precision. SRGB8_ALPHA8 storage encodes on write and decodes on sample
+   * in hardware, while the LINEAR tag keeps the shader from doing either.
+   */
+  it('stores a tonemapped pass with sRGB precision', () => {
+    const target = createSceneTarget(64, 64, 'Probe');
+    expect(target.texture.internalFormat).toBe('SRGB8_ALPHA8');
+    target.dispose();
+  });
+
+  it('holds no sRGB bytes for a canvas consumer to multiply (edge case)', () => {
+    const target = createSceneTarget(64, 64, 'Probe');
+    expect(holdsSrgbBytes(target.texture)).toBe(false);
     target.dispose();
   });
 
@@ -409,7 +429,7 @@ describe('createOffscreenTarget', () => {
    * what a 3D pass needs and nothing more.
    */
   it('samples linearly without mipmaps, and carries depth but no stencil', () => {
-    const target = createOffscreenTarget(64, 64, 'Probe');
+    const target = createSceneTarget(64, 64, 'Probe');
     expect(target.texture.minFilter).toBe(THREE.LinearFilter);
     expect(target.texture.magFilter).toBe(THREE.LinearFilter);
     expect(target.texture.generateMipmaps).toBe(false);
@@ -419,10 +439,65 @@ describe('createOffscreenTarget', () => {
   });
 
   it('names the texture after the sub-viewport and sizes it to the rect', () => {
-    const target = createOffscreenTarget(320, 240, 'Viewport');
+    const target = createSceneTarget(320, 240, 'Viewport');
     expect(target.texture.name).toBe('Viewport::target');
     expect(target.width).toBe(320);
     expect(target.height).toBe(240);
     target.dispose();
+  });
+});
+
+describe('createCanvasTarget', () => {
+  /**
+   * Godot's canvas writes its sRGB numbers straight into the target
+   * (`renderer_canvas_render_rd.cpp:671,729`). Three encodes into a target only with
+   * `isXRRenderTarget`, and then into the space `texture.colorSpace` names.
+   */
+  it('has three encode the pass into sRGB, as into the drawing buffer', () => {
+    const target = createCanvasTarget(64, 64, 'Probe');
+    expect((target as { isXRRenderTarget?: boolean }).isXRRenderTarget).toBe(true);
+    expect(target.texture.colorSpace).toBe(THREE.SRGBColorSpace);
+    target.dispose();
+  });
+
+  /**
+   * A non-HDR target is `R8G8B8A8_UNORM` (`texture_storage.cpp:3568-3569`), so a blend and a filter
+   * work on the stored sRGB numbers. An sRGB tag alone allocates SRGB8_ALPHA8, which would encode a
+   * second time and blend in linear light.
+   */
+  it('stores the encoded bytes in plain RGBA8', () => {
+    const target = createCanvasTarget(64, 64, 'Probe');
+    expect(target.texture.internalFormat).toBe('RGBA8');
+    target.dispose();
+  });
+
+  it('marks its texture as holding sRGB bytes, which a canvas consumer multiplies in sRGB', () => {
+    const target = createCanvasTarget(64, 64, 'Probe');
+    expect(holdsSrgbBytes(target.texture)).toBe(true);
+    target.dispose();
+  });
+
+  it('samples linearly without mipmaps, as Godot keeps one mip level (edge case)', () => {
+    const target = createCanvasTarget(64, 64, 'Probe');
+    expect(target.texture.minFilter).toBe(THREE.LinearFilter);
+    expect(target.texture.magFilter).toBe(THREE.LinearFilter);
+    expect(target.texture.generateMipmaps).toBe(false);
+    target.dispose();
+  });
+});
+
+describe('viewportMsaaMode', () => {
+  const modes = { msaa_2d: 1, msaa_3d: 3 };
+
+  it('takes msaa_3d for a pass that draws the 3D world', () => {
+    expect(viewportMsaaMode(modes, '3d')).toBe(3);
+  });
+
+  it('takes msaa_2d for a pass that draws canvas items', () => {
+    expect(viewportMsaaMode(modes, '2d')).toBe(1);
+  });
+
+  it('keeps Disabled at the defaults (edge case)', () => {
+    expect(viewportMsaaMode({ msaa_2d: 0, msaa_3d: 0 }, '3d')).toBe(0);
   });
 });

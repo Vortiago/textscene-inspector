@@ -27,7 +27,7 @@ export interface AnimationDriverEntry {
 }
 
 /** Publishes a driver at `path` and returns the cleanup. */
-export type RegisterDriver = (path: string, entry: AnimationDriverEntry) => () => void;
+type RegisterDriver = (path: string, entry: AnimationDriverEntry) => () => void;
 
 const NO_OP_REGISTER: RegisterDriver = () => () => {};
 const EMPTY_DRIVERS: ReadonlyMap<string, AnimationDriverEntry> = new Map();

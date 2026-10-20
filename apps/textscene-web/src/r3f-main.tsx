@@ -24,13 +24,14 @@ import { FileProblems } from './FileProblems';
 import { useSceneSource } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
 import { useCameraDeepLink } from './useCameraDeepLink';
-import { DEFAULT_FIXTURE, NO_FIXTURE, fixtureOptions } from './sceneSelection';
+import { DEFAULT_FIXTURE, NO_FIXTURE } from './sceneSelection';
 import { useSourcePane } from './sourcePane';
 import { useSourceDiagnostics } from './useSourceDiagnostics';
 import { downloadFilename, downloadTscn } from './downloadTscn';
 import { createFileIngest } from './fileIngest';
 import { useFileDrop } from './useFileDrop';
 import { useUploadError } from './useUploadError';
+import { FIXTURE_LOADING_TESTID } from './fixtureLoadingTestId';
 import { Toolbar } from './R3FToolbar';
 import styles from './r3f-main.module.css';
 
@@ -133,8 +134,6 @@ export function R3FApp() {
     uploadRevision
   );
   const [gutterScrollTop, setGutterScrollTop] = useState(0);
-
-  const options = useMemo(() => fixtureOptions(uploadedTscnName), [uploadedTscnName]);
 
   function handleFixtureChange(newFixture: string) {
     // Re-selecting the active fixture is a state no-op, so return before a discard prompt
@@ -301,7 +300,6 @@ export function R3FApp() {
             initialActiveCameraPath={initialActiveCameraPath}
             toolbar={
               <Toolbar
-                options={options}
                 fixtureFile={fixtureFile}
                 uploadedTscnName={uploadedTscnName}
                 loadError={effectiveLoadError}
@@ -315,7 +313,7 @@ export function R3FApp() {
           />
           {isFetchingFixture ? (
             <div
-              data-testid="fixture-loading"
+              data-testid={FIXTURE_LOADING_TESTID}
               role="status"
               aria-live="polite"
               className={styles.fixtureLoading}

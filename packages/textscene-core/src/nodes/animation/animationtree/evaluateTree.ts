@@ -10,13 +10,13 @@ import { unquoteLiteral } from '../../../parser/utils';
 import { clamp } from '../../../godot/math/math.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
 
-export interface ClipWeight {
+interface ClipWeight {
   clip: string;
   weight: number;
   timeScale: number;
 }
 
-export type BlendProgram = ClipWeight[];
+type BlendProgram = ClipWeight[];
 
 const WEIGHT_EPSILON = 1e-4;
 

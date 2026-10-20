@@ -10,42 +10,41 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isEqualApprox, isZeroApprox } from '../../../../godot/index.js';
-import { clamp, type Rgba } from '../../../../godot/math/math';
-import type { Vec2 } from '../../../../r3f/controls/native/rect';
+import { isEqualApprox, isZeroApprox, clamp, type Rgba } from '../../../../godot/math/math';
 import type { GeometryBuffers } from './connectionStroke';
+import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** `FEATHER_SIZE` (`renderer_canvas_cull.cpp:45`). */
-export const POLYLINE_FEATHER_SIZE = 1.25;
+const POLYLINE_FEATHER_SIZE = 1.25;
 
 /** How far `compute_polyline_edge_offset_clamped` lets a miter run, in half-widths (`:943`). */
 const MITER_LIMIT = 3;
 
-function add(a: Vec2, b: Vec2): Vec2 {
+function add(a: Vector2, b: Vector2): Vector2 {
   return { x: a.x + b.x, y: a.y + b.y };
 }
 
-function scale(v: Vec2, by: number): Vec2 {
+function scale(v: Vector2, by: number): Vector2 {
   return { x: v.x * by, y: v.y * by };
 }
 
 /** `Vector2::normalized()`: a zero-length vector stays `(0, 0)`. */
-function normalized(v: Vec2): Vec2 {
+function normalized(v: Vector2): Vector2 {
   const length = Math.hypot(v.x, v.y);
   return length === 0 ? { x: 0, y: 0 } : { x: v.x / length, y: v.y / length };
 }
 
 /** `Vector2::orthogonal()`: `Vector2(y, -x)`. */
-function orthogonal(v: Vec2): Vec2 {
+function orthogonal(v: Vector2): Vector2 {
   return { x: v.y, y: -v.x };
 }
 
-function isZeroApproxVec(v: Vec2): boolean {
+function isZeroApproxVec(v: Vector2): boolean {
   return isZeroApprox(v.x) && isZeroApprox(v.y);
 }
 
 /** `compute_polyline_segment_dir` (`:912-930`). */
-function segmentDir(points: readonly Vec2[], index: number, previous: Vec2): Vec2 {
+function segmentDir(points: readonly Vector2[], index: number, previous: Vector2): Vector2 {
   if (index === points.length - 1) return previous;
   const dir = normalized({
     x: points[index + 1]!.x - points[index]!.x,
@@ -55,7 +54,7 @@ function segmentDir(points: readonly Vec2[], index: number, previous: Vec2): Vec
 }
 
 /** `compute_polyline_edge_offset_clamped` (`:932-953`): the miter bisector, clamped. */
-function edgeOffsetClamped(dir: Vec2, previous: Vec2): Vec2 {
+function edgeOffsetClamped(dir: Vector2, previous: Vector2): Vector2 {
   const dirLength = Math.hypot(dir.x, dir.y);
   const previousLength = Math.hypot(previous.x, previous.y);
   let bisector = normalized({
@@ -78,7 +77,7 @@ function edgeOffsetClamped(dir: Vec2, previous: Vec2): Vec2 {
 
 /** One `PRIMITIVE_TRIANGLE_STRIP` polygon, as Godot fills its two parallel arrays. */
 interface Strip {
-  points: Vec2[];
+  points: Vector2[];
   colors: Rgba[];
 }
 
@@ -100,7 +99,7 @@ function transparent(color: Rgba): Rgba {
  * shape `GraphEdit::_draw_minimap_connection_line` (`:1601-1611`) produces.
  */
 export function polylineStrokeGeometry(
-  points: readonly Vec2[],
+  points: readonly Vector2[],
   colors: readonly Rgba[],
   width: number,
   antialiased: boolean
@@ -115,12 +114,12 @@ export function polylineStrokeGeometry(
   const capped = antialiased && !loop;
   const borderSize = width < 1 ? POLYLINE_FEATHER_SIZE * width : POLYLINE_FEATHER_SIZE;
 
-  let firstSegmentDir: Vec2 = { x: 0, y: 0 };
+  let firstSegmentDir: Vector2 = { x: 0, y: 0 };
   for (let i = 1; i < pointCount; i++) {
     firstSegmentDir = normalized({ x: points[i]!.x - points[i - 1]!.x, y: points[i]!.y - points[i - 1]!.y });
     if (!isZeroApproxVec(firstSegmentDir)) break;
   }
-  let lastSegmentDir: Vec2 = { x: 0, y: 0 };
+  let lastSegmentDir: Vector2 = { x: 0, y: 0 };
   for (let i = pointCount - 1; i >= 1; i--) {
     lastSegmentDir = normalized({ x: points[i]!.x - points[i - 1]!.x, y: points[i]!.y - points[i - 1]!.y });
     if (!isZeroApproxVec(lastSegmentDir)) break;
@@ -130,7 +129,7 @@ export function polylineStrokeGeometry(
   const left = antialiased ? emptyStrip(stripSize + (loop ? 0 : 5)) : null;
   const right = antialiased ? emptyStrip(stripSize + (loop ? 0 : 5)) : null;
 
-  let previousDir: Vec2 = { x: 0, y: 0 };
+  let previousDir: Vector2 = { x: 0, y: 0 };
   let color: Rgba = { r: 1, g: 1, b: 1, a: 1 };
   for (let i = 0; i < pointCount; i++) {
     const isFirst = i === 0;
@@ -142,7 +141,7 @@ export function polylineStrokeGeometry(
 
     // Each vertex pair straddles its point along the clamped miter bisector, but the two ends of an
     // open line take their own segment's orthogonal (`:1076-1082`).
-    let baseEdgeOffset: Vec2;
+    let baseEdgeOffset: Vector2;
     if (isFirst && !loop) baseEdgeOffset = orthogonal(firstSegmentDir);
     else if (isLast && !loop) baseEdgeOffset = orthogonal(lastSegmentDir);
     else baseEdgeOffset = edgeOffsetClamped(dir, previousDir);

@@ -12,9 +12,14 @@ import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/contro
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { graphNodeDrawRows, graphNodeLayout, graphNodeMinimumSize } from './nativeSolver';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { graphNodeDrawRows } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
+import { SizeFlags } from '../../../../godot/scene/control';
+
+const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;
+const graphNodeMinimumSize = controlSolverRegistry.minimumSize('GraphNode')!;
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
   return 'rects' in result ? result.rects : result;
@@ -161,7 +166,7 @@ describe('graphNodeLayout (graph_node.cpp:153-293)', () => {
     const a = leaf('a', { customMinimumSize: { x: 10, y: 10 } });
     const b = leaf('b', {
       customMinimumSize: { x: 10, y: 5 },
-      sizeFlagsVertical: 3 /* SIZE_FILL | SIZE_EXPAND */,
+      sizeFlagsVertical: SizeFlags.FILL | SizeFlags.EXPAND,
     });
     const n = graphNode('N', {}, [a, b]);
     const rects = asMap(

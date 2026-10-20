@@ -1,7 +1,7 @@
 /**
  * `<SkyLayer>`: mounts a Godot sky as the scene's background and IBL, and shows its baked layers and
  * its share of the ambient to every lit material before each render of the scene
- * (`skyLayerCubes.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
+ * (`skyLayerArray.ts`). Godot's sky shader draws the discs of the first four DirectionalLights that
  * are not Light Only as `LIGHT0..3`. The lights are read from the rendered three.js scene, where an
  * instanced or GLB light has its real world transform.
  */
@@ -14,13 +14,15 @@ import type { Sky } from '../../resources/sky/types';
 import { useTexture2D } from '../../resources/useTexture2D';
 import type { SceneResources } from '../SceneResourcesContext';
 import { buildSkyEnvironment, type SkyLight } from '../../resources/sky/build';
-import { skyLightEnergy } from './skyLight';
+import { skyLightEnergy, skyLightSize } from './skyLight';
 import { skyEuler } from './skyRotation';
-import type { Vector3 } from '../../parser/vectors';
-import { SkyLayerCubes } from './skyLayerCubes';
+import { SkyLayerArray } from './skyLayerArray';
 import { observeSceneCamera } from '../sceneRenderCamera';
+import { debandSky } from './skyDebanding';
+import { isDebanded } from '../../resources/sky/debanding';
+import type { Vector3 } from '../../godot/math/vector';
 
-export interface SkyLayerProps {
+interface SkyLayerProps {
   sky: Sky;
   /**
    * The sky's full reflection strength (`background_energy_multiplier`), as
@@ -35,7 +37,7 @@ export interface SkyLayerProps {
   contribution?: number;
   /**
    * Whether this sky also paints the background. Godot's ambient can come from
-   * the sky while the background shows something else (`AMBIENT_SOURCE_SKY`
+   * the sky while the background shows something else (`AmbientSource.SKY`
    * over a colour background).
    */
   asBackground?: boolean;
@@ -93,6 +95,7 @@ export function SkyLayer({
       lights: directionalLights(scene),
       panorama,
       asBackground,
+      energy: intensity,
     });
     if (!built) return undefined;
 
@@ -107,17 +110,19 @@ export function SkyLayer({
     scene.environment = built.environment;
     scene.environmentIntensity = intensity;
     scene.environmentRotation.copy(skyRotation);
-    const layerCubes = new SkyLayerCubes(gl, built.layers);
+    const layerArray = new SkyLayerArray(gl, built.layers);
     // Observed, not assigned: the visibility cull and the shadow fitter share the scene's hook.
-    const stopShowingLayers = observeSceneCamera(scene, () => layerCubes.show(contributionRef.current));
+    const stopShowingLayers = observeSceneCamera(scene, () => layerArray.show(contributionRef.current));
     if (asBackground) {
       scene.background = built.background;
       scene.backgroundIntensity = backgroundIntensity;
       scene.backgroundRotation.copy(skyRotation);
     }
+    const stopDebanding = asBackground && isDebanded(sky.material) ? debandSky(gl, scene) : undefined;
 
     return () => {
       stopShowingLayers();
+      stopDebanding?.();
       scene.environment = previousEnvironment;
       scene.environmentIntensity = previousIntensity;
       scene.environmentRotation.copy(previousEnvironmentRotation);
@@ -126,7 +131,7 @@ export function SkyLayer({
         scene.backgroundIntensity = previousBackgroundIntensity;
         scene.backgroundRotation.copy(previousBackgroundRotation);
       }
-      layerCubes.hide();
+      layerArray.hide();
       built.dispose();
     };
   }, [
@@ -181,9 +186,7 @@ function useSkyLightsKey(scene: THREE.Scene): string | null {
 
 function skyLightsKey(lights: readonly SkyLight[]): string {
   return lights
-    .map(({ direction: d, color: c, energy, angularRadius }) =>
-      [d.x, d.y, d.z, c.r, c.g, c.b, energy, angularRadius].join(',')
-    )
+    .map(({ direction: d, color: c, energy, size }) => [d.x, d.y, d.z, c.r, c.g, c.b, energy, size].join(','))
     .join(';');
 }
 
@@ -219,9 +222,7 @@ function directionalLights(scene: THREE.Scene): SkyLight[] {
       // `sky.cpp` sets `sky_light_data.energy` from LIGHT_PARAM_ENERGY with no PI,
       // unlike the scene shader.
       energy,
-      // `light_angular_distance` defaults to 0: a point sun with only the soft
-      // falloff `sun_curve` gives it.
-      angularRadius: 0,
+      size: skyLightSize(light),
     });
   });
 

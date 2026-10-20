@@ -6,31 +6,15 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { OVERRUN_BEHAVIOR } from '../../../../linter/validators/textServerEnums.js';
+import { OVERRUN_BEHAVIOR_NAMES } from '../../../../godot/text/textServerEnums.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-
-/** `ItemList::SelectMode`, item_list.h:48-50, in declaration order. */
-const SELECT_MODE = {
-  0: 'SELECT_SINGLE',
-  1: 'SELECT_MULTI',
-  2: 'SELECT_TOGGLE',
-};
-
-/** `ItemList::IconMode`, item_list.h:43-44, in declaration order. */
-const ICON_MODE = {
-  0: 'ICON_MODE_TOP',
-  1: 'ICON_MODE_LEFT',
-};
-
-/** `ItemList::ScrollHintMode`, item_list.h:54-57, in declaration order. */
-const SCROLL_HINT_MODE = {
-  0: 'SCROLL_HINT_MODE_DISABLED',
-  1: 'SCROLL_HINT_MODE_BOTH',
-  2: 'SCROLL_HINT_MODE_TOP',
-  3: 'SCROLL_HINT_MODE_BOTTOM',
-};
+import {
+  ITEM_LIST_ICON_MODE_NAMES,
+  ITEM_LIST_SCROLL_HINT_MODE_NAMES,
+  ITEM_LIST_SELECT_MODE_NAMES,
+} from '../../../../godot/scene/gui.js';
 
 /**
  * `item_<idx>/<leaf>` leaves: the four `base_property_helper.register_property`
@@ -105,26 +89,22 @@ validatorRegistry.registerAll('ItemList', {
   // item_list.cpp:2392, PROPERTY_HINT_ENUM "Single,Multi,Toggle" (0-2).
   // set_select_mode (item_list.cpp:657-665) assigns past an equality early-out
   // with no ERR_FAIL, so the hint constrains the inspector widget only: hinted.
-  select_mode: v.enumInt('select_mode', 0, 2, SELECT_MODE, {
-    hinted: 'item_list.cpp:2392',
-  }),
+  select_mode: v.enumInt('select_mode', ITEM_LIST_SELECT_MODE_NAMES, { hinted: 'item_list.cpp:2392' }),
   // item_list.cpp:2399, PROPERTY_HINT_ENUM with 7 entries (0-6).
   // set_text_overrun_behavior (item_list.cpp:2182-2191) assigns straight
   // through, so both ends are hinted.
-  text_overrun_behavior: v.enumInt('text_overrun_behavior', 0, 6, OVERRUN_BEHAVIOR, {
+  text_overrun_behavior: v.enumInt('text_overrun_behavior', OVERRUN_BEHAVIOR_NAMES, {
     hinted: 'item_list.cpp:2399',
   }),
   // item_list.cpp:2401, PROPERTY_HINT_ENUM "Disabled,Both,Top,Bottom" (0-3).
   // set_scroll_hint_mode (item_list.cpp:2211-2218) assigns straight through.
-  scroll_hint_mode: v.enumInt('scroll_hint_mode', 0, 3, SCROLL_HINT_MODE, {
+  scroll_hint_mode: v.enumInt('scroll_hint_mode', ITEM_LIST_SCROLL_HINT_MODE_NAMES, {
     hinted: 'item_list.cpp:2401',
   }),
   // item_list.cpp:2409, PROPERTY_HINT_ENUM "Top,Left" (0-1). Unlike the three
   // enums above, set_icon_mode opens with ERR_FAIL_INDEX((int)p_mode, 2)
   // (item_list.cpp:672), which drops the write entirely: enforced, not hinted.
-  icon_mode: v.enumInt('icon_mode', 0, 1, ICON_MODE, {
-    enforced: 'item_list.cpp:672',
-  }),
+  icon_mode: v.enumInt('icon_mode', ITEM_LIST_ICON_MODE_NAMES, { enforced: 'item_list.cpp:672' }),
 
   // item_list.cpp:2396, PROPERTY_HINT_RANGE "1,10,1,or_greater". The trailing
   // `or_greater` opens the max end, so the hinted 10 is not a bound; the floor

@@ -12,5 +12,3 @@ const navigationAgent2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(navigationAgent2DRegistration);
-
-export { navigationAgent2DRegistration };

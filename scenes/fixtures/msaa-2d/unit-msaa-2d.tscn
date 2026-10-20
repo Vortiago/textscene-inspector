@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://unitmsaa2d"]
+
+; The root viewport's msaa_2d at 4X, from this project's project.godot. Every other golden runs at
+; Godot's default, Disabled, so only this one shows the resolved edge coverage. Opaque polygons
+; with no feather, rotated so no edge runs along a pixel row, leave nothing but the edge ramp.
+
+[node name="Root" type="Node2D"]
+
+[node name="Triangle" type="Polygon2D" parent="."]
+position = Vector2(300, 320)
+rotation = 0.2
+polygon = PackedVector2Array(0, -200, 180, 140, -180, 140)
+
+[node name="Bar" type="Polygon2D" parent="."]
+position = Vector2(760, 320)
+rotation = -0.35
+color = Color(0.95, 0.4, 0.1, 1)
+polygon = PackedVector2Array(-260, -12, 260, -12, 260, 12, -260, 12)

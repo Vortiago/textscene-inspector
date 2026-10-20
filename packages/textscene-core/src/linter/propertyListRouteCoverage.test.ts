@@ -1,5 +1,5 @@
 /**
- * Every property-list route family in `propertyListRoutes.ts` resolves to a
+ * Every property-list route family in `testing/propertyListRoutes.ts` resolves to a
  * validator, or is a named gap. `UNIMPLEMENTED_COUNT` is a ratchet like
  * `ownValidatorCoverage`'s `UNDECLARED`: each row it counts is a family a scene
  * can carry with no validation.
@@ -8,8 +8,8 @@
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../core/NodeRegistry.js';
 import { validatorRegistry } from './ValidatorRegistry.js';
-import { descendsFrom } from '../godot/classdb/nodeBaseTypes.js';
-import { ROWS, type RouteRow } from './propertyListRoutes.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { ROWS, type RouteRow } from './testing/propertyListRoutes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
 
@@ -34,13 +34,13 @@ function isDeclined(
 
 /**
  * Every registered parser slice that is `type` or descends from it, the
- * population `ownValidatorCoverage` sweeps. `descendsFrom` matches the type
+ * population `ownValidatorCoverage` sweeps. `descendsFromClass` matches the type
  * itself, so a declaring class that is also a leaf (`BoneConstraint3D`) counts.
  */
 function concreteDescendants(type: string): string[] {
   return nodeRegistry
     .getAllTypeNames()
-    .filter((candidate) => descendsFrom(candidate, type))
+    .filter((candidate) => descendsFromClass(candidate, type))
     .sort();
 }
 

@@ -2,7 +2,7 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { unquoteStringName } from '../../../../parser/utils';
-import type { ControlProperties, ControlColor } from './types';
+import type { ControlProperties } from './types';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
 import {
   intOr,
@@ -10,13 +10,15 @@ import {
   parseOptionalVector2,
   parseHeadingIndex,
 } from '../../../../parser/valueParsers';
-import { LAYOUT_DIRECTION_INHERITED } from '../../../../godot/index.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../../godot/scene/canvasItem.js';
+import { LayoutDirection } from '../../../../godot/scene/control.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import type { Rgba } from '../../../../godot/math/math.js';
 
 /** Collect `theme_override_<category>/<name> = value` into the five typed maps. */
 function parseThemeOverrides(properties: Record<string, string>): Partial<ControlProperties> {
   const constants: Record<string, number> = {};
-  const colors: Record<string, ControlColor> = {};
+  const colors: Record<string, Rgba> = {};
   const fontSizes: Record<string, number> = {};
   const styles: Record<string, string> = {};
   const icons: Record<string, string> = {};
@@ -96,7 +98,7 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
   // Never left undefined: an unset Control holds INHERITED in Godot too.
   result.layoutDirection = intOr(
     properties.layout_direction,
-    LAYOUT_DIRECTION_INHERITED,
+    LayoutDirection.INHERITED,
     `${result.name || 'Control'}.layout_direction`
   );
   result.growVertical = parseOptionalFloat(properties.grow_vertical);
@@ -118,8 +120,16 @@ export function parseControl(heading: ParsedHeading, properties: Record<string, 
   result.showBehindParent = boolSlotValue(properties.show_behind_parent) === true;
   result.topLevel = boolSlotValue(properties.top_level) === true;
   result.lightMask = intOr(properties.light_mask, 1, `${result.name || 'Control'}.light_mask`);
-  result.textureFilter = intOr(properties.texture_filter, 0, `${result.name || 'Control'}.texture_filter`);
-  result.textureRepeat = intOr(properties.texture_repeat, 0, `${result.name || 'Control'}.texture_repeat`);
+  result.textureFilter = intOr(
+    properties.texture_filter,
+    CanvasItemTextureFilter.PARENT_NODE,
+    `${result.name || 'Control'}.texture_filter`
+  );
+  result.textureRepeat = intOr(
+    properties.texture_repeat,
+    CanvasItemTextureRepeat.PARENT_NODE,
+    `${result.name || 'Control'}.texture_repeat`
+  );
 
   Object.assign(result, parseThemeOverrides(properties));
 

@@ -14,12 +14,8 @@ import type { ControlProperties } from '../control/types';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
-import { SIZE_FILL, fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
-
-// Control::SizeFlags (control.h:78-85): the bits `fit_child_in_rect` tests.
-
-/** `Control`'s own default for an unset `size_flags_horizontal`/`_vertical` (control.h:230-231). */
-const DEFAULT_SIZE_FLAGS = SIZE_FILL;
+import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
+import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
 
 /** `default_theme.cpp:1252-1255`: MarginContainer's four margins default to 0, unscaled. */
 const DEFAULT_MARGIN = 0;

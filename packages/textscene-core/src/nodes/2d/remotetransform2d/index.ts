@@ -15,7 +15,6 @@ const remoteTransform2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(remoteTransform2DRegistration);
 
-export { remoteTransform2DRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

@@ -12,5 +12,3 @@ controlComponentRegistry.register({
   typeName: 'HSplitContainer',
   Component: HSplitContainer,
 });
-
-export { HSplitContainer };

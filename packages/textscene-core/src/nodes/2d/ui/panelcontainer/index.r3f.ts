@@ -14,5 +14,3 @@ controlComponentRegistry.register({
 });
 controlSolverRegistry.registerMinimumSize('PanelContainer', panelContainerMinimumSize);
 controlSolverRegistry.registerContainerLayout('PanelContainer', panelContainerLayout);
-
-export { PanelContainer };

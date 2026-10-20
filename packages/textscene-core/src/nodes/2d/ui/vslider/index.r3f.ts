@@ -8,5 +8,3 @@ import { VSlider } from './Component';
 import './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'VSlider', Component: VSlider });
-
-export { VSlider };

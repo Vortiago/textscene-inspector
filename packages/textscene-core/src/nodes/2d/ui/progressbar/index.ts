@@ -10,6 +10,5 @@ const progressBarRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(progressBarRegistration);
 
-export { progressBarRegistration };
 export * from './parser';
 export * from './types';

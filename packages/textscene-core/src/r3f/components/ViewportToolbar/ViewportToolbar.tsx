@@ -8,7 +8,9 @@
 import {
   useViewportMode,
   FRAME_ON_OPEN_STORAGE_KEY,
+  SHOW_FOG_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
+  SHOW_PERFORMANCE_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
@@ -27,7 +29,7 @@ import styles from './ViewportToolbar.module.css';
 const MODES: ViewportMode[] = ['3D', '2D'];
 
 /** Everything `buildDisplayToggles` needs, so a test needs no DOM. */
-export interface DisplayToggleState {
+interface DisplayToggleState {
   mode: ViewportMode;
   showCollisions: boolean;
   setShowCollisions: (show: boolean) => void;
@@ -43,6 +45,10 @@ export interface DisplayToggleState {
   setShowPreviewEnvironment: (show: boolean) => void;
   frameOnOpen: boolean;
   setFrameOnOpen: (frame: boolean) => void;
+  showFog: boolean;
+  setShowFog: (show: boolean) => void;
+  showPerformance: boolean;
+  setShowPerformance: (show: boolean) => void;
   sceneHasSun: boolean;
   sceneHasEnvironment: boolean;
 }
@@ -51,7 +57,7 @@ export interface DisplayToggleState {
  * The overlays the Display menu offers, and their state. At module scope, so
  * the 3D-only ones are one readable list.
  */
-export function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
+function buildDisplayToggles(state: DisplayToggleState): readonly DisplayToggle[] {
   return [
     {
       label: 'Collisions',
@@ -71,7 +77,13 @@ export function buildDisplayToggles(state: DisplayToggleState): readonly Display
       checked: state.showNavigation,
       onChange: state.setShowNavigation,
     },
-    // 3D-only: the grid, the framing preference and both preview-lighting
+    {
+      label: 'Performance',
+      title: 'Show the frame rate and the time each render step takes',
+      checked: state.showPerformance,
+      onChange: state.setShowPerformance,
+    },
+    // 3D-only: the grid, the framing preference, the fog and both preview-lighting
     // stand-ins have no meaning over the 2D Control overlay.
     ...(state.mode === '3D'
       ? ([
@@ -87,6 +99,12 @@ export function buildDisplayToggles(state: DisplayToggleState): readonly Display
             title: 'Show a ground-plane reference grid',
             checked: state.showGrid,
             onChange: state.setShowGrid,
+          },
+          {
+            label: 'Fog',
+            title: "Draw the Environment's depth and volumetric fog. Off skips the fog passes.",
+            checked: state.showFog,
+            onChange: state.setShowFog,
           },
           {
             label: 'Preview Sun',
@@ -109,6 +127,14 @@ export function buildDisplayToggles(state: DisplayToggleState): readonly Display
         ] satisfies DisplayToggle[])
       : []),
   ];
+}
+
+/** A handler that sets a viewport preference and persists it under `key`. */
+function persisting<T>(set: (value: T) => void, key: string): (value: T) => void {
+  return (value) => {
+    set(value);
+    writePersisted(key, value);
+  };
 }
 
 /** Downloads a data URL through a throwaway anchor element. */
@@ -139,6 +165,10 @@ export function ViewportToolbar() {
     setShowPreviewEnvironment,
     frameOnOpen,
     setFrameOnOpen,
+    showFog,
+    setShowFog,
+    showPerformance,
+    setShowPerformance,
   } = useViewportMode();
   const camera = useOptionalViewportActions();
   const hierarchy = useOptionalHierarchy();
@@ -158,18 +188,11 @@ export function ViewportToolbar() {
 
   // Only the user's click persists: a programmatic writer, such as
   // WorkspaceAutoSelect, must not overwrite the stored preference.
-  function handleModeClick(m: ViewportMode) {
-    setMode(m);
-    writePersisted(VIEWPORT_MODE_STORAGE_KEY, m);
-  }
-  function handleGridChange(show: boolean) {
-    setShowGrid(show);
-    writePersisted(SHOW_GRID_STORAGE_KEY, show);
-  }
-  function handleFrameOnOpenChange(frame: boolean) {
-    setFrameOnOpen(frame);
-    writePersisted(FRAME_ON_OPEN_STORAGE_KEY, frame);
-  }
+  const handleModeClick = persisting(setMode, VIEWPORT_MODE_STORAGE_KEY);
+  const handleGridChange = persisting(setShowGrid, SHOW_GRID_STORAGE_KEY);
+  const handleFrameOnOpenChange = persisting(setFrameOnOpen, FRAME_ON_OPEN_STORAGE_KEY);
+  const handleFogChange = persisting(setShowFog, SHOW_FOG_STORAGE_KEY);
+  const handlePerformanceChange = persisting(setShowPerformance, SHOW_PERFORMANCE_STORAGE_KEY);
 
   const displayToggles = buildDisplayToggles({
     mode,
@@ -187,6 +210,10 @@ export function ViewportToolbar() {
     setShowPreviewEnvironment,
     frameOnOpen,
     setFrameOnOpen: handleFrameOnOpenChange,
+    showFog,
+    setShowFog: handleFogChange,
+    showPerformance,
+    setShowPerformance: handlePerformanceChange,
     sceneHasSun,
     sceneHasEnvironment,
   });

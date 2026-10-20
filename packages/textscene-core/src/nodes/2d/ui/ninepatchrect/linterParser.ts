@@ -8,25 +8,18 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-// nine_patch_rect.h:39-43: enum AxisStretchMode, 3 values, BIND_ENUM_CONSTANT at nine_patch_rect.cpp:86-88.
-// Labels from the hint string both axes share at nine_patch_rect.cpp:83-84.
-const AXIS_STRETCH_MODE = {
-  0: 'AXIS_STRETCH_MODE_STRETCH',
-  1: 'AXIS_STRETCH_MODE_TILE',
-  2: 'AXIS_STRETCH_MODE_TILE_FIT',
-};
+import { AXIS_STRETCH_MODE_NAMES } from '../../../../godot/scene/gui.js';
 
 validatorRegistry.registerAll('NinePatchRect', {
   // nine_patch_rect.cpp:164-171: set_h_axis_stretch_mode assigns, with only an early return on a
   // redundant set and no ERR_FAIL_INDEX. The ADD_PROPERTY at :83 carries PROPERTY_HINT_ENUM with 3 labels,
   // so out-of-range is hinted, not enforced: a warning.
-  axis_stretch_horizontal: v.enumInt('axis_stretch_horizontal', 0, 2, AXIS_STRETCH_MODE, {
+  axis_stretch_horizontal: v.enumInt('axis_stretch_horizontal', AXIS_STRETCH_MODE_NAMES, {
     hinted: 'nine_patch_rect.cpp:83',
   }),
   // nine_patch_rect.cpp:177-184: set_v_axis_stretch_mode, shaped as the horizontal setter. ADD_PROPERTY
   // at :84. Warning.
-  axis_stretch_vertical: v.enumInt('axis_stretch_vertical', 0, 2, AXIS_STRETCH_MODE, {
+  axis_stretch_vertical: v.enumInt('axis_stretch_vertical', AXIS_STRETCH_MODE_NAMES, {
     hinted: 'nine_patch_rect.cpp:84',
   }),
 

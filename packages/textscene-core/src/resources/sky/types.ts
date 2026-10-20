@@ -5,16 +5,16 @@
  */
 
 import type { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
-import type { Color } from '../../utils/colorParser';
+import type { Rgba } from '../../godot/math/math';
 
 export interface ProceduralSkyProperties {
   kind: 'procedural';
-  sky_top_color: Color;
-  sky_horizon_color: Color;
+  sky_top_color: Rgba;
+  sky_horizon_color: Rgba;
   sky_curve: number;
   sky_energy_multiplier: number;
-  ground_bottom_color: Color;
-  ground_horizon_color: Color;
+  ground_bottom_color: Rgba;
+  ground_horizon_color: Rgba;
   ground_curve: number;
   ground_energy_multiplier: number;
   /** Degrees. Godot uploads its cosine. */
@@ -22,6 +22,8 @@ export interface ProceduralSkyProperties {
   sun_curve: number;
   /** The sky's overall exposure. */
   energy_multiplier: number;
+  /** Whether Godot adds its debanding noise to the drawn sky. */
+  use_debanding: boolean;
 }
 
 export interface PanoramaSkyProperties {
@@ -34,14 +36,16 @@ export interface PanoramaSkyProperties {
 export interface PhysicalSkyProperties {
   kind: 'physical';
   rayleigh_coefficient: number;
-  rayleigh_color: Color;
+  rayleigh_color: Rgba;
   mie_coefficient: number;
   mie_eccentricity: number;
-  mie_color: Color;
+  mie_color: Rgba;
   turbidity: number;
   sun_disk_scale: number;
-  ground_color: Color;
+  ground_color: Rgba;
   energy_multiplier: number;
+  /** Whether Godot adds its debanding noise to the drawn sky. */
+  use_debanding: boolean;
 }
 
 export type SkyProperties = ProceduralSkyProperties | PanoramaSkyProperties | PhysicalSkyProperties;

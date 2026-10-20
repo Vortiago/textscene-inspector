@@ -14,15 +14,9 @@ import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResou
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
-import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import {
-  canvasItemBlendState,
-  type CanvasItemBlendState,
-} from '../../../resources/materials/canvasitemmaterial/renderer';
-import { CanvasItemBlendMode } from '../../../resources/materials/canvasitemmaterial/types';
-import type { CanvasItemLightingProps } from '../../../r3f/lighting2d/useCanvasItemLighting';
+import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
 import { buildParticleGeometry, type ParticleFlipbook } from './particleGeometry';
@@ -37,16 +31,15 @@ export function CPUParticles2D({ node, children }: NodeComponentProps) {
     <CanvasItem2D
       node={node}
       props={props}
-      body={({ color, opacity }, material, lighting) =>
+      body={({ color, opacity }, material, pixelMaterial) =>
         props.emitting ? (
           <ParticleField
             props={props}
             name={node.name}
             color={color}
             opacity={opacity}
-            blend={canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX)}
             material={material}
-            lighting={lighting}
+            pixelMaterial={pixelMaterial}
           />
         ) : null
       }
@@ -75,17 +68,15 @@ function ParticleField({
   name,
   color,
   opacity,
-  blend,
   material,
-  lighting,
+  pixelMaterial,
 }: {
   props: CPUParticles2DProperties;
   name: string;
   color: THREE.Color;
   opacity: number;
-  blend: CanvasItemBlendState;
   material: CanvasItemMaterialProperties | null;
-  lighting: CanvasItemLightingProps;
+  pixelMaterial: CanvasItemPixelMaterial;
 }) {
   const { externalResources, internalResources } = useSceneResources();
   const flipbook = useMemo(() => particleFlipbook(material), [material]);
@@ -151,8 +142,8 @@ function ParticleField({
       // Each particle has its own vertex colour and alpha, and each quad is wound
       // by its own transform's determinant (`particleGeometry.ts`). A split by
       // facing would composite a mirrored particle out of emission order, so
-      // `canvasItemFacing()` draws the mesh once, in index order.
-      merge: [canvasItemFacing(), blend, lighting],
+      // the canvas-item facing draws the mesh once, in index order.
+      merge: [pixelMaterial],
     });
     return (
       <mesh geometry={geom}>

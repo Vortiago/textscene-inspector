@@ -9,19 +9,20 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import type { ControlColor } from '../control/types';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../r3f/controls/godotDefaultTheme';
+import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { tabBarStyleBoxes } from '../tabbar/nativeSolver';
 import { sliderMinimumSize } from '../shared/sliderSolver';
 import type { ColorPickerProperties } from './types';
+import type { Rgba } from '../../../../godot/math/math';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `MODE_BUTTON_COUNT` (`color_picker.h:184`). OKHSL has no mode button: only the dropdown reaches it. */
-export const MODE_BUTTON_COUNT = 3;
+const MODE_BUTTON_COUNT = 3;
 
 /** `ColorMode::get_name()` per mode (`color_mode.h:72,94,118,148`). The first 3 label `mode_btns`. */
 export const COLOR_MODE_NAMES = ['RGB', 'HSV', 'Linear', 'OKHSL'] as const;
@@ -30,36 +31,34 @@ export const COLOR_MODE_NAMES = ['RGB', 'HSV', 'Linear', 'OKHSL'] as const;
 export const COLOR_PICKER_THEME_FONT_KEY = 'font';
 
 /** Measures one run of text at the row's font size. The solver adapts `ctx.measureText` and the painter adapts `shapeButtonLabel`. */
-export type TextWidthMeasurer = (text: string) => Vec2;
+export type TextWidthMeasurer = (text: string) => Vector2;
 
 /** The one `PickerShapeType` value (`color_picker.h`) this previewer draws. */
 export const SHAPE_HSV_RECTANGLE = 0;
 
 /** `sv_width`/`sv_height` (`default_theme.cpp:1077-1078`), at scale 1. */
-export const COLOR_PICKER_SV_SIZE = 256;
+const COLOR_PICKER_SV_SIZE = 256;
 /** `h_width` (`default_theme.cpp:1079`), at scale 1. */
-export const COLOR_PICKER_HUE_WIDTH = 30;
+const COLOR_PICKER_HUE_WIDTH = 30;
 /**
  * The icon size of `btn_pick`, `btn_shape`, `btn_mode` and `menu_btn`:
  * `color_picker_pipette.svg`, `picker_shape_rectangle.svg` and `tabs_menu_hl.svg`
  * are 16x16 (`scene/theme/icons/`).
  */
-export const COLOR_PICKER_SAMPLE_ICON_SIZE = 16;
+const COLOR_PICKER_SAMPLE_ICON_SIZE = 16;
 /** The row-height fraction of `sample` (`color_picker.cpp:1397`). */
 export const COLOR_PICKER_SAMPLE_HEIGHT_FRACTION = 0.95;
 /** The fixed width of `btn_pick`, `btn_shape` and `btn_mode` (`color_picker.cpp:122-124`), at scale 1. */
-export const COLOR_PICKER_BUTTON_WIDTH = 28;
+const COLOR_PICKER_BUTTON_WIDTH = 28;
 /** `label_width` (`default_theme.cpp:1080`), at scale 1: the width floor of the channel-slider label column. */
-export const COLOR_PICKER_LABEL_WIDTH = 10;
+const COLOR_PICKER_LABEL_WIDTH = 10;
 /** The forced width of `hex_label` (`color_picker.cpp:170`), at scale 1. */
-export const COLOR_PICKER_HEX_LABEL_WIDTH = 38;
+const COLOR_PICKER_HEX_LABEL_WIDTH = 38;
 /**
  * The approximate width of `text_type`, at scale 1, sized like the other 28px
  * buttons. `color_picker.cpp:172` sizes it to match the "script" icon.
  */
-export const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
-/** The height of a channel-slider gradient band (`margin` in every `slider_draw` of `color_mode.cpp`), at scale 1. */
-export const COLOR_PICKER_SLIDER_BAND_HEIGHT = 16;
+const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
 
 /**
  * The natural width of `values[i]`. `create_slider` sets no custom minimum on the
@@ -85,7 +84,7 @@ export function colorPickerValueColumnWidth(
  * `LineEdit::get_minimum_size()` with no buttons block. Only the minimum size
  * reads it. The field fills what `hexRowColumns` leaves.
  */
-export function colorPickerHexFieldMinWidth(
+function colorPickerHexFieldMinWidth(
   theme: Pick<NativeTheme, 'widgets'>,
   measure: TextWidthMeasurer | null
 ): number {
@@ -103,13 +102,13 @@ export function colorPickerHexFieldMinWidth(
  * 481-523`) with the 16x16 `menu_option` icon (`default_theme.cpp:1088`) plus the margin of
  * `button_normal` (`default_theme.cpp:359-363`). `btn_mode` has this size, with its width floored to 28.
  */
-export function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>): Vec2 {
+function colorPickerMenuButtonSize(theme: Pick<NativeTheme, 'widgets' | 'scale'>): Vector2 {
   const icon = Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * colorPickerScale(theme));
   const margin = contentMarginSize(theme.widgets.button.normal);
   return { x: icon + margin.x, y: icon + margin.y };
 }
 
-/** `ScaledGodotTheme.scale` (`godotDefaultTheme.ts`): the raw `gui/theme/default_theme_scale`. */
+/** `ScaledGodotTheme.scale` (`godot/scene/theme.ts`): the raw `gui/theme/default_theme_scale`. */
 export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
   return theme.scale;
 }
@@ -118,7 +117,7 @@ export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
  * `Color::from_hsv` (`core/math/color.cpp:458-461`, delegating to
  * `set_hsv`, `:182-227`).
  */
-export function hsvToRgb(h: number, s: number, v: number): ControlColor {
+export function hsvToRgb(h: number, s: number, v: number): Rgba {
   if (s === 0) return { r: v, g: v, b: v, a: 1 };
   const hh = (((h * 6) % 6) + 6) % 6;
   const i = Math.floor(hh);
@@ -143,11 +142,11 @@ export function hsvToRgb(h: number, s: number, v: number): ControlColor {
 }
 
 /** `Color::inverted()` (`core/math/color.h`): flips rgb and keeps alpha. */
-export function invertRgb(c: ControlColor): ControlColor {
+export function invertRgb(c: Rgba): Rgba {
   return { r: 1 - c.r, g: 1 - c.g, b: 1 - c.b, a: c.a };
 }
 
-export interface HsvColor {
+interface HsvColor {
   h: number;
   s: number;
   v: number;
@@ -159,7 +158,7 @@ export interface HsvColor {
  * exceeds 1. `_copy_normalized_to_hsv_okhsl` (`:552-565`) then reads the HSV of that
  * normalised colour with `Color::get_h/get_s/get_v` (`core/math/color.cpp:136-180`).
  */
-export function extractHsv(color: ControlColor): HsvColor {
+export function extractHsv(color: Rgba): HsvColor {
   const linear = {
     r: sRGBChannelToLinear(color.r),
     g: sRGBChannelToLinear(color.g),
@@ -190,7 +189,7 @@ export function extractHsv(color: ControlColor): HsvColor {
   return { h, s, v };
 }
 
-export interface ColorPickerRows {
+interface ColorPickerRows {
   /** The rect of `shape_container`, `null` at any `picker_shape` but `SHAPE_HSV_RECTANGLE`. */
   shape: Rect2 | null;
   /** The rect of `sample_hbc`, `null` when `sampler_visible` is false. */
@@ -251,7 +250,7 @@ function lineRowHeight(theme: Pick<NativeTheme, 'widgets'>, textHeightPx: number
 function modeRowSize(
   theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
   measure: TextWidthMeasurer | null
-): Vec2 {
+): Vector2 {
   const scale = colorPickerScale(theme);
   const btnModeWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
   const tabMarginY = contentMarginSize(tabBarStyleBoxes(scale).unselected).y;
@@ -270,7 +269,7 @@ function modeRowSize(
 function swatchesRowSize(
   theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
   measure: TextWidthMeasurer | null
-): Vec2 {
+): Vector2 {
   const menuBtn = colorPickerMenuButtonSize(theme);
   const menuBtnWidth = menuBtn.x;
   const menuBtnHeight = menuBtn.y;
@@ -424,7 +423,7 @@ function mirroredColumn(column: Rect2, row: Rect2, rtl: boolean): Rect2 {
   return { ...column, x: row.x + row.w - (column.x - row.x) - column.w };
 }
 
-export interface ShapeRowSplit {
+interface ShapeRowSplit {
   svSquare: Rect2;
   hueSlider: Rect2;
 }
@@ -457,7 +456,7 @@ export function svAndHueRects(
  * `ColorPickerShape::draw_sv_square`'s cursor placement
  * (`color_picker_shape.cpp:259-261`), clamped to the square.
  */
-export function svSquareCursorPosition(square: Rect2, s: number, v: number): Vec2 {
+export function svSquareCursorPosition(square: Rect2, s: number, v: number): Vector2 {
   const end = { x: square.x + square.w, y: square.y + square.h };
   return {
     x: Math.min(Math.max(square.x + square.w * s, square.x), end.x),
@@ -470,7 +469,7 @@ export function hueIndicatorY(height: number, h: number): number {
   return height * h;
 }
 
-export interface SliderGridRowColumns {
+interface SliderGridRowColumns {
   label: Rect2;
   slider: Rect2;
   value: Rect2;
@@ -524,7 +523,7 @@ export function sliderGridRowRects(
   return rows;
 }
 
-export interface HexRowColumns {
+interface HexRowColumns {
   label: Rect2;
   textType: Rect2;
   field: Rect2;
@@ -551,7 +550,7 @@ export function hexRowColumns(hex: Rect2, theme: NativeTheme, rtl = false): HexR
   };
 }
 
-export interface ModeRowButtons {
+interface ModeRowButtons {
   buttons: Rect2[];
   dropdown: Rect2;
 }
@@ -596,7 +595,7 @@ export function colorPickerModeButtonStyleBox(theme: Pick<NativeTheme, 'scale'>,
   return pressed ? boxes.selected : boxes.unselected;
 }
 
-export interface SampleRowColumns {
+interface SampleRowColumns {
   pick: Rect2;
   sample: Rect2;
   shape: Rect2 | null;
@@ -639,7 +638,7 @@ export function sampleRowColumns(
   };
 }
 
-export interface SwatchesRowRects {
+interface SwatchesRowRects {
   swatchesButton: Rect2;
   menuButton: Rect2;
   recentColorsButton: Rect2;
@@ -687,7 +686,7 @@ export function swatchesRowRects(swatches: Rect2, theme: NativeTheme, rtl = fals
  * `SIZE_SHRINK_CENTER` down (`create_slider`, `color_picker.cpp:
  * 452-453`), so it has its natural height, centred in the taller cell.
  */
-export function colorPickerSliderBoxRect(cell: Rect2, theme: NativeTheme, grabber: Vec2): Rect2 {
+export function colorPickerSliderBoxRect(cell: Rect2, theme: NativeTheme, grabber: Vector2): Rect2 {
   const h = sliderMinimumSize(false, theme, grabber).y;
   // `Control::fit_child_in_rect` (`control.h`, `SIZE_SHRINK_CENTER`) floors:
   // `r.position.y += Math::floor((p_rect.size.y - minsize.y) / 2)`.
@@ -709,9 +708,9 @@ export const COLOR_PICKER_SLIDER_GRABBER_OFFSET = 8;
  * once, and `grabber_offset` is a separate int addition.
  */
 export function colorPickerChannelGrabberRect(
-  sliderBoxSize: Vec2,
+  sliderBoxSize: Vector2,
   ratio: number,
-  grabber: Vec2,
+  grabber: Vector2,
   grabberOffsetPx: number,
   rtl = false
 ): Rect2 {

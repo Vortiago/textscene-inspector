@@ -6,5 +6,3 @@ import { makeCastLinterRule } from '../../../../linter/physics/castLinterRule.js
 const rayCast3DValidationRule = makeCastLinterRule('3D', 'Ray');
 
 ruleRegistry.register(rayCast3DValidationRule);
-
-export { rayCast3DValidationRule };

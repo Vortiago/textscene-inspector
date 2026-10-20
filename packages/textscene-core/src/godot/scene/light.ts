@@ -1,22 +1,79 @@
-/** `Light3D`'s class defaults that every light type reads. */
+/**
+ * The class defaults of `Light3D` and of each light type, as their constructors set them. A light
+ * type's table starts from `LIGHT_3D_DEFAULTS` and lists what its own constructor sets.
+ */
 
-/** `Light3D()` sets `PARAM_SHADOW_OPACITY` to 1 (`scene/3d/light_3d.cpp:488`). */
-export const LIGHT_SHADOW_OPACITY_DEFAULT = 1;
+import { enumNamesByValue } from '../classdb/enumNames.js';
+import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSkyMode.js';
+import { DirectionalShadowMode } from '../rendering/lights/directionalShadow.js';
 
-/** `Light3D()` sets `PARAM_SPECULAR` to 0.5 (`scene/3d/light_3d.cpp:476`). */
-export const LIGHT_SPECULAR_DEFAULT = 0.5;
+/** `Light3D(LightType)` (`scene/3d/light_3d.cpp:468-491`) and its field initialisers (`light_3d.h:79-81`). */
+export const LIGHT_3D_DEFAULTS = {
+  color: 'Color(1, 1, 1, 1)', // :468
+  energy: 1, // :473
+  volumetricFogEnergy: 1, // :475
+  specular: 0.5, // :476
+  /** `omni_range`, `spot_range` and `area_range`. */
+  range: 5, // :477
+  /** `light_size`, and a DirectionalLight3D's `light_angular_distance`. */
+  size: 0, // :478
+  /** `omni_attenuation`, `spot_attenuation` and `area_attenuation`. */
+  attenuation: 1, // :479
+  spotAngle: 45, // :480
+  spotAngleAttenuation: 1, // :481
+  shadowSplitOffsets: [0.1, 0.2, 0.5], // :483-485, fractions of the shadowed range
+  shadowPancakeSize: 20, // :487
+  shadowOpacity: 1, // :488
+  shadowBlur: 1, // :489
+  shadowBias: 0.1, // :490
+  shadowNormalBias: 1, // :491
+  distanceFade: { begin: 40, shadow: 50, length: 10 }, // light_3d.h:79-81
+} as const;
 
-/** `DirectionalLight3D()` sets `PARAM_SPECULAR` to 1 (`scene/3d/light_3d.cpp:605`). */
-export const DIRECTIONAL_LIGHT_SPECULAR_DEFAULT = 1;
+/** `DirectionalLight3D()` (`scene/3d/light_3d.cpp:600-608`). */
+export const DIRECTIONAL_LIGHT_3D_DEFAULTS = {
+  ...LIGHT_3D_DEFAULTS,
+  shadowMaxDistance: 100, // :600
+  shadowFadeStart: 0.8, // :601
+  /** In texels of the shadow map. */
+  shadowNormalBias: 2, // :603
+  specular: 1, // :605
+  shadowMode: DirectionalShadowMode.PARALLEL_4_SPLITS, // :606
+  blendSplits: false, // :607
+  skyMode: DirectionalLightSkyMode.LIGHT_AND_SKY, // :608
+} as const;
 
-/** `Light3D()` sets `PARAM_SIZE` to 0 (`scene/3d/light_3d.cpp:478`). AreaLight3D sets its own. */
-export const LIGHT_SIZE_DEFAULT = 0;
+/** `SpotLight3D()` (`scene/3d/light_3d.cpp:681`). */
+export const SPOT_LIGHT_3D_DEFAULTS = {
+  ...LIGHT_3D_DEFAULTS,
+  shadowBias: 0.03,
+} as const;
 
-/** `Light3D()` sets `PARAM_SHADOW_NORMAL_BIAS` to 1 (`scene/3d/light_3d.cpp:491`). DirectionalLight3D sets its own. */
-export const LIGHT_SHADOW_NORMAL_BIAS_DEFAULT = 1;
+/** `AreaLight3D()` (4.7.2 `scene/3d/light_3d.cpp:746-750`). Godot 4.6.3 has no AreaLight3D. */
+export const AREA_LIGHT_3D_DEFAULTS = {
+  ...LIGHT_3D_DEFAULTS,
+  shadowBias: 0.1, // :746
+  size: 0.5, // :747
+  specular: 1, // :748
+  areaSize: { x: 1, y: 1 }, // :749
+  areaNormalizeEnergy: true, // :750
+} as const;
 
-/** `Light3D()` sets `PARAM_SHADOW_BIAS` to 0.1 (`scene/3d/light_3d.cpp:490`). */
-export const LIGHT_SHADOW_BIAS_DEFAULT = 0.1;
+/** `Light3D::BakeMode` (`scene/3d/light_3d.h:64-68`). */
+const BakeMode = {
+  DISABLED: 0,
+  STATIC: 1,
+  DYNAMIC: 2,
+} as const;
 
-/** `SpotLight3D()` sets `PARAM_SHADOW_BIAS` to 0.03 (`scene/3d/light_3d.cpp:681`). */
-export const SPOT_LIGHT_SHADOW_BIAS_DEFAULT = 0.03;
+/** Each light bake mode by its integer, spelled as its constant without `BAKE_`. */
+export const LIGHT_3D_BAKE_MODE_NAMES = enumNamesByValue(BakeMode);
+
+/** `OmniLight3D::ShadowMode` (`light_3d.h:208-211`). */
+const OmniShadowMode = {
+  DUAL_PARABOLOID: 0,
+  CUBE: 1,
+} as const;
+
+/** Each omni shadow mode by its integer, spelled as its constant without `SHADOW_`. */
+export const OMNI_LIGHT_3D_SHADOW_MODE_NAMES = enumNamesByValue(OmniShadowMode);

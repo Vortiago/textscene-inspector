@@ -11,5 +11,3 @@ import { ColorPickerButton } from './Component';
 controlSolverRegistry.registerMinimumSize('ColorPickerButton', buttonMinimumSize);
 
 controlComponentRegistry.register({ typeName: 'ColorPickerButton', Component: ColorPickerButton });
-
-export { ColorPickerButton };

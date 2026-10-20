@@ -6,10 +6,12 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import type { ImageSize } from '../../formats/image/imagePixels';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { literalText, parseGodotInt } from '../../../godot/index.js';
+import { literalText } from '../../../godot/string/string.js';
+import { parseGodotInt } from '../../../godot/variant/int.js';
 import { parsePackedByteArrayBody } from '../../../godot/variant/packedBytes.js';
 import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
 import { warn } from '../../../logger';
+import { BLOCK_FORMATS, decodeBlocks } from './blocks/decodeBlocks';
 
 /** A channel no source byte fills: 0, or 255 for alpha. */
 const ZERO = -1;
@@ -70,8 +72,8 @@ const FLOAT_LAYOUTS: Readonly<Record<string, FloatLayout>> = {
 };
 
 /**
- * The pixels and the format they were saved in. The 8-bit formats decode to RGBA8. The rest decode
- * to the raw RGBA floats Godot samples, which can pass 1.
+ * The pixels and the format they were saved in. The 8-bit and block formats decode to RGBA8. The
+ * rest decode to the raw RGBA floats Godot samples, which can pass 1.
  */
 export interface DecodedImage extends ImageSize {
   data: Uint8Array | Float32Array;
@@ -122,27 +124,43 @@ function readHeader(data: Record<string, string>): ImageHeader | null {
 
 /**
  * The image's top level, or null for an image Godot refuses (`initialize_data` fails without
- * enough bytes) or one in a format this does not decode: the
- * integer formats, which a float sampler cannot read, and the block-compressed formats.
+ * enough bytes) or one in a format this does not decode: the integer formats, which a float
+ * sampler cannot read, and the block formats no decoder handles.
  */
 function decodeImage(data: Record<string, string>): DecodedImage | null {
   const header = readHeader(data);
   if (!header) return null;
   const { width, height, format, body } = header;
-  const layout = BYTE_LAYOUTS[format] ?? FLOAT_LAYOUTS[format];
-  if (!layout) {
+  const decode = pixelDecoder(format);
+  if (!decode) {
     warn(`[Image] the ${format} format is not decoded, so its image draws nothing`);
     return null;
   }
   const bytes = parsePackedByteArrayBody(body);
-  const pixelCount = width * height;
-  if (!bytes || bytes.length < pixelCount * layout.size) return null;
-  const pixels =
-    'rgba' in layout ? expandBytes(bytes, pixelCount, layout) : unpackFloats(bytes, pixelCount, layout);
-  return { data: pixels, width, height, format };
+  const pixels = bytes && decode(bytes, { width, height });
+  return pixels ? { data: pixels, width, height, format } : null;
 }
 
-function expandBytes(bytes: Uint8Array, pixelCount: number, { size, rgba }: ByteLayout): Uint8Array {
+/** Decodes an image's top level, or gives null for data shorter than it. */
+type PixelDecoder = (bytes: Uint8Array, size: ImageSize) => Uint8Array | Float32Array | null;
+
+function pixelDecoder(format: string): PixelDecoder | null {
+  const byteLayout = BYTE_LAYOUTS[format];
+  if (byteLayout) return (bytes, size) => expandBytes(bytes, size, byteLayout);
+  const floatLayout = FLOAT_LAYOUTS[format];
+  if (floatLayout) return (bytes, size) => unpackFloats(bytes, size, floatLayout);
+  const blockFormat = BLOCK_FORMATS[format];
+  if (blockFormat) return (bytes, size) => decodeBlocks(bytes, size, blockFormat);
+  return null;
+}
+
+function expandBytes(
+  bytes: Uint8Array,
+  { width, height }: ImageSize,
+  { size, rgba }: ByteLayout
+): Uint8Array | null {
+  const pixelCount = width * height;
+  if (bytes.length < pixelCount * size) return null;
   const out = new Uint8Array(pixelCount * 4);
   for (let i = 0; i < pixelCount; i++) {
     for (let channel = 0; channel < 4; channel++) {
@@ -153,7 +171,13 @@ function expandBytes(bytes: Uint8Array, pixelCount: number, { size, rgba }: Byte
   return out;
 }
 
-function unpackFloats(bytes: Uint8Array, pixelCount: number, { size, read }: FloatLayout): Float32Array {
+function unpackFloats(
+  bytes: Uint8Array,
+  { width, height }: ImageSize,
+  { size, read }: FloatLayout
+): Float32Array | null {
+  const pixelCount = width * height;
+  if (bytes.length < pixelCount * size) return null;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const out = new Float32Array(pixelCount * 4);
   for (let i = 0; i < pixelCount; i++) read(view, i * size, out, i * 4);

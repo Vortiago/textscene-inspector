@@ -12,7 +12,7 @@ import { useNodePath } from './NodePathContext';
  * Receives a flat tuple whose arity the property decides: `frame` is `[n]`,
  * `modulate` `[r,g,b,a]`, `size` `[x,y,z]`. `null` means the driver released it.
  */
-export type ValueSetter = (value: number[] | null) => void;
+type ValueSetter = (value: number[] | null) => void;
 
 export interface AnimatedValueRegistry {
   /**

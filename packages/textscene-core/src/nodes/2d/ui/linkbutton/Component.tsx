@@ -16,11 +16,7 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import {
-  OverrunBehavior,
-  overrunFlagsForBehavior,
-  trimLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import {
   linkButtonLabelShape,
@@ -33,6 +29,7 @@ import {
   LINKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { LinkButtonProperties } from './types';
+import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LinkButtonProperties>(solveNode);
@@ -55,7 +52,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` for any `overrun_behavior` but
   // NO_TRIMMING, at the control's own rect, with no style margin.
   const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.NO_TRIMMING),
+    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
     [props.overrunBehavior]
   );
   const layout: TextLayoutResult | null = useMemo(() => {

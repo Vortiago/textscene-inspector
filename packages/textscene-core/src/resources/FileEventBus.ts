@@ -9,7 +9,7 @@ import * as logger from '../logger.js';
 export type FileData = ArrayBuffer | string;
 export type FileLoadedHandler = (path: string, data: FileData) => void;
 export type FileFailedHandler = (path: string, error: Error) => void;
-export type FileInvalidatedHandler = (path: string) => void;
+type FileInvalidatedHandler = (path: string) => void;
 
 export class FileEventBus {
   private cache = new Map<string, FileData>();
@@ -161,6 +161,16 @@ export class FileEventBus {
     } finally {
       if (this.optionalInflight.get(path) === flight) this.optionalInflight.delete(path);
     }
+  }
+
+  /**
+   * `tryLoad` for a caller that keeps what it needs from the file: the bus drops its copy after,
+   * unless a processor is also loading the file and needs the bytes.
+   */
+  async readOnce(path: string, type?: string): Promise<FileData | null> {
+    const data = await this.tryLoad(path, type);
+    if (data !== null && !this.isLoading(path)) this.clearCache(path);
+    return data;
   }
 
   /**

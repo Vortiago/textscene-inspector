@@ -5,18 +5,22 @@
  * (`scene_forward_clustered.glsl:2213,2944-2945`).
  */
 
-import { ShaderChunk, type IUniform, type Material } from 'three';
+import type { IUniform, Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
-import { recordedOn } from './recordedOnMaterial';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
+import { recordedUniform } from './recordedOnMaterial';
+import { editedChunk, type TextEdit } from '../shaderPatch/chunkPatch';
 import {
-  TextureChannel,
-  textureChannelMask,
+  DEFAULT_TEXTURE_CHANNEL_MASK,
   type TextureChannelMask,
 } from '../../godot/rendering/materials/textureChannel';
 
 const AO_PARS_CHUNK = '#include <aomap_pars_fragment>';
 const AO_CHUNK = '#include <aomap_fragment>';
-const RED_SAMPLE = 'texture2D( aoMap, vAoMapUv ).r';
+const MASKED_SAMPLE: TextEdit = {
+  three: 'texture2D( aoMap, vAoMapUv ).r',
+  godot: 'dot( texture2D( aoMap, vAoMapUv ), godotAoTextureChannel )',
+};
 
 /**
  * Sheen carries Godot's rim, which Godot adds to the diffuse light, and clearcoat goes to the
@@ -42,10 +46,7 @@ const DIRECT_OCCLUSION = /* glsl */ `
  * the chunk as the shader patches leave it.
  */
 function godotAoFragment(): string {
-  return `${ShaderChunk.aomap_fragment.replace(
-    RED_SAMPLE,
-    'dot( texture2D( aoMap, vAoMapUv ), godotAoTextureChannel )'
-  )}${DIRECT_OCCLUSION}`;
+  return `${editedChunk('aomap_fragment', MASKED_SAMPLE)}${DIRECT_OCCLUSION}`;
 }
 
 const GODOT_AO_PARS = `${AO_PARS_CHUNK}
@@ -57,11 +58,6 @@ const LIGHT_AFFECT_KEY = 'godotAoLightAffect';
 /** Where a material records its `ao_texture_channel` mask. */
 const CHANNEL_MASK_KEY = 'godotAoTextureChannel';
 
-/** `ao_light_affect`'s default (`material.cpp:3983`). */
-const DEFAULT_LIGHT_AFFECT = 0;
-/** `ao_texture_channel`'s default, red (`material.cpp:3987`). */
-const DEFAULT_CHANNEL_MASK = textureChannelMask(TextureChannel.TEXTURE_CHANNEL_RED);
-
 /** The `userData` that gives a material its `ao_light_affect` and `ao_texture_channel`. */
 export function ambientOcclusionUserData(
   lightAffect: number,
@@ -70,19 +66,10 @@ export function ambientOcclusionUserData(
   return { [LIGHT_AFFECT_KEY]: lightAffect, [CHANNEL_MASK_KEY]: channelMask };
 }
 
-/** Uniforms that read `material` at each upload, so a re-parse that changes only a value needs no remount. */
 function ambientOcclusionUniforms(material: Material): Record<string, IUniform> {
   return {
-    godotAoLightAffect: {
-      get value() {
-        return recordedOn(material, LIGHT_AFFECT_KEY, DEFAULT_LIGHT_AFFECT);
-      },
-    },
-    godotAoTextureChannel: {
-      get value() {
-        return recordedOn(material, CHANNEL_MASK_KEY, DEFAULT_CHANNEL_MASK);
-      },
-    },
+    godotAoLightAffect: recordedUniform(material, LIGHT_AFFECT_KEY, BASE_MATERIAL_3D_DEFAULTS.aoLightAffect),
+    godotAoTextureChannel: recordedUniform(material, CHANNEL_MASK_KEY, DEFAULT_TEXTURE_CHANNEL_MASK),
   };
 }
 

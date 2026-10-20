@@ -22,7 +22,7 @@ const { atlas, rows, probes, instanceLayers: layers } = REFLECTION_PROBE_UNIFORM
  * the camera (`light_storage.cpp:1824-1825`), which gives the same local space. `probes` holds the
  * count, the atlas's border size and its last layer, past which a read would leave Godot's layers.
  */
-export const REFLECTION_PROBE_GLSL = /* glsl */ `
+const REFLECTION_PROBE_GLSL = /* glsl */ `
 uniform highp sampler2DArray ${atlas};
 uniform highp sampler2D ${rows};
 uniform vec4 ${probes}[ 1 ];

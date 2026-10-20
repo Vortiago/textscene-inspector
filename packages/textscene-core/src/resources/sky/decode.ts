@@ -4,17 +4,14 @@
  * properties, so a wrong default looks like a wrong shader.
  */
 
-import type { Color } from '../../utils/colorParser';
 import type { Sky, SkyBake, SkyProcessMode, SkyProcessing, SkyProperties } from './types';
-import {
-  REAL_TIME_RADIANCE_SIZE,
-  SKY_RADIANCE_SIZES,
-  SKY_RADIANCE_SIZE_DEFAULT,
-} from '../../godot/rendering/environment/skyReflection';
-import { floatOr, parseOptionalInt } from '../../parser/valueParsers';
+import { REAL_TIME_RADIANCE_SIZE } from '../../godot/rendering/environment/skyReflection';
+import { SKY_RADIANCE_SIZES, SKY_RADIANCE_SIZE_DEFAULT } from '../../godot/scene/sky';
+import { boolOr, floatOr, parseOptionalInt } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
+import type { Rgba } from '../../godot/math/math';
 
-const rgb = (r: number, g: number, b: number): Color => ({ r, g, b, a: 1 });
+const rgb = (r: number, g: number, b: number): Rgba => ({ r, g, b, a: 1 });
 
 /**
  * The `sky_material` a `Sky` points at, `SubResource("…")` or `ExtResource("…")`
@@ -85,6 +82,7 @@ export function decodeSkyMaterial(type: string, data: Record<string, string>): S
         sun_angle_max: floatOr(data.sun_angle_max, 30, 'sun_angle_max'),
         sun_curve: floatOr(data.sun_curve, 0.15, 'sun_curve'),
         energy_multiplier: floatOr(data.energy_multiplier, 1, 'energy_multiplier'),
+        use_debanding: boolOr(data.use_debanding, true, 'use_debanding'),
       };
 
     case 'PanoramaSkyMaterial':
@@ -106,6 +104,7 @@ export function decodeSkyMaterial(type: string, data: Record<string, string>): S
         sun_disk_scale: floatOr(data.sun_disk_scale, 1, 'sun_disk_scale'),
         ground_color: colorOr(data.ground_color, rgb(0.1, 0.07, 0.034)),
         energy_multiplier: floatOr(data.energy_multiplier, 1, 'energy_multiplier'),
+        use_debanding: boolOr(data.use_debanding, true, 'use_debanding'),
       };
 
     default:

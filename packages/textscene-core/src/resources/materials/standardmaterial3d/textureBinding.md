@@ -23,7 +23,7 @@ A sampler reads the sRGB view only when the texture has one:
 (`servers/rendering/renderer_rd/storage_rd/material_storage.cpp:1073`). The
 rendering device makes that view only for a format with an sRGB variant
 (`texture_storage.cpp:895-902`): RGB8, RGBA8 and the block formats with one.
-`formatHasSrgbView` in `godot/rendering/texture.ts` lists them.
+`formatHasSrgbView` in `godot/rendering/srgbView.ts` lists them.
 
 Each producer records the format Godot holds its image in
 (`recordGodotFormat`), and `sourceColorSpace` reads it:
@@ -34,12 +34,79 @@ Each producer records the format Godot holds its image in
 | NoiseTexture2D | L8, or RGBA8 with a `color_ramp` or `as_normal_map` |
 | GradientTexture2D | RGBA8, or RGBAFloat with `use_hdr` |
 | AtlasTexture | its atlas's format |
-| an image file | none recorded, read as sRGB |
+| an image file | its import format, from the source format and the import sidecar |
+| a glTF image | the import format of the file Godot imports it as |
 
-An image file records no format, so a colour slot reads it sRGB. That matches Godot for an RGB or
-RGBA file and for a VRAM-compressed import. Godot loads a greyscale PNG or JPEG as L8 or LA8
-(`drivers/png/png_driver_common.cpp:84-87`), and a lossless import keeps that format, so Godot
-reads it raw. The previewer reads no texture `.import` sidecar yet, so it reads that file sRGB.
+## How Godot imports an image file
+
+Godot loads an image file in its source format (`godot/import/imageSourceFormat.ts`):
+
+- PNG: colour type 0 is L8, and type 4, or type 0 with a `tRNS` chunk, is LA8, at any bit depth.
+  A colour or paletted PNG is RGB8 or RGBA8 (`drivers/png/png_driver_common.cpp:66-93`).
+- JPEG: one component is L8, and three are RGB8
+  (`modules/jpg/image_loader_libjpeg_turbo.cpp:58-65`).
+- WebP: RGB8, or RGBA8 when the file has alpha (`modules/webp/webp_common.cpp:135-175`).
+- SVG: RGBA8, rasterised at `svg/scale` times its own size, rounded
+  (`modules/svg/image_loader_svg.cpp:91-103`, `:130`).
+
+The texture importer then reads the image's `.import` sidecar (`importTextureOptions`). A missing
+sidecar reads as the Detect preset's defaults (`editor/import/resource_importer_texture.cpp:234-262`).
+The previewer does not predict the editor's later re-imports of a texture it first sees in 3D
+(`detect_3d/compress_to`) or as a normal map (`compress/normal_map` Detect).
+
+The importer rewrites the texels in this order (`:861-874`):
+
+1. `process/fix_alpha_border`, on by default, gives each nearly transparent texel the colour of the
+   nearest opaque one. It runs only on RGBA8 (`core/io/image.cpp:4247`).
+2. `process/premult_alpha` multiplies the colour by alpha. It runs only on RGBA8 (`:4220-4240`).
+3. `process/normal_map_invert_y` inverts green (`resource_importer_texture.cpp:657-671`).
+
+`mipmaps/generate`, off by default, decides whether the texture has a mip chain. A texture without
+one samples its base level under every `texture_filter`. Godot forces it on for every glTF image it
+extracts (`modules/gltf/gltf_document.cpp:2251-2255`). An external glTF image keeps its own
+sidecar's (`:2356-2363`).
+
+The importer builds the chain on the CPU, after the texel passes (`resource_importer_texture.cpp:401-412`).
+Each level averages each 2 × 2 block of the level above in the image's own bytes
+(`core/io/image.cpp:1947-1979`), so an sRGB image averages its encoded values, not its linear light.
+An odd size drops its last column or row. With `compress/normal_map` Enable, each level of an RGB8
+or RGBA8 image is renormalised to unit normals (`:2003-2014`, `:4577-4588`). The compression then
+stores each level, so an RGTC normal map drops blue after the renormalise. The previewer builds the
+same chain and uploads it as the texture's levels (`processing/mipChain.ts`).
+
+With `roughness/mode` set to a channel and `roughness/src_normal` naming a normal map, the importer
+then runs the roughness limiter on the chain (`resource_importer_texture.cpp:415-418`,
+`core/io/image.cpp:2177-2343`). Each level's roughness rises by the spread of the normals it covers,
+read from the normal map's source file. The previewer reads the same file and runs the same limiter
+(`processing/roughnessLimit.ts`). The editor sets these options when it sees a roughness map paired
+with a normal map in 3D, and the previewer does not predict that re-import.
+
+A Decal reads its copy in the decal atlas, which builds its own mip chain
+(`texture_storage.cpp:3162-3226`), so a decal mipmaps whatever the import says. The atlas halves
+each level in its RGBA8 bytes too. So a decal shares an imported chain, and over an import with no
+chain the previewer builds one with the same byte average.
+
+`compress/mode` then gives the import format (`godot/import/textureImport.ts`):
+
+| `compress/mode` | Import format |
+| --- | --- |
+| 0 Lossless, 1 Lossy, 3 VRAM Uncompressed | the source format |
+| 2 VRAM Compressed | DXT5 RGBA8 when a texel has alpha below 0.999, else DXT1 RGB8. BPTC_RGBA with `compress/high_quality` |
+| 4 Basis Universal | BPTC_RGBA |
+
+A normal map (`compress/normal_map` Enable) uses only RG (`core/io/image.cpp:3732-3734`). So mode 4,
+and mode 2 without `compress/high_quality`, give RGTC RedGreen8 instead. A shader samples it as
+red, green, blue 0 and alpha 1, raw in every slot. The VRAM block is in
+`resource_importer_texture.cpp:934-947`, the channel detection in `core/io/image.cpp:3728-3802`, the S3TC formats in
+`modules/etcpak/image_compress_etcpak.cpp:60-78`, and the Basis Universal formats in
+`modules/basis_universal/image_compress_basisu.cpp:321-324` and `:356-393`. So a greyscale PNG or
+JPEG reads raw in a colour slot at modes 0, 1 and 3, and sRGB at modes 2 and 4.
+
+A glTF image with a `uri` imports as that file, under its own sidecar. Godot extracts an embedded
+image to `<base name>_<image name>.<png|jpg>` beside the glTF
+(`modules/gltf/gltf_document.cpp:2209-2210`, `:2321-2333`). That file's sidecar decides its texels
+and its import format as it does for any image file (`godot/import/gltfImageFiles.ts`,
+`resources/formats/glb/imageImport.ts`).
 
 ## The samplers of BaseMaterial3D
 

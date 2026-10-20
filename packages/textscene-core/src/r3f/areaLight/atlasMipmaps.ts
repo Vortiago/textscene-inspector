@@ -17,9 +17,11 @@
 
 import { channelToByte, sRGBChannelToLinear } from '../../utils/colorSpace.js';
 import type { AreaTextureImage } from './atlasLayout.js';
-
-/** The atlas's mip count (`texture_storage.h:279`). */
-export const AREA_LIGHT_ATLAS_MIPMAPS = 8;
+import {
+  AREA_LIGHT_ATLAS_BLUR_GROUP_SIDE,
+  AREA_LIGHT_ATLAS_BLUR_KERNEL,
+  AREA_LIGHT_ATLAS_MIPMAPS,
+} from '../../godot/rendering/lights/areaLightAtlas.js';
 
 /** A texture where the atlas holds it, in mip 0's texels. */
 export interface PlacedTexture {
@@ -36,12 +38,6 @@ interface Pixels {
   height: number;
   data: Float32Array;
 }
-
-/** `copy.glsl`'s kernel without glow, from the centre tap out (`:118`). */
-const BLUR_KERNEL = [0.214607, 0.189879, 0.131514, 0.071303] as const;
-
-/** The blur's thread groups are 8 texels wide, and each reads its own window (`copy.glsl:9`). */
-const BLUR_GROUP_SIDE = 8;
 
 /**
  * `srgb_to_linear` (`copy_to_fb.glsl:113-115`), which the GPU's sRGB view of mip 0 matches, for
@@ -135,11 +131,14 @@ function windowUv(groupStart: number, entry: number, size: number): number {
 /** The kernel's taps for one target texel along one axis. */
 function blurTaps(size: number) {
   return (target: number) => {
-    const groupStart = target - (target % BLUR_GROUP_SIDE);
-    const centre = (target % BLUR_GROUP_SIDE) + 4;
+    const groupStart = target - (target % AREA_LIGHT_ATLAS_BLUR_GROUP_SIDE);
+    const centre = (target % AREA_LIGHT_ATLAS_BLUR_GROUP_SIDE) + 4;
     const taps = [];
     for (let offset = -3; offset <= 3; offset++) {
-      taps.push({ uv: windowUv(groupStart, centre + offset, size), weight: BLUR_KERNEL[Math.abs(offset)]! });
+      taps.push({
+        uv: windowUv(groupStart, centre + offset, size),
+        weight: AREA_LIGHT_ATLAS_BLUR_KERNEL[Math.abs(offset)]!,
+      });
     }
     return taps;
   };

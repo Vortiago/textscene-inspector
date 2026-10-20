@@ -4,13 +4,12 @@
  * Without the sidecar, the previewer and a fresh Godot import both draw it 100x too
  * large, so the two agree on the wrong size.
  */
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { FileEventBus } from '../FileEventBus';
 import { ResourceEventBus } from '../ResourceEventBus';
 import { createGLBProcessor } from './createGLBProcessor';
 import { DependencyGraph } from '../dependencyGraph';
-import { initGlbModules } from '../formats/glb/glbProcessing';
 
 const GLTF_PATH = 'res://town/tree/scene.gltf';
 
@@ -54,10 +53,6 @@ function contentScale(root: THREE.Object3D): number {
 }
 
 describe('createGLBProcessor — import sidecar', () => {
-  beforeAll(async () => {
-    await initGlbModules();
-  });
-
   it('cancels the asset scale when the sidecar says to', async () => {
     const root = await loadWith({ [`${GLTF_PATH}.import`]: SIDECAR });
     // 100 (in the glTF) x 0.01 (from the sidecar) = 1.

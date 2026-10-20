@@ -7,9 +7,12 @@
 import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../../../linter/StrictTscnParser';
 import { readFixture } from '../../../linter/testing/fixtureCheck';
-import { multiplayerSynchronizerRootPathRule } from './linter';
+import { ruleRegistry } from '../../../linter/RuleRegistry';
+import './linter';
 import { reportsOf } from '../../../linter/testing/tierLists';
 import './linterParser';
+
+const multiplayerSynchronizerRootPathRule = ruleRegistry.getRule('valid-multiplayersynchronizer-root-path')!;
 
 const RULE = 'multiplayersynchronizer-root-path-dangling';
 

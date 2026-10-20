@@ -4,7 +4,7 @@
  * AnimationPlayer (ADR-0011).
  */
 
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { GLBSceneRoot } from './Component';
@@ -23,12 +23,8 @@ import {
   type SelectionContextValue,
 } from '../../contexts/SelectionContext';
 import { NodePathProvider } from '../../contexts/NodePathContext';
-import { initGlbModules } from '../../../resources/processing/glbProcessing';
-
-// GLBSceneRoot clones through cloneWithMaterials, which needs the lazy GLB module cache.
-beforeAll(async () => {
-  await initGlbModules();
-});
+import { AnimationLoopMode } from '../../../godot/scene/animation';
+import { setImportedLoopMode } from '../../../resources/formats/glb/importedLoopMode';
 
 const GLB_PATH = 'res://player.glb';
 const GLB_NODE_PATH = 'Root/player';
@@ -36,8 +32,8 @@ const GLB_NODE_PATH = 'Root/player';
 // root, activates the driver.
 const GLB_ANIM_PATH = 'Root/player/AnimationPlayer';
 
-/** A GLB-like object: a Scene group with a movable child, carrying clips. */
-function makeAnimatedGlb(): THREE.Object3D {
+/** A GLB-like object: a Scene group with a movable child, carrying clips. 'slide' imports as `slideLoopMode`. */
+function makeAnimatedGlb(slideLoopMode: number): THREE.Object3D {
   const root = new THREE.Group();
   root.name = 'Scene';
   const mover = new THREE.Object3D();
@@ -51,6 +47,7 @@ function makeAnimatedGlb(): THREE.Object3D {
   const idle = new THREE.AnimationClip('idle', 1, [
     new THREE.VectorKeyframeTrack('Mover.position', [0, 1], [0, 0, 0, 0, 0, 0]),
   ]);
+  setImportedLoopMode(slide, slideLoopMode);
   root.animations = [idle, slide];
   return root;
 }
@@ -90,9 +87,12 @@ async function setSelection(path: string | null) {
   await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath(path));
 }
 
-async function mountScene({ select = GLB_ANIM_PATH }: { select?: string | null } = {}) {
+async function mountScene({
+  select = GLB_ANIM_PATH,
+  slideLoopMode = AnimationLoopMode.LINEAR,
+}: { select?: string | null; slideLoopMode?: number } = {}) {
   const renderer = await ReactThreeTestRenderer.create(
-    <ResourceLoaderProvider loader={makeLoader(makeAnimatedGlb())}>
+    <ResourceLoaderProvider loader={makeLoader(makeAnimatedGlb(slideLoopMode))}>
       <SelectionProvider>
         <AnimationTransportProvider>
           <Capture />
@@ -190,7 +190,7 @@ describe('GLBSceneRoot animation driver — preview speed + loop override (#224)
     expect(moverX(renderer)).toBeCloseTo(5, 1);
   });
 
-  it('defaults to looping forever ("auto"), wrapping around past the clip length', async () => {
+  it('loops a LOOP_LINEAR clip forever under "auto", wrapping around past the clip length', async () => {
     const renderer = await mountScene();
     await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
     await ReactThreeTestRenderer.act(async () => transport.play());
@@ -198,12 +198,37 @@ describe('GLBSceneRoot animation driver — preview speed + loop override (#224)
     expect(moverX(renderer)).toBeCloseTo(5, 1);
   });
 
-  it('"once" forces a single clamped pass even though GLB clips loop by default', async () => {
+  it('"once" forces a single clamped pass on a LOOP_LINEAR clip', async () => {
     const renderer = await mountScene();
     await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
     await ReactThreeTestRenderer.act(async () => transport.setLoopOverride('once'));
     await ReactThreeTestRenderer.act(async () => transport.play());
     await renderer.advanceFrames(1, 1.5); // past the 1s length -> clamped at the final key
     expect(moverX(renderer)).toBeCloseTo(10, 1);
+  });
+
+  it('plays a LOOP_NONE clip as one clamped pass under "auto"', async () => {
+    const renderer = await mountScene({ slideLoopMode: AnimationLoopMode.NONE });
+    await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 1.5);
+    expect(moverX(renderer)).toBeCloseTo(10, 1);
+  });
+
+  it('plays a LOOP_PINGPONG clip forwards and then backwards under "auto"', async () => {
+    const renderer = await mountScene({ slideLoopMode: AnimationLoopMode.PINGPONG });
+    await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 1.25); // forward 1s, back 0.25s -> t=0.75 -> x=7.5
+    expect(moverX(renderer)).toBeCloseTo(7.5, 1);
+  });
+
+  it('"loop" repeats a LOOP_NONE clip', async () => {
+    const renderer = await mountScene({ slideLoopMode: AnimationLoopMode.NONE });
+    await ReactThreeTestRenderer.act(async () => transport.selectClip('slide'));
+    await ReactThreeTestRenderer.act(async () => transport.setLoopOverride('loop'));
+    await ReactThreeTestRenderer.act(async () => transport.play());
+    await renderer.advanceFrames(1, 1.5);
+    expect(moverX(renderer)).toBeCloseTo(5, 1);
   });
 });

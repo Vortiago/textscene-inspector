@@ -17,5 +17,3 @@ controlComponentRegistry.register({
 // Not a CanvasItem, and it authors no anchors or offsets. Without this the rect
 // solve hands it (0, 0, 0, 0), and every Control under it anchors against that.
 controlSolverRegistry.registerCanvasBoundary('CanvasLayer');
-
-export { CanvasLayer };

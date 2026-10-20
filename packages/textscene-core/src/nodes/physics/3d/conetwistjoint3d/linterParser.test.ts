@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry';
+import { degToRad } from '../../../../godot/math/math.js';
 import './linterParser';
 
 /** The error a validator returns for a value, or null when it accepts it. */
@@ -60,7 +61,7 @@ describe('ConeTwistJoint3D strict validators', () => {
   // no or_greater/or_less, so the large extent is still the bound. The XML default 3.1415927
   // is π (180°), well inside ±40000° converted to radians.
   describe('twist_span', () => {
-    const maxRad = (40000 * Math.PI) / 180; // cone_twist_joint_3d.cpp:38: ±40000° converted
+    const maxRad = degToRad(40000); // cone_twist_joint_3d.cpp:38: ±40000° converted
 
     it('accepts a value well inside the converted bound', () => {
       expect(check('twist_span', Math.PI.toFixed(6))).toBeNull();

@@ -16,7 +16,6 @@ import { makeBoxContainerLayout, makeBoxContainerMinimumSize } from '../shared/b
 import type { LabelProperties } from './types';
 import {
   shapeText,
-  AutowrapMode,
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
@@ -25,9 +24,7 @@ import {
   labelMinimumSize,
   labelShapingWidthPx,
   labelUnwrappedShape,
-  LABEL_THEME_KEYS,
   LABEL_THEME_FONT_KEY,
-  LABEL_DEFAULT_FONT_COLOR,
   LABEL_LINE_SPACING_PX,
   labelTextTheme,
   layoutLabelLines,
@@ -38,16 +35,12 @@ import {
   labelEffectiveTextTheme,
   labelOutlineTheme,
   labelShadowTheme,
-  VC_CHARS_BEFORE_SHAPING,
-  VC_CHARS_AFTER_SHAPING,
-  VC_GLYPHS_AUTO,
-  VC_GLYPHS_LTR,
-  VC_GLYPHS_RTL,
 } from './nativeSolver';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
-import { decodeLabelSettings } from '../../../../resources/styles/labelsettings/decode';
+import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
+import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 
 const minSize = labelMinimumSize;
 
@@ -190,7 +183,7 @@ describe('labelMinimumSize — autowrap ON reports the WRAPPED height once a pri
     const full = shapeText('AB AB', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     }).widthPx;
     // The discriminating band: trunc(box) < full <= box. Vacuous if `full`
@@ -383,26 +376,37 @@ describe("labelShapingWidthPx (label.cpp:581's `int width = get_size().width - s
   });
 });
 
-describe('labelTextTheme / LABEL_THEME_KEYS / LABEL_DEFAULT_FONT_COLOR', () => {
-  it('uses font_size/font_color as the override keys', () => {
-    expect(LABEL_THEME_KEYS).toEqual({ sizeKey: 'font_size', colorKey: 'font_color' });
+describe('labelTextTheme', () => {
+  it('reads the font_size and font_color overrides', () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    const props = { name: 'L', themeOverrideFontSizes: { font_size: 20 } } as LabelProperties;
+    const resolved = labelTextTheme(node({}, { colors: { font_color: red } }), props, {
+      theme: nativeTheme(1),
+    });
+    expect(resolved).toEqual({ fontSizePx: 20, color: red });
   });
 
-  it("defaults to Label's own opaque-white font colour, not a gray control_font_color", () => {
-    expect(LABEL_DEFAULT_FONT_COLOR).toEqual({ r: 1, g: 1, b: 1, a: 1 });
-  });
-
-  it("resolves the theme's own default font size absent an override", () => {
+  it("resolves the theme's own default font size and Label's opaque white absent an override", () => {
+    // default_theme.cpp sets Label's font_color to Color(1, 1, 1), not the gray control_font_color.
     const resolved = labelTextTheme(node({}), { name: 'L' } as LabelProperties, { theme: nativeTheme(1) });
-    expect(resolved).toEqual({ fontSizePx: 16, color: LABEL_DEFAULT_FONT_COLOR });
+    expect(resolved).toEqual({ fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } });
+  });
+
+  it("ignores RichTextLabel's normal_font_size and default_color keys (edge case)", () => {
+    const props = { name: 'L', themeOverrideFontSizes: { normal_font_size: 20 } } as LabelProperties;
+    const n = node({}, { colors: { default_color: { r: 1, g: 0, b: 0, a: 1 } } });
+    expect(labelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
+      fontSizePx: 16,
+      color: { r: 1, g: 1, b: 1, a: 1 },
+    });
   });
 });
 
 describe('layoutLabelLines (label.cpp:592-617 vbegin/vsep, :592-605 _get_line_rect x)', () => {
   const FONT_SIZE = 16;
-  const PITCH = 26; // getLinePitchPx(16)
+  const PITCH = 26; // getFontLinePitchPx(OPEN_SANS_METRICS, 16)
 
-  function layoutFor(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.OFF) {
+  function layoutFor(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.AUTOWRAP_OFF) {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 3 });
   }
 
@@ -519,7 +523,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
     const layout = shapeText('Wave rift', {
       fontSizePx: FONT_SIZE,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
     return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };
@@ -614,7 +618,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
       const layout = shapeText('A B C\nD', {
         fontSizePx: FONT_SIZE,
         boxWidthPx: 0,
-        autowrapMode: AutowrapMode.OFF,
+        autowrapMode: AutowrapMode.AUTOWRAP_OFF,
         lineSpacingPx: 3,
       });
       const placements = layoutLabelLines(layout, boxWidthPx, 200, 3, undefined);
@@ -685,7 +689,7 @@ describe('labelMinimumSize — the shaped extent is ceiled (text_server_adv.cpp:
     const raw = shapeText('Master volume', {
       fontSizePx: 16,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     }).widthPx;
     // Godot 4.6.3: `ThemeDB.fallback_font.get_string_size("Master volume", HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x`
@@ -763,17 +767,19 @@ describe('windowLabelLines', () => {
 describe('labelPreShapeText (label.cpp:155-156)', () => {
   it('truncates at the default behaviour, VC_CHARS_BEFORE_SHAPING (happy path)', () => {
     expect(labelPreShapeText('Hello', 3, undefined)).toBe('Hel');
-    expect(labelPreShapeText('Hello', 3, VC_CHARS_BEFORE_SHAPING)).toBe('Hel');
+    expect(labelPreShapeText('Hello', 3, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe('Hel');
   });
 
   it('is a no-op for every other behaviour — those trim at draw time instead (error path)', () => {
-    expect(labelPreShapeText('Hello', 3, VC_CHARS_AFTER_SHAPING)).toBe('Hello');
-    expect(labelPreShapeText('Hello', 3, VC_GLYPHS_LTR)).toBe('Hello');
+    expect(labelPreShapeText('Hello', 3, VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING)).toBe('Hello');
+    expect(labelPreShapeText('Hello', 3, VisibleCharactersBehavior.VC_GLYPHS_LTR)).toBe('Hello');
   });
 
   it('a negative or absent visibleChars is "show all" (edge case)', () => {
-    expect(labelPreShapeText('Hello', -1, VC_CHARS_BEFORE_SHAPING)).toBe('Hello');
-    expect(labelPreShapeText('Hello', undefined, VC_CHARS_BEFORE_SHAPING)).toBe('Hello');
+    expect(labelPreShapeText('Hello', -1, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe('Hello');
+    expect(labelPreShapeText('Hello', undefined, VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING)).toBe(
+      'Hello'
+    );
   });
 });
 
@@ -788,7 +794,7 @@ function fakeLine(charCount: number): TextLineLayout {
 describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
   it('VC_CHARS_AFTER_SHAPING keeps a running CHARACTER budget across lines (happy path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(3), fakeLine(3)], {
-      behavior: VC_CHARS_AFTER_SHAPING,
+      behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
       visibleChars: 4,
       visibleRatio: undefined,
     });
@@ -798,14 +804,14 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
 
   it('VC_GLYPHS_AUTO/LTR reveal GLYPHS from the FRONT, budgeted by visible_ratio * total_glyphs', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
-      behavior: VC_GLYPHS_LTR,
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
     expect(l1!.glyphs.length).toBe(4);
     expect(l2!.glyphs.length).toBe(0);
     const auto = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
-      behavior: VC_GLYPHS_AUTO,
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -815,7 +821,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
 
   it('VC_GLYPHS_RTL reveals GLYPHS from the BACK — the opposite end from LTR/AUTO (error path)', () => {
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
-      behavior: VC_GLYPHS_RTL,
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
       visibleChars: undefined,
       visibleRatio: 0.5,
     });
@@ -827,14 +833,14 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     const lines = [fakeLine(3)];
     expect(
       applyVisibleCharsReveal(lines, {
-        behavior: VC_GLYPHS_LTR,
+        behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
         visibleChars: undefined,
         visibleRatio: 1,
       })[0]!.glyphs.length
     ).toBe(3);
     expect(
       applyVisibleCharsReveal(lines, {
-        behavior: VC_CHARS_AFTER_SHAPING,
+        behavior: VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING,
         visibleChars: -1,
         visibleRatio: undefined,
       })[0]!.glyphs.length
@@ -845,7 +851,7 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
     const lines = [fakeLine(3)];
     expect(
       applyVisibleCharsReveal(lines, {
-        behavior: VC_CHARS_BEFORE_SHAPING,
+        behavior: VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING,
         visibleChars: 0,
         visibleRatio: 0,
       })[0]!.glyphs.length
@@ -994,7 +1000,11 @@ describe('labelMinimumSize — lines_skipped / max_lines_visible / label_setting
   it('label_settings.font_size overrides the theme font size outright, for empty text too', () => {
     const withSettings = node(
       { labelSettings: 'SubResource("1")' },
-      { labelSettings: decodeLabelSettings({ font_size: '32' }) }
+      {
+        labelSettings: resolveLabelSettings('SubResource("1")', [
+          { id: '1', type: 'LabelSettings', data: { font_size: '32' } },
+        ]),
+      }
     );
     // ascentPx = ceil(2189*32/2048) = 35, descentPx = ceil(600*32/2048) = 10.
     expect(minSize(withSettings, ctx()).y).toBe(45);
@@ -1014,7 +1024,7 @@ describe('layoutLabelLines — RTL layout (label.cpp:472-497)', () => {
     const layout = shapeText('Wave rift', {
       fontSizePx: FONT_SIZE,
       boxWidthPx: 0,
-      autowrapMode: AutowrapMode.OFF,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
     return { ...layout, lines: layout.lines.map((l) => ({ ...l, widthPx })), widthPx };
@@ -1072,7 +1082,7 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
     // `trim_glyphs_rtl = ... || ((behavior == VC_GLYPHS_AUTO) && rtl_layout)`: AUTO follows the
     // layout direction, so the same budget hides the opposite end from the LTR case.
     const [l1, l2] = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
-      behavior: VC_GLYPHS_AUTO,
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_AUTO,
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
@@ -1083,14 +1093,14 @@ describe('applyVisibleCharsReveal — RTL layout (label.cpp:779-780)', () => {
 
   it('VC_GLYPHS_LTR and VC_GLYPHS_RTL are explicit and ignore the layout direction (:779-780)', () => {
     const ltr = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
-      behavior: VC_GLYPHS_LTR,
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_LTR,
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: true,
     });
     expect(ltr[0]!.glyphs.length).toBe(4);
     const rtlBehavior = applyVisibleCharsReveal([fakeLine(4), fakeLine(4)], {
-      behavior: VC_GLYPHS_RTL,
+      behavior: VisibleCharactersBehavior.VC_GLYPHS_RTL,
       visibleChars: undefined,
       visibleRatio: 0.5,
       rtl: false,

@@ -5,12 +5,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
-});
-
 import { R3FApp } from './r3f-main';
+import { FIXTURE_LOADING_TESTID } from './fixtureLoadingTestId';
 
 const STUB_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -52,7 +48,7 @@ describe('#221 fixture-fetch loading indicator', () => {
     render(<R3FApp />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId('fixture-loading')).toBeTruthy();
+      expect(screen.queryByTestId(FIXTURE_LOADING_TESTID)).toBeTruthy();
     });
     expect(screen.queryByText('StubRoot')).toBeNull();
 
@@ -61,7 +57,7 @@ describe('#221 fixture-fetch loading indicator', () => {
     await waitFor(() => {
       expect(screen.queryByText('StubRoot')).toBeTruthy();
     });
-    expect(screen.queryByTestId('fixture-loading')).toBeNull();
+    expect(screen.queryByTestId(FIXTURE_LOADING_TESTID)).toBeNull();
   });
 
   it('hides the loading indicator once the fetch fails', async () => {
@@ -75,6 +71,6 @@ describe('#221 fixture-fetch loading indicator', () => {
     await waitFor(() => {
       expect(screen.queryByRole('alert')).toBeTruthy();
     });
-    expect(screen.queryByTestId('fixture-loading')).toBeNull();
+    expect(screen.queryByTestId(FIXTURE_LOADING_TESTID)).toBeNull();
   });
 });

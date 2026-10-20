@@ -8,34 +8,10 @@
 import '../resource/linterValidators.js';
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
 import { v } from '../../linter/validators/index.js';
+import { SKY_PROCESS_MODE_NAMES, SKY_RADIANCE_SIZE_NAMES } from '../../godot/scene/sky.js';
 
 validatorRegistry.registerAll('Sky', {
-  process_mode: v.enumInt(
-    'process_mode',
-    0,
-    3,
-    {
-      0: 'PROCESS_MODE_AUTOMATIC',
-      1: 'PROCESS_MODE_QUALITY',
-      2: 'PROCESS_MODE_INCREMENTAL',
-      3: 'PROCESS_MODE_REALTIME',
-    },
-    { hinted: 'sky.cpp:84' }
-  ),
-  radiance_size: v.enumInt(
-    'radiance_size',
-    0,
-    6,
-    {
-      0: 'RADIANCE_SIZE_32',
-      1: 'RADIANCE_SIZE_64',
-      2: 'RADIANCE_SIZE_128',
-      3: 'RADIANCE_SIZE_256',
-      4: 'RADIANCE_SIZE_512',
-      5: 'RADIANCE_SIZE_1024',
-      6: 'RADIANCE_SIZE_2048',
-    },
-    { enforced: 'sky.cpp:34' }
-  ),
+  process_mode: v.enumInt('process_mode', SKY_PROCESS_MODE_NAMES, { hinted: 'sky.cpp:84' }),
+  radiance_size: v.enumInt('radiance_size', SKY_RADIANCE_SIZE_NAMES, { enforced: 'sky.cpp:34' }),
   sky_material: v.resourceReference('sky_material'),
 });

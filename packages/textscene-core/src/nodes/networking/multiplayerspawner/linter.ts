@@ -49,5 +49,3 @@ const multiplayerSpawnerSpawnPathRule: LintRule = {
 };
 
 ruleRegistry.register(multiplayerSpawnerSpawnPathRule);
-
-export { multiplayerSpawnerSpawnPathRule };

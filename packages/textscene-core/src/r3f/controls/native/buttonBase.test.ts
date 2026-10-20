@@ -7,20 +7,21 @@
 import { describe, expect, it } from 'vitest';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import {
-  HORIZONTAL_ALIGNMENT_CENTER,
-  HORIZONTAL_ALIGNMENT_LEFT,
-  HORIZONTAL_ALIGNMENT_RIGHT,
-  VERTICAL_ALIGNMENT_BOTTOM,
-  VERTICAL_ALIGNMENT_CENTER,
-  VERTICAL_ALIGNMENT_TOP,
   fitIconSize,
   layoutButtonContent,
   pickButtonStyleBox,
   resolveButtonDrawState,
   tintColor,
-  tintStyleBox,
   type ButtonContentInput,
 } from './buttonBase';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  VERTICAL_ALIGNMENT_CENTER,
+  VERTICAL_ALIGNMENT_TOP,
+  VERTICAL_ALIGNMENT_BOTTOM,
+} from '../../../godot/math/math';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -99,25 +100,8 @@ describe('pickButtonStyleBox', () => {
   });
 });
 
-describe('tintStyleBox', () => {
-  it('returns the SAME reference at opaque-white tint (no-op fast path)', () => {
-    const box = styleBox();
-    expect(tintStyleBox(box, { r: 1, g: 1, b: 1, a: 1 })).toBe(box);
-  });
-
-  it('multiplies BOTH bgColor and borderColor by the tint, in raw sRGB (no linear conversion here)', () => {
-    const box = styleBox({
-      bgColor: { r: 0.8, g: 0.4, b: 0.2, a: 1 },
-      borderColor: { r: 1, g: 1, b: 1, a: 1 },
-    });
-    const tinted = tintStyleBox(box, { r: 0.5, g: 0.5, b: 0.5, a: 0.5 });
-    expect(tinted.bgColor).toEqual({ r: 0.4, g: 0.2, b: 0.1, a: 0.5 });
-    expect(tinted.borderColor).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 });
-  });
-});
-
 describe('tintColor', () => {
-  it('multiplies a plain ControlColor by the tint componentwise', () => {
+  it('multiplies a plain colour by the tint componentwise', () => {
     expect(tintColor({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 }, { r: 0.5, g: 0.5, b: 0.5, a: 1 })).toEqual({
       r: 0.4375,
       g: 0.4375,

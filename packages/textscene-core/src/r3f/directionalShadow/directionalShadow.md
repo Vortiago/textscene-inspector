@@ -17,12 +17,12 @@ two or four splits by `directional_shadow_mode`. It ports Godot 4.6.3's
   (`light_3d.cpp:606`), and so does the editor's preview sun (`node_3d_editor_plugin.cpp:10383`).
 - `<SceneShadowFitter>` (`../SceneShadowFitter.tsx`) is mounted inside `<TscnSceneContents>`, so
   the web previewer, the VS Code extension and the visual harness all mount it. It fits every
-  declared light in Godot's list of shadowed lights to the camera of each render of the scene. It
-  also writes each shadow's fade for that render, through `scene.onBeforeRender`
-  (`r3f/sceneRenderCamera.ts`). three calls that hook after it updates the world matrices and before
-  the shadow pass. So each render gets a fit to its own camera: the main view, a SubViewport pass
-  that renders the shared world, and a screenshot. No render order matters. The positional fit runs
-  after this one, from the same walk of the scene's lights (`../positionalShadow/positionalShadow.md`).
+  declared light in Godot's list of shadowed lights to the camera of each render of the scene,
+  through `scene.onBeforeRender` (`r3f/sceneRenderCamera.ts`). three calls that hook after it
+  updates the world matrices and before the shadow pass. So each render gets a fit to its own
+  camera: the main view, a SubViewport pass that renders the shared world, and a screenshot. No
+  render order matters. The positional fit runs after this one, from the same walk of the scene's
+  lights (`../positionalShadow/positionalShadow.md`).
 - A 3D SubViewport that renders its own portal scene hooks that scene with
   `useSceneShadowFit`. Its unmount hands every declared light its own shading and layers
   back.
@@ -93,35 +93,20 @@ material's program and uploads its uniforms again, since the lights' state versi
 ## The fade
 
 three shadows every receiver inside a shadow camera's box. Each box is a square round a sphere,
-so the last one reaches past the slice's far end. `shadowFade.ts` patches three's chunks to mix
-each directional and sun shadow towards unshadowed by the receiver's view depth, as Godot does.
+so the last one reaches past the slice's far end. The split lookup (`splitShadowChunk.ts`) mixes
+each sun shadow towards unshadowed by the receiver's view depth, as Godot does
+(`scene_forward_clustered.glsl:2491`).
 
 - Godot's fade runs from `fade_start` of `shadow_split_offsets[3]` to that depth. Slot 3 holds
   the last split's far end in every mode (`light_storage.cpp:711`), which is the slice's far end
   (`renderer_scene_cull.cpp:2175`). The fade mixes whichever split the fragment sampled, after
-  the split lookup. So an orthogonal light and a light with splits fade over the same depths,
-  and a small `fade_start` reaches into the nearer splits too.
-- `installDirectionalShadowFade` runs through `installShaderPatches` when a canvas is created.
-  It declares one `vec2` uniform array outside both of three's shadow blocks, with an entry per
-  directional shadow and per sun shadow. It gives every built-in lit material and `UniformsLib.lights` that
-  uniform.
-- The uniform's value is one shared `Float32Array`. `UniformsUtils.cloneUniforms` keeps a typed
-  array by reference, so each material's clone reads the same buffer. The buffer has 32 entries.
-  The sun shadows are at most eight. An undeclared directional light binds its own sampler, so
-  texture units bound those, and a desktop GPU commonly reports 32.
-- three counts directional shadows and sun shadows apart (`WebGLLights.js:289-356`). The
-  directional loop reads entry `i`, and the sun loop reads entry `NUM_DIR_LIGHT_SHADOWS + i`.
-- The fitter writes the buffer before each render, after it fits every light. It writes in the
-  order three indexes its shadow uniforms: casting lights in visible pre-order, where the
-  camera's layers include them. A light in the shadow list fails that layer test, so its
-  `SplitSunLight` takes the light's fade at the sun's index. A dropped light fails it too, and
-  takes no index. An undeclared caster keeps its index with no fade.
-- A `ShaderMaterial` with `lights: true` that does not merge `UniformsLib.lights` lacks the
-  uniform. Its shadow reads zeros, which the shader treats as no fade.
-- The fade, the soft shadow filter and the split lookup all edit `shadowmap_pars_fragment`. The
-  fade inserts after `#ifdef USE_SHADOWMAP`, the filter inserts ahead of the sun block, and the
-  split lookup rewrites only the sun block, so every install order gives the same chunk. Each
-  install changes nothing on a second call.
+  the split lookup and the soft shadow. So an orthogonal light and a light with splits fade over
+  the same depths, and a small `fade_start` reaches into the nearer splits too.
+- The fit gives each split sun its fade with its slots. `sunShadowUniforms.ts` writes it with the
+  sun's other terms after each shadow pass, as one `vec2` per sun shadow, in the order of three's
+  sun shadows.
+- A sun no fit has placed holds a fade whose ends do not ascend, and the shader reads that as no
+  fade. A light without a declaration casts on three's directional path, unfaded.
 
 ## The split lookup
 
@@ -276,24 +261,25 @@ binding (`light_storage.cpp:2572-2621`, `scene_forward_clustered_inc.glsl:374`).
 
 WebGL 2 guarantees 16 texture units per program (`MAX_TEXTURE_IMAGE_UNITS`). Measured from the
 active samplers of programs three r186 linked in the visual harness's Chromium, with every chunk
-patch `installShaderPatches` installs, for a light with four splits:
+patch `installShaderPatches` installs, for a light with four splits. A scene with no sky of its own
+takes the preview sky:
 
-| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, an environment and transmission | The same, with an omni and a spot shadow |
-| ------------- | ---------------------- | ----------------------------------------------------------------------- | ---------------------------------------- |
-| 0             | 1                      | 10                                                                      | 11                                       |
-| 1             | 2                      | 11                                                                      | 12                                       |
-| 4             | 2                      | 11                                                                      | 12                                       |
-| 8             | 2                      | 11                                                                      | 12                                       |
+| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with seven maps, a sky and transmission | The same, with an omni and a spot shadow |
+| ------------- | ---------------------- | -------------------------------------------------------------- | ---------------------------------------- |
+| 1             | 6                      | 13                                                             | 14                                       |
+| 4             | 6                      | 13                                                             | 14                                       |
+| 8             | 6                      | 13                                                             | 14                                       |
 
-A light with one split counts the same. The one unit of a plain material is three's `dfgLUT`. The
-omni and spot shadows share the one unit of the positional shadow atlas
-(`../positionalShadow/positionalShadow.md`). A program compiled with the soft shadow's define adds one
-unit, the atlas colour: eight soft suns on `MeshStandardMaterial` measure one unit more than eight
-suns without it.
+A light with one split counts the same. The suns share the one unit of the sun shadow atlas. A plain
+material's other five units are three's `dfgLUT`, Godot's DFG table, the sky's layer array, and the
+reflection atlas and its rows. The omni and spot shadows share the one unit of the positional shadow
+atlas (`../positionalShadow/positionalShadow.md`). A program compiled with the soft shadow's define
+adds one unit, the atlas colour: eight soft suns on `MeshStandardMaterial` measure one unit more than
+eight suns without it.
 
-A sampler per sun would take 9 units with eight suns and the plain material, 18 with the physical
-one, and one more with any omni or spot shadow. A GPU with only 16 units fails to link the last
-two, and the scene draws nothing lit.
+A sampler per sun would take 13 units with eight suns and the plain material, 20 with the physical
+one, and one more with any omni or spot shadow. A GPU with only 16 units fails to link the physical
+one, and the scene draws nothing lit.
 
 ### The other designs
 
@@ -353,13 +339,13 @@ uploads the scene, links each lit program's fragment shader again with a vertex 
 declares its outputs, and packs its active non-sampler uniforms by A.7, as ANGLE's
 `VariablePacker` does. It prints the highest of the lit programs each scene compiles:
 
-| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
-| ------------- | ---------------------- | --------------------------------------------------------------- |
-| 1             | 33                     | 59                                                              |
-| 8             | 173                    | 199                                                             |
-| 9 (8 sun shadows drawn) | 173 | 199 |
-| 1, soft       | 35                     | 61                                                              |
-| 8, soft       | 189                    | 215                                                             |
+| Shadowed suns           | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |
+| ----------------------- | ---------------------- | --------------------------------------------------------------- |
+| 1                       | 33                     | 60                                                              |
+| 8                       | 173                    | 200                                                             |
+| 9 (8 sun shadows drawn) | 173                    | 200                                                             |
+| 1, soft                 | 35                     | 62                                                              |
+| 8, soft                 | 189                    | 216                                                             |
 
 A scene without a light draws the preview sun, so it counts as one sun. The ninth sun leaves the
 shadow list. Every case fits the 224 vectors WebGL 2 guarantees. The harness's SwiftShader

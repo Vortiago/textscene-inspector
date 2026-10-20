@@ -12,7 +12,7 @@ const NO_SCENE_PATHS: readonly string[] = [];
 const InstancedScenePathsContext = createContext<readonly string[]>(NO_SCENE_PATHS);
 InstancedScenePathsContext.displayName = 'InstancedScenePathsContext';
 
-export interface InstancedScenePathsProviderProps {
+interface InstancedScenePathsProviderProps {
   paths: readonly string[];
   children: ReactNode;
 }

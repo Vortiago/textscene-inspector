@@ -298,7 +298,7 @@ input_pickable = true
 });
 
 describe('the subclasses the matcher reaches', () => {
-  // descendsFrom pulls AnimatableBody2D in. The message must name the type the
+  // descendsFromClass pulls AnimatableBody2D in. The message must name the type the
   // author can find in their file, not the base the rule factory was built for.
   it('names AnimatableBody2D, not StaticBody2D, in its own diagnostic', () => {
     const found = expectDiagnostic(scene(node('AnimatableBody2D', {}, { name: 'MovingPlatform' })), {

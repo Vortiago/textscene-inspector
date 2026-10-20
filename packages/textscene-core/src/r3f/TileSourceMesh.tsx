@@ -1,6 +1,6 @@
 /**
  * One batched mesh for a run of tile cells that draw from one atlas source, with the
- * unlit 2D material of Sprite2D. It owns the source's texture load.
+ * 2D material of Sprite2D. It owns the source's texture load.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -12,13 +12,11 @@ import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
 import { useCanvas2DTexture } from './canvas2DTextureDecode';
 import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
-import { canvasItemFacing } from './canvasItemFacing';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
 import { materialProgramInputs } from './materialProgramInputs';
-import type { CanvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
-import type { CanvasItemLightingProps } from './lighting2d/useCanvasItemLighting';
+import type { CanvasItemPixelMaterial } from './components/LitCanvasItemPixels';
 
-export interface TileSourceMeshProps {
+interface TileSourceMeshProps {
   source: AtlasSourceModel;
   cells: readonly DrawableCell[];
   grid: TileGrid;
@@ -29,10 +27,8 @@ export interface TileSourceMeshProps {
   opacity: number;
   /** Group name for the per-source missing-texture placeholder. */
   name?: string;
-  /** Compositing state from the node's CanvasItemMaterial, if it carries one. */
-  blend?: CanvasItemBlendState;
-  /** Makes the tiles sample the 2D light accumulation; empty when unlit. */
-  lighting?: CanvasItemLightingProps;
+  /** The tile canvas item's facing, blend state and light list. */
+  pixelMaterial: CanvasItemPixelMaterial;
 }
 
 export function TileSourceMesh({
@@ -43,8 +39,7 @@ export function TileSourceMesh({
   color,
   opacity,
   name,
-  blend,
-  lighting,
+  pixelMaterial,
 }: TileSourceMeshProps) {
   const texResult = useResource<THREE.Texture>(source.texturePath ?? '', 'texture');
   const tex = useCanvas2DTexture(texResult.value);
@@ -91,12 +86,7 @@ export function TileSourceMesh({
       depthWrite: false,
       defines: CANVAS_SRGB_DEFINES,
     },
-    merge: [
-      canvasItemFacing(),
-      blend,
-      lighting,
-      source.usesTexturePadding ? { injection: TILE_TEXTURE_PADDING } : undefined,
-    ],
+    merge: [pixelMaterial, source.usesTexturePadding ? { injection: TILE_TEXTURE_PADDING } : undefined],
   });
 
   return (

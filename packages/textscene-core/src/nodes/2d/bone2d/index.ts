@@ -12,5 +12,3 @@ const bone2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(bone2DRegistration);
-
-export { bone2DRegistration };

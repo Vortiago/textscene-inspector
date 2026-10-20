@@ -268,7 +268,8 @@ export interface ResolvedLiveNode {
 
 /**
  * The collapsed node at a path with its originating instance ref, or `null` if
- * any segment is unresolvable. {@link resolveLiveNode} returns the node alone.
+ * any segment is unresolvable. A single-root sub-scene collapses into its
+ * instance node (ADR-0013), so the root's own name is not a path segment.
  */
 export function resolveLiveEntry(
   path: string,
@@ -279,19 +280,6 @@ export function resolveLiveEntry(
   if (!links || links.length === 0) return null;
   const last = links[links.length - 1]!;
   return { node: last.collapsed, instanceRef: last.raw.instance };
-}
-
-/**
- * The node of {@link resolveLiveEntry}: the collapsed node at a path, or `null`. A
- * single-root sub-scene collapses into its instance node (ADR-0013), so the
- * root's own name is not a path segment.
- */
-export function resolveLiveNode(
-  path: string,
-  roots: readonly TscnNode[],
-  ctx: LiveTreeContext
-): LiveNode | null {
-  return resolveLiveEntry(path, roots, ctx)?.node ?? null;
 }
 
 /** Depth-first walk of the live tree, calling `visit` with each collapsed node and its full path. */

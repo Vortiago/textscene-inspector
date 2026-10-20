@@ -12,8 +12,8 @@ import { validatorRegistry, type PropertyValidator } from '../../../../linter/Va
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, v } from '../../../../linter/validators/v.js';
 import { settingCount } from '../shared/settingCount.js';
-import { ROTATION_AXIS, SECONDARY_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
+import { ROTATION_AXIS_NAMES, SECONDARY_DIRECTION_NAMES } from '../../../../godot/scene/skeletonModifier.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 /**
@@ -29,12 +29,12 @@ const negativeSettingIndex = (index: string): string =>
  * on the two indices only (iterate_ik_3d.cpp:216-324), so each PROPERTY_HINT_ENUM warns.
  */
 const JOINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
-  rotation_axis: v.enumInt('rotation_axis', 0, 4, ROTATION_AXIS, {
+  rotation_axis: v.enumInt('rotation_axis', ROTATION_AXIS_NAMES, {
     hinted: 'iterate_ik_3d.cpp:120',
   }),
   rotation_axis_vector: v.vector3('rotation_axis_vector'),
   limitation: v.resourceReference('limitation'),
-  'limitation/right_axis': v.enumInt('right_axis', 0, 7, SECONDARY_DIRECTION, {
+  'limitation/right_axis': v.enumInt('right_axis', SECONDARY_DIRECTION_NAMES, {
     hinted: 'iterate_ik_3d.cpp:123',
   }),
   'limitation/right_axis_vector': v.vector3('right_axis_vector'),

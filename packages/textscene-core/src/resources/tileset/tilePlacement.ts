@@ -4,66 +4,57 @@
  * ratio on the offset axis, then `(ret + 0.5) * tile_size`. Square placement is the default.
  */
 
-import {
-  TILE_SHAPE_HALF_OFFSET_SQUARE,
-  TILE_SHAPE_HEXAGON,
-  TILE_SHAPE_ISOMETRIC,
-  type TileGrid,
-  type Vec2i,
-} from './types';
-
-/** Godot's Math::posmod: posmod(-1, 2) === 1. */
-function posmod(a: number, b: number): number {
-  return ((a % b) + b) % b;
-}
+import type { TileGrid } from './types';
+import { posmod } from '../../godot/math/math';
+import type { Vector2 } from '../../godot/math/vector';
+import { TileLayout, TileOffsetAxis, TileShape } from '../../godot/scene/tileSet';
 
 /** Shapes whose cells stagger along an offset axis; everything else is plain square. */
 function isStaggered(shape: number): boolean {
   return (
-    shape === TILE_SHAPE_ISOMETRIC || shape === TILE_SHAPE_HALF_OFFSET_SQUARE || shape === TILE_SHAPE_HEXAGON
+    shape === TileShape.TILE_SHAPE_ISOMETRIC ||
+    shape === TileShape.TILE_SHAPE_HALF_OFFSET_SQUARE ||
+    shape === TileShape.TILE_SHAPE_HEXAGON
   );
 }
 
 /** Godot's offset-axis overlap ratio: hexagons overlap by ¼, isometric by ½. */
 function overlapRatio(shape: number): number {
-  if (shape === TILE_SHAPE_ISOMETRIC) return 0.5;
-  if (shape === TILE_SHAPE_HEXAGON) return 0.75;
+  if (shape === TileShape.TILE_SHAPE_ISOMETRIC) return 0.5;
+  if (shape === TileShape.TILE_SHAPE_HEXAGON) return 0.75;
   return 1; // half-offset square: staggered, no overlap
 }
 
-export function mapToLocalPx(grid: TileGrid, cell: Vec2i): { x: number; y: number } {
+export function mapToLocalPx(grid: TileGrid, cell: Vector2): Vector2 {
   let x = cell.x;
   let y = cell.y;
 
   if (isStaggered(grid.shape)) {
     const ratio = overlapRatio(grid.shape);
-    if (grid.offsetAxis === 0) {
+    if (grid.offsetAxis === TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL) {
       switch (grid.layout) {
-        case 0: // STACKED
+        case TileLayout.TILE_LAYOUT_STACKED:
           x += posmod(y, 2) === 0 ? 0 : 0.5;
           break;
-        case 1: // STACKED_OFFSET
+        case TileLayout.TILE_LAYOUT_STACKED_OFFSET:
           x += posmod(y, 2) === 1 ? 0 : 0.5;
           break;
-        case 2: // STAIRS_RIGHT
+        case TileLayout.TILE_LAYOUT_STAIRS_RIGHT:
           x += y / 2;
           break;
-        case 3: {
-          // STAIRS_DOWN
+        case TileLayout.TILE_LAYOUT_STAIRS_DOWN: {
           const rawX = x;
           x = rawX / 2;
           y = y * 2 + rawX;
           break;
         }
-        case 4: {
-          // DIAMOND_RIGHT
+        case TileLayout.TILE_LAYOUT_DIAMOND_RIGHT: {
           const rawX = x;
           x = (rawX + y) / 2;
           y = y - rawX;
           break;
         }
-        case 5: {
-          // DIAMOND_DOWN
+        case TileLayout.TILE_LAYOUT_DIAMOND_DOWN: {
           const rawX = x;
           x = (rawX - y) / 2;
           y = y + rawX;
@@ -73,31 +64,28 @@ export function mapToLocalPx(grid: TileGrid, cell: Vec2i): { x: number; y: numbe
       y *= ratio; // overlap on the offset axis (horizontal axis ⇒ y)
     } else {
       switch (grid.layout) {
-        case 0: // STACKED
+        case TileLayout.TILE_LAYOUT_STACKED:
           y += posmod(x, 2) === 0 ? 0 : 0.5;
           break;
-        case 1: // STACKED_OFFSET
+        case TileLayout.TILE_LAYOUT_STACKED_OFFSET:
           y += posmod(x, 2) === 1 ? 0 : 0.5;
           break;
-        case 2: {
-          // STAIRS_RIGHT
+        case TileLayout.TILE_LAYOUT_STAIRS_RIGHT: {
           const rawY = y;
           y = rawY / 2;
           x = x * 2 + rawY;
           break;
         }
-        case 3: // STAIRS_DOWN
+        case TileLayout.TILE_LAYOUT_STAIRS_DOWN:
           y += x / 2;
           break;
-        case 4: {
-          // DIAMOND_RIGHT
+        case TileLayout.TILE_LAYOUT_DIAMOND_RIGHT: {
           const rawY = y;
           y = (rawY - x) / 2;
           x = x + rawY;
           break;
         }
-        case 5: {
-          // DIAMOND_DOWN
+        case TileLayout.TILE_LAYOUT_DIAMOND_DOWN: {
           const rawY = y;
           y = (rawY + x) / 2;
           x = x - rawY;

@@ -5,10 +5,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bandRows, TiledUploadQueue, type UploadRenderer } from './TiledUploadQueue';
+import { TiledUploadQueue, type UploadRenderer } from './TiledUploadQueue';
+import { mipChain, type MipLevel } from '../../resources/processing/mipChain';
 
 interface Copy {
   destination: THREE.Texture;
+  level: number;
   fromRow: number;
   toRow: number;
 }
@@ -24,9 +26,9 @@ function fakeRenderer(msPerCopy = 1) {
     initTexture: (texture) => {
       allocations.push({ texture, dataReady: texture.source.dataReady });
     },
-    writeRows: (texture, fromRow, toRow) => {
-      copies.push({ destination: texture, fromRow, toRow });
-      calls.push(`rows ${fromRow}-${toRow}`);
+    writeRows: (texture, { level, fromRow, toRow }) => {
+      copies.push({ destination: texture, level, fromRow, toRow });
+      calls.push(level === 0 ? `rows ${fromRow}-${toRow}` : `level ${level} rows ${fromRow}-${toRow}`);
       clock += msPerCopy;
     },
     generateMipmaps: () => {
@@ -52,19 +54,42 @@ function fakePacer(bands: number) {
   return pacer;
 }
 
+/** `texture` with the levels a CPU-built chain gives it, `mipmaps[0]` its own bytes. */
+function withUploadedChain(texture: THREE.DataTexture): THREE.DataTexture {
+  texture.mipmaps = mipChain(texture.image as MipLevel, false) as unknown as THREE.DataTexture['mipmaps'];
+  texture.generateMipmaps = false;
+  return texture;
+}
+
 function dataTexture(width: number, height: number): THREE.DataTexture {
   const texture = new THREE.DataTexture(new Uint8Array(width * height * 4), width, height);
   texture.needsUpdate = true;
   return texture;
 }
 
-describe('bandRows', () => {
+describe('TiledUploadQueue band size', () => {
+  /** The rows of the first band the queue writes for a texture `width` pixels wide. */
+  function firstBandRows(width: number, height: number): number {
+    const { renderer, copies, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    void queue.enqueue(dataTexture(width, height));
+    queue.tick(0);
+    return copies[0]!.toRow - copies[0]!.fromRow;
+  }
+
   it('gives a 4096-wide texture 128 rows, about 2 MiB a band', () => {
-    expect(bandRows(4096)).toBe(128);
+    expect(firstBandRows(4096, 512)).toBe(128);
   });
 
   it('gives at least one row to a texture wider than a band', () => {
-    expect(bandRows(1 << 20)).toBe(1);
+    expect(firstBandRows(1 << 20, 2)).toBe(1);
+  });
+
+  it('tiles only a texture taller than one band', () => {
+    const { renderer, now } = fakeRenderer();
+    const queue = new TiledUploadQueue(renderer, now);
+    expect(queue.needsTiling(dataTexture(4096, 128))).toBe(false);
+    expect(queue.needsTiling(dataTexture(4096, 129))).toBe(true);
   });
 });
 
@@ -156,6 +181,39 @@ describe('TiledUploadQueue', () => {
     await upload.done;
 
     expect(calls).toEqual(['rows 0-128', 'rows 128-256', 'rows 256-300', 'mipmaps']);
+  });
+
+  it('writes each level of a chain built on the CPU after the base, in bands of its own width', async () => {
+    const { renderer, calls, now } = fakeRenderer();
+    const texture = withUploadedChain(dataTexture(4096, 600));
+    const queue = new TiledUploadQueue(renderer, now);
+    const upload = queue.enqueue(texture);
+    queue.tick(1000);
+    await upload.done;
+
+    expect(calls.slice(4, 7)).toEqual(['rows 512-600', 'level 1 rows 0-256', 'level 1 rows 256-300']);
+  });
+
+  it('writes every level of a CPU-built chain down to 1 × 1', async () => {
+    const { renderer, copies, now } = fakeRenderer();
+    const texture = withUploadedChain(dataTexture(4096, 600));
+    const queue = new TiledUploadQueue(renderer, now);
+    const upload = queue.enqueue(texture);
+    queue.tick(1000);
+    await upload.done;
+
+    expect(new Set(copies.map(({ level }) => level)).size).toBe(13);
+  });
+
+  it('asks the GPU for no chain over a CPU-built one', async () => {
+    const { renderer, calls, now } = fakeRenderer();
+    const texture = withUploadedChain(dataTexture(4096, 600));
+    const queue = new TiledUploadQueue(renderer, now);
+    const upload = queue.enqueue(texture);
+    queue.tick(1000);
+    await upload.done;
+
+    expect(calls).not.toContain('mipmaps');
   });
 
   it('generates no mipmaps for a texture that wants none', async () => {

@@ -6,9 +6,9 @@ game loads that artefact. The artefact is gitignored, binary and hash-named, so 
 previewer cannot have it as an input. The previewer therefore performs an **asset
 re-import**: it loads the source asset and re-derives the scene. It honours
 `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
-`meshes/lightmap_texel_size` and, from `_subresources`, the per-material `use_external`
-remaps, the per-node `mesh_instance/layers` and the per-mesh `generate/lightmap_uv`, and
-nothing else.
+`meshes/lightmap_texel_size`, `nodes/use_name_suffixes` and, from `_subresources`, the
+per-material `use_external` remaps, the per-node `mesh_instance/layers`, the per-mesh
+`generate/lightmap_uv` and the per-clip `settings/loop_mode`, and nothing else.
 
 ## Why the sidecars matter
 
@@ -68,9 +68,17 @@ newly vendored demo needs a decision.
   from 1". The discoverable version is an inspector row, which needs a special case in
   shared inspector code, because `GLBSceneRoot` is synthetic and has no `nodeRegistry`
   registration for the `propertyFormatter` path to find.
-- **Only scene sidecars are vendored.** Texture, audio and font sidecars govern
-  compression, mipmaps and sRGB, and this pipeline reads none of them. Vendoring those
-  inert files would hide the ones that matter.
+- **The corpus keeps only the sidecars the previewer reads.** These are scene, `.obj`, texture
+  and 3D texture sidecars (see the amendment below). `scripts/vendor-prune.mjs` prunes every other
+  sidecar. Audio and font sidecars change nothing the previewer draws, and vendoring those inert
+  files would hide the ones that matter.
+- **A clip's loop mode belongs to the asset.** The glTF importer loops a clip whose name begins or
+  ends with `loop` or `cycle` (`gltf_document.cpp:3752-3753`). Unless `nodes/use_name_suffixes` is
+  off, the scene importer also loops a clip with a `-loop`, `_loop`, `-cycle`, `_cycle`,
+  `-loop_mode`, `_loop_mode` or `$loop` suffix and removes the suffix from its name
+  (`resource_importer_scene.cpp:745-755`). An `_subresources.animations` entry under the final
+  name then replaces the mode with its `settings/loop_mode`, which is 0 (`LOOP_NONE`) when the
+  entry omits it (`:1335-1347`). Slice cuts and `save_to_file` stay unread.
 
 ## Amendment: lightmap UV2 from the unwrap cache
 
@@ -96,3 +104,31 @@ up. A mesh without a matching entry keeps the GLB's own attributes, and one log 
   from the rebuilt mesh, a mesh on a `GODOT_single_root` file's root node gets no UV2, and a
   mesh whose surface without normals precedes one with them keeps its attributes, since
   Godot 4.6.3 crashes on it.
+
+## Amendment: the texture importer
+
+A texture sidecar changes what an image file draws, so the previewer honours the texture
+importer's parameters that do. `textureBinding.md` in the StandardMaterial3D slice has the rules
+and their cites.
+
+- **`compress/mode`, `compress/high_quality` and `compress/normal_map` decide the import format.**
+  A `source_color` sampler reads a texture's sRGB view only when its format has one
+  (`material_storage.cpp:1073`). Godot loads a greyscale PNG or JPEG as L8 or LA8, which have none,
+  and keeps that format unless the mode is VRAM Compressed or Basis Universal
+  (`resource_importer_texture.cpp:934-947`). So the sidecar decides whether a colour slot reads the
+  image raw or sRGB.
+- **`mipmaps/generate` decides the mip chain.** It is off in the Detect preset, so an image with no
+  sidecar samples its base level under every `texture_filter`.
+- **`process/fix_alpha_border`, `process/premult_alpha`, `process/normal_map_invert_y` and
+  `svg/scale` rewrite the texels.** The previewer runs them in the importer's order.
+- **The parameters that change the channels stay at their default.** A channel remap, a channel
+  pack, a size limit or a mipmap limit changes the texels a slot reads, and the previewer reads
+  none of them. The allowlist test asserts their default on every vendored texture sidecar.
+- **The storage parameters are inert.** The previewer reads the source image, not the compressed
+  one, so the lossy quality and the roughness limiter change nothing it draws. The compression
+  error is not drawn (#786). The re-imports the editor starts when it first sees a texture in 3D or
+  as a normal map happen in the editor, so the previewer does not predict them.
+- **A glTF image follows the sidecar of the file Godot imports it as.** An embedded image is
+  extracted beside the glTF, and that file's sidecar decides. This holds only while the scene's
+  `gltf/embedded_image_handling` is Extract Textures, its default, so the allowlist test asserts
+  it.

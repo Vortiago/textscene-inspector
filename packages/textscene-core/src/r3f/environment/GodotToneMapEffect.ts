@@ -7,54 +7,45 @@
 
 import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
+import { brightPassGlsl, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
 import {
-  brightPassGlsl,
-  glowLevelSize,
-  samplesGlowMap,
-  type GlowParams,
-} from '../../resources/environment/godotGlow';
-import { compositeGlsl, type CompositeOptions } from '../../resources/environment/godotCompositor';
+  compositeProgram,
+  GLOW_BUFFER_UNIFORM,
+  GLOW_MAP_UNIFORM,
+  type CompositeOptions,
+} from '../../resources/environment/godotCompositor';
 import { applyTextureState } from '../../resources/textures/applyTextureState';
 import { glslFloat } from '../../utils/glslLiterals';
+import { defaultWhiteTexture } from '../materials/defaultWhiteTexture';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
 import { drawOffscreen } from '../offscreen';
-
-export interface GodotToneMapOptions extends CompositeOptions {
-  /**
-   * Godot `tonemap_exposure`, applied to the scene colour once at the top of
-   * `main()`. The bright pass has already applied the same value to the glow.
-   */
-  exposure: number;
-}
 
 export class GodotToneMapEffect extends Effect {
   /** Null when the environment has no glow: nothing to gather, nothing to own. */
   private readonly pyramid: GlowPyramid | null;
 
-  constructor({ exposure, ...composite }: GodotToneMapOptions) {
-    const { glow } = composite;
-    const uniforms = new Map<string, THREE.Uniform>([['godotExposure', new THREE.Uniform(exposure)]]);
-    // Only the glow arm of the shader reads it.
-    if (glow) uniforms.set('godotGlowBuffer', new THREE.Uniform(null));
-    if (glow && samplesGlowMap(glow)) uniforms.set('godotGlowMap', new THREE.Uniform(WHITE_GLOW_MAP));
-
-    super('GodotToneMapEffect', compositeGlsl(composite), {
+  constructor(options: CompositeOptions) {
+    const { fragmentShader, uniforms } = compositeProgram(options);
+    super('GodotToneMapEffect', fragmentShader, {
       // The effect writes the finished frame, glow and curve applied, so the composer must not
       // blend it into the scene again.
       blendFunction: BlendFunction.SRC,
-      uniforms,
+      uniforms: new Map(Object.entries(uniforms).map(([name, value]) => [name, new THREE.Uniform(value)])),
     });
 
-    this.pyramid = glow ? new GlowPyramid(glow) : null;
+    this.clearGlowMap();
+    this.pyramid = options.glow ? new GlowPyramid(options.glow) : null;
   }
 
-  /**
-   * Samples `map` as the glow map, or white while it loads, which leaves the glow unscaled. The
-   * caller owns `map`. A no-op when the composite samples no map.
-   */
-  setGlowMap(map: THREE.Texture | null): void {
-    const uniform = this.uniforms.get('godotGlowMap');
-    if (uniform) uniform.value = map ?? WHITE_GLOW_MAP;
+  /** Samples `map` as the glow map. The caller owns `map`. A no-op when the composite samples no map. */
+  setGlowMap(map: THREE.Texture): void {
+    const uniform = this.uniforms.get(GLOW_MAP_UNIFORM);
+    if (uniform) uniform.value = map;
+  }
+
+  /** Samples white, which leaves the glow unscaled: the state while the map loads. */
+  clearGlowMap(): void {
+    this.setGlowMap(defaultWhiteTexture());
   }
 
   override setSize(width: number, height: number): void {
@@ -64,7 +55,7 @@ export class GodotToneMapEffect extends Effect {
   /** Builds the pyramid, then hands the composite shader the weighted sum. */
   override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
     if (!this.pyramid) return;
-    this.uniforms.get('godotGlowBuffer')!.value = this.pyramid.gather(renderer, inputBuffer);
+    this.uniforms.get(GLOW_BUFFER_UNIFORM)!.value = this.pyramid.gather(renderer, inputBuffer);
   }
 
   override dispose(): void {
@@ -81,10 +72,6 @@ export class GodotToneMapEffect extends Effect {
 export function glowMapView(glowMap: THREE.Texture): THREE.Texture {
   return applyTextureState(glowMap, { colorSpace: THREE.NoColorSpace, repeat: false });
 }
-
-/** Shared by every effect and never disposed: one texel. */
-const WHITE_GLOW_MAP = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
-WHITE_GLOW_MAP.needsUpdate = true;
 
 /**
  * The glow buffers and passes, owned as `BloomEffect` owns its own. Not a `BloomEffect`: Godot

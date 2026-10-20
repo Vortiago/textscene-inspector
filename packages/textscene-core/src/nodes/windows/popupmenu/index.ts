@@ -12,5 +12,3 @@ const popupMenuRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(popupMenuRegistration);
-
-export { popupMenuRegistration };

@@ -5,14 +5,9 @@
  * `hint_default_black` samples an absent texture as zero.
  */
 
-import type { Color } from './types';
 import { sRGBToLinearRGB } from '../../../utils/colorSpace';
-
-/** Godot `BaseMaterial3D.EmissionOperator`. */
-export const EmissionOperator = {
-  ADD: 0,
-  MULTIPLY: 1,
-} as const;
+import type { Rgba } from '../../../godot/math/math';
+import { EmissionOperator } from '../../../godot/rendering/materials/emissionOperator';
 
 export interface EmissionScalars {
   /**
@@ -31,7 +26,7 @@ export interface EmissionScalars {
  * from `resolveEmission`, since the inline path learns whether a texture landed only
  * in the component.
  */
-export function emissionScalars(color: Color | undefined, energy: number, enabled = true): EmissionScalars {
+export function emissionScalars(color: Rgba | undefined, energy: number, enabled = true): EmissionScalars {
   if (!enabled) return { emissive: [0, 0, 0], emissiveIntensity: 0, emissionEnergy: 0 };
   // Convert before taking the peak, as sRGB→linear is not linear: for `Color(2, 0.5, 0)`
   // the other order gives `(2, 0.102, 0)` against Godot's `(4.954, 0.214, 0)`.

@@ -13,7 +13,9 @@ import {
   surfaceBillboard,
 } from './materialBag';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { ambientOcclusionUserData } from '../../../r3f/materials/godotAmbientOcclusion';
+import { metallicRoughnessChannelsUserData } from '../../../r3f/materials/godotMetallicRoughnessChannels';
 import { lightModesUserData } from '../../../r3f/lightModes';
 import { disablesSpecularOcclusion } from '../../../r3f/godotIndirectSpecular';
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
@@ -26,7 +28,7 @@ import {
 } from '../../../r3f/materials/opaquePrepass';
 import { materialFromBag } from './build';
 import { standardMaterial } from './testing/standardMaterial';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { parseStandardMaterial3DScalars } from './scalars';
 import type { ResolvedTextures } from './types';
 import { renderTargetMapUserData } from '../../../r3f/materials/renderTargetMap';
@@ -36,6 +38,7 @@ import {
   DRAWS_TOON_SPECULAR,
   DROPS_ALBEDO_ALPHA,
   OCCLUDES_DIRECT_LIGHT,
+  REBUILDS_NORMAL_MAP_BLUE,
   WRITES_OPAQUE_AFTER_CUT,
   patchedFragment,
 } from '../../../r3f/testing/patchedFragment';
@@ -287,6 +290,26 @@ describe('standardMaterialBags — fragment alpha', () => {
   });
 });
 
+describe('standardMaterialBags — metallic and roughness map channels', () => {
+  it.each([
+    ['roughness_texture', 'dot( texelRoughness, godotRoughnessTextureChannel )'],
+    ['metallic_texture', 'dot( texelMetalness, godotMetallicTextureChannel )'],
+  ] as const)('reads the named channel on a surface with a %s', (slot, read) => {
+    const built = materialFromBag(bag({}, { [slot]: new THREE.Texture() }));
+    expect(patchedFragment(built)).toContain(read);
+  });
+
+  it('records both channels for the uniforms to read', () => {
+    const properties = { roughness_texture_channel: '3', metallic_texture_channel: '2' };
+    const built = materialFromBag(bag(properties, { roughness_texture: new THREE.Texture() }));
+    expect(built.userData).toMatchObject(metallicRoughnessChannelsUserData([0, 0, 0, 1], [0, 0, 1, 0]));
+  });
+
+  it('patches nothing on a surface with neither map (edge case)', () => {
+    expect(bag({ roughness_texture_channel: '3' }).injection).toBeUndefined();
+  });
+});
+
 describe('standardMaterialBags — AO on direct light', () => {
   const aoMap = new THREE.Texture();
   const AO = { ao_enabled: 'true', ao_light_affect: '0.5' };
@@ -319,6 +342,26 @@ describe('standardMaterialBags — AO on direct light', () => {
     const fragment = patchedFragment(materialFromBag(bag({ ...AO, blend_mode: '1' }, { ao_texture: aoMap })));
     expect(fragment).toContain(OCCLUDES_DIRECT_LIGHT);
     expect(fragment).toContain(DROPS_ALBEDO_ALPHA);
+  });
+});
+
+describe('standardMaterialBags — the normal map read', () => {
+  const normalMap = new THREE.Texture();
+  const NORMAL = { normal_enabled: 'true' };
+
+  it('rebuilds the blue of a normal map from its red and green', () => {
+    expect(patchedFragment(materialFromBag(bag(NORMAL, { normal_texture: normalMap })))).toContain(
+      REBUILDS_NORMAL_MAP_BLUE
+    );
+  });
+
+  it('patches nothing on a surface with no normal map', () => {
+    expect(bag(NORMAL).injection).toBeUndefined();
+  });
+
+  it('rebuilds the blue on a physical surface too (edge case)', () => {
+    const physical = bag({ ...NORMAL, clearcoat_enabled: 'true' }, { normal_texture: normalMap });
+    expect(patchedFragment(materialFromBag(physical))).toContain(REBUILDS_NORMAL_MAP_BLUE);
   });
 });
 
@@ -542,6 +585,50 @@ describe('standardMaterialBags — alpha hash', () => {
 
   it('hashes nothing on a material with no transparency (edge case)', () => {
     expect(standardMaterial({}).alphaHash).toBe(false);
+  });
+});
+
+describe('standardMaterialBags — alpha antialiasing', () => {
+  const scissorAntialiased = (mode: string) => ({
+    transparency: '2',
+    shading_mode: '0',
+    alpha_antialiasing_mode: mode,
+    alpha_antialiasing_edge: '0.2',
+  });
+
+  it.each([
+    ['ALPHA_TO_COVERAGE', '1', THREE.SrcAlphaFactor],
+    ['ALPHA_TO_COVERAGE_AND_TO_ONE', '2', THREE.OneFactor],
+  ])('turns alpha to coverage on with its blend under %s', (_name, mode, blendSrc) => {
+    const built = standardMaterial(scissorAntialiased(mode));
+    expect(built).toMatchObject({ alphaToCoverage: true, blending: THREE.CustomBlending, blendSrc });
+  });
+
+  it.each([
+    ['ALPHA_TO_COVERAGE', '1'],
+    ['ALPHA_TO_COVERAGE_AND_TO_ONE', '2'],
+  ])('ramps the edge past the scissor under %s', (_name, mode) => {
+    const built = standardMaterial(scissorAntialiased(mode));
+    expect(alphaAntialiasingOf(built)?.edge).toBeCloseTo(0.7, 6);
+    expect(patchedFragment(built)).toContain('godotEdgeCoverage(');
+  });
+
+  it('keeps alpha to coverage on in the alpha pass a fade forces', () => {
+    const props = alphaPassBag(scissorAntialiased('1')).props;
+    expect(props.alphaToCoverage).toBe(true);
+    expect(alphaAntialiasingOf({ userData: props.userData as Record<string, unknown> })).not.toBeNull();
+  });
+
+  it("blends with the material's own blend mode while the mode is OFF", () => {
+    const built = standardMaterial({ transparency: '2', blend_mode: '1' });
+    expect(built).toMatchObject({ alphaToCoverage: false, blending: THREE.AdditiveBlending });
+    expect(alphaAntialiasingOf(built)).toBeNull();
+  });
+
+  it('replaces an authored blend mode with the alpha-to-coverage blend (edge case)', () => {
+    // `scene_shader_forward_clustered.cpp:237-241`, and the editor hides `blend_mode` (`material.cpp:2655`).
+    const built = standardMaterial({ ...scissorAntialiased('1'), blend_mode: '1' });
+    expect(built.blending).toBe(THREE.CustomBlending);
   });
 });
 

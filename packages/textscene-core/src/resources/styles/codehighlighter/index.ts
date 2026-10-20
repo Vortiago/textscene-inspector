@@ -13,8 +13,3 @@ registerResourceSlice({
   typeNames: ['CodeHighlighter'],
   busType: 'resource',
 });
-
-export { decodeCodeHighlighter } from './decode';
-export { resolveLineColors } from './highlight';
-export type { CodeHighlighterColorRegion, CodeHighlighterData } from './types';
-export type { CodeHighlighterColorSpan } from './highlight';

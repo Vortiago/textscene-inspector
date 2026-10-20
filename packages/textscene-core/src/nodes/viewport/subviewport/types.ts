@@ -5,19 +5,7 @@
  */
 
 import type { NodeProperties } from '../../node/types';
-import type { Vector2 } from '../../base/node2d/types';
-
-/** `SubViewport.UpdateMode`: when the target is re-rendered. */
-export const UPDATE_MODE_DISABLED = 0;
-export const UPDATE_MODE_ONCE = 1;
-export const UPDATE_MODE_WHEN_VISIBLE = 2;
-export const UPDATE_MODE_WHEN_PARENT_VISIBLE = 3;
-export const UPDATE_MODE_ALWAYS = 4;
-
-/** `SubViewport.ClearMode`: how the target is cleared before a render. */
-export const CLEAR_MODE_ALWAYS = 0;
-export const CLEAR_MODE_NEVER = 1;
-export const CLEAR_MODE_ONCE = 2;
+import type { Vector2 } from '../../../godot/math/vector';
 
 /**
  * `transform` is dropped from the base: a Viewport is not a spatial node, so
@@ -43,6 +31,9 @@ export interface SubViewportProperties extends Omit<NodeProperties, 'transform'>
   handle_input_locally: boolean;
   render_target_update_mode: number;
   render_target_clear_mode: number;
+  /** `Viewport.MSAA` of the buffer canvas items draw into. */
+  msaa_2d: number;
+  /** `Viewport.MSAA` of the buffer the 3D world draws into. */
   msaa_3d: number;
   use_debanding: boolean;
   audio_listener_enable_2d: boolean;

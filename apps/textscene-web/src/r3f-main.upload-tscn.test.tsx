@@ -5,16 +5,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
-// happy-dom cannot provide the WebGL `<Canvas>` that `<TscnCanvas>` mounts, so it is a stub.
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return {
-    ...real,
-    TscnCanvas: () => null,
-    TscnSceneContents: () => null,
-  };
-});
-
 import { R3FApp } from './r3f-main';
 
 const UPLOADED_TSCN = `[gd_scene load_steps=1 format=3]

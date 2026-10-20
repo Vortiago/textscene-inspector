@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { TscnParser } from '../parser/TscnParser';
 import { mergeInstanceRoot } from './mergeInstanceRoot';
 import { resolveInstancePath } from './SubResourceResolver';
-import { resolveLiveNode } from '../r3f/liveSceneTree';
+import { liveNodeAt } from '../r3f/liveSceneTree.testkit';
 import { decodeGridMapCells, type GridMapCell } from '../nodes/3d/gridmap/cellData';
 import type { GridMapProperties } from '../nodes/3d/gridmap/types';
 import type { TscnNode, TscnScene } from '../parser/types';
@@ -80,7 +80,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
   });
 
   it('delivers the override layout through the real render-path resolver (loader cache → merge)', () => {
-    // The production path the tree, viewport and inspector use: resolveLiveNode
+    // The production path the tree, viewport and inspector use: liveNodeAt
     // resolves the instance's ExtResource, reads the sub-scene from the loader
     // cache (a TscnParser-parsed scene with raw props, as `getCached` returns it)
     // and merges.
@@ -93,7 +93,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
 
     const sceneCache = { getCached: (p: string) => (p === scenePath ? gridMapScene : undefined) };
 
-    const resolved = resolveLiveNode('Stage/GridMap', stage.nodes, {
+    const resolved = liveNodeAt('Stage/GridMap', stage.nodes, {
       externalResources: stage.externalResources,
       internalResources: stage.internalResources,
       sceneCache,
@@ -106,7 +106,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
   it('delivers the override two instance levels deep (game.tscn → Stage → GridMap)', () => {
     // game.tscn instances stage.tscn ("Stage"), which instances grid_map.tscn
     // ("GridMap") with the `data` override. The override survives both collapse
-    // levels: resolveLiveNode descends into Stage, switching to stage.tscn's
+    // levels: liveNodeAt descends into Stage, switching to stage.tscn's
     // resource scope, then collapses the nested GridMap instance.
     const game = parseFixture('game.tscn');
     const stage = parseFixture('stage/stage.tscn');
@@ -118,7 +118,7 @@ describe('mergeInstanceRoot — platformer GridMap fixture (instance data overri
     };
     const sceneCache = { getCached: (p: string) => sceneByPath[p] };
 
-    const resolved = resolveLiveNode('Game/Stage/GridMap', game.nodes, {
+    const resolved = liveNodeAt('Game/Stage/GridMap', game.nodes, {
       externalResources: game.externalResources,
       internalResources: game.internalResources,
       sceneCache,

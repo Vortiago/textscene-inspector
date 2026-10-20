@@ -10,6 +10,5 @@ const textureProgressBarRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(textureProgressBarRegistration);
 
-export { textureProgressBarRegistration };
 export * from './parser';
 export * from './types';

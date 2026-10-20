@@ -7,17 +7,12 @@
 
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { TEXTURE_CHANNEL_NAMES, TextureChannel } from '../../../godot/rendering/materials/textureChannel.js';
+import { TEXTURE_CHANNEL_NAMES } from '../../../godot/rendering/materials/textureChannel.js';
+import { EMISSION_OPERATOR_NAMES } from '../../../godot/rendering/materials/emissionOperator.js';
 
 /** A `*_texture_channel` enum, which its setter refuses outside the five channels at `enforced`. */
 export function textureChannelValidator(name: string, enforced: string): PropertyValidator {
-  return v.enumInt(
-    name,
-    TextureChannel.TEXTURE_CHANNEL_RED,
-    TextureChannel.TEXTURE_CHANNEL_GRAYSCALE,
-    TEXTURE_CHANNEL_NAMES,
-    { enforced }
-  );
+  return v.enumInt(name, TEXTURE_CHANNEL_NAMES, { enforced });
 }
 
 export const pbrKeys: Record<string, PropertyValidator> = {
@@ -60,13 +55,7 @@ export const pbrKeys: Record<string, PropertyValidator> = {
   emission_intensity: v.nonNegativeFloat('emission_intensity', { hinted: 'material.cpp:3635' }),
   // material.cpp:3637, set_emission_operator (:3141-3146) is a bare assignment
   // (only an equal-check early return); no engine-side range check.
-  emission_operator: v.enumInt(
-    'emission_operator',
-    0,
-    1,
-    { 0: 'ADD', 1: 'MULTIPLY' },
-    { hinted: 'material.cpp:3637' }
-  ),
+  emission_operator: v.enumInt('emission_operator', EMISSION_OPERATOR_NAMES, { hinted: 'material.cpp:3637' }),
   // Validated but not rendered (see the sheet's limitations): a malformed value
   // is still worth reporting, since the scene is wrong in Godot either way.
   emission_on_uv2: v.boolean('emission_on_uv2'),

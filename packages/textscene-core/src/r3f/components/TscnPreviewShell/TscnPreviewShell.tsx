@@ -8,8 +8,11 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   FRAME_ON_OPEN_STORAGE_KEY,
+  SHOW_FOG_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
+  SHOW_PERFORMANCE_STORAGE_KEY,
   VIEWPORT_MODE_STORAGE_KEY,
+  type PersistedViewport,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
 import { readPersisted, usePersistedState } from '../../hooks/usePersistedState.js';
@@ -17,11 +20,13 @@ import { useParsedScene } from '../../hooks/useParsedScene.js';
 import { ViewportToolbar } from '../ViewportToolbar/ViewportToolbar.js';
 import { Splitter } from '../Splitter/Splitter.js';
 import { ViewportArea } from './ViewportArea.js';
+import { PerformanceOverlay } from '../../frameProfile/PerformanceOverlay.js';
 import { PreviewErrorBoundary } from './PreviewErrorBoundary.js';
 import { EscapeDeselect } from './EscapeDeselect.js';
 import { SceneChangeResetter } from './SceneChangeResetter.js';
 import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats } from './SceneStats.js';
+import { SceneLoadStatus } from './SceneLoadStatus.js';
 import { TextureWorkStatus } from './TextureWorkStatus.js';
 import {
   CollapsedDock,
@@ -96,10 +101,12 @@ export function TscnPreviewShell({
   // Read once to seed the provider, which holds the live value. Only the
   // toolbar's click handlers write back, so a programmatic mode change never
   // persists.
-  const [initialViewport] = useState(() => ({
+  const [initialViewport] = useState<PersistedViewport>(() => ({
     mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
     showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
     frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, false, isBoolean),
+    showFog: readPersisted(SHOW_FOG_STORAGE_KEY, true, isBoolean),
+    showPerformance: readPersisted(SHOW_PERFORMANCE_STORAGE_KEY, false, isBoolean),
   }));
 
   const withProviders = previewShellProviders({
@@ -125,6 +132,7 @@ export function TscnPreviewShell({
           <span className={styles.brand}>TextScene Inspector</span>
           {toolbar && <div className={styles.topToolbar}>{toolbar}</div>}
           <div className={styles.topSpacer} />
+          <SceneLoadStatus viewportError={viewportError} />
           <TextureWorkStatus />
           <SceneStats />
           <HelpLink />
@@ -141,6 +149,7 @@ export function TscnPreviewShell({
             <div className={styles.viewportToolbarOverlay} data-testid="viewport-toolbar-overlay">
               <ViewportToolbar />
             </div>
+            <PerformanceOverlay />
             <PreviewErrorBoundary sceneGraph={sceneGraph} onViewportErrorChange={setViewportError}>
               <ViewportArea sceneGraph={sceneGraph} scenePath={rootScenePath} />
             </PreviewErrorBoundary>

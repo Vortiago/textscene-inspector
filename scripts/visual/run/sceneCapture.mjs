@@ -4,7 +4,7 @@
  * gives a wrong baseline, and its comment names the race.
  */
 
-import { findCaptureTarget, gotoFixture, setDisplayToggle, settleCanvas } from '../previewServer.mjs';
+import { openScene, setDisplayToggle, settleCanvas } from '../previewServer.mjs';
 
 // Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
 // render-loop latency under host contention.
@@ -29,10 +29,11 @@ export async function captureScene(pages, baseUrl, scene) {
   errors.length = 0;
 
   // A silent stalled resource chain would become a baseline, so it is logged.
-  await gotoFixture(page, baseUrl, scene.file, (ms) =>
-    console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`)
-  );
-  const { target: canvas, reason: canvasReason } = await findCaptureTarget(page, { canvas2D });
+  const { target: canvas, reason: canvasReason } = await openScene(page, baseUrl, scene.file, {
+    canvas2D,
+    camera: scene.camera,
+    onSlow: (ms) => console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`),
+  });
   if (!canvas) return { buffer: null, reason: canvasReason };
 
   if (scene.navigation) {

@@ -8,7 +8,8 @@
 
 import * as THREE from 'three';
 import { fadeAlpha, forcesAlphaPass } from '../../godot/rendering/fadeAlpha';
-import { injectProgram } from '../materialProgramInputs';
+import { composeInjections, injectProgram } from '../materialProgramInputs';
+import { importedNormalMapRead, withImportedNormalMapRead } from './godotNormalMap';
 import type { MeshSurface } from '../../resources/formats/glb/meshInstances';
 import type { FadedSurface } from './swappedMaterials';
 import type { FadePass, FadeVariants } from './fadeVariants';
@@ -63,13 +64,13 @@ function alphaPassCopy(material: THREE.Material): THREE.Material {
     blending: material.blending,
   });
   if (blending !== undefined) copy.blending = blending;
-  injectProgram(copy, injection);
+  injectProgram(copy, composeInjections([importedNormalMapRead(material), injection]));
   return copy;
 }
 
-/** The plain copy of an imported `material` that draws in `pass`. An import carries no program injection. */
+/** The plain copy of an imported `material` that draws in `pass`, with the import's normal map read. */
 function plainCopy(material: THREE.Material, pass: FadePass): THREE.Material {
-  return pass === 'alphaPass' ? alphaPassCopy(material) : material.clone();
+  return pass === 'alphaPass' ? alphaPassCopy(material) : withImportedNormalMapRead(material.clone());
 }
 
 /** A faded copy, and the listener that disposes it with its unfaded material. */

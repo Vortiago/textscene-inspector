@@ -10,6 +10,5 @@ const itemListRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(itemListRegistration);
 
-export { itemListRegistration };
 export * from './parser';
 export * from './types';

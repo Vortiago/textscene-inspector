@@ -6,14 +6,8 @@ import { propertyError, shape, v } from '../../../../linter/validators/index.js'
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
+import { TILE_MAP_VISIBILITY_MODE_NAMES } from '../../../../godot/scene/tileMap.js';
 import { readTileMapDataLiteral } from '../shared/tileData.js';
-
-/**
- * DebugVisibilityMode (tile_map_layer.h:341-345), three constants matching the
- * "Default,Force Show,Force Hide" hint on both visibility-mode properties. It has
- * the shape of TileMap's VisibilityMode under a different enum name.
- */
-const DEBUG_VISIBILITY_MODE = { 0: 'DEFAULT', 1: 'FORCE_SHOW', 2: 'FORCE_HIDE' };
 
 /**
  * `tile_map_data`, a stored PACKED_BYTE_ARRAY (tile_map_layer.cpp:2267). The writer switches the
@@ -95,7 +89,7 @@ validatorRegistry.registerAll('TileMapLayer', {
   use_kinematic_bodies: v.boolean('use_kinematic_bodies'),
   // set_collision_visibility_mode (:3412-3420), bare assignment. Hint at
   // ADD_PROPERTY tile_map_layer.cpp:2279.
-  collision_visibility_mode: v.enumInt('collision_visibility_mode', 0, 2, DEBUG_VISIBILITY_MODE, {
+  collision_visibility_mode: v.enumInt('collision_visibility_mode', TILE_MAP_VISIBILITY_MODE_NAMES, {
     hinted: 'tile_map_layer.cpp:2279',
   }),
   // set_physics_quadrant_size (:3426-3436): ERR_FAIL_COND_MSG(p_size < 1)
@@ -111,7 +105,7 @@ validatorRegistry.registerAll('TileMapLayer', {
   navigation_enabled: v.boolean('navigation_enabled'),
   // set_navigation_visibility_mode (:3490-3498), bare assignment. Hint at
   // ADD_PROPERTY tile_map_layer.cpp:2284.
-  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', 0, 2, DEBUG_VISIBILITY_MODE, {
+  navigation_visibility_mode: v.enumInt('navigation_visibility_mode', TILE_MAP_VISIBILITY_MODE_NAMES, {
     hinted: 'tile_map_layer.cpp:2284',
   }),
 });

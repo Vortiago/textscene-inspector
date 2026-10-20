@@ -10,8 +10,7 @@ import type { Node3DProperties } from '../../nodes/base/node3d/types';
 import { joinPath } from '../../utils/nodePath';
 import { localMatrix3D } from '../nodeTreeTransforms';
 
-/** Godot `CSGShape3D.Operation`. */
-export const CsgOperation = { UNION: 0, INTERSECTION: 1, SUBTRACTION: 2 } as const;
+import { CsgOperation } from '../../godot/scene/csg.js';
 
 export interface CsgContribution {
   /** Full node path, so the renderer can prune exactly these nodes. */
@@ -48,7 +47,7 @@ export interface CsgPlan {
 }
 
 /** What the plan needs to know about one CSG type. */
-export interface CsgPlanShape {
+interface CsgPlanShape {
   /** False for a grouping node like CSGCombiner3D, which has no solid of its own. */
   hasGeometry: boolean;
   /** Stable string over the properties the geometry builder reads. */

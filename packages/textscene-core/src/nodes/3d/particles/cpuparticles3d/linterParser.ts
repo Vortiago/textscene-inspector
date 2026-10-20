@@ -8,18 +8,10 @@
 import '../../geometryinstance3d/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME', 2: 'VIEW_DEPTH' };
-
-const EMISSION_SHAPE = {
-  0: 'POINT',
-  1: 'SPHERE',
-  2: 'SPHERE_SURFACE',
-  3: 'BOX',
-  4: 'POINTS',
-  5: 'DIRECTED_POINTS',
-  6: 'RING',
-};
+import {
+  CPU_PARTICLES_3D_DRAW_ORDER_NAMES,
+  CPU_PARTICLES_3D_EMISSION_SHAPE_NAMES,
+} from '../../../../godot/scene/particles3d.js';
 
 // Every member is an `ADD_PROPERTY*` in `cpu_particles_3d.cpp`'s `_bind_methods` (lines
 // 1555-1742) with a setter and a getter, so none is skipped. Each cite quotes that line.
@@ -83,14 +75,16 @@ validatorRegistry.registerAll('CPUParticles3D', {
   // cpu_particles_3d.cpp:1573: PROPERTY_HINT_ENUM "Index,Lifetime,View Depth". set_draw_order
   // (cpu_particles_3d.cpp:175) refuses outside 0-2 with ERR_FAIL_INDEX. CPUParticles2D's setter
   // takes any int, so its draw_order stays unvalidated.
-  draw_order: v.enumInt('draw_order', 0, 2, DRAW_ORDER, { enforced: 'cpu_particles_3d.cpp:175' }),
+  draw_order: v.enumInt('draw_order', CPU_PARTICLES_3D_DRAW_ORDER_NAMES, {
+    enforced: 'cpu_particles_3d.cpp:175',
+  }),
   // cpu_particles_3d.cpp:1574: PROPERTY_HINT_RESOURCE_TYPE "Mesh".
   mesh: v.resourceReference('mesh'),
 
   // cpu_particles_3d.cpp:1666: ADD_GROUP("Emission Shape", "emission_").
   // cpu_particles_3d.cpp:1667: PROPERTY_HINT_ENUM, Point..Ring. set_emission_shape:423-426
   // refuses with ERR_FAIL_INDEX(p_shape, EMISSION_SHAPE_MAX).
-  emission_shape: v.enumInt('emission_shape', 0, 6, EMISSION_SHAPE, {
+  emission_shape: v.enumInt('emission_shape', CPU_PARTICLES_3D_EMISSION_SHAPE_NAMES, {
     enforced: 'cpu_particles_3d.cpp:424',
   }),
   // cpu_particles_3d.cpp:1668: "0.01,128,0.01". set_emission_sphere_radius:429-432 is bare.

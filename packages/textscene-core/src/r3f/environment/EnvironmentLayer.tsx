@@ -1,27 +1,25 @@
 /**
- * Applies one Godot `Environment` to the scene, for an authored `WorldEnvironment` and for the
- * editor preview environment alike (ADR-0025): background, sky, flat ambient, tonemapping, glow,
- * colour adjustments, depth fog and volumetric fog.
+ * Applies one Godot `Environment` to its world, authored or the editor preview's (ADR-0025):
+ * background, sky, flat ambient, tonemapping, glow, colour adjustments, depth fog and volumetric fog.
  * Each restores what it found on unmount, because the renderer and scene outlive an environment.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
-import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
-import { applyToneMapping, installToneCurve } from '../../resources/environment/toneMapping';
+import { BackgroundMode } from '../../godot/scene/environment';
+import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';
-import { useCanvasWorkspace } from '../contexts/CanvasWorkspaceContext';
-import { sceneHasBlendedSurface } from './alphaPassScan';
-import { useLatchedSceneScan } from './useLatchedSceneScan';
-import { compositorPassFor } from './compositorPass';
+import { useDraws3D } from './useCompositorPass';
+import { useWorldKind } from './WorldKindContext';
+import { useViewportMode } from '../contexts/ViewportModeContext';
 import { SkyLayer } from '../sky/SkyLayer';
 import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
-import { clearColorCube } from './colorBackground';
+import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -41,33 +39,19 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   const showsSky = settings.background.mode === BackgroundMode.BG_SKY;
   const skyAmbient = settings.skyAmbient;
   const flatAmbient = settings.ambient;
-  const hasBlended = useSceneHasBlendedSurface();
   const draws3D = useDraws3D();
-  // One value decides the pass and the suppression, so they cannot disagree. Memoised, since a new
-  // glow object rebuilds the compositor's effect.
-  const composited = useMemo(
-    () => (draws3D ? compositorPassFor(settings, hasBlended) : null),
-    [draws3D, settings, hasBlended]
-  );
+  // Only the root world tonemaps the canvas. `THREE.ShaderChunk` is module-global, so a sub-viewport
+  // world's curve would replace the root's, and a portal store shares the root's internal state, so
+  // its compositor would draw the portal scene onto the canvas, not into the target.
+  const tonesCanvas = useWorldKind() === 'root';
+  const { showFog } = useViewportMode();
   // One value decides the fog programs, the fogged colour background and the fog passes.
-  const hasFog = draws3D && (!!settings.fog || !!settings.volumetricFog);
+  const hasFog = draws3D && showFog && (!!settings.fog || !!settings.volumetricFog);
+  useColorBackground(settings, !!sky, hasFog);
 
   return (
     <>
-      <EnvironmentApplier
-        settings={settings}
-        hasSky={!!sky}
-        hasFog={hasFog}
-        suppressToneMapping={!!composited}
-      />
-      {composited && (
-        <ToneMapLayer
-          glow={composited.glow}
-          adjustments={settings.adjustments}
-          toneMapping={settings.toneMapping}
-          resources={resources}
-        />
-      )}
+      {tonesCanvas && <ToneMapLayer settings={settings} resources={resources} />}
       {hasFog && (
         <FogLayer
           depth={settings.fog}
@@ -100,112 +84,61 @@ export function EnvironmentLayer({ settings, sky, resources, skyResources }: Env
   );
 }
 
-/** Whether the live scene draws anything through the blend equation. */
-function useSceneHasBlendedSurface(): boolean {
-  return useLatchedSceneScan(sceneHasBlendedSurface);
-}
-
 /**
- * Whether this canvas draws the 3D passes: the tone-map compositor and the volumetric fog. Both need
- * a real GL context, which test-renderer and a headless DOM lack. Godot composites canvas items
- * after `_render_buffers_post_process_and_tonemap`, so a 2D canvas gets neither, and every canvas
- * item there blends.
+ * Draws a colour background, or a placeholder for a sky that does not resolve. `hasSky` is true when
+ * a sky resolves, so `<SkyLayer>` owns the background. `hasFog` is true when a fog draws, which fogs it.
  */
-function useDraws3D(): boolean {
-  const gl = useThree((s) => s.gl);
-  const glReady = useMemo(() => hasRealGlContext(gl), [gl]);
-  const is2D = useCanvasWorkspace() === '2d';
-  return glReady && !is2D;
-}
-
-function hasRealGlContext(gl: { getContext?: () => unknown }): boolean {
-  try {
-    const ctx = gl.getContext?.() as { getContextAttributes?: () => unknown } | null;
-    return !!ctx && typeof ctx.getContextAttributes === 'function' && !!ctx.getContextAttributes();
-  } catch {
-    return false;
-  }
-}
-
-interface EnvironmentApplierProps {
-  settings: EnvironmentSettings;
-  /** When a real sky renders, it owns the background and this must not fight it. */
-  hasSky: boolean;
-  /** Whether the depth fog or the volumetric fog draws, which fog every program and the background. */
-  hasFog: boolean;
-  /**
-   * The composer forces `NoToneMapping` while mounted and `GodotToneMapEffect` applies the curve,
-   * so the renderer's mapping is not set here. The curve still installs for a `SubViewport` pass,
-   * which renders the shared world without the composer.
-   */
-  suppressToneMapping: boolean;
-}
-
-function EnvironmentApplier({ settings, hasSky, hasFog, suppressToneMapping }: EnvironmentApplierProps) {
+function useColorBackground(settings: EnvironmentSettings, hasSky: boolean, hasFog: boolean): void {
   const scene = useThree((state) => state.scene);
-  const gl = useThree((state) => state.gl);
-
   const { mode, color: backgroundColor, energyMultiplier: backgroundEnergy } = settings.background;
+  const { mode: curveMode, white: curveWhite, agxContrast: curveAgxContrast } = settings.toneMapping;
   const showsColor = showsBackgroundColor(mode);
 
   // Each branch restores only what it wrote: a sky's background and intensity belong to `<SkyLayer>`.
+  // A colour draws as a texture, not a clear, since three's clear skips the curve Godot applies to it.
+  // A new texture per curve: three recompiles its background material only for a new texture or a new
+  // `toneMapping` enum, and every curve draws under the one `CustomToneMapping`.
   useEffect(() => {
     if (showsColor) {
-      if (!hasFog)
-        return showBackground(scene, godotColorToLinear(backgroundColor), scene.backgroundIntensity);
-      const cube = clearColorCube(backgroundColor);
-      const restore = showBackground(scene, cube, backgroundEnergy);
-      return () => {
-        restore();
-        cube.dispose();
-      };
+      return hasFog
+        ? showBackground(scene, foggedClearColorTexture(backgroundColor), backgroundEnergy)
+        : showBackground(scene, clearColorTexture(backgroundColor), 1);
     }
     if (mode === BackgroundMode.BG_SKY && !hasSky) {
       // A sky we cannot resolve, such as a ShaderMaterial sky. A mid-blue solid reads as
       // "sky here" rather than as a black void.
-      return showBackground(
-        scene,
-        godotColorToLinear({ r: 0.5, g: 0.6, b: 0.75 }),
-        scene.backgroundIntensity
-      );
+      return showBackground(scene, clearColorTexture(UNRESOLVED_SKY_COLOR), 1);
     }
     return undefined;
-  }, [scene, showsColor, mode, backgroundColor, backgroundEnergy, hasSky, hasFog]);
-
-  const {
-    mode: toneMapMode,
-    exposure: toneMapExposure,
-    white: toneMapWhite,
-    agxContrast: toneMapAgxContrast,
-  } = settings.toneMapping;
-  useEffect(() => {
-    const toneMapping = {
-      mode: toneMapMode,
-      exposure: toneMapExposure,
-      white: toneMapWhite,
-      agxContrast: toneMapAgxContrast,
-    };
-    return suppressToneMapping
-      ? installToneCurve(gl, toneMapping, scene)
-      : applyToneMapping(gl, toneMapping, scene);
-  }, [gl, scene, toneMapMode, toneMapExposure, toneMapWhite, toneMapAgxContrast, suppressToneMapping]);
-
-  return null;
+  }, [
+    scene,
+    showsColor,
+    mode,
+    backgroundColor,
+    backgroundEnergy,
+    hasSky,
+    hasFog,
+    curveMode,
+    curveWhite,
+    curveAgxContrast,
+  ]);
 }
 
-/** Draws `background` at `intensity` behind `scene`, and answers the restore of what it found. */
-function showBackground(
-  scene: THREE.Scene,
-  background: THREE.Color | THREE.CubeTexture,
-  intensity: number
-): () => void {
+const UNRESOLVED_SKY_COLOR = { r: 0.5, g: 0.6, b: 0.75 };
+
+/**
+ * Draws `texture` at `intensity` behind `scene`, and answers the restore of what it found, which
+ * frees `texture`.
+ */
+function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: number): () => void {
   const previousBackground = scene.background;
   const previousIntensity = scene.backgroundIntensity;
-  scene.background = background;
+  scene.background = texture;
   scene.backgroundIntensity = intensity;
   return () => {
     scene.background = previousBackground;
     scene.backgroundIntensity = previousIntensity;
+    texture.dispose();
   };
 }
 

@@ -12,5 +12,3 @@ const navigationObstacle2DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(navigationObstacle2DRegistration);
-
-export { navigationObstacle2DRegistration };

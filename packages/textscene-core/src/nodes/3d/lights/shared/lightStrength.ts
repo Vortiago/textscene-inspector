@@ -3,12 +3,7 @@
  * energy, sign, shadow opacity, `light_specular` and `light_volumetric_fog_energy`.
  */
 
-import {
-  DIRECTIONAL_LIGHT_SPECULAR_DEFAULT,
-  LIGHT_SHADOW_OPACITY_DEFAULT,
-  LIGHT_SPECULAR_DEFAULT,
-} from '../../../../godot/scene/light';
-import { LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT } from '../../../../godot/rendering/environment/volumetricFog';
+import { DIRECTIONAL_LIGHT_3D_DEFAULTS, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import { LIGHT_INTENSITY_SCALE } from '../../../../r3f/lightConstants';
 import type { BaseLightProperties } from './types';
 
@@ -28,24 +23,24 @@ export function lightIntensity(
 
 /** three's `shadow.intensity` mixes towards unshadowed as Godot's `shadow_opacity` does (`scene_forward_lights_inc.glsl:577`). */
 export function lightShadowOpacity(properties: Pick<BaseLightProperties, 'shadow_opacity'>): number {
-  return properties.shadow_opacity ?? LIGHT_SHADOW_OPACITY_DEFAULT;
+  return properties.shadow_opacity ?? LIGHT_3D_DEFAULTS.shadowOpacity;
 }
 
 /** An omni or spot light's `specular_amount`: twice its `light_specular` (`light_storage.cpp:891`). */
 export function positionalLightSpecularAmount(
   properties: Pick<BaseLightProperties, 'light_specular'>
 ): number {
-  return (properties.light_specular ?? LIGHT_SPECULAR_DEFAULT) * 2;
+  return (properties.light_specular ?? LIGHT_3D_DEFAULTS.specular) * 2;
 }
 
 /** A directional light's specular amount: its `light_specular` itself (`light_storage.cpp:665`). */
 export function directionalLightSpecularAmount(
   properties: Pick<BaseLightProperties, 'light_specular'>
 ): number {
-  return properties.light_specular ?? DIRECTIONAL_LIGHT_SPECULAR_DEFAULT;
+  return properties.light_specular ?? DIRECTIONAL_LIGHT_3D_DEFAULTS.specular;
 }
 
 /** How strongly the light scatters into volumetric fog: its `light_volumetric_fog_energy`. */
 export function lightFogEnergy(properties: Pick<BaseLightProperties, 'light_volumetric_fog_energy'>): number {
-  return properties.light_volumetric_fog_energy ?? LIGHT_VOLUMETRIC_FOG_ENERGY_DEFAULT;
+  return properties.light_volumetric_fog_energy ?? LIGHT_3D_DEFAULTS.volumetricFogEnergy;
 }

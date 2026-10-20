@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { godotBlendState } from './blendState';
 import { decodeStandardMaterial3D } from './decode';
 import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
-import { CullMode, type StandardMaterial3DData, type StandardMaterial3DScalars } from './types';
+import { CullMode } from '../../../godot/rendering/materials/cullMode';
+import type { StandardMaterial3DData, StandardMaterial3DScalars } from './types';
 
 /**
  * Godot's cull mode names the faces it discards, and three's `side` names the ones it
@@ -21,7 +22,7 @@ const SIDE: Readonly<Record<CullMode, THREE.Side>> = {
   [CullMode.DISABLED]: THREE.DoubleSide,
 };
 
-export function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
+function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
   return {
     ...godotBlendState(data.blendMode),
     color: data.albedo,
@@ -46,6 +47,7 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     alphaTest: data.alphaTest,
     alphaHash: data.alphaHash,
     alphaHashScale: data.alphaHashScale,
+    alphaAntialiasing: data.alphaAntialiasing,
     depthWrite: data.depthWrite,
     alphaPassDepthWrite: data.alphaPassDepthWrite,
     depthInAlphaPass: data.depthInAlphaPass,
@@ -59,6 +61,8 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     disablesSpecularOcclusion: data.disablesSpecularOcclusion,
     aoLightAffect: data.aoLightAffect,
     aoTextureChannelMask: textureChannelMask(data.aoTextureChannel),
+    roughnessTextureChannelMask: textureChannelMask(data.roughnessTextureChannel),
+    metallicTextureChannelMask: textureChannelMask(data.metallicTextureChannel),
     side: SIDE[data.cullMode],
     cullModeExplicit: data.cullModeExplicit,
     normalScale: data.normalScale,

@@ -1,40 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { buildSkyEnvironment, skyPanoramaTexture } from './build';
+import { buildSkyEnvironment } from './build';
 import { decodeSky, decodeSkyMaterial } from './decode';
 import type { Sky } from './types';
 import { testRenderer } from '../../testing/recordingWebGL';
+import { debandingDrawnBy } from './skyLayers.testkit';
 
 /** A sky of `materialType` with every property at Godot's default. */
 function defaultSky(materialType: string): Sky {
   return decodeSky({}, decodeSkyMaterial(materialType, {})!);
 }
-
-describe('skyPanoramaTexture', () => {
-  it('tiles a clamped panorama on a source-shared clone', () => {
-    // The panorama shader samples with `fract(atan(...))`, so u wraps 0..1 and
-    // needs Repeat. The loader's shared entry is clamp, so the sky clones it
-    // rather than mutating the entry a 2D consumer shares.
-    const shared = new THREE.Texture();
-    const tiled = skyPanoramaTexture(shared);
-    expect(tiled).not.toBe(shared);
-    expect(tiled!.wrapS).toBe(THREE.RepeatWrapping);
-    expect(tiled!.wrapT).toBe(THREE.RepeatWrapping);
-    expect(tiled!.source).toBe(shared.source);
-    expect(shared.wrapS).toBe(THREE.ClampToEdgeWrapping);
-  });
-
-  it('shares a panorama that already repeats', () => {
-    const shared = new THREE.Texture();
-    shared.wrapS = shared.wrapT = THREE.RepeatWrapping;
-    expect(skyPanoramaTexture(shared)).toBe(shared);
-  });
-
-  it('returns null when the sky has no panorama', () => {
-    expect(skyPanoramaTexture(null)).toBeNull();
-    expect(skyPanoramaTexture(undefined)).toBeNull();
-  });
-});
 
 describe('buildSkyEnvironment layers', () => {
   afterEach(() => {
@@ -49,38 +24,57 @@ describe('buildSkyEnvironment layers', () => {
       sky: defaultSky('ProceduralSkyMaterial'),
       lights: [],
       asBackground: true,
+      energy: 1,
     });
 
     expect(env).not.toBeNull();
     expect(readBack).not.toHaveBeenCalled();
   });
 
-  it("draws each of Godot's layers 1 to 7 into a mip of its group's cube, on all six faces", async () => {
+  it('bakes the layers of a radiance above 256 at 256, 640 texels wide (edge case)', async () => {
     const { renderer } = await testRenderer();
-    const context = renderer.getContext();
-    // Each draw writes to the texture level attached last.
-    let attached: unknown[] = [];
-    const draws: unknown[][] = [];
-    vi.spyOn(context, 'framebufferTexture2D').mockImplementation((...args) => void (attached = args));
-    vi.spyOn(context, 'drawArrays').mockImplementation(() => void draws.push(attached));
-    vi.spyOn(context, 'drawElements').mockImplementation(() => void draws.push(attached));
-
-    const env = buildSkyEnvironment(renderer, {
-      sky: defaultSky('ProceduralSkyMaterial'),
-      lights: [],
-      asBackground: true,
-    });
-
-    const drawnFacesAndMips = (cube: THREE.WebGLCubeRenderTarget) => {
-      const handle = (renderer.properties.get(cube.texture) as { __webglTexture: unknown }).__webglTexture;
-      const drawn = draws
-        .filter(([, , , texture]) => texture === handle)
-        .map(([, , face, , level]) => `${(face as number) - context.TEXTURE_CUBE_MAP_POSITIVE_X}@${level}`);
-      return new Set(drawn).size;
+    const sky: Sky = {
+      material: decodeSkyMaterial('ProceduralSkyMaterial', {})!,
+      radianceFilter: 'importance-sample',
+      radianceSize: 1024,
     };
-    expect([env!.layers.sharp, env!.layers.rough, env!.layers.last].map(drawnFacesAndMips)).toEqual([
-      18, 18, 6,
-    ]);
+
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground: false, energy: 1 });
+
+    expect(env!.layers.target.width).toBe(640);
+  });
+});
+
+describe('buildSkyEnvironment debanding', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** The debanding scale of the radiance octmap the build of `sky` at `energy` draws. */
+  async function radianceDebanding(sky: Sky, energy: number): Promise<number | undefined> {
+    const { renderer } = await testRenderer();
+    const drawn = debandingDrawnBy(renderer, () =>
+      buildSkyEnvironment(renderer, { sky, lights: [], asBackground: false, energy })
+    );
+    return drawn[0];
+  }
+
+  it("adds the noise to a debanded sky's radiance at the inverse of the energy a surface reads it at", async () => {
+    expect(await radianceDebanding(defaultSky('ProceduralSkyMaterial'), 2)).toBe(0.5);
+  });
+
+  it.each([
+    [
+      'a sky that turns use_debanding off',
+      decodeSky({}, decodeSkyMaterial('ProceduralSkyMaterial', { use_debanding: 'false' })!),
+    ],
+    ['a PanoramaSkyMaterial', defaultSky('PanoramaSkyMaterial')],
+  ])('adds no noise to the radiance of %s', async (_label, sky) => {
+    expect(await radianceDebanding(sky, 1)).toBe(0);
+  });
+
+  it('adds no noise to the radiance of a sky no surface reads (edge case)', async () => {
+    expect(await radianceDebanding(defaultSky('ProceduralSkyMaterial'), 0)).toBe(0);
   });
 });
 
@@ -106,7 +100,7 @@ describe('buildSkyEnvironment radiance size', () => {
       radianceFilter: 'importance-sample',
       radianceSize,
     };
-    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground });
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], asBackground, energy: 1 });
     return { rendered, prefiltered, hasBackground: env!.background !== null };
   }
 
@@ -137,7 +131,7 @@ describe('buildSkyEnvironment panorama wiring', () => {
    * panorama the sky shader read, taken during the render because the builder
    * frees it straight after. With `renders` false the render throws.
    */
-  async function build(panorama: THREE.Texture, renders = true) {
+  async function build(panorama: THREE.Texture | null, renders = true) {
     const { renderer } = await testRenderer();
     let sampled: THREE.Texture | null = null;
     vi.spyOn(THREE.CubeCamera.prototype, 'update').mockImplementation((_renderer, scene) => {
@@ -149,17 +143,28 @@ describe('buildSkyEnvironment panorama wiring', () => {
       new THREE.WebGLRenderTarget(1, 1)
     );
     const sky = defaultSky('PanoramaSkyMaterial');
-    const env = buildSkyEnvironment(renderer, { sky, lights: [], panorama, asBackground: true });
+    const env = buildSkyEnvironment(renderer, { sky, lights: [], panorama, asBackground: true, energy: 1 });
     return { env, sampled: sampled as THREE.Texture | null };
   }
 
-  it('samples the tiled panorama, not the shared entry', async () => {
-    // The clone's wrap and source are `skyPanoramaTexture`'s contract, tested above.
+  it('samples a clamped panorama through a tiled clone of its source', async () => {
+    // The panorama shader samples with `fract(atan(...))`, so u wraps 0..1 and
+    // needs Repeat. The loader's shared entry is clamp, so the sky clones it
+    // rather than mutating the entry a 2D consumer shares.
     const shared = new THREE.Texture();
     const { env, sampled } = await build(shared);
     expect(env).not.toBeNull();
     expect(sampled).not.toBe(shared);
     expect(sampled!.wrapS).toBe(THREE.RepeatWrapping);
+    expect(sampled!.wrapT).toBe(THREE.RepeatWrapping);
+    expect(sampled!.source).toBe(shared.source);
+    expect(shared.wrapS).toBe(THREE.ClampToEdgeWrapping);
+  });
+
+  it('samples no panorama when the sky has none (edge case)', async () => {
+    const { env, sampled } = await build(null);
+    expect(env).not.toBeNull();
+    expect(sampled).toBeNull();
   });
 
   it.each([

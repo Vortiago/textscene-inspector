@@ -1,11 +1,11 @@
 /** applyLoopOverride maps the preview loop override to a THREE action's loop. */
 import { describe, expect, it, vi } from 'vitest';
 import { LoopOnce, LoopPingPong, LoopRepeat, type AnimationAction } from 'three';
+import { AnimationLoopMode } from '../../godot/scene/animation';
 import {
   applyLoopOverride,
   loopsUnderOverride,
-  LOOP_ONCE_SETTINGS,
-  LOOP_REPEAT_SETTINGS,
+  loopSettingsFor,
   type ActionLoopSettings,
 } from './loopOverride';
 
@@ -18,14 +18,14 @@ function makeAction() {
 describe('applyLoopOverride', () => {
   it("'once' forces a single clamped pass regardless of the authored settings", () => {
     const action = makeAction();
-    applyLoopOverride(action, 'once', LOOP_REPEAT_SETTINGS);
+    applyLoopOverride(action, 'once', loopSettingsFor(AnimationLoopMode.LINEAR));
     expect(action.setLoop).toHaveBeenCalledWith(LoopOnce, 1);
     expect(action.clampWhenFinished).toBe(true);
   });
 
   it("'loop' forces an infinite repeat regardless of the authored settings", () => {
     const action = makeAction();
-    applyLoopOverride(action, 'loop', LOOP_ONCE_SETTINGS);
+    applyLoopOverride(action, 'loop', { loop: LoopOnce, repetitions: 1, clampWhenFinished: true });
     expect(action.setLoop).toHaveBeenCalledWith(LoopRepeat, Infinity);
     expect(action.clampWhenFinished).toBe(false);
   });
@@ -40,6 +40,32 @@ describe('applyLoopOverride', () => {
     applyLoopOverride(action, 'auto', authored);
     expect(action.setLoop).toHaveBeenCalledWith(LoopPingPong, Infinity);
     expect(action.clampWhenFinished).toBe(false);
+  });
+});
+
+describe('loopSettingsFor', () => {
+  it('maps LOOP_NONE to one clamped pass', () => {
+    expect(loopSettingsFor(AnimationLoopMode.NONE)).toEqual({
+      loop: LoopOnce,
+      repetitions: 1,
+      clampWhenFinished: true,
+    });
+  });
+
+  it('maps LOOP_LINEAR to an infinite repeat', () => {
+    expect(loopSettingsFor(AnimationLoopMode.LINEAR)).toEqual({
+      loop: LoopRepeat,
+      repetitions: Infinity,
+      clampWhenFinished: false,
+    });
+  });
+
+  it('maps LOOP_PINGPONG to an infinite ping-pong', () => {
+    expect(loopSettingsFor(AnimationLoopMode.PINGPONG).loop).toBe(LoopPingPong);
+  });
+
+  it('plays a value outside the enum once', () => {
+    expect(loopSettingsFor(7).loop).toBe(LoopOnce);
   });
 });
 

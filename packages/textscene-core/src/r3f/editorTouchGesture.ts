@@ -31,7 +31,7 @@ export interface TouchGesture {
   startDistance: number;
 }
 
-export type TouchGestureRef = { current: TouchGesture | null };
+type TouchGestureRef = { current: TouchGesture | null };
 
 /**
  * A finger landing. Touch pointers are captured to the target implicitly. No `preventDefault`,

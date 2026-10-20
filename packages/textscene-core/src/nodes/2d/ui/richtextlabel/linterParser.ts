@@ -9,27 +9,16 @@ import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { hintedBitField, maskedBitField, v } from '../../../../linter/validators/index.js';
 import {
-  AUTOWRAP_MODE,
+  AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
   JUSTIFICATION_HINTED_BITS,
-  STRUCTURED_TEXT_PARSER,
-  TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
-
-// rich_text_label.cpp:7789: PROPERTY_HINT_ENUM "Characters Before
-// Shaping,Characters After Shaping,Glyphs (Layout Direction),Glyphs
-// (Left-to-Right),Glyphs (Right-to-Left)", TextServer::VisibleCharactersBehavior
-// (servers/text/text_server.h:90-96, declaration order == bind order).
-const VISIBLE_CHARACTERS_BEHAVIOR = {
-  0: 'VC_CHARS_BEFORE_SHAPING',
-  1: 'VC_CHARS_AFTER_SHAPING',
-  2: 'VC_GLYPHS_AUTO',
-  3: 'VC_GLYPHS_LTR',
-  4: 'VC_GLYPHS_RTL',
-} as const;
+  STRUCTURED_TEXT_PARSER_NAMES,
+  TEXT_DIRECTION_NAMES,
+  VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
+} from '../../../../godot/text/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT_NAMES, VERTICAL_ALIGNMENT_NAMES } from '../../../../godot/math/math.js';
 
 validatorRegistry.registerAll('RichTextLabel', {
   // Ungrouped run (rich_text_label.cpp:7754-7770).
@@ -51,9 +40,7 @@ validatorRegistry.registerAll('RichTextLabel', {
   // rich_text_label.cpp:7761: PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word
   // (Smart)", the full enum, unlike Button's and TextEdit's. set_autowrap_mode
   // (rich_text_label.cpp:7370-7380) is a bare assignment, so the bound warns.
-  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE, {
-    hinted: 'rich_text_label.cpp:7761',
-  }),
+  autowrap_mode: v.enumInt('autowrap_mode', AUTOWRAP_MODE_NAMES, { hinted: 'rich_text_label.cpp:7761' }),
   // set_autowrap_trim_flags (rich_text_label.cpp:7390) stores `p_flags &
   // BREAK_TRIM_MASK`, dropping bits outside the mask. rich_text_label.cpp:7762
   // hints only the two edge-space bits, so BREAK_TRIM_INDENT is kept but not
@@ -75,13 +62,13 @@ validatorRegistry.registerAll('RichTextLabel', {
   // rich_text_label.cpp:7767: "Left,Center,Right,Fill" (core/math/math_defs.h:80-84).
   // set_horizontal_alignment (rich_text_label.cpp:7241-7255) opens with
   // `ERR_FAIL_INDEX((int)p_alignment, 4)` (line 7242), so this is an error.
-  horizontal_alignment: v.enumInt('horizontal_alignment', 0, 3, HORIZONTAL_ALIGNMENT, {
+  horizontal_alignment: v.enumInt('horizontal_alignment', HORIZONTAL_ALIGNMENT_NAMES, {
     enforced: 'rich_text_label.cpp:7242',
   }),
   // rich_text_label.cpp:7768: "Top,Center,Bottom,Fill". set_vertical_alignment
   // (rich_text_label.cpp:7261-7270) opens with `ERR_FAIL_INDEX((int)p_alignment, 4)`
   // (line 7262): enforced.
-  vertical_alignment: v.enumInt('vertical_alignment', 0, 3, VERTICAL_ALIGNMENT, {
+  vertical_alignment: v.enumInt('vertical_alignment', VERTICAL_ALIGNMENT_NAMES, {
     enforced: 'rich_text_label.cpp:7262',
   }),
   // rich_text_label.cpp:7769: PROPERTY_HINT_FLAGS naming 6 of the 8
@@ -144,7 +131,7 @@ validatorRegistry.registerAll('RichTextLabel', {
   }),
   // rich_text_label.cpp:7789: PROPERTY_HINT_ENUM, 5 entries (0-4).
   // set_visible_characters_behavior (rich_text_label.cpp:7880-7890) is a bare assignment.
-  visible_characters_behavior: v.enumInt('visible_characters_behavior', 0, 4, VISIBLE_CHARACTERS_BEHAVIOR, {
+  visible_characters_behavior: v.enumInt('visible_characters_behavior', VISIBLE_CHARACTERS_BEHAVIOR_NAMES, {
     hinted: 'rich_text_label.cpp:7789',
   }),
   // rich_text_label.cpp:7790: PROPERTY_HINT_RANGE "0,1,0.001". The clamp sits
@@ -160,7 +147,7 @@ validatorRegistry.registerAll('RichTextLabel', {
   // rich_text_label.cpp:7793: set_text_direction (rich_text_label.cpp:7220-7235)
   // opens with `ERR_FAIL_COND((int)p_text_direction < -1 || > 3)` (line 7221).
   // -1 has no named constant but is engine-legal, as in TextEdit.
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', TEXT_DIRECTION_NAMES, {
     hinted: 'rich_text_label.cpp:7793',
     enforced: 'rich_text_label.cpp:7221',
     enforcedMin: { at: -1 },
@@ -171,7 +158,7 @@ validatorRegistry.registerAll('RichTextLabel', {
   // rich_text_label.cpp:7795: PROPERTY_HINT_ENUM, 7 entries (0-6).
   // set_structured_text_bidi_override (rich_text_label.cpp:7314-7328) is a
   // bare assignment.
-  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', STRUCTURED_TEXT_PARSER_NAMES, {
     hinted: 'rich_text_label.cpp:7795',
   }),
   // rich_text_label.cpp:7796: Variant::ARRAY, no hint, so no `Array[Type](...)`

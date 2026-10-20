@@ -10,9 +10,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Color } from '../../../utils/colorParser';
 import { colorEquals, DEFAULT_COLOR } from './decode';
 import type { CodeHighlighterData } from './types';
+import type { Rgba } from '../../../godot/math/math';
 
 /** `core/string/char_utils.h:113-114`. */
 function isSymbol(ch: string | undefined): boolean {
@@ -46,12 +46,12 @@ export interface CodeHighlighterColorSpan {
   startIndex: number;
   /** Character index this span ends at, exclusive. */
   endIndex: number;
-  color: Color;
+  color: Rgba;
 }
 
 interface DeltaEntry {
   index: number;
-  color: Color;
+  color: Rgba;
 }
 
 /**
@@ -62,7 +62,7 @@ interface DeltaEntry {
 function scanLine(
   line: string,
   highlighter: CodeHighlighterData,
-  fontColor: Color,
+  fontColor: Rgba,
   regionAtLineStart: number
 ): { deltas: DeltaEntry[]; regionAtLineEnd: number } {
   const deltas: DeltaEntry[] = [];
@@ -80,14 +80,14 @@ function scanLine(
   let inFunctionName = false;
   let inMemberVariable = false;
   let isHexNotation = false;
-  let keywordColor: Color = DEFAULT_COLOR;
+  let keywordColor: Rgba = DEFAULT_COLOR;
   // `Color prev_color;` (`:149`) default-constructs to opaque black
   // (`core/math/color.h:251-252`), not `font_color`.
-  let prevColor: Color = DEFAULT_COLOR;
+  let prevColor: Rgba = DEFAULT_COLOR;
   let inRegion = regionAtLineStart;
 
   for (let j = 0; j < lineLength; j++) {
-    let color: Color = fontColor;
+    let color: Rgba = fontColor;
     let isChar = !isSymbol(line[j]);
     let isASymbol = isSymbol(line[j]);
     let isNumber = isDigit(line[j]);
@@ -218,7 +218,7 @@ function scanLine(
       let to = j;
       while (to < lineLength && !isSymbol(line[to])) to++;
       const word = line.slice(j, to);
-      let col: Color | undefined;
+      let col: Rgba | undefined;
       if (highlighter.keywordColors.has(word)) {
         col = highlighter.keywordColors.get(word);
       } else if (highlighter.memberKeywordColors.has(word)) {
@@ -293,7 +293,7 @@ function scanLine(
 export function resolveLineColors(
   line: string,
   highlighter: CodeHighlighterData,
-  fontColor: Color,
+  fontColor: Rgba,
   regionAtLineStart = -1
 ): { spans: CodeHighlighterColorSpan[]; regionAtLineEnd: number } {
   const { deltas, regionAtLineEnd } = scanLine(line, highlighter, fontColor, regionAtLineStart);

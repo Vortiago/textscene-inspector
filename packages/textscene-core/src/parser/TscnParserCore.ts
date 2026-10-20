@@ -30,6 +30,7 @@ import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { buildSceneTree } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
+import { parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
@@ -43,7 +44,7 @@ export type NodeCreator<N extends SceneNode<N>> = (
 ) => N | null;
 
 /** What one scan returns: the tree, and the headings it was built from. */
-export interface CoreParseResult<N extends SceneNode<N>> {
+interface CoreParseResult<N extends SceneNode<N>> {
   scene: TscnScene<N>;
   /**
    * Each `[node]` heading's node beside its line, in scan order, for checks against the tree. A
@@ -154,7 +155,8 @@ export class TscnParserCore {
             node,
             line: currentHeadingLine,
             declaredParent: currentHeading.attributes.parent,
-            recoverableById: currentHeading.attributes.parent_id_path !== undefined,
+            idTrail: parseIdTrail(currentHeading.attributes.parent_id_path),
+            uniqueId: parseUniqueId(currentHeading.attributes.unique_id),
           });
           observer?.onSectionBuilt?.(node, currentHeadingLine);
         }

@@ -5,5 +5,3 @@ import './nativeSolver';
 import { ItemList } from './Component';
 
 controlComponentRegistry.register({ typeName: 'ItemList', Component: ItemList });
-
-export { ItemList };

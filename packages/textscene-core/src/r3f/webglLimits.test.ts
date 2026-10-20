@@ -4,7 +4,7 @@
  * the axes of an uploaded image needs no separate pixel check for it.
  */
 import { describe, expect, it } from 'vitest';
-import { IMAGE_MAX_PIXELS } from '../godot/index.js';
+import { IMAGE_MAX_PIXELS } from '../godot/project/image.js';
 import { MAX_TEXTURE_EXTENT } from './webglLimits';
 
 describe('texture ceilings', () => {

@@ -14,7 +14,8 @@ import { AttenuationModel } from './types';
 import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import { BillboardMode } from '../../../godot/scene/billboard';
+import { degToRad } from '../../../godot/math/math.js';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 
 /** Editor-only gizmo colour: yellow, to match the light helpers. */
@@ -152,7 +153,7 @@ interface EmissionConeProps {
 function EmissionCone({ radius, angleDegrees }: EmissionConeProps) {
   const positions = useMemo(() => {
     const clamped = Math.min(Math.max(angleDegrees, 0), 89.9);
-    const base = radius * Math.tan((clamped * Math.PI) / 180);
+    const base = radius * Math.tan(degToRad(clamped));
     const ribs: number[] = [];
     for (let i = 0; i < 4; i++) {
       const a = (i / 4) * Math.PI * 2;

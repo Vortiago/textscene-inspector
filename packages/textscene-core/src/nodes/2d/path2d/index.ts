@@ -10,6 +10,5 @@ const path2DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(path2DRegistration);
 
-export { path2DRegistration };
 export * from './parser';
 export * from './types';

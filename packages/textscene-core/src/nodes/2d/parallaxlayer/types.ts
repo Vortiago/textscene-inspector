@@ -1,6 +1,7 @@
 /** The ParallaxLayer property shape: a Node2D whose pose a parent ParallaxBackground overwrites. */
 
-import type { Node2DProperties, Vector2 } from '../../base/node2d/types';
+import type { Node2DProperties } from '../../base/node2d/types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 export interface ParallaxLayerProperties extends Node2DProperties {
   /** Multiplies the background's scroll; an axis at 0 pins that axis to the screen. */

@@ -4,8 +4,7 @@
  * imports neither `glbProcessing.ts` nor `rootScale.ts`, so the linter and a host's
  * provider read the claim table without pulling in a renderer.
  */
-
-import { UNWRAP_CACHE_SUFFIX } from '../../../godot/index.js';
+import { UNWRAP_CACHE_SUFFIX } from '../../../godot/project/resourceFormats.js';
 import { registerResourceSlice } from '../../sliceRegistration';
 
 registerResourceSlice({
@@ -23,5 +22,3 @@ registerResourceSlice({
   clonePerConsumer: true,
   busType: 'glb',
 });
-
-export type { RootScale } from './types';

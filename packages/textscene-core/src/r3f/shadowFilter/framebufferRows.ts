@@ -20,8 +20,7 @@ const installedHeight = installedUniformValue(FRAMEBUFFER_HEIGHT_UNIFORM);
  * (`../shadowPass.ts`). After a dev server reloads this module, it is the
  * buffer the earlier evaluation installed, which every compiled program reads.
  */
-export const framebufferHeight =
-  installedHeight instanceof Float32Array ? installedHeight : new Float32Array(1);
+const framebufferHeight = installedHeight instanceof Float32Array ? installedHeight : new Float32Array(1);
 
 /** Written only by `writeFramebufferHeight`, which reads it at once. */
 const drawingBufferSize = new THREE.Vector2();

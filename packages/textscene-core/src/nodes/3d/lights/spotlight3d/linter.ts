@@ -7,10 +7,8 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { projectorArm, projectorWithoutShadowDiagnostic } from '../shared/linterChecks.js';
 import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../../godot/index.js';
-
-/** `Light3D::set_param` default for `PARAM_SPOT_ANGLE` (light_3d.cpp:480). */
-const DEFAULT_SPOT_ANGLE = 45;
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { SPOT_LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light.js';
 
 const arms = {
   shadowAngleTooWide: groundedArm('spotlight3d-shadow-angle-too-wide', { kind: 'configuration-warning' }),
@@ -30,7 +28,9 @@ function checkSpotLight3D(context: RuleContext): Diagnostic[] {
 
   const properties = node.rawProperties;
   const spotAngle =
-    properties.spot_angle !== undefined ? parseGodotFloat(properties.spot_angle) : DEFAULT_SPOT_ANGLE;
+    properties.spot_angle !== undefined
+      ? parseGodotFloat(properties.spot_angle)
+      : SPOT_LIGHT_3D_DEFAULTS.spotAngle;
 
   // light_3d.cpp:655 guards `>=` though the message says "wider than". No
   // finiteness guard: `spot_angle = inf` is a shadowless cone wider than 90
@@ -63,5 +63,3 @@ const spotLight3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(spotLight3DValidationRule);
-
-export { spotLight3DValidationRule };

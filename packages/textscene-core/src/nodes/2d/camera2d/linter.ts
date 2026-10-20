@@ -9,7 +9,7 @@ import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter
 import { nodesOfType } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { RawNode } from '../../../parser/types.js';
 
 const arms = {
@@ -141,5 +141,3 @@ const camera2DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(camera2DValidationRule);
-
-export { camera2DValidationRule };

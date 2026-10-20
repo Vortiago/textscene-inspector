@@ -9,5 +9,3 @@ const gridMapRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(gridMapRegistration);
-
-export { gridMapRegistration };

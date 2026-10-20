@@ -18,6 +18,11 @@ The previewer bakes the same projection onto each mesh the box overlaps and shad
 
 A decal takes its texture's RID (`scene/3d/decal.cpp:46`), as a material slot does. An AtlasTexture's RID is its whole sheet, so the decal projects all four quadrants, not the red region. The decal atlas refuses a CanvasTexture's RID (`texture_storage.cpp:2941`), so the far decal projects nothing.
 
+## Mip chain
+<!-- compare: image=unit-decal-mipmap-import status=done fixture=unit-decal-mipmap-import.tscn -->
+
+The decal atlas gives each decal a mip chain, even over an import without one. It halves each level in the atlas's RGBA8 bytes (`texture_storage.cpp:3162-3226`). The previewer builds the same chain on the CPU with the importer's 2 × 2 byte average. So the minified red and green checker projects a dark yellow, as in Godot.
+
 ## Linting
 
 <!-- lint:begin Decal -->
@@ -51,6 +56,8 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 |  | `decal-empty-cull-mask` | warning |
 <!-- lint:end -->
 
+The linter warns (`resource-type-excluded-by-hint`) when one of the four `texture_*` slots holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`decal.cpp:49-58`).
+
 `size` falls back to Godot's default `Vector3(2, 2, 2)` with a warning when malformed. `albedo_mix`, `emission_energy`, `normal_fade`, `upper_fade`, `lower_fade` and `cull_mask` fall back the same way to `1`, `1`, `0`, `0.3`, `0.3` and `1048575`. The two fade exponents are also clamped at zero, as Godot's setters clamp them. `modulate` falls back silently to opaque white, and the four `texture_*` references are copied through unvalidated.
 
 ## Known limitations
@@ -61,3 +68,4 @@ Strict parsing format-checks these `Decal` properties, plus 1 inherited from Vis
 - **Approximated** The projection takes the scalar roughness, metallic and `diffuse_mode` of its receiver's first surface, not its maps.
 - **Approximated** In Godot 4.6 an untextured decal hides each decal sorted after it (`texture_storage.cpp:3420`, `:3485`), where the previewer draws each decal on its own.
 - **Approximated** At the projection rim Godot fades the outer half-texel toward the transparent padding of its atlas, where the clamped sample here stays crisp.
+- **Approximated** A decal's mip chain halves its own texture, where Godot halves the whole atlas and can blend a neighbouring decal into the smallest levels.

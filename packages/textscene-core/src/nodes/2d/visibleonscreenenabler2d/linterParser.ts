@@ -8,14 +8,14 @@
 import '../visibleonscreennotifier2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { ENABLE_MODE } from '../../../linter/validators/sharedEnumLabels.js';
+import { ENABLE_MODE_NAMES } from '../../../godot/scene/visibleOnScreen.js';
 
 validatorRegistry.registerAll('VisibleOnScreenEnabler2D', {
   // visible_on_screen_notifier_2d.cpp:241, PROPERTY_HINT_ENUM
   // "Inherit,Always,When Paused", values 0-2. set_enable_mode (:157-162) is a
   // bare `enable_mode = p_mode` with no ERR_FAIL_INDEX, so an out-of-enum value
   // loads and is only outside what the inspector dropdown offers: a warning.
-  enable_mode: v.enumInt('enable_mode', 0, 2, ENABLE_MODE, {
+  enable_mode: v.enumInt('enable_mode', ENABLE_MODE_NAMES, {
     hinted: 'visible_on_screen_notifier_2d.cpp:241',
   }),
   // visible_on_screen_notifier_2d.cpp:242, Variant::NODE_PATH, no hint. set_enable_node_path

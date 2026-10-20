@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { ruleCount } from '../../../linter/validators/commonValidators.js';
 import { indicesPastCount, listWrittenIndices } from '../../../linter/reportedIndices.js';
 import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
@@ -70,12 +70,10 @@ const fileDialogValidationRule: LintRule = {
     name: 'valid-filedialog-properties',
     description: "Validates FileDialog's dynamic option_<N>/… indices stay within option_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'FileDialog'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'FileDialog'),
     emits: armEmits(arms),
   },
   check: checkFileDialog,
 };
 
 ruleRegistry.register(fileDialogValidationRule);
-
-export { fileDialogValidationRule };

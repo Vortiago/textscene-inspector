@@ -7,11 +7,13 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { BONE_AXIS, axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
+import { axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
+import { BONE_AXIS_NAMES, BoneAxis } from '../../../../godot/scene/skeletonModifier.js';
 import { resolveAimSettingLeaf } from './linterParser.js';
-import { VECTOR3_AXIS } from '../../../../linter/validators/sharedEnumLabels.js';
+import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { indexedElements, boolSlotValue } from '../../../../godot/index.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -26,8 +28,8 @@ const SETTING_PREFIX = 'settings/';
 // scene omits carries these, and neither pair of defaults is parallel
 // (BONE_AXIS_PLUS_Y maps to AXIS_Y, the default primary axis is AXIS_X), so an
 // absent key never trips this rule.
-const DEFAULT_FORWARD_AXIS = 2; // BONE_AXIS_PLUS_Y
-const DEFAULT_PRIMARY_ROTATION_AXIS = 0; // Vector3::AXIS_X
+const DEFAULT_FORWARD_AXIS = BoneAxis.PLUS_Y;
+const DEFAULT_PRIMARY_ROTATION_AXIS = Vector3Axis.X;
 
 /**
  * Every setting the scene declares, keyed by the index `_set` resolves it to. `_set` reads the index
@@ -69,8 +71,8 @@ function checkAimModifier3D(context: RuleContext): Diagnostic[] {
     // (aim_modifier_3d.cpp:235-238), and a parallel forward axis projects to a degenerate vector.
     if (axisFromBoneAxis(forwardAxis) !== primaryAxis) continue;
 
-    const forwardLabel = BONE_AXIS[forwardAxis] ?? String(forwardAxis);
-    const primaryLabel = VECTOR3_AXIS[primaryAxis] ?? String(primaryAxis);
+    const forwardLabel = BONE_AXIS_NAMES[forwardAxis] ?? String(forwardAxis);
+    const primaryLabel = VECTOR3_AXIS_NAMES[primaryAxis] ?? String(primaryAxis);
     reportArm(
       diagnostics,
       arms.parallelRotationAxes,
@@ -95,5 +97,3 @@ const aimModifier3DAxisRule: LintRule = {
 };
 
 ruleRegistry.register(aimModifier3DAxisRule);
-
-export { aimModifier3DAxisRule };

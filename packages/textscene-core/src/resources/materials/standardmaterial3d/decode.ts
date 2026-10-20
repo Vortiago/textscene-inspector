@@ -14,30 +14,32 @@ import { TEXTURE_CHANNELS, TextureChannel } from '../../../godot/rendering/mater
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../../godot/rendering/materials/specularMode';
 import { DetailUV } from '../../../godot/rendering/materials/detailUv';
+import { BASE_MATERIAL_3D_DEFAULTS, EMISSION_OPERATOR_DEFAULT } from '../../../godot/scene/baseMaterial3D';
 import { clamp } from '../../../godot/math/math';
-import { emissionScalars } from './emission';
 import {
-  BlendMode,
-  CullMode,
-  DepthDrawMode,
+  hashAntialiasing,
+  scissorAntialiasing,
+  type AlphaAntialiasingCut,
+} from '../../../godot/rendering/materials/alphaAntialiasing';
+import { emissionScalars } from './emission';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { BlendMode } from '../../../godot/rendering/materials/blendMode';
+import { CullMode } from '../../../godot/rendering/materials/cullMode';
+import { DistanceFadeMode } from '../../../godot/rendering/materials/distanceFadeMode';
+import { DepthDrawMode } from '../../../godot/rendering/materials/depthDrawMode';
+import { ShadingMode } from '../../../godot/rendering/materials/shadingMode';
+import { Transparency } from '../../../godot/rendering/materials/transparency';
+import {
   HEIGHTMAP_DEFAULTS,
   TEXTURE_SLOTS,
-  Transparency,
   type Heightmap,
-  type MaterialVec2,
   type StandardMaterial3DData,
   type TextureSlot,
   type TextureSlotReferences,
 } from './types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 const CONTEXT = 'StandardMaterial3D';
-
-/**
- * `BaseMaterial3D::texture_filter` default, `TEXTURE_FILTER_LINEAR_WITH_MIPMAPS` (= 3).
- * Restated, not imported from `resources/textures/godotTextureFilter.ts`, which
- * value-imports `three`.
- */
-const TEXTURE_FILTER_DEFAULT = 3;
 
 const TRANSPARENCY_MODES = [
   Transparency.DISABLED,
@@ -58,9 +60,6 @@ const BLEND_MODES = [
 const CULL_MODES = [CullMode.BACK, CullMode.FRONT, CullMode.DISABLED] as const;
 
 const DEPTH_DRAW_MODES = [DepthDrawMode.OPAQUE_ONLY, DepthDrawMode.ALWAYS, DepthDrawMode.DISABLED] as const;
-
-/** Godot `BaseMaterial3D.DistanceFadeMode`; only PIXEL_ALPHA writes ALPHA. */
-const DISTANCE_FADE_PIXEL_ALPHA = 1;
 
 /**
  * The feature flag Godot gates each texture slot behind. A gated slot applies only when
@@ -133,7 +132,18 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
         DEPTH_DRAW_MODES,
         `${CONTEXT}.depth_draw_mode`
       );
-  const alphaFlags = shaderAlphaFlags(properties, transparency, refractionEnabled);
+  const scissorThreshold = clamp(
+    floatOr(properties['alpha_scissor_threshold'], BASE_MATERIAL_3D_DEFAULTS.alphaScissorThreshold, CONTEXT),
+    0,
+    1
+  );
+  const alphaAntialiasing = decodeAlphaAntialiasing(properties, transparency, scissorThreshold);
+  const alphaFlags = shaderAlphaFlags(
+    properties,
+    transparency,
+    refractionEnabled,
+    alphaAntialiasing !== null
+  );
   const membership = alphaPassMembership(alphaFlags, {
     blendMode,
     refractionEnabled,
@@ -143,7 +153,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   const { alphaPass, depthInAlphaPass } = membership;
   const castsShadow = drawsInShadowPass(membership);
 
-  const normalScale = floatOr(properties['normal_scale'], 1, CONTEXT);
+  const normalScale = floatOr(properties['normal_scale'], BASE_MATERIAL_3D_DEFAULTS.normalScale, CONTEXT);
 
   // FEATURE_REFRACTION replaces the `ALPHA *= albedo.a * albedo_tex.a` line with
   // `ALPHA = 1.0` (`material.cpp:1832-1837`), so a refractive surface is fully opaque however
@@ -153,13 +163,13 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
   return {
     albedo: albedoLinear ?? [1, 1, 1],
     alpha: readsAlbedoAlpha && albedo ? clamp(albedo.a, 0, 1) : 1,
-    metallic: clamp(floatOr(properties['metallic'], 0, CONTEXT), 0, 1),
-    roughness: clamp(floatOr(properties['roughness'], 1, CONTEXT), 0, 1),
+    metallic: clamp(floatOr(properties['metallic'], BASE_MATERIAL_3D_DEFAULTS.metallic, CONTEXT), 0, 1),
+    roughness: clamp(floatOr(properties['roughness'], BASE_MATERIAL_3D_DEFAULTS.roughness, CONTEXT), 0, 1),
     // `material.cpp:2160-2163`: the setter checks no range.
-    specular: floatOr(properties['metallic_specular'], 0.5, CONTEXT),
+    specular: floatOr(properties['metallic_specular'], BASE_MATERIAL_3D_DEFAULTS.specular, CONTEXT),
     emission,
-    emissionOperator: intOr(properties['emission_operator'], 0, CONTEXT),
-    textureFilter: intOr(properties['texture_filter'], TEXTURE_FILTER_DEFAULT, CONTEXT),
+    emissionOperator: intOr(properties['emission_operator'], EMISSION_OPERATOR_DEFAULT, CONTEXT),
+    textureFilter: intOr(properties['texture_filter'], BASE_MATERIAL_3D_DEFAULTS.textureFilter, CONTEXT),
     textureRepeat: boolOr(properties['texture_repeat'], true, CONTEXT),
     uv1Scale: vec2FromVector3(properties['uv1_scale'], { x: 1, y: 1 }),
     uv1Offset: vec2FromVector3(properties['uv1_offset'], { x: 0, y: 0 }),
@@ -171,14 +181,20 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     castsShadow,
     // `alpha_scissor_threshold` hint is "0,1,0.001". 0 means "no cutout" to three,
     // which every non-scissor mode wants. A refractive surface's ALPHA is 1.0, which no
-    // threshold cuts, while three would cut on the texture alpha Godot never reads.
+    // threshold cuts, while three would cut on the texture alpha Godot never reads. Under
+    // alpha antialiasing the ramp cuts at the threshold itself.
     alphaTest:
-      transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha
-        ? clamp(floatOr(properties['alpha_scissor_threshold'], 0.5, CONTEXT), 0, 1)
+      transparency === Transparency.ALPHA_SCISSOR && readsAlbedoAlpha && !alphaAntialiasing
+        ? scissorThreshold
         : 0,
     // `scene_forward_clustered.glsl:1398-1411`: the hash cuts the ALPHA the shader writes.
     alphaHash: transparency === Transparency.ALPHA_HASH && readsAlbedoAlpha,
-    alphaHashScale: floatOr(properties['alpha_hash_scale'], 1, CONTEXT),
+    alphaHashScale: floatOr(
+      properties['alpha_hash_scale'],
+      BASE_MATERIAL_3D_DEFAULTS.alphaHashScale,
+      CONTEXT
+    ),
+    alphaAntialiasing,
     depthDrawMode,
     depthWrite: godotDepthWrite(alphaPass, depthDrawMode, depthTest),
     alphaPassDepthWrite: godotDepthWrite(true, depthDrawMode, depthTest),
@@ -190,37 +206,51 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     blendMode,
     cullMode: enumOr(properties['cull_mode'], CullMode.BACK, CULL_MODES, `${CONTEXT}.cull_mode`),
     cullModeExplicit: properties['cull_mode'] !== undefined,
-    shadingMode: properties['shading_mode'] === '0' ? 'unshaded' : 'per_pixel',
+    shadingMode:
+      intOr(properties['shading_mode'], ShadingMode.PER_PIXEL, `${CONTEXT}.shading_mode`) ===
+      ShadingMode.UNSHADED
+        ? 'unshaded'
+        : 'per_pixel',
     // `material.cpp:2462-2468`: the setter checks no range.
     diffuseMode: intOr(properties['diffuse_mode'], DiffuseMode.DIFFUSE_BURLEY, CONTEXT),
     specularMode: intOr(properties['specular_mode'], SpecularMode.SPECULAR_SCHLICK_GGX, CONTEXT),
     useVertexColors: boolOr(properties['vertex_color_use_as_albedo'], false, CONTEXT),
     disablesSpecularOcclusion: boolOr(properties['disable_specular_occlusion'], false, CONTEXT),
-    aoLightAffect: floatOr(properties['ao_light_affect'], 0, CONTEXT),
-    aoTextureChannel: enumOr(
-      properties['ao_texture_channel'],
-      TextureChannel.TEXTURE_CHANNEL_RED,
-      TEXTURE_CHANNELS,
-      `${CONTEXT}.ao_texture_channel`
-    ),
+    aoLightAffect: floatOr(properties['ao_light_affect'], BASE_MATERIAL_3D_DEFAULTS.aoLightAffect, CONTEXT),
+    aoTextureChannel: textureChannel(properties, 'ao_texture_channel'),
+    roughnessTextureChannel: textureChannel(properties, 'roughness_texture_channel'),
+    metallicTextureChannel: textureChannel(properties, 'metallic_texture_channel'),
     normalScale: { x: normalScale, y: normalScale },
     triplanar,
     heightmap: heightmapEnabled && !triplanar ? decodeHeightmap(properties) : null,
-    clearcoat: clearcoatEnabled ? clamp(floatOr(properties['clearcoat'], 1, CONTEXT), 0, 1) : 0,
-    clearcoatRoughness: clearcoatEnabled
-      ? clamp(floatOr(properties['clearcoat_roughness'], 0.5, CONTEXT), 0, 1)
+    clearcoat: clearcoatEnabled
+      ? clamp(floatOr(properties['clearcoat'], BASE_MATERIAL_3D_DEFAULTS.clearcoat, CONTEXT), 0, 1)
       : 0,
-    rim: rimEnabled ? clamp(floatOr(properties['rim'], 1, CONTEXT), 0, 1) : 0,
-    rimTint: rimEnabled ? clamp(floatOr(properties['rim_tint'], 0.5, CONTEXT), 0, 1) : 0,
-    billboardMode: intOr(properties['billboard_mode'], 0, CONTEXT),
+    clearcoatRoughness: clearcoatEnabled
+      ? clamp(
+          floatOr(properties['clearcoat_roughness'], BASE_MATERIAL_3D_DEFAULTS.clearcoatRoughness, CONTEXT),
+          0,
+          1
+        )
+      : 0,
+    rim: rimEnabled ? clamp(floatOr(properties['rim'], BASE_MATERIAL_3D_DEFAULTS.rim, CONTEXT), 0, 1) : 0,
+    rimTint: rimEnabled
+      ? clamp(floatOr(properties['rim_tint'], BASE_MATERIAL_3D_DEFAULTS.rimTint, CONTEXT), 0, 1)
+      : 0,
+    billboardMode: intOr(properties['billboard_mode'], BillboardMode.BILLBOARD_DISABLED, CONTEXT),
     billboardKeepScale: boolOr(properties['billboard_keep_scale'], false, CONTEXT),
-    anisotropy: anisotropyEnabled ? clamp(floatOr(properties['anisotropy'], 0, CONTEXT), -1, 1) : 0,
+    anisotropy: anisotropyEnabled
+      ? clamp(floatOr(properties['anisotropy'], BASE_MATERIAL_3D_DEFAULTS.anisotropy, CONTEXT), -1, 1)
+      : 0,
     // Godot refraction is a screen-space distortion; three models the same
     // "see the background through this surface" effect volumetrically, so
     // `refraction_scale` drives `thickness` and cannot go negative there.
     transmission: refractionEnabled ? 1 : 0,
     refractionThickness: refractionEnabled
-      ? Math.max(0, floatOr(properties['refraction_scale'], 0.05, CONTEXT))
+      ? Math.max(
+          0,
+          floatOr(properties['refraction_scale'], BASE_MATERIAL_3D_DEFAULTS.refractionScale, CONTEXT)
+        )
       : 0,
     textureSlots: decodeTextureSlots(properties),
   };
@@ -242,14 +272,25 @@ interface ShaderAlphaFlags {
   proximityFade: boolean;
 }
 
+/** A `*_texture_channel` enum, red by default (`material.cpp:3985-3987`). */
+function textureChannel(properties: Record<string, string>, property: string): TextureChannel {
+  return enumOr(
+    properties[property],
+    TextureChannel.TEXTURE_CHANNEL_RED,
+    TEXTURE_CHANNELS,
+    `${CONTEXT}.${property}`
+  );
+}
+
 /** What `BaseMaterial3D::_update_shader` emits for alpha, which every alpha decision reads. */
 function shaderAlphaFlags(
   properties: Record<string, string>,
   transparency: Transparency,
-  refractionEnabled: boolean
+  refractionEnabled: boolean,
+  usesAlphaAntialiasing: boolean
 ): ShaderAlphaFlags {
   const proximityFade = boolOr(properties['proximity_fade_enabled'], false, CONTEXT);
-  const distanceFadeMode = intOr(properties['distance_fade_mode'], 0, CONTEXT);
+  const distanceFadeMode = intOr(properties['distance_fade_mode'], DistanceFadeMode.DISABLED, CONTEXT);
   const shadowToOpacity = boolOr(properties['shadow_to_opacity'], false, CONTEXT);
 
   // The shader writes ALPHA: for a transparency mode, for refraction (`ALPHA = 1.0`),
@@ -258,18 +299,30 @@ function shaderAlphaFlags(
     refractionEnabled ||
     transparency !== Transparency.DISABLED ||
     shadowToOpacity ||
-    distanceFadeMode === DISTANCE_FADE_PIXEL_ALPHA ||
+    distanceFadeMode === DistanceFadeMode.PIXEL_ALPHA ||
     proximityFade;
   // The two cutout modes discard instead of blending, so they stay opaque.
   const usesAlphaClip =
     transparency === Transparency.ALPHA_SCISSOR || transparency === Transparency.ALPHA_HASH;
-  // `ALPHA_ANTIALIASING_EDGE` is written only under a cutout mode (`material.cpp:1843`),
-  // where it re-admits the cutout to the alpha pass (alpha-to-coverage).
-  const usesAlphaAntialiasing =
-    usesAlphaClip && intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT) !== 0;
   // `depth_prepass_alpha` is emitted for ALPHA_DEPTH_PRE_PASS alone (`material.cpp:898`).
   const usesDepthPrepassAlpha = transparency === Transparency.ALPHA_DEPTH_PRE_PASS;
   return { usesAlpha, usesAlphaClip, usesAlphaAntialiasing, usesDepthPrepassAlpha, proximityFade };
+}
+
+/**
+ * The cutout's alpha antialiasing. `ALPHA_ANTIALIASING_EDGE` is written for any mode but OFF, and
+ * only under a cutout (`material.cpp:1844-1847`). The edge defaults to 0.3 (`material.cpp:3977`).
+ */
+function decodeAlphaAntialiasing(
+  properties: Record<string, string>,
+  transparency: Transparency,
+  scissorThreshold: number
+): AlphaAntialiasingCut | null {
+  const mode = intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT);
+  const edge = floatOr(properties['alpha_antialiasing_edge'], 0.3, CONTEXT);
+  if (transparency === Transparency.ALPHA_SCISSOR) return scissorAntialiasing(mode, scissorThreshold, edge);
+  if (transparency === Transparency.ALPHA_HASH) return hashAntialiasing(mode, edge);
+  return null;
 }
 
 /**
@@ -334,7 +387,7 @@ function decodeTextureSlots(properties: Record<string, string>): TextureSlotRefe
 function uv2Transform(
   properties: Record<string, string>,
   uv2Triplanar: boolean
-): { uv2Scale: MaterialVec2; uv2Offset: MaterialVec2 } {
+): { uv2Scale: Vector2; uv2Offset: Vector2 } {
   const identity = { uv2Scale: { x: 1, y: 1 }, uv2Offset: { x: 0, y: 0 } };
   const detailUv = intOr(properties['detail_uv_layer'], DetailUV.DETAIL_UV_1, CONTEXT);
   if (!uv2Triplanar && detailUv !== DetailUV.DETAIL_UV_2) return identity;
@@ -359,7 +412,7 @@ function uv2Slots(properties: Record<string, string>): TextureSlot[] {
  * Godot writes UV transforms as `Vector3`, and only x and y reach a 2D UV. It wraps the
  * throwing `parseVector3`, so the float grammar, scientific notation included, is shared.
  */
-function vec2FromVector3(raw: string | undefined, fallback: MaterialVec2): MaterialVec2 {
+function vec2FromVector3(raw: string | undefined, fallback: Vector2): Vector2 {
   if (!raw) return fallback;
   try {
     const { x, y } = parseVector3(raw);

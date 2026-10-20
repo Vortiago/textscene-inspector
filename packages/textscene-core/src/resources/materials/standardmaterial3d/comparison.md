@@ -14,7 +14,11 @@ Godot's default 3D surface. The scalar PBR base maps onto `MeshStandardMaterial`
 
 A `metallic = 1.0`, `roughness = 0.1` sphere reflects the preview sky. Both engines render the same blue-grey mirror. The preview glow blooms the sun's highlight into the same halo in both.
 
-- **Approximated** Godot reads the map channel named by `metallic_texture_channel` and `roughness_texture_channel`. three reads fixed channels, so a map packed in RED is misread.
+## Metallic and roughness map channels
+
+<!-- compare: image=unit-material-texture-channel status=done fixture=unit-material-texture-channel.tscn -->
+
+Godot reads a roughness map and a metallic map from the channel that `roughness_texture_channel` and `metallic_texture_channel` name, red by default. One map holds red 20 and green and blue 235. The left sphere takes it as roughness from red, so it is glossy. The right sphere takes it as metallic from red, so it is a dielectric, as in Godot.
 
 ## Emission
 
@@ -34,6 +38,14 @@ ADD emission with both a dark red colour and a texture. Godot emits `(emission +
 <!-- compare: image=unit-sub-viewport-texture-emission status=done fixture=unit-sub-viewport-texture-emission.tscn -->
 
 A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in `unit-sub-viewport-texture`. A target in a pass cycle draws the missing-texture material from any slot.
+
+## Normal map
+
+<!-- compare: image=unit-material-normal-map-blue status=done fixture=unit-material-normal-map-blue.tscn -->
+
+`normal_texture` reads red and green only. Both engines rebuild blue from them (`scene_forward_clustered.glsl:1437-1438`). So a map with blue 0 shades its flat texel as the bare plane, and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it. A glTF material reads its normal map the same way, as Godot imports it as a StandardMaterial3D.
+
+- **Approximated** The tilted texel shades darker than Godot's, while the flat texel matches.
 
 ## Clearcoat
 
@@ -126,10 +138,12 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 
 ## Known limitations
 
-- **Shader missing** `alpha_antialiasing_mode` is read for the pass decision, but the cutout edge reads hard rather than coverage-blended.
+- **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
+- **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
+- **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).
 - **Shader missing** `proximity_fade_*` and `distance_fade_*` decide the pass but are not rendered, so the surface stays at full opacity.
 - **Approximated** Godot measures V from the image top and three from the bottom, so a non-integer `uv1_scale.y` or a non-zero `uv1_offset.y` shifts V differently.
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
 - **Approximated** Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.
-- **Approximated** A ViewportTexture outside the albedo slot ignores `uv1_scale`, `uv1_offset`, `texture_repeat` and a nearest `texture_filter`, as it samples its target clamped (#770).
+- **Approximated** A ViewportTexture outside the albedo slot ignores `uv1_scale`, `uv1_offset`, `texture_repeat` and a nearest `texture_filter`, as it samples its target clamped.
 - **Approximated** A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.

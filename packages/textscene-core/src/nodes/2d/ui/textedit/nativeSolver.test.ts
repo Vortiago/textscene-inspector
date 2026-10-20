@@ -13,8 +13,8 @@ import {
   textEditRowHeightPx,
   textEditWrapWidthPx,
   shapeTextEditLines,
-  textEditContentSize,
   textEditMinimumSize,
+  textEditMinimumSizeWith,
   layoutTextEditDrawBand,
   textEditCurrentLineXPx,
   textEditRowOriginXPx,
@@ -123,24 +123,43 @@ describe('shapeTextEditLines', () => {
   });
 });
 
-describe('textEditContentSize', () => {
-  it('sums every row into height and takes the widest row into width, plus the bare +10 pad', () => {
-    const lineLayouts = shapeTextEditLines(['a', 'bb'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
-    const rowHeightPx = textEditRowHeightPx(OPEN_SANS_FONT_METRICS, 16, 4);
-    const size = textEditContentSize(lineLayouts, rowHeightPx, 0, 80, false);
-    expect(size.y).toBe(2 * rowHeightPx);
-    expect(size.x).toBeGreaterThan(10);
+describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () => {
+  const STYLE_MIN = THEME.widgets.lineEdit.normal.contentMargin;
+  const STYLE_MIN_X = STYLE_MIN.left + STYLE_MIN.right;
+  const STYLE_MIN_Y = STYLE_MIN.top + STYLE_MIN.bottom;
+  const ROW_HEIGHT_PX = textEditRowHeightPx(OPEN_SANS_FONT_METRICS, 16, THEME.separation);
+
+  function fitWidth(props: Partial<TextEditProperties>): number {
+    return textEditMinimumSize(node({ fitContentWidth: true, ...props }), ctx()).x - STYLE_MIN_X;
+  }
+
+  function fitHeight(text: string): number {
+    return textEditMinimumSize(node({ text, fitContentHeight: true }), ctx()).y - STYLE_MIN_Y;
+  }
+
+  it('sums every row into the height', () => {
+    expect(fitHeight('a\nbb')).toBe(2 * ROW_HEIGHT_PX);
   });
-  it('adds gutteredWidthPx and, when draw_minimap, minimapWidthPx into the width', () => {
-    const lineLayouts = shapeTextEditLines(['a'], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
-    const rowHeightPx = 20;
-    const withoutExtras = textEditContentSize(lineLayouts, rowHeightPx, 0, 80, false).x;
-    expect(textEditContentSize(lineLayouts, rowHeightPx, 5, 80, false).x).toBe(withoutExtras + 5);
-    expect(textEditContentSize(lineLayouts, rowHeightPx, 0, 80, true).x).toBe(withoutExtras + 80);
+
+  it('takes the widest row into the width, plus the bare +10 pad', () => {
+    expect(fitWidth({ text: 'a\nbb' })).toBe(fitWidth({ text: 'bb' }));
+    expect(fitWidth({ text: '' })).toBe(10);
   });
-  it('floors height at one row for an entirely empty buffer', () => {
-    const lineLayouts = shapeTextEditLines([''], 16, 0, undefined, 0, OPEN_SANS_FONT_METRICS);
-    expect(textEditContentSize(lineLayouts, 20, 0, 80, false).y).toBe(20);
+
+  it('adds the gutter band width into the width', () => {
+    const props: TextEditProperties = { name: 'T', text: 'a', fitContentWidth: true };
+    const box = THEME.widgets.lineEdit.normal;
+    const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
+    expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);
+  });
+
+  it('adds minimap_width into the width only when draw_minimap is set', () => {
+    const withoutMinimap = fitWidth({ text: 'a', minimapWidth: 50 });
+    expect(fitWidth({ text: 'a', minimapWidth: 50, minimapDraw: true })).toBe(withoutMinimap + 50);
+  });
+
+  it('floors the height at one row for an entirely empty buffer', () => {
+    expect(fitHeight('')).toBe(ROW_HEIGHT_PX);
   });
 });
 

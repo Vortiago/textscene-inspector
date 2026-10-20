@@ -8,14 +8,9 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError } from '../../../linter/validators/index.js';
-import {
-  ARRAY_LITERAL_RE,
-  dropTrailingComma,
-  packedArrayLiteral,
-  resourceRef,
-  splitTopLevel,
-  STRING_LITERAL_RE,
-} from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../godot/variant/variantParser.js';
+import { dropTrailingComma, splitTopLevel, STRING_LITERAL_RE } from '../../../godot/string/string.js';
+import { resourceRef } from '../../../godot/variant/resourceRef.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 const OUTER_RE = ARRAY_LITERAL_RE;

@@ -4,5 +4,3 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { Control } from './Component';
 
 controlComponentRegistry.register({ typeName: 'Control', Component: Control });
-
-export { Control };

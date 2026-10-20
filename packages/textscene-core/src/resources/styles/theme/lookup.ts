@@ -3,7 +3,7 @@
  * `ThemeResource`s `decode.ts` produces. Pure: no I/O, no parsing.
  */
 
-import { NODE_BASE_TYPES } from '../../../linter/nodeBaseTypes';
+import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import type { FontResource } from '../../fonts/font/types';
 import type { ThemeResource } from './types';
 
@@ -13,17 +13,12 @@ import type { ThemeResource } from './types';
  */
 const nativeTypeChainCache = new Map<string, readonly string[]>();
 
-/** The class name, then its `NODE_BASE_TYPES` ancestry: the native half of the type chain. */
+/** `ThemeDB::get_native_type_dependencies` (`scene/theme/theme_db.cpp:198-208`). */
 function nativeTypeChain(nativeType: string): readonly string[] {
   const cached = nativeTypeChainCache.get(nativeType);
   if (cached) return cached;
 
-  const chain: string[] = [nativeType];
-  let base: string | undefined = NODE_BASE_TYPES[nativeType];
-  while (base !== undefined) {
-    chain.push(base);
-    base = NODE_BASE_TYPES[base];
-  }
+  const chain = classInheritanceChain(nativeType);
   nativeTypeChainCache.set(nativeType, chain);
   return chain;
 }
@@ -38,10 +33,9 @@ function themeSearchOrder(
 /**
  * `Theme::get_type_dependencies` (`scene/resources/theme.cpp:1404-1419`): the
  * type names one item lookup tries, in order. The native inheritance chain is
- * always appended, whatever the variation walk finds. `NODE_BASE_TYPES`
- * stands in for `ThemeDB::get_native_type_dependencies`: theme items live at `Control` or below.
+ * always appended, whatever the variation walk finds.
  */
-export function buildThemeTypeChain(
+function buildThemeTypeChain(
   nativeType: string,
   typeVariation: string | undefined,
   ancestorThemes: readonly ThemeResource[],
@@ -159,7 +153,7 @@ export function resolveThemeFontIn(
  * @param override Wins only when `> 0` (`if (font_size && (*font_size) > 0)`,
  *   `control.cpp:3114-3117`). A `0` falls through like an unauthored one.
  * @param builtInDefaultPx Stands in for `ThemeDB::get_fallback_font_size()`:
- *   `DEFAULT_FONT_SIZE` (`r3f/controls/godotDefaultTheme.ts`), scaled.
+ *   `DEFAULT_FONT_SIZE` (`godot/scene/theme.ts`), scaled.
  */
 export function resolveThemeFontSizeIn(
   scope: ThemeResolutionScope,

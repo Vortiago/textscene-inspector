@@ -1,7 +1,8 @@
 /**
  * <GridMap> instances each MeshLibrary item's ArrayMesh at its populated cells. Each
  * surface draws as one THREE.InstancedMesh, or as one mesh per cell when its material
- * billboards. An unresolved mesh draws a cell-sized wireframe box.
+ * billboards. A loading item draws nothing, and an unresolved one draws cell-sized
+ * wireframe boxes in one InstancedMesh.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
@@ -18,16 +19,16 @@ import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurf
 import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
-import type { Transform3D } from '../../base/node3d/types';
-import type { Vector3 } from '../../../parser/vectors';
+import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
+import type { Vector3 } from '../../../godot/math/vector';
 
-/** Literal-only, so the key is constant and a placeholder cell never remounts. */
-const PLACEHOLDER_CELL_MATERIAL = wireGizmoProgram(0x4488cc);
+/** Literal-only, so the key is constant and the placeholder batch never remounts its material. */
+const PLACEHOLDER_TILE_MATERIAL = wireGizmoProgram(0x4488cc);
 
 /** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
 function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
@@ -106,9 +107,11 @@ export function GridMap({ node, children }: NodeComponentProps) {
     return grouped;
   }, [properties.cells]);
 
+  // Godot draws a cell only once its library holds the item (`modules/gridmap/grid_map.cpp:676-678`).
+  const items = library.status === 'pending' ? [] : Array.from(cellsByItem.entries());
   return (
     <Node3D node={node}>
-      {Array.from(cellsByItem.entries()).map(([itemId, cells]) => (
+      {items.map(([itemId, cells]) => (
         <GridMapItem
           key={itemId}
           item={library.model?.get(itemId) ?? null}
@@ -151,17 +154,10 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
+  // Godot draws a cell only once its item has a mesh (`modules/gridmap/grid_map.cpp:688`).
+  if (item?.meshPath && meshResult.status === 'pending') return null;
   const geometry = meshResult.value?.geometry;
-  if (!geometry) {
-    // A pending or missing item draws cell-sized wireframe boxes.
-    return (
-      <>
-        {matrices.map((m, i) => (
-          <PlaceholderCell key={i} matrix={m} cellSize={cellSize} />
-        ))}
-      </>
-    );
-  }
+  if (!geometry) return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
   const surfaces = surfaceSources(materials);
   return (
     <>
@@ -214,12 +210,10 @@ function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.M
   const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
   const meshRef = useRef<THREE.InstancedMesh>(null);
   // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh) return;
-    matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-    mesh.instanceMatrix.needsUpdate = true;
-  }, [matrices, geometry, startingMaterial]);
+  useLayoutEffect(
+    () => writeInstanceMatrices(meshRef.current, matrices),
+    [matrices, geometry, startingMaterial]
+  );
 
   return (
     <instancedMesh
@@ -268,15 +262,42 @@ function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
   return <SurfaceMaterialSlot source={draw.source} attach={surfaceAttach(draw.surface, draw.surfaceCount)} />;
 }
 
-function PlaceholderCell({ matrix, cellSize }: { matrix: THREE.Matrix4; cellSize: Vector3 }) {
-  const position = useMemo((): [number, number, number] => {
-    const v = new THREE.Vector3().setFromMatrixPosition(matrix);
-    return [v.x, v.y, v.z];
-  }, [matrix]);
+/**
+ * A cell-sized wireframe box at each cell's centre, all in one draw, so a missing item in a large
+ * grid costs one draw as its tiles would.
+ */
+function PlaceholderTiles({ matrices, cellSize }: { matrices: THREE.Matrix4[]; cellSize: Vector3 }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => writeInstanceMatrices(meshRef.current, matrices, cellCentre), [matrices]);
   return (
-    <mesh position={position}>
+    <instancedMesh key={matrices.length} ref={meshRef} args={[undefined, undefined, matrices.length]}>
       <boxGeometry args={[cellSize.x, cellSize.y, cellSize.z]} />
-      <meshBasicMaterial key={PLACEHOLDER_CELL_MATERIAL.key} {...PLACEHOLDER_CELL_MATERIAL.props} />
-    </mesh>
+      <meshBasicMaterial key={PLACEHOLDER_TILE_MATERIAL.key} {...PLACEHOLDER_TILE_MATERIAL.props} />
+    </instancedMesh>
   );
+}
+
+/** Written only by `cellCentre`. `copyPosition` leaves its basis at identity. */
+const centreMatrix = new THREE.Matrix4();
+
+/** A cell matrix's translation alone, in one shared matrix, so a large grid allocates none. */
+function cellCentre(matrix: THREE.Matrix4): THREE.Matrix4 {
+  return centreMatrix.copyPosition(matrix);
+}
+
+/**
+ * Sets each instance of `mesh` to `place` of its matrix. A mesh not yet mounted waits for the next
+ * call. `setMatrixAt` copies, so `place` may return one reused matrix.
+ */
+function writeInstanceMatrices(
+  mesh: THREE.InstancedMesh | null,
+  matrices: THREE.Matrix4[],
+  place: (matrix: THREE.Matrix4) => THREE.Matrix4 = (matrix) => matrix
+): void {
+  if (!mesh) return;
+  matrices.forEach((m, i) => mesh.setMatrixAt(i, place(m)));
+  mesh.instanceMatrix.needsUpdate = true;
+  // three computes these once and culls by them, so a moved cell would stay culled at its old place.
+  mesh.boundingSphere = null;
+  mesh.boundingBox = null;
 }

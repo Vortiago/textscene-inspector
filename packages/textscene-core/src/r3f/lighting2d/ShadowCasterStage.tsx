@@ -67,7 +67,7 @@ export function useLightShadowCasters(
  * Exact equality, coordinate by coordinate. The bounds count too: a turned local polygon under a
  * counter-turned transform keeps its world segments but moves its bounds.
  */
-export function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly WorldShadowCaster[]): boolean {
+function sameWorldCasters(a: readonly WorldShadowCaster[], b: readonly WorldShadowCaster[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i += 1) {
     const one = a[i]!;

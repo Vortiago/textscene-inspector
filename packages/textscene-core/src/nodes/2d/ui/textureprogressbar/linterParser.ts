@@ -8,25 +8,14 @@
 import '../range/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-// texture_progress_bar.h:48-59: enum FillMode, 9 values, bound at texture_progress_bar.cpp:716-724.
-// The labels come from the ADD_PROPERTY hint string at texture_progress_bar.cpp:691.
-const FILL_MODE = {
-  0: 'FILL_LEFT_TO_RIGHT',
-  1: 'FILL_RIGHT_TO_LEFT',
-  2: 'FILL_TOP_TO_BOTTOM',
-  3: 'FILL_BOTTOM_TO_TOP',
-  4: 'FILL_CLOCKWISE',
-  5: 'FILL_COUNTER_CLOCKWISE',
-  6: 'FILL_BILINEAR_LEFT_AND_RIGHT',
-  7: 'FILL_BILINEAR_TOP_AND_BOTTOM',
-  8: 'FILL_CLOCKWISE_AND_COUNTER_CLOCKWISE',
-};
+import { TEXTURE_PROGRESS_BAR_FILL_MODE_NAMES } from '../../../../godot/scene/gui.js';
 
 validatorRegistry.registerAll('TextureProgressBar', {
   // texture_progress_bar.cpp:576: set_fill_mode's `ERR_FAIL_INDEX(p_fill, FILL_MODE_MAX)`
   // refuses the write, so out of range is an error.
-  fill_mode: v.enumInt('fill_mode', 0, 8, FILL_MODE, { enforced: 'texture_progress_bar.cpp:576' }),
+  fill_mode: v.enumInt('fill_mode', TEXTURE_PROGRESS_BAR_FILL_MODE_NAMES, {
+    enforced: 'texture_progress_bar.cpp:576',
+  }),
 
   // texture_progress_bar.cpp:66-75: set_nine_patch_stretch assigns straight
   // through. ADD_PROPERTY at :698 carries no hint. Format-only.

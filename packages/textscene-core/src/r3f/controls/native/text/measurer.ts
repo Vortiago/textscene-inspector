@@ -6,20 +6,21 @@
  */
 // A caller with a scene font (`resolveNodeFontMetrics.ts`) passes `fontMetrics`, so
 // the floored size and the painted glyphs use one font. Omitted, it is `OPEN_SANS_FONT_METRICS`.
-import type { Vec2 } from '../rect';
 import type { TextMeasurer } from '../solverRegistry';
-import { AutowrapMode, shapeText } from './textLayout';
+import { shapeText } from './textLayout';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export const measureText: TextMeasurer = (
   text: string,
   fontSize: number,
   lineSpacingPx = 0,
   fontMetrics
-): Vec2 => {
+): Vector2 => {
   const layout = shapeText(text, {
     fontSizePx: fontSize,
     boxWidthPx: 0,
-    autowrapMode: AutowrapMode.OFF,
+    autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx,
     fontMetrics,
   });

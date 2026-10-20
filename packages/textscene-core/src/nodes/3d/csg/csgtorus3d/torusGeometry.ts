@@ -35,7 +35,7 @@
 import type * as THREE from 'three';
 import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
 
-export interface CsgTorusSpec {
+interface CsgTorusSpec {
   innerRadius: number;
   outerRadius: number;
   /** Segments around the ring. Godot default 8. */

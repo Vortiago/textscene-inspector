@@ -5,11 +5,10 @@
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-
-// cpu_particles_2d.cpp:1509 hints 2 labels ("Index,Lifetime"), and
-// BIND_ENUM_CONSTANT binds both (:1511-1512). GPUParticles2D's DrawOrder
-// (gpu_particles_2d.h:40-43) is another enum, with a third value, REVERSE_LIFETIME.
-const DRAW_ORDER = { 0: 'INDEX', 1: 'LIFETIME' };
+import {
+  CPU_PARTICLES_2D_DRAW_ORDER_NAMES,
+  CPU_PARTICLES_2D_EMISSION_SHAPE_NAMES,
+} from '../../../godot/scene/particles2d.js';
 
 validatorRegistry.registerAll('CPUParticles2D', {
   emitting: v.boolean('emitting'),
@@ -70,26 +69,16 @@ validatorRegistry.registerAll('CPUParticles2D', {
   // set_draw_order (cpu_particles_2d.cpp:173-175) is `draw_order = p_order;` with
   // no ERR_FAIL_INDEX and no CLAMP, so out of range is a warning: the engine
   // reads `draw_order = 215832976` as Index.
-  draw_order: v.enumInt('draw_order', 0, 1, DRAW_ORDER, { hinted: 'cpu_particles_2d.cpp:1509' }),
+  draw_order: v.enumInt('draw_order', CPU_PARTICLES_2D_DRAW_ORDER_NAMES, {
+    hinted: 'cpu_particles_2d.cpp:1509',
+  }),
 
   // cpu_particles_2d.cpp:1586, ENUM 7 labels (matches BIND_ENUM_CONSTANT x7 +
   // EMISSION_SHAPE_MAX=7). set_emission_shape (cpu_particles_2d.cpp:480-481)
   // ERR_FAIL_INDEXes against EMISSION_SHAPE_MAX.
-  emission_shape: v.enumInt(
-    'emission_shape',
-    0,
-    6,
-    {
-      0: 'POINT',
-      1: 'SPHERE',
-      2: 'SPHERE_SURFACE',
-      3: 'RECTANGLE',
-      4: 'POINTS',
-      5: 'DIRECTED_POINTS',
-      6: 'RING',
-    },
-    { enforced: 'cpu_particles_2d.cpp:481' }
-  ),
+  emission_shape: v.enumInt('emission_shape', CPU_PARTICLES_2D_EMISSION_SHAPE_NAMES, {
+    enforced: 'cpu_particles_2d.cpp:481',
+  }),
   // cpu_particles_2d.cpp:1587 hints "0.01,128,0.01,suffix:px" hard both ends.
   // set_emission_sphere_radius (cpu_particles_2d.cpp:491-499) assigns
   // unconditionally, so both ends warn, as in the CPUParticles3D twin.

@@ -5,17 +5,16 @@
  */
 
 import {
-  BackgroundMode,
   type DepthFog,
   type EnvironmentProperties,
   type EnvironmentSettings,
   type VolumetricFog,
 } from './types';
-import { scaledRgb, type Color } from '../../utils/colorParser';
+import { scaledRgb } from '../../utils/colorParser';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
-import { GodotToneMapper } from './godotToneMapping';
-
-export type { EnvironmentSettings } from './types';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
+import type { Rgba } from '../../godot/math/math';
+import { AmbientSource, BackgroundMode } from '../../godot/scene/environment.js';
 
 /**
  * The white the tonemapper gets, as `Environment::_update_tonemap` (`scene/resources/environment.cpp`)
@@ -24,9 +23,7 @@ export type { EnvironmentSettings } from './types';
  * The authored value: `resolvedWhite` applies the per-curve floors (`environment_get_white`).
  */
 function whiteFor(properties: EnvironmentProperties): number {
-  return properties.tonemap_mode === GodotToneMapper.AGX
-    ? properties.tonemap_agx_white
-    : properties.tonemap_white;
+  return properties.tonemap_mode === ToneMapper.AGX ? properties.tonemap_agx_white : properties.tonemap_white;
 }
 
 /**
@@ -35,7 +32,7 @@ function whiteFor(properties: EnvironmentProperties): number {
  */
 export function createEnvironmentSettings(
   properties: EnvironmentProperties,
-  clearColor: Color
+  clearColor: Rgba
 ): EnvironmentSettings {
   const backgroundColor =
     properties.background_mode === BackgroundMode.BG_CLEAR_COLOR ? clearColor : properties.background_color;
@@ -137,10 +134,6 @@ function glowLevelsFor(properties: EnvironmentProperties): number[] {
   return sum > 0 ? levels.map((weight) => weight / sum) : levels;
 }
 
-const AMBIENT_SOURCE_BG = 0;
-const AMBIENT_SOURCE_COLOR = 2;
-const AMBIENT_SOURCE_SKY = 3;
-
 /**
  * The ambient this Environment contributes, transcribed from
  * `RenderSceneDataRD::update_ubo`, which fills the shader's ambient
@@ -149,7 +142,7 @@ const AMBIENT_SOURCE_SKY = 3;
  */
 function ambientFor(
   properties: EnvironmentProperties,
-  backgroundColor: Color
+  backgroundColor: Rgba
 ): {
   ambient: EnvironmentSettings['ambient'];
   skyAmbient: EnvironmentSettings['skyAmbient'];
@@ -160,7 +153,7 @@ function ambientFor(
   // BG (0, the default source) over BG_CLEAR_COLOR or BG_COLOR: flat = that colour
   // × background_energy_multiplier.
   if (
-    source === AMBIENT_SOURCE_BG &&
+    source === AmbientSource.BG &&
     (background === BackgroundMode.BG_CLEAR_COLOR || background === BackgroundMode.BG_COLOR)
   ) {
     return {
@@ -175,11 +168,11 @@ function ambientFor(
   // Otherwise flat = ambient_light_color × ambient_light_energy, and the cubemap is
   // used for (BG + BG_SKY) or SKY.
   const overSky = background === BackgroundMode.BG_SKY;
-  const fromCubemap = (source === AMBIENT_SOURCE_BG && overSky) || source === AMBIENT_SOURCE_SKY;
+  const fromCubemap = (source === AmbientSource.BG && overSky) || source === AmbientSource.SKY;
 
   // The shader blends ambient = mix(flat, sky × background_energy_multiplier,
   // sky_contribution), folded into the energies: at the default 1.0 the flat term is
-  // zero, so `ambient_light_color` under AMBIENT_SOURCE_SKY leaves no trace in Godot.
+  // zero, so `ambient_light_color` under AmbientSource.SKY leaves no trace in Godot.
   // A COLOR or DISABLED source takes none from the sky, which is still reflected.
   const contribution = fromCubemap ? properties.ambient_light_sky_contribution : 0;
 
@@ -189,7 +182,7 @@ function ambientFor(
   const skyAmbient =
     fromCubemap || overSky ? { energy: properties.background_energy_multiplier, contribution } : null;
 
-  if (!fromCubemap && source !== AMBIENT_SOURCE_COLOR) {
+  if (!fromCubemap && source !== AmbientSource.COLOR) {
     return { ambient: null, skyAmbient };
   }
 

@@ -15,5 +15,3 @@ const sliderJoint3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(sliderJoint3DRegistration);
-
-export { sliderJoint3DRegistration };

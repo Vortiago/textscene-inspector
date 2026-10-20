@@ -7,12 +7,8 @@
 import { describe, it, expect } from 'vitest';
 import { ValidatorRegistry, validatorRegistry } from './ValidatorRegistry.js';
 import type { PropertyValidator } from './propertyValidator.js';
-import {
-  everyValidator,
-  everyValidatorLabel,
-  registeredKeys,
-  registeredTypes,
-} from './registryPopulation.js';
+import { registeredTypes } from './registryPopulation.js';
+import { everyValidator, everyValidatorLabel, registeredKeys } from './testing/registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /** A validator that rejects nothing; the walk never calls it. */

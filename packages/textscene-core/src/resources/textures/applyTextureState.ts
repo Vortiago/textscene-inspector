@@ -6,7 +6,15 @@
  */
 
 import * as THREE from 'three';
-import { applyTextureFilterState, godotTextureFilterState, textureFilterMatches } from './godotTextureFilter';
+import {
+  applyTextureFilterState,
+  godotTextureFilterState,
+  hasMipChain,
+  textureFilterMatches,
+} from './godotTextureFilter';
+import { texelTexture, textureMipChain } from './texelTexture';
+import { readImagePixels } from '../formats/image/imagePixels';
+import type { MipLevel } from '../processing/mipChain';
 
 /** Below this, a UV transform is indistinguishable from identity. */
 const IDENTITY_EPSILON = 1e-6;
@@ -41,7 +49,13 @@ export interface MaterialTextureState {
   repeat?: boolean;
 }
 
-export interface TextureState extends MaterialTextureState {
+interface TextureState extends MaterialTextureState {
+  /**
+   * The sampler reads a mip chain, whatever the import gives, as Godot's decal atlas blits one
+   * (`texture_storage.cpp:3169-3226`). The atlas halves each level in byte space, as an imported
+   * chain does, so a texture with one is shared. Omitted means the import's chain.
+   */
+  buildsMipChain?: boolean;
   /**
    * The colour space this binding samples in. Required: only the binding knows
    * what the sampler needs, whatever the producer tagged.
@@ -56,8 +70,13 @@ export interface TextureState extends MaterialTextureState {
  * to `SRGBColorSpace` every commit outside `linear` mode, which no `<Canvas>` sets.
  */
 export function pinNoColorSpace(texture: THREE.Texture): THREE.Texture {
+  return pinColorSpace(texture, THREE.NoColorSpace);
+}
+
+/** Pins `texture.colorSpace` to `colorSpace`, discarding a later write, as `pinNoColorSpace` does. */
+export function pinColorSpace(texture: THREE.Texture, colorSpace: THREE.ColorSpace): THREE.Texture {
   Object.defineProperty(texture, 'colorSpace', {
-    get: () => THREE.NoColorSpace,
+    get: () => colorSpace,
     set: () => {
       // Discards `@react-three/fiber`'s reassignment. A pin, not a write after the
       // commit, so no effect order can undo it. It covers props the `colorMaps`
@@ -77,8 +96,8 @@ export function pinNoColorSpace(texture: THREE.Texture): THREE.Texture {
  */
 export function applyTextureState(texture: THREE.Texture, state: TextureState): THREE.Texture {
   // A render target (a ViewportTexture) is never cloned: a clone is a frozen
-  // frame. Nor is it re-tagged: its SubViewport writes it tone-mapped as
-  // `LinearSRGBColorSpace`, and every other reader shares that attachment.
+  // frame. Nor is it re-tagged: its pass reads the tag as its output space, and
+  // its storage, not the tag, decides what a sample decodes.
   if (texture.isRenderTargetTexture) return texture;
 
   const filterState = godotTextureFilterState(state.filter);
@@ -91,16 +110,18 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   // Only an authored filter diverges. Otherwise a GradientTexture2D, which has no
   // mipmaps, would clone per material and slot for a filter nobody asked for.
   const filterDiverges = state.filter !== undefined && !textureFilterMatches(texture, filterState);
+  const mipChainDiverges = state.buildsMipChain === true && !hasMipChain(texture);
   // A texture whose tag already matches the sampler is shared untouched.
   const colorSpaceDiverges = texture.colorSpace !== state.colorSpace;
   const channel = state.channel ?? 0;
   const channelDiverges = texture.channel !== channel;
-  if (!uvDiverges && !filterDiverges && !wrapDiverges && !colorSpaceDiverges && !channelDiverges)
-    return texture;
+  const diverges =
+    uvDiverges || filterDiverges || mipChainDiverges || wrapDiverges || colorSpaceDiverges || channelDiverges;
+  if (!diverges) return texture;
 
   // One clone, however many reasons. `clone()` shares `source`, so the image
-  // bytes are not duplicated.
-  const cloned = texture.clone();
+  // bytes are not duplicated unless the clone needs a chain of its own.
+  const cloned = mipChainDiverges ? withAtlasMipChain(texture) : texture.clone();
   if (uvDiverges) {
     cloned.repeat.set(state.uv!.scale.x, state.uv!.scale.y);
     cloned.offset.set(state.uv!.offset.x, state.uv!.offset.y);
@@ -109,7 +130,7 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   cloned.wrapS = wrapping;
   cloned.wrapT = wrapping;
   cloned.channel = channel;
-  if (filterDiverges) applyTextureFilterState(cloned, filterState);
+  if (filterDiverges || mipChainDiverges) applyTextureFilterState(cloned, filterState);
   // Pinned, not assigned: R3F reasserts `SRGBColorSpace` every commit. The sRGB
   // case wants what R3F reasserts, so it needs no pin.
   if (state.colorSpace === THREE.NoColorSpace) pinNoColorSpace(cloned);
@@ -120,10 +141,68 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
 }
 
 /**
+ * A copy of `texture` with the chain Godot's decal atlas blits: each level halves the one above in
+ * its RGBA8 UNORM bytes (`texture_storage.cpp:3162-3226`), the same box `mipChain` averages. An
+ * image whose RGBA8 bytes cannot be read gets a clone that asks the GPU for its chain.
+ */
+function withAtlasMipChain(texture: THREE.Texture): THREE.Texture {
+  const levels = atlasMipChain(texture);
+  if (!levels) {
+    const cloned = texture.clone();
+    cloned.generateMipmaps = true;
+    return cloned;
+  }
+  return copyPlacement(texelTexture(texture, levels), texture);
+}
+
+/**
+ * Written only by `atlasMipChain`. A decal rebuilds its projection on each colour, size or fade
+ * change, so a source's chain is read back and halved once per source version, not per rebuild.
+ */
+const atlasMipChains = new WeakMap<THREE.Texture['source'], { version: number; levels: MipLevel[] }>();
+
+/** The byte-space chain of `texture`'s pixels, or `undefined` when they cannot be read. */
+function atlasMipChain(texture: THREE.Texture): MipLevel[] | undefined {
+  const { source } = texture;
+  const cached = atlasMipChains.get(source);
+  if (cached?.version === source.version) return cached.levels;
+  if (!readsAsBytes(texture)) return undefined;
+  const pixels = readImagePixels(texture.image);
+  if (!pixels) return undefined;
+  const { data, width, height } = pixels;
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data.buffer, data.byteOffset, data.length);
+  const levels = textureMipChain(texture, { data: bytes, width, height }, false);
+  atlasMipChains.set(source, { version: source.version, levels });
+  return levels;
+}
+
+/** Whether `readImagePixels` gives `texture` as RGBA8: its own bytes, or half floats it clamps to bytes. */
+function readsAsBytes({ format, type }: THREE.Texture): boolean {
+  return format === THREE.RGBAFormat && (type === THREE.UnsignedByteType || type === THREE.HalfFloatType);
+}
+
+/**
+ * Writes what `Texture.copy` carries beyond the texels, sampling, tag and flip onto `target`, so a
+ * rebuilt chain stands in for a clone of `source`. Returns `target`.
+ */
+function copyPlacement<T extends THREE.Texture>(target: T, source: THREE.Texture): T {
+  target.name = source.name;
+  target.offset.copy(source.offset);
+  target.repeat.copy(source.repeat);
+  target.center.copy(source.center);
+  target.rotation = source.rotation;
+  target.matrixAutoUpdate = source.matrixAutoUpdate;
+  target.matrix.copy(source.matrix);
+  target.premultiplyAlpha = source.premultiplyAlpha;
+  target.userData = JSON.parse(JSON.stringify(source.userData)) as Record<string, unknown>;
+  return target;
+}
+
+/**
  * Whether a texture is a clone `applyTextureState` made for its binder, not the loader's cache
  * entry, so that the binder disposes it.
  */
-export function isBindingOwnedTexture(texture: THREE.Texture): boolean {
+function isBindingOwnedTexture(texture: THREE.Texture): boolean {
   return texture.userData[BINDING_OWNED] === true;
 }
 

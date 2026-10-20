@@ -11,7 +11,7 @@ import { armDiagnostic } from './ruleArms.js';
 import { propertyLocation } from './sourceLocation.js';
 import { validatorRegistry, type PropertyValidator } from './ValidatorRegistry.js';
 import { isResourceSlotValidator } from './validators/resourceValidators.js';
-import { resourceRef } from '../godot/index.js';
+import { resourceRef } from '../godot/variant/resourceRef.js';
 
 /** The ids a body may name: ext ids are all known up front, int ids accrue. */
 interface Declared {

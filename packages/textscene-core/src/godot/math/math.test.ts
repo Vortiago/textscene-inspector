@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import {
   cubicInterpolatef,
   degToRad,
+  radToDeg,
   lerpColor,
   lerpf,
   CMP_EPSILON,
@@ -17,6 +18,8 @@ import {
   sign,
   smoothstep,
   snapped,
+  posmod,
+  fposmodp,
 } from './math.js';
 
 describe('degToRad', () => {
@@ -25,11 +28,25 @@ describe('degToRad', () => {
   });
 
   it('multiplies by PI / 180 as Godot does, which rounds differently from (d * PI) / 180', () => {
-    expect(degToRad(3)).toBe(3 * (Math.PI / 180));
+    expect(degToRad(3)).toBe(0.05235987755982989);
   });
 
   it('keeps a non-finite value non-finite (edge case)', () => {
     expect(degToRad(Number.POSITIVE_INFINITY)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe('radToDeg', () => {
+  it('turns radians into degrees', () => {
+    expect(radToDeg(Math.PI)).toBe(180);
+  });
+
+  it('multiplies by 180 / PI as Godot does, which rounds differently from (r * 180) / PI', () => {
+    expect(radToDeg(0.1)).toBe(5.729577951308233);
+  });
+
+  it('keeps a non-finite value non-finite (edge case)', () => {
+    expect(radToDeg(Number.NEGATIVE_INFINITY)).toBe(Number.NEGATIVE_INFINITY);
   });
 });
 
@@ -212,5 +229,29 @@ describe('lerpColor', () => {
 
   it('extrapolates past the end, as Godot does not clamp the weight (edge case)', () => {
     expect(lerpColor(black, white, 2)).toEqual({ r: 2, g: 2, b: 2, a: 2 });
+  });
+});
+
+describe('posmod', () => {
+  it('folds a negative dividend into the divisor range', () => {
+    expect(posmod(-1, 2)).toBe(1);
+  });
+
+  it('keeps a positive dividend as the remainder', () => {
+    expect(posmod(5, 3)).toBe(2);
+  });
+
+  it('follows a negative divisor below zero', () => {
+    expect(posmod(1, -2)).toBe(-1);
+  });
+});
+
+describe('fposmodp', () => {
+  it('folds a negative angle into the positive range', () => {
+    expect(fposmodp(-90, 360)).toBe(270);
+  });
+
+  it('returns positive zero for a negative multiple', () => {
+    expect(fposmodp(-720, 360)).toBe(0);
   });
 });

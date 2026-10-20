@@ -16,88 +16,13 @@
  */
 
 import { glslFloat } from '../../utils/glslLiterals';
-import { DEFAULT_AGX_CONTRAST } from './types';
-
-/** Godot `ToneMapper`. */
-export const GodotToneMapper = {
-  LINEAR: 0,
-  REINHARDT: 1,
-  FILMIC: 2,
-  ACES: 3,
-  AGX: 4,
-} as const;
-
-/** `exposure_bias` per curve. Godot bakes these into the shader constants. */
-const FILMIC_EXPOSURE_BIAS = 2.0;
-const ACES_EXPOSURE_BIAS = 1.8;
-
-/** Hable's filmic curve with Godot's bias folded into A and B. */
-function filmic(x: number): number {
-  const A = 0.22 * FILMIC_EXPOSURE_BIAS * FILMIC_EXPOSURE_BIAS;
-  const B = 0.3 * FILMIC_EXPOSURE_BIAS;
-  const C = 0.1;
-  const D = 0.2;
-  const E = 0.01;
-  const F = 0.3;
-  return (x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F) - E / F;
-}
-
-/**
- * ACES for a neutral grey, which is all the normalisation constant needs. Both of
- * Godot's colour matrices have rows summing to 1, so a grey passes through them as a
- * plain scale by the exposure bias.
- */
-function acesGrey(x: number): number {
-  const A = 0.0245786;
-  const B = 0.000090537;
-  const C = 0.983729;
-  const D = 0.432951;
-  const E = 0.238081;
-  const biased = x * ACES_EXPOSURE_BIAS;
-  return (biased * (biased + A) - B) / (biased * (C * biased + D) + E);
-}
-
-/**
- * Godot's `environment_get_white` (`servers/rendering/storage/environment_storage.cpp`):
- * the authored white after a per-curve floor, because "Glow with screen blend mode does
- * not work when white < 1.0". The curve's normalisation and SCREEN's glow clamp both
- * read this, as Godot hands both the same result.
- */
-export function resolvedWhite(mode: number, white: number): number {
-  switch (mode) {
-    // The desktop and Forward+ floor. The 10-bit Mobile path pins a flat 2.0.
-    case GodotToneMapper.AGX:
-      return Math.max(2, white);
-    // `output_max_value`: LINEAR ignores the authored value.
-    case GodotToneMapper.LINEAR:
-      return 1;
-    // FILMIC, ACES and REINHARDT.
-    default:
-      return Math.max(1, white);
-  }
-}
-
-/**
- * The `tonemapper_params.x` Godot computes on the CPU from the resolved white
- * (`environment_get_tonemap_parameters`): white squared for Reinhard, and the curve at
- * white for FILMIC and ACES, so white maps to 1.0. For AgX it is the high-clip point,
- * where the curve reaches `output_max`, and the AgX GLSL derives its other parameters from it.
- */
-export function toneMappingWhiteParam(mode: number, white: number): number {
-  const resolved = resolvedWhite(mode, white);
-  switch (mode) {
-    case GodotToneMapper.REINHARDT:
-      return resolved * resolved;
-    case GodotToneMapper.FILMIC:
-      return filmic(resolved);
-    case GodotToneMapper.ACES:
-      return acesGrey(resolved);
-    case GodotToneMapper.AGX:
-      return resolved;
-    default:
-      return 1;
-  }
-}
+import {
+  ACES_CURVE,
+  FILMIC_CURVE,
+  TONEMAP_AGX_CONTRAST_DEFAULT,
+  ToneMapper,
+  toneMappingWhiteParam,
+} from '../../godot/rendering/environment/toneMapping.js';
 
 /**
  * The GLSL body for `CustomToneMapping`, per mode. three calls this after its
@@ -109,7 +34,7 @@ export function toneMappingWhiteParam(mode: number, white: number): number {
 export function toneMappingShaderChunk(
   mode: number,
   white: number,
-  agxContrast = DEFAULT_AGX_CONTRAST
+  agxContrast = TONEMAP_AGX_CONTRAST_DEFAULT
 ): string {
   return /* glsl */ `
 uniform float toneMappingExposure;
@@ -129,7 +54,7 @@ ${curveGlsl(mode, white, agxContrast)}
 export function toneMappingEffectGlsl(
   mode: number,
   white: number,
-  agxContrast = DEFAULT_AGX_CONTRAST
+  agxContrast = TONEMAP_AGX_CONTRAST_DEFAULT
 ): string {
   return /* glsl */ `
 vec3 godotToneMap(vec3 color, float exposure) {
@@ -141,7 +66,7 @@ ${curveGlsl(mode, white, agxContrast)}
 
 /** The mode's curve on an exposed `color`, with the white it reads baked in, so both paths draw alike. */
 function curveGlsl(mode: number, white: number, agxContrast: number): string {
-  const body = (CURVES[mode] ?? LINEAR_CURVE)(agxContrast);
+  const body = (CURVES[mode] ?? UNKNOWN_MODE_CURVE)(agxContrast);
   return `  const float godotToneMapWhite = ${glslFloat(toneMappingWhiteParam(mode, white))};\n${body}`;
 }
 
@@ -152,34 +77,47 @@ function curveGlsl(mode: number, white: number, agxContrast: number): string {
  */
 type CurveBody = (agxContrast: number) => string;
 
-/** LINEAR: exposure is the whole transform. */
-const LINEAR_CURVE: CurveBody = () => /* glsl */ `  return color;`;
+/**
+ * A mode outside the enum takes the AgX branch (`tonemap.glsl:266-268`) with the parameters
+ * `environment_get_tonemap_parameters` leaves zeroed (`environment_storage.cpp:279-339`). A channel
+ * under 0.18 maps to x^0 / (x^0 + 0) = 1 and one above divides 0 by 0, so Godot writes white.
+ */
+const UNKNOWN_MODE_CURVE: CurveBody = () => /* glsl */ `  return vec3(1.0);`;
+
+/** `tonemap.glsl:256-258`: every curve but LINEAR starts at black, so a negative light cannot drive it. */
+const NON_NEGATIVE_GLSL = /* glsl */ `  color = max(color, vec3(0.0));`;
 
 const CURVES: Record<number, CurveBody> = {
+  // LINEAR: exposure is the whole transform.
+  [ToneMapper.LINEAR]: () => /* glsl */ `  return color;`,
+
   // Reinhard's extended formula, equation 4 in https://doi.org/cjbgrt
-  [GodotToneMapper.REINHARDT]: () => /* glsl */ `
+  [ToneMapper.REINHARDT]: () => /* glsl */ `
+${NON_NEGATIVE_GLSL}
   float white_squared = godotToneMapWhite;
   vec3 white_squared_color = white_squared * color;
   return (white_squared_color + color * color) / (white_squared_color + white_squared);`,
 
-  [GodotToneMapper.FILMIC]: () => /* glsl */ `
-  const float exposure_bias = 2.0;
-  const float A = 0.22 * exposure_bias * exposure_bias;
-  const float B = 0.30 * exposure_bias;
-  const float C = 0.10;
-  const float D = 0.20;
-  const float E = 0.01;
-  const float F = 0.30;
+  [ToneMapper.FILMIC]: () => /* glsl */ `
+${NON_NEGATIVE_GLSL}
+  const float exposure_bias = ${glslFloat(FILMIC_CURVE.exposureBias)};
+  const float A = ${glslFloat(FILMIC_CURVE.A)} * exposure_bias * exposure_bias;
+  const float B = ${glslFloat(FILMIC_CURVE.B)} * exposure_bias;
+  const float C = ${glslFloat(FILMIC_CURVE.C)};
+  const float D = ${glslFloat(FILMIC_CURVE.D)};
+  const float E = ${glslFloat(FILMIC_CURVE.E)};
+  const float F = ${glslFloat(FILMIC_CURVE.F)};
   vec3 tonemapped = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
   return tonemapped / godotToneMapWhite;`,
 
-  [GodotToneMapper.ACES]: () => /* glsl */ `
-  const float exposure_bias = 1.8;
-  const float A = 0.0245786;
-  const float B = 0.000090537;
-  const float C = 0.983729;
-  const float D = 0.432951;
-  const float E = 0.238081;
+  [ToneMapper.ACES]: () => /* glsl */ `
+${NON_NEGATIVE_GLSL}
+  const float exposure_bias = ${glslFloat(ACES_CURVE.exposureBias)};
+  const float A = ${glslFloat(ACES_CURVE.A)};
+  const float B = ${glslFloat(ACES_CURVE.B)};
+  const float C = ${glslFloat(ACES_CURVE.C)};
+  const float D = ${glslFloat(ACES_CURVE.D)};
+  const float E = ${glslFloat(ACES_CURVE.E)};
   const mat3 rgb_to_rrt = mat3(
       vec3(0.59719 * exposure_bias, 0.35458 * exposure_bias, 0.04823 * exposure_bias),
       vec3(0.07600 * exposure_bias, 0.90834 * exposure_bias, 0.01566 * exposure_bias),
@@ -197,8 +135,8 @@ const CURVES: Record<number, CurveBody> = {
   // on linear light, unlike three's log2 approximation. Its harder toe crushes a shadowed
   // ambient-lit surface toward black. The parameters repeat Godot's CPU arithmetic
   // (`environment_get_tonemap_parameters`) in-shader, so AgX keeps the bake-a-literal seam.
-  [GodotToneMapper.AGX]: (agxContrast) => /* glsl */ `
-  color = max(color, vec3(0.0));
+  [ToneMapper.AGX]: (agxContrast) => /* glsl */ `
+${NON_NEGATIVE_GLSL}
 
   const mat3 rec709_to_rec2020_agx_inset = mat3(
       0.544814746488245, 0.140416948464053, 0.0888104196149096,
@@ -241,12 +179,3 @@ const CURVES: Record<number, CurveBody> = {
   // would otherwise reach three's sRGB encode as NaN.
   return clamp(color, 0.0, 1.0);`,
 };
-
-/**
- * Whether this previewer draws `mode` with Godot's own curve. LINEAR is "no tone
- * mapping" and needs no curve. REINHARDT, FILMIC, ACES and AGX are ported from
- * Godot's shader.
- */
-export function hasGodotCurve(mode: number): boolean {
-  return mode in CURVES;
-}

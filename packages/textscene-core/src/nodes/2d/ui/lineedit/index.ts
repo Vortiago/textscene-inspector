@@ -10,7 +10,6 @@ const lineEditRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(lineEditRegistration);
 
-export { lineEditRegistration };
 export * from './parser';
 export * from './displayText';
 export * from './types';

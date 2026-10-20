@@ -8,7 +8,8 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode } from '../../node/parser';
 import { boolOr, enumOr, floatOr } from '../../../parser/valueParsers';
-import { dictSubResourceEntries, literalText, resourceRef } from '../../../godot/index.js';
+import { dictSubResourceEntries, resourceRef } from '../../../godot/variant/resourceRef.js';
+import { literalText } from '../../../godot/string/string.js';
 import {
   type AnimationLibraryRef,
   AnimationProcessMode,

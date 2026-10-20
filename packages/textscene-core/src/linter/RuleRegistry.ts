@@ -3,11 +3,11 @@
 import type { LintRule } from './types';
 import * as logger from '../logger';
 
-export class RuleRegistry {
+class RuleRegistry {
   private rules: Map<string, LintRule> = new Map();
   /**
    * Memoised `getRulesForNodeType` results, keyed by node type: `Linter` asks for each node, and filtering every rule
-   * each time costs O(nodes * rules). `register` and `clear` invalidate it. Rules register at module load, before
+   * each time costs O(nodes * rules). `register` invalidates it. Rules register at module load, before
    * any lint, so no lint pays for that.
    */
   private rulesForNodeTypeCache: Map<string, LintRule[]> = new Map();
@@ -66,12 +66,6 @@ export class RuleRegistry {
    */
   getRule(name: string): LintRule | undefined {
     return this.rules.get(name);
-  }
-
-  /** Clear every registered rule, for a test. */
-  clear(): void {
-    this.rules.clear();
-    this.rulesForNodeTypeCache.clear();
   }
 }
 

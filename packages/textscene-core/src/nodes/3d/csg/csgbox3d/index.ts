@@ -10,6 +10,5 @@ const csgBox3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(csgBox3DRegistration);
 
-export { csgBox3DRegistration };
 export * from './parser';
 export * from './types';

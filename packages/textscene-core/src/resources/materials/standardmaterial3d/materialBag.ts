@@ -6,16 +6,20 @@
  */
 
 import * as THREE from 'three';
+import { GODOT_DEFAULT_ALBEDO, GODOT_DEFAULT_LIGHT_MODES } from '../../../r3f/materials/godotDefaultMaterial';
 import {
-  GODOT_DEFAULT_ALBEDO,
-  GODOT_DEFAULT_LIGHT_MODES,
-  GODOT_DEFAULT_METALLIC,
-  GODOT_DEFAULT_ROUGHNESS,
-} from '../../../r3f/materials/godotDefaultMaterial';
-import { BillboardMode } from '../../../godot/scene/billboard';
+  DEFAULT_MATERIAL_METALLIC,
+  DEFAULT_MATERIAL_ROUGHNESS,
+} from '../../../godot/rendering/materials/defaultMaterial';
+import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  alphaAntialiasingProps,
+  alphaAntialiasingUserData,
+} from '../../../r3f/materials/godotAlphaAntialiasing';
 import { recordedOn } from '../../../r3f/materials/recordedOnMaterial';
 import {
   emissionTextureAddInjection,
@@ -23,12 +27,17 @@ import {
 } from '../../../r3f/materials/emissionTextureAdd';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
+import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
 import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
   parallaxInjection,
   unshadedParallaxInjection,
 } from '../../../r3f/materials/godotParallax';
+import {
+  GODOT_METALLIC_ROUGHNESS_CHANNELS,
+  metallicRoughnessChannelsUserData,
+} from '../../../r3f/materials/godotMetallicRoughnessChannels';
 import {
   GODOT_AMBIENT_OCCLUSION,
   ambientOcclusionUserData,
@@ -87,8 +96,8 @@ function noMaterialBag(): StandardMaterialBag {
     materialClass: 'standard',
     props: {
       color: GODOT_DEFAULT_ALBEDO,
-      metalness: GODOT_DEFAULT_METALLIC,
-      roughness: GODOT_DEFAULT_ROUGHNESS,
+      metalness: DEFAULT_MATERIAL_METALLIC,
+      roughness: DEFAULT_MATERIAL_ROUGHNESS,
       side: THREE.FrontSide,
       userData: lightModesUserData(GODOT_DEFAULT_LIGHT_MODES),
     },
@@ -123,12 +132,10 @@ function needsPhysicalMaterial(scalars: StandardMaterial3DScalars): boolean {
     scalars.rim > 0 ||
     isAnisotropic(scalars) ||
     scalars.transmission > 0 ||
-    scalars.specular !== DEFAULT_SPECULAR
+    // The default 0.5 maps to three's fixed F0 of 0.04, so only another value needs `specularIntensity`.
+    scalars.specular !== BASE_MATERIAL_3D_DEFAULTS.specular
   );
 }
-
-/** `metallic_specular`'s default (`material.cpp:3941`), whose F0 is three's fixed 0.04. */
-const DEFAULT_SPECULAR = 0.5;
 
 /**
  * three's `specularIntensity` for Godot's dielectric F0 of `0.16 * specular * specular`
@@ -190,16 +197,21 @@ const CASTS_SHADOW_KEY = 'godotCastsShadow';
 
 /**
  * Surface state on `userData`, not as material props: the draw hooks apply billboard, shadow and
- * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO and height uniforms read theirs at
- * upload, and a decal reads the light modes and the specular occlusion. A fresh object per bag, as the `.tres` loader writes
- * keys into it.
+ * hash scale per draw group (`r3f/surfaceDrawHooks.ts`), the AO, height and edge-ramp uniforms read
+ * theirs at upload, and a decal reads the light modes and the specular occlusion. A fresh object per
+ * bag, as the `.tres` loader writes keys into it.
  */
 function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unknown> {
   return {
     [BILLBOARD_KEY]: surfaceBillboard(scalars),
     [CASTS_SHADOW_KEY]: scalars.castsShadow,
     ...alphaHashScaleUserData(scalars.alphaHashScale),
+    ...alphaAntialiasingUserData(scalars.alphaAntialiasing),
     ...ambientOcclusionUserData(scalars.aoLightAffect, scalars.aoTextureChannelMask),
+    ...metallicRoughnessChannelsUserData(
+      scalars.roughnessTextureChannelMask,
+      scalars.metallicTextureChannelMask
+    ),
     ...lightModesUserData(scalars),
     ...specularOcclusionUserData(scalars.disablesSpecularOcclusion),
     ...heightmapUserData(scalars.heightmap),
@@ -310,7 +322,8 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   const targetMap = renderTargetMapInjection(userData);
   const { heightmap } = scalars;
   const heightmapTexture = heightmap ? slot('heightmap_texture') : null;
-  const blend = materialBlendProps(scalars);
+  // Alpha antialiasing replaces the material's own blend mode (`scene_shader_forward_clustered.cpp:237-241`).
+  const blend = { ...materialBlendProps(scalars), ...alphaAntialiasingProps(scalars.alphaAntialiasing) };
   // `fromArray` keeps the values linear. A hex would go through
   // `setHex(…, SRGBColorSpace)` and decode these already-linear channels a
   // second time, rendering everything too dark.
@@ -378,6 +391,8 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
   const injection = composeInjections([
     lightModesInjection(scalars),
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
+    pbr.roughnessMap || pbr.metalnessMap ? GODOT_METALLIC_ROUGHNESS_CHANNELS : undefined,
+    pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),

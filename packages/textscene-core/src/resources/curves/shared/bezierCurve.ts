@@ -6,7 +6,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { ruleInt } from '../../../godot/variant/int.js';
+import { slotInt } from '../../../godot/variant/int.js';
 import { findSubResourceOfType, parseResourceReference } from '../../SubResourceResolver';
 import { readBezierData, type BezierDataFormat } from './bezierData';
 import { resizeBezierPoints } from './pointCount';
@@ -26,12 +26,9 @@ export interface BezierCurveReader<P> {
  * The control points of a Curve2D or Curve3D body. A `_data` that `_set_data` refuses,
  * or that does not parse, loads no points.
  */
-export function decodeBezierCurve<P>(
-  data: Readonly<Record<string, string>>,
-  reader: BezierCurveReader<P>
-): P[] {
+function decodeBezierCurve<P>(data: Readonly<Record<string, string>>, reader: BezierCurveReader<P>): P[] {
   const points = readControlPoints(data._data, reader);
-  const count = data.point_count === undefined ? null : ruleInt(data.point_count);
+  const count = data.point_count === undefined ? null : slotInt(data.point_count);
   return count === null ? points : resizeBezierPoints(points, count, reader.origin);
 }
 

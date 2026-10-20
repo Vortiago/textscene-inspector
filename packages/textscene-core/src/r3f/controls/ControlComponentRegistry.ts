@@ -92,7 +92,7 @@ export interface NativeControlComponentProps {
 
 export type NativeControlComponent = React.ComponentType<NativeControlComponentProps>;
 
-export interface ControlComponentRegistration {
+interface ControlComponentRegistration {
   typeName: string;
   /** The native (WebGL canvas) painter for this Control type. */
   Component: NativeControlComponent;

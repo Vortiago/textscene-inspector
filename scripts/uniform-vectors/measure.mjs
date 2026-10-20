@@ -10,17 +10,7 @@
  */
 
 import { resolve } from 'node:path';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
-import {
-  assertPortFree,
-  ensureWebBuilt,
-  killPreviewGroup,
-  settleCanvas,
-  startPreview,
-  waitForServer,
-  warmUpGLContext,
-} from '../visual/previewServer.mjs';
+import { settleCanvas, withPreviewBrowser } from '../visual/previewServer.mjs';
 import { openFixture } from '../e2e/openFixture.mjs';
 import { measuredScene } from './scenes.mjs';
 import { isSampler, packedVectors } from './packing.mjs';
@@ -128,15 +118,8 @@ async function measure(browser, baseUrl, scene) {
   }
 }
 
-async function main() {
-  ensureWebBuilt();
-  await assertPortFree(PORT, 'UNIFORM_VECTORS_PORT');
-  const { proc, baseUrl } = startPreview(PORT);
-  let browser;
-  try {
-    await waitForServer(`${baseUrl}/`);
-    browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-    await warmUpGLContext(browser);
+function main() {
+  return withPreviewBrowser({ port: PORT, portEnvName: 'UNIFORM_VECTORS_PORT' }, async (browser, baseUrl) => {
     console.log(
       '| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |'
     );
@@ -151,10 +134,7 @@ async function main() {
       console.log(`| ${label}${drawn} | ${standard.vectors} | ${physical.vectors} |`);
     }
     console.log(`\nThis Chromium reports MAX_FRAGMENT_UNIFORM_VECTORS = ${limit}. WebGL 2 guarantees 224.`);
-  } finally {
-    await browser?.close();
-    killPreviewGroup(proc);
-  }
+  });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename)) {

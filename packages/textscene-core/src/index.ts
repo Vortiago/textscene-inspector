@@ -1,90 +1,34 @@
 /**
  * The public entry point of `@textscene/core`, the TextScene Inspector library. It parses Godot .tscn files and renders
- * them with react-three-fiber. All visual and UI surface lives under `r3f/`.
+ * them with react-three-fiber. All visual and UI surface lives under `r3f/`. It re-exports only what a package
+ * outside core imports, so no export here exists for core's own tests.
  */
 
-// Parser + utilities
 export { TscnParser } from './parser/TscnParser';
+export type { TscnNode } from './parser/types';
 
-// Logging
-export { setLogAdapter, trace, debug, info, warn, error } from './logger';
-export type { LogAdapter, LogLevel } from './logger';
+export { setLogAdapter, info, warn } from './logger';
+export type { LogAdapter } from './logger';
 
-// Types
-export type { TscnScene, TscnNode } from './parser/types';
 export type { ResourceProvider } from './resources/ResourceProvider';
+export { isBinaryResourceType } from './resources/resourceProviderUtils';
 
-// Resource provider utilities
-export { isBinaryResourceType, stripResPrefix } from './resources/resourceProviderUtils';
-
-// R3F UI (Phase 14)
 export {
-  TscnCanvas,
-  TscnSceneContents,
-  NodeDispatcher,
-  type NodeDispatcherProps,
-  nodeComponentRegistry,
-  type NodeComponent,
-  type NodeComponentProps,
-  type NodeComponentRegistration,
-  SelectionProvider,
-  useSelection,
-  HierarchyProvider,
-  useHierarchy,
-  ViewportActionsProvider,
-  useViewportActions,
-  useOptionalViewportActions,
-  NodePathProvider,
-  useNodePath,
-  MissingResourcesProvider,
   useMissingResources,
-  type SelectionContextValue,
-  type SelectionProviderProps,
-  type HierarchyContextValue,
-  type HierarchyProviderProps,
-  type ViewportActionsContextValue,
-  type ViewportActionsProviderProps,
-  type NodePathProviderProps,
   type MissingResourcesContextValue,
-  type MissingResourcesProviderProps,
-  SceneTreeViewer,
-  type SceneTreeViewerProps,
-  NodeDetailsPanel,
-  MissingResourcesPanel,
-  type MissingResourcesPanelProps,
-  ViewportSelector,
-  type ViewportSelectorProps,
-  type ViewportSelectorOption,
   TscnPreviewShell,
-  type TscnPreviewShellProps,
   PENDING_CAPTURE,
   type PreviewCaptureState,
   COMPACT_LAYOUT_QUERY,
   isCompactLayout,
-  useViewportSelection,
-  type UseViewportSelectionOptions,
-  type UseViewportSelectionResult,
-  type DelegatedPointerHandlers,
   parseTscnContent,
-  type ParseResult,
   usePersistedState,
-  readPersisted,
-  writePersisted,
 } from './r3f/index';
 
-// Resource loading
-export { useResource, useResourceLoader } from './resources/useResource';
-export type { ResourceResult, ResourceStatus } from './resources/useResource';
-export type { ResourceBusType } from './resources/sliceRegistration';
-export { ResourceLoaderContext, ResourceLoaderProvider } from './resources/ResourceLoaderContext';
-export type { ResourceLoaderProviderProps } from './resources/ResourceLoaderContext';
+export { ResourceLoaderProvider } from './resources/ResourceLoaderContext';
 export { ResourceLoader } from './resources/ResourceLoader';
-export type { GltfExtensionRules } from './resources/formats/glb/types';
-export { FileEventBus } from './resources/FileEventBus';
-export type { FileData, FileLoadedHandler, FileFailedHandler } from './resources/FileEventBus';
 export { createResourcePipeline } from './resources/createResourcePipeline';
 export type { ResourcePipeline } from './resources/createResourcePipeline';
-export type { ResourceLoaderOptions } from './resources/ResourceLoader';
 export type { CreateJobWorker, JobWorker } from './workers/WorkerJobRunner';
 // A host that reads reported resource identities (a drop matcher keying on
 // basename, say) needs the file half, which core cannot normalise on its behalf.

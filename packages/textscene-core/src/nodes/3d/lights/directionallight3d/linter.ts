@@ -80,5 +80,3 @@ const directionalLight3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(directionalLight3DValidationRule);
-
-export { directionalLight3DValidationRule };

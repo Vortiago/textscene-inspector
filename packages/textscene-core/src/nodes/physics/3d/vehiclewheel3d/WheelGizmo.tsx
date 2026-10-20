@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
+import { degToRad } from '../../../../godot/math/math.js';
 
 /** Godot's `skip`: degrees per circle segment. */
 const SKIP = 10;
@@ -41,8 +42,8 @@ function buildWheelGizmo(radius: number, restLength: number): Float32Array {
   const section = t / SPRING_SECTIONS;
 
   for (let i = 0; i <= 360; i += SKIP) {
-    const ra = (i * Math.PI) / 180;
-    const rb = ((i + SKIP) * Math.PI) / 180;
+    const ra = degToRad(i);
+    const rb = degToRad(i + SKIP);
     const ax = Math.sin(ra) * r;
     const ay = Math.cos(ra) * r;
     const bx = Math.sin(rb) * r;

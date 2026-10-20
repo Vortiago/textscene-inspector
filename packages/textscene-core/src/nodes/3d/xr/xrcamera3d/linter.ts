@@ -49,5 +49,3 @@ const xrCamera3DParentRule: LintRule = {
 };
 
 ruleRegistry.register(xrCamera3DParentRule);
-
-export { xrCamera3DParentRule };

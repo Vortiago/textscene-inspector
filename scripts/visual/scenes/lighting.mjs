@@ -17,6 +17,8 @@ export const LIGHTING_SCENES = [
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
+  // `tonemap_exposure` under LINEAR with no compositor: three draws the curve per material.
+  { name: 'environment-linear-exposure', file: 'unit-environment-linear-exposure.tscn' },
   { name: 'glow-specular', file: 'unit-glow-specular.tscn' },
   { name: 'glow-map', file: 'unit-glow-map.tscn' },
   // A 4x4 checkerboard on two quads carries far more edge than a
@@ -27,9 +29,16 @@ export const LIGHTING_SCENES = [
   // sphere. A normal map, or a missing displacementMap, reads as a flat ball.
   { name: 'material-heightmap', file: 'unit-material-heightmap.tscn' },
   { name: 'world-environment', file: 'unit-world-environment-basic.tscn' },
+  // A WorldEnvironment that names no Environment: the root tonemaps LINEAR, as Godot's does.
+  { name: 'world-environment-none', file: 'unit-world-environment-none.tscn' },
+  // A WorldEnvironment whose Environment .tres is missing draws as one that names none.
+  { name: 'world-environment-missing', file: 'unit-world-environment-missing.tscn' },
+  // Two WorldEnvironments: the first in tree order applies, though it loads from a sub-scene last.
+  { name: 'world-environment-tree-order', file: 'unit-world-environment-tree-order.tscn' },
   // Exponential depth fog over boxes at three distances. The header states why no other golden
   // shows it.
   { name: 'depth-fog', file: 'unit-depth-fog.tscn' },
+  { name: 'depth-fog-orthographic', file: 'unit-depth-fog-orthographic.tscn', camera: 'Root/Camera3D' },
   // The Environment's brightness, contrast and saturation over an unshaded box. The header states
   // why no other golden shows them.
   { name: 'environment-adjustments', file: 'unit-environment-adjustments.tscn' },
@@ -43,6 +52,8 @@ export const LIGHTING_SCENES = [
   { name: 'volumetric-fog-shadow', file: 'unit-volumetric-fog-shadow.tscn' },
   // The spot shadow bias in the volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-spot-shadow-bias', file: 'unit-volumetric-fog-spot-shadow-bias.tscn' },
+  // A shadowed spot's origin inside the volumetric fog in view. The header states why no other golden shows it.
+  { name: 'volumetric-fog-spot-origin', file: 'unit-volumetric-fog-spot-origin.tscn', camera: 'Root/Camera' },
   // A colour background under thin volumetric fog. The header states why no other golden shows it.
   { name: 'volumetric-fog-color-background', file: 'unit-volumetric-fog-color-background.tscn' },
   // A box FogVolume in the volumetric fog. The header states why no other golden shows it.
@@ -54,6 +65,9 @@ export const LIGHTING_SCENES = [
   // states why no other golden shows it.
   { name: 'fog-volume-density-volume-tres', file: 'unit-fog-volume-density-volume-tres.tscn' },
   { name: 'fog-volume-density-half-tres', file: 'unit-fog-volume-density-half-tres.tscn' },
+  // A FogVolume whose ShaderMaterial Godot cannot run as fog. The header states why no other
+  // golden shows it.
+  { name: 'fog-volume-shader-material', file: 'unit-fog-volume-shader-material.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.
@@ -73,7 +87,11 @@ export const LIGHTING_SCENES = [
   // the sun disc are legible. Both carry their own light and environment, so
   // they also pin that both previews yield.
   { name: 'sky-procedural', file: 'unit-sky-procedural.tscn' },
+  { name: 'sky-orthographic', file: 'unit-sky-orthographic.tscn', camera: 'Root/Camera3D' },
+  { name: 'sky-debanding-off', file: 'unit-sky-debanding-off.tscn', camera: 'Root/Camera3D' },
   { name: 'sky-physical', file: 'unit-sky-physical.tscn' },
+  // A 3 degree sun in the procedural sky, which Godot draws as a disc of that angular size.
+  { name: 'sky-sun-angular-distance', file: 'unit-sky-sun-angular-distance.tscn' },
   // The procedural sky at sky_energy_multiplier 2, which Godot applies before the linear conversion.
   { name: 'sky-energy', file: 'unit-sky-energy.tscn' },
   // The procedural sky with Real-Time processing, which Godot bakes with its fast filter. The

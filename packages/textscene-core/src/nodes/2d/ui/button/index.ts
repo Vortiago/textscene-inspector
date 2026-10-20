@@ -10,6 +10,5 @@ const buttonRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(buttonRegistration);
 
-export { buttonRegistration };
 export * from './parser';
 export * from './types';

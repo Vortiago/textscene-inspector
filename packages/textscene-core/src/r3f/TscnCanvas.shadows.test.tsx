@@ -2,7 +2,7 @@
  * The preview canvas asks for the shadow type three 0.186 draws. happy-dom lays no
  * element out, so a mounted `<Canvas>` never configures a renderer: the source
  * read pins what the JSX asks for, and the probe pins what that ask becomes, as
- * `World2DCanvas.test.tsx` pins its canvas flags.
+ * `World2DCanvas.test.ts` pins its canvas flags.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -50,6 +50,22 @@ function ShadowMapProbe({ seen }: { seen: { type: THREE.ShadowMapType; enabled: 
   seen.enabled = shadowMap.enabled;
   return null;
 }
+
+describe('<TscnCanvas> multisampling', () => {
+  it("asks for a drawing buffer with no multisampling, as Godot's msaa_3d defaults to Disabled", () => {
+    // rendering_server.cpp:3774. A project that turns MSAA on gets it from the compositor's
+    // multisampled buffer, never from the drawing buffer.
+    expect(CANVAS_TAG).toMatch(/antialias:\s*false/);
+  });
+});
+
+describe('<TscnCanvas> tone mapping', () => {
+  it('asks for no tone curve of its own, as Godot draws a root with no Environment linear', () => {
+    // tone_mapper.h:177 defaults to LINEAR, and only an Environment changes it
+    // (renderer_scene_render_rd.cpp:724-731). R3F applies ACES unless the canvas is `flat`.
+    expect(CANVAS_TAG).toMatch(/\sflat[\s>]/);
+  });
+});
 
 describe('<TscnCanvas> shadows', () => {
   it('asks the <Canvas> for the percentage preset', () => {

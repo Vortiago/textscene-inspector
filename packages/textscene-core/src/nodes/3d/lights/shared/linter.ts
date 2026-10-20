@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { hasNonUnitScale3D } from '../../../../linter/transformBasis.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -39,12 +39,10 @@ const light3DScaleValidationRule: LintRule = {
     description:
       "Mirrors Light3D::get_configuration_warnings' own-scale check across every concrete light type",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Light3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'Light3D'),
     emits: armEmits(arms),
   },
   check: checkLight3DScale,
 };
 
 ruleRegistry.register(light3DScaleValidationRule);
-
-export { light3DScaleValidationRule };

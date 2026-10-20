@@ -4,15 +4,16 @@
  * `StyleBoxTexture::draw` (`scene/resources/style_box_texture.cpp:165-184`).
  */
 
-export const NINE_PATCH_STRETCH = 0;
-export const NINE_PATCH_TILE = 1;
-export const NINE_PATCH_TILE_FIT = 2;
+import { AxisStretchMode } from '../../../godot/scene/gui';
 
-/** `NinePatchRect::AxisStretchMode` / `StyleBoxTexture::AxisStretchMode` (both 0/1/2, same order). */
-export type NinePatchAxisMode =
-  typeof NINE_PATCH_STRETCH | typeof NINE_PATCH_TILE | typeof NINE_PATCH_TILE_FIT;
+/** A stored axis stretch mode, with an absent or unknown value read as `STRETCH`. */
+export function axisStretchModeOf(value: number | undefined): AxisStretchMode {
+  return value === AxisStretchMode.TILE || value === AxisStretchMode.TILE_FIT
+    ? value
+    : AxisStretchMode.STRETCH;
+}
 
-export interface NinePatchMargins {
+interface NinePatchMargins {
   left: number;
   top: number;
   right: number;
@@ -35,8 +36,8 @@ export interface NinePatchInput {
   /** The source window's size; equals `textureSize` when no region is authored. */
   regionSize: { x: number; y: number };
   margin: NinePatchMargins;
-  axisH: NinePatchAxisMode;
-  axisV: NinePatchAxisMode;
+  axisH: AxisStretchMode;
+  axisV: AxisStretchMode;
   drawCenter: boolean;
 }
 
@@ -70,7 +71,7 @@ function solveAxisCells(
   marginEnd: number,
   regionOrigin: number,
   regionSize: number,
-  mode: NinePatchAxisMode
+  mode: AxisStretchMode
 ): AxisCell[] {
   const cells: AxisCell[] = [];
   if (drawSize <= 0 || regionSize <= 0) return cells;
@@ -103,7 +104,7 @@ function solveAxisCells(
     const midSrcEnd = regionOrigin + regionSize - marginEnd;
 
     if (midSourceLen > 0) {
-      if (mode === NINE_PATCH_STRETCH) {
+      if (mode === AxisStretchMode.STRETCH) {
         // An affine ratio map, like three's UV interpolation, so one quad is exact.
         cells.push({
           destStart: beginW,
@@ -112,7 +113,7 @@ function solveAxisCells(
           srcEnd: midSrcEnd,
           isMiddle: true,
         });
-      } else if (mode === NINE_PATCH_TILE) {
+      } else if (mode === AxisStretchMode.TILE) {
         // `ofs = mod(pixel - margin_begin, mid_source_len)` (`:453-455`): an
         // unscaled repeat, `midSourceLen`-wide dest cells showing the whole
         // strip, plus a final partial cell cropped from the strip's start

@@ -18,25 +18,35 @@ import type {
 import type { SolveNode, ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
 import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import {
-  shapeText,
-  shapedTextSizeWidthPx,
-  AutowrapMode,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../r3f/controls/godotDefaultTheme';
+import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { TscnNode } from '../../../../parser/types';
-import type { ControlColor } from '../control/types';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  type Rgba,
+} from '../../../../godot/math/math';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_HOVER_COLOR,
+  CONTROL_FONT_PLACEHOLDER_COLOR,
+} from '../../../../godot/scene/theme';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /**
  * LineEdit's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:419`). This
@@ -45,7 +55,7 @@ import type { LineEditProperties } from './types';
 export const LINE_EDIT_THEME_FONT_KEY = 'font';
 
 /** `LineEdit::get_draw_mode`'s stylebox axis: the `theme_override_styles/*` key, and default-theme box, that the node's current `editable` selects. */
-export type LineEditStyleState = 'normal' | 'read_only';
+type LineEditStyleState = 'normal' | 'read_only';
 
 /** `editable ?? true` (Godot's `LineEdit.editable` default) as the stylebox key it selects. */
 export function resolveLineEditStyleState(editable: boolean | undefined): LineEditStyleState {
@@ -67,7 +77,7 @@ export function pickLineEditStyleBox(
  * placeholder reads `font_placeholder_color` whatever its `editable`, so the placeholder test runs
  * first, in `_shape()`'s branch order (`displayText.ts`).
  */
-export type LineEditTextState = 'normal' | 'read_only' | 'placeholder';
+type LineEditTextState = 'normal' | 'read_only' | 'placeholder';
 
 /** `using_placeholder` wins over `editable`: a placeholder is never editable or read-only text. */
 export function resolveLineEditTextState(
@@ -85,22 +95,22 @@ const LINE_EDIT_THEME_KEYS: Record<LineEditTextState, TextThemeKeys> = {
   placeholder: { sizeKey: 'font_size', colorKey: 'font_placeholder_color' },
 };
 
-/** `control_font_color` = `Color(0.875, 0.875, 0.875)` (`default_theme.cpp:101`), LineEdit's own `font_color` default (`:422`). */
-export const LINE_EDIT_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+/** LineEdit's own `font_color` default (`default_theme.cpp:422`). */
+export const LINE_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 
-/** `control_font_disabled_color = control_font_color * Color(1, 1, 1, 0.5)` (`:106`): LineEdit's `font_uneditable_color` default (`:424`). */
-export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.5 };
+/** LineEdit's `font_uneditable_color` default (`default_theme.cpp:424`). */
+export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-/** `control_font_placeholder_color = Color(control_font_color.rgb, 0.6)` (`:107`): LineEdit's `font_placeholder_color` default (`:425`). */
-export const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 0.6 };
+/** LineEdit's `font_placeholder_color` default (`default_theme.cpp:425`). */
+const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
 
-/** `control_font_color`, LineEdit's `clear_button_color` default too (`default_theme.cpp:429`). */
-export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR: ControlColor = LINE_EDIT_DEFAULT_FONT_COLOR;
+/** LineEdit's `clear_button_color` default (`default_theme.cpp:429`). */
+export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR = CONTROL_FONT_COLOR;
 
-/** `control_font_hover_color = Color(0.95, 0.95, 0.95)` (`default_theme.cpp:104`): LineEdit's `caret_color` default (`:427`). */
-export const LINE_EDIT_DEFAULT_CARET_COLOR: ControlColor = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
+/** LineEdit's `caret_color` default (`default_theme.cpp:427`). */
+export const LINE_EDIT_DEFAULT_CARET_COLOR = CONTROL_FONT_HOVER_COLOR;
 
-const LINE_EDIT_DEFAULT_COLORS: Record<LineEditTextState, ControlColor> = {
+const LINE_EDIT_DEFAULT_COLORS: Record<LineEditTextState, Rgba> = {
   normal: LINE_EDIT_DEFAULT_FONT_COLOR,
   read_only: LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
   placeholder: LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
@@ -122,8 +132,8 @@ export function lineEditTextTheme(
 
 /** `LineEdit::ExpandMode` (line_edit.cpp:3527 hint; `BIND_ENUM_CONSTANT` line_edit.cpp:3479-3481). */
 export const EXPAND_MODE_ORIGINAL_SIZE = 0;
-export const EXPAND_MODE_FIT_TO_TEXT = 1;
-export const EXPAND_MODE_FIT_TO_LINE_EDIT = 2;
+const EXPAND_MODE_FIT_TO_TEXT = 1;
+const EXPAND_MODE_FIT_TO_LINE_EDIT = 2;
 
 /** `caret_width` theme constant default (`default_theme.cpp:434`). */
 const DEFAULT_CARET_WIDTH = 1;
@@ -135,12 +145,12 @@ const DEFAULT_CARET_WIDTH = 1;
  * applies only in FIT_TO_LINE_EDIT (`:403`).
  */
 export function lineEditRightIconSize(
-  naturalSize: Vec2,
+  naturalSize: Vector2,
   iconExpandMode: number,
   fontHeightPx: number,
-  controlSize: Vec2 | null,
+  controlSize: Vector2 | null,
   rightIconScale: number
-): Vec2 {
+): Vector2 {
   switch (iconExpandMode) {
     case EXPAND_MODE_FIT_TO_TEXT:
       return { x: fontHeightPx, y: fontHeightPx };
@@ -220,7 +230,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
           shapeText(displayed, {
             fontSizePx,
             boxWidthPx: 0,
-            autowrapMode: AutowrapMode.OFF,
+            autowrapMode: AutowrapMode.AUTOWRAP_OFF,
             lineSpacingPx: 0,
             fontMetrics,
             preserveControl: props.drawControlChars,
@@ -234,7 +244,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   let height = fontHeightPx;
   let iconMaxWidth = 0;
   const tentative = ctx.tentativeRect?.(n);
-  const controlSize: Vec2 | null = tentative ? { x: tentative.w, y: tentative.h } : null;
+  const controlSize: Vector2 | null = tentative ? { x: tentative.w, y: tentative.h } : null;
   const iconExpandMode = props.iconExpandMode ?? EXPAND_MODE_ORIGINAL_SIZE;
   const rightIconScale = props.rightIconScale ?? 1;
 
@@ -274,14 +284,9 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
 
 // Draw-time layout: the content rect for clipping and the text pen offset.
 
-const HORIZONTAL_ALIGNMENT_LEFT = 0;
-const HORIZONTAL_ALIGNMENT_CENTER = 1;
-const HORIZONTAL_ALIGNMENT_RIGHT = 2;
-const HORIZONTAL_ALIGNMENT_FILL = 3;
-
-export interface LineEditContentInput {
+interface LineEditContentInput {
   /** This Control's own solved rect size, Godot px. */
-  rectSize: Vec2;
+  rectSize: Vector2;
   /** The active StyleBox's content margins (`style->get_margin(SIDE_*)`), not the max of both that `lineEditMinimumSize` floors against. */
   styleMargin: { left: number; top: number; right: number; bottom: number };
   /** `HorizontalAlignment` (`alignment` property). */
@@ -298,11 +303,11 @@ export interface LineEditContentInput {
   rtl?: boolean;
 }
 
-export interface LineEditContentLayout {
+interface LineEditContentLayout {
   /** The glyph clip rect: this rect inset by `styleMargin`, and by the active icon's width on its side, floored at a zero extent. */
   contentRect: Rect2;
   /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there (`buildGlyphQuadArrays`). */
-  textOffset: Vec2;
+  textOffset: Vector2;
   /** `ofs_max` (`line_edit.cpp:1420,1482`): the rightmost x a glyph pen may reach, and RIGHT alignment's caret fallback x (`lineEditCaretRect`). */
   ofsMaxPx: number;
 }
@@ -395,7 +400,7 @@ export function layoutLineEditContent(input: LineEditContentInput): LineEditCont
  * `font->get_height(font_size)` (`:1553`) equals `text_height`, and an empty field has no layout.
  */
 export function lineEditCaretRect(input: {
-  rectSize: Vec2;
+  rectSize: Vector2;
   styleMargin: { left: number; top: number; right: number; bottom: number };
   alignment: number;
   fontHeightPx: number;

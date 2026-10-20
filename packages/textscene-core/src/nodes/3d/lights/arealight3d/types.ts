@@ -2,14 +2,14 @@
 
 import type { Node3DProperties } from '../../../base/node3d/types';
 import type { PositionalLightProperties } from '../shared/types';
-import type { Vector2 } from '../../../../parser/vectors';
+import type { Vector2 } from '../../../../godot/math/vector';
 
 /** AreaLight3D properties: Light3D plus the rectangle. */
 export interface AreaLight3DProperties extends Node3DProperties, PositionalLightProperties {
-  /** The AreaLight3D default is 1.0, where the other lights default to 0.5. */
+  /** Required: the parser fills AreaLight3D's own default, which differs from Light3D's. */
   light_specular: number;
 
-  /** The penumbra's size: a soft shadow spreads over it. The AreaLight3D default is 0.5. */
+  /** The penumbra's size: a soft shadow spreads over it. The parser fills AreaLight3D's own default. */
   light_size: number;
 
   /** The distance at which the light reaches zero, from the closest point of the rectangle. */

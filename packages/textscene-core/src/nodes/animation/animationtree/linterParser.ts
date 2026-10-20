@@ -10,8 +10,7 @@
 import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { shape, v } from '../../../linter/validators/index.js';
-
-const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
+import { ANIMATION_CALLBACK_MODE_PROCESS_NAMES } from '../../../godot/scene/animation.js';
 
 validatorRegistry.registerAll('AnimationTree', {
   // animation_tree.cpp:1018, PROPERTY_HINT_RESOURCE_TYPE "AnimationRootNode":
@@ -25,7 +24,7 @@ validatorRegistry.registerAll('AnimationTree', {
   // through the base walk. The 3.x compat alias below is AnimationTree's own:
   // animation_player.cpp:57-58, redirected through callback_mode_process
   // (animation_mixer.cpp:501-509), a bare assignment with no range check on the raw int.
-  process_callback: v.enumInt('process_callback', 0, 2, PROCESS_MODE, {
+  process_callback: v.enumInt('process_callback', ANIMATION_CALLBACK_MODE_PROCESS_NAMES, {
     hinted: 'animation_mixer.cpp:2471',
   }),
   // animation_tree.cpp:1019, PROPERTY_HINT_NODE_PATH_VALID_TYPES "Node".

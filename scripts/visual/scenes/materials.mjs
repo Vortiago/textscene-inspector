@@ -8,6 +8,9 @@ export const MATERIAL_SCENES = [
   { name: 'material-diffuse-mode', file: 'unit-material-diffuse-mode.tscn' },
   { name: 'material-specular-mode', file: 'unit-material-specular-mode.tscn' },
   { name: 'material-normal-map', file: 'unit-material-normal-map.tscn' },
+  // A normal map with blue 0: Godot rebuilds blue from red and green, so the flat texel shades as the
+  // bare plane. A read of the stored blue turns that half dark.
+  { name: 'material-normal-map-blue', file: 'unit-material-normal-map-blue.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
@@ -44,6 +47,9 @@ export const MATERIAL_SCENES = [
   // Sprite2D, Sprite3D and 3D physics bodies.
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // An AtlasTexture crop of a normal-map sheet, minified: Godot samples the sheet's renormalised
+  // chain, so the crop draws the same 45-degree colour as the sheet. An unnormalised crop draws duller.
+  { name: 'atlastexture-normal-mipmap', file: 'unit-atlastexture-normal-mipmap.tscn', mode: '2d' },
   // A region_rect bigger than its texture: Godot clips neither, so the sampler
   // decides the overrun, and the two families disagree. A pair, so the shared UV
   // compositor cannot be "fixed" to agree with the wrong one.
@@ -81,6 +87,21 @@ export const MATERIAL_SCENES = [
   // The saved format of an albedo ImageTexture: the same greys as Lum8, which has no sRGB view and
   // reads raw, over RGB8, which reads as sRGB. A format read the wrong way darkens or lifts a strip.
   { name: 'material-albedo-image-format', file: 'unit-material-albedo-image-format.tscn' },
+  // The import format of an albedo image file: a greyscale PNG with no sidecar imports as Lum8 and
+  // reads raw, the same PNG VRAM compressed reads as sRGB, as does an RGB PNG, and an RGB PNG imported
+  // as an RGTC normal map reads red and green raw with blue 0. A wrong read shifts a strip.
+  { name: 'material-albedo-image-import', file: 'unit-material-albedo-image-import.tscn' },
+  // The mip chain of an imported image, which Godot builds on the CPU: a red and green checker
+  // averages its bytes to a dark yellow, and a normal map renormalises each level. A chain averaged
+  // in linear space brightens the checker, and one left unnormalised tilts the lit strip less.
+  { name: 'material-mipmap-import', file: 'unit-material-mipmap-import.tscn' },
+  // The roughness limiter on an imported roughness map's chain: the left sphere's sidecar names its
+  // normal map, so its minified highlight spreads and dims. A chain left unlimited keeps it tight.
+  { name: 'material-roughness-limiter', file: 'unit-material-roughness-limiter.tscn' },
+  // The channel a roughness or metallic map is read from: one map holds red 20 and green and blue
+  // 235, read from red. A green roughness read turns the left sphere matte, and a blue metallic read
+  // turns the right one metal.
+  { name: 'material-texture-channel', file: 'unit-material-texture-channel.tscn' },
   // A wrapped albedo texture: an AtlasTexture binds its whole sheet, not its region, and a
   // CanvasTexture binds Godot's white default. A cropped sheet or a drawn diffuse shows at once.
   { name: 'material-albedo-atlas-texture', file: 'unit-material-albedo-atlas-texture.tscn' },
@@ -93,6 +114,9 @@ export const MATERIAL_SCENES = [
   // Decal `texture_albedo` as an AtlasTexture: a decal takes the texture's RID, so it projects the
   // whole sheet. A cropped region projects one red square.
   { name: 'decal-atlas-texture', file: 'unit-decal-atlas-texture.tscn' },
+  // A minified decal over an import with no mipmaps: the atlas halves each level in bytes, so the
+  // red and green checker draws dark yellow. A chain averaged in linear space draws it brighter.
+  { name: 'decal-mipmap-import', file: 'unit-decal-mipmap-import.tscn' },
   // The one MeshInstance3D material from an external `.tres`, and the one
   // roughness map with contrast: a glossy cap and a rough one meet at a hard
   // seam. If the map fails to arrive, both caps go matte. Other roughness

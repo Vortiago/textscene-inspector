@@ -6,7 +6,9 @@
  */
 
 import { warn } from '../../logger';
-import { indexedKeyRegex, parseGodotInt, stringToInt } from '../../godot/index.js';
+import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
+import { parseGodotInt } from '../../godot/variant/int.js';
+import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { ARRAY_MESH_TYPES } from '../meshes/arraymesh/decode';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';

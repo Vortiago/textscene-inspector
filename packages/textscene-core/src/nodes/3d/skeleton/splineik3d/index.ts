@@ -13,5 +13,3 @@ const splineIK3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(splineIK3DRegistration);
-
-export { splineIK3DRegistration };

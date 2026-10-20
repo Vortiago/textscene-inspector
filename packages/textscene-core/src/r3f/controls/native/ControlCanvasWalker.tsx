@@ -28,7 +28,7 @@ import {
   useEffectiveZ,
 } from '../../lighting2d/canvasItemPlacement';
 
-export interface ControlCanvasWalkerProps {
+interface ControlCanvasWalkerProps {
   tree: readonly SolveNode[];
   /** Bumps when a sub-scene or texture resolves (`buildSolveTree`), so the memo below re-solves. */
   generation: number;

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { LIGHT_SHADOW_NORMAL_BIAS_DEFAULT } from '../../scene/light';
 import {
   positionalLightBounds,
   positionalShadowNear,
@@ -24,7 +23,7 @@ describe('positionalShadowNear', () => {
 
 describe('positionalShadowNormalBias', () => {
   it('is the default bias times ten texels of the largest root slot', () => {
-    expect(positionalShadowNormalBias(LIGHT_SHADOW_NORMAL_BIAS_DEFAULT, 1024)).toBeCloseTo(10 / 1024, 12);
+    expect(positionalShadowNormalBias(1, 1024)).toBeCloseTo(10 / 1024, 12);
   });
 
   it('doubles when the slot halves', () => {
@@ -60,7 +59,7 @@ describe('positionalLightBounds', () => {
   });
 
   it('is the cone along -Z for a spot light', () => {
-    const { min, max } = positionalLightBounds(10, 30);
+    const { min, max } = positionalLightBounds(10, Math.PI / 6);
     expect(min[0]).toBeCloseTo(-5, 12);
     expect(min[2]).toBe(-10);
     expect(max[1]).toBeCloseTo(5, 12);
@@ -68,7 +67,7 @@ describe('positionalLightBounds', () => {
   });
 
   it('is the whole cube for a spot light wider than a hemisphere (edge case)', () => {
-    expect(positionalLightBounds(2, 100)).toEqual({ min: [-2, -2, -2], max: [2, 2, 2] });
+    expect(positionalLightBounds(2, 1.8)).toEqual({ min: [-2, -2, -2], max: [2, 2, 2] });
   });
 
   it('carries a non-finite angle into the box (error case)', () => {

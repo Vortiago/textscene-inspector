@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { POLYLINE_FEATHER_SIZE, polylineStrokeGeometry } from './polylineStroke';
+import { polylineStrokeGeometry } from './polylineStroke';
 
 const RED = { r: 1, g: 0, b: 0, a: 1 };
 const BLUE = { r: 0, g: 0, b: 1, a: 1 };
@@ -59,7 +59,21 @@ describe('polylineStrokeGeometry — antialiased', () => {
   );
 
   it('scales the feather by the width below 1px (:1031-1034)', () => {
-    expect(POLYLINE_FEATHER_SIZE).toBe(1.25);
+    // FEATHER_SIZE is 1.25 (renderer_canvas_cull.cpp:45), so a 0.5px line feathers 0.625 past its half-width.
+    expect(xy(geometry.positions).slice(8, 17)[3]).toEqual([0, -0.25 - 0.625]);
+  });
+
+  it('feathers the whole FEATHER_SIZE from 1px up', () => {
+    const wide = polylineStrokeGeometry(
+      [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+      ],
+      [RED, BLUE],
+      2,
+      true
+    );
+    expect(xy(wide.positions).slice(8, 17)[3]).toEqual([0, -1 - 1.25]);
   });
 
   it('adds a begin and an end cap to the core strip, both fully transparent (:1113-1143)', () => {

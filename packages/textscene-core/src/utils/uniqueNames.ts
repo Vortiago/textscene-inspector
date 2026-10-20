@@ -6,7 +6,7 @@
  */
 
 import type { RawNode } from '../parser/types.js';
-import { boolSlotValue } from '../godot/index.js';
+import { boolSlotValue } from '../godot/variant/variantBool.js';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
 
 /** The node a `%Name` addresses, with the two spellings of the path that reaches it. */
@@ -34,7 +34,7 @@ export function isUniqueNameInOwner(node: RawNode): boolean {
  * What one walk over `roots` learns about ownership: this root's claim table, plus the two facts a
  * per-owner table over composed instanced content is built from.
  */
-export interface UniqueNameOwnership {
+interface UniqueNameOwnership {
   /** `%Name` → claim, for the nodes this file's root owns. */
   readonly claims: ReadonlyMap<string, UniqueNameClaim>;
   /**
@@ -51,7 +51,7 @@ export interface UniqueNameOwnership {
  * the same walk decides. `path` looks up in an authored tree's `nodeByPath` map, and `livePath`
  * in the composed render tree's.
  */
-export function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
+function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
   const claims = new Map<string, UniqueNameClaim>();
   const instanceClaims = new Map<string, UniqueNameClaim[]>();
   const ownedInsideInstances = new Set<string>();

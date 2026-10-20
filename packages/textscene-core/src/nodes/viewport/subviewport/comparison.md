@@ -9,7 +9,9 @@ renders_as: an offscreen render target, plus a boundary that scopes its canvas s
 
 # SubViewport
 
-A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0033). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass. Each target keeps its own positional shadow atlas, sized by `positional_shadow_atlas_size` and the four `positional_shadow_atlas_quad_*` keys, as each Godot viewport does. A ViewportTexture on a `.glb` surface override resolves its `viewport_path` from the GLB instance, its local scene in Godot (`packed_scene.cpp:707`).
+A Viewport that renders its subtree into an offscreen target for a `ViewportTexture` to sample (ADR-0033). It draws nothing itself. Its Node3D descendants still draw in the parent's 3D view unless `own_world_3d` is set, and its CanvasItem descendants draw only in the target. A Control-only subtree renders through its own WebGL pass. Each target keeps its own positional shadow atlas, sized by `positional_shadow_atlas_size` and the four `positional_shadow_atlas_quad_*` keys, as each Godot viewport does. `msaa_3d` multisamples a 3D target and `msaa_2d` a canvas target. Each takes the closest count at or below the mode that the device supports for the target's own colour storage, as Godot's driver does (`rendering_device_driver_vulkan.cpp:1999`). A ViewportTexture on a `.glb` surface override resolves its `viewport_path` from the GLB instance, its local scene in Godot (`packed_scene.cpp:707`).
+
+A target that holds canvas content, 2D-world items or Controls, stores 8-bit sRGB bytes, as Godot's non-HDR `R8G8B8A8_UNORM` target does (`texture_storage.cpp:3568-3569`). Translucent content blends in those stored numbers, as on the main canvas (`renderer_canvas_render_rd.cpp:671,729`). Each target offers Godot's two views of its storage. A canvas consumer filters the plain view's bytes and multiplies them in sRGB (`texture_storage.cpp:754`). A `source_color` material slot samples the sRGB view, which decodes each texel before the filter (`material_storage.cpp:1067,1073`). A 3D-content target stores its tonemapped render in SRGB8 and serves it as both views.
 
 ## Linting
 
@@ -29,17 +31,20 @@ Strict parsing format-checks these `SubViewport` properties, plus 47 inherited f
 | `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
 <!-- lint:end -->
 
-Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
+Strict and lenient parsing diverge only on out-of-range enums. The lenient parser warns and falls back to Godot's default (`render_target_update_mode` 2, `render_target_clear_mode` 0, `msaa_2d` 0, `msaa_3d` 0, `canvas_item_default_texture_filter` 1), while the strict parser reports an error. A `size` Godot cannot read at all falls back to `Vector2i(512, 512)`. A component below 2 is a strict error, because `Viewport::_set_size` raises it (`viewport.cpp:1120`).
 
 ## Known limitations
 
 - **Approximated** A sub-viewport holding both 2D and 3D content shows its 3D half only, since the renderer draws one workspace at a time.
 - **Approximated** `render_target_update_mode` and `render_target_clear_mode` do not gate the pass, so the target is re-rendered and cleared every frame.
-- **Approximated** `msaa_3d`, `use_debanding` and `canvas_item_default_texture_filter` do not affect the target, which renders at `size` with linear filtering.
-- **Approximated** A shared-world target takes the environment's tone curve but not its glow or `adjustment_*`, which Godot also runs inside the target.
+- **Approximated** `use_debanding` and `canvas_item_default_texture_filter` do not affect the target, which renders at `size` with linear filtering.
+- **Approximated** A shared-world target takes the environment's tone curve and exposure but not its glow or `adjustment_*`, which Godot also runs inside the target.
+- **Approximated** An `own_world_3d` target's own Environment neither tonemaps nor glows it, where Godot tonemaps each viewport with its own world's Environment.
+- **Approximated** A multisampled 3D target resolves after the tone curve, where Godot resolves in linear HDR before it (`render_forward_clustered.cpp:2402`, `:2514`).
 - **Approximated** Selection highlights and gizmos leak into a shared-world target, because that target is a render of the main scene.
 - **Approximated** A consumer surface inside its own viewport's frustum samples a target still being written, with a driver-defined result.
 - **Not drawn** A `TextureRect` draws nothing for a `ViewportTexture`, which only a material's texture slots and `Sprite2D.texture` accept.
 - **Approximated** `use_hdr_2d` is not read, so an HDR canvas composites differently.
+- **Approximated** A canvas consumer of a 3D-content target filters and multiplies it in linear light, where Godot filters its sRGB bytes.
 - **Needs runtime** A viewport whose camera or world is assigned by script shows only its clear colour in 3D, and frames from the origin in 2D.
 - **Shader missing** A sub-viewport's 2D content draws unlit, so its own Light2D and LightOccluder2D nodes have no effect.

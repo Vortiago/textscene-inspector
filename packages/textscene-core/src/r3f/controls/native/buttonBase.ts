@@ -10,23 +10,22 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { ControlColor } from '../../../nodes/2d/ui/control/types';
-import { multiplyModulate, type RGBA } from '../../canvasItemModulate';
+import { multiplyModulate } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
-import { AutowrapMode, shapeText, type TextLayoutResult } from './text/textLayout';
-export { tintStyleBox } from './StyleBoxQuad';
-import type { Rect2, Vec2 } from './rect';
-
-// --- Godot alignment enums (scene/gui/control.h: HorizontalAlignment / VerticalAlignment) ---
-
-export const HORIZONTAL_ALIGNMENT_LEFT = 0;
-export const HORIZONTAL_ALIGNMENT_CENTER = 1;
-export const HORIZONTAL_ALIGNMENT_RIGHT = 2;
-
-export const VERTICAL_ALIGNMENT_TOP = 0;
-export const VERTICAL_ALIGNMENT_CENTER = 1;
-export const VERTICAL_ALIGNMENT_BOTTOM = 2;
+import { shapeText, type TextLayoutResult } from './text/textLayout';
+import type { Rect2 } from './rect';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+  VERTICAL_ALIGNMENT_BOTTOM,
+  VERTICAL_ALIGNMENT_CENTER,
+  VERTICAL_ALIGNMENT_TOP,
+  type Rgba,
+} from '../../../godot/math/math';
+import type { Vector2 } from '../../../godot/math/vector';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
 
@@ -59,8 +58,8 @@ export function pickButtonStyleBox(
   return overrides[state] ?? defaults[state];
 }
 
-/** The same componentwise multiply as `tintStyleBox`'s two colours, for a single `ControlColor` (font/icon modulate). */
-export function tintColor(base: ControlColor, tint: RGBA): ControlColor {
+/** The same componentwise multiply `<StyleBoxQuad>` applies to a StyleBox's two colours, for a single `Rgba` (font/icon modulate). */
+export function tintColor(base: Rgba, tint: Rgba): Rgba {
   return multiplyModulate(base, tint);
 }
 
@@ -70,7 +69,7 @@ export function tintColor(base: ControlColor, tint: RGBA): ControlColor {
  * `Button::_fit_icon_size` (`button.cpp:469-479`): clamps to `icon_max_width`,
  * keeping aspect. The default theme sets 0, no clamp (`default_theme.cpp:172`).
  */
-export function fitIconSize(size: Vec2, maxWidth: number): Vec2 {
+export function fitIconSize(size: Vector2, maxWidth: number): Vector2 {
   if (maxWidth > 0 && size.x > maxWidth) {
     return { x: maxWidth, y: (size.y * maxWidth) / size.x };
   }
@@ -90,7 +89,7 @@ export function shapeButtonLabel(
   fontSizePx: number,
   fontMetrics: FontMetrics,
   boxWidthPx = 0,
-  autowrapMode: AutowrapMode = AutowrapMode.OFF,
+  autowrapMode: AutowrapMode = AutowrapMode.AUTOWRAP_OFF,
   autowrapTrimFlags?: number
 ): TextLayoutResult {
   return shapeText(text, {
@@ -119,7 +118,7 @@ export function centredTextTopPx(boxHeightPx: number, textHeightPx: number, topI
 
 export interface ButtonContentInput {
   /** The control's own solved rect size, Godot px. */
-  rectSize: Vec2;
+  rectSize: Vector2;
   /** The current draw-state StyleBox's content margins (`style->get_margin(SIDE_*)`). */
   styleMargin: { left: number; top: number; right: number; bottom: number };
   /** `h_separation` theme constant, clamped to >= 0 like `MAX(0, theme_cache.h_separation)`. */
@@ -134,29 +133,29 @@ export interface ButtonContentInput {
   verticalIconAlignment: number;
   expandIcon: boolean;
   /** The icon's natural pixel size, or `null` while no icon is present or loaded. */
-  iconNaturalSize: Vec2 | null;
+  iconNaturalSize: Vector2 | null;
   hasText: boolean;
   /** The shaped text's unwrapped size, `(0, 0)` when `hasText` is false. */
-  textNaturalSize: Vec2;
+  textNaturalSize: Vector2;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): swaps the icon and text alignment sides. */
   rtl: boolean;
 }
 
-export interface ButtonIconLayout {
+interface ButtonIconLayout {
   /** Local to the control's top-left, Godot px. */
   rect: Rect2;
 }
 
-export interface ButtonTextLayout {
+interface ButtonTextLayout {
   /** The paragraph box's top-left, local Godot px, for `<TextRun>` to anchor each line's baseline from. */
-  offset: Vec2;
+  offset: Vector2;
 }
 
-export interface ButtonContentLayout {
+interface ButtonContentLayout {
   icon: ButtonIconLayout | null;
   text: ButtonTextLayout | null;
   /** `drawable_size_remained` (`button.cpp:332-352,428`): the label's box after margins and the icon. A wrapping label re-shapes at `Math::ceil(MAX(1, drawableSize.x))`. */
-  drawableSize: Vec2;
+  drawableSize: Vector2;
 }
 
 const H_CENTER = HORIZONTAL_ALIGNMENT_CENTER;
@@ -196,7 +195,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
 
   // Button never sets `_internal_margin`, so the box inside the stylebox margins
   // is the whole custom element size.
-  const customElementSize: Vec2 = {
+  const customElementSize: Vector2 = {
     x: rectSize.x - styleMargin.left - styleMargin.right,
     y: rectSize.y - styleMargin.top - styleMargin.bottom,
   };
@@ -204,9 +203,9 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   let drawableWidth = customElementSize.x;
   let drawableHeight = customElementSize.y;
 
-  let iconSize: Vec2 | null = null;
+  let iconSize: Vector2 | null = null;
   if (iconNaturalSize && iconNaturalSize.x > 0 && iconNaturalSize.y > 0) {
-    let size: Vec2 = iconNaturalSize;
+    let size: Vector2 = iconNaturalSize;
     if (expandIcon) {
       let w = customElementSize.x;
       let h = customElementSize.y;

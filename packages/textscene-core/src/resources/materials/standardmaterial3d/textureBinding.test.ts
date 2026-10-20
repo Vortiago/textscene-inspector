@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { bindSlotTexture, materialTextureStates } from './textureBinding';
+import { bindSlotTexture, materialTextureStates, slotReadsSourceColor } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';
@@ -208,5 +208,19 @@ describe('bindSlotTexture — the saved format of a colour slot texture', () => 
 
   it.each([LUM8, RGB8, R_FLOAT])('keeps a normal map raw whatever its format (%#)', (texture) => {
     expect(bindSlotTexture(texture(), 'normal_texture', DEFAULTS).colorSpace).toBe(THREE.NoColorSpace);
+  });
+});
+
+describe('slotReadsSourceColor', () => {
+  it.each(DECODED)('is true for the `source_color` slot %s', (slot) => {
+    expect(slotReadsSourceColor(slot)).toBe(true);
+  });
+
+  it.each(RAW)('is false for the raw slot %s', (slot) => {
+    expect(slotReadsSourceColor(slot)).toBe(false);
+  });
+
+  it('answers for every slot, so no slot reads as undefined (edge case)', () => {
+    expect(TEXTURE_SLOTS.every((slot) => typeof slotReadsSourceColor(slot) === 'boolean')).toBe(true);
   });
 });

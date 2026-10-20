@@ -11,5 +11,3 @@ controlComponentRegistry.register({
 });
 controlSolverRegistry.registerMinimumSize('MarginContainer', marginContainerMinimumSize);
 controlSolverRegistry.registerContainerLayout('MarginContainer', marginContainerLayout);
-
-export { MarginContainer };

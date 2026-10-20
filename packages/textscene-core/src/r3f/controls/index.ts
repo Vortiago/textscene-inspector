@@ -70,4 +70,3 @@ import '../../nodes/2d/ui/vscrollbar/index.r3f';
 import '../../nodes/2d/ui/vseparator/index.r3f';
 
 export { ControlCanvasLayer } from './native/ControlCanvasLayer';
-export { controlComponentRegistry } from './ControlComponentRegistry';

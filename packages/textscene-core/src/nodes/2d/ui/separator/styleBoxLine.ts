@@ -9,13 +9,13 @@
  */
 
 import type { StyleBoxLineData } from '../../../../r3f/controls/native/styleBoxLine';
-import type { ControlColor } from '../control/types';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import type { Rgba } from '../../../../godot/math/math';
 
 export type SeparatorOrientation = 'horizontal' | 'vertical';
 
 /** `style_separator_color` (`default_theme.cpp:124`): `Color(0.5, 0.5, 0.5)`. */
-const DEFAULT_SEPARATOR_LINE_COLOR: ControlColor = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+const DEFAULT_SEPARATOR_LINE_COLOR: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
 
 /**
  * The default `separator` StyleBoxLine (`default_theme.cpp:734-740,1063-1064`): `separator_horizontal`

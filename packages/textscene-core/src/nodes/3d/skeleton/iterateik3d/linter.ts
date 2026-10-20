@@ -2,16 +2,16 @@
  * IterateIK3D's `get_configuration_warnings()` (iterate_ik_3d.cpp:158-167): a setting with an empty
  * `target_node` warns. `_process_ik` abandons such a setting (iterate_ik_3d.cpp:509-511), so the
  * modifier looks configured while doing nothing for that chain. The abstract key reaches CCDIK3D,
- * FABRIK3D and JacobianIK3D through `descendsFrom`, and none of them overrides the warnings.
+ * FABRIK3D and JacobianIK3D through `descendsFromClass`, and none of them overrides the warnings.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { ruleCount } from '../../../../linter/validators/commonValidators.js';
 import { listIndices, unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
-import { indexedElements } from '../../../../godot/index.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { resolveIterateSettingLeaf } from './linterParser.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -67,12 +67,10 @@ const iterateIK3DTargetRule: LintRule = {
     description:
       'Warns when an IterateIK3D-family setting names no target_node, the configuration Godot itself flags and then skips',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'IterateIK3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'IterateIK3D'),
     emits: armEmits(arms),
   },
   check: checkIterateIK3D,
 };
 
 ruleRegistry.register(iterateIK3DTargetRule);
-
-export { iterateIK3DTargetRule };

@@ -12,5 +12,3 @@ const containerRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(containerRegistration);
-
-export { containerRegistration };

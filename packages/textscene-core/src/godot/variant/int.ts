@@ -5,14 +5,18 @@
  * width is a per-slot {@link IntWidth}, and the render path narrows too, so previewer and linter agree.
  */
 
-export { toInt32, toUint32, toUint8, toInt16, INT32_MAX, readerLimitedInt } from './intWidth.js';
+export { toUint32, toInt16, INT32_MAX, readerLimitedInt } from './intWidth.js';
 export type { IntWidth } from './intWidth.js';
-export { parseGodotInt, storedFromFloat } from './intReader.js';
+export { parseGodotInt, statedFromFloat, storedFromFloat } from './intReader.js';
 export {
   ruleInt,
   ruleCount,
+  slotCount,
+  slotInt,
   storedInt,
   storedVector2i,
   slotComponents,
   slotComponentsAltered,
+  readSlotTuple,
 } from './intSlots.js';
+export type { SlotTuple } from './intSlots.js';

@@ -102,6 +102,13 @@ describe('installGodotIndirectSpecular', () => {
     expect(table.type).toBe(THREE.HalfFloatType);
   });
 
+  it('gives every lit material the one table, not a clone', () => {
+    installGodotIndirectSpecular();
+    const table = THREE.ShaderLib.standard.uniforms.godotDfgTable?.value;
+
+    expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms).godotDfgTable?.value).toBe(table);
+  });
+
   it('leaves every chunk alone when the AO chunk lacks its line, and warns (error case)', () => {
     THREE.ShaderChunk.aomap_fragment = '#ifdef USE_AOMAP\n#endif';
 

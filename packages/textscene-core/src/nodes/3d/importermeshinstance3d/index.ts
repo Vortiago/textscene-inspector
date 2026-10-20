@@ -12,5 +12,3 @@ const importerMeshInstance3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(importerMeshInstance3DRegistration);
-
-export { importerMeshInstance3DRegistration };

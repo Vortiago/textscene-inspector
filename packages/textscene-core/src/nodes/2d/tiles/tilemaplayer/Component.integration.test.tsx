@@ -18,7 +18,7 @@ import { TileMapLayer } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { findByType } from './findByType';
+import { findByType } from './findByType.testkit';
 import { quadrantCanvasItems } from '../../../../resources/tileset/tileCanvasItems';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasLighting2DContext, INERT_CANVAS_LIGHTING } from '../../../../r3f/lighting2d/lightPassContext';

@@ -10,6 +10,5 @@ const reflectionProbeRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(reflectionProbeRegistration);
 
-export { reflectionProbeRegistration };
 export * from './parser';
 export * from './types';

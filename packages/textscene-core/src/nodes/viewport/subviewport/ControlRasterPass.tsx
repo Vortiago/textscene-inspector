@@ -23,10 +23,12 @@ import { measureText } from '../../../r3f/controls/native/text/measurer.js';
 import type { Rect2 } from '../../../r3f/controls/native/rect.js';
 import {
   applyOrthoFrame,
-  createOffscreenTarget,
+  createCanvasTarget,
   orthoFrameForSize,
   renderToOffscreenTarget,
+  viewportMsaaMode,
 } from './offscreenViewport.js';
+import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
 import { viewportTargetSize } from './targetSize.js';
@@ -49,19 +51,6 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
   );
 }
 
-/**
- * Godot draws canvas items after the tonemap pass (`RendererViewport::_draw_viewport`),
- * so the target holds sRGB values with no curve, and the consumer applies the curve
- * once: a 0.5 grey ColorRect reaches it as rgb(162), not a pre-tonemapped rgb(196).
- * Hence sRGB storage and no pre-tonemap flag, the opposite of the 3D/2D pass.
- */
-function createRasterTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
-  return createOffscreenTarget(width, height, name, {
-    colorSpace: THREE.SRGBColorSpace,
-    preTonemapped: false,
-  });
-}
-
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, inheritedRtl, internalResources, externalResources } = viewport;
 
@@ -78,8 +67,18 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     return scene;
   }, [node.name]);
 
-  const target = useMemo(() => createRasterTarget(width, height, node.name), [width, height, node.name]);
-  useEffect(() => () => target.dispose(), [target]);
+  // Godot draws canvas items after the tonemap pass (`RendererViewport::_draw_viewport`), so the
+  // target holds sRGB values with no curve, and a 3D consumer applies its curve once: a 0.5 grey
+  // ColorRect reaches it as rgb(162), not a pre-tonemapped rgb(196).
+  const createTarget = useCallback(
+    () => createCanvasTarget(width, height, node.name),
+    [width, height, node.name]
+  );
+  // Controls are canvas items, so the 2D buffer's mode applies.
+  const target = useMultisampledTarget(
+    viewportMsaaMode(node.properties as SubViewportProperties, '2d'),
+    createTarget
+  );
 
   const camera = useMemo(() => new THREE.OrthographicCamera(), []);
   useEffect(() => {
@@ -111,7 +110,14 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
     });
   }, [gl, target, clearColor, transparentBg, portalScene, camera]);
 
-  usePublishViewportPass({ path, node, texture: target.texture, width, height, render: renderPass });
+  usePublishViewportPass({
+    path,
+    node,
+    target,
+    width,
+    height,
+    render: renderPass,
+  });
 
   return createPortal(
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>

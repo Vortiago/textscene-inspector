@@ -24,19 +24,21 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../../resources/styles/theme/lookup';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../r3f/controls/godotDefaultTheme';
+import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   pickLineEditStyleBox,
   LINE_EDIT_DEFAULT_FONT_COLOR,
   LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
 } from '../lineedit/nativeSolver';
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
-import type { ControlColor } from '../control/types';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SpinBoxProperties } from './types';
+import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
-export const SPIN_BOX_STEP_DEFAULT = 1;
+const SPIN_BOX_STEP_DEFAULT = 1;
 
 /**
  * `default_theme.cpp:647-648` sets `buttons_width`/`field_and_buttons_separation` as bare
@@ -50,10 +52,10 @@ const SPIN_BOX_FIELD_BUTTONS_SEPARATION = 2;
  * Vendored icons are never rescaled by the project theme scale (`CHECKBOX_ICON_NATURAL_SIZE`
  * in `checkbox/nativeSolver.ts`).
  */
-export const SPIN_BOX_ARROW_ICON_SIZE: Vec2 = { x: 16, y: 8 };
+export const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
 
 /** `up`/`down`: `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, SpinBox, up_icon, "up")` (and `down`, `spin_box.cpp:690,694`). The hover, pressed and disabled variants and the deprecated `updown` are never drawn, as in `Component.tsx`. */
-export type SpinBoxIconName = 'up' | 'down';
+type SpinBoxIconName = 'up' | 'down';
 const SPIN_BOX_ICON_NAMES: readonly SpinBoxIconName[] = ['up', 'down'];
 
 /** Which of `up`/`down` have a themed answer, for `SolveNode.textureSlots`. */
@@ -67,7 +69,7 @@ export const spinBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => 
 };
 
 /** This icon's resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
-export function spinBoxIconSize(n: Pick<SolveNode, 'textureSlots'>, name: SpinBoxIconName): Vec2 {
+export function spinBoxIconSize(n: Pick<SolveNode, 'textureSlots'>, name: SpinBoxIconName): Vector2 {
   return n.textureSlots[name] ?? SPIN_BOX_ARROW_ICON_SIZE;
 }
 
@@ -88,15 +90,10 @@ export function spinBoxButtonsBlockWidth(widestIconWidth: number): number {
   return Math.max(wanted, iconEnforced);
 }
 
-/** `field_and_buttons_separation` (`default_theme.cpp:647`): the gap between the buttons block and the narrower buttons (`sizing_cache.buttons_width = w - theme_cache.field_and_buttons_separation`, `spin_box.cpp:401`). */
-export function spinBoxFieldButtonsSeparation(): number {
-  return SPIN_BOX_FIELD_BUTTONS_SEPARATION;
-}
-
 /** `buttons_vertical_separation`: `default_theme.cpp:646` sets it to 0, and no per-node theme-constant override is modelled. */
 const SPIN_BOX_BUTTONS_VERTICAL_SEPARATION = 0;
 
-export interface SpinBoxLayout {
+interface SpinBoxLayout {
   /** The internal field's rect: `line_edit`'s full-rect preset with a right offset of `-buttons_block_width` (`spin_box.cpp:394-395`). */
   fieldRect: Rect2;
   /** The up (increment) button's own rect. */
@@ -112,11 +109,11 @@ export interface SpinBoxLayout {
  * get_size();` truncates toward zero, so `rectSize` is truncated once. `rtl` (`SolveNode.rtl`)
  * puts the buttons block at x 0 and the separator directly after it (`:403,409`).
  */
-export function spinBoxLayout(rectSize: Vec2, widestIconWidth: number, rtl = false): SpinBoxLayout {
+export function spinBoxLayout(rectSize: Vector2, widestIconWidth: number, rtl = false): SpinBoxLayout {
   const w = Math.trunc(rectSize.x);
   const h = Math.trunc(rectSize.y);
   const blockWidth = spinBoxButtonsBlockWidth(widestIconWidth);
-  const buttonsWidth = blockWidth - spinBoxFieldButtonsSeparation();
+  const buttonsWidth = blockWidth - SPIN_BOX_FIELD_BUTTONS_SEPARATION;
   const buttonsLeft = rtl ? 0 : w - buttonsWidth;
   const vSep = Math.min(Math.max(SPIN_BOX_BUTTONS_VERTICAL_SEPARATION, 0), h);
   const buttonUpHeight = Math.trunc((h - vSep) / 2);
@@ -134,7 +131,7 @@ export function spinBoxLayout(rectSize: Vec2, widestIconWidth: number, rtl = fal
     fieldRect: { x: fieldLeft, y: 0, w: fieldWidth, h },
     upRect: { x: buttonsLeft, y: 0, w: buttonsWidth, h: buttonUpHeight },
     downRect: { x: buttonsLeft, y: secondButtonTop, w: buttonsWidth, h: buttonDownHeight },
-    fieldAndButtonsSeparatorRect: { x: separatorLeft, y: 0, w: spinBoxFieldButtonsSeparation(), h },
+    fieldAndButtonsSeparatorRect: { x: separatorLeft, y: 0, w: SPIN_BOX_FIELD_BUTTONS_SEPARATION, h },
   };
 }
 
@@ -190,10 +187,10 @@ export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: numb
   return text;
 }
 
-export type SpinBoxButtonState = 'normal' | 'disabled';
+type SpinBoxButtonState = 'normal' | 'disabled';
 
 /** `is_fully_disabled = !is_editable()` (`spin_box.cpp:444`): gates both buttons whatever their own state. */
-export function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
+function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
   return props.editable === false;
 }
 
@@ -215,11 +212,11 @@ export function spinBoxDownButtonState(props: SpinBoxProperties, resolvedValue: 
 }
 
 /** `up_icon_modulate`/`up_disabled_icon_modulate` (`default_theme.cpp:634,637`). The icon asset is the same either way (`:616-619`), and only the modulate differs. */
-const SPIN_BOX_UP_ICON_COLOR: Record<SpinBoxButtonState, ControlColor> = {
-  normal: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
-  disabled: { r: 0.875, g: 0.875, b: 0.875, a: 0.5 },
+const SPIN_BOX_UP_ICON_COLOR: Record<SpinBoxButtonState, Rgba> = {
+  normal: CONTROL_FONT_COLOR,
+  disabled: CONTROL_FONT_DISABLED_COLOR,
 };
-/** `down_icon_modulate`/`down_disabled_icon_modulate` (`default_theme.cpp:638,641`): the same literals as the up pair. */
+/** `down_icon_modulate`/`down_disabled_icon_modulate` (`default_theme.cpp:638,641`): the same colours as the up pair. */
 const SPIN_BOX_DOWN_ICON_COLOR = SPIN_BOX_UP_ICON_COLOR;
 
 const SPIN_BOX_ICON_COLOR_KEYS: Record<'up' | 'down', Record<SpinBoxButtonState, string>> = {
@@ -232,7 +229,7 @@ export function spinBoxIconColor(
   colors: SolveNode['colors'],
   direction: 'up' | 'down',
   state: SpinBoxButtonState
-): ControlColor {
+): Rgba {
   const key = SPIN_BOX_ICON_COLOR_KEYS[direction][state];
   const defaults = direction === 'up' ? SPIN_BOX_UP_ICON_COLOR : SPIN_BOX_DOWN_ICON_COLOR;
   return colors[key] ?? defaults[state];
@@ -244,17 +241,15 @@ export function spinBoxIconColor(
  * variation falls through to the native chain (`buildThemeTypeChain`). `n`'s `"SpinBox"` scope
  * would miss `"LineEdit"`'s defaults and any project `"SpinBoxInnerLineEdit"` entry.
  */
-export function spinBoxFieldThemeScope(
-  n: Pick<SolveNode, 'themeChain' | 'projectTheme'>
-): ThemeResolutionScope {
+function spinBoxFieldThemeScope(n: Pick<SolveNode, 'themeChain' | 'projectTheme'>): ThemeResolutionScope {
   return themeResolutionScope('LineEdit', 'SpinBoxInnerLineEdit', n.themeChain, n.projectTheme);
 }
 
-export interface SpinBoxFieldTextTheme {
+interface SpinBoxFieldTextTheme {
   fontSizePx: number;
   fontMetrics: FontMetrics;
   /** `control_font_color`/`control_font_disabled_color` (LineEdit's `font_color`/`font_uneditable_color` defaults). No ancestor-theme colour walk exists (`textTheme.ts`), so the field draws only this colour. */
-  color: ControlColor;
+  color: Rgba;
 }
 
 /** The field's font (face + size, ancestor-walked) and colour (override-less default), for `editable` state. */

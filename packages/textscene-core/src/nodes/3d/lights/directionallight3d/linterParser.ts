@@ -6,17 +6,11 @@
 import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-const DIRECTIONAL_SHADOW_MODE = {
-  0: 'ORTHOGONAL',
-  1: 'PARALLEL_2_SPLITS',
-  2: 'PARALLEL_4_SPLITS',
-};
-
-const SKY_MODE = { 0: 'LIGHT_AND_SKY', 1: 'LIGHT_ONLY', 2: 'SKY_ONLY' };
+import { DIRECTIONAL_SHADOW_MODE_NAMES } from '../../../../godot/rendering/lights/directionalShadow.js';
+import { DIRECTIONAL_LIGHT_SKY_MODE_NAMES } from '../../../../godot/rendering/lights/directionalLightSkyMode.js';
 
 validatorRegistry.registerAll('DirectionalLight3D', {
-  directional_shadow_mode: v.enumInt('directional_shadow_mode', 0, 2, DIRECTIONAL_SHADOW_MODE, {
+  directional_shadow_mode: v.enumInt('directional_shadow_mode', DIRECTIONAL_SHADOW_MODE_NAMES, {
     hinted: 'light_3d.cpp:578',
   }),
   directional_shadow_split_1: v.float('directional_shadow_split_1', {
@@ -50,5 +44,5 @@ validatorRegistry.registerAll('DirectionalLight3D', {
     hinted: 'light_3d.cpp:585',
   }),
   directional_shadow_blend_splits: v.boolean('directional_shadow_blend_splits'),
-  sky_mode: v.enumInt('sky_mode', 0, 2, SKY_MODE, { hinted: 'light_3d.cpp:587' }),
+  sky_mode: v.enumInt('sky_mode', DIRECTIONAL_LIGHT_SKY_MODE_NAMES, { hinted: 'light_3d.cpp:587' }),
 });

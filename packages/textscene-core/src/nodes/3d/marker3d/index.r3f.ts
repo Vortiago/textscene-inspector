@@ -4,5 +4,3 @@ import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Marker3D } from './Component';
 
 nodeComponentRegistry.register({ typeName: 'Marker3D', Component: Marker3D });
-
-export { Marker3D };

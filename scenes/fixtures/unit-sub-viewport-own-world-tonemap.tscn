@@ -1,0 +1,57 @@
+; One variable: an own-world SubViewport whose Environment sets a different tone curve, ACES at
+; exposure 4, from the root's LINEAR. `THREE.ShaderChunk` is module-global, so a curve the
+; viewport's world installs tonemaps the root's box too. No other golden has two worlds with
+; different curves, and no glow here, so the compositor stays unmounted in both worlds.
+
+[gd_scene format=3]
+
+[sub_resource type="Environment" id="Env_root"]
+background_mode = 1
+background_color = Color(0.15, 0.15, 0.25, 1)
+
+[sub_resource type="Environment" id="Env_viewport"]
+background_mode = 1
+background_color = Color(0.3, 0.3, 0.05, 1)
+tonemap_mode = 3
+tonemap_exposure = 4.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(1, 1, 1)
+
+; Mid values on every channel, so ACES at exposure 4 lifts all three far from LINEAR.
+[sub_resource type="StandardMaterial3D" id="Mat_root"]
+shading_mode = 0
+albedo_color = Color(0.5, 0.3, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.6
+height = 1.2
+
+[sub_resource type="StandardMaterial3D" id="Mat_viewport"]
+shading_mode = 0
+albedo_color = Color(0.1, 0.8, 0.2, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env_root")
+
+[node name="RootBox" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = SubResource("Mat_root")
+
+[node name="Viewport" type="SubViewport" parent="."]
+own_world_3d = true
+size = Vector2i(256, 256)
+render_target_update_mode = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="Viewport"]
+environment = SubResource("Env_viewport")
+
+[node name="Camera3D" type="Camera3D" parent="Viewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="ViewportSphere" type="MeshInstance3D" parent="Viewport"]
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = SubResource("Mat_viewport")

@@ -7,13 +7,7 @@ import * as THREE from 'three';
 import { installGodotSkyLighting } from './godotSkyLighting';
 import { warningsOf } from './testing/logWarnings';
 import { functionBody } from './testing/glslSource';
-import {
-  SKY_CONTRIBUTION_UNIFORM,
-  SKY_LAYER_UNIFORMS,
-  skyContribution,
-  skyLayerSlots,
-} from './sky/skyLayerCubes';
-import { SKY_LAYER_GROUP_NAMES } from '../resources/sky/skyLayers';
+import { SKY_UNIFORMS, shownSky, skyLayersSlot } from './sky/skyLayerArray';
 
 const CHUNKS = ['lights_fragment_maps', 'envmap_physical_pars_fragment'] as const;
 const threeChunks = Object.fromEntries(CHUNKS.map((name) => [name, THREE.ShaderChunk[name]]));
@@ -35,30 +29,41 @@ describe('installGodotSkyLighting', () => {
     expect(patchedChunks().maps).toContain('iblIrradiance += godotIBLIrradiance( geometryNormal );');
   });
 
-  it('samples the last layer along the world normal, turned and scaled as the PMREM is', () => {
-    expect(functionBody(patchedChunks().envmap, 'godotIBLIrradiance')).toContain(
-      `PI * textureCube( ${SKY_LAYER_UNIFORMS.last}, envMapRotation * worldNormal ).rgb * envMapIntensity * ${SKY_CONTRIBUTION_UNIFORM}[ 0 ]`
+  it("reads Godot's last layer along the world normal, at its derivative mip, scaled as the PMREM is", () => {
+    const body = functionBody(patchedChunks().envmap, 'godotIBLIrradiance');
+    expect(body).toContain('vec3 ambientDir = envMapRotation * ( vec4( normal, 0.0 ) * viewMatrix ).xyz;');
+    expect(body).toContain('vec2 uv = vec3ToOctWithBorder( ambientDir, GODOT_SKY_BORDER_SIZE );');
+    expect(body).toContain(
+      'PI * godotSkyRead( uv, 7.0, godotSkyLod( ambientDir ) ) * envMapIntensity * GODOT_SKY_CONTRIBUTION'
     );
   });
 
-  it.each(SKY_LAYER_GROUP_NAMES)('gives every lit material the one shared %s layers slot', (group) => {
+  it('gives every lit material the one shared slot of the layer array', () => {
     installGodotSkyLighting();
-    const uniform = SKY_LAYER_UNIFORMS[group];
-    expect(THREE.ShaderLib.physical.uniforms[uniform]!.value).toBe(skyLayerSlots[group]);
-    expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)[uniform]!.value).toBe(
-      skyLayerSlots[group]
+    expect(THREE.ShaderLib.physical.uniforms[SKY_UNIFORMS.layers]!.value).toBe(skyLayersSlot);
+    expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)[SKY_UNIFORMS.layers]!.value).toBe(
+      skyLayersSlot
     );
   });
 
-  it("gives every lit material the one shared sky's share of the ambient", () => {
+  it("gives every lit material the one shared sky's share of the ambient and its layout", () => {
     installGodotSkyLighting();
-    expect(
-      THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)[SKY_CONTRIBUTION_UNIFORM]!.value
-    ).toBe(skyContribution);
+    expect(THREE.UniformsUtils.clone(THREE.ShaderLib.standard.uniforms)[SKY_UNIFORMS.shown]!.value).toBe(
+      shownSky
+    );
   });
 
   it('reflects the whole sky, whatever its share of the ambient', () => {
-    expect(functionBody(patchedChunks().envmap, 'godotIBLRadiance')).not.toContain(SKY_CONTRIBUTION_UNIFORM);
+    const envmap = patchedChunks().envmap;
+    expect(functionBody(envmap, 'godotIBLRadiance')).not.toContain('GODOT_SKY_CONTRIBUTION');
+    expect(functionBody(envmap, 'godotSkyLayer')).not.toContain('GODOT_SKY_CONTRIBUTION');
+  });
+
+  it('names each field of the shown sky in the order SkyLayerArray.show writes them', () => {
+    const envmap = patchedChunks().envmap;
+    ['CONTRIBUTION', 'BORDER_SIZE', 'DERIVATIVE_SCALE', 'LAST_MIP'].forEach((field, index) =>
+      expect(envmap).toContain(`#define GODOT_SKY_${field} ${SKY_UNIFORMS.shown}[ 0 ].${'xyzw'[index]}`)
+    );
   });
 
   it("reflects the sky with Godot's radiance lookup on Godot's roughness", () => {
@@ -73,41 +78,62 @@ describe('installGodotSkyLighting', () => {
     );
   });
 
-  it('reads the radiance itself, the PMREM at roughness 0, as layer 0', () => {
+  it("picks Godot's two layers around sqrt( roughness ) times the last layer's index", () => {
     expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
-      'vec3 radiance = textureCubeUV( envMap, reflectVec, 0.0 ).rgb;'
+      'float blend = modf( sqrt( roughness ) * 7.0, roughnessLod );'
     );
   });
 
-  it("reads layers 1 to 3 from the sharp cube's mips, a trilinear read blending two as Godot's", () => {
-    expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
-      `textureLod( ${SKY_LAYER_UNIFORMS.sharp}, reflectVec, clamp( layer - 1.0, 0.0, 2.0 ) )`
-    );
-  });
-
-  it("reads layers 4 to 6 from the rough cube's mips", () => {
-    expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
-      `textureLod( ${SKY_LAYER_UNIFORMS.rough}, reflectVec, clamp( layer - 4.0, 0.0, 2.0 ) )`
-    );
-  });
-
-  it('blends each group into the next across the layer between them', () => {
+  it("reads both layers at the mip of the reflection's screen derivatives, and blends them", () => {
     const body = functionBody(patchedChunks().envmap, 'godotSkyLayer');
-    expect(body).toContain('mix( radiance, sharpLayer, clamp( layer, 0.0, 1.0 ) )');
-    expect(body).toContain('mix( skyLayer, roughLayer, clamp( layer - 3.0, 0.0, 1.0 ) )');
-    expect(body).toContain('mix( skyLayer, lastLayer, clamp( layer - 6.0, 0.0, 1.0 ) )');
+    expect(body).toContain('float lod = godotSkyLod( reflectVec );');
+    expect(body).toContain('vec3 sharper = godotSkyRead( uv, roughnessLod, lod );');
+    expect(body).toContain('vec3 rougher = godotSkyRead( uv, roughnessLod + 1.0, lod );');
+    expect(body).toContain('return mix( sharper, rougher, blend ) * envMapIntensity;');
   });
 
-  it('reads the last layer for a roughness of 1', () => {
+  it("reads both layers at the reflection's one octmap texel", () => {
     expect(functionBody(patchedChunks().envmap, 'godotSkyLayer')).toContain(
-      `textureCube( ${SKY_LAYER_UNIFORMS.last}, reflectVec )`
+      'vec2 uv = vec3ToOctWithBorder( reflectVec, GODOT_SKY_BORDER_SIZE );'
     );
+  });
+
+  it('reads a layer of the array at an octmap texel and mip', () => {
+    expect(functionBody(patchedChunks().envmap, 'godotSkyRead')).toContain(
+      `textureLod( ${SKY_UNIFORMS.layers}, vec3( uv, layer ), lod ).rgb`
+    );
+  });
+
+  it("picks the mip from the direction's screen derivatives in texels of the radiance size", () => {
+    const body = functionBody(patchedChunks().envmap, 'godotSkyLod');
+    expect(body).toContain(
+      'max( dot( directionDdx, directionDdx ), dot( directionDdy, directionDdy ) ) * GODOT_SKY_DERIVATIVE_SCALE'
+    );
+    expect(body).toContain('0.25 * log2( texelsSqr + 1e-6 )');
+  });
+
+  it("clamps the mip to the array's last, as Godot's texture ends there (edge case)", () => {
+    expect(functionBody(patchedChunks().envmap, 'godotSkyLod')).toContain(
+      'min( 0.25 * log2( texelsSqr + 1e-6 ), GODOT_SKY_LAST_MIP )'
+    );
+  });
+
+  it('samples no cube of layers and no PMREM for the reflection', () => {
+    const envmap = patchedChunks().envmap;
+    expect(functionBody(envmap, 'godotSkyLayer')).not.toContain('envMap,');
+    expect(envmap).not.toContain('uniform samplerCube');
   });
 
   it('bends the reflection towards the normal by the roughness squared and dims it below the horizon', () => {
     const body = functionBody(patchedChunks().envmap, 'godotReflection');
     expect(body).toContain('mix( reflect( - viewDir, normal ), normal, pow2( roughness ) )');
     expect(body).toContain('horizon = min( 1.0 + dot( reflectVec, surfaceNormal ), 1.0 );');
+  });
+
+  it("turns the reflection into the world unnormalised, as the derivatives of Godot's own are", () => {
+    expect(functionBody(patchedChunks().envmap, 'godotReflection')).toContain(
+      'return envMapRotation * ( vec4( reflectVec, 0.0 ) * viewMatrix ).xyz;'
+    );
   });
 
   it("reflects an anisotropic surface's bent normal through the same lookup", () => {

@@ -13,7 +13,7 @@
  * and a `top_level` child is a canvas root outside this layout.
  */
 
-import type { Rect2, Vec2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type {
@@ -21,7 +21,9 @@ import type {
   MinimumSizeFn,
   SolveContext,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { fitChildInRect, isSortableControl, SIZE_FILL } from '../shared/fitChildInRect';
+import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 /** The resolved `theme_override_styles/panel`, or the default-theme `panel` struct. */
 function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {
@@ -52,13 +54,13 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
  * content rect. `panel_container.cpp` has no RTL branch, and
  * `container.cpp:95-128` reads the container's flag, never the child's.
  */
-function fitChild(child: SolveNode, minSize: Vec2, rect: Rect2, rtl: boolean): Rect2 {
+function fitChild(child: SolveNode, minSize: Vector2, rect: Rect2, rtl: boolean): Rect2 {
   const props = controlProps(child);
   return fitChildInRect(
     rect,
     minSize,
-    props.sizeFlagsHorizontal ?? SIZE_FILL,
-    props.sizeFlagsVertical ?? SIZE_FILL,
+    props.sizeFlagsHorizontal ?? SizeFlags.FILL,
+    props.sizeFlagsVertical ?? SizeFlags.FILL,
     rtl
   );
 }

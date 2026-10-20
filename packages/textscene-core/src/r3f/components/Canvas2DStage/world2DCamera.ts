@@ -4,14 +4,16 @@
  * zoom 1, so camX = (sw/2 − pan.x)/zoom and camY = −(sh/2 − pan.y)/zoom.
  */
 
-export interface World2DCameraPose {
+import type { Vector2 } from '../../../godot/math/vector.js';
+
+interface World2DCameraPose {
   x: number;
   y: number;
   zoom: number;
 }
 
 export function world2DCameraPose(
-  pan: { x: number; y: number },
+  pan: Vector2,
   zoom: number,
   stageWidth: number,
   stageHeight: number

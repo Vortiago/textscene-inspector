@@ -1,8 +1,9 @@
 /** The Sprite2D property shape: a textured quad in 2D space, on Node2D. */
 
-import type { Node2DProperties, Vector2 } from '../../base/node2d/types';
+import type { Node2DProperties } from '../../base/node2d/types';
+import type { Vector2 } from '../../../godot/math/vector';
 
-export interface Rect2 {
+interface Rect2 {
   x: number;
   y: number;
   width: number;

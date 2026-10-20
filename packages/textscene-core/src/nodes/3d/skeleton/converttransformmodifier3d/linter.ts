@@ -9,10 +9,12 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 import { rangeAdvisories, type RangeThreshold } from '../../../../linter/rangeAdvisory.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { firstSegment, indexedElements, indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { firstSegment, indexedElements, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
+import { TransformMode } from '../../../../godot/scene/skeletonModifier.js';
+import { stringToInt } from '../../../../godot/string/string.js';
 import { resolveConvertSettingLeaf } from './linterParser.js';
 
 const arms = {
@@ -36,10 +38,6 @@ const RANGE_LEAVES: ReadonlySet<string> = new Set([
   'reference/range_min',
   'reference/range_max',
 ]);
-
-/** ConvertTransformModifier3D::TransformMode (convert_transform_modifier_3d.h:39-43). */
-const TRANSFORM_MODE_POSITION = 0;
-const TRANSFORM_MODE_ROTATION = 1;
 
 /**
  * PI plus the epsilon `v.radians` uses, so the `3.1415927` Godot's own
@@ -108,14 +106,14 @@ function checkConvertTransformModifier3D(context: RuleContext): Diagnostic[] {
     const modeRaw = settings.get(index)?.get(`${firstSegment(leaf)}/transform_mode`);
     // Absent means Position, the struct's initialiser
     // (convert_transform_modifier_3d.h:46, :51), which Godot omits when unchanged.
-    const mode = ruleInt(modeRaw, TRANSFORM_MODE_POSITION);
+    const mode = ruleInt(modeRaw, TransformMode.POSITION);
     // A malformed mode is already reported by its own validator, and a
     // non-finite one is altered at parse. Neither selects a threshold here.
     if (mode === null) continue;
     // HINT_POSITION "-10,10,0.01,or_greater,or_less,suffix:m" (:33) opens both ends: no bound.
-    if (mode === TRANSFORM_MODE_POSITION) continue;
+    if (mode === TransformMode.POSITION) continue;
 
-    table[key] = mode === TRANSFORM_MODE_ROTATION ? rotationThresholds(key) : scaleThresholds(key);
+    table[key] = mode === TransformMode.ROTATION ? rotationThresholds(key) : scaleThresholds(key);
   }
 
   // The `CLAMP` at :405 applies to the interpolated result during processing, not the stored
@@ -129,12 +127,10 @@ const convertTransformModifier3DValidationRule: LintRule = {
     description:
       'Validates each ConvertTransformModifier3D settings/<i>/ range against the PROPERTY_HINT_RANGE its sibling transform_mode selects',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'ConvertTransformModifier3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'ConvertTransformModifier3D'),
     emits: armEmits(arms),
   },
   check: checkConvertTransformModifier3D,
 };
 
 ruleRegistry.register(convertTransformModifier3DValidationRule);
-
-export { convertTransformModifier3DValidationRule };

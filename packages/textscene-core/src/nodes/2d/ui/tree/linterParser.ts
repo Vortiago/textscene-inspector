@@ -7,6 +7,11 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { hintedBitField, v } from '../../../../linter/validators/index.js';
+import {
+  TREE_DROP_MODE_FLAG_NAMES,
+  TREE_SCROLL_HINT_MODE_NAMES,
+  TREE_SELECT_MODE_NAMES,
+} from '../../../../godot/scene/tree.js';
 
 /**
  * `Tree::set_drop_mode_flags` (tree.cpp:6653-6663) stores `p_flags` with no mask, so a bit
@@ -16,7 +21,7 @@ import { hintedBitField, v } from '../../../../linter/validators/index.js';
  */
 const dropModeFlagsValidator = hintedBitField('drop_mode_flags', {
   hinted: 'tree.cpp:6816',
-  labels: { 1: 'DROP_MODE_ON_ITEM', 2: 'DROP_MODE_INBETWEEN' },
+  labels: TREE_DROP_MODE_FLAG_NAMES,
 });
 
 validatorRegistry.registerAll('Tree', {
@@ -43,13 +48,7 @@ validatorRegistry.registerAll('Tree', {
   // tree.cpp:6817: PROPERTY_HINT_ENUM "Single,Row,Multi", SELECT_SINGLE=0 to SELECT_MULTI=2
   // (tree.cpp:6841-6843, tree.h:457-461). `Tree::set_select_mode` (tree.cpp:5403-5405) has no
   // ERR_FAIL or clamp, so out of range only warns.
-  select_mode: v.enumInt(
-    'select_mode',
-    0,
-    2,
-    { 0: 'SELECT_SINGLE', 1: 'SELECT_ROW', 2: 'SELECT_MULTI' },
-    { hinted: 'tree.cpp:6817' }
-  ),
+  select_mode: v.enumInt('select_mode', TREE_SELECT_MODE_NAMES, { hinted: 'tree.cpp:6817' }),
   // tree.cpp:6818
   auto_tooltip: v.boolean('auto_tooltip'),
 
@@ -61,18 +60,7 @@ validatorRegistry.registerAll('Tree', {
   // tree.cpp:6822: PROPERTY_HINT_ENUM "Disabled,Both,Top,Bottom", SCROLL_HINT_MODE_DISABLED=0 to
   // _BOTTOM=3 (tree.cpp:6849-6852, tree.h:469-474). `Tree::set_scroll_hint_mode`
   // (tree.cpp:6086-6093) rejects and clamps nothing, so the hint bounds the dropdown only.
-  scroll_hint_mode: v.enumInt(
-    'scroll_hint_mode',
-    0,
-    3,
-    {
-      0: 'SCROLL_HINT_MODE_DISABLED',
-      1: 'SCROLL_HINT_MODE_BOTH',
-      2: 'SCROLL_HINT_MODE_TOP',
-      3: 'SCROLL_HINT_MODE_BOTTOM',
-    },
-    { hinted: 'tree.cpp:6822' }
-  ),
+  scroll_hint_mode: v.enumInt('scroll_hint_mode', TREE_SCROLL_HINT_MODE_NAMES, { hinted: 'tree.cpp:6822' }),
   // tree.cpp:6823
   tile_scroll_hint: v.boolean('tile_scroll_hint'),
 });

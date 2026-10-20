@@ -4,5 +4,3 @@ import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { Path3D } from './Component';
 
 nodeComponentRegistry.register({ typeName: 'Path3D', Component: Path3D });
-
-export { Path3D };

@@ -5,13 +5,13 @@
 import * as THREE from 'three';
 import { EDITOR_CAMERA_FOV, editorCameraDirection } from './godotEditorCamera.js';
 import { computeWorldBoundingBox } from './bounds.js';
+import { degToRad } from '../godot/math/math.js';
 
 /**
- * How much room to leave around the framed bounds. Exported because the Godot
- * reference harness mirrors it to frame the same picture (`--frame`), and a
- * one-sided change there is invisible.
+ * How much room to leave around the framed bounds. The Godot reference harness copies it to frame
+ * the same picture (`--frame`), and `godot-ref/run.test.mjs` pins the copy.
  */
-export const FRAME_MARGIN = 1.6;
+const FRAME_MARGIN = 1.6;
 
 /** Largest side of a box: 0 for a point, which a bounds proxy can be. */
 function maxExtent(box: THREE.Box3): number {
@@ -86,7 +86,7 @@ export function frameSceneBounds(
   // The only orthographic camera here is the editor camera's Numpad-5 projection, sized from the same
   // 70-degree field of view; three's 50-degree default would zoom it out by half again.
   const persp = camera as THREE.PerspectiveCamera;
-  const fov = ((persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV) * Math.PI) / 180;
+  const fov = degToRad(persp.isPerspectiveCamera ? persp.fov : EDITOR_CAMERA_FOV);
   const distance = (maxDim / 2 / Math.tan(fov / 2) || maxDim) * FRAME_MARGIN;
 
   // Godot's editor viewing angle, so a scene presents the face it does in the editor, a coplanar

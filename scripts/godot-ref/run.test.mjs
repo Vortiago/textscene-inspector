@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PNG } from 'pngjs';
+import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_CAPTURE,
@@ -75,23 +76,30 @@ function bootstrap(overrides = {}) {
  */
 describe('editor-camera constants mirror the previewer', () => {
   it('matches godotEditorCamera.ts', async () => {
-    const {
-      editorCameraDirection,
-      EDITOR_CAMERA_DISTANCE: coreDistance,
-      EDITOR_CAMERA_FOV,
-    } = await import('../../packages/textscene-core/src/r3f/godotEditorCamera.ts');
+    const { editorCameraDirection, editorCameraPosition, EDITOR_CAMERA_FOV } =
+      await import('../../packages/textscene-core/src/r3f/godotEditorCamera.ts');
     const core = editorCameraDirection();
     expect(EDITOR_CAMERA_DIRECTION[0]).toBeCloseTo(core.x, 6);
     expect(EDITOR_CAMERA_DIRECTION[1]).toBeCloseTo(core.y, 6);
     expect(EDITOR_CAMERA_DIRECTION[2]).toBeCloseTo(core.z, 6);
-    expect(EDITOR_CAMERA_DISTANCE).toBe(coreDistance);
+    const position = editorCameraPosition();
+    EDITOR_CAMERA_DIRECTION.forEach((component, axis) => {
+      expect(position[axis]).toBeCloseTo(component * EDITOR_CAMERA_DISTANCE, 6);
+    });
     expect(EDITOR_FOV).toBe(EDITOR_CAMERA_FOV);
   });
 
   it('matches frameSceneBounds.ts’s framing margin', async () => {
-    const { FRAME_MARGIN: coreMargin } =
-      await import('../../packages/textscene-core/src/r3f/frameSceneBounds.ts');
-    expect(FRAME_MARGIN).toBe(coreMargin);
+    const THREE = await import('three');
+    const { frameSceneBounds } = await import('../../packages/textscene-core/src/r3f/frameSceneBounds.ts');
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2)));
+    const camera = new THREE.PerspectiveCamera(EDITOR_FOV);
+
+    frameSceneBounds(scene, camera, null);
+
+    const fitDistance = 1 / Math.tan(degToRad(EDITOR_FOV / 2));
+    expect(camera.position.length()).toBeCloseTo(fitDistance * FRAME_MARGIN, 6);
   });
 
   /**
@@ -99,14 +107,13 @@ describe('editor-camera constants mirror the previewer', () => {
    * previewer's stage at zoom 1 have the same size. A Control's anchors resolve against the
    * frame, so a one-sided edit moves the content and the two images cannot be compared.
    */
-  it('matches viewport2d.ts’s project-viewport rectangle and its fit preference', async () => {
-    const {
-      CANVAS_2D_WIDTH,
-      CANVAS_2D_HEIGHT,
-      FIT_ON_OPEN_2D_STORAGE_KEY: coreKey,
-    } = await import('../../packages/textscene-core/src/r3f/components/Canvas2DStage/viewport2d.ts');
-    expect(CANVAS_2D_CAPTURE.width).toBe(CANVAS_2D_WIDTH);
-    expect(CANVAS_2D_CAPTURE.height).toBe(CANVAS_2D_HEIGHT);
+  it('matches the default project viewport and viewport2d.ts’s fit preference', async () => {
+    const { DEFAULT_VIEWPORT_WIDTH, DEFAULT_VIEWPORT_HEIGHT } =
+      await import('../../packages/textscene-core/src/parser/projectSettingsParser.ts');
+    const { FIT_ON_OPEN_2D_STORAGE_KEY: coreKey } =
+      await import('../../packages/textscene-core/src/r3f/components/Canvas2DStage/viewport2d.ts');
+    expect(CANVAS_2D_CAPTURE.width).toBe(DEFAULT_VIEWPORT_WIDTH);
+    expect(CANVAS_2D_CAPTURE.height).toBe(DEFAULT_VIEWPORT_HEIGHT);
     expect(FIT_ON_OPEN_2D_STORAGE_KEY).toBe(coreKey);
   });
 
@@ -617,7 +624,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     // The same derivation `_place_camera` performs, from the emitted bounds.
     const b = JSON.parse(await readFile(boundsOut, 'utf8'));
     const span = Math.max(...b.size);
-    const distance = (span / 2 / Math.tan((EDITOR_FOV * Math.PI) / 180 / 2)) * FRAME_MARGIN;
+    const distance = (span / 2 / Math.tan(degToRad(EDITOR_FOV / 2))) * FRAME_MARGIN;
     const focus = b.position.map((p, i) => p + b.size[i] / 2);
     const derived = join(dir, 'derived.png');
     await renderReference({

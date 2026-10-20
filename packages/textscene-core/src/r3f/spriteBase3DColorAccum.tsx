@@ -8,21 +8,22 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
-import { multiplyModulate, WHITE_MODULATE, type RGBA } from './canvasItemModulate.js';
+import { multiplyModulate, WHITE_MODULATE } from './canvasItemModulate.js';
+import type { Rgba } from '../godot/math/math.js';
 
 /** The `SpriteBase3D` subclasses (`sprite_3d.h:36`): `cast_to<SpriteBase3D>` in type-name terms. */
-export const SPRITE_BASE_3D_TYPES: ReadonlySet<string> = new Set(['Sprite3D']);
+const SPRITE_BASE_3D_TYPES: ReadonlySet<string> = new Set(['Sprite3D']);
 
 /** The immediate parent's accumulation, white unless that parent is a SpriteBase3D. */
-const ParentColorAccumContext = createContext<RGBA>(WHITE_MODULATE);
+const ParentColorAccumContext = createContext<Rgba>(WHITE_MODULATE);
 
 /** One node's step of the accumulation: the four `*=` at `sprite_3d.cpp:47-50`. */
-function accumulate(parentAccum: RGBA, modulate: RGBA): RGBA {
+function accumulate(parentAccum: Rgba, modulate: Rgba): Rgba {
   return multiplyModulate(parentAccum, modulate);
 }
 
 /** This sprite's own `_get_color_accum()`, in the sRGB space Godot multiplies in. */
-export function useSpriteBase3DColorAccum(modulate: RGBA): RGBA {
+export function useSpriteBase3DColorAccum(modulate: Rgba): Rgba {
   const parentAccum = useContext(ParentColorAccumContext);
   return useMemo(() => accumulate(parentAccum, modulate), [parentAccum, modulate]);
 }
@@ -34,7 +35,7 @@ export function useSpriteBase3DColorAccum(modulate: RGBA): RGBA {
  */
 export function SpriteBase3DChildAccum({ node, children }: { node: TscnNode; children: ReactNode }) {
   const parentAccum = useContext(ParentColorAccumContext);
-  const modulate = (node.properties as { modulate?: RGBA }).modulate;
+  const modulate = (node.properties as { modulate?: Rgba }).modulate;
   const value = useMemo(
     () =>
       SPRITE_BASE_3D_TYPES.has(node.type) && modulate ? accumulate(parentAccum, modulate) : WHITE_MODULATE,

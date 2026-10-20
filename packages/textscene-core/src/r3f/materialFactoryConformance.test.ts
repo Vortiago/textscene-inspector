@@ -140,7 +140,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'passes its caller props through to a `<group>`, typed as R3F group props, which carry no material',
   'packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx':
     'one material per built text run, replaced and disposed together with the run geometry it was built with',
-  'packages/textscene-core/src/r3f/environment/ToneMapLayer.tsx':
+  'packages/textscene-core/src/r3f/environment/Compositor.tsx':
     'mounts a postprocessing `Effect` — an EventDispatcher, neither material nor Object3D, collected by the composer',
   'packages/textscene-core/src/r3f/internal/glb-scene-root/Component.tsx':
     'mounts the per-consumer GLB Object3D clone; the surfaces inside it keep the materials the loader gave them',
@@ -148,7 +148,7 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the light pass quad: its callers hand it the accumulator seed, with fixed shaders and one uniform, or a directional light material, memoised on every input and disposed on replacement',
   'packages/textscene-core/src/r3f/parentSpaceScope.tsx':
     'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
-  'packages/textscene-core/src/r3f/preview/PreviewLighting.tsx':
+  'packages/textscene-core/src/r3f/preview/PreviewSun.tsx':
     "mounts the preview sun's aim target — an empty Object3D, added as a child",
 };
 
@@ -183,8 +183,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the accumulator seed quad: fixed shaders, one uniform, one instance per accumulator',
   'packages/textscene-core/src/r3f/positionalShadow/atlasDepthPass.ts':
     'one depth material per light kind for the whole app, its program fixed at construction and never mutated',
-  'packages/textscene-core/src/r3f/testing/threePasses.ts':
-    "a test stand-in for three's shared `_depthMaterial`, read by a probe and never rendered, so never compiled",
   'packages/textscene-core/src/r3f/lighting2d/directionalLightQuad.ts':
     'one material per light per parameter set, memoised on every input including the shadow `defines` and disposed on replacement',
   'packages/textscene-core/src/r3f/lighting2d/lightQuad.ts':
@@ -258,8 +256,8 @@ const ASSIGNED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'puts a GLB surface’s own material or its alpha-pass copy on the mesh, which is not React state, and the copy is built once from its source, so only its opacity moves',
   'packages/textscene-core/src/r3f/materials/swappedMaterials.ts':
     'puts one of a surface’s two mounted materials on its mesh, each keyed by its own mount, so a swap changes which material draws and never a program input of one',
-  'packages/textscene-core/src/resources/formats/glb/glbProcessing.ts':
-    'the GLB slot writer: `cloneWithMaterials` gives each clone its own copy of the loader’s materials, and `forEachSurfaceMaterial` hands a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
+  'packages/textscene-core/src/resources/formats/glb/surfaceMaterials.ts':
+    'the GLB slot writer: `forEachSurfaceMaterial` hands `cloneWithMaterials` and a material override the setter for each surface of a loaded GLB, which is not React state, so there is no mount to key',
 };
 
 /**

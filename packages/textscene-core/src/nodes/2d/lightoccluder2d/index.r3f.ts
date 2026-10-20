@@ -6,5 +6,3 @@ nodeComponentRegistry.register({
   Component: LightOccluder2D,
   canvasItem: true,
 });
-
-export { LightOccluder2D };

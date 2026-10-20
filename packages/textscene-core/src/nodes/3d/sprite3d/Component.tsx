@@ -30,6 +30,10 @@ import {
 } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  alphaAntialiasingProps,
+  alphaAntialiasingUserData,
+} from '../../../r3f/materials/godotAlphaAntialiasing';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
@@ -133,6 +137,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     scissorThreshold: properties.alpha_scissor_threshold,
     // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
     transparentFlag: properties.transparent,
+    antialiasing: { mode: properties.alpha_antialiasing_mode, edge: properties.alpha_antialiasing_edge },
   });
   // The instance fade is per GeometryInstance3D, outside the accumulation: only `modulate`
   // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
@@ -210,13 +215,16 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         map: displayedTexture,
         color,
         ...surfaceAlpha[pass],
+        ...alphaAntialiasingProps(cut.antialiasing),
         // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
         depthTest,
         // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
         side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
-        // `sprite_3d.cpp:282` hands the scale to every mode's material; only HASH reads it.
+        // `sprite_3d.cpp:281-283` hands the threshold, the scale and the edge to every mode's
+        // material. Only HASH reads the scale, and only an antialiased cut the edge.
         userData: {
           ...alphaHashScaleUserData(properties.alpha_hash_scale),
+          ...alphaAntialiasingUserData(cut.antialiasing),
           ...opaquePrepassUserData(prepasses[pass]),
         },
       },

@@ -1,0 +1,13 @@
+[gd_resource type="ImageTexture" format=3]
+
+[sub_resource type="Image" id="Image_5m6st"]
+data = {
+"data": PackedByteArray(40, 200, 136, 198, 250, 136, 198, 250, 255, 255, 0, 0, 0, 0, 0, 0),
+"format": "DXT5 RGBA8",
+"height": 4,
+"mipmaps": false,
+"width": 4
+}
+
+[resource]
+image = SubResource("Image_5m6st")

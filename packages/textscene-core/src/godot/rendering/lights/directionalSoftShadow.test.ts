@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  LIGHT_ANGULAR_DISTANCE_DEFAULT,
   directionalLightSize,
   drawsDirectionalSoftShadow,
   softShadowAngle,
@@ -12,9 +11,8 @@ describe('softShadowAngle', () => {
     expect(softShadowAngle(45)).toBeCloseTo(1, 12);
   });
 
-  it('is zero for the default angular distance (edge case)', () => {
-    expect(LIGHT_ANGULAR_DISTANCE_DEFAULT).toBe(0);
-    expect(softShadowAngle(LIGHT_ANGULAR_DISTANCE_DEFAULT)).toBe(0);
+  it('is zero for no angular distance (edge case)', () => {
+    expect(softShadowAngle(0)).toBe(0);
   });
 
   it('is zero for a negative angular distance, which Godot treats as none (error case)', () => {

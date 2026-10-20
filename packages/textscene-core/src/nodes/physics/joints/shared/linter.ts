@@ -7,7 +7,7 @@
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { extractNodePath } from '../../../../linter/linterUtils.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { resolveNodePath } from '../../../../linter/nodePathResolve.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
@@ -23,8 +23,8 @@ const arms = {
 
 /** `'2D'` or `'3D'` for a joint type, or undefined when it is not a joint. */
 function jointDim(nodeType: string): '2D' | '3D' | undefined {
-  if (descendsFrom(nodeType, 'Joint2D')) return '2D';
-  if (descendsFrom(nodeType, 'Joint3D')) return '3D';
+  if (descendsFromClass(nodeType, 'Joint2D')) return '2D';
+  if (descendsFromClass(nodeType, 'Joint3D')) return '3D';
   return undefined;
 }
 
@@ -94,5 +94,3 @@ const jointValidationRule: LintRule = {
 };
 
 ruleRegistry.register(jointValidationRule);
-
-export { jointValidationRule };

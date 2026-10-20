@@ -1,0 +1,15 @@
+; A res:// root of its own, because `rendering/anti_aliasing/quality/msaa_3d` is a
+; PROJECT setting and no .tscn can carry one. Kept in a subdirectory rather than at
+; scenes/fixtures: a project.godot there would apply to every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="Alpha antialiasing under 3D MSAA"
+run/main_scene="res://unit-alpha-antialiasing.tscn"
+config/features=PackedStringArray("4.6")
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2

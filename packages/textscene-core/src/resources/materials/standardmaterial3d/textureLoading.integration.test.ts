@@ -76,6 +76,8 @@ function createMockFileEventBus(): {
         }, 0);
       }
     }),
+    // No file has an import sidecar here, so each texture imports at the defaults.
+    tryLoad: vi.fn(async () => null),
     clearCache: vi.fn((path?: string) => {
       if (path) {
         cache.delete(path);

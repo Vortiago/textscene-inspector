@@ -7,7 +7,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { resourceSlotIsEmpty } from '../../../linter/resourceChecker.js';
 import { isDrivenByAnimationAudioTrack } from '../sharedLinterChecks.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
@@ -68,4 +68,3 @@ const audioStreamPlayer2DValidationRule: LintRule = {
 ruleRegistry.register(audioStreamPlayer2DValidationRule);
 
 // Export for testing
-export { audioStreamPlayer2DValidationRule };

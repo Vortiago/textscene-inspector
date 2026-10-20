@@ -6,8 +6,10 @@ import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { Linter } from '../../../../linter/Linter.js';
 import { readFixture } from '../../../../linter/testing/fixtureCheck.js';
-import { openXRCompositionLayerValidationRule } from './linter.js';
+import './linter.js';
 import '../../../../linter/index.js';
+
+const openXRCompositionLayerValidationRule = ruleRegistry.getRule('valid-openxrcompositionlayer')!;
 
 const PARENT_RULE = 'openxrcompositionlayer-parent-not-xrorigin3d';
 const ORTHONORMAL_RULE = 'openxrcompositionlayer-non-orthonormal-transform';

@@ -13,10 +13,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { ControlColor, ControlProperties } from '../../../nodes/2d/ui/control/types';
+import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes';
-import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/index.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
+import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { projectLayoutDirectionEnv } from '../../../parser/projectSettingsParser';
 import { joinPath } from '../../../utils/nodePath';
 import {
@@ -71,9 +71,10 @@ import {
   type PaintRange,
 } from '../../canvasPaintOrder';
 import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
-import type { Vec2 } from './rect';
+import type { Rgba } from '../../../godot/math/math.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 
-export interface UseBuildSolveTreeResult {
+interface UseBuildSolveTreeResult {
   /** Every Control whose canvas item parents at the viewport's canvas: scene roots, promoted, hoisted and `top_level` Controls. */
   tree: readonly SolveNode[];
   /** Bumps on every load or failure and on settled font metrics: a stable dependency for a consumer's memo. */
@@ -125,7 +126,7 @@ function resolvedStylesOfTheme(
  * theme chain. An unresolvable ref is omitted, and all four StyleBox kinds are
  * kept: each wraps a `StyleBoxFlatData` core with its own `contentMargin`.
  */
-export function resolveStyleBoxes(
+function resolveStyleBoxes(
   node: TscnNode,
   scope: SceneScope,
   themeScope: ThemeResolutionScope = NO_THEME_SCOPE
@@ -148,7 +149,7 @@ export function resolveStyleBoxes(
 function resolveThemedColors(
   node: TscnNode,
   themeScope: ThemeResolutionScope
-): Readonly<Record<string, ControlColor>> {
+): Readonly<Record<string, Rgba>> {
   const local = (node.properties as ControlProperties).themeOverrideColors ?? {};
   return mergeThemedRecord(themeScope, local, (theme) => theme.colors);
 }
@@ -197,7 +198,7 @@ function iconRefsOfTheme(
  * `theme_override_icons/<name>` ref carries the node's own `scope`, and a Theme's
  * `<Type>/icons/<name>` carries that theme's scope.
  */
-export function resolveThemedIcons(
+function resolveThemedIcons(
   node: TscnNode,
   scope: SceneScope,
   themeScope: ThemeResolutionScope
@@ -246,7 +247,7 @@ interface ForestResult {
  * only non-Control CanvasItem a scene can author below a Control.
  */
 function isCanvasItem(node: TscnNode): boolean {
-  return descendsFrom(node.type, 'Node2D');
+  return descendsFromClass(node.type, 'Node2D');
 }
 
 /**
@@ -265,7 +266,7 @@ function isSortableChild(live: TscnNode): boolean {
  * so Node2D chains compose, and a non-`CanvasItem` link reparents at the nearest
  * canvas (`canvas_item.cpp:246-267`): `null`, so nothing above it leaks through.
  */
-export function nextSkippedAncestors(
+function nextSkippedAncestors(
   collapsed: TscnNode,
   previous: SkippedAncestors | null
 ): SkippedAncestors | null {
@@ -296,7 +297,7 @@ function childParentVisibleInTree(
   ownVisible: boolean,
   parentVisibleInTree: boolean
 ): boolean {
-  if (descendsFrom(node.type, 'CanvasItem')) return parentVisibleInTree && ownVisible;
+  if (descendsFromClass(node.type, 'CanvasItem')) return parentVisibleInTree && ownVisible;
   if (isCanvasLayerType(node.type)) return ownVisible;
   return true;
 }
@@ -443,7 +444,7 @@ function buildForest(
     ref: string,
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[]
-  ): Vec2 | null {
+  ): Vector2 | null {
     // An inline procedural texture or a region cell states its size here, with no
     // load. This walk is no component, so it cannot call `useTexture2D`.
     const inline = inlineTexture2DSize(ref, int);
@@ -479,7 +480,7 @@ function buildForest(
   }
 
   /** `resolveTextureSize`'s answer for a node whose type never registers a `TextureSlotsFn`. */
-  const EMPTY_TEXTURE_SLOTS: Readonly<Record<string, Vec2 | null>> = {};
+  const EMPTY_TEXTURE_SLOTS: Readonly<Record<string, Vector2 | null>> = {};
 
   /**
    * `textureSize`, the one generic slot of an unregistered type (`texture` or
@@ -491,11 +492,11 @@ function buildForest(
     ext: readonly TscnExternalResource[],
     int: readonly TscnInternalResource[],
     themedIcons: Readonly<Record<string, ThemedIconRef>>
-  ): { size: Vec2 | null; slots: Readonly<Record<string, Vec2 | null>> } {
+  ): { size: Vector2 | null; slots: Readonly<Record<string, Vector2 | null>> } {
     const slotsFn = controlSolverRegistry.textureSlots(node.type);
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons);
-      const slots: Record<string, Vec2 | null> = {};
+      const slots: Record<string, Vector2 | null> = {};
       for (const { key, ref, scope } of requests) {
         slots[key] = ref
           ? resolveTextureRefSize(ref, scope?.externalResources ?? ext, scope?.internalResources ?? int)

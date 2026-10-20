@@ -39,5 +39,3 @@ const voxelGIValidationRule: LintRule = {
 };
 
 ruleRegistry.register(voxelGIValidationRule);
-
-export { voxelGIValidationRule };

@@ -7,7 +7,7 @@ import type { ParsedProperty } from '../../parser/TscnParserCore.js';
 import type { ParseError } from '../types.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import { ownsNilMessage } from '../propertyValidator.js';
-import { isNilLiteral } from '../../godot/index.js';
+import { isNilLiteral } from '../../godot/variant/variantParser.js';
 
 /** The refusal for one property, or null where no validator claims it or the value passes. */
 export function propertyRefusal({

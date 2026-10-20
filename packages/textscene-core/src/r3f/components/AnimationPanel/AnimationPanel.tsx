@@ -16,7 +16,7 @@ const LOOP_OPTIONS: { value: LoopOverride; label: string }[] = [
 ];
 
 /** Formats a duration in seconds as `m:ss.cc` (minutes:seconds.centiseconds). */
-export function formatTimecode(seconds: number): string {
+function formatTimecode(seconds: number): string {
   const safe = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
   const minutes = Math.floor(safe / 60);
   const rem = safe - minutes * 60;

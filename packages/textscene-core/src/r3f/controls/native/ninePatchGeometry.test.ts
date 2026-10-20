@@ -7,12 +7,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   ninePatchGeometry,
-  NINE_PATCH_STRETCH,
-  NINE_PATCH_TILE,
-  NINE_PATCH_TILE_FIT,
+  axisStretchModeOf,
   type NinePatchInput,
   type NinePatchGeometryBuffers,
 } from './ninePatchGeometry';
+import { AxisStretchMode } from '../../../godot/scene/gui';
 
 interface Quad {
   x0: number;
@@ -59,8 +58,8 @@ const BASE: NinePatchInput = {
   regionOffset: { x: 0, y: 0 },
   regionSize: { x: 0, y: 0 },
   margin: { left: 0, top: 0, right: 0, bottom: 0 },
-  axisH: NINE_PATCH_STRETCH,
-  axisV: NINE_PATCH_STRETCH,
+  axisH: AxisStretchMode.STRETCH,
+  axisV: AxisStretchMode.STRETCH,
   drawCenter: true,
 };
 
@@ -107,8 +106,8 @@ describe('ninePatchGeometry — TILE', () => {
     textureSize: { x: 20, y: 20 },
     regionSize: { x: 20, y: 20 },
     margin: { left: 5, top: 0, right: 5, bottom: 0 },
-    axisH: NINE_PATCH_TILE,
-    axisV: NINE_PATCH_STRETCH,
+    axisH: AxisStretchMode.TILE,
+    axisV: AxisStretchMode.STRETCH,
   };
 
   it('tiles the middle strip at native size, cropping the final partial tile from its own start', () => {
@@ -155,7 +154,7 @@ describe('ninePatchGeometry — TILE_FIT', () => {
       rectSize: { x: 100, y: 10 },
       textureSize: { x: 26, y: 10 },
       regionSize: { x: 26, y: 10 },
-      axisH: NINE_PATCH_TILE_FIT,
+      axisH: AxisStretchMode.TILE_FIT,
     });
     const q = quads(buf);
     // scale = floor(100/26 + 0.5) = floor(4.346) = 4; no corners (0 margin).
@@ -247,5 +246,20 @@ describe('ninePatchGeometry — degenerate and error inputs', () => {
     for (const value of [...buf.positions, ...buf.uvs]) {
       expect(Number.isFinite(value)).toBe(true);
     }
+  });
+});
+
+describe('axisStretchModeOf', () => {
+  it('keeps a stored tile or tile-fit mode', () => {
+    expect(axisStretchModeOf(1)).toBe(AxisStretchMode.TILE);
+    expect(axisStretchModeOf(2)).toBe(AxisStretchMode.TILE_FIT);
+  });
+
+  it('reads an unknown mode as stretch (error path)', () => {
+    expect(axisStretchModeOf(3)).toBe(AxisStretchMode.STRETCH);
+  });
+
+  it('reads an absent mode as stretch (edge case)', () => {
+    expect(axisStretchModeOf(undefined)).toBe(AxisStretchMode.STRETCH);
   });
 });

@@ -7,7 +7,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -124,4 +124,3 @@ const animationTreeValidationRule: LintRule = {
 ruleRegistry.register(animationTreeValidationRule);
 
 // Export for testing
-export { animationTreeValidationRule };

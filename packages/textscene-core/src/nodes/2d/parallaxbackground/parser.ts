@@ -8,13 +8,13 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { boolOr, floatOr, intOr, vec2Or, parseHeadingIndex } from '../../../parser/valueParsers';
 import { parseCanvasLayerTransform } from '../ui/canvaslayer/parser';
 import type { ParallaxBackgroundProperties } from './types';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /**
  * `ParallaxBackground::ParallaxBackground()` runs `set_layer(-100)`, and a
  * `.tscn` omits a value equal to the class default, so `layer` is often absent.
  */
-export const PARALLAX_BACKGROUND_LAYER = -100;
+const PARALLAX_BACKGROUND_LAYER = -100;
 
 export function parseParallaxBackground(
   heading: ParsedHeading,

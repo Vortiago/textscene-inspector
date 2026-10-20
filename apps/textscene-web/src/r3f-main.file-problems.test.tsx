@@ -7,11 +7,6 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Diagnostic, LintSession, SessionLint } from '@textscene/core/linter';
 
-vi.mock('@textscene/core', async () => {
-  const real = await vi.importActual<typeof import('@textscene/core')>('@textscene/core');
-  return { ...real, TscnCanvas: () => null, TscnSceneContents: () => null };
-});
-
 /** The findings the scripted linter reports for a buffer; any other buffer lints clean. */
 const scripted = vi.hoisted(() => new Map<string, Diagnostic[]>());
 

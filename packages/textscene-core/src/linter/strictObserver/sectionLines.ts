@@ -6,7 +6,7 @@
 import type { BuiltSection } from '../../parser/types.js';
 import type { SectionLines } from '../types.js';
 
-export interface SectionLineRecorder {
+interface SectionLineRecorder {
   readonly lines: Map<BuiltSection, SectionLines>;
   /** Opens a section. Its property lines start empty. */
   start(): void;

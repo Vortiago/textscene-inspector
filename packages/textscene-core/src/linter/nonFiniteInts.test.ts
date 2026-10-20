@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { probe, taggedIntSlots } from './testing/intSlotProbe.js';
-import { everyValidatorLabel } from './registryPopulation.js';
+import { everyValidatorLabel } from './testing/registryPopulation.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /** The four spellings Godot's tokenizer resolves (`variant_parser.cpp:701-707`). */

@@ -4,18 +4,16 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { parseGodotFloat, storedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
+import { parseGodotFloat, statedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
 import {
   packedArrayBody,
   packedArrayForms,
   packedArrayLiteral,
   packedElementType,
-  readerLimitedInt,
-  splitTopLevel,
   STRING_ARRAY_FORMS,
-  stringLiteralBodies,
-  type IntWidth,
-} from '../../../godot/index.js';
+} from '../../../godot/variant/variantParser.js';
+import { readerLimitedInt, type IntWidth } from '../../../godot/variant/int.js';
+import { splitTopLevel, stringLiteralBodies } from '../../../godot/string/string.js';
 import { compositeSpellings } from '../../../godot/variant/variantConversion.js';
 import type { ParseError } from '../../types.js';
 import { formatCode } from './codes.js';
@@ -67,7 +65,7 @@ function scanIntElements(body: string | readonly string[], width: IntWidth = 'in
     // (`variant_parser.cpp:600`) into a `Vector<uint8_t>` (`:650`) through
     // `Variant::operator uint8_t()` (`variant.cpp:1519-1521`), so Godot alters
     // `300`, `-1` and `1000000000` to 44, 255 and 0.
-    const stored = storedFromFloat(asFloat, text, width);
+    const stored = statedFromFloat(asFloat, text, width);
     if (Number.isNaN(stored)) {
       const kind = readerLimitedInt(asFloat, width) ? 'beyondReader' : 'unstorable';
       return { error: { kind, text }, truncated: null };

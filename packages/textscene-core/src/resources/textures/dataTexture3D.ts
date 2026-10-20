@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { toHalfFloatTexels } from './halfFloatTexels';
 
 /** Single-channel or RGBA texels, slice after slice, rows from the top. */
-export type Texture3DFormat = typeof THREE.RedFormat | typeof THREE.RGBAFormat;
+type Texture3DFormat = typeof THREE.RedFormat | typeof THREE.RGBAFormat;
 
 /** Bytes upload as unsigned normalised, and floats as half floats that keep their raw values. */
 export function dataTexture3D(

@@ -27,14 +27,13 @@ import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
-import type { ControlColor } from '../control/types';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
+import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 /** The `font_color` of `Label` (`default_theme.cpp:384`): opaque white, where other controls use grey. */
-const LABEL_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
-/** `control_font_color` (`default_theme.cpp:101`): the `font_color` of `LineEdit` (`:422`) and both SpinBox arrow modulates (`:634,638`). */
-const CONTROL_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const LABEL_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /**
  * `DRAW_DISABLED` swaps in `icon_disabled_color` (`button.cpp:321-329`), `Color(1, 1, 1, 0.4)` for
@@ -53,7 +52,7 @@ function flatButtonPressedStyleBox(base: StyleBoxFlatData): StyleBoxFlatData {
   return { ...base, bgColor: { ...base.bgColor, a: base.bgColor.a * 0.85 } };
 }
 
-export interface GraphEditToolbarProps {
+interface GraphEditToolbarProps {
   toolbar: GraphEditToolbar;
   /** `solveNode.icons`: the scene's `theme_override_icons/<key>` for any of the seven keys. */
   icons: NativeControlComponentProps['solveNode']['icons'];
@@ -102,7 +101,7 @@ interface ToolbarTextProps {
   rect: Rect2;
   layout: TextLayoutResult;
   fontSizePx: number;
-  tint: ControlColor;
+  tint: Rgba;
   clippingPlanes: THREE.Plane[];
   renderOrder: number;
   /** `HORIZONTAL_ALIGNMENT_CENTER`, as `zoom_label` sets (`graph_edit.cpp:3242`). The SpinBox field is LEFT (`spin_box.cpp:731`). */

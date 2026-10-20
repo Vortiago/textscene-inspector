@@ -11,17 +11,16 @@ import type { GodotKeyframeValue } from './keyframeValues.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { info, warn } from '../../../logger';
+import { EXT_RESOURCE_CALL_ANYWHERE_RE, dictSubResourceEntries } from '../../../godot/variant/resourceRef.js';
+import { literalText } from '../../../godot/string/string.js';
 import {
-  EXT_RESOURCE_CALL_ANYWHERE_RE,
-  dictSubResourceEntries,
-  literalText,
   packedArrayCallAnywhere,
-} from '../../../godot/index.js';
-import { dictCallField, nodePathLiteral } from '../../../godot/variant/variantParser.js';
+  dictCallField,
+  nodePathLiteral,
+} from '../../../godot/variant/variantParser.js';
 import { findSubResource } from '../../../resources/SubResourceResolver.js';
+import { AnimationLoopMode } from '../../../godot/scene/animation.js';
 import type { AnimationLibraryRef } from './types';
-
-export type { GodotKeyframeValue } from './keyframeValues.js';
 
 export interface GodotKeyframe {
   time: number;
@@ -164,7 +163,7 @@ function parseAnimation(name: string, resource: TscnInternalResource): GodotAnim
   return {
     name,
     length: numberOr(data['length'], 1.0),
-    loopMode: numberOr(data['loop_mode'], 0),
+    loopMode: numberOr(data['loop_mode'], AnimationLoopMode.NONE),
     step: numberOr(data['step'], 0.1),
     tracks: parseTracks(data),
   };

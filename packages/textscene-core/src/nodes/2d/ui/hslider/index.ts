@@ -10,6 +10,5 @@ const hSliderRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(hSliderRegistration);
 
-export { hSliderRegistration };
 export * from './parser';
 export * from './types';

@@ -197,6 +197,11 @@ jobs:
         env:
           SHOWCASE_CHANNEL: bundled
 
+      # Each budget scene's draw calls and render step runs per frame, against its work budget.
+      - run: pnpm test:perf
+        env:
+          VISUAL_SKIP_BUILD: '1'
+
   integration:
     name: Integration tests (${{ matrix.os }}, VS Code ${{ matrix.vscode }})
     runs-on: ${{ matrix.os }}

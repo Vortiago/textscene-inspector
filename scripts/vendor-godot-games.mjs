@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Vendors curated open-source Godot 4 games into scenes/games/<dir>/, a corpus of real-world
- * scene graphs beside the scenes/demos/ breadth corpus, which vendor-godot-demos.mjs wipes on each
- * run. Each game is fetched at a pinned commit, pruned, and recorded with its licence in
+ * scene graphs beside the scenes/demos/ breadth corpus, which `pnpm vendor:demos` writes. Each
+ * game is fetched at a pinned commit, pruned, and recorded with its licence in
  * scenes/games/README.md. Each keeps its own res:// namespace (a `root` per game in the manifest).
  *
  * @example
@@ -10,11 +10,11 @@
  *   pnpm generate:fixtures
  */
 
-import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { isPruned } from './vendor-prune.mjs';
+import { copyPruned } from './vendor-prune.mjs';
 import { fetchShallow } from './vendor-git.mjs';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -62,16 +62,7 @@ try {
     const src = join(work, game.dir);
     process.stdout.write(`  fetch   ${game.dir} @ ${game.commit.slice(0, 12)} … `);
     fetchShallow(game.url, game.commit, src);
-    const dest = join(TARGET, game.dir);
-    let files = 0;
-    cpSync(src, dest, {
-      recursive: true,
-      filter: (p) => {
-        if (isPruned(p)) return false;
-        files++;
-        return true;
-      },
-    });
+    const files = copyPruned(src, join(TARGET, game.dir));
     totalFiles += files;
     summaries.push({ ...game, files });
     console.log(`vendored ${files} files`);
@@ -112,8 +103,9 @@ ${rows}
 
 - Vendored by \`scripts/vendor-godot-games.mjs\` (re-run to refresh; bump the
   pinned \`commit\` in the \`GAMES\` array to update a game). Godot editor
-  artifacts (\`*.import\`, \`.godot/\`, \`screenshots/\`) and source art
-  (\`*.psd\`, \`*.xcf\`, \`*.blend\`) are pruned; each game's \`LICENSE\` and
+  artifacts (\`.godot/\`, \`screenshots/\`, the \`*.import\` sidecars the
+  previewer does not read) and source art (\`*.psd\`, \`*.xcf\`, \`*.blend\`)
+  are pruned; each game's \`LICENSE\` and
   \`README.md\` are kept verbatim for attribution.
 - After running: \`pnpm generate:fixtures\`.
 `

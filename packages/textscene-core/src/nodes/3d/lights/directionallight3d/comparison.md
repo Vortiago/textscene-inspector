@@ -36,6 +36,8 @@ Strict parsing format-checks these `DirectionalLight3D` properties, plus 27 inhe
 | `valid-light3d-scale` (type-family match) | `light3d-non-unit-scale` | warning |
 <!-- lint:end -->
 
+The linter warns (`resource-type-excluded-by-hint`) when `light_projector` holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`light_3d.cpp:204-213`).
+
 The lenient parser reads the shadow mode, the three split offsets, the max distance, the pancake size, the fade start, `directional_shadow_blend_splits` and `sky_mode`. An absent, unparseable or non-finite value takes Godot's default. The defaults are four splits at 0.1, 0.2 and 0.5, no blending, and a fade from 0.8 of the distance. An out-of-range split offset or fade start reaches the renderer as written, as Godot's setter keeps it.
 
 The shadow's soft edge takes the four taps of Godot's default Soft Low filter, with the same dither as Godot. The filter reaches `shadow_blur` times two atlas texels.

@@ -4,13 +4,14 @@
  */
 
 import { useEffect } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { ViewportModeProvider } from '../../contexts/ViewportModeContext';
+import { SHOW_PERFORMANCE_STORAGE_KEY, ViewportModeProvider } from '../../contexts/ViewportModeContext';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
-import { ViewportActionsProvider, useViewportActions } from '../../contexts/ViewportActionsContext';
+import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
+import { useViewportActions } from '../../testing/ViewportActionsProbe';
 import { ViewportToolbar } from './ViewportToolbar';
-import { openDisplayMenu } from './displayMenuTesting';
+import { openDisplayMenu } from './DisplayMenu.testkit';
 
 function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolean) {
   return render(
@@ -21,6 +22,10 @@ function renderToolbar(initialMode?: '2D' | '3D', initialShowCollisions?: boolea
 }
 
 describe('ViewportToolbar', () => {
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
   it('defaults to 3D pressed, 2D not pressed', () => {
     renderToolbar();
     expect(screen.getByRole('button', { name: '3D' }).getAttribute('aria-pressed')).toBe('true');
@@ -70,6 +75,37 @@ describe('ViewportToolbar', () => {
     expect(checkbox.checked).toBe(false);
     fireEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
+  });
+
+  it('fog checkbox is checked by default and toggles showFog', () => {
+    renderToolbar('3D', false);
+    openDisplayMenu();
+    const checkbox = screen.getByRole('checkbox', { name: 'Fog' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(true);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it('hides the fog checkbox in 2D mode, where nothing draws fog', () => {
+    renderToolbar('2D');
+    openDisplayMenu();
+    expect(screen.queryByRole('checkbox', { name: 'Fog' })).toBeNull();
+  });
+
+  it('performance checkbox is unchecked by default and persists a click', () => {
+    renderToolbar('3D');
+    openDisplayMenu();
+    const checkbox = screen.getByRole('checkbox', { name: 'Performance' }) as HTMLInputElement;
+    expect(checkbox.checked).toBe(false);
+    fireEvent.click(checkbox);
+    expect(checkbox.checked).toBe(true);
+    expect(window.localStorage.getItem(SHOW_PERFORMANCE_STORAGE_KEY)).toBe('true');
+  });
+
+  it('offers the performance checkbox in 2D mode, whose canvas renders frames too', () => {
+    renderToolbar('2D');
+    openDisplayMenu();
+    expect(screen.getByRole('checkbox', { name: 'Performance' })).toBeTruthy();
   });
 
   it('hides the grid checkbox in 2D mode (a 3D-only affordance)', () => {

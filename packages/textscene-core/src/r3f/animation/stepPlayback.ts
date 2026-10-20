@@ -21,9 +21,9 @@ export interface StepPlaybackInput {
  * `transportTime` while paused, and 'hold-paused' keeps it paused. 'stop-and-restore'
  * stops every action and restores the authored pose. 'none': already stopped.
  */
-export type PlaybackCommand = 'ensure-playing' | 'seek' | 'hold-paused' | 'stop-and-restore' | 'none';
+type PlaybackCommand = 'ensure-playing' | 'seek' | 'hold-paused' | 'stop-and-restore' | 'none';
 
-export interface StepPlaybackResult {
+interface StepPlaybackResult {
   command: PlaybackCommand;
   /** A start, a resume or a clip switch: the local clock re-seeds from the transport. */
   resume: boolean;

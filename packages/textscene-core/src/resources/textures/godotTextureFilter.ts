@@ -5,22 +5,16 @@
  */
 
 import * as THREE from 'three';
-
-/**
- * `BaseMaterial3D::texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`. This enum
- * is `BaseMaterial3D::TextureFilter`, shared by `SpriteBase3D`. `CanvasItem.texture_filter`
- * is a different enum whose 0 means "inherit from parent node", not NEAREST.
- */
-export const GODOT_TEXTURE_FILTER_DEFAULT = 3;
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 
 /**
  * Godot's anisotropy ceiling is `1 << anisotropic_filtering_level`, a project
  * setting whose default is level 2 (4x). Pinned at 16 (level 4), not plumbed:
  * three clamps to the GPU maximum at upload, so this is a ceiling, never an error.
  */
-export const GODOT_ANISOTROPY_MAX = 16;
+const GODOT_ANISOTROPY_MAX = 16;
 
-export interface TextureFilterState {
+interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;
   minFilter: THREE.MinificationTextureFilter;
   generateMipmaps: boolean;
@@ -88,17 +82,30 @@ const STATES: Record<number, TextureFilterState> = {
  * outside `TEXTURE_FILTER_MAX`.
  */
 export function godotTextureFilterState(filter: number | undefined): TextureFilterState {
-  return STATES[filter ?? GODOT_TEXTURE_FILTER_DEFAULT] ?? STATES[GODOT_TEXTURE_FILTER_DEFAULT]!;
+  const defaultFilter = BASE_MATERIAL_3D_DEFAULTS.textureFilter;
+  return STATES[filter ?? defaultFilter] ?? STATES[defaultFilter]!;
 }
 
-/** The state as it lands on THIS texture, once its own mip availability is honoured. */
+/**
+ * The state as it lands on THIS texture, once its own mip availability is honoured. A chain built
+ * on the CPU keeps the mip filter, and the GPU builds no chain over it.
+ */
 function effectiveState(texture: THREE.Texture, state: TextureFilterState): TextureFilterState {
-  if (!state.generateMipmaps || texture.generateMipmaps) return state;
+  if (!state.generateMipmaps) return state;
+  if (hasMipChain(texture)) return { ...state, generateMipmaps: texture.generateMipmaps };
   return {
     ...state,
     minFilter: WITHOUT_MIPMAPS[state.minFilter] ?? state.minFilter,
     generateMipmaps: false,
   };
+}
+
+/**
+ * Whether `texture` samples a mip chain: one the GPU generates, or its own levels below the base,
+ * which three uploads as they are.
+ */
+export function hasMipChain(texture: THREE.Texture): boolean {
+  return texture.generateMipmaps || texture.mipmaps.length > 1;
 }
 
 /** Whether a texture already samples the way this state asks, so no clone is needed. */
@@ -119,6 +126,24 @@ const WITHOUT_MIPMAPS: Partial<Record<THREE.MinificationTextureFilter, THREE.Min
   [THREE.LinearMipmapLinearFilter]: THREE.LinearFilter,
   [THREE.LinearMipmapNearestFilter]: THREE.LinearFilter,
 };
+
+/** Marks a texture imported without a mip chain. In `userData`, so every `clone()` carries it. */
+const HAS_NO_MIP_CHAIN = 'textsceneHasNoMipChain';
+
+/**
+ * Removes the mip chain of a texture the caller owns, for an image Godot imports without one, and
+ * marks it, so a clone whose sampler the glTF loader rewrites can drop it again.
+ */
+export function dropMipChain(texture: THREE.Texture): void {
+  texture.generateMipmaps = false;
+  texture.minFilter = WITHOUT_MIPMAPS[texture.minFilter] ?? texture.minFilter;
+  texture.userData[HAS_NO_MIP_CHAIN] = true;
+}
+
+/** Whether `dropMipChain` removed the mip chain of `texture`, or of the texture it is cloned from. */
+export function hasDroppedMipChain(texture: THREE.Texture): boolean {
+  return texture.userData[HAS_NO_MIP_CHAIN] === true;
+}
 
 /**
  * Writes the sampler state onto a texture the caller owns. A `*_WITH_MIPMAPS`

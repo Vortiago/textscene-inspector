@@ -8,7 +8,9 @@
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
 import { dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
 import { matchedFloat } from '../../../godot/variant/number.js';
-import { boolSlotValue, keyedResourceRefReader, resourceRef } from '../../../godot/index.js';
+import { SPRITE_FRAME_MINIMUM_DURATION } from '../../../godot/scene/spriteFramesResource.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { keyedResourceRefReader, resourceRef } from '../../../godot/variant/resourceRef.js';
 import { ANIMATION_DICT_DEPTH, splitFramesArray, splitTopLevelDicts } from './frameSplit.js';
 import { unquoteLiteral } from '../../../parser/utils.js';
 
@@ -34,9 +36,6 @@ const ANIMATION_KEYS_RE = ['name', 'speed', 'loop', 'frames'].map((key) => new R
 /** The `"name"` value: one string literal, escapes and all, with an optional `&` or `@` sigil. */
 const NAME_RE = dictStringField('name');
 
-/** `SPRITE_FRAME_MINIMUM_DURATION` (`scene/resources/sprite_frames.h:35`). */
-export const SPRITE_FRAME_MINIMUM_DURATION = 0.01;
-
 /**
  * A `SpriteFrames` section's animations, or null when it declares none: to every
  * consumer, no animations and not a SpriteFrames both mean nothing to display.
@@ -49,7 +48,7 @@ export function decodeSpriteFrames(properties: Record<string, string>): SpriteFr
 }
 
 /** Animation name to its parsed frames and timing. */
-export function parseSpriteFramesAnimations(animationsValue: string): Map<string, SpriteFramesAnimation> {
+function parseSpriteFramesAnimations(animationsValue: string): Map<string, SpriteFramesAnimation> {
   const result = new Map<string, SpriteFramesAnimation>();
   for (const block of splitTopLevelDicts(animationsValue, ANIMATION_DICT_DEPTH)) {
     if (!ANIMATION_KEYS_RE.every((re) => re.test(block))) continue;

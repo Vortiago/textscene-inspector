@@ -96,6 +96,9 @@ export const GEOMETRY_SCENES = [
   // no .glb scene has. A missed buffer draws the placeholder, a missed image an
   // untextured quad, so the checker shows both arrived.
   { name: 'gltf-external', file: 'unit-gltf-external.tscn' },
+  // A glTF image takes its sidecar's texel passes: the default alpha-border pass turns the
+  // magenta behind a transparent edge green, as Godot's import does.
+  { name: 'gltf-alpha-border', file: 'unit-gltf-alpha-border.tscn' },
   // The same quad with a four-band atlas pins V orientation, which the
   // material-less `arraymesh` cannot see. Godot's V origin is the image top and
   // textures load with flipY=true, so a pass-through V samples upside down.
@@ -147,4 +150,6 @@ export const GEOMETRY_SCENES = [
   // A whole-node FIXED_Y billboard takes the camera's axes, so sprites off the screen centre
   // face the camera's forward axis, and a turned parent leaves no trace.
   { name: 'sprite3d-billboard-fixed-y', file: 'unit-sprite3d-billboard-fixed-y.tscn' },
+  // A shifted PROJECTION_FRUSTUM camera, looked through as the scene renders it.
+  { name: 'camera-frustum', file: 'unit-camera-frustum.tscn', camera: 'Root/Camera3D' },
 ];

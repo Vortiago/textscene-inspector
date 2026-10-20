@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../../linter/types.js';
 import { ruleRegistry } from '../../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../../godot/classdb/classBaseTypes.js';
 import { ruleInt } from '../../../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../../linter/ruleArms.js';
 
@@ -41,12 +41,10 @@ const gpuParticlesCollisionSDF3DBakeMaskRule: LintRule = {
     description:
       "Warns when a GPUParticlesCollisionSDF3D's Bake Mask has no bits enabled, so baking would produce no collision",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'GPUParticlesCollisionSDF3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'GPUParticlesCollisionSDF3D'),
     emits: armEmits(arms),
   },
   check: checkGPUParticlesCollisionSDF3D,
 };
 
 ruleRegistry.register(gpuParticlesCollisionSDF3DBakeMaskRule);
-
-export { gpuParticlesCollisionSDF3DBakeMaskRule };

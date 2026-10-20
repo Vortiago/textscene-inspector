@@ -13,6 +13,5 @@ const path3DRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(path3DRegistration);
 
-export { path3DRegistration };
 export * from './parser';
 export * from './types';

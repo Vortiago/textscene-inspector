@@ -4,7 +4,7 @@
  */
 
 import type { EnforcedEnd } from '../commonValidators.js';
-import type { IntWidth } from '../../../godot/index.js';
+import type { IntWidth } from '../../../godot/variant/int.js';
 import type { FiniteGrounding, Grounding } from './grounding.js';
 
 /** The numbers alone, shared by both option bags. */
@@ -38,9 +38,4 @@ export interface IntOpts extends NumericBounds, Grounding {
    * setter whose hint states no ceiling above `INT32_MAX` reads as int32.
    */
   width?: IntWidth;
-}
-
-export interface EnumOpts extends Grounding {
-  /** Per-value display labels, such as `{0:'OFF', 1:'ON', 2:'DOUBLE_SIDED', 3:'SHADOWS_ONLY'}`. */
-  labels: Record<number, string>;
 }

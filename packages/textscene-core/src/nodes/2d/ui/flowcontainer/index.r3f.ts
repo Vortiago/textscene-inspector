@@ -12,5 +12,3 @@ controlComponentRegistry.register({
   typeName: 'FlowContainer',
   Component: FlowContainer,
 });
-
-export { FlowContainer };

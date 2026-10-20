@@ -21,7 +21,7 @@ import { styleBoxLineDrawRect } from './styleBoxLineGeometry';
 import { ninePatchGeometry } from './ninePatchGeometry';
 import type { Rect2 } from './rect';
 import { useControlClipPlanes } from './controlClipping';
-import { multiplyModulate, WHITE_MODULATE, type RGBA } from '../../canvasItemModulate';
+import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import { canvasItemFacing } from '../../canvasItemFacing';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../canvasSrgbMultiply';
@@ -29,8 +29,9 @@ import { pinNoColorSpace, useCanvasSrgbDefines } from '../../canvas2DTextureDeco
 import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useUploadedClone } from '../../tiledUpload/useTiledUpload';
+import type { Rgba } from '../../../godot/math/math';
 
-export interface StyleBoxQuadProps {
+interface StyleBoxQuadProps {
   styleBox: ResolvedStyleBox;
   rect: Rect2;
   /**
@@ -38,7 +39,7 @@ export interface StyleBoxQuadProps {
    * linear `color`. A flat box has two base colours and a decode downstream, so the
    * tint multiplies in before it. Defaults to `WHITE_MODULATE`, no tint.
    */
-  color?: RGBA;
+  color?: Rgba;
   /**
    * Paint order in the 2D transparent bucket. Nothing writes depth, so three's sort,
    * which reads `renderOrder` before distance, alone decides which Control covers
@@ -158,11 +159,9 @@ function buildGeometry(styleBox: StyleBoxFlatData, rect: Rect2): THREE.BufferGeo
 
 /**
  * Multiplies a tint into a flat or line StyleBox's base colours in raw sRGB, ahead
- * of the one sRGB→linear conversion in `styleBoxFlatGeometry`. Exported for a
- * painter that tints a StyleBox outside `<StyleBoxQuad>`: `styleBoxFlat.ts` cannot
- * import the modulate helpers to offer one.
+ * of the one sRGB→linear conversion in `styleBoxFlatGeometry`.
  */
-export function tintStyleBox(styleBox: StyleBoxFlatData, tint: RGBA): StyleBoxFlatData {
+function tintStyleBox(styleBox: StyleBoxFlatData, tint: Rgba): StyleBoxFlatData {
   if (tint.r === 1 && tint.g === 1 && tint.b === 1 && tint.a === 1) return styleBox;
   return {
     ...styleBox,
@@ -176,7 +175,7 @@ interface StyleBoxTextureMeshProps {
   /** Zero-origin, size only. */
   rect: Rect2;
   /** Raw sRGB CanvasItem tint; multiplied with `texture.modulateColor` below. */
-  tint: RGBA;
+  tint: Rgba;
   renderOrder: number;
   clippingPlanes: THREE.Plane[];
 }

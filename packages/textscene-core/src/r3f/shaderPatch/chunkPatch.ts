@@ -7,12 +7,12 @@
 import * as THREE from 'three';
 import { warn } from '../../logger.js';
 
-export type ChunkName = keyof typeof THREE.ShaderChunk;
+type ChunkName = keyof typeof THREE.ShaderChunk;
 
 /** The text of each named chunk. */
 export type Chunks<Name extends ChunkName> = Record<Name, string>;
 
-export type ProgramName = keyof typeof THREE.ShaderLib;
+type ProgramName = keyof typeof THREE.ShaderLib;
 
 /** One replacement: three's text, and the text that takes its place. */
 export interface TextEdit {
@@ -42,6 +42,19 @@ export function applyEdits(text: string, edits: readonly TextEdit[]): string | n
     if (patched === null) return null;
   }
   return patched;
+}
+
+/**
+ * three's chunk `name` as it stands now, the patches installed so far included, with `edit` applied.
+ * It throws when three's text is missing or occurs more than once, so a three that lost the text
+ * fails loudly, not with a silently unpatched read.
+ */
+export function editedChunk(name: ChunkName, edit: TextEdit): string {
+  const chunk = THREE.ShaderChunk[name];
+  const edited = applyEdit(chunk, edit);
+  if (edited === null)
+    throw new Error(`expected three's ${name} to hold "${edit.three}" once, got:\n${chunk}`);
+  return edited;
 }
 
 /** The chunks with every edit applied in order, or null when one is missing, as `applyEdit`. */

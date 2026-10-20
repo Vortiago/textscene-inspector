@@ -4,29 +4,14 @@
  * settings type without importing `build.ts`, which the render layer pulls in.
  */
 
-import type { Color } from '../../utils/colorParser';
-import type { Vector3 } from '../../parser/vectors';
-
-/**
- * Godot's `Environment.tonemap_agx_contrast` default (`environment.h`; `ADD_PROPERTY`
- * at `environment.cpp:1290`, hint `"1.0,2.0,0.01,or_greater"`). It lives with the data
- * because the decode needs it too, and routing must not import five tone-curve bodies.
- */
-export const DEFAULT_AGX_CONTRAST = 1.25;
-
-export enum BackgroundMode {
-  BG_CLEAR_COLOR = 0,
-  BG_COLOR = 1,
-  BG_SKY = 2,
-  BG_CANVAS = 3,
-  BG_KEEP = 4,
-  BG_CAMERA_FEED = 5,
-}
+import type { Rgba } from '../../godot/math/math';
+import type { Vector3 } from '../../godot/math/vector';
+import type { AmbientSource, BackgroundMode } from '../../godot/scene/environment.js';
 
 export interface EnvironmentProperties {
   // Background
   background_mode: BackgroundMode;
-  background_color: Color;
+  background_color: Rgba;
   background_energy_multiplier: number;
 
   /**
@@ -59,8 +44,8 @@ export interface EnvironmentProperties {
 
   // Ambient lighting (scene-wide constant illumination)
   /** 0 BG (default), 1 DISABLED, 2 COLOR, 3 SKY. Only 2 and 3 emit a flat ambient. */
-  ambient_light_source: number;
-  ambient_light_color: Color;
+  ambient_light_source: AmbientSource;
+  ambient_light_color: Rgba;
   ambient_light_energy: number;
   /**
    * How much of the ambient comes from the sky rather than
@@ -73,7 +58,7 @@ export interface EnvironmentProperties {
   fog_enabled: boolean;
   /** 0 EXPONENTIAL (default), 1 DEPTH. */
   fog_mode: number;
-  fog_light_color: Color;
+  fog_light_color: Rgba;
   fog_light_energy: number;
   /** How much the directional lights tint the fog towards them. */
   fog_sun_scatter: number;
@@ -97,8 +82,8 @@ export interface EnvironmentProperties {
   volumetric_fog_enabled: boolean;
   volumetric_fog_density: number;
   /** The scattering colour, sRGB: the share of the light the medium scatters into the view. */
-  volumetric_fog_albedo: Color;
-  volumetric_fog_emission: Color;
+  volumetric_fog_albedo: Rgba;
+  volumetric_fog_emission: Rgba;
   volumetric_fog_emission_energy: number;
   /** The Henyey-Greenstein `g`: positive scatters forward, towards the light. */
   volumetric_fog_anisotropy: number;
@@ -168,7 +153,7 @@ export interface DepthFog {
   /** 0 EXPONENTIAL, 1 DEPTH. */
   mode: number;
   /** sRGB, not yet times `lightEnergy`. */
-  color: Color;
+  color: Rgba;
   lightEnergy: number;
   sunScatter: number;
   density: number;
@@ -189,8 +174,8 @@ export interface DepthFog {
  */
 export interface VolumetricFog {
   density: number;
-  albedo: Color;
-  emission: Color;
+  albedo: Rgba;
+  emission: Rgba;
   emissionEnergy: number;
   /** The Henyey-Greenstein `g` of every light the medium scatters. */
   anisotropy: number;
@@ -202,7 +187,7 @@ export interface VolumetricFog {
    */
   ambient: {
     inject: number;
-    color: Color;
+    color: Rgba;
     /** The sky's share of the injected ambient, against `color`. */
     skyContribution: number;
   };
@@ -219,7 +204,7 @@ export interface EnvironmentSettings {
   background: {
     mode: number;
     /** The sRGB colour BG_CLEAR_COLOR or BG_COLOR draws, scaled by the energy multiplier. */
-    color: Color;
+    color: Rgba;
     /** The sky's intensity under BG_SKY. `color` already carries it. */
     energyMultiplier: number;
   };
@@ -228,7 +213,7 @@ export interface EnvironmentSettings {
    * a cubemap rather than a constant (a sky background).
    */
   ambient: {
-    color: Color;
+    color: Rgba;
     energy: number;
   } | null;
   /**
@@ -242,7 +227,7 @@ export interface EnvironmentSettings {
     energy: number;
     /**
      * `ambient_light_sky_contribution`: the sky's share of the diffuse ambient, 0 for
-     * `AMBIENT_SOURCE_COLOR`. It scales the ambient only, never the reflection.
+     * `AmbientSource.COLOR`. It scales the ambient only, never the reflection.
      */
     contribution: number;
   } | null;

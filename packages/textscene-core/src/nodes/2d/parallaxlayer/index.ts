@@ -10,6 +10,5 @@ const parallaxLayerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(parallaxLayerRegistration);
 
-export { parallaxLayerRegistration };
 export * from './parser';
 export * from './types';

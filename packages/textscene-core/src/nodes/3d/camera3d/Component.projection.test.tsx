@@ -112,4 +112,41 @@ describe('Camera3D projection (assertions 60–66)', () => {
     // same `size`. If this fails, keep_aspect is being ignored.
     expect(widthCam.right === heightCam.right && widthCam.top === heightCam.top).toBe(false);
   });
+
+  it('rebuilds the projection when `size` changes', async () => {
+    const orthographic = (size: number) =>
+      makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size });
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={orthographic(8)} />);
+    await renderer.update(<Camera3D node={orthographic(2)} />);
+    const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
+    expect(o.projectionMatrix.elements[5]).toBeCloseTo(2 / 2, 6);
+  });
+
+  it('tags the new camera with its node path when the projection changes (edge case)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode()} />);
+    await renderer.update(<Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL })} />);
+    const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
+    expect(o.userData.tscnPath).toBe('Cam');
+  });
+
+  it('builds the perspective projection matrix from `fov`', async () => {
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode({ fov: 90 })} />);
+    const p = instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByType('PerspectiveCamera'));
+    // A perspective matrix scales y by 1 / tan(fovy / 2), and tan(45°) is 1.
+    expect(p.projectionMatrix.elements[5]).toBeCloseTo(1, 6);
+  });
+
+  it('draws PROJECTION_FRUSTUM through `size` and `frustum_offset` at the near plane', async () => {
+    const node = makeNode({
+      projection: ProjectionMode.PROJECTION_FRUSTUM,
+      size: 2,
+      near: 1,
+      frustum_offset: { x: 0.5, y: 0.25 },
+    });
+    const renderer = await ReactThreeTestRenderer.create(<Camera3D node={node} />);
+    const p = instanceAs<THREE.PerspectiveCamera>(renderer.scene.findByType('PerspectiveCamera'));
+    // The near plane spans 2 × 16/9 by 2, shifted by the offset: (t + b) / (t - b) is 0.5 / 2.
+    expect(p.projectionMatrix.elements[5]).toBeCloseTo(1, 6);
+    expect(p.projectionMatrix.elements[9]).toBeCloseTo(0.25, 6);
+  });
 });

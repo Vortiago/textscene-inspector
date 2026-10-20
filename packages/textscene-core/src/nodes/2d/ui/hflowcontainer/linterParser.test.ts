@@ -24,10 +24,12 @@ describe('HFlowContainer strict validators', () => {
   });
 
   it('names the removal with its citation', () => {
-    const removals = validatorRegistry.getOwnRemovals('HFlowContainer');
-    expect(Object.keys(removals)).toEqual(['vertical']);
-    expect(removals['vertical']?.cite).toBe('flow_container.cpp:372');
-    expect(removals['vertical']?.reason.length).toBeGreaterThan(0);
+    // FlowContainer removes nothing, so every key HFlowContainer removes is its own.
+    expect(validatorRegistry.getUnavailableKeys('FlowContainer')).toEqual([]);
+    expect(validatorRegistry.getUnavailableKeys('HFlowContainer')).toEqual(['vertical']);
+    const validator = validatorRegistry.declarationFor('HFlowContainer', 'vertical');
+    expect(validator?.grounding).toEqual({ kind: 'enforced', cite: 'flow_container.cpp:372' });
+    expect(validator!('vertical', 'true', 1)!.message).toContain('its orientation is fixed by the class');
   });
 
   it('still accepts `vertical` on the plain FlowContainer', () => {

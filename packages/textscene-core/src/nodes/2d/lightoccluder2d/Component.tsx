@@ -19,7 +19,7 @@ import { useShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { OCCLUDER_CULL_DISABLED } from '../../../r3f/lighting2d/shadowVolumes';
 import type { LightOccluder2DProperties } from './types';
 import { parseOccluderCullMode, polygonToSegments } from './polygonShapes';
-import { boolSlotValue } from '../../../godot/index.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 export function LightOccluder2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as LightOccluder2DProperties;

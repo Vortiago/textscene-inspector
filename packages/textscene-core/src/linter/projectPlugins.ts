@@ -12,12 +12,8 @@ import {
   projectDataDirectoryPath,
   projectExtensionListPath,
 } from '../parser/projectSettingsParser.js';
-import {
-  GDEXTENSION_FILE_EXTENSION,
-  PROJECT_FILE_PATH,
-  extensionListEntries,
-  extensionListPath,
-} from '../godot/index.js';
+import { GDEXTENSION_FILE_EXTENSION } from '../godot/project/editorScan.js';
+import { PROJECT_FILE_PATH, extensionListEntries, extensionListPath } from '../godot/project/project.js';
 import { StampedReads, loadOrNull, stampOf } from './stampedReads.js';
 
 /**
@@ -60,7 +56,7 @@ interface ProjectEvidence extends ProjectFacts {
 }
 
 /** Whether code in the project behind a provider may add to the importer. The project is listed only when it is called. */
-export type ImportExtensionProbe = () => Promise<boolean>;
+type ImportExtensionProbe = () => Promise<boolean>;
 
 /** The answer for a provider that cannot list: it never rules a GDExtension out, so no file it reads can change it. */
 const MAY_EXTEND: ImportExtensionProbe = () => Promise.resolve(true);

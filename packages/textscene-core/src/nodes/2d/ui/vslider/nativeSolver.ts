@@ -12,14 +12,14 @@ import type {
 import { sliderGrabberIconSize, sliderMinimumSize } from '../shared/sliderSolver';
 
 /** `grabber_icon` (`Theme::DATA_TYPE_ICON` under key `"grabber"`): the one themeable slot the min-size solve reads. */
-export const vSliderTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+const vSliderTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
   const themed = themedIcons.grabber;
   const requests: TextureSlotRequest[] = [];
   if (themed) requests.push({ key: 'grabber', ref: themed.ref, scope: themed.resources });
   return requests;
 };
 
-export const vSliderMinimumSize: MinimumSizeFn = (n, ctx) =>
+const vSliderMinimumSize: MinimumSizeFn = (n, ctx) =>
   sliderMinimumSize(true, ctx.theme, sliderGrabberIconSize(ctx.theme, n.textureSlots));
 
 controlSolverRegistry.registerMinimumSize('VSlider', vSliderMinimumSize);

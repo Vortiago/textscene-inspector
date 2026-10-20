@@ -9,7 +9,7 @@ import { createTypeRegistry } from '../core/createTypeRegistry';
 import type { CsgShapeRegistration } from './csg/csgRegistration';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { YSortItem } from './ySortItems';
-import { descendsFrom } from '../godot/classdb/nodeBaseTypes';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes';
 import { withGeometryInstance } from './visibilityRange/geometryInstance';
 
 export interface NodeComponentProps {
@@ -74,7 +74,7 @@ export interface YSortGroupDescription {
   cells: readonly PlacedCell[] | null;
 }
 
-export interface YSortGroupRegistration {
+interface YSortGroupRegistration {
   describe: (node: TscnNode) => YSortGroupDescription;
   Renderer: React.ComponentType<{
     item: YSortItem;
@@ -93,7 +93,7 @@ export type ScenePass = (nodes: TscnNode[], internalResources: readonly TscnInte
  * `transforms` passes move nodes; `paths` passes read where nodes ended up, so
  * every transform pass runs before any path pass whatever the barrel order.
  */
-export interface ScenePassRegistration {
+interface ScenePassRegistration {
   stage: 'transforms' | 'paths';
   run: ScenePass;
 }
@@ -111,7 +111,7 @@ class NodeComponentRegistryImpl {
    */
   register(registration: NodeComponentRegistration): void {
     const { typeName, Component } = registration;
-    const mounted = descendsFrom(typeName, 'GeometryInstance3D')
+    const mounted = descendsFromClass(typeName, 'GeometryInstance3D')
       ? withGeometryInstance(Component)
       : Component;
     this.registry.register(typeName, { ...registration, Component: mounted });

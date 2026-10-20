@@ -5,10 +5,8 @@ import {
   createShadowCasterRegistry,
   ShadowCasterProvider,
   useShadowCaster,
-  useShadowCasterRegistry,
   worldShadowCasters,
   type ShadowCaster,
-  type ShadowCasterRegistry,
 } from './shadowCasterRegistry';
 import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED } from './shadowVolumes';
 
@@ -252,35 +250,20 @@ describe('useShadowCaster', () => {
 });
 
 describe('ShadowCasterProvider', () => {
-  function Probe({ onRegistry }: { onRegistry: (r: ShadowCasterRegistry | null) => void }) {
-    onRegistry(useShadowCasterRegistry());
+  function Publisher({ value }: { value: ShadowCaster | null }) {
+    useShadowCaster(value);
     return null;
   }
 
-  it('exposes null outside any provider', () => {
-    const seen: (ShadowCasterRegistry | null)[] = [];
-    render(<Probe onRegistry={(r) => seen.push(r)} />);
-    expect(seen[0]).toBeNull();
-  });
-
-  it('shares the registry it was handed', () => {
-    const registry = createShadowCasterRegistry();
-    const seen: (ShadowCasterRegistry | null)[] = [];
+  it('creates its own registry when handed none, so an occluder inside skips the outer one', () => {
+    const outer = createShadowCasterRegistry();
     render(
-      <ShadowCasterProvider registry={registry}>
-        <Probe onRegistry={(r) => seen.push(r)} />
+      <ShadowCasterProvider registry={outer}>
+        <ShadowCasterProvider>
+          <Publisher value={caster(new THREE.Group())} />
+        </ShadowCasterProvider>
       </ShadowCasterProvider>
     );
-    expect(seen[0]).toBe(registry);
-  });
-
-  it('creates its own registry when handed none', () => {
-    const seen: (ShadowCasterRegistry | null)[] = [];
-    render(
-      <ShadowCasterProvider>
-        <Probe onRegistry={(r) => seen.push(r)} />
-      </ShadowCasterProvider>
-    );
-    expect(seen[0]).not.toBeNull();
+    expect(outer.casters()).toEqual([]);
   });
 });

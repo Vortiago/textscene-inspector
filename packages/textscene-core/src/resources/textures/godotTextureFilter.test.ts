@@ -7,12 +7,15 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  GODOT_ANISOTROPY_MAX,
-  GODOT_TEXTURE_FILTER_DEFAULT,
   applyTextureFilterState,
+  dropMipChain,
   godotTextureFilterState,
+  hasDroppedMipChain,
   textureFilterMatches,
 } from './godotTextureFilter';
+
+/** The anisotropy ceiling the previewer pins: `anisotropic_filtering_level` 4, so `1 << 4`. */
+const GODOT_ANISOTROPY_MAX = 16;
 
 /**
  * Godot's six sampler states. `min_filter` there is the within-level filter and
@@ -57,7 +60,6 @@ describe('godotTextureFilterState', () => {
 
   it("falls back to Godot's default for an absent or out-of-range value", () => {
     // `BaseMaterial3D::texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`.
-    expect(GODOT_TEXTURE_FILTER_DEFAULT).toBe(3);
     const fallback = godotTextureFilterState(3);
     expect(godotTextureFilterState(undefined)).toEqual(fallback);
     expect(godotTextureFilterState(99)).toEqual(fallback);
@@ -129,5 +131,69 @@ describe('a texture with no mipmaps', () => {
 
     expect(texture.generateMipmaps).toBe(true);
     expect(texture.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+  });
+});
+
+describe('a texture with an uploaded mip chain', () => {
+  /** A 2 × 2 texture whose chain was built on the CPU, as an imported image's is. */
+  function uploadedChain(): THREE.DataTexture {
+    const texture = new THREE.DataTexture(new Uint8Array(16), 2, 2);
+    texture.mipmaps = [
+      { data: new Uint8Array(16), width: 2, height: 2 },
+      { data: new Uint8Array(4), width: 1, height: 1 },
+    ] as unknown as THREE.DataTexture['mipmaps'];
+    return texture;
+  }
+
+  it('samples its chain under a mipmapped filter, without asking the GPU for another', () => {
+    const texture = uploadedChain();
+    applyTextureFilterState(texture, godotTextureFilterState(3));
+    expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearMipmapLinearFilter, false]);
+  });
+
+  it('already matches a mipmapped filter once that filter is applied', () => {
+    const texture = uploadedChain();
+    applyTextureFilterState(texture, godotTextureFilterState(5));
+    expect(textureFilterMatches(texture, godotTextureFilterState(5))).toBe(true);
+  });
+
+  it('samples its base level under a filter with no mipmaps (edge case)', () => {
+    const texture = uploadedChain();
+    applyTextureFilterState(texture, godotTextureFilterState(1));
+    expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearFilter, false]);
+  });
+});
+
+describe('dropMipChain', () => {
+  it('stops a mipmapped texture generating mipmaps and samples its base level', () => {
+    const texture = new THREE.Texture();
+    dropMipChain(texture);
+    expect([texture.generateMipmaps, texture.minFilter]).toEqual([false, THREE.LinearFilter]);
+  });
+
+  it('keeps a nearest mip filter nearest within the level', () => {
+    const texture = new THREE.Texture();
+    texture.minFilter = THREE.NearestMipmapLinearFilter;
+    dropMipChain(texture);
+    expect(texture.minFilter).toBe(THREE.NearestFilter);
+  });
+
+  it('leaves a filter with no mip lookup as it is (edge case)', () => {
+    const texture = new THREE.Texture();
+    texture.minFilter = THREE.NearestFilter;
+    dropMipChain(texture);
+    expect(texture.minFilter).toBe(THREE.NearestFilter);
+  });
+});
+
+describe('hasDroppedMipChain', () => {
+  it('finds the mark dropMipChain leaves on a texture and on its clone', () => {
+    const texture = new THREE.Texture();
+    dropMipChain(texture);
+    expect([hasDroppedMipChain(texture), hasDroppedMipChain(texture.clone())]).toEqual([true, true]);
+  });
+
+  it('finds none on a texture that keeps its mip chain (edge case)', () => {
+    expect(hasDroppedMipChain(new THREE.Texture())).toBe(false);
   });
 });

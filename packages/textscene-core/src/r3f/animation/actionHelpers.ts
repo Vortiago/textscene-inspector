@@ -5,7 +5,7 @@
  */
 import type { AnimationAction } from 'three';
 
-export interface ActionOpts {
+interface ActionOpts {
   weight?: number;
   timeScale?: number;
 }

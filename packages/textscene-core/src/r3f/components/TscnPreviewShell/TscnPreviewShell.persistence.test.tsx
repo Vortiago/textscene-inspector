@@ -11,6 +11,7 @@ vi.mock('../../TscnCanvas', () => ({
 }));
 
 import { TscnPreviewShell } from './TscnPreviewShell';
+import { openDisplayMenu } from '../ViewportToolbar/DisplayMenu.testkit';
 
 const MINIMAL_TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -42,6 +43,17 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
     expect(screen.queryByLabelText('Collapse the side panel')).toBeNull();
   });
 
+  it('shows the performance overlay when the last session turned it on', () => {
+    globalThis.window.localStorage.setItem('tsi.showPerformance', 'true');
+    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    expect(screen.getByTestId('performance-overlay')).toBeTruthy();
+  });
+
+  it('a session with no persisted value shows no performance overlay (default)', () => {
+    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    expect(screen.queryByTestId('performance-overlay')).toBeNull();
+  });
+
   it('a session with no persisted value starts with the dock expanded (default)', () => {
     render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
     expect(screen.getByLabelText('Collapse the side panel')).toBeTruthy();
@@ -55,6 +67,23 @@ describe('<TscnPreviewShell> persisted dock layout + viewport mode (#224)', () =
 
     render(<TscnPreviewShell panelId="p1" content={PLAIN_ROOT_TSCN} />);
     expect(screen.getByRole('button', { name: '2D' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('persists a hidden fog across a remount, so a slow scene stays fast on reload', () => {
+    const { unmount } = render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    openDisplayMenu();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Fog' }));
+    unmount();
+
+    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    openDisplayMenu();
+    expect((screen.getByRole('checkbox', { name: 'Fog' }) as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('a session with no persisted value shows the fog', () => {
+    render(<TscnPreviewShell panelId="p1" content={MINIMAL_TSCN} />);
+    openDisplayMenu();
+    expect((screen.getByRole('checkbox', { name: 'Fog' }) as HTMLInputElement).checked).toBe(true);
   });
 
   it('a session with no persisted value defaults to 3D (matches the pre-#224 baseline)', () => {

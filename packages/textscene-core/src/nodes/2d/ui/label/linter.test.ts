@@ -42,6 +42,16 @@ describe('Label Linter (label-autowrap-needs-custom-minimum-size)', () => {
     );
   });
 
+  it('stays silent when a custom_minimum_size component narrows to a value the file does not state', () => {
+    expectNoDiagnostic(
+      scene(
+        node('VBoxContainer', {}, { name: 'Column' }),
+        node('Label', { autowrap_mode: 3, custom_minimum_size: 'Vector2i(4294967296, 0)' }, { parent: '.' })
+      ),
+      { ruleName: 'label-autowrap-needs-custom-minimum-size' }
+    );
+  });
+
   it('stays silent once custom_minimum_size is non-zero', () => {
     expectNoDiagnostic(
       scene(

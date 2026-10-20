@@ -8,20 +8,17 @@ import { useMemo } from 'react';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { TileMaterial, TileSetModel } from '../resources/tileset/types';
 import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/tileCanvasItems';
-import { canvasItemBlendState } from '../resources/materials/canvasitemmaterial/renderer';
-import {
-  CanvasItemBlendMode,
-  type CanvasItemMaterialProperties,
-} from '../resources/materials/canvasitemmaterial/types';
+import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
 import { useCanvasItemMaterialFile } from './components/canvasItemMaterialContext';
-import { multiplyModulate, type RGBA } from './canvasItemModulate';
+import { multiplyModulate } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
 import { useGodotLinearColor } from './godotColor';
 import { canvasKeyAtZ } from './canvasPaintOrder';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement';
 import { TileSourceMesh } from './TileSourceMesh';
+import type { Rgba } from '../godot/math/math';
 
 interface TileLayerItem {
   model: TileSetModel;
@@ -29,7 +26,7 @@ interface TileLayerItem {
    * The layer's own-pixel modulate in sRGB, before the canvas tint: each item's material decides
    * whether the canvas tint reaches it.
    */
-  selfTint: RGBA;
+  selfTint: Rgba;
   /** The layer's material, which a tile with no material of its own draws with. */
   material: CanvasItemMaterialProperties | null;
   lightMask: number | undefined;
@@ -71,11 +68,10 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const canvasKey = canvasKeyAtZ(useCanvasItemKey(), layer.zFinal, zFinal);
   const own = multiplyModulate(layer.selfTint, useCanvasModulateFor(material));
   const color = useGodotLinearColor(own);
-  const blend = canvasItemBlendState(material?.blendMode ?? CanvasItemBlendMode.MIX);
   return (
     <CanvasItemGroup renderOrder={canvasKey}>
       <LitCanvasItemPixels material={material} lightMask={layer.lightMask} zFinal={zFinal}>
-        {(lighting) =>
+        {(pixelMaterial) =>
           item.runs.map(({ source, cells }, runIndex) => (
             <TileSourceMesh
               key={runIndex}
@@ -86,8 +82,7 @@ function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
               color={color}
               opacity={own.a}
               name={layer.name}
-              blend={blend}
-              lighting={lighting}
+              pixelMaterial={pixelMaterial}
             />
           ))
         }

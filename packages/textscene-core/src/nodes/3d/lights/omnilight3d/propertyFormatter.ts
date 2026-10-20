@@ -3,6 +3,7 @@
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import type { OmniLight3DProperties } from './types';
 import { formatNode3DProperties } from '../../../base/node3d/propertyFormatter';
+import { OMNI_LIGHT_3D_SHADOW_MODE_NAMES } from '../../../../godot/scene/light';
 import { formatBaseLightSection, formatShadowSectionWithNormalBias } from '../shared/propertyFormatter';
 
 export function formatOmniLight3DProperties(properties: OmniLight3DProperties): PropertySection[] {
@@ -18,10 +19,11 @@ export function formatOmniLight3DProperties(properties: OmniLight3DProperties): 
   const omniShadowItems: PropertySection['items'] = [];
 
   if (properties.omni_shadow_mode !== undefined) {
-    const shadowModes = ['DUAL_PARABOLOID', 'CUBE'];
     omniShadowItems.push({
       label: 'Shadow Mode',
-      value: shadowModes[properties.omni_shadow_mode] || `Unknown (${properties.omni_shadow_mode})`,
+      value:
+        OMNI_LIGHT_3D_SHADOW_MODE_NAMES[properties.omni_shadow_mode] ??
+        `Unknown (${properties.omni_shadow_mode})`,
     });
   }
 

@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+; One variable: the mip chain of an imported image, which Godot's importer builds on the CPU. Both
+; strips tile an 8 x 8 image so densely that they sample its smallest levels. The top strip is a
+; red and green checker: each level averages the bytes, so it draws 128, 128, 0 where a chain
+; averaged in linear space draws brighter. The bottom strip is a normal map of stripes leaning 0 and
+; 90 degrees towards +X, imported as a normal map, so each level is renormalised to lean 45 degrees,
+; not 30. No other golden minifies an imported image that generates mipmaps.
+
+[ext_resource type="Texture2D" path="res://textures/mip-checker.png" id="1_checker"]
+[ext_resource type="Texture2D" path="res://textures/mip-normal-stripes.png" id="2_normal"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_strip"]
+size = Vector2(4, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_checker"]
+shading_mode = 0
+albedo_texture = ExtResource("1_checker")
+uv1_scale = Vector3(512, 128, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_normal"]
+diffuse_mode = 1
+specular_mode = 2
+albedo_color = Color(0.6, 0.6, 0.6, 1)
+normal_enabled = true
+normal_texture = ExtResource("2_normal")
+uv1_scale = Vector3(512, 128, 1)
+
+[node name="MipmapImport" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 3.0
+
+[node name="Checker" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("QuadMesh_strip")
+surface_material_override/0 = SubResource("StandardMaterial3D_checker")
+
+[node name="NormalStripes" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6, 0)
+mesh = SubResource("QuadMesh_strip")
+surface_material_override/0 = SubResource("StandardMaterial3D_normal")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, 0.5, 0, 0, 0)
+sky_mode = 1

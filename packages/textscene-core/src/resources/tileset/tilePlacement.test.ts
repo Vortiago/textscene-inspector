@@ -5,7 +5,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
 import { mapToLocalPx } from './tilePlacement';
-import { TILE_SHAPE_ISOMETRIC, TILE_SHAPE_SQUARE, type TileGrid } from './types';
+import type { TileGrid } from './types';
+import { TileShape } from '../../godot/scene/tileSet';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -16,14 +17,14 @@ afterEach(() => {
 });
 
 const squareGrid: TileGrid = {
-  shape: TILE_SHAPE_SQUARE,
+  shape: TileShape.TILE_SHAPE_SQUARE,
   layout: 0,
   offsetAxis: 0,
   tileSize: { x: 16, y: 16 },
 };
 
-function isoGrid(layout: TileGrid['layout'], offsetAxis: 0 | 1 = 0): TileGrid {
-  return { shape: TILE_SHAPE_ISOMETRIC, layout, offsetAxis, tileSize: { x: 128, y: 64 } };
+function isoGrid(layout: TileGrid['layout'], offsetAxis: TileGrid['offsetAxis'] = 0): TileGrid {
+  return { shape: TileShape.TILE_SHAPE_ISOMETRIC, layout, offsetAxis, tileSize: { x: 128, y: 64 } };
 }
 
 describe('mapToLocalPx — square', () => {
@@ -71,8 +72,8 @@ describe('mapToLocalPx — vertical offset axis', () => {
 });
 
 describe('mapToLocalPx — hexagon (the hexagonal_map demo: vertical axis, 110×94)', () => {
-  function hexGrid(layout: TileGrid['layout'], offsetAxis: 0 | 1): TileGrid {
-    return { shape: 3, layout, offsetAxis, tileSize: { x: 110, y: 94 } };
+  function hexGrid(layout: TileGrid['layout'], offsetAxis: TileGrid['offsetAxis']): TileGrid {
+    return { shape: TileShape.TILE_SHAPE_HEXAGON, layout, offsetAxis, tileSize: { x: 110, y: 94 } };
   }
 
   it('STACKED, vertical axis: odd columns offset half a tile, x compressed to 0.75', () => {
@@ -119,8 +120,8 @@ describe('mapToLocalPx — hexagon (the hexagonal_map demo: vertical axis, 110×
 });
 
 describe('mapToLocalPx — half-offset square (staggered, ratio 1.0)', () => {
-  function halfGrid(layout: TileGrid['layout'], offsetAxis: 0 | 1): TileGrid {
-    return { shape: 2, layout, offsetAxis, tileSize: { x: 16, y: 16 } };
+  function halfGrid(layout: TileGrid['layout'], offsetAxis: TileGrid['offsetAxis']): TileGrid {
+    return { shape: TileShape.TILE_SHAPE_HALF_OFFSET_SQUARE, layout, offsetAxis, tileSize: { x: 16, y: 16 } };
   }
 
   it('STACKED, horizontal axis: odd rows offset half a tile, no overlap compression', () => {

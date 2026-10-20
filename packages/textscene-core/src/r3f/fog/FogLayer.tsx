@@ -18,7 +18,7 @@ import { acquireFogPasses } from './fogPasses.js';
 import { isFogVolume, type FogVolumeObject } from './fogVolumeObject.js';
 import type { DepthFog, VolumetricFog } from '../../resources/environment/types.js';
 
-export interface FogLayerProps {
+interface FogLayerProps {
   depth: DepthFog | null;
   volumetric: VolumetricFog | null;
   skyEnergy: number;
@@ -65,7 +65,7 @@ export function FogLayer({ depth, volumetric, skyEnergy }: FogLayerProps) {
     const volumes = new TrackedObjects(scene, isFogVolume);
     // After the shadow pass, so the fog reads this render's shadow maps, and each light's distance
     // fade for this camera, which the scene's observers wrote before it.
-    const stopPreparing = readShadowMaps(gl, (rendered, camera) => {
+    const stopPreparing = readShadowMaps(gl, 'Fog', (rendered, camera) => {
       if (rendered !== scene) return;
       const capture = probeCaptureOf(camera);
       const fog = capture ? captureFog(settings.current, capture.isInterior) : settings.current;

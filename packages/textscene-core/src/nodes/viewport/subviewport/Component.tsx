@@ -5,8 +5,9 @@
  * so Node3D descendants draw in the parent's view and CanvasItem descendants do not.
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
+import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -21,12 +22,13 @@ import {
   renderWithShadowAtlas,
   ViewportShadowAtlas,
 } from '../../../r3f/positionalShadow/viewportShadowAtlas';
-import { viewportPositionalShadowAtlas } from '../../../godot/rendering/lights/positionalShadowAtlas';
+import { viewportPositionalShadowAtlas } from '../../../godot/scene/viewport';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import {
   applyOrthoFrame,
-  createOffscreenTarget,
+  createCanvasTarget,
+  createSceneTarget,
   godotCanvasPosition,
   renderToOffscreenTarget,
   orthoFrameForCamera2D,
@@ -34,15 +36,21 @@ import {
   selectViewportCamera,
   selectViewportCamera2D,
   viewportAspect,
+  viewportMsaaMode,
 } from './offscreenViewport';
+import { useMultisampledTarget } from '../../../r3f/multisampledTarget';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
+import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { useViewportContentKind } from './useViewportContentKind';
 import { usePublishViewportPass } from './usePublishViewportPass';
 import type { SubViewportProperties } from './types';
 import { viewportTargetSize } from './targetSize';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
-import { worldToneMapping } from '../../../resources/environment/toneMapping';
+import {
+  recompileOnCurveChange,
+  SHARED_WORLD_TONE_MAPPING,
+} from '../../../resources/environment/toneMapping';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -103,17 +111,18 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   const gl = useThree((state) => state.gl);
   const clearColor = useProjectClearColor();
   const mainScene = useThree((state) => state.scene);
+  const canvasCamera = useThree((state) => state.camera);
   const portalScene = useMemo(() => {
     const scene = new THREE.Scene();
     scene.name = `${node.name}::offscreen`;
     return scene;
   }, [node.name]);
 
-  // Carries the storage and the tonemap contracts: Godot tonemaps a
-  // sub-viewport's render into its target as it tonemaps the main view's.
-  const target = useMemo(() => createOffscreenTarget(width, height, node.name), [width, height, node.name]);
-
-  useEffect(() => () => target.dispose(), [target]);
+  const createTarget = useCallback(
+    () => (kind === '3d' ? createSceneTarget : createCanvasTarget)(width, height, node.name),
+    [kind, width, height, node.name]
+  );
+  const target = useMultisampledTarget(viewportMsaaMode(properties, kind), createTarget);
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
   // own depth prepass. An inline pass renders the parent scene, which its own canvas serves, and a
   // 2D portal holds no 3D surface.
@@ -127,6 +136,8 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // makes itself current, so this starts at the whole target rect and the pass
   // narrows it to the current camera's view each frame.
   const orthoCamera = useMemo(() => createViewportCanvasCamera(), []);
+  /** Written only by the pass, through `recompileOnCurveChange`. */
+  const portalCurve = useRef({ revision: -1 });
   useEffect(() => {
     orthoCamera.near = 0.1;
     orthoCamera.far = 4000;
@@ -152,49 +163,37 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     }
 
     const camera = kind === '3d' ? selectViewportCamera(source, path) : orthoCamera;
+    // Godot tonemaps through the environment `find_world_3d()` resolves. A shared world's curve is
+    // the root environment's, on either of its routes. This pass reads only the root's curve, so an
+    // own world draws none. Canvas items draw after the 3D tonemap pass, so a 2D canvas gets none.
+    const isSharedWorld = !properties.own_world_3d && kind === '3d';
+    const toneMapping = isSharedWorld ? SHARED_WORLD_TONE_MAPPING : THREE.NoToneMapping;
+    if (isSharedWorld && !rendersInline) recompileOnCurveChange(source, portalCurve.current);
 
-    // A `<Camera3D>` perspective camera carries the canvas aspect (16:9). Inside
-    // the viewport it frames the target rect, and it is restored after, since
-    // the main canvas may render through the same camera. Only this pass touches
-    // that state, so it stays out of the shared helper.
-    const perspective = camera as THREE.PerspectiveCamera | null;
-    const restoreAspect = perspective?.isPerspectiveCamera ? perspective.aspect : null;
-    if (perspective?.isPerspectiveCamera) {
-      perspective.aspect = viewportAspect({ x: width, y: height });
-      perspective.updateProjectionMatrix();
-    }
+    // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
+    // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
+    const aspect = viewportAspect({ x: width, y: height });
+    const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
+    if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
     try {
       renderToOffscreenTarget(gl, {
         target,
         clearColor,
         transparentBg,
-        // Godot tonemaps through the environment `find_world_3d()` resolves. A
-        // shared world's curve is the environment's, which the glow compositor keeps
-        // off the renderer. An own world has no Environment, so LINEAR. Canvas items
-        // draw after the 3D tonemap pass, so a 2D canvas gets none.
-        toneMapping: properties.own_world_3d || kind === '2d' ? THREE.NoToneMapping : worldToneMapping(gl),
-        // `applyProps` stamps `SRGBColorSpace` on a texture bound to an albedo
-        // `map`. With `isXRRenderTarget`, three reads this pass's output space
-        // from that tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
-        // Re-tagged before every bind, since the stamp lands during React commits.
-        beforeBind: () => {
-          target.texture.colorSpace = THREE.LinearSRGBColorSpace;
-        },
+        toneMapping,
         // No camera is not an error: Godot renders the clear colour and nothing else.
         draw: () => {
           if (camera) renderWithShadowAtlas(shadowAtlas, () => gl.render(source, camera));
         },
       });
     } finally {
-      if (perspective?.isPerspectiveCamera && restoreAspect !== null) {
-        perspective.aspect = restoreAspect;
-        perspective.updateProjectionMatrix();
-      }
+      if (camera && restoreAspect !== null && restoreAspect !== aspect) fitToAspect(camera, restoreAspect);
     }
   }, [
     rendersInline,
     mainScene,
+    canvasCamera,
     portalScene,
     kind,
     path,
@@ -212,17 +211,27 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // Consumers sample the texture directly. The ordered driver runs every
   // non-cyclic pass before R3F's own render, so a sampler sees this frame's
   // content, even on the frame the target is first published.
-  usePublishViewportPass({ path, node, texture: target.texture, width, height, render: renderPass });
+  usePublishViewportPass({
+    path,
+    node,
+    target,
+    width,
+    height,
+    render: renderPass,
+  });
 
   if (rendersInline) return null;
   // The portal declares the workspace its content needs, not the host's, which
   // could drop it. The portal scene is detached, so no host CanvasItem transform
   // reaches it and a canvas root inside cancels nothing (`canvasRootScope.tsx`).
-  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`).
+  // It is the world a node inside escapes to, too (`parentSpaceScope.tsx`), and the world a
+  // WorldEnvironment inside applies to.
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
       <WorldRootProvider value={portalScene}>
-        <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+        <WorldEnvironmentScope world="subViewport">
+          <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+        </WorldEnvironmentScope>
       </WorldRootProvider>
     </CanvasWorkspaceProvider>,
     portalScene

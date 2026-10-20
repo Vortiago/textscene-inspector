@@ -17,6 +17,12 @@ describe('hoverAt', () => {
     expect(hover?.markdown).toContain('https://docs.godotengine.org/en/stable/classes/class_node3d.html');
   });
 
+  it('names the type attribute, not text inside an escaped-quote name', () => {
+    const document = new LanguageDocument('[node name="say \\" type=Fake" type="Node3D"]');
+    const hover = at(document, 1, 'Node3D', 2);
+    expect(hover?.markdown).toContain('**Node3D**');
+  });
+
   it('describes a property with its type, declaring class and accepted resource', () => {
     const document = new LanguageDocument(SCENE);
     const hover = at(document, LINE.meshProperty, 'mesh', 0);

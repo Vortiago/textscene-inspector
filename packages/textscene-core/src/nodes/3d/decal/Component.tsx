@@ -19,8 +19,6 @@ import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
 import { useTexture2DRid } from '../../../resources/useTexture2D';
 import { applyTextureState, releaseBoundTexture } from '../../../resources/textures/applyTextureState';
-import type { Color } from '../../../utils/colorParser';
-import type { Vector3 } from '../../../parser/vectors';
 import type { DecalProperties } from './types';
 import type { DecalGeometricFade } from './decalFade';
 import { distanceFade } from '../../../godot/rendering/distanceFade';
@@ -33,6 +31,8 @@ import {
   computeDecalBoxWorldAABB,
 } from './decalProjection';
 import { clamp } from '../../../godot/math/math';
+import type { Rgba } from '../../../godot/math/math';
+import type { Vector3 } from '../../../godot/math/vector';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
@@ -83,7 +83,7 @@ export function Decal({ node, children }: NodeComponentProps) {
   // An active AnimationPlayer can drive `modulate` and `size` (ADR-0017); `null`
   // means none is, so the authored value shows. The projection maths is
   // identical for driven and authored values.
-  const animatedModulate = useAnimatedValue<Color>('modulate', (v) => ({
+  const animatedModulate = useAnimatedValue<Rgba>('modulate', (v) => ({
     r: v[0] ?? 1,
     g: v[1] ?? 1,
     b: v[2] ?? 1,
@@ -126,9 +126,12 @@ export function Decal({ node, children }: NodeComponentProps) {
     // inherits a Repeat from the shared producer. The blit copies any format into an RGBA8 atlas
     // (`texture_storage.cpp:3163`) that the shader reads through its sRGB view
     // (`render_forward_clustered.cpp:3213`), so a decal decodes sRGB whatever its source format.
+    // The atlas blits its own mip chain, sampled at the `decals/filter` default of Linear Mipmap
+    // (`rendering_server.cpp:3804`), so a decal mipmaps even when its import has none.
     const projectionMap = applyTextureState(albedo, {
       repeat: false,
       colorSpace: THREE.SRGBColorSpace,
+      buildsMipChain: true,
     });
 
     const projection: DecalProjectionLook = { map: projectionMap, color, opacity };

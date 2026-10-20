@@ -15,9 +15,6 @@ import {
   textureButtonMinimumSize,
   textureButtonDraw,
   textureButtonTextureSlots,
-  TEXTURE_NORMAL_KEY,
-  TEXTURE_PRESSED_KEY,
-  TEXTURE_HOVER_KEY,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -84,7 +81,7 @@ describe('resolveTextureButtonSlot (texture_button.cpp:120-159)', () => {
 
 describe('textureButtonMinimumSize (texture_button.cpp:31-52)', () => {
   it('is (0, 0) when ignore_texture_size is true, even with a resolved texture_normal size', () => {
-    const n = node({ ignoreTextureSize: true }, { [TEXTURE_NORMAL_KEY]: { x: 64, y: 24 } });
+    const n = node({ ignoreTextureSize: true }, { texture_normal: { x: 64, y: 24 } });
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 0, y: 0 });
   });
 
@@ -94,25 +91,22 @@ describe('textureButtonMinimumSize (texture_button.cpp:31-52)', () => {
   });
 
   it("is texture_normal's own size when present (:35-36)", () => {
-    const n = node({}, { [TEXTURE_NORMAL_KEY]: { x: 64, y: 24 } });
+    const n = node({}, { texture_normal: { x: 64, y: 24 } });
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 64, y: 24 });
   });
 
   it('falls back to texture_pressed when texture_normal is unresolved (:37-45, is_null())', () => {
-    const n = node({}, { [TEXTURE_NORMAL_KEY]: null, [TEXTURE_PRESSED_KEY]: { x: 48, y: 18 } });
+    const n = node({}, { texture_normal: null, texture_pressed: { x: 48, y: 18 } });
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 48, y: 18 });
   });
 
   it('falls back to texture_hover when neither texture_normal nor texture_pressed has resolved (:38-42)', () => {
-    const n = node(
-      {},
-      { [TEXTURE_NORMAL_KEY]: null, [TEXTURE_PRESSED_KEY]: null, [TEXTURE_HOVER_KEY]: { x: 30, y: 12 } }
-    );
+    const n = node({}, { texture_normal: null, texture_pressed: null, texture_hover: { x: 30, y: 12 } });
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 30, y: 12 });
   });
 
   it('abs()es a negative resolved size (`rscale.abs()`, :51)', () => {
-    const n = node({}, { [TEXTURE_NORMAL_KEY]: { x: -64, y: -24 } });
+    const n = node({}, { texture_normal: { x: -64, y: -24 } });
     expect(textureButtonMinimumSize(n, ctx())).toEqual({ x: 64, y: 24 });
   });
 });
@@ -121,8 +115,8 @@ describe('textureButtonTextureSlots (texture_button.cpp:38-55)', () => {
   it('requests only the AUTHORED slots, in normal/pressed/hover cascade order', () => {
     const n = node({ texturePressed: 'ExtResource("2")', textureHover: 'ExtResource("3")' });
     expect(textureButtonTextureSlots(n.node)).toEqual([
-      { key: TEXTURE_PRESSED_KEY, ref: 'ExtResource("2")' },
-      { key: TEXTURE_HOVER_KEY, ref: 'ExtResource("3")' },
+      { key: 'texture_pressed', ref: 'ExtResource("2")' },
+      { key: 'texture_hover', ref: 'ExtResource("3")' },
     ]);
   });
 

@@ -8,14 +8,11 @@ import {
   parseOptionalVector2i,
 } from '../../../../parser/valueParsers';
 import { parseControl } from '../control/parser';
-import {
-  arrayLiteralBody,
-  boolSlotValue,
-  dropTrailingComma,
-  indexedElements,
-  ruleCount,
-  splitTopLevel,
-} from '../../../../godot/index.js';
+import { arrayLiteralBody } from '../../../../godot/variant/variantParser.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
+import { slotCount } from '../../../../godot/variant/int.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { ItemListItem, ItemListProperties } from './types';
 
@@ -71,7 +68,7 @@ export function parseItemList(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): ItemListProperties {
-  const itemCount = ruleCount(properties.item_count) ?? 0;
+  const itemCount = slotCount(properties.item_count) ?? 0;
   // Godot's own saver never writes both forms: item_count/item_N/* replaced
   // `items` outright. So a file carrying `item_count` always wins, and the
   // legacy array is read only for a pure old-format file.

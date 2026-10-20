@@ -6,20 +6,10 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { TEXTURE_STRETCH_MODE } from '../../../../linter/validators/sharedEnumLabels.js';
+import { TEXTURE_STRETCH_MODE_NAMES } from '../../../../godot/scene/textureStretch.js';
 
 import { v } from '../../../../linter/validators/index.js';
-
-// texture_rect.h:39-46: enum ExpandMode, 6 values, bound at texture_rect.cpp:153-158.
-// The labels come from the ADD_PROPERTY hint string at texture_rect.cpp:148.
-const EXPAND_MODE = {
-  0: 'EXPAND_KEEP_SIZE',
-  1: 'EXPAND_IGNORE_SIZE',
-  2: 'EXPAND_FIT_WIDTH',
-  3: 'EXPAND_FIT_WIDTH_PROPORTIONAL',
-  4: 'EXPAND_FIT_HEIGHT',
-  5: 'EXPAND_FIT_HEIGHT_PROPORTIONAL',
-};
+import { TEXTURE_RECT_EXPAND_MODE_NAMES } from '../../../../godot/scene/gui.js';
 
 // The deprecated `_set` (texture_rect.cpp:171-173) maps Godot 3's `expand`/`ignore_texture_size`
 // to EXPAND_IGNORE_SIZE when true and drops them otherwise. `godot/classdb/deprecated.ts` resolves both
@@ -28,7 +18,9 @@ validatorRegistry.registerAll('TextureRect', {
   // texture_rect.cpp:207-215: set_expand_mode has no ERR_FAIL_INDEX, unlike
   // TextureProgressBar's set_fill_mode. The 6-label PROPERTY_HINT_ENUM at :148 only
   // hints the range, so out of range warns.
-  expand_mode: v.enumInt('expand_mode', 0, 5, EXPAND_MODE, { hinted: 'texture_rect.cpp:148' }),
+  expand_mode: v.enumInt('expand_mode', TEXTURE_RECT_EXPAND_MODE_NAMES, {
+    hinted: 'texture_rect.cpp:148',
+  }),
   // texture_rect.cpp:234-241: set_flip_h assigns straight through. ADD_PROPERTY
   // at :150 carries no hint. Format-only.
   flip_h: v.boolean('flip_h'),
@@ -39,7 +31,7 @@ validatorRegistry.registerAll('TextureRect', {
   // The 7-label PROPERTY_HINT_ENUM at :149 only hints the range, so out of range warns.
   // texture_rect.h:48-56: enum StretchMode, 7 values, bound at texture_rect.cpp:160-166,
   // labelled from that hint string.
-  stretch_mode: v.enumInt('stretch_mode', 0, 6, TEXTURE_STRETCH_MODE, { hinted: 'texture_rect.cpp:149' }),
+  stretch_mode: v.enumInt('stretch_mode', TEXTURE_STRETCH_MODE_NAMES, { hinted: 'texture_rect.cpp:149' }),
   // texture_rect.cpp:184-201: set_texture assigns straight through. ADD_PROPERTY at
   // :147 is PROPERTY_HINT_RESOURCE_TYPE "Texture2D", editor-picker only. Format-only.
   texture: v.resourceReference('texture'),

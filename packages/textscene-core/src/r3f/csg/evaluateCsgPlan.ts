@@ -6,7 +6,8 @@
 
 import * as THREE from 'three';
 import { warn } from '../../logger';
-import { CsgOperation, type CsgContribution, type CsgPlan } from './csgPlan';
+import { type CsgContribution, type CsgPlan } from './csgPlan';
+import { CsgOperation } from '../../godot/scene/csg';
 import type { CsgModule } from './csgModule';
 import type { CsgSolid } from './csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from './csgMaterials';
@@ -21,7 +22,7 @@ export interface CsgEvaluation {
 }
 
 /** Resolve a contribution's own solid, in its own local space. */
-export type ResolveSolid = (contribution: CsgContribution) => CsgSolid | null;
+type ResolveSolid = (contribution: CsgContribution) => CsgSolid | null;
 
 function godotToLibraryOperation(operation: number, csg: CsgModule): number {
   switch (operation) {

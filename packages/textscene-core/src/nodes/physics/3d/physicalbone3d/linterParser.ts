@@ -9,11 +9,7 @@ import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { jointConstraintsValidator } from './jointConstraints.js';
-
-// physical_bone_3d.cpp:891, 913-918: 6 BIND_ENUM_CONSTANT (JOINT_TYPE_NONE..JOINT_TYPE_6DOF)
-const JOINT_TYPE = { 0: 'NONE', 1: 'PIN', 2: 'CONE', 3: 'HINGE', 4: 'SLIDER', 5: '6DOF' };
-// physical_bone_3d.cpp:902,904,910-911: 2 BIND_ENUM_CONSTANT (DAMP_MODE_COMBINE/REPLACE)
-const DAMP_MODE = { 0: 'COMBINE', 1: 'REPLACE' };
+import { DAMP_MODE_NAMES, PHYSICAL_BONE_JOINT_TYPE_NAMES } from '../../../../godot/scene/physicsBody.js';
 
 validatorRegistry.registerAll('PhysicalBone3D', {
   // physical_bone_3d.cpp:709-745: virtual STRING_NAME property (_get_property_list/
@@ -24,7 +20,7 @@ validatorRegistry.registerAll('PhysicalBone3D', {
   // physical_bone_3d.cpp:891: PROPERTY_HINT_ENUM "None,PinJoint,ConeJoint,HingeJoint,SliderJoint,6DOFJoint".
   // set_joint_type (:1088-1113) switches over the enum with no default case
   // and no ERR_FAIL: an out-of-range value is inert, not guarded, so this is hinted.
-  joint_type: v.enumInt('joint_type', 0, 5, JOINT_TYPE, { hinted: 'physical_bone_3d.cpp:891' }),
+  joint_type: v.enumInt('joint_type', PHYSICAL_BONE_JOINT_TYPE_NAMES, { hinted: 'physical_bone_3d.cpp:891' }),
   // physical_bone_3d.cpp:892: Transform3D, PROPERTY_HINT_NONE (format only, "suffix:m")
   joint_offset: v.transform3d('joint_offset'),
   // physical_bone_3d.cpp:893: PROPERTY_HINT_RANGE "-360,360,0.01,or_less,or_greater,radians_as_degrees":
@@ -55,7 +51,7 @@ validatorRegistry.registerAll('PhysicalBone3D', {
   custom_integrator: v.boolean('custom_integrator'),
   // physical_bone_3d.cpp:902: PROPERTY_HINT_ENUM "Combine,Replace". set_linear_damp_mode
   // is a bare assignment, so out-of-range warns.
-  linear_damp_mode: v.enumInt('linear_damp_mode', 0, 1, DAMP_MODE, {
+  linear_damp_mode: v.enumInt('linear_damp_mode', DAMP_MODE_NAMES, {
     hinted: 'physical_bone_3d.cpp:902',
   }),
   // physical_bone_3d.cpp:903 hints "0,100,0.001,or_greater" (soft max). set_linear_damp
@@ -63,7 +59,7 @@ validatorRegistry.registerAll('PhysicalBone3D', {
   linear_damp: v.float('linear_damp', { min: 0, enforced: 'physical_bone_3d.cpp:1249' }),
   // physical_bone_3d.cpp:904: PROPERTY_HINT_ENUM "Combine,Replace". set_angular_damp_mode
   // is a bare assignment, so out-of-range warns.
-  angular_damp_mode: v.enumInt('angular_damp_mode', 0, 1, DAMP_MODE, {
+  angular_damp_mode: v.enumInt('angular_damp_mode', DAMP_MODE_NAMES, {
     hinted: 'physical_bone_3d.cpp:904',
   }),
   // physical_bone_3d.cpp:905 hints "0,100,0.001,or_greater" (soft max). set_angular_damp

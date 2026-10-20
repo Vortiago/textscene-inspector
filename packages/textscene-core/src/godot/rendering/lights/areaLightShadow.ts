@@ -4,12 +4,6 @@
  * range. Its soft shadow is an omni light's (`positionalSoftShadow`). Godot 4.6.3 has no AreaLight3D.
  */
 
-/** `AreaLight3D()` sets `PARAM_SIZE` to 0.5 (4.7.2 `scene/3d/light_3d.cpp:747`). */
-export const AREA_LIGHT_SIZE_DEFAULT = 0.5;
-
-/** `AreaLight3D()` sets `PARAM_SHADOW_BIAS` to 0.1 (4.7.2 `scene/3d/light_3d.cpp:746`). */
-export const AREA_LIGHT_SHADOW_BIAS_DEFAULT = 0.1;
-
 /**
  * The shortest range the light buffer holds (4.7.2 `light_storage.cpp:1060`). The shadow render
  * reads the range unclamped (`render_forward_clustered.cpp:2758`).

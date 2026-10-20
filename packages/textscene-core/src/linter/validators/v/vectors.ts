@@ -19,7 +19,9 @@ import {
   createVector3Validator,
 } from '../vectorValidators.js';
 import { compositeTypeName, isConvertedSpelling } from '../../../godot/variant/variantConversion.js';
-import { INT_TOKEN_RE, isColorString, STRING_LITERAL_RE } from '../../../godot/index.js';
+import { INT_TOKEN_RE } from '../../../godot/variant/number.js';
+import { isColorString } from '../../../godot/math/color.js';
+import { STRING_LITERAL_RE } from '../../../godot/string/string.js';
 import { unquoteString } from '../../../parser/utils.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, shape, type Grounding } from './grounding.js';

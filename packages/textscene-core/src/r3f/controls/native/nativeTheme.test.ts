@@ -4,7 +4,7 @@
  * `scaledGodotTheme` unchanged while colours are not scaled.
  */
 import { describe, expect, it } from 'vitest';
-import { scaledGodotTheme } from '../godotDefaultTheme';
+import { scaledGodotTheme } from '../../../godot/scene/theme';
 import { nativeTheme } from './nativeTheme';
 
 describe('nativeTheme', () => {

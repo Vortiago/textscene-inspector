@@ -5,10 +5,11 @@
 import '../../base/node2d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
-import { isZeroApprox } from '../../../godot/index.js';
-
-const ANCHOR_MODE = { 0: 'FIXED_TOP_LEFT', 1: 'DRAG_CENTER' };
-const PROCESS_CALLBACK = { 0: 'PHYSICS', 1: 'IDLE' };
+import {
+  CAMERA_2D_ANCHOR_MODE_NAMES,
+  CAMERA_2D_PROCESS_CALLBACK_NAMES,
+} from '../../../godot/scene/camera2d.js';
+import { isZeroApprox } from '../../../godot/math/math.js';
 
 // camera_2d.cpp:104: set_zoom refuses the whole write when either component is
 // zero-approx (ERR_FAIL_COND_MSG), so the camera keeps its previous zoom.
@@ -27,7 +28,7 @@ validatorRegistry.registerAll('Camera2D', {
   // camera_2d.cpp:961, ENUM "Fixed Top Left,Drag Center" (2 labels, matches
   // BIND_ENUM_CONSTANT x2). set_anchor_mode (camera_2d.cpp:469-476) assigns
   // unconditionally, no ERR_FAIL_INDEX.
-  anchor_mode: v.enumInt('anchor_mode', 0, 1, ANCHOR_MODE, { hinted: 'camera_2d.cpp:961' }),
+  anchor_mode: v.enumInt('anchor_mode', CAMERA_2D_ANCHOR_MODE_NAMES, { hinted: 'camera_2d.cpp:961' }),
   enabled: v.boolean('enabled'),
   ignore_rotation: v.boolean('ignore_rotation'),
   offset: v.vector2('offset'),
@@ -35,7 +36,9 @@ validatorRegistry.registerAll('Camera2D', {
   // camera_2d.cpp:966, ENUM "Physics,Idle" (2 labels, matches BIND_ENUM_CONSTANT
   // x2). set_process_callback (camera_2d.cpp:513-519) assigns unconditionally,
   // no ERR_FAIL_INDEX.
-  process_callback: v.enumInt('process_callback', 0, 1, PROCESS_CALLBACK, { hinted: 'camera_2d.cpp:966' }),
+  process_callback: v.enumInt('process_callback', CAMERA_2D_PROCESS_CALLBACK_NAMES, {
+    hinted: 'camera_2d.cpp:966',
+  }),
   limit_left: v.lenientInt('limit_left'),
   limit_top: v.lenientInt('limit_top'),
   limit_right: v.lenientInt('limit_right'),

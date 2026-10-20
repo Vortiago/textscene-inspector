@@ -1,11 +1,11 @@
 /**
  * Resolves a class's serialised properties through the same base chain Godot's
  * `_get_property_list` walks, so hover and completion name a property on the class that
- * declares it. The rows come from the committed ClassDB captures. The chain comes from
- * the generated base-type tables, never by hand.
+ * declares it. The rows come from the committed ClassDB captures, and from the hand rows of a
+ * class the pinned build lacks. The chain comes from the base-type tables.
  */
 
-import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
+import { classInheritanceChain } from '../godot/classdb/classBaseTypes.js';
 import { NODE_BASE_TYPES, isCatalogedType } from '../godot/classdb/nodeBaseTypes.js';
 import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import {
@@ -13,6 +13,7 @@ import {
   RESOURCE_CLASS_PROPERTIES,
   type ClassPropertyRow,
 } from '../godot/classdb/classProperties.generated.js';
+import { UNCATALOGUED_PROPERTIES } from '../godot/classdb/uncataloguedProperties.js';
 import type { PropertyLocation } from './document.js';
 
 /** One serialised property, with the class nearest the queried type that declares it. */
@@ -26,15 +27,13 @@ export interface ClassProperty {
   readonly declaredBy: string;
 }
 
-function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
-  if (Object.hasOwn(NODE_CLASS_PROPERTIES, className)) return NODE_CLASS_PROPERTIES[className];
-  if (Object.hasOwn(RESOURCE_CLASS_PROPERTIES, className)) return RESOURCE_CLASS_PROPERTIES[className];
-  return undefined;
-}
+const PROPERTY_TABLES = [NODE_CLASS_PROPERTIES, RESOURCE_CLASS_PROPERTIES, UNCATALOGUED_PROPERTIES];
 
-/** The class itself, then each ancestor, nearest first. */
-function selfAndAncestors(className: string): readonly string[] {
-  return [className, ...classBaseChain(className)];
+function ownRows(className: string): readonly ClassPropertyRow[] | undefined {
+  for (const table of PROPERTY_TABLES) {
+    if (Object.hasOwn(table, className)) return table[className];
+  }
+  return undefined;
 }
 
 function toClassProperty(
@@ -51,7 +50,7 @@ function toClassProperty(
 export function classProperties(className: string): readonly ClassProperty[] {
   const properties: ClassProperty[] = [];
   const seen = new Set<string>();
-  for (const declaredBy of selfAndAncestors(className)) {
+  for (const declaredBy of classInheritanceChain(className)) {
     for (const row of ownRows(declaredBy) ?? []) {
       const name = row[0];
       if (seen.has(name)) continue;
@@ -64,7 +63,7 @@ export function classProperties(className: string): readonly ClassProperty[] {
 
 /** The property `className` serialises under `name`, or undefined when it has none. */
 export function findClassProperty(className: string, name: string): ClassProperty | undefined {
-  for (const declaredBy of selfAndAncestors(className)) {
+  for (const declaredBy of classInheritanceChain(className)) {
     const row = ownRows(declaredBy)?.find(([rowName]) => rowName === name);
     if (row) return toClassProperty(row, declaredBy);
   }

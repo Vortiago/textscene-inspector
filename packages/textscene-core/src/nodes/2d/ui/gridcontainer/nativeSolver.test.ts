@@ -11,9 +11,13 @@ import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext, ContainerLayoutResult } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { gridContainerMinimumSize, gridContainerLayout } from './nativeSolver';
+import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+const gridContainerLayout = controlSolverRegistry.containerLayout('GridContainer')!;
+const gridContainerMinimumSize = controlSolverRegistry.minimumSize('GridContainer')!;
 
 /** `gridContainerLayout`'s `rects` half only: see `ContainerLayoutResult`'s own doc for why the union is here at all. */
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {

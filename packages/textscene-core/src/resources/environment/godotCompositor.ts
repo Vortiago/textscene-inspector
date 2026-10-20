@@ -11,12 +11,20 @@
 
 import { blendGlsl, blendsAfterToneMapping, samplesGlowMap, type GlowParams } from './godotGlow';
 import { glslFloat } from '../../utils/glslLiterals';
-import { resolvedWhite, toneMappingEffectGlsl } from './godotToneMapping';
+import { toneMappingEffectGlsl } from './godotToneMapping';
+import { resolvedWhite } from '../../godot/rendering/environment/toneMapping.js';
 import type { EnvironmentAdjustments, EnvironmentSettings } from './types';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer';
 
 export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mode' | 'white'> &
   Partial<Pick<EnvironmentSettings['toneMapping'], 'agxContrast'>>;
+
+/** Fixed at construction: a new exposure rebuilds the effect. */
+const EXPOSURE_UNIFORM = 'godotExposure';
+/** Bound by the effect each frame, from the glow pyramid. */
+export const GLOW_BUFFER_UNIFORM = 'godotGlowBuffer';
+/** Bound by the effect when the environment names a glow map. */
+export const GLOW_MAP_UNIFORM = 'godotGlowMap';
 
 /** One field per `tonemap.glsl` flag group. A null clears that flag. */
 export interface CompositeOptions {
@@ -25,6 +33,28 @@ export interface CompositeOptions {
   toneMapping: CompositeToneMapping;
   /** Null when `adjustment_enabled` is false: `FLAG_USE_BCS` clear. */
   adjustments: EnvironmentAdjustments | null;
+  /**
+   * `rendering/viewport/transparent_background`. `tonemap.glsl` writes the buffer's alpha through,
+   * and only a transparent window shows it: the screen blit copies it with blending off
+   * (`renderer_compositor_rd.cpp:138`) into an opaque surface.
+   */
+  transparentBackground: boolean;
+  /** Godot `tonemap_exposure`, the starting value of the exposure uniform. */
+  exposure: number;
+}
+
+interface UniformDeclaration {
+  glslType: 'float' | 'sampler2D';
+  value: number | null;
+}
+
+/**
+ * The composite shader with the uniforms it declares. A number is the uniform's value; null is a
+ * texture the caller binds. A name is in the map exactly when the shader declares it.
+ */
+export interface CompositeProgram {
+  fragmentShader: string;
+  uniforms: Record<string, number | null>;
 }
 
 /**
@@ -33,30 +63,44 @@ export interface CompositeOptions {
  * bright pass already exposed the glow, so the curve runs at exposure 1.0. A null `glow` clears
  * `FLAG_USE_GLOW`, and a null `adjustments` clears `FLAG_USE_BCS`.
  */
-export function compositeGlsl({ glow, toneMapping, adjustments }: CompositeOptions): string {
-  return /* glsl */ `
-uniform float godotExposure;
+export function compositeProgram({
+  glow,
+  toneMapping,
+  adjustments,
+  exposure,
+  transparentBackground,
+}: CompositeOptions): CompositeProgram {
+  const declarations: Record<string, UniformDeclaration> = {
+    [EXPOSURE_UNIFORM]: { glslType: 'float', value: exposure },
+    ...(glow && { [GLOW_BUFFER_UNIFORM]: { glslType: 'sampler2D', value: null } }),
+    ...(glow && samplesGlowMap(glow) && { [GLOW_MAP_UNIFORM]: { glslType: 'sampler2D', value: null } }),
+  };
+  // SCREEN normalises against the floored white, not the authored one
+  // (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`): Godot's
+  // `apply_glow` says "white cannot be smaller than the maximum output value".
+  const flooredWhite = resolvedWhite(toneMapping.mode, toneMapping.white);
+  const fragmentShader = /* glsl */ `
+${declarationsGlsl(declarations)}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
-${glow ? glowDefinitionsGlsl(glow, toneMapping) : ''}
+${glow ? blendGlsl(glow, flooredWhite) : ''}
 ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
 ${adjustments ? adjustmentsGlsl(adjustments) : ''}
-  outputColor = vec4(color, inputColor.a);
+  outputColor = vec4(color, ${transparentBackground ? 'inputColor.a' : '1.0'});
 }
 `;
+  return {
+    fragmentShader,
+    uniforms: Object.fromEntries(Object.entries(declarations).map(([name, { value }]) => [name, value])),
+  };
 }
 
-/**
- * SCREEN normalises against the floored white, not the authored one
- * (`renderer_scene_render_rd.cpp`: `tonemap.white = environment_get_white(...)`).
- * Godot's comment in `apply_glow`: "white cannot be smaller than the maximum output value".
- */
-function glowDefinitionsGlsl(glow: GlowParams, toneMapping: CompositeToneMapping): string {
-  return /* glsl */ `
-uniform sampler2D godotGlowBuffer;
-${samplesGlowMap(glow) ? 'uniform sampler2D godotGlowMap;' : ''}
-${blendGlsl(glow, resolvedWhite(toneMapping.mode, toneMapping.white))}`;
+/** One `uniform` line per declaration, so the shader and the uniform map come from one list. */
+function declarationsGlsl(declarations: Record<string, UniformDeclaration>): string {
+  return Object.entries(declarations)
+    .map(([name, { glslType }]) => `uniform ${glslType} ${name};`)
+    .join('\n');
 }
 
 /**
@@ -65,19 +109,19 @@ ${blendGlsl(glow, resolvedWhite(toneMapping.mode, toneMapping.white))}`;
  */
 function glowAndToneMapGlsl(glow: GlowParams): string {
   const blend = blendsAfterToneMapping(glow)
-    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);
+    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM}, 1.0);
   color = godotGlowBlend(color, godotToneMap(glow, 1.0));`
-    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * godotExposure, glow);
+    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM}, glow);
   color = godotToneMap(color, 1.0);`;
   const map = samplesGlowMap(glow)
-    ? /* glsl */ `  glow = mix(glow, texture2D(godotGlowMap, uv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
+    ? /* glsl */ `  glow = mix(glow, texture2D(${GLOW_MAP_UNIFORM}, uv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
     : '';
-  return /* glsl */ `  vec3 glow = texture2D(godotGlowBuffer, uv).rgb * ${glslFloat(glow.intensity)};
+  return /* glsl */ `  vec3 glow = texture2D(${GLOW_BUFFER_UNIFORM}, uv).rgb * ${glslFloat(glow.intensity)};
 ${map}${blend}`;
 }
 
 /** `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. */
-const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0);`;
+const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM}, 1.0);`;
 
 /**
  * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on

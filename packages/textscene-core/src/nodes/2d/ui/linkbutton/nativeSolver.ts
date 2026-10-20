@@ -28,8 +28,11 @@ import {
   getUnderlinePositionPx,
   getUnderlineThicknessPx,
 } from '../../../../r3f/controls/native/text/openSansMetrics';
-import type { ControlColor } from '../control/types';
 import type { LinkButtonProperties } from './types';
+import type { Rgba } from '../../../../godot/math/math';
+import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { LinkButtonUnderlineMode } from '../../../../godot/scene/gui';
 
 /** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';
@@ -41,7 +44,7 @@ export const LINKBUTTON_THEME_FONT_KEY = 'font';
  * select, as in every Button-family slice: `disabled` wins, else `button_pressed`, and the hover states
  * never fire.
  */
-export type LinkButtonDrawState = 'normal' | 'pressed' | 'disabled';
+type LinkButtonDrawState = 'normal' | 'pressed' | 'disabled';
 
 export function resolveLinkButtonDrawState(props: LinkButtonProperties): LinkButtonDrawState {
   if (props.disabled) return 'disabled';
@@ -49,17 +52,17 @@ export function resolveLinkButtonDrawState(props: LinkButtonProperties): LinkBut
   return 'normal';
 }
 
-/** `control_font_color` (`default_theme.cpp:101`), LinkButton's `font_color` default (`:203`). */
-export const LINKBUTTON_DEFAULT_FONT_COLOR: ControlColor = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
-/** `control_font_pressed_color = Color(1, 1, 1)` (`:108`), LinkButton's `font_pressed_color` default (`:204`). */
-export const LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR: ControlColor = { r: 1, g: 1, b: 1, a: 1 };
+/** LinkButton's `font_color` default (`default_theme.cpp:203`). */
+const LINKBUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
+/** LinkButton's `font_pressed_color` default (`default_theme.cpp:204`). */
+const LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 /**
  * Neither LinkButton's `default_theme.cpp` block (`:196-210`) nor an ancestor in its `scene/theme/theme_db.cpp`
  * type chain registers `font_disabled_color`, so `ThemeOwner::get_theme_item_in_types` falls through to
  * the fallback theme's `get_theme_item(..., StringName())`: a default `Color()`, opaque black, not
  * `control_font_disabled_color`.
  */
-export const LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR: ControlColor = { r: 0, g: 0, b: 0, a: 1 };
+const LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
 const LINKBUTTON_THEME_KEYS: Record<LinkButtonDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
@@ -86,18 +89,15 @@ export function linkButtonTextTheme(
   return resolveTextTheme(n, props, LINKBUTTON_THEME_KEYS[state], defaults);
 }
 
-const UNDERLINE_MODE_ALWAYS = 0;
-const UNDERLINE_MODE_NEVER = 2;
-
 /**
  * `NOTIFICATION_DRAW`'s switch on `get_draw_mode()` (`link_button.cpp:249-278`): NORMAL and DISABLED
  * underline only on `UNDERLINE_MODE_ALWAYS`, and PRESSED (like the unreachable hover states) whenever
  * the mode is not `UNDERLINE_MODE_NEVER`.
  */
 export function shouldUnderline(state: LinkButtonDrawState, underlineMode: number | undefined): boolean {
-  const mode = underlineMode ?? UNDERLINE_MODE_ALWAYS;
-  if (state === 'pressed') return mode !== UNDERLINE_MODE_NEVER;
-  return mode === UNDERLINE_MODE_ALWAYS;
+  const mode = underlineMode ?? LinkButtonUnderlineMode.UNDERLINE_MODE_ALWAYS;
+  if (state === 'pressed') return mode !== LinkButtonUnderlineMode.UNDERLINE_MODE_NEVER;
+  return mode === LinkButtonUnderlineMode.UNDERLINE_MODE_ALWAYS;
 }
 
 /** `underline_spacing` theme constant, `round(2*scale)` (`default_theme.cpp:210`). */
@@ -110,7 +110,7 @@ export function linkButtonUnderlineSpacing(
   return Math.round(2 * ctx.theme.scale);
 }
 
-export interface UnderlineGeometry {
+interface UnderlineGeometry {
   /** Downward offset in px from the baseline to the centre of the underline stroke. */
   y: number;
   /** The stroke's whole-pixel thickness, floored to at least 1px. */
@@ -120,7 +120,7 @@ export interface UnderlineGeometry {
 /**
  * `link_button.cpp:306-308`: `underline_spacing` (int) plus `text_buf->get_line_underline_position()`
  * (float), narrowed to `int`, which truncates toward zero. `y` adds the line ascent, the whole-pixel
- * value `getAscentPx` gives. Thickness is `MAX(1, ...)` narrowed the same way (`:308`), with the MAX
+ * value `getFontAscentPx` gives. Thickness is `MAX(1, ...)` narrowed the same way (`:308`), with the MAX
  * applied here, as `getUnderlineThicknessPx` requires.
  */
 export function linkButtonUnderlineGeometry(
@@ -134,7 +134,7 @@ export function linkButtonUnderlineGeometry(
   return { y, thickness };
 }
 
-export interface LinkButtonTextPlacement {
+interface LinkButtonTextPlacement {
   /** The paragraph's left edge, local Godot px. */
   originX: number;
   /** `text_buf->get_line_width()` narrowed to `int`: the ceiled pen extent, and the underline's length. */
@@ -157,8 +157,6 @@ export function linkButtonTextPlacement(
 }
 
 // Minimum size
-
-const OVERRUN_NO_TRIMMING = 0;
 
 /**
  * LinkButton's shaped label, null for empty text: the solve-handoff share
@@ -184,7 +182,8 @@ export const linkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const layout: TextLayoutResult | null = ctx.measureText ? linkButtonLabelShape(n, ctx.theme) : null;
 
   const width =
-    layout && (props.overrunBehavior ?? OVERRUN_NO_TRIMMING) === OVERRUN_NO_TRIMMING
+    layout &&
+    (props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING) === OverrunBehavior.OVERRUN_NO_TRIMMING
       ? shapedTextSizeWidthPx(layout.widthPx)
       : 0;
   const height = layout ? layout.heightPx : 0;

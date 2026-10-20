@@ -13,29 +13,13 @@ import '../animationmixer/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { accepts, propertyError, v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
+import {
+  ANIMATION_CALLBACK_MODE_METHOD_NAMES,
+  ANIMATION_CALLBACK_MODE_PROCESS_NAMES,
+} from '../../../godot/scene/animation.js';
+import { EASE_TYPE_CONSTANT_NAMES, TRANSITION_TYPE_CONSTANT_NAMES } from '../../../godot/scene/tween.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
-import { ARRAY_LITERAL_RE } from '../../../godot/index.js';
-
-const PROCESS_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
-const METHOD_CALL_MODE = { 0: 'DEFERRED', 1: 'IMMEDIATE' };
-// Tween::TransitionType / Tween::EaseType (tween.h:82-95, :98-103): the
-// hint_string order at animation_player.cpp:1044/:1045 matches the C++ enum
-// declaration order, so these count and label straight from it.
-const AUTO_CAPTURE_TRANSITION_TYPE = {
-  0: 'LINEAR',
-  1: 'SINE',
-  2: 'QUINT',
-  3: 'QUART',
-  4: 'QUAD',
-  5: 'EXPO',
-  6: 'ELASTIC',
-  7: 'CUBIC',
-  8: 'CIRC',
-  9: 'BOUNCE',
-  10: 'BACK',
-  11: 'SPRING',
-};
-const AUTO_CAPTURE_EASE_TYPE = { 0: 'IN', 1: 'OUT', 2: 'IN_OUT', 3: 'OUT_IN' };
+import { ARRAY_LITERAL_RE } from '../../../godot/variant/variantParser.js';
 
 /**
  * `blend_times`: a flat Array of (from: StringName, to: StringName, time: float) triples
@@ -91,21 +75,15 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // (:874-876) is a bare assignment, so out-of-range only warns.
   playback_auto_capture_transition_type: v.enumInt(
     'playback_auto_capture_transition_type',
-    0,
-    11,
-    AUTO_CAPTURE_TRANSITION_TYPE,
+    TRANSITION_TYPE_CONSTANT_NAMES,
     { hinted: 'animation_player.cpp:1044' }
   ),
   // animation_player.cpp:1045, PROPERTY_HINT_ENUM "In,Out,InOut,OutIn"
   // (4 values, Tween::EaseType). set_auto_capture_ease_type (:882-884) is a
   // bare assignment, so out-of-range only warns.
-  playback_auto_capture_ease_type: v.enumInt(
-    'playback_auto_capture_ease_type',
-    0,
-    3,
-    AUTO_CAPTURE_EASE_TYPE,
-    { hinted: 'animation_player.cpp:1045' }
-  ),
+  playback_auto_capture_ease_type: v.enumInt('playback_auto_capture_ease_type', EASE_TYPE_CONSTANT_NAMES, {
+    hinted: 'animation_player.cpp:1045',
+  }),
   // animation_player.cpp:1046 hints "0,4096,0.01,suffix:s", closed both ends.
   // set_default_blend_time (animation_player.cpp:823) is a bare assignment, so
   // both ends are the hint's alone and warn.
@@ -117,10 +95,10 @@ validatorRegistry.registerAll('AnimationPlayer', {
   // animation_player.cpp:1035/:57-59, redirected through AnimationMixer's
   // callback_mode_process/method (animation_mixer.cpp:501-509,522-525): both
   // bare assignments, no engine-side range check on the raw int.
-  playback_process_mode: v.enumInt('playback_process_mode', 0, 2, PROCESS_MODE, {
+  playback_process_mode: v.enumInt('playback_process_mode', ANIMATION_CALLBACK_MODE_PROCESS_NAMES, {
     hinted: 'animation_mixer.cpp:2471',
   }),
-  method_call_mode: v.enumInt('method_call_mode', 0, 1, METHOD_CALL_MODE, {
+  method_call_mode: v.enumInt('method_call_mode', ANIMATION_CALLBACK_MODE_METHOD_NAMES, {
     hinted: 'animation_mixer.cpp:2472',
   }),
   playback_active: v.boolean('playback_active'),

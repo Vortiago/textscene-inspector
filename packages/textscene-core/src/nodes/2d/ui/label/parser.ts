@@ -4,8 +4,10 @@ import { type ParsedHeading, unquoteString, unquoteStringName } from '../../../.
 import { parseOptionalFloat, parseOptionalInt } from '../../../../parser/valueParsers';
 import type { LabelProperties } from './types';
 import { parseControl } from '../control/parser';
-import { boolSlotValue, packedArrayBody, packedArrayForms } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
 import { floatElements } from '../../../../resources/shapes/packedArray';
+import { SizeFlags } from '../../../../godot/scene/control';
 
 const PACKED_FLOAT32_ARRAY_FORMS = packedArrayForms('PackedFloat32Array');
 
@@ -26,7 +28,7 @@ function parseTabStops(value: string | undefined): number[] | undefined {
  * container centres at its text height on the cross axis instead of filling it. Base `Control`
  * defaults to `SIZE_FILL`, so this applies only when the scene sets no `size_flags_vertical`.
  */
-const LABEL_DEFAULT_V_SIZE_FLAGS = 4; // SIZE_SHRINK_CENTER
+const LABEL_DEFAULT_V_SIZE_FLAGS = SizeFlags.SHRINK_CENTER;
 
 interface VisibleCharsState {
   visibleChars: number;

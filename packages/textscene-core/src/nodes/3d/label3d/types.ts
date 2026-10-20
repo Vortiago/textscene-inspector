@@ -1,11 +1,11 @@
-/** Label3D node data and its enums. */
+/** Label3D node data. */
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
-import type { Color } from '../../../utils/colorParser';
-import { BillboardMode } from '../../../godot/scene/billboard';
-
-/** Godot's `BaseMaterial3D.BillboardMode`, shared with every billboarding type. */
-export { BillboardMode };
+import type { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import type { HorizontalAlignment, Rgba } from '../../../godot/math/math';
+import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
+import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 
 export interface Label3DProperties extends GeometryInstance3DProperties {
   text: string;
@@ -20,13 +20,13 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   billboard: BillboardMode;
 
   /** Text tint (default white). */
-  modulate: Color;
+  modulate: Rgba;
 
   /** Outline thickness in pixels (default 12). */
   outline_size: number;
 
   /** Outline colour (default black). */
-  outline_modulate: Color;
+  outline_modulate: Rgba;
 
   /** Visible from behind (Godot default true → THREE.DoubleSide). */
   double_sided: boolean;
@@ -61,35 +61,15 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   /** Grain of the `alpha_cut` HASH dither (`label_3d.h:63`, default 1.0). */
   alpha_hash_scale: number;
 
+  /** Alpha antialiasing of a DISCARD or HASH cut (`label_3d.h:64`, default OFF). */
+  alpha_antialiasing_mode: AlphaAntiAliasing;
+
+  /** Where the antialiased cut's edge sits (`label_3d.h:65`, default 0). */
+  alpha_antialiasing_edge: number;
+
   /** Keep a constant on-screen size regardless of distance (`label_3d.h:46`, default false). */
   fixed_size: boolean;
 
   /** Glyph-texture sampling (`label_3d.h:140`, default LINEAR_WITH_MIPMAPS). */
   texture_filter: TextureFilter;
-}
-
-/** `BaseMaterial3D::TextureFilter` (`scene/resources/material.h:172-178`). */
-export enum TextureFilter {
-  NEAREST = 0,
-  LINEAR = 1,
-  NEAREST_WITH_MIPMAPS = 2,
-  LINEAR_WITH_MIPMAPS = 3,
-  NEAREST_WITH_MIPMAPS_ANISOTROPIC = 4,
-  LINEAR_WITH_MIPMAPS_ANISOTROPIC = 5,
-}
-
-/** `Label3D::AlphaCutMode` (`scene/3d/label_3d.h:50-56`). */
-export enum AlphaCutMode {
-  DISABLED = 0,
-  DISCARD = 1,
-  OPAQUE_PREPASS = 2,
-  HASH = 3,
-}
-
-/** Godot's `HorizontalAlignment` enum, as it appears in `.tscn` files. */
-export enum HorizontalAlignment {
-  LEFT = 0,
-  CENTER = 1,
-  RIGHT = 2,
-  FILL = 3,
 }

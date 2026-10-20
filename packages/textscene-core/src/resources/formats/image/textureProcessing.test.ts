@@ -8,12 +8,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
-  applyAlphaBorderFix,
   createTextureFromBuffer,
   decodeImagePixels,
   getMimeType,
+  importDecodedImage,
   isTexturePath,
+  type ImageImport,
 } from './textureProcessing';
+import { readImagePixels } from './imagePixels';
+import { sourceColorSpace } from '../../textures/sourceColorSpace';
+import type { ImageSourceFormat } from '../../../godot/import/imageSourceFormat';
+import {
+  DEFAULT_TEXTURE_IMPORT,
+  RoughnessChannel,
+  type TextureImportOptions,
+} from '../../../godot/import/textureImport';
+
+/** An image in `source` format under its import sidecar's `options`, the rest at their defaults. */
+function imported(
+  source: ImageSourceFormat | null,
+  options: Partial<TextureImportOptions> = {}
+): ImageImport {
+  return { source, options: { ...DEFAULT_TEXTURE_IMPORT, ...options }, roughnessNormal: null };
+}
 
 const fakeLoader = vi.hoisted(() => ({
   mode: 'success' as 'success' | 'error',
@@ -47,6 +64,11 @@ vi.mock('three', async (importOriginal) => {
   }
 
   return { ...actual, TextureLoader: FakeTextureLoader };
+});
+
+vi.mock('./imagePixels', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./imagePixels')>();
+  return { ...actual, readImagePixels: vi.fn(actual.readImagePixels) };
 });
 
 describe('getMimeType', () => {
@@ -126,21 +148,69 @@ describe('createTextureFromBuffer', () => {
       fakeLoader.image = null;
     });
 
-    it('runs on a PNG with soft edges', async () => {
+    it('runs on an RGBA8 source with soft edges', async () => {
       fakeLoader.image = softEdge;
-      const texture = await createTextureFromBuffer(data, 'image/png');
+      const texture = await createTextureFromBuffer(data, 'image/png', imported('RGBA8'));
       expect(Array.from((texture.image as { data: Uint8Array }).data).slice(0, 3)).toEqual([10, 20, 30]);
+    });
+
+    it('runs on a source no loader header names, as on any image with alpha (edge case)', async () => {
+      fakeLoader.image = softEdge;
+      const texture = await createTextureFromBuffer(data, 'image/png', imported(null));
+      expect(Array.from((texture.image as { data: Uint8Array }).data).slice(0, 3)).toEqual([10, 20, 30]);
+    });
+
+    it('skips a greyscale-with-alpha source, as Godot fixes only RGBA8', async () => {
+      fakeLoader.image = softEdge;
+      const texture = await createTextureFromBuffer(data, 'image/png', imported('LumAlpha8'));
+      expect(texture.image).toBe(softEdge);
     });
 
     it('skips a JPEG, which has no alpha to fix', async () => {
       fakeLoader.image = softEdge;
-      const texture = await createTextureFromBuffer(data, 'image/jpeg');
+      const texture = await createTextureFromBuffer(data, 'image/jpeg', imported('RGB8'));
       expect(texture.image).toBe(softEdge);
+    });
+
+    /** The PNG texture a decoded image of one row of `[r, g, b, a]` texels yields. */
+    function decodeRow(texels: number[][]): Promise<THREE.Texture> {
+      fakeLoader.image = { data: new Uint8Array(texels.flat()), width: texels.length, height: 1 };
+      return createTextureFromBuffer(data, 'image/png', imported('RGBA8'));
+    }
+
+    const bytesOf = (texture: THREE.Texture) => Array.from((texture.image as { data: Uint8Array }).data);
+
+    it('rewrites the RGB behind alpha 0 on an image with soft, partial-alpha edges', async () => {
+      const fixed = await decodeRow([
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ]);
+      expect(bytesOf(fixed)).toEqual([10, 20, 30, 0, 10, 20, 30, 128]);
+    });
+
+    it("leaves the decoded image's shared bytes as they were", async () => {
+      await decodeRow([
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ]);
+      expect(Array.from(fakeLoader.image!.data)).toEqual([255, 255, 255, 0, 10, 20, 30, 128]);
+    });
+
+    it('keeps the RGB of a transparent texel with no source within the radius', async () => {
+      const fixed = await decodeRow([
+        [10, 20, 30, 255],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [7, 7, 7, 0],
+      ]);
+      expect(bytesOf(fixed).slice(20, 24)).toEqual([7, 7, 7, 0]);
     });
   });
 
   it('resolves with a texture whose colorSpace is sRGB', async () => {
-    const texture = await createTextureFromBuffer(data, 'image/png');
+    const texture = await createTextureFromBuffer(data, 'image/png', imported('RGBA8'));
     expect(texture).toBeInstanceOf(THREE.Texture);
     expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
   });
@@ -150,13 +220,13 @@ describe('createTextureFromBuffer', () => {
     // Repeat. Godot has two defaults for one image (`BaseMaterial3D` repeat,
     // `CanvasItem` clamp), so neither belongs on the shared entry. Each
     // consumer states its own at bind time (`applyTextureState.ts`).
-    const texture = await createTextureFromBuffer(data, 'image/png');
+    const texture = await createTextureFromBuffer(data, 'image/png', imported('RGBA8'));
     expect(texture.wrapS).toBe(THREE.ClampToEdgeWrapping);
     expect(texture.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
   it('wraps the buffer in a blob with the given MIME type and loads it via blob URL', async () => {
-    await createTextureFromBuffer(data, 'image/webp');
+    await createTextureFromBuffer(data, 'image/webp', imported('RGBA8'));
 
     expect(createSpy).toHaveBeenCalledTimes(1);
     const blob = createSpy.mock.calls[0]![0] as Blob;
@@ -168,104 +238,396 @@ describe('createTextureFromBuffer', () => {
   });
 
   it('revokes the blob URL after a successful load', async () => {
-    await createTextureFromBuffer(data, 'image/png');
+    await createTextureFromBuffer(data, 'image/png', imported('RGBA8'));
     const blobUrl = createSpy.mock.results[0]!.value as string;
     expect(revokeSpy).toHaveBeenCalledWith(blobUrl);
   });
 
   it('rejects with the decode-failure contract message on loader error', async () => {
     fakeLoader.mode = 'error';
-    await expect(createTextureFromBuffer(data, 'image/png')).rejects.toThrow('Failed to decode texture');
+    await expect(createTextureFromBuffer(data, 'image/png', imported('RGBA8'))).rejects.toThrow(
+      'Failed to decode texture'
+    );
   });
 
   it('revokes the blob URL even when decoding fails', async () => {
     fakeLoader.mode = 'error';
-    await createTextureFromBuffer(data, 'image/png').catch(() => undefined);
+    await createTextureFromBuffer(data, 'image/png', imported('RGBA8')).catch(() => undefined);
     const blobUrl = createSpy.mock.results[0]!.value as string;
     expect(revokeSpy).toHaveBeenCalledWith(blobUrl);
   });
 
   it('forwards the optional LoadingManager to the TextureLoader', async () => {
     const manager = new THREE.LoadingManager();
-    await createTextureFromBuffer(data, 'image/png', manager);
+    await createTextureFromBuffer(data, 'image/png', imported('RGBA8'), manager);
     expect(fakeLoader.lastManager).toBe(manager);
   });
 
   it('constructs the TextureLoader without a manager when none is given', async () => {
-    await createTextureFromBuffer(data, 'image/png');
+    await createTextureFromBuffer(data, 'image/png', imported('RGBA8'));
     expect(fakeLoader.lastManager).toBeUndefined();
   });
 });
 
-describe('applyAlphaBorderFix', () => {
-  /** A one-row DataTexture of `[r, g, b, a]` texels, as a decoded sheet's bytes. */
-  function rowTexture(texels: number[][]): THREE.DataTexture {
-    return new THREE.DataTexture(new Uint8Array(texels.flat()), texels.length, 1);
+describe('createTextureFromBuffer: the import texel passes', () => {
+  const data = new Uint8Array([1, 2, 3, 4]).buffer;
+
+  /** Decodes a one-row image of `[r, g, b, a]` texels under `source` and `options`. */
+  async function importedRow(
+    texels: number[][],
+    source: ImageSourceFormat | null,
+    options: Partial<TextureImportOptions> = {}
+  ): Promise<{ texture: THREE.Texture; decoded: { data: Uint8Array; width: number; height: number } }> {
+    const decoded = { data: new Uint8Array(texels.flat()), width: texels.length, height: 1 };
+    fakeLoader.image = decoded;
+    return { texture: await createTextureFromBuffer(data, 'image/png', imported(source, options)), decoded };
   }
 
   const bytesOf = (texture: THREE.Texture) => Array.from((texture.image as { data: Uint8Array }).data);
 
-  it('rewrites the RGB behind alpha 0 on a texture with soft, partial-alpha edges', () => {
-    const fixed = applyAlphaBorderFix(
-      rowTexture([
+  beforeEach(() => {
+    fakeLoader.mode = 'success';
+  });
+
+  afterEach(() => {
+    fakeLoader.image = null;
+  });
+
+  it('rewrites the RGB behind alpha 0 and leaves the decoded bytes as they were', async () => {
+    const { texture, decoded } = await importedRow(
+      [
         [255, 255, 255, 0],
         [10, 20, 30, 128],
-      ])
+      ],
+      'RGBA8'
     );
-
-    expect(bytesOf(fixed)).toEqual([10, 20, 30, 0, 10, 20, 30, 128]);
-  });
-
-  it("leaves the source texture's shared bytes as they were", () => {
-    const source = rowTexture([
-      [255, 255, 255, 0],
-      [10, 20, 30, 128],
+    expect([bytesOf(texture), [...decoded.data]]).toEqual([
+      [10, 20, 30, 0, 10, 20, 30, 128],
+      [255, 255, 255, 0, 10, 20, 30, 128],
     ]);
-
-    applyAlphaBorderFix(source);
-
-    expect(bytesOf(source)).toEqual([255, 255, 255, 0, 10, 20, 30, 128]);
   });
 
-  it('keeps the RGB of a transparent texel with no source within the radius', () => {
-    const fixed = applyAlphaBorderFix(
-      rowTexture([
-        [10, 20, 30, 255],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [7, 7, 7, 0],
-      ])
+  it('keeps the RGB of a transparent texel with no source within the radius', async () => {
+    const opaqueThenFarTransparent = [[10, 20, 30, 255], ...Array(4).fill([0, 0, 0, 0]), [7, 7, 7, 0]];
+    const { texture } = await importedRow(opaqueThenFarTransparent, 'RGBA8');
+    expect(bytesOf(texture).slice(20, 24)).toEqual([7, 7, 7, 0]);
+  });
+
+  it('skips the alpha-border pass when the sidecar turns it off', async () => {
+    const { texture, decoded } = await importedRow(
+      [
+        [255, 255, 255, 0],
+        [10, 20, 30, 128],
+      ],
+      'RGBA8',
+      {
+        fixAlphaBorder: false,
+      }
     );
-
-    expect(bytesOf(fixed).slice(20, 24)).toEqual([7, 7, 7, 0]);
+    expect(texture.image).toBe(decoded);
   });
 
-  it('keeps the sampling of the texture it replaces', () => {
-    const source = rowTexture([
-      [255, 255, 255, 0],
-      [10, 20, 30, 128],
+  it('premultiplies an RGBA8 image after the alpha-border pass', async () => {
+    const { texture } = await importedRow(
+      [
+        [255, 255, 255, 0],
+        [200, 100, 50, 128],
+      ],
+      'RGBA8',
+      {
+        premultAlpha: true,
+      }
+    );
+    expect(bytesOf(texture)).toEqual([0, 0, 0, 0, 100, 50, 25, 128]);
+  });
+
+  it('premultiplies no greyscale-with-alpha image, as Godot premultiplies only RGBA8', async () => {
+    const { texture, decoded } = await importedRow([[200, 200, 200, 128]], 'LumAlpha8', {
+      premultAlpha: true,
+    });
+    expect(texture.image).toBe(decoded);
+  });
+
+  it('inverts the green channel of a normal map in any format', async () => {
+    const { texture } = await importedRow([[128, 0, 255, 255]], 'RGB8', { invertNormalY: true });
+    expect(bytesOf(texture)).toEqual([128, 255, 255, 255]);
+  });
+
+  it('keeps only red and green of a normal map VRAM compressed to RGTC', async () => {
+    const { texture } = await importedRow([[200, 100, 50, 128]], 'RGBA8', {
+      mode: 'VramCompressed',
+      normalMap: true,
+      fixAlphaBorder: false,
+    });
+    expect(bytesOf(texture)).toEqual([200, 100, 0, 255]);
+  });
+
+  it('keeps every channel of a normal map compressed at high quality, to BPTC (edge case)', async () => {
+    const { texture, decoded } = await importedRow([[200, 100, 50, 255]], 'RGB8', {
+      mode: 'VramCompressed',
+      highQuality: true,
+      normalMap: true,
+    });
+    expect(texture.image).toBe(decoded);
+  });
+
+  it('keeps the sampling of the texture it replaces', async () => {
+    const { texture } = await importedRow([[1, 2, 3, 255]], 'RGB8', { invertNormalY: true, mipmaps: true });
+    expect(texture.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+  });
+
+  it('returns the decoded texture when no pass changes a byte', async () => {
+    const { texture, decoded } = await importedRow([[1, 2, 3, 255]], 'RGBA8', { premultAlpha: true });
+    expect(texture.image).toBe(decoded);
+  });
+
+  it('returns the decoded texture when its pixels cannot be read (edge case)', async () => {
+    fakeLoader.image = null;
+    const texture = await createTextureFromBuffer(
+      data,
+      'image/png',
+      imported('RGBA8', { premultAlpha: true })
+    );
+    expect(texture.image).toBeNull();
+  });
+});
+
+describe('importDecodedImage', () => {
+  /** The `userData` key `recordGodotFormat` writes. */
+  const GODOT_FORMAT = 'textsceneGodotFormat';
+  const vram = { mode: 'VramCompressed', fixAlphaBorder: false } as const;
+
+  /** A texture of raw RGBA8 `texels` in one row. */
+  const rgbaTexture = (texels: number[]) =>
+    new THREE.Texture({ data: new Uint8Array(texels), width: texels.length / 4, height: 1 });
+
+  it('drops the mip chain of an import without mipmaps', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported('RGBA8'));
+    expect([texture.minFilter, texture.generateMipmaps]).toEqual([THREE.LinearFilter, false]);
+  });
+
+  it('leaves the GPU to build the chain of an image whose pixels cannot be read (edge case)', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported('RGBA8', { mipmaps: true }));
+    expect([texture.generateMipmaps, texture.mipmaps]).toEqual([true, []]);
+  });
+
+  describe('the mip chain', () => {
+    /** A texture of raw RGBA8 texels, `width` to a row. */
+    const imageTexture = (texels: number[][], width: number) =>
+      new THREE.Texture({ data: new Uint8Array(texels.flat()), width, height: texels.length / width });
+    const levelsOf = (texture: THREE.Texture) =>
+      (texture.mipmaps as { data: Uint8Array }[]).map((level) => Array.from(level.data));
+    const mipmapped = { mipmaps: true, fixAlphaBorder: false } as const;
+    /** A 2 × 2 normal map whose 1 × 1 level Godot renormalises to 129, 178, 245. */
+    const normals = [
+      [218, 128, 128, 255],
+      [128, 218, 128, 255],
+      [128, 128, 255, 255],
+      [38, 128, 218, 255],
+    ];
+
+    it("stores the chain Godot's importer generates, averaged in byte space", () => {
+      const texture = importDecodedImage(
+        imageTexture(
+          [
+            [255, 0, 0, 255],
+            [0, 0, 255, 255],
+          ],
+          2
+        ),
+        imported('RGBA8', mipmapped)
+      );
+      expect(levelsOf(texture)).toEqual([
+        [255, 0, 0, 255, 0, 0, 255, 255],
+        [128, 0, 128, 255],
+      ]);
+    });
+
+    it('asks the GPU for no chain of its own', () => {
+      const texture = importDecodedImage(
+        imageTexture(
+          [
+            [1, 2, 3, 255],
+            [4, 5, 6, 255],
+          ],
+          2
+        ),
+        imported('RGBA8', mipmapped)
+      );
+      expect([texture.generateMipmaps, texture.minFilter]).toEqual([false, THREE.LinearMipmapLinearFilter]);
+    });
+
+    it('renormalises each level of a normal map', () => {
+      const texture = importDecodedImage(
+        imageTexture(normals, 2),
+        imported('RGBA8', { ...mipmapped, normalMap: true })
+      );
+      expect(levelsOf(texture)[1]).toEqual([129, 178, 245, 255]);
+    });
+
+    it('renormalises a normal map before its compression drops blue', () => {
+      const texture = importDecodedImage(
+        imageTexture(normals, 2),
+        imported('RGBA8', { ...mipmapped, normalMap: true, mode: 'VramCompressed' })
+      );
+      expect(levelsOf(texture)[1]).toEqual([129, 178, 0, 255]);
+    });
+
+    it('averages the bytes the texel passes leave', () => {
+      const texture = importDecodedImage(
+        imageTexture(
+          [
+            [0, 0, 0, 255],
+            [0, 100, 0, 255],
+          ],
+          2
+        ),
+        imported('RGB8', { ...mipmapped, invertNormalY: true })
+      );
+      expect(levelsOf(texture)[1]).toEqual([0, 205, 0, 255]);
+    });
+
+    it('renormalises no greyscale normal map, as Godot renormalises only RGB (edge case)', () => {
+      const texture = importDecodedImage(
+        imageTexture(
+          [
+            [200, 200, 200, 255],
+            [100, 100, 100, 255],
+          ],
+          2
+        ),
+        imported('Lum8', { ...mipmapped, normalMap: true })
+      );
+      expect(levelsOf(texture)[1]).toEqual([150, 150, 150, 255]);
+    });
+
+    /** A roughness map of four smooth texels, limited by a normal map leaning left and right. */
+    const roughnessImport = (roughnessNormal: ImageImport['roughnessNormal']): ImageImport => ({
+      ...imported('RGB8', {
+        ...mipmapped,
+        roughnessLimit: { channel: RoughnessChannel.R, normalPath: 'res://bumps.png' },
+      }),
+      roughnessNormal,
+    });
+    const smooth = [
+      [0, 0, 0, 255],
+      [0, 0, 0, 255],
+      [0, 0, 0, 255],
+      [0, 0, 0, 255],
+    ];
+    const leaning = {
+      data: new Uint8Array([255, 128, 0, 255, 0, 128, 0, 255, 255, 128, 0, 255, 0, 128, 0, 255]),
+      width: 2,
+      height: 2,
+    };
+
+    it('raises the roughness of each level by the spread of the normals it covers', () => {
+      const texture = importDecodedImage(imageTexture(smooth, 2), roughnessImport(leaning));
+      expect(levelsOf(texture)[1]).toEqual([102, 0, 0, 255]);
+    });
+
+    it('limits no roughness when the normal map did not load (edge case)', () => {
+      const texture = importDecodedImage(imageTexture(smooth, 2), roughnessImport(null));
+      expect(levelsOf(texture)[1]).toEqual([0, 0, 0, 255]);
+    });
+
+    it('disposes the decoded texture that the chain replaces', () => {
+      const disposed = vi.fn();
+      const decoded = imageTexture([[1, 2, 3, 255]], 1);
+      decoded.addEventListener('dispose', disposed);
+      importDecodedImage(decoded, imported('RGBA8', mipmapped));
+      expect(disposed).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('records the format a colour slot reads the import through', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported('Lum8'));
+    expect(sourceColorSpace(texture)).toBe(THREE.NoColorSpace);
+  });
+
+  it('disposes the decoded texture that the rewritten bytes replace', async () => {
+    const disposed = vi.fn();
+    const decoded = new THREE.Texture({ data: new Uint8Array([128, 0, 255, 255]), width: 1, height: 1 });
+    decoded.addEventListener('dispose', disposed);
+    importDecodedImage(decoded, imported('RGB8', { invertNormalY: true }));
+    expect(disposed).toHaveBeenCalledOnce();
+  });
+
+  it('records DXT1 for a VRAM-compressed RGBA8 image whose texels are all opaque', () => {
+    const texture = importDecodedImage(rgbaTexture([9, 9, 9, 255]), imported('RGBA8', vram));
+    expect(texture.userData[GODOT_FORMAT]).toBe('DXT1 RGB8');
+  });
+
+  it('records DXT5 for a VRAM-compressed RGBA8 image with a translucent texel', () => {
+    const texture = importDecodedImage(rgbaTexture([9, 9, 9, 255, 9, 9, 9, 128]), imported('RGBA8', vram));
+    expect(texture.userData[GODOT_FORMAT]).toBe('DXT5 RGBA8');
+  });
+
+  it('reads the pixels once when a texel pass has read them before the format check', () => {
+    vi.mocked(readImagePixels).mockClear();
+    const texture = importDecodedImage(
+      rgbaTexture([9, 9, 9, 255, 9, 9, 9, 128]),
+      imported('RGBA8', { mode: 'VramCompressed' })
+    );
+    expect([texture.userData[GODOT_FORMAT], vi.mocked(readImagePixels).mock.calls.length]).toEqual([
+      'DXT5 RGBA8',
+      1,
     ]);
-    source.minFilter = THREE.LinearMipmapLinearFilter;
-    source.generateMipmaps = true;
-
-    const fixed = applyAlphaBorderFix(source);
-
-    expect(fixed.minFilter).toBe(THREE.LinearMipmapLinearFilter);
-    expect(fixed.generateMipmaps).toBe(true);
   });
 
-  it('returns the same texture when no texel needs rewriting', () => {
-    const texture = rowTexture([[1, 2, 3, 255]]);
-
-    expect(applyAlphaBorderFix(texture)).toBe(texture);
+  it('records DXT5 for a VRAM-compressed RGBA8 image whose pixels cannot be read (edge case)', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported('RGBA8', vram));
+    expect(texture.userData[GODOT_FORMAT]).toBe('DXT5 RGBA8');
   });
 
-  it('returns the same texture when its pixels cannot be read', () => {
-    const texture = new THREE.Texture();
+  it('records no format for an image whose header names none (edge case)', () => {
+    const texture = importDecodedImage(new THREE.Texture(), imported(null));
+    expect(sourceColorSpace(texture)).toBe(THREE.SRGBColorSpace);
+  });
+});
 
-    expect(applyAlphaBorderFix(texture)).toBe(texture);
+describe('createTextureFromBuffer: the SVG import scale', () => {
+  const data = new Uint8Array([1, 2, 3, 4]).buffer;
+  const drawImage = vi.fn();
+
+  beforeEach(() => {
+    fakeLoader.mode = 'success';
+    fakeLoader.image = { data: new Uint8Array(4 * 3 * 2), width: 3, height: 2 };
+    const createElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      const element = createElement(tag);
+      // Only a 2D context: a WebGL one would be cached as the shared pixel-readback context.
+      const getContext = (kind: string) => (kind === '2d' ? { drawImage } : null);
+      if (tag === 'canvas') Object.assign(element, { getContext });
+      return element;
+    });
+  });
+
+  afterEach(() => {
+    fakeLoader.image = null;
+    drawImage.mockClear();
+    vi.restoreAllMocks();
+  });
+
+  it('draws an SVG at its scale times its own size, rounded', async () => {
+    const texture = await createTextureFromBuffer(
+      data,
+      'image/svg+xml',
+      imported('RGBA8', { svgScale: 2.5 })
+    );
+    const canvas = texture.image as HTMLCanvasElement;
+    expect([canvas.width, canvas.height, drawImage.mock.calls[0]!.slice(3)]).toEqual([8, 5, [8, 5]]);
+  });
+
+  it('keeps an SVG at scale 1 as decoded', async () => {
+    const texture = await createTextureFromBuffer(data, 'image/svg+xml', imported('RGBA8'));
+    expect(drawImage).not.toHaveBeenCalled();
+    expect((texture.image as { width: number }).width).toBe(3);
+  });
+
+  it('scales no raster image, whatever its sidecar says (edge case)', async () => {
+    await createTextureFromBuffer(data, 'image/png', imported('RGBA8', { svgScale: 2 }));
+    expect(drawImage).not.toHaveBeenCalled();
   });
 });
 

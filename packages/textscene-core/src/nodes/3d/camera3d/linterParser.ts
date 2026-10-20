@@ -6,19 +6,14 @@ import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
 import { CMP_EPSILON } from '../../../godot/math/math.js';
-
-const PROJECTION = { 0: 'PERSPECTIVE', 1: 'ORTHOGONAL', 2: 'FRUSTUM' };
-// camera_3d.h:50-52: `enum KeepAspect { KEEP_WIDTH, KEEP_HEIGHT };` has two members, and
-// camera_3d.cpp:672's hint offers only "Keep Width,Keep Height". No "KEEP_ASPECT_DISABLED"
-// exists in Godot 4.6.3, so a value of 2 is one the engine cannot represent.
-const KEEP_ASPECT = { 0: 'KEEP_WIDTH', 1: 'KEEP_HEIGHT' };
-const DOPPLER_TRACKING = { 0: 'DISABLED', 1: 'IDLE_STEP', 2: 'PHYSICS_STEP' };
+import { DOPPLER_TRACKING_NAMES } from '../../../godot/scene/audio.js';
+import { CAMERA_3D_KEEP_ASPECT_NAMES, CAMERA_3D_PROJECTION_NAMES } from '../../../godot/scene/camera3d.js';
 
 validatorRegistry.registerAll('Camera3D', {
   // camera_3d.cpp:341, `set_projection` only assigns inside
   // `if (p_mode==PERSPECTIVE||ORTHOGONAL||FRUSTUM)`: an out-of-enum value is
   // silently dropped rather than applied, which ADR-0032 counts as enforced.
-  projection: v.enumInt('projection', 0, 2, PROJECTION, { enforced: 'camera_3d.cpp:341' }),
+  projection: v.enumInt('projection', CAMERA_3D_PROJECTION_NAMES, { enforced: 'camera_3d.cpp:341' }),
   // camera_3d.cpp:725, ERR_FAIL_COND(p_fov < 1 || p_fov > 179): the setter
   // refuses, so this is an error rather than an advisory. Custom message keeps
   // the "degrees" qualifier that the per-node test asserts.
@@ -46,13 +41,13 @@ validatorRegistry.registerAll('Camera3D', {
   far: v.float('far', { min: 0.01, hinted: { min: 'camera_3d.cpp:686' } }),
   // camera_3d.cpp:586-591, `set_keep_aspect_mode` is a bare assignment, so the hint (:672) only
   // warns.
-  keep_aspect: v.enumInt('keep_aspect', 0, 1, KEEP_ASPECT, { hinted: 'camera_3d.cpp:672' }),
+  keep_aspect: v.enumInt('keep_aspect', CAMERA_3D_KEEP_ASPECT_NAMES, { hinted: 'camera_3d.cpp:672' }),
   cull_mask: layerBitmask('cull_mask', {
     hinted: 'camera_3d.cpp:673',
     width: 'uint32' /* camera_3d.h:177 */,
   }),
   // camera_3d.cpp:597-605, `set_doppler_tracking` is a bare assignment.
-  doppler_tracking: v.enumInt('doppler_tracking', 0, 2, DOPPLER_TRACKING, {
+  doppler_tracking: v.enumInt('doppler_tracking', DOPPLER_TRACKING_NAMES, {
     hinted: 'camera_3d.cpp:679',
   }),
   current: v.boolean('current'),

@@ -3,9 +3,10 @@
  * of the butt-capped segment quads. Godot has no "no joint" mode.
  */
 import { describe, expect, it } from 'vitest';
-import { jointWedge, LINE_JOINT_BEVEL, LINE_JOINT_ROUND, LINE_JOINT_SHARP } from './lineJoints';
+import { jointWedge } from './lineJoints';
+import { LineJointMode } from '../../../godot/scene/line2d.js';
 
-const SHARP = { jointMode: LINE_JOINT_SHARP, sharpLimit: 2, roundPrecision: 8 };
+const SHARP = { jointMode: LineJointMode.SHARP, sharpLimit: 2, roundPrecision: 8 };
 
 /** A right-angle corner: in from the left, out downward. */
 const PREV = { x: -10, y: 0 };
@@ -47,17 +48,17 @@ describe('jointWedge', () => {
   });
 
   it('bevels with a single triangle', () => {
-    const bevel = { ...SHARP, jointMode: LINE_JOINT_BEVEL };
+    const bevel = { ...SHARP, jointMode: LineJointMode.BEVEL };
     expect(triangleCount(jointWedge(PREV, CORNER, NEXT, 5, bevel))).toBe(1);
   });
 
   it('rounds with round_precision triangles', () => {
-    const round = { jointMode: LINE_JOINT_ROUND, sharpLimit: 2, roundPrecision: 6 };
+    const round = { jointMode: LineJointMode.ROUND, sharpLimit: 2, roundPrecision: 6 };
     expect(triangleCount(jointWedge(PREV, CORNER, NEXT, 5, round))).toBe(6);
   });
 
   it('keeps every round-joint vertex a half-width from the corner', () => {
-    const round = { jointMode: LINE_JOINT_ROUND, sharpLimit: 2, roundPrecision: 4 };
+    const round = { jointMode: LineJointMode.ROUND, sharpLimit: 2, roundPrecision: 4 };
     const wedge = jointWedge(PREV, CORNER, NEXT, 5, round);
     for (let i = 0; i < wedge.length; i += 3) {
       const d = Math.hypot(wedge[i]!, wedge[i + 1]!);

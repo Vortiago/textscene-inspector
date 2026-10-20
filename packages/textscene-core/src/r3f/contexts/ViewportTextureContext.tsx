@@ -8,18 +8,35 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type * as THREE from 'three';
 
+/**
+ * A target carries Godot's two views of one storage (`scene/main/viewport.cpp:168-172`,
+ * `texture_storage.cpp:1145-1156`). Every consumer samples them in the canvas that rendered them,
+ * a Control subtree's included (`nodes/viewport/subviewport/ControlRasterPass.tsx`).
+ */
 export interface ViewportTextureEntry {
   /**
-   * The rendered target. Every consumer samples it in the canvas that rendered
-   * it, a Control subtree's included (`nodes/viewport/subviewport/ControlRasterPass.tsx`).
+   * The plain view, which a canvas item and a raw material slot sample. A canvas-content target
+   * holds sRGB bytes here, which the canvas filters raw (`texture_storage.cpp:754`).
    */
   texture: THREE.Texture;
+  /** The sRGB view, which a `source_color` slot samples (`material_storage.cpp:1067,1073`). */
+  decoding: DecodingView;
   /** The size in pixels that the sub-viewport's content was laid out against. */
   size: { x: number; y: number };
 }
 
+/**
+ * A view that decodes each texel before the filter. WebGL2 has no texture views, so a pass may
+ * serve it as a copy, which it fills only while a consumer retains it.
+ */
+export interface DecodingView {
+  texture: THREE.Texture;
+  /** Keeps the view filled until the returned release is called. A second release changes nothing. */
+  retain(): () => void;
+}
+
 /** Publishes the target at `path` and returns the cleanup. */
-export type RegisterViewportTexture = (path: string, entry: ViewportTextureEntry) => () => void;
+type RegisterViewportTexture = (path: string, entry: ViewportTextureEntry) => () => void;
 
 const NO_OP_REGISTER: RegisterViewportTexture = () => () => {};
 const EMPTY: ReadonlyMap<string, ViewportTextureEntry> = new Map();
@@ -31,7 +48,7 @@ const ViewportTexturesContext = createContext<ReadonlyMap<string, ViewportTextur
 ViewportTexturesContext.displayName = 'ViewportTexturesContext';
 
 /** Stable publisher, for `<SubViewport>`. */
-export function useRegisterViewportTexture(): RegisterViewportTexture {
+function useRegisterViewportTexture(): RegisterViewportTexture {
   return useContext(RegisterViewportTextureContext);
 }
 

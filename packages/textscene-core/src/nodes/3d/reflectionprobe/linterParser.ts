@@ -6,23 +6,12 @@
  */
 
 import '../visualinstance3d/linterParser.js';
+import {
+  REFLECTION_PROBE_AMBIENT_MODE_NAMES,
+  REFLECTION_PROBE_UPDATE_MODE_NAMES,
+} from '../../../godot/scene/reflectionProbe.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../linter/validators/index.js';
-
-// reflection_probe.h:39-42 enum UpdateMode, bound at reflection_probe.cpp:278-279.
-// Labels from the hint string, reflection_probe.cpp:260: "Once (Fast),Always (Slow)".
-const UPDATE_MODE = {
-  0: 'UPDATE_ONCE',
-  1: 'UPDATE_ALWAYS',
-};
-
-// reflection_probe.h:44-48 enum AmbientMode, bound at reflection_probe.cpp:281-283.
-// Labels from the hint string, reflection_probe.cpp:274: "Disabled,Environment,Constant Color".
-const AMBIENT_MODE = {
-  0: 'AMBIENT_DISABLED',
-  1: 'AMBIENT_ENVIRONMENT',
-  2: 'AMBIENT_COLOR',
-};
 
 // `_bind_methods` (reflection_probe.cpp:214-284) has one `ADD_PROPERTY` per member below,
 // and the class has no `PropertyListHelper`, `register_property`, `ADD_ARRAY_COUNT` or
@@ -30,7 +19,9 @@ const AMBIENT_MODE = {
 validatorRegistry.registerAll('ReflectionProbe', {
   // reflection_probe.cpp:260, PROPERTY_HINT_ENUM. set_update_mode (:187-190) is a bare
   // assignment, so an out-of-range int warns.
-  update_mode: v.enumInt('update_mode', 0, 1, UPDATE_MODE, { hinted: 'reflection_probe.cpp:260' }),
+  update_mode: v.enumInt('update_mode', REFLECTION_PROBE_UPDATE_MODE_NAMES, {
+    hinted: 'reflection_probe.cpp:260',
+  }),
 
   // reflection_probe.cpp:261, PROPERTY_HINT_RANGE "0,1,0.01". set_intensity (:33-36)
   // stores the value unchecked, so both ends are hinted only.
@@ -88,7 +79,9 @@ validatorRegistry.registerAll('ReflectionProbe', {
 
   // reflection_probe.cpp:274, PROPERTY_HINT_ENUM. set_ambient_mode (:52-56) stores the
   // value unchecked, so out-of-range warns.
-  ambient_mode: v.enumInt('ambient_mode', 0, 2, AMBIENT_MODE, { hinted: 'reflection_probe.cpp:274' }),
+  ambient_mode: v.enumInt('ambient_mode', REFLECTION_PROBE_AMBIENT_MODE_NAMES, {
+    hinted: 'reflection_probe.cpp:274',
+  }),
 
   // reflection_probe.cpp:275, PROPERTY_HINT_COLOR_NO_ALPHA only hides the alpha slider.
   // set_ambient_color (:62-65) is a bare assignment.

@@ -6,8 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
-import { abortProceduralBuilds } from '../proceduralBuilds';
-import { clearProceduralTextureCache } from '../proceduralTextureCache';
+import { resetProceduralTextures } from '../proceduralBuilds';
 import { resolveNoiseTexture3D } from './resolveNoiseTexture';
 
 const FOG = `[gd_resource type="FogMaterial" format=3]
@@ -28,8 +27,7 @@ const fog = parseTresFile(FOG);
 const DENSITY = 'SubResource("NoiseTexture3D_b")';
 
 afterEach(() => {
-  abortProceduralBuilds();
-  clearProceduralTextureCache();
+  resetProceduralTextures();
 });
 
 describe('resolveNoiseTexture3D', () => {

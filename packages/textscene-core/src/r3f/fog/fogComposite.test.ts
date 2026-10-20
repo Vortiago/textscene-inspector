@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { installFogComposite } from './fogComposite';
 import { GODOT_FOG_PARS_CHUNK } from './fogChunks';
 import { fogUniforms } from './fogUniforms';
+import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection';
 import { warningsOf } from '../testing/logWarnings';
 
 const threeChunks = {
@@ -17,13 +18,22 @@ const threeChunks = {
   fog_fragment: THREE.ShaderChunk.fog_fragment,
   tonemapping_fragment: THREE.ShaderChunk.tonemapping_fragment,
   backgroundCube_frag: THREE.ShaderChunk.backgroundCube_frag,
+  background_vert: THREE.ShaderChunk.background_vert,
+  background_frag: THREE.ShaderChunk.background_frag,
 };
 const backgroundCube = THREE.ShaderLib.backgroundCube!;
-const threeBackgroundShader = backgroundCube.fragmentShader;
+const backgroundPlane = THREE.ShaderLib.background!;
+const threeBackgroundShaders = {
+  cube: backgroundCube.fragmentShader,
+  planeVertex: backgroundPlane.vertexShader,
+  planeFragment: backgroundPlane.fragmentShader,
+};
 
 afterEach(() => {
   Object.assign(THREE.ShaderChunk, threeChunks);
-  backgroundCube.fragmentShader = threeBackgroundShader;
+  backgroundCube.fragmentShader = threeBackgroundShaders.cube;
+  backgroundPlane.vertexShader = threeBackgroundShaders.planeVertex;
+  backgroundPlane.fragmentShader = threeBackgroundShaders.planeFragment;
 });
 
 describe('installFogComposite', () => {
@@ -64,10 +74,28 @@ describe('installFogComposite', () => {
     );
   });
 
+  it('fogs the flat background, a colour background, before its tone curve', () => {
+    installFogComposite();
+
+    const shader = backgroundPlane.fragmentShader;
+    expect(shader.startsWith(`#include <${GODOT_FOG_PARS_CHUNK}>`)).toBe(true);
+    expect(shader.indexOf('godotSkyFog( gl_FragColor.rgb, vWorldDirection )')).toBeLessThan(
+      shader.indexOf('<tonemapping_fragment>')
+    );
+  });
+
+  it('gives the flat background the view direction of each pixel, as Godot’s sky pass casts it', () => {
+    installFogComposite();
+
+    const shader = backgroundPlane.vertexShader;
+    expect(shader).toContain('varying vec3 vWorldDirection;');
+    expect(shader).toContain(GODOT_SKY_VIEW_RAY);
+  });
+
   it('gives every fog material and the background the same uniform values', () => {
     installFogComposite();
 
-    const fogShaders = [THREE.ShaderLib.standard!, THREE.ShaderLib.basic, backgroundCube];
+    const fogShaders = [THREE.ShaderLib.standard!, THREE.ShaderLib.basic, backgroundCube, backgroundPlane];
     for (const shader of fogShaders) {
       const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
       expect(uniforms.volumetricFogVolume!.value).toBe(fogUniforms.volume);

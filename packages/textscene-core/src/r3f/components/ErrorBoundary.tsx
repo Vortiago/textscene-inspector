@@ -7,7 +7,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import * as logger from '../../logger.js';
 
-export interface ErrorBoundaryProps {
+interface ErrorBoundaryProps {
   children: ReactNode;
   /**
    * Rendered instead of `children` once an error is caught. `reset()` clears the

@@ -7,29 +7,7 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-
-/**
- * `ScrollContainer.ScrollMode` (scroll_container.h:44-50), for
- * `horizontal_scroll_mode` and `vertical_scroll_mode`. No other class binds it.
- */
-const SCROLL_MODE = {
-  0: 'DISABLED',
-  1: 'AUTO',
-  2: 'SHOW_ALWAYS',
-  3: 'SHOW_NEVER',
-  4: 'RESERVE',
-} as const;
-
-/**
- * `ScrollContainer.ScrollHintMode` (scroll_container.h:52-57), used only by
- * `scroll_hint_mode`.
- */
-const SCROLL_HINT_MODE = {
-  0: 'DISABLED',
-  1: 'ALL',
-  2: 'TOP_AND_LEFT',
-  3: 'BOTTOM_AND_RIGHT',
-} as const;
+import { SCROLL_CONTAINER_SCROLL_HINT_MODE_NAMES, SCROLL_MODE_NAMES } from '../../../../godot/scene/gui.js';
 
 validatorRegistry.registerAll('ScrollContainer', {
   // scroll_container.cpp:843, BOOL, no hint. set_follow_focus
@@ -69,12 +47,12 @@ validatorRegistry.registerAll('ScrollContainer', {
   // scroll_container.cpp:851, ENUM "Disabled,Auto,Always Show,Never Show,Reserve"
   // (scroll_container.h:44-50). set_horizontal_scroll_mode (scroll_container.cpp:697-705)
   // has no ERR_FAIL_INDEX, so out of range is a warning.
-  horizontal_scroll_mode: v.enumInt('horizontal_scroll_mode', 0, 4, SCROLL_MODE, {
+  horizontal_scroll_mode: v.enumInt('horizontal_scroll_mode', SCROLL_MODE_NAMES, {
     hinted: 'scroll_container.cpp:851',
   }),
   // scroll_container.cpp:852, same enum; set_vertical_scroll_mode
   // (scroll_container.cpp:711-719) is the same shape, unconstrained.
-  vertical_scroll_mode: v.enumInt('vertical_scroll_mode', 0, 4, SCROLL_MODE, {
+  vertical_scroll_mode: v.enumInt('vertical_scroll_mode', SCROLL_MODE_NAMES, {
     hinted: 'scroll_container.cpp:852',
   }),
 
@@ -85,7 +63,7 @@ validatorRegistry.registerAll('ScrollContainer', {
   // scroll_container.cpp:856, ENUM "Disabled,All,Top and Left,Bottom and Right"
   // (scroll_container.h:52-57). set_scroll_hint_mode (scroll_container.cpp:733-740)
   // has no ERR_FAIL_INDEX, so out of range is a warning.
-  scroll_hint_mode: v.enumInt('scroll_hint_mode', 0, 3, SCROLL_HINT_MODE, {
+  scroll_hint_mode: v.enumInt('scroll_hint_mode', SCROLL_CONTAINER_SCROLL_HINT_MODE_NAMES, {
     hinted: 'scroll_container.cpp:856',
   }),
   // scroll_container.cpp:857, BOOL, no hint. set_tile_scroll_hint

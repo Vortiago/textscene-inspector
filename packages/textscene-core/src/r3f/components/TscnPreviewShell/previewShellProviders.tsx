@@ -8,7 +8,11 @@ import { HierarchyProvider, type HierarchyContextValue } from '../../contexts/Hi
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
-import { ViewportModeProvider, type ViewportMode } from '../../contexts/ViewportModeContext.js';
+import {
+  ViewportModeProvider,
+  type PersistedViewport,
+  type ViewportMode,
+} from '../../contexts/ViewportModeContext.js';
 import { AnimatedValueProvider } from '../../contexts/AnimatedValueContext.js';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext.js';
 import { ViewportTextureProvider } from '../../contexts/ViewportTextureContext.js';
@@ -17,15 +21,16 @@ import { ViewportRectProvider } from '../../contexts/ViewportRectContext.js';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext.js';
 import { AnimationTransportProvider } from '../../contexts/AnimationTransportContext.js';
 import { composeProviders } from '../../composeProviders.js';
+import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 
-export interface PreviewShellProviderOptions {
+interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
   initialActiveCameraPath: string | null | undefined;
   onMissingPathsChange: ((paths: ReadonlySet<string>) => void) | undefined;
   /** The host's forced viewport mode, if it named one. */
   initialViewportMode: ViewportMode | undefined;
-  /** The mode, grid and frame persisted last session. */
-  initialViewport: { mode: ViewportMode; showGrid: boolean; frameOnOpen: boolean };
+  /** The mode, grid, framing, fog and performance overlay persisted last session. */
+  initialViewport: PersistedViewport;
   panelId: string;
   rootScenePath: string;
 }
@@ -62,10 +67,14 @@ export function previewShellProviders({
         initialMode={initialViewportMode ?? initialViewport.mode}
         initialShowGrid={initialViewport.showGrid}
         initialFrameOnOpen={initialViewport.frameOnOpen}
+        initialShowFog={initialViewport.showFog}
+        initialShowPerformance={initialViewport.showPerformance}
       >
         {children}
       </ViewportModeProvider>
     ),
+    // The frame profile in the canvas publishes here, and the overlay beside the canvas reads it.
+    (children) => <FrameStatsProvider>{children}</FrameStatsProvider>,
     (children) => <AnimationTransportProvider>{children}</AnimationTransportProvider>,
     (children) => <AnimationDriverProvider>{children}</AnimationDriverProvider>,
     // A `<SubViewport>` publishes its target here and a `ViewportTexture` resolves

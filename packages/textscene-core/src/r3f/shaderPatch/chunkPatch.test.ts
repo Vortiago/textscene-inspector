@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyChunkEdits, applyEdits, installChunkPatch, onChunk, type ChunkPatch } from './chunkPatch';
+import {
+  applyChunkEdits,
+  applyEdits,
+  editedChunk,
+  installChunkPatch,
+  onChunk,
+  type ChunkPatch,
+} from './chunkPatch';
 import { warningsOf } from '../testing/logWarnings';
 
 const CHUNK = 'alphatest_fragment';
@@ -69,6 +76,28 @@ describe('applyEdits', () => {
 
   it('is the text itself for no edits (edge case)', () => {
     expect(applyEdits('a', [])).toBe('a');
+  });
+});
+
+describe('editedChunk', () => {
+  // No installed patch edits `roughnessmap_fragment`, so three's own text stands in every test.
+  const ROUGHNESS_READ = 'roughnessFactor *= texelRoughness.g;';
+
+  it("applies the edit to three's chunk", () => {
+    const edited = editedChunk('roughnessmap_fragment', { three: ROUGHNESS_READ, godot: 'masked();' });
+    expect(edited).toBe(THREE.ShaderChunk.roughnessmap_fragment.replace(ROUGHNESS_READ, 'masked();'));
+  });
+
+  it('throws, naming the text and the chunk, for a text the chunk lacks (error case)', () => {
+    expect(() => editedChunk('roughnessmap_fragment', { three: 'texelRoughness.q', godot: '' })).toThrow(
+      `expected three's roughnessmap_fragment to hold "texelRoughness.q" once, got:\n`
+    );
+  });
+
+  it('throws for a text that occurs twice in the chunk (edge case)', () => {
+    expect(() => editedChunk('roughnessmap_fragment', { three: 'roughnessFactor', godot: '' })).toThrow(
+      'to hold "roughnessFactor" once'
+    );
   });
 });
 

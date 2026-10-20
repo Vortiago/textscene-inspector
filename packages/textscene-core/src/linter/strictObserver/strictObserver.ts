@@ -14,7 +14,7 @@ import { rootHeadingCounter } from './rootHeading.js';
 import { sectionLines } from './sectionLines.js';
 import { nodeOwnerOf, sectionOwnerOf, type SectionOwner } from './sectionOwner.js';
 
-export interface StrictObserver {
+interface StrictObserver {
   observer: ParseObserver;
   /** Filled while the scan runs. */
   errors: ParseError[];
@@ -46,7 +46,7 @@ export function strictObserver(): StrictObserver {
     },
 
     onSectionStart: (heading, section, line) => {
-      reads.read(heading);
+      reads.read(heading, line);
       lines.start();
       if (section !== 'node') {
         owner = sectionOwnerOf(heading, section);

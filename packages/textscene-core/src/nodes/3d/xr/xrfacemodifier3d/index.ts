@@ -14,5 +14,3 @@ const xRFaceModifier3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(xRFaceModifier3DRegistration);
-
-export { xRFaceModifier3DRegistration };

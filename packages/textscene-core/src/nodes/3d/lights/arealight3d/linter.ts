@@ -39,5 +39,3 @@ const areaLight3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(areaLight3DValidationRule);
-
-export { areaLight3DValidationRule };

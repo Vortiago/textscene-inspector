@@ -8,30 +8,15 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { STRUCTURED_TEXT_PARSER, TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
-
-/** `LineEdit::VirtualKeyboardType` (line_edit.h, BIND_ENUM_CONSTANT line_edit.cpp:3470-3477). */
-const VIRTUAL_KEYBOARD_TYPE = {
-  0: 'KEYBOARD_TYPE_DEFAULT',
-  1: 'KEYBOARD_TYPE_MULTILINE',
-  2: 'KEYBOARD_TYPE_NUMBER',
-  3: 'KEYBOARD_TYPE_NUMBER_DECIMAL',
-  4: 'KEYBOARD_TYPE_PHONE',
-  5: 'KEYBOARD_TYPE_EMAIL_ADDRESS',
-  6: 'KEYBOARD_TYPE_PASSWORD',
-  7: 'KEYBOARD_TYPE_URL',
-};
-
-/**
- * `LineEdit::ExpandMode` (line_edit.cpp:3527 hint "Original,Fit to Text,Fit to
- * LineEdit"; BIND_ENUM_CONSTANT line_edit.cpp:3479-3481).
- */
-const EXPAND_MODE = {
-  0: 'EXPAND_MODE_ORIGINAL_SIZE',
-  1: 'EXPAND_MODE_FIT_TO_TEXT',
-  2: 'EXPAND_MODE_FIT_TO_LINE_EDIT',
-};
+import {
+  STRUCTURED_TEXT_PARSER_NAMES,
+  TEXT_DIRECTION_NAMES,
+} from '../../../../godot/text/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT_NAMES } from '../../../../godot/math/math.js';
+import {
+  LINE_EDIT_EXPAND_MODE_NAMES,
+  LINE_EDIT_VIRTUAL_KEYBOARD_TYPE_NAMES,
+} from '../../../../godot/scene/gui.js';
 
 /**
  * line_edit.cpp:2608-2621: `set_secret_character` truncates a longer literal with `c = c.left(1)`
@@ -53,7 +38,7 @@ validatorRegistry.registerAll('LineEdit', {
   // line_edit.cpp:3485, PROPERTY_HINT_ENUM "Left,Center,Right,Fill". set_horizontal_alignment
   // (line_edit.cpp:1071-1079) enforces `ERR_FAIL_INDEX((int)p_alignment, 4)` (line_edit.cpp:1072), the
   // bound SpinBox's `alignment` cites.
-  alignment: v.enumInt('alignment', 0, 3, HORIZONTAL_ALIGNMENT, { enforced: 'line_edit.cpp:1072' }),
+  alignment: v.enumInt('alignment', HORIZONTAL_ALIGNMENT_NAMES, { enforced: 'line_edit.cpp:1072' }),
   // line_edit.cpp:3486, PROPERTY_HINT_RANGE "0,1000,1,or_greater". set_max_length (line_edit.cpp:2520-2524)
   // enforces `ERR_FAIL_COND(p_max_length < 0)` (line_edit.cpp:2521), and `or_greater` opens the ceiling.
   max_length: v.int('max_length', { min: 0, enforced: 'line_edit.cpp:2521' }),
@@ -79,7 +64,7 @@ validatorRegistry.registerAll('LineEdit', {
   virtual_keyboard_enabled: v.boolean('virtual_keyboard_enabled'),
   virtual_keyboard_show_on_focus: v.boolean('virtual_keyboard_show_on_focus'),
   // line_edit.cpp:3506, PROPERTY_HINT_ENUM, 8 labels. set_virtual_keyboard_type (line_edit.cpp:2925-2927) assigns unconditionally.
-  virtual_keyboard_type: v.enumInt('virtual_keyboard_type', 0, 7, VIRTUAL_KEYBOARD_TYPE, {
+  virtual_keyboard_type: v.enumInt('virtual_keyboard_type', LINE_EDIT_VIRTUAL_KEYBOARD_TYPE_NAMES, {
     hinted: 'line_edit.cpp:3506',
   }),
 
@@ -110,7 +95,7 @@ validatorRegistry.registerAll('LineEdit', {
   // line_edit.cpp:3520, PROPERTY_HINT_ENUM "Auto,Left-to-Right,Right-to-Left,Inherited". set_text_direction
   // (line_edit.cpp:2155-2171) enforces `ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3)`
   // (line_edit.cpp:2156). -1 is a legal inherited spelling with no named constant, as in TextEdit and Button.
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', TEXT_DIRECTION_NAMES, {
     hinted: 'line_edit.cpp:3520',
     enforced: 'line_edit.cpp:2156',
     enforcedMin: { at: -1 },
@@ -118,7 +103,7 @@ validatorRegistry.registerAll('LineEdit', {
   // line_edit.cpp:3521, PROPERTY_HINT_LOCALE_ID. set_language (line_edit.cpp:2178-2184) assigns unconditionally.
   language: v.quotedString('language'),
   // line_edit.cpp:3522, PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override (line_edit.cpp:2205-2211) assigns unconditionally.
-  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', STRUCTURED_TEXT_PARSER_NAMES, {
     hinted: 'line_edit.cpp:3522',
   }),
   // line_edit.cpp:3523: an ARRAY with no hint, so never written wrapped, of parser-specific arguments
@@ -131,7 +116,7 @@ validatorRegistry.registerAll('LineEdit', {
   // assigns unconditionally past an identity check.
   right_icon: v.resourceReference('right_icon'),
   // line_edit.cpp:3527, PROPERTY_HINT_ENUM, 3 labels. set_icon_expand_mode (line_edit.cpp:3010-3019) assigns unconditionally.
-  icon_expand_mode: v.enumInt('icon_expand_mode', 0, 2, EXPAND_MODE, {
+  icon_expand_mode: v.enumInt('icon_expand_mode', LINE_EDIT_EXPAND_MODE_NAMES, {
     hinted: 'line_edit.cpp:3527',
   }),
   // line_edit.cpp:3528, PROPERTY_HINT_RANGE "0.1,1.0,0.01", closed at both ends. set_right_icon_scale

@@ -39,7 +39,7 @@ export function resolveAtlasTextureRef(
  * shared: a caller must not dispose it, and pins `key` while it holds `texture`.
  * `useTexture2D` does both for React consumers.
  */
-export interface AtlasTextureResolution {
+interface AtlasTextureResolution {
   texture: THREE.Texture;
   /** Pinned for as long as a consumer holds `texture`. */
   key: string;

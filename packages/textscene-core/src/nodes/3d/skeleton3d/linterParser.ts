@@ -9,13 +9,14 @@
 import '../../base/node3d/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { keyShapeError, propertyError, v } from '../../../linter/validators/index.js';
-import { firstSegment, indexedKeyRegex, parseGodotInt, stringToInt } from '../../../godot/index.js';
+import { firstSegment, indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { stringToInt } from '../../../godot/string/string.js';
 import { writtenIndex } from '../../../linter/reportedIndices.js';
 import { BONE_LEAVES } from './boneLeaves.js';
 import { UNREACHABLE_BONE_SLOT } from './boneNameOrder.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-
-const MODIFIER_CALLBACK_MODE = { 0: 'PHYSICS', 1: 'IDLE', 2: 'MANUAL' };
+import { MODIFIER_CALLBACK_MODE_PROCESS_NAMES } from '../../../godot/scene/skeleton3d.js';
 
 /**
  * `bones/<idx>/<sub>`: the index is a bare `path.get_slicec('/', 1).to_int()` with no validity gate
@@ -84,7 +85,7 @@ const bonesValidator: PropertyValidator = (key, value, line) => {
   // (`which` from the path, the parent from the value), so the dispatcher can answer it. Compared
   // as numbers, because `bones/03/parent = 3` names bone 3 twice.
   if (what === 'parent') {
-    const parent = parseGodotInt(value);
+    const parent = ruleInt(value);
     if (parent !== null && parent === which) {
       return propertyError(
         key,
@@ -119,9 +120,13 @@ validatorRegistry.registerAll('Skeleton3D', {
   animate_physical_bones: v.boolean('animate_physical_bones'),
   // skeleton_3d.cpp:435-441 is a bare assignment (only an equal-check early
   // return); no engine-side range check on the raw int.
-  modifier_callback_mode_process: v.enumInt('modifier_callback_mode_process', 0, 2, MODIFIER_CALLBACK_MODE, {
-    hinted: 'skeleton_3d.cpp:1297',
-  }),
+  modifier_callback_mode_process: v.enumInt(
+    'modifier_callback_mode_process',
+    MODIFIER_CALLBACK_MODE_PROCESS_NAMES,
+    {
+      hinted: 'skeleton_3d.cpp:1297',
+    }
+  ),
   'bones/*': bonesValidator,
 });
 

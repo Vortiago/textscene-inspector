@@ -4,7 +4,6 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 // `gui/common/snap_controls_to_pixels` is the root window's setting. The
@@ -34,6 +33,8 @@ import {
 import { collectControlRasterViewports } from './controlRasterViewports';
 import { ControlRasterPasses } from './ControlRasterPass';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
+import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 
 const GUI_SCENE = `[gd_scene format=3]
 
@@ -66,12 +67,6 @@ function Watch({ path, seen }: { path: string; seen: (ViewportTextureEntry | nul
   return null;
 }
 
-/** Captures the canvas renderer so a test can observe the offscreen pass. */
-function GlSpy({ captured }: { captured: { current: THREE.WebGLRenderer | null } }) {
-  captured.current = useThree((state) => state.gl);
-  return null;
-}
-
 /**
  * Runs one frame with the renderer's target and render entry points stubbed,
  * recording every non-null bind: the test renderer's fake WebGL context cannot
@@ -101,16 +96,18 @@ async function mount(
   seen: (ViewportTextureEntry | null)[] = [],
   path = 'Root/SubViewport'
 ) {
+  const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
     <ViewportTextureProvider>
       <ViewportPassProvider>
         <ControlRasterPasses viewports={walk(scene)} />
         <Watch path={path} seen={seen} />
+        <CaptureRenderer captured={captured} />
         <ViewportPassOrchestrator />
       </ViewportPassProvider>
     </ViewportTextureProvider>
   );
-  return { renderer, seen };
+  return { renderer, seen, gl: captured.current! };
 }
 
 describe('<ControlRasterPasses>', () => {
@@ -130,17 +127,26 @@ describe('<ControlRasterPasses>', () => {
   });
 
   /**
-   * The opposite colour contract to the 3D/2D pass: Godot draws a viewport's
-   * canvas items after its tonemap pass, so this target holds ordinary sRGB
-   * values with no curve and no `isXRRenderTarget` pre-tonemap tag.
+   * Controls are canvas items, which Godot writes as sRGB numbers into an `R8G8B8A8_UNORM` target
+   * (`renderer_canvas_render_rd.cpp:671,729`), so a consumer filters the bytes raw.
    */
-  it("publishes a target tagged sRGB, without the 3D/2D pass's isXRRenderTarget tag", async () => {
+  it('publishes a plain view that holds sRGB bytes', async () => {
     const seen: (ViewportTextureEntry | null)[] = [];
     await mount(parse(GUI_SCENE), seen);
     const texture = seen.at(-1)!.texture;
-    expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
-    const target = seen.at(-1)!.texture as unknown as { isXRRenderTarget?: boolean };
-    expect(target.isXRRenderTarget).not.toBe(true);
+    expect(texture.internalFormat).toBe('RGBA8');
+    expect(holdsSrgbBytes(texture)).toBe(true);
+  });
+
+  it('fills the decoding view after its pass while a consumer retains it', async () => {
+    const { renderer, seen, gl } = await mount(parse(GUI_SCENE));
+    const { texture, decoding } = seen.at(-1)!;
+    decoding.retain();
+    const bound: (THREE.Texture | undefined)[] = [];
+    await advanceFrameWithStubbedGl(renderer, gl, (target) => {
+      if (target) bound.push(target.texture);
+    });
+    expect(bound).toEqual([texture, decoding.texture]);
   });
 
   it('renders without a tonemap curve — Controls are never tonemapped, on-screen or off', async () => {
@@ -149,7 +155,7 @@ describe('<ControlRasterPasses>', () => {
       <ViewportTextureProvider>
         <ViewportPassProvider>
           <ControlRasterPasses viewports={walk(parse(GUI_SCENE))} />
-          <GlSpy captured={capturedGl} />
+          <CaptureRenderer captured={capturedGl} />
           <ViewportPassOrchestrator />
         </ViewportPassProvider>
       </ViewportTextureProvider>
@@ -193,7 +199,7 @@ offset_bottom = 100.5
         <ViewportTextureProvider>
           <ViewportPassProvider>
             <ControlRasterPasses viewports={walk(scene)} />
-            <GlSpy captured={capturedGl} />
+            <CaptureRenderer captured={capturedGl} />
             <ViewportPassOrchestrator />
           </ViewportPassProvider>
         </ViewportTextureProvider>

@@ -8,7 +8,6 @@ import './index.r3f';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { HFlowContainer } from './Component';
-import { flowContainerMinimumSize, flowContainerLayout } from '../flowcontainer/nativeSolver';
 
 describe('HFlowContainer index.r3f self-registration', () => {
   it('registers the native painter', () => {
@@ -16,10 +15,14 @@ describe('HFlowContainer index.r3f self-registration', () => {
   });
 
   it('registers the shared minimum-size solver', () => {
-    expect(controlSolverRegistry.minimumSize('HFlowContainer')).toBe(flowContainerMinimumSize);
+    const shared = controlSolverRegistry.minimumSize('FlowContainer');
+    expect(shared).toBeTypeOf('function');
+    expect(controlSolverRegistry.minimumSize('HFlowContainer')).toBe(shared);
   });
 
   it('registers the shared container-layout solver', () => {
-    expect(controlSolverRegistry.containerLayout('HFlowContainer')).toBe(flowContainerLayout);
+    const shared = controlSolverRegistry.containerLayout('FlowContainer');
+    expect(shared).toBeTypeOf('function');
+    expect(controlSolverRegistry.containerLayout('HFlowContainer')).toBe(shared);
   });
 });

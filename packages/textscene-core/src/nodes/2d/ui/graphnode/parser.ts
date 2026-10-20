@@ -13,7 +13,8 @@
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../../../utils/colorParser';
-import { indexedKeyRegex, stringToInt } from '../../../../godot/index.js';
+import { indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
+import { stringToInt } from '../../../../godot/string/string.js';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import { parseGraphElement } from '../graphelement/parser';
 

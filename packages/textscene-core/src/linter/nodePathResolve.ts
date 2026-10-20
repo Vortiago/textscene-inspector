@@ -15,7 +15,7 @@ import type { RawNode, RawScene } from '../parser/types.js';
  * only decline: Godot's walk is deterministic, so there is no "ambiguous", and a rule
  * that reports on a guess is worse than one that stays quiet.
  */
-export type NodePathResolution =
+type NodePathResolution =
   | { readonly status: 'found'; readonly node: RawNode }
   /** The walk ran off the authored tree exactly as the engine's would. */
   | { readonly status: 'missing' }
@@ -88,6 +88,6 @@ export function resolveNodePath(scene: RawScene, referencingNode: RawNode, path:
 
   // An `instance=` heading names a PackedScene, not a class, and a heading with
   // neither `type=` nor `instance=` overrides a node declared elsewhere, so a
-  // caller's `descendsFrom(target.node.type, …)` would read a non-class.
+  // caller's `descendsFromClass(target.node.type, …)` would read a non-class.
   return isTypeUnknowable(current) ? UNKNOWABLE : { status: 'found', node: current };
 }

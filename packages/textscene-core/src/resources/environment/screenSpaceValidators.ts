@@ -8,6 +8,7 @@
 
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 import { v } from '../../linter/validators/index.js';
+import { SDFGI_Y_SCALE_NAMES } from '../../godot/scene/environment.js';
 
 export const screenSpaceKeys: Record<string, PropertyValidator> = {
   ssr_enabled: v.boolean('ssr_enabled'),
@@ -74,13 +75,7 @@ export const screenSpaceKeys: Record<string, PropertyValidator> = {
     hinted: 'environment.cpp:1395',
   }),
   // environment.cpp:1400, set_sdfgi_y_scale (:524) bare-assigns.
-  sdfgi_y_scale: v.enumInt(
-    'sdfgi_y_scale',
-    0,
-    2,
-    { 0: 'Y_SCALE_50_PERCENT', 1: 'Y_SCALE_75_PERCENT', 2: 'Y_SCALE_100_PERCENT' },
-    { hinted: 'environment.cpp:1400' }
-  ),
+  sdfgi_y_scale: v.enumInt('sdfgi_y_scale', SDFGI_Y_SCALE_NAMES, { hinted: 'environment.cpp:1400' }),
   // environment.cpp:1401-1403 carry no hint at all, so there is nothing to bound.
   sdfgi_energy: v.float('sdfgi_energy'),
   sdfgi_normal_bias: v.float('sdfgi_normal_bias'),

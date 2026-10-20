@@ -13,8 +13,11 @@ import { PNG } from 'pngjs';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_2D_CHROME,
+  FIXTURE_LOADING_TESTID,
   canvas2DViewportFor,
   isUniformImage,
+  SCENE_LOAD_STATUS_TESTID,
+  sceneStillLoading,
   settleCanvas,
   startPreview,
   writeCaptureImage,
@@ -193,18 +196,55 @@ describe('settleCanvas', () => {
   });
 });
 
+describe('sceneStillLoading', () => {
+  function timeoutError() {
+    const error = new Error('Timeout exceeded');
+    error.name = 'TimeoutError';
+    return error;
+  }
+
+  it('answers no reason once no loading status is on the page', async () => {
+    const page = { waitForFunction: async () => {} };
+    expect(await sceneStillLoading(page)).toBeNull();
+  });
+
+  it('waits until the fixture fetch, scene load and texture work statuses are all gone', async () => {
+    const waitForFunction = vi.fn(async () => {});
+    await sceneStillLoading({ waitForFunction });
+    const [, ids] = waitForFunction.mock.calls[0];
+    expect(new Set(ids)).toEqual(
+      new Set([FIXTURE_LOADING_TESTID, SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID])
+    );
+  });
+
+  it('names a scene still loading once the wait runs out (error case)', async () => {
+    const page = { waitForFunction: async () => Promise.reject(timeoutError()) };
+    expect(await sceneStillLoading(page)).toMatch(/scene still loading/);
+  });
+
+  it('throws when the wait fails for a reason other than its timeout (edge case)', async () => {
+    const page = { waitForFunction: async () => Promise.reject(new Error('Target page has been closed')) };
+    await expect(sceneStillLoading(page)).rejects.toThrow(/scene to load.*Target page has been closed/);
+  });
+});
+
+describe('the status ids are shared, not duplicated', () => {
+  it('match the ids the shell renders', async () => {
+    const shell =
+      await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/statusTestIds.ts');
+    expect({ SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID }).toEqual({ ...shell });
+  });
+
+  it('matches the id the web previewer renders while it fetches the fixture', async () => {
+    const web = await import('../../apps/textscene-web/src/fixtureLoadingTestId.ts');
+    expect(FIXTURE_LOADING_TESTID).toBe(web.FIXTURE_LOADING_TESTID);
+  });
+});
+
 /**
  * One settle number for both harnesses. With a second copy each side would stay deterministic
  * while capturing a different moment, and every later comparison would fail to notice.
  */
-describe('the texture work status id is shared, not duplicated', () => {
-  it('matches the id the shell renders', async () => {
-    const { TEXTURE_WORK_STATUS_TESTID: shellId } =
-      await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/textureWorkStatusTestId.ts');
-    expect(TEXTURE_WORK_STATUS_TESTID).toBe(shellId);
-  });
-});
-
 describe('the settle contract is shared, not duplicated', () => {
   const godotScript = (simSeconds) =>
     bootstrapScript({

@@ -11,14 +11,13 @@ vi.mock('./previewServer.mjs', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    gotoFixture: vi.fn(),
-    findCaptureTarget: vi.fn(),
+    openScene: vi.fn(),
     setDisplayToggle: vi.fn(),
     settleCanvas: vi.fn(),
   };
 });
 
-import { findCaptureTarget, gotoFixture, settleCanvas } from './previewServer.mjs';
+import { openScene, settleCanvas } from './previewServer.mjs';
 import { captureScene } from './run/sceneCapture.mjs';
 import { pixelsMatchBaseline } from './run/baselines.mjs';
 
@@ -42,7 +41,7 @@ describe('captureScene seam selection', () => {
   }
 
   function stubHappyCapture() {
-    findCaptureTarget.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
   }
 
@@ -54,16 +53,14 @@ describe('captureScene seam selection', () => {
     const result = await captureScene(pages, 'http://localhost:1', scene);
 
     expect(result.buffer).not.toBeNull();
-    expect(gotoFixture).toHaveBeenCalledWith(
-      pages.canvas2D.page,
-      'http://localhost:1',
-      'unit-two-d.tscn',
-      expect.any(Function)
-    );
-    expect(findCaptureTarget).toHaveBeenCalledWith(pages.canvas2D.page, { canvas2D: true });
+    expect(openScene).toHaveBeenCalledWith(pages.canvas2D.page, 'http://localhost:1', 'unit-two-d.tscn', {
+      canvas2D: true,
+      camera: undefined,
+      onSlow: expect.any(Function),
+    });
     expect(settleCanvas).toHaveBeenCalledWith(pages.canvas2D.page, expect.anything(), expect.anything());
     // Never touches the 3D page at all.
-    expect(gotoFixture).not.toHaveBeenCalledWith(
+    expect(openScene).not.toHaveBeenCalledWith(
       pages.default.page,
       expect.anything(),
       expect.anything(),
@@ -78,13 +75,25 @@ describe('captureScene seam selection', () => {
 
     await captureScene(pages, 'http://localhost:1', scene);
 
-    expect(gotoFixture).toHaveBeenCalledWith(
-      pages.default.page,
-      'http://localhost:1',
-      'unit-three-d.tscn',
-      expect.any(Function)
-    );
-    expect(findCaptureTarget).toHaveBeenCalledWith(pages.default.page, { canvas2D: false });
+    expect(openScene).toHaveBeenCalledWith(pages.default.page, 'http://localhost:1', 'unit-three-d.tscn', {
+      canvas2D: false,
+      camera: undefined,
+      onSlow: expect.any(Function),
+    });
+  });
+
+  it('opens a scene that names a camera through that Camera3D', async () => {
+    stubHappyCapture();
+    const pages = fakePages();
+    const scene = { name: 'ortho', file: 'unit-ortho.tscn', camera: 'Root/Camera3D' };
+
+    await captureScene(pages, 'http://localhost:1', scene);
+
+    expect(openScene).toHaveBeenLastCalledWith(pages.default.page, 'http://localhost:1', 'unit-ortho.tscn', {
+      canvas2D: false,
+      camera: 'Root/Camera3D',
+      onSlow: expect.any(Function),
+    });
   });
 
   it('throws rather than silently falling back to 3D when no canvas2D context exists', async () => {
@@ -102,7 +111,7 @@ describe('captureScene settle timeout', () => {
   const pages = { default: { page: {}, errors: [] }, canvas2D: null };
 
   it('gives each screenshot the time a scene declares in settleTimeout', async () => {
-    findCaptureTarget.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
 
     await captureScene(pages, 'http://localhost:1', {
@@ -117,7 +126,7 @@ describe('captureScene settle timeout', () => {
   });
 
   it("keeps Playwright's default action timeout for a scene that declares none", async () => {
-    findCaptureTarget.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
 
     await captureScene(pages, 'http://localhost:1', { name: 'small', file: 'unit-small.tscn' });
@@ -130,7 +139,7 @@ describe('captureScene settle timeout', () => {
 
 describe('captureScene console-error gate', () => {
   it('fails a scene whose capture logged a console error, even though it settled', async () => {
-    findCaptureTarget.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     const pages = {
       default: { page: {}, errors: [] },
       canvas2D: null,
@@ -152,7 +161,7 @@ describe('captureScene console-error gate', () => {
   });
 
   it('passes a scene whose capture logged no console errors', async () => {
-    findCaptureTarget.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
     const pages = { default: { page: {}, errors: [] }, canvas2D: null };
 
@@ -165,7 +174,7 @@ describe('captureScene console-error gate', () => {
   });
 
   it('clears errors left over from a PREVIOUS scene captured on the same page', async () => {
-    findCaptureTarget.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
     const pages = {
       default: { page: {}, errors: ['stale error from a previous scene'] },

@@ -50,5 +50,3 @@ const timerWaitTimeRule: LintRule = {
 };
 
 ruleRegistry.register(timerWaitTimeRule);
-
-export { timerWaitTimeRule };

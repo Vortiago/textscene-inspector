@@ -53,5 +53,3 @@ const hSliderPropertyOrderRule: LintRule = {
 };
 
 ruleRegistry.register(hSliderPropertyOrderRule);
-
-export { hSliderPropertyOrderRule };

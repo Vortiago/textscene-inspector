@@ -7,8 +7,9 @@
 
 import * as THREE from 'three';
 import type { SkyProperties } from './types';
-import { scaledRgb, type Color } from '../../utils/colorParser';
+import { scaledRgb } from '../../utils/colorParser';
 import { godotColorToLinear } from '../../r3f/godotColor';
+import { degToRad, type Rgba } from '../../godot/math/math';
 
 /** A directional light as Godot's sky shader sees it. */
 export interface SkyLight {
@@ -16,21 +17,21 @@ export interface SkyLight {
   direction: THREE.Vector3;
   color: THREE.Color;
   energy: number;
-  /** Angular radius in radians (`light_angular_distance`), 0 for a point sun. */
-  angularRadius: number;
+  /** The sun disc's angular size in radians, Godot's `LIGHTn_SIZE`. 0 is a point sun. */
+  size: number;
 }
 
 /** Godot's sky shader has four light slots, written out longhand. */
 const LIGHT_SLOTS = 4;
 
-export type SkyUniforms = Record<string, { value: unknown }>;
+type SkyUniforms = Record<string, { value: unknown }>;
 
 /**
  * Godot scales the sRGB colour by its energy, then converts the `source_color` uniform to linear
  * (`sky_material.cpp:41`, `material_storage.cpp:459`), so an energy above 1 brightens by more
  * than its factor.
  */
-function scaledColor(color: Color, energy: number): THREE.Color {
+function scaledColor(color: Rgba, energy: number): THREE.Color {
   return godotColorToLinear(scaledRgb(color, energy));
 }
 
@@ -56,7 +57,7 @@ export function skyUniforms(
           value: scaledColor(sky.ground_horizon_color, sky.ground_energy_multiplier),
         },
         inv_ground_curve: { value: 0.6 / sky.ground_curve },
-        sun_angle_max: { value: Math.cos(THREE.MathUtils.degToRad(sky.sun_angle_max)) },
+        sun_angle_max: { value: Math.cos(degToRad(sky.sun_angle_max)) },
         inv_sun_curve: { value: 1.6 / Math.pow(sky.sun_curve, 1.4) },
         exposure: { value: sky.energy_multiplier },
       });
@@ -96,7 +97,7 @@ export function skyUniforms(
       };
       uniforms[`LIGHT${i}_COLOR`] = { value: light ? light.color.clone() : new THREE.Color(1, 1, 1) };
       uniforms[`LIGHT${i}_ENERGY`] = { value: light?.energy ?? 0 };
-      uniforms[`LIGHT${i}_SIZE`] = { value: light?.angularRadius ?? 0 };
+      uniforms[`LIGHT${i}_SIZE`] = { value: light?.size ?? 0 };
     }
   }
 

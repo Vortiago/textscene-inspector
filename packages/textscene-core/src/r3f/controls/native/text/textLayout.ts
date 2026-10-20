@@ -23,26 +23,19 @@ import {
 } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { tabAlignAdvances } from './textTabStops';
-
-/** Godot `TextServer::AutowrapMode` (`servers/text/text_server.h:98`), with the engine's values. */
-export enum AutowrapMode {
-  OFF = 0,
-  ARBITRARY = 1,
-  WORD = 2,
-  WORD_SMART = 3,
-}
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /**
  * Narrows a parsed `autowrap_mode` to the enum, else returns `fallback`, as leniently as
- * `parseOptionalInt`. The fallback is the caller's: `Label` uses `OFF`, `RichTextLabel` uses
- * `WORD_SMART` (`rich_text_label.h:557`).
+ * `parseOptionalInt`. The fallback is the caller's: `Label` uses `AUTOWRAP_OFF`, `RichTextLabel` uses
+ * `AUTOWRAP_WORD_SMART` (`rich_text_label.h:557`).
  */
 export function clampAutowrapMode(mode: number | undefined, fallback: AutowrapMode): AutowrapMode {
   switch (mode) {
-    case AutowrapMode.OFF:
-    case AutowrapMode.ARBITRARY:
-    case AutowrapMode.WORD:
-    case AutowrapMode.WORD_SMART:
+    case AutowrapMode.AUTOWRAP_OFF:
+    case AutowrapMode.AUTOWRAP_ARBITRARY:
+    case AutowrapMode.AUTOWRAP_WORD:
+    case AutowrapMode.AUTOWRAP_WORD_SMART:
       return mode;
     default:
       return fallback;
@@ -188,23 +181,6 @@ export function soloLineLayout(
 }
 
 /**
- * Checks a painter's cached `NativeControlComponentProps.meta` at runtime, since painting an
- * unrelated object is a silent wrong picture. Duck-typed, because the result is plain data.
- * `fontMetrics` is checked by presence, because it decides which painter draws.
- */
-export function isTextLayoutResult(value: unknown): value is TextLayoutResult {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Partial<TextLayoutResult>;
-  return (
-    Array.isArray(v.lines) &&
-    typeof v.linePitchPx === 'number' &&
-    typeof v.widthPx === 'number' &&
-    typeof v.heightPx === 'number' &&
-    'fontMetrics' in v
-  );
-}
-
-/**
  * The soft-break flags `_shaped_text_update_breaks` reads (`text_server_adv.cpp` ~6258-6420). For
  * space-separated text, UAX#14 soft breaks reduce to the space glyph.
  */
@@ -227,13 +203,13 @@ interface BreakFlags {
  */
 function breakFlagsForAutowrap(mode: AutowrapMode): BreakFlags {
   switch (mode) {
-    case AutowrapMode.ARBITRARY:
+    case AutowrapMode.AUTOWRAP_ARBITRARY:
       return { wordBound: false, graphemeBound: true, adaptive: false };
-    case AutowrapMode.WORD:
+    case AutowrapMode.AUTOWRAP_WORD:
       return { wordBound: true, graphemeBound: false, adaptive: false };
-    case AutowrapMode.WORD_SMART:
+    case AutowrapMode.AUTOWRAP_WORD_SMART:
       return { wordBound: true, graphemeBound: false, adaptive: true };
-    case AutowrapMode.OFF:
+    case AutowrapMode.AUTOWRAP_OFF:
     default:
       return { wordBound: false, graphemeBound: false, adaptive: false };
   }
@@ -266,7 +242,7 @@ export function isTabChar(ch: string): boolean {
 }
 
 /** `core/string/char_utils.h::is_control`: C0 controls and DEL through the C1 range, tab and linebreaks included. */
-export function isControlChar(cp: number): boolean {
+function isControlChar(cp: number): boolean {
   return cp <= 0x001f || (cp >= 0x007f && cp <= 0x009f);
 }
 
@@ -606,7 +582,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
   // AUTOWRAP_OFF never soft-wraps: force an unconstrained width regardless of
   // what the caller passed, so only the always-on hard-break branch can
   // start a new line (mirrors Label::_shape() never OR-ing a wrap flag in).
-  const effectiveWidth = autowrapMode === AutowrapMode.OFF ? 0 : boxWidthPx;
+  const effectiveWidth = autowrapMode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx;
 
   const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
 

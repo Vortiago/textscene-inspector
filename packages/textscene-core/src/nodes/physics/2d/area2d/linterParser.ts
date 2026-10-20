@@ -6,7 +6,7 @@
 
 import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { SPACE_OVERRIDE } from '../../../../linter/validators/sharedEnumLabels.js';
+import { SPACE_OVERRIDE_NAMES } from '../../../../godot/scene/area.js';
 import { v } from '../../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('Area2D', {
@@ -15,7 +15,7 @@ validatorRegistry.registerAll('Area2D', {
 
   // area_2d.cpp:653 "Disabled,Combine,Combine-Replace,Replace,Replace-Combine".
   // The setters (:35-38 etc) are bare assignments, so out-of-range warns.
-  gravity_space_override: v.enumInt('gravity_space_override', 0, 4, SPACE_OVERRIDE, {
+  gravity_space_override: v.enumInt('gravity_space_override', SPACE_OVERRIDE_NAMES, {
     hinted: 'area_2d.cpp:653',
   }),
   gravity_point: v.boolean('gravity_point'),
@@ -31,7 +31,7 @@ validatorRegistry.registerAll('Area2D', {
   gravity_direction: v.vector2('gravity_direction'),
   gravity: v.float('gravity'),
   // area_2d.cpp:661. The setter (:89-92) is a bare assignment, so out-of-range warns.
-  linear_damp_space_override: v.enumInt('linear_damp_space_override', 0, 4, SPACE_OVERRIDE, {
+  linear_damp_space_override: v.enumInt('linear_damp_space_override', SPACE_OVERRIDE_NAMES, {
     hinted: 'area_2d.cpp:661',
   }),
   // area_2d.cpp:662, PROPERTY_HINT_RANGE "0,100,0.001,or_greater". The setter
@@ -42,7 +42,7 @@ validatorRegistry.registerAll('Area2D', {
     hinted: 'area_2d.cpp:662',
   }),
   // area_2d.cpp:665. The setter (:98-101) is a bare assignment, so out-of-range warns.
-  angular_damp_space_override: v.enumInt('angular_damp_space_override', 0, 4, SPACE_OVERRIDE, {
+  angular_damp_space_override: v.enumInt('angular_damp_space_override', SPACE_OVERRIDE_NAMES, {
     hinted: 'area_2d.cpp:665',
   }),
   // area_2d.cpp:666, PROPERTY_HINT_RANGE "0,100,0.001,or_greater". The setter

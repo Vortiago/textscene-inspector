@@ -7,13 +7,14 @@ import { useEffect, useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useViewportActions } from '../../contexts/ViewportActionsContext';
+import { useViewportActions } from '../../testing/ViewportActionsProbe';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext';
 import { useResourceLoader } from '../../../resources/useResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { beginTextureWork } from '../../../resources/textures/textureWork';
 import type { PreviewCaptureState } from './previewCaptureState';
+import { SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID } from './statusTestIds';
 import type { SceneGraph } from '../../../core/SceneGraph';
 
 const DATA_URL = 'data:image/png;base64,AAA';
@@ -221,5 +222,60 @@ describe('<TscnPreviewShell> capture state', () => {
     const { states } = renderShell('');
 
     expect(latest(states)).toEqual({ status: 'pending' });
+  });
+});
+
+describe('<TscnPreviewShell> scene load status', () => {
+  const sceneLoadStatus = () => screen.queryByTestId(SCENE_LOAD_STATUS_TESTID);
+
+  it('shows "Loading scene…" in the top bar while a resource is on its way, and leaves once it lands', () => {
+    arrangeCanvas({ holdsResource: true });
+    renderShell();
+    const status = sceneLoadStatus();
+    expect(status?.textContent).toBe('Loading scene…');
+    expect(status?.closest('header')).not.toBeNull();
+
+    act(() => canvasStub.releaseResource());
+
+    expect(sceneLoadStatus()).toBeNull();
+  });
+
+  it('shows while the canvas still shows the previous scene', () => {
+    arrangeCanvas({ lagsScene: true });
+    const { showScene } = renderShell();
+    expect(sceneLoadStatus()).toBeNull();
+
+    showScene(OTHER_SCENE_3D);
+
+    expect(sceneLoadStatus()).not.toBeNull();
+  });
+
+  it('gives way to the texture work status, so one status shows at a time (edge case)', () => {
+    arrangeCanvas({});
+    const endTextureWork = beginTextureWork();
+    try {
+      renderShell();
+      expect(sceneLoadStatus()).toBeNull();
+      expect(screen.queryByTestId(TEXTURE_WORK_STATUS_TESTID)).not.toBeNull();
+    } finally {
+      act(() => endTextureWork());
+    }
+  });
+
+  it('is absent when the viewport crashed, which loads nothing (error case)', () => {
+    arrangeCanvas({ registersHandler: false, error: new Error('no WebGL') });
+    // The boundary logs the caught error, which is the case under test.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderShell();
+    consoleError.mockRestore();
+
+    expect(sceneLoadStatus()).toBeNull();
+  });
+
+  it('is absent before the host has sent a scene (edge case)', () => {
+    arrangeCanvas({});
+    renderShell('');
+
+    expect(sceneLoadStatus()).toBeNull();
   });
 });

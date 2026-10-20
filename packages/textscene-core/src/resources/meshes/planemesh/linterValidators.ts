@@ -9,6 +9,7 @@
 import '../primitivemesh/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { PLANE_MESH_ORIENTATION_NAMES } from '../../../godot/scene/planeMesh.js';
 
 validatorRegistry.registerAll('PlaneMesh', {
   // primitive_meshes.cpp:1515 (a Vector2, unlike the Vector3 `size` its BoxMesh
@@ -22,11 +23,7 @@ validatorRegistry.registerAll('PlaneMesh', {
   subdivide_width: v.int('subdivide_width', { min: 0, enforced: 'primitive_meshes.cpp:1543' }),
   subdivide_depth: v.int('subdivide_depth', { min: 0, enforced: 'primitive_meshes.cpp:1555' }),
   // primitive_meshes.cpp:1519. `set_orientation` (:1575) is a bare assignment.
-  orientation: v.enumInt(
-    'orientation',
-    0,
-    2,
-    { 0: 'FACE_X', 1: 'FACE_Y', 2: 'FACE_Z' },
-    { hinted: 'primitive_meshes.cpp:1519' }
-  ),
+  orientation: v.enumInt('orientation', PLANE_MESH_ORIENTATION_NAMES, {
+    hinted: 'primitive_meshes.cpp:1519',
+  }),
 });

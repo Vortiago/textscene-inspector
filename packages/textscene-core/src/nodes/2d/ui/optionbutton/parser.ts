@@ -8,8 +8,8 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { OptionItem, OptionButtonProperties } from './types';
 import { parseButton } from '../button/parser';
-import { ruleCount, ruleInt } from '../../../../godot/variant/int.js';
-import { indexedElements } from '../../../../godot/index.js';
+import { slotCount, slotInt } from '../../../../godot/variant/int.js';
+import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 
 export function parseOptionButton(
@@ -20,7 +20,7 @@ export function parseOptionButton(
 
   // A dense array, one slot per index, so `selected`, the raw Godot index, aligns with items[selected]
   // even when an item omits its text key.
-  const itemCount = ruleCount(properties.item_count) ?? 0;
+  const itemCount = slotCount(properties.item_count) ?? 0;
   // Read before the item walk, which bounds itself on it.
   result.selected = parseOptionalInt(properties.selected);
   // Grouped by the item `_get_property` resolves each key to: the gate is `is_valid_int()` and the read is
@@ -42,7 +42,7 @@ export function parseOptionButton(
     const leaves = declared.get(i);
     const rawText = leaves?.get('text');
     const text = rawText !== undefined ? unquoteString(rawText) : '';
-    const id = ruleInt(leaves?.get('id'));
+    const id = slotInt(leaves?.get('id'));
     items.push({ text, id: id ?? i });
   }
 

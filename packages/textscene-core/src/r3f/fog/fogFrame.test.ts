@@ -1,10 +1,8 @@
 /** The fog uniforms one render writes, and the clear after it. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { DEFAULT_CLEAR_COLOR } from '../../godot/rendering/rendering';
 import { VOLUMETRIC_FOG_DEFAULTS } from '../../godot/rendering/environment/volumetricFog';
-import { createEnvironmentSettings } from '../../resources/environment/build';
-import { decodeEnvironment } from '../../resources/environment/decode';
+import { environmentSettingsOf } from '../../resources/environment/testing/environmentSettings';
 import { skyLightUserData } from '../sky/skyLight';
 import { captureFog, finishFog, prepareFog, type FogSettings } from './fogFrame';
 import type { FogPasses } from './fogPasses';
@@ -20,7 +18,7 @@ function passes(): FogPasses {
 }
 
 function settings(properties: Record<string, string>): FogSettings {
-  const environment = createEnvironmentSettings(decodeEnvironment(properties), DEFAULT_CLEAR_COLOR);
+  const environment = environmentSettingsOf(properties);
   return {
     depth: environment.fog,
     volumetric: environment.volumetricFog,
@@ -90,7 +88,7 @@ describe('prepareFog', () => {
 
   it('writes each sun for the surfaces and for the sky apart', () => {
     const lightOnly = sun(2);
-    lightOnly.userData = skyLightUserData({ drawsInSky: false, energy: 2 / Math.PI });
+    lightOnly.userData = skyLightUserData({ drawsInSky: false, energy: 2 / Math.PI, size: 0 });
     prepareFog(renderer, new THREE.Scene(), camera, settings({ fog_enabled: 'true' }), passes(), {
       lights: [sun(Math.PI), lightOnly],
       casters: [],

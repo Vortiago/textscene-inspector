@@ -8,7 +8,7 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { TEXT_DIRECTION } from '../../../../linter/validators/textServerEnums.js';
+import { TEXT_DIRECTION_NAMES } from '../../../../godot/text/textServerEnums.js';
 
 validatorRegistry.registerAll('MenuBar', {
   // menu_bar.cpp:751 `PropertyInfo(Variant::BOOL, "flat")`, no hint.
@@ -29,7 +29,7 @@ validatorRegistry.registerAll('MenuBar', {
   // menu_bar.cpp:757 PROPERTY_HINT_ENUM "Auto,Left-to-Right,Right-to-Left,Inherited", 0..3. The setter
   // (menu_bar.cpp:801) enforces `ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3)`,
   // so -1 is legal although the hint never offers it. Button carries the same guard (button.cpp:637).
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', TEXT_DIRECTION_NAMES, {
     hinted: 'menu_bar.cpp:757',
     enforced: 'menu_bar.cpp:801',
     enforcedMin: { at: -1 },

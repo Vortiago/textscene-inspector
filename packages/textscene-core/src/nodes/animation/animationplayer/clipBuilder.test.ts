@@ -5,15 +5,14 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { AnimationMixer, LoopOnce, LoopPingPong, LoopRepeat, Object3D, type AnimationClip } from 'three';
+import { AnimationMixer, Object3D, type AnimationClip } from 'three';
 import * as logger from '../../../logger';
 import { bindClip } from '../../../r3f/animation/trackTargets';
 import { resolveRelativePath } from '../../../godot/string/nodePath';
-import { buildClip, loopSettingsFor } from './clipBuilder';
+import { buildClip } from './clipBuilder';
 import { resolveAnimations, type GodotAnimation, type GodotTrack } from './animationResolver';
 import type { TscnInternalResource } from '../../../parser/types';
-
-const DEG2RAD = Math.PI / 180;
+import { degToRad } from '../../../godot/math/math.js';
 
 function anim(name: string, length: number, tracks: GodotTrack[]): GodotAnimation {
   return { name, length, loopMode: 0, step: 0.1, tracks };
@@ -45,24 +44,6 @@ function expectValuesCloseTo(actual: ArrayLike<number>, expected: number[]) {
   expected.forEach((v, i) => expect(actual[i]).toBeCloseTo(v, 5));
 }
 
-describe('loopSettingsFor — Godot loop_mode mapping', () => {
-  it('maps loop_mode 0 (none) to play-once, clamped', () => {
-    expect(loopSettingsFor(0)).toEqual({ loop: LoopOnce, repetitions: 1, clampWhenFinished: true });
-  });
-
-  it('maps loop_mode 1 (linear) to repeat', () => {
-    expect(loopSettingsFor(1)).toEqual({
-      loop: LoopRepeat,
-      repetitions: Infinity,
-      clampWhenFinished: false,
-    });
-  });
-
-  it('maps loop_mode 2 (ping-pong) to LoopPingPong', () => {
-    expect(loopSettingsFor(2).loop).toBe(LoopPingPong);
-  });
-});
-
 describe('buildClip — clip metadata', () => {
   it('names the clip and sets its duration from the animation length', () => {
     const clip = build(anim('idle', 2.5, []));
@@ -93,9 +74,9 @@ describe('buildClip — rotation (C2/C3)', () => {
     const clip = build(
       anim('a', 1, [track('rotation_degrees', [{ time: 0, value: [90, 0, 180], transition: 1 }])])
     );
-    expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[x]')!.values, [90 * DEG2RAD]);
+    expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[x]')!.values, [degToRad(90)]);
     expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[y]')!.values, [0]);
-    expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[z]')!.values, [180 * DEG2RAD]);
+    expectValuesCloseTo(findTrack(clip, 'Root/Target.rotation[z]')!.values, [degToRad(180)]);
   });
 
   it('passes a Vector3 rotation (radians) track through per component', () => {

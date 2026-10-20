@@ -8,11 +8,12 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector2i } from '../../../linter/validators/index.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { formatReal, storedReal } from '../../../godot/math/real.js';
-import type { Vector2 as Size } from '../../../parser/vectors.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
+import { ContentScaleStretch } from '../../../godot/scene/window.js';
 
 const arms = {
   maxSizeBelowMinSize: groundedArm('window-max-size-below-min-size', {
@@ -33,15 +34,13 @@ const arms = {
 } as const satisfies RuleArms<string>;
 
 /** window.h:105,126: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`, 100. */
-const DEFAULT_SIZE: Size = { x: 100, y: 100 };
-/** window.h:88-89, enum ContentScaleStretch. */
-const CONTENT_SCALE_STRETCH_INTEGER = 1;
+const DEFAULT_SIZE: Vector2 = { x: 100, y: 100 };
 
-const formatSize = (size: Size): string => `Vector2i(${size.x}, ${size.y})`;
-const sameSize = (a: Size, b: Size): boolean => a.x === b.x && a.y === b.y;
-const floorAtZero = (size: Size): Size => ({ x: Math.max(size.x, 0), y: Math.max(size.y, 0) });
+const formatSize = (size: Vector2): string => `Vector2i(${size.x}, ${size.y})`;
+const sameSize = (a: Vector2, b: Vector2): boolean => a.x === b.x && a.y === b.y;
+const floorAtZero = (size: Vector2): Vector2 => ({ x: Math.max(size.x, 0), y: Math.max(size.y, 0) });
 /** `_validate_limit_size`'s first test (window.cpp:473): `Vector2i(0, 0)` sets no maximum. */
-const isMaxSizeSet = (maxSize: Size): boolean => maxSize.x > 0 || maxSize.y > 0;
+const isMaxSizeSet = (maxSize: Vector2): boolean => maxSize.x > 0 || maxSize.y > 0;
 
 function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (rawProps.max_size === undefined || rawProps.min_size === undefined) return [];
@@ -69,13 +68,13 @@ function checkMaxBelowMin(node: RuleContext['node'], rawProps: Record<string, st
  * `max_size` while `_validate_limit_size` (window.cpp:471-475) accepts it, else `null`. A
  * `null` limit is the rendering server's maximum, which this file cannot state, so it never caps.
  */
-function validMaxSize(minSize: Size, maxSize: Size | null): Size | null {
+function validMaxSize(minSize: Vector2, maxSize: Vector2 | null): Vector2 | null {
   if (maxSize === null || !isMaxSizeSet(maxSize)) return null;
   return maxSize.x >= minSize.x && maxSize.y >= minSize.y ? maxSize : null;
 }
 
 /** `_update_window_size`'s clamp (window.cpp:1190-1196). */
-function clampSize(size: Size, minSize: Size, maxSize: Size | null): Size {
+function clampSize(size: Vector2, minSize: Vector2, maxSize: Vector2 | null): Vector2 {
   const floored = { x: Math.max(size.x, minSize.x), y: Math.max(size.y, minSize.y) };
   const cap = validMaxSize(minSize, maxSize);
   return cap ? { x: Math.min(floored.x, cap.x), y: Math.min(floored.y, cap.y) } : floored;
@@ -87,11 +86,11 @@ function clampSize(size: Size, minSize: Size, maxSize: Size | null): Size {
  * Each setter runs `_update_window_size` (window.cpp:1183-1229), and its clamp overwrites
  * `size`, so an early cap stands under a later floor. The `wrap_controls` floor is not modelled.
  */
-function replaySize(rawProps: Record<string, string>): { written: Size; loaded: Size } | null {
-  let written: Size | null = null;
+function replaySize(rawProps: Record<string, string>): { written: Vector2; loaded: Vector2 } | null {
+  let written: Vector2 | null = null;
   let size = DEFAULT_SIZE;
-  let minSize: Size = { x: 0, y: 0 };
-  let maxSize: Size | null = null;
+  let minSize: Vector2 = { x: 0, y: 0 };
+  let maxSize: Vector2 | null = null;
 
   for (const [key, raw] of Object.entries(rawProps)) {
     if (key !== 'size' && key !== 'min_size' && key !== 'max_size') continue;
@@ -133,7 +132,8 @@ function checkSizeClamped(node: RuleContext['node'], rawProps: Record<string, st
 
 function checkContentScaleFloored(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (rawProps.content_scale_factor === undefined) return [];
-  if (ruleInt(rawProps.content_scale_stretch, 0) !== CONTENT_SCALE_STRETCH_INTEGER) return [];
+  if (ruleInt(rawProps.content_scale_stretch, ContentScaleStretch.FRACTIONAL) !== ContentScaleStretch.INTEGER)
+    return [];
   const written = parseGodotFloat(rawProps.content_scale_factor);
   // At or below 0 the setter refuses the value (window.cpp:1774), which the validator
   // reports. The floor leaves nan and inf as they are.
@@ -165,12 +165,10 @@ const windowValidationRule: LintRule = {
     name: 'valid-window-properties',
     description: "Validates Window's size, size limits and content scale factor against each other",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'Window'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'Window'),
     emits: armEmits(arms),
   },
   check: checkWindow,
 };
 
 ruleRegistry.register(windowValidationRule);
-
-export { windowValidationRule };

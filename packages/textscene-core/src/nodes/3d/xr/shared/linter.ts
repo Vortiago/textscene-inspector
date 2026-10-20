@@ -7,11 +7,11 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { isOrthonormalTransform } from '../../../../linter/transformBasis.js';
 import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../../godot/index.js';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -93,12 +93,10 @@ const openXRCompositionLayerValidationRule: LintRule = {
     description:
       "Godot's three OpenXRCompositionLayer configuration warnings: parent must be XROrigin3D, transform must be orthonormal, and hole punching needs a negative sort order",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'OpenXRCompositionLayer'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'OpenXRCompositionLayer'),
     emits: armEmits(arms),
   },
   check: checkOpenXRCompositionLayer,
 };
 
 ruleRegistry.register(openXRCompositionLayerValidationRule);
-
-export { openXRCompositionLayerValidationRule };

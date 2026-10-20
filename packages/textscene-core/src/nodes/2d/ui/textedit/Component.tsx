@@ -48,6 +48,7 @@ import {
 } from './nativeSolver';
 import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import type { TextEditProperties } from './types';
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 /** `text_edit_tab.svg`/`text_edit_space.svg`'s authored size, unscaled: no raw theme scale reaches this slice, unlike Godot's `generate_icon`. */
 const GLYPH_ICON_SIZE_PX = 8;
@@ -62,13 +63,13 @@ const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0 };
 const CARET_WIDTH_PX = 1;
 
 /**
- * `caret_color`: `control_font_color` for both types (`default_theme.cpp:473`, `:526`). Not
+ * `caret_color`, the same for both types (`default_theme.cpp:473`, `:526`). Not
  * the state-dependent font colour: a read-only TextEdit paints its text at
  * `font_readonly_color` and its caret at this.
  */
-const CARET_COLOR = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
+const CARET_COLOR = CONTROL_FONT_COLOR;
 
-export interface TextEditBodyProps extends NativeControlComponentProps {
+interface TextEditBodyProps extends NativeControlComponentProps {
   /**
    * Drawn between the panel StyleBox and the row loop, in `_draw_guidelines`'s slot
    * (`text_edit.cpp:1319-1322`), a virtual only `CodeEdit` overrides. It is a prop

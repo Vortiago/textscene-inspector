@@ -9,28 +9,17 @@ import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { hintedBitField, maskedBitField, v } from '../../../../linter/validators/index.js';
 import {
-  AUTOWRAP_MODE,
+  AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
   BREAK_TRIM_LABELS,
   BREAK_TRIM_MASK,
   JUSTIFICATION_HINTED_BITS,
-  OVERRUN_BEHAVIOR,
-  STRUCTURED_TEXT_PARSER,
-  TEXT_DIRECTION,
-} from '../../../../linter/validators/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT, VERTICAL_ALIGNMENT } from '../../../../linter/validators/globalScopeEnums.js';
-
-/**
- * `TextServer::VisibleCharactersBehavior` (servers/text/text_server.h:90-96),
- * label.cpp:1451 hint with 5 entries.
- */
-const VISIBLE_CHARACTERS_BEHAVIOR = {
-  0: 'VC_CHARS_BEFORE_SHAPING',
-  1: 'VC_CHARS_AFTER_SHAPING',
-  2: 'VC_GLYPHS_AUTO',
-  3: 'VC_GLYPHS_LTR',
-  4: 'VC_GLYPHS_RTL',
-};
+  OVERRUN_BEHAVIOR_NAMES,
+  STRUCTURED_TEXT_PARSER_NAMES,
+  TEXT_DIRECTION_NAMES,
+  VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
+} from '../../../../godot/text/textServerEnums.js';
+import { HORIZONTAL_ALIGNMENT_NAMES, VERTICAL_ALIGNMENT_NAMES } from '../../../../godot/math/math.js';
 
 /**
  * label.cpp:1258-1275: `set_ellipsis_char` truncates a longer literal with
@@ -63,19 +52,19 @@ validatorRegistry.registerAll('Label', {
   // label.cpp:1433: PROPERTY_HINT_ENUM "Left,Center,Right,Fill", the 4
   // HorizontalAlignment constants. set_horizontal_alignment (label.cpp:1064-1078),
   // `ERR_FAIL_INDEX((int)p_alignment, 4)` (label.cpp:1065), enforced.
-  horizontal_alignment: v.enumInt('horizontal_alignment', 0, 3, HORIZONTAL_ALIGNMENT, {
+  horizontal_alignment: v.enumInt('horizontal_alignment', HORIZONTAL_ALIGNMENT_NAMES, {
     enforced: 'label.cpp:1065',
   }),
   // label.cpp:1434: PROPERTY_HINT_ENUM "Top,Center,Bottom,Fill", the 4
   // VerticalAlignment constants. set_vertical_alignment (label.cpp:1084-1093),
   // `ERR_FAIL_INDEX((int)p_alignment, 4)` (label.cpp:1085), enforced.
-  vertical_alignment: v.enumInt('vertical_alignment', 0, 3, VERTICAL_ALIGNMENT, {
+  vertical_alignment: v.enumInt('vertical_alignment', VERTICAL_ALIGNMENT_NAMES, {
     enforced: 'label.cpp:1085',
   }),
   // label.cpp:1435: PROPERTY_HINT_ENUM "Off,Arbitrary,Word,Word (Smart)", the
   // whole 4-value AutowrapMode enum. set_autowrap_mode (label.cpp:37-52)
   // assigns unconditionally, no ERR_FAIL.
-  autowrap_mode: v.enumInt('autowrap_mode', 0, 3, AUTOWRAP_MODE, { hinted: 'label.cpp:1435' }),
+  autowrap_mode: v.enumInt('autowrap_mode', AUTOWRAP_MODE_NAMES, { hinted: 'label.cpp:1435' }),
   // set_autowrap_trim_flags (label.cpp:63) stores `p_flags & BREAK_TRIM_MASK`, so
   // bits outside the mask drop. label.cpp:1436 hints only the two edge-space bits,
   // so BREAK_TRIM_INDENT is kept but not offered by the inspector.
@@ -101,7 +90,7 @@ validatorRegistry.registerAll('Label', {
   // label.cpp:1441: PROPERTY_HINT_ENUM with 7 entries; TextServer::OverrunBehavior
   // OVERRUN_NO_TRIMMING=0 .. OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6. set_text_overrun_behavior
   // (label.cpp:1239-1252) assigns unconditionally, no ERR_FAIL.
-  text_overrun_behavior: v.enumInt('text_overrun_behavior', 0, 6, OVERRUN_BEHAVIOR, {
+  text_overrun_behavior: v.enumInt('text_overrun_behavior', OVERRUN_BEHAVIOR_NAMES, {
     hinted: 'label.cpp:1441',
   }),
   // label.cpp:1442: see ellipsisCharValidator above.
@@ -139,7 +128,7 @@ validatorRegistry.registerAll('Label', {
   // label.cpp:1451: PROPERTY_HINT_ENUM with 5 entries.
   // set_visible_characters_behavior (label.cpp:1334-1343) assigns
   // unconditionally, no ERR_FAIL.
-  visible_characters_behavior: v.enumInt('visible_characters_behavior', 0, 4, VISIBLE_CHARACTERS_BEHAVIOR, {
+  visible_characters_behavior: v.enumInt('visible_characters_behavior', VISIBLE_CHARACTERS_BEHAVIOR_NAMES, {
     hinted: 'label.cpp:1451',
   }),
   // label.cpp:1452: PROPERTY_HINT_RANGE "0,1,0.001", a warning (ADR-0032), since the clamp
@@ -158,7 +147,7 @@ validatorRegistry.registerAll('Label', {
   // set_text_direction (label.cpp:1139-1148) enforces
   // `ERR_FAIL_COND((int)p_text_direction < -1 || (int)p_text_direction > 3)` (label.cpp:1140).
   // -1 is a legacy inherited spelling with no named constant: legal but unlabelled.
-  text_direction: v.enumInt('text_direction', 0, 3, TEXT_DIRECTION, {
+  text_direction: v.enumInt('text_direction', TEXT_DIRECTION_NAMES, {
     hinted: 'label.cpp:1455',
     enforced: 'label.cpp:1140',
     enforcedMin: { at: -1 },
@@ -168,7 +157,7 @@ validatorRegistry.registerAll('Label', {
   language: v.quotedString('language'),
   // label.cpp:1457: PROPERTY_HINT_ENUM, 7 labels. set_structured_text_bidi_override
   // (label.cpp:1150-1158) assigns unconditionally, no ERR_FAIL.
-  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', 0, 6, STRUCTURED_TEXT_PARSER, {
+  structured_text_bidi_override: v.enumInt('structured_text_bidi_override', STRUCTURED_TEXT_PARSER_NAMES, {
     hinted: 'label.cpp:1457',
   }),
   // label.cpp:1458: Variant::ARRAY with no hint at all, so it is never written

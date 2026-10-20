@@ -12,22 +12,12 @@ import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { layerBitmask } from '../../../linter/validators/layerBitmask.js';
 import { shape, v } from '../../../linter/validators/index.js';
-import { CLIP_CHILDREN_MODES } from '../../../godot/scene/canvasItem.js';
+import {
+  CANVAS_ITEM_TEXTURE_FILTER_NAMES,
+  CANVAS_ITEM_TEXTURE_REPEAT_NAMES,
+  CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES,
+} from '../../../godot/scene/canvasItem.js';
 import { CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX } from '../../../godot/rendering/rendering.js';
-
-// scene/main/canvas_item.cpp:1486, and BIND_ENUM_CONSTANT at :1510-1516.
-const TEXTURE_FILTER = {
-  0: 'PARENT_NODE',
-  1: 'NEAREST',
-  2: 'LINEAR',
-  3: 'NEAREST_WITH_MIPMAPS',
-  4: 'LINEAR_WITH_MIPMAPS',
-  5: 'NEAREST_WITH_MIPMAPS_ANISOTROPIC',
-  6: 'LINEAR_WITH_MIPMAPS_ANISOTROPIC',
-};
-
-// scene/main/canvas_item.cpp:1487, and BIND_ENUM_CONSTANT at :1519-1522.
-const TEXTURE_REPEAT = { 0: 'PARENT_NODE', 1: 'DISABLED', 2: 'ENABLED', 3: 'MIRROR' };
 
 validatorRegistry.registerAll('CanvasItem', {
   visible: v.boolean('visible'),
@@ -39,7 +29,7 @@ validatorRegistry.registerAll('CanvasItem', {
   // floor, so the PROPERTY_HINT_ENUM at :1476 grounds the rest. Measured on 4.6.3, `4294967295`,
   // which the serialiser writes for -1, narrows to -1, passes the guard and clips, while `3` and
   // `-3000000000` trip it and keep 0.
-  clip_children: v.enumInt('clip_children', 0, 2, CLIP_CHILDREN_MODES, {
+  clip_children: v.enumInt('clip_children', CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES, {
     hinted: { min: 'canvas_item.cpp:1476' },
     enforced: { max: 'canvas_item.cpp:1733' },
   }),
@@ -69,11 +59,15 @@ validatorRegistry.registerAll('CanvasItem', {
   // canvas_item.cpp:1486, ENUM 7 labels (matches TEXTURE_FILTER_MAX=7,
   // canvas_item.h:52-60). set_texture_filter (canvas_item.cpp:1665-1667)
   // ERR_FAIL_INDEXes against TEXTURE_FILTER_MAX.
-  texture_filter: v.enumInt('texture_filter', 0, 6, TEXTURE_FILTER, { enforced: 'canvas_item.cpp:1667' }),
+  texture_filter: v.enumInt('texture_filter', CANVAS_ITEM_TEXTURE_FILTER_NAMES, {
+    enforced: 'canvas_item.cpp:1667',
+  }),
   // canvas_item.cpp:1487, ENUM 4 labels (matches TEXTURE_REPEAT_MAX=4,
   // canvas_item.h:63-68). set_texture_repeat (canvas_item.cpp:1720-1722)
   // ERR_FAIL_INDEXes against TEXTURE_REPEAT_MAX.
-  texture_repeat: v.enumInt('texture_repeat', 0, 3, TEXTURE_REPEAT, { enforced: 'canvas_item.cpp:1722' }),
+  texture_repeat: v.enumInt('texture_repeat', CANVAS_ITEM_TEXTURE_REPEAT_NAMES, {
+    enforced: 'canvas_item.cpp:1722',
+  }),
   // Format-checked only. A ShaderMaterial is valid Godot here, though the renderer applies only a
   // CanvasItemMaterial.
   material: v.resourceReference('material'),

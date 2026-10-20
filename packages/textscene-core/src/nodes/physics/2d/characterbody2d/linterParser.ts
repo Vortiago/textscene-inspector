@@ -4,17 +4,12 @@ import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { layerBitmask, v } from '../../../../linter/validators/index.js';
 import { upDirection } from '../../shared/upDirection.js';
+import { MOTION_MODE_NAMES, PLATFORM_ON_LEAVE_NAMES } from '../../../../godot/scene/physicsBody.js';
 
-const MOTION_MODE = { 0: 'GROUNDED', 1: 'FLOATING' };
-const PLATFORM_ON_LEAVE = {
-  0: 'ADD_VELOCITY',
-  1: 'ADD_UPWARD_VELOCITY',
-  2: 'DO_NOTHING',
-};
 validatorRegistry.registerAll('CharacterBody2D', {
   // character_body_2d.cpp:737 "Grounded,Floating". set_motion_mode is a bare
   // assignment, so out-of-range warns.
-  motion_mode: v.enumInt('motion_mode', 0, 1, MOTION_MODE, {
+  motion_mode: v.enumInt('motion_mode', MOTION_MODE_NAMES, {
     hinted: 'character_body_2d.cpp:737',
   }),
   // character_body_2d.cpp:648, ERR_FAIL_COND_MSG(p_up_direction == Vector2()):
@@ -47,7 +42,7 @@ validatorRegistry.registerAll('CharacterBody2D', {
   }),
   // character_body_2d.cpp:752 "Add Velocity,Add Upward Velocity,Do Nothing". The
   // setter (:601-603) is a bare assignment, so out-of-range warns.
-  platform_on_leave: v.enumInt('platform_on_leave', 0, 2, PLATFORM_ON_LEAVE, {
+  platform_on_leave: v.enumInt('platform_on_leave', PLATFORM_ON_LEAVE_NAMES, {
     hinted: 'character_body_2d.cpp:752',
   }),
   // character_body_2d.cpp:753/754, PROPERTY_HINT_LAYERS_2D_PHYSICS (no range

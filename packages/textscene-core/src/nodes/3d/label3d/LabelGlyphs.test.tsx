@@ -7,21 +7,35 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import {
+  alphaAntialiasingOf,
+  alphaAntialiasingUserData,
+} from '../../../r3f/materials/godotAlphaAntialiasing';
+import { AlphaAntiAliasing, scissorAntialiasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
-import {
-  CANVAS_TEXT_SUPERSAMPLE,
-  CANVAS_TEXT_VERTICAL_PAD_PX,
-} from '../../../r3f/controls/native/text/canvasTextPainter';
 import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { Label3DProperties } from './types';
-import { AlphaCutMode, HorizontalAlignment, TextureFilter } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
 import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
+import {
+  HORIZONTAL_ALIGNMENT_CENTER,
+  HORIZONTAL_ALIGNMENT_FILL,
+  HORIZONTAL_ALIGNMENT_LEFT,
+  HORIZONTAL_ALIGNMENT_RIGHT,
+} from '../../../godot/math/math';
+import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
+
+/** The canvas text painter's raster supersampling factor. */
+const CANVAS_TEXT_SUPERSAMPLE = 3;
+
+/** The painter's fixed anti-aliasing pad on each vertical raster edge, CSS px. */
+const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
 // happy-dom has neither `FontFace` nor `document.fonts`, so the real bundled
 // registration can only ever answer `undefined` here (`sceneFontLoader.ts`'s
@@ -327,6 +341,61 @@ describe('<LabelGlyphs>', () => {
       expect(material!.userData).toMatchObject(alphaHashScaleUserData(0.3));
     });
 
+    it('DISCARD under alpha_antialiasing_mode turns alpha to coverage on and ramps past the threshold', async () => {
+      // `label_3d.cpp:397` hands the mode and edge to `get_material_for_2d`, whose shader ramps at
+      // `clamp(threshold + edge)` (`scene_forward_clustered.glsl:1408-1410`).
+      const renderer = await render(
+        labelProperties({
+          alpha_cut: AlphaCutMode.DISCARD,
+          alpha_scissor_threshold: 0.25,
+          alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
+          alpha_antialiasing_edge: 0.5,
+        })
+      );
+      const [material] = materials(renderer);
+      expect(material!.alphaToCoverage).toBe(true);
+      expect(material!.alphaTest).toBe(0);
+      expect(material!.transparent).toBe(true);
+      expect(alphaAntialiasingOf(material!)).toEqual(
+        scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.25, 0.5)
+      );
+    });
+
+    it("measures the edge's mip level in Godot's glyph texels, one per font pixel", async () => {
+      // `label_3d.cpp:345-350` caches the glyph at its font size; the raster supersamples it.
+      const cut = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0);
+      const renderer = await render(
+        labelProperties({
+          alpha_cut: AlphaCutMode.DISCARD,
+          alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE,
+        })
+      );
+      const [material] = materials(renderer);
+      expect(material!.userData).toMatchObject(alphaAntialiasingUserData(cut, 1 / CANVAS_TEXT_SUPERSAMPLE));
+    });
+
+    it('HASH under ALPHA_TO_COVERAGE_AND_TO_ONE overwrites the colour with the coverage blend', async () => {
+      const renderer = await render(
+        labelProperties({
+          alpha_cut: AlphaCutMode.HASH,
+          alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE_AND_TO_ONE,
+        })
+      );
+      const [material] = materials(renderer);
+      expect(material!.alphaToCoverage).toBe(true);
+      expect(material!.alphaHash).toBe(true);
+      expect(material!.blendSrc).toBe(THREE.OneFactor);
+    });
+
+    it('DISABLED ignores alpha_antialiasing_mode, as the switch never reaches a cut (edge case)', async () => {
+      const renderer = await render(
+        labelProperties({ alpha_antialiasing_mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE })
+      );
+      const [material] = materials(renderer);
+      expect(material!.alphaToCoverage).toBe(false);
+      expect(alphaAntialiasingOf(material!)).toBeNull();
+    });
+
     it('DISABLED (default) paints TRANSPARENCY_ALPHA — blended, no cut, no depth write', async () => {
       const renderer = await render(labelProperties({ alpha_scissor_threshold: 0.25 }));
       const [material] = materials(renderer);
@@ -405,10 +474,10 @@ describe('<LabelGlyphs>', () => {
   describe('horizontal_alignment', () => {
     it('FILL positions a line the same as CENTER (no per-line justification, width is unparsed)', async () => {
       const center = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.CENTER })
+        labelProperties({ text: 'Hi', horizontal_alignment: HORIZONTAL_ALIGNMENT_CENTER })
       );
       const fill = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.FILL })
+        labelProperties({ text: 'Hi', horizontal_alignment: HORIZONTAL_ALIGNMENT_FILL })
       );
       const centerGroup = lineGroups(center)[0]!;
       const fillGroup = lineGroups(fill)[0]!;
@@ -417,10 +486,10 @@ describe('<LabelGlyphs>', () => {
 
     it('LEFT starts a line at x=0; RIGHT ends a line at x=0', async () => {
       const left = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.LEFT })
+        labelProperties({ text: 'Hi', horizontal_alignment: HORIZONTAL_ALIGNMENT_LEFT })
       );
       const right = await render(
-        labelProperties({ text: 'Hi', horizontal_alignment: HorizontalAlignment.RIGHT })
+        labelProperties({ text: 'Hi', horizontal_alignment: HORIZONTAL_ALIGNMENT_RIGHT })
       );
       const leftGroup = lineGroups(left)[0]!;
       const rightGroup = lineGroups(right)[0]!;

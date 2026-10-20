@@ -14,7 +14,6 @@ const animationPlayerRegistration: NodeTypeRegistration = {
 
 nodeRegistry.register(animationPlayerRegistration);
 
-export { animationPlayerRegistration };
 export * from './parser';
 export * from './propertyFormatter';
 export * from './types';

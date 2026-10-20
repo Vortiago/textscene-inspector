@@ -10,7 +10,9 @@ import {
   storedNotWritten,
   unrepresentableInt,
 } from './intSlot.js';
-import { boolLiteralAsNumber, boolSlotValue, parseGodotFloat, type IntWidth } from '../../godot/index.js';
+import { boolLiteralAsNumber, boolSlotValue } from '../../godot/variant/variantBool.js';
+import { parseGodotFloat } from '../../godot/variant/number.js';
+import type { IntWidth } from '../../godot/variant/int.js';
 
 /**
  * The Variant-literal readers, re-exported from `src/godot/`. They live there
@@ -18,7 +20,7 @@ import { boolLiteralAsNumber, boolSlotValue, parseGodotFloat, type IntWidth } fr
  * Godot does without pulling diagnostics into the webview bundle.
  */
 export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/variant/number.js';
-export { parseGodotInt, ruleCount, ruleInt, storedFromFloat } from '../../godot/variant/int.js';
+export { parseGodotInt, ruleCount, ruleInt, statedFromFloat } from '../../godot/variant/int.js';
 
 /**
  * One capture group of an already-matched float tuple, as a number. The regex
@@ -144,7 +146,7 @@ export interface EnforcedEnd {
 }
 
 /** What a numeric range validator checks, and how it reports each end. */
-export interface NumericRangeSpec {
+interface NumericRangeSpec {
   propertyName: string;
   /** Outer floor. Its severity is `minSeverity`, so a hinted one warns. */
   min?: number | null;
@@ -195,7 +197,7 @@ function refusalMessage(propertyName: string, end: EnforcedEnd, side: 'min' | 'm
  * comparison and its wording live together, since an exclusive polarity is
  * easy to get backwards at a max end.
  */
-export function enforcedEndRefusal(
+function enforcedEndRefusal(
   propertyName: string,
   end: EnforcedEnd | undefined,
   side: 'min' | 'max',

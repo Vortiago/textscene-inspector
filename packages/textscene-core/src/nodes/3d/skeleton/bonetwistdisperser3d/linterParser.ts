@@ -11,20 +11,9 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../../../linter/validators/index.js';
 import { settingCount } from '../shared/settingCount.js';
-import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { indexedKeyRegex } from '../../../../godot/index.js';
+import { BONE_DIRECTION_NAMES, DISPERSE_MODE_NAMES } from '../../../../godot/scene/skeletonModifier.js';
+import { indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
-
-/**
- * `BoneTwistDisperser3D::DisperseMode`, bone_twist_disperser_3d.h:41-45, in the
- * order of the inline hint string `"Even,Weighted,Custom"`
- * (bone_twist_disperser_3d.cpp:154).
- */
-const DISPERSE_MODE: Record<number, string> = {
-  0: 'Even',
-  1: 'Weighted',
-  2: 'Custom',
-};
 
 /** Error code for a `settings/…` key whose shape or leaf name is unrecognised. */
 const UNKNOWN_SETTING_CODE = 'INVALID_SETTING_KEY';
@@ -80,7 +69,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // "+X,-X,+Y,-Y,+Z,-Z,FromParent" (skeleton_modifier_3d.h:64), values 0-6.
   // set_end_bone_direction (:333-336) stores the static_cast unchecked, so the
   // hint governs the inspector dropdown only: out of range is a warning.
-  end_bone_direction: v.enumInt('end_bone_direction', 0, 6, BONE_DIRECTION, {
+  end_bone_direction: v.enumInt('end_bone_direction', BONE_DIRECTION_NAMES, {
     hinted: 'bone_twist_disperser_3d.cpp:149',
   }),
 
@@ -104,7 +93,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
   // :154, PROPERTY_HINT_ENUM "Even,Weighted,Custom", values 0-2.
   // set_disperse_mode (:411-415) stores the static_cast unchecked: warning.
-  disperse_mode: v.enumInt('disperse_mode', 0, 2, DISPERSE_MODE, {
+  disperse_mode: v.enumInt('disperse_mode', DISPERSE_MODE_NAMES, {
     hinted: 'bone_twist_disperser_3d.cpp:154',
   }),
 

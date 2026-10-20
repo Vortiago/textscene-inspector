@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { hasChildOfType } from '../../../../linter/childType.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -44,12 +44,10 @@ const retargetModifier3DChildSkeletonRule: LintRule = {
     description:
       'Warns when a RetargetModifier3D has no direct child Skeleton3D to retarget onto, the state Godot itself reports as "There is no child Skeleton3D!"',
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'RetargetModifier3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'RetargetModifier3D'),
     emits: armEmits(arms),
   },
   check: checkRetargetModifier3D,
 };
 
 ruleRegistry.register(retargetModifier3DChildSkeletonRule);
-
-export { retargetModifier3DChildSkeletonRule };

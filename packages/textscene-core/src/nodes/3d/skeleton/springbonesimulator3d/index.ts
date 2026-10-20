@@ -14,5 +14,3 @@ const springBoneSimulator3DRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(springBoneSimulator3DRegistration);
-
-export { springBoneSimulator3DRegistration };

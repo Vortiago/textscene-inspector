@@ -8,7 +8,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { tessellateCurve3D, type Curve3DControlPoint } from '../../../../resources/curves/curve3d/index.js';
-import { buildCsgPolygonGeometry, PathRotation, PolygonMode, type CsgPolygonSpec } from './polygonGeometry';
+import { buildCsgPolygonGeometry, PolygonMode, type CsgPolygonSpec } from './polygonGeometry';
+import { PathRotation } from './polygonSweepSpec';
 
 const BASE: CsgPolygonSpec = {
   polygon: new Float32Array([0, 0, 0, 1, 1, 1, 1, 0]),

@@ -27,7 +27,7 @@ export function CanvasItemMaterialProvider({
 }
 
 /** The material inherited from the nearest ancestor that supplies one. */
-export function useInheritedCanvasItemMaterial(): CanvasItemMaterialProperties | null {
+function useInheritedCanvasItemMaterial(): CanvasItemMaterialProperties | null {
   return useContext(CanvasItemMaterialContext);
 }
 

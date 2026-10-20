@@ -7,7 +7,7 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -42,12 +42,10 @@ const skeletonModifier3DParentRule: LintRule = {
     category: 'validation',
     // Every descendant inherits the check unchanged: none overrides `get_configuration_warnings`
     // without calling the base.
-    applicableNodeTypeMatcher: (nodeType) => descendsFrom(nodeType, 'SkeletonModifier3D'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'SkeletonModifier3D'),
     emits: armEmits(arms),
   },
   check: checkSkeletonModifier3D,
 };
 
 ruleRegistry.register(skeletonModifier3DParentRule);
-
-export { skeletonModifier3DParentRule };

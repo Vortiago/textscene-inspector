@@ -8,29 +8,25 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { unquoteLiteral } from '../../../parser/utils';
 import { findSubResource } from '../../../resources/SubResourceResolver';
-import {
-  ARRAY_LITERAL_RE,
-  arrayLiteralBody,
-  boolSlotValue,
-  dropTrailingComma,
-  ruleInt,
-  splitTopLevel,
-  subResourceRefAnywhere,
-} from '../../../godot/index.js';
+import { ARRAY_LITERAL_RE, arrayLiteralBody } from '../../../godot/variant/variantParser.js';
+import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
+import { slotInt } from '../../../godot/variant/int.js';
+import { subResourceRefAnywhere } from '../../../godot/variant/resourceRef.js';
 
 /** One node of a resolved AnimationTree. */
 export type AnimNode =
   AnimationLeaf | Blend2Node | Add2Node | TimeScaleNode | StateMachineNode | PassthroughNode;
 
 /** Plays a single named clip from the resolved AnimationPlayer. */
-export interface AnimationLeaf {
+interface AnimationLeaf {
   kind: 'animation';
   /** Clip name (the `&"name"` StringName of `AnimationNodeAnimation.animation`). */
   clip: string;
 }
 
 /** Linear blend: `out = in0·(1−amount) + in1·amount` (Godot `AnimationNodeBlend2`). */
-export interface Blend2Node {
+interface Blend2Node {
   kind: 'blend2';
   /** BlendTree-local node name, used for `parameters/<name>/blend_amount`. */
   name: string;
@@ -41,7 +37,7 @@ export interface Blend2Node {
 }
 
 /** Additive blend: `out = base + add·amount` (Godot `AnimationNodeAdd2`). */
-export interface Add2Node {
+interface Add2Node {
   kind: 'add2';
   /** BlendTree-local node name, used for `parameters/<name>/add_amount`. */
   name: string;
@@ -50,7 +46,7 @@ export interface Add2Node {
 }
 
 /** Scales the playback rate of its input (Godot `AnimationNodeTimeScale`). */
-export interface TimeScaleNode {
+interface TimeScaleNode {
   kind: 'timescale';
   /** BlendTree-local node name, used for `parameters/<name>/scale`. */
   name: string;
@@ -58,7 +54,7 @@ export interface TimeScaleNode {
 }
 
 /** A state machine: the active state's node plays at full weight. */
-export interface StateMachineNode {
+interface StateMachineNode {
   kind: 'statemachine';
   /** BlendTree-local node name (`''` when this is the `tree_root` itself), used
    *  to scope the `parameters/<name>/current_state` lookup. */
@@ -73,7 +69,7 @@ export interface StateMachineNode {
  * A single-input AnimationNode this does not model precisely (OneShot, Transition, BlendSpace,
  * nested unknown). Evaluation passes its input through unchanged, so the tree does not go blank.
  */
-export interface PassthroughNode {
+interface PassthroughNode {
   kind: 'passthrough';
   /** Original Godot type, for debugging / linting. */
   type: string;
@@ -216,7 +212,7 @@ function parseConnections(raw: string): Map<string, string> {
     // `connect_node`'s port is an int slot (animation_blend_tree.cpp:1766), read like every int
     // slot, including a string, which `Variant::_to_int` routes through `String::to_int()`
     // (variant.h:372). An unreadable `"0"` would drop the triple and leave the tree with no root.
-    const port = ruleInt(unquoteLiteral(tokens[i + 1]!));
+    const port = slotInt(unquoteLiteral(tokens[i + 1]!));
     const from = unquoteLiteral(tokens[i + 2]!);
     if (port === null) continue;
     out.set(`${to}:${port}`, from);

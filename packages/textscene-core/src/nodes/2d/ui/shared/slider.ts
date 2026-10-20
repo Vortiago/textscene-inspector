@@ -25,7 +25,7 @@ export interface SliderProperties extends ControlProperties, RangeProperties {
 }
 
 /** Godot `Slider` property defaults (doc/classes/Slider.xml). */
-export const SLIDER_DEFAULT_TICK_COUNT = 0;
+const SLIDER_DEFAULT_TICK_COUNT = 0;
 export const SLIDER_DEFAULT_EDITABLE = true;
 
 /** Control + Range bases plus Slider's own tick/editable properties. */

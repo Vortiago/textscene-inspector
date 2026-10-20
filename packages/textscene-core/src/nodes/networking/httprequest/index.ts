@@ -15,5 +15,3 @@ const hTTPRequestRegistration: NodeTypeRegistration = {
 };
 
 nodeRegistry.register(hTTPRequestRegistration);
-
-export { hTTPRequestRegistration };

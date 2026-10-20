@@ -21,11 +21,19 @@ export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
  * capture opens in the 3D workspace.
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
+/** `SHOW_PERFORMANCE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the Performance toggle. */
+export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';
+/** The Performance overlay's testids, in r3f/frameProfile/PerformancePanel.tsx. */
+export const PERFORMANCE_TESTIDS = {
+  overlay: 'performance-overlay',
+  frameMs: 'performance-frame',
+  drawCalls: 'performance-draws',
+};
 
 export const VIEWPORT = { width: 1280, height: 800 };
 
 /**
- * The 2D capture frame: Godot's project viewport (`CANVAS_2D_WIDTH/HEIGHT` in `viewport2d.ts`),
+ * The 2D capture frame: Godot's default project viewport (`DEFAULT_VIEWPORT_*` in `projectSettingsParser.ts`),
  * the rectangle a Control anchors to. Godot renders it through a SubViewport of this size, and
  * ours clips the stage's frame at zoom 1, so a 2D pair compares pixel for pixel.
  */
@@ -81,13 +89,28 @@ export const SETTLE_INTERVAL_MS = 350;
 export const SETTLE_MAX_ATTEMPTS = 12;
 
 /**
- * The shell's "Building textures…" status (`TscnPreviewShell/textureWorkStatusTestId.ts`).
+ * The shell's "Building textures…" status (`TscnPreviewShell/statusTestIds.ts`).
  * It is attached while a procedural texture builds or uploads, and a capture waits for it
  * to detach, because a texture that lands later gives a stable, wrong frame.
  */
 export const TEXTURE_WORK_STATUS_TESTID = 'texture-work-status';
 // Ceiling for that wait. A 4096² seamless noise texture builds and uploads in well under it.
 export const TEXTURE_WORK_WAIT_MS = 120000;
+
+/**
+ * The shell's "Loading scene…" status (`TscnPreviewShell/statusTestIds.ts`). It is attached from
+ * the scene's first render until the canvas has drawn it and its resources have landed, and it
+ * gives way to the texture work status. The work budget check waits until neither is attached.
+ */
+export const SCENE_LOAD_STATUS_TESTID = 'scene-load-status';
+/**
+ * The web previewer's "Loading scene…" status while it fetches the fixture
+ * (`apps/textscene-web/src/fixtureLoadingTestId.ts`). Until the fetch ends the shell has no scene,
+ * so it shows no scene load status, and the work budget check waits for this one too.
+ */
+export const FIXTURE_LOADING_TESTID = 'fixture-loading';
+// Ceiling for that wait: the largest budget demo loads in tens of seconds under software GL.
+export const SCENE_LOAD_WAIT_MS = 180000;
 
 /**
  * The settle contract: the instant on the scene's simulated clock, in seconds, at which both

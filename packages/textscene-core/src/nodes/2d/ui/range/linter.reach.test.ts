@@ -7,13 +7,13 @@
 import { describe, it, expect } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { descendsFrom } from '../../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import '../../../../parser/TscnParser.js';
 import '../../../../linter/index.js';
 
 describe('range-exp-edit-negative-min reach', () => {
   it('runs on Range and every concrete registered descendant', () => {
-    const heirs = nodeRegistry.getAllTypeNames().filter((t) => t === 'Range' || descendsFrom(t, 'Range'));
+    const heirs = nodeRegistry.getAllTypeNames().filter((t) => descendsFromClass(t, 'Range'));
 
     // Pinned: Range plus its 7 concrete descendants.
     expect(heirs.length).toBe(8);

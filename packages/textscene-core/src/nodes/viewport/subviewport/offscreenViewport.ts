@@ -5,46 +5,71 @@
  */
 
 import * as THREE from 'three';
-import type { Vector2 } from '../../base/node2d/types';
 import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
+import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
+import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
+import { pinColorSpace } from '../../../resources/textures/applyTextureState';
+import type { SubViewportProperties } from './types';
+import type { Vector2 } from '../../../godot/math/vector';
 
 /**
- * The offscreen pass's render target, carrying the storage and the tonemap
- * contracts. Godot tonemaps every viewport render into its own target
- * (`_render_buffers_post_process_and_tonemap`), so a target holds post-tonemap
- * values. The default LINEAR tag writes and samples them with no encode or decode.
+ * The target of a pass that draws the 3D world. Godot tonemaps every viewport render into its own
+ * target (`_render_buffers_post_process_and_tonemap`), so it holds post-tonemap values, and three
+ * tonemaps into a target only when it takes output like the drawing buffer. The tonemap pass writes
+ * sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
+ * encodes on write and decodes on sample in hardware. The LINEAR tag keeps the shader from doing
+ * either: an sRGB tag would stack a shader encode on the hardware encode.
  */
-export function createOffscreenTarget(
-  width: number,
-  height: number,
-  name: string,
-  options: { colorSpace?: THREE.ColorSpace; preTonemapped?: boolean } = {}
-): THREE.WebGLRenderTarget {
-  const { colorSpace = THREE.LinearSRGBColorSpace, preTonemapped = true } = options;
-  const target = new THREE.WebGLRenderTarget(width, height, {
-    depthBuffer: true,
-    stencilBuffer: false,
-    // `samples` stays at three's 0. A 2D pass shares this constructor and must
-    // not multisample: scene/main/viewport.h:309, `msaa_2d = MSAA_DISABLED`.
-    samples: 0,
-  });
-  // An sRGB tag would stack a shader encode on three's SRGB8 hardware encode
-  // and darken every sample.
-  target.texture.colorSpace = colorSpace;
+export function createSceneTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+  const target = createTarget(width, height, name);
+  // Pinned: R3F stamps `SRGBColorSpace` on a target bound to an albedo `map`, and three reads
+  // this pass's output space from the tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
+  pinColorSpace(target.texture, THREE.LinearSRGBColorSpace);
+  target.texture.internalFormat = 'SRGB8_ALPHA8';
+  return target;
+}
+
+/**
+ * The target of a pass that draws canvas items, the 2D world's or the Controls'. Godot's canvas
+ * draws after the tonemap pass (`RendererViewport::_draw_viewport`) and writes its sRGB numbers
+ * straight into an `R8G8B8A8_UNORM` target (`renderer_canvas_render_rd.cpp:671,729`,
+ * `texture_storage.cpp:3568-3569`). So three encodes into RGBA8, as into the drawing buffer, and
+ * blends and filters the encoded bytes. An sRGB tag alone would allocate SRGB8_ALPHA8.
+ */
+export function createCanvasTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+  const target = createTarget(width, height, name);
+  pinColorSpace(target.texture, THREE.SRGBColorSpace);
+  target.texture.internalFormat = 'RGBA8';
+  // An explicit mark, not a rule on RGBA8 under an sRGB tag: CanvasMsaaFrame has that shape too.
+  markSrgbBytes(target.texture);
+  return target;
+}
+
+/**
+ * A target that takes its pass's output as the drawing buffer does, with Godot's sampler: linear,
+ * and one mip level (`texture_storage.cpp:3585`), so minification and magnification follow one
+ * rule. Not the SubViewport's `canvas_item_default_texture_filter`: Godot passes that to the items
+ * drawn into the viewport (`renderer_viewport.cpp:688`), not to sampling its texture.
+ */
+function createTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: true, stencilBuffer: false });
   target.texture.name = `${name}::target`;
-  // The sub-viewport's own filter enum is not reproduced. Linear matches
-  // Godot's default `canvas_item_default_texture_filter` (1, LINEAR).
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;
-  if (preTonemapped) {
-    // `WebGLPrograms.js` tonemaps a target only when `isXRRenderTarget`, and then
-    // takes the output space from `texture.colorSpace`. Without it the target
-    // missed a curve (0.60-0.65x under FILMIC). Not declared by @types/three:
-    // three sets it on plain render targets the same way (`XRManager.js`).
-    (target as THREE.WebGLRenderTarget & { isXRRenderTarget: boolean }).isXRRenderTarget = true;
-  }
+  takeOutputLikeDrawingBuffer(target);
   return target;
+}
+
+/**
+ * The MSAA mode a sub-viewport's pass takes: `msaa_3d` for the 3D world it draws, `msaa_2d` for its
+ * canvas items. Godot keeps one mode per buffer (`renderer_viewport.cpp:1354-1370`).
+ */
+export function viewportMsaaMode(
+  modes: Pick<SubViewportProperties, 'msaa_2d' | 'msaa_3d'>,
+  kind: '2d' | '3d'
+): number {
+  return kind === '3d' ? modes.msaa_3d : modes.msaa_2d;
 }
 
 /**
@@ -58,8 +83,7 @@ const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 /**
  * Bind `target`, clear it, run `draw`, and restore the render target, clear colour,
  * alpha and tone mapping. A given `toneMapping` replaces the renderer's curve for the
- * pass. `beforeBind` runs inside the guarded region, before the bind, for state
- * that no offscreen render may run under.
+ * pass.
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
@@ -69,7 +93,6 @@ export function renderToOffscreenTarget(
     clearColor: THREE.Color;
     transparentBg: boolean;
     toneMapping?: THREE.ToneMapping;
-    beforeBind?: () => void;
     draw: () => void;
   }
 ): void {
@@ -80,7 +103,6 @@ export function renderToOffscreenTarget(
 
   try {
     if (options.toneMapping !== undefined) gl.toneMapping = options.toneMapping;
-    options.beforeBind?.();
     gl.setRenderTarget(options.target);
     gl.setClearColor(options.clearColor, options.transparentBg ? 0 : 1);
     gl.clear(true, true, true);
@@ -197,8 +219,8 @@ export function applyOrthoFrame(camera: THREE.OrthographicCamera, frame: OrthoFr
 }
 
 /**
- * The projection aspect for a target of `size` pixels. `<Camera3D>` builds every
- * camera at the canvas's 16:9, so the offscreen pass overrides it for its render.
+ * The projection aspect for a target of `size` pixels, which the offscreen pass fits its
+ * `<Camera3D>` to for its render.
  */
 export function viewportAspect(size: Vector2): number {
   if (!(size.x > 0) || !(size.y > 0)) return 1;
@@ -206,7 +228,7 @@ export function viewportAspect(size: Vector2): number {
 }
 
 /** An orthographic frustum and camera position framing exactly `size` pixels. */
-export interface OrthoFrame {
+interface OrthoFrame {
   left: number;
   right: number;
   top: number;

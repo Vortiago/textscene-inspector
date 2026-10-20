@@ -3,8 +3,7 @@
  * value names it, and a failed load there raises `ERR_FILE_MISSING_DEPENDENCIES` (`resource_format_text.cpp:146-154`).
  * A node body skips that error (`:288-289`). Every other read returns it, and the load fails.
  */
-
-import { extResourceIdsIn } from '../godot/index.js';
+import { extResourceIdsIn } from '../godot/variant/resourceRef.js';
 import type { RawNode, StrictScene } from '../parser/types.js';
 
 /**
@@ -39,7 +38,11 @@ function addNodeIds(node: RawNode, into: Map<string, ExtResourceUse>): void {
  */
 export function extResourceUses(scene: StrictScene): Map<string, ExtResourceUse> {
   const uses = new Map<string, ExtResourceUse>();
-  addIdsIn(scene.connectionBinds, 'aborting', uses);
+  addIdsIn(
+    scene.connections.flatMap(({ binds }) => (binds === undefined ? [] : [binds])),
+    'aborting',
+    uses
+  );
   addIdsIn(scene.instancesOutsideNodeBody, 'aborting', uses);
   for (const resource of scene.internalResources) addIdsIn(Object.values(resource.data), 'aborting', uses);
   if (scene.mainResource) addIdsIn(Object.values(scene.mainResource.data), 'aborting', uses);

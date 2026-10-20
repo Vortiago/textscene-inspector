@@ -8,6 +8,11 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { FOCUS_MODE_HINT_NAMES } from '../../../../godot/scene/control.js';
+import {
+  TAB_BAR_ALIGNMENT_HINT_NAMES,
+  TAB_CONTAINER_TABS_POSITION_NAMES,
+} from '../../../../godot/scene/tabs.js';
 import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
@@ -43,13 +48,7 @@ const tabValidator = indexedFamilyValidator({
 validatorRegistry.registerAll('TabContainer', {
   // tab_container.cpp:1208, PROPERTY_HINT_ENUM "Left,Center,Right". TabBar::set_tab_alignment's
   // `ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX)` (tab_bar.cpp:1671, ALIGNMENT_MAX=3) agrees with the hint.
-  tab_alignment: v.enumInt(
-    'tab_alignment',
-    0,
-    2,
-    { 0: 'Left', 1: 'Center', 2: 'Right' },
-    { enforced: 'tab_bar.cpp:1671' }
-  ),
+  tab_alignment: v.enumInt('tab_alignment', TAB_BAR_ALIGNMENT_HINT_NAMES, { enforced: 'tab_bar.cpp:1671' }),
 
   // tab_container.cpp:1209, PROPERTY_HINT_RANGE "-1,4096,1". Outside the tree, set_current_tab
   // defers (tab_container.cpp:744) to ENTER_TREE (tab_container.cpp:222-224) and TabBar::set_current_tab,
@@ -64,13 +63,9 @@ validatorRegistry.registerAll('TabContainer', {
 
   // tab_container.cpp:1210, PROPERTY_HINT_ENUM "Top,Bottom". set_tabs_position's
   // `ERR_FAIL_INDEX(p_tabs_position, POSITION_MAX)` (tab_container.cpp:820, POSITION_MAX=2) agrees.
-  tabs_position: v.enumInt(
-    'tabs_position',
-    0,
-    1,
-    { 0: 'Top', 1: 'Bottom' },
-    { enforced: 'tab_container.cpp:820' }
-  ),
+  tabs_position: v.enumInt('tabs_position', TAB_CONTAINER_TABS_POSITION_NAMES, {
+    enforced: 'tab_container.cpp:820',
+  }),
 
   // tab_container.cpp:1211, plain BOOL, no hint. set_clip_tabs bare-assigns.
   clip_tabs: v.boolean('clip_tabs'),
@@ -100,13 +95,9 @@ validatorRegistry.registerAll('TabContainer', {
   // tab_container.cpp:1218, PROPERTY_HINT_ENUM "None,Click,All" (0-2). The internal TabBar's
   // Control::set_focus_mode, `ERR_FAIL_INDEX((int)p_focus_mode, 4)` (control.cpp:2267), also
   // accepts 3 (Accessibility), which the hint never lists, so 3 warns and does not error.
-  tab_focus_mode: v.enumInt(
-    'tab_focus_mode',
-    0,
-    2,
-    { 0: 'None', 1: 'Click', 2: 'All' },
-    { hinted: 'tab_container.cpp:1218' }
-  ),
+  tab_focus_mode: v.enumInt('tab_focus_mode', 0, 2, FOCUS_MODE_HINT_NAMES, {
+    hinted: 'tab_container.cpp:1218',
+  }),
 
   // tab_container.cpp:1219, plain BOOL, no hint. set_deselect_enabled
   // delegates to TabBar's own, which bare-assigns (tab_bar.cpp:2038).

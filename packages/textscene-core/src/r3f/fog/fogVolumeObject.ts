@@ -12,9 +12,9 @@ import {
 import type { FogMaterialData } from '../../resources/materials/fogmaterial/types.js';
 
 /**
- * What fills a volume: Godot's default fog shader, which a volume without a usable material runs
- * (`environment/fog.cpp:640-643`), a FogMaterial with its density texture once built, or a fog
- * shader the previewer does not run.
+ * What fills a volume: Godot's default fog shader (`environment/fog.cpp:265-283`), which a volume
+ * without a FogMaterial or a valid fog shader runs (`:672-683`), a FogMaterial with its density
+ * texture once built, or a fog shader the previewer does not run.
  */
 export type FogVolumeFill =
   | { kind: 'default' }

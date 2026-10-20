@@ -15,7 +15,8 @@ import {
   readBezierData,
   type BezierDataPoints,
 } from '../../../resources/curves/shared/bezierData.js';
-import { packedArrayForms, subResourceRefAnywhere } from '../../../godot/index.js';
+import { packedArrayForms } from '../../../godot/variant/variantParser.js';
+import { subResourceRefAnywhere } from '../../../godot/variant/resourceRef.js';
 import { dictPackedField, packedFloatCount } from '../../../godot/variant/packedArrayFields.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -110,5 +111,3 @@ const path3DValidationRule: LintRule = {
 };
 
 ruleRegistry.register(path3DValidationRule);
-
-export { path3DValidationRule };

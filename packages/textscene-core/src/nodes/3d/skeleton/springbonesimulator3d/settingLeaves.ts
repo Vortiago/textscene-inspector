@@ -7,15 +7,12 @@
 
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { BONE_DIRECTION, ROTATION_AXIS } from '../skeletonmodifier3d/linterParser.js';
+import {
+  BONE_DIRECTION_NAMES,
+  CENTER_FROM_NAMES,
+  ROTATION_AXIS_NAMES,
+} from '../../../../godot/scene/skeletonModifier.js';
 import { nonZeroVector3 } from './nonZeroVector3.js';
-
-/** PROPERTY_HINT_ENUM "WorldOrigin,Node,Bone" (spring_bone_simulator_3d.cpp:300). */
-const CENTER_FROM: Record<number, string> = {
-  0: 'WorldOrigin',
-  1: 'Node',
-  2: 'Bone',
-};
 
 /**
  * `settings/<i>/<leaf>`, keyed by the leaf path as `_get_property_list` spells it
@@ -46,7 +43,7 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // BoneDirection declaration order (skeleton_modifier_3d.h:56-62).
   // set_end_bone_direction (:527) stores the static_cast unchecked, so the hint
   // governs the inspector only: warning.
-  'end_bone/direction': v.enumInt('end_bone/direction', 0, 6, BONE_DIRECTION, {
+  'end_bone/direction': v.enumInt('end_bone/direction', BONE_DIRECTION_NAMES, {
     hinted: 'spring_bone_simulator_3d.cpp:298',
   }),
 
@@ -61,7 +58,7 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
   // :300, PROPERTY_HINT_ENUM "WorldOrigin,Node,Bone". set_center_from (:576)
   // stores the static_cast unchecked: warning.
-  center_from: v.enumInt('center_from', 0, 2, CENTER_FROM, {
+  center_from: v.enumInt('center_from', CENTER_FROM_NAMES, {
     hinted: 'spring_bone_simulator_3d.cpp:300',
   }),
 
@@ -83,7 +80,7 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :305, PROPERTY_HINT_ENUM over get_hint_rotation_axis(), values 0-4
   // (skeleton_modifier_3d.h:81-85). set_rotation_axis (:793) assigns the
   // static_cast: warning.
-  rotation_axis: v.enumInt('rotation_axis', 0, 4, ROTATION_AXIS, {
+  rotation_axis: v.enumInt('rotation_axis', ROTATION_AXIS_NAMES, {
     hinted: 'spring_bone_simulator_3d.cpp:305',
   }),
 

@@ -7,5 +7,3 @@ import { menuBarMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'MenuBar', Component: MenuBar });
 controlSolverRegistry.registerMinimumSize('MenuBar', menuBarMinimumSize);
-
-export { MenuBar };

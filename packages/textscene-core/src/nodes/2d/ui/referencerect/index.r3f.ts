@@ -7,5 +7,3 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { ReferenceRect } from './Component';
 
 controlComponentRegistry.register({ typeName: 'ReferenceRect', Component: ReferenceRect });
-
-export { ReferenceRect };

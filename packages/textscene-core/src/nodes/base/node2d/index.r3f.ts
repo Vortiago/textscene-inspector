@@ -7,5 +7,3 @@ nodeComponentRegistry.register({
   canvasItem: true,
   renderIntent: 'transform-only',
 });
-
-export { Node2D };

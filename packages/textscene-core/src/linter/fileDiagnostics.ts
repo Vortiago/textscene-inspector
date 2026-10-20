@@ -21,7 +21,8 @@ export const FILE_DIAGNOSTICS = {
   /**
    * A `parent=` path that resolves against nothing. Godot warns, re-parents the
    * node to the scene root and renames it `<path>#<name>`, so the file loads
-   * and the node exists, in the wrong place under a different name.
+   * and the node exists, in the wrong place under a different name. A `parent_id_path=`
+   * that names a node built earlier seats the node there instead (`packed_scene.cpp:161-163`).
    */
   unresolvedParentPath: {
     severity: 'warning',
@@ -61,6 +62,24 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'packed_scene.cpp:218-219' },
   },
   /**
+   * A `[connection]` heading that omits `from`, `to`, `signal` or `method`. The text loader returns `ERR_FILE_CORRUPT`
+   * at the first one it finds, so nothing in the file loads (`resource_format_text.cpp:311-333`).
+   */
+  connectionMissingField: {
+    severity: 'error',
+    ruleName: 'connection-missing-field',
+    grounding: { kind: 'engine', at: 'resource_format_text.cpp:311-333' },
+  },
+  /**
+   * A `[connection]` `from=` or `to=` that resolves to no node from the scene root. The scene loads, and the instantiate
+   * skips the connection when either end is null, so the signal never reaches the method (`packed_scene.cpp:660-662`).
+   */
+  connectionNodeMissing: {
+    severity: 'warning',
+    ruleName: 'connection-node-missing',
+    grounding: { kind: 'engine', at: 'packed_scene.cpp:660-662' },
+  },
+  /**
    * A rule threw. Reported on the node it ran on, or on no line for the
    * cross-file rule, naming the rule and the error. Every other rule still
    * runs. Not an engine claim about the file: the rule's own findings are
@@ -80,6 +99,16 @@ export const FILE_DIAGNOSTICS = {
     severity: 'error',
     ruleName: 'dangling-resource-reference',
     grounding: { kind: 'engine', at: 'resource_format_text.cpp:113' },
+  },
+  /**
+   * A node resource slot whose reference resolves to a class its `PROPERTY_HINT_RESOURCE_TYPE` hint excludes with a
+   * `-` prefix (`object.h:68`, `excludedResourceTypes.ts`). The editor erases the exact name from the classes it offers,
+   * and the setter keeps the value, so the value is outside the property's UI hint.
+   */
+  resourceTypeExcludedByHint: {
+    severity: 'warning',
+    ruleName: 'resource-type-excluded-by-hint',
+    grounding: { kind: 'engine', at: 'editor_resource_picker.cpp:827-833' },
   },
   /**
    * An `[ext_resource]` whose `.glb`/`.gltf` requires a glTF extension outside Godot's importer set, used where a failed
@@ -130,23 +159,4 @@ const FORMAT_RULE_PREFIX = 'format:';
  */
 export function formatRuleName(key: string): string {
   return `${FORMAT_RULE_PREFIX}${key}`;
-}
-
-/** True for a name {@link formatRuleName} builds. */
-function isFormatRuleName(ruleName: string): boolean {
-  return ruleName.startsWith(FORMAT_RULE_PREFIX);
-}
-
-/** True for a name a format check reports: `strict-parser`, or a validator's `format:<key>`. */
-export function isFormatCheckName(ruleName: string): boolean {
-  return ruleName === STRICT_PARSER_RULE_NAME || isFormatRuleName(ruleName);
-}
-
-const FILE_DIAGNOSTIC_NAMES: ReadonlySet<string> = new Set(
-  Object.values(FILE_DIAGNOSTICS).map((d) => d.ruleName)
-);
-
-/** True for a `ruleName` `Linter` stamps that no registered rule declares. */
-export function isUndeclaredRuleName(ruleName: string): boolean {
-  return FILE_DIAGNOSTIC_NAMES.has(ruleName) || isFormatCheckName(ruleName);
 }

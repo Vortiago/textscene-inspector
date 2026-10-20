@@ -7,6 +7,7 @@
 import '../../../2d/ui/control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import { BASE_BUTTON_ACTION_MODE_NAMES } from '../../../../godot/scene/gui.js';
 
 // Each own member, cited at its ADD_PROPERTY line in base_button.cpp.
 validatorRegistry.registerAll('BaseButton', {
@@ -19,16 +20,7 @@ validatorRegistry.registerAll('BaseButton', {
   // base_button.cpp:570, PROPERTY_HINT_ENUM "Button Press,Button Release", bound at
   // base_button.cpp:586-587. set_action_mode (base_button.cpp:386-387) assigns
   // unconditionally, no ERR_FAIL.
-  action_mode: v.enumInt(
-    'action_mode',
-    0,
-    1,
-    {
-      0: 'ACTION_MODE_BUTTON_PRESS',
-      1: 'ACTION_MODE_BUTTON_RELEASE',
-    },
-    { hinted: 'base_button.cpp:570' }
-  ),
+  action_mode: v.enumInt('action_mode', BASE_BUTTON_ACTION_MODE_NAMES, { hinted: 'base_button.cpp:570' }),
   // base_button.cpp:571, PROPERTY_HINT_FLAGS names 3 bits (1, 2, 4), but set_button_mask
   // (base_button.cpp:394-396) assigns with no clamp and MouseButtonMask reaches XBUTTON1/2
   // = 128/256 (doc/classes/@GlobalScope.xml). A FLAGS hint is no range, so no floor either:

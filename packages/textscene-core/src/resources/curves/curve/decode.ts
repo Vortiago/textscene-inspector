@@ -1,15 +1,13 @@
 /**
- * Decode a Curve resource body, inline `[sub_resource]` or standalone `.tres`, through
- * one decode so neither arrival path drifts. Godot writes `_limits = [min_value,
+ * Decode an inline Curve `[sub_resource]` body. Godot writes `_limits = [min_value,
  * max_value, min_domain, max_domain]` (two entries before Godot 4.3) and `_data`.
  */
 
-import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
-import { ruleInt, slotComponents } from '../../../godot/variant/int.js';
+import { readSlotTuple, slotInt } from '../../../godot/variant/int.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { resizePoints } from './pointCount';
 
@@ -24,7 +22,7 @@ const ELEMS_PER_POINT = 5;
  * no points, which `sampleCurve` answers 0 for: a caller that needs "no curve at
  * all" tests `points.length`, not the sampled value.
  */
-export function decodeCurve(data: Record<string, string>): Curve {
+function decodeCurve(data: Record<string, string>): Curve {
   const limits = parseFloatArray(data._limits);
   const curve: Curve = {
     points: parsePoints(data._data),
@@ -37,7 +35,7 @@ export function decodeCurve(data: Record<string, string>): Curve {
   // `point_count` is written after `_data`, and Godot's setter resizes the point
   // list to it (curve.cpp:41-57): a smaller count drops the tail, a larger one
   // pads with default points, and a negative one is refused, leaving `_data` alone.
-  const declared = ruleInt(data.point_count);
+  const declared = slotInt(data.point_count);
   if (declared !== null && declared >= 0) curve.points = resizePoints(curve, declared);
 
   return curve;
@@ -54,12 +52,6 @@ export function resolveCurve(
   const resource = resolveSubResourceRef(ref, internalResources);
   if (resource?.type !== 'Curve') return null;
   return decodeCurve(resource.data);
-}
-
-/** The `Curve` a standalone resource file carries, or null for another resource type. */
-export function curveFromResource(parsed: ParsedResource): Curve | null {
-  if (parsed.resourceType !== 'Curve') return null;
-  return decodeCurve(parsed.properties);
 }
 
 function parsePoints(value: string | undefined): CurvePoint[] {
@@ -120,14 +112,11 @@ const VECTOR2_RE = slotTupleRegex('Vector2', 2);
  * finite pattern and reads as `Infinity`, which would reach the particle geometry.
  */
 function parseVector2Entry(entry: string): { x: number; y: number } | null {
-  const match = VECTOR2_RE.exec(entry);
-  if (!match) return null;
-  // `slotComponents`, not bare `matchedFloat`: the slot grammar admits the
-  // `Vector2i` spelling, whose arguments Godot narrows to int32 before widening
-  // into the float slot, so `Vector2i(4294967295, 0)` is the point `(-1, 0)`.
-  const components = slotComponents(entry, 'Vector2', [match[1], match[2]]);
-  if (!allFinite(components)) return null;
-  return { x: components[0]!, y: components[1]! };
+  // The slot read narrows a `Vector2i` spelling's arguments to int32 before the
+  // widening into the float slot, so `Vector2i(4294967295, 0)` is the point `(-1, 0)`.
+  const tuple = readSlotTuple(entry, 'Vector2', VECTOR2_RE);
+  if (!tuple || !allFinite(tuple.components)) return null;
+  return { x: tuple.components[0]!, y: tuple.components[1]! };
 }
 
 /**
@@ -141,5 +130,5 @@ function numberOr(entry: string, fallback: number): number {
 }
 
 function tangentMode(entry: string): CurveTangentMode {
-  return ruleInt(entry) === CurveTangentMode.Linear ? CurveTangentMode.Linear : CurveTangentMode.Free;
+  return slotInt(entry) === CurveTangentMode.Linear ? CurveTangentMode.Linear : CurveTangentMode.Free;
 }

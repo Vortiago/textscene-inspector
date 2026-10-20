@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isBinaryResourceType, resourceContent, stripResPrefix } from './resourceProviderUtils';
+import { isBinaryResourceType, resourceContent } from './resourceProviderUtils';
 import { resourceSliceRegistry } from './sliceRegistration';
 
 /** The binary type names a provider must fetch as bytes. */
@@ -102,17 +102,6 @@ describe('isBinaryResourceType', () => {
 
   it('answers false for an unclaimed type with no path', () => {
     expect(isBinaryResourceType('Curve')).toBe(false);
-  });
-});
-
-describe('stripResPrefix', () => {
-  it('drops the res:// prefix', () => {
-    expect(stripResPrefix('res://scenes/Door.tscn')).toBe('scenes/Door.tscn');
-  });
-
-  it('leaves a path that has no prefix alone', () => {
-    expect(stripResPrefix('scenes/Door.tscn')).toBe('scenes/Door.tscn');
-    expect(stripResPrefix('')).toBe('');
   });
 });
 

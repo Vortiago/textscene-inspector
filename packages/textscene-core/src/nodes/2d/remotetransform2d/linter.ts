@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { extractNodePath } from '../../../linter/linterUtils.js';
 import { resolveNodePath } from '../../../linter/nodePathResolve.js';
-import { descendsFrom } from '../../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 
 const arms = {
   invalidRemotePath: groundedArm('remotetransform2d-invalid-remote-path', { kind: 'configuration-warning' }),
@@ -39,7 +39,7 @@ function checkRemoteTransform2D(context: RuleContext): Diagnostic[] {
   if (target.status === 'missing') {
     return warn(node, `has remote_path set to NodePath("${path}"), which names no node in this file.`);
   }
-  if (target.status === 'found' && target.node.type && !descendsFrom(target.node.type, 'Node2D')) {
+  if (target.status === 'found' && target.node.type && !descendsFromClass(target.node.type, 'Node2D')) {
     return warn(
       node,
       `has remote_path pointing to '${target.node.name}', a ${target.node.type}, which is not a Node2D.`
@@ -62,5 +62,3 @@ const remoteTransform2DPathRule: LintRule = {
 };
 
 ruleRegistry.register(remoteTransform2DPathRule);
-
-export { remoteTransform2DPathRule };

@@ -83,7 +83,7 @@ describe('skyUniforms — directional lights', () => {
     direction: new THREE.Vector3(0, 1, 0),
     color: new THREE.Color(1, 1, 1),
     energy: 1,
-    angularRadius: 0,
+    size: 0,
     ...overrides,
   });
 

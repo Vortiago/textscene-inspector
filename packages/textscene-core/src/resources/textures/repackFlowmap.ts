@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { readImagePixels } from '../formats/image/imagePixels';
-import { copySampling } from './copySampling';
+import { readImagePixels, type ImagePixels } from '../formats/image/imagePixels';
+import { texelTexture } from './texelTexture';
+import type { MipLevel } from '../processing/mipChain';
 
 /**
  * Repacks a Godot anisotropy_flowmap's alpha strength into the blue channel three.js
@@ -9,25 +10,24 @@ import { copySampling } from './copySampling';
  * caller disposes the returned texture.
  */
 export function repackAnisotropyFlowmap(texture: THREE.Texture): THREE.Texture | undefined {
-  const pixels = readImagePixels(texture.image);
-  if (!pixels) return undefined;
-
-  const src = pixels.data;
-  // Alpha (byte 3) to blue (byte 2), per pixel.
-  const dst = new Uint8Array(src);
-  for (let i = 0; i < dst.length; i += 4) {
-    const alpha = src[i + 3]!;
-    dst[i + 2] = alpha;
-  }
-
-  // The source's sampling, so the repack changes channels and nothing else.
-  const out = copySampling(
-    new THREE.DataTexture(dst, pixels.width, pixels.height, THREE.RGBAFormat),
-    texture
-  );
-  out.needsUpdate = true;
+  const levels = flowmapLevels(texture);
+  if (!levels) return undefined;
+  const out = texelTexture(texture, levels.map(alphaInBlue));
   // anisotropyMap is non-colour data (direction and strength): three.js requires NoColorSpace.
   out.colorSpace = THREE.NoColorSpace;
-  out.flipY = texture.flipY;
   return out;
+}
+
+/** The flowmap's levels: the chain its import built, else its readable image alone. */
+function flowmapLevels(texture: THREE.Texture): ImagePixels[] | undefined {
+  if (texture.mipmaps.length > 1) return texture.mipmaps as ImagePixels[];
+  const pixels = readImagePixels(texture.image);
+  return pixels && [pixels];
+}
+
+/** A copy of `level` whose blue holds its alpha, per texel. */
+function alphaInBlue({ data, width, height }: ImagePixels): MipLevel {
+  const repacked = new Uint8Array(data);
+  for (let i = 0; i < repacked.length; i += 4) repacked[i + 2] = data[i + 3]!;
+  return { data: repacked, width, height };
 }

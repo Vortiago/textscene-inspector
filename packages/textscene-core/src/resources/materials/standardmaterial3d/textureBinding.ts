@@ -11,7 +11,7 @@ import {
   type MaterialTextureState,
   type UVTransform,
 } from '../../textures/applyTextureState';
-import { GODOT_TEXTURE_FILTER_DEFAULT } from '../../textures/godotTextureFilter';
+import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { sourceColorSpace } from '../../textures/sourceColorSpace';
 import { UV2_CHANNEL } from '../../meshes/uv2';
 import { bottomUpV } from '../../../godot/math/uv';
@@ -39,7 +39,12 @@ const SLOT_READS_SOURCE_COLOR: Readonly<Record<TextureSlot, boolean>> = {
  * for a `source_color` slot and a texture whose format has an sRGB view.
  */
 export function slotColorSpace(slot: TextureSlot, texture: THREE.Texture): THREE.ColorSpace {
-  return SLOT_READS_SOURCE_COLOR[slot] ? sourceColorSpace(texture) : THREE.NoColorSpace;
+  return slotReadsSourceColor(slot) ? sourceColorSpace(texture) : THREE.NoColorSpace;
+}
+
+/** Whether `slot`'s sampler carries `source_color`, so it reads a texture's sRGB view. */
+export function slotReadsSourceColor(slot: TextureSlot): boolean {
+  return SLOT_READS_SOURCE_COLOR[slot];
 }
 
 /** The texture state of the slots that sample one UV set, whose transform is always known. */
@@ -63,7 +68,8 @@ export interface MaterialTextureStates {
  */
 export function materialTextureStates(scalars: StandardMaterial3DScalars): MaterialTextureStates {
   const sampler = {
-    filter: scalars.textureFilter === GODOT_TEXTURE_FILTER_DEFAULT ? undefined : scalars.textureFilter,
+    filter:
+      scalars.textureFilter === BASE_MATERIAL_3D_DEFAULTS.textureFilter ? undefined : scalars.textureFilter,
     repeat: scalars.textureRepeat,
   };
   const uv2 = { ...sampler, uv: { scale: scalars.uv2Scale, offset: scalars.uv2Offset } };

@@ -4,8 +4,13 @@
  * a 3D scene uses the editor camera and preview environment, a 2D one the project viewport alone.
  */
 
-import { PREVIEW_LIGHTING_GD, gdString } from '../../godot-ref/bootstrap.mjs';
-import { EDITOR_CAMERA_DIRECTION, EDITOR_CAMERA_DISTANCE, EDITOR_FOV } from '../../godot-ref/run.mjs';
+import {
+  EDITOR_CAMERA_DIRECTION,
+  EDITOR_CAMERA_DISTANCE,
+  EDITOR_FOV,
+  PREVIEW_LIGHTING_GD,
+  gdString,
+} from '../../godot-ref/run.mjs';
 import { CANVAS_2D_CAPTURE } from '../../visual/previewServer.mjs';
 import { FRAMES } from './clip.mjs';
 
@@ -46,7 +51,7 @@ ${PREVIEW_LIGHTING_GD}
 }
 
 // The 2D reference: an AnimatedSprite2D in a SubViewport the size of the project viewport (2D
-// positions are absolute), stepping `frame` across one loop. Like godot-ref/bootstrap.mjs's
+// positions are absolute), stepping `frame` across one loop. Like godot-ref/run.mjs's
 // _render_2d it has no 3D camera and no editor preview (2D lighting is the scene's own). Each
 // Camera2D is disabled before the subtree is added, so none can offset the canvas.
 export function godotBootstrap2D(resPath, framesDir) {

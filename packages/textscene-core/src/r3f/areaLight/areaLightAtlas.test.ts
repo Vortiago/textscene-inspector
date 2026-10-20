@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  NO_AREA_TEXTURE,
   areaTexturePlacement,
   areaTextureUserData,
   holdAreaTexture,
@@ -11,6 +10,11 @@ import {
 } from './areaLightAtlas';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch';
 import { installedUniformValue } from '../shaderPatch/litUniform';
+
+/** Where the atlas places a light that shows no texture. */
+function untexturedPlacement() {
+  return areaTexturePlacement(new THREE.RectAreaLight());
+}
 
 /** A `size × size` RGBA8 texture whose rows run bottom-up, as the procedural textures store them. */
 function dataTexture(size: number, rgbaAtRow: (row: number) => readonly number[]): THREE.DataTexture {
@@ -98,13 +102,14 @@ describe('the area light atlas', () => {
     hold(dataTexture(64, () => [0, 0, 0, 255]));
     updateAreaLightAtlas();
 
-    expect(areaTexturePlacement(lightShowing(texture))).not.toEqual(NO_AREA_TEXTURE);
+    expect(areaTexturePlacement(lightShowing(texture))).not.toEqual(untexturedPlacement());
   });
 
   it('places nothing for a light without a texture (edge case)', () => {
     updateAreaLightAtlas();
 
-    expect(areaTexturePlacement(new THREE.RectAreaLight())).toEqual(NO_AREA_TEXTURE);
+    // An empty rectangle marks a light without a texture (4.7.2 `light_storage.cpp:1132-1141`).
+    expect(untexturedPlacement()).toEqual({ rect: [0, 0, 0, 0], maxMipmap: 0 });
   });
 
   it('places nothing for a texture whose pixels cannot be read (error case)', () => {
@@ -112,6 +117,6 @@ describe('the area light atlas', () => {
 
     updateAreaLightAtlas();
 
-    expect(areaTexturePlacement(lightShowing(texture))).toEqual(NO_AREA_TEXTURE);
+    expect(areaTexturePlacement(lightShowing(texture))).toEqual(untexturedPlacement());
   });
 });

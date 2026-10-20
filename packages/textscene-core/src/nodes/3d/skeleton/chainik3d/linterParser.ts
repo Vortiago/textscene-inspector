@@ -9,8 +9,8 @@ import '../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { accepts, v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { BONE_DIRECTION } from '../skeletonmodifier3d/linterParser.js';
-import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/index.js';
+import { BONE_DIRECTION_NAMES } from '../../../../godot/scene/skeletonModifier.js';
+import { declaredLeafResolver, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { negativeIndexError } from '../../../../linter/reportedIndices.js';
 
 // The surface is a hand-built `settings/<i>/<leaf>` family: `_set` (chain_ik_3d.cpp:33) and `_get`
@@ -73,7 +73,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // chain_ik_3d.cpp:131, PROPERTY_HINT_ENUM "+X,-X,+Y,-Y,+Z,-Z,FromParent" (skeleton_modifier_3d.h:64),
   // values 0-6 in BoneDirection order (skeleton_modifier_3d.h:56-62). set_end_bone_direction (:260)
   // stores the static_cast unchecked, so the hint governs the inspector only: warning.
-  'end_bone/direction': v.enumInt('end_bone/direction', 0, 6, BONE_DIRECTION, {
+  'end_bone/direction': v.enumInt('end_bone/direction', BONE_DIRECTION_NAMES, {
     hinted: 'chain_ik_3d.cpp:131',
   }),
 
@@ -152,7 +152,3 @@ validatorRegistry.registerAll('ChainIK3D', {
   // `end_bone/direction` and `joints/<j>/bone` reach this dispatcher, which reads the leaf itself.
   'settings/*': settingsFamily,
 });
-
-// Exported for `settingsFamilySeam.test.ts`, which checks every leaf a base declares across every
-// descendant. It derives the list from this table, so a new leaf joins the check.
-export { SETTING_LEAVES as CHAIN_IK_SETTING_LEAVES };

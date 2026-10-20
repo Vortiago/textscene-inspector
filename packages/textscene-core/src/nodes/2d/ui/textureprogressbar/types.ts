@@ -1,9 +1,10 @@
-import type { ControlProperties, ControlColor } from '../control/types';
+import type { ControlProperties } from '../control/types';
 import type { RangeProperties } from '../shared/range';
+import type { Rgba } from '../../../../godot/math/math';
 
 /** `TextureProgressBar`'s own members (`doc/classes/TextureProgressBar.xml`), plus its Control + Range bases. */
 export interface TextureProgressBarProperties extends ControlProperties, RangeProperties {
-  /** `FillMode`: 0-3 linear, 4 clockwise, 5 counter-clockwise, 6-7 bilinear, 8 clockwise+counter-clockwise. */
+  /** A `TextureProgressBarFillMode` value. */
   fillMode?: number;
   /** Window `texture_progress` (and, when set, `texture_under`/`texture_over` at ratio 1) as a 9-patch. Godot default false. */
   ninePatchStretch?: boolean;
@@ -25,7 +26,7 @@ export interface TextureProgressBarProperties extends ControlProperties, RangePr
   textureProgressOffset?: { x: number; y: number };
   /** Raw `texture_under` ref. */
   textureUnder?: string;
-  tintOver?: ControlColor;
-  tintProgress?: ControlColor;
-  tintUnder?: ControlColor;
+  tintOver?: Rgba;
+  tintProgress?: Rgba;
+  tintUnder?: Rgba;
 }

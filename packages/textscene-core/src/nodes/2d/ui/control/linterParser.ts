@@ -11,13 +11,21 @@ import { accepts, hintedBitField, v, propertyError } from '../../../../linter/va
 import { THEME_OVERRIDE_VALIDATORS } from '../../../../linter/validators/themeOverrides.js';
 import {
   arrayLiteralBody,
-  CURSOR_MAX,
-  CURSOR_SHAPES,
-  dropTrailingComma,
   nodePathLiteral,
-  splitTopLevel,
   TYPED_WRAPPER_RE,
-} from '../../../../godot/index.js';
+} from '../../../../godot/variant/variantParser.js';
+import {
+  ACCESSIBILITY_LIVE_NAMES,
+  CONTROL_RECURSIVE_BEHAVIOR_NAMES,
+  CURSOR_SHAPES,
+  FOCUS_MODE_NAMES,
+  GrowDirection,
+  LAYOUT_DIRECTION_NAMES,
+  MOUSE_FILTER_NAMES,
+  SIZE_FLAGS_LABELS,
+} from '../../../../godot/scene/control.js';
+import { AUTO_TRANSLATE_MODE_NAMES } from '../../../../godot/scene/node.js';
+import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 
 /**
  * The four `accessibility_*_nodes` properties (control.cpp:4313-4316) have `TypedArray<NodePath>`
@@ -75,18 +83,6 @@ function nodePathArray(name: string): PropertyValidator {
   return accepts(validator, 'Array[NodePath]([NodePath("path"), …]) or [NodePath("path") or "path", …]');
 }
 
-/**
- * The `Control::SizeFlags` bits the `size_flags_*` hints name (control.h:80-83,
- * control.cpp:4388-4392). `SIZE_SHRINK_BEGIN = 0` (control.h:79) is the empty set and
- * `SIZE_EXPAND_FILL = 3` (control.h:85, control.cpp:4390) is `SIZE_EXPAND | SIZE_FILL`.
- */
-const SIZE_FLAGS_LABELS = {
-  1: 'SIZE_FILL',
-  2: 'SIZE_EXPAND',
-  4: 'SIZE_SHRINK_CENTER',
-  8: 'SIZE_SHRINK_END',
-};
-
 validatorRegistry.registerAll(
   'Control',
   {
@@ -112,10 +108,18 @@ validatorRegistry.registerAll(
     offset_bottom: v.float('offset_bottom'),
     // control.cpp:4261, ENUM "Left,Right,Both". set_h_grow_direction:
     // `ERR_FAIL_INDEX((int)p_direction, 3)` (control.cpp:861).
-    grow_horizontal: v.int('grow_horizontal', { min: 0, max: 2, enforced: 'control.cpp:861' }),
+    grow_horizontal: v.int('grow_horizontal', {
+      min: GrowDirection.GROW_DIRECTION_BEGIN,
+      max: GrowDirection.GROW_DIRECTION_BOTH,
+      enforced: 'control.cpp:861',
+    }),
     // control.cpp:4262, ENUM "Top,Bottom,Both". set_v_grow_direction:
     // `ERR_FAIL_INDEX((int)p_direction, 3)` (control.cpp:878).
-    grow_vertical: v.int('grow_vertical', { min: 0, max: 2, enforced: 'control.cpp:878' }),
+    grow_vertical: v.int('grow_vertical', {
+      min: GrowDirection.GROW_DIRECTION_BEGIN,
+      max: GrowDirection.GROW_DIRECTION_BOTH,
+      enforced: 'control.cpp:878',
+    }),
     rotation: v.float('rotation'),
     scale: v.vector2('scale'),
     pivot_offset: v.vector2('pivot_offset'),
@@ -144,22 +148,10 @@ validatorRegistry.registerAll(
 
     // control.cpp:4301, ENUM "Stop,Pass (Propagate Up),Ignore" (MouseFilter 0-2,
     // control.h:88-92). set_mouse_filter (control.cpp:1923) is `ERR_FAIL_INDEX(p_filter, 3)`.
-    mouse_filter: v.enumInt(
-      'mouse_filter',
-      0,
-      2,
-      { 0: 'STOP', 1: 'PASS', 2: 'IGNORE' },
-      { enforced: 'control.cpp:1923' }
-    ),
+    mouse_filter: v.enumInt('mouse_filter', MOUSE_FILTER_NAMES, { enforced: 'control.cpp:1923' }),
     // control.cpp:4297, ENUM "None,Click,All,Accessibility" (FocusMode 0-3, control.h:65-70).
     // set_focus_mode (control.cpp:2267) is `ERR_FAIL_INDEX((int)p_focus_mode, 4)`.
-    focus_mode: v.enumInt(
-      'focus_mode',
-      0,
-      3,
-      { 0: 'NONE', 1: 'CLICK', 2: 'ALL', 3: 'ACCESSIBILITY' },
-      { enforced: 'control.cpp:2267' }
-    ),
+    focus_mode: v.enumInt('focus_mode', FOCUS_MODE_NAMES, { enforced: 'control.cpp:2267' }),
   },
   // Shared with Window: control.cpp:432/446 state the same two hints as window.cpp:183/207.
   // linter/validators/themeOverrides.ts holds the grounding.
@@ -170,13 +162,9 @@ validatorRegistry.registerAll(
     accessibility_description: v.quotedString('accessibility_description'),
     // control.cpp:4312, ENUM "Off,Polite,Assertive" = DisplayServer::AccessibilityLiveMode
     // (display/display_server.cpp:1768-1770). The field is full-width (control.h:259): hinted, not enforced.
-    accessibility_live: v.enumInt(
-      'accessibility_live',
-      0,
-      2,
-      { 0: 'OFF', 1: 'POLITE', 2: 'ASSERTIVE' },
-      { hinted: 'control.cpp:4312' }
-    ),
+    accessibility_live: v.enumInt('accessibility_live', ACCESSIBILITY_LIVE_NAMES, {
+      hinted: 'control.cpp:4312',
+    }),
     accessibility_controls_nodes: nodePathArray('accessibility_controls_nodes'),
     accessibility_described_by_nodes: nodePathArray('accessibility_described_by_nodes'),
     accessibility_labeled_by_nodes: nodePathArray('accessibility_labeled_by_nodes'),
@@ -193,42 +181,28 @@ validatorRegistry.registerAll(
     focus_previous: v.nodePath('focus_previous'),
     // control.cpp:2295, ERR_FAIL_INDEX((int)p_focus_behavior_recursive, 3).
     // ENUM "Inherited,Disabled,Enabled" (control.h:72-76).
-    focus_behavior_recursive: v.enumInt(
-      'focus_behavior_recursive',
-      0,
-      2,
-      { 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' },
-      { enforced: 'control.cpp:2295' }
-    ),
+    focus_behavior_recursive: v.enumInt('focus_behavior_recursive', CONTROL_RECURSIVE_BEHAVIOR_NAMES, {
+      enforced: 'control.cpp:2295',
+    }),
 
     // "Mouse" group. control.cpp:1953, ERR_FAIL_INDEX(p_mouse_behavior_recursive, 3).
     // The values of focus_behavior_recursive (control.h:94-98).
-    mouse_behavior_recursive: v.enumInt(
-      'mouse_behavior_recursive',
-      0,
-      2,
-      { 0: 'INHERITED', 1: 'DISABLED', 2: 'ENABLED' },
-      { enforced: 'control.cpp:1953' }
-    ),
+    mouse_behavior_recursive: v.enumInt('mouse_behavior_recursive', CONTROL_RECURSIVE_BEHAVIOR_NAMES, {
+      enforced: 'control.cpp:1953',
+    }),
     mouse_force_pass_scroll_events: v.boolean('mouse_force_pass_scroll_events'),
     // control.cpp:2877, ERR_FAIL_INDEX(int(p_shape), CURSOR_MAX). The table lives in
     // `godot/scene/control.ts` because SubViewportContainer's rule reads it too.
-    mouse_default_cursor_shape: v.enumInt('mouse_default_cursor_shape', 0, CURSOR_MAX - 1, CURSOR_SHAPES, {
+    mouse_default_cursor_shape: v.enumInt('mouse_default_cursor_shape', CURSOR_SHAPES, {
       enforced: 'control.cpp:2877',
     }),
 
     clip_contents: v.boolean('clip_contents'),
     localize_numeral_system: v.boolean('localize_numeral_system'),
-    // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX = 5) (control.h:154-160).
-    // The early return at :3536 compares with data.layout_dir, which holds only values
-    // that passed this guard, so it never catches an out-of-range write.
-    layout_direction: v.enumInt(
-      'layout_direction',
-      0,
-      4,
-      { 0: 'INHERITED', 1: 'APPLICATION_LOCALE', 2: 'LTR', 3: 'RTL', 4: 'SYSTEM_LOCALE' },
-      { enforced: 'control.cpp:3539' }
-    ),
+    // control.cpp:3539, ERR_FAIL_INDEX(p_direction, LAYOUT_DIRECTION_MAX). The early return at
+    // :3536 compares with data.layout_dir, which holds only values that passed this guard, so it
+    // never catches an out-of-range write.
+    layout_direction: v.enumInt('layout_direction', LAYOUT_DIRECTION_NAMES, { enforced: 'control.cpp:3539' }),
     // Variant::OBJECT with PROPERTY_HINT_NODE_TYPE (control.cpp:4307): the writer stores
     // `get_path_to(n)`, a NodePath (packed_scene.cpp:884-891). `null` loads too: NIL converts to
     // OBJECT (variant.cpp:543-545), and the setter stores an empty ObjectID (control.cpp:2022-2027).
@@ -242,13 +216,9 @@ validatorRegistry.registerAll(
     theme_type_variation: v.stringName('theme_type_variation'),
     // control.cpp:3657-3660 assigns a full-width field (control.h:298). ENUM "Inherit,Always,Disabled"
     // = Node::AutoTranslateMode (main/node.cpp:4032-4034). Hinted, not enforced.
-    tooltip_auto_translate_mode: v.enumInt(
-      'tooltip_auto_translate_mode',
-      0,
-      2,
-      { 0: 'INHERIT', 1: 'ALWAYS', 2: 'DISABLED' },
-      { hinted: 'control.cpp:4288' }
-    ),
+    tooltip_auto_translate_mode: v.enumInt('tooltip_auto_translate_mode', AUTO_TRANSLATE_MODE_NAMES, {
+      hinted: 'control.cpp:4288',
+    }),
     tooltip_text: v.quotedString('tooltip_text'),
   }
 );

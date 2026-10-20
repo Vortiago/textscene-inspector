@@ -7,7 +7,6 @@
 import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import {
-  PAINT_SEQUENCE_STRIDE,
   allocateNodePaintRange,
   allocatePaintRange,
   canvasKeyAtZ,
@@ -76,14 +75,14 @@ describe('canvasRenderOrder', () => {
     // `CANVAS_ITEM_Z_MIN/MAX` is ±4096 and the sequence stride has to hold a
     // whole scene's worth of items; the product must still be exactly
     // comparable, since three compares renderOrder with `!==`.
-    const extreme = canvasRenderOrder({ layerRank: 64, zFinal: 4096, sequence: PAINT_SEQUENCE_STRIDE - 1 });
+    const extreme = canvasRenderOrder({ layerRank: 64, zFinal: 4096, sequence: WHOLE_CANVAS_RANGE.size - 1 });
     expect(Number.isSafeInteger(extreme)).toBe(true);
   });
 
   it('saturates a sequence past the stride rather than carrying into the next bucket', () => {
     // A carry would move the item to another z or layer. A tie inside its own
     // bucket is the lesser failure.
-    const overflowed = canvasRenderOrder({ layerRank: 0, zFinal: 0, sequence: PAINT_SEQUENCE_STRIDE + 5 });
+    const overflowed = canvasRenderOrder({ layerRank: 0, zFinal: 0, sequence: WHOLE_CANVAS_RANGE.size + 5 });
     const nextBucket = canvasRenderOrder({ layerRank: 0, zFinal: 1, sequence: 0 });
     expect(overflowed).toBeLessThan(nextBucket);
   });

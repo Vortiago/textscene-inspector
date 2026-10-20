@@ -8,5 +8,3 @@ import { spinBoxMinimumSize, spinBoxTextureSlots } from './nativeSolver';
 controlComponentRegistry.register({ typeName: 'SpinBox', Component: SpinBox });
 controlSolverRegistry.registerMinimumSize('SpinBox', spinBoxMinimumSize);
 controlSolverRegistry.registerTextureSlots('SpinBox', spinBoxTextureSlots);
-
-export { SpinBox };

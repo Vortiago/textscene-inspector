@@ -4,8 +4,7 @@
  * No component or THREE import: the shell's initial-paint bundle loads it.
  */
 
-import type { TscnNode } from '../../parser/types';
-import { descendsFrom } from '../../godot/classdb/nodeBaseTypes.js';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 
 /**
  * What this previewer can draw: a hand-kept mirror of ControlComponentRegistry,
@@ -86,14 +85,5 @@ export const TWO_D_UI_TYPES = new Set<string>([
  * `Node`, so it is named: it roots a 2D UI subtree.
  */
 export function is2DUIType(type: string): boolean {
-  return type === 'CanvasLayer' || descendsFrom(type, 'Control');
-}
-
-/** True when any node in the subtree is a 2D-UI (Control/CanvasLayer) type. */
-export function has2DUIContent(nodes: readonly TscnNode[]): boolean {
-  for (const node of nodes) {
-    if (is2DUIType(node.type)) return true;
-    if (has2DUIContent(node.children)) return true;
-  }
-  return false;
+  return type === 'CanvasLayer' || descendsFromClass(type, 'Control');
 }

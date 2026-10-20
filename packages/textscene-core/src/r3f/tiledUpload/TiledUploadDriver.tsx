@@ -16,7 +16,7 @@ import { webglUploadRenderer } from './webglUploadRenderer';
  * Upload time a frame may spend, half of a 60 Hz frame. The other half stays for
  * the render, so a frame with bands in it still makes its vsync.
  */
-export const FRAME_UPLOAD_BUDGET_MS = 8;
+const FRAME_UPLOAD_BUDGET_MS = 8;
 
 export function TiledUploadDriver({ children }: { children: ReactNode }) {
   const renderer = useThree((state) => state.gl);

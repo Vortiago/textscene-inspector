@@ -13,7 +13,7 @@ import {
   type CsgPolygonSpec,
 } from './polygonSweepSpec';
 
-export interface ExtrusionCounts {
+interface ExtrusionCounts {
   extrusions: number;
   endCount: number;
 }

@@ -10,43 +10,21 @@ import '../resource/linterValidators.js';
 import { validatorRegistry } from '../../linter/ValidatorRegistry.js';
 import { v } from '../../linter/validators/index.js';
 import { layerFamilyKeys } from './layerValidators.js';
+import { TILE_LAYOUT_NAMES, TILE_OFFSET_AXIS_NAMES, TILE_SHAPE_NAMES } from '../../godot/scene/tileSet.js';
 import { terrainSetValidator } from './terrainValidators.js';
 import { patternValidator, sourceValidator, tileProxyValidator } from './sourceValidators.js';
-
-/** tile_set.h:244-249. */
-const TILE_SHAPE = {
-  0: 'TILE_SHAPE_SQUARE',
-  1: 'TILE_SHAPE_ISOMETRIC',
-  2: 'TILE_SHAPE_HALF_OFFSET_SQUARE',
-  3: 'TILE_SHAPE_HEXAGON',
-};
-
-/** tile_set.h:251-258. */
-const TILE_LAYOUT = {
-  0: 'TILE_LAYOUT_STACKED',
-  1: 'TILE_LAYOUT_STACKED_OFFSET',
-  2: 'TILE_LAYOUT_STAIRS_RIGHT',
-  3: 'TILE_LAYOUT_STAIRS_DOWN',
-  4: 'TILE_LAYOUT_DIAMOND_RIGHT',
-  5: 'TILE_LAYOUT_DIAMOND_DOWN',
-};
-
-/** tile_set.h:260-263. */
-const TILE_OFFSET_AXIS = { 0: 'TILE_OFFSET_AXIS_HORIZONTAL', 1: 'TILE_OFFSET_AXIS_VERTICAL' };
 
 validatorRegistry.registerAll(
   'TileSet',
   {
     // tile_set.cpp:4266. set_tile_shape (:352) assigns and re-notifies; no guard.
-    tile_shape: v.enumInt('tile_shape', 0, 3, TILE_SHAPE, { hinted: 'tile_set.cpp:4266' }),
+    tile_shape: v.enumInt('tile_shape', TILE_SHAPE_NAMES, { hinted: 'tile_set.cpp:4266' }),
     // tile_set.cpp:4267. set_tile_layout (:368) is an assignment and an
     // emit_changed. Read only for a half-offset shape, but the value is stored
     // whatever tile_shape says, so the shape is no bound on it.
-    tile_layout: v.enumInt('tile_layout', 0, 5, TILE_LAYOUT, { hinted: 'tile_set.cpp:4267' }),
+    tile_layout: v.enumInt('tile_layout', TILE_LAYOUT_NAMES, { hinted: 'tile_set.cpp:4267' }),
     // tile_set.cpp:4268. set_tile_offset_axis (:376) assigns straight through.
-    tile_offset_axis: v.enumInt('tile_offset_axis', 0, 1, TILE_OFFSET_AXIS, {
-      hinted: 'tile_set.cpp:4268',
-    }),
+    tile_offset_axis: v.enumInt('tile_offset_axis', TILE_OFFSET_AXIS_NAMES, { hinted: 'tile_set.cpp:4268' }),
     // tile_set.cpp:4269, VECTOR2I with no range hint. set_tile_size opens
     // `ERR_FAIL_COND(p_size.x < 1 || p_size.y < 1)` (:392), so a zero or negative
     // extent never reaches the field.

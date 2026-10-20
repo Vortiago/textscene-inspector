@@ -1,7 +1,8 @@
 /**
  * Installs Godot's fog into three's programs: every fog program blends the depth fog and the
  * volumetric fog in one step before the tone curve (`scene_forward_clustered.glsl:2988`), and the
- * cube background fogs the sky as Godot's sky shader does (`sky.glsl:281-295`).
+ * cube and flat backgrounds fog the sky and the clear colour as Godot's sky shader does
+ * (`sky.glsl:281-295`).
  */
 
 import * as THREE from 'three';
@@ -9,6 +10,8 @@ import { applyChunkEdits, installChunkPatch, onChunk } from '../shaderPatch/chun
 import { installMergedUniform, FOG_UNIFORMS_MERGE } from '../shaderPatch/litUniform.js';
 import { GODOT_FOG_PARS, GODOT_FOG_PARS_CHUNK } from './fogChunks.js';
 import { fogUniformRecord } from './fogUniforms.js';
+import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection.js';
+import { backgroundCube, backgroundPlane } from '../shaderPatch/backgroundPrograms.js';
 
 const VIEW_VARYING = 'vGodotFogView';
 
@@ -48,7 +51,11 @@ function godotFogChunks(chunks: Record<FogChunk, string>): Record<FogChunk, stri
   };
 }
 
-const THREE_BACKGROUND_TONE_CURVE = '\t#include <tonemapping_fragment>';
+/** three's background tone curve line, ahead of which the sky fog and the debanding go. */
+export const THREE_BACKGROUND_TONE_CURVE = '\t#include <tonemapping_fragment>';
+
+/** The sky fog's function, which marks a background chunk that holds the fog. */
+export const SKY_FOG = 'godotSkyFog';
 
 /** three's cube background, fogged after its intensity, as Godot's sky is after its brightness. */
 const fogBackgroundCube = onChunk('backgroundCube_frag', (shader) => {
@@ -56,15 +63,36 @@ const fogBackgroundCube = onChunk('backgroundCube_frag', (shader) => {
     {
       chunk: 'backgroundCube_frag',
       three: THREE_BACKGROUND_TONE_CURVE,
-      godot: `\tgl_FragColor.rgb = godotSkyFog( gl_FragColor.rgb, vWorldDirection );\n${THREE_BACKGROUND_TONE_CURVE}`,
+      godot: `\tgl_FragColor.rgb = ${SKY_FOG}( gl_FragColor.rgb, vWorldDirection );\n${THREE_BACKGROUND_TONE_CURVE}`,
     },
   ]);
   return fogged && `#include <${GODOT_FOG_PARS_CHUNK}>\n${fogged.backgroundCube_frag}`;
 });
 
-/** three's cube background shader (r186 `ShaderLib.js:231-243`), which its types leave optional. */
-function backgroundCube(): THREE.ShaderLibShader {
-  return THREE.ShaderLib.backgroundCube!;
+/** three's flat background vertex, which hands on the world direction of each pixel's view ray. */
+const THREE_PLANE_POSITION = 'gl_Position = vec4( position.xy, 1.0, 1.0 );';
+
+/** three's flat background, a colour background, fogged after its intensity as the cube is. */
+function fogBackgroundPlane(chunks: Record<'background_vert' | 'background_frag', string>) {
+  const fogged = applyChunkEdits(chunks, [
+    {
+      chunk: 'background_vert',
+      three: THREE_PLANE_POSITION,
+      godot: /* glsl */ `${THREE_PLANE_POSITION}
+	vWorldDirection = normalize( ( vec4( ${GODOT_SKY_VIEW_RAY}, 0.0 ) * viewMatrix ).xyz );`,
+    },
+    {
+      chunk: 'background_frag',
+      three: THREE_BACKGROUND_TONE_CURVE,
+      godot: `\tgl_FragColor.rgb = ${SKY_FOG}( gl_FragColor.rgb, vWorldDirection );\n${THREE_BACKGROUND_TONE_CURVE}`,
+    },
+  ]);
+  return (
+    fogged && {
+      background_vert: `varying vec3 vWorldDirection;\n${fogged.background_vert}`,
+      background_frag: `#include <${GODOT_FOG_PARS_CHUNK}>\nvarying vec3 vWorldDirection;\n${fogged.background_frag}`,
+    }
+  );
 }
 
 /**
@@ -83,13 +111,24 @@ export function installFogComposite(): void {
   });
   const isBackgroundFogged = installChunkPatch({
     names: ['backgroundCube_frag'],
-    isApplied: (chunks) => chunks.backgroundCube_frag.includes('godotSkyFog'),
+    isApplied: (chunks) => chunks.backgroundCube_frag.includes(SKY_FOG),
     apply: fogBackgroundCube,
     missing: `backgroundCube_frag has no ${THREE_BACKGROUND_TONE_CURVE.trim()}`,
   });
   if (isBackgroundFogged) backgroundCube().fragmentShader = THREE.ShaderChunk.backgroundCube_frag;
+  const isPlaneFogged = installChunkPatch({
+    names: ['background_vert', 'background_frag'],
+    isApplied: (chunks) => chunks.background_frag.includes(SKY_FOG),
+    apply: fogBackgroundPlane,
+    missing: `background_vert has no ${THREE_PLANE_POSITION}, or background_frag has no ${THREE_BACKGROUND_TONE_CURVE.trim()}`,
+  });
+  if (isPlaneFogged) {
+    backgroundPlane().vertexShader = THREE.ShaderChunk.background_vert;
+    backgroundPlane().fragmentShader = THREE.ShaderChunk.background_frag;
+  }
   for (const [name, uniform] of Object.entries(fogUniformRecord())) {
     installMergedUniform(FOG_UNIFORMS_MERGE, name, uniform.value);
     backgroundCube().uniforms[name] = { value: uniform.value };
+    backgroundPlane().uniforms[name] = { value: uniform.value };
   }
 }
