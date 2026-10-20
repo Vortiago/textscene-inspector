@@ -77,8 +77,8 @@ renders, and they drive no other node. `BoneAttachment3D` also writes only its
 own transform, but from a bone pose the scene file already holds, with no
 session, so following that pose is a drive the previewer can run and has not.
 `RemoteTransform2D`/`3D` are the middle row: the relay is implemented once at
-load, so their sheets move to `limitation`, not to a gap. `SpringArm3D` is out of
-the ledger: it places its children only outside the editor
-(`spring_arm_3d.cpp:39`), and the previewer shows the editor pose, as it does for
-a physics body. It registers as a drawing type for its length gizmo, and its
-sheet is `limitation` with a **Needs runtime** line.
+load, so their sheets move to `limitation`, not to a gap. `SpringArm3D` places its
+children only outside the editor (`spring_arm_3d.cpp:39`), and the previewer
+shows the editor pose, as it does for a physics body. So it is no gap and is not in
+the ledger: it registers as a drawing type for its length gizmo, and its sheet is `limitation`
+with a **Needs runtime** line.

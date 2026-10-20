@@ -1,6 +1,5 @@
 /**
- * SpringArm3D registration: it is parsed and drawn as its editor gizmo. Godot moves its children
- * only in a running game (`spring_arm_3d.cpp:39`), so the editor pose it mirrors has no gap.
+ * SpringArm3D registration: it is parsed and drawn as its editor gizmo.
  */
 
 import { describe, expect, it } from 'vitest';

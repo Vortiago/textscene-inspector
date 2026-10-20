@@ -49,15 +49,16 @@ export function NodeDetailsPanel() {
       <h3 className={styles.title}>{node.name}</h3>
 
       {/*
-        A banner, not a replacement: an undrawn node still has parsed and
-        validated properties. The Type row below states the type.
+        A banner, not a replacement: a node with a gap still has parsed and
+        validated properties. The Type row below states the type. The gap may
+        be an own draw or a drive, and an editor gizmo may still draw (ADR-0045).
       */}
       {isNotRendered && (
         <div className={`${styles.section} ${styles.warningSection}`}>
           <h4 className={styles.sectionTitle}>Not Implemented</h4>
           <p className={styles.warningText}>
-            This node type is not yet drawn by the previewer. It is preserved in the tree and its properties
-            are parsed, but nothing appears in the viewport.
+            This node type is not fully implemented by the previewer. It is preserved in the tree and its
+            properties are parsed, but its own drawing or its effect on other nodes is missing.
           </p>
         </div>
       )}

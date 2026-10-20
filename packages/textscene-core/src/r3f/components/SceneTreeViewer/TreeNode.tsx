@@ -227,7 +227,7 @@ function TreeNodeImpl({
         {isUnsupported && (
           <span
             className={styles.notImplementedBadge}
-            title={`${effective.type} is not yet supported by the renderer`}
+            title={`${effective.type} is not fully supported by the renderer`}
           >
             Not Implemented
           </span>

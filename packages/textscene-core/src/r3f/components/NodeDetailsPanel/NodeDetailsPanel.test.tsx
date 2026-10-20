@@ -8,6 +8,7 @@ import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
+import '../../../nodes/rendering/shaderglobalsoverride/index.r3f';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -73,6 +74,29 @@ describe('<NodeDetailsPanel>', () => {
     expect(screen.getByText(FAKE_TYPE)).toBeTruthy();
   });
 
+  it('words the banner for a drive gap without claiming that nothing appears', async () => {
+    // ShaderGlobalsOverride mounts its base, so its subtree appears, and its effect on materials is the gap.
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Overrides', 'ShaderGlobalsOverride')],
+    });
+
+    render(
+      <>
+        <NodeDetailsPanel />
+        <Selector path="Overrides" />
+      </>,
+      { wrapper: panelWrap(graph) }
+    );
+
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+
+    expect(screen.getByText('Not Implemented')).toBeTruthy();
+    expect(screen.getByText(/effect on other nodes/i)).toBeTruthy();
+    expect(screen.queryByText(/nothing appears in the viewport/i)).toBeNull();
+  });
+
   it('renders the "Not Implemented" banner for unregistered types', async () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('Mystery', 'TotallyUnknownType')],
@@ -91,7 +115,7 @@ describe('<NodeDetailsPanel>', () => {
     });
 
     expect(screen.getByText('Not Implemented')).toBeTruthy();
-    expect(screen.getByText(/not yet drawn/i)).toBeTruthy();
+    expect(screen.getByText(/not fully implemented/i)).toBeTruthy();
     // The banner sits above the details, not in their place: an unrendered node
     // still has parsed, validated properties to inspect.
     expect(screen.getByRole('heading', { name: 'Mystery' })).toBeTruthy();
