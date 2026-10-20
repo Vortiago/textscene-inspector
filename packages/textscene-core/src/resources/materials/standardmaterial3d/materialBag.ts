@@ -27,7 +27,7 @@ import {
 } from '../../../r3f/materials/emissionTextureAdd';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
-import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
+import { GODOT_NORMAL_MAP_READ, GODOT_UNIT_TANGENT_FRAME } from '../../../r3f/materials/godotNormalMap';
 import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
@@ -393,6 +393,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
     pbr.roughnessMap || pbr.metalnessMap ? GODOT_METALLIC_ROUGHNESS_CHANNELS : undefined,
     pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
+    isAnisotropic(scalars) ? GODOT_UNIT_TANGENT_FRAME : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),

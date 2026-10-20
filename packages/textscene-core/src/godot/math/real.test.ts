@@ -1,6 +1,6 @@
 /** The `real_t` storage facts: a single-precision round, and the text that names it. */
 import { describe, it, expect } from 'vitest';
-import { formatReal, storedReal, storedVector3 } from './real.js';
+import { formatReal, storedReal, storedVector2, storedVector3 } from './real.js';
 
 describe('storedReal', () => {
   it('rounds to the nearest single-precision value', () => {
@@ -34,6 +34,12 @@ describe('formatReal', () => {
     expect(formatReal(Infinity)).toBe('inf');
     expect(formatReal(-Infinity)).toBe('-inf');
     expect(formatReal(NaN)).toBe('nan');
+  });
+});
+
+describe('storedVector2', () => {
+  it('rounds each component to single precision', () => {
+    expect(storedVector2({ x: 0.99, y: 2 })).toEqual({ x: storedReal(0.99), y: 2 });
   });
 });
 
