@@ -6,6 +6,9 @@
 
 export const CANVAS_2D_SCENES = [
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn', mode: '2d' },
+  // An INT component past int32 wraps as Godot stores it. Godot probes: (260,160) red, the square at
+  // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
+  { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn', mode: '2d' },
   { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d' },
   // Two chained Bone2Ds, each turned and moved, with a bar under each. Godot
   // probes: (387,210) orange, mid upper arm, and (473,340) blue, mid forearm.

@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+; Moves one variable: a Vector2i position component past the band an int32 slot round-trips.
+; Godot wraps an INT literal to int32 (`T(_data._int)`), so 4294967496 is 200 and -4294966996 is 300.
+; No other scene reads such a literal, so none shows a reader that refuses it. The linter reports the
+; alteration as an error, so negative-fixtures.json lists this scene.
+
+[node name="Root" type="Node2D"]
+
+[node name="WrappedPositive" type="Node2D" parent="."]
+position = Vector2i(4294967496, 100)
+
+[node name="Square" type="Polygon2D" parent="WrappedPositive"]
+color = Color(0.9, 0.2, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 120, 0, 120)
+
+[node name="WrappedNegative" type="Node2D" parent="."]
+position = Vector2i(8589935192, -4294966996)
+
+[node name="Square" type="Polygon2D" parent="WrappedNegative"]
+color = Color(0.2, 0.4, 0.9, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 120, 0, 120)
