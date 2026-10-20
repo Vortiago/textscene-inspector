@@ -118,7 +118,7 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
   // Heading 0 is dropped, not reported twice: in `packed_scene.cpp`'s `if (i > 0)`,
   // the missing-parent refusal (`:207`) and the `nparent = ret_nodes[0]` re-root
   // (`:208-215`) both sit in the `i > 0` arm, and heading 0 is refused above. It
-  // strands only when its path resolves nowhere and a later heading is parentless.
+  // is orphaned only when its path resolves nowhere and a later heading is parentless.
   const orphans = scene.orphanedNodes.filter(
     (origin) => origin !== rootOrigin && !emptyNodes.has(origin.node)
   );

@@ -26,7 +26,7 @@ export function rootDeclaringParent<N extends RawNode>(
  * Every heading spelling `parent=""`. `prepend_period()` (resource_format_text.cpp:206-207)
  * dereferences the `data` an empty NodePath never allocates (`node_path.cpp:43-44`,
  * `:394-397`), so the load faults. Positional like {@link rootDeclaringParent}: the
- * builder may root such a heading as readily as strand it.
+ * builder may root such a heading as readily as leave it out.
  */
 export function emptyParentHeadings<N extends RawNode>(all: readonly NodeOrigin<N>[]): NodeOrigin<N>[] {
   return all.filter(({ declaredParent }) => declaredParent === '');

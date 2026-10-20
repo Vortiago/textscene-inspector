@@ -34,7 +34,7 @@ export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOri
   const seatedByPath = new Set<N>([rootNode]);
   for (const [index, { node }] of origins.entries()) {
     if (node === rootNode) continue;
-    // A second parentless node is stranded here. `orphanedNodes` finds it by walking
+    // A second parentless node is orphaned here. `orphanedNodes` finds it by walking
     // the returned tree, so it holds no second copy of the resolution rules.
     if (!node.parent) continue;
 
@@ -80,7 +80,7 @@ function seatBelowParent<N extends SceneNode<N>>(
   if (!anchor) return false;
   anchor.node.children.push(node);
   node.instanceSubPath = anchor.subPath;
-  registerPath(tables, anchor.strandedParentPath, node);
+  registerPath(tables, anchor.foldedParentPath, node);
   return true;
 }
 
@@ -159,14 +159,14 @@ function registerPath<N extends RawNode>(tables: BuildTables<N>, parentPath: str
   if (isUniqueNameInOwner(node)) claimUniqueName(tables.uniquePaths, node.name, path);
 }
 
-/** The instance a stranded node hangs off, and where that node lands. */
+/** The instance an orphaned node hangs off, and where that node lands. */
 interface InstanceAnchor<N> {
   /** The enclosing `instance=` node. */
   node: N;
   /** The remainder of the path below it, for the sub-scene to match. */
   subPath: string;
-  /** The stranded node's own folded parent path, the key it is registered under. */
-  strandedParentPath: string;
+  /** The orphaned node's own folded parent path, the key it is registered under. */
+  foldedParentPath: string;
 }
 
 /**
@@ -190,7 +190,7 @@ function findInstanceAnchor<N extends RawNode>(
       return {
         node: candidate,
         subPath: segments.slice(depth).join('/'),
-        strandedParentPath: parentPath,
+        foldedParentPath: parentPath,
       };
     }
   }
