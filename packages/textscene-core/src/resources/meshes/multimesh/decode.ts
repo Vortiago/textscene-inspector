@@ -8,6 +8,7 @@
 import { parseOptionalAabb, parseOptionalInt } from '../../../parser/valueParsers.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { holdsResource } from '../../../godot/scene/geometryBase.js';
+import { MultiMeshTransformFormat } from '../../../godot/scene/multiMesh.js';
 import { isEmptyAabb, EMPTY_AABB, type Aabb } from '../../../godot/math/aabb.js';
 import {
   parsePackedColorArray,
@@ -17,15 +18,12 @@ import {
 } from '../../shapes/packedArray.js';
 import { TRANSFORM_FLOATS, type MultiMeshData } from './types.js';
 
-/** `MultiMesh::TRANSFORM_3D` (`multimesh.h:43`). Any other value takes the 2D read. */
-const TRANSFORM_3D = 1;
-
 /** Floats in one 2D buffer transform: the x and y rows, each with its origin component. */
 const TRANSFORM_2D_FLOATS = 8;
 
 /** The server's MultiMesh state that its box depends on. */
 class MultiMeshState {
-  format = 0;
+  format: number = MultiMeshTransformFormat.TRANSFORM_2D;
   usesColors = false;
   usesCustomData = false;
   instances = 0;
@@ -41,7 +39,8 @@ class MultiMeshState {
   boundedTransforms = new Float32Array(0);
 
   get stride(): number {
-    const transform = this.format === TRANSFORM_3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
+    const transform =
+      this.format === MultiMeshTransformFormat.TRANSFORM_3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
     return transform + (this.usesColors ? 4 : 0) + (this.usesCustomData ? 4 : 0);
   }
 
@@ -67,7 +66,8 @@ class MultiMeshState {
     for (let i = 0; i < count; i++) {
       const at = i * this.stride;
       const row = bounded.subarray(i * TRANSFORM_FLOATS, (i + 1) * TRANSFORM_FLOATS);
-      if (this.format === TRANSFORM_3D) row.set(data.subarray(at, at + TRANSFORM_FLOATS));
+      if (this.format === MultiMeshTransformFormat.TRANSFORM_3D)
+        row.set(data.subarray(at, at + TRANSFORM_FLOATS));
       else boundTransform2D(row, data, at);
     }
     this.boundedTransforms = bounded;
@@ -164,7 +164,7 @@ function setBuffer(state: MultiMeshState, value: string): void {
 
 /** The 3.x `transform_array` (`multimesh.cpp:38-60`), through `multimesh_instance_set_transform`. */
 function setTransforms3D(state: MultiMeshState, value: string): void {
-  if (state.format !== TRANSFORM_3D) return;
+  if (state.format !== MultiMeshTransformFormat.TRANSFORM_3D) return;
   const vectors = parsePackedVector3Array(value);
   const count = Math.floor(vectors.length / 3 / 4);
   if (count !== state.instances || count === 0) return;

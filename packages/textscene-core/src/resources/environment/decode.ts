@@ -5,7 +5,7 @@
  */
 
 import type { EnvironmentProperties } from './types';
-import { BackgroundMode } from './types';
+import { BackgroundMode } from '../../godot/scene/environment.js';
 import { TONEMAP_AGX_CONTRAST_DEFAULT } from '../../godot/rendering/environment/toneMapping.js';
 import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';

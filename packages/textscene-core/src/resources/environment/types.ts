@@ -6,15 +6,7 @@
 
 import type { Rgba } from '../../godot/math/math';
 import type { Vector3 } from '../../godot/math/vector';
-
-export enum BackgroundMode {
-  BG_CLEAR_COLOR = 0,
-  BG_COLOR = 1,
-  BG_SKY = 2,
-  BG_CANVAS = 3,
-  BG_KEEP = 4,
-  BG_CAMERA_FEED = 5,
-}
+import type { BackgroundMode } from '../../godot/scene/environment.js';
 
 export interface EnvironmentProperties {
   // Background

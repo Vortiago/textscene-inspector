@@ -11,12 +11,7 @@ import { validatorRegistry, type PropertyValidator } from '../../linter/Validato
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
 import { arrayLiteralElements, layerBitmask, propertyError, v } from '../../linter/validators/index.js';
 import { dropTrailingComma, splitTopLevel } from '../../godot/string/string.js';
-
-/**
- * `RS::ShadowCastingSetting`, the same four constants `GeometryInstance3D`
- * binds, and a different tier there, because that setter bare-assigns.
- */
-const CAST_SHADOW = { 0: 'OFF', 1: 'ON', 2: 'DOUBLE_SIDED', 3: 'SHADOWS_ONLY' };
+import { SHADOW_CASTING_SETTING_NAMES } from '../../godot/rendering/rendering.js';
 
 /**
  * `item/<i>/shapes`: a flat array of Shape3D, Transform3D pairs, as
@@ -60,7 +55,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // rather than the hint warning GeometryInstance3D.cast_shadow carries for the
   // same constants: `_set`'s switch maps every other value to
   // SHADOW_CASTING_SETTING_ON (:66-68), so what was written is altered.
-  mesh_cast_shadow: v.enumInt('mesh_cast_shadow', CAST_SHADOW, {
+  mesh_cast_shadow: v.enumInt('mesh_cast_shadow', SHADOW_CASTING_SETTING_NAMES, {
     enforced: 'mesh_library.cpp:66',
   }),
   // :150, Variant::ARRAY, no hint and no element type.
