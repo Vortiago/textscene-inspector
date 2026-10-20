@@ -332,7 +332,12 @@ describe('buildSceneTree', () => {
     it('drops a node whose parent is not found, and reports it', () => {
       const nodes: TscnNode[] = [node('Root'), node('Orphan', 'NonExistentParent')];
 
-      const origins = nodes.map((node, i) => ({ node, line: i + 1, declaredParent: node.parent }));
+      const origins = nodes.map((node, i) => ({
+        node,
+        line: i + 1,
+        declaredParent: node.parent,
+        uniqueId: 0,
+      }));
       const result = buildSceneTree(nodes);
 
       // Dropped from the tree, and named by the report rather than by a log
@@ -348,6 +353,7 @@ describe('buildSceneTree', () => {
         node,
         line: i + 1,
         declaredParent: node.parent,
+        uniqueId: 0,
       }));
 
       const result = buildSceneTree(nodes);
@@ -365,6 +371,7 @@ describe('buildSceneTree', () => {
         node,
         line: i + 1,
         declaredParent: node.parent,
+        uniqueId: 0,
       }));
 
       const result = buildSceneTree(nodes);
