@@ -92,8 +92,9 @@ resource section of its type. This path imports no React and no three.js, so the
 the VS Code extension host bundle it alone.
 
 **Language features.** `languageFeatures/` (`createLanguageDocument`) parses the text through
-the same scanning loop with a `ParseObserver`, then answers hover, completion, quick fixes,
-folding and document highlights. It reads the same `godot/` ClassDB captures and the same
+the same scanning loop with a `ParseObserver`, seats the `[node]` headings as the parsers do
+(`seatScene`), then answers hover, completion, quick fixes, folding, document highlights, go to
+definition and the outline. It reads the same `godot/` ClassDB captures and the same
 deprecated-alias table as the linter, so each engine fact has one source in `godot/`. It imports
 no React and no three.js, and every result is host-neutral with zero-based ranges (ADR-0049).
 

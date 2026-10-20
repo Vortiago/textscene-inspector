@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
-import { NODE_TREE_HEAD } from './fixtures.testkit';
+import { INSTANCED_TREE, NODE_TREE_HEAD } from './fixtures.testkit';
 import { definitionRangeAt, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
@@ -205,5 +205,39 @@ describe('definitionRangeAt of a node path under a %Name parent', () => {
     const character = unique.lines[4]!.indexOf('Player/Hand') + 1;
 
     expect(definitionRangeAt(unique, { line: 4, character })?.start.line).toBe(3);
+  });
+});
+
+describe('definitionRangeAt of a node path under an instanced scene', () => {
+  const instanced = new LanguageDocument(INSTANCED_TREE);
+  const definitionLine = (line: number, value: string): number | undefined =>
+    definitionRangeAt(instanced, { line, character: instanced.lines[line]!.indexOf(value) + 1 })?.start.line;
+
+  it('resolves a parent= to the heading seated under the instance', () => {
+    expect(definitionLine(8, 'Inst/Sub/X')).toBe(6);
+  });
+
+  it('resolves a to= to the heading seated under the instance', () => {
+    expect(definitionLine(10, 'Inst/Sub/X')).toBe(6);
+  });
+
+  it('gives nothing for a path into the instanced scene that no heading declares', () => {
+    expect(definitionLine(6, 'Inst/Sub')).toBe(undefined);
+  });
+});
+
+describe('definitionRangeAt of a node path two siblings share', () => {
+  it('resolves to the later sibling, which the child table keeps', () => {
+    // `_add_child_nocheck` inserts into `data.children` by name (node.cpp:1656), so the later wins.
+    const twins = new LanguageDocument(
+      [
+        '[node name="Root" type="Node3D"]',
+        '[node name="A" type="Node3D" parent="."]',
+        '[node name="A" type="Node2D" parent="."]',
+        '[connection signal="a" from="A" to="." method="_a"]',
+      ].join('\n')
+    );
+
+    expect(definitionRangeAt(twins, { line: 3, character: 30 })?.start.line).toBe(2);
   });
 });

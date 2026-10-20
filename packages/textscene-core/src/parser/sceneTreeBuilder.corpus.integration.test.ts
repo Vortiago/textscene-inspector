@@ -18,7 +18,7 @@ const SCENES = scenesDir();
 /** The one fixture whose whole purpose is an unresolvable parent path. */
 const INTENTIONAL_ORPHANS = new Set(['fixtures/edge-missing-parent.tscn']);
 
-describe('buildSceneTree over the whole corpus', () => {
+describe('seatScene over the whole corpus', () => {
   it('orphans nothing except the fixture that exists to be orphaned', () => {
     const scenes = sceneFiles(SCENES, (path) => path.endsWith('.tscn'));
     expect(scenes.length).toBeGreaterThan(200);

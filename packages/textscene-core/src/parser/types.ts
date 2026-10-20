@@ -5,7 +5,7 @@
 import type { Node3DProperties } from '../nodes/base/node3d/types';
 
 /**
- * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
+ * One `[node]` heading as the scan saw it, before `seatScene` placed it. Kept off
  * the node because only the `sceneTreeBuilder` checks read it, against the returned tree.
  */
 export interface NodeOrigin<N extends RawNode> {
@@ -109,6 +109,18 @@ export interface RawNode {
   instance?: string;
 }
 
+/**
+ * What a node path names in the authored tree. `unknowable` is the only decline: Godot's walk is
+ * deterministic, so there is no "ambiguous", and a rule that reports on a guess is worse than one
+ * that stays quiet.
+ */
+export type NodePathResolution<N extends RawNode = RawNode> =
+  | { readonly status: 'found'; readonly node: N }
+  /** The walk ran off the authored tree exactly as the engine's would. */
+  | { readonly status: 'missing' }
+  /** The walk entered, started inside, or ended on content this file does not declare. */
+  | { readonly status: 'unknowable' };
+
 /** A node whose children are its own kind: the shape the tree builder seats a child into. */
 export type SceneNode<N> = RawNode & { children: N[] };
 
@@ -159,6 +171,11 @@ export interface HeadingFacts {
   idRecoveries: ReadonlyMap<NodeOrigin<RawNode>, IdRecovery>;
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
+  /**
+   * The node a root-relative path names once every heading is seated, as instantiate resolves a
+   * connection's `from=` and `to=` (`packed_scene.cpp:161`, `:656-657`).
+   */
+  resolveRootPath(path: string): NodePathResolution;
   /**
    * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
    * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`

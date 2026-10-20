@@ -5,22 +5,11 @@
  * bare `"Body"` never reaches a sibling, an ancestor or an unrelated branch.
  */
 
-import { isUnderInstance, sceneUniqueClaims } from './linterUtils.js';
+import { isUnderInstance } from './linterUtils.js';
+import { cachedUniqueNameClaims } from '../utils/uniqueNames.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames } from '../godot/string/nodePath.js';
-import type { RawNode, RawScene } from '../parser/types.js';
-
-/**
- * What resolving a NodePath against the authored tree can say. `unknowable` is the
- * only decline: Godot's walk is deterministic, so there is no "ambiguous", and a rule
- * that reports on a guess is worse than one that stays quiet.
- */
-type NodePathResolution =
-  | { readonly status: 'found'; readonly node: RawNode }
-  /** The walk ran off the authored tree exactly as the engine's would. */
-  | { readonly status: 'missing' }
-  /** The walk entered, started inside, or ended on content this file does not declare. */
-  | { readonly status: 'unknowable' };
+import type { NodePathResolution, RawNode, RawScene } from '../parser/types.js';
 
 const UNKNOWABLE: NodePathResolution = { status: 'unknowable' };
 const MISSING: NodePathResolution = { status: 'missing' };
@@ -71,7 +60,7 @@ export function resolveNodePath(scene: RawScene, referencingNode: RawNode, path:
       // At an opaque node, a miss may be a name that file claims, and a hit may be
       // shadowed by one (:1935-1937).
       if (isTypeUnknowable(current)) return UNKNOWABLE;
-      const claimed = sceneUniqueClaims(scene.nodes).get(name);
+      const claimed = cachedUniqueNameClaims(scene.nodes).get(name);
       // The claim table is every node here carrying `unique_name_in_owner`, built in
       // `utils/uniqueNames.ts` and shared with the renderer, so a miss is a real null.
       if (!claimed) return MISSING;

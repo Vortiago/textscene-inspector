@@ -90,6 +90,11 @@ The optional hook **seam** (`onError`, `onSectionStart`, `onProperty`, `onSectio
 The lenient parser passes none, and the strict parser passes one that collects errors and runs validators.
 _Avoid_: "callback API", "strict mode flag".
 
+**Seating** (`seatScene` in `parser/sceneTreeBuilder.ts`):
+The scene tree the `[node]` headings form once each sits under the node its `parent=` names, in declaration order as instantiate places them, and the one walk that resolves a root-relative node path over it.
+Both parsers seat through it, and the linter and the **Language-feature engine** resolve `parent=`, `from=` and `to=` through its walk.
+_Avoid_: a second path table or `%Name` claim table over the headings.
+
 **Value decoder** (`parser/valueParsers.ts`):
 The lenient parser's shared primitives (`intOr`, `floatOr`, `parseOptionalFloat` and the others) that read a raw property string into a typed scalar or vector.
 The grammar is shared, but the absent/error contract may **fork** per slice.
@@ -125,7 +130,7 @@ A node or scene with `rawProperties` and no `properties`, which is what a **Lint
 _Avoid_: reading `properties` in a rule, or casting it to a string map.
 
 **Heading facts** (`HeadingFacts` in `parser/types.ts`):
-What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, each connection heading and instances outside a node body.
+What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, each connection heading, instances outside a node body and the **Seating** walk that resolves a connection's ends.
 Only the linter reads them, so only the strict parser's `StrictScene` carries them. The strict parser builds them from the headings the core returns beside the scene and from its own observer.
 _Avoid_: putting a linter-only field on `TscnScene`.
 
@@ -162,7 +167,7 @@ _Avoid_: a per-viewport rule scoped to the whole scene.
 
 **Language-feature engine** (`languageFeatures/`):
 The React- and THREE-free core area that answers editor requests for one `.tscn`: hover, completion, quick fixes, folding and document highlights.
-It reads the text through a **ParseObserver** on the scanning loop, and reads the `godot/` captures.
+It reads the text through a **ParseObserver** on the scanning loop, seats the `[node]` headings through the **Seating**, and reads the `godot/` captures.
 Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0049).
 _Avoid_: "LSP" for the engine. LSP names the protocol, which the `tscn-lsp` server speaks. "Language service".
 

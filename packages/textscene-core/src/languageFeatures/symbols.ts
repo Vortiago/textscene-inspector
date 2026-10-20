@@ -1,12 +1,10 @@
 /**
- * The scene tree as hierarchical document symbols. The heading's `parent=` names the node's
- * ancestor by its path relative to the scene root, so a node attaches to the section already seen
- * under that path. A node's range reaches through its descendants, so a child's range sits inside
- * its parent's, as an outline, breadcrumbs and sticky scroll expect.
+ * The scene tree as hierarchical document symbols, each node under the node Godot seats it under.
+ * A node's range reaches through its descendants, so a child's range sits inside its parent's, as
+ * an outline, breadcrumbs and sticky scroll expect.
  */
 
-import type { DocumentSection, LanguageDocument } from './document.js';
-import { nodeSectionOfPath } from './nodePathRefs.js';
+import type { LanguageDocument, SeatedSection } from './document.js';
 import { linesRange } from './ranges.js';
 import type { DocumentSymbol, SymbolKind } from './types.js';
 
@@ -21,64 +19,33 @@ function symbolKindOf(type: string): SymbolKind {
   return Object.hasOwn(SYMBOL_KIND_BY_TYPE, type) ? SYMBOL_KIND_BY_TYPE[type]! : 'object';
 }
 
-interface PendingSymbol {
-  readonly name: string;
-  readonly type: string;
-  /** One-based, as the parser counts. */
-  readonly headingLine: number;
-  /** One-based last line of the node's own body, before descendants extend it. */
-  readonly endLine: number;
-  readonly children: PendingSymbol[];
-}
-
-/**
- * Each node attaches under the node its `parent=` resolves to, among those already seen. A node
- * whose parent is missing, as in a malformed file, becomes a second root, so no symbol is lost.
- */
-function buildTree(document: LanguageDocument): PendingSymbol[] {
-  const roots: PendingSymbol[] = [];
-  const bySection = new Map<DocumentSection, PendingSymbol>();
-  for (const section of document.sections) {
-    const name = section.attributes.name;
-    // VS Code refuses a symbol with an empty name, and a heading being typed has one.
-    if (section.kind !== 'node' || !name) continue;
-    const symbol: PendingSymbol = {
-      name,
-      type: section.attributes.type ?? '',
-      headingLine: section.headingLine,
-      endLine: section.endLine,
-      children: [],
-    };
-    const parent = section.attributes.parent;
-    const parentSection = parent === undefined ? undefined : nodeSectionOfPath(document, parent);
-    const parentSymbol = parentSection && bySection.get(parentSection);
-    bySection.set(section, symbol);
-    if (parentSymbol) parentSymbol.children.push(symbol);
-    else roots.push(symbol);
-  }
-  return roots;
-}
-
-/** The last one-based line of a symbol's own body or of any descendant's. */
-function subtreeEnd(symbol: PendingSymbol): number {
-  let end = symbol.endLine;
-  for (const child of symbol.children) end = Math.max(end, subtreeEnd(child));
+/** The last one-based line of a node's own body or of any descendant's. */
+function subtreeEnd({ section, children }: SeatedSection): number {
+  let end = section.endLine;
+  for (const child of children) end = Math.max(end, subtreeEnd(child));
   return end;
 }
 
-function toSymbol(document: LanguageDocument, symbol: PendingSymbol): DocumentSymbol {
-  const headingLine = symbol.headingLine - 1;
+/** The symbols of nodes that have a name. VS Code refuses a symbol with an empty name, and a heading being typed has one. */
+function namedSymbols(document: LanguageDocument, nodes: readonly SeatedSection[]): DocumentSymbol[] {
+  return nodes.filter(({ section }) => section.attributes.name).map((node) => toSymbol(document, node));
+}
+
+function toSymbol(document: LanguageDocument, node: SeatedSection): DocumentSymbol {
+  const { attributes, headingLine } = node.section;
+  const type = attributes.type ?? '';
+  const line = headingLine - 1;
   return {
-    name: symbol.name,
-    detail: symbol.type,
-    kind: symbolKindOf(symbol.type),
-    range: linesRange(document, headingLine, subtreeEnd(symbol) - 1),
-    selectionRange: linesRange(document, headingLine, headingLine),
-    children: symbol.children.map((child) => toSymbol(document, child)),
+    name: attributes.name!,
+    detail: type,
+    kind: symbolKindOf(type),
+    range: linesRange(document, line, subtreeEnd(node) - 1),
+    selectionRange: linesRange(document, line, line),
+    children: namedSymbols(document, node.children),
   };
 }
 
 /** Every node of the document as a hierarchical symbol, the scene root first. */
 export function documentSymbols(document: LanguageDocument): readonly DocumentSymbol[] {
-  return buildTree(document).map((symbol) => toSymbol(document, symbol));
+  return namedSymbols(document, document.nodeTree);
 }

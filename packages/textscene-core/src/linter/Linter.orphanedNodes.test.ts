@@ -1,5 +1,5 @@
 /**
- * A `[node]` whose `parent=` path names nothing still gets a diagnostic: `buildSceneTree` cannot place it, so every
+ * A `[node]` whose `parent=` path names nothing still gets a diagnostic: `seatScene` cannot place it, so every
  * semantic rule would skip it and its descendants silently. Godot warns "Parent path '…' for node '…' has vanished when
  * instantiating" and re-parents it to the scene root as `<parent path>#<name>` (`packed_scene.cpp:208-215`, `:561-563`),
  * so the tier is a warning.
@@ -348,7 +348,7 @@ describe('a parent path this file never defines', () => {
   });
 
   it('reports an empty parent= the tree build seated as a root, not only a stranded one', () => {
-    // `parent=""` leaves `node.parent` unset, so `buildSceneTree` picks this
+    // `parent=""` leaves `node.parent` unset, so `seatScene` picks this
     // heading as its root and nothing strands it, while the loader faults on
     // it all the same. Verified against Godot 4.7.2: `load()` crashes.
     const source = scene(
@@ -435,7 +435,7 @@ describe('a root heading that declares a parent', () => {
   });
 
   it('names the FIRST heading, not whichever one the tree build rooted at', () => {
-    // `buildSceneTree` prefers a parentless heading wherever it sits, so here it
+    // `seatScene` prefers a parentless heading wherever it sits, so here it
     // roots at `Root` and seats `A` beneath it, a tree with nothing wrong in
     // it. Godot's root is `i == 0` regardless, so `A` is still the refusal.
     const errors = rootErrors(

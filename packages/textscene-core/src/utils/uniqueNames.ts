@@ -41,6 +41,17 @@ export function isUniqueNameInOwner(node: RawNode): boolean {
 }
 
 /**
+ * Whether the scene root owns a node, so its `%Name` lands in the root's table. An explicit `owner=`
+ * decides: `"."` is the root. Without one, an override heading inside an instance keeps the sub-scene's
+ * owner (resource_format_text.cpp:264-265 zeroes `owner` only when `!(type == TYPE_INSTANTIATED &&
+ * instance == -1)`), and every other node is the root's.
+ */
+export function isOwnedByRoot(node: RawNode, insideInstance: boolean): boolean {
+  if (node.owner !== undefined) return node.owner === '.';
+  return !(insideInstance && node.overridesExistingNode === true);
+}
+
+/**
  * Records `value` under `%name` unless an earlier node claimed it: `_acquire_unique_name_in_owner`
  * refuses to overwrite an entry (node.cpp:2225-2231). The one place the first-claimant rule lives.
  */
@@ -85,35 +96,24 @@ function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
   ): void => {
     for (const node of nodes) {
       // Two paths, since they diverge at a node whose `parent=` descends into instanced content.
-      // Only that node carries `instanceSubPath` (`buildSceneTree` registers it at its authored
+      // Only that node carries `instanceSubPath` (`seatScene` registers it at its authored
       // path), so folding it once is exact.
       const path = join(parentPath, node.name);
       const under = node.instanceSubPath ? join(parentLive, node.instanceSubPath) : parentLive;
       const livePath = join(under, node.name);
-      // An explicit `owner=` replaces the structural answer: `"."` is this root, anything else the
-      // node at that root-relative path.
-      const explicitOwner =
-        node.owner === undefined ? undefined : node.owner === '.' ? null : join(roots[0]!.name, node.owner);
-      // An override under an instance keeps the sub-scene's owner: resource_format_text.cpp:264-265
-      // zeroes `owner` only when `!(type == TYPE_INSTANTIATED && instance == -1)`. Its `%Name` lands
-      // on the sub-scene root's table (node.cpp:2222-2233), which `get_node` here never consults
-      // (node.cpp:1930-1938), so it records under that instance for the owner's table.
-      const claimOwner =
-        explicitOwner !== undefined
-          ? explicitOwner
-          : instanceOwner !== null && node.overridesExistingNode === true
-            ? instanceOwner
-            : null;
-      const ownedHere = claimOwner === null;
+      const ownedHere = isOwnedByRoot(node, instanceOwner !== null);
       // A node added inside instanced content is owned by this root.
       if (ownedHere && instanceOwner !== null) ownedInsideInstances.add(livePath);
       if (isUniqueNameInOwner(node)) {
-        if (!ownedHere) {
+        if (ownedHere) {
+          claimUniqueName(claims, node.name, { node, path, livePath });
+        } else {
+          // The node an explicit `owner=` names, or else the instance whose sub-scene root owns the
+          // override: `isOwnedByRoot` answers false without an `owner=` only inside an instance.
+          const claimOwner = node.owner === undefined ? instanceOwner! : join(roots[0]!.name, node.owner);
           const owned = instanceClaims.get(claimOwner) ?? [];
           owned.push({ node, path, livePath });
           instanceClaims.set(claimOwner, owned);
-        } else {
-          claimUniqueName(claims, node.name, { node, path, livePath });
         }
       }
       // An instanced root is this scene's own root, so its overrides stay claimed. An instance inside

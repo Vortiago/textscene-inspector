@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildSceneTree, strandedNodes } from './sceneTreeBuilder';
+import { seatScene, strandedNodes } from './sceneTreeBuilder';
 import type { TscnNode } from './types';
 
 /** A childless `Node3D`, a root when `parent` is absent. */
@@ -12,17 +12,17 @@ function node(name: string, parent?: string): TscnNode {
   return parent === undefined ? root : { ...root, parent };
 }
 
-describe('buildSceneTree', () => {
+describe('seatScene roots', () => {
   describe('empty and basic cases', () => {
     it('should return empty array for empty input', () => {
-      const result = buildSceneTree([]);
+      const result = seatScene([]).roots;
       expect(result).toEqual([]);
     });
 
     it('should handle single root node without children', () => {
       const nodes: TscnNode[] = [node('Root')];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result).toHaveLength(1);
       expect(result[0]!.name).toBe('Root');
@@ -32,7 +32,7 @@ describe('buildSceneTree', () => {
     it('should handle single root node without parent attribute', () => {
       const nodes: TscnNode[] = [node('Root')];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result).toHaveLength(1);
       expect(result[0]!.name).toBe('Root');
@@ -43,7 +43,7 @@ describe('buildSceneTree', () => {
     it('should attach child with parent="." to root node', () => {
       const nodes: TscnNode[] = [node('Root'), node('Child', '.')];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result).toHaveLength(1);
       expect(result[0]!.name).toBe('Root');
@@ -54,7 +54,7 @@ describe('buildSceneTree', () => {
     it('should attach multiple children with parent="." to root', () => {
       const nodes: TscnNode[] = [node('Root'), node('Child1', '.'), node('Child2', '.')];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result).toHaveLength(1);
       expect(result[0]!.children).toHaveLength(2);
@@ -67,7 +67,7 @@ describe('buildSceneTree', () => {
     it('should attach child to named parent', () => {
       const nodes: TscnNode[] = [node('Root'), node('Child', '.'), node('GrandChild', 'Child')];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result).toHaveLength(1);
       expect(result[0]!.name).toBe('Root');
@@ -86,7 +86,7 @@ describe('buildSceneTree', () => {
         node('GrandChild2', 'Child2'),
       ];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result).toHaveLength(1);
       const root = result[0]!;
@@ -122,7 +122,7 @@ describe('buildSceneTree', () => {
         nodes.push(node(`Level${i}`, parentPath));
       }
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       // Traverse down to verify depth
       let currentNode = result[0]!;
@@ -151,7 +151,7 @@ describe('buildSceneTree', () => {
         node('Robot', 'Player/Skeleton/Skeleton3D'),
       ];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       const player = root!.children[0]!;
       expect(player.name).toBe('Player');
@@ -171,7 +171,7 @@ describe('buildSceneTree', () => {
         node('Parallax', 'Player/Skeleton/CoinCount'),
       ];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       const coinCount = root!.children[0]!.children[0]!;
       expect(coinCount.name).toBe('CoinCount');
@@ -187,7 +187,7 @@ describe('buildSceneTree', () => {
         node('SplitscreenButton', 'ColorRect/CenterContainer/VBoxContainer'),
       ];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       expect(root!.children.map((c) => c.name)).toEqual(['SplitscreenButton']);
       expect(root!.children[0]!.instanceSubPath).toBe('ColorRect/CenterContainer/VBoxContainer');
@@ -198,7 +198,7 @@ describe('buildSceneTree', () => {
       // Re-rooting it would flatten a "deep" fixture's fifteen levels into siblings.
       const nodes = [node('Level0'), node('Level1', '.'), node('Level3', 'Level2')];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       expect(root!.children.map((c) => c.name)).toEqual(['Level1']);
     });
@@ -208,7 +208,7 @@ describe('buildSceneTree', () => {
       // visible here and an unresolvable path is a mistake, not an override.
       const nodes = [node('Main'), node('Player', '.'), node('Robot', 'Player/Skeleton')];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       expect(root!.children[0]!.children).toEqual([]);
     });
@@ -224,7 +224,7 @@ describe('buildSceneTree', () => {
         node('CollisionPolygon2D', 'Building/Inside/StaticBody2D'),
       ];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       const building = root!.children[0]!;
       expect(building.children.map((c) => c.name)).toEqual(['Inside', 'CollisionPolygon2D']);
@@ -241,7 +241,7 @@ describe('buildSceneTree', () => {
         node('Leaf', 'Mid/Ghost'),
       ];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       expect(root!.children.map((c) => c.name)).toEqual(['Mid', 'Leaf']);
       expect(root!.children[1]!.instanceSubPath).toBe('Mid/Ghost');
@@ -260,7 +260,7 @@ describe('buildSceneTree', () => {
         node('Hat', '%Player'),
       ];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       const player = root!.children[0]!;
       expect(player.name).toBe('Player');
@@ -280,7 +280,7 @@ describe('buildSceneTree', () => {
         }),
       ];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       expect(root!.children.map((c) => c.name)).toEqual(['Player']);
       expect(root!.children[0]!.children).toEqual([]);
@@ -291,7 +291,7 @@ describe('buildSceneTree', () => {
       // vanished rather than treating `%Player` as an ordinary child name.
       const nodes = [node('Root'), node('Player', '.'), node('Hat', '%Player')];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       expect(root!.children.map((c) => c.name)).toEqual(['Player']);
       expect(root!.children[0]!.children).toEqual([]);
@@ -303,7 +303,7 @@ describe('buildSceneTree', () => {
       // 4.7.2: `Body` re-roots as `Later#Body` with a warning, and swapped it seats.
       const nodes = [node('Root'), node('Body', 'Later'), node('Later', '.')];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       expect(root!.children.map((c) => c.name)).toEqual(['Later']);
       expect(root!.children[0]!.children).toEqual([]);
@@ -319,7 +319,7 @@ describe('buildSceneTree', () => {
         node('Deep', 'Outer/Inner/Body/Mesh'),
       ];
 
-      const [root] = buildSceneTree(nodes);
+      const [root] = seatScene(nodes).roots;
 
       const inner = root!.children[0]!.children[0]!;
       expect(inner.name).toBe('Inner');
@@ -338,7 +338,7 @@ describe('buildSceneTree', () => {
         declaredParent: node.parent,
         uniqueId: 0,
       }));
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       // Dropped from the tree, and named by the report rather than by a log
       // line: `strandedNodes` is the single derivation, and it is what the
@@ -356,7 +356,7 @@ describe('buildSceneTree', () => {
         uniqueId: 0,
       }));
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       // Heading 0 is the root, as in the engine, and every later heading is stranded
       // and named. Returning the flat list as roots would empty the report on the
@@ -374,7 +374,7 @@ describe('buildSceneTree', () => {
         uniqueId: 0,
       }));
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result.map((r) => r.name)).toEqual(['Root']);
       expect(strandedNodes(origins, result)).toEqual([]);
@@ -385,7 +385,7 @@ describe('buildSceneTree', () => {
     it('should handle root with children having parent attribute', () => {
       const nodes: TscnNode[] = [node('Root'), node('Child1', '.'), node('Child2', 'Child1')];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result).toHaveLength(1);
       expect(result[0]!.name).toBe('Root');
@@ -414,7 +414,7 @@ describe('buildSceneTree', () => {
         },
       ];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result[0]!.properties).toHaveProperty('customProp', 'value');
       expect(result[0]!.children[0]!.properties).toHaveProperty('anotherProp', 'test');
@@ -433,10 +433,112 @@ describe('buildSceneTree', () => {
         },
       ];
 
-      const result = buildSceneTree(nodes);
+      const result = seatScene(nodes).roots;
 
       expect(result[0]!.type).toBe('Node3D');
       expect(result[0]!.children[0]!.type).toBe('MeshInstance3D');
     });
+  });
+});
+
+describe('seatScene resolve', () => {
+  const claiming = (name: string, parent: string, fields: Partial<TscnNode> = {}): TscnNode => ({
+    ...node(name, parent),
+    rawProperties: { unique_name_in_owner: 'true' },
+    ...fields,
+  });
+  const instance = (name: string, parent?: string): TscnNode => ({
+    ...node(name, parent),
+    instance: 'ExtResource("1")',
+  });
+  const foundName = (nodes: TscnNode[], path: string): string | undefined => {
+    const resolution = seatScene(nodes).resolve(path);
+    return resolution.status === 'found' ? resolution.node.name : undefined;
+  };
+  const statusOf = (nodes: TscnNode[], path: string): string => seatScene(nodes).resolve(path).status;
+
+  it('finds a node of a plain scene by its path, and the root by .', () => {
+    const nodes = [node('Root'), node('A', '.'), node('B', 'A')];
+
+    expect(foundName(nodes, 'A/B')).toBe('B');
+    expect(foundName(nodes, '.')).toBe('Root');
+  });
+
+  it('finds a node seated under a path into an instance', () => {
+    const nodes = [node('Root'), instance('Inst', '.'), node('X', 'Inst/Sub'), node('Y', 'Inst/Sub/X')];
+
+    expect(foundName(nodes, 'Inst/Sub/X')).toBe('X');
+    expect(foundName(nodes, 'Inst/Sub/X/Y')).toBe('Y');
+  });
+
+  it('cannot say what a path into an instance names when no heading is seated there', () => {
+    expect(statusOf([node('Root'), instance('Inst', '.')], 'Inst/Sub')).toBe('unknowable');
+  });
+
+  it('finds a node seated under a %Name parent at its canonical path', () => {
+    const nodes = [node('Root'), claiming('Player', '.'), node('Hand', '%Player')];
+
+    expect(foundName(nodes, 'Player/Hand')).toBe('Hand');
+    expect(foundName(nodes, '%Player/Hand')).toBe('Hand');
+  });
+
+  it('finds a node seated under a ./A parent at A', () => {
+    const nodes = [node('Root'), node('A', '.'), node('B', './A')];
+
+    expect(foundName(nodes, 'A/B')).toBe('B');
+  });
+
+  it('finds the later of two siblings that share a name, as the child table keeps it', () => {
+    // `_add_child_nocheck` inserts into `data.children` by name (node.cpp:1656), so the later wins.
+    const nodes = [node('Root'), node('A', '.'), { ...node('A', '.'), type: 'Node2D' }];
+
+    const resolution = seatScene(nodes).resolve('A');
+
+    expect(resolution.status === 'found' && resolution.node.type).toBe('Node2D');
+  });
+
+  it('finds no stranded heading, nor anything below it', () => {
+    const nodes = [node('Root'), node('Loose', 'Gone'), node('Child', 'Gone/Loose')];
+
+    expect(statusOf(nodes, 'Gone/Loose')).toBe('missing');
+    expect(statusOf(nodes, 'Loose')).toBe('missing');
+  });
+
+  it('finds nothing above the root, nor at an absolute path', () => {
+    // The walk runs from the root at instantiate, off the tree (packed_scene.cpp:161): `..` there has
+    // no parent (node.cpp:1920-1921), and an absolute path is refused (node.cpp:1898).
+    const nodes = [node('Root'), node('A', '.')];
+
+    expect(statusOf(nodes, '..')).toBe('missing');
+    expect(statusOf(nodes, '/root/Root/A')).toBe('missing');
+  });
+
+  it('finds no %Name that nothing claims', () => {
+    expect(statusOf([node('Root'), node('Player', '.')], '%Player')).toBe('missing');
+  });
+
+  it('cannot say what an unclaimed %Name names below an instanced root', () => {
+    // The root's own table holds the base scene's claims (node.cpp:1930-1933).
+    expect(statusOf([instance('Root'), node('Player', '.')], '%Player')).toBe('unknowable');
+  });
+
+  it('cannot say what an unclaimed %Name names from an instance', () => {
+    expect(statusOf([node('Root'), instance('Inst', '.')], 'Inst/%Part')).toBe('unknowable');
+  });
+
+  it('leaves an override claim under an instance out of the root table', () => {
+    // An override heading keeps the sub-scene's owner (resource_format_text.cpp:264-265), so its
+    // `%Name` lands in that owner's table (node.cpp:2222-2233), not the root's.
+    const nodes = [
+      node('Root'),
+      instance('Inst', '.'),
+      claiming('Part', 'Inst', { type: 'Node', overridesExistingNode: true }),
+      node('Hat', '%Part'),
+    ];
+
+    const part = seatScene(nodes).roots[0]!.children[0]!.children[0]!;
+
+    expect(statusOf(nodes, '%Part')).toBe('missing');
+    expect(part.children).toEqual([]);
   });
 });

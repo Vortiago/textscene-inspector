@@ -40,7 +40,7 @@ describe('StrictTscnParser', () => {
     });
 
     it('should handle first node as root (only returns one root)', () => {
-      // buildSceneTree only returns the first root node
+      // seatScene only returns the first root node
       const content = `[gd_scene load_steps=1 format=3]
 
 [node name="Root1" type="Node3D"]

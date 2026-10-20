@@ -1,19 +1,31 @@
 /**
- * Builds hierarchical scene tree from flat TSCN node list.
+ * Seats the flat `[node]` headings into the scene tree, and resolves a root-relative node path over
+ * it. The parser, the linter and the language features all read this one seating.
  */
 
-import type { NodeOrigin, RawNode, SceneNode } from './types';
+import type { NodeOrigin, NodePathResolution, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
-import { claimUniqueName, isUniqueNameInOwner } from '../utils/uniqueNames.js';
-import { resolveParentPath, type ParentPathTree } from '../godot/string/nodePath.js';
+import { claimUniqueName, isOwnedByRoot, isUniqueNameInOwner } from '../utils/uniqueNames.js';
+import { UNLISTED, walkFromRoot, type ParentPathTree } from '../godot/string/nodePath.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
-/**
- * The tree from the flat node list, by parent path. Paths are relative to the root:
- * "." is the root, "Foo/Bar" is root/Foo/Bar.
- */
-export function buildSceneTree<N extends SceneNode<N>>(nodes: N[]): N[] {
-  if (nodes.length === 0) return [];
+/** The scene tree, and the one walk over it. */
+export interface SceneSeating<N extends RawNode> {
+  /** The scene root with every heading Godot seats under it, or empty for a file with no node. */
+  readonly roots: N[];
+  /**
+   * The heading a root-relative path names once every heading is seated: how instantiate resolves a
+   * `[connection]` `from=` and `to=` (`packed_scene.cpp:161`, `:656-657`). Paths are relative to the
+   * root: "." is the root, "Foo/Bar" is root/Foo/Bar.
+   */
+  resolve(path: string): NodePathResolution<N>;
+}
+
+const MISSING = { status: 'missing' } as const;
+const UNKNOWABLE = { status: 'unknowable' } as const;
+
+export function seatScene<N extends SceneNode<N>>(nodes: N[]): SceneSeating<N> {
+  if (nodes.length === 0) return { roots: [], resolve: () => MISSING };
 
   // Heading 0 is the root when nothing is parentless: `packed_scene.cpp:218-219` makes
   // `i == 0` the root, so no later heading is a root too. Returning the flat list as
@@ -31,91 +43,129 @@ export function buildSceneTree<N extends SceneNode<N>>(nodes: N[]): N[] {
     // A second parentless node is stranded here. `strandedNodes` finds it by walking
     // the returned tree, so it holds no second copy of the resolution rules.
     if (!node.parent) continue;
-
-    // The map IS the child lookup the walk asks at every descent, so `./Mid`,
-    // `Mid/` and `Mid` name the one node Godot resolves them all to while
-    // `Missing/../Mid` names none. A node seated through any spelling is
-    // registered under the single one its own children can address it by.
-    const parentPath = resolveParentPath(node.parent, tables.tree);
-    if (parentPath === null) continue;
-
-    const parentNode = tables.byPath.get(parentPath);
-    if (parentNode) {
-      parentNode.children.push(node);
-      registerPath(tables, parentPath, node);
-      continue;
-    }
-
-    // A path into instanced content names nodes in the sub-scene or GLB, so the
-    // nearest enclosing instance anchors it and the content matches the rest.
-    const anchor = findInstanceAnchor(parentPath, tables);
-    // Without an instance anchor the path is malformed. Godot re-roots such a node
-    // and renames it `Level2#Name` (`:208-215`, `:561-563`). `strandedNodes` is the
-    // only report of it, since a node absent from the tree is invisible to a walk.
-    if (!anchor) continue;
-
-    anchor.node.children.push(node);
-    node.instanceSubPath = anchor.subPath;
-    registerPath(tables, anchor.strandedParentPath, node);
+    seat(tables, node, node.parent);
   }
 
-  return [rootNode];
+  return { roots: [rootNode], resolve: (path) => resolveSeated(tables, path) };
+}
+
+/**
+ * Seats one heading under the node its `parent=` names, or leaves it stranded. The map IS the
+ * child lookup the walk asks at every descent, so `./Mid`, `Mid/` and `Mid` name the one node
+ * Godot resolves them all to while `Missing/../Mid` names none. A node seated through any spelling
+ * is registered under the single one its own children can address it by.
+ */
+function seat<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, parent: string): void {
+  const parentPath = walkFromRoot(parent, tables.tree);
+  if (parentPath === null || parentPath === UNLISTED) return;
+
+  const parentNode = tables.byPath.get(parentPath);
+  if (parentNode) {
+    parentNode.children.push(node);
+    register(tables, parentPath, node, parentNode);
+    return;
+  }
+
+  // A path into instanced content names nodes in the sub-scene or GLB, so the
+  // nearest enclosing instance anchors it and the content matches the rest.
+  const anchor = findInstanceAnchor(parentPath, tables);
+  // Without an instance anchor the path is malformed. Godot re-roots such a node
+  // and renames it `Level2#Name` (`:208-215`, `:561-563`). `strandedNodes` is the
+  // only report of it, since a node absent from the tree is invisible to a walk.
+  if (!anchor) return;
+
+  anchor.node.children.push(node);
+  node.instanceSubPath = anchor.subPath;
+  register(tables, anchor.strandedParentPath, node, anchor.node);
+}
+
+/**
+ * The node a path names over the seated tables. A walk Godot ends in null is missing. One that
+ * passes through content this file does not list, onto no heading, is unknowable.
+ */
+function resolveSeated<N extends RawNode>(tables: SeatingTables<N>, path: string): NodePathResolution<N> {
+  const end = walkFromRoot(path, tables.tree);
+  if (end === null) return MISSING;
+  const node = end === UNLISTED ? undefined : tables.byPath.get(end);
+  return node ? { status: 'found', node } : UNKNOWABLE;
 }
 
 /**
  * The tree so far, and the path walk's view of it. One object, since every caller
- * needs both halves, and its two lookups are the two `get_node_or_null` performs.
+ * needs both halves, and its lookups are the ones `get_node_or_null` performs.
  */
-interface BuildTables<N> {
+interface SeatingTables<N> {
+  readonly root: N;
   /** Every seated node, keyed by the folded path its own children address it at. */
   readonly byPath: Map<string, N>;
-  /** `%Name` to that path, for the nodes claiming one. */
+  /** `%Name` to that path, for the nodes claiming one in the root's table. */
   readonly uniquePaths: Map<string, string>;
-  /** The same two tables as the walk consumes them. */
+  /** The seated nodes with an `instance=` ancestor below the root. */
+  readonly insideInstance: Set<N>;
+  /** The same tables as the walk consumes them. */
   readonly tree: ParentPathTree;
 }
 
 /** Tables holding only the scene root, which sits at the empty path. */
-function newTables<N extends RawNode>(rootNode: N): BuildTables<N> {
+function newTables<N extends RawNode>(rootNode: N): SeatingTables<N> {
   const byPath = new Map<string, N>([[SCENE_ROOT_PATH, rootNode]]);
   // The root claims no `%Name`: `set_unique_name_in_owner` registers in the
   // node's OWNER (node.cpp:2222-2233) and the scene root has none.
   const uniquePaths = new Map<string, string>();
+  const isOpaque = (path: string): boolean => isOpaqueAt(byPath, path);
   return {
+    root: rootNode,
     byPath,
     uniquePaths,
-    tree: { exists: (path) => canNameNode(byPath, path), uniquePaths },
+    insideInstance: new Set(),
+    tree: { exists: (path) => canNameNode(byPath, path, isOpaque), isOpaque, uniquePaths },
   };
+}
+
+/**
+ * Whether the node at a path keeps children or `%Name` claims another file lists. A path missing
+ * from the map passed the walk under such a node already. `isTypeUnknowable`, not an `instance=`
+ * test: an override heading, which Godot writes for editable children, names a node the base scene
+ * declares, so its children live there too. Its defaulted `'Node'` is not a real type.
+ */
+function isOpaqueAt(pathMap: ReadonlyMap<string, RawNode>, path: string): boolean {
+  const node = pathMap.get(path);
+  return node === undefined || isTypeUnknowable(node);
 }
 
 /**
  * Whether a name the walk descended onto could be a node: the child lookup at
  * `node.cpp:1941-1946`, answered by a parse blind to instanced scenes. Only a name
- * below a parent this file describes is one Godot fails to find. A parent missing from
- * the map passed one segment ago, so instanced content vouched for it.
+ * below a parent this file describes is one Godot fails to find.
  */
-function canNameNode(pathMap: ReadonlyMap<string, RawNode>, path: string): boolean {
+function canNameNode(
+  pathMap: ReadonlyMap<string, RawNode>,
+  path: string,
+  isOpaque: (path: string) => boolean
+): boolean {
   if (pathMap.has(path)) return true;
   const cut = path.lastIndexOf('/');
-  const parent = pathMap.get(cut === -1 ? SCENE_ROOT_PATH : path.slice(0, cut));
-  // `isTypeUnknowable`, not an `instance=` test: an override heading, which Godot
-  // writes for editable children, names a node the base scene declares, so its
-  // children live there too. Its defaulted `'Node'` is not a real type.
-  return parent === undefined || isTypeUnknowable(parent);
+  return isOpaque(cut === -1 ? SCENE_ROOT_PATH : path.slice(0, cut));
 }
 
 /**
  * Key a seated node by the path its own children address it at, and by the `%Name` it
- * claims. First claim wins: a second claimant warns and clears its own flag
- * (`node.cpp:2225-2231`).
+ * claims in the root's table. First claim wins: a second claimant warns and clears its own
+ * flag (`node.cpp:2225-2231`).
  */
-function registerPath<N extends RawNode>(tables: BuildTables<N>, parentPath: string, node: N): void {
+function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: string, node: N, parent: N): void {
+  // An instanced root is the scene's own root, so only an instance below it hides an owner.
+  const insideInstance =
+    tables.insideInstance.has(parent) || (parent !== tables.root && Boolean(parent.instance));
+  if (insideInstance) tables.insideInstance.add(node);
   // A nameless heading claims no key: an empty name joins to its parent's own key.
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
   if (!node.name) return;
   const path = joinPath(parentPath, node.name);
   tables.byPath.set(path, node);
-  if (isUniqueNameInOwner(node)) claimUniqueName(tables.uniquePaths, node.name, path);
+  if (isUniqueNameInOwner(node) && isOwnedByRoot(node, insideInstance)) {
+    claimUniqueName(tables.uniquePaths, node.name, path);
+  }
 }
 
 /** The instance a stranded node hangs off, and where that node lands. */
@@ -135,7 +185,7 @@ interface InstanceAnchor<N> {
  */
 function findInstanceAnchor<N extends RawNode>(
   parentPath: string,
-  tables: BuildTables<N>
+  tables: SeatingTables<N>
 ): InstanceAnchor<N> | null {
   // The root is seated from the start, so a node naming it never reaches here.
   if (!parentPath) return null;
@@ -157,7 +207,7 @@ function findInstanceAnchor<N extends RawNode>(
 }
 
 /**
- * The nodes {@link buildSceneTree} could not place: those unreachable from `roots`,
+ * The nodes {@link seatScene} could not place: those unreachable from `roots`,
  * derived from the tree rather than a second copy of its rules. A `parent=` naming
  * nothing, which Godot re-roots, or a non-root with no `parent=`, which
  * `packed_scene.cpp:207` refuses.

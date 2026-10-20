@@ -73,7 +73,7 @@ unique_name_in_owner = true
   });
 
   it('spells livePath through the instanced content a parent= descends into', () => {
-    // `buildSceneTree` can only anchor `parent="Bike/Body"` at the instance node
+    // `seatScene` can only anchor `parent="Bike/Body"` at the instance node
     // and records `Body` as the remainder, so the authored tree has the claimant
     // one level up from where the composed tree draws it.
     const into = `[gd_scene format=3]

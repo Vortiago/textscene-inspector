@@ -7,7 +7,6 @@
 import type { ConnectionHeading, StrictScene } from '../parser/types.js';
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
-import { resolveNodePath } from './nodePathResolve.js';
 import { armDiagnostic } from './ruleArms.js';
 
 const REQUIRED_FIELDS = ['from', 'to', 'signal', 'method'] as const;
@@ -45,12 +44,12 @@ function endsOf({ from, to, hasFromUidPath, hasToUidPath }: ConnectionHeading): 
 }
 
 function missingNodeDiagnostics(scene: StrictScene, connection: ConnectionHeading): Diagnostic[] {
-  const root = scene.nodes[0];
-  if (!root) return [];
+  // A file with no node instantiates nothing (packed_scene.cpp:171), so no connection is made or skipped.
+  if (scene.nodes.length === 0) return [];
   return endsOf(connection).flatMap(({ field, path, hasUidPath }) => {
     // A uid path lets Godot recover a node its path misses, and this linter does not walk those ids.
     if (path === undefined || hasUidPath) return [];
-    if (resolveNodePath(scene, root, path).status !== 'missing') return [];
+    if (scene.resolveRootPath(path).status !== 'missing') return [];
     return [
       armDiagnostic(
         FILE_DIAGNOSTICS.connectionNodeMissing,

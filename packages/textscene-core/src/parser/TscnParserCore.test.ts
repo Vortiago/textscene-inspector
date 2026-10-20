@@ -321,7 +321,8 @@ garbage-line-without-equals
         onSectionBuilt: () => {},
       });
 
-      expect(observed).toEqual(bare);
+      expect(observed.scene).toEqual(bare.scene);
+      expect(observed.origins).toEqual(bare.origins);
     });
 
     it('fires onError with INVALID_HEADING_FORMAT and line number for a malformed heading', () => {
