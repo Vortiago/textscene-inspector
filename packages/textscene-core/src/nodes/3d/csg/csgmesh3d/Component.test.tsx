@@ -12,7 +12,7 @@ import { createFakeResourceLoader } from '../../../../resources/testing/createFa
 import { parseCSGMesh3D } from './parser';
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
 // from the registered builder, so the registration is part of what is under test.
-import { findMesh } from '../../testing/reactThreeTestInstance';
+import { drawnMeshes, findMesh } from '../../testing/reactThreeTestInstance';
 import './index.r3f';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
 
@@ -72,14 +72,14 @@ describe('<CSGMesh3D>', () => {
     // Godot builds an empty brush for a CSGMesh3D with no mesh (csg_shape.cpp:1126).
     // No mesh is a closer match to that than an empty one, and neither is a magenta box.
     const renderer = await render(makeNode());
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
     // The transform group survives, so children still land in the right place.
     expect(renderer.scene.findAllByType('Group').length).toBeGreaterThan(0);
   });
 
   it('does not throw when the mesh reference cannot be resolved', async () => {
     const renderer = await render(makeNode({ mesh: 'SubResource("Missing_1")' }));
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('applies the node’s own material, proving it goes through CsgPrimitive', async () => {
@@ -136,7 +136,7 @@ describe('<CSGMesh3D>', () => {
       </ResourceLoaderProvider>
     );
     const renderer = await ReactThreeTestRenderer.create(element);
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
 
     await ReactThreeTestRenderer.act(async () => fake.resources._resolve(path, parseTresFile(tres)));
     const mesh = findMesh(renderer.scene);

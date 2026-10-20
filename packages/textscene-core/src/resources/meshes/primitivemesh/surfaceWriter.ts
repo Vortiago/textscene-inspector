@@ -6,8 +6,15 @@
 import type { GodotSurface } from '../godotSurface.js';
 
 type Vec2 = readonly [number, number];
-type Vec3 = readonly [number, number, number];
-type Vec4 = readonly [number, number, number, number];
+export type Vec3 = readonly [number, number, number];
+export type Vec4 = readonly [number, number, number, number];
+
+/**
+ * The thirds a `create_mesh_array` splits its UV atlas into: the columns of a BoxMesh or PrismMesh,
+ * the rows of a CapsuleMesh.
+ */
+export const ONE_THIRD = 1 / 3;
+export const TWO_THIRDS = 2 / 3;
 
 export class SurfaceWriter {
   private readonly positions: number[] = [];
@@ -40,6 +47,22 @@ export class SurfaceWriter {
   quadBetweenRows(prevrow: number, thisrow: number, i: number): void {
     this.indices.push(prevrow + i - 1, prevrow + i, thisrow + i - 1);
     this.indices.push(prevrow + i, thisrow + i, thisrow + i - 1);
+  }
+
+  /**
+   * `quadBetweenRows` for two faces a loop writes a vertex apart, the even face first: the
+   * front and back and the right and left of a BoxMesh or PrismMesh, and a BoxMesh's top and bottom.
+   */
+  quadPairBetweenRows(prevrow: number, thisrow: number, i: number): void {
+    const i2 = i * 2;
+    this.indices.push(prevrow + i2 - 2, prevrow + i2, thisrow + i2 - 2);
+    this.indices.push(prevrow + i2, thisrow + i2, thisrow + i2 - 2);
+    this.indices.push(prevrow + i2 - 1, prevrow + i2 + 1, thisrow + i2 - 1);
+    this.indices.push(prevrow + i2 + 1, thisrow + i2 + 1, thisrow + i2 - 1);
+  }
+
+  triangle(a: number, b: number, c: number): void {
+    this.indices.push(a, b, c);
   }
 
   surface(): GodotSurface {

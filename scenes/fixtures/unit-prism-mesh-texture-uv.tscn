@@ -1,0 +1,47 @@
+[gd_scene load_steps=7 format=3 uid="uid://unitprismmeshtextureuv"]
+
+; The one variable: where a texture lands on a PrismMesh. The stepped gradient shows the atlas on a
+; prism with its apex at the left (`left_to_right` 0), at the right (1), and on a subdivided, squat
+; prism. The other PrismMesh scene draws one flat-coloured prism at 0.5, where the UV is invisible.
+
+[sub_resource type="Gradient" id="G"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GT"]
+gradient = SubResource("G")
+fill_to = Vector2(1, 1)
+[sub_resource type="StandardMaterial3D" id="M"]
+shading_mode = 0
+albedo_texture = SubResource("GT")
+
+[sub_resource type="PrismMesh" id="P0"]
+material = SubResource("M")
+left_to_right = 0.0
+
+[sub_resource type="PrismMesh" id="P1"]
+material = SubResource("M")
+left_to_right = 1.0
+
+[sub_resource type="PrismMesh" id="PS"]
+material = SubResource("M")
+size = Vector3(1, 0.8, 0.5)
+subdivide_width = 2
+subdivide_height = 2
+subdivide_depth = 1
+
+[node name="Root" type="Node3D"]
+
+[node name="Prism0" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, -1.2, 0, 0)
+mesh = SubResource("P0")
+
+[node name="Prism1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0, 0, 0)
+mesh = SubResource("P1")
+
+[node name="PrismS" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 1.2, 0, 0)
+mesh = SubResource("PS")
+

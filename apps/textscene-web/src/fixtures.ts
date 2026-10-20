@@ -1403,6 +1403,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Primitive Mesh Normal Map",
+    "file": "unit-primitive-mesh-normal-map.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Primitive Mesh Uv2",
     "file": "unit-primitive-mesh-uv2.tscn",
     "category": "Other"
@@ -2604,6 +2609,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Box Mesh Texture Uv",
+    "file": "unit-box-mesh-texture-uv.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Box Mesh",
     "file": "unit-box-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -2659,8 +2669,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Prism Mesh Texture Uv",
+    "file": "unit-prism-mesh-texture-uv.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Prism Mesh",
     "file": "unit-prism-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Quadmesh Orientation",
+    "file": "unit-quadmesh-orientation.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

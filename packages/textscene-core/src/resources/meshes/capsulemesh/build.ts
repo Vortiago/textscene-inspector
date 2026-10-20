@@ -30,11 +30,8 @@
 
 import { TAU } from '../../../godot/math/math.js';
 import type { GodotSurface } from '../godotSurface.js';
-import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
+import { ONE_THIRD, SurfaceWriter, TWO_THIRDS } from '../primitivemesh/surfaceWriter.js';
 import type { CapsuleMeshProperties } from './types.js';
-
-const ONE_THIRD = 1 / 3;
-const TWO_THIRDS = 2 / 3;
 
 /** One section's vertex at row fraction `v`, on the unit circle point `(x, z)` round the axis. */
 type SectionVertex = (
