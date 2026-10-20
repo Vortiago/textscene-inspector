@@ -7,7 +7,7 @@
 
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
-import { ruleInt } from '../../godot/variant/int.js';
+import { slotInt } from '../../godot/variant/int.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
@@ -105,7 +105,7 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
 
 function intEnumOr(value: string | undefined, fallback: number, label: string): number {
   if (value === undefined) return fallback;
-  const n = ruleInt(value);
+  const n = slotInt(value);
   if (n === null) {
     warn(`[TileSet] invalid ${label} "${value}" — using default`);
     return fallback;
