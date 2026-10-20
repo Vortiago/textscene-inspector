@@ -1,0 +1,62 @@
+; One variable: a Sprite2D that samples a ViewportTexture, the canvas consumer that is not a
+; SubViewportContainer. No other golden samples a ViewportTexture on a canvas item. The target
+; holds 1 px orange and black columns. Minified at scale 0.5, each screen pixel averages two
+; columns in sRGB bytes: Godot 4.6.3 reads rgb(128, 51, 0). Magnified at scale 8, the filter
+; blends one column into the next across each 8 px step.
+
+[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_1"]
+viewport_path = NodePath("SubViewport")
+
+[node name="Root" type="Node2D"]
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(16, 16)
+render_target_update_mode = 4
+
+[node name="Black" type="Polygon2D" parent="SubViewport"]
+color = Color(0, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 16, 0, 16, 16, 0, 16)
+
+[node name="Stripe0" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(0, 0, 1, 0, 1, 16, 0, 16)
+
+[node name="Stripe1" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(2, 0, 3, 0, 3, 16, 2, 16)
+
+[node name="Stripe2" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(4, 0, 5, 0, 5, 16, 4, 16)
+
+[node name="Stripe3" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(6, 0, 7, 0, 7, 16, 6, 16)
+
+[node name="Stripe4" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(8, 0, 9, 0, 9, 16, 8, 16)
+
+[node name="Stripe5" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(10, 0, 11, 0, 11, 16, 10, 16)
+
+[node name="Stripe6" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(12, 0, 13, 0, 13, 16, 12, 16)
+
+[node name="Stripe7" type="Polygon2D" parent="SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(14, 0, 15, 0, 15, 16, 14, 16)
+
+[node name="Minified" type="Sprite2D" parent="."]
+position = Vector2(592, 300)
+scale = Vector2(0.5, 0.5)
+texture = SubResource("ViewportTexture_1")
+
+[node name="Magnified" type="Sprite2D" parent="."]
+position = Vector2(300, 280)
+scale = Vector2(8, 8)
+texture = SubResource("ViewportTexture_1")

@@ -25,8 +25,13 @@ import {
   ViewportPassProvider,
   useRegisterViewportPass,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
-import { isViewportTextureRef, useViewportTextureSlot } from './useViewportTextureSlot';
-import { ViewportTexturePublisher } from '../../../r3f/testing/ViewportTexturePublisher';
+import {
+  isViewportTextureRef,
+  useViewportTextureSlot,
+  type ViewportTextureView,
+} from './useViewportTextureSlot';
+import { ViewportTexturePublisher, viewportEntry } from '../../../r3f/testing/ViewportTexturePublisher';
+import type { ViewportTextureEntry } from '../../../r3f/contexts/ViewportTextureContext';
 
 const viewportTexture: TscnInternalResource = {
   id: 'ViewportTexture_1',
@@ -49,7 +54,7 @@ function Consumer({
   slotRef: string | undefined;
   onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
-  onResolve(useViewportTextureSlot(slotRef, RESOURCES));
+  onResolve(useViewportTextureSlot(slotRef, RESOURCES, 'plain'));
   return null;
 }
 
@@ -61,7 +66,7 @@ function mount(slotRef: string | undefined, consumerPath: string | null, publish
   render(
     <ViewportTextureProvider>
       {publishAt ? (
-        <ViewportTexturePublisher path={publishAt} entry={{ texture: texture, size: { x: 256, y: 256 } }} />
+        <ViewportTexturePublisher path={publishAt} entry={viewportEntry(texture, { x: 256, y: 256 })} />
       ) : null}
       {consumerPath === null ? consumer : <NodePathProvider path={consumerPath}>{consumer}</NodePathProvider>}
     </ViewportTextureProvider>
@@ -181,7 +186,7 @@ describe('useViewportTextureSlot', () => {
             {publish ? (
               <ViewportTexturePublisher
                 path="Root/SubViewport"
-                entry={{ texture: texture, size: { x: 256, y: 256 } }}
+                entry={viewportEntry(texture, { x: 256, y: 256 })}
               />
             ) : null}
             <NodePathProvider path={consumerPath}>
@@ -206,6 +211,22 @@ describe('useViewportTextureSlot', () => {
       );
       return null;
     }
+
+    it('keeps no decoding view filled for a target it cannot sample', () => {
+      const { entry, retainers } = entryWithDecodingView();
+      render(
+        <ViewportTextureProvider>
+          <ViewportPassProvider>
+            <CyclicRegistration />
+            <ViewportTexturePublisher path="Root/SubViewport" entry={entry} />
+            <NodePathProvider path="Root/Screen">
+              <ViewConsumer view="decoding" onResolve={() => {}} />
+            </NodePathProvider>
+          </ViewportPassProvider>
+        </ViewportTextureProvider>
+      );
+      expect(retainers.count).toBe(0);
+    });
 
     it('reports cyclic: true and a null texture even though an entry was published', () => {
       const { last } = mountCyclic(VIEWPORT_TEXTURE_REF, 'Root/Screen', true);
@@ -234,6 +255,66 @@ describe('useViewportTextureSlot', () => {
   });
 });
 
+describe('useViewportTextureSlot views', () => {
+  /** Mounts a consumer of `view` at `Root/Screen` beside a target that publishes both views. */
+  function mountView(view: ViewportTextureView) {
+    const seen: ReturnType<typeof useViewportTextureSlot>[] = [];
+    const { entry, retainers } = entryWithDecodingView();
+    const { unmount } = render(
+      <ViewportTextureProvider>
+        <ViewportTexturePublisher path="Root/SubViewport" entry={entry} />
+        <NodePathProvider path="Root/Screen">
+          <ViewConsumer view={view} onResolve={(r) => seen.push(r)} />
+        </NodePathProvider>
+      </ViewportTextureProvider>
+    );
+    return { resolved: () => seen.at(-1)?.texture ?? null, entry, retainers, unmount };
+  }
+
+  /** A `source_color` slot reads Godot's sRGB view (`material_storage.cpp:1067,1073`). */
+  it('resolves the decoding view and keeps it filled while mounted', () => {
+    const { resolved, entry, retainers } = mountView('decoding');
+    expect(resolved()).toBe(entry.decoding.texture);
+    expect(retainers.count).toBe(1);
+  });
+
+  it('releases the decoding view on unmount', () => {
+    const { retainers, unmount } = mountView('decoding');
+    unmount();
+    expect(retainers.count).toBe(0);
+  });
+
+  it('resolves the plain view and fills no decoding view (edge case)', () => {
+    const { resolved, entry, retainers } = mountView('plain');
+    expect(resolved()).toBe(entry.texture);
+    expect(retainers.count).toBe(0);
+  });
+});
+
+/** An entry whose decoding view is its own texture, counting the consumers that retain it. */
+function entryWithDecodingView(): { entry: ViewportTextureEntry; retainers: { count: number } } {
+  const retainers = { count: 0 };
+  const retain = () => {
+    retainers.count++;
+    return () => {
+      retainers.count--;
+    };
+  };
+  const decoding = { texture: new THREE.Texture(), retain };
+  return { entry: viewportEntry(new THREE.Texture(), { x: 256, y: 256 }, decoding), retainers };
+}
+
+function ViewConsumer({
+  view,
+  onResolve,
+}: {
+  view: ViewportTextureView;
+  onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
+}) {
+  onResolve(useViewportTextureSlot('SubResource("ViewportTexture_1")', RESOURCES, view));
+  return null;
+}
+
 function ConsumerWith({
   resources,
   onResolve,
@@ -241,6 +322,6 @@ function ConsumerWith({
   resources: TscnInternalResource[];
   onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
-  onResolve(useViewportTextureSlot('SubResource("Empty_1")', resources));
+  onResolve(useViewportTextureSlot('SubResource("Empty_1")', resources, 'plain'));
   return null;
 }

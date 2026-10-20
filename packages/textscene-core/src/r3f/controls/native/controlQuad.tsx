@@ -39,8 +39,8 @@ export function ControlQuad({
   drawHooks,
 }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
-  // A `NoColorSpace`-retagged canvas texture gets the sRGB multiply, and a
-  // SubViewport target, which keeps its own colour space, does not.
+  // A `NoColorSpace`-retagged canvas texture and a canvas-content SubViewport
+  // target get the sRGB multiply. A 3D-content target does not.
   const srgbDefines = useCanvasSrgbDefines(map);
 
   // A `map` is often null on the first render and a texture later, while the quad

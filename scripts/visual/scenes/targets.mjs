@@ -51,11 +51,14 @@ export const TILE_AND_TARGET_SCENES = [
   // upper right.
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
 
-  // ViewportTexture: one of three goldens that sample through a render target. The
-  // offscreen pass tonemaps like Godot's: the shared environment applies inside
-  // the target and again on the consuming quad (curve squared). The target's linear storage survives the
-  // consumer's sRGB tag. Within 1% linear per sample of Godot 4.6.3.
+  // ViewportTexture on a 3D material. The offscreen pass tonemaps like Godot's: the shared
+  // environment applies inside the target and again on the consuming quad (curve squared). The
+  // target's SRGB8 storage decodes before the filter, whatever tag the consumer stamps. Within 1%
+  // linear per sample of Godot 4.6.3.
   { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
+  // Control content with a translucent fill on the albedo, through the Control target's decoding
+  // view. Godot 4.6.3: the Panel at (480,320) rgb(84,84,84), the backdrop at (370,240) rgb(162).
+  { name: 'sub-viewport-control-texture', file: 'unit-sub-viewport-control-texture.tscn' },
   // The same target in the emission slot over a black albedo: every material slot binds a
   // ViewportTexture. A slot that drops it leaves a black quad.
   { name: 'sub-viewport-texture-emission', file: 'unit-sub-viewport-texture-emission.tscn' },

@@ -89,10 +89,10 @@ the other changed.
 **One registry serves both consumer kinds.** `ViewportTextureRegistry`
 (`nodePath → entry`) mirrors the **AnimationDriverRegistry**: a stable register function,
 so a publisher's effect does not re-fire, and a reactive map, so a consumer re-renders
-when its target appears. The entry carries `texture` for WebGL consumers and `readPixels`
-for the DOM surface, which cannot sample a WebGL texture (ADR-0003). Consumers do not
-learn which kind of content produced the target, so the Control-rasterisation path and
-the FBO path are interchangeable behind it.
+when its target appears. The entry carries Godot's two views of the target: `texture`,
+the plain view, and `decoding`, the sRGB view. Each consumer picks the view Godot's
+consumer would, so it does not learn which kind of content produced the target, and the
+Control-rasterisation path and the FBO path are interchangeable behind it.
 
 ## Considered options
 
@@ -109,12 +109,18 @@ which display real content.
 ## Consequences
 
 - The 3D half needs no new rendering machinery, only the `own_world_3d` flag.
-- Control content inside a surface renders as DOM through a nested `ControlDispatcher`,
-  cheaper and sharper than pixels. 2D-world and 3D content inside a *container* takes the
-  pixel path instead. The surface snapshots the published target through `readPixels`
-  and paints it into a `<canvas>` stacked under the Control layer. It applies the sRGB
-  encode that the target's `LinearSRGBColorSpace` tag defers (measured against Godot
-  4.6.3 on `unit-sub-viewport-container-2d-content.tscn`).
+- A container draws its sub-viewport's target on a quad that samples the published
+  texture, and a mixed sub-viewport's Controls draw live over it.
+- A target that holds canvas content, the 2D-world pass's or the Control pass's, stores
+  sRGB bytes in RGBA8, as Godot's non-HDR `R8G8B8A8_UNORM` target does
+  (`texture_storage.cpp:3568-3569`). The pass encodes and blends its sRGB numbers there, as
+  the main canvas does (`renderer_canvas_render_rd.cpp:671,729`). A canvas consumer, the
+  container or a `Sprite2D`, filters the plain view's bytes and multiplies them in sRGB
+  (`texture_storage.cpp:754`).
+- WebGL2 has no texture views, so a canvas target serves its sRGB view as an SRGB8_ALPHA8
+  copy, filled after each render of the pass while a `source_color` material slot
+  samples it (`material_storage.cpp:1067,1073`). A 3D-content target stores its tonemapped
+  render in SRGB8_ALPHA8 and serves that one texture as both views.
 - A sub-viewport that contains Controls publishes its texture through a native offscreen
   pass in the same `ControlCanvasWalker` as each other Control (ADR-0037).
 - A Camera2D frames only a sub-viewport, since the 2D stage frames the project viewport.
@@ -143,10 +149,6 @@ which display real content.
     `SubResource("2")` = the ViewportTexture. Same number, two id namespaces.
   - `render_target_update_mode` does not gate rendering. The previewer derives the target
     from the scene, so there is no per-frame update to skip.
-  - A surface's pixels stop updating once they settle. `readRenderTargetPixels` is a
-    synchronous GPU stall, so the blit samples on a bounded one-shot schedule and re-arms
-    only on a new target or a fresh parse. An `AnimationPlayer` inside a sub-viewport
-    shows its settled frame there.
   - The resolved tree decides which rasteriser owns a target, so an `instance=` child
     that has not loaded is classified provisionally and re-classified when its sub-scene
     lands. A cyclic sub-scene reference stops the resolver at 32 levels.

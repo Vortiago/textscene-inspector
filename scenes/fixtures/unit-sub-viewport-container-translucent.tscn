@@ -1,0 +1,47 @@
+; One variable: translucent canvas content inside a sub-viewport target, which blends over the
+; clear colour in the target's stored sRGB numbers. No other golden draws translucent content
+; inside a target. The left target holds a Polygon2D (the 2D-world pass) and the right one a
+; ColorRect (the Control pass), so both canvas passes show it. Godot 4.6.3 reads
+; (150,130) rgb(165, 89, 38) and (450,130) rgb(166, 89, 38).
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="PolygonBooth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="PolygonBooth"]
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Fill" type="Polygon2D" parent="PolygonBooth/SubViewport"]
+color = Color(1, 0.4, 0, 0.5)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 100, 0, 100)
+
+[node name="RectBooth" type="SubViewportContainer" parent="."]
+offset_left = 400.0
+offset_top = 80.0
+offset_right = 600.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="RectBooth"]
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Fill" type="ColorRect" parent="RectBooth/SubViewport"]
+offset_right = 200.0
+offset_bottom = 100.0
+color = Color(1, 0.4, 0, 0.5)

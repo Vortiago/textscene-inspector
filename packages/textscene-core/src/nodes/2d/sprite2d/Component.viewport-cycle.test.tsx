@@ -31,7 +31,7 @@ import {
   useRegisterViewportPass,
 } from '../../../r3f/contexts/ViewportPassRegistryContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
-import { ViewportTexturePublisher } from '../../../r3f/testing/ViewportTexturePublisher';
+import { ViewportTexturePublisher, viewportEntry } from '../../../r3f/testing/ViewportTexturePublisher';
 
 const heading = { type: 'node', attributes: { type: 'Sprite2D', name: 'ViewportSprite' } };
 
@@ -70,7 +70,7 @@ async function renderCyclicSprite() {
             <CyclicRegistration />
             <ViewportTexturePublisher
               path="Root/SubViewport"
-              entry={{ texture: publishedTexture, size: { x: 64, y: 64 } }}
+              entry={viewportEntry(publishedTexture, { x: 64, y: 64 })}
             />
             <NodePathProvider path="Root/ViewportSprite">
               <Sprite2D node={spriteNode()} />
