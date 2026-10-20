@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../linter/StrictTscnParser';
+import { sceneSeating } from '../parser/sceneTreeBuilder';
 import { LanguageDocument } from './document';
 import { nodeSectionOfPath } from './nodeSeating';
 import { INSTANCED_TREE, NODE_TREE_HEAD } from './fixtures.testkit';
@@ -25,7 +26,7 @@ function headingLinesOfEnds(text: string): { path: string; linter?: number; lang
   const document = new LanguageDocument(text);
   return scene!.connections.flatMap(({ from, to }) =>
     [from!, to!].map((path) => {
-      const resolution = scene!.resolveRootPath(path);
+      const resolution = sceneSeating(scene!.nodes).resolve(path);
       return {
         path,
         linter: resolution.status === 'found' ? lines.get(resolution.node)?.heading : undefined,

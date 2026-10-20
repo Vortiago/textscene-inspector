@@ -3,7 +3,6 @@ import {
   nodePathNames,
   nodePathWalkNames,
   resolveNodePathLiteral,
-  resolveParentPath,
   resolveRelativePath,
   unclaimedUniqueNames,
   UNLISTED,
@@ -184,17 +183,17 @@ describe('walkFromRoot', () => {
   });
 });
 
-describe('resolveParentPath', () => {
+describe('walkFromRoot without a tree', () => {
   it('folds a missing name away, the wider answer a caller with no tree gets', () => {
-    expect(resolveParentPath('Missing/../Mid')).toBe('Mid');
+    expect(walkFromRoot('Missing/../Mid')).toBe('Mid');
   });
 
   it.each([[undefined], [''], ['/root/Mid'], ['../Mid']])('addresses nothing for %s', (path) => {
-    expect(resolveParentPath(path)).toBeNull();
+    expect(walkFromRoot(path)).toBeNull();
   });
 
   it('refuses a %Name, which no table answers', () => {
-    expect(resolveParentPath('%Hud')).toBeNull();
+    expect(walkFromRoot('%Hud')).toBeNull();
   });
 });
 

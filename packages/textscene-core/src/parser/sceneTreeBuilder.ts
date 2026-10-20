@@ -5,29 +5,40 @@
 
 import type { NodePathResolution, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
-import {
-  claimUniqueName,
-  isInstanceBelowRoot,
-  isOwnedByRoot,
-  isUniqueNameInOwner,
-} from '../utils/uniqueNames.js';
+import { claimUniqueName, isInstanceBelowRoot, isOwnedByRoot, isUniqueNameInOwner } from './nodeOwner.js';
 import { UNLISTED, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
-/** The scene tree, and the one walk over it. */
-export interface SceneSeating<N extends RawNode> {
-  /** The scene root with every heading Godot seats under it, or empty for a file with no node. */
-  readonly roots: N[];
+/**
+ * The one walk over a seated scene. Paths are relative to the root: "." is the root, "Foo/Bar" is
+ * root/Foo/Bar.
+ */
+export interface SeatedPaths<N extends RawNode> {
   /**
-   * The heading a root-relative path names once every heading is seated: how instantiate resolves a
-   * `[connection]` `from=` and `to=` (`packed_scene.cpp:161`, `:656-657`). Paths are relative to the
-   * root: "." is the root, "Foo/Bar" is root/Foo/Bar.
+   * The node a root-relative path names once every heading is seated: how instantiate resolves a
+   * `[connection]` `from=` and `to=` (`packed_scene.cpp:161`, `:656-657`), and a `%Name` the root
+   * owns.
    */
   resolve(path: string): NodePathResolution<N>;
 }
 
+/** The scene tree, and the one walk over it. */
+export interface SceneSeating<N extends RawNode> extends SeatedPaths<N> {
+  /** The scene root with every heading Godot seats under it, or empty for a file with no node. */
+  readonly roots: N[];
+}
+
 export const MISSING = { status: 'missing' } as const;
 export const UNKNOWABLE = { status: 'unknowable' } as const;
+
+const NO_SCENE: SeatedPaths<RawNode> = { resolve: () => MISSING };
+
+/**
+ * Written by {@link seatScene} for the roots it returns, and by {@link sceneSeating} for a tree it
+ * seats. A parsed tree is never mutated in place, so an entry never goes stale, and it dies with
+ * its tree.
+ */
+const seatings = new WeakMap<readonly RawNode[], SeatedPaths<RawNode>>();
 
 export function seatScene<N extends SceneNode<N>>(nodes: N[]): SceneSeating<N> {
   if (nodes.length === 0) return { roots: [], resolve: () => MISSING };
@@ -42,7 +53,8 @@ export function seatScene<N extends SceneNode<N>>(nodes: N[]): SceneSeating<N> {
   // One pass in declaration order, as Godot resolves: at heading `i`,
   // `get_node_or_null(np)` (`packed_scene.cpp:157-165`) sees only the headings above.
   // A `parent=` naming a later node vanishes and re-roots (`:208-215`). Forward order
-  // also gives `children` the file's sibling order, the 2D paint order.
+  // also gives `children` the file's sibling order, the 2D paint order, and the
+  // `%Name` claims the order instantiate sets each owner in (`:565-570`).
   for (const node of nodes) {
     if (node === rootNode) continue;
     // A second parentless node is stranded here. `strandedNodes` finds it by walking
@@ -51,7 +63,42 @@ export function seatScene<N extends SceneNode<N>>(nodes: N[]): SceneSeating<N> {
     seat(tables, node, node.parent);
   }
 
-  return { roots: [rootNode], resolve: (path) => resolveSeated(tables, path) };
+  const seating: SceneSeating<N> = { roots: [rootNode], resolve: (path) => resolveSeated(tables, path) };
+  seatings.set(seating.roots, seating as SeatedPaths<RawNode>);
+  return seating;
+}
+
+/**
+ * The seating of a tree: the one {@link seatScene} built for these roots, or else the tree seated
+ * as it stands, in tree order. A hand-built tree and a composed render tree come from no heading
+ * list, so tree order is the only order they have.
+ */
+export function sceneSeating(roots: readonly RawNode[]): SeatedPaths<RawNode> {
+  let seating = seatings.get(roots);
+  if (!seating) {
+    seating = seatTree(roots);
+    seatings.set(roots, seating);
+  }
+  return seating;
+}
+
+/** Registers a built tree's nodes under the paths their places in it spell. */
+function seatTree(roots: readonly RawNode[]): SeatedPaths<RawNode> {
+  const root = roots[0];
+  if (!root) return NO_SCENE;
+  const tables = newTables(root);
+  const visit = (parent: RawNode, parentPath: string): void => {
+    for (const child of parent.children) {
+      // A node seated through an instance anchor keeps the path its `parent=` spelled.
+      const childParentPath = child.instanceSubPath
+        ? joinPath(parentPath, child.instanceSubPath)
+        : parentPath;
+      register(tables, childParentPath, child, parent);
+      visit(child, child.name ? joinPath(childParentPath, child.name) : childParentPath);
+    }
+  };
+  visit(root, SCENE_ROOT_PATH);
+  return { resolve: (path) => resolveSeated(tables, path) };
 }
 
 /**

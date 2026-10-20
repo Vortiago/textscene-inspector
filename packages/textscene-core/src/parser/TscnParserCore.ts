@@ -28,7 +28,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
+import { seatScene } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 import { parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
 
@@ -52,8 +52,6 @@ interface CoreParseResult<N extends SceneNode<N>> {
    * creator builds every node.
    */
   origins: readonly NodeOrigin<N>[];
-  /** The heading a root-relative node path names in the seated tree: {@link SceneSeating.resolve}. */
-  resolveRootPath: SceneSeating<N>['resolve'];
 }
 
 /** One property value the scan completed, after any multiline accumulation. */
@@ -335,7 +333,6 @@ export class TscnParserCore {
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
-      resolveRootPath: seating.resolve,
     };
   }
 

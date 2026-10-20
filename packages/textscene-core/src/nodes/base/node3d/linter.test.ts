@@ -175,10 +175,23 @@ describe('Node3D Linter', () => {
     it('should report nothing for a %unique-name visibility_parent', () => {
       expectNoDiagnostic(
         scene(
-          node('Node3D', { unique_name_in_owner: 'true' }, { name: 'ParentNode' }),
+          node('Node3D', {}, { name: 'Root' }),
+          node('Node3D', { unique_name_in_owner: 'true' }, { name: 'ParentNode', parent: '.' }),
           node('Node3D', { visibility_parent: 'NodePath("%ParentNode")' }, { name: 'ChildNode', parent: '.' })
         ),
         { ruleName: 'valid-node3d-visibility' }
+      );
+    });
+
+    it('should report a %unique-name only the scene root claims', () => {
+      // The root has no owner to claim in (packed_scene.cpp:565-570, node.cpp:2247). Godot 4.6.3
+      // measured: `get_node_or_null("%ParentNode")` from the child is null.
+      expectDiagnostic(
+        scene(
+          node('Node3D', { unique_name_in_owner: 'true' }, { name: 'ParentNode' }),
+          node('Node3D', { visibility_parent: 'NodePath("%ParentNode")' }, { name: 'ChildNode', parent: '.' })
+        ),
+        { ruleName: 'valid-node3d-visibility', severity: 'error', contains: ['not found'] }
       );
     });
 

@@ -172,11 +172,6 @@ export interface HeadingFacts {
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
   /**
-   * The node a root-relative path names once every heading is seated, as instantiate resolves a
-   * connection's `from=` and `to=` (`packed_scene.cpp:161`, `:656-657`).
-   */
-  resolveRootPath(path: string): NodePathResolution;
-  /**
    * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
    * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`
    * (`resource_format_text.cpp:288-289`). Every other read ends the load (`:533-536`, `:647-650`, `:381-384`,

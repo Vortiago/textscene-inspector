@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { resolveNodePath } from './nodePathResolve.js';
+import { StrictTscnParser } from './StrictTscnParser.js';
 import { byName } from './testing/sceneNodes.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 
@@ -261,5 +262,25 @@ describe('resolveNodePath', () => {
       const a = byName([tree], 'A');
       expect(resolveNodePath(scene, a, ':position')).toEqual({ status: 'found', node: a });
     });
+  });
+});
+
+describe('a %Name two headings claim', () => {
+  it('reaches the one declared first, as instantiate claims in file order (packed_scene.cpp:565-570)', () => {
+    const { scene } = new StrictTscnParser().parse(
+      [
+        '[node name="Root" type="Node3D"]',
+        '[node name="P" type="Node3D" parent="."]',
+        '[node name="Q" type="Node3D" parent="."]',
+        '[node name="X" type="Node3D" parent="Q"]',
+        'unique_name_in_owner = true',
+        '[node name="X" type="Node3D" parent="P"]',
+        'unique_name_in_owner = true',
+      ].join('\n')
+    );
+    const root = scene!.nodes[0]!;
+    const q = root.children[1]!;
+
+    expect(resolveNodePath(scene!, root, '%X')).toEqual({ status: 'found', node: q.children[0] });
   });
 });

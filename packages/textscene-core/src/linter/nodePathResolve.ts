@@ -6,11 +6,10 @@
  */
 
 import { isUnderInstance } from './linterUtils.js';
-import { cachedUniqueNameClaims } from '../utils/uniqueNames.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames } from '../godot/string/nodePath.js';
 import type { NodePathResolution, RawNode, RawScene } from '../parser/types.js';
-import { MISSING, UNKNOWABLE } from '../parser/sceneTreeBuilder.js';
+import { MISSING, UNKNOWABLE, sceneSeating } from '../parser/sceneTreeBuilder.js';
 
 /** The direct child named `name`, mirroring `data.children.getptr(name)`. */
 function childNamed(node: RawNode, name: string): RawNode | undefined {
@@ -58,11 +57,10 @@ export function resolveNodePath(scene: RawScene, referencingNode: RawNode, path:
       // At an opaque node, a miss may be a name that file claims, and a hit may be
       // shadowed by one (:1935-1937).
       if (isTypeUnknowable(current)) return UNKNOWABLE;
-      const claimed = cachedUniqueNameClaims(scene.nodes).get(name);
-      // The claim table holds every claim the root owns, built in `utils/uniqueNames.ts` and
-      // shared with the renderer. A reached node that is not opaque reads that table, so a miss
-      // is a real null.
-      if (!claimed) return MISSING;
+      // A reached node that is not opaque owns no table of its own, so the walk reads its
+      // owner's: the root's, which the seating holds in declaration order.
+      const claimed = sceneSeating(scene.nodes).resolve(name);
+      if (claimed.status !== 'found') return claimed;
       current = claimed.node;
       continue;
     }

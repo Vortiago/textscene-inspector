@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
-import { isUniqueNameInOwner } from '../../../utils/uniqueNames.js';
+import { isUniqueNameInOwner } from '../../../parser/nodeOwner.js';
 import { UNIQUE_NODE_PREFIX, resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';

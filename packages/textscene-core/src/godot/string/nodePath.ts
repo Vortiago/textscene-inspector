@@ -112,24 +112,18 @@ function walksFromRoot(path: string | undefined): path is string {
  * The node a root-relative path names, spelt from the root without its name (the root is the
  * empty path), null when Godot's walk finds nothing, or {@link UNLISTED}. A `.tscn` stores a
  * `parent=`, `from=` and `to=` path (`resource_format_text.cpp:212`) that instantiate resolves from
- * the root with `get_node_or_null` (`packed_scene.cpp:161`), so the root is the floor.
+ * the root with `get_node_or_null` (`packed_scene.cpp:161`), so the root is the floor. Without a
+ * `tree`, a missing name folds away under a later `..`, the wider answer, and a `%Name` is null.
  */
-export function walkFromRoot(path: string, tree: RootWalkTables): string | null | typeof UNLISTED {
+export function walkFromRoot(
+  path: string | undefined,
+  tree?: RootWalkTables
+): string | null | typeof UNLISTED {
   // The saver never writes a `%Name` (resource_format_text.cpp:2018), yet on 4.7.2 the loader seats
   // `parent="%Player"` under its claimant and warns only when nothing claims it.
   if (!walksFromRoot(path)) return null;
   const end = walk([], path, 0, tree);
   return Array.isArray(end) ? end.join('/') : end;
-}
-
-/**
- * {@link walkFromRoot} with no tree to read: a missing name folds away under a later `..`, the
- * wider answer, and a `%Name` is null.
- */
-export function resolveParentPath(parentPath: string | undefined): string | null {
-  if (!walksFromRoot(parentPath)) return null;
-  const end = walk([], parentPath, 0);
-  return Array.isArray(end) ? end.join('/') : null;
 }
 
 /**

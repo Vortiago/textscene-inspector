@@ -8,6 +8,7 @@ import type { ConnectionHeading, StrictScene } from '../parser/types.js';
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
+import { sceneSeating } from '../parser/sceneTreeBuilder.js';
 
 const REQUIRED_FIELDS = ['from', 'to', 'signal', 'method'] as const;
 
@@ -49,7 +50,7 @@ function missingNodeDiagnostics(scene: StrictScene, connection: ConnectionHeadin
   return endsOf(connection).flatMap(({ field, path, hasUidPath }) => {
     // A uid path lets Godot recover a node its path misses, and this linter does not walk those ids.
     if (path === undefined || hasUidPath) return [];
-    if (scene.resolveRootPath(path).status !== 'missing') return [];
+    if (sceneSeating(scene.nodes).resolve(path).status !== 'missing') return [];
     return [
       armDiagnostic(
         FILE_DIAGNOSTICS.connectionNodeMissing,

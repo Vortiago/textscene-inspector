@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import { StrictTscnParser } from '../linter/StrictTscnParser.js';
-import type { RawNode } from '../parser/types.js';
-import {
-  cachedUniqueNameClaims,
-  cachedUniqueNameOwnership,
-  isInstanceBelowRoot,
-  isOwnedByRoot,
-} from './uniqueNames.js';
+import { cachedUniqueNameClaims, cachedUniqueNameOwnership } from './uniqueNames.js';
 
 /**
  * Both trees, every time. They agree on `rawProperties` (`parser/rawPropertyParity.test.ts`), but
@@ -23,6 +17,22 @@ unique_name_in_owner = true
 [node name="Plain" type="Node3D" parent="."]
 
 [node name="Nested" type="Node3D" parent="Target"]
+unique_name_in_owner = true
+`;
+
+/** Two claimants of `%X`, declared out of tree order: `Q/X` first, `P/X` second, while `P` sits before `Q`. */
+const OUT_OF_ORDER = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="P" type="Node3D" parent="."]
+
+[node name="Q" type="Node3D" parent="."]
+
+[node name="X" type="Node3D" parent="Q"]
+unique_name_in_owner = true
+
+[node name="X" type="Node3D" parent="P"]
 unique_name_in_owner = true
 `;
 
@@ -269,35 +279,16 @@ unique_name_in_owner = true
   });
 });
 
-function rawNode(fields: Partial<RawNode> = {}): RawNode {
-  return { name: 'Node', type: 'Node3D', rawProperties: {}, children: [], ...fields };
-}
-
-describe('isInstanceBelowRoot', () => {
-  it('is true for an instance heading below the root', () => {
-    expect(isInstanceBelowRoot(rawNode({ instance: 'ExtResource("1")' }), false)).toBe(true);
+describe('the first claimant', () => {
+  // Instantiate sets each owner in declaration order (packed_scene.cpp:565-570), and a later
+  // claimant is refused (node.cpp:2225-2231), so file order decides, not tree order.
+  it('is the one declared first, on the lenient tree', () => {
+    expect(cachedUniqueNameClaims(new TscnParser().parse(OUT_OF_ORDER).nodes).get('%X')?.path).toBe(
+      'Root/Q/X'
+    );
   });
 
-  it('is false for a heading that instances nothing', () => {
-    expect(isInstanceBelowRoot(rawNode(), false)).toBe(false);
-  });
-
-  it('is false for an instanced root, which is the scene root itself', () => {
-    expect(isInstanceBelowRoot(rawNode({ instance: 'ExtResource("1")' }), true)).toBe(false);
-  });
-});
-
-describe('isOwnedByRoot', () => {
-  it('is true for a node outside any instance', () => {
-    expect(isOwnedByRoot(rawNode(), false)).toBe(true);
-  });
-
-  it('is false for an override heading inside an instance, which keeps the sub-scene owner', () => {
-    expect(isOwnedByRoot(rawNode({ overridesExistingNode: true }), true)).toBe(false);
-  });
-
-  it('follows an explicit owner= over the structural answer', () => {
-    expect(isOwnedByRoot(rawNode({ overridesExistingNode: true, owner: '.' }), true)).toBe(true);
-    expect(isOwnedByRoot(rawNode({ owner: 'Player' }), false)).toBe(false);
+  it('is the one declared first, on the strict tree', () => {
+    expect(cachedUniqueNameClaims(strictScene(OUT_OF_ORDER).nodes).get('%X')?.path).toBe('Root/Q/X');
   });
 });

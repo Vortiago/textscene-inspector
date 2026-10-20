@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { seatScene, strandedNodes } from './sceneTreeBuilder';
+import { sceneSeating, seatScene, strandedNodes } from './sceneTreeBuilder';
 import type { TscnNode } from './types';
 
 /** A childless `Node3D`, a root when `parent` is absent. */
@@ -547,5 +547,41 @@ describe('seatScene resolve', () => {
 
     expect(statusOf(nodes, '%Part')).toBe('missing');
     expect(part.children).toEqual([]);
+  });
+});
+
+describe('sceneSeating', () => {
+  it('reads the seating seatScene built for its roots, claims in declaration order included', () => {
+    const claiming = (name: string, parent: string): TscnNode => ({
+      ...node(name, parent),
+      rawProperties: { unique_name_in_owner: 'true' },
+    });
+    const nodes = [node('Root'), node('P', '.'), node('Q', '.'), claiming('X', 'Q'), claiming('X', 'P')];
+    const { roots } = seatScene(nodes);
+
+    const resolution = sceneSeating(roots).resolve('%X');
+
+    expect(resolution.status === 'found' && resolution.node).toBe(nodes[3]);
+  });
+
+  it('seats a tree no heading list built, in tree order', () => {
+    const leaf: TscnNode = { ...node('Leaf'), rawProperties: { unique_name_in_owner: 'true' } };
+    const roots = [{ ...node('Root'), children: [{ ...node('Mid'), children: [leaf] }] }];
+
+    const seating = sceneSeating(roots);
+
+    expect(seating.resolve('Mid/Leaf')).toEqual({ status: 'found', node: leaf });
+    expect(seating.resolve('%Leaf')).toEqual({ status: 'found', node: leaf });
+    expect(seating.resolve('Mid/Gone').status).toBe('missing');
+  });
+
+  it('cannot say what a path below an instance names when no heading sits there', () => {
+    const roots = [{ ...node('Root'), children: [{ ...node('Inst'), instance: 'ExtResource("1")' }] }];
+
+    expect(sceneSeating(roots).resolve('Inst/Inner').status).toBe('unknowable');
+  });
+
+  it('finds nothing in a scene with no node', () => {
+    expect(sceneSeating([]).resolve('.').status).toBe('missing');
   });
 });

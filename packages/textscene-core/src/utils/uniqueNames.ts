@@ -1,13 +1,12 @@
 /**
- * `%Name` claims over an authored tree, shared by the seating, the linter's NodePath walk and the
- * render path.
- * `_acquire_unique_name_in_owner` (node.cpp:2222) registers `"%" + name` on the node's owner and
- * refuses to overwrite an entry (node.cpp:2225-2231), so the first claimant wins and a `%Name`
- * with no claimant addresses nothing.
+ * `%Name` claims over an authored or composed tree, shared by the linter and the render path. The
+ * seating decides which claimant the root's table keeps, and this adds the paths each claim is
+ * spelt by and the claims other owners hold.
  */
 
 import type { RawNode } from '../parser/types.js';
-import { boolSlotValue } from '../godot/variant/variantBool.js';
+import { isInstanceBelowRoot, isOwnedByRoot, isUniqueNameInOwner } from '../parser/nodeOwner.js';
+import { sceneSeating } from '../parser/sceneTreeBuilder.js';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
 
 /** The node a `%Name` addresses, with the two spellings of the path that reaches it. */
@@ -20,44 +19,6 @@ export interface UniqueNameClaim {
    * `path` with each ancestor's `instanceSubPath` restored, as the render tree spells paths.
    */
   readonly livePath: string;
-}
-
-/**
- * Whether a node claims a `%Name` in its owner: `unique_name_in_owner = true`, read from
- * `rawProperties` alone, which both parsers publish alike (`parser/rawPropertyParity.test.ts`). No
- * slice models the flag, so typed `properties` lacks it. `PROPERTY_USAGE_NO_EDITOR` hides it and
- * still serialises it (node.cpp:4050).
- */
-export function isUniqueNameInOwner(node: RawNode): boolean {
-  return boolSlotValue(node.rawProperties.unique_name_in_owner) === true;
-}
-
-/**
- * Whether a node is an instance that hides its sub-scene's owner from the nodes below it. An
- * instanced root is the scene's own root, so only an instance below the root does.
- */
-export function isInstanceBelowRoot(node: RawNode, isRoot: boolean): boolean {
-  return !isRoot && Boolean(node.instance);
-}
-
-/**
- * Whether the scene root owns a node, so its `%Name` lands in the root's table. An explicit `owner=`
- * decides: `"."` is the root. Without one, an override heading inside an instance keeps the sub-scene's
- * owner (resource_format_text.cpp:264-265 zeroes `owner` only when `!(type == TYPE_INSTANTIATED &&
- * instance == -1)`), and every other node is the root's.
- */
-export function isOwnedByRoot(node: RawNode, insideInstance: boolean): boolean {
-  if (node.owner !== undefined) return node.owner === '.';
-  return !(insideInstance && node.overridesExistingNode === true);
-}
-
-/**
- * Records `value` under `%name` unless an earlier node claimed it: `_acquire_unique_name_in_owner`
- * refuses to overwrite an entry (node.cpp:2225-2231). The one place the first-claimant rule lives.
- */
-export function claimUniqueName<V>(claims: Map<string, V>, name: string, value: V): void {
-  const key = UNIQUE_NODE_PREFIX + name;
-  if (!claims.has(key)) claims.set(key, value);
 }
 
 /**
@@ -77,12 +38,12 @@ interface UniqueNameOwnership {
 }
 
 /**
- * Every `%Name` claimed in `roots`, depth-first, keyed with the prefix on, with the ownership facts
- * the same walk decides. `path` looks up in an authored tree's `nodeByPath` map, and `livePath`
+ * Every `%Name` claimed in `roots`, keyed with the prefix on, with the ownership facts the same
+ * walk decides. `path` looks up in an authored tree's `nodeByPath` map, and `livePath`
  * in the composed render tree's.
  */
 function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
-  const claims = new Map<string, UniqueNameClaim>();
+  const rootOwned: UniqueNameClaim[] = [];
   const instanceClaims = new Map<string, UniqueNameClaim[]>();
   const ownedInsideInstances = new Set<string>();
   const join = (parent: string, segment: string): string => (parent ? `${parent}/${segment}` : segment);
@@ -106,7 +67,7 @@ function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
       if (ownedHere && instanceOwner !== null) ownedInsideInstances.add(livePath);
       if (isUniqueNameInOwner(node)) {
         if (ownedHere) {
-          claimUniqueName(claims, node.name, { node, path, livePath });
+          rootOwned.push({ node, path, livePath });
         } else {
           // The node an explicit `owner=` names, or else the instance whose sub-scene root owns the
           // override: `isOwnedByRoot` answers false without an `owner=` only inside an instance.
@@ -124,7 +85,22 @@ function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
     }
   };
   walk(roots, '', '', null);
-  return { claims, instanceClaims, ownedInsideInstances };
+  return { claims: rootClaims(roots, rootOwned), instanceClaims, ownedInsideInstances };
+}
+
+/** The claims the root's table keeps: for each `%Name`, the claimant the seating resolves it to. */
+function rootClaims(
+  roots: readonly RawNode[],
+  candidates: readonly UniqueNameClaim[]
+): Map<string, UniqueNameClaim> {
+  const seating = sceneSeating(roots);
+  const claims = new Map<string, UniqueNameClaim>();
+  for (const claim of candidates) {
+    const key = UNIQUE_NODE_PREFIX + claim.node.name;
+    const winner = seating.resolve(key);
+    if (winner.status === 'found' && winner.node === claim.node) claims.set(key, claim);
+  }
+  return claims;
 }
 
 /** The claim table alone, from {@link uniqueNameOwnership}. */
