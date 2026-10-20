@@ -3,10 +3,14 @@
  * seats what it can, and these name what Godot refuses. Only the linter reads them.
  */
 
-import type { HeadingFacts, NodeOrigin, RawNode } from '../parser/types.js';
+import type { HeadingFacts, IdRecovery, NodeOrigin, RawNode } from '../parser/types.js';
 import { strandedNodes } from '../parser/sceneTreeBuilder.js';
+import { INSTANCE_PLACEHOLDER_TYPE, recoverByIdTrail, type IdHeading } from '../godot/scene/packedScene.js';
 
-type PlacementFacts = Pick<HeadingFacts, 'orphanedNodes' | 'rootWithParent' | 'emptyParentHeadings'>;
+type PlacementFacts = Pick<
+  HeadingFacts,
+  'orphanedNodes' | 'rootWithParent' | 'emptyParentHeadings' | 'idRecoveries'
+>;
 
 /**
  * The placement facts of one scan: `origins` is every `[node]` heading in scan order, and `roots`
@@ -16,11 +20,42 @@ export function placementFacts(
   origins: readonly NodeOrigin<RawNode>[],
   roots: readonly RawNode[]
 ): PlacementFacts {
+  const orphanedNodes = strandedNodes(origins, roots);
   return {
-    orphanedNodes: strandedNodes(origins, roots),
+    orphanedNodes,
     rootWithParent: rootDeclaringParent(origins),
     emptyParentHeadings: emptyParentHeadings(origins),
+    idRecoveries: idRecoveries(origins, orphanedNodes),
   };
+}
+
+/**
+ * The orphans whose `parent_id_path=` Godot follows to a node (`packed_scene.cpp:161-163`).
+ * An orphan the trail does not recover is absent: Godot re-roots it.
+ */
+function idRecoveries(
+  origins: readonly NodeOrigin<RawNode>[],
+  orphaned: readonly NodeOrigin<RawNode>[]
+): Map<NodeOrigin<RawNode>, IdRecovery> {
+  const recoveries = new Map<NodeOrigin<RawNode>, IdRecovery>();
+  if (!orphaned.some((origin) => origin.idTrail !== undefined)) return recoveries;
+  const unplaced = new Set(orphaned);
+  const headings = origins.map((origin): IdHeading => ({
+    uniqueId: origin.uniqueId,
+    instance: instanceKind(origin.node),
+    isPlaced: !unplaced.has(origin),
+  }));
+  origins.forEach((origin, index) => {
+    if (!unplaced.has(origin) || origin.idTrail === undefined) return;
+    const end = recoverByIdTrail(origin.idTrail, headings, index);
+    if (end) recoveries.set(origin, { kind: end.kind, via: origins[end.heading]! });
+  });
+  return recoveries;
+}
+
+function instanceKind(node: RawNode): IdHeading['instance'] {
+  if (node.type === INSTANCE_PLACEHOLDER_TYPE) return 'placeholder';
+  return node.instance === undefined ? undefined : 'scene';
 }
 
 /**
