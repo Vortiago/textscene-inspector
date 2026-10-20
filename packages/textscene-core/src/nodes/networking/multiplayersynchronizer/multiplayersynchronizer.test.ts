@@ -23,6 +23,6 @@ describe('MultiplayerSynchronizer registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('MultiplayerSynchronizer')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('MultiplayerSynchronizer')).toBe('transform-only');
   });
 });

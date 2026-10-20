@@ -23,6 +23,6 @@ describe('OccluderInstance3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('OccluderInstance3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('OccluderInstance3D')).toBe('transform-only');
   });
 });

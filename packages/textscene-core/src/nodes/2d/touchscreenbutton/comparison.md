@@ -4,14 +4,14 @@ category: 2D
 status: unimplemented
 fixture: unit-touch-screen-button.tscn
 # image: unit-touch-screen-button
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, Godot draws its button texture, the previewer does not
 ---
 
 # TouchScreenButton
 
 TouchScreenButton is an on-screen button for touch input that draws `texture_normal` or
 `texture_pressed`. The previewer parses and validates it but does not draw it, so it
-renders as a transform-only fallback and its children still show.
+draws nothing and its children still show.
 
 ## Linting
 

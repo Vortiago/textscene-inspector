@@ -4,12 +4,12 @@ category: 3D
 status: unimplemented
 fixture: unit-voxel-gi.tscn
 # image: unit-voxel-gi
-renders_as: an invisible transform-only fallback
+renders_as: nothing yet, Godot lights the scene from its voxel bake, the previewer does not
 ---
 
 # VoxelGI
 
-A real-time global illumination probe that bakes indirect light from static geometry into an octree. The previewer parses and validates it but does not run the bake or draw the probe volume, so it mounts as an invisible transform-only group.
+A real-time global illumination probe that bakes indirect light from static geometry into an octree. The previewer parses and validates it but does not run the bake or draw the probe volume. It draws nothing, and its children still show.
 
 ## Linting
 

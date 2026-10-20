@@ -9,7 +9,7 @@ renders_as: nothing yet, outside an OpenXR session Godot draws an equirectangula
 
 # OpenXRCompositionLayerEquirect
 
-Composites `layer_viewport` onto a sphere section in the XR compositor during a live session. Outside one, Godot draws a fallback mesh shaped by `radius` and the vertical and horizontal angles. The previewer draws a transform-only group, and its children still show.
+Composites `layer_viewport` onto a sphere section in the XR compositor during a live session. Outside one, Godot draws a fallback mesh shaped by `radius` and the vertical and horizontal angles. The previewer draws nothing for it, and its children still show.
 
 ## Linting
 

@@ -9,7 +9,7 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesAttractorSphere3D
 
-A spheroid attractor that pulls or pushes particles from nearby `GPUParticles3D` nodes toward or away from its origin. The previewer does not draw the sphere or apply its force yet, so the node is an invisible transform-only fallback and its children still show.
+A spheroid attractor that pulls or pushes particles from nearby `GPUParticles3D` nodes toward or away from its origin. The previewer does not draw the sphere or apply its force yet, so the node draws nothing and its children still show.
 
 ## Linting
 

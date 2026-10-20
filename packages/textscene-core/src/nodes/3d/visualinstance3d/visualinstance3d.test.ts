@@ -23,6 +23,6 @@ describe('VisualInstance3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('VisualInstance3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('VisualInstance3D')).toBe('transform-only');
   });
 });

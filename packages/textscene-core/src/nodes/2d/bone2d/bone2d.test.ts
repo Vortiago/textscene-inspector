@@ -23,6 +23,6 @@ describe('Bone2D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('Bone2D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('Bone2D')).toBe('transform-only');
   });
 });

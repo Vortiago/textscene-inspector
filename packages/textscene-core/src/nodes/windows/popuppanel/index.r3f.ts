@@ -1,5 +1,5 @@
 /**
- * PopupPanel is parsed but not drawn. `nodeComponentRegistry.isPending` drives the "not
+ * PopupPanel is parsed but not drawn. `renderIntent: 'pending'` drives the "not
  * implemented" badge and the placeholder marker. `container: true` holds the type in
  * both canvases. The `Node` base applies no `visible`.
  */

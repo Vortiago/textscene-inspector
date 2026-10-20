@@ -352,8 +352,13 @@ The **AnimationPlayer**, a **geometry contributor** and a **sub-viewport** are t
 _Avoid_: "placeholder", "not implemented". "inert" for those three roles.
 
 **Pending** (render intent):
-A node type whose Godot effect, an own visual or the drive of a **Driver**, is not implemented yet, registered under its base with `renderIntent: 'pending'` and the sheet status `unimplemented` (ADR-0045).
+A node type whose Godot effect, an own visual or the drive of a **Driver**, is not implemented yet, registered on an **invisible base** with `renderIntent: 'pending'` (a `Control`-based gap registers no component) and the sheet status `unimplemented` (ADR-0045).
 _Avoid_: bare "pending" for a resource load (say "load pending").
+
+**Invisible base**:
+A base component that places a node's transform for its children and draws nothing: Node3D, Node2D, Node and an undrawn GeometryInstance3D.
+`NodeComponentRegistry` refuses a **Pending** registration on any other component, and a `draws` registration on an invisible base, so the badge cannot call a drawn node a gap or a gap drawn.
+_Avoid_: "fallback" (that is the dispatcher's `GenericNodeFallback` for an unregistered type).
 
 **Driver**:
 A node with no geometry of its own that moves, deforms or animates other nodes, such as AnimationPlayer, RemoteTransform3D and a SkeletonModifier3D.

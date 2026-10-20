@@ -17,13 +17,14 @@ export function rendersOwnVisual(type: string): 'draws' | 'transform-only' | 'no
   // with no children that draws nothing until `create_instance`
   // (`packed_scene.cpp:255`), which is its finished behaviour.
   if (type === INSTANCE_PLACEHOLDER_TYPE) return 'transform-only';
+  const intent = nodeComponentRegistry.renderIntentOf(type);
   // Ahead of every branch below, including the Control fallback: a declared gap
   // is the node's own claim about itself and nothing may promote it.
-  if (nodeComponentRegistry.isPending(type)) return 'not-implemented';
+  if (intent === 'pending') return 'not-implemented';
   // A declared intent wins over the Control fallback below, or sheets.test.mjs
   // holds a `transform-only` Control's sheet to `linter-only` while the badge
   // says it draws.
-  if (nodeComponentRegistry.isTransformOnly(type)) return 'transform-only';
+  if (intent === 'transform-only') return 'transform-only';
   // `controlComponentRegistry` stays empty until the 2D overlay mounts, so
   // Controls answer from its mirror, held to it by `has2DUIContent.driftguard.test.ts`.
   if (TWO_D_UI_TYPES.has(type)) return 'draws';
