@@ -3,7 +3,7 @@
 ; The one variable: a PrimitiveMesh's `flip_faces`. Godot negates the normals and turns each
 ; triangle round, and keeps the positions and the UVs. The flipped sphere shows its far inside,
 ; lit from within. The flipped quad is turned to face away, so its back shows the stepped gradient
-; unmirrored. No other scene flips a PrimitiveMesh.
+; unmirrored, and its `center_offset` stays on the same side. No other scene flips a PrimitiveMesh.
 
 [sub_resource type="Gradient" id="Gradient_uv"]
 interpolation_mode = 1
@@ -24,6 +24,7 @@ flip_faces = true
 [sub_resource type="QuadMesh" id="QuadMesh_flipped"]
 material = SubResource("StandardMaterial3D_uv")
 flip_faces = true
+center_offset = Vector3(0.4, 0, 0)
 
 [node name="Root" type="Node3D"]
 
@@ -32,5 +33,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0, 0)
 mesh = SubResource("SphereMesh_flipped")
 
 [node name="Quad" type="MeshInstance3D" parent="."]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.7, 0, 0)
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 1, 0, 0)
 mesh = SubResource("QuadMesh_flipped")
