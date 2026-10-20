@@ -77,6 +77,27 @@ export async function loadCoreParser() {
 }
 
 /**
+ * The resource-slice claim table with every slice registered: the barrel's
+ * import side effects fill `resourceSliceRegistry`. The slices are THREE-free
+ * (ADR-0031), so a plain Node script can load them.
+ */
+export async function loadResourceClaims() {
+  try {
+    await import('../../packages/textscene-core/dist/resources/sliceRegistrations.js');
+    const { resourceSliceRegistry } =
+      await import('../../packages/textscene-core/dist/resources/sliceRegistration.js');
+    return { resourceSliceRegistry };
+  } catch (err) {
+    throw new Error(
+      'Could not load the built resource slices.\n' +
+        'Run `pnpm --filter @textscene/core build` first.\n' +
+        `Underlying error: ${err.message}`,
+      { cause: err }
+    );
+  }
+}
+
+/**
  * `CLASS_BASE_TYPES`, the class to base-type table `findValidator` walks, for
  * nodes and resources both: `StandardMaterial3D` registers its properties on
  * `BaseMaterial3D`. The linter barrel does not re-export it.

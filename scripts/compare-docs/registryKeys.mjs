@@ -38,6 +38,18 @@ const WILDCARD_SHAPES = [
 ];
 
 /**
+ * Splits property names by whether one of the class's own validator keys covers
+ * them. Both ledgers use it, so "validated" means one thing.
+ */
+export function partitionByValidator(names, ownKeys) {
+  const matchers = ownKeys.map(keyMatcher);
+  const validated = [];
+  const missing = [];
+  for (const name of names) (matchers.some((match) => match(name)) ? validated : missing).push(name);
+  return { validated, missing };
+}
+
+/**
  * Per declaring class, not per leaf: a `BaseMaterial3D` property's validator
  * belongs on `BaseMaterial3D`, so this asks `getOwnKeys`, not `findValidator`.
  */
@@ -45,8 +57,10 @@ export function unvalidatedByClass(engine, validatorRegistry, covered) {
   const rows = [];
   for (const [cls, props] of Object.entries(engine)) {
     if (!covered.has(cls)) continue;
-    const matchers = validatorRegistry.getOwnKeys(cls).map(keyMatcher);
-    const missing = props.map((p) => p.name).filter((name) => !matchers.some((m) => m(name)));
+    const { missing } = partitionByValidator(
+      props.map((p) => p.name),
+      validatorRegistry.getOwnKeys(cls)
+    );
     if (missing.length > 0) rows.push({ cls, missing });
   }
   return rows.sort((a, b) => b.missing.length - a.missing.length);
