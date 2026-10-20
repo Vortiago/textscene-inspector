@@ -39,6 +39,7 @@ import {
   DROPS_ALBEDO_ALPHA,
   OCCLUDES_DIRECT_LIGHT,
   REBUILDS_NORMAL_MAP_BLUE,
+  UNIT_TANGENT_FRAME,
   WRITES_OPAQUE_AFTER_CUT,
   patchedFragment,
 } from '../../../r3f/testing/patchedFragment';
@@ -357,6 +358,15 @@ describe('standardMaterialBags — the normal map read', () => {
 
   it('patches nothing on a surface with no normal map', () => {
     expect(bag(NORMAL).injection).toBeUndefined();
+  });
+
+  it('gives an anisotropic surface with no normal map a unit tangent frame', () => {
+    const anisotropic = bag({ anisotropy_enabled: 'true', anisotropy: '0.5' });
+    expect(patchedFragment(materialFromBag(anisotropic))).toContain(UNIT_TANGENT_FRAME);
+  });
+
+  it('leaves an isotropic surface with no normal map unpatched (edge case)', () => {
+    expect(bag({ anisotropy: '0.5' }).injection).toBeUndefined();
   });
 
   it('rebuilds the blue on a physical surface too (edge case)', () => {

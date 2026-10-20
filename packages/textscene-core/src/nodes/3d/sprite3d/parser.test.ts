@@ -36,6 +36,10 @@ describe('parseSprite3D defaults', () => {
 });
 
 describe('parseSprite3D properties', () => {
+  it('reads a texture of null as no texture', () => {
+    expect(parseSprite3D(HEADING, { texture: 'null' }).texture).toBeUndefined();
+  });
+
   it('parses texture resource reference verbatim', () => {
     const props = parseSprite3D(HEADING, { texture: 'ExtResource("1_t")' });
     expect(props.texture).toBe('ExtResource("1_t")');

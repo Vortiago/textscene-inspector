@@ -10,27 +10,15 @@ import {
   findSubResource,
   parseResourceReference,
 } from '../resources/SubResourceResolver.js';
-import { isNilLiteral } from '../godot/variant/variantParser.js';
+import { holdsResource } from '../godot/scene/resourceLiteral.js';
 import type { RawScene } from '../parser/types.js';
 
 /**
- * An explicitly cleared resource slot, a bare `null` or `nil`: the author said
- * "no resource here". `variant_parser.cpp:699` reads both identifiers to
- * `Variant()`, which every `Ref<T>` setter takes. `createResourceReferenceValidator`
- * holds the format half of the same rule.
- */
-function isClearedResource(resourceRef: string | undefined): boolean {
-  return resourceRef !== undefined && isNilLiteral(resourceRef);
-}
-
-/**
- * Whether a resource slot holds nothing: absent, empty, `null` or `nil`, which
- * all reach the `Ref<T>` as invalid (`variant_parser.cpp:699`). Use this, not
- * `!ref`: `'null'` is a truthy string. `clearedResourceSlot.test.ts` holds the
- * spellings to one answer.
+ * Whether a resource slot holds nothing: {@link holdsResource} asked the other way round. The call-site
+ * sweep in `clearedResourceSlot.test.ts` takes its predicate names from this module's exports.
  */
 export function resourceSlotIsEmpty(resourceRef: string | undefined): boolean {
-  return !resourceRef?.trim() || isClearedResource(resourceRef);
+  return !holdsResource(resourceRef);
 }
 
 /**

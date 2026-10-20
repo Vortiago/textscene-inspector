@@ -51,7 +51,7 @@ describe('TouchScreenButton strict validators', () => {
   it('accepts every value its own fixture carries', () => {
     // The fixture's "zero errors and zero warnings" claim, run against what this test
     // imported. `fixtureLint` runs it against the whole registry through the barrel.
-    expectFixtureClean('unit-touch-screen-button.tscn');
+    expectFixtureClean('touch-screen-button/unit-touch-screen-button.tscn');
   });
 
   it('rejects a malformed value on every property it validates', () => {

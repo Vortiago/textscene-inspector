@@ -123,6 +123,9 @@ let sceneIndex = null;
 export function findScene(fixture) {
   const direct = join(SCENES_DIR, fixture);
   if (existsSync(direct)) return direct;
+  // A fixture project (`touch-screen-button/unit-touch-screen-button.tscn`) keeps its folder in the id.
+  const inFixtures = join(SCENES_DIR, 'fixtures', fixture);
+  if (existsSync(inFixtures)) return inFixtures;
   if (fixture.includes('/')) {
     // copy-fixtures flattens these roots onto public/fixtures, so an id keeps
     // its res:// subpath (`decorations/candle.tscn`). This undoes it for Godot.
@@ -134,10 +137,8 @@ export function findScene(fixture) {
     return null;
   }
 
-  // A bare name is a unit fixture first; only then a corpus scene elsewhere in
+  // A bare name is a unit fixture first (checked above); only then a corpus scene elsewhere in
   // the tree. Order matters when a basename occurs twice.
-  const inFixtures = join(SCENES_DIR, 'fixtures', fixture);
-  if (existsSync(inFixtures)) return inFixtures;
   if (!sceneIndex) {
     sceneIndex = new Map();
     const walk = (dir) => {

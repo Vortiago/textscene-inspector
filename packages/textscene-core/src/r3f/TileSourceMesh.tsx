@@ -65,9 +65,10 @@ export function TileSourceMesh({
     return () => geometry.dispose();
   }, [geometry]);
 
-  // No texture reference or a failed load: one placeholder for the whole
-  // source (the panel row comes from useResource's missing-path report).
-  if (!source.texturePath || texResult.status === 'unavailable') {
+  // A source with no texture draws nothing (`tile_map_layer.cpp:724`). A failed load gets one
+  // placeholder for the whole source (the panel row comes from useResource's missing-path report).
+  if (!source.texturePath) return null;
+  if (texResult.status === 'unavailable') {
     return <MissingResourcePlaceholder shape="plane" name={name} />;
   }
   // Pending: render nothing, so no placeholder flashes.

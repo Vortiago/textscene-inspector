@@ -75,3 +75,15 @@ export function lineRangeContains(range: Range, character: number): boolean {
 export function lineRange(line: number, span: LineSpan): Range {
   return { start: { line, character: span.start }, end: { line, character: span.end } };
 }
+
+/** Zero-based lines `fromLine` to `toLine`, each whole. */
+export function linesRange(
+  document: { readonly lines: readonly string[] },
+  fromLine: number,
+  toLine: number
+): Range {
+  return {
+    start: { line: fromLine, character: 0 },
+    end: { line: toLine, character: document.lines[toLine]?.length ?? 0 },
+  };
+}

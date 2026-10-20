@@ -7,6 +7,7 @@
 import { unquoteLiteral, type ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
+import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 import type { AnimatedSprite2DProperties } from './types';
 
 export function parseAnimatedSprite2D(
@@ -22,7 +23,7 @@ export function parseAnimatedSprite2D(
     flip_h: boolOr(properties.flip_h, false),
     flip_v: boolOr(properties.flip_v, false),
   };
-  if (properties.sprite_frames) result.sprite_frames = properties.sprite_frames;
+  if (holdsResource(properties.sprite_frames)) result.sprite_frames = properties.sprite_frames;
   // `animation = &"right"` → "right", read as the SpriteFrames decoder reads the name it matches.
   if (properties.animation) result.animation = unquoteLiteral(properties.animation);
   return result;

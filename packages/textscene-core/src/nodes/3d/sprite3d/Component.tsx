@@ -163,23 +163,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       </group>
     );
 
-  // No texture referenced: a stub placeholder shows the sprite node exists. The linter flags this
-  // as `sprite3d-requires-texture`.
-  if (!properties.texture) {
-    return (
-      <>
-        <MissingResourcePlaceholder
-          shape="plane"
-          name={node.name}
-          position={position}
-          rotation={rotation}
-          scale={scale}
-        />
-        {subtree}
-      </>
-    );
-  }
-
   // Texture failed to load: a magenta-quad placeholder. The DOM `<MissingResourcesPanel>` names the
   // path.
   if (textureMissing) {
@@ -197,8 +180,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     );
   }
 
-  // Pending: nothing visible until `useTexture2D` picks the texture up on a later render, once the
-  // host provides the file.
+  // No texture draws nothing (`sprite_3d.cpp:798`), and so does one still pending: `useTexture2D`
+  // picks it up on a later render, once the host provides the file.
   if (!displayedTexture) {
     return (
       <>

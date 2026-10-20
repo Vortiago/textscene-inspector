@@ -21,13 +21,32 @@ export interface UniqueNameClaim {
   readonly livePath: string;
 }
 
+/** The property that makes a node claim a `%Name` in its owner. */
+export const UNIQUE_NAME_PROPERTY = 'unique_name_in_owner';
+
 /**
- * `unique_name_in_owner = true` on this node (node.cpp:4050: `PROPERTY_USAGE_NO_EDITOR` hides it
- * and still serialises it). Read from `rawProperties` alone, which both parsers publish alike
- * (`parser/rawPropertyParity.test.ts`). No slice models the flag, so typed `properties` lacks it.
+ * `unique_name_in_owner = true` as a property value (node.cpp:4050: `PROPERTY_USAGE_NO_EDITOR` hides
+ * it and still serialises it). A node with no such property passes `undefined`.
+ */
+export function claimsUniqueName(propertyValue: string | undefined): boolean {
+  return boolSlotValue(propertyValue) === true;
+}
+
+/**
+ * {@link claimsUniqueName} for a node, read from `rawProperties` alone, which both parsers publish
+ * alike (`parser/rawPropertyParity.test.ts`). No slice models the flag, so typed `properties` lacks it.
  */
 export function isUniqueNameInOwner(node: RawNode): boolean {
-  return boolSlotValue(node.rawProperties.unique_name_in_owner) === true;
+  return claimsUniqueName(node.rawProperties[UNIQUE_NAME_PROPERTY]);
+}
+
+/**
+ * Records `value` under `%name` unless an earlier node claimed it: `_acquire_unique_name_in_owner`
+ * refuses to overwrite an entry (node.cpp:2225-2231). The one place the first-claimant rule lives.
+ */
+export function claimUniqueName<V>(claims: Map<string, V>, name: string, value: V): void {
+  const key = UNIQUE_NODE_PREFIX + name;
+  if (!claims.has(key)) claims.set(key, value);
 }
 
 /**
@@ -71,7 +90,6 @@ function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
       const path = join(parentPath, node.name);
       const under = node.instanceSubPath ? join(parentLive, node.instanceSubPath) : parentLive;
       const livePath = join(under, node.name);
-      const key = UNIQUE_NODE_PREFIX + node.name;
       // An explicit `owner=` replaces the structural answer: `"."` is this root, anything else the
       // node at that root-relative path.
       const explicitOwner =
@@ -94,8 +112,8 @@ function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
           const owned = instanceClaims.get(claimOwner) ?? [];
           owned.push({ node, path, livePath });
           instanceClaims.set(claimOwner, owned);
-        } else if (!claims.has(key)) {
-          claims.set(key, { node, path, livePath });
+        } else {
+          claimUniqueName(claims, node.name, { node, path, livePath });
         }
       }
       // An instanced root is this scene's own root, so its overrides stay claimed. An instance inside

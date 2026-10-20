@@ -9,6 +9,7 @@ import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
 import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
 import { type Sprite3DProperties } from './types';
+import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 import { frameCoords, replaySpriteFrames } from '../../../godot/scene/spriteFrames.js';
 import { parseSpriteQuad } from './quadParser';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
@@ -78,7 +79,7 @@ export function parseSprite3D(
     render_priority: intOr(properties.render_priority, 0),
   };
 
-  if (properties.texture) {
+  if (holdsResource(properties.texture)) {
     result.texture = properties.texture;
   }
 

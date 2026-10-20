@@ -160,6 +160,11 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(placeholder).toBeDefined();
   });
 
+  it('draws nothing when no texture is authored (sprite_3d.cpp:798)', async () => {
+    const renderer = await render({ node: makeNode({ name: 'Unset' }) });
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
   it('lays the quad on the plane its axis faces', async () => {
     const tex = makeTexture(32, 32);
     const renderer = await render({

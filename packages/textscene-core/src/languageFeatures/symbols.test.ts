@@ -96,3 +96,24 @@ describe('documentSymbols', () => {
     expect(symbols.map((symbol) => symbol.name)).toEqual(['Loose']);
   });
 });
+
+describe('documentSymbols under a %Name parent', () => {
+  const UNIQUE_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Player" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Hand" type="Node3D" parent="%Player"]
+
+[node name="Mesh" type="MeshInstance3D" parent="%Player/Hand"]
+`;
+
+  it('nests a node under the node that claims the name', () => {
+    const root = only(documentSymbols(new LanguageDocument(UNIQUE_SCENE)));
+    const player = only(root.children);
+
+    expect(only(only(player.children).children).name).toBe('Mesh');
+  });
+});

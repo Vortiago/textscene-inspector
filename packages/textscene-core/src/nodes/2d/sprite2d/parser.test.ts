@@ -32,6 +32,11 @@ describe('parseSprite2D', () => {
     expect(p.texture).toBeUndefined();
   });
 
+  it('reads a null texture as no texture, as absence does', () => {
+    const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), { texture: 'null' });
+    expect(p.texture).toBeUndefined();
+  });
+
   it('inherits the Node2D transform', () => {
     const p = parseSprite2D(heading('Sprite2D', { name: 'S' }), {
       position: 'Vector2(10, 20)',

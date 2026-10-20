@@ -54,8 +54,8 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
     externalResources,
     internalResources
   );
-  const showPlaceholder = missing || !props.texture;
 
+  // With no texture the light adds nothing and draws no placeholder: measured with `pnpm ref:godot`.
   const lights = props.enabled && !!displayedTexture;
   // `canvas.glsl:806` shadows only an item whose `light_mask` meets `shadow_item_cull_mask`. With
   // no reached item meeting it, the shadow lands nowhere, so the light casts nothing.
@@ -97,7 +97,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
       node={node}
       props={props}
       body={() =>
-        !props.enabled ? null : showPlaceholder ? (
+        !props.enabled ? null : missing ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : displayedTexture ? (
           <QuadMesh

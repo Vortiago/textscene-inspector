@@ -123,6 +123,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animatedsprite2d Untextured",
+    "file": "unit-animatedsprite2d-untextured.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d",
     "file": "unit-animatedsprite2d.tscn",
     "category": "Other"
@@ -1363,6 +1368,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Untextured",
+    "file": "unit-pointlight2d-untextured.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d",
     "file": "unit-pointlight2d.tscn",
     "category": "Other"
@@ -1718,6 +1728,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Untextured",
+    "file": "unit-sprite3d-untextured.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d",
     "file": "unit-sprite3d.tscn",
     "category": "Other"
@@ -1830,11 +1845,6 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tonemap Agx Shadow",
     "file": "unit-tonemap-agx-shadow.tscn",
-    "category": "Other"
-  },
-  {
-    "name": "Touch Screen Button",
-    "file": "unit-touch-screen-button.tscn",
     "category": "Other"
   },
   {
@@ -2055,6 +2065,12 @@ export const fixtures: Fixture[] = [
     "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
     "category": "Other",
     "root": "subviewport-snap-off"
+  },
+  {
+    "name": "Touch Screen Button",
+    "file": "touch-screen-button/unit-touch-screen-button.tscn",
+    "category": "Other",
+    "root": "touch-screen-button"
   },
   {
     "name": "Animation Empty Library",
@@ -2438,6 +2454,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Untextured",
+    "file": "unit-sprite2d-untextured.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d",
     "file": "unit-sprite2d.tscn",
     "category": "Unit - 2D Canvas"
@@ -2485,6 +2506,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map Layer Tile Z Index",
     "file": "unit-tile-map-layer-tile-z-index.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Untextured Source",
+    "file": "unit-tile-map-layer-untextured-source.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -3373,6 +3399,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Normal Map Blue",
     "file": "unit-material-normal-map-blue.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Normal Map Uv Density",
+    "file": "unit-material-normal-map-uv-density.tscn",
     "category": "Unit - Materials"
   },
   {
