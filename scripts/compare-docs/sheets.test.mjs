@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFile, rm } from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join, sep } from 'node:path';
@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url';
 
 import { CATALOG } from './build-node-base-types.mjs';
 import { isDivider, splitRow } from './markdownTable.mjs';
+import { readRenderRegistrations } from './renderRegistrations.mjs';
 import { RUNTIME_EFFECT_NODE_TYPES } from './runtimeEffectNodes.data.mjs';
 import { findProseViolations, formatViolation, proseBlocks } from './sheetProse.mjs';
 import {
@@ -28,7 +29,6 @@ import {
 } from './sheetSources.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const NODES_ROOT = join(HERE, '../../packages/textscene-core/src/nodes');
 /** The ClassDB capture: each node with its ancestry, nearest parent first. */
 const catalogNodes = JSON.parse(readFileSync(CATALOG, 'utf8')).nodes;
 
@@ -332,56 +332,21 @@ describe('comparison sheets', () => {
    * does. `visual:` is not tied to it: a gizmo node (ADR-0018) draws but has no
    * useful pair, and a RigidBody3D draws nothing but its capture shows its mesh.
    */
-  /**
-   * The type names an `index.r3f.ts` registers: inline `typeName: 'Foo'`
-   * literals, and a family's loop over a constant its React-free sibling
-   * `index.ts` exports.
-   */
-  function typesRegisteredBy(r3fFile, source = readFileSync(r3fFile, 'utf8')) {
-    const inline = [...source.matchAll(/typeName:\s*'([A-Za-z0-9_]+)'/g)].map((m) => m[1]);
-    if (inline.length > 0) return inline;
-    const looped = /import \{\s*([A-Z0-9_]+)\s*\} from '\.\/index'/.exec(source);
-    if (!looped) return [];
-    const sibling = readFileSync(join(dirname(r3fFile), 'index.ts'), 'utf8');
-    const literal = new RegExp(`${looped[1]}\\s*=\\s*\\[([^\\]]*)\\]`).exec(sibling);
-    return literal ? [...literal[1].matchAll(/'([A-Za-z0-9_]+)'/g)].map((m) => m[1]) : [];
-  }
-
-  /**
-   * The registration that speaks for `type`, or null: its file and its intent.
-   * It walks to an ancestor for the family loops (`physics/2d/index.r3f.ts`),
-   * and the ancestor must name the type, or a drawing slice below it passes.
-   */
-  function registrationFor(sliceDir, type) {
-    for (let dir = sliceDir; dir.includes(`${sep}nodes`); dir = dirname(dir)) {
-      const candidate = join(dir, 'index.r3f.ts');
-      if (!existsSync(candidate)) continue;
-      const source = readFileSync(candidate, 'utf8');
-      if (!typesRegisteredBy(candidate, source).includes(type)) continue;
-      const intent = /renderIntent:\s*'([a-z-]+)'/.exec(source);
-      return {
-        file: candidate,
-        intent: intent ? intent[1] : 'draws',
-        scenePass: /scenePass:/.test(source),
-      };
-    }
-    return null;
-  }
-
   describe('status agrees with the render registration', () => {
+    const registrations = readRenderRegistrations();
     /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
-    // Read once per slice, not once per directional assertion.
     const sliceSheets = sheets
       .filter((s) => s.file.includes(`${sep}nodes${sep}`))
       .map((s) => {
-        const registration = registrationFor(dirname(s.file), s.meta.type);
+        const registration = registrations.get(s.meta.type);
         return {
           ...s,
-          hasComponent: registration !== null,
+          hasComponent: registration !== undefined,
           transformOnly: registration?.intent === 'transform-only',
           // A `pending` registration mounts a base component while the node's
           // own visual is missing: a registered gap.
           pending: registration?.intent === 'pending',
+          drawsOwnVisual: registration?.drawsOwnVisual === true,
           // A `scenePass` applies an effect to other nodes, so the sheet has an
           // effect to compare: it is not the nil-effect claim `linter-only` is.
           scenePass: registration?.scenePass === true,
@@ -401,15 +366,6 @@ describe('comparison sheets', () => {
 
     it('finds slice-backed sheets, so a bad filter cannot vacuously pass', () => {
       expect(sliceSheets.length).toBeGreaterThan(50);
-    });
-
-    it('credits a family loop only to the types it registers', () => {
-      // A loop registration: three slices own no `index.r3f.ts` and must
-      // resolve, while another slice in the same directory must not inherit it.
-      const family = join(NODES_ROOT, 'physics/2d/index.r3f.ts');
-      expect(typesRegisteredBy(family).sort()).toEqual(['CharacterBody2D', 'RigidBody2D', 'StaticBody2D']);
-      expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'RigidBody2D')?.file).toBe(family);
-      expect(registrationFor(join(NODES_ROOT, 'physics/2d/rigidbody2d'), 'ProgressBar')).toBeNull();
     });
 
     it('gives every slice-backed sheet a status, so none sits outside the checks', () => {
@@ -455,6 +411,16 @@ describe('comparison sheets', () => {
         .filter((s) => s.pending && s.meta.status !== 'unimplemented')
         .map((s) => `${s.label}: registers pending but its status is '${s.meta.status}'`);
       expect(bad).toEqual([]);
+    });
+
+    it('says "nothing yet" for every pending node that draws nothing', () => {
+      // `renders_as` heads the sheet and its index row. A gap that mounts only its base
+      // draws nothing yet, and "transform-only" there would claim the finished nil effect.
+      const bad = sliceSheets
+        .filter((s) => s.pending && !s.drawsOwnVisual)
+        .filter((s) => !/^nothing yet\b/.test(s.meta.renders_as ?? '') || /transform-only/.test(s.body))
+        .map((s) => `${s.label}: pending and undrawn, but renders_as is '${s.meta.renders_as}'`);
+      expect(bad.sort()).toEqual([]);
     });
 
     it('gives no node with a Godot runtime effect the `linter-only` status', () => {
