@@ -2102,6 +2102,11 @@ export const fixtures: Fixture[] = [
     "category": "Edge Cases"
   },
   {
+    "name": "Int Wrap Position",
+    "file": "edge-int-wrap-position.tscn",
+    "category": "Edge Cases"
+  },
+  {
     "name": "Invalid Cast Shadow",
     "file": "edge-invalid-cast-shadow.tscn",
     "category": "Edge Cases"
