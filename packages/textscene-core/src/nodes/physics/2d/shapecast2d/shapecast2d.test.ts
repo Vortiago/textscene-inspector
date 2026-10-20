@@ -23,6 +23,6 @@ describe('ShapeCast2D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('ShapeCast2D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('ShapeCast2D')).toBe('transform-only');
   });
 });

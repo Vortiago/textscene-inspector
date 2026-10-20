@@ -24,7 +24,7 @@ describe('AnimatableBody3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('AnimatableBody3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('AnimatableBody3D')).toBe('transform-only');
   });
 
   it('reads sync_to_physics nowhere: parseNode3D only knows transform and visible', () => {

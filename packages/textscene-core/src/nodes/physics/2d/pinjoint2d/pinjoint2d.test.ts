@@ -23,6 +23,6 @@ describe('PinJoint2D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('PinJoint2D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('PinJoint2D')).toBe('transform-only');
   });
 });

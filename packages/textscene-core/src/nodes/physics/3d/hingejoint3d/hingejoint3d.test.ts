@@ -24,7 +24,7 @@ describe('HingeJoint3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('HingeJoint3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('HingeJoint3D')).toBe('transform-only');
   });
 
   it('reads angular_limit/upper and motor/enable nowhere: parseNode3D only knows transform and visible', () => {

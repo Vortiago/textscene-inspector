@@ -23,6 +23,6 @@ describe('MultiplayerSpawner registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('MultiplayerSpawner')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('MultiplayerSpawner')).toBe('transform-only');
   });
 });

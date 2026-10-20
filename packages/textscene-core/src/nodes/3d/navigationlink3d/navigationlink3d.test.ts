@@ -23,6 +23,6 @@ describe('NavigationLink3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('NavigationLink3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('NavigationLink3D')).toBe('transform-only');
   });
 });

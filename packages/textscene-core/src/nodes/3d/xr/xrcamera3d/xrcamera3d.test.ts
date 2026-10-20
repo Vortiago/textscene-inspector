@@ -28,7 +28,7 @@ describe('XRCamera3D registration', () => {
   });
 
   it('claims no more and no less than Camera3D does', () => {
-    expect(nodeComponentRegistry.isTransformOnly('XRCamera3D')).toBe(false);
+    expect(nodeComponentRegistry.renderIntentOf('XRCamera3D')).toBe('draws');
     expect(rendersOwnVisual('XRCamera3D')).toBe(rendersOwnVisual('Camera3D'));
   });
 });

@@ -24,7 +24,7 @@ describe('SliderJoint3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('SliderJoint3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('SliderJoint3D')).toBe('transform-only');
   });
 
   it('reads linear_limit/upper_distance and angular_limit/upper_angle nowhere: parseNode3D only knows transform and visible', () => {

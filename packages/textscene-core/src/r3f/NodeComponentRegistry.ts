@@ -91,6 +91,12 @@ interface YSortGroupRegistration {
 /** Every pass takes the parsed roots and hands back the roots to build from. */
 export type ScenePass = (nodes: TscnNode[], internalResources: readonly TscnInternalResource[]) => TscnNode[];
 
+/** A pass and the types whose registrations carry it. */
+interface RegisteredScenePass {
+  run: ScenePass;
+  typeNames: string[];
+}
+
 /**
  * `transforms` passes move nodes; `paths` passes read where nodes ended up, so
  * every transform pass runs before any path pass whatever the barrel order.
@@ -169,25 +175,10 @@ class NodeComponentRegistryImpl {
     return this.registry.get(typeName)?.csgShape !== undefined;
   }
 
-  /** True when the type registered as drawing nothing of its own (ADR-0008). */
-  isTransformOnly(typeName: string): boolean {
-    return this.registry.get(typeName)?.renderIntent === 'transform-only';
-  }
-
-  /** True when the type registered a base component while its own visual is still a gap. */
-  isPending(typeName: string): boolean {
-    return this.registry.get(typeName)?.renderIntent === 'pending';
-  }
-
   /** The declared intent, or undefined when the type registers no component. */
   renderIntentOf(typeName: string): NodeComponentRegistration['renderIntent'] | undefined {
     const registration = this.registry.get(typeName);
     return registration === undefined ? undefined : (registration.renderIntent ?? 'draws');
-  }
-
-  /** True when the type registered a pass over the authored tree. */
-  hasScenePass(typeName: string): boolean {
-    return this.registry.get(typeName)?.scenePass !== undefined;
   }
 
   getYSortGroup(typeName: string): YSortGroupRegistration | undefined {
@@ -203,19 +194,19 @@ class NodeComponentRegistryImpl {
     return this.registry.getAllTypeNames();
   }
 
-  /** The registered passes, each once, in stage order then registration order. */
-  scenePasses(): readonly ScenePass[] {
-    const seen = new Set<ScenePass>();
-    const out: ScenePass[] = [];
+  /** The registered passes, each once with the types that share it, in stage order then registration order. */
+  scenePasses(): readonly RegisteredScenePass[] {
+    const byRun = new Map<ScenePass, RegisteredScenePass>();
     for (const stage of SCENE_PASS_STAGES) {
       for (const typeName of this.registry.getAllTypeNames()) {
         const pass = this.registry.get(typeName)?.scenePass;
-        if (!pass || pass.stage !== stage || seen.has(pass.run)) continue;
-        seen.add(pass.run);
-        out.push(pass.run);
+        if (!pass || pass.stage !== stage) continue;
+        const registered = byRun.get(pass.run) ?? { run: pass.run, typeNames: [] };
+        registered.typeNames.push(typeName);
+        byRun.set(pass.run, registered);
       }
     }
-    return out;
+    return [...byRun.values()];
   }
 
   clear(): void {

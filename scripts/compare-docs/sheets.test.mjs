@@ -338,6 +338,7 @@ describe('comparison sheets', () => {
    * useful pair, and a RigidBody3D draws nothing but its capture shows its mesh.
    */
   describe('status agrees with the render registration', () => {
+    const scenePassTypes = new Set(nodeComponentRegistry.scenePasses().flatMap((pass) => pass.typeNames));
     /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
     const sliceSheets = sheets
       .filter((s) => s.file.includes(`${sep}nodes${sep}`))
@@ -352,7 +353,7 @@ describe('comparison sheets', () => {
           pending: intent === 'pending',
           // A `scenePass` applies an effect to other nodes, so the sheet has an
           // effect to compare: it is not the nil-effect claim `linter-only` is.
-          scenePass: nodeComponentRegistry.hasScenePass(s.meta.type),
+          scenePass: scenePassTypes.has(s.meta.type),
         };
       });
     const sliceSheetByType = new Map(sliceSheets.map((s) => [s.meta.type, s]));
