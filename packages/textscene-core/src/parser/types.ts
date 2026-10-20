@@ -20,12 +20,23 @@ export interface NodeOrigin<N extends RawNode> {
    */
   readonly declaredParent: string | undefined;
   /**
-   * Whether the heading carries `parent_id_path=`, the id trail Godot falls back to
-   * when the `parent=` path does not walk (`packed_scene.cpp:161-163`, `:1947`). The
-   * ids name nodes inside base scenes this file cannot resolve, so a vanished path
-   * here does not settle where the node lands.
+   * The ids of the heading's `parent_id_path=`, the trail Godot falls back to when the
+   * `parent=` path does not walk (`packed_scene.cpp:161-163`, `:1947`). Undefined where
+   * the heading has none, or where the value is not a `PackedInt32Array`.
    */
-  readonly recoverableById?: boolean;
+  readonly idTrail?: readonly number[];
+  /** The heading's `unique_id=`, or `0` where it has none (`UNIQUE_SCENE_ID_UNASSIGNED`). */
+  readonly uniqueId: number;
+}
+
+/**
+ * Where Godot seats an orphaned node through its `parent_id_path=`, in place of the re-root.
+ * `lands` names the heading the node goes under. `inBase` names the instance heading whose
+ * scene holds the rest of the trail, so this file cannot say where the node lands.
+ */
+export interface IdRecovery {
+  readonly kind: 'lands' | 'inBase';
+  readonly via: NodeOrigin<RawNode>;
 }
 
 /** A parsed scene. `N` is the node the parser built: a `TscnNode`, or the strict parser's `RawNode`. */
@@ -119,6 +130,11 @@ export interface HeadingFacts {
    * no `node.parent`, so it is seated, not orphaned.
    */
   emptyParentHeadings: readonly NodeOrigin<RawNode>[];
+  /**
+   * The orphans whose `parent_id_path=` Godot follows to a node, instead of re-rooting them.
+   * An orphan absent here is re-rooted, or has no trail.
+   */
+  idRecoveries: ReadonlyMap<NodeOrigin<RawNode>, IdRecovery>;
   /**
    * The `binds=` value of each `[connection]` heading, as written. The loader parses a heading's fields with the
    * resource parser a property value goes through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`),

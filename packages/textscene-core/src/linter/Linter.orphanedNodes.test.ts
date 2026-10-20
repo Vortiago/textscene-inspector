@@ -208,19 +208,95 @@ describe('a parent path this file never defines', () => {
     expect(diagnostic?.nodeType).toBe('<unknown>');
   });
 
-  it('claims no re-root when the heading carries parent_id_path', () => {
+  describe('a heading that carries parent_id_path', () => {
     // `NODE_FROM_ID` falls back to `_recover_node_path_index` before the vanished-path warning (`packed_scene.cpp:161-163`,
-    // `:1947`), which walks ids through base scenes this linter never opens. So an unwalkable path here does not settle
-    // where the node lands, and the rename is not asserted.
-    const source = `[gd_scene format=3]
+    // `:1947-2005`). The trail's first id is looked up in this file's `unique_id=` values, because an orphan's scene has no base scene.
+    const headingWithTrail = (trail: string) =>
+      `[node name="Body" type="Node2D" parent="Gone" parent_id_path=PackedInt32Array(${trail})]`;
+    const trailScene = (...blocks: string[]) =>
+      scene(packedScene, node('Node2D', {}, { name: 'Root' }), ...blocks);
+    const messagesOf = (...blocks: string[]) => orphansIn(trailScene(...blocks)).map((d) => d.message);
+    const messageOf = (...blocks: string[]) => messagesOf(...blocks)[0];
 
-[node name="Root" type="Node2D"]
+    it('re-roots and renames when no heading carries the first id', () => {
+      const message = messageOf(headingWithTrail('840561040, 1598164129'));
+      expect(message).toContain('"Gone#Body"');
+    });
 
-[node name="Body" type="Node2D" parent="Gone" parent_id_path=PackedInt32Array(840561040, 1598164129)]
-`;
-    const message = orphansIn(source)[0]?.message;
-    expect(message).toContain('parent_id_path');
-    expect(message).not.toContain('Gone#Body');
+    it('lands the node under the heading the first id names, with no rename', () => {
+      const message = messageOf(
+        '[node name="Mid" type="Node2D" parent="." unique_id=20]',
+        headingWithTrail('20')
+      );
+      expect(message).toContain('lands under "Mid"');
+      expect(message).not.toContain('Gone#Body');
+    });
+
+    it('names the full path of a nested heading', () => {
+      const message = messageOf(
+        '[node name="Mid" type="Node2D" parent="."]',
+        '[node name="Leaf" type="Node2D" parent="Mid" unique_id=20]',
+        headingWithTrail('20')
+      );
+      expect(message).toContain('lands under "Mid/Leaf"');
+    });
+
+    it('re-roots when the heading the first id names comes after it', () => {
+      const message = messageOf(
+        headingWithTrail('20'),
+        '[node name="Mid" type="Node2D" parent="." unique_id=20]'
+      );
+      expect(message).toContain('"Gone#Body"');
+    });
+
+    it('re-roots when the heading the first id names is itself stranded', () => {
+      const [, bodyMessage] = messagesOf(
+        '[node name="Lost" type="Node2D" parent="Nowhere" unique_id=20]',
+        headingWithTrail('20')
+      );
+      expect(bodyMessage).toContain('"Gone#Body"');
+    });
+
+    it('matches id 0 to the first heading without a unique_id, the root here', () => {
+      const message = messageOf('[node name="Mid" type="Node2D" parent="."]', headingWithTrail('0'));
+      expect(message).toContain('lands under the scene root');
+    });
+
+    it('re-roots when a middle hop is not an instance', () => {
+      const message = messageOf(
+        '[node name="Mid" type="Node2D" parent="." unique_id=20]',
+        headingWithTrail('20, 5')
+      );
+      expect(message).toContain('"Gone#Body"');
+    });
+
+    it('re-roots when a middle hop is a placeholder', () => {
+      const message = messageOf(
+        '[node name="Mid" parent="." unique_id=20 instance_placeholder="res://body.tscn"]',
+        headingWithTrail('20, 5')
+      );
+      expect(message).toContain('"Gone#Body"');
+    });
+
+    it('cannot say where the node lands when a middle hop is an instance, and names its scene', () => {
+      const message = messageOf(
+        '[node name="Mid" parent="." unique_id=20 instance=ExtResource("1_body")]',
+        headingWithTrail('20, 5')
+      );
+      expect(message).toContain('cannot say where the node lands');
+      expect(message).toContain('res://body.tscn');
+      expect(message).not.toContain('Gone#Body');
+    });
+
+    it('keeps the refusal outcome when Godot refuses the instantiate', () => {
+      const message = messageOf(
+        '[node name="Mid" type="Node2D" parent="." unique_id=20]',
+        headingWithTrail('20'),
+        '[node name="Parentless" type="Node2D"]'
+      );
+      expect(message).toContain('refuses to instantiate');
+      expect(message).not.toContain('lands under');
+    });
   });
 
   it('errors on an empty parent=, which is neither a vanished path nor a missing field', () => {

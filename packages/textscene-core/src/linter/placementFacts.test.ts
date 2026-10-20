@@ -13,12 +13,20 @@ function node(name: string, parent?: string): RawNode {
   };
 }
 
+/** The `unique_id=` and `parent_id_path=` a heading carries. */
+interface HeadingIds {
+  uniqueId?: number;
+  idTrail?: number[];
+}
+
 /** The facts of headings in file order, each declaring `parent=` as given, `''` included. */
-function factsOf(...headings: [name: string, declaredParent?: string][]) {
-  const origins: NodeOrigin<RawNode>[] = headings.map(([name, declaredParent], i) => ({
+function factsOf(...headings: [name: string, declaredParent?: string, ids?: HeadingIds][]) {
+  const origins: NodeOrigin<RawNode>[] = headings.map(([name, declaredParent, ids], i) => ({
     node: node(name, declaredParent || undefined),
     line: i + 1,
     declaredParent,
+    uniqueId: ids?.uniqueId ?? 0,
+    idTrail: ids?.idTrail,
   }));
   return placementFacts(origins, buildSceneTree(origins.map((o) => o.node)));
 }
@@ -31,7 +39,19 @@ describe('placementFacts', () => {
       orphanedNodes: [],
       rootWithParent: undefined,
       emptyParentHeadings: [],
+      idRecoveries: new Map(),
     });
+  });
+
+  it("follows an orphan's id trail to the heading it names", () => {
+    const facts = factsOf(['Root'], ['Mid', '.', { uniqueId: 20 }], ['Orphan', 'Gone', { idTrail: [20] }]);
+    const [[orphan, recovery]] = [...facts.idRecoveries];
+    expect(orphan?.node.name).toBe('Orphan');
+    expect(recovery).toMatchObject({ kind: 'lands', via: { node: { name: 'Mid' } } });
+  });
+
+  it('omits an orphan whose id trail names no heading', () => {
+    expect(factsOf(['Root'], ['Orphan', 'Gone', { idTrail: [20] }]).idRecoveries.size).toBe(0);
   });
 
   it('names a heading whose parent path resolves against nothing', () => {
