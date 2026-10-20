@@ -22,7 +22,7 @@ describe('SpringArm3D registration', () => {
     expect(nodeComponentRegistry.get('SpringArm3D')).toBe(SpringArm3D);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
+  it('declares the placement of its children as a gap, so it still reads as not implemented', () => {
     expect(nodeComponentRegistry.renderIntentOf('SpringArm3D')).toBe('pending');
   });
 });
