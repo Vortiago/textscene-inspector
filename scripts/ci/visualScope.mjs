@@ -40,7 +40,12 @@ export const NON_RENDERING_PATHS = [
  */
 export function needsVisualRun(changedPaths) {
   if (changedPaths.length === 0) return true;
-  return changedPaths.some((path) => !NON_RENDERING_PATHS.some((pattern) => pattern.test(path)));
+  return changedPaths.some(rendersGoldens);
+}
+
+/** True for a path a golden scene may render through: any path not listed above. */
+export function rendersGoldens(path) {
+  return !NON_RENDERING_PATHS.some((pattern) => pattern.test(path));
 }
 
 function main() {
