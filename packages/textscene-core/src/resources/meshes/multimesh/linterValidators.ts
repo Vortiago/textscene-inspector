@@ -8,17 +8,17 @@
 import '../../resource/linterValidators.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import {
+  MULTI_MESH_PHYSICS_INTERPOLATION_QUALITY_NAMES,
+  MULTI_MESH_TRANSFORM_FORMAT_NAMES,
+} from '../../../godot/scene/multiMesh.js';
 
 validatorRegistry.registerAll('MultiMesh', {
   // multimesh.cpp:399 hints "2D,3D". set_transform_format (:355-358) refuses only once
   // instances exist, an order the value alone cannot show.
-  transform_format: v.enumInt(
-    'transform_format',
-    { 0: 'TRANSFORM_2D', 1: 'TRANSFORM_3D' },
-    {
-      hinted: 'multimesh.cpp:399',
-    }
-  ),
+  transform_format: v.enumInt('transform_format', MULTI_MESH_TRANSFORM_FORMAT_NAMES, {
+    hinted: 'multimesh.cpp:399',
+  }),
   use_colors: v.boolean('use_colors'),
   use_custom_data: v.boolean('use_custom_data'),
   custom_aabb: v.aabb('custom_aabb'),
@@ -36,9 +36,7 @@ validatorRegistry.registerAll('MultiMesh', {
   // multimesh.cpp:426 hints "Fast,High". set_physics_interpolation_quality (:252-255) is bare.
   physics_interpolation_quality: v.enumInt(
     'physics_interpolation_quality',
-    { 0: 'FAST', 1: 'HIGH' },
-    {
-      hinted: 'multimesh.cpp:426',
-    }
+    MULTI_MESH_PHYSICS_INTERPOLATION_QUALITY_NAMES,
+    { hinted: 'multimesh.cpp:426' }
   ),
 });

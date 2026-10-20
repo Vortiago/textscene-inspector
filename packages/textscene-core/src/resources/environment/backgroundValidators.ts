@@ -6,21 +6,15 @@
 
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 import { v } from '../../linter/validators/index.js';
+import {
+  AMBIENT_SOURCE_NAMES,
+  BACKGROUND_MODE_NAMES,
+  REFLECTION_SOURCE_NAMES,
+} from '../../godot/scene/environment.js';
 
 export const backgroundKeys: Record<string, PropertyValidator> = {
   // environment.cpp:1237, set_background (:43-49) is a bare assignment.
-  background_mode: v.enumInt(
-    'background_mode',
-    {
-      0: 'BG_CLEAR_COLOR',
-      1: 'BG_COLOR',
-      2: 'BG_SKY',
-      3: 'BG_CANVAS',
-      4: 'BG_KEEP',
-      5: 'BG_CAMERA_FEED',
-    },
-    { hinted: 'environment.cpp:1237' }
-  ),
+  background_mode: v.enumInt('background_mode', BACKGROUND_MODE_NAMES, { hinted: 'environment.cpp:1237' }),
   background_color: v.color('background_color'),
   // environment.cpp:1239 ("0,16,0.01"), set_bg_energy_multiplier (:96) bare-assigns.
   background_energy_multiplier: v.float('background_energy_multiplier', {
@@ -56,16 +50,9 @@ export const backgroundKeys: Record<string, PropertyValidator> = {
   sky_rotation: v.vector3('sky_rotation'),
 
   // environment.cpp:1264, set_ambient_source (:151-155) is a bare assignment.
-  ambient_light_source: v.enumInt(
-    'ambient_light_source',
-    {
-      0: 'BG',
-      1: 'DISABLED',
-      2: 'COLOR',
-      3: 'SKY',
-    },
-    { hinted: 'environment.cpp:1264' }
-  ),
+  ambient_light_source: v.enumInt('ambient_light_source', AMBIENT_SOURCE_NAMES, {
+    hinted: 'environment.cpp:1264',
+  }),
   ambient_light_color: v.color('ambient_light_color'),
   // environment.cpp:1266 ("0,1,0.01"), and the CLAMP at :173 is what makes this
   // an error rather than a warning: the value stored is not the value written.
@@ -82,9 +69,7 @@ export const backgroundKeys: Record<string, PropertyValidator> = {
   }),
 
   // environment.cpp:1270, set_reflection_source (:181) is a bare assignment.
-  reflected_light_source: v.enumInt(
-    'reflected_light_source',
-    { 0: 'BG', 1: 'DISABLED', 2: 'SKY' },
-    { hinted: 'environment.cpp:1270' }
-  ),
+  reflected_light_source: v.enumInt('reflected_light_source', REFLECTION_SOURCE_NAMES, {
+    hinted: 'environment.cpp:1270',
+  }),
 };
