@@ -12,3 +12,9 @@ export interface Vector3 {
   y: number;
   z: number;
 }
+
+/** `Vector3::normalize` (`core/math/vector3.h:548-558`): a zero vector stays zero. */
+export function normalizedVector3(x: number, y: number, z: number): [number, number, number] {
+  const length = Math.hypot(x, y, z);
+  return length === 0 ? [0, 0, 0] : [x / length, y / length, z / length];
+}

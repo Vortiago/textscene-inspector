@@ -4,8 +4,7 @@
  * ArrayMesh or PrimitiveMesh, or a `.tres` holding either.
  */
 
-import type * as THREE from 'three';
-import { bottomUpV } from '../../../../godot/math/uv';
+import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../../../godot/scene/primitiveMesh';
 import { warn } from '../../../../logger';
 import type { ParsedResource } from '../../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../../parser/types';
@@ -13,24 +12,14 @@ import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import type { CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
 import { resolveSubResourceRef, textResourcePath } from '../../../../resources/SubResourceResolver';
-import {
-  decodeArrayMesh,
-  decodeSceneArrayMesh,
-  drawOrderIndices,
-} from '../../../../resources/meshes/arraymesh/decode';
+import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/meshes/arraymesh/decode';
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
+import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
 import { materialPathInFile } from '../../../../resources/materials/materialPathInFile';
-import { buildPrimitiveMeshGeometry } from '../../meshinstance3d/primitiveMeshGeometry';
+import { primitiveMeshSurface } from '../../meshinstance3d/primitiveMeshGeometry';
 
-export interface CsgMeshSurface {
-  /** `xyz` per vertex. */
-  positions: Float32Array;
-  /** `xyz` per vertex, or undefined for a surface with no ARRAY_NORMAL. */
-  normals?: Float32Array;
-  /** `uv` per vertex with V down, or undefined for a surface with no ARRAY_TEX_UV. */
-  uvs?: Float32Array;
-  /** Three per triangle, front faces clockwise. */
-  indices: ArrayLike<number>;
+/** The arrays of a Godot surface the brush builder reads, and the surface's material. */
+export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normals' | 'uvs' | 'indices'> {
   material: CsgMaterialAddress;
 }
 
@@ -111,29 +100,15 @@ function arrayMeshSurfaces(
 
 /**
  * A PrimitiveMesh's one surface under its `material` (`primitive_meshes.cpp`, `surface_get_material`
- * answers it for surface 0). The slice builds it in three's space, so this turns it back.
+ * answers it for surface 0), in Godot's arrays as the brush builder reads them.
  */
 function primitiveMeshSurfaces(
   resource: TscnInternalResource,
   material: CsgMaterialAddress
 ): CsgMeshSurface[] {
-  const geometry = buildPrimitiveMeshGeometry(resource);
-  if (!geometry) return [];
-  const surface = godotSurface(geometry, material);
-  geometry.dispose();
-  return [surface];
-}
-
-/** three fronts triangles counter-clockwise with V up, where Godot fronts them clockwise with V down. */
-function godotSurface(geometry: THREE.BufferGeometry, material: CsgMaterialAddress): CsgMeshSurface {
-  const positions = Float32Array.from(geometry.getAttribute('position').array);
-  const normal = geometry.getAttribute('normal');
-  const uv = geometry.getAttribute('uv');
-  const uvs = uv ? Float32Array.from(uv.array) : undefined;
-  if (uvs) for (let i = 1; i < uvs.length; i += 2) uvs[i] = bottomUpV(uvs[i]!);
-  const index = geometry.getIndex();
-  const indices = index ? Uint32Array.from(index.array) : drawOrderIndices(positions.length / 3);
-  for (let i = 0; i + 2 < indices.length; i += 3)
-    [indices[i + 1], indices[i + 2]] = [indices[i + 2]!, indices[i + 1]!];
-  return { positions, normals: normal ? Float32Array.from(normal.array) : undefined, uvs, indices, material };
+  // The brush reads no UV2 (`csg_shape.cpp:1147-1172`), the only array the texel size scales.
+  const surface = primitiveMeshSurface(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+  if (!surface) return [];
+  const { positions, normals, uvs, indices } = surface;
+  return [{ positions, normals, uvs, indices, material }];
 }

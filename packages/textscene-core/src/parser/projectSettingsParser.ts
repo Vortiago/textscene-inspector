@@ -17,7 +17,8 @@ import type { LayoutDirectionEnv } from '../godot/scene/control.js';
 import { DEFAULT_CLEAR_COLOR } from '../godot/rendering/rendering.js';
 import { unquoteLiteral } from './utils.js';
 import { colorOr } from '../utils/colorParser.js';
-import { parseOptionalInt } from './valueParsers.js';
+import { parseOptionalFloat, parseOptionalInt } from './valueParsers.js';
+import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE, primitiveMeshTexelSize } from '../godot/scene/primitiveMesh.js';
 import {
   VOLUMETRIC_FOG_DEFAULTS,
   type VolumetricFogProjectSettings,
@@ -141,6 +142,12 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
  */
 export function projectClearColor(settings: ProjectSettings | null): Rgba {
   return colorOr(settings?.['rendering/environment/defaults/default_clear_color'], DEFAULT_CLEAR_COLOR);
+}
+
+/** `rendering/lightmapping/primitive_meshes/texel_size`, the world size of a texel in a PrimitiveMesh's UV2. */
+export function projectPrimitiveMeshTexelSize(settings: ProjectSettings | null): number {
+  const setting = parseOptionalFloat(settings?.['rendering/lightmapping/primitive_meshes/texel_size']);
+  return primitiveMeshTexelSize(setting ?? DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
 }
 
 /**

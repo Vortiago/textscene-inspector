@@ -182,6 +182,11 @@ All code for one resource type in `resources/<category>/<type>/`, the resource-s
 A Godot-text slice splits a pure `decode.ts` from `build.ts`, and a foreign-format slice declares its real parser instead.
 _Avoid_: "processor" for the slice. A hollow `decode.ts` on a foreign format.
 
+**Godot surface**:
+One triangle surface in Godot's mesh arrays: positions, normals, tangents, UV and UV2, with front faces clockwise and V from the image top.
+A decoded ArrayMesh, a PrimitiveMesh builder and a CSGMesh3D brush share it, and `godotSurfacesGeometry` alone turns it into three's winding and V.
+_Avoid_: "three-space surface". "mesh data".
+
 **React-free linter boundary**:
 The invariant that the linter bundle never imports React or THREE, even transitively, which a **conformance guard** checks on the import graph.
 _Avoid_: "linter isolation".

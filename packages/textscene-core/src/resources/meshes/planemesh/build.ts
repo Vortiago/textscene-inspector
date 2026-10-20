@@ -16,11 +16,5 @@ export function buildPlaneMeshGeometry(p: PlaneMeshProperties): THREE.BufferGeom
 
   const offset = p.centerOffset;
   if (offset) geom.translate(offset.x, offset.y, offset.z);
-
-  // flip_faces reverses winding so the surface is visible from the other side.
-  if (p.flipFaces) {
-    geom.scale(-1, 1, 1);
-    geom.computeVertexNormals();
-  }
   return geom;
 }
