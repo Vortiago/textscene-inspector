@@ -1003,6 +1003,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightmap Gi Baked",
+    "file": "unit-lightmap-gi-baked.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Directional",
+    "file": "unit-lightmap-gi-directional.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightmap Gi",
     "file": "unit-lightmap-gi.tscn",
     "category": "Other"

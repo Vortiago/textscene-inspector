@@ -114,6 +114,11 @@ export const LIGHTING_SCENES = [
   { name: 'reflection-probe-box-projection', file: 'unit-reflection-probe-box-projection.tscn' },
   // AMBIENT_COLOR on one ReflectionProbe: the floor in its box takes a red ambient.
   { name: 'reflection-probe-ambient-color', file: 'unit-reflection-probe-ambient-color.tscn' },
+  // A LightmapGI bake lights a box and the ground: a Static sun's light, its shadow and a red
+  // bounce, all read from the atlas through UV2. The headers state why no other golden shows it.
+  { name: 'lightmap-gi-baked', file: 'unit-lightmap-gi-baked.tscn' },
+  // The same scene baked directional: the read weighs four spherical-harmonics layers by the normal.
+  { name: 'lightmap-gi-directional', file: 'unit-lightmap-gi-directional.tscn' },
   // BG_SKY over a gold sky with AMBIENT_SOURCE_COLOR (grey 0.6, sky_contribution
   // 0) and AgX. The shadowed grass stays grey, with no sky IBL in diffuse, while
   // the metallic sphere reflects the gold sky in full. Matches Godot to ≤6/255,
