@@ -10,8 +10,7 @@ import { loadCoreLinter, loadResourceClaims } from '../compare-docs/loadCoreLint
 import { partitionByValidator } from '../compare-docs/registryKeys.mjs';
 
 /**
- * One row per resource class, the work order first: most unvalidated properties
- * leading.
+ * One row per resource class, most unvalidated properties first.
  *
  * `properties` maps a class to the properties it declares itself, `bases` maps a
  * class to its base, `claimed` holds the type names a slice claims, and
