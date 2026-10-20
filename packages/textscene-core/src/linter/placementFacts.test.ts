@@ -45,8 +45,8 @@ describe('placementFacts', () => {
 
   it("follows an orphan's id trail to the heading it names", () => {
     const facts = factsOf(['Root'], ['Mid', '.', { uniqueId: 20 }], ['Orphan', 'Gone', { idTrail: [20] }]);
-    const [[orphan, recovery]] = [...facts.idRecoveries];
-    expect(orphan?.node.name).toBe('Orphan');
+    const [orphan, recovery] = [...facts.idRecoveries][0]!;
+    expect(orphan.node.name).toBe('Orphan');
     expect(recovery).toMatchObject({ kind: 'lands', via: { node: { name: 'Mid' } } });
   });
 
