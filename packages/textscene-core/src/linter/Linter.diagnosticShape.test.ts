@@ -23,6 +23,14 @@ const SOURCES: Record<string, string> = {
     node('Node2D', {}, { name: 'Root' }),
     node('Node2D', {}, { name: 'B', parent: '' })
   ),
+  'connection-missing-field': scene(
+    node('Node2D', {}, { name: 'Root' }),
+    '[connection signal="ready" from="." method="go"]'
+  ),
+  'connection-node-missing': scene(
+    node('Node2D', {}, { name: 'Root' }),
+    '[connection signal="ready" from="Gone" to="." method="go"]'
+  ),
   'collisionobject2d-needs-collision-shape': scene(node('StaticBody2D', {}, { name: 'Root' })),
   'strict-parser': scene('[node name="Root" type="Node2D"]\nfoo bar'),
   'format:position': scene(node('Node2D', { position: 'Vector2(nope)' }, { name: 'Root' })),

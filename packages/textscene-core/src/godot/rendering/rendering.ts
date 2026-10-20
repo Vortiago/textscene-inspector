@@ -65,8 +65,9 @@ export const MAX_2D_DIRECTIONAL_LIGHTS = 8;
 export const MAX_LIGHTS_PER_ITEM = 16;
 
 /**
- * `RS::ShadowCastingSetting` (`servers/rendering/rendering_server.h:1494-1499`), the integers a
- * `.tscn` stores for `GeometryInstance3D.cast_shadow` and a MeshLibrary item's `mesh_cast_shadow`.
+ * `RS::ShadowCastingSetting` (`servers/rendering/rendering_server.h:1494-1499`, 4.7.2
+ * `rendering_server_enums.h:794-799`), the integers a `.tscn` stores for `GeometryInstance3D.cast_shadow`
+ * and a MeshLibrary item's `mesh_cast_shadow`.
  */
 export enum ShadowCastingSetting {
   OFF = 0,

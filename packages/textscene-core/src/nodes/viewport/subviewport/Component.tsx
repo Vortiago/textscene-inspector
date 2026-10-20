@@ -27,7 +27,8 @@ import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import {
   applyOrthoFrame,
-  createOffscreenTarget,
+  createCanvasTarget,
+  createSceneTarget,
   godotCanvasPosition,
   renderToOffscreenTarget,
   orthoFrameForCamera2D,
@@ -117,11 +118,9 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     return scene;
   }, [node.name]);
 
-  // Carries the storage and the tonemap contracts: Godot tonemaps a
-  // sub-viewport's render into its target as it tonemaps the main view's.
   const createTarget = useCallback(
-    () => createOffscreenTarget(width, height, node.name),
-    [width, height, node.name]
+    () => (kind === '3d' ? createSceneTarget : createCanvasTarget)(width, height, node.name),
+    [kind, width, height, node.name]
   );
   const target = useMultisampledTarget(viewportMsaaMode(properties, kind), createTarget);
   // A 3D portal renders its lights only through this pass, so it fits them itself and draws its
@@ -183,13 +182,6 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         clearColor,
         transparentBg,
         toneMapping,
-        // `applyProps` stamps `SRGBColorSpace` on a texture bound to an albedo
-        // `map`. With `isXRRenderTarget`, three reads this pass's output space
-        // from that tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
-        // Re-tagged before every bind, since the stamp lands during React commits.
-        beforeBind: () => {
-          target.texture.colorSpace = THREE.LinearSRGBColorSpace;
-        },
         // No camera is not an error: Godot renders the clear colour and nothing else.
         draw: () => {
           if (camera) renderWithShadowAtlas(shadowAtlas, () => gl.render(source, camera));
@@ -219,7 +211,14 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // Consumers sample the texture directly. The ordered driver runs every
   // non-cyclic pass before R3F's own render, so a sampler sees this frame's
   // content, even on the frame the target is first published.
-  usePublishViewportPass({ path, node, texture: target.texture, width, height, render: renderPass });
+  usePublishViewportPass({
+    path,
+    node,
+    target,
+    width,
+    height,
+    render: renderPass,
+  });
 
   if (rendersInline) return null;
   // The portal declares the workspace its content needs, not the host's, which

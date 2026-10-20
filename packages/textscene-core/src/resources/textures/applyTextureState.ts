@@ -70,8 +70,13 @@ interface TextureState extends MaterialTextureState {
  * to `SRGBColorSpace` every commit outside `linear` mode, which no `<Canvas>` sets.
  */
 export function pinNoColorSpace(texture: THREE.Texture): THREE.Texture {
+  return pinColorSpace(texture, THREE.NoColorSpace);
+}
+
+/** Pins `texture.colorSpace` to `colorSpace`, discarding a later write, as `pinNoColorSpace` does. */
+export function pinColorSpace(texture: THREE.Texture, colorSpace: THREE.ColorSpace): THREE.Texture {
   Object.defineProperty(texture, 'colorSpace', {
-    get: () => THREE.NoColorSpace,
+    get: () => colorSpace,
     set: () => {
       // Discards `@react-three/fiber`'s reassignment. A pin, not a write after the
       // commit, so no effect order can undo it. It covers props the `colorMaps`
@@ -91,8 +96,8 @@ export function pinNoColorSpace(texture: THREE.Texture): THREE.Texture {
  */
 export function applyTextureState(texture: THREE.Texture, state: TextureState): THREE.Texture {
   // A render target (a ViewportTexture) is never cloned: a clone is a frozen
-  // frame. Nor is it re-tagged: its SubViewport writes it tone-mapped as
-  // `LinearSRGBColorSpace`, and every other reader shares that attachment.
+  // frame. Nor is it re-tagged: its pass reads the tag as its output space, and
+  // its storage, not the tag, decides what a sample decodes.
   if (texture.isRenderTargetTexture) return texture;
 
   const filterState = godotTextureFilterState(state.filter);

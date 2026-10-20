@@ -11,7 +11,7 @@ import { findSubResource } from '../../../resources/SubResourceResolver';
 import { ARRAY_LITERAL_RE, arrayLiteralBody } from '../../../godot/variant/variantParser.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
-import { ruleInt } from '../../../godot/variant/int.js';
+import { slotInt } from '../../../godot/variant/int.js';
 import { subResourceRefAnywhere } from '../../../godot/variant/resourceRef.js';
 
 /** One node of a resolved AnimationTree. */
@@ -212,7 +212,7 @@ function parseConnections(raw: string): Map<string, string> {
     // `connect_node`'s port is an int slot (animation_blend_tree.cpp:1766), read like every int
     // slot, including a string, which `Variant::_to_int` routes through `String::to_int()`
     // (variant.h:372). An unreadable `"0"` would drop the triple and leave the tree with no root.
-    const port = ruleInt(unquoteLiteral(tokens[i + 1]!));
+    const port = slotInt(unquoteLiteral(tokens[i + 1]!));
     const from = unquoteLiteral(tokens[i + 2]!);
     if (port === null) continue;
     out.set(`${to}:${port}`, from);

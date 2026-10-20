@@ -16,6 +16,8 @@ import type { ProceduralSkyProperties, Sky } from '../../resources/sky/types';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import type { Rgba } from '../../godot/math/math';
 import { degToRad } from '../../godot/math/math.js';
+import { BackgroundMode } from '../../godot/scene/environment.js';
+import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 
 /** The node types the editor counts, one independent counter each. */
 export const PREVIEW_SUN_YIELD_TYPE = 'DirectionalLight3D';
@@ -108,10 +110,9 @@ function previewHorizonColor(): Rgba {
 export function previewEnvironment(): { settings: EnvironmentSettings; sky: Sky } {
   const settings = createEnvironmentSettings(
     decodeEnvironment({
-      background_mode: String(2), // BG_SKY
-      // TONE_MAPPER_FILMIC: the preview departs from an authored Environment's
-      // LINEAR default.
-      tonemap_mode: String(2),
+      background_mode: String(BackgroundMode.BG_SKY),
+      // The preview departs from an authored Environment's LINEAR default.
+      tonemap_mode: String(ToneMapper.FILMIC),
       // The editor preview enables glow; emissive materials bloom because of it.
       glow_enabled: 'true',
     }),

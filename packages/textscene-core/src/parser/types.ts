@@ -112,6 +112,28 @@ export interface RawNode {
 /** A node whose children are its own kind: the shape the tree builder seats a child into. */
 export type SceneNode<N> = RawNode & { children: N[] };
 
+/**
+ * What one `[connection]` heading states. Each field is `undefined` when the heading omits it, which the text loader
+ * refuses for the four it requires (`resource_format_text.cpp:311-333`).
+ */
+export interface ConnectionHeading {
+  /** 1-based. */
+  line: number;
+  signal: string | undefined;
+  from: string | undefined;
+  to: string | undefined;
+  method: string | undefined;
+  /**
+   * The `binds=` value as written. The loader parses a heading's fields with the resource parser a property value goes
+   * through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`), so an `ExtResource` in it is a use.
+   */
+  binds: string | undefined;
+  /** The heading carries `from_uid_path`, which Godot walks when `from` resolves nowhere (`packed_scene.cpp:162-163`). */
+  hasFromUidPath: boolean;
+  /** The heading carries `to_uid_path`. */
+  hasToUidPath: boolean;
+}
+
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
@@ -135,12 +157,8 @@ export interface HeadingFacts {
    * An orphan absent here is re-rooted, or has no trail.
    */
   idRecoveries: ReadonlyMap<NodeOrigin<RawNode>, IdRecovery>;
-  /**
-   * The `binds=` value of each `[connection]` heading, as written. The loader parses a heading's fields with the
-   * resource parser a property value goes through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`),
-   * so an `ExtResource` in it is a use.
-   */
-  connectionBinds: readonly string[];
+  /** Each `[connection]` heading, in file order. */
+  connections: readonly ConnectionHeading[];
   /**
    * The `instance=` value of each `[node]` heading that follows no other `[node]`: the first, or one after a
    * `[connection]` or `[editable]`. Only a node body's read of the next heading skips a failed `ExtResource`

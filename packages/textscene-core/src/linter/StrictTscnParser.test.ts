@@ -142,7 +142,7 @@ visible = true
         rootWithParent: undefined,
         emptyParentHeadings: [],
         idRecoveries: new Map(),
-        connectionBinds: [],
+        connections: [],
         instancesOutsideNodeBody: [],
       });
     });

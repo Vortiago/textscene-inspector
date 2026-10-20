@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyTextureState, releaseBoundTexture, type UVTransform } from './applyTextureState';
+import { applyTextureState, pinColorSpace, releaseBoundTexture, type UVTransform } from './applyTextureState';
 import { UV2_CHANNEL } from '../meshes/uv2';
 import { dropMipChain, godotTextureFilterState } from './godotTextureFilter';
 
@@ -499,5 +499,27 @@ describe('releaseBoundTexture', () => {
   it('tolerates an empty slot (edge case)', () => {
     expect(() => releaseBoundTexture(undefined)).not.toThrow();
     expect(() => releaseBoundTexture(null)).not.toThrow();
+  });
+});
+
+describe('pinColorSpace', () => {
+  it('reads back the pinned colour space', () => {
+    const texture = pinColorSpace(new THREE.Texture(), THREE.LinearSRGBColorSpace);
+    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+  });
+
+  /** The write `@react-three/fiber`'s `applyProps` makes on a texture bound to a `map`. */
+  it('discards a later write without throwing', () => {
+    const texture = pinColorSpace(new THREE.Texture(), THREE.LinearSRGBColorSpace);
+    expect(() => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+    }).not.toThrow();
+    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+  });
+
+  it('takes a second pin, which replaces the first (edge case)', () => {
+    const texture = pinColorSpace(new THREE.Texture(), THREE.LinearSRGBColorSpace);
+    pinColorSpace(texture, THREE.SRGBColorSpace);
+    expect(texture.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 });

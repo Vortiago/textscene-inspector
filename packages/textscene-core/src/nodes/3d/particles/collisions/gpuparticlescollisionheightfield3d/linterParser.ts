@@ -6,24 +6,12 @@
  */
 
 import '../shared/linterParser.js';
+import {
+  GPU_PARTICLES_COLLISION_HEIGHT_FIELD_3D_RESOLUTION_NAMES,
+  GPU_PARTICLES_COLLISION_HEIGHT_FIELD_3D_UPDATE_MODE_NAMES,
+} from '../../../../../godot/scene/particlesCollision3d.js';
 import { validatorRegistry } from '../../../../../linter/ValidatorRegistry.js';
 import { v, layerBitmask } from '../../../../../linter/validators/index.js';
-
-/** gpu_particles_collision_3d.cpp:734 ADD_PROPERTY, PROPERTY_HINT_ENUM "256 (Fastest),512 (Fast),1024 (Average),2048 (Slow),4096 (Slower),8192 (Slowest)". */
-const RESOLUTION = {
-  0: '256',
-  1: '512',
-  2: '1024',
-  3: '2048',
-  4: '4096',
-  5: '8192',
-};
-
-/** gpu_particles_collision_3d.cpp:735 ADD_PROPERTY, PROPERTY_HINT_ENUM "When Moved (Fast),Always (Slow)". */
-const UPDATE_MODE = {
-  0: 'WHEN_MOVED',
-  1: 'ALWAYS',
-};
 
 validatorRegistry.registerAll('GPUParticlesCollisionHeightField3D', {
   // gpu_particles_collision_3d.cpp:733, PROPERTY_HINT_RANGE
@@ -34,13 +22,13 @@ validatorRegistry.registerAll('GPUParticlesCollisionHeightField3D', {
   // gpu_particles_collision_3d.cpp:734: the .tscn stores the enum index, RESOLUTION_256=0
   // to RESOLUTION_8192=5 (gpu_particles_collision_3d.cpp:739-744), never the literal
   // resolution. set_resolution:780-785 is a bare assignment.
-  resolution: v.enumInt('resolution', RESOLUTION, {
+  resolution: v.enumInt('resolution', GPU_PARTICLES_COLLISION_HEIGHT_FIELD_3D_RESOLUTION_NAMES, {
     hinted: 'gpu_particles_collision_3d.cpp:734',
   }),
   // gpu_particles_collision_3d.cpp:735, PROPERTY_HINT_ENUM with 2 entries:
   // UPDATE_MODE_WHEN_MOVED=0, UPDATE_MODE_ALWAYS=1 (gpu_particles_collision_3d.cpp:747-748).
   // set_update_mode:791-794 is a bare assignment.
-  update_mode: v.enumInt('update_mode', UPDATE_MODE, {
+  update_mode: v.enumInt('update_mode', GPU_PARTICLES_COLLISION_HEIGHT_FIELD_3D_UPDATE_MODE_NAMES, {
     hinted: 'gpu_particles_collision_3d.cpp:735',
   }),
   // gpu_particles_collision_3d.cpp:736, plain BOOL with no hint.

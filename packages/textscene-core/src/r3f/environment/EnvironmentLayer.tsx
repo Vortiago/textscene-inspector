@@ -7,7 +7,8 @@
 import { useEffect } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
-import { BackgroundMode, type EnvironmentSettings } from '../../resources/environment/types';
+import { BackgroundMode } from '../../godot/scene/environment';
+import type { EnvironmentSettings } from '../../resources/environment/types';
 import type { Sky } from '../../resources/sky/types';
 import { godotColorToLinear } from '../godotColor';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants';

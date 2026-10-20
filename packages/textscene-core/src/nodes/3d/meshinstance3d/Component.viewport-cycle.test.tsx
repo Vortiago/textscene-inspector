@@ -33,7 +33,7 @@ import { materialInstanceAs } from '../testing/reactThreeTestInstance';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
-import { ViewportTexturePublisher } from '../../../r3f/testing/ViewportTexturePublisher';
+import { ViewportTexturePublisher, viewportEntry } from '../../../r3f/testing/ViewportTexturePublisher';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 
@@ -81,7 +81,7 @@ async function renderCyclicMesh(material: Record<string, string> = ALBEDO_TARGET
           <CyclicRegistration />
           <ViewportTexturePublisher
             path="Root/SubViewport"
-            entry={{ texture: publishedTexture, size: { x: 64, y: 64 } }}
+            entry={viewportEntry(publishedTexture, { x: 64, y: 64 })}
           />
           <NodePathProvider path="Root/Mesh1">
             <MeshInstance3D node={meshNode()} />
