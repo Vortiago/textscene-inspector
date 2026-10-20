@@ -4,8 +4,8 @@
 
 import type { NodeOrigin, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
-import { isUniqueNameInOwner } from '../utils/uniqueNames.js';
-import { UNIQUE_NODE_PREFIX, resolveParentPath, type ParentPathTree } from '../godot/string/nodePath.js';
+import { claimUniqueName, isUniqueNameInOwner } from '../utils/uniqueNames.js';
+import { resolveParentPath, type ParentPathTree } from '../godot/string/nodePath.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
 /**
@@ -115,8 +115,7 @@ function registerPath<N extends RawNode>(tables: BuildTables<N>, parentPath: str
   if (!node.name) return;
   const path = joinPath(parentPath, node.name);
   tables.byPath.set(path, node);
-  const key = UNIQUE_NODE_PREFIX + node.name;
-  if (isUniqueNameInOwner(node) && !tables.uniquePaths.has(key)) tables.uniquePaths.set(key, path);
+  if (isUniqueNameInOwner(node)) claimUniqueName(tables.uniquePaths, node.name, path);
 }
 
 /** The instance a stranded node hangs off, and where that node lands. */

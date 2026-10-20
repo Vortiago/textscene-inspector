@@ -194,6 +194,7 @@
         "res://main.tscn",
         "res://missing.tscn",
         "res://mover.gd",
+        "res://nodepaths.tscn",
         "res://project.godot",
         "res://textures/grid.png",
         "res://typing.tres",
@@ -439,6 +440,110 @@
         "inside": "res://"
       },
       "targets": []
+    },
+    {
+      "name": "a from= node path lands on the heading of the node it names",
+      "at": {
+        "file": "nodepaths.tscn",
+        "line": "[connection signal=\"visibility_changed\" from=\"Player/Sprite\"",
+        "inside": "Player/Sprite"
+      },
+      "targets": [
+        {
+          "file": "nodepaths.tscn",
+          "range": [
+            6,
+            0,
+            6,
+            52
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a to= of . lands on the root heading",
+      "at": {
+        "file": "nodepaths.tscn",
+        "line": "[connection signal=\"visibility_changed\" from=\"Player/Sprite\"",
+        "inside": "\".\""
+      },
+      "targets": [
+        {
+          "file": "nodepaths.tscn",
+          "range": [
+            2,
+            0,
+            2,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a parent= three levels deep lands on the heading of the node it names",
+      "at": {
+        "file": "nodepaths.tscn",
+        "line": "[node name=\"Gun\"",
+        "inside": "Player/Sprite"
+      },
+      "targets": [
+        {
+          "file": "nodepaths.tscn",
+          "range": [
+            6,
+            0,
+            6,
+            52
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a path with . and .. segments lands on the node it walks to",
+      "at": {
+        "file": "nodepaths.tscn",
+        "line": "[connection signal=\"visibility_changed\" from=\"./Player\"",
+        "inside": "Player/Sprite/../Sprite/Gun"
+      },
+      "targets": [
+        {
+          "file": "nodepaths.tscn",
+          "range": [
+            8,
+            0,
+            8,
+            54
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a %Name path lands on the heading of the node that claims the name",
+      "at": {
+        "file": "nodepaths.tscn",
+        "line": "[connection signal=\"visibility_changed\" from=\"%Label\"",
+        "inside": "%Label"
+      },
+      "targets": [
+        {
+          "file": "nodepaths.tscn",
+          "range": [
+            10,
+            0,
+            10,
+            50
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a node path no heading declares resolves nowhere",
+      "at": {
+        "file": "nodepaths.tscn",
+        "line": "[connection signal=\"visibility_changed\" from=\"%Label\"",
+        "inside": "Missing"
+      },
+      "targets": []
     }
   ],
   "highlights": [
@@ -523,6 +628,40 @@
         "inside": "SubResource"
       },
       "ranges": []
+    },
+    {
+      "name": "a node name highlights its name= and every path that resolves to it",
+      "at": {
+        "file": "nodepaths.tscn",
+        "line": "[node name=\"Player\"",
+        "inside": "Player"
+      },
+      "ranges": [
+        [
+          4,
+          12,
+          4,
+          18
+        ],
+        [
+          6,
+          44,
+          6,
+          50
+        ],
+        [
+          10,
+          42,
+          10,
+          48
+        ],
+        [
+          14,
+          46,
+          14,
+          54
+        ]
+      ]
     }
   ],
   "folding": {

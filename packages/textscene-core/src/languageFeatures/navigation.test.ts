@@ -2,7 +2,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
-import { declarationRangeAt, resPathAt, resPathOccurrences } from './navigation';
+import { NODE_TREE_HEAD } from './fixtures.testkit';
+import { definitionRangeAt, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
 
@@ -18,9 +19,9 @@ paths = ["res://a.png", "res://b.png"]
 
 const document = new LanguageDocument(SCENE);
 
-describe('declarationRangeAt', () => {
+describe('definitionRangeAt of a resource id', () => {
   it('resolves an ExtResource reference to its declaration heading', () => {
-    expect(declarationRangeAt(document, { line: 7, character: 15 })).toEqual({
+    expect(definitionRangeAt(document, { line: 7, character: 15 })).toEqual({
       start: { line: 2, character: 0 },
       end: {
         line: 2,
@@ -30,24 +31,24 @@ describe('declarationRangeAt', () => {
   });
 
   it('resolves a SubResource reference to its declaration heading', () => {
-    expect(declarationRangeAt(document, { line: 8, character: 10 })?.start.line).toBe(4);
+    expect(definitionRangeAt(document, { line: 8, character: 10 })?.start.line).toBe(4);
   });
 
   it("resolves a declaration's own id= to its heading", () => {
     const line = document.lines[4]!;
-    expect(declarationRangeAt(document, { line: 4, character: line.indexOf('Anim_1') + 1 })?.start.line).toBe(
+    expect(definitionRangeAt(document, { line: 4, character: line.indexOf('Anim_1') + 1 })?.start.line).toBe(
       4
     );
   });
 
   it('gives nothing off every reference', () => {
-    expect(declarationRangeAt(document, { line: 9, character: 0 })).toBeUndefined();
+    expect(definitionRangeAt(document, { line: 9, character: 0 })).toBeUndefined();
   });
 
   it('gives nothing for a reference whose declaration is absent', () => {
     const dangling = new LanguageDocument('texture = ExtResource("missing")\n');
 
-    expect(declarationRangeAt(dangling, { line: 0, character: 12 })).toBeUndefined();
+    expect(definitionRangeAt(dangling, { line: 0, character: 12 })).toBeUndefined();
   });
 });
 
@@ -115,5 +116,94 @@ describe('resPathOccurrences', () => {
 
   it('gives an empty list for a document with no res:// path', () => {
     expect(resPathOccurrences(new LanguageDocument('[gd_scene format=3]\n'))).toEqual([]);
+  });
+});
+
+describe('definitionRangeAt of a node path', () => {
+  const SCENE_PATHS = [
+    ...NODE_TREE_HEAD,
+    '[node name="Door" type="Node3D" parent="." instance=ExtResource("1_door")]',
+    '',
+    '[node name="Hinge" type="Node3D" parent="Door"]',
+    '',
+    '[node name="Unique" type="Node3D" parent="Player"]',
+    'unique_name_in_owner = true',
+    '',
+    '[connection signal="pressed" from="Player/Sprite" to="." method="_on_pressed"]',
+    '[connection signal="pressed" from="./Player" to="Player/../Player/Sprite" method="_a"]',
+    '[connection signal="pressed" from="Door/Inside/Deep" to="Missing" method="_b"]',
+    '[connection signal="pressed" from="%Unique" to="Player/%Unique" method="_c"]',
+    '',
+  ].join('\n');
+  const paths = new LanguageDocument(SCENE_PATHS);
+
+  function headingLineAt(lineText: string, value: string): number | undefined {
+    const line = paths.lines.findIndex((candidate) => candidate.startsWith(lineText));
+    const position = { line, character: paths.lines[line]!.indexOf(value) + 1 };
+    return definitionRangeAt(paths, position)?.start.line;
+  }
+
+  it('resolves a from= path to the heading of the node it names', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Player/Sprite"', 'Player/Sprite')).toBe(6);
+  });
+
+  it('resolves a to= of . to the root heading', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Player/Sprite"', '"." method')).toBe(2);
+  });
+
+  it('resolves a parent= three levels deep', () => {
+    expect(headingLineAt('[node name="Gun"', 'Player/Sprite')).toBe(6);
+  });
+
+  it('resolves a parent= of . to the root heading', () => {
+    expect(headingLineAt('[node name="Player"', '"."]')).toBe(2);
+  });
+
+  it('reads ./A and A/../A like A', () => {
+    expect(headingLineAt('[connection signal="pressed" from="./Player"', './Player')).toBe(4);
+    expect(headingLineAt('[connection signal="pressed" from="./Player"', 'Player/../Player/Sprite')).toBe(6);
+  });
+
+  it('resolves a %Unique path to the node that claims the name', () => {
+    expect(headingLineAt('[connection signal="pressed" from="%Unique"', '%Unique" to')).toBe(14);
+    expect(headingLineAt('[connection signal="pressed" from="%Unique"', 'Player/%Unique')).toBe(14);
+  });
+
+  it('gives nothing for a path into an instanced scene', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Door/Inside/Deep"', 'Door/Inside/Deep')).toBe(
+      undefined
+    );
+  });
+
+  it('gives nothing for a path no heading declares', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Door/Inside/Deep"', 'Missing')).toBe(undefined);
+  });
+
+  it('gives nothing off a node path value', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Player/Sprite"', 'method')).toBe(undefined);
+  });
+});
+
+describe('definitionRangeAt of a node path on a heading tag named like an Object property', () => {
+  it('gives nothing for a constructor heading', () => {
+    const odd = new LanguageDocument('[constructor name="A"]\n');
+    expect(definitionRangeAt(odd, { line: 0, character: 5 })).toBeUndefined();
+  });
+});
+
+describe('definitionRangeAt of a node path under a %Name parent', () => {
+  const UNIQUE = [
+    '[node name="Root" type="Node3D"]',
+    '[node name="Player" type="Node3D" parent="."]',
+    'unique_name_in_owner = true',
+    '[node name="Hand" type="Node3D" parent="%Player"]',
+    '[node name="Mesh" type="Node3D" parent="Player/Hand"]',
+  ].join('\n');
+
+  it('resolves the path of a node seated under a claimed name', () => {
+    const unique = new LanguageDocument(UNIQUE);
+    const character = unique.lines[4]!.indexOf('Player/Hand') + 1;
+
+    expect(definitionRangeAt(unique, { line: 4, character })?.start.line).toBe(3);
   });
 });
