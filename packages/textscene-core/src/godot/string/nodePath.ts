@@ -137,7 +137,7 @@ export function resolveParentPath(parentPath: string | undefined): string | null
  * A raw `NodePath("…")` property value on the node at `basePath`, resolved against that node as
  * `get_node_or_null` resolves it, or null when it addresses no other node in the scene.
  *
- * @param uniquePaths `%Name` to its claiming path, from `uniqueNameClaims` over the same tree.
+ * @param uniquePaths `%Name` to its claiming path, from `cachedUniqueNameClaims` over the same tree.
  *   Without it a `%Name` is null: `%` is invalid in a node name (ustring.cpp:5071), so a child
  *   lookup for it never hits.
  */

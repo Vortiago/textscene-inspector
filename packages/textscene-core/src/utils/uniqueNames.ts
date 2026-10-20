@@ -21,23 +21,14 @@ export interface UniqueNameClaim {
   readonly livePath: string;
 }
 
-/** The property that makes a node claim a `%Name` in its owner. */
-export const UNIQUE_NAME_PROPERTY = 'unique_name_in_owner';
-
 /**
- * `unique_name_in_owner = true` as a property value (node.cpp:4050: `PROPERTY_USAGE_NO_EDITOR` hides
- * it and still serialises it). A node with no such property passes `undefined`.
- */
-export function claimsUniqueName(propertyValue: string | undefined): boolean {
-  return boolSlotValue(propertyValue) === true;
-}
-
-/**
- * {@link claimsUniqueName} for a node, read from `rawProperties` alone, which both parsers publish
- * alike (`parser/rawPropertyParity.test.ts`). No slice models the flag, so typed `properties` lacks it.
+ * Whether a node claims a `%Name` in its owner: `unique_name_in_owner = true`, read from
+ * `rawProperties` alone, which both parsers publish alike (`parser/rawPropertyParity.test.ts`). No
+ * slice models the flag, so typed `properties` lacks it. `PROPERTY_USAGE_NO_EDITOR` hides it and
+ * still serialises it (node.cpp:4050).
  */
 export function isUniqueNameInOwner(node: RawNode): boolean {
-  return claimsUniqueName(node.rawProperties[UNIQUE_NAME_PROPERTY]);
+  return boolSlotValue(node.rawProperties.unique_name_in_owner) === true;
 }
 
 /**
@@ -128,7 +119,7 @@ function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
 }
 
 /** The claim table alone, from {@link uniqueNameOwnership}. */
-export function uniqueNameClaims(roots: readonly RawNode[]): Map<string, UniqueNameClaim> {
+function uniqueNameClaims(roots: readonly RawNode[]): Map<string, UniqueNameClaim> {
   return uniqueNameOwnership(roots).claims as Map<string, UniqueNameClaim>;
 }
 
