@@ -13,6 +13,7 @@ import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { formatReal, storedReal } from '../../../godot/math/real.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import { ContentScaleStretch } from '../../../godot/scene/window.js';
 
 const arms = {
   maxSizeBelowMinSize: groundedArm('window-max-size-below-min-size', {
@@ -34,8 +35,6 @@ const arms = {
 
 /** window.h:105,126: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`, 100. */
 const DEFAULT_SIZE: Vector2 = { x: 100, y: 100 };
-/** window.h:88-89, enum ContentScaleStretch. */
-const CONTENT_SCALE_STRETCH_INTEGER = 1;
 
 const formatSize = (size: Vector2): string => `Vector2i(${size.x}, ${size.y})`;
 const sameSize = (a: Vector2, b: Vector2): boolean => a.x === b.x && a.y === b.y;
@@ -133,7 +132,8 @@ function checkSizeClamped(node: RuleContext['node'], rawProps: Record<string, st
 
 function checkContentScaleFloored(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (rawProps.content_scale_factor === undefined) return [];
-  if (ruleInt(rawProps.content_scale_stretch, 0) !== CONTENT_SCALE_STRETCH_INTEGER) return [];
+  if (ruleInt(rawProps.content_scale_stretch, ContentScaleStretch.FRACTIONAL) !== ContentScaleStretch.INTEGER)
+    return [];
   const written = parseGodotFloat(rawProps.content_scale_factor);
   // At or below 0 the setter refuses the value (window.cpp:1774), which the validator
   // reports. The floor leaves nan and inf as they are.
