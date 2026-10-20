@@ -81,7 +81,10 @@ a blob-URL worker. In Chromium 141, under a copy of the webview CSP:
   counts each task that ends after the worker's first reply and starts before the last
   detach of the texture work status. Before the reply the build is the worker's, and the
   scene's start-up tasks, such as its first program link, can still run after the status
-  attaches. A worker that never replies fails the gate. The default headless launch composites in software: it reads the
+  attaches. A worker that never replies fails the gate. An arm that sees such a task
+  runs once more, and the gate judges the second run. A shared runner under load adds
+  50–100 ms tasks after the reply to any scene. A build on the main thread stalls the
+  second run too. The default headless launch composites in software: it reads the
   canvas back every frame, and the main thread waits for all queued GPU work. Two costs
   of the GPU process then show as main-thread tasks:
   - a 50–69 ms clear of the empty level. WebGL's robust resource initialisation clears
