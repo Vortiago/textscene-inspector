@@ -7,7 +7,7 @@
 import { RES_PATH_BODY_SOURCE } from '../godot/string/string.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 import { nodePathReferenceAt, nodeSectionOfPath } from './nodePathRefs.js';
-import { lineRange, lineRangeContains } from './ranges.js';
+import { lineRange, lineRangeContains, linesRange } from './ranges.js';
 import { declarationOf, referenceAt } from './resourceRefs.js';
 import type { Position, Range } from './types.js';
 
@@ -52,8 +52,7 @@ export function resPathAt(document: LanguageDocument, position: Position): ResPa
 
 /** The whole line of a section's heading. */
 function headingRange(document: LanguageDocument, section: DocumentSection): Range {
-  const line = section.headingLine - 1;
-  return lineRange(line, { start: 0, end: document.lines[line]?.length ?? 0 });
+  return linesRange(document, section.headingLine - 1, section.headingLine - 1);
 }
 
 /**

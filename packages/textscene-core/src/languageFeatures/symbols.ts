@@ -7,7 +7,8 @@
 
 import type { LanguageDocument } from './document.js';
 import { nodePathOf } from './nodePath.js';
-import type { DocumentSymbol, Range, SymbolKind } from './types.js';
+import { linesRange } from './ranges.js';
+import type { DocumentSymbol, SymbolKind } from './types.js';
 
 /** The icon a few common node types show. Every other node is an `object`. */
 const SYMBOL_KIND_BY_TYPE: Readonly<Record<string, SymbolKind>> = {
@@ -64,14 +65,6 @@ function subtreeEnd(symbol: PendingSymbol): number {
   let end = symbol.endLine;
   for (const child of symbol.children) end = Math.max(end, subtreeEnd(child));
   return end;
-}
-
-/** Zero-based lines `fromLine` to `toLine`, each whole. */
-function linesRange(document: LanguageDocument, fromLine: number, toLine: number): Range {
-  return {
-    start: { line: fromLine, character: 0 },
-    end: { line: toLine, character: document.lines[toLine]?.length ?? 0 },
-  };
 }
 
 function toSymbol(document: LanguageDocument, symbol: PendingSymbol): DocumentSymbol {
