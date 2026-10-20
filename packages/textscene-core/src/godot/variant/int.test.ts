@@ -8,7 +8,6 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  isAlteredInt,
   parseGodotInt,
   readSlotTuple,
   ruleCount,
@@ -20,6 +19,7 @@ import {
   storedInt,
   storedVector2i,
 } from './int.js';
+import { isAlteredInt } from './intReader.js';
 import { slotTupleRegex } from './number.js';
 
 describe('an INT-typed literal', () => {
