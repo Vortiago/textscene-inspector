@@ -4,12 +4,12 @@ category: 3D
 status: unimplemented
 fixture: unit-open-xr-visibility-mask.tscn
 # image: unit-open-xr-visibility-mask
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, Godot masks the lens-hidden part of the render, the previewer does not
 ---
 
 # OpenXRVisibilityMask
 
-Draws a stereo-correct mask that blacks out the part of the render hidden by lens distortion. The previewer parses and validates it but does not draw it, so it mounts as an invisible transform-only group.
+Draws a stereo-correct mask that blacks out the part of the render hidden by lens distortion. The previewer parses and validates it but does not draw it, so it draws nothing, and its children still show.
 
 ## Linting
 

@@ -9,7 +9,7 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesCollisionBox3D
 
-A box that particles from nearby `GPUParticles3D` nodes collide with. The previewer does not draw the box or apply the collision yet, so the node is an invisible transform-only fallback and its children still show.
+A box that particles from nearby `GPUParticles3D` nodes collide with. The previewer does not draw the box or apply the collision yet, so the node draws nothing and its children still show.
 
 ## Linting
 

@@ -9,7 +9,7 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesAttractorVectorField3D
 
-A box-shaped attractor that samples a 3D `texture` to vary attraction strength and direction across its volume. The previewer does not draw the box or sample the texture yet, so the node is an invisible transform-only fallback and its children still show.
+A box-shaped attractor that samples a 3D `texture` to vary attraction strength and direction across its volume. The previewer does not draw the box or sample the texture yet, so the node draws nothing and its children still show.
 
 ## Linting
 
