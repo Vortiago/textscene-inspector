@@ -1,0 +1,17 @@
+; A res:// root of its own, because `input_devices/pointing/emulate_touch_from_mouse` is a PROJECT
+; setting and no .tscn can carry one. Godot's game render has no editor hint, so a TOUCHSCREEN_ONLY
+; button hides until a touchscreen counts as available. The setting makes the reference draw it as the
+; editor does. Kept in a subdirectory rather than at scenes/fixtures: a project.godot there would
+; apply to every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="Touch screen button"
+run/main_scene="res://unit-touch-screen-button.tscn"
+config/features=PackedStringArray("4.6")
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true

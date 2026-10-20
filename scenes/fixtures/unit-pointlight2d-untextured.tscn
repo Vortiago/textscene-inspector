@@ -1,0 +1,31 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: a PointLight2D with no texture, and one with `texture = null`. Godot's canvas light
+; has no cookie to draw, so neither lights the surface nor draws a placeholder (measured with
+; `pnpm ref:godot`: the surface keeps its unlit colour). The textured light on the left is the
+; anchor, so a stray quad or glow on the right is visible.
+
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="1_light"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Dark" type="CanvasModulate" parent="."]
+color = Color(0.2, 0.2, 0.3, 1)
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.25, 0.25, 0.28, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="Anchor" type="PointLight2D" parent="."]
+position = Vector2(440, 324)
+texture = ExtResource("1_light")
+texture_scale = 0.5
+
+[node name="NoTexture" type="PointLight2D" parent="."]
+position = Vector2(700, 200)
+energy = 2.0
+
+[node name="NullTexture" type="PointLight2D" parent="."]
+position = Vector2(700, 448)
+texture = null
+energy = 2.0

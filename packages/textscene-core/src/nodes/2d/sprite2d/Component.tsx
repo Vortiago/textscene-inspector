@@ -85,10 +85,11 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     [viewportTexture, sourceTexture, props]
   );
 
-  // A placeholder for no texture or a failed load. An unpublished ViewportTexture
-  // is not missing, so the sprite draws nothing until it renders. One in an
-  // unrenderable pass cycle (`cyclic`) never will, so it gets the placeholder.
-  const showPlaceholder = isViewportSlot ? viewportCyclic : !props.texture || textureMissing;
+  // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The placeholder is
+  // for a texture that is set but failed to load. An unpublished ViewportTexture is not missing, so
+  // the sprite draws nothing until it renders. One in an unrenderable pass cycle (`cyclic`) never
+  // will, so it gets the placeholder.
+  const showPlaceholder = isViewportSlot ? viewportCyclic : textureMissing;
 
   return (
     <CanvasItem2D

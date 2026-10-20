@@ -7,7 +7,7 @@
 
 import { parseOptionalAabb, parseOptionalInt } from '../../../parser/valueParsers.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
-import { holdsResource } from '../../../godot/scene/geometryBase.js';
+import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 import { MultiMeshTransformFormat } from '../../../godot/scene/multiMesh.js';
 import { isEmptyAabb, EMPTY_AABB, type Aabb } from '../../../godot/math/aabb.js';
 import {

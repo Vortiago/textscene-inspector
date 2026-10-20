@@ -1,27 +1,22 @@
-/**
- * TouchScreenButton registration: parsed and validated, not yet rendered.
- *
- * The slice registers a base component under `renderIntent: 'pending'`, so the
- * badge reads a gap while `visible` and the workspace split still behave.
- */
+/** TouchScreenButton registration: the parser, and the component that draws `texture_normal`. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
-import { parseNode2D } from '../../base/node2d/parser';
+import { parseTouchScreenButton } from './parser';
 import './index';
 import './index.r3f';
 
 describe('TouchScreenButton registration', () => {
-  it('registers the parseNode2D parse it reuses', () => {
+  it('registers its own parser', () => {
     const registration = nodeRegistry.getRegistration('TouchScreenButton');
     expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode2D);
+    expect(registration!.parser).toBe(parseTouchScreenButton);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('TouchScreenButton')).toBe('pending');
-    expect(rendersOwnVisual('TouchScreenButton')).toBe('not-implemented');
+  it('registers a drawing component, so the badge no longer reads a gap', () => {
+    expect(nodeComponentRegistry.renderIntentOf('TouchScreenButton')).toBe('draws');
+    expect(rendersOwnVisual('TouchScreenButton')).toBe('draws');
   });
 });

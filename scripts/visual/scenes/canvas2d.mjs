@@ -25,6 +25,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn', mode: '2d' },
   // The 2D light surface: ADD/SUB/MIX applied against a lit surface, and an
   // inline gradient cookie under a canvas tint with an unshaded item beside it.
+  // Lights with no texture add nothing and draw no placeholder (measured with `pnpm ref:godot`).
+  { name: 'pointlight2d-untextured', file: 'unit-pointlight2d-untextured.tscn', mode: '2d' },
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', mode: '2d' },
   { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', mode: '2d' },
   { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', mode: '2d' },
@@ -295,6 +297,15 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-translucent.tscn',
     mode: '2d',
   },
+  // The one scene with a TouchScreenButton, which draws `texture_normal` at its origin in the
+  // editor whatever `visibility_mode` says (touch_screen_button.cpp:140).
+  { name: 'touch-screen-button', file: 'touch-screen-button/unit-touch-screen-button.tscn', mode: '2d' },
+  // The one scene with a Sprite2D that has no texture. Godot's draw returns early for both an unset
+  // and a null texture (sprite_2d.cpp:159), so neither shows a placeholder between the anchors.
+  { name: 'sprite2d-untextured', file: 'unit-sprite2d-untextured.tscn', mode: '2d' },
+  // The one scene with an AnimatedSprite2D that has no sprite_frames. Godot's draw returns early for
+  // both an unset and a null one (animated_sprite_2d.cpp:270), so neither shows a placeholder.
+  { name: 'animatedsprite2d-untextured', file: 'unit-animatedsprite2d-untextured.tscn', mode: '2d' },
   // A Sprite2D samples a ViewportTexture minified over 1 px stripes. Godot 4.6.3 `--mode 2d`:
   // rgb(128,51,0), the byte average.
   {

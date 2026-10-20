@@ -6,12 +6,7 @@
  */
 
 import { descendsFromClass } from '../classdb/classBaseTypes.js';
-
-/** Whether a resource property holds a resource: Godot's `null` literal clears it, as absence does. */
-export function holdsResource(value: string | undefined): boolean {
-  const trimmed = value?.trim();
-  return trimmed !== undefined && trimmed !== 'null';
-}
+import { holdsResource } from './resourceLiteral.js';
 
 /**
  * The base rule of the node's nearest class that sets one. `parentType` is the type of the node's

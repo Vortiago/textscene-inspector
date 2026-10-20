@@ -6,6 +6,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, parseOptionalRect2, vec2Or } from '../../../parser/valueParsers';
+import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 import { frameCoords, replaySpriteFrames } from '../../../godot/scene/spriteFrames.js';
 import type { Sprite2DProperties } from './types';
 
@@ -31,7 +32,7 @@ export function parseSprite2D(
     frame: frames.frame,
   };
 
-  if (properties.texture) result.texture = properties.texture;
+  if (holdsResource(properties.texture)) result.texture = properties.texture;
   // Kept as the stored frame's own coordinates: the renderer prefers this
   // field, and the authored pair may have been refused or re-mapped.
   if (frames.writes.some((w) => w.key === 'frame_coords')) result.frame_coords = frameCoords(frames);

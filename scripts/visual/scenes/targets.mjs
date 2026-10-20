@@ -25,6 +25,13 @@ export const TILE_AND_TARGET_SCENES = [
   // Cells of two atlas sources alternate in one rendering quadrant, each overlapping the next.
   // Godot draws them in cell order, not grouped by source. Verified against Godot 4.6.3.
   { name: 'tile-map-layer-mixed-sources', file: 'unit-tile-map-layer-mixed-sources.tscn', mode: '2d' },
+  // The one scene with an atlas source that has no texture. Godot skips its cell
+  // (tile_map_layer.cpp:724), so no placeholder shows between the textured cells.
+  {
+    name: 'tile-map-layer-untextured-source',
+    file: 'unit-tile-map-layer-untextured-source.tscn',
+    mode: '2d',
+  },
   // `use_texture_padding` on and off, under linear and nearest filtering. Verified against Godot 4.6.3.
   {
     name: 'tile-map-layer-texture-padding',

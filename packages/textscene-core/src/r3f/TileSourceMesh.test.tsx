@@ -33,12 +33,11 @@ function sourceOf(usesTexturePadding: boolean): AtlasSourceModel {
   };
 }
 
-async function drawnMesh(source: AtlasSourceModel): Promise<THREE.Mesh> {
+/** `texture` null seeds a texture that fails to load. */
+async function render(source: AtlasSourceModel, texture: THREE.Texture | null) {
   const fake = createFakeResourceLoader();
-  const texture = new THREE.Texture();
-  (texture as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 16 };
   fake.textures.seed(TEXTURE, texture);
-  const renderer = await ReactThreeTestRenderer.create(
+  return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <LitCanvasItemPixels material={null} lightMask={undefined} zFinal={0}>
         {(pixelMaterial) => (
@@ -55,6 +54,12 @@ async function drawnMesh(source: AtlasSourceModel): Promise<THREE.Mesh> {
       </LitCanvasItemPixels>
     </ResourceLoaderProvider>
   );
+}
+
+async function drawnMesh(source: AtlasSourceModel): Promise<THREE.Mesh> {
+  const texture = new THREE.Texture();
+  (texture as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 16 };
+  const renderer = await render(source, texture);
   return renderer.scene.findByType('Mesh').instance as THREE.Mesh;
 }
 
@@ -71,5 +76,18 @@ describe('TileSourceMesh texture padding', () => {
     const mesh = await drawnMesh(sourceOf(false));
     expect(mesh.geometry.getAttribute(TILE_UV_BOUNDS_ATTRIBUTE)).toBeUndefined();
     expect(cacheKeyOf(mesh)).not.toContain('tile-texture-padding');
+  });
+});
+
+describe('TileSourceMesh without a usable texture', () => {
+  it('draws nothing when the source has no texture (tile_map_layer.cpp:724)', async () => {
+    const renderer = await render({ ...sourceOf(false), texturePath: null }, null);
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws the placeholder when the texture is set but fails to load', async () => {
+    const renderer = await render(sourceOf(false), null);
+    const material = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect((material.material as THREE.MeshBasicMaterial).color.getHexString()).toBe('ff00ff');
   });
 });

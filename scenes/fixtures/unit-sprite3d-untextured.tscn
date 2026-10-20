@@ -1,0 +1,35 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: a Sprite3D with no texture, and one with `texture = null`. Godot's draw drops the
+; mesh for both (sprite_3d.cpp:798), so only this scene shows that neither draws a placeholder. The
+; textured sprites on either side are the anchors, so a stray quad between them is visible.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 2, 5)
+fov = 70.0
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 5, 0)
+
+[node name="Left" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1, 0)
+texture = ExtResource("1_marker")
+pixel_size = 0.01
+
+[node name="NoTexture" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1, 0)
+pixel_size = 0.01
+
+[node name="NullTexture" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1, 0)
+texture = null
+pixel_size = 0.01
+
+[node name="Right" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1, 0)
+texture = ExtResource("1_marker")
+pixel_size = 0.01
