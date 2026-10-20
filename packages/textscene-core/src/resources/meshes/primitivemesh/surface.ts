@@ -69,13 +69,26 @@ export function isPrimitiveMeshType(type: string): boolean {
 }
 
 /**
+ * Written only by `primitiveMeshSurface`, per texel size. A resource's entries go when the parsed
+ * resource does, so the geometry and the AABB of one mesh share one build.
+ */
+const builtSurfaces = new WeakMap<TscnInternalResource, Map<number, GodotSurface | null>>();
+
+/**
  * The surface `_update` hands the rendering server (`primitive_meshes.cpp:45-123`), in Godot's
  * arrays. `texelSize` is the project's PrimitiveMesh texel size, which turns `uv2_padding` into
  * world units (`:403-407`). Null for an unknown, external (GLB) or unresolvable type, or a mesh
- * Godot would refuse to build.
+ * Godot would refuse to build. The surface is shared, so a caller copies before it writes.
  */
 export function primitiveMeshSurface(resource: TscnInternalResource, texelSize: number): GodotSurface | null {
   if (!isPrimitiveMeshType(resource.type)) return null;
+  let byTexelSize = builtSurfaces.get(resource);
+  if (!byTexelSize) builtSurfaces.set(resource, (byTexelSize = new Map()));
+  if (!byTexelSize.has(texelSize)) byTexelSize.set(texelSize, buildSurface(resource, texelSize));
+  return byTexelSize.get(texelSize)!;
+}
+
+function buildSurface(resource: TscnInternalResource, texelSize: number): GodotSurface | null {
   const build = BUILDERS[resource.type]!;
   const base = decodePrimitiveMesh(resource.data);
   const surface = build(resource.data, base.addUv2 ? base.uv2Padding * texelSize : null);

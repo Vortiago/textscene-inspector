@@ -59,6 +59,24 @@ describe('primitiveMeshSurface', () => {
   });
 });
 
+describe('primitiveMeshSurface sharing', () => {
+  it('builds a resource once per texel size', () => {
+    const resource = sphere();
+
+    expect(primitiveMeshSurface(resource, TEXEL_SIZE)).toBe(primitiveMeshSurface(resource, TEXEL_SIZE));
+  });
+
+  it('builds again for another texel size', () => {
+    const resource = sphere({ add_uv2: 'true' });
+
+    expect(primitiveMeshSurface(resource, 1)).not.toBe(primitiveMeshSurface(resource, TEXEL_SIZE));
+  });
+
+  it('builds again for a fresh resource with the same content (edge case)', () => {
+    expect(primitiveMeshSurface(sphere(), TEXEL_SIZE)).not.toBe(primitiveMeshSurface(sphere(), TEXEL_SIZE));
+  });
+});
+
 describe('isPrimitiveMeshType', () => {
   it('knows every PrimitiveMesh type a slice builds', () => {
     expect(isPrimitiveMeshType('SphereMesh')).toBe(true);

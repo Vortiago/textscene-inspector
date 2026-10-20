@@ -13,8 +13,13 @@ export interface Vector3 {
   z: number;
 }
 
-/** `Vector3::normalize` (`core/math/vector3.h:548-558`): a zero vector stays zero. */
+/** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
+const f = Math.fround;
+
+/** `Vector3::normalize` (`core/math/vector3.h:548-558`) in `real_t` float: a zero vector stays zero. */
 export function normalizedVector3(x: number, y: number, z: number): [number, number, number] {
-  const length = Math.hypot(x, y, z);
-  return length === 0 ? [0, 0, 0] : [x / length, y / length, z / length];
+  const lengthSquared = f(f(f(x * x) + f(y * y)) + f(z * z));
+  if (lengthSquared === 0) return [0, 0, 0];
+  const length = f(Math.sqrt(lengthSquared));
+  return [f(x / length), f(y / length), f(z / length)];
 }

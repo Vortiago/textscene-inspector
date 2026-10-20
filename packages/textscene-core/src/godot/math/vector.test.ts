@@ -3,7 +3,7 @@ import { normalizedVector3 } from './vector';
 
 describe('normalizedVector3', () => {
   it('scales a vector to unit length', () => {
-    expect(normalizedVector3(3, 0, 4)).toEqual([0.6, 0, 0.8]);
+    expect(normalizedVector3(3, 0, 4)).toEqual([Math.fround(0.6), 0, Math.fround(0.8)]);
   });
 
   it('keeps a negative component negative', () => {
