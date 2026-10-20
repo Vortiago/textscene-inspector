@@ -7,6 +7,7 @@
 import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
+import { MULTIPLAYER_SYNCHRONIZER_VISIBILITY_UPDATE_MODE_NAMES } from '../../../godot/scene/multiplayerSynchronizer.js';
 
 validatorRegistry.registerAll('MultiplayerSynchronizer', {
   // multiplayer_synchronizer.cpp:270, NODE_PATH, PROPERTY_HINT_NONE. The default
@@ -40,11 +41,7 @@ validatorRegistry.registerAll('MultiplayerSynchronizer', {
   // is a warning.
   visibility_update_mode: v.enumInt(
     'visibility_update_mode',
-    {
-      0: 'VISIBILITY_PROCESS_IDLE',
-      1: 'VISIBILITY_PROCESS_PHYSICS',
-      2: 'VISIBILITY_PROCESS_NONE',
-    },
+    MULTIPLAYER_SYNCHRONIZER_VISIBILITY_UPDATE_MODE_NAMES,
     { hinted: 'multiplayer_synchronizer.cpp:274' }
   ),
   // multiplayer_synchronizer.cpp:275, BOOL, no hint. set_visibility_public

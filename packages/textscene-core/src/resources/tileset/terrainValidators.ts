@@ -7,6 +7,7 @@
 import { indexedFamilyValidator } from '../../linter/validators/indexedFamily.js';
 import { accepts, keyShapeError, v } from '../../linter/validators/index.js';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
+import { TERRAIN_MODE_NAMES } from '../../godot/scene/tileSet.js';
 import { negativeIndexError } from '../../linter/reportedIndices.js';
 import { terrainColor } from './terrainColor.js';
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
@@ -23,13 +24,6 @@ const negativeTerrain = (index: string): string =>
   `Terrain index ${index} must be non-negative. TileSet::_set fails ` +
   'ERR_FAIL_COND_V(terrain_index < 0, false) (tile_set.cpp:3905) before the terrain ' +
   'is reached, so the write never lands';
-
-/** tile_set.h:238-242, TerrainMode. */
-const TERRAIN_MODE = {
-  0: 'TERRAIN_MODE_MATCH_CORNERS_AND_SIDES',
-  1: 'TERRAIN_MODE_MATCH_CORNERS',
-  2: 'TERRAIN_MODE_MATCH_SIDES',
-};
 
 /**
  * The nested level, gated as `_set` gates it: `components[1]` begins `terrain_` and is
@@ -56,7 +50,7 @@ const terrainSetLeaves = indexedFamilyValidator({
   leaves: {
     // tile_set.cpp:4190, PROPERTY_HINT_ENUM. set_terrain_set_mode (:773) casts
     // the int into the enum and assigns it. Its only guard is on the index.
-    mode: v.enumInt('mode', TERRAIN_MODE, { hinted: 'tile_set.cpp:4190' }),
+    mode: v.enumInt('mode', TERRAIN_MODE_NAMES, { hinted: 'tile_set.cpp:4190' }),
   },
   unknownCode: 'INVALID_TILESET_TERRAIN_SET_KEY',
   describes: 'TileSet terrain set',

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { TILE_LAYOUT_NAMES, TILE_OFFSET_AXIS_NAMES, TILE_SHAPE_NAMES } from './tileSet.js';
+import {
+  TERRAIN_MODE_NAMES,
+  TILE_LAYOUT_NAMES,
+  TILE_OFFSET_AXIS_NAMES,
+  TILE_SHAPE_NAMES,
+} from './tileSet.js';
 
 /** `TileSet`'s enums (`scene/resources/2d/tile_set.h:244-263`). */
 describe('TileSet enum names', () => {
@@ -27,6 +32,16 @@ describe('TileSet enum names', () => {
     expect(TILE_OFFSET_AXIS_NAMES).toEqual({
       0: 'TILE_OFFSET_AXIS_HORIZONTAL',
       1: 'TILE_OFFSET_AXIS_VERTICAL',
+    });
+  });
+});
+
+describe('TERRAIN_MODE_NAMES', () => {
+  it('names the three terrain modes by their constants (tile_set.h:238-242, 4.7.2 :240-244)', () => {
+    expect(TERRAIN_MODE_NAMES).toEqual({
+      0: 'TERRAIN_MODE_MATCH_CORNERS_AND_SIDES',
+      1: 'TERRAIN_MODE_MATCH_CORNERS',
+      2: 'TERRAIN_MODE_MATCH_SIDES',
     });
   });
 });
