@@ -21,7 +21,7 @@ describe('decodeSphereMesh', () => {
     expect(decodeSphereMesh({})).toEqual({
       radius: 0.5,
       height: 1,
-      radial_segments: 64,
+      radialSegments: 64,
       rings: 32,
       isHemisphere: false,
     });
@@ -37,13 +37,13 @@ describe('decodeSphereMesh', () => {
         rings: '8',
         is_hemisphere: 'true',
       })
-    ).toEqual({ radius: 2, height: 3, radial_segments: 16, rings: 8, isHemisphere: true });
+    ).toEqual({ radius: 2, height: 3, radialSegments: 16, rings: 8, isHemisphere: true });
   });
 
   it('floors radial_segments at 4, not merely at 0', () => {
-    expect(decodeSphereMesh({ radial_segments: '3' }).radial_segments).toBe(4);
-    expect(decodeSphereMesh({ radial_segments: '-10' }).radial_segments).toBe(4);
-    expect(decodeSphereMesh({ radial_segments: '128' }).radial_segments).toBe(128);
+    expect(decodeSphereMesh({ radial_segments: '3' }).radialSegments).toBe(4);
+    expect(decodeSphereMesh({ radial_segments: '-10' }).radialSegments).toBe(4);
+    expect(decodeSphereMesh({ radial_segments: '128' }).radialSegments).toBe(128);
   });
 
   it('rejects rings below 1 (ERR_FAIL keeps the default 32)', () => {

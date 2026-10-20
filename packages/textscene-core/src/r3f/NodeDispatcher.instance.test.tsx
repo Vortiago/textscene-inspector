@@ -48,6 +48,13 @@ async function renderTree(
   );
 }
 
+/** A default SphereMesh: (rings + 2) rows of (radial_segments + 1) vertices (`primitive_meshes.cpp:2023,2036`). */
+const DEFAULT_SPHERE_VERTICES = (32 + 2) * (64 + 1);
+
+function vertexCount(mesh: THREE.Mesh): number {
+  return mesh.geometry.getAttribute('position').count;
+}
+
 describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-12, ADR-0013)', () => {
   it('collapses a single-root instance: the instance node becomes the root, keeping its name + transform', async () => {
     const fake = createFakeResourceLoader();
@@ -127,8 +134,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     const meshes = renderer.scene.findAllByType('Mesh');
     const sphere = meshes.find((m) => m.instance.name === 'OuterRoot');
     expect(sphere).toBeDefined();
-    const geom = (sphere!.instance as THREE.Mesh).geometry as { type: string };
-    expect(geom.type).toBe('SphereGeometry');
+    expect(vertexCount(sphere!.instance as THREE.Mesh)).toBe(DEFAULT_SPHERE_VERTICES);
     // No intermediate root name survives.
     expect(meshes.find((m) => m.instance.name === 'Inner')).toBeUndefined();
   });
@@ -278,7 +284,7 @@ describe('<NodeDispatcher> PackedScene instancing + Instance root merge (WI-R3F-
     // under the merged Wrapper.
     const sphere = renderer.scene.findAllByType('Mesh').find((m) => m.instance.name === 'Gadget');
     expect(sphere).toBeDefined();
-    expect(((sphere!.instance as THREE.Mesh).geometry as { type: string }).type).toBe('SphereGeometry');
+    expect(vertexCount(sphere!.instance as THREE.Mesh)).toBe(DEFAULT_SPHERE_VERTICES);
   });
 
   it('REGRESSION (ADR-0013): the outermost instance transform REPLACES the nested root transforms', async () => {

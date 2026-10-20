@@ -5,6 +5,9 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
 /** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
 const f = Math.fround;
 
+/** `Math::TAU` (`math_defs.h:43`): one full turn in radians. */
+export const TAU = Math.PI * 2;
+
 /**
  * `CMP_EPSILON` (math_defs.h:50), the tolerance every `Math::is_zero_approx` compares against, and
  * in several setters the value substituted for a component that trips it. `1e-6` is ten times too

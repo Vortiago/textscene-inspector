@@ -1,7 +1,7 @@
 /**
- * Primitive-mesh feature parity: PlaneMesh and BoxMesh subdivisions (N extra
- * loops are N+1 segments), CylinderMesh caps and the SphereMesh hemisphere,
- * read from the THREE geometry <MeshGeometry> renders.
+ * Primitive-mesh feature parity: subdivisions, CylinderMesh caps and the SphereMesh hemisphere,
+ * read from the geometry <MeshGeometry> renders. The BoxMesh and CylinderMesh slices test their
+ * own mapping onto three's generators.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
@@ -20,8 +20,6 @@ async function geomFor(resource: TscnInternalResource): Promise<THREE.BufferGeom
   );
   return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
 }
-const params = (g: THREE.BufferGeometry) =>
-  (g as unknown as { parameters: Record<string, number> }).parameters;
 
 describe('mesh feature parity — parsers', () => {
   it('BoxMesh parses subdivide_width/height/depth (default 0)', () => {
@@ -44,36 +42,20 @@ describe('mesh feature parity — parsers', () => {
 });
 
 describe('mesh feature parity — geometry', () => {
-  it('PlaneMesh subdivide_width=1 → 2 width segments (N+1)', async () => {
+  it('PlaneMesh subdivide_width=1 → a third column of vertices', async () => {
     const g = await geomFor({
       id: 'P',
       type: 'PlaneMesh',
       data: { size: 'Vector2(4, 4)', subdivide_width: '1' },
     });
-    expect(params(g).widthSegments).toBe(2);
+    // (1 + 2) columns by (0 + 2) rows.
+    expect(g.getAttribute('position').count).toBe(6);
   });
 
-  it('BoxMesh subdivide_width=2 → 3 width segments (N+1)', async () => {
-    const g = await geomFor({
-      id: 'B',
-      type: 'BoxMesh',
-      data: { size: 'Vector3(1, 1, 1)', subdivide_width: '2' },
-    });
-    expect(params(g).widthSegments).toBe(3);
-  });
-
-  it('SphereMesh is_hemisphere=true → thetaLength = π/2 (top dome)', async () => {
+  it('SphereMesh is_hemisphere=true → a dome on a flat base at y = 0', async () => {
     const g = await geomFor({ id: 'S', type: 'SphereMesh', data: { radius: '0.5', is_hemisphere: 'true' } });
-    expect(params(g).thetaLength).toBeCloseTo(Math.PI / 2, 5);
-  });
-
-  it('CylinderMesh cap_top=false + cap_bottom=false → openEnded', async () => {
-    const g = await geomFor({
-      id: 'C',
-      type: 'CylinderMesh',
-      data: { cap_top: 'false', cap_bottom: 'false' },
-    });
-    expect(params(g).openEnded).toBe(true);
+    g.computeBoundingBox();
+    expect(g.boundingBox!.min.y).toBe(0);
   });
 
   it('PrismMesh subdivide_height=2 → two extra vertex rows (Godot num_points)', async () => {

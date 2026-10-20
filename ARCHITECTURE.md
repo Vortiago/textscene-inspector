@@ -179,7 +179,7 @@ parser:
 
 - Texture V: Godot's origin is the top. Each consumer mirrors `v → 1 - v`.
   `unit-arraymesh-uv.tscn` pins it.
-- Triangle winding: Godot is clockwise. `meshes/arraymesh/build.ts` reverses each triangle.
+- Triangle winding: Godot is clockwise. `meshes/godotSurface.ts` reverses each triangle.
 - 2D Y: Godot's Y grows down. `r3f/node2dTransform.ts` negates it.
 
 ## Resource loading

@@ -36,11 +36,11 @@ export const PRIMITIVE_TRIANGLES = 3;
 export interface SurfaceLayout {
   compressed: boolean;
   /**
-   * The normal region holds an axis-angle tangent frame rather than a plain
-   * octahedral normal. Compression folds the tangent into the normal's bytes,
-   * so this is true only when the surface declares a TANGENT.
+   * How the normal region stores the tangent. `frame`: compression folds it into the normal's
+   * bytes as an axis-angle frame. `octahedral`: its own 2×uint16 after each normal. `none`: the
+   * surface declares no TANGENT, or no NORMAL to carry it.
    */
-  tangentFrame: boolean;
+  tangent: 'frame' | 'octahedral' | 'none';
   /** Bytes per vertex in `vertex_data`'s leading position region. */
   positionStride: number;
   /** Bytes per vertex in the normal/tangent region: both halved when compressed. */
@@ -72,7 +72,7 @@ export function surfaceLayout(format: number): SurfaceLayout {
 
   return {
     compressed,
-    tangentFrame: compressed && hasTangent,
+    tangent: hasNormal && hasTangent ? (compressed ? 'frame' : 'octahedral') : 'none',
     positionStride,
     normalStride,
     attributeStride: (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),

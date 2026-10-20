@@ -5,14 +5,16 @@ import type { TscnInternalResource } from '../parser/types';
 import { resourceContentKey } from './resourceContentKey';
 
 /**
- * `build(resource)`, built again only when the resource's content changes, or null for no
- * resource. The key is read once per resource object, since a packed array can run to megabytes.
+ * `build(resource)`, built again only when the resource's content or one of `deps` changes, or
+ * null for no resource. `deps` are what `build` reads besides the resource. The key is read once
+ * per resource object, since a packed array can run to megabytes.
  */
 export function useContentMemo<T>(
   resource: TscnInternalResource | null | undefined,
-  build: (resource: TscnInternalResource) => T
+  build: (resource: TscnInternalResource) => T,
+  deps: readonly unknown[] = []
 ): T | null {
   const key = useMemo(() => (resource ? resourceContentKey(resource) : null), [resource]);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` IS the content of `resource`.
-  return useMemo(() => (resource ? build(resource) : null), [key]);
+  return useMemo(() => (resource ? build(resource) : null), [key, ...deps]);
 }

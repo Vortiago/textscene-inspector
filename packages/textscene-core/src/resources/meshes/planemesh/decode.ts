@@ -1,7 +1,7 @@
 import type { PlaneMeshProperties } from './types';
 import { parseVector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
-import { boolOr, enumOr, vec2Or } from '../../../parser/valueParsers';
+import { enumOr, vec2Or } from '../../../parser/valueParsers';
 import { flooredCount } from '../meshCounts';
 import type { Vector2, Vector3 } from '../../../godot/math/vector';
 import { PlaneMeshOrientation } from '../../../godot/scene/planeMesh.js';
@@ -49,6 +49,5 @@ export function decodePlaneMesh(
       'PlaneMesh orientation'
     ),
     centerOffset,
-    flipFaces: boolOr(properties.flip_faces, false, 'PlaneMesh flip_faces'),
   };
 }

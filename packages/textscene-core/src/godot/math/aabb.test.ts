@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_AABB, hasSurface, isEmptyAabb, mergeAabb, transformAabb, type Aabb } from './aabb';
+import {
+  aabbOfPoints,
+  EMPTY_AABB,
+  hasSurface,
+  isEmptyAabb,
+  mergeAabb,
+  transformAabb,
+  type Aabb,
+} from './aabb';
 
 function box(px: number, py: number, pz: number, sx: number, sy: number, sz: number): Aabb {
   return { position: { x: px, y: py, z: pz }, size: { x: sx, y: sy, z: sz } };
@@ -61,5 +69,22 @@ describe('transformAabb', () => {
   it('collapses a box under a zero basis to a point at the origin', () => {
     const transform = [0, 0, 0, 3, 0, 0, 0, 3, 0, 0, 0, 3];
     expect(transformAabb(transform, box(-1, -1, -1, 2, 2, 2))).toEqual(box(3, 3, 3, 0, 0, 0));
+  });
+});
+
+describe('aabbOfPoints', () => {
+  it('spans the least and the greatest point on each axis', () => {
+    expect(aabbOfPoints([1, -2, 3, -1, 4, 0, 0, 0, 5])).toEqual({
+      position: { x: -1, y: -2, z: 0 },
+      size: { x: 2, y: 6, z: 5 },
+    });
+  });
+
+  it('is a box of no size round one point', () => {
+    expect(aabbOfPoints([1, 2, 3])).toEqual({ position: { x: 1, y: 2, z: 3 }, size: { x: 0, y: 0, z: 0 } });
+  });
+
+  it('is AABB() for no points (edge case)', () => {
+    expect(aabbOfPoints([])).toBe(EMPTY_AABB);
   });
 });
