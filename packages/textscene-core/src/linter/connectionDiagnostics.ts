@@ -1,0 +1,71 @@
+/**
+ * The diagnostics of the `[connection]` headings. Phase 2 walks the node tree, which holds no connection, so a
+ * heading the loader refuses or one that names no node would otherwise lint clean. Tiers and citations are
+ * declared in `fileDiagnostics.ts`, where `emitsGrounding` sweeps them.
+ */
+
+import type { ConnectionHeading, StrictScene } from '../parser/types.js';
+import type { Diagnostic } from './types.js';
+import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
+import { resolveNodePath } from './nodePathResolve.js';
+import { armDiagnostic } from './ruleArms.js';
+
+const REQUIRED_FIELDS = ['from', 'to', 'signal', 'method'] as const;
+
+/** The stand-in for a node: a connection belongs to none, and a diagnostic names a subject. */
+const CONNECTION_SUBJECT = { name: '<connection>', type: 'connection' } as const;
+
+function missingFieldDiagnostic(connection: ConnectionHeading): Diagnostic[] {
+  const missing = REQUIRED_FIELDS.filter((field) => connection[field] === undefined);
+  if (missing.length === 0) return [];
+  const names = missing.map((field) => `'${field}'`).join(', ');
+  return [
+    armDiagnostic(
+      FILE_DIAGNOSTICS.connectionMissingField,
+      CONNECTION_SUBJECT,
+      `Connection heading is missing ${names}. Godot cannot load the file at all: the text loader ` +
+        'refuses a connection that lacks one, so nothing in the file is read.',
+      { line: connection.line, column: 1 }
+    ),
+  ];
+}
+
+/** One end of a connection: its field, the path written, and whether the heading carries the matching uid path. */
+interface ConnectionEnd {
+  field: 'from' | 'to';
+  path: string | undefined;
+  hasUidPath: boolean;
+}
+
+function endsOf({ from, to, hasFromUidPath, hasToUidPath }: ConnectionHeading): ConnectionEnd[] {
+  return [
+    { field: 'from', path: from, hasUidPath: hasFromUidPath },
+    { field: 'to', path: to, hasUidPath: hasToUidPath },
+  ];
+}
+
+function missingNodeDiagnostics(scene: StrictScene, connection: ConnectionHeading): Diagnostic[] {
+  const root = scene.nodes[0];
+  if (!root) return [];
+  return endsOf(connection).flatMap(({ field, path, hasUidPath }) => {
+    // A uid path lets Godot recover a node its path misses, and this linter does not walk those ids.
+    if (path === undefined || hasUidPath) return [];
+    if (resolveNodePath(scene, root, path).status !== 'missing') return [];
+    return [
+      armDiagnostic(
+        FILE_DIAGNOSTICS.connectionNodeMissing,
+        CONNECTION_SUBJECT,
+        `Connection ${field}="${path}" names no node in this file. Godot loads the scene and skips the ` +
+          'connection, so the signal never reaches the method.',
+        { line: connection.line, column: 1 }
+      ),
+    ];
+  });
+}
+
+export function connectionDiagnostics(scene: StrictScene): Diagnostic[] {
+  return scene.connections.flatMap((connection) => [
+    ...missingFieldDiagnostic(connection),
+    ...missingNodeDiagnostics(scene, connection),
+  ]);
+}

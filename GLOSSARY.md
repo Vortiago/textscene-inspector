@@ -125,7 +125,7 @@ A node or scene with `rawProperties` and no `properties`, which is what a **Lint
 _Avoid_: reading `properties` in a rule, or casting it to a string map.
 
 **Heading facts** (`HeadingFacts` in `parser/types.ts`):
-What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, connection binds and instances outside a node body.
+What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, each connection heading and instances outside a node body.
 Only the linter reads them, so only the strict parser's `StrictScene` carries them. The strict parser builds them from the headings the core returns beside the scene and from its own observer.
 _Avoid_: putting a linter-only field on `TscnScene`.
 
