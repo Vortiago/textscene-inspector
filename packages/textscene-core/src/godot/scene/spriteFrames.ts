@@ -5,7 +5,7 @@
  * parsers and the linter share this, so they cannot disagree about which frame a body loads on.
  */
 
-import { parseGodotInt, storedVector2i } from '../variant/int.js';
+import { parseSlotInt, storedVector2i } from '../variant/int.js';
 
 type FrameKey = 'frame' | 'frame_coords';
 
@@ -75,7 +75,7 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
     if (raw === undefined) continue;
     if (key === 'hframes' || key === 'vframes') {
       state.lastGridIndex = index;
-      const count = parseGodotInt(raw);
+      const count = parseSlotInt(raw);
       if (count === null || Number.isNaN(count)) {
         state.gridUnknownFrom = Math.min(state.gridUnknownFrom, index);
         continue;
@@ -93,7 +93,7 @@ export function replaySpriteFrames(properties: Record<string, string>): SpriteFr
       resetIfPastGrid();
     } else if (key === 'frame') {
       // `set_frame`: ERR_FAIL_INDEX(p_frame, vframes * hframes) refuses it.
-      const frame = parseGodotInt(raw);
+      const frame = parseSlotInt(raw);
       if (frame === null || Number.isNaN(frame)) continue;
       const refused = frame < 0 || frame >= state.hframes * state.vframes;
       const write: FrameWrite = {

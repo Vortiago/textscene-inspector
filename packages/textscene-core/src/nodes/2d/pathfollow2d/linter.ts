@@ -5,11 +5,11 @@
  * `progress_ratio` load unlike each other.
  */
 
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
-import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 const arms = {
   noParent: groundedArm('pathfollow2d-no-parent', { kind: 'configuration-warning' }),
@@ -59,7 +59,7 @@ function checkPathFollow2D(context: RuleContext): Diagnostic[] {
   // a negative one included. The sampler clamps the offset into the curve, so
   // the follower parks at the start rather than extrapolating off the end.
   if (rawProps.progress !== undefined) {
-    const progress = parseGodotFloat(rawProps.progress);
+    const progress = scalarSlotValue(rawProps.progress);
     // `set_progress` opens with ERR_FAIL_COND(!std::isfinite(p_progress))
     // (path_2d.cpp:425), so a non-finite one never lands and this rule has
     // nothing to say about the travel it would have asked for.
