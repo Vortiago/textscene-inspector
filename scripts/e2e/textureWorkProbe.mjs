@@ -140,3 +140,12 @@ export function longTasksAfterFirstReply(probe, limitMs) {
       duration > limitMs && startTime + duration > firstReply && startTime < span.end
   );
 }
+
+/**
+ * Runs `run` once, and once more when `isStalled` finds a stall in the first result;
+ * returns the last result. A stall that comes twice is not runner noise.
+ */
+export async function runAgainIfStalled(run, isStalled) {
+  const first = await run();
+  return isStalled(first) ? run() : first;
+}
