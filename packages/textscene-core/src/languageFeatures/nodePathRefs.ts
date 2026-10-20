@@ -13,11 +13,11 @@ import { nodePathOf, ROOT_PATH } from './nodePath.js';
 import { headingAttribute, lineRange, lineRangeContains } from './ranges.js';
 import type { Position, Range } from './types.js';
 
-/** The attributes of each heading tag that hold a node path. */
-const PATH_ATTRIBUTES: Readonly<Record<string, readonly string[]>> = {
-  node: ['parent'],
-  connection: ['from', 'to'],
-};
+/** The attributes of each heading tag that hold a node path. A Map, since a tag is free text: `constructor` must miss. */
+const PATH_ATTRIBUTES: ReadonlyMap<string, readonly string[]> = new Map([
+  ['node', ['parent']],
+  ['connection', ['from', 'to']],
+]);
 
 /** A node path as written, and where its value sits. */
 export interface NodePathReference {
@@ -53,7 +53,7 @@ function claimsUniqueName(section: DocumentSection): boolean {
 /** The node paths a heading line spells. */
 function referencesOnHeading(section: DocumentSection, lineText: string): NodePathReference[] {
   const line = section.headingLine - 1;
-  return (PATH_ATTRIBUTES[section.tag] ?? []).flatMap((key) => {
+  return (PATH_ATTRIBUTES.get(section.tag) ?? []).flatMap((key) => {
     const attribute = headingAttribute(lineText, key);
     return attribute ? [{ path: attribute.value, range: lineRange(line, attribute.span) }] : [];
   });

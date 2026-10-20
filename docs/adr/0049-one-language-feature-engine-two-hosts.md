@@ -22,7 +22,7 @@ property tables, hints and deprecated aliases, and the copies would drift.
 
 - The language-feature engine parses the text through the scanning loop with a `ParseObserver` and
   answers `hoverAt`, `completionsAt`, `codeActions`, `foldingRanges`, `documentHighlights`,
-  `documentSymbols`, `declarationRangeAt`, `resPathAt` and `resPathOccurrences`. Every result is
+  `documentSymbols`, `definitionRangeAt`, `resPathAt` and `resPathOccurrences`. Every result is
   host-neutral with zero-based ranges, the convention LSP and the VS Code API share, so a host
   adapts no position. A host maps each result to its own types and adds no feature logic.
 - The language-feature engine reads a resource reference through `godot/variant/resourceRef.ts`, as the

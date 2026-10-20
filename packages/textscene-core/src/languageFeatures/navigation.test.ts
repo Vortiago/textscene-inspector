@@ -191,3 +191,10 @@ describe('nodeDeclarationRangeAt', () => {
     expect(headingLineAt('[connection signal="pressed" from="Player/Sprite"', 'method')).toBe(undefined);
   });
 });
+
+describe('nodeDeclarationRangeAt on a heading tag named like an Object property', () => {
+  it('gives nothing for a constructor heading', () => {
+    const odd = new LanguageDocument('[constructor name="A"]\n');
+    expect(nodeDeclarationRangeAt(odd, { line: 0, character: 5 })).toBeUndefined();
+  });
+});
