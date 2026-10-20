@@ -14,8 +14,10 @@ import { fileURLToPath } from 'node:url';
 
 import { CATALOG } from './build-node-base-types.mjs';
 import { isDivider, splitRow } from './markdownTable.mjs';
-import { readRenderRegistrations } from './renderRegistrations.mjs';
 import { RUNTIME_EFFECT_NODE_TYPES } from './runtimeEffectNodes.data.mjs';
+// The app's own render registrations: the barrel registers every slice on import.
+import '../../packages/textscene-core/src/r3f/nodes/index.ts';
+import { nodeComponentRegistry } from '../../packages/textscene-core/src/r3f/NodeComponentRegistry.ts';
 import { findProseViolations, formatViolation, proseBlocks } from './sheetProse.mjs';
 import {
   LINT_EXEMPT_CATEGORIES as LINT_EXEMPT,
@@ -333,23 +335,21 @@ describe('comparison sheets', () => {
    * useful pair, and a RigidBody3D draws nothing but its capture shows its mesh.
    */
   describe('status agrees with the render registration', () => {
-    const registrations = readRenderRegistrations();
     /** Slice-backed sheets only; the `complex-*` showcases have no slice. */
     const sliceSheets = sheets
       .filter((s) => s.file.includes(`${sep}nodes${sep}`))
       .map((s) => {
-        const registration = registrations.get(s.meta.type);
+        const intent = nodeComponentRegistry.renderIntentOf(s.meta.type);
         return {
           ...s,
-          hasComponent: registration !== undefined,
-          transformOnly: registration?.intent === 'transform-only',
-          // A `pending` registration mounts a base component while the node's
-          // own visual is missing: a registered gap.
-          pending: registration?.intent === 'pending',
-          drawsOwnVisual: registration?.drawsOwnVisual === true,
+          hasComponent: intent !== undefined,
+          transformOnly: intent === 'transform-only',
+          // The registry admits `pending` only on an invisible base: a registered gap
+          // that draws nothing yet.
+          pending: intent === 'pending',
           // A `scenePass` applies an effect to other nodes, so the sheet has an
           // effect to compare: it is not the nil-effect claim `linter-only` is.
-          scenePass: registration?.scenePass === true,
+          scenePass: nodeComponentRegistry.hasScenePass(s.meta.type),
         };
       });
     const sliceSheetByType = new Map(sliceSheets.map((s) => [s.meta.type, s]));
@@ -413,22 +413,21 @@ describe('comparison sheets', () => {
       expect(bad).toEqual([]);
     });
 
-    /** Pending gaps that mount only their base, so they draw nothing yet. */
-    const undrawnPending = sliceSheets.filter((s) => s.pending && !s.drawsOwnVisual);
+    const pendingSheets = sliceSheets.filter((s) => s.pending);
 
-    it('says "nothing yet" in renders_as for every pending node that draws nothing', () => {
+    it('says "nothing yet" in renders_as for every pending node', () => {
       // `renders_as` heads the sheet and its index row, so it names the gap, not a finished nil effect.
-      const bad = undrawnPending
+      const bad = pendingSheets
         .filter((s) => !/^nothing yet\b/.test(s.meta.renders_as ?? ''))
-        .map((s) => `${s.label}: pending and undrawn, but renders_as is '${s.meta.renders_as}'`);
+        .map((s) => `${s.label}: pending, but renders_as is '${s.meta.renders_as}'`);
       expect(bad).toEqual([]);
     });
 
-    it('never calls a pending node that draws nothing transform-only in its body', () => {
+    it('never calls a pending node transform-only in its body', () => {
       // "transform-only" claims the finished nil effect of ADR-0008, which a gap does not have.
-      const bad = undrawnPending
+      const bad = pendingSheets
         .filter((s) => /transform-only/.test(s.body))
-        .map((s) => `${s.label}: pending and undrawn, but its body calls it transform-only`);
+        .map((s) => `${s.label}: pending, but its body calls it transform-only`);
       expect(bad).toEqual([]);
     });
 

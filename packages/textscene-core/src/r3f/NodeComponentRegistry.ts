@@ -11,6 +11,8 @@ import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData';
 import type { YSortItem } from './ySortItems';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
 import { withGeometryInstance } from './visibilityRange/geometryInstance';
+import { isInvisibleBase } from './invisibleBase';
+import { TWO_D_UI_TYPES } from './controls/has2DUIContent';
 
 export interface NodeComponentProps {
   node: TscnNode;
@@ -98,6 +100,29 @@ interface ScenePassRegistration {
   run: ScenePass;
 }
 
+/**
+ * The badge reads the declared intent, so it must agree with the component: a `pending` gap
+ * mounts only an invisible base, and a `draws` type draws. A 2D-UI type's Control component
+ * draws it, so its 3D registration may pass through on a base.
+ */
+function assertIntentMatchesComponent({
+  typeName,
+  Component,
+  renderIntent = 'draws',
+}: NodeComponentRegistration) {
+  const mountsBase = isInvisibleBase(Component);
+  if (renderIntent === 'pending' && !mountsBase) {
+    throw new Error(
+      `${typeName}: renderIntent 'pending' expects an invisible base, got a component that draws`
+    );
+  }
+  if (renderIntent === 'draws' && mountsBase && !TWO_D_UI_TYPES.has(typeName)) {
+    throw new Error(
+      `${typeName}: renderIntent 'draws' expects a component that draws, got an invisible base`
+    );
+  }
+}
+
 const SCENE_PASS_STAGES: readonly ScenePassRegistration['stage'][] = ['transforms', 'paths'];
 
 class NodeComponentRegistryImpl {
@@ -110,6 +135,7 @@ class NodeComponentRegistryImpl {
    * drawn or not, so every such type takes part in the visibility range.
    */
   register(registration: NodeComponentRegistration): void {
+    assertIntentMatchesComponent(registration);
     const { typeName, Component } = registration;
     const mounted = descendsFromClass(typeName, 'GeometryInstance3D')
       ? withGeometryInstance(Component)
@@ -156,6 +182,11 @@ class NodeComponentRegistryImpl {
   renderIntentOf(typeName: string): NodeComponentRegistration['renderIntent'] | undefined {
     const registration = this.registry.get(typeName);
     return registration === undefined ? undefined : (registration.renderIntent ?? 'draws');
+  }
+
+  /** True when the type registered a pass over the authored tree. */
+  hasScenePass(typeName: string): boolean {
+    return this.registry.get(typeName)?.scenePass !== undefined;
   }
 
   getYSortGroup(typeName: string): YSortGroupRegistration | undefined {
