@@ -78,6 +78,19 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'debug_custom_color tints the curve gizmo the editor draws and this previewer reproduces; the component hardcodes its colour instead.',
   },
 
+  SpringArm3D: {
+    renderGap: [
+      // The arm's shape cast: the shape, the layers it hits and the margin it
+      // stops short by decide where Godot places each child
+      // (spring_arm_3d.cpp:141-193), and the previewer does not run that drive.
+      'collision_mask',
+      'margin',
+      'shape',
+    ],
+    reason:
+      'The cast moves the children along the arm (ADR-0045), so these keys change a frozen frame; only spring_length, which the length gizmo draws, is read.',
+  },
+
   Camera3D: {
     renderGap: [
       // Per-camera overrides of the world environment, the exposure and DOF
