@@ -28,9 +28,8 @@ export function validateNodeName(name: string): string {
  */
 export function serialChildName(name: string, siblings: ReadonlySet<string>): string {
   if (!siblings.has(name)) return name;
-  const trailingDigits = /\d*$/.exec(name)![0];
-  const stem = name.slice(0, name.length - trailingDigits.length);
-  let number = trailingDigits;
+  const stem = name.replace(/\d*$/, '');
+  let number = name.slice(stem.length);
   for (;;) {
     const attempt = stem + number;
     if (!siblings.has(attempt)) return attempt;

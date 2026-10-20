@@ -21,6 +21,15 @@ function build(nodes: TscnNode[]): TscnNode[] {
   return buildSceneTree(originsOf(nodes));
 }
 
+/** `origins` with `patch` applied to the one at `index`. */
+function withOrigin(
+  origins: NodeOrigin<TscnNode>[],
+  index: number,
+  patch: Partial<NodeOrigin<TscnNode>>
+): NodeOrigin<TscnNode>[] {
+  return origins.map((origin, i) => (i === index ? { ...origin, ...patch } : origin));
+}
+
 describe('buildSceneTree', () => {
   describe('empty and basic cases', () => {
     it('should return empty array for empty input', () => {
@@ -361,7 +370,8 @@ describe('buildSceneTree', () => {
 
   describe('a parent path that vanished', () => {
     /** The names of the scene root's children. */
-    const rootChildNames = (nodes: TscnNode[]) => build(nodes)[0]!.children.map((child) => child.name);
+    const rootChildNames = (origins: NodeOrigin<TscnNode>[]) =>
+      buildSceneTree(origins)[0]!.children.map((child) => child.name);
 
     it('re-roots the node under the scene root, renamed for the vanished path', () => {
       const nodes = [node('Root'), node('Orphan', 'Gone')];
@@ -383,19 +393,19 @@ describe('buildSceneTree', () => {
       ['./Gone', 'Gone#Name'],
       ['/root/Gone', '___root_Gone#Name'],
     ])('spells the rename of %s as %s', (parent, renamed) => {
-      expect(rootChildNames([node('Root'), node('Name', parent)])).toEqual([renamed]);
+      expect(rootChildNames(originsOf([node('Root'), node('Name', parent)]))).toEqual([renamed]);
     });
 
     it('seats the node among the root children at the point of its heading', () => {
       const nodes = [node('Root'), node('First', '.'), node('Orphan', 'Gone'), node('Last', '.')];
 
-      expect(rootChildNames(nodes)).toEqual(['First', 'Gone#Orphan', 'Last']);
+      expect(rootChildNames(originsOf(nodes))).toEqual(['First', 'Gone#Orphan', 'Last']);
     });
 
     it('numbers two orphans that rename alike, as `set_name` does', () => {
       const nodes = [node('Root'), node('A', 'Gone'), node('A', 'Gone')];
 
-      expect(rootChildNames(nodes)).toEqual(['Gone#A', 'Gone#A2']);
+      expect(rootChildNames(originsOf(nodes))).toEqual(['Gone#A', 'Gone#A2']);
     });
 
     it('re-roots a node below an orphan on its own, since the old path no longer exists', () => {
@@ -417,7 +427,9 @@ describe('buildSceneTree', () => {
     });
 
     it('re-roots a node whose parent path climbs out of the tree (edge case)', () => {
-      expect(rootChildNames([node('Root'), node('Orphan', '../Gone')])).toEqual(['___Gone#Orphan']);
+      expect(rootChildNames(originsOf([node('Root'), node('Orphan', '../Gone')]))).toEqual([
+        '___Gone#Orphan',
+      ]);
     });
 
     it('leaves a node below an instance anchor to the anchor, not the root (edge case)', () => {
@@ -430,60 +442,51 @@ describe('buildSceneTree', () => {
     });
 
     describe('where Godot refuses the file or follows an id trail', () => {
-      const rootChildNamesIn = (nodes: TscnNode[], origins = originsOf(nodes)) =>
-        buildSceneTree(origins)[0]!.children.map((child) => child.name);
-
       it('does not re-root where heading 0 declares a parent', () => {
         const nodes = [node('Root', 'Missing'), node('Orphan', 'Gone')];
 
-        expect(rootChildNamesIn(nodes)).toEqual([]);
+        expect(rootChildNames(originsOf(nodes))).toEqual([]);
       });
 
       it('does not re-root where a later heading declares no parent', () => {
         const nodes = [node('Root'), node('Stray'), node('Orphan', 'Gone')];
 
-        expect(rootChildNamesIn(nodes)).toEqual([]);
+        expect(rootChildNames(originsOf(nodes))).toEqual([]);
       });
 
       it('does not re-root where heading 0 states no type and no instance', () => {
         const root: TscnNode = { ...node('Root'), overridesExistingNode: true };
 
-        expect(rootChildNamesIn([root, node('Orphan', 'Gone')])).toEqual([]);
+        expect(rootChildNames(originsOf([root, node('Orphan', 'Gone')]))).toEqual([]);
       });
 
       it('does not re-root where a heading spells parent="" (edge case)', () => {
         const nodes = [node('Root'), node('Blank'), node('Orphan', 'Gone')];
-        const origins = originsOf(nodes).map((origin, i) =>
-          i === 1 ? { ...origin, declaredParent: '' } : origin
-        );
+        const origins = withOrigin(originsOf(nodes), 1, { declaredParent: '' });
 
-        expect(rootChildNamesIn(nodes, origins)).toEqual([]);
+        expect(rootChildNames(origins)).toEqual([]);
       });
 
       it('does not re-root a heading whose parent_id_path Godot follows to a node (edge case)', () => {
         const nodes = [node('Root'), node('Mid', '.'), node('Orphan', 'Gone')];
-        const origins = originsOf(nodes).map((origin, i) =>
-          i === 1 ? { ...origin, uniqueId: 7 } : i === 2 ? { ...origin, idTrail: [7] } : origin
-        );
+        const origins = withOrigin(withOrigin(originsOf(nodes), 1, { uniqueId: 7 }), 2, { idTrail: [7] });
 
-        expect(rootChildNamesIn(nodes, origins)).toEqual(['Mid']);
+        expect(rootChildNames(origins)).toEqual(['Mid']);
       });
 
       it('re-roots a heading whose parent_id_path names no heading, as Godot does (edge case)', () => {
         const nodes = [node('Root'), node('Orphan', 'Gone')];
-        const origins = originsOf(nodes).map((origin, i) => (i === 1 ? { ...origin, idTrail: [7] } : origin));
+        const origins = withOrigin(originsOf(nodes), 1, { idTrail: [7] });
 
-        expect(rootChildNamesIn(nodes, origins)).toEqual(['Gone#Orphan']);
+        expect(rootChildNames(origins)).toEqual(['Gone#Orphan']);
       });
 
       it('re-roots a heading whose trail names a heading that was itself re-rooted (edge case)', () => {
         // The named node does not exist at its authored path, so the trail finds nothing.
         const nodes = [node('Root'), node('Lost', 'Gone'), node('Orphan', 'Gone2')];
-        const origins = originsOf(nodes).map((origin, i) =>
-          i === 1 ? { ...origin, uniqueId: 7 } : i === 2 ? { ...origin, idTrail: [7] } : origin
-        );
+        const origins = withOrigin(withOrigin(originsOf(nodes), 1, { uniqueId: 7 }), 2, { idTrail: [7] });
 
-        expect(rootChildNamesIn(nodes, origins)).toEqual(['Gone#Lost', 'Gone2#Orphan']);
+        expect(rootChildNames(origins)).toEqual(['Gone#Lost', 'Gone2#Orphan']);
       });
     });
   });

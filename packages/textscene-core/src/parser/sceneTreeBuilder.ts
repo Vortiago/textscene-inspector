@@ -31,48 +31,57 @@ export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOri
   // `get_node_or_null(np)` (`packed_scene.cpp:157-165`) sees only the headings above.
   // A `parent=` naming a later node vanishes and re-roots (`:208-215`). Forward order
   // also gives `children` the file's sibling order, the 2D paint order.
-  const pathDidNotWalk = new Set<N>();
+  const seatedByPath = new Set<N>([rootNode]);
   for (const [index, { node }] of origins.entries()) {
     if (node === rootNode) continue;
     // A second parentless node is stranded here. `orphanedNodes` finds it by walking
     // the returned tree, so it holds no second copy of the resolution rules.
-    if (!node.parent) {
-      pathDidNotWalk.add(node);
-      continue;
-    }
+    if (!node.parent) continue;
 
     // The map IS the child lookup the walk asks at every descent, so `./Mid`,
     // `Mid/` and `Mid` name the one node Godot resolves them all to while
     // `Missing/../Mid` names none. A node seated through any spelling is
     // registered under the single one its own children can address it by.
     const parentPath = resolveParentPath(node.parent, tables.tree);
-    const parentNode = parentPath === null ? undefined : tables.byPath.get(parentPath);
-    if (parentPath !== null && parentNode) {
-      parentNode.children.push(node);
-      registerPath(tables, parentPath, node);
+    if (parentPath !== null && seatBelowParent(tables, parentPath, node)) {
+      seatedByPath.add(node);
       continue;
     }
 
-    // A path into instanced content names nodes in the sub-scene or GLB, so the
-    // nearest enclosing instance anchors it and the content matches the rest.
-    const anchor = parentPath === null ? null : findInstanceAnchor(parentPath, tables);
-    if (anchor) {
-      anchor.node.children.push(node);
-      node.instanceSubPath = anchor.subPath;
-      registerPath(tables, anchor.strandedParentPath, node);
-      continue;
-    }
-
-    // Without an anchor the path has vanished. A `parent_id_path=` is tried first
-    // (`:161-163`) and, where it lands, seats the node somewhere this parse cannot name, so
-    // that node, like every node of a refused file, stays out of the tree for `orphanedNodes`.
-    pathDidNotWalk.add(node);
+    // The path has vanished. A `parent_id_path=` is tried first (`:161-163`) and, where it
+    // lands, seats the node somewhere this parse cannot name, so that node, like every node
+    // of a refused file, stays out of the tree for `orphanedNodes`.
     if (!reRootsVanished) continue;
-    if (idTrailEnd(origins, index, ({ node: heading }) => !pathDidNotWalk.has(heading))) continue;
-    reRoot(tables, rootNode, node);
+    if (idTrailEnd(origins, index, ({ node: heading }) => seatedByPath.has(heading))) continue;
+    reRoot(tables, node);
   }
 
   return [rootNode];
+}
+
+/**
+ * Seats `node` below the node at `parentPath`, else below the instance enclosing it, whose
+ * sub-scene or GLB the path descends into. False where the path names no node of this file.
+ */
+function seatBelowParent<N extends SceneNode<N>>(
+  tables: BuildTables<N>,
+  parentPath: string,
+  node: N
+): boolean {
+  const parentNode = tables.byPath.get(parentPath);
+  if (parentNode) {
+    parentNode.children.push(node);
+    registerPath(tables, parentPath, node);
+    return true;
+  }
+  // A path into instanced content names nodes in the sub-scene or GLB, so the
+  // nearest enclosing instance anchors it and the content matches the rest.
+  const anchor = findInstanceAnchor(parentPath, tables);
+  if (!anchor) return false;
+  anchor.node.children.push(node);
+  node.instanceSubPath = anchor.subPath;
+  registerPath(tables, anchor.strandedParentPath, node);
+  return true;
 }
 
 /**
@@ -80,11 +89,10 @@ export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOri
  * `<path>#<name>` (`packed_scene.cpp:208-215`, `:561-563`), numbered past a root child that
  * holds the name (`set_name`, `node.cpp:1450`, `:1593-1640`). The authored name stays on `authoredName`.
  */
-function reRoot<N extends SceneNode<N>>(tables: BuildTables<N>, rootNode: N, node: N): void {
+function reRoot<N extends SceneNode<N>>(tables: BuildTables<N>, node: N): void {
   node.authoredName = node.name;
-  const siblings = new Set(rootNode.children.map((child) => child.name));
-  node.name = serialChildName(reparentedName(node.parent!, node.name), siblings);
-  rootNode.children.push(node);
+  node.name = serialChildName(reparentedName(node.parent!, node.name), tables.rootChildNames);
+  tables.root.children.push(node);
   registerPath(tables, SCENE_ROOT_PATH, node);
 }
 
@@ -93,6 +101,10 @@ function reRoot<N extends SceneNode<N>>(tables: BuildTables<N>, rootNode: N, nod
  * needs both halves, and its two lookups are the two `get_node_or_null` performs.
  */
 interface BuildTables<N> {
+  /** The scene root, which every re-rooted node joins. */
+  readonly root: N;
+  /** The names of the root's children, which a re-rooted name must not repeat. */
+  readonly rootChildNames: Set<string>;
   /** Every seated node, keyed by the folded path its own children address it at. */
   readonly byPath: Map<string, N>;
   /** `%Name` to that path, for the nodes claiming one. */
@@ -108,6 +120,8 @@ function newTables<N extends RawNode>(rootNode: N): BuildTables<N> {
   // node's OWNER (node.cpp:2222-2233) and the scene root has none.
   const uniquePaths = new Map<string, string>();
   return {
+    root: rootNode,
+    rootChildNames: new Set<string>(),
     byPath,
     uniquePaths,
     tree: { exists: (path) => canNameNode(byPath, path), uniquePaths },
@@ -140,6 +154,7 @@ function registerPath<N extends RawNode>(tables: BuildTables<N>, parentPath: str
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
   if (!node.name) return;
   const path = joinPath(parentPath, node.name);
+  if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
   if (isUniqueNameInOwner(node)) claimUniqueName(tables.uniquePaths, node.name, path);
 }
@@ -182,6 +197,11 @@ function findInstanceAnchor<N extends RawNode>(
   return null;
 }
 
+/** Whether the builder re-rooted the node, which is the one case that sets `authoredName`. */
+export function isReRooted(node: RawNode): boolean {
+  return node.authoredName !== undefined;
+}
+
 /**
  * The headings whose `parent=` names nothing, derived from the tree rather than a second copy of
  * its rules: the nodes the builder re-rooted, and those unreachable from `roots`, which are a
@@ -203,5 +223,5 @@ export function orphanedNodes<N extends RawNode>(
   walk(roots);
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
-  return all.filter(({ node }) => !placed.has(node) || node.authoredName !== undefined);
+  return all.filter(({ node }) => !placed.has(node) || isReRooted(node));
 }

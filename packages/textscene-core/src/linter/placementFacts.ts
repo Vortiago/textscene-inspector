@@ -44,10 +44,10 @@ function idRecoveries(
   orphaned: readonly NodeOrigin<RawNode>[]
 ): Map<NodeOrigin<RawNode>, IdRecovery> {
   const recoveries = new Map<NodeOrigin<RawNode>, IdRecovery>();
-  const unplaced = new Set(orphaned);
+  const unseatedByPath = new Set(orphaned);
   origins.forEach((origin, index) => {
-    if (!unplaced.has(origin)) return;
-    const end = idTrailEnd(origins, index, (heading) => !unplaced.has(heading));
+    if (!unseatedByPath.has(origin)) return;
+    const end = idTrailEnd(origins, index, (heading) => !unseatedByPath.has(heading));
     if (end) recoveries.set(origin, { kind: end.kind, via: origins[end.heading]! });
   });
   return recoveries;

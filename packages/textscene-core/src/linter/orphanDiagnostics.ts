@@ -11,6 +11,7 @@ import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { reparentedName } from '../godot/scene/packedScene.js';
+import { isReRooted } from '../parser/sceneTreeBuilder.js';
 import type { NodeOrigin, RawNode, StrictScene } from '../parser/types.js';
 import { resolveExtResourcePath } from '../resources/SubResourceResolver.js';
 
@@ -72,7 +73,7 @@ function orphanOutcome(scene: StrictScene, origin: NodeOrigin<RawNode>, hasEmpty
 
 /** Godot's name for the orphan: the one the builder gave a re-rooted node, else the spelling it would give. */
 function renamedTo({ node, declaredParent }: NodeOrigin<RawNode>): string {
-  return node.authoredName === undefined ? reparentedName(declaredParent!, node.name) : node.name;
+  return isReRooted(node) ? node.name : reparentedName(declaredParent!, node.name);
 }
 
 /**
@@ -142,10 +143,9 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
       const outcome = orphanOutcome(scene, origin, emptyParents.length > 0);
       const authoredName = node.authoredName ?? node.name;
       // A re-rooted node is in the tree, so Phase 2 ran its rules.
-      const rulesSkipped =
-        node.authoredName === undefined
-          ? ' No semantic rule ran on it or on anything parented below it.'
-          : '';
+      const rulesSkipped = isReRooted(node)
+        ? ''
+        : ' No semantic rule ran on it or on anything parented below it.';
       return armDiagnostic(
         FILE_DIAGNOSTICS.unresolvedParentPath,
         { name: authoredName, type: node.type },

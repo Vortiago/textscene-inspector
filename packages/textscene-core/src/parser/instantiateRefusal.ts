@@ -38,11 +38,29 @@ export function emptyParentHeadings<N extends RawNode>(all: readonly NodeOrigin<
  * none (`:207`), or a heading spells `parent=""`, which faults the load.
  */
 export function refusesToInstantiate<N extends RawNode>(all: readonly NodeOrigin<N>[]): boolean {
-  const [root, ...later] = all;
-  if (!root) return false;
+  const root = all[0];
   return (
-    root.declaredParent !== undefined ||
-    rootStatesNoIdentifier(root.node) ||
-    later.some(({ declaredParent }) => declaredParent === undefined || declaredParent === '')
+    root !== undefined &&
+    headingsRefuseInstantiate(
+      all.map(({ declaredParent }) => declaredParent),
+      rootStatesNoIdentifier(root.node)
+    )
+  );
+}
+
+/**
+ * The same refusal over the `parent=` each `[node]` heading declares, in file order, for a reader
+ * that holds headings and no tree. `rootIsUnidentified` is {@link rootStatesNoIdentifier} of heading 0.
+ */
+export function headingsRefuseInstantiate(
+  declaredParents: readonly (string | undefined)[],
+  rootIsUnidentified: boolean
+): boolean {
+  const [rootParent, ...laterParents] = declaredParents;
+  return (
+    rootParent !== undefined ||
+    rootIsUnidentified ||
+    declaredParents.includes('') ||
+    laterParents.includes(undefined)
   );
 }
