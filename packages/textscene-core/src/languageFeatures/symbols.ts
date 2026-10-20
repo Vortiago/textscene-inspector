@@ -27,9 +27,14 @@ function subtreeEnd({ section, children }: SeatedSection): number {
   return end;
 }
 
-/** The symbols of nodes that have a name. VS Code refuses a symbol with an empty name, and a heading being typed has one. */
+/**
+ * The symbols of the named nodes. VS Code refuses a symbol with an empty name, and a heading being
+ * typed has one, so the children of a nameless node take its place and the outline keeps them.
+ */
 function namedSymbols(document: LanguageDocument, nodes: readonly SeatedSection[]): DocumentSymbol[] {
-  return nodes.filter(({ section }) => section.attributes.name).map((node) => toSymbol(document, node));
+  return nodes.flatMap((node) =>
+    node.section.attributes.name ? [toSymbol(document, node)] : namedSymbols(document, node.children)
+  );
 }
 
 function toSymbol(document: LanguageDocument, node: SeatedSection): DocumentSymbol {

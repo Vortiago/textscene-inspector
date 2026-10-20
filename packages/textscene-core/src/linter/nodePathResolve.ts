@@ -59,8 +59,9 @@ export function resolveNodePath(scene: RawScene, referencingNode: RawNode, path:
       // shadowed by one (:1935-1937).
       if (isTypeUnknowable(current)) return UNKNOWABLE;
       const claimed = cachedUniqueNameClaims(scene.nodes).get(name);
-      // The claim table is every node here carrying `unique_name_in_owner`, built in
-      // `utils/uniqueNames.ts` and shared with the renderer, so a miss is a real null.
+      // The claim table holds every claim the root owns, built in `utils/uniqueNames.ts` and
+      // shared with the renderer. A reached node that is not opaque reads that table, so a miss
+      // is a real null.
       if (!claimed) return MISSING;
       current = claimed.node;
       continue;

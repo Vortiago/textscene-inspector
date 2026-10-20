@@ -119,6 +119,14 @@ unique_name_in_owner = true
   });
 });
 
+describe('documentSymbols with a nameless root', () => {
+  it('lists the root children while the root heading has no name yet', () => {
+    const source = SCENE.replace('[node name="Root" type="Node3D"]', '[node type="Node3D"]');
+
+    expect(only(documentSymbols(new LanguageDocument(source))).name).toBe('Player');
+  });
+});
+
 describe('documentSymbols under an instanced scene', () => {
   it('nests a node seated inside the instance under the instance node', () => {
     const root = only(documentSymbols(new LanguageDocument(INSTANCED_TREE)));

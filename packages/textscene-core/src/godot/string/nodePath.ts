@@ -67,9 +67,12 @@ function walk(
     if (part.startsWith(UNIQUE_NODE_PREFIX)) {
       // A jump through the owner's claim table (node.cpp:1930-1938): the walk restarts at the
       // claimed path, so a following `..` steps up from there. An opaque node reads its own table
-      // first, which another file fills, so a miss there is no null.
-      const claimed = uniquePaths?.get(part);
-      if (!claimed) return isOpaque?.(segments.join('/')) ? UNLISTED : null;
+      // first, which another file fills. Below the root that table shadows any claim here. At the
+      // root it holds this file's claims too, so a claim here seats as Godot seats it unshadowed.
+      const current = segments.join('/');
+      const isOpaqueHere = isOpaque?.(current) === true;
+      const claimed = isOpaqueHere && segments.length > floor ? undefined : uniquePaths?.get(part);
+      if (!claimed) return isOpaqueHere ? UNLISTED : null;
       segments = claimed.split('/');
       continue;
     }

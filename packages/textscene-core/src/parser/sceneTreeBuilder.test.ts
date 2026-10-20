@@ -526,6 +526,13 @@ describe('seatScene resolve', () => {
     expect(statusOf([node('Root'), instance('Inst', '.')], 'Inst/%Part')).toBe('unknowable');
   });
 
+  it('cannot say what a %Name names from an instance, though the root holds a claim', () => {
+    // The instance reads its own table first (node.cpp:1930-1933), which its sub-scene fills.
+    expect(statusOf([node('Root'), claiming('Part', '.'), instance('Inst', '.')], 'Inst/%Part')).toBe(
+      'unknowable'
+    );
+  });
+
   it('leaves an override claim under an instance out of the root table', () => {
     // An override heading keeps the sub-scene's owner (resource_format_text.cpp:264-265), so its
     // `%Name` lands in that owner's table (node.cpp:2222-2233), not the root's.

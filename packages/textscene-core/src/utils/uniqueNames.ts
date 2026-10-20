@@ -1,5 +1,6 @@
 /**
- * `%Name` claims over an authored tree, shared by the linter's NodePath walk and the render path.
+ * `%Name` claims over an authored tree, shared by the seating, the linter's NodePath walk and the
+ * render path.
  * `_acquire_unique_name_in_owner` (node.cpp:2222) registers `"%" + name` on the node's owner and
  * refuses to overwrite an entry (node.cpp:2225-2231), so the first claimant wins and a `%Name`
  * with no claimant addresses nothing.

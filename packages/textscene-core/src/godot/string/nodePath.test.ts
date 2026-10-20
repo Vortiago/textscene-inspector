@@ -174,6 +174,11 @@ describe('walkFromRoot', () => {
     expect(walkFromRoot('%Missing', inTree)).toBeNull();
   });
 
+  it('cannot say what a claimed %Name names from an opaque node below the root, whose own table it reads first', () => {
+    // node.cpp:1930-1933 reads the reached node's `owned_unique_nodes` before its owner's.
+    expect(walkFromRoot('Other/%Hud', inTree)).toBe(UNLISTED);
+  });
+
   it('cannot say what an unclaimed %Name names from an opaque node, whose own table another file fills', () => {
     expect(walkFromRoot('Other/%Missing', inTree)).toBe(UNLISTED);
   });

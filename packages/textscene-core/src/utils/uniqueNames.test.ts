@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import { StrictTscnParser } from '../linter/StrictTscnParser.js';
-import { cachedUniqueNameClaims, cachedUniqueNameOwnership } from './uniqueNames.js';
+import type { RawNode } from '../parser/types.js';
+import {
+  cachedUniqueNameClaims,
+  cachedUniqueNameOwnership,
+  isInstanceBelowRoot,
+  isOwnedByRoot,
+} from './uniqueNames.js';
 
 /**
  * Both trees, every time. They agree on `rawProperties` (`parser/rawPropertyParity.test.ts`), but
@@ -260,5 +266,38 @@ unique_name_in_owner = true
   it('owner="." claims for this root even on an override inside an instance', () => {
     const ownership = cachedUniqueNameOwnership(new TscnParser().parse(explicit).nodes);
     expect(ownership.claims.get('%Hud')?.path).toBe('Player/Enemy/Hud');
+  });
+});
+
+function rawNode(fields: Partial<RawNode> = {}): RawNode {
+  return { name: 'Node', type: 'Node3D', rawProperties: {}, children: [], ...fields };
+}
+
+describe('isInstanceBelowRoot', () => {
+  it('is true for an instance heading below the root', () => {
+    expect(isInstanceBelowRoot(rawNode({ instance: 'ExtResource("1")' }), false)).toBe(true);
+  });
+
+  it('is false for a heading that instances nothing', () => {
+    expect(isInstanceBelowRoot(rawNode(), false)).toBe(false);
+  });
+
+  it('is false for an instanced root, which is the scene root itself', () => {
+    expect(isInstanceBelowRoot(rawNode({ instance: 'ExtResource("1")' }), true)).toBe(false);
+  });
+});
+
+describe('isOwnedByRoot', () => {
+  it('is true for a node outside any instance', () => {
+    expect(isOwnedByRoot(rawNode(), false)).toBe(true);
+  });
+
+  it('is false for an override heading inside an instance, which keeps the sub-scene owner', () => {
+    expect(isOwnedByRoot(rawNode({ overridesExistingNode: true }), true)).toBe(false);
+  });
+
+  it('follows an explicit owner= over the structural answer', () => {
+    expect(isOwnedByRoot(rawNode({ overridesExistingNode: true, owner: '.' }), true)).toBe(true);
+    expect(isOwnedByRoot(rawNode({ owner: 'Player' }), false)).toBe(false);
   });
 });
