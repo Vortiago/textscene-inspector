@@ -52,6 +52,12 @@ export const LIGHTMAP_GI_SHADOWMASK_MODE_NAMES = enumNamesByValue(ShadowmaskMode
 /** `rendering/lightmapping/lightmap_gi/use_bicubic_filter` (`rendering_server.cpp:3822`). */
 export const LIGHTMAP_BICUBIC_FILTER_DEFAULT = true;
 
+/** `LightmapGIData`'s defaults (`lightmap_gi.h:63,66`). */
+export const LIGHTMAP_GI_DATA_DEFAULTS = {
+  usesSphericalHarmonics: false,
+  usesPackedDirectional: false,
+} as const;
+
 /** `LightmapGIData::_set_user_data` reads each user as four elements (`lightmap_gi.cpp:83-89`). */
 export const LIGHTMAP_USER_FIELDS = 4;
 

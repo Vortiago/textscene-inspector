@@ -76,7 +76,7 @@ describe('useResourceResolution', () => {
     expect(renderResolution('ExtResource("1")').current).toEqual({
       scoped: null,
       status: 'pending',
-      tresPath: 'res://grass.tres',
+      resourcePath: 'res://grass.tres',
     });
   });
 
@@ -84,7 +84,7 @@ describe('useResourceResolution', () => {
     expect(renderResolution('ExtResource("2")').current).toEqual({
       scoped: null,
       status: 'unavailable',
-      tresPath: null,
+      resourcePath: null,
     });
   });
 

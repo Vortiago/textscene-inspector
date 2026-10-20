@@ -68,6 +68,20 @@ describe('decodeLightmapGIData on text', () => {
     ).toEqual(['res://bake.exr']);
   });
 
+  it('simplifies a texture path as Godot simplifies every resource path', () => {
+    const { properties, extResources } = parseTresFile(
+      '[gd_resource type="LightmapGIData" format=3]\n\n' +
+        '[ext_resource type="CompressedTexture2DArray" path="res:///bakes//bake.exr" id="1_tex"]\n\n' +
+        '[resource]\nlightmap_textures = [ExtResource("1_tex")]\n'
+    );
+    expect(decodeLightmapGIData(properties, extResources).lightmapTextures).toEqual(['res://bakes/bake.exr']);
+  });
+
+  it('reads a BOOL slice as the int the Variant converts it to (edge case)', () => {
+    const { users } = decodeText('user_data = [NodePath("../A"), Rect2(0, 0, 1, 1), true, -1]');
+    expect(users.map(({ sliceIndex }) => sliceIndex)).toEqual([1]);
+  });
+
   it('gives each user its own slice', () => {
     const { users } = decodeText(
       'user_data = [NodePath("../A"), Rect2(0, 0, 0.5, 0.5), 0, -1, NodePath("../B"), Rect2(0, 0, 0.25, 0.5), 1, -1]'
@@ -92,6 +106,10 @@ describe('decodeLightmapGIData on text', () => {
 
   it('reads no capture bounds from data with no probe data, as LightmapGIData starts with none', () => {
     expect(decodeText('').bounds).toEqual(EMPTY_AABB);
+  });
+
+  it('reads the capture bounds from points in the Array spelling the PackedVector3Array slot converts', () => {
+    expect(decodeText(probeData('[Vector3(0, 0, 0)]')).bounds.size).toEqual({ x: 2, y: 2, z: 2 });
   });
 
   it('reads no capture bounds from probe data with no points, which set_capture_data drops', () => {

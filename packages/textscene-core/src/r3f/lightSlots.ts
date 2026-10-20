@@ -101,12 +101,10 @@ export function slottedLights(lights: readonly SceneLight[], camera: THREE.Camer
   return slotted;
 }
 
-/** `valueOf` each light `RE_Direct` shades when it renders through `camera`, in slot order. */
+/** `valueOf` each light `RE_Direct` shades among `slotted`, in slot order. */
 export function slotValues(
-  lights: readonly SceneLight[],
-  camera: THREE.Camera,
+  slotted: SlottedLights,
   valueOf: (light: THREE.Light, kind: ShadedLightKind) => number
 ): number[] {
-  const slotted = slottedLights(lights, camera);
   return SHADED_KINDS.flatMap(({ kind }) => slotted[kind].map((light) => valueOf(light, kind)));
 }

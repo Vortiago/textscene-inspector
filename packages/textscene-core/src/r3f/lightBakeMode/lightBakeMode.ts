@@ -1,9 +1,7 @@
 /**
- * Whether each light is baked Static, which three's light structs lack, in uniform arrays that every
- * lit program reads by the light's slot: one for the lights `RE_Direct` shades, and one for the rect
- * area lights. A lightmapped surface skips a Static light, whose light its lightmap already holds
- * (`scene_forward_clustered.glsl:2292`, `:2685`, `:2746`; 4.7.2 `:2853` for an area light). The
- * scene's light pass (`SceneShadowFitter.tsx`) writes them before each render.
+ * Whether each light is baked Static, in uniform arrays every lit program reads by light slot. A
+ * lightmapped surface skips a Static light, which its lightmap already holds
+ * (`scene_forward_clustered.glsl:2292`, `:2685`, `:2746`; 4.7.2 `:2853` for an area light).
  */
 
 import type * as THREE from 'three';
@@ -54,8 +52,9 @@ function staticFlagOf(light: THREE.Light): number {
 
 /** Writes the flag of each slotted light among `lights`, for a render through `camera`. */
 export function writeLightBakeModeUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
-  const shaded = slotValues(lights, camera, staticFlagOf);
+  const slotted = slottedLights(lights, camera);
+  const shaded = slotValues(slotted, staticFlagOf);
   shadedArrays.write(shaded.length, (set) => set[LIGHT_STATICS].set(shaded));
-  const area = slottedLights(lights, camera).area.map(staticFlagOf);
+  const area = slotted.area.map(staticFlagOf);
   areaArrays.write(area.length, (set) => set[AREA_LIGHT_STATICS].set(area));
 }

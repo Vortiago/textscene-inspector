@@ -8,7 +8,7 @@
 
 import type * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
-import { isPositionalKind, slotValues, type ShadedLightKind } from '../lightSlots.js';
+import { isPositionalKind, slottedLights, slotValues, type ShadedLightKind } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 import { declaredLightOf } from '../directionalShadow/splitSun.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
@@ -59,7 +59,7 @@ export function writeLightSizeUniforms(
   camera: THREE.Camera,
   drawsDirectionalSoftShadows: boolean
 ): void {
-  const ordered = slotValues(lights, camera, (light, kind) =>
+  const ordered = slotValues(slottedLights(lights, camera), (light, kind) =>
     sizeOf(light, kind, drawsDirectionalSoftShadows)
   );
   arrays.write(ordered.length, (set) => set[LIGHT_SIZES].set(ordered));

@@ -152,13 +152,13 @@ export function useGlbGeometryInstances(
     };
     assignLightmaps();
     return lightmaps.subscribe(assignLightmaps);
-  }, [scene, object, entries, instances, invalidate]);
+  }, [scene, instances, invalidate]);
 }
 
 /** One MeshInstance3D's cull instance and the faded materials of its surfaces, kept while its object is mounted. */
 class CulledMeshInstance {
   readonly instance = new CulledInstance();
-  /** Filled by `cullMeshInstance`, one per surface. */
+  /** Filled by `fadeSurface`, one per surface. */
   readonly materials: FadedMeshMaterials[] = [];
 
   constructor(private readonly surfaces: readonly MeshSurface[]) {}

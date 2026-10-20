@@ -8,6 +8,12 @@ import { describe, expect, it } from 'vitest';
 import { parseBinaryResource } from './parse';
 import { ragdollBytes } from '../../testing/ragdollBake';
 import { binaryResourceBytes, ByteWriter, type BinaryResourceLayout } from './testing/binaryResourceBytes';
+import {
+  ABSOLUTE_NODE_PATH,
+  INLINE_STRING,
+  ObjectRef,
+  VariantTag,
+} from '../../../godot/project/binaryResourceFormat';
 
 describe('parseBinaryResource on a Godot bake', () => {
   const bake = () => parseBinaryResource(ragdollBytes('ragdoll_physics.lmbake'));
@@ -56,9 +62,9 @@ describe('parseBinaryResource on other bytes', () => {
 });
 
 describe('parseBinaryResource on each header and table form', () => {
-  /** A Vector3 variant (tag 12) in the file's byte order and `real_t` width. */
+  /** A Vector3 variant in the file's byte order and `real_t` width. */
   const vector3 = (isBigEndian: boolean, isRealDouble: boolean) => {
-    const writer = new ByteWriter(isBigEndian).u32(12);
+    const writer = new ByteWriter(isBigEndian).u32(VariantTag.Vector3);
     for (const component of [1.5, -2, 0.25]) {
       if (isRealDouble) writer.f64(component);
       else writer.f32(component);
@@ -90,9 +96,9 @@ describe('parseBinaryResource on each header and table form', () => {
 
   it('writes an absolute node path with its subnames', () => {
     const variant = new ByteWriter()
-      .u32(22)
+      .u32(VariantTag.NodePath)
       .u16(2)
-      .u16(0x8000 | 1)
+      .u16(ABSOLUTE_NODE_PATH | 1)
       .u32(1)
       .u32(2)
       .u32(3)
@@ -107,10 +113,10 @@ describe('parseBinaryResource on each header and table form', () => {
   it('reads a name the file writes inline rather than in its string table', () => {
     const inlineName = new TextEncoder().encode('Mesh');
     const variant = new ByteWriter()
-      .u32(22)
+      .u32(VariantTag.NodePath)
       .u16(1)
       .u16(0)
-      .u32(0x80000000 | inlineName.length)
+      .u32(INLINE_STRING | inlineName.length)
       .raw(inlineName);
     const file = binaryResourceBytes({
       strings: ['target'],
@@ -129,7 +135,12 @@ describe('parseBinaryResource on each header and table form', () => {
         {
           id: 'Main',
           type: 'Resource',
-          properties: [{ name: 'mesh', variant: new ByteWriter().u32(24).u32(2).u32(0).bytes() }],
+          properties: [
+            {
+              name: 'mesh',
+              variant: new ByteWriter().u32(VariantTag.Object).u32(ObjectRef.InternalResource).u32(0).bytes(),
+            },
+          ],
         },
       ],
     });

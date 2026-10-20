@@ -8,13 +8,18 @@ import type { TscnExternalResource } from '../../parser/types';
 import { parseOptionalAabb, parseOptionalRect2 } from '../../parser/valueParsers';
 import { EMPTY_AABB, type Aabb } from '../../godot/math/aabb';
 import { splitTopLevel } from '../../godot/string/string';
-import { parseGodotInt } from '../../godot/variant/intReader';
-import { resourceRef } from '../../godot/variant/resourceRef';
+import { slotInt } from '../../godot/variant/intSlots';
+import { dictPackedField, packedFloatCount } from '../../godot/variant/packedArrayFields';
 import { boolSlotValue } from '../../godot/variant/variantBool';
-import { arrayLiteralBody, dictCallField, nodePathLiteral } from '../../godot/variant/variantParser';
-import { LIGHTMAP_USER_FIELDS } from '../../godot/scene/lightmapGi';
+import {
+  arrayLiteralBody,
+  dictCallField,
+  nodePathLiteral,
+  packedArrayForms,
+} from '../../godot/variant/variantParser';
+import { LIGHTMAP_GI_DATA_DEFAULTS, LIGHTMAP_USER_FIELDS } from '../../godot/scene/lightmapGi';
 import { missingProbeDataField } from './probeData';
-import { findExtResource } from '../SubResourceResolver';
+import { resolveExtResourcePath } from '../SubResourceResolver';
 import type { LightmapGIData, LightmapUser } from './types';
 
 /** `externalResources` are the pools the data's own `ExtResource` references resolve against. */
@@ -22,9 +27,10 @@ export function decodeLightmapGIData(
   properties: Record<string, string>,
   externalResources: readonly TscnExternalResource[]
 ): LightmapGIData {
-  // Both off unless set (`lightmap_gi.h:63,66`).
-  const usesSphericalHarmonics = boolSlotValue(properties.uses_spherical_harmonics) ?? false;
-  const usesPackedDirectional = boolSlotValue(properties._uses_packed_directional) ?? false;
+  const usesSphericalHarmonics =
+    boolSlotValue(properties.uses_spherical_harmonics) ?? LIGHTMAP_GI_DATA_DEFAULTS.usesSphericalHarmonics;
+  const usesPackedDirectional =
+    boolSlotValue(properties._uses_packed_directional) ?? LIGHTMAP_GI_DATA_DEFAULTS.usesPackedDirectional;
   // A LightmapGI refuses directional data in the unpacked format older bakes wrote (`:1509-1513`).
   const isAssignable = !usesSphericalHarmonics || usesPackedDirectional;
   return {
@@ -36,7 +42,8 @@ export function decodeLightmapGIData(
 }
 
 const readBounds = dictCallField('bounds', 'AABB');
-const readPoints = dictCallField('points', 'PackedVector3Array');
+const readPoints = dictPackedField('points', 'PackedVector3Array');
+const POINTS_FORMS = packedArrayForms('PackedVector3Array');
 
 /**
  * The bounds `probe_data` gives the capture. `set_capture_data` keeps them only with probe points
@@ -45,7 +52,8 @@ const readPoints = dictCallField('points', 'PackedVector3Array');
 function captureBounds(probeData: string | undefined): Aabb {
   if (probeData === undefined) return EMPTY_AABB;
   if (missingProbeDataField(probeData) !== null) return EMPTY_AABB;
-  if (!readPoints(probeData)?.trim()) return EMPTY_AABB;
+  const points = readPoints(probeData);
+  if (points === null || packedFloatCount(POINTS_FORMS, points, 3) === 0) return EMPTY_AABB;
   const bounds = readBounds(probeData);
   return (bounds !== null && parseOptionalAabb(`AABB(${bounds})`, 'LightmapGIData probe_data')) || EMPTY_AABB;
 }
@@ -57,11 +65,9 @@ function lightmapTexturePaths(
 ): string[] {
   const body = raw === undefined ? null : arrayLiteralBody(raw);
   if (body === null) return [];
-  return splitTopLevel(body).flatMap((element) => {
-    const ref = resourceRef(element);
-    const external = ref?.kind === 'ExtResource' ? findExtResource(externalResources, ref.id) : undefined;
-    return external ? [external.path] : [];
-  });
+  return splitTopLevel(body).flatMap(
+    (element) => resolveExtResourcePath(element.trim(), externalResources) ?? []
+  );
 }
 
 /**
@@ -86,8 +92,8 @@ function lightmapUsers(raw: string | undefined): LightmapUser[] {
 function lightmapUser([pathText, rectText, sliceText, subInstanceText]: string[]): LightmapUser | null {
   const path = nodePathLiteral(pathText!);
   const uvScale = parseOptionalRect2(rectText, 'LightmapGIData user_data');
-  const sliceIndex = parseGodotInt(sliceText!);
-  const subInstance = parseGodotInt(subInstanceText!);
+  const sliceIndex = slotInt(sliceText);
+  const subInstance = slotInt(subInstanceText);
   if (path === null || !uvScale || sliceIndex === null || subInstance === null) return null;
   return { path, uvScale, sliceIndex, subInstance };
 }

@@ -9,22 +9,13 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { ByteReader } from './byteReader';
 import { tableString, variantText, type VariantTables } from './variants';
-
-const MAGIC = 'RSRC';
-
-/** A file saved with `ResourceSaver::FLAG_COMPRESS` starts with this instead (`:988`). */
-const COMPRESSED_MAGIC = 'RSCC';
-
-/** `ResourceFormatSaverBinaryInstance`'s header flags (`resource_format_binary.h:169-172`). */
-const FLAG_UIDS = 2;
-const FLAG_REAL_T_IS_DOUBLE = 4;
-const FLAG_HAS_SCRIPT_CLASS = 8;
-
-/** `RESERVED_FIELDS` (`resource_format_binary.h:175`): u32 fields the header skips. */
-const RESERVED_FIELDS = 11;
-
-/** An internal resource's path in a named-ids file: `local://` and its id (`:719-724`). */
-const LOCAL_PREFIX = 'local://';
+import {
+  BINARY_RESOURCE_MAGIC,
+  BinaryFormatFlag,
+  COMPRESSED_BINARY_RESOURCE_MAGIC,
+  LOCAL_RESOURCE_PREFIX,
+  RESERVED_FIELDS,
+} from '../../../godot/project/binaryResourceFormat';
 
 /** One internal resource: its id and where its class and properties start. */
 interface InternalEntry {
@@ -53,10 +44,13 @@ export function parseBinaryResource(bytes: ArrayBuffer): ParsedResource {
 }
 
 function readMagic(reader: ByteReader): void {
-  const magic = String.fromCharCode(...reader.take(MAGIC.length));
-  if (magic === COMPRESSED_MAGIC) throw new Error('expected an uncompressed binary resource, got RSCC');
-  if (magic !== MAGIC)
-    throw new Error(`expected a binary resource starting with ${MAGIC}, got ${JSON.stringify(magic)}`);
+  const magic = String.fromCharCode(...reader.take(BINARY_RESOURCE_MAGIC.length));
+  if (magic === COMPRESSED_BINARY_RESOURCE_MAGIC)
+    throw new Error('expected an uncompressed binary resource, got RSCC');
+  if (magic !== BINARY_RESOURCE_MAGIC)
+    throw new Error(
+      `expected a binary resource starting with ${BINARY_RESOURCE_MAGIC}, got ${JSON.stringify(magic)}`
+    );
 }
 
 /** `:1021-1069`: byte order, `real_t` width, versions, the class, the flags and the reserved fields. */
@@ -69,9 +63,9 @@ function readHeader(reader: ByteReader): { formatVersion: number; flags: number 
   reader.unicodeString(); // the main resource's class, which its own entry repeats
   reader.u64(); // the import metadata offset
   const flags = reader.u32();
-  reader.isRealDouble = (flags & FLAG_REAL_T_IS_DOUBLE) !== 0;
+  reader.isRealDouble = (flags & BinaryFormatFlag.RealTIsDouble) !== 0;
   reader.u64(); // the file's own uid, or an unused field
-  if (flags & FLAG_HAS_SCRIPT_CLASS) reader.unicodeString();
+  if (flags & BinaryFormatFlag.HasScriptClass) reader.unicodeString();
   for (let i = 0; i < RESERVED_FIELDS; i++) reader.u32();
   return { formatVersion, flags };
 }
@@ -81,7 +75,7 @@ function readExternalResources(reader: ByteReader, flags: number): TscnExternalR
   return Array.from({ length: reader.u32() }, (_, index) => {
     const type = reader.unicodeString();
     const path = reader.unicodeString();
-    if (flags & FLAG_UIDS) reader.u64();
+    if (flags & BinaryFormatFlag.Uids) reader.u64();
     return { id: String(index + 1), path, type };
   });
 }
@@ -92,7 +86,9 @@ function readInternalResources(reader: ByteReader): InternalEntry[] {
     const path = reader.unicodeString();
     const offset = Number(reader.u64());
     return {
-      id: path.startsWith(LOCAL_PREFIX) ? path.slice(LOCAL_PREFIX.length) : String(index + 1),
+      id: path.startsWith(LOCAL_RESOURCE_PREFIX)
+        ? path.slice(LOCAL_RESOURCE_PREFIX.length)
+        : String(index + 1),
       offset,
     };
   });

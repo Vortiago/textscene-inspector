@@ -12,7 +12,7 @@ import type { DependencyGraph } from '../dependencyGraph';
 import { decodeImagePixels, getMimeType, isTexturePath } from '../formats/image/textureProcessing';
 import { sliceImage } from '../textures/layeredTexels';
 import { dataTexture3D } from '../textures/dataTexture3D';
-import { readImportSidecar } from './readImportSidecar';
+import { readLayeredSlices } from './readLayeredSlices';
 import { importTexture3DSlices } from '../../parser/importParser';
 
 export function createTexture3DProcessor(
@@ -20,19 +20,6 @@ export function createTexture3DProcessor(
   eventBus: ResourceEventBus,
   dependencies: DependencyGraph
 ): ResourceProcessor<THREE.Data3DTexture> {
-  /** The slices the sidecar names, read first so a missing one costs no decode. */
-  const slicesOf = async (path: string) => {
-    const sidecar = await readImportSidecar({
-      assetPath: path,
-      dependent: { busType: 'texture3d', key: path },
-      fileEventBus,
-      dependencies,
-    });
-    const slices = importTexture3DSlices(sidecar);
-    if (!slices) throw new Error(`${path} has no sidecar that imports it as a 3D texture`);
-    return slices;
-  };
-
   return createResourceProcessor({
     fileEventBus,
     eventBus,
@@ -40,7 +27,11 @@ export function createTexture3DProcessor(
     readsFile: isTexturePath,
     shouldProcess: (_path, data) => data instanceof ArrayBuffer,
     process: async (path, data) => {
-      const slices = await slicesOf(path);
+      const slices = await readLayeredSlices(
+        { assetPath: path, dependent: { busType: 'texture3d', key: path }, fileEventBus, dependencies },
+        importTexture3DSlices,
+        'a 3D texture'
+      );
       const image = await decodeImagePixels(
         data as ArrayBuffer,
         getMimeType(path),

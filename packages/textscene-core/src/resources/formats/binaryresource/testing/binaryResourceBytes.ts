@@ -3,6 +3,14 @@
  * (`core/io/resource_format_binary.cpp`), so a test sets each header field the reader branches on.
  */
 
+import {
+  BINARY_FORMAT_VERSION,
+  BINARY_RESOURCE_MAGIC,
+  BinaryFormatFlag,
+  LOCAL_RESOURCE_PREFIX,
+  RESERVED_FIELDS,
+} from '../../../../godot/project/binaryResourceFormat';
+
 /** One property: a name from the string table, then its variant's own bytes. */
 interface BinaryProperty {
   name: string;
@@ -26,12 +34,9 @@ export interface BinaryResourceLayout {
   resources: BinaryResourceEntry[];
 }
 
-const FLAG_NAMED_SCENE_IDS = 1;
-const FLAG_UIDS = 2;
-const FLAG_REAL_T_IS_DOUBLE = 4;
-const FLAG_HAS_SCRIPT_CLASS = 8;
-const FORMAT_VERSION = 6;
-const RESERVED_FIELDS = 11;
+/** The engine version the header records, which the reader skips. */
+const ENGINE_MAJOR = 4;
+const ENGINE_MINOR = 6;
 
 /** Little or big endian bytes, appended in order. */
 export class ByteWriter {
@@ -90,17 +95,17 @@ export class ByteWriter {
 export function binaryResourceBytes(layout: BinaryResourceLayout): ArrayBuffer {
   const writer = new ByteWriter(layout.isBigEndian);
   const main = layout.resources[layout.resources.length - 1]!;
-  writer.raw(new TextEncoder().encode('RSRC'));
+  writer.raw(new TextEncoder().encode(BINARY_RESOURCE_MAGIC));
   writer
     .u32(layout.isBigEndian ? 1 : 0)
     .u32(layout.isRealDouble ? 1 : 0)
-    .u32(4)
-    .u32(6)
-    .u32(FORMAT_VERSION);
+    .u32(ENGINE_MAJOR)
+    .u32(ENGINE_MINOR)
+    .u32(BINARY_FORMAT_VERSION);
   writer.unicodeString(main.type).u64(0);
-  let flags = FLAG_NAMED_SCENE_IDS | FLAG_UIDS;
-  if (layout.isRealDouble) flags |= FLAG_REAL_T_IS_DOUBLE;
-  if (layout.scriptClass !== undefined) flags |= FLAG_HAS_SCRIPT_CLASS;
+  let flags = BinaryFormatFlag.NamedSceneIds | BinaryFormatFlag.Uids;
+  if (layout.isRealDouble) flags |= BinaryFormatFlag.RealTIsDouble;
+  if (layout.scriptClass !== undefined) flags |= BinaryFormatFlag.HasScriptClass;
   writer.u32(flags).u64(0);
   if (layout.scriptClass !== undefined) writer.unicodeString(layout.scriptClass);
   for (let i = 0; i < RESERVED_FIELDS; i++) writer.u32(0);
@@ -111,10 +116,13 @@ export function binaryResourceBytes(layout: BinaryResourceLayout): ArrayBuffer {
   for (const { type, path } of externals) writer.unicodeString(type).unicodeString(path).u64(0);
   const bodies = layout.resources.map((resource) => resourceBody(resource, layout));
   writer.u32(layout.resources.length);
-  const tableBytes = layout.resources.reduce((size, { id }) => size + 4 + utf8Size(`local://${id}\0`) + 8, 0);
+  const tableBytes = layout.resources.reduce(
+    (size, { id }) => size + 4 + utf8Size(`${LOCAL_RESOURCE_PREFIX}${id}\0`) + 8,
+    0
+  );
   let offset = writer.length + tableBytes;
   layout.resources.forEach(({ id }, i) => {
-    writer.unicodeString(`local://${id}`).u64(offset);
+    writer.unicodeString(`${LOCAL_RESOURCE_PREFIX}${id}`).u64(offset);
     offset += bodies[i]!.length;
   });
   for (const body of bodies) writer.raw(body);

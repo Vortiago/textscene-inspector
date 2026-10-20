@@ -8,7 +8,7 @@
 import type * as THREE from 'three';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { declaredLightOf } from '../directionalShadow/splitSun.js';
-import { slotValues } from '../lightSlots.js';
+import { slottedLights, slotValues } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 
@@ -49,6 +49,6 @@ function specularAmountOf(light: THREE.Light): number {
 
 /** Writes the specular amount of each slotted light among `lights`, for a render through `camera`. */
 export function writeLightSpecularUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
-  const ordered = slotValues(lights, camera, specularAmountOf);
+  const ordered = slotValues(slottedLights(lights, camera), specularAmountOf);
   arrays.write(ordered.length, (set) => set[LIGHT_SPECULARS].set(ordered));
 }

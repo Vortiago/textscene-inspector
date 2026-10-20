@@ -30,8 +30,8 @@ type LayerTexelsOf<Source> = Source extends Uint16Array ? Uint16Array : Uint8Arr
 
 /**
  * Each layer is the image's size over the counts, truncated, so a remainder column or row is
- * dropped. Layers run left to right, then top to bottom. Null when a layer is empty, which
- * Godot skips (`:380`), leaving no texture.
+ * dropped. Layers run left to right, then top to bottom. Null when a layer is empty, which Godot
+ * skips (`:380`), leaving no texture. The texels can share the image's buffer.
  */
 export function sliceImage<Source extends SourcePixels>(
   image: LayeredSource<Source>,
@@ -41,6 +41,9 @@ export function sliceImage<Source extends SourcePixels>(
   const height = Math.trunc(image.height / vertical);
   if (width < 1 || height < 1) return null;
   const depth = horizontal * vertical;
+  if (horizontal === 1 && height * vertical === image.height && isLayerTexels(image.data)) {
+    return { texels: image.data, width, height, depth };
+  }
   const length = width * height * depth * 4;
   const texels = image.data instanceof Uint16Array ? new Uint16Array(length) : new Uint8Array(length);
   const rowTexels = width * 4;
@@ -53,4 +56,9 @@ export function sliceImage<Source extends SourcePixels>(
     }
   }
   return { texels: texels as LayerTexelsOf<Source>, width, height, depth };
+}
+
+/** Whether `data` already has the texel type its layers take, so a stack of whole rows is itself. */
+function isLayerTexels<Source extends SourcePixels>(data: Source): data is Source & LayerTexelsOf<Source> {
+  return data instanceof Uint16Array || data instanceof Uint8Array;
 }

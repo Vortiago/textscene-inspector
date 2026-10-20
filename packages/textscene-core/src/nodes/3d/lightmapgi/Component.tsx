@@ -11,7 +11,7 @@ import { combinedLightmapAtlas } from '../../../resources/lightmapgidata/build';
 import { decodeLightmapGIData } from '../../../resources/lightmapgidata/decode';
 import type { LightmapGIData } from '../../../resources/lightmapgidata/types';
 import { useResource } from '../../../resources/useResource';
-import { useResourceResolution } from '../../../resources/useSubOrExtResource';
+import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 import { useTreeOrder } from '../../../r3f/contexts/TreeOrderContext';
@@ -24,7 +24,7 @@ import type { LightmapGIProperties } from './types';
 
 export function LightmapGI({ node, children }: NodeComponentProps) {
   const { lightData } = node.properties as LightmapGIProperties;
-  const { scoped } = useResourceResolution(lightData, useSceneResources());
+  const scoped = useSubOrExtResource(lightData, useSceneResources());
   const data = useMemo(
     () =>
       scoped?.resource.type === 'LightmapGIData'
@@ -111,10 +111,10 @@ function useAtlas(
   paths: readonly string[],
   loaded: ReadonlyMap<string, THREE.DataArrayTexture>
 ): THREE.DataArrayTexture | null {
-  const textures = useMemo(() => paths.map((path) => loaded.get(path)), [paths, loaded]);
+  const textures = useMemo(() => paths.flatMap((path) => loaded.get(path) ?? []), [paths, loaded]);
   const atlas = useMemo(
-    () => (textures.every(isLoaded) ? combinedLightmapAtlas(textures as THREE.DataArrayTexture[]) : null),
-    [textures]
+    () => (textures.length === paths.length ? combinedLightmapAtlas(textures) : null),
+    [textures, paths]
   );
   // A stacked atlas is this component's own. A lone texture is the loader's.
   useEffect(
@@ -124,8 +124,4 @@ function useAtlas(
     [atlas, textures]
   );
   return atlas;
-}
-
-function isLoaded(texture: THREE.DataArrayTexture | undefined): texture is THREE.DataArrayTexture {
-  return texture !== undefined;
 }

@@ -16,8 +16,7 @@ const userDataArray = v.arrayLiteral('user_data');
 const userData: PropertyValidator = accepts((key, value, line) => {
   const shapeError = userDataArray(key, value, line);
   if (shapeError) return shapeError;
-  const body = arrayLiteralElements(value).trim();
-  const count = body === '' ? 0 : splitTopLevel(body).length;
+  const count = splitTopLevel(arrayLiteralElements(value)).length;
   if (count % LIGHTMAP_USER_FIELDS === 0) return null;
   return propertyError(
     key,

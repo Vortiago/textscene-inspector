@@ -4,7 +4,7 @@
  * linters share it, so a curve the linter calls unloadable is one the preview leaves
  * empty. No THREE.
  */
-import { packedArrayForms } from '../../../godot/variant/variantParser.js';
+import { dictKey, packedArrayForms } from '../../../godot/variant/variantParser.js';
 import { dictPackedField, packedFloatCount } from '../../../godot/variant/packedArrayFields.js';
 
 /** The `_data` layout of one Bézier curve class. */
@@ -38,7 +38,7 @@ function bezierDataFormat(
     vectorSize,
     otherRequiredKeys: otherRequiredKeys.map((key) => ({
       key,
-      present: new RegExp(`"${key}"\\s*:`),
+      present: dictKey(key),
     })),
   };
 }

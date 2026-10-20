@@ -35,6 +35,11 @@ describe('sliceImage', () => {
     expect(reds(volume!.texels)).toEqual([0, 1, 5, 6, 10, 11, 2, 3, 7, 8, 12, 13]);
   });
 
+  it('hands back the image itself when it is one column of whole layers, as no texel moves', () => {
+    const image = indexedImage(2, 4);
+    expect(sliceImage(image, { horizontal: 1, vertical: 2 })!.texels).toBe(image.data);
+  });
+
   it('keeps the half-float bits of an HDR image, such as a lightmap atlas', () => {
     const data = Uint16Array.of(0x4100, 0, 0, 0x3c00, 0x4740, 0, 0, 0x3c00);
     const layers = sliceImage({ data, width: 1, height: 2 }, { horizontal: 1, vertical: 2 });

@@ -8,7 +8,6 @@ import type { TscnExternalResource, TscnInternalResource } from '../parser/types
 import { resourceRef } from '../godot/variant/resourceRef.js';
 import { simplifyResPath } from '../godot/string/string.js';
 import { GODOT_SHADER_EXTENSION } from '../godot/project/resourceFormats.js';
-import { fileExtension } from './fileExtension.js';
 import { resourceSliceRegistry } from './sliceRegistration.js';
 
 /** One resource table's ids, and how many of its leading entries they cover. */
@@ -99,8 +98,8 @@ export function resolveExtResourcePath(
 
 /**
  * The file an external reference loads as a ParsedResource: a `.tres`, a `.gdshader`, or a binary
- * file a slice routes to the `resource` bus, such as a `.lmbake`. Null for any other reference: no
- * processor reads a binary `.res`, so a request for one would wait forever.
+ * file a slice routes to the `resource` bus, such as a `.lmbake`. Null for any other reference,
+ * such as a `.res`: no slice routes it to that bus, so a request for one would wait forever.
  */
 export function parsedResourcePath(
   ref: string | null | undefined,
@@ -108,14 +107,11 @@ export function parsedResourcePath(
 ): string | null {
   const path = resolveExtResourcePath(ref, externalResources);
   if (!path) return null;
-  return path.endsWith('.tres') || path.endsWith(GODOT_SHADER_EXTENSION) || isParsedBinaryPath(path)
-    ? path
-    : null;
-}
-
-function isParsedBinaryPath(path: string): boolean {
-  const extension = fileExtension(path);
-  return extension !== null && resourceSliceRegistry.byExtension(extension)?.busType === 'resource';
+  const isParsed =
+    path.endsWith('.tres') ||
+    path.endsWith(GODOT_SHADER_EXTENSION) ||
+    resourceSliceRegistry.busTypeOfPath(path) === 'resource';
+  return isParsed ? path : null;
 }
 
 /** Find a SubResource by id. The first resource in declaration order with that id wins. */

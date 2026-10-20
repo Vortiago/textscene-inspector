@@ -7,72 +7,14 @@
 import { stringLiteral } from '../../../godot/string/string';
 import { componentLiteral, floatLiteral } from '../../../godot/variant/variantWriter';
 import type { ByteReader } from './byteReader';
-
-/** The variant tags of the binary format (`resource_format_binary.cpp:45-88`). */
-const enum Tag {
-  Nil = 1,
-  Bool = 2,
-  Int = 3,
-  Float = 4,
-  String = 5,
-  Vector2 = 10,
-  Rect2 = 11,
-  Vector3 = 12,
-  Plane = 13,
-  Quaternion = 14,
-  Aabb = 15,
-  Basis = 16,
-  Transform3D = 17,
-  Transform2D = 18,
-  Color = 20,
-  NodePath = 22,
-  Rid = 23,
-  Object = 24,
-  InputEvent = 25,
-  Dictionary = 26,
-  Array = 30,
-  PackedByteArray = 31,
-  PackedInt32Array = 32,
-  PackedFloat32Array = 33,
-  PackedStringArray = 34,
-  PackedVector3Array = 35,
-  PackedColorArray = 36,
-  PackedVector2Array = 37,
-  Int64 = 40,
-  Double = 41,
-  Callable = 42,
-  Signal = 43,
-  StringName = 44,
-  Vector2i = 45,
-  Rect2i = 46,
-  Vector3i = 47,
-  PackedInt64Array = 48,
-  PackedFloat64Array = 49,
-  Vector4 = 50,
-  Vector4i = 51,
-  Projection = 52,
-  PackedVector4Array = 53,
-}
-
-/** How an object property names its resource (`resource_format_binary.cpp:89-92`). */
-const enum ObjectRef {
-  Empty = 0,
-  ExternalResource = 1,
-  InternalResource = 2,
-  ExternalResourceIndex = 3,
-}
-
-/** Version 3 dropped the property field a NodePath carried (`resource_format_binary.cpp:95,100`). */
-const FORMAT_VERSION_NO_NODEPATH_PROPERTY = 3;
-
-/** The top bit of an array or dictionary length marks it shared (`:589`, `:604`), not counted. */
-const LENGTH_MASK = 0x7fffffff;
-
-/** The top bit of a string-table index marks an inline string of that length (`:159-171`). */
-const INLINE_STRING = 0x80000000;
-
-/** The NodePath subname count's top bit marks it absolute (`:432-434`). */
-const ABSOLUTE_PATH = 0x8000;
+import {
+  ABSOLUTE_NODE_PATH,
+  FORMAT_VERSION_NO_NODEPATH_PROPERTY,
+  INLINE_STRING,
+  ObjectRef,
+  SHARED_LENGTH_MASK,
+  VariantTag as Tag,
+} from '../../../godot/project/binaryResourceFormat';
 
 /** What a variant names outside itself: the file's tables and format version. */
 export interface VariantTables {
@@ -162,7 +104,7 @@ export function variantText(reader: ByteReader, tables: VariantTables): string {
     case Tag.Dictionary:
       return dictionaryText(reader, tables);
     case Tag.Array:
-      return `[${repeat(reader.u32() & LENGTH_MASK, () => variantText(reader, tables)).join(', ')}]`;
+      return `[${repeat(reader.u32() & SHARED_LENGTH_MASK, () => variantText(reader, tables)).join(', ')}]`;
     case Tag.PackedByteArray:
       return packedByteArrayText(reader);
     case Tag.PackedInt32Array:
@@ -224,8 +166,8 @@ function ints(reader: ByteReader, count: number): string[] {
 function nodePathText(reader: ByteReader, tables: VariantTables): string {
   const nameCount = reader.u16();
   const subnameField = reader.u16();
-  const isAbsolute = (subnameField & ABSOLUTE_PATH) !== 0;
-  let subnameCount = subnameField & ~ABSOLUTE_PATH;
+  const isAbsolute = (subnameField & ABSOLUTE_NODE_PATH) !== 0;
+  let subnameCount = subnameField & ~ABSOLUTE_NODE_PATH;
   if (tables.formatVersion < FORMAT_VERSION_NO_NODEPATH_PROPERTY) subnameCount += 1;
   const names = repeat(nameCount, () => tableString(reader, tables));
   const subnames = repeat(subnameCount, () => tableString(reader, tables)).filter((name) => name !== '');
@@ -243,10 +185,9 @@ function objectText(reader: ByteReader, tables: VariantTables): string {
       return `SubResource(${stringLiteral(tableId(tables.internalIds, reader.u32(), 'internal'))})`;
     case ObjectRef.ExternalResourceIndex:
       return `ExtResource(${stringLiteral(tableId(tables.externalIds, reader.u32(), 'external'))})`;
-    case ObjectRef.ExternalResource: {
+    case ObjectRef.ExternalResource:
       reader.unicodeString();
       return `Resource(${stringLiteral(reader.unicodeString())})`;
-    }
     default:
       throw new Error(`expected an object reference kind from 0 to 3, got ${kind as number}`);
   }
@@ -261,7 +202,7 @@ function tableId(ids: readonly string[], index: number, table: string): string {
 
 /** `:582-597`. Godot's writer puts each entry on its own line. */
 function dictionaryText(reader: ByteReader, tables: VariantTables): string {
-  const entries = repeat(reader.u32() & LENGTH_MASK, () => {
+  const entries = repeat(reader.u32() & SHARED_LENGTH_MASK, () => {
     const key = variantText(reader, tables);
     return `${key}: ${variantText(reader, tables)}`;
   });

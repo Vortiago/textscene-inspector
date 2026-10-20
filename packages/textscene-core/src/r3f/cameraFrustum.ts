@@ -11,5 +11,5 @@ const viewProjection = new THREE.Matrix4();
  */
 export function cameraFrustum(camera: THREE.Camera, target: THREE.Frustum): THREE.Frustum {
   viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-  return target.setFromProjectionMatrix(viewProjection, camera.coordinateSystem);
+  return target.setFromProjectionMatrix(viewProjection, camera.coordinateSystem, camera.reversedDepth);
 }

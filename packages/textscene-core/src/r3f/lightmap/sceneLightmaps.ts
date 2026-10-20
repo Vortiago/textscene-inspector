@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { EMPTY_AABB, hasSurface, type Aabb } from '../../godot/math/aabb';
+import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../../godot/scene/lightmapGi';
 import { resolveRelativePath } from '../../godot/string/nodePath';
 import type { LightmapUser } from '../../resources/lightmapgidata/types';
 import { cameraFrustum } from '../cameraFrustum';
@@ -23,7 +24,7 @@ export class LightmapInstance {
   /** The atlas, every layer of every lightmap texture in order. Null until it loads. */
   atlas: THREE.DataArrayTexture | null = null;
   usesSphericalHarmonics = false;
-  usesBicubicFilter = true;
+  usesBicubicFilter: boolean = LIGHTMAP_BICUBIC_FILTER_DEFAULT;
   /** The bake's capture bounds, in the LightmapGI's space (`lightmap_gi.cpp:229`). */
   bounds: Aabb = EMPTY_AABB;
   /** Written only by the scene's `SceneLightmaps` before each render: whether the cull keeps it. */
@@ -68,6 +69,8 @@ class SceneLightmaps {
   private readonly listeners = new Set<() => void>();
   /** Each node's assignment, kept until the instances change so a reader sees one object. */
   private readonly assignments = new Map<string, LightmapAssignment | null>();
+  /** The instances in ready order, built on the first lookup after a change. */
+  private readyOrder: LightmapInstance[] | null = null;
   /** Set while the scene holds an instance. */
   private stopObserving: (() => void) | null = null;
 
@@ -91,6 +94,7 @@ class SceneLightmaps {
   /** Tells every reader that a held instance changed what it assigns. */
   changed(): void {
     this.assignments.clear();
+    this.readyOrder = null;
     for (const listener of this.listeners) listener();
   }
 
@@ -112,7 +116,8 @@ class SceneLightmaps {
   /** The LightmapGI that assigns last wins: each assignment replaces the node's last. */
   private lastAssignmentOf(path: string): LightmapAssignment | null {
     let assignment: LightmapAssignment | null = null;
-    for (const lightmap of [...this.instances].sort((a, b) => compareReadyOrder(a.order, b.order))) {
+    this.readyOrder ??= [...this.instances].sort((a, b) => compareReadyOrder(a.order, b.order));
+    for (const lightmap of this.readyOrder) {
       const user = lightmap.users.get(path);
       if (user) assignment = { lightmap, user };
     }

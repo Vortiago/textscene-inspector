@@ -20,17 +20,17 @@ interface MeshLibraryModelResult {
 export function useMeshLibraryModel(meshLibraryRef: string | undefined): MeshLibraryModelResult {
   const { externalResources } = useSceneResources();
 
-  const tresPath = parsedResourcePath(meshLibraryRef, externalResources);
-  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
+  const resourcePath = parsedResourcePath(meshLibraryRef, externalResources);
+  const resourceFile = useResource<ParsedResource>(resourcePath ?? '', 'resource');
 
   return useMemo((): MeshLibraryModelResult => {
-    if (!meshLibraryRef || !tresPath) return { model: null, status: 'unavailable' };
-    if (tresResult.status === 'pending') return { model: null, status: 'pending' };
-    if (tresResult.status === 'unavailable' || !tresResult.value) {
+    if (!meshLibraryRef || !resourcePath) return { model: null, status: 'unavailable' };
+    if (resourceFile.status === 'pending') return { model: null, status: 'pending' };
+    if (resourceFile.status === 'unavailable' || !resourceFile.value) {
       return { model: null, status: 'unavailable' };
     }
     // The library's own path goes in so an item mesh it embeds as a
     // `[sub_resource]` comes back as an addressable path like any other.
-    return { model: meshLibraryFromTres(tresResult.value, tresPath), status: 'loaded' };
-  }, [meshLibraryRef, tresPath, tresResult.status, tresResult.value]);
+    return { model: meshLibraryFromTres(resourceFile.value, resourcePath), status: 'loaded' };
+  }, [meshLibraryRef, resourcePath, resourceFile.status, resourceFile.value]);
 }

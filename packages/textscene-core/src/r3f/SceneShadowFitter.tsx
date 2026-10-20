@@ -34,11 +34,9 @@ import {
 } from './directionalShadow/sunSoftShadow.js';
 
 /**
- * One render's light pass, the directional fit first. The area light atlas rebuilds before the area
- * lights write where their textures lie. The directional fit changes no omni, spot or
- * area light, so their part of the pass reads the same walk. It hangs a sun under a declared
- * directional light and hides that light, so the soft shadow angles, the specular amounts, the bake modes and
- * the light sizes read a second walk.
+ * One render's light pass, the directional fit first. It changes no omni, spot or area light, so
+ * those read the first walk, and it swaps each declared directional light for a sun, so the writers
+ * after it read a second walk. The area atlas rebuilds before the area lights write their rects.
  */
 function prepareSceneLights(
   scene: THREE.Scene,

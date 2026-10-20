@@ -22,8 +22,7 @@ export class ByteReader {
   }
 
   u16(): number {
-    const value = this.view.getUint16(this.advance(2), this.isLittleEndian);
-    return value;
+    return this.view.getUint16(this.advance(2), this.isLittleEndian);
   }
 
   u32(): number {
