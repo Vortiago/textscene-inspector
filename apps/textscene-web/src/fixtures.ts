@@ -3311,6 +3311,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Normal Map Uv Density",
+    "file": "unit-material-normal-map-uv-density.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Normal Map",
     "file": "unit-material-normal-map.tscn",
     "category": "Unit - Materials"

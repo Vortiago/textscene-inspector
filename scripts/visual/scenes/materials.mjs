@@ -11,6 +11,9 @@ export const MATERIAL_SCENES = [
   // A normal map with blue 0: Godot rebuilds blue from red and green, so the flat texel shades as the
   // bare plane. A read of the stored blue turns that half dark.
   { name: 'material-normal-map-blue', file: 'unit-material-normal-map-blue.tscn' },
+  // A 2 by 4 quad, so the UV density differs per axis: each texel tilts by its authored angle on
+  // both axes. A tangent frame scaled by the longer axis shades the X tilts flatter.
+  { name: 'material-normal-map-uv-density', file: 'unit-material-normal-map-uv-density.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
