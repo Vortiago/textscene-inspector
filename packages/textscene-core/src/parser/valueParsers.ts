@@ -311,7 +311,7 @@ export function parseOptionalFloat(value: string | undefined): number | undefine
  */
 export function parseOptionalGodotFloat(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
-  return parseGodotFloat(value) ?? undefined;
+  return scalarSlotValue(value) ?? undefined;
 }
 
 /**
