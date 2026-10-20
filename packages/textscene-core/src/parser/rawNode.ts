@@ -1,8 +1,11 @@
-/** Builds the **Raw view** node of a `[node]` heading, which the linter and the language features seat. */
+/**
+ * Builds the **Raw view** node of a `[node]` heading, which the linter and the language features
+ * seat, and the origin record the seating reads beside any node.
+ */
 
-import type { RawNode } from './types.js';
+import type { NodeOrigin, RawNode } from './types.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from './utils.js';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene.js';
+import { INSTANCE_PLACEHOLDER_TYPE, parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
 
 /**
  * A **Raw view** node, built without NodeRegistry, so without three.js. It has no typed `properties`: a helper the
@@ -38,4 +41,15 @@ export function createRawNode(heading: ParsedHeading, rawProperties: Record<stri
   }
 
   return node;
+}
+
+/** A heading's node beside the facts of the heading that `seatScene` reads. */
+export function nodeOrigin<N extends RawNode>(heading: ParsedHeading, node: N, line: number): NodeOrigin<N> {
+  return {
+    node,
+    line,
+    declaredParent: heading.attributes.parent,
+    idTrail: parseIdTrail(heading.attributes.parent_id_path),
+    uniqueId: parseUniqueId(heading.attributes.unique_id),
+  };
 }

@@ -192,6 +192,7 @@ item/0/mesh = ExtResource("1_tree")
     it('returns every node heading with its line, in scan order', () => {
       const { origins } = parser.parse(content, simpleCreator);
 
+      // `Lost` is re-rooted, and its heading's node keeps the name the file wrote.
       expect(origins.map(({ node, line }) => [node.name, line])).toEqual([
         ['Root', 3],
         ['Lost', 5],
@@ -620,19 +621,20 @@ size = Vector3(1, 2, 3)
 `;
         const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
 
-        const { scene } = parser.parse(content, simpleCreator, { onSectionBuilt });
+        const { scene, origins, seating } = parser.parse(content, simpleCreator, { onSectionBuilt });
 
         const root = scene.nodes[0]!;
         expect(onSectionBuilt.mock.calls).toEqual([
           [scene.externalResources[0], 3],
           [scene.internalResources[0], 5],
-          [root, 8],
-          [root.children[0], 10],
+          [origins[0]!.node, 8],
+          [origins[1]!.node, 10],
         ]);
         // Identity, not equality: the call hands over the objects a reader of the scene holds.
+        // A node is the heading's own, and the scene holds its copy.
         expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.externalResources[0]);
         expect(onSectionBuilt.mock.calls[1]![0]).toBe(scene.internalResources[0]);
-        expect(onSectionBuilt.mock.calls[2]![0]).toBe(root);
+        expect(seating.seated.get(onSectionBuilt.mock.calls[2]![0] as RawNode)).toBe(root);
       });
 
       it("hands over a .tres file's [resource] body with its heading line, the object the scene holds", () => {

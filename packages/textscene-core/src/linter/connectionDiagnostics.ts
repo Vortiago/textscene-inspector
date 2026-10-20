@@ -47,10 +47,11 @@ function endsOf({ from, to, hasFromUidPath, hasToUidPath }: ConnectionHeading): 
 function missingNodeDiagnostics(scene: StrictScene, connection: ConnectionHeading): Diagnostic[] {
   // A file with no node instantiates nothing (packed_scene.cpp:171), so no connection is made or skipped.
   if (scene.nodes.length === 0) return [];
+  const seating = sceneSeating(scene.nodes);
   return endsOf(connection).flatMap(({ field, path, hasUidPath }) => {
     // A uid path lets Godot recover a node its path misses, and this linter does not walk those ids.
     if (path === undefined || hasUidPath) return [];
-    if (sceneSeating(scene.nodes).resolve(path).status !== 'missing') return [];
+    if (seating.resolve(path).status !== 'missing') return [];
     return [
       armDiagnostic(
         FILE_DIAGNOSTICS.connectionNodeMissing,

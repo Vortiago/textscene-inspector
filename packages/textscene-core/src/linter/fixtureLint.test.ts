@@ -116,6 +116,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'the fixture writes `true` into INT and FLOAT slots on purpose: the converted-spelling warning is the point, and the golden pins what Godot draws for it',
   },
+  'unit-orphan-reroot.tscn': {
+    rules: ['unresolved-parent-path'],
+    reason:
+      'each node hangs off a path that names nothing on purpose: the warning is the point, and the golden pins where Godot draws the re-rooted node',
+  },
   'unit-tile-map.tscn': {
     rules: ['tilemap-deprecated'],
     reason:

@@ -1,12 +1,11 @@
 /**
  * Which owner a node's `%Name` lands on. `_acquire_unique_name_in_owner` (node.cpp:2222) registers
  * `"%" + name` on the node's owner and refuses to overwrite an entry (node.cpp:2225-2231), so the
- * first claimant wins and a `%Name` with no claimant addresses nothing.
+ * first claimant in declaration order wins. The seating records every owner's claims.
  */
 
 import type { RawNode } from './types.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
-import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
 
 /**
  * Whether a node claims a `%Name` in its owner: `unique_name_in_owner = true`, read from
@@ -37,11 +36,30 @@ export function isOwnedByRoot(node: RawNode, insideInstance: boolean): boolean {
   return !(insideInstance && node.overridesExistingNode === true);
 }
 
+/** The node a `%Name` addresses, with the two spellings of the path that reaches it. */
+export interface UniqueNameClaim {
+  readonly node: RawNode;
+  /** Where the heading sits in the authored tree, from the root's own name: what a `.tscn`-only walk sees. */
+  readonly path: string;
+  /**
+   * Where the node sits once the instanced content its `parent=` addresses into is composed in:
+   * `path` with each ancestor's `instanceSubPath` restored, as the render tree spells paths.
+   */
+  readonly livePath: string;
+}
+
 /**
- * Records `value` under `%name` unless an earlier node claimed it: `_acquire_unique_name_in_owner`
- * refuses to overwrite an entry (node.cpp:2225-2231). The one place the first-claimant rule lives.
+ * Every owner's `%Name` claims in one seated file: the root's table, plus the two facts a per-owner
+ * table over composed instanced content is built from.
  */
-export function claimUniqueName<V>(claims: Map<string, V>, name: string, value: V): void {
-  const key = UNIQUE_NODE_PREFIX + name;
-  if (!claims.has(key)) claims.set(key, value);
+export interface UniqueNameOwnership {
+  /** `%Name` to claim, for the nodes this file's root owns, the first claimant kept. */
+  readonly claims: ReadonlyMap<string, UniqueNameClaim>;
+  /**
+   * Claims on override headings inside instanced content, keyed by the live path of the instance
+   * node whose sub-scene root owns them, or of the node an explicit `owner=` names, in file order.
+   */
+  readonly instanceClaims: ReadonlyMap<string, readonly UniqueNameClaim[]>;
+  /** Live paths of nodes this root owns that sit inside instanced content. */
+  readonly ownedInsideInstances: ReadonlySet<string>;
 }

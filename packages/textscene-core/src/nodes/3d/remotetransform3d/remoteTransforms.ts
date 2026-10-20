@@ -10,8 +10,8 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types.js';
 import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
 import { joinPath } from '../../../utils/nodePath.js';
-import { isUniqueNameInOwner } from '../../../parser/nodeOwner.js';
-import { UNIQUE_NODE_PREFIX, resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
+import { uniqueNamePaths } from '../../../utils/uniqueNames.js';
+import { resolveNodePathLiteral } from '../../../godot/string/nodePath.js';
 import { globalMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
 import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
 import {
@@ -50,20 +50,10 @@ export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
   const nodeByPath = new Map<string, TscnNode>();
   const relays: Array<{ node: TscnNode; path: string }> = [];
 
-  // `NodePath("%Target")` addresses the owner's claim table, so the table must exist before any
-  // relay resolves. This walk collects it, first-one-wins in the same depth-first order, since a
-  // second walk rebuilds every path string to keep a few. `utils/uniqueNames` owns the rule and the
-  // key spelling, and this module's test pins that both answer alike.
-  const uniquePaths = new Map<string, string>();
-
   const walk = (node: TscnNode, parentPath: string): void => {
     const path = joinPath(parentPath, node.name);
     nodeByPath.set(path, node);
     if (REMOTE_TRANSFORM_TYPES.has(node.type)) relays.push({ node, path });
-    if (isUniqueNameInOwner(node)) {
-      const key = UNIQUE_NODE_PREFIX + node.name;
-      if (!uniquePaths.has(key)) uniquePaths.set(key, path);
-    }
     for (const child of node.children) walk(child, path);
   };
   // Only the authored root scene. The live scene tree (ADR-0013) composes instanced sub-scenes
@@ -71,6 +61,7 @@ export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {
   for (const node of nodes) walk(node, '');
 
   if (relays.length === 0) return nodes;
+  const uniquePaths = uniqueNamePaths(nodes);
 
   // Document (pre-order) order, as Godot's enter-tree order applies a one-direction chain. A relay
   // that drives its own ancestor is not iterated to a fixed point.

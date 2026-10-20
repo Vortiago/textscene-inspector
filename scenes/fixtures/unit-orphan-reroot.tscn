@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+; One variable: a `parent=` path that names no node, which Godot re-roots under the scene root
+; (`packed_scene.cpp:208-215`). Every item hangs off a vanished path and draws at the root, with
+; no transform of the path it names. No other golden writes a vanished `parent=`, so a builder that
+; drops the node moves no other baseline.
+
+[node name="Root" type="Node2D"]
+
+[node name="Holder" type="Node2D" parent="."]
+position = Vector2(300, 0)
+
+; Draws at the root: red at (20,20)..(60,60).
+[node name="Orphan" type="ColorRect" parent="Gone"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 60.0
+offset_bottom = 60.0
+color = Color(1, 0, 0, 1)
+
+; Re-roots on its own, since `Gone/Orphan` no longer exists after the rename: green at
+; (100,20)..(140,60), not shifted by the orphan.
+[node name="Kid" type="ColorRect" parent="Gone/Orphan"]
+offset_left = 100.0
+offset_top = 20.0
+offset_right = 140.0
+offset_bottom = 60.0
+color = Color(0, 1, 0, 1)
+
+; Holder's transform does not apply: blue at (20,100)..(60,140), not at x 320.
+[node name="Inner" type="ColorRect" parent="Holder/Missing"]
+offset_left = 20.0
+offset_top = 100.0
+offset_right = 60.0
+offset_bottom = 140.0
+color = Color(0, 0, 1, 1)

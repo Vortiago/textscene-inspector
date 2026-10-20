@@ -24,9 +24,10 @@ const SCENES = {
 function headingLinesOfEnds(text: string): { path: string; linter?: number; languageFeatures?: number }[] {
   const { scene, lines } = new StrictTscnParser().parse(text);
   const document = new LanguageDocument(text);
+  const seating = sceneSeating(scene!.nodes);
   return scene!.connections.flatMap(({ from, to }) =>
     [from!, to!].map((path) => {
-      const resolution = sceneSeating(scene!.nodes).resolve(path);
+      const resolution = seating.resolve(path);
       return {
         path,
         linter: resolution.status === 'found' ? lines.get(resolution.node)?.heading : undefined,

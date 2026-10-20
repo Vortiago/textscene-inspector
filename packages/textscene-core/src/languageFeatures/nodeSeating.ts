@@ -4,9 +4,10 @@
  * editor requests never read it.
  */
 
-import { createRawNode } from '../parser/rawNode.js';
-import { seatScene, strandedNodes, type SceneSeating } from '../parser/sceneTreeBuilder.js';
+import { createRawNode, nodeOrigin } from '../parser/rawNode.js';
+import { seatScene, type SceneSeating } from '../parser/sceneTreeBuilder.js';
 import type { RawNode } from '../parser/types.js';
+import type { ParsedHeading } from '../parser/utils.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 
 /** A `[node]` heading with the headings Godot seats under it. */
@@ -17,8 +18,9 @@ export interface SeatedSection {
 
 interface DocumentSeating {
   readonly seating: SceneSeating<RawNode>;
+  /** Each seated tree node, and each unseated heading's node, to its heading. */
   readonly sectionByNode: ReadonlyMap<RawNode, DocumentSection>;
-  /** The scene root, then each stranded heading in line order. */
+  /** The scene root, then each heading left out of the tree, in line order. */
   readonly tree: readonly SeatedSection[];
 }
 
@@ -30,21 +32,29 @@ function rawNodeOf(section: DocumentSection): RawNode {
   const rawProperties = Object.fromEntries(
     section.properties.map(({ storedKey, value }) => [storedKey, value])
   );
-  return createRawNode({ type: section.tag, attributes: { ...section.attributes } }, rawProperties);
+  return createRawNode(headingOf(section), rawProperties);
+}
+
+function headingOf(section: DocumentSection): ParsedHeading {
+  return { type: section.tag, attributes: { ...section.attributes } };
 }
 
 function seat(document: LanguageDocument): DocumentSeating {
   const headings = document.sections
     .filter(({ kind }) => kind === 'node')
-    .map((section) => ({ section, node: rawNodeOf(section) }));
-  const seating = seatScene(headings.map(({ node }) => node));
-  const sectionByNode = new Map(headings.map(({ node, section }) => [node, section]));
+    .map((section) => ({
+      section,
+      ...nodeOrigin(headingOf(section), rawNodeOf(section), section.headingLine),
+    }));
+  const seating = seatScene(headings);
+  const sectionByNode = new Map<RawNode, DocumentSection>();
+  for (const { node, section } of headings) sectionByNode.set(seating.seated.get(node) ?? node, section);
   const seated = (node: RawNode): SeatedSection => ({
     section: sectionByNode.get(node)!,
     children: node.children.map(seated),
   });
-  const stranded = strandedNodes(headings, seating.roots).map(({ node }) => node);
-  return { seating, sectionByNode, tree: [...seating.roots, ...stranded].map(seated) };
+  const unseated = headings.filter(({ node }) => !seating.seated.has(node)).map(({ node }) => node);
+  return { seating, sectionByNode, tree: [...seating.roots, ...unseated].map(seated) };
 }
 
 function seatingOf(document: LanguageDocument): DocumentSeating {
@@ -56,7 +66,7 @@ function seatingOf(document: LanguageDocument): DocumentSeating {
   return seating;
 }
 
-/** The `[node]` headings as Godot seats them: the scene root, then each stranded heading in line order. */
+/** The `[node]` headings as Godot seats them: the scene root, then each heading left out of the tree, in line order. */
 export function seatedNodeTree(document: LanguageDocument): readonly SeatedSection[] {
   return seatingOf(document).tree;
 }

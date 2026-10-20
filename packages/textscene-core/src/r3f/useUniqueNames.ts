@@ -6,7 +6,8 @@
 
 import { useMemo } from 'react';
 import { useResourceLoader } from '../resources/useResource.js';
-import { cachedUniqueNameClaims, uniqueNameLivePaths, type UniqueNameClaim } from '../utils/uniqueNames.js';
+import { cachedUniqueNameClaims, uniqueNameLivePaths } from '../utils/uniqueNames.js';
+import type { UniqueNameClaim } from '../parser/nodeOwner.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
 import { liveTreeContext, useLiveTreeVersion } from './useLiveSceneTree.js';

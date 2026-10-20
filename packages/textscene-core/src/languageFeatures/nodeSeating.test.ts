@@ -29,10 +29,17 @@ describe('seatedNodeTree', () => {
     expect(root?.children.map(({ section }) => section.attributes.name)).toEqual(['Player']);
   });
 
-  it('lists a heading whose parent= names nothing after the root, in line order', () => {
+  it('seats a heading whose parent= names nothing under the root, as Godot re-roots it', () => {
     const source = [...NODE_TREE_HEAD, '[node name="Lost" type="Node3D" parent="Nowhere"]', ''].join('\n');
+    const [root] = seatedNodeTree(new LanguageDocument(source));
+    expect(root?.children.map(({ section }) => section.attributes.name)).toEqual(['Player', 'Lost']);
+  });
+
+  it('lists a heading Godot does not seat after the root, in line order', () => {
+    // A second parentless heading refuses the scene (packed_scene.cpp:207), so nothing re-roots.
+    const source = [...NODE_TREE_HEAD, '[node name="Stray" type="Node3D"]', ''].join('\n');
     const names = seatedNodeTree(new LanguageDocument(source)).map(({ section }) => section.attributes.name);
-    expect(names).toEqual(['Root', 'Lost']);
+    expect(names).toEqual(['Root', 'Stray']);
   });
 
   it('is empty for a document with no node heading', () => {

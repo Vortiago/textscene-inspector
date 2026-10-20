@@ -241,3 +241,51 @@ describe('definitionRangeAt of a node path two siblings share', () => {
     expect(definitionRangeAt(twins, { line: 3, character: 30 })?.start.line).toBe(2);
   });
 });
+
+describe('definitionRangeAt of a node path to a re-rooted node', () => {
+  const REROOTED = [
+    '[node name="Root" type="Node3D"]',
+    '[node name="Orphan" type="Node3D" parent="Gone"]',
+    '[node name="Kid" type="Node3D" parent="Gone#Orphan"]',
+    '[connection signal="s" from="Gone#Orphan" to="." method="m"]',
+    '[connection signal="s" from="Orphan" to="." method="m"]',
+  ];
+
+  /** The line of the heading the path in `lines[line]` names, or undefined. */
+  function headingLineOfPath(lines: string[], line: number, value: string): number | undefined {
+    const scene = new LanguageDocument(lines.join('\n'));
+    const character = scene.lines[line]!.indexOf(value) + 1;
+    return definitionRangeAt(scene, { line, character })?.start.line;
+  }
+
+  it('resolves a from= spelling the rename to the re-rooted heading', () => {
+    expect(headingLineOfPath(REROOTED, 3, 'Gone#Orphan')).toBe(1);
+  });
+
+  it('resolves a parent= below the re-rooted node to its heading', () => {
+    expect(headingLineOfPath(REROOTED, 2, 'Gone#Orphan')).toBe(1);
+  });
+
+  it('gives nothing for the authored name, which Godot no longer finds (edge case)', () => {
+    expect(headingLineOfPath(REROOTED, 4, '"Orphan"')).toBeUndefined();
+  });
+
+  it('gives nothing where a later heading declares no parent, so Godot re-roots nothing (edge case)', () => {
+    const refused = [...REROOTED.slice(0, 2), '[node name="Stray" type="Node3D"]', ...REROOTED.slice(2)];
+    expect(headingLineOfPath(refused, 4, 'Gone#Orphan')).toBeUndefined();
+  });
+
+  it('resolves the rename of a heading whose parent_id_path lands nowhere, which Godot re-roots too', () => {
+    // `packed_scene.cpp:161-163` tries the trail, and only a trail that finds no node falls to the re-root.
+    const trailed = [...REROOTED];
+    trailed[1] = '[node name="Orphan" type="Node3D" parent="Gone" parent_id_path=PackedInt32Array(7)]';
+    expect(headingLineOfPath(trailed, 3, 'Gone#Orphan')).toBe(1);
+  });
+
+  it('gives nothing for a heading whose parent_id_path lands on a node, which Godot does not re-root (edge case)', () => {
+    const trailed = [...REROOTED];
+    trailed[0] = '[node name="Root" type="Node3D" unique_id=7]';
+    trailed[1] = '[node name="Orphan" type="Node3D" parent="Gone" parent_id_path=PackedInt32Array(7)]';
+    expect(headingLineOfPath(trailed, 3, 'Gone#Orphan')).toBeUndefined();
+  });
+});

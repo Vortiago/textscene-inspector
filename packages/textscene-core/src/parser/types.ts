@@ -94,6 +94,11 @@ export interface RawNode {
    */
   instanceSubPath?: string;
   /**
+   * The name the heading wrote, set only on a tree node the builder re-rooted: its `name`
+   * is then Godot's rename for the vanished `parent` (`packed_scene.cpp:561-563`).
+   */
+  authoredName?: string;
+  /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this
    * path. See `isPropertyOverrideHeading`.
@@ -149,10 +154,13 @@ export interface ConnectionHeading {
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
-   * Headings the tree could not place, so they are not in `nodes`: a `parent=` path that resolves
-   * against nothing, or a later heading with no `parent=`.
+   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which
+   * `reRootedNames` holds, and those it left out of `nodes`, for a file or a trail Godot does not
+   * re-root, or a later heading with no `parent=`.
    */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
+  /** The name the builder gave each re-rooted heading's node, which the heading's own node keeps unrenamed. */
+  reRootedNames: ReadonlyMap<NodeOrigin<RawNode>, string>;
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses
    * (`packed_scene.cpp:218-219`), or undefined.
@@ -164,6 +172,12 @@ export interface HeadingFacts {
    * no `node.parent`, so it is seated, not orphaned.
    */
   emptyParentHeadings: readonly NodeOrigin<RawNode>[];
+  /**
+   * Whether Godot gives up on the scene before it re-roots anything, so the builder re-roots no
+   * orphan. True when `rootWithParent` is set, `emptyParentHeadings` is not empty, a later heading
+   * has no `parent=`, or the root heading states no identifier.
+   */
+  refusesToInstantiate: boolean;
   /**
    * The orphans whose `parent_id_path=` Godot follows to a node, instead of re-rooting them.
    * An orphan absent here is re-rooted, or has no trail.

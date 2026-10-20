@@ -10,11 +10,8 @@ import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { joinPath } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
-import {
-  cachedUniqueNameClaims,
-  cachedUniqueNameOwnership,
-  type UniqueNameClaim,
-} from '../utils/uniqueNames.js';
+import { cachedUniqueNameClaims, cachedUniqueNameOwnership } from '../utils/uniqueNames.js';
+import type { UniqueNameClaim } from '../parser/nodeOwner.js';
 import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
@@ -177,12 +174,8 @@ export function ownerClaims(owner: ClaimOwner): ReadonlyMap<string, UniqueNameCl
   const table = new Map<string, UniqueNameClaim>();
   // Own claims first: the sub-scene acquires its names while it instantiates
   // (packed_scene.cpp:565-570), the override's property lands afterwards (:492), and
-  // the first claimant keeps the name (node.cpp:2225-2231). The sub-scene root's own
-  // flag never registers: :565 acquires only for `owner >= 0`, and a root has none.
-  for (const [key, claim] of own) {
-    if (!claim.livePath.includes('/')) continue;
-    table.set(key, { ...claim, livePath: composedPath(owner, claim.livePath) });
-  }
+  // the first claimant keeps the name (node.cpp:2225-2231).
+  for (const [key, claim] of own) table.set(key, { ...claim, livePath: composedPath(owner, claim.livePath) });
   let outer = owner;
   while (outer.parent) outer = outer.parent;
   // A file records an override's claim under the instance IT declares, which is
