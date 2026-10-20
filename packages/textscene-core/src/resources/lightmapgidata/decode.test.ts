@@ -20,6 +20,9 @@ function decodeText(body: string) {
   );
 }
 
+/** One user's `user_data`, as Godot writes it. */
+const ONE_USER = 'user_data = [NodePath("../Mesh"), Rect2(0, 0, 1, 1), 0, -1]';
+
 describe('decodeLightmapGIData on the ragdoll bake', () => {
   const bake = () => decodeLightmapGIData(parseBinaryResource(ragdollBytes('ragdoll_physics.lmbake')));
 
@@ -35,10 +38,6 @@ describe('decodeLightmapGIData on the ragdoll bake', () => {
 
   it('resolves each lightmap texture to the path its external resource names', () => {
     expect(bake().lightmapTextures).toEqual(['res://ragdoll_physics.exr']);
-  });
-
-  it('reads the exposure the bake ran at from its probe data', () => {
-    expect(bake().bakedExposure).toBe(1);
   });
 });
 
@@ -71,13 +70,12 @@ describe('decodeLightmapGIData on text', () => {
     expect(decodeText('uses_spherical_harmonics = true').usesSphericalHarmonics).toBe(true);
   });
 
-  it('reads a baked exposure of 1 when the file has no probe data, the default in lightmap_gi.h:70', () => {
-    expect(decodeText('').bakedExposure).toBe(1);
+  it('keeps the users of directional data in the packed format a 4.x bake writes', () => {
+    const body = 'uses_spherical_harmonics = true\n_uses_packed_directional = true\n' + ONE_USER;
+    expect(decodeText(body).users).toHaveLength(1);
   });
 
-  it('reads the baked exposure the probe data holds', () => {
-    expect(decodeText('probe_data = {\n"baked_exposure": 2.5,\n"interior": false\n}').bakedExposure).toBe(
-      2.5
-    );
+  it('assigns no user from directional data in the old unpacked format, which LightmapGI refuses', () => {
+    expect(decodeText('uses_spherical_harmonics = true\n' + ONE_USER).users).toEqual([]);
   });
 });

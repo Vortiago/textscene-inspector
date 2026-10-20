@@ -19,7 +19,6 @@ export interface LightmapGIData {
   lightmapTextures: readonly string[];
   /** Whether each slice holds four layers of directional light (`lightmap_gi.cpp:1843-1868`). */
   usesSphericalHarmonics: boolean;
+  /** The users a LightmapGI assigns the data to. */
   users: readonly LightmapUser[];
-  /** The exposure normalisation the bake ran at. */
-  bakedExposure: number;
 }

@@ -23,6 +23,7 @@ import { observeSceneCamera } from './sceneRenderCamera.js';
 import { writeAreaLightUniforms } from './areaLight/areaLightFalloff.js';
 import { updateAreaLightAtlas } from './areaLight/areaLightAtlas.js';
 import { writeLightSpecularUniforms } from './lightSpecular/lightSpecular.js';
+import { writeLightBakeModeUniforms } from './lightBakeMode/lightBakeMode.js';
 import { writeLightSizeUniforms } from './lightSize/lightSize.js';
 import { defineSoftShadowSearch, releaseSoftShadowSearch } from './shadowFilter/softShadowSearch.js';
 import { searchesPositionalBlockers } from './positionalShadow/softShadowRadius.js';
@@ -36,8 +37,8 @@ import {
  * One render's light pass, the directional fit first. The area light atlas rebuilds before the area
  * lights write where their textures lie. The directional fit changes no omni, spot or
  * area light, so their part of the pass reads the same walk. It hangs a sun under a declared
- * directional light and hides that light, so the soft shadow angles, the specular amounts and the light
- * sizes read a second walk.
+ * directional light and hides that light, so the soft shadow angles, the specular amounts, the bake modes and
+ * the light sizes read a second walk.
  */
 function prepareSceneLights(
   scene: THREE.Scene,
@@ -54,6 +55,7 @@ function prepareSceneLights(
   const drawsSoftShadows = drawsDirectionalSoftShadows(shadedLights, camera);
   setSunSoftShadowAngles(shadedLights, drawsSoftShadows);
   writeLightSpecularUniforms(shadedLights, camera);
+  writeLightBakeModeUniforms(shadedLights, camera);
   writeLightSizeUniforms(shadedLights, camera, drawsSoftShadows);
   defineSoftShadowSearch(scene, {
     positional: searchesPositionalBlockers(lights),

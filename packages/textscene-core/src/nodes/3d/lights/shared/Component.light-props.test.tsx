@@ -16,6 +16,14 @@ import { readFogLightDeclaration } from '../../../../r3f/fog/fogLightDeclaration
 import { skyLightEnergy } from '../../../../r3f/sky/skyLight';
 import { fireSceneRenderFrom } from '../../../../r3f/testing/fireSceneRender';
 import { visualLayersOf } from '../../../../r3f/visualLayers';
+import {
+  installLightBakeModeUniforms,
+  LIGHT_STATICS,
+  writeLightBakeModeUniforms,
+} from '../../../../r3f/lightBakeMode/lightBakeMode';
+import { sceneLights } from '../../../../r3f/directionalShadow/lightLists';
+import { litUniformArray } from '../../../../r3f/testing/litUniformArray';
+import { BakeMode, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 
 function dirNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
@@ -23,6 +31,7 @@ function dirNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNod
     light_color: 'Color(1, 0.95, 0.9, 1)',
     layers: 1,
     light_energy: 1,
+    light_bake_mode: LIGHT_3D_DEFAULTS.bakeMode,
     shadow_enabled: false,
     ...overrides,
   };
@@ -41,6 +50,7 @@ function omniNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
     light_color: 'Color(1, 1, 1, 1)',
     layers: 1,
     light_energy: 1,
+    light_bake_mode: LIGHT_3D_DEFAULTS.bakeMode,
     shadow_enabled: false,
     omni_range: 5,
     omni_attenuation: 2,
@@ -61,6 +71,7 @@ function spotNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
     light_color: 'Color(1, 1, 1, 1)',
     layers: 1,
     light_energy: 1,
+    light_bake_mode: LIGHT_3D_DEFAULTS.bakeMode,
     shadow_enabled: false,
     spot_range: 10,
     spot_angle: 30,
@@ -295,5 +306,36 @@ describe('Lights: render layers, which a ReflectionProbe cull_mask tests', () =>
   it('carries a layers mask of 0, which no cull_mask matches (edge case)', async () => {
     const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode({ layers: 0 })} />);
     expect(visualLayersOf(r.scene.findByType('PointLight').instance)).toBe(0);
+  });
+});
+
+describe('Lights: light_bake_mode, which a lightmapped surface reads', () => {
+  /** The static flags the lit materials read after a render of `scene`, in slot order. */
+  function staticFlags(scene: THREE.Scene, count: number): number[] {
+    writeLightBakeModeUniforms(sceneLights(scene), new THREE.PerspectiveCamera());
+    installLightBakeModeUniforms();
+    return [...litUniformArray(LIGHT_STATICS).subarray(0, count)];
+  }
+
+  it('flags a Static DirectionalLight3D', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <DirectionalLight3D node={dirNode({ light_bake_mode: BakeMode.STATIC })} />
+    );
+    expect(staticFlags(r.scene.instance as THREE.Scene, 1)).toEqual([1]);
+  });
+
+  it('flags a Static OmniLight3D and SpotLight3D', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <>
+        <OmniLight3D node={omniNode({ light_bake_mode: BakeMode.STATIC })} />
+        <SpotLight3D node={spotNode({ light_bake_mode: BakeMode.STATIC })} />
+      </>
+    );
+    expect(staticFlags(r.scene.instance as THREE.Scene, 2)).toEqual([1, 1]);
+  });
+
+  it('leaves a Dynamic light unflagged, the default (edge case)', async () => {
+    const r = await ReactThreeTestRenderer.create(<OmniLight3D node={omniNode()} />);
+    expect(staticFlags(r.scene.instance as THREE.Scene, 1)).toEqual([0]);
   });
 });

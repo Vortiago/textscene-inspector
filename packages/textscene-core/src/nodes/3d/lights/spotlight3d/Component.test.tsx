@@ -14,6 +14,7 @@ function makeNode(overrides: Partial<SpotLight3DProperties> = {}): TscnNode {
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: 2,
     shadow_enabled: false,
     spot_range: 10,
     spot_angle: 30,

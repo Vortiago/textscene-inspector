@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
 import type { TscnInternalResource } from '../parser/types';
 import type { SceneResources } from '../r3f/SceneResourcesContext';
-import { resolveSubResourceRef, textResourcePath } from './SubResourceResolver';
+import { resolveSubResourceRef, parsedResourcePath } from './SubResourceResolver';
 import { useResource, type ResourceStatus } from './useResource';
 
 export interface ScopedResource {
@@ -31,7 +31,7 @@ const UNAVAILABLE: ResourceResolution = { scoped: null, status: 'unavailable', t
 
 export function useResourceResolution(ref: string | undefined, pools: SceneResources): ResourceResolution {
   const inline = resolveSubResourceRef(ref, pools.internalResources);
-  const tresPath = inline ? null : textResourcePath(ref, pools.externalResources);
+  const tresPath = inline ? null : parsedResourcePath(ref, pools.externalResources);
   // `''` requests nothing.
   const file = useResource<ParsedResource>(tresPath ?? '', 'resource');
 

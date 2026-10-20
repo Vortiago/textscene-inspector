@@ -8,29 +8,26 @@ import type { ParsedResource } from '../../parser/parsedResource';
 import { parseOptionalRect2 } from '../../parser/valueParsers';
 import { splitTopLevel } from '../../godot/string/string';
 import { parseGodotInt } from '../../godot/variant/intReader';
-import { parseGodotFloat } from '../../godot/variant/number';
 import { resourceRef } from '../../godot/variant/resourceRef';
 import { boolSlotValue } from '../../godot/variant/variantBool';
-import { arrayLiteralBody, dictNumberField, nodePathLiteral } from '../../godot/variant/variantParser';
+import { arrayLiteralBody, nodePathLiteral } from '../../godot/variant/variantParser';
 import { findExtResource } from '../SubResourceResolver';
 import type { LightmapGIData, LightmapUser } from './types';
 
 /** `_set_user_data` reads each user as four elements (`lightmap_gi.cpp:83-89`). */
 const USER_FIELDS = 4;
 
-/** `baked_exposure`'s default (`lightmap_gi.h:70`), which a bake without probe data keeps. */
-const DEFAULT_BAKED_EXPOSURE = 1;
-
-const BAKED_EXPOSURE_FIELD = dictNumberField('baked_exposure');
-
 export function decodeLightmapGIData(resource: ParsedResource): LightmapGIData {
   const { properties } = resource;
+  // Both off unless set (`lightmap_gi.h:63,66`).
+  const usesSphericalHarmonics = boolSlotValue(properties.uses_spherical_harmonics) ?? false;
+  const usesPackedDirectional = boolSlotValue(properties._uses_packed_directional) ?? false;
+  // A LightmapGI refuses directional data in the unpacked format older bakes wrote (`:1509-1513`).
+  const isAssignable = !usesSphericalHarmonics || usesPackedDirectional;
   return {
     lightmapTextures: lightmapTexturePaths(properties.lightmap_textures, resource),
-    // Off unless set (`lightmap_gi.h:63`).
-    usesSphericalHarmonics: boolSlotValue(properties.uses_spherical_harmonics) ?? false,
-    users: lightmapUsers(properties.user_data),
-    bakedExposure: bakedExposure(properties.probe_data),
+    usesSphericalHarmonics,
+    users: isAssignable ? lightmapUsers(properties.user_data) : [],
   };
 }
 
@@ -71,10 +68,4 @@ function lightmapUser([pathText, rectText, sliceText, subInstanceText]: string[]
   const subInstance = parseGodotInt(subInstanceText!);
   if (path === null || !uvScale || sliceIndex === null || subInstance === null) return null;
   return { path, uvScale, sliceIndex, subInstance };
-}
-
-/** `probe_data["baked_exposure"]` (`lightmap_gi.cpp:282,288`), or the default without one. */
-function bakedExposure(raw: string | undefined): number {
-  const field = raw === undefined ? null : BAKED_EXPOSURE_FIELD.exec(raw);
-  return (field && parseGodotFloat(field[1]!)) ?? DEFAULT_BAKED_EXPOSURE;
 }

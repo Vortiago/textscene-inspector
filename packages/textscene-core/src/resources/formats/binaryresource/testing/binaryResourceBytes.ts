@@ -75,7 +75,7 @@ export class ByteWriter {
     return this;
   }
 
-  bytes(): Uint8Array {
+  bytes(): Uint8Array<ArrayBuffer> {
     return new Uint8Array(this.chunks);
   }
 

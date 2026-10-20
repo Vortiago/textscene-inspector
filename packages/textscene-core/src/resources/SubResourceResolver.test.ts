@@ -9,11 +9,12 @@ import {
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
-  textResourcePath,
+  parsedResourcePath,
   unwrapCanvasTextureRef,
 } from './SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { countedTable } from './testing/countedTable';
+import './formats/binaryresource/index';
 
 const externalResources: readonly TscnExternalResource[] = [
   { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
@@ -248,29 +249,34 @@ describe('resolveTexture2DPath', () => {
   });
 });
 
-describe('textResourcePath', () => {
+describe('parsedResourcePath', () => {
   const resources = [
     { id: '1', type: 'ArrayMesh', path: 'res://rock.tres' },
     { id: '2', type: 'ArrayMesh', path: 'res://rock.res' },
     { id: '3', type: 'Shader', path: 'res://fog.gdshader' },
+    { id: '4', type: 'LightmapGIData', path: 'res://scene.lmbake' },
   ];
 
   it('names the .tres an ExtResource loads', () => {
-    expect(textResourcePath('ExtResource("1")', resources)).toBe('res://rock.tres');
+    expect(parsedResourcePath('ExtResource("1")', resources)).toBe('res://rock.tres');
   });
 
   it('names the .gdshader an ExtResource loads', () => {
-    expect(textResourcePath('ExtResource("3")', resources)).toBe('res://fog.gdshader');
+    expect(parsedResourcePath('ExtResource("3")', resources)).toBe('res://fog.gdshader');
+  });
+
+  it('names the binary lightmap bake an ExtResource loads, which the binary reader parses', () => {
+    expect(parsedResourcePath('ExtResource("4")', resources)).toBe('res://scene.lmbake');
   });
 
   it('names nothing for a binary .res, an undeclared id or no reference (error path)', () => {
-    expect(textResourcePath('ExtResource("2")', resources)).toBeNull();
-    expect(textResourcePath('ExtResource("9")', resources)).toBeNull();
-    expect(textResourcePath(undefined, resources)).toBeNull();
+    expect(parsedResourcePath('ExtResource("2")', resources)).toBeNull();
+    expect(parsedResourcePath('ExtResource("9")', resources)).toBeNull();
+    expect(parsedResourcePath(undefined, resources)).toBeNull();
   });
 
   it('names nothing for a SubResource, which loads no file (edge case)', () => {
-    expect(textResourcePath('SubResource("1")', resources)).toBeNull();
+    expect(parsedResourcePath('SubResource("1")', resources)).toBeNull();
   });
 });
 

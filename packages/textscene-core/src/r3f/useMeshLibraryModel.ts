@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
-import { textResourcePath } from '../resources/SubResourceResolver';
+import { parsedResourcePath } from '../resources/SubResourceResolver';
 import { meshLibraryFromTres } from '../resources/meshlibrary/decode';
 import type { MeshLibraryModel } from '../resources/meshlibrary/types';
 import { useResource } from '../resources/useResource';
@@ -20,7 +20,7 @@ interface MeshLibraryModelResult {
 export function useMeshLibraryModel(meshLibraryRef: string | undefined): MeshLibraryModelResult {
   const { externalResources } = useSceneResources();
 
-  const tresPath = textResourcePath(meshLibraryRef, externalResources);
+  const tresPath = parsedResourcePath(meshLibraryRef, externalResources);
   const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
 
   return useMemo((): MeshLibraryModelResult => {
