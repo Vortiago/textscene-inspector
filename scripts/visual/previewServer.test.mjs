@@ -53,18 +53,33 @@ function inkedPng(width = 8, height = 8) {
  */
 const NO_TEXTURE_WORK = { waitFor: async () => {}, count: async () => 0 };
 
-/** A Playwright page/element pair reduced to what `settleCanvas` touches. */
-function stubCanvas(shots, status = NO_TEXTURE_WORK) {
+/**
+ * A Playwright page and capture target reduced to what `settleCanvas` touches. Each shot is a
+ * DevTools `Page.captureScreenshot` on the target's page, so the stub session answers that command
+ * with the next of `shots`, base64 as Chromium sends it.
+ */
+function stubCanvas(shots, { status = NO_TEXTURE_WORK } = {}) {
   let i = 0;
   const page = { waitForTimeout: async () => {}, getByTestId: () => status };
-  const canvas = {
+  const session = {
     calls: [],
-    screenshot: async (options) => {
-      canvas.calls.push(options);
-      return Buffer.from(shots[Math.min(i++, shots.length - 1)]);
+    send: async (method, params) => {
+      session.calls.push({ method, params });
+      return { data: Buffer.from(shots[Math.min(i++, shots.length - 1)]).toString('base64') };
     },
   };
-  return { page, canvas };
+  const targetPage = { context: () => ({ newCDPSession: async () => session }) };
+  // `evaluate` answers what the in-page measurement reads: the viewport box and the scroll.
+  const canvas = {
+    box: { x: 0, y: 0, width: 8, height: 8 },
+    measureOptions: [],
+    evaluate: async (_measure, _arg, options) => {
+      canvas.measureOptions.push(options);
+      return { rect: canvas.box, scroll: { x: 0, y: 0 }, inTopFrame: true };
+    },
+    page: () => targetPage,
+  };
+  return { page, canvas, session };
 }
 
 describe('settleCanvas', () => {
@@ -78,24 +93,35 @@ describe('settleCanvas', () => {
   it('reports a scene that never stops moving rather than returning a frame', async () => {
     // Every capture differs, so nothing is a measurement, and the harness says so instead of
     // returning the last frame.
-    let n = 0;
-    const page = { waitForTimeout: async () => {}, getByTestId: () => NO_TEXTURE_WORK };
-    const canvas = { screenshot: async () => Buffer.from(String(n++)) };
+    const { page, canvas } = stubCanvas(Array.from({ length: 64 }, (_, n) => String(n)));
     const { buffer, reason } = await settleCanvas(page, canvas);
     expect(buffer).toBeNull();
     expect(reason).toMatch(/never settled/);
   });
 
-  it('passes a per-scene screenshot timeout through, and omits it otherwise', async () => {
+  it("passes a per-scene screenshot timeout through, and keeps Playwright's default otherwise", async () => {
     // One SwiftShader frame of the heaviest scenes exceeds Playwright's default
     // action timeout; without the passthrough that reads as a hang, not as slow.
     const { page, canvas } = stubCanvas(['x', 'x']);
     await settleCanvas(page, canvas, { screenshotTimeout: 120000 });
-    expect(canvas.calls.at(-1)).toEqual({ timeout: 120000 });
+    expect(canvas.measureOptions.at(-1)).toEqual({ timeout: 120000 });
 
     const bare = stubCanvas(['y', 'y']);
     await settleCanvas(bare.page, bare.canvas);
-    expect(bare.canvas.calls.at(-1)).toEqual({});
+    expect(bare.canvas.measureOptions.at(-1)).toEqual({ timeout: 30000 });
+  });
+
+  it('re-shoots a matching pair whose target resized after the box was measured', async () => {
+    // The canvas grows after the first measurement. Every shot through the old box matches the
+    // one before it, so only a second measurement shows the pair is a crop.
+    const { page, canvas, session } = stubCanvas([]);
+    session.send = async (method, params) => {
+      session.calls.push({ method, params });
+      if (session.calls.length === 1) canvas.box = { x: 0, y: 0, width: 16, height: 8 };
+      return { data: Buffer.from(`width ${params.clip.width}`).toString('base64') };
+    };
+    const { buffer } = await settleCanvas(page, canvas);
+    expect(buffer.toString()).toBe('width 16');
   });
 
   it('takes no shot until the texture work status has detached', async () => {
@@ -106,11 +132,11 @@ describe('settleCanvas', () => {
       },
       count: async () => 0,
     };
-    const { page, canvas } = stubCanvas(['x', 'x'], status);
-    const screenshot = canvas.screenshot;
-    canvas.screenshot = async (options) => {
+    const { page, canvas, session } = stubCanvas(['x', 'x'], { status });
+    const send = session.send;
+    session.send = async (method, params) => {
       events.push('shot');
-      return screenshot(options);
+      return send(method, params);
     };
     await settleCanvas(page, canvas);
 
@@ -134,7 +160,7 @@ describe('settleCanvas', () => {
     // so neither is compared with a frame from the other side of it.
     let checks = 0;
     const status = { waitFor: async () => {}, count: async () => (checks++ === 0 ? 1 : 0) };
-    const { page, canvas } = stubCanvas(['a', 'a', 'b', 'b'], status);
+    const { page, canvas } = stubCanvas(['a', 'a', 'b', 'b'], { status });
     const { buffer } = await settleCanvas(page, canvas);
     expect(buffer.toString()).toBe('b');
   });
@@ -157,15 +183,17 @@ describe('settleCanvas', () => {
   }
 
   it('reports texture work that never ends rather than returning a frame', async () => {
-    const { page, canvas } = stubCanvas(['x', 'x'], failingStatus(timeoutError()));
+    const { page, canvas, session } = stubCanvas(['x', 'x'], { status: failingStatus(timeoutError()) });
     const { buffer, reason } = await settleCanvas(page, canvas);
     expect(buffer).toBeNull();
     expect(reason).toMatch(/texture work still pending/);
-    expect(canvas.calls).toHaveLength(0);
+    expect(session.calls).toHaveLength(0);
   });
 
   it('throws when the texture work wait fails for a reason other than its timeout', async () => {
-    const { page, canvas } = stubCanvas(['x', 'x'], failingStatus(new Error('Target page has been closed')));
+    const { page, canvas } = stubCanvas(['x', 'x'], {
+      status: failingStatus(new Error('Target page has been closed')),
+    });
     await expect(settleCanvas(page, canvas)).rejects.toThrow(
       /texture work status.*Target page has been closed/
     );
@@ -178,7 +206,7 @@ describe('settleCanvas', () => {
       },
       count: async () => 1,
     };
-    const { page, canvas } = stubCanvas(['x', 'x'], status);
+    const { page, canvas } = stubCanvas(['x', 'x'], { status });
     const { reason } = await settleCanvas(page, canvas, { waitForTextureWork: false });
     expect(reason).toBeNull();
   });

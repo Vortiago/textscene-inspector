@@ -74,7 +74,7 @@ export const CANVAS_2D_TESTIDS = {
 };
 
 /**
- * The canvas element's size inside VIEWPORT after the shell's chrome, as `canvas.screenshot()`
+ * The canvas element's size inside VIEWPORT after the shell's chrome, as `settleCanvas`
  * returns it. Measured from the CSS layout, so a change to VIEWPORT means a new measurement. The
  * Godot harness defaults to it, so a probe at (x, y) addresses the same point on both sides.
  */
