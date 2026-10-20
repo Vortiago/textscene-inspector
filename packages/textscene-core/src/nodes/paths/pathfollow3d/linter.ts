@@ -9,8 +9,8 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
-import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode, RawScene } from '../../../parser/types.js';
 
@@ -82,7 +82,7 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   // sampler clamps the offset into the curve, so the follower parks at the
   // start rather than extrapolating backwards off the end.
   if (rawProps.progress !== undefined) {
-    const progress = parseGodotFloat(rawProps.progress);
+    const progress = scalarSlotValue(rawProps.progress);
     // `set_progress` opens with ERR_FAIL_COND(!std::isfinite(p_progress))
     // (path_3d.cpp:450), so a non-finite one never lands and this rule has
     // nothing to say about the travel it would have asked for.

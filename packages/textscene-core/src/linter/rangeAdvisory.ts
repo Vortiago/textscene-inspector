@@ -5,9 +5,9 @@
  * warning **Rule arm** (GLOSSARY.md, "Range advisory").
  */
 
+import { scalarSlotValue } from '../godot/variant/variantBool.js';
 import type { Diagnostic } from './types.js';
 import { reportArm, type RuleArm } from './ruleArms.js';
-import { parseGodotFloat } from './validators/commonValidators.js';
 import type { RawNode } from '../parser/types.js';
 
 /** The rule arm a table reports through. ADR-0032 grounds a hint in the warning tier. */
@@ -50,10 +50,10 @@ export function rangeAdvisories(node: RawNode, table: RangeAdvisoryTable, arm: W
   for (const [property, thresholds] of Object.entries(table)) {
     const raw = node.rawProperties[property];
     if (raw === undefined) continue;
-    // `parseGodotFloat`, not `parseFloat`: `inf` is a value above every bound,
+    // `scalarSlotValue`, not `parseFloat`: `inf` is a value above every bound,
     // not an unreadable property. `nan` reads as NaN and trips nothing, since
     // every comparison against it is false.
-    const value = parseGodotFloat(raw);
+    const value = scalarSlotValue(raw);
     if (value === null) continue;
 
     for (const threshold of thresholds) {

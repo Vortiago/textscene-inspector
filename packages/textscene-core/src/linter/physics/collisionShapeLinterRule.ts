@@ -14,8 +14,7 @@ import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
-import { parseGodotFloat } from '../validators/commonValidators.js';
-import { boolSlotValue } from '../../godot/variant/variantBool.js';
+import { boolSlotValue, scalarSlotValue } from '../../godot/variant/variantBool.js';
 
 export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
   // `one_way_collision` carries PROPERTY_HINT_GROUP_ENABLE for the
@@ -194,7 +193,7 @@ export function makeCollisionShapeLinterRule(dim: PhysicsDim): LintRule {
 
     // one_way_collision_margin set but one_way_collision is false (2D only)
     if (rawProps.one_way_collision_margin && boolSlotValue(rawProps.one_way_collision) !== true) {
-      const margin = parseGodotFloat(rawProps.one_way_collision_margin);
+      const margin = scalarSlotValue(rawProps.one_way_collision_margin);
       if (margin !== null && margin > 0) {
         report(
           arms.unusedOneWayMargin,

@@ -9,6 +9,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseGodotInt,
+  readIntSlot,
+  slotWidth,
   readSlotTuple,
   ruleCount,
   ruleInt,
@@ -329,5 +331,26 @@ describe('readSlotTuple — the one read of a composite in a FLOAT slot', () => 
   it('keeps a FLOAT token outside int32 unreadable', () => {
     // `T(_data._float)` is undefined there (variant.h:369-370), so no number is named.
     expect(readSlotTuple('Vector2i(1e10, 0.5)', 'Vector2', VECTOR2)!.components[0]).toBeNaN();
+  });
+});
+
+describe('readIntSlot', () => {
+  it('returns both readings of one literal, and null for text outside the grammar', () => {
+    expect(readIntSlot('5.5')).toEqual({ asFloat: 5.5, stored: 5 });
+    expect(readIntSlot('nope')).toEqual({ asFloat: null, stored: null });
+  });
+
+  it('reads at the width the slot ceiling implies, so an unsigned ceiling is reachable', () => {
+    expect(readIntSlot('4294967295.0', 4294967295).stored).toBe(4294967295);
+    expect(Number.isNaN(readIntSlot('4294967295.0', 255).stored)).toBe(true);
+  });
+});
+
+describe('slotWidth', () => {
+  it('reads unsigned only from a ceiling no int32 can hold', () => {
+    expect(slotWidth(4294967295)).toBe('uint32');
+    expect(slotWidth(2147483647)).toBe('int32');
+    expect(slotWidth(undefined)).toBe('int32');
+    expect(slotWidth(null)).toBe('int32');
   });
 });

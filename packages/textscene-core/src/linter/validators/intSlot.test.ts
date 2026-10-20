@@ -4,13 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  readIntSlot,
-  slotWidth,
-  storedNotWritten,
-  truncatedComponent,
-  unrepresentableInt,
-} from './intSlot.js';
+import { storedNotWritten, truncatedComponent, unrepresentableInt } from './intSlot.js';
 import { expectWarning } from '../testing/validatorCheck.js';
 
 describe('truncatedComponent', () => {
@@ -88,18 +82,6 @@ describe('storedNotWritten', () => {
   });
 });
 
-describe('readIntSlot', () => {
-  it('returns both readings of one literal, and null for text outside the grammar', () => {
-    expect(readIntSlot('5.5')).toEqual({ asFloat: 5.5, stored: 5 });
-    expect(readIntSlot('nope')).toEqual({ asFloat: null, stored: null });
-  });
-
-  it('reads at the width the slot ceiling implies, so an unsigned ceiling is reachable', () => {
-    expect(readIntSlot('4294967295.0', 4294967295).stored).toBe(4294967295);
-    expect(Number.isNaN(readIntSlot('4294967295.0', 255).stored)).toBe(true);
-  });
-});
-
 describe('unrepresentableInt', () => {
   it('errors only on the NaN signal, never on a usable number or a miss', () => {
     expect(unrepresentableInt('seed', 'seed', 'inf', 1, 'CODE', NaN)).toBeAtTier('error');
@@ -111,14 +93,5 @@ describe('unrepresentableInt', () => {
     const message = unrepresentableInt('seed', 'seed', 'inf', 1, 'CODE', NaN)?.message ?? '';
     expect(message).toContain('"inf"');
     expect(message).not.toMatch(/-?2147483648|Infinity|NaN/);
-  });
-});
-
-describe('slotWidth', () => {
-  it('reads unsigned only from a ceiling no int32 can hold', () => {
-    expect(slotWidth(4294967295)).toBe('uint32');
-    expect(slotWidth(2147483647)).toBe('int32');
-    expect(slotWidth(undefined)).toBe('int32');
-    expect(slotWidth(null)).toBe('int32');
   });
 });
