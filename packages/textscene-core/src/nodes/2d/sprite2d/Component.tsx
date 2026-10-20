@@ -25,24 +25,7 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
 
-/** A Sprite2D draws a placeholder for no texture, so a scene that forgot one stays visible. */
-export function Sprite2D(props: NodeComponentProps) {
-  return <SpriteQuad {...props} showsPlaceholderWithoutTexture />;
-}
-
-/**
- * A Sprite2D that draws nothing for no texture, for a node where Godot draws nothing too, such as a
- * TouchScreenButton with no `texture_normal`. A texture that fails to load still gets the placeholder.
- */
-export function OptionalTextureSprite2D(props: NodeComponentProps) {
-  return <SpriteQuad {...props} showsPlaceholderWithoutTexture={false} />;
-}
-
-function SpriteQuad({
-  node,
-  children,
-  showsPlaceholderWithoutTexture,
-}: NodeComponentProps & { showsPlaceholderWithoutTexture: boolean }) {
+export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
@@ -102,12 +85,11 @@ function SpriteQuad({
     [viewportTexture, sourceTexture, props]
   );
 
-  // A placeholder for no texture or a failed load. An unpublished ViewportTexture
-  // is not missing, so the sprite draws nothing until it renders. One in an
-  // unrenderable pass cycle (`cyclic`) never will, so it gets the placeholder.
-  const showPlaceholder = isViewportSlot
-    ? viewportCyclic
-    : (!props.texture && showsPlaceholderWithoutTexture) || textureMissing;
+  // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The placeholder is
+  // for a texture that is set but failed to load. An unpublished ViewportTexture is not missing, so
+  // the sprite draws nothing until it renders. One in an unrenderable pass cycle (`cyclic`) never
+  // will, so it gets the placeholder.
+  const showPlaceholder = isViewportSlot ? viewportCyclic : textureMissing;
 
   return (
     <CanvasItem2D

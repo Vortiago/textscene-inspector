@@ -2,7 +2,7 @@
  * Draws a TouchScreenButton: its `texture_normal` with the top-left corner at the node origin. The
  * editor draws that texture whatever `visibility_mode` says, and no finger is down, so
  * `texture_pressed` never shows (`touch_screen_button.cpp:136-155`). The draw is a Sprite2D's
- * uncentred quad, so the button hands the Sprite2D component those properties. One root stays
+ * uncentred quad, so the button hands the Sprite2D component those properties. The Sprite2D root stays
  * mounted whether or not a texture is set, so a live edit does not remount the children.
  */
 
@@ -10,7 +10,7 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { YSortDispatcher } from '../../../r3f/YSortDispatcher.js';
 import type { TscnNode } from '../../../parser/types';
-import { OptionalTextureSprite2D } from '../sprite2d/Component';
+import { Sprite2D } from '../sprite2d/Component';
 import type { Sprite2DProperties } from '../sprite2d/types';
 import { ShapeOverlay } from './ShapeOverlay';
 import type { TouchScreenButtonProperties } from './types';
@@ -37,9 +37,9 @@ export function TouchScreenButton({ node, children }: NodeComponentProps) {
   const spriteNode = useMemo(() => asUncentredSprite(node, props), [node, props]);
 
   return (
-    <OptionalTextureSprite2D node={spriteNode}>
+    <Sprite2D node={spriteNode}>
       <ShapeOverlay props={props} />
       {props.y_sort_enabled ? <YSortDispatcher node={node}>{children}</YSortDispatcher> : children}
-    </OptionalTextureSprite2D>
+    </Sprite2D>
   );
 }

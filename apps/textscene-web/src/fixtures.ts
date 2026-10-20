@@ -2419,6 +2419,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Sprite2d Untextured",
+    "file": "unit-sprite2d-untextured.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Sprite2d",
     "file": "unit-sprite2d.tscn",
     "category": "Unit - 2D Canvas"
