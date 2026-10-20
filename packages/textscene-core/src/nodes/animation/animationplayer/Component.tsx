@@ -16,7 +16,7 @@ import type { BoundClips } from '../../../r3f/contexts/AnimationDriverContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { usePlaybackLoop } from '../../../r3f/animation/usePlaybackLoop';
-import { applyLoopOverride } from '../../../r3f/animation/loopOverride';
+import { applyLoopOverride, loopSettingsFor } from '../../../r3f/animation/loopOverride';
 import { useAnimationDriverMount } from '../../../r3f/animation/useAnimationDriverMount';
 import { restoreSnapshot, snapshotPose, type PoseSnapshot } from '../../../r3f/animation/poseSnapshot';
 import {
@@ -29,7 +29,8 @@ import { useAnimatedValueRegistry } from '../../../r3f/contexts/AnimatedValueCon
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { resolveAnimations } from './animationResolver';
 import { resolveAnimationRootPath, resolveTrackScenePath } from './animationRoot';
-import { buildClip, loopSettingsFor } from './clipBuilder';
+import { AnimationLoopMode } from '../../../godot/scene/animation.js';
+import { buildClip } from './clipBuilder';
 import { sampleSteppedValue, sampleInterpolatedValue, VALUE_PUSH_PROPERTIES } from './valueTracks';
 
 import type { AnimationPlayerProperties } from './types';
@@ -164,7 +165,7 @@ export function AnimationPlayer({ node, children }: NodeComponentProps) {
     actionsRef,
     configureAction: (action, clipName) => {
       // 'auto' keeps the clip's authored Godot loop_mode (through loopSettingsFor).
-      const authoredMode = loopModes.get(clipName) ?? 0;
+      const authoredMode = loopModes.get(clipName) ?? AnimationLoopMode.NONE;
       applyLoopOverride(action, transport.loopOverride, loopSettingsFor(authoredMode));
     },
     reconfigureKey: transport.loopOverride,

@@ -139,19 +139,27 @@ function unnamedNodeName(node: GltfJsonObject, namingVersion: number): string {
   return 'Node';
 }
 
-/** What the importer names a file's nodes and meshes, each list by glTF index. */
-interface GltfImportNames {
+/** A clip as the glTF importer stores it: its name, and whether its name made the clip loop. */
+interface GltfAnimationName {
+  name: string;
+  loops: boolean;
+}
+
+/** What the importer names a file's nodes, meshes and animations, each list by glTF index. */
+export interface GltfImportNames {
   nodes: GltfNodeName[];
   /**
    * Each mesh's `<scene>_<mesh>` made unique (`gltf_document.cpp:1434`). It is also the mesh's
    * import id, which keys its `_subresources` settings (`resource_importer_scene.cpp:2625`).
    */
   meshes: string[];
+  /** Null for an animation the importer skips, or that has no name to store. */
+  animations: (GltfAnimationName | null)[];
 }
 
 /** The names of `json`, the parsed glTF document. A document with no `nodes` names none. */
 export function gltfImportNames(json: unknown, options: GltfNamingOptions): GltfImportNames {
-  if (!isGltfJsonObject(json)) return { nodes: [], meshes: [] };
+  if (!isGltfJsonObject(json)) return { nodes: [], meshes: [], animations: [] };
   const { namingVersion, importAsSkeletonBones, fileName } = options;
   const names = new UniqueNames();
   // `_parse_scenes` reserves the name before it reads anything (`gltf_document.cpp:528`).
@@ -193,5 +201,30 @@ export function gltfImportNames(json: unknown, options: GltfNamingOptions): Gltf
     const { mesh, skin } = nodes[i]!;
     return { name, role: mesh >= 0 && skin >= 0 ? 'skinnedMesh' : 'node' };
   });
-  return { nodes: nodeNames, meshes };
+  return { nodes: nodeNames, meshes, animations: animationNames(gltfObjects(json['animations'])) };
+}
+
+/** `_parse_animations` (`gltf_document.cpp:3735-3756`): each named animation that has channels and samplers. */
+function animationNames(animations: readonly GltfJsonObject[]): (GltfAnimationName | null)[] {
+  const taken = new Set<string>();
+  return animations.map((animation) => {
+    if (!Array.isArray(animation['channels']) || !Array.isArray(animation['samplers'])) return null;
+    if (typeof animation['name'] !== 'string') return null;
+    const name = animation['name'];
+    const lower = name.toLowerCase();
+    const loops = ['loop', 'cycle'].some((word) => lower.startsWith(word) || lower.endsWith(word));
+    return { name: uniqueAnimationName(name, taken), loops };
+  });
+}
+
+/**
+ * `_gen_unique_animation_name` (`gltf_document.cpp:475-495`): the name as `_sanitize_animation_name`
+ * leaves it (`:470-473`), or the first of `name2`, `name3` and so on that no earlier animation took.
+ */
+function uniqueAnimationName(name: string, taken: Set<string>): string {
+  const sanitised = validateNodeName(name).replace(/[/:,[]/g, '_');
+  let unique = sanitised;
+  for (let index = 2; taken.has(unique); index++) unique = `${sanitised}${index}`;
+  taken.add(unique);
+  return unique;
 }

@@ -31,6 +31,8 @@ import {
   roughnessLimitOption,
   type TextureImportOptions,
 } from '../godot/import/textureImport.js';
+import { AnimationLoopMode } from '../godot/scene/animation.js';
+import type { ClipImportOptions } from '../godot/import/animationImport.js';
 import { DEFAULT_SLICES, TEXTURE_3D_IMPORTER, type ImportSlices } from '../godot/import/texture3DImport.js';
 
 /** A `key=value` line, tolerating surrounding whitespace and a trailing comment-free tail. */
@@ -48,9 +50,9 @@ export interface ParsedImportFile {
    * The `[params]` block: a string literal's decoded text, as `VariantParser` reads it back
    * (`resource_importer.cpp:76`), and any other value as written. The typed readers cover only
    * `nodes/root_scale`, `nodes/apply_root_scale`, the glTF naming options, the lightmap unwrap
-   * options, the `_subresources` material remaps, mesh layers and mesh lightmap overrides, a
-   * texture's compression and a 3D texture's slices. The rest is GLTFLoader's work or a bake
-   * concern with no visual effect.
+   * options, `nodes/use_name_suffixes`, the `_subresources` material remaps, mesh layers, mesh
+   * lightmap overrides and clip loop modes, a texture's compression and a 3D texture's slices.
+   * The rest is GLTFLoader's work or a bake concern with no visual effect.
    */
   params: Record<string, string>;
 }
@@ -250,6 +252,25 @@ export function importNodeLayers(parsed: ParsedImportFile | null): ReadonlyMap<s
     masks.set(key.startsWith('PATH:') ? key.slice('PATH:'.length) : key, mask);
   }
   return masks;
+}
+
+/**
+ * What the sidecar says about how Godot imports a glTF's clips: whether it strips loop suffixes
+ * from their names (`nodes/use_name_suffixes`, `resource_importer_scene.cpp:640-645`), and each
+ * `_subresources.animations` entry's `settings/loop_mode` (`:1308`, `:1335-1347`).
+ */
+export function importClipOptions(parsed: ParsedImportFile | null): ClipImportOptions {
+  const sidecarLoopModes = new Map<string, number>();
+  for (const [name, settings] of Object.entries(subResourceCategory(parsed, 'animations') ?? {})) {
+    if (typeof settings !== 'object' || settings === null) continue;
+    // A missing or unreadable key reads as the option's default, 0 (`:2187`).
+    const mode = (settings as Record<string, unknown>)['settings/loop_mode'];
+    sidecarLoopModes.set(name, typeof mode === 'number' ? Math.trunc(mode) : AnimationLoopMode.NONE);
+  }
+  return {
+    useNameSuffixes: boolSlotValue(parsed?.params['nodes/use_name_suffixes']) ?? true,
+    sidecarLoopModes,
+  };
 }
 
 /** Which meshes of an asset Godot's importer unwraps for lightmaps, and at what texel size. */

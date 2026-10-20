@@ -12,7 +12,11 @@ import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { withExtensionRules } from './extensionRules';
 import { tagMeshInstances } from './meshInstances';
 import { tagGodotNodeNames } from './nodeNames';
-import { gltfImportNames, type GltfNamingOptions } from '../../../godot/import/gltfImportNames';
+import {
+  gltfImportNames,
+  type GltfImportNames,
+  type GltfNamingOptions,
+} from '../../../godot/import/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import { withImportedNormalMapRead } from '../../../r3f/materials/godotNormalMap';
 import type { GltfExtensionRules } from './types';
@@ -22,6 +26,8 @@ import { applyLightmapUv, type LightmapUvImport } from './lightmapUv/lightmapUv'
 import { godotPrimitives } from './godotPrimitives';
 import { importingImages, restoreImportedSampling, type GltfImageImport } from './imageImport';
 import { forEachSurfaceMaterial } from './surfaceMaterials';
+import { AnimationLoopMode } from '../../../godot/scene/animation';
+import { setImportedLoopMode } from './importedLoopMode';
 
 type GLTFLoaderClass = (typeof import('three/addons/loaders/GLTFLoader.js'))['GLTFLoader'];
 
@@ -129,10 +135,21 @@ export async function createGLBMesh(
   // GLTFLoader returns embedded clips on `gltf.animations`. The root's `.animations`
   // is where GLBSceneRoot plays them from and where `cloneWithMaterials` copies them.
   root.animations = gltf.animations;
+  nameClips(root.animations, names.animations);
   tagMeshInstances(root, gltf.parser.associations);
   tagGodotNodeNames(root, gltf.parser.associations, names.nodes);
   importBlendAsDepthPrepass(root);
   return root;
+}
+
+/** Each clip under the name the glTF importer stores, looping when its name asks (`gltf_document.cpp:3751-3756`). */
+function nameClips(clips: THREE.AnimationClip[], names: GltfImportNames['animations']): void {
+  clips.forEach((clip, index) => {
+    const stored = names[index];
+    if (!stored) return;
+    clip.name = stored.name;
+    setImportedLoopMode(clip, stored.loops ? AnimationLoopMode.LINEAR : AnimationLoopMode.NONE);
+  });
 }
 
 /**

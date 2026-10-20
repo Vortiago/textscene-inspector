@@ -19,6 +19,7 @@ import {
   nodePathLiteral,
 } from '../../../godot/variant/variantParser.js';
 import { findSubResource } from '../../../resources/SubResourceResolver.js';
+import { AnimationLoopMode } from '../../../godot/scene/animation.js';
 import type { AnimationLibraryRef } from './types';
 
 export interface GodotKeyframe {
@@ -162,7 +163,7 @@ function parseAnimation(name: string, resource: TscnInternalResource): GodotAnim
   return {
     name,
     length: numberOr(data['length'], 1.0),
-    loopMode: numberOr(data['loop_mode'], 0),
+    loopMode: numberOr(data['loop_mode'], AnimationLoopMode.NONE),
     step: numberOr(data['step'], 0.1),
     tracks: parseTracks(data),
   };
