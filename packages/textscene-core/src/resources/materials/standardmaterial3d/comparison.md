@@ -64,7 +64,6 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 
 `anisotropy` stretches the specular highlight along the mesh's tangent. The SphereMesh carries Godot's tangents, so both engines draw a soft ring round the pole.
 
-
 ## Anisotropy flowmap
 
 <!-- compare: image=unit-material-anisotropy-flowmap status=done fixture=unit-material-anisotropy-flowmap.tscn -->
@@ -76,7 +75,6 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 <!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
 
 The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel, and `ao_on_uv2` samples the mesh's UV2.
-
 
 ## Diffuse mode
 

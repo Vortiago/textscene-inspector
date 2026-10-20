@@ -50,14 +50,14 @@ export function buildTorusMeshSurface(
   }
   const minRadius = Math.min(p.innerRadius, p.outerRadius);
   const maxRadius = Math.max(p.innerRadius, p.outerRadius);
-  const radius = (maxRadius - minRadius) * 0.5;
+  const tubeRadius = (maxRadius - minRadius) * 0.5;
 
   // UV2 lays each row out by its length round the axis, padded on the right and the bottom (`:2244-2250`).
   const padding = uv2Padding ?? 0;
   const horizontalTotal = maxRadius * TAU + padding;
   const maxH = (maxRadius * TAU) / horizontalTotal;
   const deltaH = ((maxRadius - minRadius) * TAU) / horizontalTotal;
-  const heightV = (radius * TAU) / (radius * TAU + padding);
+  const heightV = (tubeRadius * TAU) / (tubeRadius * TAU + padding);
 
   const writer = new SurfaceWriter(uv2Padding !== null);
   for (let i = 0; i <= rings; i++) {
@@ -74,8 +74,8 @@ export function buildTorusMeshSurface(
       const angj = storedReal(incj * TAU);
       const [normaljX, normaljY] =
         j === ringSegments ? [-1, 0] : [storedReal(-Math.cos(angj)), storedReal(Math.sin(angj))];
-      const normalkX = normaljX * radius + minRadius + radius;
-      const normalkY = normaljY * radius;
+      const normalkX = normaljX * tubeRadius + minRadius + tubeRadius;
+      const normalkY = normaljY * tubeRadius;
       const offsetH = 0.5 * (1 - normaljX) * deltaH;
 
       writer.vertex(

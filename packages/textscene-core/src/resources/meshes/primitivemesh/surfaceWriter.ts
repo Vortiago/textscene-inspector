@@ -42,7 +42,7 @@ export class SurfaceWriter {
 
   /**
    * The two clockwise triangles between column `i - 1` and `i` of two rows that start at vertex
-   * `prevrow` and `thisrow`, in the order every grid loop of `primitive_meshes.cpp` pushes them.
+   * `prevrow` and `thisrow`, in the order every grid loop of `primitive_meshes.cpp` but TorusMesh's pushes them.
    */
   quadBetweenRows(prevrow: number, thisrow: number, i: number): void {
     this.indices.push(prevrow + i - 1, prevrow + i, thisrow + i - 1);

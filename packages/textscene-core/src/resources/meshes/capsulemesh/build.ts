@@ -28,8 +28,9 @@
  *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TAU } from '../../../godot/math/math.js';
+import { storedReal } from '../../../godot/math/real.js';
 import type { GodotSurface } from '../godotSurface.js';
+import { rimPoint } from '../primitivemesh/rimPoint.js';
 import { ONE_THIRD, SurfaceWriter, TWO_THIRDS } from '../primitivemesh/surfaceWriter.js';
 import type { CapsuleMeshProperties } from './types.js';
 
@@ -68,10 +69,9 @@ export function buildCapsuleMeshSurface(p: CapsuleMeshProperties, uv2Padding: nu
     for (let j = 0; j <= rings + 1; j++) {
       const v = j / (rings + 1);
       for (let i = 0; i <= radialSegments; i++) {
-        const u = i / radialSegments;
-        const seam = i === radialSegments;
-        const x = seam ? 0 : -Math.sin(u * TAU);
-        const z = seam ? 1 : Math.cos(u * TAU);
+        const u = storedReal(i / radialSegments);
+        const [sine, z] = rimPoint(i, radialSegments);
+        const x = -sine;
         const { position, normal, uvV, uv2V } = vertexAt(v, j === rings + 1, x, z);
         writer.vertex(position, normal, [-z, 0, -x, 1], [u, uvV], [u * radialH, uv2V]);
         if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);

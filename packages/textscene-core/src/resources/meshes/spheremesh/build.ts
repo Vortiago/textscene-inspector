@@ -29,8 +29,10 @@
  */
 
 import { TAU } from '../../../godot/math/math.js';
+import { storedReal } from '../../../godot/math/real.js';
 import { normalizedVector3 } from '../../../godot/math/vector.js';
 import type { GodotSurface } from '../godotSurface.js';
+import { rimPoint } from '../primitivemesh/rimPoint.js';
 import { SurfaceWriter } from '../primitivemesh/surfaceWriter.js';
 import type { SphereMeshProperties } from './types.js';
 
@@ -55,10 +57,8 @@ export function buildSphereMeshSurface(p: SphereMeshProperties, uv2Padding: numb
     const y = lastRow ? -1 : Math.cos(Math.PI * v);
 
     for (let i = 0; i <= radialSegments; i++) {
-      const u = i / radialSegments;
-      const seam = i === radialSegments;
-      const x = seam ? 0 : Math.sin(u * TAU);
-      const z = seam ? 1 : Math.cos(u * TAU);
+      const u = storedReal(i / radialSegments);
+      const [x, z] = rimPoint(i, radialSegments);
 
       const folded = isHemisphere && y < 0;
       const position: [number, number, number] = folded

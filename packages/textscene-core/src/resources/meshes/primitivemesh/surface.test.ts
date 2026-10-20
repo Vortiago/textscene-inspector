@@ -32,7 +32,7 @@ describe('primitiveMeshSurface', () => {
     expect(flipped.tangents).toEqual(plain.tangents);
   });
 
-  it("hands on a ported builder's surface as it is", () => {
+  it("hands on a builder's surface as it is", () => {
     const data = { size: 'Vector3(2, 1, 1)', left_to_right: '0.25' };
 
     const surface = primitiveMeshSurface({ id: 'prism', type: 'PrismMesh', data }, TEXEL_SIZE)!;

@@ -7,8 +7,8 @@ const TEXEL_SIZE = 0.2;
 /** Four segments round and one ring: vertex 6 sits on the equator, a quarter turn from the seam. */
 const COARSE_SPHERE = { radius: '0.5', height: '1.0', radial_segments: '4', rings: '1' };
 
-/** Every type built from a port of its Godot `create_mesh_array`. */
-const PORTED_TYPES = [
+/** Every PrimitiveMesh type, each built from a port of its Godot `create_mesh_array`. */
+const PRIMITIVE_TYPES = [
   'BoxMesh',
   'SphereMesh',
   'PlaneMesh',
@@ -24,7 +24,7 @@ function sphere(data: Record<string, string> = {}) {
 }
 
 describe('buildPrimitiveMeshGeometry', () => {
-  it.each(PORTED_TYPES)("carries %s's own tangents, each with w = 1", (type) => {
+  it.each(PRIMITIVE_TYPES)("carries %s's own tangents, each with w = 1", (type) => {
     const tangent = buildPrimitiveMeshGeometry({ id: 'mesh', type, data: {} }, TEXEL_SIZE)!.getAttribute(
       'tangent'
     );
@@ -49,13 +49,13 @@ describe('buildPrimitiveMeshGeometry', () => {
     expect(uv2.getY(6)).toBeCloseTo(1 / 6, 6);
   });
 
-  it.each(PORTED_TYPES)("carries %s's UV2 as uv1 under add_uv2", (type) => {
+  it.each(PRIMITIVE_TYPES)("carries %s's UV2 as uv1 under add_uv2", (type) => {
     const geometry = buildPrimitiveMeshGeometry({ id: 'mesh', type, data: { add_uv2: 'true' } }, TEXEL_SIZE)!;
 
     expect(geometry.getAttribute(UV2_ATTRIBUTE).count).toBe(geometry.getAttribute('position').count);
   });
 
-  it.each(PORTED_TYPES)('carries no uv1 on a %s without add_uv2', (type) => {
+  it.each(PRIMITIVE_TYPES)('carries no uv1 on a %s without add_uv2', (type) => {
     const geometry = buildPrimitiveMeshGeometry({ id: 'mesh', type, data: {} }, TEXEL_SIZE)!;
 
     expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();

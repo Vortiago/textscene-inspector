@@ -16,6 +16,8 @@ const COARSE: CylinderMeshProperties = {
 /** The centre of each cap, which follows its rim of five vertices. */
 const TOP_CENTRE = 10;
 const BOTTOM_CENTRE = 16;
+/** The centre of whichever cap comes first, when the other is not built. */
+const FIRST_CAP_CENTRE = 10;
 
 describe('buildCylinderMeshSurface', () => {
   it('builds (rings + 2) rows of (radial_segments + 1) side vertices, then a fan per cap', () => {
@@ -87,15 +89,15 @@ describe('buildCylinderMeshSurface', () => {
     const surface = buildCylinderMeshSurface({ ...COARSE, capTop: false }, null);
 
     expect(surface.positions.length / 3).toBe(16);
-    expectClose(vertexOf(surface.positions, TOP_CENTRE), [0, -1, 0]);
-    expectClose(vertexOf(surface.uvs, TOP_CENTRE, 2), [0.75, 0.75]);
+    expectClose(vertexOf(surface.positions, FIRST_CAP_CENTRE), [0, -1, 0]);
+    expectClose(vertexOf(surface.uvs, FIRST_CAP_CENTRE, 2), [0.75, 0.75]);
   });
 
   it('keeps the top cap when cap_bottom is off', () => {
     const surface = buildCylinderMeshSurface({ ...COARSE, capBottom: false }, null);
 
     expect(surface.positions.length / 3).toBe(16);
-    expectClose(vertexOf(surface.positions, TOP_CENTRE), [0, 1, 0]);
+    expectClose(vertexOf(surface.positions, FIRST_CAP_CENTRE), [0, 1, 0]);
   });
 
   it('builds only the side with both caps off', () => {
@@ -111,7 +113,7 @@ describe('buildCylinderMeshSurface', () => {
     expect(surface.positions.length / 3).toBe(16);
     expectClose(vertexOf(surface.positions, 0), [0, 1, 0]);
     expectClose(vertexOf(surface.normals, 0), [0, 0.242536, 0.970143]);
-    expectClose(vertexOf(surface.positions, TOP_CENTRE), [0, -1, 0]);
+    expectClose(vertexOf(surface.positions, FIRST_CAP_CENTRE), [0, -1, 0]);
   });
 
   it('adds a side row per ring', () => {
