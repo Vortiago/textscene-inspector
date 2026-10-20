@@ -55,21 +55,21 @@ const NO_TEXTURE_WORK = { waitFor: async () => {}, count: async () => 0 };
 
 /**
  * A Playwright page and capture target reduced to what `settleCanvas` touches. Each shot is a
- * DevTools `Page.captureScreenshot` on the target's page, so the stub answers that command with
- * the next of `shots`, base64 as Chromium sends it.
+ * DevTools `Page.captureScreenshot` on the target's page, so the stub session answers that command
+ * with the next of `shots`, base64 as Chromium sends it.
  */
-function stubCanvas(shots, status = NO_TEXTURE_WORK, box = { x: 0, y: 0, width: 8, height: 8 }) {
+function stubCanvas(shots, { status = NO_TEXTURE_WORK, box = { x: 0, y: 0, width: 8, height: 8 } } = {}) {
   let i = 0;
   const page = { waitForTimeout: async () => {}, getByTestId: () => status };
   const session = {
+    calls: [],
     send: async (method, params) => {
-      canvas.calls.push({ method, params });
+      session.calls.push({ method, params });
       return { data: Buffer.from(shots[Math.min(i++, shots.length - 1)]).toString('base64') };
     },
   };
   const targetPage = { context: () => ({ newCDPSession: async () => session }) };
   const canvas = {
-    calls: [],
     boxOptions: [],
     boundingBox: async (options) => {
       canvas.boxOptions.push(options);
@@ -111,12 +111,19 @@ describe('settleCanvas', () => {
 
   it('captures the whole pixels that enclose the target, as an element screenshot does', async () => {
     const box = { x: 0.5, y: 10.2, width: 100.4, height: 50 };
-    const { page, canvas } = stubCanvas(['x', 'x'], NO_TEXTURE_WORK, box);
+    const { page, canvas, session } = stubCanvas(['x', 'x'], { box });
     await settleCanvas(page, canvas);
-    expect(canvas.calls.at(-1)).toEqual({
+    expect(session.calls.at(-1)).toEqual({
       method: 'Page.captureScreenshot',
       params: { format: 'png', clip: { x: 0, y: 10, width: 101, height: 51, scale: 1 } },
     });
+  });
+
+  it('measures the target once for every shot of a settle', async () => {
+    const { page, canvas, session } = stubCanvas(['a', 'b', 'c', 'c']);
+    await settleCanvas(page, canvas);
+    expect(session.calls).toHaveLength(4);
+    expect(canvas.boxOptions).toHaveLength(1);
   });
 
   it('reports a shot that outlasts its timeout as a TimeoutError', async () => {
@@ -141,7 +148,7 @@ describe('settleCanvas', () => {
       },
       count: async () => 0,
     };
-    const { page, canvas, session } = stubCanvas(['x', 'x'], status);
+    const { page, canvas, session } = stubCanvas(['x', 'x'], { status });
     const send = session.send;
     session.send = async (method, params) => {
       events.push('shot');
@@ -169,7 +176,7 @@ describe('settleCanvas', () => {
     // so neither is compared with a frame from the other side of it.
     let checks = 0;
     const status = { waitFor: async () => {}, count: async () => (checks++ === 0 ? 1 : 0) };
-    const { page, canvas } = stubCanvas(['a', 'a', 'b', 'b'], status);
+    const { page, canvas } = stubCanvas(['a', 'a', 'b', 'b'], { status });
     const { buffer } = await settleCanvas(page, canvas);
     expect(buffer.toString()).toBe('b');
   });
@@ -192,15 +199,17 @@ describe('settleCanvas', () => {
   }
 
   it('reports texture work that never ends rather than returning a frame', async () => {
-    const { page, canvas } = stubCanvas(['x', 'x'], failingStatus(timeoutError()));
+    const { page, canvas, session } = stubCanvas(['x', 'x'], { status: failingStatus(timeoutError()) });
     const { buffer, reason } = await settleCanvas(page, canvas);
     expect(buffer).toBeNull();
     expect(reason).toMatch(/texture work still pending/);
-    expect(canvas.calls).toHaveLength(0);
+    expect(session.calls).toHaveLength(0);
   });
 
   it('throws when the texture work wait fails for a reason other than its timeout', async () => {
-    const { page, canvas } = stubCanvas(['x', 'x'], failingStatus(new Error('Target page has been closed')));
+    const { page, canvas } = stubCanvas(['x', 'x'], {
+      status: failingStatus(new Error('Target page has been closed')),
+    });
     await expect(settleCanvas(page, canvas)).rejects.toThrow(
       /texture work status.*Target page has been closed/
     );
@@ -213,7 +222,7 @@ describe('settleCanvas', () => {
       },
       count: async () => 1,
     };
-    const { page, canvas } = stubCanvas(['x', 'x'], status);
+    const { page, canvas } = stubCanvas(['x', 'x'], { status });
     const { reason } = await settleCanvas(page, canvas, { waitForTextureWork: false });
     expect(reason).toBeNull();
   });

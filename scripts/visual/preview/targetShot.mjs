@@ -12,22 +12,31 @@ const DEFAULT_SHOT_TIMEOUT_MS = 30000;
 const cdpSessions = new WeakMap();
 
 /**
- * The target's whole-pixel box as a PNG buffer. Rejects with a `TimeoutError` when the shot
- * outlasts `timeout`, as Playwright's own screenshot does.
+ * A function that answers the target's whole-pixel box as a PNG buffer on each call. It measures
+ * the box once, at the first call, since a capture target keeps its layout between shots. A call
+ * rejects with a `TimeoutError` when the shot outlasts `timeout`, as Playwright's own screenshot does.
  *
  * @param {import('playwright').Locator} target - the canvas, or the 2D frame, in the page or a frame.
  * @param {{ timeout?: number }} [options]
+ * @returns {() => Promise<Buffer>}
  */
-export async function shootTarget(target, { timeout = DEFAULT_SHOT_TIMEOUT_MS } = {}) {
+export function targetShooter(target, { timeout = DEFAULT_SHOT_TIMEOUT_MS } = {}) {
+  let clip;
+  return async () => {
+    clip ??= await clipOf(target, timeout);
+    const session = await cdpSessionOf(target.page());
+    const { data } = await withTimeout(
+      session.send('Page.captureScreenshot', { format: 'png', clip }),
+      timeout
+    );
+    return Buffer.from(data, 'base64');
+  };
+}
+
+async function clipOf(target, timeout) {
   const box = await target.boundingBox({ timeout });
   if (!box) throw new Error('expected a visible capture target, but the capture target is not visible');
-  const session = await cdpSessionOf(target.page());
-  const clip = { ...enclosingIntRect(box), scale: 1 };
-  const { data } = await withTimeout(
-    session.send('Page.captureScreenshot', { format: 'png', clip }),
-    timeout
-  );
-  return Buffer.from(data, 'base64');
+  return { ...enclosingIntRect(box), scale: 1 };
 }
 
 function cdpSessionOf(page) {
