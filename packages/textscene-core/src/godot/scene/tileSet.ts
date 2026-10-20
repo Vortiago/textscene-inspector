@@ -39,3 +39,12 @@ export const TILE_OFFSET_AXIS_NAMES = enumNamesByValue(TileOffsetAxis);
 export const TILE_TRANSFORM_FLIP_H = 1 << 12;
 export const TILE_TRANSFORM_FLIP_V = 1 << 13;
 export const TILE_TRANSFORM_TRANSPOSE = 1 << 14;
+
+/** `TileSet::TerrainMode` (`tile_set.h:238-242`, 4.7.2 `:240-244`). */
+const TerrainMode = {
+  TERRAIN_MODE_MATCH_CORNERS_AND_SIDES: 0,
+  TERRAIN_MODE_MATCH_CORNERS: 1,
+  TERRAIN_MODE_MATCH_SIDES: 2,
+} as const;
+
+export const TERRAIN_MODE_NAMES = enumNamesByValue(TerrainMode);
