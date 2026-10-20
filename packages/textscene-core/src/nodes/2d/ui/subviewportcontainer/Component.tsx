@@ -95,7 +95,7 @@ function ViewportSurfaceNative({
   // By path, since a nested `<SubViewport>` names no ref. A dependency cycle
   // (`ViewportPassRegistryContext.tsx`) reports `cyclic: true` and draws `<ControlFallback>`'s outline,
   // the same "content unavailable" fact. `warnAs` is `null`: the pass driver logs the cycle once.
-  const { texture, cyclic } = useViewportTargetSlot(path, null);
+  const { texture, cyclic } = useViewportTargetSlot(path, null, 'plain');
 
   // Controls anchor against Godot's viewport size, not the capped render target: the Controls arm
   // draws live, and the quad stretches whatever pixels the target holds over the same rect.

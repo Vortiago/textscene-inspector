@@ -23,7 +23,7 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { quadsSampling } from '../../../../r3f/controls/native/testing/quadsSampling';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { ViewportTexturePublisher } from '../../../../r3f/testing/ViewportTexturePublisher';
+import { ViewportTexturePublisher, viewportEntry } from '../../../../r3f/testing/ViewportTexturePublisher';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -39,7 +39,7 @@ function containerSolveNode(containerProps: object): SolveNode {
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 150 };
 
 function fakeEntry(): ViewportTextureEntry {
-  return { texture: new THREE.Texture(), size: { x: 200, y: 150 } };
+  return viewportEntry(new THREE.Texture(), { x: 200, y: 150 });
 }
 
 async function mountContainer(tint = painterTint()) {
