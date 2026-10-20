@@ -1,0 +1,26 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: an AnimatedSprite2D with no sprite_frames, and one with `sprite_frames = null`.
+; Godot's draw returns early for both (animated_sprite_2d.cpp:270), so only this scene shows that
+; neither draws a placeholder. The textured sprites on either side are the anchors, so a stray quad
+; between them is visible.
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_marker"]
+
+[node name="World" type="Node2D"]
+position = Vector2(576, 324)
+
+[node name="Left" type="Sprite2D" parent="."]
+position = Vector2(-200, 0)
+texture = ExtResource("1_marker")
+
+[node name="NoFrames" type="AnimatedSprite2D" parent="."]
+position = Vector2(-70, 0)
+
+[node name="NullFrames" type="AnimatedSprite2D" parent="."]
+position = Vector2(70, 0)
+sprite_frames = null
+
+[node name="Right" type="Sprite2D" parent="."]
+position = Vector2(200, 0)
+texture = ExtResource("1_marker")

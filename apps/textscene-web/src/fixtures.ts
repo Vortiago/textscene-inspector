@@ -123,6 +123,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Animatedsprite2d Untextured",
+    "file": "unit-animatedsprite2d-untextured.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Animatedsprite2d",
     "file": "unit-animatedsprite2d.tscn",
     "category": "Other"
@@ -1358,6 +1363,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Pointlight2d Untextured",
+    "file": "unit-pointlight2d-untextured.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d",
     "file": "unit-pointlight2d.tscn",
     "category": "Other"
@@ -1695,6 +1705,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite3d Shadow",
     "file": "unit-sprite3d-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Sprite3d Untextured",
+    "file": "unit-sprite3d-untextured.tscn",
     "category": "Other"
   },
   {
