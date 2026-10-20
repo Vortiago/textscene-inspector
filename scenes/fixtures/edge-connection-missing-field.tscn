@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+; A [connection] heading with no `to=`. The text loader returns ERR_FILE_CORRUPT for it, so Godot loads nothing
+; from the file (resource_format_text.cpp:311-333) and the linter must report an error.
+
+[node name="Root" type="Node"]
+
+[node name="Button" type="Button" parent="."]
+
+[connection signal="pressed" from="Button" method="_on_button_pressed"]

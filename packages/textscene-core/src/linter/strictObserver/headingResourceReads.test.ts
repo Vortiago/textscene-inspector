@@ -4,7 +4,7 @@ import { parseHeading } from '../../parser/utils.js';
 
 function readsOf(...headings: string[]) {
   const collector = headingResourceReads();
-  for (const line of headings) collector.read(parseHeading(line)!);
+  headings.forEach((heading, index) => collector.read(parseHeading(heading)!, index + 1));
   return collector.reads;
 }
 
@@ -12,8 +12,29 @@ describe('headingResourceReads', () => {
   it('collects the binds of each connection heading as written', () => {
     expect(
       readsOf('[connection signal="ready" from="." to="." method="go" binds=[ExtResource("1")]]')
-        .connectionBinds
-    ).toEqual(['[ExtResource("1")]']);
+        .connections[0]?.binds
+    ).toBe('[ExtResource("1")]');
+  });
+
+  it('collects the line and the four required fields of a connection heading', () => {
+    const [connection] = readsOf(
+      '[node name="Root" type="Node"]',
+      '[connection signal="ready" from="Button" method="go"]'
+    ).connections;
+    expect(connection).toMatchObject({
+      line: 2,
+      signal: 'ready',
+      from: 'Button',
+      to: undefined,
+      method: 'go',
+    });
+  });
+
+  it('records which uid paths a connection heading carries', () => {
+    const [connection] = readsOf(
+      '[connection signal="ready" from="." to="." method="go" to_uid_path=PackedInt32Array(1)]'
+    ).connections;
+    expect(connection).toMatchObject({ hasFromUidPath: false, hasToUidPath: true });
   });
 
   it('collects an instance on a node heading that follows no other node', () => {
@@ -32,10 +53,9 @@ describe('headingResourceReads', () => {
     ]);
   });
 
-  it('collects nothing from a connection without binds', () => {
-    expect(readsOf('[connection signal="ready" from="." to="." method="go"]')).toEqual({
-      connectionBinds: [],
-      instancesOutsideNodeBody: [],
-    });
+  it('leaves binds undefined on a connection without binds', () => {
+    expect(readsOf('[connection signal="ready" from="." to="." method="go"]').connections[0]?.binds).toBe(
+      undefined
+    );
   });
 });

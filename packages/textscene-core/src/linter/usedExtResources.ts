@@ -38,7 +38,11 @@ function addNodeIds(node: RawNode, into: Map<string, ExtResourceUse>): void {
  */
 export function extResourceUses(scene: StrictScene): Map<string, ExtResourceUse> {
   const uses = new Map<string, ExtResourceUse>();
-  addIdsIn(scene.connectionBinds, 'aborting', uses);
+  addIdsIn(
+    scene.connections.flatMap(({ binds }) => (binds === undefined ? [] : [binds])),
+    'aborting',
+    uses
+  );
   addIdsIn(scene.instancesOutsideNodeBody, 'aborting', uses);
   for (const resource of scene.internalResources) addIdsIn(Object.values(resource.data), 'aborting', uses);
   if (scene.mainResource) addIdsIn(Object.values(scene.mainResource.data), 'aborting', uses);

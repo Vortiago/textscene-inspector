@@ -141,7 +141,7 @@ visible = true
         orphanedNodes: [],
         rootWithParent: undefined,
         emptyParentHeadings: [],
-        connectionBinds: [],
+        connections: [],
         instancesOutsideNodeBody: [],
       });
     });
