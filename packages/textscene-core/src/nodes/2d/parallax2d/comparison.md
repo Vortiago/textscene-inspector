@@ -4,14 +4,14 @@ category: 2D
 status: unimplemented
 fixture: unit-parallax-2d.tscn
 # image: unit-parallax-2d
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, Godot repeats and scroll-offsets its children, the previewer does not
 ---
 
 # Parallax2D
 
 Parallax2D repeats and scroll-offsets its children to fake camera depth. The previewer
-parses and validates it but applies no motion, so it renders as a transform-only
-fallback and its children show at their authored transform.
+parses and validates it but applies no motion, so it draws nothing
+and its children show at their authored transform.
 
 ## Linting
 

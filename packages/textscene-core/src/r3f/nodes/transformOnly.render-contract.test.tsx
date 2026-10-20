@@ -25,7 +25,10 @@ import './index';
  */
 const TRANSFORM_ONLY_3D_TYPES = nodeComponentRegistry
   .getAllTypeNames()
-  .filter((type) => nodeComponentRegistry.isTransformOnly(type) && descendsFromClass(type, 'Node3D'))
+  .filter(
+    (type) =>
+      nodeComponentRegistry.renderIntentOf(type) === 'transform-only' && descendsFromClass(type, 'Node3D')
+  )
   .sort();
 
 // Identity basis translated to (2, 3, 4).

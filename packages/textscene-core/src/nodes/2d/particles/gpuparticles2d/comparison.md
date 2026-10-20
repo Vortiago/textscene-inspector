@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot draws a particle cloud, the previewer does not
 # GPUParticles2D
 
 GPUParticles2D emits a GPU-simulated particle cloud. The previewer parses and validates
-it but does not draw it, so it renders as a transform-only fallback and its children
+it but does not draw it, so it draws nothing and its children
 still show.
 
 ## Linting

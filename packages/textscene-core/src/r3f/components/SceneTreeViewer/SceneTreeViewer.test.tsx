@@ -153,6 +153,18 @@ describe('<SceneTreeViewer>', () => {
     expect(within(row).getByText('Not Implemented')).toBeTruthy();
   });
 
+  it('words the "Not Implemented" badge tooltip as not yet supported', () => {
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [makeNode('Mystery', 'TotallyUnknownType')],
+    });
+    render(<SceneTreeViewer />, { wrapper: withPanel(graph) });
+
+    const row = screen.getByText('Mystery').closest('[data-node-path]') as HTMLElement;
+    expect(within(row).getByText('Not Implemented').getAttribute('title')).toBe(
+      'TotallyUnknownType is not yet supported by the renderer'
+    );
+  });
+
   it('visibility toggle button is rendered with eye/hidden semantics', async () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [makeNode('Root', 'Node3D')],

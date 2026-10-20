@@ -4,12 +4,12 @@ category: 3D
 status: unimplemented
 fixture: unit-lightmap-gi.tscn
 # image: unit-lightmap-gi
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, Godot lights static geometry from its baked lightmap, the previewer does not
 ---
 
 # LightmapGI
 
-Bakes static global illumination into a lightmap atlas and applies it from `light_data` at runtime. The previewer neither bakes nor applies lightmap data yet, so the node is an invisible transform-only fallback and its children still show.
+Bakes static global illumination into a lightmap atlas and applies it from `light_data` at runtime. The previewer neither bakes nor applies lightmap data yet, so the node draws nothing and its children still show.
 
 ## Linting
 

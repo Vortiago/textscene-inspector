@@ -65,7 +65,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 
 - [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md): nothing yet, Godot rotates a bone toward its target, the previewer does not
 - [AnimatableBody3D](../../packages/textscene-core/src/nodes/physics/3d/animatablebody3d/comparison.md): nothing (a transform-only group)
-- [AnimatedSprite3D](../../packages/textscene-core/src/nodes/3d/animatedsprite3d/comparison.md): invisible transform-only fallback
+- [AnimatedSprite3D](../../packages/textscene-core/src/nodes/3d/animatedsprite3d/comparison.md): nothing yet, Godot draws a SpriteFrames frame on a quad, the previewer does not
 - [AnimationPlayer](../../packages/textscene-core/src/nodes/animation/animationplayer/comparison.md): no geometry of its own, a working driver of other nodes' properties
 - [AnimationTree](../../packages/textscene-core/src/nodes/animation/animationtree/comparison.md): no geometry of its own, a working blend-tree driver
 - [Area3D](../../packages/textscene-core/src/nodes/physics/3d/area3d/comparison.md): an invisible transform-only group
@@ -110,8 +110,8 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md): canvas-rasterised glyph quads, billboard-able
-- [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md): invisible transform-only fallback
-- [LightmapProbe](../../packages/textscene-core/src/nodes/3d/lightmapprobe/comparison.md): invisible transform-only fallback
+- [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md): nothing yet, Godot lights static geometry from its baked lightmap, the previewer does not
+- [LightmapProbe](../../packages/textscene-core/src/nodes/3d/lightmapprobe/comparison.md): nothing yet, Godot samples it to light dynamic objects, the previewer does not
 - [LimitAngularVelocityModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/limitangularvelocitymodifier3d/comparison.md): nothing yet, Godot caps how fast its bones may turn, the previewer does not
 - [LookAtModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/lookatmodifier3d/comparison.md): nothing yet, Godot rotates a bone to face its target, the previewer does not
 - [Marker3D](../../packages/textscene-core/src/nodes/3d/marker3d/comparison.md): a selection-gated axis-cross gizmo
@@ -131,7 +131,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [OpenXRHand](../../packages/textscene-core/src/nodes/3d/xr/openxrhand/comparison.md): nothing yet, Godot poses hand bones from tracking, the previewer does not
 - [OpenXRRenderModel](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodel/comparison.md): nothing yet, Godot mounts the runtime's glTF model as a child, the previewer does not
 - [OpenXRRenderModelManager](../../packages/textscene-core/src/nodes/3d/xr/openxrrendermodelmanager/comparison.md): nothing yet, Godot spawns a render model per tracked device, the previewer does not
-- [OpenXRVisibilityMask](../../packages/textscene-core/src/nodes/3d/xr/openxrvisibilitymask/comparison.md): invisible transform-only fallback
+- [OpenXRVisibilityMask](../../packages/textscene-core/src/nodes/3d/xr/openxrvisibilitymask/comparison.md): nothing yet, Godot masks the lens-hidden part of the render, the previewer does not
 - [Path3D](../../packages/textscene-core/src/nodes/paths/path3d/comparison.md): a selection-gated curve gizmo
 - [PathFollow3D](../../packages/textscene-core/src/nodes/paths/pathfollow3d/comparison.md): a curve-positioned transform group
 - [PhysicalBone3D](../../packages/textscene-core/src/nodes/physics/3d/physicalbone3d/comparison.md): nothing (a transform-only group)
@@ -151,7 +151,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): nothing yet, Godot draws a deformable mesh, the previewer does not
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md): a THREE.SpotLight
-- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): nothing yet, Godot places its children along the arm each physics frame, the previewer does not
+- [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): a transform group with a selection-gated length line
 - [SpringBoneCollision3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollision3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
 - [SpringBoneCollisionCapsule3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisioncapsule3d/comparison.md): nothing yet, Godot's spring solver collides bones with it, the previewer does not
 - [SpringBoneCollisionPlane3D](../../packages/textscene-core/src/nodes/3d/skeleton/springbonecollisionplane3d/comparison.md): nothing yet, Godot's spring solver pushes bones off its plane, the previewer does not
@@ -166,7 +166,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md): nothing (a transform-only group)
 - [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md): nothing (a transform-only group)
 - [VisualInstance3D](../../packages/textscene-core/src/nodes/3d/visualinstance3d/comparison.md): a transform-only group
-- [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md): an invisible transform-only fallback
+- [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md): nothing yet, Godot lights the scene from its voxel bake, the previewer does not
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md): the scene's background and environment lighting
 - [XRAnchor3D](../../packages/textscene-core/src/nodes/3d/xr/xranchor3d/comparison.md): nothing (a transform-only group)
 - [XRBodyModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/xrbodymodifier3d/comparison.md): nothing yet, Godot poses bones from an XR body tracker, the previewer does not
@@ -191,7 +191,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [BoxContainer](../../packages/textscene-core/src/nodes/2d/ui/boxcontainer/comparison.md): children laid out along its own `vertical`-chosen axis
 - [Button](../../packages/textscene-core/src/nodes/2d/ui/button/comparison.md): a StyleBox quad with a centred text run
 - [Camera2D](../../packages/textscene-core/src/nodes/2d/camera2d/comparison.md): a 2D view frame with no drawn geometry
-- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md): invisible transform-only fallback, the children's composite into one offscreen buffer is not reproduced
+- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md): nothing yet, Godot composites its children into one offscreen buffer, the previewer does not
 - [CanvasLayer](../../packages/textscene-core/src/nodes/2d/ui/canvaslayer/comparison.md): a full-rect passthrough layer hosting Control children
 - [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md): a colour multiply applied to the whole canvas
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md): a rect centred inside its own
@@ -247,7 +247,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [OptionButton](../../packages/textscene-core/src/nodes/2d/ui/optionbutton/comparison.md): a collapsed dropdown box
 - [Panel](../../packages/textscene-core/src/nodes/2d/ui/panel/comparison.md): a StyleBox quad
 - [PanelContainer](../../packages/textscene-core/src/nodes/2d/ui/panelcontainer/comparison.md): a StyleBox panel around its child
-- [Parallax2D](../../packages/textscene-core/src/nodes/2d/parallax2d/comparison.md): invisible transform-only fallback
+- [Parallax2D](../../packages/textscene-core/src/nodes/2d/parallax2d/comparison.md): nothing yet, Godot repeats and scroll-offsets its children, the previewer does not
 - [ParallaxBackground](../../packages/textscene-core/src/nodes/2d/parallaxbackground/comparison.md): a viewport-anchored group holding its ParallaxLayer children
 - [ParallaxLayer](../../packages/textscene-core/src/nodes/2d/parallaxlayer/comparison.md): a Node2D transform group, repeated once per mirrored axis
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md): nothing at runtime, a selection-gated curve gizmo
@@ -279,7 +279,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [TextureRect](../../packages/textscene-core/src/nodes/2d/ui/texturerect/comparison.md): a textured quad in the control's rect
 - [TileMap](../../packages/textscene-core/src/nodes/2d/tiles/tilemap/comparison.md): batched textured tile quads
 - [TileMapLayer](../../packages/textscene-core/src/nodes/2d/tiles/tilemaplayer/comparison.md): batched textured tile quads
-- [TouchScreenButton](../../packages/textscene-core/src/nodes/2d/touchscreenbutton/comparison.md): invisible transform-only fallback
+- [TouchScreenButton](../../packages/textscene-core/src/nodes/2d/touchscreenbutton/comparison.md): nothing yet, Godot draws its button texture, the previewer does not
 - [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md): an empty panel, with a blank header row when column_titles_visible
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md): children laid out down a column
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md): children flowed down a column, wrapping to a new column

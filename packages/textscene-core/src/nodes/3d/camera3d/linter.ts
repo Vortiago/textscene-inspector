@@ -8,8 +8,8 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { nodesDescendingFrom } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { parseGodotFloat, ruleInt } from '../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode } from '../../../parser/types.js';
 
@@ -98,12 +98,12 @@ function checkCamera3D(context: RuleContext): Diagnostic[] {
   // omits defaults when serialising, and camera3d/parser.ts defaults it the
   // same way, so an absent key means 75 rather than missing.
 
-  // `parseGodotFloat`, not `parseFloat`, which reads Godot's `inf` / `-inf` / `inf_neg` literals
+  // `scalarSlotValue`, not `parseFloat`, which reads Godot's `inf` / `-inf` / `inf_neg` literals
   // (variant_parser.cpp:150-155) as NaN and skips the pair the ERR_FAIL_COND refuses. An absent
   // plane is defaulted, not missing, since Godot omits a property at its default, so `far = 0.05`
   // alone is the same zero depth range as writing both.
-  const near = rawProps.near === undefined ? NEAR_DEFAULT : parseGodotFloat(rawProps.near);
-  const far = rawProps.far === undefined ? FAR_DEFAULT : parseGodotFloat(rawProps.far);
+  const near = rawProps.near === undefined ? NEAR_DEFAULT : scalarSlotValue(rawProps.near);
+  const far = rawProps.far === undefined ? FAR_DEFAULT : scalarSlotValue(rawProps.far);
 
   // set_near/set_far (camera_3d.cpp:736, :746) are bare assignments and both hints end in
   // `or_greater` (camera_3d.cpp:685-686), so the pair's tier comes from the `Projection` setter

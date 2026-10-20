@@ -49,11 +49,10 @@ jobs:
       # First: it needs no build and fails in seconds.
       - run: pnpm format:check
       - run: pnpm lint
-      - run: pnpm type-check
-
-      # The test projects resolve @textscene/core through its emitted declarations, and the
-      # docs checks load its dist.
-      - run: pnpm --filter @textscene/core build
+      # `type-check:all` builds the packages once before the parallel app checks. Each app's
+      # `pretype-check` rebuilds core, so four parallel builds would rewrite the dist an app
+      # is reading. The test projects and the docs checks read that dist too.
+      - run: pnpm type-check:all
       - run: pnpm type-check:tests
 
       - run: pnpm docs:lint-sections --check

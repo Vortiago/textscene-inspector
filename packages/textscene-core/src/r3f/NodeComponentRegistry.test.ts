@@ -4,6 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { nodeComponentRegistry } from './NodeComponentRegistry';
+import { invisibleBase } from './invisibleBase';
 
 const Dummy = () => null;
 
@@ -56,5 +57,46 @@ describe('nodeComponentRegistry.register', () => {
   it('keeps the component of a type ClassDB does not know (edge case)', () => {
     nodeComponentRegistry.register({ typeName: '__TestUnknown', Component: Dummy });
     expect(nodeComponentRegistry.get('__TestUnknown')).toBe(Dummy);
+  });
+});
+
+describe('nodeComponentRegistry.register against the declared intent', () => {
+  // A base mounts the transform and draws nothing, as Node3D, Node2D and Node do.
+  const Base = invisibleBase(() => null);
+  const Drawer = () => null;
+
+  it('accepts a pending gap on a base, and a drawing component under the default intent', () => {
+    nodeComponentRegistry.register({ typeName: '__TestGap', Component: Base, renderIntent: 'pending' });
+    nodeComponentRegistry.register({ typeName: '__TestDrawn', Component: Drawer });
+    expect(nodeComponentRegistry.renderIntentOf('__TestGap')).toBe('pending');
+    expect(nodeComponentRegistry.renderIntentOf('__TestDrawn')).toBe('draws');
+  });
+
+  it('refuses a drawing component under `pending`, which the badge would show as not drawn', () => {
+    expect(() =>
+      nodeComponentRegistry.register({
+        typeName: '__TestDrawnGap',
+        Component: Drawer,
+        renderIntent: 'pending',
+      })
+    ).toThrow(/__TestDrawnGap.*pending.*draws/);
+  });
+
+  it('refuses a base under the default intent, which the badge would show as drawn', () => {
+    expect(() => nodeComponentRegistry.register({ typeName: '__TestUndrawn', Component: Base })).toThrow(
+      /__TestUndrawn.*draws.*base/
+    );
+  });
+
+  it("accepts a 2D-UI type's 3D pass-through on a base, since its Control component draws it", () => {
+    // The exemption keys on a real 2D-UI type. Vitest gives each file its own registry.
+    nodeComponentRegistry.register({ typeName: 'SubViewportContainer', Component: Base, container: true });
+    expect(nodeComponentRegistry.renderIntentOf('SubViewportContainer')).toBe('draws');
+  });
+
+  it('refuses a 2D-UI type on a base when it does not pass through', () => {
+    expect(() => nodeComponentRegistry.register({ typeName: 'Label', Component: Base })).toThrow(
+      /Label.*draws/
+    );
   });
 });

@@ -17,6 +17,8 @@ export const GIZMO_SCENES = [
   // ticks and forward arrow. No unselected companion: with the gizmo hidden this
   // scene renders like any other transform-only body fixture.
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', select: 'Root/Vehicle/Wheel1' },
+  // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
+  { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', select: 'Root/MySpringArm3D' },
 
   // Lights, Camera3D and AudioStreamPlayer3D gizmos. Unselected: the render
   // with ground and shading only, no helper.

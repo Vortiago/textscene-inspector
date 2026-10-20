@@ -23,6 +23,15 @@ describe('sampleSteppedValue', () => {
     expect(sampleSteppedValue(keys, 5)).toBe(3);
   });
 
+  it('reads a boolean key as 1 or 0 on a numeric property, as Godot converts it', () => {
+    const flips: GodotKeyframe[] = [
+      { time: 0, value: false, transition: 1 },
+      { time: 0.1, value: true, transition: 1 },
+    ];
+    expect(sampleSteppedValue(flips, 0)).toBe(0);
+    expect(sampleSteppedValue(flips, 0.1)).toBe(1);
+  });
+
   it('returns the first value before the track starts, and 0 for an empty track', () => {
     expect(sampleSteppedValue(keys, -1)).toBe(0);
     expect(sampleSteppedValue([], 1)).toBe(0);

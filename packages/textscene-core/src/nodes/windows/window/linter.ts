@@ -4,12 +4,12 @@
  * off one node, so none fits a single-key validator. Format checks live in linterParser.ts.
  */
 
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector2i } from '../../../linter/validators/index.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { formatReal, storedReal } from '../../../godot/math/real.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
@@ -134,7 +134,7 @@ function checkContentScaleFloored(node: RuleContext['node'], rawProps: Record<st
   if (rawProps.content_scale_factor === undefined) return [];
   if (ruleInt(rawProps.content_scale_stretch, ContentScaleStretch.FRACTIONAL) !== ContentScaleStretch.INTEGER)
     return [];
-  const written = parseGodotFloat(rawProps.content_scale_factor);
+  const written = scalarSlotValue(rawProps.content_scale_factor);
   // At or below 0 the setter refuses the value (window.cpp:1774), which the validator
   // reports. The floor leaves nan and inf as they are.
   if (written === null || !Number.isFinite(written) || written <= 0) return [];

@@ -7,6 +7,7 @@ import { useMemo, type Ref } from 'react';
 import type * as THREE from 'three';
 import type { Node3DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { invisibleBase } from '../../../r3f/invisibleBase';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 
 export function Node3D({ node, children, ref }: NodeComponentProps & { ref?: Ref<THREE.Group> }) {
@@ -20,3 +21,5 @@ export function Node3D({ node, children, ref }: NodeComponentProps & { ref?: Ref
     </group>
   );
 }
+
+invisibleBase(Node3D);

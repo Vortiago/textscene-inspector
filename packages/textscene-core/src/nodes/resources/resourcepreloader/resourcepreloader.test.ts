@@ -23,6 +23,6 @@ describe('ResourcePreloader registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('ResourcePreloader')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('ResourcePreloader')).toBe('transform-only');
   });
 });

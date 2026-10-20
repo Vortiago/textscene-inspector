@@ -23,6 +23,6 @@ describe('AnimatableBody2D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('AnimatableBody2D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('AnimatableBody2D')).toBe('transform-only');
   });
 });

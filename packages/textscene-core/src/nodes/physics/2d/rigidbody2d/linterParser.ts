@@ -1,11 +1,11 @@
 /** RigidBody2D strict validators for linting. */
 
+import { scalarSlotValue } from '../../../../godot/variant/variantBool.js';
 import '../../shared/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import { propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
-import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import {
   CCD_MODE_NAMES,
   CENTER_OF_MASS_MODE_NAMES,
@@ -15,10 +15,10 @@ import {
 
 /** 2D inertia is a scalar (rotational mass around Z), unlike 3D's Vector3. */
 const inertia2d: PropertyValidator = (key, value, line) => {
-  // `parseGodotFloat`, not `parseFloat`: `inf` and `nan` are literals Godot
+  // `scalarSlotValue`, not `parseFloat`: `inf` and `nan` are literals Godot
   // writes and reloads, and `rigid_body_2d.cpp:328` refuses neither, so a
   // format error on one reports a value the engine accepts.
-  const num = parseGodotFloat(value);
+  const num = scalarSlotValue(value);
   if (num === null) {
     return propertyError(
       key,
