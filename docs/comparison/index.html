@@ -3779,7 +3779,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-geometryinstance3d-visibility-range</code> (type-family match)</td><td><code>geometryinstance3d-visibility-range-end-before-begin</code></td><td>warning</td></tr><tr><td></td><td><code>geometryinstance3d-visibility-range-begin-fade-without-margin</code></td><td>warning</td></tr><tr><td></td><td><code>geometryinstance3d-visibility-range-end-fade-without-margin</code></td><td>warning</td></tr></tbody></table></div>
 <p>The enum and range keys (<code>cast_shadow</code>, <code>gi_mode</code>, <code>layers</code>, <code>transparency</code>, the <code>visibility_range_*</code> floats) go through <code>parseOptionalInt</code> and <code>parseOptionalFloat</code>. An unparseable <code>cast_shadow</code>, <code>transparency</code> or <code>visibility_range_*</code> value keeps Godot's default. Any other unparseable value is dropped silently, and an out-of-range <code>cast_shadow = 99</code> is kept as is. The component treats any <code>cast_shadow</code> other than <code>0</code>, <code>2</code> or <code>3</code> as <code>1</code>, Godot's default. <code>mesh</code>, <code>material_override</code>, <code>skeleton</code>, <code>skin</code> and each surface override are assigned from the raw string with no resolution check.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> A transparent material renders darker than Godot's on a brightly lit face, while an opaque one agrees.</li><li><strong>Approximated</strong> A bright highlight on the metallic torus carries a soft glow halo in Godot, where here it ends sharply.</li><li><strong>Approximated</strong> three removes both cylinder caps or neither, so a <code>CylinderMesh</code> with exactly one of <code>cap_top</code> and <code>cap_bottom</code> disabled renders with both.</li></ul></div>
+<ul><li><strong>Approximated</strong> A transparent material renders darker than Godot's on a brightly lit face, while an opaque one agrees.</li><li><strong>Approximated</strong> A bright highlight on the metallic torus carries a soft glow halo in Godot, where here it ends sharply.</li></ul></div>
     </article>
     <article class="sheet" data-type="ModifierBoneTarget3D" hidden>
       <header class="sheet-head">
@@ -6182,7 +6182,7 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>An emissive sphere at <code>emission_energy = 2.0</code> glows cyan in both, and the preview environment blooms it. <code>emission_operator</code> is honoured, including MULTIPLY with no texture, which emits nothing. <code>emission_on_uv2</code> samples the mesh's UV2. The <code>glb-lightmap-uv2</code> golden draws it through a GLB's unwrapped UV2. The <code>primitive-mesh-uv2</code> golden draws it through the UV2 that each ported primitive builds under <code>add_uv2</code>.</p>
-<ul><li><strong>Approximated</strong> <code>emission_intensity</code> is ignored. <code>emission_energy_multiplier</code> alone drives the strength.</li><li><strong>Approximated</strong> A CylinderMesh or TorusMesh with <code>add_uv2</code> gets no UV2 here. <code>emission_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
+<ul><li><strong>Approximated</strong> <code>emission_intensity</code> is ignored. <code>emission_energy_multiplier</code> alone drives the strength.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Emission texture</h3><span class="status st-done">Done</span></div>
@@ -6285,8 +6285,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>anisotropy</code> stretches the specular highlight along the mesh's tangent. The SphereMesh carries Godot's tangents, so both engines draw a soft ring round the pole.</p>
-<ul><li><strong>Approximated</strong> A CylinderMesh or TorusMesh carries no tangents here. three derives the tangent frame per pixel from the UVs, so the streak reads faceted.</li></ul></div>
+        <div class="prose"><p><code>anisotropy</code> stretches the specular highlight along the mesh's tangent. The SphereMesh carries Godot's tangents, so both engines draw a soft ring round the pole.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Anisotropy flowmap</h3><span class="status st-done">Done</span></div>
@@ -6320,8 +6319,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>The left plate reads a checkerboard AO map at <code>ao_light_affect = 1.0</code>, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. <code>ao_texture_channel</code> picks the map channel, and <code>ao_on_uv2</code> samples the mesh's UV2.</p>
-<ul><li><strong>Approximated</strong> A CylinderMesh or TorusMesh with <code>add_uv2</code> gets no UV2 here. <code>ao_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
+        <div class="prose"><p>The left plate reads a checkerboard AO map at <code>ao_light_affect = 1.0</code>, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. <code>ao_texture_channel</code> picks the map channel, and <code>ao_on_uv2</code> samples the mesh's UV2.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Diffuse mode</h3><span class="status st-done">Done</span></div>

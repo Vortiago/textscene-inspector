@@ -10,9 +10,9 @@ import type { TorusMeshProperties } from './types';
 
 export function decodeTorusMesh(properties: Record<string, string>): TorusMeshProperties {
   return {
-    innerRadius: floatOr(properties.inner_radius, 0.5, 'TorusMesh innerRadius'),
-    outerRadius: floatOr(properties.outer_radius, 1.0, 'TorusMesh outerRadius'),
+    innerRadius: floatOr(properties.inner_radius, 0.5, 'TorusMesh inner_radius'),
+    outerRadius: floatOr(properties.outer_radius, 1.0, 'TorusMesh outer_radius'),
     rings: settableIntOr(properties.rings, 64, { min: 3 }, 'TorusMesh rings'),
-    ringSegments: settableIntOr(properties.ring_segments, 32, { min: 3 }, 'TorusMesh ringSegments'),
+    ringSegments: settableIntOr(properties.ring_segments, 32, { min: 3 }, 'TorusMesh ring_segments'),
   };
 }

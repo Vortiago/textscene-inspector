@@ -8,7 +8,16 @@ const TEXEL_SIZE = 0.2;
 const COARSE_SPHERE = { radius: '0.5', height: '1.0', radial_segments: '4', rings: '1' };
 
 /** Every type built from a port of its Godot `create_mesh_array`. */
-const PORTED_TYPES = ['BoxMesh', 'SphereMesh', 'PlaneMesh', 'QuadMesh', 'CapsuleMesh', 'PrismMesh'];
+const PORTED_TYPES = [
+  'BoxMesh',
+  'SphereMesh',
+  'PlaneMesh',
+  'QuadMesh',
+  'CylinderMesh',
+  'CapsuleMesh',
+  'TorusMesh',
+  'PrismMesh',
+];
 
 function sphere(data: Record<string, string> = {}) {
   return { id: 'sphere', type: 'SphereMesh', data: { ...COARSE_SPHERE, ...data } };

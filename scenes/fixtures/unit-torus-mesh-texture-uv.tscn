@@ -1,0 +1,43 @@
+[gd_scene load_steps=6 format=3 uid="uid://unittorusmeshtextureuv"]
+
+; The one variable: where a texture lands on a TorusMesh. Godot runs U round the axis from -Z and
+; V round the tube from its inner edge, so the stepped gradient turns from red to blue along both.
+; The second torus authors its radius pair reversed, and Godot swaps it to build the same ring. The
+; only other TorusMesh scene draws a flat colour, where the UV layout is invisible.
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TorusMesh" id="TorusMesh_uv"]
+material = SubResource("StandardMaterial3D_uv")
+inner_radius = 0.3
+outer_radius = 0.7
+rings = 32
+ring_segments = 16
+
+[sub_resource type="TorusMesh" id="TorusMesh_swapped"]
+material = SubResource("StandardMaterial3D_uv")
+inner_radius = 0.7
+outer_radius = 0.4
+rings = 32
+ring_segments = 16
+
+[node name="Root" type="Node3D"]
+
+[node name="Torus" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, -0.866025, 0, 0.866025, 0.5, -0.8, 0, 0)
+mesh = SubResource("TorusMesh_uv")
+
+[node name="Swapped" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, -0.866025, 0, 0.866025, 0.5, 0.8, 0, 0)
+mesh = SubResource("TorusMesh_swapped")

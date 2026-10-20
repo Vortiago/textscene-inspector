@@ -20,10 +20,10 @@ afterEach(() => {
 describe('decodeCylinderMesh', () => {
   it('falls back to the Godot defaults when everything is absent, silently', () => {
     expect(decodeCylinderMesh({})).toEqual({
-      top_radius: 0.5,
-      bottom_radius: 0.5,
+      topRadius: 0.5,
+      bottomRadius: 0.5,
       height: 2,
-      radial_segments: 64,
+      radialSegments: 64,
       rings: 4,
       capTop: true,
       capBottom: true,
@@ -43,10 +43,10 @@ describe('decodeCylinderMesh', () => {
         cap_bottom: 'false',
       })
     ).toEqual({
-      top_radius: 0,
-      bottom_radius: 2,
+      topRadius: 0,
+      bottomRadius: 2,
       height: 5,
-      radial_segments: 8,
+      radialSegments: 8,
       rings: 2,
       capTop: false,
       capBottom: false,
@@ -54,9 +54,9 @@ describe('decodeCylinderMesh', () => {
   });
 
   it('floors radial_segments at 4, not merely at 0', () => {
-    expect(decodeCylinderMesh({ radial_segments: '1' }).radial_segments).toBe(4);
-    expect(decodeCylinderMesh({ radial_segments: '-6' }).radial_segments).toBe(4);
-    expect(decodeCylinderMesh({ radial_segments: '32' }).radial_segments).toBe(32);
+    expect(decodeCylinderMesh({ radial_segments: '1' }).radialSegments).toBe(4);
+    expect(decodeCylinderMesh({ radial_segments: '-6' }).radialSegments).toBe(4);
+    expect(decodeCylinderMesh({ radial_segments: '32' }).radialSegments).toBe(32);
   });
 
   it('rejects rings below 0 (ERR_FAIL keeps the default 4) but allows 0', () => {
@@ -67,7 +67,7 @@ describe('decodeCylinderMesh', () => {
   it('warns then falls back per property for malformed values (never NaN)', () => {
     const p = decodeCylinderMesh({ height: 'nope', radial_segments: 'nope' });
     expect(p.height).toBe(2);
-    expect(p.radial_segments).toBe(64);
+    expect(p.radialSegments).toBe(64);
     expect(warnSpy).toHaveBeenCalled();
   });
 });
