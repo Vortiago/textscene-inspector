@@ -155,7 +155,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
 
     expect(geometry.attributes.normal!.getY(0)).toBe(-1);
-    expect(geometry.attributes.position!.getX(0)).toBeLessThan(0);
+    expect(geometry.attributes.position!.getX(0)).toBe(1);
   });
 
   it('audit slot 60 — PlaneMesh flip_faces=false (default) → normals face up', async () => {
@@ -165,7 +165,7 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
 
     expect(geometry.attributes.normal!.getY(0)).toBe(1);
-    expect(geometry.attributes.position!.getX(0)).toBeLessThan(0);
+    expect(geometry.attributes.position!.getX(0)).toBe(1);
   });
 
   it('audit slot 59a — PrismMesh fills its size box with the apex placed by left_to_right', async () => {

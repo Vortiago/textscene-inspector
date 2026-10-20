@@ -24,7 +24,7 @@ Godot reads a roughness map and a metallic map from the channel that `roughness_
 
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
-An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing. `emission_on_uv2` samples the mesh's UV2. The `glb-lightmap-uv2` golden draws it through a GLB's unwrapped UV2, and the `primitive-mesh-uv2` golden through the UV2 a SphereMesh, CapsuleMesh, BoxMesh, PrismMesh and PlaneMesh build under `add_uv2`.
+An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing. `emission_on_uv2` samples the mesh's UV2. The `glb-lightmap-uv2` golden draws it through a GLB's unwrapped UV2. The `primitive-mesh-uv2` golden draws it through the UV2 that each ported primitive builds under `add_uv2`.
 
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
 - **Approximated** A CylinderMesh or TorusMesh with `add_uv2` gets no UV2 here. `emission_on_uv2` on one samples the map's top-left texel, where Godot reads the generated UV2.
