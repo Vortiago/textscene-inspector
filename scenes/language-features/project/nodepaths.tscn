@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://textscene_lf_nodepaths"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Player" type="Node3D" parent="."]
+
+[node name="Sprite" type="Sprite3D" parent="Player"]
+
+[node name="Gun" type="Node3D" parent="Player/Sprite"]
+
+[node name="Label" type="Label3D" parent="Player"]
+unique_name_in_owner = true
+
+[connection signal="visibility_changed" from="Player/Sprite" to="." method="_on_sprite_visibility_changed"]
+[connection signal="visibility_changed" from="./Player" to="Player/Sprite/../Sprite/Gun" method="_on_player_visibility_changed"]
+[connection signal="visibility_changed" from="%Label" to="Missing" method="_on_label_visibility_changed"]
