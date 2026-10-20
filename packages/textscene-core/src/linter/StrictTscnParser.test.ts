@@ -141,6 +141,7 @@ visible = true
         orphanedNodes: [],
         rootWithParent: undefined,
         emptyParentHeadings: [],
+        refusesToInstantiate: false,
         idRecoveries: new Map(),
         connections: [],
         instancesOutsideNodeBody: [],

@@ -264,17 +264,32 @@ size = Vector3(1, 1, 1)
       vi.restoreAllMocks();
     });
 
-    it('warns once for each heading the tree could not place', () => {
+    it('warns once for each heading whose parent path vanished, naming the rename', () => {
       const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
       const scene = new TscnParser().parse(
         '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n[node name="Lost" type="Node3D" parent="Missing"]\n'
       );
 
-      expect(scene.nodes.map((n) => n.name)).toEqual(['Root']);
+      expect(scene.nodes[0]!.children.map((n) => n.name)).toEqual(['Missing#Lost']);
       const orphanWarnings = warn.mock.calls.filter(([message]) => String(message).includes('Orphaned node'));
       expect(orphanWarnings).toHaveLength(1);
-      expect(String(orphanWarnings[0]![0])).toContain('"Lost"');
+      expect(String(orphanWarnings[0]![0])).toContain('"Lost" re-rooted as "Missing#Lost"');
+    });
+
+    it('warns that a heading Godot does not re-root is dropped', () => {
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+      const scene = new TscnParser().parse(
+        '[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n\n[node name="Stray" type="Node3D"]\n\n[node name="Lost" type="Node3D" parent="Missing"]\n'
+      );
+
+      expect(scene.nodes[0]!.children).toEqual([]);
+      const messages = warn.mock.calls
+        .map(([message]) => String(message))
+        .filter((m) => m.includes('Orphaned node'));
+      expect(messages).toHaveLength(2);
+      expect(messages.every((message) => message.includes('dropped from the scene tree'))).toBe(true);
     });
 
     it('warns about no orphan for a well-formed scene', () => {

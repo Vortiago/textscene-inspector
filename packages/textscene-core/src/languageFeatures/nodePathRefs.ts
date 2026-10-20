@@ -6,6 +6,9 @@
  */
 
 import { resolveParentPath, type ParentPathTree } from '../godot/string/nodePath.js';
+import { serialChildName } from '../godot/string/nodeName.js';
+import { reparentedName } from '../godot/scene/packedScene.js';
+import { headingsRefuseInstantiate } from '../parser/instantiateRefusal.js';
 import { getAncestorPaths, joinPath, SCENE_ROOT_PATH } from '../utils/nodePath.js';
 import { claimsUniqueName, claimUniqueName, UNIQUE_NAME_PROPERTY } from '../utils/uniqueNames.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
@@ -59,9 +62,24 @@ function sceneRootOf(document: LanguageDocument): DocumentSection | undefined {
 }
 
 /**
+ * Whether Godot gives up on the scene before it re-roots a vanished `parent=`, read off the `[node]`
+ * headings as `refusesToInstantiate` reads the tree builder's.
+ */
+function refusesToInstantiateScene(nodes: readonly DocumentSection[]): boolean {
+  const [root] = nodes;
+  const rootIsUnidentified = !root?.attributes.type && !root?.attributes.instance;
+  return headingsRefuseInstantiate(
+    nodes.map(({ attributes }) => attributes.parent),
+    rootIsUnidentified
+  );
+}
+
+/**
  * The declared nodes, with the walk tables that resolve a path over them. Each heading is seated
  * under the path its `parent=` resolves to when it is read, as `buildSceneTree` seats it
  * (`packed_scene.cpp:157-165`), so a parent spelled `%Name` or `./A` seats it at the canonical path.
+ * A `parent=` that names nothing is seated under the root by Godot's rename, unless Godot refuses
+ * the scene or the heading carries a `parent_id_path=`, whose landing this walk does not follow.
  */
 function declaredNodes(document: LanguageDocument): Pick<NodeTable, 'byPath' | 'tree'> {
   const byPath = new Map<string, DocumentSection>();
@@ -71,18 +89,30 @@ function declaredNodes(document: LanguageDocument): Pick<NodeTable, 'byPath' | '
   const tree: ParentPathTree = { exists: (path) => enterable.has(path), uniquePaths };
   const root = sceneRootOf(document);
   if (root) byPath.set(SCENE_ROOT_PATH, root);
+  const reRootsVanished = !refusesToInstantiateScene(document.sections.filter(({ tag }) => tag === 'node'));
+  const rootChildNames = new Set<string>();
+  const seat = (section: DocumentSection, path: string, name: string) => {
+    byPath.set(path, section);
+    enterable.add(path);
+    for (const ancestor of getAncestorPaths(path)) enterable.add(ancestor);
+    if (claimsUniqueName(uniqueNameValueOf(section))) claimUniqueName(uniquePaths, name, path);
+  };
   for (const section of document.sections) {
     const { name, parent } = section.attributes;
     // A nameless heading claims no path, and a second parentless one is stranded.
     if (section.tag !== 'node' || !name || section === root || parent === undefined) continue;
     const parentPath = resolveParentPath(parent, tree);
-    if (parentPath === null) continue;
+    if (parentPath === null) {
+      if (!reRootsVanished || section.attributes.parent_id_path !== undefined) continue;
+      const renamed = serialChildName(reparentedName(parent, name), rootChildNames);
+      rootChildNames.add(renamed);
+      seat(section, joinPath(SCENE_ROOT_PATH, renamed), renamed);
+      continue;
+    }
     const path = joinPath(parentPath, name);
     if (byPath.has(path)) continue;
-    byPath.set(path, section);
-    enterable.add(path);
-    for (const ancestor of getAncestorPaths(path)) enterable.add(ancestor);
-    if (claimsUniqueName(uniqueNameValueOf(section))) claimUniqueName(uniquePaths, name, path);
+    if (parentPath === SCENE_ROOT_PATH) rootChildNames.add(name);
+    seat(section, path, name);
   }
   return { byPath, tree };
 }
