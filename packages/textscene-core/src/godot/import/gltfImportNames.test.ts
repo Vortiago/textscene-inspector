@@ -229,3 +229,65 @@ describe('gltfImportNames: meshes', () => {
     expect(gltfImportNames({ ...scene, nodes: [], meshes: [{}] }, CURRENT).meshes).toEqual(['robot_mesh']);
   });
 });
+
+describe('gltfImportNames: animations', () => {
+  const animation = (name?: string, extra: object = {}) => ({
+    ...(name === undefined ? {} : { name }),
+    channels: [],
+    samplers: [],
+    ...extra,
+  });
+  const animationNames = (animations: unknown[]) =>
+    gltfImportNames({ animations }, CURRENT).animations.map((entry) => entry?.name);
+
+  it.each([
+    ['idle_root.001', 'idle_root_001'],
+    ['a:b', 'a_b'],
+    ['a/b', 'a_b'],
+    ['a,b', 'a_b'],
+    ['a[b', 'a_b'],
+  ])('replaces the characters of %s that an animation name cannot carry', (name, stored) => {
+    expect(animationNames([animation(name)])).toEqual([stored]);
+  });
+
+  it('numbers a repeated name from 2, with no separator', () => {
+    expect(animationNames([animation('walk'), animation('walk'), animation('walk')])).toEqual([
+      'walk',
+      'walk2',
+      'walk3',
+    ]);
+  });
+
+  it.each(['Walk_Loop', 'loopWalk', 'run-cycle', 'CycleRun'])(
+    'loops %s, which begins or ends with loop or cycle',
+    (name) => {
+      expect(gltfImportNames({ animations: [animation(name)] }, CURRENT).animations[0]?.loops).toBe(true);
+    }
+  );
+
+  it('does not loop a name that only contains loop', () => {
+    expect(gltfImportNames({ animations: [animation('a_loop_b')] }, CURRENT).animations[0]?.loops).toBe(
+      false
+    );
+  });
+
+  it('reads the loop word in the name the glTF wrote, before the replacement', () => {
+    const [entry] = gltfImportNames({ animations: [animation('loop.001')] }, CURRENT).animations;
+    expect(entry).toEqual({ name: 'loop_001', loops: true });
+  });
+
+  it('names no animation without a name, a channels list or a samplers list', () => {
+    const unnamed = animation();
+    const noChannels = { name: 'a', samplers: [] };
+    const noSamplers = { name: 'b', channels: [] };
+    expect(gltfImportNames({ animations: [unnamed, noChannels, noSamplers] }, CURRENT).animations).toEqual([
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it('names none for a document with no animations', () => {
+    expect(gltfImportNames({ nodes: [] }, CURRENT).animations).toEqual([]);
+  });
+});

@@ -1,9 +1,8 @@
 /**
- * The loop mode and name Godot's scene importer gives an imported glTF clip: the glTF name rule,
- * the name suffix rule and the sidecar's `_subresources` entry, applied in that order.
+ * The loop mode and name Godot's scene importer gives an imported glTF clip after the glTF importer
+ * (`gltfImportNames.ts`): the name suffix rule, then the sidecar's `_subresources` entry.
  */
 
-import { validateNodeName } from '../string/nodeName.js';
 import { AnimationLoopMode } from '../scene/animation.js';
 
 export interface ClipImportOptions {
@@ -25,47 +24,25 @@ interface ImportedClip {
 /** The suffixes `_pre_fix_node` tests in this order (`resource_importer_scene.cpp:746-756`). */
 const LOOP_SUFFIXES = ['loop_mode', 'loop', 'cycle'] as const;
 
-/**
- * How Godot imports the clips a glTF names `gltfNames`, in order. The name rule reads the name
- * the glTF wrote. Everything after it, the suffix rule and the sidecar entry, reads the name
- * the glTF importer stores (`gltf_document.cpp:3751-3756`).
- */
-export function importedClips(gltfNames: readonly string[], options: ClipImportOptions): ImportedClip[] {
-  const takenNames = new Set<string>();
-  return gltfNames.map((gltfName) => {
-    let loopMode: number = namesLoop(gltfName) ? AnimationLoopMode.LINEAR : AnimationLoopMode.NONE;
-    let name = uniqueName(gltfName, takenNames);
-    if (options.useNameSuffixes) {
-      for (const suffix of LOOP_SUFFIXES) {
-        const stripped = withoutMarker(name, suffix);
-        if (stripped === null) continue;
-        loopMode = AnimationLoopMode.LINEAR;
-        name = stripped;
-      }
+/** A clip as the glTF importer left it: its stored name, and whether its name made it loop. */
+export interface GltfClip {
+  name: string;
+  loops: boolean;
+}
+
+/** How the scene importer imports `clip`: the suffix rule, then the sidecar entry under the name that remains. */
+export function importedClip(clip: GltfClip, options: ClipImportOptions): ImportedClip {
+  let loopMode: number = clip.loops ? AnimationLoopMode.LINEAR : AnimationLoopMode.NONE;
+  let name = clip.name;
+  if (options.useNameSuffixes) {
+    for (const suffix of LOOP_SUFFIXES) {
+      const stripped = withoutMarker(name, suffix);
+      if (stripped === null) continue;
+      loopMode = AnimationLoopMode.LINEAR;
+      name = stripped;
     }
-    return { name, loopMode: options.sidecarLoopModes.get(name) ?? loopMode };
-  });
-}
-
-/**
- * `_gen_unique_animation_name` (`gltf_document.cpp:475-495`): the name as `_sanitize_animation_name`
- * leaves it (`:470-473`), or the first of `name2`, `name3` and so on that no earlier clip took.
- */
-function uniqueName(gltfName: string, takenNames: Set<string>): string {
-  const sanitised = validateNodeName(gltfName).replace(/[/:,[]/g, '_');
-  let name = sanitised;
-  for (let index = 2; takenNames.has(name); index++) name = `${sanitised}${index}`;
-  takenNames.add(name);
-  return name;
-}
-
-/**
- * The glTF importer loops a clip whose lower-cased name begins or ends with loop or cycle
- * (`gltf_document.cpp:3750-3753`).
- */
-function namesLoop(gltfName: string): boolean {
-  const lower = gltfName.toLowerCase();
-  return ['loop', 'cycle'].some((word) => lower.startsWith(word) || lower.endsWith(word));
+  }
+  return { name, loopMode: options.sidecarLoopModes.get(name) ?? loopMode };
 }
 
 /** The name without the trailing digits, control characters, spaces and `_` that Blender appends. */
