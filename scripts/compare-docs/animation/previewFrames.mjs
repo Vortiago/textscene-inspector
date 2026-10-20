@@ -58,7 +58,7 @@ export function captureOurFrames(fixture, framesDir, mode, driverText) {
       await page.waitForTimeout(150);
 
       await mkdir(framesDir, { recursive: true });
-      const shoot = targetShooter(target);
+      const { shoot } = targetShooter(target);
       for (let i = 0; i < FRAMES; i++) {
         const t = (duration * i) / FRAMES;
         // A React-controlled input: set through the native value setter and fire input and change,

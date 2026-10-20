@@ -14,25 +14,34 @@ const DEFAULT_SHOT_TIMEOUT_MS = 30000;
 const cdpSessions = new WeakMap();
 
 /**
- * A function that answers the target's whole-pixel box as a PNG buffer on each call. It scrolls
- * the target into view and measures its box once, at the first call, since a capture target keeps
- * its layout between shots. A call rejects with a `TimeoutError` when the shot outlasts `timeout`,
+ * Shoots the target's whole-pixel box as a PNG buffer. `shoot` scrolls the target into view and
+ * measures its box once, at its first call, so later shots skip the main-thread wait. `boxChanged`
+ * measures again and answers whether the box moved since, so a caller can prove a matching pair
+ * is no crop of a resized target. A call rejects with a `TimeoutError` when it outlasts `timeout`,
  * as Playwright's own screenshot does, and a `timeout` of 0 waits without limit, as Playwright's does.
  *
  * @param {import('playwright').Locator} target - the canvas, or the 2D frame, in the page or a frame.
  * @param {{ timeout?: number }} [options]
- * @returns {() => Promise<Buffer>}
+ * @returns {{ shoot: () => Promise<Buffer>, boxChanged: () => Promise<boolean> }}
  */
 export function targetShooter(target, { timeout = DEFAULT_SHOT_TIMEOUT_MS } = {}) {
   let clip;
-  return async () => {
-    clip ??= await clipOf(target, timeout);
-    const session = await cdpSessionOf(target.page());
-    const { data } = await withTimeout(
-      session.send('Page.captureScreenshot', { format: 'png', clip }),
-      timeout
-    );
-    return Buffer.from(data, 'base64');
+  return {
+    async shoot() {
+      clip ??= await clipOf(target, timeout);
+      const session = await cdpSessionOf(target.page());
+      const { data } = await withTimeout(
+        session.send('Page.captureScreenshot', { format: 'png', clip }),
+        timeout
+      );
+      return Buffer.from(data, 'base64');
+    },
+    async boxChanged() {
+      const measured = await clipOf(target, timeout);
+      const changed = ['x', 'y', 'width', 'height'].some((key) => measured[key] !== clip?.[key]);
+      clip = measured;
+      return changed;
+    },
   };
 }
 

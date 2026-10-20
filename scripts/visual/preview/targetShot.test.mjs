@@ -30,7 +30,7 @@ function stubTarget({ box = { x: 0, y: 0, width: 8, height: 8 }, scroll = { x: 0
 describe('targetShooter', () => {
   it('answers the PNG bytes the DevTools protocol sends for the target box', async () => {
     const { target, session } = stubTarget();
-    const shot = await targetShooter(target)();
+    const shot = await targetShooter(target).shoot();
     expect(shot.toString()).toBe('png');
     expect(session.calls[0]).toEqual({
       method: 'Page.captureScreenshot',
@@ -40,7 +40,7 @@ describe('targetShooter', () => {
 
   it('captures the whole pixels that enclose the target, as an element screenshot does', async () => {
     const { target, session } = stubTarget({ box: { x: 0.5, y: 10.2, width: 100.4, height: 50 } });
-    await targetShooter(target)();
+    await targetShooter(target).shoot();
     expect(session.calls[0].params.clip).toEqual({ x: 0, y: 10, width: 101, height: 51, scale: 1 });
   });
 
@@ -49,13 +49,13 @@ describe('targetShooter', () => {
       box: { x: 4, y: 6, width: 8, height: 8 },
       scroll: { x: 0, y: 300 },
     });
-    await targetShooter(target)();
+    await targetShooter(target).shoot();
     expect(session.calls[0].params.clip).toEqual({ x: 4, y: 306, width: 8, height: 8, scale: 1 });
   });
 
   it('measures the target once for every shot', async () => {
     const { target, session } = stubTarget();
-    const shoot = targetShooter(target);
+    const { shoot } = targetShooter(target);
     await shoot();
     await shoot();
     await shoot();
@@ -63,20 +63,32 @@ describe('targetShooter', () => {
     expect(target.boxCalls).toBe(1);
   });
 
+  it('answers whether the box moved since the last measurement', async () => {
+    const { target } = stubTarget();
+    const shooter = targetShooter(target);
+    await shooter.shoot();
+    expect(await shooter.boxChanged()).toBe(false);
+    target.boundingBox = async () => ({ x: 0, y: 0, width: 16, height: 8 });
+    expect(await shooter.boxChanged()).toBe(true);
+    expect(await shooter.boxChanged()).toBe(false);
+  });
+
   it('refuses a target with no box rather than capturing the wrong region', async () => {
     const { target } = stubTarget({ box: null });
-    await expect(targetShooter(target)()).rejects.toThrow(/not visible/);
+    await expect(targetShooter(target).shoot()).rejects.toThrow(/not visible/);
   });
 
   it('reports a shot that outlasts its timeout as a TimeoutError', async () => {
     const { target } = stubTarget({ send: () => new Promise(() => {}) });
-    await expect(targetShooter(target, { timeout: 5 })()).rejects.toMatchObject({ name: 'TimeoutError' });
+    await expect(targetShooter(target, { timeout: 5 }).shoot()).rejects.toMatchObject({
+      name: 'TimeoutError',
+    });
   });
 
   it('waits without limit for a timeout of 0, as Playwright does', async () => {
     const { target } = stubTarget({
       send: () => new Promise((resolve) => setTimeout(() => resolve({ data: '' }), 5)),
     });
-    await expect(targetShooter(target, { timeout: 0 })()).resolves.toBeInstanceOf(Buffer);
+    await expect(targetShooter(target, { timeout: 0 }).shoot()).resolves.toBeInstanceOf(Buffer);
   });
 });

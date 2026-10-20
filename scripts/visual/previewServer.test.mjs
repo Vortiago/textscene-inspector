@@ -113,6 +113,21 @@ describe('settleCanvas', () => {
     expect(bare.canvas.boxOptions.at(-1)).toEqual({ timeout: 30000 });
   });
 
+  it('re-shoots a matching pair whose target resized after the box was measured', async () => {
+    // The canvas grows after the first measurement. Every shot through the old box matches the
+    // one before it, so only a second measurement shows the pair is a crop.
+    const { page, canvas, session } = stubCanvas([]);
+    const boxes = [{ x: 0, y: 0, width: 8, height: 8 }];
+    canvas.boundingBox = async () => boxes.at(-1);
+    session.send = async (method, params) => {
+      session.calls.push({ method, params });
+      if (session.calls.length === 1) boxes.push({ x: 0, y: 0, width: 16, height: 8 });
+      return { data: Buffer.from(`width ${params.clip.width}`).toString('base64') };
+    };
+    const { buffer } = await settleCanvas(page, canvas);
+    expect(buffer.toString()).toBe('width 16');
+  });
+
   it('takes no shot until the texture work status has detached', async () => {
     const events = [];
     const status = {
