@@ -4,7 +4,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import * as THREE from 'three';
 
 const warnCalls: unknown[][] = [];
@@ -284,6 +284,30 @@ describe('useViewportTextureSlot views', () => {
     expect(retainers.count).toBe(0);
   });
 
+  /**
+   * The pass fills a copy only while it is retained, and a frame can run between a commit and its
+   * passive effects. A layout effect runs inside the commit, so it sees what that frame would.
+   */
+  it('retains the decoding view in the commit that binds it, before any frame can draw', () => {
+    const { entry, retainers } = entryWithDecodingView();
+    const commits: { texture: THREE.Texture | null; retainers: number }[] = [];
+    const tree = (withConsumer: boolean) => (
+      <ViewportTextureProvider>
+        <ViewportTexturePublisher path="Root/SubViewport" entry={entry} />
+        <NodePathProvider path="Root/Screen">
+          {withConsumer && (
+            <CommitRecorder onCommit={(texture) => commits.push({ texture, retainers: retainers.count })} />
+          )}
+        </NodePathProvider>
+      </ViewportTextureProvider>
+    );
+    const { rerender } = render(tree(false));
+    rerender(tree(true));
+    const bound = commits.filter((commit) => commit.texture === entry.decoding.texture);
+    expect(bound.length).toBeGreaterThan(0);
+    expect(bound.every((commit) => commit.retainers === 1)).toBe(true);
+  });
+
   it('resolves the plain view and fills no decoding view (edge case)', () => {
     const { resolved, entry, retainers } = mountView('plain');
     expect(resolved()).toBe(entry.texture);
@@ -312,6 +336,15 @@ function ViewConsumer({
   onResolve: (result: ReturnType<typeof useViewportTextureSlot>) => void;
 }) {
   onResolve(useViewportTextureSlot('SubResource("ViewportTexture_1")', RESOURCES, view));
+  return null;
+}
+
+/** A decoding consumer that reports, inside each commit, the view it binds. */
+function CommitRecorder({ onCommit }: { onCommit: (texture: THREE.Texture | null) => void }) {
+  const { texture } = useViewportTextureSlot('SubResource("ViewportTexture_1")', RESOURCES, 'decoding');
+  useLayoutEffect(() => {
+    onCommit(texture);
+  });
   return null;
 }
 

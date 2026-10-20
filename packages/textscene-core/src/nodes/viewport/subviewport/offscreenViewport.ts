@@ -40,6 +40,7 @@ export function createCanvasTarget(width: number, height: number, name: string):
   const target = createTarget(width, height, name);
   pinColorSpace(target.texture, THREE.SRGBColorSpace);
   target.texture.internalFormat = 'RGBA8';
+  // An explicit mark, not a rule on RGBA8 under an sRGB tag: CanvasMsaaFrame has that shape too.
   markSrgbBytes(target.texture);
   return target;
 }

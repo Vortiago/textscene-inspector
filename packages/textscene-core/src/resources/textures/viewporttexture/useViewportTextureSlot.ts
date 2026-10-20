@@ -5,7 +5,7 @@
  * `resolveTexture2DPath`, whose `string | null` cannot carry it.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type * as THREE from 'three';
 
 import * as logger from '../../../logger.js';
@@ -73,7 +73,9 @@ export function useViewportTargetSlot(
   const cyclic = cycle !== null;
 
   const decoding = view === 'decoding' && !cyclic ? (entry?.decoding ?? null) : null;
-  useEffect(() => decoding?.retain(), [decoding]);
+  // A layout effect, not a passive one: a frame can run between a commit and its passive
+  // effects, and the pass fills only a retained copy, so that frame would sample it unfilled.
+  useLayoutEffect(() => decoding?.retain(), [decoding]);
 
   const lastWarnedKey = useRef<string | null>(null);
   useEffect(() => {
