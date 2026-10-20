@@ -7,16 +7,26 @@ import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { parseBinaryResource } from '../formats/binaryresource/parse';
 import { ragdollBytes } from '../testing/ragdollBake';
+import { EMPTY_AABB } from '../../godot/math/aabb';
 import { decodeLightmapGIData } from './decode';
 
 /** A `.tres` LightmapGIData whose `[resource]` body is `body`. */
 function decodeText(body: string) {
-  return decodeLightmapGIData(
-    parseTresFile(
-      '[gd_resource type="LightmapGIData" format=3]\n\n' +
-        '[ext_resource type="CompressedTexture2DArray" path="res://bake.exr" id="1_tex"]\n\n' +
-        `[resource]\n${body}\n`
-    )
+  const { properties, extResources } = parseTresFile(
+    '[gd_resource type="LightmapGIData" format=3]\n\n' +
+      '[ext_resource type="CompressedTexture2DArray" path="res://bake.exr" id="1_tex"]\n\n' +
+      `[resource]\n${body}\n`
+  );
+  return decodeLightmapGIData(properties, extResources);
+}
+
+/** A `probe_data` Dictionary with bounds of size 2 and `points`. */
+function probeData(points: string): string {
+  return (
+    'probe_data = {\n"bounds": AABB(-1, -1, -1, 2, 2, 2), "points": ' +
+    points +
+    ', "tetrahedra": PackedInt32Array(), "bsp": PackedInt32Array(), "sh": PackedColorArray(), ' +
+    '"interior": false, "baked_exposure": 1.0\n}'
   );
 }
 
@@ -24,7 +34,10 @@ function decodeText(body: string) {
 const ONE_USER = 'user_data = [NodePath("../Mesh"), Rect2(0, 0, 1, 1), 0, -1]';
 
 describe('decodeLightmapGIData on the ragdoll bake', () => {
-  const bake = () => decodeLightmapGIData(parseBinaryResource(ragdollBytes('ragdoll_physics.lmbake')));
+  const bake = () => {
+    const { properties, extResources } = parseBinaryResource(ragdollBytes('ragdoll_physics.lmbake'));
+    return decodeLightmapGIData(properties, extResources);
+  };
 
   it('reads each baked user: its node path, its rect in the atlas, its slice and its sub-instance', () => {
     const [user] = bake().users;
@@ -38,6 +51,13 @@ describe('decodeLightmapGIData on the ragdoll bake', () => {
 
   it('resolves each lightmap texture to the path its external resource names', () => {
     expect(bake().lightmapTextures).toEqual(['res://ragdoll_physics.exr']);
+  });
+
+  it('reads the capture bounds the renderer culls the lightmap by', () => {
+    expect(bake().bounds).toEqual({
+      position: { x: -8.023788, y: -0.6158713, z: -8.023788 },
+      size: { x: 16.047577, y: 8.023788, z: 16.047577 },
+    });
   });
 });
 
@@ -68,6 +88,20 @@ describe('decodeLightmapGIData on text', () => {
 
   it('reads spherical harmonics as on when the file sets it', () => {
     expect(decodeText('uses_spherical_harmonics = true').usesSphericalHarmonics).toBe(true);
+  });
+
+  it('reads no capture bounds from data with no probe data, as LightmapGIData starts with none', () => {
+    expect(decodeText('').bounds).toEqual(EMPTY_AABB);
+  });
+
+  it('reads no capture bounds from probe data with no points, which set_capture_data drops', () => {
+    expect(decodeText(probeData('PackedVector3Array()')).bounds).toEqual(EMPTY_AABB);
+  });
+
+  it('reads no capture bounds from probe data missing a field, which _set_probe_data refuses (error case)', () => {
+    expect(
+      decodeText(probeData('PackedVector3Array(0, 0, 0)').replace('"bsp": PackedInt32Array(), ', '')).bounds
+    ).toEqual(EMPTY_AABB);
   });
 
   it('keeps the users of directional data in the packed format a 4.x bake writes', () => {

@@ -1,5 +1,6 @@
 /** A LightmapGIData resource as the renderer reads it (`scene/3d/lightmap_gi.h:45-129`). */
 
+import type { Aabb } from '../../godot/math/aabb';
 import type { Rect2Value } from '../../parser/valueParsers';
 
 /** One baked instance (`LightmapGIData::User`, `lightmap_gi.h:53-58`). */
@@ -21,4 +22,6 @@ export interface LightmapGIData {
   usesSphericalHarmonics: boolean;
   /** The users a LightmapGI assigns the data to. */
   users: readonly LightmapUser[];
+  /** The capture's bounds in the LightmapGI's space, which the renderer culls the lightmap by. */
+  bounds: Aabb;
 }

@@ -25,6 +25,7 @@ import {
 } from '../godot/rendering/environment/volumetricFog.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import type { Rgba } from '../godot/math/math.js';
+import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -148,6 +149,17 @@ export function projectClearColor(settings: ProjectSettings | null): Rgba {
 export function projectPrimitiveMeshTexelSize(settings: ProjectSettings | null): number {
   const setting = parseOptionalFloat(settings?.['rendering/lightmapping/primitive_meshes/texel_size']);
   return primitiveMeshTexelSize(setting ?? DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+}
+
+/**
+ * `rendering/lightmapping/lightmap_gi/use_bicubic_filter`, which every lightmap read takes
+ * (`renderer_scene_render_rd.cpp:1732`), or Godot's default for an absent or malformed value.
+ */
+export function projectUsesLightmapBicubicFilter(settings: ProjectSettings | null): boolean {
+  return (
+    boolSlotValue(settings?.['rendering/lightmapping/lightmap_gi/use_bicubic_filter']) ??
+    LIGHTMAP_BICUBIC_FILTER_DEFAULT
+  );
 }
 
 /**

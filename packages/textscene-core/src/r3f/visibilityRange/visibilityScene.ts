@@ -14,6 +14,7 @@ import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/rendering
 import { observeSceneCull } from '../sceneRenderCamera';
 import { sceneSplitsHold } from '../directionalShadow/fitSceneDirectionalShadows';
 import { compareTreeOrder, type TreeOrder } from '../contexts/TreeOrderContext';
+import { cameraFrustum } from '../cameraFrustum';
 
 /** Where an instance's node sits in the scene tree, and which node it names as visibility parent. */
 export interface NodePlace {
@@ -99,8 +100,7 @@ function createRegistry(scene: THREE.Scene): SceneInstances {
 }
 
 /** Scratch, reused by every cull: three renders one scene at a time. */
-const viewProjection = new THREE.Matrix4();
-const cameraFrustum = new THREE.Frustum();
+const frustum = new THREE.Frustum();
 const cameraPosition = new THREE.Vector3();
 const box = new THREE.Box3();
 const boxCentre = new THREE.Vector3();
@@ -110,8 +110,7 @@ function cullScene(scene: THREE.Scene, registry: SceneInstances, camera: THREE.C
   for (const instance of unculled) instance.apply(true, 1);
   if (members.length === 0) return;
 
-  viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-  cameraFrustum.setFromProjectionMatrix(viewProjection);
+  cameraFrustum(camera, frustum);
   cameraPosition.setFromMatrixPosition(camera.matrixWorld);
 
   const states = members.map((instance) => registry.instances.get(instance)!);
@@ -124,7 +123,7 @@ function cullScene(scene: THREE.Scene, registry: SceneInstances, camera: THREE.C
       isIndexed: instance.isIndexed,
       parent: parents[i]!,
       distance: cameraPosition.distanceTo(box.getCenter(boxCentre)),
-      isInView: cameraFrustum.intersectsBox(box) || sceneSplitsHold(scene, box),
+      isInView: frustum.intersectsBox(box) || sceneSplitsHold(scene, box),
       wasVisible: states[i]!.wasVisible.get(camera) ?? false,
     };
   });

@@ -27,6 +27,7 @@ import { visibleInTree } from '../../visibleInTree';
 import type { NodePlace } from '../../visibilityRange/visibilityScene';
 import { childOrders, useTreeOrder, type TreeOrder } from '../../contexts/TreeOrderContext';
 import { useUniqueNamePaths } from '../../useUniqueNames';
+import { lightmapsOf, type LightmapAssignment } from '../../lightmap/sceneLightmaps';
 import { glbObjectName, type GlbObjectEntry } from './glbHierarchy';
 import type { GlbRoot } from './GlbInstanceContext';
 import { isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
@@ -108,9 +109,10 @@ function overridesByTarget(
 }
 
 /**
- * Registers each MeshInstance3D of the mounted GLB `object` with the scene cull. Each keeps one
- * instance while its object is mounted, as an authored MeshInstance3D does, so a scene edit keeps
- * the instance's previous visibility per camera and its faded materials.
+ * Registers each MeshInstance3D of the mounted GLB `object` with the scene cull, and gives it the
+ * lightmap of the LightmapGI that names it. Each keeps one instance while its object is mounted,
+ * as an authored MeshInstance3D does, so a scene edit keeps the instance's previous visibility per
+ * camera and its faded materials.
  */
 export function useGlbGeometryInstances(
   object: THREE.Object3D | undefined,
@@ -118,6 +120,7 @@ export function useGlbGeometryInstances(
   root: GlbRoot
 ): void {
   const scene = useThree((state) => state.scene);
+  const invalidate = useThree((state) => state.invalidate);
   const uniquePaths = useUniqueNamePaths(root.path);
   const rootOrder = useTreeOrder();
   const instances = useMemo(
@@ -137,13 +140,32 @@ export function useGlbGeometryInstances(
       culled.current.get(meshObject)?.update(place, properties);
     }
   }, [scene, object, entries, instances]);
+  useLayoutEffect(() => {
+    const lightmaps = lightmapsOf(scene);
+    const assignLightmaps = () => {
+      for (const { object: meshObject, place } of instances) {
+        culled.current
+          .get(meshObject)
+          ?.setLightmap(place.path === null ? null : lightmaps.assignmentFor(place.path));
+      }
+      invalidate();
+    };
+    assignLightmaps();
+    return lightmaps.subscribe(assignLightmaps);
+  }, [scene, object, entries, instances, invalidate]);
 }
 
-/** One MeshInstance3D's cull instance, kept while its object is mounted. */
+/** One MeshInstance3D's cull instance and the faded materials of its surfaces, kept while its object is mounted. */
 class CulledMeshInstance {
   readonly instance = new CulledInstance();
+  /** Filled by `cullMeshInstance`, one per surface. */
+  readonly materials: FadedMeshMaterials[] = [];
 
   constructor(private readonly surfaces: readonly MeshSurface[]) {}
+
+  setLightmap(lightmap: LightmapAssignment | null): void {
+    for (const materials of this.materials) materials.setLightmap(lightmap);
+  }
 
   update(place: NodePlace, properties: GeometryInstance3DProperties): void {
     this.instance.update(place, properties);
@@ -162,7 +184,7 @@ function cullMeshInstance(
   const mesh = new CulledMeshInstance(surfaces);
   mesh.instance.hasBase = true;
   mesh.instance.placement = glbPlacement(object, surfaces);
-  const releases = surfaces.map((surface) => fadeSurface(mesh.instance, surface));
+  const releases = surfaces.map((surface) => fadeSurface(mesh, surface));
   const unregister = registerVisibilityInstance(scene, mesh.instance);
   culled.set(object, mesh);
   return () => {
@@ -172,9 +194,10 @@ function cullMeshInstance(
   };
 }
 
-function fadeSurface(instance: CulledInstance, surface: MeshSurface): () => void {
+function fadeSurface(mesh: CulledMeshInstance, surface: MeshSurface): () => void {
   const materials = new FadedMeshMaterials(surface);
-  const remove = instance.add(materials);
+  mesh.materials.push(materials);
+  const remove = mesh.instance.add(materials);
   return () => {
     remove();
     materials.dispose();

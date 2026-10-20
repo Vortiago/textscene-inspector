@@ -48,3 +48,20 @@ const ShadowmaskMode = {
 
 /** Each shadowmask mode the hint offers by its integer, spelled as its constant without `SHADOWMASK_MODE_`. */
 export const LIGHTMAP_GI_SHADOWMASK_MODE_NAMES = enumNamesByValue(ShadowmaskMode);
+
+/** `rendering/lightmapping/lightmap_gi/use_bicubic_filter` (`rendering_server.cpp:3822`). */
+export const LIGHTMAP_BICUBIC_FILTER_DEFAULT = true;
+
+/** `LightmapGIData::_set_user_data` reads each user as four elements (`lightmap_gi.cpp:83-89`). */
+export const LIGHTMAP_USER_FIELDS = 4;
+
+/** The fields `LightmapGIData::_set_probe_data` requires before it sets anything (`lightmap_gi.cpp:275-281`). */
+export const LIGHTMAP_PROBE_DATA_FIELDS = [
+  'bounds',
+  'points',
+  'tetrahedra',
+  'bsp',
+  'sh',
+  'interior',
+  'baked_exposure',
+] as const;

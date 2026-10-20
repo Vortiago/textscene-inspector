@@ -9,6 +9,8 @@ import {
   opaquePrepassUserData,
 } from './opaquePrepass';
 import { REBUILDS_NORMAL_MAP_BLUE, patchedFragment } from '../testing/patchedFragment';
+import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
+import { LightmapInstance, type LightmapAssignment } from '../lightmap/sceneLightmaps';
 
 /** A fade whose alpha is 39/255: inside the alpha pass. */
 const MARGIN_FADE = 0.15625;
@@ -253,5 +255,105 @@ describe('FadedMeshMaterials: the normal map read of an import', () => {
     const mesh = meshOf(new THREE.MeshStandardMaterial());
     new FadedMeshMaterials(mesh).applyFade(NEAR_FULL_FADE);
     expect(patchedFragment(mesh.material as THREE.Material)).not.toContain(REBUILDS_NORMAL_MAP_BLUE);
+  });
+});
+
+describe('FadedMeshMaterials.setLightmap', () => {
+  /** A drawn lightmap that names the mesh. */
+  function assignment(): LightmapAssignment {
+    const lightmap = new LightmapInstance(new THREE.Object3D());
+    lightmap.isDrawn = true;
+    const user = {
+      path: '../Mesh',
+      uvScale: { x: 0, y: 0, width: 1, height: 1 },
+      sliceIndex: 0,
+      subInstance: -1,
+    };
+    return { lightmap, user };
+  }
+
+  /** Whether `material` compiles with the lightmap read, and its uniforms read a drawn one. */
+  function readsDrawnLightmap(material: THREE.Material): boolean {
+    if (!material.customProgramCacheKey().includes('godot-lightmap-read')) return false;
+    const shader = {
+      vertexShader: THREE.ShaderLib.standard.vertexShader,
+      fragmentShader: THREE.ShaderLib.standard.fragmentShader,
+      uniforms: {} as Record<string, THREE.IUniform>,
+    };
+    material.onBeforeCompile.call(material, shader as never, null as never);
+    return shader.uniforms.godotLightmapActive!.value === true;
+  }
+
+  it('draws a copy of an opaque lit material that reads the lightmap, at a full fade', () => {
+    const unfaded = new THREE.MeshStandardMaterial();
+    const mesh = meshOf(unfaded);
+    const materials = new FadedMeshMaterials(mesh);
+
+    materials.setLightmap(assignment());
+    materials.applyFade(1);
+
+    expect(mesh.material).not.toBe(unfaded);
+    expect(unfadedMaterial(mesh.material as THREE.Material)).toBe(unfaded);
+    expect(readsDrawnLightmap(mesh.material as THREE.Material)).toBe(true);
+  });
+
+  it('builds the copy through the registered builder, with the lightmap read added', () => {
+    const unfaded = new THREE.MeshStandardMaterial();
+    const build = vi.fn(() => new THREE.MeshStandardMaterial());
+    registerFadedCopyBuilders(unfaded, { unfaded: build, alphaPass: build });
+    const materials = new FadedMeshMaterials(meshOf(unfaded));
+
+    materials.setLightmap(assignment());
+    materials.applyFade(1);
+
+    expect(build).toHaveBeenCalledWith(LIGHTMAP_PROGRAM);
+  });
+
+  it('keeps a transparent material, which Godot draws outside the opaque pass', () => {
+    const unfaded = new THREE.MeshStandardMaterial({ transparent: true });
+    const mesh = meshOf(unfaded);
+    const materials = new FadedMeshMaterials(mesh);
+
+    materials.setLightmap(assignment());
+    materials.applyFade(1);
+
+    expect(mesh.material).toBe(unfaded);
+  });
+
+  it('reads no lightmap in the alpha pass', () => {
+    const mesh = meshOf(new THREE.MeshStandardMaterial());
+    const materials = new FadedMeshMaterials(mesh);
+
+    materials.setLightmap(assignment());
+    materials.applyFade(MARGIN_FADE);
+
+    expect(readsDrawnLightmap(mesh.material as THREE.Material)).toBe(false);
+  });
+
+  it('puts the unfaded material back once no LightmapGI names the mesh (edge case)', () => {
+    const unfaded = new THREE.MeshStandardMaterial();
+    const mesh = meshOf(unfaded);
+    const materials = new FadedMeshMaterials(mesh);
+    materials.setLightmap(assignment());
+    materials.applyFade(1);
+
+    materials.setLightmap(null);
+    materials.applyFade(1);
+
+    expect(mesh.material).toBe(unfaded);
+  });
+
+  it('binds a copy it has built to the new assignment', () => {
+    const mesh = meshOf(new THREE.MeshStandardMaterial());
+    const materials = new FadedMeshMaterials(mesh);
+    const first = assignment();
+    materials.setLightmap(first);
+    materials.applyFade(1);
+    first.lightmap.isDrawn = false;
+
+    materials.setLightmap(assignment());
+    materials.applyFade(1);
+
+    expect(readsDrawnLightmap(mesh.material as THREE.Material)).toBe(true);
   });
 });

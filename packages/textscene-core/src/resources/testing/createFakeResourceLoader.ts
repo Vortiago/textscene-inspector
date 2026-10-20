@@ -59,6 +59,7 @@ export interface FakeResourceLoader {
   readonly metadata: MetadataStore;
   readonly textures: FakeProcessor<THREE.Texture>;
   readonly textures3D: FakeProcessor<THREE.Data3DTexture>;
+  readonly textureArrays: FakeProcessor<THREE.DataArrayTexture>;
   readonly glbMeshes: FakeProcessor<THREE.Object3D>;
   readonly scenes: FakeProcessor<TscnScene>;
   readonly resources: FakeProcessor<ParsedResource>;
@@ -228,6 +229,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     metadata,
     textures,
     textures3D,
+    textureArrays,
     glbMeshes,
     scenes,
     resources,

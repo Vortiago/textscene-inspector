@@ -18,6 +18,7 @@ import {
   projectThemeScale,
   projectClearColor,
   projectTransparentBackground,
+  projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectViewportSize,
   projectVolumetricFogSettings,
@@ -214,6 +215,22 @@ describe('projectTransparentBackground', () => {
   it('is opaque with no project or a malformed value', () => {
     expect(projectTransparentBackground(null)).toBe(false);
     expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'yes' })).toBe(false);
+  });
+});
+
+describe('projectUsesLightmapBicubicFilter', () => {
+  const KEY = 'rendering/lightmapping/lightmap_gi/use_bicubic_filter';
+
+  it('reads a project that turns the filter off', () => {
+    expect(projectUsesLightmapBicubicFilter({ [KEY]: 'false' })).toBe(false);
+  });
+
+  it("filters with no project, Godot's default (rendering_server.cpp:3822)", () => {
+    expect(projectUsesLightmapBicubicFilter(null)).toBe(true);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectUsesLightmapBicubicFilter({ [KEY]: 'sometimes' })).toBe(true);
   });
 });
 

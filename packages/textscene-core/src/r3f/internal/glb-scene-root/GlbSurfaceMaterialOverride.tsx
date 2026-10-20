@@ -61,7 +61,7 @@ export function GlbSurfaceMaterialOverride({
     if (!bags) return materialFromBag(MISSING_TEXTURE_MATERIAL);
     const unfaded = materialFromBag(bags.unfaded);
     registerFadedCopyBuilders(unfaded, {
-      unfaded: () => materialFromBag(bags.unfaded),
+      unfaded: (extra) => materialFromBag(bags.unfaded, extra),
       alphaPass: () => materialFromBag(bags.alphaPass),
     });
     return unfaded;
