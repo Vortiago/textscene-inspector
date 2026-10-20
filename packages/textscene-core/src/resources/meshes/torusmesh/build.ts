@@ -44,12 +44,15 @@ export function buildTorusMeshSurface(
   uv2Padding: number | null
 ): GodotSurface | null {
   const { rings, ringSegments } = p;
-  if (p.innerRadius === p.outerRadius) {
+  // Godot holds each radius in a `float`, so two radii equal in single precision are equal.
+  const innerRadius = storedReal(p.innerRadius);
+  const outerRadius = storedReal(p.outerRadius);
+  if (innerRadius === outerRadius) {
     warn(`[TorusMesh] inner_radius equals outer_radius (${p.innerRadius}): Godot builds no surface for it`);
     return null;
   }
-  const minRadius = Math.min(p.innerRadius, p.outerRadius);
-  const maxRadius = Math.max(p.innerRadius, p.outerRadius);
+  const minRadius = Math.min(innerRadius, outerRadius);
+  const maxRadius = Math.max(innerRadius, outerRadius);
   const tubeRadius = (maxRadius - minRadius) * 0.5;
 
   // UV2 lays each row out by its length round the axis, padded on the right and the bottom (`:2244-2250`).

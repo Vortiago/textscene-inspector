@@ -79,6 +79,10 @@ describe('buildTorusMeshSurface', () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
+  it('builds nothing when the radii are equal only in single precision (edge case)', () => {
+    expect(buildTorusMeshSurface({ ...COARSE, innerRadius: 1, outerRadius: 1 + 1e-9 }, null)).toBeNull();
+  });
+
   it('writes no UV2 without a padding', () => {
     expect(buildTorusMeshSurface(COARSE, null)!.uv2s).toBeUndefined();
   });

@@ -1,6 +1,6 @@
 /**
  * The unit circle point a round PrimitiveMesh's `create_mesh_array` puts at column `i` of
- * `segments`: SphereMesh, CapsuleMesh and CylinderMesh step it from +Z towards +X.
+ * `segments`: SphereMesh, CapsuleMesh and CylinderMesh each turn it onto their own axes.
  */
 
 import { TAU } from '../../../godot/math/math.js';
