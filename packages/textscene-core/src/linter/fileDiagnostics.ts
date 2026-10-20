@@ -61,6 +61,24 @@ export const FILE_DIAGNOSTICS = {
     grounding: { kind: 'engine', at: 'packed_scene.cpp:218-219' },
   },
   /**
+   * A `[connection]` heading that omits `from`, `to`, `signal` or `method`. The text loader returns `ERR_FILE_CORRUPT`
+   * at the first one it finds, so nothing in the file loads (`resource_format_text.cpp:311-333`).
+   */
+  connectionMissingField: {
+    severity: 'error',
+    ruleName: 'connection-missing-field',
+    grounding: { kind: 'engine', at: 'resource_format_text.cpp:311-333' },
+  },
+  /**
+   * A `[connection]` `from=` or `to=` that resolves to no node from the scene root. The scene loads, and the instantiate
+   * skips the connection when either end is null, so the signal never reaches the method (`packed_scene.cpp:660-662`).
+   */
+  connectionNodeMissing: {
+    severity: 'warning',
+    ruleName: 'connection-node-missing',
+    grounding: { kind: 'engine', at: 'packed_scene.cpp:660-662' },
+  },
+  /**
    * A rule threw. Reported on the node it ran on, or on no line for the
    * cross-file rule, naming the rule and the error. Every other rule still
    * runs. Not an engine claim about the file: the rule's own findings are
