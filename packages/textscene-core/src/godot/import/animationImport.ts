@@ -88,6 +88,7 @@ function withoutMarker(name: string, marker: string): string | null {
   const what = trimmedName(name);
   const filler = name.slice(what.length);
   const lower = what.toLowerCase();
+  // Detected case-insensitively but removed case-sensitively: `_fixstr` calls `String::replace`.
   if (lower.includes(`$${marker}`)) return what.replaceAll(`$${marker}`, '') + filler;
   if (lower.endsWith(`-${marker}`) || lower.endsWith(`_${marker}`)) {
     return what.slice(0, what.length - (marker.length + 1)) + filler;

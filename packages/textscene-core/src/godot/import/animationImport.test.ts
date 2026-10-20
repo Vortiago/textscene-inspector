@@ -45,6 +45,13 @@ describe('importedClip, the name suffix rule', () => {
     expect(importedClip('a$loopb', SUFFIXES_ON)).toEqual({ name: 'ab', loopMode: AnimationLoopMode.LINEAR });
   });
 
+  it('loops Walk$LOOP and keeps its marker, because Godot removes the marker case-sensitively', () => {
+    expect(importedClip('Walk$LOOP', SUFFIXES_ON)).toEqual({
+      name: 'Walk$LOOP',
+      loopMode: AnimationLoopMode.LINEAR,
+    });
+  });
+
   it('leaves a plain name alone', () => {
     expect(importedClip('walk', SUFFIXES_ON)).toEqual({ name: 'walk', loopMode: AnimationLoopMode.NONE });
   });
