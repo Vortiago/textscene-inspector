@@ -20,7 +20,7 @@ import { useMeshResolution, type MeshResolution } from './meshResolution';
 import type { ScopedResource } from '../../../resources/useSubOrExtResource';
 import { warn } from '../../../logger';
 import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
-import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
+import { godotSurfacesGeometry } from '../../../resources/meshes/godotSurface';
 import {
   fileMaterialSources,
   resolveMaterialSource,
@@ -409,7 +409,7 @@ function useSceneArrayMeshGeometry(resource: TscnInternalResource | undefined): 
       const mesh = decodeSceneArrayMesh(resource);
       if (mesh.surfaces.length === 0) return null;
       return {
-        geometry: buildArrayMeshGeometry(mesh),
+        geometry: godotSurfacesGeometry(mesh.surfaces),
         surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
         materialRefs: mesh.surfaces.map((s) => s.materialRef),
       };

@@ -1,8 +1,7 @@
 /**
- * `MeshGeometry`'s dispatch from sub-resource type to three.js geometry, in a bare
- * `<mesh>`, plus the parameter math `Component.mesh-primitives.test.tsx` leaves out:
- * hemisphere theta, cylinder caps, capsule height clamping and the torus and prism
- * mappings.
+ * `MeshGeometry`'s dispatch from sub-resource type to a geometry, in a bare `<mesh>`, and the shape
+ * each type draws: the vertex counts and the boxes a caller sees. Each slice's own `build.test.ts`
+ * holds the parameter math.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,191 +23,77 @@ async function renderGeometry(resource: TscnInternalResource): Promise<THREE.Buf
   return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
 }
 
-function params<T>(geometry: THREE.BufferGeometry): T {
-  return (geometry as THREE.BufferGeometry & { parameters: T }).parameters;
+function box(geometry: THREE.BufferGeometry): THREE.Box3 {
+  geometry.computeBoundingBox();
+  return geometry.boundingBox!;
 }
 
 describe('MeshGeometry dispatch (buildPrimitiveMeshGeometry)', () => {
-  const cases: Array<[resourceType: string, geometryType: string]> = [
-    ['BoxMesh', 'BoxGeometry'],
-    ['SphereMesh', 'SphereGeometry'],
-    ['PlaneMesh', 'PlaneGeometry'],
-    ['QuadMesh', 'PlaneGeometry'],
-    ['CylinderMesh', 'CylinderGeometry'],
-    ['CapsuleMesh', 'CapsuleGeometry'],
-    ['TorusMesh', 'TorusGeometry'],
-    // PrismMesh is hand-built from Godot's own algorithm, so it has no three
-    // geometry class of its own; the block below asserts its shape instead.
+  const types = [
+    'BoxMesh',
+    'SphereMesh',
+    'PlaneMesh',
+    'QuadMesh',
+    'CylinderMesh',
+    'CapsuleMesh',
+    'TorusMesh',
+    'PrismMesh',
   ];
 
-  for (const [resourceType, geometryType] of cases) {
-    it(`${resourceType} → ${geometryType}`, async () => {
-      const geometry = await renderGeometry(sub(resourceType));
-      expect(geometry.type).toBe(geometryType);
-    });
-  }
+  it.each(types)('%s draws an indexed surface', async (type) => {
+    const geometry = await renderGeometry(sub(type));
+
+    expect(geometry.getAttribute('position').count).toBeGreaterThan(0);
+    expect(geometry.getIndex()!.count).toBeGreaterThan(0);
+  });
 
   it('unknown mesh type renders nothing (mesh keeps its default BufferGeometry)', async () => {
     const geometry = await renderGeometry(sub('ArrayMesh'));
-    expect(geometry.type).toBe('BufferGeometry');
+    expect(geometry.getAttribute('position')).toBeUndefined();
   });
 });
 
-describe('BoxMesh subdivisions', () => {
-  it('maps Godot subdivide_* (extra edge loops) to N+1 segments', async () => {
+describe('SphereMesh', () => {
+  it("builds Godot's (rings + 2)(radial_segments + 1) vertices at the defaults", async () => {
+    // (32 + 2) rows of (64 + 1) vertices.
+    expect((await renderGeometry(sub('SphereMesh'))).getAttribute('position').count).toBe(2210);
+  });
+
+  it('is_hemisphere=true draws a dome from y = 0 up to the height', async () => {
+    const dome = box(
+      await renderGeometry(sub('SphereMesh', { radius: '1', height: '0.5', is_hemisphere: 'true' }))
+    );
+
+    expect(dome.min.y).toBe(0);
+    expect(dome.max.y).toBeCloseTo(0.5, 6);
+  });
+});
+
+describe('CapsuleMesh', () => {
+  it('spans its whole height, caps included', async () => {
+    const capsule = box(await renderGeometry(sub('CapsuleMesh', { radius: '0.5', height: '3' })));
+
+    expect(capsule.min.y).toBeCloseTo(-1.5, 6);
+    expect(capsule.max.y).toBeCloseTo(1.5, 6);
+  });
+
+  it('lowers the radius to half a height below the diameter, as the linked setters do', async () => {
+    const capsule = box(await renderGeometry(sub('CapsuleMesh', { radius: '0.5', height: '0.6' })));
+
+    expect(capsule.max.y).toBeCloseTo(0.3, 6);
+    expect(capsule.max.z).toBeCloseTo(0.3, 6);
+  });
+
+  it('builds three sections of (rings + 2)(radial_segments + 1) vertices', async () => {
     const geometry = await renderGeometry(
-      sub('BoxMesh', { subdivide_width: '2', subdivide_height: '3', subdivide_depth: '4' })
+      sub('CapsuleMesh', { radius: '0.5', height: '2', rings: '6', radial_segments: '16' })
     );
-    const p = params<{ widthSegments: number; heightSegments: number; depthSegments: number }>(geometry);
-    expect(p.widthSegments).toBe(3);
-    expect(p.heightSegments).toBe(4);
-    expect(p.depthSegments).toBe(5);
+
+    expect(geometry.getAttribute('position').count).toBe(3 * 8 * 17);
   });
 });
 
-describe('QuadMesh (PlaneMesh subclass)', () => {
-  it('maps the witnessed size = Vector2(200, 200) to a 200×200 plane', async () => {
-    const p = params<{ width: number; height: number }>(
-      await renderGeometry(sub('QuadMesh', { size: 'Vector2(200, 200)' }))
-    );
-    expect(p.width).toBe(200);
-    expect(p.height).toBe(200);
-  });
-
-  it('defaults to a 1×1 quad facing +Z (no rotation applied)', async () => {
-    const geometry = await renderGeometry(sub('QuadMesh'));
-    const p = params<{ width: number; height: number }>(geometry);
-    expect(p.width).toBe(1);
-    expect(p.height).toBe(1);
-    // FACE_Z (orientation 2) keeps the default XY plane: +Z normal, untouched.
-    geometry.computeBoundingBox();
-    expect(geometry.boundingBox!.min.z).toBe(0);
-    expect(geometry.boundingBox!.max.z).toBe(0);
-  });
-});
-
-describe('SphereMesh hemisphere', () => {
-  it('full sphere by default: theta sweeps 0..π over the full circle', async () => {
-    const p = params<{ thetaStart: number; thetaLength: number; phiLength: number }>(
-      await renderGeometry(sub('SphereMesh', { radius: '1' }))
-    );
-    expect(p.thetaStart).toBe(0);
-    expect(p.thetaLength).toBeCloseTo(Math.PI, 10);
-    expect(p.phiLength).toBeCloseTo(Math.PI * 2, 10);
-  });
-
-  it('is_hemisphere=true renders only the top dome: theta sweeps 0..π/2', async () => {
-    const p = params<{ thetaStart: number; thetaLength: number }>(
-      await renderGeometry(sub('SphereMesh', { radius: '1', is_hemisphere: 'true' }))
-    );
-    expect(p.thetaStart).toBe(0);
-    expect(p.thetaLength).toBeCloseTo(Math.PI / 2, 10);
-  });
-
-  it('falls back to Godot segment defaults (radial 64, rings 32)', async () => {
-    const p = params<{ widthSegments: number; heightSegments: number }>(
-      await renderGeometry(sub('SphereMesh'))
-    );
-    expect(p.widthSegments).toBe(64);
-    expect(p.heightSegments).toBe(32);
-  });
-});
-
-describe('CylinderMesh radii and caps', () => {
-  it('maps top/bottom radius and segment counts', async () => {
-    const p = params<{
-      radiusTop: number;
-      radiusBottom: number;
-      radialSegments: number;
-      heightSegments: number;
-    }>(
-      await renderGeometry(
-        sub('CylinderMesh', {
-          top_radius: '0.25',
-          bottom_radius: '0.75',
-          radial_segments: '12',
-          rings: '3',
-        })
-      )
-    );
-    expect(p.radiusTop).toBe(0.25);
-    expect(p.radiusBottom).toBe(0.75);
-    expect(p.radialSegments).toBe(12);
-    expect(p.heightSegments).toBe(3);
-  });
-
-  it('keeps caps by default (openEnded false)', async () => {
-    const p = params<{ openEnded: boolean }>(await renderGeometry(sub('CylinderMesh')));
-    expect(p.openEnded).toBe(false);
-  });
-
-  it('opens the ends only when BOTH caps are disabled', async () => {
-    const p = params<{ openEnded: boolean }>(
-      await renderGeometry(sub('CylinderMesh', { cap_top: 'false', cap_bottom: 'false' }))
-    );
-    expect(p.openEnded).toBe(true);
-  });
-
-  it('keeps caps when only one cap is disabled (single-cap removal not representable)', async () => {
-    const topOnly = params<{ openEnded: boolean }>(
-      await renderGeometry(sub('CylinderMesh', { cap_top: 'false' }))
-    );
-    const bottomOnly = params<{ openEnded: boolean }>(
-      await renderGeometry(sub('CylinderMesh', { cap_bottom: 'false' }))
-    );
-    expect(topOnly.openEnded).toBe(false);
-    expect(bottomOnly.openEnded).toBe(false);
-  });
-});
-
-describe('CapsuleMesh height math', () => {
-  it('subtracts both hemisphere caps from Godot height for the cylinder section', async () => {
-    const p = params<{ radius: number; height: number }>(
-      await renderGeometry(sub('CapsuleMesh', { radius: '0.5', height: '3' }))
-    );
-    expect(p.radius).toBe(0.5);
-    // 3 - 2 * 0.5 = 2 cylinder section.
-    expect(p.height).toBe(2);
-  });
-
-  it('clamps the cylinder section to 0.01 when height <= 2 * radius', async () => {
-    const p = params<{ height: number }>(
-      await renderGeometry(sub('CapsuleMesh', { radius: '0.5', height: '0.6' }))
-    );
-    expect(p.height).toBe(0.01);
-  });
-
-  it('maps rings → capSegments and radial_segments → radialSegments', async () => {
-    const p = params<{ capSegments: number; radialSegments: number }>(
-      await renderGeometry(
-        sub('CapsuleMesh', { radius: '0.5', height: '2', rings: '6', radial_segments: '16' })
-      )
-    );
-    expect(p.capSegments).toBe(6);
-    expect(p.radialSegments).toBe(16);
-  });
-});
-
-describe('TorusMesh radii mapping', () => {
-  it('converts Godot inner/outer radii to THREE center radius + tube radius', async () => {
-    const p = params<{ radius: number; tube: number }>(
-      await renderGeometry(sub('TorusMesh', { inner_radius: '1', outer_radius: '3' }))
-    );
-    // Center radius = (3 + 1) / 2 = 2; tube = (3 - 1) / 2 = 1.
-    expect(p.radius).toBe(2);
-    expect(p.tube).toBe(1);
-  });
-
-  it('maps ring_segments → radialSegments and rings → tubularSegments', async () => {
-    const p = params<{ radialSegments: number; tubularSegments: number }>(
-      await renderGeometry(
-        sub('TorusMesh', { inner_radius: '0.5', outer_radius: '1', ring_segments: '24', rings: '48' })
-      )
-    );
-    expect(p.radialSegments).toBe(24);
-    expect(p.tubularSegments).toBe(48);
-  });
-
+describe('TorusMesh', () => {
   it("lies flat in the XZ plane (hole facing +Y), matching Godot — not three's upright default", async () => {
     // inner=1, outer=3 → centre radius 2, tube 1. three's TorusGeometry stands upright
     // and Godot's TorusMesh lies flat, so a π/2 rotateX lays the ring in XZ

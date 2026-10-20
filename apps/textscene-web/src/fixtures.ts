@@ -1398,6 +1398,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Primitive Mesh Flip Faces",
+    "file": "unit-primitive-mesh-flip-faces.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Primitive Mesh Uv2",
+    "file": "unit-primitive-mesh-uv2.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Progress Bar Rtl",
     "file": "unit-progress-bar-rtl.tscn",
     "category": "Other"
@@ -2574,6 +2584,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Arraymesh Tangents",
+    "file": "unit-arraymesh-tangents.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Arraymesh Uv",
     "file": "unit-arraymesh-uv.tscn",
     "category": "Unit - Primitive Meshes"
@@ -2591,6 +2606,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Box Mesh",
     "file": "unit-box-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Capsule Mesh Texture Uv",
+    "file": "unit-capsule-mesh-texture-uv.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -2646,6 +2666,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Quadmesh",
     "file": "unit-quadmesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Sphere Mesh Texture Uv",
+    "file": "unit-sphere-mesh-texture-uv.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

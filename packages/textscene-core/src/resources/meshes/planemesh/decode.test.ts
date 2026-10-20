@@ -25,7 +25,6 @@ describe('decodePlaneMesh', () => {
       subdivideDepth: 0,
       orientation: 1,
       centerOffset: undefined,
-      flipFaces: false,
     });
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -38,7 +37,6 @@ describe('decodePlaneMesh', () => {
         subdivide_depth: '3',
         orientation: '0',
         center_offset: 'Vector3(1, 2, 3)',
-        flip_faces: 'true',
       })
     ).toEqual({
       size: { x: 4, y: 8 },
@@ -46,7 +44,6 @@ describe('decodePlaneMesh', () => {
       subdivideDepth: 3,
       orientation: 0,
       centerOffset: { x: 1, y: 2, z: 3 },
-      flipFaces: true,
     });
   });
 

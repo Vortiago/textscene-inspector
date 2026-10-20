@@ -23,6 +23,8 @@ export interface ArrayMeshSurface {
   uv2s?: Float32Array;
   /** Per-vertex normals `vertexCount × 3`, or undefined when the surface has none. */
   normals?: Float32Array;
+  /** Per-vertex tangents `vertexCount × 4`, `w` the binormal sign, or undefined when the surface has none. */
+  tangents?: Float32Array;
   /** Triangle indices, width auto-detected (uint16 ≤ 65535 verts, else uint32). */
   indices: Uint16Array | Uint32Array;
   /** Resolved `res://` path of the surface's material, if it has one. */

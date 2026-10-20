@@ -19,6 +19,7 @@ import {
 } from './appContract.mjs';
 import { fixtureUrl } from './fixtureUrl.mjs';
 import { findCanvas2DFrame } from './viewportProbes.mjs';
+import { targetShooter } from './targetShot.mjs';
 import { writeFileSync } from 'node:fs';
 import { PNG } from 'pngjs';
 
@@ -112,7 +113,8 @@ export async function settleCanvas(
   }
   // A whole game world under SwiftShader can take longer to rasterise one frame than Playwright's
   // default action timeout. A per-scene raise keeps an ordinary scene's hang quick to report.
-  const shot = () => canvas.screenshot(screenshotTimeout ? { timeout: screenshotTimeout } : {});
+  const shooter = targetShooter(canvas, { timeout: screenshotTimeout });
+  const shot = () => shooter.shoot();
   const textureWork = page.getByTestId(TEXTURE_WORK_STATUS_TESTID);
   const pendingReason = `texture work still pending after ${TEXTURE_WORK_WAIT_MS}ms`;
   await page.waitForTimeout(SETTLE_INITIAL_MS);
@@ -130,8 +132,14 @@ export async function settleCanvas(
       continue;
     }
     const cur = await shot();
-    if (cur.equals(prev)) return { buffer: cur, reason: null };
-    prev = cur;
+    if (!cur.equals(prev)) {
+      prev = cur;
+      continue;
+    }
+    // The box is measured once per settle, so a target that resized since gives matching crops.
+    // A changed box restarts the comparison from a shot of the new box.
+    if (!(await shooter.boxChanged())) return { buffer: cur, reason: null };
+    prev = await shot();
   }
   return {
     buffer: null,

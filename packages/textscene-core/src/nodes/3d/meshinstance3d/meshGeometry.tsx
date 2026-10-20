@@ -7,13 +7,16 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { buildPrimitiveMeshGeometry } from './primitiveMeshGeometry';
 import { useContentMemo } from '../../../resources/useContentMemo';
+import { projectPrimitiveMeshTexelSize } from '../../../parser/projectSettingsParser';
+import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
 
 interface MeshGeometryProps {
   resource: TscnInternalResource;
 }
 
 export function MeshGeometry({ resource }: MeshGeometryProps) {
-  const geometry = useContentMemo(resource, buildPrimitiveMeshGeometry);
+  const texelSize = projectPrimitiveMeshTexelSize(useProjectSettings().settings);
+  const geometry = useContentMemo(resource, (r) => buildPrimitiveMeshGeometry(r, texelSize), [texelSize]);
 
   return geometry ? <primitive object={geometry} attach="geometry" /> : null;
 }
