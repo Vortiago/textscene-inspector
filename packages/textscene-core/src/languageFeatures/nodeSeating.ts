@@ -27,12 +27,9 @@ interface DocumentSeating {
 /** Written only by {@link seatingOf}. An entry lives as long as its document. */
 const seatings = new WeakMap<LanguageDocument, DocumentSeating>();
 
-/** The Raw view node of a `[node]` section, its properties keyed as the parser's bag keys them. */
-function rawNodeOf(section: DocumentSection): RawNode {
-  const rawProperties = Object.fromEntries(
-    section.properties.map(({ storedKey, value }) => [storedKey, value])
-  );
-  return createRawNode(headingOf(section), rawProperties);
+/** A `[node]` section's properties, keyed as the parser's bag keys them. */
+function rawPropertiesOf(section: DocumentSection): Record<string, string> {
+  return Object.fromEntries(section.properties.map(({ storedKey, value }) => [storedKey, value]));
 }
 
 function headingOf(section: DocumentSection): ParsedHeading {
@@ -42,10 +39,11 @@ function headingOf(section: DocumentSection): ParsedHeading {
 function seat(document: LanguageDocument): DocumentSeating {
   const headings = document.sections
     .filter(({ kind }) => kind === 'node')
-    .map((section) => ({
-      section,
-      ...nodeOrigin(headingOf(section), rawNodeOf(section), section.headingLine),
-    }));
+    .map((section) => {
+      const heading = headingOf(section);
+      const node = createRawNode(heading, rawPropertiesOf(section));
+      return { section, ...nodeOrigin(heading, node, section.headingLine) };
+    });
   const seating = seatScene(headings);
   const sectionByNode = new Map<RawNode, DocumentSection>();
   for (const { node, section } of headings) sectionByNode.set(seating.seated.get(node) ?? node, section);

@@ -26,13 +26,21 @@ export function isInstanceBelowRoot(node: RawNode, isRoot: boolean): boolean {
 }
 
 /**
+ * Whether a heading's `owner=` names a node other than the root: the saver writes it only then
+ * (resource_format_text.cpp:2024-2025), for a node that instanced content owns.
+ */
+export function hasForeignOwner(node: RawNode): boolean {
+  return node.owner !== undefined && node.owner !== '.';
+}
+
+/**
  * Whether the scene root owns a node, so its `%Name` lands in the root's table. An explicit `owner=`
- * decides: `"."` is the root. Without one, an override heading inside an instance keeps the sub-scene's
- * owner (resource_format_text.cpp:264-265 zeroes `owner` only when `!(type == TYPE_INSTANTIATED &&
+ * decides. Without one, an override heading inside an instance keeps the sub-scene's owner
+ * (resource_format_text.cpp:264-265 zeroes `owner` only when `!(type == TYPE_INSTANTIATED &&
  * instance == -1)`), and every other node is the root's.
  */
 export function isOwnedByRoot(node: RawNode, insideInstance: boolean): boolean {
-  if (node.owner !== undefined) return node.owner === '.';
+  if (node.owner !== undefined) return !hasForeignOwner(node);
   return !(insideInstance && node.overridesExistingNode === true);
 }
 

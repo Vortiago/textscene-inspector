@@ -678,6 +678,23 @@ describe('seatScene resolve', () => {
     );
   });
 
+  it('cannot say what a %Name names from a node another owner holds, whose table its sub-scene fills', () => {
+    // The saver writes `owner=` only for an owner other than the root (resource_format_text.cpp:2024-2025).
+    const added = { ...node('Added', 'Inst/Sub'), type: 'Node', owner: 'Inst' };
+    const nodes = [node('Root'), claiming('Part', '.'), instance('Inst', '.'), added];
+
+    expect(statusOf(nodes, 'Inst/Sub/Added/%Part')).toBe('unknowable');
+  });
+
+  it('leaves a heading whose parent= walks into content another file lists out of the tree, unrenamed', () => {
+    // The walk cannot say the parent vanished, so it re-roots nothing (packed_scene.cpp:208-215).
+    const nodes = [instance('Root'), node('Hat', '%BaseClaim')];
+    const origins = originsOf(nodes);
+
+    expect(seatScene(origins).seated.has(nodes[1]!)).toBe(false);
+    expect(orphanedNodes(origins, seatScene(origins)).map(({ node }) => node.name)).toEqual(['Hat']);
+  });
+
   it('leaves an override claim under an instance out of the root table', () => {
     // An override heading keeps the sub-scene's owner (resource_format_text.cpp:264-265), so its
     // `%Name` lands in that owner's table (node.cpp:2222-2233), not the root's.

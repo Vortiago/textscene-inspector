@@ -113,7 +113,7 @@ unique_name_in_owner = true
   });
 });
 
-describe('cachedUniqueNameClaims', () => {
+describe('the claim table cache', () => {
   it('hands every caller over one roots array the same table object', () => {
     const roots = new TscnParser().parse(SRC).nodes;
     const first = cachedUniqueNameClaims(roots);
@@ -234,6 +234,19 @@ unique_name_in_owner = true
     const { instanceClaims, ownedInsideInstances } = cachedUniqueNameOwnership(nested);
     expect([...instanceClaims.keys()]).toEqual(['Player/Enemy/Gun']);
     expect(ownedInsideInstances.has('Player/Enemy/Gun')).toBe(true);
+  });
+
+  it('records no live path for a nameless heading inside an instance, which has none of its own', () => {
+    const nameless = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
+
+[node name="Player" type="Node2D"]
+
+[node name="Enemy" parent="." instance=ExtResource("1")]
+
+[node type="Node2D" parent="Enemy"]
+`).nodes;
+    expect(cachedUniqueNameOwnership(nameless).ownedInsideInstances.size).toBe(0);
   });
 });
 

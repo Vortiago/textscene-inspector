@@ -104,7 +104,7 @@ export function resolveRelativePath(
  * Whether a path is one the root can walk: an empty `NodePath("")` returns nullptr (node.cpp:1894),
  * and the root, off-tree while instantiate runs, refuses an absolute `/root/…` (node.cpp:1898).
  */
-function walksFromRoot(path: string | undefined): path is string {
+function isRootWalkable(path: string | undefined): path is string {
   return path !== undefined && path !== '' && !path.startsWith('/');
 }
 
@@ -121,7 +121,7 @@ export function walkFromRoot(
 ): string | null | typeof UNLISTED {
   // The saver never writes a `%Name` (resource_format_text.cpp:2018), yet on 4.7.2 the loader seats
   // `parent="%Player"` under its claimant and warns only when nothing claims it.
-  if (!walksFromRoot(path)) return null;
+  if (!isRootWalkable(path)) return null;
   const end = walk([], path, 0, tree);
   return Array.isArray(end) ? end.join('/') : end;
 }
@@ -130,7 +130,7 @@ export function walkFromRoot(
  * A raw `NodePath("…")` property value on the node at `basePath`, resolved against that node as
  * `get_node_or_null` resolves it, or null when it addresses no other node in the scene.
  *
- * @param uniquePaths `%Name` to its claiming path, from `cachedUniqueNameClaims` over the same tree.
+ * @param uniquePaths `%Name` to its claiming path, from `uniqueNamePaths` over the same tree.
  *   Without it a `%Name` is null: `%` is invalid in a node name (ustring.cpp:5071), so a child
  *   lookup for it never hits.
  */

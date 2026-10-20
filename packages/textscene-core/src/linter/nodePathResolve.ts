@@ -9,7 +9,7 @@ import { isUnderInstance } from './linterUtils.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames } from '../godot/string/nodePath.js';
 import type { NodePathResolution, RawNode, RawScene } from '../parser/types.js';
-import { isOwnedByRoot } from '../parser/nodeOwner.js';
+import { hasForeignOwner } from '../parser/nodeOwner.js';
 import { MISSING, UNKNOWABLE, sceneSeating } from '../parser/sceneTreeBuilder.js';
 
 /** The direct child named `name`, mirroring `data.children.getptr(name)`. */
@@ -58,9 +58,9 @@ export function resolveNodePath(scene: RawScene, referencingNode: RawNode, path:
       // At an opaque node, a miss may be a name that file claims, and a hit may be
       // shadowed by one (:1935-1937).
       if (isTypeUnknowable(current)) return UNKNOWABLE;
-      // An explicit `owner=` names a node inside instanced content, whose table its sub-scene
-      // fills. Any other reached node reads the root's, which the seating holds.
-      if (!isOwnedByRoot(current, false)) return UNKNOWABLE;
+      // A node another owner holds reads that owner's table, which its sub-scene fills. Any
+      // other reached node reads the root's, which the seating holds.
+      if (hasForeignOwner(current)) return UNKNOWABLE;
       const claimed = sceneSeating(scene.nodes).resolve(name);
       if (claimed.status !== 'found') return claimed;
       current = claimed.node;

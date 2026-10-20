@@ -197,6 +197,14 @@ describe('localSceneOf a GLB instance', () => {
   it('is the outer root for a node the outer file adds under the GLB instance (edge case)', () => {
     expect(localRoot('Root/Model/Viewport')).toBe('Root');
   });
+
+  it('reads an empty claim table for a node inside the GLB', () => {
+    expect(localSceneClaims(localSceneOf('Root/Model/model/body', host.nodes, glbCtx)).size).toBe(0);
+  });
+
+  it('reads an empty claim table for the owner of a node inside the GLB', () => {
+    expect(ownerClaims(claimOwnerOf('Root/Model/model/body', host.nodes, glbCtx)).size).toBe(0);
+  });
 });
 
 /** `get_node` from the local scene root reads its own table, else its owner's (node.cpp:1930-1938). */

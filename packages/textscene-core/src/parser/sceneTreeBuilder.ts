@@ -7,6 +7,7 @@
 import type { NodeOrigin, NodePathResolution, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
 import {
+  hasForeignOwner,
   isInstanceBelowRoot,
   isOwnedByRoot,
   isUniqueNameInOwner,
@@ -48,13 +49,15 @@ export const UNKNOWABLE = { status: 'unknowable' } as const;
 
 /**
  * Written only by {@link seatScene}, for the roots it returns. A seated tree is never mutated in
- * place, so an entry never goes stale, and it dies with its tree.
+ * place, so an entry never goes stale, and it dies with its tree. It holds the walk and the
+ * claims alone, not `seated`, so the headings' own nodes die once the parse returns.
  */
 const seatings = new WeakMap<readonly RawNode[], SeatedPaths<RawNode>>();
 
 export function seatScene<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): SceneSeating<N> {
   const seating = origins.length === 0 ? noScene<N>() : seatHeadings(origins);
-  seatings.set(seating.roots, seating as SeatedPaths<RawNode>);
+  const { resolve, ownership } = seating;
+  seatings.set(seating.roots, { resolve, ownership } as SeatedPaths<RawNode>);
   return seating;
 }
 
@@ -83,7 +86,11 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // A second parentless node is orphaned here. `orphanedNodes` finds it by walking
     // the returned tree, so it holds no second copy of the resolution rules.
     if (!node.parent) continue;
-    if (seatBelowParent(tables, node, node.parent)) {
+    const parentPath = walkFromRoot(node.parent, tables.tree);
+    // The walk passed content another file lists, where Godot may still find the parent, so
+    // nothing here says the path vanished.
+    if (parentPath === UNLISTED) continue;
+    if (parentPath !== null && seatBelowParent(tables, node, parentPath)) {
       seatedByPath.add(node);
       continue;
     }
@@ -98,7 +105,7 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
   return {
     roots: [tables.root],
     seated: tables.seated,
-    resolve: (path) => resolveSeated(tables, path),
+    resolve: seatedResolver(tables),
     ownership: tables.ownership,
   };
 }
@@ -114,15 +121,16 @@ export function sceneSeating(roots: readonly RawNode[]): SeatedPaths<RawNode> {
 }
 
 /**
- * Seats one heading under the node its `parent=` names, else below the instance enclosing that
- * path, whose sub-scene or GLB the path descends into. False where the path names no node of this
+ * Seats one heading under the node at the path its `parent=` walks to, else below the instance
+ * enclosing that path, whose sub-scene or GLB the path descends into. False where the path names no node of this
  * file. The map IS the child lookup the walk asks at every descent, so `./Mid`, `Mid/` and `Mid`
  * name the one node Godot resolves them all to while `Missing/../Mid` names none.
  */
-function seatBelowParent<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, parent: string): boolean {
-  const parentPath = walkFromRoot(parent, tables.tree);
-  if (parentPath === null || parentPath === UNLISTED) return false;
-
+function seatBelowParent<N extends SceneNode<N>>(
+  tables: SeatingTables<N>,
+  node: N,
+  parentPath: string
+): boolean {
   const parentNode = tables.byPath.get(parentPath);
   if (parentNode) {
     const seat = seatCopy(tables, node);
@@ -163,13 +171,19 @@ function seatCopy<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N): N 
 
 /**
  * The node a path names over the seated tables. A walk Godot ends in null is missing. One that
- * passes through content this file does not list, onto no heading, is unknowable.
+ * passes through content this file does not list, onto no heading, is unknowable. The walk keeps
+ * only the two tables it reads, since the seating cache holds it as long as the tree lives.
  */
-function resolveSeated<N extends RawNode>(tables: SeatingTables<N>, path: string): NodePathResolution<N> {
-  const end = walkFromRoot(path, tables.tree);
-  if (end === null) return MISSING;
-  const node = end === UNLISTED ? undefined : tables.byPath.get(end);
-  return node ? { status: 'found', node } : UNKNOWABLE;
+function seatedResolver<N extends RawNode>({
+  byPath,
+  tree,
+}: Pick<SeatingTables<N>, 'byPath' | 'tree'>): (path: string) => NodePathResolution<N> {
+  return (path) => {
+    const end = walkFromRoot(path, tree);
+    if (end === null) return MISSING;
+    const node = end === UNLISTED ? undefined : byPath.get(end);
+    return node ? { status: 'found', node } : UNKNOWABLE;
+  };
 }
 
 /**
@@ -222,14 +236,14 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
 }
 
 /**
- * Whether the node at a path keeps children or `%Name` claims another file lists. A path missing
- * from the map passed the walk under such a node already. `isTypeUnknowable`, not an `instance=`
- * test: an override heading, which Godot writes for editable children, names a node the base scene
- * declares, so its children live there too. Its defaulted `'Node'` is not a real type.
+ * Whether the node at a path keeps children or `%Name` claims another file lists: a missing path,
+ * which passed the walk under such a node already, an override heading or instance
+ * (`isTypeUnknowable`, since an override's defaulted `'Node'` is no real type), or a node another
+ * owner holds.
  */
 function isOpaqueAt(pathMap: ReadonlyMap<string, RawNode>, path: string): boolean {
   const node = pathMap.get(path);
-  return node === undefined || isTypeUnknowable(node);
+  return node === undefined || isTypeUnknowable(node) || hasForeignOwner(node);
 }
 
 /**
@@ -260,11 +274,11 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
     ? tables.places.get(parent)!.livePath
     : tables.instanceOwners.get(parent);
   if (instanceOwner !== undefined) tables.instanceOwners.set(node, instanceOwner);
-  const isRootOwned = isOwnedByRoot(node, instanceOwner !== undefined);
-  if (isRootOwned && instanceOwner !== undefined) tables.ownership.ownedInsideInstances.add(livePath);
-  // A nameless heading claims no key: an empty name joins to its parent's own key.
+  // A nameless heading claims no key: an empty name joins to its parent's own key and live path.
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
   if (!node.name) return;
+  const isRootOwned = isOwnedByRoot(node, instanceOwner !== undefined);
+  if (isRootOwned && instanceOwner !== undefined) tables.ownership.ownedInsideInstances.add(livePath);
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
