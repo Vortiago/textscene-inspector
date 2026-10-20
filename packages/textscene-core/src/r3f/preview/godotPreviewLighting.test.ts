@@ -3,7 +3,7 @@
  * preview looks like a wrong renderer on screen, so the values are pinned.
  */
 import { describe, expect, it } from 'vitest';
-import { BackgroundMode } from '../../resources/environment/types';
+import { BackgroundMode } from '../../godot/scene/environment';
 import { previewEnvironment, previewSunDirection, previewYield } from './godotPreviewLighting';
 import type { ProceduralSkyProperties } from '../../resources/sky/types';
 import { radToDeg } from '../../godot/math/math.js';
