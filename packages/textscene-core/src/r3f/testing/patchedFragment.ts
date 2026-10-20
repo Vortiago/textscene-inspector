@@ -31,6 +31,10 @@ export const KEEPS_REFLECTION_UNOCCLUDED = '#define GODOT_SPECULAR_OCCLUSION_DIS
 /** The shader rebuilds a normal map's blue from its red and green, as Godot does. */
 export const REBUILDS_NORMAL_MAP_BLUE = '#define USE_PACKED_NORMALMAP\n';
 
+/** The shader scales the tangent and the binormal to unit length each, as Godot's vertex stage does. */
+export const UNIT_TANGENT_FRAME =
+  'return mat3( lengthT == 0.0 ? vec3( 0.0 ) : T / lengthT, lengthB == 0.0 ? vec3( 0.0 ) : B / lengthB, N );';
+
 /** The shader writes a light's specular in toon mode, not BaseMaterial3D's default GGX. */
 export const DRAWS_TOON_SPECULAR = '#define GODOT_SPECULAR_TOON\n';
 
