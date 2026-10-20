@@ -1,11 +1,11 @@
 /**
- * Go to Definition for `.tscn` files: a resource id goes to the heading that declares it, and a
- * `res://` path to the file it names. The engine finds both, so the answer matches the
- * `tscn-lsp` server's.
+ * Go to Definition for `.tscn` files: a resource id goes to the heading that declares it, a node
+ * path to the `[node]` heading it names, and a `res://` path to the file it names. The engine
+ * finds all three, so the answer matches the `tscn-lsp` server's.
  */
 
 import * as vscode from 'vscode';
-import { declarationRangeAt, resPathAt } from '@textscene/core/languageFeatures';
+import { declarationRangeAt, nodeDeclarationRangeAt, resPathAt } from '@textscene/core/languageFeatures';
 import { existingResFile } from './existingResFile';
 import { resRootOf } from './resRoot';
 import { languageDocumentOf } from './languageDocumentOf';
@@ -24,7 +24,7 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
     _token: vscode.CancellationToken
   ): Promise<vscode.Location | null> {
     const model = languageDocumentOf(document);
-    const declaration = declarationRangeAt(model, position);
+    const declaration = declarationRangeAt(model, position) ?? nodeDeclarationRangeAt(model, position);
     if (declaration) return new vscode.Location(document.uri, toVscodeRange(declaration));
 
     const occurrence = resPathAt(model, position);

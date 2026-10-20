@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
-import { declarationRangeAt, resPathAt, resPathOccurrences } from './navigation';
+import { declarationRangeAt, nodeDeclarationRangeAt, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
 
@@ -115,5 +115,79 @@ describe('resPathOccurrences', () => {
 
   it('gives an empty list for a document with no res:// path', () => {
     expect(resPathOccurrences(new LanguageDocument('[gd_scene format=3]\n'))).toEqual([]);
+  });
+});
+
+describe('nodeDeclarationRangeAt', () => {
+  const SCENE_PATHS = [
+    '[gd_scene format=3]',
+    '',
+    '[node name="Root" type="Node3D"]',
+    '',
+    '[node name="Player" type="Node3D" parent="."]',
+    '',
+    '[node name="Sprite" type="Sprite3D" parent="Player"]',
+    '',
+    '[node name="Gun" type="Node3D" parent="Player/Sprite"]',
+    '',
+    '[node name="Door" type="Node3D" parent="." instance=ExtResource("1_door")]',
+    '',
+    '[node name="Hinge" type="Node3D" parent="Door"]',
+    '',
+    '[node name="Unique" type="Node3D" parent="Player"]',
+    'unique_name_in_owner = true',
+    '',
+    '[connection signal="pressed" from="Player/Sprite" to="." method="_on_pressed"]',
+    '[connection signal="pressed" from="./Player" to="Player/../Player/Sprite" method="_a"]',
+    '[connection signal="pressed" from="Door/Inside/Deep" to="Missing" method="_b"]',
+    '[connection signal="pressed" from="%Unique" to="Player/%Unique" method="_c"]',
+    '',
+  ].join('\n');
+  const paths = new LanguageDocument(SCENE_PATHS);
+
+  function headingLineAt(lineText: string, value: string): number | undefined {
+    const line = paths.lines.findIndex((candidate) => candidate.startsWith(lineText));
+    const position = { line, character: paths.lines[line]!.indexOf(value) + 1 };
+    return nodeDeclarationRangeAt(paths, position)?.start.line;
+  }
+
+  it('resolves a from= path to the heading of the node it names', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Player/Sprite"', 'Player/Sprite')).toBe(6);
+  });
+
+  it('resolves a to= of . to the root heading', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Player/Sprite"', '"." method')).toBe(2);
+  });
+
+  it('resolves a parent= three levels deep', () => {
+    expect(headingLineAt('[node name="Gun"', 'Player/Sprite')).toBe(6);
+  });
+
+  it('resolves a parent= of . to the root heading', () => {
+    expect(headingLineAt('[node name="Player"', '"."]')).toBe(2);
+  });
+
+  it('reads ./A and A/../A like A', () => {
+    expect(headingLineAt('[connection signal="pressed" from="./Player"', './Player')).toBe(4);
+    expect(headingLineAt('[connection signal="pressed" from="./Player"', 'Player/../Player/Sprite')).toBe(6);
+  });
+
+  it('resolves a %Unique path to the node that claims the name', () => {
+    expect(headingLineAt('[connection signal="pressed" from="%Unique"', '%Unique" to')).toBe(14);
+    expect(headingLineAt('[connection signal="pressed" from="%Unique"', 'Player/%Unique')).toBe(14);
+  });
+
+  it('gives nothing for a path into an instanced scene', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Door/Inside/Deep"', 'Door/Inside/Deep')).toBe(
+      undefined
+    );
+  });
+
+  it('gives nothing for a path no heading declares', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Door/Inside/Deep"', 'Missing')).toBe(undefined);
+  });
+
+  it('gives nothing off a node path value', () => {
+    expect(headingLineAt('[connection signal="pressed" from="Player/Sprite"', 'method')).toBe(undefined);
   });
 });

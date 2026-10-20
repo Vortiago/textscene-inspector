@@ -61,3 +61,57 @@ describe('documentHighlights', () => {
     expect(documentHighlights(document, { line: 1, character: 0 })).toEqual([]);
   });
 });
+
+describe('documentHighlights of a node path', () => {
+  const text = [
+    '[gd_scene format=3]',
+    '',
+    '[node name="Root" type="Node3D"]',
+    '',
+    '[node name="Player" type="Node3D" parent="."]',
+    '',
+    '[node name="Sprite" type="Sprite3D" parent="Player"]',
+    '',
+    '[node name="Gun" type="Node3D" parent="Player/Sprite"]',
+    '',
+    '[connection signal="a" from="Player" to="." method="_a"]',
+    '[connection signal="b" from="./Player/Sprite" to="Player" method="_b"]',
+  ].join('\n');
+  const document = new LanguageDocument(text);
+  const column = (line: number, needle: string): number => document.lines[line]!.indexOf(needle);
+  const spans = (line: number, needle: string): number[][] =>
+    documentHighlights(document, { line, character: column(line, needle) + 1 })
+      .map(({ range }) => [range.start.line, range.start.character, range.end.line, range.end.character])
+      .sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!);
+
+  const playerUses = [
+    [4, column(4, 'Player'), 4, column(4, 'Player') + 6],
+    [6, column(6, 'parent="Player"') + 8, 6, column(6, 'parent="Player"') + 14],
+    [10, column(10, 'from="Player"') + 6, 10, column(10, 'from="Player"') + 12],
+    [11, column(11, 'to="Player"') + 4, 11, column(11, 'to="Player"') + 10],
+  ];
+
+  it('marks the name= and every path that resolves to the node, from its name=', () => {
+    expect(spans(4, 'Player')).toEqual(playerUses);
+  });
+
+  it('marks the same spans from a connection end', () => {
+    expect(spans(10, 'Player" to')).toEqual(playerUses);
+  });
+
+  it('leaves out a child parent= that runs through the node', () => {
+    const lines = spans(4, 'Player').map(([line]) => line);
+    expect(lines).not.toContain(8);
+  });
+
+  it('marks the root by its name= and every . that names it', () => {
+    expect(spans(2, 'Root').map(([line]) => line)).toEqual([2, 4, 10]);
+  });
+
+  it('gives nothing for a path no heading declares', () => {
+    const missing = new LanguageDocument(
+      '[node name="A"]\n\n[connection signal="a" from="B" to="A" method="m"]'
+    );
+    expect(documentHighlights(missing, { line: 2, character: 28 })).toEqual([]);
+  });
+});

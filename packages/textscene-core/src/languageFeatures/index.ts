@@ -15,7 +15,13 @@ export { codeActions } from './codeActions.js';
 export { foldingRanges } from './folding.js';
 export { documentHighlights } from './highlights.js';
 export { documentSymbols } from './symbols.js';
-export { declarationRangeAt, resPathAt, resPathOccurrences, type ResPathOccurrence } from './navigation.js';
+export {
+  declarationRangeAt,
+  nodeDeclarationRangeAt,
+  resPathAt,
+  resPathOccurrences,
+  type ResPathOccurrence,
+} from './navigation.js';
 export type {
   CodeAction,
   CompletionItem,
