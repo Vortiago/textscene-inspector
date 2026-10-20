@@ -64,6 +64,12 @@ describe('TouchScreenButton', () => {
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
+  it('draws nothing for a null texture_normal', async () => {
+    const r = await render(buttonNode({ texture_normal: 'null' }));
+
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
   it('tints the texture with modulate, as a Sprite2D does', async () => {
     const r = await render(buttonNode({ texture_normal: 'ExtResource("1")', modulate: 'Color(0, 0, 0, 1)' }));
     const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;

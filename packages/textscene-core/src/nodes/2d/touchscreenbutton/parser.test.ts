@@ -22,4 +22,8 @@ describe('parseTouchScreenButton', () => {
   it('reads a null texture_normal as no texture, as Godot does', () => {
     expect(parseTouchScreenButton(button, { texture_normal: 'null' }).texture_normal).toBeUndefined();
   });
+
+  it('carries an unreadable texture_normal raw, for the resolver to report as a missing resource', () => {
+    expect(parseTouchScreenButton(button, { texture_normal: '5' }).texture_normal).toBe('5');
+  });
 });
