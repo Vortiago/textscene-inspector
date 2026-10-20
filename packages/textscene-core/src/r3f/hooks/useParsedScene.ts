@@ -52,8 +52,8 @@ function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult
   // Every registered `NodeComponentRegistration.scenePass`, transforms before paths, rewrites the
   // parsed tree, so render, gizmos, bounds, selection, tree and inspector read one result.
   let nodes = tscnScene.nodes;
-  for (const pass of nodeComponentRegistry.scenePasses()) {
-    nodes = pass(nodes, tscnScene.internalResources);
+  for (const { run } of nodeComponentRegistry.scenePasses()) {
+    nodes = run(nodes, tscnScene.internalResources);
   }
   const parsedScene = tscnSceneToParsedScene(
     rootScenePath,

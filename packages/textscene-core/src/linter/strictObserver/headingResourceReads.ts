@@ -1,24 +1,41 @@
 /**
- * The `ExtResource` uses a heading's own fields carry, which the loader reads but no section body holds. Only the
- * linter asks, so the strict parser collects them from `onSectionStart` and the shared scan never does.
+ * What a heading's own fields carry, which no section body holds: each `[connection]` heading, and the `ExtResource`
+ * uses of a node's `instance=`. Only the linter asks, so the strict parser collects them from `onSectionStart` and the
+ * shared scan never does.
  */
 
 import type { ParsedHeading } from '../../parser/utils.js';
-import type { HeadingFacts } from '../../parser/types.js';
+import type { ConnectionHeading, HeadingFacts } from '../../parser/types.js';
 
-export type HeadingResourceReads = Pick<HeadingFacts, 'connectionBinds' | 'instancesOutsideNodeBody'>;
+export type HeadingResourceReads = Pick<HeadingFacts, 'connections' | 'instancesOutsideNodeBody'>;
+
+function connectionHeading({ attributes }: ParsedHeading, line: number): ConnectionHeading {
+  return {
+    line,
+    signal: attributes.signal,
+    from: attributes.from,
+    to: attributes.to,
+    method: attributes.method,
+    binds: attributes.binds,
+    hasFromUidPath: attributes.from_uid_path !== undefined,
+    hasToUidPath: attributes.to_uid_path !== undefined,
+  };
+}
 
 /** A collector to feed each parsed heading in scan order, and the reads it has gathered so far. */
-export function headingResourceReads(): { reads: HeadingResourceReads; read(heading: ParsedHeading): void } {
-  const connectionBinds: string[] = [];
+export function headingResourceReads(): {
+  reads: HeadingResourceReads;
+  read(heading: ParsedHeading, line: number): void;
+} {
+  const connections: ConnectionHeading[] = [];
   const instancesOutsideNodeBody: string[] = [];
   // Only a `[node]` body reads the heading after it leniently, so the previous heading's type decides.
   let previousHeadingType: string | null = null;
   return {
-    reads: { connectionBinds, instancesOutsideNodeBody },
-    read(heading) {
-      const { binds, instance } = heading.attributes;
-      if (heading.type === 'connection' && binds !== undefined) connectionBinds.push(binds);
+    reads: { connections, instancesOutsideNodeBody },
+    read(heading, line) {
+      const { instance } = heading.attributes;
+      if (heading.type === 'connection') connections.push(connectionHeading(heading, line));
       if (heading.type === 'node' && previousHeadingType !== 'node' && instance !== undefined) {
         instancesOutsideNodeBody.push(instance);
       }

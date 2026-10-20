@@ -3,7 +3,7 @@
  * prefixes, and how the paired `_min`/`_max` setters resolve a crossed range at load.
  */
 
-import { parseGodotFloat } from '../variant/number.js';
+import { scalarSlotValue } from '../variant/variantBool.js';
 import { storedReal } from '../math/real.js';
 import { replayPositions } from './propertyReplay.js';
 
@@ -52,8 +52,8 @@ export interface CrossedParamRange {
 export function crossedParamRanges(properties: Record<string, string>): CrossedParamRange[] {
   const crossed: CrossedParamRange[] = [];
   for (const [minKey, maxKey] of PARAM_KEY_PAIRS) {
-    const writtenMin = parseGodotFloat(properties[minKey] ?? '');
-    const writtenMax = parseGodotFloat(properties[maxKey] ?? '');
+    const writtenMin = scalarSlotValue(properties[minKey] ?? '');
+    const writtenMax = scalarSlotValue(properties[maxKey] ?? '');
     if (writtenMin === null || writtenMax === null) continue;
     const min = storedReal(writtenMin);
     const max = storedReal(writtenMax);

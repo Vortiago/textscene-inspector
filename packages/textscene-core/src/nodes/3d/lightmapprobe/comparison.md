@@ -4,12 +4,12 @@ category: 3D
 status: unimplemented
 fixture: unit-lightmap-probe.tscn
 # image: unit-lightmap-probe
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, Godot samples it to light dynamic objects, the previewer does not
 ---
 
 # LightmapProbe
 
-A hand-placed probe position that LightmapGI samples to light dynamic objects. It carries no state beyond where it sits. The previewer does not use it yet, so the node is an invisible transform-only fallback and its children still show.
+A hand-placed probe position that LightmapGI samples to light dynamic objects. It carries no state beyond where it sits. The previewer does not use it yet, so the node draws nothing and its children still show.
 
 ## Linting
 

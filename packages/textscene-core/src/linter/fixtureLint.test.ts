@@ -58,6 +58,25 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['worldenvironment-requires-environment'],
     reason: 'the WorldEnvironment names no Environment on purpose, to pin the root Godot draws with none',
   },
+  'unit-sprite2d-untextured.tscn': {
+    rules: ['sprite2d-requires-texture'],
+    reason: 'the two textureless Sprite2D nodes are the fixture, to pin that Godot draws nothing for them',
+  },
+  'unit-animatedsprite2d-untextured.tscn': {
+    rules: ['animatedsprite2d-requires-spriteframes'],
+    reason:
+      'the two AnimatedSprite2D nodes without sprite_frames are the fixture, to pin that Godot draws nothing for them',
+  },
+  'unit-pointlight2d-untextured.tscn': {
+    rules: ['pointlight2d-requires-texture'],
+    reason:
+      'the two PointLight2D nodes without a texture are the fixture, to pin that Godot lights nothing for them',
+  },
+  'unit-sprite3d-untextured.tscn': {
+    rules: ['sprite3d-requires-texture'],
+    reason:
+      'the two Sprite3D nodes without a texture are the fixture, to pin that Godot draws nothing for them',
+  },
   'unit-csg-mesh.tscn': {
     rules: ['csgmesh3d-requires-mesh'],
     reason:
@@ -92,6 +111,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'named for it: the fixture exists to move scroll_offset onto the clamp branch the advisory reports',
   },
+  'unit-bool-numeric-slots.tscn': {
+    rules: ['format:frame', 'format:z_index', 'format:rotation'],
+    reason:
+      'the fixture writes `true` into INT and FLOAT slots on purpose: the converted-spelling warning is the point, and the golden pins what Godot draws for it',
+  },
   'unit-tile-map.tscn': {
     rules: ['tilemap-deprecated'],
     reason:
@@ -116,7 +140,7 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 );
 
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
-const NEGATIVE_FIXTURE_COUNT = 5;
+const NEGATIVE_FIXTURE_COUNT = 7;
 
 /**
  * The project a fixture's `res://` paths resolve in: the nearest `project.godot` from its folder up to

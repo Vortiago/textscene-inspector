@@ -1,0 +1,40 @@
+; One variable against unit-sub-viewport-container-stretch-2d-content.tscn: `stretch_shrink = 2`,
+; so the 150x100 target is magnified twice over the 300x200 container. The variable is the
+; magnified edge: the filter blends the stored sRGB bytes, and no other golden magnifies a
+; target edge. Orange meets the clear colour at target column 75, and the dark fill meets orange
+; at row 50, where Godot 4.6.3 reads (249,120) rgb(210, 96, 19) and (150,179) rgb(195, 80, 4).
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 400.0
+offset_bottom = 280.0
+stretch = true
+stretch_shrink = 2
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+size = Vector2i(200, 150)
+render_target_update_mode = 4
+
+[node name="Orange" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(1, 0.4, 0, 1)
+polygon = PackedVector2Array(0, 0, 75, 0, 75, 50, 0, 50)
+
+; Color(0.06, 0.06, 0.06) stores as byte 15 in Godot's sRGB target. A linear 8-bit target
+; rounds it to 13, so this fill also pins the dark precision.
+[node name="Dark" type="Polygon2D" parent="Booth/SubViewport"]
+color = Color(0.06, 0.06, 0.06, 1)
+polygon = PackedVector2Array(0, 50, 75, 50, 75, 100, 0, 100)

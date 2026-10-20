@@ -30,6 +30,7 @@ import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
 import { buildSceneTree } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
+import { parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
@@ -154,7 +155,8 @@ export class TscnParserCore {
             node,
             line: currentHeadingLine,
             declaredParent: currentHeading.attributes.parent,
-            recoverableById: currentHeading.attributes.parent_id_path !== undefined,
+            idTrail: parseIdTrail(currentHeading.attributes.parent_id_path),
+            uniqueId: parseUniqueId(currentHeading.attributes.unique_id),
           });
           observer?.onSectionBuilt?.(node, currentHeadingLine);
         }

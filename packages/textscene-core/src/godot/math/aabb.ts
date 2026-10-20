@@ -62,3 +62,23 @@ export function transformAabb(transform: ArrayLike<number>, { position, size }: 
     size: { x: high[0]! - low[0]!, y: high[1]! - low[1]!, z: high[2]! - low[2]! },
   };
 }
+
+/**
+ * The box of `xyz` points, the first point's box grown by `AABB::expand_to` for each other
+ * (`scene/resources/3d/primitive_meshes.cpp:58-70`). `AABB()` for no points.
+ */
+export function aabbOfPoints(points: ArrayLike<number>): Aabb {
+  if (points.length < 3) return EMPTY_AABB;
+  const min = [points[0]!, points[1]!, points[2]!];
+  const max = [...min];
+  for (let i = 3; i + 2 < points.length; i += 3) {
+    for (let axis = 0; axis < 3; axis++) {
+      min[axis] = Math.min(min[axis]!, points[i + axis]!);
+      max[axis] = Math.max(max[axis]!, points[i + axis]!);
+    }
+  }
+  return {
+    position: { x: min[0]!, y: min[1]!, z: min[2]! },
+    size: { x: max[0]! - min[0]!, y: max[1]! - min[1]!, z: max[2]! - min[2]! },
+  };
+}

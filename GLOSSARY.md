@@ -125,7 +125,7 @@ A node or scene with `rawProperties` and no `properties`, which is what a **Lint
 _Avoid_: reading `properties` in a rule, or casting it to a string map.
 
 **Heading facts** (`HeadingFacts` in `parser/types.ts`):
-What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, connection binds and instances outside a node body.
+What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, each connection heading and instances outside a node body.
 Only the linter reads them, so only the strict parser's `StrictScene` carries them. The strict parser builds them from the headings the core returns beside the scene and from its own observer.
 _Avoid_: putting a linter-only field on `TscnScene`.
 
@@ -181,6 +181,11 @@ _Avoid_: "module", "feature folder".
 All code for one resource type in `resources/<category>/<type>/`, the resource-side sibling of the **Vertical slice** (ADR-0031).
 A Godot-text slice splits a pure `decode.ts` from `build.ts`, and a foreign-format slice declares its real parser instead.
 _Avoid_: "processor" for the slice. A hollow `decode.ts` on a foreign format.
+
+**Godot surface**:
+One triangle surface in Godot's mesh arrays: positions, normals, tangents, UV and UV2, with front faces clockwise and V from the image top.
+A decoded ArrayMesh, a PrimitiveMesh builder and a CSGMesh3D brush share it, and `godotSurfacesGeometry` alone turns it into three's winding and V.
+_Avoid_: "three-space surface". "mesh data".
 
 **React-free linter boundary**:
 The invariant that the linter bundle never imports React or THREE, even transitively, which a **conformance guard** checks on the import graph.
@@ -352,8 +357,13 @@ The **AnimationPlayer**, a **geometry contributor** and a **sub-viewport** are t
 _Avoid_: "placeholder", "not implemented". "inert" for those three roles.
 
 **Pending** (render intent):
-A node type whose Godot effect, an own visual or the drive of a **Driver**, is not implemented yet, registered under its base with `renderIntent: 'pending'` and the sheet status `unimplemented` (ADR-0045).
+A node type whose Godot effect, an own visual or the drive of a **Driver**, is not implemented yet, registered on an **invisible base** with `renderIntent: 'pending'` (a `Control`-based gap registers no component) and the sheet status `unimplemented` (ADR-0045).
 _Avoid_: bare "pending" for a resource load (say "load pending").
+
+**Invisible base**:
+A base component that places a node's transform for its children and draws nothing: Node3D, Node2D, Node and an undrawn GeometryInstance3D.
+`NodeComponentRegistry` refuses a **Pending** registration on any other component, and a `draws` registration on an invisible base, so the badge cannot call a drawn node a gap or a gap drawn.
+_Avoid_: "fallback" (that is the dispatcher's `GenericNodeFallback` for an unregistered type).
 
 **Driver**:
 A node with no geometry of its own that moves, deforms or animates other nodes, such as AnimationPlayer, RemoteTransform3D and a SkeletonModifier3D.

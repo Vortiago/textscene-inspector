@@ -6,9 +6,9 @@ game loads that artefact. The artefact is gitignored, binary and hash-named, so 
 previewer cannot have it as an input. The previewer therefore performs an **asset
 re-import**: it loads the source asset and re-derives the scene. It honours
 `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
-`meshes/lightmap_texel_size` and, from `_subresources`, the per-material `use_external`
-remaps, the per-node `mesh_instance/layers` and the per-mesh `generate/lightmap_uv`, and
-nothing else.
+`meshes/lightmap_texel_size`, `nodes/use_name_suffixes` and, from `_subresources`, the
+per-material `use_external` remaps, the per-node `mesh_instance/layers`, the per-mesh
+`generate/lightmap_uv` and the per-clip `settings/loop_mode`, and nothing else.
 
 ## Why the sidecars matter
 
@@ -72,6 +72,13 @@ newly vendored demo needs a decision.
   and 3D texture sidecars (see the amendment below). `scripts/vendor-prune.mjs` prunes every other
   sidecar. Audio and font sidecars change nothing the previewer draws, and vendoring those inert
   files would hide the ones that matter.
+- **A clip's loop mode belongs to the asset.** The glTF importer loops a clip whose name begins or
+  ends with `loop` or `cycle` (`gltf_document.cpp:3752-3753`). Unless `nodes/use_name_suffixes` is
+  off, the scene importer also loops a clip with a `-loop`, `_loop`, `-cycle`, `_cycle`,
+  `-loop_mode`, `_loop_mode` or `$loop` suffix and removes the suffix from its name
+  (`resource_importer_scene.cpp:745-755`). An `_subresources.animations` entry under the final
+  name then replaces the mode with its `settings/loop_mode`, which is 0 (`LOOP_NONE`) when the
+  entry omits it (`:1335-1347`). Slice cuts and `save_to_file` stay unread.
 
 ## Amendment: lightmap UV2 from the unwrap cache
 

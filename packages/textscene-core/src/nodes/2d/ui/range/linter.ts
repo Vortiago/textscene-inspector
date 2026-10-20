@@ -3,8 +3,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
-import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
-import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { boolSlotValue, scalarSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -29,8 +28,8 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
   // order collapses the range to a point at `min_value`. The .tscn keeps the
   // inverted pair, so without this rule the collapse is invisible.
   if (minRaw !== undefined && maxRaw !== undefined) {
-    const min = parseGodotFloat(minRaw);
-    const max = parseGodotFloat(maxRaw);
+    const min = scalarSlotValue(minRaw);
+    const max = scalarSlotValue(maxRaw);
     // The MAX() at range.cpp:217 does not collapse a nan pair, so `nan` has
     // no single point to report.
     if (min !== null && max !== null && !Number.isNaN(min) && !Number.isNaN(max) && max < min) {
@@ -47,7 +46,7 @@ function checkRangeBounds(context: RuleContext): Diagnostic[] {
   // `exp_edit` (range.cpp:411) defaults false and `min_value` 0.0 (range.h:40,44),
   // so both must be authored.
   if (boolSlotValue(props.exp_edit) === true && minRaw !== undefined) {
-    const min = parseGodotFloat(minRaw);
+    const min = scalarSlotValue(minRaw);
     if (min !== null && !Number.isNaN(min) && min < 0) {
       reportArm(
         diagnostics,

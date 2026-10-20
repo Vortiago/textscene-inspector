@@ -11,7 +11,7 @@ interface Rect2 {
 }
 
 export interface Sprite2DProperties extends Node2DProperties {
-  /** `ExtResource("id")` or `res://…` reference; undefined → placeholder. */
+  /** `ExtResource("id")` or `res://…` reference; undefined or `null` → nothing drawn. */
   texture?: string;
   /** Quad centred on the node origin (default true), else its top-left sits there. */
   centered: boolean;

@@ -2,7 +2,7 @@
  * Reads a surface's `vertex_data`, `attribute_data` and `index_data` into typed
  * arrays holding what Godot's `ArrayMesh.surface_get_arrays()` returns, so
  * dequantising through `aabb` / `uv_scale` belongs here. The conversions to
- * three.js (V flip, triangle winding) live in `build.ts`.
+ * three.js (V flip, triangle winding) live in `../godotSurface.ts`.
  */
 
 import type { SurfaceAabb, UvScale } from './surfaceFields.js';
@@ -134,11 +134,62 @@ function decodeUvSet(
   return out;
 }
 
-/** Octahedron → unit vector, Godot's `Vector3::octahedron_decode`. */
-function octToVec3(ex: number, ey: number): [number, number, number] {
-  let nx = ex;
-  let ny = ey;
-  const nz = 1 - Math.abs(ex) - Math.abs(ey);
+/** A surface's normals and tangents, each undefined when the surface stores none. */
+export interface NormalFrame {
+  normals?: Float32Array;
+  /** `xyzw` per vertex, `w` the binormal sign. */
+  tangents?: Float32Array;
+}
+
+/**
+ * Normals and tangents from the region after the positions, as `surface_get_arrays` returns
+ * them, so a caller recomputes what is missing. Uncompressed stores a 2×uint16 octahedral
+ * normal and, after it, an octahedral tangent. Compressed stores a rotation axis there and the
+ * angle in the 4th uint16 of the position record (`rendering_server.cpp:1459-1482`).
+ */
+export function decodeNormalFrame(
+  bytes: Uint8Array,
+  vertexCount: number,
+  layout: SurfaceLayout
+): NormalFrame {
+  const { normalStride: stride, positionStride } = layout;
+  if (stride === 0 || vertexCount === 0) return {};
+  const normalBlock = vertexCount * positionStride;
+  if (bytes.byteLength < normalBlock + stride * vertexCount) return {};
+
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  // A uint16 pair → Godot's [0, 1] octahedral coordinates. The two layouts read it differently,
+  // so they get a loop each rather than a per-vertex test of something that cannot change.
+  const pair = (o: number): [number, number] => [
+    view.getUint16(o, true) / 65535,
+    view.getUint16(o + 2, true) / 65535,
+  ];
+  const normals = new Float32Array(vertexCount * 3);
+
+  if (layout.tangent === 'frame') {
+    const tangents = new Float32Array(vertexCount * 4);
+    for (let i = 0; i < vertexCount; i++) {
+      const axis = octahedronDecode(...pair(normalBlock + i * stride));
+      const angle = view.getUint16(i * positionStride + 6, true) / 65535;
+      writeAxisAngleFrame(axis, angle, normals, tangents, i);
+    }
+    return { normals, tangents };
+  }
+
+  const tangents = layout.tangent === 'octahedral' ? new Float32Array(vertexCount * 4) : undefined;
+  for (let i = 0; i < vertexCount; i++) {
+    const record = normalBlock + i * stride;
+    normals.set(octahedronDecode(...pair(record)), i * 3);
+    if (tangents) writeOctahedralTangent(pair(record + 4), tangents, i);
+  }
+  return { normals, tangents };
+}
+
+/** Godot's `Vector3::octahedron_decode` (`vector3.cpp:107-114`), from [0, 1] coordinates. */
+function octahedronDecode(u: number, v: number): [number, number, number] {
+  let nx = u * 2 - 1;
+  let ny = v * 2 - 1;
+  const nz = 1 - Math.abs(nx) - Math.abs(ny);
   const t = Math.max(-nz, 0);
   nx += nx >= 0 ? -t : t;
   ny += ny >= 0 ? -t : t;
@@ -147,64 +198,36 @@ function octToVec3(ex: number, ey: number): [number, number, number] {
 }
 
 /**
- * Normals from the region after the positions, or undefined when there is none,
- * so the caller recomputes. Uncompressed stores a 2×uint16 octahedral normal.
- * Compressed stores a rotation axis there and the angle (half-turns) in the 4th
- * uint16 of the position record: the normal is row 3 of `axis_angle_to_tbn`.
+ * Godot's `Vector3::octahedron_tangent_decode` (`vector3.cpp:124-131`): the upper half of V is a
+ * positive binormal sign and the lower half a negative one, each folded back onto [0, 1].
  */
-export function decodeNormals(
-  bytes: Uint8Array,
-  vertexCount: number,
-  layout: SurfaceLayout
-): Float32Array | undefined {
-  const { normalStride: stride, positionStride } = layout;
-  if (stride === 0 || vertexCount === 0) return undefined;
-  const normalBlock = vertexCount * positionStride;
-  if (bytes.byteLength < normalBlock + stride * vertexCount) return undefined;
+function writeOctahedralTangent([u, v]: [number, number], tangents: Float32Array, vertex: number): void {
+  const signed = v * 2 - 1;
+  tangents.set([...octahedronDecode(u, Math.abs(signed)), signed >= 0 ? 1 : -1], vertex * 4);
+}
 
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const out = new Float32Array(vertexCount * 3);
-  // uint16 → [-1, 1] octahedral coordinates. What that pair MEANS is the whole
-  // difference between the two layouts, so they get a loop each rather than a
-  // per-vertex test of something that cannot change.
-  const oct = (o: number): [number, number] => [
-    (view.getUint16(o, true) / 65535) * 2 - 1,
-    (view.getUint16(o + 2, true) / 65535) * 2 - 1,
-  ];
-
-  if (!layout.tangentFrame) {
-    for (let i = 0; i < vertexCount; i++) {
-      const [ex, ey] = oct(normalBlock + i * stride);
-      const [nx, ny, nz] = octToVec3(ex, ey);
-      out[i * 3] = nx;
-      out[i * 3 + 1] = ny;
-      out[i * 3 + 2] = nz;
-    }
-    return out;
-  }
-
-  for (let i = 0; i < vertexCount; i++) {
-    // The pair is a rotation AXIS, and the ANGLE is the 4th uint16 of the
-    // position record, in half-turns. The normal is the third row of that
-    // rotation (Godot's `axis_angle_to_tbn`).
-    const [ex, ey] = oct(normalBlock + i * stride);
-    const [ax, ay, az] = octToVec3(ex, ey);
-    // Absolute value, as Godot's `abs(angle * 2.0 - 1.0) * PI`: the sign carries
-    // the binormal's handedness, not the rotation's direction. Read signed, it
-    // flips the normal's x and y for every vertex below the midpoint.
-    const angle = Math.abs((view.getUint16(i * positionStride + 6, true) / 65535) * 2 - 1) * Math.PI;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    const omc = 1 - cos;
-    const nx = omc * az * ax - sin * ay;
-    const ny = omc * az * ay + sin * ax;
-    const nz = omc * az * az + cos;
-    const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
-    out[i * 3] = nx / len;
-    out[i * 3 + 1] = ny / len;
-    out[i * 3 + 2] = nz / len;
-  }
-  return out;
+/**
+ * Godot's `_get_tbn_from_axis_angle` (`rendering_server.cpp:338-346`): the normal is row 2 of
+ * the rotation (`basis.cpp:840-868`) and the tangent row 0. A stored angle above the midpoint
+ * carries a positive binormal sign, and its distance from the midpoint is the rotation in
+ * half-turns.
+ */
+function writeAxisAngleFrame(
+  [ax, ay, az]: [number, number, number],
+  storedAngle: number,
+  normals: Float32Array,
+  tangents: Float32Array,
+  vertex: number
+): void {
+  const angle = Math.abs(storedAngle * 2 - 1) * Math.PI;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const omc = 1 - cos;
+  normals.set([omc * az * ax - sin * ay, omc * az * ay + sin * ax, omc * az * az + cos], vertex * 3);
+  tangents.set(
+    [ax * ax * omc + cos, ax * ay * omc - az * sin, ax * az * omc + ay * sin, storedAngle > 0.5 ? 1 : -1],
+    vertex * 4
+  );
 }
 
 /**

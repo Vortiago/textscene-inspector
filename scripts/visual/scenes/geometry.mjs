@@ -109,6 +109,9 @@ export const GEOMETRY_SCENES = [
   // triple, UVs uint16. Read at the uncompressed stride, NaN positions reach the
   // camera fit and the frame is blank.
   { name: 'arraymesh-compressed', file: 'unit-arraymesh-compressed.tscn' },
+  // The one variable: the tangents an ArrayMesh stores, in both layouts. Anisotropy and a normal
+  // map bend with them, and no other ArrayMesh scene uses either.
+  { name: 'arraymesh-tangents', file: 'unit-arraymesh-tangents.tscn' },
   // A surface material as a `[sub_resource]` of the mesh's own `.tres`, the form
   // Godot writes when a mesh carries its own materials. No other scene uses it.
   // The left plate's ExtResource material is the control, so a regression turns

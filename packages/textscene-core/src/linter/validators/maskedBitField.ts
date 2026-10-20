@@ -10,7 +10,8 @@ import { unrepresentableInt } from './intSlot.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import type { Severity } from '../types.js';
-import { markIntSlot, readIntSlot, storedNotWritten } from './intSlot.js';
+import { markIntSlot, storedNotWritten } from './intSlot.js';
+import { readIntSlot } from '../../godot/variant/int.js';
 import { formatCode, valueCode } from './v/codes.js';
 
 /**
@@ -128,7 +129,7 @@ export function maskedBitField(name: string, mask: number, opts: MaskedBitFieldO
     bits: mask,
     severity: 'error',
     // The stored value for a negative spelling and a wide one alike.
-    // `parseGodotInt` has already refused anything past 2^53, where the double
+    // `readIntSlot` has already refused anything past 2^53, where the double
     // stops being the integer the file spells.
     message: (num) =>
       `Property '${name}' accepts only the bits ${allNames}; ${num} sets bits outside the mask, which Godot drops on assignment (Godot stores ${insideMask(num, mask)})`,

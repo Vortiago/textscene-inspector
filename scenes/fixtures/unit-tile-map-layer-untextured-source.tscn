@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; Moves one variable: an atlas source with no texture between two textured ones. Godot skips a
+; cell whose source has no runtime texture (tile_map_layer.cpp:724), so only this scene shows
+; that the cell draws nothing, not a placeholder. The cells on either side are the anchors.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_textured"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_bare"]
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_untextured"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetAtlasSource_textured")
+sources/1 = SubResource("TileSetAtlasSource_bare")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(400, 260)
+tile_map_data = PackedByteArray(0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0)
+tile_set = SubResource("TileSet_untextured")

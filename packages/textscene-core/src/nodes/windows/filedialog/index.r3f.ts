@@ -1,6 +1,6 @@
 /**
  * FileDialog is parsed but not drawn. The registration declares that gap and nothing
- * more: `nodeComponentRegistry.isPending` drives the "not implemented" badge and the
+ * more: `renderIntent: 'pending'` drives the "not implemented" badge and the
  * group's placeholder marker. `container: true` holds the type in both canvases.
  * The `Node` base applies no `visible`.
  */

@@ -72,7 +72,10 @@ function atlasSource(id: number): AtlasSourceModel {
   };
 }
 
-/** A square 16 px tileset with atlas sources 0 and 1, and source 2, which names no texture. */
+/** The source whose texture fails to load. */
+const FAILED_SOURCE = 2;
+
+/** A square 16 px tileset with atlas sources 0 and 1, and source 2, whose texture fails to load. */
 const MODEL: TileSetModel = {
   shape: 0,
   layout: 0,
@@ -81,7 +84,7 @@ const MODEL: TileSetModel = {
   sources: new Map([
     [0, atlasSource(0)],
     [1, atlasSource(1)],
-    [2, { ...atlasSource(2), texturePath: '' }],
+    [FAILED_SOURCE, atlasSource(FAILED_SOURCE)],
   ]),
 };
 
@@ -106,7 +109,7 @@ function render(
   for (const id of MODEL.sources.keys()) {
     const texture = new THREE.Texture();
     (texture as unknown as { image: { width: number; height: number } }).image = { width: 16, height: 16 };
-    fake.textures.seed(`res://source${id}.png`, texture);
+    fake.textures.seed(`res://source${id}.png`, id === FAILED_SOURCE ? null : texture);
   }
   fake.resources.seed(
     'res://add.tres',
@@ -201,7 +204,9 @@ describe('<TileQuadrants>', () => {
   });
 
   it("draws a missing-texture placeholder in its tile's z bucket, not the layer's", async () => {
-    const meshes = meshesOf(await render([[cell(0, 0, 0), cell(2, 1, 0, 1)]], { zFinal: 3 }).tree);
+    const meshes = meshesOf(
+      await render([[cell(0, 0, 0), cell(FAILED_SOURCE, 1, 0, 1)]], { zFinal: 3 }).tree
+    );
     expect(meshes.map(canvasKeyOf)).toEqual([layerKey(3), layerKey(5)]);
   });
 

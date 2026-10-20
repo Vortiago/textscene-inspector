@@ -3,6 +3,11 @@ import { parseAnimatedSprite2D } from './parser';
 import { heading } from '../../../parser/testing/parserKit';
 
 describe('parseAnimatedSprite2D', () => {
+  it('reads sprite_frames of null as no sprite_frames', () => {
+    const p = parseAnimatedSprite2D(heading('AnimatedSprite2D', { name: 'Anim' }), { sprite_frames: 'null' });
+    expect(p.sprite_frames).toBeUndefined();
+  });
+
   it('parses sprite_frames ref + unwraps the &"name" StringName', () => {
     const p = parseAnimatedSprite2D(heading('AnimatedSprite2D', { name: 'Anim' }), {
       sprite_frames: 'SubResource("1")',

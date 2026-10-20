@@ -23,6 +23,6 @@ describe('AudioListener2D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('AudioListener2D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('AudioListener2D')).toBe('transform-only');
   });
 });

@@ -1,7 +1,7 @@
 /**
  * AnimatedSprite2D render behaviour: resolves the current animation frame from
- * the SpriteFrames SubResource and draws it as a modulated quad. A missing
- * sprite_frames falls back to the placeholder.
+ * the SpriteFrames SubResource and draws it as a modulated quad. Unset sprite_frames draws
+ * nothing, as Godot does; a sprite_frames that is set but cannot resolve draws the placeholder.
  */
 import type { ReactElement } from 'react';
 import { afterEach, describe, it, expect, vi } from 'vitest';
@@ -84,8 +84,18 @@ describe('AnimatedSprite2D render', () => {
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.5), 4);
   });
 
-  it('renders the magenta placeholder when sprite_frames is missing', async () => {
+  it('draws nothing when sprite_frames is unset (animated_sprite_2d.cpp:270)', async () => {
     const r = await render(makeNode({}));
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('draws nothing when sprite_frames is null (animated_sprite_2d.cpp:270)', async () => {
+    const r = await render(makeNode({ sprite_frames: 'null' }));
+    expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it('renders the magenta placeholder when sprite_frames is set but does not resolve', async () => {
+    const r = await render(makeNode({ sprite_frames: 'SubResource("absent")' }));
     const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
     const material = mesh.material as THREE.MeshBasicMaterial;
     expect(material.color.getHexString()).toBe('ff00ff');

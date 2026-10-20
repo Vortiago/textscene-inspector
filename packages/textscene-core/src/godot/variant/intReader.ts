@@ -4,6 +4,7 @@
  */
 
 import { parseGodotFloat } from './number.js';
+import { scalarSlotValue } from './variantBool.js';
 import { REPRESENTABLE, ROUND_TRIPS, toInt32, toUint32, toUint8 } from './intWidth.js';
 import type { IntWidth } from './intWidth.js';
 
@@ -36,11 +37,22 @@ function asStoredInt(num: number): number {
   return Number.isFinite(num) ? Math.trunc(num) : NaN;
 }
 
+/** The stored integer for a read `asFloat`, or `null` where the tokenizer read nothing. */
+function storedOrNull(
+  asFloat: number | null,
+  literal: string,
+  width: IntWidth,
+  alwaysFloatBranch: boolean
+): number | null {
+  return asFloat === null ? null : storedFromFloat(asFloat, literal, width, alwaysFloatBranch);
+}
+
 /**
- * A TSCN literal as the integer a Godot property slot stores: `null` when the tokenizer cannot read
- * it, `NaN` when the conversion into this slot is undefined, else the number the engine holds. Not
- * `parseInt`, which reads `2e4` as 2 (Godot stores 20000) and `8abc` as 8 (a format error). A float
- * truncates toward zero (`-5.9` is -5), and the result is narrowed, as setters take `int`.
+ * A TSCN literal as the integer a Godot constructor argument or header attribute stores: `null` when
+ * the tokenizer cannot read it, `NaN` when the conversion is undefined, else the number the engine
+ * holds. Not `parseInt`, which reads `2e4` as 2 (Godot stores 20000) and `8abc` as 8 (a format
+ * error). A float truncates toward zero (`-5.9` is -5), and the result is narrowed, as setters take
+ * `int`. A BOOL is no argument there: a property write reads {@link parseSlotInt}.
  */
 export function parseGodotInt(
   value: string,
@@ -51,13 +63,36 @@ export function parseGodotInt(
   // No grammar pre-test or trim: `parseGodotFloat` applies TSCN_FLOAT_RE and trims, and this runs
   // once per packed-array element. `FLOAT_TYPED` looks for `.` or `e`, never whitespace, so the raw
   // text answers it.
-  const asFloat = parseGodotFloat(value);
-  return asFloat === null ? null : storedFromFloat(asFloat, value, width, alwaysFloatBranch);
+  return storedOrNull(parseGodotFloat(value), value, width, alwaysFloatBranch);
+}
+
+/**
+ * {@link parseGodotInt} for a property write, which converts a BOOL as 1 or 0 (`variant.h:365-366`):
+ * `z_index = true` stores 1.
+ */
+export function parseSlotInt(
+  value: string,
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}. */
+  alwaysFloatBranch = false
+): number | null {
+  return storedOrNull(scalarSlotValue(value), value, width, alwaysFloatBranch);
+}
+
+/** Whether the tokenizer typed the literal FLOAT, which picks the `_to_int` branch. */
+function isFloatBranch(literal: string, alwaysFloatBranch: boolean): boolean {
+  return alwaysFloatBranch || FLOAT_TYPED.test(literal);
 }
 
 /**
  * The integer a slot stores, from a float the caller has already read, so a combinator such as
  * `v.strictInt` reads the text once. `literal` picks the `_to_int` branch.
+ *
+ * An INT literal wraps to the slot's width at any value a double holds exactly: `light_mask =
+ * 3000000000` stores -1294967296 and `Vector2i(4294967296, 5)` stores `(0, 5)`. A FLOAT literal
+ * converts only inside the width's range, as the C++ conversion is undefined outside it
+ * (`seed = 4294967295.0` fits uint32, `-1.0` does not), and `3e9` stores -2147483648 on x86_64 only.
+ * Whether the file states this number is {@link isAlteredInt}.
  */
 export function storedFromFloat(
   asFloat: number,
@@ -71,14 +106,42 @@ export function storedFromFloat(
   alwaysFloatBranch = false
 ): number {
   const stored = asStoredInt(asFloat);
-  if (Number.isNaN(stored)) return NaN;
-  // A FLOAT literal reaches only the type's range, as the C++ conversion is undefined outside it
-  // (`seed = 4294967295.0` fits uint32, `-1.0` does not). An INT literal wraps, and `String::to_int`
-  // saturates (`ustring.cpp:2650-2658`), so it also reaches the opposite spelling Godot writes. On
-  // 4.6.3, `light_mask = 3000000000` wraps to -1294967296, and `3e9` stores -2147483648.
-  const floatBranch = alwaysFloatBranch || FLOAT_TYPED.test(literal);
-  const [low, high] = floatBranch ? REPRESENTABLE[width] : ROUND_TRIPS[width];
   // Past 2^53 a double is no longer the int64 the file states: a reader limit, not the engine's.
-  if (stored < low || stored > high || !Number.isSafeInteger(stored)) return NaN;
+  if (!Number.isSafeInteger(stored)) return NaN;
+  if (isFloatBranch(literal, alwaysFloatBranch)) {
+    const [low, high] = REPRESENTABLE[width];
+    if (stored < low || stored > high) return NaN;
+  }
   return wrapToWidth(stored, width);
+}
+
+/**
+ * {@link storedFromFloat} for the linter: NaN when the file does not state the number (ADR-0032),
+ * so a bound cannot pass it and the alteration finding is the only one reported. `String::to_int`
+ * saturates (`ustring.cpp:2650-2658`) and Godot writes either signedness of a 32-bit pattern, so an
+ * INT literal inside `ROUND_TRIPS` is a spelling and one outside it is an alteration. A FLOAT literal
+ * is stated only inside the width's range.
+ */
+export function statedFromFloat(
+  asFloat: number,
+  literal: string,
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}. */
+  alwaysFloatBranch = false
+): number {
+  const stored = asStoredInt(asFloat);
+  if (!Number.isSafeInteger(stored)) return NaN;
+  const [low, high] = isFloatBranch(literal, alwaysFloatBranch) ? REPRESENTABLE[width] : ROUND_TRIPS[width];
+  return stored < low || stored > high ? NaN : wrapToWidth(stored, width);
+}
+
+/** Whether the stored number differs from the one the file states: the finding ADR-0032 reports. */
+export function isAlteredInt(
+  asFloat: number,
+  literal: string,
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}. */
+  alwaysFloatBranch = false
+): boolean {
+  return Number.isNaN(statedFromFloat(asFloat, literal, width, alwaysFloatBranch));
 }

@@ -10,7 +10,7 @@ renders_as: nothing yet, Godot draws a textured mesh, the previewer does not
 # MeshInstance2D
 
 MeshInstance2D draws a Mesh on the canvas, textured through `texture`. The previewer
-parses and validates it but does not draw it, so it renders as a transform-only fallback
+parses and validates it but does not draw it, so it draws nothing
 and its children still show.
 
 ## Linting

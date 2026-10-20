@@ -1,9 +1,10 @@
 /** The CLI surface: what the flags mean and how the ledger is printed. */
 
 export function parseArgs(argv) {
-  const opts = { json: false };
+  const opts = { json: false, resources: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--json') opts.json = true;
+    else if (argv[i] === '--resources') opts.resources = true;
     else if (argv[i] === '--help' || argv[i] === '-h') opts.help = true;
     else {
       console.error(`[coverage-report] unknown option: ${argv[i]}`);
@@ -36,4 +37,21 @@ export function report(data, opts) {
     console.log(`Registered but absent from ClassDB: ${data.phantom.join(', ')}\n`);
   }
   if (data.missing.length) console.log(`Missing: ${data.missing.map((n) => n.name).join(', ')}`);
+}
+
+/** The resource ledger: totals, then every class, most unvalidated properties first. */
+export function reportResources(data, opts) {
+  if (opts.json) {
+    console.log(JSON.stringify(data, null, 2));
+    return;
+  }
+
+  console.log(`Resource classes: ${data.total}, ${data.claimed} claimed by a slice`);
+  console.log(`Classes with their own validators: ${data.withOwnValidator}`);
+  console.log('');
+  console.log('class (base): claimed, validated/own properties');
+  for (const c of data.classes) {
+    const state = c.claimed ? 'claimed' : 'unclaimed';
+    console.log(`${c.name} (${c.base ?? 'none'}): ${state}, ${c.validatedProperties}/${c.ownProperties}`);
+  }
 }

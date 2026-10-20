@@ -5,9 +5,9 @@
  * `height = radius * 2.0`, and set_height (:50-52) sets `radius = height * 0.5`.
  */
 
+import { scalarSlotValue } from '../../../../godot/variant/variantBool.js';
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { parseGodotFloat } from '../../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -28,11 +28,11 @@ function checkSpringBoneCollisionCapsule3D(context: RuleContext): Diagnostic[] {
   // and the written value survives: `radius = 4.0` alone loads as radius 4.0 and height 8.0.
   if (rawRadius === undefined || rawHeight === undefined) return [];
 
-  // `parseGodotFloat`, not `parseFloat`: `inf` is a real point on the number
+  // `scalarSlotValue`, not `parseFloat`: `inf` is a real point on the number
   // line here rather than an unreadable property, and `nan` reads as NaN and
   // trips nothing, since every comparison against it is false.
-  const radius = parseGodotFloat(rawRadius);
-  const height = parseGodotFloat(rawHeight);
+  const radius = scalarSlotValue(rawRadius);
+  const height = scalarSlotValue(rawHeight);
   if (radius === null || height === null) return [];
   // The error tier (ADR-0032): a setter alters an authored value, even though not its own. File
   // order decides which half moves, so the message names neither. No hint can express it: both

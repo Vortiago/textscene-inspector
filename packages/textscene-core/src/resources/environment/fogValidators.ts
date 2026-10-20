@@ -6,11 +6,12 @@
 
 import type { PropertyValidator } from '../../linter/ValidatorRegistry.js';
 import { v } from '../../linter/validators/index.js';
+import { FOG_MODE_NAMES } from '../../godot/scene/environment.js';
 
 export const fogKeys: Record<string, PropertyValidator> = {
   fog_enabled: v.boolean('fog_enabled'),
   // environment.cpp:1492, set_fog_mode (:778-786) bare-assigns.
-  fog_mode: v.enumInt('fog_mode', { 0: 'EXPONENTIAL', 1: 'DEPTH' }, { hinted: 'environment.cpp:1492' }),
+  fog_mode: v.enumInt('fog_mode', FOG_MODE_NAMES, { hinted: 'environment.cpp:1492' }),
   fog_light_color: v.color('fog_light_color'),
   // environment.cpp:1494-1495 and :1497, all `or_greater`: floor only.
   fog_light_energy: v.nonNegativeFloat('fog_light_energy', { hinted: 'environment.cpp:1494' }),

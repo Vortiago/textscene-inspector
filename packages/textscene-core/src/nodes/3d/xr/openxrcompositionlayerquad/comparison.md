@@ -9,7 +9,7 @@ renders_as: nothing yet, outside an OpenXR session Godot draws a flat quad, the 
 
 # OpenXRCompositionLayerQuad
 
-Composites `layer_viewport` onto a flat quad in the XR compositor during a live session. Outside one, Godot draws a fallback mesh sized by `quad_size`. The previewer draws a transform-only group, and its children still show.
+Composites `layer_viewport` onto a flat quad in the XR compositor during a live session. Outside one, Godot draws a fallback mesh sized by `quad_size`. The previewer draws nothing for it, and its children still show.
 
 ## Linting
 

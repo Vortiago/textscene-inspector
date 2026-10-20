@@ -15,14 +15,16 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  # A pull request that changes no file a golden scene renders through skips the golden run.
-  # Every other event runs it.
+  # A pull request that changes no file a golden scene renders through skips the golden run. A push
+  # or pull request whose rendering files already passed it skips it too (renderInputsKey.mjs). A
+  # manual run always runs it.
   changes:
     name: Changed files
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      visual: ${{ steps.scope.outputs.visual }}
+      visual: ${{ steps.passed.outputs.cache-hit == 'true' && 'false' || steps.scope.outputs.visual }}
+      visual-key: ${{ steps.inputs.outputs.key }}
     steps:
       # A pull request checks out its merge commit, whose first parent is the base branch.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,6 +39,18 @@ jobs:
             exit 0
           fi
           git diff --name-only HEAD^1 HEAD | node scripts/ci/visualScope.mjs >> "$GITHUB_OUTPUT"
+      - id: inputs
+        if: steps.scope.outputs.visual == 'true'
+        # Unquoted paths, so a non-ASCII path still matches its NON_RENDERING_PATHS pattern.
+        run: git -c core.quotePath=false ls-tree -r HEAD | node scripts/ci/renderInputsKey.mjs >> "$GITHUB_OUTPUT"
+      # A pull request reads the passes of its own earlier runs and of main, never another branch's.
+      - id: passed
+        if: steps.scope.outputs.visual == 'true' && github.event_name != 'workflow_dispatch'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .visual-pass
+          key: visual-pass-${{ steps.inputs.outputs.key }}
+          lookup-only: true
 
   static:
     name: Lint, type check and generated files
@@ -49,11 +63,10 @@ jobs:
       # First: it needs no build and fails in seconds.
       - run: pnpm format:check
       - run: pnpm lint
-      - run: pnpm type-check
-
-      # The test projects resolve @textscene/core through its emitted declarations, and the
-      # docs checks load its dist.
-      - run: pnpm --filter @textscene/core build
+      # `type-check:all` builds the packages once before the parallel app checks. Each app's
+      # `pretype-check` rebuilds core, so four parallel builds would rewrite the dist an app
+      # is reading. The test projects and the docs checks read that dist too.
+      - run: pnpm type-check:all
       - run: pnpm type-check:tests
 
       - run: pnpm docs:lint-sections --check
@@ -323,7 +336,7 @@ jobs:
           path: scripts/vscode/output/web-preview-gate/
 
   # The one check that branch protection requires, so a new or renamed job needs no settings change.
-  # Every job it needs must succeed. The one allowed skip is the golden run that visualScope ruled
+  # Every job it needs must succeed. The one allowed skip is the golden run that the changes job ruled
   # out, which this job checks itself, so the gate costs no queued job of its own.
   ci-ok:
     name: CI passed
@@ -356,3 +369,13 @@ jobs:
             echo "::error::these jobs did not pass: $failed"
             exit 1
           fi
+
+      # Records that this tree's rendering files passed every golden shard, so a later run on the
+      # same files skips the golden run. The cache entry is the record: its file holds nothing.
+      - if: needs.visual-regression.result == 'success'
+        run: mkdir .visual-pass && touch .visual-pass/passed
+      - if: needs.visual-regression.result == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .visual-pass
+          key: visual-pass-${{ needs.changes.outputs.visual-key }}

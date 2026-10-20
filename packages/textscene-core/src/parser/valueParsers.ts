@@ -8,12 +8,12 @@ import { warn } from '../logger';
 // These wrap the canonical leaf scanners. One-off structured literals (StyleBox shapes)
 // stay in their slice.
 import { parseVector2, parseVector3 } from './vectors';
-import { slotTupleRegex, parseGodotFloat, allFinite } from '../godot/variant/number.js';
+import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
 import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/variant/int.js';
 import type { Aabb } from '../godot/math/aabb.js';
 import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { stringToInt } from '../godot/string/string.js';
-import { boolSlotValue } from '../godot/variant/variantBool.js';
+import { boolSlotValue, scalarSlotValue } from '../godot/variant/variantBool.js';
 import type { Vector2, Vector3 } from '../godot/math/vector.js';
 
 /**
@@ -24,7 +24,7 @@ import type { Vector2, Vector3 } from '../godot/math/vector.js';
  * text does. `v.float` accepts it on the linter side.
  */
 function finiteScalar(value: string): number | null {
-  const num = parseGodotFloat(value);
+  const num = scalarSlotValue(value);
   return num !== null && Number.isFinite(num) ? num : null;
 }
 
@@ -303,6 +303,15 @@ export function parseOptionalBool(value: string | undefined): boolean | undefine
 export function parseOptionalFloat(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
   return finiteScalar(value) ?? undefined;
+}
+
+/**
+ * `parseOptionalFloat` that keeps `inf`, `inf_neg` and `nan`, for a property whose consumer
+ * draws what Godot draws for them.
+ */
+export function parseOptionalGodotFloat(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  return scalarSlotValue(value) ?? undefined;
 }
 
 /**

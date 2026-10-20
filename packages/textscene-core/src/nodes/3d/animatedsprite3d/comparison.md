@@ -4,12 +4,12 @@ category: 3D
 status: unimplemented
 fixture: unit-animated-sprite-3d.tscn
 # image: unit-animated-sprite-3d
-renders_as: invisible transform-only fallback
+renders_as: nothing yet, Godot draws a SpriteFrames frame on a quad, the previewer does not
 ---
 
 # AnimatedSprite3D
 
-Plays a frame-by-frame animation from a `SpriteFrames` resource on a quad in 3D space, the animated twin of `Sprite3D`. The previewer does not draw a frame yet, so the node is an invisible transform-only fallback and its children still show.
+Plays a frame-by-frame animation from a `SpriteFrames` resource on a quad in 3D space, the animated twin of `Sprite3D`. The previewer does not draw a frame yet, so the node draws nothing and its children still show.
 
 ## Linting
 

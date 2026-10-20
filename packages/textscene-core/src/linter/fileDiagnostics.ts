@@ -21,7 +21,8 @@ export const FILE_DIAGNOSTICS = {
   /**
    * A `parent=` path that resolves against nothing. Godot warns, re-parents the
    * node to the scene root and renames it `<path>#<name>`, so the file loads
-   * and the node exists, in the wrong place under a different name.
+   * and the node exists, in the wrong place under a different name. A `parent_id_path=`
+   * that names a node built earlier seats the node there instead (`packed_scene.cpp:161-163`).
    */
   unresolvedParentPath: {
     severity: 'warning',
@@ -59,6 +60,24 @@ export const FILE_DIAGNOSTICS = {
     severity: 'error',
     ruleName: 'root-declares-parent',
     grounding: { kind: 'engine', at: 'packed_scene.cpp:218-219' },
+  },
+  /**
+   * A `[connection]` heading that omits `from`, `to`, `signal` or `method`. The text loader returns `ERR_FILE_CORRUPT`
+   * at the first one it finds, so nothing in the file loads (`resource_format_text.cpp:311-333`).
+   */
+  connectionMissingField: {
+    severity: 'error',
+    ruleName: 'connection-missing-field',
+    grounding: { kind: 'engine', at: 'resource_format_text.cpp:311-333' },
+  },
+  /**
+   * A `[connection]` `from=` or `to=` that resolves to no node from the scene root. The scene loads, and the instantiate
+   * skips the connection when either end is null, so the signal never reaches the method (`packed_scene.cpp:660-662`).
+   */
+  connectionNodeMissing: {
+    severity: 'warning',
+    ruleName: 'connection-node-missing',
+    grounding: { kind: 'engine', at: 'packed_scene.cpp:660-662' },
   },
   /**
    * A rule threw. Reported on the node it ran on, or on no line for the

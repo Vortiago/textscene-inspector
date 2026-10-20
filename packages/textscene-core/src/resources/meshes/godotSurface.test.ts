@@ -1,14 +1,14 @@
 /**
- * arrayMeshGeometry: decoded ArrayMesh surfaces into one THREE.BufferGeometry,
- * one group per surface, tested against the byte-exact wall.tres decode.
+ * godotSurfacesGeometry: Godot mesh surfaces into one THREE.BufferGeometry, one group per
+ * surface, tested against the byte-exact wall.tres decode.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { decodeArrayMeshTres } from '../../testing/decodeArrayMeshTres';
-import type { ArrayMeshData } from './types';
-import { buildArrayMeshGeometry } from './build';
-import { headlightsSurface, wallQuadSurfaces } from '../../testing/arrayMeshSurfaces';
-import { UV2_ATTRIBUTE } from '../uv2';
+import { decodeArrayMeshTres } from '../testing/decodeArrayMeshTres';
+import type { ArrayMeshData } from './arraymesh/types';
+import { godotSurfacesGeometry, type GodotSurface } from './godotSurface';
+import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
+import { UV2_ATTRIBUTE } from './uv2';
 
 const WALL_TRES = `[gd_resource type="ArrayMesh" format=4 uid="uid://bett1yahcwe25"]
 
@@ -32,7 +32,7 @@ blend_shape_mode = 0`
 );
 
 /** The single-triangle surface these tests vary one field of at a time. */
-function triangle(overrides: Partial<ArrayMeshData['surfaces'][number]> = {}) {
+function triangle(overrides: Partial<ArrayMeshData['surfaces'][number] & GodotSurface> = {}) {
   return {
     surfaceIndex: 0,
     format: 0,
@@ -47,9 +47,9 @@ function triangle(overrides: Partial<ArrayMeshData['surfaces'][number]> = {}) {
   };
 }
 
-describe('buildArrayMeshGeometry', () => {
+describe('godotSurfacesGeometry', () => {
   it('builds a BufferGeometry with position, uv, index and Godot normals', () => {
-    const geo = buildArrayMeshGeometry(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres'));
+    const geo = godotSurfacesGeometry(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces);
 
     expect(geo).toBeInstanceOf(THREE.BufferGeometry);
     expect(geo.getAttribute('position').count).toBe(4);
@@ -76,7 +76,7 @@ describe('buildArrayMeshGeometry', () => {
         },
       ],
     };
-    const geo = buildArrayMeshGeometry(data);
+    const geo = godotSurfacesGeometry(data.surfaces);
     expect(geo.getAttribute('normal').count).toBe(3);
     expect(geo.getAttribute('normal').getZ(0)).toBeCloseTo(1, 3);
   });
@@ -85,9 +85,9 @@ describe('buildArrayMeshGeometry', () => {
     // Godot writes V from the image top. three.js uploads textures bottom-up by
     // default (as spriteFrame.ts and tileGeometry.ts assume), so a pass-through V
     // samples an atlas mirrored. V=0 (Godot's top edge) must become V=1 here.
-    const uv = buildArrayMeshGeometry({
-      surfaces: [triangle({ uvs: new Float32Array([0, 0, 1, 0.25, 0.5, 1]) })],
-    }).getAttribute('uv');
+    const uv = godotSurfacesGeometry([
+      triangle({ uvs: new Float32Array([0, 0, 1, 0.25, 0.5, 1]) }),
+    ]).getAttribute('uv');
 
     // U is untouched. Only V is mirrored.
     expect([uv.getX(0), uv.getY(0)]).toEqual([0, 1]);
@@ -99,9 +99,7 @@ describe('buildArrayMeshGeometry', () => {
     // Only some surfaces may declare TEX_UV. `hasUV` is `some`, so the merged
     // buffer covers the UV-less ones, and Godot samples those at UV (0,0), the
     // image top, which is V=1 here. At 0 they would point at the opposite edge.
-    const uv = buildArrayMeshGeometry({
-      surfaces: [triangle(), triangle({ uvs: undefined })],
-    }).getAttribute('uv');
+    const uv = godotSurfacesGeometry([triangle(), triangle({ uvs: undefined })]).getAttribute('uv');
 
     expect(uv.getY(0)).toBe(1); // written 0 → image top
     expect(uv.getY(3)).toBe(1); // unwritten 0 → same edge, not the opposite one
@@ -109,29 +107,48 @@ describe('buildArrayMeshGeometry', () => {
   });
 
   it("writes UV2 in Godot's top-down V, which the UV2 binding samples", () => {
-    const uv2 = buildArrayMeshGeometry({
-      surfaces: [triangle({ uv2s: new Float32Array([0, 0.25, 1, 0.5, 0.5, 1]) })],
-    }).getAttribute(UV2_ATTRIBUTE);
+    const uv2 = godotSurfacesGeometry([
+      triangle({ uv2s: new Float32Array([0, 0.25, 1, 0.5, 0.5, 1]) }),
+    ]).getAttribute(UV2_ATTRIBUTE);
 
     expect(Array.from(uv2.array)).toEqual([0, 0.25, 1, 0.5, 0.5, 1]);
   });
 
   it('gives a mesh without UV2 no UV2 attribute', () => {
-    const geometry = buildArrayMeshGeometry({ surfaces: [triangle()] });
+    const geometry = godotSurfacesGeometry([triangle()]);
 
     expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
   });
 
   it('leaves a surface without UV2 at (0, 0), where Godot samples it (edge case)', () => {
-    const uv2 = buildArrayMeshGeometry({
-      surfaces: [triangle({ uv2s: new Float32Array([1, 1, 1, 1, 1, 1]) }), triangle()],
-    }).getAttribute(UV2_ATTRIBUTE);
+    const uv2 = godotSurfacesGeometry([
+      triangle({ uv2s: new Float32Array([1, 1, 1, 1, 1, 1]) }),
+      triangle(),
+    ]).getAttribute(UV2_ATTRIBUTE);
 
     expect(Array.from(uv2.array).slice(6)).toEqual([0, 0, 0, 0, 0, 0]);
   });
 
+  it("carries Godot's tangents as a four-component tangent attribute", () => {
+    const tangents = new Float32Array([1, 0, 0, 1, 0, 0, -1, 1, 0, 1, 0, -1]);
+    const normals = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]);
+
+    const tangent = godotSurfacesGeometry([triangle({ normals, tangents })]).getAttribute('tangent');
+
+    expect(tangent.itemSize).toBe(4);
+    expect(Array.from(tangent.array)).toEqual([1, 0, 0, 1, 0, 0, -1, 1, 0, 1, 0, -1]);
+  });
+
+  it('leaves the tangents to three when a surface has none (edge case)', () => {
+    const tangents = new Float32Array(12).fill(1);
+
+    const geometry = godotSurfacesGeometry([triangle({ tangents }), triangle()]);
+
+    expect(geometry.getAttribute('tangent')).toBeUndefined();
+  });
+
   it('adds one draw group per surface for per-surface materials', () => {
-    const geo = buildArrayMeshGeometry(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres'));
+    const geo = godotSurfacesGeometry(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces);
 
     expect(geo.groups).toHaveLength(1);
     expect(geo.groups[0]).toMatchObject({ start: 0, count: 6, materialIndex: 0 });
@@ -140,7 +157,7 @@ describe('buildArrayMeshGeometry', () => {
   it('computes a finite bounding sphere for a mesh mixing compressed and uncompressed surfaces', () => {
     // A compressed surface read at the uncompressed stride gives NaN positions,
     // a NaN bounding sphere for the whole geometry, and a camera that cannot frame it.
-    const geo = buildArrayMeshGeometry(decodeArrayMeshTres(MIXED_LAYOUT_TRES, 'res://mesh.tres'));
+    const geo = godotSurfacesGeometry(decodeArrayMeshTres(MIXED_LAYOUT_TRES, 'res://mesh.tres').surfaces);
 
     geo.computeBoundingSphere();
     geo.computeBoundingBox();
@@ -157,7 +174,7 @@ describe('buildArrayMeshGeometry', () => {
       surfaces: [triangle(), triangle({ materialPath: 'res://b.tres' })],
     };
 
-    const geo = buildArrayMeshGeometry(data);
+    const geo = godotSurfacesGeometry(data.surfaces);
 
     expect(geo.getAttribute('position').count).toBe(6);
     expect(geo.groups).toHaveLength(2);

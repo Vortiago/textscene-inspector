@@ -2,7 +2,8 @@
  * Asserts the `.import` parameter allowlist against the corpus (ADR-0028). The previewer's asset
  * re-import honours `nodes/root_scale`, `nodes/apply_root_scale`, `meshes/light_baking`,
  * `meshes/lightmap_texel_size`, from `_subresources` the `use_external` material remaps, the
- * `mesh_instance/layers` mask and the per-mesh `generate/lightmap_uv`, a `3d_texture` slice grid,
+ * `mesh_instance/layers` mask, the per-mesh `generate/lightmap_uv` and the per-clip
+ * `settings/loop_mode`, `nodes/use_name_suffixes` for the clip names, a `3d_texture` slice grid,
  * and a `texture` import's compression. A vendored sidecar that needs any other parameter would
  * render wrong with nothing to say so, so this test fails instead.
  */
@@ -20,13 +21,14 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'games']);
 
 /**
  * The parameters the previewer honours. `_subresources` is honoured only in part (its material
- * remaps, its per-node layer mask and its per-mesh lightmap UV2 override), so each non-empty block
- * is still named below. The two lightmap parameters choose the meshes that take their UV2 from
+ * remaps, its per-node layer mask, its per-mesh lightmap UV2 override and its per-clip loop mode),
+ * so each non-empty block is still named below. The two lightmap parameters choose the meshes that take their UV2 from
  * the asset's unwrap cache.
  */
 const HONOURED = new Set([
   'nodes/root_scale',
   'nodes/apply_root_scale',
+  'nodes/use_name_suffixes',
   'meshes/light_baking',
   'meshes/lightmap_texel_size',
   '_subresources',
@@ -107,9 +109,6 @@ const TEXTURE_MUST_BE_DEFAULT = new Map([
  */
 const INERT = new Set([
   'nodes/import_as_skeleton_bones',
-  // Governs Godot's `-col`/`-noimp` name conventions, which the previewer does not implement at
-  // all, so reading the parameter would change nothing.
-  'nodes/use_name_suffixes',
   'nodes/use_node_type_suffixes',
   'nodes/root_name',
   'mesh_library/use_node_names_as_mesh_names',
@@ -171,8 +170,8 @@ const KNOWN_SUBRESOURCE_OVERRIDES = {
     blocks: ['animations', 'materials'],
     note:
       'materials use_external → res://player/player_{gray,glow}.tres, honoured. animations: ' +
-      "settings/loop_mode LOOP_LINEAR on every clip, which is already three's default, " +
-      'and no slice configured — unread, and no divergence to see here (ADR-0028).',
+      'settings/loop_mode LOOP_LINEAR on every clip, honoured. No slice is configured, and ' +
+      'slices are unread (ADR-0028).',
   },
   'scenes/demos/3d/ragdoll_physics/characters/mannequiny.glb.import': {
     blocks: ['materials'],

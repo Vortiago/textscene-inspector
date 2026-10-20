@@ -50,13 +50,14 @@ import {
   type ViewportRect,
 } from '../../../../r3f/contexts/ViewportRectContext';
 import { SubViewportContainer } from './Component';
+import { createCanvasTarget, createSceneTarget } from '../../../viewport/subviewport/offscreenViewport';
 import { quadsSampling } from '../../../../r3f/controls/native/testing/quadsSampling';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 // Side-effect: the Control painters and the node registrations
 // `viewportContentKind` classifies against.
 import '../../../../r3f/controls/index';
 import '../../../../r3f/nodes/index';
-import { ViewportTexturePublisher } from '../../../../r3f/testing/ViewportTexturePublisher';
+import { ViewportTexturePublisher, viewportEntry } from '../../../../r3f/testing/ViewportTexturePublisher';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -88,7 +89,7 @@ function PassRegistrar({ path, dependsOn }: { path: string; dependsOn: string[] 
 }
 
 function fakeEntry(): ViewportTextureEntry {
-  return { texture: new THREE.Texture(), size: { x: 200, y: 150 } };
+  return viewportEntry(new THREE.Texture(), { x: 200, y: 150 });
 }
 
 async function mount(children: ReactNode) {
@@ -379,5 +380,38 @@ describe('<SubViewportContainer> — the drawn rect', () => {
     const entry = fakeEntry();
     const renderer = await mountContainer({}, { x: 0, y: 0, w: 640, h: 480 }, entry);
     expect(drawnSize(renderer, entry.texture)).toEqual({ x: 200, y: 150 });
+  });
+});
+
+/**
+ * The container draws the target's plain view (`subviewport_container.cpp:142,144`), which a canvas
+ * filters in sRGB bytes and multiplies by its modulate in sRGB (`texture_storage.cpp:754`).
+ */
+describe('<SubViewportContainer> — the colour of the surface', () => {
+  async function surfaceMaterial(texture: THREE.Texture) {
+    const renderer = await mount(
+      <>
+        <ViewportTexturePublisher path="Booth/View" entry={viewportEntry(texture, { x: 200, y: 150 })} />
+        <SubViewportContainer
+          {...painterEnv()}
+          solveNode={containerSolveNode({})}
+          rect={RECT}
+          renderOrder={0}
+        />
+      </>
+    );
+    return quadsSampling(renderer.scene, texture)[0]!.material as THREE.MeshBasicMaterial;
+  }
+
+  it('multiplies a canvas target in sRGB', async () => {
+    const target = createCanvasTarget(200, 150, 'View');
+    expect((await surfaceMaterial(target.texture)).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
+    target.dispose();
+  });
+
+  it('keeps the linear multiply for a 3D-content target (edge case)', async () => {
+    const target = createSceneTarget(200, 150, 'View');
+    expect((await surfaceMaterial(target.texture)).defines?.CANVAS_SRGB_MULTIPLY).toBeUndefined();
+    target.dispose();
   });
 });

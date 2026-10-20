@@ -17,7 +17,7 @@ import {
   useViewportTexture,
   type ViewportTextureEntry,
 } from './ViewportTextureContext.js';
-import { ViewportTexturePublisher } from '../testing/ViewportTexturePublisher';
+import { ViewportTexturePublisher, viewportEntry } from '../testing/ViewportTexturePublisher';
 
 function node(name: string, type: string, flagged = false): TscnNode {
   return {
@@ -47,10 +47,8 @@ const roots: TscnNode[] = (() => {
 // `SceneGraph` gains a field and stops matching what the `%Name` claim hooks read.
 const graph = createSceneGraphFromTscnScene({ nodes: roots });
 
-const entry = (id: string): ViewportTextureEntry => ({
-  texture: { name: id } as THREE.Texture,
-  size: { x: 4, y: 4 },
-});
+const entry = (id: string): ViewportTextureEntry =>
+  viewportEntry({ name: id } as THREE.Texture, { x: 4, y: 4 });
 
 const winner = entry('ui');
 const loser = entry('hud');

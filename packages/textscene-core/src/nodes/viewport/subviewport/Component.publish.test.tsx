@@ -29,6 +29,7 @@ import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
 import { fittedAspect } from '../../3d/camera3d/projectionFit';
 import { useEffect } from 'react';
@@ -198,6 +199,18 @@ mesh = SubResource("1")
 [node name="Camera3D" type="Camera3D" parent="Viewport"]
 `;
 
+/** A sub-viewport of 2D-world content in a 2D scene. */
+const scene2DContent = `[gd_scene format=3]
+
+[node name="Stage" type="Node2D"]
+
+[node name="Viewport" type="SubViewport" parent="."]
+size = Vector2i(64, 64)
+
+[node name="Fill" type="Polygon2D" parent="Viewport"]
+polygon = PackedVector2Array(0, 0, 64, 0, 64, 64, 0, 64)
+`;
+
 describe('<SubViewport> offscreen publisher', () => {
   it('publishes a target under its own dispatcher-absolute node path', async () => {
     const { published } = await renderScene(scene3D());
@@ -230,16 +243,25 @@ describe('<SubViewport> offscreen publisher', () => {
   /**
    * `applyProps` stamps `SRGBColorSpace` on any RGBA8/UnsignedByte texture bound to
    * a colour-map prop, and `WebGLRenderer.js` reads an `isXRRenderTarget` pass's
-   * output space from that tag, adding an sRGB OETF (1.5-6.5x too bright). The pass
-   * re-asserts LINEAR before every bind, so no offscreen render runs under a stamp.
+   * output space from that tag, adding an sRGB OETF (1.5-6.5x too bright). The tag is
+   * pinned, so no offscreen render runs under a stamp.
    */
-  it('re-asserts the linear storage tag a consumer-side sRGB stamp overwrote', async () => {
-    const { renderer, gl, published } = await renderScene(scene3D());
+  it('keeps the linear storage tag through a consumer-side sRGB stamp', async () => {
+    const { published } = await renderScene(scene3D());
     const texture = published()!.texture;
-    expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
     texture.colorSpace = THREE.SRGBColorSpace;
-    await advanceFrameWithStubbedGl(renderer, gl());
     expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+  });
+
+  /** Canvas items write sRGB numbers into an `R8G8B8A8_UNORM` target (`renderer_canvas_render_rd.cpp:671,729`). */
+  it('stores 2D-world content as sRGB bytes', async () => {
+    const { published } = await renderScene(scene2DContent, '2d', 'Stage/Viewport');
+    expect(holdsSrgbBytes(published()!.texture)).toBe(true);
+  });
+
+  it('keeps the scene storage for 3D content (edge case)', async () => {
+    const { published } = await renderScene(scene3D());
+    expect(holdsSrgbBytes(published()!.texture)).toBe(false);
   });
 
   /**

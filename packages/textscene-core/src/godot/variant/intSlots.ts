@@ -5,14 +5,56 @@
 
 import { matchedFloat, slotTupleRegex } from './number.js';
 import { compositeTypeName, isConvertedSpelling } from './variantConversion.js';
+import { INT32_MAX } from './intWidth.js';
 import type { IntWidth } from './intWidth.js';
-import { parseGodotInt, storedFromFloat } from './intReader.js';
+import { isAlteredInt, parseSlotInt, statedFromFloat, storedFromFloat } from './intReader.js';
+import { scalarSlotValue } from './variantBool.js';
 
 /**
- * The int a rule may compare, or `null` for anything it must not: `parseGodotInt`'s `NaN` fails every
- * comparison and would silence the rule, and phase 1 already reports it. `whenAbsent` stands for a
- * missing key, where Godot's default is not zero (`hframes` is 1). Here, not beside the validators:
- * render decoders (`gridmap/cellData.ts`, `tiles/shared/tileData.ts`) read it without the linter.
+ * The width a slot reads at, from its own declared ceiling: a maximum above
+ * int32 is unreachable unless the slot is unsigned. `MeshInstance3D.layers =
+ * 4294967295` stores 4294967295 (uint32), and `Node2D.light_mask` stores -1 (int32).
+ */
+export function slotWidth(max?: number | null): IntWidth {
+  return (max ?? 0) > INT32_MAX ? 'uint32' : 'int32';
+}
+
+/**
+ * Both readings of one literal, from one parse: what the slot stores, and the
+ * double it came from, which the truncation check needs. `badIntElement` has
+ * the same shape for an array element.
+ */
+export interface IntSlotRead {
+  /** The double the slot read, or `null` for text outside the grammar. */
+  readonly asFloat: number | null;
+  /** The integer stored: `null` unreadable, `NaN` read but unstorable. */
+  readonly stored: number | null;
+}
+
+/**
+ * A literal as an {@link IntSlotRead}: the integer this slot stores, beside the
+ * double it came from. The validators call it for the number the file states, and {@link ruleInt}
+ * narrows it for the rules. The decoders read the number the slot stores through {@link parseSlotInt}.
+ * The width goes in, not onto the result: `_to_int`'s FLOAT branch is undefined
+ * outside the target type's range, so a uint32 `seed = 4294967295.0` is legal.
+ */
+export function readIntSlot(
+  value: string,
+  max?: number | null,
+  width?: IntWidth,
+  /** See {@link storedFromFloat}: set for a component of a float-typed composite. */
+  alwaysFloatBranch = false
+): IntSlotRead {
+  const asFloat = scalarSlotValue(value);
+  if (asFloat === null) return { asFloat: null, stored: null };
+  return { asFloat, stored: statedFromFloat(asFloat, value, width ?? slotWidth(max), alwaysFloatBranch) };
+}
+
+/**
+ * The int a rule may compare, or `null` for anything it must not: an unreadable literal, and one the
+ * file does not state ({@link isAlteredInt}), where phase 1 already reports the alteration and a
+ * second finding over the wrapped number would repeat it. `whenAbsent` stands for a missing key, where
+ * Godot's default is not zero (`hframes` is 1). The renderer reads {@link slotInt}.
  */
 export function ruleInt(
   raw: string | undefined,
@@ -22,17 +64,29 @@ export function ruleInt(
   alwaysFloatBranch = false
 ): number | null {
   if (raw === undefined) return whenAbsent;
-  const parsed = parseGodotInt(raw, width, alwaysFloatBranch);
-  return parsed === null || Number.isNaN(parsed) ? null : parsed;
+  const { stored } = readIntSlot(raw, null, width, alwaysFloatBranch);
+  return stored === null || Number.isNaN(stored) ? null : stored;
 }
 
 /**
- * The array count a rule may compare against, or `null` for text it must not. A negative count is
- * refused, so a rule reads the default the engine keeps, not the authored number that the
- * `enforced:` validator already reports.
+ * The int the slot stores, or `null` for text Godot cannot read or a FLOAT it cannot convert. An INT
+ * literal past the round-trip band wraps, so the renderer draws what Godot holds. Same shape as
+ * {@link ruleInt}, which the linter uses.
  */
-export function ruleCount(raw: string | undefined, whenAbsent = 0): number | null {
-  const count = ruleInt(raw, whenAbsent);
+export function slotInt(
+  raw: string | undefined,
+  whenAbsent: number | null = null,
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}: set for a component of a float-typed composite. */
+  alwaysFloatBranch = false
+): number | null {
+  if (raw === undefined) return whenAbsent;
+  const parsed = parseSlotInt(raw, width, alwaysFloatBranch);
+  return parsed === null || Number.isNaN(parsed) ? null : parsed;
+}
+
+/** An array count: the engine refuses a negative one, so the array keeps its default. */
+function nonNegativeCount(count: number | null, whenAbsent: number): number | null {
   // `null` still means unreadable, and still travels: phase 1 has already
   // reported that text, and a rule owes silence rather than a second
   // diagnostic naming a number it had to invent.
@@ -44,16 +98,36 @@ export function ruleCount(raw: string | undefined, whenAbsent = 0): number | nul
 }
 
 /**
+ * The array count a rule may compare against, or `null` for text it must not. A negative count is
+ * refused, so a rule reads the default the engine keeps, not the authored number that the
+ * `enforced:` validator already reports.
+ */
+export function ruleCount(raw: string | undefined, whenAbsent = 0): number | null {
+  return nonNegativeCount(ruleInt(raw, whenAbsent), whenAbsent);
+}
+
+/** {@link ruleCount} as the slot stores it, for the renderer. */
+export function slotCount(raw: string | undefined, whenAbsent = 0): number | null {
+  return nonNegativeCount(slotInt(raw, whenAbsent), whenAbsent);
+}
+
+/** A capture the finite grammar matched, read as a double: one reader for the stored and altered questions. */
+function componentFloat(text: string | undefined): number {
+  return parseFloat(text ?? '');
+}
+
+/**
  * One matched component of an `i`-suffixed composite as the int32 Godot stores (`vector2i.h:56-57`),
  * or `null` when no int32 holds it. Narrowed, so renderer and linter read one number. It takes a
  * capture the finite grammar matched: text from a file goes through {@link parseGodotInt}.
+ * Whether the file states that number is {@link isAlteredInt}.
  */
 export function storedInt(
   text: string | undefined,
   /** See {@link storedFromFloat}: set for a component of a float-typed composite. */
   alwaysFloatBranch = false
 ): number | null {
-  const num = parseFloat(text ?? '');
+  const num = componentFloat(text);
   if (!Number.isFinite(num)) return null;
   const stored = storedFromFloat(num, text ?? '', 'int32', alwaysFloatBranch);
   return Number.isNaN(stored) ? null : stored;
@@ -108,7 +182,7 @@ export function slotComponents(
  * Whether the `i` spelling in a FLOAT slot narrows a component to a number the file does not state,
  * which a NaN from {@link slotComponents} cannot show. Same reader as {@link slotComponents}. A non-finite
  * one reads (`variant_parser.cpp:149-159`, `:577-586`) and narrows undefined outside int32 (`variant.h:369-370`),
- * and `4294967296` wraps. Neither is namable, so a caller reports the alteration (ADR-0032) and the literal.
+ * and `4294967296` wraps to a number the file does not state. A caller reports the alteration (ADR-0032) and the literal.
  */
 export function slotComponentsAltered(
   literal: string,
@@ -117,7 +191,7 @@ export function slotComponentsAltered(
   captures: readonly (string | undefined)[]
 ): boolean {
   if (!isConvertedSpelling(floatTypeName, compositeTypeName(literal))) return false;
-  return captures.some((capture) => storedInt(capture) === null);
+  return captures.some((capture) => isAlteredInt(componentFloat(capture), capture ?? '', 'int32'));
 }
 
 /** A composite literal in a FLOAT slot, as every reader of one sees it. */

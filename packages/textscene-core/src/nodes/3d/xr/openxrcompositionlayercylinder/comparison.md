@@ -9,7 +9,7 @@ renders_as: nothing yet, outside an OpenXR session Godot draws a curved cylinder
 
 # OpenXRCompositionLayerCylinder
 
-Composites `layer_viewport` onto a cylinder section in the XR compositor during a live session. Outside one, Godot draws a fallback mesh shaped by `radius`, `aspect_ratio` and `central_angle`. The previewer draws a transform-only group, and its children still show.
+Composites `layer_viewport` onto a cylinder section in the XR compositor during a live session. Outside one, Godot draws a fallback mesh shaped by `radius`, `aspect_ratio` and `central_angle`. The previewer draws nothing for it, and its children still show.
 
 ## Linting
 

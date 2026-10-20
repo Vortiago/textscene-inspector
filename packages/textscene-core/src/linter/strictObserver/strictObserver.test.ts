@@ -74,7 +74,18 @@ describe('strictObserver', () => {
         '[connection signal="ready" from="." to="." method="go" binds=[1]]\n'
     );
     expect(headingReads).toEqual({
-      connectionBinds: ['[1]'],
+      connections: [
+        {
+          line: 5,
+          signal: 'ready',
+          from: '.',
+          to: '.',
+          method: 'go',
+          binds: '[1]',
+          hasFromUidPath: false,
+          hasToUidPath: false,
+        },
+      ],
       instancesOutsideNodeBody: ['ExtResource("1")'],
     });
   });

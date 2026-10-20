@@ -1,9 +1,16 @@
 /**
  * The preview loop override as a THREE action's loop, shared by every driver:
  * 'once' is one clamped pass, 'loop' repeats, and 'auto' keeps the authored
- * setting (Godot `loop_mode` through `loopSettingsFor`, or a GLB's repeat).
+ * setting (a Godot `loop_mode` through `loopSettingsFor`).
  */
-import { LoopOnce, LoopRepeat, type AnimationAction, type AnimationActionLoopStyles } from 'three';
+import {
+  LoopOnce,
+  LoopPingPong,
+  LoopRepeat,
+  type AnimationAction,
+  type AnimationActionLoopStyles,
+} from 'three';
+import { AnimationLoopMode } from '../../godot/scene/animation.js';
 import type { LoopOverride } from '../contexts/AnimationTransportContext.js';
 
 export interface ActionLoopSettings {
@@ -19,12 +26,34 @@ const LOOP_ONCE_SETTINGS: ActionLoopSettings = Object.freeze({
   clampWhenFinished: true,
 });
 
-/** 'loop' (and a GLB clip's authored default): infinite linear repeat. */
-export const LOOP_REPEAT_SETTINGS: ActionLoopSettings = Object.freeze({
+/** 'loop', and a LOOP_LINEAR clip: infinite linear repeat. */
+const LOOP_REPEAT_SETTINGS: ActionLoopSettings = Object.freeze({
   loop: LoopRepeat,
   repetitions: Infinity,
   clampWhenFinished: false,
 });
+
+/** LOOP_PINGPONG: infinite bounce between the first and last key. */
+const LOOP_PINGPONG_SETTINGS: ActionLoopSettings = Object.freeze({
+  loop: LoopPingPong,
+  repetitions: Infinity,
+  clampWhenFinished: false,
+});
+
+/**
+ * Maps a Godot `Animation::LoopMode` to THREE action loop settings. LOOP_PINGPONG bounces forward
+ * and backward as Godot's does. A value outside the enum plays once, as LOOP_NONE.
+ */
+export function loopSettingsFor(loopMode: number): ActionLoopSettings {
+  switch (loopMode) {
+    case AnimationLoopMode.PINGPONG:
+      return LOOP_PINGPONG_SETTINGS;
+    case AnimationLoopMode.LINEAR:
+      return LOOP_REPEAT_SETTINGS;
+    default:
+      return LOOP_ONCE_SETTINGS;
+  }
+}
 
 export function applyLoopOverride(
   action: AnimationAction,

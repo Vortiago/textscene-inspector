@@ -43,6 +43,10 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/polygonSweepFrames.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`'s frame basis), `core/math/triangulate.cpp` (`Triangulate::get_area`) and `core/math/transform_3d.cpp` (`Transform3D::looking_at`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgpolygon3d/sweepFaceBuffer.ts` | `modules/csg/csg_shape.cpp` (`CSGPolygon3D::_build_brush`'s face buffer and its `face -= extrusion_face_count` rewind) |
 | `packages/textscene-core/src/nodes/3d/csg/csgtorus3d/torusGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGTorus3D::_build_brush`) |
+| `packages/textscene-core/src/resources/meshes/spheremesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`SphereMesh::create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/capsulemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CapsuleMesh::create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/prismmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrismMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/primitivemesh/flipFaces.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrimitiveMesh::_update`'s `flip_faces` block) |
 | `packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) and `servers/rendering/renderer_canvas_cull.cpp` (`light->item_mask & ci->light_mask`) |
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) and `servers/rendering/renderer_canvas_cull.cpp` (the item cull-mask test) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`'s three blend modes and the `shadow_color` mix, `light_base_color` energy packing) |

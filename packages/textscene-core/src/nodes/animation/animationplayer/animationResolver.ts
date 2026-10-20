@@ -9,7 +9,7 @@ import type { TscnInternalResource } from '../../../parser/types';
 import { parseValueArray } from './keyframeValues.js';
 import type { GodotKeyframeValue } from './keyframeValues.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
-import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import { info, warn } from '../../../logger';
 import { EXT_RESOURCE_CALL_ANYWHERE_RE, dictSubResourceEntries } from '../../../godot/variant/resourceRef.js';
 import { literalText } from '../../../godot/string/string.js';
@@ -19,6 +19,7 @@ import {
   nodePathLiteral,
 } from '../../../godot/variant/variantParser.js';
 import { findSubResource } from '../../../resources/SubResourceResolver.js';
+import { AnimationLoopMode } from '../../../godot/scene/animation.js';
 import type { AnimationLibraryRef } from './types';
 
 export interface GodotKeyframe {
@@ -162,7 +163,7 @@ function parseAnimation(name: string, resource: TscnInternalResource): GodotAnim
   return {
     name,
     length: numberOr(data['length'], 1.0),
-    loopMode: numberOr(data['loop_mode'], 0),
+    loopMode: numberOr(data['loop_mode'], AnimationLoopMode.NONE),
     step: numberOr(data['step'], 0.1),
     tracks: parseTracks(data),
   };
@@ -330,8 +331,8 @@ function parseFloatList(raw: string): number[] | null {
 
 function numberOr(value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
-  const parsed = parseGodotFloat(value);
-  // `??` catches only null. `inf` and `nan` are legal TSCN floats that `parseGodotFloat` returns as
+  const parsed = scalarSlotValue(value);
+  // `??` catches only null. `inf` and `nan` are legal TSCN floats that `scalarSlotValue` returns as
   // Infinity/NaN, and as a clip duration or blend weight they give an infinite clip or a weight that
   // fails every `> EPSILON` test. A value the renderer cannot use falls back to the documented default.
   return parsed === null || !Number.isFinite(parsed) ? fallback : parsed;

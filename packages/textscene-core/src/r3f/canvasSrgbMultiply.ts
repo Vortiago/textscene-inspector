@@ -9,8 +9,9 @@
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 
 /**
- * The define a 2D canvas material sets when its `map` is tagged `NoColorSpace` and its vertex
- * colours, if any, hold sRGB numbers. Its `color` stays linear, as three uploads it.
+ * The define a 2D canvas material sets when its `map` samples sRGB bytes, a `NoColorSpace` retag
+ * or a canvas-content render target, and its vertex colours, if any, hold sRGB numbers. Its `color`
+ * stays linear, as three uploads it.
  */
 const CANVAS_SRGB_MULTIPLY = 'CANVAS_SRGB_MULTIPLY';
 
