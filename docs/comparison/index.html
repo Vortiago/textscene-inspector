@@ -6181,8 +6181,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>An emissive sphere at <code>emission_energy = 2.0</code> glows cyan in both, and the preview environment blooms it. <code>emission_operator</code> is honoured, including MULTIPLY with no texture, which emits nothing. <code>emission_on_uv2</code> samples the mesh's UV2. The <code>glb-lightmap-uv2</code> golden draws it through a GLB's unwrapped UV2, and the <code>primitive-mesh-uv2</code> golden through the UV2 a SphereMesh and a CapsuleMesh build under <code>add_uv2</code>.</p>
-<ul><li><strong>Approximated</strong> <code>emission_intensity</code> is ignored. <code>emission_energy_multiplier</code> alone drives the strength.</li><li><strong>Approximated</strong> A BoxMesh, PlaneMesh, QuadMesh, PrismMesh, CylinderMesh or TorusMesh with <code>add_uv2</code> gets no UV2 here. <code>emission_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
+        <div class="prose"><p>An emissive sphere at <code>emission_energy = 2.0</code> glows cyan in both, and the preview environment blooms it. <code>emission_operator</code> is honoured, including MULTIPLY with no texture, which emits nothing. <code>emission_on_uv2</code> samples the mesh's UV2. The <code>glb-lightmap-uv2</code> golden draws it through a GLB's unwrapped UV2. The <code>primitive-mesh-uv2</code> golden draws it through the UV2 that each ported primitive builds under <code>add_uv2</code>.</p>
+<ul><li><strong>Approximated</strong> <code>emission_intensity</code> is ignored. <code>emission_energy_multiplier</code> alone drives the strength.</li><li><strong>Approximated</strong> A CylinderMesh or TorusMesh with <code>add_uv2</code> gets no UV2 here. <code>emission_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Emission texture</h3><span class="status st-done">Done</span></div>
@@ -6286,7 +6286,7 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p><code>anisotropy</code> stretches the specular highlight along the mesh's tangent. The SphereMesh carries Godot's tangents, so both engines draw a soft ring round the pole.</p>
-<ul><li><strong>Approximated</strong> A BoxMesh, PlaneMesh, QuadMesh, PrismMesh, CylinderMesh or TorusMesh carries no tangents here. three derives the tangent frame per pixel from the UVs, so the streak reads faceted.</li></ul></div>
+<ul><li><strong>Approximated</strong> A CylinderMesh or TorusMesh carries no tangents here. three derives the tangent frame per pixel from the UVs, so the streak reads faceted.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Anisotropy flowmap</h3><span class="status st-done">Done</span></div>
@@ -6321,7 +6321,7 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>The left plate reads a checkerboard AO map at <code>ao_light_affect = 1.0</code>, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. <code>ao_texture_channel</code> picks the map channel, and <code>ao_on_uv2</code> samples the mesh's UV2.</p>
-<ul><li><strong>Approximated</strong> A BoxMesh, PlaneMesh, QuadMesh, PrismMesh, CylinderMesh or TorusMesh with <code>add_uv2</code> gets no UV2 here. <code>ao_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
+<ul><li><strong>Approximated</strong> A CylinderMesh or TorusMesh with <code>add_uv2</code> gets no UV2 here. <code>ao_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Diffuse mode</h3><span class="status st-done">Done</span></div>

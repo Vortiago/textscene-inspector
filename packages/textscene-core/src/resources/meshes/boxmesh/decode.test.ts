@@ -58,10 +58,14 @@ describe('decodeBoxMesh', () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
+  it('holds the size in single precision, as a real_t Vector3 does', () => {
+    expect(decodeBoxMesh({ size: 'Vector3(1.3, 1, 1)' }).size.x).toBe(Math.fround(1.3));
+  });
+
   it('reads scientific notation and keeps a negative extent as authored', () => {
     // BoxMesh::set_size has no ERR_FAIL, so Godot stores a negative extent too.
     expect(decodeBoxMesh({ size: 'Vector3(1e-2, -1, 3)' }).size).toEqual({
-      x: 0.01,
+      x: Math.fround(0.01),
       y: -1,
       z: 3,
     });
