@@ -420,7 +420,7 @@ describe('comparison sheets', () => {
         .filter((s) => s.pending && !s.drawsOwnVisual)
         .filter((s) => !/^nothing yet\b/.test(s.meta.renders_as ?? '') || /transform-only/.test(s.body))
         .map((s) => `${s.label}: pending and undrawn, but renders_as is '${s.meta.renders_as}'`);
-      expect(bad.sort()).toEqual([]);
+      expect(bad).toEqual([]);
     });
 
     it('gives no node with a Godot runtime effect the `linter-only` status', () => {

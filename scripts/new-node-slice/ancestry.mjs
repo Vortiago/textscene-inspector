@@ -89,7 +89,7 @@ function boundName(specifier) {
  * The module specifier `src` imports the name `local` from, if it does. It reads both
  * `import type { X }` and the inline modifier in a value import (`import { Mode, type X }`).
  */
-function importSourceOf(src, local) {
+export function importSourceOf(src, local) {
   for (const [, names, from] of src.matchAll(/import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*'([^']+)'/g)) {
     const bound = names.split(',').map(boundName).filter(Boolean);
     if (bound.includes(local)) return from;

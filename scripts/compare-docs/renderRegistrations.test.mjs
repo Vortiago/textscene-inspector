@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { NODES_ROOT, parseRegistrationCalls, readRenderRegistrations } from './renderRegistrations.mjs';
+import { NODES_ROOT } from '../new-node-slice/paths.mjs';
+import { parseRegistrationCalls, readRenderRegistrations } from './renderRegistrations.mjs';
 
 const registrations = readRenderRegistrations();
 const ofIntent = (intent) => [...registrations.values()].filter((r) => r.intent === intent);
