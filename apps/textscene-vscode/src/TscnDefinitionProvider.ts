@@ -5,7 +5,7 @@
  */
 
 import * as vscode from 'vscode';
-import { declarationRangeAt, nodeDeclarationRangeAt, resPathAt } from '@textscene/core/languageFeatures';
+import { definitionRangeAt, resPathAt } from '@textscene/core/languageFeatures';
 import { existingResFile } from './existingResFile';
 import { resRootOf } from './resRoot';
 import { languageDocumentOf } from './languageDocumentOf';
@@ -24,7 +24,7 @@ export class TscnDefinitionProvider implements vscode.DefinitionProvider {
     _token: vscode.CancellationToken
   ): Promise<vscode.Location | null> {
     const model = languageDocumentOf(document);
-    const declaration = declarationRangeAt(model, position) ?? nodeDeclarationRangeAt(model, position);
+    const declaration = definitionRangeAt(model, position);
     if (declaration) return new vscode.Location(document.uri, toVscodeRange(declaration));
 
     const occurrence = resPathAt(model, position);

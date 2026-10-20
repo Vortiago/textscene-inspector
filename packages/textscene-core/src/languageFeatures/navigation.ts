@@ -1,12 +1,11 @@
 /**
  * Navigation targets in one file: the declaration heading a resource id names, the `[node]`
- * heading a node path names, and every `res://` path with the span it fills. A host resolves a path to a file against its own
- * project root, since that needs a filesystem.
+ * heading a node path names, and every `res://` path with the span it fills. A host resolves a
+ * path to a file against its own project root, since that needs a filesystem.
  */
 
 import { RES_PATH_BODY_SOURCE } from '../godot/string/string.js';
-import type { LanguageDocument } from './document.js';
-import type { DocumentSection } from './document.js';
+import type { DocumentSection, LanguageDocument } from './document.js';
 import { nodePathReferenceAt, nodeSectionOfPath } from './nodePathRefs.js';
 import { lineRange, lineRangeContains } from './ranges.js';
 import { declarationOf, referenceAt } from './resourceRefs.js';
@@ -75,4 +74,9 @@ export function nodeDeclarationRangeAt(document: LanguageDocument, position: Pos
   const reference = nodePathReferenceAt(document, position);
   const section = reference && nodeSectionOfPath(document, reference.path);
   return section && headingRange(document, section);
+}
+
+/** The heading line a resource id or a node path under the cursor names, or undefined. */
+export function definitionRangeAt(document: LanguageDocument, position: Position): Range | undefined {
+  return declarationRangeAt(document, position) ?? nodeDeclarationRangeAt(document, position);
 }

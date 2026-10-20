@@ -29,12 +29,11 @@ import {
   codeActions,
   completionsAt,
   createLanguageDocument,
-  declarationRangeAt,
+  definitionRangeAt,
   documentHighlights,
   documentSymbols,
   foldingRanges,
   hoverAt,
-  nodeDeclarationRangeAt,
   resPathAt,
   resPathOccurrences,
   type LanguageDocument,
@@ -261,8 +260,7 @@ connection.onDefinition(async (params): Promise<Location | null> => {
   const model = modelOf(params.textDocument.uri);
   if (model === undefined) return null;
 
-  const declaration =
-    declarationRangeAt(model, params.position) ?? nodeDeclarationRangeAt(model, params.position);
+  const declaration = definitionRangeAt(model, params.position);
   if (declaration !== undefined) return { uri: params.textDocument.uri, range: declaration };
 
   const occurrence = resPathAt(model, params.position);
