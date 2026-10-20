@@ -352,7 +352,7 @@ The **AnimationPlayer**, a **geometry contributor** and a **sub-viewport** are t
 _Avoid_: "placeholder", "not implemented". "inert" for those three roles.
 
 **Pending** (render intent):
-A node type whose Godot effect, an own visual or the drive of a **Driver**, is not implemented yet, registered on an **invisible base** with `renderIntent: 'pending'` and the sheet status `unimplemented` (ADR-0045).
+A node type whose Godot effect, an own visual or the drive of a **Driver**, is not implemented yet, registered on an **invisible base** with `renderIntent: 'pending'` (a `Control`-based gap registers no component) and the sheet status `unimplemented` (ADR-0045).
 _Avoid_: bare "pending" for a resource load (say "load pending").
 
 **Invisible base**:

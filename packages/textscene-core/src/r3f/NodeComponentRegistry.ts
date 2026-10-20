@@ -102,13 +102,14 @@ interface ScenePassRegistration {
 
 /**
  * The badge reads the declared intent, so it must agree with the component: a `pending` gap
- * mounts only an invisible base, and a `draws` type draws. A 2D-UI type's Control component
- * draws it, so its 3D registration may pass through on a base.
+ * mounts only an invisible base, and a `draws` type draws. The one exception is the 3D
+ * pass-through (`container`) of a 2D-UI type, which its Control component draws.
  */
 function assertIntentMatchesComponent({
   typeName,
   Component,
   renderIntent = 'draws',
+  container,
 }: NodeComponentRegistration) {
   const mountsBase = isInvisibleBase(Component);
   if (renderIntent === 'pending' && !mountsBase) {
@@ -116,7 +117,7 @@ function assertIntentMatchesComponent({
       `${typeName}: renderIntent 'pending' expects an invisible base, got a component that draws`
     );
   }
-  if (renderIntent === 'draws' && mountsBase && !TWO_D_UI_TYPES.has(typeName)) {
+  if (renderIntent === 'draws' && mountsBase && !(container && TWO_D_UI_TYPES.has(typeName))) {
     throw new Error(
       `${typeName}: renderIntent 'draws' expects a component that draws, got an invisible base`
     );

@@ -6,7 +6,7 @@
 
 import type { NodeComponent } from './NodeComponentRegistry';
 
-/** Written only by `invisibleBase`, as each base component's module loads. Never cleared. */
+/** Written only by `invisibleBase`, once for each base component it marks. Never cleared. */
 const invisibleBases = new WeakSet<NodeComponent>();
 
 /** Marks `component` as a base that draws nothing, and returns it. */

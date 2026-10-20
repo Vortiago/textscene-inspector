@@ -18,6 +18,9 @@ import { RUNTIME_EFFECT_NODE_TYPES } from './runtimeEffectNodes.data.mjs';
 // The app's own render registrations: the barrel registers every slice on import.
 import '../../packages/textscene-core/src/r3f/nodes/index.ts';
 import { nodeComponentRegistry } from '../../packages/textscene-core/src/r3f/NodeComponentRegistry.ts';
+// A Control slice registers its painter here, in the lazy 2D-canvas barrel.
+import '../../packages/textscene-core/src/r3f/controls/index.ts';
+import { controlComponentRegistry } from '../../packages/textscene-core/src/r3f/controls/ControlComponentRegistry.ts';
 import { findProseViolations, formatViolation, proseBlocks } from './sheetProse.mjs';
 import {
   LINT_EXEMPT_CATEGORIES as LINT_EXEMPT,
@@ -342,7 +345,7 @@ describe('comparison sheets', () => {
         const intent = nodeComponentRegistry.renderIntentOf(s.meta.type);
         return {
           ...s,
-          hasComponent: intent !== undefined,
+          hasComponent: intent !== undefined || controlComponentRegistry.has(s.meta.type),
           transformOnly: intent === 'transform-only',
           // The registry admits `pending` only on an invisible base: a registered gap
           // that draws nothing yet.

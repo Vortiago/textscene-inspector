@@ -89,7 +89,14 @@ describe('nodeComponentRegistry.register against the declared intent', () => {
   });
 
   it("accepts a 2D-UI type's 3D pass-through on a base, since its Control component draws it", () => {
+    // The exemption keys on a real 2D-UI type. Vitest gives each file its own registry.
     nodeComponentRegistry.register({ typeName: 'SubViewportContainer', Component: Base, container: true });
     expect(nodeComponentRegistry.renderIntentOf('SubViewportContainer')).toBe('draws');
+  });
+
+  it('refuses a 2D-UI type on a base when it does not pass through', () => {
+    expect(() => nodeComponentRegistry.register({ typeName: 'Label', Component: Base })).toThrow(
+      /Label.*draws/
+    );
   });
 });
