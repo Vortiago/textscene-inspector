@@ -27,4 +27,10 @@ describe('parseSpringArm3D', () => {
   it('reads an unreadable spring_length as undefined, not NaN', () => {
     expect(parseSpringArm3D(arm, { spring_length: 'long' }).spring_length).toBeUndefined();
   });
+
+  it('keeps the non-finite spring_length values the file can author', () => {
+    expect(parseSpringArm3D(arm, { spring_length: 'inf' }).spring_length).toBe(Infinity);
+    expect(parseSpringArm3D(arm, { spring_length: 'inf_neg' }).spring_length).toBe(-Infinity);
+    expect(parseSpringArm3D(arm, { spring_length: 'nan' }).spring_length).toBeNaN();
+  });
 });

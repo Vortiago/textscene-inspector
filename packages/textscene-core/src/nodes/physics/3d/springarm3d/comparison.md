@@ -30,11 +30,15 @@ Strict parsing format-checks these `SpringArm3D` properties, plus 17 inherited f
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reads `spring_length` on top of the Node3D transform. An unauthored or unreadable key stays `undefined`, not Godot's default. The gizmo substitutes `spring_length = 1` where it draws. `collision_mask`, `shape` and `margin` are never read, because they steer the cast that the previewer does not run.
+The lenient parser reads `spring_length` on top of the Node3D transform. An unauthored or unreadable key stays `undefined`, not Godot's default, and `inf` and `nan` are kept. The gizmo substitutes `spring_length = 1` where it draws. `collision_mask`, `shape` and `margin` are never read, because they steer the cast that the previewer does not run.
 
 ## Gizmo
 
-While the node is selected, it draws one segment from the origin to `Vector3(0, 0, 1) * spring_length` in the collision debug colour (`spring_arm_3d_gizmo_plugin.cpp:35-54`). A length of 0 gives a zero-length segment and a negative length runs along -Z, as in Godot, which guards neither.
+A selected node draws one segment in the collision debug colour. Godot's source is `spring_arm_3d_gizmo_plugin.cpp:35-54`. The segment runs from the origin to `Vector3(0, 0, 1) * spring_length`.
+
+Godot guards no length. A length of 0 gives a zero-length segment, and a negative length runs along -Z.
+
+An `inf`, `inf_neg` or `nan` length gives the end point `(nan, nan, ±inf)`. A render of Godot 4.6.3 drew no pixel for such a line, so the previewer draws nothing.
 
 ## Known limitations
 

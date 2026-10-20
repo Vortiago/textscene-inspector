@@ -88,6 +88,17 @@ describe('<SpringArm3D> length line', () => {
     expect(await gizmoPositions(props)).toEqual([0, 0, 0, 0, 0, length]);
   });
 
+  // Godot's end point is Vector3(0, 0, 1) * length = (nan, nan, ±inf) or (nan, nan, nan), and a
+  // PRIMITIVE_LINES mesh with that vertex drew no pixel in a 4.6.3 render (24 of 24 lines absent,
+  // against 4 of 8 finite control lines).
+  it.each([['inf'], ['inf_neg'], ['nan']])(
+    'draws no line for a spring_length of %s, as Godot does',
+    async (literal) => {
+      const renderer = await renderArm('Arm', { spring_length: literal });
+      expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+    }
+  );
+
   it('draws in the project collision colour', async () => {
     const line = await gizmoLine({});
     const material = line.material as THREE.LineBasicMaterial;
