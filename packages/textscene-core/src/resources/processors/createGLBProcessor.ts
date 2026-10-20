@@ -12,12 +12,15 @@ import { createGLBMesh, tagImportMaterial } from '../formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../formats/glb/surfaceMaterials';
 import { isGltfPath } from '../../godot/import/gltf';
 import { gltfResourcePath, selfContainedGlb, type SelfContainedGlb } from '../formats/glb/gltfResources';
+import { importedClips } from '../../godot/import/animationImport.js';
+import { setImportedLoopMode } from '../formats/glb/importedLoopMode';
 import { applyRootScale } from '../formats/glb/rootScale';
 import { stampMeshInstanceLayers } from '../formats/glb/meshInstances';
 import type { GltfExtensionRules } from '../formats/glb/types';
 import { flattenGlbObjects } from '../../r3f/internal/glb-scene-root/glbHierarchy';
 import { matchGlbTarget } from '../../r3f/internal/glb-scene-root/matchGlbTarget';
 import {
+  importClipOptions,
   importExternalMaterials,
   importGltfNaming,
   importLightmapUnwrap,
@@ -210,6 +213,22 @@ function tagSidecarMaterials(object: THREE.Object3D, path: string, parsed: Parse
 }
 
 /**
+ * Each embedded clip as Godot's scene importer imports it: its final name and loop mode, written
+ * on the cached template's clip. It runs with no sidecar too, because the glTF name rule needs none.
+ */
+function applyImportedClips(object: THREE.Object3D, parsed: ParsedImportFile | null): void {
+  const imported = importedClips(
+    object.animations.map((clip) => clip.name),
+    importClipOptions(parsed)
+  );
+  object.animations.forEach((clip, index) => {
+    const { name, loopMode } = imported[index]!;
+    clip.name = name;
+    setImportedLoopMode(clip, loopMode);
+  });
+}
+
+/**
  * Create a GLB mesh processor that handles loading and caching GLB/GLTF meshes.
  */
 export function createGLBProcessor(
@@ -240,6 +259,7 @@ export function createGLBProcessor(
         imageImport: importedImages(path, images, fileEventBus, dependencies),
       });
       applyImportSidecar(object, path, sidecar);
+      applyImportedClips(object, sidecar);
       return object;
     },
     dispose: disposeGLBMesh,

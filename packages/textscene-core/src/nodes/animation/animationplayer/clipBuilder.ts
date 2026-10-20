@@ -7,43 +7,18 @@
 
 import {
   AnimationClip,
-  LoopOnce,
-  LoopPingPong,
-  LoopRepeat,
   InterpolateDiscrete,
   InterpolateLinear,
   InterpolateSmooth,
   NumberKeyframeTrack,
   QuaternionKeyframeTrack,
   VectorKeyframeTrack,
-  type AnimationActionLoopStyles,
   type InterpolationModes,
   type KeyframeTrack,
 } from 'three';
 import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
 import { warn } from '../../../logger';
 import { degToRad } from '../../../godot/math/math.js';
-
-interface LoopSettings {
-  loop: AnimationActionLoopStyles;
-  repetitions: number;
-  clampWhenFinished: boolean;
-}
-
-/**
- * Maps Godot `loop_mode` (0 none, 1 linear, 2 ping-pong) to THREE action loop
- * settings. Ping-pong bounces forward↔backward like Godot's LOOP_PINGPONG.
- */
-export function loopSettingsFor(loopMode: number): LoopSettings {
-  switch (loopMode) {
-    case 2:
-      return { loop: LoopPingPong, repetitions: Infinity, clampWhenFinished: false };
-    case 1:
-      return { loop: LoopRepeat, repetitions: Infinity, clampWhenFinished: false };
-    default:
-      return { loop: LoopOnce, repetitions: 1, clampWhenFinished: true };
-  }
-}
 
 /**
  * Maps a track's NodePath to its target's scene path, or `null` when the walk leaves the scene, as

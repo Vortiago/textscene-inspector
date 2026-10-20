@@ -5,11 +5,11 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { AnimationMixer, LoopOnce, LoopPingPong, LoopRepeat, Object3D, type AnimationClip } from 'three';
+import { AnimationMixer, Object3D, type AnimationClip } from 'three';
 import * as logger from '../../../logger';
 import { bindClip } from '../../../r3f/animation/trackTargets';
 import { resolveRelativePath } from '../../../godot/string/nodePath';
-import { buildClip, loopSettingsFor } from './clipBuilder';
+import { buildClip } from './clipBuilder';
 import { resolveAnimations, type GodotAnimation, type GodotTrack } from './animationResolver';
 import type { TscnInternalResource } from '../../../parser/types';
 import { degToRad } from '../../../godot/math/math.js';
@@ -43,24 +43,6 @@ function expectValuesCloseTo(actual: ArrayLike<number>, expected: number[]) {
   expect(actual.length).toBe(expected.length);
   expected.forEach((v, i) => expect(actual[i]).toBeCloseTo(v, 5));
 }
-
-describe('loopSettingsFor — Godot loop_mode mapping', () => {
-  it('maps loop_mode 0 (none) to play-once, clamped', () => {
-    expect(loopSettingsFor(0)).toEqual({ loop: LoopOnce, repetitions: 1, clampWhenFinished: true });
-  });
-
-  it('maps loop_mode 1 (linear) to repeat', () => {
-    expect(loopSettingsFor(1)).toEqual({
-      loop: LoopRepeat,
-      repetitions: Infinity,
-      clampWhenFinished: false,
-    });
-  });
-
-  it('maps loop_mode 2 (ping-pong) to LoopPingPong', () => {
-    expect(loopSettingsFor(2).loop).toBe(LoopPingPong);
-  });
-});
 
 describe('buildClip — clip metadata', () => {
   it('names the clip and sets its duration from the animation length', () => {
