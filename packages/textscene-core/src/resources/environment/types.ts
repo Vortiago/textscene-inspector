@@ -6,7 +6,7 @@
 
 import type { Rgba } from '../../godot/math/math';
 import type { Vector3 } from '../../godot/math/vector';
-import type { BackgroundMode } from '../../godot/scene/environment.js';
+import type { AmbientSource, BackgroundMode } from '../../godot/scene/environment.js';
 
 export interface EnvironmentProperties {
   // Background
@@ -44,7 +44,7 @@ export interface EnvironmentProperties {
 
   // Ambient lighting (scene-wide constant illumination)
   /** 0 BG (default), 1 DISABLED, 2 COLOR, 3 SKY. Only 2 and 3 emit a flat ambient. */
-  ambient_light_source: number;
+  ambient_light_source: AmbientSource;
   ambient_light_color: Rgba;
   ambient_light_energy: number;
   /**
@@ -227,7 +227,7 @@ export interface EnvironmentSettings {
     energy: number;
     /**
      * `ambient_light_sky_contribution`: the sky's share of the diffuse ambient, 0 for
-     * `AMBIENT_SOURCE_COLOR`. It scales the ambient only, never the reflection.
+     * `AmbientSource.COLOR`. It scales the ambient only, never the reflection.
      */
     contribution: number;
   } | null;

@@ -185,7 +185,7 @@ function setTransforms3D(state: MultiMeshState, value: string): void {
 
 /** The 3.x `transform_2d_array` (`multimesh.cpp:88-108`), through `mesh_storage.cpp:1913-1938`. */
 function setTransforms2D(state: MultiMeshState, value: string): void {
-  if (state.format !== 0) return;
+  if (state.format !== MultiMeshTransformFormat.TRANSFORM_2D) return;
   const vectors = parsePackedVector2Array(value);
   const count = Math.floor(vectors.length / 2 / 3);
   if (count !== state.instances || count === 0) return;

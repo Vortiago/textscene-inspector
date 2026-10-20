@@ -1,4 +1,4 @@
-/** Godot 4.6.3's Environment resource: its class defaults and what its setters store. */
+/** Godot 4.6.3's Environment resource: its enums with their label tables, class defaults and what its setters store. */
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
 import { FogMode } from '../rendering/environment/depthFog.js';

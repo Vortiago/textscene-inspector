@@ -5,7 +5,7 @@
  */
 
 import type { EnvironmentProperties } from './types';
-import { BackgroundMode } from '../../godot/scene/environment.js';
+import { AmbientSource, BackgroundMode } from '../../godot/scene/environment.js';
 import { TONEMAP_AGX_CONTRAST_DEFAULT } from '../../godot/rendering/environment/toneMapping.js';
 import { enumOr, floatOr, intOr, parseOptionalFloat, vec3Or } from '../../parser/valueParsers';
 import { colorOr } from '../../utils/colorParser';
@@ -40,7 +40,11 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
   });
   return {
     // Background
-    background_mode: intOr(properties.background_mode, 0, 'background_mode') as BackgroundMode,
+    background_mode: intOr(
+      properties.background_mode,
+      BackgroundMode.BG_CLEAR_COLOR,
+      'background_mode'
+    ) as BackgroundMode,
     background_color: colorOr(properties.background_color, { r: 0, g: 0, b: 0, a: 1 }),
     background_energy_multiplier: floatOr(
       properties.background_energy_multiplier,
@@ -64,7 +68,7 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     tonemap_exposure: floatOr(properties.tonemap_exposure, 1.0, 'tonemap_exposure'),
 
     // Ambient lighting: Godot's default ambient_light_color is black, no ambient.
-    ambient_light_source: intOr(properties.ambient_light_source, 0, 'ambient_light_source'),
+    ambient_light_source: intOr(properties.ambient_light_source, AmbientSource.BG, 'ambient_light_source'),
     ambient_light_color: colorOr(properties.ambient_light_color, { r: 0, g: 0, b: 0, a: 1 }),
     ambient_light_energy: floatOr(properties.ambient_light_energy, 1.0, 'ambient_light_energy'),
     ambient_light_sky_contribution: floatOr(
