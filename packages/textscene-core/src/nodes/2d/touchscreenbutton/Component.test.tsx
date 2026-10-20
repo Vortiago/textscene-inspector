@@ -48,8 +48,14 @@ describe('TouchScreenButton', () => {
     // 64 x 32 px texture, +Y down in Godot, so the centre sits at (32, -16).
     expect(mesh.position.x).toBeCloseTo(32, 5);
     expect(mesh.position.y).toBeCloseTo(-16, 5);
-    expect((mesh.geometry as THREE.PlaneGeometry).parameters.width).toBeCloseTo(64, 5);
-    expect((mesh.geometry as THREE.PlaneGeometry).parameters.height).toBeCloseTo(32, 5);
+  });
+
+  it('sizes the quad to the texture in pixels', async () => {
+    const r = await render(buttonNode({ texture_normal: 'ExtResource("1")' }));
+    const mesh = r.scene.findByType('Mesh').instance as THREE.Mesh;
+    const { width, height } = (mesh.geometry as THREE.PlaneGeometry).parameters;
+
+    expect([width, height]).toEqual([64, 32]);
   });
 
   it('draws nothing without a texture_normal', async () => {

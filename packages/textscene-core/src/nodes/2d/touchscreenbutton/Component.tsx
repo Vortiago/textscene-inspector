@@ -13,8 +13,7 @@ import { Sprite2D } from '../sprite2d/Component';
 import type { Sprite2DProperties } from '../sprite2d/types';
 import type { TouchScreenButtonProperties } from './types';
 
-function asUncentredSprite(node: TscnNode, texture: string): TscnNode {
-  const props = node.properties as TouchScreenButtonProperties;
+function asUncentredSprite(node: TscnNode, props: TouchScreenButtonProperties, texture: string): TscnNode {
   const sprite: Sprite2DProperties = {
     ...props,
     texture,
@@ -31,8 +30,11 @@ function asUncentredSprite(node: TscnNode, texture: string): TscnNode {
 }
 
 export function TouchScreenButton({ node, children }: NodeComponentProps) {
-  const texture = (node.properties as TouchScreenButtonProperties).texture_normal;
-  const spriteNode = useMemo(() => (texture ? asUncentredSprite(node, texture) : null), [node, texture]);
+  // Memoised so the Sprite2D below sees one properties object per node, as it does for a parsed Sprite2D.
+  const spriteNode = useMemo(() => {
+    const props = node.properties as TouchScreenButtonProperties;
+    return props.texture_normal ? asUncentredSprite(node, props, props.texture_normal) : null;
+  }, [node]);
 
   if (!spriteNode) return <Node2D node={node}>{children}</Node2D>;
   return <Sprite2D node={spriteNode}>{children}</Sprite2D>;
