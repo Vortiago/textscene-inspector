@@ -17,7 +17,7 @@ import {
   CANVAS_CAPTURE,
   FIT_ON_OPEN_2D_STORAGE_KEY,
   VIEWPORT,
-} from '../visual/previewServer.mjs';
+} from '../visual/preview/appContract.mjs';
 import {
   bootstrapScript,
   DEFAULT_RENDERING_METHOD,

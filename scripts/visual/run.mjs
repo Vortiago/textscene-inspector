@@ -13,22 +13,22 @@
  */
 
 import { resolve } from 'node:path';
-import { createCaptureContext, withPreviewBrowser } from './previewServer.mjs';
+import {
+  attachDiagnostics,
+  createCaptureContext,
+  previewPort,
+  withPreviewBrowser,
+} from './previewServer.mjs';
 import { BASELINE_DIR } from './baselinePath.mjs';
 import { parseArgs, selectScenes, summarize } from './run/cli.mjs';
-import { attachConsoleGate, captureScene } from './run/sceneCapture.mjs';
+import { captureScene } from './run/sceneCapture.mjs';
 import { compareToBaseline, writeBaseline, writeFailureArtifacts } from './run/baselines.mjs';
-
-// An uncommon port, clear of a manual `pnpm preview` (4173) and the showcase pipeline (4188). Set
-// VISUAL_PORT when another checkout on the host uses 4317: `waitForServer` accepts any 200, so two
-// harnesses on one port would capture from whichever process got there first.
-const PORT = Number(process.env.VISUAL_PORT) || 4317;
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const scenes = selectScenes(opts);
   const results = [];
-  await withPreviewBrowser({ port: PORT, portEnvName: 'VISUAL_PORT' }, async (browser, baseUrl) => {
+  await withPreviewBrowser(previewPort('visual'), async (browser, baseUrl) => {
     console.log(`[visual] preview at ${baseUrl}`);
     const pages = await capturePages(browser, scenes);
     // shards/measure.mjs starts the first scene's clock here, so the browser launch stays out of
@@ -72,11 +72,11 @@ async function main() {
 async function capturePages(browser, scenes) {
   const context = await createCaptureContext(browser, { frameOnOpen: true });
   const page = await context.newPage();
-  const pages = { default: { page, errors: attachConsoleGate(page) }, canvas2D: null };
+  const pages = { default: { page, diagnostics: attachDiagnostics(page) }, canvas2D: null };
   if (scenes.some((s) => s.mode === '2d')) {
     const context2D = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: true });
     const page2D = await context2D.newPage();
-    pages.canvas2D = { page: page2D, errors: attachConsoleGate(page2D) };
+    pages.canvas2D = { page: page2D, diagnostics: attachDiagnostics(page2D) };
   }
   return pages;
 }

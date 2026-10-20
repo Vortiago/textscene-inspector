@@ -1,37 +1,26 @@
 /**
- * Regenerates the showcase after a UI change: it starts a preview server, records every scenario
- * (.webm and poster) and stops the server. It needs a built web app
- * (`pnpm --filter @textscene/web-previewer build`), which the `showcase:regen` root script does first.
+ * Regenerates the showcase after a UI change: it builds the web app,
+ * serves it, records every scenario (.webm and poster) and stops the server.
  *
  * @example
  *   node scripts/showcase/regenerate.mjs
  */
 
-import { assertPortFree, killPreviewGroup, startPreview, waitForServer } from '../visual/previewServer.mjs';
+import { previewPort, withPreviewBrowser } from '../visual/previewServer.mjs';
+import { launchShowcaseBrowser } from './browser.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 import { readFixtureLookup } from '../fixtureManifest.mjs';
 
-// A fixed, uncommon port gives the URL without parsing stdout. `assertPortFree` names
-// SHOWCASE_PORT as the override, so the port reads it.
-const PORT = Number(process.env.SHOWCASE_PORT) || 4188;
-
-// Before the spawn: with `--strictPort` and `stdio: 'ignore'` the server fails silently on a
-// taken port, and `waitForServer` gets its 200 from the stranger, so every clip would record a
-// foreign build and exit 0.
-await assertPortFree(PORT, 'SHOWCASE_PORT');
-const { proc, baseUrl } = startPreview(PORT);
-let exitCode = 0;
-try {
-  await waitForServer(`${baseUrl}/`);
-  process.env.SHOWCASE_URL = baseUrl;
+/**
+ * Records every scenario on the served previewer, and answers the names of those that failed. One
+ * broken scenario does not stop the others.
+ */
+async function recordAll(browser, baseUrl) {
   console.log(`[regenerate] preview at ${baseUrl}`);
-
   const fileForLabel = readFixtureLookup();
-
   const names = Object.keys(scenarios);
   console.log(`[regenerate] recording ${names.length} scenarios…`);
-  // One broken scenario does not stop the others: the run fails at the end.
   const failures = [];
   for (const name of names) {
     const scenario = scenarios[name];
@@ -41,21 +30,26 @@ try {
       continue;
     }
     try {
-      await recordShowcase(name, file, scenario.run);
+      await recordShowcase(browser, baseUrl, { name, file, run: scenario.run });
     } catch (err) {
       console.error(`[regenerate] ✗ ${name}: ${String(err.message).split('\n')[0]}`);
       failures.push(name);
     }
   }
+  return failures;
+}
 
+let exitCode = 0;
+try {
+  const failures = await withPreviewBrowser(
+    { ...previewPort('showcase'), launchBrowser: launchShowcaseBrowser },
+    recordAll
+  );
   if (failures.length) throw new Error(`${failures.length} scenario(s) failed: ${failures.join(', ')}`);
   console.log('[regenerate] ✅ clips regenerated');
 } catch (err) {
   console.error('[regenerate] failed:', err.message);
   exitCode = 1;
-} finally {
-  // The whole group: `proc` is the shell, not the pnpm-to-vite grandchild that holds the port, and
-  // an orphaned grandchild keeps this script's event loop open.
-  killPreviewGroup(proc);
 }
+// A lingering handle from the killed preview group would keep the event loop open.
 process.exit(exitCode);

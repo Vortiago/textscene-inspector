@@ -3,8 +3,8 @@
  * fixture with no stored layout, and the gate reads the layout back from outside: the
  * viewport over a bottom sheet, one half of the sheet at a time, and no sideways scroll.
  */
-import { findCanvas, gotoFixture, settleCanvas } from '../visual/previewServer.mjs';
-import { attachDiagnostics, checkDiagnostics } from './diagnostics.mjs';
+import { attachDiagnostics, findCanvas, gotoFixture, settleCanvas } from '../visual/previewServer.mjs';
+import { checkDiagnostics } from './diagnostics.mjs';
 import { checkNodePaths, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { readInspectorPanel } from './inspector.mjs';
 

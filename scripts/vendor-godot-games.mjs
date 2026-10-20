@@ -11,13 +11,12 @@
  */
 
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import { copyPruned } from './vendor-prune.mjs';
 import { fetchShallow } from './vendor-git.mjs';
+import { REPO_ROOT } from './repoRoot.mjs';
 
-const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TARGET = join(REPO_ROOT, 'scenes/games');
 
 /**

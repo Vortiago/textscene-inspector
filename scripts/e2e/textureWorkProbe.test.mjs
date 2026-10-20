@@ -3,23 +3,29 @@ import {
   longTasksAfterFirstReply,
   longTasksDuringTextureWork,
   runAgainIfStalled,
-  textureWorkWindow,
 } from './textureWorkProbe.mjs';
 
-describe('textureWorkWindow', () => {
+describe('the texture work window', () => {
+  /** A task over the 50 ms limit starting at `startTime`. */
+  const longTask = (startTime) => ({ startTime, duration: 60 });
+
   it('spans the first attach to the last detach of the status', () => {
-    expect(textureWorkWindow({ statusAttached: [100, 900], statusDetached: [400, 1500] })).toEqual({
-      start: 100,
-      end: 1500,
-    });
+    const probe = {
+      statusAttached: [100, 900],
+      statusDetached: [400, 1500],
+      longTasks: [longTask(99), longTask(100), longTask(1499), longTask(1500)],
+    };
+    expect(longTasksDuringTextureWork(probe, 50)).toEqual([longTask(100), longTask(1499)]);
   });
 
-  it('is null when the status never showed, so the gate cannot pass vacuously', () => {
-    expect(textureWorkWindow({ statusAttached: [], statusDetached: [] })).toBeNull();
+  it('is absent when the status never showed, so the gate cannot pass vacuously', () => {
+    const probe = { statusAttached: [], statusDetached: [], longTasks: [longTask(100)] };
+    expect(longTasksDuringTextureWork(probe, 50)).toBeNull();
   });
 
-  it('is null while the status is still attached', () => {
-    expect(textureWorkWindow({ statusAttached: [100], statusDetached: [] })).toBeNull();
+  it('is absent while the status is still attached', () => {
+    const probe = { statusAttached: [100], statusDetached: [], longTasks: [longTask(200)] };
+    expect(longTasksDuringTextureWork(probe, 50)).toBeNull();
   });
 });
 

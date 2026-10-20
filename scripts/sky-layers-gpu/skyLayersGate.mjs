@@ -6,12 +6,13 @@
 import { createServer } from 'vite';
 import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { REPO_ROOT } from '../visual/preview/paths.mjs';
+import { previewPort } from '../visual/preview/ports.mjs';
 import { skyLayerFailures } from './skyLayerChecks.mjs';
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
 
-const PORT = Number(process.env.GPU_GATE_PORT) || 4323;
+const { port: PORT } = previewPort('skyLayersGpu');
 
 const server = await createServer({
   root: import.meta.dirname,
