@@ -24,6 +24,8 @@ export interface VariantTables {
   externalIds: readonly string[];
   /** The text id of the internal resource at each index. */
   internalIds: readonly string[];
+  /** False for a file that names an internal resource by its number, not its table index. */
+  hasNamedIds: boolean;
 }
 
 /** `_get_string` (`:159-171`): a string-table entry, or an inline string. */
@@ -182,7 +184,7 @@ function objectText(reader: ByteReader, tables: VariantTables): string {
     case ObjectRef.Empty:
       return 'null';
     case ObjectRef.InternalResource:
-      return `SubResource(${stringLiteral(tableId(tables.internalIds, reader.u32(), 'internal'))})`;
+      return `SubResource(${stringLiteral(internalId(reader.u32(), tables))})`;
     case ObjectRef.ExternalResourceIndex:
       return `ExtResource(${stringLiteral(tableId(tables.externalIds, reader.u32(), 'external'))})`;
     case ObjectRef.ExternalResource:
@@ -191,6 +193,11 @@ function objectText(reader: ByteReader, tables: VariantTables): string {
     default:
       throw new Error(`expected an object reference kind from 0 to 3, got ${kind as number}`);
   }
+}
+
+/** `:399-408`: a table index in a named-ids file, and the resource's own number in one without. */
+function internalId(index: number, tables: VariantTables): string {
+  return tables.hasNamedIds ? tableId(tables.internalIds, index, 'internal') : String(index);
 }
 
 function tableId(ids: readonly string[], index: number, table: string): string {

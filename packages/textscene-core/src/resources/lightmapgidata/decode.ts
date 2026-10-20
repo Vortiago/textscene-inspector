@@ -34,7 +34,11 @@ export function decodeLightmapGIData(
   // A LightmapGI refuses directional data in the unpacked format older bakes wrote (`:1509-1513`).
   const isAssignable = !usesSphericalHarmonics || usesPackedDirectional;
   return {
-    lightmapTextures: lightmapTexturePaths(properties.lightmap_textures, externalResources),
+    // An older bake spells it `light_textures`, which the setter hands on (`:317-318`).
+    lightmapTextures: lightmapTexturePaths(
+      properties.lightmap_textures ?? properties.light_textures,
+      externalResources
+    ),
     usesSphericalHarmonics,
     users: isAssignable ? lightmapUsers(properties.user_data) : [],
     bounds: captureBounds(properties.probe_data),

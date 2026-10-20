@@ -25,6 +25,7 @@ import { updateAreaLightAtlas } from './areaLight/areaLightAtlas.js';
 import { writeLightSpecularUniforms } from './lightSpecular/lightSpecular.js';
 import { writeLightBakeModeUniforms } from './lightBakeMode/lightBakeMode.js';
 import { writeLightSizeUniforms } from './lightSize/lightSize.js';
+import { slottedLights } from './lightSlots.js';
 import { defineSoftShadowSearch, releaseSoftShadowSearch } from './shadowFilter/softShadowSearch.js';
 import { searchesPositionalBlockers } from './positionalShadow/softShadowRadius.js';
 import {
@@ -52,9 +53,10 @@ function prepareSceneLights(
   const shadedLights = sceneLights(scene);
   const drawsSoftShadows = drawsDirectionalSoftShadows(shadedLights, camera);
   setSunSoftShadowAngles(shadedLights, drawsSoftShadows);
-  writeLightSpecularUniforms(shadedLights, camera);
-  writeLightBakeModeUniforms(shadedLights, camera);
-  writeLightSizeUniforms(shadedLights, camera, drawsSoftShadows);
+  const slotted = slottedLights(shadedLights, camera);
+  writeLightSpecularUniforms(slotted);
+  writeLightBakeModeUniforms(slotted);
+  writeLightSizeUniforms(slotted, drawsSoftShadows);
   defineSoftShadowSearch(scene, {
     positional: searchesPositionalBlockers(lights),
     directional: searchesDirectionalBlockers(lights),

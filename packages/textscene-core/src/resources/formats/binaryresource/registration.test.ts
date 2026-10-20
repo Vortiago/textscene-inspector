@@ -20,6 +20,15 @@ describe('binaryresource slice registration', () => {
     expect(isBinaryResourceType('LightmapGIData', 'res://scene.lmbake')).toBe(true);
   });
 
+  it('routes a bake path to the bus slot its extension claims', () => {
+    expect(resourceSliceRegistry.busTypeOfPath('res://bakes/scene.lmbake')).toBe('resource');
+  });
+
+  it('routes a path whose extension no slice claims nowhere (edge case)', () => {
+    expect(resourceSliceRegistry.busTypeOfPath('res://scene.res')).toBeNull();
+    expect(resourceSliceRegistry.busTypeOfPath('res://no_extension')).toBeNull();
+  });
+
   it('claims no type name, so a LightmapGIData in a text .tres still arrives as text', () => {
     expect(isBinaryResourceType('LightmapGIData', 'res://scene.tres')).toBe(false);
   });

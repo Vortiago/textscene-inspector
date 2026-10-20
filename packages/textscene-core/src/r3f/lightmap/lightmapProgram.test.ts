@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import type { ProgramShader } from '../materialProgramInputs';
 import { functionBody } from '../testing/glslSource';
 import { scalarGlslFunction } from '../testing/glslScalar';
-import { bindLightmap, LIGHTMAP_PROGRAM } from './lightmapProgram';
+import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from './lightmapProgram';
 import { LightmapInstance, type LightmapAssignment } from './sceneLightmaps';
 
 function compiled(material: THREE.Material = new THREE.MeshStandardMaterial()): ProgramShader {
@@ -44,6 +44,20 @@ function uniformsBoundTo(bound: LightmapAssignment | null) {
 
 const fragment = compiled().fragmentShader;
 const weight = (name: string) => scalarGlslFunction(fragment, name);
+
+describe('readsLightmap', () => {
+  it('reads the lightmap of an opaque lit surface', () => {
+    expect(readsLightmap(true, false)).toBe(true);
+  });
+
+  it('reads none on a transparent surface, which draws outside the opaque pass', () => {
+    expect(readsLightmap(true, true)).toBe(false);
+  });
+
+  it('reads none on an unshaded surface (edge case)', () => {
+    expect(readsLightmap(false, false)).toBe(false);
+  });
+});
 
 describe('LIGHTMAP_PROGRAM shaders', () => {
   it('defines GODOT_LIGHTMAP, which turns on the static-light skip', () => {

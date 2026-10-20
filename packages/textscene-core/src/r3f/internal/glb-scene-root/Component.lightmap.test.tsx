@@ -18,6 +18,7 @@ import { GlbInstanceProvider } from './GlbInstanceContext';
 import { NO_SIDECAR } from '../../../resources/formats/glb/testing/noSidecar';
 import { LightmapInstance, lightmapsOf } from '../../lightmap/sceneLightmaps';
 import { unfadedMaterial } from '../../materials/fadedMeshMaterials';
+import { UV2_ATTRIBUTE } from '../../../resources/meshes/uv2';
 
 const GLB_PATH = 'res://lamp.glb';
 
@@ -49,10 +50,23 @@ function lightmapNaming(path: string): LightmapInstance {
   return instance;
 }
 
+/** `glb` with UV2 on every mesh, as Godot bakes only a mesh with UV2. */
+function withUv2(glb: THREE.Object3D): THREE.Object3D {
+  glb.traverse((object) => {
+    if (!(object instanceof THREE.Mesh)) return;
+    const { count } = object.geometry.getAttribute('position');
+    object.geometry.setAttribute(UV2_ATTRIBUTE, new THREE.BufferAttribute(new Float32Array(count * 2), 2));
+  });
+  return glb;
+}
+
 /** The material Lamp's GLB mesh Single draws with, once a LightmapGI names `named`. */
 async function singleMaterial(named: string): Promise<THREE.Material> {
   const fake = createFakeResourceLoader();
-  fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb([{ name: 'Single', mesh: 0 }]), NO_SIDECAR));
+  fake.glbMeshes.seed(
+    GLB_PATH,
+    withUv2(await createGLBMesh(nodesGlb([{ name: 'Single', mesh: 0 }]), NO_SIDECAR))
+  );
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={{ internalResources: [] }}>

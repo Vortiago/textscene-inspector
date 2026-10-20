@@ -20,7 +20,7 @@ const SHADED_KINDS = [
 export type ShadedLightKind = (typeof SHADED_KINDS)[number]['kind'];
 
 /** The lights three gives a slot, by kind, each in slot order. */
-type SlottedLights = Record<ShadedLightKind, THREE.Light[]> & { area: THREE.RectAreaLight[] };
+export type SlottedLights = Record<ShadedLightKind, THREE.Light[]> & { area: THREE.RectAreaLight[] };
 
 /** The lights `RE_Direct` shades, as GLSL: the length of an array read by slot. */
 const SHADED_LIGHTS = SHADED_KINDS.map(({ count }) => count).join(' + ');

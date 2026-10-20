@@ -68,6 +68,12 @@ describe('decodeLightmapGIData on text', () => {
     ).toEqual(['res://bake.exr']);
   });
 
+  it('reads the lightmap textures an older bake spells `light_textures`, which the setter hands on', () => {
+    expect(decodeText('light_textures = [ExtResource("1_tex")]').lightmapTextures).toEqual([
+      'res://bake.exr',
+    ]);
+  });
+
   it('simplifies a texture path as Godot simplifies every resource path', () => {
     const { properties, extResources } = parseTresFile(
       '[gd_resource type="LightmapGIData" format=3]\n\n' +

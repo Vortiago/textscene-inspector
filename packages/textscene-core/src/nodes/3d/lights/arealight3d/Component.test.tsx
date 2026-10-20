@@ -22,6 +22,7 @@ import {
   writeLightBakeModeUniforms,
 } from '../../../../r3f/lightBakeMode/lightBakeMode';
 import { sceneLights } from '../../../../r3f/directionalShadow/lightLists';
+import { slottedLights } from '../../../../r3f/lightSlots';
 import { litUniformArray } from '../../../../r3f/testing/litUniformArray';
 import { BakeMode, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 
@@ -303,7 +304,9 @@ describe('AreaLight3D light_bake_mode, which a lightmapped surface reads', () =>
     const r = await ReactThreeTestRenderer.create(
       <AreaLight3D node={makeNode({ light_bake_mode: BakeMode.STATIC })} />
     );
-    writeLightBakeModeUniforms(sceneLights(r.scene.instance as THREE.Scene), new THREE.PerspectiveCamera());
+    writeLightBakeModeUniforms(
+      slottedLights(sceneLights(r.scene.instance as THREE.Scene), new THREE.PerspectiveCamera())
+    );
     installLightBakeModeUniforms();
     expect(litUniformArray(AREA_LIGHT_STATICS)[0]).toBe(1);
   });

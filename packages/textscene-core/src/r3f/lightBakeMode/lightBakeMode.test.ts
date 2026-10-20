@@ -9,6 +9,7 @@ import {
 } from './lightBakeMode';
 import { BakeMode } from '../../godot/scene/light';
 import { sceneLights } from '../directionalShadow/lightLists';
+import { slottedLights } from '../lightSlots';
 import { SplitSunLight } from '../directionalShadow/splitSun';
 import { litUniformArray } from '../testing/litUniformArray';
 
@@ -19,7 +20,7 @@ function declared<Light extends THREE.Light>(light: Light, bakeMode: number): Li
 
 /** The first `count` flags of `name` the lit materials read after a render of `scene`. */
 function flagsAfterRender(scene: THREE.Scene, name: string, count: number): number[] {
-  writeLightBakeModeUniforms(sceneLights(scene), new THREE.PerspectiveCamera());
+  writeLightBakeModeUniforms(slottedLights(sceneLights(scene), new THREE.PerspectiveCamera()));
   installLightBakeModeUniforms();
   return [...litUniformArray(name).subarray(0, count)];
 }

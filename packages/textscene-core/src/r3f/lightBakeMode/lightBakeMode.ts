@@ -6,9 +6,8 @@
 
 import type * as THREE from 'three';
 import { BakeMode } from '../../godot/scene/light.js';
-import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { declaredLightOf } from '../directionalShadow/splitSun.js';
-import { slottedLights, slotValues } from '../lightSlots.js';
+import { slotValues, type SlottedLights } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
 
@@ -50,9 +49,8 @@ function staticFlagOf(light: THREE.Light): number {
   return declared && declaration.read(declared)?.bakeMode === BakeMode.STATIC ? 1 : 0;
 }
 
-/** Writes the flag of each slotted light among `lights`, for a render through `camera`. */
-export function writeLightBakeModeUniforms(lights: readonly SceneLight[], camera: THREE.Camera): void {
-  const slotted = slottedLights(lights, camera);
+/** Writes the flag of each light among `slotted`. */
+export function writeLightBakeModeUniforms(slotted: SlottedLights): void {
   const shaded = slotValues(slotted, staticFlagOf);
   shadedArrays.write(shaded.length, (set) => set[LIGHT_STATICS].set(shaded));
   const area = slotted.area.map(staticFlagOf);

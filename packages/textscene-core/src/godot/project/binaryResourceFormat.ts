@@ -11,6 +11,9 @@ export const COMPRESSED_BINARY_RESOURCE_MAGIC = 'RSCC';
 /** The format version Godot 4.6 writes (`.cpp:98`). */
 export const BINARY_FORMAT_VERSION = 6;
 
+/** The engine major version a file may record and still load, Godot's own (`.cpp:1026`). */
+export const ENGINE_MAJOR_VERSION = 4;
+
 /** Version 3 dropped the property field a NodePath carried (`.cpp:94,100`). */
 export const FORMAT_VERSION_NO_NODEPATH_PROPERTY = 3;
 
@@ -27,6 +30,9 @@ export const RESERVED_FIELDS = 11;
 
 /** An internal resource's path in a named-ids file: `local://` and its id (`.cpp:719-724`). */
 export const LOCAL_RESOURCE_PREFIX = 'local://';
+
+/** What joins a file's path and an internal resource's id in the resource's own path (`.cpp:722`). */
+export const SUB_RESOURCE_SEPARATOR = '::';
 
 /** The variant tags (`.cpp:45-88`). */
 export enum VariantTag {

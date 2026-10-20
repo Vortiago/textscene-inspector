@@ -13,6 +13,7 @@ import { importedNormalMapRead } from './godotNormalMap';
 import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/lightmapProgram';
 import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
 import type { MeshSurface } from '../../resources/formats/glb/meshInstances';
+import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
 import type { FadedSurface } from './swappedMaterials';
 import type { FadePass, FadeVariants } from './fadeVariants';
 import { surfaceAlphaProps, type SurfaceAlphaSource } from './surfaceAlphaPatch';
@@ -95,6 +96,14 @@ function readsImportedLightmap(material: THREE.Material): boolean {
   );
 }
 
+/**
+ * Whether the surface carries the UV2 a lightmap rect addresses. Godot bakes only a mesh with UV2
+ * (`lightmap_gi.cpp:395`), so a surface without it here lost the unwrap Godot ran on import.
+ */
+function hasUv2(geometry: THREE.BufferGeometry): boolean {
+  return geometry.getAttribute(UV2_ATTRIBUTE) !== undefined;
+}
+
 /** A faded copy, and the listener that disposes it with its unfaded material. */
 interface BuiltCopy {
   material: THREE.Material;
@@ -126,8 +135,10 @@ export class FadedMeshMaterials implements FadedSurface {
     }
   }
 
-  /** Puts each slot's unfaded material back, and disposes every faded copy this mesh built. */
+  /** Puts each slot's unfaded material back, and disposes every copy this mesh built. */
   dispose(): void {
+    // A held lightmap would place the lightmapped copy at a full fade, which the loop disposes.
+    this.lightmap = null;
     this.applyFade(1);
     for (const [unfaded, kinds] of this.copies) {
       for (const { material, disposeWithUnfaded } of Object.values(kinds)) {
@@ -156,7 +167,9 @@ export class FadedMeshMaterials implements FadedSurface {
 
   private kindAt(unfaded: THREE.Material, fade: number): CopyKind {
     if (forcesAlphaPass(fade)) return 'alphaPass';
-    return this.lightmap && readsImportedLightmap(unfaded) ? 'lightmapped' : 'unfaded';
+    return this.lightmap && hasUv2(this.mesh.geometry) && readsImportedLightmap(unfaded)
+      ? 'lightmapped'
+      : 'unfaded';
   }
 
   /** `unfaded`'s copy of `kind`, built once for this mesh and disposed with it. */

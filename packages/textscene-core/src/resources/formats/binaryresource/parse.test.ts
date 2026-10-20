@@ -151,6 +151,30 @@ describe('parseBinaryResource on each header and table form', () => {
     ]);
   });
 
+  it('resolves a reference in a file without named ids to the resource its number names', () => {
+    const reference = new ByteWriter().u32(VariantTag.Object).u32(ObjectRef.InternalResource).u32(2).bytes();
+    const file = binaryResourceBytes({
+      hasNamedIds: false,
+      strings: ['size', 'mesh'],
+      resources: [
+        { id: '1', type: 'BoxMesh', properties: [] },
+        { id: '2', type: 'BoxMesh', properties: [{ name: 'size', variant: vector3(false, false) }] },
+        { id: '3', type: 'Resource', properties: [{ name: 'mesh', variant: reference }] },
+      ],
+    });
+    expect(parseBinaryResource(file).properties.mesh).toBe('SubResource("2")');
+  });
+
+  it('refuses a format version newer than Godot 4.6 reads (error case)', () => {
+    const file = withPosition(vector3(false, false), { formatVersion: 7 });
+    expect(() => parseBinaryResource(file)).toThrow('expected a binary format version up to 6, got 7');
+  });
+
+  it('refuses a file a newer engine major version saved (error case)', () => {
+    const file = withPosition(vector3(false, false), { engineMajor: 5 });
+    expect(() => parseBinaryResource(file)).toThrow('expected a file saved by Godot 4 or older, got Godot 5');
+  });
+
   it('refuses a compressed resource, which only Godot can inflate', () => {
     const file = new TextEncoder().encode('RSCC').buffer;
     expect(() => parseBinaryResource(file)).toThrow('expected an uncompressed binary resource, got RSCC');

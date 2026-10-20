@@ -22,6 +22,7 @@ import {
   writeLightBakeModeUniforms,
 } from '../../../../r3f/lightBakeMode/lightBakeMode';
 import { sceneLights } from '../../../../r3f/directionalShadow/lightLists';
+import { slottedLights } from '../../../../r3f/lightSlots';
 import { litUniformArray } from '../../../../r3f/testing/litUniformArray';
 import { BakeMode, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 
@@ -312,7 +313,7 @@ describe('Lights: render layers, which a ReflectionProbe cull_mask tests', () =>
 describe('Lights: light_bake_mode, which a lightmapped surface reads', () => {
   /** The static flags the lit materials read after a render of `scene`, in slot order. */
   function staticFlags(scene: THREE.Scene, count: number): number[] {
-    writeLightBakeModeUniforms(sceneLights(scene), new THREE.PerspectiveCamera());
+    writeLightBakeModeUniforms(slottedLights(sceneLights(scene), new THREE.PerspectiveCamera()));
     installLightBakeModeUniforms();
     return [...litUniformArray(LIGHT_STATICS).subarray(0, count)];
   }
