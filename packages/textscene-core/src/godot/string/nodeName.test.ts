@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { validateNodeName } from './nodeName.js';
+import { serialChildName, validateNodeName } from './nodeName.js';
 
 describe('validateNodeName', () => {
   it('leaves a name carrying none of the invalid characters alone', () => {
@@ -38,5 +38,29 @@ describe('validateNodeName', () => {
 
   it('counts an astral character as one, the way a char32_t scan does', () => {
     expect(validateNodeName('A\u{1F600}.B')).toBe('A\u{1F600}_B');
+  });
+});
+
+describe('serialChildName', () => {
+  it('keeps a name no sibling holds', () => {
+    expect(serialChildName('Gone#A', new Set(['Other']))).toBe('Gone#A');
+  });
+
+  it('numbers an undecorated name from 2', () => {
+    // `node.cpp:1631-1634`: the second node takes `2`, so the first needs no number.
+    expect(serialChildName('Gone#A', new Set(['Gone#A']))).toBe('Gone#A2');
+  });
+
+  it('takes the next free number past a run of taken ones', () => {
+    expect(serialChildName('Gone#A', new Set(['Gone#A', 'Gone#A2', 'Gone#A3']))).toBe('Gone#A4');
+  });
+
+  it('counts on from a trailing number, as `increase_numeric_string` does', () => {
+    expect(serialChildName('Wall1', new Set(['Wall1']))).toBe('Wall2');
+  });
+
+  it('carries a run of nines through every digit (edge case)', () => {
+    expect(serialChildName('Wall9', new Set(['Wall9']))).toBe('Wall10');
+    expect(serialChildName('Wall99', new Set(['Wall99']))).toBe('Wall100');
   });
 });

@@ -1253,6 +1253,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Orphan Reroot",
+    "file": "unit-orphan-reroot.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Path3d",
     "file": "unit-path3d.tscn",
     "category": "Other"

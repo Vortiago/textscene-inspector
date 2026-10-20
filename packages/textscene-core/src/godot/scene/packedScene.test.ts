@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseIdTrail, parseUniqueId, recoverByIdTrail, type IdHeading } from './packedScene.js';
+import {
+  parseIdTrail,
+  parseUniqueId,
+  recoverByIdTrail,
+  reparentedName,
+  type IdHeading,
+} from './packedScene.js';
 
 describe('parseIdTrail', () => {
   it('reads the ids of a PackedInt32Array', () => {
@@ -106,5 +112,27 @@ describe('recoverByIdTrail', () => {
   it('reports the instance a middle hop names, as the rest lives in its scene', () => {
     const instance: IdHeading = { uniqueId: 10, instance: 'scene', isPlaced: true };
     expect(recoverByIdTrail([10, 5], [instance, orphan], 1)).toEqual({ kind: 'inBase', heading: 0 });
+  });
+});
+
+describe('reparentedName', () => {
+  it('joins the vanished path and the name with `#`', () => {
+    expect(reparentedName('Gone', 'Orphan')).toBe('Gone#Orphan');
+  });
+
+  it('strips a leading `./`, which the loader prepends to a relative path', () => {
+    expect(reparentedName('./Gone', 'Orphan')).toBe('Gone#Orphan');
+  });
+
+  it('turns `/` into `@`, which `set_name` then replaces with `_`', () => {
+    expect(reparentedName('Gone/Deeper', 'Name')).toBe('Gone_Deeper#Name');
+  });
+
+  it('ignores a trailing slash, which the NodePath drops (edge case)', () => {
+    expect(reparentedName('Gone/', 'Leaf')).toBe('Gone#Leaf');
+  });
+
+  it('keeps the root of an absolute path as `_` (edge case)', () => {
+    expect(reparentedName('/root/Gone', 'Leaf')).toBe('___root_Gone#Leaf');
   });
 });

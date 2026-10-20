@@ -20,3 +20,32 @@ export function validateNodeName(name: string): string {
   }
   return validated;
 }
+
+/**
+ * The name `Node::set_name` leaves a child once a sibling holds it: a number past the name's own
+ * trailing digits, counting up from 2 (`node.cpp:1593-1640`, with the default empty
+ * `editor/naming/node_name_num_separator`). The name stays as it is where no sibling holds it.
+ */
+export function serialChildName(name: string, siblings: ReadonlySet<string>): string {
+  if (!siblings.has(name)) return name;
+  const trailingDigits = /\d*$/.exec(name)![0];
+  const stem = name.slice(0, name.length - trailingDigits.length);
+  let number = trailingDigits;
+  for (;;) {
+    const attempt = stem + number;
+    if (!siblings.has(attempt)) return attempt;
+    number = number === '' ? '2' : increaseNumericString(number);
+  }
+}
+
+/** `s + 1` as an integer written in decimal, with no width limit (`node.cpp:1569-1597`). */
+function increaseNumericString(digits: string): string {
+  let carriedDigits = '';
+  for (let i = digits.length - 1; i >= 0; i--) {
+    if (digits[i] !== '9') {
+      return digits.slice(0, i) + String.fromCharCode(digits.charCodeAt(i) + 1) + carriedDigits;
+    }
+    carriedDigits += '0';
+  }
+  return '1' + carriedDigits;
+}

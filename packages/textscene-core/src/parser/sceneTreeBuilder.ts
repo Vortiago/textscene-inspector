@@ -6,41 +6,48 @@ import type { NodeOrigin, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
 import { claimUniqueName, isUniqueNameInOwner } from '../utils/uniqueNames.js';
 import { resolveParentPath, type ParentPathTree } from '../godot/string/nodePath.js';
+import { serialChildName } from '../godot/string/nodeName.js';
+import { reparentedName } from '../godot/scene/packedScene.js';
+import { idTrailEnd } from './idTrail.js';
+import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
 /**
- * The tree from the flat node list, by parent path. Paths are relative to the root:
+ * The tree from the flat heading list, by parent path. Paths are relative to the root:
  * "." is the root, "Foo/Bar" is root/Foo/Bar.
  */
-export function buildSceneTree<N extends SceneNode<N>>(nodes: N[]): N[] {
-  if (nodes.length === 0) return [];
+export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): N[] {
+  if (origins.length === 0) return [];
 
   // Heading 0 is the root when nothing is parentless: `packed_scene.cpp:218-219` makes
   // `i == 0` the root, so no later heading is a root too. Returning the flat list as
-  // roots would make every node reachable and silence `strandedNodes`.
-  const rootNode = nodes.find((n) => !n.parent) ?? nodes[0]!;
+  // roots would make every node reachable and silence `orphanedNodes`.
+  const rootNode = (origins.find(({ node }) => !node.parent) ?? origins[0]!).node;
 
   const tables = newTables(rootNode);
+  const reRootsVanished = !refusesToInstantiate(origins);
 
   // One pass in declaration order, as Godot resolves: at heading `i`,
   // `get_node_or_null(np)` (`packed_scene.cpp:157-165`) sees only the headings above.
   // A `parent=` naming a later node vanishes and re-roots (`:208-215`). Forward order
   // also gives `children` the file's sibling order, the 2D paint order.
-  for (const node of nodes) {
+  const pathDidNotWalk = new Set<N>();
+  for (const [index, { node }] of origins.entries()) {
     if (node === rootNode) continue;
-    // A second parentless node is stranded here. `strandedNodes` finds it by walking
+    // A second parentless node is stranded here. `orphanedNodes` finds it by walking
     // the returned tree, so it holds no second copy of the resolution rules.
-    if (!node.parent) continue;
+    if (!node.parent) {
+      pathDidNotWalk.add(node);
+      continue;
+    }
 
     // The map IS the child lookup the walk asks at every descent, so `./Mid`,
     // `Mid/` and `Mid` name the one node Godot resolves them all to while
     // `Missing/../Mid` names none. A node seated through any spelling is
     // registered under the single one its own children can address it by.
     const parentPath = resolveParentPath(node.parent, tables.tree);
-    if (parentPath === null) continue;
-
-    const parentNode = tables.byPath.get(parentPath);
-    if (parentNode) {
+    const parentNode = parentPath === null ? undefined : tables.byPath.get(parentPath);
+    if (parentPath !== null && parentNode) {
       parentNode.children.push(node);
       registerPath(tables, parentPath, node);
       continue;
@@ -48,18 +55,37 @@ export function buildSceneTree<N extends SceneNode<N>>(nodes: N[]): N[] {
 
     // A path into instanced content names nodes in the sub-scene or GLB, so the
     // nearest enclosing instance anchors it and the content matches the rest.
-    const anchor = findInstanceAnchor(parentPath, tables);
-    // Without an instance anchor the path is malformed. Godot re-roots such a node
-    // and renames it `Level2#Name` (`:208-215`, `:561-563`). `strandedNodes` is the
-    // only report of it, since a node absent from the tree is invisible to a walk.
-    if (!anchor) continue;
+    const anchor = parentPath === null ? null : findInstanceAnchor(parentPath, tables);
+    if (anchor) {
+      anchor.node.children.push(node);
+      node.instanceSubPath = anchor.subPath;
+      registerPath(tables, anchor.strandedParentPath, node);
+      continue;
+    }
 
-    anchor.node.children.push(node);
-    node.instanceSubPath = anchor.subPath;
-    registerPath(tables, anchor.strandedParentPath, node);
+    // Without an anchor the path has vanished. A `parent_id_path=` is tried first
+    // (`:161-163`) and, where it lands, seats the node somewhere this parse cannot name, so
+    // that node, like every node of a refused file, stays out of the tree for `orphanedNodes`.
+    pathDidNotWalk.add(node);
+    if (!reRootsVanished) continue;
+    if (idTrailEnd(origins, index, ({ node: heading }) => !pathDidNotWalk.has(heading))) continue;
+    reRoot(tables, rootNode, node);
   }
 
   return [rootNode];
+}
+
+/**
+ * Re-parents a node whose `parent=` vanished to the scene root and renames it
+ * `<path>#<name>` (`packed_scene.cpp:208-215`, `:561-563`), numbered past a root child that
+ * holds the name (`set_name`, `node.cpp:1450`, `:1593-1640`). The authored name stays on `authoredName`.
+ */
+function reRoot<N extends SceneNode<N>>(tables: BuildTables<N>, rootNode: N, node: N): void {
+  node.authoredName = node.name;
+  const siblings = new Set(rootNode.children.map((child) => child.name));
+  node.name = serialChildName(reparentedName(node.parent!, node.name), siblings);
+  rootNode.children.push(node);
+  registerPath(tables, SCENE_ROOT_PATH, node);
 }
 
 /**
@@ -157,12 +183,12 @@ function findInstanceAnchor<N extends RawNode>(
 }
 
 /**
- * The nodes {@link buildSceneTree} could not place: those unreachable from `roots`,
- * derived from the tree rather than a second copy of its rules. A `parent=` naming
- * nothing, which Godot re-roots, or a non-root with no `parent=`, which
- * `packed_scene.cpp:207` refuses.
+ * The headings whose `parent=` names nothing, derived from the tree rather than a second copy of
+ * its rules: the nodes the builder re-rooted, and those unreachable from `roots`, which are a
+ * vanished path in a file or on a heading Godot does not re-root, or a non-root with no
+ * `parent=`, which `packed_scene.cpp:207` refuses.
  */
-export function strandedNodes<N extends RawNode>(
+export function orphanedNodes<N extends RawNode>(
   all: readonly NodeOrigin<N>[],
   roots: readonly RawNode[]
 ): NodeOrigin<N>[] {
@@ -177,5 +203,5 @@ export function strandedNodes<N extends RawNode>(
   walk(roots);
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
-  return all.filter(({ node }) => !placed.has(node));
+  return all.filter(({ node }) => !placed.has(node) || node.authoredName !== undefined);
 }

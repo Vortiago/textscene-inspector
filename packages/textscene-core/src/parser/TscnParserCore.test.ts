@@ -192,9 +192,10 @@ item/0/mesh = ExtResource("1_tree")
     it('returns every node heading with its line, in scan order', () => {
       const { origins } = parser.parse(content, simpleCreator);
 
+      // `Lost` is re-rooted, so its node carries Godot's rename.
       expect(origins.map(({ node, line }) => [node.name, line])).toEqual([
         ['Root', 3],
-        ['Lost', 5],
+        ['Missing#Lost', 5],
       ]);
     });
 

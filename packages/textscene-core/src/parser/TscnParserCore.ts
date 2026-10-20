@@ -318,7 +318,7 @@ export class TscnParserCore {
     storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
-    const sceneTree = buildSceneTree(origins.map((o) => o.node));
+    const sceneTree = buildSceneTree(origins);
 
     logger.debug(
       `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
