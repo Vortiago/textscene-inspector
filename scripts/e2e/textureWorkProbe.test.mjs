@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   longTasksAfterFirstReply,
   longTasksDuringTextureWork,
+  runAgainIfStalled,
   textureWorkWindow,
 } from './textureWorkProbe.mjs';
 
@@ -89,5 +90,30 @@ describe('longTasksAfterFirstReply', () => {
 
   it('is null when there is no window to measure', () => {
     expect(longTasksAfterFirstReply({ ...probe, statusDetached: [] }, 50)).toBeNull();
+  });
+});
+
+describe('runAgainIfStalled', () => {
+  const runs = (...results) => {
+    const queue = [...results];
+    return Object.assign(async () => queue.shift(), { remaining: () => queue.length });
+  };
+  const isStalled = (result) => result.stalled;
+
+  it('returns the first run when it saw no stall, and runs nothing more', async () => {
+    const run = runs({ stalled: false, id: 'first' }, { stalled: true, id: 'second' });
+    expect(await runAgainIfStalled(run, isStalled)).toEqual({ stalled: false, id: 'first' });
+    expect(run.remaining()).toBe(1);
+  });
+
+  it('returns the second run when the first stalled, so a stall on runner load clears', async () => {
+    const run = runs({ stalled: true, id: 'first' }, { stalled: false, id: 'second' });
+    expect(await runAgainIfStalled(run, isStalled)).toEqual({ stalled: false, id: 'second' });
+  });
+
+  it('returns the second run when both stalled, so the same stall twice fails the gate', async () => {
+    const run = runs({ stalled: true, id: 'first' }, { stalled: true, id: 'second' });
+    expect(await runAgainIfStalled(run, isStalled)).toEqual({ stalled: true, id: 'second' });
+    expect(run.remaining()).toBe(0);
   });
 });
