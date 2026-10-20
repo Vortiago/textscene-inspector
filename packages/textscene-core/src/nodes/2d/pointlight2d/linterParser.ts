@@ -1,5 +1,6 @@
 /** PointLight2D strict validators. */
 
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 // Registration happens on import, so a test that loads only this slice
 // resolves an inherited key only when this line imports the ancestor. Light2D's
 // own properties live on that tier, which carries the hop to Node2D.
@@ -7,7 +8,6 @@ import '../lights/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, propertyError } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
-import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 
 /** 0 is altered (error); anything else outside the hint band only warns. */
 const TEXTURE_SCALE_HINT_MIN = 0.01;
@@ -19,9 +19,9 @@ const TEXTURE_SCALE_HINT_MAX = 50;
  * included, passes unclamped, so only the closed hint (light_2d.cpp:479) warns.
  */
 const textureScaleValidator: PropertyValidator = (key, value, line) => {
-  // `parseGodotFloat`, not `parseFloat`: `light_2d.cpp:444` substitutes only for
+  // `scalarSlotValue`, not `parseFloat`: `light_2d.cpp:444` substitutes only for
   // exactly 0, so a non-finite literal is a value the setter keeps.
-  const parsed = parseGodotFloat(value);
+  const parsed = scalarSlotValue(value);
   if (parsed === null) {
     return propertyError(
       key,

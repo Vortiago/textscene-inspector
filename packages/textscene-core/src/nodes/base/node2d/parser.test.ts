@@ -14,6 +14,12 @@ describe('parseNode2D', () => {
     expect(p.scale).toEqual({ x: 2, y: 3 });
   });
 
+  it('reads a boolean in a numeric slot as 1 or 0, as Godot stores it', () => {
+    const p = parseNode2D(heading('Node2D', { name: 'N' }), { z_index: 'true', rotation: 'true' });
+    expect(p.z_index).toBe(1);
+    expect(p.rotation).toBe(1);
+  });
+
   it('converts rotation_degrees to radians', () => {
     expect(parseNode2D(heading('Node2D', { name: 'N' }), { rotation_degrees: '90' }).rotation).toBeCloseTo(
       Math.PI / 2

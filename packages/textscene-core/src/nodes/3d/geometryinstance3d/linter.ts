@@ -4,11 +4,11 @@
  * ported: they read the project's renderer setting, which a single `.tscn` lacks.
  */
 
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { isZeroApprox } from '../../../godot/math/math.js';
-import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 import { ruleInt } from '../../../linter/validators/commonValidators.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
@@ -30,7 +30,7 @@ const FADE_DEPENDENCIES = 2;
 /** `Math::is_zero_approx`, against the engine's own tolerance. */
 function isZeroish(raw: string | undefined): boolean {
   if (raw === undefined) return true;
-  const n = parseGodotFloat(raw);
+  const n = scalarSlotValue(raw);
   // Unreadable text is not a distance the fade can start from, so it reads as
   // the zero default. `nan` is a value the slot holds, and `is_zero_approx`
   // says false for it, so it must reach the comparison instead.
@@ -56,8 +56,8 @@ function checkGeometryInstance3D(context: RuleContext): Diagnostic[] {
   // scene/3d/visual_instance_3d.cpp: !is_zero_approx(visibility_range_end) &&
   // visibility_range_end <= visibility_range_begin
   if (!isZeroish(props.visibility_range_end)) {
-    const end = parseGodotFloat(props.visibility_range_end!);
-    const begin = parseGodotFloat(props.visibility_range_begin ?? '0');
+    const end = scalarSlotValue(props.visibility_range_end!);
+    const begin = scalarSlotValue(props.visibility_range_begin ?? '0');
     // No finiteness guard: `end <= begin` is false when either side is `nan`,
     // in JS as in C++, and an infinite begin is the engine's own warning
     // (visual_instance_3d.cpp:512).

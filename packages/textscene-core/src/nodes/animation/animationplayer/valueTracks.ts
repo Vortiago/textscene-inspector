@@ -21,9 +21,12 @@ export function sampleSteppedValue(keys: readonly GodotKeyframe[], time: number)
   return value;
 }
 
-/** A `frame` keyframe is an integer; coerce defensively so a malformed array/
- *  boolean value degrades to 0 rather than poisoning the UV math with NaN. */
+/**
+ * A `frame` keyframe is an integer. A BOOL key reads as 1 or 0, as `cast_to_blendwise` casts it
+ * (`animation.cpp:5731-5733`); a malformed array degrades to 0 rather than poisoning the UV math with NaN.
+ */
 function numericValue(value: unknown): number {
+  if (typeof value === 'boolean') return value ? 1 : 0;
   return typeof value === 'number' ? value : 0;
 }
 

@@ -96,6 +96,11 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     reason:
       'named for it: the fixture exists to move scroll_offset onto the clamp branch the advisory reports',
   },
+  'unit-bool-numeric-slots.tscn': {
+    rules: ['format:frame', 'format:z_index', 'format:rotation'],
+    reason:
+      'the fixture writes `true` into INT and FLOAT slots on purpose: the converted-spelling warning is the point, and the golden pins what Godot draws for it',
+  },
   'unit-tile-map.tscn': {
     rules: ['tilemap-deprecated'],
     reason:

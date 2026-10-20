@@ -248,6 +248,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Bool Numeric Slots",
+    "file": "unit-bool-numeric-slots.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Group",
     "file": "unit-canvas-group.tscn",
     "category": "Other"

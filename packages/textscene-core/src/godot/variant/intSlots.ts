@@ -3,10 +3,52 @@
  * composite in a float slot. See `int.ts` for the whole picture.
  */
 
-import { matchedFloat, parseGodotFloat, slotTupleRegex } from './number.js';
+import { matchedFloat, slotTupleRegex } from './number.js';
 import { compositeTypeName, isConvertedSpelling } from './variantConversion.js';
+import { INT32_MAX } from './intWidth.js';
 import type { IntWidth } from './intWidth.js';
-import { isAlteredInt, parseGodotInt, statedFromFloat, storedFromFloat } from './intReader.js';
+import { isAlteredInt, parseSlotInt, statedFromFloat, storedFromFloat } from './intReader.js';
+import { scalarSlotValue } from './variantBool.js';
+
+/**
+ * The width a slot reads at, from its own declared ceiling: a maximum above
+ * int32 is unreachable unless the slot is unsigned. `MeshInstance3D.layers =
+ * 4294967295` stores 4294967295 (uint32), and `Node2D.light_mask` stores -1 (int32).
+ */
+export function slotWidth(max?: number | null): IntWidth {
+  return (max ?? 0) > INT32_MAX ? 'uint32' : 'int32';
+}
+
+/**
+ * Both readings of one literal, from one parse: what the slot stores, and the
+ * double it came from, which the truncation check needs. `badIntElement` has
+ * the same shape for an array element.
+ */
+export interface IntSlotRead {
+  /** The double the slot read, or `null` for text outside the grammar. */
+  readonly asFloat: number | null;
+  /** The integer stored: `null` unreadable, `NaN` read but unstorable. */
+  readonly stored: number | null;
+}
+
+/**
+ * A literal as an {@link IntSlotRead}: the integer this slot stores, beside the
+ * double it came from. The validators call it for the number the file states, and {@link ruleInt}
+ * narrows it for the rules. The decoders read the number the slot stores through {@link parseSlotInt}.
+ * The width goes in, not onto the result: `_to_int`'s FLOAT branch is undefined
+ * outside the target type's range, so a uint32 `seed = 4294967295.0` is legal.
+ */
+export function readIntSlot(
+  value: string,
+  max?: number | null,
+  width?: IntWidth,
+  /** See {@link storedFromFloat}: set for a component of a float-typed composite. */
+  alwaysFloatBranch = false
+): IntSlotRead {
+  const asFloat = scalarSlotValue(value);
+  if (asFloat === null) return { asFloat: null, stored: null };
+  return { asFloat, stored: statedFromFloat(asFloat, value, width ?? slotWidth(max), alwaysFloatBranch) };
+}
 
 /**
  * The int a rule may compare, or `null` for anything it must not: an unreadable literal, and one the
@@ -22,10 +64,8 @@ export function ruleInt(
   alwaysFloatBranch = false
 ): number | null {
   if (raw === undefined) return whenAbsent;
-  const asFloat = parseGodotFloat(raw);
-  if (asFloat === null) return null;
-  const stated = statedFromFloat(asFloat, raw, width, alwaysFloatBranch);
-  return Number.isNaN(stated) ? null : stated;
+  const { stored } = readIntSlot(raw, null, width, alwaysFloatBranch);
+  return stored === null || Number.isNaN(stored) ? null : stored;
 }
 
 /**
@@ -41,7 +81,7 @@ export function slotInt(
   alwaysFloatBranch = false
 ): number | null {
   if (raw === undefined) return whenAbsent;
-  const parsed = parseGodotInt(raw, width, alwaysFloatBranch);
+  const parsed = parseSlotInt(raw, width, alwaysFloatBranch);
   return parsed === null || Number.isNaN(parsed) ? null : parsed;
 }
 

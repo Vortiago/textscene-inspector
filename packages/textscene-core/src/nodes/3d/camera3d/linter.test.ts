@@ -238,6 +238,15 @@ describe('Camera3D Linter', () => {
         });
       });
 
+      it('reads a boolean plane as 1 or 0, as the slot stores it', () => {
+        expectDiagnostic(scene(node('Camera3D', { projection: 2, size: 1.0, near: 5.0, far: true })), {
+          prop: 'clipping',
+          severity: 'error',
+          ruleName: 'camera3d-invalid-clipping-planes',
+          contains: ['near', 'far', '5', '1'],
+        });
+      });
+
       it('should not error when near < far', () => {
         expect(
           clipping(scene(node('Camera3D', { projection: 2, size: 1.0, near: 0.1, far: 100.0 })))

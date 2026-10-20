@@ -4,6 +4,7 @@
  */
 
 import { parseGodotFloat } from './number.js';
+import { scalarSlotValue } from './variantBool.js';
 import { REPRESENTABLE, ROUND_TRIPS, toInt32, toUint32, toUint8 } from './intWidth.js';
 import type { IntWidth } from './intWidth.js';
 
@@ -36,11 +37,22 @@ function asStoredInt(num: number): number {
   return Number.isFinite(num) ? Math.trunc(num) : NaN;
 }
 
+/** The stored integer for a read `asFloat`, or `null` where the tokenizer read nothing. */
+function storedOrNull(
+  asFloat: number | null,
+  literal: string,
+  width: IntWidth,
+  alwaysFloatBranch: boolean
+): number | null {
+  return asFloat === null ? null : storedFromFloat(asFloat, literal, width, alwaysFloatBranch);
+}
+
 /**
- * A TSCN literal as the integer a Godot property slot stores: `null` when the tokenizer cannot read
- * it, `NaN` when the conversion into this slot is undefined, else the number the engine holds. Not
- * `parseInt`, which reads `2e4` as 2 (Godot stores 20000) and `8abc` as 8 (a format error). A float
- * truncates toward zero (`-5.9` is -5), and the result is narrowed, as setters take `int`.
+ * A TSCN literal as the integer a Godot constructor argument or header attribute stores: `null` when
+ * the tokenizer cannot read it, `NaN` when the conversion is undefined, else the number the engine
+ * holds. Not `parseInt`, which reads `2e4` as 2 (Godot stores 20000) and `8abc` as 8 (a format
+ * error). A float truncates toward zero (`-5.9` is -5), and the result is narrowed, as setters take
+ * `int`. A BOOL is no argument there: a property write reads {@link parseSlotInt}.
  */
 export function parseGodotInt(
   value: string,
@@ -51,8 +63,20 @@ export function parseGodotInt(
   // No grammar pre-test or trim: `parseGodotFloat` applies TSCN_FLOAT_RE and trims, and this runs
   // once per packed-array element. `FLOAT_TYPED` looks for `.` or `e`, never whitespace, so the raw
   // text answers it.
-  const asFloat = parseGodotFloat(value);
-  return asFloat === null ? null : storedFromFloat(asFloat, value, width, alwaysFloatBranch);
+  return storedOrNull(parseGodotFloat(value), value, width, alwaysFloatBranch);
+}
+
+/**
+ * {@link parseGodotInt} for a property write, which converts a BOOL as 1 or 0 (`variant.h:365-366`):
+ * `z_index = true` stores 1.
+ */
+export function parseSlotInt(
+  value: string,
+  width: IntWidth = 'int32',
+  /** See {@link storedFromFloat}. */
+  alwaysFloatBranch = false
+): number | null {
+  return storedOrNull(scalarSlotValue(value), value, width, alwaysFloatBranch);
 }
 
 /** Whether the tokenizer typed the literal FLOAT, which picks the `_to_int` branch. */

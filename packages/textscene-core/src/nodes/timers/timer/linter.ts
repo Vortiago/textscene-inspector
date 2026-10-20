@@ -3,10 +3,10 @@
  * (timer.cpp:200-208) warns when `wait_time < 0.05 - CMP_EPSILON`.
  */
 
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { CMP_EPSILON } from '../../../godot/math/math.js';
-import { parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
@@ -20,7 +20,7 @@ function checkTimerWaitTime(context: RuleContext): Diagnostic[] {
 
   const raw = node.rawProperties.wait_time;
   if (raw === undefined) return [];
-  const waitTime = parseGodotFloat(raw);
+  const waitTime = scalarSlotValue(raw);
   if (waitTime === null || !Number.isFinite(waitTime)) return [];
 
   // Godot's guard has no lower bound, but the setter refuses `<= 0` (timer.cpp:93),
