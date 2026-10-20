@@ -36,18 +36,13 @@ registerHooks({
   },
 });
 
-/**
- * The live linter registries, with every slice's rules and validators
- * self-registered by the barrel's import side effects.
- */
-export async function loadCoreLinter() {
+/** Runs `load`, and names the build step when the built output is missing. */
+async function loadBuilt(what, load) {
   try {
-    const { validatorRegistry, ruleRegistry, resourceRuleRegistry, registeredTypes } =
-      await import('../../packages/textscene-core/dist/linter/index.js');
-    return { validatorRegistry, ruleRegistry, resourceRuleRegistry, registeredTypes };
+    return await load();
   } catch (err) {
     throw new Error(
-      'Could not load the built linter.\n' +
+      `Could not load the built ${what}.\n` +
         'Run `pnpm --filter @textscene/core build` first.\n' +
         `Underlying error: ${err.message}`,
       { cause: err }
@@ -56,24 +51,43 @@ export async function loadCoreLinter() {
 }
 
 /**
+ * The live linter registries, with every slice's rules and validators
+ * self-registered by the barrel's import side effects.
+ */
+export function loadCoreLinter() {
+  return loadBuilt('linter', async () => {
+    const { validatorRegistry, ruleRegistry, resourceRuleRegistry, registeredTypes } =
+      await import('../../packages/textscene-core/dist/linter/index.js');
+    return { validatorRegistry, ruleRegistry, resourceRuleRegistry, registeredTypes };
+  });
+}
+
+/**
  * `nodeRegistry` with every slice's lenient parser self-registered: the linter
  * barrel registers no parser, so `TscnParser.js` runs the `index.js` side
  * effects. The parser is React/THREE-free (ADR-0001), the r3f registries are
  * not, so anything needing those reads source.
  */
-export async function loadCoreParser() {
-  try {
+export function loadCoreParser() {
+  return loadBuilt('parser', async () => {
     await import('../../packages/textscene-core/dist/parser/TscnParser.js');
     const { nodeRegistry } = await import('../../packages/textscene-core/dist/core/NodeRegistry.js');
     return { nodeRegistry };
-  } catch (err) {
-    throw new Error(
-      'Could not load the built parser.\n' +
-        'Run `pnpm --filter @textscene/core build` first.\n' +
-        `Underlying error: ${err.message}`,
-      { cause: err }
-    );
-  }
+  });
+}
+
+/**
+ * The resource-slice claim table with every slice registered: the barrel's
+ * import side effects fill `resourceSliceRegistry`. The slices are THREE-free
+ * (ADR-0031), so a plain Node script can load them.
+ */
+export function loadResourceClaims() {
+  return loadBuilt('resource slices', async () => {
+    await import('../../packages/textscene-core/dist/resources/sliceRegistrations.js');
+    const { resourceSliceRegistry } =
+      await import('../../packages/textscene-core/dist/resources/sliceRegistration.js');
+    return { resourceSliceRegistry };
+  });
 }
 
 /**
