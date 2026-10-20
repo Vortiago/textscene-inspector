@@ -1,8 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-; One variable: a `true` literal in an INT or FLOAT slot, which Godot stores as 1. Each item reads
-; the same slot the whole scene has no other golden for: no fixture or golden writes a BOOL there,
-; so a reader that falls back to 0 moves no other baseline.
+; One variable: a `true` literal in an INT or FLOAT slot, which Godot stores as 1. Each item varies
+; only the slot it writes. No other fixture or golden writes a BOOL into a numeric slot, so a reader
+; that falls back to 0 moves no other baseline.
 
 [ext_resource type="Texture2D" path="res://textures/hard-edge-split.png" id="1_split"]
 

@@ -1,9 +1,9 @@
 /** PointLight2D strict validators. */
 
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 // Registration happens on import, so a test that loads only this slice
 // resolves an inherited key only when this line imports the ancestor. Light2D's
 // own properties live on that tier, which carries the hop to Node2D.
-import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import '../lights/shared/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v, propertyError } from '../../../linter/validators/index.js';

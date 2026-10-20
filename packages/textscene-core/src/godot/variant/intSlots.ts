@@ -33,8 +33,8 @@ export interface IntSlotRead {
 
 /**
  * A literal as an {@link IntSlotRead}: the integer this slot stores, beside the
- * double it came from. The one reader of an INT property that states the number: the
- * validators call it, and {@link ruleInt} narrows it for the rules.
+ * double it came from. The validators call it for the number the file states, and {@link ruleInt}
+ * narrows it for the rules. The decoders read the number the slot stores through {@link parseSlotInt}.
  * The width goes in, not onto the result: `_to_int`'s FLOAT branch is undefined
  * outside the target type's range, so a uint32 `seed = 4294967295.0` is legal.
  */
