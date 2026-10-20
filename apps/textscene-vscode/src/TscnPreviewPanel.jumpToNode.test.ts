@@ -1,7 +1,7 @@
 /**
  * Unit tests for scene-tree "jump to node definition". `jumpToNode` resolves the
- * target by name and the `parent=` value the message carries, so two same-named
- * nodes under different parents resolve apart.
+ * target by the tree path the message carries, so two same-named nodes under
+ * different parents resolve apart.
  */
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 import * as vscode from 'vscode';
@@ -42,13 +42,13 @@ async function createReadyPanel(triggerMessage: (msg: { type: string }) => void)
   triggerMessage({ type: 'webviewReady' });
 }
 
-describe('TscnPreviewPanel jumpToNode parent resolution', () => {
-  it('resolves a duplicate name to the sibling identified by parent (B)', async () => {
+describe('TscnPreviewPanel jumpToNode tree-path resolution', () => {
+  it('resolves a duplicate name to the sibling its path names (B)', async () => {
     const { triggerMessage } = setupMockPanel();
     await createReadyPanel(triggerMessage);
     const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
 
-    triggerMessage({ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/B/Leaf', parent: 'B' });
+    triggerMessage({ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/B/Leaf' });
     await new Promise<void>((r) => setTimeout(r, 10));
 
     // The Leaf under parent="B" is on line index 5, not the first Leaf (line 4).
@@ -57,12 +57,12 @@ describe('TscnPreviewPanel jumpToNode parent resolution', () => {
     expect((editor.revealRange.mock.calls[0]![0] as { start: { line: number } }).start.line).toBe(5);
   });
 
-  it('resolves the other duplicate sibling by parent (A)', async () => {
+  it('resolves the other duplicate sibling by its path (A)', async () => {
     const { triggerMessage } = setupMockPanel();
     await createReadyPanel(triggerMessage);
     const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
 
-    triggerMessage({ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/A/Leaf', parent: 'A' });
+    triggerMessage({ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/A/Leaf' });
     await new Promise<void>((r) => setTimeout(r, 10));
 
     expect(editor.selection?.start.line).toBe(4);
@@ -81,34 +81,22 @@ describe('TscnPreviewPanel jumpToNode parent resolution', () => {
     await createReadyPanel(triggerMessage);
     const editor = stubJumpTarget(fixture);
 
-    triggerMessage({ type: 'jumpToNode', nodeName: 'Item', path: 'Root/Item', parent: '.' });
+    triggerMessage({ type: 'jumpToNode', nodeName: 'Item', path: 'Root/Item' });
     await new Promise<void>((r) => setTimeout(r, 10));
 
     // The direct child (parent=".") is line 4, not the first name match (line 3).
     expect(editor.selection?.start.line).toBe(4);
   });
 
-  it('resolves the root node (no parent) to its heading', async () => {
+  it('resolves the root node to its heading', async () => {
     const { triggerMessage } = setupMockPanel();
     await createReadyPanel(triggerMessage);
     const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
 
-    // Root nodes carry no `parent` on the message.
     triggerMessage({ type: 'jumpToNode', nodeName: 'Root', path: 'Root' });
     await new Promise<void>((r) => setTimeout(r, 10));
 
     expect(editor.selection?.start.line).toBe(1);
-  });
-
-  it('falls back to the first name match when no parent is supplied (legacy)', async () => {
-    const { triggerMessage } = setupMockPanel();
-    await createReadyPanel(triggerMessage);
-    const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
-
-    triggerMessage({ type: 'jumpToNode', nodeName: 'Leaf' });
-    await new Promise<void>((r) => setTimeout(r, 10));
-
-    expect(editor.selection?.start.line).toBe(4);
   });
 
   it('warns and opens no editor when the node is absent', async () => {
@@ -116,7 +104,7 @@ describe('TscnPreviewPanel jumpToNode parent resolution', () => {
     await createReadyPanel(triggerMessage);
     const editor = stubJumpTarget(TWO_SIBLINGS_TSCN);
 
-    triggerMessage({ type: 'jumpToNode', nodeName: 'Nope', path: 'Root/Nope', parent: 'Root' });
+    triggerMessage({ type: 'jumpToNode', nodeName: 'Nope', path: 'Root/Nope' });
     await new Promise<void>((r) => setTimeout(r, 10));
 
     expect(vscode.window.showWarningMessage as Mock).toHaveBeenCalled();

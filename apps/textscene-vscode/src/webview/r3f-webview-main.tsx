@@ -137,7 +137,6 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       type: 'jumpToNode',
       nodeName: node.name,
       path,
-      parent: node.parent,
     } satisfies WebviewToHostMessage);
   };
 

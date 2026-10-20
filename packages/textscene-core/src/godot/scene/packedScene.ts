@@ -5,7 +5,8 @@
  * renders and what lints diverge silently.
  */
 
-import { parseGodotInt } from '../variant/intReader.js';
+import { parseSlotInt } from '../variant/intReader.js';
+import { int32Elements } from '../variant/packedInt32.js';
 import { INT32_MIN } from '../variant/intWidth.js';
 import { packedArrayLiteral } from '../variant/variantParser.js';
 
@@ -19,13 +20,10 @@ export const INSTANCE_PLACEHOLDER_TYPE = 'InstancePlaceholder';
 const ID_TRAIL_RE = packedArrayLiteral('PackedInt32Array');
 
 /**
- * The integer an `int32` slot stores for `literal`, or undefined where the tokenizer cannot read it.
- * An unstorable value (`inf`, `nan`) reads as `INT32_MIN`, which Godot 4.6.3 x86_64 stores for a
+ * An unstorable id (`inf`, `nan`) reads as `INT32_MIN`, which Godot 4.6.3 x86_64 stores for a
  * `unique_id=` and for an id of a `parent_id_path=`.
  */
-function readInt32(literal: string): number | undefined {
-  const stored = parseGodotInt(literal);
-  if (stored === null) return undefined;
+function storedId(stored: number): number {
   return Number.isNaN(stored) ? INT32_MIN : stored;
 }
 
@@ -36,19 +34,20 @@ function readInt32(literal: string): number | undefined {
  */
 export function parseIdTrail(literal: string | undefined): number[] | undefined {
   if (literal === undefined) return undefined;
-  const body = ID_TRAIL_RE.exec(literal)?.[1]?.trim();
+  const body = ID_TRAIL_RE.exec(literal)?.[1];
   if (body === undefined) return undefined;
-  if (body === '') return [];
-  const ids = body.split(',').map(readInt32);
-  return ids.every((id) => id !== undefined) ? ids : undefined;
+  return int32Elements(body)?.map(storedId);
 }
 
 /**
  * The `unique_id=` of a heading, or `0` where it has none or does not hold an integer
- * (`UNIQUE_SCENE_ID_UNASSIGNED`, `node.h:140`; the loader reads it at `resource_format_text.cpp:214-215`).
+ * (`UNIQUE_SCENE_ID_UNASSIGNED`, `node.h:140`). The loader assigns the field's Variant to an
+ * `int` (`resource_format_text.cpp:214-215`), so a bool converts as 1 or 0.
  */
 export function parseUniqueId(literal: string | undefined): number {
-  return (literal === undefined ? undefined : readInt32(literal)) ?? 0;
+  if (literal === undefined) return 0;
+  const stored = parseSlotInt(literal);
+  return stored === null ? 0 : storedId(stored);
 }
 
 /** What {@link recoverByIdTrail} reads of one `[node]` heading, in file order. */
@@ -73,15 +72,15 @@ export interface IdTrailEnd {
 
 /**
  * Follows `trail` through the headings of a scene that has no base scene, so the first
- * lookup is local (`packed_scene.cpp:1960-1979`). `orphan` is the index of the heading
- * whose path did not walk. The nodes built so far are the headings before it, which is
- * all the final `get_node_or_null` can find (`:2005`). Undefined where the trail resolves
+ * lookup is local (`packed_scene.cpp:1960-1979`). `builtCount` is the number of headings
+ * built before the lookup: the headings before a node whose path did not walk, or all of
+ * them after the build. Only those can the final `get_node_or_null` find (`:2005`). Undefined where the trail resolves
  * nowhere, so Godot re-roots the node.
  */
 export function recoverByIdTrail(
   trail: readonly number[],
   headings: readonly IdHeading[],
-  orphan: number
+  builtCount: number
 ): IdTrailEnd | undefined {
   const [firstId] = trail;
   // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
@@ -91,10 +90,10 @@ export function recoverByIdTrail(
   const named = headings[index];
   if (named === undefined) return undefined;
   if (trail.length === 1) {
-    return index < orphan && named.isPlaced ? { kind: 'lands', heading: index } : undefined;
+    return index < builtCount && named.isPlaced ? { kind: 'lands', heading: index } : undefined;
   }
   // A middle hop must be a real instance (`:1996-1997`); its scene holds the rest of the trail.
   // The instance must also be built already, or the final lookup finds nothing (`:2005`).
-  const isBuiltInstance = named.instance === 'scene' && index < orphan && named.isPlaced;
+  const isBuiltInstance = named.instance === 'scene' && index < builtCount && named.isPlaced;
   return isBuiltInstance ? { kind: 'inBase', heading: index } : undefined;
 }

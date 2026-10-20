@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
 import { NODE_TREE_HEAD } from './fixtures.testkit';
-import { definitionRangeAt, resPathAt, resPathOccurrences } from './navigation';
+import { definitionRangeAt, nodeDeclarationRange, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
 
@@ -205,5 +205,67 @@ describe('definitionRangeAt of a node path under a %Name parent', () => {
     const character = unique.lines[4]!.indexOf('Player/Hand') + 1;
 
     expect(definitionRangeAt(unique, { line: 4, character })?.start.line).toBe(3);
+  });
+});
+
+describe('definitionRangeAt of a node path that Godot seats differently from its spelling', () => {
+  /** The heading line that the path `value` on the last line resolves to. */
+  function definitionLine(lines: readonly string[], value: string): number | undefined {
+    const document = new LanguageDocument(lines.join('\n'));
+    const line = lines.length - 1;
+    const character = lines[line]!.lastIndexOf(`"${value}"`) + 1;
+    return definitionRangeAt(document, { line, character })?.start.line;
+  }
+
+  it('resolves a path to the later of two siblings sharing a name', () => {
+    // `_add_child_nocheck` inserts the later node over the earlier in the child lookup (node.cpp:1656).
+    const lines = [
+      '[node name="Root" type="Node3D"]',
+      '[node name="A" type="Node3D" parent="."]',
+      '[node name="A" type="Node2D" parent="."]',
+      '[node name="B" type="Node3D" parent="A"]',
+    ];
+    expect(definitionLine(lines, 'A')).toBe(2);
+  });
+
+  it('resolves . to heading 0 when every heading declares a parent', () => {
+    // Heading 0 is the root (packed_scene.cpp:218-219).
+    const lines = ['[node name="Root" type="Node3D" parent="."]', '[node name="A" type="Node3D" parent="."]'];
+    expect(definitionLine(lines, '.')).toBe(0);
+  });
+
+  it('resolves a connection path that walks only once simplified', () => {
+    // The loader stores `from.simplified()` (resource_format_text.cpp:370), so `Gone` is never looked up.
+    const lines = [
+      '[node name="Root" type="Node3D"]',
+      '[node name="Button" type="Node3D" parent="."]',
+      '[connection signal="ready" from="Gone/../Button" to="." method="_on_ready"]',
+    ];
+    expect(definitionLine(lines, 'Gone/../Button')).toBe(1);
+  });
+
+  it('gives nothing for a parent= that walks only once simplified, which the loader never simplifies', () => {
+    const lines = [
+      '[node name="Root" type="Node3D"]',
+      '[node name="Button" type="Node3D" parent="."]',
+      '[node name="Child" type="Node3D" parent="Gone/../Button"]',
+    ];
+    expect(definitionLine(lines, 'Gone/../Button')).toBe(undefined);
+  });
+});
+
+describe('nodeDeclarationRange', () => {
+  const tree = new LanguageDocument(NODE_TREE_HEAD.join('\n'));
+
+  it('gives the heading line of the node a path names', () => {
+    expect(nodeDeclarationRange(tree, 'Player/Sprite')?.start.line).toBe(6);
+  });
+
+  it('gives the root heading for .', () => {
+    expect(nodeDeclarationRange(tree, '.')?.start.line).toBe(2);
+  });
+
+  it('gives nothing for a path no heading declares', () => {
+    expect(nodeDeclarationRange(tree, 'Player/Missing')).toBeUndefined();
   });
 });

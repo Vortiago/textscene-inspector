@@ -13,6 +13,7 @@ import { validateNodeName } from '../godot/string/nodeName.js';
 import { rootStatesNoIdentifier } from '../parser/typeUnknowable.js';
 import type { NodeOrigin, RawNode, StrictScene } from '../parser/types.js';
 import { resolveExtResourcePath } from '../resources/SubResourceResolver.js';
+import { SCENE_ROOT_PATH, treePathOf } from '../utils/nodePath.js';
 
 /**
  * Godot's name for a re-parented orphan: the vanished path with `./` stripped, every
@@ -35,16 +36,6 @@ function reparentedName(parentPath: string, name: string): string {
 }
 
 /**
- * The path `get_node_path` gives a heading: its `parent=` path, then its name. The scene
- * root is the empty path.
- */
-function headingPath({ node }: NodeOrigin<RawNode>): string {
-  if (node.parent === undefined) return '';
-  const parentNames = nodePathNames(node.parent).filter((name) => name !== '.');
-  return [...parentNames, node.name].join('/');
-}
-
-/**
  * What Godot does with the heading's `parent_id_path=`, or undefined where the trail
  * recovers nothing and the node is re-rooted (`packed_scene.cpp:1947-2005`).
  */
@@ -55,8 +46,9 @@ function idRecoveryOutcome(scene: StrictScene, origin: NodeOrigin<RawNode>): str
     'The heading also carries parent_id_path, the id trail Godot falls back to when a path ' +
     'does not walk (packed_scene.cpp:161-163).';
   if (recovery.kind === 'lands') {
-    const path = headingPath(recovery.via);
-    const where = path === '' ? 'the scene root' : `"${path}"`;
+    // A `lands` heading is placed, so the tree has a root and a path to it.
+    const path = treePathOf(scene.nodes[0]!, recovery.via.node);
+    const where = path === SCENE_ROOT_PATH ? 'the scene root' : `"${path}"`;
     return `${lead} Its first id names the node '${recovery.via.node.name}' (line ${recovery.via.line}), so the node lands under ${where} and keeps its name.`;
   }
   const instanced =

@@ -22,13 +22,13 @@ export interface UniqueNameClaim {
 }
 
 /** The property that makes a node claim a `%Name` in its owner. */
-export const UNIQUE_NAME_PROPERTY = 'unique_name_in_owner';
+const UNIQUE_NAME_PROPERTY = 'unique_name_in_owner';
 
 /**
  * `unique_name_in_owner = true` as a property value (node.cpp:4050: `PROPERTY_USAGE_NO_EDITOR` hides
  * it and still serialises it). A node with no such property passes `undefined`.
  */
-export function claimsUniqueName(propertyValue: string | undefined): boolean {
+function claimsUniqueName(propertyValue: string | undefined): boolean {
   return boolSlotValue(propertyValue) === true;
 }
 

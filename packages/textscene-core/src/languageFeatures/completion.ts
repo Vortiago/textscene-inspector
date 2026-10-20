@@ -18,7 +18,8 @@ import {
 import type { DocumentSection, LanguageDocument, PropertyLocation } from './document.js';
 import { enumEntriesOf } from './hints.js';
 import { declaredResources, openReferenceAt, type ResourceRefKind } from './resourceRefs.js';
-import { nodePathOf, ROOT_PATH } from './nodePath.js';
+import { seatedNodePaths } from './nodePathRefs.js';
+import { SCENE_ROOT_PATH } from '../utils/nodePath.js';
 import { headingAttribute, propertyKeySpan, spanContains } from './ranges.js';
 import type { CompletionItem, Position } from './types.js';
 
@@ -27,6 +28,9 @@ import type { CompletionItem, Position } from './types.js';
  * blank line does not match, so it offers nothing.
  */
 const PARTIAL_KEY_RE = /^\s*[A-Za-z_][\w/]*$/;
+
+/** The `parent=` that names the scene root, as Godot's saver writes it (resource_format_text.cpp:2018). */
+const ROOT_PARENT = '.';
 
 /**
  * The characters a host asks for completion on: a quote opens a class or a path, `=` a
@@ -118,19 +122,18 @@ function classNameItems(section: DocumentSection): readonly CompletionItem[] {
 }
 
 /**
- * What a heading's `parent=` may name: the path of a node declared above it. Godot creates the
- * nodes in file order and resolves each parent then (`packed_scene.cpp:157-160, 205-213`), so the
- * node itself and every node below it are no parent yet.
+ * What a heading's `parent=` may name: the path of a node seated above it. Godot creates the
+ * nodes in file order and resolves each parent then (`packed_scene.cpp:157-165, 205-215`), so the
+ * node itself, every node below it and every stranded node are no parent.
  */
 function parentItems(document: LanguageDocument, headingLine: number): readonly CompletionItem[] {
-  const paths = document.sections
-    .filter((section) => section.kind === 'node' && section.headingLine < headingLine)
-    .map(nodePathOf)
-    .filter((path) => path !== undefined);
+  const paths = [...seatedNodePaths(document)]
+    .filter(([section]) => section.headingLine < headingLine)
+    .map(([, path]) => (path === SCENE_ROOT_PATH ? ROOT_PARENT : path));
   return [...new Set(paths)].map((path) => ({
     label: path,
     kind: 'nodeName' as const,
-    detail: path === ROOT_PATH ? 'scene root' : 'node',
+    detail: path === ROOT_PARENT ? 'scene root' : 'node',
   }));
 }
 

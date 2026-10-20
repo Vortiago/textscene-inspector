@@ -1,4 +1,4 @@
-/** Zero-based character offsets on the heading line, `end` exclusive. */
+/** Zero-based character offsets on one line, `end` exclusive. */
 export interface ValueSpan {
   start: number;
   end: number;
@@ -10,9 +10,11 @@ export interface ParsedHeading {
 }
 
 /** A heading read from a line, with where each attribute's value sits on that line. */
-export interface SpannedHeading extends ParsedHeading {
+interface SpannedHeading extends ParsedHeading {
   /** Inside its quotes for a string, the raw text for any other value. */
   valueSpans: Record<string, ValueSpan>;
+  /** The keys whose string value opens a quote that never closes, so it names nothing yet. */
+  unclosed: ReadonlySet<string>;
 }
 
 /**
@@ -209,6 +211,7 @@ export function parseHeading(line: string): SpannedHeading | null {
 
   const attributes = keyedByAttribute<string>();
   const valueSpans = keyedByAttribute<ValueSpan>();
+  const unclosed = new Set<string>();
   const attributesOffset = contentOffset + spaceIndex;
   let pos = 0;
   const len = attributesStr.length;
@@ -260,13 +263,15 @@ export function parseHeading(line: string): SpannedHeading | null {
 
     const { content: value, quoteWidth } = readHeadingValue(rawValue);
     attributes[key] = value;
+    if (rawValue[0] === '"' && !isWholeString(rawValue)) unclosed.add(key);
+    else unclosed.delete(key);
     valueSpans[key] = {
       start: attributesOffset + nextPos - rawValue.length + quoteWidth,
       end: attributesOffset + nextPos - quoteWidth,
     };
   }
 
-  return { type, attributes, valueSpans };
+  return { type, attributes, valueSpans, unclosed };
 }
 
 export function parseProperty(line: string): { key: string; value: string } | null {

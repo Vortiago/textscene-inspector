@@ -9,7 +9,7 @@ import { INSTANCE_PLACEHOLDER_TYPE, recoverByIdTrail, type IdHeading } from '../
 
 type PlacementFacts = Pick<
   HeadingFacts,
-  'orphanedNodes' | 'rootWithParent' | 'emptyParentHeadings' | 'idRecoveries'
+  'orphanedNodes' | 'rootWithParent' | 'emptyParentHeadings' | 'idRecoveries' | 'idHeadings'
 >;
 
 /**
@@ -21,12 +21,27 @@ export function placementFacts(
   roots: readonly RawNode[]
 ): PlacementFacts {
   const orphanedNodes = strandedNodes(origins, roots);
+  const headings = idHeadings(origins, orphanedNodes);
   return {
     orphanedNodes,
     rootWithParent: rootDeclaringParent(origins),
     emptyParentHeadings: emptyParentHeadings(origins),
-    idRecoveries: idRecoveries(origins, orphanedNodes),
+    idRecoveries: idRecoveries(origins, orphanedNodes, headings),
+    idHeadings: headings,
   };
+}
+
+/** Each heading as `recoverByIdTrail` reads it: placed unless the tree build stranded it. */
+function idHeadings(
+  origins: readonly NodeOrigin<RawNode>[],
+  orphaned: readonly NodeOrigin<RawNode>[]
+): IdHeading[] {
+  const unplaced = new Set(orphaned);
+  return origins.map((origin) => ({
+    uniqueId: origin.uniqueId,
+    instance: instanceKind(origin.node),
+    isPlaced: !unplaced.has(origin),
+  }));
 }
 
 /**
@@ -35,16 +50,11 @@ export function placementFacts(
  */
 function idRecoveries(
   origins: readonly NodeOrigin<RawNode>[],
-  orphaned: readonly NodeOrigin<RawNode>[]
+  orphaned: readonly NodeOrigin<RawNode>[],
+  headings: readonly IdHeading[]
 ): Map<NodeOrigin<RawNode>, IdRecovery> {
   const recoveries = new Map<NodeOrigin<RawNode>, IdRecovery>();
-  if (!orphaned.some((origin) => origin.idTrail !== undefined)) return recoveries;
   const unplaced = new Set(orphaned);
-  const headings = origins.map((origin): IdHeading => ({
-    uniqueId: origin.uniqueId,
-    instance: instanceKind(origin.node),
-    isPlaced: !unplaced.has(origin),
-  }));
   origins.forEach((origin, index) => {
     if (!unplaced.has(origin) || origin.idTrail === undefined) return;
     const end = recoverByIdTrail(origin.idTrail, headings, index);

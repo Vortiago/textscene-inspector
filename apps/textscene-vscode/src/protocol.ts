@@ -81,18 +81,8 @@ export type WebviewReadyMessage = {
 export type JumpToNodeMessage = {
   type: 'jumpToNode';
   nodeName: string;
-  /**
-   * Full tree path from the root, such as "Root/B/Leaf" (breadcrumb identifier).
-   * Optional: a legacy webview sends `nodeName` alone, which `webviewDispatch`
-   * admits and the handler answers with its first-name-match fallback.
-   */
-  path?: string;
-  /**
-   * Raw Godot `parent=` value of the node (`undefined` for root, `"."` for a
-   * direct child, else the `/`-joined ancestor path minus the root). Used to
-   * disambiguate duplicate sibling names when locating the `[node]` heading.
-   */
-  parent?: string;
+  /** Scene-tree path from the root, its first segment the root's name: "Root/B/Leaf". */
+  path: string;
 };
 
 /** Ask the host to read a resource file from the workspace. */

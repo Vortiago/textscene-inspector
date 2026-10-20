@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildSceneTree, strandedNodes } from './sceneTreeBuilder';
+import { buildSceneTree, seatSceneTree, strandedNodes } from './sceneTreeBuilder';
 import type { TscnNode } from './types';
 
 /** A childless `Node3D`, a root when `parent` is absent. */
@@ -438,5 +438,31 @@ describe('buildSceneTree', () => {
       expect(result[0]!.type).toBe('Node3D');
       expect(result[0]!.children[0]!.type).toBe('MeshInstance3D');
     });
+  });
+});
+
+describe('seatSceneTree', () => {
+  it('keys each seated node by its root-relative path, the root at the empty path', () => {
+    const nodes = [node('Root'), node('Body', './'), node('Arm', './Body')];
+    expect([...seatSceneTree(nodes)!.byPath.keys()]).toEqual(['', 'Body', 'Body/Arm']);
+  });
+
+  it('keeps the later of two siblings sharing a name at their path, and a path for both', () => {
+    const [root, first, second] = [node('Root'), node('A', '.'), node('A', '.')];
+    const seating = seatSceneTree([root, first, second])!;
+    expect([seating.byPath.get('A'), seating.pathOf.get(first), seating.pathOf.get(second)]).toEqual([
+      second,
+      'A',
+      'A',
+    ]);
+  });
+
+  it('gives no path to a stranded node', () => {
+    const lost = node('Lost', 'Gone');
+    expect(seatSceneTree([node('Root'), lost])!.pathOf.has(lost)).toBe(false);
+  });
+
+  it('seats nothing for a file with no node', () => {
+    expect(seatSceneTree([])).toBeUndefined();
   });
 });

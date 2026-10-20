@@ -40,7 +40,15 @@ describe('placementFacts', () => {
       rootWithParent: undefined,
       emptyParentHeadings: [],
       idRecoveries: new Map(),
+      idHeadings: [
+        { uniqueId: 0, instance: undefined, isPlaced: true },
+        { uniqueId: 0, instance: undefined, isPlaced: true },
+      ],
     });
+  });
+
+  it('marks a stranded heading unplaced in the id headings', () => {
+    expect(factsOf(['Root'], ['Orphan', 'Missing']).idHeadings.map((h) => h.isPlaced)).toEqual([true, false]);
   });
 
   it("follows an orphan's id trail to the heading it names", () => {

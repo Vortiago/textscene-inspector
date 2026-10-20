@@ -26,7 +26,7 @@ describe('parseIdTrail', () => {
     expect(parseIdTrail('PackedInt32Array(-5)')).toEqual([-5]);
   });
 
-  it.each(['PackedInt32Array(1, x)', 'PackedInt32Array(1,, 2)', '[1, 2]', ''])(
+  it.each(['PackedInt32Array(1, x)', 'PackedInt32Array(1,, 2)', 'PackedInt32Array(true)', '[1, 2]', ''])(
     'reports no trail for %j',
     (literal) => {
       expect(parseIdTrail(literal)).toBeUndefined();
@@ -47,6 +47,11 @@ describe('parseUniqueId', () => {
     ['2.9', 2],
   ])('reads %s as the %i Godot 4.6.3 stores', (literal, stored) => {
     expect(parseUniqueId(literal)).toBe(stored);
+  });
+
+  it('reads a bool as the 1 or 0 the int conversion stores (edge case)', () => {
+    // `unique_id = next_tag.fields["unique_id"]` (resource_format_text.cpp:214-215) is Variant's `operator int`.
+    expect([parseUniqueId('true'), parseUniqueId('false')]).toEqual([1, 0]);
   });
 
   it.each([undefined, '', 'abc'])('reads %j as unassigned', (literal) => {
