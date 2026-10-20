@@ -4,6 +4,8 @@
  * Godot's sky ambient reads the last layer (`scene_forward_clustered.glsl:1744-1756`).
  */
 
+import { TAU } from '../../math/math.js';
+
 /** `Sky::REAL_TIME_SIZE` (`sky.h:248`): a real-time sky bakes at this size whatever its `radiance_size`. */
 export const REAL_TIME_RADIANCE_SIZE = 256;
 
@@ -131,7 +133,7 @@ export function layerSamples(layout: SkyOctmapLayout, layer: number): LayerSampl
   for (let i = 0; i < total; i += 1) {
     const cosTheta = f(Math.sqrt(f((1 - radicalInverse(i)) / (1 + (roughness4 - 1) * radicalInverse(i)))));
     const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
-    const phi = (2 * Math.PI * i) / total;
+    const phi = (TAU * i) / total;
     // In float32, as the GPU computes it: the sample at the horizon lands just below it.
     const z = f(f(2 * cosTheta) * cosTheta) - 1;
     if (z <= 0) continue;
