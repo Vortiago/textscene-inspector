@@ -44,5 +44,5 @@ validated and never rendered.
 
 ## Known limitations
 
-- **Editor only** The editor always draws the collision `shape` over the button as a filled shape, but
-  here it is an outline that shows only while Visible Collision Shapes is on.
+- **Editor only** The editor draws the collision `shape` as a filled shape, but here it is an
+  outline that shows only while Visible Collision Shapes is on.
