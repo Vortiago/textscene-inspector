@@ -11,7 +11,6 @@ import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { reparentedName } from '../godot/scene/packedScene.js';
-import { isReRooted } from '../parser/sceneTreeBuilder.js';
 import type { NodeOrigin, RawNode, StrictScene } from '../parser/types.js';
 import { resolveExtResourcePath } from '../resources/SubResourceResolver.js';
 
@@ -67,13 +66,13 @@ function orphanOutcome(scene: StrictScene, origin: NodeOrigin<RawNode>, hasEmpty
   }
   return (
     idRecoveryOutcome(scene, origin) ??
-    `Godot re-parents it to the scene root and renames it "${renamedTo(origin)}".`
+    `Godot re-parents it to the scene root and renames it "${renamedTo(scene, origin)}".`
   );
 }
 
-/** Godot's name for the orphan: the one the builder gave a re-rooted node, else the spelling it would give. */
-function renamedTo({ node, declaredParent }: NodeOrigin<RawNode>): string {
-  return isReRooted(node) ? node.name : reparentedName(declaredParent!, node.name);
+/** Godot's name for the orphan: the one the builder gave it, else the spelling it would give. */
+function renamedTo(scene: StrictScene, origin: NodeOrigin<RawNode>): string {
+  return scene.reRootedNames.get(origin) ?? reparentedName(origin.declaredParent!, origin.node.name);
 }
 
 /**
@@ -141,15 +140,14 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
         );
       }
       const outcome = orphanOutcome(scene, origin, emptyParents.length > 0);
-      const authoredName = node.authoredName ?? node.name;
       // A re-rooted node is in the tree, so Phase 2 ran its rules.
-      const rulesSkipped = isReRooted(node)
+      const rulesSkipped = scene.reRootedNames.has(origin)
         ? ''
         : ' No semantic rule ran on it or on anything parented below it.';
       return armDiagnostic(
         FILE_DIAGNOSTICS.unresolvedParentPath,
-        { name: authoredName, type: node.type },
-        `Node '${authoredName}' declares parent="${declaredParent}", a path this file never defines. ` +
+        node,
+        `Node '${node.name}' declares parent="${declaredParent}", a path this file never defines. ` +
           `${outcome}${rulesSkipped}`,
         { line, column: 1 }
       );

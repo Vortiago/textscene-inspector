@@ -28,7 +28,7 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import { buildSceneTree } from './sceneTreeBuilder.js';
+import { buildSceneTree, type SceneTree } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 import { parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
 
@@ -52,6 +52,8 @@ interface CoreParseResult<N extends SceneNode<N>> {
    * creator builds every node.
    */
   origins: readonly NodeOrigin<N>[];
+  /** The tree built from `origins`, and the copy each heading's node became in it. */
+  tree: SceneTree<N>;
 }
 
 /** One property value the scan completed, after any multiline accumulation. */
@@ -318,7 +320,7 @@ export class TscnParserCore {
     storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
-    const sceneTree = buildSceneTree(origins);
+    const tree = buildSceneTree(origins);
 
     logger.debug(
       `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
@@ -326,13 +328,14 @@ export class TscnParserCore {
 
     return {
       scene: {
-        nodes: sceneTree,
+        nodes: tree.roots,
         externalResources,
         internalResources,
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
+      tree,
     };
   }
 

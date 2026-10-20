@@ -18,7 +18,13 @@ function originsOf(nodes: TscnNode[]): NodeOrigin<TscnNode>[] {
 }
 
 function build(nodes: TscnNode[]): TscnNode[] {
-  return buildSceneTree(originsOf(nodes));
+  return buildSceneTree(originsOf(nodes)).roots;
+}
+
+/** The headings `orphanedNodes` reports for a build of `nodes`. */
+function orphansOf(nodes: TscnNode[]): NodeOrigin<TscnNode>[] {
+  const origins = originsOf(nodes);
+  return orphanedNodes(origins, buildSceneTree(origins));
 }
 
 /** `origins` with `patch` applied to the one at `index`. */
@@ -355,7 +361,7 @@ describe('buildSceneTree', () => {
       // Heading 0 is the root, as in the engine, and the file is one `packed_scene.cpp:219`
       // refuses, so the later heading is stranded and named rather than re-rooted.
       expect(result.map((r) => r.name)).toEqual(['Node1']);
-      expect(orphanedNodes(originsOf(nodes), result).map((o) => o.node.name)).toEqual(['Node2']);
+      expect(orphansOf(nodes).map((o) => o.node.name)).toEqual(['Node2']);
     });
 
     it('roots at a parentless heading even when it is not heading 0', () => {
@@ -364,14 +370,41 @@ describe('buildSceneTree', () => {
       const result = build(nodes);
 
       expect(result.map((r) => r.name)).toEqual(['Root']);
-      expect(orphanedNodes(originsOf(nodes), result)).toEqual([]);
+      expect(orphansOf(nodes)).toEqual([]);
+    });
+  });
+
+  describe('the headings it reads', () => {
+    it('builds the same tree twice from one input', () => {
+      const origins = originsOf([node('Root'), node('Orphan', 'Gone'), node('Kid', '.')]);
+
+      expect(buildSceneTree(origins).roots).toEqual(buildSceneTree(origins).roots);
+    });
+
+    it('leaves the name, children and instance path of every heading node as scanned', () => {
+      const nodes = [node('Root'), node('Orphan', 'Gone'), node('Kid', '.')];
+      const before = structuredClone(nodes);
+
+      buildSceneTree(originsOf(nodes));
+
+      expect(nodes).toEqual(before);
+    });
+
+    it('maps each seated heading to its copy, and an unseated one to nothing', () => {
+      const nodes = [node('Root'), node('Kid', '.'), node('Second')];
+
+      const { roots, seated } = buildSceneTree(originsOf(nodes));
+
+      expect(seated.get(nodes[0]!)).toBe(roots[0]);
+      expect(seated.get(nodes[1]!)).toBe(roots[0]!.children[0]);
+      expect(seated.has(nodes[2]!)).toBe(false);
     });
   });
 
   describe('a parent path that vanished', () => {
     /** The names of the scene root's children. */
     const rootChildNames = (origins: NodeOrigin<TscnNode>[]) =>
-      buildSceneTree(origins)[0]!.children.map((child) => child.name);
+      buildSceneTree(origins).roots[0]!.children.map((child) => child.name);
 
     it('re-roots the node under the scene root, renamed for the vanished path', () => {
       const nodes = [node('Root'), node('Orphan', 'Gone')];
@@ -379,7 +412,7 @@ describe('buildSceneTree', () => {
       const [root] = build(nodes);
 
       expect(root!.children.map((child) => child.name)).toEqual(['Gone#Orphan']);
-      expect(orphanedNodes(originsOf(nodes), [root!]).map((o) => o.node.name)).toEqual(['Gone#Orphan']);
+      expect(orphansOf(nodes).map((o) => o.node.name)).toEqual(['Orphan']);
     });
 
     it('keeps the authored parent path and the authored name on the re-rooted node', () => {

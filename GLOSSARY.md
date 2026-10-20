@@ -130,7 +130,7 @@ Only the linter reads them, so only the strict parser's `StrictScene` carries th
 _Avoid_: putting a linter-only field on `TscnScene`.
 
 **Re-rooted node** (`reRoot` in `parser/sceneTreeBuilder.ts`):
-A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same and keeps the heading's name in `authoredName`.
+A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same on a copy of the heading's node, which keeps the heading's name in `authoredName`.
 A node below it re-roots on its own, since the old path no longer exists. Godot does not re-root in a scene it refuses to instantiate, nor where a `parent_id_path=` lands the node.
 _Avoid_: "dropped node", which names a node left out of the tree.
 

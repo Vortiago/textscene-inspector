@@ -94,7 +94,7 @@ export interface RawNode {
    */
   instanceSubPath?: string;
   /**
-   * The name the heading wrote, set only on a node the tree builder re-rooted: its `name`
+   * The name the heading wrote, set only on a tree node the builder re-rooted: its `name`
    * is then Godot's rename for the vanished `parent` (`packed_scene.cpp:561-563`).
    */
   authoredName?: string;
@@ -142,11 +142,13 @@ export interface ConnectionHeading {
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
-   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which carry
-   * `authoredName`, and those it left out of `nodes`, for a file or a trail Godot does not
+   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which
+   * `reRootedNames` holds, and those it left out of `nodes`, for a file or a trail Godot does not
    * re-root, or a later heading with no `parent=`.
    */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
+  /** The name the builder gave each re-rooted heading's node, which the heading's own node keeps unrenamed. */
+  reRootedNames: ReadonlyMap<NodeOrigin<RawNode>, string>;
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses
    * (`packed_scene.cpp:218-219`), or undefined.

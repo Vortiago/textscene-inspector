@@ -248,7 +248,7 @@ import '../nodes/os/statusindicator/index.js';
 
 import type { NodeOrigin, TscnNode, TscnScene } from './types.js';
 import { TscnParserCore } from './TscnParserCore.js';
-import { orphanedNodes } from './sceneTreeBuilder.js';
+import { orphanedNodes, type SceneTree } from './sceneTreeBuilder.js';
 import { parseNodeWithRegistry } from '../core/NodeRegistry.js';
 import * as logger from '../logger.js';
 
@@ -267,8 +267,8 @@ export class TscnParser {
    * shape declared by the relevant node-type module.
    */
   parse(content: string): TscnScene {
-    const { scene, origins } = this.core.parse(content, parseNodeWithRegistry);
-    warnOrphanedNodes(origins, scene.nodes);
+    const { scene, origins, tree } = this.core.parse(content, parseNodeWithRegistry);
+    warnOrphanedNodes(origins, tree);
     return scene;
   }
 }
@@ -277,12 +277,13 @@ export class TscnParser {
  * Logs each orphaned heading. The renderer drops a node Godot does not re-root silently, so the
  * log is the only trace of one. The linter reports both as a diagnostic instead.
  */
-function warnOrphanedNodes(origins: readonly NodeOrigin<TscnNode>[], roots: readonly TscnNode[]): void {
-  for (const { node } of orphanedNodes(origins, roots)) {
+function warnOrphanedNodes(origins: readonly NodeOrigin<TscnNode>[], tree: SceneTree<TscnNode>): void {
+  for (const { node } of orphanedNodes(origins, tree)) {
+    const reRooted = tree.seated.get(node);
     const outcome =
-      node.authoredName === undefined
+      reRooted === undefined
         ? `dropped from the scene tree: "${node.name}"`
-        : `"${node.authoredName}" re-rooted as "${node.name}"`;
+        : `"${node.name}" re-rooted as "${reRooted.name}"`;
     logger.warn(
       `[Parser] Orphaned node ${outcome} (type: ${node.type}, parent: "${node.parent ?? 'none'}", instance: ${node.instance ?? 'none'})`
     );

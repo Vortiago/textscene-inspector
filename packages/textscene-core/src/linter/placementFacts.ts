@@ -9,25 +9,31 @@ import {
   refusesToInstantiate,
   rootDeclaringParent,
 } from '../parser/instantiateRefusal.js';
-import { orphanedNodes } from '../parser/sceneTreeBuilder.js';
+import { orphanedNodes, type SceneTree } from '../parser/sceneTreeBuilder.js';
 import { idTrailEnd } from '../parser/idTrail.js';
 
 type PlacementFacts = Pick<
   HeadingFacts,
-  'orphanedNodes' | 'rootWithParent' | 'emptyParentHeadings' | 'refusesToInstantiate' | 'idRecoveries'
+  | 'orphanedNodes'
+  | 'reRootedNames'
+  | 'rootWithParent'
+  | 'emptyParentHeadings'
+  | 'refusesToInstantiate'
+  | 'idRecoveries'
 >;
 
 /**
- * The placement facts of one scan: `origins` is every `[node]` heading in scan order, and `roots`
+ * The placement facts of one scan: `origins` is every `[node]` heading in scan order, and `tree`
  * the tree built from them.
  */
 export function placementFacts(
   origins: readonly NodeOrigin<RawNode>[],
-  roots: readonly RawNode[]
+  tree: SceneTree<RawNode>
 ): PlacementFacts {
-  const orphans = orphanedNodes(origins, roots);
+  const orphans = orphanedNodes(origins, tree);
   return {
     orphanedNodes: orphans,
+    reRootedNames: reRootedNames(orphans, tree),
     rootWithParent: rootDeclaringParent(origins),
     emptyParentHeadings: emptyParentHeadings(origins),
     refusesToInstantiate: refusesToInstantiate(origins),
@@ -51,4 +57,16 @@ function idRecoveries(
     if (end) recoveries.set(origin, { kind: end.kind, via: origins[end.heading]! });
   });
   return recoveries;
+}
+
+function reRootedNames(
+  orphaned: readonly NodeOrigin<RawNode>[],
+  { seated }: SceneTree<RawNode>
+): Map<NodeOrigin<RawNode>, string> {
+  const names = new Map<NodeOrigin<RawNode>, string>();
+  for (const origin of orphaned) {
+    const seat = seated.get(origin.node);
+    if (seat) names.set(origin, seat.name);
+  }
+  return names;
 }

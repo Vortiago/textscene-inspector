@@ -37,6 +37,7 @@ describe('placementFacts', () => {
   it('reports nothing for a well-formed scene', () => {
     expect(factsOf(['Root'], ['Child', '.'])).toEqual({
       orphanedNodes: [],
+      reRootedNames: new Map(),
       rootWithParent: undefined,
       emptyParentHeadings: [],
       refusesToInstantiate: false,
@@ -55,13 +56,16 @@ describe('placementFacts', () => {
     expect(factsOf(['Root'], ['Orphan', 'Gone', { idTrail: [20] }]).idRecoveries.size).toBe(0);
   });
 
-  it('names a re-rooted heading, whose node carries the rename', () => {
-    expect(names(factsOf(['Root'], ['Orphan', 'Missing']).orphanedNodes)).toEqual(['Missing#Orphan']);
+  it('names a re-rooted heading, and the rename the builder gave it', () => {
+    const facts = factsOf(['Root'], ['Orphan', 'Missing']);
+    expect(names(facts.orphanedNodes)).toEqual(['Orphan']);
+    expect([...facts.reRootedNames.values()]).toEqual(['Missing#Orphan']);
   });
 
   it('names a heading the builder leaves out, for a trail Godot follows', () => {
     const facts = factsOf(['Root'], ['Mid', '.', { uniqueId: 5 }], ['Orphan', 'Missing', { idTrail: [5] }]);
     expect(names(facts.orphanedNodes)).toEqual(['Orphan']);
+    expect(facts.reRootedNames.size).toBe(0);
   });
 
   it('reports a file Godot refuses to instantiate', () => {

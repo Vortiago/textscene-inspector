@@ -1,5 +1,6 @@
 /**
- * Builds hierarchical scene tree from flat TSCN node list.
+ * Builds the hierarchical scene tree from the flat heading list. The headings' nodes stay
+ * untouched: the tree holds a copy of each seated node, so a build is repeatable.
  */
 
 import type { NodeOrigin, RawNode, SceneNode } from './types';
@@ -12,12 +13,19 @@ import { idTrailEnd } from './idTrail.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
+/** The built tree, and the copy each heading's node became in it. */
+export interface SceneTree<N> {
+  readonly roots: N[];
+  /** Heading node to its copy in `roots`. A heading absent here is unreachable from the root. */
+  readonly seated: ReadonlyMap<N, N>;
+}
+
 /**
  * The tree from the flat heading list, by parent path. Paths are relative to the root:
  * "." is the root, "Foo/Bar" is root/Foo/Bar.
  */
-export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): N[] {
-  if (origins.length === 0) return [];
+export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): SceneTree<N> {
+  if (origins.length === 0) return { roots: [], seated: new Map() };
 
   // Heading 0 is the root when nothing is parentless: `packed_scene.cpp:218-219` makes
   // `i == 0` the root, so no later heading is a root too. Returning the flat list as
@@ -25,6 +33,7 @@ export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOri
   const rootNode = (origins.find(({ node }) => !node.parent) ?? origins[0]!).node;
 
   const tables = newTables(rootNode);
+  const { seated } = tables;
   const reRootsVanished = !refusesToInstantiate(origins);
 
   // One pass in declaration order, as Godot resolves: at heading `i`,
@@ -56,7 +65,7 @@ export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOri
     reRoot(tables, node);
   }
 
-  return [rootNode];
+  return { roots: [tables.root], seated };
 }
 
 /**
@@ -70,17 +79,19 @@ function seatBelowParent<N extends SceneNode<N>>(
 ): boolean {
   const parentNode = tables.byPath.get(parentPath);
   if (parentNode) {
-    parentNode.children.push(node);
-    registerPath(tables, parentPath, node);
+    const seat = seatCopy(tables, node);
+    parentNode.children.push(seat);
+    registerPath(tables, parentPath, seat);
     return true;
   }
   // A path into instanced content names nodes in the sub-scene or GLB, so the
   // nearest enclosing instance anchors it and the content matches the rest.
   const anchor = findInstanceAnchor(parentPath, tables);
   if (!anchor) return false;
-  anchor.node.children.push(node);
-  node.instanceSubPath = anchor.subPath;
-  registerPath(tables, anchor.foldedParentPath, node);
+  const seat = seatCopy(tables, node);
+  seat.instanceSubPath = anchor.subPath;
+  anchor.node.children.push(seat);
+  registerPath(tables, anchor.foldedParentPath, seat);
   return true;
 }
 
@@ -90,10 +101,18 @@ function seatBelowParent<N extends SceneNode<N>>(
  * holds the name (`set_name`, `node.cpp:1450`, `:1593-1640`). The authored name stays on `authoredName`.
  */
 function reRoot<N extends SceneNode<N>>(tables: BuildTables<N>, node: N): void {
-  node.authoredName = node.name;
-  node.name = serialChildName(reparentedName(node.parent!, node.name), tables.rootChildNames);
-  tables.root.children.push(node);
-  registerPath(tables, SCENE_ROOT_PATH, node);
+  const seat = seatCopy(tables, node);
+  seat.authoredName = node.name;
+  seat.name = serialChildName(reparentedName(node.parent!, node.name), tables.rootChildNames);
+  tables.root.children.push(seat);
+  registerPath(tables, SCENE_ROOT_PATH, seat);
+}
+
+/** The tree's own copy of a heading's node, childless, so the build never writes to the heading. */
+function seatCopy<N extends SceneNode<N>>(tables: BuildTables<N>, node: N): N {
+  const seat = { ...node, children: [] } as N;
+  tables.seated.set(node, seat);
+  return seat;
 }
 
 /**
@@ -101,8 +120,10 @@ function reRoot<N extends SceneNode<N>>(tables: BuildTables<N>, node: N): void {
  * needs both halves, and its two lookups are the two `get_node_or_null` performs.
  */
 interface BuildTables<N> {
-  /** The scene root, which every re-rooted node joins. */
+  /** The scene root's copy, which every re-rooted node joins. */
   readonly root: N;
+  /** Written only by `seatCopy`: each heading's node to its copy. */
+  readonly seated: Map<N, N>;
   /** The names of the root's children, which a re-rooted name must not repeat. */
   readonly rootChildNames: Set<string>;
   /** Every seated node, keyed by the folded path its own children address it at. */
@@ -114,13 +135,17 @@ interface BuildTables<N> {
 }
 
 /** Tables holding only the scene root, which sits at the empty path. */
-function newTables<N extends RawNode>(rootNode: N): BuildTables<N> {
-  const byPath = new Map<string, N>([[SCENE_ROOT_PATH, rootNode]]);
+function newTables<N extends SceneNode<N>>(rootNode: N): BuildTables<N> {
+  const seated = new Map<N, N>();
+  const root = { ...rootNode, children: [] } as N;
+  seated.set(rootNode, root);
+  const byPath = new Map<string, N>([[SCENE_ROOT_PATH, root]]);
   // The root claims no `%Name`: `set_unique_name_in_owner` registers in the
   // node's OWNER (node.cpp:2222-2233) and the scene root has none.
   const uniquePaths = new Map<string, string>();
   return {
-    root: rootNode,
+    root,
+    seated,
     rootChildNames: new Set<string>(),
     byPath,
     uniquePaths,
@@ -197,31 +222,20 @@ function findInstanceAnchor<N extends RawNode>(
   return null;
 }
 
-/** Whether the builder re-rooted the node, which is the one case that sets `authoredName`. */
-export function isReRooted(node: RawNode): boolean {
-  return node.authoredName !== undefined;
-}
-
 /**
  * The headings whose `parent=` names nothing, derived from the tree rather than a second copy of
- * its rules: the nodes the builder re-rooted, and those unreachable from `roots`, which are a
- * vanished path in a file or on a heading Godot does not re-root, or a non-root with no
- * `parent=`, which `packed_scene.cpp:207` refuses.
+ * its rules: the nodes the builder re-rooted, and those it never seated, which are a vanished
+ * path in a file or on a heading Godot does not re-root, or a non-root with no `parent=`
+ * (`packed_scene.cpp:207`).
  */
 export function orphanedNodes<N extends RawNode>(
   all: readonly NodeOrigin<N>[],
-  roots: readonly RawNode[]
+  { seated }: Pick<SceneTree<N>, 'seated'>
 ): NodeOrigin<N>[] {
-  const placed = new Set<RawNode>();
-  const walk = (nodes: readonly RawNode[]): void => {
-    for (const node of nodes) {
-      if (placed.has(node)) continue;
-      placed.add(node);
-      walk(node.children);
-    }
-  };
-  walk(roots);
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
-  return all.filter(({ node }) => !placed.has(node) || isReRooted(node));
+  return all.filter(({ node }) => {
+    const seat = seated.get(node);
+    return seat === undefined || seat.authoredName !== undefined;
+  });
 }
