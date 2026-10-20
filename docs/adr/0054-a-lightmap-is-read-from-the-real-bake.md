@@ -31,6 +31,8 @@ The previewer reads the bake Godot wrote and samples it as Godot's forward shade
   spherical-harmonics form (`scene_forward_clustered.glsl:921-978`, `:1835-1876`). Its uniforms
   read the assignment at each upload, so a moved or reloaded LightmapGI needs no recompile.
 - A Static light skips a lightmapped surface in the same program (`GODOT_LIGHTMAP`).
+- A GridMap the bake names draws its `baked_meshes` in place of its cells, and each takes the user
+  whose sub-instance is its index (`grid_map.cpp:688`, `lightmap_gi.cpp:1544-1550`).
 
 ## Consequences
 

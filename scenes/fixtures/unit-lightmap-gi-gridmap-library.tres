@@ -1,0 +1,16 @@
+[gd_resource type="MeshLibrary" format=3 uid="uid://ddfsfs4ryd76p"]
+
+[sub_resource type="StandardMaterial3D" id="box_mat"]
+albedo_color = Color(0.9, 0.15, 0.1, 1)
+
+[sub_resource type="BoxMesh" id="box"]
+material = SubResource("box_mat")
+
+[resource]
+item/0/name = "Box"
+item/0/mesh = SubResource("box")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = []
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1

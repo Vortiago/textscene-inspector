@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { EMPTY_AABB, hasSurface, type Aabb } from '../../godot/math/aabb';
-import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../../godot/scene/lightmapGi';
+import { LIGHTMAP_BICUBIC_FILTER_DEFAULT, LIGHTMAP_NODE_ITSELF } from '../../godot/scene/lightmapGi';
 import { resolveRelativePath } from '../../godot/string/nodePath';
 import type { LightmapUser } from '../../resources/lightmapgidata/types';
 import { cameraFrustum } from '../cameraFrustum';
@@ -19,7 +19,7 @@ import { visibleInTree } from '../visibleInTree';
 /** One LightmapGI as the surfaces it lights read it. Its component writes every field but `isDrawn`. */
 export class LightmapInstance {
   order: TreeOrder = [];
-  /** Each user by the node path it names. */
+  /** Each user by {@link lightmapUserKey}. */
   users: ReadonlyMap<string, LightmapUser> = new Map();
   /** The atlas, every layer of every lightmap texture in order. Null until it loads. */
   atlas: THREE.DataArrayTexture | null = null;
@@ -40,11 +40,15 @@ export interface LightmapAssignment {
   user: LightmapUser;
 }
 
+/** The key of the node at `path`, or of its baked mesh `subInstance`, in a LightmapInstance's users. */
+export function lightmapUserKey(path: string, subInstance: number): string {
+  // A newline cannot appear in a node name, so no node path collides with a baked mesh's key.
+  return subInstance === LIGHTMAP_NODE_ITSELF ? path : `${path}\n${subInstance}`;
+}
+
 /**
- * Each user by the node path it names from the LightmapGI at `lightmapPath`. A later user of one
- * node replaces an earlier one, as each assignment does. A user that means a GridMap or MultiMesh
- * instance is left out: LightmapGI asks the node for that instance (`:1546-1550`), which no drawer
- * here gives.
+ * Each user by the key of what it names from the LightmapGI at `lightmapPath`: a node, or one of
+ * its baked meshes. A later user of one key replaces an earlier one, as each assignment does.
  */
 export function assignedUsers(
   lightmapPath: string,
@@ -53,9 +57,8 @@ export function assignedUsers(
 ): Map<string, LightmapUser> {
   const assigned = new Map<string, LightmapUser>();
   for (const user of users) {
-    if (user.subInstance >= 0) continue;
     const path = resolveRelativePath(lightmapPath, user.path, uniquePaths);
-    if (path !== null) assigned.set(path, user);
+    if (path !== null) assigned.set(lightmapUserKey(path, user.subInstance), user);
   }
   return assigned;
 }
@@ -67,7 +70,7 @@ const worldBounds = new THREE.Box3();
 class SceneLightmaps {
   private readonly instances = new Set<LightmapInstance>();
   private readonly listeners = new Set<() => void>();
-  /** Each node's assignment, kept until the instances change so a reader sees one object. */
+  /** Each key's assignment, kept until the instances change so a reader sees one object. */
   private readonly assignments = new Map<string, LightmapAssignment | null>();
   /** The instances in ready order, built on the first lookup after a change. */
   private readyOrder: LightmapInstance[] | null = null;
@@ -103,22 +106,23 @@ class SceneLightmaps {
     return () => this.listeners.delete(listener);
   }
 
-  /** The assignment of the node at `path`, or null when no LightmapGI names it. */
-  assignmentFor(path: string): LightmapAssignment | null {
-    let assignment = this.assignments.get(path);
+  /** The assignment of the node at `path`, or of its baked mesh `subInstance`, or null when none names it. */
+  assignmentFor(path: string, subInstance = LIGHTMAP_NODE_ITSELF): LightmapAssignment | null {
+    const key = lightmapUserKey(path, subInstance);
+    let assignment = this.assignments.get(key);
     if (assignment === undefined) {
-      assignment = this.lastAssignmentOf(path);
-      this.assignments.set(path, assignment);
+      assignment = this.lastAssignmentOf(key);
+      this.assignments.set(key, assignment);
     }
     return assignment;
   }
 
   /** The LightmapGI that assigns last wins: each assignment replaces the node's last. */
-  private lastAssignmentOf(path: string): LightmapAssignment | null {
+  private lastAssignmentOf(key: string): LightmapAssignment | null {
     let assignment: LightmapAssignment | null = null;
     this.readyOrder ??= [...this.instances].sort((a, b) => compareReadyOrder(a.order, b.order));
     for (const lightmap of this.readyOrder) {
-      const user = lightmap.users.get(path);
+      const user = lightmap.users.get(key);
       if (user) assignment = { lightmap, user };
     }
     return assignment;

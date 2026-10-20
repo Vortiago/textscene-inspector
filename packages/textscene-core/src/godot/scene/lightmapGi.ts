@@ -71,3 +71,9 @@ export const LIGHTMAP_PROBE_DATA_FIELDS = [
   'interior',
   'baked_exposure',
 ] as const;
+
+/**
+ * A user's sub-instance when it means the node itself. A sub-instance from 0 names one of the
+ * node's baked meshes, which LightmapGI asks the node for (`lightmap_gi.cpp:1544-1555`).
+ */
+export const LIGHTMAP_NODE_ITSELF = -1;

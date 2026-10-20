@@ -119,6 +119,8 @@ export const LIGHTING_SCENES = [
   { name: 'lightmap-gi-baked', file: 'unit-lightmap-gi-baked.tscn' },
   // The same scene baked directional: the read weighs four spherical-harmonics layers by the normal.
   { name: 'lightmap-gi-directional', file: 'unit-lightmap-gi-directional.tscn' },
+  // A baked GridMap: its baked meshes draw in place of the cells, each lit by its sub-instance.
+  { name: 'lightmap-gi-gridmap', file: 'unit-lightmap-gi-gridmap.tscn' },
   // BG_SKY over a gold sky with AMBIENT_SOURCE_COLOR (grey 0.6, sky_contribution
   // 0) and AgX. The shadowed grass stays grey, with no sky IBL in diffuse, while
   // the metallic sphere reflects the gold sky in full. Matches Godot to ≤6/255,

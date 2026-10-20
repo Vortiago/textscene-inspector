@@ -75,4 +75,23 @@ describe('parseGridMap', () => {
     expect(read(data).cells).toBe('');
     expect(msToRead(read, data)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
   });
+
+  it('reads each baked mesh the GridMap draws in place of its cells', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'Grid' }), {
+      baked_meshes: '[SubResource("ArrayMesh_a"), SubResource("ArrayMesh_b")]',
+    });
+    expect(result.bakedMeshes).toEqual(['SubResource("ArrayMesh_a")', 'SubResource("ArrayMesh_b")']);
+  });
+
+  it('drops a null baked mesh, which the setter skips so every later index moves up (edge case)', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'Grid' }), {
+      baked_meshes: '[null, SubResource("ArrayMesh_b")]',
+    });
+    expect(result.bakedMeshes).toEqual(['SubResource("ArrayMesh_b")']);
+  });
+
+  it('reads no baked mesh from a value that is not an array (error case)', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'Grid' }), { baked_meshes: 'SubResource("x")' });
+    expect(result.bakedMeshes).toEqual([]);
+  });
 });

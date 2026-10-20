@@ -1013,6 +1013,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightmap Gi Gridmap",
+    "file": "unit-lightmap-gi-gridmap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightmap Gi",
     "file": "unit-lightmap-gi.tscn",
     "category": "Other"

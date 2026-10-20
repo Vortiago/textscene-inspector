@@ -44,8 +44,9 @@ describe('assignedUsers', () => {
     expect([...users.keys()]).toEqual(['Root/Floor']);
   });
 
-  it('assigns no user that means a GridMap or MultiMesh instance, which LightmapGI asks the node for', () => {
-    expect(assignedUsers('Root/Lightmap', [user('../Grid', 0)], undefined).size).toBe(0);
+  it("keeps a user that means one of a node's baked meshes apart from a user of the node itself", () => {
+    const users = assignedUsers('Root/Lightmap', [user('../Grid'), user('../Grid', 1)], undefined);
+    expect(users.size).toBe(2);
   });
 
   it('keeps the later of two users of one node, as each assignment replaces the last', () => {
@@ -75,6 +76,21 @@ describe('SceneLightmaps.assignmentFor', () => {
     descendant.users = new Map([['Root/Floor', user('../Floor')]]);
     const { lightmaps } = sceneWith(ancestor, descendant);
     expect(lightmaps.assignmentFor('Root/Floor')?.lightmap).toBe(ancestor);
+  });
+
+  it("assigns a GridMap's baked mesh the user that names its index", () => {
+    const instance = drawableInstance();
+    const second = user('../Grid', 1);
+    instance.users = assignedUsers('Root/Lightmap', [user('../Grid', 0), second], undefined);
+    const { lightmaps } = sceneWith(instance);
+    expect(lightmaps.assignmentFor('Root/Grid', 1)?.user).toBe(second);
+  });
+
+  it('assigns a node itself no user that names one of its baked meshes (edge case)', () => {
+    const instance = drawableInstance();
+    instance.users = assignedUsers('Root/Lightmap', [user('../Grid', 0)], undefined);
+    const { lightmaps } = sceneWith(instance);
+    expect(lightmaps.assignmentFor('Root/Grid')).toBeNull();
   });
 
   it('assigns no LightmapGI to a node none names (edge case)', () => {
