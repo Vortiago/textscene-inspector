@@ -1,6 +1,6 @@
 /**
- * SpringArm3D registration: it is parsed, and its placement of its children is
- * a gap (ADR-0045), not a nil effect.
+ * SpringArm3D registration: it is parsed and drawn as its editor gizmo. Godot moves its children
+ * only in a running game (`spring_arm_3d.cpp:39`), so the editor pose it mirrors has no gap.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -22,7 +22,7 @@ describe('SpringArm3D registration', () => {
     expect(nodeComponentRegistry.get('SpringArm3D')).toBe(SpringArm3D);
   });
 
-  it('declares the placement of its children as a gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('SpringArm3D')).toBe('pending');
+  it('registers as a drawing type, not a gap', () => {
+    expect(nodeComponentRegistry.renderIntentOf('SpringArm3D')).toBe('draws');
   });
 });

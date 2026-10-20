@@ -1,16 +1,16 @@
 ---
 type: SpringArm3D
 category: 3D
-status: unimplemented
+status: limitation
 fixture: unit-spring-arm-3d.tscn
 # image: unit-spring-arm-3d
 visual: false
-renders_as: a transform group with a selection-gated length line, and no placement of its children along the arm
+renders_as: a transform group with a selection-gated length line
 ---
 
 # SpringArm3D
 
-Casts along its local Z axis each physics frame and moves its children to the hit point minus a margin. Godot runs that placement each physics frame, and the previewer does not yet (ADR-0045): the children hold their authored transforms.
+In a running game it casts along its local Z axis each physics frame and moves its children to the hit point minus a margin. Godot's editor never runs that cast, so the children hold their authored transforms there and in the previewer.
 
 ## Linting
 
@@ -30,7 +30,7 @@ Strict parsing format-checks these `SpringArm3D` properties, plus 17 inherited f
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reads `spring_length` on top of the Node3D transform. An unauthored or unreadable key stays `undefined`, not Godot's default, and `inf` and `nan` are kept. The gizmo substitutes `spring_length = 1` where it draws. `collision_mask`, `shape` and `margin` are never read, because they steer the cast that the previewer does not run.
+The lenient parser reads `spring_length` on top of the Node3D transform. An unauthored or unreadable key stays `undefined`, not Godot's default, and `inf` and `nan` are kept. The gizmo substitutes `spring_length = 1` where it draws. `collision_mask`, `shape` and `margin` are never read, because they steer the cast that only a running game runs.
 
 ## Gizmo
 
@@ -43,4 +43,4 @@ An `inf`, `inf_neg` or `nan` length gives the end point `(nan, nan, ±inf)`. A r
 ## Known limitations
 
 - **Editor only** Godot's editor draws the length line for every spring arm, but here it draws only for the selected node (ADR-0018).
-- **Needs runtime** Godot moves each child to `spring_length` along the arm or to the hit point minus `margin`, but here the children hold their authored transforms.
+- **Needs runtime** Only a running game moves each child along the arm, to the hit point minus `margin`, and here the children hold their authored transforms.

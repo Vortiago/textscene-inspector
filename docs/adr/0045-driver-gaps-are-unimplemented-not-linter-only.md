@@ -11,7 +11,7 @@
 draws nothing and moves nothing, so there is no render to assess. Skeleton
 modifiers, IK solvers, the XR pose writers (`XRBodyModifier3D`,
 `XRHandModifier3D`, `OpenXRHand`), the blend-shape writer `XRFaceModifier3D`,
-the XR render-model nodes, `Skeleton2D`, `SpringArm3D`, `ShaderGlobalsOverride`
+the XR render-model nodes, `Skeleton2D`, `ShaderGlobalsOverride`
 and RemoteTransform all claimed it.
 Each has a real Godot runtime effect: a `SkeletonModifier3D` feeds bone poses
 through `Skeleton3D::_process_modifiers` (`skeleton_3d.cpp:1166`), a
@@ -77,4 +77,8 @@ renders, and they drive no other node. `BoneAttachment3D` also writes only its
 own transform, but from a bone pose the scene file already holds, with no
 session, so following that pose is a drive the previewer can run and has not.
 `RemoteTransform2D`/`3D` are the middle row: the relay is implemented once at
-load, so their sheets move to `limitation`, not to a gap.
+load, so their sheets move to `limitation`, not to a gap. `SpringArm3D` is out of
+the ledger: it places its children only outside the editor
+(`spring_arm_3d.cpp:39`), and the previewer shows the editor pose, as it does for
+a physics body. It registers as a drawing type for its length gizmo, and its
+sheet is `limitation` with a **Needs runtime** line.
