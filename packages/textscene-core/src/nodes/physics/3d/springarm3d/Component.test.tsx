@@ -52,19 +52,13 @@ async function gizmoPositions(props: Record<string, string>): Promise<number[]> 
 }
 
 describe('<SpringArm3D> gizmo gate', () => {
-  it('hides the length line when not selected', async () => {
-    const renderer = await renderArm(null);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
-  });
-
-  it('draws the length line when selected', async () => {
-    const renderer = await renderArm('Arm');
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
-  });
-
-  it('hides the length line when a different node is selected', async () => {
-    const renderer = await renderArm('Other');
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+  it.each([
+    ['the node is selected', 'Arm', 1],
+    ['nothing is selected', null, 0],
+    ['another node is selected', 'Other', 0],
+  ])('gates the length line on selection: %s', async (_label, selectedPath, expected) => {
+    const renderer = await renderArm(selectedPath);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
   });
 
   it('keeps its children in the Node3D transform space, selected or not', async () => {

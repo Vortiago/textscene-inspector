@@ -1,7 +1,8 @@
 /**
  * <SpringArm3D>: a Node3D group that draws Godot's length line while selected (ADR-0018):
  * one segment from the origin to (0, 0, spring_length), unguarded, so 0 and a negative
- * length draw as in spring_arm_3d_gizmo_plugin.cpp:35-54. A non-finite length draws nothing.
+ * length draw as in spring_arm_3d_gizmo_plugin.cpp:35-54. A non-finite length ends the
+ * segment at (nan, nan, ±inf), which GizmoLine draws as nothing.
  */
 
 import { useMemo } from 'react';
@@ -22,12 +23,10 @@ function LengthGizmo({ length }: { length: number }) {
 
 export function SpringArm3D({ node, children }: NodeComponentProps) {
   const props = node.properties as SpringArm3DProperties;
-  const length = props.spring_length ?? DEFAULT_SPRING_LENGTH;
-  // Vector3(0, 0, 1) * ±inf is (nan, nan, ±inf), and Godot draws no pixel for a line with that end.
-  const gizmoVisible = useGizmoVisible() && Number.isFinite(length);
+  const gizmoVisible = useGizmoVisible();
   return (
     <Node3D node={node}>
-      {gizmoVisible && <LengthGizmo length={length} />}
+      {gizmoVisible && <LengthGizmo length={props.spring_length ?? DEFAULT_SPRING_LENGTH} />}
       {children}
     </Node3D>
   );

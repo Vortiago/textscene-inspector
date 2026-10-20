@@ -16,6 +16,7 @@ import {
   vec3Or,
   parseOptionalInt,
   parseOptionalFloat,
+  parseOptionalGodotFloat,
   parseNodePathLiteral,
   settableNonNegative,
   nonNegativeOr,
@@ -194,6 +195,24 @@ describe('parseOptionalFloat', () => {
   });
   it('returns undefined for an empty string (parseFloat("") is NaN)', () => {
     expect(parseOptionalFloat('')).toBeUndefined();
+  });
+});
+
+describe('parseOptionalGodotFloat', () => {
+  it('parses a valid float and keeps the non-finite literals', () => {
+    expect(parseOptionalGodotFloat('1.5')).toBe(1.5);
+    expect(parseOptionalGodotFloat('inf')).toBe(Infinity);
+    expect(parseOptionalGodotFloat('inf_neg')).toBe(-Infinity);
+    expect(parseOptionalGodotFloat('nan')).toBeNaN();
+  });
+  it('returns undefined for an absent value, without warning', () => {
+    expect(parseOptionalGodotFloat(undefined)).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+  it('returns undefined for an invalid or empty value, without warning', () => {
+    expect(parseOptionalGodotFloat('nope')).toBeUndefined();
+    expect(parseOptionalGodotFloat('')).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 
