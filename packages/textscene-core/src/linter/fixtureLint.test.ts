@@ -58,6 +58,10 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['worldenvironment-requires-environment'],
     reason: 'the WorldEnvironment names no Environment on purpose, to pin the root Godot draws with none',
   },
+  'unit-sprite2d-untextured.tscn': {
+    rules: ['sprite2d-requires-texture'],
+    reason: 'the two textureless Sprite2D nodes are the fixture, to pin that Godot draws nothing for them',
+  },
   'unit-csg-mesh.tscn': {
     rules: ['csgmesh3d-requires-mesh'],
     reason:

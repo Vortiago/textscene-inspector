@@ -4,6 +4,7 @@
  * gizmo in the project's collision colour, shown only while Visible Collision Shapes is on.
  */
 
+import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -30,8 +31,8 @@ export function ShapeOverlay({ props }: { props: TouchScreenButtonProperties }) 
   const image = texture?.image as { width: number; height: number } | undefined;
   const centre = props.shape_centered && image ? { x: image.width / 2, y: image.height / 2 } : { x: 0, y: 0 };
   return (
-    <group position={[centre.x, -centre.y, 0]}>
+    <CanvasItemGroup position={[centre.x, -centre.y, 0]}>
       <CollisionGizmo2D shape={shape} color={color} />
-    </group>
+    </CanvasItemGroup>
   );
 }
