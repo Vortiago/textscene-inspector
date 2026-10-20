@@ -53,7 +53,7 @@ describe('every int reader, given a boolean', () => {
     enforced: 'label.cpp:63',
     labels: { 32: 'BREAK_TRIM_INDENT', 64: 'BREAK_TRIM_START', 128: 'BREAK_TRIM_END' },
   });
-  type Reader = [string, ReturnType<typeof v.lenientInt>, string, string, string];
+  type Reader = [string, ReturnType<typeof v.int>, string, string, string];
   // The spelling each reader accepts, so the probe differs from a clean value
   // in nothing but the conversion: `positiveInt` refuses the 0 that `false`
   // reads as, and bit 1 is outside the trim mask.
@@ -66,8 +66,7 @@ describe('every int reader, given a boolean', () => {
       '1',
     ],
     ['positive-int', v.positiveInt('columns'), 'columns', 'true', '1'],
-    ['strictInt', v.strictInt('frame'), 'frame', 'true', '1'],
-    ['lenientInt', v.lenientInt('frame'), 'frame', 'true', '1'],
+    ['int', v.int('frame'), 'frame', 'true', '1'],
     ['bit field', trimFlags, 'autowrap_trim_flags', 'false', '0'],
   ];
 
@@ -84,8 +83,7 @@ describe('every int reader, given a boolean', () => {
     // the conversion arm has anything to say about it.
     const castShadow = v.enumInt('cast_shadow', 0, 3, { 0: 'OFF', 1: 'ON', 2: 'DOUBLE', 3: 'SHADOWS' });
     expect(castShadow('cast_shadow', 'false', 1)).toBeAtTier('warning');
-    expect(v.lenientInt('frame')('frame', 'false', 1)).toBeAtTier('warning');
-    expect(v.strictInt('frame')('frame', 'false', 1)).toBeAtTier('warning');
+    expect(v.int('frame')('frame', 'false', 1)).toBeAtTier('warning');
     // The written 0 is stored as 0, so the same slot is silent about it.
     expect(castShadow('cast_shadow', '0', 1)).toBeNull();
     expect(trimFlags('autowrap_trim_flags', '0', 1)).toBeNull();

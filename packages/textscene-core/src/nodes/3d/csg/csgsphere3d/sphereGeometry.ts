@@ -34,6 +34,7 @@
 
 import type * as THREE from 'three';
 import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
+import { TAU } from '../../../../godot/math/math.js';
 
 interface CsgSphereSpec {
   radius: number;
@@ -68,7 +69,7 @@ export function buildCsgSphereGeometry(spec: CsgSphereSpec): THREE.BufferGeometr
 
   // Latitude runs top-to-bottom "like in an image" so the V coordinate matches a texture.
   const latitudeStep = -Math.PI / rings;
-  const longitudeStep = (Math.PI * 2) / radialSegments;
+  const longitudeStep = TAU / radialSegments;
   let face = 0;
 
   const put = (p: [number, number, number][], u: [number, number][]): void => {

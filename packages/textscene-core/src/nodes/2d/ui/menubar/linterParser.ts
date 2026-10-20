@@ -16,9 +16,9 @@ validatorRegistry.registerAll('MenuBar', {
   flat: v.boolean('flat'),
   // menu_bar.cpp:752 `PropertyInfo(Variant::INT, "start_index")`, PROPERTY_HINT_NONE: no bound (ADR-0032).
   // set_start_index (menu_bar.cpp:836-844) assigns straight through, and `if (start_index >= 0)`
-  // (menu_bar.cpp:229) only picks a placement. `lenientInt`, since `strictInt` feeds a bound: a
-  // fractional literal gets the shared truncation warning, not a format error.
-  start_index: v.lenientInt('start_index'),
+  // (menu_bar.cpp:229) only picks a placement. A fractional literal gets the shared truncation
+  // warning, not a format error.
+  start_index: v.int('start_index'),
   // menu_bar.cpp:753 `PropertyInfo(Variant::BOOL, "switch_on_hover")`, no hint.
   // set_switch_on_hover (menu_bar.cpp:788-790) is a bare assignment.
   switch_on_hover: v.boolean('switch_on_hover'),

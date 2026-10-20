@@ -67,7 +67,7 @@ validatorRegistry.registerAll('Line2D', {
   // line_2d.cpp:409 hints "1,32,1", hard both ends. set_round_precision clamps
   // below 1 (`_round_precision = MAX(1, p_precision);`, line_2d.cpp:256), enforcing
   // the floor. The setter never enforces the 32 ceiling, so it warns.
-  round_precision: v.strictInt('round_precision', {
+  round_precision: v.int('round_precision', {
     min: 1,
     max: 32,
     enforced: { min: 'line_2d.cpp:256' },

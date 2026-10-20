@@ -86,7 +86,7 @@ function isFloatBranch(literal: string, alwaysFloatBranch: boolean): boolean {
 
 /**
  * The integer a slot stores, from a float the caller has already read, so a combinator such as
- * `v.strictInt` reads the text once. `literal` picks the `_to_int` branch.
+ * `v.int` reads the text once. `literal` picks the `_to_int` branch.
  *
  * An INT literal wraps to the slot's width at any value a double holds exactly: `light_mask =
  * 3000000000` stores -1294967296 and `Vector2i(4294967296, 5)` stores `(0, 5)`. A FLOAT literal

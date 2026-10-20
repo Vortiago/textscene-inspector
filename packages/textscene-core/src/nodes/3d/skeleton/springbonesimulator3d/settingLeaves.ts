@@ -28,13 +28,13 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // set_root_bone rewrites anything at or below -1 to -1 once a skeleton exists (:460-462), and
   // _validate_bone_names (:1355) re-runs it on the first skeleton update. The ceiling is the live
   // bone count, which no per-property rule sees.
-  root_bone: v.strictInt('root_bone', { min: -1, enforced: 'spring_bone_simulator_3d.cpp:460-462' }),
+  root_bone: v.int('root_bone', { min: -1, enforced: 'spring_bone_simulator_3d.cpp:460-462' }),
 
   // :295, same shape as root_bone_name; set_end_bone_name is :477.
   end_bone_name: v.quotedString('end_bone_name'),
 
   // :296. set_end_bone applies the identical clamp to -1 (:497-499).
-  end_bone: v.strictInt('end_bone', { min: -1, enforced: 'spring_bone_simulator_3d.cpp:497-499' }),
+  end_bone: v.int('end_bone', { min: -1, enforced: 'spring_bone_simulator_3d.cpp:497-499' }),
 
   // :297, Variant::BOOL. set_extend_end_bone (:515) assigns.
   extend_end_bone: v.boolean('extend_end_bone'),
@@ -71,7 +71,7 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :303. Unbounded, unlike root_bone and end_bone: the clamp to -1 (:625-627) sits inside
   // `if (sk)` (:623), properties apply before parenting, and _validate_bone_names (:1355-1369)
   // never re-runs set_center_bone. An out-of-range index survives and re-serialises.
-  center_bone: v.strictInt('center_bone'),
+  center_bone: v.int('center_bone'),
 
   // :304, Variant::BOOL. set_individual_config (:870) assigns. Which of the two
   // config blocks below is live depends on it, and that is linter.ts's.
@@ -118,7 +118,7 @@ export const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // :316, Variant::INT with PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_ARRAY, so it
   // carries STORAGE (object.h). set_joint_count opens with
   // ERR_FAIL_COND(p_count < 0) (:1054), which refuses the write outright.
-  joint_count: v.strictInt('joint_count', {
+  joint_count: v.int('joint_count', {
     min: 0,
     enforced: 'spring_bone_simulator_3d.cpp:1054',
   }),

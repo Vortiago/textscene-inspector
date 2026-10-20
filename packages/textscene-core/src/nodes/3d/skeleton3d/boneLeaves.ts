@@ -53,7 +53,7 @@ export const BONE_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // (p_parent < 0))`, :721), the floor the hint also states. The ceiling is the live bone count,
   // which no per-property validator sees. The dispatcher checks the `p_bone == p_parent` refusal
   // (:722), which needs the index.
-  parent: v.strictInt('parent', { min: -1, enforced: 'skeleton_3d.cpp:721' }),
+  parent: v.int('parent', { min: -1, enforced: 'skeleton_3d.cpp:721' }),
 
   // :197, Variant::TRANSFORM3D. set_bone_rest (:774) guards the bone index and
   // nothing else. PROPERTY_USAGE_READ_ONLY on the same line greys the inspector
