@@ -104,7 +104,7 @@ function hasStallAfterReply({ probe }) {
 }
 
 /**
- * A shared runner under load adds 50 to 100 ms tasks after the reply to any scene (#832),
+ * A shared runner under load adds 50 to 100 ms tasks after the reply to any scene,
  * so a stall fails the arm only when a second run stalls too. The retry is logged.
  */
 function runWorkerArm(browser, baseUrl, fixture) {
