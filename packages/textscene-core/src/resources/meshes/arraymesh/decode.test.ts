@@ -16,6 +16,14 @@ afterEach(() => {
   warnSpy.mockRestore();
 });
 
+/** Every vertex of `tangents` equals `expected` to 5 decimals, the uint16 grid's precision. */
+function expectTangents(tangents: Float32Array | undefined, expected: number[]): void {
+  expect(tangents).toBeDefined();
+  for (let v = 0; v < tangents!.length / 4; v++) {
+    expected.forEach((component, i) => expect(tangents![v * 4 + i]).toBeCloseTo(component, 5));
+  }
+}
+
 /**
  * scenes/demos/3d/platformer/stage/meshes/wall.tres: a 4-vertex quad, one
  * surface, one material. format 34359742487 = VERTEX|NORMAL|TANGENT|TEX_UV|INDEX,
@@ -262,6 +270,19 @@ describe('compressed attribute layout', () => {
       expect(surface.normals![v * 3 + 1]).toBeCloseTo(0.197363, 5);
       expect(surface.normals![v * 3 + 2]).toBeCloseTo(0.97378, 5);
     }
+  });
+
+  it('reads a negative binormal sign from a compressed frame angle below the midpoint', () => {
+    const surface = decodeArrayMeshTres(COMPRESSED_LOW_ANGLE_TRES, 'res://q.tres').surfaces[0]!;
+
+    // Godot 4.6.3: ARRAY_TANGENT = (-0.065587, 0.979419, -0.190885, -1) per vertex.
+    expectTangents(surface.tangents, [-0.065587, 0.979419, -0.190885, -1]);
+  });
+
+  it('reads no tangents from a surface without TANGENT', () => {
+    const surface = decodeArrayMeshTres(COMPRESSED_NO_TANGENT_TRES, 'res://n.tres').surfaces[0]!;
+
+    expect(surface.tangents).toBeUndefined();
   });
 
   it('reads a compressed NORMAL-without-TANGENT pair as the normal, not an axis-angle frame', () => {
@@ -617,6 +638,20 @@ describe('one quad in both layouts', () => {
       expect(surface.normals![v * 3 + 1]).toBeCloseTo(0, 6);
       expect(surface.normals![v * 3 + 2]).toBeCloseTo(1, 6);
     }
+  });
+
+  it('decodes the uncompressed octahedral tangent to Godot’s ARRAY_TANGENT', () => {
+    const surface = decodeArrayMeshTres(SAME_QUAD_UNCOMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+
+    // Godot 4.6.3: ARRAY_TANGENT = (1, 0, -0.000015, 1) per vertex.
+    expectTangents(surface.tangents, [1, 0, -0.000015, 1]);
+  });
+
+  it('decodes the compressed tangent as row 0 of the axis-angle frame', () => {
+    const surface = decodeArrayMeshTres(SAME_QUAD_COMPRESSED_TRES, 'res://q.tres').surfaces[0]!;
+
+    // Godot 4.6.3: ARRAY_TANGENT = (1, 0, 0.000048, 1) per vertex.
+    expectTangents(surface.tangents, [1, 0, 0.000048, 1]);
   });
 
   it('decodes both layouts to the same surface', () => {

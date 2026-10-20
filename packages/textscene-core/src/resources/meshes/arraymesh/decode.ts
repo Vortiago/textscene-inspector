@@ -21,7 +21,7 @@ import {
 } from './surfaceFields.js';
 import { PRIMITIVE_TRIANGLES, surfaceLayout } from './surfaceFormat.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
-import { decodeIndices, decodeNormals, decodePositions, decodeUVs } from './vertexBuffers.js';
+import { decodeIndices, decodeNormalFrame, decodePositions, decodeUVs } from './vertexBuffers.js';
 
 /** The type names this slice claims: Godot's ArrayMesh class alone, whose `_surfaces` this decodes. */
 export const ARRAY_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
@@ -121,8 +121,7 @@ function decodeSurfaces(
       );
       continue;
     }
-    // Normals: octahedral pairs in the region following the positions.
-    const normals = decodeNormals(vertexData, vertexCount, layout);
+    const { normals, tangents } = decodeNormalFrame(vertexData, vertexCount, layout);
     const { uvs, uv2s } = decodeUVs(
       readPackedBytes(block, 'attribute_data'),
       vertexCount,
@@ -153,6 +152,7 @@ function decodeSurfaces(
       uvs,
       uv2s,
       normals,
+      tangents,
       indices,
       ...readMaterial(block),
     });

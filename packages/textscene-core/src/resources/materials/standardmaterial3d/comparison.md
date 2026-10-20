@@ -67,7 +67,7 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 
 `anisotropy` stretches the specular highlight along the mesh's tangent. The SphereMesh carries Godot's tangents, so both engines draw a soft ring round the pole.
 
-- **Approximated** A BoxMesh, PlaneMesh, QuadMesh, PrismMesh, CylinderMesh, TorusMesh or ArrayMesh carries no tangents here. three derives the tangent frame per pixel from the UVs, so the streak reads faceted.
+- **Approximated** A BoxMesh, PlaneMesh, QuadMesh, PrismMesh, CylinderMesh or TorusMesh carries no tangents here. three derives the tangent frame per pixel from the UVs, so the streak reads faceted.
 
 ## Anisotropy flowmap
 
