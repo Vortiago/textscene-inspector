@@ -259,8 +259,9 @@ export const CANVAS_2D_SCENES = [
   // `--mode 2d`: pixel-identical over the whole frame.
   { name: 'sub-viewport-container-controls', file: 'unit-sub-viewport-container.tscn', mode: '2d' },
   // `-2d-content` holds Polygon2Ds, which reach the container only as the
-  // offscreen pass's published texture. Godot 4.6.3 `--mode 2d`: within 1/255,
-  // the 8-bit linear intermediate the SubViewportContainer sheet documents.
+  // offscreen pass's published texture. A canvas target stores sRGB bytes, which
+  // the container filters raw and multiplies in sRGB. Godot 4.6.3 `--mode 2d`:
+  // within 1/255, on the clear colour.
   {
     name: 'sub-viewport-container-2d-content',
     file: 'unit-sub-viewport-container-2d-content.tscn',
@@ -271,6 +272,27 @@ export const CANVAS_2D_SCENES = [
   {
     name: 'sub-viewport-container-stretch-2d-content',
     file: 'unit-sub-viewport-container-stretch-2d-content.tscn',
+    mode: '2d',
+  },
+  // The target magnified twice: the filter blends the stored sRGB bytes across each edge. Godot
+  // 4.6.3 `--mode 2d`: (249,120) rgb(210,96,19) and (150,179) rgb(195,80,4), within 1/255.
+  {
+    name: 'sub-viewport-container-shrink-2d-content',
+    file: 'unit-sub-viewport-container-shrink-2d-content.tscn',
+    mode: '2d',
+  },
+  // Translucent content blends over the clear colour in the target's sRGB numbers, through the
+  // 2D-world pass and the Control pass. Godot 4.6.3 `--mode 2d`: (150,130) rgb(165,89,38).
+  {
+    name: 'sub-viewport-container-translucent',
+    file: 'unit-sub-viewport-container-translucent.tscn',
+    mode: '2d',
+  },
+  // A Sprite2D samples a ViewportTexture minified over 1 px stripes. Godot 4.6.3 `--mode 2d`:
+  // rgb(128,51,0), the byte average.
+  {
+    name: 'sprite-2d-viewport-texture',
+    file: 'unit-sprite-2d-viewport-texture.tscn',
     mode: '2d',
   },
   // A 301x201 container at shrink 2: a 150x100 target drawn over the whole rect. Godot 4.6.3

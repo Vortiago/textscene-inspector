@@ -1,6 +1,6 @@
-; One variable: where a sub-viewport's Control pixels come from and which colour pipeline they
-; cross. Controls only, so the Control rect solve paints the offscreen target, sampled back as a
-; ViewportTexture. No other scene puts Controls behind a ViewportTexture.
+; One variable: Control content, with a translucent fill, sampled by a 3D albedo. Controls only, so
+; the Control pass paints the offscreen target, and the albedo samples its decoding view. No other
+; golden puts Controls behind a ViewportTexture on a material.
 
 [gd_scene format=3]
 
@@ -15,15 +15,11 @@ resource_local_to_scene = true
 shading_mode = 0
 albedo_texture = SubResource("ViewportTexture_1")
 
-; Not gated, because of a live divergence: the backdrop measures rgb(162) against Godot 4.6.3,
-; but the Panel's translucent fill reads 110 where Godot reads 84. That fill is
-; `style_normal_color`, Color(0.1, 0.1, 0.1, 0.6) (`default_theme.cpp:112,134`), and the same
-; colour on the main canvas (a Button's `normal` box, `:138`) measures 45 against Godot's 46.
+; The Panel's translucent fill is `style_normal_color`, Color(0.1, 0.1, 0.1, 0.6)
+; (`default_theme.cpp:112,134`). The target blends it over the backdrop in sRGB numbers, as
+; Godot's does, so (480,320) reads rgb(84, 84, 84) in Godot 4.6.3 and here.
 [node name="Root" type="Node3D"]
 
-; So the alpha blend is right and the offscreen target diverges: an sRGB-tagged attachment is
-; linearised before blending, while Godot's target holds sRGB canvas values and blends in them.
-; A baseline taken now would pin that gap instead of gating against it.
 [node name="SubViewport" type="SubViewport" parent="."]
 size = Vector2i(256, 256)
 render_target_update_mode = 4

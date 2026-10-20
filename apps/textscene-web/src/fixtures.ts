@@ -1663,6 +1663,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Viewport Texture",
+    "file": "unit-sprite-2d-viewport-texture.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d Billboard Fixed Y",
     "file": "unit-sprite3d-billboard-fixed-y.tscn",
     "category": "Other"
@@ -3426,6 +3431,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Container Shrink 2d Content",
+    "file": "unit-sub-viewport-container-shrink-2d-content.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container Stretch 2d Content",
     "file": "unit-sub-viewport-container-stretch-2d-content.tscn",
     "category": "Unit - Viewports"
@@ -3438,6 +3448,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Container Stretch",
     "file": "unit-sub-viewport-container-stretch.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container Translucent",
+    "file": "unit-sub-viewport-container-translucent.tscn",
     "category": "Unit - Viewports"
   },
   {

@@ -8,6 +8,7 @@ import { act, renderHook } from '@testing-library/react';
 import { fakeTiledUploads } from './tiledUpload/fakeTiledUploads.testkit';
 import * as THREE from 'three';
 import { pinNoColorSpace, useCanvas2DTexture, useCanvasSrgbDefines } from './canvas2DTextureDecode';
+import { markSrgbBytes } from './srgbByteTextures';
 
 function makeTexture(colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture {
   const texture = new THREE.Texture();
@@ -106,6 +107,16 @@ describe('useCanvasSrgbDefines', () => {
     const texture = makeTexture(THREE.SRGBColorSpace);
     const { result } = renderHook(() => useCanvasSrgbDefines(texture));
     expect(result.current).toBeUndefined();
+  });
+
+  /**
+   * A canvas target keeps the sRGB tag its pass encodes through, which R3F also stamps on a bound
+   * `map`, so the mark, not the tag, says its bytes are sRGB numbers.
+   */
+  it('returns the sRGB-multiply define for a texture marked as holding sRGB bytes', () => {
+    const texture = markSrgbBytes(makeTexture(THREE.SRGBColorSpace));
+    const { result } = renderHook(() => useCanvasSrgbDefines(texture));
+    expect(result.current).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });
 
   it('returns undefined for null/undefined (no map bound yet)', () => {

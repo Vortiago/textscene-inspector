@@ -16,7 +16,7 @@ import { GLTF_SURFACE, useMaterialTextures, type TexturedSurface } from './Surfa
 import { NodePathProvider } from '../contexts/NodePathContext';
 import type { MaterialTextureMaps } from './materialTextureMaps';
 import { ViewportTextureProvider } from '../contexts/ViewportTextureContext';
-import { ViewportTexturePublisher } from '../testing/ViewportTexturePublisher';
+import { ViewportTexturePublisher, viewportEntry } from '../testing/ViewportTexturePublisher';
 
 const GRADIENT: TscnInternalResource[] = [
   { id: 'Gradient_a', type: 'Gradient', data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' } },
@@ -106,23 +106,38 @@ function viewportMaps(properties: Record<string, string>, surface?: TexturedSurf
   return targetMaps({ albedo_texture: 'SubResource("ViewportTexture_a")', ...properties }, surface);
 }
 
-/** The maps a material with `properties`, which name the SubViewport's render target, binds. */
+/**
+ * The maps a material with `properties`, which name the SubViewport's render target, binds. The
+ * target publishes a decoding view apart from its plain view, as a canvas-content target does.
+ */
 function targetMaps(properties: Record<string, string>, surface?: TexturedSurface) {
   const target = new THREE.WebGLRenderTarget(4, 4).texture;
+  const decoding = new THREE.WebGLRenderTarget(4, 4).texture;
+  const retainers = { count: 0 };
+  const retain = () => {
+    retainers.count++;
+    return () => {
+      retainers.count--;
+    };
+  };
   const maps = materialMaps(properties, VIEWPORT, surface, (children) => (
     <ViewportTextureProvider>
-      <ViewportTexturePublisher path="Root/SubViewport" entry={{ texture: target, size: { x: 4, y: 4 } }} />
+      <ViewportTexturePublisher
+        path="Root/SubViewport"
+        entry={viewportEntry(target, { x: 4, y: 4 }, { texture: decoding, retain })}
+      />
       <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
     </ViewportTextureProvider>
   ));
-  return { maps, target };
+  return { maps, target, decoding, retainers };
 }
 
 describe('useMaterialTextures with a render-target albedo', () => {
-  it('binds the shared target and hands its UV transform to the material', () => {
-    const { maps, target } = viewportMaps({ uv1_scale: 'Vector3(2, 3, 1)' });
+  /** A `source_color` sampler reads the sRGB view (`material_storage.cpp:1067,1073`). */
+  it('binds the decoding view and hands its UV transform to the material', () => {
+    const { maps, decoding } = viewportMaps({ uv1_scale: 'Vector3(2, 3, 1)' });
 
-    expect(maps.albedoMap).toBe(target);
+    expect(maps.albedoMap).toBe(decoding);
     expect(maps.albedoTargetUv).toEqual({ scale: { x: 2, y: 3 }, offset: { x: 0, y: 0 } });
   });
 
@@ -140,22 +155,37 @@ describe('useMaterialTextures with a render-target albedo', () => {
 });
 
 describe('useMaterialTextures with a render target in another slot', () => {
-  it('binds the shared target in an emission slot, as Godot binds any slot by RID', () => {
-    const { maps, target } = targetMaps({
+  it('binds the decoding view in an emission slot, a `source_color` sampler too', () => {
+    const { maps, decoding } = targetMaps({
       emission_enabled: 'true',
       emission_texture: 'SubResource("ViewportTexture_a")',
     });
 
-    expect(maps.emissiveMap).toBe(target);
+    expect(maps.emissiveMap).toBe(decoding);
   });
 
-  it('binds the shared target in a normal slot', () => {
+  it('keeps the decoding view filled while a `source_color` slot binds it', () => {
+    const { retainers } = viewportMaps({});
+
+    expect(retainers.count).toBe(1);
+  });
+
+  it('binds the plain view in a normal slot, which reads raw', () => {
     const { maps, target } = targetMaps({
       normal_enabled: 'true',
       normal_texture: 'SubResource("ViewportTexture_a")',
     });
 
     expect(maps.normalMap).toBe(target);
+  });
+
+  it('fills no decoding view for a slot that reads raw (edge case)', () => {
+    const { retainers } = targetMaps({
+      normal_enabled: 'true',
+      normal_texture: 'SubResource("ViewportTexture_a")',
+    });
+
+    expect(retainers.count).toBe(0);
   });
 
   it('hands the albedo UV transform to no other slot (edge case)', () => {
