@@ -147,28 +147,25 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
     expect(mat.aoMap).toBeInstanceOf(THREE.Texture);
   });
 
-  it('audit slot 60 — PlaneMesh flip_faces=true → geometry mirrored on X axis (matrix has negative det)', async () => {
+  it('audit slot 60 — PlaneMesh flip_faces=true → normals face down, positions stay (primitive_meshes.cpp:76-98)', async () => {
     const renderer = await renderMesh({ albedo_color: 'Color(1, 1, 1, 1)' }, 'PlaneMesh', {
       size: 'Vector2(2, 2)',
       flip_faces: 'true',
     });
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const geom = mesh.geometry;
-    // After geometry.scale(-1, 1, 1), the position attribute's X values
-    // are mirrored compared to a default PlaneGeometry. Sample a corner:
-    // a (2,2) plane's default first vertex is at X=-1, and after mirror at X=+1.
-    const pos = geom.attributes.position!;
-    expect(pos.getX(0)).toBeGreaterThan(0);
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+
+    expect(geometry.attributes.normal!.getY(0)).toBe(-1);
+    expect(geometry.attributes.position!.getX(0)).toBeLessThan(0);
   });
 
-  it('audit slot 60 — PlaneMesh flip_faces=false (default) → first-vertex X is negative (unflipped)', async () => {
-    // Sanity check that the default path is unchanged.
+  it('audit slot 60 — PlaneMesh flip_faces=false (default) → normals face up', async () => {
     const renderer = await renderMesh({ albedo_color: 'Color(1, 1, 1, 1)' }, 'PlaneMesh', {
       size: 'Vector2(2, 2)',
     });
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-    const pos = mesh.geometry.attributes.position!;
-    expect(pos.getX(0)).toBeLessThan(0);
+    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry;
+
+    expect(geometry.attributes.normal!.getY(0)).toBe(1);
+    expect(geometry.attributes.position!.getX(0)).toBeLessThan(0);
   });
 
   it('audit slot 59a — PrismMesh fills its size box with the apex placed by left_to_right', async () => {
