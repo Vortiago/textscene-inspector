@@ -54,12 +54,12 @@ reproduced:
 
 ## Why a 2D background reads 77 here and 76 in Godot
 
-Both sides clear a 2D scene to `default_clear_color`, 0.3 grey. The Godot images
-read 76 there, and the previewer reads 77. The value is 76.5 in 8 bits, so the
-driver's rounding decides the byte. `pnpm ref:godot` renders on Vulkan through
-lavapipe, which gives 76, and `--rendering-driver opengl3` gives 77. The
-previewer clears through WebGL, which gives 77. This 1/255 gap is not a parity
-defect.
+Both sides clear a 2D scene to `default_clear_color`, 0.3 grey. Godot hands that
+float to the driver as the clear colour (`renderer_canvas_render_rd.cpp:2278,2294`),
+so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
+`pnpm ref:godot` renders on Vulkan through lavapipe, which gives 76.
+`--rendering-driver opengl3` gives 77, and so does the previewer's WebGL clear. This
+1/255 gap is not a parity defect.
 
 ## 3D
 

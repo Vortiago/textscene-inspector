@@ -1,14 +1,15 @@
 /**
  * The 2D canvas's texture colour space: a `NoColorSpace` retag and the define
  * that multiplies its texels in sRGB, for the unlit 2D recipe (`meshBasicMaterial` + `map`) alone.
- * A SubViewport target, a PointLight2D cookie and every 3D material slot keep
- * sampling the shared cache entry.
+ * A canvas-content SubViewport target holds sRGB bytes already, so it takes the define with no
+ * retag. A PointLight2D cookie and every 3D material slot keep sampling the shared cache entry.
  */
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useUploadedClone } from './tiledUpload/useTiledUpload';
 import { pinNoColorSpace, undecodedClone } from './undecodedTexture';
 import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
+import { holdsSrgbBytes } from './srgbByteTextures';
 
 // Re-exported for the 2D consumers. It lives in `undecodedTexture.ts`, since 3D
 // material data maps need it too.
@@ -40,15 +41,16 @@ export function useCanvas2DTexture(texture: THREE.Texture | null | undefined): T
 }
 
 /**
- * `defines` for a `meshBasicMaterial` sampling `texture` as `map`, set only for a
- * `NoColorSpace` retag. A define reaches the GPU only on a newly mounted material,
- * which `materialProgramInputs` arranges, so the identity is memoised.
+ * `defines` for a `meshBasicMaterial` sampling `texture` as `map`, set for a `NoColorSpace` retag
+ * and for a texture that holds sRGB bytes. A define reaches the GPU only on a newly mounted
+ * material, which `materialProgramInputs` arranges, so the identity is memoised.
  */
 export function useCanvasSrgbDefines(
   texture: THREE.Texture | null | undefined
 ): Record<string, string> | undefined {
-  return useMemo(
-    () => (texture?.colorSpace === THREE.NoColorSpace ? CANVAS_SRGB_DEFINES : undefined),
-    [texture]
-  );
+  return useMemo(() => {
+    if (!texture) return undefined;
+    const samplesSrgbBytes = texture.colorSpace === THREE.NoColorSpace || holdsSrgbBytes(texture);
+    return samplesSrgbBytes ? CANVAS_SRGB_DEFINES : undefined;
+  }, [texture]);
 }

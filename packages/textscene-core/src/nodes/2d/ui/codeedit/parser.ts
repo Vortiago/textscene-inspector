@@ -5,7 +5,7 @@
 
 import { type ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
-import { ruleInt } from '../../../../godot/variant/int.js';
+import { slotInt } from '../../../../godot/variant/int.js';
 import { arrayBody, INT_ARRAY_FORMS, parsePackedStringArray } from './arrayForms.js';
 import { parseTextEdit } from '../textedit/parser';
 import type { CodeEditProperties } from './types';
@@ -19,7 +19,7 @@ function parseIntArray(value: string | undefined): number[] | undefined {
     .split(',')
     .map((element) => element.trim())
     .filter((element) => element.length > 0)
-    .map((element) => ruleInt(element) ?? 0);
+    .map((element) => slotInt(element) ?? 0);
 }
 
 /** The three spellings a String-array slot accepts (`arrayForms.ts`). An unreadable value reads as absent, the class default. */

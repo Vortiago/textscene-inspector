@@ -143,8 +143,10 @@ describe('the Curve body resolveCurve decodes', () => {
     });
   });
 
-  it('drops a `Vector2i` point past the round-trip band rather than place it', () => {
-    expect(decode({ _data: '[Vector2i(4294967296, 0), 0.0, 0.0, 0, 0]' }).points).toEqual([]);
+  it('places a `Vector2i` point past the round-trip band where Godot stores it', () => {
+    expect(decode({ _data: '[Vector2i(4294967296, 5), 0.0, 0.0, 0, 0]' }).points).toEqual([
+      expect.objectContaining({ position: { x: 0, y: 5 } }),
+    ]);
   });
 
   it('returns Godot resource defaults for an empty resource body (edge case)', () => {

@@ -41,3 +41,10 @@ const AnimationCallbackModeDiscrete = {
 
 /** Each discrete mode by its integer. */
 export const ANIMATION_CALLBACK_MODE_DISCRETE_NAMES = enumNamesByValue(AnimationCallbackModeDiscrete);
+
+/** `Animation::LoopMode` (`scene/resources/animation.h:74-78`). */
+export const AnimationLoopMode = {
+  NONE: 0,
+  LINEAR: 1,
+  PINGPONG: 2,
+} as const;

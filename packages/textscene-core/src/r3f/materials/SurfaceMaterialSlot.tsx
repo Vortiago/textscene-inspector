@@ -28,6 +28,7 @@ import {
 import {
   bindSlotTexture,
   materialTextureStates,
+  slotReadsSourceColor,
   topDownV,
   type MaterialTextureStates,
   type UVSetState,
@@ -260,7 +261,8 @@ function useSlotTexture(
 ): SlotTexture {
   const ref = textureSlotReference(references, slot);
   const isViewport = isViewportTextureRef(ref, internalResources);
-  const viewport = useViewportTextureSlot(isViewport ? ref : undefined, internalResources);
+  const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
+  const viewport = useViewportTextureSlot(isViewport ? ref : undefined, internalResources, view);
   const result = useTexture2DRid(isViewport ? undefined : ref, externalResources, internalResources);
   if (isViewport)
     return { texture: viewport.texture, missing: false, isArriving: false, cyclic: viewport.cyclic };

@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  importClipOptions,
   importExternalMaterials,
   importGltfNaming,
   importLightmapUnwrap,
@@ -290,6 +291,35 @@ describe('importNodeLayers', () => {
   it('is empty without a sidecar or a nodes block', () => {
     expect(importNodeLayers(null).size).toBe(0);
     expect(importNodeLayers(parseImportFile('[params]\n\nnodes/root_scale=1.0\n')).size).toBe(0);
+  });
+});
+
+describe('importClipOptions', () => {
+  const sidecar = (params: string) => parseImportFile(`[params]\n\n${params}\n`);
+  const animations = (body: string) => sidecar(`_subresources={\n"animations": {\n${body}\n}\n}`);
+
+  it.each([0, 1, 2])('reads settings/loop_mode %i of a clip entry', (mode) => {
+    const parsed = animations(`"walk": {\n"settings/loop_mode": ${mode}\n}`);
+    expect([...importClipOptions(parsed).sidecarLoopModes]).toEqual([['walk', mode]]);
+  });
+
+  it('reads an entry without settings/loop_mode as its default, LOOP_NONE', () => {
+    const parsed = animations('"walk": {\n"save_to_file/enabled": false\n}');
+    expect([...importClipOptions(parsed).sidecarLoopModes]).toEqual([['walk', 0]]);
+  });
+
+  it('reads no entry when _subresources is not JSON', () => {
+    const parsed = sidecar('_subresources={\n"animations": { "walk": Vector3(1, 2, 3) }\n}');
+    expect(importClipOptions(parsed).sidecarLoopModes.size).toBe(0);
+  });
+
+  it('reads name suffixes as on when the sidecar omits nodes/use_name_suffixes or has no sidecar', () => {
+    expect(importClipOptions(sidecar('nodes/root_scale=1.0')).useNameSuffixes).toBe(true);
+    expect(importClipOptions(null).useNameSuffixes).toBe(true);
+  });
+
+  it('reads nodes/use_name_suffixes=false', () => {
+    expect(importClipOptions(sidecar('nodes/use_name_suffixes=false')).useNameSuffixes).toBe(false);
   });
 });
 

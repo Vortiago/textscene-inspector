@@ -5,7 +5,7 @@
  * `resolveTexture2DPath`, whose `string | null` cannot carry it.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type * as THREE from 'three';
 
 import * as logger from '../../../logger.js';
@@ -31,10 +31,16 @@ export function isViewportTextureRef(
   return resolveSubResourceRef(ref, internalResources)?.type === VIEWPORT_TEXTURE_TYPE;
 }
 
+/**
+ * Which of a target's two views a consumer samples, as Godot's consumer picks it: a canvas item
+ * and a raw material slot sample the plain view, and a `source_color` slot the decoding view.
+ */
+export type ViewportTextureView = 'plain' | 'decoding';
+
 /** What a ViewportTexture slot resolves to, once cycles are accounted for. */
 interface ViewportTextureSlotResult {
   /**
-   * The live target's texture. Null for no ViewportTexture, an unpublished one,
+   * The live target's view. Null for no ViewportTexture, an unpublished one,
    * or one in an unrenderable pass cycle, which `cyclic` tells apart. A caller
    * that checks only `texture` draws nothing for a cycle: safe, but silent.
    */
@@ -49,17 +55,27 @@ interface ViewportTextureSlotResult {
 
 /**
  * The choke point every ViewportTexture consumer shares, `SubViewportContainer`
- * included: a registry path to its published texture. The orchestrator never
- * drives a pass that `ViewportPassRegistryContext` finds cyclic, so its target is
- * uninitialised and this reports `texture: null` with `cyclic: true`.
+ * included: a registry path to the view of its published target. The orchestrator
+ * never drives a pass that `ViewportPassRegistryContext` finds cyclic, so its target
+ * is uninitialised and this reports `texture: null` with `cyclic: true`. A consumer
+ * of the decoding view keeps it filled while it is mounted.
  *
  * @param warnAs The caller in the cycle warning, usually its node path. Null
  *   suppresses it, as for `SubViewportContainer`, which the context already names.
  */
-export function useViewportTargetSlot(path: string | null, warnAs: string | null): ViewportTextureSlotResult {
+export function useViewportTargetSlot(
+  path: string | null,
+  warnAs: string | null,
+  view: ViewportTextureView
+): ViewportTextureSlotResult {
   const entry = useViewportTexture(path);
   const cycle = useViewportPassCycle(path);
   const cyclic = cycle !== null;
+
+  const decoding = view === 'decoding' && !cyclic ? (entry?.decoding ?? null) : null;
+  // A layout effect, not a passive one: a frame can run between a commit and its passive
+  // effects, and the pass fills only a retained copy, so that frame would sample it unfilled.
+  useLayoutEffect(() => decoding?.retain(), [decoding]);
 
   const lastWarnedKey = useRef<string | null>(null);
   useEffect(() => {
@@ -75,18 +91,20 @@ export function useViewportTargetSlot(path: string | null, warnAs: string | null
     );
   }, [cyclic, path, warnAs]);
 
-  return { texture: cyclic ? null : (entry?.texture ?? null), cyclic };
+  if (cyclic || !entry) return { texture: null, cyclic };
+  return { texture: decoding ? decoding.texture : entry.texture, cyclic };
 }
 
 /**
- * The live target a `ViewportTexture` slot's `ref` names, rebased onto the
+ * The `view` of the live target a `ViewportTexture` slot's `ref` names, rebased onto the
  * registry key (`viewportTextureRegistryKey`). `texture: null` with `cyclic: false`
  * is not an error: a target arrives after first paint. Call it unconditionally,
  * so the hook count stays static.
  */
 export function useViewportTextureSlot(
   ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
+  internalResources: readonly TscnInternalResource[],
+  view: ViewportTextureView
 ): ViewportTextureSlotResult {
   const consumerPath = useNodePath();
   const resource = resolveSubResourceRef(ref, internalResources);
@@ -125,5 +143,5 @@ export function useViewportTextureSlot(
   }, [consumerPath, viewportPath, uniquePaths]);
   // Called unconditionally for the rules of hooks. A null key resolves to
   // `{ texture: null, cyclic: false }`.
-  return useViewportTargetSlot(key, consumerPath);
+  return useViewportTargetSlot(key, consumerPath, view);
 }

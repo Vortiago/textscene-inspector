@@ -14,13 +14,10 @@ import {
   type ViewportTextureEntry,
 } from '../../r3f/contexts/ViewportTextureContext';
 import { resolveViewportTexturePath } from '../../r3f/viewportTexturePath';
-import { ViewportTexturePublisher } from '../../r3f/testing/ViewportTexturePublisher';
+import { ViewportTexturePublisher, viewportEntry } from '../../r3f/testing/ViewportTexturePublisher';
 
 function entry(): ViewportTextureEntry {
-  return {
-    texture: new THREE.Texture(),
-    size: { x: 256, y: 256 },
-  };
+  return viewportEntry(new THREE.Texture(), { x: 256, y: 256 });
 }
 
 function Consumer({

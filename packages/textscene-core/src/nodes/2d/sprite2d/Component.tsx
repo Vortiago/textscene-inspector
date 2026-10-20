@@ -40,7 +40,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const isViewportSlot = isViewportTextureRef(props.texture, internalResources);
   const { texture: viewportTexture, cyclic: viewportCyclic } = useViewportTextureSlot(
     props.texture,
-    internalResources
+    internalResources,
+    'plain'
   );
 
   // `useTexture2D`, not the path-only resolver: `texture` may name an inline
@@ -73,8 +74,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   useUvWindow(drawnTexture, frameWindow);
 
   const displayedTexture = viewportTexture ?? drawnTexture;
-  // A ViewportTexture keeps its publisher's colour space, not the NoColorSpace
-  // retag, so this resolves to `undefined` for it.
+  // A canvas-content ViewportTexture holds sRGB bytes, so it multiplies in sRGB
+  // as a retagged file does. A 3D-content one keeps the linear multiply.
   const srgbDefines = useCanvasSrgbDefines(displayedTexture);
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas). A render
   // target reports its rect through the same `image` shape a loaded texture
@@ -140,9 +141,9 @@ function QuadMesh({
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
-  // The map is here at the first compile, but the decode can change: a
-  // ViewportTexture keeps its colour space where a `res://` file gets the canvas
-  // retag, and a swap changes the program (`materialProgramInputs.ts`).
+  // The map is here at the first compile, but the define can change: a 3D-content
+  // ViewportTexture multiplies linearly where a `res://` file multiplies in sRGB,
+  // and a swap changes the program (`materialProgramInputs.ts`).
   const program = materialProgramInputs({
     props: {
       map: texture,

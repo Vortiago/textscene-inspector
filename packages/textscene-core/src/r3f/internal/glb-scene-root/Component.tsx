@@ -18,7 +18,8 @@ import { useAnimationTransport, type PlayState } from '../../contexts/AnimationT
 import { useNodePath } from '../../contexts/NodePathContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
 import { usePlaybackLoop } from '../../animation/usePlaybackLoop';
-import { applyLoopOverride, LOOP_REPEAT_SETTINGS } from '../../animation/loopOverride';
+import { applyLoopOverride, loopSettingsFor } from '../../animation/loopOverride';
+import { importedLoopMode } from '../../../resources/formats/glb/importedLoopMode';
 import {
   restoreSnapshot,
   snapshotPose,
@@ -160,9 +161,10 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     speedScale: transport.playbackSpeed,
     mixerRef,
     actionsRef,
-    // Native glTF clips have no loop_mode and repeat for ever, so 'auto' and 'loop' repeat. The
-    // preview loop override can force one clamped pass.
-    configureAction: (action) => applyLoopOverride(action, transport.loopOverride, LOOP_REPEAT_SETTINGS),
+    // 'auto' keeps the loop mode Godot's importer gave the clip. The preview loop override can
+    // force one clamped pass or a repeat.
+    configureAction: (action) =>
+      applyLoopOverride(action, transport.loopOverride, loopSettingsFor(importedLoopMode(action.getClip()))),
     reconfigureKey: transport.loopOverride,
     reportTime: transport.reportTime,
     restore,
