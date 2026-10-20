@@ -25,7 +25,8 @@ export function toInt16(value: number): number {
 
 /** A `PackedByteArray` element: `Vector<uint8_t>` (`variant_parser.cpp:650`). */
 const UINT8_MAX = 255;
-const INT32_MIN = -2147483648;
+/** The lowest value an `int32_t` slot holds. */
+export const INT32_MIN = -2147483648;
 /** The widest value an `int32_t` slot holds; above it only a `uint32_t` can. */
 export const INT32_MAX = 2147483647;
 const UINT32_MAX = 4294967295;

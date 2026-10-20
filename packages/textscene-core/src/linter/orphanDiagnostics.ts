@@ -11,7 +11,8 @@ import { armDiagnostic } from './ruleArms.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { validateNodeName } from '../godot/string/nodeName.js';
 import { rootStatesNoIdentifier } from '../parser/typeUnknowable.js';
-import type { StrictScene } from '../parser/types.js';
+import type { NodeOrigin, RawNode, StrictScene } from '../parser/types.js';
+import { resolveExtResourcePath } from '../resources/SubResourceResolver.js';
 
 /**
  * Godot's name for a re-parented orphan: the vanished path with `./` stripped, every
@@ -31,6 +32,66 @@ function reparentedName(parentPath: string, name: string): string {
   const spelled = (parentPath.startsWith('/') ? '/' : '') + withPeriod.join('/');
   const prefix = spelled.replace(/^\.\//, '').replaceAll('/', '@');
   return validateNodeName(`${prefix}#${name}`);
+}
+
+/**
+ * The path `get_node_path` gives a heading: its `parent=` path, then its name. The scene
+ * root is the empty path.
+ */
+function headingPath({ node }: NodeOrigin<RawNode>): string {
+  if (node.parent === undefined) return '';
+  const parentNames = nodePathNames(node.parent).filter((name) => name !== '.');
+  return [...parentNames, node.name].join('/');
+}
+
+/**
+ * What Godot does with the heading's `parent_id_path=`, or undefined where the trail
+ * recovers nothing and the node is re-rooted (`packed_scene.cpp:1947-2005`).
+ */
+function idRecoveryOutcome(scene: StrictScene, origin: NodeOrigin<RawNode>): string | undefined {
+  const recovery = scene.idRecoveries.get(origin);
+  if (recovery === undefined) return undefined;
+  const lead =
+    'The heading also carries parent_id_path, the id trail Godot falls back to when a path ' +
+    'does not walk (packed_scene.cpp:161-163).';
+  if (recovery.kind === 'lands') {
+    const path = headingPath(recovery.via);
+    const where = path === '' ? 'the scene root' : `"${path}"`;
+    return `${lead} Its first id names the node '${recovery.via.node.name}' (line ${recovery.via.line}), so the node lands under ${where} and keeps its name.`;
+  }
+  const instanced =
+    resolveExtResourcePath(recovery.via.node.instance, scene.externalResources) ?? 'an instanced scene';
+  return (
+    `${lead} Its first id names the instance '${recovery.via.node.name}' of ${instanced}, and the rest ` +
+    'of the trail lives in that scene, which this linter does not open, so it cannot say where the node lands.'
+  );
+}
+
+/**
+ * What Godot does with an orphan. The empty path is its own outcome because the verb differs:
+ * that heading faults the load, so the instantiate the re-root belongs to is never reached.
+ */
+function orphanOutcome(
+  scene: StrictScene,
+  origin: NodeOrigin<RawNode>,
+  { hasEmptyParent, refused }: { hasEmptyParent: boolean; refused: boolean }
+): string {
+  if (hasEmptyParent) {
+    return (
+      'Godot cannot load the file at all — another heading spells parent="" (see the ' +
+      'error beside this) — so nothing in it is instantiated.'
+    );
+  }
+  if (refused) {
+    return (
+      'Godot refuses to instantiate the scene for another heading (see the error ' +
+      'beside this), so no re-root of this node happens.'
+    );
+  }
+  return (
+    idRecoveryOutcome(scene, origin) ??
+    `Godot re-parents it to the scene root and renames it "${reparentedName(origin.declaredParent!, origin.node.name)}".`
+  );
 }
 
 /**
@@ -92,7 +153,7 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
 
   return emptyRefusals.concat(rootRefusal).concat(
     stranded.map((origin) => {
-      const { node, line, declaredParent, recoverableById } = origin;
+      const { node, line, declaredParent } = origin;
       if (missing(origin)) {
         return armDiagnostic(
           FILE_DIAGNOSTICS.nodeWithoutParent,
@@ -102,20 +163,7 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
           { line, column: 1 }
         );
       }
-      // Three outcomes, and the empty path is its own because the verb differs:
-      // that heading faults the load, so the instantiate the re-root belongs to
-      // is never reached.
-      const outcome = recoverableById
-        ? 'The heading also carries parent_id_path, the id trail Godot falls back to when a ' +
-          'path does not walk (packed_scene.cpp:161-163). Those ids name nodes inside the base ' +
-          'scenes, which this linter does not open, so it cannot say where the node lands.'
-        : emptyParents.length > 0
-          ? 'Godot cannot load the file at all — another heading spells parent="" (see the ' +
-            'error beside this) — so nothing in it is instantiated.'
-          : refused
-            ? 'Godot refuses to instantiate the scene for another heading (see the error ' +
-              'beside this), so no re-root of this node happens.'
-            : `Godot re-parents it to the scene root and renames it "${reparentedName(declaredParent!, node.name)}".`;
+      const outcome = orphanOutcome(scene, origin, { hasEmptyParent: emptyParents.length > 0, refused });
       return armDiagnostic(
         FILE_DIAGNOSTICS.unresolvedParentPath,
         node,
