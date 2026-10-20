@@ -53,18 +53,31 @@ function inkedPng(width = 8, height = 8) {
  */
 const NO_TEXTURE_WORK = { waitFor: async () => {}, count: async () => 0 };
 
-/** A Playwright page/element pair reduced to what `settleCanvas` touches. */
-function stubCanvas(shots, status = NO_TEXTURE_WORK) {
+/**
+ * A Playwright page and capture target reduced to what `settleCanvas` touches. Each shot is a
+ * DevTools `Page.captureScreenshot` on the target's page, so the stub answers that command with
+ * the next of `shots`, base64 as Chromium sends it.
+ */
+function stubCanvas(shots, status = NO_TEXTURE_WORK, box = { x: 0, y: 0, width: 8, height: 8 }) {
   let i = 0;
   const page = { waitForTimeout: async () => {}, getByTestId: () => status };
-  const canvas = {
-    calls: [],
-    screenshot: async (options) => {
-      canvas.calls.push(options);
-      return Buffer.from(shots[Math.min(i++, shots.length - 1)]);
+  const session = {
+    send: async (method, params) => {
+      canvas.calls.push({ method, params });
+      return { data: Buffer.from(shots[Math.min(i++, shots.length - 1)]).toString('base64') };
     },
   };
-  return { page, canvas };
+  const targetPage = { context: () => ({ newCDPSession: async () => session }) };
+  const canvas = {
+    calls: [],
+    boxOptions: [],
+    boundingBox: async (options) => {
+      canvas.boxOptions.push(options);
+      return box;
+    },
+    page: () => targetPage,
+  };
+  return { page, canvas, session };
 }
 
 describe('settleCanvas', () => {
@@ -78,24 +91,46 @@ describe('settleCanvas', () => {
   it('reports a scene that never stops moving rather than returning a frame', async () => {
     // Every capture differs, so nothing is a measurement, and the harness says so instead of
     // returning the last frame.
-    let n = 0;
-    const page = { waitForTimeout: async () => {}, getByTestId: () => NO_TEXTURE_WORK };
-    const canvas = { screenshot: async () => Buffer.from(String(n++)) };
+    const { page, canvas } = stubCanvas(Array.from({ length: 64 }, (_, n) => String(n)));
     const { buffer, reason } = await settleCanvas(page, canvas);
     expect(buffer).toBeNull();
     expect(reason).toMatch(/never settled/);
   });
 
-  it('passes a per-scene screenshot timeout through, and omits it otherwise', async () => {
+  it("passes a per-scene screenshot timeout through, and keeps Playwright's default otherwise", async () => {
     // One SwiftShader frame of the heaviest scenes exceeds Playwright's default
     // action timeout; without the passthrough that reads as a hang, not as slow.
     const { page, canvas } = stubCanvas(['x', 'x']);
     await settleCanvas(page, canvas, { screenshotTimeout: 120000 });
-    expect(canvas.calls.at(-1)).toEqual({ timeout: 120000 });
+    expect(canvas.boxOptions.at(-1)).toEqual({ timeout: 120000 });
 
     const bare = stubCanvas(['y', 'y']);
     await settleCanvas(bare.page, bare.canvas);
-    expect(bare.canvas.calls.at(-1)).toEqual({});
+    expect(bare.canvas.boxOptions.at(-1)).toEqual({ timeout: 30000 });
+  });
+
+  it('captures the whole pixels that enclose the target, as an element screenshot does', async () => {
+    const box = { x: 0.5, y: 10.2, width: 100.4, height: 50 };
+    const { page, canvas } = stubCanvas(['x', 'x'], NO_TEXTURE_WORK, box);
+    await settleCanvas(page, canvas);
+    expect(canvas.calls.at(-1)).toEqual({
+      method: 'Page.captureScreenshot',
+      params: { format: 'png', clip: { x: 0, y: 10, width: 101, height: 51, scale: 1 } },
+    });
+  });
+
+  it('reports a shot that outlasts its timeout as a TimeoutError', async () => {
+    const { page, canvas, session } = stubCanvas(['x', 'x']);
+    session.send = () => new Promise(() => {});
+    await expect(settleCanvas(page, canvas, { screenshotTimeout: 5 })).rejects.toMatchObject({
+      name: 'TimeoutError',
+    });
+  });
+
+  it('refuses a target that is not on the page rather than capturing the wrong box', async () => {
+    const { page, canvas } = stubCanvas(['x', 'x']);
+    canvas.boundingBox = async () => null;
+    await expect(settleCanvas(page, canvas)).rejects.toThrow(/capture target.*not visible/);
   });
 
   it('takes no shot until the texture work status has detached', async () => {
@@ -106,11 +141,11 @@ describe('settleCanvas', () => {
       },
       count: async () => 0,
     };
-    const { page, canvas } = stubCanvas(['x', 'x'], status);
-    const screenshot = canvas.screenshot;
-    canvas.screenshot = async (options) => {
+    const { page, canvas, session } = stubCanvas(['x', 'x'], status);
+    const send = session.send;
+    session.send = async (method, params) => {
       events.push('shot');
-      return screenshot(options);
+      return send(method, params);
     };
     await settleCanvas(page, canvas);
 
