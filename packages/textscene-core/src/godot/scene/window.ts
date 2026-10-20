@@ -42,7 +42,7 @@ const ContentScaleAspect = {
 } as const;
 
 /** `Window::ContentScaleStretch` without `CONTENT_SCALE_STRETCH_` (`window.h:87-90`, 4.7.2 `:86-89`). */
-const ContentScaleStretch = {
+export const ContentScaleStretch = {
   FRACTIONAL: 0,
   INTEGER: 1,
 } as const;

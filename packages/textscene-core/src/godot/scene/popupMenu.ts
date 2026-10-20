@@ -27,7 +27,7 @@ const SystemMenu = {
   DOCK_MENU_ID: 5,
 } as const;
 
-export const SYSTEM_MENU_NAMES = enumNamesByValue(SystemMenu);
+const SYSTEM_MENU_NAMES = enumNamesByValue(SystemMenu);
 
 /**
  * The system menus `popup_menu.cpp:3262` offers: every one but `MAIN_MENU_ID`, which the hint's
