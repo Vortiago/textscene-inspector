@@ -59,7 +59,7 @@ function headingRange(document: LanguageDocument, section: DocumentSection): Ran
  * The whole heading line that declares the resource id under the cursor, or undefined. A cursor
  * on a declaration's own `id=` resolves to that heading.
  */
-export function declarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
+function declarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
   const reference = referenceAt(document, position);
   const declaration = reference && declarationOf(document, reference);
   return declaration && headingRange(document, declaration);
@@ -69,7 +69,7 @@ export function declarationRangeAt(document: LanguageDocument, position: Positio
  * The whole `[node]` heading line that the node path under the cursor names, or undefined. The
  * path is a `parent=`, `from=` or `to=` value, and a path into instanced content names none.
  */
-export function nodeDeclarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
+function nodeDeclarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
   const reference = nodePathReferenceAt(document, position);
   const section = reference && nodeSectionOfPath(document, reference.path);
   return section && headingRange(document, section);

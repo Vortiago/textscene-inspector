@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
-import { declarationRangeAt, nodeDeclarationRangeAt, resPathAt, resPathOccurrences } from './navigation';
+import { definitionRangeAt, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
 
@@ -18,9 +18,9 @@ paths = ["res://a.png", "res://b.png"]
 
 const document = new LanguageDocument(SCENE);
 
-describe('declarationRangeAt', () => {
+describe('definitionRangeAt of a resource id', () => {
   it('resolves an ExtResource reference to its declaration heading', () => {
-    expect(declarationRangeAt(document, { line: 7, character: 15 })).toEqual({
+    expect(definitionRangeAt(document, { line: 7, character: 15 })).toEqual({
       start: { line: 2, character: 0 },
       end: {
         line: 2,
@@ -30,24 +30,24 @@ describe('declarationRangeAt', () => {
   });
 
   it('resolves a SubResource reference to its declaration heading', () => {
-    expect(declarationRangeAt(document, { line: 8, character: 10 })?.start.line).toBe(4);
+    expect(definitionRangeAt(document, { line: 8, character: 10 })?.start.line).toBe(4);
   });
 
   it("resolves a declaration's own id= to its heading", () => {
     const line = document.lines[4]!;
-    expect(declarationRangeAt(document, { line: 4, character: line.indexOf('Anim_1') + 1 })?.start.line).toBe(
+    expect(definitionRangeAt(document, { line: 4, character: line.indexOf('Anim_1') + 1 })?.start.line).toBe(
       4
     );
   });
 
   it('gives nothing off every reference', () => {
-    expect(declarationRangeAt(document, { line: 9, character: 0 })).toBeUndefined();
+    expect(definitionRangeAt(document, { line: 9, character: 0 })).toBeUndefined();
   });
 
   it('gives nothing for a reference whose declaration is absent', () => {
     const dangling = new LanguageDocument('texture = ExtResource("missing")\n');
 
-    expect(declarationRangeAt(dangling, { line: 0, character: 12 })).toBeUndefined();
+    expect(definitionRangeAt(dangling, { line: 0, character: 12 })).toBeUndefined();
   });
 });
 
@@ -118,7 +118,7 @@ describe('resPathOccurrences', () => {
   });
 });
 
-describe('nodeDeclarationRangeAt', () => {
+describe('definitionRangeAt of a node path', () => {
   const SCENE_PATHS = [
     '[gd_scene format=3]',
     '',
@@ -148,7 +148,7 @@ describe('nodeDeclarationRangeAt', () => {
   function headingLineAt(lineText: string, value: string): number | undefined {
     const line = paths.lines.findIndex((candidate) => candidate.startsWith(lineText));
     const position = { line, character: paths.lines[line]!.indexOf(value) + 1 };
-    return nodeDeclarationRangeAt(paths, position)?.start.line;
+    return definitionRangeAt(paths, position)?.start.line;
   }
 
   it('resolves a from= path to the heading of the node it names', () => {
@@ -192,14 +192,14 @@ describe('nodeDeclarationRangeAt', () => {
   });
 });
 
-describe('nodeDeclarationRangeAt on a heading tag named like an Object property', () => {
+describe('definitionRangeAt of a node path on a heading tag named like an Object property', () => {
   it('gives nothing for a constructor heading', () => {
     const odd = new LanguageDocument('[constructor name="A"]\n');
-    expect(nodeDeclarationRangeAt(odd, { line: 0, character: 5 })).toBeUndefined();
+    expect(definitionRangeAt(odd, { line: 0, character: 5 })).toBeUndefined();
   });
 });
 
-describe('nodeDeclarationRangeAt under a %Name parent', () => {
+describe('definitionRangeAt of a node path under a %Name parent', () => {
   const UNIQUE = [
     '[node name="Root" type="Node3D"]',
     '[node name="Player" type="Node3D" parent="."]',
@@ -212,6 +212,6 @@ describe('nodeDeclarationRangeAt under a %Name parent', () => {
     const unique = new LanguageDocument(UNIQUE);
     const character = unique.lines[4]!.indexOf('Player/Hand') + 1;
 
-    expect(nodeDeclarationRangeAt(unique, { line: 4, character })?.start.line).toBe(3);
+    expect(definitionRangeAt(unique, { line: 4, character })?.start.line).toBe(3);
   });
 });
