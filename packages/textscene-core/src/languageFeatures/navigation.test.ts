@@ -2,6 +2,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
+import { NODE_TREE_HEAD } from './fixtures.testkit';
 import { definitionRangeAt, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
@@ -120,16 +121,7 @@ describe('resPathOccurrences', () => {
 
 describe('definitionRangeAt of a node path', () => {
   const SCENE_PATHS = [
-    '[gd_scene format=3]',
-    '',
-    '[node name="Root" type="Node3D"]',
-    '',
-    '[node name="Player" type="Node3D" parent="."]',
-    '',
-    '[node name="Sprite" type="Sprite3D" parent="Player"]',
-    '',
-    '[node name="Gun" type="Node3D" parent="Player/Sprite"]',
-    '',
+    ...NODE_TREE_HEAD,
     '[node name="Door" type="Node3D" parent="." instance=ExtResource("1_door")]',
     '',
     '[node name="Hinge" type="Node3D" parent="Door"]',

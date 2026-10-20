@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LanguageDocument } from './document';
-import { LINE, SCENE } from './fixtures.testkit';
+import { LINE, NODE_TREE_HEAD, SCENE } from './fixtures.testkit';
 import { documentHighlights } from './highlights';
 
 describe('documentHighlights', () => {
@@ -64,16 +64,7 @@ describe('documentHighlights', () => {
 
 describe('documentHighlights of a node path', () => {
   const text = [
-    '[gd_scene format=3]',
-    '',
-    '[node name="Root" type="Node3D"]',
-    '',
-    '[node name="Player" type="Node3D" parent="."]',
-    '',
-    '[node name="Sprite" type="Sprite3D" parent="Player"]',
-    '',
-    '[node name="Gun" type="Node3D" parent="Player/Sprite"]',
-    '',
+    ...NODE_TREE_HEAD,
     '[connection signal="a" from="Player" to="." method="_a"]',
     '[connection signal="b" from="./Player/Sprite" to="Player" method="_b"]',
   ].join('\n');
@@ -83,12 +74,17 @@ describe('documentHighlights of a node path', () => {
     documentHighlights(document, { line, character: column(line, needle) + 1 })
       .map(({ range }) => [range.start.line, range.start.character, range.end.line, range.end.character])
       .sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!);
+  /** The span of the quoted value that follows `prefix` on a line. */
+  const valueSpan = (line: number, prefix: string): number[] => {
+    const start = column(line, prefix) + prefix.length;
+    return [line, start, line, document.lines[line]!.indexOf('"', start)];
+  };
 
   const playerUses = [
-    [4, column(4, 'Player'), 4, column(4, 'Player') + 6],
-    [6, column(6, 'parent="Player"') + 8, 6, column(6, 'parent="Player"') + 14],
-    [10, column(10, 'from="Player"') + 6, 10, column(10, 'from="Player"') + 12],
-    [11, column(11, 'to="Player"') + 4, 11, column(11, 'to="Player"') + 10],
+    valueSpan(4, 'name="'),
+    valueSpan(6, 'parent="'),
+    valueSpan(10, 'from="'),
+    valueSpan(11, 'to="'),
   ];
 
   it('marks the name= and every path that resolves to the node, from its name=', () => {
