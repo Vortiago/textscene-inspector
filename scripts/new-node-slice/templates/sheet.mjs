@@ -27,14 +27,14 @@ export function sheetFile({ typeName, baseKey, intent, fixtureName, imageBasenam
   const rendersAs = {
     draws: 'TBD — one short noun phrase',
     'transform-only': 'nothing (a transform-only group)',
-    pending: 'nothing yet — not implemented',
+    pending: 'nothing yet, not implemented',
   }[intent];
   const sheetIntro = {
     draws: 'One or two sentences: what the node is, and what the previewer draws for it.',
     'transform-only':
       'This node draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008): its children still show, and that absence is the whole story.',
     pending:
-      'The previewer parses and validates this node but does not draw it yet, so it renders as an invisible transform-only fallback and its children still show.',
+      'The previewer parses and validates this node but does not draw it yet. It draws nothing, and its children still show.',
   }[intent];
   // `image:` ships commented out: a declared, uncaptured basename fails build-gallery and so the
   // web build, and recapture collects only declared ones. Uncomment it, then run

@@ -9,7 +9,7 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesCollisionHeightField3D
 
-A heightmap, regenerated in real time from the scene's geometry, that particles from nearby `GPUParticles3D` nodes collide with. The previewer neither generates nor draws it yet, so the node is an invisible transform-only fallback and its children still show.
+A heightmap, regenerated in real time from the scene's geometry, that particles from nearby `GPUParticles3D` nodes collide with. The previewer neither generates nor draws it yet, so the node draws nothing and its children still show.
 
 ## Linting
 

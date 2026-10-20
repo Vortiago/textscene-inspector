@@ -10,8 +10,8 @@ renders_as: nothing yet, Godot draws a batch of textured mesh instances, the pre
 # MultiMeshInstance2D
 
 MultiMeshInstance2D batch-draws many copies of one mesh from a MultiMesh resource. The
-previewer parses and validates it but does not draw it, so it renders as a
-transform-only fallback and its children still show.
+previewer parses and validates it but does not draw it, so it draws nothing
+and its children still show.
 
 ## Linting
 

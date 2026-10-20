@@ -23,6 +23,6 @@ describe('NavigationAgent2D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('NavigationAgent2D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('NavigationAgent2D')).toBe('transform-only');
   });
 });

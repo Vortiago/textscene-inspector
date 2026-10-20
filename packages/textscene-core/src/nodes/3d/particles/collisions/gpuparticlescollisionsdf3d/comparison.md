@@ -9,7 +9,7 @@ renders_as: nothing yet, not implemented
 
 # GPUParticlesCollisionSDF3D
 
-A baked signed distance field that particles from nearby `GPUParticles3D` nodes collide with. The previewer does not draw it or apply the collision yet, so the node is an invisible transform-only fallback and its children still show.
+A baked signed distance field that particles from nearby `GPUParticles3D` nodes collide with. The previewer does not draw it or apply the collision yet, so the node draws nothing and its children still show.
 
 ## Linting
 

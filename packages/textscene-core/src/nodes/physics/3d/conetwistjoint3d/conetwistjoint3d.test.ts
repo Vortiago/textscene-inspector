@@ -24,7 +24,7 @@ describe('ConeTwistJoint3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('ConeTwistJoint3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('ConeTwistJoint3D')).toBe('transform-only');
   });
 
   it('reads swing_span and bias nowhere: parseNode3D only knows transform and visible', () => {

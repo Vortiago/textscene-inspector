@@ -23,6 +23,6 @@ describe('RootMotionView registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('RootMotionView')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('RootMotionView')).toBe('transform-only');
   });
 });

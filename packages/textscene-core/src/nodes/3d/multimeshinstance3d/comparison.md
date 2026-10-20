@@ -9,7 +9,7 @@ renders_as: nothing yet, Godot draws a batch of mesh instances, the previewer do
 
 # MultiMeshInstance3D
 
-Instances a `MultiMesh` resource, drawing many copies of one mesh in a single call. The previewer does not draw the batch yet, so the node is an invisible transform-only fallback and its children still show.
+Instances a `MultiMesh` resource, drawing many copies of one mesh in a single call. The previewer does not draw the batch yet, so the node draws nothing and its children still show.
 
 ## Linting
 
