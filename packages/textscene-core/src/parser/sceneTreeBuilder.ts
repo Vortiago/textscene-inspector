@@ -3,10 +3,15 @@
  * it. The parser, the linter and the language features all read this one seating.
  */
 
-import type { NodeOrigin, NodePathResolution, RawNode, SceneNode } from './types';
+import type { NodePathResolution, RawNode, SceneNode } from './types';
 import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
-import { claimUniqueName, isOwnedByRoot, isUniqueNameInOwner } from '../utils/uniqueNames.js';
-import { UNLISTED, walkFromRoot, type ParentPathTree } from '../godot/string/nodePath.js';
+import {
+  claimUniqueName,
+  isInstanceBelowRoot,
+  isOwnedByRoot,
+  isUniqueNameInOwner,
+} from '../utils/uniqueNames.js';
+import { UNLISTED, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
 /** The scene tree, and the one walk over it. */
@@ -21,8 +26,8 @@ export interface SceneSeating<N extends RawNode> {
   resolve(path: string): NodePathResolution<N>;
 }
 
-const MISSING = { status: 'missing' } as const;
-const UNKNOWABLE = { status: 'unknowable' } as const;
+export const MISSING = { status: 'missing' } as const;
+export const UNKNOWABLE = { status: 'unknowable' } as const;
 
 export function seatScene<N extends SceneNode<N>>(nodes: N[]): SceneSeating<N> {
   if (nodes.length === 0) return { roots: [], resolve: () => MISSING };
@@ -95,7 +100,6 @@ function resolveSeated<N extends RawNode>(tables: SeatingTables<N>, path: string
  * needs both halves, and its lookups are the ones `get_node_or_null` performs.
  */
 interface SeatingTables<N> {
-  readonly root: N;
   /** Every seated node, keyed by the folded path its own children address it at. */
   readonly byPath: Map<string, N>;
   /** `%Name` to that path, for the nodes claiming one in the root's table. */
@@ -103,7 +107,7 @@ interface SeatingTables<N> {
   /** The seated nodes with an `instance=` ancestor below the root. */
   readonly insideInstance: Set<N>;
   /** The same tables as the walk consumes them. */
-  readonly tree: ParentPathTree;
+  readonly tree: RootWalkTables;
 }
 
 /** Tables holding only the scene root, which sits at the empty path. */
@@ -114,7 +118,6 @@ function newTables<N extends RawNode>(rootNode: N): SeatingTables<N> {
   const uniquePaths = new Map<string, string>();
   const isOpaque = (path: string): boolean => isOpaqueAt(byPath, path);
   return {
-    root: rootNode,
     byPath,
     uniquePaths,
     insideInstance: new Set(),
@@ -154,9 +157,8 @@ function canNameNode(
  * flag (`node.cpp:2225-2231`).
  */
 function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: string, node: N, parent: N): void {
-  // An instanced root is the scene's own root, so only an instance below it hides an owner.
-  const insideInstance =
-    tables.insideInstance.has(parent) || (parent !== tables.root && Boolean(parent.instance));
+  const isRoot = parent === tables.byPath.get(SCENE_ROOT_PATH);
+  const insideInstance = tables.insideInstance.has(parent) || isInstanceBelowRoot(parent, isRoot);
   if (insideInstance) tables.insideInstance.add(node);
   // A nameless heading claims no key: an empty name joins to its parent's own key.
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
@@ -212,10 +214,10 @@ function findInstanceAnchor<N extends RawNode>(
  * nothing, which Godot re-roots, or a non-root with no `parent=`, which
  * `packed_scene.cpp:207` refuses.
  */
-export function strandedNodes<N extends RawNode>(
-  all: readonly NodeOrigin<N>[],
+export function strandedNodes<H extends { readonly node: RawNode }>(
+  all: readonly H[],
   roots: readonly RawNode[]
-): NodeOrigin<N>[] {
+): H[] {
   const placed = new Set<RawNode>();
   const walk = (nodes: readonly RawNode[]): void => {
     for (const node of nodes) {

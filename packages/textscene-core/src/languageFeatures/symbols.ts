@@ -4,7 +4,8 @@
  * an outline, breadcrumbs and sticky scroll expect.
  */
 
-import type { LanguageDocument, SeatedSection } from './document.js';
+import type { LanguageDocument } from './document.js';
+import { seatedNodeTree, type SeatedSection } from './nodeSeating.js';
 import { linesRange } from './ranges.js';
 import type { DocumentSymbol, SymbolKind } from './types.js';
 
@@ -47,5 +48,5 @@ function toSymbol(document: LanguageDocument, node: SeatedSection): DocumentSymb
 
 /** Every node of the document as a hierarchical symbol, the scene root first. */
 export function documentSymbols(document: LanguageDocument): readonly DocumentSymbol[] {
-  return namedSymbols(document, document.nodeTree);
+  return namedSymbols(document, seatedNodeTree(document));
 }

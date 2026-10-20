@@ -32,6 +32,14 @@ export function isUniqueNameInOwner(node: RawNode): boolean {
 }
 
 /**
+ * Whether a node is an instance that hides its sub-scene's owner from the nodes below it. An
+ * instanced root is the scene's own root, so only an instance below the root does.
+ */
+export function isInstanceBelowRoot(node: RawNode, isRoot: boolean): boolean {
+  return !isRoot && Boolean(node.instance);
+}
+
+/**
  * Whether the scene root owns a node, so its `%Name` lands in the root's table. An explicit `owner=`
  * decides: `"."` is the root. Without one, an override heading inside an instance keeps the sub-scene's
  * owner (resource_format_text.cpp:264-265 zeroes `owner` only when `!(type == TYPE_INSTANTIATED &&
@@ -110,7 +118,7 @@ function uniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
       // An instanced root is this scene's own root, so its overrides stay claimed. An instance inside
       // the sub-scene is invisible here, so an override below one records under this file's
       // instance, and the composed owner tables re-key it.
-      const owner = parentPath !== '' && node.instance ? livePath : instanceOwner;
+      const owner = isInstanceBelowRoot(node, parentPath === '') ? livePath : instanceOwner;
       walk(node.children, path, livePath, owner);
     }
   };

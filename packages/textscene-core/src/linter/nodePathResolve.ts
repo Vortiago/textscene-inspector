@@ -10,9 +10,7 @@ import { cachedUniqueNameClaims } from '../utils/uniqueNames.js';
 import { isTypeUnknowable, parentIdentity } from './parentType.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames } from '../godot/string/nodePath.js';
 import type { NodePathResolution, RawNode, RawScene } from '../parser/types.js';
-
-const UNKNOWABLE: NodePathResolution = { status: 'unknowable' };
-const MISSING: NodePathResolution = { status: 'missing' };
+import { MISSING, UNKNOWABLE } from '../parser/sceneTreeBuilder.js';
 
 /** The direct child named `name`, mirroring `data.children.getptr(name)`. */
 function childNamed(node: RawNode, name: string): RawNode | undefined {

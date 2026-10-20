@@ -2,10 +2,11 @@
  * The node paths a heading spells in `parent=`, `from=` and `to=`, and the `[node]` heading each
  * one names. Godot writes all three relative to the scene root and walks them with
  * `get_node_or_null` from there (`resource_format_text.cpp:204-211, 371-372`), so the seated
- * scene's one walk (`LanguageDocument.nodeSectionOfPath`) resolves them.
+ * scene's one walk (`nodeSectionOfPath`) resolves them.
  */
 
 import type { DocumentSection, LanguageDocument } from './document.js';
+import { nodeSectionOfPath } from './nodeSeating.js';
 import { headingAttribute, lineRange, lineRangeContains } from './ranges.js';
 import type { Position, Range } from './types.js';
 
@@ -40,7 +41,7 @@ function buildNodeUses(document: LanguageDocument): NodeUses {
   const usesByNode = new Map<DocumentSection, NodePathReference[]>();
   for (const section of document.sections) {
     for (const reference of referencesOnHeading(section, document.lines[section.headingLine - 1] ?? '')) {
-      const node = document.nodeSectionOfPath(reference.path);
+      const node = nodeSectionOfPath(document, reference.path);
       if (!node) continue;
       const uses = usesByNode.get(node) ?? [];
       uses.push(reference);
@@ -86,7 +87,7 @@ export function nodeNameRange(document: LanguageDocument, section: DocumentSecti
 /** The node whose `name=` or path value the cursor is on, or undefined. */
 export function nodeAt(document: LanguageDocument, position: Position): DocumentSection | undefined {
   const reference = nodePathReferenceAt(document, position);
-  if (reference) return document.nodeSectionOfPath(reference.path);
+  if (reference) return nodeSectionOfPath(document, reference.path);
   const section = document.sectionAt(position.line + 1);
   if (section?.tag !== 'node' || section.headingLine !== position.line + 1) return undefined;
   const name = nodeNameRange(document, section);

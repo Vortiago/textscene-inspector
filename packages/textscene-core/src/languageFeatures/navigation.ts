@@ -7,6 +7,7 @@
 import { RES_PATH_BODY_SOURCE } from '../godot/string/string.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 import { nodePathReferenceAt } from './nodePathRefs.js';
+import { nodeSectionOfPath } from './nodeSeating.js';
 import { lineRange, lineRangeContains, linesRange } from './ranges.js';
 import { declarationOf, referenceAt } from './resourceRefs.js';
 import type { Position, Range } from './types.js';
@@ -71,7 +72,7 @@ function declarationRangeAt(document: LanguageDocument, position: Position): Ran
  */
 function nodeDeclarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
   const reference = nodePathReferenceAt(document, position);
-  const section = reference && document.nodeSectionOfPath(reference.path);
+  const section = reference && nodeSectionOfPath(document, reference.path);
   return section && headingRange(document, section);
 }
 

@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { StrictTscnParser } from '../linter/StrictTscnParser';
 import { LanguageDocument } from './document';
+import { nodeSectionOfPath } from './nodeSeating';
 import { INSTANCED_TREE, NODE_TREE_HEAD } from './fixtures.testkit';
 
 const SCENES = {
@@ -28,7 +29,7 @@ function headingLinesOfEnds(text: string): { path: string; linter?: number; lang
       return {
         path,
         linter: resolution.status === 'found' ? lines.get(resolution.node)?.heading : undefined,
-        languageFeatures: document.nodeSectionOfPath(path)?.headingLine,
+        languageFeatures: nodeSectionOfPath(document, path)?.headingLine,
       };
     })
   );

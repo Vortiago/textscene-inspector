@@ -29,11 +29,17 @@ export const UNIQUE_NODE_PREFIX = '%';
 /** A walk that reached content this file does not list, where Godot may yet find a node. */
 export const UNLISTED = Symbol('unlisted');
 
-/** What {@link walk} reads besides the path: each is absent for a caller that holds no tree. */
-interface WalkTables {
-  readonly uniquePaths?: ReadonlyMap<string, string>;
-  readonly exists?: (path: string) => boolean;
-  readonly isOpaque?: (path: string) => boolean;
+/**
+ * The tables Godot's walk reads over the scene seated so far. {@link walk} takes each as optional,
+ * for a caller that holds no tree.
+ */
+export interface RootWalkTables {
+  /** Whether a path names a node yet: the child lookup at each descent. */
+  readonly exists: (path: string) => boolean;
+  /** Whether the node at a path keeps children or `%Name` claims another file lists. */
+  readonly isOpaque: (path: string) => boolean;
+  /** `%Name` to the path of the node claiming it, in the scene root's table. */
+  readonly uniquePaths: ReadonlyMap<string, string>;
 }
 
 /**
@@ -47,7 +53,7 @@ function walk(
   base: readonly string[],
   relative: string,
   floor: number,
-  { uniquePaths, exists, isOpaque }: WalkTables = {}
+  { uniquePaths, exists, isOpaque }: Partial<RootWalkTables> = {}
 ): string[] | null | typeof UNLISTED {
   let segments = [...base];
   for (const part of nodePathWalkNames(relative)) {
@@ -91,16 +97,6 @@ export function resolveRelativePath(
   return Array.isArray(end) ? end.join('/') : null;
 }
 
-/** The tables Godot's walk reads for {@link walkFromRoot}: the scene seated so far. */
-export interface ParentPathTree {
-  /** Whether a path names a node yet: the child lookup at each descent. */
-  readonly exists: (path: string) => boolean;
-  /** Whether the node at a path keeps children or `%Name` claims another file lists. */
-  readonly isOpaque: (path: string) => boolean;
-  /** `%Name` to the path of the node claiming it, in the scene root's table. */
-  readonly uniquePaths: ReadonlyMap<string, string>;
-}
-
 /**
  * Whether a path is one the root can walk: an empty `NodePath("")` returns nullptr (node.cpp:1894),
  * and the root, off-tree while instantiate runs, refuses an absolute `/root/…` (node.cpp:1898).
@@ -115,7 +111,7 @@ function walksFromRoot(path: string | undefined): path is string {
  * `parent=`, `from=` and `to=` path (`resource_format_text.cpp:212`) that instantiate resolves from
  * the root with `get_node_or_null` (`packed_scene.cpp:161`), so the root is the floor.
  */
-export function walkFromRoot(path: string, tree: ParentPathTree): string | null | typeof UNLISTED {
+export function walkFromRoot(path: string, tree: RootWalkTables): string | null | typeof UNLISTED {
   // The saver never writes a `%Name` (resource_format_text.cpp:2018), yet on 4.7.2 the loader seats
   // `parent="%Player"` under its claimant and warns only when nothing claims it.
   if (!walksFromRoot(path)) return null;
