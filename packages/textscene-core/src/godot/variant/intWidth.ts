@@ -32,7 +32,7 @@ const UINT32_MAX = 4294967295;
 /**
  * int64's own range is [-2^63, 2^63), but past 2^53 a double no longer holds the integer the file
  * states. The reader's limit is the tighter of the two, so it is the bound, and `storedFromFloat`
- * refuses past it at every width.
+ * and `statedFromFloat` refuse past it at every width.
  */
 const INT64_MIN = Number.MIN_SAFE_INTEGER;
 const INT64_MAX = Number.MAX_SAFE_INTEGER;
@@ -83,7 +83,7 @@ const INT64_TRUE_MIN = -(2 ** 63);
 const INT64_TRUE_LIMIT = 2 ** 63;
 
 /**
- * Whether a refusal is this reader's limit rather than an engine alteration: {@link storedFromFloat}
+ * Whether a refusal is this reader's limit rather than an engine alteration: {@link statedFromFloat}
  * gives NaN for both. At uint8, int32 and uint32 the type is narrower than a double, so NaN means the
  * engine altered it. At int64 only the double loses a value inside the type's range. Past 2^63 a FLOAT
  * is undefined (`variant.h:369-370`) and an INT saturates (`ustring.cpp:2650-2658`), both alterations.

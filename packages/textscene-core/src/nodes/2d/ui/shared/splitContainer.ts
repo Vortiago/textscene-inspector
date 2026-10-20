@@ -6,7 +6,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
-import { ruleInt } from '../../../../godot/variant/int.js';
+import { slotInt } from '../../../../godot/variant/int.js';
 import type { ControlProperties } from '../control/types';
 import { parseControl } from '../control/parser';
 
@@ -45,7 +45,7 @@ function parseSplitOffsets(properties: Record<string, string>): number[] | undef
         .split(',')
         .map((element) => element.trim())
         .filter((element) => element.length > 0)
-        .map((element) => ruleInt(element) ?? 0);
+        .map((element) => slotInt(element) ?? 0);
     } else if (key === 'split_offset') {
       const scalar = parseOptionalInt(properties['split_offset']);
       if (scalar === undefined) continue;
