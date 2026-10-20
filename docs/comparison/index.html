@@ -6179,8 +6179,8 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>An emissive sphere at <code>emission_energy = 2.0</code> glows cyan in both, and the preview environment blooms it. <code>emission_operator</code> is honoured, including MULTIPLY with no texture, which emits nothing. <code>emission_on_uv2</code> samples the mesh's UV2, and the <code>glb-lightmap-uv2</code> golden draws it through a GLB's unwrapped UV2.</p>
-<ul><li><strong>Approximated</strong> <code>emission_intensity</code> is ignored. <code>emission_energy_multiplier</code> alone drives the strength.</li><li><strong>Approximated</strong> A PrimitiveMesh with <code>add_uv2</code> gets no UV2 here, so <code>emission_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
+        <div class="prose"><p>An emissive sphere at <code>emission_energy = 2.0</code> glows cyan in both, and the preview environment blooms it. <code>emission_operator</code> is honoured, including MULTIPLY with no texture, which emits nothing. <code>emission_on_uv2</code> samples the mesh's UV2. The <code>glb-lightmap-uv2</code> golden draws it through a GLB's unwrapped UV2, and the <code>primitive-mesh-uv2</code> golden through the UV2 a SphereMesh and a CapsuleMesh build under <code>add_uv2</code>.</p>
+<ul><li><strong>Approximated</strong> <code>emission_intensity</code> is ignored. <code>emission_energy_multiplier</code> alone drives the strength.</li><li><strong>Approximated</strong> A BoxMesh, PlaneMesh, QuadMesh, PrismMesh, CylinderMesh or TorusMesh with <code>add_uv2</code> gets no UV2 here. <code>emission_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Emission texture</h3><span class="status st-done">Done</span></div>
@@ -6270,7 +6270,7 @@ tr:last-child td{border-bottom:0}
 <ul><li><strong>Approximated</strong> The sheen is a crescent where view meets light, not an even ring round the silhouette.</li></ul></div>
       </section>
       <section class="prop">
-        <div class="prop-head"><h3>Anisotropy</h3><span class="status st-limitation">Limitation</span></div>
+        <div class="prop-head"><h3>Anisotropy</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-material-anisotropy-godot.png" alt="Godot render of Anisotropy">
@@ -6284,11 +6284,11 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>anisotropy</code> stretches the specular highlight along one direction. Both engines show a brushed-metal streak.</p>
-<ul><li><strong>Approximated</strong> three derives the tangent frame per pixel from the UVs, not from the mesh's tangents, so the streak reads faceted and turned from Godot's ring.</li></ul></div>
+        <div class="prose"><p><code>anisotropy</code> stretches the specular highlight along the mesh's tangent. The SphereMesh carries Godot's tangents, so both engines draw a soft ring round the pole.</p>
+<ul><li><strong>Approximated</strong> A BoxMesh, PlaneMesh, QuadMesh, PrismMesh, CylinderMesh, TorusMesh or ArrayMesh carries no tangents here. three derives the tangent frame per pixel from the UVs, so the streak reads faceted.</li></ul></div>
       </section>
       <section class="prop">
-        <div class="prop-head"><h3>Anisotropy flowmap</h3><span class="status st-limitation">Limitation</span></div>
+        <div class="prop-head"><h3>Anisotropy flowmap</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-material-anisotropy-flowmap-godot.png" alt="Godot render of Anisotropy flowmap">
@@ -6302,8 +6302,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p><code>anisotropy_flowmap</code> carries direction in R/G and strength in alpha. The image is repacked alpha to blue before it reaches <code>anisotropyMap</code>, and both engines band the mapped sphere.</p>
-<ul><li><strong>Approximated</strong> The bright lobe lands on the other side of centre, and band edges step hard where Godot's blur. The tangent frame comes from the UVs, not the mesh, and the glow blooms the misplaced lobe.</li><li><strong>Approximated</strong> A hard seam runs down the large sphere, where Godot's surface is smooth.</li></ul></div>
+        <div class="prose"><p><code>anisotropy_flowmap</code> carries direction in R/G and strength in alpha. The image is repacked alpha to blue before it reaches <code>anisotropyMap</code>. The flowmap turns the SphereMesh's own tangents. Both engines put the bright lobe right of centre on the large sphere, with a crease above it where the direction turns.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Ambient occlusion</h3><span class="status st-done">Done</span></div>
@@ -6321,7 +6320,7 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>The left plate reads a checkerboard AO map at <code>ao_light_affect = 1.0</code>, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. <code>ao_texture_channel</code> picks the map channel, and <code>ao_on_uv2</code> samples the mesh's UV2.</p>
-<ul><li><strong>Approximated</strong> A PrimitiveMesh with <code>add_uv2</code> gets no UV2 here, so <code>ao_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
+<ul><li><strong>Approximated</strong> A BoxMesh, PlaneMesh, QuadMesh, PrismMesh, CylinderMesh or TorusMesh with <code>add_uv2</code> gets no UV2 here. <code>ao_on_uv2</code> on one samples the map's top-left texel, where Godot reads the generated UV2.</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Diffuse mode</h3><span class="status st-done">Done</span></div>
@@ -6415,7 +6414,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects. Each field falls back to Godot's default through the shared value decoders, so a malformed <code>roughness</code> renders with default roughness. A texture reference it cannot resolve leaves the slot empty, and the mesh renders untextured.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Approximated</strong> Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.</li><li><strong>Approximated</strong> Under msaa_3d, <code>ALPHA_TO_COVERAGE_AND_TO_ONE</code> stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.</li><li><strong>Approximated</strong> <code>ALPHA_HASH</code> keeps about Godot's share of pixels but not the same pixels, as the ported hash's <code>fract(1e4 * sin())</code> rounds differently on each GPU (<code>scene_forward_aa_inc.glsl:3-39</code>).</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.</li><li><strong>Approximated</strong> A ViewportTexture outside the albedo slot ignores <code>uv1_scale</code>, <code>uv1_offset</code>, <code>texture_repeat</code> and a nearest <code>texture_filter</code>, as it samples its target clamped.</li><li><strong>Approximated</strong> A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.</li></ul></div>
+<ul><li><strong>Approximated</strong> Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.</li><li><strong>Approximated</strong> Under msaa_3d, <code>ALPHA_TO_COVERAGE_AND_TO_ONE</code> stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.</li><li><strong>Approximated</strong> <code>ALPHA_HASH</code> keeps about Godot's share of pixels but not the same pixels, as the ported hash's <code>fract(1e4 * sin())</code> rounds differently on each GPU (<code>scene_forward_aa_inc.glsl:3-39</code>).</li><li><strong>Shader missing</strong> <code>proximity_fade_*</code> and <code>distance_fade_*</code> decide the pass but are not rendered, so the surface stays at full opacity.</li><li><strong>Approximated</strong> Godot measures V from the image top and three from the bottom, so a non-integer <code>uv1_scale.y</code> or a non-zero <code>uv1_offset.y</code> shifts V differently.</li><li><strong>Approximated</strong> Under <code>uv1_world_triplanar</code>, <code>uv1_offset</code> is in world units and is not converted.</li><li><strong>Approximated</strong> Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.</li><li><strong>Approximated</strong> A ViewportTexture outside the albedo slot ignores <code>uv1_scale</code>, <code>uv1_offset</code>, <code>texture_repeat</code> and a nearest <code>texture_filter</code>, as it samples its target clamped.</li></ul></div>
     </article>
     <article class="sheet" data-type="StaticBody2D" hidden>
       <header class="sheet-head">
