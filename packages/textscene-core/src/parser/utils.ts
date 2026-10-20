@@ -1,6 +1,18 @@
+/** Zero-based character offsets on the heading line, `end` exclusive. */
+export interface ValueSpan {
+  start: number;
+  end: number;
+}
+
 export interface ParsedHeading {
   type: string;
   attributes: Record<string, string>;
+}
+
+/** A heading read from a line, with where each attribute's value sits on that line. */
+export interface SpannedHeading extends ParsedHeading {
+  /** Inside its quotes for a string, the raw text for any other value. */
+  valueSpans: Record<string, ValueSpan>;
 }
 
 /**
@@ -152,30 +164,42 @@ function stringLiteralBody(value: string): string | null {
 }
 
 /**
- * Strip a heading value's quotes and decode `\"`, both or neither: decoding an
- * unclosed value destroys the `\"` that keeps it re-parseable. Other escapes are a node
- * parser's business ({@link unquoteString}), and a structured value stays verbatim.
+ * A heading value's content and the width of the quote on each side of it. A whole
+ * string loses its quotes and decodes `\"`, both or neither: decoding an unclosed value
+ * destroys the `\"` that keeps it re-parseable. Other escapes are a node parser's
+ * business ({@link unquoteString}), and a structured value stays verbatim.
  */
-function unquoteHeadingValue(value: string): string {
+function readHeadingValue(value: string): { content: string; quoteWidth: 0 | 1 } {
   // An opening quote and nothing else carries no content, and the empty string
   // is what says so: `name` has to stay falsy for the strict parser to go on
   // reporting it missing.
-  if (value === '"') return '';
+  if (value === '"') return { content: '', quoteWidth: 0 };
   // The value was captured with the same scanner, so the two agree on where the
   // string ends.
-  if (!isWholeString(value)) return value;
+  if (!isWholeString(value)) return { content: value, quoteWidth: 0 };
   const inner = value.slice(1, -1);
-  return inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner;
+  return { content: inner.includes('\\') ? inner.replace(/\\"/g, '"') : inner, quoteWidth: 1 };
 }
 
-export function parseHeading(line: string): ParsedHeading | null {
+/**
+ * An object with no prototype, so an attribute spelled `__proto__` is a key like any
+ * other and cannot reach `Object.prototype`.
+ */
+function keyedByAttribute<T>(): Record<string, T> {
+  return Object.create(null) as Record<string, T>;
+}
+
+export function parseHeading(line: string): SpannedHeading | null {
   const trimmed = line.trim();
 
   if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
     return null;
   }
 
-  const content = trimmed.slice(1, -1).trim();
+  const inner = trimmed.slice(1, -1);
+  const content = inner.trim();
+  // Offset of `content` within `line`: the white space before `[` and before the type.
+  const contentOffset = line.length - line.trimStart().length + 1 + (inner.length - inner.trimStart().length);
 
   // No whitespace means `spaceIndex === content.length`, so the type is the
   // whole content and the attribute scan runs over an empty string.
@@ -183,7 +207,9 @@ export function parseHeading(line: string): ParsedHeading | null {
   const type = content.slice(0, spaceIndex);
   const attributesStr = content.slice(spaceIndex);
 
-  const attributes: Record<string, string> = {};
+  const attributes = keyedByAttribute<string>();
+  const valueSpans = keyedByAttribute<ValueSpan>();
+  const attributesOffset = contentOffset + spaceIndex;
   let pos = 0;
   const len = attributesStr.length;
 
@@ -232,10 +258,15 @@ export function parseHeading(line: string): ParsedHeading | null {
     pos = nextPos;
     if (!rawValue) continue;
 
-    attributes[key] = unquoteHeadingValue(rawValue);
+    const { content: value, quoteWidth } = readHeadingValue(rawValue);
+    attributes[key] = value;
+    valueSpans[key] = {
+      start: attributesOffset + nextPos - rawValue.length + quoteWidth,
+      end: attributesOffset + nextPos - quoteWidth,
+    };
   }
 
-  return { type, attributes };
+  return { type, attributes, valueSpans };
 }
 
 export function parseProperty(line: string): { key: string; value: string } | null {
