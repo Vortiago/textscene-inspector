@@ -3,7 +3,7 @@
  * of a packed tuple slot, and the nested index arrays of a polygon list.
  */
 import { parseGodotFloat } from '../../godot/variant/number.js';
-import { parseGodotInt } from '../../godot/variant/int.js';
+import { int32Elements } from '../../godot/variant/packedInt32.js';
 import { splitTopLevel } from '../../godot/string/string.js';
 import {
   packedArrayBody,
@@ -114,7 +114,7 @@ const PACKED_INT32_CALLS = packedArrayCallAnywhere('PackedInt32Array');
  * takes a `const Array &`), measured on 4.6.3 as two sub-polygons.
  */
 export function parsePackedInt32Arrays(value: string): number[][] {
-  return subArrayBodies(value).map((body) => parseIndices(body.trim(), value));
+  return subArrayBodies(value).map((body) => parseIndices(body, value));
 }
 
 /** The body of each sub-array, in whichever spelling the value holds. */
@@ -132,17 +132,14 @@ function subArrayBodies(value: string): string[] {
 
 /** One sub-array's indices. `value` is the whole slot, for the error message. */
 function parseIndices(body: string, value: string): number[] {
-  if (body === '') return [];
-  return body.split(',').map((s) => {
-    const num = parseGodotInt(s);
-    // A body Godot's tokenizer refuses throws rather than become a NaN
-    // index, and `2e1` reads as the 20 Godot loads. A non-finite would clear
-    // every range check and index arbitrary geometry.
-    if (num === null || !Number.isFinite(num)) {
-      throw new Error(`Invalid number in PackedInt32Array: ${value}`);
-    }
-    return num;
-  });
+  const indices = int32Elements(body);
+  // A body Godot's tokenizer refuses throws rather than become a NaN
+  // index, and `2e1` reads as the 20 Godot loads. An unstorable element would
+  // clear every range check and index arbitrary geometry.
+  if (indices === null || indices.some(Number.isNaN)) {
+    throw new Error(`Invalid number in PackedInt32Array: ${value}`);
+  }
+  return indices;
 }
 
 /**

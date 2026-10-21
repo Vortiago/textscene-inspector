@@ -17,7 +17,7 @@ export const JOINT_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // `_update_joints` (:1561) re-derives the same values, so a report would fire on engine output:
   // format checks only.
   bone_name: v.quotedString('bone_name'),
-  bone: v.strictInt('bone'),
+  bone: v.int('bone'),
 
   // :321, PROPERTY_HINT_ENUM over get_hint_rotation_axis().
   // set_joint_rotation_axis (:1001) assigns the static_cast: warning.

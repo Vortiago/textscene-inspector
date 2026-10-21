@@ -13,11 +13,37 @@ import { idTrailEnd } from './idTrail.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
-/** The built tree, and the copy each heading's node became in it. */
+/** The built tree, the copy each heading's node became in it, and the path of each copy. */
 export interface SceneTree<N> {
   readonly roots: N[];
   /** Heading node to its copy in `roots`. A heading absent here is unreachable from the root. */
   readonly seated: ReadonlyMap<N, N>;
+  /**
+   * Every seated copy by its root-relative path, the root at the empty path. A later sibling of the
+   * same name replaces the earlier one, as a running game's `_add_child_nocheck` does
+   * (`node.cpp:1656`). The editor renames the later one instead (`packed_scene.cpp:517-536`).
+   */
+  readonly byPath: ReadonlyMap<string, N>;
+  /** The path of each seated copy with a name, a copy a later sibling replaced in `byPath` included. */
+  readonly pathOf: ReadonlyMap<N, string>;
+  /** `%Name` to the path of the node claiming it. */
+  readonly uniquePaths: ReadonlyMap<string, string>;
+}
+
+/** The tables `resolveParentPath` walks a path over `built` with. */
+export function parentPathTree<N extends RawNode>({ byPath, uniquePaths }: SceneTree<N>): ParentPathTree {
+  return { exists: (path) => canNameNode(byPath, path), uniquePaths };
+}
+
+/** The tree of a file with no `[node]` heading, where no path names a node. */
+function emptyTree<N>(): SceneTree<N> {
+  return {
+    roots: [],
+    seated: new Map(),
+    byPath: new Map(),
+    pathOf: new Map(),
+    uniquePaths: new Map(),
+  };
 }
 
 /**
@@ -25,7 +51,7 @@ export interface SceneTree<N> {
  * "." is the root, "Foo/Bar" is root/Foo/Bar.
  */
 export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): SceneTree<N> {
-  if (origins.length === 0) return { roots: [], seated: new Map() };
+  if (origins.length === 0) return emptyTree();
 
   // Heading 0 is the root when nothing is parentless: `packed_scene.cpp:218-219` makes
   // `i == 0` the root, so no later heading is a root too. Returning the flat list as
@@ -65,7 +91,8 @@ export function buildSceneTree<N extends SceneNode<N>>(origins: readonly NodeOri
     reRoot(tables, node);
   }
 
-  return { roots: [tables.root], seated };
+  const { root, byPath, pathOf, uniquePaths } = tables;
+  return { roots: [root], seated, byPath, pathOf, uniquePaths };
 }
 
 /**
@@ -128,6 +155,8 @@ interface BuildTables<N> {
   readonly rootChildNames: Set<string>;
   /** Every seated node, keyed by the folded path its own children address it at. */
   readonly byPath: Map<string, N>;
+  /** The inverse of `byPath`, keeping a node a later sibling replaced there. */
+  readonly pathOf: Map<N, string>;
   /** `%Name` to that path, for the nodes claiming one. */
   readonly uniquePaths: Map<string, string>;
   /** The same two tables as the walk consumes them. */
@@ -148,6 +177,7 @@ function newTables<N extends SceneNode<N>>(rootNode: N): BuildTables<N> {
     seated,
     rootChildNames: new Set<string>(),
     byPath,
+    pathOf: new Map([[root, SCENE_ROOT_PATH]]),
     uniquePaths,
     tree: { exists: (path) => canNameNode(byPath, path), uniquePaths },
   };
@@ -181,6 +211,7 @@ function registerPath<N extends RawNode>(tables: BuildTables<N>, parentPath: str
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
+  tables.pathOf.set(node, path);
   if (isUniqueNameInOwner(node)) claimUniqueName(tables.uniquePaths, node.name, path);
 }
 

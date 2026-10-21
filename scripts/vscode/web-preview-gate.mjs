@@ -10,8 +10,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { open } from '@vscode/test-web';
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../showcase/browser.mjs';
+import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
 import { preserveWebglDrawingBuffer, stabilizeCanvas, writeCanvasPng } from './canvasReadback.mjs';
 import { installFolderPicker, readFolderFiles } from './webFolder.mjs';
 import {
@@ -111,7 +110,7 @@ async function main() {
     testRunnerDataDir: path.join(EXTENSION_DIR, '.vscode-test-web'),
     port: PORT,
   });
-  const browser = await chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
+  const browser = await launchSwiftShaderBrowser();
   let failures;
   try {
     const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });

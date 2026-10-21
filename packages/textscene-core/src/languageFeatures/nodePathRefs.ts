@@ -1,16 +1,15 @@
 /**
  * The node paths a heading spells in `parent=`, `from=` and `to=`, and the `[node]` heading each
- * one names. Godot writes all three relative to the scene root and walks them with
- * `get_node_or_null` from there (`resource_format_text.cpp:204-211, 371-372`), so one walk
- * (`resolveParentPath`) resolves them. A path into an instanced scene names no heading here.
+ * one names. The loader stores a `parent=` as written (`resource_format_text.cpp:205-212`) and a
+ * connection end simplified (`:370-371`). Instantiate walks each from the scene root with
+ * `get_node_or_null` (`packed_scene.cpp:157-165`). A path into an instanced scene names no heading.
  */
 
-import { resolveParentPath, type ParentPathTree } from '../godot/string/nodePath.js';
-import { serialChildName } from '../godot/string/nodeName.js';
-import { reparentedName } from '../godot/scene/packedScene.js';
-import { headingsRefuseInstantiate } from '../parser/instantiateRefusal.js';
-import { getAncestorPaths, joinPath, SCENE_ROOT_PATH } from '../utils/nodePath.js';
-import { claimsUniqueName, claimUniqueName, UNIQUE_NAME_PROPERTY } from '../utils/uniqueNames.js';
+import { resolveParentPath, simplifiedNodePath, type ParentPathTree } from '../godot/string/nodePath.js';
+import { parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
+import { createRawNode } from '../parser/rawNode.js';
+import { buildSceneTree, parentPathTree } from '../parser/sceneTreeBuilder.js';
+import type { NodeOrigin, RawNode } from '../parser/types.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 import { headingAttribute, lineRange, lineRangeContains } from './ranges.js';
 import type { Position, Range } from './types.js';
@@ -21,16 +20,19 @@ const PATH_ATTRIBUTES: ReadonlyMap<string, readonly string[]> = new Map([
   ['connection', ['from', 'to']],
 ]);
 
-/** A node path as written, and where its value sits. */
-export interface NodePathReference {
+/** A node path as the loader stores it, and where its written value sits. */
+interface NodePathReference {
   readonly path: string;
   readonly range: Range;
 }
 
-/** The `[node]` headings of a file, by the root-relative path each declares. */
+/** The `[node]` headings of a file, seated as Godot seats them. */
 interface NodeTable {
+  /** Each seated heading by its root-relative path, the root at the empty path. */
   readonly byPath: ReadonlyMap<string, DocumentSection>;
-  /** What `resolveParentPath` reads: the paths a descent may enter, and the `%Name` claims. */
+  /** The root-relative path of each seated heading with a name. */
+  readonly pathOf: ReadonlyMap<DocumentSection, string>;
+  /** What `resolveParentPath` reads: the child lookup at each descent, and the `%Name` claims. */
   readonly tree: ParentPathTree;
   /** The path references that resolve to each node heading, in line order. */
   readonly usesByNode: ReadonlyMap<DocumentSection, readonly NodePathReference[]>;
@@ -39,9 +41,9 @@ interface NodeTable {
 /** Written only by {@link nodeTableOf}. An entry lives as long as its document. */
 const nodeTables = new WeakMap<LanguageDocument, NodeTable>();
 
-/** The value of a heading's `unique_name_in_owner` property, or undefined without one. */
-function uniqueNameValueOf(section: DocumentSection): string | undefined {
-  return section.properties.find(({ storedKey }) => storedKey === UNIQUE_NAME_PROPERTY)?.value;
+/** The path the loader stores for a written value: it simplifies a connection end and nothing else. */
+function storedPath(tag: string, written: string): string {
+  return tag === 'connection' ? simplifiedNodePath(written) : written;
 }
 
 /** The node paths a heading line spells. */
@@ -49,76 +51,48 @@ function referencesOnHeading(section: DocumentSection, lineText: string): NodePa
   const line = section.headingLine - 1;
   return (PATH_ATTRIBUTES.get(section.tag) ?? []).flatMap((key) => {
     const attribute = headingAttribute(lineText, key);
-    return attribute ? [{ path: attribute.value, range: lineRange(line, attribute.span) }] : [];
+    if (!attribute) return [];
+    return [{ path: storedPath(section.tag, attribute.value), range: lineRange(line, attribute.span) }];
   });
 }
 
-/**
- * The first `[node]` heading with no `parent=`: the scene root, seated at the empty path before any
- * other, as `buildSceneTree` does.
- */
-function sceneRootOf(document: LanguageDocument): DocumentSection | undefined {
-  return document.sections.find(({ tag, attributes }) => tag === 'node' && attributes.parent === undefined);
+/** A section's properties as the parser keys a node's raw properties: by the key the engine stores. */
+function rawPropertiesOf(section: DocumentSection): Record<string, string> {
+  return Object.fromEntries(section.properties.map(({ storedKey, value }) => [storedKey, value]));
 }
 
-/**
- * Whether Godot gives up on the scene before it re-roots a vanished `parent=`, read off the `[node]`
- * headings as `refusesToInstantiate` reads the tree builder's.
- */
-function refusesToInstantiateScene(nodes: readonly DocumentSection[]): boolean {
-  const [root] = nodes;
-  const rootIsUnidentified = !root?.attributes.type && !root?.attributes.instance;
-  return headingsRefuseInstantiate(
-    nodes.map(({ attributes }) => attributes.parent),
-    rootIsUnidentified
-  );
-}
-
-/**
- * The declared nodes, with the walk tables that resolve a path over them. Each heading is seated
- * under the path its `parent=` resolves to when it is read, as `buildSceneTree` seats it
- * (`packed_scene.cpp:157-165`), so a parent spelled `%Name` or `./A` seats it at the canonical path.
- * A `parent=` that names nothing is seated under the root by Godot's rename, unless Godot refuses
- * the scene or the heading carries a `parent_id_path=`, whose landing this walk does not follow.
- */
-function declaredNodes(document: LanguageDocument): Pick<NodeTable, 'byPath' | 'tree'> {
-  const byPath = new Map<string, DocumentSection>();
-  const uniquePaths = new Map<string, string>();
-  // A descent may enter a declared path or a proper ancestor of one, since a parent can sit in an instance.
-  const enterable = new Set<string>([SCENE_ROOT_PATH]);
-  const tree: ParentPathTree = { exists: (path) => enterable.has(path), uniquePaths };
-  const root = sceneRootOf(document);
-  if (root) byPath.set(SCENE_ROOT_PATH, root);
-  const reRootsVanished = !refusesToInstantiateScene(document.sections.filter(({ tag }) => tag === 'node'));
-  const rootChildNames = new Set<string>();
-  const seat = (section: DocumentSection, path: string, name: string) => {
-    byPath.set(path, section);
-    enterable.add(path);
-    for (const ancestor of getAncestorPaths(path)) enterable.add(ancestor);
-    if (claimsUniqueName(uniqueNameValueOf(section))) claimUniqueName(uniquePaths, name, path);
+/** A `[node]` heading as the tree builder reads it. */
+function originOf(section: DocumentSection): NodeOrigin<RawNode> {
+  const { attributes } = section;
+  return {
+    node: createRawNode({ type: section.tag, attributes: { ...attributes } }, rawPropertiesOf(section)),
+    line: section.headingLine,
+    declaredParent: attributes.parent,
+    idTrail: parseIdTrail(attributes.parent_id_path),
+    uniqueId: parseUniqueId(attributes.unique_id),
   };
-  for (const section of document.sections) {
-    const { name, parent } = section.attributes;
-    // A nameless heading claims no path, and a second parentless one is stranded.
-    if (section.tag !== 'node' || !name || section === root || parent === undefined) continue;
-    const parentPath = resolveParentPath(parent, tree);
-    if (parentPath === null) {
-      if (!reRootsVanished || section.attributes.parent_id_path !== undefined) continue;
-      const renamed = serialChildName(reparentedName(parent, name), rootChildNames);
-      rootChildNames.add(renamed);
-      seat(section, joinPath(SCENE_ROOT_PATH, renamed), renamed);
-      continue;
-    }
-    const path = joinPath(parentPath, name);
-    if (byPath.has(path)) continue;
-    if (parentPath === SCENE_ROOT_PATH) rootChildNames.add(name);
-    seat(section, path, name);
-  }
-  return { byPath, tree };
+}
+
+/**
+ * The node headings seated by the tree builder the parser and linter use, mapped back to their
+ * sections, so a re-rooted node sits at its rename and a recovered id trail is followed.
+ */
+function seatedNodes(document: LanguageDocument): Pick<NodeTable, 'byPath' | 'pathOf' | 'tree'> {
+  const sectionOfSeat = new Map<RawNode, DocumentSection>();
+  const sections = document.sections.filter(({ tag }) => tag === 'node');
+  const origins = sections.map(originOf);
+  const built = buildSceneTree(origins);
+  origins.forEach(({ node }, index) => {
+    const seat = built.seated.get(node);
+    if (seat) sectionOfSeat.set(seat, sections[index]!);
+  });
+  const byPath = new Map([...built.byPath].map(([path, seat]) => [path, sectionOfSeat.get(seat)!]));
+  const pathOf = new Map([...built.pathOf].map(([seat, path]) => [sectionOfSeat.get(seat)!, path]));
+  return { byPath, pathOf, tree: parentPathTree(built) };
 }
 
 function buildNodeTable(document: LanguageDocument): NodeTable {
-  const { byPath, tree } = declaredNodes(document);
+  const { byPath, pathOf, tree } = seatedNodes(document);
   const usesByNode = new Map<DocumentSection, NodePathReference[]>();
   for (const section of document.sections) {
     for (const reference of referencesOnHeading(section, document.lines[section.headingLine - 1] ?? '')) {
@@ -130,7 +104,7 @@ function buildNodeTable(document: LanguageDocument): NodeTable {
       usesByNode.set(node, uses);
     }
   }
-  return { byPath, tree, usesByNode };
+  return { byPath, pathOf, tree, usesByNode };
 }
 
 function nodeTableOf(document: LanguageDocument): NodeTable {
@@ -140,6 +114,11 @@ function nodeTableOf(document: LanguageDocument): NodeTable {
     nodeTables.set(document, table);
   }
   return table;
+}
+
+/** The root-relative path of each seated `[node]` heading with a name, the root at the empty path. */
+export function seatedNodePaths(document: LanguageDocument): ReadonlyMap<DocumentSection, string> {
+  return nodeTableOf(document).pathOf;
 }
 
 /** The `[node]` heading a written node path names, or undefined for a path this file never declares. */

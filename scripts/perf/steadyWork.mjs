@@ -4,7 +4,7 @@
  * Three times the frames a reflection probe waits after the scene's resources settle
  * (`COMMIT_FRAMES_AFTER_SETTLE`), so the lull before its capture is never taken for steady work.
  */
-export const STEADY_FRAMES = 30;
+const STEADY_FRAMES = 30;
 
 export class SteadyWork {
   /** The work last seen, as JSON so two windows compare by value. */

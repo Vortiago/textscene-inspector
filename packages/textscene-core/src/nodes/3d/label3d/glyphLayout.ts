@@ -18,7 +18,7 @@ import {
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_RIGHT,
   type HorizontalAlignment,
-} from '../../../godot/math/math';
+} from '../../../godot/math/alignment';
 
 interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */

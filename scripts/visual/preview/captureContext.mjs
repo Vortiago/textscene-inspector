@@ -65,10 +65,14 @@ export async function createCaptureContext(
   return context;
 }
 
+/** The "switch to 2D" hint carries no testid, so a capture finds it by its title. */
+const SWITCH_TO_2D_HINT = 'button[title*="switch to the 2D view"]';
+
 /**
  * The style that paints the app's chrome out of a capture. Viewport chrome floats over the
- * canvas in both modes, and a capture composites any DOM over the canvas, so it
- * goes from every capture. `canvas2D` also paints out the 2D stage's frame, zoom label and origin axes.
+ * canvas in both modes, and a capture composites any DOM over the canvas, so it goes from every
+ * capture: the toolbar, the controls help, the Performance overlay and the "switch to 2D" hint.
+ * `canvas2D` also paints out the 2D stage's frame, zoom label and origin axes.
  */
 export function paintedOutChromeCss({ canvas2D }) {
   const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help', PERFORMANCE_TESTIDS.overlay];
@@ -80,7 +84,8 @@ export function paintedOutChromeCss({ canvas2D }) {
       CANVAS_2D_TESTIDS.originAxisY
     );
   }
-  return `${hidden.map((id) => `[data-testid="${id}"]`).join(',')}{display:none !important}`;
+  const selectors = [...hidden.map((id) => `[data-testid="${id}"]`), SWITCH_TO_2D_HINT];
+  return `${selectors.join(',')}{display:none !important}`;
 }
 
 /**

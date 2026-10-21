@@ -14,7 +14,7 @@ import { AttenuationModel } from './types';
 import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import { degToRad } from '../../../godot/math/math.js';
+import { degToRad, TAU } from '../../../godot/math/math.js';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 
@@ -104,8 +104,8 @@ function RangeCircle({ radius }: RangeCircleProps) {
   const positions = useMemo(() => {
     const verts = new Float32Array(RANGE_CIRCLE_SEGMENTS * 6);
     for (let i = 0; i < RANGE_CIRCLE_SEGMENTS; i++) {
-      const a = (i / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
-      const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
+      const a = (i / RANGE_CIRCLE_SEGMENTS) * TAU;
+      const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * TAU;
       verts.set(
         [Math.cos(a) * radius, Math.sin(a) * radius, 0, Math.cos(b) * radius, Math.sin(b) * radius, 0],
         i * 6
@@ -156,12 +156,12 @@ function EmissionCone({ radius, angleDegrees }: EmissionConeProps) {
     const base = radius * Math.tan(degToRad(clamped));
     const ribs: number[] = [];
     for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2;
+      const a = (i / 4) * TAU;
       ribs.push(0, 0, 0, Math.cos(a) * base, Math.sin(a) * base, -radius);
     }
     for (let i = 0; i < RANGE_CIRCLE_SEGMENTS; i++) {
-      const a = (i / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
-      const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
+      const a = (i / RANGE_CIRCLE_SEGMENTS) * TAU;
+      const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * TAU;
       ribs.push(
         Math.cos(a) * base,
         Math.sin(a) * base,

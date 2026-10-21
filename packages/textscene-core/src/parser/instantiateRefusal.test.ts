@@ -1,11 +1,6 @@
 /** The headings that make Godot refuse to instantiate a scene. */
 import { describe, expect, it } from 'vitest';
-import {
-  emptyParentHeadings,
-  headingsRefuseInstantiate,
-  refusesToInstantiate,
-  rootDeclaringParent,
-} from './instantiateRefusal';
+import { emptyParentHeadings, refusesToInstantiate, rootDeclaringParent } from './instantiateRefusal';
 import type { NodeOrigin, RawNode } from './types';
 
 function origin(name: string, declaredParent: string | undefined, overrides: Partial<RawNode> = {}) {
@@ -13,33 +8,23 @@ function origin(name: string, declaredParent: string | undefined, overrides: Par
   return { node, line: 1, declaredParent, uniqueId: 0 } satisfies NodeOrigin<RawNode>;
 }
 
-describe('headingsRefuseInstantiate', () => {
+describe('refusesToInstantiate', () => {
   it('accepts a root and children that declare their parents', () => {
-    expect(headingsRefuseInstantiate([undefined, '.', 'Mid'], false)).toBe(false);
+    expect(refusesToInstantiate([origin('Root', undefined), origin('A', '.'), origin('B', 'A')])).toBe(false);
   });
 
   it('refuses a root that declares a parent', () => {
-    expect(headingsRefuseInstantiate(['.', 'Mid'], false)).toBe(true);
+    expect(refusesToInstantiate([origin('Root', '.'), origin('A', 'Root')])).toBe(true);
   });
 
   it('refuses a later heading that declares no parent', () => {
-    expect(headingsRefuseInstantiate([undefined, undefined], false)).toBe(true);
+    expect(refusesToInstantiate([origin('Root', undefined), origin('Stray', undefined)])).toBe(true);
   });
 
   it('refuses a heading that spells parent="" (edge case)', () => {
-    expect(headingsRefuseInstantiate([undefined, ''], false)).toBe(true);
+    expect(refusesToInstantiate([origin('Root', undefined), origin('Blank', '')])).toBe(true);
   });
 
-  it('refuses a root that states no identifier (edge case)', () => {
-    expect(headingsRefuseInstantiate([undefined, '.'], true)).toBe(true);
-  });
-
-  it('accepts a scene with no heading', () => {
-    expect(headingsRefuseInstantiate([], false)).toBe(false);
-  });
-});
-
-describe('refusesToInstantiate', () => {
   it('reads the root heading’s identifier off its node', () => {
     const override = origin('Root', undefined, { overridesExistingNode: true });
     expect(refusesToInstantiate([override, origin('A', '.')])).toBe(true);

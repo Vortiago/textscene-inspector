@@ -27,7 +27,8 @@
  */
 
 import type { BlockFormat } from './decodeBlocks';
-import { decodeInterpolatedChannel, swizzleRg01 } from './channels';
+import { keepRedGreen } from '../../../processing/importTexelPasses';
+import { decodeInterpolatedChannel } from './channels';
 
 /** Four RGBA8 entries, written by each `decodeColourBlock` call and read before it returns. */
 const colourPalette = new Uint8Array(16);
@@ -146,7 +147,7 @@ function decodeDxt5(bytes: Uint8Array, offset: number, texels: Uint8Array): void
 function decodeDxt5RaAsRg(bytes: Uint8Array, offset: number, texels: Uint8Array): void {
   decodeDxt5(bytes, offset, texels);
   for (let at = 0; at < texels.length; at += 4) texels[at + 1] = texels[at + 3]!;
-  swizzleRg01(texels);
+  keepRedGreen(texels);
 }
 
 export const S3TC_FORMATS: Readonly<Record<string, BlockFormat>> = {

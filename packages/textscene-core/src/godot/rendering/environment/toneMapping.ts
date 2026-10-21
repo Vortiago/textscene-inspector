@@ -1,8 +1,8 @@
 /**
- * Godot 4.6.3's tone-mapping facts: the curve constants, which the CPU white and the ported shaders
- * both read, and the white on the CPU, that is the floor `environment_get_white` puts on the authored
- * white and the parameter `environment_get_tonemap_parameters` derives from it, both in
- * `servers/rendering/storage/environment_storage.cpp`. The shaders divide by that parameter.
+ * Godot 4.6.3's tone-mapping facts: the curve constants that the CPU and the ported shaders read, and
+ * the white on the CPU: the floor `environment_get_white` puts on the authored white, and the parameter
+ * `environment_get_tonemap_parameters` derives from it for the shaders to divide by
+ * (`servers/rendering/storage/environment_storage.cpp`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

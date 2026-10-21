@@ -9,20 +9,10 @@
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
-import { nodePathNames } from '../godot/string/nodePath.js';
 import { reparentedName } from '../godot/scene/packedScene.js';
 import type { NodeOrigin, RawNode, StrictScene } from '../parser/types.js';
 import { resolveExtResourcePath } from '../resources/SubResourceResolver.js';
-
-/**
- * The path `get_node_path` gives a heading: its `parent=` path, then its name. The scene
- * root is the empty path.
- */
-function headingPath({ node }: NodeOrigin<RawNode>): string {
-  if (node.parent === undefined) return '';
-  const parentNames = nodePathNames(node.parent).filter((name) => name !== '.');
-  return [...parentNames, node.name].join('/');
-}
+import { SCENE_ROOT_PATH } from '../utils/nodePath.js';
 
 /**
  * What Godot does with the heading's `parent_id_path=`, or undefined where the trail
@@ -35,8 +25,10 @@ function idRecoveryOutcome(scene: StrictScene, origin: NodeOrigin<RawNode>): str
     'The heading also carries parent_id_path, the id trail Godot falls back to when a path ' +
     'does not walk (packed_scene.cpp:161-163).';
   if (recovery.kind === 'lands') {
-    const path = headingPath(recovery.via);
-    const where = path === '' ? 'the scene root' : `"${path}"`;
+    const where =
+      recovery.viaPath === SCENE_ROOT_PATH
+        ? 'the scene root'
+        : `"${recovery.viaPath ?? recovery.via.node.name}"`;
     return `${lead} Its first id names the node '${recovery.via.node.name}' (line ${recovery.via.line}), so the node lands under ${where} and keeps its name.`;
   }
   const instanced =

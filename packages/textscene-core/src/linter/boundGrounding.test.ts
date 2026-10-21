@@ -127,13 +127,12 @@ describe('the classification guard bites', () => {
   });
 
   it('lets the int-slot tag classify an UNBOUNDED int, and never a bounded one', () => {
-    // The slot's refusal is one central claim; a range is a per-property one.
-    // While `markIntSlot` filled `grounding`, an uncited `v.strictInt('s', {min,
-    // max})` reported its range at error tier and the ratchet never saw it.
-    expect(unclassified(v.strictInt('s'))).toBe(false);
-    expect(unclassified(v.strictInt('s', { min: 0, max: 9 }))).toBe(true);
+    // The slot's refusal is one central claim, and a range is a per-property one:
+    // a bounded int must cite its bound, or it counts as unclassified.
+    expect(unclassified(v.int('s'))).toBe(false);
+    expect(unclassified(v.int('s', { min: 0, max: 9 }))).toBe(true);
     expect(unclassified(v.enumInt('mode', 0, 5, { 0: 'A' }))).toBe(true);
-    expect(unclassified(v.strictInt('s', { min: 0, max: 9, hinted: 'node.cpp:1' }))).toBe(false);
+    expect(unclassified(v.int('s', { min: 0, max: 9, hinted: 'node.cpp:1' }))).toBe(false);
   });
 
   it('passes a grounded bound, which cites instead of declaring format-only', () => {

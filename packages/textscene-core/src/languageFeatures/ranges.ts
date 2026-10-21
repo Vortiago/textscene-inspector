@@ -5,31 +5,24 @@
  * one-based line numbers combine with at the boundary.
  */
 
-import { parseHeading } from '../parser/utils.js';
+import { parseHeading, type ValueSpan } from '../parser/utils.js';
 import type { Range } from './types.js';
-
-/** A span on one line, with the line given separately. */
-interface LineSpan {
-  readonly start: number;
-  readonly end: number;
-}
 
 /**
  * The span of a heading attribute's value, inside its quotes when it has them, and the
  * value itself. The parser's scanner finds both, so a `type=B` inside `name="A type=B"`
  * is text of the name, not an attribute. Godot quotes every string attribute, and a
- * pre-4.0 scene writes an integer `id=1` bare.
+ * pre-4.0 scene writes an integer `id=1` bare. An unclosed string names nothing yet.
  */
 export function headingAttribute(
   line: string,
   key: string
-): { readonly span: LineSpan; readonly value: string } | undefined {
+): { readonly span: ValueSpan; readonly value: string } | undefined {
   const heading = parseHeading(line);
-  const span = heading?.valueSpans[key];
-  const value = heading?.attributes[key];
+  if (!heading || heading.unclosed.has(key)) return undefined;
+  const span = heading.valueSpans[key];
+  const value = heading.attributes[key];
   if (span === undefined || value === undefined) return undefined;
-  // An unclosed string keeps its opening quote in `value`: it has no value to name yet.
-  if (value.startsWith('"')) return undefined;
   return { span, value };
 }
 
@@ -39,7 +32,9 @@ function equalsIndex(line: string): number {
 }
 
 /** The trimmed key of a property line and its span, or undefined when the line has no `=`. */
-export function propertyKeySpan(line: string): { readonly span: LineSpan; readonly key: string } | undefined {
+export function propertyKeySpan(
+  line: string
+): { readonly span: ValueSpan; readonly key: string } | undefined {
   const equals = equalsIndex(line);
   if (equals === -1) return undefined;
   const rawKey = line.slice(0, equals);
@@ -52,7 +47,7 @@ export function propertyKeySpan(line: string): { readonly span: LineSpan; readon
 /** The trimmed value of a property line and its span, or undefined when the line has no `=`. */
 export function propertyValueSpan(
   line: string
-): { readonly span: LineSpan; readonly value: string } | undefined {
+): { readonly span: ValueSpan; readonly value: string } | undefined {
   const equals = equalsIndex(line);
   if (equals === -1) return undefined;
   const rawValue = line.slice(equals + 1);
@@ -62,7 +57,7 @@ export function propertyValueSpan(
 }
 
 /** Whether `character` lies on `span`, both ends included, so a cursor just past the end counts. */
-export function spanContains(span: LineSpan, character: number): boolean {
+export function spanContains(span: ValueSpan, character: number): boolean {
   return character >= span.start && character <= span.end;
 }
 
@@ -72,7 +67,7 @@ export function lineRangeContains(range: Range, character: number): boolean {
 }
 
 /** A one-line {@link Range} at `line`. */
-export function lineRange(line: number, span: LineSpan): Range {
+export function lineRange(line: number, span: ValueSpan): Range {
   return { start: { line, character: span.start }, end: { line, character: span.end } };
 }
 

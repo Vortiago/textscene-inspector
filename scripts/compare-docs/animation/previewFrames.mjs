@@ -12,16 +12,15 @@ import {
   createCaptureContext,
   findCaptureTarget,
   gotoFixture,
+  previewPort,
   targetShooter,
   withPreviewBrowser,
 } from '../../visual/previewServer.mjs';
 import { FRAMES } from './clip.mjs';
 
-const PORT = Number(process.env.COMPARE_PORT) || 4323;
-
 export function captureOurFrames(fixture, framesDir, mode, driverText) {
   return withPreviewBrowser(
-    { port: PORT, portEnvName: 'COMPARE_PORT', launchBrowser: launchGodotComparisonBrowser },
+    { ...previewPort('compareAnimation'), launchBrowser: launchGodotComparisonBrowser },
     async (browser, baseUrl) => {
       const context = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: mode === '2d' });
       const page = await context.newPage();

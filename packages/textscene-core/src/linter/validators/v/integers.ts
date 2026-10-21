@@ -67,9 +67,9 @@ export interface EnumInt {
 }
 
 /**
- * Integer enum. With a window, such as `v.enumInt('cast_shadow', 0, 3, {0:'OFF', 1:'ON',
- * 2:'DOUBLE_SIDED', 3:'SHADOWS_ONLY'})`, only that part of the labels is in range, which is
- * how one class's hint narrows the engine's whole enum. Without one, the labels are the range.
+ * Integer enum. With a window, such as GraphNode's `v.enumInt('slots_focus_mode', 1, 3,
+ * FOCUS_MODE_HINT_NAMES)`, only that part of the labels is in range, which is how one class's
+ * hint narrows the engine's whole enum. Without one, the labels are the range.
  */
 const enumInt: EnumInt = (name: string, ...rest: unknown[]): PropertyValidator => {
   if (typeof rest[0] === 'number') {
@@ -82,7 +82,10 @@ const enumInt: EnumInt = (name: string, ...rest: unknown[]): PropertyValidator =
 };
 
 export const integerCombinators = {
-  /** Integer in a range, parsed as base 10. */
+  /**
+   * Integer in a range. It narrows through `readIntSlot` before the bound check, so
+   * `frame = 4294967295` is judged as the -1 the setter's guard receives.
+   */
   int(name: string, opts: IntOpts = {}): PropertyValidator {
     // One width for the read and the tag, or they disagree on every slot whose
     // ceiling exceeds INT32_MAX.
@@ -152,20 +155,6 @@ export const integerCombinators = {
         { min, max, values }
       )
     );
-  },
-
-  /** A bound-free integer slot: `int` with no range. */
-  lenientInt(name: string): PropertyValidator {
-    return integerCombinators.int(name);
-  },
-
-  /**
-   * `int` under the name its call sites use: it narrows through `readIntSlot`
-   * before the bound check, so `frame = 4294967295` is judged as the -1 the
-   * setter's guard receives.
-   */
-  strictInt(name: string, opts: IntOpts = {}): PropertyValidator {
-    return integerCombinators.int(name, opts);
   },
 
   /** `int` with a floor of 0, for frame indices and similar counts. */

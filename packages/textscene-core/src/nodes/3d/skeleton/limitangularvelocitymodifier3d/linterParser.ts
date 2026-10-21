@@ -27,8 +27,8 @@ const CHAIN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // limit_angular_velocity_modifier_3d.cpp:100, INT, PROPERTY_HINT_NONE, PROPERTY_USAGE_NO_EDITOR,
   // which is storage (object.h:132). set_root_bone rewrites anything below -1 to the unset -1
   // (:149-151), and _validate_bone_names (:293-295) re-runs it on the first skeleton update: an error
-  // (ADR-0032). The live bone count is the ceiling. `strictInt`: Variant would truncate a decimal.
-  root_bone: v.strictInt('root_bone', {
+  // (ADR-0032). The live bone count is the ceiling. `v.int` warns on a decimal, which Variant truncates.
+  root_bone: v.int('root_bone', {
     min: -1,
     enforced: 'limit_angular_velocity_modifier_3d.cpp:149-151',
   }),
@@ -39,7 +39,7 @@ const CHAIN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
   // limit_angular_velocity_modifier_3d.cpp:102. set_end_bone (:186-188) applies
   // the identical rewrite to -1, re-run from _validate_bone_names (:299-300).
-  end_bone: v.strictInt('end_bone', {
+  end_bone: v.int('end_bone', {
     min: -1,
     enforced: 'limit_angular_velocity_modifier_3d.cpp:186-188',
   }),
@@ -109,7 +109,7 @@ validatorRegistry.registerAll('LimitAngularVelocityModifier3D', {
   // limit_angular_velocity_modifier_3d.cpp:274, the `chains/` ADD_ARRAY_COUNT, a serialised INT
   // (class_db.cpp:1492). set_chain_count opens with ERR_FAIL_COND(p_count < 0) (:204): an error. The
   // max end is open, as `chains.resize(p_count)` (:205) has no ceiling.
-  chain_count: v.strictInt('chain_count', {
+  chain_count: v.int('chain_count', {
     min: 0,
     enforced: 'limit_angular_velocity_modifier_3d.cpp:204',
   }),

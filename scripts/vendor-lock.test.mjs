@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { withLock } from './withLock.mjs';
+import { withLock } from './vendor-lock.mjs';
 
 /** A process id no process holds: above Linux's default pid_max and Windows' usual range. */
 const DEAD_PID = 2 ** 30;

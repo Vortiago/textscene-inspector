@@ -248,6 +248,15 @@ describe('a parent path this file never defines', () => {
       expect(message).toContain('lands under "Mid/Leaf"');
     });
 
+    it('names the path a heading is seated at, not the spelling of its parent=', () => {
+      const message = messageOf(
+        '[node name="Mid" type="Node2D" parent="."]\nunique_name_in_owner = true',
+        '[node name="Leaf" type="Node2D" parent="%Mid" unique_id=20]',
+        headingWithTrail('20')
+      );
+      expect(message).toContain('lands under "Mid/Leaf"');
+    });
+
     it('re-roots when the heading the first id names comes after it', () => {
       const message = messageOf(
         headingWithTrail('20'),

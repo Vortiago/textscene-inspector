@@ -13,17 +13,16 @@ import { PNG } from 'pngjs';
 import {
   CANVAS_2D_CAPTURE,
   CANVAS_2D_CHROME,
-  FIXTURE_LOADING_TESTID,
   canvas2DViewportFor,
-  isUniformImage,
+  FIXTURE_LOADING_TESTID,
+  PERFORMANCE_TESTIDS,
   SCENE_LOAD_STATUS_TESTID,
-  sceneStillLoading,
-  settleCanvas,
-  startPreview,
-  writeCaptureImage,
   SETTLE_SIM_SECONDS,
+  SHOW_PERFORMANCE_STORAGE_KEY,
   TEXTURE_WORK_STATUS_TESTID,
-} from './previewServer.mjs';
+} from './preview/appContract.mjs';
+import { isUniformImage, sceneStillLoading, settleCanvas, writeCaptureImage } from './preview/capture.mjs';
+import { startPreview } from './preview/server.mjs';
 import { bootstrapScript } from '../godot-ref/run.mjs';
 
 // The real spawn, so a test can replace one call without launching `vite preview`.
@@ -48,19 +47,20 @@ function inkedPng(width = 8, height = 8) {
 }
 
 /**
- * A texture work status that is never on the page: what every scene without a large
- * procedural texture shows the harness.
+ * A page whose loading statuses are never attached: what a loaded scene shows the harness.
+ * `waitForFunction` is the wait for every status to detach, and `evaluate` the check between shots.
  */
-const NO_TEXTURE_WORK = { waitFor: async () => {}, count: async () => 0 };
+function loadedPage() {
+  return { waitForTimeout: async () => {}, waitForFunction: async () => {}, evaluate: async () => false };
+}
 
 /**
  * A Playwright page and capture target reduced to what `settleCanvas` touches. Each shot is a
  * DevTools `Page.captureScreenshot` on the target's page, so the stub session answers that command
  * with the next of `shots`, base64 as Chromium sends it.
  */
-function stubCanvas(shots, { status = NO_TEXTURE_WORK } = {}) {
+function stubCanvas(shots, { page = loadedPage() } = {}) {
   let i = 0;
-  const page = { waitForTimeout: async () => {}, getByTestId: () => status };
   const session = {
     calls: [],
     send: async (method, params) => {
@@ -80,6 +80,13 @@ function stubCanvas(shots, { status = NO_TEXTURE_WORK } = {}) {
     page: () => targetPage,
   };
   return { page, canvas, session };
+}
+
+/** Playwright's own timeout: an `Error` named `TimeoutError`. */
+function timeoutError() {
+  const error = new Error('Timeout exceeded');
+  error.name = 'TimeoutError';
+  return error;
 }
 
 describe('settleCanvas', () => {
@@ -124,15 +131,13 @@ describe('settleCanvas', () => {
     expect(buffer.toString()).toBe('width 16');
   });
 
-  it('takes no shot until the texture work status has detached', async () => {
+  it('takes no shot until the fixture fetch, scene load and texture work statuses have detached', async () => {
     const events = [];
-    const status = {
-      waitFor: async ({ state }) => {
-        events.push(`wait ${state}`);
-      },
-      count: async () => 0,
+    const page = loadedPage();
+    page.waitForFunction = async (_predicate, ids) => {
+      events.push(`wait ${[...ids].sort().join(' ')}`);
     };
-    const { page, canvas, session } = stubCanvas(['x', 'x'], { status });
+    const { canvas, session } = stubCanvas(['x', 'x'], { page });
     const send = session.send;
     session.send = async (method, params) => {
       events.push('shot');
@@ -140,75 +145,47 @@ describe('settleCanvas', () => {
     };
     await settleCanvas(page, canvas);
 
-    expect(events[0]).toBe('wait detached');
+    const allStatuses = [FIXTURE_LOADING_TESTID, SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID];
+    expect(events[0]).toBe(`wait ${allStatuses.sort().join(' ')}`);
     expect(events.slice(1).every((event) => event === 'shot')).toBe(true);
   });
 
-  it('asks for the texture work status by the id the shell renders', async () => {
-    const asked = [];
-    const { page, canvas } = stubCanvas(['x', 'x']);
-    page.getByTestId = (id) => {
-      asked.push(id);
-      return NO_TEXTURE_WORK;
-    };
-    await settleCanvas(page, canvas);
-    expect(new Set(asked)).toEqual(new Set([TEXTURE_WORK_STATUS_TESTID]));
-  });
-
-  it('restarts the comparison when texture work comes back between two shots', async () => {
-    // The status returns once after the first shot: 'a' then 'b' spans a texture landing,
+  it('restarts the comparison when a loading status comes back between two shots', async () => {
+    // A status returns once after the first shot: 'a' then 'b' spans a texture landing,
     // so neither is compared with a frame from the other side of it.
     let checks = 0;
-    const status = { waitFor: async () => {}, count: async () => (checks++ === 0 ? 1 : 0) };
-    const { page, canvas } = stubCanvas(['a', 'a', 'b', 'b'], { status });
+    const page = loadedPage();
+    page.evaluate = async () => checks++ === 0;
+    const { canvas } = stubCanvas(['a', 'a', 'b', 'b'], { page });
     const { buffer } = await settleCanvas(page, canvas);
     expect(buffer.toString()).toBe('b');
   });
 
-  /** A status whose wait fails with `error`, as Playwright's locator rejects. */
-  function failingStatus(error) {
-    return {
-      waitFor: async () => {
-        throw error;
-      },
-      count: async () => 1,
-    };
-  }
-
-  /** Playwright's own timeout: an `Error` named `TimeoutError`. */
-  function timeoutError() {
-    const error = new Error('Timeout 120000ms exceeded');
-    error.name = 'TimeoutError';
-    return error;
-  }
-
-  it('reports texture work that never ends rather than returning a frame', async () => {
-    const { page, canvas, session } = stubCanvas(['x', 'x'], { status: failingStatus(timeoutError()) });
+  it('reports a scene still loading rather than returning a frame (error case)', async () => {
+    const page = loadedPage();
+    page.waitForFunction = async () => Promise.reject(timeoutError());
+    const { canvas, session } = stubCanvas(['x', 'x'], { page });
     const { buffer, reason } = await settleCanvas(page, canvas);
     expect(buffer).toBeNull();
-    expect(reason).toMatch(/texture work still pending/);
+    expect(reason).toMatch(/scene still loading/);
     expect(session.calls).toHaveLength(0);
   });
 
-  it('throws when the texture work wait fails for a reason other than its timeout', async () => {
-    const { page, canvas } = stubCanvas(['x', 'x'], {
-      status: failingStatus(new Error('Target page has been closed')),
-    });
-    await expect(settleCanvas(page, canvas)).rejects.toThrow(
-      /texture work status.*Target page has been closed/
-    );
+  it('throws when the loading wait fails for a reason other than its timeout', async () => {
+    const page = loadedPage();
+    page.waitForFunction = async () => Promise.reject(new Error('Target page has been closed'));
+    const { canvas } = stubCanvas(['x', 'x'], { page });
+    await expect(settleCanvas(page, canvas)).rejects.toThrow(/scene to load.*Target page has been closed/);
   });
 
-  it('can skip the texture work wait, for the control that proves the wait matters', async () => {
-    const status = {
-      waitFor: async () => {
-        throw new Error('the wait was not skipped');
-      },
-      count: async () => 1,
-    };
-    const { page, canvas } = stubCanvas(['x', 'x'], { status });
+  it('can leave the texture work status out of the wait, for the control that proves it matters', async () => {
+    const waited = [];
+    const page = loadedPage();
+    page.waitForFunction = async (_predicate, ids) => waited.push(...ids);
+    const { canvas } = stubCanvas(['x', 'x'], { page });
     const { reason } = await settleCanvas(page, canvas, { waitForTextureWork: false });
     expect(reason).toBeNull();
+    expect(new Set(waited)).toEqual(new Set([FIXTURE_LOADING_TESTID, SCENE_LOAD_STATUS_TESTID]));
   });
 
   /**
@@ -225,12 +202,6 @@ describe('settleCanvas', () => {
 });
 
 describe('sceneStillLoading', () => {
-  function timeoutError() {
-    const error = new Error('Timeout exceeded');
-    error.name = 'TimeoutError';
-    return error;
-  }
-
   it('answers no reason once no loading status is on the page', async () => {
     const page = { waitForFunction: async () => {} };
     expect(await sceneStillLoading(page)).toBeNull();
@@ -256,7 +227,7 @@ describe('sceneStillLoading', () => {
   });
 });
 
-describe('the status ids are shared, not duplicated', () => {
+describe('the app ids and keys a harness copies match the app', () => {
   it('match the ids the shell renders', async () => {
     const shell =
       await import('../../packages/textscene-core/src/r3f/components/TscnPreviewShell/statusTestIds.ts');
@@ -266,6 +237,16 @@ describe('the status ids are shared, not duplicated', () => {
   it('matches the id the web previewer renders while it fetches the fixture', async () => {
     const web = await import('../../apps/textscene-web/src/fixtureLoadingTestId.ts');
     expect(FIXTURE_LOADING_TESTID).toBe(web.FIXTURE_LOADING_TESTID);
+  });
+
+  it('match the Performance overlay ids the work budget check reads', async () => {
+    const panel = await import('../../packages/textscene-core/src/r3f/frameProfile/performanceTestIds.ts');
+    expect(PERFORMANCE_TESTIDS).toEqual(panel.PERFORMANCE_TESTIDS);
+  });
+
+  it('matches the storage key that turns the Performance overlay on', async () => {
+    const viewport = await import('../../packages/textscene-core/src/r3f/contexts/ViewportModeContext.tsx');
+    expect(SHOW_PERFORMANCE_STORAGE_KEY).toBe(viewport.SHOW_PERFORMANCE_STORAGE_KEY);
   });
 });
 
@@ -365,7 +346,7 @@ describe('an interrupted harness does not orphan its preview group', () => {
   const harness = ({ keepAlive = true } = {}) => `
 import { spawn } from 'node:child_process';
 import { reapPreviewGroupOnExit } from ${JSON.stringify(
-    new URL('./previewServer.mjs', import.meta.url).href
+    new URL('./preview/server.mjs', import.meta.url).href
   )};
 const proc = spawn('sh', ['-c', 'sleep 120'], { detached: true, stdio: 'ignore' });
 reapPreviewGroupOnExit(proc);

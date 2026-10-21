@@ -13,13 +13,13 @@ import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/propertyHint.ts';
 import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
-
-const here = import.meta.dirname;
-export const CATALOG = join(here, 'node-catalog.json');
-export const RESOURCE_BASES = join(here, 'resource-bases.json');
-export const NODE_PROPERTIES = join(here, 'node-properties.json');
-export const RESOURCE_PROPERTIES = join(here, 'resource-properties.json');
-export const RESOURCE_GETTERS = join(here, 'resource-getters.json');
+import {
+  CATALOG_OUT,
+  PROPS_OUT,
+  RESOURCE_BASES_OUT,
+  RESOURCE_GETTERS_OUT,
+  RESOURCE_PROPS_OUT,
+} from './build-node-catalog/paths.mjs';
 
 /** `src/godot/classdb/<name>` in the core package. */
 function classdbModule(name) {
@@ -342,27 +342,30 @@ function godotVersionOf(catalog) {
 
 /** The typed collection module the committed artifact must equal. */
 export function renderFromTypedCollectionCaptures() {
-  const catalog = readJson(CATALOG);
-  return renderTypedCollectionsModule(readJson(RESOURCE_GETTERS).collections, godotVersionOf(catalog));
+  const catalog = readJson(CATALOG_OUT);
+  return renderTypedCollectionsModule(readJson(RESOURCE_GETTERS_OUT).collections, godotVersionOf(catalog));
 }
 
 /** The Variant property module the committed artifact must equal. */
 export function renderFromVariantPropertyCaptures() {
-  const catalog = readJson(CATALOG);
-  return renderVariantPropertiesModule(readJson(RESOURCE_GETTERS).variantProperties, godotVersionOf(catalog));
+  const catalog = readJson(CATALOG_OUT);
+  return renderVariantPropertiesModule(
+    readJson(RESOURCE_GETTERS_OUT).variantProperties,
+    godotVersionOf(catalog)
+  );
 }
 
 /** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
 function readResourceBases() {
-  return assertAcyclic(readJson(RESOURCE_BASES), 'resource-bases.json');
+  return assertAcyclic(readJson(RESOURCE_BASES_OUT), 'resource-bases.json');
 }
 
 /** The exclusion module the committed artifact must equal. */
 export function renderFromExclusionCaptures() {
-  const catalog = readJson(CATALOG);
+  const catalog = readJson(CATALOG_OUT);
   const properties = {
-    ...readJson(NODE_PROPERTIES),
-    ...readJson(RESOURCE_PROPERTIES),
+    ...readJson(PROPS_OUT),
+    ...readJson(RESOURCE_PROPS_OUT),
   };
   const bases = { ...deriveBaseTypes(catalog.nodes), ...readResourceBases() };
   return renderExclusionsModule(deriveResourceTypeExclusions(properties, bases), godotVersionOf(catalog));
@@ -370,15 +373,15 @@ export function renderFromExclusionCaptures() {
 
 /** The property module the committed artifact must equal. */
 export function renderFromPropertyCaptures() {
-  const catalog = readJson(CATALOG);
-  const nodeProperties = readJson(NODE_PROPERTIES);
-  const resourceProperties = readJson(RESOURCE_PROPERTIES);
+  const catalog = readJson(CATALOG_OUT);
+  const nodeProperties = readJson(PROPS_OUT);
+  const resourceProperties = readJson(RESOURCE_PROPS_OUT);
   return renderPropertiesModule(nodeProperties, resourceProperties, godotVersionOf(catalog));
 }
 
 /** The module source the committed artifact must equal. */
 export function renderFromCatalog() {
-  const catalog = readJson(CATALOG);
+  const catalog = readJson(CATALOG_OUT);
   return renderModule(deriveBaseTypes(catalog.nodes), godotVersionOf(catalog));
 }
 
@@ -389,7 +392,7 @@ export function renderFromCatalog() {
  * one engine run; `resource-bases.json` is a bare map with nowhere to put it.
  */
 export function renderFromResourceBases() {
-  const catalog = readJson(CATALOG);
+  const catalog = readJson(CATALOG_OUT);
   return renderResourceModule(readResourceBases(), godotVersionOf(catalog));
 }
 

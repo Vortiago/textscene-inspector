@@ -7,10 +7,12 @@
  *   node scripts/showcase/run.mjs <scenario-name>
  *   node scripts/showcase/run.mjs all
  */
+import { launchShowcaseBrowser } from './browser.mjs';
 import { recordShowcase } from './record.mjs';
 import { scenarios } from './scenarios.mjs';
 import { readFixtureLookup } from '../fixtureManifest.mjs';
 
+const BASE_URL = process.env.SHOWCASE_URL || 'http://localhost:4173';
 const fileForLabel = readFixtureLookup();
 
 const arg = process.argv[2];
@@ -21,18 +23,23 @@ if (!arg) {
 }
 
 const names = arg === 'all' ? Object.keys(scenarios) : [arg];
-for (const name of names) {
-  const scenario = scenarios[name];
-  if (!scenario) {
-    console.error(`unknown scenario "${name}". available: ${Object.keys(scenarios).join(', ')}`);
-    process.exitCode = 1;
-    continue;
+const browser = await launchShowcaseBrowser();
+try {
+  for (const name of names) {
+    const scenario = scenarios[name];
+    if (!scenario) {
+      console.error(`unknown scenario "${name}". available: ${Object.keys(scenarios).join(', ')}`);
+      process.exitCode = 1;
+      continue;
+    }
+    const file = fileForLabel(scenario.label);
+    if (!file) {
+      console.error(`no fixture file for label "${scenario.label}" (scenario ${name})`);
+      process.exitCode = 1;
+      continue;
+    }
+    await recordShowcase(browser, BASE_URL, { name, file, run: scenario.run });
   }
-  const file = fileForLabel(scenario.label);
-  if (!file) {
-    console.error(`no fixture file for label "${scenario.label}" (scenario ${name})`);
-    process.exitCode = 1;
-    continue;
-  }
-  await recordShowcase(name, file, scenario.run);
+} finally {
+  await browser.close();
 }
