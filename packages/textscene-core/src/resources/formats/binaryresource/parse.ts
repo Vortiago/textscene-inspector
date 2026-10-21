@@ -11,6 +11,7 @@ import { ByteReader } from './byteReader';
 import { inflateCompressedStream } from './compressedStream';
 import { propertyValueText, tableString, type VariantTables } from './variants';
 import { typedCollectionPrefix } from '../../../godot/classdb/typedCollection';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { VARIANT_PROPERTIES } from '../../../godot/classdb/variantProperties.generated';
 import {
   BINARY_FORMAT_VERSION,
@@ -131,19 +132,28 @@ function readResource(
   for (let i = 0; i < propertyCount; i++) {
     const name = tableString(reader, tables);
     const value = propertyValueText(reader, tables);
-    if (value !== null && !isEmptyObject(type, name, value)) data[name] = typedText(type, name, value);
-    else if (isStoredWhenNull(type, name)) data[name] = 'null';
+    if (value !== null && value !== 'null') data[name] = typedText(type, name, value);
+    else if (keepsNull(type, name)) data[name] = 'null';
   }
   return { id, type, data };
 }
 
 /**
- * Whether a Nil is an empty Object, which the text saver leaves out (`resource_format_text.cpp:1980`).
- * Only a property declared as a Variant keeps a Nil. A getter such as `get_script` returns Nil for
- * an empty Object (`object.cpp:470-475`).
+ * Whether the text saver writes a Nil or a null Object on this property, as a null Object loads as
+ * Nil. It leaves out an empty Object unless its usage stores it when null
+ * (`resource_format_text.cpp:1980-1982`), and a getter such as `get_script` returns Nil for one.
  */
-function isEmptyObject(type: string, name: string, value: string): boolean {
-  return value === 'null' && !isVariantProperty(type, name);
+function keepsNull(type: string, name: string): boolean {
+  if (!isClassDbResource(type)) return name !== OBJECT_SCRIPT_PROPERTY;
+  return isVariantProperty(type, name) || isStoredWhenNull(type, name);
+}
+
+/** The one property every class declares as an Object (`object.cpp:642`). */
+const OBJECT_SCRIPT_PROPERTY = 'script';
+
+/** Whether ClassDB knows the class, so the capture holds its declared types, unlike an extension's. */
+function isClassDbResource(type: string): boolean {
+  return descendsFromClass(type, 'Resource');
 }
 
 function isVariantProperty(type: string, name: string): boolean {

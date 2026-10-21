@@ -79,7 +79,11 @@ function writeGetters({ collections, variant_properties }) {
     ),
   };
   writeJson(RESOURCE_GETTERS_OUT, getters);
-  console.log(`Wrote ${RESOURCE_GETTERS_OUT} - ${Object.keys(getters.collections).length} classes.`);
+  const classCount = (table) => Object.keys(table).length;
+  console.log(
+    `Wrote ${RESOURCE_GETTERS_OUT} - ${classCount(getters.collections)} classes with typed collections, ` +
+      `${classCount(getters.variantProperties)} with Variant properties.`
+  );
 }
 
 if (propertiesOnly) {

@@ -148,7 +148,7 @@ class Sorter<T> {
   }
 }
 
-/** `bitlog`: the floor of log2 of a positive length. */
+/** `bitlog`: the floor of log2 of a positive length, exact in integers as Godot's shift loop is. */
 function bitlog(length: number): number {
-  return Math.floor(Math.log2(length));
+  return 31 - Math.clz32(length);
 }

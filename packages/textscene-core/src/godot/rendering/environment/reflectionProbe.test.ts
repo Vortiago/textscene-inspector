@@ -79,4 +79,10 @@ describe('reflectionProbeOrder', () => {
     const cube = { size: { x: 10, y: 10, z: 10 } };
     expect(reflectionProbeOrder([cube, flat])).toEqual([flat, cube]);
   });
+
+  it('orders two permuted boxes by their float diagonals, which differ (edge case)', () => {
+    const shorter = { size: { x: 16.590818405151367, y: 2.104837417602539, z: 0.02428552694618702 } };
+    const longer = { size: { x: 0.02428552694618702, y: 2.104837417602539, z: 16.590818405151367 } };
+    expect(reflectionProbeOrder([longer, shorter])).toEqual([longer, shorter]);
+  });
 });

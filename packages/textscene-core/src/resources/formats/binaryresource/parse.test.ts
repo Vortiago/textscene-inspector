@@ -86,6 +86,20 @@ describe('parseBinaryResource on a null object', () => {
     expect(await propertyText('JSON', 'data', nil)).toBe('null');
   });
 
+  it('keeps a Nil on a class ClassDB does not know, whose declared types are unknown (edge case)', async () => {
+    const nil = new ByteWriter().u32(VariantTag.Nil).bytes();
+    expect(await propertyText('ExtensionResource', 'payload', nil)).toBe('null');
+  });
+
+  it('leaves out a Nil script on a class ClassDB does not know, as Object declares it (edge case)', async () => {
+    const nil = new ByteWriter().u32(VariantTag.Nil).bytes();
+    expect(await propertyText('ExtensionResource', 'script', nil)).toBeUndefined();
+  });
+
+  it('keeps a null Object on a property declared as a Variant, as it loads as Nil', async () => {
+    expect(await propertyText('JSON', 'data', nullObject)).toBe('null');
+  });
+
   it('writes a null object inside an array as null (edge case)', async () => {
     const array = new ByteWriter().u32(VariantTag.Array).u32(1).raw(nullObject).bytes();
     expect(await propertyText('Resource', 'items', array)).toBe('[null]');

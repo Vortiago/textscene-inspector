@@ -72,16 +72,11 @@ func typed_prefix(value: Variant) -> String:
 		return text.substr(0, text.find("("))
 	return ""
 
-func typed_collections(c: String, own: Array) -> Dictionary:
+func typed_collections(instance: Object, own: Array) -> Dictionary:
 	var typed: Dictionary = {}
-	var collection_rows: Array = own.filter(
-		func(p): return p["type"] == TYPE_ARRAY or p["type"] == TYPE_DICTIONARY)
-	if collection_rows.is_empty():
-		return typed
-	var instance: Object = fresh_instance(c)
-	if instance == null:
-		return typed
-	for p in collection_rows:
+	for p in own:
+		if p["type"] != TYPE_ARRAY and p["type"] != TYPE_DICTIONARY:
+			continue
 		var prefix: String = typed_prefix(instance.get(p["name"]))
 		if prefix != "":
 			typed[p["name"]] = prefix
@@ -89,11 +84,9 @@ func typed_collections(c: String, own: Array) -> Dictionary:
 
 # The instance's list, not the ClassDB rows: it holds `script`, which Object
 # declares, and the properties a class adds at run time.
-func variant_properties(c: String) -> Array:
+func variant_properties(instance: Object) -> Array:
 	var names: Array = []
-	if not ClassDB.can_instantiate(c):
-		return names
-	for p in ClassDB.instantiate(c).get_property_list():
+	for p in instance.get_property_list():
 		if int(p["usage"]) & USAGE_STORAGE != 0 and int(p["type"]) == TYPE_NIL:
 			names.append(p["name"])
 	return names
@@ -111,12 +104,15 @@ func _init() -> void:
 			var res_own: Array = own_properties(c)
 			if res_own.size() > 0:
 				resource_properties[c] = res_own
-			var typed: Dictionary = typed_collections(c, res_own)
-			if typed.size() > 0:
-				collections[c] = typed
-			var variants: Array = variant_properties(c)
-			if variants.size() > 0:
-				variant_property_names[c] = variants
+			var instance: Object = fresh_instance(c)
+			if instance != null:
+				var typed: Dictionary = typed_collections(instance, res_own)
+				if typed.size() > 0:
+					collections[c] = typed
+				# Keyed by the class itself, so only its own instance answers.
+				var variants: Array = variant_properties(instance) if ClassDB.can_instantiate(c) else []
+				if variants.size() > 0:
+					variant_property_names[c] = variants
 			# Unfiltered, unlike the two blobs above: see the header.
 			if c != "Resource":
 				resource_bases[c] = ClassDB.get_parent_class(c)

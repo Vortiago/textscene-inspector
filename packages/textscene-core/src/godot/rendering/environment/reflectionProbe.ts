@@ -9,7 +9,7 @@ import {
   SKY_ROUGHNESS_LAYERS_DEFAULT,
   type SkyOctmapLayout,
 } from './skyReflection.js';
-import type { Vector3 } from '../../math/vector.js';
+import { type Vector3, vector3Length } from '../../math/vector.js';
 import { sortArray } from '../../templates/sortArray.js';
 
 /** `ReflectionProbe::UpdateMode` (`scene/3d/reflection_probe.h:39-42`). */
@@ -110,7 +110,11 @@ export function reflectionProbeOrder<Probe extends { size: Vector3 }>(probes: re
   return ordered;
 }
 
-/** Godot's sort key, `-(size / 2).length()` as a float (`light_storage.cpp:1760-1764`). */
+/**
+ * Godot's sort key, `-(size / 2).length()` (`light_storage.cpp:1760-1764`), in float step by step:
+ * a double `hypot` rounds once, so it ties boxes Godot orders and splits boxes Godot ties.
+ */
 function negativeHalfDiagonal({ size }: { size: Vector3 }): number {
-  return -Math.fround(Math.hypot(size.x / 2, size.y / 2, size.z / 2));
+  const half = (edge: number) => Math.fround(Math.fround(edge) / 2);
+  return -vector3Length(half(size.x), half(size.y), half(size.z));
 }
