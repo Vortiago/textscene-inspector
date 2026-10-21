@@ -4,7 +4,7 @@ import { glowParamsFor, type GlowParams } from '../godotGlow';
 import { environmentSettingsOf } from './environmentSettings';
 
 export function glowOn(extra: Record<string, string> = {}): GlowParams {
-  const params = glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...extra }), true);
+  const params = glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...extra }));
   if (!params) throw new Error('expected glow to be enabled');
   return params;
 }

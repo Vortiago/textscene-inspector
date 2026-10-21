@@ -20,11 +20,12 @@ function effectWith(properties: Record<string, string>) {
     DEFAULT_CLEAR_COLOR
   );
   return new GodotToneMapEffect({
-    glow: glowParamsFor(settings, true),
+    glow: glowParamsFor(settings),
     adjustments: null,
     toneMapping: { mode: ToneMapper.FILMIC, white: 1 },
     exposure: 1,
     transparentBackground: false,
+    usesBicubicGlowUpscale: true,
   });
 }
 

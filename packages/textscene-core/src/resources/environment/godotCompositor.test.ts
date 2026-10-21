@@ -30,8 +30,14 @@ function shaderOf(
   toneMapping: CompositeToneMapping,
   adjustments: EnvironmentAdjustments | null
 ): string {
-  return compositeProgram({ glow, toneMapping, adjustments, exposure: 1, transparentBackground: false })
-    .fragmentShader;
+  return compositeProgram({
+    glow,
+    toneMapping,
+    adjustments,
+    exposure: 1,
+    transparentBackground: false,
+    usesBicubicGlowUpscale: true,
+  }).fragmentShader;
 }
 
 /** `mainImage`'s body: above it sit the definitions, not the call order. */
@@ -54,6 +60,19 @@ describe('compositeProgram — the shader it emits', () => {
     expect(glsl).toContain('void mainImage(const in vec4 inputColor, const in vec2 uv,');
   });
 
+  it('gathers each level with one bilinear fetch when the project upscales glow linearly', () => {
+    const glsl = compositeProgram({
+      glow: glowOn(),
+      toneMapping: FILMIC,
+      adjustments: null,
+      exposure: 1,
+      transparentBackground: false,
+      usesBicubicGlowUpscale: false,
+    }).fragmentShader;
+    expect(glsl).toContain(`texture2D(${glowLevelUniform(1)}, uv).rgb`);
+    expect(glsl).not.toContain('godotGlowBicubic');
+  });
+
   it('declares the exposure and one sampler for each gathered glow level', () => {
     const glsl = composite(glowOn());
     for (const level of DEFAULT_GATHERED_LEVELS)
@@ -73,6 +92,7 @@ describe('compositeProgram — the shader it emits', () => {
       adjustments: null,
       exposure: 1,
       transparentBackground: true,
+      usesBicubicGlowUpscale: true,
     });
     expect(fragmentShader).toContain('outputColor = vec4(color, inputColor.a);');
   });
@@ -339,6 +359,7 @@ describe('compositeProgram — the uniforms it returns', () => {
       adjustments: null,
       exposure,
       transparentBackground: false,
+      usesBicubicGlowUpscale: true,
     });
   }
 

@@ -17,7 +17,7 @@ const GLOW_LEVEL_COUNT = 7;
 
 describe('glowParamsFor', () => {
   it('is null when the environment has no glow', () => {
-    expect(glowParamsFor(environmentSettingsOf({}), true)).toBeNull();
+    expect(glowParamsFor(environmentSettingsOf({}))).toBeNull();
   });
 
   it('carries Godot 4.6 Environment defaults', () => {
@@ -61,7 +61,7 @@ describe('glowParamsFor', () => {
     // so a non-null result always carries a real `maxLevel`.
     const off: Record<string, string> = { glow_bloom: '1', glow_intensity: '4' };
     for (let level = 1; level <= GLOW_LEVEL_COUNT; level++) off[`glow_levels/${level}`] = '0';
-    expect(glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...off }), true)).toBeNull();
+    expect(glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...off }))).toBeNull();
   });
 
   it('sum-normalises the level weights under glow_normalized', () => {

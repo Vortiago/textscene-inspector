@@ -54,8 +54,6 @@ export interface GlowParams {
    * one value, and the composite must not apply it to the glow a second time.
    */
   exposure: number;
-  /** Whether the composite reads each level with the cubic B-spline, or with a bilinear fetch. */
-  usesBicubicUpscale: boolean;
   /** The `glow_map` reference the composite samples, resolved by the render layer. */
   map: string | undefined;
   /** Zero without a map, as Godot sets it (`renderer_scene_render_rd.cpp:705-710`). */
@@ -106,7 +104,7 @@ export function glowLevelCap(width: number, height: number): number {
  * cutoff produces nothing, so it is `null` too: a non-null result always has a
  * real `maxLevel`.
  */
-export function glowParamsFor(settings: EnvironmentSettings, usesBicubicUpscale: boolean): GlowParams | null {
+export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null {
   const glow = settings.glow;
   if (!glow) return null;
 
@@ -136,7 +134,6 @@ export function glowParamsFor(settings: EnvironmentSettings, usesBicubicUpscale:
     intensity: blendMode === GlowBlendMode.MIX ? clamp(glow.mix, 0, 1) : glow.intensity,
     blendMode,
     exposure: settings.toneMapping.exposure,
-    usesBicubicUpscale,
     map: glow.map,
     mapStrength: glow.map ? glow.mapStrength : 0,
   };

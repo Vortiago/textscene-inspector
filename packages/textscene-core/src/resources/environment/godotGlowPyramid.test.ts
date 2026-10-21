@@ -80,7 +80,7 @@ describe('the later glow levels', () => {
 
 describe('glowGatherGlsl', () => {
   it('sums each gathered level at its own weight and no other', () => {
-    const glsl = glowGatherGlsl(glowOn());
+    const glsl = glowGatherGlsl(glowOn(), true);
     expect(glsl).toContain(`godotGlowBicubic(${glowLevelUniform(1)}, uv) * 0.8`);
     expect(glsl).toContain(`godotGlowBicubic(${glowLevelUniform(2)}, uv) * 0.4`);
     expect(glsl).toContain(`godotGlowBicubic(${glowLevelUniform(3)}, uv) * 0.1`);
@@ -89,7 +89,7 @@ describe('glowGatherGlsl', () => {
   });
 
   it("samples with Godot's cubic B-spline, fetching four bilinear texels (tonemap.glsl:271-338)", () => {
-    const glsl = glowGatherGlsl(glowOn());
+    const glsl = glowGatherGlsl(glowOn(), true);
     expect(glsl).toContain('( 1.0 / 6.0 ) * ( a * a * a )');
     expect(glsl).toContain('vec2 size = vec2(textureSize(tex, 0));');
     expect(glsl).toContain('uv * size + 0.5');
@@ -98,12 +98,12 @@ describe('glowGatherGlsl', () => {
 });
 
 describe('glowGatherGlsl under the Linear upscale mode', () => {
-  const linear = () => glowGatherGlsl({ ...glowOn(), usesBicubicUpscale: false });
+  const linear = () => glowGatherGlsl(glowOn(), false);
 
   it('reads each level with one bilinear fetch, as tonemap.glsl:366-374 does', () => {
     const glsl = linear();
-    expect(glsl).toContain(`godotGlowLinear(${glowLevelUniform(1)}, uv) * 0.8`);
-    expect(glsl).toContain(`godotGlowLinear(${glowLevelUniform(3)}, uv) * 0.1`);
+    expect(glsl).toContain(`texture2D(${glowLevelUniform(1)}, uv).rgb * 0.8`);
+    expect(glsl).toContain(`texture2D(${glowLevelUniform(3)}, uv).rgb * 0.1`);
   });
 
   it('declares no cubic spline code the shader would not run', () => {

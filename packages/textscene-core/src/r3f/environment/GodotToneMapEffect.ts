@@ -40,8 +40,7 @@ export class GodotToneMapEffect extends Effect {
     });
 
     this.clearGlowMap();
-    this.pyramid = options.glow ? new GlowPyramid(options.glow) : null;
-    this.pyramid?.bindLevels(this.uniforms);
+    this.pyramid = options.glow ? new GlowPyramid(options.glow, this.uniforms) : null;
   }
 
   /** Samples `map` as the glow map. The caller owns `map`. A no-op when the composite samples no map. */
@@ -92,15 +91,18 @@ class GlowPyramid {
   private readonly laterBlur: LevelBlur;
   private readonly maxLevel: number;
   private readonly gatheredLevels: number[];
-  /** The highest level the frame has a mip for, which `setSize` sets. Unbounded until the first frame size. */
-  private levelCap = Infinity;
-  /** The composite's uniforms, which `bindLevels` writes and `setSize` rewrites. Null before the bind. */
-  private compositeUniforms: Map<string, THREE.Uniform> | null = null;
+  /** The highest level built and read for the frame size, which `setSize` lowers for a small frame. */
+  private topLevel: number;
 
-  constructor(glow: GlowParams) {
+  /** Binds each gathered level's sampler in `compositeUniforms`, and rebinds it on every resize. */
+  constructor(
+    glow: GlowParams,
+    private readonly compositeUniforms: Map<string, THREE.Uniform>
+  ) {
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
     // that exists always has at least one weighted level.
     this.maxLevel = glow.maxLevel;
+    this.topLevel = glow.maxLevel;
     this.gatheredLevels = glow.gatheredLevels;
     this.firstBlur = new LevelBlur('First', firstLevelBlurGlsl(glow));
     this.laterBlur = new LevelBlur('Later', laterLevelBlurGlsl(glow));
@@ -109,11 +111,6 @@ class GlowPyramid {
       this.levelTargets.push(createTarget(`GodotGlow.Level${level}`));
       this.horizontalTargets.push(createTarget(`GodotGlow.Horizontal${level}`));
     }
-  }
-
-  /** Binds each gathered level to its sampler, and keeps them bound across a resize. */
-  bindLevels(uniforms: Map<string, THREE.Uniform>): void {
-    this.compositeUniforms = uniforms;
     this.rebindLevels();
   }
 
@@ -123,25 +120,25 @@ class GlowPyramid {
    */
   private rebindLevels(): void {
     for (const level of this.gatheredLevels) {
-      this.compositeUniforms!.get(glowLevelUniform(level))!.value =
-        this.levelTargets[Math.min(level, this.levelCap)]!.texture;
+      this.compositeUniforms.get(glowLevelUniform(level))!.value =
+        this.levelTargets[Math.min(level, this.topLevel)]!.texture;
     }
   }
 
   setSize(width: number, height: number): void {
-    this.levelCap = glowLevelCap(width, height);
+    this.topLevel = Math.min(this.maxLevel, glowLevelCap(width, height));
     for (let level = 0; level < this.levelTargets.length; level++) {
       const size = glowLevelSize(width, height, level);
       this.levelTargets[level]!.setSize(size.width, size.height);
       this.horizontalTargets[level]!.setSize(size.width, size.height);
     }
-    if (this.compositeUniforms) this.rebindLevels();
+    this.rebindLevels();
   }
 
   /** Blurs the frame into level 0 and each level into the next (`renderer_scene_render_rd.cpp:603-613`). */
   build(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
     drawOffscreen(renderer, () => {
-      for (let level = 0; level <= Math.min(this.maxLevel, this.levelCap); level++) {
+      for (let level = 0; level <= this.topLevel; level++) {
         const source = level === 0 ? inputBuffer : this.levelTargets[level - 1]!;
         const blur = level === 0 ? this.firstBlur : this.laterBlur;
         blur.draw(renderer, source, this.horizontalTargets[level]!, this.levelTargets[level]!);

@@ -38,6 +38,11 @@ export interface CompositeOptions {
    * (`renderer_compositor_rd.cpp:138`) into an opaque surface.
    */
   transparentBackground: boolean;
+  /**
+   * `rendering/environment/glow/upscale_mode` is above Linear: the gather reads each level with the
+   * cubic B-spline rather than one bilinear fetch (`renderer_scene_render_rd.cpp:1717`).
+   */
+  usesBicubicGlowUpscale: boolean;
   /** Godot `tonemap_exposure`, the starting value of the exposure uniform. */
   exposure: number;
 }
@@ -68,6 +73,7 @@ export function compositeProgram({
   adjustments,
   exposure,
   transparentBackground,
+  usesBicubicGlowUpscale,
 }: CompositeOptions): CompositeProgram {
   const declarations: Record<string, UniformDeclaration> = {
     [EXPOSURE_UNIFORM]: { glslType: 'float', value: exposure },
@@ -86,7 +92,7 @@ export function compositeProgram({
   const fragmentShader = /* glsl */ `
 ${declarationsGlsl(declarations)}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
-${glow ? glowGatherGlsl(glow) + blendGlsl(glow, flooredWhite) : ''}
+${glow ? glowGatherGlsl(glow, usesBicubicGlowUpscale) + blendGlsl(glow, flooredWhite) : ''}
 ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}

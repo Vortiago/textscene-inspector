@@ -160,23 +160,18 @@ vec3 godotGlowBicubic(sampler2D tex, vec2 uv) {
 }
 `;
 
-const LINEAR_GLSL = /* glsl */ `
-vec3 godotGlowLinear(sampler2D tex, vec2 uv) {
-  return texture2D(tex, uv).rgb;
-}
-`;
-
 /**
  * Godot's `gather_glow` (`tonemap.glsl:376-410`): the sum of each gathered level at its weight,
  * read at one uv. The read is the cubic B-spline, or a bilinear fetch under the Linear upscale mode
  * (`:366-374`). Declares `godotGlowGather(uv)`; the caller declares the level samplers.
  */
-export function glowGatherGlsl(params: GlowParams): string {
-  const read = params.usesBicubicUpscale ? 'godotGlowBicubic' : 'godotGlowLinear';
+export function glowGatherGlsl(params: GlowParams, usesBicubicUpscale: boolean): string {
+  const read = (sampler: string) =>
+    usesBicubicUpscale ? `godotGlowBicubic(${sampler}, uv)` : `texture2D(${sampler}, uv).rgb`;
   const terms = params.gatheredLevels.map(
-    (level) => `  glow += ${read}(${glowLevelUniform(level)}, uv) * ${glslFloat(params.levels[level]!)};`
+    (level) => `  glow += ${read(glowLevelUniform(level))} * ${glslFloat(params.levels[level]!)};`
   );
-  return /* glsl */ `${params.usesBicubicUpscale ? BICUBIC_GLSL : LINEAR_GLSL}
+  return /* glsl */ `${usesBicubicUpscale ? BICUBIC_GLSL : ''}
 vec3 godotGlowGather(vec2 uv) {
   vec3 glow = vec3(0.0);
 ${terms.join('\n')}
