@@ -1,7 +1,7 @@
 /**
- * Primitive-mesh feature parity: subdivisions, CylinderMesh caps and the SphereMesh hemisphere,
- * read from the geometry <MeshGeometry> renders. The BoxMesh and CylinderMesh slices test their
- * own mapping onto three's generators.
+ * Primitive-mesh feature parity: subdivisions, the CylinderMesh cap flags and the SphereMesh
+ * hemisphere, read from the decoders and the geometry <MeshGeometry> renders. Each builder's own
+ * test checks its arrays against Godot's.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';

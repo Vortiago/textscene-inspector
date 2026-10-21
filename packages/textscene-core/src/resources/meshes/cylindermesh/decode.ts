@@ -5,6 +5,7 @@
  * guard (:1300-1339), so a cone (`top_radius = 0`) is legal.
  */
 
+import { storedReal } from '../../../godot/math/real.js';
 import { floatOr, settableIntOr } from '../../../parser/valueParsers';
 import { flooredCount } from '../meshCounts';
 import type { CylinderMeshProperties } from './types';
@@ -12,10 +13,10 @@ import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 export function decodeCylinderMesh(properties: Record<string, string>): CylinderMeshProperties {
   return {
-    top_radius: floatOr(properties.top_radius, 0.5, 'CylinderMesh top_radius'),
-    bottom_radius: floatOr(properties.bottom_radius, 0.5, 'CylinderMesh bottom_radius'),
-    height: floatOr(properties.height, 2.0, 'CylinderMesh height'),
-    radial_segments: flooredCount(properties.radial_segments, 4, 64, 'CylinderMesh radial_segments'),
+    topRadius: storedReal(floatOr(properties.top_radius, 0.5, 'CylinderMesh top_radius')),
+    bottomRadius: storedReal(floatOr(properties.bottom_radius, 0.5, 'CylinderMesh bottom_radius')),
+    height: storedReal(floatOr(properties.height, 2.0, 'CylinderMesh height')),
+    radialSegments: flooredCount(properties.radial_segments, 4, 64, 'CylinderMesh radial_segments'),
     rings: settableIntOr(properties.rings, 4, { min: 0 }, 'CylinderMesh rings'),
     capTop: boolSlotValue(properties.cap_top) !== false,
     capBottom: boolSlotValue(properties.cap_bottom) !== false,

@@ -1,14 +1,12 @@
-/**
- * CylinderMesh types for Godot cylinder meshes.
- */
+/** CylinderMesh properties, as `decode.ts` reads them. */
 
 export interface CylinderMeshProperties {
-  top_radius: number;
-  bottom_radius: number;
+  topRadius: number;
+  bottomRadius: number;
   height: number;
-  radial_segments?: number;
-  rings?: number;
-  /** Godot `cap_top` / `cap_bottom`: whether each end-cap is drawn (default true). */
+  radialSegments: number;
+  rings: number;
+  /** Godot `cap_top` and `cap_bottom`: whether each end cap is built. */
   capTop: boolean;
   capBottom: boolean;
 }

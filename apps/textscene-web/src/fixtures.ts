@@ -2664,6 +2664,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Cylinder Mesh Texture Uv",
+    "file": "unit-cylinder-mesh-texture-uv.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Cylinder Mesh",
     "file": "unit-cylinder-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -2731,6 +2736,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sphere Mesh",
     "file": "unit-sphere-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Torus Mesh Texture Uv",
+    "file": "unit-torus-mesh-texture-uv.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {

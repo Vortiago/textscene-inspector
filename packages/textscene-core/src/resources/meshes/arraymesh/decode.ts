@@ -69,7 +69,7 @@ export function decodeSceneArrayMesh(resource: TscnInternalResource): ArrayMeshD
  * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle, as
  * `add_surface_from_arrays` with no ARRAY_INDEX does.
  */
-export function drawOrderIndices(vertexCount: number): Uint16Array | Uint32Array {
+function drawOrderIndices(vertexCount: number): Uint16Array | Uint32Array {
   const indices = vertexCount > 65535 ? new Uint32Array(vertexCount) : new Uint16Array(vertexCount);
   for (let i = 0; i < vertexCount; i++) indices[i] = i;
   return indices;
