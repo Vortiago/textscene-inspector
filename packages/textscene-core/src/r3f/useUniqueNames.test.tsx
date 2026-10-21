@@ -8,25 +8,21 @@ import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit.js';
 import { TscnParser } from '../parser/TscnParser.js';
-import type { TscnNode } from '../parser/types.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
 import { useLocalScene, useUniqueNamePaths } from './useUniqueNames.js';
 
-function node(name: string, flagged = false, children: TscnNode[] = []): TscnNode {
-  return {
-    name,
-    type: 'Node2D',
-    properties: {},
-    rawProperties: flagged ? { unique_name_in_owner: 'true' } : {},
-    children,
-  };
-}
+/** A root with one child, `Hud`, that claims `%Hud`. A `%Name` table exists only for a parsed tree. */
+const HUD_SCENE = `[gd_scene format=3]
 
-const graph = createSceneGraphFromTscnScene({
-  nodes: [node('Root', false, [node('Hud', true)])],
-});
+[node name="Root" type="Node2D"]
+
+[node name="Hud" type="Node2D" parent="."]
+unique_name_in_owner = true
+`;
+
+const graph = createSceneGraphFromTscnScene(new TscnParser().parse(HUD_SCENE));
 
 function wrapper({ children }: { children: ReactNode }) {
   return <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>{children}</HierarchyProvider>;
@@ -34,7 +30,7 @@ function wrapper({ children }: { children: ReactNode }) {
 
 describe('useUniqueNamePaths', () => {
   function graphWithHud(): ReturnType<typeof createSceneGraphFromTscnScene> {
-    return createSceneGraphFromTscnScene({ nodes: [node('Root', false, [node('Hud', true)])] });
+    return createSceneGraphFromTscnScene(new TscnParser().parse(HUD_SCENE));
   }
 
   /** Renders the hook over a scene graph the returned `setGraph` swaps before a rerender. */

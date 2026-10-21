@@ -14,6 +14,7 @@ import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { lightFogEnergy, lightIntensity, lightShadowOpacity } from '../shared/lightStrength';
 import { useLightDistanceFade } from '../shared/lightDistanceFade';
+import { lightBakeModeUserData } from '../../../../r3f/lightBakeMode/lightBakeMode';
 import { areaLightUserData } from '../../../../r3f/areaLight/areaLightFalloff';
 import { fogLightUserData } from '../../../../r3f/fog/fogLightDeclaration';
 import { positionalShadowUserData } from '../../../../r3f/positionalShadow/declaration';
@@ -58,6 +59,7 @@ function useAreaTexture(ref: string | undefined): THREE.Texture | null {
 function useAreaLightUserData(properties: AreaLight3DProperties): Record<string, unknown> {
   const {
     layers,
+    light_bake_mode,
     area_range,
     area_attenuation,
     light_specular,
@@ -75,10 +77,12 @@ function useAreaLightUserData(properties: AreaLight3DProperties): Record<string,
         positionalShadowDeclaration({ light_size, shadow_blur, shadow_normal_bias })
       ),
       ...fogLightUserData({ energy: fogEnergy }),
+      ...lightBakeModeUserData(light_bake_mode),
       ...visualLayersUserData(layers),
     }),
     [
       layers,
+      light_bake_mode,
       area_range,
       area_attenuation,
       light_specular,

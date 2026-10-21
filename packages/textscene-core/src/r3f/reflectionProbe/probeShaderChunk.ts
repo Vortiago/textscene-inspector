@@ -112,18 +112,21 @@ const THREE_INDIRECT_DIFFUSE =
 
 /**
  * The probes' reflection and ambient take the place of the sky's where they cover it
- * (`scene_forward_clustered.glsl:2097-2115`), after the coat dims both. A lightmapped surface keeps
- * its ambient. three's irradiance is Godot's ambient times PI.
+ * (`scene_forward_clustered.glsl:2097-2115`), after the coat dims both. A surface whose lightmap
+ * draws keeps its ambient (`:2112`). three's irradiance is Godot's ambient times PI.
  */
 const GATHER_PROBES = /* glsl */ `#if defined( STANDARD )
 		vec4 godotProbeReflection;
 		vec4 godotProbeAmbient;
 		godotGatherReflectionProbes( geometryPosition, geometryNormal, geometryViewDir, material.godotRoughness, godotProbeReflection, godotProbeAmbient );
 		radiance = godotProbeReflection.rgb + radiance * ( 1.0 - godotProbeReflection.a );
-		#ifndef USE_LIGHTMAP
+		#ifdef GODOT_LIGHTMAP
+		if ( ! godotLightmapActive )
+		#endif
+		{
 			irradiance *= 1.0 - godotProbeAmbient.a;
 			iblIrradiance = PI * godotProbeAmbient.rgb + iblIrradiance * ( 1.0 - godotProbeAmbient.a );
-		#endif
+		}
 	#endif
 	${THREE_INDIRECT_DIFFUSE}`;
 

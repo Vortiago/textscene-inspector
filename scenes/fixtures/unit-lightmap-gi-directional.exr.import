@@ -1,0 +1,29 @@
+[remap]
+
+importer="2d_array_texture"
+type="CompressedTexture2DArray"
+uid="uid://hsec0gqe46qq"
+path.bptc="res://.godot/imported/unit-lightmap-gi-directional.exr-e9a167b0c2015f29869566f5168fdb39.bptc.ctexarray"
+metadata={
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
+}
+
+[deps]
+
+source_file="res://unit-lightmap-gi-directional.exr"
+dest_files=["res://.godot/imported/unit-lightmap-gi-directional.exr-e9a167b0c2015f29869566f5168fdb39.bptc.ctexarray"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/uastc_level=0
+compress/rdo_quality_loss=0.0
+compress/hdr_compression=1
+compress/channel_pack=1
+mipmaps/generate=false
+mipmaps/limit=-1
+slices/horizontal=1
+slices/vertical=8

@@ -78,8 +78,8 @@ export function extractLibraries(properties: Record<string, string>): AnimationL
 
   // Dictionary form (Godot 4's serialisation), possibly multi-line:
   //   libraries = { "": SubResource("AnimationLibrary_x"), "combat": SubResource("…") }
-  // Only inline SubResource libraries are captured; ExtResource entries point to
-  // external (often binary .res) libraries the previewer cannot resolve.
+  // Only inline SubResource libraries are captured. An ExtResource entry names a library
+  // file, which `animationResolver.ts` leaves out of the clip set.
   const dict = properties.libraries;
   if (dict !== undefined) {
     for (const { key, id } of dictSubResourceEntries(dict)) {

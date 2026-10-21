@@ -29,6 +29,7 @@ import {
   signedLightEnergy,
 } from '../shared/lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
+import { lightBakeModeUserData } from '../../../../r3f/lightBakeMode/lightBakeMode';
 import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
 import { directionalLightSize } from '../../../../godot/rendering/lights/directionalSoftShadow';
 import { degToRad } from '../../../../godot/math/math';
@@ -64,9 +65,20 @@ export function DirectionalLight3D({ node, children }: NodeComponentProps) {
       ...fogLightUserData({ energy: fogEnergy }),
       ...lightSpecularUserData(specularAmount),
       ...lightSizeUserData(size),
+      ...lightBakeModeUserData(properties.light_bake_mode),
       ...visualLayersUserData(properties.layers),
     }),
-    [skyMode, skyEnergy, skySize, shadow, fogEnergy, specularAmount, size, properties.layers]
+    [
+      skyMode,
+      skyEnergy,
+      skySize,
+      shadow,
+      fogEnergy,
+      specularAmount,
+      size,
+      properties.light_bake_mode,
+      properties.layers,
+    ]
   );
 
   return (

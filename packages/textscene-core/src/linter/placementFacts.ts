@@ -9,7 +9,7 @@ import {
   refusesToInstantiate,
   rootDeclaringParent,
 } from '../parser/instantiateRefusal.js';
-import { orphanedNodes, type SceneTree } from '../parser/sceneTreeBuilder.js';
+import { orphanedNodes, type SceneSeating } from '../parser/sceneTreeBuilder.js';
 import { idHeadingsOf, idTrailEnd } from '../parser/idTrail.js';
 
 type PlacementFacts = Pick<
@@ -24,23 +24,23 @@ type PlacementFacts = Pick<
 >;
 
 /**
- * The placement facts of one scan: `origins` is every `[node]` heading in scan order, and `tree`
+ * The placement facts of one scan: `origins` is every `[node]` heading in scan order, and `seating`
  * the tree built from them.
  */
 export function placementFacts(
   origins: readonly NodeOrigin<RawNode>[],
-  tree: SceneTree<RawNode>
+  seating: SceneSeating<RawNode>
 ): PlacementFacts {
-  const orphans = orphanedNodes(origins, tree);
+  const orphans = orphanedNodes(origins, seating);
   return {
     orphanedNodes: orphans,
-    reRootedNames: reRootedNames(orphans, tree),
+    reRootedNames: reRootedNames(orphans, seating),
     rootWithParent: rootDeclaringParent(origins),
     emptyParentHeadings: emptyParentHeadings(origins),
     refusesToInstantiate: refusesToInstantiate(origins),
-    idRecoveries: idRecoveries(origins, orphans, tree),
+    idRecoveries: idRecoveries(origins, orphans, seating),
     // Every heading is built by the time connections are made (`packed_scene.cpp:647-660`).
-    idHeadings: idHeadingsOf(origins, ({ node }) => tree.seated.has(node)),
+    idHeadings: idHeadingsOf(origins, ({ node }) => seating.seated.has(node)),
   };
 }
 
@@ -51,7 +51,7 @@ export function placementFacts(
 function idRecoveries(
   origins: readonly NodeOrigin<RawNode>[],
   orphaned: readonly NodeOrigin<RawNode>[],
-  { seated, pathOf }: SceneTree<RawNode>
+  { seated, pathOf }: SceneSeating<RawNode>
 ): Map<NodeOrigin<RawNode>, IdRecovery> {
   const recoveries = new Map<NodeOrigin<RawNode>, IdRecovery>();
   const unseatedByPath = new Set(orphaned);
@@ -67,7 +67,7 @@ function idRecoveries(
 
 function reRootedNames(
   orphaned: readonly NodeOrigin<RawNode>[],
-  { seated }: SceneTree<RawNode>
+  { seated }: SceneSeating<RawNode>
 ): Map<NodeOrigin<RawNode>, string> {
   const names = new Map<NodeOrigin<RawNode>, string>();
   for (const origin of orphaned) {

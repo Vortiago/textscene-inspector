@@ -7,7 +7,10 @@
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
+import type { TscnNode } from '../../../parser/types';
+import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAssignment';
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
@@ -106,10 +109,13 @@ export function GridMap({ node, children }: NodeComponentProps) {
     return grouped;
   }, [properties.cells]);
 
-  // Godot draws a cell only once its library holds the item (`modules/gridmap/grid_map.cpp:676-678`).
-  const items = library.status === 'pending' ? [] : Array.from(cellsByItem.entries());
+  // Godot draws a cell only once its library holds the item (`modules/gridmap/grid_map.cpp:676-678`),
+  // and no cell while it holds baked meshes (`:688`).
+  const hasBakedMeshes = properties.bakedMeshes.length > 0;
+  const items = library.status === 'pending' || hasBakedMeshes ? [] : Array.from(cellsByItem.entries());
   return (
     <Node3D node={node}>
+      {hasBakedMeshes && <BakedMeshes refs={properties.bakedMeshes} />}
       {items.map(([itemId, cells]) => (
         <GridMapItem
           key={itemId}
@@ -122,6 +128,36 @@ export function GridMap({ node, children }: NodeComponentProps) {
       {children}
     </Node3D>
   );
+}
+
+/**
+ * Each baked mesh as the instance Godot gives it at the GridMap's own transform
+ * (`grid_map.cpp:97-104`, `:1037-1039`), drawn as a MeshInstance3D of that mesh would be. A
+ * LightmapGI names each by its index (`lightmap_gi.cpp:1544-1550`).
+ */
+function BakedMeshes({ refs }: { refs: readonly string[] }) {
+  const nodes = useMemo(() => refs.map(bakedMeshNode), [refs]);
+  const MeshInstance3D = nodeComponentRegistry.get(MESH_INSTANCE_TYPE);
+  if (!MeshInstance3D) return null;
+  return (
+    <>
+      {nodes.map((meshNode, index) => (
+        <LightmapSubInstanceProvider key={index} value={index}>
+          <MeshInstance3D node={meshNode} />
+        </LightmapSubInstanceProvider>
+      ))}
+    </>
+  );
+}
+
+const MESH_INSTANCE_TYPE = 'MeshInstance3D';
+
+/** A MeshInstance3D of the baked mesh `ref`, with every other property at its default. */
+function bakedMeshNode(ref: string, index: number): TscnNode {
+  const heading = { type: 'node', attributes: { type: MESH_INSTANCE_TYPE, name: `BakedMesh${index}` } };
+  const node = parseNodeWithRegistry(heading, { mesh: ref });
+  if (!node) throw new Error(`expected the ${MESH_INSTANCE_TYPE} parser to be registered, got none`);
+  return node;
 }
 
 interface GridMapItemProps {

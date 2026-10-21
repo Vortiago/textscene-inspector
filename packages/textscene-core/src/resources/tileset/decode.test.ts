@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
-import { tileSetFromScene, tileSetFromTres } from './decode';
+import { tileSetFromScene, tileSetFromFile } from './decode';
 import { TscnParser } from '../../parser/TscnParser';
 import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
@@ -304,7 +304,7 @@ describe('tileSetFromScene', () => {
   });
 });
 
-describe('tileSetFromTres', () => {
+describe('tileSetFromFile', () => {
   const TILESET_TRES = `[gd_resource type="TileSet" load_steps=3 format=3]
 
 [ext_resource type="Texture2D" path="res://tileset/isotiles.png" id="1"]
@@ -325,7 +325,7 @@ sources/0 = SubResource("TileSetAtlasSource_a")
 `;
 
   it('resolves a TileSet .tres against its own ext/sub resources', () => {
-    const model = tileSetFromTres(parseTresFile(TILESET_TRES));
+    const model = tileSetFromFile(parseTresFile(TILESET_TRES));
     expect(model).not.toBeNull();
     expect(model!.shape).toBe(1);
     expect(model!.tileSize).toEqual({ x: 128, y: 64 });
@@ -340,7 +340,7 @@ sources/0 = SubResource("TileSetAtlasSource_a")
     const material = parseTresFile(
       '[gd_resource type="StandardMaterial3D" format=3]\n\n[resource]\nmetallic = 0.5\n'
     );
-    expect(tileSetFromTres(material)).toBeNull();
+    expect(tileSetFromFile(material)).toBeNull();
   });
 });
 
@@ -389,7 +389,7 @@ describe('a TileSet enum Godot reads differently from `parseInt`', () => {
   it('reads the layout the exponent spelling names', () => {
     // Godot's tokenizer types `1e1` as FLOAT and stores 10, where `parseInt`
     // would stop at the `e` and read 1 (STACKED_OFFSET).
-    const model = tileSetFromTres(
+    const model = tileSetFromFile(
       parseTresFile('[gd_resource type="TileSet"]\n\n[resource]\ntile_layout = 1e1\n')!
     );
 
@@ -427,7 +427,7 @@ describe('TileSet source lookups', () => {
 
   it('reads each entry of a .tres table once, however many sources it names', () => {
     const { table, entryReads } = countedTable(atlasSources());
-    const model = tileSetFromTres({
+    const model = tileSetFromFile({
       resourceType: 'TileSet',
       properties: tileSetBody(),
       extResources: externals,

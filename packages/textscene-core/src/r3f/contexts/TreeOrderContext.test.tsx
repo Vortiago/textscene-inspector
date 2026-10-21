@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { childOrders, compareTreeOrder, TreeOrderProvider, useTreeOrder } from './TreeOrderContext';
+import {
+  childOrders,
+  compareReadyOrder,
+  compareTreeOrder,
+  TreeOrderProvider,
+  useTreeOrder,
+} from './TreeOrderContext';
 
 describe('useTreeOrder', () => {
   it('returns the provided order inside a provider', () => {
@@ -44,5 +50,19 @@ describe('compareTreeOrder', () => {
 
   it('ties one place with itself (edge case)', () => {
     expect(compareTreeOrder([0, 1], [0, 1])).toBe(0);
+  });
+});
+
+describe('compareReadyOrder', () => {
+  it('puts an earlier sibling first', () => {
+    expect(compareReadyOrder([0, 1, 5], [0, 2])).toBeLessThan(0);
+  });
+
+  it('puts a descendant before its ancestor, as _propagate_ready runs the children first', () => {
+    expect(compareReadyOrder([0, 1, 0], [0, 1])).toBeLessThan(0);
+  });
+
+  it('ties one place with itself (edge case)', () => {
+    expect(compareReadyOrder([0, 1], [0, 1])).toBe(0);
   });
 });

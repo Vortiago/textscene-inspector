@@ -1,7 +1,6 @@
 /** Small shared helpers for node-type semantic linters. */
 import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
-import { cachedUniqueNameClaims, type uniqueNameClaims } from '../utils/uniqueNames.js';
 import type { RawNode } from '../parser/types.js';
 
 /**
@@ -58,15 +57,6 @@ function buildSceneIndex(roots: RawNode[]): SceneIndex {
   for (const ofType of nodesByType.values()) Object.freeze(ofType);
 
   return { parentOf, underInstanceAncestor, nodesByType };
-}
-
-/**
- * The `%Name` claim table, built once per tree and shared with the render
- * path's consumers through the cache in `utils/uniqueNames.ts`. Lazy rather
- * than a `SceneIndex` field, because most scenes carry no `%Name` path at all.
- */
-export function sceneUniqueClaims(roots: RawNode[]): ReturnType<typeof uniqueNameClaims> {
-  return cachedUniqueNameClaims(roots);
 }
 
 function getSceneIndex(roots: RawNode[]): SceneIndex {

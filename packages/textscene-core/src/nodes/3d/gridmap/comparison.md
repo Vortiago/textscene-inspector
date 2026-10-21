@@ -11,6 +11,8 @@ renders_as: a THREE.InstancedMesh per MeshLibrary item surface, or a mesh per ce
 
 Instances each populated cell's `MeshLibrary` item mesh, batching the cells of each item surface into one `THREE.InstancedMesh` with that surface's material. The item mesh is an ArrayMesh or a PrimitiveMesh, embedded in the library or in its own `.tres`. A surface whose material billboards draws one mesh per cell instead, so it turns about its own cell as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.
 
+A GridMap that holds `baked_meshes` draws them in place of its cells, as Godot does once a LightmapGI bakes it. Each baked mesh reads the lightmap the bake gives its index.
+
 ## Linting
 
 <!-- lint:begin GridMap -->

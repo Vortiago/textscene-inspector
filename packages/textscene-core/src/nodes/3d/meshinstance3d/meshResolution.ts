@@ -13,7 +13,7 @@ export interface MeshResolution extends ResourceResolution {
 
 export function useMeshResolution(meshRef: string | undefined, pools: SceneResources): MeshResolution {
   const resolution = useResourceResolution(meshRef, pools);
-  const { tresPath, scoped } = resolution;
-  const arrayMeshPath = tresPath && scoped?.resource.type === 'ArrayMesh' ? tresPath : null;
+  const { resourcePath, scoped } = resolution;
+  const arrayMeshPath = resourcePath && scoped?.resource.type === 'ArrayMesh' ? resourcePath : null;
   return { ...resolution, arrayMeshPath };
 }

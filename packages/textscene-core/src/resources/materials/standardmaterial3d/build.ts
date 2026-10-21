@@ -6,18 +6,19 @@
  */
 
 import * as THREE from 'three';
-import { injectProgram } from '../../../r3f/materialProgramInputs';
+import { composeInjections, injectProgram, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import type { StandardMaterialBag } from './materialBag';
 import { bindHeightmap } from '../../../r3f/materials/godotParallax';
 
 /**
  * A derived bag's material class as a constructed `THREE.Material`, for a caller that
  * already holds bound textures, such as the GLB surface-material override.
- * `<StandardMaterialSlot>` maps the same classes onto JSX tags (ADR-0039).
+ * `<StandardMaterialSlot>` maps the same classes onto JSX tags (ADR-0039). `extra` composes after
+ * the bag's own injections.
  */
-export function materialFromBag(bag: StandardMaterialBag): THREE.Material {
+export function materialFromBag(bag: StandardMaterialBag, extra?: ProgramInjection): THREE.Material {
   const material = materialOfClass(bag);
-  injectProgram(material, bag.injection);
+  injectProgram(material, composeInjections([bag.injection, extra]));
   bindHeightmap(material, bag.heightmapTexture ?? null);
   return material;
 }

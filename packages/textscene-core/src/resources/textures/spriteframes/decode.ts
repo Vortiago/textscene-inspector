@@ -6,7 +6,7 @@
  */
 
 import type { SpriteFramesAnimation, SpriteFramesData } from './types';
-import { dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
+import { dictKey, dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
 import { matchedFloat } from '../../../godot/variant/number.js';
 import { SPRITE_FRAME_MINIMUM_DURATION } from '../../../godot/scene/spriteFramesResource.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -31,7 +31,7 @@ const SPEED_RE = dictNumberField('speed');
  * (`ERR_CONTINUE(!d.has(…))`, sprite_frames.cpp:200-203). Presence only, as
  * `Dictionary::has` is: the value's form is read afterwards.
  */
-const ANIMATION_KEYS_RE = ['name', 'speed', 'loop', 'frames'].map((key) => new RegExp(`"${key}"\\s*:`));
+const ANIMATION_KEYS_RE = ['name', 'speed', 'loop', 'frames'].map((key) => dictKey(key));
 
 /** The `"name"` value: one string literal, escapes and all, with an optional `&` or `@` sigil. */
 const NAME_RE = dictStringField('name');

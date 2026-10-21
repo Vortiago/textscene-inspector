@@ -12,6 +12,7 @@ import {
   positionalLightSpecularAmount,
 } from './lightStrength';
 import { lightSpecularUserData } from '../../../../r3f/lightSpecular/lightSpecular';
+import { lightBakeModeUserData } from '../../../../r3f/lightBakeMode/lightBakeMode';
 import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
 import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import { usePositionalShadowUserData } from './positionalShadowDeclaration';
@@ -45,9 +46,18 @@ export function usePositionalLight(
       ...fogLightUserData({ energy: fogEnergy, spotAngleAttenuation }),
       ...lightSpecularUserData(specularAmount),
       ...lightSizeUserData(size),
+      ...lightBakeModeUserData(properties.light_bake_mode),
       ...visualLayersUserData(properties.layers),
     }),
-    [shadowUserData, fogEnergy, spotAngleAttenuation, specularAmount, size, properties.layers]
+    [
+      shadowUserData,
+      fogEnergy,
+      spotAngleAttenuation,
+      specularAmount,
+      size,
+      properties.light_bake_mode,
+      properties.layers,
+    ]
   );
   return { intensity, shadowOpacity, userData };
 }

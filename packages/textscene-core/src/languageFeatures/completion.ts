@@ -18,7 +18,7 @@ import {
 import type { DocumentSection, LanguageDocument, PropertyLocation } from './document.js';
 import { enumEntriesOf } from './hints.js';
 import { declaredResources, openReferenceAt, type ResourceRefKind } from './resourceRefs.js';
-import { seatedNodePaths } from './nodePathRefs.js';
+import { seatedNodePaths } from './nodeSeating.js';
 import { SCENE_ROOT_PATH } from '../utils/nodePath.js';
 import { headingAttribute, propertyKeySpan, spanContains } from './ranges.js';
 import type { CompletionItem, Position } from './types.js';

@@ -7,6 +7,7 @@ import {
   writeLightSizeUniforms,
 } from './lightSize';
 import { sceneLights } from '../directionalShadow/lightLists';
+import { slottedLights } from '../lightSlots';
 import { attachSplitSun } from '../directionalShadow/splitSun';
 import { litUniformArray } from '../testing/litUniformArray';
 
@@ -17,7 +18,10 @@ function declared<Light extends THREE.Light>(light: Light, size: number): Light 
 
 /** The first `count` sizes the lit materials read after a render of `scene`. */
 function sizesAfterRender(scene: THREE.Scene, count: number, drawsDirectionalSoftShadows = false): number[] {
-  writeLightSizeUniforms(sceneLights(scene), new THREE.PerspectiveCamera(), drawsDirectionalSoftShadows);
+  writeLightSizeUniforms(
+    slottedLights(sceneLights(scene), new THREE.PerspectiveCamera()),
+    drawsDirectionalSoftShadows
+  );
   installLightSizeUniforms();
   return [...litUniformArray(LIGHT_SIZES).subarray(0, count)];
 }

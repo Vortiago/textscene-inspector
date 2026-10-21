@@ -6,7 +6,8 @@
 
 import { RES_PATH_BODY_SOURCE } from '../godot/string/string.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
-import { nodePathReferenceAt, nodeSectionOfPath } from './nodePathRefs.js';
+import { nodePathReferenceAt } from './nodePathRefs.js';
+import { nodeSectionOfPath } from './nodeSeating.js';
 import { lineRange, lineRangeContains, linesRange } from './ranges.js';
 import { declarationOf, referenceAt } from './resourceRefs.js';
 import type { Position, Range } from './types.js';
