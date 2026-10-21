@@ -16,7 +16,7 @@ import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/mes
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
 import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
 import { scopedSection } from '../../../../resources/resourceSection';
-import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../../../resources/meshes/meshSource';
+import { meshKind, primitiveMaterialAddress } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshSurface } from '../../../../resources/meshes/primitivemesh/surface';
 
 /** The arrays of a Godot surface the brush builder reads, and the surface's material. */
@@ -24,11 +24,14 @@ export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normal
   material: CsgMaterialAddress;
 }
 
-/**
- * A mesh, and for one in a file the parsed file, whose identity keys the brush and whose tables an
- * ArrayMesh's surfaces resolve their materials in.
- */
-export type CsgMesh = MeshSource & { file: ParsedResource | null };
+/** A mesh, and for one in a file where it loads from, whose parse keys the brush. */
+export interface CsgMesh {
+  resource: TscnInternalResource;
+  /** The tables the mesh's own references resolve in. */
+  resources: SceneResources;
+  /** Null for a mesh in the scene. */
+  file: { path: string; parsed: ParsedResource } | null;
+}
 
 /** The `.tres` a mesh reference loads, or null for an inline mesh or a file no processor reads. */
 export function meshFilePath(meshRef: string | undefined, pools: SceneResources): string | null {
@@ -38,12 +41,12 @@ export function meshFilePath(meshRef: string | undefined, pools: SceneResources)
 /** The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. */
 export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
   const inline = resolveSubResourceRef(meshRef, ctx.internalResources);
-  if (inline) return { resource: inline, resources: ctx, path: null, file: null };
+  if (inline) return { resource: inline, resources: ctx, file: null };
   const path = meshFilePath(meshRef, ctx);
-  const file = path ? ctx.file(path) : undefined;
-  const scoped = path && file ? scopedSection(file, path) : undefined;
-  if (!path || !file || !scoped) return null;
-  return { ...scoped, path, file };
+  const parsed = path ? ctx.file(path) : undefined;
+  const scoped = path && parsed ? scopedSection(parsed, path) : undefined;
+  if (!path || !parsed || !scoped) return null;
+  return { ...scoped, file: { path, parsed } };
 }
 
 /**
@@ -51,16 +54,19 @@ export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext
  * materials by the scene's references, a mesh in a file by `res://` paths (ADR-0046).
  */
 export function meshSurfaces(mesh: CsgMesh): CsgMeshSurface[] {
-  const { resource, path, file } = mesh;
+  const { resource, resources, file } = mesh;
   switch (meshKind(resource.type)) {
     case 'primitive':
-      return primitiveMeshSurfaces(resource, primitiveMaterialAddress(mesh));
+      return primitiveMeshSurfaces(
+        resource,
+        primitiveMaterialAddress({ resource, resources, path: file?.path ?? null })
+      );
     case 'arrayMesh':
-      if (path && file) {
-        const section = { file, type: resource.type, properties: resource.data };
+      if (file) {
+        const section = { file: file.parsed, type: resource.type, properties: resource.data };
         return arrayMeshSurfaces(
-          () => decodeArrayMesh(section, path),
-          path,
+          () => decodeArrayMesh(section, file.path),
+          file.path,
           (s) => s.materialPath
         );
       }
