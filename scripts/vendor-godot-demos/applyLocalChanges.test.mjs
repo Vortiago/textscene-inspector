@@ -21,7 +21,7 @@ const SCENE_PATCH = `--- a/3d/demo/main.tscn
 +++ b/3d/demo/main.tscn
 @@ -1,2 +1,2 @@
  [gd_scene format=3]
--[ext_resource type="Mesh" path="res://mesh.res" id="1"]
+-[ext_resource type="Mesh" path="res://mesh.mesh" id="1"]
 +[ext_resource type="Mesh" path="res://mesh.tres" id="1"]
 `;
 
@@ -31,9 +31,9 @@ beforeEach(() => {
   write(
     checkout,
     '3d/demo/main.tscn',
-    '[gd_scene format=3]\n[ext_resource type="Mesh" path="res://mesh.res" id="1"]\n'
+    '[gd_scene format=3]\n[ext_resource type="Mesh" path="res://mesh.mesh" id="1"]\n'
   );
-  write(checkout, '3d/demo/mesh.res', 'RSRC');
+  write(checkout, '3d/demo/mesh.mesh', 'RSRC');
   write(changes, 'text-resources/3d/demo/mesh.tres', '[gd_resource type="ArrayMesh" format=3]\n');
   write(changes, 'local-changes.patch', SCENE_PATCH);
 });
@@ -46,7 +46,7 @@ afterEach(() => {
 describe('applyLocalChanges', () => {
   it('replaces a binary resource with its text copy', () => {
     applyLocalChanges(changes, checkout);
-    expect(existsSync(join(checkout, '3d/demo/mesh.res'))).toBe(false);
+    expect(existsSync(join(checkout, '3d/demo/mesh.mesh'))).toBe(false);
     expect(readFileSync(join(checkout, '3d/demo/mesh.tres'), 'utf8')).toBe(
       '[gd_resource type="ArrayMesh" format=3]\n'
     );
