@@ -108,6 +108,9 @@ export class TscnPreviewPanel {
       jumpToNode: (msg) => {
         void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.path, this._panel.viewColumn);
       },
+      copyNodePath: (msg) => {
+        void vscode.env.clipboard.writeText(msg.nodePath);
+      },
       loadResource: (msg) => {
         void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);
       },

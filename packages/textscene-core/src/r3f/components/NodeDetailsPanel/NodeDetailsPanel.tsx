@@ -10,13 +10,19 @@ import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
+import { spelledLiveNodePath } from '../../../utils/nodePath.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
 import { authoredSpelling, holdsRenamedCopy } from '../../../resources/authoredSpelling.js';
 import type { SceneScope } from '../../../parser/types.js';
 import styles from './NodeDetailsPanel.module.css';
 
-export function NodeDetailsPanel() {
+interface NodeDetailsPanelProps {
+  /** Receives the node path as Godot's "Copy Node Path" writes it. Without it the Path row has no copy button. */
+  onCopyNodePath?: (nodePath: string) => void;
+}
+
+export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
   const { selectedNodePath } = useSelection();
   const viewportActions = useOptionalViewportActions();
 
@@ -73,6 +79,15 @@ export function NodeDetailsPanel() {
         <div className={styles.row}>
           <span className={styles.label}>Path:</span>
           <span className={styles.value}>{path}</span>
+          {onCopyNodePath && (
+            <button
+              type="button"
+              className={`${styles.actionButton} ${styles.copyButton}`}
+              onClick={() => onCopyNodePath(spelledLiveNodePath(path))}
+            >
+              Copy node path
+            </button>
+          )}
         </div>
         {node.parent && (
           <div className={styles.row}>

@@ -69,10 +69,18 @@ export function seatedNodeTree(document: LanguageDocument): readonly SeatedSecti
   return seatingOf(document).tree;
 }
 
+/** Written only by {@link seatedNodePaths}. An entry lives as long as its document. */
+const seatedPaths = new WeakMap<LanguageDocument, ReadonlyMap<DocumentSection, string>>();
+
 /** The root-relative path of each seated `[node]` heading with a name, the root at the empty path. */
 export function seatedNodePaths(document: LanguageDocument): ReadonlyMap<DocumentSection, string> {
-  const { seating, sectionByNode } = seatingOf(document);
-  return new Map([...seating.pathOf].map(([node, path]) => [sectionByNode.get(node)!, path]));
+  let paths = seatedPaths.get(document);
+  if (!paths) {
+    const { seating, sectionByNode } = seatingOf(document);
+    paths = new Map([...seating.pathOf].map(([node, path]) => [sectionByNode.get(node)!, path]));
+    seatedPaths.set(document, paths);
+  }
+  return paths;
 }
 
 /** The `[node]` heading a root-relative node path names, or undefined where no heading is seated there. */

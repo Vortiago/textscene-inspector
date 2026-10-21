@@ -85,6 +85,13 @@ export type JumpToNodeMessage = {
   path: string;
 };
 
+/** The host writes the path to the clipboard, so the copy does not depend on the webview's permission. */
+export type CopyNodePathMessage = {
+  type: 'copyNodePath';
+  /** As Godot's "Copy Node Path" writes it: from the scene root, `.` for the root. */
+  nodePath: string;
+};
+
 /** Ask the host to read a resource file from the workspace. */
 export type LoadResourceMessage = {
   type: 'loadResource';
@@ -146,6 +153,7 @@ export type CapturePongMessage = {
 export type WebviewToHostMessage =
   | WebviewReadyMessage
   | JumpToNodeMessage
+  | CopyNodePathMessage
   | LoadResourceMessage
   | LogMessage
   | PreviewCapturedMessage

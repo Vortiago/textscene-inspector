@@ -54,6 +54,7 @@ const CARRIES_ITS_PAYLOAD: {
 } = {
   webviewReady: () => true,
   jumpToNode: (m) => isString(m.nodeName) && isString(m.path),
+  copyNodePath: (m) => isString(m.nodePath),
   // `resourceType` only when present: the byte layer requests a file it knows no type for.
   loadResource: (m) =>
     isString(m.path) && (m.resourceType === undefined || isString(m.resourceType)) && isString(m.requestId),

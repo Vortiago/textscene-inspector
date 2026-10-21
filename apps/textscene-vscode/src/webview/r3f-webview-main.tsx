@@ -141,12 +141,17 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
     } satisfies WebviewToHostMessage);
   };
 
+  const handleCopyNodePath = (nodePath: string) => {
+    vscode.postMessage({ type: 'copyNodePath', nodePath } satisfies WebviewToHostMessage);
+  };
+
   return (
     <ResourceLoaderProvider loader={loader}>
       <TscnPreviewShell
         panelId={panelId}
         content={content}
         onNodeReveal={handleNodeReveal}
+        onCopyNodePath={handleCopyNodePath}
         initialViewportMode={INITIAL_VIEWPORT_MODE}
         onCaptureStateChange={handleCaptureStateChange}
       />

@@ -35,3 +35,18 @@ export function getAncestorPaths(nodePath: string): string[] {
  * in `godot/string/nodePath.ts` spells the root the same way and cannot import this.
  */
 export const SCENE_ROOT_PATH = '';
+
+/**
+ * A root-relative path as a NodePath spells it, which has no empty path: the root is `.`
+ * (`node_path.cpp:301-302`). Godot's "Copy Node Path" writes this (`scene_tree_dock.cpp:1249-1258`).
+ */
+export function spelledNodePath(rootRelativePath: string): string {
+  return rootRelativePath === SCENE_ROOT_PATH ? '.' : rootRelativePath;
+}
+
+/** {@link spelledNodePath} for a live path, whose first segment is the root's name. */
+export function spelledLiveNodePath(livePath: string): string {
+  return spelledNodePath(
+    livePath.includes('/') ? livePath.slice(livePath.indexOf('/') + 1) : SCENE_ROOT_PATH
+  );
+}

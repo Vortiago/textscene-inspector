@@ -32,11 +32,19 @@ import { createFileIngest } from './fileIngest';
 import { useFileDrop } from './useFileDrop';
 import { useUploadError } from './useUploadError';
 import { FIXTURE_LOADING_TESTID } from './fixtureLoadingTestId';
+import { warn } from '@textscene/core/logger';
 import { Toolbar } from './R3FToolbar';
 import styles from './r3f-main.module.css';
 
 /** The site mirrors exactly the scenes it lists, so an empty catalog means no mirror. */
 const HAS_FIXTURES_MIRROR = fixtures.length > 0;
+
+/** A browser refuses the write outside a secure context or without permission: that is logged, not thrown. */
+function copyToClipboard(text: string): void {
+  navigator.clipboard.writeText(text).catch((error: unknown) => {
+    warn(`Copy to the clipboard failed: ${String(error)}`);
+  });
+}
 
 export function R3FApp() {
   const { sourcePane, toggleVisible: toggleSourcePane, onSplitterMouseDown } = useSourcePane();
@@ -295,6 +303,7 @@ export function R3FApp() {
             onResourceUpload={handleResourceUpload}
             onResourceRemove={handleResourceRemove}
             onMissingPathsChange={handleMissingPathsChange}
+            onCopyNodePath={copyToClipboard}
             // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
             onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
             initialActiveCameraPath={initialActiveCameraPath}
