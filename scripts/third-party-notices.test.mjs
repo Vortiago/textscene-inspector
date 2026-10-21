@@ -1,5 +1,5 @@
 /**
- * Asserts that every file transcribed from Godot source (such as `skyShaders.ts`) or from bcdec is
+ * Asserts that every file transcribed from Godot source (such as `skyShaders.ts`) or from bcdec or FastLZ is
  * listed in `THIRD-PARTY-NOTICES.md`: the bundle strips the inline MIT notice, and the notices file
  * travels with the VSIX. Detection keys on each copyright line, not a path allowlist, so copying
  * the notice into a new port is what gets it caught.
@@ -19,9 +19,13 @@ const GODOT_COPYRIGHT = /Copyright \(c\) 2007-2014 Juan Linietsky, Ariel Manzur/
 /** The line every file ported from bcdec (`thirdparty/misc/bcdec.h` in Godot) carries. */
 const BCDEC_COPYRIGHT = /Copyright \(c\) 2022 Sergii Kudlai/;
 
+/** The line every file ported from FastLZ (`thirdparty/misc/fastlz.c` in Godot) carries. */
+const FASTLZ_COPYRIGHT = /Copyright \(C\) 2005-2020 Ariya Hidayat/;
+
 const COPYRIGHTS = [
   ['Godot', GODOT_COPYRIGHT],
   ['bcdec', BCDEC_COPYRIGHT],
+  ['FastLZ', FASTLZ_COPYRIGHT],
 ];
 
 /** Trees that can contain derived source. `node_modules` and build output excluded. */

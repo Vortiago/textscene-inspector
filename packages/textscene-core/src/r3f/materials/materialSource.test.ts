@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { fileMaterialSources, resolveMaterialSource } from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
+import '../../resources/formats/binaryresource/index';
 
 const INTERNAL: TscnInternalResource[] = [
   { id: 'Mat_body', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },
@@ -21,6 +22,7 @@ const INTERNAL: TscnInternalResource[] = [
 const EXTERNAL: TscnExternalResource[] = [
   { id: '4', path: 'res://materials/paint.tres', type: 'Material' },
   { id: '5', path: 'res://models/truck.glb', type: 'PackedScene' },
+  { id: '6', path: 'res://materials/paint.material', type: 'StandardMaterial3D' },
 ];
 const POOLS = { internalResources: INTERNAL, externalResources: EXTERNAL };
 
@@ -37,7 +39,7 @@ describe('resolveMaterialSource', () => {
       kind: 'file',
       path: 'res://rock.tres::Mat_1',
     });
-    expect(resolveMaterialSource('res://paint.material', POOLS)).toBeUndefined();
+    expect(resolveMaterialSource('res://paint.png', POOLS)).toBeUndefined();
   });
 
   it('resolves an ExtResource to the .tres file the loader reads', () => {
@@ -72,7 +74,14 @@ describe('resolveMaterialSource', () => {
     expect(resolveMaterialSource('SubResource("Mesh_box")', POOLS)).toBeUndefined();
   });
 
-  it('returns undefined for an ExtResource that is not a .tres document', () => {
+  it('resolves an ExtResource to a binary .material file the loader reads', () => {
+    expect(resolveMaterialSource('ExtResource("6")', POOLS)).toEqual({
+      kind: 'file',
+      path: 'res://materials/paint.material',
+    });
+  });
+
+  it('returns undefined for an ExtResource that is not a resource file', () => {
     expect(resolveMaterialSource('ExtResource("5")', POOLS)).toBeUndefined();
   });
 
@@ -123,8 +132,14 @@ describe('fileMaterialSources', () => {
     ]);
   });
 
-  it('leaves a material that is no .tres document undefined, as an ExtResource reference does', () => {
-    expect(fileMaterialSources(['res://materials/paint.material'])).toEqual([undefined]);
+  it('takes a material inside a binary .res mesh as a file source', () => {
+    expect(fileMaterialSources(['res://mesh.res::Mat'])).toEqual([
+      { kind: 'file', path: 'res://mesh.res::Mat' },
+    ]);
+  });
+
+  it('leaves a material that is no resource file undefined, as an ExtResource reference does', () => {
+    expect(fileMaterialSources(['res://materials/paint.png'])).toEqual([undefined]);
   });
 
   it('returns no sources for a mesh with no surfaces', () => {

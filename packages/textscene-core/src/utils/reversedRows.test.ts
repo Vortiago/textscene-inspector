@@ -28,6 +28,12 @@ describe('reversedRows', () => {
     );
   });
 
+  it('keeps the bits of a half-float image, such as a decoded OpenEXR atlas', () => {
+    expect(reversedRows(Uint16Array.of(1, 1, 1, 1, 0x3c00, 0x3c00, 0x3c00, 0x3c00), 1, 2)).toEqual(
+      Uint16Array.of(0x3c00, 0x3c00, 0x3c00, 0x3c00, 1, 1, 1, 1)
+    );
+  });
+
   it('gives an empty array for an empty image (error case)', () => {
     expect(reversedRows(new Uint8Array(0), 0, 0)).toHaveLength(0);
   });

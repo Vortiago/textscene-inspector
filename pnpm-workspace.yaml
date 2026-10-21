@@ -55,6 +55,10 @@ catalog:
   # engine's own rather than a hand-port that would drift from them. MIT.
   fastnoise-lite: 1.1.1
 
+  # Zstandard decoding for a compressed binary resource (RSCC), the mode Godot saves by default.
+  # Pure JS, as the VS Code webview's policy allows no WebAssembly. MIT.
+  fzstd: 0.1.1
+
   # PNG decoding: the visual and Godot-reference scripts, and the capture checks in the
   # VS Code integration suite.
   pngjs: ^7.0.0

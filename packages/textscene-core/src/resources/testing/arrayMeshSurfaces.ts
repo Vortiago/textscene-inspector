@@ -26,7 +26,7 @@ function surfaceWriter(head: string, tail: string): (keys?: SurfaceKeys) => stri
 }
 
 /**
- * The one surface of `scenes/demos/3d/platformer/stage/meshes/wall.tres`: a 4-vertex quad, format
+ * The one surface of `scenes/demos/3d/platformer/stage/meshes/wall.res`: a 4-vertex quad, format
  * 34359742487 = VERTEX|NORMAL|TANGENT|TEX_UV|INDEX, uncompressed.
  */
 export const wallQuadSurface = surfaceWriter(
@@ -47,7 +47,7 @@ export function wallQuadSurfaces(...surfaces: SurfaceKeys[]): string {
 }
 
 /**
- * The `headlights` surface of `scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.tres`. format
+ * The `headlights` surface of `scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.res`. format
  * 34896613383 = VERTEX|NORMAL|TANGENT|INDEX + ARRAY_FLAG_COMPRESS_ATTRIBUTES +
  * ARRAY_FLAG_FORMAT_VERSION_2, 12 B/vertex: an 8 B position record, then a 4 B normal region.
  */

@@ -82,6 +82,9 @@ export const MATERIAL_SCENES = [
     name: 'glb-surface-material-override',
     file: 'unit-glb-surface-material-override.tscn',
   },
+  // A `.glb` primitive with no glTF material, lit and not overridden: the importer's own
+  // non-metallic StandardMaterial3D.
+  { name: 'glb-default-material', file: 'unit-glb-default-material.tscn' },
   // An emission map drawn through the UV2 Godot's importer unwrapped into the `.glb`'s unwrap
   // cache, the only scene that samples UV2. Each face shows its own patch of the gradient bands.
   { name: 'glb-lightmap-uv2', file: 'unit-glb-lightmap-uv2.tscn' },

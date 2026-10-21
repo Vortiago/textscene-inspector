@@ -45,6 +45,13 @@ The `.unwrap_cache` file Godot's importer writes beside a source asset it unwrap
 Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.
 _Avoid_: "lightmap cache", which suggests the baked lightmap.
 
+**Lightmap atlas** (`resources/lightmapgidata/build.ts`):
+Every layer of a bake's lightmap textures, stacked in order into one texture array. A surface reads its own slice of it through UV2.
+_Avoid_: "lightmap texture" for the whole stack: a bake can save several.
+
+**Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
+The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054).
+
 **Project settings**:
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.

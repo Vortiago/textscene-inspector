@@ -5,6 +5,7 @@
  * so a squashed sphere is legal.
  */
 
+import { storedReal } from '../../../godot/math/real.js';
 import { floatOr, settableIntOr } from '../../../parser/valueParsers';
 import { flooredCount } from '../meshCounts';
 import type { SphereMeshProperties } from './types';
@@ -12,8 +13,8 @@ import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 export function decodeSphereMesh(properties: Record<string, string>): SphereMeshProperties {
   return {
-    radius: floatOr(properties.radius, 0.5, 'SphereMesh radius'),
-    height: floatOr(properties.height, 1.0, 'SphereMesh height'),
+    radius: storedReal(floatOr(properties.radius, 0.5, 'SphereMesh radius')),
+    height: storedReal(floatOr(properties.height, 1.0, 'SphereMesh height')),
     radialSegments: flooredCount(properties.radial_segments, 4, 64, 'SphereMesh radial_segments'),
     rings: settableIntOr(properties.rings, 32, { min: 1 }, 'SphereMesh rings'),
     isHemisphere: boolSlotValue(properties.is_hemisphere) === true,

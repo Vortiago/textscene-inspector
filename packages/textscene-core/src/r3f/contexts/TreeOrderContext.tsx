@@ -29,9 +29,23 @@ export function childOrders(parent: TreeOrder, count: number): TreeOrder[] {
 
 /** Negative when `a` enters the tree before `b`, zero for one place. An ancestor comes first. */
 export function compareTreeOrder(a: TreeOrder, b: TreeOrder): number {
+  return siblingOrder(a, b) || a.length - b.length;
+}
+
+/**
+ * Negative when `a` is notified `NOTIFICATION_POST_ENTER_TREE` before `b`, zero for one place.
+ * `_propagate_ready` notifies a node after all its children (`node.cpp:316-326`), so a descendant
+ * comes first.
+ */
+export function compareReadyOrder(a: TreeOrder, b: TreeOrder): number {
+  return siblingOrder(a, b) || b.length - a.length;
+}
+
+/** The order of the siblings at the first level where `a` and `b` part, or 0 when one holds the other. */
+function siblingOrder(a: TreeOrder, b: TreeOrder): number {
   const shared = Math.min(a.length, b.length);
   for (let level = 0; level < shared; level++) {
     if (a[level] !== b[level]) return a[level]! - b[level]!;
   }
-  return a.length - b.length;
+  return 0;
 }

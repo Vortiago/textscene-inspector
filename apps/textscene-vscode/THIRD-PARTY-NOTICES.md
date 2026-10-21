@@ -45,11 +45,17 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/csg/csgtorus3d/torusGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGTorus3D::_build_brush`) |
 | `packages/textscene-core/src/resources/meshes/spheremesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`SphereMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/capsulemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CapsuleMesh::create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/cylindermesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CylinderMesh::create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/torusmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TorusMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/prismmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrismMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/lightmapSizeHint.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_update_lightmap_size` and the setters that call it) |
 | `packages/textscene-core/src/resources/meshes/primitivemesh/fallbackUv2.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrimitiveMesh::_update`'s UV2 fallback and `get_uv2_scale`) |
+| `packages/textscene-core/src/resources/formats/binaryresource/parse.ts` | `core/io/resource_format_binary.cpp` (`ResourceLoaderBinary::open` and `::load`) |
+| `packages/textscene-core/src/resources/formats/binaryresource/compressedStream.ts` | `core/io/file_access_compressed.cpp` (`FileAccessCompressed::open_after_magic` and its block reads) and `core/io/compression.cpp` (`Compression::decompress`) |
+| `packages/textscene-core/src/resources/formats/binaryresource/variants.ts` | `core/io/resource_format_binary.cpp` (`ResourceLoaderBinary::parse_variant`) and `core/variant/variant_parser.cpp` (`VariantWriter::write`) |
+| `packages/textscene-core/src/r3f/lightmap/lightmapProgram.ts` | `servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl` (the bicubic lightmap filter and the lightmap read, spherical harmonics included) |
 | `packages/textscene-core/src/resources/meshes/primitivemesh/flipFaces.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrimitiveMesh::_update`'s `flip_faces` block) |
 | `packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) and `servers/rendering/renderer_canvas_cull.cpp` (`light->item_mask & ci->light_mask`) |
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) and `servers/rendering/renderer_canvas_cull.cpp` (the item cull-mask test) |
@@ -494,6 +500,39 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+---
+
+## FastLZ
+
+<https://github.com/ariya/FastLZ>
+
+`packages/textscene-core/src/resources/formats/binaryresource/fastlz.ts` ports FastLZ's level 1
+decompressor, because Godot compresses a binary resource saved in FastLZ mode with it
+(`core/io/compression.cpp`). Godot vendors it as `thirdparty/misc/fastlz.c`. It is by Ariya
+Hidayat and is licensed MIT, separately from Godot's own MIT licence above.
+
+```
+Copyright (C) 2005-2020 Ariya Hidayat <ariya.hidayat@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 ```
 
 ---

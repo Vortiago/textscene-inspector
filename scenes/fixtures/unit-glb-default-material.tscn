@@ -1,0 +1,16 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: the material Godot gives a glTF primitive that names none. The importer makes it a
+; new StandardMaterial3D (`gltf_document.cpp:1929-1935`), which is not metallic, so the lit cube
+; shows diffuse light on each face. Every other `.glb` scene overrides its surfaces, so only this
+; one shows the default.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-cube.glb" id="1_glb"]
+
+[node name="GlbDefaultMaterial" type="Node3D"]
+
+[node name="Cube" parent="." instance=ExtResource("1_glb")]
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 0, 0, 0)
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 3, 0)

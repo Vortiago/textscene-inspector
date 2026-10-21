@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../../parser/TscnParser';
 import { parseTresFile } from '../../../../parser/parsedResource';
-import { tileSetFromTres } from '../../../../resources/tileset/decode';
+import { tileSetFromFile } from '../../../../resources/tileset/decode';
 import { mapToLocalPx } from '../../../../resources/tileset/tilePlacement';
 import { TileMapLayer } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
@@ -44,7 +44,7 @@ describe('isometric dungeon integration', () => {
   });
 
   it('resolves the real tileset.tres: 5 atlas sources, ISOMETRIC DIAMOND_DOWN 128×64', () => {
-    const model = tileSetFromTres(parseTresFile(tilesetContent));
+    const model = tileSetFromFile(parseTresFile(tilesetContent));
     expect(model).not.toBeNull();
     expect(model!.shape).toBe(1);
     expect(model!.layout).toBe(5);
@@ -65,7 +65,7 @@ describe('isometric dungeon integration', () => {
       alternativeId: 0,
     });
 
-    const model = tileSetFromTres(parseTresFile(tilesetContent))!;
+    const model = tileSetFromFile(parseTresFile(tilesetContent))!;
     // DIAMOND_DOWN: x=(11−(−14))/2+0.5 ⇒ 13·128 = 1664; y=((−14+11)·0.5)+0.5 ⇒ −1·64 = −64.
     expect(mapToLocalPx(model, { x: 11, y: -14 })).toEqual({ x: 1664, y: -64 });
     // Second cell (12, −14): x = 13.5·128 = 1728; y = −0.5·64 = −32.
@@ -104,7 +104,7 @@ describe('isometric dungeon integration', () => {
   function floorQuadrants() {
     const floor = layers.find((l) => l.name === 'Layer0')!;
     const props = floor.properties as TileMapLayerProperties;
-    const model = tileSetFromTres(parseTresFile(tilesetContent))!;
+    const model = tileSetFromFile(parseTresFile(tilesetContent))!;
     const quadrants = layerQuadrants(props.cells!, model, {
       ySortEnabled: props.y_sort_enabled,
       ySortOrigin: props.y_sort_origin,

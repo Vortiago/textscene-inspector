@@ -3,10 +3,14 @@
  * previewer, as UV v = 0 reads it, and a decoded image and Godot's `Image` run top-down.
  */
 
-type Pixels = Uint8Array | Uint8ClampedArray | Float32Array;
+type Pixels = Uint8Array | Uint8ClampedArray | Uint16Array | Float32Array;
 
-/** Floats stay floats, and bytes land in a plain `Uint8Array`. */
-type ReversedPixels<Source extends Pixels> = Source extends Float32Array ? Float32Array : Uint8Array;
+/** Floats and half-float bits keep their type, and bytes land in a plain `Uint8Array`. */
+type ReversedPixels<Source extends Pixels> = Source extends Float32Array
+  ? Float32Array
+  : Source extends Uint16Array
+    ? Uint16Array
+    : Uint8Array;
 
 /** `rgba`'s rows in reverse order. Reversing twice gives back the input. */
 export function reversedRows<Source extends Pixels>(
@@ -14,12 +18,18 @@ export function reversedRows<Source extends Pixels>(
   width: number,
   height: number
 ): ReversedPixels<Source> {
-  const reversed = rgba instanceof Float32Array ? new Float32Array(rgba.length) : new Uint8Array(rgba.length);
+  const reversed = emptyLike(rgba);
   const rowTexels = width * 4;
   for (let row = 0; row < height; row++) {
     reversed.set(rgba.subarray(row * rowTexels, (row + 1) * rowTexels), (height - 1 - row) * rowTexels);
   }
   return reversed as ReversedPixels<Source>;
+}
+
+function emptyLike(rgba: Pixels): Uint8Array | Uint16Array | Float32Array {
+  if (rgba instanceof Float32Array) return new Float32Array(rgba.length);
+  if (rgba instanceof Uint16Array) return new Uint16Array(rgba.length);
+  return new Uint8Array(rgba.length);
 }
 
 /**
