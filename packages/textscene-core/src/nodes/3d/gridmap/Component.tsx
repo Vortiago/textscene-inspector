@@ -24,14 +24,14 @@ import { surfaceBillboard } from '../../../resources/materials/standardmaterial3
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
-
-/** Where each cell sits in the grid, and how much its mesh scales. */
-type CellGrid = Pick<GridMapProperties, 'cellSize' | 'cellCenter' | 'cellScale'>;
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
 import type { Vector3 } from '../../../godot/math/vector';
+
+/** Where each cell sits in the grid, and how much its mesh scales. */
+type CellGrid = Pick<GridMapProperties, 'cellSize' | 'cellCenter' | 'cellScale'>;
 
 /** Literal-only, so the key is constant and the placeholder batch never remounts its material. */
 const PLACEHOLDER_TILE_MATERIAL = wireGizmoProgram(0x4488cc);
@@ -57,6 +57,9 @@ function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
     1
   );
 }
+
+/** Written only by `cellMatrix`. `Matrix4.scale` reads it at once, so a large grid allocates none. */
+const cellScaleVector = new THREE.Vector3();
 
 /**
  * World matrix for one cell: translate(cell·size + centering offset) × scale(cell_scale) ×
@@ -90,7 +93,7 @@ function cellMatrix(cell: GridMapCell, grid: CellGrid, meshTransform: Transform3
     cell.y * cellSize.y + (cellCenter.y ? cellSize.y * 0.5 : 0),
     cell.z * cellSize.z + (cellCenter.z ? cellSize.z * 0.5 : 0)
   );
-  matrix.scale(new THREE.Vector3(cellScale, cellScale, cellScale)).multiply(orient);
+  matrix.scale(cellScaleVector.setScalar(cellScale)).multiply(orient);
   if (meshTransform) matrix.multiply(transform3DToMatrix4(meshTransform));
   return matrix;
 }
@@ -213,7 +216,7 @@ function GridMapItem({ item, cells, cellSize, cellCenter, cellScale }: GridMapIt
 interface SurfaceDraw {
   geometry: THREE.BufferGeometry;
   /** The PrimitiveMesh drawn, which a triplanar material tiles against. Null for an ArrayMesh. */
-  primitive: TscnInternalResource | null;
+  primitive?: TscnInternalResource;
   /** Undefined for a surface that names no material: Godot's default surface. */
   source: MaterialSource | undefined;
   /** The draw group this draw owns. */
@@ -302,7 +305,7 @@ function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
     <SurfaceMaterialSlot
       source={draw.source}
       attach={surfaceAttach(draw.surface, draw.surfaceCount)}
-      triplanarMesh={draw.primitive ?? undefined}
+      triplanarMesh={draw.primitive}
     />
   );
 }

@@ -8,6 +8,7 @@ import type { ParsedResource } from '../parser/parsedResource.js';
 import type { TscnInternalResource } from '../parser/types.js';
 import { findSubResource } from './SubResourceResolver.js';
 import { parseSubResourcePath } from './subResourcePath.js';
+import type { ScopedResource } from './useSubOrExtResource.js';
 
 /**
  * The parsed file that owns `path`, a plain path or a **Sub-resource path**, from the
@@ -34,6 +35,16 @@ function findResourceSection(file: ParsedResource, path: string): ResourceSectio
 export function findSectionResource(file: ParsedResource, path: string): TscnInternalResource | undefined {
   const section = findResourceSection(file, path);
   return section && { id: path, type: section.type, data: section.properties };
+}
+
+/** {@link findSectionResource}, scoped to the tables of `file` that its references resolve in. */
+export function scopedSection(file: ParsedResource, path: string): ScopedResource | undefined {
+  const resource = findSectionResource(file, path);
+  if (!resource) return undefined;
+  return {
+    resource,
+    resources: { internalResources: file.subResources, externalResources: file.extResources },
+  };
 }
 
 /**

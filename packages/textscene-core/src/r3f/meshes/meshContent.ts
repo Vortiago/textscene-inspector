@@ -28,8 +28,8 @@ export interface SurfacedMesh {
   surfaceIndices: readonly number[];
   /** Per draw group, the material the surface names, or undefined for Godot's default surface. */
   materials: readonly (MaterialSource | undefined)[];
-  /** The PrimitiveMesh drawn, which a triplanar material tiles against. Null for an ArrayMesh. */
-  primitive: TscnInternalResource | null;
+  /** The PrimitiveMesh drawn, which a triplanar material tiles against. Absent for an ArrayMesh. */
+  primitive?: TscnInternalResource;
 }
 
 export type MeshContent =
@@ -84,7 +84,6 @@ function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh {
     geometry: mesh.geometry,
     surfaceIndices: mesh.surfaceIndices,
     materials: fileMaterialSources(mesh.materialPaths),
-    primitive: null,
   };
 }
 
@@ -127,17 +126,14 @@ function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
       geometry: decoded.geometry,
       surfaceIndices: decoded.surfaceIndices,
       materials: decoded.materialRefs.map((ref) => resolveMaterialSource(ref, resources)),
-      primitive: null,
     };
   }, [decoded, resources]);
 }
 
-interface DecodedSceneArrayMesh {
-  geometry: THREE.BufferGeometry;
-  surfaceIndices: readonly number[];
+type DecodedSceneArrayMesh = Pick<SurfacedMesh, 'geometry' | 'surfaceIndices'> & {
   /** Per surface, its raw `"material"` reference, when it has one. */
   materialRefs: readonly (string | undefined)[];
-}
+};
 
 /** The decoded geometry of a scene ArrayMesh and each surface's raw material reference. */
 function useSceneArrayMeshGeometry(resource: TscnInternalResource | undefined): DecodedSceneArrayMesh | null {

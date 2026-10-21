@@ -15,7 +15,7 @@ import { resolveSubResourceRef, parsedResourcePath } from '../../../../resources
 import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/meshes/arraymesh/decode';
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
 import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
-import { findSectionResource } from '../../../../resources/resourceSection';
+import { scopedSection } from '../../../../resources/resourceSection';
 import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshSurface } from '../../../../resources/meshes/primitivemesh/surface';
 
@@ -41,10 +41,9 @@ export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext
   if (inline) return { resource: inline, resources: ctx, path: null, file: null };
   const path = meshFilePath(meshRef, ctx);
   const file = path ? ctx.file(path) : undefined;
-  const resource = path && file ? findSectionResource(file, path) : undefined;
-  if (!path || !file || !resource) return null;
-  const resources = { internalResources: file.subResources, externalResources: file.extResources };
-  return { resource, resources, path, file };
+  const scoped = path && file ? scopedSection(file, path) : undefined;
+  if (!path || !file || !scoped) return null;
+  return { ...scoped, path, file };
 }
 
 /**

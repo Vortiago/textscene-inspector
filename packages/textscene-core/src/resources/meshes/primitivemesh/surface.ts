@@ -67,7 +67,7 @@ const FALLBACK_UV2_HINTS: Record<string, LightmapSizeHint> = {
  * The `type=` names a slice here builds. A set, not an index into BUILDERS: the name is one a
  * file chooses, and bare indexing hands back `Object` for `constructor`.
  */
-export const PRIMITIVE_MESH_TYPES: ReadonlySet<string> = new Set(Object.keys(BUILDERS));
+const PRIMITIVE_MESH_TYPES: ReadonlySet<string> = new Set(Object.keys(BUILDERS));
 
 /** Whether a slice here builds `type`. */
 export function isPrimitiveMeshType(type: string): boolean {

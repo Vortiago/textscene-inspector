@@ -8,7 +8,7 @@ import type { SceneResources } from '../../r3f/SceneResourcesContext.js';
 import { materialPathInFile } from '../materials/materialPathInFile.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import { ARRAY_MESH_TYPES } from './arraymesh/decode.js';
-import { PRIMITIVE_MESH_TYPES } from './primitivemesh/surface.js';
+import { isPrimitiveMeshType } from './primitivemesh/surface.js';
 
 export interface MeshSource {
   resource: TscnInternalResource;
@@ -23,7 +23,7 @@ type MeshKind = 'arrayMesh' | 'primitive';
 /** Which builder draws a mesh of `type`, or null for a type no slice builds. */
 export function meshKind(type: string): MeshKind | null {
   if (ARRAY_MESH_TYPES.has(type)) return 'arrayMesh';
-  return PRIMITIVE_MESH_TYPES.has(type) ? 'primitive' : null;
+  return isPrimitiveMeshType(type) ? 'primitive' : null;
 }
 
 /**

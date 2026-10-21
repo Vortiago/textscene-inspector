@@ -9,6 +9,7 @@ import { useResource } from '../../../resources/useResource';
 import { useContentMemo } from '../../../resources/useContentMemo';
 import { primitiveMeshAabb } from '../../../r3f/meshes/primitiveMeshGeometry';
 import { arrayMeshPath } from '../../../r3f/meshes/meshContent';
+import { meshKind } from '../../../resources/meshes/meshSource';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 
 /**
@@ -26,5 +27,12 @@ export function useMeshAabb(meshRef: string | undefined, resources: SceneResourc
 }
 
 function meshAabb(resource: TscnInternalResource): Aabb | null {
-  return resource.type === 'ArrayMesh' ? arrayMeshAabb(resource.data) : primitiveMeshAabb(resource);
+  switch (meshKind(resource.type)) {
+    case 'arrayMesh':
+      return arrayMeshAabb(resource.data);
+    case 'primitive':
+      return primitiveMeshAabb(resource);
+    default:
+      return null;
+  }
 }

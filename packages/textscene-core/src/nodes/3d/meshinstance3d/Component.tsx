@@ -247,7 +247,7 @@ function MeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides: Mesh
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} triplanarMesh={mesh.primitive ?? undefined} />
+      <SurfaceMaterialSlots sources={sources} triplanarMesh={mesh.primitive} />
     </>
   );
 }

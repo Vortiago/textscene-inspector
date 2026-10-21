@@ -11,7 +11,7 @@ import type { TscnInternalResource } from '../parser/types';
 import type { SceneResources } from '../r3f/SceneResourcesContext';
 import { resolveSubResourceRef, parsedResourcePath } from './SubResourceResolver';
 import { useResource, type ResourceStatus } from './useResource';
-import { findSectionResource } from './resourceSection';
+import { scopedSection } from './resourceSection';
 import { resourceFilePath } from './subResourcePath';
 
 export interface ScopedResource {
@@ -62,13 +62,9 @@ export function usePathResolution(path: string | null): ResourceResolution {
         resourcePath: path,
       };
     }
-    const resource = findSectionResource(file.value, path);
-    if (!resource) return { scoped: null, status: 'unavailable', resourcePath: path };
-    const resources = {
-      internalResources: file.value.subResources,
-      externalResources: file.value.extResources,
-    };
-    return { scoped: { resource, resources }, status: 'loaded', resourcePath: path };
+    const scoped = scopedSection(file.value, path);
+    if (!scoped) return { scoped: null, status: 'unavailable', resourcePath: path };
+    return { scoped, status: 'loaded', resourcePath: path };
   }, [path, file.status, file.value]);
 }
 
