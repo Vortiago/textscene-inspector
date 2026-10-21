@@ -1,0 +1,12 @@
+; The one variable: an instance of an inherited scene, whose root owns its base's `%View`
+; (packed_scene.cpp:227-231). The quad's ViewportTexture reads `%View` from that root, so it
+; shows the base's green sphere.
+
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-unique-viewport-inherited.tscn" id="1_monitor"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Monitor" parent="." instance=ExtResource("1_monitor")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)

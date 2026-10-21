@@ -1,23 +1,45 @@
 /**
- * An instance's `%Name` table as its graft reaches each host heading in file order, and the walk of a
- * host sub-path over it. Instantiate acquires the sub-scene's own names first
- * (packed_scene.cpp:565-570), then each host setting lands at its heading.
+ * An instance's `%Name` table, composed as instantiate builds it: the sub-scene's own names first
+ * (packed_scene.cpp:565-570), then each host setting at its heading, in file order. The graft is
+ * the only composer, and the render path reads the finished table off the merged node.
  */
 
 import type { LiveNode } from './liveNode';
-import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath';
-import { holderAfterSetting, type InstanceNameSetting } from '../parser/nodeOwner';
+import { pathBetween } from '../utils/nodePath';
+import {
+  UNIQUE_NODE_PREFIX,
+  nodePathNames,
+  walkFromRoot,
+  walkedPath,
+  type RootWalkTables,
+} from '../godot/string/nodePath';
+import { holderAfterSetting, isOutsideInstance, type InstanceNameSetting } from '../parser/nodeOwner';
 
 /**
- * The path below the instanced scene's root that its own table gives a `%Name` key, or undefined
- * where nothing there claims it.
+ * Each `%Name` key to the path from the instanced scene's root to the node that holds it. A node
+ * outside the instance that its explicit `owner=` gives to it climbs out with `..`.
+ */
+export type UniqueNamePaths = ReadonlyMap<string, string>;
+
+/**
+ * The path from the instanced scene's root that the table gives a `%Name` key, as in
+ * {@link UniqueNamePaths}, or undefined where nothing claims it.
  */
 export type ClaimedPath = (key: string) => string | undefined;
 
+/** An instance's finished `%Name` table, which the merged node keeps for the render path. */
+export interface UniqueNameTable {
+  /** Each name the instance holds, to its path from the instanced scene's root. */
+  paths(): UniqueNamePaths;
+}
+
 /** The `%Name` facts a graft reads for one instance. */
 export interface InstanceNames {
-  /** The sub-scene's own table. */
-  readonly own: ClaimedPath;
+  /**
+   * The sub-scene's own table, as it instantiates by itself. A thunk: the graft reads it only for
+   * a `%Name` sub-path or setting, and the render path only for a node that asks.
+   */
+  readonly own: () => UniqueNamePaths;
   /** The instance node's `instanceNameSettings`, in file order. */
   readonly settings: readonly InstanceNameSetting[];
 }
@@ -26,21 +48,30 @@ export interface InstanceNames {
  * The instance's table while its graft runs. A set acquires a free name and the first claimant
  * keeps it (node.cpp:2225-2231). A clear releases the node's own name (node.cpp:2236-2249).
  */
-export class InstanceNameTable {
+export class InstanceNameTable implements UniqueNameTable {
   /** Written only by `landOne`: each name a setting moved, undefined where it freed the name. */
   private readonly changed = new Map<string, string | undefined>();
-  private readonly own: ClaimedPath;
+  private readonly own: () => UniqueNamePaths;
   private readonly settings: readonly InstanceNameSetting[];
   /** Written only by `landUpTo`: how many of `settings` have landed. */
   private landed = 0;
+  /** Written only by `paths`, read once the graft has landed every setting. */
+  private finished?: UniqueNamePaths;
 
   constructor({ own, settings }: InstanceNames) {
     this.own = own;
     this.settings = settings;
   }
 
-  /** The path below the sub-scene root that holds `key` now. */
-  readonly claimed: ClaimedPath = (key) => (this.changed.has(key) ? this.changed.get(key) : this.own(key));
+  /** The path from the sub-scene root that holds `key` now, as in {@link UniqueNamePaths}. */
+  readonly claimed: ClaimedPath = (key) =>
+    this.changed.has(key) ? this.changed.get(key) : this.own().get(key);
+
+  /** The finished table: the sub-scene's own, the same object where no setting moved a name. */
+  paths(): UniqueNamePaths {
+    this.finished ??= this.changed.size === 0 ? this.own() : withChanges(this.own(), this.changed);
+    return this.finished;
+  }
 
   /** `tree` once every setting written before host child `hostChildrenSeen` has landed. */
   landUpTo(tree: LiveNode[], hostChildrenSeen: number): LiveNode[] {
@@ -57,18 +88,66 @@ export class InstanceNameTable {
    * `tree` once `setting` lands in this table, or once it is handed to the nested instance whose
    * table it names. A setting on a node the sub-scene lacks changes nothing.
    */
-  private landOne(tree: LiveNode[], setting: InstanceNameSetting): LiveNode[] {
+  private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
+    const setting = withOwnerWalked(tree, authored, this.claimed);
+    if (!setting) return tree;
+    if (isOutsideInstance(setting)) {
+      if (!setting.ownerInInstance) {
+        this.land(setting.pathInInstance, setting.isUnique);
+        return tree;
+      }
+      return handOutside(tree, setting.ownerInInstance.split('/'), setting.pathInInstance, setting);
+    }
     const segments = settingSegments(tree, setting.pathInInstance, this.claimed);
     if (!segments) return tree;
     const owner = tableOwner(tree, segments, setting.ownerInInstance);
     if (owner === null) return tree;
+    if (owner === OUTSIDE_THE_OWNER) {
+      return handOutside(tree, setting.ownerInInstance!.split('/'), segments.join('/'), setting);
+    }
     if (owner !== THIS_INSTANCE) {
       return handTo(tree, segments.slice(0, owner.nestedAt + 1), rebased(setting, segments, owner.nestedAt));
     }
-    const key = UNIQUE_NODE_PREFIX + segments.at(-1)!;
-    this.changed.set(key, holderAfterSetting(this.claimed(key), segments.join('/'), setting.isUnique));
+    this.land(segments.join('/'), setting.isUnique);
     return tree;
   }
+
+  /** The table once the node at `path` sets or clears its name. */
+  private land(path: string, isUnique: boolean): void {
+    const key = UNIQUE_NODE_PREFIX + nodePathNames(path).at(-1)!;
+    const holder = this.claimed(key);
+    const next = holderAfterSetting(holder, path, isUnique);
+    // A set on a held name or a clear on a free one changes nothing, so `paths` keeps the own table.
+    if (next !== holder) this.changed.set(key, next);
+  }
+}
+
+/** `paths` with each changed name moved to its new holder, or dropped where a clear freed it. */
+function withChanges(
+  paths: UniqueNamePaths,
+  changed: ReadonlyMap<string, string | undefined>
+): UniqueNamePaths {
+  const moved = new Map(paths);
+  for (const [key, path] of changed) {
+    if (path === undefined) moved.delete(key);
+    else moved.set(key, path);
+  }
+  return moved;
+}
+
+/**
+ * `setting` with each `%Name` in its explicit owner replaced through this table, as the loader's
+ * walk from the root reads it (packed_scene.cpp:159-161), or null where the owner names nothing.
+ */
+function withOwnerWalked(
+  tree: readonly LiveNode[],
+  setting: InstanceNameSetting,
+  claimed: ClaimedPath
+): InstanceNameSetting | null {
+  const { ownerInInstance } = setting;
+  if (!ownerInInstance) return setting;
+  const segments = subPathSegments(ownerInInstance, tree, claimed);
+  return segments && { ...setting, ownerInInstance: segments.join('/') };
 }
 
 /** The node a setting names, its parent walked as a host sub-path, or null where that names nothing. */
@@ -83,9 +162,13 @@ function settingSegments(
 }
 
 const THIS_INSTANCE = 'this instance';
+const OUTSIDE_THE_OWNER = 'outside the owner';
 
-/** Whose table a setting lands in: the instance this graft composes, or a nested one along its path. */
-type TableOwner = typeof THIS_INSTANCE | { readonly nestedAt: number };
+/**
+ * Whose table a setting lands in: the instance this graft composes, a nested one along its path, or
+ * the nested instance its explicit owner names off its path.
+ */
+type TableOwner = typeof THIS_INSTANCE | typeof OUTSIDE_THE_OWNER | { readonly nestedAt: number };
 
 /**
  * Whose table a setting at `segments` lands in, or null for a node the sub-scene lacks or a table
@@ -102,7 +185,9 @@ function tableOwner(
   if (ownerInInstance === '') return THIS_INSTANCE;
   if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
   const ownerSegments = ownerInInstance.split('/');
-  if (!ownerSegments.every((name, index) => segments[index] === name)) return null;
+  if (!ownerSegments.every((name, index) => segments[index] === name)) {
+    return isNestedInstanceAt(tree, ownerSegments) ? OUTSIDE_THE_OWNER : null;
+  }
   const ownerAt = instanceDepth(tree, ownerSegments);
   return typeof ownerAt === 'number' ? { nestedAt: ownerAt } : null;
 }
@@ -120,6 +205,30 @@ function instanceDepth(tree: readonly LiveNode[], path: readonly string[]): numb
     siblings = found.children;
   }
   return undefined;
+}
+
+/** Whether the node at `path` is an instance with no instance above it, whose graft this one hands to. */
+function isNestedInstanceAt(tree: readonly LiveNode[], path: readonly string[]): boolean {
+  return instanceDepth(tree, path) === path.length - 1;
+}
+
+/**
+ * `tree` with `setting` handed to the nested instance at `owner`, on the node at `nodePath` outside
+ * it, which that instance's graft lands in its own table. A node `owner` does not name is no table.
+ */
+function handOutside(
+  tree: LiveNode[],
+  owner: readonly string[],
+  nodePath: string,
+  setting: InstanceNameSetting
+): LiveNode[] {
+  if (!isNestedInstanceAt(tree, owner)) return tree;
+  const { isUnique, hostChildrenBefore } = setting;
+  return handTo(tree, owner, {
+    pathInInstance: pathBetween(owner.join('/'), nodePath),
+    isUnique,
+    hostChildrenBefore,
+  });
 }
 
 /** The node at `path` below the sub-scene root, or undefined where none sits there. */
@@ -183,9 +292,8 @@ export function subPathSegments(
 ): string[] | null {
   const segments = subPath.split('/');
   if (!segments.some((segment) => segment.startsWith(UNIQUE_NODE_PREFIX))) return segments;
-  const end = walkFromRoot(subPath, subSceneWalkTables(tree, claimed));
-  if (end === null) return null;
-  const path = typeof end === 'string' ? end : end.unlisted;
+  const path = walkedPath(walkFromRoot(subPath, subSceneWalkTables(tree, claimed)));
+  if (path === null) return null;
   return path === '' ? [] : path.split('/');
 }
 

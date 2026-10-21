@@ -16,6 +16,18 @@ export const SCENE_COMPOSITION_SCENES = [
     name: 'instanced-unique-parent',
     file: 'integration-instanced-unique-parent.tscn',
   },
+  // A `%Hat` claim seated through `Player/%Pivot`, which a later heading releases. The quad's
+  // ViewportTexture finds Hat where instantiate placed it, before the release.
+  {
+    name: 'instanced-unique-parent-released',
+    file: 'integration-instanced-unique-parent-released.tscn',
+  },
+  // An instance of an inherited scene: its root owns the base's `%View`, which the quad's
+  // ViewportTexture reads from that root.
+  {
+    name: 'instanced-inherited-unique-viewport',
+    file: 'integration-instanced-inherited-unique-viewport.tscn',
+  },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // Collision gizmos on: `physics-bodies` leaves the toggle off. Catches a

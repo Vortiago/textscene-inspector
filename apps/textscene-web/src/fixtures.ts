@@ -1743,6 +1743,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Soft Alpha Border",
+    "file": "unit-sprite-2d-soft-alpha-border.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Viewport Texture",
     "file": "unit-sprite-2d-viewport-texture.tscn",
     "category": "Other"
@@ -1920,6 +1925,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Unique Name Pivot",
     "file": "unit-unique-name-pivot.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Unique Viewport Base",
+    "file": "unit-unique-viewport-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Unique Viewport Inherited",
+    "file": "unit-unique-viewport-inherited.tscn",
     "category": "Other"
   },
   {
@@ -2359,8 +2374,18 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Instanced Inherited Unique Viewport",
+    "file": "integration-instanced-inherited-unique-viewport.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Instanced Subscene",
     "file": "integration-instanced-subscene.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Instanced Unique Parent Released",
+    "file": "integration-instanced-unique-parent-released.tscn",
     "category": "Integration - Multi-Node"
   },
   {
@@ -3669,6 +3694,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Texture Emission",
     "file": "unit-sub-viewport-texture-emission.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Texture Sampler",
+    "file": "unit-sub-viewport-texture-sampler.tscn",
     "category": "Unit - Viewports"
   },
   {

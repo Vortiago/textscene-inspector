@@ -7,7 +7,14 @@ import { describe, expect, it, vi } from 'vitest';
 import * as logger from '../logger';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnNode, TscnScene } from '../parser/types';
-import { liveChildGroups, rootScope, type LiveTreeContext } from './liveSceneTree';
+import { scopeOf } from '../resources/liveNode';
+import {
+  collapseLiveNode,
+  liveChildGroups,
+  rootScope,
+  singleSceneCache,
+  type LiveTreeContext,
+} from './liveSceneTree';
 
 const host = new TscnParser().parse(`[gd_scene format=3]
 
@@ -163,6 +170,45 @@ unique_name_in_owner = false
     expect(childNames(composed, 'A')).toEqual(['Hat']);
   });
 
+  it('misses a base %Name a host releases before its heading', () => {
+    // The inherited root owns its base's nodes (packed_scene.cpp:227-231), so the host's clear
+    // releases the base's claim (node.cpp:2236-2249) before Hat's `parent=` reads it.
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const base = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Base" type="Node3D"]
+
+[node name="A" type="Node3D" parent="."]
+unique_name_in_owner = true
+`);
+    const inherited = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
+
+[node name="Player" instance=ExtResource("base")]
+`);
+    const releasingFirst = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player")]
+
+[node name="A" parent="Player"]
+unique_name_in_owner = false
+
+[node name="Hat" type="Node3D" parent="Player/%A"]
+`);
+    const composed = composedPlayer(releasingFirst, {
+      'res://player.tscn': inherited,
+      'res://base.tscn': base,
+    });
+
+    expect(childNames(composed, 'A')).toEqual([]);
+    warnSpy.mockRestore();
+  });
+
   it('misses a %Name an inherited scene releases on its base', () => {
     // The base's nodes are the inherited root's own, so the clear releases the name before Hat reads it.
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -197,5 +243,41 @@ unique_name_in_owner = false
     expect(childNames(composed, 'A')).toEqual([]);
     expect(composed.children.map((n) => n.name)).toEqual(['A', 'Hat']);
     warnSpy.mockRestore();
+  });
+
+  it('composes under the %Name an inherited scene claims when each scene collapses on its own', () => {
+    // The dispatcher's cache answers one scene, so the base merges on a second collapse.
+    const base = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Player" type="Node3D"]
+
+[node name="Body" type="Node3D" parent="."]
+
+[node name="Head" type="Node3D" parent="Body"]
+`);
+    const inherited = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
+
+[node name="Player" instance=ExtResource("base")]
+
+[node name="Head" parent="Body"]
+unique_name_in_owner = true
+`);
+    const instance = host.nodes[0]!.children.find((n) => n.name === 'Player')!;
+    const outer = { externalResources: host.externalResources, internalResources: [] };
+    const overInherited = collapseLiveNode(instance, outer, singleSceneCache('res://player.tscn', inherited));
+    const overBase = collapseLiveNode(
+      overInherited,
+      scopeOf(overInherited, outer),
+      singleSceneCache('res://base.tscn', base)
+    );
+
+    expect(
+      childNames(
+        overBase.children.find((n) => n.name === 'Body')!,
+        'Head'
+      )
+    ).toEqual(['Hat']);
   });
 });
