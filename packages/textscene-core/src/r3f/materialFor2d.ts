@@ -5,8 +5,8 @@
  */
 
 import * as THREE from 'three';
-import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
-import { TextureFilter } from '../godot/rendering/materials/textureFilter';
+import type { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
+import type { TextureFilter } from '../godot/rendering/materials/textureFilter';
 import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
 import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 import { cutBlends, cutOpaquePrepasses, type FadeVariants } from './materials/fadeVariants';
