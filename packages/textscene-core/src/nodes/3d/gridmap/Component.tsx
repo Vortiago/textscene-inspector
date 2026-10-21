@@ -120,24 +120,21 @@ export function GridMap({ node, children }: NodeComponentProps) {
   // Godot draws no cell while the GridMap holds baked meshes (`modules/gridmap/grid_map.cpp:688`).
   const hasBakedMeshes = properties.bakedMeshes.length > 0;
   const items = library.status === 'pending' || hasBakedMeshes ? [] : Array.from(cellsByItem.entries());
+  const gridProps = {
+    cellSize: properties.cellSize,
+    cellCenter: properties.cellCenter,
+    cellScale: properties.cellScale,
+  };
   return (
     <Node3D node={node}>
       {hasBakedMeshes && <BakedMeshes refs={properties.bakedMeshes} />}
       {items.map(([itemId, cells]) => {
-        const item = library.model?.get(itemId) ?? null;
-        // Godot draws a cell only for an item the library holds with a mesh (`:676-678,689`). A
-        // library this previewer cannot load draws each cell's placeholder instead.
-        if (library.model && !item?.meshPath) return null;
-        return (
-          <GridMapItem
-            key={itemId}
-            item={item}
-            cells={cells}
-            cellSize={properties.cellSize}
-            cellCenter={properties.cellCenter}
-            cellScale={properties.cellScale}
-          />
-        );
+        // A library this previewer cannot load draws each cell's placeholder instead.
+        if (!library.model) return <PlaceholderTiles key={itemId} cells={cells} {...gridProps} />;
+        const item = library.model.get(itemId);
+        // Godot draws a cell only for an item the library holds with a mesh (`:676-678,689`).
+        if (!item?.meshPath) return null;
+        return <GridMapItem key={itemId} item={item} cells={cells} {...gridProps} />;
       })}
       {children}
     </Node3D>
@@ -175,7 +172,7 @@ function bakedMeshNode(ref: string, index: number): TscnNode {
 }
 
 interface GridMapItemProps extends CellGrid {
-  item: MeshLibraryItem | null;
+  item: MeshLibraryItem;
   cells: GridMapCell[];
 }
 
@@ -184,19 +181,19 @@ interface GridMapItemProps extends CellGrid {
  * as Godot billboards each surface's instances in its own shader (`scene_forward_clustered.glsl:338-342`).
  */
 function GridMapItem({ item, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
-  const content = useMeshContent(usePathResolution(item?.meshPath ?? null));
+  const content = useMeshContent(usePathResolution(item.meshPath));
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
   // file (every debounced keystroke) does not rebuild every cell's matrix.
   const matrices = useMemo(() => {
     const grid = { cellSize, cellCenter, cellScale };
-    return cells.map((cell) => cellMatrix(cell, grid, item?.meshTransform ?? null));
-  }, [cells, cellSize, cellCenter, cellScale, item?.meshTransform]);
+    return cells.map((cell) => cellMatrix(cell, grid, item.meshTransform));
+  }, [cells, cellSize, cellCenter, cellScale, item.meshTransform]);
 
   // GridMap has no `cast_shadow` of its own. The setting is per tile, read off
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
-  const shadow = shadowCastingEffects(item?.castShadow);
+  const shadow = shadowCastingEffects(item.castShadow);
 
   // Godot draws the mesh, so a mesh this previewer cannot read shows the placeholder.
   if (content.kind === 'unresolved') {
