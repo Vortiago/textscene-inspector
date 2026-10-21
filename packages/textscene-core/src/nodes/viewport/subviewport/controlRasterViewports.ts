@@ -9,7 +9,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { ControlProperties } from '../../2d/ui/control/types.js';
 import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
-import { liveChildGroups, liveNodeScope, type SceneScope } from '../../../r3f/liveSceneTree.js';
+import { liveChildGroups, liveNodeScope, mergedNodeOf, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { joinPath } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
@@ -69,8 +69,7 @@ export function collectControlRasterViewports(
       const groups = liveChildGroups(node, current, sceneCache);
       // A collapsed single-root instance (ADR-0013) becomes its sub-scene
       // root. Every other origin leaves the node's own identity alone.
-      const mergedGroup = groups.find((group) => group.origin === 'merged');
-      const effective = mergedGroup?.mergedNode ?? node;
+      const effective = mergedNodeOf(groups) ?? node;
 
       const effectiveScope = liveNodeScope(node, current, groups);
 
