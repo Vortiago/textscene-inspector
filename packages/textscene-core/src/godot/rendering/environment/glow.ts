@@ -11,5 +11,14 @@ export const GlowBlendMode = {
   MIX: 4,
 } as const;
 
+/**
+ * `rendering/environment/glow/upscale_mode`: how the composite reads each glow level
+ * (`rendering_server.cpp:3809`, whose default is Bicubic).
+ */
+export const GlowUpscaleMode = {
+  LINEAR: 0,
+  BICUBIC: 1,
+} as const;
+
 /** Each blend mode's name by the integer a `.tscn` stores, as a validator names it. */
 export const GLOW_BLEND_MODE_NAMES = enumNamesByValue(GlowBlendMode);

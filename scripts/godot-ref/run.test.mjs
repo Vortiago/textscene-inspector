@@ -16,7 +16,7 @@ import {
   CANVAS_2D_CAPTURE,
   CANVAS_CAPTURE,
   FIT_ON_OPEN_2D_STORAGE_KEY,
-  VIEWPORT,
+  SHELL_CHROME,
 } from '../visual/preview/appContract.mjs';
 import {
   bootstrapScript,
@@ -123,12 +123,10 @@ describe('editor-camera constants mirror the previewer', () => {
   it('gives a 2D capture room for the frame at zoom 1', () => {
     // The stage is the browser viewport minus the shell's dock and top bar. A frame that does not
     // fit is clipped, and the capture picks up the shell's chrome at the edges.
-    const chrome = {
-      width: VIEWPORT.width - CANVAS_CAPTURE.width,
-      height: VIEWPORT.height - CANVAS_CAPTURE.height,
-    };
-    expect(CANVAS_2D_CAPTURE.viewport.width - chrome.width).toBeGreaterThanOrEqual(CANVAS_2D_CAPTURE.width);
-    expect(CANVAS_2D_CAPTURE.viewport.height - chrome.height).toBeGreaterThanOrEqual(
+    expect(CANVAS_2D_CAPTURE.viewport.width - SHELL_CHROME.width).toBeGreaterThanOrEqual(
+      CANVAS_2D_CAPTURE.width
+    );
+    expect(CANVAS_2D_CAPTURE.viewport.height - SHELL_CHROME.height).toBeGreaterThanOrEqual(
       CANVAS_2D_CAPTURE.height
     );
   });

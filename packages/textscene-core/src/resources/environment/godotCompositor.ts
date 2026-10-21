@@ -10,6 +10,7 @@
  */
 
 import { blendGlsl, blendsAfterToneMapping, samplesGlowMap, type GlowParams } from './godotGlow';
+import { GLOW_TEXTURE_SIZE_UNIFORM, glowGatherGlsl, glowLevelUniform } from './godotGlowPyramid';
 import { glslFloat } from '../../utils/glslLiterals';
 import { toneMappingEffectGlsl } from './godotToneMapping';
 import { resolvedWhite } from '../../godot/rendering/environment/toneMapping.js';
@@ -21,8 +22,6 @@ export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mod
 
 /** Fixed at construction: a new exposure rebuilds the effect. */
 const EXPOSURE_UNIFORM = 'godotExposure';
-/** Bound by the effect each frame, from the glow pyramid. */
-export const GLOW_BUFFER_UNIFORM = 'godotGlowBuffer';
 /** Bound by the effect when the environment names a glow map. */
 export const GLOW_MAP_UNIFORM = 'godotGlowMap';
 
@@ -39,18 +38,23 @@ export interface CompositeOptions {
    * (`renderer_compositor_rd.cpp:138`) into an opaque surface.
    */
   transparentBackground: boolean;
+  /**
+   * `rendering/environment/glow/upscale_mode` is above Linear: the gather reads each level with the
+   * cubic B-spline rather than one bilinear fetch (`renderer_scene_render_rd.cpp:1717`).
+   */
+  usesBicubicGlowUpscale: boolean;
   /** Godot `tonemap_exposure`, the starting value of the exposure uniform. */
   exposure: number;
 }
 
 interface UniformDeclaration {
-  glslType: 'float' | 'sampler2D';
+  glslType: 'float' | 'vec2' | 'sampler2D';
   value: number | null;
 }
 
 /**
  * The composite shader with the uniforms it declares. A number is the uniform's value; null is a
- * texture the caller binds. A name is in the map exactly when the shader declares it.
+ * texture or a vector the caller binds. A name is in the map exactly when the shader declares it.
  */
 export interface CompositeProgram {
   fragmentShader: string;
@@ -69,10 +73,17 @@ export function compositeProgram({
   adjustments,
   exposure,
   transparentBackground,
+  usesBicubicGlowUpscale,
 }: CompositeOptions): CompositeProgram {
   const declarations: Record<string, UniformDeclaration> = {
     [EXPOSURE_UNIFORM]: { glslType: 'float', value: exposure },
-    ...(glow && { [GLOW_BUFFER_UNIFORM]: { glslType: 'sampler2D', value: null } }),
+    ...Object.fromEntries(
+      (glow?.gatheredLevels ?? []).map((level) => [
+        glowLevelUniform(level),
+        { glslType: 'sampler2D', value: null } satisfies UniformDeclaration,
+      ])
+    ),
+    ...(glow && usesBicubicGlowUpscale && { [GLOW_TEXTURE_SIZE_UNIFORM]: { glslType: 'vec2', value: null } }),
     ...(glow && samplesGlowMap(glow) && { [GLOW_MAP_UNIFORM]: { glslType: 'sampler2D', value: null } }),
   };
   // SCREEN normalises against the floored white, not the authored one
@@ -82,7 +93,7 @@ export function compositeProgram({
   const fragmentShader = /* glsl */ `
 ${declarationsGlsl(declarations)}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
-${glow ? blendGlsl(glow, flooredWhite) : ''}
+${glow ? glowGatherGlsl(glow, usesBicubicGlowUpscale) + blendGlsl(glow, flooredWhite) : ''}
 ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
@@ -109,19 +120,22 @@ function declarationsGlsl(declarations: Record<string, UniformDeclaration>): str
  */
 function glowAndToneMapGlsl(glow: GlowParams): string {
   const blend = blendsAfterToneMapping(glow)
-    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM});
+    ? /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${EXPOSURE_UNIFORM});
   color = godotGlowBlend(color, godotToneMap(glow));`
-    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM}, glow);
+    : /* glsl */ `  vec3 color = godotGlowBlend(inputColor.rgb * ${EXPOSURE_UNIFORM}, glow);
   color = godotToneMap(color);`;
   const map = samplesGlowMap(glow)
     ? /* glsl */ `  glow = mix(glow, texture2D(${GLOW_MAP_UNIFORM}, uv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
     : '';
-  return /* glsl */ `  vec3 glow = texture2D(${GLOW_BUFFER_UNIFORM}, uv).rgb * ${glslFloat(glow.intensity)};
+  return /* glsl */ `  vec3 glow = godotGlowGather(uv) * ${glslFloat(glow.intensity)};
 ${map}${blend}`;
 }
 
-/** `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. */
-const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM});`;
+/**
+ * `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. Nothing clamps the
+ * scene colour before the blend: every curve but LINEAR clamps for itself (`:258`).
+ */
+const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${EXPOSURE_UNIFORM});`;
 
 /**
  * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on

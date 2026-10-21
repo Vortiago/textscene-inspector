@@ -4,7 +4,8 @@
  * `decal`). `file` is the fixture filename exactly as in apps/textscene-web/src/fixtures.ts. An
  * entry may set `mode: '2d'`, `collisions: true`, `navigation: true`, `select: <node path>`,
  * `camera: <Camera3D node path>`, which the previewer looks through as `?camera=` opens it, or
- * `settleTimeout: <ms>`, each screenshot's limit where one frame outlasts Playwright's default.
+ * `canvas: { width, height }`, the 3D canvas size a small frame renders at, or `settleTimeout: <ms>`,
+ * each screenshot's limit where one frame outlasts Playwright's default.
  */
 
 import { GEOMETRY_SCENES } from './scenes/geometry.mjs';
