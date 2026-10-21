@@ -1,9 +1,9 @@
 /** Scopes for a merge or graft test whose nodes name no resource. */
-import type { ClaimedPath, InstanceScopes } from '../graftInstanceChildren';
+import type { InstanceNames, InstanceScopes } from '../graftInstanceChildren';
 
 const EMPTY = { externalResources: [], internalResources: [] };
 
 export const NO_SCOPES: InstanceScopes = { outer: EMPTY, content: EMPTY };
 
-/** A sub-scene whose own `%Name` table claims nothing. */
-export const NO_CLAIMS: ClaimedPath = () => undefined;
+/** An instance whose sub-scene claims no `%Name` and whose host sets none. */
+export const NO_NAMES: InstanceNames = { own: () => undefined, settings: [] };

@@ -310,3 +310,24 @@ unique_name_in_owner = true
     expect(ownerClaims(owner).has('%Panel')).toBe(true);
   });
 });
+
+describe('an override that clears unique_name_in_owner', () => {
+  // The override's property lands after the sub-scene acquires its names, and a clear releases
+  // the node's own name (node.cpp:2236-2249).
+  const releasing = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Panel" parent="HudInstance"]
+unique_name_in_owner = false
+`);
+  const releasingCtx: LiveTreeContext = { ...ctx, externalResources: releasing.externalResources };
+
+  it('drops the name from the instance table', () => {
+    const owner = claimOwnerOf('Root/HudInstance/Sprite', releasing.nodes, releasingCtx);
+    expect(ownerClaims(owner).has('%Panel')).toBe(false);
+  });
+});

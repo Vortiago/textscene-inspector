@@ -10,9 +10,10 @@ import {
   hasForeignOwner,
   isInstanceBelowRoot,
   isOwnedByRoot,
-  isUniqueNameInOwner,
+  uniqueNameSetting,
   type UniqueNameClaim,
   type UniqueNameOwnership,
+  type UniqueNameSetting,
 } from './nodeOwner.js';
 import {
   UNIQUE_NODE_PREFIX,
@@ -67,7 +68,7 @@ export function seatScene<N extends SceneNode<N>>(origins: readonly NodeOrigin<N
 }
 
 function noScene<N extends RawNode>(): SceneSeating<N> {
-  const ownership = { claims: new Map(), instanceClaims: new Map(), ownedInsideInstances: new Set<string>() };
+  const ownership = { claims: new Map(), instanceSettings: [], ownedInsideInstances: new Set<string>() };
   return { roots: [], seated: new Map(), resolve: () => MISSING, ownership };
 }
 
@@ -220,11 +221,11 @@ interface SeatingTables<N> {
   readonly uniquePaths: Map<string, string>;
   /** Each seated node's place, both spellings from the root's own name ({@link UniqueNameClaim}). */
   readonly places: Map<N, Place>;
-  /** The live path of the nearest instance below the root above each seated node that has one. */
-  readonly instanceOwners: Map<N, string>;
+  /** The nearest instance below the root above each seated node that has one. */
+  readonly enclosingInstances: Map<N, N>;
   readonly ownership: {
     readonly claims: Map<string, UniqueNameClaim>;
-    readonly instanceClaims: Map<string, UniqueNameClaim[]>;
+    readonly instanceSettings: UniqueNameSetting[];
     readonly ownedInsideInstances: Set<string>;
   };
   /** The same tables as the walk consumes them. */
@@ -246,8 +247,8 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
     byPath,
     uniquePaths,
     places: new Map([[root, { path: root.name, livePath: root.name }]]),
-    instanceOwners: new Map(),
-    ownership: { claims: new Map(), instanceClaims: new Map(), ownedInsideInstances: new Set() },
+    enclosingInstances: new Map(),
+    ownership: { claims: new Map(), instanceSettings: [], ownedInsideInstances: new Set() },
     tree: { exists: (path) => canNameNode(byPath, path, isOpaque), isOpaque, uniquePaths },
   };
 }
@@ -279,36 +280,63 @@ function canNameNode(
 }
 
 /**
- * Key a seated node by the path its own children address it at, and record its `%Name` claim in
+ * Key a seated node by the path its own children address it at, and record its `%Name` setting in
  * its owner's table. An override inside an instance keeps the sub-scene's owner, and an explicit
  * `owner=` names its own (`isOwnedByRoot`).
  */
 function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: string, node: N, parent: N): void {
   const place = placeBelow(tables.places.get(parent)!, node);
   tables.places.set(node, place);
-  const { livePath } = place;
-  const instanceOwner = isInstanceBelowRoot(parent, parent === tables.root)
-    ? tables.places.get(parent)!.livePath
-    : tables.instanceOwners.get(parent);
-  if (instanceOwner !== undefined) tables.instanceOwners.set(node, instanceOwner);
+  const instance = isInstanceBelowRoot(parent, parent === tables.root)
+    ? parent
+    : tables.enclosingInstances.get(parent);
+  if (instance !== undefined) tables.enclosingInstances.set(node, instance);
   // A nameless heading claims no key: an empty name joins to its parent's own key and live path.
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
   if (!node.name) return;
-  const isRootOwned = isOwnedByRoot(node, instanceOwner !== undefined);
-  if (isRootOwned && instanceOwner !== undefined) tables.ownership.ownedInsideInstances.add(livePath);
+  const isRootOwned = isOwnedByRoot(node, instance !== undefined);
+  if (isRootOwned && instance !== undefined) tables.ownership.ownedInsideInstances.add(place.livePath);
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
-  if (!isUniqueNameInOwner(node)) return;
-  const claim = { node, ...place };
+  const isUnique = uniqueNameSetting(node);
+  if (isUnique === undefined) return;
+  // A clear on a root-owned heading has nothing to release: the heading declares the node.
   if (isRootOwned) {
-    claimInRoot(tables, claim, path);
-  } else {
-    const owner = node.owner === undefined ? instanceOwner! : joinPath(tables.root.name, node.owner);
-    const owned = tables.ownership.instanceClaims.get(owner) ?? [];
-    owned.push(claim);
-    tables.ownership.instanceClaims.set(owner, owned);
+    if (isUnique) claimInRoot(tables, { node, ...place }, path);
+    return;
   }
+  const owner =
+    node.owner === undefined
+      ? tables.places.get(instance!)!.livePath
+      : joinPath(tables.root.name, node.owner);
+  tables.ownership.instanceSettings.push({ node, ...place, owner, isUnique });
+  if (instance !== undefined) handToInstance(tables, instance, node, isUnique);
+}
+
+/** Append a heading's setting to the instance node it sits in, at its path below that instance. */
+function handToInstance<N extends RawNode>(
+  tables: SeatingTables<N>,
+  instance: N,
+  node: N,
+  isUnique: boolean
+): void {
+  const instanceLivePath = tables.places.get(instance)!.livePath;
+  const pathInInstance = relativeTo(instanceLivePath, tables.places.get(node)!.livePath)!;
+  const ownerInInstance =
+    node.owner === undefined
+      ? undefined
+      : relativeTo(instanceLivePath, joinPath(tables.root.name, node.owner));
+  // An `owner=` outside the instance names a table this instance never reads.
+  if (node.owner !== undefined && ownerInInstance === undefined) return;
+  const setting = { pathInInstance, isUnique, ...(ownerInInstance === undefined ? {} : { ownerInInstance }) };
+  instance.instanceNameSettings = [...(instance.instanceNameSettings ?? []), setting];
+}
+
+/** `path` below `base`, `''` for `base` itself, or undefined where `path` is not at or below it. */
+function relativeTo(base: string, path: string): string | undefined {
+  if (path === base) return '';
+  return path.startsWith(base + '/') ? path.slice(base.length + 1) : undefined;
 }
 
 /** Where a node sits in the tree, and in the composed tree, both spelt from the root's own name. */

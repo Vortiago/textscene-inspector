@@ -11,7 +11,7 @@ import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
-import { boolSlotValue } from '../godot/variant/variantBool';
+import type { InstanceNameSetting } from '../parser/nodeOwner';
 
 /** The two scopes a graft joins. */
 export interface InstanceScopes {
@@ -27,6 +27,21 @@ export interface InstanceScopes {
  */
 export type ClaimedPath = (key: string) => string | undefined;
 
+/** The `%Name` facts a graft reads for one instance. */
+export interface InstanceNames {
+  /** The sub-scene's own table. */
+  readonly own: ClaimedPath;
+  /** The instance node's `instanceNameSettings`, in file order. */
+  readonly settings: readonly InstanceNameSetting[];
+}
+
+/** A setting inside a nested instance, which that instance's own graft applies. */
+interface HandedSetting {
+  /** The nested instance's path below the sub-scene root. */
+  readonly at: readonly string[];
+  readonly setting: InstanceNameSetting;
+}
+
 /**
  * The sub-scene root's children with the host's overrides folded in. A grafted node
  * carries the outer scope, and a node an override reached carries its own scope plus
@@ -34,19 +49,19 @@ export type ClaimedPath = (key: string) => string | undefined;
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
- * @param claimedPath the sub-scene's own `%Name` table, which the host's overrides then change
+ * @param names the sub-scene's own `%Name` table and the settings the instance carries
  */
 export function graftInstanceChildren(
   rootChildren: readonly LiveNode[],
   hostChildren: readonly LiveNode[],
   scopes: InstanceScopes,
-  claimedPath: ClaimedPath
+  names: InstanceNames
 ): LiveNode[] {
   if (hostChildren.length === 0) return [...rootChildren];
 
   let grafted = [...rootChildren];
   const appendedAtRoot: LiveNode[] = [];
-  const claims = withOverrideClaims(rootChildren, hostChildren, claimedPath);
+  const { claims, handed } = instanceTable(rootChildren, names);
 
   for (const child of hostChildren) {
     // A child re-anchored at a nested instance keeps the scene it was authored in.
@@ -72,42 +87,113 @@ export function graftInstanceChildren(
     }
   }
 
-  return [...grafted, ...appendedAtRoot];
+  return handDown([...grafted, ...appendedAtRoot], handed);
 }
 
 /**
- * The instance's `%Name` table once the host's overrides land. Instantiate acquires the sub-scene's
- * own names first. Each override heading then sets `unique_name_in_owner` in file order on a node
- * that keeps the sub-scene's owner (resource_format_text.cpp:264-265): a set acquires a free name,
- * a clear releases the node's own (node.cpp:2236-2249), and the first claimant keeps a name.
+ * The instance's `%Name` table once its settings land, and the settings it hands to a nested
+ * instance. Instantiate acquires the sub-scene's own names first (packed_scene.cpp:565-570), then
+ * applies each setting in file order: a set acquires a free name, and the first claimant keeps it
+ * (node.cpp:2225-2231). A clear releases the node's own name (node.cpp:2236-2249).
  */
-function withOverrideClaims(
+function instanceTable(
   rootChildren: readonly LiveNode[],
-  hostChildren: readonly LiveNode[],
-  own: ClaimedPath
-): ClaimedPath {
+  { own, settings }: InstanceNames
+): { claims: ClaimedPath; handed: HandedSetting[] } {
   const changed = new Map<string, string | null>();
   const claims: ClaimedPath = (key) => (changed.has(key) ? (changed.get(key) ?? undefined) : own(key));
-  const visit = (overrides: readonly LiveNode[], parentPath: readonly string[] | undefined) => {
-    for (const override of overrides) {
-      // An explicit `owner=` names another table, and Godot's writer never emits one (packed_scene.cpp:1036-1044).
-      if (!override.overridesExistingNode || override.owner !== undefined) continue;
-      const below =
-        parentPath ?? expandUniqueNames(override.instanceSubPath?.split('/') ?? [], rootChildren, claims);
-      const path = [...below, override.name];
-      const along = nodesAlong(rootChildren, path);
-      // A node inside a nested instance belongs to that instance's table, which its own graft reads.
-      if (!along || along.slice(0, -1).some((n) => n.instance)) continue;
-      const key = UNIQUE_NODE_PREFIX + override.name;
-      const isUnique = boolSlotValue(override.rawProperties.unique_name_in_owner);
-      const holder = claims(key);
-      if (isUnique === true && holder === undefined) changed.set(key, path.join('/'));
-      if (isUnique === false && holder === path.join('/')) changed.set(key, null);
-      if (!along.at(-1)!.instance) visit(override.children, path);
+  const handed: HandedSetting[] = [];
+  for (const setting of settings) {
+    const authored = setting.pathInInstance.split('/');
+    const segments = [...expandUniqueNames(authored.slice(0, -1), rootChildren, claims), authored.at(-1)!];
+    const owner = tableOwner(rootChildren, segments, setting.ownerInInstance);
+    if (owner === null) continue;
+    if (owner !== THIS_INSTANCE) {
+      handed.push({ at: segments.slice(0, owner + 1), setting: rebased(setting, segments, owner) });
+      continue;
     }
-  };
-  visit(hostChildren, undefined);
-  return claims;
+    const key = UNIQUE_NODE_PREFIX + segments.at(-1)!;
+    const path = segments.join('/');
+    const holder = claims(key);
+    if (setting.isUnique && holder === undefined) changed.set(key, path);
+    if (!setting.isUnique && holder === path) changed.set(key, null);
+  }
+  return { claims, handed };
+}
+
+/** {@link tableOwner}'s answer for the instance this graft composes. */
+const THIS_INSTANCE = -1;
+
+/**
+ * Whose table a setting at `segments` lands in: {@link THIS_INSTANCE}, the depth of the nested
+ * instance that holds it, or null for a node the sub-scene lacks or a table no instance reads.
+ * Without an explicit owner, a node inside a nested instance keeps that instance's owner
+ * (resource_format_text.cpp:264-265).
+ */
+function tableOwner(
+  rootChildren: readonly LiveNode[],
+  segments: readonly string[],
+  ownerInInstance: string | undefined
+): number | null {
+  const nested = firstInstanceAlong(rootChildren, segments.slice(0, -1), segments);
+  if (nested === null) return null;
+  if (ownerInInstance === undefined) return nested;
+  if (ownerInInstance === '') return THIS_INSTANCE;
+  const ownerSegments = ownerInInstance.split('/');
+  const ownerAt = firstInstanceAlong(rootChildren, ownerSegments, ownerSegments);
+  const isAncestor = ownerSegments.every((name, index) => segments[index] === name);
+  return ownerAt === null || ownerAt === THIS_INSTANCE || !isAncestor ? null : ownerAt;
+}
+
+/**
+ * The depth of the first instance among the first `walked.length` nodes of `path`,
+ * {@link THIS_INSTANCE} where none is one, or null where `path` names nothing before an instance.
+ */
+function firstInstanceAlong(
+  rootChildren: readonly LiveNode[],
+  walked: readonly string[],
+  path: readonly string[]
+): number | null {
+  let siblings = rootChildren;
+  for (const [depth, name] of path.entries()) {
+    const found = siblings.find((n) => n.name === name);
+    if (!found) return null;
+    if (depth < walked.length && found.instance) return depth;
+    siblings = found.children;
+  }
+  return THIS_INSTANCE;
+}
+
+/** `setting` spelt below the nested instance at depth `at` of `segments`. */
+function rebased(setting: InstanceNameSetting, segments: readonly string[], at: number): InstanceNameSetting {
+  const pathInInstance = segments.slice(at + 1).join('/');
+  if (setting.ownerInInstance === undefined) return { pathInInstance, isUnique: setting.isUnique };
+  const ownerInInstance = setting.ownerInInstance
+    .split('/')
+    .slice(at + 1)
+    .join('/');
+  return { pathInInstance, isUnique: setting.isUnique, ownerInInstance };
+}
+
+/** `tree` with each handed setting appended to its nested instance, copied along the spine. */
+function handDown(tree: LiveNode[], handed: readonly HandedSetting[]): LiveNode[] {
+  return handed.reduce((siblings, { at, setting }) => withSettingAt(siblings, at, setting), tree);
+}
+
+function withSettingAt(
+  siblings: LiveNode[],
+  at: readonly string[],
+  setting: InstanceNameSetting
+): LiveNode[] {
+  const [head, ...rest] = at;
+  const index = siblings.findIndex((n) => n.name === head);
+  const target = siblings[index]!;
+  const copy = [...siblings];
+  copy[index] =
+    rest.length > 0
+      ? { ...target, children: withSettingAt(target.children, rest, setting) }
+      : { ...target, instanceNameSettings: [...(target.instanceNameSettings ?? []), setting] };
+  return copy;
 }
 
 /**
@@ -131,22 +217,21 @@ function expandUniqueNames(
     } else if (segment !== '.') {
       path.push(segment);
     }
-    if (nodesAlong(rootChildren, path)?.at(-1)?.instance) return [...path, ...segments.slice(index + 1)];
+    if (nodeAt(rootChildren, path)?.instance) return [...path, ...segments.slice(index + 1)];
   }
   return path;
 }
 
-/** The nodes `path` passes below the sub-scene root, its end last, or undefined where it names nothing. */
-function nodesAlong(rootChildren: readonly LiveNode[], path: readonly string[]): LiveNode[] | undefined {
+/** The node at `path` below the sub-scene root, or undefined where none sits there. */
+function nodeAt(rootChildren: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {
   let siblings = rootChildren;
-  const along: LiveNode[] = [];
+  let found: LiveNode | undefined;
   for (const name of path) {
-    const found = siblings.find((n) => n.name === name);
+    found = siblings.find((n) => n.name === name);
     if (!found) return undefined;
-    along.push(found);
     siblings = found.children;
   }
-  return along;
+  return found;
 }
 
 /**

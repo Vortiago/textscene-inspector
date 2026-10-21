@@ -203,10 +203,58 @@ unique_name_in_owner = true
 `;
   const ownership = cachedUniqueNameOwnership(new TscnParser().parse(src).nodes);
 
-  it('keys an override claim by the live path of the instance that owns it', () => {
-    const claims = ownership.instanceClaims.get('Player/Enemy');
-    expect(claims?.map((c) => c.livePath)).toEqual(['Player/Enemy/Body/Hit']);
+  it('files an override setting by the live path of the instance that owns it', () => {
+    expect(ownership.instanceSettings.map((s) => [s.owner, s.livePath])).toEqual([
+      ['Player/Enemy', 'Player/Enemy/Body/Hit'],
+    ]);
     expect(ownership.claims.has('%Hit')).toBe(false);
+  });
+
+  it('gives the instance node the setting at its path below that instance', () => {
+    const enemy = new TscnParser().parse(src).nodes[0]!.children.find((n) => n.name === 'Enemy')!;
+    expect(enemy.instanceNameSettings).toEqual([{ pathInInstance: 'Body/Hit', isUnique: true }]);
+  });
+
+  it('records a release, which an override writes as false (node.cpp:2236-2249)', () => {
+    const released = cachedUniqueNameOwnership(
+      new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
+
+[node name="Player" type="Node2D"]
+
+[node name="Enemy" parent="." instance=ExtResource("1")]
+
+[node name="Body" parent="Enemy"]
+unique_name_in_owner = false
+`).nodes
+    );
+    expect(released.instanceSettings.map((s) => [s.livePath, s.isUnique])).toEqual([
+      ['Player/Enemy/Body', false],
+    ]);
+  });
+
+  it('keeps the settings in file order across owners', () => {
+    const interleaved = cachedUniqueNameOwnership(
+      new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
+
+[node name="Player" type="Node2D"]
+
+[node name="A" parent="." instance=ExtResource("1")]
+
+[node name="B" parent="." instance=ExtResource("1")]
+
+[node name="X" parent="A"]
+unique_name_in_owner = true
+
+[node name="Y" parent="B"]
+unique_name_in_owner = true
+
+[node name="Z" parent="A"]
+unique_name_in_owner = true
+`).nodes
+    );
+    expect(interleaved.instanceSettings.map((s) => s.node.name)).toEqual(['X', 'Y', 'Z']);
   });
 
   it("lists the live paths of this root's own nodes that sit inside an instance", () => {
@@ -231,8 +279,8 @@ unique_name_in_owner = true
 [node name="Barrel" parent="Enemy/Gun"]
 unique_name_in_owner = true
 `).nodes;
-    const { instanceClaims, ownedInsideInstances } = cachedUniqueNameOwnership(nested);
-    expect([...instanceClaims.keys()]).toEqual(['Player/Enemy/Gun']);
+    const { instanceSettings, ownedInsideInstances } = cachedUniqueNameOwnership(nested);
+    expect(instanceSettings.map((s) => s.owner)).toEqual(['Player/Enemy/Gun']);
     expect(ownedInsideInstances.has('Player/Enemy/Gun')).toBe(true);
   });
 
@@ -283,7 +331,14 @@ unique_name_in_owner = true
   it('registers the claim on the named owner, not on this root', () => {
     const ownership = cachedUniqueNameOwnership(new TscnParser().parse(explicit).nodes);
     expect(ownership.claims.has('%Hit')).toBe(false);
-    expect(ownership.instanceClaims.get('Player/Enemy')?.map((c) => c.node.name)).toContain('Hit');
+    expect(ownership.instanceSettings.find((s) => s.node.name === 'Hit')?.owner).toBe('Player/Enemy');
+  });
+
+  it('gives the instance node an explicit owner below it, empty for the instance itself', () => {
+    const enemy = new TscnParser().parse(explicit).nodes[0]!.children.find((n) => n.name === 'Enemy')!;
+    expect(enemy.instanceNameSettings).toEqual([
+      { pathInInstance: 'Body/Hit', isUnique: true, ownerInInstance: '' },
+    ]);
   });
 
   it('owner="." claims for this root even on an override inside an instance', () => {

@@ -14,7 +14,12 @@ import { boolSlotValue } from '../godot/variant/variantBool.js';
  * still serialises it (node.cpp:4050).
  */
 export function isUniqueNameInOwner(node: RawNode): boolean {
-  return boolSlotValue(node.rawProperties.unique_name_in_owner) === true;
+  return uniqueNameSetting(node) === true;
+}
+
+/** The heading's `unique_name_in_owner` as written, or undefined where it writes none. */
+export function uniqueNameSetting(node: RawNode): boolean | undefined {
+  return boolSlotValue(node.rawProperties.unique_name_in_owner);
 }
 
 /**
@@ -57,6 +62,28 @@ export interface UniqueNameClaim {
 }
 
 /**
+ * A `unique_name_in_owner` a heading writes inside an instance this file seats, as that instance
+ * reads it: true acquires a free name, and false releases the node's own (node.cpp:2236-2249).
+ */
+export interface InstanceNameSetting {
+  /** The node's path below the instance, ending in its name. */
+  readonly pathInInstance: string;
+  readonly isUnique: boolean;
+  /** An explicit `owner=` below the instance, `''` for the instance itself. Absent: the nearest owner. */
+  readonly ownerInInstance?: string;
+}
+
+/** A `unique_name_in_owner` on a heading another owner than the root holds. */
+export interface UniqueNameSetting extends UniqueNameClaim {
+  /**
+   * The live path of the instance node whose sub-scene root owns the heading, or of the node an
+   * explicit `owner=` names.
+   */
+  readonly owner: string;
+  readonly isUnique: boolean;
+}
+
+/**
  * Every owner's `%Name` claims in one seated file: the root's table, plus the two facts a per-owner
  * table over composed instanced content is built from.
  */
@@ -64,10 +91,10 @@ export interface UniqueNameOwnership {
   /** `%Name` to claim, for the nodes this file's root owns, the first claimant kept. */
   readonly claims: ReadonlyMap<string, UniqueNameClaim>;
   /**
-   * Claims on override headings inside instanced content, keyed by the live path of the instance
-   * node whose sub-scene root owns them, or of the node an explicit `owner=` names, in file order.
+   * Settings on headings another owner holds, in file order, which is the order instantiate
+   * applies them in.
    */
-  readonly instanceClaims: ReadonlyMap<string, readonly UniqueNameClaim[]>;
+  readonly instanceSettings: readonly UniqueNameSetting[];
   /** Live paths of nodes this root owns that sit inside instanced content. */
   readonly ownedInsideInstances: ReadonlySet<string>;
 }

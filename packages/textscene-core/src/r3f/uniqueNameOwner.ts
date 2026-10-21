@@ -164,9 +164,20 @@ function cachedSubRoots(
 }
 
 /**
+ * A heading's `unique_name_in_owner` on a table: a set acquires a free name, and the first claimant
+ * keeps it (node.cpp:2225-2231). A clear releases the node's own name (node.cpp:2236-2249).
+ */
+function applySetting(table: Map<string, UniqueNameClaim>, claim: UniqueNameClaim, isUnique: boolean): void {
+  const name = UNIQUE_NODE_PREFIX + claim.node.name;
+  const holder = table.get(name);
+  if (isUnique && !holder) table.set(name, claim);
+  if (!isUnique && holder?.livePath === claim.livePath) table.delete(name);
+}
+
+/**
  * `owner`'s `%Name` table at composed live paths. The outer root's is the shared
  * cached table. An instance root's is its own file's claims, rebased under the node
- * it collapsed into, then the override claims the file above assigns to it.
+ * it collapsed into, then the settings each file above writes on it, inner file first.
  */
 export function ownerClaims(owner: ClaimOwner): ReadonlyMap<string, UniqueNameClaim> {
   const own = cachedUniqueNameClaims(owner.roots);
@@ -178,23 +189,20 @@ export function ownerClaims(owner: ClaimOwner): ReadonlyMap<string, UniqueNameCl
   for (const [key, claim] of own) table.set(key, { ...claim, livePath: composedPath(owner, claim.livePath) });
   let outer = owner;
   while (outer.parent) outer = outer.parent;
-  // A file records an override's claim under the instance IT declares, which is
+  // A file records an override's setting under the instance IT declares, which is
   // the nearest owner it can see; the composed tree knows the nearest one there
   // is, so every ancestor's records are re-keyed by the owner the node has here.
   // An explicit `owner=` named its table outright and is filed by that key.
   for (let above: ClaimOwner | undefined = owner.parent; above; above = above.parent) {
-    for (const [key, claims] of cachedUniqueNameOwnership(above.roots).instanceClaims) {
-      for (const claim of claims) {
-        const name = UNIQUE_NODE_PREFIX + claim.node.name;
-        if (table.has(name)) continue;
-        const livePath = composedPath(above, claim.livePath);
-        const ownedBy =
-          claim.node.owner !== undefined || !outer.ctx
-            ? composedPath(above, key)
-            : walkTo(livePath, outer.roots, outer.ctx).owner.path;
-        if (ownedBy !== owner.path) continue;
-        table.set(name, { ...claim, livePath });
-      }
+    for (const setting of cachedUniqueNameOwnership(above.roots).instanceSettings) {
+      const { node, path, owner: key } = setting;
+      const livePath = composedPath(above, setting.livePath);
+      const ownedBy =
+        node.owner !== undefined || !outer.ctx
+          ? composedPath(above, key)
+          : walkTo(livePath, outer.roots, outer.ctx).owner.path;
+      if (ownedBy !== owner.path) continue;
+      applySetting(table, { node, path, livePath }, setting.isUnique);
     }
   }
   return table;

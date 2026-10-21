@@ -56,8 +56,9 @@ export function mergeInstanceRoot(
     ...merged,
     // A host child whose parent path descends into this instance is grafted at
     // the sub-path it names (`graftInstanceChildren`). Direct children append.
-    children: graftInstanceChildren(root.children, instanceNode.children, scopes, (key) =>
-      claimedBelowRoot(loadedScene.nodes, key)
-    ),
+    children: graftInstanceChildren(root.children, instanceNode.children, scopes, {
+      own: (key) => claimedBelowRoot(loadedScene.nodes, key),
+      settings: instanceNode.instanceNameSettings ?? [],
+    }),
   };
 }
