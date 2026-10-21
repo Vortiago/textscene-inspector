@@ -3,7 +3,7 @@
  * view (`texture_storage.cpp:3593-3594`, `:3644-3647`): the plain view a canvas item samples
  * (`texture_storage.cpp:754`) and the decoding view a `source_color` sampler reads.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
@@ -37,7 +37,6 @@ async function mount(target: THREE.WebGLRenderTarget) {
     </>
   );
   const gl = captured.current!;
-  /** Runs one fill and reports the targets it rendered into. */
   const fill = async (): Promise<(THREE.WebGLRenderTarget | null)[]> => {
     const drawnInto: (THREE.WebGLRenderTarget | null)[] = [];
     await withStubbedGl(gl, { onRender: (bound) => drawnInto.push(bound) }, () => views.current!.fill());
@@ -100,16 +99,29 @@ describe('useTargetViews', () => {
     expect(await fill()).toEqual([]);
   });
 
-  it("frees the copy's storage once the last consumer releases it", async () => {
-    const dispose = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose');
-    const { views } = await mount(createCanvasTarget(8, 8, 'Probe'));
-    const releaseFirst = views.decoding.retain();
-    const releaseSecond = views.decoding.retain();
-    releaseFirst();
-    expect(dispose).not.toHaveBeenCalled();
-    releaseSecond();
-    expect(dispose).toHaveBeenCalledTimes(1);
-    dispose.mockRestore();
+  describe('storage of a copy', () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    it('is freed once the last consumer releases it and the task ends', async () => {
+      const { views } = await mount(createCanvasTarget(8, 8, 'Probe'));
+      const dispose = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose');
+      const releaseFirst = views.decoding.retain();
+      const releaseSecond = views.decoding.retain();
+      releaseFirst();
+      releaseSecond();
+      await Promise.resolve();
+      expect(dispose).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays while a consumer retakes it in the same task as the release (edge case)', async () => {
+      const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe'));
+      const dispose = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose');
+      views.decoding.retain()();
+      views.decoding.retain();
+      await Promise.resolve();
+      expect(dispose).not.toHaveBeenCalled();
+      expect(await fill()).toHaveLength(1);
+    });
   });
 
   it('stops filling once the last consumer releases the copy', async () => {

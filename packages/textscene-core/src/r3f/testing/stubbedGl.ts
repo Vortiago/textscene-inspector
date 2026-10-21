@@ -1,8 +1,7 @@
 /**
  * Runs a frame or a call with the renderer's bind and draw entry points replaced by recorders. The
  * fake WebGL context's `setRenderTarget` throws "invalid value used as weak map key" as an
- * unhandled rejection, and no caller asserts pixels, so the code under test exercises only the
- * state around the GL side.
+ * unhandled rejection, so the code under test exercises only the state around the GL side.
  */
 import type ReactThreeTestRenderer from '@react-three/test-renderer';
 import type * as THREE from 'three';
@@ -10,8 +9,8 @@ import type * as THREE from 'three';
 interface GlRecorders {
   /** Called for every `setRenderTarget`, the restoring null bind included. */
   onBind?: (target: THREE.WebGLRenderTarget | null) => void;
-  /** Called for every `render`, with the target bound at that moment. */
-  onRender?: (bound: THREE.WebGLRenderTarget | null) => void;
+  /** Called for every `render`, with the target bound at that moment and what is drawn. */
+  onRender?: (bound: THREE.WebGLRenderTarget | null, scene: THREE.Object3D, camera: THREE.Camera) => void;
 }
 
 /** Runs `run` with the recorders in place, and restores the renderer after it settles. */
@@ -27,7 +26,8 @@ export async function withStubbedGl(
     onBind?.(target);
   }) as typeof gl.setRenderTarget;
   gl.getRenderTarget = () => bound;
-  gl.render = (() => onRender?.(bound)) as typeof gl.render;
+  gl.render = ((scene: THREE.Object3D, camera: THREE.Camera) =>
+    onRender?.(bound, scene, camera)) as typeof gl.render;
   try {
     await run();
   } finally {

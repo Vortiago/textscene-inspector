@@ -19,7 +19,11 @@ export function viewportEntry(
   size: { x: number; y: number },
   views: Partial<Pick<ViewportTextureEntry, 'plain' | 'decoding'>> = {}
 ): ViewportTextureEntry {
-  return { plain: fixedView(texture), decoding: fixedView(texture), ...views, size };
+  return {
+    plain: views.plain ?? fixedView(texture),
+    decoding: views.decoding ?? fixedView(texture),
+    size,
+  };
 }
 
 /** A view that needs no filling, so retaining it does nothing. */
@@ -27,12 +31,15 @@ function fixedView(texture: THREE.Texture): TargetView {
   return { texture, retain: () => () => {} };
 }
 
-/** A view that counts the consumers retaining it, and the count it reports. */
+/** A view that counts its retainers, and releases once like a real one. */
 export function countingView(texture: THREE.Texture): { view: TargetView; retainers: { count: number } } {
   const retainers = { count: 0 };
   const retain = () => {
     retainers.count++;
+    let released = false;
     return () => {
+      if (released) return;
+      released = true;
       retainers.count--;
     };
   };

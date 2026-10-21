@@ -34,7 +34,7 @@ import { collectControlRasterViewports } from './controlRasterViewports';
 import { ControlRasterPasses } from './ControlRasterPass';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
-import { advanceFrameWithStubbedGl } from '../../../r3f/testing/stubbedGl';
+import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 
 const GUI_SCENE = `[gd_scene format=3]
@@ -189,18 +189,15 @@ offset_bottom = 100.5
       // inside a callback stays narrowed to its initialiser, so `portalScene`
       // would read as `null` at every use below.
       const captured: { portalScene: THREE.Object3D | null } = { portalScene: null };
-      const originalSet = gl.setRenderTarget;
-      const originalRender = gl.render;
-      gl.setRenderTarget = (() => undefined) as typeof gl.setRenderTarget;
-      gl.render = ((rendered: THREE.Object3D) => {
-        captured.portalScene ??= rendered;
-      }) as typeof gl.render;
-      try {
-        await renderer.advanceFrames(1, 16);
-      } finally {
-        gl.setRenderTarget = originalSet;
-        gl.render = originalRender;
-      }
+      await withStubbedGl(
+        gl,
+        {
+          onRender: (_, rendered) => {
+            captured.portalScene ??= rendered;
+          },
+        },
+        () => renderer.advanceFrames(1, 16)
+      );
 
       let group: THREE.Object3D | undefined;
       captured.portalScene?.traverse((o) => {

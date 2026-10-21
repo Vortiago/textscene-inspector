@@ -97,8 +97,8 @@ class ViewCopy implements PassView {
   readonly texture: THREE.Texture;
   private readonly copy: THREE.WebGLRenderTarget;
   /**
-   * Written only by `retain` and its release. The copy fills while it is above zero, and its
-   * storage is freed when it returns to zero: three allocates it again on the next fill.
+   * Written only by `retain` and its release. The copy fills above zero. Its storage is freed when
+   * a task ends at zero, since three uploads again after a dispose in the same task.
    */
   private retainers = 0;
 
@@ -118,7 +118,9 @@ class ViewCopy implements PassView {
     return () => {
       if (released) return;
       released = true;
-      if (--this.retainers === 0) this.copy.dispose();
+      this.retainers--;
+      // Deferred, as `useDisposeOnRelease` does: StrictMode and a swapped consumer release and retain in one task.
+      if (this.retainers === 0) queueMicrotask(() => this.disposeIfUnretained());
     };
   }
 
@@ -131,6 +133,10 @@ class ViewCopy implements PassView {
 
   dispose(): void {
     this.copy.dispose();
+  }
+
+  private disposeIfUnretained(): void {
+    if (this.retainers === 0) this.copy.dispose();
   }
 }
 

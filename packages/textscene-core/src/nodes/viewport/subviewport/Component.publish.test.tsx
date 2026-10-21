@@ -29,7 +29,7 @@ import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
-import { advanceFrameWithStubbedGl } from '../../../r3f/testing/stubbedGl';
+import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
 import { fittedAspect } from '../../3d/camera3d/projectionFit';
@@ -56,21 +56,18 @@ async function scenesRenderedNextFrame(
   gl: THREE.WebGLRenderer
 ): Promise<THREE.Scene[]> {
   const rendered: THREE.Scene[] = [];
-  const originalSet = gl.setRenderTarget;
-  const originalRender = gl.render;
-  gl.setRenderTarget = (() => undefined) as typeof gl.setRenderTarget;
-  gl.render = ((scene: THREE.Scene, camera: THREE.Camera) => {
-    rendered.push(scene);
-    scene.updateMatrixWorld();
-    camera.updateMatrixWorld();
-    (scene.onBeforeRender as (...args: unknown[]) => void).call(scene, gl, scene, camera, null);
-  }) as typeof gl.render;
-  try {
-    await renderer.advanceFrames(1, 16);
-  } finally {
-    gl.setRenderTarget = originalSet;
-    gl.render = originalRender;
-  }
+  await withStubbedGl(
+    gl,
+    {
+      onRender: (_, scene, camera) => {
+        rendered.push(scene as THREE.Scene);
+        scene.updateMatrixWorld();
+        camera.updateMatrixWorld();
+        (scene.onBeforeRender as (...args: unknown[]) => void).call(scene, gl, scene, camera, null);
+      },
+    },
+    () => renderer.advanceFrames(1, 16)
+  );
   return rendered;
 }
 
