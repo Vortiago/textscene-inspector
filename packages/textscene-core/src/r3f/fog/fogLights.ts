@@ -13,8 +13,8 @@ import {
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
 } from '../../godot/rendering/environment/volumetricFog.js';
 import { areaLightShadowDepthScale } from '../../godot/rendering/lights/areaLightShadow.js';
-import { lightBufferRange } from '../../godot/rendering/lights/lightBufferRange.js';
 import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/rendering/lights/directionalShadow.js';
+import { lightBufferRange } from '../../godot/rendering/lights/lightBufferRange.js';
 import { splitSunOf } from '../directionalShadow/splitSun.js';
 import { isAreaShadowLight } from '../positionalShadow/atlasAreaShadow.js';
 import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow.js';
