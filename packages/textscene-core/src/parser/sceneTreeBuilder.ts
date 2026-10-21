@@ -289,9 +289,15 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   tables.byPath.set(path, node);
   const setting = uniqueNameSetting(node);
   if (setting === undefined) return;
-  // A clear on a root-owned heading has nothing to release: the heading declares the node.
   if (isRootOwned) {
     if (setting) claimInRoot(tables, { node, ...place }, path);
+    // An inherited root owns its base's nodes, so a clear on an override of one releases a claim
+    // the base made, which only the root's graft sees. Any other root-owned heading declares its node.
+    else if (tables.root.instance && instance === undefined && node.overridesExistingNode)
+      handToInstance(tables, tables.root, {
+        pathInInstance: relativeTo(tables.root.name, place.livePath)!,
+        isUnique: false,
+      });
     return;
   }
   const instanceLivePath = instance && tables.places.get(instance)!.livePath;

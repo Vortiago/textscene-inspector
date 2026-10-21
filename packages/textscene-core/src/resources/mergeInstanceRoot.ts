@@ -50,7 +50,8 @@ export function mergeInstanceRoot(
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
   const merged = mergeProperties(instanceNode, root, scopes);
-  // The graft below lands these settings, so a further collapse of the chain never reads them.
+  // The graft below lands these settings. A root that is itself an instance carries its own file's
+  // settings on to the next collapse, whose host children its own children lead.
   const { instanceNameSettings: settings = [], ...host } = instanceNode;
 
   return {
@@ -59,6 +60,7 @@ export function mergeInstanceRoot(
     // The instance node's own ref is consumed here. The tree's badge and
     // open-standalone affordance read the originating ref in the caller's scope.
     instance: root.instance,
+    ...(root.instanceNameSettings ? { instanceNameSettings: root.instanceNameSettings } : {}),
     ...merged,
     // A host child whose parent path descends into this instance is grafted at
     // the sub-path it names (`graftInstanceChildren`). Direct children append.
