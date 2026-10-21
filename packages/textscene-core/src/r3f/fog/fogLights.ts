@@ -78,7 +78,7 @@ const towards = new THREE.Vector3();
 const areaSize = new THREE.Vector2();
 const axis = new THREE.Vector3();
 const viewToShadow = new THREE.Matrix4();
-const paraboloidRect = new THREE.Vector4();
+const slotRectScratch = new THREE.Vector4();
 const row = new Float32Array(ROW_LENGTH);
 
 /**
@@ -218,7 +218,7 @@ function writeDirectionalShadow(light: THREE.DirectionalLight, camera: THREE.Cam
 function writeParaboloidShadow(light: THREE.Light, camera: THREE.Camera): void {
   const { shadow } = light as { shadow?: unknown };
   if (!light.castShadow || !(shadow instanceof AtlasOmniShadow || shadow instanceof AtlasAreaShadow)) return;
-  const rect = shadow.slotRect(paraboloidRect);
+  const rect = shadow.slotRect(slotRectScratch);
   if (!rect) return;
   writeVec4(row, FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
   writePositionalShadow(shadow, light, camera);
