@@ -21,8 +21,9 @@ import {
  * A browser context that renders only the scene: the source pane closed, the floating toolbar
  * painted out (a capture composites any DOM over the canvas), and frame-on-open set
  * explicitly. `canvas2DFrame` is the project-viewport rect, which widens the window only when it
- * does not fit the default one. `viewport` is the 3D window, which a scene shrinks to render a small frame. `showPerformance` turns the frame profile on, and its overlay is
- * painted out too.
+ * does not fit the default one. `viewport` is the 3D window, which a scene shrinks to render a
+ * small frame, and a 2D context ignores it. `showPerformance` turns the frame profile on, and its
+ * overlay is painted out too.
  */
 export async function createCaptureContext(
   browser,

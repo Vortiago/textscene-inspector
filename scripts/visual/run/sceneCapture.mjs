@@ -16,36 +16,29 @@ import {
 // render-loop latency under host contention.
 const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
 
-/** The key a scene's `window` page is stored under in `pages.windows`. */
-export function windowKey({ width, height }) {
+/** The key a scene's `canvas` page is stored under in `pages.sizes`. */
+export function canvasKey({ width, height }) {
   return `${width}x${height}`;
 }
 
-/** The page a scene captures on: the canvas2D context, a window of its own size, or the default. */
+function required(pageState, scene, what) {
+  if (!pageState) throw new Error(`scene "${scene.name}" needs ${what}, which this run did not create`);
+  return pageState;
+}
+
+/** The page a scene captures on: the canvas2D context, a window sized for its canvas, or the default. */
 function pageStateFor(pages, scene) {
-  if (scene.mode === '2d') {
-    if (!pages.canvas2D) {
-      throw new Error(
-        `scene "${scene.name}" needs the canvas2D capture context, which this run did not create`
-      );
-    }
-    return pages.canvas2D;
-  }
-  if (!scene.window) return pages.default;
-  const windowPage = pages.windows[windowKey(scene.window)];
-  if (!windowPage) {
-    throw new Error(
-      `scene "${scene.name}" needs a ${windowKey(scene.window)} capture window, which this run did not create`
-    );
-  }
-  return windowPage;
+  if (scene.mode === '2d') return required(pages.canvas2D, scene, 'the canvas2D capture context');
+  if (!scene.canvas) return pages.default;
+  const key = canvasKey(scene.canvas);
+  return required(pages.sizes[key], scene, `a ${key} capture window`);
 }
 
 /**
  * Navigates to a scene and captures its target after two byte-identical screenshots. Returns the
  * PNG buffer, or null with a reason when the scene never settles or logs a console error.
  * `pages.default` holds the framed 3D view, `pages.canvas2D` the 2D parity frame, which exists
- * only when a scene sets `mode: '2d'`, and `pages.windows` one small 3D view per `window` size.
+ * only when a scene sets `mode: '2d'`, and `pages.sizes` one small 3D view per `canvas` size.
  */
 export async function captureScene(pages, baseUrl, scene) {
   const canvas2D = scene.mode === '2d';

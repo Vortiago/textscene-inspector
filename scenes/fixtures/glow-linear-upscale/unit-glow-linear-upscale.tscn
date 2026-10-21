@@ -2,9 +2,8 @@
 
 ; The glow's Linear upscale mode: the project sets rendering/environment/glow/upscale_mode to 0,
 ; so the composite reads each glow level with one bilinear fetch where the default bicubic filter
-; blurs the coarse levels smoother. The scene is unit-glow-authored: its two coarsest levels are the
-; ones a magnified bilinear read shows. It sits in its own folder because upscale_mode is a project
-; setting that no .tscn carries.
+; reads it smoother. The scene is unit-glow-authored: its two coarsest levels are the ones a
+; magnified bilinear read shows.
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_dark"]
 sky_top_color = Color(0.02, 0.02, 0.04, 1)

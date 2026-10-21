@@ -133,7 +133,7 @@ ${map}${blend}`;
 
 /**
  * `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. Nothing clamps the
- * scene colour before the blend: the curve clamps for itself (`:258`).
+ * scene colour before the blend: every curve but LINEAR clamps for itself (`:258`).
  */
 const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${EXPOSURE_UNIFORM});`;
 

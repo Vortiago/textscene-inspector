@@ -42,7 +42,7 @@ describe('captureScene seam selection', () => {
     return {
       default: { page: { name: '3d-page' }, diagnostics: emptyDiagnostics() },
       canvas2D: { page: { name: '2d-page' }, diagnostics: emptyDiagnostics() },
-      windows: { '525x200': { page: { name: 'small-page' }, diagnostics: emptyDiagnostics() } },
+      sizes: { '200x156': { page: { name: 'small-page' }, diagnostics: emptyDiagnostics() } },
     };
   }
 
@@ -88,27 +88,27 @@ describe('captureScene seam selection', () => {
     });
   });
 
-  it('routes a scene that sets a window through the page of that size', async () => {
+  it('routes a scene that sets a canvas size through the page of that size', async () => {
     stubHappyCapture();
     const pages = fakePages();
-    const scene = { name: 'small', file: 'unit-small.tscn', window: { width: 525, height: 200 } };
+    const scene = { name: 'small', file: 'unit-small.tscn', canvas: { width: 200, height: 156 } };
 
     await captureScene(pages, 'http://localhost:1', scene);
 
     expect(openScene).toHaveBeenLastCalledWith(
-      pages.windows['525x200'].page,
+      pages.sizes['200x156'].page,
       'http://localhost:1',
       'unit-small.tscn',
       { canvas2D: false, camera: undefined, onSlow: expect.any(Function) }
     );
   });
 
-  it('throws when a scene sets a window the run created no page for', async () => {
+  it('throws when a scene sets a canvas size the run created no page for', async () => {
     stubHappyCapture();
-    const pages = { ...fakePages(), windows: {} };
-    const scene = { name: 'small', file: 'unit-small.tscn', window: { width: 525, height: 200 } };
+    const pages = { ...fakePages(), sizes: {} };
+    const scene = { name: 'small', file: 'unit-small.tscn', canvas: { width: 200, height: 156 } };
 
-    await expect(captureScene(pages, 'http://localhost:1', scene)).rejects.toThrow(/525x200/);
+    await expect(captureScene(pages, 'http://localhost:1', scene)).rejects.toThrow(/200x156/);
   });
 
   it('opens a scene that names a camera through that Camera3D', async () => {

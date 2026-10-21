@@ -17,11 +17,12 @@ import {
   attachDiagnostics,
   createCaptureContext,
   previewPort,
+  windowForCanvas,
   withPreviewBrowser,
 } from './previewServer.mjs';
 import { BASELINE_DIR } from './baselinePath.mjs';
 import { parseArgs, selectScenes, summarize } from './run/cli.mjs';
-import { captureScene, windowKey } from './run/sceneCapture.mjs';
+import { canvasKey, captureScene } from './run/sceneCapture.mjs';
 import { compareToBaseline, writeBaseline, writeFailureArtifacts } from './run/baselines.mjs';
 
 async function main() {
@@ -68,26 +69,27 @@ async function main() {
  * (ADR-0025) leaves the larger fixtures mostly out of frame, and a baseline of empty space cannot
  * fail. The parity harness keeps the fixed orbit, since Godot opens there. The 2D capture context
  * has its own viewport and localStorage, so it exists only when a scene needs it, as does each
- * `window` page.
+ * page for a `canvas` size.
  */
 async function capturePages(browser, scenes) {
-  const context = await createCaptureContext(browser, { frameOnOpen: true });
-  const page = await context.newPage();
-  const pages = { default: { page, diagnostics: attachDiagnostics(page) }, canvas2D: null, windows: {} };
+  const pages = { default: await capturePage(browser, { frameOnOpen: true }), canvas2D: null, sizes: {} };
   if (scenes.some((s) => s.mode === '2d')) {
-    const context2D = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: true });
-    const page2D = await context2D.newPage();
-    pages.canvas2D = { page: page2D, diagnostics: attachDiagnostics(page2D) };
+    pages.canvas2D = await capturePage(browser, { frameOnOpen: false, canvas2D: true });
   }
-  for (const { window } of scenes.filter((s) => s.window)) {
-    pages.windows[windowKey(window)] ??= await windowPage(browser, window);
-  }
+  const canvases = new Map(scenes.filter((s) => s.canvas).map((s) => [canvasKey(s.canvas), s.canvas]));
+  await Promise.all(
+    [...canvases].map(async ([key, canvas]) => {
+      pages.sizes[key] = await capturePage(browser, {
+        frameOnOpen: true,
+        viewport: windowForCanvas(canvas),
+      });
+    })
+  );
   return pages;
 }
 
-/** A framed 3D page at `viewport`'s size, for a scene that renders a frame the default window cannot. */
-async function windowPage(browser, viewport) {
-  const context = await createCaptureContext(browser, { frameOnOpen: true, viewport });
+async function capturePage(browser, contextOptions) {
+  const context = await createCaptureContext(browser, contextOptions);
   const page = await context.newPage();
   return { page, diagnostics: attachDiagnostics(page) };
 }

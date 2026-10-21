@@ -49,8 +49,16 @@ export const CANVAS_2D_CAPTURE = {
   viewport: { width: 1600, height: 900 },
 };
 
-/** What the shell's dock and top bar take out of the window before the stage. */
+/** What the shell's dock and top bar take out of the window before a 2D stage or a 3D canvas. */
 export const CANVAS_2D_CHROME = { width: 325, height: 44 };
+
+/** The browser window whose 3D canvas is `canvas` pixels, the shell's chrome included. */
+export function windowForCanvas(canvas) {
+  return {
+    width: canvas.width + CANVAS_2D_CHROME.width,
+    height: canvas.height + CANVAS_2D_CHROME.height,
+  };
+}
 
 /**
  * The browser window a 2D capture of a frame this size needs. The stage lays the project rect out
