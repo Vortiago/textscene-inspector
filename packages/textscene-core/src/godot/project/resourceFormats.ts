@@ -14,7 +14,7 @@
 export const GODOT_TEXT_RESOURCE_EXTENSIONS = ['.tscn', '.tres'] as const;
 
 /** The text extension a resource that is not a PackedScene takes. */
-export const GODOT_TEXT_RESOURCE_FILE_EXTENSION = GODOT_TEXT_RESOURCE_EXTENSIONS[1];
+export const GODOT_TEXT_RESOURCE_FILE_EXTENSION: (typeof GODOT_TEXT_RESOURCE_EXTENSIONS)[number] = '.tres';
 
 /**
  * Whether `path` names a Godot text resource, case-insensitive like Godot: `recognize_path` compares with

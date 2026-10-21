@@ -185,6 +185,24 @@ describe('parseBinaryResource on each header and table form', () => {
     );
   });
 
+  it('sorts a key above U+FFFF by code point, where UTF-16 order puts it first (edge case)', async () => {
+    const stringKey = (key: string) => new ByteWriter().u32(VariantTag.String).unicodeString(key).bytes();
+    const int = (value: number) => new ByteWriter().u32(VariantTag.Int).u32(value).bytes();
+    const variant = new ByteWriter()
+      .u32(VariantTag.Dictionary)
+      .u32(2)
+      .raw(stringKey('\u{1F600}'))
+      .raw(int(1))
+      .raw(stringKey('\uFFFD'))
+      .raw(int(2))
+      .bytes();
+    const file = binaryResourceBytes({
+      strings: ['surface'],
+      resources: [{ id: 'Main', type: 'Resource', properties: [{ name: 'surface', variant }] }],
+    });
+    expect((await parseBinaryResource(file)).properties.surface).toBe('{\n"\uFFFD": 2,\n"\u{1F600}": 1\n}');
+  });
+
   it('refuses a format version newer than Godot 4.6 reads (error case)', async () => {
     const file = withPosition(vector3(false, false), { formatVersion: 7 });
     await expect(parseBinaryResource(file)).rejects.toThrow(

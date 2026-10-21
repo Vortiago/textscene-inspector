@@ -68,6 +68,18 @@ describe('createTresResourceProcessor', () => {
     });
   });
 
+  it('reads a .gdshader in any case as a Shader, as parsedResourcePath routes it (edge case)', async () => {
+    const file = mockFileBus();
+    const eventBus = new ResourceEventBus();
+    const processor = createTresResourceProcessor(file.bus, eventBus);
+
+    const loaded = eventBus.once<ParsedResource>('resource', 'loaded', 'res://fog.GDShader', 1000);
+    processor.request('res://fog.GDShader');
+    file.emitLoaded('res://fog.GDShader', 'shader_type fog;\n');
+
+    expect(await loaded).toMatchObject({ resourceType: 'Shader' });
+  });
+
   it('reads a binary resource into the same ParsedResource shape', async () => {
     const file = mockFileBus();
     const eventBus = new ResourceEventBus();

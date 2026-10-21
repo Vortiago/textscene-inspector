@@ -58,8 +58,9 @@ function taggedVariantText(tag: Tag, reader: ByteReader, tables: VariantTables):
     case Tag.Double:
       return floatLiteral(reader.f64());
     case Tag.String:
+      return stringLiteral(reader.unicodeString());
     case Tag.StringName:
-      return stringLikeText(tag === Tag.StringName, reader.unicodeString());
+      return stringNameLiteral(reader.unicodeString());
     case Tag.Vector2:
       return call('Vector2', reals(reader, 2));
     case Tag.Vector2i:
@@ -209,8 +210,8 @@ function tableId(ids: readonly string[], index: number, table: string): string {
   return id;
 }
 
-function stringLikeText(isStringName: boolean, value: string): string {
-  return isStringName ? `&${stringLiteral(value)}` : stringLiteral(value);
+function stringNameLiteral(value: string): string {
+  return `&${stringLiteral(value)}`;
 }
 
 /** One dictionary entry, with its key as a string when the key is a String or a StringName. */
@@ -241,20 +242,26 @@ function writtenOrder(entries: DictionaryEntry[]): DictionaryEntry[] {
 function dictionaryEntry(reader: ByteReader, tables: VariantTables): DictionaryEntry {
   const tag = reader.u32() as Tag;
   const name = tag === Tag.String || tag === Tag.StringName ? reader.unicodeString() : null;
-  const key =
-    name === null ? taggedVariantText(tag, reader, tables) : stringLikeText(tag === Tag.StringName, name);
-  return { text: `${key}: ${variantText(reader, tables)}`, name };
+  return { text: `${dictionaryKeyText(tag, name, reader, tables)}: ${variantText(reader, tables)}`, name };
 }
 
-/** `String`'s `operator<`: code point by code point, which UTF-16 order breaks above U+FFFF. */
+function dictionaryKeyText(tag: Tag, name: string | null, reader: ByteReader, tables: VariantTables): string {
+  if (name === null) return taggedVariantText(tag, reader, tables);
+  return tag === Tag.StringName ? stringNameLiteral(name) : stringLiteral(name);
+}
+
+/**
+ * `str_compare`, as `StringName::AlphCompare` runs it: code point by code point, which UTF-16 order
+ * breaks above U+FFFF. Equal prefixes span equal code units, so one index walks both strings.
+ */
 function codePointOrder(a: string, b: string): number {
-  const left = [...a];
-  const right = [...b];
-  for (let i = 0; i < Math.min(left.length, right.length); i++) {
-    const delta = left[i]!.codePointAt(0)! - right[i]!.codePointAt(0)!;
+  for (let i = 0; i < a.length && i < b.length;) {
+    const left = a.codePointAt(i)!;
+    const delta = left - b.codePointAt(i)!;
     if (delta !== 0) return delta;
+    i += left > 0xffff ? 2 : 1;
   }
-  return left.length - right.length;
+  return a.length - b.length;
 }
 
 /** `:612-623`: the bytes, then padding to a multiple of four. Godot's writer spells them as base64. */

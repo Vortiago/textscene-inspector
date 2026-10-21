@@ -35,20 +35,17 @@ function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
     );
   };
 
-  const pathForRef = (ref: string): string | null => {
+  const extResourceOf = (ref: string) => {
     const parsed = resourceRef(ref);
-    if (parsed?.kind !== 'ExtResource') return null;
-    const ext = findExtResource(scene.externalResources, parsed.id);
-    return ext && isBinaryScenePath(ext.path, ext.type) ? ext.path : null;
+    return parsed?.kind === 'ExtResource' ? findExtResource(scene.externalResources, parsed.id) : undefined;
   };
 
-  if (node.instance) {
-    const path = pathForRef(node.instance);
-    if (path) flag('instance', path);
-  }
+  // An instance loads as a PackedScene whatever its `type=` says, as the scene processor reads it.
+  const instanced = node.instance ? extResourceOf(node.instance) : undefined;
+  if (instanced && isBinaryScenePath(instanced.path, 'PackedScene')) flag('instance', instanced.path);
   for (const [key, value] of Object.entries(node.rawProperties)) {
-    const path = pathForRef(value);
-    if (path) flag(key, path);
+    const ext = extResourceOf(value);
+    if (ext && isBinaryScenePath(ext.path, ext.type)) flag(key, ext.path);
   }
 
   return diagnostics;

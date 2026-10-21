@@ -11,6 +11,7 @@ import { createResourceProcessor, type ResourceProcessor } from '../createResour
 import { GODOT_SHADER_EXTENSION } from '../../godot/project/resourceFormats';
 import { parseShaderFile, parseTresFile, type ParsedResource } from '../../parser/parsedResource';
 import { parseBinaryResource } from '../formats/binaryresource/parse';
+import { fileExtension } from '../fileExtension';
 
 export function createTresResourceProcessor(
   fileEventBus: FileEventBus | undefined,
@@ -24,7 +25,7 @@ export function createTresResourceProcessor(
     // peer waiting on it waits out its timeout. The parse fails other text at once.
     process: async (path, data) => {
       if (typeof data !== 'string') return parseBinaryResource(data);
-      return path.endsWith(GODOT_SHADER_EXTENSION) ? parseShaderFile(data) : parseTresFile(data);
+      return fileExtension(path) === GODOT_SHADER_EXTENSION ? parseShaderFile(data) : parseTresFile(data);
     },
   });
 }

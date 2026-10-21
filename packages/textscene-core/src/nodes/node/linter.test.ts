@@ -36,6 +36,20 @@ describe('binary-resource-reference', () => {
     );
   });
 
+  it('reports an instanced .res whose ext_resource names no type, as the scene processor fails it (edge case)', () => {
+    expectDiagnostic(
+      `[gd_scene format=3]
+
+[ext_resource path="res://stage/grid_map.res" id="1"]
+
+[node name="Stage" type="Node3D"]
+
+[node name="GridMap" type="Node3D" parent="." instance=ExtResource("1")]
+`,
+      { ruleName: 'binary-resource-reference', contains: ['grid_map.res'] }
+    );
+  });
+
   it('stays silent for a .res resource that is not a scene, which the previewer reads', () => {
     expectNoDiagnostic(
       `[gd_scene format=3]
