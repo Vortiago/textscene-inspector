@@ -63,7 +63,7 @@ function settleControl(delayed) {
 describe('checkSettleControl', () => {
   it('passes a delayed capture that settled after the held build replied', () => {
     const gate = fakeGate();
-    checkSettleControl(gate, settleControl({ settledMs: 5954 }));
+    checkSettleControl(gate, settleControl({}));
     expect(gate.failures).toEqual([]);
   });
 

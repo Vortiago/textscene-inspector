@@ -75,7 +75,7 @@ export class SurfaceWriter {
       tangents: new Float32Array(this.tangents),
       uvs: new Float32Array(this.uvs),
       uv2s: this.hasUv2 ? new Float32Array(this.uv2s) : undefined,
-      indices: Uint32Array.from(this.indices),
+      indices: new Uint32Array(this.indices),
     };
   }
 }
