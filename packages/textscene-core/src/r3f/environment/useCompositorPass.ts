@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { glowParamsFor, type GlowParams } from '../../resources/environment/godotGlow';
+import { projectGlowUsesBicubicUpscale } from '../../parser/projectSettingsParser';
 import type { EnvironmentSettings } from '../../resources/environment/types';
 import { useResourceLoader } from '../../resources/useResource';
 import { COMMIT_FRAMES_AFTER_SETTLE } from '../../resources/ResourceLoaderContext';
@@ -37,14 +38,16 @@ export interface CompositorPass {
 export function useCompositorPass(settings: EnvironmentSettings | null): CompositorPass | null {
   const hasBlended = useBlendedSurfaceLatch();
   const draws3D = useDraws3D();
-  const msaa3D = useSampleCount(useProjectSettings().msaaModes.msaa3D, SCENE_BUFFER_TYPE);
+  const { settings: projectSettings, msaaModes } = useProjectSettings();
+  const msaa3D = useSampleCount(msaaModes.msaa3D, SCENE_BUFFER_TYPE);
+  const usesBicubicUpscale = projectGlowUsesBicubicUpscale(projectSettings);
   // Memoised, since a new glow object rebuilds the compositor's effect.
   return useMemo(() => {
     if (!draws3D) return null;
-    const glow = settings && glowParamsFor(settings);
+    const glow = settings && glowParamsFor(settings, usesBicubicUpscale);
     const needed = glow || hasBlended || settings?.adjustments || msaa3D > 0;
     return needed ? { glow, samples: msaa3D } : null;
-  }, [draws3D, settings, hasBlended, msaa3D]);
+  }, [draws3D, settings, usesBicubicUpscale, hasBlended, msaa3D]);
 }
 
 /**

@@ -6,6 +6,7 @@ import {
   blendsAfterToneMapping,
   brightPassGlsl,
   glowLevelSize,
+  glowLevelCap,
   glowParamsFor,
   samplesGlowMap,
 } from './godotGlow';
@@ -16,7 +17,7 @@ const GLOW_LEVEL_COUNT = 7;
 
 describe('glowParamsFor', () => {
   it('is null when the environment has no glow', () => {
-    expect(glowParamsFor(environmentSettingsOf({}))).toBeNull();
+    expect(glowParamsFor(environmentSettingsOf({}), true)).toBeNull();
   });
 
   it('carries Godot 4.6 Environment defaults', () => {
@@ -60,7 +61,7 @@ describe('glowParamsFor', () => {
     // so a non-null result always carries a real `maxLevel`.
     const off: Record<string, string> = { glow_bloom: '1', glow_intensity: '4' };
     for (let level = 1; level <= GLOW_LEVEL_COUNT; level++) off[`glow_levels/${level}`] = '0';
-    expect(glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...off }))).toBeNull();
+    expect(glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...off }), true)).toBeNull();
   });
 
   it('sum-normalises the level weights under glow_normalized', () => {
@@ -295,5 +296,30 @@ describe('blendGlsl', () => {
     expect(additive).not.toContain('2.0');
     const screen = blendGlsl(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }), 2);
     expect(screen).toContain('2.0');
+  });
+});
+
+describe('glowLevelCap', () => {
+  it('leaves a full-size frame every level the pyramid can ask for', () => {
+    expect(glowLevelCap(1920, 1080)).toBeGreaterThanOrEqual(GLOW_LEVEL_COUNT - 1);
+    expect(glowLevelCap(256, 256)).toBe(GLOW_LEVEL_COUNT - 1);
+  });
+
+  it('drops the finest levels of a small frame, as the glow texture runs out of mips', () => {
+    // `renderer_scene_render_rd.cpp:593` caps at BLUR_1's mip count, which is the frame's
+    // halvings to 1px minus two (`render_scene_buffers_rd.cpp:521,531`).
+    expect(glowLevelCap(255, 255)).toBe(5);
+    expect(glowLevelCap(128, 128)).toBe(5);
+    expect(glowLevelCap(100, 30)).toBe(4);
+    expect(glowLevelCap(64, 64)).toBe(4);
+  });
+
+  it('takes the larger side, since the mips run until both sides reach 1px', () => {
+    expect(glowLevelCap(512, 16)).toBe(glowLevelCap(512, 512));
+  });
+
+  it('never falls below level 0, for a frame with almost no mips (edge case)', () => {
+    expect(glowLevelCap(4, 4)).toBe(0);
+    expect(glowLevelCap(1, 1)).toBe(0);
   });
 });

@@ -2173,7 +2173,7 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders. Each level blurs with Godot's five-weight gaussian, and the composite reads each level with Godot's default bicubic filter. The glow runs whenever the environment enables it, so a lit specular highlight blooms as well, as in Godot. A <code>glow_map</code> scales the glow per screen position, as Godot's tonemap pass does.</p></div>
+        <div class="prose"><p>The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders. Each level blurs with Godot's five-weight gaussian, and the composite reads each level with the bicubic filter, or with a bilinear fetch when the project sets <code>rendering/environment/glow/upscale_mode</code> to Linear. A frame too small to halve to the seventh level builds fewer levels, as Godot does. The glow runs whenever the environment enables it, so a lit specular highlight blooms as well, as in Godot. A <code>glow_map</code> scales the glow per screen position, as Godot's tonemap pass does.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Adjustments</h3><span class="status st-done">Done</span></div>

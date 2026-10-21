@@ -21,7 +21,7 @@ export function glowLevelUniform(level: number): string {
 }
 
 /**
- * The five weights of `MODE_GLOW`'s gaussian (`copy.glsl:111`): the centre, then each step out.
+ * The five weights of `MODE_GLOW`'s gaussian (`copy.glsl:116`): the centre, then each step out.
  * They sum to one over the nine taps. Godot's plain blur has its own, narrower four.
  */
 const KERNEL = [0.2024, 0.179, 0.124, 0.0672, 0.0285];
@@ -30,20 +30,23 @@ const BLUR_HEADER = /* glsl */ `
 const float kernel[5] = float[5](${KERNEL.map(glslFloat).join(', ')});
 
 // Godot loads the source 2x2 pixels at a time, clamping the even pixel of a pair into
-// [0, size - 2] and reading its odd partner one on (copy.glsl:77-83). Past an edge the
+// [0, size - 2] and reading its odd partner one on (copy.glsl:99-105). Past an edge the
 // taps therefore alternate between the two outermost pixels, where a plain clamp repeats one.
 int godotGlowEdge(int pixel, int size) {
   return clamp(pixel - (pixel & 1), 0, max(size - 2, 0)) + (pixel & 1);
 }
 `;
 
+/** Godot's own luma weights for the firefly tonemap (`copy.glsl:110`). */
+const FIREFLY_LUMA_WEIGHTS = 'vec3(0.299, 0.587, 0.114)';
+
 /**
  * The tonemap that keeps one firefly from owning the first level: each source sample is divided
  * by `1 + luma / max(cap, 6)` before the blur and the blur is multiplied back after
- * (`copy.glsl:88-92`, `:152-155`). `max(cap, 6)` stops a small cap from weighting too hard.
+ * (`copy.glsl:108-114`, `:183-185`). `max(cap, 6)` stops a small cap from weighting too hard.
  */
 function fireflyLumaGlsl(params: GlowParams): string {
-  return `vec3(0.299, 0.587, 0.114) / ${glslFloat(Math.max(params.luminanceCap, 6))}`;
+  return `${FIREFLY_LUMA_WEIGHTS} / ${glslFloat(Math.max(params.luminanceCap, 6))}`;
 }
 
 /** One horizontal pass: nine taps, each a bilinear read at its pixel's centre, so 2x2 is a box. */
@@ -157,16 +160,23 @@ vec3 godotGlowBicubic(sampler2D tex, vec2 uv) {
 }
 `;
 
+const LINEAR_GLSL = /* glsl */ `
+vec3 godotGlowLinear(sampler2D tex, vec2 uv) {
+  return texture2D(tex, uv).rgb;
+}
+`;
+
 /**
  * Godot's `gather_glow` (`tonemap.glsl:376-410`): the sum of each gathered level at its weight,
- * read at one uv. Declares `godotGlowGather(uv)`; the caller declares the level samplers.
+ * read at one uv. The read is the cubic B-spline, or a bilinear fetch under the Linear upscale mode
+ * (`:366-374`). Declares `godotGlowGather(uv)`; the caller declares the level samplers.
  */
 export function glowGatherGlsl(params: GlowParams): string {
+  const read = params.usesBicubicUpscale ? 'godotGlowBicubic' : 'godotGlowLinear';
   const terms = params.gatheredLevels.map(
-    (level) =>
-      `  glow += godotGlowBicubic(${glowLevelUniform(level)}, uv) * ${glslFloat(params.levels[level]!)};`
+    (level) => `  glow += ${read}(${glowLevelUniform(level)}, uv) * ${glslFloat(params.levels[level]!)};`
   );
-  return /* glsl */ `${BICUBIC_GLSL}
+  return /* glsl */ `${params.usesBicubicUpscale ? BICUBIC_GLSL : LINEAR_GLSL}
 vec3 godotGlowGather(vec2 uv) {
   vec3 glow = vec3(0.0);
 ${terms.join('\n')}

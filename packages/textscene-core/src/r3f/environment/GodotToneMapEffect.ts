@@ -7,7 +7,7 @@
 
 import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
-import { glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
+import { glowLevelCap, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
 import {
   BLUR_BLURRED_UNIFORM,
   BLUR_SOURCE_UNIFORM,
@@ -92,6 +92,10 @@ class GlowPyramid {
   private readonly laterBlur: LevelBlur;
   private readonly maxLevel: number;
   private readonly gatheredLevels: number[];
+  /** The highest level the frame has a mip for, which `setSize` sets. Unbounded until the first frame size. */
+  private levelCap = Infinity;
+  /** The composite's uniforms, which `bindLevels` writes and `setSize` rewrites. Null before the bind. */
+  private compositeUniforms: Map<string, THREE.Uniform> | null = null;
 
   constructor(glow: GlowParams) {
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
@@ -107,25 +111,37 @@ class GlowPyramid {
     }
   }
 
-  /** Binds each gathered level to its sampler. A resize keeps the texture objects, so this runs once. */
+  /** Binds each gathered level to its sampler, and keeps them bound across a resize. */
   bindLevels(uniforms: Map<string, THREE.Uniform>): void {
+    this.compositeUniforms = uniforms;
+    this.rebindLevels();
+  }
+
+  /**
+   * A level past the cap reads the last level there is. Godot's `textureLod` clamps a lod to the
+   * last mip of the glow texture the same way (`tonemap.glsl:384-406`).
+   */
+  private rebindLevels(): void {
     for (const level of this.gatheredLevels) {
-      uniforms.get(glowLevelUniform(level))!.value = this.levelTargets[level]!.texture;
+      this.compositeUniforms!.get(glowLevelUniform(level))!.value =
+        this.levelTargets[Math.min(level, this.levelCap)]!.texture;
     }
   }
 
   setSize(width: number, height: number): void {
+    this.levelCap = glowLevelCap(width, height);
     for (let level = 0; level < this.levelTargets.length; level++) {
       const size = glowLevelSize(width, height, level);
       this.levelTargets[level]!.setSize(size.width, size.height);
       this.horizontalTargets[level]!.setSize(size.width, size.height);
     }
+    if (this.compositeUniforms) this.rebindLevels();
   }
 
   /** Blurs the frame into level 0 and each level into the next (`renderer_scene_render_rd.cpp:603-613`). */
   build(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
     drawOffscreen(renderer, () => {
-      for (let level = 0; level <= this.maxLevel; level++) {
+      for (let level = 0; level <= Math.min(this.maxLevel, this.levelCap); level++) {
         const source = level === 0 ? inputBuffer : this.levelTargets[level - 1]!;
         const blur = level === 0 ? this.firstBlur : this.laterBlur;
         blur.draw(renderer, source, this.horizontalTargets[level]!, this.levelTargets[level]!);

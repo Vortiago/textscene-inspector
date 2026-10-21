@@ -54,6 +54,8 @@ export interface GlowParams {
    * one value, and the composite must not apply it to the glow a second time.
    */
   exposure: number;
+  /** Whether the composite reads each level with the cubic B-spline, or with a bilinear fetch. */
+  usesBicubicUpscale: boolean;
   /** The `glow_map` reference the composite samples, resolved by the render layer. */
   map: string | undefined;
   /** Zero without a map, as Godot sets it (`renderer_scene_render_rd.cpp:705-710`). */
@@ -88,12 +90,23 @@ export function glowLevelSize(
 }
 
 /**
+ * The highest level the glow texture has for a frame. Godot allocates it with the frame's halvings
+ * to 1px (`render_scene_buffers_rd.cpp:521`) as its mip count, less one for the half-size texture
+ * (`:531`), and builds no level past the last mip (`renderer_scene_render_rd.cpp:593`). Level 0 stays
+ * for a frame too small to halve.
+ */
+export function glowLevelCap(width: number, height: number): number {
+  const halvingsToOnePixel = Math.floor(Math.log2(Math.max(width, height)));
+  return Math.max(0, halvingsToOnePixel - 2);
+}
+
+/**
  * `null` when this environment cannot glow, so a caller decides from the settings
  * whether to mount the post-process. A pyramid with every weight at or below the
  * cutoff produces nothing, so it is `null` too: a non-null result always has a
  * real `maxLevel`.
  */
-export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null {
+export function glowParamsFor(settings: EnvironmentSettings, usesBicubicUpscale: boolean): GlowParams | null {
   const glow = settings.glow;
   if (!glow) return null;
 
@@ -123,6 +136,7 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
     intensity: blendMode === GlowBlendMode.MIX ? clamp(glow.mix, 0, 1) : glow.intensity,
     blendMode,
     exposure: settings.toneMapping.exposure,
+    usesBicubicUpscale,
     map: glow.map,
     mapStrength: glow.map ? glow.mapStrength : 0,
   };
@@ -146,7 +160,7 @@ export function blendsAfterToneMapping(params: GlowParams): boolean {
 }
 
 /**
- * Godot's bright pass (`copy.glsl`, `MODE_GLOW` under `FLAG_GLOW_FIRST_PASS`). It
+ * Godot's bright pass (`copy.glsl:183-200`, `MODE_GLOW` under `FLAG_GLOW_FIRST_PASS`). It
  * gates on the peak RGB channel, not Rec. 709 luminance, so a saturated blue emissive
  * still blooms. It multiplies the colour by the knee rather than subtracting the
  * threshold, and `glow_bloom` floors the knee: at 1.0 every pixel glows.

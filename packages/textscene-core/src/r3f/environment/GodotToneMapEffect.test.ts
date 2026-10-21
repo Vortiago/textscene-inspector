@@ -20,7 +20,7 @@ function effectWith(properties: Record<string, string>) {
     DEFAULT_CLEAR_COLOR
   );
   return new GodotToneMapEffect({
-    glow: glowParamsFor(settings),
+    glow: glowParamsFor(settings, true),
     adjustments: null,
     toneMapping: { mode: ToneMapper.FILMIC, white: 1 },
     exposure: 1,
@@ -101,5 +101,27 @@ describe('GodotToneMapEffect glow levels', () => {
     const effect = effectWith({});
     expect(effect.uniforms.has(glowLevelUniform(0))).toBe(false);
     expect(effect.uniforms.has(glowLevelUniform(4))).toBe(false);
+  });
+
+  const DEEPEST = { 'glow_levels/7': '0.5' };
+
+  it('reads the deepest level of a full-size frame from its own texture', () => {
+    const effect = effectWith(DEEPEST);
+    effect.setSize(800, 600);
+    expect(sizeOfLevel(effect, 6)).toEqual([6, 4]);
+  });
+
+  it('reads a level the small frame has no mip for from the last level it has, as textureLod clamps', () => {
+    // 200x100 has levels 0 to 5 (`glowLevelCap`), so level 6 reads level 5: 100x50 >> 5.
+    const effect = effectWith(DEEPEST);
+    effect.setSize(200, 100);
+    expect(sizeOfLevel(effect, 6)).toEqual([3, 1]);
+  });
+
+  it('reads a level from its own texture again once the frame grows back', () => {
+    const effect = effectWith(DEEPEST);
+    effect.setSize(200, 100);
+    effect.setSize(800, 600);
+    expect(sizeOfLevel(effect, 6)).toEqual([6, 4]);
   });
 });
