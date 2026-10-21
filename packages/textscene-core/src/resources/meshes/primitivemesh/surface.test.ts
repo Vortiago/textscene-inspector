@@ -32,22 +32,7 @@ describe('primitiveMeshSurface', () => {
     expect(flipped.tangents).toEqual(plain.tangents);
   });
 
-  it('flips a primitive still built by three too (edge case)', () => {
-    const plain = primitiveMeshSurface({ id: 'cylinder', type: 'CylinderMesh', data: {} }, TEXEL_SIZE)!;
-    const flipped = primitiveMeshSurface(
-      { id: 'cylinder', type: 'CylinderMesh', data: { flip_faces: 'true' } },
-      TEXEL_SIZE
-    )!;
-
-    expect(flipped.normals![0]).toBe(-plain.normals![0]!);
-    expect(Array.from(flipped.indices).slice(0, 3)).toEqual([
-      plain.indices[1],
-      plain.indices[0],
-      plain.indices[2],
-    ]);
-  });
-
-  it("hands on a ported builder's surface as it is", () => {
+  it("hands on a builder's surface as it is", () => {
     const data = { size: 'Vector3(2, 1, 1)', left_to_right: '0.25' };
 
     const surface = primitiveMeshSurface({ id: 'prism', type: 'PrismMesh', data }, TEXEL_SIZE)!;

@@ -94,10 +94,8 @@ describe('CapsuleMesh', () => {
 });
 
 describe('TorusMesh', () => {
-  it("lies flat in the XZ plane (hole facing +Y), matching Godot — not three's upright default", async () => {
-    // inner=1, outer=3 → centre radius 2, tube 1. three's TorusGeometry stands upright
-    // and Godot's TorusMesh lies flat, so a π/2 rotateX lays the ring in XZ
-    // (max.z ≈ 3) and thin along Y (max.y ≈ 1).
+  it('lies flat in the XZ plane, its hole facing +Y, as Godot builds it', async () => {
+    // inner=1, outer=3: centre radius 2 and tube 1, so the ring reaches 3 in XZ and 1 along Y.
     const geometry = await renderGeometry(sub('TorusMesh', { inner_radius: '1', outer_radius: '3' }));
     geometry.computeBoundingBox();
     const box = geometry.boundingBox!;

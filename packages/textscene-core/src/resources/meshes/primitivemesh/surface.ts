@@ -5,11 +5,9 @@
  * read the surface.
  */
 
-import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
-import { bottomUpV } from '../../../godot/math/uv';
+import { storedReal } from '../../../godot/math/real';
 import type { GodotSurface } from '../godotSurface';
-import { drawOrderIndices } from '../arraymesh/decode';
 import { decodePrimitiveMesh } from './decode';
 import { flipFaces } from './flipFaces';
 import { withFallbackUv2 } from './fallbackUv2';
@@ -23,11 +21,11 @@ import { buildPlaneMeshSurface } from '../planemesh/build';
 import { planeMeshLightmapSizeHint } from '../planemesh/lightmapSizeHint';
 import { decodeQuadMesh, QUAD_MESH_DEFAULTS } from '../quadmesh/decode';
 import { decodeCylinderMesh } from '../cylindermesh/decode';
-import { buildCylinderMeshGeometry } from '../cylindermesh/build';
+import { buildCylinderMeshSurface } from '../cylindermesh/build';
 import { decodeCapsuleMesh } from '../capsulemesh/decode';
 import { buildCapsuleMeshSurface } from '../capsulemesh/build';
 import { decodeTorusMesh } from '../torusmesh/decode';
-import { buildTorusMeshGeometry } from '../torusmesh/build';
+import { buildTorusMeshSurface } from '../torusmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
 import { buildPrismMeshSurface } from '../prismmesh/build';
 
@@ -36,17 +34,6 @@ import { buildPrismMeshSurface } from '../prismmesh/build';
  * `uv2Padding` is in world units, or null for a mesh with no UV2.
  */
 type SurfaceBuilder = (data: Record<string, string>, uv2Padding: number | null) => GodotSurface | null;
-
-/** A slice still built by a three generator: its geometry turned back into Godot's arrays. */
-const fromThree =
-  (build: (data: Record<string, string>) => THREE.BufferGeometry | null): SurfaceBuilder =>
-  (data) => {
-    const geometry = build(data);
-    if (!geometry) return null;
-    const surface = threeGeometrySurface(geometry);
-    geometry.dispose();
-    return surface;
-  };
 
 /**
  * Godot `type=` → the slice that decodes and builds it. QuadMesh has no `build.ts` of its own: it
@@ -58,9 +45,9 @@ const BUILDERS: Record<string, SurfaceBuilder> = {
   SphereMesh: (data, uv2Padding) => buildSphereMeshSurface(decodeSphereMesh(data), uv2Padding),
   PlaneMesh: (data) => buildPlaneMeshSurface(decodePlaneMesh(data)),
   QuadMesh: (data) => buildPlaneMeshSurface(decodeQuadMesh(data)),
-  CylinderMesh: fromThree((data) => buildCylinderMeshGeometry(decodeCylinderMesh(data))),
+  CylinderMesh: (data, uv2Padding) => buildCylinderMeshSurface(decodeCylinderMesh(data), uv2Padding),
   CapsuleMesh: (data, uv2Padding) => buildCapsuleMeshSurface(decodeCapsuleMesh(data), uv2Padding),
-  TorusMesh: fromThree((data) => buildTorusMeshGeometry(decodeTorusMesh(data))),
+  TorusMesh: (data, uv2Padding) => buildTorusMeshSurface(decodeTorusMesh(data), uv2Padding),
   PrismMesh: (data, uv2Padding) => buildPrismMeshSurface(decodePrismMesh(data), uv2Padding),
 };
 
@@ -106,24 +93,12 @@ export function primitiveMeshSurface(resource: TscnInternalResource, texelSize: 
 function buildSurface(resource: TscnInternalResource, texelSize: number): GodotSurface | null {
   const build = BUILDERS[resource.type]!;
   const base = decodePrimitiveMesh(resource.data);
-  const built = build(resource.data, base.addUv2 ? base.uv2Padding * texelSize : null);
+  // Godot holds the padding and the texel size in a `float` (`:1065`), so each rounds to single precision.
+  const uv2Padding = base.addUv2 ? storedReal(base.uv2Padding * storedReal(texelSize)) : null;
+  const built = build(resource.data, uv2Padding);
   if (!built) return null;
   const hint = FALLBACK_UV2_HINTS[resource.type];
   const surface =
     base.addUv2 && hint ? withFallbackUv2(built, base.uv2Padding, hint(resource.data, texelSize)) : built;
   return base.flipFaces ? flipFaces(surface) : surface;
-}
-
-/** three fronts triangles counter-clockwise with V up, where Godot fronts them clockwise with V down. */
-function threeGeometrySurface(geometry: THREE.BufferGeometry): GodotSurface {
-  const positions = Float32Array.from(geometry.getAttribute('position').array);
-  const normal = geometry.getAttribute('normal');
-  const uv = geometry.getAttribute('uv');
-  const uvs = uv ? Float32Array.from(uv.array) : undefined;
-  if (uvs) for (let i = 1; i < uvs.length; i += 2) uvs[i] = bottomUpV(uvs[i]!);
-  const index = geometry.getIndex();
-  const indices = index ? Uint32Array.from(index.array) : drawOrderIndices(positions.length / 3);
-  for (let i = 0; i + 2 < indices.length; i += 3)
-    [indices[i + 1], indices[i + 2]] = [indices[i + 2]!, indices[i + 1]!];
-  return { positions, normals: normal ? Float32Array.from(normal.array) : undefined, uvs, indices };
 }

@@ -5,6 +5,7 @@
  * (unlike CapsuleShape3D), so a negative radius is stored as authored.
  */
 
+import { storedReal } from '../../../godot/math/real.js';
 import { warn } from '../../../logger';
 import { parseOptionalFloat, settableIntOr } from '../../../parser/valueParsers';
 import { flooredCount } from '../meshCounts';
@@ -29,12 +30,12 @@ export function decodeCapsuleMesh(properties: Record<string, string>): CapsuleMe
   let radius = 0.5;
   let height = 2;
   if (authoredRadius !== undefined) {
-    radius = authoredRadius;
+    radius = storedReal(authoredRadius);
     // `set_radius` (:638) raises height to `radius * 2` past the half height.
     if (radius > height * 0.5) height = radius * 2;
   }
   if (authoredHeight !== undefined) {
-    height = authoredHeight;
+    height = storedReal(authoredHeight);
     // `set_height` (:655) lowers radius to `height * 0.5` in the same case.
     if (radius > height * 0.5) radius = height * 0.5;
   }
