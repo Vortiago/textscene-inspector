@@ -1,4 +1,4 @@
-; One variable: the sampler state a 3D material applies to a `ViewportTexture`. The 8x8 target maps
+; One variable: the material's sampler on a `ViewportTexture`, in three arms. The 8x8 target maps
 ; onto three unshaded quads. The middle one keeps the defaults, so `texture_repeat` wraps the
 ; bottom row's linear blend with the top row. The right one sets `uv1_scale = (2, 2, 1)`, which
 ; tiles the target 2x2. The left one sets `texture_filter = 0`, so each target texel stays a block.

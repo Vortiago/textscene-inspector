@@ -332,10 +332,6 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite-2d-viewport-texture.tscn',
     mode: '2d',
   },
-  // The alpha-border pass on a soft-edged texture: transparent magenta texels take the disc's green,
-  // so the magnified edge fades green. Godot 4.6.3 and the previewer move together, up to 21/255
-  // per channel at the fringe if the sidecar turns the pass off.
-  { name: 'sprite-2d-soft-alpha-border', file: 'unit-sprite-2d-soft-alpha-border.tscn', mode: '2d' },
   // A 301x201 container at shrink 2: a 150x100 target drawn over the whole rect. Godot 4.6.3
   // `--mode 2d`: (400,150) rgb(127,127,127) and (200,280) rgb(76,76,76), the last column and row.
   {

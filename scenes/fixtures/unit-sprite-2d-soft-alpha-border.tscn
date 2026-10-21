@@ -1,8 +1,7 @@
-; One variable: the alpha-border pass on a texture with soft, partial-alpha edges. `soft-alpha-disc.png`
-; is a green disc with a three-texel alpha ramp inside transparent magenta texels. Godot 4.6.3's
-; importer gives each texel below alpha 20 the RGB of its nearest opaque neighbour. At scale 20
-; the linear filter blends from a ramp texel into its neighbour across 20 px, so a texel the pass
-; missed fringes through magenta.
+; One variable: partial alpha, against the hard alpha of `unit-gltf-alpha-border`. `soft-alpha-disc.png`
+; is a green disc with a three-texel alpha ramp inside transparent magenta texels. Godot 4.6.3 gives
+; each texel below alpha 20 the RGB of its nearest opaque neighbour, so at scale 20 the linear
+; filter blends into green. A texel the pass missed fringes magenta.
 
 [gd_scene load_steps=2 format=3]
 
