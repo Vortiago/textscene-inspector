@@ -437,3 +437,28 @@ unique_name_in_owner = true
     expect(ownerUniquePaths(claimOwnerOf('Tool', inheriting.nodes, ownCtx)).get('%Grip')).toBe('Tool/Grip');
   });
 });
+
+describe('a node outside an instance whose owner= names that instance', () => {
+  // The loader sets the owner from the NodePath (resource_format_text.cpp:257-262), and
+  // instantiate registers the name on that owner (packed_scene.cpp:565-570).
+  const lent = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="." owner="HudInstance"]
+unique_name_in_owner = true
+`);
+  const lentCtx: LiveTreeContext = { ...ctx, externalResources: lent.externalResources };
+  const pathsAt = (path: string) => ownerUniquePaths(claimOwnerOf(path, lent.nodes, lentCtx));
+
+  it('registers its name on the instance table', () => {
+    expect(pathsAt('Root/HudInstance/Sprite').get('%Lamp')).toBe('Root/Lamp');
+  });
+
+  it('leaves its name out of the outer table', () => {
+    expect(pathsAt('Root').has('%Lamp')).toBe(false);
+  });
+});

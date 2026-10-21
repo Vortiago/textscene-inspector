@@ -79,6 +79,11 @@ export class InstanceNameTable implements UniqueNameTable {
    * table it names. A setting on a node the sub-scene lacks changes nothing.
    */
   private landOne(tree: LiveNode[], setting: InstanceNameSetting): LiveNode[] {
+    // A node outside the tree has the instance as its explicit owner, so no owner walk applies.
+    if (setting.pathInInstance.startsWith('../')) {
+      this.land(setting.pathInInstance, setting.isUnique);
+      return tree;
+    }
     const segments = settingSegments(tree, setting.pathInInstance, this.claimed);
     if (!segments) return tree;
     const owner = tableOwner(tree, segments, setting.ownerInInstance);
@@ -86,12 +91,17 @@ export class InstanceNameTable implements UniqueNameTable {
     if (owner !== THIS_INSTANCE) {
       return handTo(tree, segments.slice(0, owner.nestedAt + 1), rebased(setting, segments, owner.nestedAt));
     }
-    const key = UNIQUE_NODE_PREFIX + segments.at(-1)!;
+    this.land(segments.join('/'), setting.isUnique);
+    return tree;
+  }
+
+  /** The table once the node at `path` sets or clears its name. */
+  private land(path: string, isUnique: boolean): void {
+    const key = UNIQUE_NODE_PREFIX + path.slice(path.lastIndexOf('/') + 1);
     const holder = this.claimed(key);
-    const next = holderAfterSetting(holder, segments.join('/'), setting.isUnique);
+    const next = holderAfterSetting(holder, path, isUnique);
     // A set on a held name or a clear on a free one changes nothing, so `paths` keeps the own table.
     if (next !== holder) this.changed.set(key, next);
-    return tree;
   }
 }
 

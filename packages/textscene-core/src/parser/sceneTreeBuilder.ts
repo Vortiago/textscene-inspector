@@ -5,7 +5,7 @@
  */
 
 import type { NodeOrigin, NodePathResolution, RawNode, SceneNode } from './types';
-import { SCENE_ROOT_PATH, joinPath } from '../utils/nodePath.js';
+import { SCENE_ROOT_PATH, joinPath, pathBetween } from '../utils/nodePath.js';
 import {
   hasForeignOwner,
   isInstanceBelowRoot,
@@ -306,6 +306,7 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
       });
     return;
   }
+  if (handToOwnerOutside(tables, node, place.livePath, setting)) return;
   const instanceLivePath = instance && tables.places.get(instance)!.livePath;
   if (instanceLivePath === undefined) return;
   const explicitOwner = node.owner === undefined ? undefined : joinPath(tables.root.name, node.owner);
@@ -318,6 +319,29 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   // An `owner=` outside the instance names a table this instance never reads.
   if (ownerInInstance !== undefined)
     handToInstance(tables, instance!, { pathInInstance, isUnique: setting, ownerInInstance });
+}
+
+/**
+ * Hand a setting to the instance an explicit `owner=` names when the node sits outside it, and say
+ * whether it did. The loader sets that owner (resource_format_text.cpp:257-262) and the name
+ * registers on it (packed_scene.cpp:565-570), so the table reaches the node with `..`.
+ */
+function handToOwnerOutside<N extends RawNode>(
+  tables: SeatingTables<N>,
+  node: N,
+  livePath: string,
+  isUnique: boolean
+): boolean {
+  const owner = node.owner === undefined ? undefined : tables.byPath.get(node.owner);
+  if (!owner || !isInstanceBelowRoot(owner, owner === tables.root)) return false;
+  const ownerLivePath = tables.places.get(owner)!.livePath;
+  if (relativeTo(ownerLivePath, livePath) !== undefined) return false;
+  handToInstance(tables, owner, {
+    pathInInstance: pathBetween(ownerLivePath, livePath),
+    isUnique,
+    ownerInInstance: '',
+  });
+  return true;
 }
 
 /** Append a setting to the instance node it sits in, in file order, after the children seated so far. */

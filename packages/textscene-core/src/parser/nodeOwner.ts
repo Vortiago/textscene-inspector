@@ -76,7 +76,10 @@ export interface UniqueNameClaim {
  * reads it: true acquires a free name, and false releases the node's own (node.cpp:2236-2249).
  */
 export interface InstanceNameSetting {
-  /** The node's path below the instance, ending in its name. */
+  /**
+   * The node's path below the instance, ending in its name. A node outside the instance that an
+   * explicit `owner=` gives to it climbs out with `..`.
+   */
   readonly pathInInstance: string;
   readonly isUnique: boolean;
   /** An explicit `owner=` below the instance, `''` for the instance itself. Absent: the nearest owner. */

@@ -8,7 +8,7 @@
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
-import { joinPath } from '../utils/nodePath.js';
+import { joinPath, pathFrom } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
 import {
   cachedUniqueNameLivePaths,
@@ -25,7 +25,7 @@ import {
   type LiveChildGroup,
   type LiveTreeContext,
 } from './liveSceneTree.js';
-import { scopeOf, type LiveNode } from '../resources/liveNode.js';
+import type { LiveNode } from '../resources/liveNode.js';
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 
 interface ClaimOwner {
@@ -36,7 +36,7 @@ interface ClaimOwner {
   /** The owner of the instance node itself: the file its heading is in. Absent for the outer root. */
   readonly parent?: ClaimOwner;
   /** The live tree, carried by the outer root alone so a live path can be placed over it. */
-  readonly ctx?: LiveTreeContext;
+  readonly live?: LiveTree;
   /** The table the collapse composed, on an instance that collapses into its sub-scene root. */
   readonly composed?: UniqueNameTable;
 }
@@ -68,28 +68,71 @@ const uniqueSpeltOwnedPaths = perTree((roots): readonly string[] =>
   )
 );
 
-/**
- * `livePath` with each host sub-path through a `%Name` replaced by where the graft placed it, as of
- * its heading (`uniqueParentPlacements`). A path the loaded tree cannot follow keeps the rest as
- * written, and so does a heading its file seats through a `%Name` the graft could not reach.
- */
 function placedLivePath(livePath: string, outer: ClaimOwner): string {
-  if (!livePath.includes(UNIQUE_NODE_PREFIX) || !outer.ctx) return livePath;
-  const { ctx } = outer;
-  let segments = livePath.split('/');
-  let groups: readonly LiveChildGroup[] = [
-    { origin: 'inline', children: outer.roots, scope: rootScope(ctx) },
-  ];
-  for (let depth = 0; depth < segments.length; depth++) {
-    const found = liveChildNamed(groups, segments[depth]!);
-    if (!found) break;
-    groups = liveChildGroups(found.node, found.scope, ctx.sceneCache, ctx.glbCache);
-    const placements = mergedNodeOf(groups)?.uniqueParentPlacements;
-    if (placements) {
-      segments = [...segments.slice(0, depth + 1), ...placedBelow(placements, segments.slice(depth + 1))];
-    }
+  return outer.live ? outer.live.placed(livePath) : livePath;
+}
+
+/** A node of the composed live tree, with its child groups. */
+interface LiveLink {
+  readonly node: LiveNode;
+  readonly scope: SceneScope;
+  readonly groups: readonly LiveChildGroup[];
+}
+
+/**
+ * The composed live tree below the outer roots, each node's child groups walked once per call:
+ * the owner walk, every placed `%Name` path and the inherited root's table share the one walk.
+ */
+class LiveTree {
+  /** Written only by `at`. A null marks a path the loaded tree does not contain. */
+  private readonly links = new Map<string, LiveLink | null>();
+  /** Written only by `placed`. */
+  private readonly placements = new Map<string, string>();
+
+  constructor(
+    private readonly roots: readonly TscnNode[],
+    private readonly ctx: LiveTreeContext
+  ) {}
+
+  /** The node at the live path `path`, or null where the loaded tree stops. */
+  at(path: string): LiveLink | null {
+    const cached = this.links.get(path);
+    if (cached !== undefined) return cached;
+    const slash = path.lastIndexOf('/');
+    const parentGroups =
+      slash < 0
+        ? [{ origin: 'inline' as const, children: this.roots, scope: rootScope(this.ctx) }]
+        : this.at(path.slice(0, slash))?.groups;
+    const found = parentGroups && liveChildNamed(parentGroups, path.slice(slash + 1));
+    const link = found
+      ? { ...found, groups: liveChildGroups(found.node, found.scope, this.ctx.sceneCache, this.ctx.glbCache) }
+      : null;
+    this.links.set(path, link);
+    return link;
   }
-  return segments.join('/');
+
+  /**
+   * `livePath` with each host sub-path through a `%Name` replaced by where the graft placed it, as
+   * of its heading (`uniqueParentPlacements`). A path the loaded tree cannot follow keeps the rest
+   * as written, and so does a heading its file seats through a `%Name` the graft could not reach.
+   */
+  placed(livePath: string): string {
+    if (!livePath.includes(UNIQUE_NODE_PREFIX)) return livePath;
+    const cached = this.placements.get(livePath);
+    if (cached !== undefined) return cached;
+    let segments = livePath.split('/');
+    for (let depth = 0; depth < segments.length; depth++) {
+      const link = this.at(segments.slice(0, depth + 1).join('/'));
+      if (!link) break;
+      const placements = mergedNodeOf(link.groups)?.uniqueParentPlacements;
+      if (placements) {
+        segments = [...segments.slice(0, depth + 1), ...placedBelow(placements, segments.slice(depth + 1))];
+      }
+    }
+    const placed = segments.join('/');
+    this.placements.set(livePath, placed);
+    return placed;
+  }
 }
 
 /** `rest` with its longest leading sub-path that `placements` holds replaced by the placed path. */
@@ -131,7 +174,8 @@ interface Walk {
 }
 
 function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): Walk {
-  const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, ctx };
+  const live = new LiveTree(roots, ctx);
+  const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, live };
   let candidates: Candidate[] = [
     { group: { origin: 'inline', children: roots, scope: rootScope(ctx) }, owner: outer },
   ];
@@ -159,7 +203,7 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
         break;
       }
     }
-    const scope = scopeOf(match, found.group.scope);
+    const { scope, groups } = live.at(livePath)!;
     const subRoots = cachedSubRoots(match, scope, ctx);
     // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
     // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
@@ -167,7 +211,7 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
     const contentOwner: ClaimOwner = found.rootOf
       ? { path: isGlbRoot ? parentPath : livePath, roots: found.rootOf, parent: owner }
       : owner;
-    candidates = liveChildGroups(match, scope, ctx.sceneCache, ctx.glbCache).map((group) => ({
+    candidates = groups.map((group) => ({
       group,
       owner:
         group.origin === 'merged' && subRoots
@@ -246,9 +290,9 @@ export function ownerUniquePaths(owner: ClaimOwner): UniqueNamePaths {
   return withPlacedLivePaths(rebased(cachedUniqueNamesBelowRoot(owner.roots), owner.path), outer);
 }
 
-/** `paths` below a node, spelt from the root through the node at `path`. */
+/** `paths` from a node, spelt from the root through the node at `path`. */
 function rebased(paths: UniqueNamePaths, path: string): UniqueNamePaths {
-  return new Map([...paths].map(([key, below]) => [key, joinPath(path, below)]));
+  return new Map([...paths].map(([key, fromNode]) => [key, pathFrom(path, fromNode)]));
 }
 
 /**
@@ -257,7 +301,7 @@ function rebased(paths: UniqueNamePaths, path: string): UniqueNamePaths {
  */
 function inheritedRootTable(outer: ClaimOwner): UniqueNameTable | undefined {
   const root = outer.roots[0];
-  if (!root?.instance || !outer.ctx) return undefined;
-  const { ctx } = outer;
-  return mergedNodeOf(liveChildGroups(root, rootScope(ctx), ctx.sceneCache, ctx.glbCache))?.uniqueNames;
+  if (!root?.instance || !outer.live) return undefined;
+  const link = outer.live.at(root.name);
+  return link ? mergedNodeOf(link.groups)?.uniqueNames : undefined;
 }
