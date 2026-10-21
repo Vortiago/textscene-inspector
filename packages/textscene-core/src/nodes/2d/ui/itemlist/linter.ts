@@ -16,7 +16,7 @@ const arms = {
   itemIndexOutOfRange: {
     severity: 'error',
     ruleName: 'itemlist-item-index-out-of-range',
-    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+    grounding: { kind: 'engine', at: ITEM_LIST_ITEMS.outOfBounds.at },
   },
 } as const satisfies RuleArms<string>;
 
@@ -58,7 +58,7 @@ const itemListValidationRule: LintRule = {
     name: 'valid-itemlist-properties',
     description: "Validates ItemList's dynamic item_<N>/… indices stay within item_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'ItemList'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, ITEM_LIST_ITEMS.owner),
     emits: armEmits(arms),
   },
   check: checkItemList,

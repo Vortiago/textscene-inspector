@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from './RuleRegistry.js';
+import type { IndexedFamily } from '../godot/classdb/indexedFamily.js';
 import { PROPERTY_LIST_FAMILIES } from '../godot/classdb/propertyListFamilies.js';
 import { node, scene, lint } from './testing/testkit';
 import { controlRoutes } from './testing/propertyListRoutes/controls.js';
@@ -16,37 +17,34 @@ import '../nodes/2d/ui/optionbutton/index.linter.js';
 import '../nodes/windows/popupmenu/index.linter.js';
 import '../nodes/windows/filedialog/index.linter.js';
 
-const PAST_COUNT_GROUNDING = 'property_list_helper.cpp:58';
-
-const pastCountArmsOf = (owner: string) =>
+const pastCountArmsOf = (family: IndexedFamily) =>
   ruleRegistry
-    .getRulesForNodeType(owner)
+    .getRulesForNodeType(family.owner)
     .flatMap((rule) => rule.meta.emits ?? [])
-    .filter((arm) => arm.grounding.kind === 'engine' && arm.grounding.at === PAST_COUNT_GROUNDING);
+    .filter((arm) => arm.grounding.kind === 'engine' && arm.grounding.at === family.outOfBounds.at);
 
 describe.each(PROPERTY_LIST_FAMILIES)('$owner $prefix', (family) => {
   it('has a route row whose sample key sits in the declared family', () => {
     const sampleKeys = controlRoutes.filter((row) => row.type === family.owner).map((row) => row.sample);
-    expect(sampleKeys).toContainEqual(expect.stringMatching(new RegExp(`^${family.prefix}0/`)));
+    expect(sampleKeys.some((key) => key.startsWith(`${family.prefix}0/`))).toBe(true);
   });
 
   if (family.outOfBounds.policy === 'assigned') {
     it('has no past-count rule, since the helper assigns an index past the length', () => {
-      expect(pastCountArmsOf(family.owner)).toHaveLength(0);
+      expect(pastCountArmsOf(family)).toHaveLength(0);
     });
     return;
   }
   if (family.countKey.key === null) throw new Error(`${family.owner} drops writes but declares no count key`);
   const countKey = family.countKey.key;
 
-  it('has a past-count rule that names the declared cite', () => {
-    expect(family.outOfBounds.cite).toContain(PAST_COUNT_GROUNDING);
-    expect(pastCountArmsOf(family.owner).length).toBeGreaterThan(0);
+  it('has a past-count rule grounded at the declared line', () => {
+    expect(pastCountArmsOf(family).length).toBeGreaterThan(0);
   });
 
   it('reports an index at the count', () => {
-    const properties = { [countKey]: 1, [`${family.prefix}1/${family.leaves[0]}`]: '"x"' };
-    const arms = pastCountArmsOf(family.owner).map((arm) => arm.ruleName);
+    const properties = { [countKey]: 1, [`${family.prefix}1/leaf`]: '"x"' };
+    const arms = pastCountArmsOf(family).map((arm) => arm.ruleName);
     const names = lint(scene(node(family.owner, properties))).map((diagnostic) => diagnostic.ruleName);
     expect(names.some((name) => arms.includes(name!))).toBe(true);
   });

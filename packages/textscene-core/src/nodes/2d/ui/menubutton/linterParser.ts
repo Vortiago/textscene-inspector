@@ -10,12 +10,12 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import {
   propertyListFamilyKey,
   propertyListFamilyValidator,
-  type FamilyLeaves,
 } from '../../../../linter/validators/indexedFamily.js';
 import { MENU_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { ITEM_CHECKABLE_TYPE_NAMES } from '../../../../godot/scene/popupMenu.js';
 
 import { v } from '../../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
  * The 7 `popup/item_<idx>/<leaf>` leaves (menu_button.cpp:215-221), registered without setters
@@ -23,7 +23,7 @@ import { v } from '../../../../linter/validators/index.js';
  * `PopupMenu::_set` (popup_menu.cpp:3091) and its bound setters (popup_menu.cpp:3321-3327), so a leaf cites
  * the guard of the delegate in popup_menu.cpp (ADR-0032). The hint is MenuButton's own `register_property`, even where equal.
  */
-const ITEM_LEAVES: FamilyLeaves<typeof MENU_BUTTON_ITEMS> = {
+const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // menu_button.cpp:215, no hint. PopupMenu::set_item_text (popup_menu.cpp:1951) assigns past an
   // ERR_FAIL_INDEX on p_idx, an index guard, not a value bound.
   text: v.quotedString('text'),

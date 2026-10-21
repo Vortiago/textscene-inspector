@@ -16,7 +16,7 @@ const arms = {
   itemIndexOutOfRange: {
     severity: 'error',
     ruleName: 'menubutton-item-index-out-of-range',
-    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+    grounding: { kind: 'engine', at: MENU_BUTTON_ITEMS.outOfBounds.at },
   },
 } as const satisfies RuleArms<string>;
 
@@ -50,7 +50,7 @@ const menuButtonValidationRule: LintRule = {
     name: 'valid-menubutton-properties',
     description: "Validates MenuButton's dynamic popup/item_<N>/… indices stay within item_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'MenuButton'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, MENU_BUTTON_ITEMS.owner),
     emits: armEmits(arms),
   },
   check: checkMenuButton,

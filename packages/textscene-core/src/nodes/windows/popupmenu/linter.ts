@@ -15,7 +15,7 @@ const arms = {
   itemIndexOutOfRange: {
     severity: 'error',
     ruleName: 'popupmenu-item-index-out-of-range',
-    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+    grounding: { kind: 'engine', at: POPUP_MENU_ITEMS.outOfBounds.at },
   },
 } as const satisfies RuleArms<string>;
 
@@ -58,7 +58,7 @@ const popupMenuValidationRule: LintRule = {
     name: 'valid-popupmenu-properties',
     description: "Validates PopupMenu's dynamic item_<N>/… indices stay within item_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'PopupMenu'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, POPUP_MENU_ITEMS.owner),
     emits: armEmits(arms),
   },
   check: checkPopupMenu,

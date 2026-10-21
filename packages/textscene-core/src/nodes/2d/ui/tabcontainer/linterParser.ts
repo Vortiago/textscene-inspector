@@ -8,6 +8,7 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { FOCUS_MODE_HINT_NAMES } from '../../../../godot/scene/control.js';
 import {
   TAB_BAR_ALIGNMENT_HINT_NAMES,
@@ -16,12 +17,11 @@ import {
 import {
   propertyListFamilyKey,
   propertyListFamilyValidator,
-  type FamilyLeaves,
 } from '../../../../linter/validators/indexedFamily.js';
 import { TAB_CONTAINER_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 
 /** The `tab_<idx>/<leaf>` leaves: the four `register_property` calls at tab_container.cpp:1272-1275. */
-const TAB_LEAVES: FamilyLeaves<typeof TAB_CONTAINER_TABS> = {
+const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // tab_container.cpp:1272, Variant::STRING, no hint. set_tab_title
   // (tab_container.cpp:883) checks the tab control, never the text.
   title: v.quotedString('title'),

@@ -21,7 +21,7 @@ const arms = {
   itemIndexOutOfRange: {
     severity: 'error',
     ruleName: 'optionbutton-item-index-out-of-range',
-    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+    grounding: { kind: 'engine', at: OPTION_BUTTON_ITEMS.outOfBounds.at },
   },
 } as const satisfies RuleArms<string>;
 
@@ -82,7 +82,7 @@ const optionButtonRule: LintRule = {
     name: 'valid-optionbutton-properties',
     description: "Flags an OptionButton 'selected' or popup/item_<N> index that item_count never provides",
     category: 'validation',
-    applicableNodeTypes: ['OptionButton'],
+    applicableNodeTypes: [OPTION_BUTTON_ITEMS.owner],
     emits: armEmits(arms),
   },
   check: checkOptionButton,

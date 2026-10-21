@@ -20,7 +20,7 @@ const arms = {
   tabIndexOutOfRange: {
     severity: 'error',
     ruleName: 'tabbar-tab-index-out-of-range',
-    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+    grounding: { kind: 'engine', at: TAB_BAR_TABS.outOfBounds.at },
   },
 } as const satisfies RuleArms<string>;
 
@@ -84,7 +84,7 @@ const tabBarValidationRule: LintRule = {
     name: 'valid-tabbar-properties',
     description: "Validates TabBar's current_tab and tab_<idx>/… indices against tab_count",
     category: 'validation',
-    applicableNodeTypes: ['TabBar'],
+    applicableNodeTypes: [TAB_BAR_TABS.owner],
     emits: armEmits(arms),
   },
   check: checkTabBar,

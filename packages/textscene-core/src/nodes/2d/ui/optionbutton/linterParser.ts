@@ -13,10 +13,10 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import {
   propertyListFamilyKey,
   propertyListFamilyValidator,
-  type FamilyLeaves,
 } from '../../../../linter/validators/indexedFamily.js';
 import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
  * The 5 leaves OptionButton's own `base_property_helper` (option_button.h:67) registers
@@ -24,7 +24,7 @@ import { v } from '../../../../linter/validators/index.js';
  * item is radio-checkable (option_button.cpp:325). `_set` (option_button.cpp:162-184) forwards to `popup->set(...)`
  * (option_button.cpp:168), so setters cite PopupMenu's, as popupmenu/linterParser.ts does, and hints cite OptionButton's.
  */
-const ITEM_LEAVES: FamilyLeaves<typeof OPTION_BUTTON_ITEMS> = {
+const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // option_button.cpp:628, no hint. PopupMenu::set_item_text (popup_menu.cpp:1951) assigns past an
   // ERR_FAIL_INDEX on the item index, not the text.
   text: v.quotedString('text'),

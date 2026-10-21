@@ -10,10 +10,10 @@ import { OVERRUN_BEHAVIOR_NAMES } from '../../../../godot/text/textServerEnums.j
 import {
   propertyListFamilyKey,
   propertyListFamilyValidator,
-  type FamilyLeaves,
 } from '../../../../linter/validators/indexedFamily.js';
 import { ITEM_LIST_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import {
   ITEM_LIST_ICON_MODE_NAMES,
   ITEM_LIST_SCROLL_HINT_MODE_NAMES,
@@ -25,7 +25,7 @@ import {
  * adds (item_list.cpp:2463-2466), not `ADD_PROPERTY`. ItemList forwards
  * `_set`/`_get`/`_get_property_list` to the helper (item_list.h).
  */
-const ITEM_LEAVES: FamilyLeaves<typeof ITEM_LIST_ITEMS> = {
+const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // `PropertyListHelper::_call_setter` forwards `(index, value)`, and each setter
   // assigns past an `ERR_FAIL_INDEX` on the index, so no leaf has a value bound.
   // item_list.cpp:2463, Variant::STRING, no hint. set_item_text

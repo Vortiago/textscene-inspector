@@ -7,9 +7,8 @@ describe('defineIndexedFamily', () => {
     owner: 'Example',
     prefix: 'row_',
     indexParse: 'is_valid_int',
-    countKey: { key: 'row_count', cite: 'example.cpp:1' },
-    leaves: ['text'],
-    outOfBounds: { policy: 'dropped', cite: 'property_list_helper.cpp:58' },
+    countKey: { key: 'row_count' },
+    outOfBounds: { policy: 'dropped', at: 'property_list_helper.cpp:58' },
   } as const;
 
   it('accepts a family that states every field', () => {
@@ -35,15 +34,12 @@ describe('defineIndexedFamily', () => {
 });
 
 describe('the PropertyListHelper families', () => {
-  it('pins OptionButton as dropped, cited from the forwarded write and the helper', () => {
-    expect(OPTION_BUTTON_ITEMS.outOfBounds.policy).toBe('dropped');
-    expect(OPTION_BUTTON_ITEMS.outOfBounds.cite).toContain('option_button.cpp:168');
-    expect(OPTION_BUTTON_ITEMS.outOfBounds.cite).toContain('property_list_helper.cpp:58');
+  it('pins OptionButton as dropped, grounded at the popup helper its write forwards to', () => {
+    expect(OPTION_BUTTON_ITEMS.outOfBounds).toEqual({ policy: 'dropped', at: 'property_list_helper.cpp:58' });
   });
 
   it('pins TabContainer as assigned, with no count key', () => {
-    expect(TAB_CONTAINER_TABS.outOfBounds.policy).toBe('assigned');
-    expect(TAB_CONTAINER_TABS.outOfBounds.cite).toContain('tab_container.cpp:1294');
+    expect(TAB_CONTAINER_TABS.outOfBounds).toEqual({ policy: 'assigned', at: 'tab_container.cpp:1294' });
     expect(TAB_CONTAINER_TABS.countKey.key).toBeNull();
   });
 

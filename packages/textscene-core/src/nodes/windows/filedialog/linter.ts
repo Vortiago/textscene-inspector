@@ -16,7 +16,7 @@ const arms = {
   optionIndexOutOfRange: {
     severity: 'error',
     ruleName: 'filedialog-option-index-out-of-range',
-    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+    grounding: { kind: 'engine', at: FILE_DIALOG_OPTIONS.outOfBounds.at },
   },
 } as const satisfies RuleArms<string>;
 
@@ -56,7 +56,7 @@ const fileDialogValidationRule: LintRule = {
     name: 'valid-filedialog-properties',
     description: "Validates FileDialog's dynamic option_<N>/… indices stay within option_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'FileDialog'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, FILE_DIALOG_OPTIONS.owner),
     emits: armEmits(arms),
   },
   check: checkFileDialog,

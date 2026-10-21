@@ -10,19 +10,19 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import {
   propertyListFamilyKey,
   propertyListFamilyValidator,
-  type FamilyLeaves,
 } from '../../../linter/validators/indexedFamily.js';
 import { POPUP_MENU_ITEMS } from '../../../godot/classdb/propertyListFamilies.js';
 import { ITEM_CHECKABLE_TYPE_NAMES, OFFERED_SYSTEM_MENU_NAMES } from '../../../godot/scene/popupMenu.js';
 
 import { v } from '../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 /**
  * The 7 `item_<idx>/<leaf>` leaves (popup_menu.cpp:3321-3327). `_call_setter` forwards
  * `(index, value)` to each leaf's setter (property_list_helper.cpp:66-72), so each
  * leaf is grounded in its own setter.
  */
-const ITEM_LEAVES: FamilyLeaves<typeof POPUP_MENU_ITEMS> = {
+const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // popup_menu.cpp:3321, Variant::STRING, no hint. set_item_text
   // (popup_menu.cpp:1951) is a bare assignment past the ERR_FAIL_INDEX on
   // p_idx (an array-index guard, not a value bound).

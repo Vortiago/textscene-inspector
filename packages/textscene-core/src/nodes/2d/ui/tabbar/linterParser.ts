@@ -9,10 +9,10 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import {
   propertyListFamilyKey,
   propertyListFamilyValidator,
-  type FamilyLeaves,
 } from '../../../../linter/validators/indexedFamily.js';
 import { TAB_BAR_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import {
   TAB_BAR_ALIGNMENT_NAMES,
   TAB_BAR_CLOSE_BUTTON_DISPLAY_POLICY_NAMES,
@@ -24,7 +24,7 @@ import {
  * text_direction, button_icon, icon_max_width, tab_bar.cpp:2064-2079) resolve to no
  * helper `Property` (property_list_helper.cpp:63) and drop, so they are unknown keys.
  */
-const TAB_LEAVES: FamilyLeaves<typeof TAB_BAR_TABS> = {
+const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // tab_bar.cpp:2190, Variant::STRING, no hint. `set_tab_title` (tab_bar.cpp:900)
   // checks the tab index, never the text.
   title: v.quotedString('title'),

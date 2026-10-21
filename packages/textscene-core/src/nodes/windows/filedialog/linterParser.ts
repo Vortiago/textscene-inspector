@@ -15,17 +15,17 @@ import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import {
   propertyListFamilyKey,
   propertyListFamilyValidator,
-  type FamilyLeaves,
 } from '../../../linter/validators/indexedFamily.js';
 import { FILE_DIALOG_OPTIONS } from '../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 /**
  * The three leaves `PropertyListHelper` emits per option (file_dialog.cpp:2201-2203).
  * `name` and `values` are format-only: `set_option_name` (:1977) and
  * `set_option_values` (:1989) assign once `ERR_FAIL_INDEX` passes the option index.
  */
-const OPTION_LEAVES: FamilyLeaves<typeof FILE_DIALOG_OPTIONS> = {
+const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   name: v.quotedString('name'),
   values: v.packedStringArray('values', '"*.png"'),
   // `set_option_default` (:2006-2015) clamps against the sibling `values` length
