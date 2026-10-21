@@ -50,8 +50,6 @@ export interface ResRootsPort {
  * project through. It returns null for a path outside the root or a file it does not hold.
  */
 export interface ResRoot extends ResourceProvider {
-  /** The root's directory, with forward slashes. */
-  readonly path: string;
   /** The file's modification time and size, one `stat`, so the linter reads an unchanged file once. */
   stamp(resPath: string): Promise<string | null>;
   /** The host path of the file `resPath` names, or null for a path outside the root or a file it does not hold. */
@@ -59,7 +57,7 @@ export interface ResRoot extends ResourceProvider {
   /** The `res://` path of every file the editor's scan reaches under the root, sorted, for path completion. */
   listPaths(): Promise<readonly string[]>;
   /** Overrides the provider's optional listing: a root always lists. */
-  listFiles(extension: string): Promise<string[]>;
+  listFiles(extension: string): Promise<readonly string[]>;
 }
 
 /** The roots of one host's scenes, and every answer read from the filesystem to find them. */
@@ -112,6 +110,8 @@ function directoryReader(port: ResRootsPort, root: string, linkedDirectories: Se
 
 /** One root, the directories outside it that its listings walked, and the call that drops those listings. */
 interface RootEntry {
+  /** The root's directory, with forward slashes. */
+  readonly path: string;
   readonly root: ResRoot;
   readonly linkedDirectories: ReadonlySet<string>;
   forgetListings(): void;
@@ -123,7 +123,7 @@ const EVERY_FILE = '';
 /** A root over `path`, read through `port`. */
 function createRoot(port: ResRootsPort, path: string): RootEntry {
   /** Each listing, sorted, under its key: written by `listing` and cleared by `forgetListings`. */
-  const listings = new Map<string, Promise<string[]>>();
+  const listings = new Map<string, Promise<readonly string[]>>();
   /** Written by the walks of `listings`, and cleared with them. */
   const linkedDirectories = new Set<string>();
   const listing = (key: string, extension?: string) =>
@@ -133,7 +133,6 @@ function createRoot(port: ResRootsPort, path: string): RootEntry {
       )
     );
   const root: ResRoot = {
-    path,
     async loadResource(resPath, type = '') {
       const file = resolveResPath(path, resPath);
       const bytes = file === null ? null : await port.read(file);
@@ -156,6 +155,7 @@ function createRoot(port: ResRootsPort, path: string): RootEntry {
     listPaths: () => listing(EVERY_FILE),
   };
   return {
+    path,
     root,
     linkedDirectories,
     forgetListings() {
@@ -200,7 +200,7 @@ class PortResRoots implements ResRoots {
     this.dropWithin(this.rootBySpelling, affected);
     for (const [realPath, entry] of this.rootByRealPath) {
       // A watcher may spell the change through either name of the root, or inside a directory a link leads to.
-      const directories = [entry.root.path, realPath, ...entry.linkedDirectories];
+      const directories = [entry.path, realPath, ...entry.linkedDirectories];
       if (directories.some((directory) => this.changesListing(directory, changedPath))) {
         entry.forgetListings();
       }

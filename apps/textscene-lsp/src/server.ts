@@ -268,7 +268,8 @@ connection.onDocumentLinks(async (params): Promise<DocumentLink[]> => {
   });
 });
 
-// A client that watches no files still sees a change on disk once it opens a document again.
+// A watcher cannot see a project.godot created above the workspace, so opening a document reads the disk again. This
+// also covers a client that watches no files.
 documents.onDidOpen(() => {
   resRoots.invalidateAll();
 });

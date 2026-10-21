@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDiskResRoots } from './diskProject';
 import { forwardSlashes } from './resPath';
+import { rootDirOf } from './testing/rootDirOf';
 
 let tempDir: string;
 let projectDir: string;
@@ -26,6 +27,7 @@ beforeAll(() => {
   writeFileSync(join(projectDir, 'models', 'tree.glb'), new Uint8Array([0x67, 0x6c, 0x54, 0x46]));
   writeFileSync(join(projectDir, 'scenes', 'level.tscn'), '[gd_scene format=3]\n');
   scenePath = join(projectDir, 'scenes', 'deep', 'level.tscn');
+  writeFileSync(scenePath, '[gd_scene format=3]\n');
 });
 
 afterAll(() => {
@@ -34,20 +36,22 @@ afterAll(() => {
 
 describe('createDiskResRoots rootOf', () => {
   it('gives the project root for a scene inside a project', async () => {
-    expect((await sceneRoot()).path).toBe(forwardSlashes(projectDir));
+    expect(await rootDirOf(createDiskResRoots(null), scenePath)).toBe(forwardSlashes(projectDir));
   });
 
   it('finds the project.godot above a workspace that lies inside the project', async () => {
     // A CLI run inside `game/scenes` takes the project above it: the walk has no bound but the filesystem root.
     const workspace = join(projectDir, 'scenes');
 
-    expect((await createDiskResRoots(workspace).rootOf(scenePath))?.path).toBe(forwardSlashes(projectDir));
+    expect(await rootDirOf(createDiskResRoots(workspace), scenePath)).toBe(forwardSlashes(projectDir));
   });
 
   it("gives the scene's own directory for a loose scene inside the workspace", async () => {
     const loose = join(tempDir, 'loose', 'dungeon');
+    mkdirSync(loose, { recursive: true });
+    writeFileSync(join(loose, 'dungeon.tscn'), '[gd_scene format=3]\n');
 
-    expect((await createDiskResRoots(tempDir).rootOf(join(loose, 'dungeon.tscn')))?.path).toBe(
+    expect(await rootDirOf(createDiskResRoots(tempDir), join(loose, 'dungeon.tscn'))).toBe(
       forwardSlashes(loose)
     );
   });
@@ -63,17 +67,18 @@ describe('createDiskResRoots invalidate', () => {
     const dir = freshDir();
     mkdirSync(join(dir, 'scenes'));
     const scene = join(dir, 'scenes', 'level.tscn');
+    writeFileSync(scene, '[gd_scene format=3]\n');
     const roots = createDiskResRoots(dir);
     try {
-      expect((await roots.rootOf(scene))?.path).toBe(forwardSlashes(join(dir, 'scenes')));
+      expect(await rootDirOf(roots, scene)).toBe(forwardSlashes(join(dir, 'scenes')));
 
       writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
       roots.invalidate(join(dir, 'project.godot'));
-      expect((await roots.rootOf(scene))?.path).toBe(forwardSlashes(dir));
+      expect(await rootDirOf(roots, scene)).toBe(forwardSlashes(dir));
 
       rmSync(join(dir, 'project.godot'));
       roots.invalidate(join(dir, 'project.godot'));
-      expect((await roots.rootOf(scene))?.path).toBe(forwardSlashes(join(dir, 'scenes')));
+      expect(await rootDirOf(roots, scene)).toBe(forwardSlashes(join(dir, 'scenes')));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

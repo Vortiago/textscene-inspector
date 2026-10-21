@@ -1,7 +1,8 @@
 /** A scene's `res://` root, answered through an in-memory filesystem port: the seam a Node host's adapter fills. */
 
 import { describe, expect, it } from 'vitest';
-import { createResRoots, type ResRoot, type ResRootsPort } from './resRoots';
+import { rootDirOf } from './testing/rootDirOf';
+import { createResRoots, type ResRoot, type ResRoots, type ResRootsPort } from './resRoots';
 
 /** The in-memory port's files by absolute path, forward slashes: a test adds or removes one to change the disk. */
 type MemoryFiles = Map<string, string>;
@@ -46,26 +47,36 @@ function memoryPort(files: MemoryFiles): ResRootsPort {
   };
 }
 
+/** The directory of the root of `scene`, a file the in-memory disk gains first. */
+function rootDirOfScene(files: MemoryFiles, roots: ResRoots, scene: string): Promise<string | null> {
+  files.set(scene, '');
+  return rootDirOf(roots, scene);
+}
+
 describe('rootOf', () => {
   it("gives the nearest project.godot's directory for a scene below it", async () => {
-    const roots = createResRoots(memoryPort(memoryFiles('/work/game/project.godot')), null);
+    const files = memoryFiles('/work/game/project.godot');
+    const roots = createResRoots(memoryPort(files), null);
 
-    expect((await roots.rootOf('/work/game/scenes/deep/level.tscn'))?.path).toBe('/work/game');
+    expect(await rootDirOfScene(files, roots, '/work/game/scenes/deep/level.tscn')).toBe('/work/game');
   });
 
   it('gives the nested project for a scene under a project inside a project', async () => {
     const files = memoryFiles('/work/game/project.godot', '/work/game/vendor/other/project.godot');
     const roots = createResRoots(memoryPort(files), null);
 
-    expect((await roots.rootOf('/work/game/vendor/other/scenes/a.tscn'))?.path).toBe(
+    expect(await rootDirOfScene(files, roots, '/work/game/vendor/other/scenes/a.tscn')).toBe(
       '/work/game/vendor/other'
     );
   });
 
   it("gives the scene's own directory for a loose scene inside the workspace", async () => {
-    const roots = createResRoots(memoryPort(memoryFiles()), '/work');
+    const files = memoryFiles();
+    const roots = createResRoots(memoryPort(files), '/work');
 
-    expect((await roots.rootOf('/work/loose/dungeon/dungeon.tscn'))?.path).toBe('/work/loose/dungeon');
+    expect(await rootDirOfScene(files, roots, '/work/loose/dungeon/dungeon.tscn')).toBe(
+      '/work/loose/dungeon'
+    );
   });
 
   it('gives null for a loose scene outside the workspace, so no listing reads its whole directory', async () => {
@@ -108,9 +119,10 @@ describe('rootOf with links', () => {
 
 describe('workspaceRoot', () => {
   it('gives the project at or above the workspace', async () => {
-    const roots = createResRoots(memoryPort(memoryFiles('/work/project.godot')), '/work/game');
+    const files = memoryFiles('/work/project.godot');
+    const roots = createResRoots(memoryPort(files), '/work/game');
 
-    expect((await roots.workspaceRoot())?.path).toBe('/work');
+    expect(await (await roots.workspaceRoot())?.resolve('res://project.godot')).toBe('/work/project.godot');
   });
 
   it('gives null when no project holds the workspace, which a loose root never fills', async () => {
@@ -298,45 +310,45 @@ describe('invalidate', () => {
   it('moves the root of a scene when a project.godot appears above it', async () => {
     const files = memoryFiles();
     const roots = createResRoots(memoryPort(files), '/work');
-    expect((await roots.rootOf(SCENE))?.path).toBe('/work/game/scenes');
+    expect(await rootDirOfScene(files, roots, SCENE)).toBe('/work/game/scenes');
     files.set('/work/game/project.godot', '');
 
     roots.invalidate('/work/game/project.godot');
 
-    expect((await roots.rootOf(SCENE))?.path).toBe('/work/game');
+    expect(await rootDirOfScene(files, roots, SCENE)).toBe('/work/game');
   });
 
   it("moves the root back to the scene's own directory when the project.godot is deleted", async () => {
     const files = memoryFiles('/work/game/project.godot');
     const roots = createResRoots(memoryPort(files), '/work');
-    expect((await roots.rootOf(SCENE))?.path).toBe('/work/game');
+    expect(await rootDirOfScene(files, roots, SCENE)).toBe('/work/game');
     files.delete('/work/game/project.godot');
 
     roots.invalidate('/work/game/project.godot');
 
-    expect((await roots.rootOf(SCENE))?.path).toBe('/work/game/scenes');
+    expect(await rootDirOfScene(files, roots, SCENE)).toBe('/work/game/scenes');
   });
 
   it('moves the root of a scene to a project.godot that appears between them', async () => {
     const files = memoryFiles('/work/game/project.godot');
     const roots = createResRoots(memoryPort(files), '/work');
-    expect((await roots.rootOf(SCENE))?.path).toBe('/work/game');
+    expect(await rootDirOfScene(files, roots, SCENE)).toBe('/work/game');
     files.set('/work/game/scenes/project.godot', '');
 
     roots.invalidate('/work/game/scenes/project.godot');
 
-    expect((await roots.rootOf(SCENE))?.path).toBe('/work/game/scenes');
+    expect(await rootDirOfScene(files, roots, SCENE)).toBe('/work/game/scenes');
   });
 
   it('keeps every answer a change cannot affect', async () => {
     const files = memoryFiles();
     const roots = createResRoots(memoryPort(files), '/work');
-    expect((await roots.rootOf(SCENE))?.path).toBe('/work/game/scenes');
+    expect(await rootDirOfScene(files, roots, SCENE)).toBe('/work/game/scenes');
     files.set('/work/game/project.godot', '');
 
     roots.invalidate('/work/other/project.godot');
 
-    expect((await roots.rootOf(SCENE))?.path).toBe('/work/game/scenes');
+    expect(await rootDirOfScene(files, roots, SCENE)).toBe('/work/game/scenes');
   });
 
   it('lists a file created under a root, and keeps the listing of a root it is not under', async () => {
@@ -439,7 +451,7 @@ describe('invalidateAll', () => {
 
     roots.invalidateAll();
 
-    expect((await roots.rootOf('/work/game/scenes/level.tscn'))?.path).toBe('/work/game');
+    expect(await rootDirOfScene(files, roots, '/work/game/scenes/level.tscn')).toBe('/work/game');
     expect(await loose.listPaths()).toContain('res://late.png');
   });
 });
