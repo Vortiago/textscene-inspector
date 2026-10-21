@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import {
   CANVAS_2D_CAPTURE,
-  CANVAS_2D_CHROME,
+  SHELL_CHROME,
   canvas2DViewportFor,
   FIXTURE_LOADING_TESTID,
   PERFORMANCE_TESTIDS,
@@ -463,8 +463,8 @@ describe('canvas2DViewportFor', () => {
    */
   it('grows the window so a frame larger than the default still fits the stage', () => {
     const viewport = canvas2DViewportFor({ width: 1280, height: 720 });
-    expect(viewport.width - CANVAS_2D_CHROME.width).toBeGreaterThanOrEqual(1280);
-    expect(viewport.height - CANVAS_2D_CHROME.height).toBeGreaterThanOrEqual(720);
+    expect(viewport.width - SHELL_CHROME.width).toBeGreaterThanOrEqual(1280);
+    expect(viewport.height - SHELL_CHROME.height).toBeGreaterThanOrEqual(720);
   });
 
   /**

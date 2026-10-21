@@ -53,7 +53,7 @@ emission_enabled = true
 emission = Color(0.1, 0.5, 1.0, 1)
 emission_energy_multiplier = 3.0
 
-[node name="GlowAuthoredRoot" type="Node3D"]
+[node name="GlowLinearUpscaleRoot" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Env_glow")

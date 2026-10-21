@@ -49,14 +49,14 @@ export const CANVAS_2D_CAPTURE = {
   viewport: { width: 1600, height: 900 },
 };
 
-/** What the shell's dock and top bar take out of the window before a 2D stage or a 3D canvas. */
-export const CANVAS_2D_CHROME = { width: 325, height: 44 };
+/** What the shell's dock and top bar take out of the window before the stage or canvas. */
+export const SHELL_CHROME = { width: 325, height: 44 };
 
 /** The browser window whose 3D canvas is `canvas` pixels, the shell's chrome included. */
 export function windowForCanvas(canvas) {
   return {
-    width: canvas.width + CANVAS_2D_CHROME.width,
-    height: canvas.height + CANVAS_2D_CHROME.height,
+    width: canvas.width + SHELL_CHROME.width,
+    height: canvas.height + SHELL_CHROME.height,
   };
 }
 
@@ -69,8 +69,8 @@ export function canvas2DViewportFor(frame) {
   const { width, height } = CANVAS_2D_CAPTURE.viewport;
   if (!frame) return { width, height };
   return {
-    width: Math.max(width, Math.ceil(frame.width) + CANVAS_2D_CHROME.width),
-    height: Math.max(height, Math.ceil(frame.height) + CANVAS_2D_CHROME.height),
+    width: Math.max(width, Math.ceil(frame.width) + SHELL_CHROME.width),
+    height: Math.max(height, Math.ceil(frame.height) + SHELL_CHROME.height),
   };
 }
 
