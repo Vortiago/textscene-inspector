@@ -5,7 +5,9 @@
 ; it. Left to right: the default material (1 px), a lit red point of 20 px, an unshaded green point
 ; of 8 px, a lit blue metal point of 40 px, and the red material again with its node turned a half
 ; turn about Y. Godot lights a point, which has no normal array, as a +Z normal in node space: the
-; sun, shining toward -Z, lights the first red point and not the turned one.
+; sun, shining toward -Z, lights the first red point and not the turned one. Last, an ArrayMesh of
+; a triangle surface (grey quad) and a points surface (its four corners as red 20 px points):
+; Godot draws both surfaces of one mesh.
 
 [sub_resource type="PointMesh" id="PointMesh_1"]
 
@@ -26,6 +28,32 @@ metallic = 0.8
 roughness = 0.3
 use_point_size = true
 point_size = 40.0
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_mixed"]
+_surfaces = [{
+"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"name": "wall",
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
+}, {
+"aabb": AABB(-1, -1, 1, 2, 2, 1.001358e-05),
+"attribute_data": PackedByteArray("AAAAAAAAgD4AAIA+AACAPgAAgD4AAAAAAAAAAAAAAAA="),
+"format": 34359742487,
+"index_count": 6,
+"index_data": PackedByteArray("AgAAAAMAAgABAAAA"),
+"material": SubResource("Material_red"),
+"name": "dots",
+"primitive": 0,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray("AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgD8AAIA/AACAvwAAgD8AAIA//3//f////7//f/9/////v/9//3////+//3//f////78=")
+}]
 
 [node name="Root" type="Node3D"]
 
@@ -55,3 +83,7 @@ surface_material_override/0 = SubResource("Material_metal")
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 2.4, 0, 0)
 mesh = SubResource("PointMesh_1")
 surface_material_override/0 = SubResource("Material_red")
+
+[node name="Mixed" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 3.8, 0, 0)
+mesh = SubResource("ArrayMesh_mixed")

@@ -6,7 +6,12 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { decodeArrayMeshTres } from '../testing/decodeArrayMeshTres';
 import type { ArrayMeshData } from './arraymesh/types';
-import { geometryDrawsPoints, godotSurfacesGeometry, type GodotSurface } from './godotSurface';
+import {
+  geometryDrawsPoints,
+  godotSurfaceParts,
+  godotSurfacesGeometry,
+  type GodotSurface,
+} from './godotSurface';
 import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 import { UV2_ATTRIBUTE } from './uv2';
 
@@ -233,5 +238,42 @@ describe('godotSurfacesGeometry of points surfaces', () => {
   it('tags the geometry as drawn by points, and a triangle geometry not', () => {
     expect(geometryDrawsPoints(godotSurfacesGeometry([points([0, 0, 0])]))).toBe(true);
     expect(geometryDrawsPoints(godotSurfacesGeometry([triangle()]))).toBe(false);
+  });
+});
+
+describe('godotSurfaceParts', () => {
+  const point = (tag: string): GodotSurface & { tag: string } => ({
+    positions: new Float32Array([0, 0, 0]),
+    indices: [0],
+    isPoints: true,
+    tag,
+  });
+  const tri = (tag: string): GodotSurface & { tag: string } => ({ ...triangle(), tag });
+
+  it('draws a mesh of only triangles as one part', () => {
+    const parts = godotSurfaceParts([tri('a'), tri('b')]);
+
+    expect(parts).toHaveLength(1);
+    expect(parts[0]!.surfaces.map((s) => s.tag)).toEqual(['a', 'b']);
+    expect(geometryDrawsPoints(parts[0]!.geometry)).toBe(false);
+  });
+
+  it('draws a mesh of only points as one points part', () => {
+    const parts = godotSurfaceParts([point('a')]);
+
+    expect(parts).toHaveLength(1);
+    expect(geometryDrawsPoints(parts[0]!.geometry)).toBe(true);
+  });
+
+  it('splits triangle and points surfaces into a part each, triangles first, keeping each surface', () => {
+    const parts = godotSurfaceParts([point('dots'), tri('wall'), point('more dots')]);
+
+    expect(parts.map((part) => geometryDrawsPoints(part.geometry))).toEqual([false, true]);
+    expect(parts.map((part) => part.surfaces.map((s) => s.tag))).toEqual([['wall'], ['dots', 'more dots']]);
+    expect(parts[1]!.geometry.groups.map((g) => g.materialIndex)).toEqual([0, 1]);
+  });
+
+  it('draws no part for a mesh with no surface', () => {
+    expect(godotSurfaceParts([])).toEqual([]);
   });
 });

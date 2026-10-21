@@ -202,18 +202,28 @@ function GridMapItem({ item, cells, cellSize, cellCenter, cellScale }: GridMapIt
     return <PlaceholderTiles cells={cells} cellSize={cellSize} cellCenter={cellCenter} />;
   }
   if (content.kind !== 'surfaced') return null;
-  const { geometry, primitive } = content.mesh;
-  const drawsPoints = geometryDrawsPoints(geometry);
-  const surfaces = surfaceSources(content.mesh.materials);
+  const { parts, primitive } = content.mesh;
   return (
     <>
-      {surfaces.map((source, surface) => (
-        <GridMapSurface
-          key={surface}
-          draw={{ geometry, primitive, drawsPoints, source, surface, surfaceCount: surfaces.length, shadow }}
-          matrices={matrices}
-        />
-      ))}
+      {parts.flatMap((part, partIndex) => {
+        const drawsPoints = geometryDrawsPoints(part.geometry);
+        const surfaces = surfaceSources(part.materials);
+        return surfaces.map((source, surface) => (
+          <GridMapSurface
+            key={`${partIndex}.${surface}`}
+            draw={{
+              geometry: part.geometry,
+              primitive,
+              drawsPoints,
+              source,
+              surface,
+              surfaceCount: surfaces.length,
+              shadow,
+            }}
+            matrices={matrices}
+          />
+        ));
+      })}
     </>
   );
 }

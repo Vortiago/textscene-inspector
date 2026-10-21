@@ -717,13 +717,15 @@ describe('POINTS primitive', () => {
     expect([...decodeArrayMeshTres(unindexed, 'res://mesh.tres').surfaces[0]!.indices]).toEqual([0, 1, 2, 3]);
   });
 
-  // A mesh draws one primitive type per object here, so triangles win and the points are dropped.
-  it('drops a points surface beside a triangle surface, and says so', () => {
+  // Godot draws every surface of an ArrayMesh, whatever its primitive.
+  it('keeps a points surface beside a triangle surface, in surface order', () => {
     const mesh = decodeArrayMeshTres(POINTS_SECOND_SURFACE_TRES, 'res://mesh.tres');
 
-    expect(mesh.surfaces).toHaveLength(1);
-    expect(mesh.surfaces[0]!.materialPath).toBe('res://a.tres');
-    expect(warnSpy).toHaveBeenCalled();
+    expect(mesh.surfaces.map((s) => [s.surfaceIndex, s.isPoints === true])).toEqual([
+      [0, false],
+      [1, true],
+    ]);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });
 

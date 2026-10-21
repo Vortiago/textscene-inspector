@@ -169,16 +169,5 @@ function decodeSurfaces(
     const reason = nonTriangle > 0 ? ` (${nonTriangle} skipped as non-triangle)` : '';
     throw new Error(`ArrayMesh ${label}: none of its ${declared} surface(s) could be decoded${reason}`);
   }
-  return { surfaces: withoutMixedPoints(surfaces, label) };
-}
-
-/**
- * A mesh draws one primitive type here, so a mesh of triangle and points surfaces keeps its
- * triangles and drops the points.
- */
-function withoutMixedPoints(surfaces: ArrayMeshSurface[], label: string): ArrayMeshSurface[] {
-  const triangles = surfaces.filter((surface) => !surface.isPoints);
-  if (triangles.length === 0 || triangles.length === surfaces.length) return surfaces;
-  warn(`[ArrayMesh] ${label} mixes triangle and points surfaces: drawing the triangles only`);
-  return triangles;
+  return { surfaces };
 }

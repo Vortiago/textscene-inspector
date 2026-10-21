@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
-import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
@@ -59,9 +58,7 @@ describe('useMeshAabb', () => {
     });
     const rockAabb = { position: { x: -1, y: 0, z: -1 }, size: { x: 2, y: 3, z: 2 } };
     fake.arrayMeshes.seed('res://rock.tres', {
-      geometry: new THREE.BufferGeometry(),
-      materialPaths: [],
-      surfaceIndices: [],
+      parts: [],
       aabb: rockAabb,
     });
     expect(renderMeshAabb('ExtResource("1")', fake).current).toBe(rockAabb);

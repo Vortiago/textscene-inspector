@@ -34,8 +34,26 @@ export function geometryDrawsPoints(geometry: THREE.BufferGeometry): boolean {
   return geometry.userData[DRAWS_POINTS] === true;
 }
 
+/** The surfaces one three object draws, as one geometry with a draw group per surface, in order. */
+export interface SurfacePart<S extends GodotSurface> {
+  geometry: THREE.BufferGeometry;
+  surfaces: readonly S[];
+}
+
 /**
- * A mesh draws one primitive type, so surfaces are all triangles or all points. Points draw as
+ * Godot draws every surface of a mesh, but a three object draws one primitive type. So triangle
+ * surfaces and points surfaces each become a part, triangles first, and a mesh of one kind has one.
+ */
+export function godotSurfaceParts<S extends GodotSurface>(surfaces: readonly S[]): SurfacePart<S>[] {
+  const triangles = surfaces.filter((surface) => !surface.isPoints);
+  const points = surfaces.filter((surface) => surface.isPoints);
+  return [triangles, points]
+    .filter((part) => part.length > 0)
+    .map((part) => ({ geometry: godotSurfacesGeometry(part), surfaces: part }));
+}
+
+/**
+ * The surfaces of one primitive type as one geometry: all triangles or all points. Points draw as
  * `THREE.Points`, with their indices kept in order and a normal for every vertex.
  */
 export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.BufferGeometry {

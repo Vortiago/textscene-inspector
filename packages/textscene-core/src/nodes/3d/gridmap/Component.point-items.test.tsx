@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type * as THREE from 'three';
+import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { mountGridMap } from './testing/gridMapCorpus';
 
 const POINT_LIBRARY = `[gd_resource type="MeshLibrary" format=3]
@@ -58,5 +59,23 @@ item/0/mesh = SubResource("Mesh_item")
     });
     const sizes = grid.points().map((points) => (points.material as THREE.Material).userData.godotPointSize);
     expect(sizes).toEqual([16]);
+  });
+});
+
+describe('<GridMap> item with an ArrayMesh of triangle and points surfaces', () => {
+  const MIXED_LIBRARY = `[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="ArrayMesh" id="Mesh_item"]
+_surfaces = ${wallQuadSurfaces({ name: 'wall' }, { name: 'dots', primitive: 0 })}
+
+[resource]
+item/0/mesh = SubResource("Mesh_item")
+`;
+
+  it('batches the triangles and draws the points at each cell, as Godot draws every surface', async () => {
+    const grid = await mountGridMap({ library: MIXED_LIBRARY, cells: '0, 0, 0, 1, 0, 0' });
+
+    expect(grid.tiles()).toHaveLength(1);
+    expect(grid.points()).toHaveLength(2);
   });
 });
