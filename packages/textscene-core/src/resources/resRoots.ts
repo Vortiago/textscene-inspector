@@ -12,14 +12,13 @@ import {
   findResRoot,
   forwardSlashes,
   isSamePath,
-  isWalkEnd,
   isWithinRoot,
   parentDir,
   projectFileIn,
   resolveResPath,
   type PathCase,
 } from './resPath.js';
-import { resourceContent } from './resourceProviderUtils.js';
+import { fileStamp, resourceContent } from './resourceProviderUtils.js';
 
 /** What a host's `stat` reports of a file. */
 export interface FileStat {
@@ -33,12 +32,6 @@ export interface FileStat {
  * `resolveResPath` spell it, and no method throws: an absent or unreadable path is the null or empty answer.
  */
 export interface ResRootsPort {
-  /**
-   * The highest directory the walk for a `project.godot` checks, or null for the top of the filesystem. A scene
-   * outside it is checked in its own directory alone. A Node host's watchers see past the workspace, so its bound is
-   * the top.
-   */
-  readonly walkBound: string | null;
   /** Whether the filesystem tells apart two spellings of a path that differ only in case. */
   readonly pathCase: PathCase;
   /** The file or directory at `path`, or null for none. */
@@ -138,7 +131,7 @@ function createRoot(port: ResRootsPort, path: string): RootEntry {
     async stamp(resPath) {
       const file = resolveResPath(path, resPath);
       const stat = file === null ? null : await port.stat(file);
-      return stat === null ? null : `${stat.mtimeMs}:${stat.size}`;
+      return stat === null ? null : fileStamp(stat.mtimeMs, stat.size);
     },
     async resolve(resPath) {
       const file = resolveResPath(path, resPath);
@@ -159,8 +152,10 @@ class PortResRoots implements ResRoots {
   private readonly workspaceDir: string | null;
   /** Each directory's answer, written by `hasProjectFile`: the scenes of one run share their ancestors. */
   private readonly hasProjectFileByDir = new Map<string, Promise<boolean>>();
-  /** Each root by its directory, written by `rootAt`. One per directory, so what a root keeps serves every scene. */
-  private readonly rootByDir = new Map<string, RootEntry>();
+  /** Each root by its real path, written by `rootAt`. Two spellings of a directory share one, and what it keeps. */
+  private readonly rootByRealPath = new Map<string, RootEntry>();
+  /** Each directory spelling's root, written by `rootAt`, so a spelling costs one `realPath`. */
+  private readonly rootBySpelling = new Map<string, Promise<RootEntry>>();
 
   constructor(
     private readonly port: ResRootsPort,
@@ -183,13 +178,12 @@ class PortResRoots implements ResRoots {
 
   invalidate(changedPath: string): void {
     const affected = this.directoryAffectedBy(changedPath);
-    for (const dir of this.hasProjectFileByDir.keys()) {
-      if (isWithinRoot(affected, dir, this.port.pathCase)) this.hasProjectFileByDir.delete(dir);
-    }
-    for (const [rootDir, { forgetListings }] of this.rootByDir) {
+    this.dropWithin(this.hasProjectFileByDir, affected);
+    this.dropWithin(this.rootBySpelling, affected);
+    for (const { root, forgetListings } of this.rootByRealPath.values()) {
       // Either way round: a file under the root edits its listing, and a removed directory above it empties it.
       const { pathCase } = this.port;
-      if (isWithinRoot(rootDir, changedPath, pathCase) || isWithinRoot(changedPath, rootDir, pathCase)) {
+      if (isWithinRoot(root.path, changedPath, pathCase) || isWithinRoot(changedPath, root.path, pathCase)) {
         forgetListings();
       }
     }
@@ -197,17 +191,29 @@ class PortResRoots implements ResRoots {
 
   invalidateAll(): void {
     this.hasProjectFileByDir.clear();
-    for (const { forgetListings } of this.rootByDir.values()) forgetListings();
+    this.rootBySpelling.clear();
+    for (const { forgetListings } of this.rootByRealPath.values()) forgetListings();
   }
 
   /** The root found from `start` upward, where `isLoose` says whether a directory may serve as a loose root. */
   private async rootFrom(start: string, isLoose: (dir: string) => boolean): Promise<ResRoot | null> {
-    const rootDir = await findResRoot(start, parentDir, this.isWalkEnd, this.hasProjectFile, isLoose);
+    const rootDir = await findResRoot(start, parentDir, () => false, this.hasProjectFile, isLoose);
     return rootDir === null ? null : this.rootAt(rootDir);
   }
 
-  private rootAt(dir: string): ResRoot {
-    return memo(this.rootByDir, dir, () => createRoot(this.port, dir)).root;
+  private async rootAt(dir: string): Promise<ResRoot> {
+    const entry = await memo(this.rootBySpelling, dir, async () => {
+      const realPath = (await this.port.realPath(dir)) ?? dir;
+      return memo(this.rootByRealPath, realPath, () => createRoot(this.port, dir));
+    });
+    return entry.root;
+  }
+
+  /** Deletes each answer of `answers`, keyed by a directory, that lies at or under `directory`. */
+  private dropWithin(answers: Map<string, unknown>, directory: string): void {
+    for (const key of answers.keys()) {
+      if (isWithinRoot(directory, key, this.port.pathCase)) answers.delete(key);
+    }
   }
 
   private readonly hasProjectFile = (dir: string): Promise<boolean> =>
@@ -216,9 +222,6 @@ class PortResRoots implements ResRoots {
       dir,
       async () => (await this.port.stat(projectFileIn(dir)))?.isFile === true
     );
-
-  private readonly isWalkEnd = (dir: string): boolean =>
-    this.port.walkBound !== null && isWalkEnd(this.port.walkBound, dir, this.port.pathCase);
 
   /** The directory whose roots a change at `changedPath` can move: the one a `project.godot` heads, else the path. */
   private directoryAffectedBy(changedPath: string): string {

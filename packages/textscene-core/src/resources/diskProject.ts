@@ -25,8 +25,6 @@ async function isDirectoryEntry(directory: string, entry: Dirent): Promise<boole
 
 /** The disk behind {@link ResRootsPort}. */
 const diskPort: ResRootsPort = {
-  // The top of the filesystem: a Node host's watchers see past the workspace, so no directory above it is out of reach.
-  walkBound: null,
   pathCase: pathCaseOf(process.platform),
   async stat(path) {
     try {

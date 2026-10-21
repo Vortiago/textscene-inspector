@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { isBinaryResourceType, resourceContent } from './resourceProviderUtils';
+import { fileStamp, isBinaryResourceType, resourceContent } from './resourceProviderUtils';
 import { resourceSliceRegistry } from './sliceRegistration';
 
 /** The binary type names a provider must fetch as bytes. */
@@ -102,6 +102,12 @@ describe('isBinaryResourceType', () => {
 
   it('answers false for an unclaimed type with no path', () => {
     expect(isBinaryResourceType('Curve')).toBe(false);
+  });
+});
+
+describe('fileStamp', () => {
+  it('joins the modification time and the size', () => {
+    expect(fileStamp(1700000000123.5, 42)).toBe('1700000000123.5:42');
   });
 });
 

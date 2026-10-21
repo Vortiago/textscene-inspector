@@ -25,10 +25,9 @@ function directoriesOf(files: MemoryFiles): Map<string, Map<string, boolean>> {
   return directories;
 }
 
-/** A port over `files`, with the walk bound a host states, if any. A file's stamp changes with its text's length. */
-function memoryPort(files: MemoryFiles, walkBound: string | null = null): ResRootsPort {
+/** A port over `files`. A file's stamp changes with its text's length. */
+function memoryPort(files: MemoryFiles): ResRootsPort {
   return {
-    walkBound,
     pathCase: 'sensitive',
     async stat(path) {
       if (files.has(path)) return { isFile: true, mtimeMs: 1, size: files.get(path)!.length };
@@ -94,26 +93,16 @@ describe('rootOf', () => {
       await roots.rootOf('/work/game/scenes/deep/level.tscn')
     );
   });
+});
 
-  it('ends the walk at the walk bound, so a project above it is not found', async () => {
-    const files = memoryFiles('/work/project.godot');
-    const roots = createResRoots(memoryPort(files, '/work/game'), null);
-
-    expect(await roots.rootOf('/work/game/scenes/level.tscn')).toBeNull();
-  });
-
-  it('finds a project.godot in the walk bound itself', async () => {
+describe('rootOf with links', () => {
+  it('gives one root for two spellings of a directory, so what the root keeps serves both', async () => {
     const files = memoryFiles('/work/game/project.godot');
-    const roots = createResRoots(memoryPort(files, '/work/game'), null);
+    files.set('/work/game/a.tscn', '');
+    const linked = withLinkTo(memoryPort(files), '/work/link', '/work/game');
+    const roots = createResRoots(linked, '/work');
 
-    expect((await roots.rootOf('/work/game/scenes/level.tscn'))?.path).toBe('/work/game');
-  });
-
-  it('ends the walk after the first directory for a scene outside the walk bound', async () => {
-    const files = memoryFiles('/work/project.godot');
-    const roots = createResRoots(memoryPort(files, '/work/game'), null);
-
-    expect(await roots.rootOf('/work/other/level.tscn')).toBeNull();
+    expect(await roots.rootOf('/work/link/a.tscn')).toBe(await roots.rootOf('/work/game/a.tscn'));
   });
 });
 
@@ -225,13 +214,16 @@ describe('a root resolve', () => {
   });
 });
 
-/** `port` where the directory `link` is a link to `target`: it lists, and has the real path of, `target`. */
+/** `port` where the directory `link` is a link to `target`: whatever lies under one lies under the other. */
 function withLinkTo(port: ResRootsPort, link: string, target: string): ResRootsPort {
-  const through = (directory: string) => (directory === link ? target : directory);
+  const through = (path: string) =>
+    path === link || path.startsWith(`${link}/`) ? `${target}${path.slice(link.length)}` : path;
   return {
     ...port,
+    stat: (path) => port.stat(through(path)),
     realPath: (directory) => port.realPath(through(directory)),
     list: (directory) => port.list(through(directory)),
+    read: (path) => port.read(through(path)),
   };
 }
 
