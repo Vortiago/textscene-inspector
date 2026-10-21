@@ -5,7 +5,7 @@
 ; it. Left to right: the default material (1 px), a lit red point of 20 px, an unshaded green point
 ; of 8 px, a lit blue metal point of 40 px, and the red material again with its node turned a half
 ; turn about Y. Godot lights a point, which has no normal array, as a +Z normal in node space: the
-; sun, shining toward -Z, lights the first red point and not the turned one. Last, an ArrayMesh of
+; sun, shining toward -Z, lights the first red point and not the turned one. Above them, an ArrayMesh of
 ; a triangle surface (grey quad) and a points surface (its four corners as red 20 px points):
 ; Godot draws both surfaces of one mesh.
 
@@ -85,5 +85,5 @@ mesh = SubResource("PointMesh_1")
 surface_material_override/0 = SubResource("Material_red")
 
 [node name="Mixed" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 3.8, 0, 0)
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 1.6, 0)
 mesh = SubResource("ArrayMesh_mixed")
