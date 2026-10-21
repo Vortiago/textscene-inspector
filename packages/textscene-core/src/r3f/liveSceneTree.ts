@@ -13,6 +13,7 @@ import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 export type { SceneScope };
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
+import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 
@@ -162,7 +163,7 @@ export function liveChildGroups(
     const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
     const object = glbPath ? glbCache.getCached(glbPath) : undefined;
     if (object) {
-      return [{ origin: 'glb', children: glbSceneRootChildren(object), scope: own }];
+      return [{ origin: 'glb', children: glbSceneRootChildren(object, node.children), scope: own }];
     }
   }
 
@@ -183,17 +184,45 @@ export function liveChildGroups(
     return [{ origin: 'merged', children: merged.children, scope: scopeOf(merged, own), mergedNode: merged }];
   }
 
-  // Inline children are authored in the host scene, so they keep the outer scope.
+  // Inline children are authored in the host scene, so they keep the outer scope. A typed child
+  // addressed into a GLB moves below the GLB node its path names, where Godot adds it.
+  const { glbRoot, attached, rest } = placeInGlb(node.children, cached.nodes, own, glbCache);
   const groups: LiveChildGroup[] = [];
-  if (node.children.length > 0) {
-    groups.push({ origin: 'inline', children: node.children, scope: own });
+  if (rest.length > 0) {
+    groups.push({ origin: 'inline', children: rest, scope: own });
   }
   groups.push({
     origin: 'subscene',
-    children: cached.nodes,
+    children: glbRoot ? [{ ...glbRoot, children: attached }] : cached.nodes,
     scope: contentScopeOf(cached, [...enclosingScenePaths, scenePath]),
   });
   return groups;
+}
+
+/**
+ * The host's children split for an instance of a lone GLB: those below the GLB's nodes, each stamped
+ * with the host's scope since the GLB scene's pools are not the ones it was authored against, and
+ * the rest. `glbRoot` is the GLB's synthetic root, absent for any other instance.
+ */
+function placeInGlb(
+  hostChildren: LiveNode[],
+  contentRoots: readonly TscnNode[],
+  hostScope: SceneScope,
+  glbCache: CachedGlbSource | undefined
+): { glbRoot?: LiveNode; attached: LiveNode[]; rest: LiveNode[] } {
+  const root = contentRoots.length === 1 ? contentRoots[0]! : undefined;
+  const glbPath =
+    root?.type === GLB_SCENE_ROOT_TYPE
+      ? ((root.properties as Record<string, unknown>).glbPath as string)
+      : undefined;
+  const object = glbPath ? glbCache?.getCached(glbPath) : undefined;
+  if (!root || !object) return { attached: [], rest: hostChildren };
+  const { attached, rest } = splitAttachedChildren(object, hostChildren);
+  return {
+    glbRoot: root as LiveNode,
+    attached: attached.map((child) => (child.scope ? child : { ...child, scope: hostScope })),
+    rest,
+  };
 }
 
 /** The collapsed node a `merged` group carries, so a walker merges each instance once. */

@@ -16,6 +16,8 @@ interface MatchGlbTargetOptions {
    * spread over every sibling under it.
    */
   allowAncestor?: boolean;
+  /** Log nothing, for a caller that asks again of the same path another caller already reported. */
+  isQuiet?: boolean;
 }
 
 /**
@@ -27,7 +29,7 @@ interface MatchGlbTargetOptions {
 export function matchGlbTarget(
   entries: readonly GlbObjectEntry[],
   godotPath: string,
-  { allowAncestor = true }: MatchGlbTargetOptions = {}
+  { allowAncestor = true, isQuiet = false }: MatchGlbTargetOptions = {}
 ): GlbObjectEntry | null {
   const exact = entries.find((e) => e.relPath === godotPath);
   if (exact) return exact;
@@ -36,9 +38,10 @@ export function matchGlbTarget(
 
   const subsequence = bestSubsequenceMatch(entries, segments);
   if (subsequence) {
-    info(
-      `[matchGlbTarget] "${godotPath}" → "${subsequence.relPath}" (levels Godot's importer added are not in the glTF)`
-    );
+    if (!isQuiet)
+      info(
+        `[matchGlbTarget] "${godotPath}" → "${subsequence.relPath}" (levels Godot's importer added are not in the glTF)`
+      );
     return subsequence;
   }
 
@@ -49,16 +52,18 @@ export function matchGlbTarget(
     // possible subsequence match, so `bestSubsequenceMatch` already returns it.
     const match = bestSubsequenceMatch(entries, segments.slice(0, depth));
     if (match) {
-      info(
-        `[matchGlbTarget] "${godotPath}" has no counterpart; using its nearest ancestor "${match.relPath}"`
-      );
+      if (!isQuiet)
+        info(
+          `[matchGlbTarget] "${godotPath}" has no counterpart; using its nearest ancestor "${match.relPath}"`
+        );
       return match;
     }
   }
 
-  warn(
-    `[matchGlbTarget] "${godotPath}" matches nothing in the loaded GLB — the override it carries is dropped`
-  );
+  if (!isQuiet)
+    warn(
+      `[matchGlbTarget] "${godotPath}" matches nothing in the loaded GLB — the override or node it carries is dropped`
+    );
   return null;
 }
 

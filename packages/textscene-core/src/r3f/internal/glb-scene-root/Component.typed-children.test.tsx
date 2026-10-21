@@ -205,13 +205,30 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
     const mesh = onlyMesh(renderer);
     expect(hasAncestor(mesh, glbObject(renderer, 'Torso'))).toBe(true);
     expect(mesh.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(TORSO_SCALE, 5);
-    expect(hasAncestor(mesh, selection.nodeObjectMap.get('Lamp/Mesh/Marker')!)).toBe(true);
+    expect(hasAncestor(mesh, selection.nodeObjectMap.get('Lamp/Mesh/rig/Skeleton/Torso/Marker')!)).toBe(true);
   });
 
   it('registers exactly one object for the node’s path', async () => {
     const renderer = await render([typedMesh('Marker', 'Skeleton/Torso')]);
 
-    expect(hasAncestor(onlyMesh(renderer), selection.nodeObjectMap.get('Rig/Marker')!)).toBe(true);
+    expect(
+      hasAncestor(onlyMesh(renderer), selection.nodeObjectMap.get('Rig/rig/Skeleton/Torso/Marker')!)
+    ).toBe(true);
+  });
+
+  it('registers two nodes of one name under different GLB nodes at their own paths', async () => {
+    const renderer = await render([
+      typedMesh('Marker', 'Skeleton/Torso'),
+      typedMesh('Marker', 'Skeleton/Torso/Arm'),
+    ]);
+
+    const [torsoMarker, armMarker] = [
+      selection.nodeObjectMap.get('Rig/rig/Skeleton/Torso/Marker'),
+      selection.nodeObjectMap.get('Rig/rig/Skeleton/Torso/Arm/Marker'),
+    ];
+    expect(meshesOf(renderer)).toHaveLength(2);
+    expect(torsoMarker).not.toBe(armMarker);
+    expect(hasAncestor(armMarker!, glbObject(renderer, 'Arm'))).toBe(true);
   });
 
   it('reaches the object a type-less override of the same path moves, and leaves its transform alone', async () => {

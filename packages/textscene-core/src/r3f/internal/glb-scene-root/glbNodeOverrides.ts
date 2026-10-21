@@ -7,6 +7,7 @@
  */
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
+import type { LiveNode } from '../../../resources/liveNode';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
 import { decomposeForR3F } from '../../nodeTransform';
 import { parseOptionalInt } from '../../../parser/valueParsers';
@@ -41,6 +42,25 @@ export function resolveGlbOverrideTarget(
  */
 export function isApplicableGlbOverride(override: TscnNode): boolean {
   return !override.instanceSubPath || override.overridesExistingNode === true;
+}
+
+/**
+ * The instancing scene's typed nodes whose parent path names a GLB object, which Godot adds
+ * to that object (`packed_scene.cpp:157-165`, `:541`), and the rest of `children`. A typed node
+ * whose path names none stays among the rest, where the tree has always listed it.
+ */
+export function splitAttachedChildren(
+  root: THREE.Object3D,
+  children: readonly LiveNode[]
+): { attached: LiveNode[]; rest: LiveNode[] } {
+  const typed = children.filter((child) => !isApplicableGlbOverride(child));
+  if (typed.length === 0) return { attached: [], rest: [...children] };
+  const entries = flattenGlbObjects(root);
+  // The viewport reports a path that matches nothing, so the tree asks quietly.
+  const attached = typed.filter((child) =>
+    matchGlbTarget(entries, child.instanceSubPath!, { isQuiet: true })
+  );
+  return { attached, rest: children.filter((child) => !attached.includes(child)) };
 }
 
 /**
