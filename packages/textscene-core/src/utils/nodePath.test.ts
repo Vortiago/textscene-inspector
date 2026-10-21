@@ -1,7 +1,44 @@
 import { describe, it, expect } from 'vitest';
-import { joinPath, getAncestorPaths, pathBetween } from './nodePath';
+import {
+  belowRoot,
+  joinPath,
+  getAncestorPaths,
+  pathBetween,
+  spelledLiveNodePath,
+  spelledNodePath,
+} from './nodePath';
 
 describe('nodePath utilities', () => {
+  describe('belowRoot', () => {
+    it('drops the root name from a live path', () => {
+      expect(belowRoot('Root/Player/Camera3D')).toBe('Player/Camera3D');
+    });
+
+    it('answers the empty root path for the root itself', () => {
+      expect(belowRoot('Root')).toBe('');
+    });
+  });
+
+  describe('spelledNodePath', () => {
+    it('spells the root as "." where a NodePath has no empty path (node_path.cpp:300-302)', () => {
+      expect(spelledNodePath('')).toBe('.');
+    });
+
+    it('leaves a path below the root as it is', () => {
+      expect(spelledNodePath('Player/Camera3D')).toBe('Player/Camera3D');
+    });
+  });
+
+  describe('spelledLiveNodePath', () => {
+    it.each([
+      ['the root', 'Root', '.'],
+      ['a child of the root', 'Root/Player', 'Player'],
+      ['a deeper node', 'Root/Player/Camera3D', 'Player/Camera3D'],
+    ])('copies %s as Godot does (node.cpp:2332-2334)', (_what, livePath, expected) => {
+      expect(spelledLiveNodePath(livePath)).toBe(expected);
+    });
+  });
+
   describe('pathBetween', () => {
     it('spells a node below as its path from the start', () => {
       expect(pathBetween('Root/Hud', 'Root/Hud/Panel/Lamp')).toBe('Panel/Lamp');

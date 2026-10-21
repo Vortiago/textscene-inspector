@@ -237,6 +237,22 @@ Expected:
 
 Screenshots: VSCODE-08-a before, VSCODE-08-b after.
 
+### VSCODE-09: The editor copies the path of the node under the cursor
+
+1. Open `unit-box-mesh.tscn` as text.
+2. Put the cursor on the `[node name="Box"` line.
+3. Run `textscene.copyNodePath`, or choose **TextScene: Copy Node Path** in the editor menu.
+4. Paste into a scratch file.
+5. Put the cursor on the `[node name="Root"` line and repeat steps 3 and 4.
+6. Put the cursor on the `[gd_scene` line and run the command.
+
+Expected:
+- After step 4, the pasted text is `Box`.
+- After step 5, the pasted text is `.`.
+- After step 6, an information message asks for a cursor in a `[node]` section, and the clipboard keeps its last text.
+
+Screenshot: none yet.
+
 ## Flows for both hosts
 
 ### BOTH-01: The integration scene renders
@@ -280,3 +296,16 @@ Screenshots: BOTH-03-a lights, BOTH-03-b meshes.
 Expected: each background matches its WorldEnvironment, and the two differ.
 
 Screenshots: BOTH-04-a, BOTH-04-b.
+
+### BOTH-05: The Inspector copies a node path
+
+1. Open `unit-box-mesh.tscn` in the preview.
+2. Click the `Box` row in the tree.
+3. Click **Copy node path** beside **Path** in the **Inspector** tab, and paste into a scratch file.
+4. Click the `Root` row, copy again and paste.
+
+Expected:
+- After step 3, the pasted text is `Box`, and the **Path** row still reads `Root/Box`.
+- After step 4, the pasted text is `.`.
+
+Screenshot: none yet.
