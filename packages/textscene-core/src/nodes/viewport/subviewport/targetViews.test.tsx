@@ -8,16 +8,18 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
 import { createCanvasTarget, createSceneTarget } from './offscreenViewport';
-import { useTargetViews, type PassTargetViews } from './targetViews';
+import { useTargetViews } from './targetViews';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+
+type TargetViews = ReturnType<typeof useTargetViews>;
 
 function Probe({
   target,
   views,
 }: {
   target: THREE.WebGLRenderTarget;
-  views: { current: PassTargetViews | null };
+  views: { current: TargetViews | null };
 }) {
   views.current = useTargetViews(target);
   return null;
@@ -25,7 +27,7 @@ function Probe({
 
 /** The views of `target`, and a fill that reports the targets it rendered into. */
 async function mount(target: THREE.WebGLRenderTarget) {
-  const views: { current: PassTargetViews | null } = { current: null };
+  const views: { current: TargetViews | null } = { current: null };
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   await ReactThreeTestRenderer.create(
     <>

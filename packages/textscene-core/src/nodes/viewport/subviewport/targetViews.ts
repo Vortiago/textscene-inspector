@@ -1,30 +1,28 @@
 /**
  * The two views a sub-viewport pass publishes of its target, as Godot's `R8G8B8A8_UNORM` storage
- * with an `R8G8B8A8_SRGB` view: the plain view a canvas item samples and the decoding view a
- * `source_color` slot samples. WebGL2 has no texture views, so the target serves the view its
- * storage already is, and a copy serves the other, which the pass fills after each render while a
- * consumer retains it. A canvas-content target holds sRGB bytes in RGBA8, so it is the plain view.
- * A 3D-content target is SRGB8_ALPHA8, so it is the decoding view.
+ * with an `R8G8B8A8_SRGB` view. The target serves the view its storage is, and a copy serves the
+ * other (a canvas target is the plain view, a 3D target the decoding view).
  */
 import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TargetView } from '../../../r3f/contexts/ViewportTextureContext.js';
-import { holdsSrgbBytes, markSrgbBytes } from '../../../r3f/srgbByteTextures.js';
+import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawFullScreen, fullScreenPass } from '../../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
 import { perRenderer } from '../../../r3f/perRenderer.js';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
-import { pinColorSpace } from '../../../resources/textures/applyTextureState.js';
+import { copySampling } from '../../../resources/textures/copySampling.js';
+import { storeSrgbBytes } from './offscreenViewport.js';
 
 /** A view as its pass holds it: `fill` runs after each render of the pass. */
-export interface PassView extends TargetView {
+interface PassView extends TargetView {
   fill(): void;
   dispose(): void;
 }
 
 /** Both views of a target, filled and disposed together. */
-export interface PassTargetViews {
+interface PassTargetViews {
   plain: PassView;
   decoding: PassView;
   fill(): void;
@@ -87,6 +85,7 @@ void main() {
 /** The pass a renderer fills every copy of one kind with. `fill` binds the source before each draw. */
 const copyPassFor = (name: string, fragment: string) =>
   perRenderer(() => fullScreenPass(name, fragment, { source: { value: null } }));
+type CopyPassFor = ReturnType<typeof copyPassFor>;
 const decodePassFor = copyPassFor('DecodingViewCopy', DECODE_FRAGMENT);
 const encodePassFor = copyPassFor('PlainViewCopy', ENCODE_FRAGMENT);
 
@@ -103,12 +102,10 @@ class ViewCopy implements PassView {
   constructor(
     private readonly gl: THREE.WebGLRenderer,
     private readonly source: THREE.WebGLRenderTarget,
-    private readonly passFor: typeof decodePassFor
+    private readonly passFor: CopyPassFor
   ) {
     this.copy = new THREE.WebGLRenderTarget(source.width, source.height, { depthBuffer: false });
-    this.copy.texture.minFilter = source.texture.minFilter;
-    this.copy.texture.magFilter = source.texture.magFilter;
-    this.copy.texture.generateMipmaps = false;
+    copySampling(this.copy.texture, source.texture);
     this.texture = this.copy.texture;
   }
 
@@ -147,8 +144,6 @@ function decodingCopy(gl: THREE.WebGLRenderer, plain: THREE.WebGLRenderTarget): 
 function plainCopy(gl: THREE.WebGLRenderer, decoding: THREE.WebGLRenderTarget): PassView {
   const view = new ViewCopy(gl, decoding, encodePassFor);
   view.texture.name = `${decoding.texture.name}::plain`;
-  pinColorSpace(view.texture, THREE.SRGBColorSpace);
-  view.texture.internalFormat = 'RGBA8';
-  markSrgbBytes(view.texture);
+  storeSrgbBytes(view.texture);
   return view;
 }

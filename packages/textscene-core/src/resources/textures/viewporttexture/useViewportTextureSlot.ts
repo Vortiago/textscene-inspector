@@ -90,7 +90,6 @@ export function useViewportTargetSlot(
     );
   }, [cyclic, path, warnAs]);
 
-  if (cyclic || !entry) return { texture: null, cyclic };
   return { texture: sampled?.texture ?? null, cyclic };
 }
 

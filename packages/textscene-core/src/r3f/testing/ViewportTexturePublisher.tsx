@@ -17,7 +17,12 @@ export function ViewportTexturePublisher({ path, entry }: { path: string; entry:
 export function viewportEntry(
   texture: THREE.Texture,
   size: { x: number; y: number },
-  decoding: TargetView = { texture, retain: () => () => {} }
+  decoding: TargetView = fixedView(texture)
 ): ViewportTextureEntry {
-  return { plain: { texture, retain: () => () => {} }, decoding, size };
+  return { plain: fixedView(texture), decoding, size };
+}
+
+/** A view that needs no filling, so retaining it does nothing. */
+function fixedView(texture: THREE.Texture): TargetView {
+  return { texture, retain: () => () => {} };
 }

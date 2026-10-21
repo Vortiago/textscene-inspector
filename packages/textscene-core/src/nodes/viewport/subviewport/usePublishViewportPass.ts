@@ -24,7 +24,7 @@ interface PublishViewportPassOptions {
   width: number;
   height: number;
   /**
-   * This frame's offscreen render, which the copied views fill from after. Never called while
+   * This frame's offscreen render, which the copy views fill from after. Never called while
    * this pass sits in a cycle.
    */
   render: () => void;

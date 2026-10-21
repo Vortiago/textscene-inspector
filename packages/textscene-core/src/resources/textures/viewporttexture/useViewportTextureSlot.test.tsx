@@ -308,7 +308,7 @@ describe('useViewportTextureSlot views', () => {
     expect(bound.every((commit) => commit.retainers === 1)).toBe(true);
   });
 
-  it('resolves the plain view and fills no decoding view (edge case)', () => {
+  it('resolves the plain view without retaining the decoding view (edge case)', () => {
     const { resolved, entry, retainers } = mountView('plain');
     expect(resolved()).toBe(entry.plain.texture);
     expect(retainers.count).toBe(0);
