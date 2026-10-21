@@ -186,7 +186,8 @@ function buildTextRun(
     // `generateMipmaps` stays off for every filter: Godot's own default asks
     // for mipmaps, but a per-label raster rebuilt on every text/size change
     // is the wrong thing to build a chain for, so the minified case samples
-    // the base level. Only the nearest/linear bit is honoured.
+    // the base level. Only the nearest/linear bit is honoured, so minFilter takes magFilter,
+    // never the state's mipmapped minFilter.
     texture.generateMipmaps = false;
     texture.minFilter = textureFilter.magFilter;
     texture.magFilter = textureFilter.magFilter;

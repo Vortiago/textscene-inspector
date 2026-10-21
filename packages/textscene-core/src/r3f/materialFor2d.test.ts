@@ -8,6 +8,7 @@ import { materialFor2d, type MaterialFor2dInput } from './materialFor2d';
 import { NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
 import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
+import { godotTextureFilterState } from '../resources/textures/godotTextureFilter';
 import { TextureFilter } from '../godot/rendering/materials/textureFilter';
 
 const DEFAULTS: MaterialFor2dInput = {
@@ -123,5 +124,13 @@ describe('materialFor2d texture filter', () => {
     [TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC, THREE.LinearFilter],
   ])('filter %i samples with magFilter %i', (textureFilter, magFilter) => {
     expect(materialWith({ textureFilter }).textureFilter.magFilter).toBe(magFilter);
+  });
+});
+
+describe('materialFor2d sampler', () => {
+  it('hands both nodes the one sampler state of the filter', () => {
+    expect(
+      materialWith({ textureFilter: TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC }).textureFilter
+    ).toBe(godotTextureFilterState(TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC));
   });
 });

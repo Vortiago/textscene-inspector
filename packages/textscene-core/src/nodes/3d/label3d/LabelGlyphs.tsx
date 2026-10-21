@@ -84,6 +84,8 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   ]);
   const shadow = useGeometryInstance(placement);
 
+  // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
+  // equal-valued one rebuilds nothing.
   const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
