@@ -681,3 +681,27 @@ describe('decodeStandardMaterial3D — UV2', () => {
     expect(decodeStandardMaterial3D({}).uv2Slots).toEqual([]);
   });
 });
+
+describe('decodeStandardMaterial3D — point size', () => {
+  // `BaseMaterial3D::BaseMaterial3D` calls `set_point_size(1)` (`material.cpp:3959`), and the
+  // `use_point_size` flag defaults off.
+  it('reads the defaults from an empty bag', () => {
+    const data = decodeStandardMaterial3D({});
+
+    expect(data.usesPointSize).toBe(false);
+    expect(data.pointSize).toBe(1);
+  });
+
+  it('reads use_point_size and point_size', () => {
+    const data = decodeStandardMaterial3D({ use_point_size: 'true', point_size: '12.5' });
+
+    expect(data.usesPointSize).toBe(true);
+    expect(data.pointSize).toBe(12.5);
+  });
+
+  // `set_point_size` bare-assigns (`material.cpp:2757`): the 0.1-128 range is the inspector's.
+  it('keeps a point_size outside the inspector range (edge case)', () => {
+    expect(decodeStandardMaterial3D({ point_size: '0' }).pointSize).toBe(0);
+    expect(decodeStandardMaterial3D({ point_size: '500' }).pointSize).toBe(500);
+  });
+});

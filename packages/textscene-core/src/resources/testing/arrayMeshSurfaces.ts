@@ -10,6 +10,8 @@ export interface SurfaceKeys {
   material?: string | null;
   /** The `"name"` value, written as a quoted string. */
   name?: string | null;
+  /** The `"primitive"` value, Godot's `Mesh.PrimitiveType`. A surface is triangles, 3, when absent. */
+  primitive?: number;
 }
 
 /**
@@ -18,10 +20,12 @@ export interface SurfaceKeys {
  * writes them.
  */
 function surfaceWriter(head: string, tail: string): (keys?: SurfaceKeys) => string {
-  return ({ material, name } = {}) => {
+  return ({ material, name, primitive } = {}) => {
     const materialLine = material == null ? '' : `"material": ${material},\n`;
     const nameLine = name == null ? '' : `"name": "${name}",\n`;
-    return `{\n${head}\n${materialLine}${nameLine}${tail}\n}`;
+    const primitiveTail =
+      primitive === undefined ? tail : tail.replace('"primitive": 3,', `"primitive": ${primitive},`);
+    return `{\n${head}\n${materialLine}${nameLine}${primitiveTail}\n}`;
   };
 }
 

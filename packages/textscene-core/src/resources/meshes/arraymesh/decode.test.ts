@@ -684,8 +684,50 @@ const LINES_SECOND_SURFACE_TRES = TWO_SURFACE_TRES.replace(
   '"material": ExtResource("2_b"),\n"primitive": 1,'
 );
 
+/** WALL_TRES's only surface declared as POINTS (primitive 0): Godot's `Mesh.PRIMITIVE_POINTS`. */
+const POINTS_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 0,');
+
+/** TWO_SURFACE_TRES with its second surface declared as POINTS. */
+const POINTS_SECOND_SURFACE_TRES = TWO_SURFACE_TRES.replace(
+  '"material": ExtResource("2_b"),\n"primitive": 3,',
+  '"material": ExtResource("2_b"),\n"primitive": 0,'
+);
+
 /** WALL_TRES's only surface declared as a LINE_STRIP (primitive 2). */
 const LINE_STRIP_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 2,');
+
+describe('POINTS primitive', () => {
+  it('decodes a points surface, flagged, with the indices that pick its points', () => {
+    const surface = decodeArrayMeshTres(POINTS_ONLY_TRES, 'res://mesh.tres').surfaces[0]!;
+
+    expect(surface.isPoints).toBe(true);
+    expect(surface.vertexCount).toBe(4);
+    expect([...surface.indices]).toEqual([2, 0, 3, 2, 1, 0]);
+  });
+
+  it('flags no triangle surface as points', () => {
+    expect(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!.isPoints).toBeUndefined();
+  });
+
+  it('draws a points surface saved with no indices as every vertex, in order (edge case)', () => {
+    const unindexed = POINTS_ONLY_TRES.replace('"index_count": 6,\n', '').replace(
+      /"index_data": PackedByteArray\("[^"]*"\),\n/,
+      ''
+    );
+    expect([...decodeArrayMeshTres(unindexed, 'res://mesh.tres').surfaces[0]!.indices]).toEqual([0, 1, 2, 3]);
+  });
+
+  // Godot draws every surface of an ArrayMesh, whatever its primitive.
+  it('keeps a points surface beside a triangle surface, in surface order', () => {
+    const mesh = decodeArrayMeshTres(POINTS_SECOND_SURFACE_TRES, 'res://mesh.tres');
+
+    expect(mesh.surfaces.map((s) => [s.surfaceIndex, s.isPoints === true])).toEqual([
+      [0, false],
+      [1, true],
+    ]);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
 
 describe('non-triangle primitives', () => {
   it('skips a non-triangle surface and keeps the triangle ones', () => {

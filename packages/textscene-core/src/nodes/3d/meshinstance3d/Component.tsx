@@ -9,19 +9,24 @@
 import * as THREE from 'three';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
+import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
-import { useMeshContent, type SurfacedMesh } from '../../../r3f/meshes/meshContent';
+import { drawnTag, useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
+import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
-import type { ShadowCastingEffects } from '../../../r3f/shadowCasting';
+import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
-import { livePlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
+import { partsPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
+
+/** What a MeshInstance3D mounts: a mesh draws triangles, and a PointMesh draws points. */
+type DrawnMesh = THREE.Mesh | THREE.Points;
 
 /** Literal-only, so its key is constant and it never remounts. */
 const UNRESOLVED_MESH_MATERIAL = wireGizmoProgram(0xff00ff);
@@ -49,19 +54,32 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     [properties.materialOverlay, pools]
   );
 
-  // The ref lands on whichever `<mesh>` MeshShell renders, for the overlay to share.
-  const meshRef = useRef<THREE.Mesh | null>(null);
+  // The ref lands on whichever `<mesh>` or `<points>` MeshShell renders, for the overlay to share.
+  const meshRef = useRef<DrawnMesh | null>(null);
 
   // GeometryInstance3D's, so it reaches every surface this node draws, the overlay's too.
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
-  const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
+  // The box covers every part, not the shell's alone, as Godot's does.
+  const drawnParts = content.kind === 'surfaced' ? content.mesh.parts : NO_PARTS;
+  const placement = useMemo(
+    () =>
+      partsPlacement(
+        meshRef,
+        drawnParts.map((part) => part.geometry)
+      ),
+    [drawnParts]
+  );
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
   const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
+
+  // The shell is the mesh's first part, which draws triangles when the mesh has any.
+  const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);
 
   const shellProps = {
     name: node.name,
     meshRef,
+    drawsPoints,
     position,
     rotation,
     scale,
@@ -69,7 +87,12 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     godotLayers: properties.layers,
     subtree: children,
     overlay: overlaySource ? (
-      <MaterialOverlayMesh meshRef={meshRef} source={overlaySource} shadow={shadow} />
+      <MaterialOverlayMesh
+        meshRef={meshRef}
+        drawsPoints={drawsPoints}
+        source={overlaySource}
+        shadow={shadow}
+      />
     ) : null,
   };
 
@@ -87,14 +110,29 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     case 'loading':
     case 'empty':
       return <MeshShell {...shellProps}>{null}</MeshShell>;
-    case 'surfaced':
+    case 'surfaced': {
+      const { parts, primitive } = content.mesh;
       return (
         <MeshShell {...shellProps}>
-          <MeshSurfaces mesh={content.mesh} overrides={meshOverrides} />
+          <MeshSurfaces part={parts[0]} primitive={primitive} overrides={meshOverrides} />
+          {parts.slice(1).map((part, i) => (
+            <FollowingPart
+              key={i}
+              part={part}
+              primitive={primitive}
+              overrides={meshOverrides}
+              overlaySource={overlaySource}
+              shadow={shadow}
+              godotLayers={properties.layers}
+            />
+          ))}
         </MeshShell>
       );
+    }
   }
 }
+
+const NO_PARTS: readonly SurfacedPart[] = [];
 
 /**
  * The overlay's draw-order key. Any value above the 3D default (0) puts it after
@@ -114,10 +152,13 @@ const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
  */
 function MaterialOverlayMesh({
   meshRef,
+  drawsPoints,
   source,
   shadow,
 }: {
-  meshRef: RefObject<THREE.Mesh | null>;
+  meshRef: RefObject<DrawnMesh | null>;
+  /** The base draws points, so the overlay does too. */
+  drawsPoints: boolean;
   source: MaterialSource;
   /**
    * The base mesh's hooks. The overlay casts nothing of its own, so only the colour pair
@@ -140,8 +181,9 @@ function MaterialOverlayMesh({
   useEffect(readBack);
 
   if (!geometry) return null;
+  const Drawn = drawnTag(drawsPoints);
   return (
-    <mesh
+    <Drawn
       geometry={geometry}
       // Explicit: three breaks ties by creation order, so a re-parse that remounts one
       // material would draw the overlay under its surface. Godot appends the overlay
@@ -154,15 +196,17 @@ function MaterialOverlayMesh({
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}
     >
-      <SurfaceMaterialSlot source={source} />
-    </mesh>
+      <SurfaceMaterialSlot source={source} drawsPoints={drawsPoints} />
+    </Drawn>
   );
 }
 
 interface MeshShellProps {
   name: string;
-  /** Ref to the underlying THREE.Mesh, whose geometry the overlay draws again. */
-  meshRef: RefObject<THREE.Mesh | null>;
+  /** Ref to the underlying THREE.Mesh or THREE.Points, whose geometry the overlay draws again. */
+  meshRef: RefObject<DrawnMesh | null>;
+  /** The mesh draws `PRIMITIVE_POINTS`, so the shell mounts `<points>`. */
+  drawsPoints: boolean;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -186,6 +230,7 @@ interface MeshShellProps {
 function MeshShell({
   name,
   meshRef,
+  drawsPoints,
   position,
   rotation,
   scale,
@@ -195,22 +240,15 @@ function MeshShell({
   overlay,
   children,
 }: MeshShellProps) {
+  const Drawn = drawnTag(drawsPoints);
   return (
-    <mesh
+    <Drawn
       ref={meshRef}
       name={name}
       position={position}
       rotation={rotation}
       scale={scale}
-      castShadow={shadow.castShadow}
-      // three fires these per draw group, the shadow pair after `getDepthMaterial` has
-      // set the side (`WebGLShadowMap.js:488,546,560`): the only per-surface reach into
-      // a draw of an object whose materials and depth material three shares.
-      onBeforeRender={shadow.onBeforeRender}
-      onAfterRender={shadow.onAfterRender}
-      onBeforeShadow={shadow.onBeforeShadow}
-      onAfterShadow={shadow.onAfterShadow}
-      receiveShadow
+      {...drawHookProps(shadow)}
       // Godot's `layers`, for the decal and probe masks. Set on every branch, placeholders
       // included, so a decal's receiver test never depends on load order.
       userData={visualLayersUserData(godotLayers)}
@@ -220,7 +258,7 @@ function MeshShell({
           the shadow pass and the subtree. The hooks skip each colour draw instead. */}
       {overlay}
       {subtree}
-    </mesh>
+    </Drawn>
   );
 }
 
@@ -241,16 +279,61 @@ const UNRESOLVED_MESH = (
  * (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw groups set the slot count and an extra
  * override is dropped: a PrimitiveMesh takes only surface 0's.
  */
-function MeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides: MeshOverrides }) {
-  const groupCount = Math.max(mesh.surfaceIndices.length, 1);
+function MeshSurfaces({
+  part,
+  primitive,
+  overrides,
+}: {
+  part: SurfacedPart;
+  primitive: TscnInternalResource | undefined;
+  overrides: MeshOverrides;
+}) {
+  const groupCount = Math.max(part.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
-    effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, mesh.materials[i])
+    effectiveMaterialSource(overrides, part.surfaceIndices[i] ?? i, part.materials[i])
   );
   return (
     <>
-      <primitive object={mesh.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} triplanarMesh={mesh.primitive} />
+      <primitive object={part.geometry} attach="geometry" />
+      <SurfaceMaterialSlots
+        sources={sources}
+        triplanarMesh={primitive}
+        drawsPoints={geometryDrawsPoints(part.geometry)}
+      />
     </>
+  );
+}
+
+/**
+ * A part after the shell's own: the points of a mesh that also has triangles. A child of the shell,
+ * so it shares the node's transform and its subtree stays under one object. It carries its own
+ * overlay, as Godot draws the overlay over every surface.
+ */
+function FollowingPart({
+  part,
+  primitive,
+  overrides,
+  overlaySource,
+  shadow,
+  godotLayers,
+}: {
+  part: SurfacedPart;
+  primitive: TscnInternalResource | undefined;
+  overrides: MeshOverrides;
+  overlaySource: MaterialSource | undefined;
+  shadow: ShadowCastingEffects;
+  godotLayers: number;
+}) {
+  const ref = useRef<DrawnMesh | null>(null);
+  const drawsPoints = geometryDrawsPoints(part.geometry);
+  const Drawn = drawnTag(drawsPoints);
+  return (
+    <Drawn ref={ref} {...drawHookProps(shadow)} userData={visualLayersUserData(godotLayers)}>
+      <MeshSurfaces part={part} primitive={primitive} overrides={overrides} />
+      {overlaySource && (
+        <MaterialOverlayMesh meshRef={ref} drawsPoints={drawsPoints} source={overlaySource} shadow={shadow} />
+      )}
+    </Drawn>
   );
 }
 
