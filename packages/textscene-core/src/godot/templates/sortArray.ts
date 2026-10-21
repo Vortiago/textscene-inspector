@@ -12,7 +12,6 @@ const INTROSORT_THRESHOLD = 16;
 
 /** Sorts `items` in place, in the order Godot's `SortArray::sort` leaves them. */
 export function sortArray<T>(items: T[], less: Less<T>): void {
-  if (items.length === 0) return;
   new Sorter(items, less).sort();
 }
 
@@ -25,8 +24,9 @@ class Sorter<T> {
 
   sort(): void {
     const length = this.items.length;
+    if (length === 0) return;
     this.introsort(0, length, 2 * bitlog(length));
-    this.finalInsertionSort(0, length);
+    this.finalInsertionSort(length);
   }
 
   private introsort(first: number, last: number, maxDepth: number): void {
@@ -63,7 +63,9 @@ class Sorter<T> {
       if (first >= last) return first;
       if (pivot === first) pivot = last;
       else if (pivot === last) pivot = first;
-      [items[first], items[last]] = [items[last]!, items[first]!];
+      const swapped = items[first]!;
+      items[first] = items[last]!;
+      items[last] = swapped;
       first++;
     }
   }
@@ -71,9 +73,7 @@ class Sorter<T> {
   /** `partial_sort` over the whole range, which is a heap sort. */
   private heapSort(first: number, last: number): void {
     this.makeHeap(first, last);
-    for (let end = last; end - first > 1; end--) {
-      this.popHeap(first, end - 1, end - 1, this.items[end - 1]!);
-    }
+    for (let end = last; end - first > 1; end--) this.popHeap(first, end);
   }
 
   private makeHeap(first: number, last: number): void {
@@ -84,9 +84,11 @@ class Sorter<T> {
     }
   }
 
-  private popHeap(first: number, last: number, result: number, value: T): void {
-    this.items[result] = this.items[first]!;
-    this.adjustHeap(first, 0, last - first, value);
+  /** Moves the heap's top to `end - 1` and sifts the item it displaces into the rest. */
+  private popHeap(first: number, end: number): void {
+    const value = this.items[end - 1]!;
+    this.items[end - 1] = this.items[first]!;
+    this.adjustHeap(first, 0, end - 1 - first, value);
   }
 
   private adjustHeap(first: number, hole: number, length: number, value: T): void {
@@ -117,27 +119,22 @@ class Sorter<T> {
     items[first + hole] = value;
   }
 
-  private finalInsertionSort(first: number, last: number): void {
-    if (last - first <= INTROSORT_THRESHOLD) {
-      this.insertionSort(first, last);
-      return;
-    }
-    this.insertionSort(first, first + INTROSORT_THRESHOLD);
-    for (let i = first + INTROSORT_THRESHOLD; i !== last; i++) this.unguardedLinearInsert(i, this.items[i]!);
+  /** Guarded inserts over the first 16 items, then unguarded ones, as the first item bounds them. */
+  private finalInsertionSort(length: number): void {
+    const guarded = Math.min(length, INTROSORT_THRESHOLD);
+    for (let i = 1; i < guarded; i++) this.linearInsert(i);
+    for (let i = guarded; i < length; i++) this.unguardedLinearInsert(i, this.items[i]!);
   }
 
-  private insertionSort(first: number, last: number): void {
-    for (let i = first + 1; i < last; i++) this.linearInsert(first, i);
-  }
-
-  private linearInsert(first: number, last: number): void {
+  /** Inserts item `last` into the sorted items before it, at the front when it sorts first. */
+  private linearInsert(last: number): void {
     const value = this.items[last]!;
-    if (!this.less(value, this.items[first]!)) {
+    if (!this.less(value, this.items[0]!)) {
       this.unguardedLinearInsert(last, value);
       return;
     }
-    this.items.copyWithin(first + 1, first, last);
-    this.items[first] = value;
+    this.items.copyWithin(1, 0, last);
+    this.items[0] = value;
   }
 
   /** Needs an item before `last` that `value` does not sort before, so the walk stops. */

@@ -3,8 +3,8 @@
  * the committed engine captures (`pnpm nodes:base-types` writes
  * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts,
  * classProperties.generated.ts, resourceTypeExclusions.generated.ts,
- * typedCollectionProperties.generated.ts and nilObjectProperties.generated.ts). It never runs Godot: CI
- * has no engine, and the test beside it re-derives every output to prove it current.
+ * typedCollectionProperties.generated.ts and variantProperties.generated.ts). It never runs
+ * Godot: CI has no engine, and the test beside it re-derives every output to prove it current.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -31,7 +31,7 @@ export const RESOURCE_OUT = classdbModule('resourceBaseTypes.generated.ts');
 export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
 export const EXCLUSIONS_OUT = classdbModule('resourceTypeExclusions.generated.ts');
 export const TYPED_COLLECTIONS_OUT = classdbModule('typedCollectionProperties.generated.ts');
-export const NIL_OBJECTS_OUT = classdbModule('nilObjectProperties.generated.ts');
+export const VARIANT_PROPERTIES_OUT = classdbModule('variantProperties.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
@@ -305,19 +305,29 @@ ${classes}
 `;
 }
 
-/** The module source for the Object properties whose empty value is Nil. */
-function renderNilObjectsModule(names, version) {
-  const rows = names.map((name) => `  ${JSON.stringify(name)},`).join('\n');
+/**
+ * The module source for the stored properties declared as a Variant.
+ *
+ * @param variantProperties - `resource-getters.json`'s `variantProperties`, class → names.
+ */
+function renderVariantPropertiesModule(variantProperties, version) {
+  const classes = Object.entries(variantProperties)
+    .map(([className, names]) => {
+      const rows = names.map((name) => `    ${JSON.stringify(name)},`).join('\n');
+      return `  ${JSON.stringify(className)}: [\n${rows}\n  ],`;
+    })
+    .join('\n');
   return `/**
- * The Object properties whose getter returns Nil, not a null Object, when they hold nothing,
- * derived from Godot ${version}'s getter captures. The binary saver writes such a property
- * as Nil.
+ * The stored properties each instantiable resource class declares as a Variant, with any it adds
+ * at run time, derived from Godot ${version}'s captures.
+ * The text saver keeps a Nil only on such a property, and leaves out an empty Object
+ * (\`resource_format_text.cpp:1980\`).
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
  */
 
-export const NIL_OBJECT_PROPERTIES: readonly string[] = Object.freeze([
-${rows}
-]);
+export const VARIANT_PROPERTIES: Readonly<Record<string, readonly string[]>> = Object.freeze({
+${classes}
+});
 `;
 }
 
@@ -336,10 +346,10 @@ export function renderFromTypedCollectionCaptures() {
   return renderTypedCollectionsModule(readJson(RESOURCE_GETTERS).collections, godotVersionOf(catalog));
 }
 
-/** The Nil Object property module the committed artifact must equal. */
-export function renderFromNilObjectCaptures() {
+/** The Variant property module the committed artifact must equal. */
+export function renderFromVariantPropertyCaptures() {
   const catalog = readJson(CATALOG);
-  return renderNilObjectsModule(readJson(RESOURCE_GETTERS).nilObjects, godotVersionOf(catalog));
+  return renderVariantPropertiesModule(readJson(RESOURCE_GETTERS).variantProperties, godotVersionOf(catalog));
 }
 
 /** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
@@ -394,11 +404,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     [PROPERTIES_OUT, renderFromPropertyCaptures(), describeProperties],
     [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeNestedRows('excluding slots')],
     [TYPED_COLLECTIONS_OUT, renderFromTypedCollectionCaptures(), describeNestedRows('typed collections')],
-    [
-      NIL_OBJECTS_OUT,
-      renderFromNilObjectCaptures(),
-      (source) => `${source.match(/^ {2}"/gm)?.length ?? 0} properties`,
-    ],
+    [VARIANT_PROPERTIES_OUT, renderFromVariantPropertyCaptures(), describeNestedRows('Variant properties')],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);

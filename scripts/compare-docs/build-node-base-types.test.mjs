@@ -11,7 +11,6 @@ import {
   deriveBaseTypes,
   deriveResourceTypeExclusions,
   EXCLUSIONS_OUT,
-  NIL_OBJECTS_OUT,
   NODE_PROPERTIES,
   OUT,
   PROPERTIES_OUT,
@@ -20,11 +19,12 @@ import {
   RESOURCE_PROPERTIES,
   renderFromCatalog,
   renderFromExclusionCaptures,
-  renderFromNilObjectCaptures,
+  renderFromVariantPropertyCaptures,
   renderFromPropertyCaptures,
   renderFromResourceBases,
   renderFromTypedCollectionCaptures,
   TYPED_COLLECTIONS_OUT,
+  VARIANT_PROPERTIES_OUT,
 } from './build-node-base-types.mjs';
 import { RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 
@@ -143,8 +143,8 @@ describe('deriveBaseTypes', () => {
     expect(readFileSync(TYPED_COLLECTIONS_OUT, 'utf8')).toBe(renderFromTypedCollectionCaptures());
   });
 
-  it('the committed nilObjectProperties.generated.ts matches the captures', () => {
-    expect(readFileSync(NIL_OBJECTS_OUT, 'utf8')).toBe(renderFromNilObjectCaptures());
+  it('the committed variantProperties.generated.ts matches the captures', () => {
+    expect(readFileSync(VARIANT_PROPERTIES_OUT, 'utf8')).toBe(renderFromVariantPropertyCaptures());
   });
 
   it('renders one row per captured property, so no class is dropped', () => {

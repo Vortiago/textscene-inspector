@@ -55,9 +55,15 @@
       "packet_data": "Array[Array]"
     }
   },
-  "nilObjects": [
-    "script",
-    "states/End/node",
-    "states/Start/node"
-  ]
+  "variantProperties": {
+    "BoneMap": [
+      "bonemap"
+    ],
+    "Curve": [
+      "_limits"
+    ],
+    "JSON": [
+      "data"
+    ]
+  }
 }

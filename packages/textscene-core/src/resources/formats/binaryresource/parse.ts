@@ -11,7 +11,7 @@ import { ByteReader } from './byteReader';
 import { inflateCompressedStream } from './compressedStream';
 import { propertyValueText, tableString, type VariantTables } from './variants';
 import { typedCollectionPrefix } from '../../../godot/classdb/typedCollection';
-import { NIL_OBJECT_PROPERTIES } from '../../../godot/classdb/nilObjectProperties.generated';
+import { VARIANT_PROPERTIES } from '../../../godot/classdb/variantProperties.generated';
 import {
   BINARY_FORMAT_VERSION,
   BINARY_RESOURCE_MAGIC,
@@ -131,19 +131,23 @@ function readResource(
   for (let i = 0; i < propertyCount; i++) {
     const name = tableString(reader, tables);
     const value = propertyValueText(reader, tables);
-    if (value !== null && !isNilObject(name, value)) data[name] = typedText(type, name, value);
+    if (value !== null && !isEmptyObject(type, name, value)) data[name] = typedText(type, name, value);
     else if (isStoredWhenNull(type, name)) data[name] = 'null';
   }
   return { id, type, data };
 }
 
 /**
- * Whether an Object property whose getter returns Nil when empty, such as `script`
- * (`object.cpp:470-475`), holds nothing. The text saver leaves out an empty Object
- * (`resource_format_text.cpp:1980`), whichever empty value the getter returns.
+ * Whether a Nil is an empty Object, which the text saver leaves out (`resource_format_text.cpp:1980`).
+ * Only a property declared as a Variant keeps a Nil. A getter such as `get_script` returns Nil for
+ * an empty Object (`object.cpp:470-475`).
  */
-function isNilObject(name: string, value: string): boolean {
-  return value === 'null' && NIL_OBJECT_PROPERTIES.includes(name);
+function isEmptyObject(type: string, name: string, value: string): boolean {
+  return value === 'null' && !isVariantProperty(type, name);
+}
+
+function isVariantProperty(type: string, name: string): boolean {
+  return Object.hasOwn(VARIANT_PROPERTIES, type) && VARIANT_PROPERTIES[type]!.includes(name);
 }
 
 /**

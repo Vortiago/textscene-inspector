@@ -26,8 +26,9 @@
 #   property list cannot say. "collections" holds each Array or Dictionary
 #   property whose value is typed, with the prefix the text saver writes: the
 #   binary loader types a value as the getter does, whatever the hint says.
-#   "nil_objects" names each Object property whose empty value is Nil, which
-#   the binary saver writes as Nil rather than as a null Object.
+#   "variant_properties" names, per instantiable class, each stored property
+#   declared as a Variant. The text saver keeps a Nil only on such a property
+#   and leaves out an empty Object (resource_format_text.cpp:1980).
 extends SceneTree
 
 # PROPERTY_USAGE_STORAGE. The one flag that decides whether a property can reach
@@ -53,15 +54,15 @@ func own_properties(c: String) -> Array:
 		})
 	return own
 
-# A class to read an abstract class's getters on: the getter belongs to the
-# declaring class, so any instantiable inheritor answers for it.
-func instantiable_class(c: String) -> String:
+# A fresh instance to read a class's getters on, or null. An abstract class's
+# getter belongs to it, so any instantiable inheritor answers for it.
+func fresh_instance(c: String) -> Object:
 	if ClassDB.can_instantiate(c):
-		return c
+		return ClassDB.instantiate(c)
 	for inheritor in ClassDB.get_inheriters_from_class(c):
 		if ClassDB.can_instantiate(inheritor):
-			return inheritor
-	return ""
+			return ClassDB.instantiate(inheritor)
+	return null
 
 # The `Array[T]` or `Dictionary[K, V]` prefix var_to_str writes, or "" for an
 # untyped value.
@@ -73,27 +74,29 @@ func typed_prefix(value: Variant) -> String:
 
 func typed_collections(c: String, own: Array) -> Dictionary:
 	var typed: Dictionary = {}
-	var instance_class: String = instantiable_class(c)
-	if instance_class == "":
+	var collection_rows: Array = own.filter(
+		func(p): return p["type"] == TYPE_ARRAY or p["type"] == TYPE_DICTIONARY)
+	if collection_rows.is_empty():
 		return typed
-	var instance: Object = ClassDB.instantiate(instance_class)
-	for p in own:
-		if p["type"] != TYPE_ARRAY and p["type"] != TYPE_DICTIONARY:
-			continue
+	var instance: Object = fresh_instance(c)
+	if instance == null:
+		return typed
+	for p in collection_rows:
 		var prefix: String = typed_prefix(instance.get(p["name"]))
 		if prefix != "":
 			typed[p["name"]] = prefix
 	return typed
 
-func nil_objects(c: String, found: Dictionary) -> void:
+# The instance's list, not the ClassDB rows: it holds `script`, which Object
+# declares, and the properties a class adds at run time.
+func variant_properties(c: String) -> Array:
+	var names: Array = []
 	if not ClassDB.can_instantiate(c):
-		return
-	var instance: Object = ClassDB.instantiate(c)
-	for p in instance.get_property_list():
-		if int(p["usage"]) & USAGE_STORAGE == 0 or int(p["type"]) != TYPE_OBJECT:
-			continue
-		if typeof(instance.get(p["name"])) == TYPE_NIL:
-			found[p["name"]] = true
+		return names
+	for p in ClassDB.instantiate(c).get_property_list():
+		if int(p["usage"]) & USAGE_STORAGE != 0 and int(p["type"]) == TYPE_NIL:
+			names.append(p["name"])
+	return names
 
 func _init() -> void:
 	var classes: Array = []
@@ -101,7 +104,7 @@ func _init() -> void:
 	var resource_properties: Dictionary = {}
 	var resource_bases: Dictionary = {}
 	var collections: Dictionary = {}
-	var nil_object_names: Dictionary = {}
+	var variant_property_names: Dictionary = {}
 
 	for c in ClassDB.get_class_list():
 		if ClassDB.is_parent_class(c, "Resource"):
@@ -111,7 +114,9 @@ func _init() -> void:
 			var typed: Dictionary = typed_collections(c, res_own)
 			if typed.size() > 0:
 				collections[c] = typed
-			nil_objects(c, nil_object_names)
+			var variants: Array = variant_properties(c)
+			if variants.size() > 0:
+				variant_property_names[c] = variants
 			# Unfiltered, unlike the two blobs above: see the header.
 			if c != "Resource":
 				resource_bases[c] = ClassDB.get_parent_class(c)
@@ -146,5 +151,5 @@ func _init() -> void:
 	print("###RESOURCE_BASES_JSON###")
 	print(JSON.stringify(resource_bases))
 	print("###RESOURCE_GETTERS_JSON###")
-	print(JSON.stringify({"collections": collections, "nil_objects": nil_object_names.keys()}))
+	print(JSON.stringify({"collections": collections, "variant_properties": variant_property_names}))
 	quit()

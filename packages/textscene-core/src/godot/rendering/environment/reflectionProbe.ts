@@ -10,6 +10,7 @@ import {
   type SkyOctmapLayout,
 } from './skyReflection.js';
 import type { Vector3 } from '../../math/vector.js';
+import { sortArray } from '../../templates/sortArray.js';
 
 /** `ReflectionProbe::UpdateMode` (`scene/3d/reflection_probe.h:39-42`). */
 export enum ReflectionProbeUpdateMode {
@@ -100,11 +101,16 @@ export function reflectionAtlasLayout(hasRealTimeProbe: boolean): SkyOctmapLayou
  * (`light_storage.cpp:1760-1771`). The scene shader takes the highest index first
  * (`scene_forward_clustered.glsl:2077-2086`), so the smallest box claims a fragment first.
  * Godot's cull lists the probes in reverse tree order, as it prepends each instance it queues
- * (`renderer_scene_cull.cpp:531`, `self_list.h:45-59`), and its insertion sort keeps that order for
- * equal boxes. So the first of two equal boxes in the tree wins. Past 16 probes Godot introsorts
- * (`sort_array.h:51`), which leaves equal boxes in no set order, so this keeps the tree order.
+ * (`renderer_scene_cull.cpp:531`, `self_list.h:45-59`). Its `SortArray` decides the order of
+ * equal boxes: up to 16 probes the first of two in the tree wins.
  */
 export function reflectionProbeOrder<Probe extends { size: Vector3 }>(probes: readonly Probe[]): Probe[] {
-  const diagonal = ({ size }: Probe) => Math.hypot(size.x, size.y, size.z);
-  return [...probes].reverse().sort((a, b) => diagonal(b) - diagonal(a));
+  const ordered = [...probes].reverse();
+  sortArray(ordered, (a, b) => negativeHalfDiagonal(a) < negativeHalfDiagonal(b));
+  return ordered;
+}
+
+/** Godot's sort key, `-(size / 2).length()` as a float (`light_storage.cpp:1760-1764`). */
+function negativeHalfDiagonal({ size }: { size: Vector3 }): number {
+  return -Math.fround(Math.hypot(size.x / 2, size.y / 2, size.z / 2));
 }

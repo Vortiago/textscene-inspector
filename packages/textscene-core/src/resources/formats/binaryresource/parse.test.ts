@@ -76,9 +76,14 @@ describe('parseBinaryResource on a null object', () => {
     expect((await parseBinaryResource(file)).properties).toEqual({});
   });
 
-  it("leaves out a Nil on an Object property whose getter reads empty as Nil, as a state machine's end node", async () => {
+  it("leaves out a Nil on a property declared as an Object, as a blend tree's node", async () => {
     const nil = new ByteWriter().u32(VariantTag.Nil).bytes();
-    expect(await propertyText('AnimationNodeStateMachine', 'states/End/node', nil)).toBeUndefined();
+    expect(await propertyText('AnimationNodeBlendTree', 'nodes/Walk/node', nil)).toBeUndefined();
+  });
+
+  it('keeps a Nil on a property declared as a Variant, as JSON.data', async () => {
+    const nil = new ByteWriter().u32(VariantTag.Nil).bytes();
+    expect(await propertyText('JSON', 'data', nil)).toBe('null');
   });
 
   it('writes a null object inside an array as null (edge case)', async () => {
@@ -319,8 +324,8 @@ describe('parseBinaryResource on each header and table form', () => {
     });
 
     it('reorders more than 16 keys Godot cannot order as its unstable sort does (edge case)', async () => {
-      // Planes at even file positions and colours at odd ones. Godot 4.6.3's `SortArray` leaves
-      // such a pattern in this order (`Array.sort_custom` on the same pattern).
+      // Planes at even file positions and colours at odd ones. Godot 4.6.3's `Array.sort_custom`,
+      // which runs `SortArray`, leaves this pattern in this order.
       const godotOrder = [18, 16, 14, 12, 10, 8, 6, 4, 2, 0, 7, 5, 9, 11, 3, 13, 15, 1, 17, 19];
       const isPlane = (position: number) => position % 2 === 0;
       const keys = Array.from({ length: 20 }, (_, i) => (isPlane(i) ? key.plane(i) : key.color(i)));
