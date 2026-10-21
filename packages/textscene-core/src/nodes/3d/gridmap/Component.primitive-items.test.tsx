@@ -105,7 +105,7 @@ describe('<GridMap> item whose inline mesh no slice builds', () => {
 });
 
 describe('<GridMap> item whose mesh has no surfaces', () => {
-  // Godot draws the cell with a mesh of no surfaces: a PlaceholderMesh has none
+  // Godot places the cell, and its mesh draws nothing: a PlaceholderMesh has no surface
   // (`scene/resources/mesh.h:421`), and an ImmediateMesh saves none (`immediate_mesh.cpp:405-417`).
   it.each(['PlaceholderMesh', 'ImmediateMesh'])('draws nothing for %s, not the placeholder', async (type) => {
     const tiles = await renderGridMapTiles({

@@ -47,8 +47,9 @@ export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext
 }
 
 /**
- * The mesh's triangle surfaces, or none for a mesh with no surface or a type no slice builds. A mesh in the scene names its
- * materials by the scene's references, a mesh in a file by `res://` paths (ADR-0046).
+ * The mesh's triangle surfaces, or none for a mesh with no surface or a type no slice builds. A mesh
+ * in the scene names its materials by the scene's references, a mesh in a file by `res://` paths
+ * (ADR-0046).
  */
 export function meshSurfaces(mesh: CsgMesh): CsgMeshSurface[] {
   const { resource, resources, file } = mesh;

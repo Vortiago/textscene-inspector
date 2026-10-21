@@ -147,24 +147,40 @@ describe('<CSGMesh3D>', () => {
   });
 });
 
+/** The mesh types the node's details name for a CSGMesh3D whose `mesh` is `resource`. */
+async function undrawnTypesFor(resource: TscnInternalResource): Promise<string[]> {
+  let types: string[] = [];
+  function Types() {
+    types = useUndrawnMeshTypes('Mesh');
+    return null;
+  }
+  await ReactThreeTestRenderer.create(
+    <UndrawnMeshesProvider>
+      <SceneResourcesProvider internalResources={[resource]}>
+        <NodePathProvider path="Mesh">
+          <CSGMesh3D node={makeNode({ mesh: `SubResource("${resource.id}")` })} />
+        </NodePathProvider>
+      </SceneResourcesProvider>
+      <Types />
+    </UndrawnMeshesProvider>
+  );
+  return types;
+}
+
 describe('<CSGMesh3D> mesh type no slice builds', () => {
   it("names the type in the node's details", async () => {
     const text: TscnInternalResource = { id: 'TextMesh_csg', type: 'TextMesh', data: {} };
-    let types: string[] = [];
-    function Types() {
-      types = useUndrawnMeshTypes('Mesh');
-      return null;
-    }
-    await ReactThreeTestRenderer.create(
-      <UndrawnMeshesProvider>
-        <SceneResourcesProvider internalResources={[text]}>
-          <NodePathProvider path="Mesh">
-            <CSGMesh3D node={makeNode({ mesh: 'SubResource("TextMesh_csg")' })} />
-          </NodePathProvider>
-        </SceneResourcesProvider>
-        <Types />
-      </UndrawnMeshesProvider>
-    );
-    expect(types).toEqual(['TextMesh']);
+    expect(await undrawnTypesFor(text)).toEqual(['TextMesh']);
+  });
+});
+
+describe('<CSGMesh3D> mesh with no surfaces', () => {
+  it("names no type in the node's details", async () => {
+    const placeholder: TscnInternalResource = {
+      id: 'PlaceholderMesh_csg',
+      type: 'PlaceholderMesh',
+      data: {},
+    };
+    expect(await undrawnTypesFor(placeholder)).toEqual([]);
   });
 });

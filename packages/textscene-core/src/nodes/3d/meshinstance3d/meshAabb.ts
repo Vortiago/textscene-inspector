@@ -35,7 +35,7 @@ function meshAabb(resource: TscnInternalResource): Aabb | null {
       return primitiveMeshAabb(resource);
     case 'surfaceless':
       // A PlaceholderMesh holds its own `aabb` (`mesh.h:430`).
-      return parseOptionalAabb(resource.data['aabb'], 'aabb') ?? EMPTY_AABB;
+      return parseOptionalAabb(resource.data['aabb'], `${resource.type} "${resource.id}" aabb`) ?? EMPTY_AABB;
     default:
       return null;
   }
