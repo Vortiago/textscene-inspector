@@ -6247,6 +6247,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p>A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in <code>unit-sub-viewport-texture</code>. A target in a pass cycle draws the missing-texture material from any slot.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>ViewportTexture sampler state</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sub-viewport-texture-sampler-godot.png" alt="Godot render of ViewportTexture sampler state">
+          <img class="img-ours" src="images/unit-sub-viewport-texture-sampler-ours.png" alt="Our render of ViewportTexture sampler state">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A SubViewport's 8x8 target on three unshaded quads. The material's sampler applies to the target as it does to any texture (<code>material.cpp:760</code>). <code>texture_repeat</code> wraps at the edge, <code>uv1_scale</code> tiles the target, and <code>texture_filter = 0</code> keeps its texels as blocks. Both engines draw the same three quads.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Normal map</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
@@ -6826,6 +6843,23 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>Godot imports a glTF image through the same texture importer, as the file it extracts the image to. That file's sidecar decides its texels and its format. The quad's image is a green square inside transparent magenta texels. The default alpha-border pass turns them green, so the blended edge fades green, not magenta.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Soft-alpha border</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sprite-2d-soft-alpha-border-godot.png" alt="Godot render of Soft-alpha border">
+          <img class="img-ours" src="images/unit-sprite-2d-soft-alpha-border-ours.png" alt="Our render of Soft-alpha border">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A green disc with a three-texel alpha ramp, inside transparent magenta texels, drawn 20 times larger. The default alpha-border pass gives each texel below alpha 20 the RGB of its nearest opaque neighbour, as <code>Image::fix_alpha_edges</code> does (<code>core/io/image.cpp</code>). The previewer runs it on a texture with partial alpha too. It reads the decoded bytes unpremultiplied, so the ramp keeps its colour. With the pass off, the edge of the disc takes a magenta tint in both engines.</p></div>
       </section><div class="prose"><h3>NoiseTexture2D</h3>
 <p>A field baked from a FastNoiseLite, most often as a normal map. A <code>seamless</code> bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because <code>texture_repeat</code> defaults on (<code>material.cpp:4005</code>) and the sampler hint adds <code>repeat_enable</code> (<code>material.cpp:760-765</code>).</p>
 <h3>Linting</h3>
