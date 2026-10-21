@@ -5,12 +5,8 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import {
-  graftInstanceChildren,
-  type ClaimedPath,
-  type InstanceNames,
-  type InstanceScopes,
-} from './graftInstanceChildren';
+import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren';
+import type { ClaimedPath, InstanceNames } from './instanceNameTable';
 import type { SceneScope, TscnNode } from '../parser/types';
 import { scopeOf, type LiveNode } from './liveNode';
 import { authoredSpelling } from './authoredSpelling';
@@ -301,7 +297,7 @@ describe('graftInstanceChildren', () => {
   it('grafts at the node a host override claims in the instance table', () => {
     // The override keeps the sub-scene's owner (resource_format_text.cpp:264-265), so its
     // `unique_name_in_owner` acquires the name there (node.cpp:2236-2249).
-    const settings = [{ pathInInstance: 'Sprite2D/Pivot', isUnique: true }];
+    const settings = [{ pathInInstance: 'Sprite2D/Pivot', isUnique: true, hostChildrenBefore: 0 }];
 
     const pivot = graft(subScene(), [HAT_AT_PIVOT], { names: names(settings) })[0]!.children[0]!;
 
@@ -311,7 +307,7 @@ describe('graftInstanceChildren', () => {
   it('keeps the sub-scene claim over a host override that claims the same name', () => {
     // Instantiate acquires the sub-scene's names first, and the first claimant keeps one (node.cpp:2225-2231).
     const subTree = twoPivotsScene();
-    const settings = [{ pathInInstance: 'Pivot', isUnique: true }];
+    const settings = [{ pathInInstance: 'Pivot', isUnique: true, hostChildrenBefore: 0 }];
 
     const grafted = graft(subTree, [HAT_AT_PIVOT], { names: names(settings, CLAIMS_PIVOT) });
 
@@ -321,8 +317,8 @@ describe('graftInstanceChildren', () => {
   it('keeps the first host override claim in file order', () => {
     const subTree = twoPivotsScene();
     const settings = [
-      { pathInInstance: 'Pivot', isUnique: true },
-      { pathInInstance: 'Sprite2D/Pivot', isUnique: true },
+      { pathInInstance: 'Pivot', isUnique: true, hostChildrenBefore: 0 },
+      { pathInInstance: 'Sprite2D/Pivot', isUnique: true, hostChildrenBefore: 0 },
     ];
 
     const grafted = graft(subTree, [HAT_AT_PIVOT], { names: names(settings) });
@@ -332,7 +328,7 @@ describe('graftInstanceChildren', () => {
 
   it('misses a %Name a host override releases', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    const settings = [{ pathInInstance: 'Sprite2D/Pivot', isUnique: false }];
+    const settings = [{ pathInInstance: 'Sprite2D/Pivot', isUnique: false, hostChildrenBefore: 0 }];
 
     const grafted = graft(subScene(), [HAT_AT_PIVOT], { names: names(settings, CLAIMS_PIVOT) });
 
@@ -340,21 +336,58 @@ describe('graftInstanceChildren', () => {
     warnSpy.mockRestore();
   });
 
+  it('grafts at a claim a host override releases only after the child', () => {
+    // Instantiate sets each heading's properties as it reaches it (packed_scene.cpp:157-165).
+    const settings = [{ pathInInstance: 'Sprite2D/Pivot', isUnique: false, hostChildrenBefore: 1 }];
+
+    const grafted = graft(subScene(), [HAT_AT_PIVOT], { names: names(settings, CLAIMS_PIVOT) });
+
+    expect(grafted[0]!.children[0]!.children.map((c) => c.name)).toEqual(['Hat']);
+  });
+
+  it('misses a claim a host override sets only after the child', () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const settings = [{ pathInInstance: 'Sprite2D/Pivot', isUnique: true, hostChildrenBefore: 1 }];
+
+    const grafted = graft(subScene(), [HAT_AT_PIVOT], { names: names(settings) });
+
+    expect(grafted.map((c) => c.name)).toEqual(['Sprite2D', 'Hat']);
+    warnSpy.mockRestore();
+  });
+
+  it('hands a nested instance a setting after the children it holds by then', () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const settings = [{ pathInInstance: 'Inner/Body/Deep', isUnique: true, hostChildrenBefore: 1 }];
+
+    const grafted = graft(nestedInstanceScene(), [node('Body', { instanceSubPath: 'Inner' })], {
+      names: names(settings),
+    });
+
+    expect(grafted[0]!.instanceNameSettings).toEqual([
+      { pathInInstance: 'Body/Deep', isUnique: true, hostChildrenBefore: 1 },
+    ]);
+    warnSpy.mockRestore();
+  });
+
   it('hands a setting inside a nested instance to that instance, below it', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const subTree = nestedInstanceScene();
-    const settings = [{ pathInInstance: 'Inner/Body/Deep', isUnique: true }];
+    const settings = [{ pathInInstance: 'Inner/Body/Deep', isUnique: true, hostChildrenBefore: 0 }];
 
     const grafted = graft(subTree, [HAT_AT_DEEP], { names: names(settings) });
 
     expect(grafted.map((c) => c.name)).toEqual(['Inner', 'Hat']);
-    expect(grafted[0]!.instanceNameSettings).toEqual([{ pathInInstance: 'Body/Deep', isUnique: true }]);
+    expect(grafted[0]!.instanceNameSettings).toEqual([
+      { pathInInstance: 'Body/Deep', isUnique: true, hostChildrenBefore: 0 },
+    ]);
     warnSpy.mockRestore();
   });
 
   it('applies a setting inside a nested instance whose explicit owner is this instance', () => {
     const subTree = nestedInstanceScene();
-    const settings = [{ pathInInstance: 'Inner/Body/Deep', isUnique: true, ownerInInstance: '' }];
+    const settings = [
+      { pathInInstance: 'Inner/Body/Deep', isUnique: true, ownerInInstance: '', hostChildrenBefore: 0 },
+    ];
 
     const grafted = graft(subTree, [HAT_AT_DEEP], { names: names(settings) });
 
@@ -366,12 +399,14 @@ describe('graftInstanceChildren', () => {
   it('hands an explicit owner inside a nested instance to that instance, rebased', () => {
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const subTree = nestedInstanceScene();
-    const settings = [{ pathInInstance: 'Inner/Body/Deep', isUnique: true, ownerInInstance: 'Inner' }];
+    const settings = [
+      { pathInInstance: 'Inner/Body/Deep', isUnique: true, ownerInInstance: 'Inner', hostChildrenBefore: 0 },
+    ];
 
     const grafted = graft(subTree, [HAT_AT_DEEP], { names: names(settings) });
 
     expect(grafted[0]!.instanceNameSettings).toEqual([
-      { pathInInstance: 'Body/Deep', isUnique: true, ownerInInstance: '' },
+      { pathInInstance: 'Body/Deep', isUnique: true, ownerInInstance: '', hostChildrenBefore: 0 },
     ]);
     warnSpy.mockRestore();
   });

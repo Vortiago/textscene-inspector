@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
-import type { TscnScene } from '../parser/types';
+import type { TscnNode, TscnScene } from '../parser/types';
 import { liveChildGroups, rootScope, type LiveTreeContext } from './liveSceneTree';
 
 const host = new TscnParser().parse(`[gd_scene format=3]
@@ -36,17 +36,26 @@ const unclaimed = new TscnParser().parse(`[gd_scene format=3]
 [node name="Head" type="Node3D" parent="Body"]
 `);
 
-/** The children of the sub-scene's `Body/Head` once `host` instances `sub` as Player. */
-function headChildren(host: TscnScene, sub: TscnScene): string[] {
+/** The node `host`'s Player collapses into, with each scene path in `scenes` cached. */
+function composedPlayer(host: TscnScene, scenes: Record<string, TscnScene>): TscnNode {
   const ctx: LiveTreeContext = {
     externalResources: host.externalResources,
     internalResources: [],
-    sceneCache: { getCached: (path) => (path === 'res://player.tscn' ? sub : undefined) },
+    sceneCache: { getCached: (path) => scenes[path] },
   };
   const instance = host.nodes[0]!.children.find((n) => n.name === 'Player')!;
   const [group] = liveChildGroups(instance, rootScope(ctx), ctx.sceneCache);
-  const body = group!.mergedNode!.children.find((n) => n.name === 'Body')!;
-  return body.children.find((n) => n.name === 'Head')!.children.map((n) => n.name);
+  return group!.mergedNode!;
+}
+
+function childNames(node: TscnNode, name: string): string[] {
+  return node.children.find((n) => n.name === name)!.children.map((n) => n.name);
+}
+
+/** The children of the sub-scene's `Body/Head` once `host` instances `sub` as Player. */
+function headChildren(host: TscnScene, sub: TscnScene): string[] {
+  const body = composedPlayer(host, { 'res://player.tscn': sub }).children.find((n) => n.name === 'Body')!;
+  return childNames(body, 'Head');
 }
 
 describe('a host heading below an instanced `%Name`', () => {
@@ -70,5 +79,86 @@ unique_name_in_owner = true
 [node name="Hat" type="Node3D" parent="Player/%Head"]
 `);
     expect(headChildren(claiming, unclaimed)).toEqual(['Hat']);
+  });
+
+  it('composes under a claim a host override releases only after the heading', () => {
+    // Instantiate sets each heading's properties as it reaches it (packed_scene.cpp:157-165).
+    const releasingLater = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player")]
+
+[node name="Hat" type="Node3D" parent="Player/%Head"]
+
+[node name="Head" parent="Player/Body"]
+unique_name_in_owner = false
+`);
+    expect(headChildren(releasingLater, player)).toEqual(['Hat']);
+  });
+
+  it('composes under a claimant the sub-scene seats inside its own nested instance', () => {
+    const mid = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://inner.tscn" id="inner"]
+
+[node name="Player" type="Node3D"]
+
+[node name="Inner" parent="." instance=ExtResource("inner")]
+
+[node name="New" type="Node3D" parent="Inner/X"]
+unique_name_in_owner = true
+`);
+    const hatOnNew = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player")]
+
+[node name="Hat" type="Node3D" parent="Player/%New"]
+`);
+    const innerNode = composedPlayer(hatOnNew, { 'res://player.tscn': mid }).children[0]!;
+
+    expect(innerNode.children.map((n) => [n.name, n.instanceSubPath])).toEqual([
+      ['New', 'X'],
+      ['Hat', 'X/New'],
+    ]);
+  });
+
+  it('keeps a host release out of the inherited scene its sub-scene collapses into next', () => {
+    // The inherited scene instantiates, and seats its own `%A` heading, before the host's release lands.
+    const base = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Base" type="Node3D"]
+
+[node name="A" type="Node3D" parent="."]
+unique_name_in_owner = true
+`);
+    const inherited = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
+
+[node name="Player" instance=ExtResource("base")]
+
+[node name="Hat" type="Node3D" parent="%A"]
+`);
+    const releasing = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player")]
+
+[node name="A" parent="Player"]
+unique_name_in_owner = false
+`);
+    const composed = composedPlayer(releasing, { 'res://player.tscn': inherited, 'res://base.tscn': base });
+
+    expect(childNames(composed, 'A')).toEqual(['Hat']);
   });
 });

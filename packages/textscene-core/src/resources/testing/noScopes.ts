@@ -1,5 +1,6 @@
 /** Scopes for a merge or graft test whose nodes name no resource. */
-import type { InstanceNames, InstanceScopes } from '../graftInstanceChildren';
+import type { InstanceScopes } from '../graftInstanceChildren';
+import type { InstanceNames } from '../instanceNameTable';
 
 const EMPTY = { externalResources: [], internalResources: [] };
 

@@ -310,11 +310,11 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
     handToInstance(tables, instance!, { pathInInstance, isUnique: setting, ownerInInstance });
 }
 
-/** Append a setting to the instance node it sits in, in file order. */
+/** Append a setting to the instance node it sits in, in file order, after the children seated so far. */
 function handToInstance<N extends RawNode>(
   tables: SeatingTables<N>,
   instance: N,
-  setting: InstanceNameSetting
+  setting: Omit<InstanceNameSetting, 'hostChildrenBefore'>
 ): void {
   let settings = tables.instanceNameSettings.get(instance);
   if (!settings) {
@@ -322,7 +322,7 @@ function handToInstance<N extends RawNode>(
     tables.instanceNameSettings.set(instance, settings);
     instance.instanceNameSettings = settings;
   }
-  settings.push(setting);
+  settings.push({ ...setting, hostChildrenBefore: instance.children.length });
 }
 
 /** `path` below `base`, `''` for `base` itself, or undefined where `path` is not at or below it. */

@@ -21,11 +21,15 @@ function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: Instanc
   return { ...layerRawOverride(instanceNode, root, rehomed.raw), scope: rehomed.scope };
 }
 
-/** The path below the sub-scene root that its own table gives `key`, read only when a sub-path holds a `%Name`. */
+/**
+ * The live path below the sub-scene root that its own table gives `key`, read only when a sub-path
+ * holds a `%Name`. The graft walks the composed tree, where a claimant inside a nested instance
+ * sits at its live path, not at its heading.
+ */
 function claimedBelowRoot(roots: readonly LiveNode[], key: string): string | undefined {
   const claim = cachedUniqueNameClaims(roots).get(key);
   // The root claims nothing (it has no owner), so a claim's path always continues below it.
-  return claim?.path.slice(claim.path.indexOf('/') + 1);
+  return claim?.livePath.slice(claim.livePath.indexOf('/') + 1);
 }
 
 /**
@@ -46,9 +50,11 @@ export function mergeInstanceRoot(
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
   const merged = mergeProperties(instanceNode, root, scopes);
+  // The graft below lands these settings, so a further collapse of the chain never reads them.
+  const { instanceNameSettings: settings = [], ...host } = instanceNode;
 
   return {
-    ...instanceNode,
+    ...host,
     type: root.type,
     // The instance node's own ref is consumed here. The tree's badge and
     // open-standalone affordance read the originating ref in the caller's scope.
@@ -58,7 +64,7 @@ export function mergeInstanceRoot(
     // the sub-path it names (`graftInstanceChildren`). Direct children append.
     children: graftInstanceChildren(root.children, instanceNode.children, scopes, {
       own: (key) => claimedBelowRoot(loadedScene.nodes, key),
-      settings: instanceNode.instanceNameSettings ?? [],
+      settings,
     }),
   };
 }

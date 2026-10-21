@@ -80,6 +80,11 @@ export interface InstanceNameSetting {
   readonly isUnique: boolean;
   /** An explicit `owner=` below the instance, `''` for the instance itself. Absent: the nearest owner. */
   readonly ownerInInstance?: string;
+  /**
+   * How many of the instance node's children the file seats before the setting lands, its own
+   * heading included: a host child's `%Name` parent reads the table as of its heading.
+   */
+  readonly hostChildrenBefore: number;
 }
 
 /** A `unique_name_in_owner` on a heading another owner than the root holds. */

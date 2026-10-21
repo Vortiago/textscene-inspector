@@ -10,8 +10,7 @@ import { scopeOf, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
-import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath';
-import { holderAfterSetting, type InstanceNameSetting } from '../parser/nodeOwner';
+import { InstanceNameTable, subPathSegments, type InstanceNames } from './instanceNameTable';
 
 /** The two scopes a graft joins. */
 export interface InstanceScopes {
@@ -19,27 +18,6 @@ export interface InstanceScopes {
   outer: SceneScope;
   /** The sub-scene's, which its own nodes resolve against. */
   content: SceneScope;
-}
-
-/**
- * The path below the instanced scene's root that its own table gives a `%Name` key, or undefined
- * where nothing there claims it.
- */
-export type ClaimedPath = (key: string) => string | undefined;
-
-/** The `%Name` facts a graft reads for one instance. */
-export interface InstanceNames {
-  /** The sub-scene's own table. */
-  readonly own: ClaimedPath;
-  /** The instance node's `instanceNameSettings`, in file order. */
-  readonly settings: readonly InstanceNameSetting[];
-}
-
-/** A setting inside a nested instance, which that instance's own graft applies. */
-interface HandedSetting {
-  /** The nested instance's path below the sub-scene root. */
-  readonly at: readonly string[];
-  readonly setting: InstanceNameSetting;
 }
 
 /**
@@ -61,9 +39,11 @@ export function graftInstanceChildren(
 
   let grafted = [...rootChildren];
   const appendedAtRoot: LiveNode[] = [];
-  const { claims, handed } = instanceTable(rootChildren, names);
+  const table = new InstanceNameTable(names);
 
-  for (const child of hostChildren) {
+  for (const [index, child] of hostChildren.entries()) {
+    // A setting lands at its heading, so only the host children written after it read it.
+    grafted = table.landUpTo(grafted, index);
     // A child re-anchored at a nested instance keeps the scene it was authored in.
     const stamped = child.scope ? child : { ...child, scope: scopes.outer };
     if (!child.instanceSubPath) {
@@ -73,7 +53,7 @@ export function graftInstanceChildren(
       continue;
     }
 
-    const segments = subPathSegments(child.instanceSubPath, grafted, claims);
+    const segments = subPathSegments(child.instanceSubPath, grafted, table.claimed);
     const next = segments && graftAt(grafted, segments, stamped, scopes.content);
     if (next) {
       grafted = next;
@@ -87,186 +67,7 @@ export function graftInstanceChildren(
     }
   }
 
-  return handDown([...grafted, ...appendedAtRoot], handed);
-}
-
-/**
- * The instance's `%Name` table once its settings land, and the settings it hands to a nested
- * instance. Instantiate acquires the sub-scene's own names first (packed_scene.cpp:565-570), then
- * applies each setting in file order: a set acquires a free name, and the first claimant keeps it
- * (node.cpp:2225-2231). A clear releases the node's own name (node.cpp:2236-2249).
- */
-function instanceTable(
-  rootChildren: readonly LiveNode[],
-  { own, settings }: InstanceNames
-): { claims: ClaimedPath; handed: HandedSetting[] } {
-  const changed = new Map<string, string | undefined>();
-  const claims: ClaimedPath = (key) => (changed.has(key) ? changed.get(key) : own(key));
-  const handed: HandedSetting[] = [];
-  for (const setting of settings) {
-    const authored = setting.pathInInstance.split('/');
-    const parent =
-      authored.length > 1 ? subPathSegments(authored.slice(0, -1).join('/'), rootChildren, claims) : [];
-    if (!parent) continue;
-    const segments = [...parent, authored.at(-1)!];
-    const owner = tableOwner(rootChildren, segments, setting.ownerInInstance);
-    if (owner === null) continue;
-    if (owner !== THIS_INSTANCE) {
-      handed.push({
-        at: segments.slice(0, owner.nestedAt + 1),
-        setting: rebased(setting, segments, owner.nestedAt),
-      });
-      continue;
-    }
-    const key = UNIQUE_NODE_PREFIX + segments.at(-1)!;
-    changed.set(key, holderAfterSetting(claims(key), segments.join('/'), setting.isUnique));
-  }
-  return { claims, handed };
-}
-
-const THIS_INSTANCE = 'this instance';
-
-/** Whose table a setting lands in: the instance this graft composes, or a nested one along its path. */
-type TableOwner = typeof THIS_INSTANCE | { readonly nestedAt: number };
-
-/**
- * Whose table a setting at `segments` lands in, or null for a node the sub-scene lacks or a table
- * no instance reads. Without an explicit owner, a node inside a nested instance keeps that
- * instance's owner (resource_format_text.cpp:264-265).
- */
-function tableOwner(
-  rootChildren: readonly LiveNode[],
-  segments: readonly string[],
-  ownerInInstance: string | undefined
-): TableOwner | null {
-  const nestedAt = instanceDepth(rootChildren, segments.slice(0, -1));
-  if (nestedAt === null || (nestedAt === undefined && !nodeAt(rootChildren, segments))) return null;
-  if (ownerInInstance === '') return THIS_INSTANCE;
-  if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
-  const ownerSegments = ownerInInstance.split('/');
-  if (!ownerSegments.every((name, index) => segments[index] === name)) return null;
-  const ownerAt = instanceDepth(rootChildren, ownerSegments);
-  return typeof ownerAt === 'number' ? { nestedAt: ownerAt } : null;
-}
-
-/**
- * The depth of the first instance node along `path`: undefined where none is one, and null where
- * `path` names nothing before one.
- */
-function instanceDepth(
-  rootChildren: readonly LiveNode[],
-  path: readonly string[]
-): number | undefined | null {
-  let siblings = rootChildren;
-  for (const [depth, name] of path.entries()) {
-    const found = siblings.find((n) => n.name === name);
-    if (!found) return null;
-    if (found.instance) return depth;
-    siblings = found.children;
-  }
-  return undefined;
-}
-
-/** `setting` spelt below the nested instance at depth `at` of `segments`, its expanded path. */
-function rebased(setting: InstanceNameSetting, segments: readonly string[], at: number): InstanceNameSetting {
-  const pathInInstance = segments.slice(at + 1).join('/');
-  const { ownerInInstance } = setting;
-  if (ownerInInstance === undefined) return { ...setting, pathInInstance };
-  return {
-    ...setting,
-    pathInInstance,
-    ownerInInstance: ownerInInstance
-      .split('/')
-      .slice(at + 1)
-      .join('/'),
-  };
-}
-
-/** `tree` with each nested instance's handed settings appended, its spine copied once. */
-function handDown(tree: LiveNode[], handed: readonly HandedSetting[]): LiveNode[] {
-  const byInstance = new Map<string, { at: readonly string[]; settings: InstanceNameSetting[] }>();
-  for (const { at, setting } of handed) {
-    const key = at.join('/');
-    const group = byInstance.get(key) ?? { at, settings: [] };
-    group.settings.push(setting);
-    byInstance.set(key, group);
-  }
-  let handedDown = tree;
-  for (const { at, settings } of byInstance.values()) handedDown = withSettingsAt(handedDown, at, settings);
-  return handedDown;
-}
-
-function withSettingsAt(
-  siblings: LiveNode[],
-  at: readonly string[],
-  settings: readonly InstanceNameSetting[]
-): LiveNode[] {
-  const [head, ...rest] = at;
-  const index = siblings.findIndex((n) => n.name === head);
-  const target = siblings[index]!;
-  const copy = [...siblings];
-  copy[index] =
-    rest.length > 0
-      ? { ...target, children: withSettingsAt(target.children, rest, settings) }
-      : { ...target, instanceNameSettings: [...(target.instanceNameSettings ?? []), ...settings] };
-  return copy;
-}
-
-/**
- * A sub-path below the sub-scene root, walked as Godot walks a `parent=` path (`walkFromRoot`) over
- * the instance's own `%Name` table, or null where it names nothing. A walk into a nested instance
- * keeps the rest as written, for that instance's own graft to resolve. A sub-path with no `%Name`
- * is the path as written, which the seating already walked.
- */
-function subPathSegments(
-  subPath: string,
-  rootChildren: readonly LiveNode[],
-  claims: ClaimedPath
-): string[] | null {
-  const segments = subPath.split('/');
-  if (!segments.some((segment) => segment.startsWith(UNIQUE_NODE_PREFIX))) return segments;
-  const end = walkFromRoot(subPath, subSceneWalkTables(rootChildren, claims));
-  if (end === null) return null;
-  const path = typeof end === 'string' ? end : end.unlisted;
-  return path === '' ? [] : path.split('/');
-}
-
-/** The walk's tables over the sub-scene: a nested instance is opaque, and so is anything below it. */
-function subSceneWalkTables(rootChildren: readonly LiveNode[], claims: ClaimedPath): RootWalkTables {
-  const reach = (path: string): LiveNode | typeof INSIDE_INSTANCE | undefined => {
-    if (path === '') return undefined;
-    let siblings = rootChildren;
-    let found: LiveNode | undefined;
-    for (const name of path.split('/')) {
-      if (found?.instance) return INSIDE_INSTANCE;
-      found = siblings.find((n) => n.name === name);
-      if (!found) return undefined;
-      siblings = found.children;
-    }
-    return found;
-  };
-  return {
-    exists: (path) => path === '' || reach(path) !== undefined,
-    isOpaque: (path) => {
-      const at = reach(path);
-      return at === INSIDE_INSTANCE || Boolean(at?.instance);
-    },
-    uniquePaths: { get: claims },
-  };
-}
-
-const INSIDE_INSTANCE = 'inside a nested instance';
-
-/** The node at `path` below the sub-scene root, or undefined where none sits there. */
-function nodeAt(rootChildren: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {
-  let siblings = rootChildren;
-  let found: LiveNode | undefined;
-  for (const name of path) {
-    found = siblings.find((n) => n.name === name);
-    if (!found) return undefined;
-    siblings = found.children;
-  }
-  return found;
+  return [...table.landUpTo(grafted, hostChildren.length), ...appendedAtRoot];
 }
 
 /**

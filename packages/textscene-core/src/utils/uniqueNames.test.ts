@@ -212,7 +212,9 @@ unique_name_in_owner = true
 
   it('gives the instance node the setting at its path below that instance', () => {
     const enemy = new TscnParser().parse(src).nodes[0]!.children.find((n) => n.name === 'Enemy')!;
-    expect(enemy.instanceNameSettings).toEqual([{ pathInInstance: 'Body/Hit', isUnique: true }]);
+    expect(enemy.instanceNameSettings).toEqual([
+      { pathInInstance: 'Body/Hit', isUnique: true, hostChildrenBefore: 1 },
+    ]);
   });
 
   it('records a release, which an override writes as false (node.cpp:2236-2249)', () => {
@@ -337,7 +339,7 @@ unique_name_in_owner = true
   it('gives the instance node an explicit owner below it, empty for the instance itself', () => {
     const enemy = new TscnParser().parse(explicit).nodes[0]!.children.find((n) => n.name === 'Enemy')!;
     expect(enemy.instanceNameSettings).toEqual([
-      { pathInInstance: 'Body/Hit', isUnique: true, ownerInInstance: '' },
+      { pathInInstance: 'Body/Hit', isUnique: true, ownerInInstance: '', hostChildrenBefore: 1 },
     ]);
   });
 
