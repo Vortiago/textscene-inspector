@@ -251,7 +251,7 @@ Expected:
 - After step 5, the pasted text is `.`.
 - After step 6, an information message asks for a cursor in a `[node]` section, and the clipboard keeps its last text.
 
-Screenshot: none yet.
+Screenshot: VSCODE-09-a, after step 4.
 
 ## Flows for both hosts
 
@@ -301,11 +301,11 @@ Screenshots: BOTH-04-a, BOTH-04-b.
 
 1. Open `unit-box-mesh.tscn` in the preview.
 2. Click the `Box` row in the tree.
-3. Click **Copy node path** beside **Path** in the **Inspector** tab, and paste into a scratch file.
+3. Click **Copy node path** beside **Path** in the **Inspector** tab. Paste into a scratch file in VS Code, or into the scene palette search box on the web.
 4. Click the `Root` row, copy again and paste.
 
 Expected:
 - After step 3, the pasted text is `Box`, and the **Path** row still reads `Root/Box`.
 - After step 4, the pasted text is `.`.
 
-Screenshot: none yet.
+Screenshot: BOTH-05-a, after step 3.

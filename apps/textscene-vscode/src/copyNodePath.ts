@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import { nodePathAt } from '@textscene/core/languageFeatures';
 import { languageDocumentOf } from './languageDocumentOf';
+import { writeClipboard } from './writeClipboard';
 
 export async function copyNodePathAtCursor(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
@@ -14,5 +15,5 @@ export async function copyNodePathAtCursor(): Promise<void> {
     void vscode.window.showInformationMessage('Put the cursor in a [node] section to copy its node path.');
     return;
   }
-  await vscode.env.clipboard.writeText(nodePath);
+  await writeClipboard(nodePath);
 }

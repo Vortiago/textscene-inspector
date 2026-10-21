@@ -41,16 +41,13 @@ suite('Copy Node Path', () => {
 
   suiteTeardown(() => removeGodotProject(PROJECT));
 
-  /** Puts the cursor on `line` of the open scene, then runs the command. */
-  async function copyFrom(line: number): Promise<void> {
-    const editor = await vscode.window.showTextDocument(document);
-    editor.selection = new vscode.Selection(line, 0, line, 0);
-    await vscode.commands.executeCommand(COPY_COMMAND);
-  }
-
+  /** The clipboard after the command runs with the cursor on the first line that starts with `prefix`. */
   async function copyFromLineStartingWith(prefix: string): Promise<string> {
     await vscode.env.clipboard.writeText('');
-    await copyFrom(lineStartingWith(document, prefix));
+    const editor = await vscode.window.showTextDocument(document);
+    const line = lineStartingWith(document, prefix);
+    editor.selection = new vscode.Selection(line, 0, line, 0);
+    await vscode.commands.executeCommand(COPY_COMMAND);
     return vscode.env.clipboard.readText();
   }
 

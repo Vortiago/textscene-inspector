@@ -2,7 +2,13 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 
+import { warn } from '@textscene/core/logger';
 import { R3FApp } from './r3f-main';
+
+vi.mock('@textscene/core/logger', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@textscene/core/logger')>()),
+  warn: vi.fn(),
+}));
 
 const TSCN = `[gd_scene load_steps=1 format=3]
 
@@ -40,7 +46,7 @@ describe('copy node path in the web previewer', () => {
   it('logs, and does not throw, where the browser has no clipboard', async () => {
     Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
     await copyRootPath();
-    expect(writeText).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Copy to the clipboard failed'));
   });
 
   it('writes "." for the scene root through navigator.clipboard', async () => {

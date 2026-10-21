@@ -21,6 +21,12 @@ const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'packag
 
 const GATED_COMMANDS = new Set(['textscene.openPreviewToSide', 'textscene.copyNodePath']);
 
+/**
+ * Four menus and one keybinding for the preview, two menus for the copy. The floor stops a
+ * manifest reshuffle that the scan misses from passing as "every clause is correct".
+ */
+const EXPECTED_CONTRIBUTIONS = 7;
+
 /** The gate, spelled by the file's extension rather than by its language. */
 const GATE = 'resourceExtname == .tscn';
 
@@ -34,9 +40,7 @@ describe('preview command gating', () => {
   ].filter((entry) => GATED_COMMANDS.has(entry.command));
 
   it('gates every contribution on the extension the command accepts', () => {
-    // The floor, four menus and one keybinding for the preview and two menus for the copy, stops a
-    // manifest reshuffle that this scan misses from passing as "every clause is correct".
-    expect(gated.length).toBeGreaterThanOrEqual(7);
+    expect(gated.length).toBeGreaterThanOrEqual(EXPECTED_CONTRIBUTIONS);
     const wrong = gated.filter((e) => e.when !== GATE).map((e) => `${e.where}: ${e.when}`);
     expect(wrong).toEqual([]);
   });
