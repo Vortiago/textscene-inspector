@@ -1,13 +1,14 @@
 /**
- * Godot's binary resource format (`RSRC`), read into the **ParsedResource** a `.tres` parses to
- * (ADR-0031), so a decoder never learns which serialisation a file used. Each property value is
- * written as Godot's text format spells it. Ported from `ResourceLoaderBinary::open` and `::load`
- * (`core/io/resource_format_binary.cpp:982-1110`, `:681-880`).
+ * Godot's binary resource format (`RSRC`, or `RSCC` compressed), read into the **ParsedResource**
+ * a `.tres` parses to (ADR-0031), so a decoder never learns which serialisation a file used. Each
+ * property value is written as Godot's text format spells it. Ported from
+ * `ResourceLoaderBinary::open` and `::load` (`core/io/resource_format_binary.cpp:982-1110`, `:681-880`).
  */
 
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { ByteReader } from './byteReader';
+import { inflateCompressedStream } from './compressedStream';
 import { tableString, variantText, type VariantTables } from './variants';
 import {
   BINARY_FORMAT_VERSION,
@@ -26,9 +27,24 @@ interface InternalEntry {
   offset: number;
 }
 
-export function parseBinaryResource(bytes: ArrayBuffer): ParsedResource {
-  const reader = new ByteReader(new Uint8Array(bytes));
-  readMagic(reader);
+/**
+ * A compressed file's offsets count from the start of its inflated stream, which holds no magic,
+ * and a plain file's from the start of the file (`resource_format_binary.cpp:987-1004`).
+ */
+export async function parseBinaryResource(bytes: ArrayBuffer): Promise<ParsedResource> {
+  const file = new ByteReader(new Uint8Array(bytes));
+  const magic = String.fromCharCode(...file.take(BINARY_RESOURCE_MAGIC.length));
+  if (magic === COMPRESSED_BINARY_RESOURCE_MAGIC)
+    return parseStream(new ByteReader(await inflateCompressedStream(file)));
+  if (magic !== BINARY_RESOURCE_MAGIC)
+    throw new Error(
+      `expected a binary resource starting with ${BINARY_RESOURCE_MAGIC}, got ${JSON.stringify(magic)}`
+    );
+  return parseStream(file);
+}
+
+/** The resource from `reader`, which stands where the stream after the magic starts. */
+function parseStream(reader: ByteReader): ParsedResource {
   const header = readHeader(reader);
   const strings = Array.from({ length: reader.u32() }, () => reader.unicodeString());
   const extResources = readExternalResources(reader, header.flags);
@@ -45,16 +61,6 @@ export function parseBinaryResource(bytes: ArrayBuffer): ParsedResource {
   const main = resources.pop();
   if (!main) throw new Error('expected a binary resource with at least one internal resource, got none');
   return { resourceType: main.type, properties: main.data, extResources, subResources: resources };
-}
-
-function readMagic(reader: ByteReader): void {
-  const magic = String.fromCharCode(...reader.take(BINARY_RESOURCE_MAGIC.length));
-  if (magic === COMPRESSED_BINARY_RESOURCE_MAGIC)
-    throw new Error('expected an uncompressed binary resource, got RSCC');
-  if (magic !== BINARY_RESOURCE_MAGIC)
-    throw new Error(
-      `expected a binary resource starting with ${BINARY_RESOURCE_MAGIC}, got ${JSON.stringify(magic)}`
-    );
 }
 
 /** `:1021-1069`: byte order, `real_t` width, versions, the class, the flags and the reserved fields. */

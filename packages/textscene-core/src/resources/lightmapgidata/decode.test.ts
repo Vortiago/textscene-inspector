@@ -34,13 +34,13 @@ function probeData(points: string): string {
 const ONE_USER = 'user_data = [NodePath("../Mesh"), Rect2(0, 0, 1, 1), 0, -1]';
 
 describe('decodeLightmapGIData on the ragdoll bake', () => {
-  const bake = () => {
-    const { properties, extResources } = parseBinaryResource(ragdollBytes('ragdoll_physics.lmbake'));
+  const bake = async () => {
+    const { properties, extResources } = await parseBinaryResource(ragdollBytes('ragdoll_physics.lmbake'));
     return decodeLightmapGIData(properties, extResources);
   };
 
-  it('reads each baked user: its node path, its rect in the atlas, its slice and its sub-instance', () => {
-    const [user] = bake().users;
+  it('reads each baked user: its node path, its rect in the atlas, its slice and its sub-instance', async () => {
+    const [user] = (await bake()).users;
     expect(user).toEqual({
       path: '../StaticBody3D/CSGBakedMeshInstance3D',
       uvScale: { x: 0.00024414063, y: 0.00024414063, width: 0.7597656, height: 0.5371094 },
@@ -49,12 +49,12 @@ describe('decodeLightmapGIData on the ragdoll bake', () => {
     });
   });
 
-  it('resolves each lightmap texture to the path its external resource names', () => {
-    expect(bake().lightmapTextures).toEqual(['res://ragdoll_physics.exr']);
+  it('resolves each lightmap texture to the path its external resource names', async () => {
+    expect((await bake()).lightmapTextures).toEqual(['res://ragdoll_physics.exr']);
   });
 
-  it('reads the capture bounds the renderer culls the lightmap by', () => {
-    expect(bake().bounds).toEqual({
+  it('reads the capture bounds the renderer culls the lightmap by', async () => {
+    expect((await bake()).bounds).toEqual({
       position: { x: -8.023788, y: -0.6158713, z: -8.023788 },
       size: { x: 16.047577, y: 8.023788, z: 16.047577 },
     });
