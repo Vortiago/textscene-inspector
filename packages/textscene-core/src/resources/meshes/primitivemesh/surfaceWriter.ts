@@ -75,7 +75,8 @@ export class SurfaceWriter {
       tangents: new Float32Array(this.tangents),
       uvs: new Float32Array(this.uvs),
       uv2s: this.hasUv2 ? new Float32Array(this.uv2s) : undefined,
-      indices: this.vertexCount > 65535 ? new Uint32Array(this.indices) : new Uint16Array(this.indices),
+      // One width: `godotSurfacesGeometry` copies the indices into the width the merged mesh needs.
+      indices: Uint32Array.from(this.indices),
     };
   }
 }

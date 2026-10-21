@@ -3,14 +3,14 @@
  * surfaces' stored `aabb` (`mesh.cpp:1696-1704`, `mesh_storage.cpp:705-712`).
  */
 
-import { parseOptionalAabb } from '../../../parser/valueParsers.js';
-import { EMPTY_AABB, isEmptyAabb, mergeAabb, type Aabb } from '../../../godot/math/aabb.js';
+import { parseNonEmptyAabb } from '../../../parser/valueParsers.js';
+import { EMPTY_AABB, mergeAabb, type Aabb } from '../../../godot/math/aabb.js';
 import { iterateSurfaceBlocks, readAabb } from './surfaceFields.js';
 
 /** The box of the ArrayMesh whose properties are `properties`. A mesh with no surfaces is `AABB()`. */
 export function arrayMeshAabb(properties: Readonly<Record<string, string>>): Aabb {
-  const custom = parseOptionalAabb(properties['custom_aabb'], 'custom_aabb');
-  if (custom && !isEmptyAabb(custom)) return custom;
+  const custom = parseNonEmptyAabb(properties['custom_aabb'], 'custom_aabb');
+  if (custom) return custom;
   const surfacesRaw = properties['_surfaces'];
   if (!surfacesRaw) return EMPTY_AABB;
   let merged: Aabb | null = null;
