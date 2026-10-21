@@ -98,8 +98,6 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     noDepthTest: properties.no_depth_test,
     textureFilter: properties.texture_filter,
   });
-  // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the blended pass is
-  // transparent. The geometry instance's fade can move both surfaces there.
   const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass };
 
   // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs

@@ -193,8 +193,17 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   }
 
   const material = (pass: FadePass, attach: string | MaterialAttach | undefined) => {
-    const { transparent, depthWrite, alphaTest, alphaHash, blending, injection } = blends[pass];
-    const { alphaHashScale, antialiasing, opaquePrepass } = blends[pass];
+    const {
+      transparent,
+      depthWrite,
+      alphaTest,
+      alphaHash,
+      blending,
+      injection,
+      alphaHashScale,
+      antialiasing,
+      opaquePrepass,
+    } = blends[pass];
     const program = materialProgramInputs({
       props: {
         attach,
