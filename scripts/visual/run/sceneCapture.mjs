@@ -19,17 +19,10 @@ const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
 /**
  * Navigates to a scene and captures its target after two byte-identical screenshots. Returns the
  * PNG buffer, or null with a reason when the scene never settles or logs a console error.
- * `pages.default` holds the framed 3D view and `pages.canvas2D` the 2D parity frame, which exists
- * only when a scene sets `mode: '2d'` and which such a scene both navigates and screenshots.
+ * `pageState` is the page the scene captures on (see `pagePool.mjs`).
  */
-export async function captureScene(pages, baseUrl, scene) {
+export async function captureScene(pageState, baseUrl, scene) {
   const canvas2D = scene.mode === '2d';
-  const pageState = canvas2D ? pages.canvas2D : pages.default;
-  if (!pageState) {
-    throw new Error(
-      `scene "${scene.name}" needs the canvas2D capture context, which this run did not create`
-    );
-  }
   const { page, diagnostics } = pageState;
   clearDiagnostics(diagnostics);
 

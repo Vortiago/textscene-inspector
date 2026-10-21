@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import type { LightmapAssignment } from './sceneLightmaps';
+import { bicubicWeightsGlsl } from '../../utils/bicubicWeightsGlsl';
 
 /** The last declaration before `main`. */
 const PARS_ANCHOR = '#include <clipping_planes_pars_fragment>';
@@ -31,38 +32,7 @@ uniform vec2 godotLightmapTextureSize;
 uniform mat3 godotLightmapNormalBasis;
 varying vec2 vGodotLightmapUv;
 
-float godotLightmapW0( float a ) {
-	return ( 1.0 / 6.0 ) * ( a * ( a * ( - a + 3.0 ) - 3.0 ) + 1.0 );
-}
-
-float godotLightmapW1( float a ) {
-	return ( 1.0 / 6.0 ) * ( a * a * ( 3.0 * a - 6.0 ) + 4.0 );
-}
-
-float godotLightmapW2( float a ) {
-	return ( 1.0 / 6.0 ) * ( a * ( a * ( - 3.0 * a + 3.0 ) + 3.0 ) + 1.0 );
-}
-
-float godotLightmapW3( float a ) {
-	return ( 1.0 / 6.0 ) * ( a * a * a );
-}
-
-float godotLightmapG0( float a ) {
-	return godotLightmapW0( a ) + godotLightmapW1( a );
-}
-
-float godotLightmapG1( float a ) {
-	return godotLightmapW2( a ) + godotLightmapW3( a );
-}
-
-float godotLightmapH0( float a ) {
-	return - 1.0 + godotLightmapW1( a ) / ( godotLightmapW0( a ) + godotLightmapW1( a ) );
-}
-
-float godotLightmapH1( float a ) {
-	return 1.0 + godotLightmapW3( a ) / ( godotLightmapW2( a ) + godotLightmapW3( a ) );
-}
-
+${bicubicWeightsGlsl('godotLightmap')}
 vec3 godotLightmapBicubic( vec3 uvw ) {
 	vec2 texelSize = vec2( 1.0 ) / godotLightmapTextureSize;
 	vec2 st = uvw.xy * godotLightmapTextureSize + vec2( 0.5 );

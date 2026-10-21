@@ -2129,6 +2129,12 @@ export const fixtures: Fixture[] = [
     "root": "alpha-antialiasing"
   },
   {
+    "name": "Glow Linear Upscale",
+    "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
+    "category": "Other",
+    "root": "glow-linear-upscale"
+  },
+  {
     "name": "Msaa 2d",
     "file": "msaa-2d/unit-msaa-2d.tscn",
     "category": "Other",

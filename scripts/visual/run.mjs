@@ -13,32 +13,27 @@
  */
 
 import { resolve } from 'node:path';
-import {
-  attachDiagnostics,
-  createCaptureContext,
-  previewPort,
-  withPreviewBrowser,
-} from './previewServer.mjs';
+import { previewPort, withPreviewBrowser } from './previewServer.mjs';
 import { BASELINE_DIR } from './baselinePath.mjs';
 import { parseArgs, selectScenes, summarize } from './run/cli.mjs';
+import { openPagePool } from './run/pagePool.mjs';
 import { captureScene } from './run/sceneCapture.mjs';
 import { compareToBaseline, writeBaseline, writeFailureArtifacts } from './run/baselines.mjs';
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const scenes = selectScenes(opts);
   const results = [];
   await withPreviewBrowser(previewPort('visual'), async (browser, baseUrl) => {
     console.log(`[visual] preview at ${baseUrl}`);
-    const pages = await capturePages(browser, scenes);
+    const pool = await openPagePool(browser, selectScenes(opts));
     // shards/measure.mjs starts the first scene's clock here, so the browser launch stays out of
     // the scene's seconds.
     console.log('[visual] browser ready');
-    for (const scene of scenes) {
-      const result = await checkScene(pages, baseUrl, scene, opts);
+    for (const scene of pool.scenes) {
+      const result = await pool.use(scene, (pageState) => checkScene(pageState, baseUrl, scene, opts));
       results.push(result);
       // One line per scene, so a slow run shows progress and a cancelled one shows how far it got.
-      console.log(`[visual] ${results.length}/${scenes.length} ${scene.name} ${result.status}`);
+      console.log(`[visual] ${results.length}/${pool.scenes.length} ${scene.name} ${result.status}`);
     }
   });
 
@@ -63,27 +58,9 @@ async function main() {
   process.exit(0);
 }
 
-/**
- * The pages the scenes capture on. Each scene is framed on load: the app's default fixed orbit
- * (ADR-0025) leaves the larger fixtures mostly out of frame, and a baseline of empty space cannot
- * fail. The parity harness keeps the fixed orbit, since Godot opens there. The 2D capture context
- * has its own viewport and localStorage, so it exists only when a scene needs it.
- */
-async function capturePages(browser, scenes) {
-  const context = await createCaptureContext(browser, { frameOnOpen: true });
-  const page = await context.newPage();
-  const pages = { default: { page, diagnostics: attachDiagnostics(page) }, canvas2D: null };
-  if (scenes.some((s) => s.mode === '2d')) {
-    const context2D = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: true });
-    const page2D = await context2D.newPage();
-    pages.canvas2D = { page: page2D, diagnostics: attachDiagnostics(page2D) };
-  }
-  return pages;
-}
-
 /** Captures one scene and compares it with its baseline, or writes the baseline under --update. */
-async function checkScene(pages, baseUrl, scene, opts) {
-  const { buffer, reason, status } = await captureScene(pages, baseUrl, scene);
+async function checkScene(pageState, baseUrl, scene, opts) {
+  const { buffer, reason, status } = await captureScene(pageState, baseUrl, scene);
   if (!buffer) return { scene, status: status ?? 'unstable', detail: reason };
   if (opts.update) {
     // `writeBaseline` refuses a uniform capture and skips an unchanged one: a dead context
