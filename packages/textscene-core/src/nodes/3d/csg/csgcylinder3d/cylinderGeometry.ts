@@ -34,6 +34,7 @@
 
 import type * as THREE from 'three';
 import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
+import { TAU } from '../../../../godot/math/math.js';
 
 interface CsgCylinderSpec {
   radius: number;
@@ -84,8 +85,8 @@ export function buildCsgCylinderGeometry(spec: CsgCylinderSpec): THREE.BufferGeo
     // accumulation keys on vertex position, so a seam that missed by one ulp would break smoothing.
     const incN = i === sides - 1 ? 0 : (i + 1) / sides;
 
-    const ang = inc * Math.PI * 2;
-    const angN = incN * Math.PI * 2;
+    const ang = inc * TAU;
+    const angN = incN * TAU;
     const base: [number, number, number] = [Math.cos(ang), 0, Math.sin(ang)];
     const baseN: [number, number, number] = [Math.cos(angN), 0, Math.sin(angN)];
     const taper = cone ? 0 : 1;

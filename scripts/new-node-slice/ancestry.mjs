@@ -5,7 +5,8 @@
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
+import { NODES_ROOT, fail } from './paths.mjs';
+import { CATALOG_OUT } from '../compare-docs/build-node-catalog/paths.mjs';
 
 /**
  * Every slice file of one basename, read once per invocation. A scaffold asks about five to eight
@@ -22,7 +23,7 @@ function slicesNamed(basename) {
       if (entry.isDirectory()) walk(full);
       else if (entry.name === basename) found.push({ dir: dirname(full), src: readFileSync(full, 'utf8') });
     }
-  })(join(CORE_SRC, 'nodes'));
+  })(NODES_ROOT);
   sliceSources.set(basename, found);
   return found;
 }
@@ -42,9 +43,7 @@ function soleOwner(basename, pattern) {
 /** Godot's ancestry for a type, as `pnpm nodes:catalog` recorded it. */
 let catalogCache;
 function catalogChain(typeName, fallback = []) {
-  catalogCache ??= JSON.parse(
-    readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8')
-  );
+  catalogCache ??= JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
   return catalogCache.nodes.find((n) => n.name === typeName)?.chain ?? fallback;
 }
 

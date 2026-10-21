@@ -16,6 +16,7 @@ import {
   writeGodotProject,
 } from '../helpers/godotProjectHelpers';
 import { hoverText } from '../../languageFeatures/sharedAnswersSuite.testkit';
+import { quickFixesAt } from '../../quickFixes';
 
 const PROJECT = 'language-features';
 
@@ -171,14 +172,14 @@ suite('Language Features', () => {
   test('a property-name typo offers a quick fix with an edit', async () => {
     const typo = await openProjectDocument(PROJECT, 'typo.tscn');
     const line = lineStartingWith(typo, 'mash =');
-    const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-      'vscode.executeCodeActionProvider',
-      typo.uri,
-      new vscode.Range(line, 0, line, 4)
+    const offersMesh = (action: vscode.CodeAction) => action.title.includes('mesh');
+    const actions = await quickFixesAt(typo.uri, new vscode.Range(line, 0, line, 4), (fixes) =>
+      fixes.some(offersMesh)
     );
 
-    const fix = actions.find((action) => action.title.includes('mesh'));
-    assert.ok(fix?.edit, 'a quick fix carries an edit');
+    const fix = actions.find(offersMesh);
+    const titles = actions.map((action) => action.title).join(', ');
+    assert.ok(fix?.edit, `expected a 'mesh' quick fix with an edit, found: ${titles}`);
   });
 });
 

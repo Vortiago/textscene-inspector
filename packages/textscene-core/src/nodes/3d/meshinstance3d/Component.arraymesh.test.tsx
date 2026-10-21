@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider, ResourceLoader } from '../../../index';
 import { decodeArrayMeshTres } from '../../../resources/testing/decodeArrayMeshTres';
-import { buildArrayMeshGeometry } from '../../../resources/meshes/arraymesh/build';
+import { godotSurfacesGeometry } from '../../../resources/meshes/godotSurface';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
@@ -101,7 +101,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     const loader = loaderServing({ [WALL_PATH]: WALL_TRES });
     const mesh = decodeArrayMeshTres(WALL_TRES, WALL_PATH);
     const resource: ArrayMeshResource = {
-      geometry: buildArrayMeshGeometry(mesh),
+      geometry: godotSurfacesGeometry(mesh.surfaces),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
       aabb: EMPTY_AABB,
@@ -128,7 +128,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
     const loader = loaderServing({ [WALL_PATH]: COMPRESSED_TRES });
     const mesh = decodeArrayMeshTres(COMPRESSED_TRES, WALL_PATH);
     const resource: ArrayMeshResource = {
-      geometry: buildArrayMeshGeometry(mesh),
+      geometry: godotSurfacesGeometry(mesh.surfaces),
       materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
       surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
       aabb: EMPTY_AABB,
@@ -232,7 +232,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   });
 
   it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {
-    // `buildPrimitiveMeshGeometry` has no ArrayMesh case, so falling through would
+    // `primitiveMeshGeometry` has no ArrayMesh case, so falling through would
     // draw nothing and report nothing.
     const loader = loaderServing();
     const renderer = await ReactThreeTestRenderer.create(
@@ -368,10 +368,10 @@ describe('<MeshInstance3D> external PrimitiveMesh', () => {
     expect((mesh.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xff0000);
   });
 
-  it('draws nothing for a mesh type with no slice here', async () => {
+  it('draws the placeholder for a mesh type no slice here builds', async () => {
     const mesh = await renderCrate({
-      [WALL_PATH]: '[gd_resource type="PlaceholderMesh" format=3]\n\n[resource]\n',
+      [WALL_PATH]: '[gd_resource type="TextMesh" format=3]\n\n[resource]\n',
     });
-    expect(mesh.geometry.getAttribute('position')).toBeUndefined();
+    expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });
 });

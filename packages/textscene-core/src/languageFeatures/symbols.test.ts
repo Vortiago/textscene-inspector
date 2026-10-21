@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
 import { documentSymbols } from './symbols';
+import { INSTANCED_TREE } from './fixtures.testkit';
 import type { DocumentSymbol } from './types';
 
 const SCENE = `[gd_scene format=3]
@@ -94,5 +95,60 @@ describe('documentSymbols', () => {
     const symbols = documentSymbols(new LanguageDocument(orphan));
 
     expect(symbols.map((symbol) => symbol.name)).toEqual(['Loose']);
+  });
+});
+
+describe('documentSymbols with two siblings sharing a name', () => {
+  it('nests a child under the later sibling, the one its parent= reaches', () => {
+    // A running game's child lookup keeps the later of two same-named siblings (node.cpp:1656).
+    const document = new LanguageDocument(
+      [
+        '[node name="Root" type="Node3D"]',
+        '[node name="A" type="Node3D" parent="."]',
+        '[node name="A" type="Node2D" parent="."]',
+        '[node name="B" type="Node3D" parent="A"]',
+      ].join('\n')
+    );
+    const [first, second] = only(documentSymbols(document)).children;
+    expect([first?.children.length, second?.children.map(({ name }) => name)]).toEqual([0, ['B']]);
+  });
+});
+
+describe('documentSymbols under a %Name parent', () => {
+  const UNIQUE_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Player" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="Hand" type="Node3D" parent="%Player"]
+
+[node name="Mesh" type="MeshInstance3D" parent="%Player/Hand"]
+`;
+
+  it('nests a node under the node that claims the name', () => {
+    const root = only(documentSymbols(new LanguageDocument(UNIQUE_SCENE)));
+    const player = only(root.children);
+
+    expect(only(only(player.children).children).name).toBe('Mesh');
+  });
+});
+
+describe('documentSymbols with a nameless root', () => {
+  it('lists the root children while the root heading has no name yet', () => {
+    const source = SCENE.replace('[node name="Root" type="Node3D"]', '[node type="Node3D"]');
+
+    expect(only(documentSymbols(new LanguageDocument(source))).name).toBe('Player');
+  });
+});
+
+describe('documentSymbols under an instanced scene', () => {
+  it('nests a node seated inside the instance under the instance node', () => {
+    const root = only(documentSymbols(new LanguageDocument(INSTANCED_TREE)));
+    const instance = only(root.children);
+
+    expect(instance.name).toBe('Inst');
+    expect(only(only(instance.children).children).name).toBe('Y');
   });
 });

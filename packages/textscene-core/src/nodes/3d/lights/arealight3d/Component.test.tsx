@@ -16,6 +16,15 @@ import { SceneStack } from '../../../../r3f/testing/SceneStack';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { TscnInternalResource } from '../../../../parser/types';
 import { areaTexturePlacement, updateAreaLightAtlas } from '../../../../r3f/areaLight/areaLightAtlas';
+import {
+  AREA_LIGHT_STATICS,
+  installLightBakeModeUniforms,
+  writeLightBakeModeUniforms,
+} from '../../../../r3f/lightBakeMode/lightBakeMode';
+import { sceneLights } from '../../../../r3f/directionalShadow/lightLists';
+import { slottedLights } from '../../../../r3f/lightSlots';
+import { litUniformArray } from '../../../../r3f/testing/litUniformArray';
+import { BakeMode, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 
 /** Where the atlas places a light that shows no texture. */
 function untexturedPlacement() {
@@ -28,6 +37,7 @@ function makeNode(overrides: Partial<AreaLight3DProperties> = {}): TscnNode {
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: LIGHT_3D_DEFAULTS.bakeMode,
     light_specular: 1,
     light_size: 0.5,
     shadow_enabled: false,
@@ -286,5 +296,18 @@ describe('<AreaLight3D> render layers', () => {
   it("carries the node's layers, which a ReflectionProbe cull_mask tests", async () => {
     const renderer = await ReactThreeTestRenderer.create(<AreaLight3D node={makeNode({ layers: 2 })} />);
     expect(visualLayersOf(renderer.scene.findByType('RectAreaLight').instance)).toBe(2);
+  });
+});
+
+describe('AreaLight3D light_bake_mode, which a lightmapped surface reads', () => {
+  it('flags a Static area light in its slot', async () => {
+    const r = await ReactThreeTestRenderer.create(
+      <AreaLight3D node={makeNode({ light_bake_mode: BakeMode.STATIC })} />
+    );
+    writeLightBakeModeUniforms(
+      slottedLights(sceneLights(r.scene.instance as THREE.Scene), new THREE.PerspectiveCamera())
+    );
+    installLightBakeModeUniforms();
+    expect(litUniformArray(AREA_LIGHT_STATICS)[0]).toBe(1);
   });
 });

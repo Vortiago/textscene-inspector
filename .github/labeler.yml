@@ -13,6 +13,7 @@ parser:
           - packages/textscene-core/src/parser/**
           - packages/textscene-core/src/**/parser.*
           - packages/textscene-core/src/resources/**/decode.*
+          - apps/textscene-tscn/**
 
 renderer:
   - changed-files:

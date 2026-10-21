@@ -1,6 +1,11 @@
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { CSGMesh3D } from './Component';
-import { csgMesh3DGeometry, csgMesh3DGeometryKey, csgMesh3DReadsFiles } from './csgGeometry';
+import {
+  csgMesh3DGeometry,
+  csgMesh3DGeometryKey,
+  csgMesh3DMeshType,
+  csgMesh3DReadsFiles,
+} from './csgGeometry';
 
 nodeComponentRegistry.register({
   typeName: 'CSGMesh3D',
@@ -10,5 +15,6 @@ nodeComponentRegistry.register({
     geometry: csgMesh3DGeometry,
     geometryKey: csgMesh3DGeometryKey,
     readsFiles: csgMesh3DReadsFiles,
+    meshType: csgMesh3DMeshType,
   },
 });

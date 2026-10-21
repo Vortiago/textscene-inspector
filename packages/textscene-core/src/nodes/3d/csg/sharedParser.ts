@@ -4,6 +4,7 @@
  * its own. Pure TS, so the parser closure stays React-free.
  */
 
+import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { finishCsgShapeParse } from './shapeParser';
 import type { CSGShapeFields } from './types';
 
@@ -12,7 +13,7 @@ export function finishCsgParse(
   result: CSGShapeFields & { materialPath?: string },
   properties: Record<string, string>
 ): void {
-  if (properties.material) {
+  if (holdsResource(properties.material)) {
     result.materialPath = properties.material;
   }
 

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseIdTrail, parseUniqueId, recoverByIdTrail, type IdHeading } from './packedScene.js';
+import {
+  parseIdTrail,
+  parseUniqueId,
+  recoverByIdTrail,
+  reparentedName,
+  type IdHeading,
+} from './packedScene.js';
 
 describe('parseIdTrail', () => {
   it('reads the ids of a PackedInt32Array', () => {
@@ -26,7 +32,7 @@ describe('parseIdTrail', () => {
     expect(parseIdTrail('PackedInt32Array(-5)')).toEqual([-5]);
   });
 
-  it.each(['PackedInt32Array(1, x)', 'PackedInt32Array(1,, 2)', '[1, 2]', ''])(
+  it.each(['PackedInt32Array(1, x)', 'PackedInt32Array(1,, 2)', 'PackedInt32Array(true)', '[1, 2]', ''])(
     'reports no trail for %j',
     (literal) => {
       expect(parseIdTrail(literal)).toBeUndefined();
@@ -47,6 +53,11 @@ describe('parseUniqueId', () => {
     ['2.9', 2],
   ])('reads %s as the %i Godot 4.6.3 stores', (literal, stored) => {
     expect(parseUniqueId(literal)).toBe(stored);
+  });
+
+  it('reads a bool as the 1 or 0 the int conversion stores (edge case)', () => {
+    // `unique_id = next_tag.fields["unique_id"]` (resource_format_text.cpp:214-215) is Variant's `operator int`.
+    expect([parseUniqueId('true'), parseUniqueId('false')]).toEqual([1, 0]);
   });
 
   it.each([undefined, '', 'abc'])('reads %j as unassigned', (literal) => {
@@ -106,5 +117,27 @@ describe('recoverByIdTrail', () => {
   it('reports the instance a middle hop names, as the rest lives in its scene', () => {
     const instance: IdHeading = { uniqueId: 10, instance: 'scene', isPlaced: true };
     expect(recoverByIdTrail([10, 5], [instance, orphan], 1)).toEqual({ kind: 'inBase', heading: 0 });
+  });
+});
+
+describe('reparentedName', () => {
+  it('joins the vanished path and the name with `#`', () => {
+    expect(reparentedName('Gone', 'Orphan')).toBe('Gone#Orphan');
+  });
+
+  it('strips a leading `./`, which the loader prepends to a relative path', () => {
+    expect(reparentedName('./Gone', 'Orphan')).toBe('Gone#Orphan');
+  });
+
+  it('turns `/` into `@`, which `set_name` then replaces with `_`', () => {
+    expect(reparentedName('Gone/Deeper', 'Name')).toBe('Gone_Deeper#Name');
+  });
+
+  it('ignores a trailing slash, which the NodePath drops (edge case)', () => {
+    expect(reparentedName('Gone/', 'Leaf')).toBe('Gone#Leaf');
+  });
+
+  it('keeps the root of an absolute path as `_` (edge case)', () => {
+    expect(reparentedName('/root/Gone', 'Leaf')).toBe('___root_Gone#Leaf');
   });
 });

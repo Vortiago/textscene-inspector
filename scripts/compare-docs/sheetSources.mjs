@@ -8,14 +8,12 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { NODES_ROOT } from '../new-node-slice/paths.mjs';
 
 export { REPO_ROOT };
 
 /** Slice roots, walked for `comparison.md`. */
-const SLICE_ROOTS = [
-  join(REPO_ROOT, 'packages/textscene-core/src/nodes'),
-  join(REPO_ROOT, 'packages/textscene-core/src/resources'),
-];
+const SLICE_ROOTS = [NODES_ROOT, join(REPO_ROOT, 'packages/textscene-core/src/resources')];
 
 /** The whole-scene showcases, read as plain `*.md`. */
 const LOOSE_SHEETS_DIR = join(REPO_ROOT, 'docs/comparison/sheets');
@@ -125,6 +123,9 @@ let sceneIndex = null;
 export function findScene(fixture) {
   const direct = join(SCENES_DIR, fixture);
   if (existsSync(direct)) return direct;
+  // A fixture project (`touch-screen-button/unit-touch-screen-button.tscn`) keeps its folder in the id.
+  const inFixtures = join(SCENES_DIR, 'fixtures', fixture);
+  if (existsSync(inFixtures)) return inFixtures;
   if (fixture.includes('/')) {
     // copy-fixtures flattens these roots onto public/fixtures, so an id keeps
     // its res:// subpath (`decorations/candle.tscn`). This undoes it for Godot.
@@ -136,10 +137,8 @@ export function findScene(fixture) {
     return null;
   }
 
-  // A bare name is a unit fixture first; only then a corpus scene elsewhere in
+  // A bare name is a unit fixture first (checked above); only then a corpus scene elsewhere in
   // the tree. Order matters when a basename occurs twice.
-  const inFixtures = join(SCENES_DIR, 'fixtures', fixture);
-  if (existsSync(inFixtures)) return inFixtures;
   if (!sceneIndex) {
     sceneIndex = new Map();
     const walk = (dir) => {

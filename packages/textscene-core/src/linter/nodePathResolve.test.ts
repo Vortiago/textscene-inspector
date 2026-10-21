@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { resolveNodePath } from './nodePathResolve.js';
+import { StrictTscnParser } from './StrictTscnParser.js';
 import { byName } from './testing/sceneNodes.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 
@@ -128,15 +129,21 @@ describe('resolveNodePath', () => {
   // The flag arrives as the raw literal `'true'` from either parser, so every
   // case below spells it that way.
   describe('%unique names (node.cpp:1930-1938)', () => {
-    const withUnique = () =>
-      node('Root', [
-        node('Deep', [node('Marker', [], { rawProperties: { unique_name_in_owner: 'true' } })]),
-        node('Other'),
-      ]);
+    // A `%Name` reads the root's claim table, which only the seating of a parse holds.
+    const parsed = (...headings: string[]): { scene: RawScene; tree: RawNode } => {
+      const { scene } = new StrictTscnParser().parse(
+        ['[node name="Root" type="Node3D"]', ...headings].join('\n')
+      );
+      return { scene: scene!, tree: scene!.nodes[0]! };
+    };
 
     it('resolves from anywhere, since the owner holds the map', () => {
-      const tree = withUnique();
-      const scene = sceneOf(tree);
+      const { scene, tree } = parsed(
+        '[node name="Deep" type="Node3D" parent="."]',
+        '[node name="Marker" type="Node3D" parent="Deep"]',
+        'unique_name_in_owner = true',
+        '[node name="Other" type="Node3D" parent="."]'
+      );
       expect(resolveNodePath(scene, byName([tree], 'Other'), '%Marker')).toEqual({
         status: 'found',
         node: byName([tree], 'Marker'),
@@ -146,11 +153,24 @@ describe('resolveNodePath', () => {
     // A node named Marker without the flag claims nothing: the map is keyed by
     // `_acquire_unique_name_in_owner`, not by name.
     it('is missing when no node claims the unique name', () => {
-      const tree = node('Root', [node('Marker'), node('Other')]);
-      const scene = sceneOf(tree);
+      const { scene, tree } = parsed(
+        '[node name="Marker" type="Node3D" parent="."]',
+        '[node name="Other" type="Node3D" parent="."]'
+      );
       expect(resolveNodePath(scene, byName([tree], 'Other'), '%Marker')).toEqual({
         status: 'missing',
       });
+    });
+
+    it('declines a %name read from a node an instance owns, whose table its sub-scene fills', () => {
+      // The reached node's owner table is read (node.cpp:1930-1933), and `owner=` names it.
+      const { scene, tree } = parsed(
+        '[node name="Inst" parent="." instance=ExtResource("1")]',
+        '[node name="Added" type="Node3D" parent="Inst" owner="Inst"]',
+        '[node name="Marker" type="Node3D" parent="."]',
+        'unique_name_in_owner = true'
+      );
+      expect(resolveNodePath(scene, tree, 'Inst/Added/%Marker')).toEqual({ status: 'unknowable' });
     });
 
     // `owned_unique_nodes` is read on the node the walk has reached before the
@@ -167,11 +187,12 @@ describe('resolveNodePath', () => {
     });
 
     it('continues walking below the unique node', () => {
-      const tree = node('Root', [
-        node('Rig', [node('Hand')], { rawProperties: { unique_name_in_owner: 'true' } }),
-        node('Other'),
-      ]);
-      const scene = sceneOf(tree);
+      const { scene, tree } = parsed(
+        '[node name="Rig" type="Node3D" parent="."]',
+        'unique_name_in_owner = true',
+        '[node name="Hand" type="Node3D" parent="Rig"]',
+        '[node name="Other" type="Node3D" parent="."]'
+      );
       expect(resolveNodePath(scene, byName([tree], 'Other'), '%Rig/Hand')).toEqual({
         status: 'found',
         node: byName([tree], 'Hand'),
@@ -261,5 +282,25 @@ describe('resolveNodePath', () => {
       const a = byName([tree], 'A');
       expect(resolveNodePath(scene, a, ':position')).toEqual({ status: 'found', node: a });
     });
+  });
+});
+
+describe('a %Name two headings claim', () => {
+  it('reaches the one declared first, as instantiate claims in file order (packed_scene.cpp:565-570)', () => {
+    const { scene } = new StrictTscnParser().parse(
+      [
+        '[node name="Root" type="Node3D"]',
+        '[node name="P" type="Node3D" parent="."]',
+        '[node name="Q" type="Node3D" parent="."]',
+        '[node name="X" type="Node3D" parent="Q"]',
+        'unique_name_in_owner = true',
+        '[node name="X" type="Node3D" parent="P"]',
+        'unique_name_in_owner = true',
+      ].join('\n')
+    );
+    const root = scene!.nodes[0]!;
+    const q = root.children[1]!;
+
+    expect(resolveNodePath(scene!, root, '%X')).toEqual({ status: 'found', node: q.children[0] });
   });
 });

@@ -23,6 +23,6 @@ describe('RayCast2D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('RayCast2D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('RayCast2D')).toBe('transform-only');
   });
 });

@@ -23,7 +23,7 @@ export function Path3D({ node, children }: NodeComponentProps) {
   const gizmoVisible = useGizmoVisible();
 
   // Godot 3D space is three.js space (right-handed Y-up), so curve points need no conjugation,
-  // unlike the 2D twin. A missing, ExtResource (.tres) or unfound curve gives a null sampler:
+  // unlike the 2D twin. A missing, ExtResource or unfound curve gives a null sampler:
   // no gizmo, and children keep their authored transform.
   const sampler = useMemo<Curve3DSampler | null>(() => {
     const points = resolveCurve3D(props.curve, internalResources);

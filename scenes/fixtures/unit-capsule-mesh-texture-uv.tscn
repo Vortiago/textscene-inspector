@@ -1,0 +1,36 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitcapsulemeshtextureuv"]
+
+; The one variable: where a texture lands on a CapsuleMesh. The stepped gradient runs red, green,
+; blue along the U + V diagonal, and Godot gives the top cap, the cylinder and the bottom cap a
+; third of V each. The second capsule is as tall as it is wide, so its cylinder has no height.
+; Every other CapsuleMesh scene draws a flat colour, where the UV layout is invisible.
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_tall"]
+material = SubResource("StandardMaterial3D_uv")
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_round"]
+material = SubResource("StandardMaterial3D_uv")
+height = 1.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Tall" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.7, 0, 0)
+mesh = SubResource("CapsuleMesh_tall")
+
+[node name="Round" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0, 0)
+mesh = SubResource("CapsuleMesh_round")

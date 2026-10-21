@@ -18,6 +18,15 @@ describe('Base Light Parser', () => {
       expect(result.light_volumetric_fog_energy).toBeUndefined();
     });
 
+    it('reads light_bake_mode, Dynamic by default as light_3d.h:85 sets it', () => {
+      expect(parseBaseLightWithNormalBias({ light_bake_mode: '1' }).light_bake_mode).toBe(1);
+      expect(parseBaseLightWithNormalBias({}).light_bake_mode).toBe(2);
+    });
+
+    it('reads an unreadable light_bake_mode as Dynamic (error case)', () => {
+      expect(parseBaseLightWithNormalBias({ light_bake_mode: 'static' }).light_bake_mode).toBe(2);
+    });
+
     it('reads the VisualInstance3D layers, which a ReflectionProbe cull_mask tests', () => {
       expect(parseBaseLightWithNormalBias({ layers: '2' }).layers).toBe(2);
       expect(parseBaseLightWithNormalBias({}).layers).toBe(1);

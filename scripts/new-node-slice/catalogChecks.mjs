@@ -4,13 +4,13 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { REPO_ROOT, fail } from './paths.mjs';
+import { fail } from './paths.mjs';
+import { CATALOG_OUT } from '../compare-docs/build-node-catalog/paths.mjs';
 
 /** The node catalog `pnpm nodes:catalog` derived from ClassDB, read once per invocation. */
 let cached;
 function loadCatalog() {
-  cached ??= JSON.parse(readFileSync(join(REPO_ROOT, 'scripts/compare-docs/node-catalog.json'), 'utf8'));
+  cached ??= JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
   return cached;
 }
 

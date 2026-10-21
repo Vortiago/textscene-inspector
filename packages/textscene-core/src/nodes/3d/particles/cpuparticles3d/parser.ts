@@ -1,8 +1,9 @@
 /** The render parse of a CPUParticles3D: its instance state and what its box reads. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
-import { holdsResource } from '../../../../godot/scene/geometryBase';
-import { parseBox, parseGeometryInstance3D } from '../../geometryinstance3d/parser';
+import { holdsResource } from '../../../../godot/scene/resourceLiteral';
+import { parseNonEmptyAabb } from '../../../../parser/valueParsers';
+import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import type { CPUParticles3DProperties } from './types';
 
 export function parseCPUParticles3D(
@@ -11,7 +12,7 @@ export function parseCPUParticles3D(
 ): CPUParticles3DProperties {
   return {
     ...parseGeometryInstance3D(heading, properties),
-    visibilityAabb: parseBox(properties.visibility_aabb, 'visibility_aabb'),
+    visibilityAabb: parseNonEmptyAabb(properties.visibility_aabb, 'visibility_aabb'),
     hasMesh: holdsResource(properties.mesh),
   };
 }

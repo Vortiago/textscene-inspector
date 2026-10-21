@@ -34,6 +34,7 @@
 
 import type * as THREE from 'three';
 import { applyCsgNormals, type CsgFaceSoup } from '../smoothNormals';
+import { TAU } from '../../../../godot/math/math.js';
 
 interface CsgTorusSpec {
   innerRadius: number;
@@ -96,8 +97,8 @@ export function buildCsgTorusGeometry(spec: CsgTorusSpec): THREE.BufferGeometry 
     // float. The normal accumulation keys on position, so a seam off by one ulp would
     // stop smoothing across it and leave a visible crease.
     const inciN = i === sides - 1 ? 0 : (i + 1) / sides;
-    const angi = inci * Math.PI * 2;
-    const angiN = inciN * Math.PI * 2;
+    const angi = inci * TAU;
+    const angiN = inciN * TAU;
 
     // The ring sweeps in XZ, so the hole axis is +Y.
     const ni: [number, number] = [Math.cos(angi), Math.sin(angi)];
@@ -106,8 +107,8 @@ export function buildCsgTorusGeometry(spec: CsgTorusSpec): THREE.BufferGeometry 
     for (let j = 0; j < ringSides; j++) {
       const incj = j / ringSides;
       const incjN = j === ringSides - 1 ? 0 : (j + 1) / ringSides;
-      const angj = incj * Math.PI * 2;
-      const angjN = incjN * Math.PI * 2;
+      const angj = incj * TAU;
+      const angjN = incjN * TAU;
 
       // Cross-section in (radial distance, Y), offset out to the ring centre.
       const nj: [number, number] = [Math.cos(angj) * tube + centre, Math.sin(angj) * tube];

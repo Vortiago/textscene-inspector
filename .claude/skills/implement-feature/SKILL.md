@@ -89,9 +89,11 @@ switch.
   line cited beside each bound. Scalars get hint-tier warnings, not only the `_enabled` booleans.
 - **Mesh primitive**: a slice under `resources/meshes/<type>/` with `decode.ts`, `build.ts` and an
   `index.ts` calling `registerGenericResourceSlice`, imported from
-  `resources/sliceRegistrations.ts`. Add a `BUILDERS` entry in
-  `nodes/3d/meshinstance3d/primitiveMeshGeometry.ts`, so MeshInstance3D and CSGMesh3D share one
-  construction. QuadMesh builds through PlaneMesh's geometry.
+  `resources/sliceRegistrations.ts`. `build.ts` ports Godot's `create_mesh_array` into a
+  `GodotSurface` through `primitivemesh/surfaceWriter.ts`. Add a `BUILDERS` entry in
+  `resources/meshes/primitivemesh/surface.ts`, so MeshInstance3D and CSGMesh3D share one
+  construction. QuadMesh builds through PlaneMesh's builder. A type whose builder writes no UV2,
+  as PlaneMesh's does not, adds its lightmap size hint to `FALLBACK_UV2_HINTS` there.
 - **Resource type**: `resources/<category>/<type>/` with `index.ts` (`registerResourceSlice`:
   type names, extensions, bus tag), `decode.ts`, `build.ts` where THREE
   construction exists, `types.ts`, and a registration test. Import the `index.ts` from

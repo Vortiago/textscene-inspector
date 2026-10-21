@@ -5,10 +5,11 @@
  * goes through one, so `boundGrounding.test.ts` can sweep the live registry.
  */
 
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import type { Severity } from '../../types.js';
 import { propertyError } from '../propertyError.js';
-import { parseGodotFloat, type EnforcedEnd } from '../commonValidators.js';
+import { type EnforcedEnd } from '../commonValidators.js';
 import { valueCode } from './codes.js';
 
 /**
@@ -96,7 +97,7 @@ function withLiteralGuard(
   requirement: string
 ): PropertyValidator {
   const guarded: PropertyValidator = (key, value, line) => {
-    const parsed = parseGodotFloat(value);
+    const parsed = scalarSlotValue(value);
     if (parsed !== null && refuses(parsed)) {
       return propertyError(
         key,
@@ -196,7 +197,7 @@ export function ground(
   // carrying only one is bounded and owes a citation.
   const isBounded = hasMin || hasMax || bounds.enforcedMin !== undefined || bounds.enforcedMax !== undefined;
   // Here, not in the range factories: every combinator passes through this
-  // function, including those built from an inline arrow, such as `v.strictInt`.
+  // function, including those built from an inline arrow, such as `v.enumInt`.
   if (isBounded) {
     validator.bounds = bounds;
     // The tier of the outer end, the hint's, for a value between it and the

@@ -85,7 +85,9 @@ describe('slotValues', () => {
     scene.add(spot, point, directional);
     const valueOf = { directional: 1, sun: 2, point: 3, spot: 4 };
 
-    expect(slotValues(sceneLights(scene), camera, (_light, kind) => valueOf[kind])).toEqual([1, 2, 3, 4]);
+    expect(slotValues(slottedLights(sceneLights(scene), camera), (_light, kind) => valueOf[kind])).toEqual([
+      1, 2, 3, 4,
+    ]);
   });
 
   it('hands each value its own light', () => {
@@ -94,11 +96,13 @@ describe('slotValues', () => {
     shadowed.castShadow = true;
     scene.add(plain, shadowed);
 
-    expect(slotValues(sceneLights(scene), camera, (light) => (light === shadowed ? 7 : 0))).toEqual([7, 0]);
+    expect(
+      slotValues(slottedLights(sceneLights(scene), camera), (light) => (light === shadowed ? 7 : 0))
+    ).toEqual([7, 0]);
   });
 
   it('answers no values for a scene without lights (edge case)', () => {
-    expect(slotValues(sceneLights(new THREE.Scene()), camera, () => 1)).toEqual([]);
+    expect(slotValues(slottedLights(sceneLights(new THREE.Scene()), camera), () => 1)).toEqual([]);
   });
 });
 

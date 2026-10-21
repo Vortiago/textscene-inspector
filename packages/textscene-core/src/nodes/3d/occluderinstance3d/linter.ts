@@ -17,7 +17,7 @@ const arms = {
 
 // Not ported: the `use_occlusion_culling` project setting needs `project.godot`. The
 // occluder vertex-count warnings need the referenced resource, usually an external
-// `.occ` or `.tres` this repo never reads, and occlusion culling only affects
+// `.occ` or `.tres` the linter never opens, and occlusion culling only affects
 // performance, which the previewer never simulates.
 function checkOccluderInstance3D(context: RuleContext): Diagnostic[] {
   const { node } = context;

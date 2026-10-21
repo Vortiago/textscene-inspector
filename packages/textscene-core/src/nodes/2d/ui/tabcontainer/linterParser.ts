@@ -8,13 +8,17 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { FOCUS_MODE_HINT_NAMES } from '../../../../godot/scene/control.js';
 import {
   TAB_BAR_ALIGNMENT_HINT_NAMES,
   TAB_CONTAINER_TABS_POSITION_NAMES,
 } from '../../../../godot/scene/tabs.js';
-import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
+import {
+  propertyListFamilyKey,
+  propertyListFamilyValidator,
+} from '../../../../linter/validators/indexedFamily.js';
+import { TAB_CONTAINER_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 
 /** The `tab_<idx>/<leaf>` leaves: the four `register_property` calls at tab_container.cpp:1272-1275. */
 const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
@@ -29,14 +33,10 @@ const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   hidden: v.boolean('hidden'),
 };
 
-const tabValidator = indexedFamilyValidator({
-  prefix: 'tab_',
+const tabValidator = propertyListFamilyValidator(TAB_CONTAINER_TABS, {
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TABCONTAINER_TAB_KEY',
   describes: 'tab',
-  // `_set` is `property_helper.property_set_value`, which drops an index that fails
-  // `is_valid_int()` (property_list_helper.cpp:53-55), as in TabBar's family.
-  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_TABCONTAINER_TAB_INDEX',
@@ -104,5 +104,5 @@ validatorRegistry.registerAll('TabContainer', {
   deselect_enabled: v.boolean('deselect_enabled'),
 
   // tab_container.cpp:1270-1276: see tabValidator.
-  'tab_#/*': tabValidator,
+  [propertyListFamilyKey(TAB_CONTAINER_TABS)]: tabValidator,
 });

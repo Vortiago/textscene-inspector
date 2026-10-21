@@ -56,8 +56,8 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // chain_ik_3d.cpp:127, INT, PROPERTY_HINT_NONE, PROPERTY_USAGE_NO_EDITOR, which is storage
   // (object.h:132). set_root_bone rewrites anything below -1 to the unset -1 (:186-188), and
   // _validate_bone_names (:379-383) re-runs it on the first skeleton update. The live bone count is
-  // the ceiling. `strictInt`: Variant conversion would truncate a decimal.
-  root_bone: v.strictInt('root_bone', { min: -1, enforced: 'chain_ik_3d.cpp:186-188' }),
+  // the ceiling. `v.int` warns on a decimal, which Variant conversion truncates.
+  root_bone: v.int('root_bone', { min: -1, enforced: 'chain_ik_3d.cpp:186-188' }),
 
   // chain_ik_3d.cpp:128, same hint and same non-constraint as root_bone_name.
   // set_end_bone_name is :203.
@@ -65,7 +65,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
   // chain_ik_3d.cpp:129. set_end_bone (:223-225) applies the identical clamp to
   // -1, re-run from _validate_bone_names (:385-388).
-  end_bone: v.strictInt('end_bone', { min: -1, enforced: 'chain_ik_3d.cpp:223-225' }),
+  end_bone: v.int('end_bone', { min: -1, enforced: 'chain_ik_3d.cpp:223-225' }),
 
   // chain_ik_3d.cpp:130, Variant::BOOL. set_extend_end_bone (:241) assigns.
   extend_end_bone: v.boolean('extend_end_bone'),
@@ -86,7 +86,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // carries STORAGE (object.h:131). set_joint_count refuses a negative (:333). `setting_count` is the
   // subclasses' (iterate_ik_3d.cpp:398, spline_ik_3d.cpp:185), with the floor in `_set_setting_count`
   // (ik_modifier_3d.h:98).
-  joint_count: v.strictInt('joint_count', { min: 0, enforced: 'chain_ik_3d.cpp:333' }),
+  joint_count: v.int('joint_count', { min: 0, enforced: 'chain_ik_3d.cpp:333' }),
 };
 
 /** `what = get_slicec('/', 2)` (chain_ik_3d.cpp:38). */

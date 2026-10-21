@@ -11,6 +11,9 @@ export const MATERIAL_SCENES = [
   // A normal map with blue 0: Godot rebuilds blue from red and green, so the flat texel shades as the
   // bare plane. A read of the stored blue turns that half dark.
   { name: 'material-normal-map-blue', file: 'unit-material-normal-map-blue.tscn' },
+  // A 2 by 4 quad, so the UV density differs per axis: each texel tilts by its authored angle on
+  // both axes. A tangent frame scaled by the longer axis shades the X tilts flatter.
+  { name: 'material-normal-map-uv-density', file: 'unit-material-normal-map-uv-density.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
@@ -47,6 +50,9 @@ export const MATERIAL_SCENES = [
   // Sprite2D, Sprite3D and 3D physics bodies.
   { name: 'sprite2d', file: 'unit-sprite2d.tscn', mode: '2d' },
   { name: 'sprite3d', file: 'unit-sprite3d.tscn' },
+  // The one scene with a Sprite3D that has no texture. Godot's draw drops the mesh for both an unset
+  // and a null texture (sprite_3d.cpp:798), so neither shows a placeholder between the anchors.
+  { name: 'sprite3d-untextured', file: 'unit-sprite3d-untextured.tscn' },
   // An AtlasTexture crop of a normal-map sheet, minified: Godot samples the sheet's renormalised
   // chain, so the crop draws the same 45-degree colour as the sheet. An unnormalised crop draws duller.
   { name: 'atlastexture-normal-mipmap', file: 'unit-atlastexture-normal-mipmap.tscn', mode: '2d' },
@@ -76,6 +82,9 @@ export const MATERIAL_SCENES = [
     name: 'glb-surface-material-override',
     file: 'unit-glb-surface-material-override.tscn',
   },
+  // A `.glb` primitive with no glTF material, lit and not overridden: the importer's own
+  // non-metallic StandardMaterial3D.
+  { name: 'glb-default-material', file: 'unit-glb-default-material.tscn' },
   // An emission map drawn through the UV2 Godot's importer unwrapped into the `.glb`'s unwrap
   // cache, the only scene that samples UV2. Each face shows its own patch of the gradient bands.
   { name: 'glb-lightmap-uv2', file: 'unit-glb-lightmap-uv2.tscn' },

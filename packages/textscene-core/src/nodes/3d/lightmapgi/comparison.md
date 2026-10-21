@@ -1,15 +1,15 @@
 ---
 type: LightmapGI
 category: 3D
-status: unimplemented
-fixture: unit-lightmap-gi.tscn
-# image: unit-lightmap-gi
-renders_as: invisible transform-only fallback
+status: limitation
+fixture: unit-lightmap-gi-baked.tscn
+image: unit-lightmap-gi-baked
+renders_as: the baked lightmap on each mesh its data names
 ---
 
 # LightmapGI
 
-Bakes static global illumination into a lightmap atlas and applies it from `light_data` at runtime. The previewer neither bakes nor applies lightmap data yet, so the node is an invisible transform-only fallback and its children still show.
+Applies a lightmap baked in Godot. Each mesh its `light_data` names reads its light from the bake's atlas through its second UV, in place of its ambient light. A Static light no longer lights that mesh in real time. The previewer reads the bake. It does not bake.
 
 ## Linting
 
@@ -47,8 +47,11 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A `bounces = "banana"` or `max_texture_size = -5` sits untouched in the raw property bag, with no warning and no substitution.
+The lenient parser reads `light_data` as written and leaves the bake settings in the raw property bag, since only a bake reads them. A `light_data` that resolves to no LightmapGIData, such as `light_data = 3`, applies no lightmap and logs nothing.
 
 ## Known limitations
 
-- **Not drawn** Godot lights surfaces from the baked lightmap, but here only the live lights apply.
+- **Not drawn** An object the bake does not name keeps its ambient light, where Godot lights it from the bake's light probes.
+- **Not drawn** The baked shadowmask is not read, so `shadowmask_mode` changes nothing.
+- **Approximated** The atlas is read at full float precision, where Godot reads its VRAM-compressed import, so a soft shadow edge can differ by a few levels.
+- **Not drawn** A glTF mesh whose UV2 Godot unwraps on import reads no lightmap when the project does not commit the `.unwrap_cache` that holds that UV2.

@@ -5,7 +5,7 @@
  * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -41,6 +41,7 @@ import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstan
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
 import { clamp } from '../../../godot/math/math';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 /** The sprite material's own PBR uniforms (`sprite_3d.cpp:721-722`). */
 const SHADED_SCALARS = { metalness: 0, roughness: 1 } as const;
@@ -151,7 +152,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   const geometry = useMemo(() => spriteQuadGeometry(rect, properties.axis), [rect, properties.axis]);
   // `geometry` goes through `<primitive>`, which R3F does not auto-dispose, so this releases the
   // GPU buffers on replacement and unmount.
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   // Descendants ride in a sibling group with the same transform, not inside the quad: in Godot
   // `billboard` is a shader-side effect that never spins the node's children. Every branch below
@@ -162,23 +163,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         {children}
       </group>
     );
-
-  // No texture referenced: a stub placeholder shows the sprite node exists. The linter flags this
-  // as `sprite3d-requires-texture`.
-  if (!properties.texture) {
-    return (
-      <>
-        <MissingResourcePlaceholder
-          shape="plane"
-          name={node.name}
-          position={position}
-          rotation={rotation}
-          scale={scale}
-        />
-        {subtree}
-      </>
-    );
-  }
 
   // Texture failed to load: a magenta-quad placeholder. The DOM `<MissingResourcesPanel>` names the
   // path.
@@ -197,8 +181,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     );
   }
 
-  // Pending: nothing visible until `useTexture2D` picks the texture up on a later render, once the
-  // host provides the file.
+  // No texture draws nothing (`sprite_3d.cpp:798`), and so does one still pending: `useTexture2D`
+  // picks it up on a later render, once the host provides the file.
   if (!displayedTexture) {
     return (
       <>

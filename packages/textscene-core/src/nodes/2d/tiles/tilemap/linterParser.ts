@@ -29,11 +29,11 @@ const LAYER_LEAVES: Readonly<Record<LayerLeaf, PropertyValidator>> = {
   // tile_map.cpp:1034, Variant::INT, PROPERTY_HINT_NONE "suffix:px". A plain
   // display origin: TileMapLayer::set_y_sort_origin (tile_map_layer.cpp:3321)
   // is a bare assignment past an equality early-out.
-  y_sort_origin: v.strictInt('y_sort_origin'),
+  y_sort_origin: v.int('y_sort_origin'),
   // tile_map.cpp:1035, Variant::INT. set_layer_z_index forwards to CanvasItem's
   // own z_index setter, whose ERR_FAIL_COND against CANVAS_ITEM_Z_MIN/MAX
   // (canvas_item.cpp:668) is enforced.
-  z_index: v.strictInt('z_index', {
+  z_index: v.int('z_index', {
     min: CANVAS_ITEM_Z_MIN,
     max: CANVAS_ITEM_Z_MAX,
     enforced: 'canvas_item.cpp:668',
@@ -86,7 +86,7 @@ validatorRegistry.registerAll('TileMap', {
   // layer's setter re-enforces it. No setter checks the hint's 128 ceiling
   // (tile_map.cpp:996), so it warns. TileMapLayer's own rendering_quadrant_size
   // has no RANGE hint (tilemaplayer/linterParser.ts).
-  rendering_quadrant_size: v.strictInt('rendering_quadrant_size', {
+  rendering_quadrant_size: v.int('rendering_quadrant_size', {
     min: 1,
     max: 128,
     enforced: { min: 'tile_map.cpp:224' },

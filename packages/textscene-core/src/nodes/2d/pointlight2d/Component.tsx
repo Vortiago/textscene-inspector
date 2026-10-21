@@ -33,6 +33,7 @@ import { litQuadRenderOrder, ShadowVolumeMask } from '../../../r3f/lighting2d/Sh
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
 import type { Rgba } from '../../../godot/math/math';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 /** The quads a light draws besides its lit quad, each only when its material exists. */
 const OPTIONAL_ROLES = [
@@ -54,8 +55,8 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
     externalResources,
     internalResources
   );
-  const showPlaceholder = missing || !props.texture;
 
+  // With no texture the light adds nothing and draws no placeholder: measured with `pnpm ref:godot`.
   const lights = props.enabled && !!displayedTexture;
   // `canvas.glsl:806` shadows only an item whose `light_mask` meets `shadow_item_cull_mask`. With
   // no reached item meeting it, the shadow lands nowhere, so the light casts nothing.
@@ -97,7 +98,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
       node={node}
       props={props}
       body={() =>
-        !props.enabled ? null : showPlaceholder ? (
+        !props.enabled ? null : missing ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : displayedTexture ? (
           <QuadMesh
@@ -262,7 +263,7 @@ function QuadMesh({
   // Keyed on the texture, not on mount, so a light that stops being shadowed
   // (its occluders hidden, or the sub-scene carrying them swapped out) gives
   // the GL object back instead of holding it for the session.
-  useEffect(() => () => shadowMap?.dispose(), [shadowMap]);
+  useDisposeOnRelease(shadowMap);
 
   const sampling = useMemo<ShadowSampling | undefined>(() => {
     if (!shadowMap || !light) return undefined;

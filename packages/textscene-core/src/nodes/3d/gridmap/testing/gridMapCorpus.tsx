@@ -70,6 +70,10 @@ function tileSurface(
 }
 
 export interface GridMapCorpus {
+  /** The whole library `.tres`, in place of the one whose item 0 is the tile mesh. */
+  library?: string;
+  /** Further files the loader serves, by path. */
+  files?: Record<string, string>;
   /** Extra `item/0/…` lines for the library, such as `mesh_cast_shadow`. */
   itemLines?: string;
   /** The tile material's body, or null for a surface with no material. */
@@ -78,6 +82,8 @@ export interface GridMapCorpus {
   secondMaterialLines?: string | null;
   /** The body of the `cells` PackedInt32Array: three ints per cell. */
   cells?: string;
+  /** Further GridMap properties, such as `cell_scale`. */
+  gridMapProperties?: Record<string, string>;
   /** `[sub_resource]` blocks the material names, such as a texture, written before it. */
   subResources?: string;
   /** Wraps the GridMap inside the providers, such as a tiled-upload queue. */
@@ -94,7 +100,7 @@ export interface MountedGridMap {
 
 const EXT: TscnExternalResource[] = [{ id: '1_lib', path: LIBRARY_PATH, type: 'MeshLibrary' }];
 
-function gridMapNode(cells: string): TscnNode {
+function gridMapNode(cells: string, gridMapProperties: Record<string, string>): TscnNode {
   return {
     rawProperties: {},
     name: 'MyGridMap',
@@ -105,6 +111,7 @@ function gridMapNode(cells: string): TscnNode {
       {
         mesh_library: 'ExtResource("1_lib")',
         data: `{"cells": PackedInt32Array(${cells})}`,
+        ...gridMapProperties,
       }
     ),
   };
@@ -117,23 +124,27 @@ const HELD_PATHS = { library: LIBRARY_PATH, tile: TILE_MESH_PATH };
  * load stops them.
  */
 export async function mountGridMap({
+  library,
+  files = {},
   itemLines = '',
   materialLines = null,
   secondMaterialLines = null,
   cells = '0, 0, 0',
+  gridMapProperties = {},
   subResources = '',
   wrapper: Wrapper,
   held,
 }: GridMapCorpus = {}): Promise<MountedGridMap> {
   const loader = loaderServing(
     {
-      [LIBRARY_PATH]: meshLibrary(itemLines),
+      [LIBRARY_PATH]: library ?? meshLibrary(itemLines),
       [TILE_MESH_PATH]: tileMesh({ materialLines, secondMaterialLines, subResources }),
+      ...files,
     },
     held ? [HELD_PATHS[held]] : []
   );
 
-  const gridMap = <GridMap node={gridMapNode(cells)} />;
+  const gridMap = <GridMap node={gridMapNode(cells, gridMapProperties)} />;
   const tree = (
     <ResourceLoaderProvider loader={loader}>
       <SceneResourcesProvider internalResources={[]} externalResources={EXT}>

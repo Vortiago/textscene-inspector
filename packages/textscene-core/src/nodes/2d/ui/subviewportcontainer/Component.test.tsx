@@ -110,7 +110,7 @@ describe('<SubViewportContainer>', () => {
         />
       </>
     );
-    const mesh = quadsSampling(renderer.scene, entry.texture)[0];
+    const mesh = quadsSampling(renderer.scene, entry.plain.texture)[0];
     expect(mesh).toBeDefined();
   });
 
@@ -203,7 +203,7 @@ describe('<SubViewportContainer>', () => {
           </ViewportPassProvider>
         </ViewportTextureProvider>
       );
-      const textured = quadsSampling(renderer.scene, entry.texture);
+      const textured = quadsSampling(renderer.scene, entry.plain.texture);
       expect(textured).toHaveLength(0);
       const outlines = renderer.scene.findAllByType('LineSegments');
       expect(outlines.length).toBeGreaterThan(0);
@@ -354,32 +354,32 @@ describe('<SubViewportContainer> — the drawn rect', () => {
       { x: 0, y: 0, w: 301, h: 201 },
       entry
     );
-    expect(drawnSize(renderer, entry.texture)).toEqual({ x: 301, y: 201 });
+    expect(drawnSize(renderer, entry.plain.texture)).toEqual({ x: 301, y: 201 });
   });
 
   it('fills a container narrower than the 2-pixel viewport floor', async () => {
     const entry = fakeEntry();
     const renderer = await mountContainer({ stretch: true }, { x: 0, y: 0, w: 1, h: 40 }, entry);
-    expect(drawnSize(renderer, entry.texture)).toEqual({ x: 1, y: 40 });
+    expect(drawnSize(renderer, entry.plain.texture)).toEqual({ x: 1, y: 40 });
   });
 
   it('draws past the texture cap at the size Godot gives the viewport', async () => {
     const entry = fakeEntry();
     const renderer = await mountContainer({}, RECT, entry, { size: { x: 20000, y: 150 } });
-    expect(drawnSize(renderer, entry.texture)).toEqual({ x: 20000, y: 150 });
+    expect(drawnSize(renderer, entry.plain.texture)).toEqual({ x: 20000, y: 150 });
   });
 
   it('lays the surface out at the viewport size, not the capped target, past the cap', async () => {
     const entry = fakeEntry();
     const renderer = await mountContainer({ stretch: true }, { x: 0, y: 0, w: 20000, h: 150 }, entry);
-    const quad = quadsSampling(renderer.scene, entry.texture)[0]!;
+    const quad = quadsSampling(renderer.scene, entry.plain.texture)[0]!;
     expect((quad.geometry as THREE.PlaneGeometry).parameters.width).toBe(20000);
   });
 
   it('draws at the authored size when the container does not stretch', async () => {
     const entry = fakeEntry();
     const renderer = await mountContainer({}, { x: 0, y: 0, w: 640, h: 480 }, entry);
-    expect(drawnSize(renderer, entry.texture)).toEqual({ x: 200, y: 150 });
+    expect(drawnSize(renderer, entry.plain.texture)).toEqual({ x: 200, y: 150 });
   });
 });
 

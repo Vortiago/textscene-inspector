@@ -10,7 +10,9 @@ renders_as: a textured quad
 # AnimatedSprite2D
 
 AnimatedSprite2D plays a `SpriteFrames` clip. The previewer draws the current frame as a
-textured quad, and its transport plays the clip while the node is selected (ADR-0012).
+textured quad, and its transport plays the clip while the node is selected (ADR-0012). With no
+`sprite_frames`, no animation or no frame texture, it draws nothing (`animated_sprite_2d.cpp:270-278`).
+A `sprite_frames` or frame texture that is set but fails to load draws a placeholder.
 
 ## Linting
 

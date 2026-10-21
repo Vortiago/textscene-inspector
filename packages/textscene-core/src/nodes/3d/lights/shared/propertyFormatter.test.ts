@@ -14,6 +14,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 0.5, 0, 1)',
         light_energy: 2.5,
+        light_bake_mode: 2,
         shadow_enabled: false,
       };
 
@@ -30,6 +31,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: false,
       };
 
@@ -44,6 +46,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: false,
       };
 
@@ -64,6 +67,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 0.75,
+        light_bake_mode: 2,
         shadow_enabled: false,
       };
 
@@ -77,6 +81,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 100.5,
+        light_bake_mode: 2,
         shadow_enabled: false,
       };
 
@@ -90,6 +95,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: false,
         light_negative: true,
         light_specular: 0.0,
@@ -109,6 +115,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: false,
       };
 
@@ -119,6 +126,34 @@ describe('Base Light Property Formatter', () => {
       expect(labels).not.toContain('Specular');
       expect(labels).not.toContain('Volumetric Fog Energy');
     });
+
+    it('shows a bake mode other than the default Dynamic, by its constant name', () => {
+      const properties = {
+        layers: 1,
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        light_bake_mode: 1,
+        shadow_enabled: false,
+      };
+
+      const byLabel = Object.fromEntries(
+        formatBaseLightSection(properties).items.map((i) => [i.label, i.value])
+      );
+
+      expect(byLabel['Bake Mode']).toBe('STATIC');
+    });
+
+    it('omits the default Dynamic bake mode (edge case)', () => {
+      const properties = {
+        layers: 1,
+        light_color: 'Color(1, 1, 1, 1)',
+        light_energy: 1.0,
+        light_bake_mode: 2,
+        shadow_enabled: false,
+      };
+
+      expect(formatBaseLightSection(properties).items.map((i) => i.label)).not.toContain('Bake Mode');
+    });
   });
 
   describe('formatBaseShadowSection', () => {
@@ -127,6 +162,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: false,
       };
 
@@ -142,6 +178,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
       };
 
@@ -155,6 +192,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_bias: 0.05,
       };
@@ -170,6 +208,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_blur: 3.0,
       };
@@ -185,6 +224,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_bias: 0.05,
         shadow_blur: 2.0,
@@ -203,6 +243,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_bias: 0.05,
       };
@@ -220,6 +261,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_bias: 0.001,
       };
@@ -234,6 +276,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_bias: -0.05,
       };
@@ -250,6 +293,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_normal_bias: 0.02,
       };
@@ -267,6 +311,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_bias: 0.05,
         shadow_normal_bias: 0.02,
@@ -287,6 +332,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_bias: 0.05,
       };
@@ -302,6 +348,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_normal_bias: 0.02,
       };
@@ -319,6 +366,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_normal_bias: 0.003,
       };
@@ -334,6 +382,7 @@ describe('Base Light Property Formatter', () => {
         layers: 1,
         light_color: 'Color(1, 1, 1, 1)',
         light_energy: 1.0,
+        light_bake_mode: 2,
         shadow_enabled: true,
         shadow_normal_bias: -0.02,
       };

@@ -51,16 +51,16 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 
   // :145, INT, PROPERTY_HINT_NONE, PROPERTY_USAGE_NO_EDITOR (with STORAGE). set_root_bone rewrites
   // anything at or below -1, or past the live bone count, to -1 (:266-268), and _validate_bone_names
-  // re-runs it on the first skeleton update (:573-574), so only the floor is assertable. `strictInt`:
-  // a bone index is discrete, and Variant conversion would truncate a decimal.
-  root_bone: v.strictInt('root_bone', { min: -1, enforced: 'bone_twist_disperser_3d.cpp:266-268' }),
+  // re-runs it on the first skeleton update (:573-574), so only the floor is assertable. `v.int`:
+  // a bone index is discrete, and it warns on a decimal, which Variant conversion truncates.
+  root_bone: v.int('root_bone', { min: -1, enforced: 'bone_twist_disperser_3d.cpp:266-268' }),
 
   // :146, as root_bone_name. set_end_bone_name is :283-290.
   end_bone_name: v.quotedString('end_bone_name'),
 
   // :147, as root_bone. set_end_bone applies the identical rewrite (:303-305),
   // re-run from _validate_bone_names (:579-580).
-  end_bone: v.strictInt('end_bone', { min: -1, enforced: 'bone_twist_disperser_3d.cpp:303-305' }),
+  end_bone: v.int('end_bone', { min: -1, enforced: 'bone_twist_disperser_3d.cpp:303-305' }),
 
   // :148, Variant::BOOL, no hint. set_extend_end_bone (:321-326) assigns.
   extend_end_bone: v.boolean('extend_end_bone'),
@@ -115,7 +115,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // it carries STORAGE): the count of the nested joints array. set_joint_count
   // opens with ERR_FAIL_COND(p_count < 0) (:487), which refuses the write
   // outright. There is no ceiling anywhere.
-  joint_count: v.strictInt('joint_count', { min: 0, enforced: 'bone_twist_disperser_3d.cpp:487' }),
+  joint_count: v.int('joint_count', { min: 0, enforced: 'bone_twist_disperser_3d.cpp:487' }),
 };
 
 /**

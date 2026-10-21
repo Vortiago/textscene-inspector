@@ -8,7 +8,7 @@
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v, hintedBitField } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/propertyError.js';
-import { parseGodotInt } from '../../../linter/validators/commonValidators.js';
+import { parseSlotInt } from '../../../godot/variant/int.js';
 import {
   STENCIL_COMPARE_NAMES,
   STENCIL_FLAG_LABELS,
@@ -32,7 +32,7 @@ function stencilFlags(): PropertyValidator {
     // `listed` errors on anything unreadable or unstorable, so a usable number
     // reaches here. Read at int64, the width `listed` uses: at int32 a value past
     // 32 bits reads NaN and drops the warning `listed` produced.
-    const bits = parseGodotInt(value, 'int64');
+    const bits = parseSlotInt(value, 'int64');
     if (bits === null || Number.isNaN(bits)) return null;
     if ((bits & StencilFlag.READ) !== 0 && (bits & STENCIL_WRITE_FLAGS) !== 0) {
       return propertyError(

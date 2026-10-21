@@ -4,10 +4,11 @@
  * an attached geometry, drawn as an unlit transparent `<lineSegments>` over the scene.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { editorHelperUserData } from '../editorHelpers';
 import { materialProgramInputs } from '../materialProgramInputs';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 /** Render order for selection-gated gizmos, above ordinary scene content. */
 const GIZMO_RENDER_ORDER = 10;
@@ -28,6 +29,10 @@ interface GizmoLineProps {
   color?: THREE.ColorRepresentation;
 }
 
+/**
+ * Draws nothing when a vertex is `inf` or `nan`: Godot draws no pixel for such a line, and
+ * three.js warns about a NaN bounding sphere.
+ */
 export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
@@ -35,7 +40,7 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
     if (colors) g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return g;
   }, [positions, colors]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
   // Memoised, as R3F assigns a new `userData` object on each render.
   const helperUserData = useMemo(editorHelperUserData, []);
 
@@ -51,6 +56,8 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
       transparent: true,
     },
   });
+
+  if (!positions.every(Number.isFinite)) return null;
 
   return (
     <group renderOrder={GIZMO_GROUP_ORDER} userData={helperUserData}>

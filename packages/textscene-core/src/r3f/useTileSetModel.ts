@@ -1,15 +1,19 @@
 /**
  * Resolve a tile node's `tile_set` into the normalised TileSetModel. A
  * `SubResource("…")` resolves synchronously, never `pending`. An `ExtResource("…")`
- * or `res://…` .tres loads through `useResource`, with its missing-file and upload
+ * or `res://…` resource file loads through `useResource`, with its missing-file and upload
  * handling. The sync branches pass `''`, so the hook-call count is constant.
  */
 
 import { useMemo } from 'react';
 import { warn } from '../logger';
 import type { ParsedResource } from '../parser/parsedResource';
-import { parseResourceReference, resolveExtResourcePath } from '../resources/SubResourceResolver';
-import { tileSetFromScene, tileSetFromTres } from '../resources/tileset/decode';
+import {
+  isResourceFilePath,
+  parseResourceReference,
+  resolveExtResourcePath,
+} from '../resources/SubResourceResolver';
+import { tileSetFromScene, tileSetFromFile } from '../resources/tileset/decode';
 import type { TileSetModel } from '../resources/tileset/types';
 import { useResource } from '../resources/useResource';
 import { useSceneResources } from './SceneResourcesContext';
@@ -25,10 +29,9 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
   const ref = tileSetRef ? parseResourceReference(tileSetRef) : null;
   const isExternal = !!tileSetRef && (ref?.type === 'ExtResource' || tileSetRef.startsWith('res://'));
   const resolvedPath = isExternal ? resolveExtResourcePath(tileSetRef, externalResources) : null;
-  // Only a text resource parses. No processor handles a binary `.res` TileSet,
-  // so requesting one would park the load in flight.
-  const tresPath = resolvedPath?.endsWith('.tres') ? resolvedPath : null;
-  const tresResult = useResource<ParsedResource>(tresPath ?? '', 'resource');
+  // Only a resource file parses. Requesting any other path would park the load in flight.
+  const filePath = resolvedPath && isResourceFilePath(resolvedPath) ? resolvedPath : null;
+  const fileResult = useResource<ParsedResource>(filePath ?? '', 'resource');
 
   return useMemo((): TileSetModelResult => {
     if (!tileSetRef) return { model: null, status: 'unavailable' };
@@ -38,16 +41,16 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
       return model ? { model, status: 'loaded' } : { model: null, status: 'unavailable' };
     }
 
-    if (resolvedPath && !tresPath) {
-      warn(`[TileSet] "${resolvedPath}" is not a text resource (.tres) — cannot resolve TileSet`);
+    if (resolvedPath && !filePath) {
+      warn(`[TileSet] "${resolvedPath}" is not a resource file: cannot resolve TileSet`);
       return { model: null, status: 'unavailable' };
     }
-    if (!tresPath) return { model: null, status: 'unavailable' };
-    if (tresResult.status === 'pending') return { model: null, status: 'pending' };
-    if (tresResult.status === 'unavailable' || !tresResult.value) {
+    if (!filePath) return { model: null, status: 'unavailable' };
+    if (fileResult.status === 'pending') return { model: null, status: 'pending' };
+    if (fileResult.status === 'unavailable' || !fileResult.value) {
       return { model: null, status: 'unavailable' };
     }
-    const model = tileSetFromTres(tresResult.value);
+    const model = tileSetFromFile(fileResult.value);
     return model ? { model, status: 'loaded' } : { model: null, status: 'unavailable' };
   }, [
     tileSetRef,
@@ -55,8 +58,8 @@ export function useTileSetModel(tileSetRef: string | undefined): TileSetModelRes
     internalResources,
     externalResources,
     resolvedPath,
-    tresPath,
-    tresResult.status,
-    tresResult.value,
+    filePath,
+    fileResult.status,
+    fileResult.value,
   ]);
 }

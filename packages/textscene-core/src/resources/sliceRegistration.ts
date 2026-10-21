@@ -5,6 +5,8 @@
  * linter entry point can read it. Each slice's `index.ts` registers itself.
  */
 
+import { fileExtension } from './fileExtension';
+
 /**
  * The processor slots, named for the cached artifact they produce. A slice
  * claims the slot whose artifact kind it resolves to; several Godot-text
@@ -12,7 +14,7 @@
  * meaning in their own decode.
  */
 export type ResourceBusType =
-  'texture' | 'texture3d' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
+  'texture' | 'texture3d' | 'texture2darray' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
 
 interface ResourceSliceRegistration {
   /** Slice folder name under `resources/<category>/`, for example 'standardmaterial3d'. */
@@ -80,6 +82,11 @@ export function registerGenericResourceSlice(slice: string, typeNames: readonly 
 export const resourceSliceRegistry = {
   byTypeName: (typeName: string): ResourceSliceRegistration | null => byTypeName.get(typeName) ?? null,
   byExtension: (extension: string): ResourceSliceRegistration | null => byExtension.get(extension) ?? null,
+  /** The slot the slice claiming the path's extension loads it on, or null when no slice claims it. */
+  busTypeOfPath: (path: string): ResourceBusType | null => {
+    const extension = fileExtension(path);
+    return (extension !== null && byExtension.get(extension)?.busType) || null;
+  },
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
   clonesPerConsumer: (busType: ResourceBusType): boolean =>
     all.some((r) => r.busType === busType && r.clonePerConsumer === true),

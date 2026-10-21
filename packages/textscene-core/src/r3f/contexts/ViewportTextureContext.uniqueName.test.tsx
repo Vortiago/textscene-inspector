@@ -8,7 +8,7 @@ import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit.js';
-import type { TscnNode } from '../../parser/types.js';
+import { TscnParser } from '../../parser/TscnParser.js';
 import { HierarchyProvider } from './HierarchyContext.js';
 import { viewportTextureRegistryKey } from '../viewportTexturePath.js';
 import { useLocalScene } from '../useUniqueNames.js';
@@ -19,33 +19,25 @@ import {
 } from './ViewportTextureContext.js';
 import { ViewportTexturePublisher, viewportEntry } from '../testing/ViewportTexturePublisher';
 
-function node(name: string, type: string, flagged = false): TscnNode {
-  return {
-    name,
-    type,
-    properties: {},
-    rawProperties: flagged ? { unique_name_in_owner: 'true' } : {},
-    children: [],
-  };
-}
-
-const first = node('View', 'SubViewport', true);
-const second = node('View', 'SubViewport', true);
-
 /** Root/Ui/View and Root/Hud/View, in that declaration order. */
-const roots: TscnNode[] = (() => {
-  const root = node('Root', 'Node2D');
-  const ui = node('Ui', 'Node2D');
-  const hud = node('Hud', 'Node2D');
-  ui.children.push(first);
-  hud.children.push(second);
-  root.children.push(ui, hud);
-  return [root];
-})();
+const SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Ui" type="Node2D" parent="."]
+
+[node name="Hud" type="Node2D" parent="."]
+
+[node name="View" type="SubViewport" parent="Ui"]
+unique_name_in_owner = true
+
+[node name="View" type="SubViewport" parent="Hud"]
+unique_name_in_owner = true
+`;
 
 // The real builder, not a cast literal, which keeps compiling after
 // `SceneGraph` gains a field and stops matching what the `%Name` claim hooks read.
-const graph = createSceneGraphFromTscnScene({ nodes: roots });
+const graph = createSceneGraphFromTscnScene(new TscnParser().parse(SCENE));
 
 const entry = (id: string): ViewportTextureEntry =>
   viewportEntry({ name: id } as THREE.Texture, { x: 4, y: 4 });

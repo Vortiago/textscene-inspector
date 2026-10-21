@@ -13,10 +13,10 @@ import { LINT_EXEMPT_CATEGORIES, collectSheetFiles, parseFrontmatter, sheetLabel
 import { loadClassBaseTypes, loadCoreLinter } from './loadCoreLinter.mjs';
 import { coverageFor, renderCoverage } from './lintCoverage.mjs';
 import { requireFreshDist } from '../distFreshness.mjs';
+import { CATALOG_OUT } from './build-node-catalog/paths.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const COVERAGE_OUT = join(here, 'lint-coverage.json');
-const CATALOG = join(here, 'node-catalog.json');
 const CORE = join(here, '../../packages/textscene-core');
 
 const BEGIN = (type) => `<!-- lint:begin ${type} -->`;
@@ -74,7 +74,7 @@ const registries = {
 };
 
 // Loaded before the sheet loop so a sheet's `type:` can be checked against it.
-const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+const catalog = JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
 const knownTypes = new Set(
   [...catalog.nodes, ...(catalog.resources ?? []), ...(catalog.extras ?? [])].map((n) => n.name)
 );

@@ -12,3 +12,24 @@ export interface Vector3 {
   y: number;
   z: number;
 }
+
+/** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
+const f = Math.fround;
+
+/** `Vector3::normalize` (`core/math/vector3.h:548-558`) in `real_t` float: a zero vector stays zero. */
+export function normalizedVector3(x: number, y: number, z: number): [number, number, number] {
+  const lengthSquared = vector3LengthSquared(x, y, z);
+  if (lengthSquared === 0) return [0, 0, 0];
+  const length = f(Math.sqrt(lengthSquared));
+  return [f(x / length), f(y / length), f(z / length)];
+}
+
+/** `Vector3::length` (`core/math/vector3.h:532-538`) in `real_t` float. */
+export function vector3Length(x: number, y: number, z: number): number {
+  return f(Math.sqrt(vector3LengthSquared(x, y, z)));
+}
+
+/** The squares summed in order, so a permuted vector can round to another length, as in Godot. */
+function vector3LengthSquared(x: number, y: number, z: number): number {
+  return f(f(f(x * x) + f(y * y)) + f(z * z));
+}

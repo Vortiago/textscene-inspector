@@ -111,6 +111,7 @@ export default [
       'apps/textscene-vscode/src/**/*.ts',
       'apps/textscene-linter/src/**/*.ts',
       'apps/textscene-lsp/src/**/*.ts',
+      'apps/textscene-tscn/src/**/*.ts',
       'packages/textscene-dev-kit/src/**/*.ts',
       '**/*.config.ts',
       'vitest.shared.ts',

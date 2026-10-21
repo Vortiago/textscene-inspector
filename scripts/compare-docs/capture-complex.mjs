@@ -16,6 +16,7 @@ import {
   createCaptureContext,
   findCaptureTarget,
   gotoFixture,
+  previewPort,
   settleCanvas,
   withPreviewBrowser,
   writeCaptureImage,
@@ -24,7 +25,6 @@ import {
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(here, '../..');
 const IMAGES = join(REPO_ROOT, 'docs/comparison/images');
-const PORT = Number(process.env.COMPARE_PORT) || 4321;
 
 /**
  * These scenes live outside scenes/fixtures/. `godot` is the path from the repo
@@ -125,7 +125,7 @@ async function captureGodot(scenes) {
 async function captureOurs(scenes) {
   const failures = [];
   await withPreviewBrowser(
-    { port: PORT, portEnvName: 'COMPARE_PORT', launchBrowser: launchGodotComparisonBrowser },
+    { ...previewPort('compareDocs'), launchBrowser: launchGodotComparisonBrowser },
     async (browser, baseUrl) => {
       for (const c of scenes) {
         process.stdout.write(`[complex ours] ${c.slug} (${c.mode}) … `);
@@ -138,11 +138,6 @@ async function captureOurs(scenes) {
         const page = await context.newPage();
         try {
           await gotoFixture(page, baseUrl, c.ours, () => {}, c.oursCamera ? { camera: c.oursCamera } : {});
-          // A scene with both 3D and 2D content floats a "switch to 2D" button over
-          // the canvas. It carries no testid, so this hides it by its title.
-          await page
-            .addStyleTag({ content: 'button[title*="switch to the 2D view"]{display:none !important}' })
-            .catch(() => {});
           const { target, reason } = await findCaptureTarget(page, { canvas2D: c.mode === '2d' });
           if (!target) throw new Error(reason);
           const { buffer, reason: settleReason } = await settleCanvas(page, target, {

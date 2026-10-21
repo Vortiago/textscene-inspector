@@ -1,8 +1,8 @@
 /**
- * Decodes a text ArrayMesh (`.tres`, format=4) into per-surface typed arrays:
+ * Decodes an ArrayMesh's `_surfaces`, from a `.tres` or a binary file, into per-surface typed arrays:
  * the surface loop and its material resolution. Only triangle surfaces decode.
  * Blend shapes, LODs and skins are ignored. The byte layout lives in
- * `surfaceFormat.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
+ * `surfaceFormat.ts`, `surfaceVersion.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
  */
 
 import { warn } from '../../../logger.js';
@@ -20,8 +20,9 @@ import {
   readUvScale,
 } from './surfaceFields.js';
 import { PRIMITIVE_TRIANGLES, surfaceLayout } from './surfaceFormat.js';
+import { currentVertexData } from './surfaceVersion.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
-import { decodeIndices, decodeNormals, decodePositions, decodeUVs } from './vertexBuffers.js';
+import { decodeIndices, decodeNormalFrame, decodePositions, decodeUVs } from './vertexBuffers.js';
 
 /** The type names this slice claims: Godot's ArrayMesh class alone, whose `_surfaces` this decodes. */
 export const ARRAY_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
@@ -68,8 +69,8 @@ export function decodeSceneArrayMesh(resource: TscnInternalResource): ArrayMeshD
  * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle, as
  * `add_surface_from_arrays` with no ARRAY_INDEX does.
  */
-export function drawOrderIndices(vertexCount: number): Uint16Array | Uint32Array {
-  const indices = vertexCount > 65535 ? new Uint32Array(vertexCount) : new Uint16Array(vertexCount);
+function drawOrderIndices(vertexCount: number): Uint32Array {
+  const indices = new Uint32Array(vertexCount);
   for (let i = 0; i < vertexCount; i++) indices[i] = i;
   return indices;
 }
@@ -109,7 +110,7 @@ function decodeSurfaces(
     }
 
     const layout = surfaceLayout(format);
-    const vertexData = readPackedBytes(block, 'vertex_data');
+    const vertexData = currentVertexData(format, readPackedBytes(block, 'vertex_data'), vertexCount);
     // Positions: a contiguous region at the front of vertex_data.
     const positions = decodePositions(vertexData, vertexCount, layout, readAabb(block));
     if (!positions) {
@@ -121,8 +122,7 @@ function decodeSurfaces(
       );
       continue;
     }
-    // Normals: octahedral pairs in the region following the positions.
-    const normals = decodeNormals(vertexData, vertexCount, layout);
+    const { normals, tangents } = decodeNormalFrame(vertexData, vertexCount, layout);
     const { uvs, uv2s } = decodeUVs(
       readPackedBytes(block, 'attribute_data'),
       vertexCount,
@@ -153,6 +153,7 @@ function decodeSurfaces(
       uvs,
       uv2s,
       normals,
+      tangents,
       indices,
       ...readMaterial(block),
     });

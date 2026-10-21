@@ -4,84 +4,79 @@
  * ArrayMesh or PrimitiveMesh, or a `.tres` holding either.
  */
 
-import type * as THREE from 'three';
-import { bottomUpV } from '../../../../godot/math/uv';
+import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../../../godot/scene/primitiveMesh';
 import { warn } from '../../../../logger';
 import type { ParsedResource } from '../../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../../parser/types';
 import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import type { CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveSubResourceRef, textResourcePath } from '../../../../resources/SubResourceResolver';
-import {
-  decodeArrayMesh,
-  decodeSceneArrayMesh,
-  drawOrderIndices,
-} from '../../../../resources/meshes/arraymesh/decode';
+import { resolveSubResourceRef, parsedResourcePath } from '../../../../resources/SubResourceResolver';
+import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/meshes/arraymesh/decode';
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
-import { materialPathInFile } from '../../../../resources/materials/materialPathInFile';
-import { buildPrimitiveMeshGeometry } from '../../meshinstance3d/primitiveMeshGeometry';
+import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
+import { scopedSection } from '../../../../resources/resourceSection';
+import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../../../resources/meshes/meshSource';
+import { primitiveMeshSurface } from '../../../../resources/meshes/primitivemesh/surface';
 
-export interface CsgMeshSurface {
-  /** `xyz` per vertex. */
-  positions: Float32Array;
-  /** `xyz` per vertex, or undefined for a surface with no ARRAY_NORMAL. */
-  normals?: Float32Array;
-  /** `uv` per vertex with V down, or undefined for a surface with no ARRAY_TEX_UV. */
-  uvs?: Float32Array;
-  /** Three per triangle, front faces clockwise. */
-  indices: ArrayLike<number>;
+/** The arrays of a Godot surface the brush builder reads, and the surface's material. */
+export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normals' | 'uvs' | 'indices'> {
   material: CsgMaterialAddress;
 }
 
-/** A mesh in the scene's tables, or a loaded `.tres` and the path it loaded from. */
-export type CsgMesh = { resource: TscnInternalResource } | { path: string; file: ParsedResource };
+/** A mesh, and for one in a file where it loads from, whose parse keys the brush. */
+export interface CsgMesh extends Omit<MeshSource, 'path'> {
+  /** Null for a mesh in the scene. */
+  file: { path: string; parsed: ParsedResource } | null;
+}
 
 /** The `.tres` a mesh reference loads, or null for an inline mesh or a file no processor reads. */
 export function meshFilePath(meshRef: string | undefined, pools: SceneResources): string | null {
-  return textResourcePath(meshRef, pools.externalResources);
+  return parsedResourcePath(meshRef, pools.externalResources);
 }
 
 /** The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. */
 export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
-  const resource = resolveSubResourceRef(meshRef, ctx.internalResources);
-  if (resource) return { resource };
+  const inline = resolveSubResourceRef(meshRef, ctx.internalResources);
+  if (inline) return { resource: inline, resources: ctx, file: null };
   const path = meshFilePath(meshRef, ctx);
-  const file = path ? ctx.file(path) : undefined;
-  return path && file ? { path, file } : null;
+  const parsed = path ? ctx.file(path) : undefined;
+  const scoped = path && parsed ? scopedSection(parsed, path) : undefined;
+  if (!path || !parsed || !scoped) return null;
+  return { ...scoped, file: { path, parsed } };
 }
 
-/** The mesh's triangle surfaces, or none for a mesh with no slice here. */
+/**
+ * The mesh's triangle surfaces, or none for a mesh with no surface or a type no slice builds. A mesh
+ * in the scene names its materials by the scene's references, a mesh in a file by `res://` paths
+ * (ADR-0046).
+ */
 export function meshSurfaces(mesh: CsgMesh): CsgMeshSurface[] {
-  return 'resource' in mesh ? sceneMeshSurfaces(mesh.resource) : fileMeshSurfaces(mesh.file, mesh.path);
-}
-
-/** A mesh in the scene: its materials are references in the scene's tables. */
-function sceneMeshSurfaces(resource: TscnInternalResource): CsgMeshSurface[] {
-  if (resource.type === 'ArrayMesh') {
-    return arrayMeshSurfaces(
-      () => decodeSceneArrayMesh(resource),
-      resource.id,
-      (s) => s.materialRef
-    );
+  const { resource, resources, file } = mesh;
+  switch (meshKind(resource.type)) {
+    case 'primitive':
+      return primitiveMeshSurfaces(
+        resource,
+        primitiveMaterialAddress({ resource, resources, path: file?.path ?? null })
+      );
+    case 'arrayMesh':
+      if (file) {
+        const section = { file: file.parsed, type: resource.type, properties: resource.data };
+        return arrayMeshSurfaces(
+          () => decodeArrayMesh(section, file.path),
+          file.path,
+          (s) => s.materialPath
+        );
+      }
+      return arrayMeshSurfaces(
+        () => decodeSceneArrayMesh(resource),
+        resource.id,
+        (s) => s.materialRef
+      );
+    case 'surfaceless':
+    case null:
+      return [];
   }
-  return primitiveMeshSurfaces(resource, resource.data['material']);
-}
-
-/** A mesh `.tres`: its materials are `res://` paths, as its own references resolve in its own file. */
-function fileMeshSurfaces(file: ParsedResource, path: string): CsgMeshSurface[] {
-  if (file.resourceType === 'ArrayMesh') {
-    const section = { file, type: file.resourceType, properties: file.properties };
-    return arrayMeshSurfaces(
-      () => decodeArrayMesh(section, path),
-      path,
-      (s) => s.materialPath
-    );
-  }
-  return primitiveMeshSurfaces(
-    { id: path, type: file.resourceType, data: file.properties },
-    materialPathInFile(file.properties['material'], file, path) ?? undefined
-  );
 }
 
 /**
@@ -111,29 +106,14 @@ function arrayMeshSurfaces(
 
 /**
  * A PrimitiveMesh's one surface under its `material` (`primitive_meshes.cpp`, `surface_get_material`
- * answers it for surface 0). The slice builds it in three's space, so this turns it back.
+ * answers it for surface 0), in Godot's arrays as the brush builder reads them.
  */
 function primitiveMeshSurfaces(
   resource: TscnInternalResource,
   material: CsgMaterialAddress
 ): CsgMeshSurface[] {
-  const geometry = buildPrimitiveMeshGeometry(resource);
-  if (!geometry) return [];
-  const surface = godotSurface(geometry, material);
-  geometry.dispose();
-  return [surface];
-}
-
-/** three fronts triangles counter-clockwise with V up, where Godot fronts them clockwise with V down. */
-function godotSurface(geometry: THREE.BufferGeometry, material: CsgMaterialAddress): CsgMeshSurface {
-  const positions = Float32Array.from(geometry.getAttribute('position').array);
-  const normal = geometry.getAttribute('normal');
-  const uv = geometry.getAttribute('uv');
-  const uvs = uv ? Float32Array.from(uv.array) : undefined;
-  if (uvs) for (let i = 1; i < uvs.length; i += 2) uvs[i] = bottomUpV(uvs[i]!);
-  const index = geometry.getIndex();
-  const indices = index ? Uint32Array.from(index.array) : drawOrderIndices(positions.length / 3);
-  for (let i = 0; i + 2 < indices.length; i += 3)
-    [indices[i + 1], indices[i + 2]] = [indices[i + 2]!, indices[i + 1]!];
-  return { positions, normals: normal ? Float32Array.from(normal.array) : undefined, uvs, indices, material };
+  // The brush reads no UV2 (`csg_shape.cpp:1147-1172`), the only array the texel size scales.
+  const surface = primitiveMeshSurface(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+  if (!surface) return [];
+  return [{ ...surface, material }];
 }

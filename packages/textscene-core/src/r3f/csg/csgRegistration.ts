@@ -48,6 +48,8 @@ export interface CsgShapeRegistration {
   geometryKey?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => string;
   /** The `.tres` paths `geometry` reads through `ctx.file`, which load before it can build. */
   readsFiles?: (properties: Record<string, unknown>, pools: SceneResources) => readonly string[];
+  /** The type of the mesh `geometry` reads, which the node's details name when no slice builds it. */
+  meshType?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => string | null;
 }
 
 /** A `CSGPrimitive3D`'s solid: one geometry under its one `material`. */

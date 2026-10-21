@@ -29,13 +29,13 @@ const OWN_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   tilt_enabled: v.boolean('tilt_enabled'),
 
   // spline_ik_3d.cpp:85, PROPERTY_HINT_RANGE "-1,100,1,or_greater": `or_greater` opens the max end.
-  // set_tilt_fade_in (:147) assigns with no clamp, so the -1 floor warns (ADR-0032). `strictInt`,
-  // because a fade size counts bones, so "2.5 bones" is malformed, not out of range.
-  tilt_fade_in: v.strictInt('tilt_fade_in', { min: -1, hinted: 'spline_ik_3d.cpp:85' }),
+  // set_tilt_fade_in (:147) assigns with no clamp, so the -1 floor warns (ADR-0032). A fade size
+  // counts bones, so `v.int` reports "2.5 bones", which Variant conversion truncates.
+  tilt_fade_in: v.int('tilt_fade_in', { min: -1, hinted: 'spline_ik_3d.cpp:85' }),
 
   // spline_ik_3d.cpp:86, the same hint and the same straight-through setter
   // (:157).
-  tilt_fade_out: v.strictInt('tilt_fade_out', { min: -1, hinted: 'spline_ik_3d.cpp:86' }),
+  tilt_fade_out: v.int('tilt_fade_out', { min: -1, hinted: 'spline_ik_3d.cpp:86' }),
 };
 
 /** `what = path.get_slicec('/', 2)` (spline_ik_3d.cpp:38). */

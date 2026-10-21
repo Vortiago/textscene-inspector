@@ -1,0 +1,24 @@
+; The sub-scene for `integration-instanced-unique-parent`: Pivot claims its
+; name in this scene's owner table, raised and offset so a child seated
+; under it moves visibly.
+
+[gd_scene load_steps=3 format=3 uid="uid://unituniquenamepivot"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_body"]
+size = Vector3(0.8, 0.8, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
+albedo_color = Color(0.2, 0.45, 0.9, 1)
+
+[node name="Body" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_body")
+surface_material_override/0 = SubResource("StandardMaterial3D_body")
+
+[node name="Arm" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+
+[node name="Pivot" type="Node3D" parent="Arm"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)

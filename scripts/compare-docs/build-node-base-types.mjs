@@ -2,8 +2,9 @@
  * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
  * the committed engine captures (`pnpm nodes:base-types` writes
  * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts,
- * classProperties.generated.ts and resourceTypeExclusions.generated.ts). It never runs Godot: CI
- * has no engine, and the test beside it re-derives every output to prove it current.
+ * classProperties.generated.ts, resourceTypeExclusions.generated.ts,
+ * typedCollectionProperties.generated.ts and variantProperties.generated.ts). It never runs
+ * Godot: CI has no engine, and the test beside it re-derives every output to prove it current.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,12 +13,13 @@ import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/propertyHint.ts';
 import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
-
-const here = import.meta.dirname;
-export const CATALOG = join(here, 'node-catalog.json');
-export const RESOURCE_BASES = join(here, 'resource-bases.json');
-export const NODE_PROPERTIES = join(here, 'node-properties.json');
-export const RESOURCE_PROPERTIES = join(here, 'resource-properties.json');
+import {
+  CATALOG_OUT,
+  PROPS_OUT,
+  RESOURCE_BASES_OUT,
+  RESOURCE_GETTERS_OUT,
+  RESOURCE_PROPS_OUT,
+} from './build-node-catalog/paths.mjs';
 
 /** `src/godot/classdb/<name>` in the core package. */
 function classdbModule(name) {
@@ -28,6 +30,8 @@ export const OUT = classdbModule('nodeBaseTypes.generated.ts');
 export const RESOURCE_OUT = classdbModule('resourceBaseTypes.generated.ts');
 export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
 export const EXCLUSIONS_OUT = classdbModule('resourceTypeExclusions.generated.ts');
+export const TYPED_COLLECTIONS_OUT = classdbModule('typedCollectionProperties.generated.ts');
+export const VARIANT_PROPERTIES_OUT = classdbModule('variantProperties.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
@@ -270,37 +274,115 @@ ${classes}
 `;
 }
 
+/**
+ * The module source for the typed collection table. A binary file stores no element type: the
+ * loader types a value as the property's getter types it (`resource_format_binary.cpp:846-868`),
+ * so the capture reads each getter, not its hint.
+ *
+ * @param typed - `resource-getters.json`'s `collections`, class → property → prefix.
+ */
+function renderTypedCollectionsModule(typed, version) {
+  const classes = Object.entries(typed)
+    .map(([className, slots]) => {
+      const rows = Object.entries(slots)
+        .map(([name, text]) => `    ${JSON.stringify(name)}: ${JSON.stringify(text)},`)
+        .join('\n');
+      return `  ${JSON.stringify(className)}: {\n${rows}\n  },`;
+    })
+    .join('\n');
+  return `/**
+ * The resource properties whose value Godot types as \`Array[T]\` or \`Dictionary[K, V]\`, with the
+ * prefix its text writer puts on the value, derived from Godot ${version}'s getter captures.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ *
+ * Each entry is class → property → prefix, under the class that declares the property. A reader
+ * finds an inherited property by walking the base chain in \`classBaseTypes\`.
+ */
+
+export const TYPED_COLLECTION_PROPERTIES: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
+${classes}
+});
+`;
+}
+
+/**
+ * The module source for the stored properties declared as a Variant.
+ *
+ * @param variantProperties - `resource-getters.json`'s `variantProperties`, class → names.
+ */
+function renderVariantPropertiesModule(variantProperties, version) {
+  const classes = Object.entries(variantProperties)
+    .map(([className, names]) => {
+      const rows = names.map((name) => `    ${JSON.stringify(name)},`).join('\n');
+      return `  ${JSON.stringify(className)}: [\n${rows}\n  ],`;
+    })
+    .join('\n');
+  return `/**
+ * The stored properties each instantiable resource class declares as a Variant, with any it adds
+ * at run time, derived from Godot ${version}'s captures.
+ * The text saver keeps a Nil only on such a property, and leaves out an empty Object
+ * (\`resource_format_text.cpp:1980\`).
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ */
+
+export const VARIANT_PROPERTIES: Readonly<Record<string, readonly string[]>> = Object.freeze({
+${classes}
+});
+`;
+}
+
+function readJson(path) {
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/** The engine version a capture run recorded in the catalog. */
+function godotVersionOf(catalog) {
+  return catalog.godotVersion ?? 'unknown';
+}
+
+/** The typed collection module the committed artifact must equal. */
+export function renderFromTypedCollectionCaptures() {
+  const catalog = readJson(CATALOG_OUT);
+  return renderTypedCollectionsModule(readJson(RESOURCE_GETTERS_OUT).collections, godotVersionOf(catalog));
+}
+
+/** The Variant property module the committed artifact must equal. */
+export function renderFromVariantPropertyCaptures() {
+  const catalog = readJson(CATALOG_OUT);
+  return renderVariantPropertiesModule(
+    readJson(RESOURCE_GETTERS_OUT).variantProperties,
+    godotVersionOf(catalog)
+  );
+}
+
 /** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
 function readResourceBases() {
-  return assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
+  return assertAcyclic(readJson(RESOURCE_BASES_OUT), 'resource-bases.json');
 }
 
 /** The exclusion module the committed artifact must equal. */
 export function renderFromExclusionCaptures() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const catalog = readJson(CATALOG_OUT);
   const properties = {
-    ...JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8')),
-    ...JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8')),
+    ...readJson(PROPS_OUT),
+    ...readJson(RESOURCE_PROPS_OUT),
   };
   const bases = { ...deriveBaseTypes(catalog.nodes), ...readResourceBases() };
-  return renderExclusionsModule(
-    deriveResourceTypeExclusions(properties, bases),
-    catalog.godotVersion ?? 'unknown'
-  );
+  return renderExclusionsModule(deriveResourceTypeExclusions(properties, bases), godotVersionOf(catalog));
 }
 
 /** The property module the committed artifact must equal. */
 export function renderFromPropertyCaptures() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  const nodeProperties = JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8'));
-  const resourceProperties = JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8'));
-  return renderPropertiesModule(nodeProperties, resourceProperties, catalog.godotVersion ?? 'unknown');
+  const catalog = readJson(CATALOG_OUT);
+  const nodeProperties = readJson(PROPS_OUT);
+  const resourceProperties = readJson(RESOURCE_PROPS_OUT);
+  return renderPropertiesModule(nodeProperties, resourceProperties, godotVersionOf(catalog));
 }
 
 /** The module source the committed artifact must equal. */
 export function renderFromCatalog() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  return renderModule(deriveBaseTypes(catalog.nodes), catalog.godotVersion ?? 'unknown');
+  const catalog = readJson(CATALOG_OUT);
+  return renderModule(deriveBaseTypes(catalog.nodes), godotVersionOf(catalog));
 }
 
 /**
@@ -310,20 +392,22 @@ export function renderFromCatalog() {
  * one engine run; `resource-bases.json` is a bare map with nowhere to put it.
  */
 export function renderFromResourceBases() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  return renderResourceModule(readResourceBases(), catalog.godotVersion ?? 'unknown');
+  const catalog = readJson(CATALOG_OUT);
+  return renderResourceModule(readResourceBases(), godotVersionOf(catalog));
 }
 
 // Only write when run as a CLI, so the test can import the derivation.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const describeBaseTypes = (source) => `${source.match(/^ {2}\w+: '/gm)?.length ?? 0} base-type entries`;
   const describeProperties = (source) => `${source.match(/^\s*\["/gm)?.length ?? 0} property rows`;
-  const describeExclusions = (source) => `${source.match(/^ {4}"/gm)?.length ?? 0} excluding slots`;
+  const describeNestedRows = (label) => (source) => `${source.match(/^ {4}"/gm)?.length ?? 0} ${label}`;
   const artifacts = [
     [OUT, renderFromCatalog(), describeBaseTypes],
     [RESOURCE_OUT, renderFromResourceBases(), describeBaseTypes],
     [PROPERTIES_OUT, renderFromPropertyCaptures(), describeProperties],
-    [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeExclusions],
+    [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeNestedRows('excluding slots')],
+    [TYPED_COLLECTIONS_OUT, renderFromTypedCollectionCaptures(), describeNestedRows('typed collections')],
+    [VARIANT_PROPERTIES_OUT, renderFromVariantPropertyCaptures(), describeNestedRows('Variant properties')],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);

@@ -7,11 +7,10 @@
 
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
-import { parseGodotInt } from '../../godot/variant/int.js';
+import { parseSlotInt } from '../../godot/variant/int.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
-import { ARRAY_MESH_TYPES } from '../meshes/arraymesh/decode';
-import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
+import { extResourcePathsById, resolveRefToResourcePath, subResourceClassGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
 import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
@@ -25,20 +24,15 @@ import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } fro
 const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
 
 /**
- * @param selfPath - the `res://` path the library was loaded from. An item mesh
- *   the library embeds as its own `[sub_resource]` can only be addressed
- *   relative to that file, so this is an input rather than a convenience.
- */
-/**
  * `mesh_cast_shadow` is serialised as the `RS::ShadowCastingSetting` ordinal.
  * Anything outside 0-3 lands on Godot's own default branch, which is ON
  * (`scene/resources/3d/mesh_library.cpp:65-67`).
  */
 function decodeCastShadow(rawValue: string): ShadowCastingSetting {
-  // `parseGodotInt`, not `parseInt`: Godot converts a FLOAT spelling into an int
+  // `parseSlotInt`, not `parseInt`: Godot converts a FLOAT spelling into an int
   // slot (`variant.cpp`), so `cast_shadow = 2.0` is DOUBLE_SIDED, and a raw
   // `parseInt` would read `2` out of text the engine refuses outright.
-  switch (parseGodotInt(rawValue)) {
+  switch (parseSlotInt(rawValue)) {
     case 0:
       return ShadowCastingSetting.OFF;
     case 2:
@@ -50,6 +44,11 @@ function decodeCastShadow(rawValue: string): ShadowCastingSetting {
   }
 }
 
+/**
+ * @param selfPath - the `res://` path the library was loaded from. An item mesh
+ *   the library embeds as its own `[sub_resource]` can only be addressed
+ *   relative to that file, so this is an input rather than a convenience.
+ */
 export function meshLibraryFromTres(tres: ParsedResource, selfPath: string): MeshLibraryModel {
   const extPathById = extResourcePathsById(tres.extResources);
   const items: MeshLibraryModel = new Map();
@@ -82,10 +81,9 @@ export function meshLibraryFromTres(tres: ParsedResource, selfPath: string): Mes
         rawValue,
         extPathById,
         selfPath,
-        // A library written from a scene can embed a primitive mesh (`BoxMesh`, …) as
-        // a `[sub_resource]`, which has no `_surfaces` for the ArrayMesh processor. Left
-        // unresolved, GridMap draws its placeholder cell rather than an empty mesh.
-        subResourceTypeGate(tres.subResources, ARRAY_MESH_TYPES)
+        // `_set` stores any `Ref<Mesh>` (mesh_library.cpp:48-49), so a mesh of a type no slice
+        // builds keeps its path, and GridMap draws its placeholder where Godot draws the mesh.
+        subResourceClassGate(tres.subResources, 'Mesh')
       );
     } else if (field === 'mesh_transform') {
       try {

@@ -29,6 +29,7 @@ import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
 import { fittedAspect } from '../../3d/camera3d/projectionFit';
@@ -47,31 +48,6 @@ function Probe({ path, seen }: { path: string; seen: (ViewportTextureEntry | nul
 }
 
 /**
- * Runs one frame with the renderer's target and render entry points stubbed. The
- * fake WebGL context's `setRenderTarget` throws "invalid value used as weak map key"
- * as an unhandled rejection, and nothing here asserts pixels, so a recorder
- * replaces the GL side and the frame exercises only the state around it.
- */
-async function advanceFrameWithStubbedGl(
-  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
-  gl: THREE.WebGLRenderer,
-  onBind?: (target: THREE.WebGLRenderTarget | null) => void
-): Promise<void> {
-  const originalSet = gl.setRenderTarget;
-  const originalRender = gl.render;
-  gl.setRenderTarget = ((target: THREE.WebGLRenderTarget | null) => {
-    onBind?.(target);
-  }) as typeof gl.setRenderTarget;
-  gl.render = (() => undefined) as typeof gl.render;
-  try {
-    await renderer.advanceFrames(1, 16);
-  } finally {
-    gl.setRenderTarget = originalSet;
-    gl.render = originalRender;
-  }
-}
-
-/**
  * Runs one frame whose renders run only each scene's `onBeforeRender`, as `WebGLRenderer.render`
  * does after it updates the matrices, and answers every scene a pass rendered.
  */
@@ -80,21 +56,18 @@ async function scenesRenderedNextFrame(
   gl: THREE.WebGLRenderer
 ): Promise<THREE.Scene[]> {
   const rendered: THREE.Scene[] = [];
-  const originalSet = gl.setRenderTarget;
-  const originalRender = gl.render;
-  gl.setRenderTarget = (() => undefined) as typeof gl.setRenderTarget;
-  gl.render = ((scene: THREE.Scene, camera: THREE.Camera) => {
-    rendered.push(scene);
-    scene.updateMatrixWorld();
-    camera.updateMatrixWorld();
-    (scene.onBeforeRender as (...args: unknown[]) => void).call(scene, gl, scene, camera, null);
-  }) as typeof gl.render;
-  try {
-    await renderer.advanceFrames(1, 16);
-  } finally {
-    gl.setRenderTarget = originalSet;
-    gl.render = originalRender;
-  }
+  await withStubbedGl(
+    gl,
+    {
+      onRender: (_, scene, camera) => {
+        rendered.push(scene as THREE.Scene);
+        scene.updateMatrixWorld();
+        camera.updateMatrixWorld();
+        (scene.onBeforeRender as (...args: unknown[]) => void).call(scene, gl, scene, camera, null);
+      },
+    },
+    () => renderer.advanceFrames(1, 16)
+  );
   return rendered;
 }
 
@@ -229,8 +202,8 @@ describe('<SubViewport> offscreen publisher', () => {
 
   it('publishes a texture consumers can sample', async () => {
     const { published } = await renderScene(scene3D());
-    expect(published()?.texture).toBeDefined();
-    expect(published()?.texture.isTexture).toBe(true);
+    expect(published()?.plain.texture).toBeDefined();
+    expect(published()?.plain.texture.isTexture).toBe(true);
   });
 
   it('unpublishes when the sub-viewport unmounts', async () => {
@@ -248,7 +221,7 @@ describe('<SubViewport> offscreen publisher', () => {
    */
   it('keeps the linear storage tag through a consumer-side sRGB stamp', async () => {
     const { published } = await renderScene(scene3D());
-    const texture = published()!.texture;
+    const texture = published()!.decoding.texture;
     texture.colorSpace = THREE.SRGBColorSpace;
     expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
   });
@@ -256,12 +229,18 @@ describe('<SubViewport> offscreen publisher', () => {
   /** Canvas items write sRGB numbers into an `R8G8B8A8_UNORM` target (`renderer_canvas_render_rd.cpp:671,729`). */
   it('stores 2D-world content as sRGB bytes', async () => {
     const { published } = await renderScene(scene2DContent, '2d', 'Stage/Viewport');
-    expect(holdsSrgbBytes(published()!.texture)).toBe(true);
+    expect(holdsSrgbBytes(published()!.plain.texture)).toBe(true);
   });
 
-  it('keeps the scene storage for 3D content (edge case)', async () => {
+  /**
+   * A 3D target is SRGB8_ALPHA8, which decodes on sampling. A canvas consumer filters the bytes
+   * (`texture_storage.cpp:754`), so it gets a plain copy of them.
+   */
+  it('publishes 3D content as sRGB bytes in its plain view and the scene storage in its decoding view', async () => {
     const { published } = await renderScene(scene3D());
-    expect(holdsSrgbBytes(published()!.texture)).toBe(false);
+    const { plain, decoding } = published()!;
+    expect(holdsSrgbBytes(plain.texture)).toBe(true);
+    expect(decoding.texture.internalFormat).toBe('SRGB8_ALPHA8');
   });
 
   /**

@@ -10,7 +10,8 @@ import { unrepresentableInt } from './intSlot.js';
 import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import type { Severity } from '../types.js';
-import { markIntSlot, readIntSlot, storedNotWritten } from './intSlot.js';
+import { markIntSlot, storedNotWritten } from './intSlot.js';
+import { readIntSlot } from '../../godot/variant/int.js';
 import { formatCode, valueCode } from './v/codes.js';
 
 /**

@@ -1,6 +1,6 @@
 /**
- * Resolves a Texture2D property that names an `AtlasTexture` into the cell as its own texture. A
- * `.tres` AtlasTexture reads as a sub-resource of the file's own tables (`useTextResourceSlot`), so
+ * Resolves a Texture2D property that names an `AtlasTexture` into the cell as its own texture. An
+ * AtlasTexture in a resource file reads as a sub-resource of the file's own tables (`useParsedResourceSlot`), so
  * the inline and saved forms share one lookup, crop and cache.
  */
 

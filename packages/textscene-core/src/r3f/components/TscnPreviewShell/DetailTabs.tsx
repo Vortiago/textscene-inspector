@@ -27,6 +27,7 @@ export function DetailTabs({
   treeShare,
   onResourceUpload,
   onResourceRemove,
+  onCopyNodePath,
 }: {
   activeTab: DetailTab;
   setActiveTab: (tab: DetailTab) => void;
@@ -36,6 +37,7 @@ export function DetailTabs({
   treeShare: number;
   onResourceUpload?: (path: string, file: File) => void;
   onResourceRemove?: (path: string) => void;
+  onCopyNodePath?: (nodePath: string) => void;
 }) {
   return (
     <div className={styles.detailPane} style={{ '--tsi-pane-grow': 1 - treeShare } as CSSProperties}>
@@ -69,7 +71,7 @@ export function DetailTabs({
               </div>
             }
           >
-            <NodeDetailsPanel />
+            <NodeDetailsPanel onCopyNodePath={onCopyNodePath} />
           </Suspense>
         </div>
         {activeTab === 'resources' && (

@@ -23,6 +23,6 @@ describe('CollisionPolygon3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('CollisionPolygon3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('CollisionPolygon3D')).toBe('transform-only');
   });
 });

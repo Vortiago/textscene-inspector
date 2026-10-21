@@ -9,6 +9,7 @@ import type * as THREE from 'three';
 import { Node3D } from '../../base/node3d/Component';
 import type { NodeComponent, NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { boxPlacement } from '../../../r3f/visibilityRange/placements';
+import { invisibleBase } from '../../../r3f/invisibleBase';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
 import type { Aabb } from '../../../godot/math/aabb';
@@ -32,7 +33,7 @@ export function undrawnGeometryInstance(useOwnAabb: UseOwnAabb): NodeComponent {
       </Node3D>
     );
   }
-  return UndrawnGeometryInstance;
+  return invisibleBase(UndrawnGeometryInstance);
 }
 
 /** A bare GeometryInstance3D gives its instance no base (`godot/scene/geometryBase.ts`), so no box. */

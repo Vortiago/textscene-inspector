@@ -14,6 +14,7 @@ function makeNode(overrides: Partial<OmniLight3DProperties> = {}): TscnNode {
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: 2,
     shadow_enabled: false,
     omni_range: 5,
     omni_attenuation: 2,

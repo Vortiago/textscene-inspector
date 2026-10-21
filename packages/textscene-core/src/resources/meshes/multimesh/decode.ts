@@ -5,11 +5,11 @@
  * buffer, and the format setters refuse once it is positive. No THREE.
  */
 
-import { parseOptionalAabb, parseOptionalInt } from '../../../parser/valueParsers.js';
+import { parseNonEmptyAabb, parseOptionalInt } from '../../../parser/valueParsers.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
-import { holdsResource } from '../../../godot/scene/geometryBase.js';
+import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 import { MultiMeshTransformFormat } from '../../../godot/scene/multiMesh.js';
-import { isEmptyAabb, EMPTY_AABB, type Aabb } from '../../../godot/math/aabb.js';
+import type { Aabb } from '../../../godot/math/aabb.js';
 import {
   parsePackedColorArray,
   parsePackedFloat32Array,
@@ -29,7 +29,7 @@ class MultiMeshState {
   instances = 0;
   /** The server's visible count, -1 for all (`mesh_storage.cpp:2183-2215`). */
   visibleInstances = -1;
-  customAabb: Aabb = EMPTY_AABB;
+  customAabb: Aabb | null = null;
   hasMesh = false;
   /** The buffer once `multimesh_set_buffer` has set it. */
   buffer: Float32Array | null = null;
@@ -61,7 +61,7 @@ class MultiMeshState {
 
   /** `_multimesh_re_create_aabb` (`mesh_storage.cpp:1831-1874`), over the first `count` instances. */
   bound(data: Float32Array, count: number): void {
-    if (!this.hasMesh || !isEmptyAabb(this.customAabb)) return;
+    if (!this.hasMesh || this.customAabb) return;
     const bounded = new Float32Array(count * TRANSFORM_FLOATS);
     for (let i = 0; i < count; i++) {
       const at = i * this.stride;
@@ -110,7 +110,7 @@ const SETTERS: Readonly<Record<string, Setter>> = {
     if (state.instances === 0) state.usesCustomData = boolSlotValue(value) === true;
   },
   custom_aabb(state, value) {
-    state.customAabb = parseOptionalAabb(value, 'MultiMesh.custom_aabb') ?? state.customAabb;
+    state.customAabb = parseNonEmptyAabb(value, 'MultiMesh.custom_aabb');
   },
   instance_count(state, value) {
     const count = parseOptionalInt(value);
@@ -227,7 +227,7 @@ export function decodeMultiMesh(properties: Readonly<Record<string, string>>): M
   }
   state.settle();
   return {
-    customAabb: isEmptyAabb(state.customAabb) ? null : state.customAabb,
+    customAabb: state.customAabb,
     mesh: state.hasMesh ? properties['mesh'] : undefined,
     boundedTransforms: state.boundedTransforms,
   };

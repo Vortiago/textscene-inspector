@@ -1,0 +1,101 @@
+[gd_scene load_steps=10 format=3 uid="uid://unitprimitivemeshuv2"]
+
+; The one variable: the UV2 each PrimitiveMesh builds under `add_uv2`. `emission_on_uv2` draws the
+; stepped gradient through that UV2, and `uv2_padding = 40` texels of the default 0.2 texel size
+; pulls each island in from the right and the bottom. The PlaneMesh writes no UV2 of its own, so it
+; shows the UV scaled by the padding over its lightmap size hint. Without UV2 each draws flat red.
+; The cylinder lays its side above its two caps, and the torus each row by its length round the
+; axis. The only other UV2 scene draws an imported `.glb`'s unwrap, not a primitive's.
+
+[sub_resource type="Gradient" id="Gradient_uv2"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv2"]
+gradient = SubResource("Gradient_uv2")
+fill_to = Vector2(1, 1)
+
+; A black, rough, non-specular albedo leaves the emission as the only light the meshes show.
+; MULTIPLY draws the texture alone, where ADD would add the white emission colour to it.
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv2"]
+albedo_color = Color(0, 0, 0, 1)
+metallic_specular = 0.0
+emission_enabled = true
+emission = Color(1, 1, 1, 1)
+emission_energy_multiplier = 0.5
+emission_operator = 1
+emission_texture = SubResource("GradientTexture2D_uv2")
+emission_on_uv2 = true
+
+[sub_resource type="SphereMesh" id="SphereMesh_uv2"]
+material = SubResource("StandardMaterial3D_uv2")
+add_uv2 = true
+uv2_padding = 40.0
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_uv2"]
+material = SubResource("StandardMaterial3D_uv2")
+add_uv2 = true
+uv2_padding = 40.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_uv2"]
+material = SubResource("StandardMaterial3D_uv2")
+add_uv2 = true
+uv2_padding = 40.0
+
+[sub_resource type="PrismMesh" id="PrismMesh_uv2"]
+material = SubResource("StandardMaterial3D_uv2")
+add_uv2 = true
+uv2_padding = 40.0
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_uv2"]
+material = SubResource("StandardMaterial3D_uv2")
+add_uv2 = true
+uv2_padding = 40.0
+orientation = 2
+size = Vector2(0.9, 0.9)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_uv2"]
+material = SubResource("StandardMaterial3D_uv2")
+add_uv2 = true
+uv2_padding = 40.0
+top_radius = 0.4
+bottom_radius = 0.4
+height = 0.8
+
+[sub_resource type="TorusMesh" id="TorusMesh_uv2"]
+material = SubResource("StandardMaterial3D_uv2")
+add_uv2 = true
+uv2_padding = 40.0
+inner_radius = 0.2
+outer_radius = 0.5
+
+[node name="Root" type="Node3D"]
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 0, 0)
+mesh = SubResource("SphereMesh_uv2")
+
+[node name="Capsule" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0, 0)
+mesh = SubResource("CapsuleMesh_uv2")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0.6, 0, 0)
+mesh = SubResource("BoxMesh_uv2")
+
+[node name="Prism" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 1.8, 0, 0)
+mesh = SubResource("PrismMesh_uv2")
+
+[node name="Plane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 1.3, 0)
+mesh = SubResource("PlaneMesh_uv2")
+
+[node name="Cylinder" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, -1.8, 1.6, 0)
+mesh = SubResource("CylinderMesh_uv2")
+
+[node name="Torus" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, -0.866025, 0, 0.866025, 0.5, -0.5, 1.6, 0)
+mesh = SubResource("TorusMesh_uv2")

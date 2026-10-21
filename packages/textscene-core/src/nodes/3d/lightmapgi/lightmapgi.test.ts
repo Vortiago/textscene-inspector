@@ -1,26 +1,21 @@
-/**
- * LightmapGI registration: parsed and validated, not yet rendered. The base
- * component registers under `renderIntent: 'pending'`, so the badge reads a gap
- * while `visible` and the workspace split still behave.
- */
+/** LightmapGI registration: its own parser, and a component that draws. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
-import { parseNode3D } from '../../base/node3d/parser';
+import { parseLightmapGI } from './parser';
+import { LightmapGI } from './Component';
 import './index';
 import './index.r3f';
 
 describe('LightmapGI registration', () => {
-  it('registers the parseNode3D parse it reuses', () => {
-    const registration = nodeRegistry.getRegistration('LightmapGI');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+  it('registers its own parser', () => {
+    expect(nodeRegistry.getRegistration('LightmapGI')!.parser).toBe(parseLightmapGI);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('LightmapGI')).toBe('pending');
-    expect(rendersOwnVisual('LightmapGI')).toBe('not-implemented');
+  it('registers its component as one that draws', () => {
+    expect(nodeComponentRegistry.get('LightmapGI')).toBe(LightmapGI);
+    expect(rendersOwnVisual('LightmapGI')).toBe('draws');
   });
 });

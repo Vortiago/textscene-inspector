@@ -10,14 +10,13 @@
 import { climbAncestors, type ParentLookup } from '../../../linter/parentType.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { VECTOR2_REGEX, matchVector2 } from '../../../linter/validators/vectorValidators.js';
-import { TSCN_FLOAT_RE, parseGodotFloat } from '../../../linter/validators/commonValidators.js';
 import {
   TRANSFORM2D_IDENTITY,
   multiplyTransform2D,
   transform2DFromParts,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
-import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { RawNode } from '../../../parser/types.js';
 
 /**
@@ -38,8 +37,8 @@ function readVector2Property(
 
 function parseScalar(raw: string | undefined, fallback: number): number {
   if (raw === undefined) return fallback;
-  if (!TSCN_FLOAT_RE.test(raw)) return fallback; // malformed is linterParser.ts's job, not this helper's
-  return parseGodotFloat(raw) ?? fallback;
+  // A malformed value is linterParser.ts's job, not this helper's.
+  return scalarSlotValue(raw) ?? fallback;
 }
 
 /**

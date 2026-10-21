@@ -30,6 +30,7 @@ function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> 
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: 2,
     shadow_enabled: false,
     ...overrides,
   };
@@ -42,6 +43,7 @@ function omniNode(name: string, overrides: Partial<OmniLight3DProperties> = {}):
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: 2,
     shadow_enabled: false,
     omni_range: 5,
     omni_attenuation: 2,
@@ -56,6 +58,7 @@ function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}):
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: 2,
     shadow_enabled: false,
     spot_range: 10,
     spot_angle: 30,

@@ -101,6 +101,10 @@ ones.
   and an empty one for a MeshLibrary (whose `[resource]` has no `_surfaces`). Wrong or
   blank, and never diagnosed. An address that names an id the file does not declare, or
   a section that is not an ArrayMesh, fails the load and does not decode to nothing.
+- A path can address a mesh of another kind. GridMap reads the section a MeshLibrary item's
+  path addresses, asks the ArrayMesh processor only for an ArrayMesh, and builds a PrimitiveMesh
+  as MeshInstance3D does. The item path stays one string, and the primitive's material is a path
+  in the same grammar.
 - A per-path `clearCache` drops, and announces `invalidated` for, the file and every
   address into it. Without the announcement a mounted consumer keeps a stale material
   after the owning `.tres` changes on disk. `useResource` answers `invalidated` by

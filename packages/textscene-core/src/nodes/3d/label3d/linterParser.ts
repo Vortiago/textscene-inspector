@@ -14,7 +14,7 @@ import {
   VERTICAL_ALIGNMENT_BOTTOM,
   VERTICAL_ALIGNMENT_NAMES,
   VERTICAL_ALIGNMENT_TOP,
-} from '../../../godot/math/math.js';
+} from '../../../godot/math/alignment.js';
 import { BillboardMode, BILLBOARD_MODE_NAMES } from '../../../godot/rendering/materials/billboardMode.js';
 import {
   MATERIAL_RENDER_PRIORITY_MIN,

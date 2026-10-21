@@ -6,6 +6,7 @@
 
 import type { Node2DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
+import { invisibleBase } from '../../../r3f/invisibleBase';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { YSortDispatcher } from '../../../r3f/YSortDispatcher.js';
 
@@ -21,3 +22,5 @@ export function Node2D({ node, children }: NodeComponentProps) {
     </CanvasItem2D>
   );
 }
+
+invisibleBase(Node2D);

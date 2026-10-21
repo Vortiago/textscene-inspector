@@ -38,4 +38,4 @@ The lenient parser copies `mesh` through only when present. An absent one leaves
 
 ## Known limitations
 
-- **Approximated** The thin lit band along the capsule's shaded flank reads fainter than in Godot.
+- **Resource gap** A mesh the previewer does not build (PointMesh, RibbonTrailMesh, TextMesh or TubeTrailMesh) adds nothing to the solid, and the node's details name the type.

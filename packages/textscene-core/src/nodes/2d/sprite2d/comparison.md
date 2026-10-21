@@ -10,7 +10,8 @@ renders_as: an unlit textured quad
 # Sprite2D
 
 Sprite2D draws a texture as a flat quad on the canvas. The previewer renders it as an
-unlit plane at the texture's pixel size, tinted by `modulate`.
+unlit plane at the texture's pixel size, tinted by `modulate`. A Sprite2D with no texture draws
+nothing, as Godot does (`sprite_2d.cpp:159`). A texture that is set but fails to load draws a placeholder.
 
 ## Linting
 

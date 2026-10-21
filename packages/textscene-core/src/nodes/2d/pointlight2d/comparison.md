@@ -15,7 +15,8 @@ that every lit CanvasItem multiplies its albedo against, which is Godot's own
 arithmetic. The previewer samples the cookie clamped at its quad edge. Godot resolves a
 canvas item's default repeat to the viewport's disabled default (`viewport.h:419-420`,
 `viewport.cpp:4009`, `renderer_canvas_render_rd.cpp:2344`), and the light tap uses that
-item sampler (`canvas.glsl:774-782`).
+item sampler (`canvas.glsl:774-782`). A light with no `texture` lights nothing and draws no
+placeholder, as `pnpm ref:godot` measures. A `texture` that is set but fails to load draws a placeholder.
 
 ## Blend modes
 

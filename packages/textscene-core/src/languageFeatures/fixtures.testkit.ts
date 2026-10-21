@@ -33,3 +33,39 @@ export const LINE = {
   skeletonProperty: 14,
   connection: 16,
 } as const;
+
+/**
+ * The opening of a scene of nested nodes: Root, Player, Player/Sprite and Player/Sprite/Gun, on
+ * lines 2, 4, 6 and 8 (zero-based). A suite appends its own headings and connections.
+ */
+export const NODE_TREE_HEAD = [
+  '[gd_scene format=3]',
+  '',
+  '[node name="Root" type="Node3D"]',
+  '',
+  '[node name="Player" type="Node3D" parent="."]',
+  '',
+  '[node name="Sprite" type="Sprite3D" parent="Player"]',
+  '',
+  '[node name="Gun" type="Node3D" parent="Player/Sprite"]',
+  '',
+];
+
+/**
+ * A scene with nodes under an instanced scene: Root, the instance Inst, X under `Inst/Sub` and Y
+ * under `Inst/Sub/X`, on lines 2, 4, 6 and 8 (zero-based), and a connection on line 10.
+ */
+export const INSTANCED_TREE = [
+  '[gd_scene format=3]',
+  '',
+  '[node name="Root" type="Node3D"]',
+  '',
+  '[node name="Inst" parent="." instance=ExtResource("1_door")]',
+  '',
+  '[node name="X" type="Node3D" parent="Inst/Sub"]',
+  '',
+  '[node name="Y" type="Node3D" parent="Inst/Sub/X"]',
+  '',
+  '[connection signal="a" from="." to="Inst/Sub/X" method="_a"]',
+  '',
+].join('\n');

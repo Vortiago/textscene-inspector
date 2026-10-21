@@ -6,6 +6,5 @@ export interface PlaneMeshProperties {
   subdivideWidth: number;
   subdivideDepth: number;
   orientation: PlaneMeshOrientation;
-  centerOffset?: Vector3;
-  flipFaces: boolean;
+  centerOffset: Vector3;
 }

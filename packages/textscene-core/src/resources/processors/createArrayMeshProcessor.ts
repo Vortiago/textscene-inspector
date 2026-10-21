@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { ARRAY_MESH_TYPES, decodeArrayMesh } from '../meshes/arraymesh/decode';
-import { buildArrayMeshGeometry } from '../meshes/arraymesh/build';
+import { godotSurfacesGeometry } from '../meshes/godotSurface';
 import type { SectionLoaderFn } from '../resourceSection';
 import { arrayMeshAabb } from '../meshes/arraymesh/meshAabb';
 import type { Aabb } from '../../godot/math/aabb';
@@ -41,7 +41,7 @@ export function createArrayMeshProcessor(
       const section = await loadSection(path, ARRAY_MESH_TYPES);
       const mesh = decodeArrayMesh(section, path);
       return {
-        geometry: buildArrayMeshGeometry(mesh),
+        geometry: godotSurfacesGeometry(mesh.surfaces),
         materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
         surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
         aabb: arrayMeshAabb(section.properties),

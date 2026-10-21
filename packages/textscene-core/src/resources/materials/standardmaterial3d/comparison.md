@@ -24,10 +24,9 @@ Godot reads a roughness map and a metallic map from the channel that `roughness_
 
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
-An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing. `emission_on_uv2` samples the mesh's UV2, and the `glb-lightmap-uv2` golden draws it through a GLB's unwrapped UV2.
+An emissive sphere at `emission_energy = 2.0` glows cyan in both, and the preview environment blooms it. `emission_operator` is honoured, including MULTIPLY with no texture, which emits nothing. `emission_on_uv2` samples the mesh's UV2. The `glb-lightmap-uv2` golden draws it through a GLB's unwrapped UV2. The `primitive-mesh-uv2` golden draws it through the UV2 that each ported primitive builds under `add_uv2`.
 
 - **Approximated** `emission_intensity` is ignored. `emission_energy_multiplier` alone drives the strength.
-- **Approximated** A PrimitiveMesh with `add_uv2` gets no UV2 here, so `emission_on_uv2` on one samples the map's top-left texel, where Godot reads the generated UV2.
 
 ## Emission texture
 <!-- compare: image=unit-material-emission-add status=done fixture=unit-material-emission-add.tscn -->
@@ -39,13 +38,16 @@ ADD emission with both a dark red colour and a texture. Godot emits `(emission +
 
 A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in `unit-sub-viewport-texture`. A target in a pass cycle draws the missing-texture material from any slot.
 
+## ViewportTexture sampler state
+<!-- compare: image=unit-sub-viewport-texture-sampler status=done fixture=unit-sub-viewport-texture-sampler.tscn -->
+
+A SubViewport's 8x8 target on three unshaded quads. The material's sampler applies to the target as it does to any texture (`material.cpp:760`). `texture_repeat` wraps at the edge, `uv1_scale` tiles the target, and `texture_filter = 0` keeps its texels as blocks. Both engines draw the same three quads.
+
 ## Normal map
 
 <!-- compare: image=unit-material-normal-map-blue status=done fixture=unit-material-normal-map-blue.tscn -->
 
-`normal_texture` reads red and green only. Both engines rebuild blue from them (`scene_forward_clustered.glsl:1437-1438`). So a map with blue 0 shades its flat texel as the bare plane, and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it. A glTF material reads its normal map the same way, as Godot imports it as a StandardMaterial3D.
-
-- **Approximated** The tilted texel shades darker than Godot's, while the flat texel matches.
+`normal_texture` reads red and green only. Both engines rebuild blue from them (`scene_forward_clustered.glsl:1437-1438`). So a map with blue 0 shades its flat texel as the bare plane, and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it. A glTF material reads its normal map the same way, as Godot imports it as a StandardMaterial3D. Both engines tilt the normal in a frame whose tangent and binormal have unit length. So a quad with a different UV density per axis tilts each texel by its authored angle.
 
 ## Clearcoat
 
@@ -63,28 +65,21 @@ Godot's `rim` is a Fresnel edge term on a dark sphere. It maps to `sheen` with a
 
 ## Anisotropy
 
-<!-- compare: image=unit-material-anisotropy status=limitation fixture=unit-material-anisotropy.tscn -->
+<!-- compare: image=unit-material-anisotropy status=done fixture=unit-material-anisotropy.tscn -->
 
-`anisotropy` stretches the specular highlight along one direction. Both engines show a brushed-metal streak.
-
-- **Approximated** three derives the tangent frame per pixel from the UVs, not from the mesh's tangents, so the streak reads faceted and turned from Godot's ring.
+`anisotropy` stretches the specular highlight along the mesh's tangent. The SphereMesh carries Godot's tangents, so both engines draw a soft ring round the pole.
 
 ## Anisotropy flowmap
 
-<!-- compare: image=unit-material-anisotropy-flowmap status=limitation fixture=unit-material-anisotropy-flowmap.tscn -->
+<!-- compare: image=unit-material-anisotropy-flowmap status=done fixture=unit-material-anisotropy-flowmap.tscn -->
 
-`anisotropy_flowmap` carries direction in R/G and strength in alpha. The image is repacked alpha to blue before it reaches `anisotropyMap`, and both engines band the mapped sphere.
-
-- **Approximated** The bright lobe lands on the other side of centre, and band edges step hard where Godot's blur. The tangent frame comes from the UVs, not the mesh, and the glow blooms the misplaced lobe.
-- **Approximated** A hard seam runs down the large sphere, where Godot's surface is smooth.
+`anisotropy_flowmap` carries direction in R/G and strength in alpha. The image is repacked alpha to blue before it reaches `anisotropyMap`. The flowmap turns the SphereMesh's own tangents. Both engines put the bright lobe right of centre on the large sphere, with a crease above it where the direction turns.
 
 ## Ambient occlusion
 
 <!-- compare: image=unit-material-ao status=done fixture=unit-material-ao.tscn -->
 
 The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the right plate has AO off. Both engines draw black occluded cells under the sun, since the map darkens direct light as well as ambient light. `ao_texture_channel` picks the map channel, and `ao_on_uv2` samples the mesh's UV2.
-
-- **Approximated** A PrimitiveMesh with `add_uv2` gets no UV2 here, so `ao_on_uv2` on one samples the map's top-left texel, where Godot reads the generated UV2.
 
 ## Diffuse mode
 
@@ -146,4 +141,3 @@ The lenient parser never rejects. Each field falls back to Godot's default throu
 - **Approximated** Under `uv1_world_triplanar`, `uv1_offset` is in world units and is not converted.
 - **Approximated** Triplanar tiling density is exact on a PlaneMesh only, since curved, CSG, GridMap, ArrayMesh and GLB geometry tile by their own UVs.
 - **Approximated** A ViewportTexture outside the albedo slot ignores `uv1_scale`, `uv1_offset`, `texture_repeat` and a nearest `texture_filter`, as it samples its target clamped.
-- **Approximated** A patterned texture on a SphereMesh lands rotated, because Godot winds sphere UVs at a different phase than three.

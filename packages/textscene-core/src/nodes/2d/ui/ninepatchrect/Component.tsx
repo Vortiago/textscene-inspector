@@ -4,7 +4,7 @@
  * Godot px, +Y down, so the mesh sits in a `scale={[1,-1,1]}` group like `<StyleBoxQuad>`. The walker's `tint`
  * applies as-is: no modulate reaches `canvas_item_add_nine_patch` (`nine_patch_rect.cpp:48`, unlike `style_box_texture.cpp:183`).
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -21,6 +21,7 @@ import {
 } from '../../../../r3f/controls/native/ninePatchGeometry';
 import type { NinePatchRectProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
+import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
 interface ImageLike {
   width?: number;
@@ -88,7 +89,7 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
     props.axisStretchVertical,
     props.drawCenter,
   ]);
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   // Clone: the resolved texture is a shared cache entry, and this sets colour space and filter per
   // consumer, as `texturerect/Component.tsx` does.

@@ -6,15 +6,18 @@
  */
 
 /** Godot Mesh.ArrayFormat flags. */
-const ARRAY_FORMAT_NORMAL = 1 << 1;
-const ARRAY_FORMAT_TANGENT = 1 << 2;
+export const ARRAY_FORMAT_VERTEX = 1 << 0;
+export const ARRAY_FORMAT_NORMAL = 1 << 1;
+export const ARRAY_FORMAT_TANGENT = 1 << 2;
 const ARRAY_FORMAT_COLOR = 1 << 3;
 const ARRAY_FORMAT_TEX_UV = 1 << 4;
 const ARRAY_FORMAT_TEX_UV2 = 1 << 5;
+/** Positions are 2×float32, not 3 (`rendering_server.h:339`). */
+export const ARRAY_FLAG_USE_2D_VERTICES = 1 << 25;
 /**
- * Attributes are quantised. `&` coerces to int32, so it reads only bits below 32,
- * never `ARRAY_FLAG_FORMAT_VERSION_2` (1 << 35). Nothing here reads that flag:
- * bit 29 alone selects the layout, so a fixture can omit the version flag.
+ * Attributes are quantised. `&` coerces to int32, so it reads only bits below 32, never
+ * `ARRAY_FLAG_FORMAT_VERSION_2` (1 << 35): `surfaceVersion.ts` reads the version and upgrades an
+ * older surface first.
  */
 const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
 
@@ -36,11 +39,11 @@ export const PRIMITIVE_TRIANGLES = 3;
 export interface SurfaceLayout {
   compressed: boolean;
   /**
-   * The normal region holds an axis-angle tangent frame rather than a plain
-   * octahedral normal. Compression folds the tangent into the normal's bytes,
-   * so this is true only when the surface declares a TANGENT.
+   * How the normal region stores the tangent. `frame`: compression folds it into the normal's
+   * bytes as an axis-angle frame. `octahedral`: its own 2×uint16 after each normal. `none`: the
+   * surface declares no TANGENT, or no NORMAL to carry it.
    */
-  tangentFrame: boolean;
+  tangent: 'frame' | 'octahedral' | 'none';
   /** Bytes per vertex in `vertex_data`'s leading position region. */
   positionStride: number;
   /** Bytes per vertex in the normal/tangent region: both halved when compressed. */
@@ -72,7 +75,7 @@ export function surfaceLayout(format: number): SurfaceLayout {
 
   return {
     compressed,
-    tangentFrame: compressed && hasTangent,
+    tangent: hasNormal && hasTangent ? (compressed ? 'frame' : 'octahedral') : 'none',
     positionStride,
     normalStride,
     attributeStride: (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),

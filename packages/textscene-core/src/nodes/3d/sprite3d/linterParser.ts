@@ -18,7 +18,7 @@ validatorRegistry.registerAll('Sprite3D', {
   // (:924/:905) refuse a value below 1 through ERR_FAIL_COND_MSG, and nothing enforces the 16384
   // ceiling, so it warns. Same numbers as Sprite2D (sprite_2d.cpp:543-544).
   hframes: v.int('hframes', {
-    // `int`, not `strictInt`: a float literal in this Variant::INT slot is truncated on assignment
+    // A float literal in this Variant::INT slot is truncated on assignment
     // (variant_parser.cpp:446-448), so `hframes = 5.5` is a file Godot opens, not a format error.
     min: 1,
     max: 16384,

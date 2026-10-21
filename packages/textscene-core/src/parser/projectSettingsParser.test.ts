@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  projectPrimitiveMeshTexelSize,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
@@ -17,6 +18,7 @@ import {
   projectThemeScale,
   projectClearColor,
   projectTransparentBackground,
+  projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectViewportSize,
   projectVolumetricFogSettings,
@@ -216,6 +218,40 @@ describe('projectTransparentBackground', () => {
   });
 });
 
+describe('projectUsesLightmapBicubicFilter', () => {
+  const KEY = 'rendering/lightmapping/lightmap_gi/use_bicubic_filter';
+
+  it('reads a project that turns the filter off', () => {
+    expect(projectUsesLightmapBicubicFilter({ [KEY]: 'false' })).toBe(false);
+  });
+
+  it("filters with no project, Godot's default (rendering_server.cpp:3822)", () => {
+    expect(projectUsesLightmapBicubicFilter(null)).toBe(true);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectUsesLightmapBicubicFilter({ [KEY]: 'sometimes' })).toBe(true);
+  });
+});
+
+describe('projectPrimitiveMeshTexelSize', () => {
+  const KEY = 'rendering/lightmapping/primitive_meshes/texel_size';
+
+  it('reads the texel size the project sets', () => {
+    expect(projectPrimitiveMeshTexelSize({ [KEY]: '0.5' })).toBe(0.5);
+  });
+
+  it('is 0.2 with no project or a malformed value', () => {
+    expect(projectPrimitiveMeshTexelSize(null)).toBe(0.2);
+    expect(projectPrimitiveMeshTexelSize({ [KEY]: 'big' })).toBe(0.2);
+  });
+
+  it('takes a size at or below zero as 0.2, as every PrimitiveMesh does (edge case)', () => {
+    expect(projectPrimitiveMeshTexelSize({ [KEY]: '0' })).toBe(0.2);
+    expect(projectPrimitiveMeshTexelSize({ [KEY]: '-1' })).toBe(0.2);
+  });
+});
+
 describe('projectMsaaModes', () => {
   it("reads the root viewport's 2D and 3D modes", () => {
     // `demos/2d/particles` sets msaa_2d=2, and most 3D demos set msaa_3d=2: 4X.
@@ -290,8 +326,12 @@ describe('projectViewportSize', () => {
     expect(width('NaN')).toBe(1152);
   });
 
-  it('rounds a fractional override — a capture frame is whole pixels', () => {
-    expect(projectViewportSize({ 'display/window/size/viewport_width': '800.6' }).width).toBe(801);
+  it('truncates a fractional override, as the INT setting stores it', () => {
+    expect(projectViewportSize({ 'display/window/size/viewport_width': '800.6' }).width).toBe(800);
+  });
+
+  it('refuses a spelling Godot’s tokenizer does not read', () => {
+    expect(projectViewportSize({ 'display/window/size/viewport_width': '0o1000' }).width).toBe(1152);
   });
 
   it('reads the keys as `parseProjectSettings` names them, section prefix and all', () => {

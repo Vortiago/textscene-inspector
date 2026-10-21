@@ -16,6 +16,7 @@ function makeHandlers() {
   return {
     webviewReady: vi.fn(),
     jumpToNode: vi.fn(),
+    copyNodePath: vi.fn(),
     loadResource: vi.fn(),
     log: vi.fn(),
     previewCaptured: vi.fn(),
@@ -30,7 +31,8 @@ function makeHandlers() {
 describe('dispatchWebviewMessage', () => {
   const ROUTING_CASES: WebviewToHostMessage[] = [
     { type: 'webviewReady' },
-    { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Leaf', parent: '.' },
+    { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Leaf' },
+    { type: 'copyNodePath', nodePath: 'Player/Camera3D' },
     { type: 'loadResource', path: 'res://tex.png', resourceType: 'Texture2D', requestId: 'r1' },
     { type: 'log', level: 'info', message: 'hello', args: [] },
     { type: 'previewCaptured', requestId: 'c1', dataUrl: 'data:image/png;base64,AA==' },
@@ -225,10 +227,16 @@ describe('a message whose type is known but whose body is not', () => {
     expect(h.jumpToNode).not.toHaveBeenCalled();
   });
 
-  it('still routes a root jumpToNode, whose optional parent is absent', () => {
+  it('drops a copyNodePath whose path is not a string', () => {
     const h = makeHandlers();
-    dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'Root', path: 'Root' }, h);
-    expect(h.jumpToNode).toHaveBeenCalledTimes(1);
+    dispatchWebviewMessage({ type: 'copyNodePath', nodePath: 42 }, h);
+    expect(h.copyNodePath).not.toHaveBeenCalled();
+  });
+
+  it('drops a jumpToNode with no path, which the handler resolves by', () => {
+    const h = makeHandlers();
+    dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'Root' }, h);
+    expect(h.jumpToNode).not.toHaveBeenCalled();
   });
 
   it('routes a loadResource with no resourceType, as the byte layer sends every processor load', () => {

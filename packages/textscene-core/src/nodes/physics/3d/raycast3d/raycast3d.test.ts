@@ -23,6 +23,6 @@ describe('RayCast3D registration', () => {
   });
 
   it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.isTransformOnly('RayCast3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('RayCast3D')).toBe('transform-only');
   });
 });

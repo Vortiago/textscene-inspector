@@ -11,9 +11,8 @@ import { join } from 'node:path';
 import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter } from './loadCoreLinter.mjs';
 import { unvalidatedByClass } from './registryKeys.mjs';
+import { RESOURCE_BASES_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
 
-const PROPS = join(import.meta.dirname, 'resource-properties.json');
-const BASES = join(import.meta.dirname, 'resource-bases.json');
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 /**
  * Properties in scope with no validator. Raise it only for a property a `.tscn`
@@ -23,7 +22,7 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 const EXPECTED_UNVALIDATED = 0;
 
 /** Every class from a registered resource type up to `Resource`, inclusive. */
-export function coveredClasses(registeredTypes, bases) {
+function coveredClasses(registeredTypes, bases) {
   const scope = new Set();
   for (const type of registeredTypes) {
     // A node type is absent from the resource table, which is how the two
@@ -39,8 +38,8 @@ export function coveredClasses(registeredTypes, bases) {
 }
 
 describe('resource property coverage', { timeout: 60_000 }, () => {
-  const engine = JSON.parse(readFileSync(PROPS, 'utf8'));
-  const bases = JSON.parse(readFileSync(BASES, 'utf8'));
+  const engine = JSON.parse(readFileSync(RESOURCE_PROPS_OUT, 'utf8'));
+  const bases = JSON.parse(readFileSync(RESOURCE_BASES_OUT, 'utf8'));
 
   // Not `existsSync(dist)`, which skips on no build and passes a stale one. In
   // `beforeAll`, not at module scope, where a throw during a concurrent `tsc

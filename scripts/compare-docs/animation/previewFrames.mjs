@@ -5,22 +5,22 @@
 
 /* global document, window */ // used only inside the page.evaluate callback, which runs in the browser.
 
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { launchGodotComparisonBrowser } from '../../showcase/browser.mjs';
 import {
   createCaptureContext,
   findCaptureTarget,
   gotoFixture,
+  previewPort,
+  targetShooter,
   withPreviewBrowser,
 } from '../../visual/previewServer.mjs';
 import { FRAMES } from './clip.mjs';
 
-const PORT = Number(process.env.COMPARE_PORT) || 4323;
-
 export function captureOurFrames(fixture, framesDir, mode, driverText) {
   return withPreviewBrowser(
-    { port: PORT, portEnvName: 'COMPARE_PORT', launchBrowser: launchGodotComparisonBrowser },
+    { ...previewPort('compareAnimation'), launchBrowser: launchGodotComparisonBrowser },
     async (browser, baseUrl) => {
       const context = await createCaptureContext(browser, { frameOnOpen: false, canvas2D: mode === '2d' });
       const page = await context.newPage();
@@ -57,6 +57,7 @@ export function captureOurFrames(fixture, framesDir, mode, driverText) {
       await page.waitForTimeout(150);
 
       await mkdir(framesDir, { recursive: true });
+      const { shoot } = targetShooter(target);
       for (let i = 0; i < FRAMES; i++) {
         const t = (duration * i) / FRAMES;
         // A React-controlled input: set through the native value setter and fire input and change,
@@ -69,7 +70,7 @@ export function captureOurFrames(fixture, framesDir, mode, driverText) {
           el.dispatchEvent(new Event('change', { bubbles: true }));
         }, t);
         await page.waitForTimeout(220);
-        await target.screenshot({ path: join(framesDir, `frame_${String(i).padStart(2, '0')}.png`) });
+        await writeFile(join(framesDir, `frame_${String(i).padStart(2, '0')}.png`), await shoot());
       }
     }
   );

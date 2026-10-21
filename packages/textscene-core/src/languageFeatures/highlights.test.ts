@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LanguageDocument } from './document';
-import { LINE, SCENE } from './fixtures.testkit';
+import { INSTANCED_TREE, LINE, NODE_TREE_HEAD, SCENE } from './fixtures.testkit';
 import { documentHighlights } from './highlights';
 
 describe('documentHighlights', () => {
@@ -59,5 +59,66 @@ describe('documentHighlights', () => {
   it('highlights nothing away from a reference', () => {
     const document = new LanguageDocument(SCENE);
     expect(documentHighlights(document, { line: 1, character: 0 })).toEqual([]);
+  });
+});
+
+describe('documentHighlights of a node path', () => {
+  const text = [
+    ...NODE_TREE_HEAD,
+    '[connection signal="a" from="Player" to="." method="_a"]',
+    '[connection signal="b" from="./Player/Sprite" to="Player" method="_b"]',
+  ].join('\n');
+  const document = new LanguageDocument(text);
+  const column = (line: number, needle: string): number => document.lines[line]!.indexOf(needle);
+  const spans = (line: number, needle: string): number[][] =>
+    documentHighlights(document, { line, character: column(line, needle) + 1 })
+      .map(({ range }) => [range.start.line, range.start.character, range.end.line, range.end.character])
+      .sort((a, b) => a[0]! - b[0]! || a[1]! - b[1]!);
+  /** The span of the quoted value that follows `prefix` on a line. */
+  const valueSpan = (line: number, prefix: string): number[] => {
+    const start = column(line, prefix) + prefix.length;
+    return [line, start, line, document.lines[line]!.indexOf('"', start)];
+  };
+
+  const playerUses = [
+    valueSpan(4, 'name="'),
+    valueSpan(6, 'parent="'),
+    valueSpan(10, 'from="'),
+    valueSpan(11, 'to="'),
+  ];
+
+  it('marks the name= and every path that resolves to the node, from its name=', () => {
+    expect(spans(4, 'Player')).toEqual(playerUses);
+  });
+
+  it('marks the same spans from a connection end', () => {
+    expect(spans(10, 'Player" to')).toEqual(playerUses);
+  });
+
+  it('leaves out a child parent= that runs through the node', () => {
+    const lines = spans(4, 'Player').map(([line]) => line);
+    expect(lines).not.toContain(8);
+  });
+
+  it('marks the root by its name= and every . that names it', () => {
+    expect(spans(2, 'Root').map(([line]) => line)).toEqual([2, 4, 10]);
+  });
+
+  it('gives nothing for a path no heading declares', () => {
+    const missing = new LanguageDocument(
+      '[node name="A"]\n\n[connection signal="a" from="B" to="A" method="m"]'
+    );
+    expect(documentHighlights(missing, { line: 2, character: 28 })).toEqual([]);
+  });
+});
+
+describe('documentHighlights of a node under an instanced scene', () => {
+  it('marks the name= and every path that resolves to the node', () => {
+    const document = new LanguageDocument(INSTANCED_TREE);
+    const lines = documentHighlights(document, { line: 6, character: document.lines[6]!.indexOf('X') + 1 })
+      .map(({ range }) => range.start.line)
+      .sort((a, b) => a - b);
+
+    expect(lines).toEqual([6, 8, 10]);
   });
 });

@@ -6,15 +6,7 @@
  */
 import { launchShowcaseBrowser } from '../showcase/browser.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
-import {
-  assertPortFree,
-  ensureWebBuilt,
-  killPreviewGroup,
-  readViewportMode,
-  settleCanvas,
-  startPreview,
-  waitForServer,
-} from '../visual/previewServer.mjs';
+import { previewPort, readViewportMode, settleCanvas, withPreviewBrowser } from '../visual/previewServer.mjs';
 import { installViewMatrixProbe, matricesEqual, formatMatrix } from './cameraProbe.mjs';
 import { checkNodePaths, expandAllTreeRows, readOutlinerPaths, selectOutlinerNode } from './outliner.mjs';
 import { findRowValue, readInspectorPanel } from './inspector.mjs';
@@ -38,8 +30,6 @@ import { checkUploadScenarios, runUploadScenarios } from './uploadScenarios.mjs'
 
 /* global window */
 // `window` exists only in the browser that runs the `page.evaluate` calls.
-
-const PORT = Number(process.env.E2E_WEB_PORT) || 4321;
 
 // No external resource, so the geometry and node set are deterministic. The
 // order is the fixture's authored child order, which TreeNode renders.
@@ -142,128 +132,13 @@ class GateFailures {
 }
 
 async function main() {
-  ensureWebBuilt(console.log);
-  await assertPortFree(PORT, 'E2E_WEB_PORT');
-  const { proc, baseUrl } = startPreview(PORT);
-
-  let browser;
+  const results = await withPreviewBrowser(
+    { ...previewPort('e2eWeb'), launchBrowser: launchShowcaseBrowser },
+    runScenarios
+  );
   const gate = new GateFailures();
-  try {
-    await waitForServer(baseUrl);
-    browser = await launchShowcaseBrowser();
-
-    console.log(`\n[gate] 3D scenario: ${FIXTURE_3D}`);
-    const threeD = await run3DScenario(browser, baseUrl);
-
-    console.log(`[gate] 2D scenario: ${FIXTURE_2D}`);
-    const twoD = await run2DScenario(browser, baseUrl);
-
-    console.log(`[gate] texture settle control: ${DELAY_FIXTURE}`);
-    const settleControl = await runSettleControl(browser, baseUrl);
-
-    console.log(
-      `[gate] long tasks: ${LARGE_FIXTURE} with the worker, blocked and stalled, and ${LARGE_TRES_FIXTURE}`
-    );
-    const { withWorker, fromTres, blocked, stalled } = await runLongTaskArms(baseUrl);
-
-    console.log(`[gate] phone scenario: ${FIXTURE_3D}`);
-    const phone = await runPhoneScenario(browser, baseUrl, { fixture: FIXTURE_3D, selectPath: SELECT_A });
-
-    console.log(`[gate] upload scenarios: file input, drop and repeated drop over ${FIXTURE_3D}`);
-    const uploads = await runUploadScenarios(browser, baseUrl, FIXTURE_3D);
-
-    checkSizedCanvas(gate, '[3D]', threeD.dims);
-    checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
-    checkStage(gate, '[3D]', threeD.stage, '3d');
-    checkDiagnostics(gate, '[3D]', threeD.diagnostics);
-
-    checkNodePaths(gate, `[outliner] the tree of ${FIXTURE_3D}`, EXPECTED_3D_PATHS, threeD.paths);
-
-    gate.check(
-      threeD.inspectorA?.name === 'Title',
-      `[inspector] selecting ${SELECT_A} shows "${threeD.inspectorA?.name}" in the panel title, expected "Title"`
-    );
-    const textValue = findRowValue(threeD.inspectorA?.sections, 'Text', 'Text');
-    gate.check(
-      textValue === SELECT_A_TEXT,
-      `[inspector] Text section's Text row reads "${textValue}", expected "${SELECT_A_TEXT}"`
-    );
-
-    gate.check(
-      !!threeD.before && threeD.before.updates > 0,
-      '[camera] the viewMatrix probe never captured an upload — nothing to compare, ' +
-        'this assertion would prove nothing either way'
-    );
-    if (threeD.before) {
-      gate.check(
-        matricesEqual(threeD.before.matrix, threeD.afterA.matrix),
-        `[camera] view matrix changed after selecting ${SELECT_A} — camera moved on selection\n` +
-          `    before: ${formatMatrix(threeD.before.matrix)}\n` +
-          `    after:  ${formatMatrix(threeD.afterA?.matrix)}`
-      );
-      gate.check(
-        matricesEqual(threeD.afterA.matrix, threeD.afterB.matrix),
-        `[camera] view matrix changed after selecting ${SELECT_B} (a SECOND, different selection) — ` +
-          `camera moved on selection\n` +
-          `    after ${SELECT_A}: ${formatMatrix(threeD.afterA?.matrix)}\n` +
-          `    after ${SELECT_B}: ${formatMatrix(threeD.afterB?.matrix)}`
-      );
-    }
-
-    checkSizedCanvas(gate, '[2D]', twoD.dims);
-    checkInk(gate, '[2D]', twoD.ink, INK_FLOOR_2D);
-    checkStage(gate, '[2D]', twoD.stage, '2d');
-    checkDiagnostics(gate, '[2D]', twoD.diagnostics);
-
-    checkSettleControl(gate, settleControl);
-    const largeTexture = { inkOf: inkStats, inkFloor: INK_FLOOR_LARGE_TEXTURE };
-    // The status clears only once the drawn map's banded upload completes, so a cleared
-    // status and a reply show the texture was built off-thread and uploaded to draw.
-    checkWorkerArm(gate, 'long tasks', withWorker, largeTexture);
-    checkWorkerArm(gate, 'long tasks, .tres material', fromTres, largeTexture);
-    checkBlockedControl(gate, blocked);
-    checkStalledControl(gate, stalled);
-    checkDiagnostics(gate, '[long tasks]', withWorker.diagnostics);
-    checkDiagnostics(gate, '[long tasks, .tres material]', fromTres.diagnostics);
-    checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
-    checkUploadScenarios(gate, uploads);
-
-    console.log('\n[gate] measurements');
-    console.log(
-      `  3D  canvas=${threeD.dims.width}x${threeD.dims.height} ink=${threeD.ink?.inkPixels} ` +
-        `stage=${threeD.stage} nodes=${threeD.paths.length} camera-updates=${threeD.before?.updates}`
-    );
-    console.log(
-      `  2D  canvas=${twoD.dims.width}x${twoD.dims.height} ink=${twoD.ink?.inkPixels} stage=${twoD.stage}`
-    );
-    console.log(
-      `  texture settle  baseline=${settleControl.baseline.settledMs}ms delayed=${settleControl.delayed.settledMs}ms ` +
-        `unwaited=${settleControl.unwaited.settledMs}ms workers=${settleControl.delayed.workers}`
-    );
-    // The Long Tasks API reports only tasks over 50 ms, so 0 means it saw none in the window.
-    const longest = (tasks) => Math.max(0, ...(tasks ?? []).map((task) => task.duration));
-    console.log(
-      `  long tasks in the texture window  worker after the reply: replies=${withWorker.probe.replies} ` +
-        `longest=${longest(longTasksAfterFirstReply(withWorker.probe, 0))}ms | ` +
-        `.tres material after the reply: replies=${fromTres.probe.replies} ` +
-        `longest=${longest(longTasksAfterFirstReply(fromTres.probe, 0))}ms | ` +
-        `blocked: longest=${longest(longTasksDuringTextureWork(blocked.probe, 0))}ms | ` +
-        `stalled after the reply: longest=${longest(longTasksAfterFirstReply(stalled.probe, 0))}ms`
-    );
-    console.log(
-      `  phone  canvas=${phone.canvasBox?.width}x${phone.canvasBox?.height} ` +
-        `sheet=${phone.dockBox?.width}x${phone.dockBox?.height} ` +
-        `collapsed-canvas=${phone.collapsedCanvasBox?.width}x${phone.collapsedCanvasBox?.height}`
-    );
-    console.log(
-      `  uploads  file-input ink=${uploads.fileInput.ink?.inkPixels} drop ink=${uploads.drop.ink?.inkPixels} ` +
-        `scene-only drop ink=${uploads.repeatedDrop.sceneOnly.ink?.inkPixels} ` +
-        `texture drop ink=${uploads.repeatedDrop.filled.ink?.inkPixels}`
-    );
-  } finally {
-    if (browser) await browser.close().catch(() => {});
-    killPreviewGroup(proc);
-  }
+  checkScenarios(gate, results);
+  logMeasurements(results);
 
   if (!gate.ok) {
     console.error('\n[gate] FAILED');
@@ -272,6 +147,138 @@ async function main() {
     return;
   }
   console.log('\n[gate] PASSED');
+}
+
+/** Runs every scenario on the served previewer, and answers what each measured. */
+async function runScenarios(browser, baseUrl) {
+  console.log(`\n[gate] 3D scenario: ${FIXTURE_3D}`);
+  const threeD = await run3DScenario(browser, baseUrl);
+
+  console.log(`[gate] 2D scenario: ${FIXTURE_2D}`);
+  const twoD = await run2DScenario(browser, baseUrl);
+
+  console.log(`[gate] texture settle control: ${DELAY_FIXTURE}`);
+  const settleControl = await runSettleControl(browser, baseUrl);
+
+  console.log(
+    `[gate] long tasks: ${LARGE_FIXTURE} with the worker, blocked and stalled, and ${LARGE_TRES_FIXTURE}`
+  );
+  const { withWorker, fromTres, blocked, stalled } = await runLongTaskArms(baseUrl);
+
+  console.log(`[gate] phone scenario: ${FIXTURE_3D}`);
+  const phone = await runPhoneScenario(browser, baseUrl, { fixture: FIXTURE_3D, selectPath: SELECT_A });
+
+  console.log(`[gate] upload scenarios: file input, drop and repeated drop over ${FIXTURE_3D}`);
+  const uploads = await runUploadScenarios(browser, baseUrl, FIXTURE_3D);
+
+  return { threeD, twoD, settleControl, withWorker, fromTres, blocked, stalled, phone, uploads };
+}
+
+/** Records each scenario's claims on `gate`. */
+function checkScenarios(gate, results) {
+  const { threeD, twoD, settleControl, withWorker, fromTres, blocked, stalled, phone, uploads } = results;
+  checkSizedCanvas(gate, '[3D]', threeD.dims);
+  checkInk(gate, '[3D]', threeD.ink, INK_FLOOR_3D);
+  checkStage(gate, '[3D]', threeD.stage, '3d');
+  checkDiagnostics(gate, '[3D]', threeD.diagnostics);
+
+  checkNodePaths(gate, `[outliner] the tree of ${FIXTURE_3D}`, EXPECTED_3D_PATHS, threeD.paths);
+
+  gate.check(
+    threeD.inspectorA?.name === 'Title',
+    `[inspector] selecting ${SELECT_A} shows "${threeD.inspectorA?.name}" in the panel title, expected "Title"`
+  );
+  const textValue = findRowValue(threeD.inspectorA?.sections, 'Text', 'Text');
+  gate.check(
+    textValue === SELECT_A_TEXT,
+    `[inspector] Text section's Text row reads "${textValue}", expected "${SELECT_A_TEXT}"`
+  );
+
+  gate.check(
+    !!threeD.before && threeD.before.updates > 0,
+    '[camera] the viewMatrix probe never captured an upload — nothing to compare, ' +
+      'this assertion would prove nothing either way'
+  );
+  if (threeD.before) {
+    gate.check(
+      matricesEqual(threeD.before.matrix, threeD.afterA.matrix),
+      `[camera] view matrix changed after selecting ${SELECT_A} — camera moved on selection\n` +
+        `    before: ${formatMatrix(threeD.before.matrix)}\n` +
+        `    after:  ${formatMatrix(threeD.afterA?.matrix)}`
+    );
+    gate.check(
+      matricesEqual(threeD.afterA.matrix, threeD.afterB.matrix),
+      `[camera] view matrix changed after selecting ${SELECT_B} (a SECOND, different selection) — ` +
+        `camera moved on selection\n` +
+        `    after ${SELECT_A}: ${formatMatrix(threeD.afterA?.matrix)}\n` +
+        `    after ${SELECT_B}: ${formatMatrix(threeD.afterB?.matrix)}`
+    );
+  }
+
+  checkSizedCanvas(gate, '[2D]', twoD.dims);
+  checkInk(gate, '[2D]', twoD.ink, INK_FLOOR_2D);
+  checkStage(gate, '[2D]', twoD.stage, '2d');
+  checkDiagnostics(gate, '[2D]', twoD.diagnostics);
+
+  checkSettleControl(gate, settleControl);
+  const largeTexture = { inkOf: inkStats, inkFloor: INK_FLOOR_LARGE_TEXTURE };
+  // The status clears only once the drawn map's banded upload completes, so a cleared
+  // status and a reply show the texture was built off-thread and uploaded to draw.
+  checkWorkerArm(gate, 'long tasks', withWorker, largeTexture);
+  checkWorkerArm(gate, 'long tasks, .tres material', fromTres, largeTexture);
+  checkBlockedControl(gate, blocked);
+  checkStalledControl(gate, stalled);
+  checkDiagnostics(gate, '[long tasks]', withWorker.diagnostics);
+  checkDiagnostics(gate, '[long tasks, .tres material]', fromTres.diagnostics);
+  checkPhoneLayout(gate, phone, { expectedPaths: EXPECTED_3D_PATHS, selectName: 'Title' });
+  checkUploadScenarios(gate, uploads);
+}
+
+/** Prints what each scenario measured, pass or fail, for a run's log. */
+function logMeasurements({
+  threeD,
+  twoD,
+  settleControl,
+  withWorker,
+  fromTres,
+  blocked,
+  stalled,
+  phone,
+  uploads,
+}) {
+  console.log('\n[gate] measurements');
+  console.log(
+    `  3D  canvas=${threeD.dims.width}x${threeD.dims.height} ink=${threeD.ink?.inkPixels} ` +
+      `stage=${threeD.stage} nodes=${threeD.paths.length} camera-updates=${threeD.before?.updates}`
+  );
+  console.log(
+    `  2D  canvas=${twoD.dims.width}x${twoD.dims.height} ink=${twoD.ink?.inkPixels} stage=${twoD.stage}`
+  );
+  console.log(
+    `  texture settle  baseline=${settleControl.baseline.settledMs}ms delayed=${settleControl.delayed.settledMs}ms ` +
+      `unwaited=${settleControl.unwaited.settledMs}ms workers=${settleControl.delayed.workers} ` +
+      `replies=${settleControl.delayed.replies}`
+  );
+  // The Long Tasks API reports only tasks over 50 ms, so 0 means it saw none in the window.
+  const longest = (tasks) => Math.max(0, ...(tasks ?? []).map((task) => task.duration));
+  console.log(
+    `  long tasks in the texture window  worker after the reply: replies=${withWorker.probe.replies} ` +
+      `longest=${longest(longTasksAfterFirstReply(withWorker.probe, 0))}ms | ` +
+      `.tres material after the reply: replies=${fromTres.probe.replies} ` +
+      `longest=${longest(longTasksAfterFirstReply(fromTres.probe, 0))}ms | ` +
+      `blocked: longest=${longest(longTasksDuringTextureWork(blocked.probe, 0))}ms | ` +
+      `stalled after the reply: longest=${longest(longTasksAfterFirstReply(stalled.probe, 0))}ms`
+  );
+  console.log(
+    `  phone  canvas=${phone.canvasBox?.width}x${phone.canvasBox?.height} ` +
+      `sheet=${phone.dockBox?.width}x${phone.dockBox?.height} ` +
+      `collapsed-canvas=${phone.collapsedCanvasBox?.width}x${phone.collapsedCanvasBox?.height}`
+  );
+  console.log(
+    `  uploads  file-input ink=${uploads.fileInput.ink?.inkPixels} drop ink=${uploads.drop.ink?.inkPixels} ` +
+      `scene-only drop ink=${uploads.repeatedDrop.sceneOnly.ink?.inkPixels} ` +
+      `texture drop ink=${uploads.repeatedDrop.filled.ink?.inkPixels}`
+  );
 }
 
 await main();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AREA_LIGHT_3D_DEFAULTS,
+  BakeMode,
   DIRECTIONAL_LIGHT_3D_DEFAULTS,
   LIGHT_3D_BAKE_MODE_NAMES,
   LIGHT_3D_DEFAULTS,
@@ -12,7 +13,7 @@ import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSky
 
 describe('LIGHT_3D_DEFAULTS', () => {
   it('holds what Light3D() sets for every light type', () => {
-    // `light_3d.cpp:468-491` and `light_3d.h:79-81`.
+    // `light_3d.cpp:468-491` and `light_3d.h:79-85`.
     expect(LIGHT_3D_DEFAULTS).toEqual({
       color: 'Color(1, 1, 1, 1)',
       energy: 1,
@@ -30,6 +31,7 @@ describe('LIGHT_3D_DEFAULTS', () => {
       shadowBias: 0.1,
       shadowNormalBias: 1,
       distanceFade: { begin: 40, shadow: 50, length: 10 },
+      bakeMode: BakeMode.DYNAMIC,
     });
   });
 });

@@ -1,10 +1,12 @@
 /**
  * The **Sub-resource path** grammar, `res://file.tres::SubId`: Godot's text saver
- * writes it for every `[sub_resource]`, and `ResourceLoader.load()` accepts it.
- * One string addresses an `ExtResource` `.tres`, a `SubResource` of the scene,
- * and a `SubResource` of another `.tres`.
+ * writes it for every `[sub_resource]`, the binary loader gives an internal resource
+ * the same path (`resource_format_binary.cpp:722`), and `ResourceLoader.load()` accepts it.
+ * One string addresses an `ExtResource` resource file, a `SubResource` of the
+ * scene, and a `SubResource` of another resource file.
  */
 
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { warn } from '../logger.js';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { findSubResource, parseResourceReference } from './SubResourceResolver.js';
@@ -100,6 +102,14 @@ interface SubResourceGate {
   declared: readonly TscnInternalResource[];
   /** `undefined` means the id names nothing declared. */
   accepts: (sub: TscnInternalResource | undefined) => boolean;
+}
+
+/** Accept any sub-resource of class `ancestor` or one it derives, for a reader that judges the subclass itself. */
+export function subResourceClassGate(
+  declared: readonly TscnInternalResource[],
+  ancestor: string
+): SubResourceGate {
+  return { declared, accepts: (sub) => sub !== undefined && descendsFromClass(sub.type, ancestor) };
 }
 
 /** Accept only sub-resources whose `type` is one of `types`. */

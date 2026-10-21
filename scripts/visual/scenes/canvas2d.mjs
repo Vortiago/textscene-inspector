@@ -10,6 +10,14 @@ export const CANVAS_2D_SCENES = [
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn', mode: '2d' },
   { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d' },
+  // A `true` literal in INT and FLOAT slots stores 1: frame 1 of a two-frame sheet, z_index 1 over a
+  // later sibling, and rotation 1 rad. Godot probes: (230,160) white, (550,160) green and (900,324)
+  // blue. Read as 0, the first is black, the second yellow and the bar lies flat.
+  { name: 'bool-numeric-slots', file: 'unit-bool-numeric-slots.tscn', mode: '2d' },
+  // A `parent=` path that names no node re-roots under the scene root. Godot probes: (40,40) red, the
+  // orphan; (120,40) green, its child re-rooted on its own; (40,120) blue, below a moved parent that
+  // does not apply. Dropped, all three are the grey background.
+  { name: 'orphan-reroot', file: 'unit-orphan-reroot.tscn', mode: '2d' },
   // Two chained Bone2Ds, each turned and moved, with a bar under each. Godot
   // probes: (387,210) orange, mid upper arm, and (473,340) blue, mid forearm.
   // A bone drawn as an untransformed group stacks both bars at the skeleton.
@@ -21,6 +29,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn', mode: '2d' },
   // The 2D light surface: ADD/SUB/MIX applied against a lit surface, and an
   // inline gradient cookie under a canvas tint with an unshaded item beside it.
+  // Lights with no texture add nothing and draw no placeholder (measured with `pnpm ref:godot`).
+  { name: 'pointlight2d-untextured', file: 'unit-pointlight2d-untextured.tscn', mode: '2d' },
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', mode: '2d' },
   { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', mode: '2d' },
   { name: 'pointlight2d-lightonly', file: 'unit-pointlight2d-lightonly.tscn', mode: '2d' },
@@ -291,6 +301,30 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-translucent.tscn',
     mode: '2d',
   },
+  // The same magnified edge with a 3D subtree as the content: the SRGB8 target serves a plain view
+  // of its bytes, which the container filters raw. Godot 4.6.3 `--mode 2d`: (199,180) rgb(210,96,19)
+  // and (200,180) rgb(121,83,57), within 1/255.
+  {
+    name: 'sub-viewport-container-shrink-3d-content',
+    file: 'unit-sub-viewport-container-shrink-3d-content.tscn',
+    mode: '2d',
+  },
+  // A translucent 3D surface blends in linear light inside the target. Godot 4.6.3 `--mode 2d`:
+  // (170,180) rgb(193,90,54), within 1/255.
+  {
+    name: 'sub-viewport-container-translucent-3d-content',
+    file: 'unit-sub-viewport-container-translucent-3d-content.tscn',
+    mode: '2d',
+  },
+  // The one scene with a TouchScreenButton, which draws `texture_normal` at its origin in the
+  // editor whatever `visibility_mode` says (touch_screen_button.cpp:140).
+  { name: 'touch-screen-button', file: 'touch-screen-button/unit-touch-screen-button.tscn', mode: '2d' },
+  // The one scene with a Sprite2D that has no texture. Godot's draw returns early for both an unset
+  // and a null texture (sprite_2d.cpp:159), so neither shows a placeholder between the anchors.
+  { name: 'sprite2d-untextured', file: 'unit-sprite2d-untextured.tscn', mode: '2d' },
+  // The one scene with an AnimatedSprite2D that has no sprite_frames. Godot's draw returns early for
+  // both an unset and a null one (animated_sprite_2d.cpp:270), so neither shows a placeholder.
+  { name: 'animatedsprite2d-untextured', file: 'unit-animatedsprite2d-untextured.tscn', mode: '2d' },
   // A Sprite2D samples a ViewportTexture minified over 1 px stripes. Godot 4.6.3 `--mode 2d`:
   // rgb(128,51,0), the byte average.
   {

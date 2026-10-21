@@ -9,10 +9,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { collectCoverage } from './coverage-report/collect.mjs';
+import { buildResourceLedger, collectResourceCoverage } from './coverage-report/resources.mjs';
 import { requireFreshDist } from './distFreshness.mjs';
+import { CATALOG_OUT } from './compare-docs/build-node-catalog/paths.mjs';
 
-const CATALOG = join(import.meta.dirname, 'compare-docs/node-catalog.json');
-const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+const catalog = JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
 
 const CORE = join(import.meta.dirname, '../packages/textscene-core');
 
@@ -52,5 +53,77 @@ describe('coverage ledger', () => {
     // AreaLight3D is filtered upstream (NOT_IN_CLASSDB). Anything else here is a
     // typo in a `typeName`.
     expect(coverage.phantom).toEqual([]);
+  });
+});
+
+describe('resource coverage ledger', () => {
+  const OWN_KEYS = { Material: ['render_priority'] };
+  const ledger = (overrides = {}) =>
+    buildResourceLedger({
+      properties: {
+        Resource: [{ name: 'resource_name' }],
+        Material: [{ name: 'render_priority' }, { name: 'next_pass' }],
+        Gradient: [{ name: 'colors' }, { name: 'offsets' }],
+      },
+      bases: { Material: 'Resource', Gradient: 'Resource', Noise: 'Resource' },
+      claimed: new Set(['Material', 'GLB']),
+      ownKeysOf: (name) => OWN_KEYS[name] ?? [],
+      ...overrides,
+    });
+  const row = (name, data = ledger()) => data.classes.find((c) => c.name === name);
+
+  it('counts a claimed class by its validated and unvalidated properties', () => {
+    expect(row('Material')).toMatchObject({
+      base: 'Resource',
+      claimed: true,
+      ownProperties: 2,
+      validatedProperties: 1,
+      unvalidatedProperties: 1,
+    });
+  });
+
+  it('counts an unclaimed class with no validator as all unvalidated', () => {
+    expect(row('Gradient')).toMatchObject({ claimed: false, ownKeys: 0, unvalidatedProperties: 2 });
+  });
+
+  it('reports a class with no own properties, such as Noise, as zero rather than leaving it out', () => {
+    expect(row('Noise')).toMatchObject({ ownProperties: 0, unvalidatedProperties: 0 });
+  });
+
+  it('leaves a claimed pseudo-type outside ClassDB out of every total', () => {
+    const data = ledger();
+    expect(row('GLB', data)).toBeUndefined();
+    expect(data).toMatchObject({ total: 4, claimed: 1, withOwnValidator: 1 });
+  });
+
+  it('matches an indexed validator key against its family of properties', () => {
+    const data = ledger({
+      properties: { Gradient: [{ name: 'stop_0/color' }, { name: 'stop_1/color' }] },
+      ownKeysOf: () => ['stop_#/*'],
+    });
+    expect(row('Gradient', data).validatedProperties).toBe(2);
+  });
+
+  it('lists the class with the most unvalidated properties first', () => {
+    expect(ledger().classes.map((c) => c.name)).toEqual(['Gradient', 'Material', 'Resource', 'Noise']);
+  });
+});
+
+describe('resource coverage ledger against the live registries', () => {
+  let live;
+  beforeAll(async () => {
+    requireFreshDist(CORE, 'this ledger');
+    live = await collectResourceCoverage();
+  }, 60_000);
+
+  it('reports a class with no validator beside one with validators', () => {
+    const ownKeysOf = (name) => live.classes.find((c) => c.name === name)?.ownKeys;
+    expect(ownKeysOf('BoxMesh')).toBe(0);
+    expect(ownKeysOf('BaseMaterial3D')).toBeGreaterThan(0);
+  });
+
+  it('counts a class a slice claims', () => {
+    expect(live.classes.find((c) => c.name === 'StandardMaterial3D')?.claimed).toBe(true);
+    expect(live.claimed).toBeGreaterThan(40);
   });
 });

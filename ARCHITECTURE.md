@@ -19,6 +19,7 @@ completion. A host supplies files and a place to draw or edit.
 | `apps/textscene-vscode` | VS Code extension: preview webview and language features | esbuild |
 | `apps/textscene-lsp` | `tscn-lsp` language server for any LSP client | esbuild |
 | `apps/textscene-linter` | `tscn-lint` CLI | esbuild |
+| `apps/textscene-tscn` | `@textscene/tscn`: core's parser as one npm bundle | esbuild |
 
 Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
 `pnpm-workspace.yaml` catalog holds every shared dependency version.
@@ -92,8 +93,9 @@ resource section of its type. This path imports no React and no three.js, so the
 the VS Code extension host bundle it alone.
 
 **Language features.** `languageFeatures/` (`createLanguageDocument`) parses the text through
-the same scanning loop with a `ParseObserver`, then answers hover, completion, quick fixes,
-folding and document highlights. It reads the same `godot/` ClassDB captures and the same
+the same scanning loop with a `ParseObserver`, seats the `[node]` headings as the parsers do
+(`seatScene`), then answers hover, completion, quick fixes, folding, document highlights, go to
+definition and the outline. It reads the same `godot/` ClassDB captures and the same
 deprecated-alias table as the linter, so each engine fact has one source in `godot/`. It imports
 no React and no three.js, and every result is host-neutral with zero-based ranges (ADR-0049).
 
@@ -170,6 +172,8 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
   (`ViewportPassRegistryContext.tsx`).
 - **Shadows.** `<SceneShadowFitter>` fits each declared shadow
   (`r3f/directionalShadow/directionalShadow.md`, `r3f/positionalShadow/positionalShadow.md`).
+- **Baked lightmaps.** Each LightmapGI registers its bake with `r3f/lightmap/`, and a lit surface
+  of a node it names reads the **Lightmap atlas** through UV2 (ADR-0054).
 - **Frame profile.** The Display menu's Performance toggle times each render step on the CPU and
   the GPU and counts its draw calls, and the overlay shows the result (`r3f/frameProfile/`,
   ADR-0053). `pnpm test:perf` holds the counts of a set of scenes to their work budget.
@@ -179,7 +183,7 @@ parser:
 
 - Texture V: Godot's origin is the top. Each consumer mirrors `v → 1 - v`.
   `unit-arraymesh-uv.tscn` pins it.
-- Triangle winding: Godot is clockwise. `meshes/arraymesh/build.ts` reverses each triangle.
+- Triangle winding: Godot is clockwise. `meshes/godotSurface.ts` reverses each triangle.
 - 2D Y: Godot's Y grows down. `r3f/node2dTransform.ts` negates it.
 
 ## Resource loading
@@ -256,6 +260,7 @@ A test or a script fails when one of these rules breaks.
 | Core imports each engine fact from its file, and `godot/index.ts` and the root `index.ts` re-export only what a package outside core imports | `packageExports.test.ts` |
 | No value export exists for tests alone. An entry point's export counts only when the apps, the dev kit or the scripts import it | `scripts/testOnlyExports.test.mjs` |
 | Every registered type has a Godot base chain | `baseChainCompleteness.test.ts` |
+| A `pending` registration mounts an **invisible base**, and a `draws` one mounts a component that draws | `NodeComponentRegistry.register`, `NodeComponentRegistry.test.ts`, `sheets.test.mjs` |
 | A rule reports only through its declared arms, and derives `emits` from them | the ESLint rule-arm guard, `ruleCoverage.emits.test.ts`, `ruleArms.test.ts` |
 | A resource slice has the slice shape | `resourceSliceConformance`, `resourceSliceIsolation` |
 | The raw properties agree between parsers | `parser/rawPropertyParity.test.ts` |

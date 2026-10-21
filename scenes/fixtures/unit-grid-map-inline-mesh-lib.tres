@@ -1,0 +1,13 @@
+[gd_resource type="MeshLibrary" load_steps=3 format=3 uid="uid://unitgridmapinlinemeshlib"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tile"]
+albedo_color = Color(0.85, 0.3, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tile"]
+material = SubResource("StandardMaterial3D_tile")
+size = Vector3(0.8, 0.4, 0.6)
+
+[resource]
+item/0/name = "Box"
+item/0/mesh = SubResource("BoxMesh_tile")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)

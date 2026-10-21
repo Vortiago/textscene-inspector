@@ -5,7 +5,7 @@
 
 import { clamp } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
-import { boolOr, floatOr, vec2Or } from '../../../parser/valueParsers';
+import { boolOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import type { StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';
 import { colorOr } from '../../../utils/colorParser';
 
@@ -100,12 +100,16 @@ export function decodeStyleBox(type: string, data: Record<string, string>): Styl
   return null;
 }
 
+/**
+ * Border widths, corner radii, `corner_detail` and `shadow_size` are INT slots whose setters take
+ * an int (`style_box_flat.cpp:81,101,129,191`), so a fractional value truncates.
+ */
 function decodeFlat(data: Record<string, string>): StyleBoxFlatData {
   const borderWidth = {
-    left: floatOr(data.border_width_left, 0, CONTEXT),
-    top: floatOr(data.border_width_top, 0, CONTEXT),
-    right: floatOr(data.border_width_right, 0, CONTEXT),
-    bottom: floatOr(data.border_width_bottom, 0, CONTEXT),
+    left: intOr(data.border_width_left, 0, CONTEXT),
+    top: intOr(data.border_width_top, 0, CONTEXT),
+    right: intOr(data.border_width_right, 0, CONTEXT),
+    bottom: intOr(data.border_width_bottom, 0, CONTEXT),
   };
 
   return {
@@ -113,10 +117,10 @@ function decodeFlat(data: Record<string, string>): StyleBoxFlatData {
     borderColor: colorOr(data.border_color, DEFAULT_BORDER_COLOR),
     borderWidth,
     cornerRadius: {
-      topLeft: floatOr(data.corner_radius_top_left, 0, CONTEXT),
-      topRight: floatOr(data.corner_radius_top_right, 0, CONTEXT),
-      bottomRight: floatOr(data.corner_radius_bottom_right, 0, CONTEXT),
-      bottomLeft: floatOr(data.corner_radius_bottom_left, 0, CONTEXT),
+      topLeft: intOr(data.corner_radius_top_left, 0, CONTEXT),
+      topRight: intOr(data.corner_radius_top_right, 0, CONTEXT),
+      bottomRight: intOr(data.corner_radius_bottom_right, 0, CONTEXT),
+      bottomLeft: intOr(data.corner_radius_bottom_left, 0, CONTEXT),
     },
     expandMargin: expandMarginOf(data, CONTEXT),
     // `StyleBoxFlat::get_style_margin` returns `border_width[side]` (`style_box_flat.cpp`).
@@ -132,15 +136,10 @@ function decodeFlat(data: Record<string, string>): StyleBoxFlatData {
     // `set_anti_aliased`/`set_aa_size` as `anti_aliasing`/`anti_aliasing_size`.
     antiAliased: boolOr(data.anti_aliasing, true, CONTEXT),
     aaSize: clamp(floatOr(data.anti_aliasing_size, 1, CONTEXT), AA_SIZE_MIN, AA_SIZE_MAX),
-    cornerDetail: Math.round(
-      clamp(floatOr(data.corner_detail, 8, CONTEXT), CORNER_DETAIL_MIN, CORNER_DETAIL_MAX)
-    ),
+    cornerDetail: clamp(intOr(data.corner_detail, 8, CONTEXT), CORNER_DETAIL_MIN, CORNER_DETAIL_MAX),
     skew: vec2Or(data.skew, ZERO_VECTOR2, `${CONTEXT} skew`),
     shadowColor: colorOr(data.shadow_color, DEFAULT_SHADOW_COLOR),
-    // `set_shadow_size` takes an int and the property is INT-typed
-    // (`style_box_flat.cpp:727`), so a fractional authored value truncates
-    // rather than growing the ring by a fraction.
-    shadowSize: Math.trunc(floatOr(data.shadow_size, 0, CONTEXT)),
+    shadowSize: intOr(data.shadow_size, 0, CONTEXT),
     shadowOffset: vec2Or(data.shadow_offset, ZERO_VECTOR2, `${CONTEXT} shadow_offset`),
   };
 }

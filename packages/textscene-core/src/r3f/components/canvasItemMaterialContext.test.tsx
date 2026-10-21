@@ -1,5 +1,5 @@
 /**
- * A CanvasItem's `material` resolves from a SubResource or a `.tres` file, as
+ * A CanvasItem's `material` resolves from a SubResource or a resource file, as
  * `CanvasItem::set_material` takes any loaded `Ref<Material>` (`canvas_item.cpp:1204-1211`).
  */
 import { describe, expect, it } from 'vitest';
@@ -17,6 +17,7 @@ import {
 import { CanvasItemBlendMode } from '../../resources/materials/canvasitemmaterial/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { useCanvasItemMaterial, useCanvasItemMaterialFile } from './canvasItemMaterialContext';
+import '../../resources/formats/binaryresource/index';
 
 const ADD_TRES = parseTresFile(`[gd_resource type="CanvasItemMaterial" format=3]
 
@@ -54,6 +55,8 @@ function seededLoader(): FakeResourceLoader {
   fake.resources.seed('res://add.tres', ADD_TRES);
   fake.resources.seed('res://shader.tres', SHADER_TRES);
   fake.resources.seed('res://gone.tres', null);
+  // The binary reader parses a `.res` to the ParsedResource a `.tres` gives.
+  fake.resources.seed('res://add.res', ADD_TRES);
   return fake;
 }
 
@@ -73,8 +76,12 @@ describe('useCanvasItemMaterialFile', () => {
     expect(materialFile('res://shader.tres')).toBeNull();
   });
 
-  it('gives null for a binary .res, which no processor reads', () => {
-    expect(materialFile('res://add.res')).toBeNull();
+  it('reads a CanvasItemMaterial saved as a binary .res', () => {
+    expect(materialFile('res://add.res')?.blendMode).toBe(CanvasItemBlendMode.ADD);
+  });
+
+  it('gives null for a path no resource file has, such as an image (edge case)', () => {
+    expect(materialFile('res://add.png')).toBeNull();
   });
 });
 
@@ -91,8 +98,8 @@ describe('useCanvasItemMaterial', () => {
     expect(nodeMaterial({ materialPath: 'SubResource("sub")' })?.blendMode).toBe(CanvasItemBlendMode.SUB);
   });
 
-  it("gives null for a node's binary .res material, which no processor reads", () => {
-    expect(nodeMaterial({ materialPath: 'ExtResource("bin")' })).toBeNull();
+  it("reads a node's ExtResource material from its binary .res", () => {
+    expect(nodeMaterial({ materialPath: 'ExtResource("bin")' })?.blendMode).toBe(CanvasItemBlendMode.ADD);
   });
 
   it('gives null for an ExtResource id the scene does not declare', () => {

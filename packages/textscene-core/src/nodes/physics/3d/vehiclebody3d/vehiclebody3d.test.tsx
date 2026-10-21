@@ -30,7 +30,7 @@ describe('VehicleBody3D registration', () => {
   it('declares drawing nothing of its own, which is what joins it to the shared contract', () => {
     // transformOnly.render-contract.test.tsx derives its subjects from this
     // flag, so dropping it would shrink that suite instead of failing it.
-    expect(nodeComponentRegistry.isTransformOnly('VehicleBody3D')).toBe(true);
+    expect(nodeComponentRegistry.renderIntentOf('VehicleBody3D')).toBe('transform-only');
   });
 });
 

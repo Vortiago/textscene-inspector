@@ -1,12 +1,14 @@
 /**
- * Navigation targets in one file: the declaration heading a resource id names, and every
- * `res://` path with the span it fills. A host resolves a path to a file against its own
- * project root, since that needs a filesystem.
+ * Navigation targets in one file: the declaration heading a resource id names, the `[node]`
+ * heading a node path names, and every `res://` path with the span it fills. A host resolves a
+ * path to a file against its own project root, since that needs a filesystem.
  */
 
 import { RES_PATH_BODY_SOURCE } from '../godot/string/string.js';
-import type { LanguageDocument } from './document.js';
-import { lineRange, lineRangeContains } from './ranges.js';
+import type { DocumentSection, LanguageDocument } from './document.js';
+import { nodePathReferenceAt } from './nodePathRefs.js';
+import { nodeSectionOfPath } from './nodeSeating.js';
+import { lineRange, lineRangeContains, linesRange } from './ranges.js';
 import { declarationOf, referenceAt } from './resourceRefs.js';
 import type { Position, Range } from './types.js';
 
@@ -49,17 +51,40 @@ export function resPathAt(document: LanguageDocument, position: Position): ResPa
   );
 }
 
+/** The whole line of a section's heading. */
+function headingRange(document: LanguageDocument, section: DocumentSection): Range {
+  return linesRange(document, section.headingLine - 1, section.headingLine - 1);
+}
+
 /**
  * The whole heading line that declares the resource id under the cursor, or undefined. A cursor
  * on a declaration's own `id=` resolves to that heading.
  */
-export function declarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
+function declarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
   const reference = referenceAt(document, position);
   const declaration = reference && declarationOf(document, reference);
-  if (!declaration) return undefined;
-  const line = declaration.headingLine - 1;
-  return {
-    start: { line, character: 0 },
-    end: { line, character: document.lines[line]?.length ?? 0 },
-  };
+  return declaration && headingRange(document, declaration);
+}
+
+/**
+ * The whole `[node]` heading line that the node path under the cursor names, or undefined. The
+ * path is a `parent=`, `from=` or `to=` value, and a path into instanced content names none.
+ */
+function nodeDeclarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
+  const reference = nodePathReferenceAt(document, position);
+  return reference && nodeDeclarationRange(document, reference.path);
+}
+
+/**
+ * The whole `[node]` heading line of the node a root-relative path names, spelt as a `parent=` is,
+ * or undefined for a path this file never declares.
+ */
+export function nodeDeclarationRange(document: LanguageDocument, path: string): Range | undefined {
+  const section = nodeSectionOfPath(document, path);
+  return section && headingRange(document, section);
+}
+
+/** The heading line a resource id or a node path under the cursor names, or undefined. */
+export function definitionRangeAt(document: LanguageDocument, position: Position): Range | undefined {
+  return declarationRangeAt(document, position) ?? nodeDeclarationRangeAt(document, position);
 }

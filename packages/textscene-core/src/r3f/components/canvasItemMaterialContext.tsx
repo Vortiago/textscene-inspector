@@ -9,7 +9,11 @@ import { canvasItemMaterialOf } from '../../resources/materials/canvasitemmateri
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import type { ParsedResource } from '../../parser/parsedResource';
-import { resolveExtResourcePath, resolveSubResourceRef } from '../../resources/SubResourceResolver';
+import {
+  isResourceFilePath,
+  resolveExtResourcePath,
+  resolveSubResourceRef,
+} from '../../resources/SubResourceResolver';
 import { useResource } from '../../resources/useResource';
 import { useSceneResources } from '../SceneResourcesContext';
 
@@ -53,16 +57,18 @@ export function useCanvasItemMaterial(props: Node2DProperties): CanvasItemMateri
 }
 
 /**
- * The material a `.tres` file holds, as `CanvasItem::set_material` takes any loaded
+ * The material a resource file holds, as `CanvasItem::set_material` takes any loaded
  * `Ref<Material>` (`scene/main/canvas_item.cpp:1204-1211`). Null for no path, a file still
- * loading or missing, a binary `.res`, which no processor reads, or any other material type.
+ * loading or missing, a path no resource file has, or any other material type.
  */
 export function useCanvasItemMaterialFile(path: string | null): CanvasItemMaterialProperties | null {
-  const tresPath = path?.endsWith('.tres') ? path : '';
-  const { value } = useResource<ParsedResource>(tresPath, 'resource');
+  const resourcePath = path && isResourceFilePath(path) ? path : '';
+  const { value } = useResource<ParsedResource>(resourcePath, 'resource');
   return useMemo(
     () =>
-      tresPath && value ? canvasItemMaterialOf({ type: value.resourceType, data: value.properties }) : null,
-    [tresPath, value]
+      resourcePath && value
+        ? canvasItemMaterialOf({ type: value.resourceType, data: value.properties })
+        : null,
+    [resourcePath, value]
   );
 }

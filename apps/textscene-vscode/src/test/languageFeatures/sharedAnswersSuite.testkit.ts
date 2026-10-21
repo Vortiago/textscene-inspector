@@ -9,6 +9,7 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { EXTENSION_ID } from '../smokeProject/sceneEditor';
+import { quickFixesAt } from '../quickFixes';
 import { waitFor } from '../waitFor';
 import {
   copyFixtureProject,
@@ -256,10 +257,10 @@ export function defineSharedAnswersSuite(projectDir: string): void {
           content: committed.getText(),
         });
         const position = cursorIn(document, answer.at);
-        const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-          'vscode.executeCodeActionProvider',
+        const actions = await quickFixesAt(
           document.uri,
-          new vscode.Range(position, position)
+          new vscode.Range(position, position),
+          (fixes) => fixes.length === answer.titles.length
         );
 
         assert.deepStrictEqual(

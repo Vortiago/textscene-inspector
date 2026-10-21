@@ -16,12 +16,14 @@ import {
   vec3Or,
   parseOptionalInt,
   parseOptionalFloat,
+  parseOptionalGodotFloat,
   parseNodePathLiteral,
   settableNonNegative,
   nonNegativeOr,
   nonNegativeSizeOr,
   settableIntOr,
   settableFloatOr,
+  parseNonEmptyAabb,
   parseOptionalAabb,
   parseOptionalRect2,
   parseHeadingIndex,
@@ -197,6 +199,24 @@ describe('parseOptionalFloat', () => {
   });
 });
 
+describe('parseOptionalGodotFloat', () => {
+  it('parses a valid float and keeps the non-finite literals', () => {
+    expect(parseOptionalGodotFloat('1.5')).toBe(1.5);
+    expect(parseOptionalGodotFloat('inf')).toBe(Infinity);
+    expect(parseOptionalGodotFloat('inf_neg')).toBe(-Infinity);
+    expect(parseOptionalGodotFloat('nan')).toBeNaN();
+  });
+  it('returns undefined for an absent value, without warning', () => {
+    expect(parseOptionalGodotFloat(undefined)).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+  it('returns undefined for an invalid or empty value, without warning', () => {
+    expect(parseOptionalGodotFloat('nope')).toBeUndefined();
+    expect(parseOptionalGodotFloat('')).toBeUndefined();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('vec2iOr / parseOptionalVector2i', () => {
   it('parses a Vector2i literal (happy path)', () => {
     expect(vec2iOr('Vector2i(600, 400)', { x: 0, y: 0 })).toEqual({ x: 600, y: 400 });
@@ -350,6 +370,20 @@ describe('parseOptionalAabb', () => {
   it('warns and reports unset for a box of five components', () => {
     expect(parseOptionalAabb('AABB(0, 0, 0, 1, 1)', 'Box')).toBeUndefined();
     expect(warnSpy).toHaveBeenCalledOnce();
+  });
+});
+
+describe('parseNonEmptyAabb', () => {
+  it('gives the box a value spells', () => {
+    expect(parseNonEmptyAabb('AABB(0, 0, 0, 1, 2, 3)', 'custom_aabb')?.size).toEqual({ x: 1, y: 2, z: 3 });
+  });
+
+  it('gives no box for AABB(), which clears it (edge case)', () => {
+    expect(parseNonEmptyAabb('AABB(0, 0, 0, 0, 0, 0)', 'custom_aabb')).toBeNull();
+  });
+
+  it('gives no box for an absent value', () => {
+    expect(parseNonEmptyAabb(undefined, 'custom_aabb')).toBeNull();
   });
 });
 
