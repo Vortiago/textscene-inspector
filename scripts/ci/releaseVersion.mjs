@@ -14,6 +14,7 @@ export const RELEASE_PACKAGES = {
   vscode: 'apps/textscene-vscode',
   linter: 'apps/textscene-linter',
   lsp: 'apps/textscene-lsp',
+  tscn: 'apps/textscene-tscn',
 };
 
 /** The workspace directories each package bundles, besides its own. Its release notes cover them. */
@@ -21,6 +22,7 @@ export const RELEASE_INPUTS = {
   vscode: ['packages/textscene-core', 'apps/textscene-web'],
   linter: ['packages/textscene-core'],
   lsp: ['packages/textscene-core'],
+  tscn: ['packages/textscene-core'],
 };
 
 /**
@@ -68,7 +70,7 @@ export function checkReleaseTag(tag, tags) {
   const release = parseReleaseTag(tag);
   if (!release) {
     return {
-      error: `expected a tag like vscode-v1.2.3, linter-v1.2.3 or lsp-v1.2.3, got ${JSON.stringify(tag)}`,
+      error: `expected a tag like vscode-v1.2.3, linter-v1.2.3, lsp-v1.2.3 or tscn-v1.2.3, got ${JSON.stringify(tag)}`,
     };
   }
   const directory = RELEASE_PACKAGES[release.package];

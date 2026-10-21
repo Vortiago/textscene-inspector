@@ -1,11 +1,11 @@
 name: Release
 
-# A tag releases one package: `vscode-v1.2.3` the extension, `linter-v1.2.3` the linter and
-# `lsp-v1.2.3` the language server. The tag is the version: the release jobs write it into
-# the package's manifest.
+# A tag releases one package: `vscode-v1.2.3` the extension, `linter-v1.2.3` the linter,
+# `lsp-v1.2.3` the language server and `tscn-v1.2.3` the parser. The tag is the version: the
+# release jobs write it into the package's manifest.
 on:
   push:
-    tags: ['vscode-v*', 'linter-v*', 'lsp-v*']
+    tags: ['vscode-v*', 'linter-v*', 'lsp-v*', 'tscn-v*']
 
 permissions:
   contents: read
@@ -115,11 +115,11 @@ jobs:
             apps/textscene-vscode/*.vsix
             web-dist.tar.gz
 
-  # The linter and the language server ship the same way: a tarball on GitHub and on npm.
+  # The linter, the language server and the parser ship the same way: a tarball on GitHub and on npm.
   release-npm-package:
     name: Release ${{ needs.validate.outputs.package }} on GitHub
     needs: validate
-    if: needs.validate.outputs.package == 'linter' || needs.validate.outputs.package == 'lsp'
+    if: contains(fromJSON('["linter", "lsp", "tscn"]'), needs.validate.outputs.package)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

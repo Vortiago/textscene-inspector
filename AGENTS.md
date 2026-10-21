@@ -4,8 +4,9 @@ TextScene Inspector parses, lints and renders Godot `.tscn` files with react-thr
 pnpm monorepo holds `packages/textscene-core` (parser, linter, r3f components),
 `packages/textscene-dev-kit` (shared test helpers, never published), `apps/textscene-web` (web
 previewer), `apps/textscene-vscode` (VS Code extension), `apps/textscene-lsp` (`tscn-lsp`
-language server) and `apps/textscene-linter` (CLI linter). The CLI linter and the language server
-are free of React and THREE.
+language server), `apps/textscene-linter` (CLI linter) and `apps/textscene-tscn` (`@textscene/tscn`,
+the parser as an npm package). The CLI linter, the language server and the parser package are free
+of React and THREE.
 
 ## Docs
 
