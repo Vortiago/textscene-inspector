@@ -211,8 +211,8 @@ blend_shape_mode = 0
 `;
 
 /**
- * Hand-built, compressed with NORMAL and no TANGENT: format 536875011 = VERTEX|NORMAL|INDEX
- * + ARRAY_FLAG_COMPRESS_ATTRIBUTES. With no tangent the octahedral pair (the inverse of
+ * Hand-built, compressed with NORMAL and no TANGENT: format 34896613379 = VERTEX|NORMAL|INDEX
+ * + ARRAY_FLAG_COMPRESS_ATTRIBUTES + ARRAY_FLAG_FORMAT_VERSION_2. With no tangent the octahedral pair (the inverse of
  * `octToVec3`) is the normal itself, +Y, +X and +Z, and the angle slot stays zero. The
  * axis-angle path would read that zero as `abs(0 * 2 - 1) * PI`, a half-turn, and tilt them.
  */
@@ -221,7 +221,7 @@ const COMPRESSED_NO_TANGENT_TRES = `[gd_resource type="ArrayMesh" format=4]
 [resource]
 _surfaces = [{
 "aabb": AABB(0, 0, 0, 1, 1, 1),
-"format": 536875011,
+"format": 34896613379,
 "index_count": 3,
 "index_data": PackedByteArray("AAABAAIA"),
 "name": "no_tangent",

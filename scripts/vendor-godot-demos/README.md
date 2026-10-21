@@ -22,13 +22,10 @@ previewer does not read (ADR-0028).
 
 The script applies these to the checkout before the prune:
 
-- `text-resources/` holds the Godot text copy of 3 binary resources. Each copy replaces the
-  binary file of the same stem:
-  - `3d/platformer/stage/grid_map.scn`: the previewer loads only a text scene.
-  - The two `cube.mesh` files: their surfaces use the old format that Godot converts on load
-    (`scene/resources/mesh.cpp:1662-1664`), and the ArrayMesh decoder does not convert it.
-- `local-changes.patch` edits 9 upstream files:
-  - 7 scenes and resources point their `ext_resource` paths at the text copies.
+- `text-resources/` holds the Godot text copy of `3d/platformer/stage/grid_map.scn`, which
+  replaces the binary file of the same stem. The previewer loads only a text scene.
+- `local-changes.patch` edits 3 upstream files:
+  - `3d/platformer/stage/stage.tscn` points its `ext_resource` path at the text copy.
   - `3d/decals/decal.tscn` animates `Decal:size`, not the Godot 3 `Decal:extents`, with doubled
     keyframe values (ADR-0017).
   - `3d/truck_town/town/town_scene.tscn` gets a `PreviewCamera`, which frames the town for the

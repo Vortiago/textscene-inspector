@@ -9,11 +9,8 @@ import { cpSync, readdirSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { basename, dirname, extname, join, relative } from 'node:path';
 
-/**
- * The binary forms a text copy replaces: a scene, and a mesh whose old surface format Godot
- * converts on load (`mesh.cpp:1662-1664`) and the ArrayMesh decoder does not.
- */
-const TEXT_COPY_EXTENSIONS = new Set(['.scn', '.mesh']);
+/** The binary form a text copy replaces: a scene, as the previewer loads only a text scene. */
+const TEXT_COPY_EXTENSIONS = new Set(['.scn']);
 
 export function applyLocalChanges(changesDir, checkout) {
   replaceBinaryResources(join(changesDir, 'text-resources'), checkout);
