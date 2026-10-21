@@ -1,6 +1,6 @@
 /**
  * The one resolver for a Texture2D slot: an image path or `ExtResource`, a `CanvasTexture`, or an
- * `AtlasTexture`, `GradientTexture2D` or `NoiseTexture2D`, inline or saved as its own `.tres`.
+ * `AtlasTexture`, `GradientTexture2D` or `NoiseTexture2D`, inline or saved as its own resource file.
  * Wrappers peel to a fixed point, and the texture's size is Godot's size for the slot.
  * `resolveTexture2DPath` suits only a caller that wants a file path. `inlineTexture2DSize` sits
  * here so the size cannot drift.
@@ -46,7 +46,7 @@ export function useTexture2D(
   const slot = useTexture2DSlot(ref, externalResources, internalResources);
 
   // The crop is cache-owned and pinned while mounted, like the procedural texture. Keyed on the
-  // tables the atlas sits in, so a re-parse of the scene or of its `.tres` invalidates it.
+  // tables the atlas sits in, so a re-parse of the scene or of its resource file invalidates it.
   const { atlas, source, atlasResources } = slot;
   const cropped = useMemo(
     () => (atlas ? resolveAtlasTexture(atlas, source, atlasResources) : null),
@@ -89,13 +89,13 @@ const CANVAS_TEXTURE_RID: Texture2DRidResult = { ...NOTHING, namesTexture: false
 interface Texture2DSlot {
   /** The AtlasTexture the slot names, or null for any other form. */
   atlas: AtlasTextureReference | null;
-  /** The sub-resources the atlas sits in: the scene's, or its `.tres` file's. */
+  /** The sub-resources the atlas sits in: the scene's, or its resource file's. */
   atlasResources: readonly TscnInternalResource[];
   /** The image or procedural texture behind the slot: an AtlasTexture's sheet. */
   source: THREE.Texture | null;
   /** The slot's result with an AtlasTexture's sheet in its place. */
   result: Texture2DResult;
-  /** The slot, its `.tres` or its AtlasTexture's sheet is a CanvasTexture, which this peeled. */
+  /** The slot, its resource file or its AtlasTexture's sheet is a CanvasTexture, which this peeled. */
   namesCanvasTexture: boolean;
 }
 
@@ -105,7 +105,7 @@ function useTexture2DSlot(
   internalResources: readonly TscnInternalResource[]
 ): Texture2DSlot {
   // Wrappers peel before the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw
-  // ref loses the window. A `.tres` may hold either, so its `[resource]` peels again.
+  // ref loses the window. A resource file may hold either, so its `[resource]` peels again.
   const unwrapped = useMemo(() => unwrapCanvasTextureRef(ref, internalResources), [ref, internalResources]);
   const slot = useParsedResourceSlot(unwrapped, externalResources, internalResources);
   const slotRef = useMemo(
@@ -143,7 +143,7 @@ function useTexture2DSlot(
   const peeled = { atlas, atlasResources, source, namesCanvasTexture };
 
   if (!ref) return { ...peeled, result: NOTHING };
-  // Nothing to resolve: a `.tres` still loading or proved absent, or a wrapper with no texture.
+  // Nothing to resolve: a resource file still loading or proved absent, or a wrapper with no texture.
   if (!slot.ref) {
     const result = {
       texture: null,
@@ -172,7 +172,7 @@ interface Texture2DSize {
 /**
  * The pixel size of a Texture2D slot that the scene states, for a Control's minimum-size solve,
  * which runs outside React. Null for a form only the loader can size: an image, a wrapper of one,
- * or a `.tres` (see `extResourceTexture2DSize`).
+ * or a resource file (see `extResourceTexture2DSize`).
  */
 export function inlineTexture2DSize(
   ref: string | undefined,
@@ -212,10 +212,10 @@ const DECLARED_SIZES: Readonly<
 };
 
 /**
- * The pixel size of an `ExtResource` slot from its parsed `.tres`, for a caller with a synchronous
- * cache instead of hooks. Null for a `.tres` that holds no texture the scene could state inline.
+ * The pixel size of an `ExtResource` slot from its parsed resource file, for a caller with a synchronous
+ * cache instead of hooks. Null for a file that holds no texture the scene could state inline.
  */
-export function extResourceTexture2DSize(tres: ParsedResource): Texture2DSize | null {
-  const saved = parsedResourceTexture(tres);
+export function extResourceTexture2DSize(parsed: ParsedResource): Texture2DSize | null {
+  const saved = parsedResourceTexture(parsed);
   return inlineTexture2DSize(saved.ref, saved.internalResources);
 }

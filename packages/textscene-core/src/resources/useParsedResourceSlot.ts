@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { resolveExtParsedResourcePath } from './SubResourceResolver.js';
+import { resolveExtResourceFilePath } from './SubResourceResolver.js';
 import { parsedResourceTexture } from './textures/parsedResourceTexture.js';
 import { useResource } from './useResource.js';
 
@@ -20,13 +20,13 @@ interface TextureSlotResources {
   status: 'ready' | 'loading' | 'missing';
 }
 
-/** The file loads on the `resource` bus, since the image buses decode no text. */
+/** The file loads on the `resource` bus, since the image buses decode no resource file. */
 export function useParsedResourceSlot(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[]
 ): TextureSlotResources {
-  const path = useMemo(() => resolveExtParsedResourcePath(ref, externalResources), [ref, externalResources]);
+  const path = useMemo(() => resolveExtResourceFilePath(ref, externalResources), [ref, externalResources]);
   const file = useResource<ParsedResource>(path ?? '', 'resource');
   if (!path) return { ref, externalResources, internalResources, status: 'ready' };
   if (!file.value) {

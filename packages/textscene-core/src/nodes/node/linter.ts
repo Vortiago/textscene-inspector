@@ -1,7 +1,8 @@
 /**
  * Node-universal semantic rule (no applicableNodeTypes, so it runs for every node): a reference to
  * a binary Godot scene is marked "not previewable", since the previewer loads only text scenes
- * (`.tscn`) and the content degrades to a missing-resource placeholder. It reads any other `.res`.
+ * (`.tscn`) and the content degrades to a missing-resource placeholder. The previewer reads any
+ * other `.res`.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../linter/types.js';
@@ -9,14 +10,7 @@ import { ruleRegistry } from '../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../linter/ruleArms.js';
 import { resourceRef } from '../../godot/variant/resourceRef.js';
 import { findExtResource } from '../../resources/SubResourceResolver.js';
-import type { TscnExternalResource } from '../../parser/types.js';
-
-/**
- * Godot saves a PackedScene as a `.scn`, or as a `.res` on request
- * (`resource_format_binary.cpp:2541-2545`).
- */
-const BINARY_SCENE_RE = /\.scn$/i;
-const BINARY_RESOURCE_RE = /\.res$/i;
+import { isBinaryScenePath } from '../../godot/project/binaryResourceFormat.js';
 
 /** One arm, so the rule reports `<unknown>` for a heading with no type, as every other rule does. */
 const arms = {
@@ -26,10 +20,6 @@ const arms = {
     because: 'this previewer decodes only a text .tscn scene, never a binary .scn or .res one',
   }),
 } as const satisfies RuleArms<string>;
-
-function isBinaryScene({ path, type }: TscnExternalResource): boolean {
-  return BINARY_SCENE_RE.test(path) || (type === 'PackedScene' && BINARY_RESOURCE_RE.test(path));
-}
 
 function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -49,7 +39,7 @@ function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
     const parsed = resourceRef(ref);
     if (parsed?.kind !== 'ExtResource') return null;
     const ext = findExtResource(scene.externalResources, parsed.id);
-    return ext && isBinaryScene(ext) ? ext.path : null;
+    return ext && isBinaryScenePath(ext.path, ext.type) ? ext.path : null;
   };
 
   if (node.instance) {

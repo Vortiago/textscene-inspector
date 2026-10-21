@@ -7,7 +7,10 @@
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { resourceRef } from '../godot/variant/resourceRef.js';
 import { simplifyResPath } from '../godot/string/string.js';
-import { GODOT_SHADER_EXTENSION } from '../godot/project/resourceFormats.js';
+import {
+  GODOT_SHADER_EXTENSION,
+  GODOT_TEXT_RESOURCE_FILE_EXTENSION,
+} from '../godot/project/resourceFormats.js';
 import { resourceSliceRegistry } from './sliceRegistration.js';
 import { fileExtension } from './fileExtension.js';
 
@@ -108,7 +111,7 @@ export function parsedResourcePath(
 ): string | null {
   const path = resolveExtResourcePath(ref, externalResources);
   if (!path) return null;
-  return isResourceFilePath(path) || path.endsWith(GODOT_SHADER_EXTENSION) ? path : null;
+  return isResourceFilePath(path) || fileExtension(path) === GODOT_SHADER_EXTENSION ? path : null;
 }
 
 /**
@@ -116,7 +119,10 @@ export function parsedResourcePath(
  * slice routes to the `resource` bus, such as a `.res`.
  */
 export function isResourceFilePath(path: string): boolean {
-  return fileExtension(path) === '.tres' || resourceSliceRegistry.busTypeOfPath(path) === 'resource';
+  return (
+    fileExtension(path) === GODOT_TEXT_RESOURCE_FILE_EXTENSION ||
+    resourceSliceRegistry.busTypeOfPath(path) === 'resource'
+  );
 }
 
 /** Find a SubResource by id. The first resource in declaration order with that id wins. */
@@ -185,10 +191,10 @@ export function unwrapCanvasTextureRef(
 
 /**
  * The resource file an `ExtResource` reference names, which the caller parses on the
- * `resource` bus to learn what it holds. Null for any other form: the texture buses
- * decode no resource file.
+ * `resource` bus to learn what it holds. Null for any other form, a raw `res://` path included,
+ * which `parsedResourcePath` accepts.
  */
-export function resolveExtParsedResourcePath(
+export function resolveExtResourceFilePath(
   ref: string | null | undefined,
   externalResources: readonly TscnExternalResource[]
 ): string | null {
@@ -214,10 +220,10 @@ export function resolveTexture2DPath(
   internalResources: readonly TscnInternalResource[]
 ): string | null {
   const unwrapped = unwrapCanvasTextureRef(ref, internalResources);
-  // An AtlasTexture, inline or `.tres`, resolves to null, not its sheet: this answer
+  // An AtlasTexture, inline or in a resource file, resolves to null, not its sheet: this answer
   // also sizes a Control's slot, and an atlas is the size of its region.
   // `inlineTexture2DSize` and `extResourceTexture2DSize` answer that size.
-  if (resolveExtParsedResourcePath(unwrapped, externalResources)) return null;
+  if (resolveExtResourceFilePath(unwrapped, externalResources)) return null;
   return resolveExtResourcePath(unwrapped, externalResources);
 }
 

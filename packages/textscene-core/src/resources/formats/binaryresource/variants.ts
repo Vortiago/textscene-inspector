@@ -59,7 +59,7 @@ function taggedVariantText(tag: Tag, reader: ByteReader, tables: VariantTables):
       return floatLiteral(reader.f64());
     case Tag.String:
     case Tag.StringName:
-      return stringLikeText(tag, reader.unicodeString());
+      return stringLikeText(tag === Tag.StringName, reader.unicodeString());
     case Tag.Vector2:
       return call('Vector2', reals(reader, 2));
     case Tag.Vector2i:
@@ -209,8 +209,8 @@ function tableId(ids: readonly string[], index: number, table: string): string {
   return id;
 }
 
-function stringLikeText(tag: Tag.String | Tag.StringName, value: string): string {
-  return tag === Tag.StringName ? `&${stringLiteral(value)}` : stringLiteral(value);
+function stringLikeText(isStringName: boolean, value: string): string {
+  return isStringName ? `&${stringLiteral(value)}` : stringLiteral(value);
 }
 
 /** One dictionary entry, with its key as a string when the key is a String or a StringName. */
@@ -218,6 +218,8 @@ interface DictionaryEntry {
   text: string;
   name: string | null;
 }
+
+type NamedEntry = DictionaryEntry & { name: string };
 
 /**
  * `:582-597`. Godot's writer puts each entry on its own line and sorts string keys by code point
@@ -227,15 +229,20 @@ interface DictionaryEntry {
 function dictionaryText(reader: ByteReader, tables: VariantTables): string {
   const entries = repeat(reader.u32() & SHARED_LENGTH_MASK, () => dictionaryEntry(reader, tables));
   if (entries.length === 0) return '{}';
-  if (entries.every(({ name }) => name !== null)) entries.sort((a, b) => codePointOrder(a.name!, b.name!));
-  return `{\n${entries.map(({ text }) => text).join(',\n')}\n}`;
+  const lines = writtenOrder(entries).map(({ text }) => text);
+  return `{\n${lines.join(',\n')}\n}`;
+}
+
+function writtenOrder(entries: DictionaryEntry[]): DictionaryEntry[] {
+  const named = entries.filter((entry): entry is NamedEntry => entry.name !== null);
+  return named.length === entries.length ? named.sort((a, b) => codePointOrder(a.name, b.name)) : entries;
 }
 
 function dictionaryEntry(reader: ByteReader, tables: VariantTables): DictionaryEntry {
   const tag = reader.u32() as Tag;
   const name = tag === Tag.String || tag === Tag.StringName ? reader.unicodeString() : null;
   const key =
-    name === null ? taggedVariantText(tag, reader, tables) : stringLikeText(tag as Tag.String, name);
+    name === null ? taggedVariantText(tag, reader, tables) : stringLikeText(tag === Tag.StringName, name);
   return { text: `${key}: ${variantText(reader, tables)}`, name };
 }
 

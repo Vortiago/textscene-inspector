@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { fileBytes } from './fileBytes';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { repoPath, walkSources } from '../../r3f/testing/sourceScan';
@@ -83,8 +83,7 @@ describe('ArrayMesh surface bytes have one source', () => {
 describe('the shared surfaces match the Godot files they come from', () => {
   /** The `_surfaces` text of a binary mesh in the demo corpus. */
   const surfacesOf = async (path: string) => {
-    const bytes = new Uint8Array(readFileSync(resolve(repoRoot(), path))).buffer;
-    return (await parseBinaryResource(bytes)).properties._surfaces;
+    return (await parseBinaryResource(fileBytes(resolve(repoRoot(), path)))).properties._surfaces;
   };
 
   it('matches the surface wall.res holds', async () => {

@@ -13,7 +13,7 @@ import { basename, dirname, extname, join, relative } from 'node:path';
  * The binary forms a text copy replaces: a scene, and a mesh whose old surface format Godot
  * converts on load (`mesh.cpp:1662-1664`) and the ArrayMesh decoder does not.
  */
-const BINARY_RESOURCE_EXTENSIONS = new Set(['.scn', '.mesh']);
+const TEXT_COPY_EXTENSIONS = new Set(['.scn', '.mesh']);
 
 export function applyLocalChanges(changesDir, checkout) {
   replaceBinaryResources(join(changesDir, 'text-resources'), checkout);
@@ -36,9 +36,7 @@ function binaryResourceBeside(checkout, rel) {
   const stem = basename(rel, extname(rel));
   const matches = readdirSync(join(checkout, dirname(rel)), { withFileTypes: true }).filter(
     (e) =>
-      e.isFile() &&
-      basename(e.name, extname(e.name)) === stem &&
-      BINARY_RESOURCE_EXTENSIONS.has(extname(e.name))
+      e.isFile() && basename(e.name, extname(e.name)) === stem && TEXT_COPY_EXTENSIONS.has(extname(e.name))
   );
   if (matches.length !== 1) {
     throw new Error(`expected one binary resource beside ${rel} in the checkout, found ${matches.length}`);

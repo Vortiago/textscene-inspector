@@ -1,7 +1,7 @@
 /**
  * binary-resource-reference reports, at info, a node that references a binary Godot scene: a
  * `.scn`, or a `.res` that holds a PackedScene. The previewer loads only text scenes (`.tscn`), so
- * that content shows as missing. It reads any other `.res`.
+ * that content shows as missing. The previewer reads any other `.res`.
  */
 import { describe, it } from 'vitest';
 import { expectDiagnostic, expectNoDiagnostic } from '../../linter/testing/testkit';

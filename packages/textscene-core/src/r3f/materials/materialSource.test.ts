@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { fileMaterialSources, resolveMaterialSource } from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-import '../../resources/formats/binaryresource';
+import '../../resources/formats/binaryresource/index';
 
 const INTERNAL: TscnInternalResource[] = [
   { id: 'Mat_body', type: 'StandardMaterial3D', data: { albedo_color: 'Color(1, 0, 0, 1)' } },

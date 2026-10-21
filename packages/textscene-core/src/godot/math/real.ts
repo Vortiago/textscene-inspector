@@ -37,10 +37,15 @@ const NORMAL_REAL_FIRST_DIGITS = 6;
 export function formatReal(value: number): string {
   if (Number.isNaN(value)) return 'nan';
   if (!Number.isFinite(value)) return value > 0 ? 'inf' : '-inf';
+  return String(shortestReal(value));
+}
+
+/** The number with the fewest significant digits that reads back as the same finite `real_t`. */
+export function shortestReal(value: number): number {
   const firstDigits = Math.abs(value) >= NORMAL_REAL_MIN ? NORMAL_REAL_FIRST_DIGITS : 1;
   for (let digits = firstDigits; digits < MAX_REAL_DIGITS; digits++) {
     const shortest = Number(value.toPrecision(digits));
-    if (storedReal(shortest) === value) return String(shortest);
+    if (storedReal(shortest) === value) return shortest;
   }
-  return String(Number(value.toPrecision(MAX_REAL_DIGITS)));
+  return Number(value.toPrecision(MAX_REAL_DIGITS));
 }

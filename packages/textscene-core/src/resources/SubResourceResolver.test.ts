@@ -5,7 +5,7 @@ import {
   findSubResource,
   findSubResourceOfType,
   parseResourceReference,
-  resolveExtParsedResourcePath,
+  resolveExtResourceFilePath,
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
@@ -154,7 +154,7 @@ describe('unwrapCanvasTextureRef', () => {
   });
 });
 
-describe("resolveExtParsedResourcePath — the declared type is the SLOT's", () => {
+describe("resolveExtResourceFilePath — the declared type is the SLOT's", () => {
   /**
    * Godot writes an `[ext_resource]`'s `type=` from the property slot, not the
    * target's class: an AtlasTexture in a `texture` slot is `type="Texture2D"`. So
@@ -162,36 +162,36 @@ describe("resolveExtParsedResourcePath — the declared type is the SLOT's", () 
    */
   it('matches a .tres the scene declares as the slot type Texture2D', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://icons/arrow_left.tres' }];
-    expect(resolveExtParsedResourcePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
+    expect(resolveExtResourceFilePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
   });
 
   it('declines a plain image, which the texture bus decodes directly', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://sheet.png' }];
-    expect(resolveExtParsedResourcePath('ExtResource("1")', ext)).toBeNull();
+    expect(resolveExtResourceFilePath('ExtResource("1")', ext)).toBeNull();
   });
 });
 
-describe('resolveExtParsedResourcePath', () => {
+describe('resolveExtResourceFilePath', () => {
   const externals: readonly TscnExternalResource[] = [
     { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },
     { id: '2_sheet', type: 'Texture2D', path: 'res://sheet.png' },
   ];
 
   it('gives the path of an ExtResource declared AtlasTexture', () => {
-    expect(resolveExtParsedResourcePath('ExtResource("1_atlas")', externals)).toBe(
+    expect(resolveExtResourceFilePath('ExtResource("1_atlas")', externals)).toBe(
       'res://icons/keyboard_arrow_left.tres'
     );
   });
 
   it('declines an ExtResource declared a different type', () => {
-    expect(resolveExtParsedResourcePath('ExtResource("2_sheet")', externals)).toBeNull();
+    expect(resolveExtResourceFilePath('ExtResource("2_sheet")', externals)).toBeNull();
   });
 
   it('declines a SubResource, an unknown id, a malformed ref, and an absent value', () => {
-    expect(resolveExtParsedResourcePath('SubResource("1_atlas")', externals)).toBeNull();
-    expect(resolveExtParsedResourcePath('ExtResource("404")', externals)).toBeNull();
-    expect(resolveExtParsedResourcePath('not a reference', externals)).toBeNull();
-    expect(resolveExtParsedResourcePath(undefined, externals)).toBeNull();
+    expect(resolveExtResourceFilePath('SubResource("1_atlas")', externals)).toBeNull();
+    expect(resolveExtResourceFilePath('ExtResource("404")', externals)).toBeNull();
+    expect(resolveExtResourceFilePath('not a reference', externals)).toBeNull();
+    expect(resolveExtResourceFilePath(undefined, externals)).toBeNull();
   });
 });
 

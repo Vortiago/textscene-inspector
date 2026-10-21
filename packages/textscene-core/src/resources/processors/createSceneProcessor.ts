@@ -13,8 +13,11 @@ import { createResourceProcessor, type ResourceProcessor } from '../createResour
 import { isGltfPath } from '../../godot/import/gltf';
 import { fileBaseName } from '../../godot/string/string';
 import { GLB_SCENE_ROOT_TYPE } from '../glbSceneRoot';
-import { fileExtension } from '../fileExtension';
-import { BINARY_RESOURCE_MAGIC } from '../../godot/project/binaryResourceFormat';
+import {
+  BINARY_RESOURCE_MAGIC,
+  COMPRESSED_BINARY_RESOURCE_MAGIC,
+  isBinaryScenePath,
+} from '../../godot/project/binaryResourceFormat';
 
 /**
  * The `[gd_scene]` tag after any leading `;` comment and blank lines, which Godot
@@ -126,11 +129,11 @@ export function synthesiseGLBScene(glbPath: string): TscnScene {
   };
 }
 
-/**
- * A `.res` arrives as bytes, since the binary resource slice claims it, and a `.scn` as text,
- * since no slice does.
- */
+/** A scene request asks for a PackedScene, so its path decides, or a binary file's magic. */
 function isBinaryScene(path: string, content: string | ArrayBuffer): boolean {
-  if (typeof content !== 'string') return fileExtension(path) === '.res';
-  return content.startsWith(BINARY_RESOURCE_MAGIC) || fileExtension(path) === '.scn';
+  if (isBinaryScenePath(path, 'PackedScene')) return true;
+  return (
+    typeof content === 'string' &&
+    (content.startsWith(BINARY_RESOURCE_MAGIC) || content.startsWith(COMPRESSED_BINARY_RESOURCE_MAGIC))
+  );
 }

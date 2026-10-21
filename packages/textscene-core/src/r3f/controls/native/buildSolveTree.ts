@@ -23,7 +23,7 @@ import {
   findExtResource,
   findSubResource,
   parseResourceReference,
-  resolveExtParsedResourcePath,
+  resolveExtResourceFilePath,
   resolveInstancePath,
   resolveTexture2DPath,
   parsedResourcePath,
@@ -450,18 +450,18 @@ function buildForest(
     const inline = inlineTexture2DSize(ref, int);
     if (inline) return inline;
 
-    // A texture in its own `.tres` loads on the resource bus, not the texture
-    // one: the file is text, not pixels.
+    // A texture in its own resource file loads on the resource bus, not the texture
+    // one: the file is a resource, not pixels.
     const unwrapped = unwrapCanvasTextureRef(ref, int);
-    const tresPath = resolveExtParsedResourcePath(unwrapped, ext);
-    if (tresPath) {
-      const cachedTres = resourceCache.getCached(tresPath);
-      if (cachedTres === undefined) {
-        pendingResourceFiles.add(tresPath);
+    const resourceFile = resolveExtResourceFilePath(unwrapped, ext);
+    if (resourceFile) {
+      const cached = resourceCache.getCached(resourceFile);
+      if (cached === undefined) {
+        pendingResourceFiles.add(resourceFile);
         return null;
       }
-      if (cachedTres === null) return null;
-      return extResourceTexture2DSize(cachedTres);
+      if (cached === null) return null;
+      return extResourceTexture2DSize(cached);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`

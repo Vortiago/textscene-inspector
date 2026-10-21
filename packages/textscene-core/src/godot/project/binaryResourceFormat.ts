@@ -8,13 +8,19 @@ export const BINARY_RESOURCE_MAGIC = 'RSRC';
 /** A file saved with `ResourceSaver::FLAG_COMPRESS` starts with this instead (`.cpp:988`). */
 export const COMPRESSED_BINARY_RESOURCE_MAGIC = 'RSCC';
 
+/** The extension the binary saver offers for any resource (`.cpp:2541-2545`). */
+const BINARY_RESOURCE_EXTENSION = '.res';
+
+/** A PackedScene's own binary extension (`packed_scene.h:246`). */
+const BINARY_SCENE_EXTENSION = '.scn';
+
 /**
- * The extensions a binary resource takes, dotted: `.res`, which the saver offers for any resource
- * (`.cpp:2541-2545`), and each class's own `RES_BASE_EXTENSION`, which the loader recognises
- * (`.cpp:1280-1288`). A PackedScene's `.scn` (`packed_scene.h:246`) loads as a scene instead.
+ * The extensions a binary resource takes, dotted: `.res`, and each class's own
+ * `RES_BASE_EXTENSION`, which the loader recognises (`.cpp:1280-1288`). A `.scn` loads as a scene
+ * instead.
  */
 export const BINARY_RESOURCE_EXTENSIONS = [
-  '.res',
+  BINARY_RESOURCE_EXTENSION,
   '.anim', // animation.h:40
   '.atlastex', // atlas_texture.h:37
   '.curvetex', // curve_texture.h:37,81
@@ -38,6 +44,18 @@ export const BINARY_RESOURCE_EXTENSIONS = [
   '.theme', // theme.h:40
   '.translation', // translation.h:41
 ] as const;
+
+/**
+ * Whether a file of `type` at `path` is a binary scene: a `.scn`, or a PackedScene saved as a
+ * `.res`. Case-insensitive, as `recognize_path` compares (resource_loader.cpp:73).
+ */
+export function isBinaryScenePath(path: string, type: string | undefined): boolean {
+  const lower = path.toLowerCase();
+  return (
+    lower.endsWith(BINARY_SCENE_EXTENSION) ||
+    (type === 'PackedScene' && lower.endsWith(BINARY_RESOURCE_EXTENSION))
+  );
+}
 
 /** The format version Godot 4.6 writes (`.cpp:98`). */
 export const BINARY_FORMAT_VERSION = 6;
