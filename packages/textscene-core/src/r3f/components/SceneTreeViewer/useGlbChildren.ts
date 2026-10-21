@@ -9,14 +9,11 @@ import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
 import { useResource } from '../../../resources/useResource.js';
-import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot.js';
+import { glbPathOf } from '../../../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from '../../internal/glb-scene-root/glbHierarchy.js';
 
 export function useGlbChildren(node: TscnNode): readonly TscnNode[] | null {
-  const glbPath =
-    node.type === GLB_SCENE_ROOT_TYPE
-      ? ((node.properties as Record<string, unknown>).glbPath as string | undefined)
-      : undefined;
+  const glbPath = glbPathOf(node);
   const result = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
 
   return useMemo(() => {

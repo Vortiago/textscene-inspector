@@ -60,7 +60,8 @@ export function splitAttachedChildren(
   const attached = typed.filter((child) =>
     matchGlbTarget(entries, child.instanceSubPath!, { isQuiet: true })
   );
-  return { attached, rest: children.filter((child) => !attached.includes(child)) };
+  const isAttached = new Set(attached);
+  return { attached, rest: children.filter((child) => !isAttached.has(child)) };
 }
 
 /**

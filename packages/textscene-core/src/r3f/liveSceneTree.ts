@@ -11,7 +11,7 @@ import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
-import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
+import { glbPathOf } from '../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -159,12 +159,10 @@ export function liveChildGroups(
   const inlineOnly = (): LiveChildGroup[] => [{ origin: 'inline', children: node.children, scope: own }];
 
   // GLB nodes carry no instance refs, so they stay in the outer scope.
-  if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
-    const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
-    const object = glbPath ? glbCache.getCached(glbPath) : undefined;
-    if (object) {
-      return [{ origin: 'glb', children: glbSceneRootChildren(object, node.children), scope: own }];
-    }
+  const glbPath = glbPathOf(node);
+  const glbObject = glbPath ? glbCache?.getCached(glbPath) : undefined;
+  if (glbObject) {
+    return [{ origin: 'glb', children: glbSceneRootChildren(glbObject, node.children), scope: own }];
   }
 
   if (!node.instance) return inlineOnly();
@@ -211,10 +209,7 @@ function placeInGlb(
   glbCache: CachedGlbSource | undefined
 ): { glbRoot?: LiveNode; attached: LiveNode[]; rest: LiveNode[] } {
   const root = contentRoots.length === 1 ? contentRoots[0]! : undefined;
-  const glbPath =
-    root?.type === GLB_SCENE_ROOT_TYPE
-      ? ((root.properties as Record<string, unknown>).glbPath as string)
-      : undefined;
+  const glbPath = root && glbPathOf(root);
   const object = glbPath ? glbCache?.getCached(glbPath) : undefined;
   if (!root || !object) return { attached: [], rest: hostChildren };
   const { attached, rest } = splitAttachedChildren(object, hostChildren);

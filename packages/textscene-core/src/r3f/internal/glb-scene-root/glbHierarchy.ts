@@ -155,6 +155,7 @@ function addAttachedChildren(
   nodes: readonly TscnNode[],
   attached: readonly LiveNode[]
 ): void {
+  if (attached.length === 0) return;
   const entries = flattenGlbObjects(root);
   const byRelPath = new Map<string, TscnNode>();
   const index = (list: readonly TscnNode[]): void => {

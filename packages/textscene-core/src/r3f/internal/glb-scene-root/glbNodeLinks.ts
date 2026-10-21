@@ -19,7 +19,7 @@ import { isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOver
  * visibility parent it takes from its parent (`node_3d.cpp:1307-1318`), which it passes on to its
  * children.
  */
-export interface GlbNodeLink {
+interface GlbNodeLink {
   entry: GlbObjectEntry;
   properties: GeometryInstance3DProperties;
   place: Omit<NodePlace, 'order'>;
