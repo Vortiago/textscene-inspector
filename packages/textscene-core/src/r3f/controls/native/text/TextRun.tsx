@@ -20,7 +20,6 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
-  type CanvasTextBlend,
 } from './canvasTextPainter';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { TextLayoutResult } from './textLayout';
@@ -34,6 +33,7 @@ import {
   type TextureFilterState,
 } from '../../../../resources/textures/godotTextureFilter';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
+import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
@@ -117,7 +117,7 @@ export interface TextRunProps {
    * in. Canvas runs inside a GeometryInstance3D drawer only. Omitted, it paints
    * `TRANSPARENCY_ALPHA`, a Control's only mode.
    */
-  blends?: FadeVariants<CanvasTextBlend>;
+  blends?: FadeVariants<SurfaceBlend>;
   /**
    * The draw hooks of the GeometryInstance3D the run draws for, with `castShadow` for this
    * surface (Label3D only). Omitted, the run casts nothing and draws in every pass.
@@ -140,7 +140,7 @@ export interface TextRunProps {
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
-  paint: (blend: CanvasTextBlend | undefined) => THREE.Material;
+  paint: (blend: SurfaceBlend | undefined) => THREE.Material;
   ownedTexture?: THREE.Texture;
 }
 
@@ -195,7 +195,7 @@ function buildTextRun(
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
     const opacity = tint.a;
-    const paint = (blend: CanvasTextBlend | undefined) =>
+    const paint = (blend: SurfaceBlend | undefined) =>
       createCanvasTextMaterial({ map: texture, opacity, clippingPlanes, depthTest, side, ...blend });
     return { geometry: geo, paint, ownedTexture: texture };
   }
@@ -366,12 +366,12 @@ function AtlasPending(): null {
 }
 
 /** The run's material for `blend`. */
-function usePaintedMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material {
+function usePaintedMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material {
   return useOwnedMaterial(run, blend, () => run.paint(blend));
 }
 
 /** The run's alpha-pass material, or null for a run that never fades. */
-function useAlphaPassMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material | null {
+function useAlphaPassMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material | null {
   return useOwnedMaterial(run, blend, () => (blend ? run.paint(blend) : null));
 }
 
@@ -381,7 +381,7 @@ function useAlphaPassMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefi
  */
 function useOwnedMaterial<M extends THREE.Material | null>(
   run: BuiltTextRun,
-  blend: CanvasTextBlend | undefined,
+  blend: SurfaceBlend | undefined,
   paint: () => M
 ): M {
   const material = useMemo(

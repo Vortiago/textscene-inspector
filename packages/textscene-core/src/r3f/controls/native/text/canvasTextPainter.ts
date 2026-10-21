@@ -12,15 +12,11 @@ import * as THREE from 'three';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
-import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
+import { injectProgram } from '../../../materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
 import { alphaAntialiasingProps, alphaAntialiasingUserData } from '../../../materials/godotAlphaAntialiasing';
-import type { AlphaAntialiasingCut } from '../../../../godot/rendering/materials/alphaAntialiasing';
-import {
-  NO_OPAQUE_PREPASS,
-  opaquePrepassUserData,
-  type OpaquePrepass,
-} from '../../../materials/opaquePrepass';
+import { NO_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../materials/opaquePrepass';
+import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -192,28 +188,7 @@ export function paintSceneFontCanvas(
   return canvas;
 }
 
-/**
- * One `BaseMaterial3D::Transparency` (`material.h:200-207`) in three's terms: what
- * a 3D text surface's `alpha_cut` selects (`label_3d.cpp:386-393`). A 2D Control
- * always paints `TRANSPARENCY_ALPHA`, every field's default below.
- */
-export interface CanvasTextBlend {
-  transparent: boolean;
-  depthWrite: boolean;
-  alphaTest: number;
-  alphaHash: boolean;
-  /** `alpha_hash_scale`, the grain of the hash. Omitted, Godot's default of 1. */
-  alphaHashScale?: number;
-  /** How Godot's depth passes treat the surface. Omitted, it has no opaque prepass. */
-  opaquePrepass?: OpaquePrepass;
-  /** What the surface's blend needs so three blends the alpha Godot writes (`surfaceAlphaPatch.ts`). */
-  blending?: THREE.Blending;
-  /** The cut's alpha antialiasing. Omitted, the surface runs none. */
-  antialiasing?: AlphaAntialiasingCut | null;
-  injection?: ProgramInjection;
-}
-
-interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
+interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
   opacity: number;

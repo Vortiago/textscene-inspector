@@ -193,14 +193,20 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   }
 
   const material = (pass: FadePass, attach: string | MaterialAttach | undefined) => {
-    const { alphaHashScale, antialiasing, opaquePrepass, ...blend } = blends[pass];
+    const { transparent, depthWrite, alphaTest, alphaHash, blending, injection } = blends[pass];
+    const { alphaHashScale, antialiasing, opaquePrepass } = blends[pass];
     const program = materialProgramInputs({
       props: {
         attach,
         map: displayedTexture,
         color,
         opacity,
-        ...blend,
+        transparent,
+        depthWrite,
+        alphaTest,
+        alphaHash,
+        blending,
+        injection,
         ...alphaAntialiasingProps(antialiasing),
         // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
         depthTest,

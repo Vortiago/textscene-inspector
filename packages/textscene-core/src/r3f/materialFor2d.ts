@@ -5,16 +5,18 @@
  */
 
 import * as THREE from 'three';
+import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
+import { TextureFilter } from '../godot/rendering/materials/textureFilter';
 import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
 import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 import { cutBlends, cutOpaquePrepasses, type FadeVariants } from './materials/fadeVariants';
 import { godotTextureFilterState, type TextureFilterState } from '../resources/textures/godotTextureFilter';
-import type { CanvasTextBlend } from './controls/native/text/canvasTextPainter';
+import type { PassBlend } from './materials/surfaceBlend';
 
 /** The flags `get_material_for_2d` reads, as the node stores them. */
 export interface MaterialFor2dInput {
   /** `SpriteBase3D::AlphaCutMode` or `Label3D::AlphaCutMode`: two C++ enums, same members. */
-  alphaCut: number;
+  alphaCut: AlphaCutMode;
   alphaScissorThreshold: number;
   /** A Sprite3D's `FLAG_TRANSPARENT`, or `NO_TRANSPARENT_FLAG` for a Label3D, whose DrawFlags have none. */
   transparentFlag: boolean | typeof NO_TRANSPARENT_FLAG;
@@ -25,12 +27,8 @@ export interface MaterialFor2dInput {
   doubleSided: boolean | undefined;
   noDepthTest: boolean;
   /** `BaseMaterial3D::TextureFilter` ordinal. */
-  textureFilter: number;
+  textureFilter: TextureFilter;
 }
-
-/** One pass's blend, with the fields `get_material_for_2d` always hands the material. */
-export type PassBlend = CanvasTextBlend &
-  Required<Pick<CanvasTextBlend, 'alphaHashScale' | 'antialiasing' | 'opaquePrepass'>>;
 
 export interface MaterialFor2d {
   /**
