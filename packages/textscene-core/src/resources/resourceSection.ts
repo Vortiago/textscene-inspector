@@ -5,6 +5,7 @@
  */
 
 import type { ParsedResource } from '../parser/parsedResource.js';
+import type { TscnInternalResource } from '../parser/types.js';
 import { findSubResource } from './SubResourceResolver.js';
 import { parseSubResourcePath } from './subResourcePath.js';
 
@@ -27,6 +28,12 @@ export function findResourceSection(file: ParsedResource, path: string): Resourc
   if (subResourceId === undefined) return { type: file.resourceType, properties: file.properties };
   const sub = findSubResource(file.subResources, subResourceId);
   return sub && { type: sub.type, properties: sub.data };
+}
+
+/** The section `path` addresses in `file` as a resource whose id is `path`, or undefined for an undeclared id. */
+export function findSectionResource(file: ParsedResource, path: string): TscnInternalResource | undefined {
+  const section = findResourceSection(file, path);
+  return section && { id: path, type: section.type, data: section.properties };
 }
 
 /**

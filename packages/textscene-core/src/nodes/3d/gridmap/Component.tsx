@@ -151,10 +151,9 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const shadow = shadowCastingEffects(item?.castShadow);
 
   // Godot draws a cell only once its item has a mesh (`modules/gridmap/grid_map.cpp:688`).
-  if (mesh.status === 'pending') return null;
   if (mesh.status === 'unavailable') return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
+  if (mesh.status !== 'loaded') return null;
   const { geometry } = mesh;
-  if (!geometry) return null;
   const surfaces = surfaceSources(mesh.materials);
   return (
     <>

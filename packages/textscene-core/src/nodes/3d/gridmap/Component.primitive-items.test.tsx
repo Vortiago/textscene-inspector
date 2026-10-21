@@ -8,10 +8,10 @@ import * as THREE from 'three';
 import { renderGridMapTiles, renderInstancedTile } from './testing/gridMapCorpus';
 
 /** A library whose item 0 is the inline sub-resource `meshBlock` declares as `Mesh_item`. */
-function inlineMeshLibrary(meshBlock: string, extResources = ''): string {
+function inlineMeshLibrary(meshBlock: string): string {
   return `[gd_resource type="MeshLibrary" format=3]
 
-${extResources}${meshBlock}
+${meshBlock}
 
 [resource]
 item/0/name = "Tile"
