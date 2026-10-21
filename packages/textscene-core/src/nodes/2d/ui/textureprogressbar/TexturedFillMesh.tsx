@@ -5,12 +5,13 @@
  * `<CanvasItemGroup>`, never in the geometry.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
+import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
 interface TexturedFillMeshGeometry {
   positions: number[];
@@ -41,7 +42,7 @@ export function TexturedFillMesh({ geometry, texture, color, opacity, renderOrde
   }, [geometry]);
 
   // R3F does not auto-dispose a geometry passed through `attach`.
-  useEffect(() => () => builtGeometry?.dispose(), [builtGeometry]);
+  useDisposeOnRelease(builtGeometry);
 
   if (!builtGeometry) return null;
 

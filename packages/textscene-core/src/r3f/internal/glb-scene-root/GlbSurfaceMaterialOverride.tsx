@@ -21,6 +21,7 @@ import {
 import { readyMaterial, useMaterial } from '../../materials/useMaterial.js';
 import type { MaterialSource } from '../../materials/materialSource.js';
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
+import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 
 interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
@@ -66,7 +67,7 @@ export function GlbSurfaceMaterialOverride({
     });
     return unfaded;
   }, [isAbsent, bags]);
-  useEffect(() => () => material?.dispose(), [material]);
+  useDisposeOnRelease(material);
   useGlbMaterialSwap(target, material, replaces);
   return null;
 }

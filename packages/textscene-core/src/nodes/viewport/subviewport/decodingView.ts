@@ -3,7 +3,7 @@
  * holds sRGB bytes in RGBA8, so its decoding view is an SRGB8_ALPHA8 copy, which the pass fills
  * after each render while a consumer retains it. A 3D-content target decodes in its own storage.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { DecodingView } from '../../../r3f/contexts/ViewportTextureContext.js';
@@ -11,6 +11,7 @@ import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures.js';
 import { drawFullScreen, fullScreenPass } from '../../../r3f/fullScreenPass.js';
 import { drawOffscreen } from '../../../r3f/offscreen.js';
 import { perRenderer } from '../../../r3f/perRenderer.js';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 /** A decoding view as its pass holds it: `fill` runs after each render of the pass. */
 export interface PassDecodingView extends DecodingView {
@@ -25,7 +26,7 @@ export function useDecodingView(target: THREE.WebGLRenderTarget): PassDecodingVi
     () => (holdsSrgbBytes(target.texture) ? new DecodingCopy(gl, target) : ownStorageView(target.texture)),
     [gl, target]
   );
-  useEffect(() => () => view.dispose(), [view]);
+  useDisposeOnRelease(view);
   return view;
 }
 

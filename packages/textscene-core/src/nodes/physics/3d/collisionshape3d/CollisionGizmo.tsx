@@ -14,6 +14,7 @@ import { decodeSphereShape3D } from '../../../../resources/shapes/sphereshape3d'
 import { decodeCylinderShape3D } from '../../../../resources/shapes/cylindershape3d';
 import { warn } from '../../../../logger';
 import { wireGizmoProgram } from '../../../../r3f/components/wireGizmoProgram';
+import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
 interface CollisionGizmoProps {
   shape: TscnInternalResource;
@@ -90,7 +91,7 @@ interface PolygonWireProps {
  * constructs, never a geometry handed over through the `geometry` prop.
  */
 function useDisposeOnReplace(geometry: THREE.BufferGeometry | null): void {
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 }
 
 /** One triangle, three vertices of three floats each: the least a triangle soup can draw. */

@@ -33,6 +33,7 @@ import { litQuadRenderOrder, ShadowVolumeMask } from '../../../r3f/lighting2d/Sh
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
 import type { Rgba } from '../../../godot/math/math';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 /** The quads a light draws besides its lit quad, each only when its material exists. */
 const OPTIONAL_ROLES = [
@@ -262,7 +263,7 @@ function QuadMesh({
   // Keyed on the texture, not on mount, so a light that stops being shadowed
   // (its occluders hidden, or the sub-scene carrying them swapped out) gives
   // the GL object back instead of holding it for the session.
-  useEffect(() => () => shadowMap?.dispose(), [shadowMap]);
+  useDisposeOnRelease(shadowMap);
 
   const sampling = useMemo<ShadowSampling | undefined>(() => {
     if (!shadowMap || !light) return undefined;

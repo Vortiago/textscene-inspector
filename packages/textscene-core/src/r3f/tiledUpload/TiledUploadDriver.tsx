@@ -4,13 +4,14 @@
  * GPU keeps up with (`gpuPacer.ts`).
  */
 
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { TiledUploadContext } from './TiledUploadContext';
 import { TiledUploadQueue } from './TiledUploadQueue';
 import { GpuPacer } from './gpuPacer';
 import { webglFence } from './webglFence';
 import { webglUploadRenderer } from './webglUploadRenderer';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 /**
  * Upload time a frame may spend, half of a 60 Hz frame. The other half stays for
@@ -28,7 +29,7 @@ export function TiledUploadDriver({ children }: { children: ReactNode }) {
     () => new TiledUploadQueue(webglUploadRenderer(renderer), undefined, pacer),
     [renderer, pacer]
   );
-  useEffect(() => () => pacer.dispose(), [pacer]);
+  useDisposeOnRelease(pacer);
   useFrame(() => queue.tick(FRAME_UPLOAD_BUDGET_MS));
   return <TiledUploadContext.Provider value={queue}>{children}</TiledUploadContext.Provider>;
 }

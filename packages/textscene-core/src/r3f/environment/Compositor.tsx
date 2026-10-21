@@ -18,6 +18,7 @@ import { projectTransparentBackground } from '../../parser/projectSettingsParser
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { SCENE_BUFFER_TYPE, type CompositorPass } from './useCompositorPass';
 import { SubscriberStep } from '../frameProfile/FrameProfiler';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 /** The composer's `useFrame` priority. A positive one takes the canvas's render over from R3F. */
 const COMPOSER_PRIORITY = 1;
@@ -54,7 +55,7 @@ export function Compositor({ pass, adjustments, toneMapping, resources }: Compos
       }) as Effect,
     [glow, adjustments, mode, white, exposure, agxContrast, transparentBackground]
   );
-  useEffect(() => () => effect.dispose(), [effect]);
+  useDisposeOnRelease(effect);
   // A uniform, not an effect rebuild: the map's arrival changes no shader.
   useEffect(() => {
     const toneMap = effect as GodotToneMapEffect;
