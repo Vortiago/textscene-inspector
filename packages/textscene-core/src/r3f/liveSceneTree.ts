@@ -193,6 +193,19 @@ function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
 }
 
 /**
+ * The scope the refs of `node` as the tree shows it resolve against, given its
+ * `groups` from {@link liveChildGroups}: the merged instance's, else the node's own,
+ * else the one of the group it sits in (`groupScope`).
+ */
+export function liveNodeScope(
+  node: LiveNode,
+  groupScope: SceneScope,
+  groups: readonly LiveChildGroup[]
+): SceneScope {
+  return mergedNodeOf(groups) ? groups[0]!.scope : scopeOf(node, groupScope);
+}
+
+/**
  * One link of the resolved chain: the collapsed node at a path segment and the
  * raw node it came from. The raw node's `instance` is the originating instance
  * that the tree's 📦 badge reads. The collapsed node's `instance` is the
@@ -201,44 +214,53 @@ function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
 interface LiveChainLink {
   raw: LiveNode;
   collapsed: LiveNode;
+  /** The group the raw node sits in, so a walker can tie its own state to the group. */
+  group: LiveChildGroup;
+  /** The raw node's own scope, which its instance ref resolves against. */
+  scope: SceneScope;
+  /** What is below the node, in the groups the next segment matches against. */
+  groups: readonly LiveChildGroup[];
+}
+
+/** A descent of the live tree along a path: the links it reached, and whether it reached the target. */
+interface LivePathWalk {
+  links: LiveChainLink[];
+  /** False for an empty path or a segment that matches nothing, where `links` ends at the last match. */
+  isResolved: boolean;
 }
 
 /**
- * The walk {@link liveNodeChain} and {@link resolveLiveEntry} share: descend a
- * path, collapsing each segment, or `null` if any is unresolvable. The groups
- * stay apart rather than one flat list, so the matched node descends in its own
- * group's scope.
+ * The one path walk of the live tree: descend a path, collapsing each segment. A
+ * segment that matches nothing ends the walk with the links so far, which a `%Name`
+ * lookup inside a not-yet-loaded sub-scene reads. The groups stay apart rather than
+ * one flat list, so the matched node descends in its own group's scope.
  */
-function liveChainLinks(
-  path: string,
-  roots: readonly TscnNode[],
-  ctx: LiveTreeContext
-): LiveChainLink[] | null {
+export function walkLivePath(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): LivePathWalk {
   const segments = nodePathNames(path);
-  if (segments.length === 0) return null;
-
   const links: LiveChainLink[] = [];
   let candidateGroups: readonly LiveChildGroup[] = [
     { origin: 'inline', children: roots, scope: rootScope(ctx) },
   ];
 
   for (const segment of segments) {
+    let group: LiveChildGroup | undefined;
     let match: LiveNode | undefined;
-    let matchScope: SceneScope = rootScope(ctx);
-    for (const group of candidateGroups) {
-      const found = group.children.find((n) => n.name === segment);
-      if (found) {
-        match = found;
-        matchScope = group.scope;
-        break;
-      }
+    for (group of candidateGroups) {
+      match = group.children.find((n) => n.name === segment);
+      if (match) break;
     }
-    if (!match) return null;
-    candidateGroups = liveChildGroups(match, matchScope, ctx.sceneCache, ctx.glbCache);
-    links.push({ raw: match, collapsed: mergedNodeOf(candidateGroups) ?? match });
+    if (!group || !match) return { links, isResolved: false };
+    candidateGroups = liveChildGroups(match, group.scope, ctx.sceneCache, ctx.glbCache);
+    links.push({
+      raw: match,
+      collapsed: mergedNodeOf(candidateGroups) ?? match,
+      group,
+      scope: scopeOf(match, group.scope),
+      groups: candidateGroups,
+    });
   }
 
-  return links;
+  return { links, isResolved: segments.length > 0 };
 }
 
 /**
@@ -251,8 +273,8 @@ export function liveNodeChain(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): LiveNode[] | null {
-  const links = liveChainLinks(path, roots, ctx);
-  return links ? links.map((l) => l.collapsed) : null;
+  const { links, isResolved } = walkLivePath(path, roots, ctx);
+  return isResolved ? links.map((l) => l.collapsed) : null;
 }
 
 export interface ResolvedLiveNode {
@@ -276,8 +298,8 @@ export function resolveLiveEntry(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext
 ): ResolvedLiveNode | null {
-  const links = liveChainLinks(path, roots, ctx);
-  if (!links || links.length === 0) return null;
+  const { links, isResolved } = walkLivePath(path, roots, ctx);
+  if (!isResolved) return null;
   const last = links[links.length - 1]!;
   return { node: last.collapsed, instanceRef: last.raw.instance };
 }

@@ -15,8 +15,7 @@ import {
   cachedUniqueNameOwnership,
   type UniqueNameClaim,
 } from '../utils/uniqueNames.js';
-import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
-import { scopeOf, type LiveNode } from '../resources/liveNode.js';
+import { walkLivePath, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 
 interface ClaimOwner {
@@ -46,20 +45,15 @@ function ownsInsideInstance(owner: ClaimOwner, livePath: string): boolean {
   return cachedUniqueNameOwnership(owner.roots).ownedInsideInstances.has(fileLocalPath(owner, livePath));
 }
 
-interface Candidate {
-  group: LiveChildGroup;
-  /** Owner of the nodes in `group`. */
+/** Who owns the nodes of one live-tree group. */
+interface GroupOwnership {
+  /** Owner of the nodes in the group. */
   owner: ClaimOwner;
   /** `subscene` groups: the loaded roots, each the owner of its own descendants. */
   rootOf?: readonly TscnNode[];
 }
 
-/**
- * The owner of the node rendered at `path`, walking the composed tree the way
- * the dispatcher builds it. A segment the tree does not (yet) contain keeps the
- * owner found so far, so a consumer inside a not-yet-loaded sub-scene resolves
- * against the outer table until the load lands and the version tick re-asks.
- */
+/** What {@link walkTo} found: the owners at the path, and the node when the path resolved. */
 interface Walk {
   /** Owner of the node at the path. */
   owner: ClaimOwner;
@@ -68,27 +62,23 @@ interface Walk {
   node?: TscnNode;
 }
 
+/**
+ * The owner of the node rendered at `path`, walking the composed tree the way
+ * the dispatcher builds it. A segment the tree does not (yet) contain keeps the
+ * owner found so far, so a consumer inside a not-yet-loaded sub-scene resolves
+ * against the outer table until the load lands and the version tick re-asks.
+ */
 function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): Walk {
   const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, ctx };
-  let candidates: Candidate[] = [
-    { group: { origin: 'inline', children: roots, scope: rootScope(ctx) }, owner: outer },
-  ];
+  const { links, isResolved } = walkLivePath(path, roots, ctx);
+  const ownership = new Map<LiveChildGroup, GroupOwnership>();
+  if (links[0]) ownership.set(links[0].group, { owner: outer });
   let owner = outer;
   let into = outer;
   let parentPath = '';
-  let match: LiveNode | undefined;
-  for (const segment of path.split('/')) {
-    let found: Candidate | undefined;
-    match = undefined;
-    for (const candidate of candidates) {
-      match = candidate.group.children.find((n) => n.name === segment);
-      if (match) {
-        found = candidate;
-        break;
-      }
-    }
-    if (!match || !found) return { owner, into: owner };
-    const livePath = joinPath(parentPath, segment);
+  for (const link of links) {
+    const found = ownership.get(link.group)!;
+    const livePath = joinPath(parentPath, link.raw.name);
     owner = found.owner;
     // A node the file above grafted in is that file's own, however deep it sits.
     for (let above = owner; above.parent; above = above.parent) {
@@ -97,26 +87,28 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
         break;
       }
     }
-    const scope = scopeOf(match, found.group.scope);
-    const subRoots = cachedSubRoots(match, scope, ctx);
+    const subRoots = cachedSubRoots(link.raw, link.scope, ctx);
     // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
     // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
-    const isGlbRoot = found.rootOf !== undefined && match.type === GLB_SCENE_ROOT_TYPE;
+    const isGlbRoot = found.rootOf !== undefined && link.raw.type === GLB_SCENE_ROOT_TYPE;
     const contentOwner: ClaimOwner = found.rootOf
       ? { path: isGlbRoot ? parentPath : livePath, roots: found.rootOf, parent: owner }
       : owner;
-    candidates = liveChildGroups(match, scope, ctx.sceneCache, ctx.glbCache).map((group) => ({
-      group,
-      owner:
-        group.origin === 'merged' && subRoots
-          ? { path: livePath, roots: subRoots, parent: owner }
-          : contentOwner,
-      ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
-    }));
-    into = isGlbRoot ? contentOwner : (candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner);
+    for (const group of link.groups) {
+      ownership.set(group, {
+        owner:
+          group.origin === 'merged' && subRoots
+            ? { path: livePath, roots: subRoots, parent: owner }
+            : contentOwner,
+        ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
+      });
+    }
+    const mergedGroup = link.groups.find((group) => group.origin === 'merged');
+    into = isGlbRoot ? contentOwner : ((mergedGroup && ownership.get(mergedGroup)?.owner) ?? owner);
     parentPath = livePath;
   }
-  return { owner, into, node: match };
+  if (!isResolved) return { owner, into: owner };
+  return { owner, into, node: links[links.length - 1]!.raw };
 }
 
 /**
