@@ -462,3 +462,60 @@ unique_name_in_owner = true
     expect(pathsAt('Root').has('%Lamp')).toBe(false);
   });
 });
+
+describe('a node outside a nested instance whose owner= names it with no heading of its own', () => {
+  // The owner NodePath resolves from the root with get_node_or_null (packed_scene.cpp:159-161),
+  // so it reaches the nested instance HudInstance's sub-scene seats.
+  const lentToWidget = (lampParent: string) =>
+    new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="${lampParent}" owner="HudInstance/Widget"]
+unique_name_in_owner = true
+`);
+  const widgetPaths = (scene: TscnScene) =>
+    ownerUniquePaths(
+      claimOwnerOf('Root/HudInstance/Widget/Face', scene.nodes, {
+        ...ctx,
+        externalResources: scene.externalResources,
+      })
+    );
+
+  it('registers the name of a node inside the outer instance on the nested one', () => {
+    expect(widgetPaths(lentToWidget('HudInstance')).get('%Lamp')).toBe('Root/HudInstance/Lamp');
+  });
+
+  it('registers the name of a node outside both instances on the nested one', () => {
+    expect(widgetPaths(lentToWidget('.')).get('%Lamp')).toBe('Root/Lamp');
+  });
+});
+
+describe('a node inside one instance whose owner= names a sibling instance', () => {
+  const lentAcross = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+[ext_resource type="PackedScene" path="res://inner.tscn" id="2"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="InnerInstance" parent="." instance=ExtResource("2")]
+
+[node name="Lamp" type="Node2D" parent="HudInstance" owner="InnerInstance"]
+unique_name_in_owner = true
+`);
+  const acrossCtx: LiveTreeContext = { ...ctx, externalResources: lentAcross.externalResources };
+  const pathsAt = (path: string) => ownerUniquePaths(claimOwnerOf(path, lentAcross.nodes, acrossCtx));
+
+  it('registers its name on the instance its owner= names', () => {
+    expect(pathsAt('Root/InnerInstance/Face').get('%Lamp')).toBe('Root/HudInstance/Lamp');
+  });
+
+  it('leaves its name out of the instance it sits in', () => {
+    expect(pathsAt('Root/HudInstance/Sprite').has('%Lamp')).toBe(false);
+  });
+});

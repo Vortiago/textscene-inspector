@@ -243,8 +243,10 @@ function liveChainLinks(
 
   const tree = new LiveTree(roots, ctx);
   const links: LiveChainLink[] = [];
-  for (let depth = 1; depth <= segments.length; depth++) {
-    const link = tree.at(segments.slice(0, depth).join('/'));
+  let livePath = '';
+  for (const segment of segments) {
+    livePath = joinPath(livePath, segment);
+    const link = tree.at(livePath);
     if (!link) return null;
     links.push({ raw: link.node, collapsed: mergedNodeOf(link.groups) ?? link.node });
   }
@@ -274,7 +276,7 @@ export class LiveTree {
 
   constructor(
     readonly roots: readonly TscnNode[],
-    private readonly ctx: LiveTreeContext
+    readonly ctx: LiveTreeContext
   ) {}
 
   /** The node at the live path `path`, or null where the loaded tree stops. */

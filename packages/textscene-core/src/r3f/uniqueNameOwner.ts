@@ -128,8 +128,8 @@ interface Walk {
   node?: TscnNode;
 }
 
-function walkTo(path: string, live: PlacedLiveTree, ctx: LiveTreeContext): Walk {
-  const { roots } = live.tree;
+function walkTo(path: string, live: PlacedLiveTree): Walk {
+  const { roots, ctx } = live.tree;
   const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, live };
   let candidates: Candidate[] = rootGroups(roots, ctx).map((group) => ({ group, owner: outer }));
   let owner = outer;
@@ -184,12 +184,12 @@ function liveTreeOf(roots: readonly TscnNode[], ctx: LiveTreeContext): PlacedLiv
  */
 export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): ClaimOwner {
   const live = liveTreeOf(roots, ctx);
-  const { owner, node } = walkTo(path, live, ctx);
+  const { owner, node } = walkTo(path, live);
   if (node?.owner === undefined) return owner;
   // The file an override heading is in is one above the instance that owns it.
   const file = node.overridesExistingNode && owner.parent ? owner.parent : owner;
   if (node.owner === '.') return file;
-  return walkTo(joinPath(file.path, node.owner), live, ctx).into;
+  return walkTo(joinPath(file.path, node.owner), live).into;
 }
 
 /**
@@ -201,7 +201,7 @@ export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: Live
  * the sub-scene owner it already has.
  */
 export function localSceneOf(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): ClaimOwner {
-  return walkTo(path, liveTreeOf(roots, ctx), ctx).into;
+  return walkTo(path, liveTreeOf(roots, ctx)).into;
 }
 
 /**

@@ -323,9 +323,10 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
 }
 
 /**
- * Hand a setting to the instance an explicit `owner=` names when the node sits outside it, and say
- * whether it did. The loader sets that owner (resource_format_text.cpp:257-262) and the name
- * registers on it (packed_scene.cpp:565-570), so the table reaches the node with `..`.
+ * Hand a setting to the instance that holds the node an explicit `owner=` names, when the node sits
+ * outside that instance, and say whether it did. The loader sets that owner from the root
+ * (resource_format_text.cpp:257-262, packed_scene.cpp:159-161) and the name registers on it
+ * (packed_scene.cpp:565-570), so the table reaches the node with `..`.
  */
 function handToOwnerOutside<N extends RawNode>(
   tables: SeatingTables<N>,
@@ -333,12 +334,38 @@ function handToOwnerOutside<N extends RawNode>(
   livePath: string,
   isUnique: boolean
 ): boolean {
-  const owner = node.owner === undefined ? undefined : tables.byPath.get(node.owner);
-  if (!owner || !isInstanceBelowRoot(owner, owner === tables.root)) return false;
-  const setting = { pathInInstance: pathBetween(tables.places.get(owner)!.livePath, livePath), isUnique };
-  if (!isOutsideInstance(setting)) return false;
-  handToInstance(tables, owner, setting);
+  const owner = node.owner === undefined ? undefined : instanceHolding(tables, node.owner);
+  if (!owner) return false;
+  const instanceLivePath = tables.places.get(owner.instance)!.livePath;
+  const pathInInstance = pathBetween(instanceLivePath, livePath);
+  if (!isOutsideInstance({ pathInInstance })) return false;
+  handToInstance(tables, owner.instance, { pathInInstance, isUnique, ownerInInstance: owner.pathInInstance });
   return true;
+}
+
+/**
+ * The nearest seated instance at or above the node `path` names, with that node's path below it,
+ * or undefined where no instance holds it. The rest of a path past its last heading lies in the
+ * content of the instance that heading is in.
+ */
+function instanceHolding<N extends RawNode>(
+  tables: SeatingTables<N>,
+  path: string
+): { instance: N; pathInInstance: string } | undefined {
+  const names = path.split('/');
+  for (let end = names.length; end > 0; end--) {
+    const seated = tables.byPath.get(names.slice(0, end).join('/'));
+    if (!seated) continue;
+    const instance = isInstanceBelowRoot(seated, seated === tables.root)
+      ? seated
+      : tables.enclosingInstances.get(seated);
+    if (!instance) return undefined;
+    const rest = names.slice(end).join('/');
+    const seatedLivePath = tables.places.get(seated)!.livePath;
+    const ownerLivePath = rest ? joinPath(seatedLivePath, rest) : seatedLivePath;
+    return { instance, pathInInstance: relativeTo(tables.places.get(instance)!.livePath, ownerLivePath)! };
+  }
+  return undefined;
 }
 
 /** Append a setting to the instance node it sits in, in file order, after the children seated so far. */

@@ -5,6 +5,7 @@
  */
 
 import type { LiveNode } from './liveNode';
+import { pathBetween } from '../utils/nodePath';
 import {
   UNIQUE_NODE_PREFIX,
   nodePathNames,
@@ -61,7 +62,7 @@ export class InstanceNameTable implements UniqueNameTable {
     this.settings = settings;
   }
 
-  /** The path below the sub-scene root that holds `key` now. */
+  /** The path from the sub-scene root that holds `key` now, as in {@link UniqueNamePaths}. */
   readonly claimed: ClaimedPath = (key) =>
     this.changed.has(key) ? this.changed.get(key) : this.own().get(key);
 
@@ -88,13 +89,19 @@ export class InstanceNameTable implements UniqueNameTable {
    */
   private landOne(tree: LiveNode[], setting: InstanceNameSetting): LiveNode[] {
     if (isOutsideInstance(setting)) {
-      this.land(setting.pathInInstance, setting.isUnique);
-      return tree;
+      if (!setting.ownerInInstance) {
+        this.land(setting.pathInInstance, setting.isUnique);
+        return tree;
+      }
+      return handOutside(tree, setting.ownerInInstance.split('/'), setting.pathInInstance, setting);
     }
     const segments = settingSegments(tree, setting.pathInInstance, this.claimed);
     if (!segments) return tree;
     const owner = tableOwner(tree, segments, setting.ownerInInstance);
     if (owner === null) return tree;
+    if (owner === OUTSIDE_THE_OWNER) {
+      return handOutside(tree, setting.ownerInInstance!.split('/'), segments.join('/'), setting);
+    }
     if (owner !== THIS_INSTANCE) {
       return handTo(tree, segments.slice(0, owner.nestedAt + 1), rebased(setting, segments, owner.nestedAt));
     }
@@ -137,9 +144,13 @@ function settingSegments(
 }
 
 const THIS_INSTANCE = 'this instance';
+const OUTSIDE_THE_OWNER = 'outside the owner';
 
-/** Whose table a setting lands in: the instance this graft composes, or a nested one along its path. */
-type TableOwner = typeof THIS_INSTANCE | { readonly nestedAt: number };
+/**
+ * Whose table a setting lands in: the instance this graft composes, a nested one along its path, or
+ * the nested instance its explicit owner names off its path.
+ */
+type TableOwner = typeof THIS_INSTANCE | typeof OUTSIDE_THE_OWNER | { readonly nestedAt: number };
 
 /**
  * Whose table a setting at `segments` lands in, or null for a node the sub-scene lacks or a table
@@ -156,7 +167,9 @@ function tableOwner(
   if (ownerInInstance === '') return THIS_INSTANCE;
   if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
   const ownerSegments = ownerInInstance.split('/');
-  if (!ownerSegments.every((name, index) => segments[index] === name)) return null;
+  if (!ownerSegments.every((name, index) => segments[index] === name)) {
+    return isNestedInstanceAt(tree, ownerSegments) ? OUTSIDE_THE_OWNER : null;
+  }
   const ownerAt = instanceDepth(tree, ownerSegments);
   return typeof ownerAt === 'number' ? { nestedAt: ownerAt } : null;
 }
@@ -174,6 +187,30 @@ function instanceDepth(tree: readonly LiveNode[], path: readonly string[]): numb
     siblings = found.children;
   }
   return undefined;
+}
+
+/** Whether the node at `path` is an instance with no instance above it, whose graft this one hands to. */
+function isNestedInstanceAt(tree: readonly LiveNode[], path: readonly string[]): boolean {
+  return instanceDepth(tree, path) === path.length - 1;
+}
+
+/**
+ * `tree` with `setting` handed to the nested instance at `owner`, on the node at `nodePath` outside
+ * it, which that instance's graft lands in its own table. A node `owner` does not name is no table.
+ */
+function handOutside(
+  tree: LiveNode[],
+  owner: readonly string[],
+  nodePath: string,
+  setting: InstanceNameSetting
+): LiveNode[] {
+  if (!isNestedInstanceAt(tree, owner)) return tree;
+  const { isUnique, hostChildrenBefore } = setting;
+  return handTo(tree, owner, {
+    pathInInstance: pathBetween(owner.join('/'), nodePath),
+    isUnique,
+    hostChildrenBefore,
+  });
 }
 
 /** The node at `path` below the sub-scene root, or undefined where none sits there. */
