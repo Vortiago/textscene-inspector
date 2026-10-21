@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from './RuleRegistry.js';
 import type { IndexedFamily } from '../godot/classdb/indexedFamily.js';
-import { PROPERTY_LIST_FAMILIES } from '../godot/classdb/propertyListFamilies.js';
+import * as declarations from '../godot/classdb/propertyListFamilies.js';
 import { node, scene, lint } from './testing/testkit';
 import { controlRoutes } from './testing/propertyListRoutes/controls.js';
 import '../nodes/2d/ui/itemlist/index.linter.js';
@@ -23,7 +23,9 @@ const pastCountArmsOf = (family: IndexedFamily) =>
     .flatMap((rule) => rule.meta.emits ?? [])
     .filter((arm) => arm.grounding.kind === 'engine' && arm.grounding.at === family.outOfBounds.at);
 
-describe.each(PROPERTY_LIST_FAMILIES)('$owner $prefix', (family) => {
+const families: IndexedFamily[] = Object.values(declarations);
+
+describe.each(families)('$owner $prefix', (family) => {
   it('has a route row whose sample key sits in the declared family', () => {
     const sampleKeys = controlRoutes.filter((row) => row.type === family.owner).map((row) => row.sample);
     expect(sampleKeys.some((key) => key.startsWith(`${family.prefix}0/`))).toBe(true);

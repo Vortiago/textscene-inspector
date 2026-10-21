@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defineIndexedFamily } from './indexedFamily.js';
-import { OPTION_BUTTON_ITEMS, PROPERTY_LIST_FAMILIES, TAB_CONTAINER_TABS } from './propertyListFamilies.js';
+import * as declarations from './propertyListFamilies.js';
+import { OPTION_BUTTON_ITEMS, TAB_CONTAINER_TABS } from './propertyListFamilies.js';
 
 describe('defineIndexedFamily', () => {
   const complete = {
@@ -44,7 +45,7 @@ describe('the PropertyListHelper families', () => {
   });
 
   it('declares each family once per owner and prefix', () => {
-    const identities = PROPERTY_LIST_FAMILIES.map((family) => `${family.owner} ${family.prefix}`);
+    const identities = Object.values(declarations).map((family) => `${family.owner} ${family.prefix}`);
     expect(new Set(identities).size).toBe(7);
   });
 });

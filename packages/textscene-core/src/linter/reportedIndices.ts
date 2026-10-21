@@ -143,7 +143,7 @@ export function listWrittenIndices(
  * the writes an array of that length drops. `visitIndexedKeys` visits no negative index, which is
  * the family dispatcher's report in phase 1, so one refusal is reported once.
  */
-export function indicesPastCount(
+function indicesPastCount(
   properties: Readonly<Record<string, string>>,
   prefix: string,
   indexParse: IndexParse,

@@ -76,13 +76,3 @@ export const OPTION_BUTTON_ITEMS = defineIndexedFamily({
   countKey: { key: 'item_count' },
   outOfBounds: DROPPED_PAST_LENGTH,
 });
-
-export const PROPERTY_LIST_FAMILIES = [
-  ITEM_LIST_ITEMS,
-  TAB_BAR_TABS,
-  TAB_CONTAINER_TABS,
-  MENU_BUTTON_ITEMS,
-  POPUP_MENU_ITEMS,
-  FILE_DIALOG_OPTIONS,
-  OPTION_BUTTON_ITEMS,
-] as const;
