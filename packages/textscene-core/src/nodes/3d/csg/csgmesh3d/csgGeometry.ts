@@ -26,6 +26,13 @@ export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: C
   return `mesh:${p.flipFaces}:${mesh ? meshKey(mesh) : `unresolved:${p.mesh}`}`;
 }
 
+export function csgMesh3DMeshType(
+  properties: Record<string, unknown>,
+  ctx: CsgGeometryContext
+): string | null {
+  return resolveMesh((properties as unknown as CSGMesh3DProperties).mesh, ctx)?.resource.type ?? null;
+}
+
 export function csgMesh3DReadsFiles(properties: Record<string, unknown>, pools: SceneResources): string[] {
   const path = meshFilePath((properties as unknown as CSGMesh3DProperties).mesh, pools);
   return path ? [path] : [];
