@@ -519,3 +519,53 @@ unique_name_in_owner = true
     expect(pathsAt('Root/HudInstance/Sprite').has('%Lamp')).toBe(false);
   });
 });
+
+describe('an owner= spelt through a %Name', () => {
+  // Instantiate resolves the owner NodePath from the root with get_node_or_null
+  // (packed_scene.cpp:159-161), so a `%Name` in it reads the tables as of the heading.
+  const hudClaimingWidget = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://widget.tscn" id="1"]
+
+[node name="Hud" type="Node2D"]
+
+[node name="Widget" parent="." instance=ExtResource("1")]
+unique_name_in_owner = true
+
+[node name="Sprite" type="Sprite2D" parent="."]
+`);
+  const parsed = (lamp: string) =>
+    new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+unique_name_in_owner = true
+
+${lamp}
+unique_name_in_owner = true
+`);
+  const ownerAt = (scene: TscnScene, path: string) =>
+    claimOwnerOf(path, scene.nodes, {
+      ...ctx,
+      externalResources: scene.externalResources,
+      sceneCache: { getCached: (p) => (p === 'res://hud.tscn' ? hudClaimingWidget : scenes.get(p)) },
+    });
+
+  it('registers the name on the instance the root table names', () => {
+    const scene = parsed('[node name="Lamp" type="Node2D" parent="." owner="%HudInstance"]');
+    expect(ownerUniquePaths(ownerAt(scene, 'Root/HudInstance/Sprite')).get('%Lamp')).toBe('Root/Lamp');
+  });
+
+  it('registers the name on the instance a sub-scene table names', () => {
+    const scene = parsed('[node name="Lamp" type="Node2D" parent="HudInstance" owner="HudInstance/%Widget"]');
+    expect(ownerUniquePaths(ownerAt(scene, 'Root/HudInstance/Widget/Face')).get('%Lamp')).toBe(
+      'Root/HudInstance/Lamp'
+    );
+  });
+
+  it('owns the node by the instance a sub-scene table names', () => {
+    const scene = parsed('[node name="Lamp" type="Node2D" parent="HudInstance" owner="HudInstance/%Widget"]');
+    expect(ownerAt(scene, 'Root/HudInstance/Lamp').path).toBe('Root/HudInstance/Widget');
+  });
+});

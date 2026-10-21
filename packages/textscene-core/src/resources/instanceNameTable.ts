@@ -87,7 +87,9 @@ export class InstanceNameTable implements UniqueNameTable {
    * `tree` once `setting` lands in this table, or once it is handed to the nested instance whose
    * table it names. A setting on a node the sub-scene lacks changes nothing.
    */
-  private landOne(tree: LiveNode[], setting: InstanceNameSetting): LiveNode[] {
+  private landOne(tree: LiveNode[], authored: InstanceNameSetting): LiveNode[] {
+    const setting = withOwnerWalked(tree, authored, this.claimed);
+    if (!setting) return tree;
     if (isOutsideInstance(setting)) {
       if (!setting.ownerInInstance) {
         this.land(setting.pathInInstance, setting.isUnique);
@@ -130,6 +132,21 @@ function withChanges(
     else moved.set(key, path);
   }
   return moved;
+}
+
+/**
+ * `setting` with each `%Name` in its explicit owner replaced through this table, as the loader's
+ * walk from the root reads it (packed_scene.cpp:159-161), or null where the owner names nothing.
+ */
+function withOwnerWalked(
+  tree: readonly LiveNode[],
+  setting: InstanceNameSetting,
+  claimed: ClaimedPath
+): InstanceNameSetting | null {
+  const { ownerInInstance } = setting;
+  if (!ownerInInstance?.includes(UNIQUE_NODE_PREFIX)) return setting;
+  const segments = subPathSegments(ownerInInstance, tree, claimed);
+  return segments && { ...setting, ownerInInstance: segments.join('/') };
 }
 
 /** The node a setting names, its parent walked as a host sub-path, or null where that names nothing. */

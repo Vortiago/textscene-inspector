@@ -51,20 +51,35 @@ function composedPath(owner: ClaimOwner, fileLivePath: string): string {
   return owner.path + fileLivePath.slice(fileLivePath.indexOf('/'));
 }
 
-function ownsInsideInstance(owner: ClaimOwner, livePath: string): boolean {
-  if (cachedUniqueNameOwnership(owner.roots).ownedInsideInstances.has(fileLocalPath(owner, livePath)))
-    return true;
-  return uniqueSpeltOwnedPaths(owner.roots).some(
+/** Which of a file's sets of live paths inside instanced content a question reads. */
+type InsideInstances = 'ownedInsideInstances' | 'headingsInsideInstances';
+
+/** Whether `owner`'s file lists the node at `livePath` in its set `inside`, placed over the live tree. */
+function listsInsideInstance(owner: ClaimOwner, livePath: string, inside: InsideInstances): boolean {
+  if (cachedUniqueNameOwnership(owner.roots)[inside].has(fileLocalPath(owner, livePath))) return true;
+  return uniqueSpeltPaths(owner.roots)[inside].some(
     (entry) => owner.live.placed(composedPath(owner, entry)) === livePath
   );
 }
 
-/** The live paths of nodes a file owns inside instances that pass through a `%Name`. */
-const uniqueSpeltOwnedPaths = perTree((roots): readonly string[] =>
-  [...cachedUniqueNameOwnership(roots).ownedInsideInstances].filter((path) =>
-    path.includes(UNIQUE_NODE_PREFIX)
-  )
-);
+/** Each set of a file's live paths inside instances, kept to the paths that pass through a `%Name`. */
+const uniqueSpeltPaths = perTree((roots): Record<InsideInstances, readonly string[]> => {
+  const ownership = cachedUniqueNameOwnership(roots);
+  const spelt = (paths: ReadonlySet<string>) =>
+    [...paths].filter((path) => path.includes(UNIQUE_NODE_PREFIX));
+  return {
+    ownedInsideInstances: spelt(ownership.ownedInsideInstances),
+    headingsInsideInstances: spelt(ownership.headingsInsideInstances),
+  };
+});
+
+/** The nearest file at or above `owner` that `inside` lists the node at `livePath` in, else `owner`. */
+function fileListing(owner: ClaimOwner, livePath: string, inside: InsideInstances): ClaimOwner {
+  for (let above = owner; above.parent; above = above.parent) {
+    if (listsInsideInstance(above.parent, livePath, inside)) return above.parent;
+  }
+  return owner;
+}
 
 /** The live tree with each `%`-spelt live path placed once per walk. */
 class PlacedLiveTree {
@@ -142,14 +157,8 @@ function walkTo(path: string, live: PlacedLiveTree): Walk {
     const found = link && candidates.find((candidate) => candidate.group.children.includes(link.node));
     if (!link || !found) return { owner, into: owner };
     match = link.node;
-    owner = found.owner;
     // A node the file above grafted in is that file's own, however deep it sits.
-    for (let above = owner; above.parent; above = above.parent) {
-      if (ownsInsideInstance(above.parent, livePath)) {
-        owner = above.parent;
-        break;
-      }
-    }
+    owner = fileListing(found.owner, livePath, 'ownedInsideInstances');
     const subRoots = cachedSubRoots(match, link.scope, ctx);
     // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
     // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
@@ -180,16 +189,31 @@ function liveTreeOf(roots: readonly TscnNode[], ctx: LiveTreeContext): PlacedLiv
  * The owner a `%Name` on the node at `path` registers with: the file the heading is
  * in, except an override heading inside an instance, which the instance keeps
  * (resource_format_text.cpp:264-265). An explicit `owner=` replaces that: `"."` is
- * that file's root, anything else the node at that root-relative path.
+ * the root of the file the heading is in, anything else the node at that root-relative path.
  */
 export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): ClaimOwner {
   const live = liveTreeOf(roots, ctx);
   const { owner, node } = walkTo(path, live);
   if (node?.owner === undefined) return owner;
-  // The file an override heading is in is one above the instance that owns it.
-  const file = node.overridesExistingNode && owner.parent ? owner.parent : owner;
+  const file = fileListing(owner, path, 'headingsInsideInstances');
   if (node.owner === '.') return file;
-  return walkTo(joinPath(file.path, node.owner), live).into;
+  return walkTo(ownerLivePath(file.path, node.owner, live), live).into;
+}
+
+/**
+ * The live path `owner` names from the file root at `rootPath`. The seating replaced each `%Name`
+ * its own tables answer, so one left here passes through an instance, whose own table answers it,
+ * else its owner's (node.cpp:1930-1938).
+ */
+function ownerLivePath(rootPath: string, owner: string, live: PlacedLiveTree): string {
+  let path = rootPath;
+  for (const name of owner.split('/')) {
+    const claimant = name.startsWith(UNIQUE_NODE_PREFIX)
+      ? localSceneUniquePaths(walkTo(path, live).into).get(name)
+      : undefined;
+    path = claimant ?? joinPath(path, name);
+  }
+  return path;
 }
 
 /**

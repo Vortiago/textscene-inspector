@@ -108,4 +108,6 @@ export interface UniqueNameOwnership {
   readonly claims: ReadonlyMap<string, UniqueNameClaim>;
   /** Live paths of nodes this root owns that sit inside instanced content. */
   readonly ownedInsideInstances: ReadonlySet<string>;
+  /** Live paths of every heading this file seats inside instanced content, whoever owns it. */
+  readonly headingsInsideInstances: ReadonlySet<string>;
 }

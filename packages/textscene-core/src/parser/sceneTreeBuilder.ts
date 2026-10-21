@@ -9,7 +9,6 @@ import { SCENE_ROOT_PATH, joinPath, pathBetween } from '../utils/nodePath.js';
 import {
   hasForeignOwner,
   isInstanceBelowRoot,
-  isOutsideInstance,
   isOwnedByRoot,
   uniqueNameSetting,
   type UniqueNameClaim,
@@ -66,7 +65,11 @@ export function seatScene<N extends SceneNode<N>>(origins: readonly NodeOrigin<N
 }
 
 function noScene<N extends RawNode>(): SceneSeating<N> {
-  const ownership = { claims: new Map(), ownedInsideInstances: new Set<string>() };
+  const ownership = {
+    claims: new Map(),
+    ownedInsideInstances: new Set<string>(),
+    headingsInsideInstances: new Set<string>(),
+  };
   return { roots: [], seated: new Map(), pathOf: new Map(), resolve: () => MISSING, ownership };
 }
 
@@ -218,6 +221,7 @@ interface SeatingTables<N> {
   readonly ownership: {
     readonly claims: Map<string, UniqueNameClaim>;
     readonly ownedInsideInstances: Set<string>;
+    readonly headingsInsideInstances: Set<string>;
   };
   /** The same tables as the walk consumes them. */
   readonly tree: RootWalkTables;
@@ -241,7 +245,7 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
     places: new Map([[root, { path: root.name, livePath: root.name }]]),
     enclosingInstances: new Map(),
     instanceNameSettings: new Map(),
-    ownership: { claims: new Map(), ownedInsideInstances: new Set() },
+    ownership: { claims: new Map(), ownedInsideInstances: new Set(), headingsInsideInstances: new Set() },
     tree: { exists: (path) => canNameNode(byPath, path, isOpaque), isOpaque, uniquePaths },
   };
 }
@@ -287,8 +291,12 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   // A nameless heading claims no key: an empty name joins to its parent's own key and live path.
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
   if (!node.name) return;
+  if (node.owner !== undefined) node.owner = resolvedOwner(tables, node.owner);
   const isRootOwned = isOwnedByRoot(node, instance !== undefined);
-  if (isRootOwned && instance !== undefined) tables.ownership.ownedInsideInstances.add(place.livePath);
+  if (instance !== undefined) {
+    tables.ownership.headingsInsideInstances.add(place.livePath);
+    if (isRootOwned) tables.ownership.ownedInsideInstances.add(place.livePath);
+  }
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
@@ -307,40 +315,44 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
       });
     return;
   }
-  if (handToOwnerOutside(tables, node, place.livePath, setting)) return;
-  const instanceLivePath = instance && tables.places.get(instance)!.livePath;
-  if (instanceLivePath === undefined) return;
-  const explicitOwner = node.owner === undefined ? undefined : joinPath(tables.root.name, node.owner);
-  const pathInInstance = relativeTo(instanceLivePath, place.livePath)!;
-  if (explicitOwner === undefined) {
-    handToInstance(tables, instance!, { pathInInstance, isUnique: setting });
+  if (node.owner !== undefined) {
+    handToOwner(tables, node.owner, place.livePath, setting);
     return;
   }
-  const ownerInInstance = relativeTo(instanceLivePath, explicitOwner);
-  // Any other `owner=` outside the instance names a table this instance never reads.
-  if (ownerInInstance !== undefined)
-    handToInstance(tables, instance!, { pathInInstance, isUnique: setting, ownerInInstance });
+  if (instance === undefined) return;
+  const pathInInstance = relativeTo(tables.places.get(instance)!.livePath, place.livePath)!;
+  handToInstance(tables, instance, { pathInInstance, isUnique: setting });
 }
 
 /**
- * Hand a setting to the instance that holds the node an explicit `owner=` names, when the node sits
- * outside that instance, and say whether it did. The loader sets that owner from the root
- * (resource_format_text.cpp:257-262, packed_scene.cpp:159-161) and the name registers on it
- * (packed_scene.cpp:565-570), so the table reaches the node with `..`.
+ * `owner` as the path of the node it names, walked from the root over the headings seated so far,
+ * as instantiate walks it when it sets the owner (packed_scene.cpp:159-161, :565-568): `.` for the
+ * root, and a `%Name` replaced by its claimant. A walk into content this file does not list keeps
+ * the rest for that instance to resolve, and a walk that finds nothing keeps the path as written.
  */
-function handToOwnerOutside<N extends RawNode>(
+function resolvedOwner<N extends RawNode>(tables: SeatingTables<N>, owner: string): string {
+  const end = walkFromRoot(owner, tables.tree);
+  if (end === null) return owner;
+  const path = typeof end === 'string' ? end : end.unlisted;
+  return path === SCENE_ROOT_PATH ? '.' : path;
+}
+
+/**
+ * Hand a setting to the instance that holds the node an explicit `owner=` names. The loader sets
+ * that owner (resource_format_text.cpp:257-262) and the name registers on it (packed_scene.cpp:565-570),
+ * so a node outside that instance is spelt with `..`. An owner no instance holds names a table no
+ * instance reads.
+ */
+function handToOwner<N extends RawNode>(
   tables: SeatingTables<N>,
-  node: N,
+  ownerPath: string,
   livePath: string,
   isUnique: boolean
-): boolean {
-  const owner = node.owner === undefined ? undefined : instanceHolding(tables, node.owner);
-  if (!owner) return false;
-  const instanceLivePath = tables.places.get(owner.instance)!.livePath;
-  const pathInInstance = pathBetween(instanceLivePath, livePath);
-  if (!isOutsideInstance({ pathInInstance })) return false;
+): void {
+  const owner = instanceHolding(tables, ownerPath);
+  if (!owner) return;
+  const pathInInstance = pathBetween(tables.places.get(owner.instance)!.livePath, livePath);
   handToInstance(tables, owner.instance, { pathInInstance, isUnique, ownerInInstance: owner.pathInInstance });
-  return true;
 }
 
 /**
