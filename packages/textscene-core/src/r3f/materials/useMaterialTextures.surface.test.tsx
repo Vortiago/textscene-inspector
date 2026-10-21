@@ -111,8 +111,8 @@ function viewportMaps(properties: Record<string, string>, surface?: TexturedSurf
  * target publishes a decoding view apart from its plain view, as a canvas-content target does.
  */
 function targetMaps(properties: Record<string, string>, surface?: TexturedSurface) {
-  const target = new THREE.Texture();
-  const decoding = new THREE.Texture();
+  const target = new THREE.WebGLRenderTarget(4, 4).texture;
+  const decoding = new THREE.WebGLRenderTarget(4, 4).texture;
   const { view, retainers } = countingView(decoding);
   const maps = materialMaps(properties, VIEWPORT, surface, (children) => (
     <ViewportTextureProvider>
