@@ -97,12 +97,43 @@ describe('a connection end that names no node', () => {
     expect(named(source, MISSING_NODE)).toEqual([]);
   });
 
-  it('stays silent for an absolute path', () => {
-    expect(named(sceneWith(connection({ from: '/root/Elsewhere' })), MISSING_NODE)).toEqual([]);
+  it('warns for an absolute path, which the root refuses off the tree', () => {
+    // Instantiate resolves both ends from the root before it enters a tree (packed_scene.cpp:161, :656-657),
+    // and `get_node_or_null` refuses an absolute path there (node.cpp:1898).
+    expect(named(sceneWith(connection({ from: '/root/Elsewhere' })), MISSING_NODE)).toHaveLength(1);
   });
 
-  it('stays silent for a path above the root', () => {
-    expect(named(sceneWith(connection({ to: '..' })), MISSING_NODE)).toEqual([]);
+  it('warns for a path above the root, which has no parent at instantiate', () => {
+    // node.cpp:1920-1921 returns null for `..` from a node with no parent.
+    expect(named(sceneWith(connection({ to: '..' })), MISSING_NODE)).toHaveLength(1);
+  });
+
+  it('stays silent for a node seated inside an instanced node', () => {
+    const source = scene(
+      packedScene,
+      node('Node', {}, { name: 'Root' }),
+      instanced('Body', { parent: '.' }),
+      node('Node', {}, { name: 'Added', parent: 'Body/Inner' }),
+      connection({ from: 'Body/Inner/Added' })
+    );
+    expect(named(source, MISSING_NODE)).toEqual([]);
+  });
+
+  it('stays silent for a unique name an instanced root may claim', () => {
+    const source = scene(packedScene, instanced('Root'), connection({ from: '%Elsewhere' }));
+    expect(named(source, MISSING_NODE)).toEqual([]);
+  });
+
+  it('warns for a unique name only an override inside an instance claims', () => {
+    // The override keeps the sub-scene's owner (resource_format_text.cpp:264-265), so the claim is not the root's.
+    const source = scene(
+      packedScene,
+      node('Node', {}, { name: 'Root' }),
+      instanced('Body', { parent: '.' }),
+      `[node name="Part" parent="Body"]\nunique_name_in_owner = true`,
+      connection({ from: '%Part' })
+    );
+    expect(named(source, MISSING_NODE)).toHaveLength(1);
   });
 
   it('stays silent for a unique name this file claims', () => {

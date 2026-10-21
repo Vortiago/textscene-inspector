@@ -9,8 +9,6 @@ import { parseTscnContent } from '../../../r3f/hooks/useParsedScene';
 // The relay pass reaches the pipeline through the registrations, as in the app.
 import './index.r3f';
 import '../../2d/remotetransform2d/index.r3f';
-import { TscnParser } from '../../../parser/TscnParser';
-import { uniqueNamePaths } from '../../../utils/uniqueNames';
 import { decomposeTransform3D } from '../../../utils/transform';
 import { identityTransform3D } from '../../../godot/math/transform3d.js';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
@@ -250,32 +248,23 @@ remote_path = NodePath("../Parent/Target")
   });
 });
 
-describe('the %Name table this module builds inline', () => {
-  it('answers what the shared claim walk answers', () => {
-    // The inline collection applies the shared rule a second time rather than copying it. Godot's
-    // claim is owner-scoped and first-one-wins (node.cpp:2222-2231), and a change to either half
-    // has to move both.
+describe('a %Name relay target two headings claim', () => {
+  it('moves the one declared first, as instantiate claims in file order (packed_scene.cpp:565-570)', () => {
+    // `Q/X` is declared before `P/X`, while `P` sits before `Q` in the tree.
     const content = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
-[node name="Rig" type="Node3D" parent="."]
+[node name="P" type="Node3D" parent="."]
+[node name="Q" type="Node3D" parent="."]
+[node name="X" type="Node3D" parent="Q"]
 unique_name_in_owner = true
-[node name="Target" type="Node3D" parent="Rig"]
-unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
-[node name="Target" type="Node3D" parent="."]
+[node name="X" type="Node3D" parent="P"]
 unique_name_in_owner = true
 [node name="Relay" type="RemoteTransform3D" parent="."]
-remote_path = NodePath("%Target")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
+remote_path = NodePath("%X")
 `;
-    const nodes = new TscnParser().parse(content).nodes;
-    const shared = uniqueNamePaths(nodes);
-    // The deeper claim wins on document order, and the later sibling does not take the key from
-    // it. Both halves have to agree on this.
-    expect(shared.get('%Target')).toBe('Root/Rig/Target');
-    expect(shared.get('%Rig')).toBe('Root/Rig');
 
-    // And the relay resolves through the same answer: the target it moves is
-    // the one the shared walk names, not the shallower namesake.
-    expect(targetTransform3D(content, 'Root/Rig/Target').position.x).toBe(0);
+    expect(targetTransform3D(content, 'Root/Q/X').position.x).toBe(5);
+    expect(targetTransform3D(content, 'Root/P/X').position.x).toBe(0);
   });
 });

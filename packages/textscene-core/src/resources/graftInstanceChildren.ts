@@ -10,6 +10,7 @@ import { scopeOf, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
+import { InstanceNameTable, subPathSegments, type InstanceNames } from './instanceNameTable';
 
 /** The two scopes a graft joins. */
 export interface InstanceScopes {
@@ -26,18 +27,23 @@ export interface InstanceScopes {
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
+ * @param names the sub-scene's own `%Name` table and the settings the instance carries
  */
 export function graftInstanceChildren(
   rootChildren: readonly LiveNode[],
   hostChildren: readonly LiveNode[],
-  scopes: InstanceScopes
+  scopes: InstanceScopes,
+  names: InstanceNames
 ): LiveNode[] {
   if (hostChildren.length === 0) return [...rootChildren];
 
   let grafted = [...rootChildren];
   const appendedAtRoot: LiveNode[] = [];
+  const table = new InstanceNameTable(names);
 
-  for (const child of hostChildren) {
+  for (const [index, child] of hostChildren.entries()) {
+    // A setting lands at its heading, so only the host children written after it read it.
+    grafted = table.landUpTo(grafted, index);
     // A child re-anchored at a nested instance keeps the scene it was authored in.
     const stamped = child.scope ? child : { ...child, scope: scopes.outer };
     if (!child.instanceSubPath) {
@@ -47,7 +53,8 @@ export function graftInstanceChildren(
       continue;
     }
 
-    const next = graftAt(grafted, child.instanceSubPath.split('/'), stamped, scopes.content);
+    const segments = subPathSegments(child.instanceSubPath, grafted, table.claimed);
+    const next = segments && graftAt(grafted, segments, stamped, scopes.content);
     if (next) {
       grafted = next;
     } else {
@@ -60,7 +67,7 @@ export function graftInstanceChildren(
     }
   }
 
-  return [...grafted, ...appendedAtRoot];
+  return [...table.landUpTo(grafted, hostChildren.length), ...appendedAtRoot];
 }
 
 /**

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildSceneTree, orphanedNodes } from './sceneTreeBuilder';
+import { orphanedNodes, sceneSeating, seatScene } from './sceneTreeBuilder';
 import type { NodeOrigin, TscnNode } from './types';
 
 /** A childless `Node3D`, a root when `parent` is absent. */
@@ -18,13 +18,13 @@ function originsOf(nodes: TscnNode[]): NodeOrigin<TscnNode>[] {
 }
 
 function build(nodes: TscnNode[]): TscnNode[] {
-  return buildSceneTree(originsOf(nodes)).roots;
+  return seatScene(originsOf(nodes)).roots;
 }
 
 /** The headings `orphanedNodes` reports for a build of `nodes`. */
 function orphansOf(nodes: TscnNode[]): NodeOrigin<TscnNode>[] {
   const origins = originsOf(nodes);
-  return orphanedNodes(origins, buildSceneTree(origins));
+  return orphanedNodes(origins, seatScene(origins));
 }
 
 /** `origins` with `patch` applied to the one at `index`. */
@@ -36,7 +36,7 @@ function withOrigin(
   return origins.map((origin, i) => (i === index ? { ...origin, ...patch } : origin));
 }
 
-describe('buildSceneTree', () => {
+describe('seatScene', () => {
   describe('empty and basic cases', () => {
     it('should return empty array for empty input', () => {
       const result = build([]);
@@ -378,14 +378,14 @@ describe('buildSceneTree', () => {
     it('builds the same tree twice from one input', () => {
       const origins = originsOf([node('Root'), node('Orphan', 'Gone'), node('Kid', '.')]);
 
-      expect(buildSceneTree(origins).roots).toEqual(buildSceneTree(origins).roots);
+      expect(seatScene(origins).roots).toEqual(seatScene(origins).roots);
     });
 
     it('leaves the name, children and instance path of every heading node as scanned', () => {
       const nodes = [node('Root'), node('Orphan', 'Gone'), node('Kid', '.')];
       const before = structuredClone(nodes);
 
-      buildSceneTree(originsOf(nodes));
+      seatScene(originsOf(nodes));
 
       expect(nodes).toEqual(before);
     });
@@ -393,7 +393,7 @@ describe('buildSceneTree', () => {
     it('maps each seated heading to its copy, and an unseated one to nothing', () => {
       const nodes = [node('Root'), node('Kid', '.'), node('Second')];
 
-      const { roots, seated } = buildSceneTree(originsOf(nodes));
+      const { roots, seated } = seatScene(originsOf(nodes));
 
       expect(seated.get(nodes[0]!)).toBe(roots[0]);
       expect(seated.get(nodes[1]!)).toBe(roots[0]!.children[0]);
@@ -404,7 +404,7 @@ describe('buildSceneTree', () => {
   describe('a parent path that vanished', () => {
     /** The names of the scene root's children. */
     const rootChildNames = (origins: NodeOrigin<TscnNode>[]) =>
-      buildSceneTree(origins).roots[0]!.children.map((child) => child.name);
+      seatScene(origins).roots[0]!.children.map((child) => child.name);
 
     it('re-roots the node under the scene root, renamed for the vanished path', () => {
       const nodes = [node('Root'), node('Orphan', 'Gone')];
@@ -584,30 +584,188 @@ describe('buildSceneTree', () => {
   });
 });
 
-describe('the paths of a built tree', () => {
-  it('keys each seated node by its root-relative path, the root at the empty path', () => {
-    const tree = buildSceneTree(originsOf([node('Root'), node('Body', './'), node('Arm', './Body')]));
-    expect([...tree.byPath.keys()]).toEqual(['', 'Body', 'Body/Arm']);
+describe('seatScene resolve', () => {
+  const claiming = (name: string, parent: string, fields: Partial<TscnNode> = {}): TscnNode => ({
+    ...node(name, parent),
+    rawProperties: { unique_name_in_owner: 'true' },
+    ...fields,
+  });
+  const instance = (name: string, parent?: string): TscnNode => ({
+    ...node(name, parent),
+    instance: 'ExtResource("1")',
+  });
+  const seat = (nodes: TscnNode[]) => seatScene(originsOf(nodes));
+  const foundName = (nodes: TscnNode[], path: string): string | undefined => {
+    const resolution = seat(nodes).resolve(path);
+    return resolution.status === 'found' ? resolution.node.name : undefined;
+  };
+  const statusOf = (nodes: TscnNode[], path: string): string => seat(nodes).resolve(path).status;
+
+  it('finds a node of a plain scene by its path, and the root by .', () => {
+    const nodes = [node('Root'), node('A', '.'), node('B', 'A')];
+
+    expect(foundName(nodes, 'A/B')).toBe('B');
+    expect(foundName(nodes, '.')).toBe('Root');
   });
 
-  it('keeps the later of two siblings sharing a name at their path, and a path for both', () => {
-    const [root, first, second] = [node('Root'), node('A', '.'), node('A', '.')];
-    const tree = buildSceneTree(originsOf([root, first, second]));
-    const [firstSeat, secondSeat] = [tree.seated.get(first)!, tree.seated.get(second)!];
-    expect([tree.byPath.get('A'), tree.pathOf.get(firstSeat), tree.pathOf.get(secondSeat)]).toEqual([
-      secondSeat,
-      'A',
-      'A',
+  it('finds a node seated under a path into an instance', () => {
+    const nodes = [node('Root'), instance('Inst', '.'), node('X', 'Inst/Sub'), node('Y', 'Inst/Sub/X')];
+
+    expect(foundName(nodes, 'Inst/Sub/X')).toBe('X');
+    expect(foundName(nodes, 'Inst/Sub/X/Y')).toBe('Y');
+  });
+
+  it('cannot say what a path into an instance names when no heading is seated there', () => {
+    expect(statusOf([node('Root'), instance('Inst', '.')], 'Inst/Sub')).toBe('unknowable');
+  });
+
+  it('finds a node seated under a %Name parent at its canonical path', () => {
+    const nodes = [node('Root'), claiming('Player', '.'), node('Hand', '%Player')];
+
+    expect(foundName(nodes, 'Player/Hand')).toBe('Hand');
+    expect(foundName(nodes, '%Player/Hand')).toBe('Hand');
+  });
+
+  it('finds a node seated under a ./A parent at A', () => {
+    const nodes = [node('Root'), node('A', '.'), node('B', './A')];
+
+    expect(foundName(nodes, 'A/B')).toBe('B');
+  });
+
+  it('finds the later of two siblings that share a name, as the child table keeps it', () => {
+    // `_add_child_nocheck` inserts into `data.children` by name (node.cpp:1656), so the later wins.
+    const nodes = [node('Root'), node('A', '.'), { ...node('A', '.'), type: 'Node2D' }];
+
+    const resolution = seat(nodes).resolve('A');
+
+    expect(resolution.status === 'found' && resolution.node.type).toBe('Node2D');
+  });
+
+  it('finds a re-rooted heading by its rename only, and nothing at its vanished path', () => {
+    const nodes = [node('Root'), node('Loose', 'Gone'), node('Child', 'Gone/Loose')];
+
+    expect(foundName(nodes, 'Gone#Loose')).toBe('Gone#Loose');
+    expect(statusOf(nodes, 'Gone/Loose')).toBe('missing');
+    expect(statusOf(nodes, 'Loose')).toBe('missing');
+  });
+
+  it('finds nothing above the root, nor at an absolute path', () => {
+    // The walk runs from the root at instantiate, off the tree (packed_scene.cpp:161): `..` there has
+    // no parent (node.cpp:1920-1921), and an absolute path is refused (node.cpp:1898).
+    const nodes = [node('Root'), node('A', '.')];
+
+    expect(statusOf(nodes, '..')).toBe('missing');
+    expect(statusOf(nodes, '/root/Root/A')).toBe('missing');
+  });
+
+  it('finds no %Name that nothing claims', () => {
+    expect(statusOf([node('Root'), node('Player', '.')], '%Player')).toBe('missing');
+  });
+
+  it('cannot say what an unclaimed %Name names below an instanced root', () => {
+    // The root's own table holds the base scene's claims (node.cpp:1930-1933).
+    expect(statusOf([instance('Root'), node('Player', '.')], '%Player')).toBe('unknowable');
+  });
+
+  it('cannot say what an unclaimed %Name names from an instance', () => {
+    expect(statusOf([node('Root'), instance('Inst', '.')], 'Inst/%Part')).toBe('unknowable');
+  });
+
+  it('cannot say what a %Name names from an instance, though the root holds a claim', () => {
+    // The instance reads its own table first (node.cpp:1930-1933), which its sub-scene fills.
+    expect(statusOf([node('Root'), claiming('Part', '.'), instance('Inst', '.')], 'Inst/%Part')).toBe(
+      'unknowable'
+    );
+  });
+
+  it('cannot say what a %Name names from a node another owner holds, whose table its sub-scene fills', () => {
+    // The saver writes `owner=` only for an owner other than the root (resource_format_text.cpp:2024-2025).
+    const added = { ...node('Added', 'Inst/Sub'), type: 'Node', owner: 'Inst' };
+    const nodes = [node('Root'), claiming('Part', '.'), instance('Inst', '.'), added];
+
+    expect(statusOf(nodes, 'Inst/Sub/Added/%Part')).toBe('unknowable');
+  });
+
+  it('seats a heading whose parent= reads a %Name an inherited base claims under the root, keeping the rest', () => {
+    // The base scene fills the root's table (node.cpp:1930-1933), and the graft resolves the rest there.
+    const nodes = [instance('Root'), node('Hat', '%BaseClaim')];
+    const origins = originsOf(nodes);
+    const [root] = seatScene(origins).roots;
+
+    expect(root!.children.map(({ name, instanceSubPath }) => [name, instanceSubPath])).toEqual([
+      ['Hat', '%BaseClaim'],
+    ]);
+    expect(orphanedNodes(origins, seatScene(origins))).toEqual([]);
+  });
+
+  it('seats a heading whose parent= reads a %Name inside an instance under that instance, keeping the rest', () => {
+    const nodes = [node('Root'), instance('Inst', '.'), node('Hat', 'Inst/Sub/%Part/Deep')];
+    const inst = seatScene(originsOf(nodes)).roots[0]!.children[0]!;
+
+    expect(inst.children.map(({ name, instanceSubPath }) => [name, instanceSubPath])).toEqual([
+      ['Hat', 'Sub/%Part/Deep'],
     ]);
   });
 
-  it('keys a re-rooted node by its rename', () => {
-    const lost = node('Lost', 'Gone');
-    const tree = buildSceneTree(originsOf([node('Root'), lost]));
-    expect(tree.pathOf.get(tree.seated.get(lost)!)).toBe('Gone#Lost');
+  it('leaves an override claim under an instance out of the root table', () => {
+    // An override heading keeps the sub-scene's owner (resource_format_text.cpp:264-265), so its
+    // `%Name` lands in that owner's table (node.cpp:2222-2233), not the root's.
+    const nodes = [
+      node('Root'),
+      instance('Inst', '.'),
+      claiming('Part', 'Inst', { type: 'Node', overridesExistingNode: true }),
+      node('Hat', '%Part'),
+    ];
+
+    const part = seat(nodes).roots[0]!.children[0]!.children[0]!;
+
+    expect(statusOf(nodes, '%Part')).toBe('missing');
+    expect(part.children).toEqual([]);
+  });
+});
+
+describe('sceneSeating', () => {
+  it('reads the seating seatScene built for its roots, claims in declaration order included', () => {
+    const claiming = (name: string, parent: string): TscnNode => ({
+      ...node(name, parent),
+      rawProperties: { unique_name_in_owner: 'true' },
+    });
+    const nodes = [node('Root'), node('P', '.'), node('Q', '.'), claiming('X', 'Q'), claiming('X', 'P')];
+    const { roots, seated } = seatScene(originsOf(nodes));
+
+    const resolution = sceneSeating(roots).resolve('%X');
+
+    expect(resolution.status === 'found' && resolution.node).toBe(seated.get(nodes[3]!));
   });
 
-  it('seats nothing for a file with no node', () => {
-    expect(buildSceneTree([]).byPath.size).toBe(0);
+  it('finds nothing in a scene with no node', () => {
+    expect(sceneSeating(seatScene([]).roots).resolve('.').status).toBe('missing');
+  });
+
+  it('refuses roots that seatScene did not return', () => {
+    expect(() => sceneSeating([node('Root')])).toThrow('expected roots that seatScene returned');
+  });
+});
+
+describe('seatScene pathOf', () => {
+  it('gives each seated node its root-relative path, the root at the empty path', () => {
+    const seating = seatScene(originsOf([node('Root'), node('Body', './'), node('Arm', './Body')]));
+    expect([...seating.pathOf.values()]).toEqual(['', 'Body', 'Body/Arm']);
+  });
+
+  it('gives both of two siblings sharing a name their path', () => {
+    const [root, first, second] = [node('Root'), node('A', '.'), node('A', '.')];
+    const { seated, pathOf } = seatScene(originsOf([root, first, second]));
+    expect([pathOf.get(seated.get(first)!), pathOf.get(seated.get(second)!)]).toEqual(['A', 'A']);
+  });
+
+  it('gives a re-rooted node its rename', () => {
+    const lost = node('Lost', 'Gone');
+    const { seated, pathOf } = seatScene(originsOf([node('Root'), lost]));
+    expect(pathOf.get(seated.get(lost)!)).toBe('Gone#Lost');
+  });
+
+  it('gives no path in a file with no node', () => {
+    expect(seatScene([]).pathOf.size).toBe(0);
   });
 });

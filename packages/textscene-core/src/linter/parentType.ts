@@ -11,7 +11,7 @@ import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 
-// Re-exported, not re-spelled: `buildSceneTree` asks the same question at
+// Re-exported, not re-spelled: `seatScene` asks the same question at
 // every descent of a `parent=` path, and the parser cannot import the linter.
 export { isTypeUnknowable };
 

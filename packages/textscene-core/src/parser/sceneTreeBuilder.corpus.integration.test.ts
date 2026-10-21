@@ -21,7 +21,7 @@ const INTENTIONAL_ORPHANS = new Set([
   'fixtures/unit-orphan-reroot.tscn',
 ]);
 
-describe('buildSceneTree over the whole corpus', () => {
+describe('seatScene over the whole corpus', () => {
   it('orphans nothing except the fixtures that exist to be orphaned', () => {
     const scenes = sceneFiles(SCENES, (path) => path.endsWith('.tscn'));
     expect(scenes.length).toBeGreaterThan(200);
@@ -32,8 +32,11 @@ describe('buildSceneTree over the whole corpus', () => {
     for (const file of scenes) {
       const rel = relative(SCENES, file);
       // The renderer's node creator, so the tree under test is the one the previewer draws.
-      const { origins, tree } = new TscnParserCore().parse(readFileSync(file, 'utf8'), parseNodeWithRegistry);
-      if (orphanedNodes(origins, tree).length === 0) continue;
+      const { origins, seating } = new TscnParserCore().parse(
+        readFileSync(file, 'utf8'),
+        parseNodeWithRegistry
+      );
+      if (orphanedNodes(origins, seating).length === 0) continue;
       (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
     }
 

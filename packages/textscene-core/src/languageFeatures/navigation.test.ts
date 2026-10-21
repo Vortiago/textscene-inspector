@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
-import { NODE_TREE_HEAD } from './fixtures.testkit';
+import { INSTANCED_TREE, NODE_TREE_HEAD } from './fixtures.testkit';
 import { definitionRangeAt, nodeDeclarationRange, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
@@ -205,6 +205,24 @@ describe('definitionRangeAt of a node path under a %Name parent', () => {
     const character = unique.lines[4]!.indexOf('Player/Hand') + 1;
 
     expect(definitionRangeAt(unique, { line: 4, character })?.start.line).toBe(3);
+  });
+});
+
+describe('definitionRangeAt of a node path under an instanced scene', () => {
+  const instanced = new LanguageDocument(INSTANCED_TREE);
+  const definitionLine = (line: number, value: string): number | undefined =>
+    definitionRangeAt(instanced, { line, character: instanced.lines[line]!.indexOf(value) + 1 })?.start.line;
+
+  it('resolves a parent= to the heading seated under the instance', () => {
+    expect(definitionLine(8, 'Inst/Sub/X')).toBe(6);
+  });
+
+  it('resolves a to= to the heading seated under the instance', () => {
+    expect(definitionLine(10, 'Inst/Sub/X')).toBe(6);
+  });
+
+  it('gives nothing for a path into the instanced scene that no heading declares', () => {
+    expect(definitionLine(6, 'Inst/Sub')).toBe(undefined);
   });
 });
 

@@ -28,9 +28,9 @@ import {
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
-import { buildSceneTree, type SceneTree } from './sceneTreeBuilder.js';
+import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
-import { parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
+import { nodeOrigin } from './rawNode.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
@@ -52,8 +52,8 @@ interface CoreParseResult<N extends SceneNode<N>> {
    * creator builds every node.
    */
   origins: readonly NodeOrigin<N>[];
-  /** The tree built from `origins`, and the copy each heading's node became in it. */
-  tree: SceneTree<N>;
+  /** The seating of `origins`: the tree, and the copy each heading's node became in it. */
+  seating: SceneSeating<N>;
 }
 
 /** One property value the scan completed, after any multiline accumulation. */
@@ -153,13 +153,7 @@ export class TscnParserCore {
       if (currentSection === 'node') {
         const node = nodeCreator(currentHeading, currentProperties);
         if (node) {
-          origins.push({
-            node,
-            line: currentHeadingLine,
-            declaredParent: currentHeading.attributes.parent,
-            idTrail: parseIdTrail(currentHeading.attributes.parent_id_path),
-            uniqueId: parseUniqueId(currentHeading.attributes.unique_id),
-          });
+          origins.push(nodeOrigin(currentHeading, node, currentHeadingLine));
           observer?.onSectionBuilt?.(node, currentHeadingLine);
         }
       } else if (currentSection === 'ext_resource') {
@@ -320,7 +314,7 @@ export class TscnParserCore {
     storePending(); // flush a string that ran to EOF unclosed
     finalizeSection();
 
-    const tree = buildSceneTree(origins);
+    const seating = seatScene(origins);
 
     logger.debug(
       `[Parser] Parsing complete: ${origins.length} nodes, ${externalResources.length} external resources, ${internalResources.length} internal resources`
@@ -328,14 +322,14 @@ export class TscnParserCore {
 
     return {
       scene: {
-        nodes: tree.roots,
+        nodes: seating.roots,
         externalResources,
         internalResources,
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,
-      tree,
+      seating,
     };
   }
 
