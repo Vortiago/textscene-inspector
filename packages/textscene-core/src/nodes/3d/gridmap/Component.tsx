@@ -120,21 +120,21 @@ export function GridMap({ node, children }: NodeComponentProps) {
   // Godot draws no cell while the GridMap holds baked meshes (`modules/gridmap/grid_map.cpp:688`).
   const hasBakedMeshes = properties.bakedMeshes.length > 0;
   const items = library.status === 'pending' || hasBakedMeshes ? [] : Array.from(cellsByItem.entries());
+  const gridProps = {
+    cellSize: properties.cellSize,
+    cellCenter: properties.cellCenter,
+    cellScale: properties.cellScale,
+  };
   return (
     <Node3D node={node}>
       {hasBakedMeshes && <BakedMeshes refs={properties.bakedMeshes} />}
       {items.map(([itemId, cells]) => {
-        const grid = {
-          cellSize: properties.cellSize,
-          cellCenter: properties.cellCenter,
-          cellScale: properties.cellScale,
-        };
         // A library this previewer cannot load draws each cell's placeholder instead.
-        if (!library.model) return <PlaceholderTiles key={itemId} cells={cells} {...grid} />;
+        if (!library.model) return <PlaceholderTiles key={itemId} cells={cells} {...gridProps} />;
         const item = library.model.get(itemId);
         // Godot draws a cell only for an item the library holds with a mesh (`:676-678,689`).
         if (!item?.meshPath) return null;
-        return <GridMapItem key={itemId} item={item} cells={cells} {...grid} />;
+        return <GridMapItem key={itemId} item={item} cells={cells} {...gridProps} />;
       })}
       {children}
     </Node3D>

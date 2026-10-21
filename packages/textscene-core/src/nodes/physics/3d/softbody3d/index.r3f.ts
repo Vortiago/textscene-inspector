@@ -1,9 +1,7 @@
 /**
- * SoftBody3D draws its `mesh` as a MeshInstance3D does, since it derives from it
- * (`soft_body_3d.h:66`). The previewer runs no physics (ADR-0005), so the body stays at rest. Its
- * box is the mesh's, as `MeshInstance3D::get_aabb` answers (`mesh_instance_3d.cpp:230-233`). Godot
- * replaces it with the simulated points' box only once a physics step runs
- * (`soft_body_3d.cpp:100-101,450-452`).
+ * SoftBody3D derives from MeshInstance3D (`soft_body_3d.h:66`), so it draws its `mesh` at rest: the
+ * previewer runs no physics (ADR-0005). Its box is the mesh's (`mesh_instance_3d.cpp:230-233`) until
+ * a physics step swaps it (`soft_body_3d.cpp:100-101,450-452`).
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';

@@ -64,9 +64,7 @@ export function useResourceResolution(ref: string | undefined, pools: SceneResou
     [inline, pools]
   );
   if (inlineResolution) return inlineResolution;
-  if (!holdsResource(ref)) return NO_RESOURCE;
-  // A reference with no file to load names a resource the scene lacks.
-  return fileResolution === NO_RESOURCE ? UNRESOLVED : fileResolution;
+  return holdsResource(ref) ? fileResolution : NO_RESOURCE;
 }
 
 /**
@@ -79,7 +77,7 @@ export function usePathResolution(path: string | null): ResourceResolution {
   const file = useResource<ParsedResource>(path ? resourceFilePath(path) : '', 'resource');
   // Apart from any scene tables: a scene edit leaves the file's resource the same object while the file holds.
   return useMemo((): ResourceResolution => {
-    if (!path) return NO_RESOURCE;
+    if (!path) return UNRESOLVED;
     if (!file.value) {
       return {
         scoped: null,

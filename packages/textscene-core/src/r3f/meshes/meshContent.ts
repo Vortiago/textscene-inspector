@@ -35,8 +35,8 @@ export interface SurfacedMesh {
 
 type MeshContent =
   /**
-   * A mesh the scene lacks, a file that cannot load, or surfaces that cannot be read. Also a type no slice
-   * builds, which Godot draws: the caller's placeholder says this previewer does not.
+   * A mesh the scene lacks, a file that cannot load, or surfaces that cannot be read. Also a type no
+   * slice builds, which Godot draws: the caller's placeholder says this previewer does not.
    */
   | { kind: 'unresolved' }
   /** The property holds no mesh. Godot draws nothing for it, and so does the caller. */

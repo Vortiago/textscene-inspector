@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { EXRExporter, NO_COMPRESSION } from 'three/addons/exporters/EXRExporter.js';
 
 /** One texel's red, green, blue and alpha. */
-export type Texel = readonly [number, number, number, number];
+type Texel = readonly [number, number, number, number];
 
 /** `texelAt` names each texel by its column and by its row from the bottom, as a DataTexture stores them. */
 export async function smallExrBytes(

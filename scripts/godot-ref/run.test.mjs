@@ -608,13 +608,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     expect(Math.min(...centre.rgb)).toBeGreaterThan(150);
   }, 180_000);
 
-  /**
-   * `disable_mode = KEEP_ACTIVE` keeps a disabled SoftBody3D in the physics space, where Jolt
-   * rewrites the mesh each frame with normals averaged over welded vertices
-   * (`soft_body_3d.cpp:469-478`, `jolt_soft_body_3d.cpp:612-653`). The editor never does that
-   * (`soft_body_3d.cpp:459-467`), so the reference puts the node out of the space first. A box's
-   * left face then keeps one flat shade across it.
-   */
+  /** A box face of a KEEP_ACTIVE SoftBody3D keeps one flat shade: the reason is in `_freeze_game_logic`. */
   it('keeps a KEEP_ACTIVE SoftBody3D on its authored flat normals, as the editor draws it', async () => {
     const out = join(await scratchDir(), 'shot.png');
     await renderReference({
