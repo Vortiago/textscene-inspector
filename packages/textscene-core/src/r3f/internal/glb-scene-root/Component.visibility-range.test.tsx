@@ -200,6 +200,34 @@ describe('a GLB mesh as a visibility parent or a dependant', () => {
     expect(drawsColour(single)).toBe(false);
   });
 
+  it('gives a typed node under a GLB node the visibility parent that node takes', async () => {
+    const { objectNamed } = await render(
+      'visibility_parent = NodePath("../Proxy")\n\n' +
+        '[node name="Detail" type="MeshInstance3D" parent="Lamp/Group"]\nmesh = SubResource("Box_1")\n',
+      PROXY_IN_RANGE,
+      [
+        { name: 'Group', children: [1] },
+        { name: 'Single', mesh: 0 },
+      ]
+    );
+    expect(drawsColour(objectNamed('Detail'))).toBe(false);
+  });
+
+  it('gives a typed node no visibility parent under a GLB node whose own names itself (edge case)', async () => {
+    const { objectNamed } = await render(
+      'visibility_parent = NodePath("../Proxy")\n\n[node name="Group" parent="Lamp"]\n' +
+        'visibility_parent = NodePath(".")\n\n' +
+        '[node name="Detail" type="MeshInstance3D" parent="Lamp/Group/Inner"]\nmesh = SubResource("Box_1")\n',
+      PROXY_IN_RANGE,
+      [
+        { name: 'Group', children: [1] },
+        { name: 'Inner', children: [2] },
+        { name: 'Single', mesh: 0 },
+      ]
+    );
+    expect(drawsColour(objectNamed('Detail'))).toBe(true);
+  });
+
   it('passes on no visibility parent from a GLB node whose own names itself (edge case)', async () => {
     const { single } = await render(
       'visibility_parent = NodePath("../Proxy")\n\n[node name="Group" parent="Lamp"]\nvisibility_parent = NodePath(".")\n',

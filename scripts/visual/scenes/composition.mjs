@@ -28,6 +28,10 @@ export const SCENE_COMPOSITION_SCENES = [
     name: 'instanced-inherited-unique-viewport',
     file: 'integration-instanced-inherited-unique-viewport.tscn',
   },
+  // A typed node under a path inside an instanced `.glb`: the red box takes `Torso`'s transform
+  // (moved, turned and halved), not the instance's. Rendered nowhere, the frame holds the grey
+  // torso alone. Measured against Godot 4.6.3.
+  { name: 'glb-typed-child', file: 'unit-glb-typed-child.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // Collision gizmos on: `physics-bodies` leaves the toggle off. Catches a

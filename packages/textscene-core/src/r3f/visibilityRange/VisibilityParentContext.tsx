@@ -46,6 +46,11 @@ function OwnVisibilityParent({
   );
 }
 
+/** Gives `children` a visibility parent no enclosing node holds, as a node attached below an imported one has. */
+export function VisibilityParentProvider({ value, children }: { value: string | null; children: ReactNode }) {
+  return <VisibilityParentContext.Provider value={value}>{children}</VisibilityParentContext.Provider>;
+}
+
 /** The node path of the enclosing node's visibility parent, or null for none. */
 export function useVisibilityParent(): string | null {
   return useContext(VisibilityParentContext);

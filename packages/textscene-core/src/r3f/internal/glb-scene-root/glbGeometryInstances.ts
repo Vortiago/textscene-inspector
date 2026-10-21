@@ -40,33 +40,30 @@ interface GlbMeshInstance {
 }
 
 /**
- * Each MeshInstance3D of `object`, the GLB root, then each under it in `entries` order, which is
- * the GLB's tree order below `rootOrder`. The root is the node that instances the GLB, with its
- * properties. A node without an override of its own is at its `relPath` under the root, and takes
- * its parent's visibility parent (`node_3d.cpp:1307-1318`).
+ * One GLB node as the instancing scene's headings leave it: where it sits, its node data and the
+ * visibility parent it takes from its parent (`node_3d.cpp:1307-1318`), which it passes on to its
+ * children.
  */
-function glbMeshInstances(
+export interface GlbNodeLink {
+  entry: GlbObjectEntry;
+  properties: GeometryInstance3DProperties;
+  place: Omit<NodePlace, 'order'>;
+}
+
+/**
+ * Each GLB node below the root in `entries` order, as the instancing scene leaves it. A node
+ * without an override of its own is at its `relPath` under the root, and takes its parent's
+ * visibility parent.
+ */
+export function glbNodeLinks(
   object: THREE.Object3D,
   entries: readonly GlbObjectEntry[],
   root: GlbRoot,
-  rootOrder: TreeOrder,
   uniquePaths: ReadonlyMap<string, string> | undefined
-): GlbMeshInstance[] {
-  const orders = childOrders(rootOrder, entries.length);
+): GlbNodeLink[] {
   const overrides = overridesByTarget(object, entries, root.overrides);
   const passedOn = new Map<THREE.Object3D, string | null>();
-  const instances: GlbMeshInstance[] = [];
-  if (isMeshInstance(object)) {
-    instances.push({
-      object,
-      place: { path: root.path, parentPath: root.visibilityParent, order: rootOrder },
-      properties: parseGeometryInstance3D(
-        { type: 'node', attributes: { name: glbObjectName(object) } },
-        root.rawProperties
-      ),
-    });
-  }
-  entries.forEach((entry, i) => {
+  return entries.map((entry) => {
     const override = overrides.get(entry.object);
     const path =
       root.path === null
@@ -87,8 +84,37 @@ function glbMeshInstances(
         ? inherited
         : visibilityParentOf(path, properties.visibility_parent, inherited, uniquePaths);
     passedOn.set(entry.object, parentPath);
+    return { entry, properties, place: { path, parentPath } };
+  });
+}
+
+/**
+ * Each MeshInstance3D of `object`, the GLB root, then each under it in `entries` order, which is
+ * the GLB's tree order below `rootOrder`. The root is the node that instances the GLB, with its
+ * properties.
+ */
+function glbMeshInstances(
+  object: THREE.Object3D,
+  entries: readonly GlbObjectEntry[],
+  root: GlbRoot,
+  rootOrder: TreeOrder,
+  uniquePaths: ReadonlyMap<string, string> | undefined
+): GlbMeshInstance[] {
+  const orders = childOrders(rootOrder, entries.length);
+  const instances: GlbMeshInstance[] = [];
+  if (isMeshInstance(object)) {
+    instances.push({
+      object,
+      place: { path: root.path, parentPath: root.visibilityParent, order: rootOrder },
+      properties: parseGeometryInstance3D(
+        { type: 'node', attributes: { name: glbObjectName(object) } },
+        root.rawProperties
+      ),
+    });
+  }
+  glbNodeLinks(object, entries, root, uniquePaths).forEach(({ entry, properties, place }, i) => {
     if (!isMeshInstance(entry.object)) return;
-    instances.push({ object: entry.object, place: { path, parentPath, order: orders[i]! }, properties });
+    instances.push({ object: entry.object, place: { ...place, order: orders[i]! }, properties });
   });
   return instances;
 }

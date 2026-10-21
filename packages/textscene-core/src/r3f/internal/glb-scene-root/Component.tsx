@@ -33,6 +33,7 @@ import type { LiveNode } from '../../../resources/liveNode';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { GlbAttachedChildren } from './GlbAttachedChildren';
 import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -189,6 +190,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     <primitive object={object}>
       {importMaterials}
       {materialOverrides}
+      <GlbAttachedChildren object={object} entries={entries} root={root} />
       {children}
     </primitive>
   );

@@ -45,8 +45,3 @@ three blob-shadow decals. Every part sits where Godot puts it, and the shading m
 A tow truck and the towed vehicle. One mesh mixes compressed and uncompressed surfaces.
 Every part sits where Godot puts it, and each blob shadow reaches the ground and never the
 bodywork (`Decal.cull_mask`). The shading and the grey metal chain links match.
-
-## Known limitations
-
-- **Not drawn** A typed node placed inside instanced content does not render, where a
-  type-less override does, and the town uses only overrides.
