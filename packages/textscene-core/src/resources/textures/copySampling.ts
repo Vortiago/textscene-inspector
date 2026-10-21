@@ -1,6 +1,7 @@
 /**
- * The sampler state a texture rebuilt as a `DataTexture` keeps from its source. A `DataTexture`
- * defaults to nearest filtering with no mipmaps, which a loaded image never has.
+ * The sampler state a texture rebuilt from a source keeps from it: a `DataTexture` defaults to
+ * nearest filtering with no mipmaps, which a loaded image never has, and a render target copy
+ * defaults to wrapping and anisotropy its source may not use.
  */
 
 import type * as THREE from 'three';
