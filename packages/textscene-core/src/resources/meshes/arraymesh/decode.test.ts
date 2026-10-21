@@ -87,10 +87,10 @@ describe('decodeArrayMesh', () => {
     }
   });
 
-  it('decodes indices with byte-width auto-detection (uint16 here)', () => {
+  it('decodes 2-byte index_data into the one index width every surface carries', () => {
     const surface = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
-    expect(surface.indices).toBeInstanceOf(Uint16Array);
+    expect(surface.indices).toBeInstanceOf(Uint32Array);
     expect(Array.from(surface.indices)).toEqual([2, 0, 3, 2, 1, 0]);
   });
 

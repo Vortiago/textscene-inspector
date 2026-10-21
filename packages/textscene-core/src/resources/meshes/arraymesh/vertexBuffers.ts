@@ -231,21 +231,19 @@ function writeAxisAngleFrame(
 }
 
 /**
- * uint16 when ≤ 65535 vertices, uint32 otherwise, detected from byte width.
- * Undefined when `index_data` is too short for the count it declares, so the
+ * The indices of `index_data`, stored as uint16 for a mesh of at most 65535 vertices and as uint32
+ * otherwise, which the byte length tells apart. Read into one width: `godotSurfacesGeometry` picks
+ * the width the merged mesh needs. Undefined when `index_data` is too short for the count it declares, so the
  * surface is dropped like any other unreadable one rather than throwing a
  * RangeError that would take the whole mesh down.
  */
-export function decodeIndices(bytes: Uint8Array, indexCount: number): Uint16Array | Uint32Array | undefined {
+export function decodeIndices(bytes: Uint8Array, indexCount: number): Uint32Array | undefined {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const width = bytes.byteLength >= indexCount * 4 ? 4 : 2;
   if (bytes.byteLength < indexCount * width) return undefined;
-  if (width === 4) {
-    const out = new Uint32Array(indexCount);
-    for (let i = 0; i < indexCount; i++) out[i] = view.getUint32(i * 4, true);
-    return out;
+  const out = new Uint32Array(indexCount);
+  for (let i = 0; i < indexCount; i++) {
+    out[i] = width === 4 ? view.getUint32(i * 4, true) : view.getUint16(i * 2, true);
   }
-  const out = new Uint16Array(indexCount);
-  for (let i = 0; i < indexCount; i++) out[i] = view.getUint16(i * 2, true);
   return out;
 }
