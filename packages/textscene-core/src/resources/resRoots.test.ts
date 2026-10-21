@@ -262,7 +262,7 @@ describe('a root listing', () => {
   it("lists each GDExtension the editor's scan finds, in any case, and none it skips", async () => {
     const root = await listedRoot(listedFiles());
 
-    expect((await root.listFiles('gdextension')).sort()).toEqual([
+    expect(await root.listFiles('gdextension')).toEqual([
       'res://addons/x/bin/B.GDExtension',
       'res://bin/a.gdextension',
     ]);
