@@ -1,7 +1,7 @@
 /** The box the rendering server holds for the mesh a `mesh` reference names, as a hook. */
 
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
-import { parseNonEmptyAabb } from '../../../parser/valueParsers';
+import { parseOptionalAabb } from '../../../parser/valueParsers';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { arrayMeshAabb } from '../../../resources/meshes/arraymesh/meshAabb';
@@ -34,8 +34,8 @@ function meshAabb(resource: TscnInternalResource): Aabb | null {
     case 'primitive':
       return primitiveMeshAabb(resource);
     case 'surfaceless':
-      // A PlaceholderMesh answers its own `aabb` (`mesh.h:430`), an ImmediateMesh with no surface `AABB()`.
-      return parseNonEmptyAabb(resource.data['aabb'], 'aabb') ?? EMPTY_AABB;
+      // A PlaceholderMesh holds its own `aabb` (`mesh.h:430`).
+      return parseOptionalAabb(resource.data['aabb'], 'aabb') ?? EMPTY_AABB;
     default:
       return null;
   }

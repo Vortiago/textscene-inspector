@@ -26,7 +26,7 @@ type MeshKind = 'arrayMesh' | 'primitive' | 'surfaceless';
  */
 const SURFACELESS_MESH_TYPES: ReadonlySet<string> = new Set(['ImmediateMesh', 'PlaceholderMesh']);
 
-/** Which builder draws a mesh of `type`, or null for a type no slice builds. */
+/** How a mesh of `type` draws: through which builder, or with no surface. Null for a type no slice builds. */
 export function meshKind(type: string): MeshKind | null {
   if (ARRAY_MESH_TYPES.has(type)) return 'arrayMesh';
   if (SURFACELESS_MESH_TYPES.has(type)) return 'surfaceless';

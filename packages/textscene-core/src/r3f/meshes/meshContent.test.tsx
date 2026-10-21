@@ -88,24 +88,26 @@ describe('arrayMeshPath over a mesh reference', () => {
   });
 });
 
+/** Runs `hook` inside the node at `nodePath`, under a provider that collects undrawn mesh types. */
+function renderUnderNode<T>(nodePath: string, hook: () => T) {
+  return renderHook(hook, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <UndrawnMeshesProvider>
+        <NodePathProvider path={nodePath}>{children}</NodePathProvider>
+      </UndrawnMeshesProvider>
+    ),
+  });
+}
+
 describe('useMeshContent for a mesh type no slice builds', () => {
   const TEXT: TscnInternalResource = { id: 'text', type: 'TextMesh', data: {} };
   const SCENE: SceneResources = { internalResources: [TEXT], externalResources: [] };
 
   it("names the type in the holding node's details", () => {
-    const { result } = renderHook(
-      () => {
-        useMeshContent(useResourceResolution('SubResource("text")', SCENE));
-        return useUndrawnMeshTypes('Root/Sign');
-      },
-      {
-        wrapper: ({ children }: { children: ReactNode }) => (
-          <UndrawnMeshesProvider>
-            <NodePathProvider path="Root/Sign">{children}</NodePathProvider>
-          </UndrawnMeshesProvider>
-        ),
-      }
-    );
+    const { result } = renderUnderNode('Root/Sign', () => {
+      useMeshContent(useResourceResolution('SubResource("text")', SCENE));
+      return useUndrawnMeshTypes('Root/Sign');
+    });
     expect(result.current).toEqual(['TextMesh']);
   });
 });
@@ -115,19 +117,10 @@ describe('useMeshContent for a mesh with no surfaces', () => {
   const SCENE: SceneResources = { internalResources: [PLACEHOLDER], externalResources: [] };
 
   it('is empty, as Godot draws nothing, and names no undrawn type', () => {
-    const { result } = renderHook(
-      () => ({
-        content: useMeshContent(useResourceResolution('SubResource("placeholder")', SCENE)),
-        undrawn: useUndrawnMeshTypes('Root/Stand'),
-      }),
-      {
-        wrapper: ({ children }: { children: ReactNode }) => (
-          <UndrawnMeshesProvider>
-            <NodePathProvider path="Root/Stand">{children}</NodePathProvider>
-          </UndrawnMeshesProvider>
-        ),
-      }
-    );
+    const { result } = renderUnderNode('Root/Stand', () => ({
+      content: useMeshContent(useResourceResolution('SubResource("placeholder")', SCENE)),
+      undrawn: useUndrawnMeshTypes('Root/Stand'),
+    }));
     expect(result.current).toEqual({ content: { kind: 'empty' }, undrawn: [] });
   });
 });

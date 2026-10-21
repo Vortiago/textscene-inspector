@@ -93,7 +93,6 @@ describe('useMeshAabb over a mesh with no surfaces', () => {
     expect(renderMeshAabb('SubResource("placeholder")').current?.size).toEqual({ x: 2, y: 6, z: 2 });
   });
 
-  // An ImmediateMesh saves no surface, so it loads with none (`immediate_mesh.cpp:393-401,405-417`).
   it('is AABB() for an ImmediateMesh', () => {
     expect(renderMeshAabb('SubResource("immediate")').current?.size).toEqual({ x: 0, y: 0, z: 0 });
   });
