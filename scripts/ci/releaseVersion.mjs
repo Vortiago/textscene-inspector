@@ -32,8 +32,12 @@ const RELEASE_TARGETS = {
 const field = (name) => Object.fromEntries(Object.entries(RELEASE_TARGETS).map(([tag, t]) => [tag, t[name]]));
 
 export const RELEASE_PACKAGES = field('directory');
-const RELEASE_KINDS = field('kind');
 export const RELEASE_INPUTS = field('inputs');
+
+/** Own keys only: a tag like `constructor-v1.0.0` must not find `Object.prototype.constructor`. */
+function releaseTarget(name) {
+  return Object.hasOwn(RELEASE_TARGETS, name) ? RELEASE_TARGETS[name] : undefined;
+}
 
 /** Joins the example tags with "or", without the serial comma of American English. */
 const DISJUNCTION = new Intl.ListFormat('en-GB', { type: 'disjunction' });
@@ -85,8 +89,8 @@ export function checkReleaseTag(tag, tags) {
     const examples = Object.keys(RELEASE_PACKAGES).map((name) => `${name}-v1.2.3`);
     return { error: `expected a tag like ${DISJUNCTION.format(examples)}, got ${JSON.stringify(tag)}` };
   }
-  const directory = RELEASE_PACKAGES[release.package];
-  if (!directory) {
+  const target = releaseTarget(release.package);
+  if (!target) {
     const known = Object.keys(RELEASE_PACKAGES).join(', ');
     return { error: `expected a tag prefix out of ${known}, got ${JSON.stringify(release.package)}` };
   }
@@ -97,8 +101,8 @@ export function checkReleaseTag(tag, tags) {
   }
   return {
     package: release.package,
-    kind: RELEASE_KINDS[release.package],
-    directory,
+    kind: target.kind,
+    directory: target.directory,
     version: release.version,
     previousTag: newest?.name ?? '',
   };
@@ -113,7 +117,7 @@ export function checkReleaseTag(tag, tags) {
  */
 export function releaseHistory(tag, tags) {
   const release = parseReleaseTag(tag);
-  if (!RELEASE_PACKAGES[release?.package]) {
+  if (!releaseTarget(release?.package)) {
     throw new Error(`expected a release tag like vscode-v1.2.3, got ${JSON.stringify(tag)}`);
   }
   const lower = sameSeries(release, tags).filter(

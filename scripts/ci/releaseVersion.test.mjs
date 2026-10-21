@@ -84,6 +84,18 @@ describe('checkReleaseTag', () => {
   });
 });
 
+describe('a tag prefix that Object.prototype holds', () => {
+  it('is not a package', () => {
+    expect(checkReleaseTag('constructor-v1.0.0', [])).toEqual({
+      error: 'expected a tag prefix out of vscode, linter, lsp, tscn, got "constructor"',
+    });
+  });
+
+  it('has no release history', () => {
+    expect(() => releaseHistory('constructor-v1.0.0', [])).toThrow('expected a release tag');
+  });
+});
+
 describe('releaseHistory', () => {
   it('pairs each tag of the package with the next lower one, by version, not by name', () => {
     const tags = ['vscode-v1.10.0', 'vscode-v1.2.0', 'vscode-v1.9.1'];

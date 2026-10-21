@@ -45,5 +45,5 @@ npm publish textscene-tscn-0.1.0.tgz --access public
 git checkout package.json
 ```
 
-Then add the trusted publisher on npmjs.com, and push `tscn-v0.2.0` or a later tag for each
-release after that.
+Add the trusted publisher on npmjs.com. Push `tscn-v0.2.0` or a later tag for each release after
+that.

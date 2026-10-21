@@ -13,7 +13,8 @@ import { REPO_ROOT } from '../../../scripts/repoRoot.mjs';
 import { bundledNotices } from '../../../scripts/third-party-notices.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const entry = resolve(packageDir, 'src/index.ts');
+const ownSourceDir = resolve(packageDir, 'src');
+const entry = resolve(ownSourceDir, 'index.ts');
 const outDir = resolve(packageDir, 'dist');
 
 const { metafile } = await build({
@@ -51,10 +52,14 @@ function bundledSources() {
   });
 }
 
-/** The entry is this package's own TypeScript, which has no source map and is its own source. */
+/**
+ * The entry is this package's own TypeScript, which has no source map and is its own source. Any
+ * other file without one would put a `dist/` path in the notices, so it fails the build.
+ */
 function sourceOf(compiled) {
+  if (compiled.startsWith(`${ownSourceDir}/`)) return compiled;
   const mapPath = `${compiled}.map`;
-  if (!existsSync(mapPath)) return compiled;
-  const { sources } = JSON.parse(readFileSync(mapPath, 'utf8'));
-  return resolve(dirname(compiled), sources[0]);
+  if (!existsSync(mapPath)) throw new Error(`expected a source map at ${mapPath}, found none`);
+  const [source] = JSON.parse(readFileSync(mapPath, 'utf8')).sources;
+  return resolve(dirname(compiled), source);
 }
