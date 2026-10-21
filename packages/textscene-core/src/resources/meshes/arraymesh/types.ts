@@ -25,7 +25,7 @@ export interface ArrayMeshSurface {
   normals?: Float32Array;
   /** Per-vertex tangents `vertexCount × 4`, `w` the binormal sign, or undefined when the surface has none. */
   tangents?: Float32Array;
-  /** Triangle indices. */
+  /** One width for every surface: `godotSurfacesGeometry` copies them into the width the mesh needs. */
   indices: Uint32Array;
   /** Resolved `res://` path of the surface's material, if it has one. */
   materialPath?: string;

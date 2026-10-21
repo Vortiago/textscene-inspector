@@ -54,26 +54,25 @@ describe('checkWorkerArm', () => {
 function settleControl(delayed) {
   const frame = Buffer.from('frame');
   return {
-    baseline: { buffer: frame, settledMs: 1700 },
-    delayed: { buffer: frame, settledMs: 6100, workers: 1, isHeldBuildReleased: true, ...delayed },
-    unwaited: { buffer: Buffer.from('placeholder'), settledMs: 1700 },
+    baseline: { buffer: frame },
+    delayed: { buffer: frame, workers: 1, replies: 1, ...delayed },
+    unwaited: { buffer: Buffer.from('placeholder') },
   };
 }
 
 describe('checkSettleControl', () => {
-  it('passes a delayed capture that settled after the held build was released', () => {
+  it('passes a delayed capture that settled after the held build replied', () => {
     const gate = fakeGate();
-    // The hold starts while the page opens, before the settle clock, so 5954 ms is a real wait.
     checkSettleControl(gate, settleControl({ settledMs: 5954 }));
     expect(gate.failures).toEqual([]);
   });
 
-  it('fails a delayed capture that settled while the build was still held (error case)', () => {
+  it('fails a delayed capture that settled before the held build replied (error case)', () => {
     const gate = fakeGate();
-    checkSettleControl(gate, settleControl({ isHeldBuildReleased: false }));
+    checkSettleControl(gate, settleControl({ replies: 0 }));
     expect(gate.failures).toEqual([
-      '[texture settle] the delayed capture settled while the build was still held back: it cannot ' +
-        'have waited for the texture',
+      '[texture settle] the delayed capture settled before the held build replied: it cannot have ' +
+        'waited for the texture',
     ]);
   });
 });
