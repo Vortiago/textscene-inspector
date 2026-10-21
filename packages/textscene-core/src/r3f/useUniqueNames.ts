@@ -49,8 +49,8 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
   return useStablePaths(
     useMemo(() => {
       if (!live) return undefined;
-      // Without a path, the outer root's table, one shared object per tree unless a claim's live
-      // path passes through a `%Name`.
+      // Without a path, the outer root's table. `useStablePaths` keeps one identity while its
+      // entries stay the same, since an inherited root's table is rebuilt on every call.
       return ownerUniquePaths(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx));
     }, [live, path])
   );

@@ -87,7 +87,10 @@ export class InstanceNameTable implements UniqueNameTable {
       return handTo(tree, segments.slice(0, owner.nestedAt + 1), rebased(setting, segments, owner.nestedAt));
     }
     const key = UNIQUE_NODE_PREFIX + segments.at(-1)!;
-    this.changed.set(key, holderAfterSetting(this.claimed(key), segments.join('/'), setting.isUnique));
+    const holder = this.claimed(key);
+    const next = holderAfterSetting(holder, segments.join('/'), setting.isUnique);
+    // A set on a held name or a clear on a free one changes nothing, so `paths` keeps the own table.
+    if (next !== holder) this.changed.set(key, next);
     return tree;
   }
 }

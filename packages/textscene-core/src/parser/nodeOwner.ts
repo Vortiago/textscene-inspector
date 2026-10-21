@@ -1,7 +1,8 @@
 /**
  * Which owner a node's `%Name` lands on. `_acquire_unique_name_in_owner` (node.cpp:2222) registers
  * `"%" + name` on the node's owner and refuses to overwrite an entry (node.cpp:2225-2231), so the
- * first claimant in declaration order wins. The seating records every owner's claims.
+ * first claimant in declaration order wins. The seating records the root's claims, and hands each
+ * setting another owner holds to the instance node that owner reads it from.
  */
 
 import type { RawNode } from './types.js';

@@ -14,6 +14,7 @@ import {
   cachedUniqueNameLivePaths,
   cachedUniqueNameOwnership,
   cachedUniqueNamesBelowRoot,
+  perTree,
 } from '../utils/uniqueNames.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
@@ -60,19 +61,12 @@ function ownsInsideInstance(owner: ClaimOwner, livePath: string, outer: ClaimOwn
   );
 }
 
-/** Written only by `uniqueSpeltOwnedPaths`, once per file's roots. */
-const uniqueSpeltOwned = new WeakMap<readonly TscnNode[], readonly string[]>();
-
 /** The live paths of nodes a file owns inside instances that pass through a `%Name`. */
-function uniqueSpeltOwnedPaths(roots: readonly TscnNode[]): readonly string[] {
-  let paths = uniqueSpeltOwned.get(roots);
-  if (!paths) {
-    const owned = cachedUniqueNameOwnership(roots).ownedInsideInstances;
-    paths = [...owned].filter((path) => path.includes(UNIQUE_NODE_PREFIX));
-    uniqueSpeltOwned.set(roots, paths);
-  }
-  return paths;
-}
+const uniqueSpeltOwnedPaths = perTree((roots): readonly string[] =>
+  [...cachedUniqueNameOwnership(roots).ownedInsideInstances].filter((path) =>
+    path.includes(UNIQUE_NODE_PREFIX)
+  )
+);
 
 /**
  * `livePath` with each host sub-path through a `%Name` replaced by where the graft placed it, as of

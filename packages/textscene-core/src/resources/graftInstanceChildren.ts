@@ -57,6 +57,9 @@ export function graftInstanceChildren(
   let grafted = [...rootChildren];
   const table = new InstanceNameTable(names);
   const placements = new Map<string, string>();
+  // Kept out of `grafted` until the end, so no later sub-path, fold or setting lands on a node
+  // the graft could not place.
+  const misplaced: LiveNode[] = [];
 
   for (const [index, child] of hostChildren.entries()) {
     // A setting lands at its heading, so only the host children written after it read it.
@@ -66,6 +69,7 @@ export function graftInstanceChildren(
     if (!child.instanceSubPath) {
       const folded = child.overridesExistingNode ? foldOrWarn(grafted, stamped, scopes.content) : null;
       if (folded) grafted = folded;
+      else if (child.overridesExistingNode) misplaced.push(stamped);
       else grafted.push(stamped);
       continue;
     }
@@ -83,12 +87,12 @@ export function graftInstanceChildren(
       warn(
         `[graftInstanceChildren] "${child.name}" targets "${child.instanceSubPath}", which the instanced scene does not contain — appending at its root`
       );
-      grafted.push(stamped);
+      misplaced.push(stamped);
     }
   }
 
   return {
-    children: table.landUpTo(grafted, hostChildren.length),
+    children: [...table.landUpTo(grafted, hostChildren.length), ...misplaced],
     uniqueNames: table,
     uniqueParentPlacements: placements,
   };

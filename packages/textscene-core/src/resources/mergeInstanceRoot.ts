@@ -40,7 +40,9 @@ export function mergeInstanceRoot(
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
   const merged = mergeProperties(instanceNode, root, scopes);
-  // The graft below lands these settings, so the merged node carries none on.
+  // The graft below lands these settings. A root that inherits a base the cache could not
+  // compose it over (the dispatcher's one-scene cache) carries its own file's settings on, so
+  // the next collapse over that base lands them. A composed root carries none.
   const { instanceNameSettings: settings = [], ...host } = instanceNode;
   const composed = root.uniqueNames;
   const own = composed ? () => composed.paths() : () => cachedUniqueNamesBelowRoot(loadedScene.nodes);
@@ -54,6 +56,7 @@ export function mergeInstanceRoot(
     // The instance node's own ref is consumed here. The tree's badge and
     // open-standalone affordance read the originating ref in the caller's scope.
     instance: root.instance,
+    ...(root.instanceNameSettings ? { instanceNameSettings: root.instanceNameSettings } : {}),
     ...merged,
     children: graft.children,
     uniqueNames: graft.uniqueNames,
