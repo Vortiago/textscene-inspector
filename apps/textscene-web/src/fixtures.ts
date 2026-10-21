@@ -1873,6 +1873,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Unique Name Pivot",
+    "file": "unit-unique-name-pivot.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Unsupported Nodes",
     "file": "unit-unsupported-nodes.tscn",
     "category": "Other"
@@ -2311,6 +2316,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Instanced Subscene",
     "file": "integration-instanced-subscene.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Instanced Unique Parent",
+    "file": "integration-instanced-unique-parent.tscn",
     "category": "Integration - Multi-Node"
   },
   {
