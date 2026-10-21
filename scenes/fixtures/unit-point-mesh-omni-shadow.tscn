@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+; The one variable: the shadow of a 40 px point under an omni light. Godot draws a point into the
+; omni shadow map at its point size, so the floor under the point carries a faint square, offset
+; from the dark one the previewer's sun casts. The camera looks straight down at the floor, and the
+; point draws shadows only, so it does not hide the shadow beneath it.
+
+[sub_resource type="PointMesh" id="PointMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_red"]
+shading_mode = 0
+albedo_color = Color(1, 0.2, 0.2, 1)
+use_point_size = true
+point_size = 40.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(10, 0.1, 10)
+
+[node name="Root" type="Node3D"]
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 12, 0)
+current = true
+fov = 40.0
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, 0)
+mesh = SubResource("BoxMesh_floor")
+
+[node name="Point" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("PointMesh_1")
+surface_material_override/0 = SubResource("Material_red")
+cast_shadow = 3
+
+[node name="Light" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4, 0)
+shadow_enabled = true
+omni_range = 20.0
