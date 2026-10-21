@@ -1,7 +1,7 @@
 /**
- * <GridMap> instances each MeshLibrary item's ArrayMesh at its populated cells. Each
- * surface draws as one THREE.InstancedMesh, or as one mesh per cell when its material
- * billboards. A loading item draws nothing, and an unresolved one draws cell-sized
+ * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
+ * populated cells. Each surface draws as one THREE.InstancedMesh, or as one mesh per cell when
+ * its material billboards. A loading item draws nothing, and an unresolved one draws cell-sized
  * wireframe boxes in one InstancedMesh.
  */
 
@@ -9,10 +9,9 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
-import { useResource } from '../../../resources/useResource';
-import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
-import { fileMaterialSources, type MaterialSource } from '../../../r3f/materials/materialSource';
+import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import { useItemMesh } from './itemMesh';
 import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
@@ -137,10 +136,7 @@ interface GridMapItemProps {
  * as Godot billboards each surface's instances in its own shader (`scene_forward_clustered.glsl:338-342`).
  */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
-  const meshResult = useResource<ArrayMeshResource>(item?.meshPath ?? '', 'arraymesh');
-  // The surface material addresses only become known once the ArrayMesh resolves.
-  const materialPaths = meshResult.value?.materialPaths;
-  const materials = useMemo(() => fileMaterialSources(materialPaths ?? []), [materialPaths]);
+  const mesh = useItemMesh(item?.meshPath ?? null);
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
@@ -155,10 +151,11 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const shadow = shadowCastingEffects(item?.castShadow);
 
   // Godot draws a cell only once its item has a mesh (`modules/gridmap/grid_map.cpp:688`).
-  if (item?.meshPath && meshResult.status === 'pending') return null;
-  const geometry = meshResult.value?.geometry;
-  if (!geometry) return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
-  const surfaces = surfaceSources(materials);
+  if (mesh.status === 'pending') return null;
+  if (mesh.status === 'unavailable') return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
+  const { geometry } = mesh;
+  if (!geometry) return null;
+  const surfaces = surfaceSources(mesh.materials);
   return (
     <>
       {surfaces.map((source, surface) => (

@@ -818,6 +818,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Grid Map Inline Mesh",
+    "file": "unit-grid-map-inline-mesh.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map",
     "file": "unit-grid-map.tscn",
     "category": "Other"

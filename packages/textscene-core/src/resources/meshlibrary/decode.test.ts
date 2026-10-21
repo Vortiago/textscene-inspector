@@ -89,8 +89,7 @@ item/7/mesh/0 = ExtResource("8_floor")
 
   it('addresses an item mesh embedded in the library as a sub-resource path', () => {
     // Godot writes this form when the MeshLibrary carries its own item meshes
-    // rather than referencing shared `.tres` files. `meshPath` stays one string,
-    // so GridMap's `useResource(meshPath, 'arraymesh')` needs no change.
+    // rather than referencing shared `.tres` files.
     const embedded = `[gd_resource type="MeshLibrary" format=3]
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_floor"]
@@ -103,6 +102,19 @@ item/0/mesh = SubResource("ArrayMesh_floor")
     const model = meshLibraryFromTres(parseTresFile(embedded), 'res://stage/tiles.tres');
 
     expect(model.get(0)!.meshPath).toBe('res://stage/tiles.tres::ArrayMesh_floor');
+  });
+
+  it('addresses an embedded PrimitiveMesh, and leaves a mesh type no slice builds unresolved', () => {
+    const embedded = `[gd_resource type="MeshLibrary" format=3]
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_wall"]
+[resource]
+item/0/mesh = SubResource("BoxMesh_floor")
+item/1/mesh = SubResource("ImmediateMesh_wall")
+`;
+    const model = meshLibraryFromTres(parseTresFile(embedded), 'res://stage/tiles.tres');
+    expect(model.get(0)!.meshPath).toBe('res://stage/tiles.tres::BoxMesh_floor');
+    expect(model.get(1)!.meshPath).toBeNull();
   });
 
   it('decodes each mesh_cast_shadow ordinal, defaulting an item that omits it to ON', () => {

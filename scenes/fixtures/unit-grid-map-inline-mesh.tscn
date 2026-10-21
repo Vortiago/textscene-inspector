@@ -1,0 +1,20 @@
+; A GridMap whose one MeshLibrary item is a BoxMesh the library declares as its own
+; [sub_resource], with its own material, in a 3x1x2 block of cells. Every other GridMap golden
+; tiles an ArrayMesh .tres, so a PrimitiveMesh item drawing the wireframe placeholder, the wrong
+; box size or no material shows here and nowhere else.
+[gd_scene load_steps=2 format=3 uid="uid://unitgridmapinlinemesh"]
+
+[ext_resource type="MeshLibrary" path="res://unit-grid-map-inline-mesh-lib.tres" id="1_lib"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 4, 0)
+
+[node name="GridMap" type="GridMap" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, -0.5, -1)
+mesh_library = ExtResource("1_lib")
+cell_size = Vector3(1, 1, 1)
+data = {
+"cells": PackedInt32Array(0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 1, 1, 0, 2, 1, 0)
+}

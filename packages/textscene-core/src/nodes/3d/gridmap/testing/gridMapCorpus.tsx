@@ -70,6 +70,10 @@ function tileSurface(
 }
 
 export interface GridMapCorpus {
+  /** The whole library `.tres`, in place of the one whose item 0 is the tile mesh. */
+  library?: string;
+  /** Further files the loader serves, by path. */
+  files?: Record<string, string>;
   /** Extra `item/0/…` lines for the library, such as `mesh_cast_shadow`. */
   itemLines?: string;
   /** The tile material's body, or null for a surface with no material. */
@@ -117,6 +121,8 @@ const HELD_PATHS = { library: LIBRARY_PATH, tile: TILE_MESH_PATH };
  * load stops them.
  */
 export async function mountGridMap({
+  library,
+  files = {},
   itemLines = '',
   materialLines = null,
   secondMaterialLines = null,
@@ -127,8 +133,9 @@ export async function mountGridMap({
 }: GridMapCorpus = {}): Promise<MountedGridMap> {
   const loader = loaderServing(
     {
-      [LIBRARY_PATH]: meshLibrary(itemLines),
+      [LIBRARY_PATH]: library ?? meshLibrary(itemLines),
       [TILE_MESH_PATH]: tileMesh({ materialLines, secondMaterialLines, subResources }),
+      ...files,
     },
     held ? [HELD_PATHS[held]] : []
   );

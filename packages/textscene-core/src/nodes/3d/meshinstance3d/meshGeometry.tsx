@@ -4,6 +4,8 @@
  * unresolvable mesh, and the caller decides on a placeholder.
  */
 
+import { useEffect } from 'react';
+import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
 import { buildPrimitiveMeshGeometry } from './primitiveMeshGeometry';
 import { useContentMemo } from '../../../resources/useContentMemo';
@@ -15,8 +17,18 @@ interface MeshGeometryProps {
 }
 
 export function MeshGeometry({ resource }: MeshGeometryProps) {
+  const geometry = usePrimitiveMeshGeometry(resource);
+  return geometry ? <primitive object={geometry} attach="geometry" /> : null;
+}
+
+/**
+ * A PrimitiveMesh's geometry at the project's texel size, or null for no resource or a mesh
+ * `buildPrimitiveMeshGeometry` builds nothing for. This hook disposes the geometry: r3f never
+ * disposes an object handed to `<primitive>` or `args`.
+ */
+export function usePrimitiveMeshGeometry(resource: TscnInternalResource | null): THREE.BufferGeometry | null {
   const texelSize = projectPrimitiveMeshTexelSize(useProjectSettings().settings);
   const geometry = useContentMemo(resource, (r) => buildPrimitiveMeshGeometry(r, texelSize), [texelSize]);
-
-  return geometry ? <primitive object={geometry} attach="geometry" /> : null;
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+  return geometry;
 }
