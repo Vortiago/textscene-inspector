@@ -205,7 +205,7 @@ export function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | unde
  * The first node called `name` across `groups`, as a path walk descends: with the scope its own
  * refs and children resolve against.
  */
-export function liveChildNamed(
+function liveChildNamed(
   groups: readonly LiveChildGroup[],
   name: string
 ): { node: LiveNode; scope: SceneScope } | undefined {

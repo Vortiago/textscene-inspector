@@ -106,8 +106,6 @@ export function isOutsideInstance(setting: Pick<InstanceNameSetting, 'pathInInst
 export interface UniqueNameOwnership {
   /** `%Name` to claim, for the nodes this file's root owns, the first claimant kept. */
   readonly claims: ReadonlyMap<string, UniqueNameClaim>;
-  /** Live paths of nodes this root owns that sit inside instanced content. */
-  readonly ownedInsideInstances: ReadonlySet<string>;
-  /** Live paths of every heading this file seats inside instanced content, whoever owns it. */
-  readonly headingsInsideInstances: ReadonlySet<string>;
+  /** The live path of each heading this file seats inside instanced content, to whether this root owns it. */
+  readonly insideInstances: ReadonlyMap<string, boolean>;
 }

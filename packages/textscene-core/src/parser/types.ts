@@ -109,9 +109,10 @@ export interface RawNode {
    */
   overridesExistingNode?: boolean;
   /**
-   * The heading's `owner=` NodePath as written, root-relative. The loader sets the owner
-   * from it (resource_format_text.cpp:257-262), which decides the table a `%Name`
-   * registers on. Godot's own writer never emits it (packed_scene.cpp:1036-1044).
+   * The heading's `owner=` NodePath, root-relative. The loader sets the owner from it
+   * (resource_format_text.cpp:257-262), which decides the table a `%Name` registers on. Godot's own
+   * writer never emits it (packed_scene.cpp:1036-1044). A seated node holds it walked from the root
+   * (`resolvedOwner`): `.` for the root, and each `%Name` the file answers replaced by its claimant.
    */
   owner?: string;
   /** External scene instance reference, for example ExtResource("1_abc"). */

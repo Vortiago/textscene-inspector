@@ -144,7 +144,7 @@ function withOwnerWalked(
   claimed: ClaimedPath
 ): InstanceNameSetting | null {
   const { ownerInInstance } = setting;
-  if (!ownerInInstance?.includes(UNIQUE_NODE_PREFIX)) return setting;
+  if (!ownerInInstance) return setting;
   const segments = subPathSegments(ownerInInstance, tree, claimed);
   return segments && { ...setting, ownerInInstance: segments.join('/') };
 }

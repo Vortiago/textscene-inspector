@@ -9,7 +9,7 @@
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { joinPath } from '../utils/nodePath.js';
-import { UNIQUE_NODE_PREFIX, simplifiedNodePath } from '../godot/string/nodePath.js';
+import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import {
   cachedUniqueNameLivePaths,
   cachedUniqueNameOwnership,
@@ -51,32 +51,31 @@ function composedPath(owner: ClaimOwner, fileLivePath: string): string {
   return owner.path + fileLivePath.slice(fileLivePath.indexOf('/'));
 }
 
-/** Which of a file's sets of live paths inside instanced content a question reads. */
-type InsideInstances = 'ownedInsideInstances' | 'headingsInsideInstances';
+/** Which headings a question about a file's headings inside instances counts, by whether its root owns each. */
+type Counts = (isRootOwned: boolean) => boolean;
+const ROOT_OWNED: Counts = (isRootOwned) => isRootOwned;
+const ANY_HEADING: Counts = () => true;
 
-/** Whether `owner`'s file lists the node at `livePath` in its set `inside`, placed over the live tree. */
-function listsInsideInstance(owner: ClaimOwner, livePath: string, inside: InsideInstances): boolean {
-  if (cachedUniqueNameOwnership(owner.roots)[inside].has(fileLocalPath(owner, livePath))) return true;
-  return uniqueSpeltPaths(owner.roots)[inside].some(
-    (entry) => owner.live.placed(composedPath(owner, entry)) === livePath
+/** Whether `owner`'s file seats a heading that `counts` at `livePath`, placed over the live tree. */
+function seatsInsideInstance(owner: ClaimOwner, livePath: string, counts: Counts): boolean {
+  const isRootOwned = cachedUniqueNameOwnership(owner.roots).insideInstances.get(
+    fileLocalPath(owner, livePath)
+  );
+  if (isRootOwned !== undefined && counts(isRootOwned)) return true;
+  return uniqueSpeltHeadings(owner.roots).some(
+    ([entry, isOwned]) => counts(isOwned) && owner.live.placed(composedPath(owner, entry)) === livePath
   );
 }
 
-/** Each set of a file's live paths inside instances, kept to the paths that pass through a `%Name`. */
-const uniqueSpeltPaths = perTree((roots): Record<InsideInstances, readonly string[]> => {
-  const ownership = cachedUniqueNameOwnership(roots);
-  const spelt = (paths: ReadonlySet<string>) =>
-    [...paths].filter((path) => path.includes(UNIQUE_NODE_PREFIX));
-  return {
-    ownedInsideInstances: spelt(ownership.ownedInsideInstances),
-    headingsInsideInstances: spelt(ownership.headingsInsideInstances),
-  };
-});
+/** A file's headings inside instances whose live paths pass through a `%Name`. */
+const uniqueSpeltHeadings = perTree((roots): readonly (readonly [string, boolean])[] =>
+  [...cachedUniqueNameOwnership(roots).insideInstances].filter(([path]) => path.includes(UNIQUE_NODE_PREFIX))
+);
 
-/** The nearest file at or above `owner` that `inside` lists the node at `livePath` in, else `owner`. */
-function fileListing(owner: ClaimOwner, livePath: string, inside: InsideInstances): ClaimOwner {
+/** The nearest file above `owner` that seats a heading `counts` at `livePath`, else `owner`. */
+function fileSeating(owner: ClaimOwner, livePath: string, counts: Counts): ClaimOwner {
   for (let above = owner; above.parent; above = above.parent) {
-    if (listsInsideInstance(above.parent, livePath, inside)) return above.parent;
+    if (seatsInsideInstance(above.parent, livePath, counts)) return above.parent;
   }
   return owner;
 }
@@ -158,7 +157,7 @@ function walkTo(path: string, live: PlacedLiveTree): Walk {
     if (!link || !found) return { owner, into: owner };
     match = link.node;
     // A node the file above grafted in is that file's own, however deep it sits.
-    owner = fileListing(found.owner, livePath, 'ownedInsideInstances');
+    owner = fileSeating(found.owner, livePath, ROOT_OWNED);
     const subRoots = cachedSubRoots(match, link.scope, ctx);
     // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
     // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
@@ -195,7 +194,7 @@ export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: Live
   const live = liveTreeOf(roots, ctx);
   const { owner, node } = walkTo(path, live);
   if (node?.owner === undefined) return owner;
-  const file = fileListing(owner, path, 'headingsInsideInstances');
+  const file = fileSeating(owner, path, ANY_HEADING);
   if (node.owner === '.') return file;
   return walkTo(ownerLivePath(file.path, node.owner, live), live).into;
 }
@@ -207,11 +206,11 @@ export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: Live
  */
 function ownerLivePath(rootPath: string, owner: string, live: PlacedLiveTree): string {
   let path = rootPath;
-  for (const name of owner.split('/')) {
+  for (const name of nodePathWalkNames(owner)) {
     const claimant = name.startsWith(UNIQUE_NODE_PREFIX)
       ? localSceneUniquePaths(walkTo(path, live).into).get(name)
       : undefined;
-    path = claimant ?? joinPath(path, name);
+    path = claimant ?? simplifiedNodePath(joinPath(path, name));
   }
   return path;
 }

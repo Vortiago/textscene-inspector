@@ -65,12 +65,13 @@ export function seatScene<N extends SceneNode<N>>(origins: readonly NodeOrigin<N
 }
 
 function noScene<N extends RawNode>(): SceneSeating<N> {
-  const ownership = {
-    claims: new Map(),
-    ownedInsideInstances: new Set<string>(),
-    headingsInsideInstances: new Set<string>(),
+  return {
+    roots: [],
+    seated: new Map(),
+    pathOf: new Map(),
+    resolve: () => MISSING,
+    ownership: emptyOwnership(),
   };
-  return { roots: [], seated: new Map(), pathOf: new Map(), resolve: () => MISSING, ownership };
 }
 
 function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): SceneSeating<N> {
@@ -220,8 +221,7 @@ interface SeatingTables<N> {
   readonly instanceNameSettings: Map<N, InstanceNameSetting[]>;
   readonly ownership: {
     readonly claims: Map<string, UniqueNameClaim>;
-    readonly ownedInsideInstances: Set<string>;
-    readonly headingsInsideInstances: Set<string>;
+    readonly insideInstances: Map<string, boolean>;
   };
   /** The same tables as the walk consumes them. */
   readonly tree: RootWalkTables;
@@ -245,7 +245,7 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
     places: new Map([[root, { path: root.name, livePath: root.name }]]),
     enclosingInstances: new Map(),
     instanceNameSettings: new Map(),
-    ownership: { claims: new Map(), ownedInsideInstances: new Set(), headingsInsideInstances: new Set() },
+    ownership: emptyOwnership(),
     tree: { exists: (path) => canNameNode(byPath, path, isOpaque), isOpaque, uniquePaths },
   };
 }
@@ -293,10 +293,7 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   if (!node.name) return;
   if (node.owner !== undefined) node.owner = resolvedOwner(tables, node.owner);
   const isRootOwned = isOwnedByRoot(node, instance !== undefined);
-  if (instance !== undefined) {
-    tables.ownership.headingsInsideInstances.add(place.livePath);
-    if (isRootOwned) tables.ownership.ownedInsideInstances.add(place.livePath);
-  }
+  if (instance !== undefined) tables.ownership.insideInstances.set(place.livePath, isRootOwned);
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
@@ -320,8 +317,10 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
     return;
   }
   if (instance === undefined) return;
-  const pathInInstance = relativeTo(tables.places.get(instance)!.livePath, place.livePath)!;
-  handToInstance(tables, instance, { pathInInstance, isUnique: setting });
+  handToInstance(tables, instance, {
+    pathInInstance: pathInInstance(tables, instance, place.livePath)!,
+    isUnique: setting,
+  });
 }
 
 /**
@@ -351,8 +350,11 @@ function handToOwner<N extends RawNode>(
 ): void {
   const owner = instanceHolding(tables, ownerPath);
   if (!owner) return;
-  const pathInInstance = pathBetween(tables.places.get(owner.instance)!.livePath, livePath);
-  handToInstance(tables, owner.instance, { pathInInstance, isUnique, ownerInInstance: owner.pathInInstance });
+  handToInstance(tables, owner.instance, {
+    pathInInstance: pathBetween(tables.places.get(owner.instance)!.livePath, livePath),
+    isUnique,
+    ownerInInstance: owner.pathInInstance,
+  });
 }
 
 /**
@@ -375,7 +377,7 @@ function instanceHolding<N extends RawNode>(
     const rest = names.slice(end).join('/');
     const seatedLivePath = tables.places.get(seated)!.livePath;
     const ownerLivePath = rest ? joinPath(seatedLivePath, rest) : seatedLivePath;
-    return { instance, pathInInstance: relativeTo(tables.places.get(instance)!.livePath, ownerLivePath)! };
+    return { instance, pathInInstance: pathInInstance(tables, instance, ownerLivePath)! };
   }
   return undefined;
 }
@@ -393,6 +395,20 @@ function handToInstance<N extends RawNode>(
     instance.instanceNameSettings = settings;
   }
   settings.push({ ...setting, hostChildrenBefore: instance.children.length });
+}
+
+/** The live path `livePath` below the seated `instance`, or undefined where it is not at or below it. */
+function pathInInstance<N extends RawNode>(
+  tables: SeatingTables<N>,
+  instance: N,
+  livePath: string
+): string | undefined {
+  return relativeTo(tables.places.get(instance)!.livePath, livePath);
+}
+
+/** The ownership record of a file that has seated nothing yet. */
+function emptyOwnership(): SeatingTables<RawNode>['ownership'] {
+  return { claims: new Map(), insideInstances: new Map() };
 }
 
 /** `path` below `base`, `''` for `base` itself, or undefined where `path` is not at or below it. */
