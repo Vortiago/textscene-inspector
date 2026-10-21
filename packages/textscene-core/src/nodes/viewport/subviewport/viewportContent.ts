@@ -8,7 +8,12 @@
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import { is2DUIType } from '../../../r3f/controls/has2DUIContent.js';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry.js';
-import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../../r3f/liveSceneTree.js';
+import {
+  liveChildGroups,
+  mergedNodeOf,
+  type CachedSceneSource,
+  type SceneScope,
+} from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
 
 /**
@@ -141,7 +146,7 @@ export function resolveViewportSubtree(
     const groups = liveChildGroups(child, scope, sceneCache);
     // A collapsed single-root instance (ADR-0013) becomes its sub-scene root.
     // Every other origin leaves the node's own identity alone.
-    const effective = groups.find((group) => group.origin === 'merged')?.mergedNode ?? child;
+    const effective = mergedNodeOf(groups) ?? child;
     const children = groups.flatMap((group) =>
       group.children.map((grandchild) => resolve(grandchild, group.scope))
     );

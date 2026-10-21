@@ -5,7 +5,7 @@ import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
-import { liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
+import { liveChildGroups, mergedNodeOf, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot.js';
 import { scopeOf } from '../../../resources/liveNode.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
@@ -126,10 +126,7 @@ function TreeNodeImpl({
   // Instance root merge (ADR-0013), the same decision the viewport and inspector
   // make, for the row header. It reads the `merged` group, so the merge runs once
   // per row. Every other origin keeps the raw node, as `collapseLiveNode` does.
-  const effective = useMemo(
-    () => groups.find((g) => g.origin === 'merged')?.mergedNode ?? node,
-    [groups, node]
-  );
+  const effective = useMemo(() => mergedNodeOf(groups) ?? node, [groups, node]);
 
   const hasChildren = groups.some((g) => g.children.length > 0);
 

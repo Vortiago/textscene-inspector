@@ -14,7 +14,7 @@ import {
   HOST_LEAF_PATH,
   scenesByPath,
 } from './testing/graftedScopeFixture';
-import '../r3f/nodes/index';
+import './nodes/index';
 
 describe('a node grafted into an instanced sub-scene', () => {
   it('collapses into the host scene it names, through the tree walk', () => {

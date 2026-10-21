@@ -46,7 +46,7 @@ describe('<SceneTreeViewer> — a node grafted into an instanced sub-scene', () 
       act(() => fireEvent.click(screen.getAllByRole('button', { name: 'Expand' })[0]!));
     }
 
-    expect([...requested.keys()].sort()).toEqual([HOST_LEAF_PATH].sort());
+    expect([...requested.keys()]).toEqual([HOST_LEAF_PATH]);
     expect(requested.has(SUB_LEAF_PATH)).toBe(false);
   });
 });
