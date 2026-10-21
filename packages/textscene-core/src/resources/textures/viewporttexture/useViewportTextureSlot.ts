@@ -57,7 +57,7 @@ interface ViewportTextureSlotResult {
  * A registry path to the view of its published target, which every ViewportTexture consumer shares,
  * `SubViewportContainer` included. The orchestrator drives no pass that `ViewportPassRegistryContext`
  * finds cyclic, so a cyclic target is uninitialised and reports `texture: null` with `cyclic: true`.
- * A consumer of the decoding view keeps it filled while it is mounted.
+ * A consumer keeps its view filled while it is mounted.
  *
  * @param warnAs The caller in the cycle warning, usually its node path. Null
  *   suppresses it, as for `SubViewportContainer`, which the context already names.
@@ -71,10 +71,10 @@ export function useViewportTargetSlot(
   const cycle = useViewportPassCycle(path);
   const cyclic = cycle !== null;
 
-  const decoding = view === 'decoding' && !cyclic ? (entry?.decoding ?? null) : null;
+  const sampled = cyclic ? null : (entry?.[view] ?? null);
   // A layout effect, not a passive one: a frame can run between a commit and its passive
   // effects, and the pass fills only a retained copy, so that frame would sample it unfilled.
-  useLayoutEffect(() => decoding?.retain(), [decoding]);
+  useLayoutEffect(() => sampled?.retain(), [sampled]);
 
   const lastWarnedKey = useRef<string | null>(null);
   useEffect(() => {
@@ -91,7 +91,7 @@ export function useViewportTargetSlot(
   }, [cyclic, path, warnAs]);
 
   if (cyclic || !entry) return { texture: null, cyclic };
-  return { texture: decoding ? decoding.texture : entry.texture, cyclic };
+  return { texture: sampled?.texture ?? null, cyclic };
 }
 
 /**

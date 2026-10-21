@@ -310,8 +310,21 @@ describe('useViewportTextureSlot views', () => {
 
   it('resolves the plain view and fills no decoding view (edge case)', () => {
     const { resolved, entry, retainers } = mountView('plain');
-    expect(resolved()).toBe(entry.texture);
+    expect(resolved()).toBe(entry.plain.texture);
     expect(retainers.count).toBe(0);
+  });
+
+  it('keeps the plain view filled while mounted', () => {
+    const { entry, retained } = entryRetainingPlain();
+    render(
+      <ViewportTextureProvider>
+        <ViewportTexturePublisher path="Root/SubViewport" entry={entry} />
+        <NodePathProvider path="Root/Screen">
+          <ViewConsumer view="plain" onResolve={() => {}} />
+        </NodePathProvider>
+      </ViewportTextureProvider>
+    );
+    expect(retained.count).toBe(1);
   });
 });
 
@@ -326,6 +339,19 @@ function entryWithDecodingView(): { entry: ViewportTextureEntry; retainers: { co
   };
   const decoding = { texture: new THREE.Texture(), retain };
   return { entry: viewportEntry(new THREE.Texture(), { x: 256, y: 256 }, decoding), retainers };
+}
+
+/** An entry whose plain view counts the consumers that retain it. */
+function entryRetainingPlain(): { entry: ViewportTextureEntry; retained: { count: number } } {
+  const retained = { count: 0 };
+  const retain = () => {
+    retained.count++;
+    return () => {
+      retained.count--;
+    };
+  };
+  const { decoding, size } = viewportEntry(new THREE.Texture(), { x: 256, y: 256 });
+  return { entry: { plain: { texture: new THREE.Texture(), retain }, decoding, size }, retained };
 }
 
 function ViewConsumer({

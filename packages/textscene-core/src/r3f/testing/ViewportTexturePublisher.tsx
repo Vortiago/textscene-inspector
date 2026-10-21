@@ -3,7 +3,7 @@
 import type * as THREE from 'three';
 import {
   usePublishViewportTexture,
-  type DecodingView,
+  type TargetView,
   type ViewportTextureEntry,
 } from '../contexts/ViewportTextureContext';
 
@@ -17,7 +17,7 @@ export function ViewportTexturePublisher({ path, entry }: { path: string; entry:
 export function viewportEntry(
   texture: THREE.Texture,
   size: { x: number; y: number },
-  decoding: DecodingView = { texture, retain: () => () => {} }
+  decoding: TargetView = { texture, retain: () => () => {} }
 ): ViewportTextureEntry {
-  return { texture, decoding, size };
+  return { plain: { texture, retain: () => () => {} }, decoding, size };
 }

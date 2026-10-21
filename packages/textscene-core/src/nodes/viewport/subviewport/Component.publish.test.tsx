@@ -229,8 +229,8 @@ describe('<SubViewport> offscreen publisher', () => {
 
   it('publishes a texture consumers can sample', async () => {
     const { published } = await renderScene(scene3D());
-    expect(published()?.texture).toBeDefined();
-    expect(published()?.texture.isTexture).toBe(true);
+    expect(published()?.plain.texture).toBeDefined();
+    expect(published()?.plain.texture.isTexture).toBe(true);
   });
 
   it('unpublishes when the sub-viewport unmounts', async () => {
@@ -248,7 +248,7 @@ describe('<SubViewport> offscreen publisher', () => {
    */
   it('keeps the linear storage tag through a consumer-side sRGB stamp', async () => {
     const { published } = await renderScene(scene3D());
-    const texture = published()!.texture;
+    const texture = published()!.decoding.texture;
     texture.colorSpace = THREE.SRGBColorSpace;
     expect(texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
   });
@@ -256,12 +256,18 @@ describe('<SubViewport> offscreen publisher', () => {
   /** Canvas items write sRGB numbers into an `R8G8B8A8_UNORM` target (`renderer_canvas_render_rd.cpp:671,729`). */
   it('stores 2D-world content as sRGB bytes', async () => {
     const { published } = await renderScene(scene2DContent, '2d', 'Stage/Viewport');
-    expect(holdsSrgbBytes(published()!.texture)).toBe(true);
+    expect(holdsSrgbBytes(published()!.plain.texture)).toBe(true);
   });
 
-  it('keeps the scene storage for 3D content (edge case)', async () => {
+  /**
+   * A 3D target is SRGB8_ALPHA8, which decodes on sampling. A canvas consumer filters the bytes
+   * (`texture_storage.cpp:754`), so it gets a plain copy of them.
+   */
+  it('publishes 3D content as sRGB bytes in its plain view and the scene storage in its decoding view', async () => {
     const { published } = await renderScene(scene3D());
-    expect(holdsSrgbBytes(published()!.texture)).toBe(false);
+    const { plain, decoding } = published()!;
+    expect(holdsSrgbBytes(plain.texture)).toBe(true);
+    expect(decoding.texture.internalFormat).toBe('SRGB8_ALPHA8');
   });
 
   /**

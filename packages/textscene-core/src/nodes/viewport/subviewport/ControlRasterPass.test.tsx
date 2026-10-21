@@ -117,7 +117,7 @@ describe('<ControlRasterPasses>', () => {
     const entry = seen.at(-1);
     expect(entry).not.toBeNull();
     expect(entry!.size).toEqual({ x: 320, y: 240 });
-    expect(entry!.texture.isTexture).toBe(true);
+    expect(entry!.plain.texture.isTexture).toBe(true);
   });
 
   it('caps a size Godot opens but WebGL cannot allocate', async () => {
@@ -133,20 +133,20 @@ describe('<ControlRasterPasses>', () => {
   it('publishes a plain view that holds sRGB bytes', async () => {
     const seen: (ViewportTextureEntry | null)[] = [];
     await mount(parse(GUI_SCENE), seen);
-    const texture = seen.at(-1)!.texture;
+    const texture = seen.at(-1)!.plain.texture;
     expect(texture.internalFormat).toBe('RGBA8');
     expect(holdsSrgbBytes(texture)).toBe(true);
   });
 
   it('fills the decoding view after its pass while a consumer retains it', async () => {
     const { renderer, seen, gl } = await mount(parse(GUI_SCENE));
-    const { texture, decoding } = seen.at(-1)!;
+    const { plain, decoding } = seen.at(-1)!;
     decoding.retain();
     const bound: (THREE.Texture | undefined)[] = [];
     await advanceFrameWithStubbedGl(renderer, gl, (target) => {
       if (target) bound.push(target.texture);
     });
-    expect(bound).toEqual([texture, decoding.texture]);
+    expect(bound).toEqual([plain.texture, decoding.texture]);
   });
 
   it('renders without a tonemap curve — Controls are never tonemapped, on-screen or off', async () => {
