@@ -28,6 +28,7 @@ import { decodeTorusMesh } from '../torusmesh/decode';
 import { buildTorusMeshSurface } from '../torusmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
 import { buildPrismMeshSurface } from '../prismmesh/build';
+import { buildPointMeshSurface } from '../pointmesh/build';
 
 /**
  * A slice's surface in Godot's arrays, or null for a mesh Godot builds no surface for.
@@ -49,6 +50,7 @@ const BUILDERS: Record<string, SurfaceBuilder> = {
   CapsuleMesh: (data, uv2Padding) => buildCapsuleMeshSurface(decodeCapsuleMesh(data), uv2Padding),
   TorusMesh: (data, uv2Padding) => buildTorusMeshSurface(decodeTorusMesh(data), uv2Padding),
   PrismMesh: (data, uv2Padding) => buildPrismMeshSurface(decodePrismMesh(data), uv2Padding),
+  PointMesh: buildPointMeshSurface,
 };
 
 /** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */

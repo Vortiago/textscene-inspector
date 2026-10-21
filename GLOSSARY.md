@@ -206,6 +206,7 @@ _Avoid_: "processor" for the slice. A hollow `decode.ts` on a foreign format.
 **Godot surface**:
 One triangle surface in Godot's mesh arrays: positions, normals, tangents, UV and UV2, with front faces clockwise and V from the image top.
 A decoded ArrayMesh, a PrimitiveMesh builder and a CSGMesh3D brush share it, and `godotSurfacesGeometry` alone turns it into three's winding and V.
+A PointMesh builds the one surface that is not triangles: a single position with no indices, flagged `isPoints`, which three draws as `THREE.Points`.
 _Avoid_: "three-space surface". "mesh data".
 
 **React-free linter boundary**:

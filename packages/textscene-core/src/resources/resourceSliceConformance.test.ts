@@ -49,6 +49,9 @@ describe('resource-slice barrel completeness', () => {
 // construction exists, so shapes and curves have none). A `foreign-format` slice
 // declares its real parser instead of a hollow decode.
 describe('resource-slice claim coverage', () => {
+  // A decode.ts of a type with no property of its own would return nothing: a hollow file.
+  // PointMesh declares no `_bind_methods` (`primitive_meshes.h:406-414`).
+  const slicesWithNothingToDecode = new Set(['pointmesh']);
   const all = resourceSliceRegistry.all();
   const sliceDirs = new Map<string, string>();
   for (const index of findRegisteringIndexes(here)) sliceDirs.set(dirname(index), dirname(index));
@@ -73,7 +76,12 @@ describe('resource-slice claim coverage', () => {
       // busType null means the loader never serves it and no ParsedResource
       // section reaches it (ViewportTexture decodes a NodePath), so a decode.ts
       // would have nothing to consume.
-      if (reg.kind === 'godot-text' && reg.busType !== null && !existsSync(join(dir, 'decode.ts'))) {
+      if (
+        reg.kind === 'godot-text' &&
+        reg.busType !== null &&
+        !slicesWithNothingToDecode.has(reg.slice) &&
+        !existsSync(join(dir, 'decode.ts'))
+      ) {
         failures.push(`${reg.slice}: godot-text slice without decode.ts`);
       }
       if (reg.kind === 'foreign-format' && existsSync(join(dir, 'decode.ts'))) {

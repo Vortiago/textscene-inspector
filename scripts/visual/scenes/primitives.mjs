@@ -11,6 +11,7 @@ export const PRIMITIVE_SCENES = [
   { name: 'capsule-mesh-texture-uv', file: 'unit-capsule-mesh-texture-uv.tscn' },
   { name: 'cylinder-mesh', file: 'unit-cylinder-mesh.tscn' },
   { name: 'cylinder-mesh-texture-uv', file: 'unit-cylinder-mesh-texture-uv.tscn' },
+  { name: 'point-mesh', file: 'unit-point-mesh.tscn' },
   { name: 'prism-mesh', file: 'unit-prism-mesh.tscn' },
   { name: 'prism-mesh-texture-uv', file: 'unit-prism-mesh-texture-uv.tscn' },
   { name: 'quadmesh', file: 'unit-quadmesh.tscn' },

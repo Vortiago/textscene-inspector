@@ -1,0 +1,57 @@
+[gd_scene format=3]
+
+; The one variable: a PointMesh, which Godot draws as PRIMITIVE_POINTS, one square of the material's
+; point_size pixels per vertex. No other scene draws a points surface, so none shows a regression in
+; it. Left to right: the default material (1 px), a lit red point of 20 px, an unshaded green point
+; of 8 px, a lit blue metal point of 40 px, and the red material again with its node turned a half
+; turn about Y. Godot lights a point, which has no normal array, as a +Z normal in node space: the
+; sun, shining toward -Z, lights the first red point and not the turned one.
+
+[sub_resource type="PointMesh" id="PointMesh_1"]
+
+[sub_resource type="StandardMaterial3D" id="Material_red"]
+albedo_color = Color(1, 0.2, 0.2, 1)
+use_point_size = true
+point_size = 20.0
+
+[sub_resource type="StandardMaterial3D" id="Material_green"]
+shading_mode = 0
+albedo_color = Color(0.2, 1, 0.2, 1)
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="StandardMaterial3D" id="Material_metal"]
+albedo_color = Color(0.2, 0.4, 1, 1)
+metallic = 0.8
+roughness = 0.3
+use_point_size = true
+point_size = 40.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+
+[node name="Default" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0, 0)
+mesh = SubResource("PointMesh_1")
+
+[node name="Red" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+mesh = SubResource("PointMesh_1")
+surface_material_override/0 = SubResource("Material_red")
+
+[node name="Green" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("PointMesh_1")
+surface_material_override/0 = SubResource("Material_green")
+
+[node name="Metal" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
+mesh = SubResource("PointMesh_1")
+surface_material_override/0 = SubResource("Material_metal")
+
+[node name="RedTurned" type="MeshInstance3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 2.4, 0, 0)
+mesh = SubResource("PointMesh_1")
+surface_material_override/0 = SubResource("Material_red")

@@ -20,11 +20,19 @@ export interface GodotSurface {
   uvs?: Float32Array;
   /** `uv` per vertex with V down, or undefined for a surface with no ARRAY_TEX_UV2. */
   uv2s?: Float32Array;
-  /** Three per triangle. */
+  /** Three per triangle, and none for a points surface. */
   indices: ArrayLike<number>;
+  /** Godot's `PRIMITIVE_POINTS`: one point per vertex, drawn at the material's point size. */
+  isPoints?: boolean;
 }
 
+/**
+ * A mesh draws one primitive type, so a points surface is a mesh's only surface and draws as
+ * `THREE.Points`, not as triangles (`pointsGeometry`).
+ */
 export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.BufferGeometry {
+  const only = surfaces.length === 1 ? surfaces[0] : undefined;
+  if (only?.isPoints) return pointsGeometry(only);
   const geometry = new THREE.BufferGeometry();
 
   const vertexCountOf = (surface: GodotSurface) => surface.positions.length / 3;
@@ -90,5 +98,26 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   }
   if (tangents) geometry.setAttribute('tangent', new THREE.BufferAttribute(tangents, 4));
 
+  return geometry;
+}
+
+/**
+ * What Godot lights a surface with no ARRAY_NORMAL with, in node space. Measured with `pnpm ref:godot`
+ * under ten light directions, not read from the (1, 0, 0) its default buffer holds (`mesh_storage.cpp:61-70`).
+ */
+const DEFAULT_NORMAL = [0, 0, 1];
+
+/** A points surface: its vertices, each with the surface's normal or Godot's default. */
+function pointsGeometry({ positions, normals }: GodotSurface): THREE.BufferGeometry {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const vertexCount = positions.length / 3;
+  geometry.setAttribute(
+    'normal',
+    new THREE.BufferAttribute(
+      normals ?? Float32Array.from({ length: vertexCount * 3 }, (_, i) => DEFAULT_NORMAL[i % 3]!),
+      3
+    )
+  );
   return geometry;
 }

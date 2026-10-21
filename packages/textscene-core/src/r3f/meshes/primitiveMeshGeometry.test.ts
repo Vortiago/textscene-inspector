@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_AABB } from '../../godot/math/aabb';
 import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
-import { primitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
+import { primitiveMeshSurface } from '../../resources/meshes/primitivemesh/surface';
+import { primitiveMeshGeometry, primitiveMeshAabb, primitiveMeshDrawsPoints } from './primitiveMeshGeometry';
 
 const TEXEL_SIZE = 0.2;
 /** Four segments round and one ring: vertex 6 sits on the equator, a quarter turn from the seam. */
@@ -115,5 +116,15 @@ describe('primitiveMeshAabb', () => {
 
   it('is unknown for a type with no slice here', () => {
     expect(primitiveMeshAabb({ id: 'text', type: 'TextMesh', data: {} })).toBeNull();
+  });
+});
+
+describe('primitiveMeshDrawsPoints', () => {
+  // The mounted element comes from the type and the geometry from the surface: they must not drift.
+  it.each([...PRIMITIVE_TYPES, 'PointMesh'])('agrees with the surface a %s builds', (type) => {
+    const resource = { id: 'mesh', type, data: {} };
+    expect(primitiveMeshDrawsPoints(resource)).toBe(
+      primitiveMeshSurface(resource, TEXEL_SIZE)?.isPoints === true
+    );
   });
 });

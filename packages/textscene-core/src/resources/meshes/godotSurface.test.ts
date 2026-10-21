@@ -189,3 +189,20 @@ describe('godotSurfacesGeometry', () => {
     expect(uv.getY(5)).toBe(0);
   });
 });
+
+describe('godotSurfacesGeometry for a points surface', () => {
+  const POINT: GodotSurface = { positions: new Float32Array([1, 2, 3]), indices: [], isPoints: true };
+
+  it('draws each vertex once, with no index', () => {
+    const geometry = godotSurfacesGeometry([POINT]);
+    expect(geometry.index).toBeNull();
+    expect(Array.from(geometry.getAttribute('position').array)).toEqual([1, 2, 3]);
+  });
+
+  // Godot lights a surface with no ARRAY_NORMAL as a normal of +Z in node space, measured with
+  // `pnpm ref:godot` under a light from each of ten directions.
+  it('gives a point the normal Godot lights it with, +Z', () => {
+    const normal = godotSurfacesGeometry([POINT]).getAttribute('normal');
+    expect(Array.from(normal.array)).toEqual([0, 0, 1]);
+  });
+});

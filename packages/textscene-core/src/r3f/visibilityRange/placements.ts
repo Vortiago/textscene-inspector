@@ -39,7 +39,7 @@ export function copyAabb(target: THREE.Box3, { position, size }: Aabb): void {
  */
 export function livePlacement(
   nodeRef: RefObject<THREE.Object3D | null>,
-  meshRef: RefObject<THREE.Mesh | null>
+  meshRef: RefObject<{ geometry: THREE.BufferGeometry } | null>
 ): InstancePlacement {
   return {
     nodeMatrixWorld: livePose(nodeRef),
