@@ -17,7 +17,12 @@ import {
   type UniqueNameOwnership,
   type InstanceNameSetting,
 } from './nodeOwner.js';
-import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath.js';
+import {
+  UNIQUE_NODE_PREFIX,
+  walkFromRoot,
+  walkedPath,
+  type RootWalkTables,
+} from '../godot/string/nodePath.js';
 import { serialChildName } from '../godot/string/nodeName.js';
 import { reparentedName } from '../godot/scene/packedScene.js';
 import { idTrailEnd, ownerTrailEnd } from './idTrail.js';
@@ -99,7 +104,7 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     if (!node.parent) continue;
     const owner = node.owner === undefined ? undefined : seatedOwner(tables, origins, index, isPlaced);
     const end = walkFromRoot(node.parent, tables.tree);
-    const parentPath = end === null || typeof end === 'string' ? end : end.unlisted;
+    const parentPath = walkedPath(end);
     if (parentPath !== null && seatBelowParent(tables, node, parentPath, owner)) {
       seatedByPath.add(node);
       continue;
@@ -343,13 +348,8 @@ function seatedOwner<N extends SceneNode<N>>(
   index: number,
   isPlaced: (origin: NodeOrigin<N>) => boolean
 ): string {
-  const end = walkFromRoot(origins[index]!.node.owner, tables.tree);
-  const path =
-    end === null
-      ? recoveredOwnerPath(tables, origins, index, isPlaced)
-      : typeof end === 'string'
-        ? end
-        : end.unlisted;
+  const walked = walkedPath(walkFromRoot(origins[index]!.node.owner, tables.tree));
+  const path = walked ?? recoveredOwnerPath(tables, origins, index, isPlaced);
   if (path === undefined) return NO_OWNER;
   return path === SCENE_ROOT_PATH ? '.' : path;
 }

@@ -10,6 +10,7 @@ import {
   UNIQUE_NODE_PREFIX,
   nodePathNames,
   walkFromRoot,
+  walkedPath,
   type RootWalkTables,
 } from '../godot/string/nodePath';
 import { holderAfterSetting, isOutsideInstance, type InstanceNameSetting } from '../parser/nodeOwner';
@@ -291,9 +292,8 @@ export function subPathSegments(
 ): string[] | null {
   const segments = subPath.split('/');
   if (!segments.some((segment) => segment.startsWith(UNIQUE_NODE_PREFIX))) return segments;
-  const end = walkFromRoot(subPath, subSceneWalkTables(tree, claimed));
-  if (end === null) return null;
-  const path = typeof end === 'string' ? end : end.unlisted;
+  const path = walkedPath(walkFromRoot(subPath, subSceneWalkTables(tree, claimed)));
+  if (path === null) return null;
   return path === '' ? [] : path.split('/');
 }
 

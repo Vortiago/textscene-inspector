@@ -20,7 +20,7 @@ export function idTrailEnd<N extends RawNode>(
 ): IdTrailEnd | undefined {
   const trail = origins[index]?.idTrail;
   if (trail === undefined) return undefined;
-  return recoverByIdTrail(trail, idHeadingsOf(origins, isPlaced), index);
+  return trailEnd(trail, origins, isPlaced, index);
 }
 
 /**
@@ -35,7 +35,17 @@ export function ownerTrailEnd<N extends RawNode>(
 ): IdTrailEnd | undefined {
   const trail = origins[index]?.ownerIdTrail;
   if (trail === undefined) return undefined;
-  return recoverByIdTrail(trail, idHeadingsOf(origins, isPlaced), index + 1);
+  return trailEnd(trail, origins, isPlaced, index + 1);
+}
+
+/** Where `trail` lands over the first `builtCount` headings, as instantiate has built them. */
+function trailEnd<N extends RawNode>(
+  trail: readonly number[],
+  origins: readonly NodeOrigin<N>[],
+  isPlaced: (origin: NodeOrigin<N>) => boolean,
+  builtCount: number
+): IdTrailEnd | undefined {
+  return recoverByIdTrail(trail, idHeadingsOf(origins, isPlaced), builtCount);
 }
 
 /** Each heading as `recoverByIdTrail` reads it, placed where `isPlaced` says. */
