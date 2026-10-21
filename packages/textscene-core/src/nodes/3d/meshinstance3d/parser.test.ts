@@ -29,14 +29,15 @@ describe('MeshInstance3D Parser', () => {
       expect(result.mesh).toBe('SubResource("BoxMesh_abc123")');
     });
 
-    it.each(['mesh', 'material_override', 'material_overlay'])(
+    it.each(['mesh', 'material_override', 'material_overlay', 'skin'])(
       'reads a null %s as no resource, as the Ref setter does (variant_parser.cpp:699)',
       (property) => {
         const result = parseMeshInstance3D(heading('MeshInstance3D', { name: 'Cube' }), {
           [property]: 'null',
         });
 
-        expect([result.mesh, result.materialOverride, result.materialOverlay]).toEqual([
+        expect([result.mesh, result.materialOverride, result.materialOverlay, result.skin]).toEqual([
+          undefined,
           undefined,
           undefined,
           undefined,

@@ -64,7 +64,7 @@ export function parseMeshInstance3D(
     meshInstance3DProps.skeleton = properties.skeleton;
   }
 
-  if (properties.skin) {
+  if (holdsResource(properties.skin)) {
     meshInstance3DProps.skin = properties.skin;
   }
 
