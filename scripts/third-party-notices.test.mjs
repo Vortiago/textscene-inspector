@@ -14,8 +14,8 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
 const NOTICES = join(REPO_ROOT, 'THIRD-PARTY-NOTICES.md');
 const VSCODE_COPY = join(REPO_ROOT, 'apps', 'textscene-vscode', 'THIRD-PARTY-NOTICES.md');
 
-const GODOT_COPYRIGHT = NOTICE_SOURCES.find(({ name }) => name === 'Godot').copyright;
-const COPYRIGHTS = NOTICE_SOURCES.map(({ name, copyright }) => [name, copyright]);
+const GODOT_COPYRIGHT = NOTICE_SOURCES[0].copyright;
+const COPYRIGHTS = NOTICE_SOURCES.map(({ section, copyright }) => [section, copyright]);
 
 /** Trees that can contain derived source. `node_modules` and build output excluded. */
 const SEARCH_ROOTS = ['packages', 'scripts', 'apps'];

@@ -3,13 +3,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import {
-  RELEASE_INPUTS,
-  RELEASE_KINDS,
-  RELEASE_PACKAGES,
-  checkReleaseTag,
-  releaseHistory,
-} from './releaseVersion.mjs';
+import { RELEASE_INPUTS, RELEASE_PACKAGES, checkReleaseTag, releaseHistory } from './releaseVersion.mjs';
 
 describe('checkReleaseTag', () => {
   it('releases the extension alone on a vscode tag, at the tag version', () => {
@@ -136,22 +130,7 @@ describe('RELEASE_PACKAGES', () => {
   });
 });
 
-describe('RELEASE_KINDS', () => {
-  it('names the kind of every released package', () => {
-    expect(Object.keys(RELEASE_KINDS)).toEqual(Object.keys(RELEASE_PACKAGES));
-  });
-
-  it('publishes every package but the extension to npm', () => {
-    const npm = Object.keys(RELEASE_KINDS).filter((name) => RELEASE_KINDS[name] === 'npm');
-    expect(npm).toEqual(['linter', 'lsp', 'tscn']);
-  });
-});
-
 describe('RELEASE_INPUTS', () => {
-  it('names the inputs of every released package', () => {
-    expect(Object.keys(RELEASE_INPUTS)).toEqual(Object.keys(RELEASE_PACKAGES));
-  });
-
   it.each(Object.values(RELEASE_INPUTS).flat())('%s holds a package manifest', (directory) => {
     expect(existsSync(join(REPO_ROOT, directory, 'package.json'))).toBe(true);
   });

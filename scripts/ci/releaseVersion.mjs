@@ -9,35 +9,34 @@ import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
-/** Each tag prefix, and the repo-relative directory of the one package that tag releases. */
-export const RELEASE_PACKAGES = {
-  vscode: 'apps/textscene-vscode',
-  linter: 'apps/textscene-linter',
-  lsp: 'apps/textscene-lsp',
-  tscn: 'apps/textscene-tscn',
+/**
+ * Each tag prefix, and what its tag releases:
+ * - `directory`: the repo-relative directory of the one package.
+ * - `kind`: `npm` ships a tarball on GitHub and on npm; `extension` ships a .vsix to the
+ *   marketplaces. The release workflow reads the kind, so it names no package.
+ * - `inputs`: the workspace directories the package bundles, besides its own. Its release notes
+ *   cover them.
+ */
+const RELEASE_TARGETS = {
+  vscode: {
+    directory: 'apps/textscene-vscode',
+    kind: 'extension',
+    inputs: ['packages/textscene-core', 'apps/textscene-web'],
+  },
+  linter: { directory: 'apps/textscene-linter', kind: 'npm', inputs: ['packages/textscene-core'] },
+  lsp: { directory: 'apps/textscene-lsp', kind: 'npm', inputs: ['packages/textscene-core'] },
+  tscn: { directory: 'apps/textscene-tscn', kind: 'npm', inputs: ['packages/textscene-core'] },
 };
+
+/** One field of `RELEASE_TARGETS`, keyed by tag prefix. */
+const field = (name) => Object.fromEntries(Object.entries(RELEASE_TARGETS).map(([tag, t]) => [tag, t[name]]));
+
+export const RELEASE_PACKAGES = field('directory');
+const RELEASE_KINDS = field('kind');
+export const RELEASE_INPUTS = field('inputs');
 
 /** Joins the example tags with "or", without the serial comma of American English. */
 const DISJUNCTION = new Intl.ListFormat('en-GB', { type: 'disjunction' });
-
-/**
- * What a tag publishes. An `npm` package ships a tarball on GitHub and on npm; the `extension`
- * ships a .vsix to the marketplaces. The release workflow reads this, so it names no package.
- */
-export const RELEASE_KINDS = {
-  vscode: 'extension',
-  linter: 'npm',
-  lsp: 'npm',
-  tscn: 'npm',
-};
-
-/** The workspace directories each package bundles, besides its own. Its release notes cover them. */
-export const RELEASE_INPUTS = {
-  vscode: ['packages/textscene-core', 'apps/textscene-web'],
-  linter: ['packages/textscene-core'],
-  lsp: ['packages/textscene-core'],
-  tscn: ['packages/textscene-core'],
-};
 
 /**
  * `<package>-v<major>.<minor>.<patch>` only. The VS Marketplace refuses a semver pre-release
