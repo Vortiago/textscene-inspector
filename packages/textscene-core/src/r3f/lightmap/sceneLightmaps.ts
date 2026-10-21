@@ -41,7 +41,7 @@ export interface LightmapAssignment {
 }
 
 /** The key of the node at `path`, or of its baked mesh `subInstance`, in a LightmapInstance's users. */
-export function lightmapUserKey(path: string, subInstance: number): string {
+function lightmapUserKey(path: string, subInstance: number): string {
   // A newline cannot appear in a node name, so no node path collides with a baked mesh's key.
   return subInstance === LIGHTMAP_NODE_ITSELF ? path : `${path}\n${subInstance}`;
 }
