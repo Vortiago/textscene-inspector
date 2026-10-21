@@ -11,6 +11,7 @@ import {
   stateInjectionKey,
   type ProgramInjection,
 } from '../materialProgramInputs';
+import { pointShadowSizeInjection } from './godotPoint';
 import { renderTargetMapInjection } from './renderTargetMap';
 
 /** The material state a depth draw of a surface reads. */
@@ -27,7 +28,10 @@ type DepthMaterial = (THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial) & {
   readonly depthInjection?: ProgramInjection;
 };
 
-/** Seeds the alpha with `opacity` and multiplies the vertex colour in, as three's colour programs do. */
+/**
+ * Seeds the alpha with `opacity` and multiplies the vertex colour in, as three's colour programs do.
+ * three's distance fragment declares no `opacity`, so a program that reads it fails to link.
+ */
 const SURFACE_ALPHA: ProgramInjection = {
   cacheKey: 'godot-surface-alpha',
   onBeforeCompile(shader) {
@@ -35,7 +39,10 @@ const SURFACE_ALPHA: ProgramInjection = {
       .replace('#include <common>', '#include <common>\n#include <color_pars_vertex>')
       .replace('#include <begin_vertex>', '#include <color_vertex>\n#include <begin_vertex>');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\n#include <color_pars_fragment>')
+      .replace(
+        '#include <common>',
+        '#ifdef DISTANCE\nuniform float opacity;\n#endif\n#include <common>\n#include <color_pars_fragment>'
+      )
       .replace(
         '#include <map_fragment>',
         'diffuseColor.a = opacity;\n#include <map_fragment>\n#include <color_fragment>'
@@ -80,7 +87,7 @@ function copiesOf(surface: THREE.Material): Map<DepthMaterial, DepthMaterial> {
 /**
  * Gives `depth` the alpha state of `surface` for one draw, cut at `alphaTest`. A change three keys
  * no program on, a slot's presence, the hash, the edge ramp or a render-target map's sampler,
- * recompiles it.
+ * or the size of a points surface recompiles it.
  */
 export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, alphaTest: number): void {
   const source = surface as DepthSurface;
@@ -89,7 +96,8 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
     depth.vertexColors !== surface.vertexColors ||
     !depth.map !== !source.map ||
     !depth.alphaMap !== !source.alphaMap ||
-    renderTargetMapInjection(depth.userData) !== renderTargetMapInjection(surface.userData);
+    renderTargetMapInjection(depth.userData) !== renderTargetMapInjection(surface.userData) ||
+    pointShadowSizeInjection(depth.userData) !== pointShadowSizeInjection(surface.userData);
   depth.map = source.map ?? null;
   depth.alphaMap = source.alphaMap ?? null;
   depth.opacity = surface.opacity;
@@ -106,9 +114,15 @@ export function syncSurfaceDepth(depth: DepthMaterial, surface: THREE.Material, 
 }
 
 /**
- * The surface's alpha cut, after the depth program's own injection, and the sampler of a
- * render-target map that `depth.userData` records. That sample replaces the map chunk, so it is last.
+ * The depth program's own injection, the size of a points surface, the surface's alpha cut, and the
+ * sampler of a render-target map that `depth.userData` records. That sample replaces the map chunk,
+ * so it is last.
  */
 function surfaceAlphaOf(depth: DepthMaterial): ProgramInjection | undefined {
-  return composeInjections([depth.depthInjection, SURFACE_ALPHA, renderTargetMapInjection(depth.userData)]);
+  return composeInjections([
+    depth.depthInjection,
+    pointShadowSizeInjection(depth.userData),
+    SURFACE_ALPHA,
+    renderTargetMapInjection(depth.userData),
+  ]);
 }

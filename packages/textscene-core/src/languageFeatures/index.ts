@@ -15,6 +15,8 @@ export { codeActions } from './codeActions.js';
 export { foldingRanges } from './folding.js';
 export { documentHighlights } from './highlights.js';
 export { documentSymbols } from './symbols.js';
+export { nodePathAt } from './nodePathAt.js';
+export { spelledLiveNodePath } from '../utils/nodePath.js';
 export {
   definitionRangeAt,
   nodeDeclarationRange,

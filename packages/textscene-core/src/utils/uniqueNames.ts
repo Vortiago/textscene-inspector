@@ -7,6 +7,7 @@
 import type { RawNode } from '../parser/types.js';
 import type { UniqueNameOwnership } from '../parser/nodeOwner.js';
 import { sceneSeating } from '../parser/sceneTreeBuilder.js';
+import { belowRoot } from './nodePath.js';
 
 /** The root's `%Name` claims in `roots`, keyed with the prefix on. One object per tree. */
 export function cachedUniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
@@ -44,7 +45,5 @@ export const cachedUniqueNameLivePaths = perTree(
  */
 export const cachedUniqueNamesBelowRoot = perTree(
   (roots): ReadonlyMap<string, string> =>
-    new Map(
-      [...cachedUniqueNameLivePaths(roots)].map(([key, path]) => [key, path.slice(path.indexOf('/') + 1)])
-    )
+    new Map([...cachedUniqueNameLivePaths(roots)].map(([key, path]) => [key, belowRoot(path)]))
 );

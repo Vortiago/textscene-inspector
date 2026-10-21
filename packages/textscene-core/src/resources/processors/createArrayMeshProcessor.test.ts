@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { ResourceEventBus } from '../ResourceEventBus';
+import { geometryDrawsPoints } from '../meshes/godotSurface';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './createArrayMeshProcessor';
 import { truncatedSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 import { sectionLoaderServing } from '../testing/sectionLoaderServing';
@@ -27,6 +28,13 @@ blend_shape_mode = 0`
 const UNREADABLE_THEN_GOOD_TRES = WALL_TRES.replace(
   '_surfaces = [{',
   `_surfaces = [${truncatedSurface({ name: 'truncated' })}, {`
+);
+
+/** The wall quad, then the same quad as a points surface: Godot's surface 1 is the points. */
+const TRIANGLES_THEN_POINTS_TRES = WALL_TRES.replace(
+  '}]\nblend_shape_mode = 0',
+  `}, ${wallQuadSurfaces({ primitive: 0 }).slice(1, -1)}]
+blend_shape_mode = 0`
 );
 
 /** A `shadow_mesh` sub-resource whose surface carries a material declared in the same file. */
@@ -58,11 +66,11 @@ describe('createArrayMeshProcessor', () => {
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://wall.tres', 1000);
     processor.request('res://wall.tres');
 
-    const resource = await loaded;
-    expect(resource.geometry).toBeInstanceOf(THREE.BufferGeometry);
-    expect(resource.geometry.getAttribute('position').count).toBe(4);
-    expect(resource.materialPaths).toEqual([null]); // wall surface has no material here
-    expect(processor.getCached('res://wall.tres')).toBe(resource); // identity caching
+    const [part] = (await loaded).parts;
+    expect(part!.geometry).toBeInstanceOf(THREE.BufferGeometry);
+    expect(part!.geometry.getAttribute('position').count).toBe(4);
+    expect(part!.materialPaths).toEqual([null]); // wall surface has no material here
+    expect(processor.getCached('res://wall.tres')).toBe(await loaded); // identity caching
   });
 
   it('keeps materialPaths aligned with the draw groups when a surface is dropped', async () => {
@@ -74,13 +82,13 @@ describe('createArrayMeshProcessor', () => {
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://mixed.tres', 1000);
     processor.request('res://mixed.tres');
 
-    const resource = await loaded;
-    expect(resource.geometry.groups).toHaveLength(1);
-    expect(resource.materialPaths).toHaveLength(1);
-    expect(resource.geometry.groups[0]!.materialIndex).toBe(0);
+    const [part] = (await loaded).parts;
+    expect(part!.geometry.groups).toHaveLength(1);
+    expect(part!.materialPaths).toHaveLength(1);
+    expect(part!.geometry.groups[0]!.materialIndex).toBe(0);
     // The draw group is Godot's surface 0: the readable surface comes first, so
     // the compaction has not moved it and the indices agree.
-    expect(resource.surfaceIndices).toEqual([0]);
+    expect(part!.surfaceIndices).toEqual([0]);
   });
 
   it("carries each draw group's ORIGINAL surface index", async () => {
@@ -91,9 +99,22 @@ describe('createArrayMeshProcessor', () => {
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://shifted.tres', 1000);
     processor.request('res://shifted.tres');
 
-    const resource = await loaded;
-    expect(resource.materialPaths).toHaveLength(1);
-    expect(resource.surfaceIndices).toEqual([1]);
+    const [part] = (await loaded).parts;
+    expect(part!.materialPaths).toHaveLength(1);
+    expect(part!.surfaceIndices).toEqual([1]);
+  });
+
+  it('splits triangle and points surfaces into a part each, each keeping its original surface index', async () => {
+    const { eventBus, processor } = processorServing({ 'res://dots.tres': TRIANGLES_THEN_POINTS_TRES });
+
+    const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', 'res://dots.tres', 1000);
+    processor.request('res://dots.tres');
+
+    const { parts } = await loaded;
+    expect(parts.map((part) => [geometryDrawsPoints(part.geometry), part.surfaceIndices])).toEqual([
+      [false, [0]],
+      [true, [1]],
+    ]);
   });
 
   it('emits arraymesh:failed and caches null for an address that is not an ArrayMesh', async () => {
@@ -115,6 +136,6 @@ describe('createArrayMeshProcessor', () => {
     const loaded = eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', address, 1000);
     processor.request(address);
 
-    expect((await loaded).materialPaths).toEqual(['res://wheel.tres::Mat_a']);
+    expect((await loaded).parts[0]!.materialPaths).toEqual(['res://wheel.tres::Mat_a']);
   });
 });

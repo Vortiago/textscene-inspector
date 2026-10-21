@@ -5,6 +5,8 @@
  * image.
  */
 
+/* global document */ // `document` appears only inside frame.evaluate() callbacks, which run in the browser.
+
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 
 import { sleep } from './platform.mjs';
@@ -77,6 +79,31 @@ async function gotoLine(page, line) {
   await sleep(600);
 }
 
+/**
+ * Pastes the clipboard into a new untitled file in the focused group, so the shot shows what the
+ * copy command or button wrote. The paste target is the focused group, which the caller sets.
+ */
+async function pasteIntoUntitled(page) {
+  await page.keyboard.press('Control+n'); // The palette's fuzzy match opens a clipboard diff instead.
+  await sleep(700);
+  await page.keyboard.press('Control+v');
+  await sleep(600);
+}
+
+/** Closes the untitled file without the save prompt a later "Close All Editors" would raise. */
+async function discardUntitled(page) {
+  await palette(page, 'View: Revert and Close Editor');
+}
+
+/** The zero-based line of the first line in the fixture that starts with `prefix`. */
+function lineOf(file, prefix) {
+  const line = readFileSync(`${FIXTURES}/${file}`, 'utf8')
+    .split('\n')
+    .findIndex((text) => text.startsWith(prefix));
+  if (line === -1) throw new Error(`no line starting with ${prefix} in ${file}`);
+  return line;
+}
+
 /** Translate the Box fixture along X, the edit both hot-reload flows save. */
 const moveBoxX = (x) =>
   editScene(BOX_SCENE, BOX_IDENTITY, `Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${x}, 0, 0)`);
@@ -147,6 +174,22 @@ export const GUIDE_SHOTS = {
       await settle(4000);
       return true;
     },
+  },
+
+  // VSCODE-09: the editor command copies the path of the node under the cursor.
+  'vscode-09-a': {
+    desc: 'caret on the Box heading, TextScene: Copy Node Path run, "Box" pasted into a new file',
+    run: async (page) => {
+      restore(BOX_SCENE);
+      const painted = await openScenePreview(page, BOX_SCENE, { split: true, sideBar: false });
+      await settle();
+      await palette(page, 'View: Focus First Editor Group');
+      await gotoLine(page, lineOf(BOX_SCENE, '[node name="Box"') + 1);
+      await palette(page, 'TextScene: Copy Node Path');
+      await pasteIntoUntitled(page);
+      return painted;
+    },
+    after: discardUntitled,
   },
 
   // VSCODE-04: a res:// path is a document link, and following it opens the file.
@@ -225,6 +268,30 @@ export const GUIDE_SHOTS = {
       await settle(4000);
       return true;
     },
+  },
+
+  // BOTH-05: the Inspector's Copy node path button, then the paste.
+  'both-05-a': {
+    desc: 'Box selected, Copy node path clicked, "Box" pasted into a new file beside the Inspector',
+    run: async (page) => {
+      restore(BOX_SCENE);
+      const painted = await openScenePreview(page, BOX_SCENE, {
+        split: true,
+        sideBar: false,
+        previewShare: 0.62,
+      });
+      await settle();
+      const frame = await frameShowing(page, 'Box');
+      await selectNode(frame, 'Root/Box');
+      await frame.evaluate(() =>
+        [...document.querySelectorAll('button')].find((b) => b.textContent === 'Copy node path')?.click()
+      );
+      await sleep(600);
+      await palette(page, 'View: Focus First Editor Group');
+      await pasteIntoUntitled(page);
+      return painted;
+    },
+    after: discardUntitled,
   },
 
   // BOTH-01..04: one fixture per shot, for primitives, lights and environments.

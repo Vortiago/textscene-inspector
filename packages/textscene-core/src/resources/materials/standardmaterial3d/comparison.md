@@ -117,6 +117,18 @@ Both engines shift every texture coordinate by the depth the heightmap reads, al
 - **Approximated** `texture_mipmap_bias` is not applied. WebGL2 has no per-texture LOD bias.
 - **Approximated** `anisotropic_filtering_level` is pinned at 16x rather than read from the project.
 
+## Point size
+
+<!-- compare: image=unit-point-mesh status=done fixture=unit-point-mesh.tscn -->
+
+A PointMesh draws one square per vertex, and `use_point_size` with `point_size` sets its side in pixels. Without the flag a point is one pixel. A textured point samples its albedo across the square, as Godot does. A point carries no normal array, so Godot lights it as a normal along +Z in node space, and both sides do the same. Cull mode does not turn a point's normal and does not hide the point. Godot hides a front-culled point only in the first frames, while its pipeline compiles. A point casts a shadow of its point size, as Godot draws it under a directional, a spot or an omni light.
+
+## Point shadow under an omni light
+
+<!-- compare: image=unit-point-mesh-omni-shadow status=done fixture=unit-point-mesh-omni-shadow.tscn -->
+
+A 40 px point that draws shadows only hangs under an omni light, above a floor the camera looks straight down at. Both engines cast a faint square of the point's size on the floor, beside the darker square of the previewer's sun.
+
 ## Linting
 
 <!-- lint:begin StandardMaterial3D -->

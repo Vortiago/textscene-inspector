@@ -80,8 +80,8 @@ export function meshSurfaces(mesh: CsgMesh): CsgMeshSurface[] {
 }
 
 /**
- * An ArrayMesh's decoded surfaces. A mesh none of whose surfaces decodes contributes nothing, as
- * Godot's brush skips a surface with no vertices (`csg_shape.cpp:1149-1151`).
+ * An ArrayMesh's decoded triangle surfaces. A mesh none of whose surfaces decodes contributes
+ * nothing, as Godot's brush skips a surface with no vertices (`csg_shape.cpp:1149-1151`).
  */
 function arrayMeshSurfaces(
   decode: () => ArrayMeshData,
@@ -95,18 +95,22 @@ function arrayMeshSurfaces(
     warn(`[CSGMesh3D] ${label} builds no brush: ${String(error)}`);
     return [];
   }
-  return mesh.surfaces.map((surface) => ({
-    positions: surface.positions,
-    normals: surface.normals,
-    uvs: surface.uvs,
-    indices: surface.indices,
-    material: materialOf(surface),
-  }));
+  // A points surface adds nothing: the brush builder skips every surface that is not triangles.
+  return mesh.surfaces
+    .filter((surface) => !surface.isPoints)
+    .map((surface) => ({
+      positions: surface.positions,
+      normals: surface.normals,
+      uvs: surface.uvs,
+      indices: surface.indices,
+      material: materialOf(surface),
+    }));
 }
 
 /**
  * A PrimitiveMesh's one surface under its `material` (`primitive_meshes.cpp`, `surface_get_material`
- * answers it for surface 0), in Godot's arrays as the brush builder reads them.
+ * answers it for surface 0), in Godot's arrays as the brush builder reads them. A points surface
+ * adds nothing: the brush builder skips every surface that is not triangles (`csg_shape.cpp:1148-1150`).
  */
 function primitiveMeshSurfaces(
   resource: TscnInternalResource,
@@ -114,6 +118,6 @@ function primitiveMeshSurfaces(
 ): CsgMeshSurface[] {
   // The brush reads no UV2 (`csg_shape.cpp:1147-1172`), the only array the texel size scales.
   const surface = primitiveMeshSurface(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
-  if (!surface) return [];
+  if (!surface || surface.isPoints) return [];
   return [{ ...surface, material }];
 }

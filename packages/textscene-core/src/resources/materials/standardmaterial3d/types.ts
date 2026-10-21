@@ -201,6 +201,10 @@ export interface StandardMaterial3DData {
   rimTint: number;
   /** Height mapping, null when `heightmap_enabled` is off or triplanar mapping overrides it. */
   heightmap: Heightmap | null;
+  /** `use_point_size` (default false): the shader writes `point_size` as POINT_SIZE and samples albedo at POINT_COORD. */
+  usesPointSize: boolean;
+  /** `point_size` in pixels (default 1). The setter checks no range, as the inspector's 0.1-128 is only a hint. */
+  pointSize: number;
   /**
    * `billboard_mode`: 0 DISABLED, 1 ENABLED, 2 FIXED_Y, 3 PARTICLES. The derived
    * material carries it on `userData`, and `r3f/surfaceDrawHooks.ts` poses each draw.
@@ -292,6 +296,8 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   rim: number;
   rimTint: number;
   heightmap: Heightmap | null;
+  usesPointSize: boolean;
+  pointSize: number;
   billboardMode: number;
   billboardKeepScale: boolean;
   anisotropy: number;

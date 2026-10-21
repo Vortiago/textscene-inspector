@@ -15,6 +15,7 @@ Each `.tscn` file can have its own preview.
 - The viewport uses Godot's editor controls. Press <kbd>?</kbd> in the viewport for the full list.
 - Click a node in the tree or the viewport to see its properties in the **Inspector** tab.
 - Double-click a node in the tree to jump to its line in the source.
+- Click **Copy node path** beside the Inspector's **Path** to copy the node's path from the scene root, as Godot's **Copy Node Path** writes it. The root copies as `.`.
 - Use the **3D/2D** switch for Control and Node2D scenes.
 - A mesh whose texture is missing renders magenta. The **Resources** tab lists the missing path.
 - Save the file, or a file it uses, and the preview updates. The camera stays where it is.
@@ -23,6 +24,7 @@ Each `.tscn` file can have its own preview.
 
 - **Problems panel:** the linter checks each open `.tscn` file. For a scene in a workspace folder, it also reports a `.glb` or `.gltf` file the scene uses that Godot's importer refuses. Godot fails to load the scene or resource when a sub-resource, a `.tres` `[resource]` body, a connection or the root node uses the glTF file. The report is then an error when the scene has a `project.godot` that enables no editor plugin, declares no autoload, and the project holds no `.gdextension` file. Otherwise it is a warning, because one of them can add support. Where only other nodes use the glTF file, the scene loads without it, and the report is always a warning.
 - **Problems panel (after a file change):** when a glTF file or `.godot/extension_list.cfg` changes on disk, the linter checks each open scene that reads it again. When someone creates or deletes a `.gdextension` file, a `.gdignore` or a `project.godot`, or changes `project.godot`, the linter checks the open scenes of that project again. When someone deletes or moves a folder, the linter checks again each open scene that read a file inside it, or whose project listed a `.gdextension` file inside it.
+- **Copy Node Path:** run **TextScene: Copy Node Path** from the editor menu or the Command Palette. It copies the path of the `[node]` section that holds the cursor, as Godot's **Copy Node Path** writes it.
 - **Outline:** the scene tree of the file. Click an entry to jump to its line.
 - **`res://` links:** Ctrl-click (Cmd-click on macOS) a path to open the file.
 - **Go to Definition** on `SubResource("id")` and `ExtResource("id")` goes to the heading that declares the id. On a node path in `parent=`, `from=` or `to=`, it goes to the `[node]` heading that the path names.

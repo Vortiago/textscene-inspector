@@ -24,6 +24,15 @@ export function readLightPose(
   light.matrixWorld.decompose(position, rotation, droppedScale);
 }
 
+/** Writes the matrix from the space of `view` into the light's pose space, and returns `target`. */
+export function viewToLightPose(
+  light: THREE.Object3D,
+  view: THREE.Camera,
+  target: THREE.Matrix4
+): THREE.Matrix4 {
+  return lightPoseMatrix(light, target).invert().multiply(view.matrixWorld);
+}
+
 /** Writes the light's pose into `target` as a light-to-world matrix, and returns `target`. */
 export function lightPoseMatrix(light: THREE.Object3D, target: THREE.Matrix4): THREE.Matrix4 {
   readLightPose(light, scratchPosition, scratchRotation);

@@ -10,3 +10,17 @@ vec2 godotParaboloidUv( vec3 direction, vec4 uvRect, vec2 flipOffset ) {
 	return uvRect.xy + ( direction.xy / direction.z * 0.5 + 0.5 ) * uvRect.zw;
 }
 `;
+
+/**
+ * `godotOmniSlot( slot, inset, flipOffset )`: an omni light's `atlas_rect` and the step to its
+ * second paraboloid, from the light's slot (`atlasOmniShadow.ts`), with `inset` taken off each side
+ * of the rect. The surface insets the rect one atlas texel (`scene_forward_lights_inc.glsl:505-507`,
+ * `:641-642`). The fog does not (`volumetric_fog_process.glsl:502-511`).
+ */
+export const OMNI_SLOT_GLSL = /* glsl */ `
+vec4 godotOmniSlot( vec4 slot, vec2 inset, out vec2 flipOffset ) {
+	flipOffset = slot.zw;
+	float slotSize = max( flipOffset.x, flipOffset.y );
+	return vec4( slot.xy + inset, vec2( slotSize ) - inset * 2.0 );
+}
+`;

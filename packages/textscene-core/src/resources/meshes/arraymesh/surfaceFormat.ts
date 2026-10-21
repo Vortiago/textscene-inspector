@@ -25,10 +25,11 @@ const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
 const COLOR_BYTES = 4;
 
 /**
- * Godot `Mesh.PrimitiveType.PRIMITIVE_TRIANGLES` (`servers/rendering_server.h`:
- * POINTS 0, LINES 1, LINE_STRIP 2, TRIANGLES 3, TRIANGLE_STRIP 4), the only one
- * this decoder reads. Any other read as triangles fabricates faces.
+ * Godot `Mesh.PrimitiveType` (`servers/rendering_server.h`: POINTS 0, LINES 1, LINE_STRIP 2,
+ * TRIANGLES 3, TRIANGLE_STRIP 4), the two this decoder reads. Any other read as triangles
+ * fabricates faces.
  */
+export const PRIMITIVE_POINTS = 0;
 export const PRIMITIVE_TRIANGLES = 3;
 
 /**

@@ -5,6 +5,8 @@ node_modules/
 
 # Build outputs
 dist/
+# Written by the @textscene/tscn build from the notices at the repository root.
+apps/textscene-tscn/THIRD-PARTY-NOTICES.md
 out/
 build/
 *.tsbuildinfo

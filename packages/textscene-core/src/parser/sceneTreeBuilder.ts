@@ -5,7 +5,7 @@
  */
 
 import type { NodeOrigin, NodePathResolution, RawNode, SceneNode } from './types';
-import { SCENE_ROOT_PATH, joinPath, pathBetween } from '../utils/nodePath.js';
+import { SCENE_ROOT_PATH, joinPath, pathBetween, spelledNodePath } from '../utils/nodePath.js';
 import {
   hasForeignOwner,
   isInstanceBelowRoot,
@@ -351,7 +351,7 @@ function seatedOwner<N extends SceneNode<N>>(
   const walked = walkedPath(walkFromRoot(origins[index]!.node.owner, tables.tree));
   const path = walked ?? recoveredOwnerPath(tables, origins, index, isPlaced);
   if (path === undefined) return NO_OWNER;
-  return path === SCENE_ROOT_PATH ? '.' : path;
+  return spelledNodePath(path);
 }
 
 /**

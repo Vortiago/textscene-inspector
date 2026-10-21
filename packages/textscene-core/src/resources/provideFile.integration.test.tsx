@@ -86,7 +86,7 @@ const ROWS: BusRow[] = [
     path: 'res://mesh.tres',
     before: arrayMesh(1),
     after: arrayMesh(2),
-    read: (value: ArrayMeshResource) => String(value.materialPaths.length),
+    read: (value: ArrayMeshResource) => String(value.parts[0]!.materialPaths.length),
     beforeShown: '1',
     afterShown: '2',
   },

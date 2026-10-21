@@ -298,7 +298,7 @@ describe('the settle contract is shared, not duplicated', () => {
   it('keeps the convergence knobs out of the contract', () => {
     // Godot steps a fixed frame count, and ours captures until two match. Neither number is the
     // contract, so they are not aligned, and the Godot loop is named for what it does.
-    expect(godotScript(SETTLE_SIM_SECONDS)).toContain('func _converge() -> void:');
+    expect(godotScript(SETTLE_SIM_SECONDS)).toContain('func _converge(source: Viewport) -> void:');
     expect(godotScript(SETTLE_SIM_SECONDS)).not.toContain('func _settle() -> void:');
   });
 });
