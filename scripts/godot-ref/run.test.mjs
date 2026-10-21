@@ -609,6 +609,34 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
   }, 180_000);
 
   /**
+   * `disable_mode = KEEP_ACTIVE` keeps a disabled SoftBody3D in the physics space, where Jolt
+   * rewrites the mesh each frame with normals averaged over welded vertices
+   * (`soft_body_3d.cpp:469-478`, `jolt_soft_body_3d.cpp:612-653`). The editor never does that
+   * (`soft_body_3d.cpp:459-467`), so the reference puts the node out of the space first. A box's
+   * left face then keeps one flat shade across it.
+   */
+  it('keeps a KEEP_ACTIVE SoftBody3D on its authored flat normals, as the editor draws it', async () => {
+    const out = join(await scratchDir(), 'shot.png');
+    await renderReference({
+      scene: join(REPO_ROOT, 'scenes/fixtures/unit-soft-body-3d.tscn'),
+      out,
+      mode: '3d',
+    });
+    const [upperLeft, lowerRight] = probePixels(
+      await readFile(out),
+      [
+        [395, 200],
+        [450, 300],
+      ],
+      { patch: 5 }
+    );
+    // Within 2/255: a flat face still drifts by a step across its width. Smoothing moved it by 22.
+    for (const channel of [0, 1, 2]) {
+      expect(Math.abs(lowerRight.rgb[channel] - upperLeft.rgb[channel])).toBeLessThanOrEqual(2);
+    }
+  }, 180_000);
+
+  /**
    * `--frame` places its camera from the bounds `--emit-bounds` reports. A CSG shape sets
    * `node_aabb` only in a deferred `update_shape()` (`modules/csg/csg_shape.cpp:221-226`, `:507`),
    * so a camera placed right after `add_child()` sees an empty box for every CSG node and frames

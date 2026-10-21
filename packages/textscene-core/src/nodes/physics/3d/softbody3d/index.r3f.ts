@@ -1,7 +1,8 @@
 /**
  * SoftBody3D draws its `mesh` as a MeshInstance3D does, since it derives from it
- * (`soft_body_3d.h:66`). The previewer runs no physics (ADR-0005), so the body stays at rest, and
- * the cull keeps the rest mesh's box. Godot overwrites that box with the simulated points'
+ * (`soft_body_3d.h:66`). The previewer runs no physics (ADR-0005), so the body stays at rest. Its
+ * box is the mesh's, as `MeshInstance3D::get_aabb` answers (`mesh_instance_3d.cpp:230-233`). Godot
+ * replaces it with the simulated points' box only once a physics step runs
  * (`soft_body_3d.cpp:100-101,450-452`).
  */
 
