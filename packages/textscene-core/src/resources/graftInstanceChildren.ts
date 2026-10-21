@@ -11,7 +11,7 @@ import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
-import type { InstanceNameSetting } from '../parser/nodeOwner';
+import { holderAfterSetting, type InstanceNameSetting } from '../parser/nodeOwner';
 
 /** The two scopes a graft joins. */
 export interface InstanceScopes {
@@ -100,8 +100,8 @@ function instanceTable(
   rootChildren: readonly LiveNode[],
   { own, settings }: InstanceNames
 ): { claims: ClaimedPath; handed: HandedSetting[] } {
-  const changed = new Map<string, string | null>();
-  const claims: ClaimedPath = (key) => (changed.has(key) ? (changed.get(key) ?? undefined) : own(key));
+  const changed = new Map<string, string | undefined>();
+  const claims: ClaimedPath = (key) => (changed.has(key) ? changed.get(key) : own(key));
   const handed: HandedSetting[] = [];
   for (const setting of settings) {
     const authored = setting.pathInInstance.split('/');
@@ -109,81 +109,94 @@ function instanceTable(
     const owner = tableOwner(rootChildren, segments, setting.ownerInInstance);
     if (owner === null) continue;
     if (owner !== THIS_INSTANCE) {
-      handed.push({ at: segments.slice(0, owner + 1), setting: rebased(setting, segments, owner) });
+      handed.push({
+        at: segments.slice(0, owner.nestedAt + 1),
+        setting: rebased(setting, segments, owner.nestedAt),
+      });
       continue;
     }
     const key = UNIQUE_NODE_PREFIX + segments.at(-1)!;
-    const path = segments.join('/');
-    const holder = claims(key);
-    if (setting.isUnique && holder === undefined) changed.set(key, path);
-    if (!setting.isUnique && holder === path) changed.set(key, null);
+    changed.set(key, holderAfterSetting(claims(key), segments.join('/'), setting.isUnique));
   }
   return { claims, handed };
 }
 
-/** {@link tableOwner}'s answer for the instance this graft composes. */
-const THIS_INSTANCE = -1;
+const THIS_INSTANCE = 'this instance';
+
+/** Whose table a setting lands in: the instance this graft composes, or a nested one along its path. */
+type TableOwner = typeof THIS_INSTANCE | { readonly nestedAt: number };
 
 /**
- * Whose table a setting at `segments` lands in: {@link THIS_INSTANCE}, the depth of the nested
- * instance that holds it, or null for a node the sub-scene lacks or a table no instance reads.
- * Without an explicit owner, a node inside a nested instance keeps that instance's owner
- * (resource_format_text.cpp:264-265).
+ * Whose table a setting at `segments` lands in, or null for a node the sub-scene lacks or a table
+ * no instance reads. Without an explicit owner, a node inside a nested instance keeps that
+ * instance's owner (resource_format_text.cpp:264-265).
  */
 function tableOwner(
   rootChildren: readonly LiveNode[],
   segments: readonly string[],
   ownerInInstance: string | undefined
-): number | null {
-  const nested = firstInstanceAlong(rootChildren, segments.slice(0, -1), segments);
-  if (nested === null) return null;
-  if (ownerInInstance === undefined) return nested;
+): TableOwner | null {
+  const nestedAt = instanceDepth(rootChildren, segments.slice(0, -1));
+  if (nestedAt === null || (nestedAt === undefined && !nodeAt(rootChildren, segments))) return null;
   if (ownerInInstance === '') return THIS_INSTANCE;
+  if (ownerInInstance === undefined) return nestedAt === undefined ? THIS_INSTANCE : { nestedAt };
   const ownerSegments = ownerInInstance.split('/');
-  const ownerAt = firstInstanceAlong(rootChildren, ownerSegments, ownerSegments);
-  const isAncestor = ownerSegments.every((name, index) => segments[index] === name);
-  return ownerAt === null || ownerAt === THIS_INSTANCE || !isAncestor ? null : ownerAt;
+  if (!ownerSegments.every((name, index) => segments[index] === name)) return null;
+  const ownerAt = instanceDepth(rootChildren, ownerSegments);
+  return typeof ownerAt === 'number' ? { nestedAt: ownerAt } : null;
 }
 
 /**
- * The depth of the first instance among the first `walked.length` nodes of `path`,
- * {@link THIS_INSTANCE} where none is one, or null where `path` names nothing before an instance.
+ * The depth of the first instance node along `path`: undefined where none is one, and null where
+ * `path` names nothing before one.
  */
-function firstInstanceAlong(
+function instanceDepth(
   rootChildren: readonly LiveNode[],
-  walked: readonly string[],
   path: readonly string[]
-): number | null {
+): number | undefined | null {
   let siblings = rootChildren;
   for (const [depth, name] of path.entries()) {
     const found = siblings.find((n) => n.name === name);
     if (!found) return null;
-    if (depth < walked.length && found.instance) return depth;
+    if (found.instance) return depth;
     siblings = found.children;
   }
-  return THIS_INSTANCE;
+  return undefined;
 }
 
-/** `setting` spelt below the nested instance at depth `at` of `segments`. */
+/** `setting` spelt below the nested instance at depth `at` of `segments`, its expanded path. */
 function rebased(setting: InstanceNameSetting, segments: readonly string[], at: number): InstanceNameSetting {
   const pathInInstance = segments.slice(at + 1).join('/');
-  if (setting.ownerInInstance === undefined) return { pathInInstance, isUnique: setting.isUnique };
-  const ownerInInstance = setting.ownerInInstance
-    .split('/')
-    .slice(at + 1)
-    .join('/');
-  return { pathInInstance, isUnique: setting.isUnique, ownerInInstance };
+  const { ownerInInstance } = setting;
+  if (ownerInInstance === undefined) return { ...setting, pathInInstance };
+  return {
+    ...setting,
+    pathInInstance,
+    ownerInInstance: ownerInInstance
+      .split('/')
+      .slice(at + 1)
+      .join('/'),
+  };
 }
 
-/** `tree` with each handed setting appended to its nested instance, copied along the spine. */
+/** `tree` with each nested instance's handed settings appended, its spine copied once. */
 function handDown(tree: LiveNode[], handed: readonly HandedSetting[]): LiveNode[] {
-  return handed.reduce((siblings, { at, setting }) => withSettingAt(siblings, at, setting), tree);
+  const byInstance = new Map<string, { at: readonly string[]; settings: InstanceNameSetting[] }>();
+  for (const { at, setting } of handed) {
+    const key = at.join('/');
+    const group = byInstance.get(key) ?? { at, settings: [] };
+    group.settings.push(setting);
+    byInstance.set(key, group);
+  }
+  let handedDown = tree;
+  for (const { at, settings } of byInstance.values()) handedDown = withSettingsAt(handedDown, at, settings);
+  return handedDown;
 }
 
-function withSettingAt(
+function withSettingsAt(
   siblings: LiveNode[],
   at: readonly string[],
-  setting: InstanceNameSetting
+  settings: readonly InstanceNameSetting[]
 ): LiveNode[] {
   const [head, ...rest] = at;
   const index = siblings.findIndex((n) => n.name === head);
@@ -191,8 +204,8 @@ function withSettingAt(
   const copy = [...siblings];
   copy[index] =
     rest.length > 0
-      ? { ...target, children: withSettingAt(target.children, rest, setting) }
-      : { ...target, instanceNameSettings: [...(target.instanceNameSettings ?? []), setting] };
+      ? { ...target, children: withSettingsAt(target.children, rest, settings) }
+      : { ...target, instanceNameSettings: [...(target.instanceNameSettings ?? []), ...settings] };
   return copy;
 }
 
@@ -206,6 +219,7 @@ function expandUniqueNames(
   rootChildren: readonly LiveNode[],
   claimedPath: ClaimedPath
 ): string[] {
+  if (!segments.some((segment) => segment.startsWith(UNIQUE_NODE_PREFIX))) return [...segments];
   let path: string[] = [];
   for (const [index, segment] of segments.entries()) {
     if (segment.startsWith(UNIQUE_NODE_PREFIX)) {

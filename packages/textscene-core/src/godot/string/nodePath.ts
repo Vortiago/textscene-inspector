@@ -28,10 +28,11 @@ export const UNIQUE_NODE_PREFIX = '%';
 
 /** A walk that reached content this file does not list, where Godot may yet find a node. */
 export interface UnlistedEnd {
-  /** The opaque node the walk stopped at, spelt as the walk spells paths. */
-  readonly unlistedAt: string;
-  /** The rest of the path from there, from the `%Name` that node's own table answers. */
-  readonly rest: string;
+  /**
+   * The opaque node the walk stopped at, spelt as the walk spells paths, then the rest from the
+   * `%Name` that node's own table answers, which the instanced scene resolves once grafted in.
+   */
+  readonly unlisted: string;
 }
 
 /**
@@ -78,7 +79,7 @@ function walk(
       const current = segments.join('/');
       const isOpaqueHere = isOpaque?.(current) === true;
       const claimed = isOpaqueHere && segments.length > floor ? undefined : uniquePaths?.get(part);
-      if (!claimed) return isOpaqueHere ? { unlistedAt: current, rest: parts.slice(index).join('/') } : null;
+      if (!claimed) return isOpaqueHere ? { unlisted: [...segments, ...parts.slice(index)].join('/') } : null;
       segments = claimed.split('/');
       continue;
     }

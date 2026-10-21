@@ -13,14 +13,10 @@ import {
   uniqueNameSetting,
   type UniqueNameClaim,
   type UniqueNameOwnership,
+  type InstanceNameSetting,
   type UniqueNameSetting,
 } from './nodeOwner.js';
-import {
-  UNIQUE_NODE_PREFIX,
-  walkFromRoot,
-  type RootWalkTables,
-  type UnlistedEnd,
-} from '../godot/string/nodePath.js';
+import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath.js';
 import { serialChildName } from '../godot/string/nodeName.js';
 import { reparentedName } from '../godot/scene/packedScene.js';
 import { idTrailEnd } from './idTrail.js';
@@ -93,16 +89,14 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // the returned tree, so it holds no second copy of the resolution rules.
     if (!node.parent) continue;
     const end = walkFromRoot(node.parent, tables.tree);
-    if (end !== null) {
-      // An unlisted end passed content another file lists, where Godot may still find the
-      // parent, so nothing here says the path vanished and it never re-roots.
-      const isUnlisted = typeof end !== 'string';
-      if (seatBelowParent(tables, node, isUnlisted ? unlistedPath(end) : end)) {
-        seatedByPath.add(node);
-        continue;
-      }
-      if (isUnlisted) continue;
+    const parentPath = end === null || typeof end === 'string' ? end : end.unlisted;
+    if (parentPath !== null && seatBelowParent(tables, node, parentPath)) {
+      seatedByPath.add(node);
+      continue;
     }
+    // An unlisted end passed content another file lists, where Godot may still find the
+    // parent, so nothing here says the path vanished and it never re-roots.
+    if (end !== null && typeof end !== 'string') continue;
     // The path has vanished. A `parent_id_path=` is tried first (`:161-163`) and, where it
     // lands, seats the node somewhere this parse cannot name, so that node, like every node
     // of a refused file, stays out of the tree for `orphanedNodes`.
@@ -156,15 +150,6 @@ function seatBelowParent<N extends SceneNode<N>>(
   anchor.node.children.push(seat);
   register(tables, anchor.foldedParentPath, seat, anchor.node);
   return true;
-}
-
-/**
- * The path an unlisted walk end names, for the instance enclosing it to anchor: the opaque node's
- * path, then the rest, `%Name` included, which the instanced scene's own table answers when it is
- * grafted in.
- */
-function unlistedPath({ unlistedAt, rest }: UnlistedEnd): string {
-  return joinPath(unlistedAt, rest);
 }
 
 /**
@@ -223,6 +208,8 @@ interface SeatingTables<N> {
   readonly places: Map<N, Place>;
   /** The nearest instance below the root above each seated node that has one. */
   readonly enclosingInstances: Map<N, N>;
+  /** Each instance node's `instanceNameSettings`, the array the node holds, filled in file order. */
+  readonly instanceNameSettings: Map<N, InstanceNameSetting[]>;
   readonly ownership: {
     readonly claims: Map<string, UniqueNameClaim>;
     readonly instanceSettings: UniqueNameSetting[];
@@ -248,6 +235,7 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
     uniquePaths,
     places: new Map([[root, { path: root.name, livePath: root.name }]]),
     enclosingInstances: new Map(),
+    instanceNameSettings: new Map(),
     ownership: { claims: new Map(), instanceSettings: [], ownedInsideInstances: new Set() },
     tree: { exists: (path) => canNameNode(byPath, path, isOpaque), isOpaque, uniquePaths },
   };
@@ -299,38 +287,42 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
-  const isUnique = uniqueNameSetting(node);
-  if (isUnique === undefined) return;
+  const setting = uniqueNameSetting(node);
+  if (setting === undefined) return;
   // A clear on a root-owned heading has nothing to release: the heading declares the node.
   if (isRootOwned) {
-    if (isUnique) claimInRoot(tables, { node, ...place }, path);
+    if (setting) claimInRoot(tables, { node, ...place }, path);
     return;
   }
-  const owner =
-    node.owner === undefined
-      ? tables.places.get(instance!)!.livePath
-      : joinPath(tables.root.name, node.owner);
-  tables.ownership.instanceSettings.push({ node, ...place, owner, isUnique });
-  if (instance !== undefined) handToInstance(tables, instance, node, isUnique);
+  const instanceLivePath = instance && tables.places.get(instance)!.livePath;
+  const explicitOwner = node.owner === undefined ? undefined : joinPath(tables.root.name, node.owner);
+  const owner = explicitOwner ?? instanceLivePath!;
+  tables.ownership.instanceSettings.push({ node, ...place, owner, isUnique: setting });
+  if (instanceLivePath === undefined) return;
+  const pathInInstance = relativeTo(instanceLivePath, place.livePath)!;
+  if (explicitOwner === undefined) {
+    handToInstance(tables, instance!, { pathInInstance, isUnique: setting });
+    return;
+  }
+  const ownerInInstance = relativeTo(instanceLivePath, explicitOwner);
+  // An `owner=` outside the instance names a table this instance never reads.
+  if (ownerInInstance !== undefined)
+    handToInstance(tables, instance!, { pathInInstance, isUnique: setting, ownerInInstance });
 }
 
-/** Append a heading's setting to the instance node it sits in, at its path below that instance. */
+/** Append a setting to the instance node it sits in, in file order. */
 function handToInstance<N extends RawNode>(
   tables: SeatingTables<N>,
   instance: N,
-  node: N,
-  isUnique: boolean
+  setting: InstanceNameSetting
 ): void {
-  const instanceLivePath = tables.places.get(instance)!.livePath;
-  const pathInInstance = relativeTo(instanceLivePath, tables.places.get(node)!.livePath)!;
-  const ownerInInstance =
-    node.owner === undefined
-      ? undefined
-      : relativeTo(instanceLivePath, joinPath(tables.root.name, node.owner));
-  // An `owner=` outside the instance names a table this instance never reads.
-  if (node.owner !== undefined && ownerInInstance === undefined) return;
-  const setting = { pathInInstance, isUnique, ...(ownerInInstance === undefined ? {} : { ownerInInstance }) };
-  instance.instanceNameSettings = [...(instance.instanceNameSettings ?? []), setting];
+  let settings = tables.instanceNameSettings.get(instance);
+  if (!settings) {
+    settings = [];
+    tables.instanceNameSettings.set(instance, settings);
+    instance.instanceNameSettings = settings;
+  }
+  settings.push(setting);
 }
 
 /** `path` below `base`, `''` for `base` itself, or undefined where `path` is not at or below it. */

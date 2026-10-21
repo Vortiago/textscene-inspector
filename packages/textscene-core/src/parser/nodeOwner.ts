@@ -18,6 +18,20 @@ export function uniqueNameSetting(node: RawNode): boolean | undefined {
 }
 
 /**
+ * Who holds a `%Name` once the heading at `path` writes `unique_name_in_owner`: a set takes a free
+ * name and the first claimant keeps it (node.cpp:2225-2231), and a clear releases only the node's
+ * own name (node.cpp:2236-2249). Undefined where nobody holds it.
+ */
+export function holderAfterSetting(
+  holder: string | undefined,
+  path: string,
+  isUnique: boolean
+): string | undefined {
+  if (isUnique) return holder ?? path;
+  return holder === path ? undefined : holder;
+}
+
+/**
  * Whether a node is an instance that hides its sub-scene's owner from the nodes below it. An
  * instanced root is the scene's own root, so only an instance below the root does.
  */
