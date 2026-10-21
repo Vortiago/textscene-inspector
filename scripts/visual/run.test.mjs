@@ -37,7 +37,7 @@ function uniformPngBuffer(width, height, [r, g, b, a] = [30, 60, 90, 255]) {
   return PNG.sync.write(png);
 }
 
-describe('captureScene seam selection', () => {
+describe('captureScene scene options', () => {
   const pageState = { page: { name: 'a-page' }, diagnostics: emptyDiagnostics() };
 
   function stubHappyCapture() {

@@ -482,8 +482,11 @@ describe('canvas2DViewportFor', () => {
 });
 
 describe('the 3D canvas size', () => {
-  it('is the 955 by 756 the default window measured, and the window of that canvas is the default', () => {
+  it('is the 955 by 756 the default window measured', () => {
     expect(CANVAS_CAPTURE).toEqual({ width: 955, height: 756 });
+  });
+
+  it('needs the default window, from the window of a canvas', () => {
     expect(windowForCanvas(CANVAS_CAPTURE)).toEqual(VIEWPORT);
   });
 });

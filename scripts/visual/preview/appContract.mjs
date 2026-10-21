@@ -85,9 +85,8 @@ export const CANVAS_2D_TESTIDS = {
 };
 
 /**
- * The canvas element's size inside VIEWPORT after the shell's chrome, as `settleCanvas` returns it
- * (955 by 756). The Godot harness defaults to it, so a probe at (x, y) addresses the same point on
- * both sides.
+ * The canvas element's size inside VIEWPORT after the shell's chrome, as `settleCanvas` returns it.
+ * The Godot harness defaults to it, so a probe at (x, y) addresses the same point on both sides.
  */
 export const CANVAS_CAPTURE = {
   width: VIEWPORT.width - SHELL_CHROME.width,

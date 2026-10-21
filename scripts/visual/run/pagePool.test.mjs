@@ -14,6 +14,7 @@ vi.mock('../previewServer.mjs', async (importOriginal) => {
 });
 
 import { createCaptureContext } from '../previewServer.mjs';
+import { GOLDEN_SCENES } from '../scenes.mjs';
 import { openPagePool, pageSpecFor } from './pagePool.mjs';
 
 const scene = (name, extra = {}) => ({ name, file: `${name}.tscn`, ...extra });
@@ -32,7 +33,10 @@ function stubContexts() {
 
 describe('pageSpecFor', () => {
   it('frames a 3D scene in the default window', () => {
-    expect(pageSpecFor(scene('plain'))).toEqual({ key: 'default', options: { frameOnOpen: true } });
+    expect(pageSpecFor(scene('plain'))).toEqual({
+      key: '955x756',
+      options: { frameOnOpen: true, viewport: { width: 1280, height: 800 } },
+    });
   });
 
   it('opens a 2D scene on the 2D parity frame', () => {
@@ -55,6 +59,12 @@ describe('pageSpecFor', () => {
   });
 });
 
+describe('the golden manifest', () => {
+  it('gives every scene a page', () => {
+    for (const goldenScene of GOLDEN_SCENES) expect(() => pageSpecFor(goldenScene)).not.toThrow();
+  });
+});
+
 describe('openPagePool', () => {
   it('opens one page for each distinct kind of scene, and none for a kind no scene needs', async () => {
     const contexts = stubContexts();
@@ -65,13 +75,15 @@ describe('openPagePool', () => {
     expect(contexts).toHaveLength(2);
   });
 
-  it('gives a scene the page of its kind', async () => {
-    stubContexts();
+  it("runs a capture on the page of the scene's kind", async () => {
+    const contexts = stubContexts();
     const small = scene('small', { canvas: { width: 96, height: 96 } });
     const pool = await openPagePool({}, [scene('plain'), small]);
 
-    expect(pool.pageFor(small)).not.toBe(pool.pageFor(scene('plain')));
-    expect(pool.pageFor(scene('other'))).toBe(pool.pageFor(scene('plain')));
+    const pageOf = (sceneToUse) => pool.use(sceneToUse, async (pageState) => pageState.page);
+
+    expect(await pageOf(small)).toBe(contexts[1].page);
+    expect(await pageOf(scene('other'))).toBe(contexts[0].page);
   });
 
   it('closes a page after the last scene that uses it, and not before', async () => {
@@ -80,9 +92,20 @@ describe('openPagePool', () => {
     const second = scene('second', { canvas: { width: 96, height: 96 } });
     const pool = await openPagePool({}, [first, second]);
 
-    await pool.release(first);
+    await pool.use(first, async () => {});
     expect(contexts[0].close).not.toHaveBeenCalled();
-    await pool.release(second);
+    await pool.use(second, async () => {});
+    expect(contexts[0].close).toHaveBeenCalledOnce();
+  });
+
+  it('closes a page when the capture throws', async () => {
+    const contexts = stubContexts();
+    const only = scene('only');
+    const pool = await openPagePool({}, [only]);
+
+    await expect(pool.use(only, async () => Promise.reject(new Error('settle failed')))).rejects.toThrow(
+      'settle failed'
+    );
     expect(contexts[0].close).toHaveBeenCalledOnce();
   });
 });

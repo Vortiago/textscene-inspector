@@ -31,8 +31,7 @@ async function main() {
     // the scene's seconds.
     console.log('[visual] browser ready');
     for (const scene of scenes) {
-      const result = await checkScene(pool.pageFor(scene), baseUrl, scene, opts);
-      await pool.release(scene);
+      const result = await pool.use(scene, (pageState) => checkScene(pageState, baseUrl, scene, opts));
       results.push(result);
       // One line per scene, so a slow run shows progress and a cancelled one shows how far it got.
       console.log(`[visual] ${results.length}/${scenes.length} ${scene.name} ${result.status}`);

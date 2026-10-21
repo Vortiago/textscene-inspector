@@ -4,7 +4,12 @@
  * after the last scene that needs it, so a small-frame context does not outlive its scenes.
  */
 
-import { attachDiagnostics, createCaptureContext, windowForCanvas } from '../previewServer.mjs';
+import {
+  attachDiagnostics,
+  CANVAS_CAPTURE,
+  createCaptureContext,
+  windowForCanvas,
+} from '../previewServer.mjs';
 
 function canvasKey({ width, height }) {
   return `${width}x${height}`;
@@ -13,8 +18,7 @@ function canvasKey({ width, height }) {
 /**
  * The key of the page a scene captures on, and the options its context opens with. A 3D scene is
  * framed on load: the app's default fixed orbit (ADR-0025) leaves the larger fixtures mostly out of
- * frame, and a baseline of empty space cannot fail. The parity harness keeps the fixed orbit, since
- * Godot opens there. A 2D scene keeps the parity frame's own origin and zoom.
+ * frame, and a baseline of empty space cannot fail. The parity harness keeps the fixed orbit.
  */
 export function pageSpecFor(scene) {
   if (scene.mode === '2d') {
@@ -26,41 +30,42 @@ export function pageSpecFor(scene) {
     }
     return { key: '2d', options: { frameOnOpen: false, canvas2D: true } };
   }
-  if (scene.canvas) {
-    return {
-      key: canvasKey(scene.canvas),
-      options: { frameOnOpen: true, viewport: windowForCanvas(scene.canvas) },
-    };
-  }
-  return { key: 'default', options: { frameOnOpen: true } };
+  const canvas = scene.canvas ?? CANVAS_CAPTURE;
+  return {
+    key: canvasKey(canvas),
+    options: { frameOnOpen: true, viewport: windowForCanvas(canvas) },
+  };
 }
 
 async function openPage(browser, options) {
   const context = await createCaptureContext(browser, options);
   const page = await context.newPage();
-  return { page, diagnostics: attachDiagnostics(page), context };
+  return { context, pageState: { page, diagnostics: attachDiagnostics(page) } };
 }
 
 /**
- * Opens every page `scenes` need, together. `pageFor(scene)` is the page a scene captures on, and
- * `release(scene)` closes that page once no later scene uses it.
+ * Opens every page `scenes` need, together. `use(scene, capture)` runs `capture` on the page of the
+ * scene's kind, and closes that page after the last scene of the kind.
  */
 export async function openPagePool(browser, scenes) {
-  const specs = new Map(scenes.map((scene) => [pageSpecFor(scene).key, pageSpecFor(scene)]));
-  const scenesLeft = new Map([...specs.keys()].map((key) => [key, 0]));
-  for (const scene of scenes) {
-    const { key } = pageSpecFor(scene);
-    scenesLeft.set(key, scenesLeft.get(key) + 1);
+  const kinds = new Map();
+  for (const { key, options } of scenes.map(pageSpecFor)) {
+    const kind = kinds.get(key) ?? { options, scenesLeft: 0 };
+    kind.scenesLeft += 1;
+    kinds.set(key, kind);
   }
-  const pages = new Map(
-    await Promise.all([...specs].map(async ([key, spec]) => [key, await openPage(browser, spec.options)]))
+  await Promise.all(
+    [...kinds.values()].map(async (kind) => Object.assign(kind, await openPage(browser, kind.options)))
   );
   return {
-    pageFor: (scene) => pages.get(pageSpecFor(scene).key),
-    async release(scene) {
-      const { key } = pageSpecFor(scene);
-      scenesLeft.set(key, scenesLeft.get(key) - 1);
-      if (scenesLeft.get(key) === 0) await pages.get(key).context.close();
+    async use(scene, capture) {
+      const kind = kinds.get(pageSpecFor(scene).key);
+      try {
+        return await capture(kind.pageState);
+      } finally {
+        kind.scenesLeft -= 1;
+        if (kind.scenesLeft === 0) await kind.context.close();
+      }
     },
   };
 }
