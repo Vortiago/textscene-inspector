@@ -1,4 +1,4 @@
-/** `useTextResourceSlot`: a texture slot's reference and tables, a saved `.tres` read in its own. */
+/** `useParsedResourceSlot`: a texture slot's reference and tables, a saved resource file read in its own. */
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -6,7 +6,7 @@ import { parseTresFile } from '../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
-import { useTextResourceSlot } from './useTextResourceSlot';
+import { useParsedResourceSlot } from './useParsedResourceSlot';
 
 const SCENE_EXTERNAL: TscnExternalResource[] = [
   { id: '1', type: 'GradientTexture2D', path: 'res://ramp.tres' },
@@ -28,10 +28,10 @@ function render(ref: string | undefined, seed?: (fake: ReturnType<typeof createF
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
   );
-  return renderHook(() => useTextResourceSlot(ref, SCENE_EXTERNAL, SCENE_INTERNAL), { wrapper }).result;
+  return renderHook(() => useParsedResourceSlot(ref, SCENE_EXTERNAL, SCENE_INTERNAL), { wrapper }).result;
 }
 
-describe('useTextResourceSlot', () => {
+describe('useParsedResourceSlot', () => {
   it("reads a saved .tres as its [resource] in the file's own tables", () => {
     const result = render('ExtResource("1")', (fake) =>
       fake.resources.seed('res://ramp.tres', parseTresFile(RAMP_TRES))

@@ -5,13 +5,13 @@
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
+import { BINARY_RESOURCE_EXTENSIONS } from '../../../godot/project/binaryResourceFormat';
 
 registerResourceSlice({
   slice: 'binaryresource',
   kind: 'foreign-format',
   typeNames: [],
-  // A LightmapGI bake, the one binary resource a consumer here decodes.
-  extensions: ['.lmbake'],
+  extensions: BINARY_RESOURCE_EXTENSIONS,
   binaryBytes: true,
   busType: 'resource',
 });

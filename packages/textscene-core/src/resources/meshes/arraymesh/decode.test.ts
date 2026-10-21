@@ -25,7 +25,7 @@ function expectTangents(tangents: Float32Array | undefined, expected: number[]):
 }
 
 /**
- * scenes/demos/3d/platformer/stage/meshes/wall.tres: a 4-vertex quad, one
+ * scenes/demos/3d/platformer/stage/meshes/wall.res: a 4-vertex quad, one
  * surface, one material. format 34359742487 = VERTEX|NORMAL|TANGENT|TEX_UV|INDEX,
  * uncompressed (no ARRAY_FLAG_COMPRESS_ATTRIBUTES). vertex 0 = (-1,-1,1).
  */
@@ -374,7 +374,7 @@ blend_shape_mode = 0
 `;
 
 /**
- * scenes/demos/3d/truck_town/vehicles/meshes/truck_trailer.tres, its
+ * scenes/demos/3d/truck_town/vehicles/meshes/truck_trailer.res, its
  * `truck_trailer` surface verbatim: a compressed surface that also carries
  * TEX_UV. format 34896613399 adds TEX_UV to the compressed set, so
  * `attribute_data` is 4 B/vertex.
@@ -552,7 +552,7 @@ describe('attribute_data layout', () => {
   it('reads UV1 past the vertex colour instead of decoding the colour as u', () => {
     // Godot orders the attribute record COLOR, UV1, UV2: vertex colours put 4
     // RGBA8 bytes ahead of UV1, so reading from offset 0 decodes the colour as
-    // `u`. godot_ball.tres has such a surface (12-byte record).
+    // `u`. godot_ball.res has such a surface (12-byte record).
     const surface = decodeArrayMeshTres(COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(Array.from(surface.uvs!)).toEqual([0.25, 0.5, 0.75, 1]);

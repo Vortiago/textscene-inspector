@@ -5,7 +5,7 @@ import {
   findSubResource,
   findSubResourceOfType,
   parseResourceReference,
-  resolveExtTextResourcePath,
+  resolveExtParsedResourcePath,
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
@@ -154,7 +154,7 @@ describe('unwrapCanvasTextureRef', () => {
   });
 });
 
-describe("resolveExtTextResourcePath — the declared type is the SLOT's", () => {
+describe("resolveExtParsedResourcePath — the declared type is the SLOT's", () => {
   /**
    * Godot writes an `[ext_resource]`'s `type=` from the property slot, not the
    * target's class: an AtlasTexture in a `texture` slot is `type="Texture2D"`. So
@@ -162,36 +162,36 @@ describe("resolveExtTextResourcePath — the declared type is the SLOT's", () =>
    */
   it('matches a .tres the scene declares as the slot type Texture2D', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://icons/arrow_left.tres' }];
-    expect(resolveExtTextResourcePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
+    expect(resolveExtParsedResourcePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
   });
 
   it('declines a plain image, which the texture bus decodes directly', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://sheet.png' }];
-    expect(resolveExtTextResourcePath('ExtResource("1")', ext)).toBeNull();
+    expect(resolveExtParsedResourcePath('ExtResource("1")', ext)).toBeNull();
   });
 });
 
-describe('resolveExtTextResourcePath', () => {
+describe('resolveExtParsedResourcePath', () => {
   const externals: readonly TscnExternalResource[] = [
     { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },
     { id: '2_sheet', type: 'Texture2D', path: 'res://sheet.png' },
   ];
 
   it('gives the path of an ExtResource declared AtlasTexture', () => {
-    expect(resolveExtTextResourcePath('ExtResource("1_atlas")', externals)).toBe(
+    expect(resolveExtParsedResourcePath('ExtResource("1_atlas")', externals)).toBe(
       'res://icons/keyboard_arrow_left.tres'
     );
   });
 
   it('declines an ExtResource declared a different type', () => {
-    expect(resolveExtTextResourcePath('ExtResource("2_sheet")', externals)).toBeNull();
+    expect(resolveExtParsedResourcePath('ExtResource("2_sheet")', externals)).toBeNull();
   });
 
   it('declines a SubResource, an unknown id, a malformed ref, and an absent value', () => {
-    expect(resolveExtTextResourcePath('SubResource("1_atlas")', externals)).toBeNull();
-    expect(resolveExtTextResourcePath('ExtResource("404")', externals)).toBeNull();
-    expect(resolveExtTextResourcePath('not a reference', externals)).toBeNull();
-    expect(resolveExtTextResourcePath(undefined, externals)).toBeNull();
+    expect(resolveExtParsedResourcePath('SubResource("1_atlas")', externals)).toBeNull();
+    expect(resolveExtParsedResourcePath('ExtResource("404")', externals)).toBeNull();
+    expect(resolveExtParsedResourcePath('not a reference', externals)).toBeNull();
+    expect(resolveExtParsedResourcePath(undefined, externals)).toBeNull();
   });
 });
 
@@ -255,6 +255,7 @@ describe('parsedResourcePath', () => {
     { id: '2', type: 'ArrayMesh', path: 'res://rock.res' },
     { id: '3', type: 'Shader', path: 'res://fog.gdshader' },
     { id: '4', type: 'LightmapGIData', path: 'res://scene.lmbake' },
+    { id: '5', type: 'Texture2D', path: 'res://rock.png' },
   ];
 
   it('names the .tres an ExtResource loads', () => {
@@ -269,8 +270,12 @@ describe('parsedResourcePath', () => {
     expect(parsedResourcePath('ExtResource("4")', resources)).toBe('res://scene.lmbake');
   });
 
-  it('names nothing for a binary .res, an undeclared id or no reference (error path)', () => {
-    expect(parsedResourcePath('ExtResource("2")', resources)).toBeNull();
+  it('names the binary .res an ExtResource loads, which the binary reader parses', () => {
+    expect(parsedResourcePath('ExtResource("2")', resources)).toBe('res://rock.res');
+  });
+
+  it('names nothing for an image, an undeclared id or no reference (error path)', () => {
+    expect(parsedResourcePath('ExtResource("5")', resources)).toBeNull();
     expect(parsedResourcePath('ExtResource("9")', resources)).toBeNull();
     expect(parsedResourcePath(undefined, resources)).toBeNull();
   });

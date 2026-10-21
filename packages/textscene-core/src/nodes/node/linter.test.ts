@@ -1,7 +1,7 @@
 /**
- * binary-resource-reference reports, at info, a node that references a binary Godot resource
- * (`.scn` scene, `.res` resource). The previewer loads only text formats (`.tscn`, `.tres`), so
- * that content shows as missing.
+ * binary-resource-reference reports, at info, a node that references a binary Godot scene: a
+ * `.scn`, or a `.res` that holds a PackedScene. The previewer loads only text scenes (`.tscn`), so
+ * that content shows as missing. It reads any other `.res`.
  */
 import { describe, it } from 'vitest';
 import { expectDiagnostic, expectNoDiagnostic } from '../../linter/testing/testkit';
@@ -22,8 +22,22 @@ describe('binary-resource-reference', () => {
     );
   });
 
-  it('reports when a property references a binary .res resource', () => {
+  it('reports when a node instances a scene saved as a .res', () => {
     expectDiagnostic(
+      `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://stage/grid_map.res" id="1"]
+
+[node name="Stage" type="Node3D"]
+
+[node name="GridMap" type="Node3D" parent="." instance=ExtResource("1")]
+`,
+      { ruleName: 'binary-resource-reference', contains: ['grid_map.res'] }
+    );
+  });
+
+  it('stays silent for a .res resource that is not a scene, which the previewer reads', () => {
+    expectNoDiagnostic(
       `[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://stage/meshes/floor.res" id="2"]
@@ -31,7 +45,7 @@ describe('binary-resource-reference', () => {
 [node name="Floor" type="MeshInstance3D"]
 mesh = ExtResource("2")
 `,
-      { ruleName: 'binary-resource-reference', contains: ['floor.res'] }
+      { ruleName: 'binary-resource-reference' }
     );
   });
 
@@ -42,20 +56,20 @@ mesh = ExtResource("2")
       `[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://child.tscn" id="1"]
-[ext_resource type="Texture2D" path="res://icon.res" id="2"]
+[ext_resource type="PackedScene" path="res://part.scn" id="2"]
 
 [node name="Root" type="Node2D"]
 
 [node name="Child" parent="." instance=ExtResource("1")]
 
 [node name="Inner" parent="Child"]
-texture = ExtResource("2")
+part = ExtResource("2")
 `,
       { ruleName: 'binary-resource-reference', nodeType: '<unknown>' }
     );
   });
 
-  it('stays silent for text resources (.tscn/.tres)', () => {
+  it('stays silent for text resources (.tscn, .tres)', () => {
     expectNoDiagnostic(
       `[gd_scene format=3]
 

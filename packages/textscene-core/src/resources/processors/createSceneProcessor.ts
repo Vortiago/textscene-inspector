@@ -13,6 +13,8 @@ import { createResourceProcessor, type ResourceProcessor } from '../createResour
 import { isGltfPath } from '../../godot/import/gltf';
 import { fileBaseName } from '../../godot/string/string';
 import { GLB_SCENE_ROOT_TYPE } from '../glbSceneRoot';
+import { fileExtension } from '../fileExtension';
+import { BINARY_RESOURCE_MAGIC } from '../../godot/project/binaryResourceFormat';
 
 /**
  * The `[gd_scene]` tag after any leading `;` comment and blank lines, which Godot
@@ -81,16 +83,16 @@ export function createSceneProcessor({
         }
         return synthesiseGLBScene(metadata.path);
       }
+      // The lenient parser would "parse" a binary scene or non-TSCN text (an HTML 404)
+      // into an empty scene whose subtree vanishes with no placeholder or
+      // missing-resources row, so it fails instead.
+      if (isBinaryScene(metadata.path, content)) {
+        throw new Error(
+          `Binary Godot scene (.scn, .res) is not previewable: only text scenes (.tscn) load: ${metadata.path}`
+        );
+      }
       if (typeof content !== 'string') {
         throw new Error(`TSCN scene must be text content: ${metadata.path}`);
-      }
-      // The lenient parser would "parse" a binary resource (.scn/.res, RSRC magic)
-      // or non-TSCN text (an HTML 404) into an empty scene whose subtree vanishes
-      // with no placeholder or missing-resources row, so it fails instead.
-      if (content.startsWith('RSRC') || metadata.path.endsWith('.scn')) {
-        throw new Error(
-          `Binary Godot scene (.scn) is not previewable — only text scenes (.tscn) load: ${metadata.path}`
-        );
       }
       if (!SCENE_HEADER.test(content)) {
         throw new Error(`Not a text scene (missing [gd_scene header): ${metadata.path}`);
@@ -122,4 +124,13 @@ export function synthesiseGLBScene(glbPath: string): TscnScene {
     externalResources: [],
     internalResources: [],
   };
+}
+
+/**
+ * A `.res` arrives as bytes, since the binary resource slice claims it, and a `.scn` as text,
+ * since no slice does.
+ */
+function isBinaryScene(path: string, content: string | ArrayBuffer): boolean {
+  if (typeof content !== 'string') return fileExtension(path) === '.res';
+  return content.startsWith(BINARY_RESOURCE_MAGIC) || fileExtension(path) === '.scn';
 }

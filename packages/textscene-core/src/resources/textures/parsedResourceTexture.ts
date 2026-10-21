@@ -1,5 +1,5 @@
 /**
- * A texture saved as its own `.tres`, read as a sub-resource of the file's own tables, so every
+ * A texture saved as its own resource file, read as a sub-resource of the file's own tables, so every
  * resolver that reads an inline texture reads a saved one too. The file's ids are its own, so its
  * refs resolve against its tables, never the scene's.
  */
@@ -7,7 +7,7 @@
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
-interface TextResourceTexture {
+interface ParsedResourceTexture {
   /** A `SubResource` ref to the file's `[resource]`. */
   ref: string;
   /** The file's sub-resources, with its `[resource]` among them. */
@@ -19,12 +19,12 @@ interface TextResourceTexture {
 const MAIN_RESOURCE_ID = '[resource]';
 
 /**
- * Written by `textResourceTexture`, once per parsed file. The procedural caches key their plans on
+ * Written by `parsedResourceTexture`, once per parsed file. The procedural caches key their plans on
  * the table's identity, so a file read twice must give the same table.
  */
-const textures = new WeakMap<ParsedResource, TextResourceTexture>();
+const textures = new WeakMap<ParsedResource, ParsedResourceTexture>();
 
-export function textResourceTexture(parsed: ParsedResource): TextResourceTexture {
+export function parsedResourceTexture(parsed: ParsedResource): ParsedResourceTexture {
   let texture = textures.get(parsed);
   if (!texture) {
     const main: TscnInternalResource = {

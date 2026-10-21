@@ -8,6 +8,37 @@ export const BINARY_RESOURCE_MAGIC = 'RSRC';
 /** A file saved with `ResourceSaver::FLAG_COMPRESS` starts with this instead (`.cpp:988`). */
 export const COMPRESSED_BINARY_RESOURCE_MAGIC = 'RSCC';
 
+/**
+ * The extensions a binary resource takes, dotted: `.res`, which the saver offers for any resource
+ * (`.cpp:2541-2545`), and each class's own `RES_BASE_EXTENSION`, which the loader recognises
+ * (`.cpp:1280-1288`). A PackedScene's `.scn` (`packed_scene.h:246`) loads as a scene instead.
+ */
+export const BINARY_RESOURCE_EXTENSIONS = [
+  '.res',
+  '.anim', // animation.h:40
+  '.atlastex', // atlas_texture.h:37
+  '.curvetex', // curve_texture.h:37,81
+  '.dpitex', // dpi_texture.h:40
+  '.fontdata', // font.h:185
+  '.lmbake', // lightmap_gi.h:43
+  '.material', // material.h:41
+  '.mesh', // mesh.h:298
+  '.meshlib', // mesh_library.h:45
+  '.meshtex', // mesh_texture.h:39
+  '.mp3str', // audio_stream_mp3.h:93
+  '.multimesh', // multimesh.h:38
+  '.occ', // occluder_instance_3d.h:37
+  '.oggvorbisstr', // audio_stream_ogg_vorbis.h:118
+  '.phymat', // physics_material.h:39
+  '.repl', // scene_replication_config.h:39
+  '.sample', // audio_stream_wav.h:97
+  '.shape', // shape_3d.h:41
+  '.stylebox', // style_box.h:40
+  '.tex', // image_texture.h:39
+  '.theme', // theme.h:40
+  '.translation', // translation.h:41
+] as const;
+
 /** The format version Godot 4.6 writes (`.cpp:98`). */
 export const BINARY_FORMAT_VERSION = 6;
 

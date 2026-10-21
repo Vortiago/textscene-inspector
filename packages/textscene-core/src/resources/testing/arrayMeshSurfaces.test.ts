@@ -10,6 +10,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { repoPath, walkSources } from '../../r3f/testing/sourceScan';
 import { repoRoot } from '../../parser/testing/parserKit';
+import { parseBinaryResource } from '../formats/binaryresource/parse';
 import { headlightsSurface, truncatedSurface, wallQuadSurface, wallQuadSurfaces } from './arrayMeshSurfaces';
 
 const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -80,21 +81,25 @@ describe('ArrayMesh surface bytes have one source', () => {
 });
 
 describe('the shared surfaces match the Godot files they come from', () => {
-  const read = (path: string) => readFileSync(resolve(repoRoot(), path), 'utf8');
+  /** The `_surfaces` text of a binary mesh in the demo corpus. */
+  const surfacesOf = async (path: string) => {
+    const bytes = new Uint8Array(readFileSync(resolve(repoRoot(), path))).buffer;
+    return (await parseBinaryResource(bytes)).properties._surfaces;
+  };
 
-  it('matches the surface wall.tres writes', () => {
-    const surface = wallQuadSurface({ material: 'ExtResource("1_a5mma")', name: 'tile_material' });
+  it('matches the surface wall.res holds', async () => {
+    const surface = wallQuadSurface({ material: 'ExtResource("1")', name: 'tile_material' });
 
-    expect(read('scenes/demos/3d/platformer/stage/meshes/wall.tres')).toContain(surface);
+    expect(await surfacesOf('scenes/demos/3d/platformer/stage/meshes/wall.res')).toContain(surface);
   });
 
-  it('matches the headlights surface truck_cab.tres writes', () => {
+  it('matches the headlights surface truck_cab.res holds', async () => {
     const surface = headlightsSurface({
       material: 'SubResource("StandardMaterial3D_7b7ut")',
       name: 'headlights',
     });
 
-    expect(read('scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.tres')).toContain(surface);
+    expect(await surfacesOf('scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.res')).toContain(surface);
   });
 });
 

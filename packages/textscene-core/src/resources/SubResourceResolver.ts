@@ -9,6 +9,7 @@ import { resourceRef } from '../godot/variant/resourceRef.js';
 import { simplifyResPath } from '../godot/string/string.js';
 import { GODOT_SHADER_EXTENSION } from '../godot/project/resourceFormats.js';
 import { resourceSliceRegistry } from './sliceRegistration.js';
+import { fileExtension } from './fileExtension.js';
 
 /** One resource table's ids, and how many of its leading entries they cover. */
 interface IdIndex<T> {
@@ -97,9 +98,9 @@ export function resolveExtResourcePath(
 }
 
 /**
- * The file an external reference loads as a ParsedResource: a `.tres`, a `.gdshader`, or a binary
- * file a slice routes to the `resource` bus, such as a `.lmbake`. Null for any other reference,
- * such as a `.res`: no slice routes it to that bus, so a request for one would wait forever.
+ * The file an external reference loads as a ParsedResource: a resource file or a `.gdshader`.
+ * Null for any other reference, such as an image: no slice routes it to the `resource` bus, so a
+ * request for one would wait forever.
  */
 export function parsedResourcePath(
   ref: string | null | undefined,
@@ -107,11 +108,15 @@ export function parsedResourcePath(
 ): string | null {
   const path = resolveExtResourcePath(ref, externalResources);
   if (!path) return null;
-  const isParsed =
-    path.endsWith('.tres') ||
-    path.endsWith(GODOT_SHADER_EXTENSION) ||
-    resourceSliceRegistry.busTypeOfPath(path) === 'resource';
-  return isParsed ? path : null;
+  return isResourceFilePath(path) || path.endsWith(GODOT_SHADER_EXTENSION) ? path : null;
+}
+
+/**
+ * Whether `path` names a resource file, which records its own type: a `.tres`, or a binary file a
+ * slice routes to the `resource` bus, such as a `.res`.
+ */
+export function isResourceFilePath(path: string): boolean {
+  return fileExtension(path) === '.tres' || resourceSliceRegistry.busTypeOfPath(path) === 'resource';
 }
 
 /** Find a SubResource by id. The first resource in declaration order with that id wins. */
@@ -179,11 +184,11 @@ export function unwrapCanvasTextureRef(
 }
 
 /**
- * The text-resource (`.tres`, `.res`) path an `ExtResource` reference names, which
- * the caller parses on the `resource` bus to learn what it holds. Null for any other
- * form: the texture buses never decode text.
+ * The resource file an `ExtResource` reference names, which the caller parses on the
+ * `resource` bus to learn what it holds. Null for any other form: the texture buses
+ * decode no resource file.
  */
-export function resolveExtTextResourcePath(
+export function resolveExtParsedResourcePath(
   ref: string | null | undefined,
   externalResources: readonly TscnExternalResource[]
 ): string | null {
@@ -194,12 +199,7 @@ export function resolveExtTextResourcePath(
   // The `[ext_resource]` `type=` cannot gate this: Godot writes it from the property
   // slot, so an AtlasTexture in a `texture` slot is recorded `type="Texture2D"`.
   // It lives here, not in the atlastexture slice, which imports this module.
-  return isTextResourcePath(resource.path) ? resource.path : null;
-}
-
-/** A Godot text-resource file, which carries its own `[gd_resource type=]` header. */
-function isTextResourcePath(path: string): boolean {
-  return /\.(tres|res)$/i.test(path);
+  return isResourceFilePath(resource.path) ? resource.path : null;
 }
 
 /**
@@ -217,7 +217,7 @@ export function resolveTexture2DPath(
   // An AtlasTexture, inline or `.tres`, resolves to null, not its sheet: this answer
   // also sizes a Control's slot, and an atlas is the size of its region.
   // `inlineTexture2DSize` and `extResourceTexture2DSize` answer that size.
-  if (resolveExtTextResourcePath(unwrapped, externalResources)) return null;
+  if (resolveExtParsedResourcePath(unwrapped, externalResources)) return null;
   return resolveExtResourcePath(unwrapped, externalResources);
 }
 

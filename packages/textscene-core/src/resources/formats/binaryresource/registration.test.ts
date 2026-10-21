@@ -24,8 +24,25 @@ describe('binaryresource slice registration', () => {
     expect(resourceSliceRegistry.busTypeOfPath('res://bakes/scene.lmbake')).toBe('resource');
   });
 
+  it("claims Godot's binary resource extension for the generic resource bus slot", () => {
+    expect(resourceSliceRegistry.byExtension('.res')?.slice).toBe('binaryresource');
+    expect(resourceSliceRegistry.busTypeOfPath('res://meshes/crate.RES')).toBe('resource');
+  });
+
+  it('fetches a .res as bytes, whatever type it holds', () => {
+    expect(isBinaryResourceType('ArrayMesh', 'res://meshes/crate.res')).toBe(true);
+  });
+
+  it("claims each class's own binary extension, such as a mesh or a material", () => {
+    expect(resourceSliceRegistry.busTypeOfPath('res://models/cube.mesh')).toBe('resource');
+    expect(resourceSliceRegistry.busTypeOfPath('res://materials/paint.material')).toBe('resource');
+  });
+
+  it('leaves a binary .scn scene unclaimed, as it loads as a scene, not a resource', () => {
+    expect(resourceSliceRegistry.busTypeOfPath('res://stage/grid_map.scn')).not.toBe('resource');
+  });
+
   it('routes a path whose extension no slice claims nowhere (edge case)', () => {
-    expect(resourceSliceRegistry.busTypeOfPath('res://scene.res')).toBeNull();
     expect(resourceSliceRegistry.busTypeOfPath('res://no_extension')).toBeNull();
   });
 

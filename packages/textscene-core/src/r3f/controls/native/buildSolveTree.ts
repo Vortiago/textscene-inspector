@@ -23,7 +23,7 @@ import {
   findExtResource,
   findSubResource,
   parseResourceReference,
-  resolveExtTextResourcePath,
+  resolveExtParsedResourcePath,
   resolveInstancePath,
   resolveTexture2DPath,
   parsedResourcePath,
@@ -453,7 +453,7 @@ function buildForest(
     // A texture in its own `.tres` loads on the resource bus, not the texture
     // one: the file is text, not pixels.
     const unwrapped = unwrapCanvasTextureRef(ref, int);
-    const tresPath = resolveExtTextResourcePath(unwrapped, ext);
+    const tresPath = resolveExtParsedResourcePath(unwrapped, ext);
     if (tresPath) {
       const cachedTres = resourceCache.getCached(tresPath);
       if (cachedTres === undefined) {

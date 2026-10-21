@@ -6,11 +6,13 @@ import type { TscnExternalResource, TscnInternalResource } from '../parser/types
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader, type FakeResourceLoader } from './testing/createFakeResourceLoader';
 import { useResourceResolution, useSubOrExtResource } from './useSubOrExtResource';
+import './formats/binaryresource/index';
 
 const INLINE: TscnInternalResource = { id: 'mm', type: 'MultiMesh', data: { instance_count: '2' } };
 const SCENE_EXT: TscnExternalResource[] = [
   { id: '1', type: 'MultiMesh', path: 'res://grass.tres' },
   { id: '2', type: 'MultiMesh', path: 'res://grass.res' },
+  { id: '3', type: 'MultiMesh', path: 'res://grass.png' },
 ];
 const SCENE = { internalResources: [INLINE], externalResources: SCENE_EXT };
 const TRES = parseTresFile(`[gd_resource type="MultiMesh" load_steps=2 format=3]
@@ -56,8 +58,11 @@ describe('useSubOrExtResource', () => {
     expect(renderScoped('ExtResource("1")').current).toBeNull();
   });
 
-  it('is null for a binary .res, which no processor reads', () => {
-    expect(renderScoped('ExtResource("2")').current).toBeNull();
+  it('scopes a loaded binary .res to the file’s own pools', () => {
+    const fake = createFakeResourceLoader();
+    // The binary reader parses a `.res` to the ParsedResource a `.tres` gives.
+    fake.resources.seed('res://grass.res', TRES);
+    expect(renderScoped('ExtResource("2")', fake).current?.resource).toMatchObject({ type: 'MultiMesh' });
   });
 
   it('is null for no reference', () => {
@@ -80,8 +85,8 @@ describe('useResourceResolution', () => {
     });
   });
 
-  it('is unavailable for a binary .res, never pending', () => {
-    expect(renderResolution('ExtResource("2")').current).toEqual({
+  it('is unavailable for a path no resource file has, never pending', () => {
+    expect(renderResolution('ExtResource("3")').current).toEqual({
       scoped: null,
       status: 'unavailable',
       resourcePath: null,

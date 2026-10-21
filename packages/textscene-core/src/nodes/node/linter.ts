@@ -1,7 +1,7 @@
 /**
  * Node-universal semantic rule (no applicableNodeTypes, so it runs for every node): a reference to
- * a binary Godot resource (`.scn`, `.res`) is marked "not previewable", since the previewer loads
- * only text formats (`.tscn`, `.tres`) and the content degrades to a missing-resource placeholder.
+ * a binary Godot scene is marked "not previewable", since the previewer loads only text scenes
+ * (`.tscn`) and the content degrades to a missing-resource placeholder. It reads any other `.res`.
  */
 
 import type { LintRule, Diagnostic, RuleContext } from '../../linter/types.js';
@@ -9,17 +9,27 @@ import { ruleRegistry } from '../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../linter/ruleArms.js';
 import { resourceRef } from '../../godot/variant/resourceRef.js';
 import { findExtResource } from '../../resources/SubResourceResolver.js';
+import type { TscnExternalResource } from '../../parser/types.js';
 
-const BINARY_RESOURCE_RE = /\.(scn|res)$/i;
+/**
+ * Godot saves a PackedScene as a `.scn`, or as a `.res` on request
+ * (`resource_format_binary.cpp:2541-2545`).
+ */
+const BINARY_SCENE_RE = /\.scn$/i;
+const BINARY_RESOURCE_RE = /\.res$/i;
 
 /** One arm, so the rule reports `<unknown>` for a heading with no type, as every other rule does. */
 const arms = {
   binaryReference: groundedArm('binary-resource-reference', {
     kind: 'no-engine-counterpart',
     scope: 'previewer-limitation',
-    because: 'this previewer decodes only text .tscn/.tres, never a binary .scn/.res payload',
+    because: 'this previewer decodes only a text .tscn scene, never a binary .scn or .res one',
   }),
 } as const satisfies RuleArms<string>;
+
+function isBinaryScene({ path, type }: TscnExternalResource): boolean {
+  return BINARY_SCENE_RE.test(path) || (type === 'PackedScene' && BINARY_RESOURCE_RE.test(path));
+}
 
 function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -30,8 +40,8 @@ function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
       diagnostics,
       arms.binaryReference,
       node,
-      `'${property}' references a binary Godot resource (${path}) — ` +
-        `the previewer only loads text resources (.tscn/.tres), so this content shows as missing.`
+      `'${property}' references a binary Godot scene (${path}): ` +
+        `the previewer only loads text scenes (.tscn), so this content shows as missing.`
     );
   };
 
@@ -39,7 +49,7 @@ function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
     const parsed = resourceRef(ref);
     if (parsed?.kind !== 'ExtResource') return null;
     const ext = findExtResource(scene.externalResources, parsed.id);
-    return ext && BINARY_RESOURCE_RE.test(ext.path) ? ext.path : null;
+    return ext && isBinaryScene(ext) ? ext.path : null;
   };
 
   if (node.instance) {
@@ -57,7 +67,7 @@ function checkBinaryResourceReferences(context: RuleContext): Diagnostic[] {
 const binaryResourceRule: LintRule = {
   meta: {
     name: 'binary-resource-reference',
-    description: 'Flags references to binary Godot resources (.scn/.res) the previewer cannot load',
+    description: 'Flags references to binary Godot scenes (.scn, .res) the previewer cannot load',
     category: 'validation',
     emits: armEmits(arms),
   },

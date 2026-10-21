@@ -24,10 +24,10 @@ import {
 import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
 import { imageRefSize } from './textures/image/decode.js';
 import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
-import { textResourceTexture } from './textures/textResourceTexture.js';
+import { parsedResourceTexture } from './textures/parsedResourceTexture.js';
 import { useProceduralTexture, useProceduralTexturePins } from './useProceduralTexture.js';
 import { useResource } from './useResource.js';
-import { useTextResourceSlot } from './useTextResourceSlot.js';
+import { useParsedResourceSlot } from './useParsedResourceSlot.js';
 
 export interface Texture2DResult {
   /** The resolved texture, or null while loading / when there is nothing to show. */
@@ -107,7 +107,7 @@ function useTexture2DSlot(
   // Wrappers peel before the atlas lookup: a CanvasTexture may wrap an AtlasTexture, and the raw
   // ref loses the window. A `.tres` may hold either, so its `[resource]` peels again.
   const unwrapped = useMemo(() => unwrapCanvasTextureRef(ref, internalResources), [ref, internalResources]);
-  const slot = useTextResourceSlot(unwrapped, externalResources, internalResources);
+  const slot = useParsedResourceSlot(unwrapped, externalResources, internalResources);
   const slotRef = useMemo(
     () => unwrapCanvasTextureRef(slot.ref, slot.internalResources),
     [slot.ref, slot.internalResources]
@@ -216,6 +216,6 @@ const DECLARED_SIZES: Readonly<
  * cache instead of hooks. Null for a `.tres` that holds no texture the scene could state inline.
  */
 export function extResourceTexture2DSize(tres: ParsedResource): Texture2DSize | null {
-  const saved = textResourceTexture(tres);
+  const saved = parsedResourceTexture(tres);
   return inlineTexture2DSize(saved.ref, saved.internalResources);
 }
