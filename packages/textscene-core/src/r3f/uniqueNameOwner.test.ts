@@ -331,3 +331,35 @@ unique_name_in_owner = false
     expect(ownerClaims(owner).has('%Panel')).toBe(false);
   });
 });
+
+describe('a node its file seats through an instanced %Name', () => {
+  // `parent="HudInstance/%Panel"` reads the instance's own table (node.cpp:1930-1933), so Hat
+  // renders under the sub-scene's Panel, which its own file cannot spell.
+  const through = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Hat" type="Node2D" parent="HudInstance/%Panel"]
+unique_name_in_owner = true
+
+[node name="Brim" type="Node2D" parent="HudInstance/%Panel/Hat"]
+unique_name_in_owner = true
+`);
+  const throughCtx: LiveTreeContext = { ...ctx, externalResources: through.externalResources };
+  const ownerAt = (path: string) => claimOwnerOf(path, through.nodes, throughCtx);
+
+  it('spells its claim at the composed path it renders at', () => {
+    expect(ownerClaims(ownerAt('Root')).get('%Hat')?.livePath).toBe('Root/HudInstance/Panel/Hat');
+  });
+
+  it('spells a claim below it at the composed path too', () => {
+    expect(ownerClaims(ownerAt('Root')).get('%Brim')?.livePath).toBe('Root/HudInstance/Panel/Hat/Brim');
+  });
+
+  it('is owned by the file that wrote it, not the instance it renders inside', () => {
+    expect(ownerAt('Root/HudInstance/Panel/Hat').path).toBe('Root');
+  });
+});

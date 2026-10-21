@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import { useResourceLoader } from '../resources/useResource.js';
-import { cachedUniqueNameClaims, uniqueNameLivePaths } from '../utils/uniqueNames.js';
+import { uniqueNameLivePaths } from '../utils/uniqueNames.js';
 import type { UniqueNameClaim } from '../parser/nodeOwner.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
@@ -50,9 +50,9 @@ function useUniqueNameClaims(path?: string | null): ReadonlyMap<string, UniqueNa
   const live = useLiveTree(path);
   return useMemo(() => {
     if (!live) return undefined;
-    // Without a path, the outer root's table, one shared object per tree.
-    if (!path) return cachedUniqueNameClaims(live.roots);
-    return ownerClaims(claimOwnerOf(path, live.roots, live.ctx));
+    // Without a path, the outer root's table, one shared object per tree unless a claim's live
+    // path passes through a `%Name`.
+    return ownerClaims(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx));
   }, [live, path]);
 }
 
