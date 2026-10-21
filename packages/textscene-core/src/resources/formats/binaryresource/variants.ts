@@ -40,7 +40,7 @@ export function tableString(reader: ByteReader, tables: VariantTables): string {
 }
 
 /** The next variant as Godot's text format spells it. */
-export function variantText(reader: ByteReader, tables: VariantTables): string {
+function variantText(reader: ByteReader, tables: VariantTables): string {
   return taggedVariantText(reader.u32() as Tag, reader, tables);
 }
 
