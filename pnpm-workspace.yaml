@@ -19,7 +19,7 @@ catalog:
   '@vscode/test-web': ^0.0.81
   '@vitest/ui': ^5.0.3
   '@types/node': ^26.6.4
-  vite: ^8.3.1
+  vite: ^8.3.3
   esbuild: ^0.28.2
   happy-dom: ^21.0.1
   jsdom: ^30
