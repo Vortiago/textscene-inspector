@@ -165,6 +165,26 @@ describe('parseBinaryResource on each header and table form', () => {
     expect((await parseBinaryResource(file)).properties.mesh).toBe('SubResource("2")');
   });
 
+  it('writes the string keys of a dictionary in the order Godot writes them, not the file order', async () => {
+    const stringKey = (key: string) => new ByteWriter().u32(VariantTag.String).unicodeString(key).bytes();
+    const int = (value: number) => new ByteWriter().u32(VariantTag.Int).u32(value).bytes();
+    const variant = new ByteWriter()
+      .u32(VariantTag.Dictionary)
+      .u32(2)
+      .raw(stringKey('vertex_count'))
+      .raw(int(24))
+      .raw(stringKey('format'))
+      .raw(int(7))
+      .bytes();
+    const file = binaryResourceBytes({
+      strings: ['surface'],
+      resources: [{ id: 'Main', type: 'Resource', properties: [{ name: 'surface', variant }] }],
+    });
+    expect((await parseBinaryResource(file)).properties.surface).toBe(
+      '{\n"format": 7,\n"vertex_count": 24\n}'
+    );
+  });
+
   it('refuses a format version newer than Godot 4.6 reads (error case)', async () => {
     const file = withPosition(vector3(false, false), { formatVersion: 7 });
     await expect(parseBinaryResource(file)).rejects.toThrow(
