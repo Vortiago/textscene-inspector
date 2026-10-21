@@ -6,6 +6,7 @@
  * changes. It imports no `node:` module: a host's adapter fills {@link ResRootsPort}.
  */
 
+import { isScannedDirectoryName } from '../godot/project/editorScan.js';
 import type { ResourceProvider } from './ResourceProvider.js';
 import { listScannedFiles, type DirectoryEntry, type DirectoryReader } from './projectListing.js';
 import {
@@ -94,11 +95,12 @@ function directoryReader(port: ResRootsPort, root: string): DirectoryReader {
   const readRealPaths = new Set<string>();
   return async (resDirectory) => {
     const resolved = resolveResPath(root, resDirectory);
+    if (resolved === null) return [];
     // `res://` itself resolves to the root with a trailing slash, which a port's directory has none.
-    const directory = resolved === null ? null : forwardSlashes(resolved);
-    const real = directory === null ? null : await port.realPath(directory);
+    const directory = forwardSlashes(resolved);
+    const real = await port.realPath(directory);
     // The scan skips a directory it cannot enter (`editor_file_system.cpp:1201-1202`).
-    if (directory === null || real === null || readRealPaths.has(real)) return [];
+    if (real === null || readRealPaths.has(real)) return [];
     readRealPaths.add(real);
     return port.list(directory);
   };
@@ -181,11 +183,7 @@ class PortResRoots implements ResRoots {
     this.dropWithin(this.hasProjectFileByDir, affected);
     this.dropWithin(this.rootBySpelling, affected);
     for (const { root, forgetListings } of this.rootByRealPath.values()) {
-      // Either way round: a file under the root edits its listing, and a removed directory above it empties it.
-      const { pathCase } = this.port;
-      if (isWithinRoot(root.path, changedPath, pathCase) || isWithinRoot(changedPath, root.path, pathCase)) {
-        forgetListings();
-      }
+      if (this.changesListing(root.path, changedPath)) forgetListings();
     }
   }
 
@@ -207,6 +205,17 @@ class PortResRoots implements ResRoots {
       return memo(this.rootByRealPath, realPath, () => createRoot(this.port, dir));
     });
     return entry.root;
+  }
+
+  /** Whether a change at `changedPath` can edit the listing of the root at `rootDir`. */
+  private changesListing(rootDir: string, changedPath: string): boolean {
+    const { pathCase } = this.port;
+    // A removed directory above the root empties it.
+    if (isWithinRoot(changedPath, rootDir, pathCase)) return true;
+    if (!isWithinRoot(rootDir, changedPath, pathCase)) return false;
+    // The scan never enters a dot-named directory, so a change under `.git` or `.godot` edits no listing.
+    const relative = forwardSlashes(changedPath).slice(forwardSlashes(rootDir).length).replace(/^\//, '');
+    return relative.split('/').slice(0, -1).every(isScannedDirectoryName);
   }
 
   /** Deletes each answer of `answers`, keyed by a directory, that lies at or under `directory`. */

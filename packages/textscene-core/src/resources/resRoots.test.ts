@@ -354,6 +354,30 @@ describe('invalidate', () => {
     expect(await rootB.listPaths()).not.toContain('res://late.png');
   });
 
+  it('keeps the listing of a root when a file changes under a dot-named directory, which the scan never enters', async () => {
+    const files = memoryFiles('/work/game/project.godot');
+    const roots = createResRoots(memoryPort(files), null);
+    const root = (await roots.rootOf('/work/game/s.tscn'))!;
+    const listed = await root.listPaths();
+    files.set('/work/game/.git/objects/late', '');
+
+    roots.invalidate('/work/game/.git/objects/late');
+
+    expect(await root.listPaths()).toBe(listed);
+  });
+
+  it('drops the listing when a .gdignore appears, though its own name starts with a dot', async () => {
+    const files = memoryFiles('/work/game/project.godot', '/work/game/art/a.png');
+    const roots = createResRoots(memoryPort(files), null);
+    const root = (await roots.rootOf('/work/game/s.tscn'))!;
+    expect(await root.listPaths()).toContain('res://art/a.png');
+    files.set('/work/game/art/.gdignore', '');
+
+    roots.invalidate('/work/game/art/.gdignore');
+
+    expect(await root.listPaths()).not.toContain('res://art/a.png');
+  });
+
   it('leaves out a nested project once its project.godot appears', async () => {
     const files = memoryFiles('/work/game/project.godot', '/work/game/vendor/other/nested.tscn');
     const roots = createResRoots(memoryPort(files), null);
