@@ -12,7 +12,13 @@ import { TscnParser } from '../parser/TscnParser';
 import { extResourcePathOf } from '../resources/testing/extResourcePathOf';
 import { findSubResource } from '../resources/SubResourceResolver';
 import { resourceRef } from '../godot/variant/resourceRef';
-import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree';
+import {
+  liveChildGroups,
+  liveNodeScope,
+  rootScope,
+  walkLivePath,
+  type LiveTreeContext,
+} from './liveSceneTree';
 import type { SceneScope } from '../parser/types';
 import { scopeOf, type LiveNode } from '../resources/liveNode';
 
@@ -32,20 +38,12 @@ const ctx: LiveTreeContext = {
   },
 };
 
-/** The collapsed live node at `path` and the scope its own refs resolve against, by the walk `liveChildGroups` makes. */
+/** The collapsed live node at `path` and the scope its own refs resolve against. */
 function liveNodeAt(path: string): { node: LiveNode; scope: SceneScope } {
-  let groups: readonly LiveChildGroup[] = [
-    { origin: 'inline', children: opponent.nodes, scope: rootScope(ctx) },
-  ];
-  let found: { node: LiveNode; scope: SceneScope } | undefined;
-  for (const segment of path.split('/')) {
-    const group = groups.find((g) => g.children.some((n) => n.name === segment))!;
-    const node = group.children.find((n) => n.name === segment)!;
-    groups = liveChildGroups(node, group.scope, ctx.sceneCache);
-    const collapsed = groups[0]?.mergedNode ?? node;
-    found = { node: collapsed, scope: scopeOf(collapsed, group.scope) };
-  }
-  return found!;
+  const { links, isResolved } = walkLivePath(path, opponent.nodes, ctx);
+  expect(isResolved).toBe(true);
+  const { raw, collapsed, group, groups } = links[links.length - 1]!;
+  return { node: collapsed, scope: liveNodeScope(raw, group.scope, groups) };
 }
 
 /** The path the raw `key` of the live node at `path` resolves to. */

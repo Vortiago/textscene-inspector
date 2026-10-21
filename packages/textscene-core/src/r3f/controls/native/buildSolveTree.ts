@@ -53,7 +53,7 @@ import {
 import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
-import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
+import { liveChildGroups, liveNodeScope, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
 import { scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
@@ -622,7 +622,7 @@ function buildForest(
       const mergedGroup = groups.find((g) => g.origin === 'merged');
       const collapsed = mergedGroup?.mergedNode ?? node;
 
-      const ownScope = mergedGroup ? mergedGroup.scope : authored;
+      const ownScope = liveNodeScope(node, scope, groups);
 
       const isControl = TWO_D_UI_TYPES.has(collapsed.type);
 
