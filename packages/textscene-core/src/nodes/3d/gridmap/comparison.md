@@ -1,7 +1,7 @@
 ---
 type: GridMap
 category: 3D
-status: limitation
+status: done
 fixture: unit-grid-map.tscn
 image: unit-grid-map
 renders_as: a THREE.InstancedMesh per MeshLibrary item surface, or a mesh per cell when that surface's material billboards
