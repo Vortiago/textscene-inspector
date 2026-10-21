@@ -9,6 +9,7 @@ import type * as THREE from 'three';
 import { extend } from '@react-three/fiber';
 import { fogVolumeSize } from '../../../godot/rendering/environment/fogVolume';
 import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
+import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { literalText, stringToInt } from '../../../godot/string/string';
 import * as logger from '../../../logger';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
@@ -45,21 +46,22 @@ interface FogShaderVerdict {
 
 /**
  * Whether the material `scoped` holds is a ShaderMaterial whose shader Godot runs as a fog shader.
- * A shader that has not loaded counts as one until its code arrives.
+ * A shader still loading counts as one until its code arrives. A null, missing or unreadable shader
+ * leaves the material data invalid, which Godot fills with its default fog (`fog.cpp:674-684`).
  */
 function useFogShaderVerdict(scoped: ScopedResource | null): FogShaderVerdict {
   const material = scoped?.resource ?? null;
   const shaderRef = material?.type === 'ShaderMaterial' ? material.data['shader'] : undefined;
   const shader = useResourceResolution(shaderRef, scoped?.resources ?? NO_RESOURCES);
   const mode = useMemo(() => shaderModeOfResource(shader.scoped?.resource ?? null), [shader.scoped]);
-  const isFogShader = Boolean(shaderRef) && (mode === null || mode === ShaderMode.FOG);
+  const isFogShader = holdsResource(shaderRef) && (shader.status === 'pending' || mode === ShaderMode.FOG);
   const isSettled = shader.status !== 'pending';
   return useMemo(() => ({ isFogShader, isSettled }), [isFogShader, isSettled]);
 }
 
 /**
  * What fills a volume with this material. Godot runs the default fog shader for anything but a
- * FogMaterial or a valid fog shader (`environment/fog.cpp:672-683`). The previewer runs no fog
+ * FogMaterial or a valid fog shader (`environment/fog.cpp:674-684`). The previewer runs no fog
  * shader, so a volume with one adds no fog.
  */
 function fillOf(material: TscnInternalResource | null, isFogShader: boolean): FogVolumeFill {

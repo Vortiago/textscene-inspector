@@ -3,6 +3,7 @@
  */
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
+import type { IdHeading } from '../godot/scene/packedScene.js';
 
 /**
  * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
@@ -37,6 +38,8 @@ export interface NodeOrigin<N extends RawNode> {
 export interface IdRecovery {
   readonly kind: 'lands' | 'inBase';
   readonly via: NodeOrigin<RawNode>;
+  /** The root-relative path `via` is seated at, or undefined for a nameless heading, which claims none. */
+  readonly viaPath: string | undefined;
 }
 
 /** A parsed scene. `N` is the node the parser built: a `TscnNode`, or the strict parser's `RawNode`. */
@@ -133,10 +136,13 @@ export interface ConnectionHeading {
    * through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`), so an `ExtResource` in it is a use.
    */
   binds: string | undefined;
-  /** The heading carries `from_uid_path`, which Godot walks when `from` resolves nowhere (`packed_scene.cpp:162-163`). */
-  hasFromUidPath: boolean;
-  /** The heading carries `to_uid_path`. */
-  hasToUidPath: boolean;
+  /**
+   * The ids of `from_uid_path=`, the trail Godot follows when `from` resolves nowhere (`packed_scene.cpp:162-163`).
+   * Undefined where the heading has none, or where the value is not a `PackedInt32Array`.
+   */
+  fromIdTrail: readonly number[] | undefined;
+  /** The ids of `to_uid_path=`, read as {@link ConnectionHeading.fromIdTrail} is. */
+  toIdTrail: readonly number[] | undefined;
 }
 
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
@@ -171,6 +177,8 @@ export interface HeadingFacts {
    * An orphan absent here is re-rooted, or has no trail.
    */
   idRecoveries: ReadonlyMap<NodeOrigin<RawNode>, IdRecovery>;
+  /** Every `[node]` heading in file order, as an id trail reads it (`packed_scene.cpp:1947-2005`). */
+  idHeadings: readonly IdHeading[];
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
   /**

@@ -19,12 +19,12 @@ import {
   shapeButtonLabel,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import { type Rgba } from '../../../../godot/math/math';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
-  type Rgba,
-} from '../../../../godot/math/math';
+} from '../../../../godot/math/alignment';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,

@@ -1,6 +1,5 @@
 /**
- * The interpolated 8-bit channel of BC3 alpha, BC4 and BC5, and the swizzle that RGTC and
- * DXT5_RA_AS_RG share.
+ * The interpolated 8-bit channel of BC3 alpha, BC4 and BC5.
  *
  * Ported from bcdec (`thirdparty/misc/bcdec.h` in Godot), used under the MIT licence:
  *
@@ -64,12 +63,4 @@ function writeChannelPalette(first: number, second: number): void {
 
 function readUint24(bytes: Uint8Array, offset: number): number {
   return bytes[offset]! | (bytes[offset + 1]! << 8) | (bytes[offset + 2]! << 16);
-}
-
-/** The swizzle `rg01` of RGTC and DXT5_RA_AS_RG: blue reads 0 and alpha 1. */
-export function swizzleRg01(texels: Uint8Array): void {
-  for (let at = 0; at < texels.length; at += 4) {
-    texels[at + 2] = 0;
-    texels[at + 3] = 255;
-  }
 }

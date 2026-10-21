@@ -4,10 +4,8 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { loadCoreLinter, loadCoreParser } from '../compare-docs/loadCoreLinter.mjs';
-
-const CATALOG = join(import.meta.dirname, '../compare-docs/node-catalog.json');
+import { CATALOG_OUT } from '../compare-docs/build-node-catalog/paths.mjs';
 
 /**
  * Types this repo implements that the 4.6.3 ClassDB never lists, so they are not
@@ -16,7 +14,7 @@ const CATALOG = join(import.meta.dirname, '../compare-docs/node-catalog.json');
 const NOT_IN_CLASSDB = new Set(['AreaLight3D']);
 
 export async function collectCoverage() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const catalog = JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
   const { nodeRegistry } = await loadCoreParser();
   const { validatorRegistry, registeredTypes } = await loadCoreLinter();
 

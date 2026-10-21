@@ -80,6 +80,9 @@ const RESOURCES = [
   shaderMaterial('ShaderMaterial_tres', 'ExtResource("3_shader")'),
   shaderMaterial('ShaderMaterial_spatial_file', 'ExtResource("4_shader")'),
   shaderMaterial('ShaderMaterial_unloaded', 'ExtResource("5_shader")'),
+  shaderMaterial('ShaderMaterial_unreadable', 'ExtResource("6_shader")'),
+  shaderMaterial('ShaderMaterial_null', 'null'),
+  shaderMaterial('ShaderMaterial_missing', 'SubResource("Missing")'),
   EMPTY_SHADER,
   shaderMaterial('ShaderMaterial_empty', 'SubResource("Shader_empty")'),
   FOG_VISUAL_SHADER,
@@ -91,12 +94,14 @@ const IMAGE_PATH = 'res://fog/density.png';
 const SPATIAL_SHADER_PATH = 'res://fog/spatial.tres';
 const FOG_SHADER_FILE_PATH = 'res://fog/wisps.gdshader';
 const SPATIAL_SHADER_FILE_PATH = 'res://fog/spatial.gdshader';
+const UNREADABLE_SHADER_PATH = 'res://fog/unreadable.gdshader';
 const EXTERNAL_RESOURCES: TscnExternalResource[] = [
   { id: '1_density', type: 'CompressedTexture3D', path: IMAGE_PATH },
   { id: '2_shader', type: 'Shader', path: FOG_SHADER_FILE_PATH },
   { id: '3_shader', type: 'Shader', path: SPATIAL_SHADER_PATH },
   { id: '4_shader', type: 'Shader', path: SPATIAL_SHADER_FILE_PATH },
   { id: '5_shader', type: 'Shader', path: 'res://fog/unloaded.gdshader' },
+  { id: '6_shader', type: 'Shader', path: UNREADABLE_SHADER_PATH },
 ];
 /** The imported 3D texture the loader holds for `IMAGE_PATH`. */
 const IMPORTED = new THREE.Data3DTexture(new Uint8Array(32), 2, 2, 2);
@@ -126,6 +131,7 @@ async function mountedVolume(
   });
   fake.resources.seed(FOG_SHADER_FILE_PATH, parseShaderFile('shader_type fog;\nvoid fog() {}\n'));
   fake.resources.seed(SPATIAL_SHADER_FILE_PATH, parseShaderFile('shader_type spatial;\n'));
+  fake.resources.seed(UNREADABLE_SHADER_PATH, null);
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={resources} externalResources={EXTERNAL_RESOURCES}>
@@ -199,6 +205,21 @@ describe('<FogVolume>', () => {
   it('marks a ShaderMaterial whose shader has not loaded as a fog shader (edge case)', async () => {
     const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_unloaded")' });
     expect(volume.fill).toEqual({ kind: 'shader' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose shader does not load with Godot's default fog (error case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_unreadable")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose shader is null with Godot's default fog (edge case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_null")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
+  });
+
+  it("fills a volume with a ShaderMaterial whose shader is missing with Godot's default fog (error case)", async () => {
+    const volume = await mountedVolume({ material: 'SubResource("ShaderMaterial_missing")' });
+    expect(volume.fill).toEqual({ kind: 'default' });
   });
 
   it("fills a volume with a ShaderMaterial without a shader with Godot's default fog (edge case)", async () => {

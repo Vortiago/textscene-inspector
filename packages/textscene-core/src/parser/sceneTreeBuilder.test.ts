@@ -583,3 +583,31 @@ describe('buildSceneTree', () => {
     });
   });
 });
+
+describe('the paths of a built tree', () => {
+  it('keys each seated node by its root-relative path, the root at the empty path', () => {
+    const tree = buildSceneTree(originsOf([node('Root'), node('Body', './'), node('Arm', './Body')]));
+    expect([...tree.byPath.keys()]).toEqual(['', 'Body', 'Body/Arm']);
+  });
+
+  it('keeps the later of two siblings sharing a name at their path, and a path for both', () => {
+    const [root, first, second] = [node('Root'), node('A', '.'), node('A', '.')];
+    const tree = buildSceneTree(originsOf([root, first, second]));
+    const [firstSeat, secondSeat] = [tree.seated.get(first)!, tree.seated.get(second)!];
+    expect([tree.byPath.get('A'), tree.pathOf.get(firstSeat), tree.pathOf.get(secondSeat)]).toEqual([
+      secondSeat,
+      'A',
+      'A',
+    ]);
+  });
+
+  it('keys a re-rooted node by its rename', () => {
+    const lost = node('Lost', 'Gone');
+    const tree = buildSceneTree(originsOf([node('Root'), lost]));
+    expect(tree.pathOf.get(tree.seated.get(lost)!)).toBe('Gone#Lost');
+  });
+
+  it('seats nothing for a file with no node', () => {
+    expect(buildSceneTree([]).byPath.size).toBe(0);
+  });
+});

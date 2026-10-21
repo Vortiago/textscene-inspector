@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { buildCsgTorusGeometry } from './torusGeometry';
+import { TAU } from '../../../../godot/math/math.js';
 
 const DEFAULTS = {
   innerRadius: 0.5,
@@ -46,7 +47,7 @@ describe('buildCsgTorusGeometry', () => {
       // tube * sin(72 degrees), not tube. Asserting the round number here would be
       // asserting a smooth tube Godot never builds.
       const b = box(build({ innerRadius: 0.25, outerRadius: 0.4, sides: 32, ringSides: 5 }));
-      expect(b.max.y).toBeCloseTo(0.075 * Math.sin((2 * Math.PI) / 5), 6);
+      expect(b.max.y).toBeCloseTo(0.075 * Math.sin(TAU / 5), 6);
     });
 
     it('leaves a hole of the inner radius through the middle', () => {

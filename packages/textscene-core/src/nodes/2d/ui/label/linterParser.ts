@@ -19,7 +19,7 @@ import {
   TEXT_DIRECTION_NAMES,
   VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT_NAMES, VERTICAL_ALIGNMENT_NAMES } from '../../../../godot/math/math.js';
+import { HORIZONTAL_ALIGNMENT_NAMES, VERTICAL_ALIGNMENT_NAMES } from '../../../../godot/math/alignment.js';
 
 /**
  * label.cpp:1258-1275: `set_ellipsis_char` truncates a longer literal with

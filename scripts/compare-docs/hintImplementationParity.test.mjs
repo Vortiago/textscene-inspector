@@ -10,9 +10,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter, loadDegToRad, loadRadianEpsilon } from './loadCoreLinter.mjs';
+import { PROPS_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
 
-const PROPS = join(import.meta.dirname, 'node-properties.json');
-const RESOURCE_PROPS = join(import.meta.dirname, 'resource-properties.json');
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 /** `PropertyInfo::hint` for `PROPERTY_HINT_RANGE`. */
 const HINT_RANGE = 1;
@@ -202,8 +201,8 @@ const range = (lo, hi) => Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
  */
 function engineProperties() {
   return {
-    ...JSON.parse(readFileSync(PROPS, 'utf8')),
-    ...JSON.parse(readFileSync(RESOURCE_PROPS, 'utf8')),
+    ...JSON.parse(readFileSync(PROPS_OUT, 'utf8')),
+    ...JSON.parse(readFileSync(RESOURCE_PROPS_OUT, 'utf8')),
   };
 }
 

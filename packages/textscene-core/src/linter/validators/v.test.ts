@@ -98,21 +98,19 @@ describe('v.int', () => {
   });
 });
 
-describe('the int combinators agree on what Godot can read', () => {
-  // Both combinators read all four spellings: the tokenizer resolves them for a
-  // bare slot too (variant_parser.cpp:701-707), so neither may call it a format
-  // error. What they report is a value question, answered below.
-  it.each(['inf', '-inf', 'inf_neg', 'nan'])('neither calls %s a format error', (literal) => {
+describe('v.int on what Godot can read', () => {
+  // The tokenizer resolves all four spellings for a bare slot too
+  // (variant_parser.cpp:701-707), so none is a format error. What it reports
+  // is a value question, answered below.
+  it.each(['inf', '-inf', 'inf_neg', 'nan'])('does not call %s a format error', (literal) => {
     expect(v.int('frame')('frame', literal, 1)?.code).not.toBe('INVALID_FRAME_FORMAT');
-    expect(v.strictInt('frame')('frame', literal, 1)?.code).not.toBe('INVALID_FRAME_FORMAT');
   });
 
-  it.each(['inf', '-inf', 'inf_neg', 'nan'])('both report %s as altered in an INT slot', (literal) => {
+  it.each(['inf', '-inf', 'inf_neg', 'nan'])('reports %s as altered in an INT slot', (literal) => {
     // `Vector2i(inf, 8)` and its three siblings all store `(-2147483648, 8)`:
     // the narrowing at parse time is an alteration, the error tier. A float
     // slot stores it verbatim and stays silent, the case directly below.
     expect(v.int('frame')('frame', literal, 1)).toBeAtTier('error');
-    expect(v.strictInt('frame')('frame', literal, 1)).toBeAtTier('error');
     expect(v.float('weight')('weight', literal, 1)).toBeNull();
   });
 
@@ -127,21 +125,14 @@ describe('the int combinators agree on what Godot can read', () => {
     }
   });
 
-  it.each(['8abc', '', 'Infinity', '1.2.3'])('both refuse %o', (literal) => {
+  it.each(['8abc', '', 'Infinity', '1.2.3'])('refuses %o', (literal) => {
     expect(v.int('frame')('frame', literal, 1)).not.toBeNull();
-    expect(v.strictInt('frame')('frame', literal, 1)).not.toBeNull();
   });
 
-  // And on a fractional literal too: one engine behaviour, one verdict.
-  it('agree on a fractional literal, which the INT conversion truncates', () => {
-    for (const validator of [
-      v.int('frame', { min: 0, max: 10 }),
-      v.strictInt('frame', { min: 0, max: 10 }),
-    ]) {
-      const diagnostic = validator('frame', '5.5', 1);
-      expect(diagnostic).toBeAtTier('warning');
-      expect(diagnostic?.code).toBe('INVALID_FRAME_VALUE');
-    }
+  it('warns on a fractional literal, which the INT conversion truncates', () => {
+    const diagnostic = v.int('frame', { min: 0, max: 10 })('frame', '5.5', 1);
+    expect(diagnostic).toBeAtTier('warning');
+    expect(diagnostic?.code).toBe('INVALID_FRAME_VALUE');
   });
 });
 

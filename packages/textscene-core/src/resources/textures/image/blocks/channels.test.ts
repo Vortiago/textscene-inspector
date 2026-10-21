@@ -1,6 +1,6 @@
-/** The interpolated channel of BC3 alpha, BC4 and BC5, and the `rg01` swizzle. */
+/** The interpolated channel of BC3 alpha, BC4 and BC5. */
 import { describe, expect, it } from 'vitest';
-import { decodeInterpolatedChannel, swizzleRg01 } from './channels';
+import { decodeInterpolatedChannel } from './channels';
 
 /** An interpolated block whose texel `n` reads index `n % 8`. */
 function block(first: number, second: number): Uint8Array {
@@ -41,19 +41,5 @@ describe('decodeInterpolatedChannel', () => {
     decodeInterpolatedChannel(new Uint8Array([1, 2, 3, ...block(200, 40)]), 3, texels, 2);
     expect(channelOf(texels, 2)[0]).toBe(200);
     expect(channelOf(texels, 0)).toEqual(new Array(16).fill(9));
-  });
-});
-
-describe('swizzleRg01', () => {
-  it('reads blue as 0 and alpha as 255, keeping red and green', () => {
-    const texels = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
-    swizzleRg01(texels);
-    expect([...texels]).toEqual([10, 20, 0, 255, 50, 60, 0, 255]);
-  });
-
-  it('leaves an empty texel array empty (edge case)', () => {
-    const texels = new Uint8Array(0);
-    swizzleRg01(texels);
-    expect(texels.length).toBe(0);
   });
 });

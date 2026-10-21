@@ -1,5 +1,5 @@
 /**
- * Bridges the language-feature engine's host-neutral ranges to VS Code's. Both count
+ * Bridges core's host-neutral ranges, a language feature's or a diagnostic's, to VS Code's. Both count
  * lines and characters from zero, so the conversion is a construction, not an
  * arithmetic. A `vscode.Position` or `vscode.Range` already satisfies the engine's
  * structural types, so only this direction needs one.

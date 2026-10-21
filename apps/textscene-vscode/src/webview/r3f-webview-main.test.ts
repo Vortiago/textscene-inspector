@@ -215,16 +215,14 @@ describe('resourceChanged handling', () => {
 });
 
 describe('jumpToNode forwarding', () => {
-  it('posts a jumpToNode message with the node name, path, and parent on reveal', async () => {
+  it('posts a jumpToNode message with the node name and tree path on reveal', async () => {
     const { vscodeApi } = await mountFresh();
 
     const fakeNode = { name: 'Leaf', parent: 'A' } as unknown as TscnNode;
     captured.shellProps?.onNodeReveal?.('Root/A/Leaf', fakeNode);
 
     const jumpMessages = postedMessages(vscodeApi).filter((m) => m.type === 'jumpToNode');
-    expect(jumpMessages).toEqual([
-      { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/A/Leaf', parent: 'A' },
-    ]);
+    expect(jumpMessages).toEqual([{ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/A/Leaf' }]);
   });
 });
 
@@ -236,9 +234,7 @@ describe('jumpToNode forwarding of a re-rooted node', () => {
     captured.shellProps?.onNodeReveal?.('Root/Gone#Leaf', reRooted);
 
     const jumpMessages = postedMessages(vscodeApi).filter((m) => m.type === 'jumpToNode');
-    expect(jumpMessages).toEqual([
-      { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Gone#Leaf', parent: 'Gone' },
-    ]);
+    expect(jumpMessages).toEqual([{ type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Gone#Leaf' }]);
   });
 });
 

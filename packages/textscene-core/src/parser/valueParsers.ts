@@ -9,7 +9,7 @@ import { warn } from '../logger';
 // stay in their slice.
 import { parseVector2, parseVector3 } from './vectors';
 import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
-import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/variant/int.js';
+import { slotComponents, slotInt, storedVector2i, type IntWidth } from '../godot/variant/int.js';
 import type { Aabb } from '../godot/math/aabb.js';
 import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { stringToInt } from '../godot/string/string.js';
@@ -26,17 +26,6 @@ import type { Vector2, Vector3 } from '../godot/math/vector.js';
 function finiteScalar(value: string): number | null {
   const num = scalarSlotValue(value);
   return num !== null && Number.isFinite(num) ? num : null;
-}
-
-/**
- * The same, as the integer the slot stores. Narrowed so the previewer and the linter
- * read one number from one literal: `z_index = 4294967295` is the -1 Godot holds.
- */
-function finiteIntScalar(value: string, width: IntWidth): number | null {
-  const num = finiteScalar(value);
-  if (num === null) return null;
-  const stored = storedFromFloat(num, value, width);
-  return Number.isNaN(stored) ? null : stored;
 }
 
 export interface Rect2Value {
@@ -115,8 +104,9 @@ export function intOr(
   width: IntWidth = 'int32'
 ): number {
   if (value === undefined) return fallback;
-  // The whole token parses, so `hframes = 2e1` is the 20 Godot and the linter read.
-  const parsed = finiteIntScalar(value, width);
+  // The whole token parses, so `hframes = 2e1` is the 20 Godot and the linter read, and
+  // `z_index = 4294967295` is the -1 Godot holds.
+  const parsed = slotInt(value, null, width);
   if (parsed === null) {
     warn(`${context}: invalid int "${value}", using ${fallback}`);
     return fallback;
@@ -223,7 +213,7 @@ export function enumOr<T extends number>(
 ): T {
   if (value === undefined) return fallback;
   // An enum constant is an `int` in every BIND_ENUM_CONSTANT.
-  const parsed = finiteIntScalar(value, 'int32') as T | null;
+  const parsed = slotInt(value) as T | null;
   if (parsed === null || !allowed.includes(parsed)) {
     warn(`${context}: invalid enum "${value}", using ${fallback}`);
     return fallback;
@@ -285,7 +275,7 @@ export function parseOptionalVector2i(value: string | undefined, context = 'valu
  */
 export function parseOptionalInt(value: string | undefined, width: IntWidth = 'int32'): number | undefined {
   if (value === undefined) return undefined;
-  return finiteIntScalar(value, width) ?? undefined;
+  return slotInt(value, null, width) ?? undefined;
 }
 
 /**

@@ -6,6 +6,7 @@
 
 import type { ParsedHeading } from '../../parser/utils.js';
 import type { ConnectionHeading, HeadingFacts } from '../../parser/types.js';
+import { parseIdTrail } from '../../godot/scene/packedScene.js';
 
 export type HeadingResourceReads = Pick<HeadingFacts, 'connections' | 'instancesOutsideNodeBody'>;
 
@@ -17,8 +18,8 @@ function connectionHeading({ attributes }: ParsedHeading, line: number): Connect
     to: attributes.to,
     method: attributes.method,
     binds: attributes.binds,
-    hasFromUidPath: attributes.from_uid_path !== undefined,
-    hasToUidPath: attributes.to_uid_path !== undefined,
+    fromIdTrail: parseIdTrail(attributes.from_uid_path),
+    toIdTrail: parseIdTrail(attributes.to_uid_path),
   };
 }
 

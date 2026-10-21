@@ -10,16 +10,13 @@
  */
 
 import { resolve } from 'node:path';
-import { settleCanvas, withPreviewBrowser } from '../visual/previewServer.mjs';
+import { previewPort, settleCanvas, withPreviewBrowser } from '../visual/previewServer.mjs';
 import { openFixture } from '../e2e/openFixture.mjs';
 import { measuredScene } from './scenes.mjs';
 import { isSampler, packedVectors } from './packing.mjs';
 
 /* global window, WebGL2RenderingContext */
 // Both exist only in the browser that runs the `addInitScript` and `page.evaluate` callbacks.
-
-// Clear of the visual harness's 4317 and the parity capture's 4319.
-const PORT = Number(process.env.UNIFORM_VECTORS_PORT) || 4321;
 
 /** A 3D scene that compiles no lit program, so every lit program comes from the upload. */
 const START_FIXTURE = 'unit-empty-scene.tscn';
@@ -119,7 +116,7 @@ async function measure(browser, baseUrl, scene) {
 }
 
 function main() {
-  return withPreviewBrowser({ port: PORT, portEnvName: 'UNIFORM_VECTORS_PORT' }, async (browser, baseUrl) => {
+  return withPreviewBrowser(previewPort('uniformVectors'), async (browser, baseUrl) => {
     console.log(
       '| Shadowed suns | `MeshStandardMaterial` | `MeshPhysicalMaterial` with five maps, clearcoat, a sky and fog |'
     );

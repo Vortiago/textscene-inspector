@@ -37,7 +37,7 @@ import type { Gradient } from '../../../resources/textures/gradienttexture2d/typ
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor } from '../../../resources/textures/gradienttexture2d/sample';
 import { GodotRandomPCG, idhash, randFromSeed, type SeedRef } from './godotRng';
-import { degToRad, lerp } from '../../../godot/math/math.js';
+import { degToRad, lerp, TAU } from '../../../godot/math/math.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
@@ -416,7 +416,7 @@ function restartParticle(
 function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRandomPCG): void {
   switch (props.emission_shape) {
     case CPUParticles2DEmissionShape.Sphere: {
-      const t = 2 * Math.PI * rng.randf();
+      const t = TAU * rng.randf();
       const radius = props.emission_sphere_radius * rng.randf();
       p.transform.tx = Math.cos(t) * radius;
       p.transform.ty = Math.sin(t) * radius;
@@ -424,7 +424,7 @@ function emitAtShape(props: CPUParticles2DProperties, p: Particle, rng: GodotRan
     }
     case CPUParticles2DEmissionShape.SphereSurface: {
       const s = rng.randf();
-      const t = 2 * Math.PI * rng.randf();
+      const t = TAU * rng.randf();
       const radius = props.emission_sphere_radius * Math.sqrt(1.0 - s * s);
       p.transform.tx = Math.cos(t) * radius;
       p.transform.ty = Math.sin(t) * radius;
@@ -503,7 +503,7 @@ function advanceParticle(state: SimState, input: ParticleSimInput, p: Particle, 
   const orbitAmount = texOrbitVelocity * lerpParam(props, CPUParticles2DParam.OrbitVelocity, seedRef);
   if (orbitAmount !== 0.0) {
     // Godot rotates by -ang to match ParticleProcessMaterial's clockwise matrix.
-    const ang = orbitAmount * localDelta * 2 * Math.PI;
+    const ang = orbitAmount * localDelta * TAU;
     const cr = Math.cos(-ang);
     const sr = Math.sin(-ang);
     p.transform.tx += -diff.x + (cr * diff.x - sr * diff.y);
@@ -564,7 +564,7 @@ function applyAppearance(input: ParticleSimInput, p: Particle, tv: number): void
   const texHueVariation = hueCurve ? sampleCurve(hueCurve, tv) : 0.0;
 
   const hueParam = props.params[CPUParticles2DParam.HueVariation]!;
-  const hueRotAngle = texHueVariation * 2 * Math.PI * lerp(hueParam.min, hueParam.max, p.hueRotRand);
+  const hueRotAngle = texHueVariation * TAU * lerp(hueParam.min, hueParam.max, p.hueRotRand);
 
   const base = colorRamp
     ? multiplyColor(sampleGradientColor(colorRamp, tv), props.color)

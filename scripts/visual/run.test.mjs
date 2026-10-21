@@ -21,6 +21,11 @@ import { openScene, settleCanvas } from './previewServer.mjs';
 import { captureScene } from './run/sceneCapture.mjs';
 import { pixelsMatchBaseline } from './run/baselines.mjs';
 
+/** What `attachDiagnostics` answers for a page that has logged nothing. */
+function emptyDiagnostics() {
+  return { consoleErrors: [], consoleWarnings: [], pageErrors: [], failedRequests: [] };
+}
+
 function uniformPngBuffer(width, height, [r, g, b, a] = [30, 60, 90, 255]) {
   const png = new PNG({ width, height });
   for (let i = 0; i < png.data.length; i += 4) {
@@ -35,8 +40,8 @@ function uniformPngBuffer(width, height, [r, g, b, a] = [30, 60, 90, 255]) {
 describe('captureScene seam selection', () => {
   function fakePages() {
     return {
-      default: { page: { name: '3d-page' }, errors: [] },
-      canvas2D: { page: { name: '2d-page' }, errors: [] },
+      default: { page: { name: '3d-page' }, diagnostics: emptyDiagnostics() },
+      canvas2D: { page: { name: '2d-page' }, diagnostics: emptyDiagnostics() },
     };
   }
 
@@ -98,7 +103,7 @@ describe('captureScene seam selection', () => {
 
   it('throws rather than silently falling back to 3D when no canvas2D context exists', async () => {
     stubHappyCapture();
-    const pages = { default: { page: {}, errors: [] }, canvas2D: null };
+    const pages = { default: { page: {}, diagnostics: emptyDiagnostics() }, canvas2D: null };
     const scene = { name: 'two-d-scene', file: 'unit-two-d.tscn', mode: '2d' };
 
     await expect(captureScene(pages, 'http://localhost:1', scene)).rejects.toThrow(
@@ -108,7 +113,7 @@ describe('captureScene seam selection', () => {
 });
 
 describe('captureScene settle timeout', () => {
-  const pages = { default: { page: {}, errors: [] }, canvas2D: null };
+  const pages = { default: { page: {}, diagnostics: emptyDiagnostics() }, canvas2D: null };
 
   it('gives each screenshot the time a scene declares in settleTimeout', async () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
@@ -141,13 +146,13 @@ describe('captureScene console-error gate', () => {
   it('fails a scene whose capture logged a console error, even though it settled', async () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     const pages = {
-      default: { page: {}, errors: [] },
+      default: { page: {}, diagnostics: emptyDiagnostics() },
       canvas2D: null,
     };
-    // A console or pageerror listener fires during the settle, after captureScene has cleared the
-    // array for this scene, as a real page event would.
+    // A pageerror listener fires during the settle, after captureScene has cleared the lists for
+    // this scene, as a real page event would.
     settleCanvas.mockImplementation(async () => {
-      pages.default.errors.push('TypeError: something.broke is not a function');
+      pages.default.diagnostics.pageErrors.push('TypeError: something.broke is not a function');
       return { buffer: Buffer.from('captured'), reason: null };
     });
 
@@ -163,7 +168,7 @@ describe('captureScene console-error gate', () => {
   it('passes a scene whose capture logged no console errors', async () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
-    const pages = { default: { page: {}, errors: [] }, canvas2D: null };
+    const pages = { default: { page: {}, diagnostics: emptyDiagnostics() }, canvas2D: null };
 
     const result = await captureScene(pages, 'http://localhost:1', {
       name: 'quiet-scene',
@@ -177,7 +182,10 @@ describe('captureScene console-error gate', () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
     const pages = {
-      default: { page: {}, errors: ['stale error from a previous scene'] },
+      default: {
+        page: {},
+        diagnostics: { ...emptyDiagnostics(), consoleErrors: ['stale error from a previous scene'] },
+      },
       canvas2D: null,
     };
 

@@ -1,9 +1,8 @@
 /**
- * Draws a TouchScreenButton: its `texture_normal` with the top-left corner at the node origin. The
- * editor draws that texture whatever `visibility_mode` says, and no finger is down, so
- * `texture_pressed` never shows (`touch_screen_button.cpp:136-155`). The draw is a Sprite2D's
- * uncentred quad, so the button hands the Sprite2D component those properties. The Sprite2D root stays
- * mounted whether or not a texture is set, so a live edit does not remount the children.
+ * Draws a TouchScreenButton's `texture_normal` as a Sprite2D's uncentred quad at the node origin. The
+ * editor draws it whatever `visibility_mode` says, and no finger is down, so `texture_pressed` never
+ * shows (`touch_screen_button.cpp:136-155`). The Sprite2D root stays mounted with no texture set, so a
+ * live edit does not remount the children.
  */
 
 import { useMemo } from 'react';

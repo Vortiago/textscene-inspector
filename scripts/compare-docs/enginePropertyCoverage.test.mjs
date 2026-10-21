@@ -12,8 +12,8 @@ import { classBaseChain } from '../../packages/textscene-core/src/godot/classdb/
 import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter, loadCoreParser } from './loadCoreLinter.mjs';
 import { keyMatcher, unvalidatedByClass } from './registryKeys.mjs';
+import { PROPS_OUT } from './build-node-catalog/paths.mjs';
 
-const PROPS = join(import.meta.dirname, 'node-properties.json');
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 // A ledger, not a pass mark: it only goes down, counted per declaring class
 // with no base-walk, since a `Control` validator belongs in `Control`'s slice.
@@ -37,7 +37,7 @@ function coveredClasses(nodeRegistry, declaringTypes, baseChainOf) {
 
 // Loading the built barrel exceeds vitest's 5s default under a full run.
 describe('engine property coverage', { timeout: 60_000 }, () => {
-  const engine = JSON.parse(readFileSync(PROPS, 'utf8'));
+  const engine = JSON.parse(readFileSync(PROPS_OUT, 'utf8'));
 
   // Not `existsSync(dist)`, which skips on no build and passes a stale one. In
   // `beforeAll`, not at module scope, where a throw during a concurrent `tsc

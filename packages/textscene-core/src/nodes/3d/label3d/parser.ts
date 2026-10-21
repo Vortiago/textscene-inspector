@@ -12,7 +12,7 @@ import {
   HORIZONTAL_ALIGNMENT_FILL,
   HORIZONTAL_ALIGNMENT_LEFT,
   type HorizontalAlignment,
-} from '../../../godot/math/math';
+} from '../../../godot/math/alignment';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';

@@ -25,7 +25,7 @@ import {
   tintColor,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HORIZONTAL_ALIGNMENT_RIGHT } from '../../../../godot/math/math';
+import { HORIZONTAL_ALIGNMENT_RIGHT } from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../r3f/controls/native/rect';
 import {
   resolveTextTheme,

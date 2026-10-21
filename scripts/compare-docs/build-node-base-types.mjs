@@ -12,12 +12,12 @@ import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/propertyHint.ts';
 import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
-
-const here = import.meta.dirname;
-export const CATALOG = join(here, 'node-catalog.json');
-export const RESOURCE_BASES = join(here, 'resource-bases.json');
-export const NODE_PROPERTIES = join(here, 'node-properties.json');
-export const RESOURCE_PROPERTIES = join(here, 'resource-properties.json');
+import {
+  CATALOG_OUT,
+  PROPS_OUT,
+  RESOURCE_BASES_OUT,
+  RESOURCE_PROPS_OUT,
+} from './build-node-catalog/paths.mjs';
 
 /** `src/godot/classdb/<name>` in the core package. */
 function classdbModule(name) {
@@ -272,15 +272,15 @@ ${classes}
 
 /** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
 function readResourceBases() {
-  return assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
+  return assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES_OUT, 'utf8')), 'resource-bases.json');
 }
 
 /** The exclusion module the committed artifact must equal. */
 export function renderFromExclusionCaptures() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const catalog = JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
   const properties = {
-    ...JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8')),
-    ...JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8')),
+    ...JSON.parse(readFileSync(PROPS_OUT, 'utf8')),
+    ...JSON.parse(readFileSync(RESOURCE_PROPS_OUT, 'utf8')),
   };
   const bases = { ...deriveBaseTypes(catalog.nodes), ...readResourceBases() };
   return renderExclusionsModule(
@@ -291,15 +291,15 @@ export function renderFromExclusionCaptures() {
 
 /** The property module the committed artifact must equal. */
 export function renderFromPropertyCaptures() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  const nodeProperties = JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8'));
-  const resourceProperties = JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8'));
+  const catalog = JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
+  const nodeProperties = JSON.parse(readFileSync(PROPS_OUT, 'utf8'));
+  const resourceProperties = JSON.parse(readFileSync(RESOURCE_PROPS_OUT, 'utf8'));
   return renderPropertiesModule(nodeProperties, resourceProperties, catalog.godotVersion ?? 'unknown');
 }
 
 /** The module source the committed artifact must equal. */
 export function renderFromCatalog() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const catalog = JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
   return renderModule(deriveBaseTypes(catalog.nodes), catalog.godotVersion ?? 'unknown');
 }
 
@@ -310,7 +310,7 @@ export function renderFromCatalog() {
  * one engine run; `resource-bases.json` is a bare map with nowhere to put it.
  */
 export function renderFromResourceBases() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const catalog = JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
   return renderResourceModule(readResourceBases(), catalog.godotVersion ?? 'unknown');
 }
 

@@ -138,7 +138,6 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       // The name the heading wrote: a re-rooted node's `name` is Godot's rename, which no heading spells.
       nodeName: node.authoredName ?? node.name,
       path,
-      parent: node.parent,
     } satisfies WebviewToHostMessage);
   };
 

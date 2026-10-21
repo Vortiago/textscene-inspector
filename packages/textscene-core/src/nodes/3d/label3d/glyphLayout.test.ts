@@ -16,7 +16,7 @@ import {
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_RIGHT,
   type HorizontalAlignment,
-} from '../../../godot/math/math';
+} from '../../../godot/math/alignment';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 
 const FONT_SIZE = 32;

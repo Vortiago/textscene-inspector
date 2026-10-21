@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { STEADY_FRAMES, SteadyWork } from './steadyWork.mjs';
+import { SteadyWork } from './steadyWork.mjs';
 
 const LOADING = { drawCalls: 3078, steps: {} };
 const LOADED = { drawCalls: 269, steps: {} };
+/** Three times a reflection probe's ten-frame lull after its resources settle. */
+const STEADY_FRAMES = 30;
 
 describe('SteadyWork', () => {
-  it('answers the work once it has stayed the same over STEADY_FRAMES frames', () => {
+  it('answers the work once it has stayed the same over 30 frames', () => {
     const steady = new SteadyWork();
     steady.observe(LOADED, 5);
     expect(steady.observe(LOADED, STEADY_FRAMES - 1)).toBeNull();

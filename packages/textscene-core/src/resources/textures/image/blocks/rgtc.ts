@@ -26,18 +26,19 @@
  */
 
 import type { BlockFormat } from './decodeBlocks';
-import { decodeInterpolatedChannel, swizzleRg01 } from './channels';
+import { keepRedGreen } from '../../../processing/importTexelPasses';
+import { decodeInterpolatedChannel } from './channels';
 
 function decodeRgtcRed(bytes: Uint8Array, offset: number, texels: Uint8Array): void {
   decodeInterpolatedChannel(bytes, offset, texels, 0);
   for (let at = 1; at < texels.length; at += 4) texels[at] = 0;
-  swizzleRg01(texels);
+  keepRedGreen(texels);
 }
 
 function decodeRgtcRedGreen(bytes: Uint8Array, offset: number, texels: Uint8Array): void {
   decodeInterpolatedChannel(bytes, offset, texels, 0);
   decodeInterpolatedChannel(bytes, offset + 8, texels, 1);
-  swizzleRg01(texels);
+  keepRedGreen(texels);
 }
 
 export const RGTC_FORMATS: Readonly<Record<string, BlockFormat>> = {

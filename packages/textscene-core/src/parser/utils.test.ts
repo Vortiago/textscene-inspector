@@ -108,6 +108,20 @@ describe('parseHeading', () => {
   });
 });
 
+describe('parseHeading unclosed', () => {
+  it('marks a string value whose closing quote is missing', () => {
+    expect([...parseHeading('[node name="Box" type="Mesh]')!.unclosed]).toEqual(['type']);
+  });
+
+  it('marks an opening quote with nothing after it', () => {
+    expect([...parseHeading('[node name="]')!.unclosed]).toEqual(['name']);
+  });
+
+  it('marks nothing on a heading whose strings all close', () => {
+    expect(parseHeading('[node name="Box" type="Mesh" index=2]')!.unclosed.size).toBe(0);
+  });
+});
+
 describe('parseHeading valueSpans', () => {
   it('spans a quoted value inside its quotes', () => {
     const line = '[node name="Box" type="MeshInstance3D"]';

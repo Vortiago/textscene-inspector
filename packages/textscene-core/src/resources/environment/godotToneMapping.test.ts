@@ -49,12 +49,12 @@ describe('toneMappingShaderChunk — the per-material CustomToneMapping hook', (
 });
 
 describe('toneMappingEffectGlsl — the same curves for the glow composer', () => {
-  it('emits an exposure-taking function with the white baked in as a constant', () => {
+  it('emits a function of the exposed colour with the white baked in as a constant', () => {
     const glsl = toneMappingEffectGlsl(ToneMapper.REINHARDT, 6);
-    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
     // 6² = 36, and it must be a literal GLSL accepts.
     expect(glsl).toContain('const float godotToneMapWhite = 36.0;');
-    expect(glsl).toContain('color *= exposure;');
+    expect(glsl).not.toContain('exposure');
   });
 
   it('bakes AgX’s FLOORED high clip, not the authored white (regression)', () => {
@@ -64,7 +64,7 @@ describe('toneMappingEffectGlsl — the same curves for the glow composer', () =
 
   it('emits LINEAR as a real curve rather than leaving the caller a hole', () => {
     const glsl = toneMappingEffectGlsl(ToneMapper.LINEAR, 1);
-    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
     expect(glsl).toContain('return color;');
   });
 

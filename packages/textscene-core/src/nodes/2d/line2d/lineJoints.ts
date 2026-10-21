@@ -6,6 +6,7 @@
  */
 
 import { LineJointMode } from '../../../godot/scene/line2d.js';
+import { TAU } from '../../../godot/math/math.js';
 
 interface Point {
   x: number;
@@ -85,8 +86,8 @@ function roundFan(corner: Point, a: Point, b: Point, segments: number): number[]
   const end = Math.atan2(b.y - corner.y, b.x - corner.x);
   // Sweep the short way around: the gap is always less than half a turn.
   let sweep = end - start;
-  while (sweep > Math.PI) sweep -= Math.PI * 2;
-  while (sweep < -Math.PI) sweep += Math.PI * 2;
+  while (sweep > Math.PI) sweep -= TAU;
+  while (sweep < -Math.PI) sweep += TAU;
 
   const radius = distance(a, corner);
   const out: number[] = [];

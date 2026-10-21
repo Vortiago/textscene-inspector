@@ -27,7 +27,7 @@ import {
   HORIZONTAL_ALIGNMENT_FILL,
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_RIGHT,
-} from '../../../godot/math/math';
+} from '../../../godot/math/alignment';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 

@@ -13,13 +13,10 @@ import { launchGodotComparisonBrowser } from '../showcase/browser.mjs';
 import {
   createCaptureContext,
   openScene,
+  previewPort,
   settleCanvas,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
-
-// Distinct from the visual harness's 4317, so a capture and a golden run can
-// share a host.
-const PORT = Number(process.env.PARITY_PORT) || 4319;
 
 function parseArgs(argv) {
   const args = { fixture: null, out: null, probes: [], patch: 1, frame: false, canvas2D: false };
@@ -60,7 +57,7 @@ function parseArgs(argv) {
 
 export function captureOurs({ fixture, frame = false, canvas2D = false, canvas2DFrame = null }) {
   return withPreviewBrowser(
-    { port: PORT, portEnvName: 'PARITY_PORT', launchBrowser: launchGodotComparisonBrowser },
+    { ...previewPort('parity'), launchBrowser: launchGodotComparisonBrowser },
     async (browser, baseUrl) => {
       // Godot's editor orbit (ADR-0025) on both sides, so a probe at (x, y)
       // addresses one surface point. `--frame` opts both into fit-the-bounds for

@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CATALOG } from './build-node-base-types.mjs';
+import { CATALOG_OUT } from './build-node-catalog/paths.mjs';
 import { isDivider, splitRow } from './markdownTable.mjs';
 import { RUNTIME_EFFECT_NODE_TYPES } from './runtimeEffectNodes.data.mjs';
 // The app's own render registrations: the barrel registers every slice on import.
@@ -35,7 +35,7 @@ import {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 /** The ClassDB capture: each node with its ancestry, nearest parent first. */
-const catalogNodes = JSON.parse(readFileSync(CATALOG, 'utf8')).nodes;
+const catalogNodes = JSON.parse(readFileSync(CATALOG_OUT, 'utf8')).nodes;
 
 const KNOWN_KEYS = new Set([
   'type',
