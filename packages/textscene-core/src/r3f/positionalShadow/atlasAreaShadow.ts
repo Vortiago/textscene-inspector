@@ -15,7 +15,7 @@ import {
 } from '../../godot/rendering/lights/areaLightShadow.js';
 import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
-import { lightPoseMatrix, readLightPose } from './lightPose.js';
+import { readLightPose, viewToLightPose } from './lightPose.js';
 import { drawIntoAtlasSlot, positionalShadowAtlas } from './shadowAtlasTarget.js';
 import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
 
@@ -118,7 +118,7 @@ export class AtlasAreaShadow extends AreaShadowBase implements SlottedShadow {
    * `shadow_matrix` (4.7.2 `light_storage.cpp:1196-1198`). It takes the pose the map renders from.
    */
   viewToLight(light: THREE.Object3D, view: THREE.Camera, target: THREE.Matrix4): THREE.Matrix4 {
-    return lightPoseMatrix(light, target).invert().multiply(view.matrixWorld);
+    return viewToLightPose(light, view, target);
   }
 
   /** Writes the slot as `atlas_rect`: its corner and side in units of the atlas, or zero without one. */

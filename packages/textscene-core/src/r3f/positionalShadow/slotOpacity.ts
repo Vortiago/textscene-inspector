@@ -13,6 +13,12 @@ export interface SlottedShadow extends THREE.LightShadow {
   slot: PositionalShadowSlot | null;
   /** The opacity the light last wrote through `intensity`. */
   opacity: number;
+  /**
+   * Writes the matrix from the space of `view` into the space the shadow looks up in, and returns
+   * `target`: the light's own space for an omni or area light, the atlas for a spot light. The
+   * surface and the volumetric fog both read it.
+   */
+  viewToLight(light: THREE.Object3D, view: THREE.Camera, target: THREE.Matrix4): THREE.Matrix4;
 }
 
 /**

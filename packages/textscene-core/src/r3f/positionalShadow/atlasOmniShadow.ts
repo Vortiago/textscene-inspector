@@ -11,7 +11,7 @@ import {
   omniShadowCubeSize,
   type PositionalShadowSlot,
 } from '../../godot/rendering/lights/positionalShadowAtlas.js';
-import { lightPoseMatrix } from './lightPose.js';
+import { lightPoseMatrix, viewToLightPose } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
 import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
 
@@ -62,6 +62,11 @@ export class AtlasOmniShadow extends ThreePointLightShadow implements SlottedSha
     // (`WebGLShadowMap.js:249`).
     cube.depthTexture = depth as unknown as THREE.DepthTexture;
     this.map = cube;
+  }
+
+  /** Writes the matrix from the space of `view` into the light's own, without its scale. */
+  viewToLight(light: THREE.Object3D, view: THREE.Camera, target: THREE.Matrix4): THREE.Matrix4 {
+    return viewToLightPose(light, view, target);
   }
 
   /**

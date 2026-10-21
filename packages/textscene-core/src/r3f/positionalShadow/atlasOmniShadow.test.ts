@@ -105,6 +105,19 @@ describe('AtlasOmniShadow.writeLookupMatrix', () => {
   });
 });
 
+describe('AtlasOmniShadow.viewToLight', () => {
+  it('maps a point in the view’s space into the light’s own space, without its scale', () => {
+    const view = new THREE.PerspectiveCamera();
+    view.position.set(0, 0, 5);
+    view.updateMatrixWorld();
+    const matrix = new AtlasOmniShadow().viewToLight(turnedLight(), view, new THREE.Matrix4());
+    // The world origin lies 5 in front of the view. The light sits at (1, 2, 3) and is turned a
+    // quarter about Y, so its local +Z is the world's +X and its local +X the world's -Z.
+    const local = new THREE.Vector3(0, 0, -5).applyMatrix4(matrix);
+    expect(local.distanceTo(new THREE.Vector3(3, -2, -1))).toBeCloseTo(0, 12);
+  });
+});
+
 describe('AtlasOmniShadow.paraboloidRect', () => {
   it('gives the first paraboloid and the step to the second, in units of the atlas', () => {
     const shadow = new AtlasOmniShadow();

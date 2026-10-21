@@ -4,11 +4,7 @@
  * range. Its soft shadow is an omni light's (`positionalSoftShadow`). Godot 4.6.3 has no AreaLight3D.
  */
 
-/**
- * The shortest range the light buffer holds (4.7.2 `light_storage.cpp:1060`). The shadow render
- * reads the range unclamped (`render_forward_clustered.cpp:2758`).
- */
-const LIGHT_BUFFER_MIN_RANGE = 0.001;
+import { LIGHT_BUFFER_MIN_RANGE } from './lightBufferRange.js';
 
 /** The rectangle's side lengths, `area_size`. */
 interface AreaSize {

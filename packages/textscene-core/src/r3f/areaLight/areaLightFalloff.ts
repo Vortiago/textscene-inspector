@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import { LIGHT_BUFFER_MIN_RANGE } from '../../godot/rendering/lights/lightBufferRange.js';
 import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { slottedLights } from '../lightSlots.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
@@ -110,7 +111,7 @@ function writeLight(
   const falloff = readAreaLightFalloff(light);
   if (!falloff) return;
   const falloffs = set[AREA_LIGHT_FALLOFFS];
-  falloffs[offset] = Math.max(0.001, falloff.range);
+  falloffs[offset] = Math.max(LIGHT_BUFFER_MIN_RANGE, falloff.range);
   falloffs[offset + 1] = falloff.attenuation;
   falloffs[offset + 2] = falloff.specular * 2;
 }

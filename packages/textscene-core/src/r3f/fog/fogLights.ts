@@ -12,12 +12,14 @@ import {
   VOLUMETRIC_FOG_LIGHT_ENERGY_MIN,
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
 } from '../../godot/rendering/environment/volumetricFog.js';
+import { areaLightShadowDepthScale } from '../../godot/rendering/lights/areaLightShadow.js';
+import { LIGHT_BUFFER_MIN_RANGE } from '../../godot/rendering/lights/lightBufferRange.js';
 import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/rendering/lights/directionalShadow.js';
 import { splitSunOf } from '../directionalShadow/splitSun.js';
 import { isAreaShadowLight } from '../positionalShadow/atlasAreaShadow.js';
 import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow.js';
 import { AtlasSpotShadow } from '../positionalShadow/atlasSpotShadow.js';
-import { lightPoseMatrix } from '../positionalShadow/lightPose.js';
+import type { SlottedShadow } from '../positionalShadow/slotOpacity.js';
 import { visibleInTree } from '../visibleInTree.js';
 import { readFogLightDeclaration } from './fogLightDeclaration.js';
 import { AREA_LIGHT_AXES, areaLightViewAxis, readAreaLightFalloff } from '../areaLight/areaLightFalloff.js';
@@ -70,14 +72,10 @@ export const FogLightKind = {
 
 type Kind = (typeof FogLightKind)[keyof typeof FogLightKind];
 
-/** Godot's floor on a positional light's range (`light_storage.cpp:895`). */
-const RANGE_MIN = 0.001;
-
 /** Scratch for one row, overwritten by each light. */
 const position = new THREE.Vector3();
 const towards = new THREE.Vector3();
 const axis = new THREE.Vector3();
-const worldToLight = new THREE.Matrix4();
 const viewToShadow = new THREE.Matrix4();
 const paraboloidRect = new THREE.Vector4();
 const row = new Float32Array(ROW_LENGTH);
@@ -139,7 +137,7 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   if (kind === FogLightKind.AREA) return writeArea(light as THREE.RectAreaLight, camera);
   const { x, y, z } = viewPosition(light, camera);
   const positional = light as THREE.PointLight | THREE.SpotLight;
-  writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / Math.max(RANGE_MIN, positional.distance));
+  writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / Math.max(LIGHT_BUFFER_MIN_RANGE, positional.distance));
   row[FogLightTexel.COLOR * 4 + 3] = positional.decay;
   if (kind === FogLightKind.OMNI) {
     writeOmniShadow(light as THREE.PointLight, camera);
@@ -162,12 +160,12 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
 function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
   const falloff = readAreaLightFalloff(light);
   if (!falloff) return false;
-  const range = Math.max(RANGE_MIN, falloff.range);
+  const range = Math.max(LIGHT_BUFFER_MIN_RANGE, falloff.range);
   const { x, y, z } = viewPosition(light, camera);
   writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / range);
   // The fog's falloff takes the attenuation less one (4.7.2 `volumetric_fog_process.glsl:653`).
   row[FogLightTexel.COLOR * 4 + 3] = falloff.attenuation - 1;
-  const inverseCentreRange = 1 / (range + Math.hypot(light.width, light.height) / 2);
+  const inverseCentreRange = areaLightShadowDepthScale(falloff.range, { x: light.width, y: light.height });
   writeViewAxis(FogLightTexel.DIRECTION, light, AREA_LIGHT_AXES.facing, 1, camera, inverseCentreRange);
   const { rect, maxMipmap } = areaTexturePlacement(light);
   writeVec4(row, FogLightTexel.AREA_TEXTURE, ...rect);
@@ -201,7 +199,7 @@ function writeDirectionalShadow(light: THREE.DirectionalLight, camera: THREE.Cam
   const { shadow } = sun;
   row[Cone.SHADOW_OPACITY] = shadow.intensity;
   for (let slot = 0; slot < DIRECTIONAL_SHADOW_MAX_SPLITS; slot++) {
-    writeLookup(slot, shadow.getMatrix(slot), camera);
+    writeMatrix(slot, viewToShadow.multiplyMatrices(shadow.getMatrix(slot), camera.matrixWorld));
     const split = shadow.getCamera(Math.min(slot, shadow.splitCount - 1));
     row[FogLightTexel.SHADOW_SPLITS * 4 + slot] = shadow._cascadeData[slot]!.x;
     row[FogLightTexel.SHADOW_RANGES * 4 + slot] = split.far - split.near;
@@ -219,7 +217,7 @@ function writeOmniShadow(light: THREE.PointLight, camera: THREE.Camera): void {
   const rect = shadow.paraboloidRect(paraboloidRect);
   if (!rect) return;
   writeVec4(row, FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
-  writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
+  writePositionalShadow(shadow, light, camera);
 }
 
 /**
@@ -232,29 +230,24 @@ function writeAreaShadow(light: THREE.RectAreaLight, camera: THREE.Camera): void
   if (shadow.slot === null) return;
   const rect = shadow.slotUvRect(paraboloidRect);
   writeVec4(row, FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
-  writePositionalShadow(shadow, lightPoseMatrix(light, worldToLight).invert(), camera);
+  writePositionalShadow(shadow, light, camera);
 }
 
 /** A spot light with a slot looks up through its matrix into the slot (`../positionalShadow/atlasSpotShadow.ts`). */
 function writeSpotShadow(light: THREE.SpotLight, camera: THREE.Camera): void {
   const { shadow } = light;
   if (!light.castShadow || !(shadow instanceof AtlasSpotShadow)) return;
-  writePositionalShadow(shadow, shadow.matrix, camera);
+  writePositionalShadow(shadow, light, camera);
 }
 
-function writePositionalShadow(
-  shadow: THREE.LightShadow,
-  worldToShadow: THREE.Matrix4,
-  camera: THREE.Camera
-): void {
+function writePositionalShadow(shadow: SlottedShadow, light: THREE.Light, camera: THREE.Camera): void {
   row[Cone.SHADOW_OPACITY] = shadow.intensity;
   row[Cone.SHADOW_BIAS] = shadow.bias;
-  writeLookup(0, worldToShadow, camera);
+  writeMatrix(0, shadow.viewToLight(light, camera, viewToShadow));
 }
 
-/** Writes `worldToShadow` after the view's own world matrix, so it maps a view-space cell. */
-function writeLookup(slot: number, worldToShadow: THREE.Matrix4, camera: THREE.Camera): void {
-  viewToShadow.multiplyMatrices(worldToShadow, camera.matrixWorld);
+/** Writes `viewToShadow` as the lookup of `slot`. */
+function writeMatrix(slot: number, viewToShadow: THREE.Matrix4): void {
   row.set(viewToShadow.elements, (FogLightTexel.SHADOW_MATRICES + slot * 4) * 4);
 }
 
