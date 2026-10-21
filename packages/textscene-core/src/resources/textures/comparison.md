@@ -60,6 +60,11 @@ A roughness map whose sidecar sets `roughness/mode` and `roughness/src_normal` r
 
 Godot imports a glTF image through the same texture importer, as the file it extracts the image to. That file's sidecar decides its texels and its format. The quad's image is a green square inside transparent magenta texels. The default alpha-border pass turns them green, so the blended edge fades green, not magenta.
 
+## Soft-alpha border
+<!-- compare: image=unit-sprite-2d-soft-alpha-border status=done fixture=unit-sprite-2d-soft-alpha-border.tscn -->
+
+A green disc with a three-texel alpha ramp, inside transparent magenta texels, drawn 20 times larger. The default alpha-border pass gives each texel below alpha 20 the RGB of its nearest opaque neighbour, as `Image::fix_alpha_edges` does (`core/io/image.cpp`). The previewer runs it on a texture with partial alpha too. It reads the decoded bytes unpremultiplied, so the ramp keeps its colour. With the pass off, the edge of the disc takes a magenta tint in both engines.
+
 ## NoiseTexture2D
 
 A field baked from a FastNoiseLite, most often as a normal map. A `seamless` bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because `texture_repeat` defaults on (`material.cpp:4005`) and the sampler hint adds `repeat_enable` (`material.cpp:760-765`).

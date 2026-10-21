@@ -1738,6 +1738,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Soft Alpha Border",
+    "file": "unit-sprite-2d-soft-alpha-border.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Viewport Texture",
     "file": "unit-sprite-2d-viewport-texture.tscn",
     "category": "Other"
@@ -3664,6 +3669,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Texture Emission",
     "file": "unit-sub-viewport-texture-emission.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Texture Sampler",
+    "file": "unit-sub-viewport-texture-sampler.tscn",
     "category": "Unit - Viewports"
   },
   {

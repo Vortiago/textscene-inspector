@@ -1,0 +1,16 @@
+; One variable: the alpha-border pass on a texture with soft, partial-alpha edges. `soft-alpha-disc.png`
+; is a green disc with a three-texel alpha ramp inside transparent magenta texels. Godot 4.6.3's
+; importer gives each texel below alpha 20 the RGB of its nearest opaque neighbour. At scale 20
+; the linear filter blends from a ramp texel into its neighbour across 20 px, so a texel the pass
+; missed fringes through magenta.
+
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/soft-alpha-disc.png" id="1_disc"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Disc" type="Sprite2D" parent="."]
+position = Vector2(576, 324)
+scale = Vector2(20, 20)
+texture = ExtResource("1_disc")
