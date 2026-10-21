@@ -22,6 +22,8 @@ interface DocumentSeating {
   readonly sectionByNode: ReadonlyMap<RawNode, DocumentSection>;
   /** The scene root, then each heading left out of the tree, in line order. */
   readonly tree: readonly SeatedSection[];
+  /** The root-relative path of each seated heading with a name. */
+  readonly paths: ReadonlyMap<DocumentSection, string>;
 }
 
 /** Written only by {@link seatingOf}. An entry lives as long as its document. */
@@ -52,7 +54,8 @@ function seat(document: LanguageDocument): DocumentSeating {
     children: node.children.map(seated),
   });
   const unseated = headings.filter(({ node }) => !seating.seated.has(node)).map(({ node }) => node);
-  return { seating, sectionByNode, tree: [...seating.roots, ...unseated].map(seated) };
+  const paths = new Map([...seating.pathOf].map(([node, path]) => [sectionByNode.get(node)!, path]));
+  return { seating, sectionByNode, tree: [...seating.roots, ...unseated].map(seated), paths };
 }
 
 function seatingOf(document: LanguageDocument): DocumentSeating {
@@ -69,18 +72,9 @@ export function seatedNodeTree(document: LanguageDocument): readonly SeatedSecti
   return seatingOf(document).tree;
 }
 
-/** Written only by {@link seatedNodePaths}. An entry lives as long as its document. */
-const seatedPaths = new WeakMap<LanguageDocument, ReadonlyMap<DocumentSection, string>>();
-
 /** The root-relative path of each seated `[node]` heading with a name, the root at the empty path. */
 export function seatedNodePaths(document: LanguageDocument): ReadonlyMap<DocumentSection, string> {
-  let paths = seatedPaths.get(document);
-  if (!paths) {
-    const { seating, sectionByNode } = seatingOf(document);
-    paths = new Map([...seating.pathOf].map(([node, path]) => [sectionByNode.get(node)!, path]));
-    seatedPaths.set(document, paths);
-  }
-  return paths;
+  return seatingOf(document).paths;
 }
 
 /** The `[node]` heading a root-relative node path names, or undefined where no heading is seated there. */

@@ -46,7 +46,6 @@ export function spelledNodePath(rootRelativePath: string): string {
 
 /** {@link spelledNodePath} for a live path, whose first segment is the root's name. */
 export function spelledLiveNodePath(livePath: string): string {
-  return spelledNodePath(
-    livePath.includes('/') ? livePath.slice(livePath.indexOf('/') + 1) : SCENE_ROOT_PATH
-  );
+  const cut = livePath.indexOf('/');
+  return spelledNodePath(cut === -1 ? SCENE_ROOT_PATH : livePath.slice(cut + 1));
 }

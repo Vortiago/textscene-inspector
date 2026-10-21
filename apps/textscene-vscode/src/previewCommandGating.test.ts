@@ -34,9 +34,9 @@ describe('preview command gating', () => {
   ].filter((entry) => GATED_COMMANDS.has(entry.command));
 
   it('gates every contribution on the extension the command accepts', () => {
-    // The floor, one entry per menu and the keybinding, stops a manifest reshuffle that this
-    // scan misses from passing as "every clause is correct".
-    expect(gated.length).toBeGreaterThanOrEqual(GATED_COMMANDS.size * 2);
+    // The floor, four menus and one keybinding for the preview and two menus for the copy, stops a
+    // manifest reshuffle that this scan misses from passing as "every clause is correct".
+    expect(gated.length).toBeGreaterThanOrEqual(7);
     const wrong = gated.filter((e) => e.when !== GATE).map((e) => `${e.where}: ${e.when}`);
     expect(wrong).toEqual([]);
   });

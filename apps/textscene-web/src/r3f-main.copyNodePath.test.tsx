@@ -37,6 +37,12 @@ async function copyRootPath(): Promise<void> {
 }
 
 describe('copy node path in the web previewer', () => {
+  it('logs, and does not throw, where the browser has no clipboard', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    await copyRootPath();
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
   it('writes "." for the scene root through navigator.clipboard', async () => {
     await copyRootPath();
     expect(writeText).toHaveBeenCalledExactlyOnceWith('.');

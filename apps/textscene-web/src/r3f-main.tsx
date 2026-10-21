@@ -39,11 +39,16 @@ import styles from './r3f-main.module.css';
 /** The site mirrors exactly the scenes it lists, so an empty catalog means no mirror. */
 const HAS_FIXTURES_MIRROR = fixtures.length > 0;
 
-/** A browser refuses the write outside a secure context or without permission: that is logged, not thrown. */
-function copyToClipboard(text: string): void {
-  navigator.clipboard.writeText(text).catch((error: unknown) => {
+/**
+ * A browser refuses the write outside a secure context or without permission: that is logged, not
+ * thrown. `navigator.clipboard` is undefined outside a secure context, so the access sits in the try.
+ */
+async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (error) {
     warn(`Copy to the clipboard failed: ${String(error)}`);
-  });
+  }
 }
 
 export function R3FApp() {
