@@ -15,7 +15,10 @@ export interface LiveNode extends TscnNode {
   children: LiveNode[];
 }
 
-/** The scope a node's refs and its children's resolve against: its own, else its group's. */
+/**
+ * The scope a node's refs and its children's resolve against: its own, else its group's.
+ * A group does not stamp its children with it: solve-tree maps key on the raw node, and a copy breaks them.
+ */
 export function scopeOf(node: LiveNode, groupScope: SceneScope): SceneScope {
   return node.scope ?? groupScope;
 }
