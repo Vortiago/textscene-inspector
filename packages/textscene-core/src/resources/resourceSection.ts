@@ -23,7 +23,7 @@ interface ResourceSection {
 }
 
 /** The section `path` addresses inside `file`, or undefined for an id `file` does not declare. */
-export function findResourceSection(file: ParsedResource, path: string): ResourceSection | undefined {
+function findResourceSection(file: ParsedResource, path: string): ResourceSection | undefined {
   const { subResourceId } = parseSubResourcePath(path);
   if (subResourceId === undefined) return { type: file.resourceType, properties: file.properties };
   const sub = findSubResource(file.subResources, subResourceId);
