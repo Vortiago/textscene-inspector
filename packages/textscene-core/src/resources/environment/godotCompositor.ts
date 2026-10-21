@@ -10,6 +10,7 @@
  */
 
 import { blendGlsl, blendsAfterToneMapping, samplesGlowMap, type GlowParams } from './godotGlow';
+import { glowGatherGlsl, glowLevelUniform } from './godotGlowPyramid';
 import { glslFloat } from '../../utils/glslLiterals';
 import { toneMappingEffectGlsl } from './godotToneMapping';
 import { resolvedWhite } from '../../godot/rendering/environment/toneMapping.js';
@@ -21,8 +22,6 @@ export type CompositeToneMapping = Pick<EnvironmentSettings['toneMapping'], 'mod
 
 /** Fixed at construction: a new exposure rebuilds the effect. */
 const EXPOSURE_UNIFORM = 'godotExposure';
-/** Bound by the effect each frame, from the glow pyramid. */
-export const GLOW_BUFFER_UNIFORM = 'godotGlowBuffer';
 /** Bound by the effect when the environment names a glow map. */
 export const GLOW_MAP_UNIFORM = 'godotGlowMap';
 
@@ -72,7 +71,12 @@ export function compositeProgram({
 }: CompositeOptions): CompositeProgram {
   const declarations: Record<string, UniformDeclaration> = {
     [EXPOSURE_UNIFORM]: { glslType: 'float', value: exposure },
-    ...(glow && { [GLOW_BUFFER_UNIFORM]: { glslType: 'sampler2D', value: null } }),
+    ...Object.fromEntries(
+      (glow?.gatheredLevels ?? []).map((level) => [
+        glowLevelUniform(level),
+        { glslType: 'sampler2D', value: null } satisfies UniformDeclaration,
+      ])
+    ),
     ...(glow && samplesGlowMap(glow) && { [GLOW_MAP_UNIFORM]: { glslType: 'sampler2D', value: null } }),
   };
   // SCREEN normalises against the floored white, not the authored one
@@ -82,7 +86,7 @@ export function compositeProgram({
   const fragmentShader = /* glsl */ `
 ${declarationsGlsl(declarations)}
 ${toneMappingEffectGlsl(toneMapping.mode, toneMapping.white, toneMapping.agxContrast)}
-${glow ? blendGlsl(glow, flooredWhite) : ''}
+${glow ? glowGatherGlsl(glow) + blendGlsl(glow, flooredWhite) : ''}
 ${adjustments ? GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
 ${glow ? glowAndToneMapGlsl(glow) : TONE_MAP_ONLY_GLSL}
@@ -116,7 +120,7 @@ function glowAndToneMapGlsl(glow: GlowParams): string {
   const map = samplesGlowMap(glow)
     ? /* glsl */ `  glow = mix(glow, texture2D(${GLOW_MAP_UNIFORM}, uv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
     : '';
-  return /* glsl */ `  vec3 glow = texture2D(${GLOW_BUFFER_UNIFORM}, uv).rgb * ${glslFloat(glow.intensity)};
+  return /* glsl */ `  vec3 glow = godotGlowGather(uv) * ${glslFloat(glow.intensity)};
 ${map}${blend}`;
 }
 

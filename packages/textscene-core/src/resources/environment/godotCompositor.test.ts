@@ -6,19 +6,17 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { compositeProgram, GLOW_BUFFER_UNIFORM, GLOW_MAP_UNIFORM } from './godotCompositor';
-import { glowParamsFor, type GlowParams } from './godotGlow';
+import { compositeProgram, GLOW_MAP_UNIFORM } from './godotCompositor';
+import { glowLevelUniform } from './godotGlowPyramid';
+import type { GlowParams } from './godotGlow';
 import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import type { EnvironmentAdjustments } from './types';
 import type { CompositeToneMapping } from './godotCompositor';
-import { environmentSettingsOf } from './testing/environmentSettings';
+import { glowOn } from './testing/glowParams';
 
-function glowOn(extra: Record<string, string> = {}): GlowParams {
-  const params = glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...extra }));
-  if (!params) throw new Error('expected glow to be enabled');
-  return params;
-}
+/** The levels the default weights `[0, 0.8, 0.4, 0.1, 0, 0, 0]` gather. */
+const DEFAULT_GATHERED_LEVELS = [1, 2, 3];
 
 const FILMIC: CompositeToneMapping = { mode: ToneMapper.FILMIC, white: 1 };
 
@@ -56,9 +54,11 @@ describe('compositeProgram — the shader it emits', () => {
     expect(glsl).toContain('void mainImage(const in vec4 inputColor, const in vec2 uv,');
   });
 
-  it('declares the two uniforms the pass feeds it', () => {
+  it('declares the exposure and one sampler for each gathered glow level', () => {
     const glsl = composite(glowOn());
-    expect(glsl).toContain('uniform sampler2D godotGlowBuffer;');
+    for (const level of DEFAULT_GATHERED_LEVELS)
+      expect(glsl).toContain(`uniform sampler2D ${glowLevelUniform(level)};`);
+    expect(glsl).not.toContain(`uniform sampler2D ${glowLevelUniform(0)};`);
     expect(glsl).toContain('uniform float godotExposure;');
   });
 
@@ -79,15 +79,15 @@ describe('compositeProgram — the shader it emits', () => {
 });
 
 describe('compositeProgram — the glow gather', () => {
-  it('scales the gathered buffer by glow_intensity, as gather_glow’s caller does', () => {
-    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain('texture2D(godotGlowBuffer, uv).rgb * 0.75');
+  it('scales the gathered levels by glow_intensity, as gather_glow’s caller does', () => {
+    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain('godotGlowGather(uv) * 0.75');
   });
 
   it('gives MIX the glow_mix factor in the intensity slot Godot reuses', () => {
     // Godot fills the same uniform from `glow_mix` under MIX and lerps against
     // it, so the scale on the buffer and the lerp factor are one value.
     const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.MIX), glow_mix: '0.4' }));
-    expect(glsl).toContain('texture2D(godotGlowBuffer, uv).rgb * 0.4');
+    expect(glsl).toContain('godotGlowGather(uv) * 0.4');
   });
 });
 
@@ -249,8 +249,7 @@ describe('compositeProgram — with the glow flag clear', () => {
 
   it('gathers no glow and declares no buffer to gather from', () => {
     const glsl = composite(null, tone);
-    expect(glsl).not.toContain('godotGlowBuffer');
-    expect(glsl).not.toContain('godotGlowBlend');
+    expect(glsl).not.toContain('godotGlow');
     expect(glsl).toContain('uniform float godotExposure;');
   });
 
@@ -365,11 +364,12 @@ describe('compositeProgram — the uniforms it returns', () => {
     expect(Object.keys(uniforms).sort()).toEqual(declaredUniforms(fragmentShader).sort());
   });
 
-  it('adds the glow buffer with a glow and the glow map with a map', () => {
-    expect(Object.keys(program(glowOn()).uniforms)).toEqual(['godotExposure', GLOW_BUFFER_UNIFORM]);
+  it('adds a sampler per gathered level with a glow and the glow map with a map', () => {
+    const levels = DEFAULT_GATHERED_LEVELS.map(glowLevelUniform);
+    expect(Object.keys(program(glowOn()).uniforms)).toEqual(['godotExposure', ...levels]);
     expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([
       'godotExposure',
-      GLOW_BUFFER_UNIFORM,
+      ...levels,
       GLOW_MAP_UNIFORM,
     ]);
   });
@@ -377,7 +377,7 @@ describe('compositeProgram — the uniforms it returns', () => {
   it('starts the exposure at the authored value and each texture unbound', () => {
     const { uniforms } = program(glowOn(GLOW_MAP), 2.5);
     expect(uniforms['godotExposure']).toBe(2.5);
-    expect(uniforms[GLOW_BUFFER_UNIFORM]).toBeNull();
+    expect(uniforms[glowLevelUniform(1)]).toBeNull();
     expect(uniforms[GLOW_MAP_UNIFORM]).toBeNull();
   });
 });

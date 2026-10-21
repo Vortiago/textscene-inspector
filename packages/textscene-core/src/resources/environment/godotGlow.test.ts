@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { environmentSettingsOf } from './testing/environmentSettings';
+import { glowOn } from './testing/glowParams';
 import {
   blendGlsl,
   blendsAfterToneMapping,
@@ -12,12 +13,6 @@ import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
 
 /** `RS::MAX_GLOW_LEVELS` (`rendering_server.h:107`). */
 const GLOW_LEVEL_COUNT = 7;
-
-function glowOn(extra: Record<string, string> = {}) {
-  const params = glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...extra }));
-  if (!params) throw new Error('expected glow to be enabled');
-  return params;
-}
 
 describe('glowParamsFor', () => {
   it('is null when the environment has no glow', () => {
@@ -42,8 +37,22 @@ describe('glowParamsFor', () => {
     // Defaults put weight on levels 2..4 (indices 1..3).
     expect(glowOn().maxLevel).toBe(3);
     expect(glowOn({ 'glow_levels/7': '0.5' }).maxLevel).toBe(6);
-    // Weights at or below Godot's 0.0001 cutoff do not count as present.
-    expect(glowOn({ 'glow_levels/7': '0.00005' }).maxLevel).toBe(3);
+  });
+
+  it('builds the pyramid only to a weight above 0.01, as Godot does', () => {
+    // `renderer_scene_render_rd.cpp:587` picks `max_glow_index` with `> 0.01`, so a level
+    // lighter than that is never rendered, whatever the gather's own cutoff says.
+    expect(glowOn({ 'glow_levels/7': '0.01' }).maxLevel).toBe(3);
+    expect(glowOn({ 'glow_levels/7': '0.0101' }).maxLevel).toBe(6);
+  });
+
+  it('gathers the built levels whose weight is above 0.0001, as tonemap.glsl does', () => {
+    // `tonemap.glsl:380-406`: a level at or below 0.0001 is not sampled, and level 0 has no
+    // weight under the defaults though the chain renders it.
+    expect(glowOn().gatheredLevels).toEqual([1, 2, 3]);
+    expect(glowOn({ 'glow_levels/1': '0.0001', 'glow_levels/3': '0.00011' }).gatheredLevels).toEqual([
+      1, 2, 3,
+    ]);
   });
 
   it('is null when every weight is zero, whatever else is set', () => {
@@ -177,16 +186,16 @@ describe('brightPassGlsl', () => {
 });
 
 describe('glowLevelSize', () => {
-  it('puts level 0 at a QUARTER of the frame, not a half', () => {
-    // Godot's glow buffer is half the internal size and its gather pass writes
-    // level 0 at half of that again. Set to a half instead, every rung lands an
-    // octave too fine and a coarse-weighted halo comes out far too tight.
-    expect(glowLevelSize(800, 600, 0)).toEqual({ width: 200, height: 150 });
+  it('puts level 0 at half the frame', () => {
+    // `render_scene_buffers_rd.cpp:531`: the glow texture is `blur_size >> 1`, and
+    // `renderer_scene_render_rd.cpp:603-612` writes level 0 to its first mip.
+    expect(glowLevelSize(800, 600, 0)).toEqual({ width: 400, height: 300 });
   });
 
   it('halves again per level', () => {
-    expect(glowLevelSize(800, 600, 1)).toEqual({ width: 100, height: 75 });
-    expect(glowLevelSize(800, 600, 2)).toEqual({ width: 50, height: 37 });
+    expect(glowLevelSize(800, 600, 1)).toEqual({ width: 200, height: 150 });
+    expect(glowLevelSize(800, 600, 2)).toEqual({ width: 100, height: 75 });
+    expect(glowLevelSize(800, 600, 3)).toEqual({ width: 50, height: 37 });
   });
 
   it('never collapses below one pixel', () => {
@@ -194,6 +203,7 @@ describe('glowLevelSize', () => {
     // small frame reach zero quickly.
     expect(glowLevelSize(8, 8, 6)).toEqual({ width: 1, height: 1 });
     expect(glowLevelSize(1, 1, 0)).toEqual({ width: 1, height: 1 });
+    expect(glowLevelSize(3, 3, 0)).toEqual({ width: 1, height: 1 });
   });
 });
 
