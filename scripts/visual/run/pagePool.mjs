@@ -45,24 +45,26 @@ async function openPage(browser, options) {
 
 /**
  * Opens every page `scenes` need, together. `use(scene, capture)` runs `capture` on the page of the
- * scene's kind, and closes that page after the last scene of the kind.
+ * scene's kind, and closes that page after the last scene of the kind. The returned `scenes` is the
+ * run order, a kind's scenes together: a page left on its last scene keeps rendering it, which
+ * starves the next page's requests on a two-core runner.
  */
 export async function openPagePool(browser, scenes) {
-  const keyOfScene = new Map();
-  const kinds = new Map();
-  for (const scene of scenes) {
-    const { key, options } = pageSpecFor(scene);
-    keyOfScene.set(scene, key);
-    const kind = kinds.get(key) ?? { options, scenesLeft: 0 };
-    kind.scenesLeft += 1;
-    kinds.set(key, kind);
-  }
+  const specs = new Map(scenes.map((scene) => [scene, pageSpecFor(scene)]));
+  const sceneGroups = Map.groupBy(scenes, (scene) => specs.get(scene).key);
+  const kinds = new Map(
+    [...sceneGroups].map(([key, group]) => [
+      key,
+      { options: specs.get(group[0]).options, scenesLeft: group.length },
+    ])
+  );
   await Promise.all(
     [...kinds.values()].map(async (kind) => Object.assign(kind, await openPage(browser, kind.options)))
   );
   return {
+    scenes: [...sceneGroups.values()].flat(),
     async use(scene, capture) {
-      const kind = kinds.get(keyOfScene.get(scene));
+      const kind = kinds.get(specs.get(scene)?.key);
       if (!kind || kind.scenesLeft === 0) {
         throw new Error(`scene "${scene.name}" has no open page: it is not in the run, or ran twice`);
       }

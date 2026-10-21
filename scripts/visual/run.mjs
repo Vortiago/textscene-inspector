@@ -22,19 +22,18 @@ import { compareToBaseline, writeBaseline, writeFailureArtifacts } from './run/b
 
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  const scenes = selectScenes(opts);
   const results = [];
   await withPreviewBrowser(previewPort('visual'), async (browser, baseUrl) => {
     console.log(`[visual] preview at ${baseUrl}`);
-    const pool = await openPagePool(browser, scenes);
+    const pool = await openPagePool(browser, selectScenes(opts));
     // shards/measure.mjs starts the first scene's clock here, so the browser launch stays out of
     // the scene's seconds.
     console.log('[visual] browser ready');
-    for (const scene of scenes) {
+    for (const scene of pool.scenes) {
       const result = await pool.use(scene, (pageState) => checkScene(pageState, baseUrl, scene, opts));
       results.push(result);
       // One line per scene, so a slow run shows progress and a cancelled one shows how far it got.
-      console.log(`[visual] ${results.length}/${scenes.length} ${scene.name} ${result.status}`);
+      console.log(`[visual] ${results.length}/${pool.scenes.length} ${scene.name} ${result.status}`);
     }
   });
 

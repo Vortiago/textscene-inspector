@@ -75,6 +75,30 @@ describe('openPagePool', () => {
     expect(contexts).toHaveLength(2);
   });
 
+  it("lists the scenes in run order: a page kind's scenes together, kinds by first appearance", async () => {
+    stubContexts();
+    const small = (name) => scene(name, { canvas: { width: 96, height: 96 } });
+    const scenes = [
+      scene('a'),
+      small('x'),
+      scene('b'),
+      scene('flat', { mode: '2d' }),
+      small('y'),
+      scene('c'),
+    ];
+
+    const pool = await openPagePool({}, scenes);
+
+    expect(pool.scenes.map((s) => s.name)).toEqual(['a', 'b', 'c', 'x', 'y', 'flat']);
+  });
+
+  it('keeps the order of a run of one kind', async () => {
+    stubContexts();
+    const plain = [scene('a'), scene('b'), scene('c')];
+
+    expect((await openPagePool({}, plain)).scenes).toEqual(plain);
+  });
+
   it("runs a capture on the page of the scene's kind", async () => {
     const contexts = stubContexts();
     const small = scene('small', { canvas: { width: 96, height: 96 } });
