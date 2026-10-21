@@ -110,7 +110,7 @@ describe('AtlasAreaShadow lookup', () => {
     const view = new THREE.PerspectiveCamera();
     view.position.set(0, 0, 5);
     view.updateMatrixWorld();
-    const matrix = areaShadow().viewToLight(downwardArea(), view, new THREE.Matrix4());
+    const matrix = areaShadow().viewToLookup(view, new THREE.Matrix4(), downwardArea());
     // The world origin lies 5 in front of the view, and 3 below the light, down its -Z.
     const point = new THREE.Vector3(0, 0, -5).applyMatrix4(matrix);
     expect(point.distanceTo(new THREE.Vector3(0, 0, -3))).toBeCloseTo(0, 12);
@@ -122,18 +122,18 @@ describe('AtlasAreaShadow lookup', () => {
     light.updateMatrixWorld();
     const view = new THREE.PerspectiveCamera();
     view.updateMatrixWorld();
-    const matrix = areaShadow().viewToLight(light, view, new THREE.Matrix4());
+    const matrix = areaShadow().viewToLookup(view, new THREE.Matrix4(), light);
     const point = new THREE.Vector3(0, 0, 0).applyMatrix4(matrix);
     expect(point.distanceTo(new THREE.Vector3(0, 0, -3))).toBeCloseTo(0, 12);
   });
 
   it('gives its slot as a rectangle in units of the atlas', () => {
-    expect(areaShadow().slotUvRect(new THREE.Vector4()).toArray()).toEqual([0.5, 0.25, 0.25, 0.25]);
+    expect(areaShadow().slotRect(new THREE.Vector4())!.toArray()).toEqual([0.5, 0.25, 0.25, 0.25]);
   });
 
   it('gives no rectangle without a slot (error case)', () => {
     const shadow = areaShadow();
     shadow.place(null);
-    expect(shadow.slotUvRect(new THREE.Vector4(1, 1, 1, 1)).toArray()).toEqual([0, 0, 0, 0]);
+    expect(shadow.slotRect(new THREE.Vector4(1, 1, 1, 1))).toBeNull();
   });
 });

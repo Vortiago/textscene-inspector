@@ -18,6 +18,7 @@ import {
   type ChunkEdit,
   type ChunkPatch,
 } from '../shaderPatch/chunkPatch.js';
+import { clampedBilinearDepthGlsl } from './clampedBilinearDepth.js';
 import { FRAMEBUFFER_HEIGHT_UNIFORM, installFramebufferHeightUniform } from './framebufferRows.js';
 
 const CHUNK = 'shadowmap_pars_fragment';
@@ -63,23 +64,11 @@ ${GODOT_QUICK_HASH_GLSL}
 		}
 		return shadow * ( 1.0 / float( GODOT_SOFT_SHADOW_SAMPLES ) );
 	}
-	float godotRawDepthAt( sampler2D atlasColour, ivec2 texel, ivec2 last ) {
-		vec2 bytes = floor( texelFetch( atlasColour, clamp( texel, ivec2( 0 ), last ), 0 ).rg * 255.0 + 0.5 );
+	float godotRawDepthAt( sampler2D atlasColour, ivec2 texel ) {
+		vec2 bytes = floor( texelFetch( atlasColour, texel, 0 ).rg * 255.0 + 0.5 );
 		return dot( bytes, vec2( 256.0, 1.0 ) ) / 65535.0;
 	}
-	// The uv clamps before it turns into a texel, as the fog's atlasDepth does: past the int range the
-	// conversion is undefined.
-	float godotRawDepth( sampler2D atlasColour, vec2 uv ) {
-		ivec2 size = textureSize( atlasColour, 0 );
-		ivec2 last = size - 1;
-		vec2 position = clamp( uv, 0.0, 1.0 ) * vec2( size ) - 0.5;
-		ivec2 corner = ivec2( floor( position ) );
-		vec2 weight = fract( position );
-		float bottom = mix( godotRawDepthAt( atlasColour, corner, last ), godotRawDepthAt( atlasColour, corner + ivec2( 1, 0 ), last ), weight.x );
-		float top = mix( godotRawDepthAt( atlasColour, corner + ivec2( 0, 1 ), last ), godotRawDepthAt( atlasColour, corner + ivec2( 1, 1 ), last ), weight.x );
-		return mix( bottom, top, weight.y );
-	}
-`;
+${clampedBilinearDepthGlsl('godotRawDepth', 'godotRawDepthAt')}`;
 
 /**
  * The block goes inside `#ifdef USE_SHADOWMAP`, ahead of every shadow block, so every lookup that

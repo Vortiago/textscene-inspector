@@ -16,7 +16,8 @@ import { FogLightKind, FogLightTexel } from './fogLights.js';
 import { FOG_VOLUME_DENSITY_SCALE } from '../../godot/rendering/environment/fogVolume.js';
 import { FOG_VOLUME_GLSL } from './fogVolumeShader.js';
 import { LTC_INTEGRAL } from '../areaLight/ltcIntegral.js';
-import { PARABOLOID_UV_GLSL } from '../positionalShadow/paraboloidUv.js';
+import { OMNI_SLOT_GLSL, PARABOLOID_UV_GLSL } from '../positionalShadow/paraboloidUv.js';
+import { clampedBilinearDepthGlsl } from '../shadowFilter/clampedBilinearDepth.js';
 
 /**
  * Lights one froxel: the Environment's medium plus each FogVolume's (`.glsl:354-378`), each light's
@@ -133,20 +134,10 @@ vec3 areaLightScatter( vec3 view, vec3 eye, vec4 position, vec4 color, vec4 faci
 
 // Godot reads an atlas's depth through a linear sampler that clamps at the edge (.glsl:417, :507,
 // :571). The pass reads the atlas uncompared and unfiltered, so it filters the four nearest texels.
-// The uv clamps before it turns into a texel: a cell beside a light's origin projects past the int
-// range, where the conversion is undefined and the cell turns NaN.
-float atlasDepth( highp sampler2D atlas, vec2 uv ) {
-	ivec2 last = textureSize( atlas, 0 ) - 1;
-	vec2 texel = clamp( uv, 0.0, 1.0 ) * vec2( last + 1 ) - 0.5;
-	ivec2 base = ivec2( floor( texel ) );
-	vec2 weight = texel - floor( texel );
-	float d00 = texelFetch( atlas, clamp( base, ivec2( 0 ), last ), 0 ).r;
-	float d10 = texelFetch( atlas, clamp( base + ivec2( 1, 0 ), ivec2( 0 ), last ), 0 ).r;
-	float d01 = texelFetch( atlas, clamp( base + ivec2( 0, 1 ), ivec2( 0 ), last ), 0 ).r;
-	float d11 = texelFetch( atlas, clamp( base + ivec2( 1, 1 ), ivec2( 0 ), last ), 0 ).r;
-	return mix( mix( d00, d10, weight.x ), mix( d01, d11, weight.x ), weight.y );
+float atlasDepthAt( highp sampler2D atlas, ivec2 texel ) {
+	return texelFetch( atlas, texel, 0 ).r;
 }
-
+${clampedBilinearDepthGlsl('atlasDepth', 'atlasDepthAt')}
 vec4 lightTexel( int light, int texel ) {
 	return texelFetch( fogLights, ivec2( texel, light ), 0 );
 }
@@ -170,6 +161,7 @@ float directionalShadow( int light, vec3 view ) {
 }
 
 ${PARABOLOID_UV_GLSL}
+${OMNI_SLOT_GLSL}
 // .glsl:488-510 and 4.7.2 :674-690: a cell at local in the light's space, read from the
 // paraboloid in uvRect. The depth runs from the light over depthRange.
 float paraboloidShadow( vec3 local, vec4 uvRect, vec2 flipOffset, float bias, float depthRange ) {
@@ -182,8 +174,8 @@ float paraboloidShadow( vec3 local, vec4 uvRect, vec2 flipOffset, float bias, fl
 float omniShadow( int light, vec3 view, float bias, float depthRange ) {
 	vec3 local = ( shadowLookup( light, 0 ) * vec4( view, 1.0 ) ).xyz;
 	vec4 slot = lightTexel( light, ${FogLightTexel.SHADOW_SPLITS} );
-	vec2 flipOffset = slot.zw;
-	vec4 uvRect = vec4( slot.xy, vec2( max( flipOffset.x, flipOffset.y ) ) );
+	vec2 flipOffset;
+	vec4 uvRect = godotOmniSlot( slot, vec2( 0.0 ), flipOffset );
 	return paraboloidShadow( local, uvRect, flipOffset, bias, depthRange );
 }
 
