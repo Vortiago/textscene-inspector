@@ -9,6 +9,7 @@ import { SCENE_ROOT_PATH, joinPath, pathBetween } from '../utils/nodePath.js';
 import {
   hasForeignOwner,
   isInstanceBelowRoot,
+  isOutsideInstance,
   isOwnedByRoot,
   uniqueNameSetting,
   type UniqueNameClaim,
@@ -316,7 +317,7 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
     return;
   }
   const ownerInInstance = relativeTo(instanceLivePath, explicitOwner);
-  // An `owner=` outside the instance names a table this instance never reads.
+  // Any other `owner=` outside the instance names a table this instance never reads.
   if (ownerInInstance !== undefined)
     handToInstance(tables, instance!, { pathInInstance, isUnique: setting, ownerInInstance });
 }
@@ -334,13 +335,9 @@ function handToOwnerOutside<N extends RawNode>(
 ): boolean {
   const owner = node.owner === undefined ? undefined : tables.byPath.get(node.owner);
   if (!owner || !isInstanceBelowRoot(owner, owner === tables.root)) return false;
-  const ownerLivePath = tables.places.get(owner)!.livePath;
-  if (relativeTo(ownerLivePath, livePath) !== undefined) return false;
-  handToInstance(tables, owner, {
-    pathInInstance: pathBetween(ownerLivePath, livePath),
-    isUnique,
-    ownerInInstance: '',
-  });
+  const setting = { pathInInstance: pathBetween(tables.places.get(owner)!.livePath, livePath), isUnique };
+  if (!isOutsideInstance(setting)) return false;
+  handToInstance(tables, owner, setting);
   return true;
 }
 

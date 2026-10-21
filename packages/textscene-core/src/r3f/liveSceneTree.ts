@@ -241,19 +241,55 @@ function liveChainLinks(
   const segments = nodePathNames(path);
   if (segments.length === 0) return null;
 
+  const tree = new LiveTree(roots, ctx);
   const links: LiveChainLink[] = [];
-  let candidateGroups: readonly LiveChildGroup[] = [
-    { origin: 'inline', children: roots, scope: rootScope(ctx) },
-  ];
-
-  for (const segment of segments) {
-    const found = liveChildNamed(candidateGroups, segment);
-    if (!found) return null;
-    candidateGroups = liveChildGroups(found.node, found.scope, ctx.sceneCache, ctx.glbCache);
-    links.push({ raw: found.node, collapsed: mergedNodeOf(candidateGroups) ?? found.node });
+  for (let depth = 1; depth <= segments.length; depth++) {
+    const link = tree.at(segments.slice(0, depth).join('/'));
+    if (!link) return null;
+    links.push({ raw: link.node, collapsed: mergedNodeOf(link.groups) ?? link.node });
   }
 
   return links;
+}
+
+/** The groups a walk of the live tree starts from: the outer roots, in the root scene's scope. */
+export function rootGroups(roots: readonly TscnNode[], ctx: LiveTreeContext): readonly LiveChildGroup[] {
+  return [{ origin: 'inline', children: roots, scope: rootScope(ctx) }];
+}
+
+/** A node of the live tree, before its collapse, with its child groups. */
+export interface LiveLink {
+  readonly node: LiveNode;
+  readonly scope: SceneScope;
+  readonly groups: readonly LiveChildGroup[];
+}
+
+/**
+ * The live tree over one cache snapshot, each node's child groups walked once however many paths
+ * pass through it. A caller makes one per question, since the snapshot changes on each load.
+ */
+export class LiveTree {
+  /** Written only by `at`. A null marks a path the loaded tree does not contain. */
+  private readonly links = new Map<string, LiveLink | null>();
+
+  constructor(
+    readonly roots: readonly TscnNode[],
+    private readonly ctx: LiveTreeContext
+  ) {}
+
+  /** The node at the live path `path`, or null where the loaded tree stops. */
+  at(path: string): LiveLink | null {
+    const cached = this.links.get(path);
+    if (cached !== undefined) return cached;
+    const slash = path.lastIndexOf('/');
+    const parentGroups = slash < 0 ? rootGroups(this.roots, this.ctx) : this.at(path.slice(0, slash))?.groups;
+    const found = parentGroups && liveChildNamed(parentGroups, path.slice(slash + 1));
+    const link = found
+      ? { ...found, groups: liveChildGroups(found.node, found.scope, this.ctx.sceneCache, this.ctx.glbCache) }
+      : null;
+    this.links.set(path, link);
+    return link;
+  }
 }
 
 /**

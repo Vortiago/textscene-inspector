@@ -5,21 +5,29 @@
  */
 
 import type { LiveNode } from './liveNode';
-import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath';
-import { holderAfterSetting, type InstanceNameSetting } from '../parser/nodeOwner';
+import {
+  UNIQUE_NODE_PREFIX,
+  nodePathNames,
+  walkFromRoot,
+  type RootWalkTables,
+} from '../godot/string/nodePath';
+import { holderAfterSetting, isOutsideInstance, type InstanceNameSetting } from '../parser/nodeOwner';
 
-/** Each `%Name` key to the path below the instanced scene's root that holds it. */
+/**
+ * Each `%Name` key to the path from the instanced scene's root to the node that holds it. A node
+ * outside the instance that its explicit `owner=` gives to it climbs out with `..`.
+ */
 export type UniqueNamePaths = ReadonlyMap<string, string>;
 
 /**
- * The path below the instanced scene's root that the table gives a `%Name` key, or undefined
- * where nothing there claims it.
+ * The path from the instanced scene's root that the table gives a `%Name` key, as in
+ * {@link UniqueNamePaths}, or undefined where nothing claims it.
  */
 export type ClaimedPath = (key: string) => string | undefined;
 
 /** An instance's finished `%Name` table, which the merged node keeps for the render path. */
 export interface UniqueNameTable {
-  /** Each name the instance holds, to its path below the instanced scene's root. */
+  /** Each name the instance holds, to its path from the instanced scene's root. */
   paths(): UniqueNamePaths;
 }
 
@@ -79,8 +87,7 @@ export class InstanceNameTable implements UniqueNameTable {
    * table it names. A setting on a node the sub-scene lacks changes nothing.
    */
   private landOne(tree: LiveNode[], setting: InstanceNameSetting): LiveNode[] {
-    // A node outside the tree has the instance as its explicit owner, so no owner walk applies.
-    if (setting.pathInInstance.startsWith('../')) {
+    if (isOutsideInstance(setting)) {
       this.land(setting.pathInInstance, setting.isUnique);
       return tree;
     }
@@ -97,7 +104,7 @@ export class InstanceNameTable implements UniqueNameTable {
 
   /** The table once the node at `path` sets or clears its name. */
   private land(path: string, isUnique: boolean): void {
-    const key = UNIQUE_NODE_PREFIX + path.slice(path.lastIndexOf('/') + 1);
+    const key = UNIQUE_NODE_PREFIX + nodePathNames(path).at(-1)!;
     const holder = this.claimed(key);
     const next = holderAfterSetting(holder, path, isUnique);
     // A set on a held name or a clear on a free one changes nothing, so `paths` keeps the own table.

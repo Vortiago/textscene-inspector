@@ -92,6 +92,14 @@ export interface InstanceNameSetting {
 }
 
 /**
+ * Whether the setting is on a node outside the instance, which its explicit `owner=` gives to
+ * the instance. No owner walk applies, since the instance itself holds the name.
+ */
+export function isOutsideInstance(setting: Pick<InstanceNameSetting, 'pathInInstance'>): boolean {
+  return setting.pathInInstance.startsWith('../');
+}
+
+/**
  * The root's `%Name` claims in one seated file, and where its own nodes sit inside instanced
  * content. Each instance node carries the settings for its own table (`instanceNameSettings`).
  */

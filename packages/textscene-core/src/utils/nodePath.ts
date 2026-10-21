@@ -18,17 +18,6 @@ export function pathBetween(from: string, to: string): string {
   return [...climbs, ...toSegments.slice(shared)].join('/');
 }
 
-/** The node `relative` names from the node at `base`, each leading `..` climbing one segment. */
-export function pathFrom(base: string, relative: string): string {
-  const segments = base.split('/');
-  const rest = relative.split('/');
-  while (rest[0] === '..') {
-    rest.shift();
-    segments.pop();
-  }
-  return [...segments, ...rest].join('/');
-}
-
 export function getAncestorPaths(nodePath: string): string[] {
   const parts = nodePath.split('/');
   const ancestors: string[] = [];
