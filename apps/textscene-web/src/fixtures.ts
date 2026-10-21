@@ -603,6 +603,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Default Material",
+    "file": "unit-glb-default-material.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Lightmap Uv2",
     "file": "unit-glb-lightmap-uv2.tscn",
     "category": "Other"

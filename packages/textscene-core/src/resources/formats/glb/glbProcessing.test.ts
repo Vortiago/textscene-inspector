@@ -134,6 +134,27 @@ describe('createGLBMesh alpha modes', () => {
   });
 });
 
+describe('createGLBMesh surface materials', () => {
+  async function importedMaterial(material?: Record<string, unknown>): Promise<THREE.MeshStandardMaterial> {
+    const object = await createGLBMesh(triangleGlb({ material }), NO_SIDECAR);
+    const mesh = object.getObjectByProperty('isMesh', true) as THREE.Mesh;
+    return mesh.material as THREE.MeshStandardMaterial;
+  }
+
+  it('gives a primitive with no material a non-metallic one, as Godot makes a new StandardMaterial3D', async () => {
+    // `gltf_document.cpp:1929-1935`.
+    expect((await importedMaterial()).metalness).toBe(0);
+  });
+
+  it("keeps a material's own metallic factor", async () => {
+    expect((await importedMaterial({ pbrMetallicRoughness: { metallicFactor: 0.25 } })).metalness).toBe(0.25);
+  });
+
+  it('keeps the glTF default metallic factor of 1 for a material that names none (edge case)', async () => {
+    expect((await importedMaterial({})).metalness).toBe(1);
+  });
+});
+
 describe('createGLBMesh with a URI the GLB names', () => {
   /** One triangle whose positions live in the buffer `uri` names. */
   function triangleNaming(uri: string): ArrayBuffer {
