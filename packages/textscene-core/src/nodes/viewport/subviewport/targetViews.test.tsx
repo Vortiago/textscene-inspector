@@ -3,7 +3,7 @@
  * view (`texture_storage.cpp:3593-3594`, `:3644-3647`): the plain view a canvas item samples
  * (`texture_storage.cpp:754`) and the decoding view a `source_color` sampler reads.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
@@ -11,6 +11,7 @@ import { createCanvasTarget, createSceneTarget } from './offscreenViewport';
 import { useTargetViews } from './targetViews';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 
 type TargetViews = ReturnType<typeof useTargetViews>;
 
@@ -36,25 +37,10 @@ async function mount(target: THREE.WebGLRenderTarget) {
     </>
   );
   const gl = captured.current!;
-  /** Runs one fill with the renderer stubbed, since the test context cannot draw. */
-  const fill = (): (THREE.WebGLRenderTarget | null)[] => {
+  /** Runs one fill and reports the targets it rendered into. */
+  const fill = async (): Promise<(THREE.WebGLRenderTarget | null)[]> => {
     const drawnInto: (THREE.WebGLRenderTarget | null)[] = [];
-    let bound: THREE.WebGLRenderTarget | null = null;
-    const original = { set: gl.setRenderTarget, get: gl.getRenderTarget, render: gl.render };
-    gl.setRenderTarget = ((next: THREE.WebGLRenderTarget | null) => {
-      bound = next;
-    }) as typeof gl.setRenderTarget;
-    gl.getRenderTarget = () => bound;
-    gl.render = (() => drawnInto.push(bound)) as typeof gl.render;
-    try {
-      views.current!.fill();
-    } finally {
-      Object.assign(gl, {
-        setRenderTarget: original.set,
-        getRenderTarget: original.get,
-        render: original.render,
-      });
-    }
+    await withStubbedGl(gl, { onRender: (bound) => drawnInto.push(bound) }, () => views.current!.fill());
     return drawnInto;
   };
   return { views: views.current!, fill };
@@ -91,27 +77,39 @@ describe('useTargetViews', () => {
   it('fills the decoding copy from the plain view while a consumer retains it', async () => {
     const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe'));
     views.decoding.retain();
-    expect(fill().map((drawn) => drawn?.texture)).toEqual([views.decoding.texture]);
+    expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.decoding.texture]);
   });
 
   it('fills the plain copy of a 3D target while a consumer retains it', async () => {
     const { views, fill } = await mount(createSceneTarget(8, 8, 'Probe'));
     views.plain.retain();
-    expect(fill().map((drawn) => drawn?.texture)).toEqual([views.plain.texture]);
+    expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.plain.texture]);
   });
 
   it('fills nothing for the view that is the target itself, however many consumers retain it', async () => {
     const scene = await mount(createSceneTarget(8, 8, 'Probe'));
     scene.views.decoding.retain();
-    expect(scene.fill()).toEqual([]);
+    expect(await scene.fill()).toEqual([]);
     const canvas = await mount(createCanvasTarget(8, 8, 'Probe'));
     canvas.views.plain.retain();
-    expect(canvas.fill()).toEqual([]);
+    expect(await canvas.fill()).toEqual([]);
   });
 
   it('fills nothing while no consumer retains a copy (edge case)', async () => {
     const { fill } = await mount(createCanvasTarget(8, 8, 'Probe'));
-    expect(fill()).toEqual([]);
+    expect(await fill()).toEqual([]);
+  });
+
+  it("frees the copy's storage once the last consumer releases it", async () => {
+    const dispose = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose');
+    const { views } = await mount(createCanvasTarget(8, 8, 'Probe'));
+    const releaseFirst = views.decoding.retain();
+    const releaseSecond = views.decoding.retain();
+    releaseFirst();
+    expect(dispose).not.toHaveBeenCalled();
+    releaseSecond();
+    expect(dispose).toHaveBeenCalledTimes(1);
+    dispose.mockRestore();
   });
 
   it('stops filling once the last consumer releases the copy', async () => {
@@ -120,8 +118,8 @@ describe('useTargetViews', () => {
     const releaseSecond = views.decoding.retain();
     releaseFirst();
     releaseFirst();
-    expect(fill()).toHaveLength(1);
+    expect(await fill()).toHaveLength(1);
     releaseSecond();
-    expect(fill()).toEqual([]);
+    expect(await fill()).toEqual([]);
   });
 });

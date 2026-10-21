@@ -96,7 +96,10 @@ const encodePassFor = copyPassFor('PlainViewCopy', ENCODE_FRAGMENT);
 class ViewCopy implements PassView {
   readonly texture: THREE.Texture;
   private readonly copy: THREE.WebGLRenderTarget;
-  /** Written only by `retain` and its release. The copy fills while it is above zero. */
+  /**
+   * Written only by `retain` and its release. The copy fills while it is above zero, and its
+   * storage is freed when it returns to zero: three allocates it again on the next fill.
+   */
   private retainers = 0;
 
   constructor(
@@ -115,7 +118,7 @@ class ViewCopy implements PassView {
     return () => {
       if (released) return;
       released = true;
-      this.retainers--;
+      if (--this.retainers === 0) this.copy.dispose();
     };
   }
 

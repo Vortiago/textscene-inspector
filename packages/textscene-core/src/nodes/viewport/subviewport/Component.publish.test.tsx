@@ -29,6 +29,7 @@ import { splitSunOf } from '../../../r3f/directionalShadow/splitSun';
 
 import '../../../r3f/nodes/index';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { advanceFrameWithStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { instanceAs } from '../../3d/testing/reactThreeTestInstance';
 import { fittedAspect } from '../../3d/camera3d/projectionFit';
@@ -44,31 +45,6 @@ const bareSubViewport = new TscnParser().parse(
 function Probe({ path, seen }: { path: string; seen: (ViewportTextureEntry | null)[] }) {
   seen.push(useViewportTexture(path));
   return null;
-}
-
-/**
- * Runs one frame with the renderer's target and render entry points stubbed. The
- * fake WebGL context's `setRenderTarget` throws "invalid value used as weak map key"
- * as an unhandled rejection, and nothing here asserts pixels, so a recorder
- * replaces the GL side and the frame exercises only the state around it.
- */
-async function advanceFrameWithStubbedGl(
-  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
-  gl: THREE.WebGLRenderer,
-  onBind?: (target: THREE.WebGLRenderTarget | null) => void
-): Promise<void> {
-  const originalSet = gl.setRenderTarget;
-  const originalRender = gl.render;
-  gl.setRenderTarget = ((target: THREE.WebGLRenderTarget | null) => {
-    onBind?.(target);
-  }) as typeof gl.setRenderTarget;
-  gl.render = (() => undefined) as typeof gl.render;
-  try {
-    await renderer.advanceFrames(1, 16);
-  } finally {
-    gl.setRenderTarget = originalSet;
-    gl.render = originalRender;
-  }
 }
 
 /**

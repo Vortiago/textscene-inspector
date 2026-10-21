@@ -34,6 +34,7 @@ import { collectControlRasterViewports } from './controlRasterViewports';
 import { ControlRasterPasses } from './ControlRasterPass';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { advanceFrameWithStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 
 const GUI_SCENE = `[gd_scene format=3]
@@ -65,30 +66,6 @@ function walk(scene: TscnScene) {
 function Watch({ path, seen }: { path: string; seen: (ViewportTextureEntry | null)[] }) {
   seen.push(useViewportTexture(path));
   return null;
-}
-
-/**
- * Runs one frame with the renderer's target and render entry points stubbed,
- * recording every non-null bind: the test renderer's fake WebGL context cannot
- * service a real bind or draw.
- */
-async function advanceFrameWithStubbedGl(
-  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
-  gl: THREE.WebGLRenderer,
-  onBind?: (target: THREE.WebGLRenderTarget | null) => void
-): Promise<void> {
-  const originalSet = gl.setRenderTarget;
-  const originalRender = gl.render;
-  gl.setRenderTarget = ((target: THREE.WebGLRenderTarget | null) => {
-    onBind?.(target);
-  }) as typeof gl.setRenderTarget;
-  gl.render = (() => undefined) as typeof gl.render;
-  try {
-    await renderer.advanceFrames(1, 16);
-  } finally {
-    gl.setRenderTarget = originalSet;
-    gl.render = originalRender;
-  }
 }
 
 async function mount(

@@ -16,7 +16,7 @@ import { GLTF_SURFACE, useMaterialTextures, type TexturedSurface } from './Surfa
 import { NodePathProvider } from '../contexts/NodePathContext';
 import type { MaterialTextureMaps } from './materialTextureMaps';
 import { ViewportTextureProvider } from '../contexts/ViewportTextureContext';
-import { ViewportTexturePublisher, viewportEntry } from '../testing/ViewportTexturePublisher';
+import { ViewportTexturePublisher, countingView, viewportEntry } from '../testing/ViewportTexturePublisher';
 
 const GRADIENT: TscnInternalResource[] = [
   { id: 'Gradient_a', type: 'Gradient', data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' } },
@@ -113,18 +113,12 @@ function viewportMaps(properties: Record<string, string>, surface?: TexturedSurf
 function targetMaps(properties: Record<string, string>, surface?: TexturedSurface) {
   const target = new THREE.WebGLRenderTarget(4, 4).texture;
   const decoding = new THREE.WebGLRenderTarget(4, 4).texture;
-  const retainers = { count: 0 };
-  const retain = () => {
-    retainers.count++;
-    return () => {
-      retainers.count--;
-    };
-  };
+  const { view, retainers } = countingView(decoding);
   const maps = materialMaps(properties, VIEWPORT, surface, (children) => (
     <ViewportTextureProvider>
       <ViewportTexturePublisher
         path="Root/SubViewport"
-        entry={viewportEntry(target, { x: 4, y: 4 }, { texture: decoding, retain })}
+        entry={viewportEntry(target, { x: 4, y: 4 }, { decoding: view })}
       />
       <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
     </ViewportTextureProvider>
