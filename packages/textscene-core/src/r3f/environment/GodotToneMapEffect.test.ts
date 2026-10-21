@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 import { GLOW_MAP_UNIFORM } from '../../resources/environment/godotCompositor';
-import { glowLevelUniform } from '../../resources/environment/godotGlowPyramid';
+import { GLOW_TEXTURE_SIZE_UNIFORM, glowLevelUniform } from '../../resources/environment/godotGlowPyramid';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../resources/environment/build';
@@ -124,5 +124,23 @@ describe('GodotToneMapEffect glow levels', () => {
     effect.setSize(200, 100);
     effect.setSize(800, 600);
     expect(sizeOfLevel(effect, 6)).toEqual([6, 4]);
+  });
+});
+
+describe('GodotToneMapEffect glow texture size', () => {
+  const textureSize = (effect: GodotToneMapEffect) =>
+    (effect.uniforms.get(GLOW_TEXTURE_SIZE_UNIFORM)!.value as THREE.Vector2).toArray();
+
+  it('is the half-size glow texture, which the bicubic read halves again for each level', () => {
+    const effect = effectWith({});
+    effect.setSize(800, 600);
+    expect(textureSize(effect)).toEqual([400, 300]);
+  });
+
+  it('follows a resize', () => {
+    const effect = effectWith({});
+    effect.setSize(800, 600);
+    effect.setSize(201, 101);
+    expect(textureSize(effect)).toEqual([100, 50]);
   });
 });

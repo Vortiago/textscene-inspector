@@ -7,18 +7,30 @@
 
 import { describe, expect, it } from 'vitest';
 import { compositeProgram, GLOW_MAP_UNIFORM } from './godotCompositor';
-import { glowLevelUniform } from './godotGlowPyramid';
+import { GLOW_TEXTURE_SIZE_UNIFORM, glowLevelUniform } from './godotGlowPyramid';
 import type { GlowParams } from './godotGlow';
 import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import type { EnvironmentAdjustments } from './types';
-import type { CompositeToneMapping } from './godotCompositor';
+import type { CompositeOptions, CompositeToneMapping } from './godotCompositor';
 import { glowOn } from './testing/glowParams';
 
 /** The levels the default weights `[0, 0.8, 0.4, 0.1, 0, 0, 0]` gather. */
 const DEFAULT_GATHERED_LEVELS = [1, 2, 3];
 
 const FILMIC: CompositeToneMapping = { mode: ToneMapper.FILMIC, white: 1 };
+
+/** The composite options of a project that upscales glow linearly. */
+function linearOptions(): CompositeOptions {
+  return {
+    glow: glowOn(),
+    toneMapping: FILMIC,
+    adjustments: null,
+    exposure: 1,
+    transparentBackground: false,
+    usesBicubicGlowUpscale: false,
+  };
+}
 
 /** The whole shader with `FLAG_USE_BCS` clear. */
 function composite(glow: GlowParams | null, toneMapping: CompositeToneMapping = FILMIC): string {
@@ -60,15 +72,13 @@ describe('compositeProgram — the shader it emits', () => {
     expect(glsl).toContain('void mainImage(const in vec4 inputColor, const in vec2 uv,');
   });
 
+  it('declares the glow texture size for the bicubic read, and not for the linear one', () => {
+    expect(composite(glowOn())).toContain(`uniform vec2 ${GLOW_TEXTURE_SIZE_UNIFORM};`);
+    expect(compositeProgram(linearOptions()).fragmentShader).not.toContain(GLOW_TEXTURE_SIZE_UNIFORM);
+  });
+
   it('gathers each level with one bilinear fetch when the project upscales glow linearly', () => {
-    const glsl = compositeProgram({
-      glow: glowOn(),
-      toneMapping: FILMIC,
-      adjustments: null,
-      exposure: 1,
-      transparentBackground: false,
-      usesBicubicGlowUpscale: false,
-    }).fragmentShader;
+    const glsl = compositeProgram(linearOptions()).fragmentShader;
     expect(glsl).toContain(`texture2D(${glowLevelUniform(1)}, uv).rgb`);
     expect(glsl).not.toContain('godotGlowBicubic');
   });
@@ -385,14 +395,14 @@ describe('compositeProgram — the uniforms it returns', () => {
     expect(Object.keys(uniforms).sort()).toEqual(declaredUniforms(fragmentShader).sort());
   });
 
-  it('adds a sampler per gathered level with a glow and the glow map with a map', () => {
-    const levels = DEFAULT_GATHERED_LEVELS.map(glowLevelUniform);
-    expect(Object.keys(program(glowOn()).uniforms)).toEqual(['godotExposure', ...levels]);
-    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([
+  it('adds a sampler per gathered level and the glow size with a glow, and the glow map with a map', () => {
+    const glowUniforms = [
       'godotExposure',
-      ...levels,
-      GLOW_MAP_UNIFORM,
-    ]);
+      ...DEFAULT_GATHERED_LEVELS.map(glowLevelUniform),
+      GLOW_TEXTURE_SIZE_UNIFORM,
+    ];
+    expect(Object.keys(program(glowOn()).uniforms)).toEqual(glowUniforms);
+    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([...glowUniforms, GLOW_MAP_UNIFORM]);
   });
 
   it('starts the exposure at the authored value and each texture unbound', () => {

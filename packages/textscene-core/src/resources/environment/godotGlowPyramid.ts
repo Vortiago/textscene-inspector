@@ -14,6 +14,11 @@ import { glslFloat } from '../../utils/glslLiterals';
 export const BLUR_SOURCE_UNIFORM = 'sourceBuffer';
 /** The horizontal pass's result, which the vertical pass reads. */
 export const BLUR_BLURRED_UNIFORM = 'blurredBuffer';
+/**
+ * The size of the glow texture, which is level 0, in pixels. The bicubic read takes the size of a
+ * level from it, as `glow_texture_size >> lod` does (`tonemap.glsl:339`).
+ */
+export const GLOW_TEXTURE_SIZE_UNIFORM = 'godotGlowTextureSize';
 
 /** The composite's sampler for one built level. */
 export function glowLevelUniform(level: number): string {
@@ -133,12 +138,14 @@ export function laterLevelBlurGlsl(params: GlowParams): LevelBlurGlsl {
 /**
  * The cubic B-spline read the composite takes of each level (`tonemap.glsl:271-338`), Godot's
  * default `rendering/environment/glow/upscale_mode`: four bilinear fetches stand in for sixteen
- * texels. The size is the level's own, as `glow_texture_size >> lod` is.
+ * texels. The size is `glow_texture_size >> lod`, which for a level the frame has no mip for is the
+ * size of the missing level, read from the last mip. A size under 1px clamps to 1px, where Godot
+ * divides by zero.
  */
 const BICUBIC_GLSL = /* glsl */ `
 ${bicubicWeightsGlsl('godotGlow')}
-vec3 godotGlowBicubic(sampler2D tex, vec2 uv) {
-  vec2 size = vec2(textureSize(tex, 0));
+vec3 godotGlowBicubic(sampler2D tex, vec2 uv, int lod) {
+  vec2 size = max(vec2(ivec2(${GLOW_TEXTURE_SIZE_UNIFORM}) >> lod), vec2(1.0));
   vec2 pixelSize = vec2(1.0) / size;
   uv = uv * size + 0.5;
   vec2 whole = floor(uv);
@@ -166,10 +173,14 @@ vec3 godotGlowBicubic(sampler2D tex, vec2 uv) {
  * (`:366-374`). Declares `godotGlowGather(uv)`; the caller declares the level samplers.
  */
 export function glowGatherGlsl(params: GlowParams, usesBicubicGlowUpscale: boolean): string {
-  const read = (sampler: string) =>
-    usesBicubicGlowUpscale ? `godotGlowBicubic(${sampler}, uv)` : `texture2D(${sampler}, uv).rgb`;
+  const read = (level: number) => {
+    const sampler = glowLevelUniform(level);
+    return usesBicubicGlowUpscale
+      ? `godotGlowBicubic(${sampler}, uv, ${level})`
+      : `texture2D(${sampler}, uv).rgb`;
+  };
   const terms = params.gatheredLevels.map(
-    (level) => `  glow += ${read(glowLevelUniform(level))} * ${glslFloat(params.levels[level]!)};`
+    (level) => `  glow += ${read(level)} * ${glslFloat(params.levels[level]!)};`
   );
   return /* glsl */ `${usesBicubicGlowUpscale ? BICUBIC_GLSL : ''}
 vec3 godotGlowGather(vec2 uv) {

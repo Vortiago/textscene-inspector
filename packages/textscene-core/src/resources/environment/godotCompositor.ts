@@ -10,7 +10,7 @@
  */
 
 import { blendGlsl, blendsAfterToneMapping, samplesGlowMap, type GlowParams } from './godotGlow';
-import { glowGatherGlsl, glowLevelUniform } from './godotGlowPyramid';
+import { GLOW_TEXTURE_SIZE_UNIFORM, glowGatherGlsl, glowLevelUniform } from './godotGlowPyramid';
 import { glslFloat } from '../../utils/glslLiterals';
 import { toneMappingEffectGlsl } from './godotToneMapping';
 import { resolvedWhite } from '../../godot/rendering/environment/toneMapping.js';
@@ -48,13 +48,13 @@ export interface CompositeOptions {
 }
 
 interface UniformDeclaration {
-  glslType: 'float' | 'sampler2D';
+  glslType: 'float' | 'vec2' | 'sampler2D';
   value: number | null;
 }
 
 /**
  * The composite shader with the uniforms it declares. A number is the uniform's value; null is a
- * texture the caller binds. A name is in the map exactly when the shader declares it.
+ * texture or a vector the caller binds. A name is in the map exactly when the shader declares it.
  */
 export interface CompositeProgram {
   fragmentShader: string;
@@ -83,6 +83,7 @@ export function compositeProgram({
         { glslType: 'sampler2D', value: null } satisfies UniformDeclaration,
       ])
     ),
+    ...(glow && usesBicubicGlowUpscale && { [GLOW_TEXTURE_SIZE_UNIFORM]: { glslType: 'vec2', value: null } }),
     ...(glow && samplesGlowMap(glow) && { [GLOW_MAP_UNIFORM]: { glslType: 'sampler2D', value: null } }),
   };
   // SCREEN normalises against the floored white, not the authored one

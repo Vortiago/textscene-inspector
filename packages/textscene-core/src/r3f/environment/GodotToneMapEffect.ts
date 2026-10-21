@@ -12,6 +12,7 @@ import {
   BLUR_BLURRED_UNIFORM,
   BLUR_SOURCE_UNIFORM,
   firstLevelBlurGlsl,
+  GLOW_TEXTURE_SIZE_UNIFORM,
   glowLevelUniform,
   laterLevelBlurGlsl,
   type LevelBlurGlsl,
@@ -93,6 +94,8 @@ class GlowPyramid {
   private readonly gatheredLevels: number[];
   /** The highest level built and read for the frame size, which `setSize` lowers for a small frame. */
   private topLevel: number;
+  /** The composite's size uniform, which `setSize` writes. Null under the Linear upscale mode. */
+  private readonly textureSize: THREE.Vector2 | null;
 
   /** Binds each gathered level's sampler in `compositeUniforms`, and rebinds it on every resize. */
   constructor(
@@ -111,6 +114,8 @@ class GlowPyramid {
       this.levelTargets.push(createTarget(`GodotGlow.Level${level}`));
       this.horizontalTargets.push(createTarget(`GodotGlow.Horizontal${level}`));
     }
+    const sizeUniform = compositeUniforms.get(GLOW_TEXTURE_SIZE_UNIFORM);
+    this.textureSize = sizeUniform ? (sizeUniform.value = new THREE.Vector2()) : null;
     this.rebindLevels();
   }
 
@@ -127,6 +132,8 @@ class GlowPyramid {
 
   setSize(width: number, height: number): void {
     this.topLevel = Math.min(this.maxLevel, glowLevelCap(width, height));
+    const glowTexture = glowLevelSize(width, height, 0);
+    this.textureSize?.set(glowTexture.width, glowTexture.height);
     for (let level = 0; level < this.levelTargets.length; level++) {
       const size = glowLevelSize(width, height, level);
       this.levelTargets[level]!.setSize(size.width, size.height);
