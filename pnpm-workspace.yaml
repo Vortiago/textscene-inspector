@@ -24,6 +24,9 @@ catalog:
   happy-dom: ^21.0.1
   jsdom: ^30
 
+  # Declaration bundling for @textscene/tscn: one .d.ts that imports nothing from the workspace.
+  dts-bundle-generator: ^9.5.1
+
   # CLI dependencies
   commander: ^15.0.0
 
