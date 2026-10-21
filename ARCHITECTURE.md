@@ -19,6 +19,7 @@ completion. A host supplies files and a place to draw or edit.
 | `apps/textscene-vscode` | VS Code extension: preview webview and language features | esbuild |
 | `apps/textscene-lsp` | `tscn-lsp` language server for any LSP client | esbuild |
 | `apps/textscene-linter` | `tscn-lint` CLI | esbuild |
+| `apps/textscene-tscn` | `@textscene/tscn`: core's parser as one npm bundle | esbuild |
 
 Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
 `pnpm-workspace.yaml` catalog holds every shared dependency version.
@@ -92,8 +93,9 @@ resource section of its type. This path imports no React and no three.js, so the
 the VS Code extension host bundle it alone.
 
 **Language features.** `languageFeatures/` (`createLanguageDocument`) parses the text through
-the same scanning loop with a `ParseObserver`, then answers hover, completion, quick fixes,
-folding and document highlights. It reads the same `godot/` ClassDB captures and the same
+the same scanning loop with a `ParseObserver`, seats the `[node]` headings as the parsers do
+(`seatScene`), then answers hover, completion, quick fixes, folding, document highlights, go to
+definition and the outline. It reads the same `godot/` ClassDB captures and the same
 deprecated-alias table as the linter, so each engine fact has one source in `godot/`. It imports
 no React and no three.js, and every result is host-neutral with zero-based ranges (ADR-0049).
 
@@ -170,6 +172,8 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
   (`ViewportPassRegistryContext.tsx`).
 - **Shadows.** `<SceneShadowFitter>` fits each declared shadow
   (`r3f/directionalShadow/directionalShadow.md`, `r3f/positionalShadow/positionalShadow.md`).
+- **Baked lightmaps.** Each LightmapGI registers its bake with `r3f/lightmap/`, and a lit surface
+  of a node it names reads the **Lightmap atlas** through UV2 (ADR-0054).
 - **Frame profile.** The Display menu's Performance toggle times each render step on the CPU and
   the GPU and counts its draw calls, and the overlay shows the result (`r3f/frameProfile/`,
   ADR-0053). `pnpm test:perf` holds the counts of a set of scenes to their work budget.

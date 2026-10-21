@@ -3,9 +3,11 @@
  */
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
+import type { InstanceNameSetting } from './nodeOwner';
+import type { IdHeading } from '../godot/scene/packedScene.js';
 
 /**
- * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
+ * One `[node]` heading as the scan saw it, before `seatScene` placed it. Kept off
  * the node because only the `sceneTreeBuilder` checks read it, against the returned tree.
  */
 export interface NodeOrigin<N extends RawNode> {
@@ -25,6 +27,11 @@ export interface NodeOrigin<N extends RawNode> {
    * the heading has none, or where the value is not a `PackedInt32Array`.
    */
   readonly idTrail?: readonly number[];
+  /**
+   * The ids of the heading's `owner_uid_path=`, the trail Godot falls back to when the `owner=`
+   * path does not walk (`resource_format_text.cpp:258-262`, `packed_scene.cpp:159-163`).
+   */
+  readonly ownerIdTrail?: readonly number[];
   /** The heading's `unique_id=`, or `0` where it has none (`UNIQUE_SCENE_ID_UNASSIGNED`). */
   readonly uniqueId: number;
 }
@@ -37,6 +44,8 @@ export interface NodeOrigin<N extends RawNode> {
 export interface IdRecovery {
   readonly kind: 'lands' | 'inBase';
   readonly via: NodeOrigin<RawNode>;
+  /** The root-relative path `via` is seated at, or undefined for a nameless heading, which claims none. */
+  readonly viaPath: string | undefined;
 }
 
 /** A parsed scene. `N` is the node the parser built: a `TscnNode`, or the strict parser's `RawNode`. */
@@ -94,20 +103,44 @@ export interface RawNode {
    */
   instanceSubPath?: string;
   /**
+   * The name the heading wrote, set only on a tree node the builder re-rooted: its `name`
+   * is then Godot's rename for the vanished `parent` (`packed_scene.cpp:561-563`).
+   */
+  authoredName?: string;
+  /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this
    * path. See `isPropertyOverrideHeading`.
    */
   overridesExistingNode?: boolean;
   /**
-   * The heading's `owner=` NodePath as written, root-relative. The loader sets the owner
-   * from it (resource_format_text.cpp:257-262), which decides the table a `%Name`
-   * registers on. Godot's own writer never emits it (packed_scene.cpp:1036-1044).
+   * The heading's `owner=` NodePath, root-relative. The loader sets the owner from it
+   * (resource_format_text.cpp:257-262), which decides the table a `%Name` registers on. Godot's own
+   * writer never emits it (packed_scene.cpp:1036-1044). A seated node holds it walked from the root
+   * (`resolvedOwner`): `.` for the root, and each `%Name` the file answers replaced by its claimant.
    */
   owner?: string;
   /** External scene instance reference, for example ExtResource("1_abc"). */
   instance?: string;
+  /**
+   * Set by the seating on an instance node below the root, and on an inherited root: the
+   * `unique_name_in_owner` settings this file writes inside its content, in file order. The graft
+   * reads them, and a graft into an outer instance appends the ones it hands down.
+   */
+  instanceNameSettings?: readonly InstanceNameSetting[];
 }
+
+/**
+ * What a node path names in the authored tree. `unknowable` is the only decline: Godot's walk is
+ * deterministic, so there is no "ambiguous", and a rule that reports on a guess is worse than one
+ * that stays quiet.
+ */
+export type NodePathResolution<N extends RawNode = RawNode> =
+  | { readonly status: 'found'; readonly node: N }
+  /** The walk ran off the authored tree exactly as the engine's would. */
+  | { readonly status: 'missing' }
+  /** The walk entered, started inside, or ended on content this file does not declare. */
+  | { readonly status: 'unknowable' };
 
 /** A node whose children are its own kind: the shape the tree builder seats a child into. */
 export type SceneNode<N> = RawNode & { children: N[] };
@@ -128,19 +161,25 @@ export interface ConnectionHeading {
    * through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`), so an `ExtResource` in it is a use.
    */
   binds: string | undefined;
-  /** The heading carries `from_uid_path`, which Godot walks when `from` resolves nowhere (`packed_scene.cpp:162-163`). */
-  hasFromUidPath: boolean;
-  /** The heading carries `to_uid_path`. */
-  hasToUidPath: boolean;
+  /**
+   * The ids of `from_uid_path=`, the trail Godot follows when `from` resolves nowhere (`packed_scene.cpp:162-163`).
+   * Undefined where the heading has none, or where the value is not a `PackedInt32Array`.
+   */
+  fromIdTrail: readonly number[] | undefined;
+  /** The ids of `to_uid_path=`, read as {@link ConnectionHeading.fromIdTrail} is. */
+  toIdTrail: readonly number[] | undefined;
 }
 
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
-   * Headings the tree could not place, so they are not in `nodes`: a `parent=` path that resolves
-   * against nothing, or a later heading with no `parent=`.
+   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which
+   * `reRootedNames` holds, and those it left out of `nodes`, for a file or a trail Godot does not
+   * re-root, or a later heading with no `parent=`.
    */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
+  /** The name the builder gave each re-rooted heading's node, which the heading's own node keeps unrenamed. */
+  reRootedNames: ReadonlyMap<NodeOrigin<RawNode>, string>;
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses
    * (`packed_scene.cpp:218-219`), or undefined.
@@ -153,10 +192,18 @@ export interface HeadingFacts {
    */
   emptyParentHeadings: readonly NodeOrigin<RawNode>[];
   /**
+   * Whether Godot gives up on the scene before it re-roots anything, so the builder re-roots no
+   * orphan. True when `rootWithParent` is set, `emptyParentHeadings` is not empty, a later heading
+   * has no `parent=`, or the root heading states no identifier.
+   */
+  refusesToInstantiate: boolean;
+  /**
    * The orphans whose `parent_id_path=` Godot follows to a node, instead of re-rooting them.
    * An orphan absent here is re-rooted, or has no trail.
    */
   idRecoveries: ReadonlyMap<NodeOrigin<RawNode>, IdRecovery>;
+  /** Every `[node]` heading in file order, as an id trail reads it (`packed_scene.cpp:1947-2005`). */
+  idHeadings: readonly IdHeading[];
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
   /**

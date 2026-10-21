@@ -13,6 +13,10 @@ export interface GridMapProperties extends Node3DProperties {
    * offsets each cell by half a cell on that axis.
    */
   cellCenter: { x: boolean; y: boolean; z: boolean };
+  /** `cell_scale`: each cell's mesh scales by it, round the cell's place. Godot defaults it to 1. */
+  cellScale: number;
   /** Raw `cells` PackedInt32Array body (int triplets), decoded by the component. */
   cells: string;
+  /** Each `baked_meshes` reference, in index order. While any is set, they draw in place of the cells. */
+  bakedMeshes: string[];
 }

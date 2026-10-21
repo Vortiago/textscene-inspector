@@ -228,6 +228,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Binary Resource Mesh",
+    "file": "unit-binary-resource-mesh.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Bone 2d",
     "file": "unit-bone-2d.tscn",
     "category": "Other"
@@ -573,6 +578,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Shader Null",
+    "file": "unit-fog-volume-shader-null.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
     "category": "Other"
@@ -595,6 +605,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Geometry Instance 3d",
     "file": "unit-geometry-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Default Material",
+    "file": "unit-glb-default-material.tscn",
     "category": "Other"
   },
   {
@@ -808,8 +823,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Grid Map Cell Scale",
+    "file": "unit-grid-map-cell-scale.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map Centering",
     "file": "unit-grid-map-centering.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Grid Map Inline Mesh",
+    "file": "unit-grid-map-inline-mesh.tscn",
     "category": "Other"
   },
   {
@@ -1000,6 +1025,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Light Transport Sky",
     "file": "unit-light-transport-sky.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Baked",
+    "file": "unit-lightmap-gi-baked.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Directional",
+    "file": "unit-lightmap-gi-directional.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Gridmap",
+    "file": "unit-lightmap-gi-gridmap.tscn",
     "category": "Other"
   },
   {
@@ -1253,6 +1293,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Orphan Reroot",
+    "file": "unit-orphan-reroot.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Path3d",
     "file": "unit-path3d.tscn",
     "category": "Other"
@@ -1400,6 +1445,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Primitive Mesh Flip Faces",
     "file": "unit-primitive-mesh-flip-faces.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Primitive Mesh Normal Map",
+    "file": "unit-primitive-mesh-normal-map.tscn",
     "category": "Other"
   },
   {
@@ -1688,6 +1738,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite 2d Soft Alpha Border",
+    "file": "unit-sprite-2d-soft-alpha-border.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite 2d Viewport Texture",
     "file": "unit-sprite-2d-viewport-texture.tscn",
     "category": "Other"
@@ -1860,6 +1915,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Two Bone Ik 3d",
     "file": "unit-two-bone-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Unique Name Pivot",
+    "file": "unit-unique-name-pivot.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Unique Viewport Base",
+    "file": "unit-unique-viewport-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Unique Viewport Inherited",
+    "file": "unit-unique-viewport-inherited.tscn",
     "category": "Other"
   },
   {
@@ -2299,8 +2369,23 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Instanced Inherited Unique Viewport",
+    "file": "integration-instanced-inherited-unique-viewport.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Instanced Subscene",
     "file": "integration-instanced-subscene.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Instanced Unique Parent Released",
+    "file": "integration-instanced-unique-parent-released.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Instanced Unique Parent",
+    "file": "integration-instanced-unique-parent.tscn",
     "category": "Integration - Multi-Node"
   },
   {
@@ -2604,6 +2689,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Box Mesh Texture Uv",
+    "file": "unit-box-mesh-texture-uv.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Box Mesh",
     "file": "unit-box-mesh.tscn",
     "category": "Unit - Primitive Meshes"
@@ -2616,6 +2706,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Capsule Mesh",
     "file": "unit-capsule-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Cylinder Mesh Texture Uv",
+    "file": "unit-cylinder-mesh-texture-uv.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -2659,8 +2754,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Primitive Meshes"
   },
   {
+    "name": "Prism Mesh Texture Uv",
+    "file": "unit-prism-mesh-texture-uv.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
     "name": "Prism Mesh",
     "file": "unit-prism-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Quadmesh Orientation",
+    "file": "unit-quadmesh-orientation.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -2676,6 +2781,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sphere Mesh",
     "file": "unit-sphere-mesh.tscn",
+    "category": "Unit - Primitive Meshes"
+  },
+  {
+    "name": "Torus Mesh Texture Uv",
+    "file": "unit-torus-mesh-texture-uv.tscn",
     "category": "Unit - Primitive Meshes"
   },
   {
@@ -3382,6 +3492,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Normal Map Uv Density",
+    "file": "unit-material-normal-map-uv-density.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Normal Map",
     "file": "unit-material-normal-map.tscn",
     "category": "Unit - Materials"
@@ -3497,6 +3612,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Container Shrink 3d Content",
+    "file": "unit-sub-viewport-container-shrink-3d-content.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Container Stretch 2d Content",
     "file": "unit-sub-viewport-container-stretch-2d-content.tscn",
     "category": "Unit - Viewports"
@@ -3509,6 +3629,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Container Stretch",
     "file": "unit-sub-viewport-container-stretch.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Container Translucent 3d Content",
+    "file": "unit-sub-viewport-container-translucent-3d-content.tscn",
     "category": "Unit - Viewports"
   },
   {
@@ -3564,6 +3689,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Texture Emission",
     "file": "unit-sub-viewport-texture-emission.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Texture Sampler",
+    "file": "unit-sub-viewport-texture-sampler.tscn",
     "category": "Unit - Viewports"
   },
   {

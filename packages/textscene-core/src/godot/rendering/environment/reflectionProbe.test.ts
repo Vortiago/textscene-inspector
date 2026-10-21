@@ -60,9 +60,29 @@ describe('reflectionProbeOrder', () => {
     expect(order[1]).toBe(first);
   });
 
+  it("orders more than 16 probes with equal boxes as Godot's unstable sort does (edge case)", () => {
+    // Godot sorts the probes in reverse tree order. There, large and small boxes alternate, and
+    // Godot 4.6.3's `SortArray` leaves that pattern in this order (`sortArray.godot.json`).
+    const godotOrder = [18, 16, 14, 12, 10, 8, 6, 4, 2, 0, 7, 5, 9, 11, 3, 13, 15, 1, 17, 19];
+    const count = godotOrder.length;
+    const reversePosition = (treeIndex: number) => count - 1 - treeIndex;
+    const probes = Array.from({ length: count }, (_, treeIndex) => {
+      const edge = reversePosition(treeIndex) % 2 === 0 ? 20 : 2;
+      return { treeIndex, size: { x: edge, y: edge, z: edge } };
+    });
+    const order = reflectionProbeOrder(probes).map(({ treeIndex }) => treeIndex);
+    expect(order).toEqual(godotOrder.map(reversePosition));
+  });
+
   it('orders by the diagonal, not the volume (edge case)', () => {
     const flat = { size: { x: 30, y: 0.1, z: 0.1 } };
     const cube = { size: { x: 10, y: 10, z: 10 } };
     expect(reflectionProbeOrder([cube, flat])).toEqual([flat, cube]);
+  });
+
+  it('orders two permuted boxes by their float diagonals, which differ (edge case)', () => {
+    const shorter = { size: { x: 16.590818405151367, y: 2.104837417602539, z: 0.02428552694618702 } };
+    const longer = { size: { x: 0.02428552694618702, y: 2.104837417602539, z: 16.590818405151367 } };
+    expect(reflectionProbeOrder([longer, shorter])).toEqual([longer, shorter]);
   });
 });

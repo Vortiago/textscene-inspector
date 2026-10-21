@@ -19,10 +19,13 @@ catalog:
   '@vscode/test-web': ^0.0.81
   '@vitest/ui': ^5.0.3
   '@types/node': ^26.6.4
-  vite: ^8.3.1
+  vite: ^8.3.3
   esbuild: ^0.28.2
   happy-dom: ^21.0.1
   jsdom: ^30
+
+  # Declaration bundling for @textscene/tscn: one .d.ts that imports nothing from the workspace.
+  dts-bundle-generator: ^9.5.1
 
   # CLI dependencies
   commander: ^15.0.0
@@ -54,6 +57,10 @@ catalog:
   # `thirdparty/misc/FastNoiseLite.h`, so its enum values and generators are the
   # engine's own rather than a hand-port that would drift from them. MIT.
   fastnoise-lite: 1.1.1
+
+  # Zstandard decoding for a compressed binary resource (RSCC), the mode Godot saves by default.
+  # Pure JS, as the VS Code webview's policy allows no WebAssembly. MIT.
+  fzstd: 0.1.1
 
   # PNG decoding: the visual and Godot-reference scripts, and the capture checks in the
   # VS Code integration suite.

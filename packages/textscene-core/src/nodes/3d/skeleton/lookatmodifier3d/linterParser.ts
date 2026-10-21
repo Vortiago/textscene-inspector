@@ -35,8 +35,8 @@ validatorRegistry.registerAll('LookAtModifier3D', {
   // look_at_modifier_3d.cpp:471, INT, PROPERTY_HINT_NONE, PROPERTY_USAGE_NO_EDITOR, which is storage.
   // set_bone (:108-111) rewrites anything at or below -1 to the unset -1, and _validate_bone_names
   // (:78-84) re-runs it on the first skeleton update. The live `get_bone_count()` is the ceiling.
-  // `strictInt`: Variant conversion truncates a decimal.
-  bone: v.strictInt('bone', { min: -1, enforced: 'look_at_modifier_3d.cpp:108-111' }),
+  // `v.int` warns on a decimal, which Variant conversion truncates.
+  bone: v.int('bone', { min: -1, enforced: 'look_at_modifier_3d.cpp:108-111' }),
 
   // look_at_modifier_3d.cpp:472, PROPERTY_HINT_ENUM over
   // SkeletonModifier3D::get_hint_bone_axis(), values 0-5. set_forward_axis
@@ -64,7 +64,7 @@ validatorRegistry.registerAll('LookAtModifier3D', {
 
   // look_at_modifier_3d.cpp:480, as bone. set_origin_bone (:194-197) applies the
   // identical rewrite to -1, re-run from _validate_bone_names (:85-89).
-  origin_bone: v.strictInt('origin_bone', {
+  origin_bone: v.int('origin_bone', {
     min: -1,
     enforced: 'look_at_modifier_3d.cpp:194-197',
   }),

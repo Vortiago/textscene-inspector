@@ -7,8 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { buildPrismMeshSurface } from './build';
-import { expectClose, pointsOf, vertexOf } from '../primitivemesh/surface.testkit';
-import type { GodotSurface } from '../godotSurface';
+import { expectClose, expectClockwiseFronts, pointsOf, vertexOf } from '../primitivemesh/surface.testkit';
 import type { PrismMeshProperties } from './types';
 
 function prism(overrides: Partial<PrismMeshProperties> = {}): PrismMeshProperties {
@@ -22,26 +21,12 @@ function prism(overrides: Partial<PrismMeshProperties> = {}): PrismMeshPropertie
   };
 }
 
-/** Right-hand-rule normal of triangle `t`, which points away from the viewer when it is clockwise. */
-function windingNormal(surface: GodotSurface, t: number): number[] {
-  const index = surface.indices;
-  const p = pointsOf(surface);
-  const [a, b, c] = [p[index[t * 3]!]!, p[index[t * 3 + 1]!]!, p[index[t * 3 + 2]!]!];
-  const u = [b[0]! - a[0]!, b[1]! - a[1]!, b[2]! - a[2]!];
-  const v = [c[0]! - a[0]!, c[1]! - a[1]!, c[2]! - a[2]!];
-  return [u[1]! * v[2]! - u[2]! * v[1]!, u[2]! * v[0]! - u[0]! * v[2]!, u[0]! * v[1]! - u[1]! * v[0]!];
-}
-
-/** The stored normal of triangle `t`'s first vertex. */
-function storedNormal(surface: GodotSurface, t: number): number[] {
-  return vertexOf(surface.normals, surface.indices[t * 3]!);
-}
-
-const dot = (a: number[], b: number[]) => a[0]! * b[0]! + a[1]! * b[1]! + a[2]! * b[2]!;
+/** The first vertex of each face of an unsubdivided prism: the caps and sides write 2x2 vertex pairs. */
+const FIRST_VERTEX = { front: 0, back: 1, right: 8, left: 9, bottom: 16 };
 
 describe('buildPrismMeshSurface', () => {
   it("builds Godot's vertex and triangle counts for an unsubdivided prism", () => {
-    const surface = buildPrismMeshSurface(prism());
+    const surface = buildPrismMeshSurface(prism(), null);
 
     // (0+2)(0+2)·2 + (0+2)(0+2)·2 + (0+2)(0+2) = 20 vertices, and 8 triangles =
     // 2 caps + 2 slanted quads + 1 base quad.
@@ -50,14 +35,14 @@ describe('buildPrismMeshSurface', () => {
   });
 
   it('scales its vertex count with each subdivision axis, per Godot num_points', () => {
-    expect(buildPrismMeshSurface(prism({ subdivideWidth: 1 })).positions.length / 3).toBe(26);
+    expect(buildPrismMeshSurface(prism({ subdivideWidth: 1 }), null).positions.length / 3).toBe(26);
     // sh=1: (1+2)(0+2)·2 + (1+2)(0+2)·2 + (0+2)(0+2) = 12 + 12 + 4.
-    expect(buildPrismMeshSurface(prism({ subdivideHeight: 1 })).positions.length / 3).toBe(28);
-    expect(buildPrismMeshSurface(prism({ subdivideDepth: 1 })).positions.length / 3).toBe(26);
+    expect(buildPrismMeshSurface(prism({ subdivideHeight: 1 }), null).positions.length / 3).toBe(28);
+    expect(buildPrismMeshSurface(prism({ subdivideDepth: 1 }), null).positions.length / 3).toBe(26);
   });
 
   it('fills its size box exactly, centred on the origin', () => {
-    const points = pointsOf(buildPrismMeshSurface(prism({ size: { x: 2, y: 4, z: 6 } })));
+    const points = pointsOf(buildPrismMeshSurface(prism({ size: { x: 2, y: 4, z: 6 } }), null));
     const axis = (a: number) => points.map((p) => p[a]!);
 
     expect([0, 1, 2].map((a) => Math.min(...axis(a)))).toEqual([-1, -2, -3]);
@@ -65,7 +50,7 @@ describe('buildPrismMeshSurface', () => {
   });
 
   it('puts the apex at the top and the full-width base at the bottom', () => {
-    const p = pointsOf(buildPrismMeshSurface(prism()));
+    const p = pointsOf(buildPrismMeshSurface(prism(), null));
     const top = p.filter((v) => Math.abs(v[1]! - 0.5) < 1e-6);
     const bottom = p.filter((v) => Math.abs(v[1]! + 0.5) < 1e-6);
 
@@ -79,7 +64,7 @@ describe('buildPrismMeshSurface', () => {
     // start_x = start_pos.x + (1 - scale) * size.x * left_to_right (:1670). The
     // apex row is scale 0, so the apex sits at -size.x/2 + size.x * ltr.
     const apexX = (leftToRight: number, sizeX = 1) => {
-      const p = pointsOf(buildPrismMeshSurface(prism({ leftToRight, size: { x: sizeX, y: 1, z: 1 } })));
+      const p = pointsOf(buildPrismMeshSurface(prism({ leftToRight, size: { x: sizeX, y: 1, z: 1 } }), null));
       return p.filter((v) => Math.abs(v[1]! - 0.5) < 1e-6).map((v) => v[0]!);
     };
 
@@ -89,24 +74,44 @@ describe('buildPrismMeshSurface', () => {
   });
 
   it('is extruded along Z, so every unsubdivided vertex sits on a cap plane', () => {
-    for (const v of pointsOf(buildPrismMeshSurface(prism()))) {
+    for (const v of pointsOf(buildPrismMeshSurface(prism(), null))) {
       expect(Math.abs(Math.abs(v[2]!) - 0.5)).toBeLessThan(1e-6);
     }
   });
 
   it("fronts every triangle clockwise against its stored normal, Godot's winding", () => {
-    const surface = buildPrismMeshSurface(prism());
-
-    for (let t = 0; t < surface.indices.length / 3; t++) {
-      expect(dot(windingNormal(surface, t), storedNormal(surface, t))).toBeLessThan(0);
-    }
+    expectClockwiseFronts(buildPrismMeshSurface(prism(), null));
   });
 
   it('carries a UV per vertex, V measured from the image top', () => {
-    const surface = buildPrismMeshSurface(prism());
+    const surface = buildPrismMeshSurface(prism(), null);
 
     expect(surface.uvs!.length / 2).toBe(surface.positions.length / 3);
     // The apex row's first point, offset by left_to_right / 3 (`:1671`).
     expectClose(vertexOf(surface.uvs, 0, 2), [1 / 6, 0]);
+  });
+
+  it.each([
+    ['front', [1, 0, 0, 1]],
+    ['back', [-1, 0, 0, 1]],
+    ['right', [0, 0, -1, 1]],
+    ['left', [0, 0, 1, 1]],
+    ['bottom', [1, 0, 0, 1]],
+  ] as const)('gives the %s face one tangent', (face, tangent) => {
+    expectClose(vertexOf(buildPrismMeshSurface(prism(), null).tangents, FIRST_VERTEX[face], 4), [...tangent]);
+  });
+
+  it('writes no UV2 without a padding', () => {
+    expect(buildPrismMeshSurface(prism(), null).uv2s).toBeUndefined();
+  });
+
+  it('pads UV2 so the face islands keep apart', () => {
+    // A padding of 1 on a unit prism: the horizontal total is 4 and the vertical total 6
+    // (`:1618-1628`), so the right face starts at U 0.25 + 0.25 and the back face at V 1/6 + 1/6.
+    const surface = buildPrismMeshSurface(prism(), 1);
+
+    expectClose(vertexOf(surface.uv2s, FIRST_VERTEX.right, 2), [0.5, 0]);
+    expectClose(vertexOf(surface.uv2s, FIRST_VERTEX.back, 2), [0, 1 / 3]);
+    expectClose(vertexOf(surface.uv2s, FIRST_VERTEX.bottom, 2), [0, 2 / 3]);
   });
 });

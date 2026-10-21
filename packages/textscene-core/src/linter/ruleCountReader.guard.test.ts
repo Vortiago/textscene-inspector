@@ -172,8 +172,9 @@ describe('rule-layer count reads', () => {
 
   it('resolves the counts the rules read, so the sweep cannot pass vacuously', () => {
     const refused = reads.filter((read) => read.refused);
-    // Far below the real count, so it fails only when the resolver or the registry probe breaks.
-    expect(refused.length).toBeGreaterThan(8);
+    // Far below the real count, so it fails only when the resolver or the registry probe breaks. The
+    // PropertyListHelper rules read their count through `writesPastFamilyCount`, which calls `ruleCount`.
+    expect(refused.length).toBeGreaterThan(4);
     // Both resolution paths: a direct `setting_count` read, and a `joint_count` through a loop key.
     expect(refused).toEqual(
       expect.arrayContaining([

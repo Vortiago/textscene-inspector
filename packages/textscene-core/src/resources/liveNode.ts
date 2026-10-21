@@ -4,6 +4,7 @@
  * linter reads never carries it.
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { UniqueNameTable } from './instanceNameTable.js';
 
 export interface LiveNode extends TscnNode {
   /**
@@ -13,6 +14,13 @@ export interface LiveNode extends TscnNode {
    */
   readonly scope?: SceneScope;
   children: LiveNode[];
+  /**
+   * Set by the merge on a collapsed instance: its `%Name` table, each key to the path below this
+   * node that holds it. Godot keeps it on the instance root (node.cpp:2222-2234).
+   */
+  readonly uniqueNames?: UniqueNameTable;
+  /** Set by the merge on a collapsed instance: `GraftedInstance.uniqueParentPlacements`. */
+  readonly uniqueParentPlacements?: ReadonlyMap<string, string>;
 }
 
 /**

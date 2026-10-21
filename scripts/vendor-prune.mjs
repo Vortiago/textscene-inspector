@@ -9,10 +9,16 @@ import { basename } from 'node:path';
 
 /**
  * The importers whose sidecars the previewer reads (ADR-0028): a scene's re-import options, a
- * texture's format and mip chain, and a 3D texture's slices. `import-sidecar-allowlist.test.mjs`
- * asserts it against the importers core names.
+ * texture's format and mip chain, and the slices of a 3D texture or a texture array, such as a
+ * lightmap atlas. `import-sidecar-allowlist.test.mjs` asserts it against the importers core names.
  */
-export const READ_IMPORTERS = new Set(['scene', 'wavefront_obj', 'texture', '3d_texture']);
+export const READ_IMPORTERS = new Set([
+  'scene',
+  'wavefront_obj',
+  'texture',
+  '3d_texture',
+  '2d_array_texture',
+]);
 
 /** Copies the tree at `src` to `dest` without what the prune drops, and returns the file count. */
 export function copyPruned(src, dest) {

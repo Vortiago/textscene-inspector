@@ -18,6 +18,7 @@ import {
   projectThemeScale,
   projectClearColor,
   projectTransparentBackground,
+  projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectViewportSize,
   projectVolumetricFogSettings,
@@ -217,6 +218,22 @@ describe('projectTransparentBackground', () => {
   });
 });
 
+describe('projectUsesLightmapBicubicFilter', () => {
+  const KEY = 'rendering/lightmapping/lightmap_gi/use_bicubic_filter';
+
+  it('reads a project that turns the filter off', () => {
+    expect(projectUsesLightmapBicubicFilter({ [KEY]: 'false' })).toBe(false);
+  });
+
+  it("filters with no project, Godot's default (rendering_server.cpp:3822)", () => {
+    expect(projectUsesLightmapBicubicFilter(null)).toBe(true);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectUsesLightmapBicubicFilter({ [KEY]: 'sometimes' })).toBe(true);
+  });
+});
+
 describe('projectPrimitiveMeshTexelSize', () => {
   const KEY = 'rendering/lightmapping/primitive_meshes/texel_size';
 
@@ -309,8 +326,12 @@ describe('projectViewportSize', () => {
     expect(width('NaN')).toBe(1152);
   });
 
-  it('rounds a fractional override — a capture frame is whole pixels', () => {
-    expect(projectViewportSize({ 'display/window/size/viewport_width': '800.6' }).width).toBe(801);
+  it('truncates a fractional override, as the INT setting stores it', () => {
+    expect(projectViewportSize({ 'display/window/size/viewport_width': '800.6' }).width).toBe(800);
+  });
+
+  it('refuses a spelling Godot’s tokenizer does not read', () => {
+    expect(projectViewportSize({ 'display/window/size/viewport_width': '0o1000' }).width).toBe(1152);
   });
 
   it('reads the keys as `parseProjectSettings` names them, section prefix and all', () => {

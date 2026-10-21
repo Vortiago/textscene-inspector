@@ -311,10 +311,9 @@ sources/0 = SubResource("Atlas_a")
     expect(r.scene.findAllByType('Mesh')).toHaveLength(0);
   });
 
-  it('degrades immediately for a binary TileSet (.res) instead of hanging pending forever', async () => {
-    // Godot legally serializes `[ext_resource type="TileSet" path="res://tiles.res"]`.
-    // The text-resource processor can never parse it, so requesting it would
-    // park the load in-flight with no resolution.
+  it('degrades immediately for a TileSet path no resource file has, instead of hanging pending', async () => {
+    // No processor parses such a path, so requesting it would park the load in flight
+    // with no resolution.
     const fake = createFakeResourceLoader();
     const requested: string[] = [];
     fake.resources.setRequestImpl((path) => requested.push(path));
@@ -333,7 +332,7 @@ sources/0 = SubResource("Atlas_a")
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider
           internalResources={[]}
-          externalResources={[{ id: 'ts_bin', type: 'TileSet', path: 'res://tiles.res' }]}
+          externalResources={[{ id: 'ts_bin', type: 'TileSet', path: 'res://tiles.png' }]}
         >
           <TileMapLayer node={node}>
             <mesh name="scene-child">
@@ -346,7 +345,7 @@ sources/0 = SubResource("Atlas_a")
     );
     expect(r.scene.findByProps({ name: 'scene-child' })).toBeDefined();
     expect(r.scene.findAllByType('Mesh')).toHaveLength(1); // only the child
-    expect(requested).not.toContain('res://tiles.res'); // never parked in-flight
+    expect(requested).not.toContain('res://tiles.png'); // never parked in-flight
   });
 });
 

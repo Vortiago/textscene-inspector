@@ -33,6 +33,7 @@ import {
 import { clamp } from '../../../godot/math/math';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector3 } from '../../../godot/math/vector';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 /** Wireframe colour for the (selection-gated) projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
@@ -67,7 +68,7 @@ export function Decal({ node, children }: NodeComponentProps) {
     box.dispose();
     return edges;
   }, []);
-  useEffect(() => () => boxEdges.dispose(), [boxEdges]);
+  useDisposeOnRelease(boxEdges);
 
   // By RID, as `Decal::set_texture` passes it (`scene/3d/decal.cpp:46`): an AtlasTexture projects
   // its whole sheet, and a CanvasTexture, a RID the decal atlas refuses (`texture_storage.cpp:2941`),

@@ -1,7 +1,8 @@
 /**
- * The shared headless-browser launch for the showcase harnesses. SHOWCASE_CHANNEL picks the
- * browser: unset gives system Chrome ('chrome'), 'bundled' gives Playwright's bundled Chromium,
- * and any other value names that Playwright channel.
+ * The headless Chromium launches of the repo's harnesses, one per flag set and browser. The
+ * showcase launches read SHOWCASE_CHANNEL: unset gives system Chrome ('chrome'), 'bundled' gives
+ * Playwright's bundled Chromium, and any other value names that Playwright channel. A capture that
+ * a pixel compare reads always gets the bundled Chromium, pinned by the lockfile.
  */
 import { chromium } from 'playwright';
 
@@ -18,7 +19,7 @@ export const SWIFTSHADER_GL_ARGS = [
 const GPU_COMPOSITED_ARGS = [...SWIFTSHADER_GL_ARGS, '--use-angle=swiftshader'];
 
 export function launchShowcaseBrowser() {
-  return launchWithArgs(SWIFTSHADER_GL_ARGS);
+  return launchShowcaseChannel(SWIFTSHADER_GL_ARGS);
 }
 
 /**
@@ -28,7 +29,15 @@ export function launchShowcaseBrowser() {
  * SwiftShader backend also rasterises differently, so a golden never uses this launch.
  */
 export function launchGpuCompositedBrowser() {
-  return launchWithArgs(GPU_COMPOSITED_ARGS);
+  return launchShowcaseChannel(GPU_COMPOSITED_ARGS);
+}
+
+/**
+ * The bundled Chromium with SwiftShader software GL, so local and CI render the same bits with no
+ * GPU or driver variance. The goldens are captured through it.
+ */
+export function launchSwiftShaderBrowser() {
+  return launchBundled(SWIFTSHADER_GL_ARGS);
 }
 
 /**
@@ -38,10 +47,14 @@ export function launchGpuCompositedBrowser() {
  * this launch, since its baselines carry that ring.
  */
 export function launchGodotComparisonBrowser() {
-  return chromium.launch({ headless: true, args: GPU_COMPOSITED_ARGS });
+  return launchBundled(GPU_COMPOSITED_ARGS);
 }
 
-function launchWithArgs(args) {
+function launchBundled(args) {
+  return chromium.launch({ headless: true, args });
+}
+
+function launchShowcaseChannel(args) {
   return chromium.launch({
     channel:
       process.env.SHOWCASE_CHANNEL === 'bundled' ? undefined : process.env.SHOWCASE_CHANNEL || 'chrome',

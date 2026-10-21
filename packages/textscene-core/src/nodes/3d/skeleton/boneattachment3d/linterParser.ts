@@ -14,11 +14,11 @@ validatorRegistry.registerAll('BoneAttachment3D', {
   // form, and the variant parser reads `&"…"` too. set_bone_name (cpp:178-184)
   // assigns before it looks a skeleton up, so no name is refused.
   bone_name: v.stringName('bone_name'),
-  // bone_attachment_3d.cpp:377, INT, no hint. `strictInt`: `v.int` reads `2.5` as 2. -1 is the
+  // bone_attachment_3d.cpp:377, INT, no hint. `v.int` warns that `2.5` stores 2. -1 is the
   // default, which `_check_bind` (cpp:117) reads as "unset, resolve from bone_name", so it stays
   // legal. The ceiling is the live bone count, which no per-property validator sees.
   // `boneAttachment3D.md` says why the cite is `_check_bind`, not the setter.
-  bone_idx: v.strictInt('bone_idx', { min: -1, enforced: 'bone_attachment_3d.cpp:117-118' }),
+  bone_idx: v.int('bone_idx', { min: -1, enforced: 'bone_attachment_3d.cpp:117-118' }),
   // bone_attachment_3d.cpp:378, plain Variant::BOOL. set_override_pose
   // (cpp:220-236) assigns past an equality guard and then only reconfigures
   // notifications, so nothing beyond the literal's shape is checkable.

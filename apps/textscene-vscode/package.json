@@ -67,6 +67,11 @@
         "title": "Open Preview to the Side",
         "category": "TextScene",
         "icon": "$(open-preview)"
+      },
+      {
+        "command": "textscene.copyNodePath",
+        "title": "Copy Node Path",
+        "category": "TextScene"
       }
     ],
     "menus": {
@@ -82,6 +87,11 @@
           "command": "textscene.openPreviewToSide",
           "when": "resourceExtname == .tscn",
           "group": "navigation"
+        },
+        {
+          "command": "textscene.copyNodePath",
+          "when": "resourceExtname == .tscn",
+          "group": "9_cutcopypaste"
         }
       ],
       "explorer/context": [
@@ -94,6 +104,10 @@
       "commandPalette": [
         {
           "command": "textscene.openPreviewToSide",
+          "when": "resourceExtname == .tscn"
+        },
+        {
+          "command": "textscene.copyNodePath",
           "when": "resourceExtname == .tscn"
         }
       ]

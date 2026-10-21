@@ -17,6 +17,7 @@ import { TscnResPathListing } from './TscnResPathListing';
 import { registerTscnTools } from './tools/registerTscnTools';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { initLogger, dispose as disposeLogger } from './logger';
+import { copyNodePathAtCursor } from './copyNodePath';
 import { isUri } from './uriArgument';
 import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
@@ -67,6 +68,8 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
+
+  context.subscriptions.push(vscode.commands.registerCommand('textscene.copyNodePath', copyNodePathAtCursor));
 
   context.subscriptions.push(
     vscode.languages.registerDocumentSymbolProvider({ language: 'tscn' }, new TscnDocumentSymbolProvider(), {

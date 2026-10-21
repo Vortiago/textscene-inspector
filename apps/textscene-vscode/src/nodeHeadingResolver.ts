@@ -1,32 +1,19 @@
 /**
- * Shared `[node …]` heading resolver: it tells duplicate sibling names apart by
- * the `parent=` value, for "jump to node" and the Outline start-line lookup.
+ * The `[node …]` heading a scene-tree node names, for "jump to node". The language-feature engine
+ * seats the headings as Godot does, so two same-named nodes under different parents resolve apart.
  */
 
-import { parseHeading } from '@textscene/core/parser';
+import {
+  createLanguageDocument,
+  nodeDeclarationRange,
+  spelledLiveNodePath,
+} from '@textscene/core/languageFeatures';
 
 /**
- * Locates a node's `[node …]` heading line by name and `parent=`. `expectedParent`
- * is the raw value: `undefined` for the root, `"."` for a direct child, else the
- * ancestor path. Without it, the first name match wins.
- *
- * @returns the 0-based line index, or -1 if the node is not found.
+ * The 0-based line of the heading of the node at `treePath`, or undefined where the file declares
+ * no such node. `treePath` is the scene-tree path from the root, its first segment the root's name:
+ * "Root/B/Leaf". It skips the `parent=` value, which a root may also carry (`packed_scene.cpp:218`).
  */
-export function findNodeHeadingLine(lines: string[], nodeName: string, expectedParent?: string): number {
-  let firstNameMatch = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
-    if (!line.trimStart().startsWith('[node')) continue;
-
-    const heading = parseHeading(line);
-    if (heading?.type !== 'node' || heading.attributes.name !== nodeName) continue;
-
-    if (firstNameMatch === -1) firstNameMatch = i;
-    // Root's heading omits `parent`; compare it as an empty string.
-    if (expectedParent === undefined || (heading.attributes.parent ?? '') === expectedParent) {
-      return i;
-    }
-  }
-
-  return firstNameMatch;
+export function nodeHeadingLine(text: string, treePath: string): number | undefined {
+  return nodeDeclarationRange(createLanguageDocument(text), spelledLiveNodePath(treePath))?.start.line;
 }

@@ -23,10 +23,10 @@ import {
   findExtResource,
   findSubResource,
   parseResourceReference,
-  resolveExtTextResourcePath,
+  resolveExtResourceFilePath,
   resolveInstancePath,
   resolveTexture2DPath,
-  textResourcePath,
+  parsedResourcePath,
   unwrapCanvasTextureRef,
 } from '../../../resources/SubResourceResolver';
 import { useResourceLoader } from '../../../resources/useResource';
@@ -396,7 +396,7 @@ function buildForest(
     if (!ref) return null;
     if (parseResourceReference(ref)?.type !== 'ExtResource') return resolveLabelSettings(ref, int);
 
-    const path = textResourcePath(ref, ext);
+    const path = parsedResourcePath(ref, ext);
     if (!path) return null;
     const cached = resourceCache.getCached(path);
     if (cached === undefined) {
@@ -451,18 +451,18 @@ function buildForest(
     const inline = inlineTexture2DSize(ref, int);
     if (inline) return inline;
 
-    // A texture in its own `.tres` loads on the resource bus, not the texture
-    // one: the file is text, not pixels.
+    // A texture in its own resource file loads on the resource bus, not the texture
+    // one: the file is a resource, not pixels.
     const unwrapped = unwrapCanvasTextureRef(ref, int);
-    const tresPath = resolveExtTextResourcePath(unwrapped, ext);
-    if (tresPath) {
-      const cachedTres = resourceCache.getCached(tresPath);
-      if (cachedTres === undefined) {
-        pendingResourceFiles.add(tresPath);
+    const resourceFile = resolveExtResourceFilePath(unwrapped, ext);
+    if (resourceFile) {
+      const cached = resourceCache.getCached(resourceFile);
+      if (cached === undefined) {
+        pendingResourceFiles.add(resourceFile);
         return null;
       }
-      if (cachedTres === null) return null;
-      return extResourceTexture2DSize(cachedTres);
+      if (cached === null) return null;
+      return extResourceTexture2DSize(cached);
     }
 
     // `resolveTexture2DPath`, as the painters use: it unwraps a `SubResource(...)`

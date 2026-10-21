@@ -7,8 +7,7 @@
  */
 
 import type * as THREE from 'three';
-import type { SceneLight } from '../directionalShadow/lightLists.js';
-import { isPositionalKind, slotValues, type ShadedLightKind } from '../lightSlots.js';
+import { isPositionalKind, slotValues, type ShadedLightKind, type SlottedLights } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 import { declaredLightOf } from '../directionalShadow/splitSun.js';
 import { userDataDeclaration } from '../userDataDeclaration.js';
@@ -51,16 +50,10 @@ function sizeOf(light: THREE.Light, kind: ShadedLightKind, drawsDirectionalSoftS
 }
 
 /**
- * Writes the size of each slotted light among `lights`, for a render through `camera`.
- * `drawsDirectionalSoftShadows` is Godot's flag for the render (`sunSoftShadow.ts`).
+ * Writes the size of each light among `slotted`. `drawsDirectionalSoftShadows` is Godot's flag for
+ * the render (`sunSoftShadow.ts`).
  */
-export function writeLightSizeUniforms(
-  lights: readonly SceneLight[],
-  camera: THREE.Camera,
-  drawsDirectionalSoftShadows: boolean
-): void {
-  const ordered = slotValues(lights, camera, (light, kind) =>
-    sizeOf(light, kind, drawsDirectionalSoftShadows)
-  );
+export function writeLightSizeUniforms(slotted: SlottedLights, drawsDirectionalSoftShadows: boolean): void {
+  const ordered = slotValues(slotted, (light, kind) => sizeOf(light, kind, drawsDirectionalSoftShadows));
   arrays.write(ordered.length, (set) => set[LIGHT_SIZES].set(ordered));
 }

@@ -2,6 +2,7 @@
  * One `SurfaceMaterialSlot` per surface of a mesh, each attached to its own draw group, and the
  * two rules every per-surface slot keeps: the default surface and the attach key.
  */
+import type { TscnInternalResource } from '../../parser/types';
 import type { MaterialSource } from './materialSource';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 
@@ -25,14 +26,21 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
 interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
   sources: readonly (MaterialSource | undefined)[];
+  /** The PrimitiveMesh a triplanar material tiles against, if the mesh is one. */
+  triplanarMesh?: TscnInternalResource;
 }
 
-export function SurfaceMaterialSlots({ sources }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, triplanarMesh }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
       {slotSources.map((source, i) => (
-        <SurfaceMaterialSlot key={i} source={source} attach={surfaceAttach(i, slotSources.length)} />
+        <SurfaceMaterialSlot
+          key={i}
+          source={source}
+          attach={surfaceAttach(i, slotSources.length)}
+          triplanarMesh={triplanarMesh}
+        />
       ))}
     </>
   );

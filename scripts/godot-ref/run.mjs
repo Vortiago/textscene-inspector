@@ -904,8 +904,9 @@ func _disable_2d_cameras(node: Node) -> void:
 # The per-type calls below remain for the non-physics drivers pause does not
 # reach — an AnimationPlayer's queued autoplay, an AnimationTree's graph — and
 # for SoftBody3D, whose integration the pause covers but whose disabled
-# process_mode also pins it if a future Godot changes that. GPUParticles are
-# left alone: their preprocessed burst is the authored look, not running logic.
+# process_mode also pins it if a future Godot changes that, and whose
+# disable_mode REMOVE keeps it out of the physics space as the editor does.
+# GPUParticles are left alone: their preprocessed burst is the authored look, not running logic.
 #
 # Both halves — this walk and the pause — are gated on PREVIEWS together, so
 # "editor" and "runtime" stay two whole answers rather than a mixture. Stopping
@@ -943,6 +944,9 @@ func _freeze_game_logic(node: Node) -> void:
 	if node is AnimationTree:
 		(node as AnimationTree).active = false
 	if node is SoftBody3D:
+		# REMOVE first: KEEP_ACTIVE keeps the disabled node in the physics space, where Jolt
+		# rewrites its normals each frame, which the editor never does (soft_body_3d.cpp:459-478).
+		(node as SoftBody3D).disable_mode = SoftBody3D.DISABLE_MODE_REMOVE
 		(node as SoftBody3D).process_mode = Node.PROCESS_MODE_DISABLED
 	for child in node.get_children():
 		_freeze_game_logic(child)

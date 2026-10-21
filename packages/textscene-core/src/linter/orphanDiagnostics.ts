@@ -1,48 +1,18 @@
 /**
- * One diagnostic per `[node]` heading the tree build could not place. Phase 2 walks
- * the tree, so such a node and its descendants escape every semantic rule. Phase 1
- * validates during the scan and is unaffected. Tiers and citations are declared in
- * `fileDiagnostics.ts`, where `emitsGrounding` sweeps them.
+ * One diagnostic per `[node]` heading whose `parent=` names nothing. The builder re-roots such a
+ * node where Godot does, and Phase 2 then runs its semantic rules. Where Godot does not, the node
+ * and its descendants escape every semantic rule. Phase 1 validates during the scan and is
+ * unaffected. Tiers and citations are declared in `fileDiagnostics.ts`, where `emitsGrounding`
+ * sweeps them.
  */
 
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
 import { armDiagnostic } from './ruleArms.js';
-import { nodePathNames } from '../godot/string/nodePath.js';
-import { validateNodeName } from '../godot/string/nodeName.js';
-import { rootStatesNoIdentifier } from '../parser/typeUnknowable.js';
+import { reparentedName } from '../godot/scene/packedScene.js';
 import type { NodeOrigin, RawNode, StrictScene } from '../parser/types.js';
 import { resolveExtResourcePath } from '../resources/SubResourceResolver.js';
-
-/**
- * Godot's name for a re-parented orphan: the vanished path with `./` stripped, every
- * `/` turned into `@`, then `#` and the node's name (`packed_scene.cpp:212`, `:561-563`).
- * `set_name` stores the validated form, replacing `.`, `:`, `@`, `/`, `"` and `%` with
- * `_` (`node.cpp:1441`), so `Gone/Deeper` renames to `Gone_Deeper#Name`.
- */
-function reparentedName(parentPath: string, name: string): string {
-  // The prefix is the NodePath's spelling, not the heading's: `:212` reads
-  // `String(node_paths[…])`, stored through `prepend_period()` (`resource_format_text.cpp:207`),
-  // which inserts a `.` unless one is first and ignores `absolute` (`node_path.cpp:43-49`).
-  const names = nodePathNames(parentPath);
-  // `prepend_period` skips a NodePath holding no names at all, so `/` stays `/`.
-  const withPeriod = names.length === 0 || names[0] === '.' ? names : ['.', ...names];
-  // `trim_prefix` removes the added `./` from a relative path. An absolute one keeps
-  // its `/` and the period, so `/root/Gone` spells `/./root/Gone`.
-  const spelled = (parentPath.startsWith('/') ? '/' : '') + withPeriod.join('/');
-  const prefix = spelled.replace(/^\.\//, '').replaceAll('/', '@');
-  return validateNodeName(`${prefix}#${name}`);
-}
-
-/**
- * The path `get_node_path` gives a heading: its `parent=` path, then its name. The scene
- * root is the empty path.
- */
-function headingPath({ node }: NodeOrigin<RawNode>): string {
-  if (node.parent === undefined) return '';
-  const parentNames = nodePathNames(node.parent).filter((name) => name !== '.');
-  return [...parentNames, node.name].join('/');
-}
+import { SCENE_ROOT_PATH } from '../utils/nodePath.js';
 
 /**
  * What Godot does with the heading's `parent_id_path=`, or undefined where the trail
@@ -55,8 +25,10 @@ function idRecoveryOutcome(scene: StrictScene, origin: NodeOrigin<RawNode>): str
     'The heading also carries parent_id_path, the id trail Godot falls back to when a path ' +
     'does not walk (packed_scene.cpp:161-163).';
   if (recovery.kind === 'lands') {
-    const path = headingPath(recovery.via);
-    const where = path === '' ? 'the scene root' : `"${path}"`;
+    const where =
+      recovery.viaPath === SCENE_ROOT_PATH
+        ? 'the scene root'
+        : `"${recovery.viaPath ?? recovery.via.node.name}"`;
     return `${lead} Its first id names the node '${recovery.via.node.name}' (line ${recovery.via.line}), so the node lands under ${where} and keeps its name.`;
   }
   const instanced =
@@ -71,18 +43,14 @@ function idRecoveryOutcome(scene: StrictScene, origin: NodeOrigin<RawNode>): str
  * What Godot does with an orphan. The empty path is its own outcome because the verb differs:
  * that heading faults the load, so the instantiate the re-root belongs to is never reached.
  */
-function orphanOutcome(
-  scene: StrictScene,
-  origin: NodeOrigin<RawNode>,
-  { hasEmptyParent, refused }: { hasEmptyParent: boolean; refused: boolean }
-): string {
+function orphanOutcome(scene: StrictScene, origin: NodeOrigin<RawNode>, hasEmptyParent: boolean): string {
   if (hasEmptyParent) {
     return (
       'Godot cannot load the file at all — another heading spells parent="" (see the ' +
       'error beside this) — so nothing in it is instantiated.'
     );
   }
-  if (refused) {
+  if (scene.refusesToInstantiate) {
     return (
       'Godot refuses to instantiate the scene for another heading (see the error ' +
       'beside this), so no re-root of this node happens.'
@@ -90,8 +58,13 @@ function orphanOutcome(
   }
   return (
     idRecoveryOutcome(scene, origin) ??
-    `Godot re-parents it to the scene root and renames it "${reparentedName(origin.declaredParent!, origin.node.name)}".`
+    `Godot re-parents it to the scene root and renames it "${renamedTo(scene, origin)}".`
   );
+}
+
+/** Godot's name for the orphan: the one the builder gave it, else the spelling it would give. */
+function renamedTo(scene: StrictScene, origin: NodeOrigin<RawNode>): string {
+  return scene.reRootedNames.get(origin) ?? reparentedName(origin.declaredParent!, origin.node.name);
 }
 
 /**
@@ -136,8 +109,8 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
   // Heading 0 is dropped, not reported twice: in `packed_scene.cpp`'s `if (i > 0)`,
   // the missing-parent refusal (`:207`) and the `nparent = ret_nodes[0]` re-root
   // (`:208-215`) both sit in the `i > 0` arm, and heading 0 is refused above. It
-  // strands only when its path resolves nowhere and a later heading is parentless.
-  const stranded = scene.orphanedNodes.filter(
+  // is orphaned only when its path resolves nowhere and a later heading is parentless.
+  const orphans = scene.orphanedNodes.filter(
     (origin) => origin !== rootOrigin && !emptyNodes.has(origin.node)
   );
   // The heading's own attribute, not `node.parent`: both parsers drop an
@@ -146,13 +119,8 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
   // so `n.parent` is never `-1` for one and the refusal cannot apply to it.
   const missing = ({ declaredParent }: { declaredParent: string | undefined }) =>
     declaredParent === undefined;
-  // The third and fourth refusals: a root heading that states no identifier at
-  // all, which `:220` fails on, and a placeholder root, which fails the load.
-  const refused =
-    rootOrigin !== undefined || rootStatesNoIdentifier(scene.nodes[0]) || stranded.some(missing);
-
   return emptyRefusals.concat(rootRefusal).concat(
-    stranded.map((origin) => {
+    orphans.map((origin) => {
       const { node, line, declaredParent } = origin;
       if (missing(origin)) {
         return armDiagnostic(
@@ -163,12 +131,16 @@ export function orphanDiagnostics(scene: StrictScene): Diagnostic[] {
           { line, column: 1 }
         );
       }
-      const outcome = orphanOutcome(scene, origin, { hasEmptyParent: emptyParents.length > 0, refused });
+      const outcome = orphanOutcome(scene, origin, emptyParents.length > 0);
+      // A re-rooted node is in the tree, so Phase 2 ran its rules.
+      const rulesSkipped = scene.reRootedNames.has(origin)
+        ? ''
+        : ' No semantic rule ran on it or on anything parented below it.';
       return armDiagnostic(
         FILE_DIAGNOSTICS.unresolvedParentPath,
         node,
         `Node '${node.name}' declares parent="${declaredParent}", a path this file never defines. ` +
-          `${outcome} No semantic rule ran on it or on anything parented below it.`,
+          `${outcome}${rulesSkipped}`,
         { line, column: 1 }
       );
     })

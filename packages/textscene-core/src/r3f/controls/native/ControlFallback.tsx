@@ -4,11 +4,12 @@
  * It forwards `children`, non-empty only for a passthrough type like `CanvasLayer`,
  * so descendants still draw, without the context a real painter would provide.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../ControlComponentRegistry';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import { useControlClipPlanes } from './controlClipping';
+import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 
 /** "Not painted yet": not the "broken" magenta of `MissingResourcePlaceholder.tsx`. */
 const FALLBACK_COLOR = new THREE.Color(0x38bdf8);
@@ -22,7 +23,7 @@ export function ControlFallback({ rect, renderOrder, children }: NativeControlCo
     plane.dispose();
     return edges;
   }, [rect.w, rect.h]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   // No program input here, so the outline never remounts. The key lets a later
   // prop key itself.

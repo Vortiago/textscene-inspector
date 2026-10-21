@@ -12,6 +12,7 @@ import { ResourceEventBus, type ResourceChange, type ResourceType } from './Reso
 import { MetadataStore } from './MetadataStore';
 import { createTextureProcessor } from './processors/createTextureProcessor';
 import { createTexture3DProcessor } from './processors/createTexture3DProcessor';
+import { createTexture2DArrayProcessor } from './processors/createTexture2DArrayProcessor';
 import { createGLBProcessor } from './processors/createGLBProcessor';
 import { createSceneProcessor } from './processors/createSceneProcessor';
 import { createTresResourceProcessor } from './processors/createTresResourceProcessor';
@@ -249,6 +250,14 @@ export class ResourceLoader {
       [
         'texture3d',
         createTexture3DProcessor(
+          fileEventBus,
+          this.eventBus,
+          this.dependencies
+        ) as ResourceProcessor<unknown>,
+      ],
+      [
+        'texture2darray',
+        createTexture2DArrayProcessor(
           fileEventBus,
           this.eventBus,
           this.dependencies

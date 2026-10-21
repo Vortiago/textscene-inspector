@@ -17,7 +17,7 @@ import {
   CANVAS_CAPTURE,
   FIT_ON_OPEN_2D_STORAGE_KEY,
   VIEWPORT,
-} from '../visual/previewServer.mjs';
+} from '../visual/preview/appContract.mjs';
 import {
   bootstrapScript,
   DEFAULT_RENDERING_METHOD,
@@ -606,6 +606,28 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
       patch: 15,
     });
     expect(Math.min(...centre.rgb)).toBeGreaterThan(150);
+  }, 180_000);
+
+  /** A box face of a KEEP_ACTIVE SoftBody3D keeps one flat shade: the reason is in `_freeze_game_logic`. */
+  it('keeps a KEEP_ACTIVE SoftBody3D on its authored flat normals, as the editor draws it', async () => {
+    const out = join(await scratchDir(), 'shot.png');
+    await renderReference({
+      scene: join(REPO_ROOT, 'scenes/fixtures/unit-soft-body-3d.tscn'),
+      out,
+      mode: '3d',
+    });
+    const [upperLeft, lowerRight] = probePixels(
+      await readFile(out),
+      [
+        [395, 200],
+        [450, 300],
+      ],
+      { patch: 5 }
+    );
+    // Within 2/255: a flat face still drifts by a step across its width. Smoothing moved it by 22.
+    for (const channel of [0, 1, 2]) {
+      expect(Math.abs(lowerRight.rgb[channel] - upperLeft.rgb[channel])).toBeLessThanOrEqual(2);
+    }
   }, 180_000);
 
   /**

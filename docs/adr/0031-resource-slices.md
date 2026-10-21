@@ -43,8 +43,8 @@ missing-resources row).
   parity between the kinds is the folder contract, registration and tests, not hollow
   entry-point names.
 - The parsed form is **`ParsedResource`**: header type, ext/sub resource tables, and the
-  `[resource]` body as raw Godot-text strings. A binary `.res`/`.scn` loader must produce
-  the same shape, which makes a decoder format-agnostic. It does not learn which
+  `[resource]` body as raw Godot-text strings. The binary resource loader produces the
+  same shape from a `.res`, which makes a decoder format-agnostic. It does not learn which
   serialisation the file used.
 - One decoder per type. A type that needs both a reactive (JSX) and an imperative
   applier keeps two adapters over the same `decode.ts`. The decode may not fork.

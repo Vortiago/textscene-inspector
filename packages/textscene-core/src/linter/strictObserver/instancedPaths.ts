@@ -7,7 +7,7 @@
 
 import type { ParsedHeading } from '../../parser/utils.js';
 import { SCENE_ROOT_PATH, getAncestorPaths, joinPath } from '../../utils/nodePath.js';
-import { resolveParentPath } from '../../godot/string/nodePath.js';
+import { walkFromRoot } from '../../godot/string/nodePath.js';
 
 interface InstancedPaths {
   /** Records a `[node]` heading, in scan order. */
@@ -30,15 +30,15 @@ export function instancedPaths(): InstancedPaths {
       } else if (name) {
         // Null where the path resolves against nothing (an absolute path, or `..` above the root): the fallback
         // re-roots the heading under a path no other heading can spell, so it vouches for none.
-        const parentPath = parent ? resolveParentPath(parent) : SCENE_ROOT_PATH;
-        if (parentPath !== null) paths.add(joinPath(parentPath, name));
+        const parentPath = parent ? walkFromRoot(parent) : SCENE_ROOT_PATH;
+        if (typeof parentPath === 'string') paths.add(joinPath(parentPath, name));
       }
     },
     hasInstancedAncestor(parent) {
       if (paths.has(SCENE_ROOT_PATH)) return true;
       // The root is covered above. An absolute or empty path names nothing to walk up from.
-      const path = resolveParentPath(parent);
-      if (!path) return false;
+      const path = walkFromRoot(parent);
+      if (typeof path !== 'string' || !path) return false;
       return paths.has(path) || getAncestorPaths(path).some((p) => paths.has(p));
     },
   };

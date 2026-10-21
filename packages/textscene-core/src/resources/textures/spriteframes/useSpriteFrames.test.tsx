@@ -14,6 +14,7 @@ import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../ResourceLoaderContext';
 import { createFakeResourceLoader, type FakeResourceLoader } from '../../testing/createFakeResourceLoader';
 import { useSpriteFrames } from './useSpriteFrames';
+import '../../formats/binaryresource/index';
 
 const SCENE_ANIMATIONS =
   '[{"frames": [{"duration": 1.0, "texture": ExtResource("3")}, {"duration": 2.0, "texture": ExtResource("3")}], "loop": true, "name": &"right", "speed": 5.0}]';
@@ -28,6 +29,7 @@ const SCENE_EXT: TscnExternalResource[] = [
   { id: '3', type: 'Texture2D', path: 'res://scene-frame.png' },
   { id: '7', type: 'SpriteFrames', path: 'res://frames.tres' },
   { id: '8', type: 'SpriteFrames', path: 'res://frames.res' },
+  { id: '9', type: 'SpriteFrames', path: 'res://frames.png' },
 ];
 
 /** A SpriteFrames `.tres` whose frame ids are scoped to the file, not the scene. */
@@ -161,11 +163,18 @@ describe('useSpriteFrames — external .tres', () => {
     expect(result.current.status).toBe('loaded');
   });
 
-  it('does not park a request for a binary .res SpriteFrames (no processor would answer)', () => {
+  it('reads a SpriteFrames saved as a binary .res', () => {
+    const fake = createFakeResourceLoader();
+    // The binary reader parses a `.res` to the ParsedResource a `.tres` gives.
+    fake.resources.seed('res://frames.res', TRES);
+    expect(renderSpriteFrames('ExtResource("8")', fake).result.current.status).toBe('loaded');
+  });
+
+  it('does not park a request for a path no resource file has (no processor would answer)', () => {
     const requested: string[] = [];
     const fake = createFakeResourceLoader();
     fake.resources.setRequestImpl((path) => requested.push(path));
-    const { result } = renderSpriteFrames('ExtResource("8")', fake);
+    const { result } = renderSpriteFrames('ExtResource("9")', fake);
     expect(result.current).toEqual({ spriteFrames: null, status: 'unavailable' });
     expect(requested).toEqual([]);
   });

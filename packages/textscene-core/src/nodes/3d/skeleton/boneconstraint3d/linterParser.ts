@@ -29,8 +29,8 @@ const SETTING_LEAVES = {
   // serialised. Both setters (:188-196, :232-240) only WARN_PRINT an out-of-range index and keep it.
   // The ceiling is the live bone count, which no validator sees, and -1 is the legal unset default
   // (bone_constraint_3d.h:48, :53), so there is no floor.
-  apply_bone: v.strictInt('apply_bone'),
-  reference_bone: v.strictInt('reference_bone'),
+  apply_bone: v.int('apply_bone'),
+  reference_bone: v.int('reference_bone'),
   // :105, PROPERTY_HINT_ENUM "Bone,Node" over the two-value ReferenceType
   // (bone_constraint_3d.h:39-42). set_reference_type (:207-211) assigns without
   // an ERR_FAIL_INDEX on the value.

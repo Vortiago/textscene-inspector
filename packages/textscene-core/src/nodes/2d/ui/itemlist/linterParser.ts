@@ -7,7 +7,11 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { OVERRUN_BEHAVIOR_NAMES } from '../../../../godot/text/textServerEnums.js';
-import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
+import {
+  propertyListFamilyKey,
+  propertyListFamilyValidator,
+} from '../../../../linter/validators/indexedFamily.js';
+import { ITEM_LIST_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import {
@@ -40,16 +44,10 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   disabled: v.boolean('disabled'),
 };
 
-const itemValidator = indexedFamilyValidator({
-  prefix: 'item_',
+const itemValidator = propertyListFamilyValidator(ITEM_LIST_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed)',
-  // `_set` routes straight to `property_helper.property_set_value`
-  // (item_list.cpp:2238), whose `_get_property` returns nullptr unless the
-  // index `is_valid_int()` (property_list_helper.cpp:53-55), so a non-numeric
-  // index is a dropped write.
-  indexParse: 'is_valid_int',
   // The setters fold a negative index from the end (`p_idx += get_item_count()`),
   // but the helper refuses it first (property_list_helper.cpp:58), so that line grounds this.
   negativeIndex: {
@@ -134,7 +132,7 @@ validatorRegistry.registerAll('ItemList', {
   // `PropertyListHelper` names each leaf `vformat("%s%d/%s", prefix, i, name)`
   // (property_list_helper.cpp:149), gluing the index straight onto the `item_`
   // prefix, so the registry matches it under `item_#/*` rather than `item_/*`.
-  'item_#/*': itemValidator,
+  [propertyListFamilyKey(ITEM_LIST_ITEMS)]: itemValidator,
 
   // Not an ADD_PROPERTY: `ItemList::_set`'s deprecated `items = [text, icon,
   // disabled, …]` fallback (item_list.cpp:2242-2259). Its own arity guard

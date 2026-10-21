@@ -47,9 +47,9 @@ ${curveGlsl(mode, white, agxContrast)}
 }
 
 /**
- * The same curve as the final pass after bloom, since bloom reads pre-tonemap HDR and
- * three cannot tonemap in-material then. Every mode gets a body: LINEAR is the curve that
- * applies exposure and nothing else, so no consumer supplies a fifth.
+ * The same curve as the final pass after bloom, since bloom reads pre-tonemap HDR and three cannot
+ * tonemap in-material then. The caller applies exposure first. Every mode gets a body: LINEAR returns
+ * its input, so no consumer supplies a fifth.
  */
 export function toneMappingEffectGlsl(
   mode: number,
@@ -57,8 +57,7 @@ export function toneMappingEffectGlsl(
   agxContrast = TONEMAP_AGX_CONTRAST_DEFAULT
 ): string {
   return /* glsl */ `
-vec3 godotToneMap(vec3 color, float exposure) {
-  color *= exposure;
+vec3 godotToneMap(vec3 color) {
 ${curveGlsl(mode, white, agxContrast)}
 }
 `;

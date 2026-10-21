@@ -1,0 +1,56 @@
+[gd_scene load_steps=8 format=3 uid="uid://unitquadmeshorientation"]
+
+; The one variable: which way a QuadMesh and a PlaneMesh face, and where their texture lands. The
+; stepped gradient shows the UV on a QuadMesh facing each axis, a subdivided one moved by
+; `center_offset`, and a PlaneMesh on FACE_X. The other QuadMesh scene draws one flat quad facing +Z.
+
+[sub_resource type="Gradient" id="G"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GT"]
+gradient = SubResource("G")
+fill_to = Vector2(1, 1)
+[sub_resource type="StandardMaterial3D" id="M"]
+shading_mode = 0
+albedo_texture = SubResource("GT")
+
+[sub_resource type="QuadMesh" id="QX"]
+material = SubResource("M")
+orientation = 0
+
+[sub_resource type="QuadMesh" id="QY"]
+material = SubResource("M")
+orientation = 1
+size = Vector2(1.2, 0.6)
+
+[sub_resource type="QuadMesh" id="QZ"]
+material = SubResource("M")
+center_offset = Vector3(0.2, 0.3, 0)
+subdivide_width = 3
+
+[sub_resource type="PlaneMesh" id="PX"]
+material = SubResource("M")
+orientation = 0
+size = Vector2(1, 0.6)
+subdivide_depth = 2
+
+[node name="Root" type="Node3D"]
+
+[node name="QuadX" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, -1.5, 0, 0)
+mesh = SubResource("QX")
+
+[node name="QuadY" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0, 0)
+mesh = SubResource("QY")
+
+[node name="QuadZ" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, 0)
+mesh = SubResource("QZ")
+
+[node name="PlaneX" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 1.6, 0, 0)
+mesh = SubResource("PX")
+

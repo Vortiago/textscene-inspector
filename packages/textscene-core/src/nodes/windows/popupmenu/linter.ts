@@ -7,24 +7,17 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { ruleCount } from '../../../linter/validators/commonValidators.js';
-import { indicesPastCount, listWrittenIndices } from '../../../linter/reportedIndices.js';
+import { listWrittenIndices, writesPastFamilyCount } from '../../../linter/reportedIndices.js';
+import { POPUP_MENU_ITEMS } from '../../../godot/classdb/propertyListFamilies.js';
 import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
   itemIndexOutOfRange: {
     severity: 'error',
     ruleName: 'popupmenu-item-index-out-of-range',
-    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+    grounding: { kind: 'engine', at: POPUP_MENU_ITEMS.outOfBounds.at },
   },
 } as const satisfies RuleArms<string>;
-
-/**
- * The family's prefix. It is a `PropertyListHelper` one
- * (popup_menu.cpp:3319-3328), whose `_get_property` gates the index on
- * `String::is_valid_int()` (property_list_helper.cpp:53).
- */
-const ITEM_PREFIX = 'item_';
 
 // Godot's saver never writes this: `item_count` (`ADD_ARRAY_COUNT`, popup_menu.cpp:3267)
 // precedes the item leaves, and `items.resize(p_count)` (popup_menu.cpp:2718) keeps
@@ -34,22 +27,13 @@ function checkPopupMenu(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const rawProps = node.rawProperties;
 
-  const countRaw = rawProps.item_count;
-  // Absent means the default 0 (doc/classes/PopupMenu.xml), which the
-  // serialiser omits: an empty `Vector<Item> items`, so every item key is out
-  // of range.
-  const count = ruleCount(countRaw);
-  // A malformed item_count already draws its own validator's diagnostic, and a
-  // non-finite one is altered at parse to a number the file does not state, so
-  // neither is a count this rule can name in a message.
-  if (count === null) return diagnostics;
-
-  // Resolved the way `_get_property` does, not by a hand-rolled key scan, so a key
-  // with no leaf, such as `item_3/`, names no item. The dispatcher in linterParser.ts
-  // reports a negative index, so this checks only the high end, and one mistake gets
-  // one diagnostic.
-  const offending = indicesPastCount(rawProps, ITEM_PREFIX, 'is_valid_int', count);
-  if (offending.size === 0) return diagnostics;
+  // Absent means the default 0 (doc/classes/PopupMenu.xml), which the serialiser omits: an empty
+  // `Vector<Item> items`, so every item key is out of range. Resolved the way `_get_property` does,
+  // so a key with no leaf, such as `item_3/`, names no item. The dispatcher in linterParser.ts reports
+  // a negative index, so this checks only the high end, and one mistake gets one diagnostic.
+  const pastCount = writesPastFamilyCount(rawProps, POPUP_MENU_ITEMS);
+  if (pastCount === null || pastCount.offending.size === 0) return diagnostics;
+  const { count, offending } = pastCount;
 
   const indices = listWrittenIndices(offending);
   // `p_allow_oob` is false: `enable_out_of_bounds_assign()` (property_list_helper.h:92)
@@ -74,7 +58,7 @@ const popupMenuValidationRule: LintRule = {
     name: 'valid-popupmenu-properties',
     description: "Validates PopupMenu's dynamic item_<N>/… indices stay within item_count",
     category: 'validation',
-    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'PopupMenu'),
+    applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, POPUP_MENU_ITEMS.owner),
     emits: armEmits(arms),
   },
   check: checkPopupMenu,

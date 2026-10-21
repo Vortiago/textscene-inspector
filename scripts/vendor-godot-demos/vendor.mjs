@@ -6,25 +6,15 @@
  * the recipe that made it, so an unchanged recipe fetches nothing.
  */
 
-import {
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
-import { createHash } from 'node:crypto';
+import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative, sep } from 'node:path';
+import { join } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { fetchShallow } from '../vendor-git.mjs';
+import { ensureKeyedCorpora, holdsAnyKey, recipeKey as keyOf } from '../vendor-keyed.mjs';
 import { copyPruned, isPruned } from '../vendor-prune.mjs';
 import { applyLocalChanges } from './applyLocalChanges.mjs';
 import { reachableFiles } from './reachableFiles.mjs';
-import { withLock } from './withLock.mjs';
 
 const SOURCE = {
   url: 'https://github.com/godotengine/godot-demo-projects',
@@ -39,7 +29,6 @@ const ISOMETRIC_PROJECT = '2d/isometric';
 /** The scenes under scenes/isometric/ that are ours and committed. The vendoring leaves them. */
 const ISOMETRIC_OWN_DIR = 'previews';
 const CORPORA = [DEMOS, ISOMETRIC];
-const KEY_FILE = '.vendor-key';
 const LOCK_FILE = join(REPO_ROOT, 'scenes/.vendor-godot-demos.lock');
 
 /** The files and folders that decide the corpora. A change to one of them fetches again. */
@@ -51,6 +40,7 @@ const RECIPE = [
   'scripts/vendor-godot-demos/text-resources',
   'scripts/vendor-prune.mjs',
   'scripts/vendor-git.mjs',
+  'scripts/vendor-keyed.mjs',
 ];
 
 const LICENCE = `License: code is MIT, Copyright (c) 2014-present Godot Engine contributors,
@@ -59,26 +49,26 @@ Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur
 Per-demo asset licences vary (often CC-BY). Each project keeps its own README.md for attribution.`;
 
 /**
- * Vendors both corpora, unless each already holds the current recipe's output. One process
- * vendors at a time, and a waiting one finds the corpora current. When the fetch fails, it keeps
- * corpora from an older recipe and throws only when there are none.
+ * Vendors both corpora, unless each already holds the current recipe's output. When the fetch
+ * fails, it keeps corpora from an older recipe and throws only when there are none.
  */
 export function ensureGodotDemos() {
-  const key = recipeKey();
-  if (isCurrent(key)) {
-    console.log(`[vendor-godot-demos] up to date @ ${SHORT_COMMIT}`);
-    return;
-  }
-  withLock(LOCK_FILE, () => {
-    if (!isCurrent(key)) vendor(key);
+  ensureKeyedCorpora({
+    label: 'vendor-godot-demos',
+    corpora: CORPORA,
+    recipe: RECIPE,
+    lockFile: LOCK_FILE,
+    vendor,
   });
 }
 
-function isCurrent(key) {
-  return CORPORA.every((corpus) => holdsKey(corpus, key));
+/** The recipe key, which CI also keys its cache on. */
+export function recipeKey() {
+  return keyOf(RECIPE);
 }
 
-function vendor(key) {
+/** Vendors both corpora, and returns false where it kept an older recipe's corpora. */
+function vendor() {
   const work = mkdtempSync(join(tmpdir(), 'vendor-godot-demos-'));
   try {
     const checkout = join(work, 'godot-demo-projects');
@@ -86,47 +76,20 @@ function vendor(key) {
       fetchCheckout(checkout);
     } catch (e) {
       // Offline, an older recipe's corpora beat none: the install and the tests still run.
-      if (!CORPORA.every((corpus) => existsSync(join(corpus, KEY_FILE)))) throw e;
+      if (!holdsAnyKey(CORPORA)) throw e;
       console.warn(`[vendor-godot-demos] ${e.message}\n  Kept the corpora of an older recipe.`);
-      return;
+      return false;
     }
     applyLocalChanges(import.meta.dirname, checkout);
     const demoFiles = vendorDemos(checkout);
     const isometricFiles = vendorIsometric(join(checkout, ISOMETRIC_PROJECT));
-    for (const corpus of CORPORA) writeFileSync(join(corpus, KEY_FILE), key);
     console.log(
       `[vendor-godot-demos] ${demoFiles} demo files and ${isometricFiles} isometric files @ ${SHORT_COMMIT}`
     );
+    return true;
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
-}
-
-/** A hash of the recipe's files, which CI also keys its cache on. */
-export function recipeKey() {
-  const hash = createHash('sha256');
-  for (const file of RECIPE.flatMap(recipeFiles).sort()) {
-    // A NUL after each part keeps one path and its bytes from reading as another pair.
-    hash
-      .update(`${file}\0`)
-      .update(readFileSync(join(REPO_ROOT, file)))
-      .update('\0');
-  }
-  return hash.digest('hex');
-}
-
-/** The repo-relative POSIX paths of the files at `path`, a file or a folder. */
-function recipeFiles(path) {
-  const full = join(REPO_ROOT, path);
-  if (!statSync(full).isDirectory()) return [path];
-  return readdirSync(full, { recursive: true, withFileTypes: true })
-    .filter((e) => e.isFile())
-    .map((e) => relative(REPO_ROOT, join(e.parentPath, e.name)).split(sep).join('/'));
-}
-
-function holdsKey(corpus, key) {
-  const file = join(corpus, KEY_FILE);
-  return existsSync(file) && readFileSync(file, 'utf8') === key;
 }
 
 function fetchCheckout(checkout) {

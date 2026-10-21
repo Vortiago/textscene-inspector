@@ -3,7 +3,7 @@
  * the requested scene confirmed, and the canvas proven settled before it is read.
  */
 
-/* global document */ // The `sceneStillLoading` predicate runs in the browser.
+/* global document */ // The loading status predicates run in the browser.
 
 import {
   FIXTURE_LOADING_TESTID,
@@ -15,7 +15,6 @@ import {
   SETTLE_MAX_ATTEMPTS,
   SETTLE_SIM_SECONDS,
   TEXTURE_WORK_STATUS_TESTID,
-  TEXTURE_WORK_WAIT_MS,
 } from './appContract.mjs';
 import { fixtureUrl } from './fixtureUrl.mjs';
 import { findCanvas2DFrame } from './viewportProbes.mjs';
@@ -93,10 +92,10 @@ export async function findCaptureTarget(page, { canvas2D = false } = {}) {
 }
 
 /**
- * Screenshots the canvas once two consecutive captures are byte-identical, and never while
- * the texture work status is on the page. A scene that never settles returns a reason
- * instead of a frame, so flakiness is rejected here, not absorbed by a tolerance downstream.
- * `waitForTextureWork: false` exists only for the control that proves the wait matters.
+ * Screenshots the canvas once two consecutive captures are byte-identical, and never while a
+ * loading status is on the page. A scene that never settles returns a reason instead of a frame,
+ * so flakiness is rejected here, not absorbed by a tolerance downstream.
+ * `waitForTextureWork: false` exists only for the control that proves the texture wait matters.
  */
 export async function settleCanvas(
   page,
@@ -115,19 +114,18 @@ export async function settleCanvas(
   // default action timeout. A per-scene raise keeps an ordinary scene's hang quick to report.
   const shooter = targetShooter(canvas, { timeout: screenshotTimeout });
   const shot = () => shooter.shoot();
-  const textureWork = page.getByTestId(TEXTURE_WORK_STATUS_TESTID);
-  const pendingReason = `texture work still pending after ${TEXTURE_WORK_WAIT_MS}ms`;
+  const statusIds = waitForTextureWork ? LOADING_STATUS_IDS : SCENE_STATUS_IDS;
   await page.waitForTimeout(SETTLE_INITIAL_MS);
-  if (waitForTextureWork && !(await textureWorkCleared(textureWork))) {
-    return { buffer: null, reason: pendingReason };
-  }
+  const loading = await statusesStillAttached(page, statusIds);
+  if (loading) return { buffer: null, reason: loading };
   let prev = await shot();
   for (let attempt = 0; attempt < SETTLE_MAX_ATTEMPTS; attempt++) {
     await page.waitForTimeout(SETTLE_INTERVAL_MS);
     // Work that started since the last shot means that shot is not a candidate: wait it
     // out, then start the comparison again from a fresh frame.
-    if (waitForTextureWork && (await textureWork.count()) > 0) {
-      if (!(await textureWorkCleared(textureWork))) return { buffer: null, reason: pendingReason };
+    if (await anyStatusAttached(page, statusIds)) {
+      const stillLoading = await statusesStillAttached(page, statusIds);
+      if (stillLoading) return { buffer: null, reason: stillLoading };
       prev = await shot();
       continue;
     }
@@ -149,30 +147,25 @@ export async function settleCanvas(
   };
 }
 
-/**
- * True once the texture work status is detached; false when it outlives
- * `TEXTURE_WORK_WAIT_MS`. `status` is its locator, in the page or in a webview frame.
- */
-export async function textureWorkCleared(status) {
-  try {
-    await status.waitFor({ state: 'detached', timeout: TEXTURE_WORK_WAIT_MS });
-    return true;
-  } catch (error) {
-    // Playwright's timeout is the answer here. A closed page or a crashed tab is not.
-    if (error?.name === 'TimeoutError') return false;
-    throw new Error(`waiting for the texture work status to detach: ${error}`, { cause: error });
-  }
-}
+/** The statuses of a scene not yet whole: its fixture fetch and its load. */
+const SCENE_STATUS_IDS = [FIXTURE_LOADING_TESTID, SCENE_LOAD_STATUS_TESTID];
+/** Those, and the texture work that follows them. Each gives way to the next. */
+const LOADING_STATUS_IDS = [...SCENE_STATUS_IDS, TEXTURE_WORK_STATUS_TESTID];
 
 /**
  * The reason the scene is still loading, or null once it is whole: fetched, drawn, its resources
  * landed and its texture work ended. One check reads every status, since each gives way to the next.
  */
-export async function sceneStillLoading(page) {
+export function sceneStillLoading(page) {
+  return statusesStillAttached(page, LOADING_STATUS_IDS);
+}
+
+/** Waits until no element carries one of `ids`. Answers null then, or the reason it gave up. */
+async function statusesStillAttached(page, ids) {
   try {
     await page.waitForFunction(
-      (ids) => ids.every((id) => !document.querySelector(`[data-testid="${id}"]`)),
-      [FIXTURE_LOADING_TESTID, SCENE_LOAD_STATUS_TESTID, TEXTURE_WORK_STATUS_TESTID],
+      (statusIds) => statusIds.every((id) => !document.querySelector(`[data-testid="${id}"]`)),
+      ids,
       { timeout: SCENE_LOAD_WAIT_MS }
     );
     return null;
@@ -180,6 +173,14 @@ export async function sceneStillLoading(page) {
     if (error?.name === 'TimeoutError') return `scene still loading after ${SCENE_LOAD_WAIT_MS}ms`;
     throw new Error(`waiting for the scene to load: ${error}`, { cause: error });
   }
+}
+
+/** True while an element carries one of `ids`. */
+function anyStatusAttached(page, ids) {
+  return page.evaluate(
+    (statusIds) => statusIds.some((id) => document.querySelector(`[data-testid="${id}"]`)),
+    ids
+  );
 }
 
 /** Every pixel the same RGBA: a dead GL context or an unrendered scene, never a real frame. */

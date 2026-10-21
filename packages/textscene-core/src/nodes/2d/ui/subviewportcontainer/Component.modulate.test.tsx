@@ -56,7 +56,7 @@ async function mountContainer(tint = painterTint()) {
       />
     </ViewportTextureProvider>
   );
-  const quad = quadsSampling(renderer.scene, entry.texture)[0];
+  const quad = quadsSampling(renderer.scene, entry.plain.texture)[0];
   return quad!.material as THREE.MeshBasicMaterial;
 }
 
@@ -96,7 +96,8 @@ describe('<SubViewportContainer> modulate / self_modulate', () => {
       </ViewportTextureProvider>
     );
 
-    const material = quadsSampling(renderer.scene, entry.texture)[0]!.material as THREE.MeshBasicMaterial;
+    const material = quadsSampling(renderer.scene, entry.plain.texture)[0]!
+      .material as THREE.MeshBasicMaterial;
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.25), 4);
 
     controlComponentRegistry.clear();

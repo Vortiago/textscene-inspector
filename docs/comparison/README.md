@@ -110,7 +110,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md): canvas-rasterised glyph quads, billboard-able
-- [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md): nothing yet, Godot lights static geometry from its baked lightmap, the previewer does not
+- [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md): the baked lightmap on each mesh its data names
 - [LightmapProbe](../../packages/textscene-core/src/nodes/3d/lightmapprobe/comparison.md): nothing yet, Godot samples it to light dynamic objects, the previewer does not
 - [LimitAngularVelocityModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/limitangularvelocitymodifier3d/comparison.md): nothing yet, Godot caps how fast its bones may turn, the previewer does not
 - [LookAtModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/lookatmodifier3d/comparison.md): nothing yet, Godot rotates a bone to face its target, the previewer does not
@@ -148,7 +148,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [SkeletonIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonik3d/comparison.md): nothing yet, Godot solves its deprecated chain onto the target, the previewer does not
 - [SkeletonModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/skeletonmodifier3d/comparison.md): nothing yet, Godot runs its bone-pose pass each frame, the previewer does not
 - [SliderJoint3D](../../packages/textscene-core/src/nodes/physics/3d/sliderjoint3d/comparison.md): nothing (a transform-only group)
-- [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): nothing yet, Godot draws a deformable mesh, the previewer does not
+- [SoftBody3D](../../packages/textscene-core/src/nodes/physics/3d/softbody3d/comparison.md): a THREE.Mesh
 - [SplineIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/splineik3d/comparison.md): nothing yet, Godot lays its bone chain along the path, the previewer does not
 - [SpotLight3D](../../packages/textscene-core/src/nodes/3d/lights/spotlight3d/comparison.md): a THREE.SpotLight
 - [SpringArm3D](../../packages/textscene-core/src/nodes/physics/3d/springarm3d/comparison.md): a transform group with a selection-gated length line

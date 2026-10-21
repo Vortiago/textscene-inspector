@@ -28,6 +28,11 @@ The resource pools of the file that wrote a node. A host node grafted into an in
 Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
 _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
 
+**Instance name table** (`resources/instanceNameTable.ts`):
+An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
+The merged node keeps it, and the render path's per-owner tables read it.
+_Avoid_: a second composer of an instance's table.
+
 **ExtResource**:
 An external file reference, written `ExtResource("id")` and declared by an `[ext_resource]` heading with a `uid=` and a `path="res://…"`.
 _Avoid_: "asset", "import".
@@ -49,6 +54,13 @@ The pass Godot's texture importer runs on a roughness map's **Imported mip chain
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
 Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.
 _Avoid_: "lightmap cache", which suggests the baked lightmap.
+
+**Lightmap atlas** (`resources/lightmapgidata/build.ts`):
+Every layer of a bake's lightmap textures, stacked in order into one texture array. A surface reads its own slice of it through UV2.
+_Avoid_: "lightmap texture" for the whole stack: a bake can save several.
+
+**Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
+The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054).
 
 **Project settings**:
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
@@ -95,6 +107,11 @@ The optional hook **seam** (`onError`, `onSectionStart`, `onProperty`, `onSectio
 The lenient parser passes none, and the strict parser passes one that collects errors and runs validators.
 _Avoid_: "callback API", "strict mode flag".
 
+**Seating** (`seatScene` in `parser/sceneTreeBuilder.ts`):
+The scene tree the `[node]` headings form once each sits under the node its `parent=` names, in declaration order as instantiate places them, every owner's `%Name` claims and releases in file order, and the one walk that resolves a root-relative node path over it.
+Both parsers seat through it, the linter and the **Language-feature engine** resolve `parent=`, `from=` and `to=` through its walk, and every `%Name` reader, the instance graft included, reads its claims.
+_Avoid_: a second path table or `%Name` claim table over the headings.
+
 **Value decoder** (`parser/valueParsers.ts`):
 The lenient parser's shared primitives (`intOr`, `floatOr`, `parseOptionalFloat` and the others) that read a raw property string into a typed scalar or vector.
 The grammar is shared, but the absent/error contract may **fork** per slice.
@@ -134,10 +151,19 @@ What the `[node]` and `[connection]` headings state that the scene tree does not
 Only the linter reads them, so only the strict parser's `StrictScene` carries them. The strict parser builds them from the headings the core returns beside the scene and from its own observer.
 _Avoid_: putting a linter-only field on `TscnScene`.
 
+**Re-rooted node** (`reRoot` in `parser/sceneTreeBuilder.ts`):
+A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same on a copy of the heading's node, which keeps the heading's name in `authoredName`.
+A node below it re-roots on its own, since the old path no longer exists. Godot does not re-root in a scene it refuses to instantiate, nor where a `parent_id_path=` lands the node.
+_Avoid_: "dropped node", which names a node left out of the tree.
+
 **Rule arm** (`linter/ruleArms.ts`):
 One diagnostic a **Lint rule** or a **Resource rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
 A rule reports only through its arms (`reportArm`, `armDiagnostic`), and `armEmits` derives its `emits` from them.
 _Avoid_: a hand-written diagnostic object in a rule.
+
+**Indexed family** (`IndexedFamily` in `godot/classdb/indexedFamily.ts`):
+The `PropertyListHelper` array a class serialises as `<prefix><N>/<leaf>`, declared once with its prefix, index parse, count key, leaves and out-of-bounds policy. The family validator, the past-count **Lint rule** and the parser grouping all derive from that declaration.
+_Avoid_: restating a prefix, a count key or a policy beside a validator or a rule.
 
 **Range advisory** (`linter/rangeAdvisory.ts`):
 A warning **Lint rule** that the shared `rangeAdvisories` combinator emits when one numeric property falls outside a table of cited thresholds.
@@ -167,7 +193,7 @@ _Avoid_: a per-viewport rule scoped to the whole scene.
 
 **Language-feature engine** (`languageFeatures/`):
 The React- and THREE-free core area that answers editor requests for one `.tscn`: hover, completion, quick fixes, folding and document highlights.
-It reads the text through a **ParseObserver** on the scanning loop, and reads the `godot/` captures.
+It reads the text through a **ParseObserver** on the scanning loop, seats the `[node]` headings through the **Seating**, and reads the `godot/` captures.
 Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0049).
 _Avoid_: "LSP" for the engine. LSP names the protocol, which the `tscn-lsp` server speaks. "Language service".
 

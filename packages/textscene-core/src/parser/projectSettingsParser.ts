@@ -25,6 +25,7 @@ import {
 } from '../godot/rendering/environment/volumetricFog.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import type { Rgba } from '../godot/math/math.js';
+import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -117,18 +118,14 @@ export interface ProjectViewportSize {
 
 /**
  * `display/window/size/viewport_*`: the rect a 2D scene is composed against and a root
- * Control anchors to. Per axis, as Godot falls back per setting. A non-finite or
+ * Control anchors to. Per axis, as Godot falls back per setting. Both settings are INT
+ * (`project_settings.cpp:1711-1712`), so a fraction truncates. An unreadable or
  * non-positive value takes the default: a zero-width viewport cannot be laid out.
  */
 export function projectViewportSize(settings: ProjectSettings | null): ProjectViewportSize {
   const axis = (key: string, fallback: number): number => {
-    const raw = settings?.[key];
-    if (raw === undefined || raw.trim() === '') return fallback;
-    const value = Number(raw);
-    if (!Number.isFinite(value) || value <= 0) return fallback;
-    // Godot stores these as ints; a fractional override would put the capture
-    // frame on a half pixel and resample every comparison made against it.
-    return Math.round(value);
+    const value = parseOptionalInt(settings?.[key]);
+    return value === undefined || value <= 0 ? fallback : value;
   };
   return {
     width: axis('display/window/size/viewport_width', DEFAULT_VIEWPORT_WIDTH),
@@ -148,6 +145,17 @@ export function projectClearColor(settings: ProjectSettings | null): Rgba {
 export function projectPrimitiveMeshTexelSize(settings: ProjectSettings | null): number {
   const setting = parseOptionalFloat(settings?.['rendering/lightmapping/primitive_meshes/texel_size']);
   return primitiveMeshTexelSize(setting ?? DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+}
+
+/**
+ * `rendering/lightmapping/lightmap_gi/use_bicubic_filter`, which every lightmap read takes
+ * (`renderer_scene_render_rd.cpp:1732`), or Godot's default for an absent or malformed value.
+ */
+export function projectUsesLightmapBicubicFilter(settings: ProjectSettings | null): boolean {
+  return (
+    boolSlotValue(settings?.['rendering/lightmapping/lightmap_gi/use_bicubic_filter']) ??
+    LIGHTMAP_BICUBIC_FILTER_DEFAULT
+  );
 }
 
 /**

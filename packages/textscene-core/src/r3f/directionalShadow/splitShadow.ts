@@ -13,6 +13,7 @@ import {
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
 } from '../../godot/rendering/lights/directionalShadow.js';
+import { cameraFrustum } from '../cameraFrustum.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
 
@@ -48,9 +49,6 @@ class UndrawnFrustum extends THREE.Frustum {
 const ThreeLightShadow = THREE.LightShadow as unknown as new (
   camera: THREE.OrthographicCamera
 ) => THREE.LightShadow<THREE.OrthographicCamera> & LightShadowInternals;
-
-/** Scratch for `placeSplitFrusta`, which places one frustum at a time. */
-const splitViewProjection = new THREE.Matrix4();
 
 /** The fade of a sun no fit has placed: ends that do not ascend fade nothing. */
 export const NO_SHADOW_FADE: DirectionalShadowFade = { from: 0, to: 0 };
@@ -188,13 +186,7 @@ export class DirectionalSplitShadow extends ThreeLightShadow {
    */
   placeSplitFrusta(): void {
     for (let slot = 0; slot < this.splitCount; slot++) {
-      const camera = this.splitCameras[slot]!;
-      splitViewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-      this.splitFrustums[slot]!.setFromProjectionMatrix(
-        splitViewProjection,
-        camera.coordinateSystem,
-        camera.reversedDepth
-      );
+      cameraFrustum(this.splitCameras[slot]!, this.splitFrustums[slot]!);
     }
   }
 

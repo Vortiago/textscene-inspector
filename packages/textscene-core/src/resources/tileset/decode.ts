@@ -1,6 +1,6 @@
 /**
  * The TileSet slice's decode (ADR-0031): a TileSet's properties to the
- * `TileSetModel`. `tileSetFromScene` and `tileSetFromTres` differ only in which
+ * `TileSetModel`. `tileSetFromScene` and `tileSetFromFile` differ only in which
  * tables resolve a reference, and the decode never forks. Lenient: silent on
  * absent properties, warn-then-skip on malformed ones, never throws.
  */
@@ -113,8 +113,8 @@ function intEnumOr(value: string | undefined, fallback: number, label: string): 
   return n;
 }
 
-/** Adapter: a TileSet from an external .tres file, or null for another type. */
-export function tileSetFromTres(parsed: ParsedResource): TileSetModel | null {
+/** Adapter: a TileSet from its own resource file, or null for another type. */
+export function tileSetFromFile(parsed: ParsedResource): TileSetModel | null {
   if (parsed.resourceType !== 'TileSet') return null;
   return resolveTileSetModel({
     properties: parsed.properties,

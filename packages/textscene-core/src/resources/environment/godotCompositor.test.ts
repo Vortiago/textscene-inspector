@@ -51,7 +51,7 @@ describe('compositeProgram — the shader it emits', () => {
     // The effect compiles this one string. A function it only calls would be a
     // link error at shader-compile time: a black frame.
     const glsl = composite(glowOn());
-    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
     expect(glsl).toContain('vec3 godotGlowBlend(vec3 color, vec3 glow)');
     expect(glsl).toContain('void mainImage(const in vec4 inputColor, const in vec2 uv,');
   });
@@ -119,7 +119,7 @@ describe('compositeProgram — exposure', () => {
   it('exposes the scene colour and leaves the glow alone, pre-tonemap modes', () => {
     const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }));
     expect(glsl).toContain('* godotExposure');
-    expect(glsl).toContain('godotToneMap(color, 1.0)');
+    expect(glsl).toContain('godotToneMap(color)');
     expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
   });
 
@@ -130,10 +130,10 @@ describe('compositeProgram — exposure', () => {
     }
   });
 
-  it('calls the curve with an exposure of 1.0 — each operand is exposed already', () => {
+  it('tonemaps operands that are exposed already', () => {
     const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
-    expect(glsl).toContain('godotToneMap(glow, 1.0)');
-    expect(glsl).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0)');
+    expect(glsl).toContain('godotToneMap(glow)');
+    expect(glsl).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure)');
   });
 
   it('clamps the scene colour non-negative before the curve, as apply_tonemapping does', () => {
@@ -146,7 +146,7 @@ describe('compositeProgram — exposure', () => {
 describe('compositeProgram — which side of the tone curve the blend falls on', () => {
   it('tonemaps both operands and neither twice, SOFTLIGHT', () => {
     const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
-    expect(glsl).toContain('godotToneMap(glow, 1.0)');
+    expect(glsl).toContain('godotToneMap(glow)');
     expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
   });
 
@@ -244,7 +244,7 @@ describe('compositeProgram — with the glow flag clear', () => {
   const tone = { mode: ToneMapper.FILMIC, white: 1 };
 
   it('exposes the scene colour and applies the curve, in that order', () => {
-    expect(body(null, tone)).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0)');
+    expect(body(null, tone)).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure)');
   });
 
   it('gathers no glow and declares no buffer to gather from', () => {
@@ -260,7 +260,7 @@ describe('compositeProgram — with the glow flag clear', () => {
 
   it('still emits a real curve under LINEAR, which is exposure and nothing else', () => {
     const glsl = composite(null, { mode: ToneMapper.LINEAR, white: 1 });
-    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
     expect(glsl).toContain('* godotExposure');
   });
 });

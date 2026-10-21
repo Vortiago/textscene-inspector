@@ -1,14 +1,10 @@
 /**
- * SoftBody3D draws nothing here yet, and the badge reads "not implemented". The
- * GeometryInstance3D base still mounts, for `visible`, the workspace split and the scene cull.
+ * SoftBody3D derives from MeshInstance3D (`soft_body_3d.h:66`), so it draws its `mesh` at rest: the
+ * previewer runs no physics (ADR-0005). Its box is the mesh's (`mesh_instance_3d.cpp:230-233`) until
+ * a physics step swaps it (`soft_body_3d.cpp:100-101,450-452`).
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { undrawnGeometryInstance } from '../../../3d/geometryinstance3d/Component';
-import { useSoftBody3DAabb } from './ownAabb';
+import { MeshInstance3D } from '../../../3d/meshinstance3d/Component';
 
-nodeComponentRegistry.register({
-  typeName: 'SoftBody3D',
-  Component: undrawnGeometryInstance(useSoftBody3DAabb),
-  renderIntent: 'pending',
-});
+nodeComponentRegistry.register({ typeName: 'SoftBody3D', Component: MeshInstance3D });

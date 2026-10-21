@@ -1,6 +1,7 @@
 /**
- * One MeshInstance3D inside the scene providers, for a component test, and
- * the materials its draw groups end up with.
+ * One MeshInstance3D, or a subclass that draws as one, inside the scene providers, for a component
+ * test, and the materials its draw groups end up with. The registry picks the component by the
+ * node's type.
  */
 
 import type * as THREE from 'three';
@@ -14,8 +15,6 @@ import type { MeshInstance3DProperties } from '../types';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../geometryinstance3d/types';
 import '../index.r3f';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
-
-const MeshInstance3D = registeredComponent('MeshInstance3D');
 
 type TestRenderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -60,9 +59,10 @@ export function childIsRendered(renderer: TestRenderer): boolean {
 
 /** The element tree, for a test that re-renders it with `renderer.update`. */
 export function meshInstanceTree({ loader, node, internalResources, externalResources }: MeshInstanceScene) {
+  const Component = registeredComponent(node.type);
   return (
     <SceneStack loader={loader} scene={{ internalResources, externalResources }}>
-      <MeshInstance3D node={node} />
+      <Component node={node} />
     </SceneStack>
   );
 }

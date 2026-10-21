@@ -33,7 +33,7 @@ function negativeIndexMessage(index: string): string {
  * All 14 leaves, keyed by their path below the index, in the order `_get_property_list` pushes them
  * (two_bone_ik_3d.cpp:140-153). The bone index setters rewrite an index `<= -1` or past the bone
  * count to -1 once a skeleton resolves (two_bone_ik_3d.cpp:231, 268, 307): -2 is altered, and -1,
- * the unset default, stays legal. `v.strictInt`, so `2.5` is reported.
+ * the unset default, stays legal. `v.int`, so `2.5` is reported.
  */
 const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // two_bone_ik_3d.cpp:140, Variant::NODE_PATH, no hint. set_target_node
@@ -49,11 +49,11 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   root_bone_name: v.quotedString('root_bone_name'),
   // two_bone_ik_3d.cpp:143, Variant::INT, PROPERTY_HINT_NONE, PROPERTY_USAGE_NO_EDITOR (which still
   // serialises). The ceiling is the live bone count, which no per-property validator sees.
-  root_bone: v.strictInt('root_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:231' }),
+  root_bone: v.int('root_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:231' }),
   // two_bone_ik_3d.cpp:144, as root_bone_name.
   middle_bone_name: v.quotedString('middle_bone_name'),
   // two_bone_ik_3d.cpp:145, as root_bone.
-  middle_bone: v.strictInt('middle_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:268' }),
+  middle_bone: v.int('middle_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:268' }),
   // two_bone_ik_3d.cpp:146, Variant::INT, PROPERTY_HINT_ENUM "None,+X,-X,+Y,-Y,+Z,-Z,Custom"
   // (skeleton_modifier_3d.h:77), values 0-7. set_pole_direction (two_bone_ik_3d.cpp:425-437)
   // static_casts and assigns with no range guard, so an out-of-range value loads and only warns.
@@ -68,7 +68,7 @@ const SETTING_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   // two_bone_ik_3d.cpp:148, as root_bone_name.
   end_bone_name: v.quotedString('end_bone_name'),
   // two_bone_ik_3d.cpp:149, as root_bone.
-  end_bone: v.strictInt('end_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:307' }),
+  end_bone: v.int('end_bone', { min: -1, enforced: 'two_bone_ik_3d.cpp:307' }),
   // two_bone_ik_3d.cpp:150, Variant::BOOL, no hint. set_use_virtual_end
   // (two_bone_ik_3d.cpp:325-338) is a bare assignment.
   use_virtual_end: v.boolean('use_virtual_end'),

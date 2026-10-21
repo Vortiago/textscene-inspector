@@ -6,7 +6,7 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { splitTopLevel } from '../../../godot/string/string.js';
 import { arrayLiteralBody } from '../../../godot/variant/variantParser.js';
-import type { Texture3DTexels } from '../../formats/image3d/texels';
+import type { LayeredTexels } from '../layeredTexels';
 import { decodeImageRef, type DecodedImage } from '../image/decode';
 import { stackSlices } from './texels';
 
@@ -14,7 +14,7 @@ import { stackSlices } from './texels';
 export function decodeImageTexture3D(
   properties: Record<string, string>,
   resources: readonly TscnInternalResource[]
-): Texture3DTexels<Uint8Array | Float32Array> | null {
+): LayeredTexels<Uint8Array | Float32Array> | null {
   const images = savedImages(properties._images, resources);
   if (!images || new Set(images.map(({ format }) => format)).size > 1) return null;
   return stackSlices(images);

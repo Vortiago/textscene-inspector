@@ -81,18 +81,15 @@ export type WebviewReadyMessage = {
 export type JumpToNodeMessage = {
   type: 'jumpToNode';
   nodeName: string;
-  /**
-   * Full tree path from the root, such as "Root/B/Leaf" (breadcrumb identifier).
-   * Optional: a legacy webview sends `nodeName` alone, which `webviewDispatch`
-   * admits and the handler answers with its first-name-match fallback.
-   */
-  path?: string;
-  /**
-   * Raw Godot `parent=` value of the node (`undefined` for root, `"."` for a
-   * direct child, else the `/`-joined ancestor path minus the root). Used to
-   * disambiguate duplicate sibling names when locating the `[node]` heading.
-   */
-  parent?: string;
+  /** Scene-tree path from the root, its first segment the root's name: "Root/B/Leaf". */
+  path: string;
+};
+
+/** The host writes the path to the clipboard, so the copy does not depend on the webview's permission. */
+export type CopyNodePathMessage = {
+  type: 'copyNodePath';
+  /** As Godot's "Copy Node Path" writes it: from the scene root, `.` for the root. */
+  nodePath: string;
 };
 
 /** Ask the host to read a resource file from the workspace. */
@@ -156,6 +153,7 @@ export type CapturePongMessage = {
 export type WebviewToHostMessage =
   | WebviewReadyMessage
   | JumpToNodeMessage
+  | CopyNodePathMessage
   | LoadResourceMessage
   | LogMessage
   | PreviewCapturedMessage

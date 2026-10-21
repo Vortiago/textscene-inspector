@@ -21,9 +21,12 @@ export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
  * capture opens in the 3D workspace.
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
-/** `SHOW_PERFORMANCE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the Performance toggle. */
+/**
+ * `SHOW_PERFORMANCE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the Performance toggle.
+ * `previewServer.test.mjs` pins it.
+ */
 export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';
-/** The Performance overlay's testids, in r3f/frameProfile/PerformancePanel.tsx. */
+/** The Performance overlay's testids, in r3f/frameProfile/performanceTestIds.ts. */
 export const PERFORMANCE_TESTIDS = {
   overlay: 'performance-overlay',
   frameMs: 'performance-frame',
@@ -94,7 +97,8 @@ export const SETTLE_MAX_ATTEMPTS = 12;
  * to detach, because a texture that lands later gives a stable, wrong frame.
  */
 export const TEXTURE_WORK_STATUS_TESTID = 'texture-work-status';
-// Ceiling for that wait. A 4096² seamless noise texture builds and uploads in well under it.
+// Ceiling for a wait on the texture work alone. A 4096² seamless noise texture builds and uploads
+// in well under it. A capture waits on every loading status at once, under SCENE_LOAD_WAIT_MS.
 export const TEXTURE_WORK_WAIT_MS = 120000;
 
 /**

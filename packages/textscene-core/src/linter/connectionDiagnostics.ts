@@ -7,8 +7,10 @@
 import type { ConnectionHeading, StrictScene } from '../parser/types.js';
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
-import { resolveNodePath } from './nodePathResolve.js';
 import { armDiagnostic } from './ruleArms.js';
+import { sceneSeating } from '../parser/sceneTreeBuilder.js';
+import { recoverByIdTrail } from '../godot/scene/packedScene.js';
+import { simplifiedNodePath } from '../godot/string/nodePath.js';
 
 const REQUIRED_FIELDS = ['from', 'to', 'signal', 'method'] as const;
 
@@ -30,27 +32,39 @@ function missingFieldDiagnostic(connection: ConnectionHeading): Diagnostic[] {
   ];
 }
 
-/** One end of a connection: its field, the path written, and whether the heading carries the matching uid path. */
+/** One end of a connection: its field, the path written, and the id trail Godot falls back to. */
 interface ConnectionEnd {
   field: 'from' | 'to';
   path: string | undefined;
-  hasUidPath: boolean;
+  idTrail: readonly number[] | undefined;
 }
 
-function endsOf({ from, to, hasFromUidPath, hasToUidPath }: ConnectionHeading): ConnectionEnd[] {
+function endsOf({ from, to, fromIdTrail, toIdTrail }: ConnectionHeading): ConnectionEnd[] {
   return [
-    { field: 'from', path: from, hasUidPath: hasFromUidPath },
-    { field: 'to', path: to, hasUidPath: hasToUidPath },
+    { field: 'from', path: from, idTrail: fromIdTrail },
+    { field: 'to', path: to, idTrail: toIdTrail },
   ];
 }
 
+/**
+ * Whether the end's id trail finds a node where its path missed (`packed_scene.cpp:161-163`). Every heading is
+ * built by the time connections are made (`:647-660`), so the whole file is the trail's view. An `inBase` end
+ * continues in a scene this linter does not open, so it counts as found.
+ */
+function isRecoveredById(scene: StrictScene, idTrail: readonly number[] | undefined): boolean {
+  if (idTrail === undefined) return false;
+  return recoverByIdTrail(idTrail, scene.idHeadings, scene.idHeadings.length) !== undefined;
+}
+
 function missingNodeDiagnostics(scene: StrictScene, connection: ConnectionHeading): Diagnostic[] {
-  const root = scene.nodes[0];
-  if (!root) return [];
-  return endsOf(connection).flatMap(({ field, path, hasUidPath }) => {
-    // A uid path lets Godot recover a node its path misses, and this linter does not walk those ids.
-    if (path === undefined || hasUidPath) return [];
-    if (resolveNodePath(scene, root, path).status !== 'missing') return [];
+  // A file with no node instantiates nothing (packed_scene.cpp:171), so no connection is made or skipped.
+  if (scene.nodes.length === 0) return [];
+  const seating = sceneSeating(scene.nodes);
+  return endsOf(connection).flatMap(({ field, path, idTrail }) => {
+    if (path === undefined) return [];
+    // The loader stores the simplified path (`resource_format_text.cpp:370-371`), so `Gone/..` never walks.
+    if (seating.resolve(simplifiedNodePath(path)).status !== 'missing') return [];
+    if (isRecoveredById(scene, idTrail)) return [];
     return [
       armDiagnostic(
         FILE_DIAGNOSTICS.connectionNodeMissing,

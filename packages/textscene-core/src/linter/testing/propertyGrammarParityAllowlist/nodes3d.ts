@@ -8,11 +8,6 @@ import type { AsymmetryEntry } from './types.js';
 export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   GridMap: {
     linterOnly: [
-      // grid_map.cpp:84-106/:138-145/:154-156: the ArrayMesh cache
-      // `make_baked_meshes()` writes, one draw call per group of identical
-      // cells. It reproduces what the `data` dictionary the parser decodes
-      // already draws.
-      'baked_meshes',
       // Physics and navigation built from the cells, plus the octree
       // partitioning size. None of them decide what is drawn where.
       'bake_navigation',
@@ -22,13 +17,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'collision_priority',
       'physics_material',
     ],
-    renderGap: [
-      // Multiplies the cell size into the render transform
-      // (grid_map.cpp:687, :1333), so a non-unit scale moves every tile.
-      'cell_scale',
-    ],
     reason:
-      'data is a packed cell dictionary decoded by a bespoke helper (extractCells) - now symmetric on both sides; baked_meshes is a rendering-optimisation cache, and the physics/navigation/octant keys never reach a frame. cell_scale does and is unread.',
+      'data is a packed cell dictionary decoded by a bespoke helper (extractCells), and baked_meshes draw in place of the cells (grid_map.cpp:688). The physics/navigation/octant keys never reach a frame.',
   },
 
   Label3D: {

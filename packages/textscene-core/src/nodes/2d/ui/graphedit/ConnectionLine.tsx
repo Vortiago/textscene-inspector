@@ -7,7 +7,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -18,6 +18,7 @@ import { connectionControlPoints, tessellateConnectionLine } from './connectionC
 import { connectionStrokeGeometry } from './connectionStroke';
 import type { ResolvedConnection } from './connectionEndpoints';
 import type { Rgba } from '../../../../godot/math/math';
+import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
 interface ConnectionLineProps {
   connection: ResolvedConnection;
@@ -57,7 +58,7 @@ export function ConnectionLine({
     geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 4));
     return geo;
   }, [connection, curvature, lineWidth, rimColor, tintOwn]);
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   if (!geometry) return null;
 

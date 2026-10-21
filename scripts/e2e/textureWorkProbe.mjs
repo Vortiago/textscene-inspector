@@ -105,7 +105,7 @@ export function installWorkerBlock() {
  * From the first time the status attached to the last time it detached, in page
  * milliseconds. Null when the status never showed or still shows: nothing to measure.
  */
-export function textureWorkWindow({ statusAttached, statusDetached }) {
+function textureWorkWindow({ statusAttached, statusDetached }) {
   if (statusAttached.length === 0 || statusDetached.length < statusAttached.length) return null;
   return { start: Math.min(...statusAttached), end: Math.max(...statusDetached) };
 }

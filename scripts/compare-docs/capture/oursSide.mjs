@@ -9,6 +9,7 @@ import { launchGodotComparisonBrowser } from '../../showcase/browser.mjs';
 import {
   createCaptureContext,
   openScene,
+  previewPort,
   readViewportMode,
   settleCanvas,
   withPreviewBrowser,
@@ -16,10 +17,6 @@ import {
 } from '../../visual/previewServer.mjs';
 import { resolveModes } from './modes.mjs';
 import { IMAGES, imagePath } from './paths.mjs';
-
-// Distinct from both the golden harness (4317) and the single-shot parity
-// capture (4319), so a long batch run cannot collide with either.
-const PORT = Number(process.env.COMPARE_PORT) || 4321;
 
 export async function captureOurs(fixtures, force, godotModes) {
   mkdirSync(IMAGES, { recursive: true });
@@ -38,7 +35,7 @@ export async function captureOurs(fixtures, force, godotModes) {
   if (capturable.length === 0) return failures;
 
   await withPreviewBrowser(
-    { port: PORT, portEnvName: 'COMPARE_PORT', launchBrowser: launchGodotComparisonBrowser },
+    { ...previewPort('compareDocs'), launchBrowser: launchGodotComparisonBrowser },
     async (browser, baseUrl) => {
       // One context per workspace, not per fixture: the workspaces need different
       // viewports and seeded preferences, and a context costs far more than a

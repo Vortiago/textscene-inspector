@@ -235,7 +235,7 @@ describe('Camera2D Linter', () => {
   describe('Semantic Validation', () => {
     describe('multiple enabled cameras', () => {
       // TSCN allows only one parentless root node, so sibling cameras hang off
-      // the root through parent="." for buildSceneTree to keep them.
+      // the root through parent="." for seatScene to keep them.
 
       it('reports when multiple Camera2D nodes are enabled', () => {
         expectDiagnostic(

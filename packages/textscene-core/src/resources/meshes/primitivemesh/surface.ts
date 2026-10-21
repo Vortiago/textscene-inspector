@@ -5,26 +5,27 @@
  * read the surface.
  */
 
-import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
-import { bottomUpV } from '../../../godot/math/uv';
+import { storedReal } from '../../../godot/math/real';
 import type { GodotSurface } from '../godotSurface';
-import { drawOrderIndices } from '../arraymesh/decode';
 import { decodePrimitiveMesh } from './decode';
 import { flipFaces } from './flipFaces';
+import { withFallbackUv2 } from './fallbackUv2';
 import { decodeBoxMesh } from '../boxmesh/decode';
-import { buildBoxMeshGeometry } from '../boxmesh/build';
+import { buildBoxMeshSurface } from '../boxmesh/build';
 import { decodeSphereMesh } from '../spheremesh/decode';
 import { buildSphereMeshSurface } from '../spheremesh/build';
+import type { Vector2 } from '../../../godot/math/vector';
 import { decodePlaneMesh } from '../planemesh/decode';
-import { buildPlaneMeshGeometry } from '../planemesh/build';
-import { decodeQuadMesh } from '../quadmesh/decode';
+import { buildPlaneMeshSurface } from '../planemesh/build';
+import { planeMeshLightmapSizeHint } from '../planemesh/lightmapSizeHint';
+import { decodeQuadMesh, QUAD_MESH_DEFAULTS } from '../quadmesh/decode';
 import { decodeCylinderMesh } from '../cylindermesh/decode';
-import { buildCylinderMeshGeometry } from '../cylindermesh/build';
+import { buildCylinderMeshSurface } from '../cylindermesh/build';
 import { decodeCapsuleMesh } from '../capsulemesh/decode';
 import { buildCapsuleMeshSurface } from '../capsulemesh/build';
 import { decodeTorusMesh } from '../torusmesh/decode';
-import { buildTorusMeshGeometry } from '../torusmesh/build';
+import { buildTorusMeshSurface } from '../torusmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
 import { buildPrismMeshSurface } from '../prismmesh/build';
 
@@ -34,38 +35,43 @@ import { buildPrismMeshSurface } from '../prismmesh/build';
  */
 type SurfaceBuilder = (data: Record<string, string>, uv2Padding: number | null) => GodotSurface | null;
 
-/** A slice still built by a three generator: its geometry turned back into Godot's arrays. */
-const fromThree =
-  (build: (data: Record<string, string>) => THREE.BufferGeometry | null): SurfaceBuilder =>
-  (data) => {
-    const geometry = build(data);
-    if (!geometry) return null;
-    const surface = threeGeometrySurface(geometry);
-    geometry.dispose();
-    return surface;
-  };
-
 /**
  * Godot `type=` → the slice that decodes and builds it. QuadMesh has no `build.ts` of its own: it
  * is a PlaneMesh subclass differing only in defaults, so it decodes with its own defaults and
- * builds through PlaneMesh's geometry.
+ * builds through PlaneMesh's surface.
  */
 const BUILDERS: Record<string, SurfaceBuilder> = {
-  BoxMesh: fromThree((data) => buildBoxMeshGeometry(decodeBoxMesh(data))),
+  BoxMesh: (data, uv2Padding) => buildBoxMeshSurface(decodeBoxMesh(data), uv2Padding),
   SphereMesh: (data, uv2Padding) => buildSphereMeshSurface(decodeSphereMesh(data), uv2Padding),
-  PlaneMesh: fromThree((data) => buildPlaneMeshGeometry(decodePlaneMesh(data))),
-  QuadMesh: fromThree((data) => buildPlaneMeshGeometry(decodeQuadMesh(data))),
-  CylinderMesh: fromThree((data) => buildCylinderMeshGeometry(decodeCylinderMesh(data))),
+  PlaneMesh: (data) => buildPlaneMeshSurface(decodePlaneMesh(data)),
+  QuadMesh: (data) => buildPlaneMeshSurface(decodeQuadMesh(data)),
+  CylinderMesh: (data, uv2Padding) => buildCylinderMeshSurface(decodeCylinderMesh(data), uv2Padding),
   CapsuleMesh: (data, uv2Padding) => buildCapsuleMeshSurface(decodeCapsuleMesh(data), uv2Padding),
-  TorusMesh: fromThree((data) => buildTorusMeshGeometry(decodeTorusMesh(data))),
-  PrismMesh: (data) => buildPrismMeshSurface(decodePrismMesh(data)),
+  TorusMesh: (data, uv2Padding) => buildTorusMeshSurface(decodeTorusMesh(data), uv2Padding),
+  PrismMesh: (data, uv2Padding) => buildPrismMeshSurface(decodePrismMesh(data), uv2Padding),
 };
+
+/** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */
+type LightmapSizeHint = (data: Record<string, string>, texelSize: number) => Vector2;
+
+/**
+ * The lightmap size hint of each type whose builder writes no UV2, PlaneMesh and its QuadMesh
+ * subclass (`primitive_meshes.cpp:1416`). `PrimitiveMesh::_update` scales their UV by it instead.
+ */
+const FALLBACK_UV2_HINTS: Record<string, LightmapSizeHint> = {
+  PlaneMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize),
+  QuadMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize, QUAD_MESH_DEFAULTS),
+};
+
+/**
+ * The `type=` names a slice here builds. A set, not an index into BUILDERS: the name is one a
+ * file chooses, and bare indexing hands back `Object` for `constructor`.
+ */
+const PRIMITIVE_MESH_TYPES: ReadonlySet<string> = new Set(Object.keys(BUILDERS));
 
 /** Whether a slice here builds `type`. */
 export function isPrimitiveMeshType(type: string): boolean {
-  // hasOwn: the key is a `[sub_resource type=…]` the file chooses, and bare
-  // indexing hands back `Object` for `constructor` or throws for `valueOf`.
-  return Object.hasOwn(BUILDERS, type);
+  return PRIMITIVE_MESH_TYPES.has(type);
 }
 
 /**
@@ -91,21 +97,12 @@ export function primitiveMeshSurface(resource: TscnInternalResource, texelSize: 
 function buildSurface(resource: TscnInternalResource, texelSize: number): GodotSurface | null {
   const build = BUILDERS[resource.type]!;
   const base = decodePrimitiveMesh(resource.data);
-  const surface = build(resource.data, base.addUv2 ? base.uv2Padding * texelSize : null);
-  if (!surface) return null;
+  // Godot holds the padding and the texel size in a `float` (`:1065`), so each rounds to single precision.
+  const uv2Padding = base.addUv2 ? storedReal(base.uv2Padding * storedReal(texelSize)) : null;
+  const built = build(resource.data, uv2Padding);
+  if (!built) return null;
+  const hint = FALLBACK_UV2_HINTS[resource.type];
+  const surface =
+    base.addUv2 && hint ? withFallbackUv2(built, base.uv2Padding, hint(resource.data, texelSize)) : built;
   return base.flipFaces ? flipFaces(surface) : surface;
-}
-
-/** three fronts triangles counter-clockwise with V up, where Godot fronts them clockwise with V down. */
-function threeGeometrySurface(geometry: THREE.BufferGeometry): GodotSurface {
-  const positions = Float32Array.from(geometry.getAttribute('position').array);
-  const normal = geometry.getAttribute('normal');
-  const uv = geometry.getAttribute('uv');
-  const uvs = uv ? Float32Array.from(uv.array) : undefined;
-  if (uvs) for (let i = 1; i < uvs.length; i += 2) uvs[i] = bottomUpV(uvs[i]!);
-  const index = geometry.getIndex();
-  const indices = index ? Uint32Array.from(index.array) : drawOrderIndices(positions.length / 3);
-  for (let i = 0; i + 2 < indices.length; i += 3)
-    [indices[i + 1], indices[i + 2]] = [indices[i + 2]!, indices[i + 1]!];
-  return { positions, normals: normal ? Float32Array.from(normal.array) : undefined, uvs, indices };
 }

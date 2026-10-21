@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { GODOT_NORMAL_MAP_READ, importedNormalMapRead, withImportedNormalMapRead } from './godotNormalMap';
-import { REBUILDS_NORMAL_MAP_BLUE, patchedFragment } from '../testing/patchedFragment';
+import { REBUILDS_NORMAL_MAP_BLUE, UNIT_TANGENT_FRAME, patchedFragment } from '../testing/patchedFragment';
 
 const normalMapped = () => new THREE.MeshStandardMaterial({ normalMap: new THREE.Texture() });
 
@@ -22,6 +22,12 @@ describe('importedNormalMapRead', () => {
 describe('withImportedNormalMapRead', () => {
   it('rebuilds blue in the program of a normal-mapped material', () => {
     expect(patchedFragment(withImportedNormalMapRead(normalMapped()))).toContain(REBUILDS_NORMAL_MAP_BLUE);
+  });
+
+  it('gives the tangent and the binormal unit length, whatever the UV density', () => {
+    const fragment = patchedFragment(withImportedNormalMapRead(normalMapped()));
+    expect(fragment).not.toContain('#include <normalmap_pars_fragment>');
+    expect(fragment).toContain(UNIT_TANGENT_FRAME);
   });
 
   it('leaves a material without a normal map unpatched', () => {

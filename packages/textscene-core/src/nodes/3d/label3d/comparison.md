@@ -63,7 +63,7 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-`pixel_size`, `outline_size`, `font_size`, `line_spacing` and `alpha_antialiasing_edge` warn and fall back through `floatOr` to `0.005`, `12`, `32`, `0` and `0`. `alpha_antialiasing_mode` warns and falls back to `OFF`. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the label opaque. A `billboard` outside `0` to `2` keeps `DISABLED`, as Godot's setter refuses it. `no_depth_test` is a raw `=== 'true'` comparison, so any other value renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
+`pixel_size`, `outline_size`, `font_size`, `line_spacing` and `alpha_antialiasing_edge` warn and fall back through `floatOr` to `0.005`, `12`, `32`, `0` and `0`. `alpha_antialiasing_mode` warns and falls back to `OFF`. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the label opaque. A `billboard` outside `0` to `2` keeps `DISABLED`, as Godot's setter refuses it. `no_depth_test` reads every spelling a BOOL slot converts, so `1` is true. Text no BOOL slot reads renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
 
 ## Known limitations
 

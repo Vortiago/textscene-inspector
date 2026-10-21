@@ -5,7 +5,7 @@ import type { Label3DProperties } from '../types';
 import { AlphaCutMode } from '../../../../godot/rendering/materials/alphaCut';
 import { BillboardMode } from '../../../../godot/rendering/materials/billboardMode';
 import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
-import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../../godot/math/math';
+import { HORIZONTAL_ALIGNMENT_CENTER } from '../../../../godot/math/alignment';
 import { AlphaAntiAliasing } from '../../../../godot/rendering/materials/alphaAntialiasing';
 
 export function labelProperties(overrides: Partial<Label3DProperties> = {}): Label3DProperties {

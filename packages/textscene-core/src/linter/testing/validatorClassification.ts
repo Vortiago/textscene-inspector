@@ -32,7 +32,7 @@ export function unclassifiedKeys(): string[] {
 /**
  * A validator that names no authority for its rejections. `intSlot` classifies
  * only an unbounded validator, since the slot's own refusal is cited centrally.
- * A bounded one, such as `v.strictInt('s', { min: 0, max: 9 })`, still owes a
+ * A bounded one, such as `v.int('s', { min: 0, max: 9 })`, still owes a
  * citation for its bound.
  */
 export function isUnclassified(v: PropertyValidator): boolean {

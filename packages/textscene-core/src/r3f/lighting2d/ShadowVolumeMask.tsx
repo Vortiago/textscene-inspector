@@ -5,12 +5,13 @@
  * light samples `shadowPolarMap` (ADR-0030) over the whole rect and uses only the render-order helpers.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { buildShadowVolumes, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
 import { canvasItemFacing } from '../canvasItemFacing';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { usePassMeshRef } from './lightPassDeclarations';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 /**
  * Distinct stencil values in one pass. The buffer is 8-bit and 0 is the cleared state, so refs run
@@ -97,7 +98,7 @@ export function ShadowVolumeMask({ light, casters, ordinal, sequence }: ShadowVo
     return g;
   }, [positions]);
   // R3F does not auto-dispose a geometry handed over as a primitive.
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   if (!geometry) return null;
 

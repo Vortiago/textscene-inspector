@@ -8,7 +8,7 @@ import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnInternalResource } from '../../parser/types';
-import { findResourceSection } from '../../resources/resourceSection';
+import { findSectionResource } from '../../resources/resourceSection';
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
 import { useMissingReport } from '../contexts/MissingResourcesContext';
@@ -37,7 +37,7 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   // parses whole files, so the hook loads the file and reports under the address itself.
   const fileResult = useResourceLoad<ParsedResource>(resourceFilePath(address), 'resource');
   const file = fileResult.value;
-  const body = useMemo(() => (file ? materialBody(file, address) : undefined), [file, address]);
+  const body = useMemo(() => (file ? findSectionResource(file, address) : undefined), [file, address]);
   useMissingReport(address, addressStatus(fileResult.status, body));
 
   // Keyed on what the source holds, not the source object: a caller may build a new
@@ -81,10 +81,4 @@ function addressStatus(fileStatus: ResourceStatus, body: TscnInternalResource | 
 function ready(material: MaterialResource): LoadedMaterial {
   const { type } = material.resource;
   return type === 'StandardMaterial3D' ? { status: 'ready', material } : { status: 'declined', type };
-}
-
-/** The section `address` names in its parsed `.tres`, or undefined for an id the file does not declare. */
-function materialBody(file: ParsedResource, address: string): TscnInternalResource | undefined {
-  const section = findResourceSection(file, address);
-  return section && { id: address, type: section.type, data: section.properties };
 }

@@ -4,10 +4,11 @@
  * an attached geometry, drawn as an unlit transparent `<lineSegments>` over the scene.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { editorHelperUserData } from '../editorHelpers';
 import { materialProgramInputs } from '../materialProgramInputs';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 /** Render order for selection-gated gizmos, above ordinary scene content. */
 const GIZMO_RENDER_ORDER = 10;
@@ -39,7 +40,7 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
     if (colors) g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return g;
   }, [positions, colors]);
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
   // Memoised, as R3F assigns a new `userData` object on each render.
   const helperUserData = useMemo(editorHelperUserData, []);
 

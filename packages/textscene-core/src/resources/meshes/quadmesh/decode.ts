@@ -10,7 +10,7 @@ import { decodePlaneMesh } from '../planemesh/decode';
 import { PlaneMeshOrientation } from '../../../godot/scene/planeMesh.js';
 
 /** Godot QuadMesh defaults: FACE_Z orientation, 1×1 size. */
-const QUAD_MESH_DEFAULTS = { size: { x: 1, y: 1 }, orientation: PlaneMeshOrientation.FACE_Z } as const;
+export const QUAD_MESH_DEFAULTS = { size: { x: 1, y: 1 }, orientation: PlaneMeshOrientation.FACE_Z } as const;
 
 export function decodeQuadMesh(properties: Record<string, string>): PlaneMeshProperties {
   return decodePlaneMesh(properties, QUAD_MESH_DEFAULTS);

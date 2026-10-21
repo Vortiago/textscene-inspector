@@ -163,6 +163,34 @@ describe('createSceneProcessor (WI-ARCH-2 replacement for SceneLoader)', () => {
       expect(error.message).toMatch(/binary/i);
     });
 
+    it('names a compressed binary scene at a text path a binary scene (edge case)', async () => {
+      const handler = vi.fn();
+      eventBus.on<Error>('scene', 'failed', handler);
+      mockProvider.loadResource = vi.fn().mockResolvedValue('RSCC\u0000\u0002compressed');
+      registerMetadata('s', { id: 's', path: 'res://scenes/renamed.tscn', type: 'PackedScene' });
+
+      processor.request('s');
+      await new Promise((r) => setTimeout(r, 20));
+
+      const [, error] = handler.mock.calls[0]!;
+      expect(error.message).toMatch(/^Binary Godot scene/);
+    });
+
+    it('names a .res scene, which arrives as bytes, a binary scene (edge case)', async () => {
+      const handler = vi.fn();
+      eventBus.on<Error>('scene', 'failed', handler);
+      mockProvider.loadResource = vi.fn().mockResolvedValue(new ArrayBuffer(8));
+      registerMetadata('grid', { id: 'grid', path: 'res://stage/grid_map.res', type: 'PackedScene' });
+
+      processor.request('grid');
+      await new Promise((r) => setTimeout(r, 20));
+
+      const [, error] = handler.mock.calls[0]!;
+      expect(error.message).toBe(
+        'Binary Godot scene (.scn, .res) is not previewable: only text scenes (.tscn) load: res://stage/grid_map.res'
+      );
+    });
+
     it('emits failed for text content that is not a TSCN scene', async () => {
       const handler = vi.fn();
       eventBus.on<Error>('scene', 'failed', handler);

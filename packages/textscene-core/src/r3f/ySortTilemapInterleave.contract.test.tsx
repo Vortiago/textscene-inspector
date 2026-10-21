@@ -13,7 +13,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../parser/TscnParser';
 import { nearestGroupOrder } from './testing/paintOrder';
 import { parseTresFile } from '../parser/parsedResource';
-import { tileSetFromTres } from '../resources/tileset/decode';
+import { tileSetFromFile } from '../resources/tileset/decode';
 import { mapToLocalPx } from '../resources/tileset/tilePlacement';
 import { NodeDispatcher } from './NodeDispatcher';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
@@ -96,7 +96,7 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
 
 describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () => {
   it('a decoration between two tile rows draws BETWEEN the tile groups by Y', async () => {
-    const model = tileSetFromTres(parseTresFile(tilesetContent))!;
+    const model = tileSetFromFile(parseTresFile(tilesetContent))!;
     // Two single-source cells at distinct Godot local Y (DIAMOND_DOWN 128x64).
     const yLow = mapToLocalPx(model, { x: 0, y: 0 }).y; // 32
     const yHigh = mapToLocalPx(model, { x: 0, y: 4 }).y; // 160
@@ -123,7 +123,7 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
     // The rows share the layer's own reserve (`canvasPaintOrder.ts`). A fresh reserve
     // per row runs off the subtree's run into the next sibling's, which the test above
     // misses: its decoration sits inside the same subtree and overflows with it.
-    const model = tileSetFromTres(parseTresFile(tilesetContent))!;
+    const model = tileSetFromFile(parseTresFile(tilesetContent))!;
     const cells: PlacedCell[] = [0, 2, 4, 6, 8].map((y) => ({
       coords: { x: 0, y },
       sourceId: 0,

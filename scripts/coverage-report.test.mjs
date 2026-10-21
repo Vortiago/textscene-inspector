@@ -11,9 +11,9 @@ import { join } from 'node:path';
 import { collectCoverage } from './coverage-report/collect.mjs';
 import { buildResourceLedger, collectResourceCoverage } from './coverage-report/resources.mjs';
 import { requireFreshDist } from './distFreshness.mjs';
+import { CATALOG_OUT } from './compare-docs/build-node-catalog/paths.mjs';
 
-const CATALOG = join(import.meta.dirname, 'compare-docs/node-catalog.json');
-const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+const catalog = JSON.parse(readFileSync(CATALOG_OUT, 'utf8'));
 
 const CORE = join(import.meta.dirname, '../packages/textscene-core');
 

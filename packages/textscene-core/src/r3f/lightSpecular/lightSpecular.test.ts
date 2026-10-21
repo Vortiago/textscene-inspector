@@ -7,6 +7,7 @@ import {
   writeLightSpecularUniforms,
 } from './lightSpecular';
 import { sceneLights } from '../directionalShadow/lightLists';
+import { slottedLights } from '../lightSlots';
 import { SplitSunLight } from '../directionalShadow/splitSun';
 import { litUniformArray } from '../testing/litUniformArray';
 
@@ -17,7 +18,7 @@ function declared<Light extends THREE.Light>(light: Light, amount: number): Ligh
 
 /** The first `count` amounts the lit materials read after a render of `scene`. */
 function amountsAfterRender(scene: THREE.Scene, count: number): number[] {
-  writeLightSpecularUniforms(sceneLights(scene), new THREE.PerspectiveCamera());
+  writeLightSpecularUniforms(slottedLights(sceneLights(scene), new THREE.PerspectiveCamera()));
   installLightSpecularUniforms();
   return [...litUniformArray(LIGHT_SPECULARS).subarray(0, count)];
 }

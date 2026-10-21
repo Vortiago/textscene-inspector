@@ -92,6 +92,20 @@ describe('completionsAt', () => {
     expect(labels).toEqual(['.', 'Body', 'Body/Arm']);
   });
 
+  it('offers parent= each node above at the path Godot seats it, and no stranded node', async () => {
+    const document = new LanguageDocument(
+      [
+        '[node name="Root" type="Node3D"]',
+        '[node name="Lost" type="Node3D" parent="Gone"]',
+        '[node name="Body" type="Node3D" parent="./"]',
+        '[node name="Arm" type="Node3D" parent="./Body"]',
+        '[node name="Hand" type="Node3D" parent=""]',
+      ].join('\n')
+    );
+    const labels = await labelsAt(document, 5, '[node name="Hand" type="Node3D" parent="'.length);
+    expect(labels).toEqual(['.', 'Body', 'Body/Arm']);
+  });
+
   it('offers parent= only the root for the first child', async () => {
     const document = new LanguageDocument(
       ['[node name="Root" type="Node3D"]', '[node name="Body" type="Node3D" parent=""]'].join('\n')

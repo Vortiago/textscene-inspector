@@ -34,6 +34,7 @@ import { collectControlRasterViewports } from './controlRasterViewports';
 import { ControlRasterPasses } from './ControlRasterPass';
 import { MAX_TEXTURE_EXTENT } from '../../../r3f/webglLimits.js';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
+import { advanceFrameWithStubbedGl, withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 
 const GUI_SCENE = `[gd_scene format=3]
@@ -67,30 +68,6 @@ function Watch({ path, seen }: { path: string; seen: (ViewportTextureEntry | nul
   return null;
 }
 
-/**
- * Runs one frame with the renderer's target and render entry points stubbed,
- * recording every non-null bind: the test renderer's fake WebGL context cannot
- * service a real bind or draw.
- */
-async function advanceFrameWithStubbedGl(
-  renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>,
-  gl: THREE.WebGLRenderer,
-  onBind?: (target: THREE.WebGLRenderTarget | null) => void
-): Promise<void> {
-  const originalSet = gl.setRenderTarget;
-  const originalRender = gl.render;
-  gl.setRenderTarget = ((target: THREE.WebGLRenderTarget | null) => {
-    onBind?.(target);
-  }) as typeof gl.setRenderTarget;
-  gl.render = (() => undefined) as typeof gl.render;
-  try {
-    await renderer.advanceFrames(1, 16);
-  } finally {
-    gl.setRenderTarget = originalSet;
-    gl.render = originalRender;
-  }
-}
-
 async function mount(
   scene: TscnScene,
   seen: (ViewportTextureEntry | null)[] = [],
@@ -117,7 +94,7 @@ describe('<ControlRasterPasses>', () => {
     const entry = seen.at(-1);
     expect(entry).not.toBeNull();
     expect(entry!.size).toEqual({ x: 320, y: 240 });
-    expect(entry!.texture.isTexture).toBe(true);
+    expect(entry!.plain.texture.isTexture).toBe(true);
   });
 
   it('caps a size Godot opens but WebGL cannot allocate', async () => {
@@ -133,20 +110,20 @@ describe('<ControlRasterPasses>', () => {
   it('publishes a plain view that holds sRGB bytes', async () => {
     const seen: (ViewportTextureEntry | null)[] = [];
     await mount(parse(GUI_SCENE), seen);
-    const texture = seen.at(-1)!.texture;
+    const texture = seen.at(-1)!.plain.texture;
     expect(texture.internalFormat).toBe('RGBA8');
     expect(holdsSrgbBytes(texture)).toBe(true);
   });
 
   it('fills the decoding view after its pass while a consumer retains it', async () => {
     const { renderer, seen, gl } = await mount(parse(GUI_SCENE));
-    const { texture, decoding } = seen.at(-1)!;
+    const { plain, decoding } = seen.at(-1)!;
     decoding.retain();
     const bound: (THREE.Texture | undefined)[] = [];
     await advanceFrameWithStubbedGl(renderer, gl, (target) => {
       if (target) bound.push(target.texture);
     });
-    expect(bound).toEqual([texture, decoding.texture]);
+    expect(bound).toEqual([plain.texture, decoding.texture]);
   });
 
   it('renders without a tonemap curve — Controls are never tonemapped, on-screen or off', async () => {
@@ -212,18 +189,15 @@ offset_bottom = 100.5
       // inside a callback stays narrowed to its initialiser, so `portalScene`
       // would read as `null` at every use below.
       const captured: { portalScene: THREE.Object3D | null } = { portalScene: null };
-      const originalSet = gl.setRenderTarget;
-      const originalRender = gl.render;
-      gl.setRenderTarget = (() => undefined) as typeof gl.setRenderTarget;
-      gl.render = ((rendered: THREE.Object3D) => {
-        captured.portalScene ??= rendered;
-      }) as typeof gl.render;
-      try {
-        await renderer.advanceFrames(1, 16);
-      } finally {
-        gl.setRenderTarget = originalSet;
-        gl.render = originalRender;
-      }
+      await withStubbedGl(
+        gl,
+        {
+          onRender: (_, rendered) => {
+            captured.portalScene ??= rendered;
+          },
+        },
+        () => renderer.advanceFrames(1, 16)
+      );
 
       let group: THREE.Object3D | undefined;
       captured.portalScene?.traverse((o) => {
