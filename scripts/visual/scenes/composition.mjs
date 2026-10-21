@@ -11,6 +11,11 @@ export const SCENE_COMPOSITION_SCENES = [
   // collapse into Area3D coins at x=±1.5, pinning the wrapper collapse and the
   // transform replace.
   { name: 'instanced-subscene', file: 'integration-instanced-subscene.tscn' },
+  // A node seated through a `%Name` inside an instance (`parent="Player/%Pivot"`).
+  {
+    name: 'instanced-unique-parent',
+    file: 'integration-instanced-unique-parent.tscn',
+  },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // Collision gizmos on: `physics-bodies` leaves the toggle off. Catches a

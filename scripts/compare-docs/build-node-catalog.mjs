@@ -14,6 +14,7 @@ import {
   CATALOG_OUT,
   PROPS_OUT,
   RESOURCE_BASES_OUT,
+  RESOURCE_GETTERS_OUT,
   RESOURCE_PROPS_OUT,
 } from './build-node-catalog/paths.mjs';
 
@@ -31,31 +32,62 @@ const previousByName = new Map(
   ])
 );
 
-/** One row per class, sorted so a regenerated file diffs by content not by order. */
+const byName = (a, b) => a.localeCompare(b);
+
+/** `object` with its keys sorted, so a regenerated file diffs by content not by order. */
+function sortedByKey(object) {
+  return Object.fromEntries(Object.entries(object).sort(([a], [b]) => byName(a, b)));
+}
+
+function writeJson(out, value) {
+  writeFileSync(out, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+/** One row per class, each class's rows sorted by name. */
 function writeProperties(properties, out) {
   const sorted = Object.fromEntries(
-    Object.entries(properties)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([cls, props]) => [cls, [...props].sort((a, b) => a.name.localeCompare(b.name))])
+    Object.entries(sortedByKey(properties)).map(([className, rows]) => [
+      className,
+      [...rows].sort((a, b) => byName(a.name, b.name)),
+    ])
   );
-  writeFileSync(out, `${JSON.stringify(sorted, null, 2)}\n`);
-  const count = Object.values(sorted).reduce((sum, p) => sum + p.length, 0);
+  writeJson(out, sorted);
+  const count = Object.values(sorted).reduce((sum, rows) => sum + rows.length, 0);
   console.log(`Wrote ${out} - ${Object.keys(sorted).length} classes, ${count} properties.`);
 }
 
 /** Every engine table from one enumeration, since one run yields them all. */
-function writePropertyTables(enumerated) {
+function writeEngineTables(enumerated) {
   writeProperties(enumerated.properties, PROPS_OUT);
   writeProperties(enumerated.resourceProperties, RESOURCE_PROPS_OUT);
-  const bases = Object.fromEntries(
-    Object.entries(enumerated.resourceBases).sort(([a], [b]) => a.localeCompare(b))
-  );
-  writeFileSync(RESOURCE_BASES_OUT, `${JSON.stringify(bases, null, 2)}\n`);
+  const bases = sortedByKey(enumerated.resourceBases);
+  writeJson(RESOURCE_BASES_OUT, bases);
   console.log(`Wrote ${RESOURCE_BASES_OUT} - ${Object.keys(bases).length} classes.`);
+  writeGetters(enumerated.resourceGetters);
+}
+
+function writeGetters({ collections, variant_properties }) {
+  const getters = {
+    collections: Object.fromEntries(
+      Object.entries(sortedByKey(collections)).map(([className, slots]) => [className, sortedByKey(slots)])
+    ),
+    variantProperties: Object.fromEntries(
+      Object.entries(sortedByKey(variant_properties)).map(([className, names]) => [
+        className,
+        [...names].sort(byName),
+      ])
+    ),
+  };
+  writeJson(RESOURCE_GETTERS_OUT, getters);
+  const classCount = (table) => Object.keys(table).length;
+  console.log(
+    `Wrote ${RESOURCE_GETTERS_OUT} - ${classCount(getters.collections)} classes with typed collections, ` +
+      `${classCount(getters.variantProperties)} with Variant properties.`
+  );
 }
 
 if (propertiesOnly) {
-  writePropertyTables(enumerateGodotNodes());
+  writeEngineTables(enumerateGodotNodes());
   process.exit(0);
 }
 
@@ -79,7 +111,7 @@ if (linksOnly) {
 } else {
   const supported = await supportedTypes();
   const enumerated = enumerateGodotNodes();
-  writePropertyTables(enumerated);
+  writeEngineTables(enumerated);
   nodes = enumerated.classes
     // Editor-only plugins and engine-internal placeholders are not scene content.
     .filter(

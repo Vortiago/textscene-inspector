@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { placementFacts } from './placementFacts.js';
-import { buildSceneTree } from '../parser/sceneTreeBuilder.js';
+import { seatScene } from '../parser/sceneTreeBuilder.js';
 import type { NodeOrigin, RawNode } from '../parser/types.js';
 
 function node(name: string, parent?: string): RawNode {
@@ -28,7 +28,7 @@ function factsOf(...headings: [name: string, declaredParent?: string, ids?: Head
     uniqueId: ids?.uniqueId ?? 0,
     idTrail: ids?.idTrail,
   }));
-  return placementFacts(origins, buildSceneTree(origins));
+  return placementFacts(origins, seatScene(origins));
 }
 
 const names = (origins: readonly NodeOrigin<RawNode>[]) => origins.map((o) => o.node.name);

@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
 import { documentSymbols } from './symbols';
+import { INSTANCED_TREE } from './fixtures.testkit';
 import type { DocumentSymbol } from './types';
 
 const SCENE = `[gd_scene format=3]
@@ -131,5 +132,23 @@ unique_name_in_owner = true
     const player = only(root.children);
 
     expect(only(only(player.children).children).name).toBe('Mesh');
+  });
+});
+
+describe('documentSymbols with a nameless root', () => {
+  it('lists the root children while the root heading has no name yet', () => {
+    const source = SCENE.replace('[node name="Root" type="Node3D"]', '[node type="Node3D"]');
+
+    expect(only(documentSymbols(new LanguageDocument(source))).name).toBe('Player');
+  });
+});
+
+describe('documentSymbols under an instanced scene', () => {
+  it('nests a node seated inside the instance under the instance node', () => {
+    const root = only(documentSymbols(new LanguageDocument(INSTANCED_TREE)));
+    const instance = only(root.children);
+
+    expect(instance.name).toBe('Inst');
+    expect(only(only(instance.children).children).name).toBe('Y');
   });
 });

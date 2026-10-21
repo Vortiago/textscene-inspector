@@ -19,6 +19,7 @@ import type { FogDensityAtlas } from './fogDensityAtlas.js';
 import type { FogVolumeObject } from './fogVolumeObject.js';
 import { RowBuffer } from './packedRows.js';
 import { writeVec4 } from '../writeVec4.js';
+import { cameraFrustum } from '../cameraFrustum.js';
 
 /**
  * Where each value sits in a volume's row, in texels of four floats. `TO_LOCAL` starts three rows
@@ -67,7 +68,6 @@ const viewToLocal = new THREE.Matrix4();
 const cameraPosition = new THREE.Vector3();
 const bounds = new THREE.Box3();
 const frustum = new THREE.Frustum();
-const viewProjection = new THREE.Matrix4();
 const color = new THREE.Color();
 const worldCorners = UNIT_CORNERS.map(() => new THREE.Vector3());
 const viewCorner = new THREE.Vector3();
@@ -88,9 +88,7 @@ export class FogVolumeRows extends RowBuffer {
     view: FogVolumeView,
     atlas: FogDensityAtlas
   ): boolean {
-    frustum.setFromProjectionMatrix(
-      viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-    );
+    cameraFrustum(camera, frustum);
     this.begin();
     for (const volume of volumes) {
       if (visibleInTree(volume) && writeRow(volume, camera, view, atlas)) this.append(row);

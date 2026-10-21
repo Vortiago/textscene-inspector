@@ -7,7 +7,14 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
 import { DirectionalLightSkyMode } from '../rendering/lights/directionalLightSkyMode.js';
 import { DirectionalShadowMode } from '../rendering/lights/directionalShadow.js';
 
-/** `Light3D(LightType)` (`scene/3d/light_3d.cpp:468-491`) and its field initialisers (`light_3d.h:79-81`). */
+/** `Light3D::BakeMode` (`scene/3d/light_3d.h:64-68`). */
+export const BakeMode = {
+  DISABLED: 0,
+  STATIC: 1,
+  DYNAMIC: 2,
+} as const;
+
+/** `Light3D(LightType)` (`scene/3d/light_3d.cpp:468-491`) and its field initialisers (`light_3d.h:79-85`). */
 export const LIGHT_3D_DEFAULTS = {
   color: 'Color(1, 1, 1, 1)', // :468
   energy: 1, // :473
@@ -28,6 +35,7 @@ export const LIGHT_3D_DEFAULTS = {
   shadowBias: 0.1, // :490
   shadowNormalBias: 1, // :491
   distanceFade: { begin: 40, shadow: 50, length: 10 }, // light_3d.h:79-81
+  bakeMode: BakeMode.DYNAMIC, // light_3d.h:85
 } as const;
 
 /** `DirectionalLight3D()` (`scene/3d/light_3d.cpp:600-608`). */
@@ -57,13 +65,6 @@ export const AREA_LIGHT_3D_DEFAULTS = {
   specular: 1, // :748
   areaSize: { x: 1, y: 1 }, // :749
   areaNormalizeEnergy: true, // :750
-} as const;
-
-/** `Light3D::BakeMode` (`scene/3d/light_3d.h:64-68`). */
-const BakeMode = {
-  DISABLED: 0,
-  STATIC: 1,
-  DYNAMIC: 2,
 } as const;
 
 /** Each light bake mode by its integer, spelled as its constant without `BAKE_`. */

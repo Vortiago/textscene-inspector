@@ -322,7 +322,8 @@ garbage-line-without-equals
         onSectionBuilt: () => {},
       });
 
-      expect(observed).toEqual(bare);
+      expect(observed.scene).toEqual(bare.scene);
+      expect(observed.origins).toEqual(bare.origins);
     });
 
     it('fires onError with INVALID_HEADING_FORMAT and line number for a malformed heading', () => {
@@ -620,7 +621,7 @@ size = Vector3(1, 2, 3)
 `;
         const onSectionBuilt = vi.fn<NonNullable<ParseObserver['onSectionBuilt']>>();
 
-        const { scene, origins, tree } = parser.parse(content, simpleCreator, { onSectionBuilt });
+        const { scene, origins, seating } = parser.parse(content, simpleCreator, { onSectionBuilt });
 
         const root = scene.nodes[0]!;
         expect(onSectionBuilt.mock.calls).toEqual([
@@ -633,7 +634,7 @@ size = Vector3(1, 2, 3)
         // A node is the heading's own, and the scene holds its copy.
         expect(onSectionBuilt.mock.calls[0]![0]).toBe(scene.externalResources[0]);
         expect(onSectionBuilt.mock.calls[1]![0]).toBe(scene.internalResources[0]);
-        expect(tree.seated.get(onSectionBuilt.mock.calls[2]![0] as RawNode)).toBe(root);
+        expect(seating.seated.get(onSectionBuilt.mock.calls[2]![0] as RawNode)).toBe(root);
       });
 
       it("hands over a .tres file's [resource] body with its heading line, the object the scene holds", () => {

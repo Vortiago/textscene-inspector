@@ -42,4 +42,20 @@ describe('TscnDefinitionProvider node paths', () => {
 
     expect(await new TscnDefinitionProvider().provideDefinition(document, position, token)).toBeNull();
   });
+
+  it('goes from a path under an instanced scene to the heading seated there', async () => {
+    const instanced = SCENE.replace(
+      '[node name="Button" type="Button" parent="."]',
+      '[node name="Inst" parent="." instance=ExtResource("1")]\n[node name="Button" type="Button" parent="Inst/Sub"]'
+    ).replace('from="Button"', 'from="Inst/Sub/Button"');
+    const document = createMockDocument(instanced);
+    const position = new vscode.Position(7, document.lineAt(7).text.indexOf('Inst/Sub/Button') + 1);
+    const location = (await new TscnDefinitionProvider().provideDefinition(
+      document,
+      position,
+      token
+    )) as vscode.Location | null;
+
+    expect(location?.range.start.line).toBe(5);
+  });
 });

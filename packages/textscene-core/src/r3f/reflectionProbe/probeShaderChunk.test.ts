@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotReflectionProbes } from './probeShaderChunk';
 import { atlasSlot, instanceLayers, REFLECTION_PROBE_UNIFORMS, rowsSlot, shownProbes } from './probeSlots';
-import { functionBody } from '../testing/glslSource';
+import { functionBody, preprocessorBranch } from '../testing/glslSource';
 import { scalarGlslFunction } from '../testing/glslScalar';
 import { warningsOf } from '../testing/logWarnings';
 import { installedShaderChunks } from '../testing/shaderPatches';
@@ -70,13 +70,12 @@ describe('installGodotReflectionProbes', () => {
     );
   });
 
-  it("leaves a lightmapped surface's ambient alone, as Godot does (edge case)", () => {
+  it('leaves the ambient of a surface whose lightmap draws alone, as Godot does (edge case)', () => {
     const end = patchedEnd();
-    const ambient = end.slice(end.indexOf('#ifndef USE_LIGHTMAP'));
+    const guard = end.slice(end.indexOf('if ( ! godotLightmapActive )'));
 
-    expect(ambient.indexOf('irradiance *= 1.0 - godotProbeAmbient.a;')).toBeLessThan(
-      ambient.indexOf('#endif')
-    );
+    expect(preprocessorBranch(end, '#ifdef GODOT_LIGHTMAP')).toContain('if ( ! godotLightmapActive )');
+    expect(guard.indexOf('irradiance *= 1.0 - godotProbeAmbient.a;')).toBeLessThan(guard.indexOf('}'));
   });
 
   it('takes the probes from the last, the smallest, and skips one the instance is not masked into', () => {

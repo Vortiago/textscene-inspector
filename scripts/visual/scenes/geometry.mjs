@@ -117,6 +117,8 @@ export const GEOMETRY_SCENES = [
   // The left plate's ExtResource material is the control, so a regression turns
   // only the right plate white.
   { name: 'arraymesh-own-material', file: 'unit-arraymesh-own-material.tscn' },
+  // An ArrayMesh in a zstd-compressed binary `.res`, each surface with the file's own material.
+  { name: 'binary-resource-mesh', file: 'unit-binary-resource-mesh.tscn' },
   // `material_override` over an ArrayMesh, one golden per mesh source. The
   // override must reach every surface of the right instance, and the left one
   // is the control. `material-override` drives a BoxMesh, whose slots come from

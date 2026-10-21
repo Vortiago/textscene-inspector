@@ -9,10 +9,9 @@ import type { AsymmetryEntry } from './types.js';
 /**
  * Light3D base validators, registered under 'Light3D' in
  * 3d/lights/shared/linterParser.ts, that the shared parser helpers never read:
- * bake, cull and fine shadow tuning with no effect on the static preview.
+ * cull and fine shadow tuning with no effect on the static preview.
  */
 const LIGHT3D_LINTER_ONLY_KEYS = [
-  'light_bake_mode',
   'light_cull_mask',
   'light_indirect_energy',
   'shadow_reverse_cull_face',

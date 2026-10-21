@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   NODE_PATH_LITERAL_RE,
   dictCallField,
+  dictKey,
   dictStringField,
   isNilLiteral,
   nodePathLiteral,
@@ -257,5 +258,19 @@ describe('stringArrayBodies', () => {
   it('is null for a value that is no string-array spelling', () => {
     expect(stringArrayBodies('Array[int]([1])')).toBeNull();
     expect(stringArrayBodies('"a"')).toBeNull();
+  });
+});
+
+describe('dictKey', () => {
+  it('finds a key whatever its value', () => {
+    expect(dictKey('points').test('{\n"points": PackedVector3Array()\n}')).toBe(true);
+  });
+
+  it('finds no key the Dictionary lacks (error case)', () => {
+    expect(dictKey('bsp').test('{ "bounds": AABB(0, 0, 0, 1, 1, 1) }')).toBe(false);
+  });
+
+  it('finds a key with blanks before its colon, as the tokenizer skips them (edge case)', () => {
+    expect(dictKey('sh').test('{ "sh" \t: PackedColorArray() }')).toBe(true);
   });
 });

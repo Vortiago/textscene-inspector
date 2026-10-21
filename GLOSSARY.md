@@ -45,6 +45,13 @@ The `.unwrap_cache` file Godot's importer writes beside a source asset it unwrap
 Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.
 _Avoid_: "lightmap cache", which suggests the baked lightmap.
 
+**Lightmap atlas** (`resources/lightmapgidata/build.ts`):
+Every layer of a bake's lightmap textures, stacked in order into one texture array. A surface reads its own slice of it through UV2.
+_Avoid_: "lightmap texture" for the whole stack: a bake can save several.
+
+**Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
+The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054).
+
 **Project settings**:
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.
@@ -89,6 +96,11 @@ _Avoid_: "validator".
 The optional hook **seam** (`onError`, `onSectionStart`, `onProperty`, `onSectionBuilt`) on the one shared scanning loop.
 The lenient parser passes none, and the strict parser passes one that collects errors and runs validators.
 _Avoid_: "callback API", "strict mode flag".
+
+**Seating** (`seatScene` in `parser/sceneTreeBuilder.ts`):
+The scene tree the `[node]` headings form once each sits under the node its `parent=` names, in declaration order as instantiate places them, every owner's `%Name` claims and releases in file order, and the one walk that resolves a root-relative node path over it.
+Both parsers seat through it, the linter and the **Language-feature engine** resolve `parent=`, `from=` and `to=` through its walk, and every `%Name` reader, the instance graft included, reads its claims.
+_Avoid_: a second path table or `%Name` claim table over the headings.
 
 **Value decoder** (`parser/valueParsers.ts`):
 The lenient parser's shared primitives (`intOr`, `floatOr`, `parseOptionalFloat` and the others) that read a raw property string into a typed scalar or vector.
@@ -167,7 +179,7 @@ _Avoid_: a per-viewport rule scoped to the whole scene.
 
 **Language-feature engine** (`languageFeatures/`):
 The React- and THREE-free core area that answers editor requests for one `.tscn`: hover, completion, quick fixes, folding and document highlights.
-It reads the text through a **ParseObserver** on the scanning loop, and reads the `godot/` captures.
+It reads the text through a **ParseObserver** on the scanning loop, seats the `[node]` headings through the **Seating**, and reads the `godot/` captures.
 Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0049).
 _Avoid_: "LSP" for the engine. LSP names the protocol, which the `tscn-lsp` server speaks. "Language service".
 

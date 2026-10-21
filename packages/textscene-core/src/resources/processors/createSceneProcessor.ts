@@ -9,10 +9,16 @@ import type { TscnScene, TscnNode } from '../../parser/types';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
+import { seatScene } from '../../parser/sceneTreeBuilder';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { isGltfPath } from '../../godot/import/gltf';
 import { fileBaseName } from '../../godot/string/string';
 import { GLB_SCENE_ROOT_TYPE } from '../glbSceneRoot';
+import {
+  BINARY_RESOURCE_MAGIC,
+  COMPRESSED_BINARY_RESOURCE_MAGIC,
+  isBinaryScenePath,
+} from '../../godot/project/binaryResourceFormat';
 
 /**
  * The `[gd_scene]` tag after any leading `;` comment and blank lines, which Godot
@@ -81,16 +87,16 @@ export function createSceneProcessor({
         }
         return synthesiseGLBScene(metadata.path);
       }
+      // The lenient parser would "parse" a binary scene or non-TSCN text (an HTML 404)
+      // into an empty scene whose subtree vanishes with no placeholder or
+      // missing-resources row, so it fails instead.
+      if (isBinaryScene(metadata.path, content)) {
+        throw new Error(
+          `Binary Godot scene (.scn, .res) is not previewable: only text scenes (.tscn) load: ${metadata.path}`
+        );
+      }
       if (typeof content !== 'string') {
         throw new Error(`TSCN scene must be text content: ${metadata.path}`);
-      }
-      // The lenient parser would "parse" a binary resource (.scn/.res, RSRC magic)
-      // or non-TSCN text (an HTML 404) into an empty scene whose subtree vanishes
-      // with no placeholder or missing-resources row, so it fails instead.
-      if (content.startsWith('RSRC') || metadata.path.endsWith('.scn')) {
-        throw new Error(
-          `Binary Godot scene (.scn) is not previewable — only text scenes (.tscn) load: ${metadata.path}`
-        );
       }
       if (!SCENE_HEADER.test(content)) {
         throw new Error(`Not a text scene (missing [gd_scene header): ${metadata.path}`);
@@ -117,9 +123,20 @@ export function synthesiseGLBScene(glbPath: string): TscnScene {
     children: [],
     properties: { glbPath } as Record<string, unknown>,
   };
+  // Seated like a parsed root, so every `%Name` reader finds its (empty) claim table.
+  const { roots } = seatScene([{ node: root, line: 0, declaredParent: undefined, uniqueId: 0 }]);
   return {
-    nodes: [root],
+    nodes: roots,
     externalResources: [],
     internalResources: [],
   };
+}
+
+/** A scene request asks for a PackedScene, so its path decides, or a binary file's magic. */
+function isBinaryScene(path: string, content: string | ArrayBuffer): boolean {
+  if (isBinaryScenePath(path, 'PackedScene')) return true;
+  return (
+    typeof content === 'string' &&
+    (content.startsWith(BINARY_RESOURCE_MAGIC) || content.startsWith(COMPRESSED_BINARY_RESOURCE_MAGIC))
+  );
 }

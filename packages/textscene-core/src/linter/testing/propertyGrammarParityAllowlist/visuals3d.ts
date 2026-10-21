@@ -27,6 +27,40 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'mesh_lod_threshold picks the mesh LOD a capture draws, and the previewer draws every mesh at full detail.',
   },
 
+  LightmapGI: {
+    linterOnly: [
+      // Bake inputs: `LightmapGI::bake` reads them, and the frame reads only the bake in
+      // `light_data` (lightmap_gi.cpp:1507-1567).
+      'bias',
+      'bounce_indirect_energy',
+      'bounces',
+      'camera_attributes',
+      'denoiser_range',
+      'denoiser_strength',
+      'directional',
+      'environment_custom_color',
+      'environment_custom_energy',
+      'environment_custom_sky',
+      'environment_mode',
+      'generate_probes_subdiv',
+      'interior',
+      'max_texture_size',
+      'quality',
+      'supersampling',
+      'supersampling_factor',
+      'texel_scale',
+      'use_denoiser',
+      'use_texture_for_bounces',
+    ],
+    renderGap: [
+      // lightmap_gi.cpp:1659-1663: how the baked shadowmask mixes with the real-time shadow. The
+      // previewer reads no shadowmask.
+      'shadowmask_mode',
+    ],
+    reason:
+      'Every LightmapGI key but light_data and shadowmask_mode is a bake input, which the drawn frame never reads. shadowmask_mode mixes a shadowmask the previewer does not read yet.',
+  },
+
   MeshInstance3D: {
     parserOnly: [
       // Deprecated: `scene/3d/visual_instance_3d.cpp` binds `gi_lightmap_scale`

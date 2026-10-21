@@ -15,4 +15,6 @@ export interface GridMapProperties extends Node3DProperties {
   cellCenter: { x: boolean; y: boolean; z: boolean };
   /** Raw `cells` PackedInt32Array body (int triplets), decoded by the component. */
   cells: string;
+  /** Each `baked_meshes` reference, in index order. While any is set, they draw in place of the cells. */
+  bakedMeshes: string[];
 }

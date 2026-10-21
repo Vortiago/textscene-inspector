@@ -9,8 +9,8 @@ import { cpSync, readdirSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { basename, dirname, extname, join, relative } from 'node:path';
 
-/** The binary forms of a resource. The previewer reads none of them. */
-const BINARY_RESOURCE_EXTENSIONS = new Set(['.res', '.scn', '.mesh']);
+/** The binary form a text copy replaces: a scene, as the previewer loads only a text scene. */
+const TEXT_COPY_EXTENSIONS = new Set(['.scn']);
 
 export function applyLocalChanges(changesDir, checkout) {
   replaceBinaryResources(join(changesDir, 'text-resources'), checkout);
@@ -33,9 +33,7 @@ function binaryResourceBeside(checkout, rel) {
   const stem = basename(rel, extname(rel));
   const matches = readdirSync(join(checkout, dirname(rel)), { withFileTypes: true }).filter(
     (e) =>
-      e.isFile() &&
-      basename(e.name, extname(e.name)) === stem &&
-      BINARY_RESOURCE_EXTENSIONS.has(extname(e.name))
+      e.isFile() && basename(e.name, extname(e.name)) === stem && TEXT_COPY_EXTENSIONS.has(extname(e.name))
   );
   if (matches.length !== 1) {
     throw new Error(`expected one binary resource beside ${rel} in the checkout, found ${matches.length}`);

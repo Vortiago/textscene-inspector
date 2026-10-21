@@ -228,6 +228,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Binary Resource Mesh",
+    "file": "unit-binary-resource-mesh.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Bone 2d",
     "file": "unit-bone-2d.tscn",
     "category": "Other"
@@ -600,6 +605,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Geometry Instance 3d",
     "file": "unit-geometry-instance-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Default Material",
+    "file": "unit-glb-default-material.tscn",
     "category": "Other"
   },
   {
@@ -1005,6 +1015,21 @@ export const fixtures: Fixture[] = [
   {
     "name": "Light Transport Sky",
     "file": "unit-light-transport-sky.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Baked",
+    "file": "unit-lightmap-gi-baked.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Directional",
+    "file": "unit-lightmap-gi-directional.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Gridmap",
+    "file": "unit-lightmap-gi-gridmap.tscn",
     "category": "Other"
   },
   {
@@ -1878,6 +1903,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Unique Name Pivot",
+    "file": "unit-unique-name-pivot.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Unsupported Nodes",
     "file": "unit-unsupported-nodes.tscn",
     "category": "Other"
@@ -2316,6 +2346,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Instanced Subscene",
     "file": "integration-instanced-subscene.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Instanced Unique Parent",
+    "file": "integration-instanced-unique-parent.tscn",
     "category": "Integration - Multi-Node"
   },
   {

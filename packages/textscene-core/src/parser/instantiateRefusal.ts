@@ -10,7 +10,7 @@ import { rootStatesNoIdentifier } from './typeUnknowable.js';
 /**
  * The first heading, when it declares a `parent=`: `packed_scene.cpp:219` refuses it,
  * so no scene builds. Positional, unlike `orphanedNodes`: the engine's root is
- * `i == 0`, while `buildSceneTree` prefers a parentless heading wherever it sits.
+ * `i == 0`, while `seatScene` prefers a parentless heading wherever it sits.
  */
 export function rootDeclaringParent<N extends RawNode>(
   all: readonly NodeOrigin<N>[]
