@@ -3,7 +3,8 @@
  * (`primitive_meshes.cpp:2388`), one point at each cell's place, never as the placeholder.
  */
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
+import { Vector3, type Material, type Points } from 'three';
+import { ORTHO_BASES } from './cellData';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 import { mountGridMap } from './testing/gridMapCorpus';
 
@@ -16,22 +17,44 @@ item/0/name = "Dot"
 item/0/mesh = SubResource("Mesh_item")
 `;
 
-/** Where each point sits in the world. */
-async function pointPlaces(cells: string): Promise<number[][]> {
-  const grid = await mountGridMap({ library: POINT_LIBRARY, cells });
-  return grid.points().map((points) => points.localToWorld(points.position.clone().set(0, 0, 0)).toArray());
+/** The one Points an item mounts for all its cells. */
+async function onlyPoints(cells: string): Promise<Points> {
+  const points = (await mountGridMap({ library: POINT_LIBRARY, cells })).points();
+  expect(points).toHaveLength(1);
+  return points[0]!;
+}
+
+/** Where each vertex of `points` sits in the world. */
+function vertexPlaces(points: Points): number[][] {
+  const position = points.geometry.getAttribute('position');
+  return Array.from({ length: position.count }, (_, i) =>
+    points.localToWorld(new Vector3().fromBufferAttribute(position, i)).toArray()
+  );
 }
 
 describe('<GridMap> item with an inline PointMesh', () => {
   it('draws one point at the centre of each cell', async () => {
     // Cell (0, 0, 0) of the default 2-unit, centred grid sits at (1, 1, 1).
-    expect(await pointPlaces('0, 0, 0')).toEqual([[1, 1, 1]]);
+    expect(vertexPlaces(await onlyPoints('0, 0, 0'))).toEqual([[1, 1, 1]]);
   });
 
-  it('draws a point per cell, each at its own place', async () => {
-    expect(await pointPlaces('0, 0, 0, 1, 0, 0')).toEqual([
+  it('draws every cell in one Points, each point at its own place', async () => {
+    expect(vertexPlaces(await onlyPoints('0, 0, 0, 1, 0, 0'))).toEqual([
       [1, 1, 1],
       [3, 1, 1],
+    ]);
+  });
+
+  it("turns each point's +Z normal with its cell's basis", async () => {
+    // The second cell, at x = 1, holds orientation 10, which `ORTHO_BASES` gives as a half turn about Y.
+    const points = await onlyPoints(`0, 0, 0, 1, 0, ${10 << 16}`);
+    const normal = points.geometry.getAttribute('normal');
+    const basis = ORTHO_BASES[10]!;
+    const normals = [0, 1].map((i) => new Vector3().fromBufferAttribute(normal, i).toArray());
+
+    expect(normals).toEqual([
+      [0, 0, 1],
+      [basis[2], basis[5], basis[8]],
     ]);
   });
 
@@ -57,7 +80,7 @@ material = SubResource("Big")
 item/0/mesh = SubResource("Mesh_item")
 `,
     });
-    const sizes = grid.points().map((points) => (points.material as THREE.Material).userData.godotPointSize);
+    const sizes = grid.points().map((points) => (points.material as Material).userData.godotPointSize);
     expect(sizes).toEqual([16]);
   });
 });
@@ -75,7 +98,11 @@ item/0/mesh = SubResource("Mesh_item")
   it('batches the triangles and draws the points at each cell, as Godot draws every surface', async () => {
     const grid = await mountGridMap({ library: MIXED_LIBRARY, cells: '0, 0, 0, 1, 0, 0' });
 
+    const [points, ...others] = grid.points();
+
     expect(grid.tiles()).toHaveLength(1);
-    expect(grid.points()).toHaveLength(2);
+    expect(others).toEqual([]);
+    // The four corners of the wall quad, once for each of the two cells.
+    expect(points!.geometry.getAttribute('position').count).toBe(8);
   });
 });

@@ -455,13 +455,13 @@ tr:last-child td{border-bottom:0}
       <div class="status-note st-unreviewed"></div>
       
       <div class="novisual">Comparison images not captured yet for ArrayMesh.</div>
-      <div class="prose"><p>A baked mesh whose surfaces are base64 <code>PackedByteArray</code> blobs laid out by a <code>format</code> bitfield. The previewer decodes both the plain and the compressed layout. It merges every triangle surface, or every points surface, into one <code>BufferGeometry</code> with a draw group per surface. A points surface draws as <code>THREE.Points</code> at the material's point size. A surface's TEX_UV2 becomes the mesh's UV2, and a compressed UV2 re-expands by <code>uv_scale</code>'s z and w as in Godot (<code>rendering_server.cpp:1581-1582</code>).</p>
+      <div class="prose"><p>A baked mesh whose surfaces are base64 <code>PackedByteArray</code> blobs laid out by a <code>format</code> bitfield. The previewer decodes both the plain and the compressed layout. It merges the triangle surfaces into one <code>BufferGeometry</code> and the points surfaces into another, each with a draw group per surface, so a mesh of both draws both. A points surface draws as <code>THREE.Points</code> at the material's point size. A surface's TEX_UV2 becomes the mesh's UV2, and a compressed UV2 re-expands by <code>uv_scale</code>'s z and w as in Godot (<code>rendering_server.cpp:1581-1582</code>).</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks the inherited set (1 inherited from Mesh, 2 inherited from Resource); <code>ArrayMesh</code> declares none of its own. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>
 <p>The lenient parser never rejects a mesh property. An unreadable <code>subdivide_width</code> or <code>uv2_padding</code> falls back to Godot's default through the shared value decoders. A surface whose arrays are malformed is dropped with a warning, and the mesh's other surfaces still render.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Not drawn</strong> A LINES or strip surface of an ArrayMesh is skipped, since only triangle and points surfaces are decoded.</li><li><strong>Not drawn</strong> A mesh with both triangle and points surfaces draws its triangles only, since one mesh draws one primitive type here.</li><li><strong>Approximated</strong> Blend shapes, LODs and skins are ignored, so a skinned mesh renders in its rest pose.</li><li><strong>Approximated</strong> A compressed surface with a normal but no tangent is decoded by symmetry and is not measured against Godot.</li><li><strong>Approximated</strong> A <code>.tres</code> whose every surface is undecodable is listed in the missing-resources panel even though the file is present.</li></ul></div>
+<ul><li><strong>Not drawn</strong> A LINES or strip surface of an ArrayMesh is skipped, since only triangle and points surfaces are decoded.</li><li><strong>Approximated</strong> Blend shapes, LODs and skins are ignored, so a skinned mesh renders in its rest pose.</li><li><strong>Approximated</strong> A compressed surface with a normal but no tangent is decoded by symmetry and is not measured against Godot.</li><li><strong>Approximated</strong> A <code>.tres</code> whose every surface is undecodable is listed in the missing-resources panel even though the file is present.</li></ul></div>
     </article>
     <article class="sheet" data-type="AspectRatioContainer" hidden>
       <header class="sheet-head">
@@ -2789,7 +2789,7 @@ tr:last-child td{border-bottom:0}
     <article class="sheet" data-type="GridMap" hidden>
       <header class="sheet-head">
         <h2>GridMap</h2>
-        <span class="renders">renders as a THREE.InstancedMesh per MeshLibrary item surface, or a mesh per cell when that surface's material billboards</span>
+        <span class="renders">renders as a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface, or a mesh per cell when that surface's material billboards</span>
         <a class="reflink" href="https://docs.godotengine.org/en/stable/classes/class_gridmap.html" target="_blank" rel="noopener" title="Godot class reference for GridMap">docs ↗</a>
         <a class="reflink" href="https://github.com/godotengine/godot/blob/master/modules/gridmap/grid_map.h" target="_blank" rel="noopener" title="Godot engine source for GridMap">source ↗</a>
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-grid-map.tscn" target="_blank" rel="noopener" title="Open unit-grid-map.tscn in the previewer"><code>unit-grid-map.tscn</code> ↗</a>
@@ -2812,6 +2812,7 @@ tr:last-child td{border-bottom:0}
       </div>
       <div class="prose"><p>Instances each populated cell's <code>MeshLibrary</code> item mesh, batching the cells of each item surface into one <code>THREE.InstancedMesh</code> with that surface's material. The item mesh is an ArrayMesh or a PrimitiveMesh, embedded in the library or in its own <code>.tres</code>. A surface whose material billboards draws one mesh per cell instead, so it turns about its own cell as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.</p>
 <p>Each mesh scales by <code>cell_scale</code> round its cell's place. A cell whose item has no mesh draws nothing.</p>
+<p>A PointMesh item draws every cell's points as one <code>THREE.Points</code>, since three has no instanced form of it. Each cell's matrix moves its points and turns their +Z normal, as Godot lights a point that has no normal array. Both engines light an upright point and leave a point turned a half turn about Y in the dark.</p>
 <p>A GridMap that holds <code>baked_meshes</code> draws them in place of its cells, as Godot does once a LightmapGI bakes it. Each baked mesh reads the lightmap the bake gives its index.</p>
 <h3>Linting</h3>
 <p>Strict parsing format-checks these <code>GridMap</code> properties, plus 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
@@ -6455,7 +6456,7 @@ tr:last-child td{border-bottom:0}
 <ul><li><strong>Approximated</strong> Nearest sampling with anisotropy takes the property but not the anisotropy, since three skips it under <code>NearestFilter</code>.</li><li><strong>Approximated</strong> <code>texture_mipmap_bias</code> is not applied. WebGL2 has no per-texture LOD bias.</li><li><strong>Approximated</strong> <code>anisotropic_filtering_level</code> is pinned at 16x rather than read from the project.</li></ul></div>
       </section>
       <section class="prop">
-        <div class="prop-head"><h3>Point size</h3><span class="status st-limitation">Limitation</span></div>
+        <div class="prop-head"><h3>Point size</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-point-mesh-godot.png" alt="Godot render of Point size">
@@ -6469,7 +6470,12 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-        <div class="prose"><p>A PointMesh draws one square per vertex, and <code>use_point_size</code> with <code>point_size</code> sets its side in pixels. Without the flag a point is one pixel. A textured point samples its albedo across the square, as Godot does. A point carries no normal array, so Godot lights it as a normal along +Z in node space, and both sides do the same. Cull mode does not turn a point's normal and does not hide the point. Godot hides a front-culled point only in the first frames, while its pipeline compiles. A point casts a shadow of its point size, as Godot draws it under a directional or a spot light. Under an omni light Godot draws a second, smaller square beside the shadow, and this previewer draws only the first.</p></div>
+        <div class="prose"><p>A PointMesh draws one square per vertex, and <code>use_point_size</code> with <code>point_size</code> sets its side in pixels. Without the flag a point is one pixel. A textured point samples its albedo across the square, as Godot does. A point carries no normal array, so Godot lights it as a normal along +Z in node space, and both sides do the same. Cull mode does not turn a point's normal and does not hide the point. Godot hides a front-culled point only in the first frames, while its pipeline compiles. A point casts a shadow of its point size, as Godot draws it under a directional, a spot or an omni light.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Point shadow under an omni light</h3><span class="status st-done">Done</span></div>
+        <div class="novisual">Comparison images not captured yet for Point shadow under an omni light.</div>
+        <div class="prose"><p>A 40 px point that draws shadows only hangs under an omni light, above a floor the camera looks straight down at. Both engines cast a faint square of the point's size on the floor, beside the darker square of the previewer's sun.</p></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks the inherited set (131 inherited from BaseMaterial3D, 2 inherited from Material, 2 inherited from Resource); <code>StandardMaterial3D</code> declares none of its own. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr></tbody></table></div>

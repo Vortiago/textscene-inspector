@@ -1338,6 +1338,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Point Mesh Gridmap",
+    "file": "unit-point-mesh-gridmap.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Point Mesh Omni Shadow",
     "file": "unit-point-mesh-omni-shadow.tscn",
     "category": "Other"
