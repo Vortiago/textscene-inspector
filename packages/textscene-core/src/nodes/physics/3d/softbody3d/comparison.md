@@ -47,4 +47,4 @@ The lenient parser reuses MeshInstance3D's parse. The scene cull measures the no
 
 ## Known limitations
 
-- **Needs runtime** Godot draws and culls the mesh as the simulation moves it, and shades it with smooth normals, but the previewer keeps the rest mesh, its box and its authored normals.
+- **Needs runtime** Godot moves, culls and smooth-shades the mesh as the simulation runs, but the previewer keeps the rest mesh, its box and its normals.
