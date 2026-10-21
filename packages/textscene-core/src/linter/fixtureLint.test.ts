@@ -10,6 +10,7 @@ import { basename, join, relative } from 'node:path';
 import { Linter } from './Linter.js';
 import { parseHeading } from '../parser/utils.js';
 import { createDiskResRoots } from '../resources/diskProject.js';
+import { isWithinRoot, pathCaseOf } from '../resources/resPath.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { isUndeclaredRuleName } from './testing/ruleNames.js';
 import type { Diagnostic } from './types.js';
@@ -156,8 +157,14 @@ interface Fixture {
   readonly provider: ResourceProvider | null;
 }
 
+/** The fixture's project, or null for a flat one. A project above `scenes/fixtures` is no fixture's own. */
+async function projectOf(path: string): Promise<ResourceProvider | null> {
+  const root = await fixtureRoots.rootOf(path);
+  return root !== null && isWithinRoot(fixtures, root.path, pathCaseOf(process.platform)) ? root : null;
+}
+
 async function fixture(path: string): Promise<Fixture> {
-  return { path, name: relative(fixtures, path), provider: await fixtureRoots.rootOf(path) };
+  return { path, name: relative(fixtures, path), provider: await projectOf(path) };
 }
 
 function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {
