@@ -10,6 +10,7 @@ import type { OptionItem, OptionButtonProperties } from './types';
 import { parseButton } from '../button/parser';
 import { slotCount, slotInt } from '../../../../godot/variant/int.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
+import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 
 export function parseOptionButton(
@@ -25,7 +26,7 @@ export function parseOptionButton(
   result.selected = parseOptionalInt(properties.selected);
   // Grouped by the item `_get_property` resolves each key to: the gate is `is_valid_int()` and the read is
   // `to_int()` (property_list_helper.cpp:53-55), so `popup/item_00/text` and `popup/item_+0/text` are item 0.
-  const declared = indexedElements(properties, 'popup/item_', 'is_valid_int');
+  const declared = indexedElements(properties, OPTION_BUTTON_ITEMS.prefix, OPTION_BUTTON_ITEMS.indexParse);
   // Dense only as far as anything observes: past the last index the file names or `selected` points at,
   // an item renders blank either way. A loop, not `Math.max(-1, ...declared.keys())`: the spread passes
   // one argument per index, and 10^5 keys throw `RangeError: Maximum call stack size exceeded`.
