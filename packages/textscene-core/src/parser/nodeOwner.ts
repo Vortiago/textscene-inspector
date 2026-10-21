@@ -8,16 +8,11 @@ import type { RawNode } from './types.js';
 import { boolSlotValue } from '../godot/variant/variantBool.js';
 
 /**
- * Whether a node claims a `%Name` in its owner: `unique_name_in_owner = true`, read from
+ * The heading's `unique_name_in_owner` as written, or undefined where it writes none. It is read from
  * `rawProperties` alone, which both parsers publish alike (`parser/rawPropertyParity.test.ts`). No
  * slice models the flag, so typed `properties` lacks it. `PROPERTY_USAGE_NO_EDITOR` hides it and
  * still serialises it (node.cpp:4050).
  */
-export function isUniqueNameInOwner(node: RawNode): boolean {
-  return uniqueNameSetting(node) === true;
-}
-
-/** The heading's `unique_name_in_owner` as written, or undefined where it writes none. */
 export function uniqueNameSetting(node: RawNode): boolean | undefined {
   return boolSlotValue(node.rawProperties.unique_name_in_owner);
 }
