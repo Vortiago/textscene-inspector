@@ -36,7 +36,8 @@ import {
   EXPAND_MODE_ORIGINAL_SIZE,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
-import { HORIZONTAL_ALIGNMENT_LEFT, type Rgba } from '../../../../godot/math/math';
+import { type Rgba } from '../../../../godot/math/math';
+import { HORIZONTAL_ALIGNMENT_LEFT } from '../../../../godot/math/alignment';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const DEFAULT_CARET_WIDTH_PX = 1;

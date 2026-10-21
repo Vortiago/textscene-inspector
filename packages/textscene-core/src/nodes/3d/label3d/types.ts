@@ -2,7 +2,8 @@
 
 import type { GeometryInstance3DProperties } from '../geometryinstance3d/types';
 import type { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
-import type { HorizontalAlignment, Rgba } from '../../../godot/math/math';
+import type { Rgba } from '../../../godot/math/math';
+import type { HorizontalAlignment } from '../../../godot/math/alignment';
 import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
