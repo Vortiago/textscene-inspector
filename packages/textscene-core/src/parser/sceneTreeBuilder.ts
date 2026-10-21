@@ -99,8 +99,8 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
   const isPlaced = ({ node: heading }: NodeOrigin<N>) => seatedByPath.has(heading);
   for (const [index, { node }] of origins.entries()) {
     if (node === rootNode) continue;
-    // A second parentless node is orphaned here. `orphanedNodes` finds it by walking
-    // the returned tree, so it holds no second copy of the resolution rules.
+    // A second parentless node is orphaned here. `orphanedNodes` finds it absent from
+    // `seated`, so it holds no second copy of the resolution rules.
     if (!node.parent) continue;
     const owner = node.owner === undefined ? undefined : seatedOwner(tables, origins, index, isPlaced);
     const end = walkFromRoot(node.parent, tables.tree);
@@ -499,13 +499,13 @@ function claimInRoot<N extends RawNode>(
   tables.ownership.claims.set(key, claim);
 }
 
-/** The instance an orphaned node hangs off, and where that node lands. */
+/** The instance a node whose path descends into instanced content hangs off, and where it lands. */
 interface InstanceAnchor<N> {
   /** The enclosing `instance=` node. */
   node: N;
   /** The remainder of the path below it, for the sub-scene to match. */
   subPath: string;
-  /** The orphaned node's own folded parent path, the key it is registered under. */
+  /** The node's own folded parent path, the key it is registered under. */
   foldedParentPath: string;
 }
 

@@ -4,7 +4,7 @@
  * Positions are raw Godot 2D pixels: the Node2D wrapper converts from +Y-down.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -21,6 +21,7 @@ import {
   NAV_OVERLAY_COLOR,
 } from '../../../r3f/navigationOverlay';
 import type { NavigationRegion2DProperties } from './types';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 /** Literal-only, so the key is constant and the overlay never remounts. */
 const NAV_FACES_MATERIAL = materialProgramInputs({
@@ -50,13 +51,8 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
 
   // R3F does not dispose a geometry passed through `attach`, and these are per
   // component, so dispose them on rebuild and unmount.
-  useEffect(() => {
-    if (!overlay) return;
-    return () => {
-      overlay.faces.dispose();
-      overlay.edges.dispose();
-    };
-  }, [overlay]);
+  useDisposeOnRelease(overlay?.faces);
+  useDisposeOnRelease(overlay?.edges);
 
   return (
     <Node2D node={node}>

@@ -63,11 +63,15 @@ const FALLBACK_UV2_HINTS: Record<string, LightmapSizeHint> = {
   QuadMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize, QUAD_MESH_DEFAULTS),
 };
 
+/**
+ * The `type=` names a slice here builds. A set, not an index into BUILDERS: the name is one a
+ * file chooses, and bare indexing hands back `Object` for `constructor`.
+ */
+const PRIMITIVE_MESH_TYPES: ReadonlySet<string> = new Set(Object.keys(BUILDERS));
+
 /** Whether a slice here builds `type`. */
 export function isPrimitiveMeshType(type: string): boolean {
-  // hasOwn: the key is a `[sub_resource type=…]` the file chooses, and bare
-  // indexing hands back `Object` for `constructor` or throws for `valueOf`.
-  return Object.hasOwn(BUILDERS, type);
+  return PRIMITIVE_MESH_TYPES.has(type);
 }
 
 /**

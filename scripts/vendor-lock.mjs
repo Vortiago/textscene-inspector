@@ -34,7 +34,7 @@ function acquire(path) {
       rmSync(path, { force: true });
       continue;
     }
-    if (!announced) console.log(`[vendor-godot-demos] waiting for process ${holder} to finish vendoring`);
+    if (!announced) console.log(`[vendor] waiting for process ${holder} to release ${path}`);
     announced = true;
     Atomics.wait(sleeper, 0, 0, POLL_MS);
   }

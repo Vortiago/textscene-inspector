@@ -12,6 +12,7 @@ import type { TscnNode } from '../../../parser/types';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
@@ -79,6 +80,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const registration = nodeComponentRegistry.getCsgShape(node.type);
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
+  useUndrawnMeshReport(registration?.meshType?.(builderProps, ctx) ?? null);
   const ownSolid = useMemo(
     () => (skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null)),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.

@@ -137,6 +137,11 @@ export const GEOMETRY_SCENES = [
   // cell_center_x/y/z the cell sits on the (1,1,1) marker, and without the
   // half-cell offset it moves to the origin.
   { name: 'grid-map-centering', file: 'unit-grid-map-centering.tscn' },
+  // The only GridMap item that is a PrimitiveMesh, a BoxMesh the library embeds with its own
+  // material: a placeholder, a wrong size or a lost material shows here.
+  { name: 'grid-map-inline-mesh', file: 'unit-grid-map-inline-mesh.tscn' },
+  // The only GridMap that sets cell_scale: a scale dropped, or applied to each cell's place, shows here.
+  { name: 'grid-map-cell-scale', file: 'unit-grid-map-cell-scale.tscn' },
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   // The 3D half of `sprite2d-gradienttexture`: Sprite3D decodes sRGB in hardware
   // before filtering, the opposite of the 2D canvas, so a procedural texture can

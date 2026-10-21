@@ -10,7 +10,7 @@ import { warn } from '../logger';
 import { parseVector2, parseVector3 } from './vectors';
 import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
 import { slotComponents, slotInt, storedVector2i, type IntWidth } from '../godot/variant/int.js';
-import type { Aabb } from '../godot/math/aabb.js';
+import { isEmptyAabb, type Aabb } from '../godot/math/aabb.js';
 import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { stringToInt } from '../godot/string/string.js';
 import { boolSlotValue, scalarSlotValue } from '../godot/variant/variantBool.js';
@@ -77,6 +77,15 @@ export function parseOptionalAabb(value: string | undefined, context = 'value'):
     return undefined;
   }
   return { position: { x: c[0]!, y: c[1]!, z: c[2]! }, size: { x: c[3]!, y: c[4]!, z: c[5]! } };
+}
+
+/**
+ * A box that an `AABB()` clears, such as `custom_aabb` (`renderer_scene_cull.cpp:1093`,
+ * `mesh_storage.cpp:705-712`, `:2236`): the box, or null where it is absent, malformed or empty.
+ */
+export function parseNonEmptyAabb(value: string | undefined, context: string): Aabb | null {
+  const box = parseOptionalAabb(value, context);
+  return box && !isEmptyAabb(box) ? box : null;
 }
 
 export function floatOr(value: string | undefined, fallback: number, context = 'value'): number {

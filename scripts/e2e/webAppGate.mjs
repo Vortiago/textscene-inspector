@@ -256,7 +256,8 @@ function logMeasurements({
   );
   console.log(
     `  texture settle  baseline=${settleControl.baseline.settledMs}ms delayed=${settleControl.delayed.settledMs}ms ` +
-      `unwaited=${settleControl.unwaited.settledMs}ms workers=${settleControl.delayed.workers}`
+      `unwaited=${settleControl.unwaited.settledMs}ms workers=${settleControl.delayed.workers} ` +
+      `replies=${settleControl.delayed.replies}`
   );
   // The Long Tasks API reports only tasks over 50 ms, so 0 means it saw none in the window.
   const longest = (tasks) => Math.max(0, ...(tasks ?? []).map((task) => task.duration));

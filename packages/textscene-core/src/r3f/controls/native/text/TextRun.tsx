@@ -10,7 +10,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
@@ -35,6 +35,7 @@ import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
+import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 
 /** One rectangle of a hex-code box in local Godot px, +Y down, the space of `buildGlyphQuadArrays`' `topPx` before the Y negation. */
 export interface HexCodeBoxAbsoluteRect {
@@ -298,9 +299,9 @@ export function TextRun({
 
   // R3F does not dispose a geometry or material passed as a prop, so both leak
   // on every rebuild without this, and a Label re-shapes on every rect or font change.
-  useEffect(() => () => run.geometry.dispose(), [run]);
+  useDisposeOnRelease(run.geometry);
   // The canvas path's raster texture is fresh per rebuild, unlike the shared atlas.
-  useEffect(() => () => run.ownedTexture?.dispose(), [run]);
+  useDisposeOnRelease(run.ownedTexture);
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
   // this run's `tint`, converted to linear once as for every `ControlQuad`.
@@ -398,6 +399,6 @@ function useOwnedMaterial<M extends THREE.Material | null>(
       blend?.injection,
     ]
   );
-  useEffect(() => () => material?.dispose(), [material]);
+  useDisposeOnRelease(material);
   return material;
 }

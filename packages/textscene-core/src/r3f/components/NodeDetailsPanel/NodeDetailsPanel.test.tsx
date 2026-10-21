@@ -8,6 +8,8 @@ import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
+import { NodePathProvider } from '../../contexts/NodePathContext';
+import { UndrawnMeshesProvider, useUndrawnMeshReport } from '../../contexts/UndrawnMeshesContext';
 
 function makeNode(name: string, type: string, extras: Partial<TscnNode> = {}): TscnNode {
   return { rawProperties: {}, name, type, children: [], properties: {}, ...extras };
@@ -33,6 +35,12 @@ function Selector({ path }: { path: string | null }) {
 }
 
 const FAKE_TYPE = '___PanelTestType___';
+
+/** A node's reader of a TextMesh, which no slice builds. */
+function TextMeshHolder() {
+  useUndrawnMeshReport('TextMesh');
+  return null;
+}
 
 afterEach(() => {
   // Remove the registrations the tests added, so none leaks.
@@ -97,6 +105,27 @@ describe('<NodeDetailsPanel>', () => {
     expect(screen.getByRole('heading', { name: 'Mystery' })).toBeTruthy();
     expect(screen.getByText('TotallyUnknownType')).toBeTruthy();
     expect(screen.getByText('Path:')).toBeTruthy();
+  });
+
+  it('names a mesh type the previewer does not draw', async () => {
+    nodeRegistry.register({ typeName: FAKE_TYPE, parser: () => ({}) });
+    const graph = createSceneGraphFromTscnScene({ nodes: [makeNode('Sign', FAKE_TYPE)] });
+
+    render(
+      <UndrawnMeshesProvider>
+        <NodeDetailsPanel />
+        <Selector path="Sign" />
+        <NodePathProvider path="Sign">
+          <TextMeshHolder />
+        </NodePathProvider>
+      </UndrawnMeshesProvider>,
+      { wrapper: panelWrap(graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+
+    expect(screen.getByText(/Its TextMesh mesh is not yet drawn/)).toBeTruthy();
   });
 
   it('renders propertyFormatter sections from the registry', async () => {

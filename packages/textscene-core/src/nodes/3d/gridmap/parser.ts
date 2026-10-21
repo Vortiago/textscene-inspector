@@ -1,11 +1,11 @@
 /**
- * GridMap parser: the Node3D surface plus the mesh library reference, cell size
+ * GridMap parser: the Node3D surface plus the mesh library reference, cell size and scale
  * and the PackedInt32Array body of `data = { "cells": PackedInt32Array(...) }`.
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
-import { boolOr, vec3Or } from '../../../parser/valueParsers';
+import { boolOr, floatOr, vec3Or } from '../../../parser/valueParsers';
 import type { GridMapProperties } from './types';
 import { readCellsField } from './cellData.js';
 import { splitTopLevel } from '../../../godot/string/string.js';
@@ -55,6 +55,7 @@ export function parseGridMap(heading: ParsedHeading, properties: Record<string, 
     meshLibrary: properties.mesh_library,
     cellSize: vec3Or(properties.cell_size, DEFAULT_CELL_SIZE, 'GridMap.cell_size'),
     cellCenter: parseCellCenter(properties),
+    cellScale: floatOr(properties.cell_scale, 1, 'GridMap.cell_scale'),
     cells: extractCells(properties.data),
     bakedMeshes: bakedMeshRefs(properties.baked_meshes),
   };

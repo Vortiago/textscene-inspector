@@ -5,13 +5,14 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  indicesPastCount,
   listIndices,
   listWrittenIndices,
   negativeIndexError,
   unsatisfiedIndices,
+  writesPastFamilyCount,
   writtenIndex,
 } from './reportedIndices.js';
+import { ITEM_LIST_ITEMS, TAB_CONTAINER_TABS } from '../godot/classdb/propertyListFamilies.js';
 
 describe('listIndices', () => {
   it('names every index while they fit', () => {
@@ -131,15 +132,13 @@ function spellFirst(
   );
 }
 
-describe('indicesPastCount', () => {
+describe('writesPastFamilyCount', () => {
+  const offendingOf = (properties: Record<string, string>) =>
+    writesPastFamilyCount(properties, ITEM_LIST_ITEMS)?.offending;
+
   it('maps each written index at or past the count to the index it resolves to', () => {
     expect(
-      indicesPastCount(
-        { item_count: '2', 'item_1/text': '"a"', 'item_2/text': '"b"', 'item_+3/icon': 'null' },
-        'item_',
-        'is_valid_int',
-        2
-      )
+      offendingOf({ item_count: '2', 'item_1/text': '"a"', 'item_2/text': '"b"', 'item_+3/icon': 'null' })
     ).toEqual(
       new Map([
         ['2', 2],
@@ -148,23 +147,34 @@ describe('indicesPastCount', () => {
     );
   });
 
+  it('measures against an absent count as 0', () => {
+    expect(writesPastFamilyCount({ 'item_0/text': '"a"' }, ITEM_LIST_ITEMS)).toEqual({
+      count: 0,
+      offending: new Map([['0', 0]]),
+    });
+  });
+
   it('leaves a negative index to the dispatcher that already reports it', () => {
-    expect(indicesPastCount({ 'item_-4/text': '"a"' }, 'item_', 'is_valid_int', 0).size).toBe(0);
+    expect(offendingOf({ item_count: '0', 'item_-4/text': '"a"' })?.size).toBe(0);
   });
 
   it('names one text once, whatever its leaves', () => {
-    const past = indicesPastCount(
-      { 'item_4294967299/text': '"a"', 'item_4294967299/icon': 'null' },
-      'item_',
-      'is_valid_int',
-      2
-    );
-    expect(past).toEqual(new Map([['4294967299', 3]]));
+    expect(
+      offendingOf({ item_count: '2', 'item_4294967299/text': '"a"', 'item_4294967299/icon': 'null' })
+    ).toEqual(new Map([['4294967299', 3]]));
   });
 
   // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
   it('measures the index Godot stores, not the number the text spells', () => {
-    expect(indicesPastCount({ 'item_4294967296/text': '"a"' }, 'item_', 'is_valid_int', 1).size).toBe(0);
+    expect(offendingOf({ item_count: '1', 'item_4294967296/text': '"a"' })?.size).toBe(0);
+  });
+
+  it('says nothing for a count its own validator reports', () => {
+    expect(offendingOf({ item_count: 'inf', 'item_3/text': '"a"' })).toBeUndefined();
+  });
+
+  it('says nothing for a family that assigns past its length', () => {
+    expect(writesPastFamilyCount({ 'tab_3/title': '"a"' }, TAB_CONTAINER_TABS)).toBeNull();
   });
 });
 

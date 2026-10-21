@@ -4,7 +4,7 @@
  * both (`itemLightList.ts`, `PassMeshRole`).
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 import {
   alphaOnly,
@@ -15,6 +15,7 @@ import {
 } from '../../../r3f/lighting2d/lightQuad';
 import { litQuadStencilProps, shadowColorQuadStencilProps } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { Rgba } from '../../../godot/math/math';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 interface LightQuadMaterialOptions {
   readonly cookie: THREE.Texture;
@@ -80,7 +81,7 @@ function useOwnedMaterial<M extends THREE.ShaderMaterial | null>(
 ): M {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- each caller lists what its `build` reads.
   const material = useMemo(build, deps);
-  useEffect(() => () => material?.dispose(), [material]);
+  useDisposeOnRelease(material);
   return material;
 }
 

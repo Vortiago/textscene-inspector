@@ -41,7 +41,7 @@ function triangle(overrides: Partial<ArrayMeshData['surfaces'][number] & GodotSu
     indexCount: 3,
     positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
     uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
-    indices: new Uint16Array([0, 1, 2]),
+    indices: new Uint32Array([0, 1, 2]),
     materialPath: 'res://a.tres',
     ...overrides,
   };
@@ -72,7 +72,7 @@ describe('godotSurfacesGeometry', () => {
           // Godot-style CW winding from +Z. The builder reverses it to CCW so
           // computeVertexNormals() yields the outward +Z normal.
           positions: new Float32Array([0, 0, 0, 0, 1, 0, 1, 0, 0]),
-          indices: new Uint16Array([0, 1, 2]),
+          indices: new Uint32Array([0, 1, 2]),
         },
       ],
     };

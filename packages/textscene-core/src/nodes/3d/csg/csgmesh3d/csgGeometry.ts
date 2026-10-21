@@ -26,6 +26,13 @@ export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: C
   return `mesh:${p.flipFaces}:${mesh ? meshKey(mesh) : `unresolved:${p.mesh}`}`;
 }
 
+export function csgMesh3DMeshType(
+  properties: Record<string, unknown>,
+  ctx: CsgGeometryContext
+): string | null {
+  return resolveMesh((properties as unknown as CSGMesh3DProperties).mesh, ctx)?.resource.type ?? null;
+}
+
 export function csgMesh3DReadsFiles(properties: Record<string, unknown>, pools: SceneResources): string[] {
   const path = meshFilePath((properties as unknown as CSGMesh3DProperties).mesh, pools);
   return path ? [path] : [];
@@ -46,7 +53,7 @@ function fileKey(file: object): number {
 
 /** A scene mesh keys on its content, since the parser allocates a fresh one per reparse. */
 function meshKey(mesh: CsgMesh): string {
-  return 'resource' in mesh ? resourceContentKey(mesh.resource) : `${mesh.path}#${fileKey(mesh.file)}`;
+  return mesh.file ? `${mesh.file.path}#${fileKey(mesh.file.parsed)}` : resourceContentKey(mesh.resource);
 }
 
 /** The faces of every surface in turn, with the index of each face's material in `materials`. */

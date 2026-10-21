@@ -5,7 +5,7 @@
  * gates it. Children render normally inside the Node3D transform.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
@@ -22,6 +22,7 @@ import {
 } from '../../../r3f/navigationOverlay';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { NavigationRegion3DProperties } from './types';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 /** Literal-only, so the key is constant and the overlay never remounts. */
 const NAV_FACES_MATERIAL = materialProgramInputs({
@@ -55,13 +56,8 @@ export function NavigationRegion3D({ node, children }: NodeComponentProps) {
 
   // R3F never disposes geometry passed through the `geometry` or `primitive` attach, and
   // these are built per component, so dispose them on a rebuild or an unmount.
-  useEffect(() => {
-    if (!overlay) return;
-    return () => {
-      overlay.faces.dispose();
-      overlay.edges.dispose();
-    };
-  }, [overlay]);
+  useDisposeOnRelease(overlay?.faces);
+  useDisposeOnRelease(overlay?.edges);
 
   return (
     <Node3D node={node}>
