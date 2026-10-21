@@ -51,10 +51,12 @@ export const FOG_HISTORY_MAX_CYCLES = 48;
 
 /**
  * Frames the render wait needs the picture, the compilations queued and the texture memory to hold
- * still. At 12 frames the seven point materials of `point-mesh` landed their pipelines, measured
- * at about 50 ms a frame under lavapipe, and 30 is two and a half times that.
+ * still. `render-wait.md` gives the measure behind the number.
  */
 export const RENDER_QUIET_FRAMES = 30;
+
+/** The most frames the render wait draws: the longest fog convergence, then the quiet window. */
+export const RENDER_WAIT_MAX_FRAMES = FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES;
 
 /** `--quit-after`: a backstop for a bootstrap that never quits, above the fog history's frames. */
 const RENDER_QUIT_AFTER_FRAMES = 1200;
@@ -714,6 +716,7 @@ const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}
 const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
 const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}
+const RENDER_WAIT_MAX_FRAMES := ${RENDER_WAIT_MAX_FRAMES}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
 # exit code. A mid-walk quit() would be reset to 0 by that same call.
@@ -777,8 +780,11 @@ func _render_3d(target: Node) -> void:
 		return
 	_place_camera(target)
 	await _converge(get_viewport())
-	get_viewport().get_texture().get_image().save_png(OUT)
+	_save_capture(get_viewport())
 	_write_bounds(target)
+
+func _save_capture(source: Viewport) -> void:
+	source.get_texture().get_image().save_png(OUT)
 
 # A 2D scene has nothing to point a camera at: Godot draws it through the
 # canvas transform into the PROJECT VIEWPORT rectangle, and a Control resolves
@@ -801,7 +807,7 @@ func _render_2d(target: Node) -> void:
 	if PREVIEWS:
 		_freeze_game_logic(target)
 	await _converge(vp)
-	vp.get_texture().get_image().save_png(OUT)
+	_save_capture(vp)
 
 # THE SECOND 2D ARM. Godot hands several viewport settings to SceneTree's root
 # Window and to nothing else, so nothing composed inside a SubViewport can
@@ -833,7 +839,7 @@ func _render_2d_root(target: Node) -> void:
 	if PREVIEWS:
 		_freeze_game_logic(target)
 	await _converge(get_tree().root)
-	get_tree().root.get_texture().get_image().save_png(OUT)
+	_save_capture(get_tree().root)
 
 # What the nested capture CANNOT answer, reported rather than guessed at.
 #
@@ -1032,30 +1038,9 @@ func _await_reflection_probe_captures(source: Viewport) -> void:
 	for _frame in probes.size() * maxi(layers, COMPATIBILITY_PROBE_FRAMES):
 		await RenderingServer.frame_post_draw
 
-# Draws on until nothing the renderer still owes the picture is pending. Godot signals none of
-# it, so each kind is seen through what it changes, and the capture waits until all of them have
-# held still for RENDER_QUIET_FRAMES frames in a row:
-#
-# - Pipeline compilation. Godot compiles a material's pipeline in the background and draws the
-#   ubershader until it lands (render_forward_clustered.cpp:509-514). The ubershader culls with
-#   gl_FrontFacing (scene_forward_clustered.glsl:3010-3016), which is true for a point, so a
-#   cull-front point is missing from a capture taken too early. Nothing counts the compilations that
-#   finish, only the ones queued (pipeline_hash_map_rd.h:114-116, rendering_server_default.cpp:307-317).
-# - Texture loading. load() returns a finished resource, so every texture the scene names is read
-#   before the first draw (resource_loader.cpp:541), and 4.6.3 streams none in afterwards. A texture
-#   made later, such as a viewport's target, moves RENDERING_INFO_TEXTURE_MEM_USED
-#   (renderer_rd/storage_rd/utilities.cpp:303-304, refreshed every frame at
-#   rendering_server_default.cpp:205).
-# - Temporal volumetric fog. It mixes temporal_reprojection_amount of a history that starts black
-#   (volumetric_fog_process.glsl:683, fog.cpp:482) and jitters each frame by frame % 16
-#   (fog.cpp:1113). So the picture must repeat the one a jitter cycle earlier.
-#
-# Any other change shows in the picture, which must repeat the one before it. A paused tree gives
-# these frames no simulated time, but a shader's TIME advances by the frame step the main loop hands
-# the renderer (main.cpp:4841,4990-4994). A sprite that sways a pixel in 30 ms would then decide the
-# picture, so the wait holds the time scale at 0. An unpaused tree (--no-previews) would run its
-# physics on, so only a fog history draws on there. A scene that never settles is captured as it
-# stands, with a warning.
+# Draws on until the picture and the renderer's pending work have held still for
+# RENDER_QUIET_FRAMES frames in a row. The time scale stays 0 after the wait: the process quits
+# once it has saved. The Godot source behind each kind of pending work is in render-wait.md.
 func _await_rendered(source: Viewport) -> void:
 	var period := FOG_JITTER_CYCLE_FRAMES if _has_fog_history(source) else 1
 	if not PREVIEWS and period == 1:
@@ -1064,7 +1049,7 @@ func _await_rendered(source: Viewport) -> void:
 	var pictures: Array[PackedByteArray] = []
 	var pending := _pending_work()
 	var quiet := 0
-	for _frame in FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES:
+	for _frame in RENDER_WAIT_MAX_FRAMES:
 		await RenderingServer.frame_post_draw
 		var picture := source.get_texture().get_image().get_data()
 		var now_pending := _pending_work()

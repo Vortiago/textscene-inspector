@@ -34,6 +34,7 @@ import {
   parseArgs,
   REFERENCE_FIXED_FPS,
   RENDER_QUIET_FRAMES,
+  RENDER_WAIT_MAX_FRAMES,
   renderArgv,
   renderingMethodFallbackMessage,
   requestedRenderingMethod,
@@ -435,7 +436,7 @@ describe('--mode 2d-root renders the scene as the root window', () => {
     const script = bootstrap({ mode: '2d-root' });
     expect(script).toContain('const ROOT_WINDOW := true');
     expect(script).toContain('get_tree().root.add_child(target)');
-    expect(script).toContain('get_tree().root.get_texture()');
+    expect(script).toContain('_save_capture(get_tree().root)');
   });
 
   it('asks for the particle advance the moment the subtree enters the tree, as the other arms do', () => {
@@ -931,7 +932,7 @@ describe('the render wait fits inside the render pass', () => {
     const argv = renderArgv('/tmp/work');
     const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
 
-    expect(quitAfter).toBeGreaterThan(FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES);
+    expect(quitAfter).toBeGreaterThan(RENDER_WAIT_MAX_FRAMES);
   });
 
   it('cycles over the jitters the previewer averages', async () => {
@@ -941,13 +942,11 @@ describe('the render wait fits inside the render pass', () => {
     expect(FOG_JITTER_CYCLE_FRAMES).toBe(VOLUMETRIC_FOG_TEMPORAL_JITTERS.length);
   });
 
-  it('gives the bootstrap the cycle length and cap (edge case: the GDScript holds its own copy)', () => {
+  it('gives the bootstrap the cycle length, the caps and the quiet window (edge case: the GDScript holds its own copy)', () => {
     expect(bootstrap()).toContain(`const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}`);
     expect(bootstrap()).toContain(`const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}`);
-  });
-
-  it('gives the bootstrap the quiet window the wait needs (edge case: the GDScript holds its own copy)', () => {
     expect(bootstrap()).toContain(`const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}`);
+    expect(bootstrap()).toContain(`const RENDER_WAIT_MAX_FRAMES := ${RENDER_WAIT_MAX_FRAMES}`);
   });
 });
 
