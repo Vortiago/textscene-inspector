@@ -10,8 +10,8 @@ import { readFileSync } from 'node:fs';
 import {
   deriveBaseTypes,
   deriveResourceTypeExclusions,
-  deriveTypedCollections,
   EXCLUSIONS_OUT,
+  NIL_OBJECTS_OUT,
   NODE_PROPERTIES,
   OUT,
   PROPERTIES_OUT,
@@ -20,6 +20,7 @@ import {
   RESOURCE_PROPERTIES,
   renderFromCatalog,
   renderFromExclusionCaptures,
+  renderFromNilObjectCaptures,
   renderFromPropertyCaptures,
   renderFromResourceBases,
   renderFromTypedCollectionCaptures,
@@ -59,61 +60,6 @@ describe('deriveResourceTypeExclusions', () => {
     expect(deriveResourceTypeExclusions(properties, { OmniLight3D: 'Light3D' }).OmniLight3D).toEqual({
       light_projector: '',
     });
-  });
-});
-
-describe('deriveTypedCollections', () => {
-  const row = (name, type, hint, hint_string) => ({ name, type, hint, hint_string });
-
-  it('spells a typed array of a class as Godot writes it', () => {
-    const properties = { LightmapGIData: [row('lightmap_textures', 28, 31, 'TextureLayered')] };
-    expect(deriveTypedCollections(properties)).toEqual({
-      LightmapGIData: { lightmap_textures: 'Array[TextureLayered]' },
-    });
-  });
-
-  it('names the class of a typed array whose hint holds a resource type hint', () => {
-    expect(deriveTypedCollections({ Font: [row('fallbacks', 28, 31, '24/17:Font')] })).toEqual({
-      Font: { fallbacks: 'Array[Font]' },
-    });
-  });
-
-  it('names the builtin type of a typed array whose hint holds a type number', () => {
-    expect(deriveTypedCollections({ Thing: [row('maps', 28, 31, '27/0:')] })).toEqual({
-      Thing: { maps: 'Array[Dictionary]' },
-    });
-  });
-
-  it('names the node class of a typed array whose hint holds a node type hint', () => {
-    expect(deriveTypedCollections({ Thing: [row('targets', 28, 31, '24/34:Node3D')] })).toEqual({
-      Thing: { targets: 'Array[Node3D]' },
-    });
-  });
-
-  it('spells a typed dictionary with its key and value types', () => {
-    expect(deriveTypedCollections({ Thing: [row('tints', 27, 38, 'Color;Color')] })).toEqual({
-      Thing: { tints: 'Dictionary[Color, Color]' },
-    });
-  });
-
-  it('keeps untyped a collection whose getter returns an untyped one, whatever its hint', () => {
-    expect(deriveTypedCollections({ Shortcut: [row('events', 28, 31, '24/17:InputEvent')] })).toEqual({});
-  });
-
-  it("spells the getter's collection type where it differs from the hint", () => {
-    expect(
-      deriveTypedCollections({ OggPacketSequence: [row('packet_data', 28, 31, 'PackedByteArray')] })
-    ).toEqual({ OggPacketSequence: { packet_data: 'Array[Array]' } });
-  });
-
-  it('keeps no class that declares no typed collection (edge case)', () => {
-    expect(deriveTypedCollections({ Curve: [row('points', 28, 0, '')] })).toEqual({});
-  });
-
-  it('refuses a type number Godot does not define, rather than spell a wrong type', () => {
-    expect(() => deriveTypedCollections({ Thing: [row('maps', 28, 31, '99/0:')] })).toThrow(
-      'expected a Variant::Type number in the hint of Thing.maps, got 99'
-    );
   });
 });
 
@@ -195,6 +141,10 @@ describe('deriveBaseTypes', () => {
 
   it('the committed typedCollectionProperties.generated.ts matches the captures', () => {
     expect(readFileSync(TYPED_COLLECTIONS_OUT, 'utf8')).toBe(renderFromTypedCollectionCaptures());
+  });
+
+  it('the committed nilObjectProperties.generated.ts matches the captures', () => {
+    expect(readFileSync(NIL_OBJECTS_OUT, 'utf8')).toBe(renderFromNilObjectCaptures());
   });
 
   it('renders one row per captured property, so no class is dropped', () => {

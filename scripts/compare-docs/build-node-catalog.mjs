@@ -10,7 +10,13 @@ import { enumerateGodotNodes, godotVersion, supportedTypes } from './build-node-
 import { EXTRA_CLASSES, RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
-import { OUT, PROPS_OUT, RESOURCE_BASES_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
+import {
+  OUT,
+  PROPS_OUT,
+  RESOURCE_BASES_OUT,
+  RESOURCE_GETTERS_OUT,
+  RESOURCE_PROPS_OUT,
+} from './build-node-catalog/paths.mjs';
 
 const linksOnly = process.argv.includes('--links-only');
 // The engine half alone: the property tables need a local godot, not the
@@ -47,6 +53,22 @@ function writePropertyTables(enumerated) {
   );
   writeFileSync(RESOURCE_BASES_OUT, `${JSON.stringify(bases, null, 2)}\n`);
   console.log(`Wrote ${RESOURCE_BASES_OUT} - ${Object.keys(bases).length} classes.`);
+  writeGetters(enumerated.resourceGetters);
+}
+
+/** The getter capture, sorted so a regenerated file diffs by content not by order. */
+function writeGetters({ collections, nil_objects }) {
+  const byName = ([a], [b]) => a.localeCompare(b);
+  const getters = {
+    collections: Object.fromEntries(
+      Object.entries(collections)
+        .sort(byName)
+        .map(([cls, slots]) => [cls, Object.fromEntries(Object.entries(slots).sort(byName))])
+    ),
+    nilObjects: [...nil_objects].sort((a, b) => a.localeCompare(b)),
+  };
+  writeFileSync(RESOURCE_GETTERS_OUT, `${JSON.stringify(getters, null, 2)}\n`);
+  console.log(`Wrote ${RESOURCE_GETTERS_OUT} - ${Object.keys(getters.collections).length} classes.`);
 }
 
 if (propertiesOnly) {

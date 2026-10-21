@@ -30,8 +30,8 @@ function blobAfter(out, marker, what) {
 }
 
 /**
- * One engine run, four answers: the instantiable classes, the Node and Resource
- * property rows, and the Resource hierarchy. One spawn, since Godot start-up
+ * One engine run, five answers: the instantiable classes, the Node and Resource
+ * property rows, the Resource hierarchy, and what a fresh Resource's getters return. One spawn, since Godot start-up
  * dominates the cost and two runs could straddle a version change.
  */
 export function enumerateGodotNodes() {
@@ -57,6 +57,7 @@ export function enumerateGodotNodes() {
     properties: blobAfter(out, '###PROPS_JSON###', 'the property list'),
     resourceProperties: blobAfter(out, '###RESOURCE_PROPS_JSON###', 'the resource property list'),
     resourceBases: blobAfter(out, '###RESOURCE_BASES_JSON###', 'the resource base-class map'),
+    resourceGetters: blobAfter(out, '###RESOURCE_GETTERS_JSON###', 'the resource getter values'),
   };
 }
 

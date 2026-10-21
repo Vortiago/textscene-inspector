@@ -2,8 +2,8 @@
  * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
  * the committed engine captures (`pnpm nodes:base-types` writes
  * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts,
- * classProperties.generated.ts, resourceTypeExclusions.generated.ts and
- * typedCollectionProperties.generated.ts). It never runs Godot: CI
+ * classProperties.generated.ts, resourceTypeExclusions.generated.ts,
+ * typedCollectionProperties.generated.ts and nilObjectProperties.generated.ts). It never runs Godot: CI
  * has no engine, and the test beside it re-derives every output to prove it current.
  */
 
@@ -13,16 +13,13 @@ import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/propertyHint.ts';
 import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
-import {
-  VARIANT_TYPE,
-  variantTypeName,
-} from '../../packages/textscene-core/src/godot/variant/variantType.ts';
 
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
 export const RESOURCE_BASES = join(here, 'resource-bases.json');
 export const NODE_PROPERTIES = join(here, 'node-properties.json');
 export const RESOURCE_PROPERTIES = join(here, 'resource-properties.json');
+export const RESOURCE_GETTERS = join(here, 'resource-getters.json');
 
 /** `src/godot/classdb/<name>` in the core package. */
 function classdbModule(name) {
@@ -34,6 +31,7 @@ export const RESOURCE_OUT = classdbModule('resourceBaseTypes.generated.ts');
 export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
 export const EXCLUSIONS_OUT = classdbModule('resourceTypeExclusions.generated.ts');
 export const TYPED_COLLECTIONS_OUT = classdbModule('typedCollectionProperties.generated.ts');
+export const NIL_OBJECTS_OUT = classdbModule('nilObjectProperties.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
@@ -276,70 +274,13 @@ ${classes}
 `;
 }
 
-/** The hints whose hint string names the class of an Object element: a resource or a node type. */
-const CLASS_NAMING_HINTS = new Set([PROPERTY_HINT.RESOURCE_TYPE, PROPERTY_HINT.NODE_TYPE]);
-
 /**
- * The rows whose getter returns another collection than the hint names. The loader types a value
- * by the getter's value (`resource_format_binary.cpp:846-868`): `Shortcut::get_events` and
- * `DPITexture::get_color_map` return an untyped collection, which takes no prefix, and
- * `OggPacketSequence::get_packet_data` a `TypedArray<Array>`.
- */
-const GETTER_COLLECTION_PREFIXES = new Map([
-  ['Shortcut.events', undefined],
-  ['DPITexture.color_map', undefined],
-  ['OggPacketSequence.packet_data', 'Array[Array]'],
-]);
-
-/**
- * The type name Godot's text writer gives one element hint (`variant_parser.cpp:2262-2268,2363-2367`):
- * a bare type or class name, or `type/hint:hint_string`, whose resource or node hint names the class.
- */
-function elementTypeName(elementHint, where) {
-  const numbered = /^(\d+)\/(\d+):(.*)$/.exec(elementHint);
-  if (!numbered) return elementHint;
-  const [, type, hint, hintString] = numbered;
-  if (Number(type) === VARIANT_TYPE.OBJECT) {
-    return CLASS_NAMING_HINTS.has(Number(hint)) ? hintString : 'Object';
-  }
-  if (Number(type) === VARIANT_TYPE.NIL) return 'Variant';
-  const name = variantTypeName(Number(type));
-  if (name === undefined)
-    throw new Error(`expected a Variant::Type number in the hint of ${where}, got ${type}`);
-  return name;
-}
-
-/** The `Array[T]` or `Dictionary[K, V]` prefix of one row, or undefined for an untyped one. */
-function typedCollectionText(row, where) {
-  if (GETTER_COLLECTION_PREFIXES.has(where)) return GETTER_COLLECTION_PREFIXES.get(where);
-  if (row.hint === PROPERTY_HINT.ARRAY_TYPE) return `Array[${elementTypeName(row.hint_string, where)}]`;
-  if (row.hint !== PROPERTY_HINT.DICTIONARY_TYPE) return undefined;
-  const [key, value] = row.hint_string.split(';');
-  return `Dictionary[${elementTypeName(key, where)}, ${elementTypeName(value, where)}]`;
-}
-
-/**
- * Class → property → the `Array[T]` or `Dictionary[K, V]` prefix Godot's text writer puts on the
- * value, under the class that declares it. A binary file stores no element type: the loader types
- * a value as the property's getter types it (`resource_format_binary.cpp:846-868`), so a reader
- * needs this.
+ * The module source for the typed collection table. A binary file stores no element type: the
+ * loader types a value as the property's getter types it (`resource_format_binary.cpp:846-868`),
+ * so the capture reads each getter, not its hint.
  *
- * @param properties - class → own rows.
+ * @param typed - `resource-getters.json`'s `collections`, class → property → prefix.
  */
-export function deriveTypedCollections(properties) {
-  const typed = {};
-  for (const className of Object.keys(properties).sort((a, b) => a.localeCompare(b))) {
-    const slots = {};
-    for (const row of properties[className]) {
-      const text = typedCollectionText(row, `${className}.${row.name}`);
-      if (text !== undefined) slots[row.name] = text;
-    }
-    if (Object.keys(slots).length > 0) typed[className] = slots;
-  }
-  return typed;
-}
-
-/** The module source for the typed collection table. */
 function renderTypedCollectionsModule(typed, version) {
   const classes = Object.entries(typed)
     .map(([className, slots]) => {
@@ -351,7 +292,7 @@ function renderTypedCollectionsModule(typed, version) {
     .join('\n');
   return `/**
  * The resource properties whose value Godot types as \`Array[T]\` or \`Dictionary[K, V]\`, with the
- * prefix its text writer puts on the value, derived from Godot ${version}'s ClassDB captures.
+ * prefix its text writer puts on the value, derived from Godot ${version}'s getter captures.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
  *
  * Each entry is class → property → prefix, under the class that declares the property. A reader
@@ -361,6 +302,22 @@ function renderTypedCollectionsModule(typed, version) {
 export const TYPED_COLLECTION_PROPERTIES: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
 ${classes}
 });
+`;
+}
+
+/** The module source for the Object properties whose empty value is Nil. */
+function renderNilObjectsModule(names, version) {
+  const rows = names.map((name) => `  ${JSON.stringify(name)},`).join('\n');
+  return `/**
+ * The Object properties whose getter returns Nil, not a null Object, when they hold nothing,
+ * derived from Godot ${version}'s getter captures. The binary saver writes such a property
+ * as Nil.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ */
+
+export const NIL_OBJECT_PROPERTIES: readonly string[] = Object.freeze([
+${rows}
+]);
 `;
 }
 
@@ -376,10 +333,13 @@ function godotVersionOf(catalog) {
 /** The typed collection module the committed artifact must equal. */
 export function renderFromTypedCollectionCaptures() {
   const catalog = readJson(CATALOG);
-  return renderTypedCollectionsModule(
-    deriveTypedCollections(readJson(RESOURCE_PROPERTIES)),
-    godotVersionOf(catalog)
-  );
+  return renderTypedCollectionsModule(readJson(RESOURCE_GETTERS).collections, godotVersionOf(catalog));
+}
+
+/** The Nil Object property module the committed artifact must equal. */
+export function renderFromNilObjectCaptures() {
+  const catalog = readJson(CATALOG);
+  return renderNilObjectsModule(readJson(RESOURCE_GETTERS).nilObjects, godotVersionOf(catalog));
 }
 
 /** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
@@ -434,6 +394,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     [PROPERTIES_OUT, renderFromPropertyCaptures(), describeProperties],
     [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeNestedRows('excluding slots')],
     [TYPED_COLLECTIONS_OUT, renderFromTypedCollectionCaptures(), describeNestedRows('typed collections')],
+    [
+      NIL_OBJECTS_OUT,
+      renderFromNilObjectCaptures(),
+      (source) => `${source.match(/^ {2}"/gm)?.length ?? 0} properties`,
+    ],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);

@@ -76,6 +76,11 @@ describe('parseBinaryResource on a null object', () => {
     expect((await parseBinaryResource(file)).properties).toEqual({});
   });
 
+  it("leaves out a Nil on an Object property whose getter reads empty as Nil, as a state machine's end node", async () => {
+    const nil = new ByteWriter().u32(VariantTag.Nil).bytes();
+    expect(await propertyText('AnimationNodeStateMachine', 'states/End/node', nil)).toBeUndefined();
+  });
+
   it('writes a null object inside an array as null (edge case)', async () => {
     const array = new ByteWriter().u32(VariantTag.Array).u32(1).raw(nullObject).bytes();
     expect(await propertyText('Resource', 'items', array)).toBe('[null]');
@@ -86,6 +91,12 @@ describe('parseBinaryResource on a collection property', () => {
   const emptyArray = new ByteWriter().u32(VariantTag.Array).u32(0).bytes();
   it('types an array an ancestor declares typed, as a FontFile inherits Font.fallbacks', async () => {
     expect(await propertyText('FontFile', 'fallbacks', emptyArray)).toBe('Array[Font]([])');
+  });
+
+  it('types an array its getter types where the hint names no type, as NavigationPolygon.outlines', async () => {
+    expect(await propertyText('NavigationPolygon', 'outlines', emptyArray)).toBe(
+      'Array[PackedVector2Array]([])'
+    );
   });
 
   it('leaves an untyped array untyped', async () => {

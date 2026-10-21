@@ -1,6 +1,6 @@
-# Dumps what only a running engine can answer, as four JSON blobs each after a
+# Dumps what only a running engine can answer, as five JSON blobs each after a
 # marker line. Driven by build-node-catalog/classdb.mjs. Re-run against a newer
-# Godot to refresh all four.
+# Godot to refresh all five.
 #
 # ###NODES_JSON### every INSTANTIABLE Node class, with its dimension (3D / 2D /
 #   Other) and full ancestor chain.
@@ -21,6 +21,13 @@
 #   is absent from the blob above) and BaseMaterial3D, which declares its whole
 #   property set, is abstract. Either filter would break the one chain a scene
 #   walks.
+#
+# ###RESOURCE_GETTERS_JSON### what a fresh Resource's getters return, where the
+#   property list cannot say. "collections" holds each Array or Dictionary
+#   property whose value is typed, with the prefix the text saver writes: the
+#   binary loader types a value as the getter does, whatever the hint says.
+#   "nil_objects" names each Object property whose empty value is Nil, which
+#   the binary saver writes as Nil rather than as a null Object.
 extends SceneTree
 
 # PROPERTY_USAGE_STORAGE. The one flag that decides whether a property can reach
@@ -46,17 +53,65 @@ func own_properties(c: String) -> Array:
 		})
 	return own
 
+# A class to read an abstract class's getters on: the getter belongs to the
+# declaring class, so any instantiable inheritor answers for it.
+func instantiable_class(c: String) -> String:
+	if ClassDB.can_instantiate(c):
+		return c
+	for inheritor in ClassDB.get_inheriters_from_class(c):
+		if ClassDB.can_instantiate(inheritor):
+			return inheritor
+	return ""
+
+# The `Array[T]` or `Dictionary[K, V]` prefix var_to_str writes, or "" for an
+# untyped value.
+func typed_prefix(value: Variant) -> String:
+	var text: String = var_to_str(value)
+	if text.begins_with("Array[") or text.begins_with("Dictionary["):
+		return text.substr(0, text.find("("))
+	return ""
+
+func typed_collections(c: String, own: Array) -> Dictionary:
+	var typed: Dictionary = {}
+	var instance_class: String = instantiable_class(c)
+	if instance_class == "":
+		return typed
+	var instance: Object = ClassDB.instantiate(instance_class)
+	for p in own:
+		if p["type"] != TYPE_ARRAY and p["type"] != TYPE_DICTIONARY:
+			continue
+		var prefix: String = typed_prefix(instance.get(p["name"]))
+		if prefix != "":
+			typed[p["name"]] = prefix
+	return typed
+
+func nil_objects(c: String, found: Dictionary) -> void:
+	if not ClassDB.can_instantiate(c):
+		return
+	var instance: Object = ClassDB.instantiate(c)
+	for p in instance.get_property_list():
+		if int(p["usage"]) & USAGE_STORAGE == 0 or int(p["type"]) != TYPE_OBJECT:
+			continue
+		if typeof(instance.get(p["name"])) == TYPE_NIL:
+			found[p["name"]] = true
+
 func _init() -> void:
 	var classes: Array = []
 	var properties: Dictionary = {}
 	var resource_properties: Dictionary = {}
 	var resource_bases: Dictionary = {}
+	var collections: Dictionary = {}
+	var nil_object_names: Dictionary = {}
 
 	for c in ClassDB.get_class_list():
 		if ClassDB.is_parent_class(c, "Resource"):
 			var res_own: Array = own_properties(c)
 			if res_own.size() > 0:
 				resource_properties[c] = res_own
+			var typed: Dictionary = typed_collections(c, res_own)
+			if typed.size() > 0:
+				collections[c] = typed
+			nil_objects(c, nil_object_names)
 			# Unfiltered, unlike the two blobs above: see the header.
 			if c != "Resource":
 				resource_bases[c] = ClassDB.get_parent_class(c)
@@ -90,4 +145,6 @@ func _init() -> void:
 	print(JSON.stringify(resource_properties))
 	print("###RESOURCE_BASES_JSON###")
 	print(JSON.stringify(resource_bases))
+	print("###RESOURCE_GETTERS_JSON###")
+	print(JSON.stringify({"collections": collections, "nil_objects": nil_object_names.keys()}))
 	quit()
