@@ -95,6 +95,33 @@ item/0/mesh = ExtResource("1_text")
   });
 });
 
+describe('<GridMap> item whose inline mesh no slice builds', () => {
+  it('draws the placeholder, as Godot draws the mesh', async () => {
+    const tile = await renderInstancedTile({
+      library: inlineMeshLibrary('[sub_resource type="TextMesh" id="Mesh_item"]'),
+    });
+    expect((tile.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
+  });
+});
+
+describe('<GridMap> cell Godot gives no mesh', () => {
+  // Godot places a cell only for an item the library holds with a valid mesh
+  // (`modules/gridmap/grid_map.cpp:676-678,689`).
+  it('draws nothing for an item with no mesh', async () => {
+    const tiles = await renderGridMapTiles({
+      library: '[gd_resource type="MeshLibrary" format=3]\n\n[resource]\nitem/0/name = "Empty"\n',
+    });
+    expect(tiles).toEqual([]);
+  });
+
+  it('draws nothing for an item the library lacks', async () => {
+    const tiles = await renderGridMapTiles({
+      library: '[gd_resource type="MeshLibrary" format=3]\n\n[resource]\n',
+    });
+    expect(tiles).toEqual([]);
+  });
+});
+
 describe('<GridMap> item with an inline ArrayMesh', () => {
   it('draws the ArrayMesh with the material its surface names in the library', async () => {
     const tile = await renderInstancedTile({

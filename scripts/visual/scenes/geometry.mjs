@@ -140,6 +140,8 @@ export const GEOMETRY_SCENES = [
   // The only GridMap item that is a PrimitiveMesh, a BoxMesh the library embeds with its own
   // material: a placeholder, a wrong size or a lost material shows here.
   { name: 'grid-map-inline-mesh', file: 'unit-grid-map-inline-mesh.tscn' },
+  // The only GridMap that sets cell_scale: a scale dropped, or applied to each cell's place, shows here.
+  { name: 'grid-map-cell-scale', file: 'unit-grid-map-cell-scale.tscn' },
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   // The 3D half of `sprite2d-gradienttexture`: Sprite3D decodes sRGB in hardware
   // before filtering, the opposite of the 2D canvas, so a procedural texture can

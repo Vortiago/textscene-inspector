@@ -18,9 +18,6 @@ export interface MeshSource {
   path: string | null;
 }
 
-/** The mesh types a slice here builds. Godot draws any `Ref<Mesh>`, and another type has no builder. */
-export const MESH_TYPES: ReadonlySet<string> = new Set([...ARRAY_MESH_TYPES, ...PRIMITIVE_MESH_TYPES]);
-
 type MeshKind = 'arrayMesh' | 'primitive';
 
 /** Which builder draws a mesh of `type`, or null for a type no slice builds. */

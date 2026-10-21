@@ -103,6 +103,11 @@ interface SubResourceGate {
   accepts: (sub: TscnInternalResource | undefined) => boolean;
 }
 
+/** Accept any declared sub-resource, for a reader that judges the type itself. */
+export function declaredSubResourceGate(declared: readonly TscnInternalResource[]): SubResourceGate {
+  return { declared, accepts: (sub) => sub !== undefined };
+}
+
 /** Accept only sub-resources whose `type` is one of `types`. */
 export function subResourceTypeGate(
   declared: readonly TscnInternalResource[],

@@ -1,8 +1,8 @@
 /**
  * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
  * populated cells. Each surface draws as one THREE.InstancedMesh, or as one mesh per cell when
- * its material billboards. A loading item draws nothing, and an unresolved one draws cell-sized
- * wireframe boxes in one InstancedMesh.
+ * its material billboards. A loading item draws nothing. An item whose mesh or library this
+ * previewer cannot read draws cell-sized wireframe boxes in one InstancedMesh.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
@@ -24,6 +24,9 @@ import { surfaceBillboard } from '../../../resources/materials/standardmaterial3
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
+
+/** Where each cell sits in the grid, and how much its mesh scales. */
+type CellGrid = Pick<GridMapProperties, 'cellSize' | 'cellCenter' | 'cellScale'>;
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
@@ -56,17 +59,13 @@ function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
 }
 
 /**
- * World matrix for one cell: translate(cell·size + centering offset) ×
- * orientation × meshTransform. The offset is Godot's `_get_offset()`:
- * `cell_size * 0.5` on each axis whose `cell_center_*` is on, all three by
+ * World matrix for one cell: translate(cell·size + centering offset) × scale(cell_scale) ×
+ * orientation × meshTransform (`modules/gridmap/grid_map.cpp:685-687,696`). The offset is Godot's
+ * `_get_offset()`: `cell_size * 0.5` on each axis whose `cell_center_*` is on, all three by
  * default. Without it the tiles sit half a cell off from sibling nodes.
  */
-function cellMatrix(
-  cell: GridMapCell,
-  cellSize: Vector3,
-  cellCenter: GridMapProperties['cellCenter'],
-  meshTransform: Transform3D | null
-): THREE.Matrix4 {
+function cellMatrix(cell: GridMapCell, grid: CellGrid, meshTransform: Transform3D | null): THREE.Matrix4 {
+  const { cellSize, cellCenter, cellScale } = grid;
   const basis = ORTHO_BASES[cell.rot] ?? ORTHO_BASES[0]!;
   const orient = new THREE.Matrix4().set(
     basis[0]!,
@@ -91,7 +90,7 @@ function cellMatrix(
     cell.y * cellSize.y + (cellCenter.y ? cellSize.y * 0.5 : 0),
     cell.z * cellSize.z + (cellCenter.z ? cellSize.z * 0.5 : 0)
   );
-  matrix.multiply(orient);
+  matrix.scale(new THREE.Vector3(cellScale, cellScale, cellScale)).multiply(orient);
   if (meshTransform) matrix.multiply(transform3DToMatrix4(meshTransform));
   return matrix;
 }
@@ -110,22 +109,28 @@ export function GridMap({ node, children }: NodeComponentProps) {
     return grouped;
   }, [properties.cells]);
 
-  // Godot draws a cell only once its library holds the item (`modules/gridmap/grid_map.cpp:676-678`),
-  // and no cell while it holds baked meshes (`:688`).
+  // Godot draws no cell while the GridMap holds baked meshes (`modules/gridmap/grid_map.cpp:688`).
   const hasBakedMeshes = properties.bakedMeshes.length > 0;
   const items = library.status === 'pending' || hasBakedMeshes ? [] : Array.from(cellsByItem.entries());
   return (
     <Node3D node={node}>
       {hasBakedMeshes && <BakedMeshes refs={properties.bakedMeshes} />}
-      {items.map(([itemId, cells]) => (
-        <GridMapItem
-          key={itemId}
-          item={library.model?.get(itemId) ?? null}
-          cells={cells}
-          cellSize={properties.cellSize}
-          cellCenter={properties.cellCenter}
-        />
-      ))}
+      {items.map(([itemId, cells]) => {
+        const item = library.model?.get(itemId) ?? null;
+        // Godot draws a cell only for an item the library holds with a mesh (`:676-678,689`). A
+        // library this previewer cannot load draws each cell's placeholder instead.
+        if (library.model && !item?.meshPath) return null;
+        return (
+          <GridMapItem
+            key={itemId}
+            item={item}
+            cells={cells}
+            cellSize={properties.cellSize}
+            cellCenter={properties.cellCenter}
+            cellScale={properties.cellScale}
+          />
+        );
+      })}
       {children}
     </Node3D>
   );
@@ -161,33 +166,32 @@ function bakedMeshNode(ref: string, index: number): TscnNode {
   return node;
 }
 
-interface GridMapItemProps {
+interface GridMapItemProps extends CellGrid {
   item: MeshLibraryItem | null;
   cells: GridMapCell[];
-  cellSize: Vector3;
-  cellCenter: GridMapProperties['cellCenter'];
 }
 
 /**
  * All cells sharing one MeshLibrary item. Each surface decides on its own whether it batches,
  * as Godot billboards each surface's instances in its own shader (`scene_forward_clustered.glsl:338-342`).
  */
-function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
+function GridMapItem({ item, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
   const content = useMeshContent(usePathResolution(item?.meshPath ?? null));
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
   // file (every debounced keystroke) does not rebuild every cell's matrix.
   const matrices = useMemo(
-    () => cells.map((cell) => cellMatrix(cell, cellSize, cellCenter, item?.meshTransform ?? null)),
-    [cells, cellSize, cellCenter, item?.meshTransform]
+    () =>
+      cells.map((cell) => cellMatrix(cell, { cellSize, cellCenter, cellScale }, item?.meshTransform ?? null)),
+    [cells, cellSize, cellCenter, cellScale, item?.meshTransform]
   );
 
   // GridMap has no `cast_shadow` of its own. The setting is per tile, read off
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
-  // Godot draws a cell only once its item has a mesh (`modules/gridmap/grid_map.cpp:688`).
+  // Godot draws the mesh, so a mesh this previewer cannot read shows the placeholder.
   if (content.kind === 'unresolved') return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
   if (content.kind !== 'surfaced') return null;
   const { geometry, primitive } = content.mesh;

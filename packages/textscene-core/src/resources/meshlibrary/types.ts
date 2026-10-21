@@ -14,8 +14,8 @@ export interface MeshLibraryItem {
   id: number;
   name?: string;
   /**
-   * The item's mesh, an ArrayMesh or a PrimitiveMesh, as a `res://` path or a **Sub-resource
-   * path** into the library. Null when absent or of a type no slice builds.
+   * The item's mesh as a `res://` path or a **Sub-resource path** into the library. Null when the
+   * item has no mesh, which Godot draws nothing for.
    */
   meshPath: string | null;
   /** Library-local transform applied to the mesh, or null (= identity). */

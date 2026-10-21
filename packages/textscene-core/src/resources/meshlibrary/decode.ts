@@ -10,8 +10,7 @@ import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { parseSlotInt } from '../../godot/variant/int.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
-import { MESH_TYPES } from '../meshes/meshSource';
-import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
+import { declaredSubResourceGate, extResourcePathsById, resolveRefToResourcePath } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
 import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
@@ -82,9 +81,9 @@ export function meshLibraryFromTres(tres: ParsedResource, selfPath: string): Mes
         rawValue,
         extPathById,
         selfPath,
-        // `_set` stores any `Ref<Mesh>` (mesh_library.cpp:48-49). A type no slice builds stays
-        // unresolved, so GridMap draws its placeholder cell, not an empty mesh.
-        subResourceTypeGate(tres.subResources, MESH_TYPES)
+        // `_set` stores any `Ref<Mesh>` (mesh_library.cpp:48-49), so a mesh of a type no slice
+        // builds keeps its path, and GridMap draws its placeholder where Godot draws the mesh.
+        declaredSubResourceGate(tres.subResources)
       );
     } else if (field === 'mesh_transform') {
       try {

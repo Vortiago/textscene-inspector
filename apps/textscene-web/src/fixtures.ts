@@ -823,6 +823,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Grid Map Cell Scale",
+    "file": "unit-grid-map-cell-scale.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map Centering",
     "file": "unit-grid-map-centering.tscn",
     "category": "Other"
