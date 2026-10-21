@@ -77,9 +77,10 @@ function verticalGlsl(finish: string): string {
 uniform sampler2D ${BLUR_BLURRED_UNIFORM};
 ${BLUR_HEADER}
 // Godot counts rows from the top of the image and a framebuffer from the bottom, so the
-// pair rule runs on the mirrored row.
+// pair rule runs on the mirrored row. A one-row level has no partner row, so the clamp keeps
+// the rule's odd result inside the texture, where texelFetch is undefined.
 int godotGlowRowEdge(int row, int rows) {
-  return rows - 1 - godotGlowEdge(rows - 1 - row, rows);
+  return clamp(rows - 1 - godotGlowEdge(rows - 1 - row, rows), 0, rows - 1);
 }
 
 vec3 blurredAt(ivec2 pixel, int offset) {

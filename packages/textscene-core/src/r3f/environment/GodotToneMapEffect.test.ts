@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 import { GLOW_MAP_UNIFORM } from '../../resources/environment/godotCompositor';
+import { glowLevelUniform } from '../../resources/environment/godotGlowPyramid';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../resources/environment/build';
@@ -76,5 +77,29 @@ describe('GodotToneMapEffect.setGlowMap', () => {
     const effect = effectWith({});
     effect.setGlowMap(srgbTexture());
     expect(effect.uniforms.has(GLOW_MAP_UNIFORM)).toBe(false);
+  });
+});
+
+describe('GodotToneMapEffect glow levels', () => {
+  const sizeOfLevel = (effect: GodotToneMapEffect, level: number) => {
+    const { image } = effect.uniforms.get(glowLevelUniform(level))!.value as THREE.Texture<{
+      width: number;
+      height: number;
+    }>;
+    return [image.width, image.height];
+  };
+
+  it('binds each gathered level to its own texture, one mip below the one before', () => {
+    const effect = effectWith({});
+    effect.setSize(800, 600);
+    expect(sizeOfLevel(effect, 1)).toEqual([200, 150]);
+    expect(sizeOfLevel(effect, 2)).toEqual([100, 75]);
+    expect(sizeOfLevel(effect, 3)).toEqual([50, 37]);
+  });
+
+  it('binds no level the weights leave out', () => {
+    const effect = effectWith({});
+    expect(effect.uniforms.has(glowLevelUniform(0))).toBe(false);
+    expect(effect.uniforms.has(glowLevelUniform(4))).toBe(false);
   });
 });

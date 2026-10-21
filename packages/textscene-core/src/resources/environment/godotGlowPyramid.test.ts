@@ -33,7 +33,7 @@ describe('the glow blur kernel', () => {
       'ivec2(godotGlowEdge(pixel.x, size.x), pixel.y)'
     );
     const glsl = laterLevelBlurGlsl(glowOn()).vertical;
-    expect(glsl).toContain('return rows - 1 - godotGlowEdge(rows - 1 - row, rows);');
+    expect(glsl).toContain('clamp(rows - 1 - godotGlowEdge(rows - 1 - row, rows), 0, rows - 1)');
   });
 
   it('samples the source bilinearly at the pixel centre, so a 2x reduction is a 2x2 box', () => {

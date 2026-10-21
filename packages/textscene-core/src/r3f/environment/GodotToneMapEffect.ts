@@ -41,12 +41,7 @@ export class GodotToneMapEffect extends Effect {
 
     this.clearGlowMap();
     this.pyramid = options.glow ? new GlowPyramid(options.glow) : null;
-    if (options.glow && this.pyramid) {
-      // A resize keeps each level's texture object, so the composite binds each once.
-      for (const level of options.glow.gatheredLevels) {
-        this.uniforms.get(glowLevelUniform(level))!.value = this.pyramid.levelTexture(level);
-      }
-    }
+    this.pyramid?.bindLevels(this.uniforms);
   }
 
   /** Samples `map` as the glow map. The caller owns `map`. A no-op when the composite samples no map. */
@@ -96,11 +91,13 @@ class GlowPyramid {
   private readonly firstBlur: LevelBlur;
   private readonly laterBlur: LevelBlur;
   private readonly maxLevel: number;
+  private readonly gatheredLevels: number[];
 
   constructor(glow: GlowParams) {
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
     // that exists always has at least one weighted level.
     this.maxLevel = glow.maxLevel;
+    this.gatheredLevels = glow.gatheredLevels;
     this.firstBlur = new LevelBlur('First', firstLevelBlurGlsl(glow));
     this.laterBlur = new LevelBlur('Later', laterLevelBlurGlsl(glow));
 
@@ -110,8 +107,11 @@ class GlowPyramid {
     }
   }
 
-  levelTexture(level: number): THREE.Texture {
-    return this.levelTargets[level]!.texture;
+  /** Binds each gathered level to its sampler. A resize keeps the texture objects, so this runs once. */
+  bindLevels(uniforms: Map<string, THREE.Uniform>): void {
+    for (const level of this.gatheredLevels) {
+      uniforms.get(glowLevelUniform(level))!.value = this.levelTargets[level]!.texture;
+    }
   }
 
   setSize(width: number, height: number): void {
