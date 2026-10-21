@@ -23,6 +23,11 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
+**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveNodeScope`):
+The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
+Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
+_Avoid_: resolving a grafted node's ids in the sub-scene's pools.
+
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
 The merged node keeps it, and the render path's per-owner tables read it.

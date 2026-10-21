@@ -49,4 +49,6 @@ export interface TscnPreviewShellProps {
    * The shell reports `pending` as it unmounts.
    */
   onCaptureStateChange?: (state: PreviewCaptureState) => void;
+  /** Fired with the node path the Inspector copies, for the host to put on the clipboard. Without it the row has no copy button. */
+  onCopyNodePath?: (nodePath: string) => void;
 }

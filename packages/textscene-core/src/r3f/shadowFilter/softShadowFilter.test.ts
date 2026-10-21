@@ -8,6 +8,7 @@ import { SOFT_LOW_SHADOW_SAMPLES, vogelDisk } from '../../godot/rendering/lights
 import { GODOT_QUICK_HASH_GLSL } from '../../godot/rendering/quickHash';
 import { FRAMEBUFFER_HEIGHT_UNIFORM } from './framebufferRows';
 import { installedFramebufferHeight } from './framebufferRows.testkit';
+import { clampedBilinearDepthGlsl } from './clampedBilinearDepth';
 import { installSoftShadowFilter } from './softShadowFilter';
 import { occurrences } from '../testing/glslSource';
 import { warningsOf } from '../testing/logWarnings';
@@ -67,10 +68,6 @@ describe('the soft shadow filter', () => {
     expect(installedChunk()).toContain('return dot( bytes, vec2( 256.0, 1.0 ) ) / 65535.0;');
   });
 
-  it('clamps each texel of the raw depth read to the atlas (edge case)', () => {
-    expect(installedChunk()).toContain('clamp( texel, ivec2( 0 ), last )');
-  });
-
   it('writes every kernel value as a float GLSL accepts (edge case)', () => {
     const kernel = /GODOT_SOFT_SHADOW_KERNEL\[ \d+ \] = vec2\[\]\((.*)\);/.exec(installedChunk())![1]!;
     expect(kernel).not.toMatch(/[(, ]-?\d+ [,)]/);
@@ -122,5 +119,16 @@ describe('installSoftShadowFilter', () => {
     expect(warnings).toHaveLength(1);
     expect(THREE.ShaderChunk[CHUNK]).toBe('void main() {}');
     expect(THREE.ShaderLib.standard.uniforms[FRAMEBUFFER_HEIGHT_UNIFORM]).toBeUndefined();
+  });
+});
+
+describe('the filter’s raw depth read', () => {
+  it('is the clamped bilinear read the volumetric fog shares', () => {
+    installSoftShadowFilter();
+    const read = clampedBilinearDepthGlsl('godotRawDepth', 'godotRawDepthAt');
+    expect(installedChunk()).toContain(read);
+    expect(read).toContain('clamp( uv, 0.0, 1.0 )');
+    expect(read).toContain('clamp( corner + ivec2( 1, 1 ), ivec2( 0 ), last )');
+    expect(read.match(/godotRawDepthAt\(/g)).toHaveLength(4);
   });
 });
