@@ -4,6 +4,7 @@
  * scene graphs beside the scenes/demos/ breadth corpus, which `pnpm vendor:demos` writes. Each
  * game is fetched at a pinned commit, pruned, and recorded with its licence in
  * scenes/games/README.md. Each keeps its own res:// namespace (a `root` per game in the manifest).
+ * A key file names the recipe that made the corpus, so an unchanged recipe fetches nothing.
  *
  * @example
  *   node scripts/vendor-godot-games.mjs
@@ -15,9 +16,19 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { copyPruned } from './vendor-prune.mjs';
 import { fetchShallow } from './vendor-git.mjs';
+import { ensureKeyedCorpora } from './vendor-keyed.mjs';
 import { REPO_ROOT } from './repoRoot.mjs';
 
 const TARGET = join(REPO_ROOT, 'scenes/games');
+const LOCK_FILE = join(REPO_ROOT, 'scenes/.vendor-godot-games.lock');
+
+/** The files that decide the corpus, the pins below included. A change to one of them fetches again. */
+const RECIPE = [
+  'scripts/vendor-godot-games.mjs',
+  'scripts/vendor-prune.mjs',
+  'scripts/vendor-git.mjs',
+  'scripts/vendor-keyed.mjs',
+];
 
 /**
  * The curated games, pinned to a specific commit for reproducible vendoring.
@@ -50,41 +61,58 @@ const GAMES = [
   },
 ];
 
-const work = mkdtempSync(join(tmpdir(), 'vendor-godot-games-'));
-rmSync(TARGET, { recursive: true, force: true });
-mkdirSync(TARGET, { recursive: true });
+ensureKeyedCorpora({
+  label: 'vendor-godot-games',
+  corpora: [TARGET],
+  recipe: RECIPE,
+  lockFile: LOCK_FILE,
+  vendor,
+});
+console.log(
+  '[vendor-godot-games] now run: pnpm generate:fixtures (or use `pnpm vendor:games`, which does both)'
+);
 
-let totalFiles = 0;
-const summaries = [];
-try {
-  for (const game of GAMES) {
-    const src = join(work, game.dir);
-    process.stdout.write(`  fetch   ${game.dir} @ ${game.commit.slice(0, 12)} … `);
-    fetchShallow(game.url, game.commit, src);
-    const files = copyPruned(src, join(TARGET, game.dir));
-    totalFiles += files;
-    summaries.push({ ...game, files });
-    console.log(`vendored ${files} files`);
+/** Fetches every game into a wiped scenes/games/ and writes its README. */
+function vendor() {
+  const work = mkdtempSync(join(tmpdir(), 'vendor-godot-games-'));
+  rmSync(TARGET, { recursive: true, force: true });
+  mkdirSync(TARGET, { recursive: true });
+
+  let totalFiles = 0;
+  const summaries = [];
+  try {
+    for (const game of GAMES) {
+      const src = join(work, game.dir);
+      process.stdout.write(`  fetch   ${game.dir} @ ${game.commit.slice(0, 12)} … `);
+      fetchShallow(game.url, game.commit, src);
+      const files = copyPruned(src, join(TARGET, game.dir));
+      totalFiles += files;
+      summaries.push({ ...game, files });
+      console.log(`vendored ${files} files`);
+    }
+  } finally {
+    rmSync(work, { recursive: true, force: true });
   }
-} finally {
-  rmSync(work, { recursive: true, force: true });
+  writeFileSync(join(TARGET, 'README.md'), readme(summaries));
+  console.log(`\n[vendor-godot-games] ${summaries.length} games, ${totalFiles} files`);
+  return true;
 }
 
-const rows = summaries
-  .map(
-    (g) =>
-      `- **${g.name}** → \`scenes/games/${g.dir}/\` — Godot ${g.godot}\n` +
-      `  - Source: ${g.url} @ \`${g.commit}\`\n` +
-      `  - License: ${g.license}`
-  )
-  .join('\n');
+/** The corpus README: each game with its pin and licence. */
+function readme(summaries) {
+  const rows = summaries
+    .map(
+      (g) =>
+        `- **${g.name}** → \`scenes/games/${g.dir}/\` — Godot ${g.godot}\n` +
+        `  - Source: ${g.url} @ \`${g.commit}\`\n` +
+        `  - License: ${g.license}`
+    )
+    .join('\n');
 
-writeFileSync(
-  join(TARGET, 'README.md'),
-  `# Open-source Godot games (vendored)
+  return `# Open-source Godot games (vendored)
 
 Full community game projects copied in as the "proper games" corpus for
-previewer QA — real-world scene graphs to check feature completeness and hunt
+previewer QA: real-world scene graphs to check feature completeness and hunt
 bugs against, beyond the tiny fixtures and the godot-demo-projects breadth
 corpus (\`scenes/demos/\`).
 
@@ -100,17 +128,13 @@ ${rows}
 
 ## Maintenance
 
-- Vendored by \`scripts/vendor-godot-games.mjs\` (re-run to refresh; bump the
-  pinned \`commit\` in the \`GAMES\` array to update a game). Godot editor
-  artifacts (\`.godot/\`, \`screenshots/\`, the \`*.import\` sidecars the
-  previewer does not read) and source art (\`*.psd\`, \`*.xcf\`, \`*.blend\`)
-  are pruned; each game's \`LICENSE\` and
-  \`README.md\` are kept verbatim for attribution.
+- \`scripts/vendor-godot-games.mjs\` vendors this folder. A change to a pinned
+  \`commit\` in its \`GAMES\` array, or to the script, fetches again. The
+  \`.vendor-key\` file names the recipe that made the folder.
+- The vendoring prunes Godot editor artifacts (\`.godot/\`, \`screenshots/\`,
+  the \`*.import\` sidecars the previewer does not read) and source art
+  (\`*.psd\`, \`*.xcf\`, \`*.blend\`). It keeps each game's \`LICENSE\` and
+  \`README.md\` verbatim for attribution.
 - After running: \`pnpm generate:fixtures\`.
-`
-);
-
-console.log(`\n[vendor-godot-games] ${summaries.length} games, ${totalFiles} files`);
-console.log(
-  '[vendor-godot-games] now run: pnpm generate:fixtures (or use `pnpm vendor:games`, which does both)'
-);
+`;
+}
