@@ -52,47 +52,44 @@ describe('parseBinaryResource on a Godot bake', () => {
   });
 });
 
+/** A file whose main resource of `type` holds one property. */
+function resourceWith(type: string, name: string, variant: Uint8Array): ArrayBuffer {
+  return binaryResourceBytes({
+    strings: [name],
+    resources: [{ id: 'Main', type, properties: [{ name, variant }] }],
+  });
+}
+
+/** The text of the one property of a `type` resource, as the parser writes it. */
+async function propertyText(type: string, name: string, variant: Uint8Array): Promise<string | undefined> {
+  return (await parseBinaryResource(resourceWith(type, name, variant))).properties[name];
+}
+
 describe('parseBinaryResource on a null object', () => {
   const nullObject = new ByteWriter().u32(VariantTag.Object).u32(ObjectRef.Empty).bytes();
-  const withProperty = (type: string, name: string, variant: Uint8Array) =>
-    binaryResourceBytes({
-      strings: [name],
-      resources: [{ id: 'Main', type, properties: [{ name, variant }] }],
-    });
-
   it('keeps a null Theme icon, which Theme stores when null (theme.cpp:123)', async () => {
-    const file = withProperty('Theme', 'Button/icons/checked', nullObject);
-    expect((await parseBinaryResource(file)).properties['Button/icons/checked']).toBe('null');
+    expect(await propertyText('Theme', 'Button/icons/checked', nullObject)).toBe('null');
   });
 
   it('leaves out a null property of another resource, such as its material', async () => {
-    const file = withProperty('ArrayMesh', 'lightmap_size_hint_material', nullObject);
+    const file = resourceWith('ArrayMesh', 'lightmap_size_hint_material', nullObject);
     expect((await parseBinaryResource(file)).properties).toEqual({});
   });
 
   it('writes a null object inside an array as null (edge case)', async () => {
     const array = new ByteWriter().u32(VariantTag.Array).u32(1).raw(nullObject).bytes();
-    const file = withProperty('Resource', 'items', array);
-    expect((await parseBinaryResource(file)).properties.items).toBe('[null]');
+    expect(await propertyText('Resource', 'items', array)).toBe('[null]');
   });
 });
 
 describe('parseBinaryResource on a collection property', () => {
   const emptyArray = new ByteWriter().u32(VariantTag.Array).u32(0).bytes();
-  const withProperty = (type: string, name: string) =>
-    binaryResourceBytes({
-      strings: [name],
-      resources: [{ id: 'Main', type, properties: [{ name, variant: emptyArray }] }],
-    });
-
   it('types an array an ancestor declares typed, as a FontFile inherits Font.fallbacks', async () => {
-    expect((await parseBinaryResource(withProperty('FontFile', 'fallbacks'))).properties.fallbacks).toBe(
-      'Array[Font]([])'
-    );
+    expect(await propertyText('FontFile', 'fallbacks', emptyArray)).toBe('Array[Font]([])');
   });
 
   it('leaves an untyped array untyped', async () => {
-    expect((await parseBinaryResource(withProperty('Resource', 'items'))).properties.items).toBe('[]');
+    expect(await propertyText('Resource', 'items', emptyArray)).toBe('[]');
   });
 });
 
@@ -209,9 +206,10 @@ describe('parseBinaryResource on each header and table form', () => {
     expect((await parseBinaryResource(file)).properties.mesh).toBe('SubResource("2")');
   });
 
+  const stringKey = (key: string) => new ByteWriter().u32(VariantTag.String).unicodeString(key).bytes();
+  const int = (value: number) => new ByteWriter().u32(VariantTag.Int).u32(value).bytes();
+
   it('writes the string keys of a dictionary in the order Godot writes them, not the file order', async () => {
-    const stringKey = (key: string) => new ByteWriter().u32(VariantTag.String).unicodeString(key).bytes();
-    const int = (value: number) => new ByteWriter().u32(VariantTag.Int).u32(value).bytes();
     const variant = new ByteWriter()
       .u32(VariantTag.Dictionary)
       .u32(2)
@@ -220,18 +218,10 @@ describe('parseBinaryResource on each header and table form', () => {
       .raw(stringKey('format'))
       .raw(int(7))
       .bytes();
-    const file = binaryResourceBytes({
-      strings: ['surface'],
-      resources: [{ id: 'Main', type: 'Resource', properties: [{ name: 'surface', variant }] }],
-    });
-    expect((await parseBinaryResource(file)).properties.surface).toBe(
-      '{\n"format": 7,\n"vertex_count": 24\n}'
-    );
+    expect(await propertyText('Resource', 'surface', variant)).toBe('{\n"format": 7,\n"vertex_count": 24\n}');
   });
 
   it('sorts a key above U+FFFF by code point, where UTF-16 order puts it first (edge case)', async () => {
-    const stringKey = (key: string) => new ByteWriter().u32(VariantTag.String).unicodeString(key).bytes();
-    const int = (value: number) => new ByteWriter().u32(VariantTag.Int).u32(value).bytes();
     const variant = new ByteWriter()
       .u32(VariantTag.Dictionary)
       .u32(2)
@@ -240,11 +230,7 @@ describe('parseBinaryResource on each header and table form', () => {
       .raw(stringKey('\uFFFD'))
       .raw(int(2))
       .bytes();
-    const file = binaryResourceBytes({
-      strings: ['surface'],
-      resources: [{ id: 'Main', type: 'Resource', properties: [{ name: 'surface', variant }] }],
-    });
-    expect((await parseBinaryResource(file)).properties.surface).toBe('{\n"\uFFFD": 2,\n"\u{1F600}": 1\n}');
+    expect(await propertyText('Resource', 'surface', variant)).toBe('{\n"\uFFFD": 2,\n"\u{1F600}": 1\n}');
   });
 
   describe('a dictionary with keys of other types', () => {
@@ -272,11 +258,7 @@ describe('parseBinaryResource on each header and table form', () => {
     const dictionaryOf = async (...keys: Uint8Array[]) => {
       const writer = new ByteWriter().u32(VariantTag.Dictionary).u32(keys.length);
       for (const k of keys) writer.raw(k).raw(nil);
-      const file = binaryResourceBytes({
-        strings: ['map'],
-        resources: [{ id: 'Main', type: 'Resource', properties: [{ name: 'map', variant: writer.bytes() }] }],
-      });
-      return (await parseBinaryResource(file)).properties.map;
+      return propertyText('Resource', 'map', writer.bytes());
     };
     const lines = (...keys: string[]) => `{\n${keys.map((k) => `${k}: null`).join(',\n')}\n}`;
 

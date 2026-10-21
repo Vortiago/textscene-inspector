@@ -41,7 +41,16 @@ export function tableString(reader: ByteReader, tables: VariantTables): string {
 
 /** The next variant as Godot's text format spells it. */
 function variantText(reader: ByteReader, tables: VariantTables): string {
-  return taggedVariantText(reader.u32() as Tag, reader, tables);
+  return taggedVariant(reader.u32() as Tag, reader, tables).text;
+}
+
+/** The next variant, read once for its text and for its order as a dictionary key. */
+function readVariant(reader: ByteReader, tables: VariantTables): ReadVariant {
+  const tag = reader.u32() as Tag;
+  const type = VARIANT_TYPE_OF_TAG[tag];
+  if (type === undefined) throw new Error(`expected a binary variant tag, got ${tag as number}`);
+  const { text, value } = taggedVariant(tag, reader, tables);
+  return { text, order: { type, ...value } };
 }
 
 /**
@@ -51,43 +60,111 @@ function variantText(reader: ByteReader, tables: VariantTables): string {
  */
 export function propertyValueText(reader: ByteReader, tables: VariantTables): string | null {
   const tag = reader.u32() as Tag;
-  return tag === Tag.Object ? objectText(reader, tables) : taggedVariantText(tag, reader, tables);
+  return tag === Tag.Object ? objectText(reader, tables) : taggedVariant(tag, reader, tables).text;
 }
 
-function taggedVariantText(tag: Tag, reader: ByteReader, tables: VariantTables): string {
+/** The variants `OP_LESS` orders (`variant_op.cpp:731-745`) carry their value. The rest carry none. */
+function taggedVariant(
+  tag: Tag,
+  reader: ByteReader,
+  tables: VariantTables
+): { text: string; value: KeyValue } {
+  switch (tag) {
+    case Tag.Bool: {
+      const isTrue = reader.u32() !== 0;
+      return numbered(isTrue ? 'true' : 'false', [isTrue ? 1 : 0]);
+    }
+    case Tag.Int:
+      return integer(reader.i32());
+    case Tag.Int64:
+      return integer(reader.i64());
+    // The loader reads a RID as its int id (`:388-390`).
+    case Tag.Rid:
+      return integer(reader.u32());
+    case Tag.Float:
+      return real(reader.real());
+    case Tag.Double:
+      return real(reader.f64());
+    case Tag.String: {
+      const value = reader.unicodeString();
+      return { text: stringLiteral(value), value: { kind: 'text', value } };
+    }
+    case Tag.StringName: {
+      const value = reader.unicodeString();
+      return { text: stringNameLiteral(value), value: { kind: 'text', value } };
+    }
+    case Tag.Vector2:
+      return realVector(
+        'Vector2',
+        repeat(2, () => reader.real())
+      );
+    case Tag.Vector2i:
+      return intVector(
+        'Vector2i',
+        repeat(2, () => reader.i32())
+      );
+    case Tag.Vector3:
+      return realVector(
+        'Vector3',
+        repeat(3, () => reader.real())
+      );
+    case Tag.Vector3i:
+      return intVector(
+        'Vector3i',
+        repeat(3, () => reader.i32())
+      );
+    case Tag.Vector4:
+      return realVector(
+        'Vector4',
+        repeat(4, () => reader.real())
+      );
+    case Tag.Vector4i:
+      return intVector(
+        'Vector4i',
+        repeat(4, () => reader.i32())
+      );
+    case Tag.Array: {
+      const elements = repeat(reader.u32() & SHARED_LENGTH_MASK, () => readVariant(reader, tables));
+      return {
+        text: `[${elements.map(({ text }) => text).join(', ')}]`,
+        value: { kind: 'array', value: elements.map(({ order }) => order) },
+      };
+    }
+    default:
+      return { text: unorderedVariantText(tag, reader, tables), value: UNORDERED };
+  }
+}
+
+const UNORDERED: KeyValue = { kind: 'none' };
+
+function numbered(text: string, value: readonly (number | bigint)[]): { text: string; value: KeyValue } {
+  return { text, value: { kind: 'numbers', value } };
+}
+
+function integer(value: number | bigint): { text: string; value: KeyValue } {
+  return numbered(String(value), [value]);
+}
+
+function real(value: number): { text: string; value: KeyValue } {
+  return numbered(floatLiteral(value), [value]);
+}
+
+function realVector(typeName: string, values: number[]): { text: string; value: KeyValue } {
+  return numbered(call(typeName, values.map(componentLiteral)), values);
+}
+
+function intVector(typeName: string, values: number[]): { text: string; value: KeyValue } {
+  return numbered(call(typeName, values.map(String)), values);
+}
+
+function unorderedVariantText(tag: Tag, reader: ByteReader, tables: VariantTables): string {
   switch (tag) {
     case Tag.Nil:
       return 'null';
-    case Tag.Bool:
-      return reader.u32() !== 0 ? 'true' : 'false';
-    case Tag.Int:
-      return String(reader.i32());
-    case Tag.Int64:
-      return String(reader.i64());
-    case Tag.Float:
-      return floatLiteral(reader.real());
-    case Tag.Double:
-      return floatLiteral(reader.f64());
-    case Tag.String:
-      return stringLiteral(reader.unicodeString());
-    case Tag.StringName:
-      return stringNameLiteral(reader.unicodeString());
-    case Tag.Vector2:
-      return call('Vector2', reals(reader, 2));
-    case Tag.Vector2i:
-      return call('Vector2i', ints(reader, 2));
     case Tag.Rect2:
       return call('Rect2', reals(reader, 4));
     case Tag.Rect2i:
       return call('Rect2i', ints(reader, 4));
-    case Tag.Vector3:
-      return call('Vector3', reals(reader, 3));
-    case Tag.Vector3i:
-      return call('Vector3i', ints(reader, 3));
-    case Tag.Vector4:
-      return call('Vector4', reals(reader, 4));
-    case Tag.Vector4i:
-      return call('Vector4i', ints(reader, 4));
     case Tag.Plane:
       return call('Plane', reals(reader, 4));
     case Tag.Quaternion:
@@ -108,9 +185,6 @@ function taggedVariantText(tag: Tag, reader: ByteReader, tables: VariantTables):
       return call('Color', floats(reader, 4));
     case Tag.NodePath:
       return nodePathText(reader, tables);
-    // The loader reads a RID as its int id (`:388-390`).
-    case Tag.Rid:
-      return String(reader.u32());
     case Tag.Object:
       return objectText(reader, tables) ?? 'null';
     case Tag.Callable:
@@ -119,8 +193,6 @@ function taggedVariantText(tag: Tag, reader: ByteReader, tables: VariantTables):
       return 'Signal()';
     case Tag.Dictionary:
       return dictionaryText(reader, tables);
-    case Tag.Array:
-      return `[${repeat(reader.u32() & SHARED_LENGTH_MASK, () => variantText(reader, tables)).join(', ')}]`;
     case Tag.PackedByteArray:
       return packedByteArrayText(reader);
     case Tag.PackedInt32Array:
@@ -225,15 +297,15 @@ function stringNameLiteral(value: string): string {
   return `&${stringLiteral(value)}`;
 }
 
-/** One dictionary entry, with its key as `Variant::operator<` compares it. */
-interface DictionaryEntry {
+/** A variant's text, and its value as `Variant::operator<` compares it. */
+interface ReadVariant {
   text: string;
   order: KeyOrder;
 }
 
 /**
  * A key as Godot orders it: its `Variant::Type`, then its value. A type with no `OP_LESS`
- * (`variant_op.cpp:731-745`) holds no value, and Godot leaves it where the file puts it.
+ * holds no value, and Godot leaves it where the file puts it.
  */
 type KeyOrder = { type: number } & KeyValue;
 
@@ -250,18 +322,14 @@ type KeyValue =
 function dictionaryText(reader: ByteReader, tables: VariantTables): string {
   const entries = repeat(reader.u32() & SHARED_LENGTH_MASK, () => dictionaryEntry(reader, tables));
   if (entries.length === 0) return '{}';
-  entries.sort((a, b) => (isKeyLess(a.order, b.order) ? -1 : isKeyLess(b.order, a.order) ? 1 : 0));
+  entries.sort((a, b) => compareKeys(a.order, b.order));
   const lines = entries.map(({ text }) => text);
   return `{\n${lines.join(',\n')}\n}`;
 }
 
-/** The key is read twice: once for its text, and once from the same bytes for its order. */
-function dictionaryEntry(reader: ByteReader, tables: VariantTables): DictionaryEntry {
-  const keyStart = reader.position;
-  const key = variantText(reader, tables);
-  reader.seek(keyStart);
-  const order = keyOrder(reader, tables);
-  return { text: `${key}: ${variantText(reader, tables)}`, order };
+function dictionaryEntry(reader: ByteReader, tables: VariantTables): ReadVariant {
+  const key = readVariant(reader, tables);
+  return { text: `${key.text}: ${variantText(reader, tables)}`, order: key.order };
 }
 
 /** The `Variant::Type` of each tag. A RID loads as its int id (`:388-390`). */
@@ -310,85 +378,40 @@ const VARIANT_TYPE_OF_TAG: Readonly<Record<Tag, number>> = {
   [Tag.PackedVector4Array]: VARIANT_TYPE.PACKED_VECTOR4_ARRAY,
 };
 
-/** The next variant as a key order. A type Godot cannot order is read past through its text. */
-function keyOrder(reader: ByteReader, tables: VariantTables): KeyOrder {
-  const tag = reader.u32() as Tag;
-  const type = VARIANT_TYPE_OF_TAG[tag];
-  if (type === undefined) throw new Error(`expected a binary variant tag, got ${tag as number}`);
-  return { type, ...keyValue(tag, reader, tables) };
-}
-
-function keyValue(tag: Tag, reader: ByteReader, tables: VariantTables): KeyValue {
-  const numbers = (value: readonly (number | bigint)[]): KeyValue => ({ kind: 'numbers', value });
-  switch (tag) {
-    case Tag.Bool:
-      return numbers([reader.u32() !== 0 ? 1 : 0]);
-    case Tag.Int:
-      return numbers([reader.i32()]);
-    case Tag.Int64:
-      return numbers([reader.i64()]);
-    case Tag.Float:
-      return numbers([reader.real()]);
-    case Tag.Double:
-      return numbers([reader.f64()]);
-    case Tag.Rid:
-      return numbers([reader.u32()]);
-    case Tag.String:
-    case Tag.StringName:
-      return { kind: 'text', value: reader.unicodeString() };
-    case Tag.Vector2:
-      return numbers(repeat(2, () => reader.real()));
-    case Tag.Vector2i:
-      return numbers(repeat(2, () => reader.i32()));
-    case Tag.Vector3:
-      return numbers(repeat(3, () => reader.real()));
-    case Tag.Vector3i:
-      return numbers(repeat(3, () => reader.i32()));
-    case Tag.Vector4:
-      return numbers(repeat(4, () => reader.real()));
-    case Tag.Vector4i:
-      return numbers(repeat(4, () => reader.i32()));
-    case Tag.Array:
-      return {
-        kind: 'array',
-        value: repeat(reader.u32() & SHARED_LENGTH_MASK, () => keyOrder(reader, tables)),
-      };
-    default:
-      taggedVariantText(tag, reader, tables);
-      return { kind: 'none' };
-  }
-}
-
 /** `StringLikeVariantOrder::compare`: two string-like keys by their text, any other pair by `operator<`. */
-function isKeyLess(a: KeyOrder, b: KeyOrder): boolean {
-  if (a.kind === 'text' && b.kind === 'text') return codePointOrder(a.value, b.value) < 0;
-  return isVariantLess(a, b);
+function compareKeys(a: KeyOrder, b: KeyOrder): number {
+  return a.kind === 'text' && b.kind === 'text' ? codePointOrder(a.value, b.value) : compareVariants(a, b);
 }
 
-/** `Variant::operator<` (`variant.cpp:882-890`): by type, then by the type's `OP_LESS`, false without one. */
-function isVariantLess(a: KeyOrder, b: KeyOrder): boolean {
-  if (a.type !== b.type) return a.type < b.type;
-  if (a.kind === 'text' && b.kind === 'text') return codePointOrder(a.value, b.value) < 0;
-  if (a.kind === 'array' && b.kind === 'array') return isArrayLess(a.value, b.value);
-  if (a.kind === 'numbers' && b.kind === 'numbers') return isComponentLess(a.value, b.value);
-  return false;
+/**
+ * `Variant::operator<` (`variant.cpp:882-890`) as a three-way compare: by type, then by the type's
+ * `OP_LESS`. Zero where neither is less, as for a type with no `OP_LESS`.
+ */
+function compareVariants(a: KeyOrder, b: KeyOrder): number {
+  if (a.type !== b.type) return a.type - b.type;
+  if (a.kind === 'text' && b.kind === 'text') return codePointOrder(a.value, b.value);
+  if (a.kind === 'array' && b.kind === 'array') return compareArrays(a.value, b.value);
+  if (a.kind === 'numbers' && b.kind === 'numbers') return compareComponents(a.value, b.value);
+  return 0;
 }
 
-/** A scalar, or a vector compared component by component (`vector2.h:164`). */
-function isComponentLess(a: readonly (number | bigint)[], b: readonly (number | bigint)[]): boolean {
+/** A scalar, or a vector compared component by component, stopping at the first unequal one (`vector2.h:164`). */
+function compareComponents(a: readonly (number | bigint)[], b: readonly (number | bigint)[]): number {
   for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return a[i]! < b[i]!;
+    const left = a[i]!;
+    const right = b[i]!;
+    if (left !== right) return left < right ? -1 : right < left ? 1 : 0;
   }
-  return false;
+  return 0;
 }
 
 /** `Array::operator<` (`array.cpp:164-179`): element by element, then the shorter first. */
-function isArrayLess(a: readonly KeyOrder[], b: readonly KeyOrder[]): boolean {
+function compareArrays(a: readonly KeyOrder[], b: readonly KeyOrder[]): number {
   for (let i = 0; i < Math.min(a.length, b.length); i++) {
-    if (isVariantLess(a[i]!, b[i]!)) return true;
-    if (isVariantLess(b[i]!, a[i]!)) return false;
+    const order = compareVariants(a[i]!, b[i]!);
+    if (order !== 0) return order;
   }
-  return a.length < b.length;
+  return a.length - b.length;
 }
 
 /**

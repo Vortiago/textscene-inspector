@@ -149,8 +149,13 @@ function isEmptyScript(name: string, value: string): boolean {
  * no element type: the loader types the value by the property it sets (`.cpp:846-868`).
  */
 function typedText(type: string, name: string, value: string): string {
+  if (!isCollectionText(value)) return value;
   const prefix = typedCollectionPrefix(type, name);
   return prefix === undefined ? value : `${prefix}(${value})`;
+}
+
+function isCollectionText(value: string): boolean {
+  return value.startsWith('[') || value.startsWith('{');
 }
 
 /** A Theme's icon, style and font items carry `PROPERTY_USAGE_STORE_IF_NULL` (`theme.cpp:123-137`). */

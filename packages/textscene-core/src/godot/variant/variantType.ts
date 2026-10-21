@@ -47,53 +47,55 @@ export const VARIANT_TYPE = {
   PACKED_VECTOR4_ARRAY: 38,
 } as const;
 
-/** The engine name of each `Variant::Type`, indexed by its number, `Nil` (0) to `PackedVector4Array` (38). */
-const VARIANT_TYPE_NAMES: readonly string[] = [
-  'Nil',
-  'bool',
-  'int',
-  'float',
-  'String',
-  'Vector2',
-  'Vector2i',
-  'Rect2',
-  'Rect2i',
-  'Vector3',
-  'Vector3i',
-  'Transform2D',
-  'Vector4',
-  'Vector4i',
-  'Plane',
-  'Quaternion',
-  'AABB',
-  'Basis',
-  'Transform3D',
-  'Projection',
-  'Color',
-  'StringName',
-  'NodePath',
-  'RID',
-  'Object',
-  'Callable',
-  'Signal',
-  'Dictionary',
-  'Array',
-  'PackedByteArray',
-  'PackedInt32Array',
-  'PackedInt64Array',
-  'PackedFloat32Array',
-  'PackedFloat64Array',
-  'PackedStringArray',
-  'PackedVector2Array',
-  'PackedVector3Array',
-  'PackedColorArray',
-  'PackedVector4Array',
-];
+type VariantType = (typeof VARIANT_TYPE)[keyof typeof VARIANT_TYPE];
+
+/** The engine name of each `Variant::Type`, keyed by its constant so a type cannot lose its name. */
+const VARIANT_TYPE_NAMES: Readonly<Record<VariantType, string>> = {
+  [VARIANT_TYPE.NIL]: 'Nil',
+  [VARIANT_TYPE.BOOL]: 'bool',
+  [VARIANT_TYPE.INT]: 'int',
+  [VARIANT_TYPE.FLOAT]: 'float',
+  [VARIANT_TYPE.STRING]: 'String',
+  [VARIANT_TYPE.VECTOR2]: 'Vector2',
+  [VARIANT_TYPE.VECTOR2I]: 'Vector2i',
+  [VARIANT_TYPE.RECT2]: 'Rect2',
+  [VARIANT_TYPE.RECT2I]: 'Rect2i',
+  [VARIANT_TYPE.VECTOR3]: 'Vector3',
+  [VARIANT_TYPE.VECTOR3I]: 'Vector3i',
+  [VARIANT_TYPE.TRANSFORM2D]: 'Transform2D',
+  [VARIANT_TYPE.VECTOR4]: 'Vector4',
+  [VARIANT_TYPE.VECTOR4I]: 'Vector4i',
+  [VARIANT_TYPE.PLANE]: 'Plane',
+  [VARIANT_TYPE.QUATERNION]: 'Quaternion',
+  [VARIANT_TYPE.AABB]: 'AABB',
+  [VARIANT_TYPE.BASIS]: 'Basis',
+  [VARIANT_TYPE.TRANSFORM3D]: 'Transform3D',
+  [VARIANT_TYPE.PROJECTION]: 'Projection',
+  [VARIANT_TYPE.COLOR]: 'Color',
+  [VARIANT_TYPE.STRING_NAME]: 'StringName',
+  [VARIANT_TYPE.NODE_PATH]: 'NodePath',
+  [VARIANT_TYPE.RID]: 'RID',
+  [VARIANT_TYPE.OBJECT]: 'Object',
+  [VARIANT_TYPE.CALLABLE]: 'Callable',
+  [VARIANT_TYPE.SIGNAL]: 'Signal',
+  [VARIANT_TYPE.DICTIONARY]: 'Dictionary',
+  [VARIANT_TYPE.ARRAY]: 'Array',
+  [VARIANT_TYPE.PACKED_BYTE_ARRAY]: 'PackedByteArray',
+  [VARIANT_TYPE.PACKED_INT32_ARRAY]: 'PackedInt32Array',
+  [VARIANT_TYPE.PACKED_INT64_ARRAY]: 'PackedInt64Array',
+  [VARIANT_TYPE.PACKED_FLOAT32_ARRAY]: 'PackedFloat32Array',
+  [VARIANT_TYPE.PACKED_FLOAT64_ARRAY]: 'PackedFloat64Array',
+  [VARIANT_TYPE.PACKED_STRING_ARRAY]: 'PackedStringArray',
+  [VARIANT_TYPE.PACKED_VECTOR2_ARRAY]: 'PackedVector2Array',
+  [VARIANT_TYPE.PACKED_VECTOR3_ARRAY]: 'PackedVector3Array',
+  [VARIANT_TYPE.PACKED_COLOR_ARRAY]: 'PackedColorArray',
+  [VARIANT_TYPE.PACKED_VECTOR4_ARRAY]: 'PackedVector4Array',
+};
 
 /**
  * The engine name of a `Variant::Type` number, or `undefined` for a number the union does
  * not hold. A host shows the number itself there rather than inventing a name.
  */
 export function variantTypeName(type: number): string | undefined {
-  return VARIANT_TYPE_NAMES[type];
+  return VARIANT_TYPE_NAMES[type as VariantType];
 }

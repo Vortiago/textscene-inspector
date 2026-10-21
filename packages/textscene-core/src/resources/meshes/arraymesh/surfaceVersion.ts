@@ -38,6 +38,8 @@ export function currentVertexData(format: number, vertexData: Uint8Array, vertex
 
 /** `_convert_surface_version_1_to_surface_version_2` (`:2156-2208`): PNTPNT becomes PPNTNT. */
 function regionsFromInterleaved(format: number, interleaved: Uint8Array, vertexCount: number): Uint8Array {
+  // Not `surfaceLayout`: a version 1 surface has no compressed form, and the conversion sizes a 2D
+  // position and a missing attribute itself.
   const positionSize = !(format & ARRAY_FORMAT_VERTEX) ? 0 : format & ARRAY_FLAG_USE_2D_VERTICES ? 8 : 12;
   const frameSize =
     (format & ARRAY_FORMAT_NORMAL ? FRAME_PAIR_BYTES : 0) +

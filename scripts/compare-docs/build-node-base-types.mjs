@@ -13,7 +13,10 @@ import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/propertyHint.ts';
 import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
-import { variantTypeName } from '../../packages/textscene-core/src/godot/variant/variantType.ts';
+import {
+  VARIANT_TYPE,
+  variantTypeName,
+} from '../../packages/textscene-core/src/godot/variant/variantType.ts';
 
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
@@ -273,9 +276,6 @@ ${classes}
 `;
 }
 
-/** `Variant::OBJECT` and `PROPERTY_HINT_RESOURCE_TYPE`, which name a class in a `type/hint:hint_string` element hint. */
-const VARIANT_OBJECT = 24;
-
 /**
  * The type name Godot's text writer gives one element hint (`variant_parser.cpp:2262-2268,2363-2367`):
  * a bare type or class name, or `type/hint:hint_string`, whose resource hint names the class.
@@ -284,10 +284,11 @@ function elementTypeName(elementHint, where) {
   const numbered = /^(\d+)\/(\d+):(.*)$/.exec(elementHint);
   if (!numbered) return elementHint;
   const [, type, hint, hintString] = numbered;
-  if (Number(type) === VARIANT_OBJECT) {
+  // An Object element under `PROPERTY_HINT_RESOURCE_TYPE` names its class.
+  if (Number(type) === VARIANT_TYPE.OBJECT) {
     return Number(hint) === PROPERTY_HINT.RESOURCE_TYPE ? hintString : 'Object';
   }
-  if (Number(type) === 0) return 'Variant';
+  if (Number(type) === VARIANT_TYPE.NIL) return 'Variant';
   const name = variantTypeName(Number(type));
   if (name === undefined)
     throw new Error(`expected a Variant::Type number in the hint of ${where}, got ${type}`);
@@ -347,46 +348,52 @@ ${classes}
 `;
 }
 
+function readJson(path) {
+  return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/** The engine version a capture run recorded in the catalog. */
+function godotVersionOf(catalog) {
+  return catalog.godotVersion ?? 'unknown';
+}
+
 /** The typed collection module the committed artifact must equal. */
 export function renderFromTypedCollectionCaptures() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const catalog = readJson(CATALOG);
   return renderTypedCollectionsModule(
-    deriveTypedCollections(JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8'))),
-    catalog.godotVersion ?? 'unknown'
+    deriveTypedCollections(readJson(RESOURCE_PROPERTIES)),
+    godotVersionOf(catalog)
   );
 }
 
 /** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
 function readResourceBases() {
-  return assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
+  return assertAcyclic(readJson(RESOURCE_BASES), 'resource-bases.json');
 }
 
 /** The exclusion module the committed artifact must equal. */
 export function renderFromExclusionCaptures() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  const catalog = readJson(CATALOG);
   const properties = {
-    ...JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8')),
-    ...JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8')),
+    ...readJson(NODE_PROPERTIES),
+    ...readJson(RESOURCE_PROPERTIES),
   };
   const bases = { ...deriveBaseTypes(catalog.nodes), ...readResourceBases() };
-  return renderExclusionsModule(
-    deriveResourceTypeExclusions(properties, bases),
-    catalog.godotVersion ?? 'unknown'
-  );
+  return renderExclusionsModule(deriveResourceTypeExclusions(properties, bases), godotVersionOf(catalog));
 }
 
 /** The property module the committed artifact must equal. */
 export function renderFromPropertyCaptures() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  const nodeProperties = JSON.parse(readFileSync(NODE_PROPERTIES, 'utf8'));
-  const resourceProperties = JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8'));
-  return renderPropertiesModule(nodeProperties, resourceProperties, catalog.godotVersion ?? 'unknown');
+  const catalog = readJson(CATALOG);
+  const nodeProperties = readJson(NODE_PROPERTIES);
+  const resourceProperties = readJson(RESOURCE_PROPERTIES);
+  return renderPropertiesModule(nodeProperties, resourceProperties, godotVersionOf(catalog));
 }
 
 /** The module source the committed artifact must equal. */
 export function renderFromCatalog() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  return renderModule(deriveBaseTypes(catalog.nodes), catalog.godotVersion ?? 'unknown');
+  const catalog = readJson(CATALOG);
+  return renderModule(deriveBaseTypes(catalog.nodes), godotVersionOf(catalog));
 }
 
 /**
@@ -396,22 +403,21 @@ export function renderFromCatalog() {
  * one engine run; `resource-bases.json` is a bare map with nowhere to put it.
  */
 export function renderFromResourceBases() {
-  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
-  return renderResourceModule(readResourceBases(), catalog.godotVersion ?? 'unknown');
+  const catalog = readJson(CATALOG);
+  return renderResourceModule(readResourceBases(), godotVersionOf(catalog));
 }
 
 // Only write when run as a CLI, so the test can import the derivation.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const describeBaseTypes = (source) => `${source.match(/^ {2}\w+: '/gm)?.length ?? 0} base-type entries`;
   const describeProperties = (source) => `${source.match(/^\s*\["/gm)?.length ?? 0} property rows`;
-  const describeExclusions = (source) => `${source.match(/^ {4}"/gm)?.length ?? 0} excluding slots`;
-  const describeTypedCollections = (source) => `${source.match(/^ {4}"/gm)?.length ?? 0} typed collections`;
+  const describeNestedRows = (label) => (source) => `${source.match(/^ {4}"/gm)?.length ?? 0} ${label}`;
   const artifacts = [
     [OUT, renderFromCatalog(), describeBaseTypes],
     [RESOURCE_OUT, renderFromResourceBases(), describeBaseTypes],
     [PROPERTIES_OUT, renderFromPropertyCaptures(), describeProperties],
-    [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeExclusions],
-    [TYPED_COLLECTIONS_OUT, renderFromTypedCollectionCaptures(), describeTypedCollections],
+    [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeNestedRows('excluding slots')],
+    [TYPED_COLLECTIONS_OUT, renderFromTypedCollectionCaptures(), describeNestedRows('typed collections')],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);
