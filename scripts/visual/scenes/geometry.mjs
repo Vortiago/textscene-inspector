@@ -1,6 +1,6 @@
 /**
- * Meshes, CSG defaults, external ArrayMesh geometry, GridMap and 3D navigation:
- * the goldens whose subject is the geometry that reaches the renderer.
+ * Meshes, CSG defaults, external ArrayMesh geometry, GridMap, 3D navigation and the texel
+ * passes of an image import: the goldens whose subject is what reaches the renderer.
  */
 
 export const GEOMETRY_SCENES = [
@@ -99,6 +99,10 @@ export const GEOMETRY_SCENES = [
   // A glTF image takes its sidecar's texel passes: the default alpha-border pass turns the
   // magenta behind a transparent edge green, as Godot's import does.
   { name: 'gltf-alpha-border', file: 'unit-gltf-alpha-border.tscn' },
+  // The alpha-border pass on a soft-edged texture: transparent magenta texels take the disc's green,
+  // so the magnified edge fades green. Godot 4.6.3 and the previewer move together, up to 21/255
+  // per channel at the fringe if the sidecar turns the pass off.
+  { name: 'sprite-2d-soft-alpha-border', file: 'unit-sprite-2d-soft-alpha-border.tscn', mode: '2d' },
   // The same quad with a four-band atlas pins V orientation, which the
   // material-less `arraymesh` cannot see. Godot's V origin is the image top and
   // textures load with flipY=true, so a pass-through V samples upside down.
