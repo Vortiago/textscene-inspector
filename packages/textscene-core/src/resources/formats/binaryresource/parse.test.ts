@@ -28,8 +28,8 @@ describe('parseBinaryResource on a Godot bake', () => {
     ]);
   });
 
-  it('writes an external resource property as an ExtResource reference', async () => {
-    expect((await bake()).properties.lightmap_textures).toBe('[ExtResource("1")]');
+  it('writes a typed array property with its element type, as the property types it', async () => {
+    expect((await bake()).properties.lightmap_textures).toBe('Array[TextureLayered]([ExtResource("1")])');
   });
 
   it('writes an array of a node path, a rect and two integers', async () => {
@@ -43,12 +43,56 @@ describe('parseBinaryResource on a Godot bake', () => {
     expect((await bake()).properties.probe_data).toContain('"baked_exposure": 1.0');
   });
 
-  it('writes a null object as null', async () => {
-    expect((await bake()).properties.script).toBe('null');
+  it("leaves out a null object property, as Godot's text saver does", async () => {
+    expect((await bake()).properties).not.toHaveProperty('script');
   });
 
   it('keeps no sub-resource, as the bake holds only its main resource', async () => {
     expect((await bake()).subResources).toEqual([]);
+  });
+});
+
+describe('parseBinaryResource on a null object', () => {
+  const nullObject = new ByteWriter().u32(VariantTag.Object).u32(ObjectRef.Empty).bytes();
+  const withProperty = (type: string, name: string, variant: Uint8Array) =>
+    binaryResourceBytes({
+      strings: [name],
+      resources: [{ id: 'Main', type, properties: [{ name, variant }] }],
+    });
+
+  it('keeps a null Theme icon, which Theme stores when null (theme.cpp:123)', async () => {
+    const file = withProperty('Theme', 'Button/icons/checked', nullObject);
+    expect((await parseBinaryResource(file)).properties['Button/icons/checked']).toBe('null');
+  });
+
+  it('leaves out a null property of another resource, such as its material', async () => {
+    const file = withProperty('ArrayMesh', 'lightmap_size_hint_material', nullObject);
+    expect((await parseBinaryResource(file)).properties).toEqual({});
+  });
+
+  it('writes a null object inside an array as null (edge case)', async () => {
+    const array = new ByteWriter().u32(VariantTag.Array).u32(1).raw(nullObject).bytes();
+    const file = withProperty('Resource', 'items', array);
+    expect((await parseBinaryResource(file)).properties.items).toBe('[null]');
+  });
+});
+
+describe('parseBinaryResource on a collection property', () => {
+  const emptyArray = new ByteWriter().u32(VariantTag.Array).u32(0).bytes();
+  const withProperty = (type: string, name: string) =>
+    binaryResourceBytes({
+      strings: [name],
+      resources: [{ id: 'Main', type, properties: [{ name, variant: emptyArray }] }],
+    });
+
+  it('types an array an ancestor declares typed, as a FontFile inherits Font.fallbacks', async () => {
+    expect((await parseBinaryResource(withProperty('FontFile', 'fallbacks'))).properties.fallbacks).toBe(
+      'Array[Font]([])'
+    );
+  });
+
+  it('leaves an untyped array untyped', async () => {
+    expect((await parseBinaryResource(withProperty('Resource', 'items'))).properties.items).toBe('[]');
   });
 });
 
@@ -201,6 +245,79 @@ describe('parseBinaryResource on each header and table form', () => {
       resources: [{ id: 'Main', type: 'Resource', properties: [{ name: 'surface', variant }] }],
     });
     expect((await parseBinaryResource(file)).properties.surface).toBe('{\n"\uFFFD": 2,\n"\u{1F600}": 1\n}');
+  });
+
+  describe('a dictionary with keys of other types', () => {
+    const nil = new ByteWriter().u32(VariantTag.Nil).bytes();
+    const key = {
+      bool: (value: boolean) =>
+        new ByteWriter()
+          .u32(VariantTag.Bool)
+          .u32(value ? 1 : 0)
+          .bytes(),
+      int: (value: number) => new ByteWriter().u32(VariantTag.Int).u32(value).bytes(),
+      float: (value: number) => new ByteWriter().u32(VariantTag.Float).f32(value).bytes(),
+      string: (value: string) => new ByteWriter().u32(VariantTag.String).unicodeString(value).bytes(),
+      stringName: (value: string) => new ByteWriter().u32(VariantTag.StringName).unicodeString(value).bytes(),
+      vector2: (x: number, y: number) => new ByteWriter().u32(VariantTag.Vector2).f32(x).f32(y).bytes(),
+      color: (r: number) => new ByteWriter().u32(VariantTag.Color).f32(r).f32(0).f32(0).f32(1).bytes(),
+      rid: (id: number) => new ByteWriter().u32(VariantTag.Rid).u32(id).bytes(),
+      array: (...items: Uint8Array[]) => {
+        const writer = new ByteWriter().u32(VariantTag.Array).u32(items.length);
+        for (const item of items) writer.raw(item);
+        return writer.bytes();
+      },
+    };
+    /** The text of a dictionary whose keys are `keys`, in file order, each with a null value. */
+    const dictionaryOf = async (...keys: Uint8Array[]) => {
+      const writer = new ByteWriter().u32(VariantTag.Dictionary).u32(keys.length);
+      for (const k of keys) writer.raw(k).raw(nil);
+      const file = binaryResourceBytes({
+        strings: ['map'],
+        resources: [{ id: 'Main', type: 'Resource', properties: [{ name: 'map', variant: writer.bytes() }] }],
+      });
+      return (await parseBinaryResource(file)).properties.map;
+    };
+    const lines = (...keys: string[]) => `{\n${keys.map((k) => `${k}: null`).join(',\n')}\n}`;
+
+    it('orders keys of different types by their Variant::Type', async () => {
+      expect(
+        await dictionaryOf(key.vector2(0, 0), key.string('a'), key.float(0.5), key.int(1), key.bool(true))
+      ).toBe(lines('true', '1', '0.5', '"a"', 'Vector2(0, 0)'));
+    });
+
+    it('orders numbers and vectors by value, a vector component by component', async () => {
+      expect(await dictionaryOf(key.int(2), key.vector2(1, 0), key.int(1), key.vector2(0, 5))).toBe(
+        lines('1', '2', 'Vector2(0, 5)', 'Vector2(1, 0)')
+      );
+    });
+
+    it('orders a String and a StringName by their text, and either after an int', async () => {
+      expect(await dictionaryOf(key.string('b'), key.stringName('a'), key.int(1))).toBe(
+        lines('1', '&"a"', '"b"')
+      );
+    });
+
+    it('orders array keys element by element, then the shorter first', async () => {
+      expect(
+        await dictionaryOf(
+          key.array(key.int(2)),
+          key.array(key.int(1), key.int(5)),
+          key.array(key.int(1)),
+          key.array()
+        )
+      ).toBe(lines('[]', '[1]', '[1, 5]', '[2]'));
+    });
+
+    it('writes a RID key as the int the loader reads it as, and orders it among the ints', async () => {
+      expect(await dictionaryOf(key.int(9), key.rid(7))).toBe(lines('7', '9'));
+    });
+
+    it('keeps the file order of keys Godot cannot order, such as colours (edge case)', async () => {
+      expect(await dictionaryOf(key.color(1), key.color(0))).toBe(
+        lines('Color(1, 0, 0, 1)', 'Color(0, 0, 0, 1)')
+      );
+    });
   });
 
   it('refuses a format version newer than Godot 4.6 reads (error case)', async () => {

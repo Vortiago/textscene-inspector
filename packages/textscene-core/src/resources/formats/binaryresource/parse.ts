@@ -9,7 +9,8 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { ByteReader } from './byteReader';
 import { inflateCompressedStream } from './compressedStream';
-import { tableString, variantText, type VariantTables } from './variants';
+import { propertyValueText, tableString, type VariantTables } from './variants';
+import { typedCollectionPrefix } from '../../../godot/classdb/typedCollection';
 import {
   BINARY_FORMAT_VERSION,
   BINARY_RESOURCE_MAGIC,
@@ -128,7 +129,33 @@ function readResource(
   const propertyCount = reader.u32();
   for (let i = 0; i < propertyCount; i++) {
     const name = tableString(reader, tables);
-    data[name] = variantText(reader, tables);
+    const value = propertyValueText(reader, tables);
+    if (value !== null && !isEmptyScript(name, value)) data[name] = typedText(type, name, value);
+    else if (isStoredWhenNull(type, name)) data[name] = 'null';
   }
   return { id, type, data };
+}
+
+/**
+ * Whether the Object property `script` holds no script. The binary saver writes it as Nil, not as a
+ * null Object, because `get_script` returns an empty Variant (`object.cpp:470-475`, `:642`).
+ */
+function isEmptyScript(name: string, value: string): boolean {
+  return name === 'script' && value === 'null';
+}
+
+/**
+ * The value with the `Array[T]` or `Dictionary[K, V]` prefix of a typed property. The file stores
+ * no element type: the loader types the value by the property it sets (`.cpp:846-868`).
+ */
+function typedText(type: string, name: string, value: string): string {
+  const prefix = typedCollectionPrefix(type, name);
+  return prefix === undefined ? value : `${prefix}(${value})`;
+}
+
+/** A Theme's icon, style and font items carry `PROPERTY_USAGE_STORE_IF_NULL` (`theme.cpp:123-137`). */
+const THEME_ITEM_STORED_WHEN_NULL = /^[^/]+\/(icons|styles|fonts)\/[^/]+$/;
+
+function isStoredWhenNull(type: string, name: string): boolean {
+  return type === 'Theme' && THEME_ITEM_STORED_WHEN_NULL.test(name);
 }

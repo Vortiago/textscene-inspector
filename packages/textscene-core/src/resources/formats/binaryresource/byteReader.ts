@@ -17,6 +17,10 @@ export class ByteReader {
     this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
 
+  get position(): number {
+    return this.offset;
+  }
+
   seek(offset: number): void {
     this.offset = offset;
   }
