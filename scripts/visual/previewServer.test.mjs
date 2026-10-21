@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import {
   CANVAS_2D_CAPTURE,
+  CANVAS_CAPTURE,
   SHELL_CHROME,
   canvas2DViewportFor,
   FIXTURE_LOADING_TESTID,
@@ -20,6 +21,8 @@ import {
   SETTLE_SIM_SECONDS,
   SHOW_PERFORMANCE_STORAGE_KEY,
   TEXTURE_WORK_STATUS_TESTID,
+  VIEWPORT,
+  windowForCanvas,
 } from './preview/appContract.mjs';
 import { isUniformImage, sceneStillLoading, settleCanvas, writeCaptureImage } from './preview/capture.mjs';
 import { startPreview } from './preview/server.mjs';
@@ -475,5 +478,12 @@ describe('canvas2DViewportFor', () => {
   it('keeps the default window for a frame that already fits', () => {
     expect(canvas2DViewportFor(CANVAS_2D_CAPTURE)).toEqual(CANVAS_2D_CAPTURE.viewport);
     expect(canvas2DViewportFor(null)).toEqual(CANVAS_2D_CAPTURE.viewport);
+  });
+});
+
+describe('the 3D canvas size', () => {
+  it('is the 955 by 756 the default window measured, and the window of that canvas is the default', () => {
+    expect(CANVAS_CAPTURE).toEqual({ width: 955, height: 756 });
+    expect(windowForCanvas(CANVAS_CAPTURE)).toEqual(VIEWPORT);
   });
 });

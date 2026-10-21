@@ -16,33 +16,13 @@ import {
 // render-loop latency under host contention.
 const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
 
-/** The key a scene's `canvas` page is stored under in `pages.sizes`. */
-export function canvasKey({ width, height }) {
-  return `${width}x${height}`;
-}
-
-function required(pageState, scene, what) {
-  if (!pageState) throw new Error(`scene "${scene.name}" needs ${what}, which this run did not create`);
-  return pageState;
-}
-
-/** The page a scene captures on: the canvas2D context, a window sized for its canvas, or the default. */
-function pageStateFor(pages, scene) {
-  if (scene.mode === '2d') return required(pages.canvas2D, scene, 'the canvas2D capture context');
-  if (!scene.canvas) return pages.default;
-  const key = canvasKey(scene.canvas);
-  return required(pages.sizes[key], scene, `a ${key} capture window`);
-}
-
 /**
  * Navigates to a scene and captures its target after two byte-identical screenshots. Returns the
  * PNG buffer, or null with a reason when the scene never settles or logs a console error.
- * `pages.default` holds the framed 3D view, `pages.canvas2D` the 2D parity frame, which exists
- * only when a scene sets `mode: '2d'`, and `pages.sizes` one small 3D view per `canvas` size.
+ * `pageState` is the page the scene captures on (see `pagePool.mjs`).
  */
-export async function captureScene(pages, baseUrl, scene) {
+export async function captureScene(pageState, baseUrl, scene) {
   const canvas2D = scene.mode === '2d';
-  const pageState = pageStateFor(pages, scene);
   const { page, diagnostics } = pageState;
   clearDiagnostics(diagnostics);
 

@@ -85,11 +85,14 @@ export const CANVAS_2D_TESTIDS = {
 };
 
 /**
- * The canvas element's size inside VIEWPORT after the shell's chrome, as `settleCanvas`
- * returns it. Measured from the CSS layout, so a change to VIEWPORT means a new measurement. The
- * Godot harness defaults to it, so a probe at (x, y) addresses the same point on both sides.
+ * The canvas element's size inside VIEWPORT after the shell's chrome, as `settleCanvas` returns it
+ * (955 by 756). The Godot harness defaults to it, so a probe at (x, y) addresses the same point on
+ * both sides.
  */
-export const CANVAS_CAPTURE = { width: 955, height: 756 };
+export const CANVAS_CAPTURE = {
+  width: VIEWPORT.width - SHELL_CHROME.width,
+  height: VIEWPORT.height - SHELL_CHROME.height,
+};
 export const NETWORK_IDLE_MS = 20000; // Ceiling for the app's own resource chain to go quiet.
 // Covers CameraFit's last fit timer at 1100 ms. Its fit on a loader settle can come later, and
 // changes the frame, so the convergence loop below waits that one out.
