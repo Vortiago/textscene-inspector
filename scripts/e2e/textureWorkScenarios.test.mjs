@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkWorkerArm } from './textureWorkScenarios.mjs';
+import { checkSettleControl, checkWorkerArm } from './textureWorkScenarios.mjs';
 import { fakeGate } from './gate.testkit.mjs';
 
 const LARGE_TEXTURE = { inkOf: () => ({ inkPixels: 30000 }), inkFloor: 20000 };
@@ -46,6 +46,34 @@ describe('checkWorkerArm', () => {
     expect(gate.failures).toEqual([
       '[long tasks] the texture work status never came and went, or no worker replied: nothing was measured',
       '[long tasks] no job worker answered: the build did not run off the main thread',
+    ]);
+  });
+});
+
+/** A settle control whose three captures settled, with `delayed` fields over the held arm. */
+function settleControl(delayed) {
+  const frame = Buffer.from('frame');
+  return {
+    baseline: { buffer: frame, settledMs: 1700 },
+    delayed: { buffer: frame, settledMs: 6100, workers: 1, isHeldBuildReleased: true, ...delayed },
+    unwaited: { buffer: Buffer.from('placeholder'), settledMs: 1700 },
+  };
+}
+
+describe('checkSettleControl', () => {
+  it('passes a delayed capture that settled after the held build was released', () => {
+    const gate = fakeGate();
+    // The hold starts while the page opens, before the settle clock, so 5954 ms is a real wait.
+    checkSettleControl(gate, settleControl({ settledMs: 5954 }));
+    expect(gate.failures).toEqual([]);
+  });
+
+  it('fails a delayed capture that settled while the build was still held (error case)', () => {
+    const gate = fakeGate();
+    checkSettleControl(gate, settleControl({ isHeldBuildReleased: false }));
+    expect(gate.failures).toEqual([
+      '[texture settle] the delayed capture settled while the build was still held back: it cannot ' +
+        'have waited for the texture',
     ]);
   });
 });

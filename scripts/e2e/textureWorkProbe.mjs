@@ -57,14 +57,21 @@ export function installTextureWorkProbe(statusTestId) {
   else document.addEventListener('DOMContentLoaded', observe);
 }
 
-/** Holds the first job message a worker is sent for `delayMs`, as a slow build would. */
+/**
+ * Holds the first job message a worker is sent for `delayMs`, as a slow build would.
+ * `window.__isHeldBuildReleased` turns true once the message goes to the worker.
+ */
 export function installWorkerDelay(delayMs) {
   const post = window.Worker.prototype.postMessage;
   let delayed = false;
+  window.__isHeldBuildReleased = false;
   window.Worker.prototype.postMessage = function delayedPostMessage(...args) {
     if (delayed) return post.apply(this, args);
     delayed = true;
-    setTimeout(() => post.apply(this, args), delayMs);
+    setTimeout(() => {
+      window.__isHeldBuildReleased = true;
+      post.apply(this, args);
+    }, delayMs);
     return undefined;
   };
 }

@@ -57,9 +57,12 @@ async function captureSettled(browser, baseUrl, { delayWorker, waitForTextureWor
   const startedAt = Date.now();
   const { buffer, reason } = await settleCanvas(page, canvas, { waitForTextureWork });
   const settledMs = Date.now() - startedAt;
-  const probe = await page.evaluate(() => window.__textureWorkProbe);
+  const { probe, isHeldBuildReleased } = await page.evaluate(() => ({
+    probe: window.__textureWorkProbe,
+    isHeldBuildReleased: window.__isHeldBuildReleased,
+  }));
   await context.close();
-  return { buffer, reason, settledMs, workers: probe.workers };
+  return { buffer, reason, settledMs, workers: probe.workers, isHeldBuildReleased };
 }
 
 /**
@@ -157,10 +160,12 @@ export function checkSettleControl(gate, { baseline, delayed, unwaited }) {
     delayed.workers > 0,
     '[texture settle] the page started no job worker, so the delay held back nothing and proves nothing'
   );
+  // The page's own release flag, not `settledMs`: the hold starts while the page opens,
+  // before the settle clock does, so a real wait can read under `WORKER_DELAY_MS` (5954 ms).
   gate.check(
-    delayed.settledMs >= WORKER_DELAY_MS,
-    `[texture settle] the delayed capture settled after ${delayed.settledMs} ms, before the ` +
-      `${WORKER_DELAY_MS} ms the build was held back: it cannot have waited for the texture`
+    delayed.isHeldBuildReleased,
+    '[texture settle] the delayed capture settled while the build was still held back: it cannot ' +
+      'have waited for the texture'
   );
   if (baseline.buffer && delayed.buffer) {
     gate.check(
