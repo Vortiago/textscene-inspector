@@ -1,7 +1,7 @@
 /**
- * The `parent_id_path=` recovery for a heading whose `parent=` path does not walk, over the
- * headings of one scan. Both the tree builder, which re-roots a node the trail does not seat, and
- * the linter, which names where the trail lands, ask it here.
+ * The id-trail recovery over the headings of one scan: the `parent_id_path=` for a heading whose
+ * `parent=` path does not walk, and the `owner_uid_path=` for one whose `owner=` path does not.
+ * The tree builder and the linter both ask it here.
  */
 
 import type { NodeOrigin, RawNode } from './types.js';

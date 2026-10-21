@@ -720,7 +720,7 @@ unique_name_in_owner = true
     return reads;
   };
 
-  it('steps through each node on the owner path once', () => {
+  it('reads no more scenes than one walk to a node below the owner', () => {
     expect(sceneReads('Root/HudInstance/Lamp')).toBeLessThanOrEqual(
       sceneReads('Root/HudInstance/Widget/Face')
     );
