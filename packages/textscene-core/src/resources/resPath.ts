@@ -84,6 +84,14 @@ export function parentDir(path: string): string | null {
 }
 
 /**
+ * Whether a walk upward ends at `dir`, given the highest directory it may check: that directory itself, or one
+ * outside it, which is checked alone.
+ */
+export function isWalkEnd(walkBound: string, dir: string, pathCase: PathCase): boolean {
+  return isSamePath(dir, walkBound, pathCase) || !isWithinRoot(walkBound, dir, pathCase);
+}
+
+/**
  * `relative` with `.` and empty segments dropped and each `..` folded into its parent, or null when a `..` climbs
  * above where the path starts.
  */

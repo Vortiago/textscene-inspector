@@ -6,14 +6,15 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDiskResRoots } from './diskProject';
+import { forwardSlashes } from './resPath';
 
 let tempDir: string;
 let projectDir: string;
 let scenePath: string;
 
-/** `path` spelled with forward slashes, as a root's path is. */
-function forward(path: string): string {
-  return path.replace(/\\/g, '/');
+/** The root of the scene at `scenePath`, from a fresh instance with no workspace. */
+async function sceneRoot() {
+  return (await createDiskResRoots(null).rootOf(scenePath))!;
 }
 
 beforeAll(() => {
@@ -33,28 +34,22 @@ afterAll(() => {
 
 describe('createDiskResRoots rootOf', () => {
   it('gives the project root for a scene inside a project', async () => {
-    expect((await createDiskResRoots(null).rootOf(scenePath))?.path).toBe(forward(projectDir));
+    expect((await sceneRoot()).path).toBe(forwardSlashes(projectDir));
   });
 
   it('finds the project.godot above a workspace that lies inside the project', async () => {
     // A CLI run inside `game/scenes` takes the project above it: the walk has no bound but the filesystem root.
     const workspace = join(projectDir, 'scenes');
 
-    expect((await createDiskResRoots(workspace).rootOf(scenePath))?.path).toBe(forward(projectDir));
+    expect((await createDiskResRoots(workspace).rootOf(scenePath))?.path).toBe(forwardSlashes(projectDir));
   });
 
   it("gives the scene's own directory for a loose scene inside the workspace", async () => {
     const loose = join(tempDir, 'loose', 'dungeon');
 
     expect((await createDiskResRoots(tempDir).rootOf(join(loose, 'dungeon.tscn')))?.path).toBe(
-      forward(loose)
+      forwardSlashes(loose)
     );
-  });
-
-  it('gives null for a loose scene outside the workspace', async () => {
-    const roots = createDiskResRoots(projectDir);
-
-    expect(await roots.rootOf(join(tempDir, 'loose', 'dungeon', 'dungeon.tscn'))).toBeNull();
   });
 });
 
@@ -70,15 +65,15 @@ describe('createDiskResRoots invalidate', () => {
     const scene = join(dir, 'scenes', 'level.tscn');
     const roots = createDiskResRoots(dir);
     try {
-      expect((await roots.rootOf(scene))?.path).toBe(forward(join(dir, 'scenes')));
+      expect((await roots.rootOf(scene))?.path).toBe(forwardSlashes(join(dir, 'scenes')));
 
       writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
       roots.invalidate(join(dir, 'project.godot'));
-      expect((await roots.rootOf(scene))?.path).toBe(forward(dir));
+      expect((await roots.rootOf(scene))?.path).toBe(forwardSlashes(dir));
 
       rmSync(join(dir, 'project.godot'));
       roots.invalidate(join(dir, 'project.godot'));
-      expect((await roots.rootOf(scene))?.path).toBe(forward(join(dir, 'scenes')));
+      expect((await roots.rootOf(scene))?.path).toBe(forwardSlashes(join(dir, 'scenes')));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -103,7 +98,7 @@ describe('createDiskResRoots invalidate', () => {
 
 describe('a disk root', () => {
   it('reads a binary resource as bytes and a text resource as a string', async () => {
-    const root = (await createDiskResRoots(null).rootOf(scenePath))!;
+    const root = await sceneRoot();
     const bytes = await root.loadResource('res://models/tree.glb', 'PackedScene');
 
     expect([...new Uint8Array(bytes as ArrayBuffer)]).toEqual([0x67, 0x6c, 0x54, 0x46]);
@@ -111,14 +106,14 @@ describe('a disk root', () => {
   });
 
   it('stamps a file with its modification time and size', async () => {
-    const root = (await createDiskResRoots(null).rootOf(scenePath))!;
+    const root = await sceneRoot();
     const { mtimeMs, size } = statSync(join(projectDir, 'models', 'tree.glb'));
 
     expect(await root.stamp('res://models/tree.glb')).toBe(`${mtimeMs}:${size}`);
   });
 
   it('changes the stamp of a file that is rewritten', async () => {
-    const root = (await createDiskResRoots(null).rootOf(scenePath))!;
+    const root = await sceneRoot();
     const file = join(projectDir, 'models', 'stamped.glb');
     writeFileSync(file, new Uint8Array([1]));
     const before = await root.stamp('res://models/stamped.glb');
@@ -128,9 +123,11 @@ describe('a disk root', () => {
   });
 
   it('resolves a file and not a directory', async () => {
-    const root = (await createDiskResRoots(null).rootOf(scenePath))!;
+    const root = await sceneRoot();
 
-    expect(await root.resolve('res://models/tree.glb')).toBe(forward(join(projectDir, 'models', 'tree.glb')));
+    expect(await root.resolve('res://models/tree.glb')).toBe(
+      forwardSlashes(join(projectDir, 'models', 'tree.glb'))
+    );
     expect(await root.resolve('res://models')).toBeNull();
   });
 });

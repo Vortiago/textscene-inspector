@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   createConnection,
   DidChangeWatchedFilesNotification,
+  FileChangeType,
   ProposedFeatures,
   TextDocumentSyncKind,
   TextDocuments,
@@ -187,7 +188,9 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeWatchedFiles(({ changes }) => {
-  for (const { uri } of changes) {
+  for (const { uri, type } of changes) {
+    // A saved file keeps its place in every root and listing. Only a file that appears or goes changes one.
+    if (type === FileChangeType.Changed) continue;
     const path = filePathOf(uri);
     if (path !== null) resRoots.invalidate(path);
   }

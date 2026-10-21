@@ -137,23 +137,22 @@ describe('workspaceRoot', () => {
   });
 });
 
+/** The root of `/work/game`, over `files` and a `project.godot` there, with a file outside the project beside it. */
+async function gameRoot(files: MemoryFiles = memoryFiles()): Promise<ResRoot> {
+  files.set('/work/game/project.godot', 'config_version=5\n');
+  files.set('/work/secret.txt', 'outside the project');
+  return (await createResRoots(memoryPort(files), null).rootOf('/work/game/scenes/level.tscn'))!;
+}
+
 describe('a root as a resource provider', () => {
-  const GAME = '/work/game';
-
-  /** The root of `/work/game` over `files`, which gain a `project.godot` there. */
-  async function gameRoot(files: MemoryFiles = memoryFiles()): Promise<ResRoot> {
-    files.set(`${GAME}/project.godot`, 'config_version=5\n');
-    return (await createResRoots(memoryPort(files), null).rootOf(`${GAME}/scenes/level.tscn`))!;
-  }
-
   it('reads a text resource as a string', async () => {
-    const root = await gameRoot(new Map([[`${GAME}/scenes/level.tscn`, '[gd_scene format=3]\n']]));
+    const root = await gameRoot(new Map([['/work/game/scenes/level.tscn', '[gd_scene format=3]\n']]));
 
     expect(await root.loadResource('res://scenes/level.tscn', 'PackedScene')).toBe('[gd_scene format=3]\n');
   });
 
   it('reads a binary resource as bytes', async () => {
-    const root = await gameRoot(new Map([[`${GAME}/models/tree.glb`, 'glTF']]));
+    const root = await gameRoot(new Map([['/work/game/models/tree.glb', 'glTF']]));
     const data = await root.loadResource('res://models/tree.glb', 'PackedScene');
 
     expect(data).toBeInstanceOf(ArrayBuffer);
@@ -167,13 +166,13 @@ describe('a root as a resource provider', () => {
   });
 
   it('refuses a path that escapes the root', async () => {
-    const root = await gameRoot(new Map([['/work/secret.txt', 'outside the project']]));
+    const root = await gameRoot();
 
     expect(await root.loadResource('res://../secret.txt', 'TextFile')).toBeNull();
   });
 
   it('refuses a path that is not res://', async () => {
-    const root = await gameRoot(new Map([['/work/secret.txt', 'outside the project']]));
+    const root = await gameRoot();
 
     expect(await root.loadResource('/work/secret.txt', 'TextFile')).toBeNull();
   });
@@ -181,19 +180,14 @@ describe('a root as a resource provider', () => {
 
 describe('a root stamp', () => {
   it('is the modification time and size of the file', async () => {
-    const files = new Map([['/work/game/models/tree.glb', 'glTF']]);
-    files.set('/work/game/project.godot', '');
-    const root = (await createResRoots(memoryPort(files), null).rootOf('/work/game/a.tscn'))!;
+    const root = await gameRoot(new Map([['/work/game/models/tree.glb', 'glTF']]));
 
     expect(await root.stamp('res://models/tree.glb')).toBe('1:4');
   });
 
   it('changes when the file is rewritten', async () => {
-    const files = new Map([
-      ['/work/game/project.godot', ''],
-      ['/work/game/a.glb', '1'],
-    ]);
-    const root = (await createResRoots(memoryPort(files), null).rootOf('/work/game/a.tscn'))!;
+    const files = new Map([['/work/game/a.glb', '1']]);
+    const root = await gameRoot(files);
     const before = await root.stamp('res://a.glb');
     files.set('/work/game/a.glb', '12');
 
@@ -201,29 +195,17 @@ describe('a root stamp', () => {
   });
 
   it('gives null for a file the project does not hold', async () => {
-    const root = (await createResRoots(memoryPort(memoryFiles('/work/game/project.godot')), null).rootOf(
-      '/work/game/a.tscn'
-    ))!;
-
-    expect(await root.stamp('res://missing.glb')).toBeNull();
+    expect(await (await gameRoot()).stamp('res://missing.glb')).toBeNull();
   });
 
   it('gives null for a path that escapes the root', async () => {
-    const files = memoryFiles('/work/game/project.godot', '/work/secret.txt');
-    const root = (await createResRoots(memoryPort(files), null).rootOf('/work/game/a.tscn'))!;
-
-    expect(await root.stamp('res://../secret.txt')).toBeNull();
+    expect(await (await gameRoot()).stamp('res://../secret.txt')).toBeNull();
   });
 });
 
 describe('a root resolve', () => {
-  async function gameRoot(...paths: string[]): Promise<ResRoot> {
-    const files = memoryFiles('/work/game/project.godot', '/work/secret.txt', ...paths);
-    return (await createResRoots(memoryPort(files), null).rootOf('/work/game/a.tscn'))!;
-  }
-
   it('gives the host path of a file the root holds', async () => {
-    const root = await gameRoot('/work/game/textures/floor.png');
+    const root = await gameRoot(memoryFiles('/work/game/textures/floor.png'));
 
     expect(await root.resolve('res://textures/floor.png')).toBe('/work/game/textures/floor.png');
   });
@@ -233,7 +215,7 @@ describe('a root resolve', () => {
   });
 
   it('gives null for a directory, which no editor opens as a document', async () => {
-    const root = await gameRoot('/work/game/textures/floor.png');
+    const root = await gameRoot(memoryFiles('/work/game/textures/floor.png'));
 
     expect(await root.resolve('res://textures')).toBeNull();
   });
