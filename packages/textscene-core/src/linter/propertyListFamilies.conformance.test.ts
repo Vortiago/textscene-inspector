@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { ruleRegistry } from './RuleRegistry.js';
 import { PROPERTY_LIST_FAMILIES } from '../godot/classdb/propertyListFamilies.js';
 import { node, scene, lint } from './testing/testkit';
+import { controlRoutes } from './testing/propertyListRoutes/controls.js';
 import '../nodes/2d/ui/itemlist/index.linter.js';
 import '../nodes/2d/ui/tabbar/index.linter.js';
 import '../nodes/2d/ui/tabcontainer/index.linter.js';
@@ -24,6 +25,11 @@ const pastCountArmsOf = (owner: string) =>
     .filter((arm) => arm.grounding.kind === 'engine' && arm.grounding.at === PAST_COUNT_GROUNDING);
 
 describe.each(PROPERTY_LIST_FAMILIES)('$owner $prefix', (family) => {
+  it('has a route row whose sample key sits in the declared family', () => {
+    const sampleKeys = controlRoutes.filter((row) => row.type === family.owner).map((row) => row.sample);
+    expect(sampleKeys).toContainEqual(expect.stringMatching(new RegExp(`^${family.prefix}0/`)));
+  });
+
   if (family.outOfBounds.policy === 'assigned') {
     it('has no past-count rule, since the helper assigns an index past the length', () => {
       expect(pastCountArmsOf(family.owner)).toHaveLength(0);

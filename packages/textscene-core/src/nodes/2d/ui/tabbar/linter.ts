@@ -63,7 +63,6 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
   // index at or past the length getter (property_list_helper.cpp:58), here `get_tab_count`
   // (tab_bar.cpp:2189). Only TabContainer enables out-of-bounds assign (tab_container.cpp:1294).
   // Godot's saver never writes this: `tabs.resize(p_count)` (tab_bar.cpp:755) keeps both in step.
-
   if (offending.size > 0) {
     const indices = listWrittenIndices(offending);
     reportArm(
