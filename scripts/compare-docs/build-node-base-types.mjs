@@ -2,7 +2,8 @@
  * Derives the Node and Resource class → base-type tables and the ClassDB property tables from
  * the committed engine captures (`pnpm nodes:base-types` writes
  * packages/textscene-core/src/godot/classdb/{node,resource}BaseTypes.generated.ts,
- * classProperties.generated.ts and resourceTypeExclusions.generated.ts). It never runs Godot: CI
+ * classProperties.generated.ts, resourceTypeExclusions.generated.ts and
+ * typedCollectionProperties.generated.ts). It never runs Godot: CI
  * has no engine, and the test beside it re-derives every output to prove it current.
  */
 
@@ -12,6 +13,7 @@ import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { PROPERTY_HINT } from '../../packages/textscene-core/src/godot/classdb/propertyHint.ts';
 import { resourceTypeHint } from '../../packages/textscene-core/src/godot/classdb/resourceTypeHint.ts';
+import { variantTypeName } from '../../packages/textscene-core/src/godot/variant/variantType.ts';
 
 const here = import.meta.dirname;
 export const CATALOG = join(here, 'node-catalog.json');
@@ -28,6 +30,7 @@ export const OUT = classdbModule('nodeBaseTypes.generated.ts');
 export const RESOURCE_OUT = classdbModule('resourceBaseTypes.generated.ts');
 export const PROPERTIES_OUT = classdbModule('classProperties.generated.ts');
 export const EXCLUSIONS_OUT = classdbModule('resourceTypeExclusions.generated.ts');
+export const TYPED_COLLECTIONS_OUT = classdbModule('typedCollectionProperties.generated.ts');
 
 /**
  * Refuses to write a table a walk cannot leave. Every consumer (`descendsFromClass`, `classBaseChain`,
@@ -270,6 +273,89 @@ ${classes}
 `;
 }
 
+/** `Variant::OBJECT` and `PROPERTY_HINT_RESOURCE_TYPE`, which name a class in a `type/hint:hint_string` element hint. */
+const VARIANT_OBJECT = 24;
+
+/**
+ * The type name Godot's text writer gives one element hint (`variant_parser.cpp:2262-2268,2363-2367`):
+ * a bare type or class name, or `type/hint:hint_string`, whose resource hint names the class.
+ */
+function elementTypeName(elementHint, where) {
+  const numbered = /^(\d+)\/(\d+):(.*)$/.exec(elementHint);
+  if (!numbered) return elementHint;
+  const [, type, hint, hintString] = numbered;
+  if (Number(type) === VARIANT_OBJECT) {
+    return Number(hint) === PROPERTY_HINT.RESOURCE_TYPE ? hintString : 'Object';
+  }
+  if (Number(type) === 0) return 'Variant';
+  const name = variantTypeName(Number(type));
+  if (name === undefined)
+    throw new Error(`expected a Variant::Type number in the hint of ${where}, got ${type}`);
+  return name;
+}
+
+/** The `Array[T]` or `Dictionary[K, V]` prefix of one row, or undefined for an untyped one. */
+function typedCollectionText(row, where) {
+  if (row.hint === PROPERTY_HINT.ARRAY_TYPE) return `Array[${elementTypeName(row.hint_string, where)}]`;
+  if (row.hint !== PROPERTY_HINT.DICTIONARY_TYPE) return undefined;
+  const [key, value] = row.hint_string.split(';');
+  return `Dictionary[${elementTypeName(key, where)}, ${elementTypeName(value, where)}]`;
+}
+
+/**
+ * Class → property → the `Array[T]` or `Dictionary[K, V]` prefix Godot's text writer puts on the
+ * value, under the class that declares it. A binary file stores no element type: the loader types
+ * a value by the property it sets (`resource_format_binary.cpp:846-868`), so a reader needs this.
+ *
+ * @param properties - class → own rows.
+ */
+export function deriveTypedCollections(properties) {
+  const typed = {};
+  for (const className of Object.keys(properties).sort((a, b) => a.localeCompare(b))) {
+    const slots = {};
+    for (const row of properties[className]) {
+      const text = typedCollectionText(row, `${className}.${row.name}`);
+      if (text !== undefined) slots[row.name] = text;
+    }
+    if (Object.keys(slots).length > 0) typed[className] = slots;
+  }
+  return typed;
+}
+
+/** The module source for the typed collection table. */
+function renderTypedCollectionsModule(typed, version) {
+  const classes = Object.entries(typed)
+    .map(([className, slots]) => {
+      const rows = Object.entries(slots)
+        .map(([name, text]) => `    ${JSON.stringify(name)}: ${JSON.stringify(text)},`)
+        .join('\n');
+      return `  ${JSON.stringify(className)}: {\n${rows}\n  },`;
+    })
+    .join('\n');
+  return `/**
+ * The resource properties whose value Godot types as \`Array[T]\` or \`Dictionary[K, V]\`, with the
+ * prefix its text writer puts on the value, derived from Godot ${version}'s ClassDB captures.
+ * AUTO-GENERATED - Do not edit manually. Run: pnpm nodes:base-types
+ *
+ * Each entry is class → property → prefix, under the class that declares the property. A reader
+ * finds an inherited property by walking the base chain in \`classBaseTypes\`.
+ */
+
+export const TYPED_COLLECTION_PROPERTIES: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({
+${classes}
+});
+`;
+}
+
+/** The typed collection module the committed artifact must equal. */
+export function renderFromTypedCollectionCaptures() {
+  const catalog = JSON.parse(readFileSync(CATALOG, 'utf8'));
+  return renderTypedCollectionsModule(
+    deriveTypedCollections(JSON.parse(readFileSync(RESOURCE_PROPERTIES, 'utf8'))),
+    catalog.godotVersion ?? 'unknown'
+  );
+}
+
 /** `resource-bases.json`, refused when cyclic. Flattened, so unlike the node side no chain shape rules a cycle out. */
 function readResourceBases() {
   return assertAcyclic(JSON.parse(readFileSync(RESOURCE_BASES, 'utf8')), 'resource-bases.json');
@@ -319,11 +405,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const describeBaseTypes = (source) => `${source.match(/^ {2}\w+: '/gm)?.length ?? 0} base-type entries`;
   const describeProperties = (source) => `${source.match(/^\s*\["/gm)?.length ?? 0} property rows`;
   const describeExclusions = (source) => `${source.match(/^ {4}"/gm)?.length ?? 0} excluding slots`;
+  const describeTypedCollections = (source) => `${source.match(/^ {4}"/gm)?.length ?? 0} typed collections`;
   const artifacts = [
     [OUT, renderFromCatalog(), describeBaseTypes],
     [RESOURCE_OUT, renderFromResourceBases(), describeBaseTypes],
     [PROPERTIES_OUT, renderFromPropertyCaptures(), describeProperties],
     [EXCLUSIONS_OUT, renderFromExclusionCaptures(), describeExclusions],
+    [TYPED_COLLECTIONS_OUT, renderFromTypedCollectionCaptures(), describeTypedCollections],
   ];
   for (const [path, source, describe] of artifacts) {
     writeFileSync(path, source);
