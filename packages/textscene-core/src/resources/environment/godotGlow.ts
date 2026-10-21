@@ -88,10 +88,10 @@ export function glowLevelSize(
 }
 
 /**
- * The highest level the glow texture has for a frame. Godot allocates it with the frame's halvings
- * to 1px (`render_scene_buffers_rd.cpp:521`) as its mip count, less one for the half-size texture
- * (`:531`), and builds no level past the last mip (`renderer_scene_render_rd.cpp:593`). Level 0 stays
- * for a frame too small to halve.
+ * The highest level index the glow texture has for a frame. Godot allocates it with one mip fewer
+ * than the frame's halvings to 1px (`render_scene_buffers_rd.cpp:521,531`) and builds no level past
+ * the last mip (`renderer_scene_render_rd.cpp:593`), so the top index is the halvings less two.
+ * Level 0 stays for a frame too small to halve.
  */
 export function glowLevelCap(width: number, height: number): number {
   const halvingsToOnePixel = Math.floor(Math.log2(Math.max(width, height)));
