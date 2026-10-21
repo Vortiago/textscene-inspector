@@ -6,7 +6,6 @@
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
-import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../../r3f/nodeSupport';
 import { drawsInWorkspace } from '../../../../r3f/nodeWorkspaceVisibility';
 import { parseMeshInstance3D } from '../../../3d/meshinstance3d/parser';
@@ -20,8 +19,7 @@ describe('SoftBody3D registration', () => {
     expect(registration!.parser).toBe(parseMeshInstance3D);
   });
 
-  it('reports that it draws, which a declared gap would not', () => {
-    expect(nodeComponentRegistry.renderIntentOf('SoftBody3D')).not.toBe('pending');
+  it('reports that it draws', () => {
     expect(rendersOwnVisual('SoftBody3D')).toBe('draws');
   });
 

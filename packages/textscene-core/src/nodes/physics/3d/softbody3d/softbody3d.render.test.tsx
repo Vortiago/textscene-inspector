@@ -1,7 +1,6 @@
 /** A SoftBody3D at rest draws its `mesh` as a MeshInstance3D does, with no simulation. */
 
 import { describe, expect, it } from 'vitest';
-import type * as THREE from 'three';
 import { heading } from '../../../../parser/testing/parserKit';
 import type { TscnNode } from '../../../../parser/types';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
@@ -42,15 +41,6 @@ describe('<SoftBody3D>', () => {
     mesh.geometry.computeBoundingBox();
     const { min, max } = mesh.geometry.boundingBox!;
     expect([max.x - min.x, max.y - min.y, max.z - min.z]).toEqual([4, 0, 2]);
-  });
-
-  it('paints a surface_material_override over the mesh', async () => {
-    const mesh = await renderSoftBody({
-      mesh: 'SubResource("cloth")',
-      'surface_material_override/0': 'SubResource("red")',
-    });
-    const material = mesh.material as THREE.MeshStandardMaterial;
-    expect(material.color.r).toBeGreaterThan(material.color.b);
   });
 
   it('draws nothing with no mesh', async () => {

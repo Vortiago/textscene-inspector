@@ -36,7 +36,9 @@ export interface SurfacedMesh {
 type MeshContent =
   /**
    * No mesh, a file that cannot load, or surfaces that cannot be read. Also a type no slice
-   * builds, which Godot draws: the caller's placeholder says this previewer does not.
+   * builds, which Godot draws: the caller's placeholder says this previewer does not. The
+   * resolution cannot tell no mesh from one that cannot load, so a caller that draws nothing
+   * for no mesh checks the reference itself.
    */
   | { kind: 'unresolved' }
   | { kind: 'loading' }

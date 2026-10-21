@@ -59,10 +59,10 @@ export function childIsRendered(renderer: TestRenderer): boolean {
 
 /** The element tree, for a test that re-renders it with `renderer.update`. */
 export function meshInstanceTree({ loader, node, internalResources, externalResources }: MeshInstanceScene) {
-  const MeshInstance3D = registeredComponent(node.type);
+  const Component = registeredComponent(node.type);
   return (
     <SceneStack loader={loader} scene={{ internalResources, externalResources }}>
-      <MeshInstance3D node={node} />
+      <Component node={node} />
     </SceneStack>
   );
 }

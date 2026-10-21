@@ -4,6 +4,7 @@ import type { ParsedHeading } from '../../../../parser/utils';
 import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import { finishCsgParse } from '../sharedParser';
 import { boolOr } from '../../../../parser/valueParsers';
+import { holdsResource } from '../../../../godot/scene/resourceLiteral';
 import type { CSGMesh3DProperties } from './types';
 
 export function parseCSGMesh3D(
@@ -17,7 +18,7 @@ export function parseCSGMesh3D(
     flipFaces: boolOr(properties.flip_faces, false, 'CSGMesh3D flip_faces'),
   };
 
-  if (properties.mesh) result.mesh = properties.mesh;
+  if (holdsResource(properties.mesh)) result.mesh = properties.mesh;
 
   // finishCsgParse copies the `material` path and `operation`.
   finishCsgParse(result, properties);
