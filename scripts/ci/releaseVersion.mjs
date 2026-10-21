@@ -17,6 +17,9 @@ export const RELEASE_PACKAGES = {
   tscn: 'apps/textscene-tscn',
 };
 
+/** Joins the example tags with "or", without the serial comma of American English. */
+const DISJUNCTION = new Intl.ListFormat('en-GB', { type: 'disjunction' });
+
 /** The workspace directories each package bundles, besides its own. Its release notes cover them. */
 export const RELEASE_INPUTS = {
   vscode: ['packages/textscene-core', 'apps/textscene-web'],
@@ -70,7 +73,7 @@ export function checkReleaseTag(tag, tags) {
   const release = parseReleaseTag(tag);
   if (!release) {
     const examples = Object.keys(RELEASE_PACKAGES).map((name) => `${name}-v1.2.3`);
-    return { error: `expected a tag like ${examples.join(', ')}, got ${JSON.stringify(tag)}` };
+    return { error: `expected a tag like ${DISJUNCTION.format(examples)}, got ${JSON.stringify(tag)}` };
   }
   const directory = RELEASE_PACKAGES[release.package];
   if (!directory) {
