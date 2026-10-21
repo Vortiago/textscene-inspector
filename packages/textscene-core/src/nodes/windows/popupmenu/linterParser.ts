@@ -7,7 +7,11 @@
 
 import '../window/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
+import {
+  propertyListFamilyKey,
+  propertyListFamilyValidator,
+} from '../../../linter/validators/indexedFamily.js';
+import { POPUP_MENU_ITEMS } from '../../../godot/classdb/propertyListFamilies.js';
 import { ITEM_CHECKABLE_TYPE_NAMES, OFFERED_SYSTEM_MENU_NAMES } from '../../../godot/scene/popupMenu.js';
 
 import { v } from '../../../linter/validators/index.js';
@@ -50,16 +54,10 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * `_set` and `_get` to `property_helper`. `item_0/text` glues the index to the prefix
  * (property_list_helper.cpp:149), hence `item_#/*` (ValidatorRegistry.findOwnValidator).
  */
-const itemValidator = indexedFamilyValidator({
-  prefix: 'item_',
+const itemValidator = propertyListFamilyValidator(POPUP_MENU_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item_<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed)',
-  // `_set` routes to `property_helper.property_set_value` (popup_menu.cpp:3092), whose
-  // `_get_property` (property_list_helper.cpp:47-55) returns nullptr unless the index
-  // `is_valid_int()` (property_list_helper.cpp:53-55): a dropped write. The
-  // `>= item_count` end needs a sibling, so linter.ts checks it.
-  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_ITEM_INDEX',
@@ -109,5 +107,5 @@ validatorRegistry.registerAll('PopupMenu', {
   // enforced; there is no ceiling anywhere.
   item_count: v.int('item_count', { min: 0, enforced: 'popup_menu.cpp:2698' }),
 
-  'item_#/*': itemValidator,
+  [propertyListFamilyKey(POPUP_MENU_ITEMS)]: itemValidator,
 });
