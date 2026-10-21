@@ -23,6 +23,7 @@ import {
   nonNegativeSizeOr,
   settableIntOr,
   settableFloatOr,
+  parseNonEmptyAabb,
   parseOptionalAabb,
   parseOptionalRect2,
   parseHeadingIndex,
@@ -369,6 +370,20 @@ describe('parseOptionalAabb', () => {
   it('warns and reports unset for a box of five components', () => {
     expect(parseOptionalAabb('AABB(0, 0, 0, 1, 1)', 'Box')).toBeUndefined();
     expect(warnSpy).toHaveBeenCalledOnce();
+  });
+});
+
+describe('parseNonEmptyAabb', () => {
+  it('gives the box a value spells', () => {
+    expect(parseNonEmptyAabb('AABB(0, 0, 0, 1, 2, 3)', 'custom_aabb')?.size).toEqual({ x: 1, y: 2, z: 3 });
+  });
+
+  it('gives no box for AABB(), which clears it (edge case)', () => {
+    expect(parseNonEmptyAabb('AABB(0, 0, 0, 0, 0, 0)', 'custom_aabb')).toBeNull();
+  });
+
+  it('gives no box for an absent value', () => {
+    expect(parseNonEmptyAabb(undefined, 'custom_aabb')).toBeNull();
   });
 });
 

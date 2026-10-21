@@ -20,6 +20,14 @@ describe('arrayMeshAabb', () => {
     expect(box.size).toEqual({ x: 5, y: 5, z: 5 });
   });
 
+  it('takes the surfaces for a custom_aabb of AABB(), which sets none (edge case)', () => {
+    const box = arrayMeshAabb({
+      custom_aabb: 'AABB(0, 0, 0, 0, 0, 0)',
+      _surfaces: `[${surface('AABB(-1, 0, 0, 1, 1, 1)')}]`,
+    });
+    expect(box.size).toEqual({ x: 1, y: 1, z: 1 });
+  });
+
   it('reads a surface with no stored box as AABB() (error case)', () => {
     expect(arrayMeshAabb({ _surfaces: '[{ "format": 1 }]' })).toEqual(EMPTY_AABB);
   });
