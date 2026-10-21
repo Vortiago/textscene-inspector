@@ -69,9 +69,8 @@ function sameSeries(release, tags) {
 export function checkReleaseTag(tag, tags) {
   const release = parseReleaseTag(tag);
   if (!release) {
-    return {
-      error: `expected a tag like vscode-v1.2.3, linter-v1.2.3, lsp-v1.2.3 or tscn-v1.2.3, got ${JSON.stringify(tag)}`,
-    };
+    const examples = Object.keys(RELEASE_PACKAGES).map((name) => `${name}-v1.2.3`);
+    return { error: `expected a tag like ${examples.join(', ')}, got ${JSON.stringify(tag)}` };
   }
   const directory = RELEASE_PACKAGES[release.package];
   if (!directory) {

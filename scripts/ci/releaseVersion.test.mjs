@@ -66,7 +66,7 @@ describe('checkReleaseTag', () => {
   it('refuses a pre-release tag, which the VS Marketplace cannot take', () => {
     expect(checkReleaseTag('vscode-v1.3.0-rc.1', [])).toEqual({
       error:
-        'expected a tag like vscode-v1.2.3, linter-v1.2.3, lsp-v1.2.3 or tscn-v1.2.3, got "vscode-v1.3.0-rc.1"',
+        'expected a tag like vscode-v1.2.3, linter-v1.2.3, lsp-v1.2.3, tscn-v1.2.3, got "vscode-v1.3.0-rc.1"',
     });
   });
 

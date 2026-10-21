@@ -14,6 +14,7 @@
   },
   "files": [
     "dist",
+    "!dist/*.meta.json",
     "THIRD-PARTY-NOTICES.md"
   ],
   "publishConfig": {
@@ -22,7 +23,7 @@
   "scripts": {
     "prebuild": "pnpm --filter @textscene/core build",
     "build": "node scripts/build.mjs",
-    "clean": "rimraf dist THIRD-PARTY-NOTICES.md",
+    "clean": "rimraf dist",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "pretype-check": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",

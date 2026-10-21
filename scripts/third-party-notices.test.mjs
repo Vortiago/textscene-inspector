@@ -11,7 +11,10 @@ import { join, relative, resolve, sep } from 'node:path';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const NOTICES = join(REPO_ROOT, 'THIRD-PARTY-NOTICES.md');
-const VSCODE_COPY = join(REPO_ROOT, 'apps', 'textscene-vscode', 'THIRD-PARTY-NOTICES.md');
+const PACKAGE_COPIES = [
+  join(REPO_ROOT, 'apps', 'textscene-vscode', 'THIRD-PARTY-NOTICES.md'),
+  join(REPO_ROOT, 'apps', 'textscene-tscn', 'THIRD-PARTY-NOTICES.md'),
+];
 
 /** The line every Godot-derived file carries. Matched loosely on the two names. */
 const GODOT_COPYRIGHT = /Copyright \(c\) 2007-2014 Juan Linietsky, Ariel Manzur/;
@@ -90,9 +93,9 @@ describe('THIRD-PARTY-NOTICES.md', () => {
     }
   );
 
-  it('is byte-identical to the copy shipped in the VSIX', () => {
-    // `vsce package` picks up the copy beside the extension's package.json, since `.vscodeignore`
-    // is a denylist. The root file is authoritative, and the copy must match it.
-    expect(readFileSync(VSCODE_COPY, 'utf8')).toBe(readFileSync(NOTICES, 'utf8'));
+  it.each(PACKAGE_COPIES)('is byte-identical to the copy shipped in %s', (copy) => {
+    // `vsce package` and `pnpm pack` pick up the copy beside the package's package.json. The root
+    // file is authoritative, and each copy must match it.
+    expect(readFileSync(copy, 'utf8')).toBe(readFileSync(NOTICES, 'utf8'));
   });
 });

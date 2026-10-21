@@ -1,19 +1,33 @@
 /**
- * Installs the packed tarball into a plain Node project, as a consumer does, and uses it. The
- * project has no bundler and no `@textscene/source` condition, so a bundle that leans on either
- * fails here.
+ * Builds @textscene/tscn once, then checks the bundle and installs the packed tarball into a plain
+ * Node project, as a consumer does. The project has no bundler and no `@textscene/source`
+ * condition, so a bundle that leans on either fails here.
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
+const bundlePath = join(packageDir, 'dist', 'index.js');
+const metafilePath = join(packageDir, 'dist', 'index.meta.json');
 const tscBin = join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
+
+/** The runtime exports of core's `./parser` and `./godot` entries. A new export is a decision to publish it. */
+const PUBLIC_VALUE_EXPORTS = [
+  'PROJECT_FILE_NAME',
+  'PROJECT_FILE_PATH',
+  'SCAN_STOP_FILES',
+  'TscnParser',
+  'importSidecarPath',
+  'isGodotTextResourcePath',
+  'isScannedPath',
+];
 
 const CONSUMER_SCRIPT = `
 import { TscnParser, PROJECT_FILE_NAME } from '@textscene/tscn';
@@ -63,17 +77,35 @@ afterAll(() => {
   if (consumerDir) rmSync(consumerDir, { recursive: true });
 });
 
+describe('@textscene/tscn bundle', () => {
+  it('exports exactly the parser and engine-fact entries of core', async () => {
+    const exported = await import(pathToFileURL(bundlePath).href);
+    expect(Object.keys(exported).sort()).toEqual(PUBLIC_VALUE_EXPORTS);
+  });
+
+  it('imports nothing, so it needs no dependency and no resolver condition', () => {
+    expect(readFileSync(bundlePath, 'utf8')).not.toMatch(/^\s*(import|export)\b[^;]*\sfrom\s*['"]/m);
+  });
+
+  it('holds no React and no three.js module', () => {
+    const metafile = JSON.parse(readFileSync(metafilePath, 'utf8'));
+    expect(Object.keys(metafile.inputs).length).toBeGreaterThan(100);
+    expect(findForbiddenHostInputs(metafile)).toEqual([]);
+  });
+});
+
 describe('@textscene/tscn tarball in a plain Node project', () => {
   it('imports and parses a scene', () => {
     const output = run('node', ['use.mjs'], consumerDir);
     expect(JSON.parse(output)).toEqual({ root: 'Root', projectFile: 'project.godot' });
   });
 
-  it('ships the licence and the third-party notices', () => {
+  it('ships the licence and the third-party notices, and no metafile', () => {
     const installed = join(consumerDir, 'node_modules', '@textscene', 'tscn');
     expect(
       ['LICENSE', 'THIRD-PARTY-NOTICES.md'].filter((file) => !existsSync(join(installed, file)))
     ).toEqual([]);
+    expect(existsSync(join(installed, 'dist', 'index.meta.json'))).toBe(false);
   });
 
   it('ships declarations that type-check without @textscene/core', () => {

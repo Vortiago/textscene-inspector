@@ -5,8 +5,6 @@ node_modules/
 
 # Build outputs
 dist/
-# Copied from the repository root by the @textscene/tscn build.
-apps/textscene-tscn/THIRD-PARTY-NOTICES.md
 out/
 build/
 *.tsbuildinfo

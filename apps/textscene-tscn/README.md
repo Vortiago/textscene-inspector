@@ -30,5 +30,5 @@ The package also exports the Godot engine facts the parser shares with the previ
 
 ## Licence
 
-MIT. The package ships `LICENSE` and `THIRD-PARTY-NOTICES.md`, which holds the Godot Engine MIT
-notice for the engine facts the parser transcribes.
+MIT. The package ships `LICENSE` and `THIRD-PARTY-NOTICES.md`, which holds the notices of the
+third-party code the repository transcribes, the Godot Engine MIT notice among them.
