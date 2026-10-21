@@ -1,0 +1,27 @@
+; The base scene for `unit-unique-viewport-inherited`: View claims its name in this scene's
+; owner table, which the inheriting root takes over (packed_scene.cpp:227-231).
+
+[gd_scene load_steps=3 format=3 uid="uid://unituniqueviewportbase"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_subject"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_subject"]
+shading_mode = 0
+albedo_color = Color(0.2, 0.8, 0.3, 1)
+
+[node name="Monitor" type="Node3D"]
+
+[node name="View" type="SubViewport" parent="."]
+unique_name_in_owner = true
+own_world_3d = true
+size = Vector2i(128, 128)
+render_target_update_mode = 4
+
+[node name="Subject" type="MeshInstance3D" parent="View"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+mesh = SubResource("SphereMesh_subject")
+surface_material_override/0 = SubResource("StandardMaterial3D_subject")
+
+[node name="Camera3D" type="Camera3D" parent="View"]

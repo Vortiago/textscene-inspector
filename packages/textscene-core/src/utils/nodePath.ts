@@ -8,6 +8,16 @@ export function joinPath(parentPath: string, childName: string): string {
   return parentPath ? `${parentPath}/${childName}` : childName;
 }
 
+/** The path from the node at `from` to the node at `to`, climbing with `..` where `to` is not below. */
+export function pathBetween(from: string, to: string): string {
+  const fromSegments = from.split('/');
+  const toSegments = to.split('/');
+  let shared = 0;
+  while (shared < fromSegments.length && fromSegments[shared] === toSegments[shared]) shared++;
+  const climbs = Array<string>(fromSegments.length - shared).fill('..');
+  return [...climbs, ...toSegments.slice(shared)].join('/');
+}
+
 export function getAncestorPaths(nodePath: string): string[] {
   const parts = nodePath.split('/');
   const ancestors: string[] = [];

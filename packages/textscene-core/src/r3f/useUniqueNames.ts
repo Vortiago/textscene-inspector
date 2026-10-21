@@ -6,10 +6,8 @@
 
 import { useMemo } from 'react';
 import { useResourceLoader } from '../resources/useResource.js';
-import { uniqueNameLivePaths } from '../utils/uniqueNames.js';
-import type { UniqueNameClaim } from '../parser/nodeOwner.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
-import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { liveTreeContext, useLiveTreeVersion } from './useLiveSceneTree.js';
 
 /**
@@ -41,33 +39,26 @@ function useStablePaths(
 }
 
 /**
- * The `%Name` table the node at `path` resolves against, or undefined with no
- * scene. A flag says a node claimed a name, and only the first claimant keeps
- * it, so the answer needs the whole tree. It is per owner: a name registers on
+ * The `%Name` table the node at `path` resolves against, as the live paths the dispatcher
+ * registers, or undefined with no scene. A flag says a node claimed a name, and only the first
+ * claimant keeps it, so the answer needs the whole tree. It is per owner: a name registers on
  * the claimant's owner (node.cpp:2222-2234) and resolves through the caller's (node.cpp:1930-1938).
  */
-function useUniqueNameClaims(path?: string | null): ReadonlyMap<string, UniqueNameClaim> | undefined {
-  const live = useLiveTree(path);
-  return useMemo(() => {
-    if (!live) return undefined;
-    // Without a path, the outer root's table, one shared object per tree unless a claim's live
-    // path passes through a `%Name`.
-    return ownerClaims(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx));
-  }, [live, path]);
-}
-
-/**
- * The `%Name` table the node at `path` resolves against, as the live paths the dispatcher
- * registers: the composed render tree spells a path as a claim's `livePath`.
- */
 export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, string> | undefined {
-  const claims = useUniqueNameClaims(path);
-  return useStablePaths(useMemo(() => claims && uniqueNameLivePaths(claims), [claims]));
+  const live = useLiveTree(path);
+  return useStablePaths(
+    useMemo(() => {
+      if (!live) return undefined;
+      // Without a path, the outer root's table. `useStablePaths` keeps one identity while its
+      // entries stay the same, since an inherited root's table is rebuilt on every call.
+      return ownerUniquePaths(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx));
+    }, [live, path])
+  );
 }
 
 /**
  * A local scene: the live path of its root, and the `%Name` table a walk from that root reads
- * ({@link localSceneClaims}). With no scene tree there is no table, so a `%Name` addresses
+ * ({@link localSceneUniquePaths}). With no scene tree there is no table, so a `%Name` addresses
  * nothing.
  */
 interface LocalScene {
@@ -86,10 +77,7 @@ export function useLocalScene(path: string | null): LocalScene | undefined {
     () => (live && path ? localSceneOf(path, live.roots, live.ctx) : undefined),
     [live, path]
   );
-  // Keyed on the table, not the owner: the outer root's table is one cached object, while
-  // the walk builds a fresh owner on every load tick.
-  const claims = useMemo(() => owner && localSceneClaims(owner), [owner]);
-  const uniquePaths = useStablePaths(useMemo(() => claims && uniqueNameLivePaths(claims), [claims]));
+  const uniquePaths = useStablePaths(useMemo(() => owner && localSceneUniquePaths(owner), [owner]));
   const rootPath = owner?.path ?? path?.split('/')[0];
   return useMemo(() => (rootPath ? { path: rootPath, uniquePaths } : undefined), [rootPath, uniquePaths]);
 }

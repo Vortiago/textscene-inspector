@@ -159,6 +159,11 @@ export function walkFromRoot(path: string | undefined, tree?: RootWalkTables): s
   return Array.isArray(end) ? end.join('/') : end;
 }
 
+/** The path a walk ended on, the unlisted rest for an {@link UnlistedEnd}, or null where it found nothing. */
+export function walkedPath(end: string | null | UnlistedEnd): string | null {
+  return end === null || typeof end === 'string' ? end : end.unlisted;
+}
+
 /**
  * A raw `NodePath("…")` property value on the node at `basePath`, resolved against that node as
  * `get_node_or_null` resolves it, or null when it addresses no other node in the scene.

@@ -66,30 +66,39 @@ export function singleSceneCache(
  * yet cached and a scene already in `scope.instancedScenePaths` (cyclic
  * instancing) return unchanged.
  *
- * It collapses an instance chain to a fixed point, not one level. A host override
- * such as `visible = false` on a heading with no `type=` stays in `rawProperties`
- * until a level with a real type re-parses it, so one level loses it. The chain
- * stops at a scene that already encloses the node, so a scene that instances
- * itself ends.
+ * An inherited sub-scene root collapses over its base first, as Godot instantiates the base
+ * before the inheriting file's headings land (packed_scene.cpp:227-231), and the host merges
+ * onto that composed root. The chain stops at a scene that already encloses the node, so a
+ * scene that inherits or instances itself ends.
  */
 export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
-  let current = node;
-  // Advances with the chain: after a merge the `instance` ref is the sub-scene
-  // root's own and names an id in that file's pool, which the merged node carries.
-  let outer = scopeOf(node, scope);
-  while (current.instance) {
-    const scenePath = resolveInstancePath(current.instance, outer.externalResources);
-    const enclosingScenePaths = outer.instancedScenePaths ?? [];
-    if (!scenePath || enclosingScenePaths.includes(scenePath)) break;
-    const cached = sceneCache.getCached(scenePath);
-    if (!cached) break;
-    const content = contentScopeOf(cached, [...enclosingScenePaths, scenePath]);
-    const merged = mergeInstanceRoot(current, cached, { outer, content });
-    if (!merged) break;
-    current = merged;
-    outer = scopeOf(merged, content);
-  }
-  return current;
+  if (!node.instance) return node;
+  const outer = scopeOf(node, scope);
+  const scenePath = resolveInstancePath(node.instance, outer.externalResources);
+  const enclosingScenePaths = outer.instancedScenePaths ?? [];
+  if (!scenePath || enclosingScenePaths.includes(scenePath)) return node;
+  const cached = sceneCache.getCached(scenePath);
+  if (!cached) return node;
+  const content = contentScopeOf(cached, [...enclosingScenePaths, scenePath]);
+  const subScene = composedSubScene(cached, content, sceneCache);
+  // A composed root's nodes resolve in its base's scope, which its own `scope` carries.
+  const rootContent = subScene.nodes.length === 1 ? scopeOf(subScene.nodes[0]!, content) : content;
+  return mergeInstanceRoot(node, subScene, { outer, content: rootContent }) ?? node;
+}
+
+/**
+ * A loaded sub-scene as it instantiates by itself: its sole root collapsed over the base it
+ * inherits, or the scene as cached where nothing collapses.
+ */
+function composedSubScene(
+  cached: { nodes: readonly TscnNode[] },
+  content: SceneScope,
+  sceneCache: CachedSceneSource
+): { nodes: readonly LiveNode[] } {
+  if (cached.nodes.length !== 1) return cached;
+  const root = cached.nodes[0]!;
+  const composed = collapseLiveNode(root, content, sceneCache);
+  return composed === root ? cached : { nodes: [composed] };
 }
 
 /**
@@ -188,8 +197,23 @@ export function liveChildGroups(
 }
 
 /** The collapsed node a `merged` group carries, so a walker merges each instance once. */
-function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
+export function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
   return groups[0]?.mergedNode;
+}
+
+/**
+ * The first node called `name` across `groups`, as a path walk descends: with the scope its own
+ * refs and children resolve against.
+ */
+function liveChildNamed(
+  groups: readonly LiveChildGroup[],
+  name: string
+): { node: LiveNode; scope: SceneScope } | undefined {
+  for (const group of groups) {
+    const node = group.children.find((n) => n.name === name);
+    if (node) return { node, scope: scopeOf(node, group.scope) };
+  }
+  return undefined;
 }
 
 /**
@@ -217,28 +241,57 @@ function liveChainLinks(
   const segments = nodePathNames(path);
   if (segments.length === 0) return null;
 
+  const tree = new LiveTree(roots, ctx);
   const links: LiveChainLink[] = [];
-  let candidateGroups: readonly LiveChildGroup[] = [
-    { origin: 'inline', children: roots, scope: rootScope(ctx) },
-  ];
-
+  let livePath = '';
   for (const segment of segments) {
-    let match: LiveNode | undefined;
-    let matchScope: SceneScope = rootScope(ctx);
-    for (const group of candidateGroups) {
-      const found = group.children.find((n) => n.name === segment);
-      if (found) {
-        match = found;
-        matchScope = group.scope;
-        break;
-      }
-    }
-    if (!match) return null;
-    candidateGroups = liveChildGroups(match, matchScope, ctx.sceneCache, ctx.glbCache);
-    links.push({ raw: match, collapsed: mergedNodeOf(candidateGroups) ?? match });
+    livePath = joinPath(livePath, segment);
+    const link = tree.at(livePath);
+    if (!link) return null;
+    links.push({ raw: link.node, collapsed: mergedNodeOf(link.groups) ?? link.node });
   }
 
   return links;
+}
+
+/** The groups a walk of the live tree starts from: the outer roots, in the root scene's scope. */
+export function rootGroups(roots: readonly TscnNode[], ctx: LiveTreeContext): readonly LiveChildGroup[] {
+  return [{ origin: 'inline', children: roots, scope: rootScope(ctx) }];
+}
+
+/** A node of the live tree, before its collapse, with its child groups. */
+export interface LiveLink {
+  readonly node: LiveNode;
+  readonly scope: SceneScope;
+  readonly groups: readonly LiveChildGroup[];
+}
+
+/**
+ * The live tree over one cache snapshot, each node's child groups walked once however many paths
+ * pass through it. A caller makes one per question, since the snapshot changes on each load.
+ */
+export class LiveTree {
+  /** Written only by `at`. A null marks a path the loaded tree does not contain. */
+  private readonly links = new Map<string, LiveLink | null>();
+
+  constructor(
+    readonly roots: readonly TscnNode[],
+    readonly ctx: LiveTreeContext
+  ) {}
+
+  /** The node at the live path `path`, or null where the loaded tree stops. */
+  at(path: string): LiveLink | null {
+    const cached = this.links.get(path);
+    if (cached !== undefined) return cached;
+    const slash = path.lastIndexOf('/');
+    const parentGroups = slash < 0 ? rootGroups(this.roots, this.ctx) : this.at(path.slice(0, slash))?.groups;
+    const found = parentGroups && liveChildNamed(parentGroups, path.slice(slash + 1));
+    const link = found
+      ? { ...found, groups: liveChildGroups(found.node, found.scope, this.ctx.sceneCache, this.ctx.glbCache) }
+      : null;
+    this.links.set(path, link);
+    return link;
+  }
 }
 
 /**
