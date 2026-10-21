@@ -1,15 +1,15 @@
 ---
 type: SoftBody3D
 category: 3D
-status: unimplemented
+status: unreviewed
 fixture: unit-soft-body-3d.tscn
-# image: unit-soft-body-3d
-renders_as: nothing yet, Godot draws a deformable mesh, the previewer does not
+image: unit-soft-body-3d
+renders_as: a THREE.Mesh
 ---
 
 # SoftBody3D
 
-A deformable physics mesh that Godot draws as a simulated version of its own `mesh`. The previewer parses and validates it but does not draw it yet, so the GeometryInstance3D base mounts under `renderIntent: 'pending'` and its children still show.
+A deformable physics mesh that derives from MeshInstance3D. The previewer draws its `mesh` at rest as a MeshInstance3D does, with the material overrides, and runs no simulation.
 
 ## Linting
 
@@ -47,5 +47,4 @@ The lenient parser reuses MeshInstance3D's parse. The scene cull measures the no
 
 ## Known limitations
 
-- **Not drawn** Godot draws the soft mesh, but the previewer draws nothing for it.
-- **Needs runtime** Godot culls the body by its simulated points once physics moves them, but here the cull reads the mesh at rest.
+- **Needs runtime** Godot draws and culls the mesh as the simulation moves it, but the previewer keeps the rest mesh and its box.

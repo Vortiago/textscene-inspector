@@ -1,8 +1,7 @@
 /**
- * SoftBody3D registration: parsed and validated, not yet rendered. The GeometryInstance3D
- * base under `renderIntent: 'pending'` makes `rendersOwnVisual` report
- * 'not-implemented', while `visible` and the 3D-only workspace placement still
- * work. An absent registration keeps neither.
+ * SoftBody3D registration: it parses with MeshInstance3D's parser and draws with MeshInstance3D's
+ * component, since it derives from MeshInstance3D (`soft_body_3d.h:66`). The previewer runs no
+ * physics (ADR-0005), so the body stays at rest.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -21,9 +20,9 @@ describe('SoftBody3D registration', () => {
     expect(registration!.parser).toBe(parseMeshInstance3D);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('SoftBody3D')).toBe('pending');
-    expect(rendersOwnVisual('SoftBody3D')).toBe('not-implemented');
+  it('reports that it draws, which a declared gap would not', () => {
+    expect(nodeComponentRegistry.renderIntentOf('SoftBody3D')).not.toBe('pending');
+    expect(rendersOwnVisual('SoftBody3D')).toBe('draws');
   });
 
   it('stays out of the 2D canvas, which an absent registration would not', () => {

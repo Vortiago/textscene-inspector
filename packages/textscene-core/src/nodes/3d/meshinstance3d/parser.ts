@@ -6,6 +6,7 @@ import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseOptionalInt } from '../../../parser/valueParsers';
 import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
 import { stringToInt } from '../../../godot/string/string.js';
+import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 
 /** Assigns only a present value: the optional readers already drop an absent or unreadable one. */
 function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | undefined): void {
@@ -44,15 +45,15 @@ export function parseMeshInstance3D(
     surfaceMaterialOverrides,
   };
 
-  if (properties.mesh) {
+  if (holdsResource(properties.mesh)) {
     meshInstance3DProps.mesh = properties.mesh;
   }
 
-  if (properties.material_override) {
+  if (holdsResource(properties.material_override)) {
     meshInstance3DProps.materialOverride = properties.material_override;
   }
 
-  if (properties.material_overlay) {
+  if (holdsResource(properties.material_overlay)) {
     meshInstance3DProps.materialOverlay = properties.material_overlay;
   }
 

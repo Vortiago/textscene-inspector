@@ -1,7 +1,7 @@
 /**
  * Renders a Godot MeshInstance3D as an R3F <mesh>: the geometry `useMeshContent` reads,
  * or a magenta wireframe placeholder for a GLB, a mesh type no slice builds, or an
- * unresolvable mesh.
+ * unresolvable mesh. A node with no `mesh` draws nothing.
  * Each surface draws through `<SurfaceMaterialSlot>`, which owns the magenta
  * missing-texture placeholder.
  */
@@ -75,9 +75,11 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
   switch (content.kind) {
     case 'unresolved':
+      // No `mesh` is Godot's empty node, which draws nothing. Only a mesh this previewer cannot
+      // build gets the placeholder.
       return (
         <MeshShell {...shellProps} overlay={null}>
-          {UNRESOLVED_MESH}
+          {properties.mesh === undefined ? null : UNRESOLVED_MESH}
         </MeshShell>
       );
     // While it loads, the shell keeps the node's descendants mounted: they do not depend on
