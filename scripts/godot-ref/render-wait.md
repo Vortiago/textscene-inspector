@@ -35,10 +35,13 @@ step the main loop hands the renderer (`main.cpp:4841,4990-4994`). A sprite that
 30 ms would then decide the picture, so the wait sets `Engine.time_scale` to 0. The process quits
 after it saves the picture, so nothing restores the scale.
 
-An unpaused tree (`--no-previews`) runs its physics on, so only a fog history draws on there.
+With `--no-previews` the harness does not freeze the scene, so the wait stays out of its way: only
+a fog history draws on there.
 
 ## The quiet window
 
-At 12 frames, the seven point materials of the `point-mesh` fixture had not all landed their
-pipelines. A frame takes about 50 ms under lavapipe, and 30 frames is two and a half times that
-measure.
+The window must outlast the slowest pipeline compilation. The seven point materials of the
+`point-mesh` fixture had landed within 12 frames, and a frame takes about 50 ms under lavapipe.
+`RENDER_QUIET_FRAMES` is 30, which leaves two and a half times that margin. The
+`point-cull-front` calibration scene queues thirteen pipelines, and the old fixed wait loses its
+cull-front point.

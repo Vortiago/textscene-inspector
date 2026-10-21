@@ -58,7 +58,10 @@ export const RENDER_QUIET_FRAMES = 30;
 /** The most frames the render wait draws: the longest fog convergence, then the quiet window. */
 export const RENDER_WAIT_MAX_FRAMES = FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES;
 
-/** `--quit-after`: a backstop for a bootstrap that never quits, above the fog history's frames. */
+/**
+ * `--quit-after`: a backstop for a bootstrap that never quits. It sits above the render wait's
+ * frames plus the six convergence frames and the reflection probe frames before it.
+ */
 const RENDER_QUIT_AFTER_FRAMES = 1200;
 
 /**
@@ -1087,6 +1090,8 @@ func _environment_in_effect(source: Viewport) -> Environment:
 	if camera != null and camera.environment != null:
 		return camera.environment
 	var world := source.find_world_3d()
+	if world == null:
+		return null
 	return world.environment if world.environment != null else world.fallback_environment
 
 # The method and driver that drew this frame, which the caller compares with

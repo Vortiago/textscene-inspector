@@ -763,6 +763,21 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
   }, 360_000);
 
   /**
+   * While a material's pipeline compiles, Godot draws the ubershader (`render_forward_clustered.cpp:509-514`),
+   * which culls by `gl_FrontFacing`, true for a point (`scene_forward_clustered.glsl:3010-3016`). A
+   * cull-front point is missing from a capture that does not wait for the pipeline to land.
+   */
+  it('captures a cull-front point once its pipeline has landed', async () => {
+    const options = { previews: true, camera: [0, 0, 3], lookAt: [0, 0, 0] };
+    const front = await channelsOf('point-cull-front.tscn', options);
+    const back = await channelsOf('point-cull-back.tscn', options);
+
+    const centre = (120 / 2) * 160 * 4 + (160 / 2) * 4;
+    expect(front[centre + 1]).toBeGreaterThan(200);
+    expect(front.every((value, i) => Math.abs(value - back[i]) <= 1)).toBe(true);
+  }, 360_000);
+
+  /**
    * An UPDATE_ONCE ReflectionProbe captures over several frames, and the scene renders one such
    * probe at a time (`renderer_scene_cull.cpp:3739-3751`), so six frames leave a probe empty. A
    * capture that waits them out shows what UPDATE_ALWAYS shows at once. The two filter the
