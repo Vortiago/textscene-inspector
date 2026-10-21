@@ -8,8 +8,8 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
-import { ruleCount } from '../../../../linter/validators/commonValidators.js';
-import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
+import { listWrittenIndices, writesPastFamilyCount } from '../../../../linter/reportedIndices.js';
+import { MENU_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -20,27 +20,17 @@ const arms = {
   },
 } as const satisfies RuleArms<string>;
 
-/**
- * The family prefix is `popup/item_` (menu_button.cpp:213) and the count key is the bare `item_count`
- * (`ADD_ARRAY_COUNT` at menu_button.cpp:205), so `item_0/text` reaches no MenuButton property. Godot's
- * saver writes the count first, so only a hand-edited scene fires this rule.
- */
-const ITEM_PREFIX = 'popup/item_';
-
 function checkMenuButton(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const rawProps = node.rawProperties;
 
-  // `item_count` is the popup's (menu_button.cpp:123-131, menu_button.cpp:134-135). Absent means 0: the popup
-  // starts with an empty `Vector<Item> items`, doc/classes/MenuButton.xml's default="0" the serialiser omits.
-  const count = ruleCount(rawProps.item_count);
-  // A malformed item_count draws its own validator's diagnostic, and a non-finite one parses to a
-  // number the file does not state, so this rule cannot name either in a message.
-  if (count === null) return [];
-
-  // Only the high end: linterParser.ts's family dispatcher already reports a negative index.
-  const offending = indicesPastCount(rawProps, ITEM_PREFIX, 'is_valid_int', count);
-  if (offending.size === 0) return [];
+  // `item_count` is the popup's (menu_button.cpp:123-131, menu_button.cpp:134-135) and the key is the bare
+  // `item_count`, so `item_0/text` reaches no MenuButton property. Absent means 0: the popup starts with an
+  // empty `Vector<Item> items`. Godot's saver writes the count first, so only a hand-edited scene fires this
+  // rule, and only the high end: linterParser.ts's family dispatcher reports a negative index.
+  const pastCount = writesPastFamilyCount(rawProps, MENU_BUTTON_ITEMS);
+  if (pastCount === null || pastCount.offending.size === 0) return [];
+  const { count, offending } = pastCount;
 
   return [
     armDiagnostic(

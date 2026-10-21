@@ -10,9 +10,13 @@
 // so an authored value is overwritten, not refused, as with `SpinBox.exp_edit` and `FileDialog.dialog_text`.
 import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
+import {
+  propertyListFamilyKey,
+  propertyListFamilyValidator,
+  type FamilyLeaves,
+} from '../../../../linter/validators/indexedFamily.js';
+import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
  * The 5 leaves OptionButton's own `base_property_helper` (option_button.h:67) registers
@@ -20,7 +24,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
  * item is radio-checkable (option_button.cpp:325). `_set` (option_button.cpp:162-184) forwards to `popup->set(...)`
  * (option_button.cpp:168), so setters cite PopupMenu's, as popupmenu/linterParser.ts does, and hints cite OptionButton's.
  */
-const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
+const ITEM_LEAVES: FamilyLeaves<typeof OPTION_BUTTON_ITEMS> = {
   // option_button.cpp:628, no hint. PopupMenu::set_item_text (popup_menu.cpp:1951) assigns past an
   // ERR_FAIL_INDEX on the item index, not the text.
   text: v.quotedString('text'),
@@ -37,14 +41,10 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   separator: v.boolean('separator'),
 };
 
-const itemValidator = indexedFamilyValidator({
-  prefix: 'popup/item_',
+const itemValidator = propertyListFamilyValidator(OPTION_BUTTON_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item',
-  // `_set` gates on `property_helper.is_property_valid` (option_button.cpp:166), which needs an
-  // `is_valid_int()` index (property_list_helper.cpp:126), so a non-numeric index is a dropped write.
-  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_ITEM_INDEX',
@@ -68,5 +68,5 @@ validatorRegistry.registerAll('OptionButton', {
   // enforces `ERR_FAIL_COND(p_count < 0)`, and nothing sets a ceiling.
   item_count: v.int('item_count', { min: 0, enforced: 'option_button.cpp:310' }),
 
-  'popup/item_#/*': itemValidator,
+  [propertyListFamilyKey(OPTION_BUTTON_ITEMS)]: itemValidator,
 });

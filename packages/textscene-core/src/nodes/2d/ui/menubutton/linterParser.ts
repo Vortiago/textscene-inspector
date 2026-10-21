@@ -7,11 +7,15 @@
 
 import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
+import {
+  propertyListFamilyKey,
+  propertyListFamilyValidator,
+  type FamilyLeaves,
+} from '../../../../linter/validators/indexedFamily.js';
+import { MENU_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { ITEM_CHECKABLE_TYPE_NAMES } from '../../../../godot/scene/popupMenu.js';
 
 import { v } from '../../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
  * The 7 `popup/item_<idx>/<leaf>` leaves (menu_button.cpp:215-221), registered without setters
@@ -19,7 +23,7 @@ import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js'
  * `PopupMenu::_set` (popup_menu.cpp:3091) and its bound setters (popup_menu.cpp:3321-3327), so a leaf cites
  * the guard of the delegate in popup_menu.cpp (ADR-0032). The hint is MenuButton's own `register_property`, even where equal.
  */
-const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
+const ITEM_LEAVES: FamilyLeaves<typeof MENU_BUTTON_ITEMS> = {
   // menu_button.cpp:215, no hint. PopupMenu::set_item_text (popup_menu.cpp:1951) assigns past an
   // ERR_FAIL_INDEX on p_idx, an index guard, not a value bound.
   text: v.quotedString('text'),
@@ -45,14 +49,10 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 // `set_prefix("popup/item_")` (menu_button.cpp:213) glues the index on (property_list_helper.cpp:149), so a
 // scene writes `popup/item_0/text` (scenes/demos/gui/control_gallery/control_gallery.tscn:527). The key
 // `popup/item_#/*` selects the glued-index matcher of `ValidatorRegistry.findOwnValidator`.
-const itemValidator = indexedFamilyValidator({
-  prefix: 'popup/item_',
+const itemValidator = propertyListFamilyValidator(MENU_BUTTON_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item',
-  // `_set` gates on `property_helper.is_property_valid` (menu_button.cpp:176), which needs an
-  // `is_valid_int()` index (property_list_helper.cpp:126), so a non-numeric index is a dropped write.
-  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_ITEM_INDEX',
@@ -70,5 +70,5 @@ validatorRegistry.registerAll('MenuButton', {
   // and nothing sets a ceiling.
   item_count: v.int('item_count', { min: 0, enforced: 'menu_button.cpp:124' }),
 
-  'popup/item_#/*': itemValidator,
+  [propertyListFamilyKey(MENU_BUTTON_ITEMS)]: itemValidator,
 });

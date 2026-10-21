@@ -1,0 +1,47 @@
+/**
+ * Every declared PropertyListHelper family that drops a write past its count has a past-count rule,
+ * and a family that assigns one has none. The rule is found through the registry, so a slice that
+ * forgets to declare it fails here.
+ */
+import { describe, expect, it } from 'vitest';
+import { ruleRegistry } from './RuleRegistry.js';
+import { PROPERTY_LIST_FAMILIES } from '../godot/classdb/propertyListFamilies.js';
+import { node, scene, lint } from './testing/testkit';
+import '../nodes/2d/ui/itemlist/index.linter.js';
+import '../nodes/2d/ui/tabbar/index.linter.js';
+import '../nodes/2d/ui/tabcontainer/index.linter.js';
+import '../nodes/2d/ui/menubutton/index.linter.js';
+import '../nodes/2d/ui/optionbutton/index.linter.js';
+import '../nodes/windows/popupmenu/index.linter.js';
+import '../nodes/windows/filedialog/index.linter.js';
+
+const PAST_COUNT_GROUNDING = 'property_list_helper.cpp:58';
+
+const pastCountArmsOf = (owner: string) =>
+  ruleRegistry
+    .getRulesForNodeType(owner)
+    .flatMap((rule) => rule.meta.emits ?? [])
+    .filter((arm) => arm.grounding.kind === 'engine' && arm.grounding.at === PAST_COUNT_GROUNDING);
+
+describe.each(PROPERTY_LIST_FAMILIES)('$owner $prefix', (family) => {
+  if (family.outOfBounds.policy === 'assigned') {
+    it('has no past-count rule, since the helper assigns an index past the length', () => {
+      expect(pastCountArmsOf(family.owner)).toHaveLength(0);
+    });
+    return;
+  }
+  if (family.countKey.key === null) throw new Error(`${family.owner} drops writes but declares no count key`);
+  const countKey = family.countKey.key;
+
+  it('has a past-count rule that names the declared cite', () => {
+    expect(family.outOfBounds.cite).toContain(PAST_COUNT_GROUNDING);
+    expect(pastCountArmsOf(family.owner).length).toBeGreaterThan(0);
+  });
+
+  it('reports an index at the count', () => {
+    const properties = { [countKey]: 1, [`${family.prefix}1/${family.leaves[0]}`]: '"x"' };
+    const arms = pastCountArmsOf(family.owner).map((arm) => arm.ruleName);
+    const names = lint(scene(node(family.owner, properties))).map((diagnostic) => diagnostic.ruleName);
+    expect(names.some((name) => arms.includes(name!))).toBe(true);
+  });
+});

@@ -146,6 +146,10 @@ One diagnostic a **Lint rule** or a **Resource rule** can report, declared with 
 A rule reports only through its arms (`reportArm`, `armDiagnostic`), and `armEmits` derives its `emits` from them.
 _Avoid_: a hand-written diagnostic object in a rule.
 
+**Indexed family** (`IndexedFamily` in `godot/classdb/indexedFamily.ts`):
+The `PropertyListHelper` array a class serialises as `<prefix><N>/<leaf>`, declared once with its prefix, index parse, count key, leaves and out-of-bounds policy. The family validator, the past-count **Lint rule** and the parser grouping all derive from that declaration.
+_Avoid_: restating a prefix, a count key or a policy beside a validator or a rule.
+
 **Range advisory** (`linter/rangeAdvisory.ts`):
 A warning **Lint rule** that the shared `rangeAdvisories` combinator emits when one numeric property falls outside a table of cited thresholds.
 _Avoid_: a range advisory that errors. A cross-field check as a range advisory.

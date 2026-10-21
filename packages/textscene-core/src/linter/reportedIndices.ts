@@ -3,7 +3,9 @@
  * the error that refuses a negative one.
  */
 import { IS_VALID_INT_RE, stringToInt } from '../godot/string/string.js';
+import { ruleCount } from '../godot/variant/int.js';
 import { visitIndexedKeys, type IndexParse } from '../godot/classdb/indexedKey.js';
+import type { CountedFamily } from '../godot/classdb/indexedFamily.js';
 import type { ParseError } from './types.js';
 import { keyShapeError } from './validators/propertyError.js';
 
@@ -152,6 +154,21 @@ export function indicesPastCount(
     if (index >= count) past.set(indexText, index);
   });
   return past;
+}
+
+/**
+ * The writes a `PropertyListHelper` family makes past its own count, with the count they are
+ * measured against: the input of every past-count rule. Null when the count is malformed or
+ * non-finite, which its own validator reports and no message can name. An absent count is 0,
+ * the empty array the serialiser omits.
+ */
+export function writesPastFamilyCount(
+  properties: Readonly<Record<string, string>>,
+  family: CountedFamily
+): { count: number; offending: Map<string, number> } | null {
+  const count = ruleCount(properties[family.countKey.key]);
+  if (count === null) return null;
+  return { count, offending: indicesPastCount(properties, family.prefix, family.indexParse, count) };
 }
 
 /**

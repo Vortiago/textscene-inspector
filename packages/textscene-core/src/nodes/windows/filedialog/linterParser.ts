@@ -12,16 +12,20 @@ import {
   FILE_DIALOG_FILE_MODE_NAMES,
 } from '../../../godot/scene/fileDialog.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import { indexedFamilyValidator } from '../../../linter/validators/indexedFamily.js';
+import {
+  propertyListFamilyKey,
+  propertyListFamilyValidator,
+  type FamilyLeaves,
+} from '../../../linter/validators/indexedFamily.js';
+import { FILE_DIALOG_OPTIONS } from '../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../linter/validators/index.js';
-import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 
 /**
  * The three leaves `PropertyListHelper` emits per option (file_dialog.cpp:2201-2203).
  * `name` and `values` are format-only: `set_option_name` (:1977) and
  * `set_option_values` (:1989) assign once `ERR_FAIL_INDEX` passes the option index.
  */
-const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
+const OPTION_LEAVES: FamilyLeaves<typeof FILE_DIALOG_OPTIONS> = {
   name: v.quotedString('name'),
   values: v.packedStringArray('values', '"*.png"'),
   // `set_option_default` (:2006-2015) clamps against the sibling `values` length
@@ -38,15 +42,10 @@ const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * bound lives here and the `>= option_count` bound in `linter.ts`, as in PopupMenu:
  * only the second needs a sibling, and a rule claiming both would double-report.
  */
-const optionValidator = indexedFamilyValidator({
-  prefix: 'option_',
+const optionValidator = propertyListFamilyValidator(FILE_DIALOG_OPTIONS, {
   leaves: OPTION_LEAVES,
   unknownCode: 'INVALID_OPTION_KEY',
   describes: 'option name, values or default',
-  // `_set` is `property_helper.property_set_value` (file_dialog.h:386), whose
-  // `_get_property` returns nullptr unless the index `is_valid_int()`
-  // (property_list_helper.cpp:53-55), so a non-numeric index is a dropped write.
-  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_OPTION_INDEX',
@@ -108,5 +107,5 @@ validatorRegistry.registerAll('FileDialog', {
   // (file_dialog.cpp:169-170, 2199-2204, 2627; property_list_helper.cpp:138-153). Its
   // PROPERTY_USAGE_DEFAULT (object.h) stores it. The index is glued to the prefix
   // (property_list_helper.cpp:149), hence `#`. The cross-field rule is in linter.ts.
-  'option_#/*': optionValidator,
+  [propertyListFamilyKey(FILE_DIALOG_OPTIONS)]: optionValidator,
 });

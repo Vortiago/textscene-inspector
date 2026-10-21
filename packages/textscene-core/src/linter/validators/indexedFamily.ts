@@ -10,6 +10,7 @@ import { accepts } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { IS_VALID_INT_RE, stringToInt } from '../../godot/string/string.js';
 import { declaredLeafResolver, type IndexParse, type LeafResolver } from '../../godot/classdb/indexedKey.js';
+import type { IndexedFamily } from '../../godot/classdb/indexedFamily.js';
 import { negativeIndexError } from '../reportedIndices.js';
 
 /**
@@ -20,7 +21,7 @@ import { negativeIndexError } from '../reportedIndices.js';
  */
 const IS_VALID_INT_CITE = 'property_list_helper.cpp:53-55';
 
-interface IndexedFamilyOptions {
+export interface IndexedFamilyOptions {
   /** The glued prefix: `item_` for `item_0/text`, `popup/item_` for MenuButton. */
   prefix: string;
   /**
@@ -151,4 +152,23 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
   }
   validator.leaves = Object.values(leaves);
   return validator;
+}
+
+/** The validators of a declared family: one per leaf it names, and no other. */
+export type FamilyLeaves<F extends IndexedFamily> = Readonly<Record<F['leaves'][number], PropertyValidator>>;
+
+/**
+ * The registry key that routes `<prefix><i>/<leaf>` to a declared family's validator: `#` selects
+ * the glued-index matcher of `ValidatorRegistry.findOwnValidator`.
+ */
+export function propertyListFamilyKey(family: IndexedFamily): string {
+  return `${family.prefix}#/*`;
+}
+
+/** {@link indexedFamilyValidator} for a declared family: its prefix and index parse come from the declaration. */
+export function propertyListFamilyValidator<const F extends IndexedFamily>(
+  family: F,
+  options: Omit<IndexedFamilyOptions, 'prefix' | 'indexParse' | 'leaves'> & { leaves: FamilyLeaves<F> }
+): PropertyValidator {
+  return indexedFamilyValidator({ ...options, prefix: family.prefix, indexParse: family.indexParse });
 }
