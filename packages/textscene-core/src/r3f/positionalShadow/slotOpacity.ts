@@ -26,8 +26,8 @@ export interface SlottedShadow extends THREE.LightShadow {
 export interface ParaboloidShadow extends SlottedShadow {
   /**
    * Writes the slot's rect into `target` in units of the atlas, as the lookup reads it, and
-   * returns it, or null without a slot. An omni light's `zw` step to its second paraboloid. An area
-   * light's are the slot's side. The surface and the volumetric fog both read it.
+   * returns it, or null without a slot. For an omni light, `zw` is the step to the second paraboloid.
+   * For an area light, `zw` is the slot's side. The surface and the volumetric fog both read it.
    */
   slotRect(target: THREE.Vector4): THREE.Vector4 | null;
 }
