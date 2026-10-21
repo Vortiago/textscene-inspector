@@ -78,12 +78,13 @@ describe('openPagePool', () => {
   it("runs a capture on the page of the scene's kind", async () => {
     const contexts = stubContexts();
     const small = scene('small', { canvas: { width: 96, height: 96 } });
-    const pool = await openPagePool({}, [scene('plain'), small]);
+    const plain = scene('plain');
+    const pool = await openPagePool({}, [plain, small]);
 
     const pageOf = (sceneToUse) => pool.use(sceneToUse, async (pageState) => pageState.page);
 
     expect(await pageOf(small)).toBe(contexts[1].page);
-    expect(await pageOf(scene('other'))).toBe(contexts[0].page);
+    expect(await pageOf(plain)).toBe(contexts[0].page);
   });
 
   it('closes a page after the last scene that uses it, and not before', async () => {
@@ -107,5 +108,14 @@ describe('openPagePool', () => {
       'settle failed'
     );
     expect(contexts[0].close).toHaveBeenCalledOnce();
+  });
+
+  it('rejects a scene that was not in the run, naming it', async () => {
+    stubContexts();
+    const pool = await openPagePool({}, [scene('listed')]);
+
+    await expect(pool.use(scene('stranger'), async () => {})).rejects.toThrow(
+      /scene "stranger" has no open page/
+    );
   });
 });

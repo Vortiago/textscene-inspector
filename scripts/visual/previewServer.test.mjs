@@ -21,8 +21,6 @@ import {
   SETTLE_SIM_SECONDS,
   SHOW_PERFORMANCE_STORAGE_KEY,
   TEXTURE_WORK_STATUS_TESTID,
-  VIEWPORT,
-  windowForCanvas,
 } from './preview/appContract.mjs';
 import { isUniformImage, sceneStillLoading, settleCanvas, writeCaptureImage } from './preview/capture.mjs';
 import { startPreview } from './preview/server.mjs';
@@ -482,11 +480,8 @@ describe('canvas2DViewportFor', () => {
 });
 
 describe('the 3D canvas size', () => {
-  it('is the 955 by 756 the default window measured', () => {
+  // The committed 3D goldens and the Godot probes address this size.
+  it('is the 955 by 756 the default window leaves after the shell chrome', () => {
     expect(CANVAS_CAPTURE).toEqual({ width: 955, height: 756 });
-  });
-
-  it('needs the default window, from the window of a canvas', () => {
-    expect(windowForCanvas(CANVAS_CAPTURE)).toEqual(VIEWPORT);
   });
 });

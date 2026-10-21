@@ -48,8 +48,11 @@ async function openPage(browser, options) {
  * scene's kind, and closes that page after the last scene of the kind.
  */
 export async function openPagePool(browser, scenes) {
+  const keyOfScene = new Map();
   const kinds = new Map();
-  for (const { key, options } of scenes.map(pageSpecFor)) {
+  for (const scene of scenes) {
+    const { key, options } = pageSpecFor(scene);
+    keyOfScene.set(scene, key);
     const kind = kinds.get(key) ?? { options, scenesLeft: 0 };
     kind.scenesLeft += 1;
     kinds.set(key, kind);
@@ -59,7 +62,10 @@ export async function openPagePool(browser, scenes) {
   );
   return {
     async use(scene, capture) {
-      const kind = kinds.get(pageSpecFor(scene).key);
+      const kind = kinds.get(keyOfScene.get(scene));
+      if (!kind || kind.scenesLeft === 0) {
+        throw new Error(`scene "${scene.name}" has no open page: it is not in the run, or ran twice`);
+      }
       try {
         return await capture(kind.pageState);
       } finally {
