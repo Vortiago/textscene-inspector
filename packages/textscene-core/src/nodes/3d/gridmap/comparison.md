@@ -48,4 +48,4 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 
 ## Known limitations
 
-- **Resource gap** An item mesh the previewer does not build (ImmediateMesh, PlaceholderMesh, PointMesh, RibbonTrailMesh, TextMesh or TubeTrailMesh) draws as a wireframe box in each cell, and the node's details name the type.
+- **Resource gap** An item mesh the previewer does not build (PointMesh, RibbonTrailMesh, TextMesh or TubeTrailMesh) draws as a wireframe box in each cell, and the node's details name the type.

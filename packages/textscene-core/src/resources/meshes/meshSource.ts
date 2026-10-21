@@ -18,11 +18,18 @@ export interface MeshSource {
   path: string | null;
 }
 
-type MeshKind = 'arrayMesh' | 'primitive';
+type MeshKind = 'arrayMesh' | 'primitive' | 'surfaceless';
+
+/**
+ * Meshes Godot loads with no surface to draw: a PlaceholderMesh has none (`mesh.h:421`), and an
+ * ImmediateMesh saves none, since only a script fills it (`immediate_mesh.cpp:405-417`).
+ */
+const SURFACELESS_MESH_TYPES: ReadonlySet<string> = new Set(['ImmediateMesh', 'PlaceholderMesh']);
 
 /** Which builder draws a mesh of `type`, or null for a type no slice builds. */
 export function meshKind(type: string): MeshKind | null {
   if (ARRAY_MESH_TYPES.has(type)) return 'arrayMesh';
+  if (SURFACELESS_MESH_TYPES.has(type)) return 'surfaceless';
   return isPrimitiveMeshType(type) ? 'primitive' : null;
 }
 

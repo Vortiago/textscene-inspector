@@ -109,3 +109,25 @@ describe('useMeshContent for a mesh type no slice builds', () => {
     expect(result.current).toEqual(['TextMesh']);
   });
 });
+
+describe('useMeshContent for a mesh with no surfaces', () => {
+  const PLACEHOLDER: TscnInternalResource = { id: 'placeholder', type: 'PlaceholderMesh', data: {} };
+  const SCENE: SceneResources = { internalResources: [PLACEHOLDER], externalResources: [] };
+
+  it('is empty, as Godot draws nothing, and names no undrawn type', () => {
+    const { result } = renderHook(
+      () => ({
+        content: useMeshContent(useResourceResolution('SubResource("placeholder")', SCENE)),
+        undrawn: useUndrawnMeshTypes('Root/Stand'),
+      }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <UndrawnMeshesProvider>
+            <NodePathProvider path="Root/Stand">{children}</NodePathProvider>
+          </UndrawnMeshesProvider>
+        ),
+      }
+    );
+    expect(result.current).toEqual({ content: { kind: 'empty' }, undrawn: [] });
+  });
+});

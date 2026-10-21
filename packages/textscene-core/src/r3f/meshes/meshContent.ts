@@ -33,14 +33,14 @@ export interface SurfacedMesh {
   primitive?: TscnInternalResource;
 }
 
-export type MeshContent =
+type MeshContent =
   /**
    * No mesh, a file that cannot load, or surfaces that cannot be read. Also a type no slice
    * builds, which Godot draws: the caller's placeholder says this previewer does not.
    */
   | { kind: 'unresolved' }
   | { kind: 'loading' }
-  /** A mesh Godot builds no surface for, such as a TorusMesh of equal radii: it draws nothing. */
+  /** A mesh with no surface, such as a PlaceholderMesh or a TorusMesh of equal radii: it draws nothing. */
   | { kind: 'empty' }
   | { kind: 'surfaced'; mesh: SurfacedMesh };
 
@@ -74,6 +74,7 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
 
   if (status === 'pending') return LOADING;
   if (!scoped || !kind) return UNRESOLVED;
+  if (kind === 'surfaceless') return EMPTY;
   if (kind === 'primitive') return primitiveSurfaced ? { kind: 'surfaced', mesh: primitiveSurfaced } : EMPTY;
   if (!processorPath) return sceneSurfaced ? { kind: 'surfaced', mesh: sceneSurfaced } : UNRESOLVED;
   if (fileArrayMesh.status === 'unavailable') return UNRESOLVED;
