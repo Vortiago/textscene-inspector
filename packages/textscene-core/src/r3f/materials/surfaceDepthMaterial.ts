@@ -28,7 +28,10 @@ type DepthMaterial = (THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial) & {
   readonly depthInjection?: ProgramInjection;
 };
 
-/** Seeds the alpha with `opacity` and multiplies the vertex colour in, as three's colour programs do. */
+/**
+ * Seeds the alpha with `opacity` and multiplies the vertex colour in, as three's colour programs do.
+ * three's distance fragment declares no `opacity`, so a program that reads it fails to link.
+ */
 const SURFACE_ALPHA: ProgramInjection = {
   cacheKey: 'godot-surface-alpha',
   onBeforeCompile(shader) {
@@ -36,7 +39,10 @@ const SURFACE_ALPHA: ProgramInjection = {
       .replace('#include <common>', '#include <common>\n#include <color_pars_vertex>')
       .replace('#include <begin_vertex>', '#include <color_vertex>\n#include <begin_vertex>');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\n#include <color_pars_fragment>')
+      .replace(
+        '#include <common>',
+        '#ifdef DISTANCE\nuniform float opacity;\n#endif\n#include <common>\n#include <color_pars_fragment>'
+      )
       .replace(
         '#include <map_fragment>',
         'diffuseColor.a = opacity;\n#include <map_fragment>\n#include <color_fragment>'

@@ -9,9 +9,10 @@ import { AlphaAntiAliasing, scissorAntialiasing } from '../../godot/rendering/ma
 
 const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3);
 
-/** The depth program as `depth`'s `onBeforeCompile` leaves it. */
-function compiled(depth: THREE.Material): ProgramShader {
-  const shader: ProgramShader = { ...THREE.ShaderLib.depth, uniforms: {} };
+/** The depth or distance program as `depth`'s `onBeforeCompile` leaves it. */
+function compiled(depth: THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial): ProgramShader {
+  const base = depth instanceof THREE.MeshDistanceMaterial ? THREE.ShaderLib.distance : THREE.ShaderLib.depth;
+  const shader: ProgramShader = { ...base, uniforms: {} };
   depth.onBeforeCompile.call(depth, shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
   return shader;
 }
@@ -37,6 +38,16 @@ describe('surfaceDepthMaterial', () => {
     );
     expect(fragmentShader).toMatch(
       /diffuseColor\.a = opacity;\s*#include <map_fragment>\s*#include <color_fragment>/
+    );
+  });
+
+  // three's distance fragment declares no `opacity`, so a copy that reads it fails to link and draws nothing.
+  it('declares the opacity a distance copy reads', () => {
+    const { fragmentShader } = compiled(
+      surfaceDepthMaterial(new THREE.MeshBasicMaterial(), new THREE.MeshDistanceMaterial())
+    );
+    expect(fragmentShader).toMatch(
+      /#ifdef DISTANCE\s*uniform float opacity;\s*#endif[\s\S]*diffuseColor\.a = opacity;/
     );
   });
 
