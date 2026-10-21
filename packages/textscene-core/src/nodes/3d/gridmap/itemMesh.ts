@@ -7,7 +7,8 @@
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import type { ParsedResource } from '../../../parser/parsedResource';
-import { useResource } from '../../../resources/useResource';
+import { useResource, type ResourceStatus } from '../../../resources/useResource';
+import { useMissingReport } from '../../../r3f/contexts/MissingResourcesContext';
 import { findSectionResource } from '../../../resources/resourceSection';
 import { resourceFilePath } from '../../../resources/subResourcePath';
 import { ARRAY_MESH_TYPES } from '../../../resources/meshes/arraymesh/decode';
@@ -48,6 +49,7 @@ export function useItemMesh(meshPath: string | null): ItemMesh {
   const isArrayMesh = section !== undefined && ARRAY_MESH_TYPES.has(section.type);
   const arrayMesh = useResource<ArrayMeshResource>(isArrayMesh ? meshPath! : '', 'arraymesh');
   const primitive = section && isPrimitiveMeshType(section.type) ? section : null;
+  useMissingReport(meshPath ?? '', sectionStatus(file.status, isArrayMesh || primitive !== null));
   const primitiveGeometry = usePrimitiveMeshGeometry(primitive);
   // Paths, as an ArrayMesh's materials are: one material inside the file has one identity (ADR-0046).
   const primitiveMaterials = useMemo(
@@ -76,4 +78,13 @@ export function useItemMesh(meshPath: string | null): ItemMesh {
   }
   if (!isArrayMesh || arrayMesh.status === 'unavailable') return UNAVAILABLE;
   return drawnArrayMesh ? { status: 'loaded', ...drawnArrayMesh } : PENDING;
+}
+
+/**
+ * A loaded file whose section no mesh slice builds fails the item's path, as the ArrayMesh
+ * processor's type check does. Pending otherwise: the file's own report covers a failed load.
+ */
+function sectionStatus(fileStatus: ResourceStatus, isDrawable: boolean): ResourceStatus {
+  if (fileStatus !== 'loaded') return 'pending';
+  return isDrawable ? 'loaded' : 'unavailable';
 }

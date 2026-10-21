@@ -104,17 +104,24 @@ item/0/mesh = SubResource("ArrayMesh_floor")
     expect(model.get(0)!.meshPath).toBe('res://stage/tiles.tres::ArrayMesh_floor');
   });
 
-  it('addresses an embedded PrimitiveMesh, and leaves a mesh type no slice builds unresolved', () => {
+  it('addresses an embedded PrimitiveMesh as a sub-resource path', () => {
     const embedded = `[gd_resource type="MeshLibrary" format=3]
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
-[sub_resource type="ImmediateMesh" id="ImmediateMesh_wall"]
 [resource]
 item/0/mesh = SubResource("BoxMesh_floor")
-item/1/mesh = SubResource("ImmediateMesh_wall")
 `;
     const model = meshLibraryFromTres(parseTresFile(embedded), 'res://stage/tiles.tres');
     expect(model.get(0)!.meshPath).toBe('res://stage/tiles.tres::BoxMesh_floor');
-    expect(model.get(1)!.meshPath).toBeNull();
+  });
+
+  it('leaves an embedded mesh of a type no slice builds unresolved', () => {
+    const embedded = `[gd_resource type="MeshLibrary" format=3]
+[sub_resource type="ImmediateMesh" id="ImmediateMesh_wall"]
+[resource]
+item/0/mesh = SubResource("ImmediateMesh_wall")
+`;
+    const model = meshLibraryFromTres(parseTresFile(embedded), 'res://stage/tiles.tres');
+    expect(model.get(0)!.meshPath).toBeNull();
   });
 
   it('decodes each mesh_cast_shadow ordinal, defaulting an item that omits it to ON', () => {

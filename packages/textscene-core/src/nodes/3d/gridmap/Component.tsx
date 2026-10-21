@@ -197,8 +197,8 @@ function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE
 
 /**
  * Every cell as one InstancedMesh, keyed on the count: three sizes the instance buffer at
- * construction. The resource pipeline owns the geometry, which R3F leaves alone since it
- * arrives through `args`. The shadow hooks carry DOUBLE_SIDED and SHADOWS_ONLY per draw
+ * construction. `useItemMesh` owns the geometry, which R3F leaves alone since it arrives
+ * through `args`. The shadow hooks carry DOUBLE_SIDED and SHADOWS_ONLY per draw
  * (`r3f/surfaceDrawHooks.ts`).
  */
 function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
