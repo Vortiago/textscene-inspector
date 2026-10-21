@@ -111,7 +111,7 @@ Utilities:
 - `utils/transform.ts`: parses and decomposes a Transform3D.
 - `r3f/lightConstants.ts`: light constants (render side only).
 - `utils/nodePath.ts`: joins and lists the path keys of this codebase's node maps.
-- `godot/string/nodePath.ts`: Godot's NodePath walk. Resolve a path with `resolveRelativePath`, `resolveNodePathLiteral` or `resolveParentPath`, never with a new `..` or `%Name` loop.
+- `godot/string/nodePath.ts`: Godot's NodePath walk. Resolve a path with `resolveRelativePath` or `resolveNodePathLiteral`, never with a new `..` or `%Name` loop. Resolve a root-relative `parent=`, `from=` or `to=` path through the seating (`seatScene` in `parser/sceneTreeBuilder.ts`).
 - `src/godot/`: engine facts (constants, tolerances, grammar). Look there before you declare a constant.
 
 ### Troubleshooting

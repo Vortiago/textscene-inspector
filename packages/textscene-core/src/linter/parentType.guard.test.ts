@@ -21,7 +21,7 @@ const PARENT_ACCESS_ALLOWED = new Set(['linter/linterUtils.ts', 'linter/parentTy
 
 /**
  * The linter files that may read the raw `overridesExistingNode` flag. `StrictTscnParser.ts`
- * sets it for `parser/typeUnknowable.ts`, a parser file since `buildSceneTree` asks it and
+ * sets it for `parser/typeUnknowable.ts`, a parser file since `seatScene` asks it and
  * cannot import the linter. `NodeRegistry.ts`, `graftInstanceChildren.ts` and
  * `glbNodeOverrides.ts` use it outside the linter for an unrelated question.
  */

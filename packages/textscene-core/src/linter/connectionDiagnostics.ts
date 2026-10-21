@@ -7,8 +7,8 @@
 import type { ConnectionHeading, StrictScene } from '../parser/types.js';
 import type { Diagnostic } from './types.js';
 import { FILE_DIAGNOSTICS } from './fileDiagnostics.js';
-import { resolveNodePath } from './nodePathResolve.js';
 import { armDiagnostic } from './ruleArms.js';
+import { sceneSeating } from '../parser/sceneTreeBuilder.js';
 import { recoverByIdTrail } from '../godot/scene/packedScene.js';
 import { simplifiedNodePath } from '../godot/string/nodePath.js';
 
@@ -57,12 +57,13 @@ function isRecoveredById(scene: StrictScene, idTrail: readonly number[] | undefi
 }
 
 function missingNodeDiagnostics(scene: StrictScene, connection: ConnectionHeading): Diagnostic[] {
-  const root = scene.nodes[0];
-  if (!root) return [];
+  // A file with no node instantiates nothing (packed_scene.cpp:171), so no connection is made or skipped.
+  if (scene.nodes.length === 0) return [];
+  const seating = sceneSeating(scene.nodes);
   return endsOf(connection).flatMap(({ field, path, idTrail }) => {
     if (path === undefined) return [];
     // The loader stores the simplified path (`resource_format_text.cpp:370-371`), so `Gone/..` never walks.
-    if (resolveNodePath(scene, root, simplifiedNodePath(path)).status !== 'missing') return [];
+    if (seating.resolve(simplifiedNodePath(path)).status !== 'missing') return [];
     if (isRecoveredById(scene, idTrail)) return [];
     return [
       armDiagnostic(

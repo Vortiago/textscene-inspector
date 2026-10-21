@@ -9,6 +9,7 @@ import type { TscnScene, TscnNode } from '../../parser/types';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import type { ResourceProvider } from '../ResourceProvider';
 import { TscnParser } from '../../parser/TscnParser';
+import { seatScene } from '../../parser/sceneTreeBuilder';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { isGltfPath } from '../../godot/import/gltf';
 import { fileBaseName } from '../../godot/string/string';
@@ -122,8 +123,10 @@ export function synthesiseGLBScene(glbPath: string): TscnScene {
     children: [],
     properties: { glbPath } as Record<string, unknown>,
   };
+  // Seated like a parsed root, so every `%Name` reader finds its (empty) claim table.
+  const { roots } = seatScene([{ node: root, line: 0, declaredParent: undefined, uniqueId: 0 }]);
   return {
-    nodes: [root],
+    nodes: roots,
     externalResources: [],
     internalResources: [],
   };

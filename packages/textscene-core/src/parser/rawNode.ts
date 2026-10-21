@@ -1,15 +1,16 @@
 /**
- * The **Raw view** node of one `[node]` heading, built without NodeRegistry, so without three.js.
- * The strict parser seats these into its tree, and the language features seat them to resolve paths.
+ * Builds the **Raw view** node of a `[node]` heading, which the linter and the language features
+ * seat, and the origin record the seating reads beside any node.
  */
 
-import type { RawNode } from './types.js';
+import type { NodeOrigin, RawNode } from './types.js';
 import { isPropertyOverrideHeading, type ParsedHeading } from './utils.js';
-import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene.js';
+import { INSTANCE_PLACEHOLDER_TYPE, parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
 
 /**
- * The node has no typed `properties`: a helper the linter and the renderer share reads `rawProperties`, which holds
- * the same literals on either tree (`parser/rawPropertyParity.test.ts`).
+ * A **Raw view** node, built without NodeRegistry, so without three.js. It has no typed `properties`: a helper the
+ * linter and the renderer share reads `rawProperties`, which holds the same literals on either tree
+ * (`parser/rawPropertyParity.test.ts`).
  */
 export function createRawNode(heading: ParsedHeading, rawProperties: Record<string, string>): RawNode {
   const node: RawNode = {
@@ -22,7 +23,7 @@ export function createRawNode(heading: ParsedHeading, rawProperties: Record<stri
       heading.attributes.instance ||
       '',
     rawProperties,
-    children: [], // buildSceneTree fills it.
+    children: [], // seatScene fills it.
   };
 
   if (heading.attributes.parent) {
@@ -40,4 +41,15 @@ export function createRawNode(heading: ParsedHeading, rawProperties: Record<stri
   }
 
   return node;
+}
+
+/** A heading's node beside the facts of the heading that `seatScene` reads. */
+export function nodeOrigin<N extends RawNode>(heading: ParsedHeading, node: N, line: number): NodeOrigin<N> {
+  return {
+    node,
+    line,
+    declaredParent: heading.attributes.parent,
+    idTrail: parseIdTrail(heading.attributes.parent_id_path),
+    uniqueId: parseUniqueId(heading.attributes.unique_id),
+  };
 }

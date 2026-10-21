@@ -5,8 +5,8 @@
 
 import type * as THREE from 'three';
 import type { TscnInternalResource } from '../../../parser/types';
-import { parseOptionalAabb } from '../../../parser/valueParsers';
-import { aabbOfPoints, EMPTY_AABB, isEmptyAabb, type Aabb } from '../../../godot/math/aabb';
+import { parseNonEmptyAabb } from '../../../parser/valueParsers';
+import { aabbOfPoints, EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../../godot/scene/primitiveMesh';
 import { godotSurfacesGeometry } from '../../../resources/meshes/godotSurface';
 import { isPrimitiveMeshType, primitiveMeshSurface } from '../../../resources/meshes/primitivemesh/surface';
@@ -27,8 +27,8 @@ export function buildPrimitiveMeshGeometry(
  */
 export function primitiveMeshAabb(resource: TscnInternalResource): Aabb | null {
   if (!isPrimitiveMeshType(resource.type)) return null;
-  const custom = parseOptionalAabb(resource.data['custom_aabb'], 'custom_aabb');
-  if (custom && !isEmptyAabb(custom)) return custom;
+  const custom = parseNonEmptyAabb(resource.data['custom_aabb'], 'custom_aabb');
+  if (custom) return custom;
   // The texel size only scales UV2, which moves no vertex.
   const surface = primitiveMeshSurface(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
   return surface ? aabbOfPoints(surface.positions) : EMPTY_AABB;

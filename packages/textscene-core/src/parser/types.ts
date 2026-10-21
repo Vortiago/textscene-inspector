@@ -3,10 +3,11 @@
  */
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
+import type { InstanceNameSetting } from './nodeOwner';
 import type { IdHeading } from '../godot/scene/packedScene.js';
 
 /**
- * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
+ * One `[node]` heading as the scan saw it, before `seatScene` placed it. Kept off
  * the node because only the `sceneTreeBuilder` checks read it, against the returned tree.
  */
 export interface NodeOrigin<N extends RawNode> {
@@ -115,7 +116,25 @@ export interface RawNode {
   owner?: string;
   /** External scene instance reference, for example ExtResource("1_abc"). */
   instance?: string;
+  /**
+   * Set by the seating on an instance node below the root: the `unique_name_in_owner` settings this
+   * file writes inside its content, in file order. The graft reads them, and a graft into an outer
+   * instance appends the ones it hands down.
+   */
+  instanceNameSettings?: readonly InstanceNameSetting[];
 }
+
+/**
+ * What a node path names in the authored tree. `unknowable` is the only decline: Godot's walk is
+ * deterministic, so there is no "ambiguous", and a rule that reports on a guess is worse than one
+ * that stays quiet.
+ */
+export type NodePathResolution<N extends RawNode = RawNode> =
+  | { readonly status: 'found'; readonly node: N }
+  /** The walk ran off the authored tree exactly as the engine's would. */
+  | { readonly status: 'missing' }
+  /** The walk entered, started inside, or ended on content this file does not declare. */
+  | { readonly status: 'unknowable' };
 
 /** A node whose children are its own kind: the shape the tree builder seats a child into. */
 export type SceneNode<N> = RawNode & { children: N[] };

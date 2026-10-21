@@ -97,6 +97,11 @@ The optional hook **seam** (`onError`, `onSectionStart`, `onProperty`, `onSectio
 The lenient parser passes none, and the strict parser passes one that collects errors and runs validators.
 _Avoid_: "callback API", "strict mode flag".
 
+**Seating** (`seatScene` in `parser/sceneTreeBuilder.ts`):
+The scene tree the `[node]` headings form once each sits under the node its `parent=` names, in declaration order as instantiate places them, every owner's `%Name` claims and releases in file order, and the one walk that resolves a root-relative node path over it.
+Both parsers seat through it, the linter and the **Language-feature engine** resolve `parent=`, `from=` and `to=` through its walk, and every `%Name` reader, the instance graft included, reads its claims.
+_Avoid_: a second path table or `%Name` claim table over the headings.
+
 **Value decoder** (`parser/valueParsers.ts`):
 The lenient parser's shared primitives (`intOr`, `floatOr`, `parseOptionalFloat` and the others) that read a raw property string into a typed scalar or vector.
 The grammar is shared, but the absent/error contract may **fork** per slice.
@@ -178,7 +183,7 @@ _Avoid_: a per-viewport rule scoped to the whole scene.
 
 **Language-feature engine** (`languageFeatures/`):
 The React- and THREE-free core area that answers editor requests for one `.tscn`: hover, completion, quick fixes, folding and document highlights.
-It reads the text through a **ParseObserver** on the scanning loop, and reads the `godot/` captures.
+It reads the text through a **ParseObserver** on the scanning loop, seats the `[node]` headings through the **Seating**, and reads the `godot/` captures.
 Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0049).
 _Avoid_: "LSP" for the engine. LSP names the protocol, which the `tscn-lsp` server speaks. "Language service".
 
