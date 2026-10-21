@@ -82,6 +82,7 @@ describe('useResourceResolution', () => {
       scoped: null,
       status: 'pending',
       resourcePath: 'res://grass.tres',
+      isNone: false,
     });
   });
 
@@ -90,7 +91,16 @@ describe('useResourceResolution', () => {
       scoped: null,
       status: 'unavailable',
       resourcePath: null,
+      isNone: false,
     });
+  });
+
+  it.each([undefined, 'null', ''])('is none for %j, a property that holds no resource', (ref) => {
+    expect(renderResolution(ref).current.isNone).toBe(true);
+  });
+
+  it('is not none for a SubResource the scene lacks', () => {
+    expect(renderResolution('SubResource("gone")').current.isNone).toBe(false);
   });
 
   it('keeps the file’s resolution while the scene’s pools change', () => {

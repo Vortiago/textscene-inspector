@@ -58,7 +58,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
   const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
-  const hasMesh = properties.mesh !== undefined;
 
   const shellProps = {
     name: node.name,
@@ -76,15 +75,15 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
 
   switch (content.kind) {
     case 'unresolved':
-      // No `mesh` is Godot's empty node, which draws nothing. The parser drops a `null` mesh, so
-      // only a mesh this previewer cannot build gets the placeholder.
       return (
         <MeshShell {...shellProps} overlay={null}>
-          {hasMesh ? UNRESOLVED_MESH : null}
+          {UNRESOLVED_MESH}
         </MeshShell>
       );
     // While it loads, the shell keeps the node's descendants mounted: they do not depend on
-    // the `.tres`. A mesh Godot builds no surface for draws nothing, its descendants still mount.
+    // the `.tres`. A node with no mesh, and a mesh Godot builds no surface for, draw nothing and
+    // their descendants still mount.
+    case 'none':
     case 'loading':
     case 'empty':
       return <MeshShell {...shellProps}>{null}</MeshShell>;

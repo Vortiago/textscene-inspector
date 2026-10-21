@@ -124,3 +124,19 @@ describe('useMeshContent for a mesh with no surfaces', () => {
     expect(result.current).toEqual({ content: { kind: 'empty' }, undrawn: [] });
   });
 });
+
+describe('useMeshContent for a property that holds no mesh', () => {
+  const SCENE: SceneResources = { internalResources: [], externalResources: [] };
+
+  it.each([undefined, 'null', ''])('is none for %j, which Godot draws as nothing', (ref) => {
+    const { result } = renderUnderNode('Root/Empty', () => useMeshContent(useResourceResolution(ref, SCENE)));
+    expect(result.current).toEqual({ kind: 'none' });
+  });
+
+  it('stays unresolved for a mesh the scene lacks, which the previewer cannot draw', () => {
+    const { result } = renderUnderNode('Root/Gone', () =>
+      useMeshContent(useResourceResolution('SubResource("gone")', SCENE))
+    );
+    expect(result.current).toEqual({ kind: 'unresolved' });
+  });
+});

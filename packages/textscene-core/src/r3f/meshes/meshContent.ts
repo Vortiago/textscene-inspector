@@ -35,18 +35,19 @@ export interface SurfacedMesh {
 
 type MeshContent =
   /**
-   * No mesh, a file that cannot load, or surfaces that cannot be read. Also a type no slice
-   * builds, which Godot draws: the caller's placeholder says this previewer does not. The
-   * resolution cannot tell no mesh from one that cannot load, so a caller that draws nothing
-   * for no mesh checks the reference itself.
+   * A mesh the scene lacks, a file that cannot load, or surfaces that cannot be read. Also a type no slice
+   * builds, which Godot draws: the caller's placeholder says this previewer does not.
    */
   | { kind: 'unresolved' }
+  /** The property holds no mesh. Godot draws nothing for it, and so does the caller. */
+  | { kind: 'none' }
   | { kind: 'loading' }
   /** A mesh with no surface, such as a PlaceholderMesh or a TorusMesh of equal radii: it draws nothing. */
   | { kind: 'empty' }
   | { kind: 'surfaced'; mesh: SurfacedMesh };
 
 const UNRESOLVED: MeshContent = { kind: 'unresolved' };
+const NONE: MeshContent = { kind: 'none' };
 const LOADING: MeshContent = { kind: 'loading' };
 const EMPTY: MeshContent = { kind: 'empty' };
 
@@ -74,6 +75,7 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
     )
   );
 
+  if (resolution.isNone) return NONE;
   if (status === 'pending') return LOADING;
   if (!scoped || !kind) return UNRESOLVED;
   if (kind === 'surfaceless') return EMPTY;

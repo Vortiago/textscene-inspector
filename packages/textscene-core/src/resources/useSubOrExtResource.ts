@@ -13,6 +13,7 @@ import { resolveSubResourceRef, parsedResourcePath } from './SubResourceResolver
 import { useResource, type ResourceStatus } from './useResource';
 import { scopedSection } from './resourceSection';
 import { resourceFilePath } from './subResourcePath';
+import { holdsResource } from '../godot/scene/resourceLiteral';
 
 export interface ScopedResource {
   resource: TscnInternalResource;
@@ -27,9 +28,25 @@ export interface ResourceResolution {
   status: ResourceStatus;
   /** The path the resource loads from, a file or a **Sub-resource path**, or null for a SubResource or none. */
   resourcePath: string | null;
+  /**
+   * Whether the property holds no resource at all, which Godot reads as a null Ref and draws as
+   * nothing. A reference that names a resource this previewer cannot resolve is not none.
+   */
+  isNone: boolean;
 }
 
-const UNAVAILABLE: ResourceResolution = { scoped: null, status: 'unavailable', resourcePath: null };
+const NO_RESOURCE: ResourceResolution = {
+  scoped: null,
+  status: 'unavailable',
+  resourcePath: null,
+  isNone: true,
+};
+const UNRESOLVED: ResourceResolution = {
+  scoped: null,
+  status: 'unavailable',
+  resourcePath: null,
+  isNone: false,
+};
 
 export function useResourceResolution(ref: string | undefined, pools: SceneResources): ResourceResolution {
   const inline = resolveSubResourceRef(ref, pools.internalResources);
@@ -37,11 +54,19 @@ export function useResourceResolution(ref: string | undefined, pools: SceneResou
   const inlineResolution = useMemo(
     (): ResourceResolution | null =>
       inline
-        ? { scoped: { resource: inline, resources: pools }, status: 'loaded', resourcePath: null }
+        ? {
+            scoped: { resource: inline, resources: pools },
+            status: 'loaded',
+            resourcePath: null,
+            isNone: false,
+          }
         : null,
     [inline, pools]
   );
-  return inlineResolution ?? fileResolution;
+  if (inlineResolution) return inlineResolution;
+  if (!holdsResource(ref)) return NO_RESOURCE;
+  // A reference with no file to load names a resource the scene lacks.
+  return fileResolution === NO_RESOURCE ? UNRESOLVED : fileResolution;
 }
 
 /**
@@ -54,17 +79,18 @@ export function usePathResolution(path: string | null): ResourceResolution {
   const file = useResource<ParsedResource>(path ? resourceFilePath(path) : '', 'resource');
   // Apart from any scene tables: a scene edit leaves the file's resource the same object while the file holds.
   return useMemo((): ResourceResolution => {
-    if (!path) return UNAVAILABLE;
+    if (!path) return NO_RESOURCE;
     if (!file.value) {
       return {
         scoped: null,
         status: file.status === 'pending' ? 'pending' : 'unavailable',
         resourcePath: path,
+        isNone: false,
       };
     }
     const scoped = scopedSection(file.value, path);
-    if (!scoped) return { scoped: null, status: 'unavailable', resourcePath: path };
-    return { scoped, status: 'loaded', resourcePath: path };
+    if (!scoped) return { scoped: null, status: 'unavailable', resourcePath: path, isNone: false };
+    return { scoped, status: 'loaded', resourcePath: path, isNone: false };
   }, [path, file.status, file.value]);
 }
 
