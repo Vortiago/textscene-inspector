@@ -13,7 +13,7 @@ import {
 } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { lightPoseMatrix, viewToLightPose } from './lightPose.js';
 import { positionalShadowAtlas } from './shadowAtlasTarget.js';
-import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
+import { readIntensityThroughSlot, type ParaboloidShadow } from './slotOpacity.js';
 
 /** three exports no `PointLightShadow` class, so it comes from a point light's own shadow. */
 const ThreePointLightShadow = new THREE.PointLight().shadow.constructor as new () => PointLightShadow;
@@ -21,7 +21,7 @@ const ThreePointLightShadow = new THREE.PointLight().shadow.constructor as new (
 /** Written only by `writeLookupMatrix`, and valid only inside that call. */
 const scratchRect = new THREE.Vector4();
 
-export class AtlasOmniShadow extends ThreePointLightShadow implements SlottedShadow {
+export class AtlasOmniShadow extends ThreePointLightShadow implements ParaboloidShadow {
   /** The light's slot in the atlas of the viewport that renders now, or null for none. */
   slot: PositionalShadowSlot | null = null;
   opacity = 1;
@@ -65,7 +65,7 @@ export class AtlasOmniShadow extends ThreePointLightShadow implements SlottedSha
   }
 
   /** Writes the matrix from the space of `view` into the light's own, without its scale. */
-  viewToLight(light: THREE.Object3D, view: THREE.Camera, target: THREE.Matrix4): THREE.Matrix4 {
+  viewToLookup(view: THREE.Camera, target: THREE.Matrix4, light: THREE.Object3D): THREE.Matrix4 {
     return viewToLightPose(light, view, target);
   }
 
@@ -76,7 +76,7 @@ export class AtlasOmniShadow extends ThreePointLightShadow implements SlottedSha
    */
   writeLookupMatrix(light: THREE.Object3D): void {
     lightPoseMatrix(light, this.matrix).invert();
-    const rect = this.paraboloidRect(scratchRect);
+    const rect = this.slotRect(scratchRect);
     if (!rect) return;
     const e = this.matrix.elements;
     e[3] = rect.x;
@@ -89,7 +89,7 @@ export class AtlasOmniShadow extends ThreePointLightShadow implements SlottedSha
    * The first paraboloid's corner and the step to the second, in units of the atlas texture
    * (`light_storage.cpp:981-984`, `:1002-1003`), written into `target`. Null without a slot.
    */
-  paraboloidRect(target: THREE.Vector4): THREE.Vector4 | null {
+  slotRect(target: THREE.Vector4): THREE.Vector4 | null {
     const slot = this.slot;
     if (!slot?.paraboloidStep) return null;
     const atlasSize = positionalShadowAtlas().width;

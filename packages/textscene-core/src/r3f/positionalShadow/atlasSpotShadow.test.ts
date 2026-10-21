@@ -108,7 +108,7 @@ describe('AtlasSpotShadow.updateMatrices', () => {
   });
 });
 
-describe('AtlasSpotShadow.viewToLight', () => {
+describe('AtlasSpotShadow.viewToLookup', () => {
   it('maps a point in the view’s space to the atlas coordinate of its world point', () => {
     const view = new THREE.PerspectiveCamera();
     view.position.set(0, 0, 5);
@@ -116,7 +116,7 @@ describe('AtlasSpotShadow.viewToLight', () => {
     const shadow = new AtlasSpotShadow();
     shadow.place({ x: 2048, y: 1024, size: 1024, paraboloidStep: null });
     shadow.updateMatrices(downwardSpot());
-    const matrix = shadow.viewToLight(downwardSpot(), view, new THREE.Matrix4());
+    const matrix = shadow.viewToLookup(view, new THREE.Matrix4(), downwardSpot());
     // The world origin lies 5 in front of the view, on the cone's axis.
     const v = new THREE.Vector4(0, 0, -5, 1).applyMatrix4(matrix);
     expect(v.x / v.w).toBeCloseTo((2048 + 512) / 4096, 9);

@@ -105,12 +105,12 @@ describe('AtlasOmniShadow.writeLookupMatrix', () => {
   });
 });
 
-describe('AtlasOmniShadow.viewToLight', () => {
+describe('AtlasOmniShadow.viewToLookup', () => {
   it('maps a point in the view’s space into the light’s own space, without its scale', () => {
     const view = new THREE.PerspectiveCamera();
     view.position.set(0, 0, 5);
     view.updateMatrixWorld();
-    const matrix = new AtlasOmniShadow().viewToLight(turnedLight(), view, new THREE.Matrix4());
+    const matrix = new AtlasOmniShadow().viewToLookup(view, new THREE.Matrix4(), turnedLight());
     // The world origin lies 5 in front of the view. The light sits at (1, 2, 3) and is turned a
     // quarter about Y, so its local +Z is the world's +X and its local +X the world's -Z.
     const local = new THREE.Vector3(0, 0, -5).applyMatrix4(matrix);
@@ -118,23 +118,23 @@ describe('AtlasOmniShadow.viewToLight', () => {
   });
 });
 
-describe('AtlasOmniShadow.paraboloidRect', () => {
+describe('AtlasOmniShadow.slotRect', () => {
   it('gives the first paraboloid and the step to the second, in units of the atlas', () => {
     const shadow = new AtlasOmniShadow();
     shadow.slot = { x: 2048, y: 1024, size: 512, paraboloidStep: [1, 0] };
 
-    expect(shadow.paraboloidRect(new THREE.Vector4())!.toArray()).toEqual([0.5, 0.25, 0.125, 0]);
+    expect(shadow.slotRect(new THREE.Vector4())!.toArray()).toEqual([0.5, 0.25, 0.125, 0]);
   });
 
   it('gives none without a slot (error case)', () => {
-    expect(new AtlasOmniShadow().paraboloidRect(new THREE.Vector4())).toBeNull();
+    expect(new AtlasOmniShadow().slotRect(new THREE.Vector4())).toBeNull();
   });
 
   it('gives none for a slot without a paraboloid pair (edge case)', () => {
     const shadow = new AtlasOmniShadow();
     shadow.slot = { x: 0, y: 0, size: 512, paraboloidStep: null };
 
-    expect(shadow.paraboloidRect(new THREE.Vector4())).toBeNull();
+    expect(shadow.slotRect(new THREE.Vector4())).toBeNull();
   });
 });
 

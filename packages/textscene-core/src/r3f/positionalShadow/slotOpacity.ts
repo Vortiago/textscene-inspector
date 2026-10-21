@@ -16,9 +16,20 @@ export interface SlottedShadow extends THREE.LightShadow {
   /**
    * Writes the matrix from the space of `view` into the space the shadow looks up in, and returns
    * `target`: the light's own space for an omni or area light, the atlas for a spot light. The
-   * surface and the volumetric fog both read it.
+   * surface and the volumetric fog both read it. A spot shadow's matrix holds its light's pose, so
+   * it ignores `light`.
    */
-  viewToLight(light: THREE.Object3D, view: THREE.Camera, target: THREE.Matrix4): THREE.Matrix4;
+  viewToLookup(view: THREE.Camera, target: THREE.Matrix4, light: THREE.Object3D): THREE.Matrix4;
+}
+
+/** A slotted shadow that looks up through paraboloids: an omni or an area light's. */
+export interface ParaboloidShadow extends SlottedShadow {
+  /**
+   * Writes the slot's rect into `target` in units of the atlas, as the lookup reads it, and
+   * returns it, or null without a slot. An omni light's `zw` step to its second paraboloid. An area
+   * light's are the slot's side. The surface and the volumetric fog both read it.
+   */
+  slotRect(target: THREE.Vector4): THREE.Vector4 | null;
 }
 
 /**

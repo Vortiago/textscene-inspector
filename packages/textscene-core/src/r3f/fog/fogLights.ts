@@ -16,7 +16,7 @@ import { areaLightShadowDepthScale } from '../../godot/rendering/lights/areaLigh
 import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/rendering/lights/directionalShadow.js';
 import { lightBufferRange } from '../../godot/rendering/lights/lightBufferRange.js';
 import { splitSunOf } from '../directionalShadow/splitSun.js';
-import { isAreaShadowLight } from '../positionalShadow/atlasAreaShadow.js';
+import { AtlasAreaShadow } from '../positionalShadow/atlasAreaShadow.js';
 import { AtlasOmniShadow } from '../positionalShadow/atlasOmniShadow.js';
 import { AtlasSpotShadow } from '../positionalShadow/atlasSpotShadow.js';
 import type { SlottedShadow } from '../positionalShadow/slotOpacity.js';
@@ -141,7 +141,7 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / lightBufferRange(positional.distance));
   row[FogLightTexel.COLOR * 4 + 3] = positional.decay;
   if (kind === FogLightKind.OMNI) {
-    writeOmniShadow(light as THREE.PointLight, camera);
+    writeParaboloidShadow(light as THREE.PointLight, camera);
     return true;
   }
   const spot = light as THREE.SpotLight;
@@ -175,7 +175,7 @@ function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
   writeVec4(row, FogLightTexel.AREA_TEXTURE, ...rect);
   writeViewAxis(FogLightTexel.AREA_WIDTH, light, AREA_LIGHT_AXES.width, light.width, camera, maxMipmap);
   writeViewAxis(FogLightTexel.AREA_HEIGHT, light, AREA_LIGHT_AXES.height, light.height, camera);
-  writeAreaShadow(light, camera);
+  writeParaboloidShadow(light, camera);
   return true;
 }
 
@@ -212,27 +212,14 @@ function writeDirectionalShadow(light: THREE.DirectionalLight, camera: THREE.Cam
 }
 
 /**
- * An omni light with a slot looks up through Godot's world-to-light transform, and keeps its
- * paraboloids' rect beside it (`../positionalShadow/atlasOmniShadow.ts`).
+ * An omni or area light with a slot looks up from its own space into its paraboloids' slot
+ * (`../positionalShadow/atlasOmniShadow.ts`, `atlasAreaShadow.ts`).
  */
-function writeOmniShadow(light: THREE.PointLight, camera: THREE.Camera): void {
-  const { shadow } = light;
-  if (!light.castShadow || !(shadow instanceof AtlasOmniShadow)) return;
-  const rect = shadow.paraboloidRect(paraboloidRect);
+function writeParaboloidShadow(light: THREE.Light, camera: THREE.Camera): void {
+  const { shadow } = light as { shadow?: unknown };
+  if (!light.castShadow || !(shadow instanceof AtlasOmniShadow || shadow instanceof AtlasAreaShadow)) return;
+  const rect = shadow.slotRect(paraboloidRect);
   if (!rect) return;
-  writeVec4(row, FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
-  writePositionalShadow(shadow, light, camera);
-}
-
-/**
- * An area light with a slot looks up from its own space into its one paraboloid's slot
- * (`../positionalShadow/atlasAreaShadow.ts`).
- */
-function writeAreaShadow(light: THREE.RectAreaLight, camera: THREE.Camera): void {
-  if (!light.castShadow || !isAreaShadowLight(light)) return;
-  const { shadow } = light;
-  if (shadow.slot === null) return;
-  const rect = shadow.slotUvRect(paraboloidRect);
   writeVec4(row, FogLightTexel.SHADOW_SPLITS, rect.x, rect.y, rect.z, rect.w);
   writePositionalShadow(shadow, light, camera);
 }
@@ -247,7 +234,7 @@ function writeSpotShadow(light: THREE.SpotLight, camera: THREE.Camera): void {
 function writePositionalShadow(shadow: SlottedShadow, light: THREE.Light, camera: THREE.Camera): void {
   row[Cone.SHADOW_OPACITY] = shadow.intensity;
   row[Cone.SHADOW_BIAS] = shadow.bias;
-  writeMatrix(0, shadow.viewToLight(light, camera, viewToShadow));
+  writeMatrix(0, shadow.viewToLookup(camera, viewToShadow, light));
 }
 
 /** Writes `matrix` as the lookup of `slot`. */
