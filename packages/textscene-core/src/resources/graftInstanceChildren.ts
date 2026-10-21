@@ -10,7 +10,7 @@ import { scopeOf, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
-import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
+import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath';
 import { holderAfterSetting, type InstanceNameSetting } from '../parser/nodeOwner';
 
 /** The two scopes a graft joins. */
@@ -73,8 +73,8 @@ export function graftInstanceChildren(
       continue;
     }
 
-    const segments = expandUniqueNames(child.instanceSubPath.split('/'), grafted, claims);
-    const next = graftAt(grafted, segments, stamped, scopes.content);
+    const segments = subPathSegments(child.instanceSubPath, grafted, claims);
+    const next = segments && graftAt(grafted, segments, stamped, scopes.content);
     if (next) {
       grafted = next;
     } else {
@@ -105,7 +105,10 @@ function instanceTable(
   const handed: HandedSetting[] = [];
   for (const setting of settings) {
     const authored = setting.pathInInstance.split('/');
-    const segments = [...expandUniqueNames(authored.slice(0, -1), rootChildren, claims), authored.at(-1)!];
+    const parent =
+      authored.length > 1 ? subPathSegments(authored.slice(0, -1).join('/'), rootChildren, claims) : [];
+    if (!parent) continue;
+    const segments = [...parent, authored.at(-1)!];
     const owner = tableOwner(rootChildren, segments, setting.ownerInInstance);
     if (owner === null) continue;
     if (owner !== THIS_INSTANCE) {
@@ -210,31 +213,49 @@ function withSettingsAt(
 }
 
 /**
- * `segments` with each `%Name` the sub-scene's own table answers replaced by the path it claims,
- * since the walk restarts there (node.cpp:1930-1938). It stops at a nested instance, whose own
- * graft reads that scene's table, and leaves an unclaimed name for the graft to miss.
+ * A sub-path below the sub-scene root, walked as Godot walks a `parent=` path (`walkFromRoot`) over
+ * the instance's own `%Name` table, or null where it names nothing. A walk into a nested instance
+ * keeps the rest as written, for that instance's own graft to resolve. A sub-path with no `%Name`
+ * is the path as written, which the seating already walked.
  */
-function expandUniqueNames(
-  segments: readonly string[],
+function subPathSegments(
+  subPath: string,
   rootChildren: readonly LiveNode[],
-  claimedPath: ClaimedPath
-): string[] {
-  if (!segments.some((segment) => segment.startsWith(UNIQUE_NODE_PREFIX))) return [...segments];
-  let path: string[] = [];
-  for (const [index, segment] of segments.entries()) {
-    if (segment.startsWith(UNIQUE_NODE_PREFIX)) {
-      const claimed = claimedPath(segment);
-      if (claimed === undefined) return [...path, ...segments.slice(index)];
-      path = claimed.split('/');
-    } else if (segment === '..') {
-      path.pop();
-    } else if (segment !== '.') {
-      path.push(segment);
-    }
-    if (nodeAt(rootChildren, path)?.instance) return [...path, ...segments.slice(index + 1)];
-  }
-  return path;
+  claims: ClaimedPath
+): string[] | null {
+  const segments = subPath.split('/');
+  if (!segments.some((segment) => segment.startsWith(UNIQUE_NODE_PREFIX))) return segments;
+  const end = walkFromRoot(subPath, subSceneWalkTables(rootChildren, claims));
+  if (end === null) return null;
+  const path = typeof end === 'string' ? end : end.unlisted;
+  return path === '' ? [] : path.split('/');
 }
+
+/** The walk's tables over the sub-scene: a nested instance is opaque, and so is anything below it. */
+function subSceneWalkTables(rootChildren: readonly LiveNode[], claims: ClaimedPath): RootWalkTables {
+  const reach = (path: string): LiveNode | typeof INSIDE_INSTANCE | undefined => {
+    if (path === '') return undefined;
+    let siblings = rootChildren;
+    let found: LiveNode | undefined;
+    for (const name of path.split('/')) {
+      if (found?.instance) return INSIDE_INSTANCE;
+      found = siblings.find((n) => n.name === name);
+      if (!found) return undefined;
+      siblings = found.children;
+    }
+    return found;
+  };
+  return {
+    exists: (path) => path === '' || reach(path) !== undefined,
+    isOpaque: (path) => {
+      const at = reach(path);
+      return at === INSIDE_INSTANCE || Boolean(at?.instance);
+    },
+    uniquePaths: { get: claims },
+  };
+}
+
+const INSIDE_INSTANCE = 'inside a nested instance';
 
 /** The node at `path` below the sub-scene root, or undefined where none sits there. */
 function nodeAt(rootChildren: readonly LiveNode[], path: readonly string[]): LiveNode | undefined {

@@ -45,7 +45,7 @@ export interface RootWalkTables {
   /** Whether the node at a path keeps children or `%Name` claims another file lists. */
   readonly isOpaque: (path: string) => boolean;
   /** `%Name` to the path of the node claiming it, in the scene root's table. */
-  readonly uniquePaths: ReadonlyMap<string, string>;
+  readonly uniquePaths: Pick<ReadonlyMap<string, string>, 'get'>;
 }
 
 /**
