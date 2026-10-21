@@ -35,7 +35,7 @@ names the repository `Vortiago/textscene-inspector`, the workflow `release.yml` 
 environment `release`. npm offers that setting only for a package that already exists, so a
 package's first version is published by hand with `npm publish <tarball> --access public`.
 
-`@textscene/tscn` is core's parser and engine facts bundled into one file, so core stays private.
+`@textscene/tscn` is core's parser bundled into one file, so core stays private.
 Build and pack it for the first publish, then restore the manifest:
 
 ```bash

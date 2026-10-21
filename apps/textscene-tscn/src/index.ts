@@ -1,7 +1,15 @@
 /**
- * The public entry of `@textscene/tscn`: core's parser and engine facts, and nothing else. The
- * build bundles it, so core can stay private.
+ * The public entry of `@textscene/tscn`: the parser and the shapes of the scene it returns. The
+ * names are listed one by one, since core is private and each name core exports through a barrel
+ * would become a promise to every consumer.
  */
 
-export * from '@textscene/core/parser';
-export * from '@textscene/core/godot';
+export { TscnParser } from '@textscene/core/parser';
+export type {
+  RawNode,
+  TscnExternalResource,
+  TscnInternalResource,
+  TscnMainResource,
+  TscnNode,
+  TscnScene,
+} from '@textscene/core/parser';

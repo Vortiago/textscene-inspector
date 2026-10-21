@@ -24,11 +24,10 @@ const scene = new TscnParser().parse(source);
 console.log(scene.nodes[0]?.name);
 ```
 
-The package also exports the Godot engine facts the parser shares with the previewer:
-`PROJECT_FILE_NAME`, `PROJECT_FILE_PATH`, `SCAN_STOP_FILES`, `isScannedPath`, `importSidecarPath` and
-`isGodotTextResourcePath`.
+The package exports `TscnParser` and the types of the scene it returns: `TscnScene`, `TscnNode`,
+`RawNode`, `TscnExternalResource`, `TscnInternalResource` and `TscnMainResource`.
 
 ## Licence
 
-MIT. The package ships `LICENSE` and `THIRD-PARTY-NOTICES.md`, which holds the notices of the
-third-party code the repository transcribes, the Godot Engine MIT notice among them.
+MIT. The package ships `LICENSE` and `THIRD-PARTY-NOTICES.md`. The build writes the notices from the
+modules it bundles: the Godot Engine MIT notice covers the Godot code in the parser.

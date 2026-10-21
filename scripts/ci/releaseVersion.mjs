@@ -2,7 +2,7 @@
 /**
  * Reads a release tag before anything is built: which package it releases, and at which
  * version. The tag is the version's only source: the release jobs write it into the
- * package's manifest before they pack. Prints `package`, `directory`, `version` and
+ * package's manifest before they pack. Prints `package`, `kind`, `directory`, `version` and
  * `previous_tag` lines for $GITHUB_OUTPUT, or the error on stderr and exits 1.
  */
 import { execFileSync } from 'node:child_process';
@@ -19,6 +19,17 @@ export const RELEASE_PACKAGES = {
 
 /** Joins the example tags with "or", without the serial comma of American English. */
 const DISJUNCTION = new Intl.ListFormat('en-GB', { type: 'disjunction' });
+
+/**
+ * What a tag publishes. An `npm` package ships a tarball on GitHub and on npm; the `extension`
+ * ships a .vsix to the marketplaces. The release workflow reads this, so it names no package.
+ */
+export const RELEASE_KINDS = {
+  vscode: 'extension',
+  linter: 'npm',
+  lsp: 'npm',
+  tscn: 'npm',
+};
 
 /** The workspace directories each package bundles, besides its own. Its release notes cover them. */
 export const RELEASE_INPUTS = {
@@ -65,7 +76,7 @@ function sameSeries(release, tags) {
 /**
  * @param {string} tag - the pushed tag name, as `GITHUB_REF_NAME` gives it.
  * @param {string[]} tags - every tag in the repository.
- * @returns {{ package: string, directory: string, version: string, previousTag: string }
+ * @returns {{ package: string, kind: string, directory: string, version: string, previousTag: string }
  *   | { error: string }} `previousTag` is the base the release notes compare against, or ''
  *   for a package's first release.
  */
@@ -85,7 +96,13 @@ export function checkReleaseTag(tag, tags) {
   if (newest && compareParts(newest.release.parts, release.parts) > 0) {
     return { error: `expected a version above the newest ${release.package} tag ${newest.name}, got ${tag}` };
   }
-  return { package: release.package, directory, version: release.version, previousTag: newest?.name ?? '' };
+  return {
+    package: release.package,
+    kind: RELEASE_KINDS[release.package],
+    directory,
+    version: release.version,
+    previousTag: newest?.name ?? '',
+  };
 }
 
 /**
@@ -124,6 +141,7 @@ function main() {
     process.exit(1);
   }
   console.log(`package=${result.package}`);
+  console.log(`kind=${result.kind}`);
   console.log(`directory=${result.directory}`);
   console.log(`version=${result.version}`);
   console.log(`previous_tag=${result.previousTag}`);

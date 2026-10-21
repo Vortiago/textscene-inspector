@@ -3,12 +3,19 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { RELEASE_INPUTS, RELEASE_PACKAGES, checkReleaseTag, releaseHistory } from './releaseVersion.mjs';
+import {
+  RELEASE_INPUTS,
+  RELEASE_KINDS,
+  RELEASE_PACKAGES,
+  checkReleaseTag,
+  releaseHistory,
+} from './releaseVersion.mjs';
 
 describe('checkReleaseTag', () => {
   it('releases the extension alone on a vscode tag, at the tag version', () => {
     expect(checkReleaseTag('vscode-v1.3.0', [])).toEqual({
       package: 'vscode',
+      kind: 'extension',
       directory: 'apps/textscene-vscode',
       version: '1.3.0',
       previousTag: '',
@@ -26,6 +33,7 @@ describe('checkReleaseTag', () => {
   it('releases the language server alone on an lsp tag', () => {
     expect(checkReleaseTag('lsp-v1.0.0', ['linter-v1.0.0'])).toEqual({
       package: 'lsp',
+      kind: 'npm',
       directory: 'apps/textscene-lsp',
       version: '1.0.0',
       previousTag: '',
@@ -35,6 +43,7 @@ describe('checkReleaseTag', () => {
   it('releases the parser package alone on a tscn tag', () => {
     expect(checkReleaseTag('tscn-v0.1.0', ['lsp-v1.0.0'])).toEqual({
       package: 'tscn',
+      kind: 'npm',
       directory: 'apps/textscene-tscn',
       version: '0.1.0',
       previousTag: '',
@@ -124,6 +133,17 @@ describe('releaseHistory', () => {
 describe('RELEASE_PACKAGES', () => {
   it.each(Object.values(RELEASE_PACKAGES))('%s holds a package manifest', (directory) => {
     expect(existsSync(join(REPO_ROOT, directory, 'package.json'))).toBe(true);
+  });
+});
+
+describe('RELEASE_KINDS', () => {
+  it('names the kind of every released package', () => {
+    expect(Object.keys(RELEASE_KINDS)).toEqual(Object.keys(RELEASE_PACKAGES));
+  });
+
+  it('publishes every package but the extension to npm', () => {
+    const npm = Object.keys(RELEASE_KINDS).filter((name) => RELEASE_KINDS[name] === 'npm');
+    expect(npm).toEqual(['linter', 'lsp', 'tscn']);
   });
 });
 

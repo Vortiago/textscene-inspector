@@ -1,11 +1,11 @@
 name: Release
 
-# A tag releases one package: `vscode-v1.2.3` the extension, `linter-v1.2.3` the linter,
-# `lsp-v1.2.3` the language server and `tscn-v1.2.3` the parser. The tag is the version: the
-# release jobs write it into the package's manifest.
+# A tag `<package>-v1.2.3` releases one package, and `scripts/ci/releaseVersion.mjs` names the
+# packages and what each one publishes. The tag is the version: the release jobs write it into
+# the package's manifest. A tag of an unknown package fails the first job.
 on:
   push:
-    tags: ['vscode-v*', 'linter-v*', 'lsp-v*', 'tscn-v*']
+    tags: ['*-v*']
 
 permissions:
   contents: read
@@ -16,6 +16,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       package: ${{ steps.tag.outputs.package }}
+      kind: ${{ steps.tag.outputs.kind }}
       directory: ${{ steps.tag.outputs.directory }}
       version: ${{ steps.tag.outputs.version }}
       previous_tag: ${{ steps.tag.outputs.previous_tag }}
@@ -60,7 +61,7 @@ jobs:
   release-vscode:
     name: Release the extension on GitHub
     needs: validate
-    if: needs.validate.outputs.package == 'vscode'
+    if: needs.validate.outputs.kind == 'extension'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -115,11 +116,11 @@ jobs:
             apps/textscene-vscode/*.vsix
             web-dist.tar.gz
 
-  # The linter, the language server and the parser ship the same way: a tarball on GitHub and on npm.
+  # Each npm package ships the same way: a tarball on GitHub and on npm.
   release-npm-package:
     name: Release ${{ needs.validate.outputs.package }} on GitHub
     needs: validate
-    if: contains(fromJSON('["linter", "lsp", "tscn"]'), needs.validate.outputs.package)
+    if: needs.validate.outputs.kind == 'npm'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

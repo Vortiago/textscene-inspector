@@ -9,6 +9,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import ts from 'typescript';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
 
@@ -18,27 +19,56 @@ const bundlePath = join(packageDir, 'dist', 'index.js');
 const metafilePath = join(packageDir, 'dist', 'index.meta.json');
 const tscBin = join(repoRoot, 'node_modules', 'typescript', 'bin', 'tsc');
 
-/** The runtime exports of core's `./parser` and `./godot` entries. A new export is a decision to publish it. */
-const PUBLIC_VALUE_EXPORTS = [
-  'PROJECT_FILE_NAME',
-  'PROJECT_FILE_PATH',
-  'SCAN_STOP_FILES',
-  'TscnParser',
-  'importSidecarPath',
-  'isGodotTextResourcePath',
-  'isScannedPath',
+/** What a parser user needs: the parser and the shapes of the scene it returns. Core's internals stay out. */
+const PUBLIC_VALUE_EXPORTS = ['TscnParser'];
+const PUBLIC_TYPE_EXPORTS = [
+  'RawNode',
+  'TscnExternalResource',
+  'TscnInternalResource',
+  'TscnMainResource',
+  'TscnNode',
+  'TscnScene',
 ];
 
+function isExported(statement: ts.Statement): boolean {
+  return (
+    ts.canHaveModifiers(statement) &&
+    (ts.getModifiers(statement) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+  );
+}
+
+/** The names a declaration file exports, whether it declares them or re-exports them. */
+function declaredExports(declarationPath: string): string[] {
+  const source = ts.createSourceFile(
+    declarationPath,
+    readFileSync(declarationPath, 'utf8'),
+    ts.ScriptTarget.ES2022
+  );
+  const names: string[] = [];
+  for (const statement of source.statements) {
+    if (
+      ts.isExportDeclaration(statement) &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    ) {
+      names.push(...statement.exportClause.elements.map((element) => element.name.text));
+    } else if (isExported(statement) && 'name' in statement) {
+      names.push((statement.name as ts.Identifier).text);
+    }
+  }
+  return names.sort();
+}
+
 const CONSUMER_SCRIPT = `
-import { TscnParser, PROJECT_FILE_NAME } from '@textscene/tscn';
+import { TscnParser } from '@textscene/tscn';
 const scene = new TscnParser().parse('[gd_scene format=3]\\n\\n[node name="Root" type="Node3D"]\\n');
-console.log(JSON.stringify({ root: scene.nodes[0].name, projectFile: PROJECT_FILE_NAME }));
+console.log(JSON.stringify({ root: scene.nodes[0].name }));
 `;
 
 const CONSUMER_TYPES = `
-import { TscnParser, type TscnScene } from '@textscene/tscn';
+import { TscnParser, type TscnNode, type TscnScene } from '@textscene/tscn';
 const scene: TscnScene = new TscnParser().parse('');
-export const nodeCount: number = scene.nodes.length;
+export const roots: TscnNode[] = scene.nodes;
 `;
 
 const CONSUMER_TSCONFIG = {
@@ -78,9 +108,15 @@ afterAll(() => {
 });
 
 describe('@textscene/tscn bundle', () => {
-  it('exports exactly the parser and engine-fact entries of core', async () => {
+  it('exports exactly the public values', async () => {
     const exported = await import(pathToFileURL(bundlePath).href);
     expect(Object.keys(exported).sort()).toEqual(PUBLIC_VALUE_EXPORTS);
+  });
+
+  it('exports exactly the public types, beside the values', () => {
+    expect(declaredExports(join(packageDir, 'dist', 'index.d.ts'))).toEqual(
+      [...PUBLIC_VALUE_EXPORTS, ...PUBLIC_TYPE_EXPORTS].sort()
+    );
   });
 
   it('imports nothing, so it needs no dependency and no resolver condition', () => {
@@ -97,15 +133,21 @@ describe('@textscene/tscn bundle', () => {
 describe('@textscene/tscn tarball in a plain Node project', () => {
   it('imports and parses a scene', () => {
     const output = run('node', ['use.mjs'], consumerDir);
-    expect(JSON.parse(output)).toEqual({ root: 'Root', projectFile: 'project.godot' });
+    expect(JSON.parse(output)).toEqual({ root: 'Root' });
   });
 
-  it('ships the licence and the third-party notices, and no metafile', () => {
+  it('ships the licence, and no metafile', () => {
     const installed = join(consumerDir, 'node_modules', '@textscene', 'tscn');
-    expect(
-      ['LICENSE', 'THIRD-PARTY-NOTICES.md'].filter((file) => !existsSync(join(installed, file)))
-    ).toEqual([]);
+    expect(existsSync(join(installed, 'LICENSE'))).toBe(true);
     expect(existsSync(join(installed, 'dist', 'index.meta.json'))).toBe(false);
+  });
+
+  it('ships the notices of the Godot code it holds, and of no other third party', () => {
+    const installed = join(consumerDir, 'node_modules', '@textscene', 'tscn');
+    const notices = readFileSync(join(installed, 'THIRD-PARTY-NOTICES.md'), 'utf8');
+    expect(notices).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
+    expect(notices).toContain('packages/textscene-core/src/godot/math/color.ts');
+    expect(notices).not.toContain('## Open Sans font');
   });
 
   it('ships declarations that type-check without @textscene/core', () => {

@@ -19,7 +19,7 @@ completion. A host supplies files and a place to draw or edit.
 | `apps/textscene-vscode` | VS Code extension: preview webview and language features | esbuild |
 | `apps/textscene-lsp` | `tscn-lsp` language server for any LSP client | esbuild |
 | `apps/textscene-linter` | `tscn-lint` CLI | esbuild |
-| `apps/textscene-tscn` | `@textscene/tscn`: core's parser and engine facts as one npm bundle | esbuild |
+| `apps/textscene-tscn` | `@textscene/tscn`: core's parser as one npm bundle | esbuild |
 
 Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
 `pnpm-workspace.yaml` catalog holds every shared dependency version.

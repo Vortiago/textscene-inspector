@@ -8,28 +8,14 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
+import { NOTICE_SOURCES, bundledNotices } from './third-party-notices.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const NOTICES = join(REPO_ROOT, 'THIRD-PARTY-NOTICES.md');
-const PACKAGE_COPIES = [
-  join(REPO_ROOT, 'apps', 'textscene-vscode', 'THIRD-PARTY-NOTICES.md'),
-  join(REPO_ROOT, 'apps', 'textscene-tscn', 'THIRD-PARTY-NOTICES.md'),
-];
+const VSCODE_COPY = join(REPO_ROOT, 'apps', 'textscene-vscode', 'THIRD-PARTY-NOTICES.md');
 
-/** The line every Godot-derived file carries. Matched loosely on the two names. */
-const GODOT_COPYRIGHT = /Copyright \(c\) 2007-2014 Juan Linietsky, Ariel Manzur/;
-
-/** The line every file ported from bcdec (`thirdparty/misc/bcdec.h` in Godot) carries. */
-const BCDEC_COPYRIGHT = /Copyright \(c\) 2022 Sergii Kudlai/;
-
-/** The line every file ported from FastLZ (`thirdparty/misc/fastlz.c` in Godot) carries. */
-const FASTLZ_COPYRIGHT = /Copyright \(C\) 2005-2020 Ariya Hidayat/;
-
-const COPYRIGHTS = [
-  ['Godot', GODOT_COPYRIGHT],
-  ['bcdec', BCDEC_COPYRIGHT],
-  ['FastLZ', FASTLZ_COPYRIGHT],
-];
+const GODOT_COPYRIGHT = NOTICE_SOURCES.find(({ name }) => name === 'Godot').copyright;
+const COPYRIGHTS = NOTICE_SOURCES.map(({ name, copyright }) => [name, copyright]);
 
 /** Trees that can contain derived source. `node_modules` and build output excluded. */
 const SEARCH_ROOTS = ['packages', 'scripts', 'apps'];
@@ -93,9 +79,44 @@ describe('THIRD-PARTY-NOTICES.md', () => {
     }
   );
 
-  it.each(PACKAGE_COPIES)('is byte-identical to the copy shipped in %s', (copy) => {
-    // `vsce package` and `pnpm pack` pick up the copy beside the package's package.json. The root
-    // file is authoritative, and each copy must match it.
-    expect(readFileSync(copy, 'utf8')).toBe(readFileSync(NOTICES, 'utf8'));
+  it('is byte-identical to the copy shipped in the VSIX', () => {
+    // `vsce package` picks up the copy beside the extension's package.json, since `.vscodeignore`
+    // is a denylist. The root file is authoritative, and the copy must match it.
+    expect(readFileSync(VSCODE_COPY, 'utf8')).toBe(readFileSync(NOTICES, 'utf8'));
+  });
+});
+
+describe('bundledNotices', () => {
+  const notices = readFileSync(NOTICES, 'utf8');
+  const godotFile = {
+    path: 'packages/textscene-core/src/godot/math/color.ts',
+    text: 'Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur',
+  };
+  const fastlzFile = {
+    path: 'packages/textscene-core/src/resources/formats/binaryresource/fastlz.ts',
+    text: 'Copyright (C) 2005-2020 Ariya Hidayat',
+  };
+  const plainFile = { path: 'packages/textscene-core/src/parser/utils.ts', text: 'export {};' };
+
+  it('keeps the preamble and drops every section whose code the bundle lacks', () => {
+    const text = bundledNotices(notices, [plainFile]);
+    expect(text).toContain('# Third-party notices');
+    expect(text).not.toContain('## ');
+  });
+
+  it('carries the Godot licence and lists the bundled Godot files only', () => {
+    const text = bundledNotices(notices, [godotFile, plainFile]);
+    expect(text).toContain('## Godot Engine');
+    expect(text).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
+    expect(text).toContain(`- \`${godotFile.path}\``);
+    expect(text).not.toContain('skyShaders.ts');
+    expect(text).not.toContain('## Open Sans font');
+  });
+
+  it('carries a section whole when the bundle holds code from it', () => {
+    const text = bundledNotices(notices, [fastlzFile]);
+    expect(text).toContain('## FastLZ');
+    expect(text).toContain('Ariya Hidayat');
+    expect(text).not.toContain('## Godot Engine');
   });
 });
