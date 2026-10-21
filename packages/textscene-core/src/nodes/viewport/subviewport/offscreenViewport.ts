@@ -36,11 +36,16 @@ export function createSceneTarget(width: number, height: number, name: string): 
  */
 export function createCanvasTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
   const target = createTarget(width, height, name);
-  pinColorSpace(target.texture, THREE.SRGBColorSpace);
-  target.texture.internalFormat = 'RGBA8';
-  // An explicit mark, not a rule on RGBA8 under an sRGB tag: CanvasMsaaFrame has that shape too.
-  markSrgbBytes(target.texture);
+  storeSrgbBytes(target.texture);
   return target;
+}
+
+/** Makes `texture` the storage of canvas bytes: RGBA8 under a pinned sRGB tag, marked as bytes. */
+export function storeSrgbBytes(texture: THREE.Texture): void {
+  pinColorSpace(texture, THREE.SRGBColorSpace);
+  texture.internalFormat = 'RGBA8';
+  // An explicit mark, not a rule on RGBA8 under an sRGB tag: CanvasMsaaFrame has that shape too.
+  markSrgbBytes(texture);
 }
 
 /**

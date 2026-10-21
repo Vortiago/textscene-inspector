@@ -12,7 +12,7 @@ import {
   type ViewportTextureEntry,
 } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { collectNestedViewportPaths } from './nestedViewportPaths.js';
-import { useDecodingView } from './decodingView.js';
+import { useTargetViews } from './targetViews.js';
 
 interface PublishViewportPassOptions {
   /** Dispatcher-absolute path of the sub-viewport publishing its content. */
@@ -24,7 +24,7 @@ interface PublishViewportPassOptions {
   width: number;
   height: number;
   /**
-   * This frame's offscreen render, which the decoding view fills from after. Never called while
+   * This frame's offscreen render, which the copy views fill from after. Never called while
    * this pass sits in a cycle.
    */
   render: () => void;
@@ -39,20 +39,19 @@ export function usePublishViewportPass({
   render,
 }: PublishViewportPassOptions): void {
   const registerViewportPass = useRegisterViewportPass();
-  const decoding = useDecodingView(target);
-  const texture = target.texture;
+  const views = useTargetViews(target);
 
   const entry = useMemo<ViewportTextureEntry>(
-    () => ({ texture, decoding, size: { x: width, y: height } }),
-    [texture, decoding, width, height]
+    () => ({ plain: views.plain, decoding: views.decoding, size: { x: width, y: height } }),
+    [views, width, height]
   );
   usePublishViewportTexture(path, entry);
 
   const dependsOn = useMemo(() => collectNestedViewportPaths(node, path), [node, path]);
   const renderViews = useCallback(() => {
     render();
-    decoding.fill();
-  }, [render, decoding]);
+    views.fill();
+  }, [render, views]);
   useEffect(
     () => registerViewportPass(path, { dependsOn, render: renderViews }),
     [registerViewportPass, path, dependsOn, renderViews]

@@ -30,7 +30,11 @@ import {
   useViewportTextureSlot,
   type ViewportTextureView,
 } from './useViewportTextureSlot';
-import { ViewportTexturePublisher, viewportEntry } from '../../../r3f/testing/ViewportTexturePublisher';
+import {
+  ViewportTexturePublisher,
+  countingView,
+  viewportEntry,
+} from '../../../r3f/testing/ViewportTexturePublisher';
 import type { ViewportTextureEntry } from '../../../r3f/contexts/ViewportTextureContext';
 
 const viewportTexture: TscnInternalResource = {
@@ -308,24 +312,31 @@ describe('useViewportTextureSlot views', () => {
     expect(bound.every((commit) => commit.retainers === 1)).toBe(true);
   });
 
-  it('resolves the plain view and fills no decoding view (edge case)', () => {
+  it('resolves the plain view without retaining the decoding view (edge case)', () => {
     const { resolved, entry, retainers } = mountView('plain');
-    expect(resolved()).toBe(entry.texture);
+    expect(resolved()).toBe(entry.plain.texture);
     expect(retainers.count).toBe(0);
+  });
+
+  it('keeps the plain view filled while mounted', () => {
+    const { view, retainers } = countingView(new THREE.Texture());
+    const entry = viewportEntry(new THREE.Texture(), { x: 256, y: 256 }, { plain: view });
+    render(
+      <ViewportTextureProvider>
+        <ViewportTexturePublisher path="Root/SubViewport" entry={entry} />
+        <NodePathProvider path="Root/Screen">
+          <ViewConsumer view="plain" onResolve={() => {}} />
+        </NodePathProvider>
+      </ViewportTextureProvider>
+    );
+    expect(retainers.count).toBe(1);
   });
 });
 
-/** An entry whose decoding view is its own texture, counting the consumers that retain it. */
+/** An entry whose decoding view counts the consumers that retain it. */
 function entryWithDecodingView(): { entry: ViewportTextureEntry; retainers: { count: number } } {
-  const retainers = { count: 0 };
-  const retain = () => {
-    retainers.count++;
-    return () => {
-      retainers.count--;
-    };
-  };
-  const decoding = { texture: new THREE.Texture(), retain };
-  return { entry: viewportEntry(new THREE.Texture(), { x: 256, y: 256 }, decoding), retainers };
+  const { view, retainers } = countingView(new THREE.Texture());
+  return { entry: viewportEntry(new THREE.Texture(), { x: 256, y: 256 }, { decoding: view }), retainers };
 }
 
 function ViewConsumer({

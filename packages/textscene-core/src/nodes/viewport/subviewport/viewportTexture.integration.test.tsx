@@ -129,7 +129,8 @@ texture = SubResource("ViewportTexture_1")
     const maps = materials(renderer)
       .map((material) => (material as THREE.MeshBasicMaterial).map)
       .filter((map): map is THREE.Texture => !!map);
-    expect(maps.map((map) => map.name)).toContain('SubViewport::target');
+    // A canvas item samples the plain view, which a 3D target serves as a copy of its bytes.
+    expect(maps.map((map) => map.name)).toContain('SubViewport::target::plain');
   });
 
   /**
