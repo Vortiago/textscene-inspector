@@ -31,6 +31,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.mocked(warn).mockClear();
 });
 
 async function copyRootPath(): Promise<void> {
@@ -52,5 +53,6 @@ describe('copy node path in the web previewer', () => {
   it('writes "." for the scene root through navigator.clipboard', async () => {
     await copyRootPath();
     expect(writeText).toHaveBeenCalledExactlyOnceWith('.');
+    expect(warn).not.toHaveBeenCalled();
   });
 });

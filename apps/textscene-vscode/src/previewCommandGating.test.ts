@@ -25,7 +25,7 @@ const GATED_COMMANDS = new Set(['textscene.openPreviewToSide', 'textscene.copyNo
  * Four menus and one keybinding for the preview, two menus for the copy. The floor stops a
  * manifest reshuffle that the scan misses from passing as "every clause is correct".
  */
-const EXPECTED_CONTRIBUTIONS = 7;
+const MIN_CONTRIBUTIONS = 7;
 
 /** The gate, spelled by the file's extension rather than by its language. */
 const GATE = 'resourceExtname == .tscn';
@@ -40,7 +40,7 @@ describe('preview command gating', () => {
   ].filter((entry) => GATED_COMMANDS.has(entry.command));
 
   it('gates every contribution on the extension the command accepts', () => {
-    expect(gated.length).toBeGreaterThanOrEqual(EXPECTED_CONTRIBUTIONS);
+    expect(gated.length).toBeGreaterThanOrEqual(MIN_CONTRIBUTIONS);
     const wrong = gated.filter((e) => e.when !== GATE).map((e) => `${e.where}: ${e.when}`);
     expect(wrong).toEqual([]);
   });

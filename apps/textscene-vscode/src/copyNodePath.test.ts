@@ -39,7 +39,7 @@ describe('copyNodePathAtCursor', () => {
     await copyNodePathAtCursor();
     expect(vscode.env.clipboard.writeText).not.toHaveBeenCalled();
     expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(
-      'Put the cursor in a [node] section to copy its node path.'
+      'Put the cursor in a [node] section that the scene tree holds to copy its node path.'
     );
   });
 

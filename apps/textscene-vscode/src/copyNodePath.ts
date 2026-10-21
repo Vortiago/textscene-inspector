@@ -12,7 +12,9 @@ export async function copyNodePathAtCursor(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   const nodePath = editor && nodePathAt(languageDocumentOf(editor.document), editor.selection.active);
   if (nodePath === undefined) {
-    void vscode.window.showInformationMessage('Put the cursor in a [node] section to copy its node path.');
+    void vscode.window.showInformationMessage(
+      'Put the cursor in a [node] section that the scene tree holds to copy its node path.'
+    );
     return;
   }
   await writeClipboard(nodePath);
