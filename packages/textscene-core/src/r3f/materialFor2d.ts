@@ -14,7 +14,7 @@ import { godotTextureFilterState, type TextureFilterState } from '../resources/t
 import type { PassBlend } from './materials/surfaceBlend';
 
 /** The flags `get_material_for_2d` reads, as the node stores them. */
-export interface MaterialFor2dInput {
+interface MaterialFor2dInput {
   /** `SpriteBase3D::AlphaCutMode` or `Label3D::AlphaCutMode`: two C++ enums, same members. */
   alphaCut: AlphaCutMode;
   alphaScissorThreshold: number;
@@ -30,7 +30,7 @@ export interface MaterialFor2dInput {
   textureFilter: TextureFilter;
 }
 
-export interface MaterialFor2d {
+interface MaterialFor2d {
   /**
    * Each pass a geometry instance's fade can draw the surface in. It carries no opacity: a
    * Sprite3D takes it from its modulate, a Label3D run from its tint.

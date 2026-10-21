@@ -4,12 +4,14 @@
  */
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { materialFor2d, type MaterialFor2dInput } from './materialFor2d';
+import { materialFor2d } from './materialFor2d';
 import { NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
 import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
 import { godotTextureFilterState } from '../resources/textures/godotTextureFilter';
 import { TextureFilter } from '../godot/rendering/materials/textureFilter';
+
+type MaterialFor2dInput = Parameters<typeof materialFor2d>[0];
 
 const DEFAULTS: MaterialFor2dInput = {
   alphaCut: AlphaCutMode.DISABLED,
