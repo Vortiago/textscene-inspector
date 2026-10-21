@@ -17,6 +17,12 @@ export const LIGHTING_SCENES = [
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
+  // The Linear upscale mode, from a Fixture project's project.godot: a bilinear read of each level.
+  { name: 'glow-linear-upscale', file: 'glow-linear-upscale/unit-glow-linear-upscale.tscn' },
+  // A frame under 256 px has fewer glow levels, and a weighted level past the last reads that one:
+  // unit-glow-authored weights its two coarsest levels. 96 px clamps both, 200 px clamps the last.
+  { name: 'glow-small-frame-96', file: 'unit-glow-authored.tscn', window: { width: 421, height: 140 } },
+  { name: 'glow-small-frame-200', file: 'unit-glow-authored.tscn', window: { width: 525, height: 200 } },
   // `tonemap_exposure` under LINEAR with no compositor: three draws the curve per material.
   { name: 'environment-linear-exposure', file: 'unit-environment-linear-exposure.tscn' },
   { name: 'glow-specular', file: 'unit-glow-specular.tscn' },

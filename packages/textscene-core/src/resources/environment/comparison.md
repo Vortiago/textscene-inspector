@@ -33,7 +33,7 @@ A `ProceduralSkyMaterial` under `background_mode = BG_SKY`. The gradient, and th
 ## Glow (bloom)
 <!-- compare: image=unit-material-emissive status=done fixture=unit-material-emissive.tscn -->
 
-The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders. Each level blurs with Godot's five-weight gaussian, and the composite reads each level with the bicubic filter, or with a bilinear fetch when the project sets `rendering/environment/glow/upscale_mode` to Linear. A frame too small to halve to the seventh level builds fewer levels, as Godot does. The glow runs whenever the environment enables it, so a lit specular highlight blooms as well, as in Godot. A `glow_map` scales the glow per screen position, as Godot's tonemap pass does.
+The preview environment enables glow, which blooms the emissive sphere. Both engines draw the same tight halo and leave the ground untouched. The bright pass, the seven-level pyramid and all five blend modes are ported from Godot's shaders. Each level blurs with Godot's five-weight gaussian. The composite reads each level with the bicubic filter, or with a bilinear fetch when the project sets `rendering/environment/glow/upscale_mode` to Linear. A frame too small to halve to the seventh level builds fewer levels, as Godot does. The glow runs whenever the environment enables it, so a lit specular highlight blooms as well, as in Godot. A `glow_map` scales the glow per screen position, as Godot's tonemap pass does.
 
 ## Adjustments
 <!-- compare: image=unit-environment-adjustments status=done fixture=unit-environment-adjustments.tscn -->

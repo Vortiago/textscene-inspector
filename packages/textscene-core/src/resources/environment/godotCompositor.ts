@@ -120,9 +120,9 @@ function declarationsGlsl(declarations: Record<string, UniformDeclaration>): str
  */
 function glowAndToneMapGlsl(glow: GlowParams): string {
   const blend = blendsAfterToneMapping(glow)
-    ? /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM});
+    ? /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${EXPOSURE_UNIFORM});
   color = godotGlowBlend(color, godotToneMap(glow));`
-    : /* glsl */ `  vec3 color = godotGlowBlend(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM}, glow);
+    : /* glsl */ `  vec3 color = godotGlowBlend(inputColor.rgb * ${EXPOSURE_UNIFORM}, glow);
   color = godotToneMap(color);`;
   const map = samplesGlowMap(glow)
     ? /* glsl */ `  glow = mix(glow, texture2D(${GLOW_MAP_UNIFORM}, uv).rgb * glow, ${glslFloat(glow.mapStrength)});\n`
@@ -131,8 +131,11 @@ function glowAndToneMapGlsl(glow: GlowParams): string {
 ${map}${blend}`;
 }
 
-/** `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. */
-const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(max(inputColor.rgb, 0.0) * ${EXPOSURE_UNIFORM});`;
+/**
+ * `tonemap.glsl:859-899` with `FLAG_USE_GLOW` clear: exposure, then the curve. Nothing clamps the
+ * scene colour before the blend: the curve clamps for itself (`:258`).
+ */
+const TONE_MAP_ONLY_GLSL = /* glsl */ `  vec3 color = godotToneMap(inputColor.rgb * ${EXPOSURE_UNIFORM});`;
 
 /**
  * `tonemap.glsl:916-946`: brightness on linear values, contrast and an equal-weight saturation on

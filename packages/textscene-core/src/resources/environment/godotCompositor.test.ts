@@ -163,13 +163,13 @@ describe('compositeProgram — exposure', () => {
   it('tonemaps operands that are exposed already', () => {
     const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
     expect(glsl).toContain('godotToneMap(glow)');
-    expect(glsl).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure)');
+    expect(glsl).toContain('godotToneMap(inputColor.rgb * godotExposure)');
   });
 
-  it('clamps the scene colour non-negative before the curve, as apply_tonemapping does', () => {
-    // Godot: "Ensure color values passed to tonemappers are positive. They can
-    // be negative in the case of negative lights".
-    expect(body(glowOn())).toContain('max(inputColor.rgb, 0.0)');
+  it('blends the scene colour unclamped, so a negative channel lowers the glow as in Godot', () => {
+    // `tonemap.glsl:875,892`: only `apply_tonemapping` clamps, after the blend. The sky's dither
+    // leaves a channel below zero, and a clamp before the blend raises the sum by that much.
+    expect(body(glowOn())).toContain('godotGlowBlend(inputColor.rgb * godotExposure, glow)');
   });
 });
 
@@ -274,7 +274,7 @@ describe('compositeProgram — with the glow flag clear', () => {
   const tone = { mode: ToneMapper.FILMIC, white: 1 };
 
   it('exposes the scene colour and applies the curve, in that order', () => {
-    expect(body(null, tone)).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure)');
+    expect(body(null, tone)).toContain('godotToneMap(inputColor.rgb * godotExposure)');
   });
 
   it('gathers no glow and declares no buffer to gather from', () => {

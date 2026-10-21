@@ -42,6 +42,7 @@ describe('captureScene seam selection', () => {
     return {
       default: { page: { name: '3d-page' }, diagnostics: emptyDiagnostics() },
       canvas2D: { page: { name: '2d-page' }, diagnostics: emptyDiagnostics() },
+      windows: { '525x200': { page: { name: 'small-page' }, diagnostics: emptyDiagnostics() } },
     };
   }
 
@@ -85,6 +86,29 @@ describe('captureScene seam selection', () => {
       camera: undefined,
       onSlow: expect.any(Function),
     });
+  });
+
+  it('routes a scene that sets a window through the page of that size', async () => {
+    stubHappyCapture();
+    const pages = fakePages();
+    const scene = { name: 'small', file: 'unit-small.tscn', window: { width: 525, height: 200 } };
+
+    await captureScene(pages, 'http://localhost:1', scene);
+
+    expect(openScene).toHaveBeenLastCalledWith(
+      pages.windows['525x200'].page,
+      'http://localhost:1',
+      'unit-small.tscn',
+      { canvas2D: false, camera: undefined, onSlow: expect.any(Function) }
+    );
+  });
+
+  it('throws when a scene sets a window the run created no page for', async () => {
+    stubHappyCapture();
+    const pages = { ...fakePages(), windows: {} };
+    const scene = { name: 'small', file: 'unit-small.tscn', window: { width: 525, height: 200 } };
+
+    await expect(captureScene(pages, 'http://localhost:1', scene)).rejects.toThrow(/525x200/);
   });
 
   it('opens a scene that names a camera through that Camera3D', async () => {
