@@ -130,16 +130,17 @@ function authoredSections(
   }));
 }
 
-/** Names each mesh type the node holds that the previewer does not draw, which a wireframe box stands in for. */
+/** Names each mesh type the node holds that the previewer does not draw. */
 function UndrawnMeshNotice({ nodePath }: { nodePath: string }) {
   const types = useUndrawnMeshTypes(nodePath);
   if (types.length === 0) return null;
+  const meshes = types.length === 1 ? `${types[0]} mesh is` : `${types.join(', ')} meshes are`;
   return (
     <div className={`${styles.section} ${styles.warningSection}`}>
       <h4 className={styles.sectionTitle}>Mesh Not Drawn</h4>
       <p className={styles.warningText}>
-        Its {types.join(', ')} mesh is not yet drawn by the previewer. The viewport shows a wireframe box, or
-        nothing, where Godot draws it.
+        Its {meshes} not yet drawn by the previewer. The viewport shows a wireframe box, or nothing, where
+        Godot draws it.
       </p>
     </div>
   );

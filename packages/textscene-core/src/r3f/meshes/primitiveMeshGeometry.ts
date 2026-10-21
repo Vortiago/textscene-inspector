@@ -14,10 +14,10 @@ import { resourceContentKey } from '../../resources/resourceContentKey';
 
 /**
  * Written only by `primitiveMeshGeometry`. An entry leaves when its geometry is disposed, which
- * `useDisposeOnRelease` does once its last holder lets go. One a discarded render built waits for
- * the next holder of its content.
+ * `useDisposeOnRelease` does once its last holder lets go. A weak reference lets the collector
+ * take one that a discarded render built and no holder ever took.
  */
-const sharedGeometries = new Map<string, THREE.BufferGeometry>();
+const sharedGeometries = new Map<string, WeakRef<THREE.BufferGeometry>>();
 
 /**
  * `primitiveMeshSurface` as one three geometry, shared by every holder of equal content: Godot
@@ -29,14 +29,20 @@ export function primitiveMeshGeometry(
   texelSize: number
 ): THREE.BufferGeometry | null {
   const key = `${texelSize}|${resourceContentKey(resource)}`;
-  const shared = sharedGeometries.get(key);
+  const shared = sharedGeometries.get(key)?.deref();
   if (shared) return shared;
   const surface = primitiveMeshSurface(resource, texelSize);
   if (!surface) return null;
   const geometry = godotSurfacesGeometry([surface]);
-  sharedGeometries.set(key, geometry);
-  geometry.addEventListener('dispose', () => sharedGeometries.delete(key));
+  sharedGeometries.set(key, new WeakRef(geometry));
+  geometry.addEventListener('dispose', () => forgetSharedGeometry(key, geometry));
   return geometry;
+}
+
+/** Drops `geometry`'s entry, and leaves alone a newer geometry that took the key after it. */
+function forgetSharedGeometry(key: string, geometry: THREE.BufferGeometry): void {
+  const entry = sharedGeometries.get(key)?.deref();
+  if (entry === undefined || entry === geometry) sharedGeometries.delete(key);
 }
 
 /**

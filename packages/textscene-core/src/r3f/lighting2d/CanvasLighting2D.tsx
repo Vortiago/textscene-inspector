@@ -26,6 +26,7 @@ import { capItemLights, type CappedItem } from './itemLightCap.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 import { useGameViewportRect } from '../gameViewportRect.js';
 import type { Rgba } from '../../godot/math/math.js';
+import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
 export { useCanvasLighting2D, type CanvasLighting2D } from './lightPassContext.js';
 export {
@@ -34,7 +35,6 @@ export {
   useRegisterCanvasLight2D,
   useRegisterLitItem,
 } from './lightPassDeclarations.js';
-import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 interface CanvasLighting2DProviderProps {
   /**

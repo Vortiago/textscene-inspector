@@ -21,7 +21,7 @@ import {
 import { readyMaterial, useMaterial } from '../../materials/useMaterial.js';
 import type { MaterialSource } from '../../materials/materialSource.js';
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
-import { useDisposeOnRelease } from '../../useDisposeOnRelease';
+import { useDisposeOnRelease } from '../../useDisposeOnRelease.js';
 
 interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
