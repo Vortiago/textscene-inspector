@@ -50,6 +50,14 @@ export class AtlasSpotShadow extends ThreeSpotLightShadow implements SlottedShad
     confineShadowScissor(this, this.slotRect);
   }
 
+  /**
+   * Writes the matrix from the space of `view` into the atlas, through the slot. `matrix` already
+   * holds the light's pose.
+   */
+  viewToLookup(view: THREE.Camera, target: THREE.Matrix4): THREE.Matrix4 {
+    return target.multiplyMatrices(this.matrix, view.matrixWorld);
+  }
+
   /** Copies `source`, and stays undrawn by three's own pass. */
   override copy(source: SpotLightShadow): this {
     super.copy(source);

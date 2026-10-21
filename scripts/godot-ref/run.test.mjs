@@ -33,6 +33,9 @@ import {
   PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
+  RENDER_QUIET_FRAMES,
+  RENDER_QUIET_MSEC,
+  RENDER_WAIT_MAX_FRAMES,
   renderArgv,
   renderingMethodFallbackMessage,
   requestedRenderingMethod,
@@ -434,7 +437,7 @@ describe('--mode 2d-root renders the scene as the root window', () => {
     const script = bootstrap({ mode: '2d-root' });
     expect(script).toContain('const ROOT_WINDOW := true');
     expect(script).toContain('get_tree().root.add_child(target)');
-    expect(script).toContain('get_tree().root.get_texture()');
+    expect(script).toContain('_save_capture(get_tree().root)');
   });
 
   it('asks for the particle advance the moment the subtree enters the tree, as the other arms do', () => {
@@ -498,7 +501,15 @@ describe('probePixels', () => {
  */
 const hasEngine = spawnSync('which', ['godot']).status === 0 && spawnSync('which', ['xvfb-run']).status === 0;
 
-describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
+/**
+ * A test's budget: a render runs two engine passes, an import and the draw, and a test may render
+ * twice. Each pass is reaped after `ENGINE_TIMEOUT_S`, so the harness names an overrun itself. A
+ * smaller budget ends a slow render as an anonymous vitest timeout: 24 renders at once on 4 cores
+ * take about 420 s each.
+ */
+const ENGINE_TEST_TIMEOUT_MS = 2 * 2 * (ENGINE_TIMEOUT_S + ENGINE_KILL_AFTER_S) * 1000;
+
+describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TEST_TIMEOUT_MS }, () => {
   // On a tmpfs /tmp each render's output stays in RAM after every suite run.
   const scratch = [];
   const scratchDir = async () => {
@@ -536,7 +547,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     // than the flat default clear colour a runtime render leaves there.
     expect(sky[2]).toBeGreaterThan(sky[0]);
     expect(Math.max(...sky)).toBeGreaterThan(120);
-  }, 180_000);
+  });
 
   /**
    * `--emit-bounds` lets both renderers derive one camera, so it measures what the previewer
@@ -562,7 +573,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     expect(b.size[1]).toBeLessThan(0.5);
     expect(b.size[0]).toBeCloseTo(8, 3);
     expect(b.size[2]).toBeCloseTo(8, 3);
-  }, 180_000);
+  });
 
   /**
    * The reference shows the authored pose: `_converge()` steps six process frames, through which a
@@ -582,9 +593,9 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
       previews: true,
     });
     const b = JSON.parse(await readFile(boundsOut, 'utf8'));
-    expect(b.position[1]).toBeCloseTo(0.5, 1);
-    expect(b.size[1]).toBeCloseTo(1, 1);
-  }, 180_000);
+    expect(b.position[1], `bounds ${JSON.stringify(b)}`).toBeCloseTo(0.5, 1);
+    expect(b.size[1], `bounds ${JSON.stringify(b)}`).toBeCloseTo(1, 1);
+  });
 
   /**
    * SoftBody3D has no freeze property, and its `get_aabb` reports the rest AABB while the cloth
@@ -606,7 +617,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
       patch: 15,
     });
     expect(Math.min(...centre.rgb)).toBeGreaterThan(150);
-  }, 180_000);
+  });
 
   /** A box face of a KEEP_ACTIVE SoftBody3D keeps one flat shade: the reason is in `_freeze_game_logic`. */
   it('keeps a KEEP_ACTIVE SoftBody3D on its authored flat normals, as the editor draws it', async () => {
@@ -628,7 +639,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     for (const channel of [0, 1, 2]) {
       expect(Math.abs(lowerRight.rgb[channel] - upperLeft.rgb[channel])).toBeLessThanOrEqual(2);
     }
-  }, 180_000);
+  });
 
   /**
    * `--frame` places its camera from the bounds `--emit-bounds` reports. A CSG shape sets
@@ -666,7 +677,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     // Per channel, not a mean: a mean under 1 passes with thousands of channels off by 200. The
     // allowance is the rasteriser's 1/255 blend-rounding floor, and it measures 0 here.
     expect(worst).toBeLessThanOrEqual(1);
-  }, 360_000);
+  });
 
   /**
    * The 2D path end to end: a Node2D scene comes back as the project-viewport rectangle that the
@@ -691,7 +702,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     // The fixture's white line runs through the upper left, far brighter than the background.
     const [line] = probePixels(buffer, [[150, 150]], { patch: 21 });
     expect(Math.min(...line.rgb)).toBeGreaterThan(150);
-  }, 180_000);
+  });
 
   /**
    * The scene draws a four-deep chain of half-pixel Control offsets directly and inside its own
@@ -721,7 +732,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     expect(snapped.rgb).toEqual(BACKDROP);
     // The nested arm is inside a SubViewport in BOTH modes, so it must not move.
     expect(nested.rgb).toEqual(GREEN);
-  }, 180_000);
+  });
 
   it('refuses the SubViewport capture for that project instead of answering with the default', async () => {
     const out = join(await scratchDir(), 'nested.png');
@@ -729,7 +740,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
       /gui\/common\/snap_controls_to_pixels/
     );
     await expect(renderReference({ scene: snapScene, out, mode: '2d' })).rejects.toThrow(/--mode 2d-root/);
-  }, 360_000);
+  });
 
   /** A calibration scene from `scenes/`, rendered at 160x120, as PNG bytes. */
   async function renderCalibrationScene(file, options) {
@@ -758,7 +769,22 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
 
     const largestGap = blended.reduce((gap, value, i) => Math.max(gap, Math.abs(value - direct[i])), 0);
     expect(largestGap).toBeLessThanOrEqual(1);
-  }, 360_000);
+  });
+
+  /**
+   * While a material's pipeline compiles, Godot draws the ubershader (`render_forward_clustered.cpp:509-514`),
+   * which culls by `gl_FrontFacing`, true for a point (`scene_forward_clustered.glsl:3010-3016`). A
+   * cull-front point is missing from a capture that does not wait for the pipeline to land.
+   */
+  it('captures a cull-front point once its pipeline has landed', async () => {
+    const options = { previews: true, camera: [0, 0, 3], lookAt: [0, 0, 0] };
+    const front = await channelsOf('point-cull-front.tscn', options);
+    const back = await channelsOf('point-cull-back.tscn', options);
+
+    const centre = (120 / 2) * 160 * 4 + (160 / 2) * 4;
+    expect(front[centre + 1]).toBeGreaterThan(200);
+    expect(front.every((value, i) => Math.abs(value - back[i]) <= 1)).toBe(true);
+  });
 
   /**
    * An UPDATE_ONCE ReflectionProbe captures over several frames, and the scene renders one such
@@ -775,7 +801,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     const colourChannels = (once.length / 4) * 3;
     const farOff = once.filter((value, i) => i % 4 !== 3 && Math.abs(value - always[i]) > 4).length;
     expect(farOff / colourChannels).toBeLessThan(0.01);
-  }, 360_000);
+  });
 
   /**
    * The editor keeps the edited scene under its 2D viewport (`editor_node.cpp:8648-8652`), so the
@@ -793,7 +819,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
 
     for (const rgb of await covers(true)) expect(rgb).not.toEqual(MAGENTA);
     expect(await covers(false)).toEqual([MAGENTA, MAGENTA]);
-  }, 360_000);
+  });
 
   it('lights the scene only because of the previews — --no-previews is runtime semantics', async () => {
     const [lit, unlit] = [await render(true), await render(false)];
@@ -801,7 +827,7 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', () => {
     // unlit silhouette that `godot --path` (the running game) shows.
     expect(Math.max(...lit.ground)).toBeGreaterThan(3 * Math.max(...unlit.ground));
     expect(Math.max(...unlit.ground)).toBeLessThan(80);
-  }, 360_000);
+  });
 });
 
 /**
@@ -925,12 +951,12 @@ describe('the reference renders on a fixed clock', () => {
   });
 });
 
-describe('the fog history fits inside the render pass', () => {
-  it('quits after more frames than the longest fog convergence draws', () => {
+describe('the render wait fits inside the render pass', () => {
+  it('quits after more frames than the longest fog convergence and its quiet window draw', () => {
     const argv = renderArgv('/tmp/work');
     const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
 
-    expect(quitAfter).toBeGreaterThan(FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES);
+    expect(quitAfter).toBeGreaterThan(RENDER_WAIT_MAX_FRAMES);
   });
 
   it('cycles over the jitters the previewer averages', async () => {
@@ -940,9 +966,12 @@ describe('the fog history fits inside the render pass', () => {
     expect(FOG_JITTER_CYCLE_FRAMES).toBe(VOLUMETRIC_FOG_TEMPORAL_JITTERS.length);
   });
 
-  it('gives the bootstrap the cycle length and cap (edge case: the GDScript holds its own copy)', () => {
+  it('gives the bootstrap the cycle length, the caps and the quiet window (edge case: the GDScript holds its own copy)', () => {
     expect(bootstrap()).toContain(`const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}`);
     expect(bootstrap()).toContain(`const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}`);
+    expect(bootstrap()).toContain(`const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}`);
+    expect(bootstrap()).toContain(`const RENDER_QUIET_MSEC := ${RENDER_QUIET_MSEC}`);
+    expect(bootstrap()).toContain(`const RENDER_WAIT_MAX_FRAMES := ${RENDER_WAIT_MAX_FRAMES}`);
   });
 });
 
