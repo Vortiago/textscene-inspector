@@ -1,7 +1,8 @@
 /**
  * What a resolved mesh draws: its geometry and each draw group's own material, whatever kind of
  * mesh it is and wherever it lives. MeshInstance3D and GridMap read a mesh through this one hook.
- * A mesh with a path decodes once through the ArrayMesh processor; one in the scene decodes in place.
+ * An ArrayMesh with a path decodes once through the ArrayMesh processor. Every other mesh builds in
+ * place.
  */
 
 import { useMemo } from 'react';

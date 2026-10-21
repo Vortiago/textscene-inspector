@@ -28,7 +28,6 @@ import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
-import type { Vector3 } from '../../../godot/math/vector';
 
 /** Where each cell sits in the grid, and how much its mesh scales. */
 type CellGrid = Pick<GridMapProperties, 'cellSize' | 'cellCenter' | 'cellScale'>;
@@ -62,13 +61,23 @@ function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
 const cellScaleVector = new THREE.Vector3();
 
 /**
- * World matrix for one cell: translate(cell·size + centering offset) × scale(cell_scale) ×
- * orientation × meshTransform (`modules/gridmap/grid_map.cpp:685-687,696`). The offset is Godot's
- * `_get_offset()`: `cell_size * 0.5` on each axis whose `cell_center_*` is on, all three by
- * default. Without it the tiles sit half a cell off from sibling nodes.
+ * A cell's place: translate(cell·size + centering offset). The offset is Godot's `_get_offset()`:
+ * `cell_size * 0.5` on each axis whose `cell_center_*` is on, all three by default. Without it the
+ * tiles sit half a cell off from sibling nodes.
+ */
+function cellOrigin(cell: GridMapCell, { cellSize, cellCenter }: Omit<CellGrid, 'cellScale'>): THREE.Matrix4 {
+  return new THREE.Matrix4().makeTranslation(
+    cell.x * cellSize.x + (cellCenter.x ? cellSize.x * 0.5 : 0),
+    cell.y * cellSize.y + (cellCenter.y ? cellSize.y * 0.5 : 0),
+    cell.z * cellSize.z + (cellCenter.z ? cellSize.z * 0.5 : 0)
+  );
+}
+
+/**
+ * World matrix for one cell: its place × scale(cell_scale) × orientation × meshTransform
+ * (`modules/gridmap/grid_map.cpp:685-687,696`).
  */
 function cellMatrix(cell: GridMapCell, grid: CellGrid, meshTransform: Transform3D | null): THREE.Matrix4 {
-  const { cellSize, cellCenter, cellScale } = grid;
   const basis = ORTHO_BASES[cell.rot] ?? ORTHO_BASES[0]!;
   const orient = new THREE.Matrix4().set(
     basis[0]!,
@@ -88,12 +97,8 @@ function cellMatrix(cell: GridMapCell, grid: CellGrid, meshTransform: Transform3
     0,
     1
   );
-  const matrix = new THREE.Matrix4().makeTranslation(
-    cell.x * cellSize.x + (cellCenter.x ? cellSize.x * 0.5 : 0),
-    cell.y * cellSize.y + (cellCenter.y ? cellSize.y * 0.5 : 0),
-    cell.z * cellSize.z + (cellCenter.z ? cellSize.z * 0.5 : 0)
-  );
-  matrix.scale(cellScaleVector.setScalar(cellScale)).multiply(orient);
+  const matrix = cellOrigin(cell, grid);
+  matrix.scale(cellScaleVector.setScalar(grid.cellScale)).multiply(orient);
   if (meshTransform) matrix.multiply(transform3DToMatrix4(meshTransform));
   return matrix;
 }
@@ -184,18 +189,19 @@ function GridMapItem({ item, cells, cellSize, cellCenter, cellScale }: GridMapIt
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
   // file (every debounced keystroke) does not rebuild every cell's matrix.
-  const matrices = useMemo(
-    () =>
-      cells.map((cell) => cellMatrix(cell, { cellSize, cellCenter, cellScale }, item?.meshTransform ?? null)),
-    [cells, cellSize, cellCenter, cellScale, item?.meshTransform]
-  );
+  const matrices = useMemo(() => {
+    const grid = { cellSize, cellCenter, cellScale };
+    return cells.map((cell) => cellMatrix(cell, grid, item?.meshTransform ?? null));
+  }, [cells, cellSize, cellCenter, cellScale, item?.meshTransform]);
 
   // GridMap has no `cast_shadow` of its own. The setting is per tile, read off
   // the library (`modules/gridmap/grid_map.cpp:799-800`).
   const shadow = shadowCastingEffects(item?.castShadow);
 
   // Godot draws the mesh, so a mesh this previewer cannot read shows the placeholder.
-  if (content.kind === 'unresolved') return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
+  if (content.kind === 'unresolved') {
+    return <PlaceholderTiles cells={cells} cellSize={cellSize} cellCenter={cellCenter} />;
+  }
   if (content.kind !== 'surfaced') return null;
   const { geometry, primitive } = content.mesh;
   const surfaces = surfaceSources(content.mesh.materials);
@@ -215,7 +221,7 @@ function GridMapItem({ item, cells, cellSize, cellCenter, cellScale }: GridMapIt
 /** One surface of an item's mesh, drawn on its own. */
 interface SurfaceDraw {
   geometry: THREE.BufferGeometry;
-  /** The PrimitiveMesh drawn, which a triplanar material tiles against. Null for an ArrayMesh. */
+  /** The PrimitiveMesh drawn, which a triplanar material tiles against. Absent for an ArrayMesh. */
   primitive?: TscnInternalResource;
   /** Undefined for a surface that names no material: Godot's default surface. */
   source: MaterialSource | undefined;
@@ -311,12 +317,20 @@ function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
 }
 
 /**
- * A cell-sized wireframe box at each cell's centre, all in one draw, so a missing item in a large
+ * A cell-sized wireframe box at each cell's place, all in one draw, so a missing item in a large
  * grid costs one draw as its tiles would.
  */
-function PlaceholderTiles({ matrices, cellSize }: { matrices: THREE.Matrix4[]; cellSize: Vector3 }) {
+function PlaceholderTiles({
+  cells,
+  cellSize,
+  cellCenter,
+}: { cells: GridMapCell[] } & Omit<CellGrid, 'cellScale'>) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => writeInstanceMatrices(meshRef.current, matrices, cellCentre), [matrices]);
+  const matrices = useMemo(
+    () => cells.map((cell) => cellOrigin(cell, { cellSize, cellCenter })),
+    [cells, cellSize, cellCenter]
+  );
+  useLayoutEffect(() => writeInstanceMatrices(meshRef.current, matrices), [matrices]);
   return (
     <instancedMesh key={matrices.length} ref={meshRef} args={[undefined, undefined, matrices.length]}>
       <boxGeometry args={[cellSize.x, cellSize.y, cellSize.z]} />
@@ -325,25 +339,10 @@ function PlaceholderTiles({ matrices, cellSize }: { matrices: THREE.Matrix4[]; c
   );
 }
 
-/** Written only by `cellCentre`. `copyPosition` leaves its basis at identity. */
-const centreMatrix = new THREE.Matrix4();
-
-/** A cell matrix's translation alone, in one shared matrix, so a large grid allocates none. */
-function cellCentre(matrix: THREE.Matrix4): THREE.Matrix4 {
-  return centreMatrix.copyPosition(matrix);
-}
-
-/**
- * Sets each instance of `mesh` to `place` of its matrix. A mesh not yet mounted waits for the next
- * call. `setMatrixAt` copies, so `place` may return one reused matrix.
- */
-function writeInstanceMatrices(
-  mesh: THREE.InstancedMesh | null,
-  matrices: THREE.Matrix4[],
-  place: (matrix: THREE.Matrix4) => THREE.Matrix4 = (matrix) => matrix
-): void {
+/** Sets each instance of `mesh` to its matrix. A mesh not yet mounted waits for the next call. */
+function writeInstanceMatrices(mesh: THREE.InstancedMesh | null, matrices: THREE.Matrix4[]): void {
   if (!mesh) return;
-  matrices.forEach((m, i) => mesh.setMatrixAt(i, place(m)));
+  matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
   mesh.instanceMatrix.needsUpdate = true;
   // three computes these once and culls by them, so a moved cell would stay culled at its old place.
   mesh.boundingSphere = null;

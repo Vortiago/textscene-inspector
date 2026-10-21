@@ -124,6 +124,16 @@ item/0/mesh = SubResource("ImmediateMesh_wall")
     expect(model.get(0)!.meshPath).toBe('res://stage/tiles.tres::ImmediateMesh_wall');
   });
 
+  it('gives no mesh for a sub-resource that is not a Mesh, which `Ref<Mesh>` refuses', () => {
+    const embedded = `[gd_resource type="MeshLibrary" format=3]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
+[resource]
+item/0/mesh = SubResource("StandardMaterial3D_wall")
+`;
+    const model = meshLibraryFromTres(parseTresFile(embedded), 'res://stage/tiles.tres');
+    expect(model.get(0)!.meshPath).toBeNull();
+  });
+
   it('decodes each mesh_cast_shadow ordinal, defaulting an item that omits it to ON', () => {
     // Ordinals: RS::ShadowCastingSetting, servers/rendering/rendering_server.h:1494-1499.
     // Absent = ON: MeshLibrary::Item::mesh_cast_shadow, scene/resources/3d/mesh_library.h:58.

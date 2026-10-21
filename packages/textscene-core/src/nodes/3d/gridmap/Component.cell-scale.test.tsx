@@ -35,3 +35,22 @@ describe('<GridMap> cell_scale', () => {
     expect((await firstCell({ cell_scale: '0.5' }, meshTransform)).position).toEqual([2, 1, 1]);
   });
 });
+
+describe('<GridMap> placeholder under cell_scale', () => {
+  it("sits at its cell's place, whatever the scale and the item's mesh offset", async () => {
+    const tile = await renderInstancedTile({
+      gridMapProperties: { cell_scale: '0.5' },
+      library: `[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="TextMesh" id="TextMesh_item"]
+
+[resource]
+item/0/mesh = SubResource("TextMesh_item")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+`,
+    });
+    const matrix = new THREE.Matrix4();
+    tile.getMatrixAt(0, matrix);
+    expect(new THREE.Vector3().setFromMatrixPosition(matrix).toArray()).toEqual([1, 1, 1]);
+  });
+});
