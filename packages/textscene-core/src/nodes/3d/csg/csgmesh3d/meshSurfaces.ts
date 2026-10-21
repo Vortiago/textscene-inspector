@@ -26,7 +26,7 @@ export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normal
 /** A mesh in the scene's tables, or a loaded `.tres` and the path it loaded from. */
 export type CsgMesh = { resource: TscnInternalResource } | { path: string; file: ParsedResource };
 
-/** The `.tres` a mesh reference loads, or null for an inline mesh or a file no processor reads. */
+/** The resource file a mesh reference loads, or null for an inline mesh or a file no processor reads. */
 export function meshFilePath(meshRef: string | undefined, pools: SceneResources): string | null {
   return parsedResourcePath(meshRef, pools.externalResources);
 }
