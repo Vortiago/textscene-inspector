@@ -16,7 +16,14 @@ import {
   cachedUniqueNamesBelowRoot,
 } from '../utils/uniqueNames.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
-import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
+import {
+  liveChildGroups,
+  liveChildNamed,
+  mergedNodeOf,
+  rootScope,
+  type LiveChildGroup,
+  type LiveTreeContext,
+} from './liveSceneTree.js';
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 
@@ -80,27 +87,15 @@ function placedLivePath(livePath: string, outer: ClaimOwner): string {
     { origin: 'inline', children: outer.roots, scope: rootScope(ctx) },
   ];
   for (let depth = 0; depth < segments.length; depth++) {
-    const found = childNamed(groups, segments[depth]!);
+    const found = liveChildNamed(groups, segments[depth]!);
     if (!found) break;
     groups = liveChildGroups(found.node, found.scope, ctx.sceneCache, ctx.glbCache);
-    const placements = groups[0]?.mergedNode?.uniqueParentPlacements;
+    const placements = mergedNodeOf(groups)?.uniqueParentPlacements;
     if (placements) {
       segments = [...segments.slice(0, depth + 1), ...placedBelow(placements, segments.slice(depth + 1))];
     }
   }
   return segments.join('/');
-}
-
-/** The first node of `name` across `groups`, with the scope its own children resolve against. */
-function childNamed(
-  groups: readonly LiveChildGroup[],
-  name: string
-): { node: LiveNode; scope: SceneScope } | undefined {
-  for (const group of groups) {
-    const node = group.children.find((n) => n.name === name);
-    if (node) return { node, scope: scopeOf(node, group.scope) };
-  }
-  return undefined;
 }
 
 /** `rest` with its longest leading sub-path that `placements` holds replaced by the placed path. */
@@ -223,10 +218,10 @@ export function localSceneOf(path: string, roots: readonly TscnNode[], ctx: Live
  * The `%Name` table a walk from the local scene root reads: its own table, else its owner's
  * (node.cpp:1930-1938). Only an instance root has an owner, so the outer root's is its own.
  */
-export function localSceneClaims(scene: ClaimOwner): UniqueNamePaths {
-  const own = ownerClaims(scene);
+export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
+  const own = ownerUniquePaths(scene);
   if (!scene.parent) return own;
-  return new Map([...ownerClaims(scene.parent), ...own]);
+  return new Map([...ownerUniquePaths(scene.parent), ...own]);
 }
 
 function cachedSubRoots(
@@ -246,14 +241,29 @@ function withPlacedLivePaths(paths: UniqueNamePaths, outer: ClaimOwner): UniqueN
 }
 
 /**
- * `owner`'s `%Name` table at composed live paths. The outer root's is the shared cached table. An
- * instance root's is the one its collapse composed, else its own file's claims, rebased under the
- * node it renders at.
+ * `owner`'s `%Name` table at composed live paths: the one its collapse composed, else its own
+ * file's claims. The outer root's own file's table is one shared object per tree.
  */
-export function ownerClaims(owner: ClaimOwner): UniqueNamePaths {
+export function ownerUniquePaths(owner: ClaimOwner): UniqueNamePaths {
   const outer = outerOf(owner);
+  const composed = owner.parent ? owner.composed : inheritedRootTable(owner);
+  if (composed) return withPlacedLivePaths(rebased(composed.paths(), owner.path), outer);
   if (!owner.parent) return withPlacedLivePaths(cachedUniqueNameLivePaths(owner.roots), outer);
-  const below = owner.composed?.paths() ?? cachedUniqueNamesBelowRoot(owner.roots);
-  const rebased = new Map([...below].map(([key, path]) => [key, joinPath(owner.path, path)]));
-  return withPlacedLivePaths(rebased, outer);
+  return withPlacedLivePaths(rebased(cachedUniqueNamesBelowRoot(owner.roots), owner.path), outer);
+}
+
+/** `paths` below a node, spelt from the root through the node at `path`. */
+function rebased(paths: UniqueNamePaths, path: string): UniqueNamePaths {
+  return new Map([...paths].map(([key, below]) => [key, joinPath(path, below)]));
+}
+
+/**
+ * The table an inherited outer root's collapse composed over its base, which owns the base's
+ * names (packed_scene.cpp:227-231), or undefined for a root that inherits nothing loaded.
+ */
+function inheritedRootTable(outer: ClaimOwner): UniqueNameTable | undefined {
+  const root = outer.roots[0];
+  if (!root?.instance || !outer.ctx) return undefined;
+  const { ctx } = outer;
+  return mergedNodeOf(liveChildGroups(root, rootScope(ctx), ctx.sceneCache, ctx.glbCache))?.uniqueNames;
 }

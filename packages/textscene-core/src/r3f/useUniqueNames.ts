@@ -7,7 +7,7 @@
 import { useMemo } from 'react';
 import { useResourceLoader } from '../resources/useResource.js';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
-import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { liveTreeContext, useLiveTreeVersion } from './useLiveSceneTree.js';
 
 /**
@@ -51,14 +51,14 @@ export function useUniqueNamePaths(path: string | null): ReadonlyMap<string, str
       if (!live) return undefined;
       // Without a path, the outer root's table, one shared object per tree unless a claim's live
       // path passes through a `%Name`.
-      return ownerClaims(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx));
+      return ownerUniquePaths(claimOwnerOf(path || (live.roots[0]?.name ?? ''), live.roots, live.ctx));
     }, [live, path])
   );
 }
 
 /**
  * A local scene: the live path of its root, and the `%Name` table a walk from that root reads
- * ({@link localSceneClaims}). With no scene tree there is no table, so a `%Name` addresses
+ * ({@link localSceneUniquePaths}). With no scene tree there is no table, so a `%Name` addresses
  * nothing.
  */
 interface LocalScene {
@@ -77,7 +77,7 @@ export function useLocalScene(path: string | null): LocalScene | undefined {
     () => (live && path ? localSceneOf(path, live.roots, live.ctx) : undefined),
     [live, path]
   );
-  const uniquePaths = useStablePaths(useMemo(() => owner && localSceneClaims(owner), [owner]));
+  const uniquePaths = useStablePaths(useMemo(() => owner && localSceneUniquePaths(owner), [owner]));
   const rootPath = owner?.path ?? path?.split('/')[0];
   return useMemo(() => (rootPath ? { path: rootPath, uniquePaths } : undefined), [rootPath, uniquePaths]);
 }

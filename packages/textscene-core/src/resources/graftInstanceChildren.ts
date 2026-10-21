@@ -65,7 +65,8 @@ export function graftInstanceChildren(
     const stamped = child.scope ? child : { ...child, scope: scopes.outer };
     if (!child.instanceSubPath) {
       const folded = child.overridesExistingNode ? foldOrWarn(grafted, stamped, scopes.content) : null;
-      grafted = folded ?? [...grafted, stamped];
+      if (folded) grafted = folded;
+      else grafted.push(stamped);
       continue;
     }
 
@@ -82,7 +83,7 @@ export function graftInstanceChildren(
       warn(
         `[graftInstanceChildren] "${child.name}" targets "${child.instanceSubPath}", which the instanced scene does not contain — appending at its root`
       );
-      grafted = [...grafted, stamped];
+      grafted.push(stamped);
     }
   }
 

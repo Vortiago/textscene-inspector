@@ -26,8 +26,8 @@ export interface UniqueNameTable {
 /** The `%Name` facts a graft reads for one instance. */
 export interface InstanceNames {
   /**
-   * The sub-scene's own table, as it instantiates by itself. A thunk, since a sub-scene seated
-   * for its table costs a walk only an instance with a `%Name` to read needs.
+   * The sub-scene's own table, as it instantiates by itself. A thunk: the graft reads it only for
+   * a `%Name` sub-path or setting, and the render path only for a node that asks.
    */
   readonly own: () => UniqueNamePaths;
   /** The instance node's `instanceNameSettings`, in file order. */

@@ -23,34 +23,28 @@ export function uniqueNamePaths(roots: readonly RawNode[]): Map<string, string> 
   return paths;
 }
 
-/** Written only by `cachedUniqueNameLivePaths`, once per tree. */
-const livePaths = new WeakMap<readonly RawNode[], ReadonlyMap<string, string>>();
-
-/** The same reduction onto `livePath`, for the composed render tree. One object per tree. */
-export function cachedUniqueNameLivePaths(roots: readonly RawNode[]): ReadonlyMap<string, string> {
-  let paths = livePaths.get(roots);
-  if (!paths) {
-    paths = new Map(
-      [...cachedUniqueNameOwnership(roots).claims].map(([key, claim]) => [key, claim.livePath])
-    );
-    livePaths.set(roots, paths);
-  }
-  return paths;
+/** A per-tree table, built once for each roots array the returned reader is called with. */
+function perTree<T>(build: (roots: readonly RawNode[]) => T): (roots: readonly RawNode[]) => T {
+  const built = new WeakMap<readonly RawNode[], T>();
+  return (roots) => {
+    if (!built.has(roots)) built.set(roots, build(roots));
+    return built.get(roots)!;
+  };
 }
 
-/** Written only by `cachedUniqueNamesBelowRoot`, once per tree. */
-const belowRoot = new WeakMap<readonly RawNode[], ReadonlyMap<string, string>>();
+/** The same reduction onto `livePath`, for the composed render tree. One object per tree. */
+export const cachedUniqueNameLivePaths = perTree(
+  (roots): ReadonlyMap<string, string> =>
+    new Map([...cachedUniqueNameOwnership(roots).claims].map(([key, claim]) => [key, claim.livePath]))
+);
 
 /**
  * The live paths again, spelt below the root, as an instance of the scene holds them. The root
- * claims nothing (it has no owner), so each path continues below it.
+ * claims nothing (it has no owner), so each path continues below it. One object per tree.
  */
-export function cachedUniqueNamesBelowRoot(roots: readonly RawNode[]): ReadonlyMap<string, string> {
-  let paths = belowRoot.get(roots);
-  if (!paths) {
-    const live = [...cachedUniqueNameLivePaths(roots)];
-    paths = new Map(live.map(([key, path]) => [key, path.slice(path.indexOf('/') + 1)]));
-    belowRoot.set(roots, paths);
-  }
-  return paths;
-}
+export const cachedUniqueNamesBelowRoot = perTree(
+  (roots): ReadonlyMap<string, string> =>
+    new Map(
+      [...cachedUniqueNameLivePaths(roots)].map(([key, path]) => [key, path.slice(path.indexOf('/') + 1)])
+    )
+);

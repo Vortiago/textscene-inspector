@@ -87,28 +87,13 @@ export interface InstanceNameSetting {
   readonly hostChildrenBefore: number;
 }
 
-/** A `unique_name_in_owner` on a heading another owner than the root holds. */
-export interface UniqueNameSetting extends UniqueNameClaim {
-  /**
-   * The live path of the instance node whose sub-scene root owns the heading, or of the node an
-   * explicit `owner=` names.
-   */
-  readonly owner: string;
-  readonly isUnique: boolean;
-}
-
 /**
- * Every owner's `%Name` claims in one seated file: the root's table, plus the two facts a per-owner
- * table over composed instanced content is built from.
+ * The root's `%Name` claims in one seated file, and where its own nodes sit inside instanced
+ * content. Each instance node carries the settings for its own table (`instanceNameSettings`).
  */
 export interface UniqueNameOwnership {
   /** `%Name` to claim, for the nodes this file's root owns, the first claimant kept. */
   readonly claims: ReadonlyMap<string, UniqueNameClaim>;
-  /**
-   * Settings on headings another owner holds, in file order, which is the order instantiate
-   * applies them in.
-   */
-  readonly instanceSettings: readonly UniqueNameSetting[];
   /** Live paths of nodes this root owns that sit inside instanced content. */
   readonly ownedInsideInstances: ReadonlySet<string>;
 }

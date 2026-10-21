@@ -197,8 +197,23 @@ export function liveChildGroups(
 }
 
 /** The collapsed node a `merged` group carries, so a walker merges each instance once. */
-function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
+export function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
   return groups[0]?.mergedNode;
+}
+
+/**
+ * The first node called `name` across `groups`, as a path walk descends: with the scope its own
+ * refs and children resolve against.
+ */
+export function liveChildNamed(
+  groups: readonly LiveChildGroup[],
+  name: string
+): { node: LiveNode; scope: SceneScope } | undefined {
+  for (const group of groups) {
+    const node = group.children.find((n) => n.name === name);
+    if (node) return { node, scope: scopeOf(node, group.scope) };
+  }
+  return undefined;
 }
 
 /**
@@ -232,19 +247,10 @@ function liveChainLinks(
   ];
 
   for (const segment of segments) {
-    let match: LiveNode | undefined;
-    let matchScope: SceneScope = rootScope(ctx);
-    for (const group of candidateGroups) {
-      const found = group.children.find((n) => n.name === segment);
-      if (found) {
-        match = found;
-        matchScope = group.scope;
-        break;
-      }
-    }
-    if (!match) return null;
-    candidateGroups = liveChildGroups(match, matchScope, ctx.sceneCache, ctx.glbCache);
-    links.push({ raw: match, collapsed: mergedNodeOf(candidateGroups) ?? match });
+    const found = liveChildNamed(candidateGroups, segment);
+    if (!found) return null;
+    candidateGroups = liveChildGroups(found.node, found.scope, ctx.sceneCache, ctx.glbCache);
+    links.push({ raw: found.node, collapsed: mergedNodeOf(candidateGroups) ?? found.node });
   }
 
   return links;

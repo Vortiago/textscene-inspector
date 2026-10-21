@@ -14,7 +14,6 @@ import {
   type UniqueNameClaim,
   type UniqueNameOwnership,
   type InstanceNameSetting,
-  type UniqueNameSetting,
 } from './nodeOwner.js';
 import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath.js';
 import { serialChildName } from '../godot/string/nodeName.js';
@@ -66,7 +65,7 @@ export function seatScene<N extends SceneNode<N>>(origins: readonly NodeOrigin<N
 }
 
 function noScene<N extends RawNode>(): SceneSeating<N> {
-  const ownership = { claims: new Map(), instanceSettings: [], ownedInsideInstances: new Set<string>() };
+  const ownership = { claims: new Map(), ownedInsideInstances: new Set<string>() };
   return { roots: [], seated: new Map(), pathOf: new Map(), resolve: () => MISSING, ownership };
 }
 
@@ -217,7 +216,6 @@ interface SeatingTables<N> {
   readonly instanceNameSettings: Map<N, InstanceNameSetting[]>;
   readonly ownership: {
     readonly claims: Map<string, UniqueNameClaim>;
-    readonly instanceSettings: UniqueNameSetting[];
     readonly ownedInsideInstances: Set<string>;
   };
   /** The same tables as the walk consumes them. */
@@ -242,7 +240,7 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
     places: new Map([[root, { path: root.name, livePath: root.name }]]),
     enclosingInstances: new Map(),
     instanceNameSettings: new Map(),
-    ownership: { claims: new Map(), instanceSettings: [], ownedInsideInstances: new Set() },
+    ownership: { claims: new Map(), ownedInsideInstances: new Set() },
     tree: { exists: (path) => canNameNode(byPath, path, isOpaque), isOpaque, uniquePaths },
   };
 }
@@ -309,10 +307,8 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
     return;
   }
   const instanceLivePath = instance && tables.places.get(instance)!.livePath;
-  const explicitOwner = node.owner === undefined ? undefined : joinPath(tables.root.name, node.owner);
-  const owner = explicitOwner ?? instanceLivePath!;
-  tables.ownership.instanceSettings.push({ node, ...place, owner, isUnique: setting });
   if (instanceLivePath === undefined) return;
+  const explicitOwner = node.owner === undefined ? undefined : joinPath(tables.root.name, node.owner);
   const pathInInstance = relativeTo(instanceLivePath, place.livePath)!;
   if (explicitOwner === undefined) {
     handToInstance(tables, instance!, { pathInInstance, isUnique: setting });

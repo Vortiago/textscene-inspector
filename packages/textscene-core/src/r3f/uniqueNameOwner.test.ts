@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import type { TscnScene } from '../parser/types.js';
 import type { LiveTreeContext } from './liveSceneTree.js';
-import { claimOwnerOf, localSceneClaims, localSceneOf, ownerClaims } from './uniqueNameOwner.js';
+import { claimOwnerOf, localSceneUniquePaths, localSceneOf, ownerUniquePaths } from './uniqueNameOwner.js';
 import { synthesiseGLBScene } from '../resources/processors/createSceneProcessor.js';
 import * as THREE from 'three';
 
@@ -199,20 +199,20 @@ describe('localSceneOf a GLB instance', () => {
   });
 
   it('reads an empty claim table for a node inside the GLB', () => {
-    expect(localSceneClaims(localSceneOf('Root/Model/model/body', host.nodes, glbCtx)).size).toBe(0);
+    expect(localSceneUniquePaths(localSceneOf('Root/Model/model/body', host.nodes, glbCtx)).size).toBe(0);
   });
 
   it('reads an empty claim table for the owner of a node inside the GLB', () => {
-    expect(ownerClaims(claimOwnerOf('Root/Model/model/body', host.nodes, glbCtx)).size).toBe(0);
+    expect(ownerUniquePaths(claimOwnerOf('Root/Model/model/body', host.nodes, glbCtx)).size).toBe(0);
   });
 });
 
 /** `get_node` from the local scene root reads its own table, else its owner's (node.cpp:1930-1938). */
-describe('localSceneClaims', () => {
-  const claimsFrom = (path: string) => localSceneClaims(localSceneOf(path, main.nodes, ctx));
+describe('localSceneUniquePaths', () => {
+  const claimsFrom = (path: string) => localSceneUniquePaths(localSceneOf(path, main.nodes, ctx));
 
   it('is the shared outer table for the outer root', () => {
-    expect(claimsFrom('Root/Screen')).toBe(ownerClaims(ownerOf('Root/Screen')));
+    expect(claimsFrom('Root/Screen')).toBe(ownerUniquePaths(ownerOf('Root/Screen')));
   });
 
   it('reads an instance root\u2019s own claims', () => {
@@ -230,34 +230,34 @@ describe('localSceneClaims', () => {
   });
 });
 
-describe('ownerClaims', () => {
+describe('ownerUniquePaths', () => {
   it('is the shared outer table for the outer root', () => {
-    const table = ownerClaims(ownerOf('Root/Screen'));
+    const table = ownerUniquePaths(ownerOf('Root/Screen'));
     expect(table.get('%Extra')).toBe('Root/HudInstance/Extra');
     expect(table.has('%Panel')).toBe(false);
-    expect(ownerClaims(ownerOf('Root/Screen'))).toBe(table);
+    expect(ownerUniquePaths(ownerOf('Root/Screen'))).toBe(table);
   });
 
   it('spells a sub-scene claim at its composed live path', () => {
-    const table = ownerClaims(ownerOf('Root/HudInstance/Sprite'));
+    const table = ownerUniquePaths(ownerOf('Root/HudInstance/Sprite'));
     expect(table.get('%Panel')).toBe('Root/HudInstance/Panel');
   });
 
   it('never claims the sub-scene root itself (packed_scene.cpp:565 acquires only for owner >= 0)', () => {
-    expect(ownerClaims(ownerOf('Root/HudInstance/Sprite')).has('%Hud')).toBe(false);
+    expect(ownerUniquePaths(ownerOf('Root/HudInstance/Sprite')).has('%Hud')).toBe(false);
   });
 
   it('folds in the outer file override that the sub-scene root owns', () => {
-    const table = ownerClaims(ownerOf('Root/HudInstance/Sprite'));
+    const table = ownerUniquePaths(ownerOf('Root/HudInstance/Sprite'));
     expect(table.get('%Hit')).toBe('Root/HudInstance/Panel/Hit');
   });
 
   it('leaves the outer root claim of an added node out of the sub-scene table', () => {
-    expect(ownerClaims(ownerOf('Root/HudInstance/Sprite')).has('%Extra')).toBe(false);
+    expect(ownerUniquePaths(ownerOf('Root/HudInstance/Sprite')).has('%Extra')).toBe(false);
   });
 
   it('folds a nested override in from the file that instanced the inner scene', () => {
-    const table = ownerClaims(ownerOf('Root/HudInstance/Widget/Face'));
+    const table = ownerUniquePaths(ownerOf('Root/HudInstance/Widget/Face'));
     expect(table.get('%Knob')).toBe('Root/HudInstance/Widget/Knob');
     expect(table.has('%Panel')).toBe(false);
   });
@@ -266,8 +266,8 @@ describe('ownerClaims', () => {
     const owner = ownerOf('Root/HudInstance/Inner/Face');
     expect(owner.path).toBe('Root/HudInstance/Inner');
     expect(owner.parent?.parent).toBeUndefined();
-    expect(ownerClaims(owner).get('%Gear')).toBe('Root/HudInstance/Inner/Gear');
-    expect(ownerClaims(ownerOf('Root/HudInstance/Sprite')).has('%Gear')).toBe(false);
+    expect(ownerUniquePaths(owner).get('%Gear')).toBe('Root/HudInstance/Inner/Gear');
+    expect(ownerUniquePaths(ownerOf('Root/HudInstance/Sprite')).has('%Gear')).toBe(false);
   });
 });
 
@@ -292,11 +292,11 @@ unique_name_in_owner = true
   const own = (path: string) => claimOwnerOf(path, nested.nodes, nestedCtx);
 
   it('files an override inside a sub-scene\u2019s own nested instance under that inner instance', () => {
-    expect(ownerClaims(own('Root/HudInstance/Widget/Knob')).get('%Face')).toBe(
+    expect(ownerUniquePaths(own('Root/HudInstance/Widget/Knob')).get('%Face')).toBe(
       'Root/HudInstance/Widget/Face'
     );
-    expect(ownerClaims(own('Root/HudInstance/Sprite')).has('%Face')).toBe(false);
-    expect(ownerClaims(own('Root/Lamp')).has('%Face')).toBe(false);
+    expect(ownerUniquePaths(own('Root/HudInstance/Sprite')).has('%Face')).toBe(false);
+    expect(ownerUniquePaths(own('Root/Lamp')).has('%Face')).toBe(false);
   });
 
   /** A new node's properties land (packed_scene.cpp:438) before its owner is set (:566-568). */
@@ -307,7 +307,7 @@ unique_name_in_owner = true
   it('gives a consumer with an explicit owner= that owner\u2019s table', () => {
     const owner = own('Root/Lamp');
     expect(owner.path).toBe('Root/HudInstance');
-    expect(ownerClaims(owner).has('%Panel')).toBe(true);
+    expect(ownerUniquePaths(owner).has('%Panel')).toBe(true);
   });
 });
 
@@ -328,7 +328,7 @@ unique_name_in_owner = false
 
   it('drops the name from the instance table', () => {
     const owner = claimOwnerOf('Root/HudInstance/Sprite', releasing.nodes, releasingCtx);
-    expect(ownerClaims(owner).has('%Panel')).toBe(false);
+    expect(ownerUniquePaths(owner).has('%Panel')).toBe(false);
   });
 });
 
@@ -352,11 +352,11 @@ unique_name_in_owner = true
   const ownerAt = (path: string) => claimOwnerOf(path, through.nodes, throughCtx);
 
   it('spells its claim at the composed path it renders at', () => {
-    expect(ownerClaims(ownerAt('Root')).get('%Hat')).toBe('Root/HudInstance/Panel/Hat');
+    expect(ownerUniquePaths(ownerAt('Root')).get('%Hat')).toBe('Root/HudInstance/Panel/Hat');
   });
 
   it('spells a claim below it at the composed path too', () => {
-    expect(ownerClaims(ownerAt('Root')).get('%Brim')).toBe('Root/HudInstance/Panel/Hat/Brim');
+    expect(ownerUniquePaths(ownerAt('Root')).get('%Brim')).toBe('Root/HudInstance/Panel/Hat/Brim');
   });
 
   it('is owned by the file that wrote it, not the instance it renders inside', () => {
@@ -384,7 +384,7 @@ unique_name_in_owner = false
 
   it('spells the claim at the node the heading reached', () => {
     const owner = claimOwnerOf('Root', releasingLater.nodes, releasingCtx);
-    expect(ownerClaims(owner).get('%Hat')).toBe('Root/HudInstance/Panel/Hat');
+    expect(ownerUniquePaths(owner).get('%Hat')).toBe('Root/HudInstance/Panel/Hat');
   });
 });
 
@@ -422,7 +422,7 @@ unique_name_in_owner = true
     internalResources: [],
     sceneCache: { getCached: (p) => inheritedScenes.get(p) },
   };
-  const table = () => ownerClaims(claimOwnerOf('Root/Tool/Blade', host.nodes, inheritedCtx));
+  const table = () => ownerUniquePaths(claimOwnerOf('Root/Tool/Blade', host.nodes, inheritedCtx));
 
   it('holds the base scene’s claims', () => {
     expect(table().get('%Grip')).toBe('Root/Tool/Grip');
@@ -430,5 +430,10 @@ unique_name_in_owner = true
 
   it('holds the inherited scene’s own claims', () => {
     expect(table().get('%Blade')).toBe('Root/Tool/Blade');
+  });
+
+  it('holds the base scene’s claims for the inherited scene opened on its own', () => {
+    const ownCtx: LiveTreeContext = { ...inheritedCtx, externalResources: inheriting.externalResources };
+    expect(ownerUniquePaths(claimOwnerOf('Tool', inheriting.nodes, ownCtx)).get('%Grip')).toBe('Tool/Grip');
   });
 });

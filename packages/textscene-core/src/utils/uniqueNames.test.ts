@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import { StrictTscnParser } from '../linter/StrictTscnParser.js';
+import type { RawNode } from '../parser/types.js';
 import { cachedUniqueNameOwnership } from './uniqueNames.js';
 
 /**
@@ -41,6 +42,11 @@ function strictScene(source: string) {
   // Absent only if the scanner could not run, which these sources do not provoke: a broken test.
   if (!scene) throw new Error('strict parser produced no scene');
   return scene;
+}
+
+/** The child of the scene root called `name`. */
+function instanceNamed(roots: readonly RawNode[], name: string): RawNode {
+  return roots[0]!.children.find((n) => n.name === name)!;
 }
 
 describe("the root's claim table", () => {
@@ -203,10 +209,7 @@ unique_name_in_owner = true
 `;
   const ownership = cachedUniqueNameOwnership(new TscnParser().parse(src).nodes);
 
-  it('files an override setting by the live path of the instance that owns it', () => {
-    expect(ownership.instanceSettings.map((s) => [s.owner, s.livePath])).toEqual([
-      ['Player/Enemy', 'Player/Enemy/Body/Hit'],
-    ]);
+  it('leaves an override setting out of the root table', () => {
     expect(ownership.claims.has('%Hit')).toBe(false);
   });
 
@@ -218,7 +221,7 @@ unique_name_in_owner = true
   });
 
   it('records a release, which an override writes as false (node.cpp:2236-2249)', () => {
-    const released = cachedUniqueNameOwnership(
+    const released = instanceNamed(
       new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
 
@@ -228,15 +231,16 @@ unique_name_in_owner = true
 
 [node name="Body" parent="Enemy"]
 unique_name_in_owner = false
-`).nodes
+`).nodes,
+      'Enemy'
     );
-    expect(released.instanceSettings.map((s) => [s.livePath, s.isUnique])).toEqual([
-      ['Player/Enemy/Body', false],
+    expect(released.instanceNameSettings).toEqual([
+      { pathInInstance: 'Body', isUnique: false, hostChildrenBefore: 1 },
     ]);
   });
 
-  it('keeps the settings in file order across owners', () => {
-    const interleaved = cachedUniqueNameOwnership(
+  it('keeps each instance its own settings in file order', () => {
+    const interleaved = instanceNamed(
       new TscnParser().parse(`[gd_scene format=3]
 [ext_resource type="PackedScene" path="res://enemy.tscn" id="1"]
 
@@ -254,9 +258,10 @@ unique_name_in_owner = true
 
 [node name="Z" parent="A"]
 unique_name_in_owner = true
-`).nodes
+`).nodes,
+      'A'
     );
-    expect(interleaved.instanceSettings.map((s) => s.node.name)).toEqual(['X', 'Y', 'Z']);
+    expect(interleaved.instanceNameSettings?.map((s) => s.pathInInstance)).toEqual(['X', 'Z']);
   });
 
   it("lists the live paths of this root's own nodes that sit inside an instance", () => {
@@ -281,9 +286,9 @@ unique_name_in_owner = true
 [node name="Barrel" parent="Enemy/Gun"]
 unique_name_in_owner = true
 `).nodes;
-    const { instanceSettings, ownedInsideInstances } = cachedUniqueNameOwnership(nested);
-    expect(instanceSettings.map((s) => s.owner)).toEqual(['Player/Enemy/Gun']);
-    expect(ownedInsideInstances.has('Player/Enemy/Gun')).toBe(true);
+    const gun = instanceNamed(nested, 'Enemy').children.find((n) => n.name === 'Gun')!;
+    expect(gun.instanceNameSettings?.map((s) => s.pathInInstance)).toEqual(['Barrel']);
+    expect(cachedUniqueNameOwnership(nested).ownedInsideInstances.has('Player/Enemy/Gun')).toBe(true);
   });
 
   it('records no live path for a nameless heading inside an instance, which has none of its own', () => {
@@ -333,7 +338,6 @@ unique_name_in_owner = true
   it('registers the claim on the named owner, not on this root', () => {
     const ownership = cachedUniqueNameOwnership(new TscnParser().parse(explicit).nodes);
     expect(ownership.claims.has('%Hit')).toBe(false);
-    expect(ownership.instanceSettings.find((s) => s.node.name === 'Hit')?.owner).toBe('Player/Enemy');
   });
 
   it('gives the instance node an explicit owner below it, empty for the instance itself', () => {
