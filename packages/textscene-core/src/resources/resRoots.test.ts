@@ -354,6 +354,19 @@ describe('invalidate', () => {
     expect(await rootB.listPaths()).not.toContain('res://late.png');
   });
 
+  it('drops the listing of a root when a file changes under the other spelling of its directory', async () => {
+    const files = memoryFiles('/work/game/project.godot');
+    const linked = withLinkTo(memoryPort(files), '/work/link', '/work/game');
+    const roots = createResRoots(linked, '/work');
+    const root = (await roots.rootOf('/work/link/s.tscn'))!;
+    expect(await root.listPaths()).not.toContain('res://late.png');
+    files.set('/work/game/late.png', '');
+
+    roots.invalidate('/work/game/late.png');
+
+    expect(await root.listPaths()).toContain('res://late.png');
+  });
+
   it('keeps the listing of a root when a file changes under a dot-named directory, which the scan never enters', async () => {
     const files = memoryFiles('/work/game/project.godot');
     const roots = createResRoots(memoryPort(files), null);
@@ -364,6 +377,20 @@ describe('invalidate', () => {
     roots.invalidate('/work/game/.git/objects/late');
 
     expect(await root.listPaths()).toBe(listed);
+  });
+
+  it('drops the listing of a root when a file changes in a directory a link leads to outside it', async () => {
+    const files = memoryFiles('/work/game/project.godot', '/work/shared/old.png');
+    files.set('/work/game/art/.link', '');
+    const port = withLinkTo(memoryPort(files), '/work/game/art', '/work/shared');
+    const roots = createResRoots(port, null);
+    const root = (await roots.rootOf('/work/game/s.tscn'))!;
+    expect(await root.listPaths()).not.toContain('res://art/late.png');
+    files.set('/work/shared/late.png', '');
+
+    roots.invalidate('/work/shared/late.png');
+
+    expect(await root.listPaths()).toContain('res://art/late.png');
   });
 
   it('drops the listing when a .gdignore appears, though its own name starts with a dot', async () => {

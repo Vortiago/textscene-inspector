@@ -89,10 +89,12 @@ function memo<V>(map: Map<string, V>, key: string, make: (key: string) => V): V 
 
 /**
  * A reader of the directories under `root`, for {@link listScannedFiles}. A directory whose real path it has read
- * before, reached again through a link, reads as empty, so a link up the tree ends the walk.
+ * before, reached again through a link, reads as empty, so a link up the tree ends the walk. It adds to
+ * `linkedDirectories` the real path of each directory it reads outside the root, which only a link leads to.
  */
-function directoryReader(port: ResRootsPort, root: string): DirectoryReader {
+function directoryReader(port: ResRootsPort, root: string, linkedDirectories: Set<string>): DirectoryReader {
   const readRealPaths = new Set<string>();
+  let rootRealPath: string | null = null;
   return async (resDirectory) => {
     const resolved = resolveResPath(root, resDirectory);
     if (resolved === null) return [];
@@ -102,13 +104,16 @@ function directoryReader(port: ResRootsPort, root: string): DirectoryReader {
     // The scan skips a directory it cannot enter (`editor_file_system.cpp:1201-1202`).
     if (real === null || readRealPaths.has(real)) return [];
     readRealPaths.add(real);
+    rootRealPath ??= real;
+    if (!isWithinRoot(rootRealPath, real, port.pathCase)) linkedDirectories.add(real);
     return port.list(directory);
   };
 }
 
-/** One root and the call that drops what it has listed. */
+/** One root, the directories outside it that its listings walked, and the call that drops those listings. */
 interface RootEntry {
   readonly root: ResRoot;
+  readonly linkedDirectories: ReadonlySet<string>;
   forgetListings(): void;
 }
 
@@ -119,9 +124,13 @@ const EVERY_FILE = '';
 function createRoot(port: ResRootsPort, path: string): RootEntry {
   /** Each listing, sorted, under its key: written by `listing` and cleared by `forgetListings`. */
   const listings = new Map<string, Promise<string[]>>();
+  /** Written by the walks of `listings`, and cleared with them. */
+  const linkedDirectories = new Set<string>();
   const listing = (key: string, extension?: string) =>
     memo(listings, key, () =>
-      listScannedFiles(directoryReader(port, path), extension).then((paths) => paths.sort())
+      listScannedFiles(directoryReader(port, path, linkedDirectories), extension).then((paths) =>
+        paths.sort()
+      )
     );
   const root: ResRoot = {
     path,
@@ -146,7 +155,14 @@ function createRoot(port: ResRootsPort, path: string): RootEntry {
     },
     listPaths: () => listing(EVERY_FILE),
   };
-  return { root, forgetListings: () => listings.clear() };
+  return {
+    root,
+    linkedDirectories,
+    forgetListings() {
+      listings.clear();
+      linkedDirectories.clear();
+    },
+  };
 }
 
 class PortResRoots implements ResRoots {
@@ -182,8 +198,12 @@ class PortResRoots implements ResRoots {
     const affected = this.directoryAffectedBy(changedPath);
     this.dropWithin(this.hasProjectFileByDir, affected);
     this.dropWithin(this.rootBySpelling, affected);
-    for (const { root, forgetListings } of this.rootByRealPath.values()) {
-      if (this.changesListing(root.path, changedPath)) forgetListings();
+    for (const [realPath, entry] of this.rootByRealPath) {
+      // A watcher may spell the change through either name of the root, or inside a directory a link leads to.
+      const directories = [entry.root.path, realPath, ...entry.linkedDirectories];
+      if (directories.some((directory) => this.changesListing(directory, changedPath))) {
+        entry.forgetListings();
+      }
     }
   }
 
