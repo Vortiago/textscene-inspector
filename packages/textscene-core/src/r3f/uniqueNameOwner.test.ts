@@ -216,16 +216,16 @@ describe('localSceneClaims', () => {
   });
 
   it('reads an instance root\u2019s own claims', () => {
-    expect(claimsFrom('Root/HudInstance/Sprite').get('%Panel')?.livePath).toBe('Root/HudInstance/Panel');
+    expect(claimsFrom('Root/HudInstance/Sprite').get('%Panel')).toBe('Root/HudInstance/Panel');
   });
 
   it('falls back to the table of the instance\u2019s owner', () => {
-    expect(claimsFrom('Root/HudInstance/Sprite').get('%Extra')?.livePath).toBe('Root/HudInstance/Extra');
+    expect(claimsFrom('Root/HudInstance/Sprite').get('%Extra')).toBe('Root/HudInstance/Extra');
   });
 
   it('stops at the owner: a nested instance does not reach the outer table', () => {
     const table = claimsFrom('Root/HudInstance/Widget/Face');
-    expect(table.get('%Panel')?.livePath).toBe('Root/HudInstance/Panel');
+    expect(table.get('%Panel')).toBe('Root/HudInstance/Panel');
     expect(table.has('%Extra')).toBe(false);
   });
 });
@@ -233,14 +233,14 @@ describe('localSceneClaims', () => {
 describe('ownerClaims', () => {
   it('is the shared outer table for the outer root', () => {
     const table = ownerClaims(ownerOf('Root/Screen'));
-    expect(table.get('%Extra')?.livePath).toBe('Root/HudInstance/Extra');
+    expect(table.get('%Extra')).toBe('Root/HudInstance/Extra');
     expect(table.has('%Panel')).toBe(false);
     expect(ownerClaims(ownerOf('Root/Screen'))).toBe(table);
   });
 
   it('spells a sub-scene claim at its composed live path', () => {
     const table = ownerClaims(ownerOf('Root/HudInstance/Sprite'));
-    expect(table.get('%Panel')?.livePath).toBe('Root/HudInstance/Panel');
+    expect(table.get('%Panel')).toBe('Root/HudInstance/Panel');
   });
 
   it('never claims the sub-scene root itself (packed_scene.cpp:565 acquires only for owner >= 0)', () => {
@@ -249,7 +249,7 @@ describe('ownerClaims', () => {
 
   it('folds in the outer file override that the sub-scene root owns', () => {
     const table = ownerClaims(ownerOf('Root/HudInstance/Sprite'));
-    expect(table.get('%Hit')?.livePath).toBe('Root/HudInstance/Panel/Hit');
+    expect(table.get('%Hit')).toBe('Root/HudInstance/Panel/Hit');
   });
 
   it('leaves the outer root claim of an added node out of the sub-scene table', () => {
@@ -258,7 +258,7 @@ describe('ownerClaims', () => {
 
   it('folds a nested override in from the file that instanced the inner scene', () => {
     const table = ownerClaims(ownerOf('Root/HudInstance/Widget/Face'));
-    expect(table.get('%Knob')?.livePath).toBe('Root/HudInstance/Widget/Knob');
+    expect(table.get('%Knob')).toBe('Root/HudInstance/Widget/Knob');
     expect(table.has('%Panel')).toBe(false);
   });
 
@@ -266,7 +266,7 @@ describe('ownerClaims', () => {
     const owner = ownerOf('Root/HudInstance/Inner/Face');
     expect(owner.path).toBe('Root/HudInstance/Inner');
     expect(owner.parent?.parent).toBeUndefined();
-    expect(ownerClaims(owner).get('%Gear')?.livePath).toBe('Root/HudInstance/Inner/Gear');
+    expect(ownerClaims(owner).get('%Gear')).toBe('Root/HudInstance/Inner/Gear');
     expect(ownerClaims(ownerOf('Root/HudInstance/Sprite')).has('%Gear')).toBe(false);
   });
 });
@@ -292,7 +292,7 @@ unique_name_in_owner = true
   const own = (path: string) => claimOwnerOf(path, nested.nodes, nestedCtx);
 
   it('files an override inside a sub-scene\u2019s own nested instance under that inner instance', () => {
-    expect(ownerClaims(own('Root/HudInstance/Widget/Knob')).get('%Face')?.livePath).toBe(
+    expect(ownerClaims(own('Root/HudInstance/Widget/Knob')).get('%Face')).toBe(
       'Root/HudInstance/Widget/Face'
     );
     expect(ownerClaims(own('Root/HudInstance/Sprite')).has('%Face')).toBe(false);
@@ -352,14 +352,83 @@ unique_name_in_owner = true
   const ownerAt = (path: string) => claimOwnerOf(path, through.nodes, throughCtx);
 
   it('spells its claim at the composed path it renders at', () => {
-    expect(ownerClaims(ownerAt('Root')).get('%Hat')?.livePath).toBe('Root/HudInstance/Panel/Hat');
+    expect(ownerClaims(ownerAt('Root')).get('%Hat')).toBe('Root/HudInstance/Panel/Hat');
   });
 
   it('spells a claim below it at the composed path too', () => {
-    expect(ownerClaims(ownerAt('Root')).get('%Brim')?.livePath).toBe('Root/HudInstance/Panel/Hat/Brim');
+    expect(ownerClaims(ownerAt('Root')).get('%Brim')).toBe('Root/HudInstance/Panel/Hat/Brim');
   });
 
   it('is owned by the file that wrote it, not the instance it renders inside', () => {
     expect(ownerAt('Root/HudInstance/Panel/Hat').path).toBe('Root');
+  });
+});
+
+describe('a claim under an instanced %Name a later heading releases', () => {
+  // Instantiate sets each heading's properties as it reaches it (packed_scene.cpp:157-165), so
+  // Hat's `parent=` reads `%Panel` before the release below it lands (node.cpp:2236-2249).
+  const releasingLater = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Hat" type="Node2D" parent="HudInstance/%Panel"]
+unique_name_in_owner = true
+
+[node name="Panel" parent="HudInstance"]
+unique_name_in_owner = false
+`);
+  const releasingCtx: LiveTreeContext = { ...ctx, externalResources: releasingLater.externalResources };
+
+  it('spells the claim at the node the heading reached', () => {
+    const owner = claimOwnerOf('Root', releasingLater.nodes, releasingCtx);
+    expect(ownerClaims(owner).get('%Hat')).toBe('Root/HudInstance/Panel/Hat');
+  });
+});
+
+describe('an instance of an inherited scene', () => {
+  // The inherited root is the base scene's instance (packed_scene.cpp:227-231), so it owns the
+  // base's nodes and their names (packed_scene.cpp:565-570).
+  const base = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Base" type="Node2D"]
+
+[node name="Grip" type="Node2D" parent="."]
+unique_name_in_owner = true
+`);
+  const inheriting = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Tool" instance=ExtResource("1")]
+
+[node name="Blade" type="Node2D" parent="."]
+unique_name_in_owner = true
+`);
+  const host = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://tool.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Tool" parent="." instance=ExtResource("1")]
+`);
+  const inheritedScenes = new Map<string, TscnScene>([
+    ['res://base.tscn', base],
+    ['res://tool.tscn', inheriting],
+  ]);
+  const inheritedCtx: LiveTreeContext = {
+    externalResources: host.externalResources,
+    internalResources: [],
+    sceneCache: { getCached: (p) => inheritedScenes.get(p) },
+  };
+  const table = () => ownerClaims(claimOwnerOf('Root/Tool/Blade', host.nodes, inheritedCtx));
+
+  it('holds the base scene’s claims', () => {
+    expect(table().get('%Grip')).toBe('Root/Tool/Grip');
+  });
+
+  it('holds the inherited scene’s own claims', () => {
+    expect(table().get('%Blade')).toBe('Root/Tool/Blade');
   });
 });

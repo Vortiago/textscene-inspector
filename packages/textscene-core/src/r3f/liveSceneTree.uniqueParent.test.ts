@@ -163,6 +163,45 @@ unique_name_in_owner = false
     expect(childNames(composed, 'A')).toEqual(['Hat']);
   });
 
+  it('misses a base %Name a host releases before its heading', () => {
+    // The inherited root owns its base's nodes (packed_scene.cpp:227-231), so the host's clear
+    // releases the base's claim (node.cpp:2236-2249) before Hat's `parent=` reads it.
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    const base = new TscnParser().parse(`[gd_scene format=3]
+
+[node name="Base" type="Node3D"]
+
+[node name="A" type="Node3D" parent="."]
+unique_name_in_owner = true
+`);
+    const inherited = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://base.tscn" id="base"]
+
+[node name="Player" instance=ExtResource("base")]
+`);
+    const releasingFirst = new TscnParser().parse(`[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://player.tscn" id="player"]
+
+[node name="Main" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("player")]
+
+[node name="A" parent="Player"]
+unique_name_in_owner = false
+
+[node name="Hat" type="Node3D" parent="Player/%A"]
+`);
+    const composed = composedPlayer(releasingFirst, {
+      'res://player.tscn': inherited,
+      'res://base.tscn': base,
+    });
+
+    expect(childNames(composed, 'A')).toEqual([]);
+    warnSpy.mockRestore();
+  });
+
   it('misses a %Name an inherited scene releases on its base', () => {
     // The base's nodes are the inherited root's own, so the clear releases the name before Hat reads it.
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});

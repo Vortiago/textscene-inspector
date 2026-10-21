@@ -1,17 +1,21 @@
 /**
- * The owner whose `%Name` table a rendered node resolves against, that table composed over
- * instanced content, and the local scene a local-to-scene resource on the node measures from.
- * Each instance root has a table of its own, which an outer consumer never sees
- * (`uniqueNameOwner.md`). Pure: it walks the composed live tree over a cache snapshot, like
- * `liveSceneTree.ts`, and the React hooks supply reactivity.
+ * The owner whose `%Name` table a rendered node resolves against, that table at composed live
+ * paths, and the local scene a local-to-scene resource on the node measures from. Each instance
+ * root has a table of its own, which an outer consumer never sees (`uniqueNameOwner.md`). The
+ * collapse composes an instance's table, and this reads it. Pure: it walks the composed live tree
+ * over a cache snapshot, like `liveSceneTree.ts`, and the React hooks supply reactivity.
  */
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { joinPath } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath.js';
-import { cachedUniqueNameClaims, cachedUniqueNameOwnership } from '../utils/uniqueNames.js';
-import { holderAfterSetting, type UniqueNameClaim } from '../parser/nodeOwner.js';
+import {
+  cachedUniqueNameLivePaths,
+  cachedUniqueNameOwnership,
+  cachedUniqueNamesBelowRoot,
+} from '../utils/uniqueNames.js';
+import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import { liveChildGroups, rootScope, type LiveChildGroup, type LiveTreeContext } from './liveSceneTree.js';
 import { scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
@@ -23,8 +27,10 @@ interface ClaimOwner {
   readonly roots: readonly TscnNode[];
   /** The owner of the instance node itself: the file its heading is in. Absent for the outer root. */
   readonly parent?: ClaimOwner;
-  /** The live tree, carried by the outer root alone so a table can re-walk it. */
+  /** The live tree, carried by the outer root alone so a live path can be placed over it. */
   readonly ctx?: LiveTreeContext;
+  /** The table the collapse composed, on an instance that collapses into its sub-scene root. */
+  readonly composed?: UniqueNameTable;
 }
 
 /** A composed live path spelled the way `owner`'s own file spells it. */
@@ -43,7 +49,7 @@ function ownsInsideInstance(owner: ClaimOwner, livePath: string, outer: ClaimOwn
   if (cachedUniqueNameOwnership(owner.roots).ownedInsideInstances.has(fileLocalPath(owner, livePath)))
     return true;
   return uniqueSpeltOwnedPaths(owner.roots).some(
-    (entry) => resolvedLivePath(composedPath(owner, entry), outer) === livePath
+    (entry) => placedLivePath(composedPath(owner, entry), outer) === livePath
   );
 }
 
@@ -61,42 +67,49 @@ function uniqueSpeltOwnedPaths(roots: readonly TscnNode[]): readonly string[] {
   return paths;
 }
 
-/** Written only by `resolvedLivePath`: the paths it is resolving now, so a `%Name` cycle ends. */
-const resolving = new Set<string>();
-
 /**
- * `livePath` with each `%Name` replaced by the composed path of the node it names. A heading its
- * file seats through an instanced `%Name` keeps that spelling, since the file cannot see the
- * sub-scene. A name the loaded tree cannot answer, or a cycle, keeps the path as written.
+ * `livePath` with each host sub-path through a `%Name` replaced by where the graft placed it, as of
+ * its heading (`uniqueParentPlacements`). A path the loaded tree cannot follow keeps the rest as
+ * written, and so does a heading its file seats through a `%Name` the graft could not reach.
  */
-function resolvedLivePath(livePath: string, outer: ClaimOwner): string {
-  if (!livePath.includes(UNIQUE_NODE_PREFIX) || !outer.ctx || resolving.has(livePath)) return livePath;
-  resolving.add(livePath);
-  try {
-    let resolved = '';
-    for (const segment of livePath.split('/')) {
-      if (!segment.startsWith(UNIQUE_NODE_PREFIX)) {
-        resolved = joinPath(resolved, segment);
-        continue;
-      }
-      const claim = tableAt(resolved, outer).get(segment);
-      if (!claim) return livePath;
-      resolved = claim.livePath;
+function placedLivePath(livePath: string, outer: ClaimOwner): string {
+  if (!livePath.includes(UNIQUE_NODE_PREFIX) || !outer.ctx) return livePath;
+  const { ctx } = outer;
+  let segments = livePath.split('/');
+  let groups: readonly LiveChildGroup[] = [
+    { origin: 'inline', children: outer.roots, scope: rootScope(ctx) },
+  ];
+  for (let depth = 0; depth < segments.length; depth++) {
+    const found = childNamed(groups, segments[depth]!);
+    if (!found) break;
+    groups = liveChildGroups(found.node, found.scope, ctx.sceneCache, ctx.glbCache);
+    const placements = groups[0]?.mergedNode?.uniqueParentPlacements;
+    if (placements) {
+      segments = [...segments.slice(0, depth + 1), ...placedBelow(placements, segments.slice(depth + 1))];
     }
-    return resolved;
-  } finally {
-    resolving.delete(livePath);
   }
+  return segments.join('/');
 }
 
-/**
- * The table a `%Name` read at the node at `path` answers from: the node's own, as an instance
- * root, then its owner's (node.cpp:1930-1933).
- */
-function tableAt(path: string, outer: ClaimOwner): ReadonlyMap<string, UniqueNameClaim> {
-  const { owner, into } = walkTo(path, outer.roots, outer.ctx!);
-  if (into === owner) return ownerClaims(owner);
-  return new Map([...ownerClaims(owner), ...ownerClaims(into)]);
+/** The first node of `name` across `groups`, with the scope its own children resolve against. */
+function childNamed(
+  groups: readonly LiveChildGroup[],
+  name: string
+): { node: LiveNode; scope: SceneScope } | undefined {
+  for (const group of groups) {
+    const node = group.children.find((n) => n.name === name);
+    if (node) return { node, scope: scopeOf(node, group.scope) };
+  }
+  return undefined;
+}
+
+/** `rest` with its longest leading sub-path that `placements` holds replaced by the placed path. */
+function placedBelow(placements: ReadonlyMap<string, string>, rest: readonly string[]): string[] {
+  for (let end = rest.length; end > 0; end--) {
+    const placed = placements.get(rest.slice(0, end).join('/'));
+    if (placed !== undefined) return [...placed.split('/'), ...rest.slice(end)];
+  }
+  return [...rest];
 }
 
 /** The outer root's owner, which carries the live tree. */
@@ -169,7 +182,7 @@ function walkTo(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext):
       group,
       owner:
         group.origin === 'merged' && subRoots
-          ? { path: livePath, roots: subRoots, parent: owner }
+          ? { path: livePath, roots: subRoots, parent: owner, composed: group.mergedNode?.uniqueNames }
           : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
@@ -210,7 +223,7 @@ export function localSceneOf(path: string, roots: readonly TscnNode[], ctx: Live
  * The `%Name` table a walk from the local scene root reads: its own table, else its owner's
  * (node.cpp:1930-1938). Only an instance root has an owner, so the outer root's is its own.
  */
-export function localSceneClaims(scene: ClaimOwner): ReadonlyMap<string, UniqueNameClaim> {
+export function localSceneClaims(scene: ClaimOwner): UniqueNamePaths {
   const own = ownerClaims(scene);
   if (!scene.parent) return own;
   return new Map([...ownerClaims(scene.parent), ...own]);
@@ -226,55 +239,21 @@ function cachedSubRoots(
   return scenePath ? ctx.sceneCache.getCached(scenePath)?.nodes : undefined;
 }
 
-/** `claims` with each live path resolved, the same object where none passes through a `%Name`. */
-function withResolvedLivePaths(
-  claims: ReadonlyMap<string, UniqueNameClaim>,
-  outer: ClaimOwner
-): ReadonlyMap<string, UniqueNameClaim> {
-  if (![...claims.values()].some((claim) => claim.livePath.includes(UNIQUE_NODE_PREFIX))) return claims;
-  return new Map(
-    [...claims].map(([key, claim]) => [key, { ...claim, livePath: resolvedLivePath(claim.livePath, outer) }])
-  );
+/** `paths` with each live path placed, the same object where none passes through a `%Name`. */
+function withPlacedLivePaths(paths: UniqueNamePaths, outer: ClaimOwner): UniqueNamePaths {
+  if (![...paths.values()].some((path) => path.includes(UNIQUE_NODE_PREFIX))) return paths;
+  return new Map([...paths].map(([key, path]) => [key, placedLivePath(path, outer)]));
 }
 
 /**
- * `owner`'s `%Name` table at composed live paths. The outer root's is the shared
- * cached table. An instance root's is its own file's claims, rebased under the node
- * it collapsed into, then the settings each file above writes on it, inner file first.
+ * `owner`'s `%Name` table at composed live paths. The outer root's is the shared cached table. An
+ * instance root's is the one its collapse composed, else its own file's claims, rebased under the
+ * node it renders at.
  */
-export function ownerClaims(owner: ClaimOwner): ReadonlyMap<string, UniqueNameClaim> {
-  const own = cachedUniqueNameClaims(owner.roots);
+export function ownerClaims(owner: ClaimOwner): UniqueNamePaths {
   const outer = outerOf(owner);
-  if (!owner.parent) return withResolvedLivePaths(own, outer);
-  const table = new Map<string, UniqueNameClaim>();
-  // Own claims first: the sub-scene acquires its names while it instantiates
-  // (packed_scene.cpp:565-570), the override's property lands afterwards (:492), and
-  // the first claimant keeps the name (node.cpp:2225-2231).
-  for (const [key, claim] of own) {
-    table.set(key, { ...claim, livePath: resolvedLivePath(composedPath(owner, claim.livePath), outer) });
-  }
-  // A file records an override's setting under the instance IT declares, which is
-  // the nearest owner it can see; the composed tree knows the nearest one there
-  // is, so every ancestor's records are re-keyed by the owner the node has here.
-  // An explicit `owner=` named its table outright and is filed by that key.
-  for (let above: ClaimOwner | undefined = owner.parent; above; above = above.parent) {
-    for (const { node, path, livePath: fileLivePath, owner: key, isUnique } of cachedUniqueNameOwnership(
-      above.roots
-    ).instanceSettings) {
-      const name = UNIQUE_NODE_PREFIX + node.name;
-      const holder = table.get(name)?.livePath;
-      // A set on a held name or a clear on a free one changes nothing, so it skips the owner walk.
-      if (isUnique ? holder !== undefined : holder === undefined) continue;
-      const livePath = resolvedLivePath(composedPath(above, fileLivePath), outer);
-      const ownedBy =
-        node.owner !== undefined || !outer.ctx
-          ? composedPath(above, key)
-          : walkTo(livePath, outer.roots, outer.ctx).owner.path;
-      if (ownedBy !== owner.path) continue;
-      const next = holderAfterSetting(holder, livePath, isUnique);
-      if (next === undefined) table.delete(name);
-      else if (next !== holder) table.set(name, { node, path, livePath });
-    }
-  }
-  return table;
+  if (!owner.parent) return withPlacedLivePaths(cachedUniqueNameLivePaths(owner.roots), outer);
+  const below = owner.composed?.paths() ?? cachedUniqueNamesBelowRoot(owner.roots);
+  const rebased = new Map([...below].map(([key, path]) => [key, joinPath(owner.path, path)]));
+  return withPlacedLivePaths(rebased, outer);
 }

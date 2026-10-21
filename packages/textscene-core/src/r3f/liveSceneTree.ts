@@ -66,30 +66,39 @@ export function singleSceneCache(
  * yet cached and a scene already in `scope.instancedScenePaths` (cyclic
  * instancing) return unchanged.
  *
- * It collapses an instance chain to a fixed point, not one level. A host override
- * such as `visible = false` on a heading with no `type=` stays in `rawProperties`
- * until a level with a real type re-parses it, so one level loses it. The chain
- * stops at a scene that already encloses the node, so a scene that instances
- * itself ends.
+ * An inherited sub-scene root collapses over its base first, as Godot instantiates the base
+ * before the inheriting file's headings land (packed_scene.cpp:227-231), and the host merges
+ * onto that composed root. The chain stops at a scene that already encloses the node, so a
+ * scene that inherits or instances itself ends.
  */
 export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
-  let current = node;
-  // Advances with the chain: after a merge the `instance` ref is the sub-scene
-  // root's own and names an id in that file's pool, which the merged node carries.
-  let outer = scopeOf(node, scope);
-  while (current.instance) {
-    const scenePath = resolveInstancePath(current.instance, outer.externalResources);
-    const enclosingScenePaths = outer.instancedScenePaths ?? [];
-    if (!scenePath || enclosingScenePaths.includes(scenePath)) break;
-    const cached = sceneCache.getCached(scenePath);
-    if (!cached) break;
-    const content = contentScopeOf(cached, [...enclosingScenePaths, scenePath]);
-    const merged = mergeInstanceRoot(current, cached, { outer, content });
-    if (!merged) break;
-    current = merged;
-    outer = scopeOf(merged, content);
-  }
-  return current;
+  if (!node.instance) return node;
+  const outer = scopeOf(node, scope);
+  const scenePath = resolveInstancePath(node.instance, outer.externalResources);
+  const enclosingScenePaths = outer.instancedScenePaths ?? [];
+  if (!scenePath || enclosingScenePaths.includes(scenePath)) return node;
+  const cached = sceneCache.getCached(scenePath);
+  if (!cached) return node;
+  const content = contentScopeOf(cached, [...enclosingScenePaths, scenePath]);
+  const subScene = composedSubScene(cached, content, sceneCache);
+  // A composed root's nodes resolve in its base's scope, which its own `scope` carries.
+  const rootContent = subScene.nodes.length === 1 ? scopeOf(subScene.nodes[0]!, content) : content;
+  return mergeInstanceRoot(node, subScene, { outer, content: rootContent }) ?? node;
+}
+
+/**
+ * A loaded sub-scene as it instantiates by itself: its sole root collapsed over the base it
+ * inherits, or the scene as cached where nothing collapses.
+ */
+function composedSubScene(
+  cached: { nodes: readonly TscnNode[] },
+  content: SceneScope,
+  sceneCache: CachedSceneSource
+): { nodes: readonly LiveNode[] } {
+  if (cached.nodes.length !== 1) return cached;
+  const root = cached.nodes[0]!;
+  const composed = collapseLiveNode(root, content, sceneCache);
+  return composed === root ? cached : { nodes: [composed] };
 }
 
 /**

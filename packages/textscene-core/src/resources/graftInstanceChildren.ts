@@ -10,7 +10,14 @@ import { scopeOf, type LiveNode } from './liveNode';
 import { layerRawOverride } from './layerRawOverride';
 import { rehomeOverride } from './rehomeOverride';
 import { warn } from '../logger';
-import { InstanceNameTable, subPathSegments, type InstanceNames } from './instanceNameTable';
+import {
+  InstanceNameTable,
+  subPathSegments,
+  type InstanceNames,
+  type UniqueNameTable,
+} from './instanceNameTable';
+import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
+import { joinPath } from '../utils/nodePath';
 
 /** The two scopes a graft joins. */
 export interface InstanceScopes {
@@ -20,10 +27,22 @@ export interface InstanceScopes {
   content: SceneScope;
 }
 
+/** An instanced sub-scene's root children with its host's children grafted in, and its `%Name` facts. */
+export interface GraftedInstance {
+  readonly children: LiveNode[];
+  /** The instance's table once every host setting has landed. */
+  readonly uniqueNames: UniqueNameTable;
+  /**
+   * Each host child whose sub-path passes through a `%Name`, spelt `subPath/name` as authored, to
+   * the path below the root the graft placed it at, as of its heading.
+   */
+  readonly uniqueParentPlacements: ReadonlyMap<string, string>;
+}
+
 /**
  * The sub-scene root's children with the host's overrides folded in. A grafted node
  * carries the outer scope, and a node an override reached carries its own scope plus
- * the resources the override names (`rehomeOverride`).
+ * the resources an override names (`rehomeOverride`).
  *
  * @param rootChildren the loaded sub-scene root's children (never mutated)
  * @param hostChildren the instancing node's children, deep and direct alike
@@ -34,12 +53,10 @@ export function graftInstanceChildren(
   hostChildren: readonly LiveNode[],
   scopes: InstanceScopes,
   names: InstanceNames
-): LiveNode[] {
-  if (hostChildren.length === 0) return [...rootChildren];
-
+): GraftedInstance {
   let grafted = [...rootChildren];
-  const appendedAtRoot: LiveNode[] = [];
   const table = new InstanceNameTable(names);
+  const placements = new Map<string, string>();
 
   for (const [index, child] of hostChildren.entries()) {
     // A setting lands at its heading, so only the host children written after it read it.
@@ -48,8 +65,7 @@ export function graftInstanceChildren(
     const stamped = child.scope ? child : { ...child, scope: scopes.outer };
     if (!child.instanceSubPath) {
       const folded = child.overridesExistingNode ? foldOrWarn(grafted, stamped, scopes.content) : null;
-      if (folded) grafted = folded;
-      else appendedAtRoot.push(stamped);
+      grafted = folded ?? [...grafted, stamped];
       continue;
     }
 
@@ -57,17 +73,24 @@ export function graftInstanceChildren(
     const next = segments && graftAt(grafted, segments, stamped, scopes.content);
     if (next) {
       grafted = next;
+      if (child.instanceSubPath.includes(UNIQUE_NODE_PREFIX)) {
+        placements.set(joinPath(child.instanceSubPath, child.name), joinPath(segments.join('/'), child.name));
+      }
     } else {
       // Visible-but-misplaced beats invisible: a sub-path that does not resolve is
       // a matching failure worth seeing, not a reason to drop the node.
       warn(
         `[graftInstanceChildren] "${child.name}" targets "${child.instanceSubPath}", which the instanced scene does not contain — appending at its root`
       );
-      appendedAtRoot.push(stamped);
+      grafted = [...grafted, stamped];
     }
   }
 
-  return [...table.landUpTo(grafted, hostChildren.length), ...appendedAtRoot];
+  return {
+    children: table.landUpTo(grafted, hostChildren.length),
+    uniqueNames: table,
+    uniqueParentPlacements: placements,
+  };
 }
 
 /**

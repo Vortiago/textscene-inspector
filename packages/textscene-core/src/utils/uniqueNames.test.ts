@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser.js';
 import { StrictTscnParser } from '../linter/StrictTscnParser.js';
-import { cachedUniqueNameClaims, cachedUniqueNameOwnership } from './uniqueNames.js';
+import { cachedUniqueNameOwnership } from './uniqueNames.js';
 
 /**
  * Both trees, every time. They agree on `rawProperties` (`parser/rawPropertyParity.test.ts`), but
@@ -43,24 +43,24 @@ function strictScene(source: string) {
   return scene;
 }
 
-describe('cachedUniqueNameClaims', () => {
+describe("the root's claim table", () => {
   it('finds a claim in the lenient tree, whose typed properties never carry the flag', () => {
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(SRC).nodes).claims;
     expect(claims.get('%Target')?.path).toBe('Root/Target');
   });
 
   it('finds the same claim in the strict tree', () => {
-    const claims = cachedUniqueNameClaims(strictScene(SRC).nodes);
+    const claims = cachedUniqueNameOwnership(strictScene(SRC).nodes).claims;
     expect(claims.get('%Target')?.path).toBe('Root/Target');
   });
 
   it('claims a descendant at any depth, not just a root child', () => {
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(SRC).nodes).claims;
     expect(claims.get('%Nested')?.path).toBe('Root/Target/Nested');
   });
 
   it('leaves a node without the flag unclaimed', () => {
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(SRC).nodes).claims;
     expect(claims.has('%Plain')).toBe(false);
   });
 
@@ -79,12 +79,12 @@ unique_name_in_owner = true
 [node name="Dup" type="Node3D" parent="Second"]
 unique_name_in_owner = true
 `;
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(duplicate).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(duplicate).nodes).claims;
     expect(claims.get('%Dup')?.path).toBe('Root/First/Dup');
   });
 
   it('carries the node itself, so a caller can read its type', () => {
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(SRC).nodes).claims;
     expect(claims.get('%Target')?.node.type).toBe('Node3D');
   });
 
@@ -102,13 +102,13 @@ unique_name_in_owner = true
 [node name="Sight" type="Node2D" parent="Bike/Body"]
 unique_name_in_owner = true
 `;
-    const claim = cachedUniqueNameClaims(new TscnParser().parse(into).nodes).get('%Sight');
+    const claim = cachedUniqueNameOwnership(new TscnParser().parse(into).nodes).claims.get('%Sight');
     expect(claim?.path).toBe('Root/Bike/Sight');
     expect(claim?.livePath).toBe('Root/Bike/Body/Sight');
   });
 
   it('leaves livePath equal to path where nothing is instanced', () => {
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(SRC).nodes).claims;
     expect(claims.get('%Nested')?.livePath).toBe('Root/Target/Nested');
   });
 });
@@ -116,19 +116,19 @@ unique_name_in_owner = true
 describe('the claim table cache', () => {
   it('hands every caller over one roots array the same table object', () => {
     const roots = new TscnParser().parse(SRC).nodes;
-    const first = cachedUniqueNameClaims(roots);
+    const first = cachedUniqueNameOwnership(roots).claims;
     expect(first.has('%Target')).toBe(true);
-    expect(cachedUniqueNameClaims(roots)).toBe(first);
+    expect(cachedUniqueNameOwnership(roots).claims).toBe(first);
   });
 
   it('builds a new table for a re-parse of the same source', () => {
-    const first = cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes);
-    expect(cachedUniqueNameClaims(new TscnParser().parse(SRC).nodes)).not.toBe(first);
+    const first = cachedUniqueNameOwnership(new TscnParser().parse(SRC).nodes).claims;
+    expect(cachedUniqueNameOwnership(new TscnParser().parse(SRC).nodes).claims).not.toBe(first);
   });
 
   it('is empty for a tree with no claim', () => {
     const roots = new TscnParser().parse('[gd_scene format=3]\n\n[node name="Root" type="Node3D"]\n').nodes;
-    expect(cachedUniqueNameClaims(roots).size).toBe(0);
+    expect(cachedUniqueNameOwnership(roots).claims.size).toBe(0);
   });
 });
 
@@ -152,17 +152,17 @@ unique_name_in_owner = true
 `;
 
   it('does not claim the override in the lenient tree', () => {
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(overridden).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(overridden).nodes).claims;
     expect(claims.has('%Hit')).toBe(false);
   });
 
   it('does not claim the override in the strict tree', () => {
-    const claims = cachedUniqueNameClaims(strictScene(overridden).nodes);
+    const claims = cachedUniqueNameOwnership(strictScene(overridden).nodes).claims;
     expect(claims.has('%Hit')).toBe(false);
   });
 
   it('still claims a node ADDED under the instance, whose owner is the scene root', () => {
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(overridden).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(overridden).nodes).claims;
     expect(claims.get('%Added')?.path).toBe('Player/Enemy/Added');
   });
 
@@ -175,13 +175,13 @@ unique_name_in_owner = true
 [node name="Hit" parent="."]
 unique_name_in_owner = true
 `;
-    const claims = cachedUniqueNameClaims(new TscnParser().parse(inherited).nodes);
+    const claims = cachedUniqueNameOwnership(new TscnParser().parse(inherited).nodes).claims;
     expect(claims.get('%Hit')?.path).toBe('Root/Hit');
   });
 });
 
 /**
- * The same walk, keeping what `cachedUniqueNameClaims` drops: an override's claim belongs to its
+ * The same walk, keeping what the root's claim table drops: an override's claim belongs to its
  * instance root, and a node added inside an instance is this root's. A per-owner table is
  * composed from both once the sub-scene loads.
  */
@@ -263,7 +263,7 @@ unique_name_in_owner = true
     expect([...ownership.ownedInsideInstances]).toEqual(['Player/Enemy/Added', 'Player/Enemy/Added/Child']);
   });
 
-  it('is the table cachedUniqueNameClaims returns', () => {
+  it("holds the root's claim table", () => {
     expect(ownership.claims.get('%Added')?.path).toBe('Player/Enemy/Added');
   });
 
@@ -353,12 +353,14 @@ describe('the first claimant', () => {
   // Instantiate sets each owner in declaration order (packed_scene.cpp:565-570), and a later
   // claimant is refused (node.cpp:2225-2231), so file order decides, not tree order.
   it('is the one declared first, on the lenient tree', () => {
-    expect(cachedUniqueNameClaims(new TscnParser().parse(OUT_OF_ORDER).nodes).get('%X')?.path).toBe(
+    expect(cachedUniqueNameOwnership(new TscnParser().parse(OUT_OF_ORDER).nodes).claims.get('%X')?.path).toBe(
       'Root/Q/X'
     );
   });
 
   it('is the one declared first, on the strict tree', () => {
-    expect(cachedUniqueNameClaims(strictScene(OUT_OF_ORDER).nodes).get('%X')?.path).toBe('Root/Q/X');
+    expect(cachedUniqueNameOwnership(strictScene(OUT_OF_ORDER).nodes).claims.get('%X')?.path).toBe(
+      'Root/Q/X'
+    );
   });
 });

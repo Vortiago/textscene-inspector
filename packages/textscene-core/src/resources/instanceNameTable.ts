@@ -1,23 +1,35 @@
 /**
- * An instance's `%Name` table as its graft reaches each host heading in file order, and the walk of a
- * host sub-path over it. Instantiate acquires the sub-scene's own names first
- * (packed_scene.cpp:565-570), then each host setting lands at its heading.
+ * An instance's `%Name` table, composed as instantiate builds it: the sub-scene's own names first
+ * (packed_scene.cpp:565-570), then each host setting at its heading, in file order. The graft is
+ * the only composer, and the render path reads the finished table off the merged node.
  */
 
 import type { LiveNode } from './liveNode';
 import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath';
 import { holderAfterSetting, type InstanceNameSetting } from '../parser/nodeOwner';
 
+/** Each `%Name` key to the path below the instanced scene's root that holds it. */
+export type UniqueNamePaths = ReadonlyMap<string, string>;
+
 /**
- * The path below the instanced scene's root that its own table gives a `%Name` key, or undefined
+ * The path below the instanced scene's root that the table gives a `%Name` key, or undefined
  * where nothing there claims it.
  */
 export type ClaimedPath = (key: string) => string | undefined;
 
+/** An instance's finished `%Name` table, which the merged node keeps for the render path. */
+export interface UniqueNameTable {
+  /** Each name the instance holds, to its path below the instanced scene's root. */
+  paths(): UniqueNamePaths;
+}
+
 /** The `%Name` facts a graft reads for one instance. */
 export interface InstanceNames {
-  /** The sub-scene's own table. */
-  readonly own: ClaimedPath;
+  /**
+   * The sub-scene's own table, as it instantiates by itself. A thunk, since a sub-scene seated
+   * for its table costs a walk only an instance with a `%Name` to read needs.
+   */
+  readonly own: () => UniqueNamePaths;
   /** The instance node's `instanceNameSettings`, in file order. */
   readonly settings: readonly InstanceNameSetting[];
 }
@@ -26,13 +38,15 @@ export interface InstanceNames {
  * The instance's table while its graft runs. A set acquires a free name and the first claimant
  * keeps it (node.cpp:2225-2231). A clear releases the node's own name (node.cpp:2236-2249).
  */
-export class InstanceNameTable {
+export class InstanceNameTable implements UniqueNameTable {
   /** Written only by `landOne`: each name a setting moved, undefined where it freed the name. */
   private readonly changed = new Map<string, string | undefined>();
-  private readonly own: ClaimedPath;
+  private readonly own: () => UniqueNamePaths;
   private readonly settings: readonly InstanceNameSetting[];
   /** Written only by `landUpTo`: how many of `settings` have landed. */
   private landed = 0;
+  /** Written only by `paths`, read once the graft has landed every setting. */
+  private finished?: UniqueNamePaths;
 
   constructor({ own, settings }: InstanceNames) {
     this.own = own;
@@ -40,7 +54,14 @@ export class InstanceNameTable {
   }
 
   /** The path below the sub-scene root that holds `key` now. */
-  readonly claimed: ClaimedPath = (key) => (this.changed.has(key) ? this.changed.get(key) : this.own(key));
+  readonly claimed: ClaimedPath = (key) =>
+    this.changed.has(key) ? this.changed.get(key) : this.own().get(key);
+
+  /** The finished table: the sub-scene's own, the same object where no setting moved a name. */
+  paths(): UniqueNamePaths {
+    this.finished ??= this.changed.size === 0 ? this.own() : withChanges(this.own(), this.changed);
+    return this.finished;
+  }
 
   /** `tree` once every setting written before host child `hostChildrenSeen` has landed. */
   landUpTo(tree: LiveNode[], hostChildrenSeen: number): LiveNode[] {
@@ -69,6 +90,19 @@ export class InstanceNameTable {
     this.changed.set(key, holderAfterSetting(this.claimed(key), segments.join('/'), setting.isUnique));
     return tree;
   }
+}
+
+/** `paths` with each changed name moved to its new holder, or dropped where a clear freed it. */
+function withChanges(
+  paths: UniqueNamePaths,
+  changed: ReadonlyMap<string, string | undefined>
+): UniqueNamePaths {
+  const moved = new Map(paths);
+  for (const [key, path] of changed) {
+    if (path === undefined) moved.delete(key);
+    else moved.set(key, path);
+  }
+  return moved;
 }
 
 /** The node a setting names, its parent walked as a host sub-path, or null where that names nothing. */

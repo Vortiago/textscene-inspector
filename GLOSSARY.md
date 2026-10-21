@@ -23,6 +23,11 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
+**Instance name table** (`resources/instanceNameTable.ts`):
+An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
+The merged node keeps it, and the render path's per-owner tables read it.
+_Avoid_: a second composer of an instance's table.
+
 **ExtResource**:
 An external file reference, written `ExtResource("id")` and declared by an `[ext_resource]` heading with a `uid=` and a `path="res://…"`.
 _Avoid_: "asset", "import".

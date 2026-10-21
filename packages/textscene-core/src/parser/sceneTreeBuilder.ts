@@ -298,12 +298,13 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   if (setting === undefined) return;
   if (isRootOwned) {
     if (setting) claimInRoot(tables, { node, ...place }, path);
-    // An inherited root owns its base's nodes, so a clear on an override of one releases a claim
-    // the base made, which only the root's graft sees. Any other root-owned heading declares its node.
-    else if (tables.root.instance && instance === undefined && node.overridesExistingNode)
+    // An inherited root owns its base's nodes (packed_scene.cpp:227-231), so only its graft over
+    // the base composes the one table both files' names land in, each at its heading.
+    if (tables.root.instance)
       handToInstance(tables, tables.root, {
         pathInInstance: relativeTo(tables.root.name, place.livePath)!,
-        isUnique: false,
+        isUnique: setting,
+        ownerInInstance: '',
       });
     return;
   }

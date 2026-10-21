@@ -117,9 +117,9 @@ export interface RawNode {
   /** External scene instance reference, for example ExtResource("1_abc"). */
   instance?: string;
   /**
-   * Set by the seating on an instance node below the root: the `unique_name_in_owner` settings this
-   * file writes inside its content, in file order. The graft reads them, and a graft into an outer
-   * instance appends the ones it hands down.
+   * Set by the seating on an instance node below the root, and on an inherited root: the
+   * `unique_name_in_owner` settings this file writes inside its content, in file order. The graft
+   * reads them, and a graft into an outer instance appends the ones it hands down.
    */
   instanceNameSettings?: readonly InstanceNameSetting[];
 }

@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChildren';
-import type { ClaimedPath, InstanceNames } from './instanceNameTable';
+import type { InstanceNames, UniqueNamePaths } from './instanceNameTable';
 import type { SceneScope, TscnNode } from '../parser/types';
 import { scopeOf, type LiveNode } from './liveNode';
 import { authoredSpelling } from './authoredSpelling';
@@ -49,16 +49,16 @@ function graft(
   hostChildren: readonly LiveNode[],
   { scopes = NO_SCOPES, names = NO_NAMES }: { scopes?: InstanceScopes; names?: InstanceNames } = {}
 ): LiveNode[] {
-  return graftInstanceChildren(rootChildren, hostChildren, scopes, names);
+  return graftInstanceChildren(rootChildren, hostChildren, scopes, names).children;
 }
 
 /** The table and settings a graft reads. */
-function names(settings: InstanceNameSetting[], own: ClaimedPath = () => undefined): InstanceNames {
-  return { own, settings };
+function names(settings: InstanceNameSetting[], own: UniqueNamePaths = new Map()): InstanceNames {
+  return { own: () => own, settings };
 }
 
 /** A sub-scene table that claims `%Pivot` for `Sprite2D/Pivot`. */
-const CLAIMS_PIVOT: ClaimedPath = (key) => (key === '%Pivot' ? 'Sprite2D/Pivot' : undefined);
+const CLAIMS_PIVOT: UniqueNamePaths = new Map([['%Pivot', 'Sprite2D/Pivot']]);
 
 /** A loaded sub-scene that instances `Inner`, whose content this graft cannot see. */
 function nestedInstanceScene(): TscnNode[] {

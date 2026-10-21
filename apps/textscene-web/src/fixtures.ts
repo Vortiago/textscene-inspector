@@ -1908,6 +1908,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Unique Viewport Base",
+    "file": "unit-unique-viewport-base.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Unique Viewport Inherited",
+    "file": "unit-unique-viewport-inherited.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Unsupported Nodes",
     "file": "unit-unsupported-nodes.tscn",
     "category": "Other"
@@ -2344,8 +2354,18 @@ export const fixtures: Fixture[] = [
     "category": "Integration - Multi-Node"
   },
   {
+    "name": "Instanced Inherited Unique Viewport",
+    "file": "integration-instanced-inherited-unique-viewport.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
     "name": "Instanced Subscene",
     "file": "integration-instanced-subscene.tscn",
+    "category": "Integration - Multi-Node"
+  },
+  {
+    "name": "Instanced Unique Parent Released",
+    "file": "integration-instanced-unique-parent-released.tscn",
     "category": "Integration - Multi-Node"
   },
   {
