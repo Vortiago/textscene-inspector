@@ -1,9 +1,9 @@
 /**
  * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
  * populated cells. Each surface draws as one THREE.InstancedMesh, as one mesh per cell when its
- * material billboards, or as one THREE.Points holding every cell's points for a PointMesh. A loading item draws
- * nothing. An item whose mesh or library this previewer cannot read draws cell-sized wireframe
- * boxes in one InstancedMesh.
+ * material billboards, or as one THREE.Points holding every cell's points for a PointMesh. A loading
+ * item draws nothing. An item whose mesh or library this previewer cannot read draws cell-sized
+ * wireframe boxes in one InstancedMesh.
  */
 
 import { useLayoutEffect, useMemo, useRef } from 'react';
