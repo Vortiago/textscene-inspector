@@ -1,7 +1,7 @@
 ---
 type: GridMap
 category: 3D
-status: done
+status: limitation
 fixture: unit-grid-map.tscn
 image: unit-grid-map
 renders_as: a THREE.InstancedMesh per MeshLibrary item surface, or a mesh per cell when that surface's material billboards
@@ -45,3 +45,7 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 <!-- lint:end -->
 
 `cell_size` warns and falls back to Godot's default `Vector3(2, 2, 2)` on a malformed value. `cell_scale` warns and falls back to `1` on a malformed or non-finite value. `mesh_library` is copied straight through when present, with no check that it resolves. `cell_center_x`, `_y` and `_z` default to `true` when all three are absent. Otherwise each warns and falls back to `true` on its own through `boolOr`.
+
+## Known limitations
+
+- **Resource gap** An item mesh the previewer does not build (ImmediateMesh, PlaceholderMesh, PointMesh, RibbonTrailMesh, TextMesh or TubeTrailMesh) draws as a wireframe box in each cell, and the node's details name the type.

@@ -9,7 +9,9 @@ import {
   type FakeResourceLoader,
 } from '../../resources/testing/createFakeResourceLoader';
 import { useResourceResolution } from '../../resources/useSubOrExtResource';
-import { arrayMeshPath } from './meshContent';
+import { NodePathProvider } from '../contexts/NodePathContext';
+import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../contexts/UndrawnMeshesContext';
+import { arrayMeshPath, useMeshContent } from './meshContent';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
 const RESOURCES: SceneResources = {
@@ -83,5 +85,27 @@ describe('arrayMeshPath over a mesh reference', () => {
   it('is unavailable for a .glb or an unknown id', () => {
     expect(renderResolution('ExtResource("3")').current.status).toBe('unavailable');
     expect(renderResolution('ExtResource("9")').current.status).toBe('unavailable');
+  });
+});
+
+describe('useMeshContent for a mesh type no slice builds', () => {
+  const TEXT: TscnInternalResource = { id: 'text', type: 'TextMesh', data: {} };
+  const SCENE: SceneResources = { internalResources: [TEXT], externalResources: [] };
+
+  it("names the type in the holding node's details", () => {
+    const { result } = renderHook(
+      () => {
+        useMeshContent(useResourceResolution('SubResource("text")', SCENE));
+        return useUndrawnMeshTypes('Root/Sign');
+      },
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <UndrawnMeshesProvider>
+            <NodePathProvider path="Root/Sign">{children}</NodePathProvider>
+          </UndrawnMeshesProvider>
+        ),
+      }
+    );
+    expect(result.current).toEqual(['TextMesh']);
   });
 });

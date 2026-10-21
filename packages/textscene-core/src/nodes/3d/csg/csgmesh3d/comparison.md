@@ -1,7 +1,7 @@
 ---
 type: CSGMesh3D
 category: 3D
-status: done
+status: limitation
 fixture: unit-csg-mesh.tscn
 image: unit-csg-mesh
 renders_as: a solid built from an arbitrary Mesh resource
@@ -35,3 +35,7 @@ Strict parsing format-checks these `CSGMesh3D` properties, plus 1 inherited from
 The linter warns (`resource-type-excluded-by-hint`) when `mesh` holds a class its hint excludes: a `PlaneMesh`, `PointMesh`, `QuadMesh` or `RibbonTrailMesh`. Godot's editor never offers such a class, and the setter keeps it without a warning (`csg_shape.cpp:1302-1316`).
 
 The lenient parser copies `mesh` through only when present. An absent one leaves the node with no solid, which is Godot's empty brush and not an error. `flip_faces` warns then falls back to `false` when unparseable. Neither side rejects a non-manifold `mesh` such as PlaneMesh, since Godot excludes those only in its property hint.
+
+## Known limitations
+
+- **Resource gap** A mesh the previewer does not build (ImmediateMesh, PlaceholderMesh, PointMesh, RibbonTrailMesh, TextMesh or TubeTrailMesh) adds nothing to the solid, and the node's details name the type.

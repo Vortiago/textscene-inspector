@@ -9,6 +9,7 @@ import { isCamera3DType } from '../../cameraNodeTypes.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
+import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
 import { authoredSpelling, holdsRenamedCopy } from '../../../resources/authoredSpelling.js';
@@ -61,6 +62,8 @@ export function NodeDetailsPanel() {
           </p>
         </div>
       )}
+
+      <UndrawnMeshNotice nodePath={path} />
 
       <div className={styles.section}>
         <div className={styles.row}>
@@ -125,4 +128,19 @@ function authoredSections(
     ...section,
     items: section.items.map((item) => ({ ...item, value: authoredSpelling(item.value, scope) })),
   }));
+}
+
+/** Names each mesh type the node holds that the previewer does not draw, which a wireframe box stands in for. */
+function UndrawnMeshNotice({ nodePath }: { nodePath: string }) {
+  const types = useUndrawnMeshTypes(nodePath);
+  if (types.length === 0) return null;
+  return (
+    <div className={`${styles.section} ${styles.warningSection}`}>
+      <h4 className={styles.sectionTitle}>Mesh Not Drawn</h4>
+      <p className={styles.warningText}>
+        Its {types.join(', ')} mesh is not yet drawn by the previewer. The viewport shows a wireframe box, or
+        nothing, where Godot draws it.
+      </p>
+    </div>
+  );
 }

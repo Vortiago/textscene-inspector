@@ -15,6 +15,8 @@ import { parseCSGMesh3D } from './parser';
 import { drawnMeshes, findMesh } from '../../testing/reactThreeTestInstance';
 import './index.r3f';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
+import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
+import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../../../../r3f/contexts/UndrawnMeshesContext';
 
 const CSGMesh3D = registeredComponent('CSGMesh3D');
 
@@ -142,5 +144,27 @@ describe('<CSGMesh3D>', () => {
     const mesh = findMesh(renderer.scene);
     expect(mesh.geometry.groups).toHaveLength(2);
     expect(Array.isArray(mesh.material) && mesh.material.length).toBe(2);
+  });
+});
+
+describe('<CSGMesh3D> mesh type no slice builds', () => {
+  it("names the type in the node's details", async () => {
+    const text: TscnInternalResource = { id: 'TextMesh_csg', type: 'TextMesh', data: {} };
+    let types: string[] = [];
+    function Types() {
+      types = useUndrawnMeshTypes('Mesh');
+      return null;
+    }
+    await ReactThreeTestRenderer.create(
+      <UndrawnMeshesProvider>
+        <SceneResourcesProvider internalResources={[text]}>
+          <NodePathProvider path="Mesh">
+            <CSGMesh3D node={makeNode({ mesh: 'SubResource("TextMesh_csg")' })} />
+          </NodePathProvider>
+        </SceneResourcesProvider>
+        <Types />
+      </UndrawnMeshesProvider>
+    );
+    expect(types).toEqual(['TextMesh']);
   });
 });

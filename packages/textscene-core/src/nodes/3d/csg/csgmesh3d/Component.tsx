@@ -6,12 +6,19 @@
  */
 
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
+import { useUndrawnMeshReport } from '../../../../r3f/contexts/UndrawnMeshesContext';
+import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
+import { useResourceResolution } from '../../../../resources/useSubOrExtResource';
 import { CsgPrimitive } from '../CsgPrimitive';
 import type { CSGMesh3DProperties } from './types';
 
 export function CSGMesh3D({ node, children }: NodeComponentProps) {
+  const properties = node.properties as CSGMesh3DProperties;
+  useUndrawnMeshReport(
+    useResourceResolution(properties.mesh, useSceneResources()).scoped?.resource.type ?? null
+  );
   return (
-    <CsgPrimitive node={node} properties={node.properties as CSGMesh3DProperties}>
+    <CsgPrimitive node={node} properties={properties}>
       {children}
     </CsgPrimitive>
   );

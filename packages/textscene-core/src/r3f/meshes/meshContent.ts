@@ -19,6 +19,7 @@ import type { ResourceResolution, ScopedResource } from '../../resources/useSubO
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { fileMaterialSources, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import { useUndrawnMeshReport } from '../contexts/UndrawnMeshesContext';
 import { primitiveMeshGeometry } from './primitiveMeshGeometry';
 
 /** A mesh's draw groups and each one's own material, whichever file holds it. */
@@ -55,6 +56,7 @@ export function arrayMeshPath({ scoped, resourcePath }: ResourceResolution): str
 export function useMeshContent(resolution: ResourceResolution): MeshContent {
   const { scoped, status, resourcePath } = resolution;
   const kind = scoped ? meshKind(scoped.resource.type) : null;
+  useUndrawnMeshReport(scoped?.resource.type ?? null);
   const processorPath = arrayMeshPath(resolution);
   // `''` requests nothing.
   const fileArrayMesh = useResource<ArrayMeshResource>(processorPath ?? '', 'arraymesh');
