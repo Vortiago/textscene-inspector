@@ -55,7 +55,7 @@ describe('ViewportTextureRegistry contract', () => {
       </ViewportTextureProvider>
     );
     const resolved = seen.at(-1);
-    expect(resolved?.texture).toBeInstanceOf(THREE.Texture);
+    expect(resolved?.plain.texture).toBeInstanceOf(THREE.Texture);
     expect(resolved?.size).toEqual({ x: 256, y: 256 });
   });
 

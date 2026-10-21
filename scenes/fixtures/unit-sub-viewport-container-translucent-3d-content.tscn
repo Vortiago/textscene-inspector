@@ -1,0 +1,45 @@
+; One variable against unit-sub-viewport-container-translucent.tscn: the content kind. A
+; translucent 3D surface blends in linear light inside the target, whose SRGB8_ALPHA8 storage
+; encodes the result, so the blend differs from the canvas target's sRGB-number blend. Godot 4.6.3
+; reads (170,180) rgb(193, 90, 54).
+
+[gd_scene format=3]
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(1, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.4, 0, 0.5)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="Booth"]
+own_world_3d = true
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="Booth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Quad" type="MeshInstance3D" parent="Booth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 0)
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("StandardMaterial3D_1")

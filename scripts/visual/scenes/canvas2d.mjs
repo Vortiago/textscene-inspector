@@ -301,6 +301,21 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sub-viewport-container-translucent.tscn',
     mode: '2d',
   },
+  // The same magnified edge with a 3D subtree as the content: the SRGB8 target serves a plain view
+  // of its bytes, which the container filters raw. Godot 4.6.3 `--mode 2d`: (199,180) rgb(210,96,19)
+  // and (200,180) rgb(121,83,57), within 1/255.
+  {
+    name: 'sub-viewport-container-shrink-3d-content',
+    file: 'unit-sub-viewport-container-shrink-3d-content.tscn',
+    mode: '2d',
+  },
+  // A translucent 3D surface blends in linear light inside the target. Godot 4.6.3 `--mode 2d`:
+  // (170,180) rgb(193,90,54), within 1/255.
+  {
+    name: 'sub-viewport-container-translucent-3d-content',
+    file: 'unit-sub-viewport-container-translucent-3d-content.tscn',
+    mode: '2d',
+  },
   // The one scene with a TouchScreenButton, which draws `texture_normal` at its origin in the
   // editor whatever `visibility_mode` says (touch_screen_button.cpp:140).
   { name: 'touch-screen-button', file: 'touch-screen-button/unit-touch-screen-button.tscn', mode: '2d' },
