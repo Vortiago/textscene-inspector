@@ -14,24 +14,22 @@ The CSG shape whose solid comes from a `Mesh` resource, so any mesh can take par
 ## Linting
 
 <!-- lint:begin CSGMesh3D -->
-
 Strict parsing format-checks these `CSGMesh3D` properties, plus 1 inherited from CSGPrimitive3D, 6 inherited from CSGShape3D, 18 inherited from GeometryInstance3D, 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property   | Accepts                                                        | Out of range |
-| ---------- | -------------------------------------------------------------- | ------------ |
-| `material` | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
-| `mesh`     | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
+| `mesh` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
-| Rule                                                            | Reports                                                         | Severity |
-| --------------------------------------------------------------- | --------------------------------------------------------------- | -------- |
-| `binary-resource-reference` (all nodes)                         | `binary-resource-reference`                                     | info     |
-| `valid-node3d-visibility` (type-family match)                   | `valid-node3d-visibility`                                       | error    |
-| `valid-csgshape3d-own-geometry` (type-family match)             | `csgmesh3d-requires-mesh`                                       | info     |
-|                                                                 | `csgpolygon3d-insufficient-points`                              | info     |
-| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin`          | warning  |
-|                                                                 | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning  |
-|                                                                 | `geometryinstance3d-visibility-range-end-fade-without-margin`   | warning  |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| `valid-csgshape3d-own-geometry` (type-family match) | `csgmesh3d-requires-mesh` | info |
+|  | `csgpolygon3d-insufficient-points` | info |
+| `valid-geometryinstance3d-visibility-range` (type-family match) | `geometryinstance3d-visibility-range-end-before-begin` | warning |
+|  | `geometryinstance3d-visibility-range-begin-fade-without-margin` | warning |
+|  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
 The linter warns (`resource-type-excluded-by-hint`) when `mesh` holds a class its hint excludes: a `PlaneMesh`, `PointMesh`, `QuadMesh` or `RibbonTrailMesh`. Godot's editor never offers such a class, and the setter keeps it without a warning (`csg_shape.cpp:1302-1316`).
