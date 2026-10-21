@@ -1,5 +1,5 @@
 /**
- * `buildPrimitiveMeshGeometry`'s dispatch from sub-resource type to a geometry, and the shape
+ * `primitiveMeshGeometry`'s dispatch from sub-resource type to a geometry, and the shape
  * each type draws: the vertex counts and the boxes a caller sees. Each slice's own `build.test.ts`
  * holds the parameter math.
  */
@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMesh';
-import { buildPrimitiveMeshGeometry } from './primitiveMeshGeometry';
+import { primitiveMeshGeometry } from './primitiveMeshGeometry';
 import type { TscnInternalResource } from '../../parser/types';
 
 function sub(type: string, data: Record<string, string> = {}): TscnInternalResource {
@@ -15,7 +15,7 @@ function sub(type: string, data: Record<string, string> = {}): TscnInternalResou
 }
 
 function renderGeometry(resource: TscnInternalResource): THREE.BufferGeometry {
-  const geometry = buildPrimitiveMeshGeometry(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+  const geometry = primitiveMeshGeometry(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
   if (!geometry) throw new Error(`expected a geometry for ${resource.type}, got none`);
   return geometry;
 }
@@ -25,7 +25,7 @@ function box(geometry: THREE.BufferGeometry): THREE.Box3 {
   return geometry.boundingBox!;
 }
 
-describe('buildPrimitiveMeshGeometry dispatch', () => {
+describe('primitiveMeshGeometry dispatch', () => {
   const types = [
     'BoxMesh',
     'SphereMesh',
@@ -45,7 +45,7 @@ describe('buildPrimitiveMeshGeometry dispatch', () => {
   });
 
   it('builds nothing for a type no PrimitiveMesh slice builds', () => {
-    expect(buildPrimitiveMeshGeometry(sub('ArrayMesh'), DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)).toBeNull();
+    expect(primitiveMeshGeometry(sub('ArrayMesh'), DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)).toBeNull();
   });
 });
 

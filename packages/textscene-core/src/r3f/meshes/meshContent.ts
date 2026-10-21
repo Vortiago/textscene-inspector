@@ -14,13 +14,12 @@ import { decodeSceneArrayMesh } from '../../resources/meshes/arraymesh/decode';
 import { godotSurfacesGeometry } from '../../resources/meshes/godotSurface';
 import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../resources/meshes/meshSource';
 import type { ArrayMeshResource } from '../../resources/processors/createArrayMeshProcessor';
-import { useContentMemo } from '../../resources/useContentMemo';
 import { useResource } from '../../resources/useResource';
 import type { ResourceResolution, ScopedResource } from '../../resources/useSubOrExtResource';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { fileMaterialSources, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { buildPrimitiveMeshGeometry } from './primitiveMeshGeometry';
+import { primitiveMeshGeometry } from './primitiveMeshGeometry';
 
 /** A mesh's draw groups and each one's own material, whichever file holds it. */
 export interface SurfacedMesh {
@@ -107,7 +106,10 @@ function usePrimitiveMesh(source: MeshSource | null): SurfacedMesh | null {
 /** A PrimitiveMesh's geometry at the project's texel size, or null for none or a mesh with no surface. */
 function usePrimitiveMeshGeometry(resource: TscnInternalResource | null): THREE.BufferGeometry | null {
   const texelSize = projectPrimitiveMeshTexelSize(useProjectSettings().settings);
-  const geometry = useContentMemo(resource, (r) => buildPrimitiveMeshGeometry(r, texelSize), [texelSize]);
+  const geometry = useMemo(
+    () => (resource ? primitiveMeshGeometry(resource, texelSize) : null),
+    [resource, texelSize]
+  );
   useDisposeOnRelease(geometry);
   return geometry;
 }

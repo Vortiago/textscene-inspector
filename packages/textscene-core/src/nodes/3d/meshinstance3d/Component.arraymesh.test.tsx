@@ -232,7 +232,7 @@ describe('<MeshInstance3D> external ArrayMesh (WI-1)', () => {
   });
 
   it('shows the placeholder when a scene ArrayMesh sub_resource carries no surfaces', async () => {
-    // `buildPrimitiveMeshGeometry` has no ArrayMesh case, so falling through would
+    // `primitiveMeshGeometry` has no ArrayMesh case, so falling through would
     // draw nothing and report nothing.
     const loader = loaderServing();
     const renderer = await ReactThreeTestRenderer.create(

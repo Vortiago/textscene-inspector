@@ -1,6 +1,6 @@
 /**
  * Primitive-mesh feature parity: subdivisions, the CylinderMesh cap flags and the SphereMesh
- * hemisphere, read from the decoders and the geometry `buildPrimitiveMeshGeometry` builds. Each builder's own
+ * hemisphere, read from the decoders and the geometry `primitiveMeshGeometry` builds. Each builder's own
  * test checks its arrays against Godot's.
  */
 import { describe, it, expect } from 'vitest';
@@ -9,11 +9,11 @@ import { decodeBoxMesh } from '../../resources/meshes/boxmesh/decode';
 import { decodeSphereMesh } from '../../resources/meshes/spheremesh/decode';
 import { decodeCylinderMesh } from '../../resources/meshes/cylindermesh/decode';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMesh';
-import { buildPrimitiveMeshGeometry } from './primitiveMeshGeometry';
+import { primitiveMeshGeometry } from './primitiveMeshGeometry';
 import type { TscnInternalResource } from '../../parser/types';
 
 function geomFor(resource: TscnInternalResource): THREE.BufferGeometry {
-  return buildPrimitiveMeshGeometry(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)!;
+  return primitiveMeshGeometry(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)!;
 }
 
 describe('mesh feature parity — parsers', () => {
