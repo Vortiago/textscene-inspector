@@ -9,7 +9,9 @@ renders_as: a THREE.InstancedMesh per MeshLibrary item surface, or a mesh per ce
 
 # GridMap
 
-Instances each populated cell's `MeshLibrary` item mesh, batching the cells of each item surface into one `THREE.InstancedMesh` with that surface's material. A surface whose material billboards draws one mesh per cell instead, so it turns about its own cell as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.
+Instances each populated cell's `MeshLibrary` item mesh, batching the cells of each item surface into one `THREE.InstancedMesh` with that surface's material. The item mesh is an ArrayMesh or a PrimitiveMesh, embedded in the library or in its own `.tres`. A surface whose material billboards draws one mesh per cell instead, so it turns about its own cell as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.
+
+Each mesh scales by `cell_scale` round its cell's place. A cell whose item has no mesh draws nothing.
 
 A GridMap that holds `baked_meshes` draws them in place of its cells, as Godot does once a LightmapGI bakes it. Each baked mesh reads the lightmap the bake gives its index.
 
@@ -42,8 +44,8 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 | `valid-gridmap-resources` | `gridmap-requires-mesh-library` | info |
 <!-- lint:end -->
 
-`cell_size` falls back silently to Godot's default `Vector3(2, 2, 2)` on a malformed value. `mesh_library` is copied straight through when present, with no check that it resolves. `cell_center_x`, `_y` and `_z` default to `true` when all three are absent. Otherwise each warns and falls back to `true` on its own through `boolOr`.
+`cell_size` warns and falls back to Godot's default `Vector3(2, 2, 2)` on a malformed value. `cell_scale` warns and falls back to `1` on a malformed or non-finite value. `mesh_library` is copied straight through when present, with no check that it resolves. `cell_center_x`, `_y` and `_z` default to `true` when all three are absent. Otherwise each warns and falls back to `true` on its own through `boolOr`.
 
 ## Known limitations
 
-- **Approximated** `cell_scale` is not parsed, so a map that sets it renders every tile at the wrong size.
+- **Resource gap** An item mesh the previewer does not build (PointMesh, RibbonTrailMesh, TextMesh or TubeTrailMesh) draws as a wireframe box in each cell, and the node's details name the type.

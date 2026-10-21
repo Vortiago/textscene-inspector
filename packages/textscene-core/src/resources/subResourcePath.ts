@@ -6,6 +6,7 @@
  * scene, and a `SubResource` of another resource file.
  */
 
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { warn } from '../logger.js';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types.js';
 import { findSubResource, parseResourceReference } from './SubResourceResolver.js';
@@ -101,6 +102,14 @@ interface SubResourceGate {
   declared: readonly TscnInternalResource[];
   /** `undefined` means the id names nothing declared. */
   accepts: (sub: TscnInternalResource | undefined) => boolean;
+}
+
+/** Accept any sub-resource of class `ancestor` or one it derives, for a reader that judges the subclass itself. */
+export function subResourceClassGate(
+  declared: readonly TscnInternalResource[],
+  ancestor: string
+): SubResourceGate {
+  return { declared, accepts: (sub) => sub !== undefined && descendsFromClass(sub.type, ancestor) };
 }
 
 /** Accept only sub-resources whose `type` is one of `types`. */

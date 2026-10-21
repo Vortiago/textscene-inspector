@@ -1,0 +1,23 @@
+; The scene for `integration-instanced-inherited-unique-viewport`: it inherits a base whose
+; `%View` the quad's ViewportTexture names from its local scene, this root.
+
+[gd_scene load_steps=5 format=3 uid="uid://unituniqueviewportinherited"]
+
+[ext_resource type="PackedScene" path="res://unit-unique-viewport-base.tscn" id="1_base"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_screen"]
+size = Vector2(1.5, 1.5)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_view"]
+viewport_path = NodePath("%View")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_screen"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_view")
+
+[node name="Monitor" instance=ExtResource("1_base")]
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_screen")
+surface_material_override/0 = SubResource("StandardMaterial3D_screen")

@@ -10,8 +10,9 @@ import { CsgPrimitive } from '../CsgPrimitive';
 import type { CSGMesh3DProperties } from './types';
 
 export function CSGMesh3D({ node, children }: NodeComponentProps) {
+  const properties = node.properties as CSGMesh3DProperties;
   return (
-    <CsgPrimitive node={node} properties={node.properties as CSGMesh3DProperties}>
+    <CsgPrimitive node={node} properties={properties}>
       {children}
     </CsgPrimitive>
   );

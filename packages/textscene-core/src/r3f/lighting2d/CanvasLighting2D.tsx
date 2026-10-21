@@ -11,7 +11,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
@@ -26,6 +26,7 @@ import { capItemLights, type CappedItem } from './itemLightCap.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 import { useGameViewportRect } from '../gameViewportRect.js';
 import type { Rgba } from '../../godot/math/math.js';
+import { useDisposeOnRelease } from '../useDisposeOnRelease.js';
 
 export { useCanvasLighting2D, type CanvasLighting2D } from './lightPassContext.js';
 export {
@@ -121,7 +122,7 @@ export function CanvasLighting2DProvider({ canvasModulate, children }: CanvasLig
   );
 
   const seedMaterial = useMemo(createSeedMaterial, []);
-  useEffect(() => () => seedMaterial.dispose(), [seedMaterial]);
+  useDisposeOnRelease(seedMaterial);
 
   const resolution = useRef(new THREE.Vector2(1, 1)).current;
 

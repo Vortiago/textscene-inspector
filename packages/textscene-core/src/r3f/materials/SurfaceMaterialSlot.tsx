@@ -6,7 +6,8 @@
  */
 
 import * as THREE from 'three';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import type { TscnInternalResource } from '../../parser/types';
 import {
   isViewportTextureRef,
@@ -71,7 +72,7 @@ export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
  * Resolve every texture slot of one StandardMaterial3D, from gated references through
  * loads, precedence and binding to the eight three maps. Each reference resolves in
  * `tables`, the material's own file, whichever file that is. A triplanar material tiles
- * per world unit, so a PlaneMesh `surface` folds in its size. CSG and GridMap pass
+ * per world unit, so a PlaneMesh `surface` folds in its size. CSG and an ArrayMesh pass
  * nothing and get the material's own `uv1_scale`.
  */
 export function useMaterialTextures(
@@ -154,8 +155,9 @@ export function useMaterialTextures(
 
   // One effect per texture: a shared dependency list runs every cleanup when any
   // slot resolves, freeing still-bound textures that three then re-uploads.
-  useDisposeTexture(repackedFlowmap);
-  useDisposeTexture(anisotropyClone);
+  // This module allocated both, and no binding releases them.
+  useDisposeOnRelease(repackedFlowmap);
+  useDisposeOnRelease(anisotropyClone);
   const albedoDrawn = useDrawnMap(albedoMap, slotTextures.albedo_texture.isArriving, 'albedo_texture');
   const normalDrawn = useDrawnMap(normalMap, slotTextures.normal_texture.isArriving, 'normal_texture');
   const roughnessDrawn = useDrawnMap(
@@ -345,12 +347,4 @@ function useDrawnMap(
   const drawn = useTiledUpload(bound ?? null, releaseBoundTexture) ?? undefined;
   if (drawn) return drawn;
   return bound || isArriving ? pendingMapStandIn(slot) : undefined;
-}
-
-/** Disposes a texture this module allocated itself, which no binding releases, once it is replaced or the slot unmounts. */
-function useDisposeTexture(texture: THREE.Texture | undefined): void {
-  useEffect(() => {
-    const own = texture;
-    return () => own?.dispose();
-  }, [texture]);
 }

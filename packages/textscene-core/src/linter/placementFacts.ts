@@ -32,15 +32,17 @@ export function placementFacts(
   seating: SceneSeating<RawNode>
 ): PlacementFacts {
   const orphans = orphanedNodes(origins, seating);
+  const isOrphan = new Set(orphans);
   return {
     orphanedNodes: orphans,
     reRootedNames: reRootedNames(orphans, seating),
     rootWithParent: rootDeclaringParent(origins),
     emptyParentHeadings: emptyParentHeadings(origins),
     refusesToInstantiate: refusesToInstantiate(origins),
-    idRecoveries: idRecoveries(origins, orphans, seating),
-    // Every heading is built by the time connections are made (`packed_scene.cpp:647-660`).
-    idHeadings: idHeadingsOf(origins, ({ node }) => seating.seated.has(node)),
+    idRecoveries: idRecoveries(origins, isOrphan, seating),
+    // An id trail finds a heading at the path it declares (`packed_scene.cpp:1985-2005`), so an
+    // orphan, re-rooted or recovered elsewhere, is not there.
+    idHeadings: idHeadingsOf(origins, (origin) => !isOrphan.has(origin)),
   };
 }
 
@@ -50,14 +52,13 @@ export function placementFacts(
  */
 function idRecoveries(
   origins: readonly NodeOrigin<RawNode>[],
-  orphaned: readonly NodeOrigin<RawNode>[],
+  isOrphan: ReadonlySet<NodeOrigin<RawNode>>,
   { seated, pathOf }: SceneSeating<RawNode>
 ): Map<NodeOrigin<RawNode>, IdRecovery> {
   const recoveries = new Map<NodeOrigin<RawNode>, IdRecovery>();
-  const unseatedByPath = new Set(orphaned);
   origins.forEach((origin, index) => {
-    if (!unseatedByPath.has(origin)) return;
-    const end = idTrailEnd(origins, index, (heading) => !unseatedByPath.has(heading));
+    if (!isOrphan.has(origin)) return;
+    const end = idTrailEnd(origins, index, (heading) => !isOrphan.has(heading));
     if (!end) return;
     const via = origins[end.heading]!;
     recoveries.set(origin, { kind: end.kind, via, viaPath: pathOf.get(seated.get(via.node)!) });

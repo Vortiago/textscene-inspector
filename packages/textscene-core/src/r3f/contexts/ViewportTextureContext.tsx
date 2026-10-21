@@ -15,21 +15,21 @@ import type * as THREE from 'three';
  */
 export interface ViewportTextureEntry {
   /**
-   * The plain view, which a canvas item and a raw material slot sample. A canvas-content target
-   * holds sRGB bytes here, which the canvas filters raw (`texture_storage.cpp:754`).
+   * The plain view, which a canvas item and a raw material slot sample. It holds sRGB bytes, which
+   * the canvas filters raw (`texture_storage.cpp:754`).
    */
-  texture: THREE.Texture;
+  plain: TargetView;
   /** The sRGB view, which a `source_color` slot samples (`material_storage.cpp:1067,1073`). */
-  decoding: DecodingView;
+  decoding: TargetView;
   /** The size in pixels that the sub-viewport's content was laid out against. */
   size: { x: number; y: number };
 }
 
 /**
- * A view that decodes each texel before the filter. WebGL2 has no texture views, so a pass may
- * serve it as a copy, which it fills only while a consumer retains it.
+ * One view of a target. WebGL2 has no texture views, so a pass may serve a view as a copy, which it
+ * fills only while a consumer retains it.
  */
-export interface DecodingView {
+export interface TargetView {
   texture: THREE.Texture;
   /** Keeps the view filled until the returned release is called. A second release changes nothing. */
   retain(): () => void;

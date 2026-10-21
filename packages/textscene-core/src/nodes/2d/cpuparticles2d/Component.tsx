@@ -5,7 +5,7 @@
  * Godot's `_update_internal` returns early, but the node still positions children.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -23,6 +23,7 @@ import { buildParticleGeometry, type ParticleFlipbook } from './particleGeometry
 import { resolveParticleCurves, resolveParticleGradient } from './sceneResources';
 import { simulateFrozenPose } from './simulate';
 import type { CPUParticles2DProperties } from './types';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 export function CPUParticles2D({ node, children }: NodeComponentProps) {
   const props = node.properties as CPUParticles2DProperties;
@@ -120,7 +121,7 @@ function ParticleField({
     () => buildParticleGeometry(pose, width, height, flipbook),
     [pose, width, height, flipbook]
   );
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   // The field draws from the first frame on a 1x1 quad while the texture loads, so
   // this material compiles mapless unless a fresh one replaces it

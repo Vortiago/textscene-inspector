@@ -1,6 +1,6 @@
 /**
- * Meshes, CSG defaults, external ArrayMesh geometry, GridMap and 3D navigation:
- * the goldens whose subject is the geometry that reaches the renderer.
+ * Meshes, CSG defaults, external ArrayMesh geometry, GridMap, 3D navigation and the texel
+ * passes of an image import: the goldens whose subject is what reaches the renderer.
  */
 
 export const GEOMETRY_SCENES = [
@@ -25,6 +25,9 @@ export const GEOMETRY_SCENES = [
   // do it: three skips an invisible object in the shadow pass and its subtree.
   // Soft-shadow edges are GPU-sensitive.
   { name: 'shadows-only', file: 'unit-shadows-only.tscn' },
+  // A SoftBody3D draws its box at rest, with no simulation. No other scene shows a regression in
+  // it: the box is the only node here that draws.
+  { name: 'soft-body-3d', file: 'unit-soft-body-3d.tscn' },
   // Five boxes against `visibility_range`: the framed camera is past A's end and short of B's
   // begin, so both vanish while A's child stays, and C and D blend at a SELF margin fade.
   { name: 'visibility-range', file: 'unit-visibility-range.tscn' },
@@ -99,6 +102,10 @@ export const GEOMETRY_SCENES = [
   // A glTF image takes its sidecar's texel passes: the default alpha-border pass turns the
   // magenta behind a transparent edge green, as Godot's import does.
   { name: 'gltf-alpha-border', file: 'unit-gltf-alpha-border.tscn' },
+  // The alpha-border pass on a soft-edged texture: transparent magenta texels take the disc's green,
+  // so the magnified edge fades green. Godot 4.6.3 and the previewer move together, up to 21/255
+  // per channel at the fringe if the sidecar turns the pass off.
+  { name: 'sprite-2d-soft-alpha-border', file: 'unit-sprite-2d-soft-alpha-border.tscn', mode: '2d' },
   // The same quad with a four-band atlas pins V orientation, which the
   // material-less `arraymesh` cannot see. Godot's V origin is the image top and
   // textures load with flipY=true, so a pass-through V samples upside down.
@@ -137,6 +144,11 @@ export const GEOMETRY_SCENES = [
   // cell_center_x/y/z the cell sits on the (1,1,1) marker, and without the
   // half-cell offset it moves to the origin.
   { name: 'grid-map-centering', file: 'unit-grid-map-centering.tscn' },
+  // The only GridMap item that is a PrimitiveMesh, a BoxMesh the library embeds with its own
+  // material: a placeholder, a wrong size or a lost material shows here.
+  { name: 'grid-map-inline-mesh', file: 'unit-grid-map-inline-mesh.tscn' },
+  // The only GridMap that sets cell_scale: a scale dropped, or applied to each cell's place, shows here.
+  { name: 'grid-map-cell-scale', file: 'unit-grid-map-cell-scale.tscn' },
   { name: 'navigation-region-3d', file: 'unit-navigation-region-3d.tscn' },
   // The 3D half of `sprite2d-gradienttexture`: Sprite3D decodes sRGB in hardware
   // before filtering, the opposite of the 2D canvas, so a procedural texture can

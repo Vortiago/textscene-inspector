@@ -51,6 +51,7 @@ import {
   recompileOnCurveChange,
   SHARED_WORLD_TONE_MAPPING,
 } from '../../../resources/environment/toneMapping';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 /**
  * Registered with neither `canvasItem` nor `container`, so `PlainNode` passes it
@@ -255,6 +256,6 @@ function useViewportShadowAtlas(properties: SubViewportProperties): ViewportShad
     () => new ViewportShadowAtlas(viewportPositionalShadowAtlas(size, [quad0, quad1, quad2, quad3])),
     [size, quad0, quad1, quad2, quad3]
   );
-  useEffect(() => () => atlas.dispose(), [atlas]);
+  useDisposeOnRelease(atlas);
   return atlas;
 }

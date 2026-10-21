@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_AABB } from '../../../godot/math/aabb';
-import { UV2_ATTRIBUTE } from '../../../resources/meshes/uv2';
-import { buildPrimitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
+import { EMPTY_AABB } from '../../godot/math/aabb';
+import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
+import { primitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
 
 const TEXEL_SIZE = 0.2;
 /** Four segments round and one ring: vertex 6 sits on the equator, a quarter turn from the seam. */
@@ -23,9 +23,33 @@ function sphere(data: Record<string, string> = {}) {
   return { id: 'sphere', type: 'SphereMesh', data: { ...COARSE_SPHERE, ...data } };
 }
 
-describe('buildPrimitiveMeshGeometry', () => {
+describe('primitiveMeshGeometry sharing', () => {
+  // One PrimitiveMesh resource is one mesh in Godot, whichever MeshLibrary item or node draws it.
+  it('gives every holder of equal content one geometry', () => {
+    const data = { radius: '0.75' };
+    expect(primitiveMeshGeometry(sphere(data), TEXEL_SIZE)).toBe(
+      primitiveMeshGeometry(sphere(data), TEXEL_SIZE)
+    );
+  });
+
+  it('builds again once the shared geometry is disposed', () => {
+    const data = { radius: '0.625' };
+    const first = primitiveMeshGeometry(sphere(data), TEXEL_SIZE)!;
+    first.dispose();
+    expect(primitiveMeshGeometry(sphere(data), TEXEL_SIZE)).not.toBe(first);
+  });
+
+  it('builds apart for another texel size, which moves UV2', () => {
+    const data = { radius: '0.875' };
+    expect(primitiveMeshGeometry(sphere(data), TEXEL_SIZE)).not.toBe(
+      primitiveMeshGeometry(sphere(data), 0.4)
+    );
+  });
+});
+
+describe('primitiveMeshGeometry', () => {
   it.each(PRIMITIVE_TYPES)("carries %s's own tangents, each with w = 1", (type) => {
-    const tangent = buildPrimitiveMeshGeometry({ id: 'mesh', type, data: {} }, TEXEL_SIZE)!.getAttribute(
+    const tangent = primitiveMeshGeometry({ id: 'mesh', type, data: {} }, TEXEL_SIZE)!.getAttribute(
       'tangent'
     );
 
@@ -34,7 +58,7 @@ describe('buildPrimitiveMeshGeometry', () => {
   });
 
   it("turns Godot's top-down V into three's bottom-up V", () => {
-    const uv = buildPrimitiveMeshGeometry(sphere(), TEXEL_SIZE)!.getAttribute('uv');
+    const uv = primitiveMeshGeometry(sphere(), TEXEL_SIZE)!.getAttribute('uv');
 
     expect([uv.getX(0), uv.getY(0)]).toEqual([0, 1]);
   });
@@ -43,26 +67,26 @@ describe('buildPrimitiveMeshGeometry', () => {
     // 3.14159 texels of size 1 pad a circumference of π: U halves round the centre, V thirds.
     const data = { add_uv2: 'true', uv2_padding: String(Math.PI) };
 
-    const uv2 = buildPrimitiveMeshGeometry(sphere(data), 1)!.getAttribute(UV2_ATTRIBUTE);
+    const uv2 = primitiveMeshGeometry(sphere(data), 1)!.getAttribute(UV2_ATTRIBUTE);
 
     expect(uv2.getX(6)).toBeCloseTo(0.125, 6);
     expect(uv2.getY(6)).toBeCloseTo(1 / 6, 6);
   });
 
   it.each(PRIMITIVE_TYPES)("carries %s's UV2 as uv1 under add_uv2", (type) => {
-    const geometry = buildPrimitiveMeshGeometry({ id: 'mesh', type, data: { add_uv2: 'true' } }, TEXEL_SIZE)!;
+    const geometry = primitiveMeshGeometry({ id: 'mesh', type, data: { add_uv2: 'true' } }, TEXEL_SIZE)!;
 
     expect(geometry.getAttribute(UV2_ATTRIBUTE).count).toBe(geometry.getAttribute('position').count);
   });
 
   it.each(PRIMITIVE_TYPES)('carries no uv1 on a %s without add_uv2', (type) => {
-    const geometry = buildPrimitiveMeshGeometry({ id: 'mesh', type, data: {} }, TEXEL_SIZE)!;
+    const geometry = primitiveMeshGeometry({ id: 'mesh', type, data: {} }, TEXEL_SIZE)!;
 
     expect(geometry.getAttribute(UV2_ATTRIBUTE)).toBeUndefined();
   });
 
   it('is null for a type with no slice here', () => {
-    expect(buildPrimitiveMeshGeometry({ id: 'text', type: 'TextMesh', data: {} }, TEXEL_SIZE)).toBeNull();
+    expect(primitiveMeshGeometry({ id: 'text', type: 'TextMesh', data: {} }, TEXEL_SIZE)).toBeNull();
   });
 });
 

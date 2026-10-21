@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { styleBoxFlatGeometry } from './styleBoxFlatGeometry';
 import type { StyleBoxFlatData } from './styleBoxFlat';
@@ -30,6 +30,7 @@ import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { useUploadedClone } from '../../tiledUpload/useTiledUpload';
 import type { Rgba } from '../../../godot/math/math';
+import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 
 interface StyleBoxQuadProps {
   styleBox: ResolvedStyleBox;
@@ -99,7 +100,7 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
     [tintedStyleBox, flatRect, kind]
   );
   // R3F does not dispose a geometry passed through `attach="geometry"`.
-  useEffect(() => () => flatGeometry?.dispose(), [flatGeometry]);
+  useDisposeOnRelease(flatGeometry);
 
   if (kind === 'texture') {
     const texture = (styleBox as StyleBoxTextureBox).texture;
@@ -246,7 +247,7 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
     built.setIndex(buffers.indices);
     return built;
   }, [rawTexture, rect, texture]);
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   // A clone: the cached texture is shared, and this mutates colour space and
   // filter. Linear and clamp-to-edge, the `Viewport::default_canvas_item_texture_filter`

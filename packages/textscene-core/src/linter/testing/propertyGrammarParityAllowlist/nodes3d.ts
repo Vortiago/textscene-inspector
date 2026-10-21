@@ -17,13 +17,8 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'collision_priority',
       'physics_material',
     ],
-    renderGap: [
-      // Multiplies the cell size into the render transform
-      // (grid_map.cpp:687, :1333), so a non-unit scale moves every tile.
-      'cell_scale',
-    ],
     reason:
-      'data is a packed cell dictionary decoded by a bespoke helper (extractCells), and baked_meshes draw in place of the cells (grid_map.cpp:688). The physics/navigation/octant keys never reach a frame. cell_scale does and is unread.',
+      'data is a packed cell dictionary decoded by a bespoke helper (extractCells), and baked_meshes draw in place of the cells (grid_map.cpp:688). The physics/navigation/octant keys never reach a frame.',
   },
 
   Label3D: {

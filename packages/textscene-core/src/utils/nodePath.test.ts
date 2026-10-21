@@ -1,7 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { joinPath, getAncestorPaths } from './nodePath';
+import { joinPath, getAncestorPaths, pathBetween } from './nodePath';
 
 describe('nodePath utilities', () => {
+  describe('pathBetween', () => {
+    it('spells a node below as its path from the start', () => {
+      expect(pathBetween('Root/Hud', 'Root/Hud/Panel/Lamp')).toBe('Panel/Lamp');
+    });
+
+    it('climbs with .. to a node outside the start', () => {
+      expect(pathBetween('Root/Hud/Inner', 'Root/Lamp')).toBe('../../Lamp');
+    });
+  });
+
   describe('joinPath', () => {
     it('should join parent path with child name', () => {
       expect(joinPath('Root/Player', 'Mesh')).toBe('Root/Player/Mesh');

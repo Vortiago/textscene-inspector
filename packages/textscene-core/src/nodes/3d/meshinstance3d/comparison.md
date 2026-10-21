@@ -33,9 +33,10 @@ Strict parsing format-checks these `MeshInstance3D` properties, plus 18 inherite
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, `transparency`, the `visibility_range_*` floats) go through `parseOptionalInt` and `parseOptionalFloat`. An unparseable `cast_shadow`, `transparency` or `visibility_range_*` value keeps Godot's default. Any other unparseable value is dropped silently, and an out-of-range `cast_shadow = 99` is kept as is. The component treats any `cast_shadow` other than `0`, `2` or `3` as `1`, Godot's default. `mesh`, `material_override`, `skeleton`, `skin` and each surface override are assigned from the raw string with no resolution check.
+The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, `transparency`, the `visibility_range_*` floats) go through `parseOptionalInt` and `parseOptionalFloat`. An unparseable `cast_shadow`, `transparency` or `visibility_range_*` value keeps Godot's default. Any other unparseable value is dropped silently, and an out-of-range `cast_shadow = 99` is kept as is. The component treats any `cast_shadow` other than `0`, `2` or `3` as `1`, Godot's default. `mesh`, `material_override`, `material_overlay` and `skin` drop a blank, `null` or `nil` value, as Godot's `Ref` setter does (`variant_parser.cpp:699`). Each of them, `skeleton` and each surface override is otherwise assigned from the raw string with no resolution check.
 
 ## Known limitations
 
 - **Approximated** A transparent material renders darker than Godot's on a brightly lit
   face, while an opaque one agrees.
+- **Resource gap** A mesh the previewer does not build (PointMesh, RibbonTrailMesh, TextMesh or TubeTrailMesh) draws as a wireframe box, and the node's details name the type.

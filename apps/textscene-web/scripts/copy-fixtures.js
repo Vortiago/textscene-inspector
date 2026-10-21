@@ -23,6 +23,9 @@ const MAX_DEPLOY_FILE_BYTES = 25 * 1024 * 1024;
 const skippedLargeFiles = [];
 
 ensureGodotDemos();
+// Cleared first: a copy keeps a file that no longer exists in scenes/, such as a deleted sidecar,
+// and the previewer then reads it as part of res://.
+rmSync(fixturesTarget, { recursive: true, force: true });
 mkdirSync(fixturesTarget, { recursive: true });
 
 /**

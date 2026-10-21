@@ -8,6 +8,7 @@ import { HierarchyProvider, type HierarchyContextValue } from '../../contexts/Hi
 import { SelectionProvider } from '../../contexts/SelectionContext.js';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.js';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
+import { UndrawnMeshesProvider } from '../../contexts/UndrawnMeshesContext.js';
 import {
   ViewportModeProvider,
   type PersistedViewport,
@@ -61,6 +62,7 @@ export function previewShellProviders({
         {children}
       </MissingResourcesProvider>
     ),
+    (children) => <UndrawnMeshesProvider>{children}</UndrawnMeshesProvider>,
     (children) => (
       // A host-forced `initialViewportMode` wins over the persisted mode.
       <ViewportModeProvider

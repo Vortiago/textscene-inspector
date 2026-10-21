@@ -1,24 +1,19 @@
 /**
  * Primitive-mesh feature parity: subdivisions, the CylinderMesh cap flags and the SphereMesh
- * hemisphere, read from the decoders and the geometry <MeshGeometry> renders. Each builder's own
+ * hemisphere, read from the decoders and the geometry `primitiveMeshGeometry` builds. Each builder's own
  * test checks its arrays against Godot's.
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { decodeBoxMesh } from '../../../resources/meshes/boxmesh/decode';
-import { decodeSphereMesh } from '../../../resources/meshes/spheremesh/decode';
-import { decodeCylinderMesh } from '../../../resources/meshes/cylindermesh/decode';
-import { MeshGeometry } from './meshGeometry';
-import type { TscnInternalResource } from '../../../parser/types';
+import { decodeBoxMesh } from '../../resources/meshes/boxmesh/decode';
+import { decodeSphereMesh } from '../../resources/meshes/spheremesh/decode';
+import { decodeCylinderMesh } from '../../resources/meshes/cylindermesh/decode';
+import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMesh';
+import { primitiveMeshGeometry } from './primitiveMeshGeometry';
+import type { TscnInternalResource } from '../../parser/types';
 
-async function geomFor(resource: TscnInternalResource): Promise<THREE.BufferGeometry> {
-  const renderer = await ReactThreeTestRenderer.create(
-    <mesh>
-      <MeshGeometry resource={resource} />
-    </mesh>
-  );
-  return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+function geomFor(resource: TscnInternalResource): THREE.BufferGeometry {
+  return primitiveMeshGeometry(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)!;
 }
 
 describe('mesh feature parity — parsers', () => {
@@ -42,8 +37,8 @@ describe('mesh feature parity — parsers', () => {
 });
 
 describe('mesh feature parity — geometry', () => {
-  it('PlaneMesh subdivide_width=1 → a third column of vertices', async () => {
-    const g = await geomFor({
+  it('PlaneMesh subdivide_width=1 → a third column of vertices', () => {
+    const g = geomFor({
       id: 'P',
       type: 'PlaneMesh',
       data: { size: 'Vector2(4, 4)', subdivide_width: '1' },
@@ -52,14 +47,14 @@ describe('mesh feature parity — geometry', () => {
     expect(g.getAttribute('position').count).toBe(6);
   });
 
-  it('SphereMesh is_hemisphere=true → a dome on a flat base at y = 0', async () => {
-    const g = await geomFor({ id: 'S', type: 'SphereMesh', data: { radius: '0.5', is_hemisphere: 'true' } });
+  it('SphereMesh is_hemisphere=true → a dome on a flat base at y = 0', () => {
+    const g = geomFor({ id: 'S', type: 'SphereMesh', data: { radius: '0.5', is_hemisphere: 'true' } });
     g.computeBoundingBox();
     expect(g.boundingBox!.min.y).toBe(0);
   });
 
-  it('PrismMesh subdivide_height=2 → two extra vertex rows (Godot num_points)', async () => {
-    const g = await geomFor({
+  it('PrismMesh subdivide_height=2 → two extra vertex rows (Godot num_points)', () => {
+    const g = geomFor({
       id: 'Pr',
       type: 'PrismMesh',
       data: { size: 'Vector3(1, 1, 1)', subdivide_height: '2' },
@@ -68,8 +63,8 @@ describe('mesh feature parity — geometry', () => {
     expect(g.getAttribute('position').count).toBe(36);
   });
 
-  it('PrismMesh subdivide_height default 0 → the bare 20-vertex prism', async () => {
-    const g = await geomFor({ id: 'Pr0', type: 'PrismMesh', data: { size: 'Vector3(1, 1, 1)' } });
+  it('PrismMesh subdivide_height default 0 → the bare 20-vertex prism', () => {
+    const g = geomFor({ id: 'Pr0', type: 'PrismMesh', data: { size: 'Vector3(1, 1, 1)' } });
     expect(g.getAttribute('position').count).toBe(20);
   });
 });

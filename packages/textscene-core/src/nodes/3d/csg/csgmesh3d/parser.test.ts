@@ -31,6 +31,10 @@ describe('parseCSGMesh3D', () => {
     expect(parseCSGMesh3D(heading('CSGMesh3D', { name: 'M' }), {}).mesh).toBeUndefined();
   });
 
+  it('reads a null mesh as no mesh, as the Ref setter does (variant_parser.cpp:699)', () => {
+    expect(parseCSGMesh3D(heading('CSGMesh3D', { name: 'M' }), { mesh: 'null' }).mesh).toBeUndefined();
+  });
+
   it('parses name, parent, and transform (happy path)', () => {
     const result = parseCSGMesh3D(heading('CSGMesh3D', { name: 'M', parent: '.' }), {
       transform: 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 3, 4)',

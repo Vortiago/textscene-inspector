@@ -1,7 +1,8 @@
 /**
  * Which owner a node's `%Name` lands on. `_acquire_unique_name_in_owner` (node.cpp:2222) registers
  * `"%" + name` on the node's owner and refuses to overwrite an entry (node.cpp:2225-2231), so the
- * first claimant in declaration order wins. The seating records every owner's claims.
+ * first claimant in declaration order wins. The seating records the root's claims, and hands each
+ * setting another owner holds to the instance node that owner reads it from.
  */
 
 import type { RawNode } from './types.js';
@@ -40,6 +41,13 @@ export function isInstanceBelowRoot(node: RawNode, isRoot: boolean): boolean {
 }
 
 /**
+ * The seated `owner=` of a heading whose owner path names no node when instantiate sets it. An
+ * empty NodePath, which `get_node_or_null` answers with null (node.cpp:1894), so the node gets no
+ * owner and its name registers on no table (packed_scene.cpp:159-168, :565-570).
+ */
+export const NO_OWNER = '';
+
+/**
  * Whether a heading's `owner=` names a node other than the root: the saver writes it only then
  * (resource_format_text.cpp:2024-2025), for a node that instanced content owns.
  */
@@ -75,7 +83,10 @@ export interface UniqueNameClaim {
  * reads it: true acquires a free name, and false releases the node's own (node.cpp:2236-2249).
  */
 export interface InstanceNameSetting {
-  /** The node's path below the instance, ending in its name. */
+  /**
+   * The node's path below the instance, ending in its name. A node outside the instance that an
+   * explicit `owner=` gives to it climbs out with `..`.
+   */
   readonly pathInInstance: string;
   readonly isUnique: boolean;
   /** An explicit `owner=` below the instance, `''` for the instance itself. Absent: the nearest owner. */
@@ -87,28 +98,32 @@ export interface InstanceNameSetting {
   readonly hostChildrenBefore: number;
 }
 
-/** A `unique_name_in_owner` on a heading another owner than the root holds. */
-export interface UniqueNameSetting extends UniqueNameClaim {
-  /**
-   * The live path of the instance node whose sub-scene root owns the heading, or of the node an
-   * explicit `owner=` names.
-   */
-  readonly owner: string;
-  readonly isUnique: boolean;
+/**
+ * Whether the setting is on a node outside the instance, which its explicit `owner=` gives to
+ * the instance. No owner walk applies, since the instance itself holds the name.
+ */
+export function isOutsideInstance(setting: Pick<InstanceNameSetting, 'pathInInstance'>): boolean {
+  return setting.pathInInstance.startsWith('../');
 }
 
 /**
- * Every owner's `%Name` claims in one seated file: the root's table, plus the two facts a per-owner
- * table over composed instanced content is built from.
+ * The root's `%Name` claims in one seated file, and where its own nodes sit inside instanced
+ * content. Each instance node carries the settings for its own table (`instanceNameSettings`).
  */
 export interface UniqueNameOwnership {
   /** `%Name` to claim, for the nodes this file's root owns, the first claimant kept. */
   readonly claims: ReadonlyMap<string, UniqueNameClaim>;
-  /**
-   * Settings on headings another owner holds, in file order, which is the order instantiate
-   * applies them in.
-   */
-  readonly instanceSettings: readonly UniqueNameSetting[];
-  /** Live paths of nodes this root owns that sit inside instanced content. */
-  readonly ownedInsideInstances: ReadonlySet<string>;
+  /** The live path of each node this file's headings reach inside instanced content, to what they say of it. */
+  readonly insideInstances: ReadonlyMap<string, HeadingsInsideInstance>;
+}
+
+/**
+ * What a file's headings at one live path inside an instance say of the node there. Each field is
+ * true where any heading at that path says so, since a later heading never takes back an earlier one.
+ */
+export interface HeadingsInsideInstance {
+  /** Whether this file's root owns the node, so its `%Name` lands in the root's table. */
+  readonly isRootOwned: boolean;
+  /** Whether a heading here adds the node, rather than overriding one the instance already has. */
+  readonly isAdded: boolean;
 }

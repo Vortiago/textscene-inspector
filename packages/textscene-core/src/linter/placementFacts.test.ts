@@ -49,8 +49,10 @@ describe('placementFacts', () => {
     });
   });
 
-  it('marks a re-rooted heading placed in the id headings, since Godot builds it', () => {
-    expect(factsOf(['Root'], ['Orphan', 'Missing']).idHeadings.map((h) => h.isPlaced)).toEqual([true, true]);
+  it('marks a re-rooted heading unplaced, as an id trail looks it up by its authored path', () => {
+    // `_recover_node_path_index` rebuilds the path the heading declares (`packed_scene.cpp:1985-2005`),
+    // and the re-rooted node lives at `Missing#Orphan`, not there.
+    expect(factsOf(['Root'], ['Orphan', 'Missing']).idHeadings.map((h) => h.isPlaced)).toEqual([true, false]);
   });
 
   it('marks a heading unplaced where Godot refuses the scene and re-roots nothing', () => {

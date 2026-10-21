@@ -38,6 +38,11 @@ ADD emission with both a dark red colour and a texture. Godot emits `(emission +
 
 A SubViewport's target in the emission slot, over a black albedo. A material binds every slot by RID, so the target glows as it draws through the albedo in `unit-sub-viewport-texture`. A target in a pass cycle draws the missing-texture material from any slot.
 
+## ViewportTexture sampler state
+<!-- compare: image=unit-sub-viewport-texture-sampler status=done fixture=unit-sub-viewport-texture-sampler.tscn -->
+
+A SubViewport's 8x8 target on three unshaded quads. The material's sampler applies to the target as it does to any texture (`material.cpp:760`). `texture_repeat` wraps at the edge, `uv1_scale` tiles the target, and `texture_filter = 0` keeps its texels as blocks. Both engines draw the same three quads.
+
 ## Normal map
 
 <!-- compare: image=unit-material-normal-map-blue status=done fixture=unit-material-normal-map-blue.tscn -->

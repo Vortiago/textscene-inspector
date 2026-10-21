@@ -1,0 +1,52 @@
+; The one variable: a `%Name` claim whose heading reaches into an instance through a
+; `%Name` (`parent="Player/%Pivot"`) that a later heading releases. Instantiate seats Hat
+; before the release lands (packed_scene.cpp:157-165), so `%Hat` names the SubViewport on
+; the sub-scene's Pivot and the quad shows its green sphere.
+
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://unit-unique-name-pivot.tscn" id="1_body"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_screen"]
+size = Vector2(1.5, 1.5)
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_hat"]
+viewport_path = NodePath("%Hat")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_screen"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("ViewportTexture_hat")
+
+[sub_resource type="SphereMesh" id="SphereMesh_subject"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_subject"]
+shading_mode = 0
+albedo_color = Color(0.2, 0.8, 0.3, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="Player" parent="." instance=ExtResource("1_body")]
+
+[node name="Hat" type="SubViewport" parent="Player/%Pivot"]
+unique_name_in_owner = true
+own_world_3d = true
+size = Vector2i(128, 128)
+render_target_update_mode = 4
+
+[node name="Subject" type="MeshInstance3D" parent="Player/%Pivot/Hat"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2)
+mesh = SubResource("SphereMesh_subject")
+surface_material_override/0 = SubResource("StandardMaterial3D_subject")
+
+[node name="Camera3D" type="Camera3D" parent="Player/%Pivot/Hat"]
+
+[node name="Pivot" parent="Player/Arm"]
+unique_name_in_owner = false
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0.5, 0)
+mesh = SubResource("QuadMesh_screen")
+surface_material_override/0 = SubResource("StandardMaterial3D_screen")

@@ -27,6 +27,11 @@ export interface NodeOrigin<N extends RawNode> {
    * the heading has none, or where the value is not a `PackedInt32Array`.
    */
   readonly idTrail?: readonly number[];
+  /**
+   * The ids of the heading's `owner_uid_path=`, the trail Godot falls back to when the `owner=`
+   * path does not walk (`resource_format_text.cpp:258-262`, `packed_scene.cpp:159-163`).
+   */
+  readonly ownerIdTrail?: readonly number[];
   /** The heading's `unique_id=`, or `0` where it has none (`UNIQUE_SCENE_ID_UNASSIGNED`). */
   readonly uniqueId: number;
 }
@@ -109,17 +114,18 @@ export interface RawNode {
    */
   overridesExistingNode?: boolean;
   /**
-   * The heading's `owner=` NodePath as written, root-relative. The loader sets the owner
-   * from it (resource_format_text.cpp:257-262), which decides the table a `%Name`
-   * registers on. Godot's own writer never emits it (packed_scene.cpp:1036-1044).
+   * The heading's `owner=` NodePath, root-relative. The loader sets the owner from it
+   * (resource_format_text.cpp:257-262), which decides the table a `%Name` registers on. Godot's own
+   * writer never emits it (packed_scene.cpp:1036-1044). A seated node holds it walked from the root
+   * (`resolvedOwner`): `.` for the root, and each `%Name` the file answers replaced by its claimant.
    */
   owner?: string;
   /** External scene instance reference, for example ExtResource("1_abc"). */
   instance?: string;
   /**
-   * Set by the seating on an instance node below the root: the `unique_name_in_owner` settings this
-   * file writes inside its content, in file order. The graft reads them, and a graft into an outer
-   * instance appends the ones it hands down.
+   * Set by the seating on an instance node below the root, and on an inherited root: the
+   * `unique_name_in_owner` settings this file writes inside its content, in file order. The graft
+   * reads them, and a graft into an outer instance appends the ones it hands down.
    */
   instanceNameSettings?: readonly InstanceNameSetting[];
 }
