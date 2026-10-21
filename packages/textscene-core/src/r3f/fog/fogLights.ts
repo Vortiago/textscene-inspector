@@ -13,7 +13,7 @@ import {
   VOLUMETRIC_FOG_SHADOW_OPACITY_MIN,
 } from '../../godot/rendering/environment/volumetricFog.js';
 import { areaLightShadowDepthScale } from '../../godot/rendering/lights/areaLightShadow.js';
-import { LIGHT_BUFFER_MIN_RANGE } from '../../godot/rendering/lights/lightBufferRange.js';
+import { lightBufferRange } from '../../godot/rendering/lights/lightBufferRange.js';
 import { DIRECTIONAL_SHADOW_MAX_SPLITS } from '../../godot/rendering/lights/directionalShadow.js';
 import { splitSunOf } from '../directionalShadow/splitSun.js';
 import { isAreaShadowLight } from '../positionalShadow/atlasAreaShadow.js';
@@ -75,6 +75,7 @@ type Kind = (typeof FogLightKind)[keyof typeof FogLightKind];
 /** Scratch for one row, overwritten by each light. */
 const position = new THREE.Vector3();
 const towards = new THREE.Vector3();
+const areaSize = new THREE.Vector2();
 const axis = new THREE.Vector3();
 const viewToShadow = new THREE.Matrix4();
 const paraboloidRect = new THREE.Vector4();
@@ -137,7 +138,7 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   if (kind === FogLightKind.AREA) return writeArea(light as THREE.RectAreaLight, camera);
   const { x, y, z } = viewPosition(light, camera);
   const positional = light as THREE.PointLight | THREE.SpotLight;
-  writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / Math.max(LIGHT_BUFFER_MIN_RANGE, positional.distance));
+  writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / lightBufferRange(positional.distance));
   row[FogLightTexel.COLOR * 4 + 3] = positional.decay;
   if (kind === FogLightKind.OMNI) {
     writeOmniShadow(light as THREE.PointLight, camera);
@@ -160,12 +161,15 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
 function writeArea(light: THREE.RectAreaLight, camera: THREE.Camera): boolean {
   const falloff = readAreaLightFalloff(light);
   if (!falloff) return false;
-  const range = Math.max(LIGHT_BUFFER_MIN_RANGE, falloff.range);
+  const range = lightBufferRange(falloff.range);
   const { x, y, z } = viewPosition(light, camera);
   writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / range);
   // The fog's falloff takes the attenuation less one (4.7.2 `volumetric_fog_process.glsl:653`).
   row[FogLightTexel.COLOR * 4 + 3] = falloff.attenuation - 1;
-  const inverseCentreRange = areaLightShadowDepthScale(falloff.range, { x: light.width, y: light.height });
+  const inverseCentreRange = areaLightShadowDepthScale(
+    falloff.range,
+    areaSize.set(light.width, light.height)
+  );
   writeViewAxis(FogLightTexel.DIRECTION, light, AREA_LIGHT_AXES.facing, 1, camera, inverseCentreRange);
   const { rect, maxMipmap } = areaTexturePlacement(light);
   writeVec4(row, FogLightTexel.AREA_TEXTURE, ...rect);
@@ -246,9 +250,9 @@ function writePositionalShadow(shadow: SlottedShadow, light: THREE.Light, camera
   writeMatrix(0, shadow.viewToLight(light, camera, viewToShadow));
 }
 
-/** Writes `viewToShadow` as the lookup of `slot`. */
-function writeMatrix(slot: number, viewToShadow: THREE.Matrix4): void {
-  row.set(viewToShadow.elements, (FogLightTexel.SHADOW_MATRICES + slot * 4) * 4);
+/** Writes `matrix` as the lookup of `slot`. */
+function writeMatrix(slot: number, matrix: THREE.Matrix4): void {
+  row.set(matrix.elements, (FogLightTexel.SHADOW_MATRICES + slot * 4) * 4);
 }
 
 function fogLightKind(light: THREE.Light): Kind | null {

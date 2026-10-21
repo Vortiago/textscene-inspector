@@ -4,7 +4,7 @@
  * range. Its soft shadow is an omni light's (`positionalSoftShadow`). Godot 4.6.3 has no AreaLight3D.
  */
 
-import { LIGHT_BUFFER_MIN_RANGE } from './lightBufferRange.js';
+import { lightBufferRange } from './lightBufferRange.js';
 
 /** The rectangle's side lengths, `area_size`. */
 interface AreaSize {
@@ -19,7 +19,8 @@ function halfDiagonal(size: AreaSize): number {
 /**
  * The far plane the paraboloid renders to: the range plus half the rectangle's diagonal, so the
  * map reaches a fragment one range from the rectangle's corner (4.7.2
- * `render_forward_clustered.cpp:2755-2758`).
+ * `render_forward_clustered.cpp:2755-2758`). The shadow render reads the range unclamped (`:2758`),
+ * where the light buffer floors it (`lightBufferRange.ts`).
  */
 export function areaLightShadowFar(range: number, size: AreaSize): number {
   return range + halfDiagonal(size);
@@ -30,7 +31,7 @@ export function areaLightShadowFar(range: number, size: AreaSize): number {
  * (4.7.2 `light_storage.cpp:1060`, `:1092`).
  */
 export function areaLightShadowDepthScale(range: number, size: AreaSize): number {
-  return 1 / areaLightShadowFar(Math.max(LIGHT_BUFFER_MIN_RANGE, range), size);
+  return 1 / areaLightShadowFar(lightBufferRange(range), size);
 }
 
 /** A box in the light's own space, its corners at `min` and `max`. */
