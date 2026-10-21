@@ -107,12 +107,20 @@ function viewportMaps(properties: Record<string, string>, surface?: TexturedSurf
 }
 
 /**
+ * A render target's texture: `isRenderTargetTexture` gates `albedoTargetUv`, and a bare
+ * `THREE.Texture` leaves it false.
+ */
+function renderTargetTexture(): THREE.Texture {
+  return new THREE.WebGLRenderTarget(4, 4).texture;
+}
+
+/**
  * The maps a material with `properties`, which name the SubViewport's render target, binds. The
  * target publishes a decoding view apart from its plain view, as a canvas-content target does.
  */
 function targetMaps(properties: Record<string, string>, surface?: TexturedSurface) {
-  const target = new THREE.WebGLRenderTarget(4, 4).texture;
-  const decoding = new THREE.WebGLRenderTarget(4, 4).texture;
+  const target = renderTargetTexture();
+  const decoding = renderTargetTexture();
   const { view, retainers } = countingView(decoding);
   const maps = materialMaps(properties, VIEWPORT, surface, (children) => (
     <ViewportTextureProvider>
