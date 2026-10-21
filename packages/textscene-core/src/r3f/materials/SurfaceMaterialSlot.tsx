@@ -71,7 +71,7 @@ export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
  * Resolve every texture slot of one StandardMaterial3D, from gated references through
  * loads, precedence and binding to the eight three maps. Each reference resolves in
  * `tables`, the material's own file, whichever file that is. A triplanar material tiles
- * per world unit, so a PlaneMesh `surface` folds in its size. CSG and GridMap pass
+ * per world unit, so a PlaneMesh `surface` folds in its size. CSG and an ArrayMesh pass
  * nothing and get the material's own `uv1_scale`.
  */
 export function useMaterialTextures(

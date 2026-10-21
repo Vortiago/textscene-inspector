@@ -9,12 +9,13 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
-import type { TscnNode } from '../../../parser/types';
+import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAssignment';
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
-import { useItemMesh } from './itemMesh';
+import { useMeshContent } from '../../../r3f/meshes/meshContent';
+import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
@@ -172,7 +173,7 @@ interface GridMapItemProps {
  * as Godot billboards each surface's instances in its own shader (`scene_forward_clustered.glsl:338-342`).
  */
 function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
-  const mesh = useItemMesh(item?.meshPath ?? null);
+  const content = useMeshContent(usePathResolution(item?.meshPath ?? null));
 
   // `cellCenter` is compared by identity: the parser hands back one shared
   // frozen instance for the all-centered default, so re-parsing an unchanged
@@ -187,16 +188,16 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
   const shadow = shadowCastingEffects(item?.castShadow);
 
   // Godot draws a cell only once its item has a mesh (`modules/gridmap/grid_map.cpp:688`).
-  if (mesh.status === 'unavailable') return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
-  if (mesh.status !== 'loaded') return null;
-  const { geometry } = mesh;
-  const surfaces = surfaceSources(mesh.materials);
+  if (content.kind === 'unresolved') return <PlaceholderTiles matrices={matrices} cellSize={cellSize} />;
+  if (content.kind !== 'surfaced') return null;
+  const { geometry, primitive } = content.mesh;
+  const surfaces = surfaceSources(content.mesh.materials);
   return (
     <>
       {surfaces.map((source, surface) => (
         <GridMapSurface
           key={surface}
-          draw={{ geometry, source, surface, surfaceCount: surfaces.length, shadow }}
+          draw={{ geometry, primitive, source, surface, surfaceCount: surfaces.length, shadow }}
           matrices={matrices}
         />
       ))}
@@ -207,6 +208,8 @@ function GridMapItem({ item, cells, cellSize, cellCenter }: GridMapItemProps) {
 /** One surface of an item's mesh, drawn on its own. */
 interface SurfaceDraw {
   geometry: THREE.BufferGeometry;
+  /** The PrimitiveMesh drawn, which a triplanar material tiles against. Null for an ArrayMesh. */
+  primitive: TscnInternalResource | null;
   /** Undefined for a surface that names no material: Godot's default surface. */
   source: MaterialSource | undefined;
   /** The draw group this draw owns. */
@@ -233,7 +236,7 @@ function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE
 
 /**
  * Every cell as one InstancedMesh, keyed on the count: three sizes the instance buffer at
- * construction. `useItemMesh` owns the geometry, which R3F leaves alone since it arrives
+ * construction. `useMeshContent` owns the geometry, which R3F leaves alone since it arrives
  * through `args`. The shadow hooks carry DOUBLE_SIDED and SHADOWS_ONLY per draw
  * (`r3f/surfaceDrawHooks.ts`).
  */
@@ -291,7 +294,13 @@ function CellTile({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }
 
 /** The material of the one draw group a surface draw owns. */
 function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
-  return <SurfaceMaterialSlot source={draw.source} attach={surfaceAttach(draw.surface, draw.surfaceCount)} />;
+  return (
+    <SurfaceMaterialSlot
+      source={draw.source}
+      attach={surfaceAttach(draw.surface, draw.surfaceCount)}
+      triplanarMesh={draw.primitive ?? undefined}
+    />
+  );
 }
 
 /**

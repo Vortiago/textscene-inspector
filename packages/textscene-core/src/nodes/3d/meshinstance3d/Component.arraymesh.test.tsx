@@ -368,10 +368,10 @@ describe('<MeshInstance3D> external PrimitiveMesh', () => {
     expect((mesh.material as THREE.MeshStandardMaterial).color.getHex()).toBe(0xff0000);
   });
 
-  it('draws nothing for a mesh type with no slice here', async () => {
+  it('draws the placeholder for a mesh type no slice here builds', async () => {
     const mesh = await renderCrate({
-      [WALL_PATH]: '[gd_resource type="PlaceholderMesh" format=3]\n\n[resource]\n',
+      [WALL_PATH]: '[gd_resource type="TextMesh" format=3]\n\n[resource]\n',
     });
-    expect(mesh.geometry.getAttribute('position')).toBeUndefined();
+    expect((mesh.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });
 });

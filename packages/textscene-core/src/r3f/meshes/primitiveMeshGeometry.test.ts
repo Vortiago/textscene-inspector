@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_AABB } from '../../../godot/math/aabb';
-import { UV2_ATTRIBUTE } from '../../../resources/meshes/uv2';
+import { EMPTY_AABB } from '../../godot/math/aabb';
+import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
 import { buildPrimitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
 
 const TEXEL_SIZE = 0.2;

@@ -7,8 +7,9 @@ import { arrayMeshAabb } from '../../../resources/meshes/arraymesh/meshAabb';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
 import { useResource } from '../../../resources/useResource';
 import { useContentMemo } from '../../../resources/useContentMemo';
-import { primitiveMeshAabb } from './primitiveMeshGeometry';
-import { useMeshResolution } from './meshResolution';
+import { primitiveMeshAabb } from '../../../r3f/meshes/primitiveMeshGeometry';
+import { arrayMeshPath } from '../../../r3f/meshes/meshContent';
+import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 
 /**
  * The box of the mesh `meshRef` names in `resources`, in mesh space: an ArrayMesh's or a
@@ -16,11 +17,12 @@ import { useMeshResolution } from './meshResolution';
  * this previewer reads, or a `.tres` still loading. The same object while the mesh holds.
  */
 export function useMeshAabb(meshRef: string | undefined, resources: SceneResources): Aabb | null {
-  const mesh = useMeshResolution(meshRef, resources);
+  const resolution = useResourceResolution(meshRef, resources);
+  const path = arrayMeshPath(resolution);
   // The ArrayMesh processor bounds a `.tres` ArrayMesh once for every consumer.
-  const file = useResource<ArrayMeshResource>(mesh.arrayMeshPath ?? '', 'arraymesh');
-  const own = useContentMemo(mesh.arrayMeshPath ? null : mesh.scoped?.resource, meshAabb);
-  return mesh.arrayMeshPath ? (file.value?.aabb ?? null) : own;
+  const file = useResource<ArrayMeshResource>(path ?? '', 'arraymesh');
+  const own = useContentMemo(path ? null : resolution.scoped?.resource, meshAabb);
+  return path ? (file.value?.aabb ?? null) : own;
 }
 
 function meshAabb(resource: TscnInternalResource): Aabb | null {

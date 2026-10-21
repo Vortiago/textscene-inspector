@@ -4,12 +4,12 @@
  */
 
 import type * as THREE from 'three';
-import type { TscnInternalResource } from '../../../parser/types';
-import { parseOptionalAabb } from '../../../parser/valueParsers';
-import { aabbOfPoints, EMPTY_AABB, isEmptyAabb, type Aabb } from '../../../godot/math/aabb';
-import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../../godot/scene/primitiveMesh';
-import { godotSurfacesGeometry } from '../../../resources/meshes/godotSurface';
-import { isPrimitiveMeshType, primitiveMeshSurface } from '../../../resources/meshes/primitivemesh/surface';
+import type { TscnInternalResource } from '../../parser/types';
+import { parseOptionalAabb } from '../../parser/valueParsers';
+import { aabbOfPoints, EMPTY_AABB, isEmptyAabb, type Aabb } from '../../godot/math/aabb';
+import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMesh';
+import { godotSurfacesGeometry } from '../../resources/meshes/godotSurface';
+import { isPrimitiveMeshType, primitiveMeshSurface } from '../../resources/meshes/primitivemesh/surface';
 
 /** `primitiveMeshSurface` as one three geometry. */
 export function buildPrimitiveMeshGeometry(

@@ -10,8 +10,7 @@ import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { parseSlotInt } from '../../godot/variant/int.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
-import { ARRAY_MESH_TYPES } from '../meshes/arraymesh/decode';
-import { PRIMITIVE_MESH_TYPES } from '../meshes/primitivemesh/surface';
+import { MESH_TYPES } from '../meshes/meshSource';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
@@ -24,12 +23,6 @@ import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } fro
  * leaf is ignored (ustring.cpp:941-964): `item/7/name/extra` sets item 7's name.
  */
 const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
-
-/**
- * The embedded mesh types an item draws. `_set` stores any `Ref<Mesh>` (mesh_library.cpp:48-49).
- * Another type stays unresolved, so GridMap draws its placeholder cell, not an empty mesh.
- */
-const ITEM_MESH_TYPES: ReadonlySet<string> = new Set([...ARRAY_MESH_TYPES, ...PRIMITIVE_MESH_TYPES]);
 
 /**
  * `mesh_cast_shadow` is serialised as the `RS::ShadowCastingSetting` ordinal.
@@ -89,7 +82,9 @@ export function meshLibraryFromTres(tres: ParsedResource, selfPath: string): Mes
         rawValue,
         extPathById,
         selfPath,
-        subResourceTypeGate(tres.subResources, ITEM_MESH_TYPES)
+        // `_set` stores any `Ref<Mesh>` (mesh_library.cpp:48-49). A type no slice builds stays
+        // unresolved, so GridMap draws its placeholder cell, not an empty mesh.
+        subResourceTypeGate(tres.subResources, MESH_TYPES)
       );
     } else if (field === 'mesh_transform') {
       try {

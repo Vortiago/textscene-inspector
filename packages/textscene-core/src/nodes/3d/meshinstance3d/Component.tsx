@@ -1,7 +1,7 @@
 /**
- * Renders a Godot MeshInstance3D as an R3F <mesh>: a primitive or ArrayMesh
- * geometry, from the scene or a `.tres`, or a magenta wireframe placeholder for a
- * GLB or unresolvable mesh.
+ * Renders a Godot MeshInstance3D as an R3F <mesh>: the geometry `useMeshContent` reads,
+ * or a magenta wireframe placeholder for a GLB, a mesh type no slice builds, or an
+ * unresolvable mesh.
  * Each surface draws through `<SurfaceMaterialSlot>`, which owns the magenta
  * missing-texture placeholder.
  */
@@ -9,23 +9,12 @@
 import * as THREE from 'three';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import type { MeshInstance3DProperties } from './types';
-import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
-import { useResource, type ResourceResult } from '../../../resources/useResource';
-import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
-import { MeshGeometry } from './meshGeometry';
-import { useMeshResolution, type MeshResolution } from './meshResolution';
-import type { ScopedResource } from '../../../resources/useSubOrExtResource';
-import { warn } from '../../../logger';
-import { decodeSceneArrayMesh } from '../../../resources/meshes/arraymesh/decode';
-import { godotSurfacesGeometry } from '../../../resources/meshes/godotSurface';
-import {
-  fileMaterialSources,
-  resolveMaterialSource,
-  type MaterialSource,
-} from '../../../r3f/materials/materialSource';
+import { useResourceResolution } from '../../../resources/useSubOrExtResource';
+import { useMeshContent, type SurfacedMesh } from '../../../r3f/meshes/meshContent';
+import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
@@ -47,24 +36,10 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   );
 
   // A `.glb` resolves to nothing and falls through to the placeholder.
-  const mesh = useMeshResolution(properties.mesh, pools);
-  // The hook runs with `''` for any other mesh, since the rules of hooks forbid a conditional call.
-  const arrayMeshResult = useResource<ArrayMeshResource>(mesh.arrayMeshPath ?? '', 'arraymesh');
+  const content = useMeshContent(useResourceResolution(properties.mesh, pools));
 
-  // A scene's own `[sub_resource type="ArrayMesh"]` has its surfaces inlined in the
-  // `.tscn`, so it decodes synchronously, with no file to fetch.
-  const sceneArrayMesh = useSceneArrayMesh(mesh.arrayMeshPath ? null : mesh.scoped);
-
-  // Surface 0's material, the only one a primitive mesh has. Every multi-surface mesh
-  // is an ArrayMesh, which returns from its own branch below.
-  const primarySource = useMemo(
-    () => resolvePrimitiveMaterialSource(properties, pools, mesh.scoped),
-    [properties, pools, mesh.scoped]
-  );
-
-  // The same two overrides for an ArrayMesh. Its surfaces are draw groups indexed by the
-  // mesh's own surface numbering, so they cannot use the per-slot collapse above, but
-  // Godot applies the overrides to both kinds of mesh identically.
+  // `material_override` and `surface_material_override/N`, keyed by the mesh's own surface
+  // numbering. Godot applies them to every kind of mesh alike.
   const meshOverrides = useMemo(() => resolveMeshOverrides(properties, pools), [properties, pools]);
 
   // `material_overlay` never competes for a surface slot, so it resolves apart from the
@@ -81,7 +56,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
   const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
-  const content = meshContent(mesh, arrayMeshResult, sceneArrayMesh);
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
   const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
 
@@ -107,22 +81,14 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
         </MeshShell>
       );
     // While it loads, the shell keeps the node's descendants mounted: they do not depend on
-    // the `.tres`.
+    // the `.tres`. A mesh Godot builds no surface for draws nothing, its descendants still mount.
     case 'loading':
+    case 'empty':
       return <MeshShell {...shellProps}>{null}</MeshShell>;
-    case 'arrayMesh':
+    case 'surfaced':
       return (
         <MeshShell {...shellProps}>
-          <ArrayMeshSurfaces mesh={content.mesh} overrides={meshOverrides} />
-        </MeshShell>
-      );
-    // No `attach`: `mesh.material` stays one Material for one surface. An array would make
-    // three skip every draw group past the last entry, and a BoxGeometry declares six.
-    case 'primitive':
-      return (
-        <MeshShell {...shellProps}>
-          <MeshGeometry resource={content.resource} />
-          <SurfaceMaterialSlot source={primarySource} triplanarMesh={content.resource} />
+          <MeshSurfaces mesh={content.mesh} overrides={meshOverrides} />
         </MeshShell>
       );
   }
@@ -134,39 +100,6 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
  * every step also steps it past unrelated content at the same depth.
  */
 const MATERIAL_OVERLAY_RENDER_ORDER = 1;
-
-/** What a MeshInstance3D draws. */
-type MeshContent =
-  | { kind: 'unresolved' }
-  | { kind: 'loading' }
-  | { kind: 'arrayMesh'; mesh: SurfacedMesh }
-  | { kind: 'primitive'; resource: TscnInternalResource };
-
-const UNRESOLVED: MeshContent = { kind: 'unresolved' };
-const LOADING: MeshContent = { kind: 'loading' };
-
-/**
- * The placeholder stands for no mesh, an external GLB, a missing SubResource, a `.tres` that
- * cannot load, and an ArrayMesh that cannot be read. `buildPrimitiveMeshGeometry` has no
- * ArrayMesh case, so an unreadable one would otherwise draw nothing.
- */
-function meshContent(
-  mesh: MeshResolution,
-  arrayMeshResult: ResourceResult<ArrayMeshResource>,
-  sceneArrayMesh: SurfacedMesh | null
-): MeshContent {
-  if (mesh.status === 'pending') return LOADING;
-  if (!mesh.scoped) return UNRESOLVED;
-  if (mesh.arrayMeshPath) {
-    if (arrayMeshResult.status === 'unavailable') return UNRESOLVED;
-    return arrayMeshResult.value
-      ? { kind: 'arrayMesh', mesh: withFileMaterials(arrayMeshResult.value) }
-      : LOADING;
-  }
-  const { resource } = mesh.scoped;
-  if (resource.type !== 'ArrayMesh') return { kind: 'primitive', resource };
-  return sceneArrayMesh ? { kind: 'arrayMesh', mesh: sceneArrayMesh } : UNRESOLVED;
-}
 
 /** Opts a mesh out of picking: three calls `raycast` and collects nothing. */
 const NO_RAYCAST: THREE.Object3D['raycast'] = () => {};
@@ -301,12 +234,12 @@ const UNRESOLVED_MESH = (
 );
 
 /**
- * An ArrayMesh's geometry plus a `<SurfaceMaterialSlots>` over its draw groups, so one
- * `useResource` per component serves any surface count. Godot sizes the override
- * array to the surface count (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw
- * groups set the slot count and an extra override is dropped.
+ * A mesh's geometry plus a `<SurfaceMaterialSlots>` over its draw groups, so one hook per
+ * component serves any surface count. Godot sizes the override array to the surface count
+ * (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw groups set the slot count and an extra
+ * override is dropped: a PrimitiveMesh takes only surface 0's.
  */
-function ArrayMeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides: MeshOverrides }) {
+function MeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides: MeshOverrides }) {
   const groupCount = Math.max(mesh.surfaceIndices.length, 1);
   const sources = Array.from({ length: groupCount }, (_unused, i) =>
     effectiveMaterialSource(overrides, mesh.surfaceIndices[i] ?? i, mesh.materials[i])
@@ -314,27 +247,9 @@ function ArrayMeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides:
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} />
+      <SurfaceMaterialSlots sources={sources} triplanarMesh={mesh.primitive ?? undefined} />
     </>
   );
-}
-
-/** An ArrayMesh's draw groups and each one's own material, whichever file holds it. */
-interface SurfacedMesh {
-  geometry: THREE.BufferGeometry;
-  /** Per draw group, Godot's surface index, which `surface_material_override/N` names. */
-  surfaceIndices: readonly number[];
-  /** Per draw group, the material the surface names, when it names one. */
-  materials: readonly (MaterialSource | undefined)[];
-}
-
-/** An external ArrayMesh's surfaces, each material a file the loader fetches. */
-function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh {
-  return {
-    geometry: mesh.geometry,
-    surfaceIndices: mesh.surfaceIndices,
-    materials: fileMaterialSources(mesh.materialPaths),
-  };
 }
 
 /** A MeshInstance3D's two material-override properties, already resolved against the scene. */
@@ -369,88 +284,4 @@ function effectiveMaterialSource(
   own: MaterialSource | undefined
 ): MaterialSource | undefined {
   return overrides.node ?? overrides.perSurface.get(surfaceIndex) ?? own;
-}
-
-/**
- * An ArrayMesh the scene declares as its own `[sub_resource]`, with each surface's
- * material resolved against the pools that hold the mesh. Null for any other mesh type
- * or for unreadable surfaces, and the caller then shows its placeholder.
- */
-function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
-  const decoded = useSceneArrayMeshGeometry(mesh?.resource);
-  const resources = mesh?.resources;
-  // Apart from the decode: an edit to a material's body or to an `ext_resource`
-  // path changes the resources and leaves the surface bytes alone.
-  return useMemo(() => {
-    if (!decoded || !resources) return null;
-    return {
-      geometry: decoded.geometry,
-      surfaceIndices: decoded.surfaceIndices,
-      materials: decoded.materialRefs.map((ref) => resolveMaterialSource(ref, resources)),
-    };
-  }, [decoded, resources]);
-}
-
-/**
- * The decoded geometry of a scene ArrayMesh and each surface's raw material
- * reference. This hook disposes the geometry: r3f never disposes an object
- * handed to `<primitive>`.
- */
-function useSceneArrayMeshGeometry(resource: TscnInternalResource | undefined): DecodedSceneArrayMesh | null {
-  // Keyed on the surface bytes, not identity: every keystroke re-parses the scene into
-  // fresh objects, and no processor cache stands in front of an inline mesh, so identity
-  // deps would re-decode and re-upload it per character.
-  const surfacesRaw = resource?.type === 'ArrayMesh' ? resource.data['_surfaces'] : undefined;
-  const key = typeof surfacesRaw === 'string' ? surfacesRaw : null;
-
-  const decoded = useMemo(() => {
-    if (resource?.type !== 'ArrayMesh' || key === null) return null;
-    try {
-      const mesh = decodeSceneArrayMesh(resource);
-      if (mesh.surfaces.length === 0) return null;
-      return {
-        geometry: godotSurfacesGeometry(mesh.surfaces),
-        surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
-        materialRefs: mesh.surfaces.map((s) => s.materialRef),
-      };
-    } catch (error) {
-      warn(
-        `[MeshInstance3D] scene ArrayMesh "${resource.id}" could not be decoded: ` +
-          `${error instanceof Error ? error.message : String(error)}`
-      );
-      return null;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` IS the content of `resource`.
-  }, [key]);
-
-  useEffect(() => () => decoded?.geometry.dispose(), [decoded]);
-  return decoded;
-}
-
-interface DecodedSceneArrayMesh extends Omit<SurfacedMesh, 'materials'> {
-  /** Per surface, its raw `"material"` reference, when it has one. */
-  materialRefs: readonly (string | undefined)[];
-}
-
-/**
- * The material of a primitive mesh's one surface, as a `MaterialSource`: the
- * engine hands the server only `->get_rid()`
- * (`scene/3d/mesh_instance_3d.cpp:366`), so a `.tres` and a `[sub_resource]`
- * are equal arrivals. An override resolves against the scene, the mesh's own
- * material against the pools that hold the mesh.
- */
-function resolvePrimitiveMaterialSource(
-  properties: MeshInstance3DProperties,
-  scene: SceneResources,
-  mesh: ScopedResource | null
-): MaterialSource | undefined {
-  // Surface 0 alone: `_set` (`scene/3d/mesh_instance_3d.cpp:65-73`) refuses an override
-  // index past the array that `_mesh_changed` (`:407`) sizes to the surface count, 1 for
-  // every PrimitiveMesh. `material_override` comes first, as `_geometry_instance_add_surface`
-  // applies it per surface (`render_forward_clustered.cpp:4206` over `:4264`).
-  const override = properties.materialOverride ?? properties.surfaceMaterialOverrides?.get(0);
-  if (override) return resolveMaterialSource(override, scene);
-  const own = mesh?.resource.data['material'];
-  if (!mesh || typeof own !== 'string') return undefined;
-  return resolveMaterialSource(own, mesh.resources);
 }

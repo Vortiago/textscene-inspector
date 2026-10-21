@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
-import type { TscnInternalResource } from '../../../parser/types';
-import type { SceneResources } from '../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import type { TscnInternalResource } from '../../parser/types';
+import type { SceneResources } from '../SceneResourcesContext';
+import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import {
   createFakeResourceLoader,
   type FakeResourceLoader,
-} from '../../../resources/testing/createFakeResourceLoader';
-import { useMeshResolution } from './meshResolution';
+} from '../../resources/testing/createFakeResourceLoader';
+import { useResourceResolution } from '../../resources/useSubOrExtResource';
+import { arrayMeshPath } from './meshContent';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
 const RESOURCES: SceneResources = {
@@ -39,14 +40,20 @@ function renderResolution(
   meshRef: string | undefined,
   fake: FakeResourceLoader = createFakeResourceLoader()
 ) {
-  return renderHook(() => useMeshResolution(meshRef, RESOURCES), {
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
-    ),
-  }).result;
+  return renderHook(
+    () => {
+      const resolution = useResourceResolution(meshRef, RESOURCES);
+      return { ...resolution, arrayMeshPath: arrayMeshPath(resolution) };
+    },
+    {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+      ),
+    }
+  ).result;
 }
 
-describe('useMeshResolution', () => {
+describe('arrayMeshPath over a mesh reference', () => {
   it('names the simplified .tres path of an external ArrayMesh', () => {
     const fake = createFakeResourceLoader();
     seedFiles(fake);

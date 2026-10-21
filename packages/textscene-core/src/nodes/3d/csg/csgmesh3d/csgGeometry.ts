@@ -46,7 +46,7 @@ function fileKey(file: object): number {
 
 /** A scene mesh keys on its content, since the parser allocates a fresh one per reparse. */
 function meshKey(mesh: CsgMesh): string {
-  return 'resource' in mesh ? resourceContentKey(mesh.resource) : `${mesh.path}#${fileKey(mesh.file)}`;
+  return mesh.file ? `${mesh.path}#${fileKey(mesh.file)}` : resourceContentKey(mesh.resource);
 }
 
 /** The faces of every surface in turn, with the index of each face's material in `materials`. */

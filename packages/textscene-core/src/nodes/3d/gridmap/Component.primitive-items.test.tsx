@@ -5,8 +5,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { ReactNode } from 'react';
-import { MissingResourcesProvider } from '../../../r3f/contexts/MissingResourcesContext';
 import { renderGridMapTiles, renderInstancedTile } from './testing/gridMapCorpus';
 import { wallQuadSurfaces } from '../../../resources/testing/arrayMeshSurfaces';
 
@@ -82,14 +80,8 @@ describe('<GridMap> item with an inline PrimitiveMesh Godot builds no surface fo
 });
 
 describe('<GridMap> item whose mesh path holds no mesh a slice builds', () => {
-  it('reports the path as a missing resource', async () => {
-    let missing: ReadonlySet<string> = new Set();
-    const Wrapper = ({ children }: { children: ReactNode }) => (
-      <MissingResourcesProvider onMissingPathsChange={(paths) => (missing = paths)}>
-        {children}
-      </MissingResourcesProvider>
-    );
-    await renderGridMapTiles({
+  it('draws the placeholder', async () => {
+    const tile = await renderInstancedTile({
       library: `[gd_resource type="MeshLibrary" format=3]
 
 [ext_resource type="Mesh" path="res://stage/meshes/text.tres" id="1_text"]
@@ -98,9 +90,8 @@ describe('<GridMap> item whose mesh path holds no mesh a slice builds', () => {
 item/0/mesh = ExtResource("1_text")
 `,
       files: { 'res://stage/meshes/text.tres': '[gd_resource type="TextMesh" format=3]\n\n[resource]\n' },
-      wrapper: Wrapper,
     });
-    expect([...missing]).toEqual(['res://stage/meshes/text.tres']);
+    expect((tile.material as THREE.MeshBasicMaterial).wireframe).toBe(true);
   });
 });
 
