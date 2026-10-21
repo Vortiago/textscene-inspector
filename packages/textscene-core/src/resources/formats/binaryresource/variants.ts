@@ -7,6 +7,7 @@
 import { stringLiteral } from '../../../godot/string/string';
 import { componentLiteral, floatLiteral } from '../../../godot/variant/variantWriter';
 import { VARIANT_TYPE } from '../../../godot/variant/variantType';
+import { sortArray } from '../../../godot/templates/sortArray';
 import type { ByteReader } from './byteReader';
 import {
   ABSOLUTE_NODE_PATH,
@@ -297,7 +298,7 @@ interface ReadVariant {
 
 /**
  * A key as Godot orders it: its `Variant::Type`, then its value. A type with no `OP_LESS`
- * holds no value, and Godot leaves it where the file puts it.
+ * holds no value, and ties with every key of its type.
  */
 type KeyOrder = { type: number } & KeyValue;
 
@@ -309,12 +310,13 @@ type KeyValue =
 
 /**
  * `:582-597`. Godot's writer puts each entry on its own line, its keys sorted by
- * `StringLikeVariantOrder` (`variant_parser.cpp:2306-2307`, `variant.cpp:3409-3427`).
+ * `StringLikeVariantOrder` (`variant_parser.cpp:2306-2307`, `variant.cpp:3409-3427`) with
+ * `SortArray`, which leaves keys it cannot order in its own order.
  */
 function dictionaryText(reader: ByteReader, tables: VariantTables): string {
   const entries = repeat(reader.u32() & SHARED_LENGTH_MASK, () => dictionaryEntry(reader, tables));
   if (entries.length === 0) return '{}';
-  entries.sort((a, b) => compareKeys(a.order, b.order));
+  sortArray(entries, (a, b) => compareKeys(a.order, b.order) < 0);
   const lines = entries.map(({ text }) => text);
   return `{\n${lines.join(',\n')}\n}`;
 }

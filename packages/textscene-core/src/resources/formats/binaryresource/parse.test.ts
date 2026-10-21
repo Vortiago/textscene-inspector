@@ -256,6 +256,7 @@ describe('parseBinaryResource on each header and table form', () => {
       float: (value: number) => new ByteWriter().u32(VariantTag.Float).f32(value).bytes(),
       string: (value: string) => new ByteWriter().u32(VariantTag.String).unicodeString(value).bytes(),
       stringName: (value: string) => new ByteWriter().u32(VariantTag.StringName).unicodeString(value).bytes(),
+      plane: (x: number) => new ByteWriter().u32(VariantTag.Plane).f32(x).f32(0).f32(0).f32(0).bytes(),
       vector2: (x: number, y: number) => new ByteWriter().u32(VariantTag.Vector2).f32(x).f32(y).bytes(),
       color: (r: number) => new ByteWriter().u32(VariantTag.Color).f32(r).f32(0).f32(0).f32(1).bytes(),
       rid: (id: number) => new ByteWriter().u32(VariantTag.Rid).u32(id).bytes(),
@@ -311,10 +312,20 @@ describe('parseBinaryResource on each header and table form', () => {
       expect(await dictionaryOf(key.bool(false), nullObject)).toBe(lines('null', 'false'));
     });
 
-    it('keeps the file order of keys Godot cannot order, such as colours (edge case)', async () => {
+    it('keeps the file order of up to 16 keys Godot cannot order, such as colours (edge case)', async () => {
       expect(await dictionaryOf(key.color(1), key.color(0))).toBe(
         lines('Color(1, 0, 0, 1)', 'Color(0, 0, 0, 1)')
       );
+    });
+
+    it('reorders more than 16 keys Godot cannot order as its unstable sort does (edge case)', async () => {
+      // Planes at even file positions and colours at odd ones. Godot 4.6.3's `SortArray` leaves
+      // such a pattern in this order (`Array.sort_custom` on the same pattern).
+      const godotOrder = [18, 16, 14, 12, 10, 8, 6, 4, 2, 0, 7, 5, 9, 11, 3, 13, 15, 1, 17, 19];
+      const isPlane = (position: number) => position % 2 === 0;
+      const keys = Array.from({ length: 20 }, (_, i) => (isPlane(i) ? key.plane(i) : key.color(i)));
+      const text = (i: number) => (isPlane(i) ? `Plane(${i}, 0, 0, 0)` : `Color(${i}, 0, 0, 1)`);
+      expect(await dictionaryOf(...keys)).toBe(lines(...godotOrder.map(text)));
     });
   });
 
