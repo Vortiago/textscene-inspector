@@ -178,7 +178,8 @@ suite('Language Features', () => {
     );
 
     const fix = actions.find(offersMesh);
-    assert.ok(fix?.edit, 'a quick fix carries an edit');
+    const titles = actions.map((action) => action.title).join(', ');
+    assert.ok(fix?.edit, `expected a 'mesh' quick fix with an edit, found: ${titles}`);
   });
 });
 
