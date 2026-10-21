@@ -228,6 +228,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Binary Resource Mesh",
+    "file": "unit-binary-resource-mesh.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Bone 2d",
     "file": "unit-bone-2d.tscn",
     "category": "Other"
