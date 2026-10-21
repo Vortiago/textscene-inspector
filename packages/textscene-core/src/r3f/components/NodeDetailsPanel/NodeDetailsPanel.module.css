@@ -189,3 +189,8 @@
   outline: 2px solid var(--tsi-focus-ring);
   outline-offset: 1px;
 }
+
+.copyButton {
+  flex-shrink: 0;
+  margin: 0;
+}

@@ -6,6 +6,7 @@
 
 import {
   mockCommands,
+  mockEnv,
   mockLanguages,
   mockLm,
   mockUri,
@@ -50,6 +51,7 @@ export const vscodeModuleMock = {
   workspace: mockWorkspace,
   window: mockWindow,
   commands: mockCommands,
+  env: mockEnv,
   languages: mockLanguages,
   lm: mockLm,
   Range: MockRange,

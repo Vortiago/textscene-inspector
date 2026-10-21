@@ -73,6 +73,7 @@ export function TscnPreviewShell({
   initialViewportMode,
   initialActiveCameraPath,
   onCaptureStateChange,
+  onCopyNodePath,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
 
@@ -197,6 +198,7 @@ export function TscnPreviewShell({
                   treeShare={treeShare}
                   onResourceUpload={onResourceUpload}
                   onResourceRemove={onResourceRemove}
+                  onCopyNodePath={onCopyNodePath}
                 />
               </section>
             </>
