@@ -33,6 +33,7 @@ import {
   PARTICLES_PROCESS_DEFAULT,
   parseArgs,
   REFERENCE_FIXED_FPS,
+  RENDER_QUIET_FRAMES,
   renderArgv,
   renderingMethodFallbackMessage,
   requestedRenderingMethod,
@@ -925,12 +926,12 @@ describe('the reference renders on a fixed clock', () => {
   });
 });
 
-describe('the fog history fits inside the render pass', () => {
-  it('quits after more frames than the longest fog convergence draws', () => {
+describe('the render wait fits inside the render pass', () => {
+  it('quits after more frames than the longest fog convergence and its quiet window draw', () => {
     const argv = renderArgv('/tmp/work');
     const quitAfter = Number(argv[argv.indexOf('--quit-after') + 1]);
 
-    expect(quitAfter).toBeGreaterThan(FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES);
+    expect(quitAfter).toBeGreaterThan(FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES);
   });
 
   it('cycles over the jitters the previewer averages', async () => {
@@ -943,6 +944,10 @@ describe('the fog history fits inside the render pass', () => {
   it('gives the bootstrap the cycle length and cap (edge case: the GDScript holds its own copy)', () => {
     expect(bootstrap()).toContain(`const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}`);
     expect(bootstrap()).toContain(`const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}`);
+  });
+
+  it('gives the bootstrap the quiet window the wait needs (edge case: the GDScript holds its own copy)', () => {
+    expect(bootstrap()).toContain(`const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}`);
   });
 });
 

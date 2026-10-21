@@ -49,6 +49,13 @@ export const FOG_JITTER_CYCLE_FRAMES = 16;
  */
 export const FOG_HISTORY_MAX_CYCLES = 48;
 
+/**
+ * Frames the render wait needs the picture, the compilations queued and the texture memory to hold
+ * still. At 12 frames the seven point materials of `point-mesh` landed their pipelines, measured
+ * at about 50 ms a frame under lavapipe, and 30 is two and a half times that.
+ */
+export const RENDER_QUIET_FRAMES = 30;
+
 /** `--quit-after`: a backstop for a bootstrap that never quits, above the fog history's frames. */
 const RENDER_QUIT_AFTER_FRAMES = 1200;
 
@@ -706,6 +713,7 @@ const CANVAS_2D_SIZE := Vector2i(${canvas2DSize.width}, ${canvas2DSize.height})
 const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}
 const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
+const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
 # exit code. A mid-walk quit() would be reset to 0 by that same call.
@@ -768,10 +776,8 @@ func _render_3d(target: Node) -> void:
 	if not _build_csg(target):
 		return
 	_place_camera(target)
-	await _converge()
-	await _await_reflection_probe_captures(target)
-	var frame: Image = await _converged_frame()
-	frame.save_png(OUT)
+	await _converge(get_viewport())
+	get_viewport().get_texture().get_image().save_png(OUT)
 	_write_bounds(target)
 
 # A 2D scene has nothing to point a camera at: Godot draws it through the
@@ -794,7 +800,7 @@ func _render_2d(target: Node) -> void:
 	_advance_particles(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
-	await _converge()
+	await _converge(vp)
 	vp.get_texture().get_image().save_png(OUT)
 
 # THE SECOND 2D ARM. Godot hands several viewport settings to SceneTree's root
@@ -826,7 +832,7 @@ func _render_2d_root(target: Node) -> void:
 	_advance_particles(target)
 	if PREVIEWS:
 		_freeze_game_logic(target)
-	await _converge()
+	await _converge(get_tree().root)
 	get_tree().root.get_texture().get_image().save_png(OUT)
 
 # What the nested capture CANNOT answer, reported rather than guessed at.
@@ -1005,10 +1011,12 @@ func _advance_particles(node: Node) -> void:
 # reaches the same standstill by a different route (screenshots until two are
 # byte-identical) and that asymmetry is correct — a stopping test has no
 # semantics to share.
-func _converge() -> void:
+func _converge(source: Viewport) -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw
+	await _await_reflection_probe_captures(source)
+	await _await_rendered(source)
 
 # An UPDATE_ONCE ReflectionProbe renders its faces in one frame, then filters one
 # roughness layer per frame: at most roughness_layers frames in all on Forward+
@@ -1017,41 +1025,83 @@ func _converge() -> void:
 # scene renders one such probe at a time (renderer_scene_cull.cpp:3739-3751).
 const COMPATIBILITY_PROBE_FRAMES := 9
 
-func _await_reflection_probe_captures(target: Node) -> void:
+func _await_reflection_probe_captures(source: Viewport) -> void:
 	var layers: int = ProjectSettings.get_setting("rendering/reflections/sky_reflections/roughness_layers")
-	var probes := target.find_children("*", "ReflectionProbe", true, false) \
+	var probes := source.find_children("*", "ReflectionProbe", true, false) \
 		.filter(func(probe): return probe.update_mode == ReflectionProbe.UPDATE_ONCE)
 	for _frame in probes.size() * maxi(layers, COMPATIBILITY_PROBE_FRAMES):
 		await RenderingServer.frame_post_draw
 
-# The frame to capture. Temporal volumetric fog mixes temporal_reprojection_amount
-# of a history that starts black (volumetric_fog_process.glsl:683, fog.cpp:482),
-# so it draws on until a frame repeats the one a jitter cycle earlier, as each
-# frame jitters by frame % 16 (fog.cpp:1113).
-func _converged_frame() -> Image:
-	var earlier := get_viewport().get_texture().get_image()
-	if not _has_fog_history():
-		return earlier
-	for _cycle in FOG_HISTORY_MAX_CYCLES:
-		for _frame in FOG_JITTER_CYCLE_FRAMES:
-			await RenderingServer.frame_post_draw
-		var current := get_viewport().get_texture().get_image()
-		if current.get_data() == earlier.get_data():
-			return current
-		earlier = current
-	return earlier
+# Draws on until nothing the renderer still owes the picture is pending. Godot signals none of
+# it, so each kind is seen through what it changes, and the capture waits until all of them have
+# held still for RENDER_QUIET_FRAMES frames in a row:
+#
+# - Pipeline compilation. Godot compiles a material's pipeline in the background and draws the
+#   ubershader until it lands (render_forward_clustered.cpp:509-514). The ubershader culls with
+#   gl_FrontFacing (scene_forward_clustered.glsl:3010-3016), which is true for a point, so a
+#   cull-front point is missing from a capture taken too early. Nothing counts the compilations that
+#   finish, only the ones queued (pipeline_hash_map_rd.h:114-116, rendering_server_default.cpp:307-317).
+# - Texture loading. load() returns a finished resource, so every texture the scene names is read
+#   before the first draw (resource_loader.cpp:541), and 4.6.3 streams none in afterwards. A texture
+#   made later, such as a viewport's target, moves RENDERING_INFO_TEXTURE_MEM_USED
+#   (renderer_rd/storage_rd/utilities.cpp:303-304, refreshed every frame at
+#   rendering_server_default.cpp:205).
+# - Temporal volumetric fog. It mixes temporal_reprojection_amount of a history that starts black
+#   (volumetric_fog_process.glsl:683, fog.cpp:482) and jitters each frame by frame % 16
+#   (fog.cpp:1113). So the picture must repeat the one a jitter cycle earlier.
+#
+# Any other change shows in the picture, which must repeat the one before it. A paused tree gives
+# these frames no simulated time, but a shader's TIME advances by the frame step the main loop hands
+# the renderer (main.cpp:4841,4990-4994). A sprite that sways a pixel in 30 ms would then decide the
+# picture, so the wait holds the time scale at 0. An unpaused tree (--no-previews) would run its
+# physics on, so only a fog history draws on there. A scene that never settles is captured as it
+# stands, with a warning.
+func _await_rendered(source: Viewport) -> void:
+	var period := FOG_JITTER_CYCLE_FRAMES if _has_fog_history(source) else 1
+	if not PREVIEWS and period == 1:
+		return
+	Engine.time_scale = 0.0
+	var pictures: Array[PackedByteArray] = []
+	var pending := _pending_work()
+	var quiet := 0
+	for _frame in FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES:
+		await RenderingServer.frame_post_draw
+		var picture := source.get_texture().get_image().get_data()
+		var now_pending := _pending_work()
+		var repeats := pictures.size() == period and picture == pictures[0]
+		quiet = quiet + 1 if repeats and now_pending == pending else 0
+		if quiet >= RENDER_QUIET_FRAMES:
+			return
+		pending = now_pending
+		pictures.append(picture)
+		if pictures.size() > period:
+			pictures.pop_front()
+	printerr("godot-ref: the picture did not settle, so it is captured as it stands")
 
-func _has_fog_history() -> bool:
-	var environment := _environment_in_effect()
+# What the renderer has queued or allocated, which changes while work is still pending.
+func _pending_work() -> Array[int]:
+	var queued := 0
+	for info in [
+		RenderingServer.RENDERING_INFO_PIPELINE_COMPILATIONS_CANVAS,
+		RenderingServer.RENDERING_INFO_PIPELINE_COMPILATIONS_MESH,
+		RenderingServer.RENDERING_INFO_PIPELINE_COMPILATIONS_SURFACE,
+		RenderingServer.RENDERING_INFO_PIPELINE_COMPILATIONS_DRAW,
+		RenderingServer.RENDERING_INFO_PIPELINE_COMPILATIONS_SPECIALIZATION,
+	]:
+		queued += RenderingServer.get_rendering_info(info)
+	return [queued, RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TEXTURE_MEM_USED)]
+
+func _has_fog_history(source: Viewport) -> bool:
+	var environment := _environment_in_effect(source)
 	return environment != null and environment.volumetric_fog_enabled \
 		and environment.volumetric_fog_temporal_reprojection_enabled
 
 # Camera3D.environment overrides the world's, which falls back to the project's.
-func _environment_in_effect() -> Environment:
-	var camera := get_viewport().get_camera_3d()
+func _environment_in_effect(source: Viewport) -> Environment:
+	var camera := source.get_camera_3d()
 	if camera != null and camera.environment != null:
 		return camera.environment
-	var world := get_viewport().find_world_3d()
+	var world := source.find_world_3d()
 	return world.environment if world.environment != null else world.fallback_environment
 
 # The method and driver that drew this frame, which the caller compares with
@@ -1079,7 +1129,7 @@ func _write_mode(two_d: bool) -> void:
 
 # The scene's world-space AABB — a true read of the FINAL scene bounds, but
 # NOT necessarily the number that placed --frame's camera: this runs AFTER
-# _converge() (six process frames + frame_post_draw), while _place_camera runs
+# _converge() (six process frames, then the render wait), while _place_camera runs
 # synchronously right after add_child(), before any frame has settled. For a
 # scene holding a Label3D the two calls can disagree, because a fresh
 # Label3D's shaped-text AABB is not available synchronously on add_child()
