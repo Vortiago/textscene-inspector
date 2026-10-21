@@ -50,6 +50,7 @@ export function nodeOrigin<N extends RawNode>(heading: ParsedHeading, node: N, l
     line,
     declaredParent: heading.attributes.parent,
     idTrail: parseIdTrail(heading.attributes.parent_id_path),
+    ownerIdTrail: parseIdTrail(heading.attributes.owner_uid_path),
     uniqueId: parseUniqueId(heading.attributes.unique_id),
   };
 }

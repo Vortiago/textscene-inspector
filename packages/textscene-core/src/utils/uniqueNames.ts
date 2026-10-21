@@ -1,21 +1,16 @@
 /**
  * `%Name` claims over a seated tree, shared by the linter and the render path. The seating records
- * every owner's claims (`SeatedPaths.ownership`), and this reduces the root's table to the path
- * spellings a NodePath walk reads.
+ * the root's claims (`SeatedPaths.ownership`), and this reduces that table to the path spellings a
+ * NodePath walk reads.
  */
 
 import type { RawNode } from '../parser/types.js';
-import type { UniqueNameClaim, UniqueNameOwnership } from '../parser/nodeOwner.js';
+import type { UniqueNameOwnership } from '../parser/nodeOwner.js';
 import { sceneSeating } from '../parser/sceneTreeBuilder.js';
 
-/** Every owner's `%Name` claims in `roots`, keyed with the prefix on. One object per tree. */
+/** The root's `%Name` claims in `roots`, keyed with the prefix on. One object per tree. */
 export function cachedUniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
   return sceneSeating(roots).ownership;
-}
-
-/** The root's claim table: `path` looks up in an authored tree, and `livePath` in the composed render tree. */
-export function cachedUniqueNameClaims(roots: readonly RawNode[]): ReadonlyMap<string, UniqueNameClaim> {
-  return cachedUniqueNameOwnership(roots).claims;
 }
 
 /**
@@ -24,17 +19,32 @@ export function cachedUniqueNameClaims(roots: readonly RawNode[]): ReadonlyMap<s
  */
 export function uniqueNamePaths(roots: readonly RawNode[]): Map<string, string> {
   const paths = new Map<string, string>();
-  for (const [key, claim] of cachedUniqueNameClaims(roots)) paths.set(key, claim.path);
+  for (const [key, claim] of cachedUniqueNameOwnership(roots).claims) paths.set(key, claim.path);
   return paths;
 }
 
-/**
- * The same reduction onto `livePath`, for the composed render tree. It takes the table, not the
- * roots: the render path memoises the table per scene graph, and a rebuild per consumer walks the
- * whole scene on every render.
- */
-export function uniqueNameLivePaths(
-  claims: ReadonlyMap<string, UniqueNameClaim>
-): ReadonlyMap<string, string> {
-  return new Map([...claims].map(([key, claim]) => [key, claim.livePath]));
+/** A per-tree table, built once for each roots array the returned reader is called with. */
+export function perTree<T>(build: (roots: readonly RawNode[]) => T): (roots: readonly RawNode[]) => T {
+  const built = new WeakMap<readonly RawNode[], T>();
+  return (roots) => {
+    if (!built.has(roots)) built.set(roots, build(roots));
+    return built.get(roots)!;
+  };
 }
+
+/** The same reduction onto `livePath`, for the composed render tree. One object per tree. */
+export const cachedUniqueNameLivePaths = perTree(
+  (roots): ReadonlyMap<string, string> =>
+    new Map([...cachedUniqueNameOwnership(roots).claims].map(([key, claim]) => [key, claim.livePath]))
+);
+
+/**
+ * The live paths again, spelt below the root, as an instance of the scene holds them. The root
+ * claims nothing (it has no owner), so each path continues below it. One object per tree.
+ */
+export const cachedUniqueNamesBelowRoot = perTree(
+  (roots): ReadonlyMap<string, string> =>
+    new Map(
+      [...cachedUniqueNameLivePaths(roots)].map(([key, path]) => [key, path.slice(path.indexOf('/') + 1)])
+    )
+);

@@ -7,4 +7,4 @@ const EMPTY = { externalResources: [], internalResources: [] };
 export const NO_SCOPES: InstanceScopes = { outer: EMPTY, content: EMPTY };
 
 /** An instance whose sub-scene claims no `%Name` and whose host sets none. */
-export const NO_NAMES: InstanceNames = { own: () => undefined, settings: [] };
+export const NO_NAMES: InstanceNames = { own: () => new Map(), settings: [] };
