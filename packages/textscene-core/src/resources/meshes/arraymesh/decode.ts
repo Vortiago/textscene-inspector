@@ -1,8 +1,8 @@
 /**
- * Decodes a text ArrayMesh (`.tres`, format=4) into per-surface typed arrays:
+ * Decodes an ArrayMesh's `_surfaces`, from a `.tres` or a binary file, into per-surface typed arrays:
  * the surface loop and its material resolution. Only triangle surfaces decode.
  * Blend shapes, LODs and skins are ignored. The byte layout lives in
- * `surfaceFormat.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
+ * `surfaceFormat.ts`, `surfaceVersion.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
  */
 
 import { warn } from '../../../logger.js';
@@ -20,6 +20,7 @@ import {
   readUvScale,
 } from './surfaceFields.js';
 import { PRIMITIVE_TRIANGLES, surfaceLayout } from './surfaceFormat.js';
+import { currentVertexData } from './surfaceVersion.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
 import { decodeIndices, decodeNormalFrame, decodePositions, decodeUVs } from './vertexBuffers.js';
 
@@ -109,7 +110,7 @@ function decodeSurfaces(
     }
 
     const layout = surfaceLayout(format);
-    const vertexData = readPackedBytes(block, 'vertex_data');
+    const vertexData = currentVertexData(format, readPackedBytes(block, 'vertex_data'), vertexCount);
     // Positions: a contiguous region at the front of vertex_data.
     const positions = decodePositions(vertexData, vertexCount, layout, readAabb(block));
     if (!positions) {

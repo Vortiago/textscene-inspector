@@ -10,6 +10,9 @@ export interface BaseLightProperties {
 
   light_energy: number;
 
+  /** `Light3D::BakeMode`: a Static light is baked into a lightmap, which then skips it. */
+  light_bake_mode: number;
+
   /** Subtract light instead of adding it (optional). */
   light_negative?: boolean;
 

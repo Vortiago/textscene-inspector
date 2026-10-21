@@ -233,7 +233,7 @@ export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMa
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
   const { maps, isUnresolved } = useMaterialTextures(scalars, material, triplanarMesh);
-  if (isUnresolved) return materialBagElement(MISSING_TEXTURE_MATERIAL, attach);
+  if (isUnresolved) return materialBagElement(MISSING_TEXTURE_MATERIAL, attach, null);
   return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
 }
 

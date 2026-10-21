@@ -28,4 +28,12 @@ export const RESOURCE_PROPS_OUT = join(here, '../resource-properties.json');
  * are abstract. One hop per class is what the walk reads.
  */
 export const RESOURCE_BASES_OUT = join(here, '../resource-bases.json');
+
+/**
+ * What a fresh Resource answers, from the same engine run: each typed
+ * collection's prefix, which the binary loader takes from the getter, and each
+ * stored property declared as a Variant, whose Nil the text saver keeps.
+ */
+export const RESOURCE_GETTERS_OUT = join(here, '../resource-getters.json');
+
 export const ENUM_GD = join(REPO_ROOT, 'scripts/godot-ref/enumerate-nodes.gd');

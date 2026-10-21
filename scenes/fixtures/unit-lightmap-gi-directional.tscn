@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://0rwc546jbj6x"]
+
+; One variable: a directional lightmap. The same scene as `unit-lightmap-gi-baked.tscn`, baked with
+; `directional = true`, so the atlas holds four layers of spherical harmonics per mesh and the
+; read weighs them by the surface normal. The baked scene reads one layer, so it cannot show a
+; wrong layer order or normal basis.
+
+[ext_resource type="LightmapGIData" uid="uid://dh7ix8brl1724" path="res://unit-lightmap-gi-directional.lmbake" id="1_a0k4w"]
+
+[sub_resource type="StandardMaterial3D" id="ground_mat"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="PlaneMesh" id="ground"]
+lightmap_size_hint = Vector2i(42, 42)
+material = SubResource("ground_mat")
+add_uv2 = true
+size = Vector2(8, 8)
+
+[sub_resource type="StandardMaterial3D" id="box_mat"]
+albedo_color = Color(0.9, 0.15, 0.1, 1)
+
+[sub_resource type="BoxMesh" id="box"]
+lightmap_size_hint = Vector2i(19, 28)
+material = SubResource("box_mat")
+add_uv2 = true
+size = Vector3(1.5, 1.5, 1.5)
+
+[node name="Root" type="Node3D" unique_id=290438329]
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=701240184]
+mesh = SubResource("ground")
+
+[node name="Box" type="MeshInstance3D" parent="." unique_id=291665026]
+transform = Transform3D(0.866025, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866025, 0, 0.75, 0)
+mesh = SubResource("box")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=392768214]
+transform = Transform3D(-0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, 0.5, -0.5, 0, 4, 0)
+light_bake_mode = 1
+shadow_enabled = true
+
+[node name="LightmapGI" type="LightmapGI" parent="." unique_id=829744379]
+quality = 0
+directional = true
+environment_mode = 0
+light_data = ExtResource("1_a0k4w")

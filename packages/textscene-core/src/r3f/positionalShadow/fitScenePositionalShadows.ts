@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { positionalLightBounds } from '../../godot/rendering/lights/positionalShadow.js';
 import type { PositionalShadowRequest } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { isViewingCamera, type ViewingCamera } from '../directionalShadow/fitDirectionalShadowBox.js';
+import { cameraFrustum } from '../cameraFrustum.js';
 import { declaredLights, type DeclaredLight, type SceneLight } from '../directionalShadow/lightLists.js';
 import { readPositionalShadowDeclaration, type PositionalShadowDeclaration } from './declaration.js';
 import { adoptAtlasShadow } from './adoptAtlasShadow.js';
@@ -23,7 +24,6 @@ type DeclaredPositionalLight = DeclaredLight<PositionalLight, PositionalShadowDe
  * it, and is valid until that function runs again.
  */
 const declaredSet = new Set<PositionalLight>();
-const scratchViewProjection = new THREE.Matrix4();
 const scratchFrustum = new THREE.Frustum();
 const scratchVolume = new THREE.Box3();
 const scratchPosition = new THREE.Vector3();
@@ -67,7 +67,7 @@ function slotRequests(
   declared: readonly DeclaredPositionalLight[],
   camera: ViewingCamera
 ): PositionalShadowRequest<PositionalLight>[] {
-  const frustum = cameraFrustum(camera);
+  const frustum = cameraFrustum(camera, scratchFrustum);
   const requests: PositionalShadowRequest<PositionalLight>[] = [];
   for (const { light, isVisible } of declared) {
     if (!isVisible || !light.castShadow || !frustum.intersectsBox(lightVolume(light))) continue;
@@ -78,15 +78,6 @@ function slotRequests(
     });
   }
   return requests.reverse();
-}
-
-/** three updates the camera's matrices before `onBeforeRender` (r186 `WebGLRenderer.js:1663-1678`). */
-function cameraFrustum(camera: ViewingCamera): THREE.Frustum {
-  const viewProjection = scratchViewProjection.multiplyMatrices(
-    camera.projectionMatrix,
-    camera.matrixWorldInverse
-  );
-  return scratchFrustum.setFromProjectionMatrix(viewProjection, camera.coordinateSystem);
 }
 
 /** The light's volume in world space: Godot's local box, transformed and boxed again. */

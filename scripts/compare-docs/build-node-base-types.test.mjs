@@ -16,8 +16,12 @@ import {
   RESOURCE_OUT,
   renderFromCatalog,
   renderFromExclusionCaptures,
+  renderFromVariantPropertyCaptures,
   renderFromPropertyCaptures,
   renderFromResourceBases,
+  renderFromTypedCollectionCaptures,
+  TYPED_COLLECTIONS_OUT,
+  VARIANT_PROPERTIES_OUT,
 } from './build-node-base-types.mjs';
 import { RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { PROPS_OUT, RESOURCE_BASES_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
@@ -131,6 +135,14 @@ describe('deriveBaseTypes', () => {
 
   it('the committed resourceTypeExclusions.generated.ts matches the captures', () => {
     expect(readFileSync(EXCLUSIONS_OUT, 'utf8')).toBe(renderFromExclusionCaptures());
+  });
+
+  it('the committed typedCollectionProperties.generated.ts matches the captures', () => {
+    expect(readFileSync(TYPED_COLLECTIONS_OUT, 'utf8')).toBe(renderFromTypedCollectionCaptures());
+  });
+
+  it('the committed variantProperties.generated.ts matches the captures', () => {
+    expect(readFileSync(VARIANT_PROPERTIES_OUT, 'utf8')).toBe(renderFromVariantPropertyCaptures());
   });
 
   it('renders one row per captured property, so no class is dropped', () => {

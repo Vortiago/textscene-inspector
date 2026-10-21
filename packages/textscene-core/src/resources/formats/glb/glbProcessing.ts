@@ -138,6 +138,7 @@ export async function createGLBMesh(
   nameClips(root.animations, names.animations);
   tagMeshInstances(root, gltf.parser.associations);
   tagGodotNodeNames(root, gltf.parser.associations, names.nodes);
+  importMissingMaterialsAsGodotDefault(root, gltf.parser.associations);
   importBlendAsDepthPrepass(root);
   return root;
 }
@@ -167,6 +168,25 @@ async function godotSceneRoot(gltf: GLTF): Promise<THREE.Object3D> {
   root ??= (await gltf.parser.getDependency('node', 0)) as THREE.Object3D;
   root.removeFromParent();
   return root;
+}
+
+/**
+ * Godot gives a primitive with no material a new StandardMaterial3D, which is not metallic
+ * (`gltf_document.cpp:1929-1935`). GLTFLoader's stand-in, the one material no glTF index names, is
+ * fully metallic, so it would draw no diffuse light and no lightmap.
+ */
+function importMissingMaterialsAsGodotDefault(
+  object: THREE.Object3D,
+  associations: GLTFParser['associations']
+): void {
+  forEachSurfaceMaterial(object, (material) => {
+    if (
+      material instanceof THREE.MeshStandardMaterial &&
+      associations.get(material)?.materials === undefined
+    ) {
+      material.metalness = 0;
+    }
+  });
 }
 
 /**

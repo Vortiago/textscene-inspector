@@ -110,7 +110,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not
 - [Label3D](../../packages/textscene-core/src/nodes/3d/label3d/comparison.md): canvas-rasterised glyph quads, billboard-able
-- [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md): nothing yet, Godot lights static geometry from its baked lightmap, the previewer does not
+- [LightmapGI](../../packages/textscene-core/src/nodes/3d/lightmapgi/comparison.md): the baked lightmap on each mesh its data names
 - [LightmapProbe](../../packages/textscene-core/src/nodes/3d/lightmapprobe/comparison.md): nothing yet, Godot samples it to light dynamic objects, the previewer does not
 - [LimitAngularVelocityModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/limitangularvelocitymodifier3d/comparison.md): nothing yet, Godot caps how fast its bones may turn, the previewer does not
 - [LookAtModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/lookatmodifier3d/comparison.md): nothing yet, Godot rotates a bone to face its target, the previewer does not

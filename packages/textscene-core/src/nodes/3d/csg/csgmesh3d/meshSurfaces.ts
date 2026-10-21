@@ -11,7 +11,7 @@ import type { TscnInternalResource } from '../../../../parser/types';
 import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import type { CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveSubResourceRef, textResourcePath } from '../../../../resources/SubResourceResolver';
+import { resolveSubResourceRef, parsedResourcePath } from '../../../../resources/SubResourceResolver';
 import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/meshes/arraymesh/decode';
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
 import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
@@ -26,9 +26,9 @@ export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normal
 /** A mesh in the scene's tables, or a loaded `.tres` and the path it loaded from. */
 export type CsgMesh = { resource: TscnInternalResource } | { path: string; file: ParsedResource };
 
-/** The `.tres` a mesh reference loads, or null for an inline mesh or a file no processor reads. */
+/** The resource file a mesh reference loads, or null for an inline mesh or a file no processor reads. */
 export function meshFilePath(meshRef: string | undefined, pools: SceneResources): string | null {
-  return textResourcePath(meshRef, pools.externalResources);
+  return parsedResourcePath(meshRef, pools.externalResources);
 }
 
 /** The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. */

@@ -12,11 +12,14 @@ import {
   type StandardMaterialBag,
 } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
-import { materialProgramInputs } from '../materialProgramInputs';
+import { composeInjections, materialProgramInputs } from '../materialProgramInputs';
 import { resolvedTexturesFromMaps, type MaterialTextureMaps } from './materialTextureMaps';
 import type { MaterialAttach } from './swappedMaterials';
 import { FadedMaterials } from './FadedMaterials';
 import { bindHeightmap } from './godotParallax';
+import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/lightmapProgram';
+import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
+import { useLightmapAssignment } from '../lightmap/useLightmapAssignment';
 
 /**
  * The texture props are `MaterialTextureMaps`', already bound and paired to their
@@ -42,6 +45,7 @@ export function StandardMaterialSlot({
   albedoTargetUv,
   attach,
 }: StandardMaterialSlotProps) {
+  const lightmap = useLightmapAssignment();
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
   // surface, not a default-constructed StandardMaterial3D.
   const bags = standardMaterialBags(
@@ -60,23 +64,38 @@ export function StandardMaterialSlot({
   );
 
   return (
-    <FadedMaterials attach={attach}>{(pass, mount) => materialBagElement(bags[pass], mount)}</FadedMaterials>
+    <FadedMaterials attach={attach}>
+      {(pass, mount) => materialBagElement(bags[pass], mount, pass === 'unfaded' ? lightmap : null)}
+    </FadedMaterials>
   );
 }
 
-/** A derived bag as its class's JSX tag. The missing-texture placeholder mounts through it too. */
-export function materialBagElement(bag: StandardMaterialBag, attach: string | MaterialAttach | undefined) {
+/**
+ * A derived bag as its class's JSX tag, reading `lightmap` where it reads one. The missing-texture
+ * placeholder mounts through it too.
+ */
+export function materialBagElement(
+  bag: StandardMaterialBag,
+  attach: string | MaterialAttach | undefined,
+  lightmap: LightmapAssignment | null
+) {
   const heightmapTexture = bag.heightmapTexture ?? null;
-  // A ref, not a prop: three's classes have no heightmap field, and a rebind needs no remount.
-  const bindsHeightmap = (material: THREE.Material | null) => {
-    if (material) bindHeightmap(material, heightmapTexture);
+  const readLightmap =
+    lightmap && readsLightmap(bag.materialClass !== 'basic', bag.props.transparent === true)
+      ? lightmap
+      : null;
+  // A ref, not a prop: three's classes have no heightmap or lightmap field, and a rebind needs no
+  // remount.
+  const binds = (material: THREE.Material | null) => {
+    if (!material) return;
+    bindHeightmap(material, heightmapTexture);
+    bindLightmap(material, readLightmap);
   };
+  const injection = composeInjections([bag.injection, readLightmap ? LIGHTMAP_PROGRAM : undefined]);
   // `attach` and the ref first: they are the mount's own props and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a program input
   // arriving late, or a moved `attach`, reaches three only through a remount.
-  const program = materialProgramInputs({
-    props: { attach, ref: bindsHeightmap, ...bag.props, injection: bag.injection },
-  });
+  const program = materialProgramInputs({ props: { attach, ref: binds, ...bag.props, injection } });
   switch (bag.materialClass) {
     case 'basic':
       return <meshBasicMaterial key={program.key} {...program.props} />;

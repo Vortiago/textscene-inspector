@@ -5,15 +5,17 @@ import {
   findSubResource,
   findSubResourceOfType,
   parseResourceReference,
-  resolveExtTextResourcePath,
+  resolveExtResourceFilePath,
+  isResourceFilePath,
   resolveInstancePath,
   resolveSubResourceRef,
   resolveTexture2DPath,
-  textResourcePath,
+  parsedResourcePath,
   unwrapCanvasTextureRef,
 } from './SubResourceResolver';
 import type { TscnExternalResource, TscnInternalResource } from '../parser/types';
 import { countedTable } from './testing/countedTable';
+import './formats/binaryresource/index';
 
 const externalResources: readonly TscnExternalResource[] = [
   { id: '1_cube', path: 'res://child_cube.tscn', type: 'PackedScene' },
@@ -153,7 +155,7 @@ describe('unwrapCanvasTextureRef', () => {
   });
 });
 
-describe("resolveExtTextResourcePath — the declared type is the SLOT's", () => {
+describe("resolveExtResourceFilePath — the declared type is the SLOT's", () => {
   /**
    * Godot writes an `[ext_resource]`'s `type=` from the property slot, not the
    * target's class: an AtlasTexture in a `texture` slot is `type="Texture2D"`. So
@@ -161,36 +163,36 @@ describe("resolveExtTextResourcePath — the declared type is the SLOT's", () =>
    */
   it('matches a .tres the scene declares as the slot type Texture2D', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://icons/arrow_left.tres' }];
-    expect(resolveExtTextResourcePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
+    expect(resolveExtResourceFilePath('ExtResource("1")', ext)).toBe('res://icons/arrow_left.tres');
   });
 
   it('declines a plain image, which the texture bus decodes directly', () => {
     const ext = [{ id: '1', type: 'Texture2D', path: 'res://sheet.png' }];
-    expect(resolveExtTextResourcePath('ExtResource("1")', ext)).toBeNull();
+    expect(resolveExtResourceFilePath('ExtResource("1")', ext)).toBeNull();
   });
 });
 
-describe('resolveExtTextResourcePath', () => {
+describe('resolveExtResourceFilePath', () => {
   const externals: readonly TscnExternalResource[] = [
     { id: '1_atlas', type: 'AtlasTexture', path: 'res://icons/keyboard_arrow_left.tres' },
     { id: '2_sheet', type: 'Texture2D', path: 'res://sheet.png' },
   ];
 
   it('gives the path of an ExtResource declared AtlasTexture', () => {
-    expect(resolveExtTextResourcePath('ExtResource("1_atlas")', externals)).toBe(
+    expect(resolveExtResourceFilePath('ExtResource("1_atlas")', externals)).toBe(
       'res://icons/keyboard_arrow_left.tres'
     );
   });
 
   it('declines an ExtResource declared a different type', () => {
-    expect(resolveExtTextResourcePath('ExtResource("2_sheet")', externals)).toBeNull();
+    expect(resolveExtResourceFilePath('ExtResource("2_sheet")', externals)).toBeNull();
   });
 
   it('declines a SubResource, an unknown id, a malformed ref, and an absent value', () => {
-    expect(resolveExtTextResourcePath('SubResource("1_atlas")', externals)).toBeNull();
-    expect(resolveExtTextResourcePath('ExtResource("404")', externals)).toBeNull();
-    expect(resolveExtTextResourcePath('not a reference', externals)).toBeNull();
-    expect(resolveExtTextResourcePath(undefined, externals)).toBeNull();
+    expect(resolveExtResourceFilePath('SubResource("1_atlas")', externals)).toBeNull();
+    expect(resolveExtResourceFilePath('ExtResource("404")', externals)).toBeNull();
+    expect(resolveExtResourceFilePath('not a reference', externals)).toBeNull();
+    expect(resolveExtResourceFilePath(undefined, externals)).toBeNull();
   });
 });
 
@@ -248,29 +250,57 @@ describe('resolveTexture2DPath', () => {
   });
 });
 
-describe('textResourcePath', () => {
+describe('parsedResourcePath', () => {
   const resources = [
     { id: '1', type: 'ArrayMesh', path: 'res://rock.tres' },
     { id: '2', type: 'ArrayMesh', path: 'res://rock.res' },
     { id: '3', type: 'Shader', path: 'res://fog.gdshader' },
+    { id: '4', type: 'LightmapGIData', path: 'res://scene.lmbake' },
+    { id: '5', type: 'Texture2D', path: 'res://rock.png' },
   ];
 
   it('names the .tres an ExtResource loads', () => {
-    expect(textResourcePath('ExtResource("1")', resources)).toBe('res://rock.tres');
+    expect(parsedResourcePath('ExtResource("1")', resources)).toBe('res://rock.tres');
   });
 
   it('names the .gdshader an ExtResource loads', () => {
-    expect(textResourcePath('ExtResource("3")', resources)).toBe('res://fog.gdshader');
+    expect(parsedResourcePath('ExtResource("3")', resources)).toBe('res://fog.gdshader');
   });
 
-  it('names nothing for a binary .res, an undeclared id or no reference (error path)', () => {
-    expect(textResourcePath('ExtResource("2")', resources)).toBeNull();
-    expect(textResourcePath('ExtResource("9")', resources)).toBeNull();
-    expect(textResourcePath(undefined, resources)).toBeNull();
+  it('names the binary lightmap bake an ExtResource loads, which the binary reader parses', () => {
+    expect(parsedResourcePath('ExtResource("4")', resources)).toBe('res://scene.lmbake');
+  });
+
+  it('names the binary .res an ExtResource loads, which the binary reader parses', () => {
+    expect(parsedResourcePath('ExtResource("2")', resources)).toBe('res://rock.res');
+  });
+
+  it('names nothing for an image, an undeclared id or no reference (error path)', () => {
+    expect(parsedResourcePath('ExtResource("5")', resources)).toBeNull();
+    expect(parsedResourcePath('ExtResource("9")', resources)).toBeNull();
+    expect(parsedResourcePath(undefined, resources)).toBeNull();
   });
 
   it('names nothing for a SubResource, which loads no file (edge case)', () => {
-    expect(textResourcePath('SubResource("1")', resources)).toBeNull();
+    expect(parsedResourcePath('SubResource("1")', resources)).toBeNull();
+  });
+});
+
+describe('isResourceFilePath', () => {
+  it('names a .tres and a binary .res resource files', () => {
+    expect(isResourceFilePath('res://tiles.tres')).toBe(true);
+    expect(isResourceFilePath('res://meshes/crate.res')).toBe(true);
+  });
+
+  it('leaves out an image, a shader and a binary scene (error case)', () => {
+    expect(isResourceFilePath('res://rock.png')).toBe(false);
+    expect(isResourceFilePath('res://fog.gdshader')).toBe(false);
+    expect(isResourceFilePath('res://stage/grid_map.scn')).toBe(false);
+  });
+
+  it('reads the extension case-insensitively (edge case)', () => {
+    expect(isResourceFilePath('res://tiles.TRES')).toBe(true);
+    expect(isResourceFilePath('res://materials/paint.Material')).toBe(true);
   });
 });
 

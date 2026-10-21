@@ -15,6 +15,7 @@ function makeNode(overrides: Partial<DirectionalLight3DProperties> = {}): TscnNo
     layers: 1,
     light_color: 'Color(1, 0.95, 0.9, 1)',
     light_energy: 0.8,
+    light_bake_mode: 2,
     shadow_enabled: false,
     ...overrides,
   };

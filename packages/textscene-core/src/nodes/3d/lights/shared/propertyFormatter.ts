@@ -2,6 +2,7 @@
 
 import type { PropertySection } from '../../../../core/NodeRegistry';
 import type { BaseLightProperties, BaseLightWithNormalBias } from './types';
+import { LIGHT_3D_BAKE_MODE_NAMES, LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 
 /**
  * Formats base light properties (color, energy) into a property section.
@@ -31,6 +32,14 @@ export function formatBaseLightSection(
     items.push({
       label: 'Volumetric Fog Energy',
       value: properties.light_volumetric_fog_energy.toFixed(2),
+    });
+  }
+
+  if (properties.light_bake_mode !== LIGHT_3D_DEFAULTS.bakeMode) {
+    items.push({
+      label: 'Bake Mode',
+      value:
+        LIGHT_3D_BAKE_MODE_NAMES[properties.light_bake_mode] ?? `Unknown (${properties.light_bake_mode})`,
     });
   }
 

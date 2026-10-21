@@ -8,6 +8,8 @@ import { parseNode3D } from '../../base/node3d/parser';
 import { boolOr, vec3Or } from '../../../parser/valueParsers';
 import type { GridMapProperties } from './types';
 import { readCellsField } from './cellData.js';
+import { splitTopLevel } from '../../../godot/string/string.js';
+import { arrayLiteralBody } from '../../../godot/variant/variantParser.js';
 import type { Vector3 } from '../../../godot/math/vector.js';
 
 const DEFAULT_CELL_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
@@ -54,5 +56,15 @@ export function parseGridMap(heading: ParsedHeading, properties: Record<string, 
     cellSize: vec3Or(properties.cell_size, DEFAULT_CELL_SIZE, 'GridMap.cell_size'),
     cellCenter: parseCellCenter(properties),
     cells: extractCells(properties.data),
+    bakedMeshes: bakedMeshRefs(properties.baked_meshes),
   };
+}
+
+/** Each baked mesh's reference. The setter skips a null mesh, so the next takes its index (`grid_map.cpp:97`). */
+function bakedMeshRefs(raw: string | undefined): string[] {
+  const body = raw === undefined ? null : arrayLiteralBody(raw);
+  if (body === null) return [];
+  return splitTopLevel(body)
+    .map((element) => element.trim())
+    .filter((element) => element !== 'null');
 }

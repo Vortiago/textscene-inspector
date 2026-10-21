@@ -1,8 +1,9 @@
 /**
  * The **Sub-resource path** grammar, `res://file.tres::SubId`: Godot's text saver
- * writes it for every `[sub_resource]`, and `ResourceLoader.load()` accepts it.
- * One string addresses an `ExtResource` `.tres`, a `SubResource` of the scene,
- * and a `SubResource` of another `.tres`.
+ * writes it for every `[sub_resource]`, the binary loader gives an internal resource
+ * the same path (`resource_format_binary.cpp:722`), and `ResourceLoader.load()` accepts it.
+ * One string addresses an `ExtResource` resource file, a `SubResource` of the
+ * scene, and a `SubResource` of another resource file.
  */
 
 import { warn } from '../logger.js';
