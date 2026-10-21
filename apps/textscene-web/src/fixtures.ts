@@ -573,6 +573,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fog Volume Shader Null",
+    "file": "unit-fog-volume-shader-null.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Fog Volume",
     "file": "unit-fog-volume.tscn",
     "category": "Other"
@@ -1250,6 +1255,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Open Xr Visibility Mask",
     "file": "unit-open-xr-visibility-mask.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Orphan Reroot",
+    "file": "unit-orphan-reroot.tscn",
     "category": "Other"
   },
   {

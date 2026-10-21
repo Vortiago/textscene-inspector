@@ -1,6 +1,6 @@
 /**
- * Load health for the web-app E2E gate: console errors and warnings, uncaught page errors and
- * failed requests, collected per page and checked per scenario.
+ * Load health for the web-app E2E gate: the console errors and warnings, uncaught page errors and
+ * failed requests that `attachDiagnostics` collects per page, checked per scenario.
  */
 
 /**
@@ -23,24 +23,6 @@ const EXPECTED_WARNINGS = [
 function unexpectedWarnings(warnings, scenarioWarnings = []) {
   const accepted = [...EXPECTED_WARNINGS, ...scenarioWarnings];
   return warnings.filter((text) => !accepted.some((pattern) => pattern.test(text)));
-}
-
-/** Collects a page's console messages, uncaught errors and failed requests. */
-export function attachDiagnostics(page) {
-  const consoleErrors = [];
-  const consoleWarnings = [];
-  const pageErrors = [];
-  const failedRequests = [];
-  page.on('console', (message) => {
-    const type = message.type();
-    if (type === 'error') consoleErrors.push(message.text());
-    else if (type === 'warning') consoleWarnings.push(message.text());
-  });
-  page.on('pageerror', (error) => pageErrors.push(String(error)));
-  page.on('requestfailed', (request) => {
-    failedRequests.push({ url: request.url(), failure: request.failure()?.errorText });
-  });
-  return { consoleErrors, consoleWarnings, pageErrors, failedRequests };
 }
 
 export function checkDiagnostics(gate, label, diagnostics, { expectedWarnings = [] } = {}) {

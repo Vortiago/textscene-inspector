@@ -3,6 +3,7 @@
  */
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
+import type { IdHeading } from '../godot/scene/packedScene.js';
 
 /**
  * One `[node]` heading as the scan saw it, before `buildSceneTree` placed it. Kept off
@@ -37,6 +38,8 @@ export interface NodeOrigin<N extends RawNode> {
 export interface IdRecovery {
   readonly kind: 'lands' | 'inBase';
   readonly via: NodeOrigin<RawNode>;
+  /** The root-relative path `via` is seated at, or undefined for a nameless heading, which claims none. */
+  readonly viaPath: string | undefined;
 }
 
 /** A parsed scene. `N` is the node the parser built: a `TscnNode`, or the strict parser's `RawNode`. */
@@ -94,6 +97,11 @@ export interface RawNode {
    */
   instanceSubPath?: string;
   /**
+   * The name the heading wrote, set only on a tree node the builder re-rooted: its `name`
+   * is then Godot's rename for the vanished `parent` (`packed_scene.cpp:561-563`).
+   */
+  authoredName?: string;
+  /**
    * True when the heading declared none of `type=`, `instance=` and
    * `instance_placeholder=`: Godot's marker for overriding the node already at this
    * path. See `isPropertyOverrideHeading`.
@@ -128,19 +136,25 @@ export interface ConnectionHeading {
    * through (`resource_format_text.cpp:286`, `:379`, `variant_parser.cpp:1862`), so an `ExtResource` in it is a use.
    */
   binds: string | undefined;
-  /** The heading carries `from_uid_path`, which Godot walks when `from` resolves nowhere (`packed_scene.cpp:162-163`). */
-  hasFromUidPath: boolean;
-  /** The heading carries `to_uid_path`. */
-  hasToUidPath: boolean;
+  /**
+   * The ids of `from_uid_path=`, the trail Godot follows when `from` resolves nowhere (`packed_scene.cpp:162-163`).
+   * Undefined where the heading has none, or where the value is not a `PackedInt32Array`.
+   */
+  fromIdTrail: readonly number[] | undefined;
+  /** The ids of `to_uid_path=`, read as {@link ConnectionHeading.fromIdTrail} is. */
+  toIdTrail: readonly number[] | undefined;
 }
 
 /** The **Heading facts**: what the `[node]` and `[connection]` headings state that the tree does not hold. */
 export interface HeadingFacts {
   /**
-   * Headings the tree could not place, so they are not in `nodes`: a `parent=` path that resolves
-   * against nothing, or a later heading with no `parent=`.
+   * Headings whose `parent=` names nothing: the nodes the builder re-rooted, which
+   * `reRootedNames` holds, and those it left out of `nodes`, for a file or a trail Godot does not
+   * re-root, or a later heading with no `parent=`.
    */
   orphanedNodes: readonly NodeOrigin<RawNode>[];
+  /** The name the builder gave each re-rooted heading's node, which the heading's own node keeps unrenamed. */
+  reRootedNames: ReadonlyMap<NodeOrigin<RawNode>, string>;
   /**
    * The root heading, when it declares a `parent=`, which Godot refuses
    * (`packed_scene.cpp:218-219`), or undefined.
@@ -153,10 +167,18 @@ export interface HeadingFacts {
    */
   emptyParentHeadings: readonly NodeOrigin<RawNode>[];
   /**
+   * Whether Godot gives up on the scene before it re-roots anything, so the builder re-roots no
+   * orphan. True when `rootWithParent` is set, `emptyParentHeadings` is not empty, a later heading
+   * has no `parent=`, or the root heading states no identifier.
+   */
+  refusesToInstantiate: boolean;
+  /**
    * The orphans whose `parent_id_path=` Godot follows to a node, instead of re-rooting them.
    * An orphan absent here is re-rooted, or has no trail.
    */
   idRecoveries: ReadonlyMap<NodeOrigin<RawNode>, IdRecovery>;
+  /** Every `[node]` heading in file order, as an id trail reads it (`packed_scene.cpp:1947-2005`). */
+  idHeadings: readonly IdHeading[];
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
   /**

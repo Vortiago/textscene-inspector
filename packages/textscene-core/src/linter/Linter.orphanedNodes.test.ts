@@ -1,6 +1,6 @@
 /**
- * A `[node]` whose `parent=` path names nothing still gets a diagnostic: `buildSceneTree` cannot place it, so every
- * semantic rule would skip it and its descendants silently. Godot warns "Parent path '…' for node '…' has vanished when
+ * A `[node]` whose `parent=` path names nothing still gets a diagnostic. Where Godot does not re-root it, `buildSceneTree`
+ * cannot place it, so every semantic rule would skip it and its descendants silently. Godot warns "Parent path '…' for node '…' has vanished when
  * instantiating" and re-parents it to the scene root as `<parent path>#<name>` (`packed_scene.cpp:208-215`, `:561-563`),
  * so the tier is a warning.
  */
@@ -52,15 +52,22 @@ describe('a parent path this file never defines', () => {
     expect(orphans[0]?.location?.line).toBe(5);
   });
 
-  it('says the semantic rules did not run on it', () => {
+  it('runs the semantic rules on a node the builder re-rooted', () => {
+    const shapeless = lint(dangling).filter((d) => d.ruleName === NEEDS_SHAPE);
+    expect(shapeless.map((d) => d.nodeName)).toEqual(['NoSuchNode#Body']);
+    expect(orphansIn(dangling)[0]?.message).not.toContain('No semantic rule ran');
+  });
+
+  it('says the semantic rules did not run on a node Godot does not re-root', () => {
     // The claim has to be this narrow: property validation happens during the
     // scan, so Phase 1 still covered the node's own values.
-    expect(lint(dangling).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(false);
-    const placed = scene(
+    const refused = scene(
       node('Node2D', {}, { name: 'Root' }),
-      node('StaticBody2D', {}, { name: 'Body', parent: '.' })
+      node('Node2D', {}, { name: 'Stray' }),
+      node('StaticBody2D', {}, { name: 'Body', parent: 'NoSuchNode' })
     );
-    expect(lint(placed).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+    expect(lint(refused).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(false);
+    expect(orphansIn(refused)[0]?.message).toContain('No semantic rule ran on it');
   });
 
   it('reports every node in the stranded subtree, as Godot warns per node', () => {
@@ -236,6 +243,15 @@ describe('a parent path this file never defines', () => {
       const message = messageOf(
         '[node name="Mid" type="Node2D" parent="."]',
         '[node name="Leaf" type="Node2D" parent="Mid" unique_id=20]',
+        headingWithTrail('20')
+      );
+      expect(message).toContain('lands under "Mid/Leaf"');
+    });
+
+    it('names the path a heading is seated at, not the spelling of its parent=', () => {
+      const message = messageOf(
+        '[node name="Mid" type="Node2D" parent="."]\nunique_name_in_owner = true',
+        '[node name="Leaf" type="Node2D" parent="%Mid" unique_id=20]',
         headingWithTrail('20')
       );
       expect(message).toContain('lands under "Mid/Leaf"');

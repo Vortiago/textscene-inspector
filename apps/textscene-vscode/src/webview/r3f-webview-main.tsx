@@ -135,9 +135,9 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const handleNodeReveal = (path: string, node: TscnNode) => {
     vscode.postMessage({
       type: 'jumpToNode',
-      nodeName: node.name,
+      // The name the heading wrote: a re-rooted node's `name` is Godot's rename, which no heading spells.
+      nodeName: node.authoredName ?? node.name,
       path,
-      parent: node.parent,
     } satisfies WebviewToHostMessage);
   };
 

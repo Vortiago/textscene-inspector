@@ -1,6 +1,5 @@
-import { EventEmitter } from 'node:events';
 import { describe, expect, it } from 'vitest';
-import { attachDiagnostics, checkDiagnostics } from './diagnostics.mjs';
+import { checkDiagnostics } from './diagnostics.mjs';
 import { CLEAN_LOAD, fakeGate } from './gate.testkit.mjs';
 
 const CLOCK_DEPRECATION = 'THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.';
@@ -9,16 +8,6 @@ const REMOVED_TYPE_WARNING =
 const GL_DRIVER_STALL =
   '[.WebGL-0x9a40016ce00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): ' +
   'GPU stall due to ReadPixels';
-
-/** A Playwright page's `on`, with handlers the test drives. */
-function fakePage() {
-  return new EventEmitter();
-}
-
-/** Emits one console message with the method shape `attachDiagnostics` reads. */
-function emitConsole(page, type, text) {
-  page.emit('console', { type: () => type, text: () => text });
-}
 
 /** The failures `checkDiagnostics` records for a load that logged only `warnings`. */
 function warningFailures(warnings, options) {
@@ -59,19 +48,6 @@ describe('checkDiagnostics on console warnings', () => {
     expect(
       warningFailures([REMOVED_TYPE_WARNING], { expectedWarnings: [/PCFSoftShadowMap has been removed/] })
     ).toEqual([]);
-  });
-});
-
-describe('attachDiagnostics', () => {
-  it('keeps warnings and errors apart and drops info and debug', () => {
-    const page = fakePage();
-    const diagnostics = attachDiagnostics(page);
-    emitConsole(page, 'warning', 'a warning');
-    emitConsole(page, 'error', 'an error');
-    emitConsole(page, 'info', 'an info');
-    emitConsole(page, 'debug', 'a debug');
-    expect(diagnostics.consoleWarnings).toEqual(['a warning']);
-    expect(diagnostics.consoleErrors).toEqual(['an error']);
   });
 });
 

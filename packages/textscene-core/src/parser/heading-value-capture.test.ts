@@ -105,6 +105,11 @@ describe('parseHeading captures a complete attribute value', () => {
 
   it('still returns null for a line that is not a heading, and {} for a bare type', () => {
     expect(parseHeading('name="X" type="Node"')).toBeNull();
-    expect(parseHeading('[editable]')).toEqual({ type: 'editable', attributes: {}, valueSpans: {} });
+    expect(parseHeading('[editable]')).toEqual({
+      type: 'editable',
+      attributes: {},
+      valueSpans: {},
+      unclosed: new Set(),
+    });
   });
 });

@@ -10,14 +10,19 @@ import { enumerateGodotNodes, godotVersion, supportedTypes } from './build-node-
 import { EXTRA_CLASSES, RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
 import { groupOf } from './build-node-catalog/groups.mjs';
 import { attachLinks } from './build-node-catalog/links.mjs';
-import { OUT, PROPS_OUT, RESOURCE_BASES_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
+import {
+  CATALOG_OUT,
+  PROPS_OUT,
+  RESOURCE_BASES_OUT,
+  RESOURCE_PROPS_OUT,
+} from './build-node-catalog/paths.mjs';
 
 const linksOnly = process.argv.includes('--links-only');
 // The engine half alone: the property tables need a local godot, not the
 // network, so a GitHub API outage or rate limit does not block them.
 const propertiesOnly = process.argv.includes('--properties-only');
-const previous = existsSync(OUT)
-  ? JSON.parse(readFileSync(OUT, 'utf8'))
+const previous = existsSync(CATALOG_OUT)
+  ? JSON.parse(readFileSync(CATALOG_OUT, 'utf8'))
   : { nodes: [], resources: [], extras: [] };
 const previousByName = new Map(
   [...(previous.nodes ?? []), ...(previous.resources ?? []), ...(previous.extras ?? [])].map((n) => [
@@ -57,7 +62,7 @@ if (propertiesOnly) {
 let nodes;
 let godotVersionValue;
 if (linksOnly) {
-  if (!previous.nodes?.length) throw new Error(`--links-only needs an existing ${OUT}`);
+  if (!previous.nodes?.length) throw new Error(`--links-only needs an existing ${CATALOG_OUT}`);
   // The links need only the network, the node list needs a local godot.
   nodes = previous.nodes.map((n) => {
     const copy = { ...n };
@@ -67,7 +72,7 @@ if (linksOnly) {
   });
   if (!nodes.some((n) => n.chain?.length)) {
     throw new Error(
-      `${OUT} predates persisted ancestry — run a full \`pnpm nodes:catalog\` once before --links-only.`
+      `${CATALOG_OUT} predates persisted ancestry — run a full \`pnpm nodes:catalog\` once before --links-only.`
     );
   }
   godotVersionValue = previous.godotVersion ?? 'unknown';
@@ -106,9 +111,9 @@ const catalog = {
   resources: linkedResources,
   extras: linkedExtras,
 };
-writeFileSync(OUT, `${JSON.stringify(catalog, null, 2)}\n`);
+writeFileSync(CATALOG_OUT, `${JSON.stringify(catalog, null, 2)}\n`);
 const unsupported = linkedNodes.filter((n) => !n.supported).length;
 const sourced = linkedNodes.filter((n) => n.source).length;
 console.log(
-  `Wrote ${OUT} — ${linkedNodes.length} nodes (${linkedNodes.length - unsupported} supported, ${unsupported} not implemented), ${sourced} with a verified source link, plus ${linkedResources.length} resources.`
+  `Wrote ${CATALOG_OUT} — ${linkedNodes.length} nodes (${linkedNodes.length - unsupported} supported, ${unsupported} not implemented), ${sourced} with a verified source link, plus ${linkedResources.length} resources.`
 );

@@ -44,7 +44,7 @@ function greyThroughInstalledCurve(gl: Renderer, x: number): number {
   return curve(x, gl.toneMappingExposure);
 }
 
-/** The curve's lines after its exposure line, which each route words in its own uniform. */
+/** The curve's lines after its exposure line, which the compositor applies before the call. */
 function curveAfterExposure(body: string): string {
   return body.slice(body.indexOf(';') + 1);
 }
@@ -173,7 +173,7 @@ describe('the compositor’s tone pass', () => {
         exposure: 1,
         transparentBackground: false,
       }).fragmentShader;
-      expect(curveAfterExposure(functionBody(composite, 'vec3 godotToneMap')), `mode ${mode}`).toBe(
+      expect(functionBody(composite, 'vec3 godotToneMap'), `mode ${mode}`).toBe(
         curveAfterExposure(functionBody(installedChunk(), 'vec3 CustomToneMapping'))
       );
     }

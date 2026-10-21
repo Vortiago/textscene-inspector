@@ -117,18 +117,14 @@ export interface ProjectViewportSize {
 
 /**
  * `display/window/size/viewport_*`: the rect a 2D scene is composed against and a root
- * Control anchors to. Per axis, as Godot falls back per setting. A non-finite or
+ * Control anchors to. Per axis, as Godot falls back per setting. Both settings are INT
+ * (`project_settings.cpp:1711-1712`), so a fraction truncates. An unreadable or
  * non-positive value takes the default: a zero-width viewport cannot be laid out.
  */
 export function projectViewportSize(settings: ProjectSettings | null): ProjectViewportSize {
   const axis = (key: string, fallback: number): number => {
-    const raw = settings?.[key];
-    if (raw === undefined || raw.trim() === '') return fallback;
-    const value = Number(raw);
-    if (!Number.isFinite(value) || value <= 0) return fallback;
-    // Godot stores these as ints; a fractional override would put the capture
-    // frame on a half pixel and resample every comparison made against it.
-    return Math.round(value);
+    const value = parseOptionalInt(settings?.[key]);
+    return value === undefined || value <= 0 ? fallback : value;
   };
   return {
     width: axis('display/window/size/viewport_width', DEFAULT_VIEWPORT_WIDTH),

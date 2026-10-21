@@ -29,7 +29,7 @@ import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
   VERTICAL_ALIGNMENT_CENTER,
-} from '../../../../godot/math/math';
+} from '../../../../godot/math/alignment';
 import { buttonIconColor, menuButtonLabelShape, menuButtonTextTheme } from './nativeSolver';
 import type { MenuButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';

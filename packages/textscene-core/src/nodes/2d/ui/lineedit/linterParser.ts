@@ -12,7 +12,7 @@ import {
   STRUCTURED_TEXT_PARSER_NAMES,
   TEXT_DIRECTION_NAMES,
 } from '../../../../godot/text/textServerEnums.js';
-import { HORIZONTAL_ALIGNMENT_NAMES } from '../../../../godot/math/math.js';
+import { HORIZONTAL_ALIGNMENT_NAMES } from '../../../../godot/math/alignment.js';
 import {
   LINE_EDIT_EXPAND_MODE_NAMES,
   LINE_EDIT_VIRTUAL_KEYBOARD_TYPE_NAMES,

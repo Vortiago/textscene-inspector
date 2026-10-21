@@ -22,5 +22,5 @@ validatorRegistry.registerAll('Slider', {
   // No bound: `slider.cpp:469` passes PROPERTY_HINT_ENUM with the default `""` hint string
   // (`object.h:181`), ADR-0032's "nothing" row. `set_ticks_position` (`slider.cpp:416-422`) neither
   // fails nor clamps, and BIND_ENUM_CONSTANT is no grounding the tier table admits.
-  ticks_position: v.lenientInt('ticks_position'),
+  ticks_position: v.int('ticks_position'),
 });

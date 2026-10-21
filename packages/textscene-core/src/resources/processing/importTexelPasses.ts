@@ -52,8 +52,8 @@ function invertedGreen(data: Uint8Array, index: number): number {
 }
 
 /**
- * The texels an RGTC RedGreen8 texture samples: red and green kept, blue 0 and alpha opaque, since
- * the format stores neither (`core/io/image.cpp:3732-3734`).
+ * The swizzle `rg01` of an RGTC or DXT5_RA_AS_RG texture: red and green kept, blue 0 and alpha
+ * opaque, since it decodes to R8 or RG8 (`modules/bcdec/image_decompress_bcdec.cpp:245-253, 297-299`).
  */
 export function keepRedGreen(data: Uint8Array): boolean {
   let changed = false;

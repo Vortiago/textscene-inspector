@@ -33,13 +33,13 @@ import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { type Rgba } from '../../../../godot/math/math';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_FILL,
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_RIGHT,
-  type Rgba,
-} from '../../../../godot/math/math';
+} from '../../../../godot/math/alignment';
 import {
   CONTROL_FONT_COLOR,
   CONTROL_FONT_DISABLED_COLOR,

@@ -13,12 +13,10 @@ import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 
 /**
- * The target of a pass that draws the 3D world. Godot tonemaps every viewport render into its own
- * target (`_render_buffers_post_process_and_tonemap`), so it holds post-tonemap values, and three
- * tonemaps into a target only when it takes output like the drawing buffer. The tonemap pass writes
+ * The target of a pass that draws the 3D world. Godot tonemaps each viewport into its own target as
  * sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
- * encodes on write and decodes on sample in hardware. The LINEAR tag keeps the shader from doing
- * either: an sRGB tag would stack a shader encode on the hardware encode.
+ * encodes on write and decodes on sample in hardware. The LINEAR tag keeps the shader from encoding
+ * too: an sRGB tag would stack a shader encode on the hardware encode.
  */
 export function createSceneTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
   const target = createTarget(width, height, name);

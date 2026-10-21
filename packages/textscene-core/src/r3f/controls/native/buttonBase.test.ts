@@ -21,7 +21,7 @@ import {
   VERTICAL_ALIGNMENT_CENTER,
   VERTICAL_ALIGNMENT_TOP,
   VERTICAL_ALIGNMENT_BOTTOM,
-} from '../../../godot/math/math';
+} from '../../../godot/math/alignment';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };

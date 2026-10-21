@@ -4,6 +4,7 @@
  * the level above in their own space, so an sRGB image averages its encoded values.
  */
 
+import { normalizedVector3 } from '../../godot/math/vector';
 import { channelToByte } from '../../utils/colorSpace';
 
 /** One level of an RGBA8 image, top row first. Its shape is the entry three reads from `Texture.mipmaps`. */
@@ -66,17 +67,14 @@ function average4(data: Uint8Array, a: number, b: number, c: number, d: number):
 
 /** `Image::renormalize_uint8`, in the float32 of its `Vector3`, rounded to the nearest byte. */
 function renormalizeTexel(data: Uint8Array, index: number): void {
-  const x = SIGNED_UNIT_BY_BYTE[data[index]!]!;
-  const y = SIGNED_UNIT_BY_BYTE[data[index + 1]!]!;
-  const z = SIGNED_UNIT_BY_BYTE[data[index + 2]!]!;
-  const lengthSquared = Math.fround(
-    Math.fround(Math.fround(x * x) + Math.fround(y * y)) + Math.fround(z * z)
+  const [x, y, z] = normalizedVector3(
+    SIGNED_UNIT_BY_BYTE[data[index]!]!,
+    SIGNED_UNIT_BY_BYTE[data[index + 1]!]!,
+    SIGNED_UNIT_BY_BYTE[data[index + 2]!]!
   );
-  // `Vector3::normalize` (`core/math/vector3.h:548-558`) zeroes a zero vector.
-  const length = lengthSquared === 0 ? Infinity : Math.fround(Math.sqrt(lengthSquared));
-  data[index] = toByte(Math.fround(x / length));
-  data[index + 1] = toByte(Math.fround(y / length));
-  data[index + 2] = toByte(Math.fround(z / length));
+  data[index] = toByte(x);
+  data[index + 1] = toByte(y);
+  data[index + 2] = toByte(z);
 }
 
 /** A byte as the `-1..1` float32 `renormalize_uint8` reads, one entry per byte value. */

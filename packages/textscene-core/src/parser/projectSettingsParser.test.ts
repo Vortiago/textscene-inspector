@@ -309,8 +309,12 @@ describe('projectViewportSize', () => {
     expect(width('NaN')).toBe(1152);
   });
 
-  it('rounds a fractional override — a capture frame is whole pixels', () => {
-    expect(projectViewportSize({ 'display/window/size/viewport_width': '800.6' }).width).toBe(801);
+  it('truncates a fractional override, as the INT setting stores it', () => {
+    expect(projectViewportSize({ 'display/window/size/viewport_width': '800.6' }).width).toBe(800);
+  });
+
+  it('refuses a spelling Godot’s tokenizer does not read', () => {
+    expect(projectViewportSize({ 'display/window/size/viewport_width': '0o1000' }).width).toBe(1152);
   });
 
   it('reads the keys as `parseProjectSettings` names them, section prefix and all', () => {

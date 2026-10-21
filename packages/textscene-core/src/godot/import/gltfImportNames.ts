@@ -140,7 +140,7 @@ function unnamedNodeName(node: GltfJsonObject, namingVersion: number): string {
 }
 
 /** A clip as the glTF importer stores it: its name, and whether its name made the clip loop. */
-interface GltfAnimationName {
+export interface GltfClip {
   name: string;
   loops: boolean;
 }
@@ -154,7 +154,7 @@ export interface GltfImportNames {
    */
   meshes: string[];
   /** Null for an animation the importer skips, or that has no name to store. */
-  animations: (GltfAnimationName | null)[];
+  animations: (GltfClip | null)[];
 }
 
 /** The names of `json`, the parsed glTF document. A document with no `nodes` names none. */
@@ -205,7 +205,7 @@ export function gltfImportNames(json: unknown, options: GltfNamingOptions): Gltf
 }
 
 /** `_parse_animations` (`gltf_document.cpp:3735-3756`): each named animation that has channels and samplers. */
-function animationNames(animations: readonly GltfJsonObject[]): (GltfAnimationName | null)[] {
+function animationNames(animations: readonly GltfJsonObject[]): (GltfClip | null)[] {
   const taken = new Set<string>();
   return animations.map((animation) => {
     if (!Array.isArray(animation['channels']) || !Array.isArray(animation['samplers'])) return null;

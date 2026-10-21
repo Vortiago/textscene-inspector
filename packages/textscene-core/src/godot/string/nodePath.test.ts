@@ -5,6 +5,7 @@ import {
   resolveNodePathLiteral,
   resolveParentPath,
   resolveRelativePath,
+  simplifiedNodePath,
   unclaimedUniqueNames,
 } from './nodePath.js';
 
@@ -208,4 +209,39 @@ describe('unclaimedUniqueNames', () => {
       expect(unclaimedUniqueNames(raw, claims)).toEqual([]);
     }
   );
+});
+
+describe('simplifiedNodePath', () => {
+  it.each([
+    ['Gone/../Button', 'Button'],
+    ['./A', 'A'],
+    ['A/./B', 'A/B'],
+    ['A/B/../../C', 'C'],
+    ['./..', '..'],
+  ])('folds %s to %s, as NodePath::simplify does', (path, simplified) => {
+    // `.` is dropped and a name followed by `..` cancels with it (node_path.cpp:331-355).
+    expect(simplifiedNodePath(path)).toBe(simplified);
+  });
+
+  it.each([
+    ['A/..', '.'],
+    ['A/./..', '.'],
+  ])('leaves . for %s, which cancels to nothing', (path, simplified) => {
+    expect(simplifiedNodePath(path)).toBe(simplified);
+  });
+
+  it.each([['.'], ['..'], ['../X'], ['../..'], ['Button']])(
+    'keeps %s, which holds nothing to fold',
+    (path) => {
+      expect(simplifiedNodePath(path)).toBe(path);
+    }
+  );
+
+  it('keeps the absolute marker and the :subname', () => {
+    expect(simplifiedNodePath('/root/./A:position:x')).toBe('/root/A:position:x');
+  });
+
+  it('keeps an empty path empty', () => {
+    expect(simplifiedNodePath('')).toBe('');
+  });
 });

@@ -71,13 +71,13 @@ validatorRegistry.registerAll('TileMapLayer', {
   // set_y_sort_origin (:3321-3329), bare assignment. PROPERTY_HINT_NONE with
   // no suffix at all here, unlike TileMap's layer_#/y_sort_origin leaf which
   // carries "suffix:px" (tile_map.cpp:1034).
-  y_sort_origin: v.strictInt('y_sort_origin'),
+  y_sort_origin: v.int('y_sort_origin'),
   // set_x_draw_order_reversed (:3335-3343), bare assignment.
   x_draw_order_reversed: v.boolean('x_draw_order_reversed'),
   // set_rendering_quadrant_size (:3369-3378): ERR_FAIL_COND_MSG(p_size < 1) floors it.
   // No range hint (PROPERTY_HINT_NONE at tile_map_layer.cpp:2275), unlike TileMap's own
   // property, which adds a hinted 128 ceiling (tilemap/linterParser.ts).
-  rendering_quadrant_size: v.strictInt('rendering_quadrant_size', {
+  rendering_quadrant_size: v.int('rendering_quadrant_size', {
     min: 1,
     enforced: 'tile_map_layer.cpp:3373',
   }),
@@ -94,7 +94,7 @@ validatorRegistry.registerAll('TileMapLayer', {
   }),
   // set_physics_quadrant_size (:3426-3436): ERR_FAIL_COND_MSG(p_size < 1)
   // floors it. No range hint (hint == PROPERTY_HINT_NONE at :2280).
-  physics_quadrant_size: v.strictInt('physics_quadrant_size', {
+  physics_quadrant_size: v.int('physics_quadrant_size', {
     min: 1,
     enforced: 'tile_map_layer.cpp:3430',
   }),

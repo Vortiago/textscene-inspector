@@ -408,7 +408,7 @@ describe('Node2D Linter', () => {
     });
 
     it('rejects a z_index Godot itself refuses', () => {
-      // The CanvasItem tier carries the real range; an unbounded `v.strictInt`
+      // The CanvasItem tier carries the real range; an unbounded `v.int`
       // here would pass 999999, a value the engine will not load.
       expectDiagnostic(scene(node('Node2D', { z_index: 999999 })), {
         prop: 'z_index',
