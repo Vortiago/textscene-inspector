@@ -29,6 +29,10 @@ import { buildGlyphQuadArrays } from './glyphQuads';
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
+import {
+  godotTextureFilterState,
+  type TextureFilterState,
+} from '../../../../resources/textures/godotTextureFilter';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
@@ -103,10 +107,10 @@ export interface TextRunProps {
   strokeWidthPx?: number;
   /**
    * The raster texture's filter: Label3D's `texture_filter` (`label_3d.h:140`).
-   * The default `'linear'` is the nearest/linear bit of Godot's default. Canvas
-   * runs only: the MSDF atlas is always sampled linearly.
+   * The default is Godot's default filter. Canvas runs only: the MSDF atlas is
+   * always sampled linearly.
    */
-  textureFilter?: 'nearest' | 'linear';
+  textureFilter?: TextureFilterState;
   /**
    * The `BaseMaterial3D::Transparency` this surface paints in, from a 3D caller's
    * `alpha_cut` (`label_3d.cpp:386-393`), in each pass its GeometryInstance3D's fade can draw it
@@ -160,7 +164,7 @@ function buildTextRun(
   skew: number,
   distanceBias: number,
   strokeWidthPx: number,
-  textureFilter: 'nearest' | 'linear',
+  textureFilter: TextureFilterState,
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
@@ -184,9 +188,8 @@ function buildTextRun(
     // is the wrong thing to build a chain for, so the minified case samples
     // the base level. Only the nearest/linear bit is honoured.
     texture.generateMipmaps = false;
-    const filter = textureFilter === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
-    texture.minFilter = filter;
-    texture.magFilter = filter;
+    texture.minFilter = textureFilter.magFilter;
+    texture.magFilter = textureFilter.magFilter;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
@@ -234,7 +237,7 @@ export function TextRun({
   depthTest,
   side,
   strokeWidthPx = 0,
-  textureFilter = 'linear',
+  textureFilter = godotTextureFilterState(undefined),
   blends,
   shadow,
   layers,

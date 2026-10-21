@@ -91,9 +91,3 @@ const CUT_OPAQUE_PREPASSES: FadeVariants<OpaquePrepass> = {
 export function cutOpaquePrepasses(cut: AlphaCutSurface, depthTest: boolean): FadeVariants<OpaquePrepass> {
   return cut.depthPrepass && depthTest ? CUT_OPAQUE_PREPASSES : NO_OPAQUE_PREPASSES;
 }
-
-/** {@link cutBlends} with `opacity`, the alpha a Sprite3D's shader reads. */
-export function cutFadeVariants(cut: AlphaCutSurface, opacity: number) {
-  const { unfaded, alphaPass } = cutBlends(cut);
-  return { unfaded: { ...unfaded, opacity }, alphaPass: { ...alphaPass, opacity } };
-}

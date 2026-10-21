@@ -14,7 +14,7 @@ import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
  */
 const GODOT_ANISOTROPY_MAX = 16;
 
-interface TextureFilterState {
+export interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;
   minFilter: THREE.MinificationTextureFilter;
   generateMipmaps: boolean;

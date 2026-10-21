@@ -1,12 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import {
-  cutBlends,
-  cutFadeVariants,
-  cutOpaquePrepasses,
-  surfaceFadeVariants,
-  type AlphaPassSurface,
-} from './fadeVariants';
+import { cutBlends, cutOpaquePrepasses, surfaceFadeVariants, type AlphaPassSurface } from './fadeVariants';
 import { DRAWN_OPAQUE_PREPASS, FADED_OPAQUE_PREPASS, NO_OPAQUE_PREPASS } from './opaquePrepass';
 import type { SurfaceAlphaSource } from './surfaceAlphaPatch';
 import { alphaCutSurface } from '../godotAlphaCut';
@@ -98,21 +92,6 @@ describe('cutBlends', () => {
     expect(patchedShader(injection!.onBeforeCompile, THREE.ShaderLib.basic.fragmentShader)).toContain(
       DROPS_ALBEDO_ALPHA
     );
-  });
-});
-
-describe('cutFadeVariants', () => {
-  it('gives both passes the opacity the sprite shader reads', () => {
-    const { unfaded, alphaPass } = cutFadeVariants(discardCut(true), 0.25);
-    expect([unfaded.opacity, alphaPass.opacity]).toEqual([0.25, 0.25]);
-  });
-
-  it('keeps the blends of the cut', () => {
-    expect(cutFadeVariants(discardCut(true), 1).alphaPass.blending).toBe(THREE.NoBlending);
-  });
-
-  it('carries an opacity of 0, which a fully transparent modulate gives (edge case)', () => {
-    expect(cutFadeVariants(discardCut(true), 0).unfaded.opacity).toBe(0);
   });
 });
 
