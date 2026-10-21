@@ -52,8 +52,11 @@ function writeLight(
     return;
   }
   const { shadow } = light;
-  shadow.viewToLight(light, camera, scratchMatrix).toArray(set[AREA_LIGHT_SHADOW_MATRICES], index * 16);
-  shadow.slotUvRect(scratchRect).toArray(set[AREA_LIGHT_SHADOW_RECTS], index * 4);
+  shadow.viewToLookup(camera, scratchMatrix, light).toArray(set[AREA_LIGHT_SHADOW_MATRICES], index * 16);
+  (shadow.slotRect(scratchRect) ?? scratchRect.set(0, 0, 0, 0)).toArray(
+    set[AREA_LIGHT_SHADOW_RECTS],
+    index * 4
+  );
   writeVec4(terms, index, shadow.intensity, shadow.normalBias, shadow.bias, shadow.depthScale());
   set[AREA_LIGHT_SOFT_SHADOW_RADII][index] = shadow.radius;
 }

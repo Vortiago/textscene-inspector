@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import { scalarGlslFunction } from '../testing/glslScalar';
 import { FOG_LIGHT_FRAGMENT } from './volumetricFogShaders';
+import { clampedBilinearDepthGlsl } from '../shadowFilter/clampedBilinearDepth';
+import { OMNI_SLOT_GLSL } from '../positionalShadow/paraboloidUv';
 
 const fogShadow = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadow');
 const fogShadowFade = scalarGlslFunction(FOG_LIGHT_FRAGMENT, 'fogShadowFade');
@@ -89,5 +91,16 @@ describe("the fog's area light scatter", () => {
 
   it('samples the area light atlas', () => {
     expect(FOG_LIGHT_FRAGMENT).toContain('uniform sampler2D godotAreaLightAtlas;');
+  });
+});
+
+describe("the fog's shared shadow reads", () => {
+  it("decodes an omni light's slot without Godot's one-texel inset (volumetric_fog_process.glsl:502-511)", () => {
+    expect(FOG_LIGHT_FRAGMENT).toContain(OMNI_SLOT_GLSL);
+    expect(FOG_LIGHT_FRAGMENT).toContain('godotOmniSlot( slot, vec2( 0.0 ), flipOffset )');
+  });
+
+  it("reads an atlas's depth through the shared clamped bilinear read", () => {
+    expect(FOG_LIGHT_FRAGMENT).toContain(clampedBilinearDepthGlsl('atlasDepth', 'atlasDepthAt'));
   });
 });

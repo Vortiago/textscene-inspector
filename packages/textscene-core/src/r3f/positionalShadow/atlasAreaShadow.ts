@@ -15,9 +15,9 @@ import {
 } from '../../godot/rendering/lights/areaLightShadow.js';
 import type { PositionalShadowSlot } from '../../godot/rendering/lights/positionalShadowAtlas.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
-import { lightPoseMatrix, readLightPose } from './lightPose.js';
+import { readLightPose, viewToLightPose } from './lightPose.js';
 import { drawIntoAtlasSlot, positionalShadowAtlas } from './shadowAtlasTarget.js';
-import { readIntensityThroughSlot, type SlottedShadow } from './slotOpacity.js';
+import { readIntensityThroughSlot, type ParaboloidShadow } from './slotOpacity.js';
 
 /**
  * The camera the paraboloid renders through: the light's pose, and a projection that maps the
@@ -78,7 +78,7 @@ function localBox(object: THREE.Object3D): THREE.Box3 {
 type AreaShadowInternals = THREE.LightShadow<ParaboloidCamera> & LightShadowInternals;
 const AreaShadowBase = THREE.LightShadow as unknown as new (camera: ParaboloidCamera) => AreaShadowInternals;
 
-export class AtlasAreaShadow extends AreaShadowBase implements SlottedShadow {
+export class AtlasAreaShadow extends AreaShadowBase implements ParaboloidShadow {
   /** The light's slot in the atlas of the viewport that renders now, or null for none. */
   slot: PositionalShadowSlot | null = null;
   opacity = 1;
@@ -87,7 +87,7 @@ export class AtlasAreaShadow extends AreaShadowBase implements SlottedShadow {
   /** `area_size`. */
   readonly size = new THREE.Vector2();
   /** The slot's rectangle in units of the slot, as three gives a viewport (`WebGLShadowMap.js:345-350`). */
-  private readonly slotRect = new THREE.Vector4(0, 0, 1, 1);
+  private readonly slotViewport = new THREE.Vector4(0, 0, 1, 1);
 
   constructor() {
     super(new ParaboloidCamera());
@@ -100,7 +100,7 @@ export class AtlasAreaShadow extends AreaShadowBase implements SlottedShadow {
   place(slot: PositionalShadowSlot | null): void {
     this.slot = slot;
     if (slot === null) return;
-    drawIntoAtlasSlot(this, slot, this.slotRect);
+    drawIntoAtlasSlot(this, slot, this.slotViewport);
   }
 
   /**
@@ -110,20 +110,20 @@ export class AtlasAreaShadow extends AreaShadowBase implements SlottedShadow {
   override updateMatrices(light: THREE.Object3D): void {
     this.fitCamera(light);
     (this._frustum as AreaShadowVolume).enclose(this.bounds(), this.camera.matrixWorld);
-    confineShadowScissor(this, this.slotRect);
+    confineShadowScissor(this, this.slotViewport);
   }
 
   /**
    * Writes the matrix from the space of `view` into the light's own, which Godot's lookup reads as
    * `shadow_matrix` (4.7.2 `light_storage.cpp:1196-1198`). It takes the pose the map renders from.
    */
-  viewToLight(light: THREE.Object3D, view: THREE.Camera, target: THREE.Matrix4): THREE.Matrix4 {
-    return lightPoseMatrix(light, target).invert().multiply(view.matrixWorld);
+  viewToLookup(view: THREE.Camera, target: THREE.Matrix4, light: THREE.Object3D): THREE.Matrix4 {
+    return viewToLightPose(light, view, target);
   }
 
-  /** Writes the slot as `atlas_rect`: its corner and side in units of the atlas, or zero without one. */
-  slotUvRect(target: THREE.Vector4): THREE.Vector4 {
-    if (this.slot === null) return target.set(0, 0, 0, 0);
+  /** Writes the slot as `atlas_rect`: its corner and side in units of the atlas, or null without one. */
+  slotRect(target: THREE.Vector4): THREE.Vector4 | null {
+    if (this.slot === null) return null;
     const atlasSize = positionalShadowAtlas().width;
     const { x, y, size } = this.slot;
     return target.set(x, y, size, size).divideScalar(atlasSize);
