@@ -33,21 +33,31 @@ describe('pointsAtCells', () => {
     expect(Array.from(merged.getAttribute('color').array)).toEqual([1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0]);
   });
 
-  it('keeps the draw order of each cell by offsetting its index', () => {
+  it('keeps the draw order inside each group by offsetting each cell’s index', () => {
     const merged = pointsAtCells(twoPoints(), [moved(0), moved(1)]);
 
-    expect(Array.from(merged.index!.array)).toEqual([1, 0, 3, 2]);
+    expect(Array.from(merged.index!.array)).toEqual([1, 3, 0, 2]);
   });
 
-  it('repeats each draw group for each cell, in the cell’s own range', () => {
+  // One range per group, so a surface costs one draw call however many cells hold it.
+  it('spans every cell with each draw group', () => {
     const merged = pointsAtCells(twoPoints(), [moved(0), moved(1)]);
 
     expect(merged.groups).toEqual([
-      { start: 0, count: 1, materialIndex: 0 },
-      { start: 1, count: 1, materialIndex: 1 },
-      { start: 2, count: 1, materialIndex: 0 },
-      { start: 3, count: 1, materialIndex: 1 },
+      { start: 0, count: 2, materialIndex: 0 },
+      { start: 2, count: 2, materialIndex: 1 },
     ]);
+  });
+
+  it('draws a source with no index and no groups once for each cell (edge case)', () => {
+    const source = twoPoints();
+    source.setIndex(null);
+    source.clearGroups();
+
+    const merged = pointsAtCells(source, [moved(0), moved(1)]);
+
+    expect(Array.from(merged.index!.array)).toEqual([0, 1, 2, 3]);
+    expect(merged.groups).toEqual([]);
   });
 
   it('keeps what marks the geometry as points', () => {

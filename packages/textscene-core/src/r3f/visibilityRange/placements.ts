@@ -45,13 +45,41 @@ export function livePlacement(
     nodeMatrixWorld: livePose(nodeRef),
     isVisibleInTree: liveVisibility(nodeRef),
     ownAabb(target) {
-      const geometry = meshRef.current?.geometry;
-      if (!geometry?.getAttribute('position')) return false;
-      if (!geometry.boundingBox) geometry.computeBoundingBox();
-      target.copy(geometry.boundingBox!);
+      const box = meshRef.current && geometryBox(meshRef.current.geometry);
+      if (!box) return false;
+      target.copy(box);
       return true;
     },
   };
+}
+
+/**
+ * As `livePlacement`, for a mesh of several drawn parts, which share the node's space: one box
+ * over all of them, as the rendering server holds one box for the whole mesh.
+ */
+export function partsPlacement(
+  nodeRef: RefObject<THREE.Object3D | null>,
+  geometries: readonly THREE.BufferGeometry[]
+): InstancePlacement {
+  return {
+    nodeMatrixWorld: livePose(nodeRef),
+    isVisibleInTree: liveVisibility(nodeRef),
+    ownAabb(target) {
+      target.makeEmpty();
+      for (const geometry of geometries) {
+        const box = geometryBox(geometry);
+        if (box) target.union(box);
+      }
+      return !target.isEmpty();
+    },
+  };
+}
+
+/** The box of `geometry`, or null while it holds no vertices. */
+function geometryBox(geometry: THREE.BufferGeometry): THREE.Box3 | null {
+  if (!geometry.getAttribute('position')) return null;
+  if (!geometry.boundingBox) geometry.computeBoundingBox();
+  return geometry.boundingBox;
 }
 
 /** An instance whose box its data gives, or none, under the node object's live pose. */

@@ -21,9 +21,9 @@ import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlot
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
-import type { ShadowCastingEffects } from '../../../r3f/shadowCasting';
+import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
-import { livePlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
+import { partsPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 
 /** What a MeshInstance3D mounts: a mesh draws triangles, and a PointMesh draws points. */
 type DrawnMesh = THREE.Mesh | THREE.Points;
@@ -60,7 +60,16 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // GeometryInstance3D's, so it reaches every surface this node draws, the overlay's too.
   // `cast_shadow`, the range cull and each surface's billboard and shadow-pass membership reach
   // three per draw group, through hooks that read that group's material.
-  const placement = useMemo(() => livePlacement(meshRef, meshRef), []);
+  // The box covers every part, not the shell's alone, as Godot's does.
+  const drawnParts = content.kind === 'surfaced' ? content.mesh.parts : NO_PARTS;
+  const placement = useMemo(
+    () =>
+      partsPlacement(
+        meshRef,
+        drawnParts.map((part) => part.geometry)
+      ),
+    [drawnParts]
+  );
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
   const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
 
@@ -122,6 +131,8 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
     }
   }
 }
+
+const NO_PARTS: readonly SurfacedPart[] = [];
 
 /**
  * The overlay's draw-order key. Any value above the 3D default (0) puts it after
@@ -211,23 +222,6 @@ interface MeshShellProps {
 }
 
 /**
- * What every object that draws part of the mesh sets: `cast_shadow` and the per-surface draw hooks.
- * three fires them per draw group, the shadow pair after `getDepthMaterial` has set the side
- * (`WebGLShadowMap.js:488,546,560`): the only per-surface reach into a draw of an object whose
- * materials and depth material three shares.
- */
-function partDrawProps(shadow: ShadowCastingEffects) {
-  return {
-    castShadow: shadow.castShadow,
-    receiveShadow: true,
-    onBeforeRender: shadow.onBeforeRender,
-    onAfterRender: shadow.onAfterRender,
-    onBeforeShadow: shadow.onBeforeShadow,
-    onAfterShadow: shadow.onAfterShadow,
-  };
-}
-
-/**
  * The attribute shell every `<mesh>` branch of MeshInstance3D shares.
  * `children` is the branch's geometry and material. `subtree` is the node's
  * descendants, inside the mesh so they inherit its transform. Every branch,
@@ -254,7 +248,7 @@ function MeshShell({
       position={position}
       rotation={rotation}
       scale={scale}
-      {...partDrawProps(shadow)}
+      {...drawHookProps(shadow)}
       // Godot's `layers`, for the decal and probe masks. Set on every branch, placeholders
       // included, so a decal's receiver test never depends on load order.
       userData={visualLayersUserData(godotLayers)}
@@ -334,7 +328,7 @@ function FollowingPart({
   const drawsPoints = geometryDrawsPoints(part.geometry);
   const Drawn = drawnTag(drawsPoints);
   return (
-    <Drawn ref={ref} {...partDrawProps(shadow)} userData={visualLayersUserData(godotLayers)}>
+    <Drawn ref={ref} {...drawHookProps(shadow)} userData={visualLayersUserData(godotLayers)}>
       <MeshSurfaces part={part} primitive={primitive} overrides={overrides} />
       {overlaySource && (
         <MaterialOverlayMesh meshRef={ref} drawsPoints={drawsPoints} source={overlaySource} shadow={shadow} />
