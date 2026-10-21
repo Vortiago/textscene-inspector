@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -111,6 +111,7 @@ import {
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
 /** `Button`'s `font_pressed_color` (`default_theme.cpp:157`), which the toggled-on `mode_btns[i]` reads. */
 const MODE_BUTTON_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
@@ -137,7 +138,7 @@ interface GradientMeshProps {
 
 /** One vertex-coloured, single-pass mesh: the SV square's two layers, the hue strip and every channel-slider band. */
 function GradientMesh({ geometry, renderOrder, clippingPlanes, linear }: GradientMeshProps) {
-  useEffect(() => () => geometry.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
   const program = materialProgramInputs({
     props: {
       vertexColors: true,

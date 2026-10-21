@@ -4,7 +4,8 @@
  * holds.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import * as THREE from 'three';
 
 function createAccumulationTarget(): THREE.WebGLRenderTarget {
@@ -32,17 +33,15 @@ function createAccumulationTarget(): THREE.WebGLRenderTarget {
 export function useAccumulationTargets(ids: readonly string[]): ReadonlyMap<string, THREE.WebGLRenderTarget> {
   // Keyed on the joined ids, since a caller rebuilds the array every render. No id holds a newline.
   const signature = ids.join('\n');
-  const targets = useMemo(
-    () =>
-      new Map(
-        signature
-          .split('\n')
-          .filter(Boolean)
-          .map((id) => [id, createAccumulationTarget()])
-      ),
-    [signature]
-  );
-  // A cleanup belongs to an effect: React never calls a useMemo factory's return value.
-  useEffect(() => () => targets.forEach((target) => target.dispose()), [targets]);
-  return targets;
+  const accumulation = useMemo(() => {
+    const targets = new Map(
+      signature
+        .split('\n')
+        .filter(Boolean)
+        .map((id) => [id, createAccumulationTarget()])
+    );
+    return { targets, dispose: () => targets.forEach((target) => target.dispose()) };
+  }, [signature]);
+  useDisposeOnRelease(accumulation);
+  return accumulation.targets;
 }

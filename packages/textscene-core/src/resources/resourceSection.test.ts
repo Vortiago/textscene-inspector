@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { parseTresFile } from '../parser/parsedResource';
-import { findResourceSection, sectionLoader } from './resourceSection';
+import { findSectionResource, sectionLoader } from './resourceSection';
 
 const SHARED_TRES = [
   '[gd_resource type="Theme" load_steps=2 format=3]',
@@ -76,8 +76,16 @@ describe('sectionLoader', () => {
   });
 });
 
-describe('findResourceSection', () => {
+describe('findSectionResource', () => {
+  it('names the section it finds by the address it was asked for', () => {
+    expect(findSectionResource(FILE, 'res://shared.tres::FontVariation_a')).toEqual({
+      id: 'res://shared.tres::FontVariation_a',
+      type: 'FontVariation',
+      data: { spacing_glyph: '2' },
+    });
+  });
+
   it('answers undefined for a sub-resource the file does not declare', () => {
-    expect(findResourceSection(FILE, 'res://shared.tres::Missing_1')).toBeUndefined();
+    expect(findSectionResource(FILE, 'res://shared.tres::Missing_1')).toBeUndefined();
   });
 });

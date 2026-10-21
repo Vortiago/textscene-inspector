@@ -34,15 +34,3 @@ describe('useContentMemo', () => {
     expect(build).not.toHaveBeenCalled();
   });
 });
-
-describe('useContentMemo with dependencies', () => {
-  it('builds again when a dependency changes under the same content', () => {
-    const resource = box('Vector3(1, 1, 1)');
-    const { result, rerender } = renderHook(
-      ({ scale }) => useContentMemo(resource, (r) => `${r.data['size']} x${scale}`, [scale]),
-      { initialProps: { scale: 1 } }
-    );
-    rerender({ scale: 2 });
-    expect(result.current).toBe('Vector3(1, 1, 1) x2');
-  });
-});

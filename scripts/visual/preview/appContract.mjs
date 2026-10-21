@@ -97,7 +97,8 @@ export const SETTLE_MAX_ATTEMPTS = 12;
  * to detach, because a texture that lands later gives a stable, wrong frame.
  */
 export const TEXTURE_WORK_STATUS_TESTID = 'texture-work-status';
-// Ceiling for that wait. A 4096² seamless noise texture builds and uploads in well under it.
+// Ceiling for a wait on the texture work alone. A 4096² seamless noise texture builds and uploads
+// in well under it. A capture waits on every loading status at once, under SCENE_LOAD_WAIT_MS.
 export const TEXTURE_WORK_WAIT_MS = 120000;
 
 /**

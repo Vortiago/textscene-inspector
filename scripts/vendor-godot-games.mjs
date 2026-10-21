@@ -68,9 +68,6 @@ ensureKeyedCorpora({
   lockFile: LOCK_FILE,
   vendor,
 });
-console.log(
-  '[vendor-godot-games] now run: pnpm generate:fixtures (or use `pnpm vendor:games`, which does both)'
-);
 
 /** Fetches every game into a wiped scenes/games/ and writes its README. */
 function vendor() {
@@ -95,6 +92,9 @@ function vendor() {
   }
   writeFileSync(join(TARGET, 'README.md'), readme(summaries));
   console.log(`\n[vendor-godot-games] ${summaries.length} games, ${totalFiles} files`);
+  console.log(
+    '[vendor-godot-games] now run: pnpm generate:fixtures (or use `pnpm vendor:games`, which does both)'
+  );
   return true;
 }
 
