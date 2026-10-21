@@ -23,6 +23,21 @@ export function idTrailEnd<N extends RawNode>(
   return recoverByIdTrail(trail, idHeadingsOf(origins, isPlaced), index);
 }
 
+/**
+ * Where the `owner_uid_path=` of `origins[index]` finds its owner, or undefined where it finds
+ * nothing or there is none. Instantiate sets the owner once the node itself is built
+ * (`packed_scene.cpp:565-568`), so the heading counts among the built ones.
+ */
+export function ownerTrailEnd<N extends RawNode>(
+  origins: readonly NodeOrigin<N>[],
+  index: number,
+  isPlaced: (origin: NodeOrigin<N>) => boolean
+): IdTrailEnd | undefined {
+  const trail = origins[index]?.ownerIdTrail;
+  if (trail === undefined) return undefined;
+  return recoverByIdTrail(trail, idHeadingsOf(origins, isPlaced), index + 1);
+}
+
 /** Each heading as `recoverByIdTrail` reads it, placed where `isPlaced` says. */
 export function idHeadingsOf<N extends RawNode>(
   origins: readonly NodeOrigin<N>[],

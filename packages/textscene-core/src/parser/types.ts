@@ -27,6 +27,11 @@ export interface NodeOrigin<N extends RawNode> {
    * the heading has none, or where the value is not a `PackedInt32Array`.
    */
   readonly idTrail?: readonly number[];
+  /**
+   * The ids of the heading's `owner_uid_path=`, the trail Godot falls back to when the `owner=`
+   * path does not walk (`resource_format_text.cpp:258-262`, `packed_scene.cpp:159-163`).
+   */
+  readonly ownerIdTrail?: readonly number[];
   /** The heading's `unique_id=`, or `0` where it has none (`UNIQUE_SCENE_ID_UNASSIGNED`). */
   readonly uniqueId: number;
 }

@@ -665,3 +665,64 @@ unique_name_in_owner = true
     expect(ownerUniquePaths(owner).get('%Lamp')).toBe('Player/Lamp');
   });
 });
+
+describe('an owner= recovered through its owner_uid_path', () => {
+  // A missed owner path falls back to the id trail (packed_scene.cpp:159-163, :1947).
+  const recovered = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1") unique_id=77]
+
+[node name="Lamp" type="Node2D" parent="." owner="Gone" owner_uid_path=PackedInt32Array(77)]
+unique_name_in_owner = true
+`);
+  const recoveredCtx: LiveTreeContext = { ...ctx, externalResources: recovered.externalResources };
+
+  it('registers the name on the instance the trail finds', () => {
+    const owner = claimOwnerOf('Root/HudInstance/Sprite', recovered.nodes, recoveredCtx);
+    expect(ownerUniquePaths(owner).get('%Lamp')).toBe('Root/Lamp');
+  });
+});
+
+describe('the walk an owner= with a %Name takes', () => {
+  const hudClaimingWidget = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://widget.tscn" id="1"]
+
+[node name="Hud" type="Node2D"]
+
+[node name="Widget" parent="." instance=ExtResource("1")]
+unique_name_in_owner = true
+`);
+  const lent = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="HudInstance" owner="HudInstance/%Widget"]
+`);
+  /** How many times the walk to `path` reads a scene from the cache. */
+  const sceneReads = (path: string): number => {
+    let reads = 0;
+    claimOwnerOf(path, lent.nodes, {
+      ...ctx,
+      externalResources: lent.externalResources,
+      sceneCache: {
+        getCached: (p) => {
+          reads++;
+          return p === 'res://hud.tscn' ? hudClaimingWidget : scenes.get(p);
+        },
+      },
+    });
+    return reads;
+  };
+
+  it('steps through each node on the owner path once', () => {
+    expect(sceneReads('Root/HudInstance/Lamp')).toBeLessThanOrEqual(
+      sceneReads('Root/HudInstance/Widget/Face')
+    );
+  });
+});

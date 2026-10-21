@@ -142,30 +142,58 @@ interface Walk {
   node?: TscnNode;
 }
 
-function walkTo(path: string, live: PlacedLiveTree): Walk {
-  const { roots, ctx } = live.tree;
-  const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, live };
-  let candidates: Candidate[] = rootGroups(roots, ctx).map((group) => ({ group, owner: outer }));
-  let owner = outer;
-  let into = outer;
-  let parentPath = '';
-  let match: TscnNode | undefined;
-  for (const segment of path.split('/')) {
-    const livePath = joinPath(parentPath, segment);
+/** A walk that reached a node, with the groups its children are found in. */
+interface Reached extends Walk {
+  readonly candidates: readonly Candidate[];
+}
+
+/**
+ * The owner walk over one live tree, each live path stepped to once however many walks pass
+ * through it: the node's own walk, each `%Name` an `owner=` reads, and the walk to that owner.
+ */
+class OwnerWalk {
+  /** Written only by `to`. A null marks a path the loaded tree does not contain. */
+  private readonly reached = new Map<string, Reached | null>();
+  private readonly root: Reached;
+
+  constructor(readonly live: PlacedLiveTree) {
+    const { roots, ctx } = live.tree;
+    const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, live };
+    const candidates = rootGroups(roots, ctx).map((group) => ({ group, owner: outer }));
+    this.root = { owner: outer, into: outer, candidates };
+  }
+
+  to(path: string): Walk {
+    let reached = this.root;
+    let parentPath = '';
+    for (const segment of path.split('/')) {
+      const livePath = joinPath(parentPath, segment);
+      if (!this.reached.has(livePath)) this.reached.set(livePath, this.step(reached, parentPath, livePath));
+      const next = this.reached.get(livePath);
+      if (!next) return { owner: reached.owner, into: reached.owner };
+      reached = next;
+      parentPath = livePath;
+    }
+    return reached;
+  }
+
+  /** The walk one segment on from `from`, at `parentPath`, to `livePath`, or null where none is there. */
+  private step(from: Reached, parentPath: string, livePath: string): Reached | null {
+    const { live } = this;
     const link = live.tree.at(livePath);
-    const found = link && candidates.find((candidate) => candidate.group.children.includes(link.node));
-    if (!link || !found) return { owner, into: owner };
-    match = link.node;
+    const found = link && from.candidates.find((candidate) => candidate.group.children.includes(link.node));
+    if (!link || !found) return null;
+    const node = link.node;
     // A node the file above grafted in is that file's own, however deep it sits.
-    owner = fileSeating(found.owner, livePath, ROOT_OWNED);
-    const subRoots = cachedSubRoots(match, link.scope, ctx);
+    const owner = fileSeating(found.owner, livePath, ROOT_OWNED);
+    const subRoots = cachedSubRoots(node, link.scope, live.tree.ctx);
     // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
     // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
-    const isGlbRoot = found.rootOf !== undefined && match.type === GLB_SCENE_ROOT_TYPE;
+    const isGlbRoot = found.rootOf !== undefined && node.type === GLB_SCENE_ROOT_TYPE;
     const contentOwner: ClaimOwner = found.rootOf
       ? { path: isGlbRoot ? parentPath : livePath, roots: found.rootOf, parent: owner, live }
       : owner;
-    candidates = link.groups.map((group) => ({
+    const candidates = link.groups.map((group) => ({
       group,
       owner:
         group.origin === 'merged' && subRoots
@@ -173,15 +201,16 @@ function walkTo(path: string, live: PlacedLiveTree): Walk {
           : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
-    into = isGlbRoot ? contentOwner : (candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner);
-    parentPath = livePath;
+    const into = isGlbRoot
+      ? contentOwner
+      : (candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner);
+    return { owner, into, node, candidates };
   }
-  return { owner, into, node: match };
 }
 
-/** The live tree one question walks, so every walk it takes shares each node's child groups. */
-function liveTreeOf(roots: readonly TscnNode[], ctx: LiveTreeContext): PlacedLiveTree {
-  return new PlacedLiveTree(new LiveTree(roots, ctx));
+/** The owner walk one question takes, so every walk it makes shares each step. */
+function ownerWalkOf(roots: readonly TscnNode[], ctx: LiveTreeContext): OwnerWalk {
+  return new OwnerWalk(new PlacedLiveTree(new LiveTree(roots, ctx)));
 }
 
 /**
@@ -191,13 +220,13 @@ function liveTreeOf(roots: readonly TscnNode[], ctx: LiveTreeContext): PlacedLiv
  * the root of the file the heading is in, anything else the node at that root-relative path.
  */
 export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): ClaimOwner {
-  const live = liveTreeOf(roots, ctx);
-  const { owner, node } = walkTo(path, live);
+  const walk = ownerWalkOf(roots, ctx);
+  const { owner, node } = walk.to(path);
   if (node?.owner === undefined) return owner;
   const file = fileSeating(owner, path, ADDED);
   if (node.owner === '.') return file;
-  const ownerPath = node.owner === NO_OWNER ? undefined : ownerLivePath(file.path, node.owner, live);
-  return ownerPath === undefined ? noOwner(live) : walkTo(ownerPath, live).into;
+  const ownerPath = node.owner === NO_OWNER ? undefined : ownerLivePath(file.path, node.owner, walk);
+  return ownerPath === undefined ? noOwner(walk.live) : walk.to(ownerPath).into;
 }
 
 const NO_NAMES: UniqueNameTable = { paths: () => new Map() };
@@ -213,12 +242,12 @@ function noOwner(live: PlacedLiveTree): ClaimOwner {
  * each `%Name` its own tables answer, so one left here passes through an instance, whose own table
  * answers it, else its owner's (node.cpp:1930-1938).
  */
-function ownerLivePath(rootPath: string, owner: string, live: PlacedLiveTree): string | undefined {
+function ownerLivePath(rootPath: string, owner: string, walk: OwnerWalk): string | undefined {
   let path = rootPath;
   for (const name of nodePathWalkNames(owner)) {
     if (name === '..' && path === rootPath) return undefined;
     const claimant = name.startsWith(UNIQUE_NODE_PREFIX)
-      ? localSceneUniquePaths(walkTo(path, live).into).get(name)
+      ? localSceneUniquePaths(walk.to(path).into).get(name)
       : undefined;
     path = claimant ?? simplifiedNodePath(joinPath(path, name));
   }
@@ -234,7 +263,7 @@ function ownerLivePath(rootPath: string, owner: string, live: PlacedLiveTree): s
  * the sub-scene owner it already has.
  */
 export function localSceneOf(path: string, roots: readonly TscnNode[], ctx: LiveTreeContext): ClaimOwner {
-  return walkTo(path, liveTreeOf(roots, ctx)).into;
+  return ownerWalkOf(roots, ctx).to(path).into;
 }
 
 /**

@@ -20,7 +20,7 @@ import {
 import { UNIQUE_NODE_PREFIX, walkFromRoot, type RootWalkTables } from '../godot/string/nodePath.js';
 import { serialChildName } from '../godot/string/nodeName.js';
 import { reparentedName } from '../godot/scene/packedScene.js';
-import { idTrailEnd } from './idTrail.js';
+import { idTrailEnd, ownerTrailEnd } from './idTrail.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
 
@@ -91,14 +91,16 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
   // also gives `children` the file's sibling order, the 2D paint order, and the
   // `%Name` claims the order instantiate sets each owner in (`:565-570`).
   const seatedByPath = new Set<N>([rootNode]);
+  const isPlaced = ({ node: heading }: NodeOrigin<N>) => seatedByPath.has(heading);
   for (const [index, { node }] of origins.entries()) {
     if (node === rootNode) continue;
     // A second parentless node is orphaned here. `orphanedNodes` finds it by walking
     // the returned tree, so it holds no second copy of the resolution rules.
     if (!node.parent) continue;
+    const owner = node.owner === undefined ? undefined : seatedOwner(tables, origins, index, isPlaced);
     const end = walkFromRoot(node.parent, tables.tree);
     const parentPath = end === null || typeof end === 'string' ? end : end.unlisted;
-    if (parentPath !== null && seatBelowParent(tables, node, parentPath)) {
+    if (parentPath !== null && seatBelowParent(tables, node, parentPath, owner)) {
       seatedByPath.add(node);
       continue;
     }
@@ -109,8 +111,8 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // lands, seats the node somewhere this parse cannot name, so that node, like every node
     // of a refused file, stays out of the tree for `orphanedNodes`.
     if (!reRootsVanished) continue;
-    if (idTrailEnd(origins, index, ({ node: heading }) => seatedByPath.has(heading))) continue;
-    reRoot(tables, node);
+    if (idTrailEnd(origins, index, isPlaced)) continue;
+    reRoot(tables, node, owner);
   }
 
   return {
@@ -141,11 +143,12 @@ export function sceneSeating(roots: readonly RawNode[]): SeatedPaths<RawNode> {
 function seatBelowParent<N extends SceneNode<N>>(
   tables: SeatingTables<N>,
   node: N,
-  parentPath: string
+  parentPath: string,
+  owner: string | undefined
 ): boolean {
   const parentNode = tables.byPath.get(parentPath);
   if (parentNode) {
-    const seat = seatCopy(tables, node);
+    const seat = seatCopy(tables, node, owner);
     parentNode.children.push(seat);
     register(tables, parentPath, seat, parentNode);
     return true;
@@ -154,7 +157,7 @@ function seatBelowParent<N extends SceneNode<N>>(
   // nearest enclosing instance anchors it and the content matches the rest.
   const anchor = findInstanceAnchor(parentPath, tables);
   if (!anchor) return false;
-  const seat = seatCopy(tables, node);
+  const seat = seatCopy(tables, node, owner);
   seat.instanceSubPath = anchor.subPath;
   anchor.node.children.push(seat);
   register(tables, anchor.foldedParentPath, seat, anchor.node);
@@ -166,17 +169,20 @@ function seatBelowParent<N extends SceneNode<N>>(
  * `<path>#<name>` (`packed_scene.cpp:208-215`, `:561-563`), numbered past a root child that
  * holds the name (`set_name`, `node.cpp:1450`, `:1593-1640`). The authored name stays on `authoredName`.
  */
-function reRoot<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N): void {
-  const seat = seatCopy(tables, node);
+function reRoot<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, owner: string | undefined): void {
+  const seat = seatCopy(tables, node, owner);
   seat.authoredName = node.name;
   seat.name = serialChildName(reparentedName(node.parent!, node.name), tables.rootChildNames);
   tables.root.children.push(seat);
   register(tables, SCENE_ROOT_PATH, seat, tables.root);
 }
 
-/** The tree's own copy of a heading's node, childless, so the seating never writes to the heading. */
-function seatCopy<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N): N {
-  const seat = { ...node, children: [] } as N;
+/**
+ * The tree's own copy of a heading's node, childless and with its `owner=` as `seatedOwner` resolved
+ * it, so the seating never writes to the heading.
+ */
+function seatCopy<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, owner: string | undefined): N {
+  const seat = { ...node, children: [], ...(owner === undefined ? {} : { owner }) } as N;
   tables.seated.set(node, seat);
   return seat;
 }
@@ -293,7 +299,6 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   // A nameless heading claims no key: an empty name joins to its parent's own key and live path.
   // Godot seats it and places later siblings by path (`packed_scene.cpp:208-215`).
   if (!node.name) return;
-  if (node.owner !== undefined) node.owner = resolvedOwner(tables, node.owner);
   const isRootOwned = isOwnedByRoot(node, instance !== undefined);
   if (instance !== undefined) recordInsideInstance(tables, place.livePath, node, isRootOwned);
   const path = joinPath(parentPath, node.name);
@@ -326,16 +331,43 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
 }
 
 /**
- * `owner` as the path of the node it names, walked from the root over the headings seated so far,
- * as instantiate walks it when it sets the owner (packed_scene.cpp:159-161, :565-568): `.` for the
- * root, and a `%Name` replaced by its claimant. A walk into content this file does not list keeps
- * the rest for that instance to resolve, and a walk that finds nothing keeps the path as written.
+ * The `owner=` of `origins[index]` as the path of the node it names, walked from the root over the
+ * headings seated so far, as instantiate walks it when it sets the owner (packed_scene.cpp:159-168,
+ * :565-568): `.` for the root, and a `%Name` replaced by its claimant. A walk into content this file
+ * does not list keeps the rest for that instance to resolve. A walk that finds nothing falls back to
+ * the `owner_uid_path=`, and where that finds nothing this parse can name too, the node has no owner.
  */
-function resolvedOwner<N extends RawNode>(tables: SeatingTables<N>, owner: string): string {
-  const end = walkFromRoot(owner, tables.tree);
-  if (end === null) return NO_OWNER;
-  const path = typeof end === 'string' ? end : end.unlisted;
+function seatedOwner<N extends SceneNode<N>>(
+  tables: SeatingTables<N>,
+  origins: readonly NodeOrigin<N>[],
+  index: number,
+  isPlaced: (origin: NodeOrigin<N>) => boolean
+): string {
+  const end = walkFromRoot(origins[index]!.node.owner, tables.tree);
+  const path =
+    end === null
+      ? recoveredOwnerPath(tables, origins, index, isPlaced)
+      : typeof end === 'string'
+        ? end
+        : end.unlisted;
+  if (path === undefined) return NO_OWNER;
   return path === SCENE_ROOT_PATH ? '.' : path;
+}
+
+/**
+ * The path of the heading the `owner_uid_path=` of `origins[index]` lands on, or undefined where it
+ * lands nowhere or inside an instance's content, which this parse cannot name.
+ */
+function recoveredOwnerPath<N extends SceneNode<N>>(
+  tables: SeatingTables<N>,
+  origins: readonly NodeOrigin<N>[],
+  index: number,
+  isPlaced: (origin: NodeOrigin<N>) => boolean
+): string | undefined {
+  const recovered = ownerTrailEnd(origins, index, isPlaced);
+  if (recovered?.kind !== 'lands') return undefined;
+  const seat = tables.seated.get(origins[recovered.heading]!.node);
+  return seat && tables.pathOf.get(seat);
 }
 
 /**
