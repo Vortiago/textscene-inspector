@@ -5,7 +5,8 @@ import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
-import { resProviderForFile } from '@textscene/core/resources/diskProject';
+import { createDiskResRoots } from '@textscene/core/resources/diskProject';
+import type { ResRoots } from '@textscene/core/resources/resRoots';
 import { escapeControlCharacters, formatDiagnostics, formatError } from './format';
 
 /** Lint outcome for a single file, with output split by target stream. */
@@ -105,6 +106,21 @@ function collectTscnFiles(dir: string, found: string[] = []): string[] {
 const linter = new Linter();
 
 /**
+ * The roots of each workspace a run lints in, written by `resRootsOf`. A run has one workspace, its working directory,
+ * so every scene of it shares the roots and what they read.
+ */
+const resRootsByWorkspace = new Map<string, ResRoots>();
+
+function resRootsOf(workspace: string): ResRoots {
+  let roots = resRootsByWorkspace.get(workspace);
+  if (roots === undefined) {
+    roots = createDiskResRoots(workspace);
+    resRootsByWorkspace.set(workspace, roots);
+  }
+  return roots;
+}
+
+/**
  * Reads and lints a single TSCN file, returning raw diagnostics with no
  * presentation applied. It also reads the files the scene uses from its
  * `res://` root: its Godot project, or its own directory when no project holds
@@ -116,8 +132,8 @@ export async function lintFileDiagnostics(filePath: string): Promise<FileDiagnos
   try {
     const absolutePath = resolve(filePath);
     const content = await readFile(absolutePath, 'utf-8');
-    const provider = await resProviderForFile(absolutePath, process.cwd());
-    return { filePath, diagnostics: await linter.lintComplete(content, provider) };
+    const root = await resRootsOf(process.cwd()).rootOf(absolutePath);
+    return { filePath, diagnostics: await linter.lintComplete(content, root) };
   } catch (error) {
     return {
       filePath,

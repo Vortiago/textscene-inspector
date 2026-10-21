@@ -1,174 +1,141 @@
 // @vitest-environment node
-/** A scene's `res://` root read from disk: the files under the nearest `project.godot`, or a loose scene's own directory. */
+/** The `node:fs` adapter of {@link ResRoots}: what only a real disk shows, such as links, real stamps and bytes. */
 
 import { mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  forgetDiskState,
-  isFile,
-  listProjectPaths,
-  providerForRoot,
-  resProviderForFile,
-  resRootForDir,
-  resRootForFile,
-} from './diskProject';
+import { createDiskResRoots } from './diskProject';
 
 let tempDir: string;
 let projectDir: string;
 let scenePath: string;
-/** The project root, spelled with forward slashes as the walk spells it. */
-let root: string;
+
+/** `path` spelled with forward slashes, as a root's path is. */
+function forward(path: string): string {
+  return path.replace(/\\/g, '/');
+}
 
 beforeAll(() => {
   tempDir = mkdtempSync(join(tmpdir(), 'tscn-disk-project-'));
   projectDir = join(tempDir, 'game');
   mkdirSync(join(projectDir, 'scenes', 'deep'), { recursive: true });
   mkdirSync(join(projectDir, 'models'));
-  mkdirSync(join(projectDir, '.godot', 'imported'), { recursive: true });
-  // A nested project: the editor's scan does not enter it, and neither does the listing.
-  mkdirSync(join(projectDir, 'vendor', 'other'), { recursive: true });
   writeFileSync(join(projectDir, 'project.godot'), 'config_version=5\n');
   writeFileSync(join(projectDir, 'models', 'tree.glb'), new Uint8Array([0x67, 0x6c, 0x54, 0x46]));
   writeFileSync(join(projectDir, 'scenes', 'level.tscn'), '[gd_scene format=3]\n');
-  writeFileSync(join(projectDir, 'vendor', 'other', 'project.godot'), 'config_version=5\n');
-  writeFileSync(join(projectDir, 'vendor', 'other', 'nested.tscn'), '[gd_scene format=3]\n');
-  writeFileSync(join(projectDir, '.godot', 'imported', 'cache.ctex'), 'generated');
-  writeFileSync(join(tempDir, 'secret.txt'), 'outside the project');
   scenePath = join(projectDir, 'scenes', 'deep', 'level.tscn');
-  root = projectDir.replace(/\\/g, '/');
 });
 
 afterAll(() => {
   rmSync(tempDir, { recursive: true, force: true });
 });
 
-describe('resRootForFile', () => {
+describe('createDiskResRoots rootOf', () => {
   it('gives the project root for a scene inside a project', async () => {
-    expect(await resRootForFile(scenePath, null)).toBe(root);
+    expect((await createDiskResRoots(null).rootOf(scenePath))?.path).toBe(forward(projectDir));
+  });
+
+  it('finds the project.godot above a workspace that lies inside the project', async () => {
+    // A CLI run inside `game/scenes` takes the project above it: the walk has no bound but the filesystem root.
+    const workspace = join(projectDir, 'scenes');
+
+    expect((await createDiskResRoots(workspace).rootOf(scenePath))?.path).toBe(forward(projectDir));
   });
 
   it("gives the scene's own directory for a loose scene inside the workspace", async () => {
     const loose = join(tempDir, 'loose', 'dungeon');
-    expect(await resRootForFile(join(loose, 'dungeon.tscn'), tempDir)).toBe(loose.replace(/\\/g, '/'));
-  });
 
-  it('gives null for a loose scene outside the workspace, so no listing reads its whole directory', async () => {
-    const loose = join(tempDir, 'loose', 'dungeon');
-    expect(await resRootForFile(join(loose, 'dungeon.tscn'), join(tempDir, 'game'))).toBeNull();
-  });
-
-  it('gives null for a loose scene with no workspace', async () => {
-    expect(await resRootForFile(join(tempDir, 'loose', 'dungeon.tscn'), null)).toBeNull();
-  });
-
-  it('gives null for a filesystem root, which no directory holds', async () => {
-    expect(await resRootForFile('/', '/')).toBeNull();
-  });
-});
-
-describe('resRootForDir', () => {
-  it('stops at the directory itself when it holds project.godot', async () => {
-    const own = join(tempDir, 'own', 'inner');
-    mkdirSync(own, { recursive: true });
-    writeFileSync(join(own, 'project.godot'), 'config_version=5\n');
-
-    expect(await resRootForDir(own, null)).toBe(own.replace(/\\/g, '/'));
-  });
-
-  it('gives null for a directory outside every project with no workspace', async () => {
-    expect(await resRootForDir(join(tempDir, 'loose'), null)).toBeNull();
-  });
-});
-
-describe('resProviderForFile', () => {
-  it("reads a loose scene's res:// path under its own directory inside the workspace", async () => {
-    const loose = join(tempDir, 'loose-read');
-    mkdirSync(loose);
-    writeFileSync(join(loose, 'floor.png'), new Uint8Array([0x89, 0x50]));
-    const provider = await resProviderForFile(join(loose, 'dungeon.tscn'), tempDir);
-
-    expect([
-      ...new Uint8Array((await provider!.loadResource('res://floor.png', 'Texture2D')) as ArrayBuffer),
-    ]).toEqual([0x89, 0x50]);
-  });
-
-  it('gives no provider for a loose scene outside the workspace', async () => {
-    expect(await resProviderForFile(join(tempDir, 'loose', 'scene.tscn'), projectDir)).toBeNull();
-  });
-
-  it('gives no provider for a loose scene with no workspace', async () => {
-    expect(await resProviderForFile(join(tempDir, 'loose', 'scene.tscn'), null)).toBeNull();
-  });
-
-  it('reads a res:// path under the nearest project.godot as bytes', async () => {
-    const provider = await resProviderForFile(scenePath, null);
-    const data = await provider!.loadResource('res://models/tree.glb', 'PackedScene');
-
-    expect(data).toBeInstanceOf(ArrayBuffer);
-    expect([...new Uint8Array(data as ArrayBuffer)]).toEqual([0x67, 0x6c, 0x54, 0x46]);
-  });
-
-  it('reads a text resource as a string', async () => {
-    const provider = await resProviderForFile(scenePath, null);
-    expect(await provider!.loadResource('res://scenes/level.tscn', 'PackedScene')).toBe(
-      '[gd_scene format=3]\n'
+    expect((await createDiskResRoots(tempDir).rootOf(join(loose, 'dungeon.tscn')))?.path).toBe(
+      forward(loose)
     );
   });
 
-  it('gives null for a file the project does not hold', async () => {
-    const provider = await resProviderForFile(scenePath, null);
-    expect(await provider!.loadResource('res://models/missing.glb', 'PackedScene')).toBeNull();
-  });
+  it('gives null for a loose scene outside the workspace', async () => {
+    const roots = createDiskResRoots(projectDir);
 
-  it('refuses a path that escapes the project root', async () => {
-    const provider = await resProviderForFile(scenePath, null);
-    expect(await provider!.loadResource('res://../secret.txt', 'TextFile')).toBeNull();
-  });
-
-  it('refuses a path that is not res://', async () => {
-    const provider = await resProviderForFile(scenePath, null);
-    expect(await provider!.loadResource(join(tempDir, 'secret.txt'), 'TextFile')).toBeNull();
-  });
-
-  it('hands back one provider for every scene of a project, so its verdicts serve the whole run', async () => {
-    const other = join(projectDir, 'scenes', 'level.tscn');
-    expect(await resProviderForFile(other, null)).toBe(await resProviderForFile(scenePath, null));
+    expect(await roots.rootOf(join(tempDir, 'loose', 'dungeon', 'dungeon.tscn'))).toBeNull();
   });
 });
 
-describe('resProviderForFile stamp', () => {
-  it('stamps a file with its modification time and size', async () => {
-    const provider = await resProviderForFile(scenePath, null);
-    const file = join(projectDir, 'models', 'tree.glb');
-    const { mtimeMs, size } = statSync(file);
+describe('createDiskResRoots invalidate', () => {
+  /** A fresh directory per test, since each one changes the disk after a first read. */
+  function freshDir(): string {
+    return mkdtempSync(join(tmpdir(), 'tscn-disk-forget-'));
+  }
 
-    expect(await provider!.stamp!('res://models/tree.glb')).toBe(`${mtimeMs}:${size}`);
+  it('moves the root of a scene when a project.godot is created above it, and back when it is deleted', async () => {
+    const dir = freshDir();
+    mkdirSync(join(dir, 'scenes'));
+    const scene = join(dir, 'scenes', 'level.tscn');
+    const roots = createDiskResRoots(dir);
+    try {
+      expect((await roots.rootOf(scene))?.path).toBe(forward(join(dir, 'scenes')));
+
+      writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
+      roots.invalidate(join(dir, 'project.godot'));
+      expect((await roots.rootOf(scene))?.path).toBe(forward(dir));
+
+      rmSync(join(dir, 'project.godot'));
+      roots.invalidate(join(dir, 'project.godot'));
+      expect((await roots.rootOf(scene))?.path).toBe(forward(join(dir, 'scenes')));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
-  it('changes when the file is rewritten', async () => {
-    const provider = await resProviderForFile(scenePath, null);
+  it('lets the listing see a file created after the first listing', async () => {
+    const dir = freshDir();
+    writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
+    const roots = createDiskResRoots(null);
+    try {
+      const root = (await roots.rootOf(join(dir, 'level.tscn')))!;
+      await root.listPaths();
+      writeFileSync(join(dir, 'late.png'), '');
+      roots.invalidate(join(dir, 'late.png'));
+
+      expect(await root.listPaths()).toContain('res://late.png');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('a disk root', () => {
+  it('reads a binary resource as bytes and a text resource as a string', async () => {
+    const root = (await createDiskResRoots(null).rootOf(scenePath))!;
+    const bytes = await root.loadResource('res://models/tree.glb', 'PackedScene');
+
+    expect([...new Uint8Array(bytes as ArrayBuffer)]).toEqual([0x67, 0x6c, 0x54, 0x46]);
+    expect(await root.loadResource('res://scenes/level.tscn', 'PackedScene')).toBe('[gd_scene format=3]\n');
+  });
+
+  it('stamps a file with its modification time and size', async () => {
+    const root = (await createDiskResRoots(null).rootOf(scenePath))!;
+    const { mtimeMs, size } = statSync(join(projectDir, 'models', 'tree.glb'));
+
+    expect(await root.stamp('res://models/tree.glb')).toBe(`${mtimeMs}:${size}`);
+  });
+
+  it('changes the stamp of a file that is rewritten', async () => {
+    const root = (await createDiskResRoots(null).rootOf(scenePath))!;
     const file = join(projectDir, 'models', 'stamped.glb');
     writeFileSync(file, new Uint8Array([1]));
-    const before = await provider!.stamp!('res://models/stamped.glb');
+    const before = await root.stamp('res://models/stamped.glb');
     writeFileSync(file, new Uint8Array([1, 2]));
 
-    expect(await provider!.stamp!('res://models/stamped.glb')).not.toBe(before);
+    expect(await root.stamp('res://models/stamped.glb')).not.toBe(before);
   });
 
-  it('gives null for a file the project does not hold', async () => {
-    const provider = await resProviderForFile(scenePath, null);
-    expect(await provider!.stamp!('res://models/missing.glb')).toBeNull();
-  });
+  it('resolves a file and not a directory', async () => {
+    const root = (await createDiskResRoots(null).rootOf(scenePath))!;
 
-  it('gives null for a path that escapes the project root', async () => {
-    const provider = await resProviderForFile(scenePath, null);
-    expect(await provider!.stamp!('res://../secret.txt')).toBeNull();
+    expect(await root.resolve('res://models/tree.glb')).toBe(forward(join(projectDir, 'models', 'tree.glb')));
+    expect(await root.resolve('res://models')).toBeNull();
   });
 });
 
-describe('resProviderForFile listFiles', () => {
+describe('a disk root listing', () => {
   let listedDir: string;
 
   beforeAll(() => {
@@ -190,121 +157,42 @@ describe('resProviderForFile listFiles', () => {
     }
     // A link back up the tree: the walk follows it once and does not loop.
     symlinkSync(join(listedDir, 'addons'), join(listedDir, 'addons', 'x', 'loop'), 'dir');
+    // The scan follows a link to a directory, and a link to nothing is no directory (`dir_access_unix.cpp:167-175`).
+    mkdirSync(join(tempDir, 'linked-target'));
+    writeFileSync(join(tempDir, 'linked-target', 'inside.png'), '');
+    symlinkSync(join(tempDir, 'linked-target'), join(listedDir, 'linked'), 'dir');
+    symlinkSync(join(listedDir, 'absent'), join(listedDir, 'dangling'), 'dir');
   });
 
+  async function listedRoot() {
+    return (await createDiskResRoots(null).rootOf(join(listedDir, 'scenes', 'level.tscn')))!;
+  }
+
   it("lists each GDExtension the editor's scan finds, in any case, and none it skips", async () => {
-    const provider = await resProviderForFile(join(listedDir, 'scenes', 'level.tscn'), null);
-    const listed = await provider!.listFiles!('gdextension');
+    const listed = await (await listedRoot()).listFiles('gdextension');
 
     expect(listed).toContain('res://bin/a.gdextension');
     expect(listed).toContain('res://addons/x/bin/B.GDExtension');
-    expect(listed!.filter((path) => !path.startsWith('res://addons/x/loop/')).sort()).toEqual([
+    expect(listed.filter((path) => !path.startsWith('res://addons/x/loop/')).sort()).toEqual([
       'res://addons/x/bin/B.GDExtension',
       'res://bin/a.gdextension',
     ]);
   });
 
-  it('lists the project once per run, since a run sees one state of it', async () => {
-    const provider = await resProviderForFile(join(listedDir, 'scenes', 'level.tscn'), null);
-    const first = await provider!.listFiles!('gdextension');
-    writeFileSync(join(listedDir, 'bin', 'late.gdextension'), '');
+  it('lists the files of a project as res:// paths, sorted, without the data directory or a nested project', async () => {
+    const paths = await (await listedRoot()).listPaths();
 
-    expect(await provider!.listFiles!('gdextension')).toEqual(first);
-  });
-});
-
-describe('providerForRoot', () => {
-  it('hands back one provider for a root, so its verdicts are shared', () => {
-    expect(providerForRoot(root)).toBe(providerForRoot(root));
-  });
-});
-
-describe('listProjectPaths', () => {
-  it('lists every project file as a res:// path, sorted', async () => {
-    const paths = await listProjectPaths(root);
-
-    expect(paths).toContain('res://project.godot');
-    expect(paths).toContain('res://models/tree.glb');
     expect(paths).toContain('res://scenes/level.tscn');
+    expect(paths.some((path) => path.startsWith('res://.godot/') || path.startsWith('res://nested/'))).toBe(
+      false
+    );
     expect([...paths]).toEqual([...paths].sort());
   });
 
-  it('skips the .godot data directory and a nested project, as the editor scan does', async () => {
-    const paths = await listProjectPaths(root);
+  it('enters a link to a directory, and lists a dangling link as a file', async () => {
+    const paths = await (await listedRoot()).listPaths();
 
-    expect(paths.some((path) => path.startsWith('res://.godot/'))).toBe(false);
-    expect(paths.some((path) => path.startsWith('res://vendor/'))).toBe(false);
-  });
-
-  it('lists a root once, so a later file is not seen', async () => {
-    const first = await listProjectPaths(root);
-    writeFileSync(join(projectDir, 'models', 'late.glb'), new Uint8Array([1]));
-
-    expect(await listProjectPaths(root)).toEqual(first);
-  });
-});
-
-describe('isFile', () => {
-  it('is true for a file that exists', async () => {
-    expect(await isFile(join(projectDir, 'project.godot'))).toBe(true);
-  });
-
-  it('is false for a file that is absent', async () => {
-    expect(await isFile(join(tempDir, 'nope.tscn'))).toBe(false);
-  });
-
-  it('is false for a directory, which no editor opens as a document', async () => {
-    expect(await isFile(join(projectDir, 'models'))).toBe(false);
-  });
-});
-
-describe('forgetDiskState', () => {
-  /** A fresh directory per test, since each one changes the disk after a first read. */
-  function freshDir(): string {
-    return mkdtempSync(join(tmpdir(), 'tscn-disk-forget-'));
-  }
-
-  it('lets the listing see a file created after the first listing', async () => {
-    const dir = freshDir();
-    writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
-    const forwardRoot = dir.replace(/\\/g, '/');
-    try {
-      await listProjectPaths(forwardRoot);
-      writeFileSync(join(dir, 'late.png'), '');
-      forgetDiskState();
-
-      expect(await listProjectPaths(forwardRoot)).toContain('res://late.png');
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it('lets the walk find a project.godot created after a walk found none', async () => {
-    const dir = freshDir();
-    mkdirSync(join(dir, 'scenes'));
-    try {
-      await resRootForDir(join(dir, 'scenes'), null);
-      writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
-      forgetDiskState();
-
-      expect(await resRootForDir(join(dir, 'scenes'), null)).toBe(dir.replace(/\\/g, '/'));
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("lets a provider's file listing see a file created after the first listing", async () => {
-    const dir = freshDir();
-    writeFileSync(join(dir, 'project.godot'), 'config_version=5\n');
-    const forwardRoot = dir.replace(/\\/g, '/');
-    try {
-      await providerForRoot(forwardRoot).listFiles!('glb');
-      writeFileSync(join(dir, 'late.glb'), new Uint8Array([1]));
-      forgetDiskState();
-
-      expect(await providerForRoot(forwardRoot).listFiles!('glb')).toContain('res://late.glb');
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
+    expect(paths).toContain('res://linked/inside.png');
+    expect(paths).toContain('res://dangling');
   });
 });

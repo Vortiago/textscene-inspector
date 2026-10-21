@@ -21,7 +21,7 @@ function withoutTrailingSlashes(path: string): string {
 }
 
 /** `path` with forward slashes and no trailing one, unless it is a filesystem root such as `/` or `c:/`. */
-function forwardSlashes(path: string): string {
+export function forwardSlashes(path: string): string {
   const trimmed = withoutTrailingSlashes(path.replace(/\\/g, '/'));
   return trimmed === '' || /^[A-Za-z]:$/.test(trimmed) ? `${trimmed}/` : trimmed;
 }
@@ -46,14 +46,23 @@ export function pathCaseOf(platform: string | undefined): PathCase {
   return platform === 'win32' || platform === 'darwin' ? 'insensitive' : 'sensitive';
 }
 
+/** `path` as a filesystem with `pathCase` compares it: two paths that name one place share a key. */
+function pathKey(path: string, pathCase: PathCase): string {
+  return pathCase === 'insensitive' ? comparablePath(path) : forwardSlashes(path);
+}
+
+/** Whether `a` and `b` name one path on a filesystem with `pathCase`. */
+export function isSamePath(a: string, b: string, pathCase: PathCase): boolean {
+  return pathKey(a, pathCase) === pathKey(b, pathCase);
+}
+
 /**
  * Whether `candidate` is `root` or under it. The separator is the boundary, so `/proj-other` is not under `/proj`.
  * Case counts unless `pathCase` is insensitive, so on Linux `/w/game` is not under `/w/Game`.
  */
 export function isWithinRoot(root: string, candidate: string, pathCase: PathCase): boolean {
-  const keyOf = pathCase === 'insensitive' ? comparablePath : forwardSlashes;
-  const rootKey = keyOf(root);
-  const candidateKey = keyOf(candidate);
+  const rootKey = pathKey(root, pathCase);
+  const candidateKey = pathKey(candidate, pathCase);
   if (candidateKey === rootKey) return true;
   const prefix = rootKey.endsWith('/') ? rootKey : `${rootKey}/`;
   return candidateKey.startsWith(prefix);

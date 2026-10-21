@@ -5,12 +5,11 @@
  */
 
 import { beforeAll, describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
-import { basename, dirname, join, relative, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { basename, join, relative } from 'node:path';
 import { Linter } from './Linter.js';
 import { parseHeading } from '../parser/utils.js';
-import { providerForRoot } from '../resources/diskProject.js';
-import { findResRoot, parentDir, projectFileIn } from '../resources/resPath.js';
+import { createDiskResRoots } from '../resources/diskProject.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { isUndeclaredRuleName } from './testing/ruleNames.js';
 import type { Diagnostic } from './types.js';
@@ -147,15 +146,8 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
 const NEGATIVE_FIXTURE_COUNT = 7;
 
-/**
- * The project a fixture's `res://` paths resolve in: the nearest `project.godot` from its folder up to
- * `scenes/fixtures`, or null for the flat corpus, which is no project.
- */
-function projectRootOf(path: string): Promise<string | null> {
-  const isFixturesDir = (dir: string) => resolve(dir) === fixtures;
-  const isProject = async (dir: string) => existsSync(projectFileIn(dir));
-  return findResRoot(dirname(path), parentDir, isFixturesDir, isProject, () => false);
-}
+/** The fixtures' roots: a fixture is linted in the nearest `project.godot` above it, and a flat one in none. */
+const fixtureRoots = createDiskResRoots(null);
 
 /** One fixture: where it lies, its name relative to `scenes/fixtures`, and the project it is linted in. */
 interface Fixture {
@@ -165,8 +157,7 @@ interface Fixture {
 }
 
 async function fixture(path: string): Promise<Fixture> {
-  const root = await projectRootOf(path);
-  return { path, name: relative(fixtures, path), provider: root === null ? null : providerForRoot(root) };
+  return { path, name: relative(fixtures, path), provider: await fixtureRoots.rootOf(path) };
 }
 
 function lintFixture({ path, provider }: Fixture): Promise<Diagnostic[]> {

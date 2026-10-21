@@ -192,6 +192,11 @@ It reads the text through a **ParseObserver** on the scanning loop, seats the `[
 Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0049).
 _Avoid_: "LSP" for the engine. LSP names the protocol, which the `tscn-lsp` server speaks. "Language service".
 
+**Res root** (`resources/resRoots.ts`):
+The directory a scene's `res://` paths resolve under: the nearest `project.godot` above the scene, else the scene's own directory when it lies inside the workspace, else none.
+A scene with the second kind is a loose scene, and Godot has no `res://` for it.
+_Avoid_: "project root" for the second kind.
+
 **Agent tool**:
 A tool the VS Code extension registers through `vscode.lm` for a coding agent in chat.
 The agent tools lint a scene, read its node tree, open or capture its preview, and list its missing resources.
