@@ -14,6 +14,7 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { drawnTag, useMeshContent, type SurfacedMesh } from '../../../r3f/meshes/meshContent';
+import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
@@ -62,7 +63,7 @@ export function MeshInstance3D({ node, children }: NodeComponentProps) {
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
   const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
 
-  const drawsPoints = content.kind === 'surfaced' && content.mesh.drawsPoints;
+  const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.geometry);
 
   const shellProps = {
     name: node.name,
@@ -219,8 +220,7 @@ function MeshShell({
       position={position}
       rotation={rotation}
       scale={scale}
-      // No shadow for a point: three's depth materials write no gl_PointSize, so its size is the driver's.
-      castShadow={shadow.castShadow && !drawsPoints}
+      castShadow={shadow.castShadow}
       // three fires these per draw group, the shadow pair after `getDepthMaterial` has
       // set the side (`WebGLShadowMap.js:488,546,560`): the only per-surface reach into
       // a draw of an object whose materials and depth material three shares.
@@ -267,7 +267,11 @@ function MeshSurfaces({ mesh, overrides }: { mesh: SurfacedMesh; overrides: Mesh
   return (
     <>
       <primitive object={mesh.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} triplanarMesh={mesh.primitive} drawsPoints={mesh.drawsPoints} />
+      <SurfaceMaterialSlots
+        sources={sources}
+        triplanarMesh={mesh.primitive}
+        drawsPoints={geometryDrawsPoints(mesh.geometry)}
+      />
     </>
   );
 }

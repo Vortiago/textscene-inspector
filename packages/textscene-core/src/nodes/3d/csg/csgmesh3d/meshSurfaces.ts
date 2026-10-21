@@ -80,8 +80,8 @@ export function meshSurfaces(mesh: CsgMesh): CsgMeshSurface[] {
 }
 
 /**
- * An ArrayMesh's decoded surfaces. A mesh none of whose surfaces decodes contributes nothing, as
- * Godot's brush skips a surface with no vertices (`csg_shape.cpp:1149-1151`).
+ * An ArrayMesh's decoded triangle surfaces. A mesh none of whose surfaces decodes contributes
+ * nothing, as Godot's brush skips a surface with no vertices (`csg_shape.cpp:1149-1151`).
  */
 function arrayMeshSurfaces(
   decode: () => ArrayMeshData,
@@ -95,13 +95,16 @@ function arrayMeshSurfaces(
     warn(`[CSGMesh3D] ${label} builds no brush: ${String(error)}`);
     return [];
   }
-  return mesh.surfaces.map((surface) => ({
-    positions: surface.positions,
-    normals: surface.normals,
-    uvs: surface.uvs,
-    indices: surface.indices,
-    material: materialOf(surface),
-  }));
+  // A points surface adds nothing: the brush builder skips every surface that is not triangles.
+  return mesh.surfaces
+    .filter((surface) => !surface.isPoints)
+    .map((surface) => ({
+      positions: surface.positions,
+      normals: surface.normals,
+      uvs: surface.uvs,
+      indices: surface.indices,
+      material: materialOf(surface),
+    }));
 }
 
 /**

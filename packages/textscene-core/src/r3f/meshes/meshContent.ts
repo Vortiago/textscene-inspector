@@ -20,7 +20,7 @@ import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { fileMaterialSources, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useUndrawnMeshReport } from '../contexts/UndrawnMeshesContext';
-import { primitiveMeshDrawsPoints, primitiveMeshGeometry } from './primitiveMeshGeometry';
+import { primitiveMeshGeometry } from './primitiveMeshGeometry';
 
 /** A mesh's draw groups and each one's own material, whichever file holds it. */
 export interface SurfacedMesh {
@@ -31,11 +31,9 @@ export interface SurfacedMesh {
   materials: readonly (MaterialSource | undefined)[];
   /** The PrimitiveMesh drawn, which a triplanar material tiles against. Absent for an ArrayMesh. */
   primitive?: TscnInternalResource;
-  /** The geometry is Godot's `PRIMITIVE_POINTS`: a drawer mounts `THREE.Points`, not a `THREE.Mesh`. */
-  drawsPoints: boolean;
 }
 
-/** The R3F tag that draws a surface: `THREE.Points` for Godot's `PRIMITIVE_POINTS`, else a `THREE.Mesh`. */
+/** The R3F tag that draws a surface: `THREE.Points` for geometry of Godot's `PRIMITIVE_POINTS`, else a `THREE.Mesh`. */
 export function drawnTag(drawsPoints: boolean): 'points' | 'mesh' {
   return drawsPoints ? 'points' : 'mesh';
 }
@@ -94,7 +92,6 @@ function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh {
     geometry: mesh.geometry,
     surfaceIndices: mesh.surfaceIndices,
     materials: fileMaterialSources(mesh.materialPaths),
-    drawsPoints: false,
   };
 }
 
@@ -113,7 +110,6 @@ function usePrimitiveMesh(source: MeshSource | null): SurfacedMesh | null {
             surfaceIndices: [0],
             materials: [material],
             primitive: source.resource,
-            drawsPoints: primitiveMeshDrawsPoints(source.resource),
           }
         : null,
     [geometry, material, source]
@@ -146,7 +142,6 @@ function useSceneArrayMesh(mesh: ScopedResource | null): SurfacedMesh | null {
       geometry: decoded.geometry,
       surfaceIndices: decoded.surfaceIndices,
       materials: decoded.materialRefs.map((ref) => resolveMaterialSource(ref, resources)),
-      drawsPoints: false,
     };
   }, [decoded, resources]);
 }

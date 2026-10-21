@@ -36,10 +36,10 @@ describe('MeshInstance3D with a PointMesh', () => {
     expect(Array.from(points.geometry.getAttribute('position').array)).toEqual([0, 0, 0]);
   });
 
-  // three's depth materials write no gl_PointSize, so a point's shadow would be the driver's size.
-  it('casts no shadow', async () => {
+  // Godot rasterises a point into its shadow map, at the point size.
+  it('casts a shadow, as a mesh of the default cast_shadow does', async () => {
     const renderer = await render();
-    expect(instanceAs<THREE.Points>(renderer.scene.findByType('Points')).castShadow).toBe(false);
+    expect(instanceAs<THREE.Points>(renderer.scene.findByType('Points')).castShadow).toBe(true);
   });
 
   it('draws no triangle mesh and no placeholder box', async () => {

@@ -1,6 +1,6 @@
 /** ArrayMesh decoded data: one entry per decodable surface. */
 
-/** One decoded mesh surface. Every surface here is a TRIANGLES primitive. */
+/** One decoded mesh surface: a TRIANGLES primitive, or POINTS when `isPoints` is set. */
 export interface ArrayMeshSurface {
   /**
    * The surface's position in the mesh's `_surfaces` array, not in this one,
@@ -26,10 +26,12 @@ export interface ArrayMeshSurface {
   /** Per-vertex tangents `vertexCount × 4`, `w` the binormal sign, or undefined when the surface has none. */
   tangents?: Float32Array;
   /**
-   * Three per triangle, in one width for every surface: `godotSurfacesGeometry` copies them into
-   * the width the merged mesh needs.
+   * Three per triangle, or one per drawn point, in one width for every surface:
+   * `godotSurfacesGeometry` copies them into the width the merged mesh needs.
    */
   indices: Uint32Array;
+  /** Godot's `PRIMITIVE_POINTS`: one point per index. Absent for a triangle surface. */
+  isPoints?: boolean;
   /** Resolved `res://` path of the surface's material, if it has one. */
   materialPath?: string;
   /**

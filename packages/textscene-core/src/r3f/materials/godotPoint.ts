@@ -12,16 +12,19 @@ import type { StandardMaterial3DScalars } from '../../resources/materials/standa
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 
 const POINT_SIZE_KEY = 'godotPointSize';
+const POINT_PIXEL_RATIO_KEY = 'godotPointPixelRatio';
+const POINT_COORD_ALBEDO_KEY = 'godotPointCoordAlbedo';
 const PROJECT_CHUNK = '#include <project_vertex>';
 
 /** How a material draws the points of a points surface. */
 export interface PointDraw {
-  /**
-   * The side of each point's square in framebuffer pixels: `point_size` under `use_point_size`,
-   * else 1, times the canvas pixel ratio. Godot's pixels are its viewport's, which a canvas of
-   * pixel ratio 2 draws twice over.
-   */
+  /** The side of each point's square in Godot's pixels: `point_size` under `use_point_size`, else 1. */
   pixels: number;
+  /**
+   * The canvas pixel ratio. Godot's pixels are its viewport's, which a canvas of ratio 2 draws
+   * twice over. A shadow map's texels are Godot's own, so only the colour pass reads it.
+   */
+  pixelRatio: number;
   /** `use_point_size` is on: the albedo map is read across the point's square, not at the UV. */
   samplesAlbedoAtPointCoord: boolean;
 }
@@ -29,25 +32,41 @@ export interface PointDraw {
 /** `scalars` as a points draw on a canvas of `pixelRatio`, or Godot's default surface for none. */
 export function pointDrawOf(scalars: StandardMaterial3DScalars | null, pixelRatio: number): PointDraw {
   return scalars?.usesPointSize
-    ? { pixels: scalars.pointSize * pixelRatio, samplesAlbedoAtPointCoord: true }
-    : { pixels: BASE_MATERIAL_3D_DEFAULTS.pointSize * pixelRatio, samplesAlbedoAtPointCoord: false };
+    ? { pixels: scalars.pointSize, pixelRatio, samplesAlbedoAtPointCoord: true }
+    : { pixels: BASE_MATERIAL_3D_DEFAULTS.pointSize, pixelRatio, samplesAlbedoAtPointCoord: false };
 }
 
-/** What a material compiles with to draw a points surface. */
-const GODOT_POINT_SIZE: ProgramInjection = {
-  cacheKey: 'godot-point-size',
-  onBeforeCompile(shader) {
-    shader.uniforms[POINT_SIZE_KEY] = recordedUniform(
-      this,
-      POINT_SIZE_KEY,
-      BASE_MATERIAL_3D_DEFAULTS.pointSize
-    );
-    shader.vertexShader = `uniform float ${POINT_SIZE_KEY};\n${shader.vertexShader.replace(
-      PROJECT_CHUNK,
-      `${PROJECT_CHUNK}\n\tgl_PointSize = ${POINT_SIZE_KEY};`
-    )}`;
-  },
+/** The uniforms of a points colour pass, each with the value it holds until the material's userData records one. */
+const POINT_SIZE_UNIFORMS = {
+  [POINT_SIZE_KEY]: BASE_MATERIAL_3D_DEFAULTS.pointSize,
+  [POINT_PIXEL_RATIO_KEY]: 1,
 };
+
+/** Writes `gl_PointSize` as the product of `uniforms`, each recorded from the material's userData. */
+function pointSizeInjection(cacheKey: string, uniforms: Readonly<Record<string, number>>): ProgramInjection {
+  const keys = Object.keys(uniforms);
+  const declarations = keys.map((key) => `uniform float ${key};`).join('\n');
+  return {
+    cacheKey,
+    onBeforeCompile(shader) {
+      for (const [key, initial] of Object.entries(uniforms)) {
+        shader.uniforms[key] = recordedUniform(this, key, initial);
+      }
+      shader.vertexShader = `${declarations}\n${shader.vertexShader.replace(
+        PROJECT_CHUNK,
+        `${PROJECT_CHUNK}\n\tgl_PointSize = ${keys.join(' * ')};`
+      )}`;
+    },
+  };
+}
+
+/** What a material compiles with to draw a points surface, at its size in canvas pixels. */
+const GODOT_POINT_SIZE = pointSizeInjection('godot-point-size', POINT_SIZE_UNIFORMS);
+
+/** What a depth draw compiles with to rasterise a point at its size in the shadow map's texels. */
+const GODOT_POINT_SHADOW_SIZE = pointSizeInjection('godot-point-shadow-size', {
+  [POINT_SIZE_KEY]: POINT_SIZE_UNIFORMS[POINT_SIZE_KEY],
+});
 
 const MAP_PARS_CHUNK = '#include <map_pars_fragment>';
 
@@ -75,7 +94,7 @@ const pointBags = new WeakMap<StandardMaterialBag, Map<string, StandardMaterialB
  */
 export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefined): StandardMaterialBag {
   if (!draw) return bag;
-  const drawKey = `${draw.pixels}:${draw.samplesAlbedoAtPointCoord}`;
+  const drawKey = `${draw.pixels}:${draw.pixelRatio}:${draw.samplesAlbedoAtPointCoord}`;
   const forms = pointBags.get(bag) ?? new Map<string, StandardMaterialBag>();
   pointBags.set(bag, forms);
   const known = forms.get(drawKey);
@@ -86,8 +105,13 @@ export function withPointDraw(bag: StandardMaterialBag, draw: PointDraw | undefi
 }
 
 function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBag {
-  const userData = { ...bag.props.userData, [POINT_SIZE_KEY]: draw.pixels };
   const readsMap = draw.samplesAlbedoAtPointCoord && Boolean(bag.props.map);
+  const userData = {
+    ...bag.props.userData,
+    [POINT_SIZE_KEY]: draw.pixels,
+    [POINT_PIXEL_RATIO_KEY]: draw.pixelRatio,
+    [POINT_COORD_ALBEDO_KEY]: readsMap,
+  };
   return {
     ...bag,
     props: { ...bag.props, side: FrontSide, userData },
@@ -97,4 +121,19 @@ function pointBag(bag: StandardMaterialBag, draw: PointDraw): StandardMaterialBa
       readsMap ? GODOT_POINT_COORD_ALBEDO : undefined,
     ]),
   };
+}
+
+const GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD = composeInjections([
+  GODOT_POINT_SHADOW_SIZE,
+  GODOT_POINT_COORD_ALBEDO,
+])!;
+
+/**
+ * What a depth draw compiles with to cut a points surface's shadow as its colour pass draws the
+ * points: at their size, and across the square where the albedo map is read. Undefined for a
+ * surface that draws none.
+ */
+export function pointShadowSizeInjection(userData: Record<string, unknown>): ProgramInjection | undefined {
+  if (!(POINT_SIZE_KEY in userData)) return undefined;
+  return userData[POINT_COORD_ALBEDO_KEY] ? GODOT_POINT_SHADOW_SIZE_AT_POINT_COORD : GODOT_POINT_SHADOW_SIZE;
 }

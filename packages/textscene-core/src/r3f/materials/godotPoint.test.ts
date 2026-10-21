@@ -6,8 +6,8 @@ import { parseStandardMaterial3DScalars } from '../../resources/materials/standa
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 
 const BAG: StandardMaterialBag = { materialClass: 'standard', props: { color: 'red' } };
-const SIZE_6: PointDraw = { pixels: 6, samplesAlbedoAtPointCoord: false };
-const SIZE_6_AT_COORD: PointDraw = { pixels: 6, samplesAlbedoAtPointCoord: true };
+const SIZE_6: PointDraw = { pixels: 6, pixelRatio: 1, samplesAlbedoAtPointCoord: false };
+const SIZE_6_AT_COORD: PointDraw = { ...SIZE_6, samplesAlbedoAtPointCoord: true };
 const BOUND_MAP: StandardMaterialBag = { ...BAG, props: { map: new THREE.Texture() } };
 
 /** What `bag` as a points material leaves of the shaders, and the material it compiles on. */
@@ -32,7 +32,7 @@ describe.each([
 
   // `scene_forward_clustered.glsl:724` writes `gl_PointSize = point_size`.
   it('writes gl_PointSize from the point size uniform', () => {
-    expect(patched).toContain('gl_PointSize = godotPointSize;');
+    expect(patched).toContain('gl_PointSize = godotPointSize * godotPointPixelRatio;');
     expect(patched).toContain('uniform float godotPointSize;');
   });
 
@@ -44,6 +44,17 @@ describe.each([
 describe('the point size uniform', () => {
   it('reads the size of the draw', () => {
     expect(compiled(BAG, { ...SIZE_6, pixels: 20 }).shader.uniforms.godotPointSize!.value).toBe(20);
+  });
+
+  // Godot's pixels are its viewport's, and a canvas of pixel ratio 2 has twice as many per side.
+  it('multiplies the size by the canvas pixel ratio in the colour pass', () => {
+    const { shader } = compiled(
+      BAG,
+      { ...SIZE_6, pixelRatio: 2 },
+      { vertexShader: THREE.ShaderLib.basic.vertexShader }
+    );
+    expect(shader.vertexShader).toContain('gl_PointSize = godotPointSize * godotPointPixelRatio;');
+    expect(shader.uniforms.godotPointPixelRatio!.value).toBe(2);
   });
 
   it('follows a later change to the userData, so a new size needs no recompile', () => {
@@ -62,26 +73,22 @@ describe('the point size uniform', () => {
 
 describe('pointDrawOf', () => {
   it('is the 1 px default of a material with no point size', () => {
-    expect(pointDrawOf(null, 1)).toEqual({ pixels: 1, samplesAlbedoAtPointCoord: false });
+    expect(pointDrawOf(null, 1)).toEqual({ pixels: 1, pixelRatio: 1, samplesAlbedoAtPointCoord: false });
   });
 
   it('is point_size under use_point_size, and samples the albedo at the point coordinate', () => {
     const scalars = parseStandardMaterial3DScalars({ use_point_size: 'true', point_size: '12' });
-    expect(pointDrawOf(scalars, 1)).toEqual({ pixels: 12, samplesAlbedoAtPointCoord: true });
+    expect(pointDrawOf(scalars, 1)).toEqual({ pixels: 12, pixelRatio: 1, samplesAlbedoAtPointCoord: true });
   });
 
   // `material.cpp:1229-1232` writes POINT_SIZE, and `:1612-1615` samples at POINT_COORD, only under the flag.
   it('ignores point_size without use_point_size (edge case)', () => {
     const scalars = parseStandardMaterial3DScalars({ point_size: '12' });
-    expect(pointDrawOf(scalars, 1)).toEqual({ pixels: 1, samplesAlbedoAtPointCoord: false });
+    expect(pointDrawOf(scalars, 1)).toEqual({ pixels: 1, pixelRatio: 1, samplesAlbedoAtPointCoord: false });
   });
 
-  // Godot's pixels are its viewport's, and a canvas of pixel ratio 2 has twice as many per side.
-  it.each([
-    ['point_size', { use_point_size: 'true', point_size: '12' }, 24],
-    ['the 1 px default', {}, 2],
-  ])('scales %s by the canvas pixel ratio', (_what, properties, pixels) => {
-    expect(pointDrawOf(parseStandardMaterial3DScalars(properties), 2).pixels).toBe(pixels);
+  it('carries the canvas pixel ratio beside the size', () => {
+    expect(pointDrawOf(null, 2).pixelRatio).toBe(2);
   });
 });
 

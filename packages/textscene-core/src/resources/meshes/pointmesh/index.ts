@@ -2,4 +2,4 @@
 
 import { registerGenericResourceSlice } from '../../sliceRegistration.js';
 
-registerGenericResourceSlice('pointmesh', ['PointMesh']);
+registerGenericResourceSlice('pointmesh', ['PointMesh'], { declaresNoProperties: true });

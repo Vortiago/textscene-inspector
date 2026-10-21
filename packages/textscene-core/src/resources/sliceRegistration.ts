@@ -36,6 +36,11 @@ interface ResourceSliceRegistration {
    */
   clonePerConsumer?: boolean;
   /**
+   * The type declares no property of its own (PointMesh), so the slice has nothing to decode and
+   * no decode.ts. The conformance guard reads it.
+   */
+  declaresNoProperties?: boolean;
+  /**
    * Which processor slot serves this slice's claims. Null for the types the
    * loader never serves (ViewportTexture resolves by NodePath, not by file).
    */
@@ -75,8 +80,12 @@ export function registerResourceSlice(registration: ResourceSliceRegistration): 
  * the generic `resource` bus slot. No `extensions`: every Godot-text slice shares
  * `.tres`, and a duplicate extension claim throws, so these route by `type=` name.
  */
-export function registerGenericResourceSlice(slice: string, typeNames: readonly string[]): void {
-  registerResourceSlice({ slice, kind: 'godot-text', typeNames, busType: 'resource' });
+export function registerGenericResourceSlice(
+  slice: string,
+  typeNames: readonly string[],
+  { declaresNoProperties = false } = {}
+): void {
+  registerResourceSlice({ slice, kind: 'godot-text', typeNames, busType: 'resource', declaresNoProperties });
 }
 
 export const resourceSliceRegistry = {

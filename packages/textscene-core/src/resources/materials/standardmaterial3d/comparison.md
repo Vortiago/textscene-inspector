@@ -118,7 +118,7 @@ Both engines shift every texture coordinate by the depth the heightmap reads, al
 
 <!-- compare: image=unit-point-mesh status=limitation fixture=unit-point-mesh.tscn -->
 
-A PointMesh draws one square per vertex, and `use_point_size` with `point_size` sets its side in pixels. Without the flag a point is one pixel. A textured point samples its albedo across the square, as Godot does. A point carries no normal array, so Godot lights it as a normal along +Z in node space, and both sides do the same. Cull mode does not turn a point's normal. A point casts no shadow here, whatever `cast_shadow` says.
+A PointMesh draws one square per vertex, and `use_point_size` with `point_size` sets its side in pixels. Without the flag a point is one pixel. A textured point samples its albedo across the square, as Godot does. A point carries no normal array, so Godot lights it as a normal along +Z in node space, and both sides do the same. Cull mode does not turn a point's normal and does not hide the point. Godot hides a front-culled point only in the first frames, while its pipeline compiles. A point casts a shadow of its point size, as Godot draws it under a directional or a spot light. Under an omni light Godot draws a second, smaller square beside the shadow, and this previewer draws only the first.
 
 ## Linting
 

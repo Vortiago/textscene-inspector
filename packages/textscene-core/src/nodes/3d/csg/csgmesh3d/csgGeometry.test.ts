@@ -44,8 +44,14 @@ const INLINE_QUADS: TscnInternalResource = {
   },
 };
 
+const INLINE_POINTS: TscnInternalResource = {
+  id: 'Points',
+  type: 'ArrayMesh',
+  data: { _surfaces: wallQuadSurfaces({ primitive: 0 }) },
+};
+
 const CTX = csgGeometryContext({
-  internalResources: [INLINE_BOX, INLINE_CAPSULE, INLINE_POINT, INLINE_QUADS],
+  internalResources: [INLINE_BOX, INLINE_CAPSULE, INLINE_POINT, INLINE_POINTS, INLINE_QUADS],
   externalResources: EXT,
   files: FILES,
 });
@@ -125,6 +131,10 @@ describe('csgMesh3DGeometry: mesh sources', () => {
   it('builds nothing for a PointMesh, whose surface is points', () => {
     expect(build('SubResource("Point")')).toBeNull();
     expect(meshSurfaces({ resource: INLINE_POINT, resources: CTX, file: null })).toEqual([]);
+  });
+
+  it('builds nothing for an ArrayMesh whose surface is points', () => {
+    expect(build('SubResource("Points")')).toBeNull();
   });
 
   it('builds nothing for a mesh no slice here reads, nor for no mesh', () => {

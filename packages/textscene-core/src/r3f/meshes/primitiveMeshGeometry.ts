@@ -45,11 +45,6 @@ function forgetSharedGeometry(key: string, geometry: THREE.BufferGeometry): void
   if (entry === undefined || entry === geometry) sharedGeometries.delete(key);
 }
 
-/** Whether a PrimitiveMesh draws `PRIMITIVE_POINTS`, which a mesh draws as `THREE.Points`. */
-export function primitiveMeshDrawsPoints(resource: TscnInternalResource): boolean {
-  return resource.type === 'PointMesh';
-}
-
 /**
  * The box the rendering server holds for a PrimitiveMesh: its `custom_aabb`, else the box of the
  * vertices it builds (`mesh_storage.cpp:705-712`). A mesh Godot builds no surface for is `AABB()`.

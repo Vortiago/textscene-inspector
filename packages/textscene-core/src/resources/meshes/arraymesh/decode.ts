@@ -1,7 +1,7 @@
 /**
  * Decodes an ArrayMesh's `_surfaces`, from a `.tres` or a binary file, into per-surface typed arrays:
- * the surface loop and its material resolution. Only triangle surfaces decode.
- * Blend shapes, LODs and skins are ignored. The byte layout lives in
+ * the surface loop and its material resolution. Only triangle and points surfaces decode, and a
+ * mesh with both keeps its triangles. Blend shapes, LODs and skins are ignored. The byte layout lives in
  * `surfaceFormat.ts`, `surfaceVersion.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
  */
 
@@ -19,7 +19,7 @@ import {
   readPackedBytes,
   readUvScale,
 } from './surfaceFields.js';
-import { PRIMITIVE_TRIANGLES, surfaceLayout } from './surfaceFormat.js';
+import { PRIMITIVE_POINTS, PRIMITIVE_TRIANGLES, surfaceLayout } from './surfaceFormat.js';
 import { currentVertexData } from './surfaceVersion.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
 import { decodeIndices, decodeNormalFrame, decodePositions, decodeUVs } from './vertexBuffers.js';
@@ -66,8 +66,8 @@ export function decodeSceneArrayMesh(resource: TscnInternalResource): ArrayMeshD
 }
 
 /**
- * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle, as
- * `add_surface_from_arrays` with no ARRAY_INDEX does.
+ * A surface Godot saved with no `index_data` draws its vertices in order, three to a triangle or one
+ * to a point, as `add_surface_from_arrays` with no ARRAY_INDEX does.
  */
 function drawOrderIndices(vertexCount: number): Uint32Array {
   const indices = new Uint32Array(vertexCount);
@@ -94,17 +94,18 @@ function decodeSurfaces(
     const vertexCount = readInt(block, 'vertex_count');
     const indexCount = readInt(block, 'index_count');
 
-    // A LINES/POINTS/STRIP surface read as triangles fabricates faces. `readInt`
+    // A LINES/STRIP surface read as triangles fabricates faces. `readInt`
     // defaults an absent key to 0, and Godot always writes `primitive` for a
-    // saved surface, so only a declared non-triangle value skips it.
+    // saved surface, so only a declared value other than triangles or points skips it.
     const primitive = block.includes('"primitive"') ? readInt(block, 'primitive') : PRIMITIVE_TRIANGLES;
-    if (primitive !== PRIMITIVE_TRIANGLES) {
+    const isPoints = primitive === PRIMITIVE_POINTS;
+    if (primitive !== PRIMITIVE_TRIANGLES && !isPoints) {
       nonTriangle++;
       const name = readName(block);
       warn(
         `[ArrayMesh] surface ${surfaceIndex}${name ? ` "${name}"` : ''} is primitive ` +
-          `${primitive}, not triangles (3) — skipping it; this decoder builds triangle ` +
-          `geometry only`
+          `${primitive}, not triangles (3) or points (0) — skipping it; this decoder builds ` +
+          `triangle and points geometry only`
       );
       continue;
     }
@@ -155,6 +156,7 @@ function decodeSurfaces(
       normals,
       tangents,
       indices,
+      ...(isPoints && { isPoints }),
       ...readMaterial(block),
     });
   }
@@ -167,5 +169,16 @@ function decodeSurfaces(
     const reason = nonTriangle > 0 ? ` (${nonTriangle} skipped as non-triangle)` : '';
     throw new Error(`ArrayMesh ${label}: none of its ${declared} surface(s) could be decoded${reason}`);
   }
-  return { surfaces };
+  return { surfaces: withoutMixedPoints(surfaces, label) };
+}
+
+/**
+ * A mesh draws one primitive type here, so a mesh of triangle and points surfaces keeps its
+ * triangles and drops the points.
+ */
+function withoutMixedPoints(surfaces: ArrayMeshSurface[], label: string): ArrayMeshSurface[] {
+  const triangles = surfaces.filter((surface) => !surface.isPoints);
+  if (triangles.length === 0 || triangles.length === surfaces.length) return surfaces;
+  warn(`[ArrayMesh] ${label} mixes triangle and points surfaces: drawing the triangles only`);
+  return triangles;
 }

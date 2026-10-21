@@ -4,6 +4,7 @@ import { surfaceDepthMaterial, syncSurfaceDepth } from './surfaceDepthMaterial';
 import type { ProgramShader } from '../materialProgramInputs';
 import { renderTargetMapUserData } from './renderTargetMap';
 import { alphaAntialiasingUserData } from './godotAlphaAntialiasing';
+import { withPointDraw } from './godotPoint';
 import { AlphaAntiAliasing, scissorAntialiasing } from '../../godot/rendering/materials/alphaAntialiasing';
 
 const SCISSOR_CUT = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0.3);
@@ -58,6 +59,46 @@ describe('surfaceDepthMaterial', () => {
       userData: alphaAntialiasingUserData(SCISSOR_CUT),
     });
     expect(surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial()).alphaToCoverage).toBe(false);
+  });
+
+  describe('of a points surface', () => {
+    const pointSurface = (pixels: number, pixelRatio: number) =>
+      new THREE.MeshBasicMaterial({
+        userData: withPointDraw(
+          { materialClass: 'basic', props: {} },
+          { pixels, pixelRatio, samplesAlbedoAtPointCoord: false }
+        ).props.userData,
+      });
+
+    // A shadow-map texel is Godot's own, so the canvas pixel ratio does not scale it.
+    it("writes the size in Godot's pixels, as the shadow map's texels", () => {
+      const { vertexShader, uniforms } = compiled(
+        surfaceDepthMaterial(pointSurface(20, 2), new THREE.MeshDepthMaterial())
+      );
+      expect(vertexShader).toContain('gl_PointSize = godotPointSize;');
+      expect(uniforms.godotPointSize!.value).toBe(20);
+    });
+
+    // The alpha cut reads the albedo where the colour pass does: across the square.
+    it("cuts a textured point's shadow at the point coordinate, as the colour pass reads it", () => {
+      const surface = new THREE.MeshBasicMaterial({
+        map: new THREE.Texture(),
+        userData: withPointDraw(
+          { materialClass: 'basic', props: { map: new THREE.Texture() } },
+          { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: true }
+        ).props.userData,
+      });
+      const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+
+      syncSurfaceDepth(depth, surface, 0.5);
+
+      expect(compiled(depth).fragmentShader).toContain('gl_PointCoord');
+    });
+
+    it('writes no size for a surface that draws triangles (edge case)', () => {
+      const copy = surfaceDepthMaterial(new THREE.MeshBasicMaterial(), new THREE.MeshDepthMaterial());
+      expect(compiled(copy).vertexShader).not.toContain('gl_PointSize');
+    });
   });
 
   it('disposes its copies with the surface (edge case)', () => {
@@ -164,5 +205,21 @@ describe('syncSurfaceDepth', () => {
 
     expect(depth.version).toBeGreaterThan(version);
     expect(compiled(depth).fragmentShader).toContain('#include <map_fragment>');
+  });
+
+  it('recompiles when the surface starts drawing points (edge case)', () => {
+    const surface = new THREE.MeshBasicMaterial();
+    const depth = surfaceDepthMaterial(surface, new THREE.MeshDepthMaterial());
+    syncSurfaceDepth(depth, surface, 0.5);
+    const version = depth.version;
+    surface.userData = withPointDraw(
+      { materialClass: 'basic', props: {} },
+      { pixels: 20, pixelRatio: 1, samplesAlbedoAtPointCoord: false }
+    ).props.userData!;
+
+    syncSurfaceDepth(depth, surface, 0.5);
+
+    expect(depth.version).toBeGreaterThan(version);
+    expect(compiled(depth).vertexShader).toContain('gl_PointSize = godotPointSize;');
   });
 });

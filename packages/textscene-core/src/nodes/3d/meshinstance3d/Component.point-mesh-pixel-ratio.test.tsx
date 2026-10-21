@@ -18,7 +18,7 @@ vi.mock('@react-three/fiber', async (importOriginal) => {
 });
 
 describe('MeshInstance3D with a PointMesh on a canvas of pixel ratio 2', () => {
-  it('draws point_size twice over in framebuffer pixels', async () => {
+  it('records the pixel ratio beside point_size, for the colour pass to draw twice over', async () => {
     const renderer = await renderMeshInstance({
       loader: loaderServing(),
       node: meshInstanceNode({
@@ -31,6 +31,9 @@ describe('MeshInstance3D with a PointMesh on a canvas of pixel ratio 2', () => {
       ],
     });
     const points = instanceAs<THREE.Points>(renderer.scene.findByType('Points'));
-    expect((points.material as THREE.Material).userData.godotPointSize).toBe(40);
+    expect((points.material as THREE.Material).userData).toMatchObject({
+      godotPointSize: 20,
+      godotPointPixelRatio: 2,
+    });
   });
 });

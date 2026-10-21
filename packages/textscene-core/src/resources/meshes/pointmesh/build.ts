@@ -32,5 +32,5 @@ import type { GodotSurface } from '../godotSurface.js';
 
 /** The surface of every PointMesh, which has no property. */
 export function buildPointMeshSurface(): GodotSurface {
-  return { positions: new Float32Array(3), indices: new Uint32Array(0), isPoints: true };
+  return { positions: new Float32Array(3), indices: Uint32Array.of(0), isPoints: true };
 }

@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { decodeArrayMeshTres } from '../testing/decodeArrayMeshTres';
 import type { ArrayMeshData } from './arraymesh/types';
-import { godotSurfacesGeometry, type GodotSurface } from './godotSurface';
+import { geometryDrawsPoints, godotSurfacesGeometry, type GodotSurface } from './godotSurface';
 import { headlightsSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 import { UV2_ATTRIBUTE } from './uv2';
 
@@ -191,11 +191,12 @@ describe('godotSurfacesGeometry', () => {
 });
 
 describe('godotSurfacesGeometry for a points surface', () => {
-  const POINT: GodotSurface = { positions: new Float32Array([1, 2, 3]), indices: [], isPoints: true };
+  const POINT: GodotSurface = { positions: new Float32Array([1, 2, 3]), indices: [0], isPoints: true };
 
-  it('draws each vertex once, with no index', () => {
+  it('draws each vertex through its index, in one draw group', () => {
     const geometry = godotSurfacesGeometry([POINT]);
-    expect(geometry.index).toBeNull();
+    expect(Array.from(geometry.getIndex()!.array)).toEqual([0]);
+    expect(geometry.groups).toHaveLength(1);
     expect(Array.from(geometry.getAttribute('position').array)).toEqual([1, 2, 3]);
   });
 
@@ -204,5 +205,33 @@ describe('godotSurfacesGeometry for a points surface', () => {
   it('gives a point the normal Godot lights it with, +Z', () => {
     const normal = godotSurfacesGeometry([POINT]).getAttribute('normal');
     expect(Array.from(normal.array)).toEqual([0, 0, 1]);
+  });
+});
+
+describe('godotSurfacesGeometry of points surfaces', () => {
+  const points = (positions: number[], extra: Partial<GodotSurface> = {}): GodotSurface => ({
+    positions: new Float32Array(positions),
+    indices: new Uint32Array([0]),
+    isPoints: true,
+    ...extra,
+  });
+
+  it('merges points surfaces into one geometry, a draw group each, with indices offset', () => {
+    const geometry = godotSurfacesGeometry([
+      points([0, 0, 0, 1, 0, 0], { indices: new Uint32Array([1, 0]) }),
+      points([0, 2, 0]),
+    ]);
+
+    expect(geometry.getAttribute('position').count).toBe(3);
+    expect(Array.from(geometry.getIndex()!.array)).toEqual([1, 0, 2]);
+    expect(geometry.groups.map((g) => [g.start, g.count, g.materialIndex])).toEqual([
+      [0, 2, 0],
+      [2, 1, 1],
+    ]);
+  });
+
+  it('tags the geometry as drawn by points, and a triangle geometry not', () => {
+    expect(geometryDrawsPoints(godotSurfacesGeometry([points([0, 0, 0])]))).toBe(true);
+    expect(geometryDrawsPoints(godotSurfacesGeometry([triangle()]))).toBe(false);
   });
 });

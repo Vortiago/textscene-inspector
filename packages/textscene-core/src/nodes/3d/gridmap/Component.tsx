@@ -16,6 +16,7 @@ import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
 import { drawnTag, useMeshContent } from '../../../r3f/meshes/meshContent';
+import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
@@ -204,7 +205,8 @@ function GridMapItem({ item, cells, cellSize, cellCenter, cellScale }: GridMapIt
     return <PlaceholderTiles cells={cells} cellSize={cellSize} cellCenter={cellCenter} />;
   }
   if (content.kind !== 'surfaced') return null;
-  const { geometry, primitive, drawsPoints } = content.mesh;
+  const { geometry, primitive } = content.mesh;
+  const drawsPoints = geometryDrawsPoints(geometry);
   const surfaces = surfaceSources(content.mesh.materials);
   return (
     <>
@@ -300,7 +302,7 @@ function CellTile({ draw, matrix }: { draw: SurfaceDraw; matrix: THREE.Matrix4 }
       args={[geometry, startingMaterial]}
       matrix={matrix}
       matrixAutoUpdate={false}
-      castShadow={shadow.castShadow && !draw.drawsPoints}
+      castShadow={shadow.castShadow}
       receiveShadow
       onBeforeRender={shadow.onBeforeRender}
       onAfterRender={shadow.onAfterRender}

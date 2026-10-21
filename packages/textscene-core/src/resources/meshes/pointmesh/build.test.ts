@@ -13,10 +13,10 @@ describe('PointMesh surface', () => {
     expect(Array.from(pointMeshSurface()!.positions)).toEqual([0, 0, 0]);
   });
 
-  it('is a points surface with no index', () => {
+  it('is a points surface that draws its one vertex', () => {
     const surface = pointMeshSurface()!;
     expect(surface.isPoints).toBe(true);
-    expect(surface.indices.length).toBe(0);
+    expect(Array.from(surface.indices)).toEqual([0]);
   });
 
   it('writes no normal, tangent or UV, as Godot writes only ARRAY_VERTEX', () => {
