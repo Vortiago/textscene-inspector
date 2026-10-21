@@ -28,9 +28,11 @@ interface SurfaceMaterialSlotsProps {
   sources: readonly (MaterialSource | undefined)[];
   /** The PrimitiveMesh a triplanar material tiles against, if the mesh is one. */
   triplanarMesh?: TscnInternalResource;
+  /** The mesh draws `THREE.Points`, so each material also sizes its points. */
+  drawsPoints?: boolean;
 }
 
-export function SurfaceMaterialSlots({ sources, triplanarMesh }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, triplanarMesh, drawsPoints }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -40,6 +42,7 @@ export function SurfaceMaterialSlots({ sources, triplanarMesh }: SurfaceMaterial
           source={source}
           attach={surfaceAttach(i, slotSources.length)}
           triplanarMesh={triplanarMesh}
+          drawsPoints={drawsPoints}
         />
       ))}
     </>
