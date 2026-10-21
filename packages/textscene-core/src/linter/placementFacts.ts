@@ -32,6 +32,7 @@ export function placementFacts(
   seating: SceneSeating<RawNode>
 ): PlacementFacts {
   const orphans = orphanedNodes(origins, seating);
+  const orphanSet = new Set(orphans);
   return {
     orphanedNodes: orphans,
     reRootedNames: reRootedNames(orphans, seating),
@@ -39,8 +40,9 @@ export function placementFacts(
     emptyParentHeadings: emptyParentHeadings(origins),
     refusesToInstantiate: refusesToInstantiate(origins),
     idRecoveries: idRecoveries(origins, orphans, seating),
-    // Every heading is built by the time connections are made (`packed_scene.cpp:647-660`).
-    idHeadings: idHeadingsOf(origins, ({ node }) => seating.seated.has(node)),
+    // An id trail finds a heading at the path it declares (`packed_scene.cpp:1985-2005`), so an
+    // orphan, re-rooted or recovered elsewhere, is not there.
+    idHeadings: idHeadingsOf(origins, (origin) => !orphanSet.has(origin)),
   };
 }
 
