@@ -4,7 +4,7 @@
  * the panel resolves through `useLiveNode` over the tree the outliner shows,
  * and re-derives on the live-tree version tick when a sub-scene lands.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { NodeDetailsPanel } from './NodeDetailsPanel';
@@ -283,5 +283,43 @@ texture = ExtResource("1")
     });
 
     expect(screen.getByText('ExtResource("1")')).toBeTruthy();
+  });
+});
+
+describe('<NodeDetailsPanel> copy node path inside an instance', () => {
+  it('copies through the instance node, whose name is the merged sub-scene root', async () => {
+    nodeRegistry.register({ typeName: LAMP_MESH_TYPE, parser: () => ({}) });
+    const { loader, scenes } = createFakeResourceLoader();
+    scenes.seed('res://ceiling_lamp.tscn', {
+      nodes: [makeNode('ceiling_lamp', 'Node3D', { children: [makeNode('plafoniera', LAMP_MESH_TYPE)] })],
+      externalResources: [],
+      internalResources: [],
+    });
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [
+        makeNode('RoomGeometry', 'Node3D', {
+          children: [makeNode('ceiling_lamp', 'Node3D', { instance: 'ExtResource("3_as5ck")' })],
+        }),
+      ],
+      externalResources: [makeExtResource('3_as5ck', 'res://ceiling_lamp.tscn')],
+      internalResources: [],
+    });
+    const onCopyNodePath = vi.fn();
+
+    render(
+      <>
+        <NodeDetailsPanel onCopyNodePath={onCopyNodePath} />
+        <Selector path="RoomGeometry/ceiling_lamp/plafoniera" />
+      </>,
+      { wrapper: wrap(loader, graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: 'Copy node path' }).click();
+    });
+
+    expect(onCopyNodePath).toHaveBeenCalledExactlyOnceWith('ceiling_lamp/plafoniera');
   });
 });

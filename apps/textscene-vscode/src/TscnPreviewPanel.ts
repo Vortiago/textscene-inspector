@@ -12,6 +12,7 @@ import { buildPanelHtml } from './panelHtml';
 import { dispatchWebviewMessage, type WebviewMessageHandlers } from './webviewDispatch';
 import { jumpToNodeDefinition } from './jumpToNodeDefinition';
 import { relayWebviewLog } from './hostLogRelay';
+import { writeClipboard } from './writeClipboard';
 import { encodeResourceResponse } from './wireCodec';
 import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue';
 
@@ -107,6 +108,9 @@ export class TscnPreviewPanel {
       },
       jumpToNode: (msg) => {
         void jumpToNodeDefinition(this._currentResource, msg.nodeName, msg.path, this._panel.viewColumn);
+      },
+      copyNodePath: (msg) => {
+        void writeClipboard(msg.nodePath);
       },
       loadResource: (msg) => {
         void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);

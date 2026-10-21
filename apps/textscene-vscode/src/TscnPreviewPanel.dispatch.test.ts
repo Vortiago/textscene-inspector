@@ -16,6 +16,7 @@ function makeHandlers() {
   return {
     webviewReady: vi.fn(),
     jumpToNode: vi.fn(),
+    copyNodePath: vi.fn(),
     loadResource: vi.fn(),
     log: vi.fn(),
     previewCaptured: vi.fn(),
@@ -31,6 +32,7 @@ describe('dispatchWebviewMessage', () => {
   const ROUTING_CASES: WebviewToHostMessage[] = [
     { type: 'webviewReady' },
     { type: 'jumpToNode', nodeName: 'Leaf', path: 'Root/Leaf' },
+    { type: 'copyNodePath', nodePath: 'Player/Camera3D' },
     { type: 'loadResource', path: 'res://tex.png', resourceType: 'Texture2D', requestId: 'r1' },
     { type: 'log', level: 'info', message: 'hello', args: [] },
     { type: 'previewCaptured', requestId: 'c1', dataUrl: 'data:image/png;base64,AA==' },
@@ -223,6 +225,12 @@ describe('a message whose type is known but whose body is not', () => {
     const h = makeHandlers();
     dispatchWebviewMessage({ type: 'jumpToNode', nodeName: 'N', path: 7 }, h);
     expect(h.jumpToNode).not.toHaveBeenCalled();
+  });
+
+  it('drops a copyNodePath whose path is not a string', () => {
+    const h = makeHandlers();
+    dispatchWebviewMessage({ type: 'copyNodePath', nodePath: 42 }, h);
+    expect(h.copyNodePath).not.toHaveBeenCalled();
   });
 
   it('drops a jumpToNode with no path, which the handler resolves by', () => {

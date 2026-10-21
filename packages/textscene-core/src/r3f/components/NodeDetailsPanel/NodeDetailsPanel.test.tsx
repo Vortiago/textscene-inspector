@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { NodeDetailsPanel } from './NodeDetailsPanel';
@@ -232,5 +232,59 @@ describe('<NodeDetailsPanel> camera actions', () => {
   it('offers no camera action for a non-camera node', async () => {
     await selectAndRender('Node3D');
     expect(screen.queryByRole('button', { name: 'Use This Camera' })).toBeNull();
+  });
+
+  describe('copy node path', () => {
+    const SCENE = createSceneGraphFromTscnScene({
+      nodes: [
+        makeNode('Root', 'Node3D', {
+          children: [makeNode('Player', 'Node3D', { children: [makeNode('Camera3D', 'Camera3D')] })],
+        }),
+      ],
+    });
+
+    async function copyFor(selected: string): Promise<ReturnType<typeof vi.fn>> {
+      const onCopyNodePath = vi.fn();
+      render(
+        <>
+          <NodeDetailsPanel onCopyNodePath={onCopyNodePath} />
+          <Selector path={selected} />
+        </>,
+        { wrapper: panelWrap(SCENE) }
+      );
+      await act(async () => {
+        screen.getByTestId('select-node').click();
+      });
+      await act(async () => {
+        screen.getByRole('button', { name: 'Copy node path' }).click();
+      });
+      return onCopyNodePath;
+    }
+
+    it.each([
+      ['the root as "."', 'Root', '.'],
+      ['a nested node from the root, without the root name', 'Root/Player/Camera3D', 'Player/Camera3D'],
+    ])('asks the host to copy %s', async (_what, selected, expected) => {
+      expect(await copyFor(selected)).toHaveBeenCalledExactlyOnceWith(expected);
+    });
+
+    it('leaves the displayed Path row as the live path', async () => {
+      await copyFor('Root/Player');
+      expect(screen.getByText('Root/Player')).toBeTruthy();
+    });
+
+    it('has no copy button when the host cannot copy', async () => {
+      render(
+        <>
+          <NodeDetailsPanel />
+          <Selector path="Root" />
+        </>,
+        { wrapper: panelWrap(SCENE) }
+      );
+      await act(async () => {
+        screen.getByTestId('select-node').click();
+      });
+      expect(screen.queryByRole('button', { name: 'Copy node path' })).toBeNull();
+    });
   });
 });
