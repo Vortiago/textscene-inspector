@@ -34,6 +34,7 @@ import {
   parseArgs,
   REFERENCE_FIXED_FPS,
   RENDER_QUIET_FRAMES,
+  RENDER_QUIET_MSEC,
   RENDER_WAIT_MAX_FRAMES,
   renderArgv,
   renderingMethodFallbackMessage,
@@ -961,6 +962,7 @@ describe('the render wait fits inside the render pass', () => {
     expect(bootstrap()).toContain(`const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}`);
     expect(bootstrap()).toContain(`const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}`);
     expect(bootstrap()).toContain(`const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}`);
+    expect(bootstrap()).toContain(`const RENDER_QUIET_MSEC := ${RENDER_QUIET_MSEC}`);
     expect(bootstrap()).toContain(`const RENDER_WAIT_MAX_FRAMES := ${RENDER_WAIT_MAX_FRAMES}`);
   });
 });

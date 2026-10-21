@@ -40,8 +40,10 @@ a fog history draws on there.
 
 ## The quiet window
 
-The window must outlast the slowest pipeline compilation. The seven point materials of the
-`point-mesh` fixture had landed within 12 frames, and a frame takes about 50 ms under lavapipe.
-`RENDER_QUIET_FRAMES` is 30, which leaves two and a half times that margin. The
-`point-cull-front` calibration scene queues thirteen pipelines, and the old fixed wait loses its
-cull-front point.
+Godot signals no end of a pipeline compilation, which runs on a worker thread. The window must
+outlast it, so it holds for `RENDER_QUIET_FRAMES` frames and `RENDER_QUIET_MSEC` milliseconds.
+
+The `point-cull-front` calibration scene queues thirteen pipelines, and the old fixed wait loses its
+cull-front point. A window of 30 frames passed on a quiet machine and failed on all four of four runs
+at once. A window of 150 frames passed on all four. The milliseconds cover a scene whose frames are
+quick, so that 150 of them end before the compile does.

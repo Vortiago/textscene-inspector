@@ -50,10 +50,12 @@ export const FOG_JITTER_CYCLE_FRAMES = 16;
 export const FOG_HISTORY_MAX_CYCLES = 48;
 
 /**
- * Frames the render wait needs the picture, the compilations queued and the texture memory to hold
- * still. `render-wait.md` gives the measure behind the number.
+ * Frames, and milliseconds, the render wait needs the picture, the compilations queued and the
+ * texture memory to hold still. A pipeline compiles on a worker thread that signals no end, so the
+ * window must outlast the compile. `render-wait.md` gives the measure behind both numbers.
  */
-export const RENDER_QUIET_FRAMES = 30;
+export const RENDER_QUIET_FRAMES = 150;
+export const RENDER_QUIET_MSEC = 2000;
 
 /** The most frames the render wait draws: the longest fog convergence, then the quiet window. */
 export const RENDER_WAIT_MAX_FRAMES = FOG_HISTORY_MAX_CYCLES * FOG_JITTER_CYCLE_FRAMES + RENDER_QUIET_FRAMES;
@@ -719,6 +721,7 @@ const CLEAR_2D := ${gdColor(CANVAS_2D_CAPTURE.clearColor)}
 const FOG_JITTER_CYCLE_FRAMES := ${FOG_JITTER_CYCLE_FRAMES}
 const FOG_HISTORY_MAX_CYCLES := ${FOG_HISTORY_MAX_CYCLES}
 const RENDER_QUIET_FRAMES := ${RENDER_QUIET_FRAMES}
+const RENDER_QUIET_MSEC := ${RENDER_QUIET_MSEC}
 const RENDER_WAIT_MAX_FRAMES := ${RENDER_WAIT_MAX_FRAMES}
 
 # Set by a refusal inside the render, so the ONE quit() below carries a non-zero
@@ -1042,7 +1045,7 @@ func _await_reflection_probe_captures(source: Viewport) -> void:
 		await RenderingServer.frame_post_draw
 
 # Draws on until the picture and the renderer's pending work have held still for
-# RENDER_QUIET_FRAMES frames in a row. The time scale stays 0 after the wait: the process quits
+# RENDER_QUIET_FRAMES frames and RENDER_QUIET_MSEC milliseconds in a row. The time scale stays 0 after the wait: the process quits
 # once it has saved. The Godot source behind each kind of pending work is in render-wait.md.
 func _await_rendered(source: Viewport) -> void:
 	var period := FOG_JITTER_CYCLE_FRAMES if _has_fog_history(source) else 1
@@ -1052,13 +1055,18 @@ func _await_rendered(source: Viewport) -> void:
 	var pictures: Array[PackedByteArray] = []
 	var pending := _pending_work()
 	var quiet := 0
+	var quiet_since := Time.get_ticks_msec()
 	for _frame in RENDER_WAIT_MAX_FRAMES:
 		await RenderingServer.frame_post_draw
 		var picture := source.get_texture().get_image().get_data()
 		var now_pending := _pending_work()
 		var repeats := pictures.size() == period and picture == pictures[0]
-		quiet = quiet + 1 if repeats and now_pending == pending else 0
-		if quiet >= RENDER_QUIET_FRAMES:
+		if repeats and now_pending == pending:
+			quiet += 1
+		else:
+			quiet = 0
+			quiet_since = Time.get_ticks_msec()
+		if quiet >= RENDER_QUIET_FRAMES and Time.get_ticks_msec() - quiet_since >= RENDER_QUIET_MSEC:
 			return
 		pending = now_pending
 		pictures.append(picture)
