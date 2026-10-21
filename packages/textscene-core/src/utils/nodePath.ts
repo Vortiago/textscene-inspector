@@ -3,6 +3,7 @@
  * walk over a NodePath is an engine fact, in `godot/string/nodePath.ts`.
  */
 
+/** The path of a child named `childName` below the node at `parentPath`. */
 export function joinPath(parentPath: string, childName: string): string {
   return parentPath ? `${parentPath}/${childName}` : childName;
 }

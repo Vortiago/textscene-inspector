@@ -4,6 +4,7 @@
  */
 
 import type { Vector2 } from '../../../../godot/math/vector';
+import { TAU } from '../../../../godot/math/math.js';
 
 const CIRCLE_SEGMENTS = 32;
 const CAPSULE_CAP_SEGMENTS = 16;
@@ -24,7 +25,7 @@ export function rectanglePoints(size: Vector2): Vector2[] {
 export function circlePoints(radius: number): Vector2[] {
   const points: Vector2[] = [];
   for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
-    const t = (i / CIRCLE_SEGMENTS) * Math.PI * 2;
+    const t = (i / CIRCLE_SEGMENTS) * TAU;
     points.push({ x: radius * Math.cos(t), y: radius * Math.sin(t) });
   }
   return points;

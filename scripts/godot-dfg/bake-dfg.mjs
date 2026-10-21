@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { TAU } from '../../packages/textscene-core/src/godot/math/math.ts';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
 const OUT = join(REPO_ROOT, 'packages/textscene-core/src/godot/rendering/materials/dfgTable.generated.ts');
@@ -45,7 +46,7 @@ function sampleHalfVectors(roughness) {
   const a = roughness * roughness;
   const halfVectors = new Float64Array(SAMPLE_COUNT * 3);
   for (let i = 0; i < SAMPLE_COUNT; i += 1) {
-    const phi = (2 * Math.PI * i) / SAMPLE_COUNT;
+    const phi = (TAU * i) / SAMPLE_COUNT;
     const u = radicalInverse(i);
     const cosTheta = Math.sqrt((1 - u) / (1 + (a * a - 1) * u));
     const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);

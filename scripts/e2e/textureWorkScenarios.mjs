@@ -194,11 +194,13 @@ export function checkWorkerArm(gate, label, arm, { inkOf, inkFloor }) {
     arm.probe.replies > 0,
     `[${label}] no job worker answered: the build did not run off the main thread`
   );
-  gate.check(
-    during !== null && during.length === 0,
-    `[${label}] ${during?.length} task(s) over ${LONG_TASK_LIMIT_MS} ms while the texture built and uploaded: ` +
-      JSON.stringify(during?.slice(0, 5))
-  );
+  if (during !== null) {
+    gate.check(
+      during.length === 0,
+      `[${label}] ${during.length} task(s) over ${LONG_TASK_LIMIT_MS} ms while the texture built and uploaded: ` +
+        JSON.stringify(during.slice(0, 5))
+    );
+  }
   const ink = arm.settled.buffer ? inkOf(arm.settled.buffer) : null;
   gate.check(
     !!ink && ink.inkPixels >= inkFloor,

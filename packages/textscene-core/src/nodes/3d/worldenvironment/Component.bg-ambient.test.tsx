@@ -12,6 +12,7 @@ import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironment
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { TscnParser } from '../../../parser/TscnParser';
 import { instanceAs } from '../testing/reactThreeTestInstance';
+import { TAU } from '../../../godot/math/math.js';
 
 async function ambientLights(environmentBody: string) {
   const scene = new TscnParser().parse(
@@ -47,7 +48,7 @@ describe('<WorldEnvironment> ambient from the background', () => {
     // three's ambient irradiance carries no 1/PI where Godot's does, so
     // `background_energy_multiplier` reaches the light multiplied by PI
     // (reasoning in Component.world.test.tsx).
-    expect(lights[0]!.intensity).toBeCloseTo(2 * Math.PI, 6);
+    expect(lights[0]!.intensity).toBeCloseTo(TAU, 6);
   });
 
   it('mounts one for a bare Environment, from the default clear colour', async () => {

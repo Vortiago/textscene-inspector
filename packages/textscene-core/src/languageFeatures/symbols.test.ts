@@ -98,6 +98,22 @@ describe('documentSymbols', () => {
   });
 });
 
+describe('documentSymbols with two siblings sharing a name', () => {
+  it('nests a child under the later sibling, the one its parent= reaches', () => {
+    // A running game's child lookup keeps the later of two same-named siblings (node.cpp:1656).
+    const document = new LanguageDocument(
+      [
+        '[node name="Root" type="Node3D"]',
+        '[node name="A" type="Node3D" parent="."]',
+        '[node name="A" type="Node2D" parent="."]',
+        '[node name="B" type="Node3D" parent="A"]',
+      ].join('\n')
+    );
+    const [first, second] = only(documentSymbols(document)).children;
+    expect([first?.children.length, second?.children.map(({ name }) => name)]).toEqual([0, ['B']]);
+  });
+});
+
 describe('documentSymbols under a %Name parent', () => {
   const UNIQUE_SCENE = `[gd_scene format=3]
 

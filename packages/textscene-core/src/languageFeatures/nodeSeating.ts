@@ -69,6 +69,12 @@ export function seatedNodeTree(document: LanguageDocument): readonly SeatedSecti
   return seatingOf(document).tree;
 }
 
+/** The root-relative path of each seated `[node]` heading with a name, the root at the empty path. */
+export function seatedNodePaths(document: LanguageDocument): ReadonlyMap<DocumentSection, string> {
+  const { seating, sectionByNode } = seatingOf(document);
+  return new Map([...seating.pathOf].map(([node, path]) => [sectionByNode.get(node)!, path]));
+}
+
 /** The `[node]` heading a root-relative node path names, or undefined where no heading is seated there. */
 export function nodeSectionOfPath(document: LanguageDocument, path: string): DocumentSection | undefined {
   const { seating, sectionByNode } = seatingOf(document);

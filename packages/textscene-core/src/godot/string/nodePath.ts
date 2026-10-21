@@ -23,6 +23,35 @@ export function nodePathWalkNames(path: string): string[] {
   return nodePathNames(path.split(':')[0]!);
 }
 
+/**
+ * `String(NodePath(path).simplified())` (node_path.cpp:331-355): each `.` dropped and each name
+ * followed by `..` cancelled with it, with `.` left where everything cancels. The text loader
+ * stores a `[connection]`'s `from=` and `to=` this way (resource_format_text.cpp:370-371).
+ */
+export function simplifiedNodePath(path: string): string {
+  const colon = path.indexOf(':');
+  const namesText = colon === -1 ? path : path.slice(0, colon);
+  const subnames = colon === -1 ? '' : path.slice(colon);
+  const absolute = namesText.startsWith('/') ? '/' : '';
+  return absolute + simplifiedNames(nodePathNames(namesText)).join('/') + subnames;
+}
+
+/** `NodePath::simplify` over the names alone, a single name never touched (node_path.cpp:336-338). */
+function simplifiedNames(names: string[]): string[] {
+  const kept = [...names];
+  for (let i = 0; i < kept.length && kept.length > 1; i++) {
+    if (kept[i] === '.') {
+      kept.splice(i, 1);
+      i--;
+    } else if (i > 0 && kept[i] === '..' && kept[i - 1] !== '.' && kept[i - 1] !== '..') {
+      kept.splice(i - 1, 2);
+      i -= 2;
+      if (kept.length === 0) return ['.'];
+    }
+  }
+  return kept;
+}
+
 /** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
 export const UNIQUE_NODE_PREFIX = '%';
 

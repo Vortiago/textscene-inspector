@@ -7,7 +7,7 @@
 
 export { toUint32, toInt16, readerLimitedInt } from './intWidth.js';
 export type { IntWidth } from './intWidth.js';
-export { parseGodotInt, parseSlotInt, statedFromFloat, storedFromFloat } from './intReader.js';
+export { parseGodotInt, parseSlotInt, statedFromFloat } from './intReader.js';
 export {
   readIntSlot,
   slotWidth,

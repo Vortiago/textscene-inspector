@@ -7,7 +7,7 @@
 
 import { warn } from '../../../../logger';
 import { ARRAY_LITERAL_RE, packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
-import { parseGodotInt } from '../../../../godot/variant/int.js';
+import { int32Elements } from '../../../../godot/variant/packedInt32.js';
 import { decodeBase64Bytes } from '../../../../godot/variant/packedBytes.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 
@@ -85,54 +85,43 @@ export function decodeTileMapData(value: string): PlacedCell[] | null {
 
 /**
  * The elements of a packed int body: null overall for text Godot cannot read,
- * which fails the load, and null per element for one no int32 holds (`inf`,
+ * which fails the load, and NaN per element for one no int32 holds (`inf`,
  * `1e20`), which Godot loads as a sentinel, so only its cell is unknowable and
  * {@link dropUnstorableRecords} drops that cell alone.
  */
-function readInt32Elements(body: string, context: string): (number | null)[] | null {
-  // An empty body is an empty array: `''.split(',')` yields `['']`, which would
-  // report a legal empty layer as corrupt.
-  if (body.trim() === '') return [];
-  const out: (number | null)[] = [];
-  for (const part of body.split(',')) {
-    const num = parseGodotInt(part);
-    if (num === null) {
-      warn(`${context} has entries Godot cannot read — ignoring tile data`);
-      return null;
-    }
-    out.push(Number.isNaN(num) ? null : num);
-  }
-  return out;
+function readInt32Elements(body: string, context: string): number[] | null {
+  const elements = int32Elements(body);
+  if (elements === null) warn(`${context} has entries Godot cannot read — ignoring tile data`);
+  return elements;
 }
 
 /**
- * Every fixed-stride record with no unstorable element, so an unstorable element
+ * Every fixed-stride record with no unstorable (NaN) element, so an unstorable element
  * costs only its own cell: voiding the stream draws nothing, and a zero draws a
  * cell at the origin. A trailing partial record passes through to the caller's
  * truncation check.
  */
 function dropUnstorableRecords(
-  elements: (number | null)[],
+  elements: number[],
   stride: number,
   headerLength: number,
   context: string
 ): number[] | null {
-  const header = elements.slice(0, headerLength);
-  if (header.some((n) => n === null)) {
+  const out = elements.slice(0, headerLength);
+  if (out.some(Number.isNaN)) {
     warn(`${context} header is not a value Godot can hold — ignoring tile data`);
     return null;
   }
-  const out = header as number[];
   let i = headerLength;
   for (; i + stride <= elements.length; i += stride) {
     const record = elements.slice(i, i + stride);
-    if (record.some((n) => n === null)) {
+    if (record.some(Number.isNaN)) {
       warn(`${context} has a cell Godot cannot place — dropping that cell`);
       continue;
     }
-    out.push(...(record as number[]));
+    out.push(...record);
   }
-  for (; i < elements.length; i++) out.push(elements[i] ?? 0);
+  for (; i < elements.length; i++) out.push(Number.isNaN(elements[i]) ? 0 : elements[i]!);
   return out;
 }
 

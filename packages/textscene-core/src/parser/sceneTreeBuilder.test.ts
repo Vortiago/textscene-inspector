@@ -746,3 +746,26 @@ describe('sceneSeating', () => {
     expect(() => sceneSeating([node('Root')])).toThrow('expected roots that seatScene returned');
   });
 });
+
+describe('seatScene pathOf', () => {
+  it('gives each seated node its root-relative path, the root at the empty path', () => {
+    const seating = seatScene(originsOf([node('Root'), node('Body', './'), node('Arm', './Body')]));
+    expect([...seating.pathOf.values()]).toEqual(['', 'Body', 'Body/Arm']);
+  });
+
+  it('gives both of two siblings sharing a name their path', () => {
+    const [root, first, second] = [node('Root'), node('A', '.'), node('A', '.')];
+    const { seated, pathOf } = seatScene(originsOf([root, first, second]));
+    expect([pathOf.get(seated.get(first)!), pathOf.get(seated.get(second)!)]).toEqual(['A', 'A']);
+  });
+
+  it('gives a re-rooted node its rename', () => {
+    const lost = node('Lost', 'Gone');
+    const { seated, pathOf } = seatScene(originsOf([node('Root'), lost]));
+    expect(pathOf.get(seated.get(lost)!)).toBe('Gone#Lost');
+  });
+
+  it('gives no path in a file with no node', () => {
+    expect(seatScene([]).pathOf.size).toBe(0);
+  });
+});

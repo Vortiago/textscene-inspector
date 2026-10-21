@@ -11,6 +11,7 @@
 import type { Vector2 } from '../../../../godot/math/vector';
 import { fposmodp } from '../../../../godot/math/math';
 import { TextureProgressBarFillMode } from '../../../../godot/scene/gui';
+import { TAU } from '../../../../godot/math/math.js';
 
 /** `set_fill_degrees` (`texture_progress_bar.cpp:610-619`): `CLAMP(p_angle, 0, 360)`, always applied. */
 export function clampRadialFillDegrees(radialFillDegrees: number | undefined): number {
@@ -53,7 +54,7 @@ function unitValToUv(val: number, center: Vector2): Vector2 {
   if (v < 0) v += 1;
   if (v > 1) v -= 1;
 
-  const angle = v * Math.PI * 2 - Math.PI * 0.5;
+  const angle = v * TAU - Math.PI * 0.5;
   const dir = { x: Math.cos(angle), y: Math.sin(angle) };
   let t1 = 1.0;
   const edgeLeft = 0;

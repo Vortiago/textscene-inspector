@@ -4,6 +4,7 @@
  */
 
 import { AnimationLoopMode } from '../scene/animation.js';
+import type { GltfClip } from './gltfImportNames.js';
 
 export interface ClipImportOptions {
   /** `nodes/use_name_suffixes` (`resource_importer_scene.cpp:640-645`), true by default. */
@@ -23,12 +24,6 @@ interface ImportedClip {
 
 /** The suffixes `_pre_fix_node` tests in this order (`resource_importer_scene.cpp:746-756`). */
 const LOOP_SUFFIXES = ['loop_mode', 'loop', 'cycle'] as const;
-
-/** A clip as the glTF importer left it: its stored name, and whether its name made it loop. */
-export interface GltfClip {
-  name: string;
-  loops: boolean;
-}
 
 /** How the scene importer imports `clip`: the suffix rule, then the sidecar entry under the name that remains. */
 export function importedClip(clip: GltfClip, options: ClipImportOptions): ImportedClip {

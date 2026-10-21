@@ -14,20 +14,24 @@ describe('refusesToInstantiate', () => {
   });
 
   it('refuses a root that declares a parent', () => {
-    expect(refusesToInstantiate([origin('Root', '.'), origin('A', 'Mid')])).toBe(true);
+    expect(refusesToInstantiate([origin('Root', '.'), origin('A', 'Root')])).toBe(true);
   });
 
   it('refuses a later heading that declares no parent', () => {
-    expect(refusesToInstantiate([origin('Root', undefined), origin('A', undefined)])).toBe(true);
+    expect(refusesToInstantiate([origin('Root', undefined), origin('Stray', undefined)])).toBe(true);
   });
 
   it('refuses a heading that spells parent="" (edge case)', () => {
-    expect(refusesToInstantiate([origin('Root', undefined), origin('A', '')])).toBe(true);
+    expect(refusesToInstantiate([origin('Root', undefined), origin('Blank', '')])).toBe(true);
   });
 
-  it('refuses a root that states no identifier, read off its node (edge case)', () => {
+  it('reads the root heading’s identifier off its node', () => {
     const override = origin('Root', undefined, { overridesExistingNode: true });
     expect(refusesToInstantiate([override, origin('A', '.')])).toBe(true);
+  });
+
+  it('accepts a well-formed scene', () => {
+    expect(refusesToInstantiate([origin('Root', undefined), origin('A', '.')])).toBe(false);
   });
 
   it('accepts an empty scene (edge case)', () => {

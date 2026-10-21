@@ -8,6 +8,7 @@ describe('paintedOutChromeCss', () => {
       const css = paintedOutChromeCss({ canvas2D });
       expect(css).toContain('[data-testid="viewport-toolbar-overlay"]');
       expect(css).toContain('[data-testid="viewport-controls-help"]');
+      expect(css).toContain('button[title*="switch to the 2D view"]');
       expect(css).toContain(`[data-testid="${PERFORMANCE_TESTIDS.overlay}"]`);
       expect(css).toContain('{display:none !important}');
     }

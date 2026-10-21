@@ -80,12 +80,10 @@ function releasePasses(gl: THREE.WebGLRenderer, filter: LayerFilter): void {
 }
 
 /**
- * Godot's baked layers of the sky in `radiance`, a cube as wide as the bake's radiance size. The
- * cube stands for Godot's radiance octmap of the same size, which is twice as wide to match a cube's
- * texel density (`sky.cpp:1554-1557`). Each layer's mips shrink its mip 0 as Godot's
- * `update_reflection_mipmaps` does (`sky.cpp:481-500`). `debanding` scales the debanding noise in
- * the radiance, 0 for a sky without it. The caller owns the array, and frees it with
- * `disposeSkyLayers`.
+ * Godot's baked sky layers in `radiance`, a cube as wide as the radiance size. It stands for Godot's
+ * octmap of that size, twice as wide for a cube's texel density (`sky.cpp:1554-1557`). Mips shrink as
+ * `update_reflection_mipmaps` does (`sky.cpp:481-500`). `debanding` scales the radiance's debanding
+ * noise, 0 for none. The caller owns the array, and frees it with `disposeSkyLayers`.
  */
 export function bakeSkyLayers(
   gl: THREE.WebGLRenderer,

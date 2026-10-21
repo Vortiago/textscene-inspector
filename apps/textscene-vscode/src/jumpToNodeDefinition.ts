@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { findNodeHeadingLine } from './nodeHeadingResolver';
+import { nodeHeadingLine } from './nodeHeadingResolver';
 
 /**
  * The column of an editor tab that already holds `resource`, so the jump focuses that editor
@@ -30,7 +30,7 @@ function freshColumn(previewColumn: vscode.ViewColumn | undefined): vscode.ViewC
 }
 
 /**
- * Open `resource` and put the cursor on `nodeName`'s heading, in the column of a tab that
+ * Open `resource` and put the cursor on the heading of the node at `treePath`, in the column of a tab that
  * already holds the scene, or else a fresh column, never over the preview in `previewColumn`.
  * A name the file does not carry is a warning, not an error: the webview's tree can outlive
  * an edit that removed the node.
@@ -38,14 +38,14 @@ function freshColumn(previewColumn: vscode.ViewColumn | undefined): vscode.ViewC
 export async function jumpToNodeDefinition(
   resource: vscode.Uri,
   nodeName: string,
-  expectedParent: string | undefined,
+  treePath: string,
   previewColumn: vscode.ViewColumn | undefined
 ): Promise<void> {
   try {
     const document = await vscode.workspace.openTextDocument(resource);
-    const targetLine = findNodeHeadingLine(document.getText().split('\n'), nodeName, expectedParent);
+    const targetLine = nodeHeadingLine(document.getText(), treePath);
 
-    if (targetLine === -1) {
+    if (targetLine === undefined) {
       vscode.window.showWarningMessage(`Could not find node "${nodeName}" in file`);
       return;
     }

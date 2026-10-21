@@ -7,7 +7,7 @@
 import '../range/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
-import { HORIZONTAL_ALIGNMENT_NAMES } from '../../../../godot/math/math.js';
+import { HORIZONTAL_ALIGNMENT_NAMES } from '../../../../godot/math/alignment.js';
 
 // `exp_edit` keeps Range's validator. SpinBox::_validate_property (spin_box.cpp:647-650) sets its
 // usage to PROPERTY_USAGE_NONE, which hides it and stops the saver, but `Range::set_exp_ratio`

@@ -14,7 +14,7 @@ validatorRegistry.registerAll('PhysicalBone2D', {
   // scene/2d/physics/physical_bone_2d.cpp:283: PROPERTY_HINT_RANGE "-1, 1000, 1". The -1 is the
   // in-memory default (physical_bone_2d.h:47), and set_bone2d_index (:228-229) refuses
   // `p_bone_idx < 0`, so the floor is 0 and errors.
-  bone2d_index: v.strictInt('bone2d_index', {
+  bone2d_index: v.int('bone2d_index', {
     min: 0,
     // Only hinted: the bone-count check (:237) needs is_inside_tree(), and properties load
     // before parenting (packed_scene.cpp:492 sets, :541 parents).

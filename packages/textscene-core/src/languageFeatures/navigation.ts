@@ -72,7 +72,15 @@ function declarationRangeAt(document: LanguageDocument, position: Position): Ran
  */
 function nodeDeclarationRangeAt(document: LanguageDocument, position: Position): Range | undefined {
   const reference = nodePathReferenceAt(document, position);
-  const section = reference && nodeSectionOfPath(document, reference.path);
+  return reference && nodeDeclarationRange(document, reference.path);
+}
+
+/**
+ * The whole `[node]` heading line of the node a root-relative path names, spelt as a `parent=` is,
+ * or undefined for a path this file never declares.
+ */
+export function nodeDeclarationRange(document: LanguageDocument, path: string): Range | undefined {
+  const section = nodeSectionOfPath(document, path);
   return section && headingRange(document, section);
 }
 

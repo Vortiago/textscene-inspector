@@ -1,10 +1,11 @@
 /**
  * The node paths a heading spells in `parent=`, `from=` and `to=`, and the `[node]` heading each
- * one names. Godot writes all three relative to the scene root and walks them with
- * `get_node_or_null` from there (`resource_format_text.cpp:204-211, 371-372`), so the seated
- * scene's one walk (`nodeSectionOfPath`) resolves them.
+ * one names. The loader stores a `parent=` as written (`resource_format_text.cpp:205-212`) and a
+ * connection end simplified (`:370-371`). Instantiate walks each from the scene root with
+ * `get_node_or_null` (`packed_scene.cpp:157-165`), so the seated scene's one walk resolves them.
  */
 
+import { simplifiedNodePath } from '../godot/string/nodePath.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 import { nodeSectionOfPath } from './nodeSeating.js';
 import { headingAttribute, lineRange, lineRangeContains } from './ranges.js';
@@ -16,8 +17,8 @@ const PATH_ATTRIBUTES: ReadonlyMap<string, readonly string[]> = new Map([
   ['connection', ['from', 'to']],
 ]);
 
-/** A node path as written, and where its value sits. */
-export interface NodePathReference {
+/** A node path as the loader stores it, and where its written value sits. */
+interface NodePathReference {
   readonly path: string;
   readonly range: Range;
 }
@@ -28,12 +29,18 @@ type NodeUses = ReadonlyMap<DocumentSection, readonly NodePathReference[]>;
 /** Written only by {@link nodeUsesOf}. An entry lives as long as its document. */
 const nodeUsesByDocument = new WeakMap<LanguageDocument, NodeUses>();
 
+/** The path the loader stores for a written value: it simplifies a connection end and nothing else. */
+function storedPath(tag: string, written: string): string {
+  return tag === 'connection' ? simplifiedNodePath(written) : written;
+}
+
 /** The node paths a heading line spells. */
 function referencesOnHeading(section: DocumentSection, lineText: string): NodePathReference[] {
   const line = section.headingLine - 1;
   return (PATH_ATTRIBUTES.get(section.tag) ?? []).flatMap((key) => {
     const attribute = headingAttribute(lineText, key);
-    return attribute ? [{ path: attribute.value, range: lineRange(line, attribute.span) }] : [];
+    if (!attribute) return [];
+    return [{ path: storedPath(section.tag, attribute.value), range: lineRange(line, attribute.span) }];
   });
 }
 

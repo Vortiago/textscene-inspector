@@ -49,7 +49,7 @@ validatorRegistry.registerAll('CanvasItem', {
   // scene/main/canvas_item.cpp:1481 builds the hint from the rendering server's
   // own constants, and set_z_index (canvas_item.cpp:668-669) ERR_FAIL_CONDs
   // against the same two, so this is enforced, not only hinted.
-  z_index: v.strictInt('z_index', {
+  z_index: v.int('z_index', {
     min: CANVAS_ITEM_Z_MIN,
     max: CANVAS_ITEM_Z_MAX,
     enforced: 'canvas_item.cpp:668',

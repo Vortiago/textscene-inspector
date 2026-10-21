@@ -16,22 +16,21 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+  attachDiagnostics,
+  clearDiagnostics,
   createCaptureContext,
+  loggedErrors,
   openScene,
   PERFORMANCE_TESTIDS,
+  previewPort,
   sceneStillLoading,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
-import { attachConsoleGate } from '../visual/run/sceneCapture.mjs';
 import { BUDGET_SCENES } from './scenes.mjs';
 import { SteadyWork } from './steadyWork.mjs';
 import { compareToBudget, parseWorkCounts } from './workCounts.mjs';
 
 const BUDGETS_PATH = resolve(import.meta.dirname, 'budgets.json');
-
-// Clear of the golden gate's 4317, the parity capture's 4319 and the comparison captures' 4321 and
-// 4323, so each can run beside the others.
-const PORT = Number(process.env.PERF_PORT) || 4325;
 
 /** Shorter than the overlay's 500 ms window, so no window goes unread. */
 const READ_INTERVAL_MS = 250;
@@ -47,7 +46,7 @@ async function main() {
 
   const measured = {};
   const unmeasured = [];
-  await withPreviewBrowser({ port: PORT, portEnvName: 'PERF_PORT' }, async (browser, baseUrl) => {
+  await withPreviewBrowser(previewPort('perf'), async (browser, baseUrl) => {
     const profiled = await profiledPage(browser);
     for (const scene of scenes) {
       const { work, reason } = await measureScene(profiled, baseUrl, scene);
@@ -81,7 +80,7 @@ function parseArgs(argv) {
 async function profiledPage(browser) {
   const context = await createCaptureContext(browser, { frameOnOpen: true, showPerformance: true });
   const page = await context.newPage();
-  return { page, errors: attachConsoleGate(page) };
+  return { page, diagnostics: attachDiagnostics(page) };
 }
 
 /**
@@ -89,8 +88,8 @@ async function profiledPage(browser) {
  * end the wait: an animated scene does the same work each frame, and a frame of a large world under
  * software GL outlasts a screenshot's timeout.
  */
-async function measureScene({ page, errors }, baseUrl, scene) {
-  errors.length = 0;
+async function measureScene({ page, diagnostics }, baseUrl, scene) {
+  clearDiagnostics(diagnostics);
   const { target, reason } = await openScene(page, baseUrl, scene.file, {
     onSlow: (ms) => console.log(`[perf]   ${scene.name}: no network idle within ${ms}ms`),
   });
@@ -98,6 +97,7 @@ async function measureScene({ page, errors }, baseUrl, scene) {
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
   const { work, reason: unsteady } = await steadyWork(page);
+  const errors = loggedErrors(diagnostics);
   if (errors.length > 0) return { work: null, reason: `console error(s): ${errors.join(' | ')}` };
   return { work, reason: unsteady };
 }

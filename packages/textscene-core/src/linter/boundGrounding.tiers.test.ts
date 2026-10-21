@@ -63,7 +63,7 @@ describe('per-end grounding', () => {
   it('gives an enforced floor and a hinted ceiling different severities', () => {
     // PhysicalBone2D.bone2d_index is the real shape: ERR_FAIL_COND on the floor
     // (physical_bone_2d.cpp:229), nothing but a hint on the ceiling (:283).
-    const validator = v.strictInt('bone2d_index', {
+    const validator = v.int('bone2d_index', {
       min: 0,
       max: 1000,
       enforced: { min: 'physical_bone_2d.cpp:229' },
@@ -81,7 +81,7 @@ describe('per-end grounding', () => {
       v.positiveInt('i', undefined, { hinted: 'd.cpp:4' }),
       v.strictNonNegativeInt('s', { hinted: 'e.cpp:5' }),
       v.boundedVector3('vec', { min: 0, hinted: 'f.cpp:6' }),
-      v.strictInt('si', { min: 0, hinted: 'g.cpp:7' }),
+      v.int('si', { min: 0, hinted: 'g.cpp:7' }),
       layerBitmask('mask', { hinted: 'h.cpp:8', width: 'uint32' }),
     ];
     for (const validator of cases) {
@@ -97,7 +97,7 @@ describe('per-end grounding', () => {
     );
   });
 
-  it('splits float and int the same way strictInt does', () => {
+  it('splits float and int per end the same way', () => {
     // `float`/`int` split the tier per end, not through `boundSeverity`, which returns 'error' unless both ends are
     // hinted. CSGCylinder3D's `sides` (enforced floor csg_shape.cpp:1876, hinted ceiling :1849) is the real shape.
     const floatV = v.float('extra_cull_margin', {

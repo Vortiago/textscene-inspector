@@ -44,6 +44,8 @@ export interface SceneSeating<N extends RawNode> extends SeatedPaths<N> {
   readonly roots: N[];
   /** Heading node to its copy in `roots`. A heading absent here is unreachable from the root. */
   readonly seated: ReadonlyMap<N, N>;
+  /** The root-relative path of each seated copy with a name, a copy a later sibling of its name replaced included. */
+  readonly pathOf: ReadonlyMap<N, string>;
 }
 
 export const MISSING = { status: 'missing' } as const;
@@ -65,7 +67,7 @@ export function seatScene<N extends SceneNode<N>>(origins: readonly NodeOrigin<N
 
 function noScene<N extends RawNode>(): SceneSeating<N> {
   const ownership = { claims: new Map(), instanceSettings: [], ownedInsideInstances: new Set<string>() };
-  return { roots: [], seated: new Map(), resolve: () => MISSING, ownership };
+  return { roots: [], seated: new Map(), pathOf: new Map(), resolve: () => MISSING, ownership };
 }
 
 function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[]): SceneSeating<N> {
@@ -108,6 +110,7 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
   return {
     roots: [tables.root],
     seated: tables.seated,
+    pathOf: tables.pathOf,
     resolve: seatedResolver(tables),
     ownership: tables.ownership,
   };
@@ -202,6 +205,8 @@ interface SeatingTables<N> {
   readonly rootChildNames: Set<string>;
   /** Every seated node, keyed by the folded path its own children address it at. */
   readonly byPath: Map<string, N>;
+  /** The inverse of `byPath`, keeping a node a later sibling replaced there. */
+  readonly pathOf: Map<N, string>;
   /** `%Name` to that path, for the nodes claiming one in the root's table. */
   readonly uniquePaths: Map<string, string>;
   /** Each seated node's place, both spellings from the root's own name ({@link UniqueNameClaim}). */
@@ -232,6 +237,7 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
     seated: new Map([[rootNode, root]]),
     rootChildNames: new Set(),
     byPath,
+    pathOf: new Map([[root, SCENE_ROOT_PATH]]),
     uniquePaths,
     places: new Map([[root, { path: root.name, livePath: root.name }]]),
     enclosingInstances: new Map(),
@@ -287,6 +293,7 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
+  tables.pathOf.set(node, path);
   const setting = uniqueNameSetting(node);
   if (setting === undefined) return;
   if (isRootOwned) {

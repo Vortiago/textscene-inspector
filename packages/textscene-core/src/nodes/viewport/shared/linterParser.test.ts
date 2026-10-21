@@ -137,9 +137,8 @@ describe('Viewport shared validators', () => {
     });
 
     it('accepts canvas_item_default_texture_filter 4 (PARENT_NODE, added in 4.7); rejects 5 and -1, both outside DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX', () => {
-      // 4.7.2: viewport.cpp:4101 ERR_FAIL_INDEX against MAX = 5
-      // (viewport.h:191-198). 4.6.3 stops at 3, so bounding at 3 errors on a
-      // scene the 4.7 editor writes.
+      // 4.6.3 refuses 4 (viewport.cpp:3968), but the 4.7 editor writes it, and the
+      // ceiling follows the newer release (ADR-0032).
       const validator = find('canvas_item_default_texture_filter');
       for (const value of ['0', '1', '2', '3', '4']) {
         expect(validator('canvas_item_default_texture_filter', value, 1)).toBeNull();
@@ -152,8 +151,8 @@ describe('Viewport shared validators', () => {
     });
 
     it('accepts canvas_item_default_texture_repeat 3 (PARENT_NODE, added in 4.7); rejects 4, past DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_MAX', () => {
-      // 4.7.2: viewport.cpp:4184 ERR_FAIL_INDEX against MAX = 4
-      // (viewport.h:200-206). 4.6.3 stops at 2.
+      // 4.6.3 refuses 3 (viewport.cpp:3999), but the 4.7 editor writes it, and the
+      // ceiling follows the newer release (ADR-0032).
       const validator = find('canvas_item_default_texture_repeat');
       for (const value of ['0', '1', '2', '3']) {
         expect(validator('canvas_item_default_texture_repeat', value, 1)).toBeNull();

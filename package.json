@@ -51,7 +51,7 @@
     "ref:godot": "node scripts/godot-ref/run.mjs",
     "ref:ours": "node scripts/godot-ref/capture-ours.mjs",
     "ref:diff": "node scripts/godot-ref/diff.mjs",
-    "showcase:regen": "pnpm --filter @textscene/web-previewer build && node scripts/showcase/regenerate.mjs",
+    "showcase:regen": "node scripts/showcase/regenerate.mjs",
     "drive:vscode": "node scripts/vscode/drive-vscode.mjs",
     "drive:vscode:diff": "node scripts/vscode/ink-diff.mjs",
     "test:vscode:csp": "node scripts/vscode/webview-csp-gate.mjs",

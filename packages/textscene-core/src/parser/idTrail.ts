@@ -20,12 +20,19 @@ export function idTrailEnd<N extends RawNode>(
 ): IdTrailEnd | undefined {
   const trail = origins[index]?.idTrail;
   if (trail === undefined) return undefined;
-  const headings = origins.map((origin): IdHeading => ({
+  return recoverByIdTrail(trail, idHeadingsOf(origins, isPlaced), index);
+}
+
+/** Each heading as `recoverByIdTrail` reads it, placed where `isPlaced` says. */
+export function idHeadingsOf<N extends RawNode>(
+  origins: readonly NodeOrigin<N>[],
+  isPlaced: (origin: NodeOrigin<N>) => boolean
+): IdHeading[] {
+  return origins.map((origin) => ({
     uniqueId: origin.uniqueId,
     instance: instanceKind(origin.node),
     isPlaced: isPlaced(origin),
   }));
-  return recoverByIdTrail(trail, headings, index);
 }
 
 function instanceKind(node: RawNode): IdHeading['instance'] {

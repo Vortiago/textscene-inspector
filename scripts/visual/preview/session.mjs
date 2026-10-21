@@ -3,17 +3,10 @@
  * browser closes and the server stops however the session ends, so no harness leaves either behind.
  */
 
-import { chromium } from 'playwright';
-import { SWIFTSHADER_GL_ARGS } from '../../showcase/browser.mjs';
+import { launchSwiftShaderBrowser } from '../../showcase/browser.mjs';
 import { warmUpGLContext } from './captureContext.mjs';
 import { assertPortFree, killPreviewGroup, startPreview, waitForServer } from './server.mjs';
 import { ensureWebBuilt } from './webBuild.mjs';
-
-// Playwright's bundled Chromium, pinned by the lockfile, and SwiftShader software GL, so local and
-// CI render the same bits with no GPU or driver variance.
-function launchSwiftShaderBrowser() {
-  return chromium.launch({ headless: true, args: SWIFTSHADER_GL_ARGS });
-}
 
 /**
  * Runs `work(browser, baseUrl)` against the previewer on `port`, and answers what it answers.

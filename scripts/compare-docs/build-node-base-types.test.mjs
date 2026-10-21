@@ -11,18 +11,16 @@ import {
   deriveBaseTypes,
   deriveResourceTypeExclusions,
   EXCLUSIONS_OUT,
-  NODE_PROPERTIES,
   OUT,
   PROPERTIES_OUT,
-  RESOURCE_BASES,
   RESOURCE_OUT,
-  RESOURCE_PROPERTIES,
   renderFromCatalog,
   renderFromExclusionCaptures,
   renderFromPropertyCaptures,
   renderFromResourceBases,
 } from './build-node-base-types.mjs';
 import { RESOURCE_CLASSES } from './build-node-catalog/extraClasses.mjs';
+import { PROPS_OUT, RESOURCE_BASES_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
 
 describe('deriveResourceTypeExclusions', () => {
   const row = (name, hint, hint_string) => ({ name, type: 24, hint, hint_string });
@@ -136,7 +134,7 @@ describe('deriveBaseTypes', () => {
   });
 
   it('renders one row per captured property, so no class is dropped', () => {
-    const total = [NODE_PROPERTIES, RESOURCE_PROPERTIES]
+    const total = [PROPS_OUT, RESOURCE_PROPS_OUT]
       .map((path) => JSON.parse(readFileSync(path, 'utf8')))
       .reduce((sum, table) => sum + Object.values(table).reduce((rows, list) => rows + list.length, 0), 0);
     expect(renderFromPropertyCaptures().match(/^\s*\["/gm)?.length).toBe(total);
@@ -145,7 +143,7 @@ describe('deriveBaseTypes', () => {
   it('the gallery hand-writes no resource chain the capture disagrees with', () => {
     // RESOURCE_CLASSES spells its ancestry by hand, so it is compared with the capture rather
     // than either being trusted.
-    const bases = JSON.parse(readFileSync(RESOURCE_BASES, 'utf8'));
+    const bases = JSON.parse(readFileSync(RESOURCE_BASES_OUT, 'utf8'));
     // `seen` so a cyclic capture fails this assertion instead of hanging the run.
     const derived = (name) => {
       const chain = [];
