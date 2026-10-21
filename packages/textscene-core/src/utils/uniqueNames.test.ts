@@ -266,7 +266,7 @@ unique_name_in_owner = true
 
   it("lists the live paths of this root's own nodes that sit inside an instance", () => {
     expect(
-      [...ownership.insideInstances].filter(([, isRootOwned]) => isRootOwned).map(([path]) => path)
+      [...ownership.insideInstances].filter(([, headings]) => headings.isRootOwned).map(([path]) => path)
     ).toEqual(['Player/Enemy/Added', 'Player/Enemy/Added/Child']);
   });
 
@@ -290,7 +290,7 @@ unique_name_in_owner = true
 `).nodes;
     const gun = instanceNamed(nested, 'Enemy').children.find((n) => n.name === 'Gun')!;
     expect(gun.instanceNameSettings?.map((s) => s.pathInInstance)).toEqual(['Barrel']);
-    expect(cachedUniqueNameOwnership(nested).insideInstances.get('Player/Enemy/Gun')).toBe(true);
+    expect(cachedUniqueNameOwnership(nested).insideInstances.get('Player/Enemy/Gun')?.isRootOwned).toBe(true);
   });
 
   it('records no live path for a nameless heading inside an instance, which has none of its own', () => {

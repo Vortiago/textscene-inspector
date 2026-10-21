@@ -10,7 +10,9 @@ import {
   hasForeignOwner,
   isInstanceBelowRoot,
   isOwnedByRoot,
+  NO_OWNER,
   uniqueNameSetting,
+  type HeadingsInsideInstance,
   type UniqueNameClaim,
   type UniqueNameOwnership,
   type InstanceNameSetting,
@@ -221,7 +223,7 @@ interface SeatingTables<N> {
   readonly instanceNameSettings: Map<N, InstanceNameSetting[]>;
   readonly ownership: {
     readonly claims: Map<string, UniqueNameClaim>;
-    readonly insideInstances: Map<string, boolean>;
+    readonly insideInstances: Map<string, HeadingsInsideInstance>;
   };
   /** The same tables as the walk consumes them. */
   readonly tree: RootWalkTables;
@@ -293,7 +295,7 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
   if (!node.name) return;
   if (node.owner !== undefined) node.owner = resolvedOwner(tables, node.owner);
   const isRootOwned = isOwnedByRoot(node, instance !== undefined);
-  if (instance !== undefined) tables.ownership.insideInstances.set(place.livePath, isRootOwned);
+  if (instance !== undefined) recordInsideInstance(tables, place.livePath, node, isRootOwned);
   const path = joinPath(parentPath, node.name);
   if (parentPath === SCENE_ROOT_PATH) tables.rootChildNames.add(node.name);
   tables.byPath.set(path, node);
@@ -331,7 +333,7 @@ function register<N extends RawNode>(tables: SeatingTables<N>, parentPath: strin
  */
 function resolvedOwner<N extends RawNode>(tables: SeatingTables<N>, owner: string): string {
   const end = walkFromRoot(owner, tables.tree);
-  if (end === null) return owner;
+  if (end === null) return NO_OWNER;
   const path = typeof end === 'string' ? end : end.unlisted;
   return path === SCENE_ROOT_PATH ? '.' : path;
 }
@@ -348,7 +350,7 @@ function handToOwner<N extends RawNode>(
   livePath: string,
   isUnique: boolean
 ): void {
-  const owner = instanceHolding(tables, ownerPath);
+  const owner = ownerPath === NO_OWNER ? undefined : instanceHolding(tables, ownerPath);
   if (!owner) return;
   handToInstance(tables, owner.instance, {
     pathInInstance: pathBetween(tables.places.get(owner.instance)!.livePath, livePath),
@@ -367,12 +369,10 @@ function instanceHolding<N extends RawNode>(
   path: string
 ): { instance: N; pathInInstance: string } | undefined {
   const names = path.split('/');
-  for (let end = names.length; end > 0; end--) {
+  for (let end = names.length; end >= 0; end--) {
     const seated = tables.byPath.get(names.slice(0, end).join('/'));
     if (!seated) continue;
-    const instance = isInstanceBelowRoot(seated, seated === tables.root)
-      ? seated
-      : tables.enclosingInstances.get(seated);
+    const instance = isInstanceAt(tables, seated) ? seated : tables.enclosingInstances.get(seated);
     if (!instance) return undefined;
     const rest = names.slice(end).join('/');
     const seatedLivePath = tables.places.get(seated)!.livePath;
@@ -380,6 +380,14 @@ function instanceHolding<N extends RawNode>(
     return { instance, pathInInstance: pathInInstance(tables, instance, ownerLivePath)! };
   }
   return undefined;
+}
+
+/**
+ * Whether a seated node is an instance whose graft composes a table: one below the root, or an
+ * inherited root, which owns its base's nodes (packed_scene.cpp:227-231).
+ */
+function isInstanceAt<N extends RawNode>(tables: SeatingTables<N>, node: N): boolean {
+  return node === tables.root ? Boolean(node.instance) : isInstanceBelowRoot(node, false);
 }
 
 /** Append a setting to the instance node it sits in, in file order, after the children seated so far. */
@@ -404,6 +412,20 @@ function pathInInstance<N extends RawNode>(
   livePath: string
 ): string | undefined {
   return relativeTo(tables.places.get(instance)!.livePath, livePath);
+}
+
+/** Fold a heading inside an instance into what the file's earlier headings at its live path say. */
+function recordInsideInstance<N extends RawNode>(
+  tables: SeatingTables<N>,
+  livePath: string,
+  node: N,
+  isRootOwned: boolean
+): void {
+  const earlier = tables.ownership.insideInstances.get(livePath);
+  tables.ownership.insideInstances.set(livePath, {
+    isRootOwned: isRootOwned || earlier?.isRootOwned === true,
+    isAdded: !node.overridesExistingNode || earlier?.isAdded === true,
+  });
 }
 
 /** The ownership record of a file that has seated nothing yet. */

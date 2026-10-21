@@ -41,6 +41,13 @@ export function isInstanceBelowRoot(node: RawNode, isRoot: boolean): boolean {
 }
 
 /**
+ * The seated `owner=` of a heading whose owner path names no node when instantiate sets it. An
+ * empty NodePath, which `get_node_or_null` answers with null (node.cpp:1894), so the node gets no
+ * owner and its name registers on no table (packed_scene.cpp:159-168, :565-570).
+ */
+export const NO_OWNER = '';
+
+/**
  * Whether a heading's `owner=` names a node other than the root: the saver writes it only then
  * (resource_format_text.cpp:2024-2025), for a node that instanced content owns.
  */
@@ -106,6 +113,17 @@ export function isOutsideInstance(setting: Pick<InstanceNameSetting, 'pathInInst
 export interface UniqueNameOwnership {
   /** `%Name` to claim, for the nodes this file's root owns, the first claimant kept. */
   readonly claims: ReadonlyMap<string, UniqueNameClaim>;
-  /** The live path of each heading this file seats inside instanced content, to whether this root owns it. */
-  readonly insideInstances: ReadonlyMap<string, boolean>;
+  /** The live path of each node this file's headings reach inside instanced content, to what they say of it. */
+  readonly insideInstances: ReadonlyMap<string, HeadingsInsideInstance>;
+}
+
+/**
+ * What a file's headings at one live path inside an instance say of the node there. Each field is
+ * true where any heading at that path says so, since a later heading never takes back an earlier one.
+ */
+export interface HeadingsInsideInstance {
+  /** Whether this file's root owns the node, so its `%Name` lands in the root's table. */
+  readonly isRootOwned: boolean;
+  /** Whether a heading here adds the node, rather than overriding one the instance already has. */
+  readonly isAdded: boolean;
 }

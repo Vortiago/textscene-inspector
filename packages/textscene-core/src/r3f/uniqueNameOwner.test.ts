@@ -569,3 +569,99 @@ unique_name_in_owner = true
     expect(ownerAt(scene, 'Root/HudInstance/Lamp').path).toBe('Root/HudInstance/Widget');
   });
 });
+
+describe('an owner= on a sub-scene heading that the host overrides', () => {
+  // The fold keeps the sub-scene node's own fields, so the owner= is the sub-scene heading's.
+  const hudGivingLampToWidget = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://widget.tscn" id="1"]
+
+[node name="Hud" type="Node2D"]
+
+[node name="Widget" parent="." instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="." owner="Widget"]
+unique_name_in_owner = true
+`);
+  const host = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Lamp" parent="HudInstance"]
+visible = false
+`);
+
+  it('walks the owner from the root of the file that adds the node', () => {
+    const owner = claimOwnerOf('Root/HudInstance/Lamp', host.nodes, {
+      ...ctx,
+      externalResources: host.externalResources,
+      sceneCache: { getCached: (p) => (p === 'res://hud.tscn' ? hudGivingLampToWidget : scenes.get(p)) },
+    });
+    expect(owner.path).toBe('Root/HudInstance/Widget');
+  });
+});
+
+describe('an owner= that names no node when instantiate sets it', () => {
+  // An owner path get_node_or_null misses sets no owner (packed_scene.cpp:159-168, :565-570),
+  // and a walk from a node with no owner reads no table but its own (node.cpp:1930-1938).
+  const ownerless = (lampOwner: string, after = '') =>
+    new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://hud.tscn" id="1"]
+
+[node name="Root" type="Node2D"]
+
+[node name="HudInstance" parent="." instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="." owner="${lampOwner}"]
+unique_name_in_owner = true
+${after}`);
+  const lampTable = (scene: TscnScene) =>
+    ownerUniquePaths(
+      claimOwnerOf('Root/Lamp', scene.nodes, { ...ctx, externalResources: scene.externalResources })
+    );
+
+  it('reads no table for an owner declared after the heading', () => {
+    const scene = ownerless('Later', '\n[node name="Later" parent="." instance=ExtResource("1")]\n');
+    expect(lampTable(scene).size).toBe(0);
+  });
+
+  it('reads no table for an owner that climbs above the root', () => {
+    const scene = ownerless(
+      'HudInstance/%Panel/../../..',
+      '\n[node name="Screen" type="Node2D" parent="."]\nunique_name_in_owner = true\n'
+    );
+    expect(lampTable(scene).size).toBe(0);
+  });
+});
+
+describe('an inherited scene whose owner= names a base %Name', () => {
+  // An inherited root owns its base's nodes and their names (packed_scene.cpp:227-231).
+  const base = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://widget.tscn" id="1"]
+
+[node name="Base" type="Node2D"]
+
+[node name="A" parent="." instance=ExtResource("1")]
+unique_name_in_owner = true
+`);
+  const inherited = new TscnParser().parse(`[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://base.tscn" id="1"]
+
+[node name="Player" instance=ExtResource("1")]
+
+[node name="Lamp" type="Node2D" parent="." owner="%A"]
+unique_name_in_owner = true
+`);
+  const inheritedCtx: LiveTreeContext = {
+    ...ctx,
+    externalResources: inherited.externalResources,
+    sceneCache: { getCached: (p) => (p === 'res://base.tscn' ? base : scenes.get(p)) },
+  };
+
+  it('registers the name on the base instance the %Name names', () => {
+    const owner = claimOwnerOf('Player/A/Face', inherited.nodes, inheritedCtx);
+    expect(ownerUniquePaths(owner).get('%Lamp')).toBe('Player/Lamp');
+  });
+});

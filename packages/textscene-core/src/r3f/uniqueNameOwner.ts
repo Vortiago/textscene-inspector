@@ -7,6 +7,7 @@
  */
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
+import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { joinPath } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
@@ -35,7 +36,7 @@ interface ClaimOwner {
   readonly parent?: ClaimOwner;
   /** The live tree the walk that found this owner reads, which its table's paths are placed over. */
   readonly live: PlacedLiveTree;
-  /** The table the collapse composed, on an instance that collapses into its sub-scene root. */
+  /** The table the collapse composed, on an instance that collapses into its sub-scene root, or none for no owner. */
   readonly composed?: UniqueNameTable;
 }
 
@@ -51,24 +52,23 @@ function composedPath(owner: ClaimOwner, fileLivePath: string): string {
   return owner.path + fileLivePath.slice(fileLivePath.indexOf('/'));
 }
 
-/** Which headings a question about a file's headings inside instances counts, by whether its root owns each. */
-type Counts = (isRootOwned: boolean) => boolean;
-const ROOT_OWNED: Counts = (isRootOwned) => isRootOwned;
-const ANY_HEADING: Counts = () => true;
+/** Which of a file's headings inside instances a question counts. */
+type Counts = (headings: HeadingsInsideInstance) => boolean;
+const ROOT_OWNED: Counts = (headings) => headings.isRootOwned;
+/** The file that adds a node holds its heading's `owner=`: an override's never reaches the folded node. */
+const ADDED: Counts = (headings) => headings.isAdded;
 
 /** Whether `owner`'s file seats a heading that `counts` at `livePath`, placed over the live tree. */
 function seatsInsideInstance(owner: ClaimOwner, livePath: string, counts: Counts): boolean {
-  const isRootOwned = cachedUniqueNameOwnership(owner.roots).insideInstances.get(
-    fileLocalPath(owner, livePath)
-  );
-  if (isRootOwned !== undefined && counts(isRootOwned)) return true;
+  const headings = cachedUniqueNameOwnership(owner.roots).insideInstances.get(fileLocalPath(owner, livePath));
+  if (headings !== undefined && counts(headings)) return true;
   return uniqueSpeltHeadings(owner.roots).some(
-    ([entry, isOwned]) => counts(isOwned) && owner.live.placed(composedPath(owner, entry)) === livePath
+    ([entry, spelt]) => counts(spelt) && owner.live.placed(composedPath(owner, entry)) === livePath
   );
 }
 
 /** A file's headings inside instances whose live paths pass through a `%Name`. */
-const uniqueSpeltHeadings = perTree((roots): readonly (readonly [string, boolean])[] =>
+const uniqueSpeltHeadings = perTree((roots): readonly (readonly [string, HeadingsInsideInstance])[] =>
   [...cachedUniqueNameOwnership(roots).insideInstances].filter(([path]) => path.includes(UNIQUE_NODE_PREFIX))
 );
 
@@ -194,19 +194,29 @@ export function claimOwnerOf(path: string, roots: readonly TscnNode[], ctx: Live
   const live = liveTreeOf(roots, ctx);
   const { owner, node } = walkTo(path, live);
   if (node?.owner === undefined) return owner;
-  const file = fileSeating(owner, path, ANY_HEADING);
+  const file = fileSeating(owner, path, ADDED);
   if (node.owner === '.') return file;
-  return walkTo(ownerLivePath(file.path, node.owner, live), live).into;
+  const ownerPath = node.owner === NO_OWNER ? undefined : ownerLivePath(file.path, node.owner, live);
+  return ownerPath === undefined ? noOwner(live) : walkTo(ownerPath, live).into;
+}
+
+const NO_NAMES: UniqueNameTable = { paths: () => new Map() };
+
+/** The claim owner of a node with no owner, whose table is empty. */
+function noOwner(live: PlacedLiveTree): ClaimOwner {
+  return { path: '', roots: [], live, composed: NO_NAMES };
 }
 
 /**
- * The live path `owner` names from the file root at `rootPath`. The seating replaced each `%Name`
- * its own tables answer, so one left here passes through an instance, whose own table answers it,
- * else its owner's (node.cpp:1930-1938).
+ * The live path `owner` names from the file root at `rootPath`, or undefined where it climbs above
+ * that root, which `get_node_or_null` answers with null (node.cpp:1919-1922). The seating replaced
+ * each `%Name` its own tables answer, so one left here passes through an instance, whose own table
+ * answers it, else its owner's (node.cpp:1930-1938).
  */
-function ownerLivePath(rootPath: string, owner: string, live: PlacedLiveTree): string {
+function ownerLivePath(rootPath: string, owner: string, live: PlacedLiveTree): string | undefined {
   let path = rootPath;
   for (const name of nodePathWalkNames(owner)) {
+    if (name === '..' && path === rootPath) return undefined;
     const claimant = name.startsWith(UNIQUE_NODE_PREFIX)
       ? localSceneUniquePaths(walkTo(path, live).into).get(name)
       : undefined;
@@ -258,7 +268,7 @@ function withPlacedLivePaths(paths: UniqueNamePaths, live: PlacedLiveTree): Uniq
  * file's claims. The outer root's own file's table is one shared object per tree.
  */
 export function ownerUniquePaths(owner: ClaimOwner): UniqueNamePaths {
-  const composed = owner.parent ? owner.composed : inheritedRootTable(owner);
+  const composed = owner.composed ?? (owner.parent ? undefined : inheritedRootTable(owner));
   if (composed) return withPlacedLivePaths(rebased(composed.paths(), owner.path), owner.live);
   if (!owner.parent) return withPlacedLivePaths(cachedUniqueNameLivePaths(owner.roots), owner.live);
   return withPlacedLivePaths(rebased(cachedUniqueNamesBelowRoot(owner.roots), owner.path), owner.live);
