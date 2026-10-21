@@ -276,17 +276,31 @@ ${classes}
 `;
 }
 
+/** The hints whose hint string names the class of an Object element: a resource or a node type. */
+const CLASS_NAMING_HINTS = new Set([PROPERTY_HINT.RESOURCE_TYPE, PROPERTY_HINT.NODE_TYPE]);
+
+/**
+ * The rows whose getter returns another collection than the hint names. The loader types a value
+ * by the getter's value (`resource_format_binary.cpp:846-868`): `Shortcut::get_events` and
+ * `DPITexture::get_color_map` return an untyped collection, which takes no prefix, and
+ * `OggPacketSequence::get_packet_data` a `TypedArray<Array>`.
+ */
+const GETTER_COLLECTION_PREFIXES = new Map([
+  ['Shortcut.events', undefined],
+  ['DPITexture.color_map', undefined],
+  ['OggPacketSequence.packet_data', 'Array[Array]'],
+]);
+
 /**
  * The type name Godot's text writer gives one element hint (`variant_parser.cpp:2262-2268,2363-2367`):
- * a bare type or class name, or `type/hint:hint_string`, whose resource hint names the class.
+ * a bare type or class name, or `type/hint:hint_string`, whose resource or node hint names the class.
  */
 function elementTypeName(elementHint, where) {
   const numbered = /^(\d+)\/(\d+):(.*)$/.exec(elementHint);
   if (!numbered) return elementHint;
   const [, type, hint, hintString] = numbered;
-  // An Object element under `PROPERTY_HINT_RESOURCE_TYPE` names its class.
   if (Number(type) === VARIANT_TYPE.OBJECT) {
-    return Number(hint) === PROPERTY_HINT.RESOURCE_TYPE ? hintString : 'Object';
+    return CLASS_NAMING_HINTS.has(Number(hint)) ? hintString : 'Object';
   }
   if (Number(type) === VARIANT_TYPE.NIL) return 'Variant';
   const name = variantTypeName(Number(type));
@@ -297,6 +311,7 @@ function elementTypeName(elementHint, where) {
 
 /** The `Array[T]` or `Dictionary[K, V]` prefix of one row, or undefined for an untyped one. */
 function typedCollectionText(row, where) {
+  if (GETTER_COLLECTION_PREFIXES.has(where)) return GETTER_COLLECTION_PREFIXES.get(where);
   if (row.hint === PROPERTY_HINT.ARRAY_TYPE) return `Array[${elementTypeName(row.hint_string, where)}]`;
   if (row.hint !== PROPERTY_HINT.DICTIONARY_TYPE) return undefined;
   const [key, value] = row.hint_string.split(';');
@@ -306,7 +321,8 @@ function typedCollectionText(row, where) {
 /**
  * Class → property → the `Array[T]` or `Dictionary[K, V]` prefix Godot's text writer puts on the
  * value, under the class that declares it. A binary file stores no element type: the loader types
- * a value by the property it sets (`resource_format_binary.cpp:846-868`), so a reader needs this.
+ * a value as the property's getter types it (`resource_format_binary.cpp:846-868`), so a reader
+ * needs this.
  *
  * @param properties - class → own rows.
  */

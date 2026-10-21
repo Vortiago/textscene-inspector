@@ -47,9 +47,11 @@ function variantText(reader: ByteReader, tables: VariantTables): string {
 /** The next variant, read once for its text and for its order as a dictionary key. */
 function readVariant(reader: ByteReader, tables: VariantTables): ReadVariant {
   const tag = reader.u32() as Tag;
-  const type = VARIANT_TYPE_OF_TAG[tag];
-  if (type === undefined) throw new Error(`expected a binary variant tag, got ${tag as number}`);
+  const tagType = VARIANT_TYPE_OF_TAG[tag];
+  if (tagType === undefined) throw new Error(`expected a binary variant tag, got ${tag as number}`);
   const { text, value } = taggedVariant(tag, reader, tables);
+  // A null Object loads as Nil (`:395-397`), so it orders as Nil. Only Nil and it write `null`.
+  const type = text === 'null' ? VARIANT_TYPE.NIL : tagType;
   return { text, order: { type, ...value } };
 }
 
@@ -94,35 +96,17 @@ function taggedVariant(
       return { text: stringNameLiteral(value), value: { kind: 'text', value } };
     }
     case Tag.Vector2:
-      return realVector(
-        'Vector2',
-        repeat(2, () => reader.real())
-      );
+      return realVector('Vector2', realValues(reader, 2));
     case Tag.Vector2i:
-      return intVector(
-        'Vector2i',
-        repeat(2, () => reader.i32())
-      );
+      return intVector('Vector2i', intValues(reader, 2));
     case Tag.Vector3:
-      return realVector(
-        'Vector3',
-        repeat(3, () => reader.real())
-      );
+      return realVector('Vector3', realValues(reader, 3));
     case Tag.Vector3i:
-      return intVector(
-        'Vector3i',
-        repeat(3, () => reader.i32())
-      );
+      return intVector('Vector3i', intValues(reader, 3));
     case Tag.Vector4:
-      return realVector(
-        'Vector4',
-        repeat(4, () => reader.real())
-      );
+      return realVector('Vector4', realValues(reader, 4));
     case Tag.Vector4i:
-      return intVector(
-        'Vector4i',
-        repeat(4, () => reader.i32())
-      );
+      return intVector('Vector4i', intValues(reader, 4));
     case Tag.Array: {
       const elements = repeat(reader.u32() & SHARED_LENGTH_MASK, () => readVariant(reader, tables));
       return {
@@ -235,16 +219,24 @@ function repeat<T>(count: number, read: () => T): T[] {
   return Array.from({ length: count }, read);
 }
 
+function realValues(reader: ByteReader, count: number): number[] {
+  return repeat(count, () => reader.real());
+}
+
 function reals(reader: ByteReader, count: number): string[] {
-  return repeat(count, () => componentLiteral(reader.real()));
+  return realValues(reader, count).map(componentLiteral);
 }
 
 function floats(reader: ByteReader, count: number): string[] {
   return repeat(count, () => componentLiteral(reader.f32()));
 }
 
+function intValues(reader: ByteReader, count: number): number[] {
+  return repeat(count, () => reader.i32());
+}
+
 function ints(reader: ByteReader, count: number): string[] {
-  return repeat(count, () => String(reader.i32()));
+  return intValues(reader, count).map(String);
 }
 
 /**

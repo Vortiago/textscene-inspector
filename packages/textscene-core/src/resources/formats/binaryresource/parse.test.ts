@@ -295,6 +295,11 @@ describe('parseBinaryResource on each header and table form', () => {
       expect(await dictionaryOf(key.int(9), key.rid(7))).toBe(lines('7', '9'));
     });
 
+    it('orders a null object key as the Nil it loads as, before a bool (edge case)', async () => {
+      const nullObject = new ByteWriter().u32(VariantTag.Object).u32(ObjectRef.Empty).bytes();
+      expect(await dictionaryOf(key.bool(false), nullObject)).toBe(lines('null', 'false'));
+    });
+
     it('keeps the file order of keys Godot cannot order, such as colours (edge case)', async () => {
       expect(await dictionaryOf(key.color(1), key.color(0))).toBe(
         lines('Color(1, 0, 0, 1)', 'Color(0, 0, 0, 1)')

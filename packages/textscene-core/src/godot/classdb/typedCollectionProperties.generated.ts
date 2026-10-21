@@ -11,9 +11,6 @@ export const TYPED_COLLECTION_PROPERTIES: Readonly<Record<string, Readonly<Recor
   "Compositor": {
     "compositor_effects": "Array[CompositorEffect]",
   },
-  "DPITexture": {
-    "color_map": "Dictionary[Color, Color]",
-  },
   "Font": {
     "fallbacks": "Array[Font]",
   },
@@ -28,9 +25,6 @@ export const TYPED_COLLECTION_PROPERTIES: Readonly<Record<string, Readonly<Recor
     "shadowmask_textures": "Array[TextureLayered]",
   },
   "OggPacketSequence": {
-    "packet_data": "Array[PackedByteArray]",
-  },
-  "Shortcut": {
-    "events": "Array[InputEvent]",
+    "packet_data": "Array[Array]",
   },
 });

@@ -146,7 +146,7 @@ function isEmptyScript(name: string, value: string): boolean {
 
 /**
  * The value with the `Array[T]` or `Dictionary[K, V]` prefix of a typed property. The file stores
- * no element type: the loader types the value by the property it sets (`.cpp:846-868`).
+ * no element type: the loader types the value as the property's getter types it (`:846-868`).
  */
 function typedText(type: string, name: string, value: string): string {
   if (!isCollectionText(value)) return value;

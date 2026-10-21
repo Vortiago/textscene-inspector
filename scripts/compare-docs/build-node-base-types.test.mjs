@@ -84,10 +84,26 @@ describe('deriveTypedCollections', () => {
     });
   });
 
-  it('spells a typed dictionary with its key and value types', () => {
-    expect(deriveTypedCollections({ DPITexture: [row('color_map', 27, 38, 'Color;Color')] })).toEqual({
-      DPITexture: { color_map: 'Dictionary[Color, Color]' },
+  it('names the node class of a typed array whose hint holds a node type hint', () => {
+    expect(deriveTypedCollections({ Thing: [row('targets', 28, 31, '24/34:Node3D')] })).toEqual({
+      Thing: { targets: 'Array[Node3D]' },
     });
+  });
+
+  it('spells a typed dictionary with its key and value types', () => {
+    expect(deriveTypedCollections({ Thing: [row('tints', 27, 38, 'Color;Color')] })).toEqual({
+      Thing: { tints: 'Dictionary[Color, Color]' },
+    });
+  });
+
+  it('keeps untyped a collection whose getter returns an untyped one, whatever its hint', () => {
+    expect(deriveTypedCollections({ Shortcut: [row('events', 28, 31, '24/17:InputEvent')] })).toEqual({});
+  });
+
+  it("spells the getter's collection type where it differs from the hint", () => {
+    expect(
+      deriveTypedCollections({ OggPacketSequence: [row('packet_data', 28, 31, 'PackedByteArray')] })
+    ).toEqual({ OggPacketSequence: { packet_data: 'Array[Array]' } });
   });
 
   it('keeps no class that declares no typed collection (edge case)', () => {
