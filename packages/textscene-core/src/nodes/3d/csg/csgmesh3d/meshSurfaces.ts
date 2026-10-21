@@ -16,7 +16,7 @@ import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/mes
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
 import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
 import { scopedSection } from '../../../../resources/resourceSection';
-import { meshKind, primitiveMaterialAddress } from '../../../../resources/meshes/meshSource';
+import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshSurface } from '../../../../resources/meshes/primitivemesh/surface';
 
 /** The arrays of a Godot surface the brush builder reads, and the surface's material. */
@@ -25,10 +25,7 @@ export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normal
 }
 
 /** A mesh, and for one in a file where it loads from, whose parse keys the brush. */
-export interface CsgMesh {
-  resource: TscnInternalResource;
-  /** The tables the mesh's own references resolve in. */
-  resources: SceneResources;
+export interface CsgMesh extends Omit<MeshSource, 'path'> {
   /** Null for a mesh in the scene. */
   file: { path: string; parsed: ParsedResource } | null;
 }

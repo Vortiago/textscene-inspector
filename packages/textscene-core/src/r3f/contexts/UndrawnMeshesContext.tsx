@@ -15,16 +15,17 @@ import {
 import { meshKind } from '../../resources/meshes/meshSource.js';
 import { useNodePath } from './NodePathContext.js';
 
-interface UndrawnMeshesContextValue {
-  /** One `undrawnKey` per node and mesh type reported. */
-  undrawn: ReadonlySet<string>;
+interface UndrawnMeshReports {
   report: (key: string) => void;
   clear: (key: string) => void;
 }
 
-const NOOP: UndrawnMeshesContextValue = { undrawn: new Set(), report: () => {}, clear: () => {} };
+/** Apart from the reports, so a change to the set re-renders only its readers, not each reporter. */
+const UndrawnReportsContext = createContext<UndrawnMeshReports>({ report: () => {}, clear: () => {} });
+UndrawnReportsContext.displayName = 'UndrawnReportsContext';
 
-const UndrawnMeshesContext = createContext<UndrawnMeshesContextValue>(NOOP);
+/** One `undrawnKey` per node and mesh type reported. */
+const UndrawnMeshesContext = createContext<ReadonlySet<string>>(new Set());
 UndrawnMeshesContext.displayName = 'UndrawnMeshesContext';
 
 /** A newline never occurs in a node path, so it splits the path from the type. */
@@ -44,7 +45,8 @@ export function UndrawnMeshesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clear = useCallback((key: string) => {
-    const count = reportCounts.current.get(key) ?? 0;
+    const count = reportCounts.current.get(key);
+    if (count === undefined) return;
     if (count > 1) {
       reportCounts.current.set(key, count - 1);
       return;
@@ -57,14 +59,18 @@ export function UndrawnMeshesProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const value = useMemo(() => ({ undrawn, report, clear }), [undrawn, report, clear]);
-  return <UndrawnMeshesContext.Provider value={value}>{children}</UndrawnMeshesContext.Provider>;
+  const reports = useMemo(() => ({ report, clear }), [report, clear]);
+  return (
+    <UndrawnReportsContext.Provider value={reports}>
+      <UndrawnMeshesContext.Provider value={undrawn}>{children}</UndrawnMeshesContext.Provider>
+    </UndrawnReportsContext.Provider>
+  );
 }
 
 /** Reports the enclosing node's mesh of `type` while no slice builds that type. Null reports nothing. */
 export function useUndrawnMeshReport(type: string | null): void {
   const nodePath = useNodePath();
-  const { report, clear } = useContext(UndrawnMeshesContext);
+  const { report, clear } = useContext(UndrawnReportsContext);
   const key =
     nodePath !== null && type !== null && meshKind(type) === null ? undrawnKey(nodePath, type) : null;
   useEffect(() => {
@@ -76,7 +82,7 @@ export function useUndrawnMeshReport(type: string | null): void {
 
 /** The mesh types the node at `nodePath` holds that no slice builds, in name order. */
 export function useUndrawnMeshTypes(nodePath: string): string[] {
-  const { undrawn } = useContext(UndrawnMeshesContext);
+  const undrawn = useContext(UndrawnMeshesContext);
   return useMemo(() => {
     const prefix = undrawnKey(nodePath, '');
     return [...undrawn]

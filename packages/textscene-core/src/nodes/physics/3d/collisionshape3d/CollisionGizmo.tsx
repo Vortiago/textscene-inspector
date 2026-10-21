@@ -86,14 +86,6 @@ interface PolygonWireProps {
   color: THREE.Color;
 }
 
-/**
- * Disposes `geometry` once a newer one has replaced it, or on unmount. R3F disposes only what it
- * constructs, never a geometry handed over through the `geometry` prop.
- */
-function useDisposeOnReplace(geometry: THREE.BufferGeometry | null): void {
-  useDisposeOnRelease(geometry);
-}
-
 /** One triangle, three vertices of three floats each: the least a triangle soup can draw. */
 const MIN_TRIANGLE_SOUP_FLOATS = 3 * 3;
 
@@ -110,7 +102,7 @@ function TriangleSoupWire({ shapeData, color }: PolygonWireProps) {
     geom.computeVertexNormals();
     return geom;
   }, [shapeData]);
-  useDisposeOnReplace(geometry);
+  useDisposeOnRelease(geometry);
   const wire = wireGizmoProgram(color);
   if (!geometry) return null;
   return (
@@ -124,7 +116,7 @@ function TriangleSoupWire({ shapeData, color }: PolygonWireProps) {
 function ConvexHullWire({ shapeData, color }: PolygonWireProps) {
   const points = useMemo(() => decodeConvexPolygonShape3D(shapeData).points, [shapeData]);
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
-  useDisposeOnReplace(geometry);
+  useDisposeOnRelease(geometry);
 
   useEffect(() => {
     let cancelled = false;
