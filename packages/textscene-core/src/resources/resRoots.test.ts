@@ -226,6 +226,22 @@ describe('a root resolve', () => {
   });
 });
 
+describe('a root pathOf', () => {
+  it('gives the host path a res:// path names, whether or not a file is there', async () => {
+    const root = await gameRoot();
+
+    expect(root.pathOf('res://textures/floor.png')).toBe('/work/game/textures/floor.png');
+  });
+
+  it('gives null for a path that escapes the root', async () => {
+    expect((await gameRoot()).pathOf('res://../secret.txt')).toBeNull();
+  });
+
+  it('gives null for a path that is not res://', async () => {
+    expect((await gameRoot()).pathOf('/work/game/textures/floor.png')).toBeNull();
+  });
+});
+
 /** `port` where the directory `link` is a link to `target`: whatever lies under one lies under the other. */
 function withLinkTo(port: ResRootsPort, link: string, target: string): ResRootsPort {
   const through = (path: string) =>

@@ -7,6 +7,7 @@ import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
+import { TscnReferenceProvider } from './TscnReferenceProvider';
 import { TscnHoverProvider } from './TscnHoverProvider';
 import { COMPLETION_TRIGGER_CHARACTERS } from '@textscene/core/languageFeatures';
 import { TscnCompletionItemProvider } from './TscnCompletionItemProvider';
@@ -161,6 +162,10 @@ export function activate(context: vscode.ExtensionContext) {
 function registerLanguageFeatureProviders(resPathListing: TscnResPathListing): vscode.Disposable[] {
   return [
     vscode.languages.registerHoverProvider({ language: 'tscn' }, new TscnHoverProvider()),
+    vscode.languages.registerReferenceProvider(
+      { language: 'tscn' },
+      new TscnReferenceProvider(resPathListing)
+    ),
     vscode.languages.registerCompletionItemProvider(
       { language: 'tscn' },
       new TscnCompletionItemProvider(resPathListing),

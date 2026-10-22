@@ -3,7 +3,7 @@
 `tscn-lsp` is a language server for Godot `.tscn` scenes and `.tres` resources. It gives any
 Language Server Protocol (LSP) client the features of the TextScene Inspector VS Code
 extension: hover, completion, quick fixes, folding, document symbols, go to definition,
-document highlights and diagnostics. Each lint check cites the line of Godot source that
+find all references on a `res://` path, document highlights and diagnostics. Each lint check cites the line of Godot source that
 grounds it.
 
 For each document, the server finds the nearest `project.godot` in the document's directory or above

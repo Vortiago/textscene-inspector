@@ -24,14 +24,20 @@ export function resolveToolUri(inputPath: string): vscode.Uri | undefined {
   return vscode.Uri.joinPath(folder.uri, ...inputPath.split(/[\\/]/));
 }
 
+/** The open editors' documents by URI. Taken once per request, so a lookup per path costs no scan. */
+export function openSceneDocuments(): ReadonlyMap<string, vscode.TextDocument> {
+  return new Map(vscode.workspace.textDocuments.map((document) => [document.uri.toString(), document]));
+}
+
+/** The text of the file at `uri` on disk. It opens no document, so it starts no lint. */
+export async function readSceneFileText(uri: vscode.Uri): Promise<string> {
+  return new TextDecoder().decode(await vscode.workspace.fs.readFile(uri));
+}
+
 /**
  * The text of a scene the tool resolved: an open editor's text, unsaved edits included, as the
- * Problems panel lints it, else the file on disk. It opens no document, so it starts no lint.
+ * Problems panel lints it, else the file on disk.
  */
 export async function readSceneText(uri: vscode.Uri): Promise<string> {
-  const key = uri.toString();
-  const open = vscode.workspace.textDocuments.find((document) => document.uri.toString() === key);
-  if (open) return open.getText();
-  const bytes = await vscode.workspace.fs.readFile(uri);
-  return new TextDecoder().decode(bytes);
+  return openSceneDocuments().get(uri.toString())?.getText() ?? (await readSceneFileText(uri));
 }

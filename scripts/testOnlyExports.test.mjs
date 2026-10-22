@@ -22,6 +22,12 @@ const CORE = resolve(ROOT, 'packages/textscene-core');
 /** Every place outside core that imports it: the apps, the dev kit and the scripts. */
 const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir) => resolve(ROOT, dir));
 
+/**
+ * The scan of the real tree parses over 5,000 TypeScript files of core and of its importers. That is real work: it
+ * took 7.5 seconds on a slow container, past vitest's 5 second default, so the case that scans it gets room.
+ */
+const TREE_SCAN_TIMEOUT_MS = 60_000;
+
 /** The value exports kept although only tests import them, each with the reason a test needs it. */
 const KEPT = [
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
@@ -45,17 +51,21 @@ function scan(files, { importers = {}, entries = {} } = {}) {
 }
 
 describe('testOnlyExports over @textscene/core', () => {
-  it('finds no value export that only tests import, beyond the kept ones', () => {
-    const packageJson = JSON.parse(readFileSync(resolve(CORE, 'package.json'), 'utf8'));
-    const found = testOnlyExports(readSourceTree(resolve(CORE, 'src')), {
-      tree: 'packages/textscene-core/src',
-      dist: 'packages/textscene-core/dist',
-      importers: readImporters(ROOT, OUTSIDE_CORE),
-      entries: entryPointsOf(packageJson, './src'),
-    });
+  it(
+    'finds no value export that only tests import, beyond the kept ones',
+    () => {
+      const packageJson = JSON.parse(readFileSync(resolve(CORE, 'package.json'), 'utf8'));
+      const found = testOnlyExports(readSourceTree(resolve(CORE, 'src')), {
+        tree: 'packages/textscene-core/src',
+        dist: 'packages/textscene-core/dist',
+        importers: readImporters(ROOT, OUTSIDE_CORE),
+        entries: entryPointsOf(packageJson, './src'),
+      });
 
-    expect(found).toEqual(KEPT);
-  });
+      expect(found).toEqual(KEPT);
+    },
+    TREE_SCAN_TIMEOUT_MS
+  );
 });
 
 describe('testOnlyExports', () => {
