@@ -13,7 +13,7 @@ import {
   NOTICE_SOURCES,
   bundledNotices,
   bundledSourceFiles,
-  copyRootNotices,
+  mergedFileInputs,
   writeBundledNotices,
 } from './third-party-notices.mjs';
 
@@ -211,13 +211,25 @@ describe('writeBundledNotices', () => {
   });
 });
 
-describe('copyRootNotices', () => {
-  const root = mkdtempSync(join(tmpdir(), 'copied-notices-'));
-  afterAll(() => rmSync(root, { recursive: true }));
+describe('mergedFileInputs', () => {
+  it('keeps the file inputs of every bundle once', () => {
+    const merged = mergedFileInputs([
+      { inputs: { 'src/extension.ts': {}, 'src/shared.ts': {} } },
+      { inputs: { 'src/shared.ts': {}, 'src/webview/webview.ts': {} } },
+    ]);
 
-  it('writes the root notices, byte for byte, beside the package', () => {
-    copyRootNotices(root);
+    expect(Object.keys(merged.inputs)).toEqual([
+      'src/extension.ts',
+      'src/shared.ts',
+      'src/webview/webview.ts',
+    ]);
+  });
 
-    expect(readFileSync(join(root, 'THIRD-PARTY-NOTICES.md'), 'utf8')).toBe(readFileSync(NOTICES, 'utf8'));
+  it("leaves out a plugin's virtual module, which names no file", () => {
+    const merged = mergedFileInputs([
+      { inputs: { 'texture-worker-source:virtual:texture-worker-source': {}, 'src/webview/webview.ts': {} } },
+    ]);
+
+    expect(Object.keys(merged.inputs)).toEqual(['src/webview/webview.ts']);
   });
 });

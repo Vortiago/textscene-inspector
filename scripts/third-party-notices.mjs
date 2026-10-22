@@ -4,7 +4,7 @@
  * the code derives its own notices from it, so they never name code the package lacks.
  */
 
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { REPO_ROOT } from './repoRoot.mjs';
 
@@ -98,9 +98,17 @@ export function writeBundledNotices(metafile, { packageDir, ownSourceDir }) {
   );
 }
 
-/** Writes the root `THIRD-PARTY-NOTICES.md`, every section of it, into `packageDir`, as the VSIX ships it. */
-export function copyRootNotices(packageDir) {
-  copyFileSync(ROOT_NOTICES, resolve(packageDir, NOTICES_FILE));
+/**
+ * One metafile whose inputs are every file input of `metafiles`, for a package that ships several
+ * bundles. A plugin's virtual module, such as `texture-worker-source:virtual:texture-worker-source`,
+ * names no file and is left out.
+ *
+ * @param {{ inputs: Record<string, unknown> }[]} metafiles
+ * @returns {{ inputs: Record<string, unknown> }}
+ */
+export function mergedFileInputs(metafiles) {
+  const inputs = Object.assign({}, ...metafiles.map((metafile) => metafile.inputs));
+  return { inputs: Object.fromEntries(Object.entries(inputs).filter(([input]) => !/^[\w-]+:/.test(input))) };
 }
 
 /**

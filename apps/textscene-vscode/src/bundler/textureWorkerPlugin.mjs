@@ -13,10 +13,11 @@ const NAMESPACE = 'texture-worker-source';
 const WORKER_ENTRY = path.resolve(import.meta.dirname, '../webview/textureWorker.ts');
 
 /**
- * @param {{ minify: boolean }} options
+ * @param {{ minify: boolean, onMetafile: (metafile: esbuild.Metafile) => void }} options - `onMetafile`
+ *   receives the worker bundle's metafile, whose inputs the webview's own metafile does not list.
  * @returns {esbuild.Plugin}
  */
-export function textureWorkerPlugin({ minify }) {
+export function textureWorkerPlugin({ minify, onMetafile }) {
   return {
     name: 'texture-worker-source',
     setup(build) {
@@ -41,6 +42,7 @@ export function textureWorkerPlugin({ minify }) {
         });
         const [output] = result.outputFiles;
         if (!output) throw new Error(`expected one worker bundle from ${WORKER_ENTRY}, got none`);
+        onMetafile(result.metafile);
         return {
           contents: `export default ${JSON.stringify(output.text)};`,
           loader: 'js',
