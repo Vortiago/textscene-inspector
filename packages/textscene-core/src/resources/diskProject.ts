@@ -23,9 +23,12 @@ async function isDirectoryEntry(directory: string, entry: Dirent): Promise<boole
   }
 }
 
+/** Whether this platform's filesystem tells apart two spellings of a path that differ only in case. */
+export const DISK_PATH_CASE = pathCaseOf(process.platform);
+
 /** The disk behind {@link ResRootsPort}. */
 const diskPort: ResRootsPort = {
-  pathCase: pathCaseOf(process.platform),
+  pathCase: DISK_PATH_CASE,
   async stat(path) {
     try {
       const stats = await stat(path);

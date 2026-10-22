@@ -1,11 +1,30 @@
-/** <GizmoLine> draws its segments, and nothing when a vertex is non-finite. */
+/**
+ * <GizmoLine> draws its segments. A segment with a non-finite vertex draws nothing, and its finite
+ * neighbours still draw, as in Godot: 6 of 8 lines of a mesh with two NaN lines (measured, 4.6.3).
+ */
 import { describe, expect, it } from 'vitest';
+import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { GizmoLine } from './GizmoLine';
 
+async function render(positions: number[], colors?: number[]) {
+  return ReactThreeTestRenderer.create(
+    <GizmoLine positions={new Float32Array(positions)} colors={colors && new Float32Array(colors)} />
+  );
+}
+
 async function lineCount(positions: number[]): Promise<number> {
-  const renderer = await ReactThreeTestRenderer.create(<GizmoLine positions={new Float32Array(positions)} />);
-  return renderer.scene.findAllByType('LineSegments').length;
+  return (await render(positions)).scene.findAllByType('LineSegments').length;
+}
+
+/** The vertices and the colours the first line object draws. */
+async function drawn(positions: number[], colors?: number[]) {
+  const renderer = await render(positions, colors);
+  const geometry = (renderer.scene.findByType('LineSegments').instance as THREE.LineSegments).geometry;
+  return {
+    positions: Array.from(geometry.getAttribute('position').array),
+    colors: geometry.getAttribute('color') && Array.from(geometry.getAttribute('color').array),
+  };
 }
 
 describe('<GizmoLine>', () => {
@@ -19,5 +38,18 @@ describe('<GizmoLine>', () => {
     ['a NaN', NaN],
   ])('draws nothing for %s vertex', async (_label, bad) => {
     expect(await lineCount([0, 0, 0, 0, 0, bad])).toBe(0);
+  });
+
+  it('draws the finite segments beside one with a non-finite vertex', async () => {
+    const { positions } = await drawn([0, 0, 0, 0, 0, 4, 0, 1, 0, NaN, 1, 0, 0, 2, 0, 0, 2, 4]);
+    expect(positions).toEqual([0, 0, 0, 0, 0, 4, 0, 2, 0, 0, 2, 4]);
+  });
+
+  it('drops the colours of a dropped segment with it', async () => {
+    const { colors } = await drawn(
+      [0, 0, 0, 1, 0, 0, 0, 1, 0, Infinity, 1, 0],
+      [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0]
+    );
+    expect(colors).toEqual([1, 0, 0, 1, 0, 0]);
   });
 });

@@ -276,7 +276,10 @@ describe('the one spelling of the Transform2D construction, product and inverse'
   });
 
   it('inverts a transform only here', () => {
-    const inverters = sources.filter(({ text }) => INVERSE.test(text)).map(({ rel }) => rel);
+    // `basis.ts` holds `Basis::invert`, the 3D inverse of a different type.
+    const inverters = sources
+      .filter(({ rel, text }) => rel !== 'godot/math/basis.ts' && INVERSE.test(text))
+      .map(({ rel }) => rel);
     expect(inverters).toEqual(['godot/math/transform2d.ts']);
   });
 

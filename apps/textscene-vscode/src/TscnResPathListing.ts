@@ -1,7 +1,6 @@
 /**
- * Lists the files under a document's `res://` root as `res://` paths, the seam the engine's
- * path completion reads. It caches one listing per root, so a completion does not walk the
- * workspace on every keystroke.
+ * Lists the files under a document's `res://` root as `res://` paths, the seam the engine's path completion and
+ * reference search read. It caches one listing per root, so a request does not walk the workspace again.
  */
 
 import * as vscode from 'vscode';
@@ -15,7 +14,12 @@ import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
  */
 const DOT_DIRECTORIES = '**/.*/**';
 
-export class TscnResPathListing {
+/** Lists the `res://` paths under the document's root, the seam path completion and Find All References read. */
+export interface ResPathListing {
+  pathsFor(document: vscode.TextDocument): Promise<readonly string[]>;
+}
+
+export class TscnResPathListing implements ResPathListing {
   /** Each `res://` root's listing, written by `pathsFor` and dropped by `clear`. */
   private readonly _listingByRoot = new Map<string, Promise<readonly string[]>>();
   /**

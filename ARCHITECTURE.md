@@ -31,7 +31,7 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `linter/` | The strict parser, the rule and validator registries, the `Linter` |
 | `core/` | `SceneGraph`, `NodeRegistry` and the registry factory |
 | `godot/` | Engine facts: constants and pure functions. It imports nothing. |
-| `languageFeatures/` | Hover, completion, quick fixes, folding and document highlights over the scanning loop |
+| `languageFeatures/` | Hover, completion, quick fixes, folding, document highlights and `res://` references over the scanning loop |
 | `nodes/` | One vertical slice per Godot node type |
 | `resources/` | The resource loader, and one slice per resource type |
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
@@ -96,7 +96,7 @@ the VS Code extension host bundle it alone.
 **Language features.** `languageFeatures/` (`createLanguageDocument`) parses the text through
 the same scanning loop with a `ParseObserver`, seats the `[node]` headings as the parsers do
 (`seatScene`), then answers hover, completion, quick fixes, folding, document highlights, go to
-definition and the outline. It reads the same `godot/` ClassDB captures and the same
+definition, the references of a `res://` path and the outline. It reads the same `godot/` ClassDB captures and the same
 deprecated-alias table as the linter, so each engine fact has one source in `godot/`. It imports
 no React and no three.js, and every result is host-neutral with zero-based ranges (ADR-0049).
 

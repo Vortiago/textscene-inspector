@@ -106,7 +106,7 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(group).toBeDefined();
     // Godot draws a camera-facing circle of lines at `unit_size x soft_multiplier`, and the default
     // INVERSE_DISTANCE multiplier is 12, so 25 x 12 = 300. Traversed, not indexed: `<GizmoLine>`
-    // wraps its line in a group that carries the gizmo's draw order (`GIZMO_GROUP_ORDER`).
+    // wraps its line in a `<GizmoGroup>`.
     let line: THREE.Line | undefined;
     (group!.instance as unknown as THREE.Object3D).traverse((o) => {
       if (!line && (o as THREE.Line).isLine) line = o as THREE.Line;

@@ -7,6 +7,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
+import { parseAlphaAntialiasing } from '../../../parser/alphaAntialiasingParser';
 import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
 import { type Sprite3DProperties } from './types';
 import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
@@ -56,13 +57,7 @@ export function parseSprite3D(
       'Sprite3D alpha_scissor_threshold'
     ),
     alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'Sprite3D alpha_hash_scale'),
-    // `set_alpha_antialiasing` stores any value (`sprite_3d.cpp:571-578`), and any but OFF ramps the edge.
-    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, 'Sprite3D alpha_antialiasing_mode'),
-    alpha_antialiasing_edge: floatOr(
-      properties.alpha_antialiasing_edge,
-      0,
-      'Sprite3D alpha_antialiasing_edge'
-    ),
+    ...parseAlphaAntialiasing(properties, 'Sprite3D '),
     texture_filter: enumOr(
       properties.texture_filter,
       TextureFilter.LINEAR_WITH_MIPMAPS,

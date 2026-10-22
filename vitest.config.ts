@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { vmMemoryLimit } from './vitest.shared';
 
 /**
  * Root Vitest configuration: each package, app and `scripts` is one project, and a project's own
@@ -8,6 +9,7 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
+    vmMemoryLimit,
     globalSetup: ['scripts/vendor-godot-demos/vitestGlobalSetup.mjs'],
     projects: ['packages/*', 'apps/*', 'scripts'],
   },

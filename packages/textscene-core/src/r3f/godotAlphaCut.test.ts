@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
+import type { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
 
 const DISABLED = 0;
 const DISCARD = 1;
@@ -91,7 +92,12 @@ describe('alphaCutSurface', () => {
   it('an out-of-range mode falls to the DISABLED arm', () => {
     // `sprite_3d.cpp:292` is an `else`, not a fourth comparison.
     expect(
-      alphaCutSurface({ antialiasing: OFF, mode: 99, scissorThreshold: 0.25, transparentFlag: true })
+      alphaCutSurface({
+        antialiasing: OFF,
+        mode: 99 as AlphaCutMode,
+        scissorThreshold: 0.25,
+        transparentFlag: true,
+      })
     ).toEqual(
       alphaCutSurface({ antialiasing: OFF, mode: DISABLED, scissorThreshold: 0.25, transparentFlag: true })
     );

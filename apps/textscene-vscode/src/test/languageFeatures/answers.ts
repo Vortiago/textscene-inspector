@@ -16,7 +16,13 @@ import {
   type LanguageFeatureAnswers,
 } from '@textscene/dev-kit';
 
-export { rangeTuple, sortedRanges, type CursorSpec, type RangeTuple } from '@textscene/dev-kit';
+export {
+  rangeTuple,
+  sortedFileRanges,
+  sortedRanges,
+  type CursorSpec,
+  type RangeTuple,
+} from '@textscene/dev-kit';
 
 /** The fixture directory, found by walking up from this bundle's own output directory. */
 function fixtureDir(): string {
