@@ -5,7 +5,7 @@
  * normal/ORM/emission maps and `emission_energy`, which Godot's distance fade also scales.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -58,6 +58,11 @@ export function Decal({ node, children }: NodeComponentProps) {
   // The projection materials, for the per-frame distance-fade write below. They are
   // built imperatively inside the effect, so a ref is the only handle on them.
   const materialsRef = useRef<DecalProjectionMaterials | null>(null);
+  // What the last bake projected onto, and how many objects the scene held then. Written by the
+  // bake effect, cleared when it is torn down.
+  const bakedRef = useRef<{ receivers: readonly THREE.Mesh[]; sceneObjectCount: number } | null>(null);
+  // Counts the bakes a late receiver asked for. It only changes the bake effect's dependencies.
+  const [lateReceiverBakes, setLateReceiverBakes] = useState(0);
 
   // Unit-cube projection-volume wireframe. `size` scales the gizmo group, so animating `size`
   // (ADR-0017) stays a cheap scale write. R3F's `primitive` does not auto-dispose, so this
@@ -159,9 +164,11 @@ export function Decal({ node, children }: NodeComponentProps) {
       group.add(mesh);
     }
 
+    bakedRef.current = { receivers, sceneObjectCount: countSceneObjects(scene) };
     invalidate();
 
     return () => {
+      bakedRef.current = null;
       for (const child of group.children.slice()) {
         group.remove(child);
         (child as THREE.Mesh).geometry?.dispose();
@@ -185,7 +192,27 @@ export function Decal({ node, children }: NodeComponentProps) {
     properties.lower_fade,
     properties.normal_fade,
     resourceVersion,
+    lateReceiverBakes,
   ]);
+
+  // A receiver can mount after the bake, as a Label3D does once its font loads. Godot's clustered
+  // decal finds it the next frame, so a render that sees the scene's object count change looks for
+  // receivers the bake missed. The count gate keeps the walk off every other frame.
+  useEffect(() => {
+    const group = projectionRef.current;
+    if (!group) return undefined;
+    return observeSceneCamera(scene, () => {
+      const baked = bakedRef.current;
+      if (!baked) return;
+      const sceneObjectCount = countSceneObjects(scene);
+      if (sceneObjectCount === baked.sceneObjectCount) return;
+      baked.sceneObjectCount = sceneObjectCount;
+      scene.updateMatrixWorld(true);
+      const boxAABB = computeDecalBoxWorldAABB(group.matrixWorld, size);
+      const receivers = collectDecalReceivers(scene, boxAABB, properties.cull_mask);
+      if (!isSameReceivers(receivers, baked.receivers)) setLateReceiverBakes((bakes) => bakes + 1);
+    });
+  }, [scene, size, properties.cull_mask]);
 
   // Before each render, for whichever camera renders the scene, the projections follow their
   // receivers' shading, and the decal takes its distance fade. Godot computes that fade per decal per
@@ -248,4 +275,14 @@ function showFaded(
 ): void {
   materials.setOpacity(opacity * fade);
   group.visible = fade > 0;
+}
+
+function countSceneObjects(scene: THREE.Scene): number {
+  let count = 0;
+  scene.traverse(() => count++);
+  return count;
+}
+
+function isSameReceivers(a: readonly THREE.Mesh[], b: readonly THREE.Mesh[]): boolean {
+  return a.length === b.length && a.every((mesh, i) => mesh === b[i]);
 }

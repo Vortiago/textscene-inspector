@@ -287,6 +287,39 @@ describe('<Decal>', () => {
     expect(projections(renderer)).toEqual([]);
   });
 
+  it('projects onto a receiver that mounts after the decal baked', async () => {
+    // A Label3D builds its glyph mesh once its font loads, so the decal can bake first. Godot's
+    // clustered decal finds a late receiver by its next frame.
+    const loader = seededLoader([{ path: TEXTURE_PATH, texture: makeTexture() }]);
+    const options = {
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+    };
+    const renderer = await ReactThreeTestRenderer.create(decalTree(options, loader));
+    expect(projections(renderer)).toEqual([]);
+
+    await renderer.update(decalTree({ ...options, children: <Receiver /> }, loader));
+    const scene = renderer.scene.instance as THREE.Scene;
+    scene.updateMatrixWorld();
+    await ReactThreeTestRenderer.act(async () => fireSceneRender(scene, farCamera()));
+
+    expect(projections(renderer).length).toBeGreaterThan(0);
+  });
+
+  it('keeps a receiver that stays mounted baked once, across renders', async () => {
+    const renderer = await render({
+      node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
+      externals: [extRef('1_tex', TEXTURE_PATH)],
+      cached: [{ path: TEXTURE_PATH, texture: makeTexture() }],
+      children: <Receiver />,
+    });
+    const scene = renderer.scene.instance as THREE.Scene;
+    const before = projections(renderer);
+    await ReactThreeTestRenderer.act(async () => fireSceneRender(scene, farCamera()));
+
+    expect(projections(renderer)).toEqual(before);
+  });
+
   it('bakes the fade into a vertex-alpha attribute the material opts into', async () => {
     const renderer = await render({
       node: makeNode({ texture_albedo: 'ExtResource("1_tex")' }),
