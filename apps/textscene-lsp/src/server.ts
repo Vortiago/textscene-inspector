@@ -129,15 +129,12 @@ async function readFileText(root: ResRoot, path: string): Promise<string | null>
   return typeof content === 'string' ? content : null;
 }
 
-/** The unsaved text of the open document at `file`, a host path, or undefined when the client has none open there. */
-function openDocumentText(file: string): string | undefined {
-  return documents
-    .all()
-    .find((document) => {
-      const open = filePathOf(document.uri);
-      return open !== null && isSamePath(open, file, DISK_PATH_CASE);
-    })
-    ?.getText();
+/** The open documents that have a file path, each beside that path. Taken once per request. */
+function openDocumentFiles(): { file: string; document: TextDocument }[] {
+  return documents.all().flatMap((document) => {
+    const file = filePathOf(document.uri);
+    return file === null ? [] : [{ file, document }];
+  });
 }
 
 function scheduleLint(document: TextDocument): void {
@@ -272,11 +269,13 @@ connection.onReferences(async (params, token): Promise<Location[] | null> => {
   if (model === undefined) return null;
   const root = await rootForUri(params.textDocument.uri);
   if (root === null) return [];
+  const openFiles = openDocumentFiles();
   const references = await resPathReferencesAt(model, params.position, {
     listPaths: () => root.listPaths(),
     openText: (path) => {
       const file = root.pathOf(path);
-      return file === null ? undefined : openDocumentText(file);
+      if (file === null) return undefined;
+      return openFiles.find((open) => isSamePath(open.file, file, DISK_PATH_CASE))?.document.getText();
     },
     readFile: (path) => readFileText(root, path),
     isCancelled: () => token.isCancellationRequested,

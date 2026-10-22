@@ -9,6 +9,7 @@ import { resPathUri } from './existingResFile';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
 import { resRootOf } from './resRoot';
+import { openSceneDocuments, readSceneFileText } from './tools/toolInput';
 import type { ResPathListing } from './TscnResPathListing';
 
 /**
@@ -20,16 +21,11 @@ async function readFileText(root: vscode.Uri, path: string): Promise<string | nu
   const file = resPathUri(root, path);
   if (file === null) return null;
   try {
-    return new TextDecoder().decode(await vscode.workspace.fs.readFile(file));
+    return await readSceneFileText(file);
   } catch {
     // A file that went away since the listing, or one the host may not read, holds no reference to report.
     return null;
   }
-}
-
-/** The open editors' documents by URI, taken once per request. */
-function openDocumentsByUri(): ReadonlyMap<string, vscode.TextDocument> {
-  return new Map(vscode.workspace.textDocuments.map((document) => [document.uri.toString(), document]));
 }
 
 export class TscnReferenceProvider implements vscode.ReferenceProvider {
@@ -49,7 +45,7 @@ export class TscnReferenceProvider implements vscode.ReferenceProvider {
   ): Promise<vscode.Location[]> {
     const root = await resRootOf(document.uri);
     if (root === null) return [];
-    const openDocuments = openDocumentsByUri();
+    const openDocuments = openSceneDocuments();
     const references = await resPathReferencesAt(languageDocumentOf(document), position, {
       listPaths: () => this.pathListing.pathsFor(document),
       openText: (path) => {
