@@ -1,7 +1,7 @@
 /**
- * The render ritual of a selection-gated line gizmo: a BufferGeometry from flat
- * `positions` and optional `colors`, disposed on rebuild since R3F does not dispose
- * an attached geometry, drawn as an unlit transparent `<lineSegments>` over the scene.
+ * A selection-gated line gizmo: a BufferGeometry from flat `positions` and optional `colors`,
+ * drawn as an unlit transparent `<lineSegments>` over the scene. R3F does not dispose an attached
+ * geometry, so the gizmo disposes it on rebuild.
  */
 
 import { useMemo } from 'react';
@@ -13,9 +13,9 @@ import { GIZMO_RENDER_ORDER, GizmoGroup } from './GizmoGroup';
 interface GizmoLineProps {
   /** Flat line-segment vertex positions `[x0,y0,z0, x1,y1,z1, …]`. */
   positions: Float32Array;
-  /** Optional flat per-vertex RGB colors; when set, the material uses them. */
+  /** Optional flat per-vertex RGB colours; when set, the material uses them. */
   colors?: Float32Array;
-  /** Solid line color (ignored when `colors` is set; defaults to white). */
+  /** Solid line colour (ignored when `colors` is set; defaults to white). */
   color?: THREE.ColorRepresentation;
 }
 
@@ -57,7 +57,6 @@ export function GizmoLine({ positions: allPositions, colors: allColors, color }:
     () => finiteSegments(allPositions, allColors),
     [allPositions, allColors]
   );
-  // No geometry for a gizmo with no line left: Godot draws nothing for it.
   const geometry = useMemo(() => {
     if (positions.length === 0) return null;
     const g = new THREE.BufferGeometry();
@@ -66,11 +65,10 @@ export function GizmoLine({ positions: allPositions, colors: allColors, color }:
     return g;
   }, [positions, colors]);
   useDisposeOnRelease(geometry);
+  if (!geometry) return null;
 
   // `vertexColors` is a program input (`WebGLPrograms.js:308`), and a gizmo that
   // gains or loses its colour attribute would otherwise keep the first program.
-  // Default to white so vertex-coloured gizmos multiply against white (and we
-  // never hand the material an undefined colour).
   const program = materialProgramInputs({
     props: {
       color: color ?? 0xffffff,
@@ -79,8 +77,6 @@ export function GizmoLine({ positions: allPositions, colors: allColors, color }:
       transparent: true,
     },
   });
-
-  if (!geometry) return null;
 
   return (
     <GizmoGroup>

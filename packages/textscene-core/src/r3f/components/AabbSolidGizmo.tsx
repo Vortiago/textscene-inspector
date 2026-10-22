@@ -14,7 +14,6 @@ interface AabbSolidGizmoProps {
   aabb: Aabb;
   /** The sRGB colour Godot fills the box with. */
   color: { r: number; g: number; b: number };
-  /** The opacity of the fill, from 0 to 1. */
   alpha: number;
 }
 

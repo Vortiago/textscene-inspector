@@ -1,8 +1,8 @@
 /**
  * <GPUParticles3D> draws no particles, so the intent is `pending` and the badge reads "not
- * implemented". The GeometryInstance3D base still mounts (`undrawnGeometryInstance`), and while the
- * node is selected (ADR-0018) it carries Godot's editor gizmos: the `visibility_aabb` box and the
- * emission shape of the process material.
+ * implemented". The GeometryInstance3D base still mounts, with Godot's editor gizmos on it
+ * (`undrawnGeometryInstanceWithGizmos`): the `visibility_aabb` box and the emission shape of the
+ * process material.
  */
 
 import { undrawnGeometryInstanceWithGizmos } from '../../geometryinstance3d/Component';

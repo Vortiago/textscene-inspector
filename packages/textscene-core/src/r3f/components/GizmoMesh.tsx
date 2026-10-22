@@ -1,7 +1,6 @@
 /**
- * The render ritual of a selection-gated fill gizmo: a geometry drawn as an unlit translucent
- * `<mesh>` over the scene, disposed once the gizmo lets go of it. The caller builds and memoises
- * the geometry.
+ * A selection-gated fill gizmo: a geometry drawn as an unlit translucent `<mesh>` over the scene.
+ * The caller builds and memoises the geometry.
  */
 
 import type * as THREE from 'three';
@@ -20,11 +19,13 @@ interface GizmoMeshProps {
 
 export function GizmoMesh({ geometry, color, alpha }: GizmoMeshProps) {
   useDisposeOnRelease(geometry);
+  if (!geometry) return null;
+
   // Godot's gizmo material culls no face (`node_3d_editor_gizmos.cpp:927`), so one pass draws both.
   const program = materialProgramInputs({
-    props: { color, opacity: alpha, transparent: true, depthWrite: false, fog: false, ...canvasItemFacing() },
+    props: { color, opacity: alpha, transparent: true, depthWrite: false, fog: false },
+    merge: [canvasItemFacing()],
   });
-  if (!geometry) return null;
 
   return (
     <GizmoGroup>

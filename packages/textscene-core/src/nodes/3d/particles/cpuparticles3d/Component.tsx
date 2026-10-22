@@ -1,8 +1,7 @@
 /**
  * <CPUParticles3D> draws no particles, so the intent is `pending` and the badge reads "not
- * implemented". The GeometryInstance3D base still mounts (`undrawnGeometryInstance`), and while the
- * node is selected (ADR-0018) it carries Godot's editor gizmos: the `visibility_aabb` box with its
- * axes, and the emission shape.
+ * implemented". The GeometryInstance3D base still mounts, with Godot's editor gizmos on it
+ * (`undrawnGeometryInstanceWithGizmos`): the `visibility_aabb` box with its axes, and the emission shape.
  */
 
 import { EMPTY_AABB } from '../../../../godot/math/aabb';
