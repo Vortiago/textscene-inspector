@@ -6,7 +6,8 @@ import { clamp } from '../../../godot/math/math.js';
 import { storedReal } from '../../../godot/math/real.js';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { curveIndex } from './sample';
-import { CurveTangentMode, type Curve, type CurvePoint } from './types';
+import { type Curve, type CurvePoint } from './types';
+import { CurveTangentMode } from '../../../godot/scene/curve.js';
 
 /**
  * The point list at the declared count, as `Curve::set_point_count` (curve.cpp:41-57).
@@ -28,8 +29,8 @@ export function resizePoints(curve: Curve, count: number): CurvePoint[] {
       position: { x, y },
       leftTangent: 0,
       rightTangent: 0,
-      leftMode: CurveTangentMode.Free,
-      rightMode: CurveTangentMode.Free,
+      leftMode: CurveTangentMode.FREE,
+      rightMode: CurveTangentMode.FREE,
     });
     updateAutoTangents(points, at);
   }
@@ -60,8 +61,8 @@ function updateAutoTangents(points: CurvePoint[], index: number): void {
     const before = points[index - 1]!;
     const aimed = slope(before, point);
     if (aimed !== null) {
-      if (point.leftMode === CurveTangentMode.Linear) point.leftTangent = aimed;
-      if (before.rightMode === CurveTangentMode.Linear) before.rightTangent = aimed;
+      if (point.leftMode === CurveTangentMode.LINEAR) point.leftTangent = aimed;
+      if (before.rightMode === CurveTangentMode.LINEAR) before.rightTangent = aimed;
     }
   }
 
@@ -69,8 +70,8 @@ function updateAutoTangents(points: CurvePoint[], index: number): void {
     const after = points[index + 1]!;
     const aimed = slope(after, point);
     if (aimed !== null) {
-      if (point.rightMode === CurveTangentMode.Linear) point.rightTangent = aimed;
-      if (after.leftMode === CurveTangentMode.Linear) after.leftTangent = aimed;
+      if (point.rightMode === CurveTangentMode.LINEAR) point.rightTangent = aimed;
+      if (after.leftMode === CurveTangentMode.LINEAR) after.leftTangent = aimed;
     }
   }
 }

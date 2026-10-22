@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
-import { Camera2DAnchorMode } from '../camera2d/types';
+
 import type { Camera2DTag } from '../camera2d/cameraView';
 import { parseParallaxLayer } from '../parallaxlayer/parser';
 import { ParallaxLayer } from '../parallaxlayer/Component';
@@ -19,6 +19,7 @@ import { ParallaxBackground } from './Component';
 import { CanvasLayerScope } from '../../../r3f/canvasLayerScope';
 import { fireSceneRender } from '../../../r3f/testing/fireSceneRender';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera';
+import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 function backgroundNode(properties: Record<string, string> = {}): TscnNode {
   return {

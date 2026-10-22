@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { BONE_AXIS_NAMES, BoneAxis } from '../../../../godot/scene/skeletonModifier.js';
 import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {

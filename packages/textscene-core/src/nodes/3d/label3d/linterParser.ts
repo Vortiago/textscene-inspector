@@ -23,9 +23,9 @@ import {
 import {
   AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
-  BREAK_TRIM_LABELS,
+  BREAK_TRIM_NAMES,
   BREAK_TRIM_MASK,
-  JUSTIFICATION_HINTED_BITS,
+  JUSTIFICATION_HINTED_NAMES,
   STRUCTURED_TEXT_PARSER_NAMES,
   TextDirection,
   TEXT_DIRECTION_NAMES,
@@ -181,7 +181,7 @@ validatorRegistry.registerAll('Label3D', {
   // edge-space bits, so BREAK_TRIM_INDENT is kept but not offered by the inspector.
   autowrap_trim_flags: maskedBitField('autowrap_trim_flags', BREAK_TRIM_MASK, {
     enforced: 'label_3d.cpp:920',
-    labels: BREAK_TRIM_LABELS,
+    labels: BREAK_TRIM_NAMES,
     hintedBits: BREAK_TRIM_HINTED_BITS,
   }),
   // label_3d.cpp:162: PROPERTY_HINT_FLAGS naming 6 of the 8 JustificationFlag
@@ -189,6 +189,6 @@ validatorRegistry.registerAll('Label3D', {
   // unreachable from the inspector: the hint's warning tier, not a mask's error.
   justification_flags: hintedBitField('justification_flags', {
     hinted: 'label_3d.cpp:162',
-    labels: JUSTIFICATION_HINTED_BITS,
+    labels: JUSTIFICATION_HINTED_NAMES,
   }),
 });

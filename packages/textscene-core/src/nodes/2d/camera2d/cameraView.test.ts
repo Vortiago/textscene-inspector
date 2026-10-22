@@ -4,7 +4,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { camera2DView, type Camera2DTag } from './cameraView';
-import { Camera2DAnchorMode } from './types';
+
+import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 const VIEWPORT = { x: 1152, y: 648 };
 

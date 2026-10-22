@@ -3,12 +3,6 @@
 import type { Node2DProperties } from '../../base/node2d/types';
 import type { Vector2 } from '../../../godot/math/vector';
 
-/** Godot Camera2D.AnchorMode. */
-export const Camera2DAnchorMode = {
-  FIXED_TOP_LEFT: 0,
-  DRAG_CENTER: 1,
-} as const;
-
 export interface Camera2DProperties extends Node2DProperties {
   /** View magnification (higher = more zoomed in). Default (1, 1). */
   zoom: Vector2;

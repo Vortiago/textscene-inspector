@@ -37,6 +37,7 @@ import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -904,7 +905,11 @@ describe('layoutRichTextRuns', () => {
   const FONT_SIZE = 16;
   const BLACK = { r: 0, g: 0, b: 0, a: 1 };
 
-  function shape(text: string, boxWidthPx = 0, autowrapMode = AutowrapMode.AUTOWRAP_OFF): TextLayoutResult {
+  function shape(
+    text: string,
+    boxWidthPx = 0,
+    autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF
+  ): TextLayoutResult {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 0 });
   }
 
@@ -913,7 +918,7 @@ describe('layoutRichTextRuns', () => {
     text: string,
     runs: Parameters<typeof fontSizePxAtFromRuns>[0],
     boxWidthPx = 0,
-    autowrapMode = AutowrapMode.AUTOWRAP_OFF
+    autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF
   ): TextLayoutResult {
     return shapeText(text, {
       fontSizePx: FONT_SIZE,
@@ -1113,7 +1118,7 @@ describe('layoutRichTextRuns', () => {
       text: string,
       runs: Parameters<typeof fontSizePxAtFromRuns>[0],
       boxWidthPx = 0,
-      autowrapMode = AutowrapMode.AUTOWRAP_OFF
+      autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF
     ): TextLayoutResult {
       return shapeText(text, {
         fontSizePx: FONT_SIZE,

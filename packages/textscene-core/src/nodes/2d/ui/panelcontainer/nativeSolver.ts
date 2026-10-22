@@ -13,7 +13,7 @@
  * and a `top_level` child is a canvas root outside this layout.
  */
 
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type {

@@ -10,7 +10,7 @@
  */
 
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,

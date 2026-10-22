@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { nodePathLiteral } from '../../../../godot/variant/variantParser.js';
-import { ruleCount } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount } from '../../../../godot/variant/intSlots.js';
 import { unsatisfiedIndices } from '../../../../linter/reportedIndices.js';
 import { resolveSplineSettingLeaf } from './linterParser.js';
 import {

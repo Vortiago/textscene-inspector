@@ -7,7 +7,8 @@
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseAudioStreamPlayer2D } from './parser';
-import { PlaybackType } from './types';
+
+import { PlaybackType } from '../../../godot/audio/audioServer';
 
 const HEADING: ParsedHeading = {
   type: 'node',

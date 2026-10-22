@@ -3,8 +3,9 @@
  * `_modulate_with_gradient` writes it (noise_texture_2d.cpp:183-198, noise_texture_3d.cpp:175-189).
  */
 import { describe, expect, it } from 'vitest';
-import { GradientInterpolationMode, type Gradient } from '../../textures/gradienttexture2d/types';
+import { type Gradient } from '../../textures/gradienttexture2d/types';
 import { modulateRedWithGradient, modulateWithGradient } from './gradientModulation';
+import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 
 /** Black to opaque red. */
 const RAMP: Gradient = {
@@ -12,7 +13,7 @@ const RAMP: Gradient = {
     { offset: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
     { offset: 1, color: { r: 1, g: 0, b: 0, a: 1 } },
   ],
-  interpolationMode: GradientInterpolationMode.Linear,
+  interpolationMode: GradientInterpolationMode.LINEAR,
 };
 
 /** Black to a half-transparent white, so every channel differs from red. */
@@ -21,7 +22,7 @@ const GREY_RAMP: Gradient = {
     { offset: 0, color: { r: 0, g: 0.2, b: 0.4, a: 1 } },
     { offset: 1, color: { r: 1, g: 1, b: 1, a: 0.5 } },
   ],
-  interpolationMode: GradientInterpolationMode.Linear,
+  interpolationMode: GradientInterpolationMode.LINEAR,
 };
 
 describe('modulateWithGradient', () => {

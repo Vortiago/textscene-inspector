@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
 import { simulateFrozenPose, type ParticleSimInput } from './simulate';
-import { CPUParticles2DParam, type CPUParticles2DProperties } from './types';
+import { type CPUParticles2DProperties } from './types';
 import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/math/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
-import { GradientInterpolationMode } from '../../../resources/textures/gradienttexture2d/types';
-import { CurveTangentMode, DEFAULT_BAKE_RESOLUTION, type Curve } from '../../../resources/curves/curve/types';
+import { DEFAULT_BAKE_RESOLUTION, type Curve } from '../../../resources/curves/curve/types';
+import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
+import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
+import { CurveTangentMode } from '../../../godot/scene/curve';
 
 const NO_CURVES: (Curve | null)[] = Array.from({ length: 12 }, () => null);
 
@@ -411,15 +413,15 @@ describe('simulateFrozenPose', () => {
           position: { x: 0, y: 1 },
           leftTangent: 0,
           rightTangent: 0,
-          leftMode: CurveTangentMode.Free,
-          rightMode: CurveTangentMode.Free,
+          leftMode: CurveTangentMode.FREE,
+          rightMode: CurveTangentMode.FREE,
         },
         {
           position: { x: 1, y: 0 },
           leftTangent: 0,
           rightTangent: 0,
-          leftMode: CurveTangentMode.Free,
-          rightMode: CurveTangentMode.Free,
+          leftMode: CurveTangentMode.FREE,
+          rightMode: CurveTangentMode.FREE,
         },
       ],
       minValue: 0,
@@ -429,7 +431,7 @@ describe('simulateFrozenPose', () => {
       bakeResolution: DEFAULT_BAKE_RESOLUTION,
     };
     const curves = NO_CURVES.slice();
-    curves[CPUParticles2DParam.Scale] = shrinking;
+    curves[CPUParticlesParameter.SCALE] = shrinking;
 
     const pose = simulateFrozenPose(input({ props: props({ amount: '24', lifetime: '1' }), curves }));
     // A steady-state emitter holds particles at every age, so the curve must
@@ -444,7 +446,7 @@ describe('simulateFrozenPose', () => {
         { offset: 0, color: { r: 1, g: 0, b: 0, a: 1 } },
         { offset: 1, color: { r: 0, g: 0, b: 1, a: 1 } },
       ],
-      interpolationMode: GradientInterpolationMode.Linear,
+      interpolationMode: GradientInterpolationMode.LINEAR,
     };
     const pose = simulateFrozenPose(input({ props: props({ amount: '24' }), colorRamp: ramp }));
     const reds = pose.map((p) => p.color.r);

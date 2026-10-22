@@ -5,7 +5,7 @@ import { parseOptionalInt } from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { TAB_BAR_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
-import { slotCount } from '../../../../godot/variant/int.js';
+import { slotCount } from '../../../../godot/variant/intSlots.js';
 import { parseControl } from '../control/parser';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { TabBarProperties, TabBarTabProperties } from './types';

@@ -4,7 +4,9 @@ import type { TscnExternalResource, TscnInternalResource } from '../../../parser
 import { NO_RESOURCES, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { loadedFilesOf, NO_FILES } from '../../../resources/testing/loadedFiles';
 import { particleFiles, resolveParticleCurves, resolveParticleGradient } from './sceneResources';
-import { CPUParticles2DParam, CPU_PARTICLES_2D_PARAM_COUNT, type ParticleParam } from './types';
+import { CPU_PARTICLES_2D_PARAM_COUNT, type ParticleParam } from './types';
+import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 const CURVE_DATA = '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0), 0.0, 0.0, 0, 0]';
 const GRADIENT_DATA = {
@@ -35,9 +37,11 @@ function sceneOf(internalResources: TscnInternalResource[], externalResources = 
   return { internalResources, externalResources };
 }
 
-function params(overrides: Partial<Record<CPUParticles2DParam, string>> = {}): ParticleParam[] {
+function params(
+  overrides: Partial<Record<EnumValue<typeof CPUParticlesParameter>, string>> = {}
+): ParticleParam[] {
   return Array.from({ length: CPU_PARTICLES_2D_PARAM_COUNT }, (_, i) => {
-    const curve = overrides[i as CPUParticles2DParam];
+    const curve = overrides[i as EnumValue<typeof CPUParticlesParameter>];
     return curve ? { min: 0, max: 1, curve } : { min: 0, max: 1 };
   });
 }
@@ -45,34 +49,34 @@ function params(overrides: Partial<Record<CPUParticles2DParam, string>> = {}): P
 describe('resolveParticleCurves', () => {
   it('decodes the Curve a parameter slot names (happy path)', () => {
     const curves = resolveParticleCurves(
-      params({ [CPUParticles2DParam.Scale]: 'SubResource("4")' }),
+      params({ [CPUParticlesParameter.SCALE]: 'SubResource("4")' }),
       sceneOf([CURVE]),
       NO_FILES
     );
-    expect(curves[CPUParticles2DParam.Scale]?.points).toHaveLength(2);
+    expect(curves[CPUParticlesParameter.SCALE]?.points).toHaveLength(2);
   });
 
   it('decodes the Curve a parameter slot names as a loaded .tres', () => {
     const curves = resolveParticleCurves(
-      params({ [CPUParticles2DParam.Scale]: 'ExtResource("7_curve")' }),
+      params({ [CPUParticlesParameter.SCALE]: 'ExtResource("7_curve")' }),
       sceneOf([]),
       loadedFile
     );
-    expect(curves[CPUParticles2DParam.Scale]?.points).toHaveLength(2);
+    expect(curves[CPUParticlesParameter.SCALE]?.points).toHaveLength(2);
   });
 
   it('leaves a slot null while its .tres has not loaded', () => {
     const curves = resolveParticleCurves(
-      params({ [CPUParticles2DParam.Scale]: 'ExtResource("7_curve")' }),
+      params({ [CPUParticlesParameter.SCALE]: 'ExtResource("7_curve")' }),
       sceneOf([]),
       NO_FILES
     );
-    expect(curves[CPUParticles2DParam.Scale]).toBeNull();
+    expect(curves[CPUParticlesParameter.SCALE]).toBeNull();
   });
 
   it('leaves every unreferenced slot null and keeps the array full length', () => {
     const curves = resolveParticleCurves(
-      params({ [CPUParticles2DParam.Scale]: 'SubResource("4")' }),
+      params({ [CPUParticlesParameter.SCALE]: 'SubResource("4")' }),
       sceneOf([CURVE]),
       NO_FILES
     );
@@ -82,11 +86,11 @@ describe('resolveParticleCurves', () => {
 
   it('yields null for a reference the scene does not define (error path)', () => {
     const curves = resolveParticleCurves(
-      params({ [CPUParticles2DParam.Damping]: 'SubResource("missing")' }),
+      params({ [CPUParticlesParameter.DAMPING]: 'SubResource("missing")' }),
       sceneOf([CURVE]),
       NO_FILES
     );
-    expect(curves[CPUParticles2DParam.Damping]).toBeNull();
+    expect(curves[CPUParticlesParameter.DAMPING]).toBeNull();
   });
 
   it('yields an all-null array for an empty resource table (edge case)', () => {
@@ -127,8 +131,8 @@ describe('particleFiles', () => {
     const files = particleFiles(
       {
         params: params({
-          [CPUParticles2DParam.Scale]: 'ExtResource("7_curve")',
-          [CPUParticles2DParam.Damping]: 'ExtResource("7_curve")',
+          [CPUParticlesParameter.SCALE]: 'ExtResource("7_curve")',
+          [CPUParticlesParameter.DAMPING]: 'ExtResource("7_curve")',
         }),
         ...ramps,
       },

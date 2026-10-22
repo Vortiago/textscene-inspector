@@ -12,8 +12,9 @@ import { directionalLightCullKey } from './lightCullKey';
 import { useRegisterCanvasLight2D, useRegisterLitItem } from './lightPassDeclarations';
 import { useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster, type ShadowCaster } from './shadowCasterRegistry';
-import { OCCLUDER_CULL_DISABLED } from './shadowVolumes';
+
 import { World2DLightingBoundary } from './World2DLightingBoundary';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 const SUN = {
   reach: directionalLightCullKey(0, 0),
@@ -32,7 +33,7 @@ interface Seen {
 function occluder(object: THREE.Object3D): ShadowCaster {
   return {
     segments: new Float32Array([0, 0, 0, 10, 0, 0]),
-    cullMode: OCCLUDER_CULL_DISABLED,
+    cullMode: OccluderPolygon2DCullMode.DISABLED,
     occluderLightMask: 1,
     object,
   };

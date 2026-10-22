@@ -6,7 +6,8 @@
 
 import * as THREE from 'three';
 import { toHalfFloatTexels } from '../../resources/textures/halfFloatTexels.js';
-import { LTC_SIZE, ltcTables } from '../../godot/rendering/lights/ltc.js';
+import { ltcTables } from '../../godot/rendering/lights/ltc.js';
+import { LTC_SIZE } from '../../godot/rendering/lights/ltcTable.generated.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 
 /** The four textures three reads off `UniformsLib`, which its own type does not declare. */

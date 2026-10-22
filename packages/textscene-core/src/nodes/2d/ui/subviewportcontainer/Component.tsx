@@ -9,7 +9,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
 import { ControlFallback } from '../../../../r3f/controls/native/ControlFallback.js';
-import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
+import type { Rect2 } from '../../../../godot/math/rect2.js';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker.js';
 import { useBuildSolveTree } from '../../../../r3f/controls/native/buildSolveTree.js';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping.js';

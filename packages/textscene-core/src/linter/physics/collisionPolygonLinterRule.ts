@@ -13,7 +13,7 @@ import { basisColumnScales } from './basisColumnScales.js';
 import type { PhysicsDim } from './dim.js';
 import { dimSuffix } from './dim.js';
 import { armEmits, groundedArm, reportArm, type RuleArm, type RuleArms } from '../ruleArms.js';
-import { ruleInt } from '../validators/commonValidators.js';
+import { ruleInt } from '../../godot/variant/intSlots.js';
 import { polygonPointCount } from '../polygonPoints.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 

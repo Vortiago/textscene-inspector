@@ -9,7 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { ControlClipProvider, useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import type { ScrollContainerProperties } from './types';

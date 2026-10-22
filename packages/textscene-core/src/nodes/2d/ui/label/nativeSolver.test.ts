@@ -5,7 +5,7 @@
  * ceil(600*16/2048) = 5, line_spacing 3 (default_theme.cpp:392): pitch 26, font height 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
@@ -19,7 +19,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { JustificationFlag } from '../../../../r3f/controls/native/text/textJustify';
+
 import {
   labelMinimumSize,
   labelShapingWidthPx,
@@ -40,7 +40,11 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
-import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
+import {
+  AutowrapMode,
+  VisibleCharactersBehavior,
+  JustificationFlag,
+} from '../../../../godot/text/textServerEnums';
 
 const minSize = labelMinimumSize;
 

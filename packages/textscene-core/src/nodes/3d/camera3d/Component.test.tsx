@@ -4,18 +4,19 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Camera3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Camera3DProperties } from './types';
-import { ProjectionMode, KeepAspectMode } from './types';
+
 import { instanceAs } from '../testing/reactThreeTestInstance';
+import { Camera3DProjectionType, Camera3DKeepAspect } from '../../../godot/scene/camera3d';
 
 function makeNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
   const base: Camera3DProperties = {
     name: 'MyCamera',
-    projection: ProjectionMode.PROJECTION_PERSPECTIVE,
+    projection: Camera3DProjectionType.PERSPECTIVE,
     fov: 75,
     size: 1,
     near: 0.05,
     far: 4000,
-    keep_aspect: KeepAspectMode.KEEP_HEIGHT,
+    keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
     h_offset: 0,
     v_offset: 0,
     frustum_offset: { x: 0, y: 0 },
@@ -42,7 +43,7 @@ describe('<Camera3D>', () => {
 
   it('renders an OrthographicCamera for projection=1', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 5 })} />
+      <Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 5 })} />
     );
     const cameras = renderer.scene.findAllByType('OrthographicCamera');
     expect(cameras.length).toBeGreaterThan(0);
@@ -75,7 +76,7 @@ describe('<Camera3D>', () => {
 
   it('applies orthographic size to left/right/top/bottom', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 })} />
+      <Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 4 })} />
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
     const o = instanceAs<THREE.OrthographicCamera>(cam);

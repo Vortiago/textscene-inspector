@@ -593,6 +593,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fogvolume Gizmo",
+    "file": "unit-fogvolume-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Foldable Container Rtl",
     "file": "unit-foldable-container-rtl.tscn",
     "category": "Other"
@@ -1538,6 +1543,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflectionprobe Gizmo",
+    "file": "unit-reflectionprobe-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d",
     "file": "unit-remote-transform-2d.tscn",
     "category": "Other"
@@ -2028,6 +2038,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Visibleonscreenenabler3d Gizmo",
+    "file": "unit-visibleonscreenenabler3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visibleonscreennotifier3d Gizmo",
+    "file": "unit-visibleonscreennotifier3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visual Instance 3d",
     "file": "unit-visual-instance-3d.tscn",
     "category": "Other"
@@ -2055,6 +2075,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Voxel Gi",
     "file": "unit-voxel-gi.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Voxelgi Gizmo",
+    "file": "unit-voxelgi-gizmo.tscn",
     "category": "Other"
   },
   {

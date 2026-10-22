@@ -3,8 +3,9 @@ import { decodeCurveResource } from './decode';
 import { subResource } from '../../../testing/subResource';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { sampleCurve } from './sample';
-import { CurveTangentMode, EMPTY_CURVE, type Curve } from './types';
+import { EMPTY_CURVE, type Curve } from './types';
 import type { TscnInternalResource } from '../../../parser/types';
+import { CurveTangentMode } from '../../../godot/scene/curve';
 
 /** The `scale_amount_curve` the isometric candle's Sparkle emitter carries. */
 const CANDLE_SPARKLE = {
@@ -29,8 +30,8 @@ describe('the Curve body decodeCurveResource decodes', () => {
       position: { x: 0, y: 0 },
       leftTangent: 0,
       rightTangent: Math.fround(1.36377),
-      leftMode: CurveTangentMode.Free,
-      rightMode: CurveTangentMode.Free,
+      leftMode: CurveTangentMode.FREE,
+      rightMode: CurveTangentMode.FREE,
     });
     expect(curve.points[1]!.position).toEqual({ x: Math.fround(0.262376), y: Math.fround(0.188182) });
     expect(curve.points[2]!.leftTangent).toBeCloseTo(-1.06101, 5);
@@ -54,8 +55,8 @@ describe('the Curve body decodeCurveResource decodes', () => {
 
   it('reads non-Free tangent modes', () => {
     const curve = decode({ _data: '[Vector2(0, 0), 0.0, 0.0, 1, 1]' });
-    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.Linear);
-    expect(curve.points[0]!.rightMode).toBe(CurveTangentMode.Linear);
+    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.LINEAR);
+    expect(curve.points[0]!.rightMode).toBe(CurveTangentMode.LINEAR);
   });
 
   it('truncates to `point_count` when the property disagrees with `_data`', () => {
@@ -174,8 +175,8 @@ describe('`point_count` resizes the decoded point list', () => {
     position: { x: 0, y: 0 },
     leftTangent: 0,
     rightTangent: 0,
-    leftMode: CurveTangentMode.Free,
-    rightMode: CurveTangentMode.Free,
+    leftMode: CurveTangentMode.FREE,
+    rightMode: CurveTangentMode.FREE,
   };
 
   it('pads with Godot’s default point when the count exceeds `_data`', () => {
@@ -191,8 +192,8 @@ describe('`point_count` resizes the decoded point list', () => {
       position: { x: 1, y: 1 },
       leftTangent: 1,
       rightTangent: 0.5,
-      leftMode: CurveTangentMode.Linear,
-      rightMode: CurveTangentMode.Linear,
+      leftMode: CurveTangentMode.LINEAR,
+      rightMode: CurveTangentMode.LINEAR,
     });
   });
 
@@ -300,7 +301,7 @@ describe('a Variant number Godot reads differently from `parseInt`', () => {
     // load at all.
     const curve = decode({ ...CANDLE_SPARKLE, _data: '[Vector2(0, 0), 0.0, 0.0, 1abc, 0]' });
 
-    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.Free);
+    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.FREE);
   });
 });
 

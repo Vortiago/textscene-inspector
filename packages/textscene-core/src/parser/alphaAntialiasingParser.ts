@@ -1,5 +1,7 @@
 /** The alpha antialiasing pair that Label3D and Sprite3D (SpriteBase3D) both store. */
 
+import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
+import type { EnumValue } from '../godot/classdb/enumNames.js';
 import { floatOr, intOr } from './valueParsers';
 
 /**
@@ -10,9 +12,9 @@ export function parseAlphaAntialiasing(properties: Record<string, string>, conte
   return {
     alpha_antialiasing_mode: intOr(
       properties.alpha_antialiasing_mode,
-      0,
+      AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
       `${contextPrefix}alpha_antialiasing_mode`
-    ),
+    ) as EnumValue<typeof AlphaAntiAliasing>,
     alpha_antialiasing_edge: floatOr(
       properties.alpha_antialiasing_edge,
       0,

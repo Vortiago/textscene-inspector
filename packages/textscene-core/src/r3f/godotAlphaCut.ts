@@ -13,13 +13,14 @@ import {
   type AlphaAntiAliasing,
   type AlphaAntialiasingCut,
 } from '../godot/rendering/materials/alphaAntialiasing';
+import type { EnumValue } from '../godot/classdb/enumNames.js';
 
 /** Passed as `transparentFlag` by a node whose DrawFlags have no `FLAG_TRANSPARENT` member. */
 export const NO_TRANSPARENT_FLAG = 'no-transparent-flag';
 
 interface AlphaCutInput {
   /** `SpriteBase3D::AlphaCutMode` or `Label3D::AlphaCutMode`: two C++ enums, same members. */
-  mode: AlphaCutMode;
+  mode: EnumValue<typeof AlphaCutMode>;
   /** `alpha_scissor_threshold`; DISCARD is the only arm that reads it. */
   scissorThreshold: number;
   /**
@@ -29,7 +30,7 @@ interface AlphaCutInput {
    */
   transparentFlag: boolean | typeof NO_TRANSPARENT_FLAG;
   /** `alpha_antialiasing_mode` and `alpha_antialiasing_edge`, which `get_material_for_2d` hands on. */
-  antialiasing: { mode: AlphaAntiAliasing; edge: number };
+  antialiasing: { mode: EnumValue<typeof AlphaAntiAliasing>; edge: number };
 }
 
 export interface AlphaCutSurface extends SurfaceAlphaSource {
@@ -93,7 +94,7 @@ export function alphaCutSurface({
 
 /** One arm of the switch, each of which multiplies the albedo alpha into ALPHA. */
 function cutArm(
-  mode: AlphaCutMode,
+  mode: EnumValue<typeof AlphaCutMode>,
   scissorThreshold: number,
   { mode: antialiasingMode, edge }: AlphaCutInput['antialiasing']
 ): CutArm {

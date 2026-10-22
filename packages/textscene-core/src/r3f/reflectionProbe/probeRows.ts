@@ -8,6 +8,7 @@ import type { ReflectionProbeAmbientMode } from '../../godot/rendering/environme
 import type { Vector3 } from '../../godot/math/vector.js';
 import { sRGBToLinearRGB } from '../../utils/colorSpace.js';
 import type { Rgba } from '../../godot/math/math.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** What the shader reads of one probe. */
 export interface DrawnProbe {
@@ -17,7 +18,7 @@ export interface DrawnProbe {
   blendDistance: number;
   originOffset: Vector3;
   intensity: number;
-  ambientMode: ReflectionProbeAmbientMode;
+  ambientMode: EnumValue<typeof ReflectionProbeAmbientMode>;
   ambientColor: Rgba;
   ambientColorEnergy: number;
   reflectionMask: number;

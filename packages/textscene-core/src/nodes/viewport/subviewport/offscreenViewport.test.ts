@@ -19,7 +19,8 @@ import {
 } from './offscreenViewport';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import type { Camera2DTag } from '../../2d/camera2d/cameraView';
-import { Camera2DAnchorMode } from '../../2d/camera2d/types';
+
+import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 /** A camera tagged the way `<Camera3D>` tags one: its dispatcher-absolute path. */
 function camera(tscnPath: string, current = false): THREE.PerspectiveCamera {

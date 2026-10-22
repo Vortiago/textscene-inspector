@@ -74,6 +74,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
   // corners, so only an overrunning window tiles.
   const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
+  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
@@ -86,7 +87,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     doubleSided: properties.double_sided,
     noDepthTest: properties.no_depth_test,
     textureFilter: properties.texture_filter,
-    anisotropicFilteringLevel: useAnisotropicFilteringLevel(),
+    anisotropicFilteringLevel,
   });
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
   // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a

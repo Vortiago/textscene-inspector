@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
-import {
-  CPUParticles2DDrawOrder,
-  CPUParticles2DEmissionShape,
-  CPUParticles2DParam,
-  CPU_PARTICLES_2D_PARAM_COUNT,
-} from './types';
+import { CPU_PARTICLES_2D_PARAM_COUNT } from './types';
+import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
+import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 
 describe('parseCPUParticles2D', () => {
   it('parses the isometric candle’s Fire emitter (happy path)', () => {
@@ -52,8 +49,8 @@ describe('parseCPUParticles2D', () => {
     expect(result.fixed_fps).toBe(0);
     expect(result.fract_delta).toBe(true);
     expect(result.local_coords).toBe(false);
-    expect(result.draw_order).toBe(CPUParticles2DDrawOrder.Index);
-    expect(result.emission_shape).toBe(CPUParticles2DEmissionShape.Point);
+    expect(result.draw_order).toBe(CPUParticles2DDrawOrder.INDEX);
+    expect(result.emission_shape).toBe(CPUParticles2DEmissionShape.POINT);
     expect(result.emission_sphere_radius).toBe(1);
     expect(result.emission_rect_extents).toEqual({ x: 1, y: 1 });
     expect(result.emission_ring_radius).toBe(1);
@@ -71,9 +68,9 @@ describe('parseCPUParticles2D', () => {
     expect(result.params).toHaveLength(CPU_PARTICLES_2D_PARAM_COUNT);
     for (const param of result.params) expect(param.curve).toBeUndefined();
 
-    expect(result.params[CPUParticles2DParam.InitialLinearVelocity]).toEqual({ min: 0, max: 0 });
-    expect(result.params[CPUParticles2DParam.Damping]).toEqual({ min: 0, max: 0 });
-    expect(result.params[CPUParticles2DParam.Scale]).toEqual({ min: 1, max: 1 });
+    expect(result.params[CPUParticlesParameter.INITIAL_LINEAR_VELOCITY]).toEqual({ min: 0, max: 0 });
+    expect(result.params[CPUParticlesParameter.DAMPING]).toEqual({ min: 0, max: 0 });
+    expect(result.params[CPUParticlesParameter.SCALE]).toEqual({ min: 1, max: 1 });
   });
 
   it('reads each parameter triple from its own serialised property names', () => {
@@ -89,18 +86,18 @@ describe('parseCPUParticles2D', () => {
       anim_offset_max: '1.0',
     });
 
-    expect(result.params[CPUParticles2DParam.InitialLinearVelocity]).toEqual({ min: 50, max: 75 });
-    expect(result.params[CPUParticles2DParam.AngularVelocity]).toEqual({
+    expect(result.params[CPUParticlesParameter.INITIAL_LINEAR_VELOCITY]).toEqual({ min: 50, max: 75 });
+    expect(result.params[CPUParticlesParameter.ANGULAR_VELOCITY]).toEqual({
       min: -90,
       max: 90,
       curve: 'SubResource("av")',
     });
-    expect(result.params[CPUParticles2DParam.Scale]).toEqual({
+    expect(result.params[CPUParticlesParameter.SCALE]).toEqual({
       min: 0.5,
       max: 2,
       curve: 'SubResource("4")',
     });
-    expect(result.params[CPUParticles2DParam.AnimOffset]).toEqual({ min: 0, max: 1 });
+    expect(result.params[CPUParticlesParameter.ANIM_OFFSET]).toEqual({ min: 0, max: 1 });
   });
 
   it('clamps `amount` into Godot’s 1..1,000,000 range (edge case)', () => {
@@ -119,14 +116,14 @@ describe('parseCPUParticles2D', () => {
     const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
       draw_order: '215832976',
     });
-    expect(result.draw_order).toBe(CPUParticles2DDrawOrder.Index);
+    expect(result.draw_order).toBe(CPUParticles2DDrawOrder.INDEX);
   });
 
   it('falls back to Point for an unknown `emission_shape` (error path)', () => {
     const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
       emission_shape: '99',
     });
-    expect(result.emission_shape).toBe(CPUParticles2DEmissionShape.Point);
+    expect(result.emission_shape).toBe(CPUParticles2DEmissionShape.POINT);
   });
 
   it('keeps the Godot default when a numeric property is unparseable (error path)', () => {
@@ -165,7 +162,7 @@ describe('parseCPUParticles2D', () => {
     expect(result.fixed_fps).toBe(30);
     expect(result.fract_delta).toBe(false);
     expect(result.local_coords).toBe(true);
-    expect(result.draw_order).toBe(CPUParticles2DDrawOrder.Lifetime);
+    expect(result.draw_order).toBe(CPUParticles2DDrawOrder.LIFETIME);
   });
 
   it('handles a heading with no attributes at all (edge case)', () => {

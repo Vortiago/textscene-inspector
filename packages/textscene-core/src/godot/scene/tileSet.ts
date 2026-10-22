@@ -3,32 +3,32 @@
 import { enumNamesByValue } from '../classdb/enumNames.js';
 
 /** `TileSet::TileShape` (`scene/resources/2d/tile_set.h:244-249`). */
-export enum TileShape {
-  TILE_SHAPE_SQUARE = 0,
-  TILE_SHAPE_ISOMETRIC = 1,
-  TILE_SHAPE_HALF_OFFSET_SQUARE = 2,
-  TILE_SHAPE_HEXAGON = 3,
-}
+export const TileShape = {
+  TILE_SHAPE_SQUARE: 0,
+  TILE_SHAPE_ISOMETRIC: 1,
+  TILE_SHAPE_HALF_OFFSET_SQUARE: 2,
+  TILE_SHAPE_HEXAGON: 3,
+} as const;
 
 export const TILE_SHAPE_NAMES = enumNamesByValue(TileShape);
 
 /** `TileSet::TileLayout` (`tile_set.h:251-258`): how a staggered shape lays its rows out. */
-export enum TileLayout {
-  TILE_LAYOUT_STACKED = 0,
-  TILE_LAYOUT_STACKED_OFFSET = 1,
-  TILE_LAYOUT_STAIRS_RIGHT = 2,
-  TILE_LAYOUT_STAIRS_DOWN = 3,
-  TILE_LAYOUT_DIAMOND_RIGHT = 4,
-  TILE_LAYOUT_DIAMOND_DOWN = 5,
-}
+export const TileLayout = {
+  TILE_LAYOUT_STACKED: 0,
+  TILE_LAYOUT_STACKED_OFFSET: 1,
+  TILE_LAYOUT_STAIRS_RIGHT: 2,
+  TILE_LAYOUT_STAIRS_DOWN: 3,
+  TILE_LAYOUT_DIAMOND_RIGHT: 4,
+  TILE_LAYOUT_DIAMOND_DOWN: 5,
+} as const;
 
 export const TILE_LAYOUT_NAMES = enumNamesByValue(TileLayout);
 
 /** `TileSet::TileOffsetAxis` (`tile_set.h:260-263`): the axis a staggered shape offsets along. */
-export enum TileOffsetAxis {
-  TILE_OFFSET_AXIS_HORIZONTAL = 0,
-  TILE_OFFSET_AXIS_VERTICAL = 1,
-}
+export const TileOffsetAxis = {
+  TILE_OFFSET_AXIS_HORIZONTAL: 0,
+  TILE_OFFSET_AXIS_VERTICAL: 1,
+} as const;
 
 export const TILE_OFFSET_AXIS_NAMES = enumNamesByValue(TileOffsetAxis);
 

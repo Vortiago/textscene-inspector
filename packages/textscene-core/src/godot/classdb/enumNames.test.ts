@@ -1,18 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { enumNamesByValue, enumValues, labelEnumNames, pascalCaseLabel, relabelEnumNames } from './enumNames';
+import {
+  enumMember,
+  enumNamesByValue,
+  flagLabels,
+  labelEnumNames,
+  pascalCaseLabel,
+  relabelEnumNames,
+} from './enumNames';
 
-enum Shade {
-  DARK = 0,
-  LIGHT = 2,
-}
+const Shade = { DARK: 0, LIGHT: 2 } as const;
 
 describe('enumNamesByValue', () => {
   it('names each member by its integer', () => {
     expect(enumNamesByValue(Shade)).toEqual({ 0: 'DARK', 2: 'LIGHT' });
-  });
-
-  it('leaves out the reverse entries a numeric TS enum adds', () => {
-    expect(Object.values(enumNamesByValue(Shade))).not.toContain('0');
   });
 
   it('gives an empty map for an enum with no numeric member', () => {
@@ -33,17 +33,6 @@ describe('relabelEnumNames', () => {
   });
 });
 
-describe('enumValues', () => {
-  enum Sample {
-    A = 0,
-    B = 3,
-  }
-
-  it('lists the integers in declaration order, without the reverse-mapped names', () => {
-    expect(enumValues(Sample)).toEqual([0, 3]);
-  });
-});
-
 describe('pascalCaseLabel', () => {
   it('joins the words of a member name in PascalCase', () => {
     expect(pascalCaseLabel('SPECIFIC_BONE')).toBe('SpecificBone');
@@ -61,5 +50,28 @@ describe('labelEnumNames', () => {
       0: 'OpenXR',
       1: 'Humanoid',
     });
+  });
+});
+
+describe('flagLabels', () => {
+  const Flags = { NONE: 0, FIRST: 1, SECOND: 2, FOURTH: 8 } as const;
+
+  it('labels each listed flag by its bit, with the prefix before the member name', () => {
+    expect(flagLabels(Flags, 'FLAG_', ['FIRST', 'FOURTH'])).toEqual({ 1: 'FLAG_FIRST', 8: 'FLAG_FOURTH' });
+  });
+
+  it('leaves out a flag that is not listed', () => {
+    expect(Object.keys(flagLabels(Flags, 'FLAG_', ['FIRST']))).toEqual(['1']);
+  });
+});
+
+describe('enumMember', () => {
+  it('gives the integer back as the member it names', () => {
+    expect(enumMember(Shade, 2)).toBe(Shade.LIGHT);
+  });
+
+  it('gives null for an integer no member holds', () => {
+    expect(enumMember(Shade, 1)).toBeNull();
+    expect(enumMember(Shade, 0.5)).toBeNull();
   });
 });

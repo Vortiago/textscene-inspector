@@ -4,7 +4,7 @@
  * (`resource_format_text.cpp:1724-1732`).
  */
 
-import { parseGodotInt } from './int.js';
+import { parseGodotInt } from './intReader.js';
 import { toUint8 } from './intWidth.js';
 import { literalText, STRING_LITERAL_RE } from '../string/string.js';
 

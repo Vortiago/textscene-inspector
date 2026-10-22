@@ -3,7 +3,7 @@
  * the error that refuses a negative one.
  */
 import { IS_VALID_INT_RE, stringToInt } from '../godot/string/string.js';
-import { ruleCount } from '../godot/variant/int.js';
+import { ruleCount } from '../godot/variant/intSlots.js';
 import { visitIndexedKeys, type IndexParse } from '../godot/classdb/indexedKey.js';
 import type { IndexedFamily } from '../godot/classdb/indexedFamily.js';
 import type { ParseError } from './types.js';

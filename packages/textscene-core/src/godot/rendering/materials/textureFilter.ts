@@ -8,13 +8,13 @@ import { enumNamesByValue } from '../../classdb/enumNames.js';
  * `PARENT_NODE` at 0, and `Viewport::DefaultCanvasItemTextureFilter`
  * (viewport/shared) has four, with the two `_WITH_MIPMAPS` values swapped.
  */
-export enum TextureFilter {
-  NEAREST = 0,
-  LINEAR = 1,
-  NEAREST_WITH_MIPMAPS = 2,
-  LINEAR_WITH_MIPMAPS = 3,
-  NEAREST_WITH_MIPMAPS_ANISOTROPIC = 4,
-  LINEAR_WITH_MIPMAPS_ANISOTROPIC = 5,
-}
+export const TextureFilter = {
+  NEAREST: 0,
+  LINEAR: 1,
+  NEAREST_WITH_MIPMAPS: 2,
+  LINEAR_WITH_MIPMAPS: 3,
+  NEAREST_WITH_MIPMAPS_ANISOTROPIC: 4,
+  LINEAR_WITH_MIPMAPS_ANISOTROPIC: 5,
+} as const;
 
 export const TEXTURE_FILTER_NAMES = enumNamesByValue(TextureFilter);

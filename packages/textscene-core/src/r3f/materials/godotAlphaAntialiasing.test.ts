@@ -15,6 +15,7 @@ import {
   scissorAntialiasing,
 } from '../../godot/rendering/materials/alphaAntialiasing';
 import { scalarGlslFunction } from '../testing/glslScalar';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** Every three program an antialiased Godot surface, its depth prepass or its shadow compiles. */
 const ANTIALIASED_PROGRAMS: Readonly<Record<string, { vertexShader: string; fragmentShader: string }>> = {
@@ -219,7 +220,9 @@ describe('alphaAntialiasingProps', () => {
   });
 
   it('adds nothing for a mode past the enum, which ramps the edge only (edge case)', () => {
-    expect(alphaAntialiasingProps(scissorAntialiasing(3 as AlphaAntiAliasing, 0.5, 0.3))).toEqual({});
+    expect(
+      alphaAntialiasingProps(scissorAntialiasing(3 as EnumValue<typeof AlphaAntiAliasing>, 0.5, 0.3))
+    ).toEqual({});
   });
 
   it('adds nothing for no cut', () => {

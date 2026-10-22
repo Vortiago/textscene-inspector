@@ -21,7 +21,7 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   TAB_ALIGNMENT_CENTER,
   TAB_ALIGNMENT_LEFT,

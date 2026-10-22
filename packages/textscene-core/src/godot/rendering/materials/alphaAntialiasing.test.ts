@@ -5,6 +5,7 @@ import {
   scissorAntialiasing,
   turnsOnAlphaToCoverage,
 } from './alphaAntialiasing';
+import type { EnumValue } from '../../classdb/enumNames.js';
 
 describe('scissorAntialiasing', () => {
   it('moves the edge past the scissor threshold', () => {
@@ -57,6 +58,6 @@ describe('turnsOnAlphaToCoverage', () => {
   });
 
   it('leaves it off for a mode past the enum, which emits no render mode (error case)', () => {
-    expect(turnsOnAlphaToCoverage(3 as AlphaAntiAliasing)).toBe(false);
+    expect(turnsOnAlphaToCoverage(3 as EnumValue<typeof AlphaAntiAliasing>)).toBe(false);
   });
 });

@@ -7,13 +7,15 @@
 
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
-import { parseSlotInt } from '../../godot/variant/int.js';
+import { parseSlotInt } from '../../godot/variant/intReader.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceClassGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
-import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
+import { type MeshLibraryModel, type MeshLibraryItem } from './types';
+import { ShadowCastingSetting } from '../../godot/rendering/rendering';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /**
  * `MeshLibrary::_set` reads fixed slices with no validity gate, `get_slicec('/', 1)`
@@ -28,7 +30,7 @@ const ITEM_KEY_RE = indexedKeyRegex('^item/(#)/([^/]+)', 'to_int');
  * Anything outside 0-3 lands on Godot's own default branch, which is ON
  * (`scene/resources/3d/mesh_library.cpp:65-67`).
  */
-function decodeCastShadow(rawValue: string): ShadowCastingSetting {
+function decodeCastShadow(rawValue: string): EnumValue<typeof ShadowCastingSetting> {
   // `parseSlotInt`, not `parseInt`: Godot converts a FLOAT spelling into an int
   // slot (`variant.cpp`), so `cast_shadow = 2.0` is DOUBLE_SIDED, and a raw
   // `parseInt` would read `2` out of text the engine refuses outright.

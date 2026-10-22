@@ -10,15 +10,9 @@ import {
   buildShadowPolarMap,
   type ShadowPolarLight,
 } from './shadowPolarMap';
-import {
-  OCCLUDER_CULL_DISABLED,
-  OCCLUDER_CULL_CLOCKWISE,
-  OCCLUDER_CULL_COUNTER_CLOCKWISE,
-  type LightRect,
-  type OccluderCullMode,
-  type ShadowCasterEdges,
-} from './shadowVolumes';
+import { type LightRect, type OccluderCullMode, type ShadowCasterEdges } from './shadowVolumes';
 import { worldEdges } from './testing/worldEdges';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 /** A rect no test occluder falls outside, so a test not about the cull measures only its own subject. */
 const UNBOUNDED: LightRect = {
@@ -47,7 +41,7 @@ function segment(
   ay: number,
   bx: number,
   by: number,
-  cullMode: OccluderCullMode = OCCLUDER_CULL_DISABLED
+  cullMode: OccluderCullMode = OccluderPolygon2DCullMode.DISABLED
 ): ShadowCasterEdges {
   return worldEdges([ax, ay, bx, by], cullMode);
 }
@@ -211,7 +205,7 @@ describe('buildShadowPolarMap', () => {
     // `polygonToSegments` hands it over.
     const square: ShadowCasterEdges = worldEdges(
       [-80, -80, 80, -80, 80, -80, 80, 80, 80, 80, -80, 80, -80, 80, -80, -80],
-      OCCLUDER_CULL_DISABLED
+      OccluderPolygon2DCullMode.DISABLED
     );
     const map = buildShadowPolarMap(lightAt(0, 0, RADIUS), [square]);
     expect([...map].every((v) => v < SHADOW_MAP_FAR)).toBe(true);
@@ -293,15 +287,15 @@ describe('buildShadowPolarMap', () => {
     // Same edge, both windings, under both culling modes. This is the test
     // `edgeCastsShadow` already answers for the stencil path; the polar map must
     // answer it identically or a filtered light would shadow from the far side.
-    const forward = segment(100, -50, 100, 50, OCCLUDER_CULL_CLOCKWISE);
-    const reversed = segment(100, 50, 100, -50, OCCLUDER_CULL_CLOCKWISE);
+    const forward = segment(100, -50, 100, 50, OccluderPolygon2DCullMode.CLOCKWISE);
+    const reversed = segment(100, 50, 100, -50, OccluderPolygon2DCullMode.CLOCKWISE);
     const bin = binOf(0.125);
     const a = buildShadowPolarMap(lightAt(0, 0, RADIUS), [forward])[bin]!;
     const b = buildShadowPolarMap(lightAt(0, 0, RADIUS), [reversed])[bin]!;
     expect([a === SHADOW_MAP_FAR, b === SHADOW_MAP_FAR]).toEqual([false, true]);
 
     const ccw = buildShadowPolarMap(lightAt(0, 0, RADIUS), [
-      segment(100, -50, 100, 50, OCCLUDER_CULL_COUNTER_CLOCKWISE),
+      segment(100, -50, 100, 50, OccluderPolygon2DCullMode.COUNTER_CLOCKWISE),
     ])[bin]!;
     expect(ccw).toBe(SHADOW_MAP_FAR);
   });
@@ -331,7 +325,7 @@ describe('buildShadowPolarMap', () => {
   it('ignores a degenerate edge and a caster with no segments', () => {
     const degenerate = buildShadowPolarMap(lightAt(0, 0, RADIUS), [
       segment(100, 0, 100, 0),
-      worldEdges([], OCCLUDER_CULL_DISABLED),
+      worldEdges([], OccluderPolygon2DCullMode.DISABLED),
       // Collinear with the light: no area, and `edgeCastsShadow` rejects it.
       segment(100, 0, 200, 0),
     ]);

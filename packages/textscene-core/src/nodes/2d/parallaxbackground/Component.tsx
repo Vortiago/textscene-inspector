@@ -11,7 +11,6 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
-import { Camera2DAnchorMode } from '../camera2d/types';
 import type { Camera2DTag } from '../camera2d/cameraView';
 import { selectViewportCamera2D } from '../../viewport/subviewport/offscreenViewport';
 import {
@@ -24,6 +23,7 @@ import {
 import { isViewportPass, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { ParallaxScrollProvider, type RegisteredParallaxLayer } from './scrollContext';
 import type { ParallaxBackgroundProperties } from './types';
+import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 /** The identity canvas transform: a view whose top-left is the world origin. */
 const EDITOR_VIEW: ParallaxViewFraming = {

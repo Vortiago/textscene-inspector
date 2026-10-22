@@ -6,14 +6,15 @@
 import type * as THREE from 'three';
 import { getFovy } from '../../../godot/math/projection.js';
 import { radToDeg } from '../../../godot/math/math.js';
-import { KeepAspectMode, ProjectionMode } from './types';
+import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../godot/scene/camera3d.js';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** The Camera3D properties that the projection takes, before the viewport aspect. */
 export interface CameraLens {
-  projection: ProjectionMode;
+  projection: EnumValue<typeof Camera3DProjectionType>;
   fov: number;
   size: number;
-  keepAspect: KeepAspectMode;
+  keepAspect: EnumValue<typeof Camera3DKeepAspect>;
   frustumOffset: { x: number; y: number };
 }
 
@@ -48,7 +49,7 @@ export function fitToAspect(camera: THREE.Camera, aspect: number): void {
   if (fittable.isOrthographicCamera) fitOrthographic(camera as THREE.OrthographicCamera, fit.lens, aspect);
   if (fittable.isPerspectiveCamera) fitPerspective(camera as THREE.PerspectiveCamera, fit.lens, aspect);
   // After the perspective fit, which sets the aspect the frustum's width reads.
-  if (fit.lens.projection === ProjectionMode.PROJECTION_FRUSTUM) {
+  if (fit.lens.projection === Camera3DProjectionType.FRUSTUM) {
     fitFrustum(camera as THREE.PerspectiveCamera, fit.lens, aspect);
   }
 }
@@ -60,7 +61,7 @@ export function fittedAspect(camera: THREE.Camera): number | null {
 
 /** `Projection::set_orthogonal` (`projection.cpp:356-362`): `size` is the full kept extent. */
 function fitOrthographic(camera: THREE.OrthographicCamera, lens: CameraLens, aspect: number): void {
-  const width = lens.keepAspect === KeepAspectMode.KEEP_WIDTH ? lens.size : lens.size * aspect;
+  const width = lens.keepAspect === Camera3DKeepAspect.KEEP_WIDTH ? lens.size : lens.size * aspect;
   camera.left = -width / 2;
   camera.right = width / 2;
   camera.top = width / aspect / 2;
@@ -70,7 +71,7 @@ function fitOrthographic(camera: THREE.OrthographicCamera, lens: CameraLens, asp
 
 /** three's fov is vertical. Under KEEP_WIDTH Godot's is horizontal (`projection.cpp:252-255`). */
 function fitPerspective(camera: THREE.PerspectiveCamera, lens: CameraLens, aspect: number): void {
-  camera.fov = lens.keepAspect === KeepAspectMode.KEEP_WIDTH ? getFovy(lens.fov, 1 / aspect) : lens.fov;
+  camera.fov = lens.keepAspect === Camera3DKeepAspect.KEEP_WIDTH ? getFovy(lens.fov, 1 / aspect) : lens.fov;
   camera.aspect = aspect;
   camera.updateProjectionMatrix();
 }

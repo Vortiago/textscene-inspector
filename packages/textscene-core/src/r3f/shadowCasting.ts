@@ -15,6 +15,7 @@ import {
   type DrawnInstance,
   type SurfaceDrawHooks,
 } from './surfaceDrawHooks';
+import type { EnumValue } from '../godot/classdb/enumNames.js';
 
 /** What every GeometryInstance3D consumer mounts: `castShadow` and the four draw hooks. */
 export interface ShadowCastingEffects extends SurfaceDrawHooks {
@@ -47,7 +48,7 @@ interface CastSetting {
   rule: CastRule;
 }
 
-const CAST_SETTINGS: Readonly<Record<ShadowCastingSetting, CastSetting>> = {
+const CAST_SETTINGS: Readonly<Record<EnumValue<typeof ShadowCastingSetting>, CastSetting>> = {
   [ShadowCastingSetting.OFF]: {
     castShadow: false,
     rule: { colourDraw: poseColourDraw, shadowSide: materialCull },
@@ -68,7 +69,9 @@ const CAST_SETTINGS: Readonly<Record<ShadowCastingSetting, CastSetting>> = {
 
 /** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
 function castSettingOf(value: number | undefined): CastSetting {
-  return CAST_SETTINGS[value as ShadowCastingSetting] ?? CAST_SETTINGS[ShadowCastingSetting.ON];
+  return (
+    CAST_SETTINGS[value as EnumValue<typeof ShadowCastingSetting>] ?? CAST_SETTINGS[ShadowCastingSetting.ON]
+  );
 }
 
 function castEffects({ castShadow, rule }: CastSetting, instance: DrawnInstance): ShadowCastingEffects {

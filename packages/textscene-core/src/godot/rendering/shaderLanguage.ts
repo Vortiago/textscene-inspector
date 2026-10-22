@@ -1,19 +1,20 @@
+import type { EnumValue } from '../classdb/enumNames.js';
 /**
  * The shader language's reading of a shader's type, which picks the shader's mode
  * (`servers/rendering/shader_language.cpp:11223-11302`, `scene/resources/shader.cpp:111-123`).
  */
 
 /** `Shader::Mode` (`scene/resources/shader.h:45-51`), the values `VisualShader.mode` stores. */
-export enum ShaderMode {
-  SPATIAL = 0,
-  CANVAS_ITEM = 1,
-  PARTICLES = 2,
-  SKY = 3,
-  FOG = 4,
-}
+export const ShaderMode = {
+  SPATIAL: 0,
+  CANVAS_ITEM: 1,
+  PARTICLES: 2,
+  SKY: 3,
+  FOG: 4,
+} as const;
 
 /** The mode each `shader_type` names. Any other type runs spatial (`scene/resources/shader.cpp:113-123`). */
-const SHADER_MODE_BY_TYPE: ReadonlyMap<string, ShaderMode> = new Map([
+const SHADER_MODE_BY_TYPE: ReadonlyMap<string, EnumValue<typeof ShaderMode>> = new Map([
   ['canvas_item', ShaderMode.CANVAS_ITEM],
   ['particles', ShaderMode.PARTICLES],
   ['sky', ShaderMode.SKY],
@@ -76,6 +77,6 @@ const DIRECTIVE_LINE = /^[ \t]*#.*$/gm;
  * (`scene/resources/shader.cpp:91-111`), whose output keeps no directive line. This drops those
  * lines but expands no macro or include, so a type an include or a macro writes reads as spatial.
  */
-export function shaderModeOf(code: string): ShaderMode {
+export function shaderModeOf(code: string): EnumValue<typeof ShaderMode> {
   return SHADER_MODE_BY_TYPE.get(shaderTypeOf(code.replace(DIRECTIVE_LINE, ''))) ?? ShaderMode.SPATIAL;
 }

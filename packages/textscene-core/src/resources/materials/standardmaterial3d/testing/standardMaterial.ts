@@ -5,12 +5,11 @@
  */
 
 import type * as THREE from 'three';
-import { materialFromBag } from '../build';
-import { standardMaterialBags } from '../materialBag';
+import { buildMaterial } from '../buildMaterial.testkit';
 import { parseStandardMaterial3DScalars } from '../scalars';
 
 export function standardMaterial(properties: Record<string, string> = {}): THREE.Material {
-  return materialFromBag(standardMaterialBags(parseStandardMaterial3DScalars(properties)).unfaded);
+  return buildMaterial(parseStandardMaterial3DScalars(properties));
 }
 
 /**

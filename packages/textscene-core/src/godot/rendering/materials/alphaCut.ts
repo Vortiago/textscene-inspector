@@ -8,11 +8,11 @@ import { enumNamesByValue } from '../../classdb/enumNames.js';
  * Both setters enforce `ERR_FAIL_INDEX(p_mode, ALPHA_CUT_MAX)` at
  * `label_3d.cpp:1013` and `sprite_3d.cpp:531`.
  */
-export enum AlphaCutMode {
-  DISABLED = 0,
-  DISCARD = 1,
-  OPAQUE_PREPASS = 2,
-  HASH = 3,
-}
+export const AlphaCutMode = {
+  DISABLED: 0,
+  DISCARD: 1,
+  OPAQUE_PREPASS: 2,
+  HASH: 3,
+} as const;
 
 export const ALPHA_CUT_NAMES = enumNamesByValue(AlphaCutMode);

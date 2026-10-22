@@ -6,8 +6,9 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import { Camera2DAnchorMode, type Camera2DProperties } from './types';
+import { type Camera2DProperties } from './types';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 export function parseCamera2D(
   heading: ParsedHeading,
