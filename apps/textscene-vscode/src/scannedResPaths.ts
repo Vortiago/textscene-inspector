@@ -6,19 +6,19 @@
 
 import type * as vscode from 'vscode';
 import { isScannedPath } from '@textscene/core/godot';
-
-const ROOT = 'res://';
+import { forwardSlashes, RES_SCHEME } from '@textscene/core/resources/resPath';
 
 /** The `res://` path of `file`, a file under `root`. */
 function resPathUnder(root: vscode.Uri, file: vscode.Uri): string {
-  const rootPath = root.path.replace(/\/+$/, '');
-  return `${ROOT}${file.path.slice(rootPath.length + 1)}`;
+  const rootPath = forwardSlashes(root.path);
+  const rootPrefix = rootPath.endsWith('/') ? rootPath : `${rootPath}/`;
+  return `${RES_SCHEME}${file.path.slice(rootPrefix.length)}`;
 }
 
 /** The `res://` path of the directory holding the file at `path`. */
 function parentResPath(path: string): string {
   const slash = path.lastIndexOf('/');
-  return slash < ROOT.length ? ROOT : path.slice(0, slash);
+  return slash < RES_SCHEME.length ? RES_SCHEME : path.slice(0, slash);
 }
 
 /**
@@ -31,7 +31,7 @@ export function scannedResPaths(
   stopFiles: readonly vscode.Uri[]
 ): string[] {
   const skipped = new Set(
-    stopFiles.map((file) => parentResPath(resPathUnder(root, file))).filter((dir) => dir !== ROOT)
+    stopFiles.map((file) => parentResPath(resPathUnder(root, file))).filter((dir) => dir !== RES_SCHEME)
   );
   return files.map((file) => resPathUnder(root, file)).filter((path) => isScannedPath(path, skipped));
 }
