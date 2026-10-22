@@ -10,6 +10,7 @@ import {
 import { parseControl } from '../control/parser';
 import { arrayLiteralBody } from '../../../../godot/variant/variantParser.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { holdsResource } from '../../../../godot/scene/resourceLiteral.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { ITEM_LIST_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
@@ -58,7 +59,7 @@ function parseDeprecatedItems(value: string): ItemListItem[] | null {
   for (let i = 0; i < entries.length; i += 3) {
     const icon = entries[i + 1]!.trim();
     const item: ItemListItem = { text: unquoteString(entries[i]!.trim()) };
-    if (icon !== 'null') item.icon = icon;
+    if (holdsResource(icon)) item.icon = icon;
     if (boolSlotValue(entries[i + 2]!.trim()) === true) item.disabled = true;
     items.push(item);
   }

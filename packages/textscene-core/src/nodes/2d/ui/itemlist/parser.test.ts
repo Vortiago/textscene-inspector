@@ -98,6 +98,11 @@ describe('parseItemList', () => {
       expect(result.itemCount).toBe(2);
     });
 
+    it('reads a nil icon as no icon, as the variant parser reads it as null (variant_parser.cpp:699)', () => {
+      const result = parseItemList(heading, { items: '["Shield", nil, false]' });
+      expect(result.items).toEqual([{ text: 'Shield' }]);
+    });
+
     it('a wrong arity drops every row, matching ERR_FAIL_COND_V before clear() (error path)', () => {
       const result = parseItemList(heading, { items: '["Sword", null]' });
       expect(result.items).toEqual([]);
