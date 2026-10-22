@@ -65,6 +65,12 @@ describe('openDocumentLookup', () => {
     expect(openDocumentLookup()(createMockUri('/game/Main.tscn'))).toBe(main);
   });
 
+  it("skips a diff view's committed copy, which shares the file's fsPath", () => {
+    const committed = { uri: { ...createMockUri('/game/Main.tscn'), scheme: 'git' }, getText: () => 'HEAD' };
+    vscodeMocks.workspace.textDocuments = [committed, main];
+    expect(openDocumentLookup()(createMockUri('/game/Main.tscn'))).toBe(main);
+  });
+
   it('reads the open documents once for every lookup it answers', () => {
     let reads = 0;
     Object.defineProperty(vscodeMocks.workspace, 'textDocuments', {

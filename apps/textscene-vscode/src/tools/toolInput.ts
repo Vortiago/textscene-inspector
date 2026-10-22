@@ -33,10 +33,18 @@ export function resolveToolUri(inputPath: string): vscode.Uri | undefined {
 export function openDocumentLookup(): (file: vscode.Uri) => vscode.TextDocument | undefined {
   const byPath = new Map<string, vscode.TextDocument>();
   for (const document of vscode.workspace.textDocuments) {
-    const key = pathKey(document.uri.fsPath, HOST_PATH_CASE);
+    const key = documentKey(document.uri);
     if (!byPath.has(key)) byPath.set(key, document);
   }
-  return (file) => byPath.get(pathKey(file.fsPath, HOST_PATH_CASE));
+  return (file) => byPath.get(documentKey(file));
+}
+
+/**
+ * The scheme and authority too, not the fsPath alone: a diff view's `git:` document of the file has the file's fsPath
+ * and holds the committed text.
+ */
+function documentKey(uri: vscode.Uri): string {
+  return `${uri.scheme}://${uri.authority}${pathKey(uri.fsPath, HOST_PATH_CASE)}`;
 }
 
 /** The text of the file at `uri` on disk. It opens no document, so it starts no lint. */
