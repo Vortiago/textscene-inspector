@@ -24,8 +24,6 @@ const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
  * the map read one texel along the pair. Roughness 1 stays 1, so that pixel skips the reads.
  */
 const NORMAL_DERIVATIVES = /* glsl */ `#ifdef USE_NORMALMAP_TANGENTSPACE
-vec2 godotUvDx = dFdx( vNormalMapUv );
-vec2 godotUvDy = dFdy( vNormalMapUv );
 mat3 godotTbnDx = mat3( dFdx( tbn[ 0 ] ), dFdx( tbn[ 1 ] ), dFdx( tbn[ 2 ] ) );
 mat3 godotTbnDy = mat3( dFdy( tbn[ 0 ] ), dFdy( tbn[ 1 ] ), dFdy( tbn[ 2 ] ) );
 vec2 godotPair = 1.0 - 2.0 * mod( floor( gl_FragCoord.xy ), 2.0 );

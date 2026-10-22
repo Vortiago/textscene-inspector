@@ -61,6 +61,16 @@ export function importedNormalMapRead(material: THREE.Material): ProgramInjectio
 
 const PARS_CHUNK = 'normalmap_pars_fragment';
 const MAPS_CHUNK = 'normal_fragment_maps';
+const BEGIN_CHUNK = 'normal_fragment_begin';
+
+const THREE_NON_PERTURBED_NORMAL = 'vec3 nonPerturbedNormal = normal;';
+
+/** The map UV's screen gradients, once for the pixel's read and the roughness limiter's. */
+const GODOT_UV_GRADIENTS = `${THREE_NON_PERTURBED_NORMAL}
+#ifdef USE_NORMALMAP_TANGENTSPACE
+	vec2 godotUvDx = dFdx( vNormalMapUv );
+	vec2 godotUvDy = dFdy( vNormalMapUv );
+#endif`;
 
 const THREE_NORMAL_SCALE = 'uniform vec2 normalScale;\n#endif';
 
@@ -89,11 +99,13 @@ const THREE_TANGENT_READ = `	vec3 mapN = texture2D( normalMap, vNormalMapUv ).xy
 	mapN.xy *= normalScale;
 	normal = normalize( tbn * mapN );`;
 
-const GODOT_TANGENT_READ =
-  '\tnormal = godotMapNormal( vNormalMapUv, dFdx( vNormalMapUv ), dFdy( vNormalMapUv ), tbn );';
+const GODOT_TANGENT_READ = '\tnormal = godotMapNormal( vNormalMapUv, godotUvDx, godotUvDy, tbn );';
 
-const GODOT_NORMAL_MAP_EDITS: readonly ChunkEdit<typeof PARS_CHUNK | typeof MAPS_CHUNK>[] = [
+const GODOT_NORMAL_MAP_EDITS: readonly ChunkEdit<
+  typeof PARS_CHUNK | typeof MAPS_CHUNK | typeof BEGIN_CHUNK
+>[] = [
   { chunk: PARS_CHUNK, three: THREE_NORMAL_SCALE, godot: GODOT_MAP_NORMAL },
+  { chunk: BEGIN_CHUNK, three: THREE_NON_PERTURBED_NORMAL, godot: GODOT_UV_GRADIENTS },
   { chunk: MAPS_CHUNK, three: THREE_TANGENT_READ, godot: GODOT_TANGENT_READ },
 ];
 
@@ -106,9 +118,9 @@ export const NORMAL_MAP_READ_MARK = 'vec3 godotMapNormal(';
  */
 export function installGodotNormalMapRead(): void {
   installChunkPatch({
-    names: [PARS_CHUNK, MAPS_CHUNK],
+    names: [PARS_CHUNK, BEGIN_CHUNK, MAPS_CHUNK],
     isApplied: (chunks) => chunks[PARS_CHUNK].includes(NORMAL_MAP_READ_MARK),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_NORMAL_MAP_EDITS),
-    missing: `${PARS_CHUNK} or ${MAPS_CHUNK} lacks a line the normal map read patch replaces`,
+    missing: `${PARS_CHUNK}, ${BEGIN_CHUNK} or ${MAPS_CHUNK} lacks a line the normal map read patch replaces`,
   });
 }

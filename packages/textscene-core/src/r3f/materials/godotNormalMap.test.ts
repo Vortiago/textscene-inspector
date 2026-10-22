@@ -33,10 +33,14 @@ describe('the installed normal map read', () => {
       installedShaderChunks().normal_fragment_maps,
       '#elif defined( USE_NORMALMAP_TANGENTSPACE )'
     );
-    expect(tangentRead).toContain(
-      'normal = godotMapNormal( vNormalMapUv, dFdx( vNormalMapUv ), dFdy( vNormalMapUv ), tbn );'
-    );
+    expect(tangentRead).toContain('normal = godotMapNormal( vNormalMapUv, godotUvDx, godotUvDy, tbn );');
     expect(tangentRead).not.toContain('texture2D');
+  });
+
+  it('declares the map UV gradients once, for the pixel and the limiter', () => {
+    const begin = installedShaderChunks().normal_fragment_begin;
+    expect(begin).toContain('vec2 godotUvDx = dFdx( vNormalMapUv );');
+    expect(begin).toContain('vec2 godotUvDy = dFdy( vNormalMapUv );');
   });
 
   it('declares the tangent frame the roughness limiter reads, before the setup chunk (edge case)', () => {
