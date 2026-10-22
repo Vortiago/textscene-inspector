@@ -10,13 +10,11 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { godotConePenumbra } from '../../../../r3f/godotLightAttenuation';
-import { positionalShadowNear } from '../../../../godot/rendering/lights/positionalShadow';
-import { lightBufferRange } from '../../../../godot/rendering/lights/lightBufferRange';
 import { degToRad } from '../../../../godot/math/math.js';
 import { spotShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
 import { SpotLightGizmo } from '../shared/lightHelpers';
-import { usePositionalLight } from '../shared/positionalLight';
+import { positionalLightRange, usePositionalLight } from '../shared/positionalLight';
 
 export function SpotLight3D({ node, children }: NodeComponentProps) {
   const properties = node.properties as SpotLight3DProperties;
@@ -26,8 +24,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
     [properties]
   );
   const color = parseColorToHex(properties.light_color);
-  // The floored range, as the shader's falloff and shadow lookup read it: three takes 0 as no cutoff.
-  const range = lightBufferRange(properties.spot_range);
+  const { distance, shadowNear, shadowFar } = positionalLightRange(properties.spot_range);
   const angleRadians = degToRad(properties.spot_angle);
   // `spot_attenuation` is Godot's distance falloff exponent, which three calls decay.
   const decay = properties.spot_attenuation;
@@ -51,16 +48,16 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
             position={[0, 0, 0]}
             color={color}
             intensity={intensity}
-            distance={range}
+            distance={distance}
             angle={angleRadians}
             penumbra={penumbra}
             decay={decay}
             castShadow={properties.shadow_enabled}
             shadow-intensity={shadowOpacity}
             userData={userData}
+            shadow-camera-near={shadowNear}
+            shadow-camera-far={shadowFar}
             shadow-bias={spotShadowBias(properties)}
-            shadow-camera-near={positionalShadowNear(range)}
-            shadow-camera-far={range}
             target={target}
           />
           <SpotLightGizmo lightRef={lightRef} />
