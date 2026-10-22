@@ -5,19 +5,23 @@
  */
 
 import { isGodotTextResourcePath } from '../godot/project/resourceFormats.js';
-import { splitLines, type LanguageDocument } from './document.js';
-import { resPathAt, resPathOccurrences } from './navigation.js';
+import type { LanguageDocument } from './document.js';
+import { resPathAt, resPathOccurrencesInText } from './navigation.js';
 import type { Position, Range } from './types.js';
 
-/** What a host gives {@link resPathReferencesAt}: the project's files and the text of each. */
+/** What a host gives {@link resPathReferencesAt}: the project's files, the text of each, and the request's state. */
 export interface ReferenceSource {
   /** The `res://` path of every file of the project, as path completion lists them. */
   listPaths(): Promise<readonly string[]>;
   /**
-   * The text of the file at a `res://` path, or null for a file the host cannot read. It never throws, and it serves
-   * an open editor's unsaved text in place of the disk's, since a range from stale text lands on the wrong line.
+   * The unsaved text of an open editor that holds the file at a `res://` path, or undefined when none does. It wins
+   * over the file on disk, because a range from the disk's text lands on the wrong line in the editor.
    */
-  readText(path: string): Promise<string | null>;
+  openText(path: string): string | undefined;
+  /** The text of the file at a `res://` path on disk, or null for a file the host cannot read. It never throws. */
+  readFile(path: string): Promise<string | null>;
+  /** Whether the client cancelled the request. The engine reads no further file once it has. */
+  isCancelled(): boolean;
 }
 
 /** One occurrence of the path: the file that holds it and the span it fills. */
@@ -52,7 +56,7 @@ async function mapBounded<Item, Result>(
 /** The occurrences of `path` in `text`. A file that does not hold the path as a substring holds no occurrence. */
 function occurrencesOf(path: string, text: string): Range[] {
   if (!text.includes(path)) return [];
-  return resPathOccurrences({ lines: splitLines(text) })
+  return resPathOccurrencesInText(text)
     .filter((occurrence) => occurrence.path === path)
     .map(({ range }) => range);
 }
@@ -61,7 +65,8 @@ function occurrencesOf(path: string, text: string): Range[] {
  * Every occurrence of the `res://` path under the cursor, in the order the source lists its files, then in line order.
  * It matches the whole path, so `res://a.tscn` finds neither `res://a.tscn.import` nor `res://dir/a.tscn`. It reads
  * the path's text only: an `ext_resource` whose `uid=` names the file but whose `path=` is stale is not found. A
- * cursor off a `res://` path gives none, and reads nothing.
+ * cursor off a `res://` path gives none, and reads nothing. A cancelled request gives whatever the reads before the
+ * cancel found, which the host drops.
  */
 export async function resPathReferencesAt(
   document: LanguageDocument,
@@ -72,7 +77,8 @@ export async function resPathReferencesAt(
   if (target === undefined) return [];
   const files = (await source.listPaths()).filter(isGodotTextResourcePath);
   const perFile = await mapBounded(files, async (file) => {
-    const text = await source.readText(file);
+    if (source.isCancelled()) return [];
+    const text = source.openText(file) ?? (await source.readFile(file));
     return text === null ? [] : occurrencesOf(target.path, text).map((range) => ({ file, range }));
   });
   return perFile.flat();

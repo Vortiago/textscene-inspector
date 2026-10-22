@@ -58,10 +58,11 @@ seam only for a cursor inside a `res://` value, so a host lists the project only
 listings follow the Godot editor's scan rules: no dot-named directory, no nested project and no
 `.gdignore` directory.
 
-The reference search (`resPathReferencesAt`) takes the same `listPaths` and a `readText` callback.
-The host lists the project, reads each file and maps each match to its own location, and the engine
-owns the matching. A host's `readText` serves the unsaved text of an open editor, because a range
-from the file on disk lands on the wrong line in the editor.
+The reference search (`resPathReferencesAt`) takes the same `listPaths`, an `openText` and a
+`readFile` callback, and an `isCancelled` check. The engine owns the matching and the order of the
+reads: it reads the text of an open editor first, because a range from the file on disk lands on the
+wrong line in the editor, and it reads no further file once the client cancels. A host only lists the
+project, reads one file, and maps each match to its own location.
 
 ## Considered Options
 

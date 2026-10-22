@@ -30,12 +30,21 @@ function arrangeProject(files: Record<string, string>): void {
   });
 }
 
-/** The references found from the path in `door.tscn`, as `path:line:character`. */
-async function referencesFound(listing: readonly string[]): Promise<string[]> {
+/** A token that has not been cancelled. */
+const LIVE_TOKEN = { isCancellationRequested: false } as vscode.CancellationToken;
+
+/** The references found from `position` in `door.tscn`, as `path:line:character`. */
+async function referencesFound(
+  listing: readonly string[],
+  position: vscode.Position = ON_PATH,
+  token: vscode.CancellationToken = LIVE_TOKEN
+): Promise<string[]> {
   const provider = new TscnReferenceProvider({ pathsFor: async () => listing });
   const locations = await provider.provideReferences(
     createMockDocument(LINE, '/workspace/scenes/door.tscn'),
-    ON_PATH
+    position,
+    { includeDeclaration: true },
+    token
   );
   return locations.map(
     (location) => `${location.uri.fsPath}:${location.range.start.line}:${location.range.start.character}`
@@ -87,10 +96,20 @@ describe('TscnReferenceProvider', () => {
 
     const locations = await new TscnReferenceProvider({ pathsFor }).provideReferences(
       createMockDocument(LINE, '/workspace/scenes/door.tscn'),
-      new vscode.Position(0, 3)
+      new vscode.Position(0, 3),
+      { includeDeclaration: true },
+      LIVE_TOKEN
     );
 
     expect(locations).toEqual([]);
     expect(pathsFor).not.toHaveBeenCalled();
+  });
+
+  it('reads no file once the request is cancelled', async () => {
+    arrangeProject({ '/workspace/levels/one.tscn': LINE });
+    const cancelled = { isCancellationRequested: true } as vscode.CancellationToken;
+
+    expect(await referencesFound(['res://levels/one.tscn'], ON_PATH, cancelled)).toEqual([]);
+    expect(vscodeMocks.workspace.fs.readFile).not.toHaveBeenCalled();
   });
 });

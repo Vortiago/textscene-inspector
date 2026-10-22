@@ -11,16 +11,24 @@ const CURSOR_SCENE = `[gd_scene format=3]
 `;
 const ON_TARGET = { line: 2, character: 40 };
 
-/** A source over files held in memory, which records every read. A null text is a file the host cannot read. */
-function memorySource(files: Record<string, string | null>): ReferenceSource & { readonly reads: string[] } {
+/**
+ * A source over files held in memory, which records every read. A null text is a file the host cannot read.
+ * `open` holds the unsaved text of the files an editor has open.
+ */
+function memorySource(
+  files: Record<string, string | null>,
+  open: Record<string, string> = {}
+): ReferenceSource & { readonly reads: string[] } {
   const reads: string[] = [];
   return {
     reads,
     listPaths: () => Promise.resolve(Object.keys(files)),
-    readText: (path) => {
+    openText: (path) => open[path],
+    readFile: (path) => {
       reads.push(path);
       return Promise.resolve(files[path] ?? null);
     },
+    isCancelled: () => false,
   };
 }
 
@@ -117,11 +125,11 @@ describe('resPathReferencesAt', () => {
   it('gives nothing, and lists nothing, when the cursor is not on a res:// path', async () => {
     let listed = false;
     const source: ReferenceSource = {
+      ...memorySource({}),
       listPaths: () => {
         listed = true;
         return Promise.resolve([]);
       },
-      readText: () => Promise.resolve(null),
     };
 
     const found = await resPathReferencesAt(
@@ -144,8 +152,8 @@ describe('resPathReferencesAt', () => {
     let inFlight = 0;
     let mostInFlight = 0;
     const source: ReferenceSource = {
-      listPaths: () => Promise.resolve(Object.keys(files)),
-      readText: async (path) => {
+      ...memorySource(files),
+      readFile: async (path) => {
         inFlight++;
         mostInFlight = Math.max(mostInFlight, inFlight);
         await Promise.resolve();
@@ -158,5 +166,38 @@ describe('resPathReferencesAt', () => {
 
     expect(found).toHaveLength(200);
     expect(mostInFlight).toBeLessThanOrEqual(32);
+  });
+
+  it("reads an open editor's unsaved text in place of the file on disk", async () => {
+    const source = memorySource(
+      { 'res://edited.tscn': 'a = "res://textures/grid.png"\n' },
+      { 'res://edited.tscn': '\n\nb = "res://textures/grid.png"\n' }
+    );
+
+    expect(await referencesFrom(source)).toEqual(['res://edited.tscn:2:5']);
+    expect(source.reads).toEqual([]);
+  });
+
+  it('reads no further file once the request is cancelled', async () => {
+    const files = Object.fromEntries(
+      Array.from({ length: 200 }, (_, index) => [
+        `res://scene${index}.tscn`,
+        'a = "res://textures/grid.png"\n',
+      ])
+    );
+    const source = memorySource(files);
+    const cancelled = { value: false };
+
+    const found = await resPathReferencesAt(new LanguageDocument(CURSOR_SCENE), ON_TARGET, {
+      ...source,
+      isCancelled: () => cancelled.value,
+      readFile: async (path) => {
+        cancelled.value = source.reads.length >= 10;
+        return source.readFile(path);
+      },
+    });
+
+    expect(source.reads.length).toBeLessThan(50);
+    expect(found.length).toBeLessThan(50);
   });
 });

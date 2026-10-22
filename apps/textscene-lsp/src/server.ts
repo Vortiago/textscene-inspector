@@ -123,23 +123,21 @@ async function resPathFileUrl(root: ResRoot | null, path: string): Promise<strin
   return file === null ? undefined : pathToFileURL(file).toString();
 }
 
-/**
- * A reader of the files under `root` that serves an open document's unsaved text in place of its file's: a range
- * from the file's text would land on the wrong line in the editor. Reads the open documents once, when it is made.
- */
-function textReaderWithOpenDocuments(root: ResRoot): (path: string) => Promise<string | null> {
-  const openTexts = documents.all().flatMap((document) => {
-    const file = filePathOf(document.uri);
-    return file === null ? [] : [{ file, text: document.getText() }];
-  });
-  return async (path) => {
-    const file = root.pathOf(path);
-    const open =
-      file === null ? undefined : openTexts.find((entry) => isSamePath(entry.file, file, DISK_PATH_CASE));
-    if (open !== undefined) return open.text;
-    const content = await root.loadResource(path);
-    return typeof content === 'string' ? content : null;
-  };
+/** The text on disk of the file at `path` under `root`, or null for a file that is no text resource. */
+async function readFileText(root: ResRoot, path: string): Promise<string | null> {
+  const content = await root.loadResource(path);
+  return typeof content === 'string' ? content : null;
+}
+
+/** The unsaved text of the open document at `file`, a host path, or undefined when the client has none open there. */
+function openDocumentText(file: string): string | undefined {
+  return documents
+    .all()
+    .find((document) => {
+      const open = filePathOf(document.uri);
+      return open !== null && isSamePath(open, file, DISK_PATH_CASE);
+    })
+    ?.getText();
 }
 
 function scheduleLint(document: TextDocument): void {
@@ -269,14 +267,19 @@ connection.onDefinition(async (params): Promise<Location | null> => {
   return target === undefined ? null : { uri: target, range: FILE_START };
 });
 
-connection.onReferences(async (params): Promise<Location[] | null> => {
+connection.onReferences(async (params, token): Promise<Location[] | null> => {
   const model = modelOf(params.textDocument.uri);
   if (model === undefined) return null;
   const root = await rootForUri(params.textDocument.uri);
   if (root === null) return [];
   const references = await resPathReferencesAt(model, params.position, {
     listPaths: () => root.listPaths(),
-    readText: textReaderWithOpenDocuments(root),
+    openText: (path) => {
+      const file = root.pathOf(path);
+      return file === null ? undefined : openDocumentText(file);
+    },
+    readFile: (path) => readFileText(root, path),
+    isCancelled: () => token.isCancellationRequested,
   });
   return references.flatMap(({ file, range }) => {
     const path = root.pathOf(file);

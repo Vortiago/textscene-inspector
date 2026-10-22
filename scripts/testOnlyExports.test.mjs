@@ -23,8 +23,8 @@ const CORE = resolve(ROOT, 'packages/textscene-core');
 const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir) => resolve(ROOT, dir));
 
 /**
- * The scan of the real tree reads every source file of core and every importer outside it. It took 7.5 seconds on a
- * slow container, past vitest's 5 second default, so the case that scans it gets room.
+ * The scan of the real tree parses over 5,000 TypeScript files of core and of its importers. That is real work: it
+ * took 7.5 seconds on a slow container, past vitest's 5 second default, so the case that scans it gets room.
  */
 const TREE_SCAN_TIMEOUT_MS = 60_000;
 

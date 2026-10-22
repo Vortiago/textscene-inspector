@@ -8,7 +8,7 @@
  */
 
 import { TscnParserCore, type ParseObserver, type SectionType } from '../parser/TscnParserCore.js';
-import type { ParsedHeading } from '../parser/utils.js';
+import { splitLines, type ParsedHeading } from '../parser/utils.js';
 
 /** The four section tags a feature reads, and `other` for the rest (`gd_scene`, `connection`). */
 type SectionKind = 'node' | 'sub_resource' | 'ext_resource' | 'resource' | 'other';
@@ -115,11 +115,6 @@ function scanHeadings(text: string): ScannedHeading[] {
   // A null node creator: the scan only needs the observer's headings and properties.
   new TscnParserCore().parse(text, () => null, observer);
   return headings;
-}
-
-/** The lines of `text`, each without its `\n` or `\r\n`. */
-export function splitLines(text: string): string[] {
-  return text.split(/\r?\n/);
 }
 
 function scanSections(text: string, lines: readonly string[]): DocumentSection[] {
