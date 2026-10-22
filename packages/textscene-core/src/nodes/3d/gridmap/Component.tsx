@@ -275,13 +275,21 @@ interface SurfaceDraw {
   shadow: ShadowCastingEffects;
 }
 
-/**
- * Every cell of one surface: one batch, or one tile per cell when its material billboards. A points
- * surface is one `THREE.Points`. The decoded material decides, as the drawn one exists only inside a slot.
- */
+/** Every cell of one surface. A points surface is one `THREE.Points`, whose slot reads its own material. */
 function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
+  return geometryDrawsPoints(draw.geometry) ? (
+    <PointTiles draw={draw} />
+  ) : (
+    <MeshTiles draw={draw} matrices={matrices} />
+  );
+}
+
+/**
+ * Every cell of a triangle surface: one batch, or one tile per cell when its material billboards.
+ * The decoded material decides, as the drawn one exists only inside a slot.
+ */
+function MeshTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
   const scalars = useSurfaceScalars(draw.source);
-  if (geometryDrawsPoints(draw.geometry)) return <PointTiles draw={draw} />;
   if (drawsAsOneBatch(surfaceBillboard(scalars))) return <BatchedTiles draw={draw} matrices={matrices} />;
   return (
     <>
