@@ -22,6 +22,7 @@ import { applyTextureState, releaseBoundTexture } from '../../../resources/textu
 import type { DecalProperties } from './types';
 import type { DecalGeometricFade } from './decalFade';
 import { distanceFade } from '../../../godot/rendering/distanceFade';
+import { TrackedObjects } from '../../../r3f/trackedObjects';
 import { cameraDistance, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { DecalProjectionMaterials, type DecalProjectionLook } from './decalProjectionMaterials';
@@ -58,8 +59,10 @@ export function Decal({ node, children }: NodeComponentProps) {
   // The projection materials, for the per-frame distance-fade write below. They are
   // built imperatively inside the effect, so a ref is the only handle on them.
   const materialsRef = useRef<DecalProjectionMaterials | null>(null);
-  // What the last bake projected onto. Written by the bake effect, cleared when it is torn down.
-  const bakedReceiversRef = useRef<readonly THREE.Mesh[] | null>(null);
+  // What the last bake projected onto, and the mesh tracker's version then. Written by the bake
+  // effect, cleared when it is torn down.
+  const bakedRef = useRef<{ receivers: readonly THREE.Mesh[]; meshVersion: number } | null>(null);
+  const meshesRef = useRef<TrackedObjects<THREE.Mesh> | null>(null);
   // Counts the bakes a late receiver asked for. It only changes the bake effect's dependencies.
   const [lateReceiverBakes, setLateReceiverBakes] = useState(0);
 
@@ -163,11 +166,11 @@ export function Decal({ node, children }: NodeComponentProps) {
       group.add(mesh);
     }
 
-    bakedReceiversRef.current = receivers;
+    bakedRef.current = { receivers, meshVersion: meshesRef.current?.version ?? 0 };
     invalidate();
 
     return () => {
-      bakedReceiversRef.current = null;
+      bakedRef.current = null;
       for (const child of group.children.slice()) {
         group.remove(child);
         (child as THREE.Mesh).geometry?.dispose();
@@ -195,22 +198,32 @@ export function Decal({ node, children }: NodeComponentProps) {
   ]);
 
   // A receiver can mount after the bake, as a Label3D does once its font loads. Godot's clustered
-  // decal finds it the next frame, so each render looks for receivers the bake missed. The latest
-  // box inputs sit in a ref, so an animated `size` does not resubscribe the observer every frame.
+  // decal finds it the next frame. The tracker lists the scene's meshes without a walk and changes
+  // its version when one arrives or leaves, so a render where none did costs one comparison. The
+  // latest box inputs sit in a ref, so an animated `size` does not resubscribe every frame.
   const boxInputsRef = useRef({ size, cullMask: properties.cull_mask });
   boxInputsRef.current = { size, cullMask: properties.cull_mask };
   useEffect(() => {
     const group = projectionRef.current;
     if (!group) return undefined;
-    return observeSceneCamera(scene, () => {
-      const baked = bakedReceiversRef.current;
-      if (!baked) return;
+    const meshes = new TrackedObjects(scene, isSceneMesh);
+    meshes.current();
+    meshesRef.current = meshes;
+    const stop = observeSceneCamera(scene, () => {
+      const baked = bakedRef.current;
+      if (!baked || meshes.version === baked.meshVersion) return;
+      baked.meshVersion = meshes.version;
       scene.updateMatrixWorld(true);
       const { size: boxSize, cullMask } = boxInputsRef.current;
       const boxAABB = computeDecalBoxWorldAABB(group.matrixWorld, boxSize);
       const receivers = collectDecalReceivers(scene, boxAABB, cullMask);
-      if (!isSameReceivers(receivers, baked)) setLateReceiverBakes((bakes) => bakes + 1);
+      if (!isSameReceivers(receivers, baked.receivers)) setLateReceiverBakes((bakes) => bakes + 1);
     });
+    return () => {
+      stop();
+      meshes.dispose();
+      meshesRef.current = null;
+    };
   }, [scene]);
 
   // Before each render, for whichever camera renders the scene, the projections follow their
@@ -274,6 +287,11 @@ function showFaded(
 ): void {
   materials.setOpacity(opacity * fade);
   group.visible = fade > 0;
+}
+
+/** A mesh a decal can receive on: its own and every decal's projection meshes are not receivers. */
+function isSceneMesh(object: THREE.Object3D): object is THREE.Mesh {
+  return (object as THREE.Mesh).isMesh === true && object.userData.isDecalProjection !== true;
 }
 
 function isSameReceivers(a: readonly THREE.Mesh[], b: readonly THREE.Mesh[]): boolean {
