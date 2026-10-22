@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
-import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
+import { injectProgram, injectViewportProgram, type ProgramInjection } from '../../../materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
 import { alphaAntialiasingProps, alphaAntialiasingUserData } from '../../../materials/godotAlphaAntialiasing';
 import type { AlphaAntialiasingCut } from '../../../../godot/rendering/materials/alphaAntialiasing';
@@ -222,6 +222,8 @@ interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
   /** Omitted, it takes `canvasItemFacing()`'s side, like `createMsdfMaterial`. */
   side?: THREE.Side;
   clippingPlanes?: readonly THREE.Plane[];
+  /** The raster carries a mip chain and draws in 3D, so it samples at the viewport's mipmap bias. */
+  mipmapped?: boolean;
 }
 
 /**
@@ -250,6 +252,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     blending = THREE.NormalBlending,
     antialiasing = null,
     injection,
+    mipmapped = false,
   } = options;
   const material = new THREE.MeshBasicMaterial({
     map,
@@ -275,6 +278,7 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }
-  injectProgram(material, injection);
+  if (mipmapped) injectViewportProgram(material, injection);
+  else injectProgram(material, injection);
   return material;
 }

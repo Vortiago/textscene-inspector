@@ -2135,6 +2135,12 @@ export const fixtures: Fixture[] = [
     "root": "glow-linear-upscale"
   },
   {
+    "name": "Label3d Glyph Mipmaps",
+    "file": "label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn",
+    "category": "Other",
+    "root": "label3d-glyph-mipmaps"
+  },
+  {
     "name": "Msaa 2d",
     "file": "msaa-2d/unit-msaa-2d.tscn",
     "category": "Other",

@@ -108,6 +108,12 @@ export interface TextRunProps {
    */
   textureFilter?: 'nearest' | 'linear';
   /**
+   * Builds a mip chain for the raster, as Godot does for a font with `generate_mipmaps`
+   * (`text_server_adv.cpp:3121`), and samples it at the viewport's mipmap bias. Canvas runs
+   * drawn in 3D only. Omitted, the raster has no chain, as a font without that flag has none.
+   */
+  mipmapped?: boolean;
+  /**
    * The `BaseMaterial3D::Transparency` this surface paints in, from a 3D caller's
    * `alpha_cut` (`label_3d.cpp:386-393`), in each pass its GeometryInstance3D's fade can draw it
    * in. Canvas runs inside a GeometryInstance3D drawer only. Omitted, it paints
@@ -161,6 +167,7 @@ function buildTextRun(
   distanceBias: number,
   strokeWidthPx: number,
   textureFilter: 'nearest' | 'linear',
+  mipmapped: boolean,
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
@@ -179,20 +186,30 @@ function buildTextRun(
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
     // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
     texture.colorSpace = THREE.SRGBColorSpace;
-    // `generateMipmaps` stays off for every filter: Godot's own default asks
-    // for mipmaps, but a per-label raster rebuilt on every text/size change
-    // is the wrong thing to build a chain for, so the minified case samples
-    // the base level. Only the nearest/linear bit is honoured.
-    texture.generateMipmaps = false;
+    // No chain unless the caller asks: Godot's default font generates none
+    // (`text_server.cpp:2387`), and a raster rebuilt on every text or size change is costly to mipmap.
     const filter = textureFilter === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
-    texture.minFilter = filter;
+    texture.generateMipmaps = mipmapped;
+    texture.minFilter = !mipmapped
+      ? filter
+      : textureFilter === 'nearest'
+        ? THREE.NearestMipmapLinearFilter
+        : THREE.LinearMipmapLinearFilter;
     texture.magFilter = filter;
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
     const opacity = tint.a;
     const paint = (blend: CanvasTextBlend | undefined) =>
-      createCanvasTextMaterial({ map: texture, opacity, clippingPlanes, depthTest, side, ...blend });
+      createCanvasTextMaterial({
+        map: texture,
+        opacity,
+        clippingPlanes,
+        depthTest,
+        side,
+        mipmapped,
+        ...blend,
+      });
     return { geometry: geo, paint, ownedTexture: texture };
   }
 
@@ -235,6 +252,7 @@ export function TextRun({
   side,
   strokeWidthPx = 0,
   textureFilter = 'linear',
+  mipmapped = false,
   blends,
   shadow,
   layers,
@@ -256,6 +274,7 @@ export function TextRun({
         distanceBias,
         strokeWidthPx,
         textureFilter,
+        mipmapped,
         outlineColor,
         outlineWidthPx
       ),
@@ -276,6 +295,7 @@ export function TextRun({
       side,
       strokeWidthPx,
       textureFilter,
+      mipmapped,
       outlineColor?.r,
       outlineColor?.g,
       outlineColor?.b,

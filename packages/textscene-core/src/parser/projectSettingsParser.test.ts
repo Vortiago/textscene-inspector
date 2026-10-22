@@ -22,6 +22,7 @@ import {
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectAnisotropicFilteringLevel,
+  projectDefaultFontGeneratesMipmaps,
   projectTextureMipmapBias,
   projectViewportSize,
   projectVolumetricFogSettings,
@@ -587,5 +588,24 @@ describe('projectAnisotropicFilteringLevel', () => {
 
   it('keeps the default for a malformed value (edge case)', () => {
     expect(projectAnisotropicFilteringLevel({ [KEY]: 'sharp' })).toBe(2);
+  });
+});
+
+describe('projectDefaultFontGeneratesMipmaps', () => {
+  const KEY = 'gui/theme/default_font_generate_mipmaps';
+
+  it('reads true from a project.godot line', () => {
+    const settings = parseProjectSettings('[gui]\n\ntheme/default_font_generate_mipmaps=true\n');
+
+    expect(projectDefaultFontGeneratesMipmaps(settings)).toBe(true);
+  });
+
+  it("is false with no project or no key, Godot's default (text_server.cpp:2387)", () => {
+    expect(projectDefaultFontGeneratesMipmaps(null)).toBe(false);
+    expect(projectDefaultFontGeneratesMipmaps({ 'gui/other': 'true' })).toBe(false);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectDefaultFontGeneratesMipmaps({ [KEY]: 'sharp' })).toBe(false);
   });
 });

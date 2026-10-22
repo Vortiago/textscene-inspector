@@ -65,12 +65,14 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 
 `pixel_size`, `outline_size`, `font_size`, `line_spacing` and `alpha_antialiasing_edge` warn and fall back through `floatOr` to `0.005`, `12`, `32`, `0` and `0`. `alpha_antialiasing_mode` warns and falls back to `OFF`. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the label opaque. A `billboard` outside `0` to `2` keeps `DISABLED`, as Godot's setter refuses it. `no_depth_test` reads every spelling a BOOL slot converts, so `1` is true. Text no BOOL slot reads renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
 
+The glyph raster has a mip chain only when `gui/theme/default_font_generate_mipmaps` is on and `texture_filter` is mipmapped, as Godot's default font builds one only then (`text_server.cpp:2387`, `text_server_adv.cpp:3121`). The project's `texture_mipmap_bias` then offsets it.
+
 ## Known limitations
 
 - **Approximated** `width` and `autowrap_mode` are not read, so a long label runs on one
   line where Godot wraps it.
-- **Approximated** The glyph texture carries no mipmaps, so a label seen small sparkles
-  where Godot's stays smooth.
+- **Approximated** The glyph mip chain is per label raster at 3x supersampling, where Godot's is per glyph page, so a minified label differs slightly.
+- **Approximated** A font resource's own `generate_mipmaps` is not read, as `font` is not read.
 - **Approximated** Godot draws the glyphs softer, and an `outline_size = 8` outline as a faint grey halo, where here it is a crisp black ring.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.

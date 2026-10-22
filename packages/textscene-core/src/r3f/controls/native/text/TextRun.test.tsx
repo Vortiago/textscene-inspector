@@ -137,6 +137,41 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     expect(geometry.getIndex()!.count).toBe(6);
   });
 
+  it.each([
+    ['linear', THREE.LinearMipmapLinearFilter],
+    ['nearest', THREE.NearestMipmapLinearFilter],
+  ] as const)(
+    'builds a mip chain for a %s raster that Godot would mipmap (text_server_adv.cpp:3121)',
+    async (textureFilter, minFilter) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextRun
+          layout={canvasLayoutFor('Hi')}
+          fontSizePx={16}
+          tint={WHITE}
+          textureFilter={textureFilter}
+          mipmapped
+        />
+      );
+      const map = (
+        (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial
+      ).map!;
+
+      expect(map.generateMipmaps).toBe(true);
+      expect(map.minFilter).toBe(minFilter);
+    }
+  );
+
+  it('builds no mip chain unless the caller asks, as a font without generate_mipmaps has none', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
+    );
+    const map = (
+      (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial
+    ).map!;
+
+    expect(map.generateMipmaps).toBe(false);
+  });
+
   it('uses a plain textured material (no MSDF uniforms/shader), sourced from a canvas texture', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />

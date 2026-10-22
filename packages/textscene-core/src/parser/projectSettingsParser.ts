@@ -213,8 +213,16 @@ export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
   };
 }
 
+/**
+ * `gui/theme/default_font_generate_mipmaps`, which the default font takes (`theme_db.cpp:64`). Off
+ * by default (`text_server.cpp:2387`), so its glyph pages carry no mip chain.
+ */
+export function projectDefaultFontGeneratesMipmaps(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['gui/theme/default_font_generate_mipmaps']) ?? false;
+}
+
 /** Godot's default `rendering/textures/default_filters/anisotropic_filtering_level`, 4x (`rendering_server.cpp:3750`). */
-const DEFAULT_ANISOTROPIC_FILTERING_LEVEL = 2;
+export const DEFAULT_ANISOTROPIC_FILTERING_LEVEL = 2;
 
 /**
  * `rendering/textures/default_filters/anisotropic_filtering_level`, which every viewport takes at

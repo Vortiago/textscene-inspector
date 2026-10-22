@@ -28,6 +28,7 @@ import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLa
 import { type Label3DProperties } from './types';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
+import { useProjectDefaultFontGeneratesMipmaps } from './useProjectDefaultFontGeneratesMipmaps';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export interface LabelGlyphsProps {
@@ -131,6 +132,9 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
   // members are the nearest ones whatever their mipmap/anisotropy suffix.
   const textureFilter = properties.texture_filter % 2 === TextureFilter.NEAREST ? 'nearest' : 'linear';
+  // Only a mipmapped filter reads the chain a font with `generate_mipmaps` gives its glyph pages.
+  const generatesGlyphMipmaps = useProjectDefaultFontGeneratesMipmaps();
+  const mipmapped = generatesGlyphMipmaps && properties.texture_filter >= TextureFilter.NEAREST_WITH_MIPMAPS;
 
   // Nothing renders before the family registers: `ctx.fillText` against an
   // unregistered one rasterises a system font, frame-stable, so no golden catches it.
@@ -156,6 +160,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   side={side}
                   renderOrder={outlineSurface.renderOrder}
                   textureFilter={textureFilter}
+                  mipmapped={mipmapped}
                   blends={blends}
                   shadow={surfaceShadow}
                   layers={properties.layers}
@@ -172,6 +177,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 side={side}
                 renderOrder={fillSurface.renderOrder}
                 textureFilter={textureFilter}
+                mipmapped={mipmapped}
                 blends={blends}
                 shadow={surfaceShadow}
                 layers={properties.layers}

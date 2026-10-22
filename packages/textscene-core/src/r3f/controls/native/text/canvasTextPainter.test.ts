@@ -7,6 +7,8 @@ import {
 } from './canvasTextPainter';
 import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
+import { patchedFragment } from '../../../testing/patchedFragment';
+import { mipmappedTexture } from '../../../testing/mipmapBiasUniform';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const CANVAS_METRICS = createRuntimeFontMetrics({
@@ -136,6 +138,20 @@ describe('buildCanvasTextQuadArrays', () => {
     // BR uv
     expect(arrays.uvs[3 * 2]).toBe(1);
     expect(arrays.uvs[3 * 2 + 1]).toBe(0);
+  });
+});
+
+describe('createCanvasTextMaterial mipmapped', () => {
+  it('samples a mipmapped raster at the viewport mipmap bias', () => {
+    const material = createCanvasTextMaterial({ map: mipmappedTexture(), opacity: 1, mipmapped: true });
+
+    expect(patchedFragment(material)).toContain('godotMipmapBiased( map,');
+  });
+
+  it('leaves a raster with no mip chain as three samples it', () => {
+    const material = createCanvasTextMaterial({ map: mipmappedTexture(), opacity: 1 });
+
+    expect(patchedFragment(material)).not.toContain('godotMipmapBias');
   });
 });
 

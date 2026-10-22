@@ -6,13 +6,7 @@
 
 import * as THREE from 'three';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
-
-/**
- * Godot's `anisotropic_filtering_level` default, which the root viewport takes from the project
- * (`rendering_server.cpp:3750`, `viewport.cpp:5384`). The two anisotropic rows sample at
- * `1 << level` (`material_storage.cpp:2461`), and three clamps that to the GPU maximum at upload.
- */
-export const DEFAULT_ANISOTROPIC_FILTERING_LEVEL = 2;
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../parser/projectSettingsParser';
 
 interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;
@@ -76,7 +70,10 @@ const STATES: Record<number, TextureFilterState> = {
   },
 };
 
-/** The rows whose sampler uses anisotropy (`material_storage.cpp:2489-2504`). Their `anisotropy` above is the level's to set. */
+/**
+ * The rows whose sampler uses anisotropy (`material_storage.cpp:2489-2504`). They sample at
+ * `1 << anisotropic_filtering_level` (`:2461`), which three clamps to the GPU maximum at upload.
+ */
 const ANISOTROPIC_FILTERS: ReadonlySet<number> = new Set([4, 5]);
 
 /**
