@@ -77,6 +77,11 @@ function liftBelow(children: readonly LiveNode[], anchor: string | undefined): L
   });
 }
 
+/** {@link liftOverrideChildren}, with the override nodes themselves dropped: Godot adds none. */
+export function liftedWithoutOverrides(children: readonly LiveNode[]): LiveNode[] {
+  return liftOverrideChildren(children).filter((child) => !child.overridesExistingNode);
+}
+
 /**
  * The Godot path of the GLB object a typed node of the instancing scene is added to: its parent
  * path, as Godot adds it (`packed_scene.cpp:157-165`, `:541`). Null for an override, which names
@@ -100,7 +105,7 @@ export function splitAttachedChildren(
   root: THREE.Object3D,
   children: readonly LiveNode[]
 ): { attached: LiveNode[]; rest: LiveNode[] } {
-  const nodes = liftOverrideChildren(children).filter((child) => !child.overridesExistingNode);
+  const nodes = liftedWithoutOverrides(children);
   if (nodes.every(isApplicableGlbOverride)) return { attached: [], rest: nodes };
   const entries = flattenGlbObjects(root);
   const attached: LiveNode[] = [];

@@ -56,7 +56,7 @@ import {
   WorldRoot,
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
-import { liftOverrideChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
+import { liftedWithoutOverrides } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { orderAmongPlaced } from '../godot/scene/siblingIndex.js';
 import { useResource } from '../resources/useResource.js';
@@ -182,16 +182,23 @@ function OwnResourceScope({ scope, children }: { scope: SceneScope; children: Re
 }
 
 /**
+ * The node without the children `isDropped` names, and the same reference when it names none, so
+ * the `useMemo([node])`s in `PlainNode` stay valid. `some` comes before `filter` since most nodes
+ * drop nothing.
+ */
+function withoutChildrenWhere(node: TscnNode, isDropped: (child: TscnNode) => boolean): TscnNode {
+  if (!node.children.some(isDropped)) return node;
+  return { ...node, children: node.children.filter((child) => !isDropped(child)) };
+}
+
+/**
  * The node without its deep children, whose parent path descends into this
  * instance's content. Here they would take the instance's transform, so they render
  * nowhere. `GlbInstanceProvider` still gets them all, and `GlbAttachedChildren` mounts each
  * typed one under the GLB object its path names.
  */
 function withoutDeepChildren(node: TscnNode): TscnNode {
-  // `some` before `filter`: most nodes have no deep children, and the same
-  // reference keeps the `useMemo([node])`s in `PlainNode` valid.
-  if (!node.children.some((c) => c.instanceSubPath)) return node;
-  return { ...node, children: node.children.filter((c) => !c.instanceSubPath) };
+  return withoutChildrenWhere(node, (child) => !!child.instanceSubPath);
 }
 
 /**
@@ -200,8 +207,7 @@ function withoutDeepChildren(node: TscnNode): TscnNode {
  * it cannot find (`packed_scene.cpp:310`).
  */
 function withoutOverrideSubtrees(node: TscnNode): TscnNode {
-  if (!node.children.some((c) => c.overridesExistingNode)) return node;
-  return { ...node, children: node.children.filter((c) => !c.overridesExistingNode) };
+  return withoutChildrenWhere(node, (child) => child.overridesExistingNode === true);
 }
 
 /**
@@ -211,10 +217,8 @@ function withoutOverrideSubtrees(node: TscnNode): TscnNode {
  * `GlbInstanceProvider` hands it to the GLB, which applies it.
  */
 function withoutPropertyOverrides(node: TscnNode): TscnNode {
-  // Same reference when no child overrides, so the `useMemo([node])`s in `PlainNode` stay valid.
-  if (!node.children.some((c) => c.overridesExistingNode)) return node;
-  const children = liftOverrideChildren(node.children).filter((c) => !c.overridesExistingNode);
-  return { ...node, children };
+  if (!node.children.some((child) => child.overridesExistingNode)) return node;
+  return { ...node, children: liftedWithoutOverrides(node.children) };
 }
 
 interface PlainNodeProps extends DispatchedNodeProps {
@@ -401,20 +405,19 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     return collapseLiveNode(node, scope, singlePathCache(loadPath, loadedScene));
   }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene]);
 
-  // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
-  // stripped node is a new object.
   const glbPath = loneGlbRootPath(loadedScene?.nodes ?? []);
-  const isLoneGlb = glbPath !== undefined;
   // Loaded here, not by the GLB root, for the count of its top-level objects: the host children
   // move to their `index=` among them (`packed_scene.cpp:541-544`). The root takes this load.
   const glb = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
+  // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a stripped node is a new
+  // object. The objects are counted only for a child that states an `index=`.
   const shallow = useMemo(() => {
-    const stripped = withoutDeepChildren(isLoneGlb ? withoutPropertyOverrides(node) : node);
-    if (!glb.value) return stripped;
+    const stripped = withoutDeepChildren(glbPath !== undefined ? withoutPropertyOverrides(node) : node);
+    if (!glb.value || !stripped.children.some((child) => child.index !== undefined)) return stripped;
     const objectCount = glbSceneRootChildren(glb.value, []).length;
     return { ...stripped, children: orderAmongPlaced(stripped.children, objectCount) };
-  }, [node, isLoneGlb, glb.value]);
-  // What the node draws while its instanced scene is unknown or missing.
+  }, [node, glbPath, glb.value]);
+  // What the node draws while its instanced scene is unknown or missing. Memoized like `shallow`.
   const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);
   const order = useTreeOrder();
   const injectedOrders = useMemo(() => {
@@ -453,7 +456,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
 
   // A `.glb` mounts at this node's path. A multi-root scene injects its roots as children.
   return (
-    <GlbInstanceProvider node={node} path={path} glb={glb}>
+    <GlbInstanceProvider node={node} path={path} glb={glbPath !== undefined ? glb : undefined}>
       <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
@@ -463,7 +466,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
             {loadedScene.nodes.map((child, i) => (
               <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
                 <TreeOrderProvider order={injectedOrders.roots[i]!}>
-                  {isLoneGlb ? (
+                  {glbPath !== undefined ? (
                     <GlbRootNode node={child} />
                   ) : (
                     <DispatchedNode node={child} path={joinPath(path, child.name)} />

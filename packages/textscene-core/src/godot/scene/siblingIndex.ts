@@ -25,8 +25,8 @@ export function orderAmongPlaced<T extends { index?: number }>(
   nodes: readonly T[],
   placedCount: number
 ): T[] {
-  const siblings: { index?: number }[] = Array.from({ length: placedCount }, () => ({}));
+  const placeholder = {};
+  const siblings: { index?: number }[] = Array.from({ length: placedCount }, () => placeholder);
   for (const node of nodes) insertAtIndex(siblings, node);
-  const added = new Set<{ index?: number }>(nodes);
-  return siblings.filter((sibling): sibling is T => added.has(sibling));
+  return siblings.filter((sibling): sibling is T => sibling !== placeholder);
 }
