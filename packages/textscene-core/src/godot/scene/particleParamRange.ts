@@ -26,21 +26,26 @@ function writtenReal(value: string | undefined): number | null {
   return value === undefined ? null : scalarSlotValue(value);
 }
 
+/** As {@link writtenReal}, but a non-finite value is null: the renderer falls back where the linter reports. */
+function writtenFiniteReal(value: string | undefined): number | null {
+  const real = writtenReal(value);
+  return real !== null && Number.isFinite(real) ? real : null;
+}
+
 /**
- * The range `stem` holds after the file's lines apply, on a pair that Godot constructs at
- * `fallback` for both bounds. A write that crosses the other bound moves it, so a lone
- * `scale_amount_min = 3` on a default of 1 loads as 3 and 3. A value the slot does not take is
- * skipped, and the lint validator reports it.
+ * The range `stem` holds after the writes that `read` accepts apply in the file's order, on a pair
+ * that Godot constructs at `fallback` for both bounds.
  */
-export function loadedParamRange(
+function settledParamRange(
   properties: Record<string, string>,
   stem: string,
-  fallback: number
+  fallback: number,
+  read: (value: string | undefined) => number | null
 ): { min: number; max: number } {
   const minKey = `${stem}_min`;
   const maxKey = `${stem}_max`;
-  const writtenMin = writtenReal(properties[minKey]);
-  const writtenMax = writtenReal(properties[maxKey]);
+  const writtenMin = read(properties[minKey]);
+  const writtenMax = read(properties[maxKey]);
   let min = fallback;
   let max = fallback;
   const setMin = (value: number) => {
@@ -64,6 +69,20 @@ export function loadedParamRange(
 }
 
 /**
+ * The range `stem` holds after the file's lines apply, on a pair that Godot constructs at
+ * `fallback` for both bounds. A write that crosses the other bound moves it, so a lone
+ * `scale_amount_min = 3` on a default of 1 loads as 3 and 3. A value the slot does not take, and a
+ * non-finite one, is skipped, and the lint validator reports it.
+ */
+export function loadedParamRange(
+  properties: Record<string, string>,
+  stem: string,
+  fallback: number
+): { min: number; max: number } {
+  return settledParamRange(properties, stem, fallback, writtenFiniteReal);
+}
+
+/**
  * Every pair of `stems` whose authored `_min` is above its authored `_max`. The key the file lists
  * first loads as the other key's value. One authored key alone moves only the default, so it never
  * appears here.
@@ -83,7 +102,7 @@ export function crossedParamRanges(
     const max = storedReal(writtenMax);
     if (!(min > max)) continue;
 
-    const loaded = loadedParamRange(properties, stem, min);
+    const loaded = settledParamRange(properties, stem, min, writtenReal);
     const isMinMoved = loaded.min !== min;
     crossed.push({
       minKey,

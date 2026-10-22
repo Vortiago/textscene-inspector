@@ -85,6 +85,14 @@ describe('crossedParamRanges over the ParticleProcessMaterial pairs', () => {
   });
 });
 
+describe('crossedParamRanges with an infinite bound', () => {
+  it('names the bound that Godot moves onto inf, which the setters accept', () => {
+    expect(crossedParamRanges({ angle_min: 'inf', angle_max: '2' }, ['angle'])).toEqual([
+      expect.objectContaining({ movedKey: 'angle_min', loadedValue: 2 }),
+    ]);
+  });
+});
+
 describe('loadedParamRange', () => {
   it('loads a crossed pair as the key listed last, min first', () => {
     expect(loadedParamRange({ angle_min: '5', angle_max: '2' }, 'angle', 0)).toEqual({ min: 2, max: 2 });
@@ -112,5 +120,9 @@ describe('loadedParamRange', () => {
 
   it('skips a value that is not a float, as the slot would not take it (edge)', () => {
     expect(loadedParamRange({ angle_min: '"fast"', angle_max: '2' }, 'angle', 0)).toEqual({ min: 0, max: 2 });
+  });
+
+  it('skips a non-finite value, so the renderer keeps the default the linter reports against (edge)', () => {
+    expect(loadedParamRange({ angle_min: 'inf', angle_max: 'nan' }, 'angle', 0)).toEqual({ min: 0, max: 0 });
   });
 });
