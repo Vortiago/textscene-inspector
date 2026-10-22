@@ -21,7 +21,7 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
   // createSceneProcessor's instanced path uses. The node fetches the bytes through
   // useResource('GLBMesh').
   if (isGltfPath(rootScenePath)) {
-    return toParseResult(rootScenePath, synthesiseGLBScene(rootScenePath));
+    return { sceneGraph: toSceneGraph(rootScenePath, synthesiseGLBScene(rootScenePath)), error: null };
   }
   if (!content) {
     return { sceneGraph: null, error: null };
@@ -39,7 +39,7 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
       };
     }
 
-    return toParseResult(rootScenePath, tscnScene);
+    return { sceneGraph: toSceneGraph(rootScenePath, tscnScene), error: null };
   } catch (err) {
     return {
       sceneGraph: null,
@@ -48,7 +48,8 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
   }
 }
 
-function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
+/** A parsed scene as the graph every panel reads, the registered scene passes applied. */
+export function toSceneGraph(rootScenePath: string, tscnScene: TscnScene): SceneGraph {
   // Every registered `NodeComponentRegistration.scenePass`, transforms before paths, rewrites the
   // parsed tree, so render, gizmos, bounds, selection, tree and inspector read one result.
   let nodes = tscnScene.nodes;
@@ -61,7 +62,7 @@ function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult
     tscnScene.externalResources,
     tscnScene.internalResources
   );
-  return { sceneGraph: buildSceneGraph(parsedScene), error: null };
+  return buildSceneGraph(parsedScene);
 }
 
 /** Re-parses only when `content` or `rootScenePath` changes. */

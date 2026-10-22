@@ -35,6 +35,15 @@ export interface PersistedViewport {
   showPerformance: boolean;
 }
 
+/** The preferences of a session that persisted none: 3D, no grid, Godot's fixed orbit, fog on. */
+export const DEFAULT_VIEWPORT: PersistedViewport = {
+  mode: '3D',
+  showGrid: false,
+  frameOnOpen: false,
+  showFog: true,
+  showPerformance: false,
+};
+
 interface ViewportModeValue {
   mode: ViewportMode;
   setMode: (mode: ViewportMode) => void;
@@ -110,16 +119,16 @@ export interface ViewportModeProviderProps {
 
 export function ViewportModeProvider({
   children,
-  initialMode = '3D',
+  initialMode = DEFAULT_VIEWPORT.mode,
   initialShowCollisions = false,
   initialShowLabels = true,
   initialShowNavigation = true,
-  initialShowGrid = false,
+  initialShowGrid = DEFAULT_VIEWPORT.showGrid,
   initialShowPreviewSun = true,
   initialShowPreviewEnvironment = true,
-  initialFrameOnOpen = false,
-  initialShowFog = true,
-  initialShowPerformance = false,
+  initialFrameOnOpen = DEFAULT_VIEWPORT.frameOnOpen,
+  initialShowFog = DEFAULT_VIEWPORT.showFog,
+  initialShowPerformance = DEFAULT_VIEWPORT.showPerformance,
 }: ViewportModeProviderProps) {
   const [mode, setMode] = useState<ViewportMode>(initialMode);
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);

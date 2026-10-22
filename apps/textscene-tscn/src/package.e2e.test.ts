@@ -9,8 +9,8 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import ts from 'typescript';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { declaredExports } from '@textscene/dev-kit';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -29,35 +29,6 @@ const PUBLIC_TYPE_EXPORTS = [
   'TscnNode',
   'TscnScene',
 ];
-
-function isExported(statement: ts.Statement): boolean {
-  return (
-    ts.canHaveModifiers(statement) &&
-    (ts.getModifiers(statement) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
-  );
-}
-
-/** The names a declaration file exports, whether it declares them or re-exports them. */
-function declaredExports(declarationPath: string): string[] {
-  const source = ts.createSourceFile(
-    declarationPath,
-    readFileSync(declarationPath, 'utf8'),
-    ts.ScriptTarget.ES2022
-  );
-  const names: string[] = [];
-  for (const statement of source.statements) {
-    if (
-      ts.isExportDeclaration(statement) &&
-      statement.exportClause &&
-      ts.isNamedExports(statement.exportClause)
-    ) {
-      names.push(...statement.exportClause.elements.map((element) => element.name.text));
-    } else if (isExported(statement) && 'name' in statement) {
-      names.push((statement.name as ts.Identifier).text);
-    }
-  }
-  return names.sort();
-}
 
 const CONSUMER_SCRIPT = `
 import { TscnParser } from '@textscene/tscn';

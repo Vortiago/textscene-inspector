@@ -24,6 +24,8 @@ import { AnimationTransportProvider } from '../../contexts/AnimationTransportCon
 import { composeProviders } from '../../composeProviders.js';
 import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 
+export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
+
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
   initialActiveCameraPath: string | null | undefined;
