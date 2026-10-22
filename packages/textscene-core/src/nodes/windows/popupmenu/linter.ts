@@ -35,11 +35,7 @@ function checkPopupMenu({ node }: RuleContext): Diagnostic[] {
     node,
     POPUP_MENU_ITEMS,
     arms.itemIndexOutOfRange,
-    (indices, count) =>
-      `PopupMenu item index(es) ${indices} fall outside item_count (${count}). ` +
-      'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ' +
-      'an index >= the array length, so PopupMenu never calls the matching setter and ' +
-      'these item_<N>/… values are silently dropped on load.'
+    (indices, count) => `PopupMenu item index(es) ${indices} fall outside item_count (${count}).`
   );
 }
 

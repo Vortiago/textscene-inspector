@@ -175,20 +175,41 @@ function writesPastFamilyCount(
   return { count, offending: indicesPastCount(properties, family.prefix, family.indexParse, count) };
 }
 
+const HELPER_DROPS_PAST_LENGTH =
+  'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an index >= the array length';
+
+/** Why `family`'s past-count writes are lost, when its owner's own helper drops them. */
+function droppedPastLength(family: IndexedFamily): string {
+  return (
+    `${HELPER_DROPS_PAST_LENGTH}, so ${family.owner} never calls the matching setter and ` +
+    `these ${family.prefix}<N>/… values are silently dropped on load.`
+  );
+}
+
+/** Why `family`'s past-count writes are lost, when its owner forwards them to `popup`, whose helper drops them. */
+export function droppedByPopup(family: IndexedFamily, popup: string): string {
+  return (
+    `${family.owner} forwards the write to ${popup}, whose ${HELPER_DROPS_PAST_LENGTH}, so no setter runs ` +
+    `and these ${family.prefix}<N>/… values are silently dropped on load.`
+  );
+}
+
 /**
  * The one diagnostic of a past-count rule: the writes `family` makes on `node` past its own count,
- * reported through `arm`. `message` receives the indices as {@link listWrittenIndices} names them,
- * and the count. Empty when the family drops no write.
+ * reported through `arm`. `firstSentence` receives the indices as {@link listWrittenIndices} names
+ * them, and the count. `dropReason` follows it. Empty when the family drops no write.
  */
 export function pastCountDiagnostic(
   node: RawNode,
   family: IndexedFamily,
   arm: RuleArm,
-  message: (indices: string, count: number) => string
+  firstSentence: (indices: string, count: number) => string,
+  dropReason = droppedPastLength(family)
 ): Diagnostic[] {
   const pastCount = writesPastFamilyCount(node.rawProperties, family);
   if (pastCount === null || pastCount.offending.size === 0) return [];
-  return [armDiagnostic(arm, node, message(listWrittenIndices(pastCount.offending), pastCount.count))];
+  const indices = listWrittenIndices(pastCount.offending);
+  return [armDiagnostic(arm, node, `${firstSentence(indices, pastCount.count)} ${dropReason}`)];
 }
 
 /**

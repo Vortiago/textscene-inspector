@@ -9,7 +9,7 @@ import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
-import { pastCountDiagnostic } from '../../../../linter/reportedIndices.js';
+import { droppedByPopup, pastCountDiagnostic } from '../../../../linter/reportedIndices.js';
 import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 
 const arms = {
@@ -35,12 +35,8 @@ function checkItemIndices({ node }: RuleContext): Diagnostic[] {
     node,
     OPTION_BUTTON_ITEMS,
     arms.itemIndexOutOfRange,
-    (indices, count) =>
-      `OptionButton item index(es) ${indices} fall outside item_count (${count}). ` +
-      'OptionButton forwards the write to its popup (option_button.cpp:168), whose ' +
-      'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an ' +
-      'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +
-      'silently dropped on load.'
+    (indices, count) => `OptionButton item index(es) ${indices} fall outside item_count (${count}).`,
+    droppedByPopup(OPTION_BUTTON_ITEMS, 'its popup (option_button.cpp:168)')
   );
 }
 

@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
-import { pastCountDiagnostic } from '../../../../linter/reportedIndices.js';
+import { droppedByPopup, pastCountDiagnostic } from '../../../../linter/reportedIndices.js';
 import { MENU_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
@@ -29,12 +29,8 @@ function checkMenuButton({ node }: RuleContext): Diagnostic[] {
     node,
     MENU_BUTTON_ITEMS,
     arms.itemIndexOutOfRange,
-    (indices, count) =>
-      `MenuButton item index(es) ${indices} fall outside item_count (${count}). ` +
-      'MenuButton forwards the write to its popup child (menu_button.cpp:178), whose ' +
-      'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an ' +
-      'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +
-      'silently dropped on load.'
+    (indices, count) => `MenuButton item index(es) ${indices} fall outside item_count (${count}).`,
+    droppedByPopup(MENU_BUTTON_ITEMS, 'its popup child (menu_button.cpp:178)')
   );
 }
 

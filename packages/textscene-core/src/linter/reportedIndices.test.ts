@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 import {
+  droppedByPopup,
   listIndices,
   listWrittenIndices,
   negativeIndexError,
@@ -12,7 +13,11 @@ import {
   unsatisfiedIndices,
   writtenIndex,
 } from './reportedIndices.js';
-import { ITEM_LIST_ITEMS, TAB_CONTAINER_TABS } from '../godot/classdb/propertyListFamilies.js';
+import {
+  ITEM_LIST_ITEMS,
+  OPTION_BUTTON_ITEMS,
+  TAB_CONTAINER_TABS,
+} from '../godot/classdb/propertyListFamilies.js';
 import type { IndexedFamily } from '../godot/classdb/indexedFamily.js';
 import type { RawNode } from '../parser/types.js';
 
@@ -146,18 +151,23 @@ describe('pastCountDiagnostic', () => {
     children: [],
     rawProperties,
   });
-  /** The message the rule writes, with the indices and the count it was handed. */
+  /** The first sentence the rule writes, with the indices and the count it was handed. */
   const messageOf = (rawProperties: Record<string, string>, family: IndexedFamily = ITEM_LIST_ITEMS) =>
-    pastCountDiagnostic(nodeWith(rawProperties), family, ARM, (indices, count) => `${indices} | ${count}`)[0]
-      ?.message;
+    pastCountDiagnostic(
+      nodeWith(rawProperties),
+      family,
+      ARM,
+      (indices, count) => `${indices} | ${count}`,
+      '(reason)'
+    )[0]?.message.replace(/ \(reason\)$/, '');
 
   it('reports through the arm, on the node', () => {
     expect(
-      pastCountDiagnostic(nodeWith({ 'item_0/text': '"a"' }), ITEM_LIST_ITEMS, ARM, () => 'past')
+      pastCountDiagnostic(nodeWith({ 'item_0/text': '"a"' }), ITEM_LIST_ITEMS, ARM, () => 'Past.', 'Dropped.')
     ).toEqual([
       {
         severity: 'error',
-        message: 'past',
+        message: 'Past. Dropped.',
         nodeName: 'List',
         nodeType: 'ItemList',
         ruleName: 'test-index-out-of-range',
@@ -292,5 +302,30 @@ describe('unsatisfiedIndices', () => {
     // A negative count is its own validator's diagnostic and allocates nothing
     // in the engine, so it names no index here either.
     expect(unsatisfiedIndices(-4, new Set())).toEqual({ listed: [], total: 0 });
+  });
+});
+
+describe('past-count drop reasons', () => {
+  it('names the owner that never calls the setter, and its keys, by default', () => {
+    const node: RawNode = {
+      name: 'L',
+      type: 'ItemList',
+      children: [],
+      rawProperties: { 'item_0/text': '"a"' },
+    };
+    const arm = { severity: 'error', ruleName: 'r', grounding: { kind: 'engine', at: 'x.cpp:1' } } as const;
+    expect(pastCountDiagnostic(node, ITEM_LIST_ITEMS, arm, () => 'First.')[0]?.message).toBe(
+      'First. PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an index >= ' +
+        'the array length, so ItemList never calls the matching setter and these item_<N>/… values ' +
+        'are silently dropped on load.'
+    );
+  });
+
+  it('names the popup a forwarded write reaches', () => {
+    expect(droppedByPopup(OPTION_BUTTON_ITEMS, 'its popup (option_button.cpp:168)')).toBe(
+      'OptionButton forwards the write to its popup (option_button.cpp:168), whose ' +
+        'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an index >= ' +
+        'the array length, so no setter runs and these popup/item_<N>/… values are silently dropped on load.'
+    );
   });
 });
