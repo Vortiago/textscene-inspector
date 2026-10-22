@@ -3,7 +3,7 @@
  * expandable child rows, and is not flagged "Not implemented".
  */
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { SceneTreeViewer } from './SceneTreeViewer';
@@ -14,6 +14,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
+import type { TscnScene } from '../../../parser/types';
 
 function named<T extends THREE.Object3D>(o: T, name: string): T {
   o.name = name;
@@ -59,6 +60,28 @@ function glbGraph() {
   });
 }
 
+const RIG_PATH = 'res://rig.glb';
+
+/** The GLB scene root a `.glb` instance loads as, which the instancing node's sub-scene holds. */
+const RIG_SCENE: TscnScene = {
+  nodes: [
+    {
+      rawProperties: {},
+      name: 'rig',
+      type: 'GLBSceneRoot',
+      children: [],
+      properties: { glbPath: RIG_PATH } as Record<string, unknown>,
+    },
+  ],
+  externalResources: [],
+  internalResources: [],
+};
+
+function expandRow(name: string) {
+  const row = screen.getByText(name).closest('[data-node-path]') as HTMLElement;
+  act(() => fireEvent.click(within(row).getAllByRole('button', { name: /expand/i })[0]!));
+}
+
 describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
   it('shows the GLB row with children and never flags it "Not implemented"', () => {
     const fake = createFakeResourceLoader();
@@ -70,5 +93,39 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
     expect(row).not.toBeNull();
     expect(row!.textContent).toContain('▶'); // It has children, so it expands.
     expect(screen.queryByText(/not implemented/i)).toBeNull();
+  });
+
+  it('lists a typed node the instancing scene adds inside the GLB under the GLB row it addresses', () => {
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed(RIG_PATH, RIG_SCENE);
+    fake.glbMeshes.seed(RIG_PATH, fakeGlb());
+    const marker = {
+      rawProperties: {},
+      name: 'Marker',
+      type: 'Marker3D',
+      children: [],
+      properties: {} as Record<string, unknown>,
+      instanceSubPath: 'Armature',
+    };
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [
+        {
+          rawProperties: {},
+          name: 'Rig',
+          type: 'Node',
+          instance: 'ExtResource("rig")',
+          children: [marker],
+          properties: {} as Record<string, unknown>,
+        },
+      ],
+      externalResources: [{ id: 'rig', path: RIG_PATH, type: 'PackedScene' }],
+      internalResources: [],
+    });
+
+    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
+    for (const name of ['Rig', 'rig', 'Armature']) expandRow(name);
+
+    expect(container.querySelector('[data-node-path="Rig/rig/Armature/Marker"]')).not.toBeNull();
+    expect(container.querySelector('[data-node-path="Rig/Marker"]')).toBeNull();
   });
 });
