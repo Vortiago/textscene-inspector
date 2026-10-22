@@ -22,14 +22,10 @@ export interface ResPathListing {
 export class TscnResPathListing implements ResPathListing {
   /** Each `res://` root's listing, written by `pathsFor` and dropped by `clear`. */
   private readonly _listingByRoot = new Map<string, Promise<readonly string[]>>();
-  /**
-   * Each document's `res://` root, null outside every workspace folder, written by `pathsFor` and dropped by `clear`.
-   */
-  private readonly _rootByDocument = new Map<string, Promise<vscode.Uri | null>>();
 
   /** The files under the document's `res://` root as `res://` paths, or none outside every workspace folder. */
   async pathsFor(document: vscode.TextDocument): Promise<readonly string[]> {
-    const root = await this._rootOf(document.uri);
+    const root = await resRootOf(document.uri);
     if (!root) return [];
     const key = root.toString();
     // The promise is cached, not its value: two completions before the walk ends share it.
@@ -39,16 +35,6 @@ export class TscnResPathListing implements ResPathListing {
     const listing = this._list(root);
     this._listingByRoot.set(key, listing);
     return listing;
-  }
-
-  private _rootOf(documentUri: vscode.Uri): Promise<vscode.Uri | null> {
-    const key = documentUri.toString();
-    let root = this._rootByDocument.get(key);
-    if (!root) {
-      root = resRootOf(documentUri);
-      this._rootByDocument.set(key, root);
-    }
-    return root;
   }
 
   /**
@@ -64,9 +50,8 @@ export class TscnResPathListing implements ResPathListing {
     return scannedResPaths(root, files, stopFiles);
   }
 
-  /** Drops every listing and root, so a created or deleted file is offered on the next completion. */
+  /** Drops every listing, so a created or deleted file is offered on the next completion. */
   clear(): void {
     this._listingByRoot.clear();
-    this._rootByDocument.clear();
   }
 }

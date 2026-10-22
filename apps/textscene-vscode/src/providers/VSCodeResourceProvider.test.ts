@@ -2,6 +2,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { VSCodeResourceProvider } from './VSCodeResourceProvider';
+import { forgetProjectFiles } from '../resRoot';
 import { MAX_READ_BYTES } from '../readWorkspaceFile';
 import { HOST_PATH_CASE } from '../hostPathCase';
 import { createMockUri, createMockFileData, vscode } from '../test-setup';
@@ -389,8 +390,12 @@ describe('VSCodeResourceProvider', () => {
   });
 
   describe('hasResRootMoved', () => {
-    /** Finds `project.godot` in exactly these directories. Every other file exists. */
+    /**
+     * Finds `project.godot` in exactly these directories. Every other file exists. The shared answers are forgotten,
+     * as the extension forgets them on the watcher's event.
+     */
     function projectFilesIn(...dirs: string[]): void {
+      forgetProjectFiles();
       vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) => {
         const isProjectFile = uri.fsPath.endsWith('/project.godot');
         return !isProjectFile || dirs.some((dir) => uri.fsPath === `${dir}/project.godot`)

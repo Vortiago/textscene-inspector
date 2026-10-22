@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { findResRootIn, hasProjectFile, resRootOf } from './resRoot';
+import { findResRootIn, forgetProjectFiles, resRootOf } from './resRoot';
 import { createMockUri, vscode } from './test-setup';
 
 describe('findResRootIn', () => {
@@ -111,20 +111,44 @@ describe('resRootOf', () => {
   });
 });
 
-describe('hasProjectFile', () => {
-  it('is true when stat finds project.godot in the directory', async () => {
-    vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
-      uri.fsPath === '/workspace/project.godot'
-        ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 })
-        : Promise.reject(new Error('Not found'))
-    );
+describe('the project.godot answers resRootOf shares', () => {
+  /** A scene three directories below the workspace root, in no project. */
+  const DEEP_SCENE = '/workspace/a/b/c/scene.tscn';
+  const statCalls = () => vscode.workspace.fs.stat.mock.calls.length;
 
-    expect(await hasProjectFile(createMockUri('/workspace'))).toBe(true);
+  function noProjectAnywhere(): void {
+    (vscode.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+    vscode.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+  }
+
+  it('asks stat once for each directory from the scene up to the top', async () => {
+    noProjectAnywhere();
+
+    await resRootOf(createMockUri(DEEP_SCENE));
+
+    expect(statCalls()).toBe(5);
   });
 
-  it('is false when stat rejects', async () => {
-    vscode.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+  it('asks stat nothing more for a second lookup', async () => {
+    noProjectAnywhere();
+    await resRootOf(createMockUri(DEEP_SCENE));
+    const afterFirst = statCalls();
 
-    expect(await hasProjectFile(createMockUri('/workspace'))).toBe(false);
+    await resRootOf(createMockUri(DEEP_SCENE));
+
+    expect(statCalls()).toBe(afterFirst);
+  });
+
+  it('walks again after forgetProjectFiles', async () => {
+    noProjectAnywhere();
+    await resRootOf(createMockUri(DEEP_SCENE));
+    const afterFirst = statCalls();
+
+    forgetProjectFiles();
+    await resRootOf(createMockUri(DEEP_SCENE));
+
+    expect(statCalls()).toBe(2 * afterFirst);
   });
 });

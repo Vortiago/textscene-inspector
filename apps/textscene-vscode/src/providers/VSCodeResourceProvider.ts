@@ -67,9 +67,9 @@ export class VSCodeResourceProvider implements ResourceProvider {
   }
 
   /**
-   * Whether a fresh walk finds another `res://` root than the cached one, after a
-   * `project.godot` was created, moved or deleted. False before any load cached a
-   * root, since no resource was then resolved against one.
+   * Whether a walk now finds another `res://` root than the cached one, after a `project.godot` was created, moved or
+   * deleted: the extension forgets the shared answers on that event first. False before any load cached a root, since
+   * no resource was then resolved against one.
    */
   async hasResRootMoved(): Promise<boolean> {
     if (!this.resRootLookup) {

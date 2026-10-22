@@ -19,7 +19,7 @@ import { resPathUri } from './existingResFile';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { toVscodeRange } from './languageFeatureRanges';
 import { LintResourceProvider } from './LintResourceProvider';
-import { hasProjectFile, resRootOf } from './resRoot';
+import { forgetProjectFiles, resRootOf } from './resRoot';
 import {
   ANY_PATH_PATTERN,
   EXTENSION_LIST_PATTERN,
@@ -156,12 +156,6 @@ export class TscnDiagnostics implements vscode.Disposable {
    * deleted when its root is deleted, cleared by `_clearAll`.
    */
   private readonly _providers = new Map<string, LintResourceProvider>();
-  /**
-   * Whether each directory holds `project.godot`, so the walks of a project's documents share their answers.
-   * Written by `_holdsProjectFile`, cleared on any `project.godot` event, on a delete that holds a project root, and by
-   * `_clearAll`.
-   */
-  private readonly _projectFileByDir = new Map<string, Promise<boolean>>();
   private _enabled: boolean;
   private _debounceMs: number;
 
@@ -305,7 +299,7 @@ export class TscnDiagnostics implements vscode.Disposable {
       this._providers.delete(key);
       gone.add(provider);
     }
-    if (gone.size > 0) this._projectFileByDir.clear();
+    if (gone.size > 0) forgetProjectFiles();
     return gone;
   }
 
@@ -327,8 +321,9 @@ export class TscnDiagnostics implements vscode.Disposable {
    * would root, and lints each once its walk answers. A provider whose root is unchanged stays, verdicts included.
    */
   private _onProjectFileChanged(uri: vscode.Uri): void {
-    // Before the enabled check: a walk running when diagnostics went off can still fill the map.
-    this._projectFileByDir.clear();
+    // Before the walks below, which must not wait on the extension's own listener. Before the enabled check too: a
+    // walk running when diagnostics went off can still fill the answers.
+    forgetProjectFiles();
     if (!this._enabled) return;
     const projectDir = vscode.Uri.joinPath(uri, '..').fsPath;
     for (const document of vscode.workspace.textDocuments) {
@@ -371,7 +366,7 @@ export class TscnDiagnostics implements vscode.Disposable {
    * Problems panel's verdict.
    */
   async providerFor(uri: vscode.Uri): Promise<LintResourceProvider | null> {
-    const root = await resRootOf(uri, (dir) => this._holdsProjectFile(dir));
+    const root = await resRootOf(uri);
     if (!root) return null;
     const key = root.toString();
     let provider = this._providers.get(key);
@@ -380,16 +375,6 @@ export class TscnDiagnostics implements vscode.Disposable {
       this._providers.set(key, provider);
     }
     return provider;
-  }
-
-  private _holdsProjectFile(dir: vscode.Uri): Promise<boolean> {
-    const key = dir.toString();
-    let answer = this._projectFileByDir.get(key);
-    if (!answer) {
-      answer = hasProjectFile(dir);
-      this._projectFileByDir.set(key, answer);
-    }
-    return answer;
   }
 
   private _recordOf(document: vscode.TextDocument): DocumentLint {
@@ -472,7 +457,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
     this._documents.clear();
     this._providers.clear();
-    this._projectFileByDir.clear();
+    forgetProjectFiles();
   }
 
   public dispose(): void {
