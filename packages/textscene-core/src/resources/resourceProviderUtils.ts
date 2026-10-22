@@ -74,6 +74,14 @@ export function isBinaryResourceType(type: string | undefined, path?: string): b
 }
 
 /**
+ * A file's version stamp for a provider's `stamp`: its modification time in milliseconds and its size, which
+ * change whenever its content does. Every host builds its stamps here, so one file reads one stamp.
+ */
+export function fileStamp(mtimeMs: number, size: number): string {
+  return `${mtimeMs}:${size}`;
+}
+
+/**
  * A file's bytes in the shape `loadResource` returns for `type` at `path`: an ArrayBuffer for a binary resource, else
  * UTF-8 text. A view over a whole ArrayBuffer hands that buffer over, so a large `.glb` is not held twice. Any other
  * view is copied, since it can sit inside a larger buffer, such as the pool `readFileSync` reads a small file into.

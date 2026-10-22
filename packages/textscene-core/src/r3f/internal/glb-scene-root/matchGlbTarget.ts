@@ -18,48 +18,66 @@ interface MatchGlbTargetOptions {
   allowAncestor?: boolean;
 }
 
+/** How `findGlbTarget` reached its entry. `none` carries no entry. */
+type GlbTargetMatchKind = 'exact' | 'subsequence' | 'ancestor' | 'none';
+
+interface GlbTargetMatch {
+  entry: GlbObjectEntry | null;
+  kind: GlbTargetMatchKind;
+}
+
 /**
- * The GLB object a Godot path names, or `null` when nothing could be it.
+ * The GLB object a Godot path names, and how it was found, with no logging. The scene tree asks
+ * through this: the viewport already reports a path that matches nothing.
  *
  * @param entries the GLB flattened by `flattenGlbObjects`
  * @param godotPath the path relative to the GLB root, such as `Skeleton/Skeleton3D/Robot`
  */
-export function matchGlbTarget(
+export function findGlbTarget(
   entries: readonly GlbObjectEntry[],
   godotPath: string,
   { allowAncestor = true }: MatchGlbTargetOptions = {}
-): GlbObjectEntry | null {
+): GlbTargetMatch {
   const exact = entries.find((e) => e.relPath === godotPath);
-  if (exact) return exact;
+  if (exact) return { entry: exact, kind: 'exact' };
 
   const segments = godotPath.split('/');
 
   const subsequence = bestSubsequenceMatch(entries, segments);
-  if (subsequence) {
-    info(
-      `[matchGlbTarget] "${godotPath}" → "${subsequence.relPath}" (levels Godot's importer added are not in the glTF)`
-    );
-    return subsequence;
-  }
+  if (subsequence) return { entry: subsequence, kind: 'subsequence' };
 
   // The node has no counterpart, as `Skeleton3D` exists only in Godot's tree. The nearest
   // ancestor that matches is the object it means.
   for (let depth = segments.length - 1; allowAncestor && depth > 0; depth--) {
     // No exact-match fast path here: an exact hit is itself the deepest
     // possible subsequence match, so `bestSubsequenceMatch` already returns it.
-    const match = bestSubsequenceMatch(entries, segments.slice(0, depth));
-    if (match) {
-      info(
-        `[matchGlbTarget] "${godotPath}" has no counterpart; using its nearest ancestor "${match.relPath}"`
-      );
-      return match;
-    }
+    const entry = bestSubsequenceMatch(entries, segments.slice(0, depth));
+    if (entry) return { entry, kind: 'ancestor' };
   }
+  return { entry: null, kind: 'none' };
+}
 
-  warn(
-    `[matchGlbTarget] "${godotPath}" matches nothing in the loaded GLB — the override it carries is dropped`
-  );
-  return null;
+/** The GLB object a Godot path names, or `null` when nothing could be it. Logs how it matched. */
+export function matchGlbTarget(
+  entries: readonly GlbObjectEntry[],
+  godotPath: string,
+  options: MatchGlbTargetOptions = {}
+): GlbObjectEntry | null {
+  const { entry, kind } = findGlbTarget(entries, godotPath, options);
+  if (kind === 'subsequence') {
+    info(
+      `[matchGlbTarget] "${godotPath}" → "${entry!.relPath}" (levels Godot's importer added are not in the glTF)`
+    );
+  } else if (kind === 'ancestor') {
+    info(
+      `[matchGlbTarget] "${godotPath}" has no counterpart; using its nearest ancestor "${entry!.relPath}"`
+    );
+  } else if (kind === 'none') {
+    warn(
+      `[matchGlbTarget] "${godotPath}" matches nothing in the loaded GLB — the override or node it carries is dropped`
+    );
+  }
+  return entry;
 }
 
 /**

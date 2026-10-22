@@ -31,9 +31,6 @@ import {
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
-/** The canvas text painter's raster supersampling factor. */
-const CANVAS_TEXT_SUPERSAMPLE = 3;
-
 /** The painter's fixed anti-aliasing pad on each vertical raster edge, CSS px. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
@@ -100,9 +97,9 @@ describe('<LabelGlyphs>', () => {
     const renderer = await render(labelProperties({ text: '' }));
     const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     // The raster painter always emits its one quad. "No ink" is the quad at
-    // the one device pixel a canvas must have, since with no outline stroke
+    // the one pixel a canvas must have, since with no outline stroke
     // and no skew no horizontal pad widens it.
-    expect(boundingSize(mesh).x).toBeCloseTo(1 / CANVAS_TEXT_SUPERSAMPLE, 6);
+    expect(boundingSize(mesh).x).toBeCloseTo(1, 6);
   });
 
   it('scales glyph geometry with font_size — to within the whole-pixel advance round, which is not proportional', async () => {
@@ -362,7 +359,7 @@ describe('<LabelGlyphs>', () => {
     });
 
     it("measures the edge's mip level in Godot's glyph texels, one per font pixel", async () => {
-      // `label_3d.cpp:345-350` caches the glyph at its font size; the raster supersamples it.
+      // `label_3d.cpp:345-350` caches the glyph at its font size, and the raster paints it at that size.
       const cut = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0);
       const renderer = await render(
         labelProperties({
@@ -371,7 +368,7 @@ describe('<LabelGlyphs>', () => {
         })
       );
       const [material] = materials(renderer);
-      expect(material!.userData).toMatchObject(alphaAntialiasingUserData(cut, 1 / CANVAS_TEXT_SUPERSAMPLE));
+      expect(material!.userData).toMatchObject(alphaAntialiasingUserData(cut));
     });
 
     it('HASH under ALPHA_TO_COVERAGE_AND_TO_ONE overwrites the colour with the coverage blend', async () => {

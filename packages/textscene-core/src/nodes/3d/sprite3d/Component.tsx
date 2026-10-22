@@ -17,18 +17,15 @@ import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
-import { alphaCutSurface, joinsShadowPass } from '../../../r3f/godotAlphaCut';
-import { cutFadeVariants, cutOpaquePrepasses, type FadePass } from '../../../r3f/materials/fadeVariants';
+import { materialFor2d } from '../../../r3f/materialFor2d';
+import type { FadePass } from '../../../r3f/materials/fadeVariants';
 import { opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
 import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { sourceColorSpace } from '../../../resources/textures/sourceColorSpace';
-import {
-  applyTextureFilterState,
-  godotTextureFilterState,
-} from '../../../resources/textures/godotTextureFilter';
+import { applyTextureFilterState } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
 import {
@@ -77,19 +74,31 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
   // corners, so only an overrunning window tiles.
   const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
-  const textureFilter = properties.texture_filter;
+  const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
+    alphaCut: properties.alpha_cut,
+    alphaScissorThreshold: properties.alpha_scissor_threshold,
+    // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
+    transparentFlag: properties.transparent,
+    alphaHashScale: properties.alpha_hash_scale,
+    alphaAntialiasingMode: properties.alpha_antialiasing_mode,
+    alphaAntialiasingEdge: properties.alpha_antialiasing_edge,
+    // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
+    doubleSided: properties.double_sided,
+    noDepthTest: properties.no_depth_test,
+    textureFilter: properties.texture_filter,
+    anisotropicFilteringLevel: useAnisotropicFilteringLevel(),
+  });
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
   // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a
   // `source_color` sampler, so the clone reads as an albedo does, not as the 2D canvas's retag.
-  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const samplerClone = useMemo(() => {
     if (!sourceTexture) return undefined;
     const cloned = spriteSamplerClone(sourceTexture, wrap, sourceColorSpace(sourceTexture));
     // Sprite3D's texture is a node property, not a material slot, so the node's
     // own `texture_filter` (`material.cpp:3055`) lands on this clone.
-    applyTextureFilterState(cloned, godotTextureFilterState(textureFilter, anisotropicFilteringLevel));
+    applyTextureFilterState(cloned, textureFilter);
     return cloned;
-  }, [sourceTexture, wrap, textureFilter, anisotropicFilteringLevel]);
+  }, [sourceTexture, wrap, textureFilter]);
   // The clone is this component's, never the loader's cached entry: `useUploadedClone`
   // uploads it once and disposes it once it no longer draws. A frame change keeps it.
   const displayedTexture = useUploadedClone(samplerClone ?? null);
@@ -135,20 +144,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // sRGB→linear step stays here, after the product (matching Sprite2D and WorldEnvironment).
   const accum = useSpriteBase3DColorAccum(properties.modulate);
   const color = useGodotLinearColor(accum);
-  const cut = alphaCutSurface({
-    mode: properties.alpha_cut,
-    scissorThreshold: properties.alpha_scissor_threshold,
-    // `sprite_3d.cpp:286`: FLAG_TRANSPARENT off disables the whole switch.
-    transparentFlag: properties.transparent,
-    antialiasing: { mode: properties.alpha_antialiasing_mode, edge: properties.alpha_antialiasing_edge },
-  });
   // The instance fade is per GeometryInstance3D, outside the accumulation: only `modulate`
   // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
-  const surfaceAlpha = cutFadeVariants(cut, properties.transparent ? clamp(accum.a, 0, 1) : 1);
-  const depthTest = !properties.no_depth_test;
-  const castsShadow = shadow.castShadow && joinsShadowPass(cut, depthTest);
-  const prepasses = cutOpaquePrepasses(cut, depthTest);
+  const opacity = properties.transparent ? clamp(accum.a, 0, 1) : 1;
+  const castsShadow = shadow.castShadow && joinsShadowPass;
 
   // Baked into the geometry, so it stays right under the node's rotation and billboard.
   const geometry = useMemo(() => spriteQuadGeometry(rect, properties.axis), [rect, properties.axis]);
@@ -195,23 +195,39 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   }
 
   const material = (pass: FadePass, attach: string | MaterialAttach | undefined) => {
+    const {
+      transparent,
+      depthWrite,
+      alphaTest,
+      alphaHash,
+      blending,
+      injection,
+      alphaHashScale,
+      antialiasing,
+      opaquePrepass,
+    } = blends[pass];
     const program = viewportProgramInputs({
       props: {
         attach,
         map: displayedTexture,
         color,
-        ...surfaceAlpha[pass],
-        ...alphaAntialiasingProps(cut.antialiasing),
+        opacity,
+        transparent,
+        depthWrite,
+        alphaTest,
+        alphaHash,
+        blending,
+        injection,
+        ...alphaAntialiasingProps(antialiasing),
         // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
         depthTest,
-        // DoubleSide by default: Godot's runtime shows a sprite quad from behind too.
-        side: properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide,
+        side,
         // `sprite_3d.cpp:281-283` hands the threshold, the scale and the edge to every mode's
         // material. Only HASH reads the scale, and only an antialiased cut the edge.
         userData: {
-          ...alphaHashScaleUserData(properties.alpha_hash_scale),
-          ...alphaAntialiasingUserData(cut.antialiasing),
-          ...opaquePrepassUserData(prepasses[pass]),
+          ...alphaHashScaleUserData(alphaHashScale),
+          ...alphaAntialiasingUserData(antialiasing),
+          ...opaquePrepassUserData(opaquePrepass),
         },
       },
       merge: [properties.shaded ? SHADED_SCALARS : undefined],

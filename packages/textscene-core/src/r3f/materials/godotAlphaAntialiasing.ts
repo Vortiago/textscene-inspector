@@ -69,19 +69,11 @@ const SCISSOR_CUT = /* glsl */ `if ( diffuseColor.a < godotAlphaScissorThreshold
 /** Where a material records its alpha antialiasing. */
 const ALPHA_ANTIALIASING_KEY = 'godotAlphaAntialiasing';
 
-/** Where a material records how many of Godot's albedo texels one texel of its map holds. */
-const ALBEDO_TEXTURE_SCALE_KEY = 'godotAlbedoTextureScale';
-
-/**
- * The `userData` that gives a material its alpha antialiasing: nothing for none. `albedoTextureScale`
- * converts the map's size into the `albedo_texture_size` Godot's mip term reads, for a map drawn at
- * another resolution than Godot's texture.
- */
+/** The `userData` that gives a material its alpha antialiasing: nothing for none. */
 export function alphaAntialiasingUserData(
-  cut: AlphaAntialiasingCut | null,
-  albedoTextureScale = 1
-): Record<string, AlphaAntialiasingCut | number> {
-  return cut ? { [ALPHA_ANTIALIASING_KEY]: cut, [ALBEDO_TEXTURE_SCALE_KEY]: albedoTextureScale } : {};
+  cut: AlphaAntialiasingCut | null
+): Record<string, AlphaAntialiasingCut> {
+  return cut ? { [ALPHA_ANTIALIASING_KEY]: cut } : {};
 }
 
 /** The alpha antialiasing a material, or the props it is built from, records, or null for none. */
@@ -142,8 +134,7 @@ function edgeUniformsOf(material: THREE.Material & { map?: THREE.Texture | null 
       godotAlbedoTextureSize: {
         get value() {
           const image = material.map?.image as { width?: number; height?: number } | undefined;
-          const scale = recordedOn(material, ALBEDO_TEXTURE_SCALE_KEY, 1);
-          return textureSize.set(image?.width ?? 0, image?.height ?? 0).multiplyScalar(scale);
+          return textureSize.set(image?.width ?? 0, image?.height ?? 0);
         },
       },
       godotSingleSampleCoverage: { value: 0 },

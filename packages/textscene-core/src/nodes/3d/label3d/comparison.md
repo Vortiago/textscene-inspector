@@ -73,7 +73,7 @@ The glyph raster has a mip chain only when `gui/theme/default_font_generate_mipm
   line where Godot wraps it.
 - **Approximated** The glyph mip chain is per label raster at 3x supersampling, where Godot's is per glyph page, so a minified label differs slightly.
 - **Approximated** A font resource's own `generate_mipmaps` is not read, as `font` is not read.
-- **Approximated** Godot draws the glyphs softer, and an `outline_size = 8` outline as a faint grey halo, where here it is a crisp black ring.
+- **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).

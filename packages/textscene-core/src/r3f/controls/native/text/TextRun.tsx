@@ -20,7 +20,6 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
-  type CanvasTextBlend,
 } from './canvasTextPainter';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { TextLayoutResult } from './textLayout';
@@ -29,18 +28,18 @@ import { buildGlyphQuadArrays } from './glyphQuads';
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
-import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
-import type { FadeVariants } from '../../../materials/fadeVariants';
-import { useSwappedMaterials } from '../../../materials/swappedMaterials';
-import { usePendingWhile } from '../../../../resources/usePendingWhile';
-import type { ShadowCastingEffects } from '../../../shadowCasting';
-import type { Rgba } from '../../../../godot/math/math';
 import {
   applyTextureFilterState,
   godotTextureFilterState,
   type TextureFilterState,
 } from '../../../../resources/textures/godotTextureFilter';
-import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
+import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
+import type { SurfaceBlend } from '../../../materials/surfaceBlend';
+import type { FadeVariants } from '../../../materials/fadeVariants';
+import { useSwappedMaterials } from '../../../materials/swappedMaterials';
+import { usePendingWhile } from '../../../../resources/usePendingWhile';
+import type { ShadowCastingEffects } from '../../../shadowCasting';
+import type { Rgba } from '../../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 
 /** One rectangle of a hex-code box in local Godot px, +Y down, the space of `buildGlyphQuadArrays`' `topPx` before the Y negation. */
@@ -108,9 +107,9 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). Omitted, it is
-   * LINEAR. A mipmapped row samples a mip chain only where `mipmapped` built one. Canvas runs
-   * only: the MSDF atlas is always sampled linearly.
+   * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
+   * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
+   * Canvas runs only: the MSDF atlas is always sampled linearly.
    */
   textureFilter?: TextureFilterState;
   /**
@@ -125,7 +124,7 @@ export interface TextRunProps {
    * in. Canvas runs inside a GeometryInstance3D drawer only. Omitted, it paints
    * `TRANSPARENCY_ALPHA`, a Control's only mode.
    */
-  blends?: FadeVariants<CanvasTextBlend>;
+  blends?: FadeVariants<SurfaceBlend>;
   /**
    * The draw hooks of the GeometryInstance3D the run draws for, with `castShadow` for this
    * surface (Label3D only). Omitted, the run casts nothing and draws in every pass.
@@ -148,7 +147,7 @@ export interface TextRunProps {
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
-  paint: (blend: CanvasTextBlend | undefined) => THREE.Material;
+  paint: (blend: SurfaceBlend | undefined) => THREE.Material;
   ownedTexture?: THREE.Texture;
 }
 
@@ -200,7 +199,7 @@ function buildTextRun(
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
     const opacity = tint.a;
-    const paint = (blend: CanvasTextBlend | undefined) =>
+    const paint = (blend: SurfaceBlend | undefined) =>
       createCanvasTextMaterial({
         map: texture,
         opacity,
@@ -240,9 +239,6 @@ function buildTextRun(
   return { geometry: geo, paint: () => createMsdfMaterial(options) };
 }
 
-/** A run with no authored filter samples its raster LINEAR. */
-const LINEAR_RASTER_FILTER = godotTextureFilterState(TextureFilter.LINEAR);
-
 export function TextRun({
   layout,
   fontSizePx,
@@ -254,7 +250,7 @@ export function TextRun({
   depthTest,
   side,
   strokeWidthPx = 0,
-  textureFilter = LINEAR_RASTER_FILTER,
+  textureFilter = godotTextureFilterState(undefined),
   mipmapped = false,
   blends,
   shadow,
@@ -385,12 +381,12 @@ function AtlasPending(): null {
 }
 
 /** The run's material for `blend`. */
-function usePaintedMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material {
+function usePaintedMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material {
   return useOwnedMaterial(run, blend, () => run.paint(blend));
 }
 
 /** The run's alpha-pass material, or null for a run that never fades. */
-function useAlphaPassMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material | null {
+function useAlphaPassMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material | null {
   return useOwnedMaterial(run, blend, () => (blend ? run.paint(blend) : null));
 }
 
@@ -400,7 +396,7 @@ function useAlphaPassMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefi
  */
 function useOwnedMaterial<M extends THREE.Material | null>(
   run: BuiltTextRun,
-  blend: CanvasTextBlend | undefined,
+  blend: SurfaceBlend | undefined,
   paint: () => M
 ): M {
   const material = useMemo(

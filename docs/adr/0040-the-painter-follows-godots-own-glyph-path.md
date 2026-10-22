@@ -112,9 +112,10 @@ priority comparator no longer applies, and Godot shifts vertex z instead (`:404`
 - **The text on painter B is not scale-invariant.** An MSDF is resolution independent,
   and a canvas raster is not. ADR-0034 discharged this for scene fonts because the 2D
   parity capture renders at zoom 1, and **that reasoning does not transfer**: a `Label3D`
-  is a billboard in a 3D scene, viewed at whatever distance the camera is. The
-  mitigation is a fixed supersample (`CANVAS_TEXT_SUPERSAMPLE = 3`), a documented
-  quality/performance trade, not a fix, and not adaptive on purpose.
+  is a billboard in a 3D scene, viewed at whatever distance the camera is. Godot has the
+  same limit: it caches a glyph at its font size, one texel per font pixel
+  (`label_3d.cpp:345-350`). The painter rasterises at that size too, so a magnified glyph
+  blurs as Godot's does.
 - **The text on painter B is not byte-deterministic against a build artefact.** The
   atlas is baked at build time and ships as bytes. A raster is produced at view time by
   the browser's own text rasteriser (Skia, in Chromium), under its own hinting,

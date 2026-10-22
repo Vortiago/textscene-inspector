@@ -20,5 +20,5 @@ export interface ResourceProvider {
    *
    * @param extension - The extension without its dot, such as "gdextension"
    */
-  listFiles?(extension: string): Promise<string[] | null>;
+  listFiles?(extension: string): Promise<readonly string[] | null>;
 }
