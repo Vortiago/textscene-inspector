@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { hiddenOrUnknowableInTree } from '../../../../linter/parentType.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { TextureRectExpandMode } from '../../../../godot/scene/gui';
 

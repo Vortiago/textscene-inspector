@@ -9,7 +9,7 @@ import { StyleBoxQuad } from './StyleBoxQuad';
 import type { NativeControlComponentProps } from '../ControlComponentRegistry';
 import type { NativeTheme } from './nativeTheme';
 import type { SolveNode } from './solveTree';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 
 interface PanelChromeProps {
   solveNode: SolveNode;

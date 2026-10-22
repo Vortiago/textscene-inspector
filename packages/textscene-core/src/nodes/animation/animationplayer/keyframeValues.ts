@@ -5,7 +5,7 @@
  */
 
 import { variantTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
-import { storedInt } from '../../../godot/variant/int.js';
+import { storedInt } from '../../../godot/variant/intSlots.js';
 import { info } from '../../../logger';
 
 /** One keyframe's decoded value: a composite's components, a scalar, or a flag. */

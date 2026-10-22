@@ -19,7 +19,7 @@ import type { StyleBoxLineData } from './styleBoxLine';
 import type { StyleBoxTextureData } from './styleBoxTexture';
 import { styleBoxLineDrawRect } from './styleBoxLineGeometry';
 import { ninePatchGeometry } from './ninePatchGeometry';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import { useControlClipPlanes } from './controlClipping';
 import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import { canvasItemFacing } from '../../canvasItemFacing';

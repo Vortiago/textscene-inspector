@@ -9,7 +9,7 @@
 import { warn } from '../../../logger.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { dictCallField, dictNumberField, dictStringField } from '../../../godot/variant/variantParser.js';
-import { parseGodotInt } from '../../../godot/variant/int.js';
+import { parseGodotInt } from '../../../godot/variant/intReader.js';
 import { parsePackedByteArrayBody } from '../../../godot/variant/packedBytes.js';
 import { unquoteString } from '../../../parser/utils.js';
 

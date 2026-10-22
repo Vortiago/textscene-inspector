@@ -1,8 +1,0 @@
-/**
- * Plain 2D geometry for the native Control rect solve, in Godot pixels with +Y
- * down like `World2DCanvas.tsx`. The walker, not this module, flips a solved
- * `Rect2` to a three.js position (`[rect.x, -rect.y, 0]`). Pure data: no React, no THREE.
- */
-
-/** A Control's rect in Godot pixels, +Y down. */
-export type { Rect2 } from '../../../godot/math/rect2';

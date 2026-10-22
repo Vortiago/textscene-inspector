@@ -11,7 +11,7 @@
  */
 
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
 

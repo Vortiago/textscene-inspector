@@ -5,10 +5,7 @@
  */
 
 import type { Transform3D } from '../../godot/math/transform3d';
-import { ShadowCastingSetting } from '../../godot/rendering/rendering';
-
-/** Godot's `RS::ShadowCastingSetting`, shared with every GeometryInstance3D. */
-export { ShadowCastingSetting };
+import type { ShadowCastingSetting } from '../../godot/rendering/rendering';
 
 export interface MeshLibraryItem {
   id: number;

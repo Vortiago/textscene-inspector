@@ -1,6 +1,6 @@
 /**
  * Integer readers for rules and for the components of an `i`-suffixed
- * composite in a float slot. See `int.ts` for the whole picture.
+ * composite in a float slot. `intReader.ts` has the engine conversion they build on.
  */
 
 import { matchedFloat, slotTupleRegex } from './number.js';

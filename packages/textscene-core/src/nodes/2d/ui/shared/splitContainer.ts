@@ -6,7 +6,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 import { packedArrayBody, packedArrayForms } from '../../../../godot/variant/variantParser.js';
-import { slotInt } from '../../../../godot/variant/int.js';
+import { slotInt } from '../../../../godot/variant/intSlots.js';
 import type { ControlProperties } from '../control/types';
 import { parseControl } from '../control/parser';
 

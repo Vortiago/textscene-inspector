@@ -8,7 +8,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import { nodesOfType } from '../../../linter/linterUtils.js';
 import { viewportScopeCounter, viewportScopeOf } from '../../../linter/viewportScope.js';
-import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../godot/variant/intSlots.js';
 import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { RawNode } from '../../../parser/types.js';
 

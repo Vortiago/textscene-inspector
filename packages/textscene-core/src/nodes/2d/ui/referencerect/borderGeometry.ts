@@ -4,7 +4,7 @@
  * (`scene/main/canvas_item.cpp:815-841`), without antialiasing.
  */
 
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 
 /** `canvas_item.cpp:827-828`: `p_width >= rect.size.width || p_width >= rect.size.height` draws a filled rect grown by `0.5 * p_width` on every side instead. */
 function grownFilledRect(w: number, h: number, width: number): readonly Rect2[] {

@@ -10,7 +10,7 @@
  */
 
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SeparatorOrientation } from './styleBoxLine';
 
 /** C++ `int / 2` truncates toward zero; `Math.floor` would not for a negative dividend. */

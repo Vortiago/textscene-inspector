@@ -7,13 +7,14 @@
 
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
-import { parseSlotInt } from '../../godot/variant/int.js';
+import { parseSlotInt } from '../../godot/variant/intReader.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceClassGate } from '../subResourcePath';
 import { parseTransform3D } from '../../utils/transform';
 import { unquoteString } from '../../parser/utils';
-import { ShadowCastingSetting, type MeshLibraryModel, type MeshLibraryItem } from './types';
+import { type MeshLibraryModel, type MeshLibraryItem } from './types';
+import { ShadowCastingSetting } from '../../godot/rendering/rendering';
 
 /**
  * `MeshLibrary::_set` reads fixed slices with no validity gate, `get_slicec('/', 1)`

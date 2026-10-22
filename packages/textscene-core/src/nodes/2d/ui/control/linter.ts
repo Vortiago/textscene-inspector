@@ -8,7 +8,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { unquoteString } from '../../../../parser/utils.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { targetsBeforeLatestTrigger } from '../../../../linter/propertyOrder.js';
 import type { RawNode } from '../../../../parser/types.js';
 

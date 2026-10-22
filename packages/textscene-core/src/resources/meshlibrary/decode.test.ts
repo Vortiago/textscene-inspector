@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseTresFile } from '../../parser/parsedResource';
 import { meshLibraryFromTres } from './decode';
-import { ShadowCastingSetting } from './types';
+import { ShadowCastingSetting } from '../../godot/rendering/rendering';
 
 const TILES_TRES = `[gd_resource type="MeshLibrary" format=3 uid="uid://tiles"]
 

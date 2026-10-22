@@ -8,7 +8,7 @@
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v, hintedBitField } from '../../../linter/validators/index.js';
 import { propertyError } from '../../../linter/validators/propertyError.js';
-import { parseSlotInt } from '../../../godot/variant/int.js';
+import { parseSlotInt } from '../../../godot/variant/intReader.js';
 import {
   STENCIL_COMPARE_NAMES,
   STENCIL_FLAG_LABELS,

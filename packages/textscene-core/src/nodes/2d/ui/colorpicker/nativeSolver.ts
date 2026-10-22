@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';

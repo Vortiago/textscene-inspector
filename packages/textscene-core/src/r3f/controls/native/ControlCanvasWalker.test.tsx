@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn } from './solverRegistry';
@@ -15,12 +15,8 @@ import { canvasRenderOrder, layerRankOf, layerRanks } from '../../canvasPaintOrd
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { controlNode, withPaintRanges } from './testing/solveNode';
 import { controlComponentRegistry, type NativeControlComponent } from '../ControlComponentRegistry';
-import {
-  CanvasLayerIndexProvider,
-  CANVAS_ITEM_Z_MAX,
-  CANVAS_ITEM_Z_MIN,
-  useEffectiveZ,
-} from '../../lighting2d/canvasItemPlacement';
+import { CanvasLayerIndexProvider, useEffectiveZ } from '../../lighting2d/canvasItemPlacement';
+import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../../godot/rendering/rendering';
 import { Modulate2DContext, useParentModulate } from '../../canvasItemModulate';
 import { solveNode as emptySolveNode } from './testing/solveNode';
 

@@ -13,7 +13,7 @@ import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { painterEnv } from '../r3f/controls/native/testing/painterProps';
 import { solveNode as emptySolveNode } from '../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../r3f/controls/native/solveTree';
-import type { Rect2 } from '../r3f/controls/native/rect';
+import type { Rect2 } from '../godot/math/rect2';
 import { Sprite2D } from '../nodes/2d/sprite2d/Component';
 import { parseSprite2D } from '../nodes/2d/sprite2d/parser';
 import { parseSprite3D } from '../nodes/3d/sprite3d/parser';

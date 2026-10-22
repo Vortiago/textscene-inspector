@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { floatOr, intOr, enumOr } from './valueParsers.js';
-import { readIntSlot, ruleInt, slotInt } from '../godot/variant/int.js';
+import { readIntSlot, ruleInt, slotInt } from '../godot/variant/intSlots.js';
 
 const NOT_STORED = 'not stored';
 type Expected = number | typeof NOT_STORED;
