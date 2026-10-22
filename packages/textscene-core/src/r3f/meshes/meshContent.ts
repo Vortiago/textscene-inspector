@@ -93,10 +93,7 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
     kind === 'primitive' ? scoped : null
   );
   const primitiveSurfaced = usePrimitiveMesh(
-    useMemo(
-      () => (resolvable && !isLoadingReferences ? { ...resolvable, path: resourcePath } : null),
-      [resolvable, isLoadingReferences, resourcePath]
-    )
+    useMemo(() => (resolvable ? { ...resolvable, path: resourcePath } : null), [resolvable, resourcePath])
   );
 
   if (resolution.isNone) return NONE;

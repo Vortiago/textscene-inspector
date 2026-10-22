@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseTresFile, type ParsedResource } from '../parser/parsedResource';
+import { parseTresFile } from '../parser/parsedResource';
 import type { SceneResources } from '../r3f/SceneResourcesContext';
 import { referencedFilePath, resolveReference } from './resolveReference';
-import type { LoadedFile } from './scopedResource';
-import { NO_FILES } from './testing/noFiles';
+import { loadedFilesOf, NO_FILES } from './testing/loadedFiles';
 
 const CURVE_PATH = 'res://fade.tres';
 const SCENE: SceneResources = {
@@ -18,10 +17,6 @@ const SCENE: SceneResources = {
 const CURVE_FILE = parseTresFile(
   `[gd_resource type="Curve" format=3]\n\n[sub_resource type="Gradient" id="Gradient_a"]\n\n[resource]\nbake_resolution = 50\n`
 );
-const loaded =
-  (parsed: ParsedResource): LoadedFile =>
-  (path) =>
-    path === CURVE_PATH ? parsed : undefined;
 
 describe('referencedFilePath', () => {
   it('is the path of an ExtResource that names a resource file', () => {
@@ -44,7 +39,11 @@ describe('resolveReference', () => {
   });
 
   it('resolves an ExtResource to the section of its loaded file, scoped to that file’s own tables', () => {
-    const scoped = resolveReference('ExtResource("1_curve")', SCENE, loaded(CURVE_FILE));
+    const scoped = resolveReference(
+      'ExtResource("1_curve")',
+      SCENE,
+      loadedFilesOf({ [CURVE_PATH]: CURVE_FILE })
+    );
 
     expect(scoped?.resource).toMatchObject({ type: 'Curve', data: { bake_resolution: '50' } });
     expect(scoped?.resources.internalResources).toBe(CURVE_FILE.subResources);
@@ -55,7 +54,7 @@ describe('resolveReference', () => {
   });
 
   it('is null for no reference, an unknown id, and a file no processor reads', () => {
-    const files = loaded(CURVE_FILE);
+    const files = loadedFilesOf({ [CURVE_PATH]: CURVE_FILE });
 
     expect(resolveReference(undefined, SCENE, files)).toBeNull();
     expect(resolveReference('SubResource("missing")', SCENE, files)).toBeNull();

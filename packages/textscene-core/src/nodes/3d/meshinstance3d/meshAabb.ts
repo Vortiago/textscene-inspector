@@ -9,7 +9,7 @@ import { useResource } from '../../../resources/useResource';
 import { useContentMemo } from '../../../resources/useContentMemo';
 import { primitiveMeshAabb } from '../../../r3f/meshes/primitiveMeshGeometry';
 import { arrayMeshPath } from '../../../r3f/meshes/meshContent';
-import { meshKind } from '../../../resources/meshes/meshSource';
+import { meshContentKey, meshKind } from '../../../resources/meshes/meshSource';
 import { useResolvableMesh } from '../../../resources/meshes/useResolvableMesh';
 import type { ResolvableResource } from '../../../resources/scopedResource';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
@@ -24,8 +24,8 @@ export function useMeshAabb(meshRef: string | undefined, resources: SceneResourc
   const path = arrayMeshPath(resolution);
   // The ArrayMesh processor bounds a `.tres` ArrayMesh once for every consumer.
   const file = useResource<ArrayMeshResource>(path ?? '', 'arraymesh');
-  const { mesh, isLoading } = useResolvableMesh(path ? null : resolution.scoped);
-  const own = useContentMemo(isLoading ? null : mesh, meshAabb);
+  const { mesh } = useResolvableMesh(path ? null : resolution.scoped);
+  const own = useContentMemo(mesh, meshContentKey, meshAabb);
   return path ? (file.value?.aabb ?? null) : own;
 }
 

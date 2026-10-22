@@ -4,8 +4,8 @@ import { expect } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext.js';
 import type { ParsedResource } from '../../../parser/parsedResource.js';
-import type { LoadedFile, ResolvableResource } from '../../scopedResource.js';
-import { NO_FILES } from '../../testing/noFiles.js';
+import type { ResolvableResource } from '../../scopedResource.js';
+import { loadedFilesOf, NO_FILES } from '../../testing/loadedFiles.js';
 import type { GodotSurface } from '../godotSurface.js';
 
 /** Vertex `vertex` of an array that holds `size` numbers per vertex. */
@@ -55,8 +55,7 @@ export function withLoadedFiles(
   mesh: ResolvableResource,
   parsed: Record<string, ParsedResource>
 ): ResolvableResource {
-  const loadedFile: LoadedFile = (path) => parsed[path];
-  return { ...mesh, loadedFile };
+  return { ...mesh, loadedFile: loadedFilesOf(parsed) };
 }
 
 /** The data of a TubeTrailMesh two sections long, with one ring each and four steps round. */
@@ -65,4 +64,9 @@ export const COARSE_TUBE = { radial_steps: '4', sections: '2', section_length: '
 /** The data of a Curve that runs from 1 at the top to `end` at the bottom. */
 export function curveEndingAt(end: string): { _data: string } {
   return { _data: `[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, ${end}), 0.0, 0.0, 0, 0]` };
+}
+
+/** A `.tres` Curve file that runs from 1 at the top to `end` at the bottom. */
+export function curveFile(end: string): ParsedResource {
+  return { resourceType: 'Curve', properties: curveEndingAt(end), extResources: [], subResources: [] };
 }

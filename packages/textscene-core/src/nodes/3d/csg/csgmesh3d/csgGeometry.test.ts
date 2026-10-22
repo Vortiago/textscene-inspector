@@ -12,7 +12,11 @@ import type { TscnExternalResource, TscnInternalResource } from '../../../../par
 import { fixturesDir } from '../../../../parser/testing/parserKit';
 import type { CsgSolid } from '../../../../r3f/csg/csgRegistration';
 import { csgGeometryContext } from '../../../../r3f/csg/testing/csgGeometryContext';
-import { COARSE_TUBE, curveEndingAt } from '../../../../resources/meshes/primitivemesh/surface.testkit';
+import {
+  COARSE_TUBE,
+  curveEndingAt,
+  curveFile,
+} from '../../../../resources/meshes/primitivemesh/surface.testkit';
 import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
 import { csgMesh3DGeometry, csgMesh3DGeometryKey, csgMesh3DReadsFiles } from './csgGeometry';
 import { meshSurfaces } from './meshSurfaces';
@@ -290,6 +294,18 @@ describe('csgMesh3DGeometryKey', () => {
     });
 
     expect(key('SubResource("TubeFile")', loaded)).not.toBe(key('SubResource("TubeFile")', pending));
+  });
+
+  it('changes when the Curve file of a .tres TubeTrailMesh changes', () => {
+    const withCurveFile = (curve: ParsedResource) =>
+      csgGeometryContext({
+        externalResources: EXT,
+        files: { [FILE_TUBE_PATH]: FILE_TUBE, [GROWING_CURVE_PATH]: curve },
+      });
+
+    expect(key('ExtResource("5")', withCurveFile(curveFile('3')))).not.toBe(
+      key('ExtResource("5")', withCurveFile(curveFile('2')))
+    );
   });
 
   it('stays the same while an inline TubeTrailMesh and its Curve hold their content', () => {

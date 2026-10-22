@@ -9,7 +9,6 @@ import { warn } from '../../../../logger';
 import type { ParsedResource } from '../../../../parser/parsedResource';
 import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import type { CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
-import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
 import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/meshes/arraymesh/decode';
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
 import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
@@ -29,16 +28,11 @@ export interface CsgMesh extends ResolvableResource {
   file: { path: string; parsed: ParsedResource } | null;
 }
 
-/** The `.tres` a mesh reference loads, or null for an inline mesh or a file no processor reads. */
-export function meshFilePath(meshRef: string | undefined, pools: SceneResources): string | null {
-  return referencedFilePath(meshRef, pools);
-}
-
 /** The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. */
 export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
   const scoped = resolveReference(meshRef, ctx, ctx.file);
   if (!scoped) return null;
-  const path = meshFilePath(meshRef, ctx);
+  const path = referencedFilePath(meshRef, ctx);
   const parsed = path ? ctx.file(path) : undefined;
   return { ...scoped, loadedFile: ctx.file, file: path && parsed ? { path, parsed } : null };
 }

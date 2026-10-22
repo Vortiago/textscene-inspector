@@ -10,11 +10,11 @@ import type { CsgGeometryBuilder, CsgGeometryContext, CsgSolid } from '../../../
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
 import { meshContentKey } from '../../../../resources/meshes/meshSource';
-import { primitiveMeshFiles } from '../../../../resources/meshes/primitivemesh/surface';
-import { resolveReference } from '../../../../resources/resolveReference';
+import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
+import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
 import type { LoadedFile } from '../../../../resources/scopedResource';
 import { applyCsgNormals } from '../smoothNormals';
-import { meshFilePath, meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
+import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
 
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
@@ -42,7 +42,7 @@ export function csgMesh3DReadsFiles(
   loadedFile: LoadedFile
 ): string[] {
   const { mesh: meshRef } = properties as unknown as CSGMesh3DProperties;
-  const path = meshFilePath(meshRef, pools);
+  const path = referencedFilePath(meshRef, pools);
   const scoped = resolveReference(meshRef, pools, loadedFile);
   // The files a PrimitiveMesh reads join once the mesh itself has loaded.
   return [...(path ? [path] : []), ...(scoped ? primitiveMeshFiles(scoped) : [])];
@@ -62,11 +62,12 @@ function fileKey(file: object): number {
 }
 
 /**
- * A scene mesh keys on its content, and on its sub-resources' where it builds from them, since the
- * parser allocates a fresh one per reparse.
+ * A scene mesh keys on its content, and on the resources it builds from, since the parser allocates a
+ * fresh one per reparse. A mesh in a file keys on that parse and on the files its build reads.
  */
 function meshKey(mesh: CsgMesh): string {
-  return mesh.file ? `${mesh.file.path}#${fileKey(mesh.file.parsed)}` : meshContentKey(mesh);
+  if (!mesh.file) return meshContentKey(mesh);
+  return `${mesh.file.path}#${fileKey(mesh.file.parsed)}|${referencesKey(mesh)}`;
 }
 
 /** The faces of every surface in turn, with the index of each face's material in `materials`. */

@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
-import { MissingResourcesProvider } from '../../r3f/contexts/MissingResourcesContext';
 import { NO_RESOURCES } from '../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../ResourceLoaderContext';
 import type { ScopedResource } from '../scopedResource';
 import { createFakeResourceLoader } from '../testing/createFakeResourceLoader';
+import { missingResourcesWrapper } from '../testing/missingResourcesWrapper';
 import { COARSE_TUBE, curveEndingAt } from './primitivemesh/surface.testkit';
 import { useResolvableMesh } from './useResolvableMesh';
 
@@ -27,20 +25,15 @@ const BOX: ScopedResource = {
 function renderMesh(scoped: ScopedResource | null) {
   const fake = createFakeResourceLoader();
   const result = renderHook(() => useResolvableMesh(scoped), {
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <MissingResourcesProvider>
-        <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
-      </MissingResourcesProvider>
-    ),
+    wrapper: missingResourcesWrapper(fake.loader),
   }).result;
   return { fake, result };
 }
 
 describe('useResolvableMesh', () => {
-  it('loads while the Curve file of a TubeTrailMesh is not there, then serves it', () => {
+  it('is no mesh while the Curve file of a TubeTrailMesh loads, then serves it', () => {
     const { fake, result } = renderMesh(TUBE);
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.mesh!.loadedFile(CURVE_PATH)).toBeUndefined();
+    expect(result.current).toEqual({ mesh: null, isLoading: true });
 
     act(() => fake.resources._resolve(CURVE_PATH, CURVE_FILE));
 
@@ -49,7 +42,8 @@ describe('useResolvableMesh', () => {
   });
 
   it('keeps the mesh and its tables as given', () => {
-    const { result } = renderMesh(TUBE);
+    const { fake, result } = renderMesh(TUBE);
+    act(() => fake.resources._resolve(CURVE_PATH, CURVE_FILE));
 
     expect(result.current.mesh).toMatchObject(TUBE);
   });

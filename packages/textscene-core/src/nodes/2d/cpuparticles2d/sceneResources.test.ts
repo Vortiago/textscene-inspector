@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseTresFile, type ParsedResource } from '../../../parser/parsedResource';
+import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import { NO_RESOURCES, type SceneResources } from '../../../r3f/SceneResourcesContext';
-import type { LoadedFile } from '../../../resources/scopedResource';
-import { NO_FILES } from '../../../resources/testing/noFiles';
+import { loadedFilesOf, NO_FILES } from '../../../resources/testing/loadedFiles';
 import { particleFiles, resolveParticleCurves, resolveParticleGradient } from './sceneResources';
 import { CPUParticles2DParam, CPU_PARTICLES_2D_PARAM_COUNT, type ParticleParam } from './types';
 
@@ -22,7 +21,7 @@ const EXTERNAL: TscnExternalResource[] = [
   { id: '7_curve', type: 'Curve', path: CURVE_PATH },
   { id: '8_ramp', type: 'Gradient', path: GRADIENT_PATH },
 ];
-const FILES: Record<string, ParsedResource> = {
+const loadedFile = loadedFilesOf({
   [CURVE_PATH]: parseTresFile(`[gd_resource type="Curve" format=3]\n\n[resource]\n_data = ${CURVE_DATA}\n`),
   [GRADIENT_PATH]: parseTresFile(
     `[gd_resource type="Gradient" format=3]\n\n[resource]\n` +
@@ -30,8 +29,7 @@ const FILES: Record<string, ParsedResource> = {
         .map(([name, value]) => `${name} = ${value}\n`)
         .join('')
   ),
-};
-const loadedFile: LoadedFile = (path) => FILES[path];
+});
 
 function sceneOf(internalResources: TscnInternalResource[], externalResources = EXTERNAL): SceneResources {
   return { internalResources, externalResources };
@@ -125,7 +123,7 @@ describe('resolveParticleGradient', () => {
 describe('particleFiles', () => {
   const ramps = { color_ramp: 'ExtResource("8_ramp")', color_initial_ramp: 'SubResource("2")' };
 
-  it('names the .tres each curve slot and ramp loads from, each once', () => {
+  it('names the .tres each curve slot and ramp loads from', () => {
     const files = particleFiles(
       {
         params: params({
@@ -136,7 +134,7 @@ describe('particleFiles', () => {
       },
       sceneOf([GRADIENT])
     );
-    expect(files).toEqual([CURVE_PATH, GRADIENT_PATH]);
+    expect(files).toEqual([CURVE_PATH, CURVE_PATH, GRADIENT_PATH]);
   });
 
   it('names no file for SubResource references or none', () => {

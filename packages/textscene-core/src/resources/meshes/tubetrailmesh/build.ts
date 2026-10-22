@@ -61,12 +61,10 @@ export function buildTubeTrailMeshSurface(p: TubeTrailMeshProperties): GodotSurf
   const writer = new SurfaceWriter(false);
   writeBody(writer, p, rim, depth, radiusScale);
   // A cap is built only where the curve leaves a scale above `CMP_EPSILON` (`:2596`, `:2680`).
-  const topScale = radiusScale(0);
-  const bottomScale = radiusScale(1);
-  if (p.capTop && topScale > CMP_EPSILON)
-    writeTopCap(writer, rim, depth * 0.5, storedReal(p.radius * topScale));
-  if (p.capBottom && bottomScale > CMP_EPSILON)
-    writeBottomCap(writer, rim, depth * -0.5, storedReal(p.radius * bottomScale));
+  const topRadius = capRadius(p.radius, radiusScale(0));
+  const bottomRadius = capRadius(p.radius, radiusScale(1));
+  if (p.capTop && topRadius !== null) writeCap(writer, rim, TOP_CAP, depth * 0.5, topRadius);
+  if (p.capBottom && bottomRadius !== null) writeCap(writer, rim, BOTTOM_CAP, depth * -0.5, bottomRadius);
   return writer.surface();
 }
 
@@ -104,41 +102,50 @@ function writeBody(
   }
 }
 
-/** A fan facing up, centred on (0.25, 0.75) in UV (`:2596-2677`). */
-function writeTopCap(writer: SurfaceWriter, rim: readonly RimColumn[], y: number, capRadius: number): void {
-  const centre = writer.vertexCount;
-  writer.vertex([0, y, 0], [0, 1, 0], CAP_TANGENT, [0.25, 0.75], [0, 0]);
-  rim.forEach(({ x, z }, i) => {
-    writer.vertex(
-      [x * capRadius, y, z * capRadius],
-      [0, 1, 0],
-      CAP_TANGENT,
-      [storedReal((x + 1) * 0.25), storedReal(0.5 + (z + 1) * 0.25)],
-      [0, 0]
-    );
-    const point = writer.vertexCount;
-    if (i > 0) writer.triangle(centre, point - 1, point - 2);
-  });
+/** The radius of a cap at a curve scale, or null where the scale leaves no cap. */
+function capRadius(radius: number, scale: number): number | null {
+  return scale > CMP_EPSILON ? storedReal(radius * scale) : null;
 }
 
+/** What differs between the two caps: which way they face, where their UV sits, and their winding. */
+interface CapFace {
+  normalY: 1 | -1;
+  centreUv: readonly [number, number];
+  rimUv: (x: number, z: number) => [number, number];
+  /** Whether the fan's triangles take the newer rim vertex first, so the cap faces down. */
+  isFlipped: boolean;
+}
+
+/** A fan facing up, centred on (0.25, 0.75) in UV (`:2596-2677`). */
+const TOP_CAP: CapFace = {
+  normalY: 1,
+  centreUv: [0.25, 0.75],
+  rimUv: (x, z) => [storedReal((x + 1) * 0.25), storedReal(0.5 + (z + 1) * 0.25)],
+  isFlipped: false,
+};
+
 /** A fan facing down, centred on (0.75, 0.75) in UV with V mirrored (`:2680-2732`). */
-function writeBottomCap(
+const BOTTOM_CAP: CapFace = {
+  normalY: -1,
+  centreUv: [0.75, 0.75],
+  rimUv: (x, z) => [storedReal(0.5 + (x + 1) * 0.25), storedReal(1 - (z + 1) * 0.25)],
+  isFlipped: true,
+};
+
+function writeCap(
   writer: SurfaceWriter,
   rim: readonly RimColumn[],
+  { normalY, centreUv, rimUv, isFlipped }: CapFace,
   y: number,
-  capRadius: number
+  radius: number
 ): void {
   const centre = writer.vertexCount;
-  writer.vertex([0, y, 0], [0, -1, 0], CAP_TANGENT, [0.75, 0.75], [0, 0]);
+  writer.vertex([0, y, 0], [0, normalY, 0], CAP_TANGENT, [...centreUv], [0, 0]);
   rim.forEach(({ x, z }, i) => {
-    writer.vertex(
-      [x * capRadius, y, z * capRadius],
-      [0, -1, 0],
-      CAP_TANGENT,
-      [storedReal(0.5 + (x + 1) * 0.25), storedReal(1 - (z + 1) * 0.25)],
-      [0, 0]
-    );
+    writer.vertex([x * radius, y, z * radius], [0, normalY, 0], CAP_TANGENT, rimUv(x, z), [0, 0]);
     const point = writer.vertexCount;
-    if (i > 0) writer.triangle(centre, point - 2, point - 1);
+    if (i === 0) return;
+    if (isFlipped) writer.triangle(centre, point - 2, point - 1);
+    else writer.triangle(centre, point - 1, point - 2);
   });
 }

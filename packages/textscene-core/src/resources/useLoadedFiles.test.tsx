@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import type { ParsedResource } from '../parser/parsedResource';
-import { MissingResourcesProvider, useMissingResources } from '../r3f/contexts/MissingResourcesContext';
-import { ResourceLoaderProvider } from './ResourceLoaderContext';
+import { useMissingResources } from '../r3f/contexts/MissingResourcesContext';
 import type { LoadedFile } from './scopedResource';
 import { createFakeResourceLoader, type FakeResourceLoader } from './testing/createFakeResourceLoader';
+import { missingResourcesWrapper } from './testing/missingResourcesWrapper';
 import { useLoadedFiles } from './useLoadedFiles';
 
 const OUTER = 'res://outer.tres';
@@ -17,11 +16,7 @@ const NESTED_PLAN = (loadedFile: LoadedFile) => [OUTER, ...(loadedFile(OUTER) ? 
 
 function renderFiles(plan: (loadedFile: LoadedFile) => readonly string[], fake: FakeResourceLoader) {
   return renderHook(() => ({ files: useLoadedFiles(plan), missing: useMissingResources().missingPaths }), {
-    wrapper: ({ children }: { children: ReactNode }) => (
-      <MissingResourcesProvider>
-        <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
-      </MissingResourcesProvider>
-    ),
+    wrapper: missingResourcesWrapper(fake.loader),
   }).result;
 }
 
@@ -77,7 +72,7 @@ describe('useLoadedFiles', () => {
   it('pins each file while mounted', () => {
     const { fake } = fakeRequesting();
 
-    renderFiles(NESTED_PLAN, fake);
+    renderFiles(() => [OUTER], fake);
 
     expect(fake.resources.pinCounts.get(OUTER)).toBe(1);
   });
@@ -90,6 +85,27 @@ describe('useLoadedFiles', () => {
 
     expect(result.current.files.isLoading).toBe(false);
     expect(result.current.missing.has(OUTER)).toBe(true);
+  });
+
+  it('requests and pins a file once, however often the plan names it', () => {
+    const { fake, request } = fakeRequesting();
+
+    renderFiles(() => [OUTER, OUTER], fake);
+
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(fake.resources.pinCounts.get(OUTER)).toBe(1);
+  });
+
+  it('re-reads the lookup when a file the plan names loads, and not when another one does', () => {
+    const { fake } = fakeRequesting();
+    const result = renderFiles(() => [OUTER], fake);
+    const { loadedFile } = result.current.files;
+
+    act(() => fake.resources._resolve('res://other.tres', FILE));
+    expect(result.current.files.loadedFile).toBe(loadedFile);
+
+    act(() => fake.resources._resolve(OUTER, FILE));
+    expect(result.current.files.loadedFile).not.toBe(loadedFile);
   });
 
   it('is not loading, and requests nothing, for a plan that names no file (edge case)', () => {

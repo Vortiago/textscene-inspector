@@ -3,7 +3,8 @@ import { renderHook } from '@testing-library/react';
 import type { TscnInternalResource } from '../parser/types';
 import { NO_RESOURCES } from '../r3f/SceneResourcesContext';
 import type { ResolvableResource } from './scopedResource';
-import { NO_FILES } from './testing/noFiles';
+import { NO_FILES } from './testing/loadedFiles';
+import { meshContentKey } from './meshes/meshSource';
 import { useContentMemo } from './useContentMemo';
 
 const box = (size: string): ResolvableResource => ({
@@ -14,7 +15,9 @@ const box = (size: string): ResolvableResource => ({
 
 function renderMemo(initial: ResolvableResource | null) {
   const build = vi.fn((mesh: ResolvableResource) => ({ size: mesh.resource.data['size'] }));
-  const hook = renderHook(({ mesh }) => useContentMemo(mesh, build), { initialProps: { mesh: initial } });
+  const hook = renderHook(({ mesh }) => useContentMemo(mesh, meshContentKey, build), {
+    initialProps: { mesh: initial },
+  });
   return { ...hook, build };
 }
 
@@ -45,7 +48,7 @@ describe('useContentMemo', () => {
       data: { bake_resolution: bakeResolution },
     });
     const build = vi.fn((mesh: ResolvableResource) => mesh.resources.internalResources[0]!.data);
-    const { result, rerender } = renderHook(({ mesh }) => useContentMemo(mesh, build), {
+    const { result, rerender } = renderHook(({ mesh }) => useContentMemo(mesh, meshContentKey, build), {
       initialProps: { mesh: tube(curve('10')) },
     });
 

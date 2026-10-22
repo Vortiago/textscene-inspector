@@ -10,7 +10,7 @@ import { vec2iOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real';
 import type { Vector2 } from '../../../godot/math/vector';
 import { resourceContentKey } from '../../resourceContentKey';
-import { referencedFilePath, resolveReference } from '../../resolveReference';
+import { referencedFilePath, resolveReference, resolveReferencedResource } from '../../resolveReference';
 import type { ResolvableResource, ScopedResource } from '../../scopedResource';
 import type { GodotSurface } from '../godotSurface';
 import { decodePrimitiveMesh } from './decode';
@@ -41,8 +41,11 @@ interface BuildInput {
   data: Record<string, string>;
   /** In world units, or null for a mesh with no UV2 (`add_uv2` off). */
   uv2Padding: number | null;
-  /** The resource the property names, or null for none, an unknown id, or a file not loaded. */
-  reference: (property: string) => TscnInternalResource | null;
+  /**
+   * The resource each property the type declares in `references` names, or null for none, an unknown
+   * id, or a file not loaded.
+   */
+  references: Readonly<Record<string, TscnInternalResource | null>>;
 }
 
 /** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */
@@ -73,7 +76,7 @@ const TYPES: Record<string, PrimitiveMeshType> = {
   SphereMesh: { build: ({ data, uv2Padding }) => buildSphereMeshSurface(decodeSphereMesh(data), uv2Padding) },
   PlaneMesh: {
     build: ({ data }) => buildPlaneMeshSurface(decodePlaneMesh(data)),
-    lightmapSizeHint: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize),
+    lightmapSizeHint: planeMeshLightmapSizeHint,
   },
   QuadMesh: {
     build: ({ data }) => buildPlaneMeshSurface(decodeQuadMesh(data)),
@@ -89,8 +92,8 @@ const TYPES: Record<string, PrimitiveMeshType> = {
   PrismMesh: { build: ({ data, uv2Padding }) => buildPrismMeshSurface(decodePrismMesh(data), uv2Padding) },
   PointMesh: { build: () => buildPointMeshSurface() },
   TubeTrailMesh: {
-    build: ({ data, reference }) =>
-      buildTubeTrailMeshSurface(decodeTubeTrailMesh(data, reference(CURVE_PROPERTY))),
+    build: ({ data, references }) =>
+      buildTubeTrailMeshSurface(decodeTubeTrailMesh(data, references[CURVE_PROPERTY] ?? null)),
     references: [CURVE_PROPERTY],
     lightmapSizeHint: (data) =>
       vec2iOr(data.lightmap_size_hint, { x: 0, y: 0 }, 'TubeTrailMesh lightmap_size_hint'),
@@ -108,10 +111,16 @@ export function isPrimitiveMeshType(type: string): boolean {
   return PRIMITIVE_MESH_TYPES.has(type);
 }
 
+/** The properties of `type` that name a resource its build reads. */
+function referencesOf(type: string): readonly string[] {
+  return TYPES[type]?.references ?? [];
+}
+
 /** The files the mesh's ExtResource references load from, which its build reads once they load. */
 export function primitiveMeshFiles({ resource, resources }: ScopedResource): string[] {
-  const references = TYPES[resource.type]?.references ?? [];
-  return references.flatMap((property) => referencedFilePath(resource.data[property], resources) ?? []);
+  return referencesOf(resource.type).flatMap(
+    (property) => referencedFilePath(resource.data[property], resources) ?? []
+  );
 }
 
 /**
@@ -120,8 +129,7 @@ export function primitiveMeshFiles({ resource, resources }: ScopedResource): str
  */
 export function referencesKey(mesh: ResolvableResource): string {
   const { resource, resources, loadedFile } = mesh;
-  const references = TYPES[resource.type]?.references ?? [];
-  return references
+  return referencesOf(resource.type)
     .map((property) => {
       const named = resolveReference(resource.data[property], resources, loadedFile);
       return named ? resourceContentKey(named.resource) : 'missing';
@@ -168,12 +176,13 @@ function buildSurface(mesh: ResolvableResource, texelSize: number): GodotSurface
   const base = decodePrimitiveMesh(resource.data);
   // Godot holds the padding and the texel size in a `float` (`:1065`), so each rounds to single precision.
   const uv2Padding = base.addUv2 ? storedReal(base.uv2Padding * storedReal(texelSize)) : null;
-  const built = type.build({
-    data: resource.data,
-    uv2Padding,
-    reference: (property) =>
-      resolveReference(resource.data[property], resources, loadedFile)?.resource ?? null,
-  });
+  const references = Object.fromEntries(
+    referencesOf(resource.type).map((property) => [
+      property,
+      resolveReferencedResource(resource.data[property], resources, loadedFile),
+    ])
+  );
+  const built = type.build({ data: resource.data, uv2Padding, references });
   if (!built) return null;
   const surface =
     base.addUv2 && type.lightmapSizeHint

@@ -7,23 +7,31 @@
 
 import { decodeCurveResource } from '../../../resources/curves/curve/decode';
 import type { Curve } from '../../../resources/curves/curve/types';
-import { referencedFilePath, resolveReference } from '../../../resources/resolveReference';
+import { referencedFilePath, resolveReferencedResource } from '../../../resources/resolveReference';
 import type { LoadedFile } from '../../../resources/scopedResource';
 import { decodeGradientResource } from '../../../resources/textures/gradienttexture2d/decode';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { CPU_PARTICLES_2D_PARAM_COUNT, type CPUParticles2DProperties } from './types';
 
-type ParticleReferences = Pick<CPUParticles2DProperties, 'params' | 'color_ramp' | 'color_initial_ramp'>;
+type ParticleParams = CPUParticles2DProperties['params'];
 
-/** The `.tres` files the emitter's curves and ramps load from, each once. */
+/** The `curve` reference of each parameter slot, always `CPU_PARTICLES_2D_PARAM_COUNT` long. */
+function curveReferences(params: ParticleParams): Array<string | undefined> {
+  return Array.from({ length: CPU_PARTICLES_2D_PARAM_COUNT }, (_, slot) => params[slot]?.curve);
+}
+
+/** The `.tres` files the emitter's curves and ramps load from. */
 export function particleFiles(
-  { params, color_ramp, color_initial_ramp }: ParticleReferences,
+  {
+    params,
+    color_ramp,
+    color_initial_ramp,
+  }: Pick<CPUParticles2DProperties, 'params' | 'color_ramp' | 'color_initial_ramp'>,
   pools: SceneResources
-) {
-  const references = [...params.map((param) => param.curve), color_ramp, color_initial_ramp];
-  const paths = references.flatMap((ref) => referencedFilePath(ref, pools) ?? []);
-  return [...new Set(paths)];
+): string[] {
+  const references = [...curveReferences(params), color_ramp, color_initial_ramp];
+  return references.flatMap((ref) => referencedFilePath(ref, pools) ?? []);
 }
 
 /**
@@ -32,15 +40,13 @@ export function particleFiles(
  * by `CPUParticles2DParam` without a bounds check.
  */
 export function resolveParticleCurves(
-  params: CPUParticles2DProperties['params'],
+  params: ParticleParams,
   pools: SceneResources,
   loadedFile: LoadedFile
 ): Array<Curve | null> {
-  const curves: Array<Curve | null> = new Array(CPU_PARTICLES_2D_PARAM_COUNT).fill(null);
-  for (let i = 0; i < CPU_PARTICLES_2D_PARAM_COUNT; i++) {
-    curves[i] = decodeCurveResource(resolveReference(params[i]?.curve, pools, loadedFile)?.resource ?? null);
-  }
-  return curves;
+  return curveReferences(params).map((ref) =>
+    decodeCurveResource(resolveReferencedResource(ref, pools, loadedFile))
+  );
 }
 
 /**
@@ -52,5 +58,5 @@ export function resolveParticleGradient(
   pools: SceneResources,
   loadedFile: LoadedFile
 ): Gradient | null {
-  return decodeGradientResource(resolveReference(ref, pools, loadedFile)?.resource ?? null);
+  return decodeGradientResource(resolveReferencedResource(ref, pools, loadedFile));
 }

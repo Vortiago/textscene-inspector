@@ -9,7 +9,7 @@ import { useLoadedFiles } from '../useLoadedFiles';
 import { primitiveMeshFiles } from './primitivemesh/surface';
 
 export interface ResolvableMesh {
-  /** Null for no mesh. */
+  /** Null for no mesh, and while a file the build reads loads. */
   mesh: ResolvableResource | null;
   /** True while a file the build reads has neither loaded nor failed. */
   isLoading: boolean;
@@ -18,6 +18,9 @@ export interface ResolvableMesh {
 export function useResolvableMesh(scoped: ScopedResource | null): ResolvableMesh {
   const plan = useCallback(() => (scoped ? primitiveMeshFiles(scoped) : []), [scoped]);
   const { loadedFile, isLoading } = useLoadedFiles(plan);
-  const mesh = useMemo(() => (scoped ? { ...scoped, loadedFile } : null), [scoped, loadedFile]);
-  return useMemo(() => ({ mesh, isLoading }), [mesh, isLoading]);
+  const mesh = useMemo(
+    () => (scoped && !isLoading ? { ...scoped, loadedFile } : null),
+    [scoped, loadedFile, isLoading]
+  );
+  return { mesh, isLoading };
 }

@@ -8,7 +8,11 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { COARSE_TUBE, curveEndingAt } from '../../../resources/meshes/primitivemesh/surface.testkit';
+import {
+  COARSE_TUBE,
+  curveEndingAt,
+  curveFile,
+} from '../../../resources/meshes/primitivemesh/surface.testkit';
 import { subResource } from '../../../testing/subResource';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import './index.r3f';
@@ -131,12 +135,7 @@ describe('Mesh primitives (assertions 48–59)', () => {
   it('TubeTrailMesh.curve scales the radius along the tube when the Curve is a .tres', async () => {
     const CURVE_PATH = 'res://grow.tres';
     const fake = createFakeResourceLoader();
-    fake.resources.seed(CURVE_PATH, {
-      resourceType: 'Curve',
-      properties: curveEndingAt('3'),
-      extResources: [],
-      subResources: [],
-    });
+    fake.resources.seed(CURVE_PATH, curveFile('3'));
     const renderer = await ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider

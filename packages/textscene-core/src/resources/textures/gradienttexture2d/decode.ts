@@ -72,9 +72,9 @@ export function decodeGradientResource(resource: TscnInternalResource | null): G
 }
 
 /**
- * The `Gradient` a `SubResource("id")` property names, or null for anything else.
- * CPUParticles2D takes a bare `Gradient`, not a `GradientTexture1D`, so its
- * colour ramp decodes here, not through the texture path.
+ * The `Gradient` a `SubResource("id")` property names, or null for anything else, an ExtResource
+ * included: the texture and noise callers hold no loaded files. {@link decodeGradientResource}
+ * decodes a resource a caller resolved itself, as CPUParticles2D does for a `.tres` ramp.
  */
 export function resolveGradient(
   ref: string | undefined,

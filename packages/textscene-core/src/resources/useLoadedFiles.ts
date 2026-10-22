@@ -29,20 +29,23 @@ const NO_PATHS: ReadonlySet<string> = new Set();
 
 /**
  * The files a plan names, as the resource loader's cache holds them: a hook cannot run once per
- * file, and a plan may name any number. The plan reads the cache itself, so a file it names only
- * once another has loaded joins the list as that one arrives. Each file is requested and pinned
- * while the caller is mounted, and a file that fails shows as a **Missing resource**. A caller
- * keeps `plan` stable while its inputs hold.
+ * file, and a plan may name any number, in any order, with repeats. The plan reads the cache itself,
+ * so a file it names only once another has loaded joins the list as that one arrives. Each file is
+ * requested and pinned while the caller is mounted, and a file that fails shows as a **Missing
+ * resource**. Only a load of a file the plan named re-runs the plan. A caller keeps `plan` stable
+ * while its inputs hold.
  */
 export function useLoadedFiles(plan: (loadedFile: LoadedFile) => readonly string[]): LoadedFiles {
   const loader = useResourceLoader();
   const readPaths = useRef<ReadonlySet<string>>(NO_PATHS);
-  const version = useCacheVersion(loader, RESOURCE_BUS, readPaths);
-  const paths = useStableList(
+  const version = useCacheVersion(loader, RESOURCE_BUS, readPaths, { onlyReadKeys: true });
+  const planned = useMemo(
+    () => [...new Set(plan((path) => cachedFile(loader, path) ?? undefined))],
     // `version` is a cache-buster: the cache changes outside React.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    useMemo(() => plan((path) => cachedFile(loader, path) ?? undefined), [plan, loader, version])
+    [plan, loader, version]
   );
+  const paths = useStableList(planned);
   useEffect(() => {
     readPaths.current = new Set(paths);
   }, [paths]);
@@ -57,9 +60,14 @@ export function useLoadedFiles(plan: (loadedFile: LoadedFile) => readonly string
   useMissingFiles(files);
 
   const loadedFile = useMemo((): LoadedFile => (path) => files.get(path) ?? undefined, [files]);
-  const isLoading = loader !== null && [...files.values()].some((file) => file === undefined);
+  const isLoading = useMemo(() => loader !== null && hasUnsettledFile(files), [loader, files]);
   usePendingWhile(isLoading);
-  return useMemo(() => ({ loadedFile, isLoading }), [loadedFile, isLoading]);
+  return { loadedFile, isLoading };
+}
+
+function hasUnsettledFile(files: ReadonlyMap<string, CachedFile>): boolean {
+  for (const file of files.values()) if (file === undefined) return true;
+  return false;
 }
 
 function cachedFile(loader: ResourceLoader | null, path: string): CachedFile {
@@ -106,7 +114,7 @@ function useRequestedFiles(loader: ResourceLoader | null, paths: readonly string
  */
 function useMissingFiles(files: ReadonlyMap<string, CachedFile>): void {
   const { report, clear, markUploaded } = useMissingResources();
-  const failed = useStableList([...files].filter(([, file]) => file === null).map(([path]) => path));
+  const failed = useMemo(() => [...files].filter(([, file]) => file === null).map(([path]) => path), [files]);
   const reported = useRef<ReadonlySet<string>>(NO_PATHS);
 
   useEffect(() => {
