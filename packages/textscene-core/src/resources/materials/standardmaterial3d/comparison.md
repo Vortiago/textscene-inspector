@@ -49,6 +49,12 @@ A SubViewport's 8x8 target on three unshaded quads. The material's sampler appli
 
 `normal_texture` reads red and green only. Both engines rebuild blue from them (`scene_forward_clustered.glsl:1437-1438`). So a map with blue 0 shades its flat texel as the bare plane, and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it. A glTF material reads its normal map the same way, as Godot imports it as a StandardMaterial3D. Both engines tilt the normal in a frame whose tangent and binormal have unit length. So a quad with a different UV density per axis tilts each texel by its authored angle.
 
+## Roughness limiter on a normal map
+
+<!-- compare: image=unit-material-roughness-limiter-derivative status=done fixture=unit-material-roughness-limiter-derivative.tscn -->
+
+A smooth metal sphere under a bumpy normal map, lit by the sun. Godot's screen-space roughness limiter spreads the highlight by the difference of the normal between the two pixels of a pair (`scene_forward_clustered.glsl:1660`). WebGL 2 has no fine derivative, so the previewer reads the normal map one texel along the pair and takes the same difference.
+
 ## Clearcoat
 
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->
