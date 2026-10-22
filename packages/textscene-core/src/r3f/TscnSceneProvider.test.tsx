@@ -151,4 +151,24 @@ describe('<TscnSceneProvider>', () => {
 
     expect(selection.selectedNodePath).toBe('Cube');
   });
+
+  it('clears the selection when the scene changes', () => {
+    let selection!: ReturnType<typeof useSelection>;
+    function SelectionProbe() {
+      selection = useSelection();
+      return null;
+    }
+    const provider = emptyProvider();
+    const withScene = (source: string) => (
+      <TscnSceneProvider scene={parse(source)} provider={provider}>
+        <SelectionProbe />
+      </TscnSceneProvider>
+    );
+
+    const { rerender } = render(withScene(BOX_SCENE));
+    act(() => selection.setSelectedNodePath('Cube'));
+    rerender(withScene(NOISE_SCENE));
+
+    expect(selection.selectedNodePath).toBeNull();
+  });
 });

@@ -49,7 +49,8 @@ export function SceneView() {
 }
 ```
 
-`<TscnCanvas>` fills its parent, so give the parent a size.
+`<TscnCanvas>` fills its parent, so give the parent a size. It draws 3D content. A scene of 2D
+nodes, such as `Control` or `Node2D`, draws nothing in it.
 
 ## API
 
@@ -58,8 +59,9 @@ The package exports four names.
 - `TscnCanvas`: the canvas. It reads the scene, the resources and the selection from
   `<TscnSceneProvider>`.
 - `TscnSceneProvider`: mounts what the canvas reads. Its props are `scene` (a parsed scene),
-  `provider` (a `ResourceProvider`), `rootScenePath` (the `res://` path the scene opens under, optional)
-  and `children`. A new `provider` starts a new resource loader.
+  `provider` (a `ResourceProvider`), `rootScenePath` (the `res://` path the scene opens under,
+  optional) and `children`. A new `provider` starts a new resource loader. The provider moves the
+  target of a `RemoteTransform` in the `scene` object, so parse one scene for each provider.
 - `ResourceProvider` (a type): `loadResource(path, type?)` returns the file as a string or an
   `ArrayBuffer`, or `null` when the file is missing.
 - `useSelection`: the selected node path and the functions that change it. Call it in a component

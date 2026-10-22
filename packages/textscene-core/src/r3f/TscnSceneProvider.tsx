@@ -9,13 +9,17 @@ import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { createResourcePipeline } from '../resources/createResourcePipeline.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { toSceneGraph } from './hooks/useParsedScene.js';
+import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
 import {
   DEFAULT_ROOT_SCENE_PATH,
   previewShellProviders,
 } from './components/TscnPreviewShell/previewShellProviders.js';
 
 interface TscnSceneProviderProps {
-  /** The scene to draw, as `TscnParser` returns it. */
+  /**
+   * The scene to draw, as `TscnParser` returns it. The provider moves the targets of its
+   * RemoteTransform nodes in this object, so parse one scene for each provider.
+   */
   scene: TscnScene;
   /** How the scene's `res://` resources load. Another provider starts another resource loader. */
   provider: ResourceProvider;
@@ -39,5 +43,15 @@ export function TscnSceneProvider({
 
   const withProviders = previewShellProviders({ hierarchyValue, panelId, rootScenePath });
 
-  return <ResourceLoaderProvider loader={loader}>{withProviders(children)}</ResourceLoaderProvider>;
+  // The resetter clears the selection when `scene` changes, or the highlight draws a removed node.
+  return (
+    <ResourceLoaderProvider loader={loader}>
+      {withProviders(
+        <>
+          <SceneChangeResetter sceneGraph={hierarchyValue.sceneGraph} />
+          {children}
+        </>
+      )}
+    </ResourceLoaderProvider>
+  );
 }

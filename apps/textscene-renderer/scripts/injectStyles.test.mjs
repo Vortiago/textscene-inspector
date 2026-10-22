@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { injectStyles } from './injectStyles.mjs';
 
 /** Runs the statement that heads `injectStyles`' output in a page, and returns the page's <head>. */
-function headAfter(source, globals, loads = 1) {
+function headAfter(sources, globals) {
   const children = [];
   const document = {
     createElement: () => ({}),
     getElementById: (id) => children.find((child) => child.id === id) ?? null,
     head: { appendChild: (child) => children.push(child) },
   };
-  for (let load = 0; load < loads; load++) runInNewContext(source, { document, ...globals });
+  for (const source of [sources].flat()) runInNewContext(source, { document, ...globals });
   return children;
 }
 
@@ -23,9 +23,15 @@ describe('injectStyles', () => {
   });
 
   it('keeps one stylesheet when the bundle loads twice, as under hot reload', () => {
-    const children = headAfter(injectStyles('', '.a {}'), {}, 2);
+    const children = headAfter([injectStyles('', '.a {}'), injectStyles('', '.a {}')], {});
 
     expect(children).toHaveLength(1);
+  });
+
+  it('keeps the styles of the load that ran last, so a reload shows an edited stylesheet', () => {
+    const [style] = headAfter([injectStyles('', '.a {}'), injectStyles('', '.b {}')], {});
+
+    expect(style).toMatchObject({ textContent: '.b {}' });
   });
 
   it('keeps the bundle after the statement', () => {

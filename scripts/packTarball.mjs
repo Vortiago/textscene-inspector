@@ -11,5 +11,6 @@ export function packTarball(packageDir, destination) {
     encoding: 'utf8',
     stdio: 'pipe',
   });
-  return JSON.parse(output).filename;
+  // A lifecycle script of the package may print before the JSON.
+  return JSON.parse(output.slice(output.indexOf('{'))).filename;
 }

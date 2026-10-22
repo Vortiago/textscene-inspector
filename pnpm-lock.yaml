@@ -91,8 +91,8 @@ catalogs:
       specifier: ^7.0.0
       version: 7.0.0
     postprocessing:
-      specifier: ^6.39
-      version: 6.39.3
+      specifier: ^6.39.5
+      version: 6.39.5
     prettier:
       specifier: 3.9.9
       version: 3.9.9
@@ -312,7 +312,7 @@ importers:
         version: 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
       '@react-three/postprocessing':
         specifier: 'catalog:'
-        version: 3.1.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.3(three@0.186.0))(react@19.3.0)(three@0.186.0)
+        version: 3.1.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.5(three@0.186.0))(react@19.3.0)(three@0.186.0)
       '@textscene/core':
         specifier: workspace:*
         version: link:../../packages/textscene-core
@@ -342,7 +342,7 @@ importers:
         version: 1.1.1(patch_hash=ixba4smauncpcw4rwdgn4b76aa)
       postprocessing:
         specifier: 'catalog:'
-        version: 6.39.3(three@0.186.0)
+        version: 6.39.5(three@0.186.0)
       react:
         specifier: 'catalog:'
         version: 19.3.0
@@ -518,7 +518,7 @@ importers:
         version: 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
       '@react-three/postprocessing':
         specifier: 'catalog:'
-        version: 3.1.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.3(three@0.186.0))(react@19.3.0)(three@0.186.0)
+        version: 3.1.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.5(three@0.186.0))(react@19.3.0)(three@0.186.0)
       fastnoise-lite:
         specifier: 'catalog:'
         version: 1.1.1(patch_hash=ixba4smauncpcw4rwdgn4b76aa)
@@ -527,7 +527,7 @@ importers:
         version: 0.1.1
       postprocessing:
         specifier: 'catalog:'
-        version: 6.39.3(three@0.186.0)
+        version: 6.39.5(three@0.186.0)
       react:
         specifier: 'catalog:'
         version: 19.3.0
@@ -3239,10 +3239,10 @@ packages:
     resolution: {integrity: sha512-YUbWYCgErwnMAVkjUnYa+KlMBzGpHwiIt/DE7f0G33AuX2LH9UcTk6KgWxd3zRU+pN3u/C+Xl3EnMLM4Hea7Sg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  postprocessing@6.39.3:
-    resolution: {integrity: sha512-h5H1iuN96aRkU06CzJ8d/FqFe3Qs2bI7LiGHTzOI5T5mQqjzovi2t1EkRHb8qkHgoD9cTJDb4uA30AkSxsFB7A==}
+  postprocessing@6.39.5:
+    resolution: {integrity: sha512-YmH+t74J2X1lwYjKzK/tgs9C9kqWWPB9JwZiDF5mEf4BdCEAmEFbO8lXBA7NM0/j4g+x6FgD/Tt5/kT7ogbEDA==}
     peerDependencies:
-      three: '>= 0.168.0 < 0.186.0'
+      three: '>= 0.168.0 < 0.187.0'
 
   potpack@1.0.2:
     resolution: {integrity: sha512-choctRBIV9EMT9WGAZHn3V7t0Z2pMQyl0EZE6pFc/6ml3ssw7Dlf/oAOvFwjm1HVsqfQN8GfeFyJ+d8tRzqueQ==}
@@ -4879,12 +4879,12 @@ snapshots:
       - '@types/react'
       - immer
 
-  '@react-three/postprocessing@3.1.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.3(three@0.186.0))(react@19.3.0)(three@0.186.0)':
+  '@react-three/postprocessing@3.1.2(@react-three/fiber@9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0))(@types/three@0.186.0)(postprocessing@6.39.5(three@0.186.0))(react@19.3.0)(three@0.186.0)':
     dependencies:
       '@react-three/fiber': 9.8.0(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.186.0)
       maath: 0.10.8(@types/three@0.186.0)(three@0.186.0)
-      n8ao: 2.0.1(postprocessing@6.39.3(three@0.186.0))(three@0.186.0)
-      postprocessing: 6.39.3(three@0.186.0)
+      n8ao: 2.0.1(postprocessing@6.39.5(three@0.186.0))(three@0.186.0)
+      postprocessing: 6.39.5(three@0.186.0)
       react: 19.3.0
       three: 0.186.0
     transitivePeerDependencies:
@@ -6654,9 +6654,9 @@ snapshots:
 
   mute-stream@0.0.8: {}
 
-  n8ao@2.0.1(postprocessing@6.39.3(three@0.186.0))(three@0.186.0):
+  n8ao@2.0.1(postprocessing@6.39.5(three@0.186.0))(three@0.186.0):
     dependencies:
-      postprocessing: 6.39.3(three@0.186.0)
+      postprocessing: 6.39.5(three@0.186.0)
       three: 0.186.0
 
   nanoid@3.3.20: {}
@@ -6813,7 +6813,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  postprocessing@6.39.3(three@0.186.0):
+  postprocessing@6.39.5(three@0.186.0):
     dependencies:
       three: 0.186.0
 
