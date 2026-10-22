@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
-import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../parser/projectSettingsParser';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../godot/scene/viewport';
 
 export interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;

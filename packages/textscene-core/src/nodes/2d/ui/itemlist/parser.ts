@@ -13,7 +13,7 @@ import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { ITEM_LIST_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
-import { slotCount } from '../../../../godot/variant/int.js';
+import { slotCount } from '../../../../godot/variant/intSlots.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { ItemListItem, ItemListProperties } from './types';
 

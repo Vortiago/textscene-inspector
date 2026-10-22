@@ -5,29 +5,12 @@
 
 import type { Node3DProperties } from '../../base/node3d/types';
 import type { AudioStreamBaseProperties } from '../types';
-
-/**
- * Attenuation models (Godot Server3D::AttenuationModel).
- */
-export enum AttenuationModel {
-  ATTENUATION_INVERSE_DISTANCE = 0,
-  ATTENUATION_INVERSE_SQUARE_DISTANCE = 1,
-  ATTENUATION_LOGARITHMIC = 2,
-  ATTENUATION_DISABLED = 3,
-}
-
-/**
- * Doppler tracking modes (Godot AudioStreamPlayer3D::DopplerTracking).
- */
-export enum DopplerTracking {
-  DOPPLER_TRACKING_DISABLED = 0,
-  DOPPLER_TRACKING_IDLE_STEP = 1,
-  DOPPLER_TRACKING_PHYSICS_STEP = 2,
-}
+import { AttenuationModel, DopplerTracking } from '../../../godot/scene/audio';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export interface AudioStreamPlayer3DProperties extends Node3DProperties, AudioStreamBaseProperties {
   /** Attenuation model (default: INVERSE_DISTANCE). */
-  attenuation_model: AttenuationModel;
+  attenuation_model: EnumValue<typeof AttenuationModel>;
 
   /**
    * Distance at which the audio is heard at full volume. The range gizmo's
@@ -48,7 +31,7 @@ export interface AudioStreamPlayer3DProperties extends Node3DProperties, AudioSt
   attenuation_filter_db: number;
 
   /** Doppler tracking mode (default: DISABLED). */
-  doppler_tracking: DopplerTracking;
+  doppler_tracking: EnumValue<typeof DopplerTracking>;
 
   /** Panning strength, at least 0 (default: 1.0). */
   panning_strength: number;

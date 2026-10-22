@@ -7,12 +7,13 @@ import {
   GODOT_BLEND_ATTACHMENTS,
   type GodotBlendAttachment,
 } from './blendMode';
+import type { EnumValue } from '../../classdb/enumNames.js';
 
 /**
  * `blend_mode_to_blend_attachment` (`material_storage.cpp:651-716`, Godot 4.6.3), one row per
  * `BaseMaterial3D` blend mode, in Godot's vocabulary.
  */
-const EXPECTED_ATTACHMENTS: Readonly<Record<BlendMode, GodotBlendAttachment>> = {
+const EXPECTED_ATTACHMENTS: Readonly<Record<EnumValue<typeof BlendMode>, GodotBlendAttachment>> = {
   [BlendMode.MIX]: {
     colorOp: 'add',
     srcColor: 'src-alpha',

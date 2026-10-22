@@ -4,7 +4,7 @@ import { storedVector2 } from '../../../godot/math/real';
 import { flooredCount } from '../meshCounts';
 import type { Vector2 } from '../../../godot/math/vector';
 import { PlaneMeshOrientation } from '../../../godot/scene/planeMesh.js';
-import { enumValues } from '../../../godot/classdb/enumNames.js';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /**
  * Defaults that differ between PlaneMesh (FACE_Y, 2×2) and its QuadMesh subclass
@@ -13,13 +13,15 @@ import { enumValues } from '../../../godot/classdb/enumNames.js';
  */
 export interface PlaneMeshDefaults {
   size: Vector2;
-  orientation: PlaneMeshOrientation;
+  orientation: EnumValue<typeof PlaneMeshOrientation>;
 }
 
 export const PLANE_MESH_DEFAULTS: PlaneMeshDefaults = {
   size: { x: 2, y: 2 },
   orientation: PlaneMeshOrientation.FACE_Y,
 };
+
+const ORIENTATIONS = Object.values(PlaneMeshOrientation);
 
 export function decodePlaneMesh(
   properties: Record<string, string>,
@@ -29,12 +31,7 @@ export function decodePlaneMesh(
     size: storedVector2(vec2Or(properties.size, defaults.size, 'PlaneMesh size')),
     subdivideWidth: flooredCount(properties.subdivide_width, 0, 0, 'PlaneMesh subdivideWidth'),
     subdivideDepth: flooredCount(properties.subdivide_depth, 0, 0, 'PlaneMesh subdivideDepth'),
-    orientation: enumOr(
-      properties.orientation,
-      defaults.orientation,
-      enumValues(PlaneMeshOrientation),
-      'PlaneMesh orientation'
-    ),
+    orientation: enumOr(properties.orientation, defaults.orientation, ORIENTATIONS, 'PlaneMesh orientation'),
     centerOffset: vec3Or(properties.center_offset, { x: 0, y: 0, z: 0 }, 'PlaneMesh center_offset'),
   };
 }

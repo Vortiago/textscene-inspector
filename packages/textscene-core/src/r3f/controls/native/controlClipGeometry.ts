@@ -9,7 +9,7 @@
  */
 import * as THREE from 'three';
 import { round as godotRound } from '../../../godot/math/math';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 
 /**
  * Appends a node's own planes to the inherited ones, which only narrows. With no

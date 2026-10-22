@@ -172,8 +172,10 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
   for the engine area it ports (ARCHITECTURE.md lists them). A group has no `index.ts`. Import a
   fact from its file. `godot/index.ts` serves only the `./godot` package export, so it re-exports
   only what a package outside core imports.
-- A Godot enum lives in `godot/` once. When its member names are the labels a validator prints,
-  its label table is `enumNamesByValue(<Enum>)`.
+- A Godot enum lives in `godot/` once, as an `as const` object, with its Godot cite. Write its
+  type as `EnumValue<typeof Name>`. Never copy its values into a slice, and never re-export a
+  `godot/` name: `engineFactRoutes.test.ts` fails both. When its member names are the labels a
+  validator prints, its label table is `enumNamesByValue(<Enum>)`, named `<CLASS>_<ENUM>_NAMES`.
 - Web tests run under happy-dom, so never assert rendered geometry. Read a `.module.css`
   source through `import.meta.dirname`, never `process.cwd()`.
 - `useResource.ts` clones a cached Object3D per consumer. Assert identity only for textures

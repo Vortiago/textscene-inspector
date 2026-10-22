@@ -1,20 +1,20 @@
 /** A BaseMaterial3D's blend mode and the colour blend attachment Godot programs for each. */
 
-import { enumNamesByValue } from '../../classdb/enumNames.js';
+import { enumNamesByValue, type EnumValue } from '../../classdb/enumNames.js';
 
 /**
  * `BaseMaterial3D::BlendMode` (`scene/resources/material.h:227-233`), as the integers a `.tscn`
  * stores for `blend_mode`. The default is MIX (`material.h:601`).
  */
-export enum BlendMode {
-  MIX = 0,
-  ADD = 1,
-  SUB = 2,
-  MUL = 3,
-  PREMULT_ALPHA = 4,
-}
+export const BlendMode = {
+  MIX: 0,
+  ADD: 1,
+  SUB: 2,
+  MUL: 3,
+  PREMULT_ALPHA: 4,
+} as const;
 
-export const BLEND_MODE_NAMES = enumNamesByValue(BlendMode);
+export const BASE_MATERIAL_3D_BLEND_MODE_NAMES = enumNamesByValue(BlendMode);
 
 /** `RD::BlendOperation`, only the two values the attachments use. */
 export type GodotBlendOp = 'add' | 'reverse-subtract';
@@ -37,7 +37,7 @@ export interface GodotBlendAttachment {
  * `blend_mode_to_blend_attachment` (`servers/rendering/renderer_rd/storage_rd/material_storage.cpp:651-716`),
  * verbatim. Every mode enables blending, and the alpha channel gets its own factors in all five.
  */
-export const GODOT_BLEND_ATTACHMENTS: Readonly<Record<BlendMode, GodotBlendAttachment>> = {
+export const GODOT_BLEND_ATTACHMENTS: Readonly<Record<EnumValue<typeof BlendMode>, GodotBlendAttachment>> = {
   [BlendMode.MIX]: {
     colorOp: 'add',
     srcColor: 'src-alpha',

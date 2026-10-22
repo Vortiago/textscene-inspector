@@ -3,10 +3,8 @@
  * (`area_lights_inc.glsl:325-341`, 4.7.2). A read at `(roughness, view angle)` is Godot's read.
  */
 
-import { LTC_LUT1_BASE64, LTC_LUT2_BASE64, LTC_SIZE } from './ltcTable.generated.js';
+import { LTC_LUT1_BASE64, LTC_LUT2_BASE64 } from './ltcTable.generated.js';
 import { decodeBase64Bytes } from '../../variant/packedBytes.js';
-
-export { LTC_SIZE };
 
 /** The two tables, RGBA floats per texel: a row per view angle and a column per roughness. */
 interface LtcTables {

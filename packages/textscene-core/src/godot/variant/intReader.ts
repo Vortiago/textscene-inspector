@@ -1,6 +1,9 @@
 /**
- * Reading an integer literal the way the engine stores it for a slot width.
- * See `int.ts` for the whole picture.
+ * Variant to fixed-width integer, as the engine converts on a property write (`variant.h:360-377`).
+ * `case INT` (`:367-368`) wraps int64 alike on every platform, so a diagnostic can name the stored
+ * number. `case FLOAT` (`:369-370`) is undefined out of range, so it cannot ({@link asStoredInt}). The
+ * width is a per-slot {@link IntWidth}, and the render path narrows too, so previewer and linter agree.
+ * This file reads an integer literal the way the engine stores it for a slot width.
  */
 
 import { parseGodotFloat } from './number.js';

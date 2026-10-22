@@ -12,15 +12,17 @@ import {
   writeDirectionalShadowMap,
   type DirectionalShadowSampling,
 } from './directionalLightQuad';
-import { Light2DBlendMode, SHADOW_FILTER_NONE, SHADOW_FILTER_PCF13 } from './lightQuad';
+
 import { SHADOW_MAP_BINS } from './shadowPolarMap';
+import { Light2DBlendMode } from '../../godot/scene/light2d';
+import { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
 const WARM = { r: 1, g: 0.75, b: 0.35, a: 0.5 };
 
 function sampling(overrides: Partial<DirectionalShadowSampling> = {}): DirectionalShadowSampling {
   return {
     map: createDirectionalShadowTexture(),
-    filter: SHADOW_FILTER_NONE,
+    filter: Light2DShadowFilter.NONE,
     smooth: 0,
     ndcToShadow: new THREE.Matrix3(),
     shadowColor: { r: 0, g: 0, b: 1, a: 0.5 },
@@ -65,9 +67,9 @@ describe('createDirectionalLightMaterial', () => {
   });
 
   it('selects the kernel by shadow_filter and binds the map and its transform', () => {
-    const shadow = sampling({ filter: SHADOW_FILTER_PCF13 });
+    const shadow = sampling({ filter: Light2DShadowFilter.PCF13 });
     const mat = createDirectionalLightMaterial({ color: WARM, energy: 1, blendMode: 0, shadow });
-    expect(mat.defines?.SHADOW_FILTER).toBe(SHADOW_FILTER_PCF13);
+    expect(mat.defines?.SHADOW_FILTER).toBe(Light2DShadowFilter.PCF13);
     expect(mat.uniforms.uShadowMap!.value).toBe(shadow.map);
     expect(mat.uniforms.uNdcToShadow!.value).toBe(shadow.ndcToShadow);
   });

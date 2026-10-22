@@ -8,7 +8,8 @@
 import type { ParseError } from '../types.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
-import { readerLimitedInt, type IntSlotRead, type IntWidth } from '../../godot/variant/int.js';
+import { readerLimitedInt, type IntWidth } from '../../godot/variant/intWidth.js';
+import { type IntSlotRead } from '../../godot/variant/intSlots.js';
 import { boolLiteralAsNumber, scalarSlotValue } from '../../godot/variant/variantBool.js';
 
 /**

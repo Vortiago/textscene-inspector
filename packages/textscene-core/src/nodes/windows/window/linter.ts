@@ -8,7 +8,7 @@ import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector2i } from '../../../linter/validators/index.js';
-import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../godot/variant/intSlots.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { formatReal, storedReal } from '../../../godot/math/real.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../linter/ruleArms.js';

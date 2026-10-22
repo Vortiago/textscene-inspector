@@ -7,8 +7,6 @@
 import type * as THREE from 'three';
 import type { Curve3DSampler } from '../../../../resources/curves/curve3d/index.js';
 
-export { PathIntervalType, PathRotation, PolygonMode } from '../../../../godot/scene/csg.js';
-
 /**
  * Everything MODE_PATH needs that lives outside this node, resolved beforehand by the
  * `path_node` pass because a component cannot see its siblings.

@@ -17,7 +17,7 @@ import { directionalLightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useDirectionalLightSlot } from '../../../r3f/lighting2d/useLightSequence';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
-import { Light2DBlendMode, shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
+import { shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
 import { buildDirectionalShadowMap } from '../../../r3f/lighting2d/directionalShadowMap';
 import { useDirectionalShadowView, useNdcToShadow } from '../../../r3f/lighting2d/directionalShadowView';
 import { FullScreenQuad } from '../../../r3f/lighting2d/fullScreenQuad';
@@ -29,6 +29,7 @@ import {
   type DirectionalShadowSampling,
 } from '../../../r3f/lighting2d/directionalLightQuad';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { Light2DBlendMode } from '../../../godot/scene/light2d';
 
 export function DirectionalLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as DirectionalLight2DProperties;

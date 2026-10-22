@@ -1,0 +1,22 @@
+; A VisibleOnScreenEnabler3D with an aabb that is not the default, for the one variable no other golden
+; moves: its editor gizmo, which Godot draws as the one of its base class VisibleOnScreenNotifier3D. The
+; previewer gates the gizmo on selection (ADR-0018), so only the `select:` golden has it. A small box
+; sits at two opposite corners of the aabb to frame the whole gizmo.
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxMesh" id="Corner_1"]
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Root" type="Node3D"]
+
+[node name="Enabler" type="VisibleOnScreenEnabler3D" parent="."]
+aabb = AABB(0, 0, 0, 3, 1, 2)
+enable_mode = 1
+
+[node name="NearCorner" type="MeshInstance3D" parent="Enabler"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("Corner_1")
+
+[node name="FarCorner" type="MeshInstance3D" parent="Enabler"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 2)
+mesh = SubResource("Corner_1")

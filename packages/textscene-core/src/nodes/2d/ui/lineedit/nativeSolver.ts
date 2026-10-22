@@ -27,7 +27,7 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TscnNode } from '../../../../parser/types';
 import { lineEditDisplayText } from './displayText';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';

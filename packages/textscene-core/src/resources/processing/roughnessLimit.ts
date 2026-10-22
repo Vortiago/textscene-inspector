@@ -14,10 +14,11 @@ import { RoughnessChannel } from '../../godot/import/textureImport';
 import type { ImagePixels } from '../formats/image/imagePixels';
 import { byteOf, channelOf } from '../../godot/project/image.js';
 import type { MipLevel } from './mipChain';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** The channel the limiter raises, and the format the import holds, which decides the write. */
 interface RoughnessTarget {
-  channel: RoughnessChannel;
+  channel: EnumValue<typeof RoughnessChannel>;
   source: ImageSourceFormat | null;
 }
 

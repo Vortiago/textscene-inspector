@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { parsePathFollow3D } from './parser';
-import { RotationMode } from './types';
+
 import { heading } from '../../../parser/testing/parserKit';
+import { PathFollow3DRotationMode } from '../../../godot/scene/pathFollow3d';
 
 describe('parsePathFollow3D', () => {
   it('defaults rotation_mode to XYZ, booleans to Godot defaults, offsets to 0', () => {
     const props = parsePathFollow3D(heading('PathFollow3D', { name: 'Follow' }), {});
-    expect(props.rotation_mode).toBe(RotationMode.XYZ);
+    expect(props.rotation_mode).toBe(PathFollow3DRotationMode.XYZ);
     expect(props.cubic_interp).toBe(true);
     expect(props.loop).toBe(true);
     expect(props.tilt_enabled).toBe(true);
@@ -29,7 +30,7 @@ describe('parsePathFollow3D', () => {
     expect(props.progress_ratio).toBeCloseTo(0.25, 5);
     expect(props.h_offset).toBe(2);
     expect(props.v_offset).toBe(-1);
-    expect(props.rotation_mode).toBe(RotationMode.NONE);
+    expect(props.rotation_mode).toBe(PathFollow3DRotationMode.NONE);
     expect(props.loop).toBe(false);
     expect(props.use_model_front).toBe(true);
   });

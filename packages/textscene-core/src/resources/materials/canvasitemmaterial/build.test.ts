@@ -8,7 +8,12 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { canvasItemBlendState } from './build';
 import { canvasItemMaterialOf } from './decode';
-import { CanvasItemBlendMode, CanvasItemLightMode, type CanvasItemMaterialProperties } from './types';
+import { type CanvasItemMaterialProperties } from './types';
+import {
+  CanvasItemMaterialBlendMode,
+  CanvasItemMaterialLightMode,
+} from '../../../godot/scene/canvasItemMaterial';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** The CanvasItemMaterial a resource with this property bag draws as. */
 function decode(data: Record<string, string>): CanvasItemMaterialProperties {
@@ -36,9 +41,9 @@ interface GodotAttachment {
 }
 
 /** `blend_mode_to_blend_attachment`, case by case (cpp:655-708). */
-const GODOT: Array<[CanvasItemBlendMode, string, GodotAttachment]> = [
+const GODOT: Array<[EnumValue<typeof CanvasItemMaterialBlendMode>, string, GodotAttachment]> = [
   [
-    CanvasItemBlendMode.ADD,
+    CanvasItemMaterialBlendMode.ADD,
     'ADD (cpp:664-672)',
     {
       colorOp: OP_ADD,
@@ -51,7 +56,7 @@ const GODOT: Array<[CanvasItemBlendMode, string, GodotAttachment]> = [
     },
   ],
   [
-    CanvasItemBlendMode.SUB,
+    CanvasItemMaterialBlendMode.SUB,
     'SUB — reverse subtract (cpp:673-681)',
     {
       colorOp: OP_REVERSE_SUBTRACT,
@@ -64,7 +69,7 @@ const GODOT: Array<[CanvasItemBlendMode, string, GodotAttachment]> = [
     },
   ],
   [
-    CanvasItemBlendMode.MUL,
+    CanvasItemMaterialBlendMode.MUL,
     'MUL — alpha multiplies too (cpp:682-690)',
     {
       colorOp: OP_ADD,
@@ -77,7 +82,7 @@ const GODOT: Array<[CanvasItemBlendMode, string, GodotAttachment]> = [
     },
   ],
   [
-    CanvasItemBlendMode.PREMULT_ALPHA,
+    CanvasItemMaterialBlendMode.PREMULT_ALPHA,
     'PREMULT_ALPHA (cpp:700-708)',
     {
       colorOp: OP_ADD,
@@ -110,7 +115,7 @@ describe('canvasItemBlendState', () => {
     // Godot MIX: colour SRC_ALPHA / ONE_MINUS_SRC_ALPHA, alpha ONE /
     // ONE_MINUS_SRC_ALPHA, both ADD: the pair three's NormalBlending sets for a
     // straight-alpha material, so no custom factors are needed and none are set.
-    const state = canvasItemBlendState(CanvasItemBlendMode.MIX);
+    const state = canvasItemBlendState(CanvasItemMaterialBlendMode.MIX);
     expect(state.blending).toBe(THREE.NormalBlending);
     expect(state.premultipliedAlpha).toBe(false);
     expect(state.blendSrc).toBeUndefined();
@@ -122,14 +127,14 @@ describe('canvasItemBlendState', () => {
     // The five BIND_ENUM_CONSTANTs are the modes a scene can carry; each must
     // resolve to a state, and only MIX may be the preset one.
     const authorable = [
-      CanvasItemBlendMode.MIX,
-      CanvasItemBlendMode.ADD,
-      CanvasItemBlendMode.SUB,
-      CanvasItemBlendMode.MUL,
-      CanvasItemBlendMode.PREMULT_ALPHA,
+      CanvasItemMaterialBlendMode.MIX,
+      CanvasItemMaterialBlendMode.ADD,
+      CanvasItemMaterialBlendMode.SUB,
+      CanvasItemMaterialBlendMode.MUL,
+      CanvasItemMaterialBlendMode.PREMULT_ALPHA,
     ];
     const custom = authorable.filter((mode) => canvasItemBlendState(mode).blending === THREE.CustomBlending);
-    expect(custom).toEqual(authorable.filter((mode) => mode !== CanvasItemBlendMode.MIX));
+    expect(custom).toEqual(authorable.filter((mode) => mode !== CanvasItemMaterialBlendMode.MIX));
   });
 
   it("never sets three's in-shader premultiply — Godot only programs blend factors", () => {
@@ -137,11 +142,11 @@ describe('canvasItemBlendState', () => {
     // premultipliedAlpha adds `rgb *= a` in-shader, which would premultiply a
     // straight-alpha texture twice against Godot's output.
     const premultiplied = [
-      CanvasItemBlendMode.MIX,
-      CanvasItemBlendMode.ADD,
-      CanvasItemBlendMode.SUB,
-      CanvasItemBlendMode.MUL,
-      CanvasItemBlendMode.PREMULT_ALPHA,
+      CanvasItemMaterialBlendMode.MIX,
+      CanvasItemMaterialBlendMode.ADD,
+      CanvasItemMaterialBlendMode.SUB,
+      CanvasItemMaterialBlendMode.MUL,
+      CanvasItemMaterialBlendMode.PREMULT_ALPHA,
     ].filter((mode) => canvasItemBlendState(mode).premultipliedAlpha);
     expect(premultiplied).toEqual([]);
   });
@@ -150,22 +155,26 @@ describe('canvasItemBlendState', () => {
     // BLEND_MODE_DISABLED is in the C++ enum but bound to neither the script API
     // nor the inspector hint, so decode rejects a `blend_mode = 5` first; the
     // build half still has to answer, and MIX is the safe answer.
-    const disabled = 5 as CanvasItemBlendMode;
-    expect(canvasItemBlendState(disabled)).toEqual(canvasItemBlendState(CanvasItemBlendMode.MIX));
-    expect(decode({ blend_mode: '5' }).blendMode).toBe(CanvasItemBlendMode.MIX);
+    const disabled = 5 as EnumValue<typeof CanvasItemMaterialBlendMode>;
+    expect(canvasItemBlendState(disabled)).toEqual(canvasItemBlendState(CanvasItemMaterialBlendMode.MIX));
+    expect(decode({ blend_mode: '5' }).blendMode).toBe(CanvasItemMaterialBlendMode.MIX);
   });
 
   it('is independent of light_mode — unshaded and light_only blend the same', () => {
     // light_mode selects which 2D lights reach the item (canvasItemLighting),
     // never how its pixels combine, so the blend state must not move with it.
-    const forMode = (lightMode: CanvasItemLightMode) =>
+    const forMode = (lightMode: EnumValue<typeof CanvasItemMaterialLightMode>) =>
       canvasItemBlendState(decode({ blend_mode: '1', light_mode: String(lightMode) }).blendMode);
-    expect(forMode(CanvasItemLightMode.UNSHADED)).toEqual(forMode(CanvasItemLightMode.NORMAL));
-    expect(forMode(CanvasItemLightMode.LIGHT_ONLY)).toEqual(forMode(CanvasItemLightMode.NORMAL));
+    expect(forMode(CanvasItemMaterialLightMode.UNSHADED)).toEqual(
+      forMode(CanvasItemMaterialLightMode.NORMAL)
+    );
+    expect(forMode(CanvasItemMaterialLightMode.LIGHT_ONLY)).toEqual(
+      forMode(CanvasItemMaterialLightMode.NORMAL)
+    );
   });
 
   it('blends a material with no blend_mode at all as MIX (the decode default)', () => {
     const state = canvasItemBlendState(decode({}).blendMode);
-    expect(state).toEqual(canvasItemBlendState(CanvasItemBlendMode.MIX));
+    expect(state).toEqual(canvasItemBlendState(CanvasItemMaterialBlendMode.MIX));
   });
 });

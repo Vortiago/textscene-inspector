@@ -69,12 +69,12 @@ export const MAX_LIGHTS_PER_ITEM = 16;
  * `rendering_server_enums.h:794-799`), the integers a `.tscn` stores for `GeometryInstance3D.cast_shadow`
  * and a MeshLibrary item's `mesh_cast_shadow`.
  */
-export enum ShadowCastingSetting {
-  OFF = 0,
-  ON = 1,
-  DOUBLE_SIDED = 2,
-  SHADOWS_ONLY = 3,
-}
+export const ShadowCastingSetting = {
+  OFF: 0,
+  ON: 1,
+  DOUBLE_SIDED: 2,
+  SHADOWS_ONLY: 3,
+} as const;
 
 /** Each `ShadowCastingSetting` name by its integer, as a validator or an inspector names it. */
 export const SHADOW_CASTING_SETTING_NAMES = enumNamesByValue(ShadowCastingSetting);

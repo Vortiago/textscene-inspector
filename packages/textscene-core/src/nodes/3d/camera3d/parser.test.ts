@@ -4,19 +4,20 @@
 
 import { describe, it, expect } from 'vitest';
 import { parseCamera3D } from './parser';
-import { ProjectionMode, KeepAspectMode } from './types';
+
 import { heading } from '../../../parser/testing/parserKit';
+import { Camera3DProjectionType, Camera3DKeepAspect } from '../../../godot/scene/camera3d';
 
 describe('Camera3D Parser', () => {
   describe('parseCamera3D', () => {
     it('should parse perspective camera with defaults', () => {
       const props = parseCamera3D(heading('Camera3D', { name: 'Camera' }), {});
 
-      expect(props.projection).toBe(ProjectionMode.PROJECTION_PERSPECTIVE);
+      expect(props.projection).toBe(Camera3DProjectionType.PERSPECTIVE);
       expect(props.fov).toBe(75.0);
       expect(props.near).toBe(0.05);
       expect(props.far).toBe(4000.0);
-      expect(props.keep_aspect).toBe(KeepAspectMode.KEEP_HEIGHT);
+      expect(props.keep_aspect).toBe(Camera3DKeepAspect.KEEP_HEIGHT);
       expect(props.current).toBe(false);
     });
 
@@ -30,11 +31,11 @@ describe('Camera3D Parser', () => {
         current: 'true',
       });
 
-      expect(props.projection).toBe(ProjectionMode.PROJECTION_PERSPECTIVE);
+      expect(props.projection).toBe(Camera3DProjectionType.PERSPECTIVE);
       expect(props.fov).toBe(60.0);
       expect(props.near).toBe(0.1);
       expect(props.far).toBe(1000.0);
-      expect(props.keep_aspect).toBe(KeepAspectMode.KEEP_HEIGHT);
+      expect(props.keep_aspect).toBe(Camera3DKeepAspect.KEEP_HEIGHT);
       expect(props.current).toBe(true);
     });
 
@@ -47,11 +48,11 @@ describe('Camera3D Parser', () => {
         keep_aspect: '0',
       });
 
-      expect(props.projection).toBe(ProjectionMode.PROJECTION_ORTHOGONAL);
+      expect(props.projection).toBe(Camera3DProjectionType.ORTHOGONAL);
       expect(props.size).toBe(10.0);
       expect(props.near).toBe(0.1);
       expect(props.far).toBe(100.0);
-      expect(props.keep_aspect).toBe(KeepAspectMode.KEEP_WIDTH);
+      expect(props.keep_aspect).toBe(Camera3DKeepAspect.KEEP_WIDTH);
     });
 
     it('should parse frustum offset', () => {
@@ -97,7 +98,7 @@ describe('Camera3D Parser', () => {
         projection: '2',
       });
 
-      expect(props.projection).toBe(ProjectionMode.PROJECTION_FRUSTUM);
+      expect(props.projection).toBe(Camera3DProjectionType.FRUSTUM);
     });
 
     it('reads an out-of-range keep_aspect as KEEP_HEIGHT, as Godot does', () => {
@@ -105,7 +106,7 @@ describe('Camera3D Parser', () => {
         keep_aspect: '2',
       });
 
-      expect(props.keep_aspect).toBe(KeepAspectMode.KEEP_HEIGHT);
+      expect(props.keep_aspect).toBe(Camera3DKeepAspect.KEEP_HEIGHT);
     });
   });
 });
@@ -118,7 +119,7 @@ describe('a projection value the tokenizer cannot read', () => {
       projection: '1abc',
     });
 
-    expect(props.projection).toBe(ProjectionMode.PROJECTION_PERSPECTIVE);
+    expect(props.projection).toBe(Camera3DProjectionType.PERSPECTIVE);
   });
 
   it('reads the keep-aspect mode the same way', () => {
@@ -126,6 +127,6 @@ describe('a projection value the tokenizer cannot read', () => {
       keep_aspect: '0abc',
     });
 
-    expect(props.keep_aspect).toBe(KeepAspectMode.KEEP_HEIGHT);
+    expect(props.keep_aspect).toBe(Camera3DKeepAspect.KEEP_HEIGHT);
   });
 });

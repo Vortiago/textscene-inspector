@@ -1,16 +1,20 @@
 ---
 type: VisibleOnScreenEnabler3D
 category: 3D
-status: linter-only
+status: limitation
 fixture: unit-visible-on-screen-enabler-3d.tscn
 # image: unit-visible-on-screen-enabler-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a selection-gated box gizmo
 ---
 
 # VisibleOnScreenEnabler3D
 
-Switches another node's `process_mode` on and off as this node's box enters and leaves the screen. It draws nothing at runtime in Godot either, so the previewer renders it as a transform-only group (ADR-0008).
+Switches another node's `process_mode` on and off as this node's box enters and leaves the screen. It draws nothing at runtime. Godot's editor draws the gizmo of its base class, and the previewer draws it while the node is selected (ADR-0018).
+
+## Gizmo
+
+A selected enabler draws the gizmo of VisibleOnScreenNotifier3D in Godot's editor, because the gizmo plugin matches the base class (`visible_on_screen_notifier_3d_gizmo_plugin.cpp:46-48`). The lines are the 12 edges of `aabb`, three unit axes from its centre and a fill of the box. The notifier sheet describes them.
 
 ## Linting
 
@@ -28,4 +32,8 @@ Strict parsing format-checks these `VisibleOnScreenEnabler3D` properties, plus 1
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reuses the base parser and keeps every key in `rawProperties` verbatim, so a malformed `enable_mode` is neither substituted nor dropped. It survives into the inspector as written while the strict parser reports it.
+The lenient parser reads `aabb` as the notifier does, for the gizmo. It keeps every key in `rawProperties` verbatim, so a malformed `enable_mode` is neither substituted nor dropped. It survives into the inspector as written while the strict parser reports it.
+
+## Known limitations
+
+- **Editor only** Godot's editor also draws the edges and axes of an unselected enabler at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.

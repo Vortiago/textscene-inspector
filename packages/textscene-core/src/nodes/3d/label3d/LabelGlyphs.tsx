@@ -89,6 +89,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
 
   // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
   // equal-valued one rebuilds nothing.
+  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
@@ -100,11 +101,12 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     doubleSided: properties.double_sided,
     noDepthTest: properties.no_depth_test,
     textureFilter: properties.texture_filter,
-    anisotropicFilteringLevel: useAnisotropicFilteringLevel(),
+    anisotropicFilteringLevel,
   });
   // The glyph pages carry a mip chain only for a font with `generate_mipmaps`; the filter row
   // says whether a mipmapped sampler reads it.
-  const mipmapped = projectDefaultFontGeneratesMipmaps(useProjectSettings().settings);
+  const { settings } = useProjectSettings();
+  const mipmapped = projectDefaultFontGeneratesMipmaps(settings);
   const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass };
 
   // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs

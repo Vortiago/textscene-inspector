@@ -5,19 +5,8 @@
  */
 
 import type { NodeProperties } from '../../node/types';
-
-/** Godot AnimationMixer::AnimationCallbackModeProcess (animation_mixer.h:54) */
-export enum AnimationProcessMode {
-  PHYSICS = 0,
-  IDLE = 1,
-  MANUAL = 2,
-}
-
-/** Godot AnimationMixer::AnimationCallbackModeMethod (animation_mixer.h:60) */
-export enum MethodCallMode {
-  DEFERRED = 0,
-  IMMEDIATE = 1,
-}
+import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /**
  * An AnimationLibrary SubResource the node references with `libraries/<name> = SubResource("id")`.
@@ -38,10 +27,10 @@ export interface AnimationPlayerProperties extends NodeProperties {
   playback_default_blend_time: number;
 
   /** Process callback mode (default: IDLE); deprecated key `playback_process_mode`. */
-  callback_mode_process: AnimationProcessMode;
+  callback_mode_process: EnumValue<typeof AnimationCallbackModeProcess>;
 
   /** Method call mode (default: DEFERRED); deprecated key `method_call_mode`. */
-  callback_mode_method: MethodCallMode;
+  callback_mode_method: EnumValue<typeof AnimationCallbackModeMethod>;
 
   /** Whether the mixer applies anything (default: true); deprecated key `playback_active`. */
   active: boolean;

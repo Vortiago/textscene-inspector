@@ -12,7 +12,7 @@
 
 import type { ControlProperties } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,

@@ -13,6 +13,7 @@ import {
   selfFade,
 } from './visibilityRange.js';
 import type { VisibilityRange } from './visibilityRange.js';
+import type { EnumValue } from '../classdb/enumNames.js';
 
 export interface VisibilityCullInstance {
   range: VisibilityRange;
@@ -104,14 +105,14 @@ export function cullVisibility(instances: readonly VisibilityCullInstance[]): Vi
   }
 }
 
-const DEPENDENCY_FLAGS: Readonly<Record<RangeCheck, number>> = {
+const DEPENDENCY_FLAGS: Readonly<Record<EnumValue<typeof RangeCheck>, number>> = {
   [RangeCheck.BEYOND_END]: HIDDEN,
   [RangeCheck.SHORT_OF_BEGIN]: HIDDEN_CLOSE_RANGE,
   [RangeCheck.IN_RANGE]: 0,
   [RangeCheck.IN_FADE_MARGIN]: FADE_CHILDREN,
 };
 
-function drawsAt(check: RangeCheck): boolean {
+function drawsAt(check: EnumValue<typeof RangeCheck>): boolean {
   return check === RangeCheck.IN_RANGE || check === RangeCheck.IN_FADE_MARGIN;
 }
 

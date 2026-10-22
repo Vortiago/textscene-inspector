@@ -1,6 +1,6 @@
 /** The three unit axes that Godot's CPUParticles3D gizmo draws from the centre of its box. */
 import { describe, expect, it } from 'vitest';
-import { EMPTY_AABB } from '../../../../godot/math/aabb';
+import { EMPTY_AABB } from '../../godot/math/aabb';
 import { centreAxisLines } from './centreAxes';
 
 describe('centreAxisLines', () => {

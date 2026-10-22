@@ -5,26 +5,12 @@
  */
 
 import type { NodeProperties } from '../../node/types';
-
-/** Godot AnimationTree::AnimationProcessCallback */
-export enum AnimationTreeProcessMode {
-  PHYSICS = 0,
-  IDLE = 1,
-  MANUAL = 2,
-}
-
-/** Godot AnimationTree::AnimationCallbackModeMethod */
-export enum CallbackModeMethod {
-  DEFERRED = 0,
-  IMMEDIATE = 1,
-}
-
-/** Godot AnimationTree::AnimationCallbackModeDiscrete */
-export enum CallbackModeDiscrete {
-  DOMINANT = 0,
-  RECESSIVE = 1,
-  FORCE_CONTINUOUS = 2,
-}
+import {
+  AnimationCallbackModeProcess,
+  AnimationCallbackModeMethod,
+  AnimationCallbackModeDiscrete,
+} from '../../../godot/scene/animation';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export interface AnimationTreeProperties extends NodeProperties {
   /** SubResource/ExtResource reference to the animation tree root node. */
@@ -44,16 +30,16 @@ export interface AnimationTreeProperties extends NodeProperties {
   active: boolean;
 
   /** Process callback mode (default: IDLE). */
-  process_callback: AnimationTreeProcessMode;
+  process_callback: EnumValue<typeof AnimationCallbackModeProcess>;
 
   /** Callback mode for process (default: IDLE). */
-  callback_mode_process: AnimationTreeProcessMode;
+  callback_mode_process: EnumValue<typeof AnimationCallbackModeProcess>;
 
   /** Callback mode for methods (default: DEFERRED). */
-  callback_mode_method: CallbackModeMethod;
+  callback_mode_method: EnumValue<typeof AnimationCallbackModeMethod>;
 
   /** Callback mode for discrete transitions (default: FORCE_CONTINUOUS, AnimationTree's override). */
-  callback_mode_discrete: CallbackModeDiscrete;
+  callback_mode_discrete: EnumValue<typeof AnimationCallbackModeDiscrete>;
 
   /** NodePath track used for root motion extraction (empty = disabled). */
   root_motion_track: string;

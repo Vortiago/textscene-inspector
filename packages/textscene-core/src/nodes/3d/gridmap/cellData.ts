@@ -6,7 +6,8 @@
  */
 
 import { warn } from '../../../logger.js';
-import { slotInt, toInt16, toUint32 } from '../../../godot/variant/int.js';
+import { slotInt } from '../../../godot/variant/intSlots.js';
+import { toInt16, toUint32 } from '../../../godot/variant/intWidth.js';
 import { dictCallField } from '../../../godot/variant/variantParser.js';
 
 /**

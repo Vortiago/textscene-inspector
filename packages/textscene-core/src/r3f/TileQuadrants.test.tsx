@@ -27,19 +27,16 @@ import { CanvasItemKeyProvider } from './components/CanvasItemGroup';
 import { canvasRenderOrder } from './canvasPaintOrder';
 import { CanvasModulateContext } from './canvasModulate';
 import { WHITE_MODULATE } from './canvasItemModulate';
-import {
-  CanvasItemBlendMode,
-  CanvasItemLightMode,
-  type CanvasItemMaterialProperties,
-} from '../resources/materials/canvasitemmaterial/types';
+import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import type { Rgba } from '../godot/math/math';
+import { CanvasItemMaterialBlendMode, CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
 
 function canvasItemMaterial(overrides: Partial<CanvasItemMaterialProperties>): CanvasItemMaterialProperties {
   return { ...canvasItemMaterialOf({ type: 'CanvasItemMaterial', data: {} })!, ...overrides };
 }
 
-const ADD = canvasItemMaterial({ blendMode: CanvasItemBlendMode.ADD });
-const UNSHADED = canvasItemMaterial({ lightMode: CanvasItemLightMode.UNSHADED });
+const ADD = canvasItemMaterial({ blendMode: CanvasItemMaterialBlendMode.ADD });
+const UNSHADED = canvasItemMaterial({ lightMode: CanvasItemMaterialLightMode.UNSHADED });
 
 /**
  * The tile at atlas (0, 0): alternative 0 at TileData defaults, 1 at z_index 2, 2 with an additive

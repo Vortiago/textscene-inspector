@@ -11,7 +11,7 @@ import '../../node/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { busValidator } from '../busValidator.js';
-import { PLAYBACK_TYPE_NAMES } from '../../../godot/audio/audioServer.js';
+import { AUDIO_SERVER_PLAYBACK_TYPE_NAMES } from '../../../godot/audio/audioServer.js';
 import { AUDIO_STREAM_PLAYER_MIX_TARGET_NAMES } from '../../../godot/scene/audio.js';
 
 validatorRegistry.registerAll('AudioStreamPlayer', {
@@ -50,7 +50,7 @@ validatorRegistry.registerAll('AudioStreamPlayer', {
   // set_playback_type (:234-236) forwards to
   // AudioStreamPlayerInternal::set_playback_type (audio_stream_player_internal.cpp:337-339),
   // a bare assignment: out-of-range only warns.
-  playback_type: v.enumInt('playback_type', PLAYBACK_TYPE_NAMES, {
+  playback_type: v.enumInt('playback_type', AUDIO_SERVER_PLAYBACK_TYPE_NAMES, {
     hinted: 'audio_stream_player.cpp:291',
   }),
 });
