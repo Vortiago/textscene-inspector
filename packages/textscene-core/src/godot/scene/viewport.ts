@@ -23,6 +23,9 @@ export const POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES = relabelEnumNames(
   (name) => name.replace('SHADOWS_', '')
 );
 
+/** Godot's default `rendering/textures/default_filters/anisotropic_filtering_level`, 4x (`rendering_server.cpp:3750`). */
+export const DEFAULT_ANISOTROPIC_FILTERING_LEVEL = 2;
+
 /** `Viewport::AnisotropicFiltering` (`viewport.h:128-135`), without its `_MAX`. */
 const AnisotropicFiltering = {
   DISABLED: 0,
