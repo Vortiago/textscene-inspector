@@ -11,7 +11,7 @@ import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
-import { glbPathOf } from '../resources/glbSceneRoot.js';
+import { glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -208,13 +208,12 @@ function placeInGlb(
   hostScope: SceneScope,
   glbCache: CachedGlbSource | undefined
 ): { glbRoot?: LiveNode; attached: LiveNode[]; rest: LiveNode[] } {
-  const root = contentRoots.length === 1 ? contentRoots[0]! : undefined;
-  const glbPath = root && glbPathOf(root);
+  const glbPath = loneGlbRootPath(contentRoots);
   const object = glbPath ? glbCache?.getCached(glbPath) : undefined;
-  if (!root || !object) return { attached: [], rest: hostChildren };
+  if (!object) return { attached: [], rest: hostChildren };
   const { attached, rest } = splitAttachedChildren(object, hostChildren);
   return {
-    glbRoot: root as LiveNode,
+    glbRoot: contentRoots[0] as LiveNode,
     attached: attached.map((child) => (child.scope ? child : { ...child, scope: hostScope })),
     rest,
   };

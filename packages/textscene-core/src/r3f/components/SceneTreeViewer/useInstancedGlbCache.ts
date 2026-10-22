@@ -6,13 +6,12 @@
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { useResource } from '../../../resources/useResource.js';
-import { glbPathOf } from '../../../resources/glbSceneRoot.js';
+import { loneGlbRootPath } from '../../../resources/glbSceneRoot.js';
 import type { CachedGlbSource } from '../../liveSceneTree.js';
 import type { SubSceneChildren } from './useSubSceneChildren.js';
 
 export function useInstancedGlbCache(subScene: SubSceneChildren | null): CachedGlbSource | undefined {
-  const root = subScene?.nodes.length === 1 ? subScene.nodes[0]! : undefined;
-  const glbPath = root && glbPathOf(root);
+  const glbPath = subScene ? loneGlbRootPath(subScene.nodes) : undefined;
   const result = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
 
   return useMemo(() => {
