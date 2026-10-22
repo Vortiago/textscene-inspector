@@ -1,4 +1,4 @@
-/** TubeTrailMesh resource slice: claims the type name, re-exports its decode. */
+/** TubeTrailMesh resource slice: claims the type name. */
 
 import { registerGenericResourceSlice } from '../../sliceRegistration.js';
 

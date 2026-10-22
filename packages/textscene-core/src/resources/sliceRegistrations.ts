@@ -35,6 +35,7 @@ import './meshes/torusmesh/index.js';
 import './meshes/prismmesh/index.js';
 import './meshes/pointmesh/index.js';
 import './meshes/tubetrailmesh/index.js';
+import './meshes/ribbontrailmesh/index.js';
 import './meshes/multimesh/index.js';
 
 // Collision shapes

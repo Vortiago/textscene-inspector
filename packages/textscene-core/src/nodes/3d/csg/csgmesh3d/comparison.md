@@ -38,4 +38,5 @@ The lenient parser copies `mesh` through only when present. An absent one leaves
 
 ## Known limitations
 
-- **Resource gap** A mesh the previewer does not build (RibbonTrailMesh or TextMesh) adds nothing to the solid, and the node's details name the type.
+- **Resource gap** A mesh the previewer does not build (TextMesh) adds nothing to the solid, and the node's details name the type.
+- **Open brush** A RibbonTrailMesh adds its ribbon to the solid, where Godot adds nothing because manifold refuses an open brush.

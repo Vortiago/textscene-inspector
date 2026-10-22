@@ -15,9 +15,6 @@ import type { TubeTrailMeshProperties } from './types';
 
 const DEFAULT_RADIUS = 0.5;
 
-/** The property that names the one resource the builder reads. */
-export const CURVE_PROPERTY = 'curve';
-
 /** `curve` is the resource the mesh's `curve` property names, or null when it names none. */
 export function decodeTubeTrailMesh(
   properties: Record<string, string>,

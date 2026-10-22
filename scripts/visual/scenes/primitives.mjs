@@ -21,6 +21,7 @@ export const PRIMITIVE_SCENES = [
   { name: 'torus-mesh', file: 'unit-torus-mesh.tscn' },
   { name: 'torus-mesh-texture-uv', file: 'unit-torus-mesh-texture-uv.tscn' },
   { name: 'tube-trail-mesh-texture-uv', file: 'unit-tube-trail-mesh-texture-uv.tscn' },
+  { name: 'ribbon-trail-mesh-texture-uv', file: 'unit-ribbon-trail-mesh-texture-uv.tscn' },
   // The tangent frame every ported builder writes, under a normal map and each light type.
   { name: 'primitive-mesh-normal-map', file: 'unit-primitive-mesh-normal-map.tscn' },
   // The steps PrimitiveMesh applies after every builder: the UV2 layout and `flip_faces`.

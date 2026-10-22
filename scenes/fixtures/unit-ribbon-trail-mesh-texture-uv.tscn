@@ -1,0 +1,48 @@
+[gd_scene load_steps=7 format=3 uid="uid://unitribbontrailmeshtextureuv"]
+
+; The one variable: the surface a RibbonTrailMesh builds. The stepped gradient runs red, green, blue
+; along the U + V diagonal, so it shows the edges and the rows. The first ribbon is flat, and the
+; second is a cross of two ribbons whose width a Curve narrows down the length. Each turns 30 degrees
+; about Y, so a flat ribbon is not edge-on. The third is the same cross turned 120 degrees, so the
+; strip that faces +X shows and the strip that faces +Z does not. No other scene draws a RibbonTrailMesh.
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="Curve" id="Curve_narrow"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.2), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_flat"]
+material = SubResource("StandardMaterial3D_uv")
+shape = 0
+size = 0.8
+
+[sub_resource type="RibbonTrailMesh" id="RibbonTrailMesh_cross"]
+material = SubResource("StandardMaterial3D_uv")
+size = 0.8
+curve = SubResource("Curve_narrow")
+
+[node name="Root" type="Node3D"]
+
+[node name="Flat" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.866025, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866025, -0.8, 0, 0)
+mesh = SubResource("RibbonTrailMesh_flat")
+
+[node name="Cross" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.866025, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866025, 0.8, 0, 0)
+mesh = SubResource("RibbonTrailMesh_cross")
+
+[node name="CrossTurned" type="MeshInstance3D" parent="."]
+transform = Transform3D(-0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, -0.5, 2.4, 0, 0)
+mesh = SubResource("RibbonTrailMesh_cross")
