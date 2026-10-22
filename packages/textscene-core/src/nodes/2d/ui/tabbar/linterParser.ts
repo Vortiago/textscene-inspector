@@ -6,10 +6,7 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import {
-  propertyListFamilyKey,
-  propertyListFamilyValidator,
-} from '../../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../../linter/validators/indexedFamily.js';
 import { TAB_BAR_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
@@ -43,7 +40,7 @@ const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * require an integer before a `/`, and the registry tries exact keys first, so
  * the three scalars keep their own validators.
  */
-const tabValidator = propertyListFamilyValidator(TAB_BAR_TABS, {
+const tabFamily = propertyListFamilyEntry(TAB_BAR_TABS, {
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TAB_KEY',
   describes: 'tab',
@@ -55,7 +52,7 @@ const tabValidator = propertyListFamilyValidator(TAB_BAR_TABS, {
   },
 });
 
-validatorRegistry.registerAll('TabBar', {
+validatorRegistry.registerAll('TabBar', tabFamily, {
   // tab_bar.cpp:2123, PROPERTY_HINT_RANGE "-1,4096,1". Below -1, `ERR_FAIL_INDEX`
   // (tab_bar.cpp:804) refuses the write. -1 meets `_can_deselect()` (tab_bar.cpp:798), a
   // sibling-tab check no validator sees, which passes while the tab vector is empty at
@@ -101,6 +98,4 @@ validatorRegistry.registerAll('TabBar', {
   // (class_db.cpp:1492). `set_tab_count` refuses `p_count < 0` (tab_bar.cpp:745),
   // and nothing bounds the ceiling.
   tab_count: v.int('tab_count', { min: 0, enforced: 'tab_bar.cpp:745' }),
-
-  [propertyListFamilyKey(TAB_BAR_TABS)]: tabValidator,
 });

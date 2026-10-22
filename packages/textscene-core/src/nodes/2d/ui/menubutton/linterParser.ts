@@ -7,10 +7,7 @@
 
 import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import {
-  propertyListFamilyKey,
-  propertyListFamilyValidator,
-} from '../../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../../linter/validators/indexedFamily.js';
 import { MENU_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { ITEM_CHECKABLE_TYPE_NAMES } from '../../../../godot/scene/popupMenu.js';
 
@@ -49,7 +46,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 // `set_prefix("popup/item_")` (menu_button.cpp:213) glues the index on (property_list_helper.cpp:149), so a
 // scene writes `popup/item_0/text` (scenes/demos/gui/control_gallery/control_gallery.tscn:527). The key
 // `popup/item_#/*` selects the glued-index matcher of `ValidatorRegistry.findOwnValidator`.
-const itemValidator = propertyListFamilyValidator(MENU_BUTTON_ITEMS, {
+const itemFamily = propertyListFamilyEntry(MENU_BUTTON_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item',
@@ -61,7 +58,7 @@ const itemValidator = propertyListFamilyValidator(MENU_BUTTON_ITEMS, {
   },
 });
 
-validatorRegistry.registerAll('MenuButton', {
+validatorRegistry.registerAll('MenuButton', itemFamily, {
   // menu_button.cpp:204, Variant::BOOL, no hint. set_switch_on_hover
   // (menu_button.cpp:115-117) is a bare assignment.
   switch_on_hover: v.boolean('switch_on_hover'),
@@ -69,6 +66,4 @@ validatorRegistry.registerAll('MenuButton', {
   // set_item_count (menu_button.cpp:123-131) enforces `ERR_FAIL_COND(p_count < 0)` before forwarding,
   // and nothing sets a ceiling.
   item_count: v.int('item_count', { min: 0, enforced: 'menu_button.cpp:124' }),
-
-  [propertyListFamilyKey(MENU_BUTTON_ITEMS)]: itemValidator,
 });

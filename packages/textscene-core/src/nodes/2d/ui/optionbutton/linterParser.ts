@@ -10,10 +10,7 @@
 // so an authored value is overwritten, not refused, as with `SpinBox.exp_edit` and `FileDialog.dialog_text`.
 import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import {
-  propertyListFamilyKey,
-  propertyListFamilyValidator,
-} from '../../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../../linter/validators/indexedFamily.js';
 import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
@@ -41,7 +38,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   separator: v.boolean('separator'),
 };
 
-const itemValidator = propertyListFamilyValidator(OPTION_BUTTON_ITEMS, {
+const itemFamily = propertyListFamilyEntry(OPTION_BUTTON_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item',
@@ -53,7 +50,7 @@ const itemValidator = propertyListFamilyValidator(OPTION_BUTTON_ITEMS, {
   },
 });
 
-validatorRegistry.registerAll('OptionButton', {
+validatorRegistry.registerAll('OptionButton', itemFamily, {
   // option_button.cpp:601, PROPERTY_HINT_NONE. `_select_int` (option_button.cpp:432-443) drops a write
   // below NONE_SELECTED (-1, option_button.cpp:433), so the floor is enforced. The high end, against the
   // sibling count, is the cross-field rule in linter.ts (ADR-0032).
@@ -67,6 +64,4 @@ validatorRegistry.registerAll('OptionButton', {
   // option_button.cpp:604, ADD_ARRAY_COUNT, PROPERTY_HINT_NONE. set_item_count (option_button.cpp:309-310)
   // enforces `ERR_FAIL_COND(p_count < 0)`, and nothing sets a ceiling.
   item_count: v.int('item_count', { min: 0, enforced: 'option_button.cpp:310' }),
-
-  [propertyListFamilyKey(OPTION_BUTTON_ITEMS)]: itemValidator,
 });

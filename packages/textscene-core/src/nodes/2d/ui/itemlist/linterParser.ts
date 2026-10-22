@@ -7,10 +7,7 @@
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { OVERRUN_BEHAVIOR_NAMES } from '../../../../godot/text/textServerEnums.js';
-import {
-  propertyListFamilyKey,
-  propertyListFamilyValidator,
-} from '../../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../../linter/validators/indexedFamily.js';
 import { ITEM_LIST_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
@@ -44,10 +41,10 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   disabled: v.boolean('disabled'),
 };
 
-const itemValidator = propertyListFamilyValidator(ITEM_LIST_ITEMS, {
+const itemFamily = propertyListFamilyEntry(ITEM_LIST_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
-  describes: 'item_<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed)',
+  describes: `${ITEM_LIST_ITEMS.prefix}<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed)`,
   // The setters fold a negative index from the end (`p_idx += get_item_count()`),
   // but the helper refuses it first (property_list_helper.cpp:58), so that line grounds this.
   negativeIndex: {
@@ -58,7 +55,7 @@ const itemValidator = propertyListFamilyValidator(ITEM_LIST_ITEMS, {
   },
 });
 
-validatorRegistry.registerAll('ItemList', {
+validatorRegistry.registerAll('ItemList', itemFamily, {
   // item_list.cpp:2393, Variant::BOOL, no hint. set_allow_reselect
   // (item_list.cpp:2081-2083) is a bare assignment.
   allow_reselect: v.boolean('allow_reselect'),
@@ -128,11 +125,6 @@ validatorRegistry.registerAll('ItemList', {
   // set_fixed_icon_size (item_list.cpp:691-699) assigns past an equality
   // early-out, so neither component has a floor: shape only.
   fixed_icon_size: v.vector2i('fixed_icon_size'),
-
-  // `PropertyListHelper` names each leaf `vformat("%s%d/%s", prefix, i, name)`
-  // (property_list_helper.cpp:149), gluing the index straight onto the `item_`
-  // prefix, so the registry matches it under `item_#/*` rather than `item_/*`.
-  [propertyListFamilyKey(ITEM_LIST_ITEMS)]: itemValidator,
 
   // Not an ADD_PROPERTY: `ItemList::_set`'s deprecated `items = [text, icon,
   // disabled, …]` fallback (item_list.cpp:2242-2259). Its own arity guard

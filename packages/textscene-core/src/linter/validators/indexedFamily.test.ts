@@ -5,7 +5,8 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { indexedFamilyValidator } from './indexedFamily.js';
+import { indexedFamilyValidator, propertyListFamilyEntry } from './indexedFamily.js';
+import { ITEM_LIST_ITEMS } from '../../godot/classdb/propertyListFamilies.js';
 import { v } from './v.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 
@@ -360,5 +361,23 @@ describe('indexedFamilyValidator', () => {
       expect(family('item_0/text/extra', '"hi"', 1)?.code).toBe('INVALID_ITEM');
       expect(leaf.calls).toHaveLength(0);
     });
+  });
+});
+
+describe('propertyListFamilyEntry', () => {
+  const entry = propertyListFamilyEntry(ITEM_LIST_ITEMS, {
+    leaves: { text: probe() },
+    unknownCode: 'INVALID_ITEM_KEY',
+    describes: 'item',
+  });
+
+  it('keys the one validator by the glued-index matcher of the family prefix', () => {
+    expect(Object.keys(entry)).toEqual(['item_#/*']);
+  });
+
+  it('takes the prefix and index parse from the declared family', () => {
+    const validator = entry['item_#/*']!;
+    expect(validator('item_0/text', '"hi"', 1)).toBeNull();
+    expect(validator('item_0/nope', '1', 2)?.code).toBe('INVALID_ITEM_KEY');
   });
 });

@@ -12,10 +12,7 @@ import {
   FILE_DIALOG_FILE_MODE_NAMES,
 } from '../../../godot/scene/fileDialog.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import {
-  propertyListFamilyKey,
-  propertyListFamilyValidator,
-} from '../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../linter/validators/indexedFamily.js';
 import { FILE_DIALOG_OPTIONS } from '../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
@@ -42,7 +39,7 @@ const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * bound lives here and the `>= option_count` bound in `linter.ts`, as in PopupMenu:
  * only the second needs a sibling, and a rule claiming both would double-report.
  */
-const optionValidator = propertyListFamilyValidator(FILE_DIALOG_OPTIONS, {
+const optionFamily = propertyListFamilyEntry(FILE_DIALOG_OPTIONS, {
   leaves: OPTION_LEAVES,
   unknownCode: 'INVALID_OPTION_KEY',
   describes: 'option name, values or default',
@@ -58,7 +55,7 @@ const optionValidator = propertyListFamilyValidator(FILE_DIALOG_OPTIONS, {
 // (file_dialog.cpp:2136-2138), which the storage guard (packed_scene.cpp:865) never saves, so no
 // validator. `dialog_text` keeps AcceptDialog's validator: it is hidden but no removal
 // (`linter/removalKeys.md`).
-validatorRegistry.registerAll('FileDialog', {
+validatorRegistry.registerAll('FileDialog', optionFamily, {
   // file_dialog.cpp:2113, BOOL, no hint. set_mode_overrides_title (:1354-1356)
   // is a bare assignment.
   mode_overrides_title: v.boolean('mode_overrides_title'),
@@ -102,10 +99,4 @@ validatorRegistry.registerAll('FileDialog', {
   layout_toggle_enabled: v.boolean('layout_toggle_enabled'),
   overwrite_warning_enabled: v.boolean('overwrite_warning_enabled'),
   deleting_enabled: v.boolean('deleting_enabled'),
-
-  // `option_<index>/<leaf>`, a PropertyListHelper family with no XML member
-  // (file_dialog.cpp:169-170, 2199-2204, 2627; property_list_helper.cpp:138-153). Its
-  // PROPERTY_USAGE_DEFAULT (object.h) stores it. The index is glued to the prefix
-  // (property_list_helper.cpp:149), hence `#`. The cross-field rule is in linter.ts.
-  [propertyListFamilyKey(FILE_DIALOG_OPTIONS)]: optionValidator,
 });
