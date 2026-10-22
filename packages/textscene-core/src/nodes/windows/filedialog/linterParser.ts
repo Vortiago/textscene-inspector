@@ -39,7 +39,7 @@ const OPTION_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * bound lives here and the `>= option_count` bound in `linter.ts`, as in PopupMenu:
  * only the second needs a sibling, and a rule claiming both would double-report.
  */
-const optionFamily = propertyListFamilyEntry(FILE_DIALOG_OPTIONS, {
+const optionFamilyEntry = propertyListFamilyEntry(FILE_DIALOG_OPTIONS, {
   leaves: OPTION_LEAVES,
   unknownCode: 'INVALID_OPTION_KEY',
   describes: 'option name, values or default',
@@ -55,7 +55,7 @@ const optionFamily = propertyListFamilyEntry(FILE_DIALOG_OPTIONS, {
 // (file_dialog.cpp:2136-2138), which the storage guard (packed_scene.cpp:865) never saves, so no
 // validator. `dialog_text` keeps AcceptDialog's validator: it is hidden but no removal
 // (`linter/removalKeys.md`).
-validatorRegistry.registerAll('FileDialog', optionFamily, {
+validatorRegistry.registerAll('FileDialog', optionFamilyEntry, {
   // file_dialog.cpp:2113, BOOL, no hint. set_mode_overrides_title (:1354-1356)
   // is a bare assignment.
   mode_overrides_title: v.boolean('mode_overrides_title'),

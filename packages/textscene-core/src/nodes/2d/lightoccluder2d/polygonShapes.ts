@@ -1,6 +1,7 @@
 import { intOr } from '../../../parser/valueParsers';
 import type { OccluderCullMode } from '../../../r3f/lighting2d/shadowVolumes';
 import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
+import { enumMember } from '../../../godot/classdb/enumNames';
 
 /**
  * A flat `PackedVector2Array` `[x0,y0, x1,y1, …]` as flat `[ax,ay,0, bx,by,0, …]`
@@ -40,7 +41,5 @@ export function polygonToSegments(points: ArrayLike<number>, closed: boolean): F
  */
 export function parseOccluderCullMode(raw: string | undefined): OccluderCullMode {
   const value = intOr(raw, OccluderPolygon2DCullMode.DISABLED, 'OccluderPolygon2D.cull_mode');
-  return value >= OccluderPolygon2DCullMode.DISABLED && value <= OccluderPolygon2DCullMode.COUNTER_CLOCKWISE
-    ? (value as OccluderCullMode)
-    : OccluderPolygon2DCullMode.DISABLED;
+  return enumMember(OccluderPolygon2DCullMode, value) ?? OccluderPolygon2DCullMode.DISABLED;
 }

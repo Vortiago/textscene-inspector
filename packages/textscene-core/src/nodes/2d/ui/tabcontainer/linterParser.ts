@@ -30,7 +30,7 @@ const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   hidden: v.boolean('hidden'),
 };
 
-const tabFamily = propertyListFamilyEntry(TAB_CONTAINER_TABS, {
+const tabFamilyEntry = propertyListFamilyEntry(TAB_CONTAINER_TABS, {
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TABCONTAINER_TAB_KEY',
   describes: 'tab',
@@ -42,7 +42,7 @@ const tabFamily = propertyListFamilyEntry(TAB_CONTAINER_TABS, {
   },
 });
 
-validatorRegistry.registerAll('TabContainer', tabFamily, {
+validatorRegistry.registerAll('TabContainer', tabFamilyEntry, {
   // tab_container.cpp:1208, PROPERTY_HINT_ENUM "Left,Center,Right". TabBar::set_tab_alignment's
   // `ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX)` (tab_bar.cpp:1671, ALIGNMENT_MAX=3) agrees with the hint.
   tab_alignment: v.enumInt('tab_alignment', TAB_BAR_ALIGNMENT_HINT_NAMES, { enforced: 'tab_bar.cpp:1671' }),

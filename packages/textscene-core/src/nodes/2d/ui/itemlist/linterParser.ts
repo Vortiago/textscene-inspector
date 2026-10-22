@@ -41,7 +41,7 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   disabled: v.boolean('disabled'),
 };
 
-const itemFamily = propertyListFamilyEntry(ITEM_LIST_ITEMS, {
+const itemFamilyEntry = propertyListFamilyEntry(ITEM_LIST_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: `${ITEM_LIST_ITEMS.prefix}<index>/<leaf> (see item_list.cpp, PropertyListHelper-backed)`,
@@ -55,7 +55,7 @@ const itemFamily = propertyListFamilyEntry(ITEM_LIST_ITEMS, {
   },
 });
 
-validatorRegistry.registerAll('ItemList', itemFamily, {
+validatorRegistry.registerAll('ItemList', itemFamilyEntry, {
   // item_list.cpp:2393, Variant::BOOL, no hint. set_allow_reselect
   // (item_list.cpp:2081-2083) is a bare assignment.
   allow_reselect: v.boolean('allow_reselect'),

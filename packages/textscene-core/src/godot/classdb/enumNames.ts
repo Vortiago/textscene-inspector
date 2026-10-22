@@ -8,7 +8,7 @@ export function enumMember<T extends Record<string, number>>(
   enumObject: T,
   value: number
 ): EnumValue<T> | null {
-  return (Object.values(enumObject) as number[]).includes(value) ? (value as EnumValue<T>) : null;
+  return Object.values(enumObject).includes(value) ? (value as EnumValue<T>) : null;
 }
 
 /** Each member name by its integer, as a validator or an inspector names it. */

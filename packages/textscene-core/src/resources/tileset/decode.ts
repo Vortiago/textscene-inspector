@@ -87,6 +87,7 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     warn(`[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`);
   }
 
+  // `set_tile_layout` and `set_tile_offset_axis` store any int (`tile_set.cpp:368-371`, `:376-379`).
   return {
     shape,
     layout: intEnumOr(

@@ -40,7 +40,7 @@ const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * require an integer before a `/`, and the registry tries exact keys first, so
  * the three scalars keep their own validators.
  */
-const tabFamily = propertyListFamilyEntry(TAB_BAR_TABS, {
+const tabFamilyEntry = propertyListFamilyEntry(TAB_BAR_TABS, {
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TAB_KEY',
   describes: 'tab',
@@ -52,7 +52,7 @@ const tabFamily = propertyListFamilyEntry(TAB_BAR_TABS, {
   },
 });
 
-validatorRegistry.registerAll('TabBar', tabFamily, {
+validatorRegistry.registerAll('TabBar', tabFamilyEntry, {
   // tab_bar.cpp:2123, PROPERTY_HINT_RANGE "-1,4096,1". Below -1, `ERR_FAIL_INDEX`
   // (tab_bar.cpp:804) refuses the write. -1 meets `_can_deselect()` (tab_bar.cpp:798), a
   // sibling-tab check no validator sees, which passes while the tab vector is empty at

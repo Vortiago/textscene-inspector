@@ -44,9 +44,8 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
 };
 
 // `set_prefix("popup/item_")` (menu_button.cpp:213) glues the index on (property_list_helper.cpp:149), so a
-// scene writes `popup/item_0/text` (scenes/demos/gui/control_gallery/control_gallery.tscn:527). The key
-// `popup/item_#/*` selects the glued-index matcher of `ValidatorRegistry.findOwnValidator`.
-const itemFamily = propertyListFamilyEntry(MENU_BUTTON_ITEMS, {
+// scene writes `popup/item_0/text` (scenes/demos/gui/control_gallery/control_gallery.tscn:527).
+const itemFamilyEntry = propertyListFamilyEntry(MENU_BUTTON_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item',
@@ -58,7 +57,7 @@ const itemFamily = propertyListFamilyEntry(MENU_BUTTON_ITEMS, {
   },
 });
 
-validatorRegistry.registerAll('MenuButton', itemFamily, {
+validatorRegistry.registerAll('MenuButton', itemFamilyEntry, {
   // menu_button.cpp:204, Variant::BOOL, no hint. set_switch_on_hover
   // (menu_button.cpp:115-117) is a bare assignment.
   switch_on_hover: v.boolean('switch_on_hover'),

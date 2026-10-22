@@ -49,9 +49,9 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * The per-item family: `base_property_helper.register_property` (popup_menu.cpp:3317-3328)
  * with no `ADD_PROPERTY`, since popup_menu.h:258-260 delegate `_get_property_list`,
  * `_set` and `_get` to `property_helper`. `item_0/text` glues the index to the prefix
- * (property_list_helper.cpp:149), hence `item_#/*` (ValidatorRegistry.findOwnValidator).
+ * (property_list_helper.cpp:149).
  */
-const itemFamily = propertyListFamilyEntry(POPUP_MENU_ITEMS, {
+const itemFamilyEntry = propertyListFamilyEntry(POPUP_MENU_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: `${POPUP_MENU_ITEMS.prefix}<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed)`,
@@ -63,7 +63,7 @@ const itemFamily = propertyListFamilyEntry(POPUP_MENU_ITEMS, {
   },
 });
 
-validatorRegistry.registerAll('PopupMenu', itemFamily, {
+validatorRegistry.registerAll('PopupMenu', itemFamilyEntry, {
   // popup_menu.cpp:3257, Variant::BOOL, no hint. set_hide_on_item_selection
   // (popup_menu.cpp:3016-3018) is a bare assignment.
   hide_on_item_selection: v.boolean('hide_on_item_selection'),
