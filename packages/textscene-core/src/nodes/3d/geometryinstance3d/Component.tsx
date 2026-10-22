@@ -4,11 +4,12 @@
  * Each type gives the box its Godot base gives the instance.
  */
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, type ComponentType } from 'react';
 import type * as THREE from 'three';
 import { Node3D } from '../../base/node3d/Component';
 import type { NodeComponent, NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { boxPlacement } from '../../../r3f/visibilityRange/placements';
+import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { invisibleBase } from '../../../r3f/invisibleBase';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
@@ -34,6 +35,27 @@ export function undrawnGeometryInstance(useOwnAabb: UseOwnAabb): NodeComponent {
     );
   }
   return invisibleBase(UndrawnGeometryInstance);
+}
+
+/**
+ * An undrawn GeometryInstance3D that carries its editor gizmos while it is selected (ADR-0018).
+ * `Gizmos` reads the node's properties, which are `Properties` for the type that registers it.
+ */
+export function undrawnGeometryInstanceWithGizmos<Properties>(
+  useOwnAabb: UseOwnAabb,
+  Gizmos: ComponentType<{ properties: Properties }>
+): NodeComponent {
+  const Undrawn = undrawnGeometryInstance(useOwnAabb);
+  function UndrawnGeometryInstanceWithGizmos({ node, children }: NodeComponentProps) {
+    const gizmoVisible = useGizmoVisible();
+    return (
+      <Undrawn node={node}>
+        {gizmoVisible && <Gizmos properties={node.properties as Properties} />}
+        {children}
+      </Undrawn>
+    );
+  }
+  return invisibleBase(UndrawnGeometryInstanceWithGizmos);
 }
 
 /** A bare GeometryInstance3D gives its instance no base (`godot/scene/geometryBase.ts`), so no box. */

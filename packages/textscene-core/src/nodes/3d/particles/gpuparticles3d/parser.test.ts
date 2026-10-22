@@ -31,4 +31,14 @@ describe('parseGPUParticles3D', () => {
       z: 0,
     });
   });
+
+  it('keeps the process_material reference raw, for the gizmo to resolve', () => {
+    expect(parse({ process_material: 'SubResource("Process_1")' }).processMaterial).toBe(
+      'SubResource("Process_1")'
+    );
+  });
+
+  it('has no process material for an emitter that authors none', () => {
+    expect(parse({}).processMaterial).toBeUndefined();
+  });
 });

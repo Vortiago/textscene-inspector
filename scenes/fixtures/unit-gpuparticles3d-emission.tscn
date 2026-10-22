@@ -1,0 +1,31 @@
+; A GPUParticles3D whose process material emits from a box, with an emission_shape_offset and an
+; emission_shape_scale, for the one variable no other golden moves: the emission shape lines of its
+; editor gizmo, which Godot scales and offsets only for a material. The previewer gates the gizmo on
+; selection (ADR-0018), so only the `select:` golden has it. The visibility_aabb is not the default,
+; so its box lines stand apart from the box of the emission shape. A small box sits at two opposite
+; corners of the visibility_aabb to frame both.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="Process_1"]
+emission_shape = 3
+emission_box_extents = Vector3(1, 0.5, 1)
+emission_shape_offset = Vector3(0, 1, 0)
+emission_shape_scale = Vector3(2, 1, 1)
+
+[sub_resource type="BoxMesh" id="Corner_1"]
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Root" type="Node3D"]
+
+[node name="Emitter" type="GPUParticles3D" parent="."]
+visibility_aabb = AABB(-3, -1, -2, 6, 4, 4)
+process_material = SubResource("Process_1")
+draw_pass_1 = SubResource("Corner_1")
+
+[node name="NearCorner" type="MeshInstance3D" parent="Emitter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, -1, -2)
+mesh = SubResource("Corner_1")
+
+[node name="FarCorner" type="MeshInstance3D" parent="Emitter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 3, 2)
+mesh = SubResource("Corner_1")

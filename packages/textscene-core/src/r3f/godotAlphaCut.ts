@@ -19,7 +19,7 @@ export const NO_TRANSPARENT_FLAG = 'no-transparent-flag';
 
 interface AlphaCutInput {
   /** `SpriteBase3D::AlphaCutMode` or `Label3D::AlphaCutMode`: two C++ enums, same members. */
-  mode: number;
+  mode: AlphaCutMode;
   /** `alpha_scissor_threshold`; DISCARD is the only arm that reads it. */
   scissorThreshold: number;
   /**
@@ -93,7 +93,7 @@ export function alphaCutSurface({
 
 /** One arm of the switch, each of which multiplies the albedo alpha into ALPHA. */
 function cutArm(
-  mode: number,
+  mode: AlphaCutMode,
   scissorThreshold: number,
   { mode: antialiasingMode, edge }: AlphaCutInput['antialiasing']
 ): CutArm {
