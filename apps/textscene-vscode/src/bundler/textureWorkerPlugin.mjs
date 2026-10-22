@@ -5,6 +5,7 @@
  * fetches nothing: the CSP grants `worker-src blob:` and no `connect-src` (ADR-0042).
  */
 import path from 'node:path';
+import process from 'node:process';
 import * as esbuild from 'esbuild';
 
 export const TEXTURE_WORKER_MODULE = 'virtual:texture-worker-source';
@@ -25,8 +26,11 @@ export function textureWorkerPlugin({ minify, onMetafile }) {
         path: args.path,
         namespace: NAMESPACE,
       }));
+      // The outer build's working directory, so the worker's metafile inputs merge with its own.
+      const workingDir = build.initialOptions.absWorkingDir ?? process.cwd();
       build.onLoad({ filter: /.*/, namespace: NAMESPACE }, async () => {
         const result = await esbuild.build({
+          absWorkingDir: workingDir,
           entryPoints: [WORKER_ENTRY],
           bundle: true,
           write: false,
@@ -46,7 +50,7 @@ export function textureWorkerPlugin({ minify, onMetafile }) {
         return {
           contents: `export default ${JSON.stringify(output.text)};`,
           loader: 'js',
-          watchFiles: Object.keys(result.metafile.inputs).map((input) => path.resolve(input)),
+          watchFiles: Object.keys(result.metafile.inputs).map((input) => path.resolve(workingDir, input)),
         };
       });
     },

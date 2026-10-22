@@ -85,6 +85,7 @@ async function buildWorker(): Promise<{ source: string; metafile: esbuild.Metafi
       contents: `import source from '${TEXTURE_WORKER_MODULE}'; globalThis.__source = source;`,
       resolveDir: APP_ROOT,
     },
+    absWorkingDir: APP_ROOT,
     bundle: true,
     write: false,
     format: 'iife',
