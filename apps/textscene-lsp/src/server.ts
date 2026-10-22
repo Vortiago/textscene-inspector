@@ -37,6 +37,7 @@ import {
   hoverAt,
   resPathAt,
   resPathOccurrences,
+  resPathReferencesAt,
   type LanguageDocument,
 } from '@textscene/core/languageFeatures';
 import {
@@ -50,6 +51,10 @@ import {
 } from './lspConvert';
 import { createDiskResRoots } from '@textscene/core/resources/diskProject';
 import type { ResRoot, ResRoots } from '@textscene/core/resources/resRoots';
+import { isSamePath, pathCaseOf } from '@textscene/core/resources/resPath';
+
+/** Whether this platform's filesystem tells apart two spellings of a path that differ only in case. */
+const PATH_CASE = pathCaseOf(process.platform);
 
 /** Wait after the last edit before a lint, so a burst of keystrokes lints once. */
 const LINT_DEBOUNCE_MS = 300;
@@ -121,6 +126,26 @@ async function resPathFileUrl(root: ResRoot | null, path: string): Promise<strin
   return file === null ? undefined : pathToFileURL(file).toString();
 }
 
+/**
+ * A reader of the files under `root` that serves an open document's unsaved text in place of its file's: a range
+ * from the file's text would land on the wrong line in the editor. Reads the open documents once, when it is made.
+ */
+function textReaderWithOpenDocuments(root: ResRoot): (path: string) => Promise<string | null> {
+  const openTexts = documents.all().flatMap((document) => {
+    const file = filePathOf(document.uri);
+    return file === null ? [] : [{ file, text: document.getText() }];
+  });
+  return async (path) => {
+    const file = root.pathOf(path);
+    const open =
+      file === null ? undefined : openTexts.find((entry) => isSamePath(entry.file, file, PATH_CASE));
+    if (open !== undefined) return open.text;
+    const content = await root.loadResource(path);
+    // A text resource loads as a string. Anything else is no scene or resource to search.
+    return typeof content === 'string' ? content : null;
+  };
+}
+
 function scheduleLint(document: TextDocument): void {
   cancelLint(document.uri);
   lintTimers.set(
@@ -170,6 +195,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       foldingRangeProvider: true,
       documentSymbolProvider: true,
       definitionProvider: true,
+      referencesProvider: true,
       documentHighlightProvider: true,
       documentLinkProvider: { resolveProvider: false },
     },
@@ -245,6 +271,21 @@ connection.onDefinition(async (params): Promise<Location | null> => {
   if (occurrence === undefined) return null;
   const target = await resPathFileUrl(await rootForUri(params.textDocument.uri), occurrence.path);
   return target === undefined ? null : { uri: target, range: FILE_START };
+});
+
+connection.onReferences(async (params): Promise<Location[] | null> => {
+  const model = modelOf(params.textDocument.uri);
+  if (model === undefined) return null;
+  const root = await rootForUri(params.textDocument.uri);
+  if (root === null) return [];
+  const references = await resPathReferencesAt(model, params.position, {
+    listPaths: () => root.listPaths(),
+    readText: textReaderWithOpenDocuments(root),
+  });
+  return references.flatMap(({ file, range }) => {
+    const path = root.pathOf(file);
+    return path === null ? [] : [{ uri: pathToFileURL(path).toString(), range }];
+  });
 });
 
 connection.onDocumentHighlight((params) => {

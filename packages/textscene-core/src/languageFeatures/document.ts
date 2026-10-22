@@ -117,6 +117,11 @@ function scanHeadings(text: string): ScannedHeading[] {
   return headings;
 }
 
+/** The lines of `text`, each without its `\n` or `\r\n`. */
+export function splitLines(text: string): string[] {
+  return text.split(/\r?\n/);
+}
+
 function scanSections(text: string, lines: readonly string[]): DocumentSection[] {
   const headings = scanHeadings(text);
   return headings.map((heading, index) => {
@@ -145,7 +150,7 @@ export class LanguageDocument {
   private readonly propertyByLine: Map<number, PropertyLocation>;
 
   constructor(readonly text: string) {
-    this.lines = text.split(/\r?\n/);
+    this.lines = splitLines(text);
     this.sections = scanSections(text, this.lines);
     this.sectionByLine = new Map();
     this.propertyByLine = new Map();

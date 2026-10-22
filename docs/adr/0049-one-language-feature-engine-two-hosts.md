@@ -22,8 +22,8 @@ property tables, hints and deprecated aliases, and the copies would drift.
 
 - The language-feature engine parses the text through the scanning loop with a `ParseObserver` and
   answers `hoverAt`, `completionsAt`, `codeActions`, `foldingRanges`, `documentHighlights`,
-  `documentSymbols`, `definitionRangeAt`, `resPathAt` and `resPathOccurrences`. Every result is
-  host-neutral with zero-based ranges, the convention LSP and the VS Code API share, so a host
+  `documentSymbols`, `definitionRangeAt`, `resPathAt`, `resPathOccurrences` and
+  `resPathReferencesAt`. Every result is host-neutral with zero-based ranges, the convention LSP and the VS Code API share, so a host
   adapts no position. A host maps each result to its own types and adds no feature logic.
 - The language-feature engine reads a resource reference through `godot/variant/resourceRef.ts`, as the
   linter and the renderer do. So the old integer form `ExtResource(1)` resolves in every host.
@@ -57,6 +57,11 @@ and the server lists the filesystem. The language-feature engine knows neither. 
 seam only for a cursor inside a `res://` value, so a host lists the project only then. Both
 listings follow the Godot editor's scan rules: no dot-named directory, no nested project and no
 `.gdignore` directory.
+
+The reference search (`resPathReferencesAt`) takes the same `listPaths` and a `readText` callback.
+The host lists the project, reads each file and maps each match to its own location, and the engine
+owns the matching. A host's `readText` serves the unsaved text of an open editor, because a range
+from the file on disk lands on the wrong line in the editor.
 
 ## Considered Options
 

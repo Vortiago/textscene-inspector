@@ -37,8 +37,8 @@ function resPathsOnLine(line: string, lineIndex: number): ResPathOccurrence[] {
   });
 }
 
-/** Every `res://` occurrence in the document, in line order. */
-export function resPathOccurrences(document: LanguageDocument): readonly ResPathOccurrence[] {
+/** Every `res://` occurrence in the document, in line order. A caller with text and no parsed document passes `{ lines }`. */
+export function resPathOccurrences(document: Pick<LanguageDocument, 'lines'>): readonly ResPathOccurrence[] {
   return [...document.lines.entries()].flatMap(([lineIndex, line]) => resPathsOnLine(line, lineIndex));
 }
 
