@@ -8,11 +8,11 @@ import * as THREE from 'three';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 
 /**
- * Godot's anisotropy ceiling is `1 << anisotropic_filtering_level`, a project
- * setting whose default is level 2 (4x). Pinned at 16 (level 4), not plumbed:
- * three clamps to the GPU maximum at upload, so this is a ceiling, never an error.
+ * Godot's `anisotropic_filtering_level` default, which the root viewport takes from the project
+ * (`rendering_server.cpp:3750`, `viewport.cpp:5384`). The two anisotropic rows sample at
+ * `1 << level` (`material_storage.cpp:2461`), and three clamps that to the GPU maximum at upload.
  */
-const GODOT_ANISOTROPY_MAX = 16;
+export const DEFAULT_ANISOTROPIC_FILTERING_LEVEL = 2;
 
 interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;
@@ -65,25 +65,33 @@ const STATES: Record<number, TextureFilterState> = {
     magFilter: THREE.NearestFilter,
     minFilter: THREE.NearestMipmapLinearFilter,
     generateMipmaps: true,
-    anisotropy: GODOT_ANISOTROPY_MAX,
+    anisotropy: 1,
   },
   // LINEAR_WITH_MIPMAPS_ANISOTROPIC
   5: {
     magFilter: THREE.LinearFilter,
     minFilter: THREE.LinearMipmapLinearFilter,
     generateMipmaps: true,
-    anisotropy: GODOT_ANISOTROPY_MAX,
+    anisotropy: 1,
   },
 };
+
+/** The rows whose sampler uses anisotropy (`material_storage.cpp:2489-2504`). Their `anisotropy` above is the level's to set. */
+const ANISOTROPIC_FILTERS: ReadonlySet<number> = new Set([4, 5]);
 
 /**
  * The sampler state for a `texture_filter` ordinal. An absent or out-of-range
  * value resolves to Godot's default, matching how the engine treats anything
  * outside `TEXTURE_FILTER_MAX`.
  */
-export function godotTextureFilterState(filter: number | undefined): TextureFilterState {
+export function godotTextureFilterState(
+  filter: number | undefined,
+  anisotropicFilteringLevel: number = DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+): TextureFilterState {
   const defaultFilter = BASE_MATERIAL_3D_DEFAULTS.textureFilter;
-  return STATES[filter ?? defaultFilter] ?? STATES[defaultFilter]!;
+  const row = filter !== undefined && filter in STATES ? filter : defaultFilter;
+  if (!ANISOTROPIC_FILTERS.has(row)) return STATES[row]!;
+  return { ...STATES[row]!, anisotropy: 1 << Math.max(0, anisotropicFilteringLevel) };
 }
 
 /**

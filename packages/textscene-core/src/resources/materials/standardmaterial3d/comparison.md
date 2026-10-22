@@ -114,7 +114,7 @@ Both engines shift every texture coordinate by the depth the heightmap reads, al
 `texture_filter` picks the sampler every texture slot reads through. `texture_repeat` rides the same helper. Godot's repeat default is on while three's is clamp, so the applier states Repeat at bind time. An unauthored material tiles a clamped arrival on a source-shared clone. A ViewportTexture albedo samples through the same filter, repeat and UV transform in the material's program. Its render target is shared and never cloned. `texture_mipmap_bias` comes from the project or the SubViewport that renders the material. It offsets the mip level of every mipmapped slot through one uniform that each render pass writes. A `NEAREST` or `LINEAR` material has no mip levels, so the bias leaves it alone.
 
 - **Approximated** Nearest sampling with anisotropy takes the property but not the anisotropy, since three skips it under `NearestFilter`.
-- **Approximated** `anisotropic_filtering_level` is pinned at 16x rather than read from the project.
+- **Approximated** A SubViewport's own `anisotropic_filtering_level` is not applied. A texture carries one anisotropy for every pass, so the previewer reads the project's level (`viewport.cpp:5384`).
 
 ## Point size
 

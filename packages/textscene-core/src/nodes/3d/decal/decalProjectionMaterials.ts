@@ -6,13 +6,12 @@
  */
 
 import * as THREE from 'three';
-import { composeInjections, injectProgram } from '../../../r3f/materialProgramInputs';
+import { composeInjections, injectViewportProgram } from '../../../r3f/materialProgramInputs';
 import {
   SPECULAR_OCCLUSION_DISABLED,
   disablesSpecularOcclusion,
   specularOcclusionUserData,
 } from '../../../r3f/godotIndirectSpecular';
-import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
 import {
   drawsLightModesOf,
   lightModesInjection,
@@ -102,12 +101,11 @@ function projectionMaterial(look: DecalProjectionLook, shading: ReceiverShading)
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
     userData: {
-      ...viewportSamplersUserData(),
       ...lightModesUserData(shading.lightModes),
       ...specularOcclusionUserData(shading.disablesSpecularOcclusion),
     },
   });
-  injectProgram(
+  injectViewportProgram(
     material,
     composeInjections([
       lightModesInjection(shading.lightModes),

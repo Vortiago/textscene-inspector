@@ -213,6 +213,20 @@ export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
   };
 }
 
+/** Godot's default `rendering/textures/default_filters/anisotropic_filtering_level`, 4x (`rendering_server.cpp:3750`). */
+const DEFAULT_ANISOTROPIC_FILTERING_LEVEL = 2;
+
+/**
+ * `rendering/textures/default_filters/anisotropic_filtering_level`, which every viewport takes at
+ * construction (`viewport.cpp:5384`). An anisotropic sampler reads `1 << level` taps at most.
+ */
+export function projectAnisotropicFilteringLevel(settings: ProjectSettings | null): number {
+  return (
+    parseOptionalInt(settings?.['rendering/textures/default_filters/anisotropic_filtering_level']) ??
+    DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+  );
+}
+
 /** Godot's default `rendering/textures/default_filters/texture_mipmap_bias` (`rendering_server.cpp:3803`). */
 const DEFAULT_TEXTURE_MIPMAP_BIAS = 0;
 

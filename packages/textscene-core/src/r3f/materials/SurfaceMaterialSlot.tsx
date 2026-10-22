@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import { useProjectAnisotropicFilteringLevel } from './useProjectAnisotropicFilteringLevel';
 import type { TscnInternalResource } from '../../parser/types';
 import {
   isViewportTextureRef,
@@ -102,9 +103,11 @@ export function useMaterialTextures(
   };
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `bindSlotTexture`'s.
+  const anisotropicFilteringLevel = useProjectAnisotropicFilteringLevel();
   const textureStates = useMemo(
-    (): MaterialTextureStates | null => scalars && surfaceTextureStates(scalars, surface),
-    [scalars, surface]
+    (): MaterialTextureStates | null =>
+      scalars && surfaceTextureStates(scalars, surface, anisotropicFilteringLevel),
+    [scalars, surface, anisotropicFilteringLevel]
   );
 
   const albedoMap = useTransformedTexture(
@@ -318,9 +321,10 @@ function transformedTexture(
 /** The texture states of `scalars` on `surface`. */
 function surfaceTextureStates(
   scalars: StandardMaterial3DScalars,
-  surface: TexturedSurface | undefined
+  surface: TexturedSurface | undefined,
+  anisotropicFilteringLevel: number
 ): MaterialTextureStates {
-  const states = materialTextureStates(scalars);
+  const states = materialTextureStates(scalars, anisotropicFilteringLevel);
   if (surface === GLTF_SURFACE) return { ...states, uv1: onGltfUvs(states.uv1), uv2: onGltfUvs(states.uv2) };
   if (!surface) return states;
   return {

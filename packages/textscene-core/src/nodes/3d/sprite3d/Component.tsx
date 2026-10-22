@@ -15,7 +15,8 @@ import { frameSizePx, frameUvWindow, spriteSamplerClone, spriteWrapMode } from '
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { useProjectAnisotropicFilteringLevel } from '../../../r3f/materials/useProjectAnisotropicFilteringLevel';
+import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface, joinsShadowPass } from '../../../r3f/godotAlphaCut';
 import { cutFadeVariants, cutOpaquePrepasses, type FadePass } from '../../../r3f/materials/fadeVariants';
 import { opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
@@ -30,7 +31,6 @@ import {
 } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
-import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
 import {
   alphaAntialiasingProps,
   alphaAntialiasingUserData,
@@ -81,14 +81,15 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
   // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a
   // `source_color` sampler, so the clone reads as an albedo does, not as the 2D canvas's retag.
+  const anisotropicFilteringLevel = useProjectAnisotropicFilteringLevel();
   const samplerClone = useMemo(() => {
     if (!sourceTexture) return undefined;
     const cloned = spriteSamplerClone(sourceTexture, wrap, sourceColorSpace(sourceTexture));
     // Sprite3D's texture is a node property, not a material slot, so the node's
     // own `texture_filter` (`material.cpp:3055`) lands on this clone.
-    applyTextureFilterState(cloned, godotTextureFilterState(textureFilter));
+    applyTextureFilterState(cloned, godotTextureFilterState(textureFilter, anisotropicFilteringLevel));
     return cloned;
-  }, [sourceTexture, wrap, textureFilter]);
+  }, [sourceTexture, wrap, textureFilter, anisotropicFilteringLevel]);
   // The clone is this component's, never the loader's cached entry: `useUploadedClone`
   // uploads it once and disposes it once it no longer draws. A frame change keeps it.
   const displayedTexture = useUploadedClone(samplerClone ?? null);
@@ -194,7 +195,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   }
 
   const material = (pass: FadePass, attach: string | MaterialAttach | undefined) => {
-    const program = materialProgramInputs({
+    const program = viewportProgramInputs({
       props: {
         attach,
         map: displayedTexture,
@@ -208,7 +209,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         // `sprite_3d.cpp:281-283` hands the threshold, the scale and the edge to every mode's
         // material. Only HASH reads the scale, and only an antialiased cut the edge.
         userData: {
-          ...viewportSamplersUserData(),
           ...alphaHashScaleUserData(properties.alpha_hash_scale),
           ...alphaAntialiasingUserData(cut.antialiasing),
           ...opaquePrepassUserData(prepasses[pass]),

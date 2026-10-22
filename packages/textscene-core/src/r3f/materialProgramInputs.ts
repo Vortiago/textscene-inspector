@@ -11,7 +11,7 @@ import {
   coverOneSampleTarget,
   GODOT_ALPHA_ANTIALIASING,
 } from './materials/godotAlphaAntialiasing';
-import { mipmapBiasInjection } from './materials/godotMipmapBias';
+import { mipmapBiasInjection, viewportSamplersUserData } from './materials/godotMipmapBias';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -195,6 +195,30 @@ export function injectProgram(material: THREE.Material, injection: ProgramInject
   if (!composed) return;
   material.onBeforeCompile = composed.onBeforeCompile;
   material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
+}
+
+/**
+ * `injectProgram` for a 3D material that is not derived from a StandardMaterial3D bag: Godot reads
+ * its textures through the viewport's samplers, so it carries the mipmap bias too.
+ */
+export function injectViewportProgram(
+  material: THREE.Material,
+  injection: ProgramInjection | undefined
+): void {
+  Object.assign(material.userData, viewportSamplersUserData());
+  injectProgram(material, injection);
+}
+
+/** `materialProgramInputs` for a 3D material outside a StandardMaterial3D bag, as `injectViewportProgram`. */
+export function viewportProgramInputs<
+  P extends { userData?: object },
+  M extends readonly (object | undefined)[] = [],
+>(input: {
+  props: P & MaterialProgramBag;
+  merge?: { [Part in keyof M]: (M[Part] & MaterialProgramBag) | undefined };
+}) {
+  const userData = { ...input.props.userData, ...viewportSamplersUserData() };
+  return materialProgramInputs<P, M>({ ...input, props: { ...input.props, userData } });
 }
 
 /**

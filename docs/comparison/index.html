@@ -6449,7 +6449,7 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p><code>texture_filter</code> picks the sampler every texture slot reads through. <code>texture_repeat</code> rides the same helper. Godot's repeat default is on while three's is clamp, so the applier states Repeat at bind time. An unauthored material tiles a clamped arrival on a source-shared clone. A ViewportTexture albedo samples through the same filter, repeat and UV transform in the material's program. Its render target is shared and never cloned. <code>texture_mipmap_bias</code> comes from the project or the SubViewport that renders the material. It offsets the mip level of every mipmapped slot through one uniform that each render pass writes. A <code>NEAREST</code> or <code>LINEAR</code> material has no mip levels, so the bias leaves it alone.</p>
-<ul><li><strong>Approximated</strong> Nearest sampling with anisotropy takes the property but not the anisotropy, since three skips it under <code>NearestFilter</code>.</li><li><strong>Approximated</strong> <code>anisotropic_filtering_level</code> is pinned at 16x rather than read from the project.</li></ul></div>
+<ul><li><strong>Approximated</strong> Nearest sampling with anisotropy takes the property but not the anisotropy, since three skips it under <code>NearestFilter</code>.</li><li><strong>Approximated</strong> A SubViewport's own <code>anisotropic_filtering_level</code> is not applied. A texture carries one anisotropy for every pass, so the previewer reads the project's level (<code>viewport.cpp:5384</code>).</li></ul></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>Point size</h3><span class="status st-done">Done</span></div>

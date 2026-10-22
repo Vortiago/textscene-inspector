@@ -21,6 +21,7 @@ import {
   projectGlowUsesBicubicUpscale,
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
+  projectAnisotropicFilteringLevel,
   projectTextureMipmapBias,
   projectViewportSize,
   projectVolumetricFogSettings,
@@ -561,5 +562,30 @@ describe('projectGlowUsesBicubicUpscale', () => {
 
   it('keeps the default for a malformed value (edge case)', () => {
     expect(projectGlowUsesBicubicUpscale({ [KEY]: 'sharp' })).toBe(true);
+  });
+});
+
+describe('projectAnisotropicFilteringLevel', () => {
+  const KEY = 'rendering/textures/default_filters/anisotropic_filtering_level';
+
+  it('reads the level from a project.godot line', () => {
+    const settings = parseProjectSettings(
+      '[rendering]\n\ntextures/default_filters/anisotropic_filtering_level=4\n'
+    );
+
+    expect(projectAnisotropicFilteringLevel(settings)).toBe(4);
+  });
+
+  it("is 2 (4x) with no project or no key, Godot's default (rendering_server.cpp:3750)", () => {
+    expect(projectAnisotropicFilteringLevel(null)).toBe(2);
+    expect(projectAnisotropicFilteringLevel({ 'rendering/other': '1' })).toBe(2);
+  });
+
+  it('reads 0 as disabled, not as the default', () => {
+    expect(projectAnisotropicFilteringLevel({ [KEY]: '0' })).toBe(0);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectAnisotropicFilteringLevel({ [KEY]: 'sharp' })).toBe(2);
   });
 });

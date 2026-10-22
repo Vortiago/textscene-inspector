@@ -19,8 +19,7 @@ import {
 } from '../../../godot/import/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
 import { importedNormalMapRead } from '../../../r3f/materials/godotNormalMap';
-import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
-import { injectProgram } from '../../../r3f/materialProgramInputs';
+import { injectViewportProgram } from '../../../r3f/materialProgramInputs';
 import type { GltfExtensionRules } from './types';
 import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 import { usesGodotSingleRoot } from '../../../godot/import/gltf';
@@ -207,8 +206,7 @@ function importBlendAsDepthPrepass(object: THREE.Object3D): void {
  * carries no `onBeforeCompile`, so each copy takes its programs again.
  */
 function importedSurfaceMaterial(copy: THREE.Material): THREE.Material {
-  Object.assign(copy.userData, viewportSamplersUserData());
-  injectProgram(copy, importedNormalMapRead(copy));
+  injectViewportProgram(copy, importedNormalMapRead(copy));
   return copy;
 }
 
