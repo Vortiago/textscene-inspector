@@ -294,6 +294,13 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
     expect(hasAncestor(onlyMesh(renderer), torso)).toBe(true);
   });
 
+  it('draws no node for a type-less override of a top-level GLB object', async () => {
+    const renderer = await render([override('Skeleton', '', { transform: translated(0, 5, 0) })]);
+
+    expect(selection.nodeObjectMap.get('Rig/Skeleton')).toBe(glbObject(renderer, 'Skeleton'));
+    expect(glbObject(renderer, 'Skeleton').position.y).toBeCloseTo(5, 5);
+  });
+
   it('is hidden with a hidden GLB ancestor', async () => {
     const renderer = await render([
       override('Torso', 'Skeleton', { visible: 'false' }),

@@ -251,7 +251,7 @@ function glbInstanceGroups(
   return groups;
 }
 
-/** The collapsed node a `merged` group carries, so a walker merges each instance once. */
+/** The collapsed node the first group carries (`merged`, or `glb` for a merged GLB), so a walker merges each instance once. */
 export function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
   return groups[0]?.mergedNode;
 }

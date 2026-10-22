@@ -73,6 +73,23 @@ describe('an instanced GLB, in the live tree', () => {
   });
 });
 
+describe('a property override of an instanced GLB, in the live tree', () => {
+  /** `[node name="Torso" parent="Skeleton"]`: Godot takes the node by name and adds none (`packed_scene.cpp:290-296`). */
+  function override(name: string, instanceSubPath?: string): TscnNode {
+    return { ...makeNode(name, 'Node'), overridesExistingNode: true, instanceSubPath };
+  }
+
+  it('is no node, so a GLB object keeps its one path', () => {
+    expect(pathsBelowRig([override('Skeleton'), override('Torso', 'Skeleton')], () => true)).toEqual([
+      'Rig',
+      'Rig/Skeleton',
+      'Rig/Skeleton/Torso',
+      'Rig/Skeleton/Arm',
+      'Rig/AnimationPlayer',
+    ]);
+  });
+});
+
 describe('a GLB instanced by the root of a sub-scene, in the live tree', () => {
   it('lists its objects below the merged node', () => {
     const wrapper: TscnScene = {

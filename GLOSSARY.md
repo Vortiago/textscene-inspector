@@ -511,7 +511,7 @@ _Avoid_: "include", "prefab".
 
 **Instance root merge** (`mergeInstanceRoot`, applied through `collapseLiveNode`):
 The collapse of a single-root `.tscn` instance, where the instance Node becomes the sub-scene's root and its own properties win per key.
-Every consumer calls `collapseLiveNode` so node paths agree, and a multi-root instance is not merged.
+Every consumer calls `collapseLiveNode` so node paths agree. A multi-root instance and a lone `.glb` instance are not merged: the node that instances a `.glb` is the **GLB root**.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
 
 **GLB root**:

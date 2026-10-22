@@ -47,7 +47,9 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
 /**
  * The instancing scene's typed nodes whose parent path names a GLB object, which Godot adds
  * to that object (`packed_scene.cpp:157-165`, `:541`), and the rest of `children`. A typed node
- * whose path names none stays among the rest, where the tree has always listed it.
+ * whose path names none stays among the rest, where the tree has always listed it. A property
+ * override is no node: Godot takes the existing node by name and adds none (`packed_scene.cpp:290-296`),
+ * so it is in neither list.
  *
  * Each attached node comes back with `glbTargetRelPath` set, so the tree's next step
  * (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
@@ -56,11 +58,12 @@ export function splitAttachedChildren(
   root: THREE.Object3D,
   children: readonly LiveNode[]
 ): { attached: LiveNode[]; rest: LiveNode[] } {
-  if (children.every(isApplicableGlbOverride)) return { attached: [], rest: [...children] };
+  const nodes = children.filter((child) => !child.overridesExistingNode);
+  if (nodes.every(isApplicableGlbOverride)) return { attached: [], rest: nodes };
   const entries = flattenGlbObjects(root);
   const attached: LiveNode[] = [];
   const rest: LiveNode[] = [];
-  for (const child of children) {
+  for (const child of nodes) {
     const entry = isApplicableGlbOverride(child)
       ? null
       : findGlbTarget(entries, child.instanceSubPath!).entry;

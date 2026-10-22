@@ -192,6 +192,16 @@ function withoutDeepChildren(node: TscnNode): TscnNode {
   return { ...node, children: node.children.filter((c) => !c.instanceSubPath) };
 }
 
+/**
+ * The node without its property overrides, `[node name="Torso" parent="."]`. Godot takes the
+ * existing node by name and adds none (`packed_scene.cpp:290-296`), so an override of an instanced
+ * GLB's object draws no node: `GlbInstanceProvider` hands it to the GLB, which applies it.
+ */
+function withoutPropertyOverrides(node: TscnNode): TscnNode {
+  if (!node.children.some((c) => c.overridesExistingNode)) return node;
+  return { ...node, children: node.children.filter((c) => !c.overridesExistingNode) };
+}
+
 interface PlainNodeProps extends DispatchedNodeProps {
   /** Extra rendered subtree appended after the node's own inline children. */
   children?: ReactNode;
@@ -389,7 +399,11 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
 
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
   // stripped node is a new object.
-  const shallow = useMemo(() => withoutDeepChildren(node), [node]);
+  const isLoneGlb = loneGlbPath(loadedScene?.nodes ?? []) !== undefined;
+  const shallow = useMemo(
+    () => (isLoneGlb ? withoutPropertyOverrides(withoutDeepChildren(node)) : withoutDeepChildren(node)),
+    [node, isLoneGlb]
+  );
   const order = useTreeOrder();
   const injectedOrders = useMemo(() => {
     const groups = childOrders(order, 2);
@@ -425,7 +439,6 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   if (effective !== node) return <DispatchedNode node={effective} path={path} />;
 
   // A `.glb` mounts at this node's path. A multi-root scene injects its roots as children.
-  const isLoneGlb = loneGlbPath(loadedScene.nodes) !== undefined;
   return (
     <GlbInstanceProvider node={node} path={path}>
       <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
