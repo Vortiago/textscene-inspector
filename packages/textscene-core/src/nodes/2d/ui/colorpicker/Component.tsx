@@ -49,7 +49,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   COLOR_MODE_NAMES,
   COLOR_PICKER_SAMPLE_HEIGHT_FRACTION,

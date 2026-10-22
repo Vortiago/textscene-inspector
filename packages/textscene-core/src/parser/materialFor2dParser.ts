@@ -4,12 +4,13 @@
  */
 
 import { boolOr, enumOr, floatOr, intOr } from './valueParsers';
-import { enumValues } from '../godot/classdb/enumNames';
+import type { EnumValue } from '../godot/classdb/enumNames';
+import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
 import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../godot/rendering/materials/textureFilter';
 
-const ALPHA_CUT_MODES = enumValues(AlphaCutMode);
-const TEXTURE_FILTERS = enumValues(TextureFilter);
+const ALPHA_CUT_MODES = Object.values(AlphaCutMode);
+const TEXTURE_FILTERS = Object.values(TextureFilter);
 
 /**
  * The `get_material_for_2d` fields of a node of type `nodeType`, which names the node in a parse
@@ -28,7 +29,11 @@ export function parseMaterialFor2dFields(properties: Record<string, string>, nod
       label('alpha_scissor_threshold')
     ),
     alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, label('alpha_hash_scale')),
-    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, label('alpha_antialiasing_mode')),
+    alpha_antialiasing_mode: intOr(
+      properties.alpha_antialiasing_mode,
+      AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+      label('alpha_antialiasing_mode')
+    ) as EnumValue<typeof AlphaAntiAliasing>,
     alpha_antialiasing_edge: floatOr(properties.alpha_antialiasing_edge, 0, label('alpha_antialiasing_edge')),
     texture_filter: enumOr(
       properties.texture_filter,

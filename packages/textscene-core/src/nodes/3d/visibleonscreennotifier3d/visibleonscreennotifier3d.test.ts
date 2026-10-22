@@ -1,28 +1,30 @@
 /**
- * VisibleOnScreenNotifier3D registration: it is parsed, and it draws nothing on purpose (ADR-0008), not for want
- * of an implementation.
+ * VisibleOnScreenNotifier3D registration: it draws nothing at runtime, so it declares no render
+ * intent, and its component draws the editor gizmo of its box while selected (ADR-0018).
  */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
-import { Node3D } from '../../base/node3d/Component';
+import { rendersOwnVisual } from '../../../r3f/nodeSupport';
+import { VisibleOnScreenNotifier3D } from './Component';
+import { parseVisibleOnScreenNotifier3D } from './parser';
 import './index';
 import './index.r3f';
 
 describe('VisibleOnScreenNotifier3D registration', () => {
-  it('registers the Node3D base parser', () => {
-    const registration = nodeRegistry.getRegistration('VisibleOnScreenNotifier3D');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+  it('registers the parser that reads aabb', () => {
+    expect(nodeRegistry.getRegistration('VisibleOnScreenNotifier3D')?.parser).toBe(
+      parseVisibleOnScreenNotifier3D
+    );
   });
 
-  it('reuses the Node3D component so children keep their transform space', () => {
-    expect(nodeComponentRegistry.get('VisibleOnScreenNotifier3D')).toBe(Node3D);
+  it('registers the component that draws the gizmo', () => {
+    expect(nodeComponentRegistry.get('VisibleOnScreenNotifier3D')).toBe(VisibleOnScreenNotifier3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.renderIntentOf('VisibleOnScreenNotifier3D')).toBe('transform-only');
+  it('declares no render intent, as a node whose Godot gizmo is its only drawing', () => {
+    expect(nodeComponentRegistry.renderIntentOf('VisibleOnScreenNotifier3D')).toBe('draws');
+    expect(rendersOwnVisual('VisibleOnScreenNotifier3D')).toBe('draws');
   });
 });

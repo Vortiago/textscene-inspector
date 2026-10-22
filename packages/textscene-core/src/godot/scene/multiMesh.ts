@@ -3,10 +3,10 @@
 import { enumNamesByValue } from '../classdb/enumNames.js';
 
 /** `MultiMesh::TransformFormat` (`scene/resources/multimesh.h:41-44`). */
-export enum MultiMeshTransformFormat {
-  TRANSFORM_2D = 0,
-  TRANSFORM_3D = 1,
-}
+export const MultiMeshTransformFormat = {
+  TRANSFORM_2D: 0,
+  TRANSFORM_3D: 1,
+} as const;
 
 /** `MultiMesh::PhysicsInterpolationQuality` without `INTERP_QUALITY_` (`multimesh.h:46-49`). */
 const PhysicsInterpolationQuality = {

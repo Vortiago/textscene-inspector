@@ -4,8 +4,8 @@ import type { ParseError } from '../../linter/types.js';
 import { propertyError } from './propertyError.js';
 import { truncatedComponent } from './intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from './floatTupleValidator.js';
-import { ruleInt, tupleComponent } from './commonValidators.js';
-import { readSlotTuple } from '../../godot/variant/int.js';
+import { tupleComponent } from './commonValidators.js';
+import { readSlotTuple, ruleInt } from '../../godot/variant/intSlots.js';
 import { compositeTypeName, isConvertedSpelling } from '../../godot/variant/variantConversion.js';
 
 /**

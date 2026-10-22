@@ -8,7 +8,8 @@
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseAnimationPlayer } from './parser';
-import { AnimationProcessMode, MethodCallMode } from './types';
+
+import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
 
 const HEADING: ParsedHeading = {
   type: 'node',
@@ -20,8 +21,8 @@ describe('parseAnimationPlayer defaults', () => {
     const props = parseAnimationPlayer(HEADING, {});
     expect(props.speed_scale).toBe(1.0);
     expect(props.playback_default_blend_time).toBe(0.0);
-    expect(props.callback_mode_process).toBe(AnimationProcessMode.IDLE);
-    expect(props.callback_mode_method).toBe(MethodCallMode.DEFERRED);
+    expect(props.callback_mode_process).toBe(AnimationCallbackModeProcess.IDLE);
+    expect(props.callback_mode_method).toBe(AnimationCallbackModeMethod.DEFERRED);
     expect(props.active).toBe(true);
     expect(props.autoplay).toBe('');
     expect(props.current_animation).toBe('');
@@ -49,22 +50,22 @@ describe('parseAnimationPlayer properties', () => {
 
   it('parses callback_mode_process enum — PHYSICS', () => {
     const props = parseAnimationPlayer(HEADING, { callback_mode_process: '0' });
-    expect(props.callback_mode_process).toBe(AnimationProcessMode.PHYSICS);
+    expect(props.callback_mode_process).toBe(AnimationCallbackModeProcess.PHYSICS);
   });
 
   it('parses callback_mode_process enum — MANUAL', () => {
     const props = parseAnimationPlayer(HEADING, { callback_mode_process: '2' });
-    expect(props.callback_mode_process).toBe(AnimationProcessMode.MANUAL);
+    expect(props.callback_mode_process).toBe(AnimationCallbackModeProcess.MANUAL);
   });
 
   it('clamps out-of-range callback_mode_process to IDLE default', () => {
     const props = parseAnimationPlayer(HEADING, { callback_mode_process: '9' });
-    expect(props.callback_mode_process).toBe(AnimationProcessMode.IDLE);
+    expect(props.callback_mode_process).toBe(AnimationCallbackModeProcess.IDLE);
   });
 
   it('parses callback_mode_method — IMMEDIATE', () => {
     const props = parseAnimationPlayer(HEADING, { callback_mode_method: '1' });
-    expect(props.callback_mode_method).toBe(MethodCallMode.IMMEDIATE);
+    expect(props.callback_mode_method).toBe(AnimationCallbackModeMethod.IMMEDIATE);
   });
 
   it('parses active = false', () => {
@@ -76,8 +77,8 @@ describe('parseAnimationPlayer properties', () => {
   // forward into the canonical setter, so each pair is one field. Godot never
   // writes the deprecated spelling, but a 3.x scene still carries it.
   it.each([
-    ['playback_process_mode', '0', 'callback_mode_process', AnimationProcessMode.PHYSICS],
-    ['method_call_mode', '1', 'callback_mode_method', MethodCallMode.IMMEDIATE],
+    ['playback_process_mode', '0', 'callback_mode_process', AnimationCallbackModeProcess.PHYSICS],
+    ['method_call_mode', '1', 'callback_mode_method', AnimationCallbackModeMethod.IMMEDIATE],
     ['playback_active', 'false', 'active', false],
   ] as const)('reads the deprecated %s into %s', (deprecated, raw, canonical, expected) => {
     const props = parseAnimationPlayer(HEADING, { [deprecated]: raw });
@@ -85,8 +86,8 @@ describe('parseAnimationPlayer properties', () => {
   });
 
   it.each([
-    ['callback_mode_process', '2', 'playback_process_mode', '0', AnimationProcessMode.MANUAL],
-    ['callback_mode_method', '1', 'method_call_mode', '0', MethodCallMode.IMMEDIATE],
+    ['callback_mode_process', '2', 'playback_process_mode', '0', AnimationCallbackModeProcess.MANUAL],
+    ['callback_mode_method', '1', 'method_call_mode', '0', AnimationCallbackModeMethod.IMMEDIATE],
     ['active', 'true', 'playback_active', 'false', true],
   ] as const)(
     'prefers %s over the deprecated %s when a scene carries both',

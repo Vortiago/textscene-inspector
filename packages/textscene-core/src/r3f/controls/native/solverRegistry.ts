@@ -7,7 +7,7 @@
 
 import { createTypeRegistry } from '../../../core/createTypeRegistry';
 import type { TscnNode } from '../../../parser/types';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode, ThemedIconRef } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';

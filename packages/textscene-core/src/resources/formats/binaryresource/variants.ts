@@ -15,8 +15,9 @@ import {
   INLINE_STRING,
   ObjectRef,
   SHARED_LENGTH_MASK,
-  VariantTag as Tag,
+  VariantTag,
 } from '../../../godot/project/binaryResourceFormat';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** What a variant names outside itself: the file's tables and format version. */
 export interface VariantTables {
@@ -42,12 +43,12 @@ export function tableString(reader: ByteReader, tables: VariantTables): string {
 
 /** The next variant as Godot's text format spells it. */
 function variantText(reader: ByteReader, tables: VariantTables): string {
-  return taggedVariant(reader.u32() as Tag, reader, tables).text;
+  return taggedVariant(reader.u32() as EnumValue<typeof VariantTag>, reader, tables).text;
 }
 
 /** The next variant, read once for its text and for its order as a dictionary key. */
 function readVariant(reader: ByteReader, tables: VariantTables): ReadVariant {
-  const tag = reader.u32() as Tag;
+  const tag = reader.u32() as EnumValue<typeof VariantTag>;
   const tagType = VARIANT_TYPE_OF_TAG[tag];
   if (tagType === undefined) throw new Error(`expected a binary variant tag, got ${tag as number}`);
   const { text, value } = taggedVariant(tag, reader, tables);
@@ -62,53 +63,53 @@ function readVariant(reader: ByteReader, tables: VariantTables): ReadVariant {
  * (`resource_format_text.cpp:1980-1982`), and the binary saver keeps it, so the caller decides.
  */
 export function propertyValueText(reader: ByteReader, tables: VariantTables): string | null {
-  const tag = reader.u32() as Tag;
-  return tag === Tag.Object ? objectText(reader, tables) : taggedVariant(tag, reader, tables).text;
+  const tag = reader.u32() as EnumValue<typeof VariantTag>;
+  return tag === VariantTag.Object ? objectText(reader, tables) : taggedVariant(tag, reader, tables).text;
 }
 
 /** The variants `OP_LESS` orders (`variant_op.cpp:731-745`) carry their value. The rest carry none. */
 function taggedVariant(
-  tag: Tag,
+  tag: EnumValue<typeof VariantTag>,
   reader: ByteReader,
   tables: VariantTables
 ): { text: string; value: KeyValue } {
   switch (tag) {
-    case Tag.Bool: {
+    case VariantTag.Bool: {
       const isTrue = reader.u32() !== 0;
       return numbered(isTrue ? 'true' : 'false', [isTrue ? 1 : 0]);
     }
-    case Tag.Int:
+    case VariantTag.Int:
       return integer(reader.i32());
-    case Tag.Int64:
+    case VariantTag.Int64:
       return integer(reader.i64());
     // The loader reads a RID as its int id (`:388-390`).
-    case Tag.Rid:
+    case VariantTag.Rid:
       return integer(reader.u32());
-    case Tag.Float:
+    case VariantTag.Float:
       return real(reader.real());
-    case Tag.Double:
+    case VariantTag.Double:
       return real(reader.f64());
-    case Tag.String: {
+    case VariantTag.String: {
       const value = reader.unicodeString();
       return { text: stringLiteral(value), value: { kind: 'text', value } };
     }
-    case Tag.StringName: {
+    case VariantTag.StringName: {
       const value = reader.unicodeString();
       return { text: stringNameLiteral(value), value: { kind: 'text', value } };
     }
-    case Tag.Vector2:
+    case VariantTag.Vector2:
       return realVector('Vector2', realValues(reader, 2));
-    case Tag.Vector2i:
+    case VariantTag.Vector2i:
       return intVector('Vector2i', intValues(reader, 2));
-    case Tag.Vector3:
+    case VariantTag.Vector3:
       return realVector('Vector3', realValues(reader, 3));
-    case Tag.Vector3i:
+    case VariantTag.Vector3i:
       return intVector('Vector3i', intValues(reader, 3));
-    case Tag.Vector4:
+    case VariantTag.Vector4:
       return realVector('Vector4', realValues(reader, 4));
-    case Tag.Vector4i:
+    case VariantTag.Vector4i:
       return intVector('Vector4i', intValues(reader, 4));
-    case Tag.Array: {
+    case VariantTag.Array: {
       const elements = repeat(reader.u32() & SHARED_LENGTH_MASK, () => readVariant(reader, tables));
       return {
         text: `[${elements.map(({ text }) => text).join(', ')}]`,
@@ -142,70 +143,74 @@ function intVector(typeName: string, values: number[]): { text: string; value: K
   return numbered(call(typeName, values.map(String)), values);
 }
 
-function unorderedVariantText(tag: Tag, reader: ByteReader, tables: VariantTables): string {
+function unorderedVariantText(
+  tag: EnumValue<typeof VariantTag>,
+  reader: ByteReader,
+  tables: VariantTables
+): string {
   switch (tag) {
-    case Tag.Nil:
+    case VariantTag.Nil:
       return 'null';
-    case Tag.Rect2:
+    case VariantTag.Rect2:
       return call('Rect2', reals(reader, 4));
-    case Tag.Rect2i:
+    case VariantTag.Rect2i:
       return call('Rect2i', ints(reader, 4));
-    case Tag.Plane:
+    case VariantTag.Plane:
       return call('Plane', reals(reader, 4));
-    case Tag.Quaternion:
+    case VariantTag.Quaternion:
       return call('Quaternion', reals(reader, 4));
-    case Tag.Aabb:
+    case VariantTag.Aabb:
       return call('AABB', reals(reader, 6));
-    case Tag.Transform2D:
+    case VariantTag.Transform2D:
       return call('Transform2D', reals(reader, 6));
     // The binary file and the text writer both run row by row, then the origin.
-    case Tag.Basis:
+    case VariantTag.Basis:
       return call('Basis', reals(reader, 9));
-    case Tag.Transform3D:
+    case VariantTag.Transform3D:
       return call('Transform3D', reals(reader, 12));
-    case Tag.Projection:
+    case VariantTag.Projection:
       return call('Projection', reals(reader, 16));
     // A Color is single precision whatever `real_t` is (`:418`).
-    case Tag.Color:
+    case VariantTag.Color:
       return call('Color', floats(reader, 4));
-    case Tag.NodePath:
+    case VariantTag.NodePath:
       return nodePathText(reader, tables);
-    case Tag.Object:
+    case VariantTag.Object:
       return objectText(reader, tables) ?? 'null';
-    case Tag.Callable:
+    case VariantTag.Callable:
       return 'Callable()';
-    case Tag.Signal:
+    case VariantTag.Signal:
       return 'Signal()';
-    case Tag.Dictionary:
+    case VariantTag.Dictionary:
       return dictionaryText(reader, tables);
-    case Tag.PackedByteArray:
+    case VariantTag.PackedByteArray:
       return packedByteArrayText(reader);
-    case Tag.PackedInt32Array:
+    case VariantTag.PackedInt32Array:
       return call('PackedInt32Array', ints(reader, reader.u32()));
-    case Tag.PackedInt64Array:
+    case VariantTag.PackedInt64Array:
       return call(
         'PackedInt64Array',
         repeat(reader.u32(), () => String(reader.i64()))
       );
-    case Tag.PackedFloat32Array:
+    case VariantTag.PackedFloat32Array:
       return call('PackedFloat32Array', floats(reader, reader.u32()));
-    case Tag.PackedFloat64Array:
+    case VariantTag.PackedFloat64Array:
       return call(
         'PackedFloat64Array',
         repeat(reader.u32(), () => componentLiteral(reader.f64()))
       );
-    case Tag.PackedStringArray:
+    case VariantTag.PackedStringArray:
       return call(
         'PackedStringArray',
         repeat(reader.u32(), () => stringLiteral(reader.unicodeString()))
       );
-    case Tag.PackedVector2Array:
+    case VariantTag.PackedVector2Array:
       return call('PackedVector2Array', reals(reader, reader.u32() * 2));
-    case Tag.PackedVector3Array:
+    case VariantTag.PackedVector3Array:
       return call('PackedVector3Array', reals(reader, reader.u32() * 3));
-    case Tag.PackedVector4Array:
+    case VariantTag.PackedVector4Array:
       return call('PackedVector4Array', reals(reader, reader.u32() * 4));
-    case Tag.PackedColorArray:
+    case VariantTag.PackedColorArray:
       return call('PackedColorArray', floats(reader, reader.u32() * 4));
     default:
       throw new Error(`expected a binary variant tag, got ${tag as number}`);
@@ -258,7 +263,7 @@ function nodePathText(reader: ByteReader, tables: VariantTables): string {
 
 /** `:453-548`: a resource the property names by index, or by type and path in an old file. Null for none. */
 function objectText(reader: ByteReader, tables: VariantTables): string | null {
-  const kind = reader.u32() as ObjectRef;
+  const kind = reader.u32() as EnumValue<typeof ObjectRef>;
   switch (kind) {
     case ObjectRef.Empty:
       return null;
@@ -327,49 +332,49 @@ function dictionaryEntry(reader: ByteReader, tables: VariantTables): ReadVariant
 }
 
 /** The `Variant::Type` of each tag. A RID loads as its int id (`:388-390`). */
-const VARIANT_TYPE_OF_TAG: Readonly<Record<Tag, number>> = {
-  [Tag.Nil]: VARIANT_TYPE.NIL,
-  [Tag.Bool]: VARIANT_TYPE.BOOL,
-  [Tag.Int]: VARIANT_TYPE.INT,
-  [Tag.Int64]: VARIANT_TYPE.INT,
-  [Tag.Float]: VARIANT_TYPE.FLOAT,
-  [Tag.Double]: VARIANT_TYPE.FLOAT,
-  [Tag.String]: VARIANT_TYPE.STRING,
-  [Tag.Vector2]: VARIANT_TYPE.VECTOR2,
-  [Tag.Vector2i]: VARIANT_TYPE.VECTOR2I,
-  [Tag.Rect2]: VARIANT_TYPE.RECT2,
-  [Tag.Rect2i]: VARIANT_TYPE.RECT2I,
-  [Tag.Vector3]: VARIANT_TYPE.VECTOR3,
-  [Tag.Vector3i]: VARIANT_TYPE.VECTOR3I,
-  [Tag.Transform2D]: VARIANT_TYPE.TRANSFORM2D,
-  [Tag.Vector4]: VARIANT_TYPE.VECTOR4,
-  [Tag.Vector4i]: VARIANT_TYPE.VECTOR4I,
-  [Tag.Plane]: VARIANT_TYPE.PLANE,
-  [Tag.Quaternion]: VARIANT_TYPE.QUATERNION,
-  [Tag.Aabb]: VARIANT_TYPE.AABB,
-  [Tag.Basis]: VARIANT_TYPE.BASIS,
-  [Tag.Transform3D]: VARIANT_TYPE.TRANSFORM3D,
-  [Tag.Projection]: VARIANT_TYPE.PROJECTION,
-  [Tag.Color]: VARIANT_TYPE.COLOR,
-  [Tag.StringName]: VARIANT_TYPE.STRING_NAME,
-  [Tag.NodePath]: VARIANT_TYPE.NODE_PATH,
-  [Tag.Rid]: VARIANT_TYPE.INT,
-  [Tag.Object]: VARIANT_TYPE.OBJECT,
-  [Tag.InputEvent]: VARIANT_TYPE.OBJECT,
-  [Tag.Callable]: VARIANT_TYPE.CALLABLE,
-  [Tag.Signal]: VARIANT_TYPE.SIGNAL,
-  [Tag.Dictionary]: VARIANT_TYPE.DICTIONARY,
-  [Tag.Array]: VARIANT_TYPE.ARRAY,
-  [Tag.PackedByteArray]: VARIANT_TYPE.PACKED_BYTE_ARRAY,
-  [Tag.PackedInt32Array]: VARIANT_TYPE.PACKED_INT32_ARRAY,
-  [Tag.PackedInt64Array]: VARIANT_TYPE.PACKED_INT64_ARRAY,
-  [Tag.PackedFloat32Array]: VARIANT_TYPE.PACKED_FLOAT32_ARRAY,
-  [Tag.PackedFloat64Array]: VARIANT_TYPE.PACKED_FLOAT64_ARRAY,
-  [Tag.PackedStringArray]: VARIANT_TYPE.PACKED_STRING_ARRAY,
-  [Tag.PackedVector2Array]: VARIANT_TYPE.PACKED_VECTOR2_ARRAY,
-  [Tag.PackedVector3Array]: VARIANT_TYPE.PACKED_VECTOR3_ARRAY,
-  [Tag.PackedColorArray]: VARIANT_TYPE.PACKED_COLOR_ARRAY,
-  [Tag.PackedVector4Array]: VARIANT_TYPE.PACKED_VECTOR4_ARRAY,
+const VARIANT_TYPE_OF_TAG: Readonly<Record<EnumValue<typeof VariantTag>, number>> = {
+  [VariantTag.Nil]: VARIANT_TYPE.NIL,
+  [VariantTag.Bool]: VARIANT_TYPE.BOOL,
+  [VariantTag.Int]: VARIANT_TYPE.INT,
+  [VariantTag.Int64]: VARIANT_TYPE.INT,
+  [VariantTag.Float]: VARIANT_TYPE.FLOAT,
+  [VariantTag.Double]: VARIANT_TYPE.FLOAT,
+  [VariantTag.String]: VARIANT_TYPE.STRING,
+  [VariantTag.Vector2]: VARIANT_TYPE.VECTOR2,
+  [VariantTag.Vector2i]: VARIANT_TYPE.VECTOR2I,
+  [VariantTag.Rect2]: VARIANT_TYPE.RECT2,
+  [VariantTag.Rect2i]: VARIANT_TYPE.RECT2I,
+  [VariantTag.Vector3]: VARIANT_TYPE.VECTOR3,
+  [VariantTag.Vector3i]: VARIANT_TYPE.VECTOR3I,
+  [VariantTag.Transform2D]: VARIANT_TYPE.TRANSFORM2D,
+  [VariantTag.Vector4]: VARIANT_TYPE.VECTOR4,
+  [VariantTag.Vector4i]: VARIANT_TYPE.VECTOR4I,
+  [VariantTag.Plane]: VARIANT_TYPE.PLANE,
+  [VariantTag.Quaternion]: VARIANT_TYPE.QUATERNION,
+  [VariantTag.Aabb]: VARIANT_TYPE.AABB,
+  [VariantTag.Basis]: VARIANT_TYPE.BASIS,
+  [VariantTag.Transform3D]: VARIANT_TYPE.TRANSFORM3D,
+  [VariantTag.Projection]: VARIANT_TYPE.PROJECTION,
+  [VariantTag.Color]: VARIANT_TYPE.COLOR,
+  [VariantTag.StringName]: VARIANT_TYPE.STRING_NAME,
+  [VariantTag.NodePath]: VARIANT_TYPE.NODE_PATH,
+  [VariantTag.Rid]: VARIANT_TYPE.INT,
+  [VariantTag.Object]: VARIANT_TYPE.OBJECT,
+  [VariantTag.InputEvent]: VARIANT_TYPE.OBJECT,
+  [VariantTag.Callable]: VARIANT_TYPE.CALLABLE,
+  [VariantTag.Signal]: VARIANT_TYPE.SIGNAL,
+  [VariantTag.Dictionary]: VARIANT_TYPE.DICTIONARY,
+  [VariantTag.Array]: VARIANT_TYPE.ARRAY,
+  [VariantTag.PackedByteArray]: VARIANT_TYPE.PACKED_BYTE_ARRAY,
+  [VariantTag.PackedInt32Array]: VARIANT_TYPE.PACKED_INT32_ARRAY,
+  [VariantTag.PackedInt64Array]: VARIANT_TYPE.PACKED_INT64_ARRAY,
+  [VariantTag.PackedFloat32Array]: VARIANT_TYPE.PACKED_FLOAT32_ARRAY,
+  [VariantTag.PackedFloat64Array]: VARIANT_TYPE.PACKED_FLOAT64_ARRAY,
+  [VariantTag.PackedStringArray]: VARIANT_TYPE.PACKED_STRING_ARRAY,
+  [VariantTag.PackedVector2Array]: VARIANT_TYPE.PACKED_VECTOR2_ARRAY,
+  [VariantTag.PackedVector3Array]: VARIANT_TYPE.PACKED_VECTOR3_ARRAY,
+  [VariantTag.PackedColorArray]: VARIANT_TYPE.PACKED_COLOR_ARRAY,
+  [VariantTag.PackedVector4Array]: VARIANT_TYPE.PACKED_VECTOR4_ARRAY,
 };
 
 /** `StringLikeVariantOrder::compare`: two string-like keys by their text, any other pair by `operator<`. */

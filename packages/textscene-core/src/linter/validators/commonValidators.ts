@@ -6,15 +6,8 @@ import { propertyError } from './propertyError.js';
 import { convertedSpelling, storedNotWritten, unrepresentableInt } from './intSlot.js';
 import { boolLiteralAsNumber, boolSlotValue, scalarSlotValue } from '../../godot/variant/variantBool.js';
 import { parseGodotFloat } from '../../godot/variant/number.js';
-import { readIntSlot, slotWidth, type IntWidth } from '../../godot/variant/int.js';
-
-/**
- * The Variant-literal readers, re-exported from `src/godot/`. They live there
- * because that module imports nothing, so the renderer can read a value as
- * Godot does without pulling diagnostics into the webview bundle.
- */
-export { TSCN_FLOAT_PATTERN_SOURCE, TSCN_FLOAT_RE, parseGodotFloat } from '../../godot/variant/number.js';
-export { ruleCount, ruleInt, statedFromFloat } from '../../godot/variant/int.js';
+import { readIntSlot, slotWidth } from '../../godot/variant/intSlots.js';
+import { type IntWidth } from '../../godot/variant/intWidth.js';
 
 /**
  * One capture group of an already-matched float tuple, as a number. The regex

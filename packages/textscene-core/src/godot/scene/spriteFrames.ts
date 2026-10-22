@@ -5,7 +5,8 @@
  * parsers and the linter share this, so they cannot disagree about which frame a body loads on.
  */
 
-import { parseSlotInt, storedVector2i } from '../variant/int.js';
+import { parseSlotInt } from '../variant/intReader.js';
+import { storedVector2i } from '../variant/intSlots.js';
 
 type FrameKey = 'frame' | 'frame_coords';
 

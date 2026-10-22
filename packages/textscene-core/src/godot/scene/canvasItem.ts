@@ -8,11 +8,11 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
  * Godot tests `get_clip_children_mode() != CLIP_CHILDREN_DISABLED` (`canvas_group.cpp:76`,
  * `canvas_item.cpp:1308`).
  */
-export enum CanvasItemClipChildrenMode {
-  DISABLED = 0,
-  ONLY = 1,
-  AND_DRAW = 2,
-}
+export const CanvasItemClipChildrenMode = {
+  DISABLED: 0,
+  ONLY: 1,
+  AND_DRAW: 2,
+} as const;
 
 /** The names Godot binds (`BIND_ENUM_CONSTANT`, `canvas_item.cpp:1525-1527`). */
 export const CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES = enumNamesByValue(CanvasItemClipChildrenMode);
@@ -31,15 +31,15 @@ export const CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT = CanvasItemClipChildrenMode.A
  * default is PARENT_NODE (`canvas_item.h:123`). `BaseMaterial3D::TextureFilter` has no PARENT_NODE
  * (`rendering/materials/textureFilter.ts`).
  */
-export enum CanvasItemTextureFilter {
-  PARENT_NODE = 0,
-  NEAREST = 1,
-  LINEAR = 2,
-  NEAREST_WITH_MIPMAPS = 3,
-  LINEAR_WITH_MIPMAPS = 4,
-  NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5,
-  LINEAR_WITH_MIPMAPS_ANISOTROPIC = 6,
-}
+export const CanvasItemTextureFilter = {
+  PARENT_NODE: 0,
+  NEAREST: 1,
+  LINEAR: 2,
+  NEAREST_WITH_MIPMAPS: 3,
+  LINEAR_WITH_MIPMAPS: 4,
+  NEAREST_WITH_MIPMAPS_ANISOTROPIC: 5,
+  LINEAR_WITH_MIPMAPS_ANISOTROPIC: 6,
+} as const;
 
 /** Each filter's name by the integer a `.tscn` stores (`canvas_item.cpp:1510-1516`), as a validator names it. */
 export const CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(CanvasItemTextureFilter);
@@ -64,12 +64,12 @@ export function canvasItemSamplerFilter(filter: number | undefined): 'nearest' |
  * `CanvasItem::TextureRepeat` (`scene/main/canvas_item.h:63-69`), without `TEXTURE_REPEAT_MAX`, as the
  * integers a `.tscn` stores for `texture_repeat`. PARENT_NODE at 0 defers to the ancestors.
  */
-export enum CanvasItemTextureRepeat {
-  PARENT_NODE = 0,
-  DISABLED = 1,
-  ENABLED = 2,
-  MIRROR = 3,
-}
+export const CanvasItemTextureRepeat = {
+  PARENT_NODE: 0,
+  DISABLED: 1,
+  ENABLED: 2,
+  MIRROR: 3,
+} as const;
 
 /** Each repeat's name by the integer a `.tscn` stores (`canvas_item.cpp:1519-1522`), as a validator names it. */
 export const CANVAS_ITEM_TEXTURE_REPEAT_NAMES = enumNamesByValue(CanvasItemTextureRepeat);

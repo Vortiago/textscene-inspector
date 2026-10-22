@@ -7,7 +7,7 @@
 import type { PropertyValidator } from '../../../linter/ValidatorRegistry.js';
 import { v } from '../../../linter/validators/index.js';
 import { ALPHA_ANTIALIASING_NAMES } from '../../../godot/rendering/materials/alphaAntialiasing.js';
-import { BLEND_MODE_NAMES } from '../../../godot/rendering/materials/blendMode.js';
+import { BASE_MATERIAL_3D_BLEND_MODE_NAMES } from '../../../godot/rendering/materials/blendMode.js';
 import { CULL_MODE_NAMES } from '../../../godot/rendering/materials/cullMode.js';
 import { DEPTH_DRAW_MODE_NAMES } from '../../../godot/rendering/materials/depthDrawMode.js';
 import { DEPTH_TEST_NAMES } from '../../../godot/rendering/materials/depthTest.js';
@@ -35,7 +35,7 @@ export const surfaceKeys: Record<string, PropertyValidator> = {
     max: 1,
     hinted: 'material.cpp:3592',
   }),
-  blend_mode: v.enumInt('blend_mode', BLEND_MODE_NAMES, {
+  blend_mode: v.enumInt('blend_mode', BASE_MATERIAL_3D_BLEND_MODE_NAMES, {
     hinted: 'material.cpp:3593',
   }),
   cull_mode: v.enumInt('cull_mode', CULL_MODE_NAMES, {

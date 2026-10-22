@@ -8,13 +8,13 @@ import {
   worldShadowCasters,
   type ShadowCaster,
 } from './shadowCasterRegistry';
-import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED } from './shadowVolumes';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 /** A caster whose local segments run from (0,0) to (10,0), under `object`. */
 function caster(object: THREE.Object3D, overrides: Partial<ShadowCaster> = {}): ShadowCaster {
   return {
     segments: new Float32Array([0, 0, 0, 10, 0, 0]),
-    cullMode: OCCLUDER_CULL_DISABLED,
+    cullMode: OccluderPolygon2DCullMode.DISABLED,
     occluderLightMask: 1,
     object,
     ...overrides,
@@ -149,8 +149,8 @@ describe('worldShadowCasters', () => {
 
   it('carries the cull mode through', () => {
     const registry = createShadowCasterRegistry();
-    registry.add(caster(new THREE.Group(), { cullMode: OCCLUDER_CULL_CLOCKWISE }));
-    expect(worldShadowCasters(registry, 1)[0]!.cullMode).toBe(OCCLUDER_CULL_CLOCKWISE);
+    registry.add(caster(new THREE.Group(), { cullMode: OccluderPolygon2DCullMode.CLOCKWISE }));
+    expect(worldShadowCasters(registry, 1)[0]!.cullMode).toBe(OccluderPolygon2DCullMode.CLOCKWISE);
   });
 
   it('keeps every mask, and carries it through, when no mask is given', () => {

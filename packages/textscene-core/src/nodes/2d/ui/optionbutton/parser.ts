@@ -8,7 +8,7 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { OptionItem, OptionButtonProperties } from './types';
 import { parseButton } from '../button/parser';
-import { slotCount, slotInt } from '../../../../godot/variant/int.js';
+import { slotCount, slotInt } from '../../../../godot/variant/intSlots.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';

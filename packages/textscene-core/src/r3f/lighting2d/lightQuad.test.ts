@@ -10,13 +10,12 @@ import {
   createLightQuadMaterial,
   createShadowColorQuadMaterial,
   updateShadowPolarTexture,
-  Light2DBlendMode,
-  SHADOW_FILTER_PCF5,
-  SHADOW_FILTER_PCF13,
   type ShadowSampling,
 } from './lightQuad';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
 import { shadowPixelSize } from './shadowSampling';
+import { Light2DBlendMode } from '../../godot/scene/light2d';
+import { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
 const WARM = { r: 1, g: 0.75, b: 0.35, a: 1 };
 
@@ -27,7 +26,7 @@ function material(blendMode: number, energy = 1) {
 function sampling(overrides: Partial<ShadowSampling> = {}): ShadowSampling {
   return {
     map: new THREE.Texture(),
-    filter: SHADOW_FILTER_PCF5,
+    filter: Light2DShadowFilter.PCF5,
     smooth: 0,
     worldToLocal: new THREE.Matrix3(),
     zFarInv: 1 / 1100,
@@ -192,7 +191,7 @@ describe('createLightQuadMaterial with a shadow filter', () => {
 
   it('selects the five-tap kernel for PCF5 and the thirteen-tap for PCF13', () => {
     const pcf5 = filteredMaterial();
-    const pcf13 = filteredMaterial(sampling({ filter: SHADOW_FILTER_PCF13 }));
+    const pcf13 = filteredMaterial(sampling({ filter: Light2DShadowFilter.PCF13 }));
     expect(pcf5.defines?.SHADOW_FILTER).toBe(1);
     expect(pcf13.defines?.SHADOW_FILTER).toBe(2);
     // Both kernels are compiled into the one shader and chosen by the define, so

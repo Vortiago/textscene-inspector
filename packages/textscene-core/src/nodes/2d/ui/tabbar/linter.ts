@@ -8,7 +8,7 @@ import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types
 import { pastCountDiagnostic } from '../../../../linter/reportedIndices.js';
 import { TAB_BAR_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount, ruleInt } from '../../../../godot/variant/intSlots.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {

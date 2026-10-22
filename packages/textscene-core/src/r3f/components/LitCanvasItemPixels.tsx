@@ -10,10 +10,8 @@ import {
   canvasItemBlendState,
   type CanvasItemBlendState,
 } from '../../resources/materials/canvasitemmaterial/renderer';
-import {
-  CanvasItemBlendMode,
-  type CanvasItemMaterialProperties,
-} from '../../resources/materials/canvasitemmaterial/types';
+import { type CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
+import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 
 /**
  * What every canvas-item mesh merges into its material, as one `materialProgramInputs` part: the
@@ -33,7 +31,7 @@ interface LitCanvasItemPixelsProps {
 
 export function LitCanvasItemPixels({ material, lightMask, zFinal, children }: LitCanvasItemPixelsProps) {
   const { props: lighting, geometryRef } = useCanvasItemLighting(material, lightMask, zFinal);
-  const blendMode = material?.blendMode ?? CanvasItemBlendMode.MIX;
+  const blendMode = material?.blendMode ?? CanvasItemMaterialBlendMode.MIX;
   const pixelMaterial = useMemo<CanvasItemPixelMaterial>(
     () => ({ ...canvasItemFacing(), ...canvasItemBlendState(blendMode), ...lighting }),
     [blendMode, lighting]

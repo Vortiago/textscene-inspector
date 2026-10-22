@@ -169,8 +169,8 @@ The previewer asks the browser's driver for the same maximum and takes that driv
 - [TwoBoneIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/twoboneik3d/comparison.md): nothing yet, Godot poses its two-bone chain onto the target, the previewer does not
 - [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md): an invisible transform-only group
 - [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md): a transform group with a selection-gated wheel gizmo
-- [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md): nothing (a transform-only group)
-- [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md): nothing (a transform-only group)
+- [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md): a selection-gated box gizmo
+- [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md): a selection-gated box gizmo
 - [VisualInstance3D](../../packages/textscene-core/src/nodes/3d/visualinstance3d/comparison.md): a transform-only group
 - [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md): nothing yet, Godot lights the scene from its voxel bake, the previewer does not
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md): the scene's background and environment lighting

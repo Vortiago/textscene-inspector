@@ -15,7 +15,7 @@ import { ControlClipProvider } from './controlClipping';
 import { ControlQuad } from './controlQuad';
 import { StyleBoxQuad } from './StyleBoxQuad';
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import { ControlCanvasLayer } from './ControlCanvasLayer';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';

@@ -13,7 +13,7 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import type { TscnNode } from '../../parser/types';
 import type { MeshInstance3DProperties } from '../../nodes/3d/meshinstance3d/types';
 import type { Camera3DProperties } from '../../nodes/3d/camera3d/types';
-import { ProjectionMode, KeepAspectMode } from '../../nodes/3d/camera3d/types';
+
 import { labelProperties } from '../../nodes/3d/label3d/testing/labelProperties';
 import { inlineTwoSurfaceMesh } from '../../nodes/3d/meshinstance3d/testing/twoSurfaceMesh';
 import { depthSideOf, drawsColour } from '../testing/threePasses';
@@ -23,6 +23,7 @@ import '../../nodes/3d/meshinstance3d/index.r3f';
 import '../../nodes/3d/label3d/index.r3f';
 import { registeredComponent } from '../testing/registeredComponent';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
+import { Camera3DProjectionType, Camera3DKeepAspect } from '../../godot/scene/camera3d';
 
 const MeshInstance3D = registeredComponent('MeshInstance3D');
 const Label3D = registeredComponent('Label3D');
@@ -214,12 +215,12 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       children: [],
       properties: {
         name: 'Cam',
-        projection: ProjectionMode.PROJECTION_PERSPECTIVE,
+        projection: Camera3DProjectionType.PERSPECTIVE,
         fov: 75,
         size: 1,
         near: 0.05,
         far: 100,
-        keep_aspect: KeepAspectMode.KEEP_HEIGHT,
+        keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
         h_offset: 2.5,
         v_offset: 0,
         frustum_offset: { x: 0, y: 0 },
@@ -250,12 +251,12 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       children: [],
       properties: {
         name: 'Cam',
-        projection: ProjectionMode.PROJECTION_PERSPECTIVE,
+        projection: Camera3DProjectionType.PERSPECTIVE,
         fov: 75,
         size: 1,
         near: 0.05,
         far: 100,
-        keep_aspect: KeepAspectMode.KEEP_HEIGHT,
+        keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
         h_offset: 0,
         v_offset: -1.5,
         frustum_offset: { x: 0, y: 0 },
@@ -288,12 +289,12 @@ describe('WI-R3F-19 parity-audit Tier-1 fixes', () => {
       children: [],
       properties: {
         name: 'Cam',
-        projection: ProjectionMode.PROJECTION_PERSPECTIVE,
+        projection: Camera3DProjectionType.PERSPECTIVE,
         fov: 75,
         size: 1,
         near: 0.05,
         far: 100,
-        keep_aspect: KeepAspectMode.KEEP_HEIGHT,
+        keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
         h_offset: 2,
         v_offset: 1,
         frustum_offset: { x: 0, y: 0 },

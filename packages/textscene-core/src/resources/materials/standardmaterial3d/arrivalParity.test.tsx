@@ -8,13 +8,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import {
-  StandardMaterialSlot,
-  type StandardMaterialSlotProps,
-} from '../../../r3f/materials/StandardMaterialSlot';
+import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import { inlineSource } from '../../../r3f/materials/surfaceMaterial.testkit';
 import { parseTresFile } from '../../../parser/parsedResource';
+import { subResource } from '../../../testing/subResource';
 import { ResourceLoaderProvider } from '../../ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../testing/createFakeResourceLoader';
 import { resolveExtResourcePath } from '../../SubResourceResolver';
@@ -27,7 +26,7 @@ import { alphaAntialiasingOf, GODOT_ALPHA_ANTIALIASING } from '../../../r3f/mate
 import { mipmapBiasInjection } from '../../../r3f/materials/godotMipmapBias';
 import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
 import { bindSlotTexture, materialTextureStates } from './textureBinding';
-import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../parser/projectSettingsParser';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import { parseStandardMaterial3DScalars } from './scalars';
 import { mapSampledBy } from '../../../r3f/testing/patchedFragment';
 import { TEXTURE_SLOTS, type ResolvedTextureSlots, type TextureSlot } from './types';
@@ -340,18 +339,11 @@ async function renderArrival(testCase: ParityCase, arrival: Arrival): Promise<TH
   fake.resources.seed(STANDALONE_PATH, parseTresFile(standaloneTres(testCase)));
   fake.resources.seed(MESH_PATH, parseTresFile(meshTresCarryingIt(testCase)));
   const sources: Record<Arrival, MaterialSource> = {
-    inline: {
-      kind: 'inline',
-      material: {
-        resource: {
-          id: 'Mat_inline',
-          type: testCase.resourceType ?? 'StandardMaterial3D',
-          data: testCase.properties,
-        },
-        internalResources: [],
-        externalResources: testCase.extResources ?? [],
-      },
-    },
+    inline: inlineSource(
+      subResource(testCase.resourceType ?? 'StandardMaterial3D', 'Mat_inline', testCase.properties),
+      [],
+      testCase.extResources ?? []
+    ),
     '.tres': { kind: 'file', path: STANDALONE_PATH },
     '.tres::sub': { kind: 'file', path: `${MESH_PATH}::Mat_surface` },
   };
@@ -550,25 +542,15 @@ function snapshot(material: THREE.Material): MaterialSnapshot {
   };
 }
 
-/** The bound slots as the reactive adapter's own prop names. */
-function slotProps(testCase: ParityCase, textures: ResolvedTextureSlots): StandardMaterialSlotProps {
-  return {
-    scalars: parseStandardMaterial3DScalars(testCase.properties),
-    albedoMap: textures.albedo_texture ?? undefined,
-    normalMap: textures.normal_texture ?? undefined,
-    roughnessMap: textures.roughness_texture ?? undefined,
-    metalnessMap: textures.metallic_texture ?? undefined,
-    emissiveMap: textures.emission_texture ?? undefined,
-    aoMap: textures.ao_texture ?? undefined,
-    heightMap: textures.heightmap_texture ?? undefined,
-    anisotropyMap: textures.anisotropy_flowmap ?? undefined,
-  };
+/** The bags the reactive adapter mounts for `testCase` with its slots bound. */
+function slotBags(testCase: ParityCase, textures: ResolvedTextureSlots) {
+  return standardMaterialBags(parseStandardMaterial3DScalars(testCase.properties), textures);
 }
 
 async function renderThroughSlot(testCase: ParityCase): Promise<THREE.Material> {
   const renderer = await ReactThreeTestRenderer.create(
     <mesh>
-      <StandardMaterialSlot {...slotProps(testCase, inlineTextures(testCase))} />
+      <StandardMaterialSlot bags={slotBags(testCase, inlineTextures(testCase))} />
     </mesh>
   );
   return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;
@@ -650,11 +632,11 @@ describe('StandardMaterial3D arrival parity', () => {
     for (const testCase of CASES) {
       it(`${testCase.name}: the reactive adapter mounts the derived bag`, async () => {
         const textures = inlineTextures(testCase);
-        const props = slotProps(testCase, textures);
-        const bag = standardMaterialBags(props.scalars, textures).unfaded;
+        const bags = slotBags(testCase, textures);
+        const bag = bags.unfaded;
         const renderer = await ReactThreeTestRenderer.create(
           <mesh>
-            <StandardMaterialSlot {...props} />
+            <StandardMaterialSlot bags={bags} />
           </mesh>
         );
         const element = renderer.scene.findByType(TYPE_FOR[bag.materialClass]);
@@ -847,7 +829,9 @@ describe('uncompiled ShaderMaterial arrival parity', () => {
   });
 
   it('the reactive adapter mounts that same surface for a null material', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<StandardMaterialSlot scalars={null} />);
+    const renderer = await ReactThreeTestRenderer.create(
+      <StandardMaterialSlot bags={standardMaterialBags(null)} />
+    );
     const mounted = renderer.scene.findAllByType('MeshStandardMaterial')[0];
     expect(mounted).toBeDefined();
     const built = surfaceOf(buildMaterial(null));

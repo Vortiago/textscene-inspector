@@ -3,7 +3,7 @@
  * in each slice's linterParser.ts.
  */
 
-import { ruleInt } from '../validators/commonValidators.js';
+import { ruleInt } from '../../godot/variant/intSlots.js';
 import type { LintRule, Diagnostic, RuleContext } from '../types.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../ruleArms.js';
 import type { PhysicsDim } from './dim.js';

@@ -9,11 +9,9 @@ import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { WHITE_MODULATE } from './canvasItemModulate.js';
 import { CANVAS_MODULATE_FLOOR } from './lighting2d/canvasItemLighting.js';
-import {
-  CanvasItemLightMode,
-  type CanvasItemMaterialProperties,
-} from '../resources/materials/canvasitemmaterial/types.js';
+import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types.js';
 import type { Rgba } from '../godot/math/math.js';
+import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial.js';
 
 interface CanvasModulateLike {
   color?: Rgba;
@@ -61,7 +59,8 @@ export function useCanvasModulate(): Rgba {
  */
 export function useCanvasModulateFor(material: CanvasItemMaterialProperties | null): Rgba {
   const canvasModulate = useContext(CanvasModulateContext);
-  const shaded = (material?.lightMode ?? CanvasItemLightMode.NORMAL) === CanvasItemLightMode.NORMAL;
+  const shaded =
+    (material?.lightMode ?? CanvasItemMaterialLightMode.NORMAL) === CanvasItemMaterialLightMode.NORMAL;
   return useMemo(
     () => (shaded ? floorCanvasModulate(canvasModulate) : WHITE_MODULATE),
     [shaded, canvasModulate]

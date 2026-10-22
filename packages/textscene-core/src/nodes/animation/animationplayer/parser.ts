@@ -10,12 +10,8 @@ import { parseNode } from '../../node/parser';
 import { boolOr, enumOr, floatOr } from '../../../parser/valueParsers';
 import { dictSubResourceEntries, resourceRef } from '../../../godot/variant/resourceRef.js';
 import { literalText } from '../../../godot/string/string.js';
-import {
-  type AnimationLibraryRef,
-  AnimationProcessMode,
-  type AnimationPlayerProperties,
-  MethodCallMode,
-} from './types';
+import { type AnimationLibraryRef, type AnimationPlayerProperties } from './types';
+import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
 
 export function parseAnimationPlayer(
   heading: ParsedHeading,
@@ -35,13 +31,17 @@ export function parseAnimationPlayer(
     // prefers the canonical key.
     callback_mode_process: enumOr(
       properties.callback_mode_process ?? properties.playback_process_mode,
-      AnimationProcessMode.IDLE,
-      [AnimationProcessMode.PHYSICS, AnimationProcessMode.IDLE, AnimationProcessMode.MANUAL]
+      AnimationCallbackModeProcess.IDLE,
+      [
+        AnimationCallbackModeProcess.PHYSICS,
+        AnimationCallbackModeProcess.IDLE,
+        AnimationCallbackModeProcess.MANUAL,
+      ]
     ),
     callback_mode_method: enumOr(
       properties.callback_mode_method ?? properties.method_call_mode,
-      MethodCallMode.DEFERRED,
-      [MethodCallMode.DEFERRED, MethodCallMode.IMMEDIATE]
+      AnimationCallbackModeMethod.DEFERRED,
+      [AnimationCallbackModeMethod.DEFERRED, AnimationCallbackModeMethod.IMMEDIATE]
     ),
     active: isActive(properties),
     autoplay: literalText(properties.autoplay ?? ''),

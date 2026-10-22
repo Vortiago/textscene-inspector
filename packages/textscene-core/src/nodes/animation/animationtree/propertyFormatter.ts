@@ -3,13 +3,13 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import {
-  AnimationTreeProcessMode,
-  type AnimationTreeProperties,
-  CallbackModeDiscrete,
-  CallbackModeMethod,
-} from './types';
+import { type AnimationTreeProperties } from './types';
 import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
+import {
+  ANIMATION_CALLBACK_MODE_DISCRETE_HINT_NAMES,
+  ANIMATION_CALLBACK_MODE_METHOD_HINT_NAMES,
+  ANIMATION_CALLBACK_MODE_PROCESS_HINT_NAMES,
+} from '../../../godot/scene/animation';
 
 export function formatAnimationTreeProperties(properties: AnimationTreeProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -22,7 +22,10 @@ export function formatAnimationTreeProperties(properties: AnimationTreePropertie
       { label: 'Active', value: properties.active ? 'true' : 'false' },
       { label: 'Tree Root', value: properties.tree_root ?? '(none)' },
       { label: 'AnimationPlayer', value: animPlayerPath },
-      { label: 'Process Callback', value: processModeName(properties.process_callback) },
+      {
+        label: 'Process Callback',
+        value: ANIMATION_CALLBACK_MODE_PROCESS_HINT_NAMES[properties.process_callback] ?? 'Unknown',
+      },
     ],
   });
 
@@ -40,9 +43,18 @@ export function formatAnimationTreeProperties(properties: AnimationTreePropertie
   sections.push({
     title: 'Advanced',
     items: [
-      { label: 'Callback Mode Process', value: processModeName(properties.callback_mode_process) },
-      { label: 'Callback Mode Method', value: methodModeName(properties.callback_mode_method) },
-      { label: 'Callback Mode Discrete', value: discreteModeName(properties.callback_mode_discrete) },
+      {
+        label: 'Callback Mode Process',
+        value: ANIMATION_CALLBACK_MODE_PROCESS_HINT_NAMES[properties.callback_mode_process] ?? 'Unknown',
+      },
+      {
+        label: 'Callback Mode Method',
+        value: ANIMATION_CALLBACK_MODE_METHOD_HINT_NAMES[properties.callback_mode_method] ?? 'Unknown',
+      },
+      {
+        label: 'Callback Mode Discrete',
+        value: ANIMATION_CALLBACK_MODE_DISCRETE_HINT_NAMES[properties.callback_mode_discrete] ?? 'Unknown',
+      },
       { label: 'Audio Max Polyphony', value: properties.audio_max_polyphony.toString() },
       { label: 'Deterministic', value: properties.deterministic ? 'true' : 'false' },
       { label: 'Reset On Save', value: properties.reset_on_save ? 'true' : 'false' },
@@ -54,41 +66,4 @@ export function formatAnimationTreeProperties(properties: AnimationTreePropertie
 
 function extractNodePath(raw: string): string {
   return nodePathLiteral(raw) ?? raw;
-}
-
-function processModeName(mode: AnimationTreeProcessMode): string {
-  switch (mode) {
-    case AnimationTreeProcessMode.PHYSICS:
-      return 'Physics';
-    case AnimationTreeProcessMode.IDLE:
-      return 'Idle';
-    case AnimationTreeProcessMode.MANUAL:
-      return 'Manual';
-    default:
-      return 'Unknown';
-  }
-}
-
-function methodModeName(mode: CallbackModeMethod): string {
-  switch (mode) {
-    case CallbackModeMethod.DEFERRED:
-      return 'Deferred';
-    case CallbackModeMethod.IMMEDIATE:
-      return 'Immediate';
-    default:
-      return 'Unknown';
-  }
-}
-
-function discreteModeName(mode: CallbackModeDiscrete): string {
-  switch (mode) {
-    case CallbackModeDiscrete.DOMINANT:
-      return 'Dominant';
-    case CallbackModeDiscrete.RECESSIVE:
-      return 'Recessive';
-    case CallbackModeDiscrete.FORCE_CONTINUOUS:
-      return 'Force Continuous';
-    default:
-      return 'Unknown';
-  }
 }

@@ -9,38 +9,36 @@ import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
 import type { TscnExternalResource } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { pendingMapStandIn } from './pendingMapStandIn';
-import { useMaterialTextures } from './SurfaceMaterialSlot';
+import { inlineMaterial, unfadedProps } from './surfaceMaterial.testkit';
+import { useSurfaceMaterial } from './useSurfaceMaterial';
 
 const NORMAL_PATH = 'res://bricks_normal.png';
 const EXTERNAL: TscnExternalResource[] = [{ id: '1_normal', type: 'Texture2D', path: NORMAL_PATH }];
 
-const SCALARS = parseStandardMaterial3DScalars({
-  normal_enabled: 'true',
-  normal_texture: 'ExtResource("1_normal")',
-});
+const SOURCE = inlineMaterial(
+  { normal_enabled: 'true', normal_texture: 'ExtResource("1_normal")' },
+  [],
+  EXTERNAL
+);
 
 function renderMaterial() {
   const fake = createFakeResourceLoader();
-  const hook = renderHook(
-    () => useMaterialTextures(SCALARS, { internalResources: [], externalResources: EXTERNAL }),
-    {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
-      ),
-    }
-  );
+  const hook = renderHook(() => useSurfaceMaterial(SOURCE), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+    ),
+  });
   return { ...hook, textures: fake.textures };
 }
 
-describe('useMaterialTextures with file slots', () => {
+describe('useSurfaceMaterial with file slots', () => {
   it('binds a stand-in while the file loads', () => {
     const { result } = renderMaterial();
 
-    expect(result.current.maps.normalMap).toBe(pendingMapStandIn('normal_texture'));
-    expect(result.current.isUnresolved).toBe(false);
+    expect(unfadedProps(result.current).normalMap).toBe(pendingMapStandIn('normal_texture'));
+    expect(result.current.bags).not.toBeNull();
   });
 
   it('binds the file once it loads', () => {
@@ -48,7 +46,7 @@ describe('useMaterialTextures with file slots', () => {
     const loaded = new THREE.DataTexture(new Uint8Array(4), 1, 1);
     act(() => textures._resolve(NORMAL_PATH, loaded));
 
-    expect(result.current.maps.normalMap?.source).toBe(loaded.source);
+    expect(unfadedProps(result.current).normalMap?.source).toBe(loaded.source);
   });
 
   it('tiles a clamped file on a source-shared Repeat clone for a default material', () => {
@@ -58,7 +56,7 @@ describe('useMaterialTextures with file slots', () => {
     const loaded = new THREE.DataTexture(new Uint8Array(4), 1, 1);
     act(() => textures._resolve(NORMAL_PATH, loaded));
 
-    const map = result.current.maps.normalMap!;
+    const map = unfadedProps(result.current).normalMap!;
     expect(map).not.toBe(loaded);
     expect(map.source).toBe(loaded.source);
     expect(map.wrapS).toBe(THREE.RepeatWrapping);
@@ -67,11 +65,10 @@ describe('useMaterialTextures with file slots', () => {
     expect(loaded.wrapT).toBe(THREE.ClampToEdgeWrapping);
   });
 
-  it('leaves the slot empty and reports the surface unresolved once the file fails', () => {
+  it('derives no bags once the file fails, so the surface draws the missing-texture placeholder', () => {
     const { result, textures } = renderMaterial();
     act(() => textures._fail(NORMAL_PATH, 'not found'));
 
-    expect(result.current.maps.normalMap).toBeUndefined();
-    expect(result.current.isUnresolved).toBe(true);
+    expect(result.current.bags).toBeNull();
   });
 });

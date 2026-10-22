@@ -31,7 +31,7 @@ import {
 } from '../../../../r3f/controls/native/themeIcons';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { ResolvedConnection } from './connectionEndpoints';
 import type { MinimapTransform, GraphScrollBounds, MinimapElement } from './minimap';
 import { minimapCameraRect, minimapNodeRect } from './minimap';

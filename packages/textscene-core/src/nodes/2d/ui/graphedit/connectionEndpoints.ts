@@ -13,7 +13,7 @@
 import type { TextMeasurer } from '../../../../r3f/controls/native/solverRegistry.js';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme.js';
-import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
+import type { Rect2 } from '../../../../godot/math/rect2.js';
 import type { GraphElementProperties } from '../graphelement/types.js';
 import { graphNodePorts } from './connectionPorts.js';
 import type { GraphEditProperties } from './types.js';

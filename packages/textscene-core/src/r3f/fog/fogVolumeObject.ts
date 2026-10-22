@@ -10,6 +10,7 @@ import {
   type FogVolumeShape,
 } from '../../godot/rendering/environment/fogVolume.js';
 import type { FogMaterialData } from '../../resources/materials/fogmaterial/types.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /**
  * What fills a volume: Godot's default fog shader (`environment/fog.cpp:265-283`), which a volume
@@ -30,7 +31,7 @@ export class FogVolumeObject extends THREE.Object3D {
     FOG_VOLUME_DEFAULT_SIZE.y,
     FOG_VOLUME_DEFAULT_SIZE.z
   );
-  shape: FogVolumeShape | number = FOG_VOLUME_DEFAULT_SHAPE;
+  shape: EnumValue<typeof FogVolumeShape> | number = FOG_VOLUME_DEFAULT_SHAPE;
   fill: FogVolumeFill = DEFAULT_FOG_VOLUME_FILL;
 }
 

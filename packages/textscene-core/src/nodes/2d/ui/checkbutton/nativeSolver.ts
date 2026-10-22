@@ -23,7 +23,7 @@ import {
   swapAlignmentSide,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,

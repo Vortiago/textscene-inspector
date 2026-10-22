@@ -5,9 +5,11 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import { AttenuationModel, type AudioStreamPlayer3DProperties, DopplerTracking } from './types';
+import { type AudioStreamPlayer3DProperties } from './types';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { audioStreamSection } from '../audioStreamSection';
+import { AttenuationModel, DopplerTracking } from '../../../godot/scene/audio';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function formatAudioStreamPlayer3DProperties(
   properties: AudioStreamPlayer3DProperties
@@ -66,28 +68,28 @@ export function formatAudioStreamPlayer3DProperties(
   return sections;
 }
 
-function attenuationName(mode: AttenuationModel): string {
+function attenuationName(mode: EnumValue<typeof AttenuationModel>): string {
   switch (mode) {
-    case AttenuationModel.ATTENUATION_INVERSE_DISTANCE:
+    case AttenuationModel.INVERSE_DISTANCE:
       return 'Inverse Distance';
-    case AttenuationModel.ATTENUATION_INVERSE_SQUARE_DISTANCE:
+    case AttenuationModel.INVERSE_SQUARE_DISTANCE:
       return 'Inverse Square';
-    case AttenuationModel.ATTENUATION_LOGARITHMIC:
+    case AttenuationModel.LOGARITHMIC:
       return 'Logarithmic';
-    case AttenuationModel.ATTENUATION_DISABLED:
+    case AttenuationModel.DISABLED:
       return 'Disabled';
     default:
       return 'Unknown';
   }
 }
 
-function dopplerName(mode: DopplerTracking): string {
+function dopplerName(mode: EnumValue<typeof DopplerTracking>): string {
   switch (mode) {
-    case DopplerTracking.DOPPLER_TRACKING_DISABLED:
+    case DopplerTracking.DISABLED:
       return 'Disabled';
-    case DopplerTracking.DOPPLER_TRACKING_IDLE_STEP:
+    case DopplerTracking.IDLE_STEP:
       return 'Idle Step';
-    case DopplerTracking.DOPPLER_TRACKING_PHYSICS_STEP:
+    case DopplerTracking.PHYSICS_STEP:
       return 'Physics Step';
     default:
       return 'Unknown';

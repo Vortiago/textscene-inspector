@@ -15,13 +15,14 @@ import {
   type TileLayout,
   type TileOffsetAxis,
 } from '../../godot/scene/tileSet';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** The grid surface of a TileSet that placement math needs. */
 export interface TileGrid {
   /** A `TileShape`, or any integer a scene stores: placement treats an unknown one as square. */
   shape: number;
-  layout: TileLayout;
-  offsetAxis: TileOffsetAxis;
+  layout: EnumValue<typeof TileLayout>;
+  offsetAxis: EnumValue<typeof TileOffsetAxis>;
   tileSize: Vector2;
 }
 

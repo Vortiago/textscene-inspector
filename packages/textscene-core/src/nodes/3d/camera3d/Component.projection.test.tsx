@@ -8,18 +8,19 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Camera3D } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { Camera3DProperties } from './types';
-import { ProjectionMode, KeepAspectMode } from './types';
+
 import { instanceAs } from '../testing/reactThreeTestInstance';
+import { Camera3DProjectionType, Camera3DKeepAspect } from '../../../godot/scene/camera3d';
 
 function makeNode(overrides: Partial<Camera3DProperties> = {}): TscnNode {
   const base: Camera3DProperties = {
     name: 'Cam',
-    projection: ProjectionMode.PROJECTION_PERSPECTIVE,
+    projection: Camera3DProjectionType.PERSPECTIVE,
     fov: 75,
     size: 1,
     near: 0.05,
     far: 4000,
-    keep_aspect: KeepAspectMode.KEEP_HEIGHT,
+    keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
     h_offset: 0,
     v_offset: 0,
     frustum_offset: { x: 0, y: 0 },
@@ -54,7 +55,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('#63 projection=1 (ORTHOGRAPHIC) → OrthographicCamera used, not PerspectiveCamera', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 5 })} />
+      <Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 5 })} />
     );
     expect(renderer.scene.findAllByType('OrthographicCamera').length).toBeGreaterThan(0);
     expect(renderer.scene.findAllByType('PerspectiveCamera').length).toBe(0);
@@ -62,7 +63,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('#64 projection=0 (PERSPECTIVE) → PerspectiveCamera used', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_PERSPECTIVE })} />
+      <Camera3D node={makeNode({ projection: Camera3DProjectionType.PERSPECTIVE })} />
     );
     expect(renderer.scene.findAllByType('PerspectiveCamera').length).toBeGreaterThan(0);
     expect(renderer.scene.findAllByType('OrthographicCamera').length).toBe(0);
@@ -70,7 +71,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('#65 size (ortho) → OrthographicCamera frustum width matches', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 })} />
+      <Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 4 })} />
     );
     const cam = renderer.scene.findByType('OrthographicCamera');
     const o = instanceAs<THREE.OrthographicCamera>(cam);
@@ -87,18 +88,18 @@ describe('Camera3D projection (assertions 60–66)', () => {
     const widthRenderer = await ReactThreeTestRenderer.create(
       <Camera3D
         node={makeNode({
-          projection: ProjectionMode.PROJECTION_ORTHOGONAL,
+          projection: Camera3DProjectionType.ORTHOGONAL,
           size: 4,
-          keep_aspect: KeepAspectMode.KEEP_WIDTH,
+          keep_aspect: Camera3DKeepAspect.KEEP_WIDTH,
         })}
       />
     );
     const heightRenderer = await ReactThreeTestRenderer.create(
       <Camera3D
         node={makeNode({
-          projection: ProjectionMode.PROJECTION_ORTHOGONAL,
+          projection: Camera3DProjectionType.ORTHOGONAL,
           size: 4,
-          keep_aspect: KeepAspectMode.KEEP_HEIGHT,
+          keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
         })}
       />
     );
@@ -114,8 +115,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
   });
 
   it('rebuilds the projection when `size` changes', async () => {
-    const orthographic = (size: number) =>
-      makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size });
+    const orthographic = (size: number) => makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size });
     const renderer = await ReactThreeTestRenderer.create(<Camera3D node={orthographic(8)} />);
     await renderer.update(<Camera3D node={orthographic(2)} />);
     const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
@@ -124,7 +124,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('tags the new camera with its node path when the projection changes (edge case)', async () => {
     const renderer = await ReactThreeTestRenderer.create(<Camera3D node={makeNode()} />);
-    await renderer.update(<Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL })} />);
+    await renderer.update(<Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL })} />);
     const o = instanceAs<THREE.OrthographicCamera>(renderer.scene.findByType('OrthographicCamera'));
     expect(o.userData.tscnPath).toBe('Cam');
   });
@@ -138,7 +138,7 @@ describe('Camera3D projection (assertions 60–66)', () => {
 
   it('draws PROJECTION_FRUSTUM through `size` and `frustum_offset` at the near plane', async () => {
     const node = makeNode({
-      projection: ProjectionMode.PROJECTION_FRUSTUM,
+      projection: Camera3DProjectionType.FRUSTUM,
       size: 2,
       near: 1,
       frustum_offset: { x: 0.5, y: 0.25 },

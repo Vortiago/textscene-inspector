@@ -10,13 +10,14 @@ import { decodeStandardMaterial3D } from './decode';
 import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import { CullMode } from '../../../godot/rendering/materials/cullMode';
 import type { StandardMaterial3DData, StandardMaterial3DScalars } from './types';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /**
  * Godot's cull mode names the faces it discards, and three's `side` names the ones it
  * keeps. `_update_shader` emits `cull_back` / `cull_front` / `cull_disabled`, so
  * CULL_BACK (the default) draws front faces.
  */
-const SIDE: Readonly<Record<CullMode, THREE.Side>> = {
+const SIDE: Readonly<Record<EnumValue<typeof CullMode>, THREE.Side>> = {
   [CullMode.BACK]: THREE.FrontSide,
   [CullMode.FRONT]: THREE.BackSide,
   [CullMode.DISABLED]: THREE.DoubleSide,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DataUtils } from 'three';
-import { DFG_SIZE, dfgHalfFloats } from './dfg';
+import { dfgHalfFloats } from './dfg';
+import { DFG_SIZE } from './dfgTable.generated';
 
 const table = dfgHalfFloats();
 

@@ -5,60 +5,62 @@
  */
 
 import FastNoiseLite, { Vector2, Vector3 } from 'fastnoise-lite';
+import { type FastNoiseLiteData } from '../fastnoiselite/types';
 import {
-  CellularDistanceFunction,
-  CellularReturnType,
-  DomainWarpFractalType,
-  DomainWarpType,
-  NoiseFractalType,
-  NoiseType,
-  type FastNoiseLiteData,
-} from '../fastnoiselite/types';
+  FastNoiseLiteCellularDistanceFunction,
+  FastNoiseLiteCellularReturnType,
+  FastNoiseLiteDomainWarpFractalType,
+  FastNoiseLiteDomainWarpType,
+  FastNoiseLiteFractalType,
+  FastNoiseLiteNoiseType,
+} from '../../../godot/scene/fastNoiseLite';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
-const NOISE_TYPE: Record<NoiseType, string> = {
-  [NoiseType.SIMPLEX]: FastNoiseLite.NoiseType.OpenSimplex2,
-  [NoiseType.SIMPLEX_SMOOTH]: FastNoiseLite.NoiseType.OpenSimplex2S,
-  [NoiseType.CELLULAR]: FastNoiseLite.NoiseType.Cellular,
-  [NoiseType.PERLIN]: FastNoiseLite.NoiseType.Perlin,
-  [NoiseType.VALUE_CUBIC]: FastNoiseLite.NoiseType.ValueCubic,
-  [NoiseType.VALUE]: FastNoiseLite.NoiseType.Value,
+const NOISE_TYPE: Record<EnumValue<typeof FastNoiseLiteNoiseType>, string> = {
+  [FastNoiseLiteNoiseType.SIMPLEX]: FastNoiseLite.NoiseType.OpenSimplex2,
+  [FastNoiseLiteNoiseType.SIMPLEX_SMOOTH]: FastNoiseLite.NoiseType.OpenSimplex2S,
+  [FastNoiseLiteNoiseType.CELLULAR]: FastNoiseLite.NoiseType.Cellular,
+  [FastNoiseLiteNoiseType.PERLIN]: FastNoiseLite.NoiseType.Perlin,
+  [FastNoiseLiteNoiseType.VALUE_CUBIC]: FastNoiseLite.NoiseType.ValueCubic,
+  [FastNoiseLiteNoiseType.VALUE]: FastNoiseLite.NoiseType.Value,
 };
 
-const FRACTAL_TYPE: Record<NoiseFractalType, string> = {
-  [NoiseFractalType.NONE]: FastNoiseLite.FractalType.None,
-  [NoiseFractalType.FBM]: FastNoiseLite.FractalType.FBm,
-  [NoiseFractalType.RIDGED]: FastNoiseLite.FractalType.Ridged,
-  [NoiseFractalType.PING_PONG]: FastNoiseLite.FractalType.PingPong,
+const FRACTAL_TYPE: Record<EnumValue<typeof FastNoiseLiteFractalType>, string> = {
+  [FastNoiseLiteFractalType.NONE]: FastNoiseLite.FractalType.None,
+  [FastNoiseLiteFractalType.FBM]: FastNoiseLite.FractalType.FBm,
+  [FastNoiseLiteFractalType.RIDGED]: FastNoiseLite.FractalType.Ridged,
+  [FastNoiseLiteFractalType.PING_PONG]: FastNoiseLite.FractalType.PingPong,
 };
 
-const DISTANCE_FUNCTION: Record<CellularDistanceFunction, string> = {
-  [CellularDistanceFunction.EUCLIDEAN]: FastNoiseLite.CellularDistanceFunction.Euclidean,
-  [CellularDistanceFunction.EUCLIDEAN_SQUARED]: FastNoiseLite.CellularDistanceFunction.EuclideanSq,
-  [CellularDistanceFunction.MANHATTAN]: FastNoiseLite.CellularDistanceFunction.Manhattan,
-  [CellularDistanceFunction.HYBRID]: FastNoiseLite.CellularDistanceFunction.Hybrid,
+const DISTANCE_FUNCTION: Record<EnumValue<typeof FastNoiseLiteCellularDistanceFunction>, string> = {
+  [FastNoiseLiteCellularDistanceFunction.EUCLIDEAN]: FastNoiseLite.CellularDistanceFunction.Euclidean,
+  [FastNoiseLiteCellularDistanceFunction.EUCLIDEAN_SQUARED]:
+    FastNoiseLite.CellularDistanceFunction.EuclideanSq,
+  [FastNoiseLiteCellularDistanceFunction.MANHATTAN]: FastNoiseLite.CellularDistanceFunction.Manhattan,
+  [FastNoiseLiteCellularDistanceFunction.HYBRID]: FastNoiseLite.CellularDistanceFunction.Hybrid,
 };
 
-const RETURN_TYPE: Record<CellularReturnType, string> = {
-  [CellularReturnType.CELL_VALUE]: FastNoiseLite.CellularReturnType.CellValue,
-  [CellularReturnType.DISTANCE]: FastNoiseLite.CellularReturnType.Distance,
-  [CellularReturnType.DISTANCE2]: FastNoiseLite.CellularReturnType.Distance2,
-  [CellularReturnType.DISTANCE2_ADD]: FastNoiseLite.CellularReturnType.Distance2Add,
-  [CellularReturnType.DISTANCE2_SUB]: FastNoiseLite.CellularReturnType.Distance2Sub,
-  [CellularReturnType.DISTANCE2_MUL]: FastNoiseLite.CellularReturnType.Distance2Mul,
-  [CellularReturnType.DISTANCE2_DIV]: FastNoiseLite.CellularReturnType.Distance2Div,
+const RETURN_TYPE: Record<EnumValue<typeof FastNoiseLiteCellularReturnType>, string> = {
+  [FastNoiseLiteCellularReturnType.CELL_VALUE]: FastNoiseLite.CellularReturnType.CellValue,
+  [FastNoiseLiteCellularReturnType.DISTANCE]: FastNoiseLite.CellularReturnType.Distance,
+  [FastNoiseLiteCellularReturnType.DISTANCE2]: FastNoiseLite.CellularReturnType.Distance2,
+  [FastNoiseLiteCellularReturnType.DISTANCE2_ADD]: FastNoiseLite.CellularReturnType.Distance2Add,
+  [FastNoiseLiteCellularReturnType.DISTANCE2_SUB]: FastNoiseLite.CellularReturnType.Distance2Sub,
+  [FastNoiseLiteCellularReturnType.DISTANCE2_MUL]: FastNoiseLite.CellularReturnType.Distance2Mul,
+  [FastNoiseLiteCellularReturnType.DISTANCE2_DIV]: FastNoiseLite.CellularReturnType.Distance2Div,
 };
 
-const WARP_TYPE: Record<DomainWarpType, string> = {
-  [DomainWarpType.SIMPLEX]: FastNoiseLite.DomainWarpType.OpenSimplex2,
-  [DomainWarpType.SIMPLEX_REDUCED]: FastNoiseLite.DomainWarpType.OpenSimplex2Reduced,
-  [DomainWarpType.BASIC_GRID]: FastNoiseLite.DomainWarpType.BasicGrid,
+const WARP_TYPE: Record<EnumValue<typeof FastNoiseLiteDomainWarpType>, string> = {
+  [FastNoiseLiteDomainWarpType.SIMPLEX]: FastNoiseLite.DomainWarpType.OpenSimplex2,
+  [FastNoiseLiteDomainWarpType.SIMPLEX_REDUCED]: FastNoiseLite.DomainWarpType.OpenSimplex2Reduced,
+  [FastNoiseLiteDomainWarpType.BASIC_GRID]: FastNoiseLite.DomainWarpType.BasicGrid,
 };
 
 /** Godot's own warp fractal enum onto upstream's (`_convert_domain_warp_fractal_type_enum`, fastnoise_lite.cpp:35-50). */
-const WARP_FRACTAL_TYPE: Record<DomainWarpFractalType, string> = {
-  [DomainWarpFractalType.NONE]: FastNoiseLite.FractalType.None,
-  [DomainWarpFractalType.PROGRESSIVE]: FastNoiseLite.FractalType.DomainWarpProgressive,
-  [DomainWarpFractalType.INDEPENDENT]: FastNoiseLite.FractalType.DomainWarpIndependent,
+const WARP_FRACTAL_TYPE: Record<EnumValue<typeof FastNoiseLiteDomainWarpFractalType>, string> = {
+  [FastNoiseLiteDomainWarpFractalType.NONE]: FastNoiseLite.FractalType.None,
+  [FastNoiseLiteDomainWarpFractalType.PROGRESSIVE]: FastNoiseLite.FractalType.DomainWarpProgressive,
+  [FastNoiseLiteDomainWarpFractalType.INDEPENDENT]: FastNoiseLite.FractalType.DomainWarpIndependent,
 };
 
 /** A sampler over the configured generator, offset like `get_noise_2d`. */

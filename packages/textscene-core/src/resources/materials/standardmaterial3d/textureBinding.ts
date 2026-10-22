@@ -1,7 +1,7 @@
 /**
  * Binding a texture to a StandardMaterial3D slot, the one place that knows what a Godot
  * slot needs of its texture: its colour space, and when a shared cache entry must clone.
- * `SurfaceMaterialSlot` crosses it, for `<StandardMaterialSlot>` and the GLB override. It
+ * `useSurfaceMaterial` crosses it once, for `<StandardMaterialSlot>` and the GLB override. It
  * value-imports `three`, so `index.ts` never reaches it (ADR-0031).
  */
 

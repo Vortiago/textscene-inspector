@@ -5,9 +5,10 @@
  */
 import { describe, expect, it } from 'vitest';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
-import { GradientInterpolationMode, type Gradient } from '../gradienttexture2d/types';
+import { type Gradient } from '../gradienttexture2d/types';
 import { decodeNoiseTexture3D } from './decode';
 import { noiseTexture3DTexels, type NoiseTexture3DInput } from './texels';
+import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 
 function input(properties: Record<string, string>, colorRamp: Gradient | null = null): NoiseTexture3DInput {
   return { tex: decodeNoiseTexture3D(properties), noise: decodeFastNoiseLite({}), colorRamp };
@@ -52,7 +53,7 @@ describe('noiseTexture3DTexels', () => {
         { offset: 0, color: { r: 0, g: 1, b: 1, a: 1 } },
         { offset: 1, color: { r: 1, g: 0, b: 0, a: 1 } },
       ],
-      interpolationMode: GradientInterpolationMode.Linear,
+      interpolationMode: GradientInterpolationMode.LINEAR,
     };
     const texels = noiseTexture3DTexels(input(SIZE, ramp));
     expect(Array.from(texels.subarray(0, 12))).toEqual([29, 58, 80, 100, 21, 48, 70, 86, 0, 27, 52, 77]);

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { bindSlotTexture, materialTextureStates, slotReadsSourceColor } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
-import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../parser/projectSettingsParser';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';
 import { recordGodotFormat } from '../../textures/sourceColorSpace';

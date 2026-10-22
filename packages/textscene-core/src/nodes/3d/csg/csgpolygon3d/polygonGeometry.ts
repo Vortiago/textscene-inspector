@@ -36,12 +36,10 @@ import * as THREE from 'three';
 import { applyCsgNormals } from '../smoothNormals';
 import { extrusionCounts } from './extrusionCounts';
 import { emptyGeometry, facingMatrix, PATH_UP, signedArea, toPoints, warnOnce } from './polygonSweepFrames';
-import { MIN_POLYGON_VERTICES, PathRotation, PolygonMode, type CsgPolygonSpec } from './polygonSweepSpec';
+import { MIN_POLYGON_VERTICES, type CsgPolygonSpec } from './polygonSweepSpec';
+import { PathRotation, PolygonMode } from '../../../../godot/scene/csg';
 import { sweepFaceBuffer } from './sweepFaceBuffer';
 import { degToRad } from '../../../../godot/math/math.js';
-
-export { PolygonMode } from './polygonSweepSpec';
-export type { CsgPolygonPathPlan, CsgPolygonSpec } from './polygonSweepSpec';
 
 export function buildCsgPolygonGeometry(spec: CsgPolygonSpec): THREE.BufferGeometry {
   const shape = toPoints(spec.polygon);

@@ -3,7 +3,7 @@
  * error that refuses a negative one, and the diagnostic of a write past the family's count.
  */
 import { IS_VALID_INT_RE, stringToInt } from '../godot/string/string.js';
-import { ruleCount } from '../godot/variant/int.js';
+import { ruleCount } from '../godot/variant/intSlots.js';
 import { visitIndexedKeys, type IndexParse } from '../godot/classdb/indexedKey.js';
 import type { IndexedFamily } from '../godot/classdb/indexedFamily.js';
 import type { Diagnostic, ParseError, RuleArm } from './types.js';

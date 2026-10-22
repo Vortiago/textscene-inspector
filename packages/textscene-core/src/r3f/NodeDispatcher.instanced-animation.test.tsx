@@ -15,12 +15,13 @@ import {
 } from './contexts/AnimationTransportContext';
 import { SceneStack } from './testing/SceneStack';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
-import { AnimationProcessMode, MethodCallMode } from '../nodes/animation/animationplayer/types';
+
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../nodes/3d/geometryinstance3d/types';
 
 import './nodes/index';
 // The Instance root merge parses a sub-scene root with the Node parser when its type has none.
 import '../nodes/node/index';
+import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../godot/scene/animation';
 
 // AnimationLibrary with one "slide" clip moving a sibling Target.
 const INTERNAL: TscnInternalResource[] = [
@@ -48,8 +49,8 @@ function makeAnimationPlayerNode(): TscnNode {
       name: 'Animation',
       speed_scale: 1.0,
       playback_default_blend_time: 0.0,
-      callback_mode_process: AnimationProcessMode.IDLE,
-      callback_mode_method: MethodCallMode.DEFERRED,
+      callback_mode_process: AnimationCallbackModeProcess.IDLE,
+      callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
       active: true,
       autoplay: '',
       current_animation: '',

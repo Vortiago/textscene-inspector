@@ -3,6 +3,7 @@
  * in a viewport with the bias as their mip level offset, on the four mipmapped filters only
  * (`material_storage.cpp:2454-2502`). WebGL2 has no per-sampler bias, so a program samples each such
  * slot with `texture(sampler, uv, bias)` from one shared uniform. A pass writes it as it renders.
+ * A pass that draws 3D materials and skips `renderWithMipmapBias` samples at the last value written.
  */
 
 import * as THREE from 'three';

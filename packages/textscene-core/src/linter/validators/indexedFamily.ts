@@ -155,17 +155,18 @@ export function indexedFamilyValidator(opts: IndexedFamilyOptions): PropertyVali
 }
 
 /**
- * The registry key that routes `<prefix><i>/<leaf>` to a declared family's validator: `#` selects
- * the glued-index matcher of `ValidatorRegistry.findOwnValidator`.
+ * The registry entry of a declared family: its validator under the key that routes
+ * `<prefix><i>/<leaf>` to it. `#` selects the glued-index matcher of
+ * `ValidatorRegistry.findOwnValidator`. The prefix and index parse come from the declaration.
  */
-export function propertyListFamilyKey(family: IndexedFamily): string {
-  return `${family.prefix}#/*`;
-}
-
-/** {@link indexedFamilyValidator} for a declared family: its prefix and index parse come from the declaration. */
-export function propertyListFamilyValidator(
+export function propertyListFamilyEntry(
   family: IndexedFamily,
   options: Omit<IndexedFamilyOptions, 'prefix' | 'indexParse'>
-): PropertyValidator {
-  return indexedFamilyValidator({ ...options, prefix: family.prefix, indexParse: family.indexParse });
+): Record<string, PropertyValidator> {
+  const validator = indexedFamilyValidator({
+    ...options,
+    prefix: family.prefix,
+    indexParse: family.indexParse,
+  });
+  return { [`${family.prefix}#/*`]: validator };
 }

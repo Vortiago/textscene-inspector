@@ -4,37 +4,38 @@
  */
 import { describe, expect, it } from 'vitest';
 import { decodeFastNoiseLite } from './decode';
+
 import {
-  CellularReturnType,
-  DomainWarpFractalType,
-  DomainWarpType,
-  NoiseFractalType,
-  NoiseType,
-} from './types';
+  FastNoiseLiteCellularReturnType,
+  FastNoiseLiteDomainWarpFractalType,
+  FastNoiseLiteDomainWarpType,
+  FastNoiseLiteFractalType,
+  FastNoiseLiteNoiseType,
+} from '../../../godot/scene/fastNoiseLite';
 
 describe('decodeFastNoiseLite', () => {
   it("applies Godot's constructor defaults to an empty resource", () => {
     // fastnoise_lite.h:97-124. A `.tres` omits most properties, so a wrong
     // default is a wrong generator.
     expect(decodeFastNoiseLite({})).toEqual({
-      noiseType: NoiseType.SIMPLEX_SMOOTH,
+      noiseType: FastNoiseLiteNoiseType.SIMPLEX_SMOOTH,
       seed: 0,
       frequency: 0.01,
       offset: { x: 0, y: 0, z: 0 },
-      fractalType: NoiseFractalType.FBM,
+      fractalType: FastNoiseLiteFractalType.FBM,
       fractalOctaves: 5,
       fractalLacunarity: 2,
       fractalGain: 0.5,
       fractalWeightedStrength: 0,
       fractalPingPongStrength: 2,
       cellularDistanceFunction: 0,
-      cellularReturnType: CellularReturnType.DISTANCE,
+      cellularReturnType: FastNoiseLiteCellularReturnType.DISTANCE,
       cellularJitter: 1,
       domainWarpEnabled: false,
-      domainWarpType: DomainWarpType.SIMPLEX,
+      domainWarpType: FastNoiseLiteDomainWarpType.SIMPLEX,
       domainWarpAmplitude: 30,
       domainWarpFrequency: 0.05,
-      domainWarpFractalType: DomainWarpFractalType.PROGRESSIVE,
+      domainWarpFractalType: FastNoiseLiteDomainWarpFractalType.PROGRESSIVE,
       domainWarpFractalOctaves: 5,
       domainWarpFractalLacunarity: 6,
       domainWarpFractalGain: 0.5,
@@ -48,10 +49,10 @@ describe('decodeFastNoiseLite', () => {
       fractal_lacunarity: '2.5',
     });
     expect(decoded.frequency).toBeCloseTo(0.003, 6);
-    expect(decoded.fractalType).toBe(NoiseFractalType.RIDGED);
+    expect(decoded.fractalType).toBe(FastNoiseLiteFractalType.RIDGED);
     expect(decoded.fractalLacunarity).toBeCloseTo(2.5, 6);
     // Everything else stays default, including the SIMPLEX_SMOOTH generator.
-    expect(decoded.noiseType).toBe(NoiseType.SIMPLEX_SMOOTH);
+    expect(decoded.noiseType).toBe(FastNoiseLiteNoiseType.SIMPLEX_SMOOTH);
     expect(decoded.fractalOctaves).toBe(5);
   });
 
@@ -67,14 +68,14 @@ describe('decodeFastNoiseLite', () => {
       cellular_return_type: '4',
       cellular_jitter: '0.5',
     });
-    expect(decoded.noiseType).toBe(NoiseType.CELLULAR);
+    expect(decoded.noiseType).toBe(FastNoiseLiteNoiseType.CELLULAR);
     expect(decoded.seed).toBe(7);
     expect(decoded.fractalOctaves).toBe(10);
     expect(decoded.fractalGain).toBeCloseTo(0.776, 6);
     expect(decoded.fractalWeightedStrength).toBeCloseTo(0.04, 6);
     expect(decoded.fractalPingPongStrength).toBeCloseTo(1.5, 6);
     expect(decoded.cellularDistanceFunction).toBe(2);
-    expect(decoded.cellularReturnType).toBe(CellularReturnType.DISTANCE2_SUB);
+    expect(decoded.cellularReturnType).toBe(FastNoiseLiteCellularReturnType.DISTANCE2_SUB);
     expect(decoded.cellularJitter).toBeCloseTo(0.5, 6);
   });
 
@@ -90,10 +91,10 @@ describe('decodeFastNoiseLite', () => {
       domain_warp_fractal_gain: '0.25',
     });
     expect(decoded.domainWarpEnabled).toBe(true);
-    expect(decoded.domainWarpType).toBe(DomainWarpType.BASIC_GRID);
+    expect(decoded.domainWarpType).toBe(FastNoiseLiteDomainWarpType.BASIC_GRID);
     expect(decoded.domainWarpAmplitude).toBeCloseTo(15.5, 6);
     expect(decoded.domainWarpFrequency).toBeCloseTo(0.02, 6);
-    expect(decoded.domainWarpFractalType).toBe(DomainWarpFractalType.INDEPENDENT);
+    expect(decoded.domainWarpFractalType).toBe(FastNoiseLiteDomainWarpFractalType.INDEPENDENT);
     expect(decoded.domainWarpFractalOctaves).toBe(3);
     expect(decoded.domainWarpFractalLacunarity).toBeCloseTo(4, 6);
     expect(decoded.domainWarpFractalGain).toBeCloseTo(0.25, 6);
@@ -109,8 +110,8 @@ describe('decodeFastNoiseLite', () => {
 
   it('falls back to the default for an out-of-range enum, never storing it raw', () => {
     // enumOr's contract: an ordinal Godot's enum does not contain is refused.
-    expect(decodeFastNoiseLite({ noise_type: '99' }).noiseType).toBe(NoiseType.SIMPLEX_SMOOTH);
-    expect(decodeFastNoiseLite({ fractal_type: '-1' }).fractalType).toBe(NoiseFractalType.FBM);
+    expect(decodeFastNoiseLite({ noise_type: '99' }).noiseType).toBe(FastNoiseLiteNoiseType.SIMPLEX_SMOOTH);
+    expect(decodeFastNoiseLite({ fractal_type: '-1' }).fractalType).toBe(FastNoiseLiteFractalType.FBM);
   });
 
   it('falls back rather than storing NaN for malformed scalars and offsets', () => {

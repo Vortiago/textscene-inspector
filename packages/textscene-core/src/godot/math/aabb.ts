@@ -22,6 +22,11 @@ export const EMPTY_AABB: Aabb = Object.freeze({
   size: Object.freeze({ x: 0, y: 0, z: 0 }),
 });
 
+/** `AABB(-size / 2, size)`: the box of `size` centred on the origin, as the box gizmos build it. */
+export function centredAabb(size: AabbCorner): Aabb {
+  return { position: { x: -size.x / 2, y: -size.y / 2, z: -size.z / 2 }, size };
+}
+
 /** `AABB::get_center` (`core/math/aabb.h:131-133`): the middle of the box. */
 export function aabbCenter({ position, size }: Aabb): AabbCorner {
   return { x: position.x + size.x * 0.5, y: position.y + size.y * 0.5, z: position.z + size.z * 0.5 };
@@ -50,6 +55,23 @@ export function aabbEdges({ position, size }: Aabb): number[] {
     ...[x1, y0, z0, x1, y1, z0],
     ...[x1, y0, z1, x1, y1, z1],
   ];
+}
+
+/**
+ * `AABB::get_endpoint` (`core/math/aabb.h:244-264`): corner `index` from 0 to 7. Bit 2 of the index
+ * adds the X size, bit 1 the Y size and bit 0 the Z size.
+ */
+export function aabbEndpoint({ position, size }: Aabb, index: number): AabbCorner {
+  return {
+    x: position.x + (index & 4 ? size.x : 0),
+    y: position.y + (index & 2 ? size.y : 0),
+    z: position.z + (index & 1 ? size.z : 0),
+  };
+}
+
+/** `AABB::get_longest_axis_size` (`core/math/aabb.h:399-410`): the largest of the three sizes. */
+export function aabbLongestAxisSize({ size }: Aabb): number {
+  return Math.max(size.x, size.y, size.z);
 }
 
 /** `AABB::merge_with` (`core/math/aabb.cpp:40-64`): the box that holds both. */
