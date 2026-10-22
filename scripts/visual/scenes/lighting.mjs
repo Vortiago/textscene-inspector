@@ -126,6 +126,9 @@ export const LIGHTING_SCENES = [
   // A LightmapGI bake lights a box and the ground: a Static sun's light, its shadow and a red
   // bounce, all read from the atlas through UV2. The headers state why no other golden shows it.
   { name: 'lightmap-gi-baked', file: 'unit-lightmap-gi-baked.tscn' },
+  // A GLB box named by the bake whose unwrap the project commits no cache for: it reads no
+  // lightmap and draws with ambient light, where the ground still reads its atlas.
+  { name: 'lightmap-gi-glb-unwrap-miss', file: 'unit-glb-lightmap-miss.tscn' },
   // The same scene baked directional: the read weighs four spherical-harmonics layers by the normal.
   { name: 'lightmap-gi-directional', file: 'unit-lightmap-gi-directional.tscn' },
   // A baked GridMap: its baked meshes draw in place of the cells, each lit by its sub-instance.

@@ -69,10 +69,10 @@ export async function applyLightmapUv(
 }
 
 /**
- * What `rebuiltSurfaces` returns for a mesh Godot unwraps and the cache cannot rebuild, which
- * Godot would unwrap afresh with xatlas, whose layout the previewer does not reproduce: it depends
- * on the C library's float functions and `qsort` (`xatlas.cpp:4117-4125`), so it matches only a
- * bake made on the same platform. A mesh with no unwrap input is `null`: Godot does not unwrap it.
+ * What `rebuiltSurfaces` returns for a mesh Godot unwraps and the cache cannot rebuild. Godot
+ * would unwrap it afresh with xatlas (`xatlas_unwrap/register_types.cpp:138`), which the previewer
+ * does not run: a fresh unwrap of `zdm2.glb` gives 91265 vertices against the cache's 91276
+ * (ADR-0028). A mesh with no unwrap input is `null`: Godot does not unwrap it.
  */
 const UNREBUILT = Symbol('unrebuilt');
 
