@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
 import type { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
+import type { EnumValue } from '../godot/classdb/enumNames.js';
 
 const DISABLED = 0;
 const DISCARD = 1;
@@ -94,7 +95,7 @@ describe('alphaCutSurface', () => {
     expect(
       alphaCutSurface({
         antialiasing: OFF,
-        mode: 99 as AlphaCutMode,
+        mode: 99 as EnumValue<typeof AlphaCutMode>,
         scissorThreshold: 0.25,
         transparentFlag: true,
       })

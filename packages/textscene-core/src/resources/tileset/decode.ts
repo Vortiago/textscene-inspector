@@ -32,6 +32,7 @@ import type {
 } from './types';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Vector2 } from '../../godot/math/vector.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 interface TileSetSourceData {
@@ -92,12 +93,12 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
       data.properties.tile_layout,
       TileLayout.TILE_LAYOUT_STACKED,
       'tile_layout'
-    ) as TileLayout,
+    ) as EnumValue<typeof TileLayout>,
     offsetAxis: intEnumOr(
       data.properties.tile_offset_axis,
       TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL,
       'tile_offset_axis'
-    ) as TileOffsetAxis,
+    ) as EnumValue<typeof TileOffsetAxis>,
     tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
   };

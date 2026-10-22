@@ -7,12 +7,12 @@ import { enumNamesByValue, pascalCaseLabel, relabelEnumNames } from '../classdb/
  * `SIZE_SHRINK_BEGIN = 0` (`control.h:79`) is the empty set and `SIZE_EXPAND_FILL = 3`
  * (`control.h:85`, `control.cpp:4390`) is `EXPAND | FILL`, so neither is a member.
  */
-export enum SizeFlags {
-  FILL = 1,
-  EXPAND = 2,
-  SHRINK_CENTER = 4,
-  SHRINK_END = 8,
-}
+export const SizeFlags = {
+  FILL: 1,
+  EXPAND: 2,
+  SHRINK_CENTER: 4,
+  SHRINK_END: 8,
+} as const;
 
 /** What both `size_flags_*` properties hold until a scene sets them (`control.h:229-230`). */
 export const DEFAULT_SIZE_FLAGS = SizeFlags.FILL;
@@ -61,11 +61,11 @@ export const CURSOR_SHAPES = {
 };
 
 /** `Control::GrowDirection` (`scene/gui/control.h:59-63`), as `grow_horizontal` and `grow_vertical` store it. */
-export enum GrowDirection {
-  GROW_DIRECTION_BEGIN = 0,
-  GROW_DIRECTION_END = 1,
-  GROW_DIRECTION_BOTH = 2,
-}
+export const GrowDirection = {
+  GROW_DIRECTION_BEGIN: 0,
+  GROW_DIRECTION_END: 1,
+  GROW_DIRECTION_BOTH: 2,
+} as const;
 
 /** `Control::LayoutDirection` (`scene/gui/control.h:155-160`). */
 export const LayoutDirection = {

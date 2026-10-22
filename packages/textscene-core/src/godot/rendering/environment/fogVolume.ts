@@ -9,14 +9,14 @@ import type { HalfExtents, VolumetricFogGrid } from './volumetricFog.js';
 import type { Vector3 } from '../../math/vector.js';
 
 /** `RS::FogVolumeShape` (`servers/rendering_server.h`), the values `FogVolume.shape` stores. */
-export enum FogVolumeShape {
-  ELLIPSOID = 0,
-  CONE = 1,
-  CYLINDER = 2,
-  BOX = 3,
+export const FogVolumeShape = {
+  ELLIPSOID: 0,
+  CONE: 1,
+  CYLINDER: 2,
+  BOX: 3,
   /** Covers every froxel, and ignores the size. */
-  WORLD = 4,
-}
+  WORLD: 4,
+} as const;
 
 /** Each shape's name by the integer a `.tscn` stores, as a validator names it. */
 export const FOG_VOLUME_SHAPE_NAMES = enumNamesByValue(FogVolumeShape);

@@ -19,6 +19,7 @@ import { boolOr, enumOr, floatOr, intOr, vec3Or } from '../../../parser/valuePar
 import { colorOr } from '../../../utils/colorParser';
 import { parseNode3D } from '../../base/node3d/parser';
 import type { ReflectionProbeProperties } from './types';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 const AMBIENT_MODES = [
   ReflectionProbeAmbientMode.DISABLED,
@@ -97,7 +98,7 @@ function layerMask(value: string | undefined, context: string): number {
  * `set_ambient_mode` stores any int, and the scene shader's switch has a case only for the three
  * modes (`scene_forward_lights_inc.glsl:977-1001`), so another value adds no ambient.
  */
-function parseAmbientMode(value: string | undefined): ReflectionProbeAmbientMode {
+function parseAmbientMode(value: string | undefined): EnumValue<typeof ReflectionProbeAmbientMode> {
   const mode = intOr(value, REFLECTION_PROBE_DEFAULTS.ambientMode, 'ReflectionProbe ambient_mode');
   return AMBIENT_MODES.includes(mode) ? mode : ReflectionProbeAmbientMode.DISABLED;
 }

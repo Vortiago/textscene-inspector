@@ -17,6 +17,7 @@ import {
   depthFogRange,
   GLOW_BLEND_MODE_DEFAULT,
 } from '../../godot/scene/environment.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
@@ -44,7 +45,7 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
       properties.background_mode,
       BackgroundMode.BG_CLEAR_COLOR,
       'background_mode'
-    ) as BackgroundMode,
+    ) as EnumValue<typeof BackgroundMode>,
     background_color: colorOr(properties.background_color, { r: 0, g: 0, b: 0, a: 1 }),
     background_energy_multiplier: floatOr(
       properties.background_energy_multiplier,

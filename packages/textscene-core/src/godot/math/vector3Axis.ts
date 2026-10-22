@@ -6,11 +6,11 @@
 
 import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
 
-export enum Vector3Axis {
-  X = 0,
-  Y = 1,
-  Z = 2,
-}
+export const Vector3Axis = {
+  X: 0,
+  Y: 1,
+  Z: 2,
+} as const;
 
 /** Each axis named as its enum hint names it, "X,Y,Z". */
 export const VECTOR3_AXIS_NAMES = enumNamesByValue(Vector3Axis);

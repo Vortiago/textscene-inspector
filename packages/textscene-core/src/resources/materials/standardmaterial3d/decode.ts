@@ -38,6 +38,7 @@ import {
   type TextureSlotReferences,
 } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 const CONTEXT = 'StandardMaterial3D';
 
@@ -259,9 +260,9 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
 }
 
 interface PassInputs {
-  blendMode: BlendMode;
+  blendMode: EnumValue<typeof BlendMode>;
   refractionEnabled: boolean;
-  depthDrawMode: DepthDrawMode;
+  depthDrawMode: EnumValue<typeof DepthDrawMode>;
   depthTest: boolean;
 }
 
@@ -275,7 +276,10 @@ interface ShaderAlphaFlags {
 }
 
 /** A `*_texture_channel` enum, red by default (`material.cpp:3985-3987`). */
-function textureChannel(properties: Record<string, string>, property: string): TextureChannel {
+function textureChannel(
+  properties: Record<string, string>,
+  property: string
+): EnumValue<typeof TextureChannel> {
   return enumOr(
     properties[property],
     TextureChannel.TEXTURE_CHANNEL_RED,
@@ -287,7 +291,7 @@ function textureChannel(properties: Record<string, string>, property: string): T
 /** What `BaseMaterial3D::_update_shader` emits for alpha, which every alpha decision reads. */
 function shaderAlphaFlags(
   properties: Record<string, string>,
-  transparency: Transparency,
+  transparency: EnumValue<typeof Transparency>,
   refractionEnabled: boolean,
   usesAlphaAntialiasing: boolean
 ): ShaderAlphaFlags {
@@ -317,7 +321,7 @@ function shaderAlphaFlags(
  */
 function decodeAlphaAntialiasing(
   properties: Record<string, string>,
-  transparency: Transparency,
+  transparency: EnumValue<typeof Transparency>,
   scissorThreshold: number
 ): AlphaAntialiasingCut | null {
   const mode = intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT);
@@ -358,7 +362,11 @@ function alphaPassMembership(alphaFlags: ShaderAlphaFlags, inputs: PassInputs): 
  * `_create_pipeline`): the depth-draw mode decides it, and the transparent pipeline
  * overrides OPAQUE_ONLY to false. A disabled depth test writes nothing.
  */
-function godotDepthWrite(alphaPass: boolean, depthDrawMode: DepthDrawMode, depthTest: boolean): boolean {
+function godotDepthWrite(
+  alphaPass: boolean,
+  depthDrawMode: EnumValue<typeof DepthDrawMode>,
+  depthTest: boolean
+): boolean {
   if (!depthTest || depthDrawMode === DepthDrawMode.DISABLED) return false;
   if (!alphaPass) return true;
   // A depth prepass writes the depth of a `depth_prepass_alpha` surface, not its colour pipeline.

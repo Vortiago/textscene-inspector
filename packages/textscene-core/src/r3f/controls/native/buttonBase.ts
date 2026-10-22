@@ -26,6 +26,7 @@ import {
 } from '../../../godot/math/alignment';
 import type { Vector2 } from '../../../godot/math/vector';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
 
@@ -89,7 +90,7 @@ export function shapeButtonLabel(
   fontSizePx: number,
   fontMetrics: FontMetrics,
   boxWidthPx = 0,
-  autowrapMode: AutowrapMode = AutowrapMode.AUTOWRAP_OFF,
+  autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF,
   autowrapTrimFlags?: number
 ): TextLayoutResult {
   return shapeText(text, {

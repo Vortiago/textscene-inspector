@@ -10,12 +10,12 @@ import { enumNamesByValue, flagLabels } from '../classdb/enumNames.js';
  * `TextServer::AutowrapMode`: AUTOWRAP_OFF=0 … AUTOWRAP_WORD_SMART=3
  * (servers/text/text_server.h:99-102, BIND_ENUM_CONSTANT text_server.cpp:574-577).
  */
-export enum AutowrapMode {
-  AUTOWRAP_OFF = 0,
-  AUTOWRAP_ARBITRARY = 1,
-  AUTOWRAP_WORD = 2,
-  AUTOWRAP_WORD_SMART = 3,
-}
+export const AutowrapMode = {
+  AUTOWRAP_OFF: 0,
+  AUTOWRAP_ARBITRARY: 1,
+  AUTOWRAP_WORD: 2,
+  AUTOWRAP_WORD_SMART: 3,
+} as const;
 
 export const AUTOWRAP_MODE_NAMES = enumNamesByValue(AutowrapMode);
 
@@ -24,15 +24,15 @@ export const AUTOWRAP_MODE_NAMES = enumNamesByValue(AutowrapMode);
  * OVERRUN_TRIM_WORD_ELLIPSIS_FORCE=6 (servers/text/text_server.h:123-130).
  * `FoldableContainer`'s hint stops at OVERRUN_TRIM_WORD_ELLIPSIS (4).
  */
-export enum OverrunBehavior {
-  OVERRUN_NO_TRIMMING = 0,
-  OVERRUN_TRIM_CHAR = 1,
-  OVERRUN_TRIM_WORD = 2,
-  OVERRUN_TRIM_ELLIPSIS = 3,
-  OVERRUN_TRIM_WORD_ELLIPSIS = 4,
-  OVERRUN_TRIM_ELLIPSIS_FORCE = 5,
-  OVERRUN_TRIM_WORD_ELLIPSIS_FORCE = 6,
-}
+export const OverrunBehavior = {
+  OVERRUN_NO_TRIMMING: 0,
+  OVERRUN_TRIM_CHAR: 1,
+  OVERRUN_TRIM_WORD: 2,
+  OVERRUN_TRIM_ELLIPSIS: 3,
+  OVERRUN_TRIM_WORD_ELLIPSIS: 4,
+  OVERRUN_TRIM_ELLIPSIS_FORCE: 5,
+  OVERRUN_TRIM_WORD_ELLIPSIS_FORCE: 6,
+} as const;
 
 export const OVERRUN_BEHAVIOR_NAMES = enumNamesByValue(OverrunBehavior);
 
@@ -112,12 +112,12 @@ export const BREAK_TRIM_HINTED_BITS =
  * TEXT_DIRECTION_AUTO=0 … TEXT_DIRECTION_INHERITED=3 (scene/gui/control.h:166-171,
  * BIND_ENUM_CONSTANT control.cpp:4415-4418).
  */
-export enum TextDirection {
-  TEXT_DIRECTION_AUTO = 0,
-  TEXT_DIRECTION_LTR = 1,
-  TEXT_DIRECTION_RTL = 2,
-  TEXT_DIRECTION_INHERITED = 3,
-}
+export const TextDirection = {
+  TEXT_DIRECTION_AUTO: 0,
+  TEXT_DIRECTION_LTR: 1,
+  TEXT_DIRECTION_RTL: 2,
+  TEXT_DIRECTION_INHERITED: 3,
+} as const;
 
 export const TEXT_DIRECTION_NAMES = enumNamesByValue(TextDirection);
 
@@ -125,13 +125,13 @@ export const TEXT_DIRECTION_NAMES = enumNamesByValue(TextDirection);
  * `TextServer::VisibleCharactersBehavior` (`servers/text/text_server.h:90-96`), hinted with five
  * entries at `label.cpp:1451` and `rich_text_label.cpp:7789`. Label's default is `VC_CHARS_BEFORE_SHAPING` (`label.h:74`).
  */
-export enum VisibleCharactersBehavior {
-  VC_CHARS_BEFORE_SHAPING = 0,
-  VC_CHARS_AFTER_SHAPING = 1,
-  VC_GLYPHS_AUTO = 2,
-  VC_GLYPHS_LTR = 3,
-  VC_GLYPHS_RTL = 4,
-}
+export const VisibleCharactersBehavior = {
+  VC_CHARS_BEFORE_SHAPING: 0,
+  VC_CHARS_AFTER_SHAPING: 1,
+  VC_GLYPHS_AUTO: 2,
+  VC_GLYPHS_LTR: 3,
+  VC_GLYPHS_RTL: 4,
+} as const;
 
 export const VISIBLE_CHARACTERS_BEHAVIOR_NAMES = enumNamesByValue(VisibleCharactersBehavior);
 
@@ -141,14 +141,14 @@ export const VISIBLE_CHARACTERS_BEHAVIOR_NAMES = enumNamesByValue(VisibleCharact
  * labels index 5 "None", but the labels follow the enum, so a diagnostic names
  * STRUCTURED_TEXT_GDSCRIPT, as the engine does.
  */
-enum StructuredTextParser {
-  STRUCTURED_TEXT_DEFAULT = 0,
-  STRUCTURED_TEXT_URI = 1,
-  STRUCTURED_TEXT_FILE = 2,
-  STRUCTURED_TEXT_EMAIL = 3,
-  STRUCTURED_TEXT_LIST = 4,
-  STRUCTURED_TEXT_GDSCRIPT = 5,
-  STRUCTURED_TEXT_CUSTOM = 6,
-}
+const StructuredTextParser = {
+  STRUCTURED_TEXT_DEFAULT: 0,
+  STRUCTURED_TEXT_URI: 1,
+  STRUCTURED_TEXT_FILE: 2,
+  STRUCTURED_TEXT_EMAIL: 3,
+  STRUCTURED_TEXT_LIST: 4,
+  STRUCTURED_TEXT_GDSCRIPT: 5,
+  STRUCTURED_TEXT_CUSTOM: 6,
+} as const;
 
 export const STRUCTURED_TEXT_PARSER_NAMES = enumNamesByValue(StructuredTextParser);

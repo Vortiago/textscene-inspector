@@ -5,6 +5,7 @@ import type { Label3DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function formatLabel3DProperties(properties: Label3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -52,7 +53,7 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
   return sections;
 }
 
-function getBillboardModeName(mode: BillboardMode): string {
+function getBillboardModeName(mode: EnumValue<typeof BillboardMode>): string {
   switch (mode) {
     case BillboardMode.BILLBOARD_DISABLED:
       return 'Disabled';

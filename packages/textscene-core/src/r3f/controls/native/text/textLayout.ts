@@ -24,13 +24,17 @@ import {
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { tabAlignAdvances } from './textTabStops';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 /**
  * Narrows a parsed `autowrap_mode` to the enum, else returns `fallback`, as leniently as
  * `parseOptionalInt`. The fallback is the caller's: `Label` uses `AUTOWRAP_OFF`, `RichTextLabel` uses
  * `AUTOWRAP_WORD_SMART` (`rich_text_label.h:557`).
  */
-export function clampAutowrapMode(mode: number | undefined, fallback: AutowrapMode): AutowrapMode {
+export function clampAutowrapMode(
+  mode: number | undefined,
+  fallback: EnumValue<typeof AutowrapMode>
+): EnumValue<typeof AutowrapMode> {
   switch (mode) {
     case AutowrapMode.AUTOWRAP_OFF:
     case AutowrapMode.AUTOWRAP_ARBITRARY:
@@ -53,7 +57,7 @@ export interface ShapeTextOptions {
    * `boxWidthPx - indent`. Only `TextEdit.indent_wrapped_lines` sets it (`text_edit.cpp:285-287`).
    */
   trimIndent?: boolean;
-  autowrapMode: AutowrapMode;
+  autowrapMode: EnumValue<typeof AutowrapMode>;
   /** `Label.uppercase`: shapes `text.toUpperCase()`, not the source casing. */
   uppercase?: boolean;
   /**
@@ -201,7 +205,7 @@ interface BreakFlags {
  * `Label::_shape()`'s mode-to-flags map (`scene/gui/label.cpp` ~209-225), each mode with
  * `BREAK_MANDATORY` too. OFF sets no soft flag, so only hard breaks start a line.
  */
-function breakFlagsForAutowrap(mode: AutowrapMode): BreakFlags {
+function breakFlagsForAutowrap(mode: EnumValue<typeof AutowrapMode>): BreakFlags {
   switch (mode) {
     case AutowrapMode.AUTOWRAP_ARBITRARY:
       return { wordBound: false, graphemeBound: true, adaptive: false };

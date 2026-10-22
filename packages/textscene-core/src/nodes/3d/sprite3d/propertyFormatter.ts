@@ -7,6 +7,7 @@ import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function formatSprite3DProperties(properties: Sprite3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -66,7 +67,7 @@ export function formatSprite3DProperties(properties: Sprite3DProperties): Proper
   return sections;
 }
 
-function billboardName(mode: BillboardMode): string {
+function billboardName(mode: EnumValue<typeof BillboardMode>): string {
   switch (mode) {
     case BillboardMode.BILLBOARD_DISABLED:
       return 'Disabled';
@@ -79,7 +80,7 @@ function billboardName(mode: BillboardMode): string {
   }
 }
 
-function alphaCutName(mode: AlphaCutMode): string {
+function alphaCutName(mode: EnumValue<typeof AlphaCutMode>): string {
   switch (mode) {
     case AlphaCutMode.DISABLED:
       return 'Disabled';

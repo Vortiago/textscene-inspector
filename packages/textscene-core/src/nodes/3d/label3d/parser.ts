@@ -17,6 +17,7 @@ import {
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseGeometryInstance3D(heading, properties);
@@ -57,17 +58,17 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
   };
 }
 
-function parseAlphaCutMode(value: string | undefined): AlphaCutMode {
+function parseAlphaCutMode(value: string | undefined): EnumValue<typeof AlphaCutMode> {
   const num = intOr(value, AlphaCutMode.DISABLED, 'alpha_cut');
   return num >= AlphaCutMode.DISABLED && num <= AlphaCutMode.HASH
-    ? (num as AlphaCutMode)
+    ? (num as EnumValue<typeof AlphaCutMode>)
     : AlphaCutMode.DISABLED;
 }
 
-function parseTextureFilter(value: string | undefined): TextureFilter {
+function parseTextureFilter(value: string | undefined): EnumValue<typeof TextureFilter> {
   const num = intOr(value, TextureFilter.LINEAR_WITH_MIPMAPS, 'texture_filter');
   return num >= TextureFilter.NEAREST && num <= TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC
-    ? (num as TextureFilter)
+    ? (num as EnumValue<typeof TextureFilter>)
     : TextureFilter.LINEAR_WITH_MIPMAPS;
 }
 

@@ -27,12 +27,13 @@ import { useTexture3D } from '../../../resources/useTexture3D';
 import { Node3D } from '../../base/node3d/Component';
 import type { FogVolumeProperties } from './types';
 import type { Vector3 } from '../../../godot/math/vector';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
 const FogVolumeElement = extend(FogVolumeObject);
 
 /** The mode `shader` runs in, or null before it has loaded. */
-function shaderModeOfResource(shader: TscnInternalResource | null): ShaderMode | null {
+function shaderModeOfResource(shader: TscnInternalResource | null): EnumValue<typeof ShaderMode> | null {
   if (!shader) return null;
   if (shader.type === 'VisualShader') return stringToInt(shader.data['mode'] ?? '0');
   return shaderModeOf(literalText(shader.data['code'] ?? ''));

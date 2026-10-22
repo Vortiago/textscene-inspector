@@ -5,22 +5,22 @@ import { FogMode } from '../rendering/environment/depthFog.js';
 import { GlowBlendMode } from '../rendering/environment/glow.js';
 
 /** `Environment::BGMode` without `BG_MAX` (`scene/resources/environment.h:41-48`, 4.7.2 `:42-49`). */
-export enum BackgroundMode {
-  BG_CLEAR_COLOR = 0,
-  BG_COLOR = 1,
-  BG_SKY = 2,
-  BG_CANVAS = 3,
-  BG_KEEP = 4,
-  BG_CAMERA_FEED = 5,
-}
+export const BackgroundMode = {
+  BG_CLEAR_COLOR: 0,
+  BG_COLOR: 1,
+  BG_SKY: 2,
+  BG_CANVAS: 3,
+  BG_KEEP: 4,
+  BG_CAMERA_FEED: 5,
+} as const;
 
 /** `Environment::AmbientSource` without `AMBIENT_SOURCE_` (`environment.h:51-56`, 4.7.2 `:52-57`). */
-export enum AmbientSource {
-  BG = 0,
-  DISABLED = 1,
-  COLOR = 2,
-  SKY = 3,
-}
+export const AmbientSource = {
+  BG: 0,
+  DISABLED: 1,
+  COLOR: 2,
+  SKY: 3,
+} as const;
 
 /** `Environment::ReflectionSource` without `REFLECTION_SOURCE_` (`environment.h:58-62`, 4.7.2 `:59-63`). */
 const ReflectionSource = {
