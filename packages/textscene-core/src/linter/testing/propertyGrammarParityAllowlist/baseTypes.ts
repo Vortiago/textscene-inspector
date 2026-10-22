@@ -139,15 +139,14 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     renderGap: [
       // Image-forming settings the previewer does not read: antialiasing and
       // scaling, the shadow atlas depth, VRS, the 2D-lighting SDF, snapping,
-      // anisotropic filtering, culling, and the World3D the viewport renders against (apart
-      // from the `own_world_3d` flag, the atlas layout, `msaa_2d`, `msaa_3d` and
-      // `texture_mipmap_bias`, which are parsed).
+      // culling, and the World3D the viewport renders against (apart from the
+      // `own_world_3d` flag, the atlas layout, `msaa_2d`, `msaa_3d`, `texture_mipmap_bias`
+      // and `anisotropic_filtering_level`, which are parsed).
       'screen_space_aa',
       'use_taa',
       'scaling_3d_mode',
       'scaling_3d_scale',
       'fsr_sharpness',
-      'anisotropic_filtering_level',
       'positional_shadow_atlas_16_bits',
       'vrs_mode',
       'vrs_update_mode',
