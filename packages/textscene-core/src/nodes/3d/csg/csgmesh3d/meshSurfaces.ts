@@ -39,14 +39,17 @@ const meshesByContext = new WeakMap<CsgGeometryContext, Map<string, CsgMesh | nu
  * object for the same reference in a context, so the geometry and its key share one read.
  */
 export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
-  if (meshRef === undefined) return readMesh(meshRef, ctx);
+  if (!meshRef) return null;
   let meshes = meshesByContext.get(ctx);
   if (!meshes) meshesByContext.set(ctx, (meshes = new Map()));
-  if (!meshes.has(meshRef)) meshes.set(meshRef, readMesh(meshRef, ctx));
-  return meshes.get(meshRef)!;
+  const cached = meshes.get(meshRef);
+  if (cached !== undefined) return cached;
+  const mesh = readMesh(meshRef, ctx);
+  meshes.set(meshRef, mesh);
+  return mesh;
 }
 
-function readMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
+function readMesh(meshRef: string, ctx: CsgGeometryContext): CsgMesh | null {
   const scoped = resolveReference(meshRef, ctx, ctx.loadedFile);
   if (!scoped) return null;
   const path = referencedFilePath(meshRef, ctx);

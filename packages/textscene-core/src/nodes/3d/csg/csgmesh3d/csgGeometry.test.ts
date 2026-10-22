@@ -260,7 +260,7 @@ describe('resolveMesh', () => {
     expect(resolveMesh('SubResource("Tube")', CTX)).toBe(resolveMesh('SubResource("Tube")', CTX));
   });
 
-  it('gives a new mesh object in a new context, which holds other files', () => {
+  it('gives a new mesh object in a new context, which holds other resources', () => {
     const other = csgGeometryContext({ internalResources: [INLINE_TUBE], externalResources: EXT });
 
     expect(resolveMesh('SubResource("Tube")', other)).not.toBe(resolveMesh('SubResource("Tube")', CTX));
