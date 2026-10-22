@@ -7,12 +7,8 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { aabbCenter, type Aabb } from '../../godot/math/aabb';
 import { allFinite } from '../../godot/variant/number';
-import { canvasItemFacing } from '../canvasItemFacing';
-import { editorHelperUserData } from '../editorHelpers';
 import { useGodotLinearColor } from '../godotColor';
-import { materialProgramInputs } from '../materialProgramInputs';
-import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { GIZMO_GROUP_ORDER, GIZMO_RENDER_ORDER } from './gizmoRenderOrder';
+import { GizmoMesh } from './GizmoMesh';
 
 interface AabbSolidGizmoProps {
   aabb: Aabb;
@@ -35,27 +31,5 @@ function isFiniteBox({ position, size }: Aabb): boolean {
 
 export function AabbSolidGizmo({ aabb, color, alpha }: AabbSolidGizmoProps) {
   const geometry = useMemo(() => (isFiniteBox(aabb) ? solidBoxGeometry(aabb) : null), [aabb]);
-  useDisposeOnRelease(geometry);
-  const helperUserData = useMemo(editorHelperUserData, []);
-  const linearColor = useGodotLinearColor(color);
-  // Godot's gizmo material culls no face (`node_3d_editor_gizmos.cpp:927`), so one pass draws both.
-  const program = materialProgramInputs({
-    props: {
-      color: linearColor,
-      opacity: alpha,
-      transparent: true,
-      depthWrite: false,
-      fog: false,
-      ...canvasItemFacing(),
-    },
-  });
-  if (!geometry) return null;
-
-  return (
-    <group renderOrder={GIZMO_GROUP_ORDER} userData={helperUserData}>
-      <mesh renderOrder={GIZMO_RENDER_ORDER} geometry={geometry}>
-        <meshBasicMaterial key={program.key} {...program.props} />
-      </mesh>
-    </group>
-  );
+  return <GizmoMesh geometry={geometry} color={useGodotLinearColor(color)} alpha={alpha} />;
 }

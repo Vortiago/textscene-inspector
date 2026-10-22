@@ -47,8 +47,5 @@ export function CPUParticlesBoxGizmo({ box }: { box: Aabb }) {
 
 export function EmissionShapeGizmo({ emission }: { emission: ParticleEmission }) {
   const positions = useMemo(() => new Float32Array(emissionShapeLines(emission)), [emission]);
-  const color = useGodotLinearColor(EMISSION_SHAPE_COLOR);
-  // The Point and point-cloud shapes draw no lines, so no geometry or material is built for them.
-  if (positions.length === 0) return null;
-  return <GizmoLine positions={positions} color={color} />;
+  return <GizmoLine positions={positions} color={useGodotLinearColor(EMISSION_SHAPE_COLOR)} />;
 }

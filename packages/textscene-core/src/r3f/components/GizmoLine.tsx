@@ -6,10 +6,9 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { editorHelperUserData } from '../editorHelpers';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { GIZMO_GROUP_ORDER, GIZMO_RENDER_ORDER } from './gizmoRenderOrder';
+import { GIZMO_RENDER_ORDER, GizmoGroup } from './GizmoGroup';
 
 interface GizmoLineProps {
   /** Flat line-segment vertex positions `[x0,y0,z0, x1,y1,z1, …]`. */
@@ -58,15 +57,15 @@ export function GizmoLine({ positions: allPositions, colors: allColors, color }:
     () => finiteSegments(allPositions, allColors),
     [allPositions, allColors]
   );
+  // No geometry for a gizmo with no line left: Godot draws nothing for it.
   const geometry = useMemo(() => {
+    if (positions.length === 0) return null;
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     if (colors) g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return g;
   }, [positions, colors]);
   useDisposeOnRelease(geometry);
-  // Memoised, as R3F assigns a new `userData` object on each render.
-  const helperUserData = useMemo(editorHelperUserData, []);
 
   // `vertexColors` is a program input (`WebGLPrograms.js:308`), and a gizmo that
   // gains or loses its colour attribute would otherwise keep the first program.
@@ -81,14 +80,14 @@ export function GizmoLine({ positions: allPositions, colors: allColors, color }:
     },
   });
 
-  if (positions.length === 0) return null;
+  if (!geometry) return null;
 
   return (
-    <group renderOrder={GIZMO_GROUP_ORDER} userData={helperUserData}>
+    <GizmoGroup>
       <lineSegments renderOrder={GIZMO_RENDER_ORDER}>
         <primitive object={geometry} attach="geometry" />
         <lineBasicMaterial key={program.key} {...program.props} />
       </lineSegments>
-    </group>
+    </GizmoGroup>
   );
 }

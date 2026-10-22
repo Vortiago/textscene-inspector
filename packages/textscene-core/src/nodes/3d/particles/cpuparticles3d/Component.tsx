@@ -6,15 +6,10 @@
  */
 
 import { EMPTY_AABB } from '../../../../godot/math/aabb';
-import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
-import { useGizmoVisible } from '../../../../r3f/hooks/useGizmoVisible';
-import { invisibleBase } from '../../../../r3f/invisibleBase';
-import { undrawnGeometryInstance } from '../../geometryinstance3d/Component';
+import { undrawnGeometryInstanceWithGizmos } from '../../geometryinstance3d/Component';
 import { CPUParticlesBoxGizmo, EmissionShapeGizmo } from '../gizmo/ParticleGizmos';
 import { useCPUParticles3DAabb } from './ownAabb';
 import type { CPUParticles3DProperties } from './types';
-
-const UndrawnCPUParticles3D = undrawnGeometryInstance(useCPUParticles3DAabb);
 
 function Gizmos({ properties }: { properties: CPUParticles3DProperties }) {
   return (
@@ -26,12 +21,4 @@ function Gizmos({ properties }: { properties: CPUParticles3DProperties }) {
   );
 }
 
-export const CPUParticles3D = invisibleBase(function CPUParticles3D({ node, children }: NodeComponentProps) {
-  const gizmoVisible = useGizmoVisible();
-  return (
-    <UndrawnCPUParticles3D node={node}>
-      {gizmoVisible && <Gizmos properties={node.properties as CPUParticles3DProperties} />}
-      {children}
-    </UndrawnCPUParticles3D>
-  );
-});
+export const CPUParticles3D = undrawnGeometryInstanceWithGizmos(useCPUParticles3DAabb, Gizmos);

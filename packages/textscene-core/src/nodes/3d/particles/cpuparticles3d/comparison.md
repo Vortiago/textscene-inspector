@@ -124,4 +124,4 @@ The previewer draws no billboard icon and no emission point handles.
 
 - **Not drawn** Godot draws the live particle cloud, but here nothing appears.
 - **Needs runtime** An emitter with a `mesh` and no `visibility_aabb` stays hidden with its visibility dependants, where Godot culls it by its live particles.
-- **Editor only** Godot's editor draws the box and its axes faintly for every emitter, but here they draw only for the selected node (ADR-0018).
+- **Editor only** Godot's editor draws the box and axes faintly for every emitter, but ADR-0018 draws them only for the selected node.
