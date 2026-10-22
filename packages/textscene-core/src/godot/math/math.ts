@@ -1,7 +1,9 @@
 /** Engine math constants, as Godot declares them. */
 
-// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
-import { storedReal as f } from './real.js';
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. A local alias, not
+// `storedReal`: scripts/godot-dfg/bake-dfg.mjs runs this file through Node's type stripping,
+// which resolves no `.js` import, so this module imports nothing.
+const f = Math.fround;
 
 /** `Math::TAU` (`math_defs.h:43`): one full turn in radians. */
 export const TAU = Math.PI * 2;
