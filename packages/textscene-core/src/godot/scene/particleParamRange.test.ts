@@ -122,7 +122,11 @@ describe('loadedParamRange', () => {
     expect(loadedParamRange({ angle_min: '"fast"', angle_max: '2' }, 'angle', 0)).toEqual({ min: 0, max: 2 });
   });
 
-  it('skips a non-finite value, so the renderer keeps the default the linter reports against (edge)', () => {
+  it('skips a non-finite value, so the renderer keeps the default (edge)', () => {
     expect(loadedParamRange({ angle_min: 'inf', angle_max: 'nan' }, 'angle', 0)).toEqual({ min: 0, max: 0 });
+  });
+
+  it('skips a value that overflows a single-precision real to inf (edge)', () => {
+    expect(loadedParamRange({ angle_min: '1e39', angle_max: '2' }, 'angle', 0)).toEqual({ min: 0, max: 2 });
   });
 });

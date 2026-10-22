@@ -7,7 +7,6 @@
 
 import { scalarSlotValue } from '../variant/variantBool.js';
 import { storedReal } from '../math/real.js';
-import { replayPositions } from './propertyReplay.js';
 
 /** A `_min` above its `_max`, and the bound Godot moves onto the other at load. */
 export interface CrossedParamRange {
@@ -26,10 +25,13 @@ function writtenReal(value: string | undefined): number | null {
   return value === undefined ? null : scalarSlotValue(value);
 }
 
-/** As {@link writtenReal}, but a non-finite value is null: the renderer falls back where the linter reports. */
+/**
+ * As {@link writtenReal}, but null for a value that is non-finite once stored: the renderer cannot
+ * draw it. The stored form is tested, since `1e39` is finite as a double and `inf` as a `real_t`.
+ */
 function writtenFiniteReal(value: string | undefined): number | null {
   const real = writtenReal(value);
-  return real !== null && Number.isFinite(real) ? real : null;
+  return real !== null && Number.isFinite(storedReal(real)) ? real : null;
 }
 
 /**
@@ -44,35 +46,30 @@ function settledParamRange(
 ): { min: number; max: number } {
   const minKey = `${stem}_min`;
   const maxKey = `${stem}_max`;
-  const writtenMin = read(properties[minKey]);
-  const writtenMax = read(properties[maxKey]);
   let min = fallback;
   let max = fallback;
-  const setMin = (value: number) => {
-    min = storedReal(value);
-    if (min > max) max = min;
-  };
-  const setMax = (value: number) => {
-    max = storedReal(value);
-    if (min > max) min = max;
-  };
-
-  // The file's order matters only when both keys are written, and then the scan is for this pair alone.
-  const isMaxFirst =
-    writtenMin !== null &&
-    writtenMax !== null &&
-    !replayPositions(properties, minKey, [maxKey])[maxKey]!.late;
-  if (isMaxFirst) setMax(writtenMax);
-  if (writtenMin !== null) setMin(writtenMin);
-  if (writtenMax !== null && !isMaxFirst) setMax(writtenMax);
+  // The record lists its keys in file order, so the writes apply in the order the file states them.
+  for (const [key, value] of Object.entries(properties)) {
+    if (key !== minKey && key !== maxKey) continue;
+    const written = read(value);
+    if (written === null) continue;
+    if (key === minKey) {
+      min = storedReal(written);
+      if (min > max) max = min;
+    } else {
+      max = storedReal(written);
+      if (min > max) min = max;
+    }
+  }
   return { min, max };
 }
 
 /**
  * The range `stem` holds after the file's lines apply, on a pair that Godot constructs at
  * `fallback` for both bounds. A write that crosses the other bound moves it, so a lone
- * `scale_amount_min = 3` on a default of 1 loads as 3 and 3. A value the slot does not take, and a
- * non-finite one, is skipped, and the lint validator reports it.
+ * `scale_amount_min = 3` on a default of 1 loads as 3 and 3. A value the slot does not take is
+ * skipped, and the lint validator reports it. A non-finite one is skipped too, and the linter
+ * accepts it.
  */
 export function loadedParamRange(
   properties: Record<string, string>,
@@ -102,16 +99,9 @@ export function crossedParamRanges(
     const max = storedReal(writtenMax);
     if (!(min > max)) continue;
 
-    const loaded = settledParamRange(properties, stem, min, writtenReal);
-    const isMinMoved = loaded.min !== min;
-    crossed.push({
-      minKey,
-      maxKey,
-      min,
-      max,
-      movedKey: isMinMoved ? minKey : maxKey,
-      loadedValue: isMinMoved ? loaded.min : loaded.max,
-    });
+    // A crossed pair settles on one value: the bound the file lists last.
+    const loadedValue = settledParamRange(properties, stem, min, writtenReal).min;
+    crossed.push({ minKey, maxKey, min, max, movedKey: loadedValue === min ? maxKey : minKey, loadedValue });
   }
   return crossed;
 }
