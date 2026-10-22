@@ -75,7 +75,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     () => (object ? glbNodeLinks(object, entries, root, uniquePaths) : []),
     [object, entries, root, uniquePaths]
   );
-  useGlbGeometryInstances(object, root, links);
+  useGlbGeometryInstances(object, entries, root, links);
 
   // Registers each GLB object under the tree's relPath scheme, so the SceneTreeViewer can select
   // and hide it.
