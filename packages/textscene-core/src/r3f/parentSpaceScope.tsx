@@ -6,7 +6,7 @@
  * invisible object, and Godot does not.
  */
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { extend } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
@@ -73,9 +73,9 @@ export function ParentSpaceScope({ node, children }: { node: TscnNode; children:
   // No ancestor CanvasItem transform reaches the world root, so the CanvasSpace a canvas root
   // inside inverts is empty.
   return (
-    <WorldRootAttached worldRoot={worldRoot}>
+    <AttachedToObject target={worldRoot}>
       <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
-    </WorldRootAttached>
+    </AttachedToObject>
   );
 }
 
@@ -83,15 +83,19 @@ export function ParentSpaceScope({ node, children }: { node: TscnNode; children:
  * Moves only the three object, not the React subtree: an R3F portal would hand every component
  * inside its own `scene`, which WorldEnvironment, Decal and the light helpers write to. R3F calls a
  * function `attach` on every mount and reorder, and its cleanup on removal. An `object3D`, not a
- * group, so no canvas key resets. The key remounts it into a new world root.
+ * group, so no canvas key resets. The key remounts it into a new target.
  */
-function WorldRootAttached({ worldRoot, children }: { worldRoot: THREE.Object3D; children: ReactNode }) {
-  const attachToWorldRoot = (_parent: unknown, self: THREE.Object3D) => {
-    worldRoot.add(self);
-    return () => worldRoot.remove(self);
-  };
+export function AttachedToObject({ target, children }: { target: THREE.Object3D; children: ReactNode }) {
+  // Stable per target: R3F detaches and attaches again when the function changes.
+  const attachToTarget = useCallback(
+    (_parent: unknown, self: THREE.Object3D) => {
+      target.add(self);
+      return () => target.remove(self);
+    },
+    [target]
+  );
   return (
-    <object3D key={worldRoot.uuid} attach={attachToWorldRoot}>
+    <object3D key={target.uuid} attach={attachToTarget}>
       {children}
     </object3D>
   );

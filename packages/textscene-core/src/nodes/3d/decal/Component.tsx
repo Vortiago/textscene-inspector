@@ -5,7 +5,7 @@
  * normal/ORM/emission maps and `emission_energy`, which Godot's distance fade also scales.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -22,6 +22,7 @@ import { applyTextureState, releaseBoundTexture } from '../../../resources/textu
 import type { DecalProperties } from './types';
 import type { DecalGeometricFade } from './decalFade';
 import { distanceFade } from '../../../godot/rendering/distanceFade';
+import { TrackedObjects } from '../../../r3f/trackedObjects';
 import { cameraDistance, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { DecalProjectionMaterials, type DecalProjectionLook } from './decalProjectionMaterials';
@@ -58,6 +59,12 @@ export function Decal({ node, children }: NodeComponentProps) {
   // The projection materials, for the per-frame distance-fade write below. They are
   // built imperatively inside the effect, so a ref is the only handle on them.
   const materialsRef = useRef<DecalProjectionMaterials | null>(null);
+  // What the last bake projected onto, and the mesh tracker's version then. Written by the bake
+  // effect, cleared when it is torn down.
+  const bakedRef = useRef<{ receivers: readonly THREE.Mesh[]; meshVersion: number } | null>(null);
+  const meshesRef = useRef<TrackedObjects<THREE.Mesh> | null>(null);
+  // Counts the bakes a late receiver asked for. It only changes the bake effect's dependencies.
+  const [lateReceiverBakes, setLateReceiverBakes] = useState(0);
 
   // Unit-cube projection-volume wireframe. `size` scales the gizmo group, so animating `size`
   // (ADR-0017) stays a cheap scale write. R3F's `primitive` does not auto-dispose, so this
@@ -159,9 +166,11 @@ export function Decal({ node, children }: NodeComponentProps) {
       group.add(mesh);
     }
 
+    bakedRef.current = { receivers, meshVersion: meshesRef.current?.version ?? 0 };
     invalidate();
 
     return () => {
+      bakedRef.current = null;
       for (const child of group.children.slice()) {
         group.remove(child);
         (child as THREE.Mesh).geometry?.dispose();
@@ -185,7 +194,37 @@ export function Decal({ node, children }: NodeComponentProps) {
     properties.lower_fade,
     properties.normal_fade,
     resourceVersion,
+    lateReceiverBakes,
   ]);
+
+  // A receiver can mount after the bake, as a Label3D does once its font loads. Godot's clustered
+  // decal finds it the next frame. The tracker lists the scene's meshes without a walk and changes
+  // its version when one arrives or leaves, so a render where none did costs one comparison. The
+  // latest box inputs sit in a ref, so an animated `size` does not resubscribe every frame.
+  const boxInputsRef = useRef({ size, cullMask: properties.cull_mask });
+  boxInputsRef.current = { size, cullMask: properties.cull_mask };
+  useEffect(() => {
+    const group = projectionRef.current;
+    if (!group) return undefined;
+    const meshes = new TrackedObjects(scene, isSceneMesh);
+    meshes.current();
+    meshesRef.current = meshes;
+    const stop = observeSceneCamera(scene, () => {
+      const baked = bakedRef.current;
+      if (!baked || meshes.version === baked.meshVersion) return;
+      baked.meshVersion = meshes.version;
+      scene.updateMatrixWorld(true);
+      const { size: boxSize, cullMask } = boxInputsRef.current;
+      const boxAABB = computeDecalBoxWorldAABB(group.matrixWorld, boxSize);
+      const receivers = collectDecalReceivers(scene, boxAABB, cullMask);
+      if (!isSameReceivers(receivers, baked.receivers)) setLateReceiverBakes((bakes) => bakes + 1);
+    });
+    return () => {
+      stop();
+      meshes.dispose();
+      meshesRef.current = null;
+    };
+  }, [scene]);
 
   // Before each render, for whichever camera renders the scene, the projections follow their
   // receivers' shading, and the decal takes its distance fade. Godot computes that fade per decal per
@@ -248,4 +287,13 @@ function showFaded(
 ): void {
   materials.setOpacity(opacity * fade);
   group.visible = fade > 0;
+}
+
+/** A mesh a decal can receive on: its own and every decal's projection meshes are not receivers. */
+function isSceneMesh(object: THREE.Object3D): object is THREE.Mesh {
+  return (object as THREE.Mesh).isMesh === true && object.userData.isDecalProjection !== true;
+}
+
+function isSameReceivers(a: readonly THREE.Mesh[], b: readonly THREE.Mesh[]): boolean {
+  return a.length === b.length && a.every((mesh, i) => mesh === b[i]);
 }

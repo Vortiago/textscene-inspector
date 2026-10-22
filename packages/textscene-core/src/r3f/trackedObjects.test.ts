@@ -227,4 +227,22 @@ describe('TrackedObjects', () => {
 
     expect(lights.current()).toEqual([light]);
   });
+
+  it('changes its version when a tracked object arrives or leaves, and for nothing else', () => {
+    const scene = new THREE.Scene();
+    const lights = new TrackedObjects(scene, isLight);
+    lights.current();
+    const unchanged = lights.version;
+
+    scene.add(mesh());
+    expect(lights.version).toBe(unchanged);
+
+    const light = new THREE.PointLight();
+    scene.add(light);
+    const afterArrival = lights.version;
+    expect(afterArrival).not.toBe(unchanged);
+
+    scene.remove(light);
+    expect(lights.version).not.toBe(afterArrival);
+  });
 });
