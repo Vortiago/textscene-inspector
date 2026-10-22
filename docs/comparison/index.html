@@ -6302,6 +6302,23 @@ tr:last-child td{border-bottom:0}
         <div class="prose"><p><code>normal_texture</code> reads red and green only. Both engines rebuild blue from them (<code>scene_forward_clustered.glsl:1437-1438</code>). So a map with blue 0 shades its flat texel as the bare plane, and its tilted texel brighter. An RGTC import stores no blue, so this read is the only one that shades it. A glTF material reads its normal map the same way, as Godot imports it as a StandardMaterial3D. Both engines tilt the normal in a frame whose tangent and binormal have unit length. So a quad with a different UV density per axis tilts each texel by its authored angle.</p></div>
       </section>
       <section class="prop">
+        <div class="prop-head"><h3>Roughness limiter on a normal map</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-material-roughness-limiter-derivative-godot.png" alt="Godot render of Roughness limiter on a normal map">
+          <img class="img-ours" src="images/unit-material-roughness-limiter-derivative-ours.png" alt="Our render of Roughness limiter on a normal map">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A smooth metal sphere under a bumpy normal map, lit by the sun. Godot's screen-space roughness limiter spreads the highlight by the difference of the normal between the two pixels of a pair (<code>scene_forward_clustered.glsl:1660</code>). WebGL 2 has no fine derivative, so the previewer reads the normal map one texel along the pair and takes the same difference.</p></div>
+      </section>
+      <section class="prop">
         <div class="prop-head"><h3>Clearcoat</h3><span class="status st-done">Done</span></div>
         <div class="compare">
         <div class="stage">
