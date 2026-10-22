@@ -55,14 +55,10 @@ export const GLTF_SURFACE = 'gltf';
 export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
 
 /**
- * Resolve every texture slot of one StandardMaterial3D, from gated references through
- * loads, precedence and binding to the slot's drawn map. Each reference resolves in
- * `tables`, the material's own file, whichever file that is. A triplanar material tiles
- * per world unit, so a PlaneMesh `surface` folds in its size. CSG and an ArrayMesh pass
- * nothing and get the material's own `uv1_scale`.
- *
- * Null when a slot's file could not load, or the albedo slot names a ViewportTexture whose pass
- * is cyclic. Either texture never draws, so the surface takes `MISSING_TEXTURE_MATERIAL`.
+ * Every texture slot of one StandardMaterial3D, resolved in `tables`, the material's own file. A
+ * triplanar material tiles per world unit: a PlaneMesh `surface` folds in its size, and CSG or an
+ * ArrayMesh passes none and gets `uv1_scale`. Null when a slot's file cannot load or a
+ * ViewportTexture albedo is cyclic: the surface takes `MISSING_TEXTURE_MATERIAL`.
  */
 export function useSurfaceTextures(
   scalars: StandardMaterial3DScalars | null,
@@ -71,10 +67,9 @@ export function useSurfaceTextures(
 ): ResolvedTextures | null {
   const resourceTables = tables ?? NO_TABLES;
 
-  // The decode's gated table, never the raw property bag: Godot declares and
-  // samples a gated slot's sampler only inside its `if (features[…])` branch
-  // (`scene/resources/material.cpp:1090,1745`), so a `normal_texture` without
-  // `normal_enabled` reaches no shader at all.
+  // The decode's gated table, never the raw property bag: Godot samples a gated slot only inside
+  // its `if (features[…])` branch (`scene/resources/material.cpp:1090,1745`), so a
+  // `normal_texture` without `normal_enabled` reaches no shader.
   const references = scalars?.textureSlots;
 
   // One call per slot, unrolled: hooks cannot run in a loop.
@@ -135,10 +130,10 @@ interface SlotTexture extends Texture2DResult {
 type SlotMap = Pick<SlotTexture, 'texture' | 'isArriving'>;
 
 /**
- * One slot's texture, through every form a Texture2D slot takes, null while it arrives. A material
- * binds a texture by its RID: an AtlasTexture's RID is its whole sheet
- * (`scene/resources/atlas_texture.cpp:55-58`), a CanvasTexture's names no texture, and a
- * ViewportTexture's names its viewport's target, which arrives through the live registry.
+ * One slot's texture in every form a Texture2D slot takes, null while it arrives. A material binds
+ * a texture by RID: an AtlasTexture's is its whole sheet (`scene/resources/atlas_texture.cpp:55-58`),
+ * a CanvasTexture's names none, and a ViewportTexture's names its viewport's target, from the
+ * live registry.
  */
 function useSlotTexture(
   references: TextureSlotReferences | undefined,
@@ -166,9 +161,8 @@ function textureSlotReference(
 
 /**
  * The flowmap as three reads it: its strength moved into blue. Only an anisotropic material
- * samples it, so only that one repacks, which is a canvas readback, a full-buffer copy and a GPU
- * re-upload, and only that one waits for a map that is arriving. The slot depends on the two
- * values the repack reads, not their wrapper.
+ * samples it, so only that one repacks (a canvas readback, a buffer copy and a GPU re-upload) and
+ * waits for an arriving map. The memo depends on the two values the repack reads, not their wrapper.
  */
 function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
   const { texture } = flowmap;
@@ -182,10 +176,10 @@ function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
 }
 
 /**
- * The map a slot draws: its texture with the material's own texture state applied, once it is on
- * the GPU. A large map uploads in bands, and the slot keeps the map it had meanwhile. With none yet,
- * a stand-in fills the slot while a map uploads or arrives (`pendingMapStandIn.ts` says why). The
- * upload releases each map the slot stops drawing.
+ * The map a slot draws: its texture with the material's texture state applied, once on the GPU. A
+ * large map uploads in bands and the slot keeps its old map meanwhile. With none, a stand-in fills
+ * the slot while a map uploads or arrives (`pendingMapStandIn.ts`). The upload releases each map
+ * the slot stops drawing.
  */
 function useDrawnSlot(
   slot: TextureSlot,

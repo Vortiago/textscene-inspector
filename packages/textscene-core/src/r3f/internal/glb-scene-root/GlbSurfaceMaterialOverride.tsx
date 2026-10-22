@@ -25,12 +25,10 @@ interface GlbSurfaceMaterialOverrideProps {
 }
 
 /**
- * The override material, built and disposed here, whichever file it came from. Not
- * `<StandardMaterialSlot>`: the target is inside a cloned GLB with no R3F element. It installs
- * the same bags from `useSurfaceMaterial`, so the adapters stay two (ADR-0039). A material this previewer
- * cannot build still replaced the glTF's own, so the surface is Godot's default (ADR-0041).
- * One still loading, or one that never loads, replaces nothing, as Godot's null material does.
- * One whose texture never draws takes the magenta placeholder, as `<SurfaceMaterialSlot>` does.
+ * The override material, built and disposed here: the target is a cloned GLB with no R3F element,
+ * so it installs the bags of `useSurfaceMaterial` itself (ADR-0039). A material this previewer
+ * cannot build still replaces the glTF's own with Godot's default (ADR-0041). One still loading,
+ * or one that never loads, replaces nothing, as Godot's null does. A missing texture draws magenta.
  */
 export function GlbSurfaceMaterialOverride({
   target,

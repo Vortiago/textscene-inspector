@@ -1,9 +1,7 @@
 /**
- * `<StandardMaterialSlot>`: the reactive adapter that mounts the derived bags' class as the JSX
- * tag R3F prop-diffs, for every StandardMaterial3D-bearing node. It derives nothing:
- * `useSurfaceMaterial` hands it the bags, `materialBag.ts` holds the class choice and every
- * mapping, and the imperative `build.ts` reads them too. Inside a GeometryInstance3D drawer it
- * mounts the unfaded and the alpha-pass bag, which the cull swaps.
+ * `<StandardMaterialSlot>`: the reactive adapter that mounts the bags from `useSurfaceMaterial`
+ * as the JSX tag R3F prop-diffs. It derives nothing, as `build.ts` does not. Inside a
+ * GeometryInstance3D drawer it mounts the unfaded and the alpha-pass bag, which the cull swaps.
  */
 
 import type * as THREE from 'three';
