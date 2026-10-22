@@ -71,6 +71,7 @@ export function parseSubViewport(
     ),
     gui_embed_subwindows: boolOr(properties.gui_embed_subwindows, false, context),
     texture_mipmap_bias: parseOptionalFloat(properties.texture_mipmap_bias),
+    anisotropic_filtering_level: parseOptionalInt(properties.anisotropic_filtering_level),
     positional_shadow_atlas_size: parseOptionalInt(properties.positional_shadow_atlas_size),
     positional_shadow_atlas_quad_0: parseOptionalInt(properties.positional_shadow_atlas_quad_0),
     positional_shadow_atlas_quad_1: parseOptionalInt(properties.positional_shadow_atlas_quad_1),

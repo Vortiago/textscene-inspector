@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import { useProjectAnisotropicFilteringLevel } from './useProjectAnisotropicFilteringLevel';
+import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
 import type { TscnInternalResource } from '../../parser/types';
 import {
   isViewportTextureRef,
@@ -103,7 +103,7 @@ export function useMaterialTextures(
   };
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `bindSlotTexture`'s.
-  const anisotropicFilteringLevel = useProjectAnisotropicFilteringLevel();
+  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const textureStates = useMemo(
     (): MaterialTextureStates | null =>
       scalars && surfaceTextureStates(scalars, surface, anisotropicFilteringLevel),

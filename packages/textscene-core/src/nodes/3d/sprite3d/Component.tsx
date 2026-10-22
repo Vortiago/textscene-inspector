@@ -15,7 +15,7 @@ import { frameSizePx, frameUvWindow, spriteSamplerClone, spriteWrapMode } from '
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useProjectAnisotropicFilteringLevel } from '../../../r3f/materials/useProjectAnisotropicFilteringLevel';
+import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
 import { alphaCutSurface, joinsShadowPass } from '../../../r3f/godotAlphaCut';
 import { cutFadeVariants, cutOpaquePrepasses, type FadePass } from '../../../r3f/materials/fadeVariants';
@@ -81,7 +81,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
   // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a
   // `source_color` sampler, so the clone reads as an albedo does, not as the 2D canvas's retag.
-  const anisotropicFilteringLevel = useProjectAnisotropicFilteringLevel();
+  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const samplerClone = useMemo(() => {
     if (!sourceTexture) return undefined;
     const cloned = spriteSamplerClone(sourceTexture, wrap, sourceColorSpace(sourceTexture));
