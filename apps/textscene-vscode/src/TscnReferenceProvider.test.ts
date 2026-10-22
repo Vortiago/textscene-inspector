@@ -9,8 +9,6 @@ import { TscnReferenceProvider } from './TscnReferenceProvider';
 import { createMockDocument } from './TscnDefinitionProvider.testkit';
 import { createMockFileData, createMockUri, vscode as vscodeMocks } from './test-setup';
 
-const TOKEN = {} as vscode.CancellationToken;
-const CONTEXT = { includeDeclaration: true } as vscode.ReferenceContext;
 const LINE = '[ext_resource type="Texture2D" path="res://art/a.png" id="1"]';
 const ON_PATH = new vscode.Position(0, LINE.indexOf('art/'));
 
@@ -37,9 +35,7 @@ async function referencesFound(listing: readonly string[]): Promise<string[]> {
   const provider = new TscnReferenceProvider({ pathsFor: async () => listing });
   const locations = await provider.provideReferences(
     createMockDocument(LINE, '/workspace/scenes/door.tscn'),
-    ON_PATH,
-    CONTEXT,
-    TOKEN
+    ON_PATH
   );
   return locations.map(
     (location) => `${location.uri.fsPath}:${location.range.start.line}:${location.range.start.character}`
@@ -91,9 +87,7 @@ describe('TscnReferenceProvider', () => {
 
     const locations = await new TscnReferenceProvider({ pathsFor }).provideReferences(
       createMockDocument(LINE, '/workspace/scenes/door.tscn'),
-      new vscode.Position(0, 3),
-      CONTEXT,
-      TOKEN
+      new vscode.Position(0, 3)
     );
 
     expect(locations).toEqual([]);

@@ -9,47 +9,38 @@ import { resPathUri } from './existingResFile';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
 import { resRootOf } from './resRoot';
+import { readSceneText } from './tools/toolInput';
 import type { ResPathListing } from './TscnResPathListing';
 
 /**
- * A reader of the files under `root` that serves an open editor's text in place of its file's: a range from the file's
- * text would land on the wrong line in the editor. It reads the open editors once, when it is made.
- * It reads through `workspace.fs` and not `readWorkspaceFile`: that refuses a link or a large file to guard what the
- * webview receives, and this read returns only positions.
+ * The text of the file at `path` under `root`, an open editor's unsaved text first, as {@link readSceneText} reads it:
+ * a range from the file's text would land on the wrong line in the editor. It does not use `readWorkspaceFile`: that
+ * refuses a link or a large file to guard what the webview receives, and this read returns only positions.
  */
-function textReaderWithOpenDocuments(root: vscode.Uri): (path: string) => Promise<string | null> {
-  const openTexts = new Map(
-    vscode.workspace.textDocuments.map((document) => [document.uri.toString(), document.getText()])
-  );
-  return async (path) => {
-    const file = resPathUri(root, path);
-    if (file === null) return null;
-    const open = openTexts.get(file.toString());
-    if (open !== undefined) return open;
-    try {
-      return new TextDecoder().decode(await vscode.workspace.fs.readFile(file));
-    } catch {
-      // A file that went away since the listing, or one the host may not read, holds no reference to report.
-      return null;
-    }
-  };
+async function readReferenceText(root: vscode.Uri, path: string): Promise<string | null> {
+  const file = resPathUri(root, path);
+  if (file === null) return null;
+  try {
+    return await readSceneText(file);
+  } catch {
+    // A file that went away since the listing, or one the host may not read, holds no reference to report.
+    return null;
+  }
 }
 
 export class TscnReferenceProvider implements vscode.ReferenceProvider {
   constructor(private readonly pathListing: ResPathListing) {}
 
-  /** The context's `includeDeclaration` is ignored: the occurrence under the cursor is always one of the references. */
+  /** The occurrence under the cursor is always one of the references, so the context's `includeDeclaration` is not read. */
   async provideReferences(
     document: vscode.TextDocument,
-    position: vscode.Position,
-    _context: vscode.ReferenceContext,
-    _token: vscode.CancellationToken
+    position: vscode.Position
   ): Promise<vscode.Location[]> {
     const root = await resRootOf(document.uri);
     if (root === null) return [];
     const references = await resPathReferencesAt(languageDocumentOf(document), position, {
       listPaths: () => this.pathListing.pathsFor(document),
-      readText: textReaderWithOpenDocuments(root),
+      readText: (path) => readReferenceText(root, path),
     });
     return references.flatMap(({ file, range }) => {
       const uri = resPathUri(root, file);

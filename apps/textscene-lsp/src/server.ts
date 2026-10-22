@@ -49,12 +49,9 @@ import {
   toLspHover,
   toLspSymbol,
 } from './lspConvert';
-import { createDiskResRoots } from '@textscene/core/resources/diskProject';
+import { DISK_PATH_CASE, createDiskResRoots } from '@textscene/core/resources/diskProject';
 import type { ResRoot, ResRoots } from '@textscene/core/resources/resRoots';
-import { isSamePath, pathCaseOf } from '@textscene/core/resources/resPath';
-
-/** Whether this platform's filesystem tells apart two spellings of a path that differ only in case. */
-const PATH_CASE = pathCaseOf(process.platform);
+import { isSamePath } from '@textscene/core/resources/resPath';
 
 /** Wait after the last edit before a lint, so a burst of keystrokes lints once. */
 const LINT_DEBOUNCE_MS = 300;
@@ -138,10 +135,9 @@ function textReaderWithOpenDocuments(root: ResRoot): (path: string) => Promise<s
   return async (path) => {
     const file = root.pathOf(path);
     const open =
-      file === null ? undefined : openTexts.find((entry) => isSamePath(entry.file, file, PATH_CASE));
+      file === null ? undefined : openTexts.find((entry) => isSamePath(entry.file, file, DISK_PATH_CASE));
     if (open !== undefined) return open.text;
     const content = await root.loadResource(path);
-    // A text resource loads as a string. Anything else is no scene or resource to search.
     return typeof content === 'string' ? content : null;
   };
 }

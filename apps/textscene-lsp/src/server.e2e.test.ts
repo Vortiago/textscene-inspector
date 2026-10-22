@@ -163,6 +163,11 @@ function inProject(use: (client: LspClient) => Promise<void>): Promise<void> {
   return withInitializedServer(pathToFileURL(PROJECT_DIR).toString(), use);
 }
 
+/** The params of a references request at a cursor. The cursor's own occurrence counts either way. */
+function referencesParams(cursor: Pick<ReturnType<typeof openAt>, 'textDocument' | 'position'>) {
+  return { ...cursor, context: { includeDeclaration: true } };
+}
+
 /** The locations a references request answered, as project files and ranges. */
 function fileRangesOf(projectDir: string, locations: readonly Location[] | null): FileRange[] {
   return (locations ?? []).map(({ uri, range }) => ({
@@ -278,10 +283,10 @@ describe('tscn-lsp gives the shared answers for the fixture project', () => {
       `references: ${answer.name}`,
       () =>
         inProject(async (client) => {
-          const locations = await client.result<Location[] | null>('textDocument/references', {
-            ...openAt(client, answer.at),
-            context: { includeDeclaration: true },
-          });
+          const locations = await client.result<Location[] | null>(
+            'textDocument/references',
+            referencesParams(openAt(client, answer.at))
+          );
           expect(sortedFileRanges(fileRangesOf(PROJECT_DIR, locations))).toEqual(
             sortedFileRanges(answer.locations)
           );
@@ -440,11 +445,10 @@ describe('tscn-lsp finds references across the project', () => {
           },
         });
 
-        const locations = await client.result<Location[]>('textDocument/references', {
-          textDocument: { uri },
-          position: gridCursor(1),
-          context: { includeDeclaration: true },
-        });
+        const locations = await client.result<Location[]>(
+          'textDocument/references',
+          referencesParams({ textDocument: { uri }, position: gridCursor(1) })
+        );
 
         const inMain = fileRangesOf(PROJECT_DIR, locations).filter(({ file }) => file === gridAnswer.at.file);
         expect(inMain.map(({ range }) => range[0])).toEqual([3, 16]);
@@ -459,10 +463,7 @@ describe('tscn-lsp finds references across the project', () => {
       cpSync(PROJECT_DIR, projectDir, { recursive: true });
       try {
         await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
-          const params = {
-            ...openAt(client, gridAnswer.at, projectDir),
-            context: { includeDeclaration: true },
-          };
+          const params = referencesParams(openAt(client, gridAnswer.at, projectDir));
           const before = await client.result<Location[]>('textDocument/references', params);
           writeFileSync(join(projectDir, 'created.tscn'), 'metadata/frame = "res://textures/grid.png"\n');
           client.notify('workspace/didChangeWatchedFiles', {
@@ -487,11 +488,13 @@ describe('tscn-lsp finds references across the project', () => {
     'answers null for a document the client never opened',
     () =>
       inProject(async (client) => {
-        const locations = await client.result('textDocument/references', {
-          textDocument: { uri: fileUri(PROJECT_DIR, 'main.tscn') },
-          position: gridCursor(0),
-          context: { includeDeclaration: true },
-        });
+        const locations = await client.result(
+          'textDocument/references',
+          referencesParams({
+            textDocument: { uri: fileUri(PROJECT_DIR, 'main.tscn') },
+            position: gridCursor(0),
+          })
+        );
 
         expect(locations).toBeNull();
       }),
