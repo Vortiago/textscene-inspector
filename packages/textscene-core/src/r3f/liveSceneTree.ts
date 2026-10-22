@@ -202,6 +202,19 @@ export function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | unde
 }
 
 /**
+ * The scope the refs of `node` as the tree shows it resolve against, given its
+ * `groups` from {@link liveChildGroups}: the merged instance's, else the node's own,
+ * else the one of the group it sits in (`groupScope`).
+ */
+export function liveNodeScope(
+  node: LiveNode,
+  groupScope: SceneScope,
+  groups: readonly LiveChildGroup[]
+): SceneScope {
+  return mergedNodeOf(groups) ? groups[0]!.scope : scopeOf(node, groupScope);
+}
+
+/**
  * The first node called `name` across `groups`, as a path walk descends: with the scope its own
  * refs and children resolve against.
  */

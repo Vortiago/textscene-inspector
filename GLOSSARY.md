@@ -23,6 +23,11 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
+**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveNodeScope`):
+The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
+Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
+_Avoid_: resolving a grafted node's ids in the sub-scene's pools.
+
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
 The merged node keeps it, and the render path's per-owner tables read it.
@@ -192,6 +197,11 @@ It reads the text through a **ParseObserver** on the scanning loop, seats the `[
 Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0049).
 _Avoid_: "LSP" for the engine. LSP names the protocol, which the `tscn-lsp` server speaks. "Language service".
 
+**Res root** (`resources/resRoots.ts`):
+The directory a scene's `res://` paths resolve under: the nearest `project.godot` above the scene, else the scene's own directory when it lies inside the workspace, else none.
+A scene with the second kind is a loose scene, and Godot has no `res://` for it.
+_Avoid_: "project root" for the second kind.
+
 **Agent tool**:
 A tool the VS Code extension registers through `vscode.lm` for a coding agent in chat.
 The agent tools lint a scene, read its node tree, open or capture its preview, and list its missing resources.
@@ -211,6 +221,7 @@ _Avoid_: "processor" for the slice. A hollow `decode.ts` on a foreign format.
 **Godot surface**:
 One triangle surface in Godot's mesh arrays: positions, normals, tangents, UV and UV2, with front faces clockwise and V from the image top.
 A decoded ArrayMesh, a PrimitiveMesh builder and a CSGMesh3D brush share it, and `godotSurfacesGeometry` alone turns it into three's winding and V.
+A PointMesh builds the one surface that is not triangles: a single position with no indices, flagged `isPoints`, which three draws as `THREE.Points`.
 _Avoid_: "three-space surface". "mesh data".
 
 **React-free linter boundary**:

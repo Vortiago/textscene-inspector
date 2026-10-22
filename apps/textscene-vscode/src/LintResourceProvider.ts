@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 import { isWithinRoot, resRelativePath } from '@textscene/core/resources/resPath';
-import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
+import { fileStamp, resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 import { anyCase } from './anyCaseGlob';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 import { HOST_PATH_CASE } from './hostPathCase';
@@ -46,7 +46,7 @@ export class LintResourceProvider implements ResourceProvider {
     if (file === null) return null;
     try {
       const { mtime, size } = await vscode.workspace.fs.stat(file);
-      return `${mtime}:${size}`;
+      return fileStamp(mtime, size);
     } catch {
       // A file with no stamp is read, and the read answers a missing one with null.
       return null;

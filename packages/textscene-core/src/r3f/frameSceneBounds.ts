@@ -55,7 +55,8 @@ export function frameSceneBounds(
     if (!o.isMesh && !o.isLine && !o.isLineSegments && !o.isPoints) return;
     const objBox = computeWorldBoundingBox(obj, new THREE.Box3());
     if (objBox.isEmpty() || !Number.isFinite(objBox.min.x)) return;
-    if (o.isMesh) {
+    // Points frame as meshes do: Godot unions the AABB of every visual instance, a PointMesh's too.
+    if (o.isMesh || o.isPoints) {
       meshBox.union(objBox);
       hasMesh = true;
     } else {

@@ -17,6 +17,7 @@ export {
   TEXTURE_WORK_STATUS_TESTID,
   TEXTURE_WORK_WAIT_MS,
   VIEWPORT,
+  windowForCanvas,
 } from './preview/appContract.mjs';
 export { createCaptureContext, installStyle, paintedOutChromeCss } from './preview/captureContext.mjs';
 export { attachDiagnostics, clearDiagnostics, loggedErrors } from './preview/pageDiagnostics.mjs';

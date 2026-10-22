@@ -39,5 +39,4 @@ The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, `transparency`, the
 
 - **Approximated** A transparent material renders darker than Godot's on a brightly lit
   face, while an opaque one agrees.
-- **Approximated** A bright highlight on the metallic torus carries a soft glow halo in Godot, where here it ends sharply.
-- **Resource gap** A mesh the previewer does not build (PointMesh, RibbonTrailMesh, TextMesh or TubeTrailMesh) draws as a wireframe box, and the node's details name the type.
+- **Resource gap** A mesh the previewer does not build (RibbonTrailMesh, TextMesh or TubeTrailMesh) draws as a wireframe box, and the node's details name the type.

@@ -155,3 +155,27 @@ describe('frameSceneBounds — CSG contributor bounds proxies', () => {
     expect(without.target.z).toBeCloseTo(0, 5);
   });
 });
+
+describe('frameSceneBounds — a PointMesh beside a mesh', () => {
+  /** A PointMesh at `x`, which Godot sizes as a zero-size AABB at its origin. */
+  function drawnPoint(x: number): THREE.Points {
+    const points = new THREE.Points(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3()]));
+    points.position.x = x;
+    return points;
+  }
+
+  function targetOf(...objects: THREE.Object3D[]): THREE.Vector3 {
+    const scene = new THREE.Scene();
+    scene.add(...objects);
+    const controls = { target: new THREE.Vector3(), update: () => {} };
+    frameSceneBounds(scene, makeCamera(), controls);
+    return controls.target;
+  }
+
+  const box = () => new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial());
+
+  // `Node3DEditorViewport` unions the AABB of every visual instance, a point's included.
+  it('stretches the bounds to the point, as it does for any instance', () => {
+    expect(targetOf(box(), drawnPoint(10)).x).toBeCloseTo(4.5, 5);
+  });
+});

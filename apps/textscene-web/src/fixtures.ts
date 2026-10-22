@@ -1338,6 +1338,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Point Mesh Gridmap",
+    "file": "unit-point-mesh-gridmap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Point Mesh Omni Shadow",
+    "file": "unit-point-mesh-omni-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Point Mesh",
+    "file": "unit-point-mesh.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Blend",
     "file": "unit-pointlight2d-blend.tscn",
     "category": "Other"
@@ -2112,6 +2127,12 @@ export const fixtures: Fixture[] = [
     "file": "alpha-antialiasing/unit-alpha-antialiasing.tscn",
     "category": "Other",
     "root": "alpha-antialiasing"
+  },
+  {
+    "name": "Glow Linear Upscale",
+    "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
+    "category": "Other",
+    "root": "glow-linear-upscale"
   },
   {
     "name": "Msaa 2d",

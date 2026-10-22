@@ -1,0 +1,19 @@
+; The one variable: a GridMap whose MeshLibrary item is a PointMesh, in three cells: the first
+; upright, the second turned a half turn about Y, the third one cell up and to the right. Godot
+; lights a point, which has no normal array, as a +Z normal in node space, and the cell's basis
+; turns it. The sun, shining toward -Z, lights the two upright points and not the turned one.
+[gd_scene load_steps=2 format=3 uid="uid://unitpointmeshgridmap"]
+
+[ext_resource type="MeshLibrary" path="res://unit-point-mesh-gridmap-lib.tres" id="1_lib"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+
+[node name="GridMap" type="GridMap" parent="."]
+mesh_library = ExtResource("1_lib")
+cell_size = Vector3(1, 1, 1)
+data = {
+"cells": PackedInt32Array(65535, 0, 0, 0, 0, 655360, 65537, 0, 0)
+}

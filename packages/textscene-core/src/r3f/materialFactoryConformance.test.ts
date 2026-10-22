@@ -128,6 +128,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts a THREE CameraHelper — an Object3D, which R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/nodes/3d/csg/CsgPrimitive.tsx':
     'spreads the shared Node3D transform bag onto a `<group>`, which has no material slot',
+  'packages/textscene-core/src/nodes/3d/gridmap/Component.tsx':
+    'spreads `drawHookProps`, which carries shadow settings and draw hooks and no material, onto each tile; the material mounts in an `OwnedSurfaceSlot`',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightHelpers.tsx':
     'mounts a THREE light helper — an Object3D, added as a child',
   'packages/textscene-core/src/nodes/3d/lights/shared/lightShared.tsx':

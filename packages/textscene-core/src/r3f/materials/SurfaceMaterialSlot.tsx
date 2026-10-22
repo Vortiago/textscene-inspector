@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { useMemo } from 'react';
+import { useThree } from '@react-three/fiber';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import type { TscnInternalResource } from '../../parser/types';
 import {
@@ -40,6 +41,7 @@ import { releaseBoundTexture } from '../../resources/textures/applyTextureState'
 import { triplanarPlaneScale } from '../../nodes/3d/meshinstance3d/triplanarScale';
 import { materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { defaultWhiteTexture } from './defaultWhiteTexture';
+import { pointDrawOf, withPointDraw } from './godotPoint';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import type { MaterialResource, MaterialSource } from './materialSource';
 import { readyMaterial, useMaterial } from './useMaterial';
@@ -223,6 +225,8 @@ interface SurfaceMaterialSlotProps {
   attach?: string;
   /** The mesh sub-resource a triplanar material folds into its tiling, if any. */
   triplanarMesh?: TscnInternalResource;
+  /** The surface draws `THREE.Points`, so its material also sizes each point. */
+  drawsPoints?: boolean;
 }
 
 /**
@@ -231,12 +235,20 @@ interface SurfaceMaterialSlotProps {
  * `<StandardMaterialSlot>` builds from null scalars (ADR-0041). A surface whose texture
  * cannot load, or whose ViewportTexture albedo is cyclic, draws the magenta placeholder.
  */
-export function SurfaceMaterialSlot({ source, attach, triplanarMesh }: SurfaceMaterialSlotProps) {
+export function SurfaceMaterialSlot({
+  source,
+  attach,
+  triplanarMesh,
+  drawsPoints,
+}: SurfaceMaterialSlotProps) {
   const material = readyMaterial(useMaterial(source));
   const scalars = useMaterialScalars(material);
   const { maps, isUnresolved } = useMaterialTextures(scalars, material, triplanarMesh);
-  if (isUnresolved) return materialBagElement(MISSING_TEXTURE_MATERIAL, attach, null);
-  return <StandardMaterialSlot scalars={scalars} attach={attach} {...maps} />;
+  const pixelRatio = useThree((state) => state.viewport.dpr);
+  const pointDraw = drawsPoints ? pointDrawOf(scalars, pixelRatio) : undefined;
+  if (isUnresolved)
+    return materialBagElement(withPointDraw(MISSING_TEXTURE_MATERIAL, pointDraw), attach, null);
+  return <StandardMaterialSlot scalars={scalars} attach={attach} pointDraw={pointDraw} {...maps} />;
 }
 
 /** The decoded scalars of `material`, or null for Godot's default surface. */
