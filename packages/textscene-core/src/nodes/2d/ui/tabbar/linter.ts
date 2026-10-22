@@ -5,11 +5,11 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
-import { listWrittenIndices, writesPastFamilyCount } from '../../../../linter/reportedIndices.js';
+import { pastCountDiagnostic } from '../../../../linter/reportedIndices.js';
 import { TAB_BAR_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
-import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { ruleCount, ruleInt } from '../../../../godot/variant/intSlots.js';
+import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
   currentTabOutOfRange: {
@@ -24,59 +24,54 @@ const arms = {
   },
 } as const satisfies RuleArms<string>;
 
-function checkTabBar(context: RuleContext): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
-  const { node } = context;
+function checkCurrentTab({ node }: RuleContext): Diagnostic[] {
   const props = node.rawProperties;
-
   // Absent means 0: `tabs` is default-constructed empty
   // (doc/classes/TabBar.xml:282 records the same default).
-  const pastCount = writesPastFamilyCount(props, TAB_BAR_TABS);
-  if (pastCount === null) return diagnostics;
-  const { count, offending } = pastCount;
+  const count = ruleCount(props[TAB_BAR_TABS.countKey.key]);
+  if (count === null || props.current_tab === undefined) return [];
 
   // Either order drops the write. `tab_count` first flips `initialized` (tab_bar.cpp:778-779),
   // so `set_current_tab` fails `ERR_FAIL_INDEX` (tab_bar.cpp:804). `current_tab` first, the
   // writer order (tab_bar.cpp:2123 before tab_bar.cpp:2137), queues it (tab_bar.cpp:800-802) for
   // `set_tab_count` to replay (tab_bar.cpp:780-782). Without `tab_count`, nothing replays it (tab_bar.cpp:404).
-  const currentRaw = props.current_tab;
-  if (currentRaw !== undefined) {
-    const current = ruleInt(currentRaw);
-    // Below -1 is linterParser.ts's error. -1 is the default and the deselect sentinel,
-    // guarded by `_can_deselect()` (tab_bar.cpp:798), which is true while the vector is empty.
-    if (current !== null && current >= 0 && current >= count) {
-      reportArm(
-        diagnostics,
-        arms.currentTabOutOfRange,
-        node,
-        `TabBar '${node.name}' selects tab ${current} but declares only ${count} tab(s) (tab_count). ` +
-          'set_current_tab parks the index in queued_current and returns while the bar is ' +
-          'uninitialised (tab_bar.cpp:801-802); only set_tab_count replays it (:778-782), and ' +
-          'with tab_count absent or 0 that returns at its own `p_count == tabs.size()` guard ' +
-          '(:741) without ever replaying. Either way the selection is dropped and the bar ' +
-          'opens on its default tab.'
-      );
-    }
-  }
-
-  // `TabBar::_set` is `property_helper.property_set_value` (tab_bar.h:208), which drops an
-  // index at or past the length getter (property_list_helper.cpp:58), here `get_tab_count`
-  // (tab_bar.cpp:2189). Only TabContainer enables out-of-bounds assign (tab_container.cpp:1294).
-  // Godot's saver never writes this: `tabs.resize(p_count)` (tab_bar.cpp:755) keeps both in step.
-  if (offending.size > 0) {
-    const indices = listWrittenIndices(offending);
-    reportArm(
-      diagnostics,
-      arms.tabIndexOutOfRange,
+  const current = ruleInt(props.current_tab);
+  // Below -1 is linterParser.ts's error. -1 is the default and the deselect sentinel,
+  // guarded by `_can_deselect()` (tab_bar.cpp:798), which is true while the vector is empty.
+  if (current === null || current < 0 || current < count) return [];
+  return [
+    armDiagnostic(
+      arms.currentTabOutOfRange,
       node,
-      `TabBar '${node.name}' sets properties on tab index(es) ${indices} but declares only ${count} tab(s) (tab_count). ` +
-        'PropertyListHelper::_get_property returns null for an index at or past the array length ' +
-        '(property_list_helper.cpp:58) and TabBar never enables out-of-bounds assignment, so these ' +
-        'tab_<idx>/… values are silently dropped on load.'
-    );
-  }
+      `TabBar '${node.name}' selects tab ${current} but declares only ${count} tab(s) (tab_count). ` +
+        'set_current_tab parks the index in queued_current and returns while the bar is ' +
+        'uninitialised (tab_bar.cpp:801-802); only set_tab_count replays it (:778-782), and ' +
+        'with tab_count absent or 0 that returns at its own `p_count == tabs.size()` guard ' +
+        '(:741) without ever replaying. Either way the selection is dropped and the bar ' +
+        'opens on its default tab.'
+    ),
+  ];
+}
 
-  return diagnostics;
+// `TabBar::_set` is `property_helper.property_set_value` (tab_bar.h:208), which drops an
+// index at or past the length getter (property_list_helper.cpp:58), here `get_tab_count`
+// (tab_bar.cpp:2189). Only TabContainer enables out-of-bounds assign (tab_container.cpp:1294).
+// Godot's saver never writes this: `tabs.resize(p_count)` (tab_bar.cpp:755) keeps both in step.
+function checkTabIndices({ node }: RuleContext): Diagnostic[] {
+  return pastCountDiagnostic(
+    node,
+    TAB_BAR_TABS,
+    arms.tabIndexOutOfRange,
+    (indices, count) =>
+      `TabBar '${node.name}' sets properties on tab index(es) ${indices} but declares only ${count} tab(s) (tab_count).`,
+    'PropertyListHelper::_get_property returns null for an index at or past the array length ' +
+      '(property_list_helper.cpp:58) and TabBar never enables out-of-bounds assignment, so these ' +
+      'tab_<idx>/… values are silently dropped on load.'
+  );
+}
+
+function checkTabBar(context: RuleContext): Diagnostic[] {
+  return [...checkCurrentTab(context), ...checkTabIndices(context)];
 }
 
 const tabBarValidationRule: LintRule = {

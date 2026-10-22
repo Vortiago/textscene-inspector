@@ -5,10 +5,10 @@
  * Godot's operation order, since the unwrap cache is keyed on the bits of what follows.
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../math/real.js';
 import { normalizedVector3, vector3Dot } from '../math/vector.js';
-
-/** A `Basis`'s nine `real_t` components, row-major: `rows[i][j]` is at `3i + j`. */
-export type Basis32 = readonly number[];
+import { basisInvert, type BasisComponents } from '../math/basis.js';
 
 /** The transform fields of a glTF node. */
 export interface GltfNodeTransform {
@@ -19,15 +19,13 @@ export interface GltfNodeTransform {
 
 type Triple = [number, number, number];
 
-const f = Math.fround;
-
-export const IDENTITY_BASIS: Basis32 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+export const IDENTITY_BASIS: BasisComponents = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
  * The node's basis as `_parse_nodes` sets it (`gltf_document.cpp:586-597`): a matrix by columns
  * (`:344-354`), else `set_rotation` then `set_scale` (`gltf_node.cpp:160-170`) on the identity.
  */
-export function gltfNodeBasis(node: GltfNodeTransform): Basis32 {
+export function gltfNodeBasis(node: GltfNodeTransform): BasisComponents {
   if (node.matrix) return basisFromColumns(node.matrix);
   let basis = IDENTITY_BASIS;
   // `set_quaternion_scale(q, get_scale())`, and the identity's scale is exactly one.
@@ -37,16 +35,16 @@ export function gltfNodeBasis(node: GltfNodeTransform): Basis32 {
 }
 
 /** `Basis::scale` (`basis.cpp:234-238`), which multiplies row `i` by `rowScales[i]`. */
-export function rowScaledBasis(basis: Basis32, rowScales: readonly number[]): Basis32 {
-  return basis.map((component, i) => f(component * f(rowScales[Math.floor(i / 3)]!)));
+export function rowScaledBasis(basis: BasisComponents, rowScales: readonly number[]): BasisComponents {
+  return basisFrom((i) => f(basis[i]! * f(rowScales[Math.floor(i / 3)]!)));
 }
 
 /**
  * The column lengths of `xf = n.transform * xf` over `chain`, mesh node first and root last
  * (`resource_importer_scene.cpp:2683-2689`).
  */
-export function transformChainScale(chain: readonly Basis32[]): Triple {
-  const basis = chain.reduce<Basis32>((xf, node) => multiply(node, xf), IDENTITY_BASIS);
+export function transformChainScale(chain: readonly BasisComponents[]): Triple {
+  const basis = chain.reduce<BasisComponents>((xf, node) => multiply(node, xf), IDENTITY_BASIS);
   return [0, 1, 2].map((axis) => length(column(basis, axis))) as Triple;
 }
 
@@ -60,7 +58,7 @@ export function unwrapSpace(scale: readonly number[]): {
   transformNormals: (xyz: Float32Array) => void;
 } {
   const basis = rowScaledBasis(IDENTITY_BASIS, scale);
-  const normalBasis = transposed(inverse(basis));
+  const normalBasis = transposed(basisInvert(basis));
   return {
     transformPositions: (xyz) => {
       for (let i = 0; i < xyz.length; i += 3) {
@@ -78,52 +76,31 @@ export function unwrapSpace(scale: readonly number[]): {
 }
 
 /** `Basis::xform` (`basis.h:336-341`) of the vector at `xyz[at]`: each row dotted with it. */
-function xform(basis: Basis32, xyz: Float32Array, at: number): Triple {
+function xform(basis: BasisComponents, xyz: Float32Array, at: number): Triple {
   const v: Triple = [xyz[at]!, xyz[at + 1]!, xyz[at + 2]!];
   return [rowDot(basis, 0, v), rowDot(basis, 1, v), rowDot(basis, 2, v)];
 }
 
-function rowDot(basis: Basis32, row: number, v: Triple): number {
+function rowDot(basis: BasisComponents, row: number, v: Triple): number {
   return f(f(f(basis[3 * row]! * v[0]) + f(basis[3 * row + 1]! * v[1])) + f(basis[3 * row + 2]! * v[2]));
 }
 
-/** `Basis::invert` (`basis.cpp:39-54`), cofactors over the determinant. */
-function inverse(basis: Basis32): Basis32 {
-  const at = (row: number, col: number): number => basis[3 * row + col]!;
-  const cofactor = (r1: number, c1: number, r2: number, c2: number): number =>
-    f(f(at(r1, c1) * at(r2, c2)) - f(at(r1, c2) * at(r2, c1)));
-  const co = [cofactor(1, 1, 2, 2), cofactor(1, 2, 2, 0), cofactor(1, 0, 2, 1)];
-  const det = f(f(f(at(0, 0) * co[0]!) + f(at(0, 1) * co[1]!)) + f(at(0, 2) * co[2]!));
-  const s = f(1 / det);
-  return [
-    f(co[0]! * s),
-    f(cofactor(0, 2, 2, 1) * s),
-    f(cofactor(0, 1, 1, 2) * s),
-    f(co[1]! * s),
-    f(cofactor(0, 0, 2, 2) * s),
-    f(cofactor(0, 2, 1, 0) * s),
-    f(co[2]! * s),
-    f(cofactor(0, 1, 2, 0) * s),
-    f(cofactor(0, 0, 1, 1) * s),
-  ];
+function transposed(basis: BasisComponents): BasisComponents {
+  return basisFrom((i) => basis[3 * (i % 3) + Math.floor(i / 3)]!);
 }
 
-function transposed(basis: Basis32): Basis32 {
-  return [0, 3, 6, 1, 4, 7, 2, 5, 8].map((i) => basis[i]!);
-}
-
-function basisFromColumns(matrix: readonly number[]): Basis32 {
+function basisFromColumns(matrix: readonly number[]): BasisComponents {
   const at = (i: number): number => f(matrix[i] ?? 0);
   return [at(0), at(4), at(8), at(1), at(5), at(9), at(2), at(6), at(10)];
 }
 
-function diagonal(scale: readonly number[]): Basis32 {
+function diagonal(scale: readonly number[]): BasisComponents {
   const [x = 1, y = 1, z = 1] = scale.map(f);
   return [x, 0, 0, 0, y, 0, 0, 0, z];
 }
 
 /** `Basis::set_quaternion` (`basis.cpp:828-838`). */
-function quaternionBasis(rotation: readonly number[]): Basis32 {
+function quaternionBasis(rotation: readonly number[]): BasisComponents {
   const [x = 0, y = 0, z = 0, w = 1] = rotation.map(f);
   const d = f(f(f(f(x * x) + f(y * y)) + f(z * z)) + f(w * w));
   const s = f(2 / d);
@@ -147,19 +124,32 @@ function quaternionBasis(rotation: readonly number[]): Basis32 {
 }
 
 /** `Basis::operator*` (`basis.h:281-286`): each component is `tdot` of the right over the left's row. */
-function multiply(left: Basis32, right: Basis32): Basis32 {
-  const product: number[] = [];
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 3; col++) {
-      const terms = [0, 1, 2].map((k) => f(right[3 * k + col]! * left[3 * row + k]!));
-      product.push(f(f(terms[0]! + terms[1]!) + terms[2]!));
-    }
-  }
-  return product;
+function multiply(left: BasisComponents, right: BasisComponents): BasisComponents {
+  return basisFrom((i) => {
+    const row = Math.floor(i / 3);
+    const col = i % 3;
+    const terms = [0, 1, 2].map((k) => f(right[3 * k + col]! * left[3 * row + k]!));
+    return f(f(terms[0]! + terms[1]!) + terms[2]!);
+  });
+}
+
+/** The basis whose row-major component `i` is `component(i)`. */
+function basisFrom(component: (i: number) => number): BasisComponents {
+  return [
+    component(0),
+    component(1),
+    component(2),
+    component(3),
+    component(4),
+    component(5),
+    component(6),
+    component(7),
+    component(8),
+  ];
 }
 
 /** `Basis::orthonormalize` (`basis.cpp:56-72`), Gram-Schmidt over the columns. */
-function orthonormalized(basis: Basis32): Basis32 {
+function orthonormalized(basis: BasisComponents): BasisComponents {
   const x = normalizedVector3(...column(basis, 0));
   const y = normalizedVector3(...subtract(column(basis, 1), scaled(x, vector3Dot(x, column(basis, 1)))));
   const zColumn = column(basis, 2);
@@ -169,7 +159,7 @@ function orthonormalized(basis: Basis32): Basis32 {
   return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
 }
 
-function column(basis: Basis32, axis: number): Triple {
+function column(basis: BasisComponents, axis: number): Triple {
   return [basis[axis]!, basis[axis + 3]!, basis[axis + 6]!];
 }
 

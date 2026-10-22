@@ -26,7 +26,7 @@ import {
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
 import type { Rgba } from '../../../../godot/math/math';

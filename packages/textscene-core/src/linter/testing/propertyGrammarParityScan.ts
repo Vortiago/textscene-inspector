@@ -8,6 +8,8 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { classBaseChain } from '../../godot/classdb/classBaseTypes.js';
+import * as PROPERTY_LIST_FAMILIES from '../../godot/classdb/propertyListFamilies.js';
+import type { IndexedFamily } from '../../godot/classdb/indexedFamily.js';
 
 // Re-exported, not re-derived: two modules in this directory resolving the same
 // directory from their own `import.meta.url` is two `..` counts to keep right.
@@ -72,8 +74,8 @@ export function findSliceDirs(dir: string): string[] {
 }
 
 /**
- * Scrape `properties.X` and `properties['X']` accesses from a parser source.
- * Returns only identifier-shaped keys (alphanumeric + underscore).
+ * Scrape `properties.X`, `properties['X']` and `properties[FAMILY.countKey.key]` accesses from a
+ * parser source, the last through the family `propertyListFamilies.ts` declares.
  */
 export function scrapeParserProps(src: string): Set<string> {
   const props = new Set<string>();
@@ -84,7 +86,17 @@ export function scrapeParserProps(src: string): Set<string> {
   // properties['key'] or properties["key"]
   const bracketRe = /\bproperties\[['"]([^'"]+)['"]\]/g;
   while ((m = bracketRe.exec(src)) !== null) props.add(m[1]!);
+  const countKeyRe = /\bproperties\[([A-Z][A-Z0-9_]*)\.countKey\.key\]/g;
+  while ((m = countKeyRe.exec(src)) !== null) props.add(familyCountKey(m[1]!));
   return props;
+}
+
+/** The count key of the family exported as `name`, which a scrape must name or it reads nothing. */
+function familyCountKey(name: string): string {
+  const family = (PROPERTY_LIST_FAMILIES as Record<string, IndexedFamily | undefined>)[name];
+  const key = family?.countKey.key;
+  if (!key) throw new Error(`expected a family with a count key in propertyListFamilies.ts, got ${name}`);
+  return key;
 }
 
 /**

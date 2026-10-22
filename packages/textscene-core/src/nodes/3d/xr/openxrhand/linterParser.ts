@@ -9,7 +9,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
   HAND_BONE_UPDATE_NAMES,
-  HAND_NAMES,
+  OPEN_XR_HAND_NAMES,
   MOTION_RANGE_NAMES,
   SKELETON_RIG_NAMES,
 } from '../../../../godot/scene/openxr.js';
@@ -23,7 +23,7 @@ validatorRegistry.registerAll('OpenXRHand', {
   // (cpp:83-87) opens with ERR_FAIL_INDEX(p_hand, HAND_MAX), which returns
   // before the assignment, so an out-of-range value is refused, not merely
   // hinted.
-  hand: v.enumInt('hand', HAND_NAMES, { enforced: 'openxr_hand.cpp:84' }),
+  hand: v.enumInt('hand', OPEN_XR_HAND_NAMES, { enforced: 'openxr_hand.cpp:84' }),
   // openxr_hand.cpp:56, PROPERTY_HINT_ENUM "Unobstructed,Conform to
   // controller". set_motion_range (cpp:99-104) opens with
   // ERR_FAIL_INDEX(p_motion_range, MOTION_RANGE_MAX), refusing out-of-range.

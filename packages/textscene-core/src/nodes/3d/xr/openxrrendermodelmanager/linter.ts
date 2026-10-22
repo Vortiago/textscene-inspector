@@ -8,7 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict, type ParentVerdict } from '../../../../linter/parentType.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { literalText } from '../../../../godot/string/string.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import type { RawNode, RawScene } from '../../../../parser/types.js';

@@ -34,9 +34,10 @@ import { SurfaceWriter, type Vec3, type Vec4 } from '../primitivemesh/surfaceWri
 import { PlaneMeshOrientation } from '../../../godot/scene/planeMesh.js';
 import type { Vector3 } from '../../../godot/math/vector.js';
 import type { PlaneMeshProperties } from './types.js';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** Each orientation's normal and tangent (`:1420-1425`, `:1468-1472`). */
-const FACES: Record<PlaneMeshOrientation, { normal: Vec3; tangent: Vec4 }> = {
+const FACES: Record<EnumValue<typeof PlaneMeshOrientation>, { normal: Vec3; tangent: Vec4 }> = {
   [PlaneMeshOrientation.FACE_X]: { normal: [1, 0, 0], tangent: [0, 0, -1, 1] },
   [PlaneMeshOrientation.FACE_Y]: { normal: [0, 1, 0], tangent: [1, 0, 0, 1] },
   [PlaneMeshOrientation.FACE_Z]: { normal: [0, 0, 1], tangent: [1, 0, 0, 1] },
@@ -80,7 +81,12 @@ export function buildPlaneMeshSurface(p: PlaneMeshProperties): GodotSurface {
 }
 
 /** The point at grid `x`, `z` in the plane `orientation` faces, moved by `center_offset` (`:1460-1466`). */
-function planePoint(orientation: PlaneMeshOrientation, x: number, z: number, offset: Vector3): Vec3 {
+function planePoint(
+  orientation: EnumValue<typeof PlaneMeshOrientation>,
+  x: number,
+  z: number,
+  offset: Vector3
+): Vec3 {
   if (orientation === PlaneMeshOrientation.FACE_X) return [offset.x, z + offset.y, x + offset.z];
   if (orientation === PlaneMeshOrientation.FACE_Y) return [-x + offset.x, offset.y, -z + offset.z];
   return [-x + offset.x, z + offset.y, offset.z];

@@ -5,17 +5,24 @@
  * guarded, as in Godot: an input that divides by zero leaves NaN vertices in the result.
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../../../../godot/math/real';
 import { aabbEdges, type Aabb } from '../../../../godot/math/aabb';
 import { basisInvert, type BasisComponents } from '../../../../godot/math/basis';
 import { degToRad } from '../../../../godot/math/math';
-import { normalizedVector3, vector3Cross, vector3Dot, type Vector3 } from '../../../../godot/math/vector';
+import {
+  VECTOR3_AXES,
+  normalizedVector3,
+  vector3Cross,
+  vector3Dot,
+  type Vector3,
+} from '../../../../godot/math/vector';
 import { EmissionShape } from '../../../../godot/scene/particles3d';
 import type { ParticleEmission } from '../emission/types';
 
 /** The circles run `i = 0..120` of 3 degrees, so the last segment overlaps the first. */
 const LAST_CIRCLE_SEGMENT = 120;
 const DEGREES_PER_SEGMENT = 3;
-const AXES = ['x', 'y', 'z'] as const;
 /** The ring's vertical lines stand at every 30th segment: 0, 90, 180, 270 and 360 degrees. */
 const RING_LINE_SEGMENT_STEP = 30;
 
@@ -72,7 +79,7 @@ function sphereLines(radius: number, offset: Vector3, scale: Vector3): number[] 
 
 function boxLines(extents: Vector3, offset: Vector3, scale: Vector3): number[] {
   return aabbEdges(UNIT_BOX_AABB).map((coordinate, i) => {
-    const axis = AXES[i % 3]!;
+    const axis = VECTOR3_AXES[i % 3]!;
     return coordinate * 2 * scale[axis] * extents[axis] + offset[axis];
   });
 }
@@ -121,9 +128,6 @@ function ringLines(ring: ParticleEmission, offset: Vector3, scale: Vector3): num
   }
   return points;
 }
-
-/** Single precision: each `f(...)` rounds as a C++ `float` operation does. */
-const f = Math.fround;
 
 /**
  * The basis that carries the ring's own axes onto its `ring_axis`, built as the plugin builds it

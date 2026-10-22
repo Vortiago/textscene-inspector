@@ -45,9 +45,18 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
 }
 
 /**
- * The instancing scene's typed nodes whose parent path names a GLB object, which Godot adds
- * to that object (`packed_scene.cpp:157-165`, `:541`), and the rest of `children`. A typed node
- * whose path names none stays among the rest, where the tree has always listed it.
+ * The Godot path of the GLB object a typed node of the instancing scene is added to: its parent
+ * path, as Godot adds it (`packed_scene.cpp:157-165`, `:541`). Null for an override, which names
+ * an existing node. Each caller resolves the path with its own lookup.
+ */
+export function glbAttachPath(child: TscnNode): string | null {
+  return isApplicableGlbOverride(child) ? null : child.instanceSubPath!;
+}
+
+/**
+ * The instancing scene's typed nodes that {@link glbAttachPath} places on a GLB object, and the
+ * rest of `children`. A typed node whose path names none stays among the rest, where the tree has
+ * always listed it. It looks up through the quiet `findGlbTarget`.
  *
  * Each attached node comes back with `glbTargetRelPath` set, so the tree's next step
  * (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
@@ -61,9 +70,8 @@ export function splitAttachedChildren(
   const attached: LiveNode[] = [];
   const rest: LiveNode[] = [];
   for (const child of children) {
-    const entry = isApplicableGlbOverride(child)
-      ? null
-      : findGlbTarget(entries, child.instanceSubPath!).entry;
+    const path = glbAttachPath(child);
+    const entry = path === null ? null : findGlbTarget(entries, path).entry;
     if (entry) attached.push({ ...child, glbTargetRelPath: entry.relPath });
     else rest.push(child);
   }

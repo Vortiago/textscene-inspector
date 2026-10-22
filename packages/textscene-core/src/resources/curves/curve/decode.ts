@@ -4,12 +4,15 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+import { DEFAULT_BAKE_RESOLUTION, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+import { settableIntOr } from '../../../parser/valueParsers';
+import { storedReal } from '../../../godot/math/real.js';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
-import { readSlotTuple, slotInt } from '../../../godot/variant/int.js';
+import { readSlotTuple, slotInt } from '../../../godot/variant/intSlots.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { resizePoints } from './pointCount';
+import { CurveTangentMode } from '../../../godot/scene/curve';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /**
  * Entries per point in `_data`: `Vector2(x, y)`, left tangent, right tangent, left
@@ -30,6 +33,13 @@ function decodeCurve(data: Record<string, string>): Curve {
     maxValue: limits?.[1] ?? EMPTY_CURVE.maxValue,
     minDomain: limits?.[2] ?? EMPTY_CURVE.minDomain,
     maxDomain: limits?.[3] ?? EMPTY_CURVE.maxDomain,
+    // `set_bake_resolution` ERR_FAILs outside 1 to 1000 (`curve.cpp:526-527`).
+    bakeResolution: settableIntOr(
+      data.bake_resolution,
+      DEFAULT_BAKE_RESOLUTION,
+      { min: 1, max: 1000 },
+      'Curve bake_resolution'
+    ),
   };
 
   // `point_count` is written after `_data`, and Godot's setter resizes the point
@@ -41,17 +51,9 @@ function decodeCurve(data: Record<string, string>): Curve {
   return curve;
 }
 
-/**
- * The `Curve` a `SubResource("id")` property names, or null when the reference
- * is absent, is not a SubResource, names nothing, or names something else.
- */
-export function resolveCurve(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): Curve | null {
-  const resource = resolveSubResourceRef(ref, internalResources);
-  if (resource?.type !== 'Curve') return null;
-  return decodeCurve(resource.data);
+/** The `Curve` a resource holds, or null for no resource or one of another type. */
+export function decodeCurveResource(resource: TscnInternalResource | null): Curve | null {
+  return resource?.type === 'Curve' ? decodeCurve(resource.data) : null;
 }
 
 function parsePoints(value: string | undefined): CurvePoint[] {
@@ -76,13 +78,20 @@ function parsePoints(value: string | undefined): CurvePoint[] {
   return points;
 }
 
+/** A float as the engine stores a `real_t`, or null when the text is not one. */
+function parseStoredReal(entry: string): number | null {
+  const parsed = parseGodotFloat(entry);
+  return parsed === null ? null : storedReal(parsed);
+}
+
 /** `[a, b, c]` of plain floats, or null when the literal is absent/malformed. */
 function parseFloatArray(value: string | undefined): number[] | null {
   const entries = splitArrayLiteral(value);
   if (!entries) return null;
   // `parseGodotFloat`, not `parseFloat`, which reads `5abc` as 5. Finite, since a
   // non-finite limit clamps every padded point onto Infinity and scales every sample by it.
-  const numbers = entries.map((e) => parseGodotFloat(e));
+  // Each limit is a `real_t`, so it rounds to single precision before the test.
+  const numbers = entries.map(parseStoredReal);
   return numbers.some((n) => n === null || !Number.isFinite(n)) ? null : (numbers as number[]);
 }
 
@@ -115,8 +124,11 @@ function parseVector2Entry(entry: string): { x: number; y: number } | null {
   // The slot read narrows a `Vector2i` spelling's arguments to int32 before the
   // widening into the float slot, so `Vector2i(4294967295, 0)` is the point `(-1, 0)`.
   const tuple = readSlotTuple(entry, 'Vector2', VECTOR2_RE);
-  if (!tuple || !allFinite(tuple.components)) return null;
-  return { x: tuple.components[0]!, y: tuple.components[1]! };
+  if (!tuple) return null;
+  // A `Vector2` holds floats, so a component past the float range is infinite.
+  const x = storedReal(tuple.components[0]!);
+  const y = storedReal(tuple.components[1]!);
+  return allFinite([x, y]) ? { x, y } : null;
 }
 
 /**
@@ -125,10 +137,10 @@ function parseVector2Entry(entry: string): { x: number; y: number } | null {
  * to the particle geometry.
  */
 function numberOr(entry: string, fallback: number): number {
-  const num = parseGodotFloat(entry);
+  const num = parseStoredReal(entry);
   return num !== null && Number.isFinite(num) ? num : fallback;
 }
 
-function tangentMode(entry: string): CurveTangentMode {
-  return slotInt(entry) === CurveTangentMode.Linear ? CurveTangentMode.Linear : CurveTangentMode.Free;
+function tangentMode(entry: string): EnumValue<typeof CurveTangentMode> {
+  return slotInt(entry) === CurveTangentMode.LINEAR ? CurveTangentMode.LINEAR : CurveTangentMode.FREE;
 }

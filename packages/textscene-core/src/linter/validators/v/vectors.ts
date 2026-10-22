@@ -6,8 +6,8 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { ruleInt, tupleComponent } from '../commonValidators.js';
-import { slotComponents, slotComponentsAltered } from '../../../godot/variant/int.js';
+import { tupleComponent } from '../commonValidators.js';
+import { slotComponents, slotComponentsAltered, ruleInt } from '../../../godot/variant/intSlots.js';
 import { convertedSpelling, markIntSlot, truncatedComponent } from '../intSlot.js';
 import { floatTupleValidator, makeFloatTupleRegex } from '../floatTupleValidator.js';
 import {

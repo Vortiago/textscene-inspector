@@ -5,27 +5,12 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
-
-/** `Gradient.interpolation_mode`: how colour blends between stops. */
-export enum GradientInterpolationMode {
-  Linear = 0,
-  Constant = 1,
-  Cubic = 2,
-}
-
-/** `GradientTexture2D.fill`: how the 1D gradient projects across the image. */
-export enum GradientFill {
-  Linear = 0,
-  Radial = 1,
-  Square = 2,
-}
-
-/** `GradientTexture2D.repeat`: how offsets outside 0..1 wrap. */
-export enum GradientRepeat {
-  None = 0,
-  Repeat = 1,
-  Mirror = 2,
-}
+import {
+  GradientInterpolationMode,
+  GradientTexture2DFill,
+  GradientTexture2DRepeat,
+} from '../../../godot/scene/gradientTexture';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** One `(offset, color)` stop of a Gradient, offset in 0..1. */
 export interface GradientColorStop {
@@ -36,18 +21,18 @@ export interface GradientColorStop {
 export interface Gradient {
   /** Stops sorted ascending by offset (Godot sorts before sampling). */
   stops: GradientColorStop[];
-  interpolationMode: GradientInterpolationMode;
+  interpolationMode: EnumValue<typeof GradientInterpolationMode>;
 }
 
 export interface GradientTexture2D {
   width: number;
   height: number;
-  fill: GradientFill;
+  fill: EnumValue<typeof GradientTexture2DFill>;
   /** Fill origin in 0..1 UV space (offset 0 of the gradient). */
   fillFrom: { x: number; y: number };
   /** Fill end in 0..1 UV space (offset 1 of the gradient). */
   fillTo: { x: number; y: number };
-  repeat: GradientRepeat;
+  repeat: EnumValue<typeof GradientTexture2DRepeat>;
   /** `use_hdr`: an RGBAF float image instead of RGBA8. `build.ts` ignores it. */
   useHdr: boolean;
 }

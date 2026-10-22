@@ -27,6 +27,19 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'mesh_lod_threshold picks the mesh LOD a capture draws, and the previewer draws every mesh at full detail.',
   },
 
+  VoxelGI: {
+    linterOnly: [
+      // voxel_gi.cpp:525-531: the exposure the bake runs at. The previewer runs no bake.
+      'camera_attributes',
+    ],
+    renderGap: [
+      // voxel_gi.cpp:269-279: the baked probe data the frame lights from. The previewer lights
+      // nothing from it (renderIntent 'pending').
+      'data',
+    ],
+    reason: 'VoxelGI is a gap: the gizmo reads size and subdiv, and the bake and its data are not drawn.',
+  },
+
   LightmapGI: {
     linterOnly: [
       // Bake inputs: `LightmapGI::bake` reads them, and the frame reads only the bake in

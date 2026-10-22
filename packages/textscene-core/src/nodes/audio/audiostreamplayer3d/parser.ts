@@ -7,7 +7,8 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseAudioBase } from '../parseAudioBase';
-import { AttenuationModel, type AudioStreamPlayer3DProperties, DopplerTracking } from './types';
+import { type AudioStreamPlayer3DProperties } from './types';
+import { AttenuationModel, DopplerTracking } from '../../../godot/scene/audio';
 
 export function parseAudioStreamPlayer3D(
   heading: ParsedHeading,
@@ -18,21 +19,21 @@ export function parseAudioStreamPlayer3D(
   return {
     ...baseProps,
     ...parseAudioBase(properties),
-    attenuation_model: enumOr(properties.attenuation_model, AttenuationModel.ATTENUATION_INVERSE_DISTANCE, [
-      AttenuationModel.ATTENUATION_INVERSE_DISTANCE,
-      AttenuationModel.ATTENUATION_INVERSE_SQUARE_DISTANCE,
-      AttenuationModel.ATTENUATION_LOGARITHMIC,
-      AttenuationModel.ATTENUATION_DISABLED,
+    attenuation_model: enumOr(properties.attenuation_model, AttenuationModel.INVERSE_DISTANCE, [
+      AttenuationModel.INVERSE_DISTANCE,
+      AttenuationModel.INVERSE_SQUARE_DISTANCE,
+      AttenuationModel.LOGARITHMIC,
+      AttenuationModel.DISABLED,
     ]),
     unit_size: floatOr(properties.unit_size, 10),
     max_distance: floatOr(properties.max_distance, 0),
     max_db: floatOr(properties.max_db, 3),
     attenuation_filter_cutoff_hz: floatOr(properties.attenuation_filter_cutoff_hz, 5000),
     attenuation_filter_db: floatOr(properties.attenuation_filter_db, -24),
-    doppler_tracking: enumOr(properties.doppler_tracking, DopplerTracking.DOPPLER_TRACKING_DISABLED, [
-      DopplerTracking.DOPPLER_TRACKING_DISABLED,
-      DopplerTracking.DOPPLER_TRACKING_IDLE_STEP,
-      DopplerTracking.DOPPLER_TRACKING_PHYSICS_STEP,
+    doppler_tracking: enumOr(properties.doppler_tracking, DopplerTracking.DISABLED, [
+      DopplerTracking.DISABLED,
+      DopplerTracking.IDLE_STEP,
+      DopplerTracking.PHYSICS_STEP,
     ]),
     panning_strength: floatOr(properties.panning_strength, 1),
     area_mask: intOr(properties.area_mask, 1, 'AudioStreamPlayer3D.area_mask', 'uint32'),

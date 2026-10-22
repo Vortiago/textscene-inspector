@@ -35,6 +35,15 @@ export interface PersistedViewport {
   showPerformance: boolean;
 }
 
+/** The preferences of a session that persisted none: 3D, no grid, Godot's fixed orbit, fog on. */
+export const DEFAULT_VIEWPORT: PersistedViewport = {
+  mode: '3D',
+  showGrid: false,
+  frameOnOpen: false,
+  showFog: true,
+  showPerformance: false,
+};
+
 interface ViewportModeValue {
   mode: ViewportMode;
   setMode: (mode: ViewportMode) => void;
@@ -69,7 +78,7 @@ interface ViewportModeValue {
 }
 
 const DEFAULT_VALUE: ViewportModeValue = {
-  mode: '3D',
+  ...DEFAULT_VIEWPORT,
   setMode: () => {},
   showCollisions: false,
   setShowCollisions: () => {},
@@ -77,17 +86,13 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setShowLabels: () => {},
   showNavigation: true,
   setShowNavigation: () => {},
-  showGrid: false,
   setShowGrid: () => {},
   showPreviewSun: true,
   setShowPreviewSun: () => {},
   showPreviewEnvironment: true,
   setShowPreviewEnvironment: () => {},
-  frameOnOpen: false,
   setFrameOnOpen: () => {},
-  showFog: true,
   setShowFog: () => {},
-  showPerformance: false,
   setShowPerformance: () => {},
 };
 
@@ -110,16 +115,16 @@ export interface ViewportModeProviderProps {
 
 export function ViewportModeProvider({
   children,
-  initialMode = '3D',
+  initialMode = DEFAULT_VIEWPORT.mode,
   initialShowCollisions = false,
   initialShowLabels = true,
   initialShowNavigation = true,
-  initialShowGrid = false,
+  initialShowGrid = DEFAULT_VIEWPORT.showGrid,
   initialShowPreviewSun = true,
   initialShowPreviewEnvironment = true,
-  initialFrameOnOpen = false,
-  initialShowFog = true,
-  initialShowPerformance = false,
+  initialFrameOnOpen = DEFAULT_VIEWPORT.frameOnOpen,
+  initialShowFog = DEFAULT_VIEWPORT.showFog,
+  initialShowPerformance = DEFAULT_VIEWPORT.showPerformance,
 }: ViewportModeProviderProps) {
   const [mode, setMode] = useState<ViewportMode>(initialMode);
   const [showCollisions, setShowCollisions] = useState(initialShowCollisions);

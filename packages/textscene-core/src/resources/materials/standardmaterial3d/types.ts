@@ -16,6 +16,7 @@ import type { CullMode } from '../../../godot/rendering/materials/cullMode';
 import type { DepthDrawMode } from '../../../godot/rendering/materials/depthDrawMode';
 import type { Transparency } from '../../../godot/rendering/materials/transparency';
 import type { AlphaAntialiasingCut } from '../../../godot/rendering/materials/alphaAntialiasing';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** Godot's height mapping of a surface. */
 export interface Heightmap {
@@ -122,7 +123,7 @@ export interface StandardMaterial3DData {
   /** The slots that sample UV2 (`emission_on_uv2`, `ao_on_uv2`). */
   uv2Slots: readonly TextureSlot[];
   /** The authored `transparency` mode. */
-  transparency: Transparency;
+  transparency: EnumValue<typeof Transparency>;
   /**
    * Whether the surface renders in Godot's alpha pass: its `uses_alpha_pass()`
    * ported, so `blend_mode`, refraction, the fades and the depth flags all get a
@@ -143,7 +144,7 @@ export interface StandardMaterial3DData {
   /** The cutout's alpha antialiasing, or null where its shader runs none. */
   alphaAntialiasing: AlphaAntialiasingCut | null;
   /** The authored `depth_draw_mode`, with refraction's forced ALWAYS applied. */
-  depthDrawMode: DepthDrawMode;
+  depthDrawMode: EnumValue<typeof DepthDrawMode>;
   /** Whether this surface's fragments reach the depth buffer. */
   depthWrite: boolean;
   /**
@@ -162,8 +163,8 @@ export interface StandardMaterial3DData {
   opaqueAfterCut: boolean;
   /** Godot `no_depth_test` inverted: false means the surface draws through everything. */
   depthTest: boolean;
-  blendMode: BlendMode;
-  cullMode: CullMode;
+  blendMode: EnumValue<typeof BlendMode>;
+  cullMode: EnumValue<typeof CullMode>;
   /**
    * Whether `cull_mode` was authored at all. Lets a consumer apply a
    * per-mesh-type default only where the material expressed no opinion.
@@ -182,11 +183,11 @@ export interface StandardMaterial3DData {
   /** `ao_light_affect`: how far the AO map also occludes direct light. Unclamped, as the setter is. */
   aoLightAffect: number;
   /** `ao_texture_channel`: the AO map channel the shader reads. */
-  aoTextureChannel: TextureChannel;
+  aoTextureChannel: EnumValue<typeof TextureChannel>;
   /** `roughness_texture_channel`: the roughness map channel the shader reads. */
-  roughnessTextureChannel: TextureChannel;
+  roughnessTextureChannel: EnumValue<typeof TextureChannel>;
   /** `metallic_texture_channel`: the metallic map channel the shader reads. */
-  metallicTextureChannel: TextureChannel;
+  metallicTextureChannel: EnumValue<typeof TextureChannel>;
   /** `normal_scale`, as the uniform XY pair three's `normalScale` wants. */
   normalScale: Vector2;
   /** `uv1_triplanar`: triplanar mapping of the first UV set. */

@@ -50,6 +50,9 @@ export function parentTypeVerdict(scene: RawScene, node: RawNode, wantedType: st
   return { kind: 'mismatch', parent };
 }
 
+/** The part of a scene a parent walk reads: its roots. */
+export type SceneRoots = { readonly nodes: readonly RawNode[] };
+
 /** One step up the tree, with the knowability question already answered. */
 export type ParentLookup =
   /** A parent whose `type` this file really states. */
@@ -65,7 +68,7 @@ export type ParentLookup =
  * where a forgotten check is invisible. {@link parentIdentity} is the second door, for a
  * caller that reads no type.
  */
-export function knownParent(scene: RawScene, node: RawNode): ParentLookup {
+export function knownParent(scene: SceneRoots, node: RawNode): ParentLookup {
   return parentLookup(findParentNode(scene.nodes, node));
 }
 
@@ -119,7 +122,7 @@ type AncestorSearch<T> =
  * An instanced, override, typeless or GDExtension ancestor ends the walk at `unknowable`.
  */
 export function searchAncestors<T>(
-  scene: RawScene,
+  scene: SceneRoots,
   node: RawNode,
   visit: (ancestor: RawNode) => T | undefined
 ): AncestorSearch<T> {

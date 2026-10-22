@@ -11,7 +11,7 @@ import { maskedBitField, v } from '../../../../linter/validators/index.js';
 import {
   AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
-  BREAK_TRIM_LABELS,
+  BREAK_TRIM_NAMES,
   BREAK_TRIM_MASK,
   OVERRUN_BEHAVIOR_NAMES,
   TEXT_DIRECTION_NAMES,
@@ -56,7 +56,7 @@ validatorRegistry.registerAll('Button', {
   // so BREAK_TRIM_INDENT is kept but the inspector does not offer it.
   autowrap_trim_flags: maskedBitField('autowrap_trim_flags', BREAK_TRIM_MASK, {
     enforced: 'button.cpp:625',
-    labels: BREAK_TRIM_LABELS,
+    labels: BREAK_TRIM_NAMES,
     hintedBits: BREAK_TRIM_HINTED_BITS,
   }),
   // button.cpp:818

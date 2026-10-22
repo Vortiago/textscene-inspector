@@ -9,7 +9,8 @@ import { warn } from '../logger';
 // stay in their slice.
 import { parseVector2, parseVector3 } from './vectors';
 import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
-import { slotComponents, slotInt, storedVector2i, type IntWidth } from '../godot/variant/int.js';
+import { slotComponents, slotInt, storedVector2i } from '../godot/variant/intSlots.js';
+import { type IntWidth } from '../godot/variant/intWidth.js';
 import { isEmptyAabb, type Aabb } from '../godot/math/aabb.js';
 import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { stringToInt } from '../godot/string/string.js';

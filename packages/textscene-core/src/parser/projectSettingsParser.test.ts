@@ -22,6 +22,9 @@ import {
   projectGlowUsesBicubicUpscale,
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
+  projectAnisotropicFilteringLevel,
+  projectDefaultFontGeneratesMipmaps,
+  projectTextureMipmapBias,
   projectViewportSize,
   projectVolumetricFogSettings,
 } from './projectSettingsParser';
@@ -521,6 +524,32 @@ describe('projectExtensionListPath', () => {
   });
 });
 
+describe('projectTextureMipmapBias', () => {
+  const KEY = 'rendering/textures/default_filters/texture_mipmap_bias';
+
+  it('reads the bias from a project.godot line', () => {
+    const settings = parseProjectSettings(
+      `[rendering]\n\ntextures/default_filters/texture_mipmap_bias=-0.5\n`
+    );
+
+    expect(projectTextureMipmapBias(settings)).toBe(-0.5);
+  });
+
+  it("is 0 with no project or no key, Godot's default (rendering_server.cpp:3803)", () => {
+    expect(projectTextureMipmapBias(null)).toBe(0);
+    expect(projectTextureMipmapBias({ 'rendering/other': '1' })).toBe(0);
+  });
+
+  it('passes a value past the -2..2 hint through, as the setter does not clamp (viewport.cpp:4904-4911)', () => {
+    expect(projectTextureMipmapBias({ [KEY]: '3' })).toBe(3);
+    expect(projectTextureMipmapBias({ [KEY]: '-4.25' })).toBe(-4.25);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectTextureMipmapBias({ [KEY]: 'sharp' })).toBe(0);
+  });
+});
+
 describe('projectGlowUsesBicubicUpscale', () => {
   const KEY = 'rendering/environment/glow/upscale_mode';
 
@@ -555,5 +584,53 @@ describe('projectCanvasTextureDefaults', () => {
       filter: 2,
       repeat: 1,
     });
+  });
+});
+
+describe('projectAnisotropicFilteringLevel', () => {
+  const KEY = 'rendering/textures/default_filters/anisotropic_filtering_level';
+
+  it('reads the level from a project.godot line', () => {
+    const settings = parseProjectSettings(
+      '[rendering]\n\ntextures/default_filters/anisotropic_filtering_level=4\n'
+    );
+
+    expect(projectAnisotropicFilteringLevel(settings)).toBe(4);
+  });
+
+  it("is 2 (4x) with no project or no key, Godot's default (rendering_server.cpp:3750)", () => {
+    expect(projectAnisotropicFilteringLevel(null)).toBe(2);
+    expect(projectAnisotropicFilteringLevel({ 'rendering/other': '1' })).toBe(2);
+  });
+
+  it('reads 0 as disabled, not as the default', () => {
+    expect(projectAnisotropicFilteringLevel({ [KEY]: '0' })).toBe(0);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectAnisotropicFilteringLevel({ [KEY]: 'sharp' })).toBe(2);
+  });
+
+  it.each(['5', '-1', '99'])('keeps the default for level %s, which the enum does not name', (level) => {
+    expect(projectAnisotropicFilteringLevel({ [KEY]: level })).toBe(2);
+  });
+});
+
+describe('projectDefaultFontGeneratesMipmaps', () => {
+  const KEY = 'gui/theme/default_font_generate_mipmaps';
+
+  it('reads true from a project.godot line', () => {
+    const settings = parseProjectSettings('[gui]\n\ntheme/default_font_generate_mipmaps=true\n');
+
+    expect(projectDefaultFontGeneratesMipmaps(settings)).toBe(true);
+  });
+
+  it("is false with no project or no key, Godot's default (text_server.cpp:2387)", () => {
+    expect(projectDefaultFontGeneratesMipmaps(null)).toBe(false);
+    expect(projectDefaultFontGeneratesMipmaps({ 'gui/other': 'true' })).toBe(false);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectDefaultFontGeneratesMipmaps({ [KEY]: 'sharp' })).toBe(false);
   });
 });

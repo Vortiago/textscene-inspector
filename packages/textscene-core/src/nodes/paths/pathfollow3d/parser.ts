@@ -8,8 +8,9 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, boolOr } from '../../../parser/valueParsers';
-import { RotationMode, type PathFollow3DProperties } from './types';
+import { type PathFollow3DProperties } from './types';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
+import { PathFollow3DRotationMode } from '../../../godot/scene/pathFollow3d';
 
 export function parsePathFollow3D(
   heading: ParsedHeading,
@@ -20,7 +21,7 @@ export function parsePathFollow3D(
     ...base,
     h_offset: floatOr(properties.h_offset, 0),
     v_offset: floatOr(properties.v_offset, 0),
-    rotation_mode: intOr(properties.rotation_mode, RotationMode.XYZ),
+    rotation_mode: intOr(properties.rotation_mode, PathFollow3DRotationMode.XYZ),
     cubic_interp: boolOr(properties.cubic_interp, true),
     loop: boolOr(properties.loop, true),
     tilt_enabled: boolOr(properties.tilt_enabled, true),

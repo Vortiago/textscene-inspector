@@ -7,7 +7,7 @@
 
 import type { Diagnostic } from '../../../../linter/types.js';
 import { groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import type { tileMapLayerVector } from '../shared/layerVector';
 import type { RawNode } from '../../../../parser/types.js';

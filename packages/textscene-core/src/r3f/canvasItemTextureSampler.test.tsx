@@ -8,8 +8,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
-import { TextureFilter } from '../godot/rendering/materials/textureFilter';
-import { godotTextureFilterState } from '../resources/textures/godotTextureFilter';
 import {
   ROOT_TEXTURE_SAMPLER,
   TextureSampler2DContext,
@@ -187,17 +185,15 @@ describe('applyCanvasItemSampler', () => {
     expect([nearest.magFilter, nearest.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
   });
 
-  it("applies the 3D path's anisotropy ceiling under the two anisotropic filters (material_storage.cpp:2490-2506)", () => {
-    const ceiling = godotTextureFilterState(TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC).anisotropy;
+  it('samples the two anisotropic filters at 4 taps (material_storage.cpp:2490-2506)', () => {
     const linear = sampleWith(mipmappedTexture(), LINEAR_WITH_MIPMAPS_ANISOTROPIC);
-    expect([linear.minFilter, linear.anisotropy]).toEqual([THREE.LinearMipmapLinearFilter, ceiling]);
+    expect([linear.minFilter, linear.anisotropy]).toEqual([THREE.LinearMipmapLinearFilter, 4]);
     const nearest = sampleWith(mipmappedTexture(), NEAREST_WITH_MIPMAPS_ANISOTROPIC);
     expect([nearest.magFilter, nearest.minFilter, nearest.anisotropy]).toEqual([
       THREE.NearestFilter,
       THREE.NearestMipmapLinearFilter,
-      ceiling,
+      4,
     ]);
-    expect(ceiling).toBeGreaterThan(1);
   });
 
   it('applies no anisotropy under the four other filters', () => {

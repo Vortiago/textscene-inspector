@@ -19,6 +19,7 @@ import {
   AlphaAntiAliasing,
   type AlphaToCoverageMode,
 } from '../../../godot/rendering/materials/alphaAntialiasing';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 const THREE_EQUATION: Readonly<Record<GodotBlendOp, THREE.BlendingEquation>> = {
   add: THREE.AddEquation,
@@ -41,7 +42,7 @@ const THREE_FACTOR: Readonly<Record<GodotBlendFactor, THREE.BlendingDstFactor>> 
  * PREMULT_ALPHA is not `premultipliedAlpha`, which premultiplies a premultiplied source again.
  * Every Godot mode gives alpha its own factors, so no colour-only `gl.blendFunc` reading fits one.
  */
-const PRESETS: Readonly<Partial<Record<BlendMode, THREE.Blending>>> = {
+const PRESETS: Readonly<Partial<Record<EnumValue<typeof BlendMode>, THREE.Blending>>> = {
   // `blendFuncSeparate(SRC_ALPHA, ONE_MINUS_SRC_ALPHA, ONE, ONE_MINUS_SRC_ALPHA)`, `FUNC_ADD`.
   [BlendMode.MIX]: THREE.NormalBlending,
   // `blendFunc(SRC_ALPHA, ONE)` sets colour and alpha, so alpha gets Godot's pair.
@@ -64,7 +65,7 @@ const ALPHA_TO_ONE_ATTACHMENT: GodotBlendAttachment = {
 };
 
 /** The blending state a material with this `blend_mode` must carry. */
-export function godotBlendState(mode: BlendMode): MaterialBlendState {
+export function godotBlendState(mode: EnumValue<typeof BlendMode>): MaterialBlendState {
   const preset = PRESETS[mode];
   if (preset !== undefined) return { blending: preset };
   return customBlendState(GODOT_BLEND_ATTACHMENTS[mode]);

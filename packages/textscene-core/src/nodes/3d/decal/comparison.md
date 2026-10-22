@@ -9,16 +9,19 @@ renders_as: a texture projected onto the surfaces its box intersects
 Godot's texture projector: it casts `texture_albedo` down the node's local -Y axis onto the surfaces inside its `size` box, blended onto the lit surface.
 
 ## Projection
+
 <!-- compare: image=unit-decal status=limitation fixture=unit-decal.tscn -->
 
-The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring `cull_mask` and the three fades. The projection samples its texture clamped, as Godot samples the decal atlas: the blit disables repeat (`copy_effects.cpp:592`), and fragments outside the box are discarded (`scene_forward_clustered.glsl:1585-1587`).
+The previewer bakes the same projection onto each mesh the box overlaps and shades it with the scene's lights, honouring `cull_mask` and the three fades. The projection samples its texture clamped, as Godot samples the decal atlas: the blit disables repeat (`copy_effects.cpp:592`), and fragments outside the box are discarded (`scene_forward_clustered.glsl:1585-1587`). The decal sampler is one of the viewport's samplers (`render_forward_clustered.cpp:3434-3455`), so the viewport's `texture_mipmap_bias` offsets the decal's mip level as it does a material's.
 
 ## Texture wrappers
+
 <!-- compare: image=unit-decal-atlas-texture status=done fixture=unit-decal-atlas-texture.tscn -->
 
 A decal takes its texture's RID (`scene/3d/decal.cpp:46`), as a material slot does. An AtlasTexture's RID is its whole sheet, so the decal projects all four quadrants, not the red region. The decal atlas refuses a CanvasTexture's RID (`texture_storage.cpp:2941`), so the far decal projects nothing.
 
 ## Mip chain
+
 <!-- compare: image=unit-decal-mipmap-import status=done fixture=unit-decal-mipmap-import.tscn -->
 
 The decal atlas gives each decal a mip chain, even over an import without one. It halves each level in the atlas's RGBA8 bytes (`texture_storage.cpp:3162-3226`). The previewer builds the same chain on the CPU with the importer's 2 × 2 byte average. So the minified red and green checker projects a dark yellow, as in Godot.
@@ -62,7 +65,6 @@ The linter warns (`resource-type-excluded-by-hint`) when one of the four `textur
 
 ## Known limitations
 
-- **Approximated** The projection reads bolder than Godot's at a partial `albedo_mix`, since exact blending needs a custom projector shader.
 - **Approximated** The depth and normal fades are baked per vertex, so a large decal on a low-poly tilted or curved receiver bands where Godot's is smooth.
 - **Approximated** `texture_normal`, `texture_orm`, `texture_emission` and `emission_energy` are parsed but not applied, so the projection carries albedo alone.
 - **Approximated** The projection takes the scalar roughness, metallic and `diffuse_mode` of its receiver's first surface, not its maps.

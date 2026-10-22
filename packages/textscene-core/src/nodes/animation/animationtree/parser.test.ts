@@ -8,7 +8,12 @@
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseAnimationTree } from './parser';
-import { AnimationTreeProcessMode, CallbackModeDiscrete, CallbackModeMethod } from './types';
+
+import {
+  AnimationCallbackModeProcess,
+  AnimationCallbackModeDiscrete,
+  AnimationCallbackModeMethod,
+} from '../../../godot/scene/animation';
 
 const HEADING: ParsedHeading = {
   type: 'node',
@@ -21,13 +26,13 @@ describe('parseAnimationTree defaults', () => {
     // AnimationMixer.active defaults to true and is omitted at its default.
     expect(props.active).toBe(true);
     expect(props.tree_root).toBeUndefined();
-    expect(props.process_callback).toBe(AnimationTreeProcessMode.IDLE);
-    expect(props.callback_mode_process).toBe(AnimationTreeProcessMode.IDLE);
-    expect(props.callback_mode_method).toBe(CallbackModeMethod.DEFERRED);
+    expect(props.process_callback).toBe(AnimationCallbackModeProcess.IDLE);
+    expect(props.callback_mode_process).toBe(AnimationCallbackModeProcess.IDLE);
+    expect(props.callback_mode_method).toBe(AnimationCallbackModeMethod.DEFERRED);
     // AnimationTree overrides two AnimationMixer defaults (its class XML marks
     // both `overrides="AnimationMixer"`): FORCE_CONTINUOUS instead of the
     // mixer's RECESSIVE, and deterministic true instead of false.
-    expect(props.callback_mode_discrete).toBe(CallbackModeDiscrete.FORCE_CONTINUOUS);
+    expect(props.callback_mode_discrete).toBe(AnimationCallbackModeDiscrete.FORCE_CONTINUOUS);
     expect(props.audio_max_polyphony).toBe(32);
     expect(props.deterministic).toBe(true);
     expect(props.advance_expression_base_node).toBe('NodePath(".")');
@@ -63,27 +68,27 @@ describe('parseAnimationTree properties', () => {
 
   it('parses process_callback enum — PHYSICS', () => {
     const props = parseAnimationTree(HEADING, { process_callback: '0' });
-    expect(props.process_callback).toBe(AnimationTreeProcessMode.PHYSICS);
+    expect(props.process_callback).toBe(AnimationCallbackModeProcess.PHYSICS);
   });
 
   it('parses process_callback enum — MANUAL', () => {
     const props = parseAnimationTree(HEADING, { process_callback: '2' });
-    expect(props.process_callback).toBe(AnimationTreeProcessMode.MANUAL);
+    expect(props.process_callback).toBe(AnimationCallbackModeProcess.MANUAL);
   });
 
   it('clamps out-of-range process_callback to IDLE default', () => {
     const props = parseAnimationTree(HEADING, { process_callback: '9' });
-    expect(props.process_callback).toBe(AnimationTreeProcessMode.IDLE);
+    expect(props.process_callback).toBe(AnimationCallbackModeProcess.IDLE);
   });
 
   it('parses callback_mode_method — IMMEDIATE', () => {
     const props = parseAnimationTree(HEADING, { callback_mode_method: '1' });
-    expect(props.callback_mode_method).toBe(CallbackModeMethod.IMMEDIATE);
+    expect(props.callback_mode_method).toBe(AnimationCallbackModeMethod.IMMEDIATE);
   });
 
   it('parses callback_mode_discrete — FORCE_CONTINUOUS', () => {
     const props = parseAnimationTree(HEADING, { callback_mode_discrete: '2' });
-    expect(props.callback_mode_discrete).toBe(CallbackModeDiscrete.FORCE_CONTINUOUS);
+    expect(props.callback_mode_discrete).toBe(AnimationCallbackModeDiscrete.FORCE_CONTINUOUS);
   });
 
   it('parses audio_max_polyphony as integer', () => {

@@ -170,6 +170,46 @@ describe('parseSubViewport', () => {
     });
   });
 
+  describe('anisotropic_filtering_level', () => {
+    it('reads an authored level, 0 included', () => {
+      const parse = (level: string) =>
+        parseSubViewport(heading('SubViewport', { name: 'V' }), { anisotropic_filtering_level: level });
+      expect(parse('3').anisotropic_filtering_level).toBe(3);
+      expect(parse('0').anisotropic_filtering_level).toBe(0);
+    });
+
+    it.each(['5', '-1', '99'])('stays absent for level %s, which the enum does not name', (level) => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {
+        anisotropic_filtering_level: level,
+      });
+      expect(result.anisotropic_filtering_level).toBeUndefined();
+    });
+
+    it('stays absent when authored not at all, so the project level holds', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {});
+      expect(result.anisotropic_filtering_level).toBeUndefined();
+    });
+  });
+
+  describe('texture_mipmap_bias', () => {
+    it('parses an authored bias, a value past the -2..2 hint included (viewport.cpp:4904-4911)', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), { texture_mipmap_bias: '-3.5' });
+      expect(result.texture_mipmap_bias).toBe(-3.5);
+    });
+
+    it('leaves an absent bias unset, so the viewport takes the project setting (viewport.cpp:5383)', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {});
+      expect(result.texture_mipmap_bias).toBeUndefined();
+    });
+
+    it('leaves an unreadable bias unset (error case)', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {
+        texture_mipmap_bias: 'sharp',
+      });
+      expect(result.texture_mipmap_bias).toBeUndefined();
+    });
+  });
+
   it('handles a heading with no attributes at all (edge case)', () => {
     const result = parseSubViewport({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');

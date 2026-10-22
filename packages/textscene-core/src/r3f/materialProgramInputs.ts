@@ -11,6 +11,7 @@ import {
   coverOneSampleTarget,
   GODOT_ALPHA_ANTIALIASING,
 } from './materials/godotAlphaAntialiasing';
+import { mipmapBiasInjection, viewportSamplersUserData } from './materials/godotMipmapBias';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -196,11 +197,41 @@ export function injectProgram(material: THREE.Material, injection: ProgramInject
   material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
 }
 
-/** The injections a material's own state turns on: Godot's hash, then its edge ramp. */
+/**
+ * `injectProgram` for a 3D material that is not derived from a StandardMaterial3D bag: Godot reads
+ * its textures through the viewport's samplers, so it carries the mipmap bias too.
+ */
+export function injectViewportProgram(
+  material: THREE.Material,
+  injection: ProgramInjection | undefined
+): void {
+  Object.assign(material.userData, viewportSamplersUserData());
+  injectProgram(material, injection);
+}
+
+/** `materialProgramInputs` for a 3D material outside a StandardMaterial3D bag, as `injectViewportProgram`. */
+export function viewportProgramInputs<
+  P extends { userData?: object },
+  M extends readonly (object | undefined)[] = [],
+>(input: {
+  props: P & MaterialProgramBag;
+  merge?: { [Part in keyof M]: (M[Part] & MaterialProgramBag) | undefined };
+}) {
+  const userData = { ...input.props.userData, ...viewportSamplersUserData() };
+  return materialProgramInputs<P, M>({ ...input, props: { ...input.props, userData } });
+}
+
+/**
+ * The injections a material's own state turns on: Godot's hash, its edge ramp, then the mipmap
+ * bias. The bias comes last, as it inlines the chunks that sample a texture, which the patches
+ * before it match by their `#include`.
+ */
 function stateInjections(state: { alphaHash?: unknown; userData?: unknown }): ProgramInjection[] {
   const injections: ProgramInjection[] = [];
   if (state.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
   if (recordsAlphaAntialiasing(state.userData)) injections.push(GODOT_ALPHA_ANTIALIASING);
+  const bias = mipmapBiasInjection(state);
+  if (bias) injections.push(bias);
   return injections;
 }
 

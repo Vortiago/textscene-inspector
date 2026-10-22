@@ -4,7 +4,8 @@ TextScene Inspector is MIT licensed (see `LICENSE`). It additionally contains, a
 distributes, material from the third parties below.
 
 Runtime npm dependencies are not enumerated here; each carries its own licence in its
-published package.
+published package. FastNoiseLite is the exception, since its package keeps the licence in a
+source comment that a bundler strips.
 
 ---
 
@@ -48,6 +49,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/capsulemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CapsuleMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/cylindermesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CylinderMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/torusmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TorusMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/tubetrailmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TubeTrailMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/prismmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrismMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/pointmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PointMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
@@ -162,6 +164,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/textureprogressbar/ninePatchProgress.ts` | `scene/gui/texture_progress_bar.cpp` (`draw_nine_patch_stretched`) and `scene/resources/texture.cpp` (the region a stretched progress patch samples) |
 | `packages/textscene-core/src/nodes/2d/ui/textureprogressbar/radialFill.ts` | `scene/gui/texture_progress_bar.cpp` (`get_relative_center`, `draw_circular_progress` and its `radial_initial_angle`/`radial_fill_degrees` fan) and `core/math/math_funcs.h` (`Math::fposmod`) |
 | `packages/textscene-core/src/resources/curves/curve/sample.ts` | `scene/resources/curve.cpp` (`Curve::sample`, `Curve::sample_local_nocheck`, `Curve::get_index`) and `core/math/math_funcs.h` (`Math::bezier_interpolate`) |
+| `packages/textscene-core/src/resources/curves/curve/bakedSample.ts` | `scene/resources/curve.cpp` (`Curve::_bake`, `Curve::sample_baked`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) and `scene/2d/cpu_particles_2d.cpp` (`idhash`, `rand_from_seed`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (the `_update_internal` preprocess loop and its fixed-step evaluation window) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particlesProcess.ts` | `scene/2d/cpu_particles_2d.cpp` (`CPUParticles2D::_particles_process`'s per-frame loop: cycle bookkeeping, restart phase, the emission transform) |
@@ -302,10 +305,11 @@ vendors the identical font Godot ships rather than substituting a system or web 
 `packages/textscene-core/assets/fonts/OpenSans_SemiBold.woff2` is an unmodified copy of
 Godot 4.6.3's vendored file. `scripts/fonts/bake-metrics.mjs` reads it at build time
 (decompressing to a TTF in memory, since neither the metrics tool nor the atlas tool
-decompresses real Brotli woff2 itself) and bakes the two committed artifacts
-`openSansMetrics.ts` (font-wide scalar metrics + kerning table) and `openSansAtlas.ts`
+decompresses real Brotli woff2 itself) and bakes the three committed artifacts
+`openSansMetrics.ts` (font-wide scalar metrics + kerning table), `openSansAtlas.ts`
 (the pre-baked MSDF glyph atlas — see ADR-0003 and `packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts`'s own citation of why a
-pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows).
+pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows) and
+`packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face).
 
 Per Godot's own `COPYRIGHT.txt` (`Files: thirdparty/fonts/OpenSans*.woff2`) and
 `thirdparty/README.md`:
@@ -535,6 +539,43 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+```
+
+---
+
+## FastNoiseLite
+
+<https://github.com/Auburn/FastNoiseLite>
+
+The `fastnoise-lite` npm package (1.1.1) is the JavaScript port of FastNoiseLite, the noise library
+Godot vendors as `thirdparty/misc/FastNoiseLite.h`. NoiseTexture2D and NoiseTexture3D draw their
+noise with it. The package ships its licence as a comment in its source, which a bundler strips, so
+a bundle that holds the package carries the notice here. It is by Jordan Peck and is licensed MIT,
+separately from Godot's own MIT licence above.
+
+```
+MIT License
+
+Copyright(c) 2023 Jordan Peck (jordan.me2@gmail.com)
+Copyright(c) 2023 Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files(the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions :
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ---

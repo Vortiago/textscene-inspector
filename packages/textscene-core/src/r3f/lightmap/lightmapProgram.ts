@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import type { LightmapAssignment } from './sceneLightmaps';
-import { bicubicWeightsGlsl } from '../../utils/bicubicWeightsGlsl';
+import { bicubicFilterGlsl } from '../../utils/bicubicFilterGlsl';
 
 /** The last declaration before `main`. */
 const PARS_ANCHOR = '#include <clipping_planes_pars_fragment>';
@@ -32,26 +32,13 @@ uniform vec2 godotLightmapTextureSize;
 uniform mat3 godotLightmapNormalBasis;
 varying vec2 vGodotLightmapUv;
 
-${bicubicWeightsGlsl('godotLightmap')}
-vec3 godotLightmapBicubic( vec3 uvw ) {
-	vec2 texelSize = vec2( 1.0 ) / godotLightmapTextureSize;
-	vec2 st = uvw.xy * godotLightmapTextureSize + vec2( 0.5 );
-	vec2 iuv = floor( st );
-	vec2 fuv = fract( st );
-	float g0x = godotLightmapG0( fuv.x );
-	float g1x = godotLightmapG1( fuv.x );
-	float h0x = godotLightmapH0( fuv.x );
-	float h1x = godotLightmapH1( fuv.x );
-	float h0y = godotLightmapH0( fuv.y );
-	float h1y = godotLightmapH1( fuv.y );
-	vec2 p0 = ( vec2( iuv.x + h0x, iuv.y + h0y ) - vec2( 0.5 ) ) * texelSize;
-	vec2 p1 = ( vec2( iuv.x + h1x, iuv.y + h0y ) - vec2( 0.5 ) ) * texelSize;
-	vec2 p2 = ( vec2( iuv.x + h0x, iuv.y + h1y ) - vec2( 0.5 ) ) * texelSize;
-	vec2 p3 = ( vec2( iuv.x + h1x, iuv.y + h1y ) - vec2( 0.5 ) ) * texelSize;
-	return ( godotLightmapG0( fuv.y ) * ( g0x * texture( godotLightmap, vec3( p0, uvw.z ) ).rgb + g1x * texture( godotLightmap, vec3( p1, uvw.z ) ).rgb ) ) +
-		( godotLightmapG1( fuv.y ) * ( g0x * texture( godotLightmap, vec3( p2, uvw.z ) ).rgb + g1x * texture( godotLightmap, vec3( p3, uvw.z ) ).rgb ) );
-}
-
+${bicubicFilterGlsl({
+  prefix: 'godotLightmap',
+  params: 'vec3 uvw',
+  uv: 'uvw.xy',
+  size: 'godotLightmapTextureSize',
+  fetch: (texelUv) => `texture( godotLightmap, vec3( ${texelUv}, uvw.z ) ).rgb`,
+})}
 vec3 godotLightmapTexel( vec3 uvw ) {
 	return godotLightmapUsesBicubic ? godotLightmapBicubic( uvw ) : textureLod( godotLightmap, uvw, 0.0 ).rgb;
 }

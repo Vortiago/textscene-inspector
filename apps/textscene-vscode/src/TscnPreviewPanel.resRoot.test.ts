@@ -7,6 +7,7 @@
 import { describe, expect, it, type Mock } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnPreviewPanel } from './TscnPreviewPanel';
+import { forgetProjectFiles } from './resRoot';
 import { createMockUri, createMockFileData, setupMockPanel, type MockWebview } from './test-setup';
 
 const MINIMAL_TSCN = '[gd_scene format=3]\n[node name="Root" type="Node3D"]';
@@ -39,6 +40,12 @@ async function createPanelServingTexture(triggerMessage: (msg: unknown) => void)
   });
   await settle();
   return panel;
+}
+
+/** A `project.godot` event as the extension relays it: its own listener forgets the shared answers first. */
+async function projectFileEvent(panel: TscnPreviewPanel, fsPath: string): Promise<void> {
+  forgetProjectFiles();
+  await panel.handleDependencyChange(createMockUri(fsPath));
 }
 
 function changedPaths(webview: MockWebview): string[] {
@@ -74,7 +81,7 @@ describe('TscnPreviewPanel res:// root', () => {
     const panel = await createPanelServingTexture(triggerMessage);
     projectFilesIn('/workspace');
 
-    await panel.handleDependencyChange(createMockUri('/workspace/project.godot'));
+    await projectFileEvent(panel, '/workspace/project.godot');
 
     expect(changedPaths(webview)).toEqual(['res://textures/wood.png']);
     expect(await fsPathOfNextLoad(triggerMessage, 'res://textures/wood.png')).toBe(
@@ -88,7 +95,7 @@ describe('TscnPreviewPanel res:// root', () => {
     const panel = await createPanelServingTexture(triggerMessage);
     projectFilesIn();
 
-    await panel.handleDependencyChange(createMockUri('/workspace/project.godot'));
+    await projectFileEvent(panel, '/workspace/project.godot');
 
     expect(changedPaths(webview)).toEqual(['res://textures/wood.png']);
     expect(await fsPathOfNextLoad(triggerMessage, 'res://textures/wood.png')).toBe(
@@ -102,7 +109,7 @@ describe('TscnPreviewPanel res:// root', () => {
     const panel = await createPanelServingTexture(triggerMessage);
     projectFilesIn('/workspace/game', '/workspace/other');
 
-    await panel.handleDependencyChange(createMockUri('/workspace/other/project.godot'));
+    await projectFileEvent(panel, '/workspace/other/project.godot');
 
     expect(changedPaths(webview)).toEqual([]);
     expect(await fsPathOfNextLoad(triggerMessage, 'res://textures/wood.png')).toBe(

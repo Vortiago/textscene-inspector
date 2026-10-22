@@ -26,14 +26,6 @@ export function forwardSlashes(path: string): string {
   return trimmed === '' || /^[A-Za-z]:$/.test(trimmed) ? `${trimmed}/` : trimmed;
 }
 
-/**
- * `path` as two host paths compare: forward slashes, lowercased. Case-insensitive because the default Windows and
- * macOS filesystems are, and a watcher can report either spelling.
- */
-export function comparablePath(path: string): string {
-  return forwardSlashes(path).toLowerCase();
-}
-
 /** Whether a host's filesystem tells apart two spellings of a path that differ only in case. */
 export type PathCase = 'sensitive' | 'insensitive';
 
@@ -46,9 +38,13 @@ export function pathCaseOf(platform: string | undefined): PathCase {
   return platform === 'win32' || platform === 'darwin' ? 'insensitive' : 'sensitive';
 }
 
-/** `path` as a filesystem with `pathCase` compares it: two paths that name one place share a key. */
-function pathKey(path: string, pathCase: PathCase): string {
-  return pathCase === 'insensitive' ? comparablePath(path) : forwardSlashes(path);
+/**
+ * `path` as a filesystem with `pathCase` compares it, for a map keyed by path: two paths that name one place share a
+ * key. Forward slashes, and lowercased on a filesystem that ignores case.
+ */
+export function pathKey(path: string, pathCase: PathCase): string {
+  const slashed = forwardSlashes(path);
+  return pathCase === 'insensitive' ? slashed.toLowerCase() : slashed;
 }
 
 /** Whether `a` and `b` name one path on a filesystem with `pathCase`. */
@@ -84,14 +80,6 @@ export function parentDir(path: string): string | null {
 }
 
 /**
- * Whether a walk upward ends at `dir`, given the highest directory it may check: that directory itself, or one
- * outside it, which is checked alone.
- */
-export function isWalkEnd(walkBound: string, dir: string, pathCase: PathCase): boolean {
-  return isSamePath(dir, walkBound, pathCase) || !isWithinRoot(walkBound, dir, pathCase);
-}
-
-/**
  * `relative` with `.` and empty segments dropped and each `..` folded into its parent, or null when a `..` climbs
  * above where the path starts.
  */
@@ -103,6 +91,14 @@ export function normalizeRelativePath(relative: string): string | null {
     else if (segments.pop() === undefined) return null;
   }
   return segments.join('/');
+}
+
+/**
+ * `paths` in code-unit order, so every host lists them alike: `localeCompare` would order them by
+ * the host's locale.
+ */
+export function inPathOrder(paths: Iterable<string>): string[] {
+  return [...paths].sort();
 }
 
 /**
@@ -121,18 +117,16 @@ export function resolveResPath(projectRoot: string, resPath: string): string | n
 
 /**
  * The nearest directory, from `start` upward through `parent`, where `hasProjectFile` finds a `project.godot`, or null
- * for none. The walk ends after the first directory `isStop` accepts, or at the top, where `parent` gives null. Generic
- * over the directory handle, so each host walks its own kind: a string path, or a `Uri` that keeps its scheme.
+ * for none. The walk ends only at the top, where `parent` gives null, so no host's workspace bounds it. Generic over
+ * the directory handle, so each host walks its own kind: a string path, or a `Uri` that keeps its scheme.
  */
 async function findProjectRoot<Dir>(
   start: Dir,
   parent: (dir: Dir) => Dir | null,
-  isStop: (dir: Dir) => boolean,
   hasProjectFile: (dir: Dir) => Promise<boolean>
 ): Promise<Dir | null> {
   for (let dir: Dir | null = start; dir !== null; dir = parent(dir)) {
     if (await hasProjectFile(dir)) return dir;
-    if (isStop(dir)) return null;
   }
   return null;
 }
@@ -146,11 +140,10 @@ async function findProjectRoot<Dir>(
 export async function findResRoot<Dir>(
   sceneDir: Dir,
   parent: (dir: Dir) => Dir | null,
-  isStop: (dir: Dir) => boolean,
   hasProjectFile: (dir: Dir) => Promise<boolean>,
   isInWorkspace: (dir: Dir) => boolean
 ): Promise<Dir | null> {
-  const project = await findProjectRoot(sceneDir, parent, isStop, hasProjectFile);
+  const project = await findProjectRoot(sceneDir, parent, hasProjectFile);
   if (project !== null) return project;
   return isInWorkspace(sceneDir) ? sceneDir : null;
 }

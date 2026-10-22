@@ -15,10 +15,11 @@ import { frameSizePx, frameUvWindow, spriteSamplerClone, spriteWrapMode } from '
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
+import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import type { FadePass } from '../../../r3f/materials/fadeVariants';
-import { opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
+import { passBlendMaterialProps } from '../../../r3f/materials/surfaceBlend';
 import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
 import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
@@ -26,11 +27,6 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import { sourceColorSpace } from '../../../resources/textures/sourceColorSpace';
 import { applyTextureFilterState } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
-import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
-import {
-  alphaAntialiasingProps,
-  alphaAntialiasingUserData,
-} from '../../../r3f/materials/godotAlphaAntialiasing';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
@@ -73,6 +69,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
   // corners, so only an overrunning window tiles.
   const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
+  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
     alphaScissorThreshold: properties.alpha_scissor_threshold,
@@ -85,6 +82,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     doubleSided: properties.double_sided,
     noDepthTest: properties.no_depth_test,
     textureFilter: properties.texture_filter,
+    anisotropicFilteringLevel,
   });
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
   // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a
@@ -193,40 +191,18 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   }
 
   const material = (pass: FadePass, attach: string | MaterialAttach | undefined) => {
-    const {
-      transparent,
-      depthWrite,
-      alphaTest,
-      alphaHash,
-      blending,
-      injection,
-      alphaHashScale,
-      antialiasing,
-      opaquePrepass,
-    } = blends[pass];
-    const program = materialProgramInputs({
+    const blend = blends[pass];
+    const program = viewportProgramInputs({
       props: {
         attach,
         map: displayedTexture,
         color,
         opacity,
-        transparent,
-        depthWrite,
-        alphaTest,
-        alphaHash,
-        blending,
-        injection,
-        ...alphaAntialiasingProps(antialiasing),
+        ...passBlendMaterialProps(blend),
+        injection: blend.injection,
         // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
         depthTest,
         side,
-        // `sprite_3d.cpp:281-283` hands the threshold, the scale and the edge to every mode's
-        // material. Only HASH reads the scale, and only an antialiased cut the edge.
-        userData: {
-          ...alphaHashScaleUserData(alphaHashScale),
-          ...alphaAntialiasingUserData(antialiasing),
-          ...opaquePrepassUserData(opaquePrepass),
-        },
       },
       merge: [properties.shaded ? SHADED_SCALARS : undefined],
     });

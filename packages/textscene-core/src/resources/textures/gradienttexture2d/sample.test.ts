@@ -4,8 +4,13 @@ import { gradientOffsetAt, sampleGradientColor } from './sample';
 import { rasterizeGradientTexture2D } from './build';
 import { decodeGradientTexture2D } from './decode';
 import { gradientOf } from './gradient.testkit';
-import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
+
 import type { Gradient, GradientTexture2D } from './types';
+import {
+  GradientTexture2DFill,
+  GradientInterpolationMode,
+  GradientTexture2DRepeat,
+} from '../../../godot/scene/gradientTexture';
 
 // A radial white-to-transparent falloff, cubic-interpolated.
 const coinGradient = (): Gradient =>
@@ -39,7 +44,7 @@ describe('sampleGradientColor', () => {
 
   it('cubic interpolation differs from linear between stops (locks the curve)', () => {
     const cubic = coinGradient();
-    const linear: Gradient = { ...cubic, interpolationMode: GradientInterpolationMode.Linear };
+    const linear: Gradient = { ...cubic, interpolationMode: GradientInterpolationMode.LINEAR };
     // Midpoint of the first segment (weight 0.5). Linear = (1 + 0.180392)/2.
     const mid = 0.642276 / 2;
     expect(sampleGradientColor(linear, mid).a).toBeCloseTo(0.590196, 5);
@@ -48,7 +53,7 @@ describe('sampleGradientColor', () => {
   });
 
   it('constant interpolation holds the lower stop', () => {
-    const g: Gradient = { ...coinGradient(), interpolationMode: GradientInterpolationMode.Constant };
+    const g: Gradient = { ...coinGradient(), interpolationMode: GradientInterpolationMode.CONSTANT };
     expect(sampleGradientColor(g, 0.3).a).toBeCloseTo(1, 6);
     expect(sampleGradientColor(g, 0.8).a).toBeCloseTo(0.180392, 6);
   });
@@ -56,7 +61,7 @@ describe('sampleGradientColor', () => {
   it('handles a single-stop gradient', () => {
     const g: Gradient = {
       stops: [{ offset: 0, color: { r: 0.2, g: 0.4, b: 0.6, a: 1 } }],
-      interpolationMode: GradientInterpolationMode.Linear,
+      interpolationMode: GradientInterpolationMode.LINEAR,
     };
     expect(sampleGradientColor(g, 0.5)).toEqual({ r: 0.2, g: 0.4, b: 0.6, a: 1 });
   });
@@ -113,10 +118,10 @@ describe('gradientOffsetAt', () => {
     const tex: GradientTexture2D = {
       width: 3,
       height: 1,
-      fill: GradientFill.Linear,
+      fill: GradientTexture2DFill.LINEAR,
       fillFrom: { x: 0, y: 0 },
       fillTo: { x: 1, y: 0 },
-      repeat: GradientRepeat.None,
+      repeat: GradientTexture2DRepeat.NONE,
       useHdr: false,
     };
     expect(gradientOffsetAt(tex, 0, 0)).toBeCloseTo(0, 6);
@@ -128,10 +133,10 @@ describe('gradientOffsetAt', () => {
     const tex: GradientTexture2D = {
       width: 3,
       height: 3,
-      fill: GradientFill.Square,
+      fill: GradientTexture2DFill.SQUARE,
       fillFrom: { x: 0.5, y: 0.5 },
       fillTo: { x: 1, y: 0.5 },
-      repeat: GradientRepeat.None,
+      repeat: GradientTexture2DRepeat.NONE,
       useHdr: false,
     };
     // Corner (0,0): max(|−0.5|,|−0.5|)/max(0.5,0) = 1.
@@ -144,10 +149,10 @@ describe('gradientOffsetAt', () => {
     const tex: GradientTexture2D = {
       width: 4,
       height: 4,
-      fill: GradientFill.Radial,
+      fill: GradientTexture2DFill.RADIAL,
       fillFrom: { x: 0.5, y: 0.5 },
       fillTo: { x: 0.5, y: 0.5 },
-      repeat: GradientRepeat.None,
+      repeat: GradientTexture2DRepeat.NONE,
       useHdr: false,
     };
     expect(gradientOffsetAt(tex, 3, 3)).toBe(0);
@@ -172,15 +177,15 @@ describe('rasterizeGradientTexture2D', () => {
     const tex: GradientTexture2D = {
       width: 1,
       height: 4,
-      fill: GradientFill.Linear,
+      fill: GradientTexture2DFill.LINEAR,
       fillFrom: { x: 0, y: 0 },
       fillTo: { x: 0, y: 1 },
-      repeat: GradientRepeat.None,
+      repeat: GradientTexture2DRepeat.NONE,
       useHdr: false,
     };
     // Black at Godot's top (offset 0), white at Godot's bottom (offset 1).
     const gradient: Gradient = {
-      interpolationMode: GradientInterpolationMode.Linear,
+      interpolationMode: GradientInterpolationMode.LINEAR,
       stops: [
         { offset: 0, color: { r: 0, g: 0, b: 0, a: 1 } },
         { offset: 1, color: { r: 1, g: 1, b: 1, a: 1 } },

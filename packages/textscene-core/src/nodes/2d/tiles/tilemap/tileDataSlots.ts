@@ -8,10 +8,9 @@ import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { markIntSlot } from '../../../../linter/validators/intSlot.js';
 import { badIntElement } from '../../../../linter/validators/v/packedArrays.js';
-import { boolLiteralAsNumber } from '../../../../godot/variant/variantBool.js';
+import { scalarSlotValue } from '../../../../godot/variant/variantBool.js';
 import { packedArrayLiteral } from '../../../../godot/variant/variantParser.js';
-import { parseGodotFloat } from '../../../../godot/variant/number.js';
-import { ruleInt } from '../../../../godot/variant/int.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { replayPositions } from '../../../../godot/scene/propertyReplay.js';
 
 /** `format` initialises to TILE_MAP_DATA_FORMAT_3, which is 2 (tile_map.h:64). */
@@ -31,7 +30,7 @@ const INT_LITERAL_RE = /^-?\d+$/;
 export const formatValidator: PropertyValidator = accepts((key, value, line) => {
   const text = value.trim();
   if (INT_LITERAL_RE.test(text)) return null;
-  if (parseGodotFloat(text) === null && boolLiteralAsNumber(text) === undefined) {
+  if (scalarSlotValue(text) === null) {
     return propertyError(
       key,
       line,

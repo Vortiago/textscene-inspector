@@ -15,6 +15,7 @@ import {
   type DocumentLineSource,
 } from './TscnDiagnostics';
 import { createMockDiagnosticCollection, createMockFileData, createMockUri } from './test-setup';
+import { HOST_PATH_CASE } from './hostPathCase';
 import {
   ANY_PATH_PATTERN,
   EXTENSION_LIST_PATTERN,
@@ -650,7 +651,7 @@ describe('TscnDiagnostics', () => {
 
       const provider = await diagnostics.providerFor(createMockUri('/workspace/isometric/dungeon.tscn'));
 
-      expect(provider?.fileOf('res://tree.glb')?.fsPath).toBe('/workspace/isometric/tree.glb');
+      expect(provider?.resRoot.fsPath).toBe('/workspace/isometric');
       diagnostics.dispose();
     });
 
@@ -659,7 +660,7 @@ describe('TscnDiagnostics', () => {
 
       const provider = await diagnostics.providerFor(createMockUri('/workspace/scenes/level.tscn'));
 
-      expect(provider?.fileOf('res://tree.glb')?.fsPath).toBe('/workspace/tree.glb');
+      expect(provider?.resRoot.fsPath).toBe('/workspace');
       diagnostics.dispose();
     });
 
@@ -1249,6 +1250,23 @@ describe('TscnDiagnostics', () => {
       expect(lintsOf(level)).toBe(before + 1);
       diagnostics.dispose();
     });
+
+    it.runIf(HOST_PATH_CASE === 'sensitive')(
+      'leaves a document alone when a file that differs from its read only in case changes',
+      async () => {
+        const level = sceneUsingTree('/workspace');
+        open(level);
+        const diagnostics = newDiagnostics();
+        await settleWalks();
+        const before = lintsOf(level);
+
+        fire('change', '/workspace/TREE.glb');
+        vi.advanceTimersByTime(DEFAULT_LINT_DEBOUNCE_MS);
+
+        expect(lintsOf(level)).toBe(before);
+        diagnostics.dispose();
+      }
+    );
 
     it('re-lints a document that reads a glTF when the GDExtension list changes', async () => {
       const level = sceneUsingTree('/workspace/scenes');

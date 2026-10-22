@@ -5,7 +5,9 @@ import { transform3DToMatrix } from '../../../../r3f/nodeTreeTransforms';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import { tessellateCurve3D } from '../../../../resources/curves/curve3d/index.js';
 import type { Transform3D } from '../../../../godot/math/transform3d';
-import { buildCsgPolygonGeometry, PolygonMode, type CsgPolygonPathPlan } from './polygonGeometry';
+import { buildCsgPolygonGeometry } from './polygonGeometry';
+import { PolygonMode } from '../../../../godot/scene/csg';
+import { type CsgPolygonPathPlan } from './polygonSweepSpec';
 import type { CSGPolygon3DProperties } from './types';
 
 function pathPlan(p: CSGPolygon3DProperties): CsgPolygonPathPlan | null {

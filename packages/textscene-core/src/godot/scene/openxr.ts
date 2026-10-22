@@ -54,7 +54,7 @@ export const COMPOSITION_SWIZZLE_NAMES = enumNamesByValue(Swizzle);
 const Hand = { LEFT: 0, RIGHT: 1 } as const;
 
 /** Each hand by its integer, as `openxr_hand.cpp:55` hints it. */
-export const HAND_NAMES = labelEnumNames(Hand, { LEFT: 'Left', RIGHT: 'Right' });
+export const OPEN_XR_HAND_NAMES = labelEnumNames(Hand, { LEFT: 'Left', RIGHT: 'Right' });
 
 /** `OpenXRHand::MotionRange` (`openxr_hand.h:51-55`), `MOTION_RANGE_MAX` left out. */
 const MotionRange = { UNOBSTRUCTED: 0, CONFORM_TO_CONTROLLER: 1 } as const;

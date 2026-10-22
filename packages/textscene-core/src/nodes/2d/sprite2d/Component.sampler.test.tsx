@@ -32,6 +32,7 @@ const TEX = 'res://sprite.png';
 const NEAREST = '1';
 const LINEAR = '2';
 const LINEAR_WITH_MIPMAPS = '4';
+const LINEAR_WITH_MIPMAPS_ANISOTROPIC = '6';
 const REPEAT_ENABLED = '2';
 
 function sprite(raw: Record<string, string> = {}): TscnNode {
@@ -131,5 +132,14 @@ describe('Sprite2D texture sampler', () => {
     expect([repeated.wrapS, repeated.wrapT]).toEqual([THREE.RepeatWrapping, THREE.RepeatWrapping]);
     const clamped = await drawnMap(sprite());
     expect([clamped.wrapS, clamped.wrapT]).toEqual([THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping]);
+  });
+
+  it('samples an anisotropic filter at 4 taps, whatever the project anisotropic_filtering_level', async () => {
+    // The canvas binds the default samplers, built at 4x (`renderer_canvas_render_rd.cpp:460`).
+    projectSettingsMock.settings = {
+      'rendering/textures/default_filters/anisotropic_filtering_level': '3',
+    };
+    const map = await drawnMap(sprite({ texture_filter: LINEAR_WITH_MIPMAPS_ANISOTROPIC }));
+    expect(map.anisotropy).toBe(4);
   });
 });

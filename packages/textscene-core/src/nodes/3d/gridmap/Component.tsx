@@ -18,10 +18,10 @@ import type { MaterialSource } from '../../../r3f/materials/materialSource';
 import { useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
 import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
-import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { useSurfaceScalars } from '../../../r3f/materials/useSurfaceMaterial';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
-import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../../godot/math/transform3d';
@@ -32,34 +32,13 @@ import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { pointsAtCells } from './pointCells';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
+import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 
 /** Where each cell sits in the grid, and how much its mesh scales. */
 type CellGrid = Pick<GridMapProperties, 'cellSize' | 'cellCenter' | 'cellScale'>;
 
 /** Literal-only, so the key is constant and the placeholder batch never remounts its material. */
 const PLACEHOLDER_TILE_MATERIAL = wireGizmoProgram(0x4488cc);
-
-/** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
-function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
-  return new THREE.Matrix4().set(
-    t.basis_x.x,
-    t.basis_x.y,
-    t.basis_x.z,
-    t.origin.x,
-    t.basis_y.x,
-    t.basis_y.y,
-    t.basis_y.z,
-    t.origin.y,
-    t.basis_z.x,
-    t.basis_z.y,
-    t.basis_z.z,
-    t.origin.z,
-    0,
-    0,
-    0,
-    1
-  );
-}
 
 /** Written only by `cellMatrix`. `Matrix4.scale` reads it at once, so a large grid allocates none. */
 const cellScaleVector = new THREE.Vector3();
@@ -103,7 +82,7 @@ function cellMatrix(cell: GridMapCell, grid: CellGrid, meshTransform: Transform3
   );
   const matrix = cellOrigin(cell, grid);
   matrix.scale(cellScaleVector.setScalar(grid.cellScale)).multiply(orient);
-  if (meshTransform) matrix.multiply(transform3DToMatrix4(meshTransform));
+  if (meshTransform) matrix.multiply(transform3DToMatrix(meshTransform));
   return matrix;
 }
 
@@ -275,13 +254,21 @@ interface SurfaceDraw {
   shadow: ShadowCastingEffects;
 }
 
-/**
- * Every cell of one surface: one batch, or one tile per cell when its material billboards. A points
- * surface is one `THREE.Points`. The decoded material decides, as the drawn one exists only inside a slot.
- */
+/** Every cell of one surface. A points surface is one `THREE.Points`, whose slot reads its own material. */
 function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
-  const scalars = useMaterialScalars(readyMaterial(useMaterial(draw.source)));
-  if (geometryDrawsPoints(draw.geometry)) return <PointTiles draw={draw} />;
+  return geometryDrawsPoints(draw.geometry) ? (
+    <PointTiles draw={draw} />
+  ) : (
+    <MeshTiles draw={draw} matrices={matrices} />
+  );
+}
+
+/**
+ * Every cell of a triangle surface: one batch, or one tile per cell when its material billboards.
+ * The decoded material decides, as the drawn one exists only inside a slot.
+ */
+function MeshTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
+  const scalars = useSurfaceScalars(draw.source);
   if (drawsAsOneBatch(surfaceBillboard(scalars))) return <BatchedTiles draw={draw} matrices={matrices} />;
   return (
     <>

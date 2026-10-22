@@ -3,11 +3,24 @@
  * (an open editor's unsaved text first) and maps each match to a location under the document's `res://` root.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
+import type { PathCase } from '@textscene/core/resources/resPath';
 import { TscnReferenceProvider } from './TscnReferenceProvider';
 import { createMockDocument } from './TscnDefinitionProvider.testkit';
 import { createMockFileData, createMockUri, vscode as vscodeMocks } from './test-setup';
+
+/** The host's path case, which a test may switch to the case-insensitive filesystems of Windows and macOS. */
+const hostPathCase = vi.hoisted(() => ({ value: 'sensitive' as PathCase }));
+vi.mock('./hostPathCase', () => ({
+  get HOST_PATH_CASE() {
+    return hostPathCase.value;
+  },
+}));
+
+afterEach(() => {
+  hostPathCase.value = 'sensitive';
+});
 
 const LINE = '[ext_resource type="Texture2D" path="res://art/a.png" id="1"]';
 const ON_PATH = new vscode.Position(0, LINE.indexOf('art/'));
@@ -67,6 +80,18 @@ describe('TscnReferenceProvider', () => {
   it("reads an open document's text in place of its file", async () => {
     arrangeProject({ '/workspace/levels/one.tscn': LINE });
     vscodeMocks.workspace.textDocuments = [createMockDocument(`\n\n${LINE}`, '/workspace/levels/one.tscn')];
+
+    try {
+      expect(await referencesFound(['res://levels/one.tscn'])).toEqual(['/workspace/levels/one.tscn:2:37']);
+    } finally {
+      vscodeMocks.workspace.textDocuments = [];
+    }
+  });
+
+  it('reads an open document whose path differs in case on a case-insensitive filesystem', async () => {
+    hostPathCase.value = 'insensitive';
+    arrangeProject({ '/workspace/levels/one.tscn': LINE });
+    vscodeMocks.workspace.textDocuments = [createMockDocument(`\n\n${LINE}`, '/workspace/Levels/One.tscn')];
 
     try {
       expect(await referencesFound(['res://levels/one.tscn'])).toEqual(['/workspace/levels/one.tscn:2:37']);

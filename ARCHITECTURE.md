@@ -20,6 +20,7 @@ completion. A host supplies files and a place to draw or edit.
 | `apps/textscene-lsp` | `tscn-lsp` language server for any LSP client | esbuild |
 | `apps/textscene-linter` | `tscn-lint` CLI | esbuild |
 | `apps/textscene-tscn` | `@textscene/tscn`: core's parser as one npm bundle | esbuild |
+| `apps/textscene-renderer` | `@textscene/renderer`: core's renderer as one npm bundle, with React and three.js as peers | esbuild |
 
 Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
 `pnpm-workspace.yaml` catalog holds every shared dependency version.
@@ -44,8 +45,12 @@ even when its class lives in `scene/`. So `scene/` imports from `rendering/`, an
 not import from `scene/`. `noDependencies.test.ts` checks that direction.
 
 A test sits beside its file. Core imports each fact from its file under a group. The root keeps
-`noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which re-exports only what
-a package outside core imports.
+`noDependencies.test.ts`, `engineFactRoutes.test.ts` and `index.ts`, the package's `./godot` export,
+which re-exports only what a package outside core imports.
+
+Each Godot enum is declared once, as an `as const` object. Its type is `EnumValue<typeof Name>`,
+because a type alias with the object's name fails the `no-redeclare` lint rule. A table of
+labels for one enum ends in `_NAMES` and starts with its Godot class.
 
 | `godot/` group | Ports from Godot's |
 | --- | --- |
@@ -223,8 +228,9 @@ flowchart TD
   processor accepts.
 - **Imports.** `.import` sidecars and `project.godot` load through `tryLoad` (ADR-0028).
 - **Clones.** A cached Object3D is cloned per consumer. Textures and materials are shared.
-- **Materials.** `resolveMaterialSource`, `useMaterial` and `SurfaceMaterialSlot` give every
-  material one path to a surface (ADR-0041).
+- **Materials.** `resolveMaterialSource` and `useSurfaceMaterial` give every material one path
+  to a surface: the source loads, every texture binds, and the two bags come out. `SurfaceMaterialSlot`
+  and the GLB override only install those bags (ADR-0039, ADR-0041).
 - **Procedural textures.** A NoiseTexture2D builds as a job in a worker (`workers/jobs.ts`,
   ADR-0042). A large texture uploads in bands (`r3f/tiledUpload/`).
 
@@ -258,6 +264,7 @@ A test or a script fails when one of these rules breaks.
 | The linter and the lenient parser import no React or three.js | `linter/reactFree.test.ts`, an ESLint `no-restricted-imports` rule |
 | The language-feature engine and the `tscn-lsp` server import no React or three.js | `languageFeatures/reactFree.test.ts`, an ESLint `no-restricted-imports` rule, `apps/textscene-lsp/src/reactFree.test.ts` |
 | `godot/` imports nothing | `noDependencies.test.ts` |
+| No module outside `godot/` re-exports a `godot/` name, no group has a barrel, and no enum outside `godot/` copies a `godot/` enum | `engineFactRoutes.test.ts` |
 | Every slice is wired into its barrels | `barrelCompleteness`, `parserBarrelCompleteness` |
 | Core imports each engine fact from its file, and `godot/index.ts` and the root `index.ts` re-export only what a package outside core imports | `packageExports.test.ts` |
 | No value export exists for tests alone. An entry point's export counts only when the apps, the dev kit or the scripts import it | `scripts/testOnlyExports.test.mjs` |

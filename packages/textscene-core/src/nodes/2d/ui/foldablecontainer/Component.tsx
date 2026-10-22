@@ -22,7 +22,7 @@ import {
   HORIZONTAL_ALIGNMENT_RIGHT,
 } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   foldableContainerHSeparation,
   foldableContainerTitleShape,

@@ -14,6 +14,7 @@ import * as THREE from 'three';
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
@@ -48,6 +49,8 @@ import type { SubViewportProperties } from './types';
 import { viewportTargetSize } from './targetSize';
 import { createViewportCanvasCamera } from '../../../r3f/sceneRenderCamera.js';
 import { useProjectClearColor } from '../../../r3f/useProjectClearColor.js';
+import { renderWithMipmapBias } from '../../../r3f/materials/godotMipmapBias.js';
+import { useProjectTextureMipmapBias } from '../../../r3f/materials/useProjectTextureMipmapBias.js';
 import {
   recompileOnCurveChange,
   SHARED_WORLD_TONE_MAPPING,
@@ -137,6 +140,8 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   useSceneShadowFit(portalLightScene);
   useSceneDepthPrepass(portalLightScene);
   const shadowAtlas = useViewportShadowAtlas(properties);
+  const projectMipmapBias = useProjectTextureMipmapBias();
+  const mipmapBias = properties.texture_mipmap_bias ?? projectMipmapBias;
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its canvas transform, the identity until a Camera2D in the subtree
@@ -191,7 +196,11 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
         toneMapping,
         // No camera is not an error: Godot renders the clear colour and nothing else.
         draw: () => {
-          if (camera) renderWithShadowAtlas(shadowAtlas, () => gl.render(source, camera));
+          if (camera) {
+            renderWithMipmapBias(mipmapBias, () =>
+              renderWithShadowAtlas(shadowAtlas, () => gl.render(source, camera))
+            );
+          }
         },
       });
     } finally {
@@ -208,6 +217,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
     gl,
     target,
     shadowAtlas,
+    mipmapBias,
     clearColor,
     transparentBg,
     properties.own_world_3d,
@@ -235,11 +245,13 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // WorldEnvironment inside applies to.
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
-      <WorldRootProvider value={portalScene}>
-        <WorldEnvironmentScope world="subViewport">
-          <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
-        </WorldEnvironmentScope>
-      </WorldRootProvider>
+      <AnisotropicFilteringProvider level={properties.anisotropic_filtering_level}>
+        <WorldRootProvider value={portalScene}>
+          <WorldEnvironmentScope world="subViewport">
+            <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
+          </WorldEnvironmentScope>
+        </WorldRootProvider>
+      </AnisotropicFilteringProvider>
     </CanvasWorkspaceProvider>,
     portalScene
   );

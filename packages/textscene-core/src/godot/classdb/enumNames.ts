@@ -1,18 +1,20 @@
-/** The member names of a numeric TypeScript enum, keyed by the integer Godot stores. */
+/** The member names of an enum object, keyed by the integer Godot stores. */
 
-/**
- * Each member name by its integer, as a validator or an inspector names it. The numeric members
- * only: a TS enum object also maps each name back to its integer.
- */
+/** The integers an `as const` enum object holds, as the type of a property that stores one. */
+export type EnumValue<T extends object> = T[keyof T];
+
+/** The member of `enumObject` that holds `value`, or null: for a setter that refuses an integer no member holds. */
+export function enumMember<T extends Record<string, number>>(
+  enumObject: T,
+  value: number
+): EnumValue<T> | null {
+  return Object.values(enumObject).includes(value) ? (value as EnumValue<T>) : null;
+}
+
+/** Each member name by its integer, as a validator or an inspector names it. */
 /* @__NO_SIDE_EFFECTS__ */
 export function enumNamesByValue(enumObject: object): Readonly<Record<number, string>> {
-  return Object.freeze(
-    Object.fromEntries(
-      Object.entries(enumObject)
-        .filter(([, value]) => typeof value === 'number')
-        .map(([name, value]) => [value, name])
-    )
-  );
+  return Object.freeze(Object.fromEntries(Object.entries(enumObject).map(([name, value]) => [value, name])));
 }
 
 /**
@@ -43,6 +45,19 @@ export function labelEnumNames<T extends Record<string, number>>(
   );
 }
 
+/**
+ * The label of each listed flag by its bit: `prefix` before the member name, as the engine spells
+ * the constant. For a bit-field hint that offers only some of the flags of an enum.
+ */
+/* @__NO_SIDE_EFFECTS__ */
+export function flagLabels<T extends Record<string, number>>(
+  flags: T,
+  prefix: string,
+  members: readonly (keyof T & string)[]
+): Readonly<Record<number, string>> {
+  return Object.freeze(Object.fromEntries(members.map((member) => [flags[member], `${prefix}${member}`])));
+}
+
 /** A `SPECIFIC_BONE` member as the PascalCase word a hint string prints, `SpecificBone`. */
 /* @__NO_SIDE_EFFECTS__ */
 export function pascalCaseLabel(name: string): string {
@@ -51,10 +66,4 @@ export function pascalCaseLabel(name: string): string {
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join('');
-}
-
-/** Every integer a numeric TypeScript enum holds, in declaration order, without the name-to-integer entries. */
-/* @__NO_SIDE_EFFECTS__ */
-export function enumValues<T extends number>(enumObject: Record<string, string | T>): readonly T[] {
-  return Object.values(enumObject).filter((value): value is T => typeof value === 'number');
 }

@@ -13,21 +13,21 @@ import { type Vector3, vector3Length } from '../../math/vector.js';
 import { sortArray } from '../../templates/sortArray.js';
 
 /** `ReflectionProbe::UpdateMode` (`scene/3d/reflection_probe.h:39-42`). */
-export enum ReflectionProbeUpdateMode {
+export const ReflectionProbeUpdateMode = {
   /** Captures when the probe is added or changes, filtered by GGX importance sampling. */
-  ONCE = 0,
+  ONCE: 0,
   /** Captures every frame, filtered by the fast filter. */
-  ALWAYS = 1,
-}
+  ALWAYS: 1,
+} as const;
 
 /** `ReflectionProbe::AmbientMode` (`reflection_probe.h:44-48`). */
-export enum ReflectionProbeAmbientMode {
-  DISABLED = 0,
+export const ReflectionProbeAmbientMode = {
+  DISABLED: 0,
   /** The capture's last layer, along the surface normal. */
-  ENVIRONMENT = 1,
+  ENVIRONMENT: 1,
   /** `ambient_color` times `ambient_color_energy`. */
-  COLOR = 2,
-}
+  COLOR: 2,
+} as const;
 
 /** The near plane of each capture face (`servers/rendering/renderer_scene_cull.cpp:3694`). */
 export const CAPTURE_NEAR = 0.01;

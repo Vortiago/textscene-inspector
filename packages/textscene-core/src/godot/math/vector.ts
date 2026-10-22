@@ -1,5 +1,8 @@
 /** Godot's vector types as plain components, for engine facts that import nothing. */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from './real.js';
+
 /** A point, a size or a direction: two components, as Godot's `Vector2` and `Vector2i` hold them. */
 export interface Vector2 {
   x: number;
@@ -13,8 +16,8 @@ export interface Vector3 {
   z: number;
 }
 
-/** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
-const f = Math.fround;
+/** The components of a `Vector3`, in the order Godot indexes them (`v[0]`, `v[1]`, `v[2]`). */
+export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
 
 /** `Vector3::normalize` (`core/math/vector3.h:548-558`) in `real_t` float: a zero vector stays zero. */
 export function normalizedVector3(x: number, y: number, z: number): [number, number, number] {
@@ -38,6 +41,11 @@ export function vector3Cross(a: Components3, b: Components3): [number, number, n
     f(f(a[2] * b[0]) - f(a[0] * b[2])),
     f(f(a[0] * b[1]) - f(a[1] * b[0])),
   ];
+}
+
+/** `Vector3::maxf` (`core/math/vector3.h:105-107`): each component raised to at least `floor`. */
+export function vector3Maxf({ x, y, z }: Vector3, floor: number): Vector3 {
+  return { x: Math.max(x, floor), y: Math.max(y, floor), z: Math.max(z, floor) };
 }
 
 /** `Vector3::length` (`core/math/vector3.h:532-538`) in `real_t` float. */

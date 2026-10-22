@@ -8,17 +8,15 @@
 import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/scene/gradientTexture.js';
+import {
+  GRADIENT_TEXTURE_MAX_SIZE,
+  GradientTexture2DFill,
+  GradientInterpolationMode,
+  GradientTexture2DRepeat,
+} from '../../../godot/scene/gradientTexture.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { parsePackedColorArray, parsePackedFloat32Array } from '../../shapes/packedArray';
-import {
-  GradientFill,
-  GradientInterpolationMode,
-  GradientRepeat,
-  type Gradient,
-  type GradientColorStop,
-  type GradientTexture2D,
-} from './types';
+import { type Gradient, type GradientColorStop, type GradientTexture2D } from './types';
 import type { Rgba } from '../../../godot/math/math.js';
 
 /**
@@ -59,25 +57,28 @@ function decodeGradient(data: Record<string, string>): Gradient {
     stops,
     interpolationMode: enumOr(
       data.interpolation_mode,
-      GradientInterpolationMode.Linear,
-      [GradientInterpolationMode.Linear, GradientInterpolationMode.Constant, GradientInterpolationMode.Cubic],
+      GradientInterpolationMode.LINEAR,
+      [GradientInterpolationMode.LINEAR, GradientInterpolationMode.CONSTANT, GradientInterpolationMode.CUBIC],
       'Gradient.interpolation_mode'
     ),
   };
 }
 
+/** The `Gradient` a resource holds, or null for no resource or one of another type. */
+export function decodeGradientResource(resource: TscnInternalResource | null): Gradient | null {
+  return resource?.type === 'Gradient' ? decodeGradient(resource.data) : null;
+}
+
 /**
- * The `Gradient` a `SubResource("id")` property names, or null for anything else.
- * CPUParticles2D takes a bare `Gradient`, not a `GradientTexture1D`, so its
- * colour ramp resolves here, not through the texture path.
+ * The `Gradient` a `SubResource("id")` property names, or null for anything else, an ExtResource
+ * included: the texture and noise callers hold no loaded files. {@link decodeGradientResource}
+ * decodes a resource a caller resolved itself, as CPUParticles2D does for a `.tres` ramp.
  */
 export function resolveGradient(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): Gradient | null {
-  const resource = resolveSubResourceRef(ref, internalResources);
-  if (resource?.type !== 'Gradient') return null;
-  return decodeGradient(resource.data);
+  return decodeGradientResource(resolveSubResourceRef(ref, internalResources) ?? null);
 }
 
 /** `width = 64` and `height = 64` (`gradient_texture.h:92-93`). */
@@ -99,16 +100,16 @@ export function decodeGradientTexture2D(data: Record<string, string>): GradientT
     height: settableIntOr(data.height, DEFAULT_TEXTURE_SIZE, TEXTURE_SIZE_RANGE, 'GradientTexture2D.height'),
     fill: enumOr(
       data.fill,
-      GradientFill.Linear,
-      [GradientFill.Linear, GradientFill.Radial, GradientFill.Square],
+      GradientTexture2DFill.LINEAR,
+      [GradientTexture2DFill.LINEAR, GradientTexture2DFill.RADIAL, GradientTexture2DFill.SQUARE],
       'GradientTexture2D.fill'
     ),
     fillFrom: vec2Or(data.fill_from, { x: 0, y: 0 }, 'GradientTexture2D.fill_from'),
     fillTo: vec2Or(data.fill_to, { x: 1, y: 0 }, 'GradientTexture2D.fill_to'),
     repeat: enumOr(
       data.repeat,
-      GradientRepeat.None,
-      [GradientRepeat.None, GradientRepeat.Repeat, GradientRepeat.Mirror],
+      GradientTexture2DRepeat.NONE,
+      [GradientTexture2DRepeat.NONE, GradientTexture2DRepeat.REPEAT, GradientTexture2DRepeat.MIRROR],
       'GradientTexture2D.repeat'
     ),
     useHdr: boolSlotValue(data.use_hdr) === true,

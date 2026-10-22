@@ -3,6 +3,8 @@
  * straight across.
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../../../godot/math/real.js';
 import type { Gradient } from '../../textures/gradienttexture2d/types';
 import { sampleGradientColor } from '../../textures/gradienttexture2d/sample';
 import { clamp8 } from './noiseBytes.js';
@@ -58,8 +60,6 @@ export function grayToRgba(gray: Uint8Array): Uint8Array {
   }
   return rgba;
 }
-
-const f = Math.fround;
 
 /**
  * `Color::get_luminance` (color.h:106-108) of an L8 pixel, in Godot's float arithmetic. Its weights

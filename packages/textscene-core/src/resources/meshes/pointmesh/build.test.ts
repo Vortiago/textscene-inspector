@@ -1,11 +1,12 @@
 /** PointMesh build: one vertex at the origin, as a points surface (`primitive_meshes.cpp:2379-2389`). */
 import { describe, expect, it } from 'vitest';
 import { primitiveMeshSurface } from '../primitivemesh/surface';
+import { scopedMesh } from '../primitivemesh/surface.testkit';
 
 const TEXEL_SIZE = 0.2;
 
 function pointMeshSurface(data: Record<string, string> = {}) {
-  return primitiveMeshSurface({ id: 'P', type: 'PointMesh', data }, TEXEL_SIZE);
+  return primitiveMeshSurface(scopedMesh({ id: 'P', type: 'PointMesh', data }), TEXEL_SIZE);
 }
 
 describe('PointMesh surface', () => {

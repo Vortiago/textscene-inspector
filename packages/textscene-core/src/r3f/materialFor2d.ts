@@ -12,22 +12,25 @@ import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from './godotAl
 import { cutBlends, cutOpaquePrepasses, type FadeVariants } from './materials/fadeVariants';
 import { godotTextureFilterState, type TextureFilterState } from '../resources/textures/godotTextureFilter';
 import type { PassBlend } from './materials/surfaceBlend';
+import type { EnumValue } from '../godot/classdb/enumNames.js';
 
 /** The flags `get_material_for_2d` reads, as the node stores them. */
 interface MaterialFor2dInput {
   /** `SpriteBase3D::AlphaCutMode` or `Label3D::AlphaCutMode`: two C++ enums, same members. */
-  alphaCut: AlphaCutMode;
+  alphaCut: EnumValue<typeof AlphaCutMode>;
   alphaScissorThreshold: number;
   /** A Sprite3D's `FLAG_TRANSPARENT`, or `NO_TRANSPARENT_FLAG` for a Label3D, whose DrawFlags have none. */
   transparentFlag: boolean | typeof NO_TRANSPARENT_FLAG;
   alphaHashScale: number;
-  alphaAntialiasingMode: AlphaAntiAliasing;
+  alphaAntialiasingMode: EnumValue<typeof AlphaAntiAliasing>;
   alphaAntialiasingEdge: number;
   /** Omitted means Godot's default, both faces. */
   doubleSided: boolean | undefined;
   noDepthTest: boolean;
   /** `BaseMaterial3D::TextureFilter` ordinal. */
-  textureFilter: TextureFilter;
+  textureFilter: EnumValue<typeof TextureFilter>;
+  /** The viewport's anisotropic filtering level, which sets the anisotropic sampler rows. */
+  anisotropicFilteringLevel: number;
 }
 
 interface MaterialFor2d {
@@ -62,6 +65,6 @@ export function materialFor2d(input: MaterialFor2dInput): MaterialFor2d {
     joinsShadowPass: joinsShadowPass(cut, depthTest),
     side: input.doubleSided === false ? THREE.FrontSide : THREE.DoubleSide,
     depthTest,
-    textureFilter: godotTextureFilterState(input.textureFilter),
+    textureFilter: godotTextureFilterState(input.textureFilter, input.anisotropicFilteringLevel),
   };
 }

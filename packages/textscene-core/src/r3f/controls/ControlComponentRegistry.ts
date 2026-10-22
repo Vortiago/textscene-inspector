@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { createTypeRegistry } from '../../core/createTypeRegistry';
 import type { NativeTheme } from './native/nativeTheme';
 import type { TextMeasurer } from './native/solverRegistry';
-import type { Rect2 } from './native/rect';
+import type { Rect2 } from '../../godot/math/rect2';
 import type { SolveNode } from './native/solveTree';
 import type { ControlOwnTint } from './native/controlTint';
 import type { SealedHandoff } from './native/solveHandoff';

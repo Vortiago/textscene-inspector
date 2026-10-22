@@ -9,15 +9,16 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ShadowCasterStage, useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster } from './shadowCasterRegistry';
-import { OCCLUDER_CULL_CLOCKWISE, OCCLUDER_CULL_DISABLED, type OccluderCullMode } from './shadowVolumes';
+import { type OccluderCullMode } from './shadowVolumes';
 import type { WorldShadowCaster } from './shadowCasterRegistry';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 /** Publishes one caster and reports every snapshot the stage handed it. */
 function Probe({
   object,
   seen,
   segments,
-  cullMode = OCCLUDER_CULL_DISABLED,
+  cullMode = OccluderPolygon2DCullMode.DISABLED,
   occluderLightMask = 1,
 }: {
   object: THREE.Object3D;
@@ -170,9 +171,9 @@ describe('the snapshot the stage compares', () => {
   }
 
   it('republishes on a changed cull mode, which flips which edges cast', async () => {
-    const { before, after } = await aroundChange({ cullMode: OCCLUDER_CULL_CLOCKWISE });
+    const { before, after } = await aroundChange({ cullMode: OccluderPolygon2DCullMode.CLOCKWISE });
     expect(after).not.toBe(before);
-    expect(after[0]!.cullMode).toBe(OCCLUDER_CULL_CLOCKWISE);
+    expect(after[0]!.cullMode).toBe(OccluderPolygon2DCullMode.CLOCKWISE);
   });
 
   it('republishes on a changed occluder_light_mask, which flips which lights see it', async () => {

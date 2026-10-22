@@ -6,7 +6,7 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { markIntSlot } from '../intSlot.js';
-import { slotWidth } from '../../../godot/variant/int.js';
+import { slotWidth } from '../../../godot/variant/intSlots.js';
 import { createEnumValidator, createNumericRangeValidator } from '../commonValidators.js';
 import { formatCode, numericRange, valueCode } from './codes.js';
 import { accepts, endSeverity, ground, type EndedGrounding, type Grounding } from './grounding.js';

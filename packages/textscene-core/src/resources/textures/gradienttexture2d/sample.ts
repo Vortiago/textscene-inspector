@@ -5,12 +5,17 @@
  * `Gradient.interpolation_color_space` is always sRGB, so OKLab differs mid-stop.
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../../../godot/math/real';
 import { cubicInterpolatef, lerpf } from '../../../godot/math/math';
-import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
+
 import type { Gradient, GradientTexture2D } from './types';
 import type { Rgba } from '../../../godot/math/math';
-
-const f = Math.fround;
+import {
+  GradientTexture2DFill,
+  GradientInterpolationMode,
+  GradientTexture2DRepeat,
+} from '../../../godot/scene/gradientTexture';
 
 /**
  * The normalised gradient offset at integer pixel `(x, y)`, mirroring Godot's
@@ -28,12 +33,12 @@ export function gradientOffsetAt(tex: GradientTexture2D, x: number, y: number): 
   const dy = fillTo.y - fillFrom.y;
 
   let ofs: number;
-  if (fill === GradientFill.Linear) {
+  if (fill === GradientTexture2DFill.LINEAR) {
     // Godot projects onto the uncapped segment: ofs is the signed projection
     // parameter along (fill_to - fill_from).
     const lenSq = dx * dx + dy * dy;
     ofs = ((posX - fillFrom.x) * dx + (posY - fillFrom.y) * dy) / lenSq;
-  } else if (fill === GradientFill.Radial) {
+  } else if (fill === GradientTexture2DFill.RADIAL) {
     ofs = Math.hypot(posX - fillFrom.x, posY - fillFrom.y) / Math.hypot(dx, dy);
   } else {
     // Square: chebyshev distance ratio.
@@ -42,10 +47,10 @@ export function gradientOffsetAt(tex: GradientTexture2D, x: number, y: number): 
       Math.max(Math.abs(dx), Math.abs(dy));
   }
 
-  if (repeat === GradientRepeat.None) {
+  if (repeat === GradientTexture2DRepeat.NONE) {
     return Math.min(1, Math.max(0, ofs));
   }
-  if (repeat === GradientRepeat.Repeat) {
+  if (repeat === GradientTexture2DRepeat.REPEAT) {
     ofs = ofs % 1;
     return ofs < 0 ? 1 + ofs : ofs;
   }
@@ -92,10 +97,10 @@ export function sampleGradientColor(gradient: Gradient, offset: number): Rgba {
   const c2 = stops[second]!.color;
   const weight = f(f(at - stops[first]!.offset) / f(stops[second]!.offset - stops[first]!.offset));
 
-  if (gradient.interpolationMode === GradientInterpolationMode.Constant) {
+  if (gradient.interpolationMode === GradientInterpolationMode.CONSTANT) {
     return c1;
   }
-  if (gradient.interpolationMode === GradientInterpolationMode.Cubic) {
+  if (gradient.interpolationMode === GradientInterpolationMode.CUBIC) {
     let p0 = first - 1;
     let p3 = second + 1;
     if (p3 >= n) p3 = second;

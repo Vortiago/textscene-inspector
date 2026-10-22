@@ -11,7 +11,7 @@ import { axisFromBoneAxis } from '../skeletonmodifier3d/linterParser.js';
 import { BONE_AXIS_NAMES, BoneAxis } from '../../../../godot/scene/skeletonModifier.js';
 import { resolveAimSettingLeaf } from './linterParser.js';
 import { VECTOR3_AXIS_NAMES, Vector3Axis } from '../../../../godot/math/vector3Axis.js';
-import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount, ruleInt } from '../../../../godot/variant/intSlots.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';

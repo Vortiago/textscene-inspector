@@ -6,12 +6,13 @@
 import type { FogVolumeShape } from '../../../godot/rendering/environment/fogVolume';
 import type { Node3DProperties } from '../../base/node3d/types';
 import type { Vector3 } from '../../../godot/math/vector';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export interface FogVolumeProperties extends Node3DProperties {
   /** The full size of the shape in local units. The WORLD shape ignores it. */
   size: Vector3;
   /** A `FogVolumeShape`, or a value outside it, which Godot stores and draws as no shape. */
-  shape: FogVolumeShape | number;
+  shape: EnumValue<typeof FogVolumeShape> | number;
   /** The FogMaterial or ShaderMaterial reference as written, if any. */
   material?: string;
 }

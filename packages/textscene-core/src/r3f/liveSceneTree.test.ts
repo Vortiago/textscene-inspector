@@ -10,7 +10,7 @@ import {
   liveChildGroups,
   liveNodeChain,
   resolveLiveEntry,
-  singleSceneCache,
+  singlePathCache,
   type LiveChildGroup,
   type LiveTreeContext,
   type CachedSceneSource,
@@ -451,27 +451,27 @@ describe('resolveLiveEntry — effective node + ORIGINATING instance ref (for th
   });
 });
 
-describe('singleSceneCache — one-entry adapter the tree + viewport hand their loaded sub-scene through', () => {
+describe('singlePathCache — one-entry adapter the tree + viewport hand their loaded sub-scene through', () => {
   it('answers only for its own path (no scope leak to siblings)', () => {
     const sub: TscnScene = {
       nodes: [makeNode('Root', 'Node3D')],
       externalResources: [],
       internalResources: [],
     };
-    const cache = singleSceneCache('res://a.tscn', sub);
+    const cache = singlePathCache('res://a.tscn', sub);
     expect(cache.getCached('res://a.tscn')).toBe(sub);
     expect(cache.getCached('res://other.tscn')).toBeUndefined();
   });
 
   it('reports not-cached for a null scene (still loading / failed) so collapse keeps the node', () => {
-    const cache = singleSceneCache('res://a.tscn', null);
+    const cache = singlePathCache('res://a.tscn', null);
     expect(cache.getCached('res://a.tscn')).toBeUndefined();
     const node = makeNode('X', 'Node3D', { instance: 'ExtResource("1")' });
     expect(collapseLiveNode(node, scopeOf([ext('1', 'res://a.tscn')]), cache)).toBe(node);
   });
 
   it('answers for no path when keyed by null (a non-instance row)', () => {
-    const cache = singleSceneCache(null, { nodes: [makeNode('R', 'Node3D')] });
+    const cache = singlePathCache(null, { nodes: [makeNode('R', 'Node3D')] });
     expect(cache.getCached('res://anything.tscn')).toBeUndefined();
   });
 
@@ -489,7 +489,7 @@ describe('singleSceneCache — one-entry adapter the tree + viewport hand their 
     };
     const node = makeNode('Player', 'Node3D', { instance: 'ExtResource("p")' });
     const outer = [ext('p', 'res://player.tscn')];
-    const cache = singleSceneCache('res://player.tscn', sub);
+    const cache = singlePathCache('res://player.tscn', sub);
 
     expect(collapseLiveNode(node, scopeOf(outer), cache).type).toBe('CharacterBody3D');
 

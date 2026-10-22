@@ -13,6 +13,7 @@ import { inThreadJobRunner } from '../workers/WorkerJobRunner.js';
 import { usePendingWhile } from './usePendingWhile.js';
 import { beginTextureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
+import { withKey } from '../utils/keySet.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
 import { resolveProceduralTexture, resolveProceduralTexture3D } from './textures/resolveProceduralTexture.js';
 import {
@@ -117,7 +118,7 @@ function useProceduralSlots(
           if (!current) return;
           // Null while this effect still holds the build means it could not be allocated.
           if (texture) setLanded((prev) => landOne(prev, lookups, build.key, texture));
-          else setFailedKeys((keys) => new Set(keys).add(build.key));
+          else setFailedKeys((keys) => withKey(keys, build.key));
         },
         (error: unknown) => {
           if (current) setBuildError({ error });

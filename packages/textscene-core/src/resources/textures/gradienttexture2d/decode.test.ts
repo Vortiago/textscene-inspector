@@ -2,8 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { decodeGradientTexture2D, resolveGradient } from './decode';
 import { gradientOf } from './gradient.testkit';
 import type { TscnInternalResource } from '../../../parser/types';
-import { GradientFill, GradientInterpolationMode, GradientRepeat } from './types';
-import { GRADIENT_TEXTURE_MAX_SIZE } from '../../../godot/scene/gradientTexture.js';
+
+import {
+  GRADIENT_TEXTURE_MAX_SIZE,
+  GradientTexture2DFill,
+  GradientInterpolationMode,
+  GradientTexture2DRepeat,
+} from '../../../godot/scene/gradientTexture.js';
 
 /** The stop colours a Gradient with this `colors` value decodes to. */
 function colorsOf(colors: string) {
@@ -47,7 +52,7 @@ describe('the Gradient body resolveGradient decodes', () => {
       colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)',
     });
 
-    expect(gradient.interpolationMode).toBe(GradientInterpolationMode.Cubic);
+    expect(gradient.interpolationMode).toBe(GradientInterpolationMode.CUBIC);
     expect(gradient.stops).toEqual([
       { offset: 0, color: { r: 1, g: 1, b: 1, a: 1 } },
       { offset: Math.fround(0.642276), color: { r: 1, g: 1, b: 1, a: Math.fround(0.180392) } },
@@ -60,7 +65,7 @@ describe('the Gradient body resolveGradient decodes', () => {
       colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0)',
     });
 
-    expect(gradient.interpolationMode).toBe(GradientInterpolationMode.Linear);
+    expect(gradient.interpolationMode).toBe(GradientInterpolationMode.LINEAR);
     expect(gradient.stops.map((s) => s.offset)).toEqual([0, 1]);
   });
 
@@ -79,7 +84,7 @@ describe('the Gradient body resolveGradient decodes', () => {
   });
 
   it('decodes an empty body to a stopless linear gradient (edge case)', () => {
-    expect(gradientOf({})).toEqual({ stops: [], interpolationMode: GradientInterpolationMode.Linear });
+    expect(gradientOf({})).toEqual({ stops: [], interpolationMode: GradientInterpolationMode.LINEAR });
   });
 });
 
@@ -91,12 +96,12 @@ describe('decodeGradientTexture2D', () => {
       fill_to: 'Vector2(0.5, 0.01)',
     });
 
-    expect(tex.fill).toBe(GradientFill.Radial);
+    expect(tex.fill).toBe(GradientTexture2DFill.RADIAL);
     expect(tex.fillFrom).toEqual({ x: 0.5, y: 0.5 });
     expect(tex.fillTo).toEqual({ x: 0.5, y: 0.01 });
     expect(tex.width).toBe(64);
     expect(tex.height).toBe(64);
-    expect(tex.repeat).toBe(GradientRepeat.None);
+    expect(tex.repeat).toBe(GradientTexture2DRepeat.NONE);
     expect(tex.useHdr).toBe(false);
   });
 
@@ -109,13 +114,13 @@ describe('decodeGradientTexture2D', () => {
     });
     expect(tex.width).toBe(128);
     expect(tex.height).toBe(32);
-    expect(tex.repeat).toBe(GradientRepeat.Mirror);
+    expect(tex.repeat).toBe(GradientTexture2DRepeat.MIRROR);
     expect(tex.useHdr).toBe(true);
   });
 
   it('defaults fill to linear from (0,0) to (1,0)', () => {
     const tex = decodeGradientTexture2D({});
-    expect(tex.fill).toBe(GradientFill.Linear);
+    expect(tex.fill).toBe(GradientTexture2DFill.LINEAR);
     expect(tex.fillFrom).toEqual({ x: 0, y: 0 });
     expect(tex.fillTo).toEqual({ x: 1, y: 0 });
   });

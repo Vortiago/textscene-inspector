@@ -12,11 +12,9 @@ import * as THREE from 'three';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
-import { injectProgram } from '../../../materialProgramInputs';
-import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
-import { alphaAntialiasingProps, alphaAntialiasingUserData } from '../../../materials/godotAlphaAntialiasing';
-import { NO_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../materials/opaquePrepass';
-import type { SurfaceBlend } from '../../../materials/surfaceBlend';
+import { injectProgram, injectViewportProgram } from '../../../materialProgramInputs';
+import { NO_OPAQUE_PREPASS } from '../../../materials/opaquePrepass';
+import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/surfaceBlend';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -186,6 +184,8 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   /** Omitted, it takes `canvasItemFacing()`'s side, like `createMsdfMaterial`. */
   side?: THREE.Side;
   clippingPlanes?: readonly THREE.Plane[];
+  /** The raster carries a mip chain and draws in 3D, so it samples at the viewport's mipmap bias. */
+  mipmapped?: boolean;
 }
 
 /**
@@ -214,30 +214,31 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     blending = THREE.NormalBlending,
     antialiasing = null,
     injection,
+    mipmapped = false,
   } = options;
   const material = new THREE.MeshBasicMaterial({
     map,
-    transparent,
     opacity,
-    depthWrite,
     depthTest,
-    alphaTest,
-    alphaHash,
-    blending,
-    ...alphaAntialiasingProps(antialiasing),
+    ...passBlendMaterialProps({
+      transparent,
+      depthWrite,
+      alphaTest,
+      alphaHash,
+      blending,
+      alphaHashScale,
+      opaquePrepass,
+      antialiasing,
+    }),
     // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),
     clippingPlanes: [...clippingPlanes],
   });
-  material.userData = {
-    ...alphaHashScaleUserData(alphaHashScale),
-    ...opaquePrepassUserData(opaquePrepass),
-    ...alphaAntialiasingUserData(antialiasing),
-  };
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }
-  injectProgram(material, injection);
+  if (mipmapped) injectViewportProgram(material, injection);
+  else injectProgram(material, injection);
   return material;
 }

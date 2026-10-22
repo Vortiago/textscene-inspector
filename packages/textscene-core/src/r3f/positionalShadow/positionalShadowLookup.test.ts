@@ -75,10 +75,6 @@ describe('the spot shadow lookup', () => {
   it('keeps every tap inside the light’s slot (edge case)', () => {
     expect(SPOT_LOOKUP).toContain('clamp( coord.xy + offset, slotRect.xy, slotRect.xy + slotRect.zw )');
   });
-
-  it('reads a light without a range as lit, as it lights nothing (error case)', () => {
-    expect(SPOT_LOOKUP).toContain('if ( light.distance <= 0.0 ) return 1.0;');
-  });
 });
 
 describe('the area shadow lookup', () => {

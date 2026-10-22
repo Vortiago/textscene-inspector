@@ -26,7 +26,9 @@ const WRAP: Record<'clamp' | 'repeat' | 'mirror', THREE.Wrapping> = {
 /**
  * Writes a filter onto a texture the caller owns. The mipmap filters read the chain the texture has,
  * and a texture imported without one samples its base level under them, as the NEAREST and LINEAR
- * samplers do (`max_lod = 0`, `material_storage.cpp:2467-2476`).
+ * samplers do (`max_lod = 0`, `material_storage.cpp:2467-2476`). An anisotropic filter reads 4 taps whatever
+ * the project or viewport level: the canvas binds the default samplers (`renderer_canvas_render_rd.cpp:460`),
+ * which are allocated with the 4x default argument (`material_storage.cpp:1291`, `material_storage.h:370`).
  */
 export function applyCanvasItemFilter(texture: THREE.Texture, filter: number): void {
   applyTextureFilterState(texture, godotTextureFilterState(canvasItemSamplerFilter(filter)));
@@ -47,7 +49,10 @@ export interface AmbientTextureSampler {
 }
 
 /** A CanvasItem's effective sampler, with the viewport default applied. */
-export type CanvasItemTextureSampler = CanvasItemTextureDefaults;
+export interface CanvasItemTextureSampler {
+  filter: number;
+  repeat: number;
+}
 
 /** No ancestor names either property, so the viewport default applies. */
 export const ROOT_TEXTURE_SAMPLER: AmbientTextureSampler = { filter: undefined, repeat: undefined };

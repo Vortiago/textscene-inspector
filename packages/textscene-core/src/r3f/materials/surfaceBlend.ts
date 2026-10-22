@@ -3,7 +3,9 @@
 import type * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import type { AlphaAntialiasingCut } from '../../godot/rendering/materials/alphaAntialiasing';
-import type { OpaquePrepass } from './opaquePrepass';
+import { opaquePrepassUserData, type OpaquePrepass } from './opaquePrepass';
+import { alphaHashScaleUserData } from './godotAlphaHash';
+import { alphaAntialiasingProps, alphaAntialiasingUserData } from './godotAlphaAntialiasing';
 
 /**
  * One `BaseMaterial3D::Transparency` (`material.h:200-207`) in three's terms: what
@@ -29,3 +31,24 @@ export interface SurfaceBlend {
 /** One pass's blend, with the fields `get_material_for_2d` always hands the material. */
 export type PassBlend = SurfaceBlend &
   Required<Pick<SurfaceBlend, 'alphaHashScale' | 'antialiasing' | 'opaquePrepass'>>;
+
+/**
+ * The material props of one pass: its blend state, and the `userData` the hash, antialiasing and
+ * prepass patches read. Every mode's material carries the scale and the edge (`sprite_3d.cpp:281-283`):
+ * only HASH reads the scale, and only an antialiased cut the edge.
+ */
+export function passBlendMaterialProps(blend: PassBlend) {
+  return {
+    transparent: blend.transparent,
+    depthWrite: blend.depthWrite,
+    alphaTest: blend.alphaTest,
+    alphaHash: blend.alphaHash,
+    blending: blend.blending,
+    ...alphaAntialiasingProps(blend.antialiasing),
+    userData: {
+      ...alphaHashScaleUserData(blend.alphaHashScale),
+      ...alphaAntialiasingUserData(blend.antialiasing),
+      ...opaquePrepassUserData(blend.opaquePrepass),
+    },
+  };
+}

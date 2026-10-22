@@ -102,6 +102,20 @@ describe('parseGridMap', () => {
     expect(result.bakedMeshes).toEqual(['SubResource("ArrayMesh_b")']);
   });
 
+  it('drops a nil baked mesh, which the variant parser reads as null (variant_parser.cpp:699)', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'Grid' }), {
+      baked_meshes: '[nil, SubResource("ArrayMesh_b")]',
+    });
+    expect(result.bakedMeshes).toEqual(['SubResource("ArrayMesh_b")']);
+  });
+
+  it('reads no baked mesh from the blank slot a trailing comma leaves (edge case)', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'Grid' }), {
+      baked_meshes: '[SubResource("ArrayMesh_a"), ]',
+    });
+    expect(result.bakedMeshes).toEqual(['SubResource("ArrayMesh_a")']);
+  });
+
   it('reads no baked mesh from a value that is not an array (error case)', () => {
     const result = parseGridMap(heading('GridMap', { name: 'Grid' }), { baked_meshes: 'SubResource("x")' });
     expect(result.bakedMeshes).toEqual([]);

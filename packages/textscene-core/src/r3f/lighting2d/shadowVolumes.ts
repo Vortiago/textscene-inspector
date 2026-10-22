@@ -5,15 +5,11 @@
  * gate picks one. Everything is in the previewer's 2D world space, Y up.
  */
 
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import type { Vector2 } from '../../godot/math/vector.js';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d.js';
 
-/** `OccluderPolygon2D.CullMode`. */
-export const OCCLUDER_CULL_DISABLED = 0;
-export const OCCLUDER_CULL_CLOCKWISE = 1;
-export const OCCLUDER_CULL_COUNTER_CLOCKWISE = 2;
-
-export type OccluderCullMode =
-  typeof OCCLUDER_CULL_DISABLED | typeof OCCLUDER_CULL_CLOCKWISE | typeof OCCLUDER_CULL_COUNTER_CLOCKWISE;
+export type OccluderCullMode = EnumValue<typeof OccluderPolygon2DCullMode>;
 
 /** An axis-aligned world rect, the shape Godot culls occluders against. */
 export interface LightRect {
@@ -136,8 +132,8 @@ export function edgeCastsShadow(
   // A collinear edge has no shadow area, and this also covers a light on the
   // edge's line, in front of it or between its endpoints.
   if (!Number.isFinite(orient) || orient === 0) return false;
-  if (cullMode === OCCLUDER_CULL_CLOCKWISE) return orient > 0;
-  if (cullMode === OCCLUDER_CULL_COUNTER_CLOCKWISE) return orient < 0;
+  if (cullMode === OccluderPolygon2DCullMode.CLOCKWISE) return orient > 0;
+  if (cullMode === OccluderPolygon2DCullMode.COUNTER_CLOCKWISE) return orient < 0;
   return true;
 }
 

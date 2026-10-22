@@ -7,10 +7,11 @@
 import type { Rgba } from '../../godot/math/math';
 import type { Vector3 } from '../../godot/math/vector';
 import type { AmbientSource, BackgroundMode } from '../../godot/scene/environment.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 export interface EnvironmentProperties {
   // Background
-  background_mode: BackgroundMode;
+  background_mode: EnumValue<typeof BackgroundMode>;
   background_color: Rgba;
   background_energy_multiplier: number;
 
@@ -44,7 +45,7 @@ export interface EnvironmentProperties {
 
   // Ambient lighting (scene-wide constant illumination)
   /** 0 BG (default), 1 DISABLED, 2 COLOR, 3 SKY. Only 2 and 3 emit a flat ambient. */
-  ambient_light_source: AmbientSource;
+  ambient_light_source: EnumValue<typeof AmbientSource>;
   ambient_light_color: Rgba;
   ambient_light_energy: number;
   /**

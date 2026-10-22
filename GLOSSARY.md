@@ -50,6 +50,15 @@ _Avoid_: "mipmaps" for a chain the GPU generates.
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
 
+**Mipmap bias** (`r3f/materials/godotMipmapBias.ts`):
+The offset a viewport adds to the mip level that each of its 3D material samplers picks: the project's `texture_mipmap_bias`, or a SubViewport's own.
+It changes only a texture that has levels to choose between.
+_Avoid_: "LOD bias", which suggests mesh level of detail.
+
+**Anisotropic filtering level** (`r3f/contexts/AnisotropicFilteringContext.tsx`):
+The `Viewport.AnisotropicFiltering` value, 0 to 4, that sets `1 << level` taps for a texture on an anisotropic `texture_filter`: the project's `anisotropic_filtering_level`, or a SubViewport's own for the textures that only its pass draws.
+Unlike the **Mipmap bias**, the texture carries it, so it cannot change between passes.
+
 **Unwrap cache**:
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
 Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.
@@ -254,7 +263,7 @@ How much behaviour a caller or test can exercise per unit of interface it must l
 _Avoid_: bare "depth" for a dependency-chain distance or a test suite's size.
 
 **Conformance guard**:
-A test that walks a registry or scrapes source to prove every registered thing has its promised shape (`barrelCompleteness`, `parserBarrelCompleteness`, `resourceSliceConformance`, `baseChainCompleteness`, `reactFree`, `noDependencies`, `packageExports`).
+A test that walks a registry or scrapes source to prove every registered thing has its promised shape (`barrelCompleteness`, `parserBarrelCompleteness`, `resourceSliceConformance`, `baseChainCompleteness`, `reactFree`, `noDependencies`, `engineFactRoutes`, `packageExports`).
 Its failure list is the work list, and a green guard proves only what it scraped.
 _Avoid_: a per-slice test as a substitute. "coverage" for a guard.
 

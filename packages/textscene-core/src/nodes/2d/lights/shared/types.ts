@@ -2,18 +2,14 @@
 
 import type { Node2DProperties } from '../../../base/node2d/types';
 import type { Rgba } from '../../../../godot/math/math';
-
-/** `Light2D.BlendMode`: ADD, SUB, MIX. */
-export type Light2DBlendMode = 0 | 1 | 2;
-
-/** `Light2D.ShadowFilter`: NONE, PCF5, PCF13. */
-export type Light2DShadowFilter = 0 | 1 | 2;
+import { Light2DBlendMode, Light2DShadowFilter } from '../../../../godot/scene/light2d';
+import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 export interface Light2DProperties extends Node2DProperties {
   enabled: boolean;
   color: Rgba;
   energy: number;
-  blend_mode: Light2DBlendMode;
+  blend_mode: EnumValue<typeof Light2DBlendMode>;
   /**
    * `Light2D.range_item_cull_mask`: the mask ANDed against each CanvasItem's
    * `light_mask` to decide whether this light reaches it. Not the light's own
@@ -52,7 +48,7 @@ export interface Light2DProperties extends Node2DProperties {
    * `Light2D.shadow_filter`: how the shadow boundary is sampled. NONE is a hard
    * `step()`. PCF5 and PCF13 spread it over `shadow_filter_smooth` texels.
    */
-  shadow_filter: Light2DShadowFilter;
+  shadow_filter: EnumValue<typeof Light2DShadowFilter>;
   /** `Light2D.shadow_filter_smooth`: the PCF kernel's width, in shadow-map texels. */
   shadow_filter_smooth: number;
 }

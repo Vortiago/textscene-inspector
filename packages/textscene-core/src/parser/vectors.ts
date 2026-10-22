@@ -7,7 +7,7 @@
  */
 
 import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
-import { readSlotTuple } from '../godot/variant/int.js';
+import { readSlotTuple } from '../godot/variant/intSlots.js';
 
 import type { Vector2, Vector3 } from '../godot/math/vector.js';
 

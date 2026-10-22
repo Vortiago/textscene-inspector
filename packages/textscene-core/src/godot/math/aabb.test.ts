@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   aabbCenter,
   aabbEdges,
+  aabbEndpoint,
+  aabbLongestAxisSize,
   aabbOfPoints,
+  centredAabb,
   EMPTY_AABB,
   hasSurface,
   isEmptyAabb,
@@ -132,5 +135,54 @@ describe('aabbCenter', () => {
 
   it('is the origin for AABB() (edge case)', () => {
     expect(aabbCenter(EMPTY_AABB)).toEqual({ x: 0, y: 0, z: 0 });
+  });
+});
+
+describe('aabbEndpoint', () => {
+  const sample = box(1, 2, 3, 10, 20, 30);
+
+  it.each([
+    [0, { x: 1, y: 2, z: 3 }],
+    [1, { x: 1, y: 2, z: 33 }],
+    [2, { x: 1, y: 22, z: 3 }],
+    [3, { x: 1, y: 22, z: 33 }],
+    [4, { x: 11, y: 2, z: 3 }],
+    [5, { x: 11, y: 2, z: 33 }],
+    [6, { x: 11, y: 22, z: 3 }],
+    [7, { x: 11, y: 22, z: 33 }],
+  ])('names corner %i in the order of AABB::get_endpoint', (index, corner) => {
+    expect(aabbEndpoint(sample, index)).toEqual(corner);
+  });
+
+  it('puts every corner of AABB() on the origin (edge case)', () => {
+    expect(aabbEndpoint(EMPTY_AABB, 7)).toEqual({ x: 0, y: 0, z: 0 });
+  });
+});
+
+describe('aabbLongestAxisSize', () => {
+  it('is the largest of the three sizes', () => {
+    expect(aabbLongestAxisSize(box(0, 0, 0, 40, 10, 20))).toBe(40);
+  });
+
+  it('takes the Z size when it is the largest', () => {
+    expect(aabbLongestAxisSize(box(0, 0, 0, 1, 2, 3))).toBe(3);
+  });
+
+  it('is the first size when none is positive (edge case)', () => {
+    expect(aabbLongestAxisSize(box(0, 0, 0, -1, -2, -3))).toBe(-1);
+  });
+});
+
+describe('centredAabb', () => {
+  it('is the box of that size with its centre on the origin', () => {
+    expect(centredAabb({ x: 20, y: 10, z: 4 })).toEqual(box(-10, -5, -2, 20, 10, 4));
+  });
+
+  it('puts a size of 0 at the origin, as the negative zero the division leaves (edge case)', () => {
+    expect(centredAabb({ x: 0, y: 0, z: 0 })).toEqual(box(-0, -0, -0, 0, 0, 0));
+  });
+
+  it('keeps a negative size, which then puts the position above the origin (edge case)', () => {
+    expect(centredAabb({ x: -2, y: 1, z: 1 })).toEqual(box(1, -0.5, -0.5, -2, 1, 1));
   });
 });

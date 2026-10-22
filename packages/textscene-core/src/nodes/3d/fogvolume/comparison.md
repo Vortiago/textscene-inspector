@@ -15,6 +15,15 @@ A `FogMaterial` `density_texture` shapes the density by its red channel. It can 
 
 A `ShaderMaterial` fills the volume with Godot's default fog, as Godot does, when its shader is absent, `null`, unreadable or of another `shader_type` than `fog`. The shader can be inline, a `.tres` or a `.gdshader` file.
 
+## Gizmo
+
+A selected volume draws the gizmo of Godot's editor, the 12 edges of its box in the fog colour. Godot's source is `fog_volume_gizmo_plugin.cpp:92-125`.
+
+- The ellipsoid, cone, cylinder and box shapes all draw the box of `size`, centred on the node.
+- The WORLD shape draws nothing, because it ignores the size.
+
+The previewer draws no edit handles and no billboard icon.
+
 ## Linting
 
 <!-- lint:begin FogVolume -->
@@ -37,6 +46,7 @@ The lenient parser clamps each negative `size` component to 0, as `set_size` doe
 
 ## Known limitations
 
+- **Editor only** Godot's editor also draws the box of an unselected volume at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.
 - **Shader missing** A volume whose material is a fog `ShaderMaterial` adds no fog, where Godot runs its fog shader.
 - **Approximated** A fog shader with a compile error adds no fog, where Godot draws its default fog.
 - **Approximated** A fog shader whose `shader_type` comes from an `#include` or a macro draws the default fog, where Godot runs its fog shader.

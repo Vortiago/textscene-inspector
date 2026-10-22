@@ -24,7 +24,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SceneScope } from '../../../../parser/types';
 import {
   ICON_MODE_LEFT,

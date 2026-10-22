@@ -5,7 +5,7 @@
  * Children render beside the painter, since the solve has already placed them.
  */
 import { useMemo } from 'react';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import { controlProps, type SolveNode } from './solveTree';
 import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';

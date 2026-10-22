@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { listWrittenIndices } from '../../../../linter/reportedIndices.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
-import { ruleCount } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount } from '../../../../godot/variant/intSlots.js';
 import { indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { stringToInt } from '../../../../godot/string/string.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';

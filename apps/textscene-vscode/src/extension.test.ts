@@ -7,6 +7,7 @@ import { TscnPreviewPanel } from './TscnPreviewPanel';
 import * as logger from './logger';
 import { TscnDiagnostics } from './TscnDiagnostics';
 import { TscnResPathListing } from './TscnResPathListing';
+import { resRootOf } from './resRoot';
 import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 
 vi.mock('./TscnPreviewPanel', () => ({
@@ -113,6 +114,41 @@ describe('Extension', () => {
     commandHandlers.get('textscene.openPreviewToSide')?.();
   }
 
+  describe('the shared project.godot answers', () => {
+    const SCENE = createMockUri('/workspace/scenes/Door.tscn');
+    const statCalls = () => (vscode.workspace.fs.stat as Mock).mock.calls.length;
+
+    /** Activates with no project.godot anywhere, and looks the scene's root up once. Returns the stats it took. */
+    async function activateAndLookUp(): Promise<number> {
+      activate(mockContext);
+      (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({ uri: createMockUri('/workspace') });
+      (vscode.workspace.fs.stat as Mock).mockRejectedValue(new Error('Not found'));
+      await resRootOf(SCENE);
+      return statCalls();
+    }
+
+    it('forgets them on a project.godot event', async () => {
+      const firstWalk = await activateAndLookUp();
+
+      await fireChange(PROJECT_FILE_PATTERN, createMockUri('/workspace/project.godot'));
+      await resRootOf(SCENE);
+
+      expect(statCalls()).toBe(2 * firstWalk);
+    });
+
+    it('forgets them when the window gains focus', async () => {
+      const firstWalk = await activateAndLookUp();
+      const onWindowState = (vscode.window.onDidChangeWindowState as Mock).mock.calls[0]![0] as (state: {
+        focused: boolean;
+      }) => void;
+
+      onWindowState({ focused: true });
+      await resRootOf(SCENE);
+
+      expect(statCalls()).toBe(2 * firstWalk);
+    });
+  });
+
   describe('activate', () => {
     it('should initialize logger on activation', () => {
       activate(mockContext);
@@ -149,9 +185,9 @@ describe('Extension', () => {
 
       // Commands, symbol, definition, document link, hover, completion, code action,
       // folding, highlight and reference providers, five agent tools, diagnostics, save listener,
-      // each of the two watchers itself plus its three handlers, and the stop-file
-      // watcher itself plus its two handlers.
-      expect(mockContext.subscriptions.length).toBe(29);
+      // each of the two watchers itself plus its three handlers, the project file watcher's three
+      // forget handlers, the window focus listener, and the stop-file watcher itself plus its two handlers.
+      expect(mockContext.subscriptions.length).toBe(33);
     });
 
     it('should register a reference provider for Find All References on a res:// path', () => {

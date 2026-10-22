@@ -39,6 +39,11 @@ export interface MaterialTextureState {
   /** Godot `BaseMaterial3D.texture_filter` ordinal. Omitted means its default. */
   filter?: number;
   /**
+   * The viewport's `anisotropic_filtering_level`, which sets how far an anisotropic filter samples.
+   * Omitted means Godot's default.
+   */
+  anisotropicFilteringLevel?: number;
+  /**
    * Godot `BaseMaterial3D.texture_repeat`, default true
    * (`flags[FLAG_USE_TEXTURE_REPEAT] = true`, `repeat_enable` on the sampler).
    * three defaults to clamp-to-edge, which smears UVs outside 0..1 into stripes.
@@ -100,7 +105,7 @@ export function applyTextureState(texture: THREE.Texture, state: TextureState): 
   // its storage, not the tag, decides what a sample decodes.
   if (texture.isRenderTargetTexture) return texture;
 
-  const filterState = godotTextureFilterState(state.filter);
+  const filterState = godotTextureFilterState(state.filter, state.anisotropicFilteringLevel);
   const uvDiverges = state.uv !== undefined && !isIdentity(state.uv);
   // A producer may hand over either wrapping (ADR-0044), so the wanted wrapping
   // is compared with what the texture carries. Only a texture already wrapped as

@@ -4,7 +4,7 @@
  */
 
 import type { EnforcedEnd } from '../commonValidators.js';
-import type { IntWidth } from '../../../godot/variant/int.js';
+import type { IntWidth } from '../../../godot/variant/intWidth.js';
 import type { FiniteGrounding, Grounding } from './grounding.js';
 
 /** The numbers alone, shared by both option bags. */

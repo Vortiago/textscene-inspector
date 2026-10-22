@@ -113,6 +113,18 @@ describe('completionsAt', () => {
     expect(await labelsAt(document, 2, '[node name="Body" type="Node3D" parent="'.length)).toEqual(['.']);
   });
 
+  it('offers res:// paths in path order, whatever order the host lists them in', async () => {
+    const document = new LanguageDocument(
+      ['[node name="R" type="Node"]', 'scene_file_path = "res://'].join('\n')
+    );
+    const labels = await labelsAt(document, 2, document.lines[1]!.length, [
+      'res://b.tscn',
+      'res://a/c.tscn',
+      'res://A.tscn',
+    ]);
+    expect(labels).toEqual(['res://A.tscn', 'res://a/c.tscn', 'res://b.tscn']);
+  });
+
   it('offers res:// paths in an ext_resource heading path=', async () => {
     const heading = '[ext_resource type="Texture2D" path="res://art/" id="1"]';
     const document = new LanguageDocument(heading);

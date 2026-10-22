@@ -18,6 +18,7 @@ import { axisStretchModeOf } from './ninePatchGeometry';
 import type { Rgba } from '../../../godot/math/math';
 import { contentMarginOr, expandMarginOf } from '../../../resources/styles/stylebox/decode';
 import { AxisStretchMode } from '../../../godot/scene/gui';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export interface StyleBoxTextureData {
   /**
@@ -43,8 +44,8 @@ export interface StyleBoxTextureData {
   expandMargin: { left: number; top: number; right: number; bottom: number };
   /** `region_rect`: `undefined` or all-zero means the whole texture. */
   regionRect: Rect2Value | undefined;
-  axisStretchHorizontal: AxisStretchMode;
-  axisStretchVertical: AxisStretchMode;
+  axisStretchHorizontal: EnumValue<typeof AxisStretchMode>;
+  axisStretchVertical: EnumValue<typeof AxisStretchMode>;
   /** `draw_center`, default `true`. */
   drawCenter: boolean;
   /** `modulate_color`, default `Color(1, 1, 1, 1)`. */

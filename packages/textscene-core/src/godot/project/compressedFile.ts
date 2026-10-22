@@ -5,13 +5,13 @@
  */
 
 /** `Compression::Mode` (`compression.h:47-53`), the u32 after the magic. */
-export enum CompressionMode {
-  FastLz = 0,
-  Deflate = 1,
-  Zstd = 2,
-  Gzip = 3,
-  Brotli = 4,
-}
+export const CompressionMode = {
+  FastLz: 0,
+  Deflate: 1,
+  Zstd: 2,
+  Gzip: 3,
+  Brotli: 4,
+} as const;
 
 /**
  * Bit 5 of a FastLZ stream's first byte marks level 2. `fastlz_compress` picks level 2 only for an

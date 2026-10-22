@@ -167,8 +167,8 @@ function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly Live
 
 /**
  * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren` returns them) below the objects their
- * parent paths name, plus an `AnimationPlayer` when it has clips. One source, so `useGlbChildren`
- * and `resolveLiveEntry` produce the same children.
+ * parent paths name, plus an `AnimationPlayer` when it has clips. `liveChildGroups` alone calls it,
+ * so the tree's rows and `resolveLiveEntry` see the same children.
  */
 export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[] = []): TscnNode[] {
   const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));

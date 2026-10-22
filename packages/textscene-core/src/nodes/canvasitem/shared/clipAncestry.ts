@@ -11,7 +11,7 @@ import {
   CANVAS_ITEM_CLIP_CHILDREN_MODE_COUNT,
   CanvasItemClipChildrenMode,
 } from '../../../godot/scene/canvasItem.js';
-import { ruleInt } from '../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../godot/variant/intSlots.js';
 import type { RawNode, RawScene } from '../../../parser/types.js';
 
 /**

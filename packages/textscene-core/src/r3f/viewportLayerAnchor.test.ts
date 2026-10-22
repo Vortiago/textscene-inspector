@@ -6,8 +6,9 @@ import {
   orthoFrameForSize,
 } from '../nodes/viewport/subviewport/offscreenViewport';
 import type { Camera2DTag } from '../nodes/2d/camera2d/cameraView';
-import { Camera2DAnchorMode } from '../nodes/2d/camera2d/types';
+
 import { viewportLayerMatrix } from './viewportLayerAnchor';
+import { Camera2DAnchorMode } from '../godot/scene/camera2d';
 
 const NOT_FOLLOWING = { enabled: false, scale: 1 };
 

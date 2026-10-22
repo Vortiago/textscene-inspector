@@ -47,4 +47,4 @@ Strict parsing format-checks these `Node2D` properties, plus 16 inherited from C
 
 ## Known limitations
 
-- **Approximated** The two anisotropic `texture_filter` values cap anisotropy at 16×, as the 3D path does. Godot caps it at `1 << anisotropic_filtering_level`, 4× by default (`material_storage.cpp:2461`, `rendering_server.cpp:3750`).
+- **Approximated** Nearest with Mipmaps and Anisotropic gets 4 taps in Godot (`material_storage.cpp:2490-2506`). three skips anisotropy when the magnification filter is nearest, so the texture is sampled without it.

@@ -54,6 +54,14 @@ describe('applyTextureState', () => {
       expect(applyTextureState(texture, state({ filter: undefined }))).toBe(texture);
     });
 
+    it("samples an anisotropic filter at the viewport's anisotropic_filtering_level", () => {
+      const sampler = (anisotropicFilteringLevel: number) =>
+        applyTextureState(tiling(), state({ filter: 5, anisotropicFilteringLevel }));
+
+      expect(sampler(1).anisotropy).toBe(2);
+      expect(sampler(3).anisotropy).toBe(8);
+    });
+
     it('returns the original for an identity UV transform', () => {
       const texture = tiling();
       expect(applyTextureState(texture, state({ uv: uv(1, 1) }))).toBe(texture);

@@ -10,7 +10,7 @@ import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { isExplicitlyHidden, parentTypeVerdict, placementPhrase } from '../../../../linter/parentType.js';
 import { isOrthonormalTransform } from '../../../../linter/transformBasis.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 

@@ -598,6 +598,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fogvolume Gizmo",
+    "file": "unit-fogvolume-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Foldable Container Rtl",
     "file": "unit-foldable-container-rtl.tscn",
     "category": "Other"
@@ -1020,6 +1025,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Light Base Properties",
     "file": "unit-light-base-properties.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Range Floor",
+    "file": "unit-light-range-floor.tscn",
     "category": "Other"
   },
   {
@@ -1543,6 +1553,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Reflectionprobe Gizmo",
+    "file": "unit-reflectionprobe-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Remote Transform 2d",
     "file": "unit-remote-transform-2d.tscn",
     "category": "Other"
@@ -1948,6 +1963,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tube Trail Mesh Texture Uv",
+    "file": "unit-tube-trail-mesh-texture-uv.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Two Bone Ik 3d",
     "file": "unit-two-bone-ik-3d.tscn",
     "category": "Other"
@@ -2028,6 +2048,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Visibleonscreenenabler3d Gizmo",
+    "file": "unit-visibleonscreenenabler3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visibleonscreennotifier3d Gizmo",
+    "file": "unit-visibleonscreennotifier3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visual Instance 3d",
     "file": "unit-visual-instance-3d.tscn",
     "category": "Other"
@@ -2055,6 +2085,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Voxel Gi",
     "file": "unit-voxel-gi.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Voxelgi Gizmo",
+    "file": "unit-voxelgi-gizmo.tscn",
     "category": "Other"
   },
   {
@@ -2153,6 +2188,12 @@ export const fixtures: Fixture[] = [
     "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
     "category": "Other",
     "root": "glow-linear-upscale"
+  },
+  {
+    "name": "Label3d Glyph Mipmaps",
+    "file": "label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn",
+    "category": "Other",
+    "root": "label3d-glyph-mipmaps"
   },
   {
     "name": "Msaa 2d",
@@ -3596,6 +3637,12 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Mipmap Bias",
+    "file": "mipmap-bias/unit-material-mipmap-bias.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
   },
   {
     "name": "Navigation Agent 2d",

@@ -1,11 +1,7 @@
 /** Test casters in world space, for occluders under an unrotated transform. */
 
-import {
-  OCCLUDER_CULL_DISABLED,
-  type OccluderCullMode,
-  type Quad2,
-  type ShadowCasterEdges,
-} from '../shadowVolumes';
+import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from '../shadowVolumes';
+import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 
 /** The axis-aligned box around `segments`: the local bounds of an occluder with no rotation. */
 export function axisAlignedBounds(segments: ArrayLike<number>): Quad2 {
@@ -30,7 +26,7 @@ export function axisAlignedBounds(segments: ArrayLike<number>): Quad2 {
 /** World `[ax,ay, bx,by, …]` edges of an unrotated occluder, its bounds around them. */
 export function worldEdges(
   segments: ArrayLike<number>,
-  cullMode: OccluderCullMode = OCCLUDER_CULL_DISABLED
+  cullMode: OccluderCullMode = OccluderPolygon2DCullMode.DISABLED
 ): ShadowCasterEdges {
   return { segments, cullMode, bounds: axisAlignedBounds(segments) };
 }

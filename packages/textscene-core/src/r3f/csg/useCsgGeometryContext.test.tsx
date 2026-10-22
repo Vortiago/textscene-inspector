@@ -64,11 +64,11 @@ describe('useCsgGeometryContext', () => {
     const fake = createFakeResourceLoader();
     const result = renderSetup(ROOT, fake);
     expect(result.current.setup.isLoading).toBe(true);
-    expect(result.current.setup.context.file(ROCK)).toBeUndefined();
+    expect(result.current.setup.context.loadedFile(ROCK)).toBeUndefined();
 
     act(() => fake.resources._resolve(ROCK, ROCK_FILE));
     expect(result.current.setup.isLoading).toBe(false);
-    expect(result.current.setup.context.file(ROCK)).toBe(ROCK_FILE);
+    expect(result.current.setup.context.loadedFile(ROCK)).toBe(ROCK_FILE);
   });
 
   it('keeps the context when an unrelated file loads', () => {
@@ -91,7 +91,7 @@ describe('useCsgGeometryContext', () => {
     const result = renderSetup(ROOT, fake);
     act(() => fake.resources._fail(ROCK, 'gone'));
     expect(result.current.setup.isLoading).toBe(false);
-    expect(result.current.setup.context.file(ROCK)).toBeUndefined();
+    expect(result.current.setup.context.loadedFile(ROCK)).toBeUndefined();
     expect(result.current.missing.has(ROCK)).toBe(true);
   });
 

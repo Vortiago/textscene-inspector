@@ -4,6 +4,7 @@ import {
   joinPath,
   getAncestorPaths,
   pathBetween,
+  pathUnder,
   spelledLiveNodePath,
   spelledNodePath,
 } from './nodePath';
@@ -60,6 +61,16 @@ describe('nodePath utilities', () => {
 
     it('should handle deeply nested paths', () => {
       expect(joinPath('A/B/C', 'D')).toBe('A/B/C/D');
+    });
+  });
+
+  describe('pathUnder', () => {
+    it('places a root-relative path below the node at the parent path', () => {
+      expect(pathUnder('Main/Level', 'Door/Hinge')).toBe('Main/Level/Door/Hinge');
+    });
+
+    it('places the root at the parent path itself (edge case)', () => {
+      expect(pathUnder('Main/Level', belowRoot('Level'))).toBe('Main/Level');
     });
   });
 

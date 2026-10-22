@@ -9,7 +9,7 @@ renders_as: a THREE.SpotLight
 
 # SpotLight3D
 
-Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a `THREE.SpotLight` with energy scaled by PI to match Godot's brightness. A shader patch gives it Godot's distance falloff and Godot's fade from the axis to the cone's rim, at the power `spot_angle_attenuation` sets. Its highlight scales by twice `light_specular`, as Godot's does. `light_size` widens its lit side and its highlight by Godot's size term, so a large light near a surface reaches past the surface's horizon. In volumetric fog, it scatters `light_volumetric_fog_energy` times its light into the medium, under its shadow.
+Godot's cone-shaped light, emitting from a point along its local -Z axis and fading toward the cone's rim and its range. The previewer renders it as a `THREE.SpotLight` with energy scaled by PI to match Godot's brightness. A shader patch gives it Godot's distance falloff and Godot's fade from the axis to the cone's rim, at the power `spot_angle_attenuation` sets. A `spot_range` under 0.001 cuts the light off at 0.001, as Godot's light buffer does, so a range of 0 lights nothing. Its highlight scales by twice `light_specular`, as Godot's does. `light_size` widens its lit side and its highlight by Godot's size term, so a large light near a surface reaches past the surface's horizon. In volumetric fog, it scatters `light_volumetric_fog_energy` times its light into the medium, under its shadow.
 
 ## Linting
 
