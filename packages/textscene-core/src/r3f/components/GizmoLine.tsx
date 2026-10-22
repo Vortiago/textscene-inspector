@@ -17,6 +17,8 @@ interface GizmoLineProps {
   colors?: Float32Array;
   /** Solid line colour (ignored when `colors` is set; defaults to white). */
   color?: THREE.ColorRepresentation;
+  /** The opacity of the lines, from 0 to 1: the alpha of the colour a Godot gizmo material has. */
+  opacity?: number;
 }
 
 const FLOATS_PER_SEGMENT = 6;
@@ -52,7 +54,12 @@ function finiteSegments(positions: Float32Array, colors: Float32Array | undefine
  * Draws each segment that has no `inf` or `nan` vertex. Godot draws no pixel for a line with
  * one, and its finite neighbours still draw. three.js warns about a NaN bounding sphere.
  */
-export function GizmoLine({ positions: allPositions, colors: allColors, color }: GizmoLineProps) {
+export function GizmoLine({
+  positions: allPositions,
+  colors: allColors,
+  color,
+  opacity = 1,
+}: GizmoLineProps) {
   const { positions, colors } = useMemo(
     () => finiteSegments(allPositions, allColors),
     [allPositions, allColors]
@@ -72,6 +79,7 @@ export function GizmoLine({ positions: allPositions, colors: allColors, color }:
   const program = materialProgramInputs({
     props: {
       color: color ?? 0xffffff,
+      opacity,
       vertexColors: !!colors,
       depthWrite: false,
       transparent: true,

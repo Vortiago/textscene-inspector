@@ -1,6 +1,6 @@
 # Driver gaps are `unimplemented`, not `linter-only`
 
-- Status: Accepted (2026-10-02).
+- Status: Accepted (2026-10-02). Amended on 2026-10-22 by the gizmo amendment below.
 - Related: ADR-0008 (invisible render intent: `transform-only` stays the claim that
   the node's own geometry is nil), ADR-0005 (physics bodies are transform-only by
   design, not by omission), ADR-0031 (resource slices share the status vocabulary).
@@ -69,7 +69,7 @@ from it claims a nil effect. Deliberate exclusions keep `linter-only`, because
 the previewer's contract says their effect is nil here, not missing: physics
 bodies and joints, `PhysicalBone2D`/`PhysicalBone3D` ragdoll physics (ADR-0005
 settled these as transform-only by design), navigation nodes, `BackBufferCopy`,
-`VisibleOnScreenNotifier`/`Enabler`, `OccluderInstance3D`, and `Bone2D` (the
+`VisibleOnScreenNotifier2D`/`Enabler2D`, `OccluderInstance3D`, and `Bone2D` (the
 bone `Skeleton2D` moves, not a driver itself). The XR trackers (`XRNode3D`,
 `XRController3D`, `XROrigin3D`, `XRAnchor3D`) stay too: a session updates only
 their own transform, their children ride the normal hierarchy the previewer
@@ -82,3 +82,13 @@ children only outside the editor (`spring_arm_3d.cpp:39`), and the previewer
 shows the editor pose, as it does for a physics body. So it is no gap and is not in
 the ledger: it registers as a drawing type for its length gizmo, and its sheet is `limitation`
 with a **Needs runtime** line.
+
+## Amendment: a nil-effect type with an editor gizmo
+
+`VisibleOnScreenNotifier3D` and `VisibleOnScreenEnabler3D` have no runtime effect on the screen, and
+Godot's editor draws a box gizmo for them (`visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`).
+A node whose own drawing is its editor gizmo registers a component that draws, with no `renderIntent`,
+as `Marker3D` does (ADR-0018). Its sheet is not `linter-only`, because that status needs a
+`transform-only` registration. A gizmo is not the Godot effect of a node, so a gizmo changes no
+`pending` registration and no `unimplemented` sheet: `ReflectionProbe`, `VoxelGI`, `FogVolume` and the
+particle emitters keep the intent and the status their effect has.

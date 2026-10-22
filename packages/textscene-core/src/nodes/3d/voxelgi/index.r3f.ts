@@ -1,13 +1,13 @@
 /**
- * VoxelGI draws nothing here yet, so the badge reads "not implemented". The
- * Node3D base still mounts, for `visible` and the workspace split.
+ * VoxelGI lights nothing here yet, so the badge reads "not implemented". Its component mounts the
+ * Node3D base for `visible` and the workspace split, and the selected editor gizmo.
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../base/node3d/Component';
+import { VoxelGI } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'VoxelGI',
-  Component: Node3D,
+  Component: VoxelGI,
   renderIntent: 'pending',
 });

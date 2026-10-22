@@ -1,7 +1,8 @@
 /**
  * <FogVolume>: puts a fog volume into the scene at the node's transform, which the volumetric fog
  * finds and draws (`r3f/fog/fogVolumeRows.ts`). It draws nothing of its own, so it draws nothing
- * where the Environment's volumetric fog is off, as in Godot.
+ * where the Environment's volumetric fog is off, as in Godot. Godot's editor gizmo of the box draws
+ * while the node is selected (ADR-0018).
  */
 
 import { useEffect, useMemo } from 'react';
@@ -13,6 +14,7 @@ import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { literalText, stringToInt } from '../../../godot/string/string';
 import * as logger from '../../../logger';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
+import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import {
   DEFAULT_FOG_VOLUME_FILL,
   FogVolumeObject,
@@ -25,6 +27,7 @@ import { decodeFogMaterial } from '../../../resources/materials/fogmaterial/deco
 import { useResourceResolution, type ScopedResource } from '../../../resources/useSubOrExtResource';
 import { useTexture3D } from '../../../resources/useTexture3D';
 import { Node3D } from '../../base/node3d/Component';
+import { FogVolumeGizmo } from './Gizmo';
 import type { FogVolumeProperties } from './types';
 import type { Vector3 } from '../../../godot/math/vector';
 
@@ -111,10 +114,12 @@ export function FogVolume({ node, children }: NodeComponentProps) {
   }));
   // An animated size clamps as an authored one does.
   const size = animatedSize ? fogVolumeSize(animatedSize) : properties.size;
+  const gizmoVisible = useGizmoVisible();
 
   return (
     <Node3D node={node}>
       <FogVolumeElement size={[size.x, size.y, size.z]} shape={properties.shape} fill={fill} />
+      {gizmoVisible && <FogVolumeGizmo size={size} shape={properties.shape} />}
       {children}
     </Node3D>
   );

@@ -41,7 +41,7 @@ The right dock holds the scene tree above three tabs.
 - **Cameras:** view the scene through one of its Camera3D nodes.
 
 A click on a mesh in the viewport also selects it.
-Lights, cameras and particle emitters show a wireframe gizmo, because they have no geometry. An emitter shows its gizmo while it is selected.
+Lights, cameras and particle emitters show a wireframe gizmo, because they have no geometry. An emitter shows its gizmo while it is selected. A visibility notifier, a reflection probe, a VoxelGI and a fog volume show the lines of their box while they are selected.
 
 ## Fix a missing file
 
