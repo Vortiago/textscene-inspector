@@ -8,7 +8,7 @@
 import { warn } from '../../../logger.js';
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { materialPathInFile } from '../../materials/materialPathInFile.js';
-import type { LoadedSection } from '../../resourceSection.js';
+import { fileResources, type LoadedSection } from '../../resourceSection.js';
 import { resourceFilePath } from '../../subResourcePath.js';
 import {
   iterateSurfaceBlocks,
@@ -41,8 +41,9 @@ export function decodeArrayMesh({ file, properties }: LoadedSection, selfPath: s
   if (!surfacesRaw) return { surfaces: [] };
 
   const filePath = resourceFilePath(selfPath);
+  const resources = fileResources(file);
   return decodeSurfaces(surfacesRaw, selfPath, (block) => ({
-    materialPath: materialPathInFile(readMaterialRef(block), file, filePath) ?? undefined,
+    materialPath: materialPathInFile(readMaterialRef(block), resources, filePath) ?? undefined,
   }));
 }
 
