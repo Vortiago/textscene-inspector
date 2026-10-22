@@ -8,13 +8,14 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 
 async function matFor(scalars: StandardMaterial3DScalars | null): Promise<THREE.Material> {
   const r = await ReactThreeTestRenderer.create(
     <mesh>
-      <StandardMaterialSlot scalars={scalars} />
+      <StandardMaterialSlot bags={standardMaterialBags(scalars)} />
     </mesh>
   );
   return (r.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material;

@@ -7,15 +7,20 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { StandardMaterialSlot, type StandardMaterialSlotProps } from './StandardMaterialSlot';
+import { StandardMaterialSlot } from './StandardMaterialSlot';
+import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import type { ResolvedTextures } from '../../resources/materials/standardmaterial3d/types';
 
-type Maps = Omit<StandardMaterialSlotProps, 'scalars'>;
+type Maps = ResolvedTextures & { attach?: string };
 
-function slot(data: Record<string, string>, maps: Maps) {
+function slot(data: Record<string, string>, { attach, ...textures }: Maps) {
   return (
     <mesh>
-      <StandardMaterialSlot scalars={parseStandardMaterial3DScalars(data)} {...maps} />
+      <StandardMaterialSlot
+        bags={standardMaterialBags(parseStandardMaterial3DScalars(data), textures)}
+        attach={attach}
+      />
     </mesh>
   );
 }
@@ -35,17 +40,17 @@ async function rebuilds(
 }
 
 /**
- * Six of the eight slots. `anisotropyMap` is asserted separately: three gates it
+ * Six of the eight slots. `anisotropy_flowmap` is asserted separately: three gates it
  * on `HAS_ANISOTROPY` (`WebGLPrograms.js:147`), and only `MeshPhysicalMaterial`
  * declares `anisotropy` (`MeshPhysicalMaterial.js:353`). The heightmap is a uniform.
  */
 const TEXTURE_SLOTS: Array<keyof Maps> = [
-  'albedoMap',
-  'normalMap',
-  'roughnessMap',
-  'metalnessMap',
-  'emissiveMap',
-  'aoMap',
+  'albedo_texture',
+  'normal_texture',
+  'roughness_texture',
+  'metallic_texture',
+  'emission_texture',
+  'ao_texture',
 ];
 
 const ALPHA = { transparency: '1' };
@@ -71,7 +76,7 @@ describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves',
 
   it('keeps the material when a heightmap arrives, which only rebinds a uniform', async () => {
     const heightmap = { heightmap_enabled: 'true' };
-    expect(await rebuilds(heightmap, heightmap, {}, { heightMap: new THREE.Texture() })).toBe(false);
+    expect(await rebuilds(heightmap, heightmap, {}, { heightmap_texture: new THREE.Texture() })).toBe(false);
   });
 
   it.each([
@@ -91,7 +96,9 @@ describe('<StandardMaterialSlot> rebuilds when a baked program parameter moves',
     // The real hazard `HAS_ANISOTROPYMAP` (`:147`) describes: the physical
     // branch is already up, `anisotropy > 0`, and the flowmap resolves late.
     const anisotropic = { anisotropy_enabled: 'true', anisotropy: '0.5' };
-    expect(await rebuilds(anisotropic, anisotropic, {}, { anisotropyMap: new THREE.Texture() })).toBe(true);
+    expect(await rebuilds(anisotropic, anisotropic, {}, { anisotropy_flowmap: new THREE.Texture() })).toBe(
+      true
+    );
   });
 
   it('unshaded (MeshBasicMaterial) keys the same composite', async () => {
@@ -129,33 +136,33 @@ describe('<StandardMaterialSlot> keeps the compiled material for a plain uniform
     // (`MeshPhysicalMaterial.js:353`), so `HAS_ANISOTROPY` is false and the slot
     // (`WebGLPrograms.js:147`) cannot be a program input here. Crossing zero
     // switches the element type, which remounts on its own.
-    expect(await rebuilds({}, {}, {}, { anisotropyMap: new THREE.Texture() })).toBe(false);
+    expect(await rebuilds({}, {}, {}, { anisotropy_flowmap: new THREE.Texture() })).toBe(false);
   });
 
   it('a texture slot swapping IDENTITY is presence-unchanged', async () => {
     // three bakes `USE_MAP`, not which texture, so a fresh material would waste a
     // compiled program on a uniform assignment.
-    const first = { albedoMap: new THREE.Texture() };
-    const second = { albedoMap: new THREE.Texture() };
+    const first = { albedo_texture: new THREE.Texture() };
+    const second = { albedo_texture: new THREE.Texture() };
     expect(await rebuilds({}, {}, first, second)).toBe(false);
   });
 });
 
 describe('<StandardMaterialSlot> keeps ao_light_affect a uniform', () => {
-  const aoMap = new THREE.Texture();
+  const aoTexture = new THREE.Texture();
   const lightAffect = (value: string) => ({ ao_enabled: 'true', ao_light_affect: value });
 
   it('keeps the material when only the light affect moves', async () => {
-    expect(await rebuilds(lightAffect('0'), lightAffect('1'), { aoMap })).toBe(false);
+    expect(await rebuilds(lightAffect('0'), lightAffect('1'), { ao_texture: aoTexture })).toBe(false);
   });
 
   it('feeds the moved light affect to the compiled uniform', async () => {
-    const renderer = await ReactThreeTestRenderer.create(slot(lightAffect('0'), { aoMap }));
+    const renderer = await ReactThreeTestRenderer.create(slot(lightAffect('0'), { ao_texture: aoTexture }));
     const material = (renderer.scene.findByType('Mesh').instance as unknown as THREE.Mesh)
       .material as THREE.Material;
     const shader = { vertexShader: '', fragmentShader: '', uniforms: {} as Record<string, THREE.IUniform> };
     material.onBeforeCompile(shader as THREE.WebGLProgramParametersWithUniforms, undefined as never);
-    await renderer.update(slot(lightAffect('1'), { aoMap }));
+    await renderer.update(slot(lightAffect('1'), { ao_texture: aoTexture }));
     expect(shader.uniforms.godotAoLightAffect!.value).toBe(1);
   });
 });
@@ -176,13 +183,15 @@ describe('<StandardMaterialSlot> remounts leave the bound textures alone', () =>
   // The texture hooks own each map. Fiber disposes only the unmounted material, and
   // `Material.dispose()` frees no texture, so a remount re-uploads nothing.
   it('disposes no texture when a moved `attach` and a program input remount the material', async () => {
-    const albedoMap = new THREE.Texture();
+    const albedoTexture = new THREE.Texture();
     let disposals = 0;
-    albedoMap.addEventListener('dispose', () => disposals++);
+    albedoTexture.addEventListener('dispose', () => disposals++);
 
-    const renderer = await ReactThreeTestRenderer.create(slot({}, { albedoMap, attach: 'material' }));
-    await renderer.update(slot({}, { albedoMap, attach: 'material-0' }));
-    await renderer.update(slot(ALPHA, { albedoMap, attach: 'material-0' }));
+    const renderer = await ReactThreeTestRenderer.create(
+      slot({}, { albedo_texture: albedoTexture, attach: 'material' })
+    );
+    await renderer.update(slot({}, { albedo_texture: albedoTexture, attach: 'material-0' }));
+    await renderer.update(slot(ALPHA, { albedo_texture: albedoTexture, attach: 'material-0' }));
 
     expect(disposals).toBe(0);
   });

@@ -9,12 +9,12 @@ import { act, renderHook } from '@testing-library/react';
 import type { TscnInternalResource } from '../../parser/types';
 import type { ResourceLoader } from '../../resources/ResourceLoader';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { resetProceduralTextures } from '../../resources/textures/proceduralBuilds';
 import { fakeJobRunner } from '../../workers/fakeJobRunner.testkit';
 import { pendingMapStandIn } from './pendingMapStandIn';
-import { useMaterialTextures } from './SurfaceMaterialSlot';
+import { inlineSource, standardMaterialResource, unfadedProps } from './surfaceMaterial.testkit';
+import { useSurfaceMaterial } from './useSurfaceMaterial';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
 
 function scene(seed: number): TscnInternalResource[] {
@@ -34,7 +34,7 @@ function scene(seed: number): TscnInternalResource[] {
   ];
 }
 
-const SCALARS = parseStandardMaterial3DScalars({
+const MATERIAL = standardMaterialResource({
   albedo_texture: 'SubResource("NoiseTexture2D_a")',
   emission_enabled: 'true',
   emission_texture: 'SubResource("GradientTexture2D_a")',
@@ -55,16 +55,12 @@ function renderMaterial(tiles = false) {
   // The hook reads this on each render, so an edit swaps it and re-renders.
   let resources = scene(1);
   const uploads = fakeTiledUploads();
-  // The material's own tables, as `useMaterial` hands them over, whatever its file.
-  const hook = renderHook(
-    () => useMaterialTextures(SCALARS, { internalResources: resources, externalResources: [] }),
-    {
-      wrapper: ({ children }: { children: ReactNode }) => {
-        const tree = <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
-        return tiles ? <uploads.wrapper>{tree}</uploads.wrapper> : tree;
-      },
-    }
-  );
+  const hook = renderHook(() => useSurfaceMaterial(inlineSource(MATERIAL, resources)), {
+    wrapper: ({ children }: { children: ReactNode }) => {
+      const tree = <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>;
+      return tiles ? <uploads.wrapper>{tree}</uploads.wrapper> : tree;
+    },
+  });
   const edit = (seed: number) => {
     resources = scene(seed);
     hook.rerender();
@@ -76,13 +72,13 @@ afterEach(() => {
   resetProceduralTextures();
 });
 
-describe('useMaterialTextures with procedural slots', () => {
+describe('useSurfaceMaterial with procedural slots', () => {
   it('binds a gradient at once and a stand-in in a building noise slot', () => {
     const { result, requested } = renderMaterial();
 
-    expect(result.current.maps.emissiveMap).toBeDefined();
-    expect(result.current.maps.albedoMap).toBe(pendingMapStandIn('albedo_texture'));
-    expect(result.current.isUnresolved).toBe(false);
+    expect(unfadedProps(result.current).emissiveMap).toBeDefined();
+    expect(unfadedProps(result.current).map).toBe(pendingMapStandIn('albedo_texture'));
+    expect(result.current.bags).not.toBeNull();
     expect(requested).toEqual([]);
   });
 
@@ -92,7 +88,7 @@ describe('useMaterialTextures with procedural slots', () => {
     runs[0]?.complete();
     await flush();
 
-    expect((result.current.maps.albedoMap?.image as { width: number } | undefined)?.width).toBe(4);
+    expect((unfadedProps(result.current).map?.image as { width: number } | undefined)?.width).toBe(4);
   });
 
   it('keeps the old noise map through an edit until the new one lands', async () => {
@@ -100,15 +96,15 @@ describe('useMaterialTextures with procedural slots', () => {
     await flush();
     runs[0]?.complete();
     await flush();
-    const before = result.current.maps.albedoMap?.image;
+    const before = unfadedProps(result.current).map?.image;
 
     edit(2);
     await flush();
-    expect(result.current.maps.albedoMap?.image).toBe(before);
+    expect(unfadedProps(result.current).map?.image).toBe(before);
 
     runs[1]?.complete();
     await flush();
-    expect(result.current.maps.albedoMap?.image).not.toBe(before);
+    expect(unfadedProps(result.current).map?.image).not.toBe(before);
   });
 
   it('keeps drawing the old noise map while the new one uploads in bands', async () => {
@@ -116,26 +112,26 @@ describe('useMaterialTextures with procedural slots', () => {
     await flush();
     runs[0]?.complete();
     await flush();
-    expect(result.current.maps.albedoMap).toBe(pendingMapStandIn('albedo_texture'));
+    expect(unfadedProps(result.current).map).toBe(pendingMapStandIn('albedo_texture'));
     expect(uploads.length).toBeGreaterThan(0);
     await act(async () => {
       uploads.forEach((upload) => upload.finish(true));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    const before = result.current.maps.albedoMap;
+    const before = unfadedProps(result.current).map;
     expect(before).toBeDefined();
 
     edit(2);
     await flush();
     runs[1]?.complete();
     await flush();
-    expect(result.current.maps.albedoMap).toBe(before);
+    expect(unfadedProps(result.current).map).toBe(before);
 
     await act(async () => {
       uploads.forEach((upload) => upload.finish(true));
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
-    expect(result.current.maps.albedoMap).not.toBe(before);
+    expect(unfadedProps(result.current).map).not.toBe(before);
   });
 
   it('leaves the slot empty once a build cannot be allocated', async () => {
@@ -144,6 +140,6 @@ describe('useMaterialTextures with procedural slots', () => {
     runs[0]?.reject(new RangeError('Array buffer allocation failed'));
     await flush();
 
-    expect(result.current.maps.albedoMap).toBeUndefined();
+    expect(unfadedProps(result.current).map).toBeNull();
   });
 });

@@ -10,12 +10,12 @@ import { act, renderHook } from '@testing-library/react';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseTresFile } from '../../parser/parsedResource';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { resetProceduralTextures } from '../../resources/textures/proceduralBuilds';
 import { defaultWhiteTexture } from './defaultWhiteTexture';
 import { pendingMapStandIn } from './pendingMapStandIn';
-import { useMaterialTextures } from './SurfaceMaterialSlot';
+import { inlineMaterial, unfadedProps } from './surfaceMaterial.testkit';
+import { useSurfaceMaterial } from './useSurfaceMaterial';
 
 const SHEET_PATH = 'res://sheet.png';
 const TRES_PATH = 'res://ramp.tres';
@@ -61,15 +61,12 @@ function renderMaterial(
 ) {
   const fake = createFakeResourceLoader();
   seed?.(fake);
-  const scalars = parseStandardMaterial3DScalars(properties);
-  const hook = renderHook(
-    () => useMaterialTextures(scalars, { internalResources: INTERNAL, externalResources: EXTERNAL }),
-    {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
-      ),
-    }
-  );
+  const source = inlineMaterial(properties, INTERNAL, EXTERNAL);
+  const hook = renderHook(() => useSurfaceMaterial(source), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+    ),
+  });
   return { ...hook, fake };
 }
 
@@ -81,13 +78,13 @@ afterEach(() => {
   resetProceduralTextures();
 });
 
-describe('useMaterialTextures with a wrapped or saved texture', () => {
+describe('useSurfaceMaterial with a wrapped or saved texture', () => {
   it("binds an AtlasTexture's whole sheet, uncropped", () => {
     const { result, fake } = renderMaterial({ albedo_texture: 'SubResource("AtlasTexture_cell")' });
     const loaded = sheet();
     act(() => fake.textures._resolve(SHEET_PATH, loaded));
 
-    const map = result.current.maps.albedoMap!;
+    const map = unfadedProps(result.current).map!;
     expect(map.source).toBe(loaded.source);
     expect(map.image).toMatchObject({ width: 4, height: 4 });
   });
@@ -95,15 +92,14 @@ describe('useMaterialTextures with a wrapped or saved texture', () => {
   it("binds an AtlasTexture's procedural sheet, uncropped", () => {
     const { result } = renderMaterial({ albedo_texture: 'SubResource("AtlasTexture_gradient")' });
 
-    expect(result.current.maps.albedoMap?.image).toMatchObject({ width: 8, height: 8 });
+    expect(unfadedProps(result.current).map?.image).toMatchObject({ width: 8, height: 8 });
   });
 
   it("binds Godot's white default for a CanvasTexture, whose RID names no texture", () => {
     const { result, fake } = renderMaterial({ albedo_texture: 'SubResource("CanvasTexture_a")' });
     act(() => fake.textures._resolve(SHEET_PATH, sheet()));
 
-    expect(result.current.maps.albedoMap).toBe(defaultWhiteTexture());
-    expect(result.current.isUnresolved).toBe(false);
+    expect(unfadedProps(result.current).map).toBe(defaultWhiteTexture());
   });
 
   it("binds Godot's white default in an emission slot too, whatever its hint (edge case)", () => {
@@ -112,14 +108,13 @@ describe('useMaterialTextures with a wrapped or saved texture', () => {
       emission_texture: 'SubResource("CanvasTexture_a")',
     });
 
-    expect(result.current.maps.emissiveMap).toBe(defaultWhiteTexture());
+    expect(unfadedProps(result.current).emissiveMap).toBe(defaultWhiteTexture());
   });
 
   it('binds a stand-in while a .tres texture loads', () => {
     const { result } = renderMaterial({ albedo_texture: 'ExtResource("2_tres")' });
 
-    expect(result.current.maps.albedoMap).toBe(pendingMapStandIn('albedo_texture'));
-    expect(result.current.isUnresolved).toBe(false);
+    expect(unfadedProps(result.current).map).toBe(pendingMapStandIn('albedo_texture'));
   });
 
   it('binds the texture a .tres saves', () => {
@@ -127,14 +122,13 @@ describe('useMaterialTextures with a wrapped or saved texture', () => {
       fake.resources.seed(TRES_PATH, GRADIENT_TRES)
     );
 
-    expect(result.current.maps.albedoMap?.image).toMatchObject({ width: 4, height: 4 });
+    expect(unfadedProps(result.current).map?.image).toMatchObject({ width: 4, height: 4 });
   });
 
-  it("reports the surface unresolved once an AtlasTexture's sheet fails (error case)", () => {
+  it("derives no bags once an AtlasTexture's sheet fails (error case)", () => {
     const { result, fake } = renderMaterial({ albedo_texture: 'SubResource("AtlasTexture_cell")' });
     act(() => fake.textures._fail(SHEET_PATH, 'not found'));
 
-    expect(result.current.maps.albedoMap).toBeUndefined();
-    expect(result.current.isUnresolved).toBe(true);
+    expect(result.current.bags).toBeNull();
   });
 });
