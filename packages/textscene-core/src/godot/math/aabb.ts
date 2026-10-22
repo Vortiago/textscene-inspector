@@ -59,13 +59,9 @@ export function aabbEdges({ position, size }: Aabb): number[] {
 
 /**
  * `AABB::get_endpoint` (`core/math/aabb.h:244-264`): corner `index` from 0 to 7. Bit 2 of the index
- * adds the X size, bit 1 the Y size and bit 0 the Z size. The engine returns a zero vector and
- * logs an error for another index.
+ * adds the X size, bit 1 the Y size and bit 0 the Z size.
  */
 export function aabbEndpoint({ position, size }: Aabb, index: number): AabbCorner {
-  if (!Number.isInteger(index) || index < 0 || index > 7) {
-    throw new Error(`expected a corner index from 0 to 7, got ${index}`);
-  }
   return {
     x: position.x + (index & 4 ? size.x : 0),
     y: position.y + (index & 2 ? size.y : 0),

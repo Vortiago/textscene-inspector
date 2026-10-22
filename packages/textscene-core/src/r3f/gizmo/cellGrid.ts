@@ -1,6 +1,6 @@
 /**
- * The cell grid inside the box of a VoxelGI or GPUParticlesCollisionSDF3D gizmo: on each axis, the
- * planes a cell apart, each drawn as four segments across the other two axes.
+ * The cell grid inside the box of a VoxelGI gizmo: on each axis, the planes a cell apart, each drawn
+ * as four segments across the other two axes.
  */
 
 import { aabbLongestAxisSize, type Aabb } from '../../godot/math/aabb';
@@ -9,7 +9,7 @@ const AXES = ['x', 'y', 'z'] as const;
 
 /**
  * Flat `xyz` segment ends of the planes `box` has for `subdivisions` cells along its longest axis
- * (`voxel_gi_gizmo_plugin.cpp:117-153`, `gpu_particles_collision_3d_gizmo_plugin.cpp:265-303`).
+ * (`voxel_gi_gizmo_plugin.cpp:117-153`).
  * A plane past the size of a shorter axis is not drawn.
  */
 export function cellGridLines(box: Aabb, subdivisions: number): number[] {

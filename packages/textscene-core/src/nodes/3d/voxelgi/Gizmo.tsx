@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import { centredAabb } from '../../../godot/math/aabb';
-import { VOXEL_GI_SUBDIVISIONS } from '../../../godot/scene/voxelGi';
+import { voxelGiCells } from '../../../godot/scene/voxelGi';
 import { AabbGizmo } from '../../../r3f/components/AabbGizmo';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { cellGridLines } from '../../../r3f/gizmo/cellGrid';
@@ -21,10 +21,7 @@ const GRID_ALPHA = 0.02;
 export function VoxelGIGizmo({ voxelGi }: { voxelGi: VoxelGIProperties }) {
   const { size, subdiv } = voxelGi;
   const box = useMemo(() => centredAabb(size), [size]);
-  const grid = useMemo(
-    () => new Float32Array(cellGridLines(box, VOXEL_GI_SUBDIVISIONS[subdiv]!)),
-    [box, subdiv]
-  );
+  const grid = useMemo(() => new Float32Array(cellGridLines(box, voxelGiCells(subdiv))), [box, subdiv]);
   return (
     <>
       <AabbGizmo aabb={box} color={GIZMO_COLOR} />

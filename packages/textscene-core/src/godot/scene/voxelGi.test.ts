@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { VOXEL_GI_DEFAULTS, VOXEL_GI_SUBDIVISIONS, voxelGiSize } from './voxelGi';
+import { VOXEL_GI_DEFAULTS, voxelGiCells, voxelGiSize } from './voxelGi';
 
 describe('VOXEL_GI_DEFAULTS', () => {
   it('holds the constructor values: 20 on each side, and 128 subdivisions', () => {
     expect(VOXEL_GI_DEFAULTS).toEqual({ size: { x: 20, y: 20, z: 20 }, subdiv: 1 });
-    expect(VOXEL_GI_SUBDIVISIONS[VOXEL_GI_DEFAULTS.subdiv]).toBe(128);
+    expect(voxelGiCells(VOXEL_GI_DEFAULTS.subdiv)).toBe(128);
   });
 });
 
-describe('VOXEL_GI_SUBDIVISIONS', () => {
-  it('holds the cell count of each enum value, as the gizmo reads them', () => {
-    expect(VOXEL_GI_SUBDIVISIONS).toEqual([64, 128, 256, 512]);
+describe('voxelGiCells', () => {
+  it('gives the cell count of each enum value, as the gizmo reads them', () => {
+    expect([0, 1, 2, 3].map(voxelGiCells)).toEqual([64, 128, 256, 512]);
   });
 });
 

@@ -2,17 +2,14 @@
 
 import { aabbEdges, aabbEndpoint, centredAabb, type Aabb } from '../../../godot/math/aabb';
 import type { Vector3 } from '../../../godot/math/vector';
+import type { ReflectionProbeProperties } from './types';
 
 const AXES = ['x', 'y', 'z'] as const;
 
 /** Half the length of each segment of the origin cross (`reflection_probe_gizmo_plugin.cpp:193-197`). */
 const ORIGIN_CROSS_HALF_LENGTH = 0.25;
 
-interface ReflectionProbeGizmoInput {
-  size: Vector3;
-  blendDistance: number;
-  originOffset: Vector3;
-}
+type ReflectionProbeGizmoInput = Pick<ReflectionProbeProperties, 'size' | 'blendDistance' | 'originOffset'>;
 
 /** Flat `xyz` segment ends, in two sets that the gizmo draws at two opacities. */
 interface ReflectionProbeGizmoLines {

@@ -40,6 +40,11 @@ export function vector3Cross(a: Components3, b: Components3): [number, number, n
   ];
 }
 
+/** `Vector3::maxf` (`core/math/vector3.h:105-107`): each component raised to at least `floor`. */
+export function vector3Maxf({ x, y, z }: Vector3, floor: number): Vector3 {
+  return { x: Math.max(x, floor), y: Math.max(y, floor), z: Math.max(z, floor) };
+}
+
 /** `Vector3::length` (`core/math/vector3.h:532-538`) in `real_t` float. */
 export function vector3Length(x: number, y: number, z: number): number {
   return f(Math.sqrt(vector3LengthSquared(x, y, z)));

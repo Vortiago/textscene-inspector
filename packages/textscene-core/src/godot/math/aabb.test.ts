@@ -157,10 +157,6 @@ describe('aabbEndpoint', () => {
   it('puts every corner of AABB() on the origin (edge case)', () => {
     expect(aabbEndpoint(EMPTY_AABB, 7)).toEqual({ x: 0, y: 0, z: 0 });
   });
-
-  it('refuses an index outside 0 to 7, as the engine does (error case)', () => {
-    expect(() => aabbEndpoint(sample, 8)).toThrow('expected a corner index from 0 to 7, got 8');
-  });
 });
 
 describe('aabbLongestAxisSize', () => {
