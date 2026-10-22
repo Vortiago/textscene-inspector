@@ -1,7 +1,7 @@
 # Releasing
 
 Push a `vscode-v<version>` (extension), `linter-v<version>` (linter), `lsp-v<version>`
-(language server) or `tscn-v<version>` (parser) tag on `main`:
+(language server), `tscn-v<version>` (parser) or `renderer-v<version>` (renderer) tag on `main`:
 
 ```bash
 git fetch origin && git tag vscode-v1.2.3 origin/main && git push origin vscode-v1.2.3
@@ -29,10 +29,10 @@ node scripts/ci/releaseNotes.mjs --changelog vscode-v1.2.3
 
 The `CHANGELOG.md` in the repository is a stub. Do not commit a generated one.
 
-npm takes `@textscene/linter`, `@textscene/lsp` and `@textscene/tscn` from the `npm` job in
-`.github/workflows/release.yml`, with no token. Each package's trusted publisher on npmjs.com
-names the repository `Vortiago/textscene-inspector`, the workflow `release.yml` and the
-environment `release`. npm offers that setting only for a package that already exists, so a
+npm takes `@textscene/linter`, `@textscene/lsp`, `@textscene/tscn` and `@textscene/renderer` from
+the `npm` job in `.github/workflows/release.yml`, with no token. Each package's trusted publisher
+on npmjs.com names the repository `Vortiago/textscene-inspector`, the workflow `release.yml` and
+the environment `release`. npm offers that setting only for a package that already exists, so a
 package's first version is published by hand with `npm publish <tarball> --access public`.
 
 `@textscene/tscn` is core's parser bundled into one file, so core stays private.
@@ -47,3 +47,18 @@ git checkout package.json
 
 Add the trusted publisher on npmjs.com. Push `tscn-v0.2.0` or a later tag for each release after
 that.
+
+`@textscene/renderer` is core's react-three-fiber renderer bundled into one file, with its styles
+inside. React, three.js and their ecosystem are peer dependencies, so core stays private. Build
+and pack it for the first publish, then restore the manifest:
+
+```bash
+pnpm build:renderer
+cd apps/textscene-renderer && npm pkg set version=0.1.0 && pnpm pack
+npm publish textscene-renderer-0.1.0.tgz --access public
+git checkout package.json
+```
+
+Add the trusted publisher on npmjs.com. Push `renderer-v0.2.0` or a later tag for each release
+after that. `pnpm test:renderer-consumer` installs the packed tarball into a plain Vite app and
+renders a scene. CI runs it on every pull request.

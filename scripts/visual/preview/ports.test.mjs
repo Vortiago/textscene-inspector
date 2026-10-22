@@ -10,6 +10,7 @@ const HARNESSES = [
   'skyLayersGpu',
   'e2eWeb',
   'uniformVectors',
+  'rendererConsumer',
   'showcase',
 ];
 

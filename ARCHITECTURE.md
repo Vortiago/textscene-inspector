@@ -20,6 +20,7 @@ completion. A host supplies files and a place to draw or edit.
 | `apps/textscene-lsp` | `tscn-lsp` language server for any LSP client | esbuild |
 | `apps/textscene-linter` | `tscn-lint` CLI | esbuild |
 | `apps/textscene-tscn` | `@textscene/tscn`: core's parser as one npm bundle | esbuild |
+| `apps/textscene-renderer` | `@textscene/renderer`: core's renderer as one npm bundle, with React and three.js as peers | esbuild |
 
 Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
 `pnpm-workspace.yaml` catalog holds every shared dependency version.
