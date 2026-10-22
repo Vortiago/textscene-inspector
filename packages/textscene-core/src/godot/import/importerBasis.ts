@@ -6,6 +6,7 @@
  */
 
 import { normalizedVector3, vector3Dot } from '../math/vector.js';
+import { basisInvert } from '../math/basis.js';
 
 /** A `Basis`'s nine `real_t` components, row-major: `rows[i][j]` is at `3i + j`. */
 export type Basis32 = readonly number[];
@@ -60,7 +61,7 @@ export function unwrapSpace(scale: readonly number[]): {
   transformNormals: (xyz: Float32Array) => void;
 } {
   const basis = rowScaledBasis(IDENTITY_BASIS, scale);
-  const normalBasis = transposed(inverse(basis));
+  const normalBasis = transposed(basisInvert(basis));
   return {
     transformPositions: (xyz) => {
       for (let i = 0; i < xyz.length; i += 3) {
@@ -85,27 +86,6 @@ function xform(basis: Basis32, xyz: Float32Array, at: number): Triple {
 
 function rowDot(basis: Basis32, row: number, v: Triple): number {
   return f(f(f(basis[3 * row]! * v[0]) + f(basis[3 * row + 1]! * v[1])) + f(basis[3 * row + 2]! * v[2]));
-}
-
-/** `Basis::invert` (`basis.cpp:39-54`), cofactors over the determinant. */
-function inverse(basis: Basis32): Basis32 {
-  const at = (row: number, col: number): number => basis[3 * row + col]!;
-  const cofactor = (r1: number, c1: number, r2: number, c2: number): number =>
-    f(f(at(r1, c1) * at(r2, c2)) - f(at(r1, c2) * at(r2, c1)));
-  const co = [cofactor(1, 1, 2, 2), cofactor(1, 2, 2, 0), cofactor(1, 0, 2, 1)];
-  const det = f(f(f(at(0, 0) * co[0]!) + f(at(0, 1) * co[1]!)) + f(at(0, 2) * co[2]!));
-  const s = f(1 / det);
-  return [
-    f(co[0]! * s),
-    f(cofactor(0, 2, 2, 1) * s),
-    f(cofactor(0, 1, 1, 2) * s),
-    f(co[1]! * s),
-    f(cofactor(0, 0, 2, 2) * s),
-    f(cofactor(0, 2, 1, 0) * s),
-    f(co[2]! * s),
-    f(cofactor(0, 1, 2, 0) * s),
-    f(cofactor(0, 0, 1, 1) * s),
-  ];
 }
 
 function transposed(basis: Basis32): Basis32 {
