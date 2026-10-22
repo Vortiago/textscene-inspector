@@ -30,11 +30,11 @@ export interface CsgMesh extends ResolvableResource {
 
 /** The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. */
 export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
-  const scoped = resolveReference(meshRef, ctx, ctx.file);
+  const scoped = resolveReference(meshRef, ctx, ctx.loadedFile);
   if (!scoped) return null;
   const path = referencedFilePath(meshRef, ctx);
-  const parsed = path ? ctx.file(path) : undefined;
-  return { ...scoped, loadedFile: ctx.file, file: path && parsed ? { path, parsed } : null };
+  const parsed = path ? ctx.loadedFile(path) : undefined;
+  return { ...scoped, loadedFile: ctx.loadedFile, file: path && parsed ? { path, parsed } : null };
 }
 
 /**

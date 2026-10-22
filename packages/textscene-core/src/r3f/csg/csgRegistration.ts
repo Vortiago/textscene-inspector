@@ -11,7 +11,7 @@ import type { CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgGeometryContext extends SceneResources {
   /** A `.tres` the shape's `readsFiles` named, or undefined while it loads or after it failed. */
-  file: LoadedFile;
+  loadedFile: LoadedFile;
 }
 
 /**
@@ -47,7 +47,7 @@ export interface CsgShapeRegistration {
    */
   geometryKey?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => string;
   /**
-   * The `.tres` paths `geometry` reads through `ctx.file`, which load before it can build. A path
+   * The `.tres` paths `geometry` reads through `ctx.loadedFile`, which load before it can build. A path
    * that only a loaded file names is listed once `loadedFile` holds that file.
    */
   readsFiles?: (

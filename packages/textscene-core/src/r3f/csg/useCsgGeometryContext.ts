@@ -25,7 +25,7 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
     [root, pools]
   );
   const { loadedFile, isLoading } = useLoadedFiles(plan);
-  const context = useMemo((): CsgGeometryContext => ({ ...pools, file: loadedFile }), [pools, loadedFile]);
+  const context = useMemo((): CsgGeometryContext => ({ ...pools, loadedFile }), [pools, loadedFile]);
   return useMemo(() => ({ context, isLoading }), [context, isLoading]);
 }
 

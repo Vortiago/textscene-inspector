@@ -202,7 +202,7 @@ describe('csgMesh3DGeometry: mesh sources', () => {
   it('builds nothing for a PointMesh, whose surface is points', () => {
     expect(build('SubResource("Point")')).toBeNull();
     expect(
-      meshSurfaces({ resource: INLINE_POINT, resources: CTX, loadedFile: CTX.file, file: null })
+      meshSurfaces({ resource: INLINE_POINT, resources: CTX, loadedFile: CTX.loadedFile, file: null })
     ).toEqual([]);
   });
 

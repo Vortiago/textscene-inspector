@@ -5,7 +5,7 @@ import { parseTresFile } from '../../../parser/parsedResource';
 import { subResource } from '../../../testing/subResource';
 import { meshContentKey } from '../meshSource';
 import type { ResolvableResource } from '../../scopedResource';
-import { isPrimitiveMeshType, primitiveMeshFiles, primitiveMeshSurface } from './surface';
+import { isPrimitiveMeshType, primitiveMeshFiles, primitiveMeshSurface, referencesKey } from './surface';
 import {
   COARSE_TUBE,
   curveEndingAt,
@@ -204,6 +204,21 @@ describe('meshContentKey', () => {
     expect(meshContentKey(scopedMesh(sphere({ material: 'SubResource("m")' }), material))).toBe(
       meshContentKey(scopedMesh(sphere({ material: 'SubResource("m")' })))
     );
+  });
+});
+
+describe('referencesKey', () => {
+  it('reads the resources of a mesh object once, so its build and its geometry key share one read', () => {
+    const curve = subResource('Curve', 'c', curveEndingAt('0.2'));
+    const mesh = scopedMesh(
+      { id: 'tube', type: 'TubeTrailMesh', data: { ...COARSE_TUBE, curve: 'SubResource("c")' } },
+      curve
+    );
+    const first = referencesKey(mesh);
+
+    curve.data = curveEndingAt('0.4');
+
+    expect(referencesKey(mesh)).toBe(first);
   });
 });
 

@@ -124,11 +124,22 @@ export function primitiveMeshFiles({ resource, resources }: ScopedResource): str
 }
 
 /**
+ * Written only by `referencesKey`: the key of each mesh object. A mesh object holds its resources
+ * and its file lookup for good, so its key never changes, and one build reads it once.
+ */
+const referencesKeys = new WeakMap<ResolvableResource, string>();
+
+/**
  * A key over the content of each resource the mesh's build reads, empty for a type that reads
  * none. A resource that is not there, or not loaded, is part of the key as missing.
  */
 export function referencesKey(mesh: ResolvableResource): string {
-  const { resource, resources, loadedFile } = mesh;
+  let key = referencesKeys.get(mesh);
+  if (key === undefined) referencesKeys.set(mesh, (key = readReferencesKey(mesh)));
+  return key;
+}
+
+function readReferencesKey({ resource, resources, loadedFile }: ResolvableResource): string {
   return referencesOf(resource.type)
     .map((property) => {
       const named = resolveReference(resource.data[property], resources, loadedFile);
