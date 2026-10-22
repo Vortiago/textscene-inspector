@@ -98,8 +98,10 @@ describe('parallaxInjection', () => {
     expect(shader.fragmentShader).toContain('#define vAoMapUv ( vAoMapUv + godotParallaxShift )');
   });
 
-  it("leaves a shader without three's map anchor unshifted (error case)", () => {
-    expect(patched(HEIGHTMAP, HEIGHTMAP, 'void main() {}').fragmentShader).toBe('void main() {}');
+  it("throws, naming the anchor, for a shader without three's declarations (error case)", () => {
+    expect(() => patched(HEIGHTMAP, HEIGHTMAP, 'void main() {}')).toThrow(
+      'expected the fragment shader of the parallax to hold "#include <clipping_planes_pars_fragment>" once'
+    );
   });
 
   it("writes the heightmap's coordinate under its texture's transform", () => {

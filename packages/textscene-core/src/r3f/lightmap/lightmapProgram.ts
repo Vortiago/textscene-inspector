@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
+import { editedShader } from '../shaderPatch/chunkPatch';
 import type { LightmapAssignment } from './sceneLightmaps';
 import { bicubicFilterGlsl } from '../../utils/bicubicFilterGlsl';
 
@@ -153,12 +154,22 @@ const LIGHTMAP_READ: ProgramInjection = {
   cacheKey: 'godot-lightmap-read',
   onBeforeCompile(shader) {
     Object.assign(shader.uniforms, lightmapUniforms(this));
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <uv_pars_vertex>', LIGHTMAP_UV_PARS)
-      .replace('#include <uv_vertex>', LIGHTMAP_UV);
-    shader.fragmentShader = shader.fragmentShader
-      .replace(PARS_ANCHOR, LIGHTMAP_PARS)
-      .replace(MAPS_ANCHOR, LIGHTMAP_AMBIENT);
+    shader.vertexShader = editedShader(
+      shader.vertexShader,
+      [
+        { three: '#include <uv_pars_vertex>', godot: LIGHTMAP_UV_PARS },
+        { three: '#include <uv_vertex>', godot: LIGHTMAP_UV },
+      ],
+      'the vertex shader of the lightmap read'
+    );
+    shader.fragmentShader = editedShader(
+      shader.fragmentShader,
+      [
+        { three: PARS_ANCHOR, godot: LIGHTMAP_PARS },
+        { three: MAPS_ANCHOR, godot: LIGHTMAP_AMBIENT },
+      ],
+      'the fragment shader of the lightmap read'
+    );
   },
 };
 

@@ -16,36 +16,46 @@ export type ShaderChunks = typeof THREE.ShaderChunk;
 /** The soft shadow filter's own function, which marks a chunk that holds the filter. */
 export const FILTER_PCF = 'float godotPcf(';
 
-type Uniforms = Record<string, unknown>;
+type Table = Record<string, unknown>;
 
 /** Makes `target` hold exactly the keys and values of `source`. */
-function replaceContents(target: Uniforms, source: Uniforms): void {
+function replaceContents(target: Table, source: Table): void {
   for (const key of Object.keys(target)) if (!(key in source)) delete target[key];
   Object.assign(target, source);
 }
 
+/** Whether a `UniformsLib` entry is a group of uniforms, or a uniform of its own, as a patch adds. */
+function isTable(value: unknown): value is Table {
+  return typeof value === 'object' && value !== null;
+}
+
 /**
- * Records every global a patch install writes: the chunks, each program's fragment shader and
- * uniforms, and `UniformsLib` with its light and fog groups. The returned call puts them back.
+ * Records every global a patch install can write: the chunks, the programs of `ShaderLib` with
+ * their sources and uniforms, and `UniformsLib` with each of its groups. The returned call puts
+ * them back, and removes what the install added.
  */
 export function snapshotShaderGlobals(): () => void {
   const chunks = { ...THREE.ShaderChunk };
+  const shaderLib = THREE.ShaderLib as unknown as Table;
+  const library = { ...shaderLib };
   const programs = Object.values(THREE.ShaderLib).map(
-    (program) => [program, program.fragmentShader, { ...program.uniforms }] as const
+    (program) => [program, program.vertexShader, program.fragmentShader, { ...program.uniforms }] as const
   );
-  const uniformsLib = THREE.UniformsLib as unknown as Uniforms;
-  const library = { ...uniformsLib };
-  const groups = [THREE.UniformsLib.lights, THREE.UniformsLib.fog].map(
-    (group) => [group as Uniforms, { ...group }] as const
-  );
+  const uniformsLib = THREE.UniformsLib as unknown as Table;
+  const uniforms = { ...uniformsLib };
+  const groups = Object.values(uniforms)
+    .filter(isTable)
+    .map((group) => [group, { ...group }] as const);
   return () => {
-    Object.assign(THREE.ShaderChunk, chunks);
-    for (const [program, fragmentShader, uniforms] of programs) {
+    replaceContents(THREE.ShaderChunk as unknown as Table, chunks);
+    replaceContents(shaderLib, library);
+    for (const [program, vertexShader, fragmentShader, programUniforms] of programs) {
+      program.vertexShader = vertexShader;
       program.fragmentShader = fragmentShader;
-      replaceContents(program.uniforms, uniforms);
+      replaceContents(program.uniforms, programUniforms);
     }
-    replaceContents(uniformsLib, library);
-    for (const [group, uniforms] of groups) replaceContents(group, uniforms);
+    replaceContents(uniformsLib, uniforms);
+    for (const [group, groupUniforms] of groups) replaceContents(group, groupUniforms);
   };
 }
 

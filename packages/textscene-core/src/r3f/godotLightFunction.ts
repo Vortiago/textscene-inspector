@@ -5,7 +5,12 @@
  * `scene_forward_clustered.glsl:2165`), where three r186 weights it by what the specular reflects.
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import {
+  applyChunkEdits,
+  editedShader,
+  installChunkPatch,
+  type ChunkEdit,
+} from './shaderPatch/chunkPatch.js';
 import { NORMAL_MAP_READ_MARK } from './materials/godotNormalMap.js';
 import { LIGHT_SIZE_MARK } from './lightSize/lightSizeChunk.js';
 import { LIGHT_SPECULAR_MARK } from './lightSpecular/lightSpecularChunk.js';
@@ -224,15 +229,20 @@ const THREE_IBL_RETRO_RADIANCE =
 
 /** The reflection line bent about Godot's direction. */
 const onGodotIBLDirection = (line: string) =>
-  line.replace('material.anisotropyB', 'GODOT_IBL_ANISOTROPIC_DIRECTION');
+  editedShader(
+    line,
+    [{ three: 'material.anisotropyB', godot: 'GODOT_IBL_ANISOTROPIC_DIRECTION' }],
+    'three’s anisotropic reflection line'
+  );
 
 /**
  * The anisotropic reflection also on Godot's roughness, which `godotIBLRadiance`
  * (`godotSkyLighting.ts`) reads as the isotropic one does.
  */
-const GODOT_IBL_RADIANCE = onGodotIBLDirection(THREE_IBL_RADIANCE).replace(
-  'material.roughness',
-  'material.godotRoughness'
+const GODOT_IBL_RADIANCE = editedShader(
+  onGodotIBLDirection(THREE_IBL_RADIANCE),
+  [{ three: 'material.roughness', godot: 'material.godotRoughness' }],
+  'three’s anisotropic reflection line'
 );
 
 type LightChunk = typeof CHUNK | typeof SETUP_CHUNK | typeof MAPS_CHUNK;

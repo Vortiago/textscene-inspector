@@ -11,6 +11,7 @@ import {
   stateInjectionKey,
   type ProgramInjection,
 } from '../materialProgramInputs';
+import { editedShader } from '../shaderPatch/chunkPatch';
 import { pointShadowSizeInjection } from './godotPoint';
 import { renderTargetMapInjection } from './renderTargetMap';
 
@@ -35,18 +36,29 @@ type DepthMaterial = (THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial) & {
 const SURFACE_ALPHA: ProgramInjection = {
   cacheKey: 'godot-surface-alpha',
   onBeforeCompile(shader) {
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\n#include <color_pars_vertex>')
-      .replace('#include <begin_vertex>', '#include <color_vertex>\n#include <begin_vertex>');
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        '#include <common>',
-        '#ifdef DISTANCE\nuniform float opacity;\n#endif\n#include <common>\n#include <color_pars_fragment>'
-      )
-      .replace(
-        '#include <map_fragment>',
-        'diffuseColor.a = opacity;\n#include <map_fragment>\n#include <color_fragment>'
-      );
+    shader.vertexShader = editedShader(
+      shader.vertexShader,
+      [
+        { three: '#include <common>', godot: '#include <common>\n#include <color_pars_vertex>' },
+        { three: '#include <begin_vertex>', godot: '#include <color_vertex>\n#include <begin_vertex>' },
+      ],
+      'the vertex shader of the surface alpha'
+    );
+    shader.fragmentShader = editedShader(
+      shader.fragmentShader,
+      [
+        {
+          three: '#include <common>',
+          godot:
+            '#ifdef DISTANCE\nuniform float opacity;\n#endif\n#include <common>\n#include <color_pars_fragment>',
+        },
+        {
+          three: '#include <map_fragment>',
+          godot: 'diffuseColor.a = opacity;\n#include <map_fragment>\n#include <color_fragment>',
+        },
+      ],
+      'the fragment shader of the surface alpha'
+    );
   },
 };
 

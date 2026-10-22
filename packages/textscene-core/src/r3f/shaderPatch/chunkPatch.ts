@@ -1,7 +1,7 @@
 /**
- * How this repository patches three's shader chunks: a pure function of the chunks' text, and one
+ * How this repository patches three's shader text: a pure function of the chunks' text, one
  * installer that writes its result into `THREE.ShaderChunk` once, for every program compiled after
- * the call.
+ * the call, and the helper that splices a program's own text at compile.
  */
 
 import * as THREE from 'three';
@@ -45,16 +45,38 @@ export function applyEdits(text: string, edits: readonly TextEdit[]): string | n
 }
 
 /**
- * three's chunk `name` as it stands now, the patches installed so far included, with `edit` applied.
- * It throws when three's text is missing or occurs more than once, so a three that lost the text
- * fails loudly, not with a silently unpatched read.
+ * `text` of the shader named `shader` with every edit applied in order. It throws when an edit's
+ * text is missing or occurs more than once, so a three that moved the text fails loudly, not with a
+ * silently unpatched program. Every splice of a program's text goes through this or `rewrittenShader`.
+ */
+export function editedShader(text: string, edits: readonly TextEdit[], shader: string): string {
+  let edited = text;
+  for (const edit of edits) {
+    const next = applyEdit(edited, edit);
+    if (next === null) throw new Error(`expected ${shader} to hold "${edit.three}" once, got:\n${edited}`);
+    edited = next;
+  }
+  return edited;
+}
+
+/**
+ * `text` with every match of `pattern` rewritten, and with no match left as it is. It serves a rule
+ * about a family of lines, not an anchor three must hold once, so a program without a match is no error.
+ */
+export function rewrittenShader(
+  text: string,
+  pattern: RegExp,
+  rewrite: (match: string, group: string) => string
+): string {
+  return text.replace(pattern, rewrite);
+}
+
+/**
+ * three's chunk `name` as it stands now, the patches installed so far included, with `edit` applied,
+ * as `editedShader`.
  */
 export function editedChunk(name: ChunkName, edit: TextEdit): string {
-  const chunk = THREE.ShaderChunk[name];
-  const edited = applyEdit(chunk, edit);
-  if (edited === null)
-    throw new Error(`expected three's ${name} to hold "${edit.three}" once, got:\n${chunk}`);
-  return edited;
+  return editedShader(THREE.ShaderChunk[name], [edit], `three's ${name}`);
 }
 
 /** The chunks with every edit applied in order, or null when one is missing, as `applyEdit`. */

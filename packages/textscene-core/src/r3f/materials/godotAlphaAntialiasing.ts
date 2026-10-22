@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
+import { editedShader } from '../shaderPatch/chunkPatch';
 import { recordedOn } from './recordedOnMaterial';
 import {
   turnsOnAlphaToCoverage,
@@ -168,12 +169,17 @@ export const GODOT_ALPHA_ANTIALIASING: ProgramInjection = {
     const { fragmentShader } = shader;
     if (!fragmentShader.includes(ALPHA_TEST_CHUNK) || !fragmentShader.includes(ALPHA_HASH_CHUNK)) return;
     Object.assign(shader.uniforms, edgeUniformsOf(this));
-    shader.fragmentShader = shader.fragmentShader
-      .replace(ALPHA_TEST_PARS_CHUNK, `${ALPHA_TEST_PARS_CHUNK}\n${EDGE_FUNCTIONS}`)
-      .replace(ALPHA_TEST_CHUNK, SCISSOR_CUT)
-      .replace(
-        ALPHA_HASH_CHUNK,
-        `${ALPHA_HASH_CHUNK}\n${EDGE_RAMP}${SINGLE_SAMPLE_COVERAGE}\t${ALPHA_TEST_CHUNK}`
-      );
+    shader.fragmentShader = editedShader(
+      shader.fragmentShader,
+      [
+        { three: ALPHA_TEST_PARS_CHUNK, godot: `${ALPHA_TEST_PARS_CHUNK}\n${EDGE_FUNCTIONS}` },
+        { three: ALPHA_TEST_CHUNK, godot: SCISSOR_CUT },
+        {
+          three: ALPHA_HASH_CHUNK,
+          godot: `${ALPHA_HASH_CHUNK}\n${EDGE_RAMP}${SINGLE_SAMPLE_COVERAGE}\t${ALPHA_TEST_CHUNK}`,
+        },
+      ],
+      'the fragment shader of the alpha antialiasing'
+    );
   },
 };

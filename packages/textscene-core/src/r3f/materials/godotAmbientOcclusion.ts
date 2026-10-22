@@ -9,7 +9,7 @@ import type { IUniform, Material } from 'three';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 import { recordedUniform } from './recordedOnMaterial';
-import { editedChunk, type TextEdit } from '../shaderPatch/chunkPatch';
+import { editedChunk, editedShader, type TextEdit } from '../shaderPatch/chunkPatch';
 import {
   DEFAULT_TEXTURE_CHANNEL_MASK,
   type TextureChannelMask,
@@ -78,8 +78,13 @@ export const GODOT_AMBIENT_OCCLUSION: ProgramInjection = {
   cacheKey: 'godot-ambient-occlusion',
   onBeforeCompile(shader) {
     Object.assign(shader.uniforms, ambientOcclusionUniforms(this));
-    shader.fragmentShader = shader.fragmentShader
-      .replace(AO_PARS_CHUNK, GODOT_AO_PARS)
-      .replace(AO_CHUNK, godotAoFragment());
+    shader.fragmentShader = editedShader(
+      shader.fragmentShader,
+      [
+        { three: AO_PARS_CHUNK, godot: GODOT_AO_PARS },
+        { three: AO_CHUNK, godot: godotAoFragment() },
+      ],
+      'the fragment shader of the ambient occlusion'
+    );
   },
 };
