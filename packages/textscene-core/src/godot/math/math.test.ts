@@ -13,6 +13,7 @@ import {
   lerpf,
   CMP_EPSILON,
   bezierInterpolate,
+  bezierInterpolatef,
   isZeroApprox,
   isEqualApprox,
   sign,
@@ -253,5 +254,21 @@ describe('fposmodp', () => {
 
   it('returns positive zero for a negative multiple', () => {
     expect(fposmodp(-720, 360)).toBe(0);
+  });
+});
+
+describe('bezierInterpolatef', () => {
+  it('returns the end values exactly at t = 0 and t = 1', () => {
+    expect(bezierInterpolatef(1, 5, -3, 7, 0)).toBe(1);
+    expect(bezierInterpolatef(1, 5, -3, 7, 1)).toBe(7);
+  });
+
+  it('rounds the result to single precision, where the double overload does not', () => {
+    const single = bezierInterpolatef(0, 0.1, 0.2, 1, 0.3);
+
+    expect(single).toBe(Math.fround(single));
+    expect(bezierInterpolate(0, 0.1, 0.2, 1, 0.3)).not.toBe(
+      Math.fround(bezierInterpolate(0, 0.1, 0.2, 1, 0.3))
+    );
   });
 });

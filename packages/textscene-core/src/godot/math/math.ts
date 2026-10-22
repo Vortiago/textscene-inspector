@@ -168,6 +168,27 @@ export function bezierInterpolate(
 }
 
 /**
+ * The float overload of `Math::bezier_interpolate` (`core/math/math_funcs.h:452-461`), which the
+ * `real_t` arguments of `Curve` pick: the same terms, each operation rounded to single precision.
+ */
+export function bezierInterpolatef(
+  start: number,
+  control1: number,
+  control2: number,
+  end: number,
+  t: number
+): number {
+  const omt = f(1 - t);
+  const omt2 = f(omt * omt);
+  const omt3 = f(omt2 * omt);
+  const t2 = f(t * t);
+  const t3 = f(t2 * t);
+  const second = f(f(f(control1 * omt2) * t) * 3);
+  const third = f(f(f(control2 * omt) * t2) * 3);
+  return f(f(f(f(start * omt3) + second) + third) + f(end * t3));
+}
+
+/**
  * `Basis::determinant()` (`basis.h:350-354`) over the nine row-major components, expanded along the
  * first column as the engine writes it. The first row gives the same number except with `inf`:
  * `Transform3D(1, inf, 0, 0, 1, 1, 1, 0, 1, …)` is NaN (sign 0) one way and `1 + inf` the other. Here,

@@ -32,7 +32,12 @@ export interface Curve {
   minDomain: number;
   /** `_limits[3]`: the horizontal domain end (Godot 4.3+, older files omit it). */
   maxDomain: number;
+  /** `bake_resolution`: the entries `Curve.sample_baked` interpolates between. */
+  bakeResolution: number;
 }
+
+/** `Curve::_bake_resolution` (`curve.h:163`). */
+export const DEFAULT_BAKE_RESOLUTION = 100;
 
 /** A `Curve` with no points, for which Godot's `sample()` answers 0. */
 export const EMPTY_CURVE: Curve = {
@@ -41,4 +46,5 @@ export const EMPTY_CURVE: Curve = {
   maxValue: 1,
   minDomain: 0,
   maxDomain: 1,
+  bakeResolution: DEFAULT_BAKE_RESOLUTION,
 };

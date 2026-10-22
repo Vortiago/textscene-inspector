@@ -11,12 +11,13 @@ import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
 import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { decodeMultiMesh, multiMeshAabb, type MultiMeshData } from '../../../resources/meshes/multimesh';
 import { useMeshAabb } from '../meshinstance3d/meshAabb';
+import { resourceContentKey } from '../../../resources/resourceContentKey';
 import { useContentMemo } from '../../../resources/useContentMemo';
 
 /** The box in node space, or null while the MultiMesh or the mesh box it needs is unknown. */
 export function useMultiMeshInstance3DAabb(node: TscnNode): Aabb | null {
   const scoped = useSubOrExtResource(node.rawProperties['multimesh'], useSceneResources());
-  const multiMesh = useContentMemo(scoped?.resource, readMultiMesh);
+  const multiMesh = useContentMemo(scoped?.resource, resourceContentKey, readMultiMesh);
   const meshAabb = useMeshAabb(multiMesh?.mesh, scoped?.resources ?? NO_RESOURCES);
   return useMemo(() => multiMesh && multiMeshAabb(multiMesh, meshAabb), [multiMesh, meshAabb]);
 }

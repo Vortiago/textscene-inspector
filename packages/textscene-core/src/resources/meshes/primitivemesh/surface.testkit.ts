@@ -1,6 +1,9 @@
 /** Readers for a Godot surface's arrays, shared by the PrimitiveMesh builder tests. */
 
 import { expect } from 'vitest';
+import type { TscnInternalResource } from '../../../parser/types.js';
+import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext.js';
+import type { ScopedResource } from '../../useSubOrExtResource.js';
 import type { GodotSurface } from '../godotSurface.js';
 
 /** Vertex `vertex` of an array that holds `size` numbers per vertex. */
@@ -35,4 +38,12 @@ export function expectClockwiseFronts(surface: GodotSurface): void {
     const stored = vertexOf(surface.normals, surface.indices[t * 3]!);
     expect(winding[0]! * stored[0]! + winding[1]! * stored[1]! + winding[2]! * stored[2]!).toBeLessThan(0);
   }
+}
+
+/** A mesh with the sub-resources its references resolve in, as a caller of the PrimitiveMesh seam holds it. */
+export function scopedMesh(
+  resource: TscnInternalResource,
+  ...internalResources: TscnInternalResource[]
+): ScopedResource {
+  return { resource, resources: { ...NO_RESOURCES, internalResources } };
 }

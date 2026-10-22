@@ -6,7 +6,11 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
+import { vec2iOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real';
+import { resolveSubResourceRef } from '../../SubResourceResolver';
+import { resourceContentKey } from '../../resourceContentKey';
+import type { ScopedResource } from '../../useSubOrExtResource';
 import type { GodotSurface } from '../godotSurface';
 import { decodePrimitiveMesh } from './decode';
 import { flipFaces } from './flipFaces';
@@ -29,12 +33,19 @@ import { buildTorusMeshSurface } from '../torusmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
 import { buildPrismMeshSurface } from '../prismmesh/build';
 import { buildPointMeshSurface } from '../pointmesh/build';
+import { decodeTubeTrailMesh } from '../tubetrailmesh/decode';
+import { buildTubeTrailMeshSurface } from '../tubetrailmesh/build';
 
 /**
  * A slice's surface in Godot's arrays, or null for a mesh Godot builds no surface for.
- * `uv2Padding` is in world units, or null for a mesh with no UV2.
+ * `uv2Padding` is in world units, or null for a mesh with no UV2. `internalResources` is the table
+ * a sub-resource the mesh names resolves in.
  */
-type SurfaceBuilder = (data: Record<string, string>, uv2Padding: number | null) => GodotSurface | null;
+type SurfaceBuilder = (
+  data: Record<string, string>,
+  uv2Padding: number | null,
+  internalResources: readonly TscnInternalResource[]
+) => GodotSurface | null;
 
 /**
  * Godot `type=` → the slice that decodes and builds it. QuadMesh has no `build.ts` of its own: it
@@ -51,18 +62,32 @@ const BUILDERS: Record<string, SurfaceBuilder> = {
   TorusMesh: (data, uv2Padding) => buildTorusMeshSurface(decodeTorusMesh(data), uv2Padding),
   PrismMesh: (data, uv2Padding) => buildPrismMeshSurface(decodePrismMesh(data), uv2Padding),
   PointMesh: buildPointMeshSurface,
+  TubeTrailMesh: (data, _uv2Padding, internalResources) =>
+    buildTubeTrailMeshSurface(decodeTubeTrailMesh(data, internalResources)),
 };
+
+/**
+ * The properties of each type that name a sub-resource its builder reads. A mesh's own content
+ * leaves that sub-resource out, so a key over the mesh follows these too.
+ */
+const SUB_RESOURCE_PROPERTIES: ReadonlyMap<string, readonly string[]> = new Map([
+  ['TubeTrailMesh', ['curve']],
+]);
 
 /** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */
 type LightmapSizeHint = (data: Record<string, string>, texelSize: number) => Vector2;
 
 /**
- * The lightmap size hint of each type whose builder writes no UV2, PlaneMesh and its QuadMesh
- * subclass (`primitive_meshes.cpp:1416`). `PrimitiveMesh::_update` scales their UV by it instead.
+ * The lightmap size hint of each type whose builder writes no UV2. `PrimitiveMesh::_update` scales
+ * their UV by it instead. PlaneMesh and its QuadMesh subclass derive it as they set their
+ * properties (`primitive_meshes.cpp:1416`). A TubeTrailMesh keeps the authored hint, as it
+ * overrides no `_update_lightmap_size`.
  */
 const FALLBACK_UV2_HINTS: Record<string, LightmapSizeHint> = {
   PlaneMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize),
   QuadMesh: (data, texelSize) => planeMeshLightmapSizeHint(data, texelSize, QUAD_MESH_DEFAULTS),
+  TubeTrailMesh: (data) =>
+    vec2iOr(data.lightmap_size_hint, { x: 0, y: 0 }, 'TubeTrailMesh lightmap_size_hint'),
 };
 
 /**
@@ -77,31 +102,47 @@ export function isPrimitiveMeshType(type: string): boolean {
 }
 
 /**
- * Written only by `primitiveMeshSurface`, per texel size. A resource's entries go when the parsed
- * resource does, so the geometry and the AABB of one mesh share one build.
+ * Written only by `primitiveMeshSurface`, per texel size and sub-resource content. A resource's
+ * entries go when the parsed resource does, so the geometry and the AABB of one mesh share one build.
  */
-const builtSurfaces = new WeakMap<TscnInternalResource, Map<number, GodotSurface | null>>();
+const builtSurfaces = new WeakMap<TscnInternalResource, Map<string, GodotSurface | null>>();
+
+/**
+ * A key over everything the mesh builds from: its own content, and the content of each
+ * sub-resource its builder reads. A fresh parse of equal content gives an equal key. A sub-resource
+ * the tables do not hold is part of the key as missing.
+ */
+export function primitiveMeshContentKey({ resource, resources }: ScopedResource): string {
+  const subResources = (SUB_RESOURCE_PROPERTIES.get(resource.type) ?? []).map((property) => {
+    const named = resolveSubResourceRef(resource.data[property], resources.internalResources);
+    return named ? resourceContentKey(named) : 'missing';
+  });
+  return [resourceContentKey(resource), ...subResources].join('|');
+}
 
 /**
  * The surface `_update` hands the rendering server (`primitive_meshes.cpp:45-123`), in Godot's
- * arrays. `texelSize` is the project's PrimitiveMesh texel size, which turns `uv2_padding` into
- * world units (`:403-407`). Null for an unknown, external (GLB) or unresolvable type, or a mesh
- * Godot would refuse to build. The surface is shared, so a caller copies before it writes.
+ * arrays. `mesh` holds the tables its references resolve in. `texelSize` is the project's
+ * PrimitiveMesh texel size, which turns `uv2_padding` into world units (`:403-407`). Null for an
+ * unknown, external (GLB) or unresolvable type, or a mesh Godot would refuse to build. The surface
+ * is shared, so a caller copies before it writes.
  */
-export function primitiveMeshSurface(resource: TscnInternalResource, texelSize: number): GodotSurface | null {
+export function primitiveMeshSurface(mesh: ScopedResource, texelSize: number): GodotSurface | null {
+  const { resource } = mesh;
   if (!isPrimitiveMeshType(resource.type)) return null;
-  let byTexelSize = builtSurfaces.get(resource);
-  if (!byTexelSize) builtSurfaces.set(resource, (byTexelSize = new Map()));
-  if (!byTexelSize.has(texelSize)) byTexelSize.set(texelSize, buildSurface(resource, texelSize));
-  return byTexelSize.get(texelSize)!;
+  let byContent = builtSurfaces.get(resource);
+  if (!byContent) builtSurfaces.set(resource, (byContent = new Map()));
+  const key = `${texelSize}|${primitiveMeshContentKey(mesh)}`;
+  if (!byContent.has(key)) byContent.set(key, buildSurface(mesh, texelSize));
+  return byContent.get(key)!;
 }
 
-function buildSurface(resource: TscnInternalResource, texelSize: number): GodotSurface | null {
+function buildSurface({ resource, resources }: ScopedResource, texelSize: number): GodotSurface | null {
   const build = BUILDERS[resource.type]!;
   const base = decodePrimitiveMesh(resource.data);
   // Godot holds the padding and the texel size in a `float` (`:1065`), so each rounds to single precision.
   const uv2Padding = base.addUv2 ? storedReal(base.uv2Padding * storedReal(texelSize)) : null;
-  const built = build(resource.data, uv2Padding);
+  const built = build(resource.data, uv2Padding, resources.internalResources);
   if (!built) return null;
   const hint = FALLBACK_UV2_HINTS[resource.type];
   const surface =

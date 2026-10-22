@@ -94,3 +94,40 @@ describe('useMeshAabb over a mesh with no surfaces', () => {
     expect(renderMeshAabb('SubResource("immediate")').current?.size).toEqual({ x: 0, y: 0, z: 0 });
   });
 });
+
+describe('useMeshAabb over a TubeTrailMesh', () => {
+  // Two sections of length 1, four steps round: the tube is 2 tall, as wide as its widest row.
+  const TUBE: TscnInternalResource = {
+    id: 'tube',
+    type: 'TubeTrailMesh',
+    data: {
+      radial_steps: '4',
+      sections: '2',
+      section_length: '1',
+      section_rings: '1',
+      curve: 'SubResource("c")',
+    },
+  };
+  const curveEndingAt = (end: string): TscnInternalResource => ({
+    id: 'c',
+    type: 'Curve',
+    data: { _data: `[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, ${end}), 0.0, 0.0, 0, 0]` },
+  });
+  const inScene = (curve: TscnInternalResource): SceneResources => ({
+    internalResources: [TUBE, curve],
+    externalResources: [],
+  });
+
+  it('bounds the tube by the radii its Curve gives, and again once the Curve changes', () => {
+    const { result, rerender } = renderHook(
+      ({ resources }) => useMeshAabb('SubResource("tube")', resources),
+      {
+        initialProps: { resources: inScene(curveEndingAt('1')) },
+      }
+    );
+    expect(result.current?.size.x).toBeCloseTo(1, 5);
+
+    rerender({ resources: inScene(curveEndingAt('3')) });
+    expect(result.current?.size.x).toBeCloseTo(3, 5);
+  });
+});

@@ -48,6 +48,25 @@ material = SubResource("Red")`),
   });
 });
 
+describe('<GridMap> item with a TubeTrailMesh that names a Curve', () => {
+  it("draws the tube scaled by the Curve in the library's own tables", async () => {
+    const tile = await renderInstancedTile({
+      library: inlineMeshLibrary(`[sub_resource type="Curve" id="Curve_item"]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 3), 0.0, 0.0, 0, 0]
+
+[sub_resource type="TubeTrailMesh" id="Mesh_item"]
+radial_steps = 4
+sections = 2
+section_length = 1.0
+section_rings = 1
+curve = SubResource("Curve_item")`),
+    });
+    expect((tile.material as THREE.MeshBasicMaterial).wireframe).toBeFalsy();
+    // The bottom row is three times the radius of 0.5.
+    expect(geometrySize(tile)).toEqual([3, 2, 3]);
+  });
+});
+
 describe('<GridMap> item whose mesh is a PrimitiveMesh .tres', () => {
   it('draws the BoxMesh the file holds', async () => {
     const tile = await renderInstancedTile({

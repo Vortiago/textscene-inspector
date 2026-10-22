@@ -6,7 +6,7 @@ import { CPUParticles2DParam, type CPUParticles2DProperties } from './types';
 import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/math/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { GradientInterpolationMode } from '../../../resources/textures/gradienttexture2d/types';
-import { CurveTangentMode, type Curve } from '../../../resources/curves/curve/types';
+import { CurveTangentMode, DEFAULT_BAKE_RESOLUTION, type Curve } from '../../../resources/curves/curve/types';
 
 const NO_CURVES: (Curve | null)[] = Array.from({ length: 12 }, () => null);
 
@@ -426,6 +426,7 @@ describe('simulateFrozenPose', () => {
       maxValue: 1,
       minDomain: 0,
       maxDomain: 1,
+      bakeResolution: DEFAULT_BAKE_RESOLUTION,
     };
     const curves = NO_CURVES.slice();
     curves[CPUParticles2DParam.Scale] = shrinking;

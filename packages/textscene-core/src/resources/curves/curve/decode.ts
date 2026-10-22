@@ -5,7 +5,9 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+import { CurveTangentMode, DEFAULT_BAKE_RESOLUTION, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+import { settableIntOr } from '../../../parser/valueParsers';
+import { storedReal } from '../../../godot/math/real.js';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
 import { readSlotTuple, slotInt } from '../../../godot/variant/int.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
@@ -30,6 +32,13 @@ function decodeCurve(data: Record<string, string>): Curve {
     maxValue: limits?.[1] ?? EMPTY_CURVE.maxValue,
     minDomain: limits?.[2] ?? EMPTY_CURVE.minDomain,
     maxDomain: limits?.[3] ?? EMPTY_CURVE.maxDomain,
+    // `set_bake_resolution` ERR_FAILs outside 1 to 1000 (`curve.cpp:526-527`).
+    bakeResolution: settableIntOr(
+      data.bake_resolution,
+      DEFAULT_BAKE_RESOLUTION,
+      { min: 1, max: 1000 },
+      'Curve bake_resolution'
+    ),
   };
 
   // `point_count` is written after `_data`, and Godot's setter resizes the point
@@ -82,7 +91,11 @@ function parseFloatArray(value: string | undefined): number[] | null {
   if (!entries) return null;
   // `parseGodotFloat`, not `parseFloat`, which reads `5abc` as 5. Finite, since a
   // non-finite limit clamps every padded point onto Infinity and scales every sample by it.
-  const numbers = entries.map((e) => parseGodotFloat(e));
+  // Each limit is a `real_t`, so it rounds to single precision before the test.
+  const numbers = entries.map((e) => {
+    const parsed = parseGodotFloat(e);
+    return parsed === null ? null : storedReal(parsed);
+  });
   return numbers.some((n) => n === null || !Number.isFinite(n)) ? null : (numbers as number[]);
 }
 
@@ -115,8 +128,11 @@ function parseVector2Entry(entry: string): { x: number; y: number } | null {
   // The slot read narrows a `Vector2i` spelling's arguments to int32 before the
   // widening into the float slot, so `Vector2i(4294967295, 0)` is the point `(-1, 0)`.
   const tuple = readSlotTuple(entry, 'Vector2', VECTOR2_RE);
-  if (!tuple || !allFinite(tuple.components)) return null;
-  return { x: tuple.components[0]!, y: tuple.components[1]! };
+  if (!tuple) return null;
+  // A `Vector2` holds floats, so a component past the float range is infinite.
+  const x = storedReal(tuple.components[0]!);
+  const y = storedReal(tuple.components[1]!);
+  return allFinite([x, y]) ? { x, y } : null;
 }
 
 /**
@@ -125,7 +141,8 @@ function parseVector2Entry(entry: string): { x: number; y: number } | null {
  * to the particle geometry.
  */
 function numberOr(entry: string, fallback: number): number {
-  const num = parseGodotFloat(entry);
+  const parsed = parseGodotFloat(entry);
+  const num = parsed === null ? null : storedReal(parsed);
   return num !== null && Number.isFinite(num) ? num : fallback;
 }
 

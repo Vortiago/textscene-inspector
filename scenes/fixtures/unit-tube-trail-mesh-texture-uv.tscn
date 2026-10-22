@@ -1,0 +1,47 @@
+[gd_scene load_steps=7 format=3 uid="uid://unittubetrailmeshtextureuv"]
+
+; The one variable: the surface a TubeTrailMesh builds. The stepped gradient runs red, green, blue
+; along the U + V diagonal, so it shows the seam, the rows and both caps. The second tube is
+; scaled by a Curve that swells and narrows its radius, and the third draws the first tube as a
+; CSGMesh3D's mesh. The only other TubeTrailMesh scene is a particles demo, where no texture
+; shows the UV.
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="Curve" id="Curve_swell"]
+_data = [Vector2(0, 0.3), 0.0, 0.0, 0, 0, Vector2(0.5, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.4), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="TubeTrailMesh" id="TubeTrailMesh_plain"]
+material = SubResource("StandardMaterial3D_uv")
+radial_steps = 16
+
+[sub_resource type="TubeTrailMesh" id="TubeTrailMesh_curve"]
+material = SubResource("StandardMaterial3D_uv")
+radial_steps = 16
+curve = SubResource("Curve_swell")
+
+[node name="Root" type="Node3D"]
+
+[node name="Plain" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, -1.6, 0, 0)
+mesh = SubResource("TubeTrailMesh_plain")
+
+[node name="Curved" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, 0, 0)
+mesh = SubResource("TubeTrailMesh_curve")
+
+[node name="Csg" type="CSGMesh3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 1.6, 0, 0)
+mesh = SubResource("TubeTrailMesh_plain")

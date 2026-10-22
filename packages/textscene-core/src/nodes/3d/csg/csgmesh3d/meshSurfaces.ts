@@ -7,7 +7,6 @@
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../../../godot/scene/primitiveMesh';
 import { warn } from '../../../../logger';
 import type { ParsedResource } from '../../../../parser/parsedResource';
-import type { TscnInternalResource } from '../../../../parser/types';
 import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import type { CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
@@ -18,6 +17,7 @@ import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
 import { scopedSection } from '../../../../resources/resourceSection';
 import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshSurface } from '../../../../resources/meshes/primitivemesh/surface';
+import type { ScopedResource } from '../../../../resources/useSubOrExtResource';
 
 /** The arrays of a Godot surface the brush builder reads, and the surface's material. */
 export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normals' | 'uvs' | 'indices'> {
@@ -56,7 +56,7 @@ export function meshSurfaces(mesh: CsgMesh): CsgMeshSurface[] {
   switch (meshKind(resource.type)) {
     case 'primitive':
       return primitiveMeshSurfaces(
-        resource,
+        mesh,
         primitiveMaterialAddress({ resource, resources, path: file?.path ?? null })
       );
     case 'arrayMesh':
@@ -112,12 +112,9 @@ function arrayMeshSurfaces(
  * answers it for surface 0), in Godot's arrays as the brush builder reads them. A points surface
  * adds nothing: the brush builder skips every surface that is not triangles (`csg_shape.cpp:1148-1150`).
  */
-function primitiveMeshSurfaces(
-  resource: TscnInternalResource,
-  material: CsgMaterialAddress
-): CsgMeshSurface[] {
+function primitiveMeshSurfaces(mesh: ScopedResource, material: CsgMaterialAddress): CsgMeshSurface[] {
   // The brush reads no UV2 (`csg_shape.cpp:1147-1172`), the only array the texel size scales.
-  const surface = primitiveMeshSurface(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+  const surface = primitiveMeshSurface(mesh, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
   if (!surface || surface.isPoints) return [];
   return [{ ...surface, material }];
 }

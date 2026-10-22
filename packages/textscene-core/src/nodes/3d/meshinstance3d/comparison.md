@@ -39,4 +39,5 @@ The enum and range keys (`cast_shadow`, `gi_mode`, `layers`, `transparency`, the
 
 - **Approximated** A transparent material renders darker than Godot's on a brightly lit
   face, while an opaque one agrees.
-- **Resource gap** A mesh the previewer does not build (RibbonTrailMesh, TextMesh or TubeTrailMesh) draws as a wireframe box, and the node's details name the type.
+- **Resource gap** A mesh the previewer does not build (RibbonTrailMesh or TextMesh) draws as a wireframe box, and the node's details name the type.
+- **Resource gap** A TubeTrailMesh whose `curve` is an ExtResource draws with no curve, because the previewer reads a Curve only from the mesh's own resources.

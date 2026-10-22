@@ -28,18 +28,18 @@ describe('the Curve body resolveCurve decodes', () => {
     expect(curve.points[0]).toEqual({
       position: { x: 0, y: 0 },
       leftTangent: 0,
-      rightTangent: 1.36377,
+      rightTangent: Math.fround(1.36377),
       leftMode: CurveTangentMode.Free,
       rightMode: CurveTangentMode.Free,
     });
-    expect(curve.points[1]!.position).toEqual({ x: 0.262376, y: 0.188182 });
+    expect(curve.points[1]!.position).toEqual({ x: Math.fround(0.262376), y: Math.fround(0.188182) });
     expect(curve.points[2]!.leftTangent).toBeCloseTo(-1.06101, 5);
   });
 
   it('reads the four-element `_limits` as min/max value then min/max domain', () => {
     const curve = decode(CANDLE_SPARKLE);
     expect(curve.minValue).toBe(0);
-    expect(curve.maxValue).toBe(0.3);
+    expect(curve.maxValue).toBe(Math.fround(0.3));
     expect(curve.minDomain).toBe(0);
     expect(curve.maxDomain).toBe(1);
   });
@@ -157,6 +157,7 @@ describe('the Curve body resolveCurve decodes', () => {
       maxValue: 1,
       minDomain: 0,
       maxDomain: 1,
+      bakeResolution: 100,
     });
   });
 
@@ -303,5 +304,41 @@ describe('a Variant number Godot reads differently from `parseInt`', () => {
     const curve = decode({ ...CANDLE_SPARKLE, _data: '[Vector2(0, 0), 0.0, 0.0, 1abc, 0]' });
 
     expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.Free);
+  });
+});
+
+describe('`bake_resolution`, which `Curve.sample_baked` reads', () => {
+  // `set_bake_resolution` ERR_FAILs outside 1 to 1000 (`curve.cpp:526-527`) and keeps the default 100 (`curve.h:163`).
+  it('defaults to 100', () => {
+    expect(decode({}).bakeResolution).toBe(100);
+  });
+
+  it('reads an authored value', () => {
+    expect(decode({ bake_resolution: '12' }).bakeResolution).toBe(12);
+  });
+
+  it('keeps the default for a value the setter refuses', () => {
+    expect(decode({ bake_resolution: '0' }).bakeResolution).toBe(100);
+    expect(decode({ bake_resolution: '1001' }).bakeResolution).toBe(100);
+    expect(decode({ bake_resolution: '1000' }).bakeResolution).toBe(1000);
+  });
+});
+
+describe('the floats a Curve holds', () => {
+  // Every position, tangent and limit is a `real_t`, which an official build keeps as a float.
+  it('rounds each position and tangent to single precision', () => {
+    const point = decode({ _data: '[Vector2(0.1, 0.3), 0.7, 0.9, 0, 0]' }).points[0]!;
+
+    expect(point.position).toEqual({ x: Math.fround(0.1), y: Math.fround(0.3) });
+    expect(point.leftTangent).toBe(Math.fround(0.7));
+    expect(point.rightTangent).toBe(Math.fround(0.9));
+  });
+
+  it('rounds the limits to single precision', () => {
+    const curve = decode({ _limits: '[0.1, 0.7, 0.2, 0.9]' });
+
+    expect([curve.minValue, curve.maxValue, curve.minDomain, curve.maxDomain]).toEqual(
+      [0.1, 0.7, 0.2, 0.9].map(Math.fround)
+    );
   });
 });

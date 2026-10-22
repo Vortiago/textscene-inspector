@@ -2,7 +2,6 @@
 
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { parseOptionalAabb } from '../../../parser/valueParsers';
-import type { TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { arrayMeshAabb } from '../../../resources/meshes/arraymesh/meshAabb';
 import type { ArrayMeshResource } from '../../../resources/processors/createArrayMeshProcessor';
@@ -10,8 +9,8 @@ import { useResource } from '../../../resources/useResource';
 import { useContentMemo } from '../../../resources/useContentMemo';
 import { primitiveMeshAabb } from '../../../r3f/meshes/primitiveMeshGeometry';
 import { arrayMeshPath } from '../../../r3f/meshes/meshContent';
-import { meshKind } from '../../../resources/meshes/meshSource';
-import { useResourceResolution } from '../../../resources/useSubOrExtResource';
+import { meshContentKey, meshKind } from '../../../resources/meshes/meshSource';
+import { useResourceResolution, type ScopedResource } from '../../../resources/useSubOrExtResource';
 
 /**
  * The box of the mesh `meshRef` names in `resources`, in mesh space, in the scene or in a `.tres`
@@ -23,16 +22,17 @@ export function useMeshAabb(meshRef: string | undefined, resources: SceneResourc
   const path = arrayMeshPath(resolution);
   // The ArrayMesh processor bounds a `.tres` ArrayMesh once for every consumer.
   const file = useResource<ArrayMeshResource>(path ?? '', 'arraymesh');
-  const own = useContentMemo(path ? null : resolution.scoped?.resource, meshAabb);
+  const own = useContentMemo(path ? null : resolution.scoped, meshContentKey, meshAabb);
   return path ? (file.value?.aabb ?? null) : own;
 }
 
-function meshAabb(resource: TscnInternalResource): Aabb | null {
+function meshAabb(mesh: ScopedResource): Aabb | null {
+  const { resource } = mesh;
   switch (meshKind(resource.type)) {
     case 'arrayMesh':
       return arrayMeshAabb(resource.data);
     case 'primitive':
-      return primitiveMeshAabb(resource);
+      return primitiveMeshAabb(mesh);
     case 'surfaceless':
       // A PlaceholderMesh holds its own `aabb` (`mesh.h:430`).
       return parseOptionalAabb(resource.data['aabb'], `${resource.type} "${resource.id}" aabb`) ?? EMPTY_AABB;

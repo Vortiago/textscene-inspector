@@ -23,9 +23,12 @@ function makeNode(meshSubResId: string): TscnNode {
   return { rawProperties: {}, name: 'M', type: 'MeshInstance3D', children: [], properties: props };
 }
 
-async function renderGeometry(meshSubResource: TscnInternalResource): Promise<THREE.BufferGeometry> {
+async function renderGeometry(
+  meshSubResource: TscnInternalResource,
+  ...named: TscnInternalResource[]
+): Promise<THREE.BufferGeometry> {
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneResourcesProvider internalResources={[meshSubResource]}>
+    <SceneResourcesProvider internalResources={[meshSubResource, ...named]}>
       <MeshInstance3D node={makeNode(meshSubResource.id)} />
     </SceneResourcesProvider>
   );
@@ -111,6 +114,23 @@ describe('Mesh primitives (assertions 48–59)', () => {
     );
     // The tube is (1.5 - 0.5) / 2 = 0.5 thick, so the ring is 1 tall.
     expectSize(geom, [3, 1, 3]);
+  });
+
+  it('TubeTrailMesh.curve scales the radius along the tube, the Curve read from the same scene', async () => {
+    const geom = await renderGeometry(
+      subResource('TubeTrailMesh', 'Tube', {
+        radial_steps: '4',
+        sections: '2',
+        section_length: '1',
+        section_rings: '1',
+        curve: 'SubResource("C")',
+      }),
+      subResource('Curve', 'C', {
+        _data: '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 3), 0.0, 0.0, 0, 0]',
+      })
+    );
+    // 2 tall, and as wide as the bottom row: three times the radius of 0.5, twice.
+    expectSize(geom, [3, 2, 3]);
   });
 
   it('#59 PrismMesh.size → a triangular prism filling that box', async () => {

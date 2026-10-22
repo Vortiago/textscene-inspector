@@ -35,6 +35,22 @@ const FILES = {
 
 const INLINE_BOX: TscnInternalResource = { id: 'Box', type: 'BoxMesh', data: { size: 'Vector3(2, 2, 2)' } };
 const INLINE_CAPSULE: TscnInternalResource = { id: 'Capsule', type: 'CapsuleMesh', data: {} };
+const INLINE_TUBE: TscnInternalResource = {
+  id: 'Tube',
+  type: 'TubeTrailMesh',
+  data: {
+    radial_steps: '4',
+    sections: '2',
+    section_length: '1',
+    section_rings: '1',
+    curve: 'SubResource("Grow")',
+  },
+};
+const growingCurve = (end: string): TscnInternalResource => ({
+  id: 'Grow',
+  type: 'Curve',
+  data: { _data: `[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, ${end}), 0.0, 0.0, 0, 0]` },
+});
 const INLINE_POINT: TscnInternalResource = { id: 'Point', type: 'PointMesh', data: {} };
 const INLINE_QUADS: TscnInternalResource = {
   id: 'Quads',
@@ -51,7 +67,15 @@ const INLINE_POINTS: TscnInternalResource = {
 };
 
 const CTX = csgGeometryContext({
-  internalResources: [INLINE_BOX, INLINE_CAPSULE, INLINE_POINT, INLINE_POINTS, INLINE_QUADS],
+  internalResources: [
+    INLINE_BOX,
+    INLINE_CAPSULE,
+    INLINE_POINT,
+    INLINE_POINTS,
+    INLINE_QUADS,
+    INLINE_TUBE,
+    growingCurve('3'),
+  ],
   externalResources: EXT,
   files: FILES,
 });
@@ -127,6 +151,14 @@ describe('csgMesh3DGeometry: mesh sources', () => {
     expect(build('ExtResource("1")', {}, csgGeometryContext({ externalResources: EXT }))).toBeNull();
   });
 
+  it('builds an inline TubeTrailMesh whose Curve it reads from the scene', () => {
+    const { geometry } = build('SubResource("Tube")')!;
+    geometry.computeBoundingBox();
+
+    // The Curve grows the bottom row to three times the radius of 0.5.
+    expect(geometry.boundingBox!.getSize(new THREE.Vector3()).x).toBeCloseTo(3, 5);
+  });
+
   // The brush builder skips every surface that is not PRIMITIVE_TRIANGLES (`csg_shape.cpp:1148-1150`).
   it('builds nothing for a PointMesh, whose surface is points', () => {
     expect(build('SubResource("Point")')).toBeNull();
@@ -200,6 +232,20 @@ describe('csgMesh3DGeometryKey', () => {
 
   it('stays the same for the same loaded file', () => {
     expect(key('ExtResource("1")')).toBe(key('ExtResource("1")'));
+  });
+
+  it("changes when the body of an inline TubeTrailMesh's Curve changes", () => {
+    const withCurve = (end: string) =>
+      csgGeometryContext({ internalResources: [INLINE_TUBE, growingCurve(end)] });
+
+    expect(key('SubResource("Tube")', withCurve('2'))).not.toBe(key('SubResource("Tube")', withCurve('3')));
+  });
+
+  it('stays the same while an inline TubeTrailMesh and its Curve hold their content', () => {
+    const withCurve = () =>
+      csgGeometryContext({ internalResources: [{ ...INLINE_TUBE }, growingCurve('2')] });
+
+    expect(key('SubResource("Tube")', withCurve())).toBe(key('SubResource("Tube")', withCurve()));
   });
 
   it('changes with flip_faces', () => {

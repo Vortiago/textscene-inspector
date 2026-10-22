@@ -119,7 +119,7 @@ function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh | null {
 
 /** A PrimitiveMesh's one surface under its own material, or null for a mesh Godot builds no surface for. */
 function usePrimitiveMesh(source: MeshSource | null): SurfacedMesh | null {
-  const geometry = usePrimitiveMeshGeometry(source?.resource ?? null);
+  const geometry = usePrimitiveMeshGeometry(source);
   const material = useMemo(
     () => (source ? resolveMaterialSource(primitiveMaterialAddress(source), source.resources) : undefined),
     [source]
@@ -137,11 +137,11 @@ function usePrimitiveMesh(source: MeshSource | null): SurfacedMesh | null {
 }
 
 /** A PrimitiveMesh's geometry at the project's texel size, or null for none or a mesh with no surface. */
-function usePrimitiveMeshGeometry(resource: TscnInternalResource | null): THREE.BufferGeometry | null {
+function usePrimitiveMeshGeometry(source: MeshSource | null): THREE.BufferGeometry | null {
   const texelSize = projectPrimitiveMeshTexelSize(useProjectSettings().settings);
   const geometry = useMemo(
-    () => (resource ? primitiveMeshGeometry(resource, texelSize) : null),
-    [resource, texelSize]
+    () => (source ? primitiveMeshGeometry(source, texelSize) : null),
+    [source, texelSize]
   );
   useDisposeOnRelease(geometry);
   return geometry;

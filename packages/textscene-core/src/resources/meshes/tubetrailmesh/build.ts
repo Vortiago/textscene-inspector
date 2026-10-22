@@ -1,0 +1,140 @@
+/**
+ * TubeTrailMesh surface, ported from Godot 4.6.3 `TubeTrailMesh::_create_mesh_array`
+ * (`scene/resources/3d/primitive_meshes.cpp:2503-2741`, without the bone arrays): a row of
+ * `radial_steps + 1` vertices for each ring down the tube, U round it from +Z towards +X and V down
+ * the top half of the atlas, then a fan for each cap in the bottom half.
+ *
+ * Derived from Godot Engine (`scene/resources/3d/primitive_meshes.cpp`), used under the MIT licence:
+ *
+ *   Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md).
+ *   Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining
+ *   a copy of this software and associated documentation files (the
+ *   "Software"), to deal in the Software without restriction, including
+ *   without limitation the rights to use, copy, modify, merge, publish,
+ *   distribute, sublicense, and/or sell copies of the Software, and to
+ *   permit persons to whom the Software is furnished to do so, subject to
+ *   the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be
+ *   included in all copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ *   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *   IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ *   CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ *   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+import { CMP_EPSILON } from '../../../godot/math/math.js';
+import { storedReal } from '../../../godot/math/real.js';
+import { bakedCurveSampler } from '../../curves/curve/bakedSample.js';
+import type { GodotSurface } from '../godotSurface.js';
+import { rimPoint } from '../primitivemesh/rimPoint.js';
+import { SurfaceWriter, type Vec4 } from '../primitivemesh/surfaceWriter.js';
+import type { TubeTrailMeshProperties } from './types.js';
+
+/** The tangent of every cap vertex (`:2587`). */
+const CAP_TANGENT: Vec4 = [1, 0, 0, 1];
+
+/**
+ * No UV2: `PrimitiveMesh::_update` makes it from UV. No bone arrays: nothing here skins a primitive,
+ * and Godot draws a mesh with no skin at the rest positions.
+ */
+export function buildTubeTrailMeshSurface(p: TubeTrailMeshProperties): GodotSurface {
+  const depth = storedReal(p.sectionLength * p.sections);
+  // A curve with no point scales nothing (`:2552`).
+  const radiusScale = p.curve && p.curve.points.length > 0 ? bakedCurveSampler(p.curve) : null;
+
+  const writer = new SurfaceWriter(false);
+  writeBody(writer, p, depth, radiusScale);
+  if (p.capTop) writeTopCap(writer, p, depth, radiusScale?.(0) ?? 1);
+  if (p.capBottom) writeBottomCap(writer, p, depth, radiusScale?.(1) ?? 1);
+  return writer.surface();
+}
+
+type RadiusScale = ((v: number) => number) | null;
+
+/** The tube as rows from the top down, one per ring (`:2536-2578`). */
+function writeBody(
+  writer: SurfaceWriter,
+  p: TubeTrailMeshProperties,
+  depth: number,
+  radiusScale: RadiusScale
+): void {
+  const { radius, radialSteps } = p;
+  const totalRings = p.sectionRings * p.sections;
+  let thisrow = 0;
+  let prevrow = 0;
+  for (let j = 0; j <= totalRings; j++) {
+    const v = storedReal(j / totalRings);
+    const y = storedReal(depth * 0.5 - storedReal(depth * v));
+    const rowRadius = radiusScale ? storedReal(radius * radiusScale(v)) : radius;
+
+    for (let i = 0; i <= radialSteps; i++) {
+      const [x, z] = rimPoint(i, radialSteps);
+      writer.vertex(
+        [x * rowRadius, y, z * rowRadius],
+        [x, 0, z],
+        [z, 0, -x, 1],
+        [storedReal(i / radialSteps), v * 0.5],
+        [0, 0]
+      );
+      if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);
+    }
+    prevrow = thisrow;
+    thisrow = writer.vertexCount;
+  }
+}
+
+/** A fan facing up, centred on (0.25, 0.75) in UV (`:2596-2677`). Built when the curve leaves a radius above `CMP_EPSILON`. */
+function writeTopCap(writer: SurfaceWriter, p: TubeTrailMeshProperties, depth: number, scale: number): void {
+  if (scale <= CMP_EPSILON) return;
+  const { radialSteps } = p;
+  const capRadius = storedReal(p.radius * scale);
+  const y = depth * 0.5;
+  const centre = writer.vertexCount;
+  writer.vertex([0, y, 0], [0, 1, 0], CAP_TANGENT, [0.25, 0.75], [0, 0]);
+  for (let i = 0; i <= radialSteps; i++) {
+    const [x, z] = rimPoint(i, radialSteps);
+    writer.vertex(
+      [x * capRadius, y, z * capRadius],
+      [0, 1, 0],
+      CAP_TANGENT,
+      [storedReal((x + 1) * 0.25), storedReal(0.5 + (z + 1) * 0.25)],
+      [0, 0]
+    );
+    const point = writer.vertexCount;
+    if (i > 0) writer.triangle(centre, point - 1, point - 2);
+  }
+}
+
+/** A fan facing down, centred on (0.75, 0.75) in UV with V mirrored (`:2680-2732`). */
+function writeBottomCap(
+  writer: SurfaceWriter,
+  p: TubeTrailMeshProperties,
+  depth: number,
+  scale: number
+): void {
+  if (scale <= CMP_EPSILON) return;
+  const { radialSteps } = p;
+  const capRadius = storedReal(p.radius * scale);
+  const y = depth * -0.5;
+  const centre = writer.vertexCount;
+  writer.vertex([0, y, 0], [0, -1, 0], CAP_TANGENT, [0.75, 0.75], [0, 0]);
+  for (let i = 0; i <= radialSteps; i++) {
+    const [x, z] = rimPoint(i, radialSteps);
+    writer.vertex(
+      [x * capRadius, y, z * capRadius],
+      [0, -1, 0],
+      CAP_TANGENT,
+      [storedReal(0.5 + (x + 1) * 0.25), storedReal(1 - (z + 1) * 0.25)],
+      [0, 0]
+    );
+    const point = writer.vertexCount;
+    if (i > 0) writer.triangle(centre, point - 2, point - 1);
+  }
+}

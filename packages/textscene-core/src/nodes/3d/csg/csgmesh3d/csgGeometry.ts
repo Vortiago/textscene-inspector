@@ -9,7 +9,7 @@ import { isEqualApprox } from '../../../../godot/math/math';
 import type { CsgGeometryBuilder, CsgGeometryContext, CsgSolid } from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resourceContentKey } from '../../../../resources/resourceContentKey';
+import { meshContentKey } from '../../../../resources/meshes/meshSource';
 import { applyCsgNormals } from '../smoothNormals';
 import { meshFilePath, meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
@@ -51,9 +51,12 @@ function fileKey(file: object): number {
   return key;
 }
 
-/** A scene mesh keys on its content, since the parser allocates a fresh one per reparse. */
+/**
+ * A scene mesh keys on its content, and on its sub-resources' where it builds from them, since the
+ * parser allocates a fresh one per reparse.
+ */
 function meshKey(mesh: CsgMesh): string {
-  return mesh.file ? `${mesh.file.path}#${fileKey(mesh.file.parsed)}` : resourceContentKey(mesh.resource);
+  return mesh.file ? `${mesh.file.path}#${fileKey(mesh.file.parsed)}` : meshContentKey(mesh);
 }
 
 /** The faces of every surface in turn, with the index of each face's material in `materials`. */

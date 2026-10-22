@@ -8,7 +8,9 @@ import type { SceneResources } from '../../r3f/SceneResourcesContext.js';
 import { materialPathInFile } from '../materials/materialPathInFile.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import { ARRAY_MESH_TYPES } from './arraymesh/decode.js';
-import { isPrimitiveMeshType } from './primitivemesh/surface.js';
+import { resourceContentKey } from '../resourceContentKey.js';
+import type { ScopedResource } from '../useSubOrExtResource.js';
+import { isPrimitiveMeshType, primitiveMeshContentKey } from './primitivemesh/surface.js';
 
 export interface MeshSource {
   resource: TscnInternalResource;
@@ -31,6 +33,16 @@ export function meshKind(type: string): MeshKind | null {
   if (ARRAY_MESH_TYPES.has(type)) return 'arrayMesh';
   if (SURFACELESS_MESH_TYPES.has(type)) return 'surfaceless';
   return isPrimitiveMeshType(type) ? 'primitive' : null;
+}
+
+/**
+ * A key over everything `mesh` builds from, for memoising what is built from it: a fresh parse of
+ * equal content gives an equal key. A PrimitiveMesh follows the sub-resources its builder reads.
+ */
+export function meshContentKey(mesh: ScopedResource): string {
+  return meshKind(mesh.resource.type) === 'primitive'
+    ? primitiveMeshContentKey(mesh)
+    : resourceContentKey(mesh.resource);
 }
 
 /**
