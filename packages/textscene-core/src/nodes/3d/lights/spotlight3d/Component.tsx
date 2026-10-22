@@ -11,6 +11,7 @@ import { transformFromNode3DProperties } from '../../../../r3f/nodeTransform';
 import { parseColorToHex } from '../../../../utils/colorParser';
 import { godotConePenumbra } from '../../../../r3f/godotLightAttenuation';
 import { positionalShadowNear } from '../../../../godot/rendering/lights/positionalShadow';
+import { lightBufferRange } from '../../../../godot/rendering/lights/lightBufferRange';
 import { degToRad } from '../../../../godot/math/math.js';
 import { spotShadowBias } from '../shared/shadowBias';
 import { LightWithTarget } from '../shared/lightShared';
@@ -25,6 +26,8 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
     [properties]
   );
   const color = parseColorToHex(properties.light_color);
+  // The floored range, as the shader's falloff and shadow lookup read it: three takes 0 as no cutoff.
+  const range = lightBufferRange(properties.spot_range);
   const angleRadians = degToRad(properties.spot_angle);
   // `spot_attenuation` is Godot's distance falloff exponent, which three calls decay.
   const decay = properties.spot_attenuation;
@@ -48,7 +51,7 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
             position={[0, 0, 0]}
             color={color}
             intensity={intensity}
-            distance={properties.spot_range}
+            distance={range}
             angle={angleRadians}
             penumbra={penumbra}
             decay={decay}
@@ -56,8 +59,8 @@ export function SpotLight3D({ node, children }: NodeComponentProps) {
             shadow-intensity={shadowOpacity}
             userData={userData}
             shadow-bias={spotShadowBias(properties)}
-            shadow-camera-near={positionalShadowNear(properties.spot_range)}
-            shadow-camera-far={properties.spot_range}
+            shadow-camera-near={positionalShadowNear(range)}
+            shadow-camera-far={range}
             target={target}
           />
           <SpotLightGizmo lightRef={lightRef} />
