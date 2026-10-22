@@ -22,6 +22,7 @@ import {
   useEffectiveZ,
 } from '../../lighting2d/canvasItemPlacement';
 import { Modulate2DContext, useParentModulate } from '../../canvasItemModulate';
+import { ROOT_TEXTURE_SAMPLER, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
 import { solveNode as emptySolveNode } from './testing/solveNode';
 
 /** The world canvas's rank, derived, never hardcoded: only a rank's order means
@@ -259,7 +260,12 @@ describe('<ControlCanvasWalker>', () => {
         offsetBottom: 20,
         rotation: Math.PI / 2,
       }),
-      skippedAncestors: { transform: ancestorTransform, modulate: { r: 1, g: 1, b: 1, a: 1 }, z: [] },
+      skippedAncestors: {
+        transform: ancestorTransform,
+        modulate: { r: 1, g: 1, b: 1, a: 1 },
+        z: [],
+        sampler: ROOT_TEXTURE_SAMPLER,
+      },
     };
 
     const renderer = await ReactThreeTestRenderer.create(
@@ -467,6 +473,61 @@ describe('<ControlCanvasWalker>', () => {
     expect(groups.every((g) => g.position.z === 0)).toBe(true);
   });
 
+  describe('texture sampler of a promoted Control', () => {
+    const NEAREST = 1;
+    const LINEAR = 2;
+    // Names its group after the sampler its own node resolved, which the walker publishes around it.
+    const SamplerProbe: NativeControlComponent = () => {
+      const { filter, repeat } = useResolvedTextureSampler();
+      return <group name={`sampler:filter=${filter},repeat=${repeat}`} />;
+    };
+
+    async function resolvedSampler(promoted: SolveNode): Promise<string> {
+      controlComponentRegistry.register({ typeName: 'SamplerProbe', Component: SamplerProbe });
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker
+          tree={[promoted]}
+          generation={0}
+          viewport={VIEWPORT}
+          theme={THEME}
+          measurer={null}
+        />
+      );
+      const probe = renderer.scene
+        .findAllByType('Group')
+        .map((g) => g.instance)
+        .find((g) => g.name.startsWith('sampler:'))!;
+      return probe.name.slice('sampler:'.length);
+    }
+
+    function promotedPast(
+      sampler: { filter: number | undefined; repeat: number | undefined },
+      own = {}
+    ): SolveNode {
+      return {
+        ...solveNode('N/Promoted', 'SamplerProbe', { anchorsPreset: 15, ...own }),
+        skippedAncestors: {
+          transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
+          modulate: { r: 1, g: 1, b: 1, a: 1 },
+          z: [],
+          sampler,
+        },
+      };
+    }
+
+    it('inherits the filter a skipped Node2D ancestor names, where it names none itself', async () => {
+      const reading = await resolvedSampler(promotedPast({ filter: NEAREST, repeat: undefined }));
+      expect(reading).toBe('filter=1,repeat=1');
+    });
+
+    it('lets its own filter beat the skipped ancestor', async () => {
+      const reading = await resolvedSampler(
+        promotedPast({ filter: NEAREST, repeat: undefined }, { textureFilter: LINEAR })
+      );
+      expect(reading).toBe('filter=2,repeat=1');
+    });
+  });
+
   describe('EffectiveZProvider (Light2D culling z_final)', () => {
     // Names its group after the ambient `useEffectiveZ()`, the `z_final` its
     // parent published: a hook runs only inside a real component.
@@ -579,6 +640,7 @@ describe('<ControlCanvasWalker>', () => {
           transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
           modulate: { r: 1, g: 1, b: 1, a: 1 },
           z: [{ zIndex: 5, zAsRelative: true }],
+          sampler: ROOT_TEXTURE_SAMPLER,
         },
       };
 
@@ -611,6 +673,7 @@ describe('<ControlCanvasWalker>', () => {
             { zIndex: 50, zAsRelative: true },
             { zIndex: 3, zAsRelative: false },
           ],
+          sampler: ROOT_TEXTURE_SAMPLER,
         },
       };
 

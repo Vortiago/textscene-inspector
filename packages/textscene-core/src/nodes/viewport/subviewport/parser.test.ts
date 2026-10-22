@@ -114,6 +114,7 @@ describe('parseSubViewport', () => {
         use_debanding: 'true',
         audio_listener_enable_2d: 'true',
         canvas_item_default_texture_filter: '0',
+        canvas_item_default_texture_repeat: '2',
         gui_embed_subwindows: 'true',
         size_2d_override: 'Vector2i(320, 240)',
         size_2d_override_stretch: 'true',
@@ -123,6 +124,7 @@ describe('parseSubViewport', () => {
       expect(result.use_debanding).toBe(true);
       expect(result.audio_listener_enable_2d).toBe(true);
       expect(result.canvas_item_default_texture_filter).toBe(0);
+      expect(result.canvas_item_default_texture_repeat).toBe(2);
       expect(result.gui_embed_subwindows).toBe(true);
       expect(result.size_2d_override).toEqual({ x: 320, y: 240 });
       expect(result.size_2d_override_stretch).toBe(true);
@@ -135,6 +137,7 @@ describe('parseSubViewport', () => {
       expect(result.use_debanding).toBe(false);
       expect(result.audio_listener_enable_2d).toBe(false);
       expect(result.canvas_item_default_texture_filter).toBe(1);
+      expect(result.canvas_item_default_texture_repeat).toBe(0);
       expect(result.gui_embed_subwindows).toBe(false);
       expect(result.size_2d_override).toEqual({ x: 0, y: 0 });
       expect(result.size_2d_override_stretch).toBe(false);

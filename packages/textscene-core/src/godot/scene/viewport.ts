@@ -5,6 +5,7 @@
 
 import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
 import type { PositionalShadowAtlasSettings } from '../rendering/lights/positionalShadowAtlas.js';
+import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from './canvasItem.js';
 
 /** `Viewport::PositionalShadowAtlasQuadrantSubdiv` (`scene/main/viewport.h:108-117`), without its `_MAX`. */
 enum PositionalShadowAtlasQuadrantSubdiv {
@@ -209,7 +210,7 @@ export enum DefaultCanvasItemTextureFilter {
  * stores for `canvas_item_default_texture_repeat`. 4.7.2 adds PARENT_NODE (`viewport.h:205`), which
  * 4.6.3 refuses.
  */
-enum DefaultCanvasItemTextureRepeat {
+export enum DefaultCanvasItemTextureRepeat {
   DISABLED = 0,
   ENABLED = 1,
   MIRROR = 2,
@@ -222,6 +223,46 @@ export const DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(Default
 
 /** A Viewport's default filter for a CanvasItem that defers to its ancestors (`viewport.h:419`). */
 export const VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER = DefaultCanvasItemTextureFilter.LINEAR;
+
+/** What a CanvasItem at PARENT_NODE with no ancestor to defer to resolves to: the viewport's default. */
+export interface CanvasItemTextureDefaults {
+  filter: CanvasItemTextureFilter;
+  repeat: CanvasItemTextureRepeat;
+}
+
+const CANVAS_ITEM_FILTER_OF_DEFAULT: readonly CanvasItemTextureFilter[] = [
+  CanvasItemTextureFilter.NEAREST,
+  CanvasItemTextureFilter.LINEAR,
+  CanvasItemTextureFilter.LINEAR_WITH_MIPMAPS,
+  CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS,
+];
+
+const CANVAS_ITEM_REPEAT_OF_DEFAULT: readonly CanvasItemTextureRepeat[] = [
+  CanvasItemTextureRepeat.DISABLED,
+  CanvasItemTextureRepeat.ENABLED,
+  CanvasItemTextureRepeat.MIRROR,
+];
+
+/** The table entry at `index`, `undefined` for no index or one outside the table. */
+function entryAt<T>(table: readonly T[], index: number | undefined): T | undefined {
+  return index === undefined ? undefined : table[index];
+}
+
+/**
+ * The canvas item filter and repeat that a viewport's `default_canvas_item_texture_filter` and
+ * `_repeat` set (`viewport.cpp:3974-3987`, `:4007-4017`), which differ in numbering from
+ * `CanvasItem`'s. An absent or out-of-range value keeps the initialiser, Linear and Disabled
+ * (`viewport.h:419-420`), since the setter refuses it (`viewport.cpp:3968`, `:3999`).
+ */
+export function viewportCanvasItemTextureDefaults(
+  filter: number | undefined,
+  repeat: number | undefined
+): CanvasItemTextureDefaults {
+  return {
+    filter: entryAt(CANVAS_ITEM_FILTER_OF_DEFAULT, filter) ?? CanvasItemTextureFilter.LINEAR,
+    repeat: entryAt(CANVAS_ITEM_REPEAT_OF_DEFAULT, repeat) ?? CanvasItemTextureRepeat.DISABLED,
+  };
+}
 
 /** `SubViewport::UpdateMode` (`viewport.h:877-883`): when the target is re-rendered. */
 export enum SubViewportUpdateMode {

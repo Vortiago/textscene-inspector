@@ -4,10 +4,13 @@
  * the ramp between texels, so a regression shows only on a magnified icon.
  */
 import { describe, expect, it, vi, afterEach } from 'vitest';
+import { createElement, type ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import { useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
+import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
+import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem';
 import type { ThemedIconRef } from './solveTree';
 import type { TscnInternalResource } from '../../../parser/types';
 
@@ -57,6 +60,23 @@ describe('useIconTexture', () => {
 
     expect(result.current).toBe(first);
     expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("samples with the owner's inherited filter and repeat (a Nearest parent makes the icon crisp)", () => {
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(
+        TextureSampler2DContext.Provider,
+        { value: { filter: CanvasItemTextureFilter.NEAREST, repeat: CanvasItemTextureRepeat.ENABLED } },
+        children
+      );
+
+    const { result } = renderHook(() => useIconTexture(ICON), { wrapper });
+
+    expect([result.current.magFilter, result.current.minFilter]).toEqual([
+      THREE.NearestFilter,
+      THREE.NearestFilter,
+    ]);
+    expect(result.current.wrapS).toBe(THREE.RepeatWrapping);
   });
 
   it('disposes the texture when the icon turns off, rather than leaking it', () => {

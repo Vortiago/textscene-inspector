@@ -15,7 +15,7 @@ of tile material or `z_index`. The quadrant's cells draw
 in Godot's order, x then y (`tile_map_layer.cpp:306-311`), with each run of cells from one atlas
 source batched into one quad mesh. Under `use_texture_padding` (the default), a tile samples
 only its own texels and repeats its edge texels outward, as Godot's padded atlas copy does.
-A filtered tile then shows no seam from its neighbour.
+A filtered tile then shows no seam from its neighbour. Tiles sample with the layer's inherited `texture_filter` and `texture_repeat`.
 A cell whose atlas source has no texture draws nothing (`tile_map_layer.cpp:724`). A texture that is set but fails to load draws a placeholder.
 
 A rendering quadrant is a `rendering_quadrant_size` square of cells, or one tile row of a

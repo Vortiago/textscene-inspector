@@ -136,6 +136,7 @@ function render(
         lightMask={1}
         zFinal={zFinal}
         name="Layer"
+        sampler={{ filter: 2, repeat: 1 }}
       />
     )
   );

@@ -10,6 +10,7 @@ import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { PaintRange } from '../../canvasPaintOrder';
+import type { AmbientTextureSampler } from '../../canvasItemTextureSampler';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
 import type { Rgba } from '../../../godot/math/math.js';
@@ -31,9 +32,8 @@ export interface ThemedIconRef {
  * canvas root (`renderer_canvas_cull.cpp:70-83`), as one value because one break resets all.
  * Visibility follows the scene tree instead: {@link SolveNode.parentVisibleInTree}.
  */
-// Two facets are missing, so a skipped ancestor that sets one diverges: the material owner (no
-// native painter reads `CanvasItemMaterialContext`) and the texture sampler
-// (`Node2DProperties` does not parse `texture_filter`/`texture_repeat`).
+// One facet is missing, so a skipped ancestor that sets it diverges: the material owner (no
+// native painter reads `CanvasItemMaterialContext`).
 export interface SkippedAncestors {
   /**
    * Composed `Transform2D`, outermost first (`transform_2d.cpp:198-218`). Never decomposed:
@@ -48,6 +48,12 @@ export interface SkippedAncestors {
    * `z_relative == false` restarts (`renderer_canvas_cull.cpp:430-434`). The walker folds it.
    */
   z: readonly CanvasItemZStep[];
+  /**
+   * The `texture_filter` and `texture_repeat` the skipped ancestors name, the innermost winning
+   * (`canvas_item.cpp:1625-1699`). Unnamed where none does: the walker lays the ancestors above them
+   * and the viewport default under them.
+   */
+  sampler: AmbientTextureSampler;
 }
 
 /** One CanvasItem's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */

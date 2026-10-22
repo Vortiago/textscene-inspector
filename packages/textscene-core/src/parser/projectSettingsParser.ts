@@ -27,6 +27,10 @@ import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import type { Rgba } from '../godot/math/math.js';
 import { GlowUpscaleMode } from '../godot/rendering/environment/glow.js';
 import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
+import {
+  viewportCanvasItemTextureDefaults,
+  type CanvasItemTextureDefaults,
+} from '../godot/scene/viewport.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -140,6 +144,18 @@ export function projectViewportSize(settings: ProjectSettings | null): ProjectVi
  */
 export function projectClearColor(settings: ProjectSettings | null): Rgba {
   return colorOr(settings?.['rendering/environment/defaults/default_clear_color'], DEFAULT_CLEAR_COLOR);
+}
+
+/**
+ * `rendering/textures/canvas_textures/default_texture_filter` and `_repeat`, which the editor's scene root
+ * takes as its viewport defaults (`editor_node.cpp:451-460`). Every CanvasItem at PARENT_NODE with no
+ * ancestor to defer to resolves to them.
+ */
+export function projectCanvasTextureDefaults(settings: ProjectSettings | null): CanvasItemTextureDefaults {
+  return viewportCanvasItemTextureDefaults(
+    parseOptionalInt(settings?.['rendering/textures/canvas_textures/default_texture_filter']),
+    parseOptionalInt(settings?.['rendering/textures/canvas_textures/default_texture_repeat'])
+  );
 }
 
 /** `rendering/lightmapping/primitive_meshes/texel_size`, the world size of a texel in a PrimitiveMesh's UV2. */

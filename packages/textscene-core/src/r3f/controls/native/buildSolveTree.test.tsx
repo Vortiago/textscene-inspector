@@ -741,6 +741,41 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     expect(result.current.tree[0]!.skippedAncestors!.z).toEqual([{ zIndex: 0, zAsRelative: true }]);
   });
 
+  it("folds each skipped ancestor's texture_filter and texture_repeat, the innermost naming one winning (canvas_item.cpp:1625-1699)", async () => {
+    const NEAREST = 1;
+    const LINEAR = 2;
+    const REPEAT_ENABLED = 2;
+    const outer = node2D(
+      'Outer',
+      {},
+      {
+        properties: { texture_filter: NEAREST, texture_repeat: REPEAT_ENABLED },
+        children: [
+          node2D(
+            'Inner',
+            {},
+            { properties: { texture_filter: LINEAR, texture_repeat: 0 }, children: [label('L')] }
+          ),
+        ],
+      }
+    );
+    const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
+    // Inner names a filter, so it wins. Its PARENT_NODE repeat defers to Outer's.
+    expect(result.current.tree[0]!.skippedAncestors!.sampler).toEqual({
+      filter: LINEAR,
+      repeat: REPEAT_ENABLED,
+    });
+  });
+
+  it('leaves the sampler unnamed where no skipped ancestor names a filter or repeat', async () => {
+    const nodes = [node2D('N', {}, { children: [label('L')] })];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    expect(result.current.tree[0]!.skippedAncestors!.sampler).toEqual({
+      filter: undefined,
+      repeat: undefined,
+    });
+  });
+
   it('a Control that is never promoted (no skipped ancestor) carries no ancestor transform', async () => {
     const { result } = renderHook(() => useBuildSolveTree([control('C')], [], []));
     expect(result.current.tree[0]!.skippedAncestors).toBeNull();

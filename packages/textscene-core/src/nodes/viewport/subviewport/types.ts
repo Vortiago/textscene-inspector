@@ -38,6 +38,7 @@ export interface SubViewportProperties extends Omit<NodeProperties, 'transform'>
   use_debanding: boolean;
   audio_listener_enable_2d: boolean;
   canvas_item_default_texture_filter: number;
+  canvas_item_default_texture_repeat: number;
   gui_embed_subwindows: boolean;
   /** The side of the viewport's positional shadow atlas. Absent keeps the Viewport default, 2048. */
   positional_shadow_atlas_size?: number;

@@ -14,6 +14,7 @@ import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';
 import { defineChannel } from './solveHandoff';
 import { controlNode, solveNode } from './testing/solveNode';
+import { ROOT_TEXTURE_SAMPLER } from '../../canvasItemTextureSampler';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 
@@ -412,6 +413,7 @@ describe('solveControlTree — a promoted Control anchors against its DIRECT par
     transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     modulate: { r: 1, g: 1, b: 1, a: 1 },
     z: [],
+    sampler: ROOT_TEXTURE_SAMPLER,
   };
 
   function promoted(path: string, properties: Props, children: SolveNode[] = []): SolveNode {

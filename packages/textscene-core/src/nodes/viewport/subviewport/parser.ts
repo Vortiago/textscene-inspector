@@ -12,6 +12,7 @@ import { MSAA_DISABLED, MSAA_MODES } from '../../../godot/rendering/msaa';
 import {
   VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
   DefaultCanvasItemTextureFilter,
+  DefaultCanvasItemTextureRepeat,
   SubViewportClearMode,
   SubViewportUpdateMode,
 } from '../../../godot/scene/viewport';
@@ -26,6 +27,13 @@ const TEXTURE_FILTERS = [
   DefaultCanvasItemTextureFilter.LINEAR,
   DefaultCanvasItemTextureFilter.LINEAR_WITH_MIPMAPS,
   DefaultCanvasItemTextureFilter.NEAREST_WITH_MIPMAPS,
+] as const;
+
+/** `Viewport.DefaultCanvasItemTextureRepeat`: the three modes 4.6.3 accepts, without 4.7's PARENT_NODE. */
+const TEXTURE_REPEATS = [
+  DefaultCanvasItemTextureRepeat.DISABLED,
+  DefaultCanvasItemTextureRepeat.ENABLED,
+  DefaultCanvasItemTextureRepeat.MIRROR,
 ] as const;
 
 export function parseSubViewport(
@@ -67,6 +75,12 @@ export function parseSubViewport(
       properties.canvas_item_default_texture_filter,
       VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
       TEXTURE_FILTERS,
+      context
+    ),
+    canvas_item_default_texture_repeat: enumOr(
+      properties.canvas_item_default_texture_repeat,
+      DefaultCanvasItemTextureRepeat.DISABLED,
+      TEXTURE_REPEATS,
       context
     ),
     gui_embed_subwindows: boolOr(properties.gui_embed_subwindows, false, context),

@@ -1,0 +1,27 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: `texture_filter` on the Node2D parent. Both Sprite2Ds magnify the same 8x8 texture
+; 8x, and neither sets its own filter. Under the Nearest parent the half-black, half-white edge
+; stays a hard step. Under the default parent the project's Linear filter blends it over one texel.
+
+[ext_resource type="Texture2D" path="res://textures/hard-edge-split.png" id="1_split"]
+
+[node name="World" type="Node2D"]
+
+; `texture_filter` 1 is TEXTURE_FILTER_NEAREST.
+[node name="NearestParent" type="Node2D" parent="."]
+texture_filter = 1
+
+; The sprites are 64 px wide and sit 288 px either side of the viewport centre, so each boundary
+; midpoint is addressable by a whole-pixel probe.
+[node name="Nearest" type="Sprite2D" parent="NearestParent"]
+texture = ExtResource("1_split")
+position = Vector2(288, 324)
+scale = Vector2(8, 8)
+
+[node name="DefaultParent" type="Node2D" parent="."]
+
+[node name="Default" type="Sprite2D" parent="DefaultParent"]
+texture = ExtResource("1_split")
+position = Vector2(864, 324)
+scale = Vector2(8, 8)

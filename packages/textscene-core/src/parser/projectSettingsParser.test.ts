@@ -16,6 +16,7 @@ import {
   projectExtensionListPath,
   projectLayoutDirectionEnv,
   projectThemeScale,
+  projectCanvasTextureDefaults,
   projectClearColor,
   projectTransparentBackground,
   projectGlowUsesBicubicUpscale,
@@ -534,5 +535,25 @@ describe('projectGlowUsesBicubicUpscale', () => {
 
   it('keeps the default for a malformed value (edge case)', () => {
     expect(projectGlowUsesBicubicUpscale({ [KEY]: 'sharp' })).toBe(true);
+  });
+});
+
+describe('projectCanvasTextureDefaults', () => {
+  const FILTER = 'rendering/textures/canvas_textures/default_texture_filter';
+  const REPEAT = 'rendering/textures/canvas_textures/default_texture_repeat';
+
+  it('reads Linear and Disabled with no project, the settings defaults (project_settings.cpp:1833-1834)', () => {
+    expect(projectCanvasTextureDefaults(null)).toEqual({ filter: 2, repeat: 1 });
+  });
+
+  it('reads a Nearest filter and an Enabled repeat as the canvas item values they set', () => {
+    expect(projectCanvasTextureDefaults({ [FILTER]: '0', [REPEAT]: '1' })).toEqual({ filter: 1, repeat: 2 });
+  });
+
+  it('keeps the defaults for a malformed value (edge case)', () => {
+    expect(projectCanvasTextureDefaults({ [FILTER]: 'crisp', [REPEAT]: '' })).toEqual({
+      filter: 2,
+      repeat: 1,
+    });
   });
 });

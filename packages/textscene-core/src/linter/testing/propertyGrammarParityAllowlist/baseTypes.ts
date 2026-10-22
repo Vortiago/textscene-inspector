@@ -45,14 +45,11 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // One entry covers every 2D leaf and every Control.
   CanvasItem: {
     linterOnly: [
-      // Culling, clipping and sampler settings with no render equivalent:
+      // Culling and clipping settings with no render equivalent:
       // `visibility_layer` and `clip_children` gate culling and stencil
-      // clipping, and the texture sampler modes are set per material rather
-      // than per node in three.js.
+      // clipping.
       'visibility_layer',
       'clip_children',
-      'texture_filter',
-      'texture_repeat',
       // canvas_item.cpp:637-656: a shader-reflected instance uniform, typed by
       // the attached ShaderMaterial's GLSL. This previewer has no ShaderMaterial
       // slice, so no parser has a uniform to reflect it onto.
@@ -158,7 +155,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'snap_2d_vertices_to_pixel',
       'gui_snap_controls_to_pixels',
       'canvas_cull_mask',
-      'canvas_item_default_texture_repeat',
       'mesh_lod_threshold',
       'use_occlusion_culling',
       'use_hdr_2d',
