@@ -4,7 +4,7 @@
  */
 
 import { storesAlpha, type ImageSourceFormat } from './imageSourceFormat.js';
-import type { EnumValue } from '../classdb/enumNames.js';
+import { enumMember, type EnumValue } from '../classdb/enumNames.js';
 
 /** The importer a sidecar names for a 2D texture (`resource_importer_texture.cpp:164-166`). */
 export const TEXTURE_IMPORTER = 'texture';
@@ -53,10 +53,8 @@ export function roughnessLimitOption(
   normalPath: string | undefined
 ): RoughnessLimitOption | null {
   if (mode === undefined || !normalPath) return null;
-  const channel = mode - ROUGHNESS_MODE_FIRST_CHANNEL;
-  return channel >= RoughnessChannel.R && channel <= RoughnessChannel.L
-    ? { channel: channel as EnumValue<typeof RoughnessChannel>, normalPath }
-    : null;
+  const channel = enumMember(RoughnessChannel, mode - ROUGHNESS_MODE_FIRST_CHANNEL);
+  return channel === null ? null : { channel, normalPath };
 }
 
 /** The roughness channel the limiter raises, and the path of the normal map it reads. */

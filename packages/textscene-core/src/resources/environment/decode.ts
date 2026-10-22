@@ -40,7 +40,7 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     end: parseOptionalFloat(properties.fog_depth_end),
   });
   return {
-    // Background
+    // Background. `set_background` and `set_ambient_source` store any int (`environment.cpp:43-50`, `:151-155`).
     background_mode: intOr(
       properties.background_mode,
       BackgroundMode.BG_CLEAR_COLOR,

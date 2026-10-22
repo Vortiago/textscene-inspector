@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { enumNamesByValue, flagLabels, labelEnumNames, pascalCaseLabel, relabelEnumNames } from './enumNames';
+import {
+  enumMember,
+  enumNamesByValue,
+  flagLabels,
+  labelEnumNames,
+  pascalCaseLabel,
+  relabelEnumNames,
+} from './enumNames';
 
 const Shade = { DARK: 0, LIGHT: 2 } as const;
 
@@ -55,5 +62,16 @@ describe('flagLabels', () => {
 
   it('leaves out a flag that is not listed', () => {
     expect(Object.keys(flagLabels(Flags, 'FLAG_', ['FIRST']))).toEqual(['1']);
+  });
+});
+
+describe('enumMember', () => {
+  it('gives the integer back as the member it names', () => {
+    expect(enumMember(Shade, 2)).toBe(Shade.LIGHT);
+  });
+
+  it('gives null for an integer no member holds', () => {
+    expect(enumMember(Shade, 1)).toBeNull();
+    expect(enumMember(Shade, 0.5)).toBeNull();
   });
 });

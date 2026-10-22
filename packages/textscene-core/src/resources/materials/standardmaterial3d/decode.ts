@@ -325,6 +325,7 @@ function decodeAlphaAntialiasing(
   transparency: EnumValue<typeof Transparency>,
   scissorThreshold: number
 ): AlphaAntialiasingCut | null {
+  // `set_alpha_antialiasing` stores any value (`material.cpp:2395-2401`).
   const mode = intOr(
     properties['alpha_antialiasing_mode'],
     AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
