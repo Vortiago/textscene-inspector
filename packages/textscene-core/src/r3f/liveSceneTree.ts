@@ -6,8 +6,7 @@
  */
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { scopeOf, type LiveNode } from '../resources/liveNode.js';
-import { resolveInstancePath } from '../resources/SubResourceResolver.js';
+import { liveInstancePath, scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
@@ -73,9 +72,8 @@ export function singleSceneCache(
  * scene that inherits or instances itself ends.
  */
 export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
-  if (!node.instance) return node;
+  const scenePath = liveInstancePath(node, scope);
   const outer = scopeOf(node, scope);
-  const scenePath = resolveInstancePath(node.instance, outer.externalResources);
   const enclosingScenePaths = outer.instancedScenePaths ?? [];
   if (!scenePath || enclosingScenePaths.includes(scenePath)) return node;
   const cached = sceneCache.getCached(scenePath);
@@ -165,9 +163,7 @@ export function liveChildGroups(
     return [{ origin: 'glb', children: glbSceneRootChildren(glbObject, node.children), scope: own }];
   }
 
-  if (!node.instance) return inlineOnly();
-
-  const scenePath = resolveInstancePath(node.instance, own.externalResources);
+  const scenePath = liveInstancePath(node, scope);
   if (!scenePath) return inlineOnly();
 
   // Cyclic instancing: Godot never loads the scene here, so nothing of it is below.

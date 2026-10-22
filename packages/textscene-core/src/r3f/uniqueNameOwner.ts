@@ -8,7 +8,7 @@
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
-import { resolveInstancePath } from '../resources/SubResourceResolver.js';
+import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { joinPath } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import {
@@ -277,12 +277,11 @@ export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
 }
 
 function cachedSubRoots(
-  node: TscnNode,
+  node: LiveNode,
   scope: SceneScope,
   ctx: LiveTreeContext
 ): readonly TscnNode[] | undefined {
-  if (!node.instance) return undefined;
-  const scenePath = resolveInstancePath(node.instance, scope.externalResources);
+  const scenePath = liveInstancePath(node, scope);
   return scenePath ? ctx.sceneCache.getCached(scenePath)?.nodes : undefined;
 }
 

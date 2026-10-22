@@ -4,10 +4,9 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
 import { liveChildGroups, mergedNodeOf, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
 import { glbPathOf, loneGlbRootPath } from '../../../resources/glbSceneRoot.js';
-import { scopeOf } from '../../../resources/liveNode.js';
+import { liveInstancePath, scopeOf } from '../../../resources/liveNode.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import { useGlbCache } from './useGlbCache.js';
 import styles from './SceneTreeViewer.module.css';
@@ -103,12 +102,12 @@ function TreeNodeImpl({
     () => scopeOf(node, { externalResources, internalResources: [], instancedScenePaths }),
     [node, externalResources, instancedScenePaths]
   );
-  const scenePath = node.instance ? resolveInstancePath(node.instance, scope.externalResources) : null;
+  const scenePath = liveInstancePath(node, scope);
   const instanceScenePath = onOpenSubScene ? scenePath : null;
 
   // Null for a non-instance row or while the sub-scene loads. The hook
   // re-renders the row when the sub-scene arrives.
-  const subScene = useSubSceneChildren(node, scope.externalResources);
+  const subScene = useSubSceneChildren(node, scope.externalResources, scenePath);
 
   // A GLB row's own GLB, else the GLB an instanced `.glb` sub-scene is made of. The hook re-renders
   // the row when the GLB arrives.
