@@ -1023,6 +1023,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Light Range Floor",
+    "file": "unit-light-range-floor.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Light Specular",
     "file": "unit-light-specular.tscn",
     "category": "Other"
@@ -1950,6 +1955,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tree",
     "file": "unit-tree.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tube Trail Mesh Texture Uv",
+    "file": "unit-tube-trail-mesh-texture-uv.tscn",
     "category": "Other"
   },
   {

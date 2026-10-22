@@ -11,7 +11,6 @@ import { DispatchedNode } from '../../NodeDispatcher';
 import { AttachedToObject, ParentTypeProvider } from '../../parentSpaceScope';
 import { CullPathProvider } from '../../visibilityRange/CullPathContext';
 import { VisibilityParentProvider } from '../../visibilityRange/VisibilityParentContext';
-import { useUniqueNamePaths } from '../../useUniqueNames';
 import {
   childOrders,
   TreeOrderProvider,
@@ -20,8 +19,8 @@ import {
 } from '../../contexts/TreeOrderContext';
 import type { GlbRoot } from './GlbInstanceContext';
 import type { GlbObjectEntry } from './glbHierarchy';
-import { glbNodeLinks } from './glbNodeLinks';
-import { isApplicableGlbOverride } from './glbNodeOverrides';
+import type { GlbNodeLink } from './glbNodeLinks';
+import { glbAttachPath, isApplicableGlbOverride } from './glbNodeOverrides';
 import { matchGlbTarget } from './matchGlbTarget';
 
 /** A GLB object is a Node3D in Godot, so a child of another family escapes it as it escapes a Node3D. */
@@ -38,26 +37,21 @@ interface AttachedChild {
 }
 
 interface GlbAttachedChildrenProps {
-  /** The mounted GLB, the root of `entries`. */
-  object: THREE.Object3D;
-  /** The mounted GLB flattened by `flattenGlbObjects`, which `root.overrides` address into. */
-  entries: readonly GlbObjectEntry[];
+  /**
+   * The mounted GLB's objects as `glbNodeLinks` reads them, one link per `flattenGlbObjects`
+   * entry, which `root.overrides` address into.
+   */
+  links: readonly GlbNodeLink[];
   root: GlbRoot;
   /** The GLB scene root's own node path, which each GLB object's `relPath` continues. */
   nodePath: string | null;
 }
 
-export function GlbAttachedChildren({
-  object,
-  entries,
-  root,
-  nodePath,
-}: GlbAttachedChildrenProps): ReactNode {
+export function GlbAttachedChildren({ links, root, nodePath }: GlbAttachedChildrenProps): ReactNode {
   const rootOrder = useTreeOrder();
-  const uniquePaths = useUniqueNamePaths(root.path);
   const attached = useMemo(
-    () => attachedChildren(object, entries, root, nodePath, rootOrder, uniquePaths),
-    [object, entries, root, nodePath, rootOrder, uniquePaths]
+    () => attachedChildren(links, root, nodePath, rootOrder),
+    [links, root, nodePath, rootOrder]
   );
   if (attached.length === 0 || nodePath === null || root.path === null) return null;
   return (
@@ -82,23 +76,21 @@ export function GlbAttachedChildren({
  * order. A path that names no object drops its node, and `matchGlbTarget` warns once for it.
  */
 function attachedChildren(
-  object: THREE.Object3D,
-  entries: readonly GlbObjectEntry[],
+  links: readonly GlbNodeLink[],
   root: GlbRoot,
   nodePath: string | null,
-  rootOrder: TreeOrder,
-  uniquePaths: ReadonlyMap<string, string> | undefined
+  rootOrder: TreeOrder
 ): AttachedChild[] {
   // The common GLB has none, so nothing below runs for it. A GLB opened as the scene has no
   // instancing node to address into it.
   if (nodePath === null || root.path === null || root.overrides.every(isApplicableGlbOverride)) return [];
+  const entries = links.map((link) => link.entry);
   const orders = childOrders(rootOrder, entries.length);
-  const links = glbNodeLinks(object, entries, root, uniquePaths);
   const attachedBelow = new Map<number, number>();
   const attached: AttachedChild[] = [];
   for (const node of root.overrides) {
-    if (isApplicableGlbOverride(node)) continue;
-    const target = matchGlbTarget(entries, node.instanceSubPath!);
+    const path = glbAttachPath(node);
+    const target = path === null ? null : matchGlbTarget(entries, path);
     if (!target) continue;
     // After the target's whole subtree, in the flat order its entries hold, and after the nodes
     // already attached there.

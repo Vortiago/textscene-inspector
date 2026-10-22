@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as vscode from 'vscode';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
+import { forgetProjectFiles } from './resRoot';
 import { createMockUri, vscode as vscodeMocks } from './test-setup';
 
 function makeDocument(content: string, fsPath = '/workspace/scenes/Door.tscn'): vscode.TextDocument {
@@ -144,7 +145,7 @@ describe('TscnDocumentLinkProvider', () => {
       expect(await provider.resolveDocumentLink!(link!, TOKEN)).toBeUndefined();
     });
 
-    it('finds a project.godot created after an earlier link found none', async () => {
+    it('finds a project.godot created after an earlier link found none, once its event arrives', async () => {
       (vscodeMocks.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
         uri: createMockUri('/workspace'),
       });
@@ -155,6 +156,8 @@ describe('TscnDocumentLinkProvider', () => {
       await provider.resolveDocumentLink!(provider.provideDocumentLinks(document, TOKEN)[0]!, TOKEN);
 
       arrangeDisk(['/workspace/game/project.godot', '/workspace/game/scenes/door.tscn']);
+      // What the extension does on the watcher's create event.
+      forgetProjectFiles();
       const resolved = await provider.resolveDocumentLink!(
         provider.provideDocumentLinks(document, TOKEN)[0]!,
         TOKEN

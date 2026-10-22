@@ -4,7 +4,8 @@
  */
 
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
-import { searchAncestors } from './parentType.js';
+import { searchAncestors, type SceneRoots } from './parentType.js';
+import { perTree } from '../utils/perTree.js';
 import type { RawNode, RawScene } from '../parser/types.js';
 
 /**
@@ -13,7 +14,7 @@ import type { RawNode, RawScene } from '../parser/types.js';
  * may be an instanced Viewport, and pooling its cameras into the outer scope is
  * the false positive this scoping prevents.
  */
-export function viewportScopeOf(scene: RawScene, node: RawNode): RawNode | null | undefined {
+export function viewportScopeOf(scene: SceneRoots, node: RawNode): RawNode | null | undefined {
   // The slot is `get_viewport()`'s, for 2D (camera_2d.cpp:342) and 3D (camera_3d.cpp:186)
   // alike: the 2D group is `"__cameras_" + itos(vp.get_id())` (camera_2d.cpp:349) and
   // `make_current` gates on `!viewport->get_camera_2d()` (:354, viewport.h:764).
@@ -27,28 +28,25 @@ export function viewportScopeOf(scene: RawScene, node: RawNode): RawNode | null 
 }
 
 /**
- * A counter of the claiming nodes that share one viewport scope, tallied once per scene.
+ * A counter of the claiming nodes that share one viewport scope, tallied once per tree.
  * A walk per node is O(matches x nodes x depth) on the very scene a contention rule
- * detects. Keyed on the roots array, since `viewportScopeOf` reads nothing of `scene`
- * but `nodes`. `claimants` returns the nodes that claim the slot.
+ * detects. `claimants` returns the nodes that claim the slot.
  */
 export function viewportScopeCounter(
-  claimants: (roots: RawNode[]) => Iterable<RawNode>
+  claimants: (roots: readonly RawNode[]) => Iterable<RawNode>
 ): (scene: RawScene, scope: RawNode | null) => number {
-  const tallies = new WeakMap<RawNode[], Map<RawNode | null, number>>();
-  return (scene, scope) => {
-    let tally = tallies.get(scene.nodes);
-    if (!tally) {
-      tally = new Map<RawNode | null, number>();
-      for (const claimant of claimants(scene.nodes)) {
-        // A node whose viewport this file cannot determine is left out of the
-        // contending set: `undefined` is never a scope a caller holds.
-        const claimantScope = viewportScopeOf(scene, claimant);
-        if (claimantScope === undefined) continue;
-        tally.set(claimantScope, (tally.get(claimantScope) ?? 0) + 1);
-      }
-      tallies.set(scene.nodes, tally);
-    }
-    return tally.get(scope) ?? 0;
-  };
+  const tallyOf = perTree((roots) => tallyScopes(roots, claimants(roots)));
+  return (scene, scope) => tallyOf(scene.nodes).get(scope) ?? 0;
+}
+
+function tallyScopes(roots: readonly RawNode[], claimants: Iterable<RawNode>): Map<RawNode | null, number> {
+  const tally = new Map<RawNode | null, number>();
+  for (const claimant of claimants) {
+    // A node whose viewport this file cannot determine is left out of the
+    // contending set: `undefined` is never a scope a caller holds.
+    const claimantScope = viewportScopeOf({ nodes: roots }, claimant);
+    if (claimantScope === undefined) continue;
+    tally.set(claimantScope, (tally.get(claimantScope) ?? 0) + 1);
+  }
+  return tally;
 }

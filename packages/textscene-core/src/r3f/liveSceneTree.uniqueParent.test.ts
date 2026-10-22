@@ -12,7 +12,7 @@ import {
   collapseLiveNode,
   liveChildGroups,
   rootScope,
-  singleSceneCache,
+  singlePathCache,
   type LiveTreeContext,
 } from './liveSceneTree';
 
@@ -266,11 +266,11 @@ unique_name_in_owner = true
 `);
     const instance = host.nodes[0]!.children.find((n) => n.name === 'Player')!;
     const outer = { externalResources: host.externalResources, internalResources: [] };
-    const overInherited = collapseLiveNode(instance, outer, singleSceneCache('res://player.tscn', inherited));
+    const overInherited = collapseLiveNode(instance, outer, singlePathCache('res://player.tscn', inherited));
     const overBase = collapseLiveNode(
       overInherited,
       scopeOf(overInherited, outer),
-      singleSceneCache('res://base.tscn', base)
+      singlePathCache('res://base.tscn', base)
     );
 
     expect(

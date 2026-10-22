@@ -21,7 +21,7 @@ export function parseOptionButton(
 
   // A dense array, one slot per index, so `selected`, the raw Godot index, aligns with items[selected]
   // even when an item omits its text key.
-  const itemCount = slotCount(properties.item_count) ?? 0;
+  const itemCount = slotCount(properties[OPTION_BUTTON_ITEMS.countKey.key]) ?? 0;
   // Read before the item walk, which bounds itself on it.
   result.selected = parseOptionalInt(properties.selected);
   // Grouped by the item `_get_property` resolves each key to: the gate is `is_valid_int()` and the read is

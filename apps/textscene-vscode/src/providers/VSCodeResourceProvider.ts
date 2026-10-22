@@ -8,7 +8,13 @@ import * as vscode from 'vscode';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
-import { comparablePath, isWithinRoot, RES_SCHEME, resRelativePath } from '@textscene/core/resources/resPath';
+import {
+  isSamePath,
+  isWithinRoot,
+  pathKey,
+  RES_SCHEME,
+  resRelativePath,
+} from '@textscene/core/resources/resPath';
 import { directoryOf, findResRootIn } from '../resRoot';
 import { HOST_PATH_CASE } from '../hostPathCase';
 import { readWorkspaceFile } from '../readWorkspaceFile';
@@ -21,10 +27,9 @@ export class VSCodeResourceProvider implements ResourceProvider {
   private resRootLookup: Promise<vscode.Uri | null> | null = null;
 
   /**
-   * Comparable fsPath -> the exact `res://` string a `loadResource` call resolved
-   * it to. Recorded on resolution, before the read, so a resource not on disk yet
-   * is still recorded and a later `onDidCreate` recovers it through
-   * `getServedResPath`.
+   * The exact `res://` string a `loadResource` call resolved to, by the key of its fsPath in the host's path case.
+   * Recorded on resolution, before the read, so a resource not on disk yet is still recorded and a later
+   * `onDidCreate` recovers it through `getServedResPath`.
    */
   private servedResources = new Map<string, string>();
 
@@ -38,7 +43,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
     try {
       const fsPath = await this.resolve(resourcePath);
       info(`[VSCodeResourceProvider] Resolved to: ${fsPath.fsPath}`);
-      this.servedResources.set(comparablePath(fsPath.fsPath), resourcePath);
+      this.servedResources.set(pathKey(fsPath.fsPath, HOST_PATH_CASE), resourcePath);
       const fileData = await readWorkspaceFile(fsPath);
       return resourceContent(fileData, type, resourcePath);
     } catch (cause) {
@@ -49,12 +54,11 @@ export class VSCodeResourceProvider implements ResourceProvider {
   }
 
   /**
-   * The exact `res://` string `loadResource` served for this fsPath, or `null`
-   * when never served, so there is nothing to invalidate. A lookup with no IO, not
-   * a re-derivation, so it ignores a watcher's casing.
+   * The exact `res://` string `loadResource` served for this fsPath, or `null` when never served, so there is nothing
+   * to invalidate. A lookup with no IO, not a re-derivation, so on a case-insensitive host it ignores a watcher's case.
    */
   getServedResPath(fileUri: vscode.Uri): string | null {
-    return this.servedResources.get(comparablePath(fileUri.fsPath)) ?? null;
+    return this.servedResources.get(pathKey(fileUri.fsPath, HOST_PATH_CASE)) ?? null;
   }
 
   /** Every `res://` path `loadResource` served, for a caller that must re-fetch them all. */
@@ -63,9 +67,9 @@ export class VSCodeResourceProvider implements ResourceProvider {
   }
 
   /**
-   * Whether a fresh walk finds another `res://` root than the cached one, after a
-   * `project.godot` was created, moved or deleted. False before any load cached a
-   * root, since no resource was then resolved against one.
+   * Whether a walk now finds another `res://` root than the cached one, after a `project.godot` was created, moved or
+   * deleted: the extension forgets the shared answers on that event first. False before any load cached a root, since
+   * no resource was then resolved against one.
    */
   async hasResRootMoved(): Promise<boolean> {
     if (!this.resRootLookup) {
@@ -75,7 +79,7 @@ export class VSCodeResourceProvider implements ResourceProvider {
       this.resRootLookup,
       findResRootIn(this.workspaceRoot, this.documentUri),
     ]);
-    return rootKey(currentRoot) !== rootKey(cachedRoot);
+    return !isSameRoot(currentRoot, cachedRoot);
   }
 
   /** The scene's `res://` root, cached for this provider's lifetime. `hasResRootMoved` tells the owner when to replace it. */
@@ -115,7 +119,7 @@ function resRootRelativePath(resPath: string): string {
   return relativePath;
 }
 
-/** A root as two host paths compare, or null for no root. */
-function rootKey(root: vscode.Uri | null): string | null {
-  return root && comparablePath(root.fsPath);
+/** Whether `a` and `b` are one root, or both no root. */
+function isSameRoot(a: vscode.Uri | null, b: vscode.Uri | null): boolean {
+  return a === null || b === null ? a === b : isSamePath(a.fsPath, b.fsPath, HOST_PATH_CASE);
 }

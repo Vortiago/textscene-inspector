@@ -44,7 +44,7 @@ function wrapper(fake: FakeResourceLoader) {
 describe('useSubSceneChildren', () => {
   it('returns the sub-scene nodes once the load resolves', () => {
     const fake = createFakeResourceLoader();
-    const { result } = renderHook(() => useSubSceneChildren(INSTANCE_ROW, EXTERNAL_RESOURCES), {
+    const { result } = renderHook(() => useSubSceneChildren(INSTANCE_ROW, EXTERNAL_RESOURCES, SCENE_PATH), {
       wrapper: wrapper(fake),
     });
 
@@ -57,17 +57,17 @@ describe('useSubSceneChildren', () => {
     const fake = createFakeResourceLoader();
     const rendered: (SubSceneChildren | null)[] = [];
     const { rerender } = renderHook(
-      ({ node }: { node: TscnNode }) => {
-        const children = useSubSceneChildren(node, EXTERNAL_RESOURCES);
+      ({ node, scenePath }: { node: TscnNode; scenePath: string | null }) => {
+        const children = useSubSceneChildren(node, EXTERNAL_RESOURCES, scenePath);
         rendered.push(children);
         return children;
       },
-      { wrapper: wrapper(fake), initialProps: { node: INSTANCE_ROW } }
+      { wrapper: wrapper(fake), initialProps: { node: INSTANCE_ROW, scenePath: SCENE_PATH as string | null } }
     );
     act(() => fake.scenes._resolve(SCENE_PATH, SUB_SCENE));
     const rendersBeforeRemoval = rendered.length;
 
-    rerender({ node: PLAIN_ROW });
+    rerender({ node: PLAIN_ROW, scenePath: null });
 
     expect(rendered[rendersBeforeRemoval]).toBeNull();
   });

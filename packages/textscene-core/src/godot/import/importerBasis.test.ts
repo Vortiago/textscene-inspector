@@ -78,6 +78,15 @@ describe('unwrapSpace', () => {
     expect(Array.from(xyz)).toEqual([Math.fround(2 / Math.sqrt(5)), Math.fround(1 / Math.sqrt(5)), 0]);
   });
 
+  it('keeps the scale basis for a normal under a zero axis, as the editor build does (edge case)', () => {
+    // `ERR_FAIL_COND(det == 0)` under `MATH_CHECKS` leaves the basis as it is (`basis.cpp:45-47`).
+    const xyz = Float32Array.from([0, 1, 0]);
+
+    unwrapSpace([0, 1, 1]).transformNormals(xyz);
+
+    expect(Array.from(xyz)).toEqual([0, 1, 0]);
+  });
+
   it('writes a -0 position as +0, as the zero origin is added (edge case)', () => {
     const xyz = Float32Array.from([-0, 1, 1]);
 

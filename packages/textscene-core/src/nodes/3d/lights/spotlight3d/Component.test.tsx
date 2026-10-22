@@ -87,6 +87,16 @@ describe('<SpotLight3D>', () => {
     expect(instanceAs<THREE.SpotLight>(light).distance).toBe(25);
   });
 
+  it('cuts a zero spot_range off at the light buffer’s 0.001, not at no distance', async () => {
+    // three reads a distance of 0 as no cutoff. Godot floors the range (`light_storage.cpp:895`).
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpotLight3D node={makeNode({ shadow_enabled: true, spot_range: 0 })} />
+    );
+    const light = instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight'));
+    expect(light.distance).toBe(0.001);
+    expect(light.shadow.camera.far).toBe(0.001);
+  });
+
   it("carries Godot's cone exponent in the penumbra's cosine", async () => {
     const renderer = await ReactThreeTestRenderer.create(<SpotLight3D node={makeNode({ spot_angle: 50 })} />);
     const light = instanceAs<THREE.SpotLight>(renderer.scene.findByType('SpotLight'));

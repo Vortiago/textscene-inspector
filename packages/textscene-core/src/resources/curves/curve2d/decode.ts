@@ -7,7 +7,8 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector2Array } from '../../shapes/packedArray';
-import { bezierInterpolate } from '../../../godot/math/math.js';
+import { bezierInterpolatef } from '../../../godot/math/math.js';
+import { storedReal, storedVector2 } from '../../../godot/math/real.js';
 import { CURVE2D_DATA } from '../shared/bezierData';
 import { resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
 import type { Curve2DControlPoint, Curve2DSample, Curve2DSampler } from './types';
@@ -84,7 +85,9 @@ export function tessellateCurve2D(points: Curve2DControlPoint[], segmentsPerSpan
 
 /**
  * Append a span's vertices (excluding its start, already pushed) to `flat`. The span
- * is the cubic Bézier `P0=pos_i, P1=pos_i+out_i, P2=pos_{i+1}+in_{i+1}, P3=pos_{i+1}`.
+ * is the cubic Bézier `P0=pos_i, P1=pos_i+out_i, P2=pos_{i+1}+in_{i+1}, P3=pos_{i+1}`. Each point
+ * is a `Vector2` of floats and `Vector2::bezier_interpolate` (`vector2.h:307-312`) takes the float
+ * `Math::bezier_interpolate`, so the points and each step round to single precision.
  */
 function appendSpan(
   flat: number[],
@@ -97,13 +100,15 @@ function appendSpan(
     flat.push(b.position.x, b.position.y);
     return;
   }
-  const p0 = a.position;
-  const p1 = { x: a.position.x + a.out.x, y: a.position.y + a.out.y };
-  const p2 = { x: b.position.x + b.in.x, y: b.position.y + b.in.y };
-  const p3 = b.position;
+  const p0 = storedVector2(a.position);
+  const out = storedVector2(a.out);
+  const p3 = storedVector2(b.position);
+  const inHandle = storedVector2(b.in);
+  const p1 = storedVector2({ x: p0.x + out.x, y: p0.y + out.y });
+  const p2 = storedVector2({ x: p3.x + inHandle.x, y: p3.y + inHandle.y });
   const steps = Math.max(1, segmentsPerSpan);
   for (let s = 1; s <= steps; s++) {
-    const t = s / steps;
-    flat.push(bezierInterpolate(p0.x, p1.x, p2.x, p3.x, t), bezierInterpolate(p0.y, p1.y, p2.y, p3.y, t));
+    const t = storedReal(s / steps);
+    flat.push(bezierInterpolatef(p0.x, p1.x, p2.x, p3.x, t), bezierInterpolatef(p0.y, p1.y, p2.y, p3.y, t));
   }
 }

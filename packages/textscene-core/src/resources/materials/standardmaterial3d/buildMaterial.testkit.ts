@@ -7,6 +7,7 @@ import type * as THREE from 'three';
 import { materialFromBag } from './build';
 import { standardMaterialBags } from './materialBag';
 import { bindSlotTexture, materialTextureStates } from './textureBinding';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import type { ResolvedTextureSlots, StandardMaterial3DScalars, TextureSlot } from './types';
 
 /** Each populated slot's texture put through the material's own binding. */
@@ -14,7 +15,7 @@ function boundTextureSlots(
   scalars: StandardMaterial3DScalars,
   textures: ResolvedTextureSlots
 ): ResolvedTextureSlots {
-  const states = materialTextureStates(scalars);
+  const states = materialTextureStates(scalars, DEFAULT_ANISOTROPIC_FILTERING_LEVEL);
   const bound: ResolvedTextureSlots = {};
   for (const slot of Object.keys(textures) as TextureSlot[]) {
     const texture = textures[slot];

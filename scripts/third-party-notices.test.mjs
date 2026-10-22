@@ -13,12 +13,12 @@ import {
   NOTICE_SOURCES,
   bundledNotices,
   bundledSourceFiles,
+  mergedFileInputs,
   writeBundledNotices,
 } from './third-party-notices.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const NOTICES = join(REPO_ROOT, 'THIRD-PARTY-NOTICES.md');
-const VSCODE_COPY = join(REPO_ROOT, 'apps', 'textscene-vscode', 'THIRD-PARTY-NOTICES.md');
 
 const GODOT_COPYRIGHT = NOTICE_SOURCES.find(({ section }) => section === 'Godot Engine').copyright;
 const copyrightPairs = (sources) => sources.map(({ section, copyright }) => [section, copyright]);
@@ -87,12 +87,6 @@ describe('THIRD-PARTY-NOTICES.md', () => {
       expect(derivedFiles(copyright).length).toBeGreaterThan(0);
     }
   );
-
-  it('is byte-identical to the copy shipped in the VSIX', () => {
-    // `vsce package` picks up the copy beside the extension's package.json, since `.vscodeignore`
-    // is a denylist. The root file is authoritative, and the copy must match it.
-    expect(readFileSync(VSCODE_COPY, 'utf8')).toBe(readFileSync(NOTICES, 'utf8'));
-  });
 });
 
 describe('bundledNotices', () => {
@@ -214,5 +208,34 @@ describe('writeBundledNotices', () => {
     const notices = readFileSync(join(root, 'THIRD-PARTY-NOTICES.md'), 'utf8');
     expect(notices).toContain('## FastNoiseLite');
     expect(notices).not.toContain('## Godot Engine');
+  });
+});
+
+describe('mergedFileInputs', () => {
+  it('keeps the file inputs of every bundle once', () => {
+    const merged = mergedFileInputs([
+      { inputs: { 'src/extension.ts': {}, 'src/shared.ts': {} } },
+      { inputs: { 'src/shared.ts': {}, 'src/webview/webview.ts': {} } },
+    ]);
+
+    expect(Object.keys(merged.inputs)).toEqual([
+      'src/extension.ts',
+      'src/shared.ts',
+      'src/webview/webview.ts',
+    ]);
+  });
+
+  it("leaves out a plugin's virtual module, which names no file", () => {
+    const merged = mergedFileInputs([
+      { inputs: { 'texture-worker-source:virtual:texture-worker-source': {}, 'src/webview/webview.ts': {} } },
+    ]);
+
+    expect(Object.keys(merged.inputs)).toEqual(['src/webview/webview.ts']);
+  });
+
+  it('keeps a Windows input on another drive, whose drive letter is no namespace (edge case)', () => {
+    const merged = mergedFileInputs([{ inputs: { 'D:/deps/three/build/three.module.js': {} } }]);
+
+    expect(Object.keys(merged.inputs)).toEqual(['D:/deps/three/build/three.module.js']);
   });
 });

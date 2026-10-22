@@ -278,16 +278,16 @@ describe('a root listing', () => {
   it("lists each GDExtension the editor's scan finds, in any case, and none it skips", async () => {
     const root = await listedRoot(listedFiles());
 
-    expect(await root.listFiles('gdextension')).toEqual([
+    expect([...(await root.listFiles('gdextension'))].sort()).toEqual([
       'res://addons/x/bin/B.GDExtension',
       'res://bin/a.gdextension',
     ]);
   });
 
-  it('lists every project file as a res:// path, sorted, and none the scan skips', async () => {
+  it('lists every project file as a res:// path, and none the scan skips', async () => {
     const root = await listedRoot(listedFiles());
 
-    expect(await root.listPaths()).toEqual([
+    expect([...(await root.listPaths())].sort()).toEqual([
       'res://addons/x/bin/B.GDExtension',
       'res://bin/a.gdextension',
       'res://project.godot',

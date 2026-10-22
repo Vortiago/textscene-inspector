@@ -5,13 +5,19 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import type { TscnInternalResource } from '../../../parser/types';
 import measured from './surface.godot.json';
 import { primitiveMeshSurface } from './surface';
+import { scopedMesh } from './surface.testkit';
 
-/** One mesh as the JSON holds it: its `type=`, its properties as `.tscn` text, and Godot's arrays. */
+/**
+ * One mesh as the JSON holds it: its `type=`, its properties as `.tscn` text, the sub-resources
+ * they name (a TubeTrailMesh's Curve), and Godot's arrays.
+ */
 interface MeasuredSurface {
   type: string;
   data: Record<string, string>;
+  sub_resources?: TscnInternalResource[];
   positions: number[];
   uvs: number[];
   uv2s: number[];
@@ -20,9 +26,10 @@ interface MeasuredSurface {
 // Through `unknown`: JSON typing gives each mesh the other meshes' keys as optional `undefined`.
 describe.each(measured.surfaces as unknown as MeasuredSurface[])(
   '$type against Godot',
-  ({ type, data, ...arrays }) => {
+  ({ type, data, sub_resources = [], ...arrays }) => {
     it.each(['positions', 'uvs', 'uv2s'] as const)('writes the same single-precision %s', (array) => {
-      const surface = primitiveMeshSurface({ id: type, type, data }, measured.texel_size)!;
+      const mesh = scopedMesh({ id: type, type, data }, ...sub_resources);
+      const surface = primitiveMeshSurface(mesh, measured.texel_size)!;
 
       // `+ 0` turns -0 into 0: the JSON keeps no sign on a zero.
       expect(Array.from(surface[array]!, (value) => value + 0)).toEqual(arrays[array]);
