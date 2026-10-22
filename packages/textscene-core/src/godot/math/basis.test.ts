@@ -109,6 +109,6 @@ describe('basisInvert', () => {
 
   it('leaves a singular basis as it is, as the editor build does (edge case)', () => {
     const singular: BasisComponents = [0, 0, 0, 0, 1, 0, 0, 0, 0];
-    expect(basisInvert(singular)).toEqual(singular);
+    expect(basisInvert(singular)).toBe(singular);
   });
 });

@@ -75,18 +75,16 @@ export function basisIsOrthonormal(n: BasisComponents): boolean {
 /**
  * `Basis::invert` (`core/math/basis.cpp:38-54`) in `real_t` float, each step rounded in Godot's
  * order. The editor build checks the determinant (`MATH_CHECKS`, `math_defs.h:55-57`) and returns
- * early, so a singular basis stays as it is. `n` holds the nine row-major components.
+ * early, so a singular basis stays as it is.
  */
-export function basisInvert(n: readonly number[]): BasisComponents {
+export function basisInvert(n: BasisComponents): BasisComponents {
   const at = (row: number, col: number): number => n[row * 3 + col]!;
   // `cofac(row1, col1, row2, col2)` (`basis.cpp:35-36`).
   const cofac = (row1: number, col1: number, row2: number, col2: number): number =>
     f(f(at(row1, col1) * at(row2, col2)) - f(at(row1, col2) * at(row2, col1)));
   const co = [cofac(1, 1, 2, 2), cofac(1, 2, 2, 0), cofac(1, 0, 2, 1)] as const;
   const determinant = f(f(f(at(0, 0) * co[0]) + f(at(0, 1) * co[1])) + f(at(0, 2) * co[2]));
-  if (determinant === 0) {
-    return [at(0, 0), at(0, 1), at(0, 2), at(1, 0), at(1, 1), at(1, 2), at(2, 0), at(2, 1), at(2, 2)];
-  }
+  if (determinant === 0) return n;
   const s = f(1 / determinant);
   return [
     f(co[0] * s),
