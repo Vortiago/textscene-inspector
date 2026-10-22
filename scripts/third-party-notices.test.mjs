@@ -13,12 +13,12 @@ import {
   NOTICE_SOURCES,
   bundledNotices,
   bundledSourceFiles,
+  copyRootNotices,
   writeBundledNotices,
 } from './third-party-notices.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const NOTICES = join(REPO_ROOT, 'THIRD-PARTY-NOTICES.md');
-const VSCODE_COPY = join(REPO_ROOT, 'apps', 'textscene-vscode', 'THIRD-PARTY-NOTICES.md');
 
 const GODOT_COPYRIGHT = NOTICE_SOURCES.find(({ section }) => section === 'Godot Engine').copyright;
 const copyrightPairs = (sources) => sources.map(({ section, copyright }) => [section, copyright]);
@@ -87,12 +87,6 @@ describe('THIRD-PARTY-NOTICES.md', () => {
       expect(derivedFiles(copyright).length).toBeGreaterThan(0);
     }
   );
-
-  it('is byte-identical to the copy shipped in the VSIX', () => {
-    // `vsce package` picks up the copy beside the extension's package.json, since `.vscodeignore`
-    // is a denylist. The root file is authoritative, and the copy must match it.
-    expect(readFileSync(VSCODE_COPY, 'utf8')).toBe(readFileSync(NOTICES, 'utf8'));
-  });
 });
 
 describe('bundledNotices', () => {
@@ -214,5 +208,16 @@ describe('writeBundledNotices', () => {
     const notices = readFileSync(join(root, 'THIRD-PARTY-NOTICES.md'), 'utf8');
     expect(notices).toContain('## FastNoiseLite');
     expect(notices).not.toContain('## Godot Engine');
+  });
+});
+
+describe('copyRootNotices', () => {
+  const root = mkdtempSync(join(tmpdir(), 'copied-notices-'));
+  afterAll(() => rmSync(root, { recursive: true }));
+
+  it('writes the root notices, byte for byte, beside the package', () => {
+    copyRootNotices(root);
+
+    expect(readFileSync(join(root, 'THIRD-PARTY-NOTICES.md'), 'utf8')).toBe(readFileSync(NOTICES, 'utf8'));
   });
 });

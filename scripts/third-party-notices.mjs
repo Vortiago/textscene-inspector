@@ -4,9 +4,12 @@
  * the code derives its own notices from it, so they never name code the package lacks.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { REPO_ROOT } from './repoRoot.mjs';
+
+const NOTICES_FILE = 'THIRD-PARTY-NOTICES.md';
+const ROOT_NOTICES = resolve(REPO_ROOT, NOTICES_FILE);
 
 /**
  * Each third party: its `## ` section in THIRD-PARTY-NOTICES.md, and the line that every file
@@ -86,11 +89,18 @@ export function bundledSourceFiles(metafile, { packageDir, ownSourceDir }) {
 
 /** Writes the `THIRD-PARTY-NOTICES.md` of a package whose bundle holds the inputs of `metafile`. */
 export function writeBundledNotices(metafile, { packageDir, ownSourceDir }) {
-  const rootNotices = readFileSync(resolve(REPO_ROOT, 'THIRD-PARTY-NOTICES.md'), 'utf8');
   writeFileSync(
-    resolve(packageDir, 'THIRD-PARTY-NOTICES.md'),
-    bundledNotices(rootNotices, bundledSourceFiles(metafile, { packageDir, ownSourceDir }))
+    resolve(packageDir, NOTICES_FILE),
+    bundledNotices(
+      readFileSync(ROOT_NOTICES, 'utf8'),
+      bundledSourceFiles(metafile, { packageDir, ownSourceDir })
+    )
   );
+}
+
+/** Writes the root `THIRD-PARTY-NOTICES.md`, every section of it, into `packageDir`, as the VSIX ships it. */
+export function copyRootNotices(packageDir) {
+  copyFileSync(ROOT_NOTICES, resolve(packageDir, NOTICES_FILE));
 }
 
 /**

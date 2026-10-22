@@ -7,6 +7,7 @@ import * as esbuild from 'esbuild';
 import { rm, writeFile } from 'node:fs/promises';
 import cssModulesPlugin from 'esbuild-css-modules-plugin';
 import { globSync } from 'glob';
+import { copyRootNotices } from '../../scripts/third-party-notices.mjs';
 import { textureWorkerPlugin } from './src/bundler/textureWorkerPlugin.mjs';
 
 const production = process.argv.includes('--production');
@@ -187,4 +188,6 @@ if (watch) {
     writeFile('dist/extension.meta.json', JSON.stringify(extensionResult.metafile)),
     writeFile('dist/extension.web.meta.json', JSON.stringify(extensionWebResult.metafile)),
   ]);
+  // `vsce package` runs this production build, and ships the notices beside package.json.
+  if (production) copyRootNotices(import.meta.dirname);
 }

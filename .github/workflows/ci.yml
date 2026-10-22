@@ -288,7 +288,7 @@ jobs:
         run: |
           vsix=$(ls *.vsix)
           for entry in extension/dist/extension.js extension/dist/extension.web.js \
-            extension/package.json extension.vsixmanifest; do
+            extension/package.json extension/THIRD-PARTY-NOTICES.md extension.vsixmanifest; do
             unzip -l "$vsix" | grep -q "$entry" || { echo "::error::$entry is missing from $vsix"; exit 1; }
           done
           # The browser entry point runs the extension on vscode.dev.
