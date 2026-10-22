@@ -47,16 +47,16 @@ export interface LiveTreeEntry {
 }
 
 /**
- * A {@link CachedSceneSource} that answers for one path, so a React walker can
- * hand `collapseLiveNode` the one sub-scene it loaded. Any other path returns
- * `undefined`, which keeps each mount's scope to itself (ADR-0009). A scene that
- * is still loading or failed reads as not cached, so the node stays uncollapsed.
+ * A cache source that answers for one path, so a React walker can hand the walk the one
+ * sub-scene or GLB it loaded. Any other path returns `undefined`, which keeps each mount's scope
+ * to itself (ADR-0009). A value that is still loading or failed reads as not cached, so the node
+ * stays uncollapsed.
  */
-export function singleSceneCache(
+export function singlePathCache<T>(
   path: string | null | undefined,
-  scene: (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined
-): CachedSceneSource {
-  return { getCached: (p) => (p === path ? (scene ?? undefined) : undefined) };
+  value: T | null | undefined
+): { getCached: (path: string) => T | undefined } {
+  return { getCached: (p) => (p === path ? (value ?? undefined) : undefined) };
 }
 
 /**

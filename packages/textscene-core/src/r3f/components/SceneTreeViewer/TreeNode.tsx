@@ -4,7 +4,7 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { liveChildGroups, mergedNodeOf, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
+import { liveChildGroups, mergedNodeOf, singlePathCache, type LiveChildGroup } from '../../liveSceneTree.js';
 import { glbPathOf, loneGlbRootPath } from '../../../resources/glbSceneRoot.js';
 import { liveInstancePath, scopeOf } from '../../../resources/liveNode.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
@@ -116,7 +116,7 @@ function TreeNodeImpl({
   // What lives below this node, and in what resource scope. The memo keeps the groups stable
   // across selection and hover, so `effective` reuses one merge.
   const groups: readonly LiveChildGroup[] = useMemo(
-    () => liveChildGroups(node, scope, singleSceneCache(scenePath, subScene), glbCache),
+    () => liveChildGroups(node, scope, singlePathCache(scenePath, subScene), glbCache),
     [node, scope, scenePath, subScene, glbCache]
   );
 

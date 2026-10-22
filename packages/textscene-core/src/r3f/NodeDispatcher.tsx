@@ -38,7 +38,7 @@ import {
   InstancedScenePathsProvider,
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
-import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
+import { collapseLiveNode, singlePathCache } from './liveSceneTree.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
@@ -382,7 +382,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const effective = useMemo(() => {
     if (!loadedScene) return node;
     const scope: SceneScope = { ...ambientScope, instancedScenePaths: enclosingScenePaths };
-    return collapseLiveNode(node, scope, singleSceneCache(loadPath, loadedScene));
+    return collapseLiveNode(node, scope, singlePathCache(loadPath, loadedScene));
   }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene]);
 
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a

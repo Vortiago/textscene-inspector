@@ -7,14 +7,13 @@
 import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { useResource } from '../../../resources/useResource.js';
-import type { CachedGlbSource } from '../../liveSceneTree.js';
+import { singlePathCache, type CachedGlbSource } from '../../liveSceneTree.js';
 
 export function useGlbCache(glbPath: string | undefined): CachedGlbSource | undefined {
   const result = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
 
   return useMemo(() => {
     if (!glbPath || result.status !== 'loaded' || !result.value) return undefined;
-    const object = result.value;
-    return { getCached: (path) => (path === glbPath ? object : undefined) };
+    return singlePathCache(glbPath, result.value);
   }, [glbPath, result.status, result.value]);
 }
