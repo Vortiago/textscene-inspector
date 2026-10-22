@@ -281,7 +281,7 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
  * off, so these files are the ones that may call it, each with the reason it samples no
  * viewport-biased texture.
  */
-const PLAIN_FACTORY_CALL = /\b(?:materialProgramInputs|injectProgram)\(/;
+const PLAIN_FACTORY_CALL = /\b(?:materialProgramInputs|injectProgram)\b\s*(?:<[^>(]*>)?\(/;
 const VIEWPORT_SCOPES = ['nodes/3d/', 'resources/'].map((dir) => `${RENDERER_ROOT}/${dir}`);
 const PLAIN_FACTORY_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
@@ -395,7 +395,7 @@ describe('Material factory conformance', () => {
 
     expect(
       offenders,
-      `a 3D material built without the viewport marker ignores texture_mipmap_bias — call viewportProgramInputs() or injectViewportProgram(), or add the file to PLAIN_FACTORY_EXEMPTIONS with its reason: ${offenders.join(', ')}`
+      `a 3D material built without the viewport marker ignores texture_mipmap_bias: call viewportProgramInputs() or injectViewportProgram(), or add the file to PLAIN_FACTORY_EXEMPTIONS with its reason. Found: ${offenders.join(', ')}`
     ).toEqual([]);
   });
 
@@ -403,7 +403,7 @@ describe('Material factory conformance', () => {
     const live = new Set(PLAIN_FACTORY_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(PLAIN_FACTORY_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+    expect(stale, `these exemptions no longer describe anything, so drop them: ${stale.join(', ')}`).toEqual(
       []
     );
   });
@@ -415,7 +415,7 @@ describe('Material factory conformance', () => {
 
     expect(
       offenders,
-      `a hand-written marker is a second owner of the rule — use viewportProgramInputs() or injectViewportProgram(): ${offenders.join(', ')}`
+      `a hand-written marker is a second owner of the rule, so use viewportProgramInputs() or injectViewportProgram(): ${offenders.join(', ')}`
     ).toEqual([]);
     const live = new Set(MARKER_SITES.map(({ file }) => repoPath(file)));
     expect(
@@ -428,7 +428,7 @@ describe('Material factory conformance', () => {
     const live = new Set(CONSTRUCTOR_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(IMPERATIVE_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+    expect(stale, `these exemptions no longer describe anything, so drop them: ${stale.join(', ')}`).toEqual(
       []
     );
   });
@@ -437,7 +437,7 @@ describe('Material factory conformance', () => {
     const live = new Set(ASSIGNMENT_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(ASSIGNED_MOUNT_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+    expect(stale, `these exemptions no longer describe anything, so drop them: ${stale.join(', ')}`).toEqual(
       []
     );
   });
@@ -446,7 +446,7 @@ describe('Material factory conformance', () => {
     const live = new Set(MESH_ARGUMENT_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(CONSTRUCTED_MOUNT_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+    expect(stale, `these exemptions no longer describe anything, so drop them: ${stale.join(', ')}`).toEqual(
       []
     );
   });
@@ -455,7 +455,7 @@ describe('Material factory conformance', () => {
     const live = new Set(OFF_TAG_SITES.map(({ file }) => repoPath(file)));
     const stale = Object.keys(OFF_TAG_EXEMPTIONS).filter((file) => !live.has(file));
 
-    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+    expect(stale, `these exemptions no longer describe anything, so drop them: ${stale.join(', ')}`).toEqual(
       []
     );
   });

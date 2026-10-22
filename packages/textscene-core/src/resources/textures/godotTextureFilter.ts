@@ -77,7 +77,7 @@ const STATES: Record<number, TextureFilterState> = {
 const ANISOTROPIC_FILTERS: ReadonlySet<number> = new Set([4, 5]);
 
 /** Each anisotropic state by row and level, written only by `godotTextureFilterState`, so a caller's memo sees one identity. */
-const anisotropicStates = new Map<number, TextureFilterState>();
+const anisotropicStates = new Map<string, TextureFilterState>();
 
 /**
  * The sampler state for a `texture_filter` ordinal. An absent or out-of-range
@@ -92,7 +92,7 @@ export function godotTextureFilterState(
   const row = filter !== undefined && filter in STATES ? filter : defaultFilter;
   if (!ANISOTROPIC_FILTERS.has(row)) return STATES[row]!;
   const level = Math.max(0, anisotropicFilteringLevel);
-  const key = row * 64 + level;
+  const key = `${row}:${level}`;
   let state = anisotropicStates.get(key);
   if (!state) {
     state = { ...STATES[row]!, anisotropy: 1 << level };
