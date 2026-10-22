@@ -4,8 +4,7 @@ import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Label3DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
-import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
-import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import { billboardName } from '../sprites/shared/billboardName';
 
 export function formatLabel3DProperties(properties: Label3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -13,7 +12,7 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
   const textItems: PropertySection['items'] = [
     { label: 'Text', value: properties.text || '(empty)' },
     { label: 'Pixel Size', value: properties.pixel_size.toFixed(4) },
-    { label: 'Billboard', value: getBillboardModeName(properties.billboard) },
+    { label: 'Billboard', value: billboardName(properties.billboard) },
   ];
 
   sections.push({
@@ -51,17 +50,4 @@ export function formatLabel3DProperties(properties: Label3DProperties): Property
   sections.push(...formatNode3DProperties(properties));
 
   return sections;
-}
-
-function getBillboardModeName(mode: EnumValue<typeof BillboardMode>): string {
-  switch (mode) {
-    case BillboardMode.BILLBOARD_DISABLED:
-      return 'Disabled';
-    case BillboardMode.BILLBOARD_ENABLED:
-      return 'Enabled';
-    case BillboardMode.BILLBOARD_FIXED_Y:
-      return 'Y-Axis Only';
-    default:
-      return 'Unknown';
-  }
 }

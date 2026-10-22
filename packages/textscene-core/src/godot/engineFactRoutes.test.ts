@@ -5,25 +5,31 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, posix, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname, posix, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { isProductionSource, walkSources } from '../r3f/testing/sourceScan';
 
 const srcDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Every non-test `.ts` and `.tsx` file under `dir`, relative to `srcDir`, with `/` separators. */
-function sourceFiles(dir: string = srcDir, prefix = ''): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const name = `${prefix}${entry.name}`;
-    if (entry.isDirectory()) return sourceFiles(resolve(dir, entry.name), `${name}/`);
-    const isSource = /\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts');
-    return isSource && !/\.test\.tsx?$/.test(entry.name) ? [name] : [];
-  });
+/** Every production `.ts` and `.tsx` file under `srcDir`, relative to it, with `/` separators. */
+function sourceFiles(): string[] {
+  return walkSources([srcDir], isProductionSource).map(({ file }) =>
+    relative(srcDir, file).split(sep).join('/')
+  );
 }
 
+/** Memoised by text: each sweep reads every file, and a parse of about 3,100 files costs seconds. */
+const parsedBySource = new Map<string, ts.SourceFile>();
+
 function parse(source: string): ts.SourceFile {
-  return ts.createSourceFile('file.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  let file = parsedBySource.get(source);
+  if (!file) {
+    file = ts.createSourceFile('file.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    parsedBySource.set(source, file);
+  }
+  return file;
 }
 
 /** The path a specifier names, relative to `srcDir` and without `.js`, or undefined for a package. */
@@ -195,23 +201,19 @@ describe('src/godot is the one route to an engine fact', () => {
     expect(files).toContain('linter/validators/commonValidators.ts');
   });
 
+  /** One violation per re-export in `file` that reaches a file under godot/. */
+  const godotReExports = (file: string): string[] =>
+    reExportedModules(read(file))
+      .filter((specifier) => resolvedTarget(file, specifier)?.startsWith('godot/'))
+      .map((specifier) => `${file} re-exports from '${specifier}'`);
+
   it('is not re-exported by any module outside it', () => {
-    const violations = files
-      .filter((file) => !isInGodot(file))
-      .flatMap((file) =>
-        reExportedModules(read(file))
-          .filter((specifier) => resolvedTarget(file, specifier)?.startsWith('godot/'))
-          .map((specifier) => `${file} re-exports from '${specifier}'`)
-      );
+    const violations = files.filter((file) => !isInGodot(file)).flatMap(godotReExports);
     expect(violations, 'import the fact from the file under godot/ that declares it').toEqual([]);
   });
 
   it('has no barrel inside a group', () => {
-    const violations = files.filter(isInGodotGroup).flatMap((file) =>
-      reExportedModules(read(file))
-        .filter((specifier) => resolvedTarget(file, specifier)?.startsWith('godot/'))
-        .map((specifier) => `${file} re-exports from '${specifier}'`)
-    );
+    const violations = files.filter(isInGodotGroup).flatMap(godotReExports);
     expect(violations, 'a group has no barrel (ARCHITECTURE.md)').toEqual([]);
   });
 

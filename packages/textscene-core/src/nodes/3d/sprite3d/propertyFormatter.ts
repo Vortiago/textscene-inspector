@@ -8,6 +8,7 @@ import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import { billboardName } from '../sprites/shared/billboardName';
 
 export function formatSprite3DProperties(properties: Sprite3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -65,19 +66,6 @@ export function formatSprite3DProperties(properties: Sprite3DProperties): Proper
   sections.push(...formatNode3DProperties(properties));
 
   return sections;
-}
-
-function billboardName(mode: EnumValue<typeof BillboardMode>): string {
-  switch (mode) {
-    case BillboardMode.BILLBOARD_DISABLED:
-      return 'Disabled';
-    case BillboardMode.BILLBOARD_ENABLED:
-      return 'Enabled';
-    case BillboardMode.BILLBOARD_FIXED_Y:
-      return 'Y-Axis Only';
-    default:
-      return 'Unknown';
-  }
 }
 
 function alphaCutName(mode: EnumValue<typeof AlphaCutMode>): string {

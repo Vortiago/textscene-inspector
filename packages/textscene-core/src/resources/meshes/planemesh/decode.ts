@@ -21,6 +21,8 @@ export const PLANE_MESH_DEFAULTS: PlaneMeshDefaults = {
   orientation: PlaneMeshOrientation.FACE_Y,
 };
 
+const ORIENTATIONS = Object.values(PlaneMeshOrientation);
+
 export function decodePlaneMesh(
   properties: Record<string, string>,
   defaults: PlaneMeshDefaults = PLANE_MESH_DEFAULTS
@@ -29,12 +31,7 @@ export function decodePlaneMesh(
     size: storedVector2(vec2Or(properties.size, defaults.size, 'PlaneMesh size')),
     subdivideWidth: flooredCount(properties.subdivide_width, 0, 0, 'PlaneMesh subdivideWidth'),
     subdivideDepth: flooredCount(properties.subdivide_depth, 0, 0, 'PlaneMesh subdivideDepth'),
-    orientation: enumOr(
-      properties.orientation,
-      defaults.orientation,
-      Object.values(PlaneMeshOrientation),
-      'PlaneMesh orientation'
-    ),
+    orientation: enumOr(properties.orientation, defaults.orientation, ORIENTATIONS, 'PlaneMesh orientation'),
     centerOffset: vec3Or(properties.center_offset, { x: 0, y: 0, z: 0 }, 'PlaneMesh center_offset'),
   };
 }

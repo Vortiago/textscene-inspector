@@ -1,6 +1,6 @@
 /** Animation facts a scene carries: the AnimatedSprite family's defaults and the AnimationMixer callback modes. */
 
-import { enumNamesByValue } from '../classdb/enumNames.js';
+import { enumNamesByValue, labelEnumNames } from '../classdb/enumNames.js';
 
 /**
  * The `animation` an AnimatedSprite holds before a scene assigns one: `SceneStringName(default_)`,
@@ -23,6 +23,13 @@ export const AnimationCallbackModeProcess = {
  */
 export const ANIMATION_CALLBACK_MODE_PROCESS_NAMES = enumNamesByValue(AnimationCallbackModeProcess);
 
+/** Each process mode by its integer, in the labels the inspector hint prints (`animation_mixer.cpp:2471`). */
+export const ANIMATION_CALLBACK_MODE_PROCESS_HINT_NAMES = labelEnumNames(AnimationCallbackModeProcess, {
+  PHYSICS: 'Physics',
+  IDLE: 'Idle',
+  MANUAL: 'Manual',
+});
+
 /** `AnimationMixer::AnimationCallbackModeMethod` (`animation_mixer.h:60-63`). */
 export const AnimationCallbackModeMethod = {
   DEFERRED: 0,
@@ -31,6 +38,12 @@ export const AnimationCallbackModeMethod = {
 
 /** Each method mode by its integer. AnimationPlayer's `method_call_mode` alias shares it. */
 export const ANIMATION_CALLBACK_MODE_METHOD_NAMES = enumNamesByValue(AnimationCallbackModeMethod);
+
+/** Each method mode by its integer, in the labels the inspector hint prints (`animation_mixer.cpp:2472`). */
+export const ANIMATION_CALLBACK_MODE_METHOD_HINT_NAMES = labelEnumNames(AnimationCallbackModeMethod, {
+  DEFERRED: 'Deferred',
+  IMMEDIATE: 'Immediate',
+});
 
 /** `AnimationMixer::AnimationCallbackModeDiscrete` (`animation_mixer.h:65-69`). */
 export const AnimationCallbackModeDiscrete = {
@@ -41,6 +54,13 @@ export const AnimationCallbackModeDiscrete = {
 
 /** Each discrete mode by its integer. */
 export const ANIMATION_CALLBACK_MODE_DISCRETE_NAMES = enumNamesByValue(AnimationCallbackModeDiscrete);
+
+/** Each discrete mode by its integer, in the labels the inspector hint prints (`animation_mixer.cpp:2473`). */
+export const ANIMATION_CALLBACK_MODE_DISCRETE_HINT_NAMES = labelEnumNames(AnimationCallbackModeDiscrete, {
+  DOMINANT: 'Dominant',
+  RECESSIVE: 'Recessive',
+  FORCE_CONTINUOUS: 'Force Continuous',
+});
 
 /** `Animation::LoopMode` (`scene/resources/animation.h:74-78`). */
 export const AnimationLoopMode = {

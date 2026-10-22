@@ -4,7 +4,6 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Camera3DProperties } from './types';
-
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
 import {
   CAMERA_3D_KEEP_ASPECT_HINT_NAMES,

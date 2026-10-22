@@ -6,8 +6,7 @@ import { floatOr, boolOr, enumOr, intOr } from '../../../../parser/valueParsers'
 import { colorOr } from '../../../../utils/colorParser';
 import { LIGHT_2D_RANGE_DEFAULTS } from './types';
 import type { Light2DProperties } from './types';
-import type { Light2DBlendMode, Light2DShadowFilter } from '../../../../godot/scene/light2d';
-import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { Light2DBlendMode, Light2DShadowFilter } from '../../../../godot/scene/light2d';
 
 export function parseLight2D(heading: ParsedHeading, properties: Record<string, string>): Light2DProperties {
   const context = heading.attributes.type ?? 'Light2D';
@@ -16,12 +15,7 @@ export function parseLight2D(heading: ParsedHeading, properties: Record<string, 
     enabled: boolOr(properties.enabled, true, context),
     color: colorOr(properties.color, { r: 1, g: 1, b: 1, a: 1 }),
     energy: floatOr(properties.energy, 1.0, context),
-    blend_mode: enumOr(
-      properties.blend_mode,
-      0 as EnumValue<typeof Light2DBlendMode>,
-      [0, 1, 2] as const,
-      context
-    ),
+    blend_mode: enumOr(properties.blend_mode, Light2DBlendMode.ADD, Object.values(Light2DBlendMode), context),
     // Both default to 1, so a light with nothing authored reaches exactly the
     // items that also left `light_mask` alone.
     range_item_cull_mask: intOr(
@@ -42,8 +36,8 @@ export function parseLight2D(heading: ParsedHeading, properties: Record<string, 
     shadow_color: colorOr(properties.shadow_color, { r: 0, g: 0, b: 0, a: 0 }),
     shadow_filter: enumOr(
       properties.shadow_filter,
-      0 as EnumValue<typeof Light2DShadowFilter>,
-      [0, 1, 2] as const,
+      Light2DShadowFilter.NONE,
+      Object.values(Light2DShadowFilter),
       context
     ),
     shadow_filter_smooth: floatOr(properties.shadow_filter_smooth, 0.0, context),
