@@ -4,24 +4,12 @@
  */
 
 import { boolOr, enumOr, floatOr, intOr } from './valueParsers';
+import { enumValues } from '../godot/classdb/enumNames';
 import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../godot/rendering/materials/textureFilter';
 
-const ALPHA_CUT_MODES = [
-  AlphaCutMode.DISABLED,
-  AlphaCutMode.DISCARD,
-  AlphaCutMode.OPAQUE_PREPASS,
-  AlphaCutMode.HASH,
-];
-
-const TEXTURE_FILTERS = [
-  TextureFilter.NEAREST,
-  TextureFilter.LINEAR,
-  TextureFilter.NEAREST_WITH_MIPMAPS,
-  TextureFilter.LINEAR_WITH_MIPMAPS,
-  TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
-  TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
-];
+const ALPHA_CUT_MODES = enumValues(AlphaCutMode);
+const TEXTURE_FILTERS = enumValues(TextureFilter);
 
 /**
  * The `get_material_for_2d` fields of a node of type `nodeType`, which names the node in a parse
@@ -30,32 +18,26 @@ const TEXTURE_FILTERS = [
  * true and the other flags false (`sprite_3d.cpp:712-714`).
  */
 export function parseMaterialFor2dFields(properties: Record<string, string>, nodeType: string) {
+  // Each read names its key in the source, not through a table: the parity scan scrapes them.
+  const label = (key: string) => `${nodeType} ${key}`;
   return {
-    alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.DISABLED, ALPHA_CUT_MODES, `${nodeType} alpha_cut`),
+    alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.DISABLED, ALPHA_CUT_MODES, label('alpha_cut')),
     alpha_scissor_threshold: floatOr(
       properties.alpha_scissor_threshold,
       0.5,
-      `${nodeType} alpha_scissor_threshold`
+      label('alpha_scissor_threshold')
     ),
-    alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, `${nodeType} alpha_hash_scale`),
-    alpha_antialiasing_mode: intOr(
-      properties.alpha_antialiasing_mode,
-      0,
-      `${nodeType} alpha_antialiasing_mode`
-    ),
-    alpha_antialiasing_edge: floatOr(
-      properties.alpha_antialiasing_edge,
-      0,
-      `${nodeType} alpha_antialiasing_edge`
-    ),
+    alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, label('alpha_hash_scale')),
+    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, label('alpha_antialiasing_mode')),
+    alpha_antialiasing_edge: floatOr(properties.alpha_antialiasing_edge, 0, label('alpha_antialiasing_edge')),
     texture_filter: enumOr(
       properties.texture_filter,
       TextureFilter.LINEAR_WITH_MIPMAPS,
       TEXTURE_FILTERS,
-      `${nodeType} texture_filter`
+      label('texture_filter')
     ),
-    no_depth_test: boolOr(properties.no_depth_test, false, `${nodeType} no_depth_test`),
-    double_sided: boolOr(properties.double_sided, true, `${nodeType} double_sided`),
-    fixed_size: boolOr(properties.fixed_size, false, `${nodeType} fixed_size`),
+    no_depth_test: boolOr(properties.no_depth_test, false, label('no_depth_test')),
+    double_sided: boolOr(properties.double_sided, true, label('double_sided')),
+    fixed_size: boolOr(properties.fixed_size, false, label('fixed_size')),
   };
 }
