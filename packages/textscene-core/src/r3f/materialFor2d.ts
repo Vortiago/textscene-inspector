@@ -29,6 +29,8 @@ interface MaterialFor2dInput {
   noDepthTest: boolean;
   /** `BaseMaterial3D::TextureFilter` ordinal. */
   textureFilter: EnumValue<typeof TextureFilter>;
+  /** The viewport's anisotropic filtering level, which sets the anisotropic sampler rows. */
+  anisotropicFilteringLevel: number;
 }
 
 interface MaterialFor2d {
@@ -63,6 +65,6 @@ export function materialFor2d(input: MaterialFor2dInput): MaterialFor2d {
     joinsShadowPass: joinsShadowPass(cut, depthTest),
     side: input.doubleSided === false ? THREE.FrontSide : THREE.DoubleSide,
     depthTest,
-    textureFilter: godotTextureFilterState(input.textureFilter),
+    textureFilter: godotTextureFilterState(input.textureFilter, input.anisotropicFilteringLevel),
   };
 }

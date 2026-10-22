@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { DecalProjectionMaterials } from './decalProjectionMaterials';
+import { mipmappedTexture } from '../../../r3f/testing/mipmapBiasUniform';
+import { dropMipChain } from '../../../resources/textures/godotTextureFilter';
 import { lightModesUserData } from '../../../r3f/lightModes';
 import { specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
@@ -39,7 +41,29 @@ function projectionMaterial(decal: DecalProjectionMaterials, onto: THREE.Mesh): 
   return decal.project(new THREE.BufferGeometry(), onto).material as THREE.MeshPhysicalMaterial;
 }
 
+function decalOf(map: THREE.Texture): DecalProjectionMaterials {
+  return new DecalProjectionMaterials({ map, color: new THREE.Color(1, 1, 1), opacity: 1 });
+}
+
+function unmipped(): THREE.Texture {
+  const texture = mipmappedTexture();
+  dropMipChain(texture);
+  return texture;
+}
+
 describe('DecalProjectionMaterials', () => {
+  it("samples a mipmapped decal texture with the viewport's mipmap bias (scene_forward_clustered.glsl:1604)", () => {
+    expect(patchedFragment(projectionMaterial(decalOf(mipmappedTexture()), lambertReceiver()))).toContain(
+      'godotMipmapBiased( map,'
+    );
+  });
+
+  it('adds no mipmap bias to a decal texture with no mip chain', () => {
+    expect(patchedFragment(projectionMaterial(decalOf(unmipped()), lambertReceiver()))).not.toContain(
+      'godotMipmapBias'
+    );
+  });
+
   it("shades the projection in the receiver's diffuse mode", () => {
     expect(patchedFragment(projectionMaterial(materials(), lambertReceiver()))).toContain(
       DRAWS_LAMBERT_DIFFUSE

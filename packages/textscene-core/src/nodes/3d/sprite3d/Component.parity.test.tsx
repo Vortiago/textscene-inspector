@@ -10,6 +10,7 @@ import type { TscnNode } from '../../../parser/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { godotTextureFilterState } from '../../../resources/textures/godotTextureFilter';
 
 const Sprite3D = registeredComponent('Sprite3D');
@@ -205,5 +206,22 @@ describe('Sprite3D material-property parity', () => {
     const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
     expect([map.magFilter, map.minFilter]).toEqual([THREE.LinearFilter, THREE.LinearMipmapLinearFilter]);
     expect([map.generateMipmaps, map.anisotropy]).toEqual([true, godotTextureFilterState(5).anisotropy]);
+  });
+
+  it.each([
+    ['LINEAR_WITH_MIPMAPS (the default)', undefined],
+    ['shaded', { shaded: 'true' }],
+  ])('texture_mipmap_bias reaches a %s sprite, which samples mip levels', async (_, raw) => {
+    const r = await render(raw);
+
+    expect(patchedFragment(findMesh(r.scene).material as THREE.Material)).toContain(
+      'godotMipmapBiased( map,'
+    );
+  });
+
+  it('texture_mipmap_bias does not reach a LINEAR sprite, which has no mip levels', async () => {
+    const r = await render({ texture_filter: '1' });
+
+    expect(patchedFragment(findMesh(r.scene).material as THREE.Material)).not.toContain('godotMipmapBias');
   });
 });
