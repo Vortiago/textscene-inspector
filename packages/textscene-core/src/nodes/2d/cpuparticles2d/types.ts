@@ -37,7 +37,7 @@ const SLOT_DETAILS: Readonly<Record<CpuParticlesParam, SlotDetails>> = {
 };
 
 /**
- * The parameter slots, in `CPUParticles2DParam` order: the serialised prefix
+ * The parameter slots, in `CPUParticlesParameter` order: the serialised prefix
  * (`<prefix>_min` / `_max` / `_curve`) and its {@link SLOT_DETAILS}. The parser applies
  * `def` and the formatter hides a slot that holds it, so one table keeps them agreed.
  */
@@ -95,7 +95,7 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   spread: number;
   gravity: Vector2;
 
-  /** Indexed by `CPUParticles2DParam`. Always `CPU_PARTICLES_2D_PARAM_COUNT` long. */
+  /** Indexed by `CPUParticlesParameter`. Always `CPU_PARTICLES_2D_PARAM_COUNT` long. */
   params: ParticleParam[];
 
   color: Rgba;

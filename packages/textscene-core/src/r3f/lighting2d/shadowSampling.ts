@@ -12,11 +12,8 @@
 
 import * as THREE from 'three';
 import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
-// Type-only, so the pair of modules never form a runtime cycle: the filter
-// constants are declared beside the quads that branch on them.
-
 import type { Rgba } from '../../godot/math/math.js';
-import { Light2DShadowFilter } from '../../godot/scene/light2d.js';
+import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
 /**
  * `rasterizer_canvas_gles3.cpp:182`:

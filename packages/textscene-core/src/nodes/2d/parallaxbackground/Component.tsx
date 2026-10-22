@@ -11,7 +11,6 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
-
 import type { Camera2DTag } from '../camera2d/cameraView';
 import { selectViewportCamera2D } from '../../viewport/subviewport/offscreenViewport';
 import {

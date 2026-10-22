@@ -1,3 +1,9 @@
+/**
+ * Godot's `Noise` resource as decoded data. The enum ordinals are the upstream C++ values, which a
+ * `.tres` carries and this slice stores. `build.ts` maps them to the JS port's strings. Defaults are
+ * the engine's (`fastnoise_lite.h:97-124`), since a `.tres` omits most properties.
+ */
+
 import type {
   FastNoiseLiteNoiseType,
   FastNoiseLiteFractalType,

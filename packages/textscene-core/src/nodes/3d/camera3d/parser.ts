@@ -4,7 +4,6 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import type { Camera3DProperties } from './types';
-
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { slotInt } from '../../../godot/variant/intSlots.js';

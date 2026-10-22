@@ -6,7 +6,6 @@
  */
 
 import * as THREE from 'three';
-
 import { CanvasItemMaterialBlendMode } from '../../../godot/scene/canvasItemMaterial';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 

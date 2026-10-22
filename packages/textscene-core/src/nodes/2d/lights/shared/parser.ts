@@ -8,6 +8,9 @@ import { LIGHT_2D_RANGE_DEFAULTS } from './types';
 import type { Light2DProperties } from './types';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../../../godot/scene/light2d';
 
+const BLEND_MODES = Object.values(Light2DBlendMode);
+const SHADOW_FILTERS = Object.values(Light2DShadowFilter);
+
 export function parseLight2D(heading: ParsedHeading, properties: Record<string, string>): Light2DProperties {
   const context = heading.attributes.type ?? 'Light2D';
   return {
@@ -15,7 +18,7 @@ export function parseLight2D(heading: ParsedHeading, properties: Record<string, 
     enabled: boolOr(properties.enabled, true, context),
     color: colorOr(properties.color, { r: 1, g: 1, b: 1, a: 1 }),
     energy: floatOr(properties.energy, 1.0, context),
-    blend_mode: enumOr(properties.blend_mode, Light2DBlendMode.ADD, Object.values(Light2DBlendMode), context),
+    blend_mode: enumOr(properties.blend_mode, Light2DBlendMode.ADD, BLEND_MODES, context),
     // Both default to 1, so a light with nothing authored reaches exactly the
     // items that also left `light_mask` alone.
     range_item_cull_mask: intOr(
@@ -34,12 +37,7 @@ export function parseLight2D(heading: ParsedHeading, properties: Record<string, 
     // Transparent black (`light_2d.h:58`): where a shadow falls, Godot mixes the light toward
     // nothing (`canvas.glsl:544-546`), so the surface keeps its unlit colour.
     shadow_color: colorOr(properties.shadow_color, { r: 0, g: 0, b: 0, a: 0 }),
-    shadow_filter: enumOr(
-      properties.shadow_filter,
-      Light2DShadowFilter.NONE,
-      Object.values(Light2DShadowFilter),
-      context
-    ),
+    shadow_filter: enumOr(properties.shadow_filter, Light2DShadowFilter.NONE, SHADOW_FILTERS, context),
     shadow_filter_smooth: floatOr(properties.shadow_filter_smooth, 0.0, context),
   };
 }

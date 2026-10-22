@@ -12,7 +12,6 @@
 
 import type * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs.js';
-
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
 
@@ -55,7 +54,7 @@ export interface CanvasItemLightingUniforms {
   readonly resolution: THREE.IUniform;
   readonly canvasModulate: THREE.IUniform;
   /**
-   * The item's `CanvasItemLightMode`, Godot's LightMode ordinal. A uniform, not a program variant:
+   * The item's `CanvasItemMaterialLightMode`, Godot's LightMode ordinal. A uniform, not a program variant:
    * three bakes program inputs at first compile, and a re-parse edits `light_mode` under a mounted
    * item. On Godot 4.6.3 Light Only masks alpha: transparent where unlit, authored colour where lit.
    */

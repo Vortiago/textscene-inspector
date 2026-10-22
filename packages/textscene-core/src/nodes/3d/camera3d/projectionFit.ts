@@ -6,7 +6,6 @@
 import type * as THREE from 'three';
 import { getFovy } from '../../../godot/math/projection.js';
 import { radToDeg } from '../../../godot/math/math.js';
-
 import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../godot/scene/camera3d.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 

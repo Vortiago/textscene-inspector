@@ -11,7 +11,6 @@
  */
 
 import * as THREE from 'three';
-
 import { accumulationState } from './lightQuad.js';
 import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
 import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';

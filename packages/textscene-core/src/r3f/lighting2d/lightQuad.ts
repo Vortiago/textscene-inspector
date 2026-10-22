@@ -22,8 +22,7 @@ import {
 } from './lightQuadShaders.js';
 import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
 import type { Rgba } from '../../godot/math/math.js';
-import { Light2DBlendMode } from '../../godot/scene/light2d.js';
-import { Light2DShadowFilter } from '../../godot/scene/light2d.js';
+import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
 export { updateShadowPolarTexture, type ShadowSampling } from './shadowSampling.js';
 

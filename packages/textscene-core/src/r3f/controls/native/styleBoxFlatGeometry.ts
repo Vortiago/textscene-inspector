@@ -1,7 +1,7 @@
 /**
  * Pure geometry for a `StyleBoxFlat`, ported from `StyleBoxFlat::draw` and its
  * helpers in `scene/resources/style_box_flat.cpp` (Godot 4.6.3). Plain number
- * arrays in the input rect's Godot-pixel, +Y-down space (`native/rect.ts`): no
+ * arrays in the input rect's Godot-pixel, +Y-down space (`godot/math/rect2.ts`): no
  * THREE, and the caller flips the axis.
  *
  * Portions ported from Godot Engine (MIT).

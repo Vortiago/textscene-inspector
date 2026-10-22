@@ -1,4 +1,10 @@
-import {
+/**
+ * `CanvasItemMaterial`, the material every 2D CanvasItem can carry. It holds no textures:
+ * it selects how the item's pixels combine with the canvas (`blend_mode`) and whether 2D
+ * lights reach them (`light_mode`).
+ */
+
+import type {
   CanvasItemMaterialBlendMode,
   CanvasItemMaterialLightMode,
 } from '../../../godot/scene/canvasItemMaterial.js';

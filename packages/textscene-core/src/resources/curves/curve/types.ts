@@ -1,4 +1,10 @@
-import { CurveTangentMode } from '../../../godot/scene/curve.js';
+/**
+ * Godot's 1D `Curve` resource: the scalar `f(offset) -> value` curve of particle
+ * parameters and `CurveTexture`, sampled as a cubic Bézier between points. The
+ * `curve2d` and `curve3d` slices decode path geometry. No THREE, so the linter reads it.
+ */
+
+import type { CurveTangentMode } from '../../../godot/scene/curve.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** One `_data` entry: a position plus the two tangents meeting at it. */

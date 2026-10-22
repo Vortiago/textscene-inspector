@@ -67,7 +67,7 @@ const DEFAULT_PREVIEW_SEED = 0;
  */
 const MAX_SIM_STEPS = 4096;
 
-/** Godot's `Curve` slots, indexed by `CPUParticles2DParam`. Null where unset. */
+/** Godot's `Curve` slots, indexed by `CPUParticlesParameter`. Null where unset. */
 type ParticleCurves = ReadonlyArray<Curve | null>;
 
 export interface ParticleSimInput {
