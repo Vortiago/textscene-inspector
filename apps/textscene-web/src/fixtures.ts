@@ -3639,6 +3639,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Texture Filter Anisotropic",
+    "file": "unit-material-texture-filter-anisotropic.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Texture Filter",
     "file": "unit-material-texture-filter.tscn",
     "category": "Unit - Materials"

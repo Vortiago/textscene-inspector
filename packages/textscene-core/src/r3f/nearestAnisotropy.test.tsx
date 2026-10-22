@@ -3,35 +3,15 @@
  * magnification filter. three writes `TEXTURE_MAX_ANISOTROPY_EXT` only under a linear one
  * (`WebGLTextures.js:695`), so the draw site writes it onto the texture's GPU storage.
  */
-import { createElement, type ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
-import { context } from '@react-three/fiber';
 import { useNearestAnisotropy } from './nearestAnisotropy';
-
-const GL = { TEXTURE_2D: 0x0de1, TEXTURE0: 0x84c0 };
-const MAX_ANISOTROPY = 0x84fe;
-
-function fakeCanvas({ isAllocated }: { isAllocated: boolean }) {
-  const storage = { name: 'storage' };
-  const gl = { ...GL, texParameterf: vi.fn() };
-  const properties = isAllocated ? { __webglTexture: storage } : {};
-  const renderer = {
-    getContext: () => gl,
-    state: { bindTexture: vi.fn() },
-    properties: { get: () => properties },
-    extensions: { get: () => ({ TEXTURE_MAX_ANISOTROPY_EXT: MAX_ANISOTROPY }) },
-    capabilities: { getMaxAnisotropy: () => 8 },
-    initTexture: vi.fn(() => {
-      (properties as { __webglTexture?: unknown }).__webglTexture = storage;
-    }),
-  };
-  const store = { getState: () => ({ gl: renderer }) };
-  const wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(context.Provider, { value: store as never }, children);
-  return { gl, renderer, storage, wrapper };
-}
+import {
+  FAKE_GL as GL,
+  MAX_ANISOTROPY_PARAMETER as MAX_ANISOTROPY,
+  fakeCanvasRenderer as fakeCanvas,
+} from './testing/fakeCanvasRenderer';
 
 function nearestMipAnisotropic(anisotropy = 4): THREE.Texture {
   const texture = new THREE.Texture();

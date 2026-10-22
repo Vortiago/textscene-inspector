@@ -48,6 +48,8 @@ export function useTiledUpload<T extends THREE.Texture>(
     lastShown.current = shown;
   });
   useRetired([texture, shown], retire);
+  // After the effect above, which allocates a large texture's storage empty.
+  useNearestAnisotropy(texture);
   return shown;
 }
 
@@ -57,10 +59,7 @@ export function useTiledUpload<T extends THREE.Texture>(
  * it goes through here (`drawnCloneGuard.test.ts`).
  */
 export function useUploadedClone<T extends THREE.Texture>(clone: T | null): T | null {
-  const shown = useTiledUpload(clone, disposeTexture);
-  // After the tiled upload's effect, which allocates a large clone's storage empty.
-  useNearestAnisotropy(clone);
-  return shown;
+  return useTiledUpload(clone, disposeTexture);
 }
 
 function disposeTexture(texture: THREE.Texture): void {

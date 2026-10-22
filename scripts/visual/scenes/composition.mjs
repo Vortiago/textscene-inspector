@@ -57,6 +57,9 @@ export const SCENE_COMPOSITION_SCENES = [
   // per-material texture cloning. The loader caches one THREE.Texture per path,
   // so filter state written onto it renders both quads the same.
   { name: 'material-texture-filter', file: 'unit-material-texture-filter.tscn' },
+  // The one variable: `texture_filter` 2 to 5 over stripes at a grazing angle. Nearest with Mipmaps and
+  // Anisotropic needs the draw-site anisotropy write, which three skips under a nearest magnification.
+  { name: 'material-texture-filter-anisotropic', file: 'unit-material-texture-filter-anisotropic.tscn' },
   // `anisotropy_flowmap` as a real PNG: the one scene where a decoded image
   // reaches the repack (Godot keeps strength in alpha, three.js reads blue),
   // through a canvas readback no headless unit test can do. Without it the right

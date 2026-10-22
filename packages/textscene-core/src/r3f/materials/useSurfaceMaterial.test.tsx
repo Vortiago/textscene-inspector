@@ -10,6 +10,7 @@ import { act, renderHook } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
+import { FAKE_GL, MAX_ANISOTROPY_PARAMETER, fakeCanvasRenderer } from '../testing/fakeCanvasRenderer';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
@@ -140,5 +141,37 @@ describe('useSurfaceMaterial with an anisotropy flowmap', () => {
     const { result } = renderSurface(inlineMaterial({ ...ANISOTROPIC, anisotropy: '0' }, [], EXTERNAL));
 
     expect(unfadedProps(result.current).anisotropyMap).toBeUndefined();
+  });
+});
+
+describe('useSurfaceMaterial with Nearest with Mipmaps and Anisotropic', () => {
+  const ALBEDO_PATH = 'res://albedo.png';
+  const ALBEDO = [{ id: '1_albedo', type: 'Texture2D', path: ALBEDO_PATH }];
+  // `BaseMaterial3D::TEXTURE_FILTER_NEAREST_WITH_MIPMAPS_ANISOTROPIC`.
+  const NEAREST_WITH_MIPMAPS_ANISOTROPIC = '4';
+
+  it('writes the anisotropy onto the albedo texture, which three skips under a nearest magnification', () => {
+    const canvas = fakeCanvasRenderer({ isAllocated: true });
+    const fake = createFakeResourceLoader();
+    renderHook(
+      () =>
+        useSurfaceMaterial(
+          inlineMaterial(
+            { albedo_texture: 'ExtResource("1_albedo")', texture_filter: NEAREST_WITH_MIPMAPS_ANISOTROPIC },
+            [],
+            ALBEDO
+          )
+        ),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <canvas.wrapper>
+            <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+          </canvas.wrapper>
+        ),
+      }
+    );
+    act(() => fake.textures._resolve(ALBEDO_PATH, new THREE.Texture()));
+
+    expect(canvas.gl.texParameterf).toHaveBeenCalledWith(FAKE_GL.TEXTURE_2D, MAX_ANISOTROPY_PARAMETER, 4);
   });
 });
