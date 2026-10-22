@@ -13,7 +13,7 @@ A real-time global illumination probe that bakes indirect light from static geom
 
 ## Gizmo
 
-A selected VoxelGI draws the gizmo of Godot's editor in the VoxelGI colour. Godot's source is `voxel_gi_gizmo_plugin.cpp:96-164`.
+A selected VoxelGI draws the gizmo of Godot's editor in the VoxelGI colour. Godot's source is `voxel_gi_gizmo_plugin.cpp:96-164`. Godot draws the lines only for the selected node (`:99`).
 
 - The 12 edges of the box, a box of `size` centred on the node.
 - The grid of its cells at an opacity of 0.02. The longest side holds 64, 128, 256 or 512 cells by `subdiv`, and each plane inside the box draws four segments.
@@ -43,5 +43,4 @@ The lenient parser reads `size` and `subdiv` for the gizmo. It raises each side 
 
 ## Known limitations
 
-- **Editor only** Godot's editor also draws the box and cells of an unselected VoxelGI at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.
 - **Not drawn** Godot lights dynamic objects from the baked probe, but the previewer applies no indirect light from it.

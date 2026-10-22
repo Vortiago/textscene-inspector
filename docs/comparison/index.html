@@ -5290,7 +5290,7 @@ tr:last-child td{border-bottom:0}
       </div>
         <div class="prose"><p>One probe sets its ambient to red. The floor inside its box takes the red as its ambient light.</p></div>
       </section><div class="prose"><h3>Gizmo</h3>
-<p>A selected probe draws the gizmo of Godot's editor in the probe colour. Godot's source is <code>reflection_probe_gizmo_plugin.cpp:149-212</code>.</p>
+<p>A selected probe draws the gizmo of Godot's editor in the probe colour. Godot's source is <code>reflection_probe_gizmo_plugin.cpp:149-212</code>. Godot draws the lines only for the selected node (<code>:152</code>).</p>
 <ul><li>The 12 edges of the box inset by <code>blend_distance</code>. A <code>blend_distance</code> of 0 draws no box.</li><li>Eight lines at half opacity, from each corner of the inset box to the matching corner of the outer box.</li><li>A cross of three segments of 0.5 centred on <code>origin_offset</code>, drawn only when the offset is not 0.</li></ul>
 <p>Godot draws no edge of the outer box. An axis where the inset passes the middle of the box collapses to the middle, with a size of 0. The previewer draws no edit handles and no billboard icon.</p>
 <h3>Linting</h3>
@@ -5299,7 +5299,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-reflectionprobe-properties</code></td><td><code>reflectionprobe-ambient-color-no-effect</code></td><td>info</td></tr><tr><td></td><td><code>reflectionprobe-origin-offset-clamped</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser reads every property above. A malformed value keeps Godot's default, a <code>max_distance</code> above 262144 clamps to it, and an <code>ambient_mode</code> outside 0 to 2 reads as <code>AMBIENT_DISABLED</code>.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> Godot's editor also draws the blend box and origin cross of an unselected probe at 0.3 alpha (<code>node_3d_editor_gizmos.cpp:919-920</code>), where <a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a> draws it only when selected.</li><li><strong>Approximated</strong> A probe that updates ALWAYS captures once, so it does not follow a moving node.</li></ul></div>
+<ul><li><strong>Approximated</strong> A probe that updates ALWAYS captures once, so it does not follow a moving node.</li></ul></div>
     </article>
     <article class="sheet" data-type="RemoteTransform2D" hidden>
       <header class="sheet-head">
@@ -7474,7 +7474,7 @@ tr:last-child td{border-bottom:0}
       <div class="novisual">Comparison images not captured yet for VoxelGI.</div>
       <div class="prose"><p>A real-time global illumination probe that bakes indirect light from static geometry into an octree. The previewer parses and validates it but does not run the bake or draw the probe volume. It draws nothing, and its children still show.</p>
 <h3>Gizmo</h3>
-<p>A selected VoxelGI draws the gizmo of Godot's editor in the VoxelGI colour. Godot's source is <code>voxel_gi_gizmo_plugin.cpp:96-164</code>.</p>
+<p>A selected VoxelGI draws the gizmo of Godot's editor in the VoxelGI colour. Godot's source is <code>voxel_gi_gizmo_plugin.cpp:96-164</code>. Godot draws the lines only for the selected node (<code>:99</code>).</p>
 <ul><li>The 12 edges of the box, a box of <code>size</code> centred on the node.</li><li>The grid of its cells at an opacity of 0.02. The longest side holds 64, 128, 256 or 512 cells by <code>subdiv</code>, and each plane inside the box draws four segments.</li></ul>
 <p>The previewer draws no edit handles and no billboard icon.</p>
 <h3>Linting</h3>
@@ -7483,7 +7483,7 @@ tr:last-child td{border-bottom:0}
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-node3d-visibility</code> (type-family match)</td><td><code>valid-node3d-visibility</code></td><td>error</td></tr><tr><td><code>valid-voxelgi-data</code></td><td><code>voxelgi-missing-data</code></td><td>warning</td></tr></tbody></table></div>
 <p>The lenient parser reads <code>size</code> and <code>subdiv</code> for the gizmo. It raises each side of <code>size</code> below 1 to 1, as <code>set_size</code> does. A malformed value or a <code>subdiv</code> outside 0 to 3 keeps Godot's default.</p>
 <h3>Known limitations</h3>
-<ul><li><strong>Editor only</strong> Godot's editor also draws the box and cells of an unselected VoxelGI at 0.3 alpha (<code>node_3d_editor_gizmos.cpp:919-920</code>), where <a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0018-2d-gizmos-render-when-selected.md" target="_blank" rel="noopener">ADR-0018</a> draws it only when selected.</li><li><strong>Not drawn</strong> Godot lights dynamic objects from the baked probe, but the previewer applies no indirect light from it.</li></ul></div>
+<ul><li><strong>Not drawn</strong> Godot lights dynamic objects from the baked probe, but the previewer applies no indirect light from it.</li></ul></div>
     </article>
     <article class="sheet" data-type="VScrollBar" hidden>
       <header class="sheet-head">

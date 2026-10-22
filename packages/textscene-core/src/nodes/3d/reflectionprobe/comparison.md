@@ -29,7 +29,7 @@ One probe sets its ambient to red. The floor inside its box takes the red as its
 
 ## Gizmo
 
-A selected probe draws the gizmo of Godot's editor in the probe colour. Godot's source is `reflection_probe_gizmo_plugin.cpp:149-212`.
+A selected probe draws the gizmo of Godot's editor in the probe colour. Godot's source is `reflection_probe_gizmo_plugin.cpp:149-212`. Godot draws the lines only for the selected node (`:152`).
 
 - The 12 edges of the box inset by `blend_distance`. A `blend_distance` of 0 draws no box.
 - Eight lines at half opacity, from each corner of the inset box to the matching corner of the outer box.
@@ -74,5 +74,4 @@ The lenient parser reads every property above. A malformed value keeps Godot's d
 
 ## Known limitations
 
-- **Editor only** Godot's editor also draws the blend box and origin cross of an unselected probe at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.
 - **Approximated** A probe that updates ALWAYS captures once, so it does not follow a moving node.
