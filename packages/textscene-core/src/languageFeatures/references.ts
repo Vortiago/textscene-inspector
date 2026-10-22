@@ -5,6 +5,7 @@
  */
 
 import { isGodotTextResourcePath } from '../godot/project/resourceFormats.js';
+import { inPathOrder } from '../resources/resPath.js';
 import type { LanguageDocument } from './document.js';
 import { resPathAt, resPathOccurrencesInText } from './navigation.js';
 import type { Position, Range } from './types.js';
@@ -76,7 +77,7 @@ export async function resPathReferencesAt(
   const target = resPathAt(document, position);
   if (target === undefined) return [];
   // Code-unit order, not `localeCompare`: the order must not move with the user's locale.
-  const files = (await source.listPaths()).filter(isGodotTextResourcePath).sort();
+  const files = inPathOrder((await source.listPaths()).filter(isGodotTextResourcePath));
   const perFile = await mapBounded(files, async (file) => {
     if (source.isCancelled()) return [];
     const text = source.openText(file) ?? (await source.readFile(file));

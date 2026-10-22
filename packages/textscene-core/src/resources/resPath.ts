@@ -94,6 +94,14 @@ export function normalizeRelativePath(relative: string): string | null {
 }
 
 /**
+ * `paths` in code-unit order, so every host lists them alike: `localeCompare` would order them by
+ * the host's locale.
+ */
+export function inPathOrder(paths: Iterable<string>): string[] {
+  return [...paths].sort();
+}
+
+/**
  * `resPath` relative to its project root, or null for a path that is not `res://` or that escapes the root. For a host
  * whose paths are not strings, such as VS Code's `Uri`.
  */
