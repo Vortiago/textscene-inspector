@@ -13,9 +13,11 @@ import { projectPrimitiveMeshTexelSize } from '../../parser/projectSettingsParse
 import { decodeSceneArrayMesh } from '../../resources/meshes/arraymesh/decode';
 import { godotSurfaceParts } from '../../resources/meshes/godotSurface';
 import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../resources/meshes/meshSource';
+import { useResolvableMesh } from '../../resources/meshes/useResolvableMesh';
+import type { ScopedResource } from '../../resources/scopedResource';
 import type { ArrayMeshResource } from '../../resources/processors/createArrayMeshProcessor';
 import { useResource } from '../../resources/useResource';
-import type { ResourceResolution, ScopedResource } from '../../resources/useSubOrExtResource';
+import type { ResourceResolution } from '../../resources/useSubOrExtResource';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { fileMaterialSources, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
@@ -87,18 +89,21 @@ export function useMeshContent(resolution: ResourceResolution): MeshContent {
     [fileArrayMesh.value]
   );
   const sceneSurfaced = useSceneArrayMesh(kind === 'arrayMesh' && !processorPath ? scoped : null);
+  const { mesh: resolvable, isLoading: isLoadingReferences } = useResolvableMesh(
+    kind === 'primitive' ? scoped : null
+  );
   const primitiveSurfaced = usePrimitiveMesh(
-    useMemo(
-      () => (scoped && kind === 'primitive' ? { ...scoped, path: resourcePath } : null),
-      [scoped, kind, resourcePath]
-    )
+    useMemo(() => (resolvable ? { ...resolvable, path: resourcePath } : null), [resolvable, resourcePath])
   );
 
   if (resolution.isNone) return NONE;
   if (status === 'pending') return LOADING;
   if (!scoped || !kind) return UNRESOLVED;
   if (kind === 'surfaceless') return EMPTY;
-  if (kind === 'primitive') return primitiveSurfaced ? { kind: 'surfaced', mesh: primitiveSurfaced } : EMPTY;
+  if (kind === 'primitive') {
+    if (isLoadingReferences) return LOADING;
+    return primitiveSurfaced ? { kind: 'surfaced', mesh: primitiveSurfaced } : EMPTY;
+  }
   if (!processorPath) return sceneSurfaced ? { kind: 'surfaced', mesh: sceneSurfaced } : UNRESOLVED;
   if (fileArrayMesh.status === 'unavailable') return UNRESOLVED;
   if (!fileArrayMesh.value) return LOADING;
@@ -119,9 +124,12 @@ function withFileMaterials(mesh: ArrayMeshResource): SurfacedMesh | null {
 
 /** A PrimitiveMesh's one surface under its own material, or null for a mesh Godot builds no surface for. */
 function usePrimitiveMesh(source: MeshSource | null): SurfacedMesh | null {
-  const geometry = usePrimitiveMeshGeometry(source?.resource ?? null);
+  const geometry = usePrimitiveMeshGeometry(source);
   const material = useMemo(
-    () => (source ? resolveMaterialSource(primitiveMaterialAddress(source), source.resources) : undefined),
+    () =>
+      source
+        ? resolveMaterialSource(primitiveMaterialAddress(source, source.path), source.resources)
+        : undefined,
     [source]
   );
   return useMemo(
@@ -137,11 +145,11 @@ function usePrimitiveMesh(source: MeshSource | null): SurfacedMesh | null {
 }
 
 /** A PrimitiveMesh's geometry at the project's texel size, or null for none or a mesh with no surface. */
-function usePrimitiveMeshGeometry(resource: TscnInternalResource | null): THREE.BufferGeometry | null {
+function usePrimitiveMeshGeometry(source: MeshSource | null): THREE.BufferGeometry | null {
   const texelSize = projectPrimitiveMeshTexelSize(useProjectSettings().settings);
   const geometry = useMemo(
-    () => (resource ? primitiveMeshGeometry(resource, texelSize) : null),
-    [resource, texelSize]
+    () => (source ? primitiveMeshGeometry(source, texelSize) : null),
+    [source, texelSize]
   );
   useDisposeOnRelease(geometry);
   return geometry;

@@ -1953,6 +1953,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tube Trail Mesh Texture Uv",
+    "file": "unit-tube-trail-mesh-texture-uv.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Two Bone Ik 3d",
     "file": "unit-two-bone-ik-3d.tscn",
     "category": "Other"
