@@ -4,6 +4,8 @@
  * each input vertex, which the rebuild reads attributes from (`importer_mesh.cpp:1039-1153`).
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../../../../godot/math/real';
 import type * as THREE from 'three';
 import { unwrapSpace } from '../../../../godot/import/importerBasis';
 import { UNWRAP_SHORTEST_EDGE_SQUARED } from '../../../../godot/import/sceneImport';
@@ -26,8 +28,6 @@ export interface UnwrapInput {
   /** The geometry vertex of each input vertex, within its surface. */
   vertexSource: Int32Array;
 }
-
-const f = Math.fround;
 
 /** Marks in `usedVertices` before a used vertex takes its input number, which is never negative. */
 const UNUSED = -1;

@@ -5,11 +5,10 @@
  * warnings (`Light3D`, `XROrigin3D`, `OpenXRCompositionLayer`, `RigidBody3D`) ask these questions.
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from './real.js';
 import { basisDeterminant, isEqualApprox, isZeroApprox, sign } from './math.js';
 import { vector3Dot } from './vector.js';
-
-/** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
-const f = Math.fround;
 
 /** The nine row-major components of a serialised `Basis`. */
 export type BasisComponents = readonly [

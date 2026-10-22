@@ -1,7 +1,7 @@
 /** Engine math constants, as Godot declares them. */
 
-/** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
-const f = Math.fround;
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from './real.js';
 
 /** `Math::TAU` (`math_defs.h:43`): one full turn in radians. */
 export const TAU = Math.PI * 2;

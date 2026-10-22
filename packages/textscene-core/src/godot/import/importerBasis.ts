@@ -5,6 +5,8 @@
  * Godot's operation order, since the unwrap cache is keyed on the bits of what follows.
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../math/real.js';
 import { normalizedVector3, vector3Dot } from '../math/vector.js';
 import { basisInvert } from '../math/basis.js';
 
@@ -19,8 +21,6 @@ export interface GltfNodeTransform {
 }
 
 type Triple = [number, number, number];
-
-const f = Math.fround;
 
 export const IDENTITY_BASIS: Basis32 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
