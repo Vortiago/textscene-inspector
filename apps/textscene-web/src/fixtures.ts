@@ -633,6 +633,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Typed Child Visibility Parent",
+    "file": "unit-glb-typed-child-visibility-parent.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Typed Child",
     "file": "unit-glb-typed-child.tscn",
     "category": "Other"

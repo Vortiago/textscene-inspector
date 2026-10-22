@@ -190,7 +190,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     <primitive object={object}>
       {importMaterials}
       {materialOverrides}
-      <GlbAttachedChildren object={object} entries={entries} root={root} nodePath={nodePath} />
+      <GlbAttachedChildren object={object} entries={entries} root={root} />
       {children}
     </primitive>
   );

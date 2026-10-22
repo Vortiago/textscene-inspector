@@ -25,7 +25,6 @@ import {
   type LiveChildGroup,
   type LiveTreeContext,
 } from './liveSceneTree.js';
-import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 
 interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
@@ -168,7 +167,7 @@ class OwnerWalk {
     let parentPath = '';
     for (const segment of path.split('/')) {
       const livePath = joinPath(parentPath, segment);
-      if (!this.reached.has(livePath)) this.reached.set(livePath, this.step(reached, parentPath, livePath));
+      if (!this.reached.has(livePath)) this.reached.set(livePath, this.step(reached, livePath));
       const next = this.reached.get(livePath);
       if (!next) return { owner: reached.owner, into: reached.owner };
       reached = next;
@@ -177,8 +176,8 @@ class OwnerWalk {
     return reached;
   }
 
-  /** The walk one segment on from `from`, at `parentPath`, to `livePath`, or null where none is there. */
-  private step(from: Reached, parentPath: string, livePath: string): Reached | null {
+  /** The walk one segment on from `from` to `livePath`, or null where none is there. */
+  private step(from: Reached, livePath: string): Reached | null {
     const { live } = this;
     const link = live.tree.at(livePath);
     const found = link && from.candidates.find((candidate) => candidate.group.children.includes(link.node));
@@ -187,23 +186,23 @@ class OwnerWalk {
     // A node the file above grafted in is that file's own, however deep it sits.
     const owner = fileSeating(found.owner, livePath, ROOT_OWNED);
     const subRoots = cachedSubRoots(node, link.scope, live.tree.ctx);
-    // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
-    // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
-    const isGlbRoot = found.rootOf !== undefined && node.type === GLB_SCENE_ROOT_TYPE;
     const contentOwner: ClaimOwner = found.rootOf
-      ? { path: isGlbRoot ? parentPath : livePath, roots: found.rootOf, parent: owner, live }
+      ? { path: livePath, roots: found.rootOf, parent: owner, live }
       : owner;
+    // The instance node is the root of what it instances, so it owns the GLB's objects too: they sit
+    // directly below it (packed_scene.cpp:261-264).
+    const instanceOwner = subRoots && { path: livePath, roots: subRoots, parent: owner, live };
     const candidates = link.groups.map((group) => ({
       group,
       owner:
-        group.origin === 'merged' && subRoots
-          ? { path: livePath, roots: subRoots, parent: owner, live, composed: group.mergedNode?.uniqueNames }
+        instanceOwner && (group.origin === 'merged' || group.origin === 'glb')
+          ? { ...instanceOwner, ...(group.mergedNode ? { composed: group.mergedNode.uniqueNames } : {}) }
           : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
-    const into = isGlbRoot
-      ? contentOwner
-      : (candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner);
+    const into =
+      candidates.find((c) => instanceOwner && (c.group.origin === 'merged' || c.group.origin === 'glb'))
+        ?.owner ?? owner;
     return { owner, into, node, candidates };
   }
 }

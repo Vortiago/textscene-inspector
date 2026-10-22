@@ -58,6 +58,8 @@ import {
   WorldRoot,
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
+import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
+import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
@@ -341,8 +343,8 @@ const INSTANCING_SCENE_NODES = 1;
 /**
  * Loads the PackedScene a node's `instance` ref names and composes it into the
  * tree. A single-root `.tscn` merges into the instance node at the same path
- * (ADR-0013). A `.glb` or multi-root scene injects its roots as children. Either
- * way the loaded scene's resources are scoped to the subtree. An instance of a
+ * (ADR-0013). A `.glb` is the instance node's own content, mounted at its path. A multi-root scene
+ * injects its roots as children. Either way the loaded scene's resources are scoped to the subtree. An instance of a
  * scene that already encloses it (cyclic instancing) renders as a failed load.
  */
 function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
@@ -422,7 +424,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // The merged node carries the sub-scene's scope, which `DispatchedNode` provides.
   if (effective !== node) return <DispatchedNode node={effective} path={path} />;
 
-  // A `.glb` or multi-root scene: the loaded roots are injected as children.
+  // A `.glb` mounts at this node's path. A multi-root scene injects its roots as children.
   return (
     <GlbInstanceProvider node={node} path={path}>
       <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
@@ -434,7 +436,11 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
             {loadedScene.nodes.map((child, i) => (
               <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
                 <TreeOrderProvider order={injectedOrders.roots[i]!}>
-                  <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                  {child.type === GLB_SCENE_ROOT_TYPE ? (
+                    <GlbRootNode node={child} />
+                  ) : (
+                    <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                  )}
                 </TreeOrderProvider>
               </PaintRangeProvider>
             ))}

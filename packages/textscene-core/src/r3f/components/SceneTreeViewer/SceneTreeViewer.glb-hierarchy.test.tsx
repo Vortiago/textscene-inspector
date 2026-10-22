@@ -15,6 +15,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnScene } from '../../../parser/types';
+import '../../../nodes/node/index';
 
 function named<T extends THREE.Object3D>(o: T, name: string): T {
   o.name = name;
@@ -123,9 +124,49 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
     });
 
     const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
-    for (const name of ['Rig', 'rig', 'Armature']) expandRow(name);
+    for (const name of ['Rig', 'Armature']) expandRow(name);
 
-    expect(container.querySelector('[data-node-path="Rig/rig/Armature/Marker"]')).not.toBeNull();
+    expect(container.querySelector('[data-node-path="Rig/Armature/Marker"]')).not.toBeNull();
+    expect(container.querySelector('[data-node-path="Rig/rig"]')).toBeNull();
     expect(container.querySelector('[data-node-path="Rig/Marker"]')).toBeNull();
+  });
+
+  it('lists the GLB a sub-scene’s root instances below the node that instances the sub-scene', () => {
+    const fake = createFakeResourceLoader();
+    fake.scenes.seed(RIG_PATH, RIG_SCENE);
+    fake.glbMeshes.seed(RIG_PATH, fakeGlb());
+    fake.scenes.seed('res://wrapper.tscn', {
+      nodes: [
+        {
+          rawProperties: {},
+          name: 'WrapperRoot',
+          type: 'Node',
+          instance: 'ExtResource("rig")',
+          children: [],
+          properties: {} as Record<string, unknown>,
+        },
+      ],
+      externalResources: [{ id: 'rig', path: RIG_PATH, type: 'PackedScene' }],
+      internalResources: [],
+    });
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [
+        {
+          rawProperties: {},
+          name: 'Body',
+          type: 'Node',
+          instance: 'ExtResource("wrapper")',
+          children: [],
+          properties: {} as Record<string, unknown>,
+        },
+      ],
+      externalResources: [{ id: 'wrapper', path: 'res://wrapper.tscn', type: 'PackedScene' }],
+      internalResources: [],
+    });
+
+    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
+    expandRow('Body');
+
+    expect(container.querySelector('[data-node-path="Body/Armature"]')).not.toBeNull();
   });
 });

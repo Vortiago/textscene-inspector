@@ -16,6 +16,8 @@ import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit'
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { TscnParser } from '../../../parser/TscnParser';
 import '../../../nodes/2d/sprite2d/index';
+import * as THREE from 'three';
+import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import type { TscnNode, TscnScene, TscnExternalResource } from '../../../parser/types';
 
@@ -321,5 +323,51 @@ describe('<NodeDetailsPanel> copy node path inside an instance', () => {
     });
 
     expect(onCopyNodePath).toHaveBeenCalledExactlyOnceWith('ceiling_lamp/plafoniera');
+  });
+});
+
+describe('<NodeDetailsPanel> copy node path inside an instanced GLB', () => {
+  it('copies the path Godot gives a GLB object, with no segment for the GLB file', async () => {
+    const { loader, scenes, glbMeshes } = createFakeResourceLoader();
+    scenes.seed('res://rig.glb', {
+      nodes: [
+        makeNode('rig', GLB_SCENE_ROOT_TYPE, {
+          properties: { glbPath: 'res://rig.glb' } as Record<string, unknown>,
+        }),
+      ],
+      externalResources: [],
+      internalResources: [],
+    });
+    const named = (name: string) => Object.assign(new THREE.Group(), { name });
+    const rig = named('Scene');
+    const torso = named('Torso');
+    rig.add(torso);
+    glbMeshes.seed('res://rig.glb', rig);
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [
+        makeNode('Root', 'Node3D', {
+          children: [makeNode('Body', 'Node3D', { instance: 'ExtResource("1_rig")' })],
+        }),
+      ],
+      externalResources: [makeExtResource('1_rig', 'res://rig.glb')],
+      internalResources: [],
+    });
+    const onCopyNodePath = vi.fn();
+
+    render(
+      <>
+        <NodeDetailsPanel onCopyNodePath={onCopyNodePath} />
+        <Selector path="Root/Body/Torso" />
+      </>,
+      { wrapper: wrap(loader, graph) }
+    );
+    await act(async () => {
+      screen.getByTestId('select-node').click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: 'Copy node path' }).click();
+    });
+
+    expect(onCopyNodePath).toHaveBeenCalledExactlyOnceWith('Body/Torso');
   });
 });

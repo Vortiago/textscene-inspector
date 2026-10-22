@@ -1,11 +1,13 @@
 /**
  * The GLB animation driver binds to the node path the scene tree selects, through the real
- * NodeDispatcher → InstancedNode → GLBSceneRoot path. A broken `joinPath` of the instance node
- * and the GLB root's basename leaves the Animation tab empty on selection.
+ * NodeDispatcher → InstancedNode → GLBSceneRoot path. The node that instances the GLB is the GLB
+ * root, so the driver sits at `<instancing node>/AnimationPlayer` for the tree and for an
+ * AnimationTree alike (`gltf_document.cpp:7051-7053`).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnNode, TscnScene } from '../../../parser/types';
 import { NodeDispatcher } from '../../NodeDispatcher';
 import { SceneStack } from '../../testing/SceneStack';
@@ -17,10 +19,12 @@ import {
   type AnimationTransport,
 } from '../../contexts/AnimationTransportContext';
 import { useOptionalSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
+import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 
 // Register node-type components (Node3D / GLBSceneRoot / …).
 import '../../nodes/index';
+import '../../../nodes/animation/animationtree/index';
 
 const GLB_PATH = 'res://player.glb';
 
@@ -79,7 +83,7 @@ function Capture() {
 }
 
 describe('GLB driver — selection path through the real dispatcher', () => {
-  it('populates the transport when the GLB AnimationPlayer row (Player/player/AnimationPlayer) is selected', async () => {
+  it('populates the transport when the GLB AnimationPlayer row (Player/AnimationPlayer) is selected', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SceneStack
         loader={makeLoader()}
@@ -100,16 +104,61 @@ describe('GLB driver — selection path through the real dispatcher', () => {
 
     // Selecting the GLB root row does not drive the tab: as in Godot, the clips live on the
     // AnimationPlayer child.
-    await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath('Player/player'));
+    await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath('Player'));
     expect(transport.hasPlayer).toBe(false);
 
     // Select the synthesised AnimationPlayer row at its dispatcher-composed path.
-    await ReactThreeTestRenderer.act(async () =>
-      selection?.setSelectedNodePath('Player/player/AnimationPlayer')
-    );
+    await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath('Player/AnimationPlayer'));
 
     expect(transport.hasPlayer).toBe(true);
-    expect(transport.clips).toEqual(['idle']);
+    // The tree measures the scrubber from the clip of the driver it found, 1 s long.
+    expect(transport.duration).toBe(1);
+
+    await renderer.unmount();
+  });
+});
+
+const TREE_SCENE = `[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="${GLB_PATH}" id="glb_1"]
+
+[sub_resource type="AnimationNodeAnimation" id="Idle"]
+animation = &"idle"
+
+[sub_resource type="AnimationNodeBlendTree" id="Blend"]
+nodes/idle/node = SubResource("Idle")
+node_connections = [&"output", 0, &"idle"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("glb_1")]
+
+[node name="Tree" type="AnimationTree" parent="."]
+tree_root = SubResource("Blend")
+anim_player = NodePath("../Body/AnimationPlayer")
+active = true
+`;
+
+describe('AnimationTree — the GLB animation driver through the real dispatcher', () => {
+  it('finds the driver of the GLB its anim_player names by the path Godot gives the AnimationPlayer', async () => {
+    const scene = new TscnParser().parse(TREE_SCENE);
+    const renderer = await ReactThreeTestRenderer.create(
+      <SceneStack
+        loader={makeLoader()}
+        scene={{ internalResources: scene.internalResources, externalResources: scene.externalResources }}
+      >
+        <AnimationTransportProvider>
+          <AnimationDriverProvider>
+            <Capture />
+            <NodeDispatcher nodes={scene.nodes} />
+          </AnimationDriverProvider>
+        </AnimationTransportProvider>
+      </SceneStack>
+    );
+    await ReactThreeTestRenderer.act(async () => selection?.setSelectedNodePath('Root/Tree'));
+
+    // The tree measures the scrubber from the clip of the driver it found, 1 s long.
+    expect(transport.duration).toBe(1);
 
     await renderer.unmount();
   });

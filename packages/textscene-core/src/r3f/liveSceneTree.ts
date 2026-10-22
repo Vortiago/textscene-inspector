@@ -142,8 +142,9 @@ export interface LiveChildGroup {
 
 /**
  * What is below a node: one `inline` group for a non-instance, one `merged`
- * group for a single-root instance, `inline` plus `subscene` for a multi-root or
- * GLB instance, and one `glb` group for a GLBSceneRoot. `scope` is the group's the
+ * group for a single-root instance, `inline` plus `subscene` for a multi-root
+ * instance, and one `glb` group for a GLBSceneRoot. The node that instances a lone GLB is the
+ * GLB root, so a loaded GLB's objects are its `glb` group, before its `inline` group. `scope` is the group's the
  * node sits in, which the node's own `scope` replaces. A sub-scene's groups read the
  * sub-scene's pools from the cache, and their `instancedScenePaths` gain the
  * sub-scene. An instance of a scene that already encloses it (cyclic instancing)
@@ -178,46 +179,84 @@ export function liveChildGroups(
   if (!cached) return inlineOnly();
 
   const merged = collapseLiveNode(node, own, sceneCache);
-  if (merged !== node) {
-    return [{ origin: 'merged', children: merged.children, scope: scopeOf(merged, own), mergedNode: merged }];
+  if (merged !== node) return mergedGroups(merged, own, sceneCache, glbCache);
+
+  // A lone GLB is the instancing node's own content: its objects sit directly below that node, as
+  // the GLB root's children do in Godot (packed_scene.cpp:261-264). Until the GLB loads, the
+  // node's children stay inline.
+  const instancedGlbPath = loneGlbPath(cached.nodes);
+  if (instancedGlbPath) {
+    const object = glbCache?.getCached(instancedGlbPath);
+    return object ? glbInstanceGroups(object, node.children, own) : inlineOnly();
   }
 
-  // Inline children are authored in the host scene, so they keep the outer scope. A typed child
-  // addressed into a GLB moves below the GLB node its path names, where Godot adds it.
-  const { glbRoot, attached, rest } = placeInGlb(node.children, cached.nodes, own, glbCache);
+  // Inline children are authored in the host scene, so they keep the outer scope.
   const groups: LiveChildGroup[] = [];
-  if (rest.length > 0) {
-    groups.push({ origin: 'inline', children: rest, scope: own });
+  if (node.children.length > 0) {
+    groups.push({ origin: 'inline', children: node.children, scope: own });
   }
   groups.push({
     origin: 'subscene',
-    children: glbRoot ? [{ ...glbRoot, children: attached }] : cached.nodes,
+    children: cached.nodes,
     scope: contentScopeOf(cached, [...enclosingScenePaths, scenePath]),
   });
   return groups;
 }
 
 /**
- * The host's children split for an instance of a lone GLB: those below the GLB's nodes, each stamped
- * with the host's scope since the GLB scene's pools are not the ones it was authored against, and
- * the rest. `glbRoot` is the GLB's synthetic root, absent for any other instance.
+ * The groups of a collapsed instance. A sub-scene root that instances a loaded lone GLB leaves
+ * the merged node the GLB root, so its objects sit directly below it, under its `mergedNode`.
  */
-function placeInGlb(
-  hostChildren: LiveNode[],
-  contentRoots: readonly TscnNode[],
-  hostScope: SceneScope,
-  glbCache: CachedGlbSource | undefined
-): { glbRoot?: LiveNode; attached: LiveNode[]; rest: LiveNode[] } {
+function mergedGroups(
+  merged: LiveNode,
+  outer: SceneScope,
+  sceneCache: CachedSceneSource,
+  glbCache?: CachedGlbSource
+): LiveChildGroup[] {
+  const scope = scopeOf(merged, outer);
+  const object = instancedGlbObject(merged, scope, sceneCache, glbCache);
+  if (!object) return [{ origin: 'merged', children: merged.children, scope, mergedNode: merged }];
+  const [objects, ...rest] = glbInstanceGroups(object, merged.children, scope);
+  return [{ ...objects!, mergedNode: merged }, ...rest];
+}
+
+/** The loaded GLB `node` instances as the only root of its sub-scene, or undefined. */
+function instancedGlbObject(
+  node: LiveNode,
+  scope: SceneScope,
+  sceneCache: CachedSceneSource,
+  glbCache?: CachedGlbSource
+): THREE.Object3D | undefined {
+  const scenePath = node.instance && resolveInstancePath(node.instance, scope.externalResources);
+  if (!scenePath || (scope.instancedScenePaths ?? []).includes(scenePath)) return undefined;
+  const glbPath = loneGlbPath(sceneCache.getCached(scenePath)?.nodes ?? []);
+  return glbPath ? (glbCache?.getCached(glbPath) ?? undefined) : undefined;
+}
+
+/** The `.glb` path of a sub-scene whose only root is a `GLBSceneRoot`, else undefined. */
+function loneGlbPath(contentRoots: readonly TscnNode[]): string | undefined {
   const root = contentRoots.length === 1 ? contentRoots[0]! : undefined;
-  const glbPath = root && glbPathOf(root);
-  const object = glbPath ? glbCache?.getCached(glbPath) : undefined;
-  if (!root || !object) return { attached: [], rest: hostChildren };
+  return root && glbPathOf(root);
+}
+
+/**
+ * The groups of a node that instances a lone GLB: the GLB's objects, with the host's typed children
+ * below the GLB nodes their parent paths name, then the host's other children. Each typed child
+ * takes the host's scope when it carries none, since the GLB scene's pools are not the ones it was
+ * authored against.
+ */
+function glbInstanceGroups(
+  object: THREE.Object3D,
+  hostChildren: LiveNode[],
+  hostScope: SceneScope
+): LiveChildGroup[] {
   const { attached, rest } = splitAttachedChildren(object, hostChildren);
-  return {
-    glbRoot: root as LiveNode,
-    attached: attached.map((child) => (child.scope ? child : { ...child, scope: hostScope })),
-    rest,
-  };
+  const stamped = attached.map((child) => (child.scope ? child : { ...child, scope: hostScope }));
+  const groups: LiveChildGroup[] = [
+    { origin: 'glb', children: glbSceneRootChildren(object, stamped), scope: hostScope },
+  ];
+  if (rest.length > 0) groups.push({ origin: 'inline', children: rest, scope: hostScope });
+  return groups;
 }
 
 /** The collapsed node a `merged` group carries, so a walker merges each instance once. */

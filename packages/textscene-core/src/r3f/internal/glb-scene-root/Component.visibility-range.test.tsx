@@ -87,7 +87,7 @@ function hostTree(fake: ReturnType<typeof createFakeResourceLoader>, lines: stri
     <SceneStack loader={fake.loader} scene={{ internalResources: RESOURCES }}>
       <NodeTree node={root} path="Root" />
       <GlbInstanceProvider node={lamp} path="Root/Lamp">
-        <NodePathProvider path="Root/Lamp/lamp">
+        <NodePathProvider path="Root/Lamp">
           <GLBSceneRoot node={GLB_ROOT} />
         </NodePathProvider>
       </GlbInstanceProvider>

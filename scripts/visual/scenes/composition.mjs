@@ -32,6 +32,9 @@ export const SCENE_COMPOSITION_SCENES = [
   // (moved, turned and halved), not the instance's. Rendered nowhere, the frame holds the grey
   // torso alone. Measured against Godot 4.6.3.
   { name: 'glb-typed-child', file: 'unit-glb-typed-child.tscn' },
+  // The same attached nodes name a proxy by `%Name` as their visibility parent: the red box names
+  // the proxy that draws and hides, the green box names the one that hides and draws.
+  { name: 'glb-typed-child-visibility-parent', file: 'unit-glb-typed-child-visibility-parent.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // Collision gizmos on: `physics-bodies` leaves the toggle off. Catches a
