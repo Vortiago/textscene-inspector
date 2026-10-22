@@ -1,24 +1,13 @@
-/**
- * Godot's 1D `Curve` resource: the scalar `f(offset) -> value` curve of particle
- * parameters and `CurveTexture`, sampled as a cubic Bézier between points. The
- * `curve2d` and `curve3d` slices decode path geometry. No THREE, so the linter reads it.
- */
-
-/** Godot `Curve.TangentMode`. */
-export enum CurveTangentMode {
-  /** The stored tangent is authored freely. */
-  Free = 0,
-  /** The tangent points at the neighbouring point. Godot keeps the stored value in sync, so sampling reads it as Free. */
-  Linear = 1,
-}
+import { CurveTangentMode } from '../../../godot/scene/curve.js';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** One `_data` entry: a position plus the two tangents meeting at it. */
 export interface CurvePoint {
   position: { x: number; y: number };
   leftTangent: number;
   rightTangent: number;
-  leftMode: CurveTangentMode;
-  rightMode: CurveTangentMode;
+  leftMode: EnumValue<typeof CurveTangentMode>;
+  rightMode: EnumValue<typeof CurveTangentMode>;
 }
 
 export interface Curve {

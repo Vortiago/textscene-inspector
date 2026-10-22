@@ -5,11 +5,13 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { resolveSubResourceRef } from '../../SubResourceResolver';
-import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+import { EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 import { slotTupleRegex, parseGodotFloat, allFinite } from '../../../godot/variant/number.js';
 import { readSlotTuple, slotInt } from '../../../godot/variant/intSlots.js';
 import { dropTrailingComma, splitTopLevel } from '../../../godot/string/string.js';
 import { resizePoints } from './pointCount';
+import { CurveTangentMode } from '../../../godot/scene/curve';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /**
  * Entries per point in `_data`: `Vector2(x, y)`, left tangent, right tangent, left
@@ -129,6 +131,6 @@ function numberOr(entry: string, fallback: number): number {
   return num !== null && Number.isFinite(num) ? num : fallback;
 }
 
-function tangentMode(entry: string): CurveTangentMode {
-  return slotInt(entry) === CurveTangentMode.Linear ? CurveTangentMode.Linear : CurveTangentMode.Free;
+function tangentMode(entry: string): EnumValue<typeof CurveTangentMode> {
+  return slotInt(entry) === CurveTangentMode.LINEAR ? CurveTangentMode.LINEAR : CurveTangentMode.FREE;
 }

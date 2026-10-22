@@ -4,7 +4,7 @@
  * `"Arbitrary:1,Word:2,Word (Smart):3"` while Button's offers `"Off,Arbitrary,Word,Word (Smart)"`.
  */
 
-import { enumNamesByValue } from '../classdb/enumNames.js';
+import { enumNamesByValue, flagLabels } from '../classdb/enumNames.js';
 
 /**
  * `TextServer::AutowrapMode`: AUTOWRAP_OFF=0 … AUTOWRAP_WORD_SMART=3
@@ -37,19 +37,50 @@ export enum OverrunBehavior {
 export const OVERRUN_BEHAVIOR_NAMES = enumNamesByValue(OverrunBehavior);
 
 /**
- * The `TextServer::JustificationFlag` bits a `justification_flags` hint offers,
- * identical in `label.cpp:1437` and `rich_text_label.cpp:7769`. Not the whole
- * enum: `servers/text/text_server.h:78-88` also declares 4 and 16, which the
- * setters keep but no hint lists, so `hintedBitField` reports them.
+ * `TextServer::JustificationFlag` (`servers/text/text_server.h:78-88`), each member without
+ * `JUSTIFICATION_`.
  */
-export const JUSTIFICATION_HINTED_BITS = {
-  1: 'JUSTIFICATION_KASHIDA',
-  2: 'JUSTIFICATION_WORD_BOUND',
-  8: 'JUSTIFICATION_AFTER_LAST_TAB',
-  32: 'JUSTIFICATION_SKIP_LAST_LINE',
-  64: 'JUSTIFICATION_SKIP_LAST_LINE_WITH_VISIBLE_CHARS',
-  128: 'JUSTIFICATION_DO_NOT_SKIP_SINGLE_LINE',
-};
+export const JustificationFlag = {
+  NONE: 0,
+  KASHIDA: 1 << 0,
+  WORD_BOUND: 1 << 1,
+  TRIM_EDGE_SPACES: 1 << 2,
+  AFTER_LAST_TAB: 1 << 3,
+  CONSTRAIN_ELLIPSIS: 1 << 4,
+  SKIP_LAST_LINE: 1 << 5,
+  SKIP_LAST_LINE_WITH_VISIBLE_CHARS: 1 << 6,
+  DO_NOT_SKIP_SINGLE_LINE: 1 << 7,
+} as const;
+
+/**
+ * The `JustificationFlag` bits a `justification_flags` hint offers, identical in `label.cpp:1437`
+ * and `rich_text_label.cpp:7769`. Not the whole enum: `TRIM_EDGE_SPACES` (4) and
+ * `CONSTRAIN_ELLIPSIS` (16) are ones the setters keep but no hint lists, so `hintedBitField`
+ * reports them.
+ */
+export const JUSTIFICATION_HINTED_BITS = flagLabels(JustificationFlag, 'JUSTIFICATION_', [
+  'KASHIDA',
+  'WORD_BOUND',
+  'AFTER_LAST_TAB',
+  'SKIP_LAST_LINE',
+  'SKIP_LAST_LINE_WITH_VISIBLE_CHARS',
+  'DO_NOT_SKIP_SINGLE_LINE',
+]);
+
+/**
+ * `TextServer::LineBreakFlag` (`servers/text/text_server.h:105-121`), each member without `BREAK_`.
+ * The deprecated `BREAK_TRIM_EDGE_SPACES` (1 << 4) is left out, as `BREAK_TRIM_MASK` omits it.
+ */
+export const LineBreakFlag = {
+  NONE: 0,
+  MANDATORY: 1 << 0,
+  WORD_BOUND: 1 << 1,
+  GRAPHEME_BOUND: 1 << 2,
+  ADAPTIVE: 1 << 3,
+  TRIM_INDENT: 1 << 5,
+  TRIM_START_EDGE_SPACES: 1 << 6,
+  TRIM_END_EDGE_SPACES: 1 << 7,
+} as const;
 
 /**
  * `BREAK_TRIM_MASK` (servers/text/text_server.h:120), shared with its bound:
@@ -57,14 +88,15 @@ export const JUSTIFICATION_HINTED_BITS = {
  * (`label.cpp:63`, `button.cpp:625`, `rich_text_label.cpp:7390`) with identical
  * hints. Each call site cites its setter as `enforced`.
  */
-export const BREAK_TRIM_MASK = 32 | 64 | 128;
+export const BREAK_TRIM_MASK =
+  LineBreakFlag.TRIM_INDENT | LineBreakFlag.TRIM_START_EDGE_SPACES | LineBreakFlag.TRIM_END_EDGE_SPACES;
 
 /** The three bits `BREAK_TRIM_MASK` keeps (servers/text/text_server.h:116-118). */
-export const BREAK_TRIM_LABELS = {
-  32: 'BREAK_TRIM_INDENT',
-  64: 'BREAK_TRIM_START_EDGE_SPACES',
-  128: 'BREAK_TRIM_END_EDGE_SPACES',
-};
+export const BREAK_TRIM_LABELS = flagLabels(LineBreakFlag, 'BREAK_', [
+  'TRIM_INDENT',
+  'TRIM_START_EDGE_SPACES',
+  'TRIM_END_EDGE_SPACES',
+]);
 
 /**
  * The inspector's flag list, `vformat("Trim Spaces After Break:%d,Trim Spaces
@@ -72,7 +104,8 @@ export const BREAK_TRIM_LABELS = {
  * so BREAK_TRIM_INDENT warns as unreachable. Not `BREAK_TRIM_MASK & ~32`: this
  * is the hint's own content, and a derived value would hide a hint change.
  */
-export const BREAK_TRIM_HINTED_BITS = 64 | 128;
+export const BREAK_TRIM_HINTED_BITS =
+  LineBreakFlag.TRIM_START_EDGE_SPACES | LineBreakFlag.TRIM_END_EDGE_SPACES;
 
 /**
  * `Control::TextDirection`, which aliases `TextServer::Direction`:

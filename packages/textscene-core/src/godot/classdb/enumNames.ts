@@ -46,6 +46,19 @@ export function labelEnumNames<T extends Record<string, number>>(
   );
 }
 
+/**
+ * The label of each listed flag by its bit: `prefix` before the member name, as the engine spells
+ * the constant. For a bit-field hint that offers only some of the flags of an enum.
+ */
+/* @__NO_SIDE_EFFECTS__ */
+export function flagLabels<T extends Record<string, number>>(
+  flags: T,
+  prefix: string,
+  members: readonly (keyof T & string)[]
+): Readonly<Record<number, string>> {
+  return Object.freeze(Object.fromEntries(members.map((member) => [flags[member], `${prefix}${member}`])));
+}
+
 /** A `SPECIFIC_BONE` member as the PascalCase word a hint string prints, `SpecificBone`. */
 /* @__NO_SIDE_EFFECTS__ */
 export function pascalCaseLabel(name: string): string {

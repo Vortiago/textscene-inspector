@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { enumNamesByValue, enumValues, labelEnumNames, pascalCaseLabel, relabelEnumNames } from './enumNames';
+import {
+  enumNamesByValue,
+  enumValues,
+  flagLabels,
+  labelEnumNames,
+  pascalCaseLabel,
+  relabelEnumNames,
+} from './enumNames';
 
 enum Shade {
   DARK = 0,
@@ -61,5 +68,17 @@ describe('labelEnumNames', () => {
       0: 'OpenXR',
       1: 'Humanoid',
     });
+  });
+});
+
+describe('flagLabels', () => {
+  const Flags = { NONE: 0, FIRST: 1, SECOND: 2, FOURTH: 8 } as const;
+
+  it('labels each listed flag by its bit, with the prefix before the member name', () => {
+    expect(flagLabels(Flags, 'FLAG_', ['FIRST', 'FOURTH'])).toEqual({ 1: 'FLAG_FIRST', 8: 'FLAG_FOURTH' });
+  });
+
+  it('leaves out a flag that is not listed', () => {
+    expect(Object.keys(flagLabels(Flags, 'FLAG_', ['FIRST']))).toEqual(['1']);
   });
 });

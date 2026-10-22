@@ -12,8 +12,9 @@
 
 import type * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs.js';
-import { CanvasItemLightMode } from '../../resources/materials/canvasitemmaterial/types.js';
+
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
+import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
 
 /**
  * The floor of the canvas modulate the CPU folds in and the shader divides by, so the divide-out
@@ -73,8 +74,8 @@ void main() {`;
 
 /** Midpoints between adjacent LightMode ordinals, so the GLSL never tests equality. */
 const midpoint = (a: number, b: number) => ((a + b) / 2).toFixed(1);
-const ABOVE_NORMAL = midpoint(CanvasItemLightMode.NORMAL, CanvasItemLightMode.UNSHADED);
-const ABOVE_UNSHADED = midpoint(CanvasItemLightMode.UNSHADED, CanvasItemLightMode.LIGHT_ONLY);
+const ABOVE_NORMAL = midpoint(CanvasItemMaterialLightMode.NORMAL, CanvasItemMaterialLightMode.UNSHADED);
+const ABOVE_UNSHADED = midpoint(CanvasItemMaterialLightMode.UNSHADED, CanvasItemMaterialLightMode.LIGHT_ONLY);
 
 const LIGHT_INJECTION = `bool unshaded = uLightMode > ${ABOVE_NORMAL} && uLightMode < ${ABOVE_UNSHADED};
 bool lightOnly = uLightMode > ${ABOVE_UNSHADED};

@@ -5,7 +5,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { GlyphPlacement, TextLineLayout } from './textLayout';
-import { JustificationFlag, fitLineToWidth } from './textJustify';
+import { fitLineToWidth } from './textJustify';
+import { JustificationFlag } from '../../../../godot/text/textServerEnums';
 
 const FONT_SIZE_PX = 16;
 

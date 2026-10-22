@@ -15,7 +15,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { overrunFlagsForBehavior, trimLineToWidth } from '../../../../r3f/controls/native/text/textOverrun';
-import { JustificationFlag } from '../../../../r3f/controls/native/text/textJustify';
+
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
@@ -40,6 +40,7 @@ import {
   AutowrapMode,
   OverrunBehavior,
   VisibleCharactersBehavior,
+  JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
 
 /**

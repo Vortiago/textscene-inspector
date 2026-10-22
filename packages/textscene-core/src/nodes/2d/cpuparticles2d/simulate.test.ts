@@ -5,9 +5,11 @@ import { simulateFrozenPose, type ParticleSimInput } from './simulate';
 import { type CPUParticles2DProperties } from './types';
 import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/math/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
-import { GradientInterpolationMode } from '../../../resources/textures/gradienttexture2d/types';
-import { CurveTangentMode, type Curve } from '../../../resources/curves/curve/types';
+
+import { type Curve } from '../../../resources/curves/curve/types';
 import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
+import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
+import { CurveTangentMode } from '../../../godot/scene/curve';
 
 const NO_CURVES: (Curve | null)[] = Array.from({ length: 12 }, () => null);
 
@@ -412,15 +414,15 @@ describe('simulateFrozenPose', () => {
           position: { x: 0, y: 1 },
           leftTangent: 0,
           rightTangent: 0,
-          leftMode: CurveTangentMode.Free,
-          rightMode: CurveTangentMode.Free,
+          leftMode: CurveTangentMode.FREE,
+          rightMode: CurveTangentMode.FREE,
         },
         {
           position: { x: 1, y: 0 },
           leftTangent: 0,
           rightTangent: 0,
-          leftMode: CurveTangentMode.Free,
-          rightMode: CurveTangentMode.Free,
+          leftMode: CurveTangentMode.FREE,
+          rightMode: CurveTangentMode.FREE,
         },
       ],
       minValue: 0,
@@ -444,7 +446,7 @@ describe('simulateFrozenPose', () => {
         { offset: 0, color: { r: 1, g: 0, b: 0, a: 1 } },
         { offset: 1, color: { r: 0, g: 0, b: 1, a: 1 } },
       ],
-      interpolationMode: GradientInterpolationMode.Linear,
+      interpolationMode: GradientInterpolationMode.LINEAR,
     };
     const pose = simulateFrozenPose(input({ props: props({ amount: '24' }), colorRamp: ramp }));
     const reds = pose.map((p) => p.color.r);

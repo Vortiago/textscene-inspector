@@ -19,7 +19,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { JustificationFlag } from '../../../../r3f/controls/native/text/textJustify';
+
 import {
   labelMinimumSize,
   labelShapingWidthPx,
@@ -40,7 +40,11 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
-import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
+import {
+  AutowrapMode,
+  VisibleCharactersBehavior,
+  JustificationFlag,
+} from '../../../../godot/text/textServerEnums';
 
 const minSize = labelMinimumSize;
 
