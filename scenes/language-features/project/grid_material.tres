@@ -1,0 +1,6 @@
+[gd_resource type="StandardMaterial3D" load_steps=2 format=3 uid="uid://textscene_lf_grid_material"]
+
+[ext_resource type="Texture2D" path="res://textures/grid.png" id="1_grid"]
+
+[resource]
+albedo_texture = ExtResource("1_grid")

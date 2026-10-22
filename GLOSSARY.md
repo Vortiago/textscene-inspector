@@ -201,7 +201,7 @@ _Avoid_: a per-viewport rule scoped to the whole scene.
 ### Language features
 
 **Language-feature engine** (`languageFeatures/`):
-The React- and THREE-free core area that answers editor requests for one `.tscn`: hover, completion, quick fixes, folding and document highlights.
+The React- and THREE-free core area that answers editor requests for one `.tscn`: hover, completion, quick fixes, folding, document highlights and the references of a `res://` path.
 It reads the text through a **ParseObserver** on the scanning loop, seats the `[node]` headings through the **Seating**, and reads the `godot/` captures.
 Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0049).
 _Avoid_: "LSP" for the engine. LSP names the protocol, which the `tscn-lsp` server speaks. "Language service".

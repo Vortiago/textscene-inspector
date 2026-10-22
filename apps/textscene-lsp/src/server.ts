@@ -37,6 +37,7 @@ import {
   hoverAt,
   resPathAt,
   resPathOccurrences,
+  resPathReferencesAt,
   type LanguageDocument,
 } from '@textscene/core/languageFeatures';
 import {
@@ -48,8 +49,9 @@ import {
   toLspHover,
   toLspSymbol,
 } from './lspConvert';
-import { createDiskResRoots } from '@textscene/core/resources/diskProject';
+import { DISK_PATH_CASE, createDiskResRoots } from '@textscene/core/resources/diskProject';
 import type { ResRoot, ResRoots } from '@textscene/core/resources/resRoots';
+import { isSamePath } from '@textscene/core/resources/resPath';
 
 /** Wait after the last edit before a lint, so a burst of keystrokes lints once. */
 const LINT_DEBOUNCE_MS = 300;
@@ -121,6 +123,20 @@ async function resPathFileUrl(root: ResRoot | null, path: string): Promise<strin
   return file === null ? undefined : pathToFileURL(file).toString();
 }
 
+/** The text on disk of the file at `path` under `root`, or null for a file that is no text resource. */
+async function readFileText(root: ResRoot, path: string): Promise<string | null> {
+  const content = await root.loadResource(path);
+  return typeof content === 'string' ? content : null;
+}
+
+/** The open documents that have a file path, each beside that path. Taken once per request. */
+function openDocumentFiles(): { file: string; document: TextDocument }[] {
+  return documents.all().flatMap((document) => {
+    const file = filePathOf(document.uri);
+    return file === null ? [] : [{ file, document }];
+  });
+}
+
 function scheduleLint(document: TextDocument): void {
   cancelLint(document.uri);
   lintTimers.set(
@@ -170,6 +186,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       foldingRangeProvider: true,
       documentSymbolProvider: true,
       definitionProvider: true,
+      referencesProvider: true,
       documentHighlightProvider: true,
       documentLinkProvider: { resolveProvider: false },
     },
@@ -245,6 +262,28 @@ connection.onDefinition(async (params): Promise<Location | null> => {
   if (occurrence === undefined) return null;
   const target = await resPathFileUrl(await rootForUri(params.textDocument.uri), occurrence.path);
   return target === undefined ? null : { uri: target, range: FILE_START };
+});
+
+connection.onReferences(async (params, token): Promise<Location[] | null> => {
+  const model = modelOf(params.textDocument.uri);
+  if (model === undefined) return null;
+  const root = await rootForUri(params.textDocument.uri);
+  if (root === null) return [];
+  const openFiles = openDocumentFiles();
+  const references = await resPathReferencesAt(model, params.position, {
+    listPaths: () => root.listPaths(),
+    openText: (path) => {
+      const file = root.pathOf(path);
+      if (file === null) return undefined;
+      return openFiles.find((open) => isSamePath(open.file, file, DISK_PATH_CASE))?.document.getText();
+    },
+    readFile: (path) => readFileText(root, path),
+    isCancelled: () => token.isCancellationRequested,
+  });
+  return references.flatMap(({ file, range }) => {
+    const path = root.pathOf(file);
+    return path === null ? [] : [{ uri: pathToFileURL(path).toString(), range }];
+  });
 });
 
 connection.onDocumentHighlight((params) => {

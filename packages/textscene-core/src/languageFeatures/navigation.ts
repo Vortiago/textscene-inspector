@@ -5,6 +5,7 @@
  */
 
 import { RES_PATH_BODY_SOURCE } from '../godot/string/string.js';
+import { splitLines } from '../parser/utils.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 import { nodePathReferenceAt } from './nodePathRefs.js';
 import { nodeSectionOfPath } from './nodeSeating.js';
@@ -20,7 +21,7 @@ export interface ResPathOccurrence {
 
 const RES_PATH_RE = new RegExp(`res://${RES_PATH_BODY_SOURCE}`, 'g');
 
-/** Where a path inside prose ends, since a path that opens no string has no closing quote. */
+/** Where a path inside prose ends: prose has no delimiter, so a space ends the path. */
 const PROSE_PATH_END_RE = /[\s')]/;
 
 /** A path that opens a string runs as far as a file name may. One inside prose ends sooner. */
@@ -37,9 +38,18 @@ function resPathsOnLine(line: string, lineIndex: number): ResPathOccurrence[] {
   });
 }
 
+function resPathsOnLines(lines: readonly string[]): readonly ResPathOccurrence[] {
+  return [...lines.entries()].flatMap(([lineIndex, line]) => resPathsOnLine(line, lineIndex));
+}
+
 /** Every `res://` occurrence in the document, in line order. */
 export function resPathOccurrences(document: LanguageDocument): readonly ResPathOccurrence[] {
-  return [...document.lines.entries()].flatMap(([lineIndex, line]) => resPathsOnLine(line, lineIndex));
+  return resPathsOnLines(document.lines);
+}
+
+/** Every `res://` occurrence in `text`, in line order, for a file that no one needs parsed as a document. */
+export function resPathOccurrencesInText(text: string): readonly ResPathOccurrence[] {
+  return resPathsOnLines(splitLines(text));
 }
 
 /** The `res://` path the cursor sits on, or undefined. */

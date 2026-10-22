@@ -8,7 +8,7 @@
  */
 
 import { TscnParserCore, type ParseObserver, type SectionType } from '../parser/TscnParserCore.js';
-import type { ParsedHeading } from '../parser/utils.js';
+import { splitLines, type ParsedHeading } from '../parser/utils.js';
 
 /** The four section tags a feature reads, and `other` for the rest (`gd_scene`, `connection`). */
 type SectionKind = 'node' | 'sub_resource' | 'ext_resource' | 'resource' | 'other';
@@ -145,7 +145,7 @@ export class LanguageDocument {
   private readonly propertyByLine: Map<number, PropertyLocation>;
 
   constructor(readonly text: string) {
-    this.lines = text.split(/\r?\n/);
+    this.lines = splitLines(text);
     this.sections = scanSections(text, this.lines);
     this.sectionByLine = new Map();
     this.propertyByLine = new Map();

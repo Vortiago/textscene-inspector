@@ -309,6 +309,14 @@ export function isSectionHeading(line: string): boolean {
   return SECTION_HEADING_RE.test(line.trim());
 }
 
+/**
+ * The lines of `text`, split on CRLF or LF. A trailing `\r` on each line of a Windows-authored file would corrupt
+ * accumulated multi-line string values and put a range one character past the line's end.
+ */
+export function splitLines(text: string): string[] {
+  return text.split(/\r?\n/);
+}
+
 export function isEmpty(line: string): boolean {
   return line.trim().length === 0;
 }

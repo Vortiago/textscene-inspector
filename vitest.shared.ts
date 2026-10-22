@@ -1,4 +1,5 @@
 import { availableParallelism } from 'node:os';
+import { getHeapStatistics } from 'node:v8';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -22,6 +23,17 @@ export const sourceResolve = {
     },
   },
 };
+
+/**
+ * Vitest recycles a VM worker once its heap passes `vmMemoryLimit`. The default, 1 / maxWorkers of
+ * machine memory, is above V8's worker heap limit (4.8 GB against 2.2 GB on 16 GB and 4 CPUs), so
+ * the worker dies first. 70% leaves room for the next file. A multi-project run reads the limit
+ * from the root config only.
+ */
+const WORKER_HEAP_SHARE_BEFORE_RECYCLE = 0.7;
+export const vmMemoryLimit = `${Math.floor(
+  (getHeapStatistics().heap_size_limit * WORKER_HEAP_SHARE_BEFORE_RECYCLE) / 1024 ** 2
+)}MB`;
 
 /**
  * Shared Vitest configuration for all packages.
@@ -64,6 +76,7 @@ export default defineConfig({
     maxWorkers: Math.min(16, Math.max(1, availableParallelism() - 1)),
     fileParallelism: true,
     maxConcurrency: 15,
+    vmMemoryLimit,
     // Keeps each module's transform in node_modules/.vitest-cache, so the next run skips it.
     fsModuleCache: true,
   },
