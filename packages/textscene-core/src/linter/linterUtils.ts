@@ -2,6 +2,7 @@
 import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import type { RawNode } from '../parser/types.js';
+import { perTree } from '../utils/perTree.js';
 
 /**
  * Scene-tree facts built in one depth-first pass for the helpers below. A rule calls
@@ -24,20 +25,12 @@ interface SceneIndex {
   nodesByType: Map<string, RawNode[]>;
 }
 
-/**
- * Keyed by the roots array's identity, written only by `getSceneIndex`. A parsed
- * `scene.nodes` is never mutated in place and each parse makes a fresh array, so an
- * entry never goes stale and is collected with its tree. A caller that mutated a tree
- * in place and re-queried the same array would read stale results.
- */
-const sceneIndexCache = new WeakMap<RawNode[], SceneIndex>();
-
-function buildSceneIndex(roots: RawNode[]): SceneIndex {
+function buildSceneIndex(roots: readonly RawNode[]): SceneIndex {
   const parentOf = new Map<RawNode, RawNode | null>();
   const underInstanceAncestor = new Set<RawNode>();
   const nodesByType = new Map<string, RawNode[]>();
 
-  const walk = (nodes: RawNode[], parent: RawNode | null, ancestorIsInstance: boolean): void => {
+  const walk = (nodes: readonly RawNode[], parent: RawNode | null, ancestorIsInstance: boolean): void => {
     for (const node of nodes) {
       parentOf.set(node, parent);
 
@@ -59,14 +52,7 @@ function buildSceneIndex(roots: RawNode[]): SceneIndex {
   return { parentOf, underInstanceAncestor, nodesByType };
 }
 
-function getSceneIndex(roots: RawNode[]): SceneIndex {
-  let index = sceneIndexCache.get(roots);
-  if (!index) {
-    index = buildSceneIndex(roots);
-    sceneIndexCache.set(roots, index);
-  }
-  return index;
-}
+const getSceneIndex = perTree(buildSceneIndex);
 
 /** Shared empty result for a type miss: one frozen instance, not an allocation per miss. */
 const NO_MATCHES: readonly RawNode[] = Object.freeze([]);

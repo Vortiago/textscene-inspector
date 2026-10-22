@@ -15,8 +15,8 @@ import {
   cachedUniqueNameLivePaths,
   cachedUniqueNameOwnership,
   cachedUniqueNamesBelowRoot,
-  perTree,
 } from '../utils/uniqueNames.js';
+import { perTree } from '../utils/perTree.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
