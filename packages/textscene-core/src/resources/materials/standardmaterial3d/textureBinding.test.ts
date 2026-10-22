@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { bindSlotTexture, materialTextureStates, slotReadsSourceColor } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../parser/projectSettingsParser';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';
 import { recordGodotFormat } from '../../textures/sourceColorSpace';
@@ -23,7 +24,10 @@ function loaded(): THREE.Texture {
   return texture;
 }
 
-const DEFAULTS = materialTextureStates(parseStandardMaterial3DScalars({}));
+const DEFAULTS = materialTextureStates(
+  parseStandardMaterial3DScalars({}),
+  DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+);
 
 /**
  * Godot's `source_color` samplers, and only those:
@@ -112,14 +116,21 @@ describe('bindSlotTexture — colour space per Godot texture slot', () => {
     // (`material.cpp:4005`), so the sampler loses `repeat_enable` and the clamped
     // arrival is exactly what the slot wants: shared, not cloned.
     const procedural = new THREE.Texture();
-    const noRepeat = materialTextureStates(parseStandardMaterial3DScalars({ texture_repeat: 'false' }));
+    const noRepeat = materialTextureStates(
+      parseStandardMaterial3DScalars({ texture_repeat: 'false' }),
+      DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+    );
     expect(bindSlotTexture(procedural, 'normal_texture', noRepeat)).toBe(procedural);
   });
 
   it('carries the material state and the colour space in ONE clone', () => {
     const shared = loaded();
     const scalars = parseStandardMaterial3DScalars({ uv1_scale: 'Vector3(3, 2, 1)' });
-    const bound = bindSlotTexture(shared, 'roughness_texture', materialTextureStates(scalars));
+    const bound = bindSlotTexture(
+      shared,
+      'roughness_texture',
+      materialTextureStates(scalars, DEFAULT_ANISOTROPIC_FILTERING_LEVEL)
+    );
 
     expect(bound.repeat.x).toBe(3);
     expect(bound.colorSpace).toBe(THREE.NoColorSpace);
@@ -135,7 +146,8 @@ describe('bindSlotTexture — UV set per slot', () => {
       detail_uv_layer: '1',
       uv1_scale: 'Vector3(3, 3, 1)',
       uv2_scale: 'Vector3(2, 2, 1)',
-    })
+    }),
+    DEFAULT_ANISOTROPIC_FILTERING_LEVEL
   );
 
   it('binds the emission map to UV2 under emission_on_uv2, with the UV2 transform', () => {
@@ -152,7 +164,10 @@ describe('bindSlotTexture — UV set per slot', () => {
   });
 
   it('binds the AO map to UV2 under ao_on_uv2', () => {
-    const state = materialTextureStates(parseStandardMaterial3DScalars({ ao_on_uv2: 'true' }));
+    const state = materialTextureStates(
+      parseStandardMaterial3DScalars({ ao_on_uv2: 'true' }),
+      DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+    );
 
     expect(bindSlotTexture(loaded(), 'ao_texture', state).channel).toBe(UV2_CHANNEL);
   });
@@ -166,7 +181,8 @@ describe('bindSlotTexture — UV set per slot', () => {
 
   it('samples the first UV set under UV2 triplanar, as UV1 triplanar does (edge case)', () => {
     const state = materialTextureStates(
-      parseStandardMaterial3DScalars({ emission_on_uv2: 'true', uv2_triplanar: 'true' })
+      parseStandardMaterial3DScalars({ emission_on_uv2: 'true', uv2_triplanar: 'true' }),
+      DEFAULT_ANISOTROPIC_FILTERING_LEVEL
     );
 
     const bound = bindSlotTexture(loaded(), 'emission_texture', state);

@@ -82,7 +82,7 @@ const anisotropicStates = new Map<string, TextureFilterState>();
 /**
  * The sampler state for a `texture_filter` ordinal. An absent or out-of-range
  * value resolves to Godot's default, matching how the engine treats anything
- * outside `TEXTURE_FILTER_MAX`.
+ * outside `TEXTURE_FILTER_MAX`. The level is one `parseAnisotropicFilteringLevel` accepted.
  */
 export function godotTextureFilterState(
   filter: number | undefined,
@@ -91,11 +91,10 @@ export function godotTextureFilterState(
   const defaultFilter = BASE_MATERIAL_3D_DEFAULTS.textureFilter;
   const row = filter !== undefined && filter in STATES ? filter : defaultFilter;
   if (!ANISOTROPIC_FILTERS.has(row)) return STATES[row]!;
-  const level = Math.max(0, anisotropicFilteringLevel);
-  const key = `${row}:${level}`;
+  const key = `${row}:${anisotropicFilteringLevel}`;
   let state = anisotropicStates.get(key);
   if (!state) {
-    state = { ...STATES[row]!, anisotropy: 1 << level };
+    state = { ...STATES[row]!, anisotropy: 1 << anisotropicFilteringLevel };
     anisotropicStates.set(key, state);
   }
   return state;
