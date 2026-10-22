@@ -13,10 +13,10 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
-import { inlineMaterialSource, type MaterialSource } from './materialSource';
+import type { MaterialSource } from './materialSource';
 import { subResource } from '../../testing/subResource';
 import { pendingMapStandIn } from './pendingMapStandIn';
-import { inlineMaterial, unfadedProps } from './surfaceMaterial.testkit';
+import { inlineMaterial, inlineSource, unfadedProps } from './surfaceMaterial.testkit';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 
 const TRES_PATH = 'res://painted.tres';
@@ -68,7 +68,7 @@ describe('useSurfaceMaterial for a source without a usable material', () => {
   });
 
   it("derives Godot's default surface for a material type it does not build", () => {
-    const { result } = renderSurface(inlineMaterialSource(subResource('ShaderMaterial', 'Shader_a'), [], []));
+    const { result } = renderSurface(inlineSource(subResource('ShaderMaterial', 'Shader_a')));
 
     expect(result.current.isAbsent).toBe(false);
     expect(result.current.scalars).toBeNull();

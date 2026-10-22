@@ -5,7 +5,7 @@
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { subResource } from '../../testing/subResource';
-import { inlineMaterialSource, type MaterialSource } from './materialSource';
+import type { MaterialSource } from './materialSource';
 import type { SurfaceMaterial } from './useSurfaceMaterial';
 
 /** The material body for `properties`. Keep one across renders: the source is keyed on its identity. */
@@ -19,7 +19,7 @@ export function inlineSource(
   internalResources: readonly TscnInternalResource[] = [],
   externalResources: readonly TscnExternalResource[] = []
 ): MaterialSource {
-  return inlineMaterialSource(resource, internalResources, externalResources);
+  return { kind: 'inline', material: { resource, internalResources, externalResources } };
 }
 
 /** A scene-held StandardMaterial3D with `properties`. */

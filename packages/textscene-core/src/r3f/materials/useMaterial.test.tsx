@@ -13,7 +13,8 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { useMissingResources } from '../contexts/MissingResourcesContext';
 import { missingResourcesWrapper } from '../../resources/testing/missingResourcesWrapper';
-import { inlineMaterialSource, type MaterialSource } from './materialSource';
+import type { MaterialSource } from './materialSource';
+import { inlineSource } from './surfaceMaterial.testkit';
 import { readyMaterial, useMaterial } from './useMaterial';
 
 const TRES_PATH = 'res://materials/paint.tres';
@@ -38,7 +39,7 @@ const SCENE_EXTERNAL: TscnExternalResource[] = [];
 
 function inline(id: string): MaterialSource {
   const resource = SCENE_INTERNAL.find((entry) => entry.id === id)!;
-  return inlineMaterialSource(resource, SCENE_INTERNAL, SCENE_EXTERNAL);
+  return inlineSource(resource, SCENE_INTERNAL, SCENE_EXTERNAL);
 }
 
 function renderMaterial(source: MaterialSource | undefined, seeded: Record<string, string> = {}) {

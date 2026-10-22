@@ -31,15 +31,6 @@ export type MaterialSource =
   /** A resource file, or a `file.res::SubId` address into one, that `useMaterial` loads. */
   | { kind: 'file'; path: string };
 
-/** A material the scene already holds, with the scene's tables. */
-export function inlineMaterialSource(
-  resource: TscnInternalResource,
-  internalResources: readonly TscnInternalResource[],
-  externalResources: readonly TscnExternalResource[]
-): MaterialSource {
-  return { kind: 'inline', material: { resource, internalResources, externalResources } };
-}
-
 /**
  * The source `ref` names, or undefined when it names no material. `ref` is a reference in the
  * scene's tables, or a `res://` path such as a material inside a mesh resource file. Undefined leaves the
@@ -59,7 +50,7 @@ export function resolveMaterialSource(
   if (parsed.type === 'SubResource') {
     const resource = findSubResource(internalResources, parsed.id);
     if (!resource || !BUILDABLE_MATERIAL_TYPES.has(resource.type)) return undefined;
-    return inlineMaterialSource(resource, internalResources, externalResources);
+    return { kind: 'inline', material: { resource, internalResources, externalResources } };
   }
 
   const ext = findExtResource(externalResources, parsed.id);

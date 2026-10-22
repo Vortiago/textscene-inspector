@@ -11,7 +11,8 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../../godot/rendering/materials/defaultMaterial';
-import { inlineMaterialSource, type MaterialSource } from './materialSource';
+import type { MaterialSource } from './materialSource';
+import { inlineSource } from './surfaceMaterial.testkit';
 import { SurfaceMaterialSlots, surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
 
 const SCENE: TscnInternalResource[] = [
@@ -20,7 +21,7 @@ const SCENE: TscnInternalResource[] = [
 ];
 
 function inline(resource: TscnInternalResource): MaterialSource {
-  return inlineMaterialSource(resource, SCENE, []);
+  return inlineSource(resource, SCENE);
 }
 
 const RED = inline(SCENE[0]!);

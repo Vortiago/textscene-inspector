@@ -99,16 +99,18 @@ export function useSurfaceTextures(
 }
 
 /**
- * `use(slot, ...args)` for each texture slot, in `TEXTURE_SLOTS` order, keyed by slot. The list
- * has a fixed length, so every render calls the hooks in the same order.
+ * `useSlot(slot, ...args)` for each texture slot, in `TEXTURE_SLOTS` order, keyed by slot. The
+ * loop answers `react-hooks/rules-of-hooks`: `TEXTURE_SLOTS` is a constant, so every render calls
+ * the same hooks in the same order.
  */
 function useEachSlot<Args extends unknown[], T>(
-  use: (slot: TextureSlot, ...args: Args) => T,
+  useSlot: (slot: TextureSlot, ...args: Args) => T,
   ...args: Args
 ): Readonly<Record<TextureSlot, T>> {
   const results: Partial<Record<TextureSlot, T>> = {};
   for (const slot of TEXTURE_SLOTS) {
-    results[slot] = use(slot, ...args);
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- `TEXTURE_SLOTS` is a constant.
+    results[slot] = useSlot(slot, ...args);
   }
   return results as Record<TextureSlot, T>;
 }

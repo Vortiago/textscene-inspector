@@ -10,7 +10,8 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { inlineMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
+import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import { inlineSource } from '../../../r3f/materials/surfaceMaterial.testkit';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { subResource } from '../../../testing/subResource';
 import { ResourceLoaderProvider } from '../../ResourceLoaderContext';
@@ -337,7 +338,7 @@ async function renderArrival(testCase: ParityCase, arrival: Arrival): Promise<TH
   fake.resources.seed(STANDALONE_PATH, parseTresFile(standaloneTres(testCase)));
   fake.resources.seed(MESH_PATH, parseTresFile(meshTresCarryingIt(testCase)));
   const sources: Record<Arrival, MaterialSource> = {
-    inline: inlineMaterialSource(
+    inline: inlineSource(
       subResource(testCase.resourceType ?? 'StandardMaterial3D', 'Mat_inline', testCase.properties),
       [],
       testCase.extResources ?? []
