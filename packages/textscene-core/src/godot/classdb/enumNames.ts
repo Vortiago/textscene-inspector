@@ -3,19 +3,10 @@
 /** The integers an `as const` enum object holds, as the type of a property that stores one. */
 export type EnumValue<T extends object> = T[keyof T];
 
-/**
- * Each member name by its integer, as a validator or an inspector names it. The numeric members
- * only: a TS enum object also maps each name back to its integer.
- */
+/** Each member name by its integer, as a validator or an inspector names it. */
 /* @__NO_SIDE_EFFECTS__ */
 export function enumNamesByValue(enumObject: object): Readonly<Record<number, string>> {
-  return Object.freeze(
-    Object.fromEntries(
-      Object.entries(enumObject)
-        .filter(([, value]) => typeof value === 'number')
-        .map(([name, value]) => [value, name])
-    )
-  );
+  return Object.freeze(Object.fromEntries(Object.entries(enumObject).map(([name, value]) => [value, name])));
 }
 
 /**
@@ -67,10 +58,4 @@ export function pascalCaseLabel(name: string): string {
     .split('_')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join('');
-}
-
-/** Every integer a numeric TypeScript enum holds, in declaration order, without the name-to-integer entries. */
-/* @__NO_SIDE_EFFECTS__ */
-export function enumValues<T extends number>(enumObject: Record<string, string | T>): readonly T[] {
-  return Object.values(enumObject).filter((value): value is T => typeof value === 'number');
 }

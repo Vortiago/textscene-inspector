@@ -4,7 +4,7 @@ import { storedVector2 } from '../../../godot/math/real';
 import { flooredCount } from '../meshCounts';
 import type { Vector2 } from '../../../godot/math/vector';
 import { PlaneMeshOrientation } from '../../../godot/scene/planeMesh.js';
-import { enumValues, type EnumValue } from '../../../godot/classdb/enumNames.js';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /**
  * Defaults that differ between PlaneMesh (FACE_Y, 2×2) and its QuadMesh subclass
@@ -32,7 +32,7 @@ export function decodePlaneMesh(
     orientation: enumOr(
       properties.orientation,
       defaults.orientation,
-      enumValues(PlaneMeshOrientation),
+      Object.values(PlaneMeshOrientation),
       'PlaneMesh orientation'
     ),
     centerOffset: vec3Or(properties.center_offset, { x: 0, y: 0, z: 0 }, 'PlaneMesh center_offset'),

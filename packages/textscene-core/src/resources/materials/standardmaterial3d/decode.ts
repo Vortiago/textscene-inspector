@@ -17,6 +17,7 @@ import { DetailUV } from '../../../godot/rendering/materials/detailUv';
 import { BASE_MATERIAL_3D_DEFAULTS, EMISSION_OPERATOR_DEFAULT } from '../../../godot/scene/baseMaterial3D';
 import { clamp } from '../../../godot/math/math';
 import {
+  AlphaAntiAliasing,
   hashAntialiasing,
   scissorAntialiasing,
   type AlphaAntialiasingCut,
@@ -324,7 +325,11 @@ function decodeAlphaAntialiasing(
   transparency: EnumValue<typeof Transparency>,
   scissorThreshold: number
 ): AlphaAntialiasingCut | null {
-  const mode = intOr(properties['alpha_antialiasing_mode'], 0, CONTEXT);
+  const mode = intOr(
+    properties['alpha_antialiasing_mode'],
+    AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF,
+    CONTEXT
+  ) as EnumValue<typeof AlphaAntiAliasing>;
   const edge = floatOr(properties['alpha_antialiasing_edge'], 0.3, CONTEXT);
   if (transparency === Transparency.ALPHA_SCISSOR) return scissorAntialiasing(mode, scissorThreshold, edge);
   if (transparency === Transparency.ALPHA_HASH) return hashAntialiasing(mode, edge);

@@ -35,7 +35,8 @@ const FogVolumeElement = extend(FogVolumeObject);
 /** The mode `shader` runs in, or null before it has loaded. */
 function shaderModeOfResource(shader: TscnInternalResource | null): EnumValue<typeof ShaderMode> | null {
   if (!shader) return null;
-  if (shader.type === 'VisualShader') return stringToInt(shader.data['mode'] ?? '0');
+  if (shader.type === 'VisualShader')
+    return stringToInt(shader.data['mode'] ?? '0') as EnumValue<typeof ShaderMode>;
   return shaderModeOf(literalText(shader.data['code'] ?? ''));
 }
 

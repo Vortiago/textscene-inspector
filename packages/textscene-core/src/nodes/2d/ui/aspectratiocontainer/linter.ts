@@ -21,7 +21,7 @@ const arms = {
   }),
 } as const satisfies RuleArms<string>;
 
-const UNSUPPORTED_EXPAND_MODES = new Set([
+const UNSUPPORTED_EXPAND_MODES = new Set<number>([
   TextureRectExpandMode.EXPAND_FIT_WIDTH_PROPORTIONAL,
   TextureRectExpandMode.EXPAND_FIT_HEIGHT_PROPORTIONAL,
 ]);

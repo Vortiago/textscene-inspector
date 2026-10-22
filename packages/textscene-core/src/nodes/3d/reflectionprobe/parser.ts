@@ -21,7 +21,7 @@ import { parseNode3D } from '../../base/node3d/parser';
 import type { ReflectionProbeProperties } from './types';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
-const AMBIENT_MODES = [
+const AMBIENT_MODES: readonly number[] = [
   ReflectionProbeAmbientMode.DISABLED,
   ReflectionProbeAmbientMode.ENVIRONMENT,
   ReflectionProbeAmbientMode.COLOR,
@@ -100,5 +100,7 @@ function layerMask(value: string | undefined, context: string): number {
  */
 function parseAmbientMode(value: string | undefined): EnumValue<typeof ReflectionProbeAmbientMode> {
   const mode = intOr(value, REFLECTION_PROBE_DEFAULTS.ambientMode, 'ReflectionProbe ambient_mode');
-  return AMBIENT_MODES.includes(mode) ? mode : ReflectionProbeAmbientMode.DISABLED;
+  return AMBIENT_MODES.includes(mode)
+    ? (mode as EnumValue<typeof ReflectionProbeAmbientMode>)
+    : ReflectionProbeAmbientMode.DISABLED;
 }

@@ -71,7 +71,7 @@ export const JUSTIFICATION_HINTED_NAMES = flagLabels(JustificationFlag, 'JUSTIFI
  * `TextServer::LineBreakFlag` (`servers/text/text_server.h:105-121`), each member without `BREAK_`.
  * The deprecated `BREAK_TRIM_EDGE_SPACES` (1 << 4) is left out, as `BREAK_TRIM_MASK` omits it.
  */
-export const LineBreakFlag = {
+const LineBreakFlag = {
   NONE: 0,
   MANDATORY: 1 << 0,
   WORD_BOUND: 1 << 1,

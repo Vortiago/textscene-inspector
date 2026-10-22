@@ -93,18 +93,6 @@ function integerOf(node: ts.Expression): number | undefined {
   return undefined;
 }
 
-function enumMembers(declaration: ts.EnumDeclaration): ReadonlyMap<string, number> | undefined {
-  const members = new Map<string, number>();
-  let next = 0;
-  for (const member of declaration.members) {
-    const value = member.initializer ? integerOf(member.initializer) : next;
-    if (value === undefined) return undefined;
-    members.set(member.name.getText(), value);
-    next = value + 1;
-  }
-  return members;
-}
-
 /**
  * An object literal whose every member is an integer, which is how `as const` enums are written.
  * Members that are all one letter make it a vector or a colour (`{ x: 1, y: 0 }`), not an enum.
@@ -121,25 +109,26 @@ function objectLiteralMembers(literal: ts.ObjectLiteralExpression): ReadonlyMap<
   return members.size > 0 && !isCoordinates ? members : undefined;
 }
 
-function enumsIn(source: string): { tsEnums: EnumMembers[]; objects: EnumMembers[] } {
-  const tsEnums: EnumMembers[] = [];
+/** The integer-valued `as const` objects a file declares at its top level. */
+function objectEnumsIn(source: string): EnumMembers[] {
   const objects: EnumMembers[] = [];
   for (const statement of parse(source).statements) {
-    if (ts.isEnumDeclaration(statement)) {
-      const members = enumMembers(statement);
-      if (members) tsEnums.push({ name: statement.name.text, members });
-    } else if (ts.isVariableStatement(statement)) {
-      for (const { name, initializer } of statement.declarationList.declarations) {
-        let value = initializer;
-        while (value && (ts.isAsExpression(value) || ts.isSatisfiesExpression(value)))
-          value = value.expression;
-        const members =
-          value && ts.isObjectLiteralExpression(value) ? objectLiteralMembers(value) : undefined;
-        if (members && ts.isIdentifier(name)) objects.push({ name: name.text, members });
-      }
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const { name, initializer } of statement.declarationList.declarations) {
+      let value = initializer;
+      while (value && (ts.isAsExpression(value) || ts.isSatisfiesExpression(value))) value = value.expression;
+      const members = value && ts.isObjectLiteralExpression(value) ? objectLiteralMembers(value) : undefined;
+      if (members && ts.isIdentifier(name)) objects.push({ name: name.text, members });
     }
   }
-  return { tsEnums, objects };
+  return objects;
+}
+
+/** The name of each TypeScript `enum` a file declares at its top level, `const enum` included. */
+function tsEnumNames(source: string): string[] {
+  return parse(source)
+    .statements.filter(ts.isEnumDeclaration)
+    .map((declaration) => declaration.name.text);
 }
 
 const spelling = (name: string): string => name.toLowerCase().replace(/_/g, '');
@@ -172,19 +161,14 @@ describe('detecting a re-export', () => {
 });
 
 describe('detecting an engine enum', () => {
-  it('reads a TypeScript enum with its implicit and written values', () => {
-    const { tsEnums } = enumsIn('export enum E { A, B = 5, C }');
-    expect(tsEnums[0]?.members).toEqual(
-      new Map([
-        ['A', 0],
-        ['B', 5],
-        ['C', 6],
-      ])
-    );
+  it('names a TypeScript enum, whatever its members hold', () => {
+    expect(
+      tsEnumNames('export enum E { A, B = 5 }\nconst enum F { C = 1 << 2 }\nenum G { H = "h" }')
+    ).toEqual(['E', 'F', 'G']);
   });
 
   it('reads an as-const object of integers and skips one with other values', () => {
-    const { objects } = enumsIn(
+    const objects = objectEnumsIn(
       "const E = { FIRST: 0, SECOND: 1 << 2 } as const;\nconst F = { FIRST: 'x' };"
     );
     expect(objects.map(({ name }) => name)).toEqual(['E']);
@@ -231,24 +215,23 @@ describe('src/godot is the one route to an engine fact', () => {
     expect(violations, 'a group has no barrel (ARCHITECTURE.md)').toEqual([]);
   });
 
-  it('declares no engine enum outside it as a TypeScript enum', () => {
-    const violations = files
-      .filter((file) => !isInGodot(file))
-      .flatMap((file) => enumsIn(read(file)).tsEnums.map(({ name }) => `${file} declares enum ${name}`));
-    expect(violations, 'declare the enum under godot/, with its Godot cite').toEqual([]);
+  it('declares each enum as an as-const object, never a TypeScript enum', () => {
+    const violations = files.flatMap((file) =>
+      tsEnumNames(read(file)).map((name) => `${file} declares enum ${name}`)
+    );
+    expect(violations, 'declare it as an `as const` object, in godot/ with its Godot cite').toEqual([]);
   });
 
   it('copies no godot/ enum as an object outside it', () => {
-    const engineEnums = files.filter(isInGodot).flatMap((file) => {
-      const { tsEnums, objects } = enumsIn(read(file));
-      return [...tsEnums, ...objects]
+    const engineEnums = files.filter(isInGodot).flatMap((file) =>
+      objectEnumsIn(read(file))
         .filter(({ members }) => members.size >= 2)
-        .map((found) => ({ ...found, file }));
-    });
+        .map((found) => ({ ...found, file }))
+    );
     const violations = files
       .filter((file) => !isInGodot(file))
       .flatMap((file) =>
-        enumsIn(read(file)).objects.flatMap((candidate) => {
+        objectEnumsIn(read(file)).flatMap((candidate) => {
           const copied =
             candidate.members.size >= 2 && engineEnums.find((engine) => copiesMembersOf(candidate, engine));
           return copied ? [`${file}: ${candidate.name} copies ${copied.file} ${copied.name}`] : [];

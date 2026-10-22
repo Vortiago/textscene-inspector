@@ -20,7 +20,6 @@ import type { SceneResources } from '../SceneResourcesContext';
 import { ToneMapLayer } from './ToneMapLayer';
 import { FogLayer } from '../fog/FogLayer';
 import { clearColorTexture, foggedClearColorTexture } from './colorBackground';
-import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 export interface EnvironmentLayerProps {
   settings: EnvironmentSettings;
@@ -143,6 +142,6 @@ function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: n
   };
 }
 
-function showsBackgroundColor(mode: EnumValue<typeof BackgroundMode>): boolean {
+function showsBackgroundColor(mode: number): boolean {
   return mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;
 }

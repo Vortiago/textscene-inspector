@@ -29,6 +29,7 @@ function parseVisibilityRange(properties: Record<string, string>): VisibilityRan
     beginMargin: parseOptionalFloat(properties.visibility_range_begin_margin) ?? fallback.beginMargin,
     end: parseOptionalFloat(properties.visibility_range_end) ?? fallback.end,
     endMargin: parseOptionalFloat(properties.visibility_range_end_margin) ?? fallback.endMargin,
-    fadeMode: parseOptionalInt(properties.visibility_range_fade_mode) ?? fallback.fadeMode,
+    fadeMode: (parseOptionalInt(properties.visibility_range_fade_mode) ??
+      fallback.fadeMode) as VisibilityRange['fadeMode'],
   };
 }

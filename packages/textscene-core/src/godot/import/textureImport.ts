@@ -54,7 +54,9 @@ export function roughnessLimitOption(
 ): RoughnessLimitOption | null {
   if (mode === undefined || !normalPath) return null;
   const channel = mode - ROUGHNESS_MODE_FIRST_CHANNEL;
-  return channel >= RoughnessChannel.R && channel <= RoughnessChannel.L ? { channel, normalPath } : null;
+  return channel >= RoughnessChannel.R && channel <= RoughnessChannel.L
+    ? { channel: channel as EnumValue<typeof RoughnessChannel>, normalPath }
+    : null;
 }
 
 /** The roughness channel the limiter raises, and the path of the normal map it reads. */

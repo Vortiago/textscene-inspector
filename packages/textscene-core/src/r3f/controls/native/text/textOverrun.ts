@@ -12,7 +12,6 @@ import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 import { getFontGlyphAdvancePx, type FontMetrics } from './fontMetrics';
 import { isWhitespace, type GlyphPlacement, type TextLineLayout } from './textLayout';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
-import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 /**
  * The `TextServer::TextOverrunFlag` bits an `OverrunBehavior` reaches (`text_server.cpp:2399-2432`),
@@ -36,7 +35,7 @@ const NO_TRIM_FLAGS: OverrunTrimFlags = {
 };
 
 /** `TextServer::get_overrun_flags_from_behavior` (`text_server.cpp:2399-2432`). */
-export function overrunFlagsForBehavior(behavior: EnumValue<typeof OverrunBehavior>): OverrunTrimFlags {
+export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
   switch (behavior) {
     case OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE:
       return {
