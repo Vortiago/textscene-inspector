@@ -208,6 +208,7 @@ describe('meshContentKey', () => {
 });
 
 describe('referencesKey', () => {
+  // An edited Curve arrives as a new mesh object, so the memo never serves a stale key.
   it('reads the resources of a mesh object once, so its build and its geometry key share one read', () => {
     const curve = subResource('Curve', 'c', curveEndingAt('0.2'));
     const mesh = scopedMesh(

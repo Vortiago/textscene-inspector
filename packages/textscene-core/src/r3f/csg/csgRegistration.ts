@@ -10,7 +10,10 @@ import type { SceneResources } from '../SceneResourcesContext';
 import type { CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgGeometryContext extends SceneResources {
-  /** A `.tres` the shape's `readsFiles` named, or undefined while it loads or after it failed. */
+  /**
+   * Looks up the parse of a `.tres` the shape's `readsFiles` named: undefined while it loads or after it
+   * failed.
+   */
   loadedFile: LoadedFile;
 }
 

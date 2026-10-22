@@ -19,7 +19,7 @@ import {
 } from '../../../../resources/meshes/primitivemesh/surface.testkit';
 import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
 import { csgMesh3DGeometry, csgMesh3DGeometryKey, csgMesh3DReadsFiles } from './csgGeometry';
-import { meshSurfaces } from './meshSurfaces';
+import { meshSurfaces, resolveMesh } from './meshSurfaces';
 
 const TWO_BOXES_PATH = 'res://two-boxes.tres';
 const BOX_PATH = 'res://box.tres';
@@ -252,6 +252,22 @@ describe('csgMesh3DGeometry: faces', () => {
     const inward = frontNormals(geometry).map((n) => n.negate());
     const p = geometry.getAttribute('position');
     expect(inward.every((n, t) => n.dot(new THREE.Vector3().fromBufferAttribute(p, t * 3)) > 0)).toBe(true);
+  });
+});
+
+describe('resolveMesh', () => {
+  it('gives the same mesh object for the same reference in a context, so a build and its key share it', () => {
+    expect(resolveMesh('SubResource("Tube")', CTX)).toBe(resolveMesh('SubResource("Tube")', CTX));
+  });
+
+  it('gives a new mesh object in a new context, which holds other files', () => {
+    const other = csgGeometryContext({ internalResources: [INLINE_TUBE], externalResources: EXT });
+
+    expect(resolveMesh('SubResource("Tube")', other)).not.toBe(resolveMesh('SubResource("Tube")', CTX));
+  });
+
+  it('gives null for no reference', () => {
+    expect(resolveMesh(undefined, CTX)).toBeNull();
   });
 });
 

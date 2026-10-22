@@ -28,8 +28,25 @@ export interface CsgMesh extends ResolvableResource {
   file: { path: string; parsed: ParsedResource } | null;
 }
 
-/** The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. */
+/**
+ * Written only by `resolveMesh`: the meshes of each context by reference. A context holds its
+ * tables and files for good, so a reference names the same mesh for as long as the context lives.
+ */
+const meshesByContext = new WeakMap<CsgGeometryContext, Map<string, CsgMesh | null>>();
+
+/**
+ * The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. The same
+ * object for the same reference in a context, so the geometry and its key share one read.
+ */
 export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
+  if (meshRef === undefined) return readMesh(meshRef, ctx);
+  let meshes = meshesByContext.get(ctx);
+  if (!meshes) meshesByContext.set(ctx, (meshes = new Map()));
+  if (!meshes.has(meshRef)) meshes.set(meshRef, readMesh(meshRef, ctx));
+  return meshes.get(meshRef)!;
+}
+
+function readMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
   const scoped = resolveReference(meshRef, ctx, ctx.loadedFile);
   if (!scoped) return null;
   const path = referencedFilePath(meshRef, ctx);
