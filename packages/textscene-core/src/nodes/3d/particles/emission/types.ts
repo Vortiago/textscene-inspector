@@ -1,4 +1,4 @@
-/** The emission of a ParticleProcessMaterial as the editor gizmo reads it. */
+/** The emission of a ParticleProcessMaterial or a CPUParticles3D as the editor gizmo reads it. */
 
 import type { Vector3 } from '../../../../godot/math/vector';
 
@@ -15,10 +15,8 @@ export interface ParticleEmission {
   ringInnerRadius: number;
   /** In degrees. */
   ringConeAngle: number;
-}
-
-export interface ParticleProcessMaterialData {
-  emission: ParticleEmission;
-  emissionShapeOffset: Vector3;
-  emissionShapeScale: Vector3;
+  /** The material's `emission_shape_offset`. A CPUParticles3D has none, so it keeps the default. */
+  shapeOffset: Vector3;
+  /** The material's `emission_shape_scale`. A CPUParticles3D has none, so it keeps the default. */
+  shapeScale: Vector3;
 }

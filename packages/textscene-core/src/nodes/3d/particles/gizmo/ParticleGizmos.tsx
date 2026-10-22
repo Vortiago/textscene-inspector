@@ -5,7 +5,6 @@
 
 import { useMemo } from 'react';
 import type { Aabb } from '../../../../godot/math/aabb';
-import type { Vector3 } from '../../../../godot/math/vector';
 import { AabbGizmo } from '../../../../r3f/components/AabbGizmo';
 import { AabbSolidGizmo } from '../../../../r3f/components/AabbSolidGizmo';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
@@ -46,18 +45,10 @@ export function CPUParticlesBoxGizmo({ box }: { box: Aabb }) {
   );
 }
 
-interface EmissionShapeGizmoProps {
-  emission: ParticleEmission;
-  /** Where the shape sits: the material's `emission_shape_offset`, none for a CPUParticles3D. */
-  offset: Vector3;
-  /** The material's `emission_shape_scale`, 1 for a CPUParticles3D. */
-  scale: Vector3;
-}
-
-export function EmissionShapeGizmo({ emission, offset, scale }: EmissionShapeGizmoProps) {
-  const positions = useMemo(
-    () => new Float32Array(emissionShapeLines(emission, offset, scale)),
-    [emission, offset, scale]
-  );
-  return <GizmoLine positions={positions} color={useGodotLinearColor(EMISSION_SHAPE_COLOR)} />;
+export function EmissionShapeGizmo({ emission }: { emission: ParticleEmission }) {
+  const positions = useMemo(() => new Float32Array(emissionShapeLines(emission)), [emission]);
+  const color = useGodotLinearColor(EMISSION_SHAPE_COLOR);
+  // The Point and point-cloud shapes draw no lines, so no geometry or material is built for them.
+  if (positions.length === 0) return null;
+  return <GizmoLine positions={positions} color={color} />;
 }

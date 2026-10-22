@@ -31,11 +31,13 @@ const emission = (overrides: Partial<ParticleEmission>): ParticleEmission => ({
   ringRadius: PARTICLE_EMISSION_DEFAULTS.ringRadius,
   ringInnerRadius: PARTICLE_EMISSION_DEFAULTS.ringInnerRadius,
   ringConeAngle: PARTICLE_EMISSION_DEFAULTS.ringConeAngle,
+  shapeOffset: PARTICLE_EMISSION_DEFAULTS.shapeOffset,
+  shapeScale: PARTICLE_EMISSION_DEFAULTS.shapeScale,
   ...overrides,
 });
 
-const lines = (shape: Partial<ParticleEmission>, offset = NO_OFFSET, scale = NO_SCALE): number[] =>
-  emissionShapeLines(emission(shape), offset, scale);
+const lines = (shape: Partial<ParticleEmission>, shapeOffset = NO_OFFSET, shapeScale = NO_SCALE): number[] =>
+  emissionShapeLines(emission({ ...shape, shapeOffset, shapeScale }));
 
 const vertexCount = (positions: number[]): number => positions.length / 3;
 

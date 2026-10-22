@@ -30,6 +30,8 @@ export function readParticleEmission(properties: Record<string, string>): Partic
       DEFAULTS.ringConeAngle,
       'emission_ring_cone_angle'
     ),
+    shapeOffset: DEFAULTS.shapeOffset,
+    shapeScale: DEFAULTS.shapeScale,
   };
 }
 

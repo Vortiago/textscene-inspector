@@ -13,6 +13,8 @@ describe('readParticleEmission', () => {
       ringRadius: 1,
       ringInnerRadius: 0,
       ringConeAngle: 90,
+      shapeOffset: { x: 0, y: 0, z: 0 },
+      shapeScale: { x: 1, y: 1, z: 1 },
     });
   });
 
@@ -37,7 +39,18 @@ describe('readParticleEmission', () => {
       ringRadius: 1.5,
       ringInnerRadius: 0.5,
       ringConeAngle: 45,
+      shapeOffset: { x: 0, y: 0, z: 0 },
+      shapeScale: { x: 1, y: 1, z: 1 },
     });
+  });
+
+  it('leaves the shape in place, as only a material has an offset and a scale (edge case)', () => {
+    expect(
+      readParticleEmission({
+        emission_shape_offset: 'Vector3(0, 1, 0)',
+        emission_shape_scale: 'Vector3(2, 2, 2)',
+      })
+    ).toMatchObject({ shapeOffset: { x: 0, y: 0, z: 0 }, shapeScale: { x: 1, y: 1, z: 1 } });
   });
 
   it('holds a real at single precision, as a real_t field does', () => {

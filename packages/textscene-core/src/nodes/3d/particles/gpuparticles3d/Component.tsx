@@ -17,17 +17,11 @@ import { useProcessMaterial } from './useProcessMaterial';
 const UndrawnGPUParticles3D = undrawnGeometryInstance(useGPUParticles3DAabb);
 
 function Gizmos({ properties }: { properties: GPUParticles3DProperties }) {
-  const material = useProcessMaterial(properties.processMaterial);
+  const emission = useProcessMaterial(properties.processMaterial);
   return (
     <>
       <ParticlesBoxGizmo box={properties.visibilityAabb} />
-      {material && (
-        <EmissionShapeGizmo
-          emission={material.emission}
-          offset={material.emissionShapeOffset}
-          scale={material.emissionShapeScale}
-        />
-      )}
+      {emission && <EmissionShapeGizmo emission={emission} />}
     </>
   );
 }

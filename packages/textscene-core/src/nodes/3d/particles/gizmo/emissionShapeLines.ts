@@ -8,7 +8,7 @@
 import { aabbEdges, type Aabb } from '../../../../godot/math/aabb';
 import { basisInvert, type BasisComponents } from '../../../../godot/math/basis';
 import { degToRad } from '../../../../godot/math/math';
-import { normalizedVector3, type Vector3 } from '../../../../godot/math/vector';
+import { normalizedVector3, vector3Cross, vector3Dot, type Vector3 } from '../../../../godot/math/vector';
 import { EmissionShape } from '../../../../godot/scene/particles3d';
 import type { ParticleEmission } from '../emission/types';
 
@@ -29,9 +29,10 @@ const UNIT_BOX_AABB: Aabb = {
 
 /**
  * The line segments of `emission`, as flat `xyz` start and end points in the emitter's space, each
- * point scaled by `scale` and moved by `offset`. A shape without lines gives none.
+ * point scaled by `shapeScale` and moved by `shapeOffset`. A shape without lines gives none.
  */
-export function emissionShapeLines(emission: ParticleEmission, offset: Vector3, scale: Vector3): number[] {
+export function emissionShapeLines(emission: ParticleEmission): number[] {
+  const { shapeOffset: offset, shapeScale: scale } = emission;
   switch (emission.shape) {
     case EmissionShape.SPHERE:
     case EmissionShape.SPHERE_SURFACE:
@@ -68,9 +69,11 @@ function sphereLines(radius: number, offset: Vector3, scale: Vector3): number[] 
   return points;
 }
 
+const AXES = ['x', 'y', 'z'] as const;
+
 function boxLines(extents: Vector3, offset: Vector3, scale: Vector3): number[] {
   return aabbEdges(UNIT_BOX_AABB).map((coordinate, i) => {
-    const axis = (['x', 'y', 'z'] as const)[i % 3]!;
+    const axis = AXES[i % 3]!;
     return coordinate * 2 * scale[axis] * extents[axis] + offset[axis];
   });
 }
@@ -120,18 +123,8 @@ function ringLines(ring: ParticleEmission, offset: Vector3, scale: Vector3): num
   return points;
 }
 
-type Row = readonly [number, number, number];
-
 /** Single precision: each `f(...)` rounds as a C++ `float` operation does. */
 const f = Math.fround;
-
-const dot = (a: Row, b: Row): number => f(f(f(a[0] * b[0]) + f(a[1] * b[1])) + f(a[2] * b[2]));
-
-const cross = (a: Row, b: Row): Row => [
-  f(f(a[1] * b[2]) - f(a[2] * b[1])),
-  f(f(a[2] * b[0]) - f(a[0] * b[2])),
-  f(f(a[0] * b[1]) - f(a[1] * b[0])),
-];
 
 /**
  * The basis that carries the ring's own axes onto its `ring_axis`, built as the plugin builds it
@@ -143,12 +136,12 @@ const cross = (a: Row, b: Row): Row => [
 function ringBasis(axis: Vector3): BasisComponents {
   const up = normalizedVector3(axis.x, axis.y, axis.z);
   const start = normalizedVector3(up[1], -up[2], -up[0]);
-  const overlap = dot(start, up);
+  const overlap = vector3Dot(start, up);
   const right = normalizedVector3(
     f(start[0] - f(overlap * up[0])),
     f(start[1] - f(overlap * up[1])),
     f(start[2] - f(overlap * up[2]))
   );
-  const forward = normalizedVector3(...cross(right, up));
+  const forward = normalizedVector3(...vector3Cross(right, up));
   return basisInvert([...right, ...up, ...forward]);
 }

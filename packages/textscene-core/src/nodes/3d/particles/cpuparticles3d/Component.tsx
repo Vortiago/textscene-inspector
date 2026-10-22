@@ -6,7 +6,6 @@
  */
 
 import { EMPTY_AABB } from '../../../../godot/math/aabb';
-import { PARTICLE_EMISSION_DEFAULTS } from '../../../../godot/scene/particles3d';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { useGizmoVisible } from '../../../../r3f/hooks/useGizmoVisible';
 import { invisibleBase } from '../../../../r3f/invisibleBase';
@@ -22,11 +21,7 @@ function Gizmos({ properties }: { properties: CPUParticles3DProperties }) {
     <>
       {/* The box the node authors, `AABB()` for none, and not the parser's null (the multimesh box). */}
       <CPUParticlesBoxGizmo box={properties.visibilityAabb ?? EMPTY_AABB} />
-      <EmissionShapeGizmo
-        emission={properties.emission}
-        offset={PARTICLE_EMISSION_DEFAULTS.shapeOffset}
-        scale={PARTICLE_EMISSION_DEFAULTS.shapeScale}
-      />
+      <EmissionShapeGizmo emission={properties.emission} />
     </>
   );
 }

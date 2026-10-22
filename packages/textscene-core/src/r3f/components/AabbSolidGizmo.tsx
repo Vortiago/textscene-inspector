@@ -5,7 +5,8 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import type { Aabb } from '../../godot/math/aabb';
+import { aabbCenter, type Aabb } from '../../godot/math/aabb';
+import { allFinite } from '../../godot/variant/number';
 import { canvasItemFacing } from '../canvasItemFacing';
 import { editorHelperUserData } from '../editorHelpers';
 import { useGodotLinearColor } from '../godotColor';
@@ -21,22 +22,19 @@ interface AabbSolidGizmoProps {
   alpha: number;
 }
 
-function solidBoxGeometry({ position, size }: Aabb): THREE.BufferGeometry {
-  return new THREE.BoxGeometry(size.x, size.y, size.z).translate(
-    position.x + size.x / 2,
-    position.y + size.y / 2,
-    position.z + size.z / 2
-  );
+function solidBoxGeometry(aabb: Aabb): THREE.BufferGeometry {
+  const { size } = aabb;
+  const centre = aabbCenter(aabb);
+  return new THREE.BoxGeometry(size.x, size.y, size.z).translate(centre.x, centre.y, centre.z);
 }
 
 /** Draws nothing for a box with an `inf` or `nan` size or position, which three cannot bound. */
 function isFiniteBox({ position, size }: Aabb): boolean {
-  return [position.x, position.y, position.z, size.x, size.y, size.z].every(Number.isFinite);
+  return allFinite([position.x, position.y, position.z, size.x, size.y, size.z]);
 }
 
 export function AabbSolidGizmo({ aabb, color, alpha }: AabbSolidGizmoProps) {
-  const isFinite = isFiniteBox(aabb);
-  const geometry = useMemo(() => (isFinite ? solidBoxGeometry(aabb) : null), [aabb, isFinite]);
+  const geometry = useMemo(() => (isFiniteBox(aabb) ? solidBoxGeometry(aabb) : null), [aabb]);
   useDisposeOnRelease(geometry);
   const helperUserData = useMemo(editorHelperUserData, []);
   const linearColor = useGodotLinearColor(color);

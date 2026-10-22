@@ -22,21 +22,30 @@ interface GizmoLineProps {
 
 const FLOATS_PER_SEGMENT = 6;
 
+/** Whether the segment starting at `start` has an `inf` or `nan` vertex. */
+function hasNonFiniteVertex(positions: Float32Array, start: number): boolean {
+  for (let i = start; i < start + FLOATS_PER_SEGMENT; i++) {
+    if (!Number.isFinite(positions[i])) return true;
+  }
+  return false;
+}
+
 /** The segments that have no `inf` or `nan` vertex. The same arrays when every segment has none. */
 function finiteSegments(positions: Float32Array, colors: Float32Array | undefined) {
   const segmentCount = Math.floor(positions.length / FLOATS_PER_SEGMENT);
-  const isFiniteSegment = (segment: number): boolean =>
-    positions
-      .subarray(segment * FLOATS_PER_SEGMENT, (segment + 1) * FLOATS_PER_SEGMENT)
-      .every(Number.isFinite);
-  const kept = Array.from({ length: segmentCount }, (_, segment) => segment).filter(isFiniteSegment);
-  if (kept.length === segmentCount) return { positions, colors };
-  const onlyKept = (array: Float32Array) =>
-    Float32Array.from(
-      kept.flatMap((segment) =>
-        Array.from(array.subarray(segment * FLOATS_PER_SEGMENT, (segment + 1) * FLOATS_PER_SEGMENT))
-      )
+  const keptStarts: number[] = [];
+  for (let segment = 0; segment < segmentCount; segment++) {
+    const start = segment * FLOATS_PER_SEGMENT;
+    if (!hasNonFiniteVertex(positions, start)) keptStarts.push(start);
+  }
+  if (keptStarts.length === segmentCount) return { positions, colors };
+  const onlyKept = (array: Float32Array) => {
+    const kept = new Float32Array(keptStarts.length * FLOATS_PER_SEGMENT);
+    keptStarts.forEach((start, index) =>
+      kept.set(array.subarray(start, start + FLOATS_PER_SEGMENT), index * FLOATS_PER_SEGMENT)
     );
+    return kept;
+  };
   return { positions: onlyKept(positions), colors: colors && onlyKept(colors) };
 }
 

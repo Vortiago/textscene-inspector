@@ -24,6 +24,26 @@ export function normalizedVector3(x: number, y: number, z: number): [number, num
   return [f(x / length), f(y / length), f(z / length)];
 }
 
+/** `Vector3::dot` (`core/math/vector3.h`) in `real_t` float, the products summed in order. */
+export function vector3Dot(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number]
+): number {
+  return f(f(f(a[0] * b[0]) + f(a[1] * b[1])) + f(a[2] * b[2]));
+}
+
+/** `Vector3::cross` (`core/math/vector3.h`) in `real_t` float. */
+export function vector3Cross(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number]
+): [number, number, number] {
+  return [
+    f(f(a[1] * b[2]) - f(a[2] * b[1])),
+    f(f(a[2] * b[0]) - f(a[0] * b[2])),
+    f(f(a[0] * b[1]) - f(a[1] * b[0])),
+  ];
+}
+
 /** `Vector3::length` (`core/math/vector3.h:532-538`) in `real_t` float. */
 export function vector3Length(x: number, y: number, z: number): number {
   return f(Math.sqrt(vector3LengthSquared(x, y, z)));

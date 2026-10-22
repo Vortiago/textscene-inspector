@@ -43,7 +43,7 @@ export const EmissionShape = {
   RING: 6,
 } as const;
 
-/** Each emission shape by its integer, spelled as its constant, for both particle emitters and ParticleProcessMaterial. */
+/** Each emission shape by its integer, spelled as its constant. */
 export const CPU_PARTICLES_3D_EMISSION_SHAPE_NAMES = enumNamesByValue(EmissionShape);
 
 /**

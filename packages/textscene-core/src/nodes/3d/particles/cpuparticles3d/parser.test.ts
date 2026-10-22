@@ -39,6 +39,8 @@ describe('parseCPUParticles3D', () => {
       ringRadius: 1,
       ringInnerRadius: 0,
       ringConeAngle: 90,
+      shapeOffset: { x: 0, y: 0, z: 0 },
+      shapeScale: { x: 1, y: 1, z: 1 },
     });
   });
 
