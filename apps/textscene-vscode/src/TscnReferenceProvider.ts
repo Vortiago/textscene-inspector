@@ -9,7 +9,7 @@ import { resPathUri } from './existingResFile';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
 import { resRootOf } from './resRoot';
-import { openDocumentAt, readSceneFileText } from './tools/toolInput';
+import { openDocumentLookup, readSceneFileText } from './tools/toolInput';
 import type { ResPathListing } from './TscnResPathListing';
 
 /**
@@ -45,6 +45,7 @@ export class TscnReferenceProvider implements vscode.ReferenceProvider {
   ): Promise<vscode.Location[]> {
     const root = await resRootOf(document.uri);
     if (root === null) return [];
+    const openDocumentAt = openDocumentLookup();
     const references = await resPathReferencesAt(languageDocumentOf(document), position, {
       listPaths: () => this.pathListing.pathsFor(document),
       openText: (path) => {
