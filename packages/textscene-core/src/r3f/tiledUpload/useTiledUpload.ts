@@ -8,6 +8,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import { beginTextureWork } from '../../resources/textures/textureWork';
+import { useNearestAnisotropy } from '../nearestAnisotropy';
 import { TiledUploadContext } from './TiledUploadContext';
 
 /**
@@ -56,7 +57,10 @@ export function useTiledUpload<T extends THREE.Texture>(
  * it goes through here (`drawnCloneGuard.test.ts`).
  */
 export function useUploadedClone<T extends THREE.Texture>(clone: T | null): T | null {
-  return useTiledUpload(clone, disposeTexture);
+  const shown = useTiledUpload(clone, disposeTexture);
+  // After the tiled upload's effect, which allocates a large clone's storage empty.
+  useNearestAnisotropy(clone);
+  return shown;
 }
 
 function disposeTexture(texture: THREE.Texture): void {

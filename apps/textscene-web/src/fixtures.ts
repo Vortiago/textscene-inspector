@@ -1828,6 +1828,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Sprite3d Texture Filter Anisotropic",
+    "file": "unit-sprite3d-texture-filter-anisotropic.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Sprite3d Untextured",
     "file": "unit-sprite3d-untextured.tscn",
     "category": "Other"
@@ -2623,6 +2628,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sprite2d Texture Filter Inherited",
     "file": "unit-sprite2d-texture-filter-inherited.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Sprite2d Texture Filter Nearest Anisotropic",
+    "file": "unit-sprite2d-texture-filter-nearest-anisotropic.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

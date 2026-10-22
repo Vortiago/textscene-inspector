@@ -53,8 +53,7 @@ const STATES: Record<number, TextureFilterState> = {
     anisotropy: 1,
   },
   // NEAREST_WITH_MIPMAPS_ANISOTROPIC. three skips anisotropy when `magFilter` is
-  // `NearestFilter`, so the texture gets the property but not the sampling.
-  // Godot applies it.
+  // `NearestFilter`, so a drawn clone gets it written by `useNearestAnisotropy`.
   4: {
     magFilter: THREE.NearestFilter,
     minFilter: THREE.NearestMipmapLinearFilter,

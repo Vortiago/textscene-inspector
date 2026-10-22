@@ -151,6 +151,13 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-sprite2d-texture-filter-inherited.tscn',
     mode: '2d',
   },
+  // The one variable: `texture_filter` 3 against 5 on the Node2D parent, over a texture minified
+  // more across than down. Only the anisotropic filter keeps the stripes, as in Godot.
+  {
+    name: 'sprite2d-texture-filter-nearest-anisotropic',
+    file: 'unit-sprite2d-texture-filter-nearest-anisotropic.tscn',
+    mode: '2d',
+  },
   // The one variable: `texture_repeat` on a Polygon2D with UVs three times the texture's size.
   // Enabled tiles it, and the default clamps to the edge texels.
   { name: 'polygon2d-texture-repeat', file: 'unit-polygon2d-texture-repeat.tscn', mode: '2d' },
