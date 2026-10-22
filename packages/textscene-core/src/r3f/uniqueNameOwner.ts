@@ -195,16 +195,21 @@ class OwnerWalk {
     const candidates = link.groups.map((group) => ({
       group,
       owner:
-        instanceOwner && (group.origin === 'merged' || group.origin === 'glb')
+        instanceOwner && holdsInstanceContent(group)
           ? { ...instanceOwner, ...(group.mergedNode ? { composed: group.mergedNode.uniqueNames } : {}) }
           : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
-    const into =
-      candidates.find((c) => instanceOwner && (c.group.origin === 'merged' || c.group.origin === 'glb'))
-        ?.owner ?? owner;
+    const into = instanceOwner
+      ? (candidates.find((c) => holdsInstanceContent(c.group))?.owner ?? owner)
+      : owner;
     return { owner, into, node, candidates };
   }
+}
+
+/** A group of what the node instances, which the instance node owns as the root of it. */
+function holdsInstanceContent(group: LiveChildGroup): boolean {
+  return group.origin === 'merged' || group.origin === 'glb';
 }
 
 /** The owner walk one question takes, so every walk it makes shares each step. */

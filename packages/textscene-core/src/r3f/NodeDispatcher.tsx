@@ -59,7 +59,7 @@ import {
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
-import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
+import { loneGlbPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
@@ -343,9 +343,9 @@ const INSTANCING_SCENE_NODES = 1;
 /**
  * Loads the PackedScene a node's `instance` ref names and composes it into the
  * tree. A single-root `.tscn` merges into the instance node at the same path
- * (ADR-0013). A `.glb` is the instance node's own content, mounted at its path. A multi-root scene
- * injects its roots as children. Either way the loaded scene's resources are scoped to the subtree. An instance of a
- * scene that already encloses it (cyclic instancing) renders as a failed load.
+ * (ADR-0013). A `.glb` is the instance node's own content, mounted at its path. A multi-root
+ * scene injects its roots as children. Either way the loaded scene's resources are scoped to the
+ * subtree. An instance of a scene that already encloses it (cyclic instancing) renders as a failed load.
  */
 function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const ambientScope = useSceneResources();
@@ -370,7 +370,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const result = useInstancedScene(instanceRef, externalResources, loadPath);
   const loadedScene = result.status === 'loaded' ? (result.value ?? null) : null;
 
-  // The scenes that enclose a multi-root or GLB instance's content. A stable identity,
+  // The scenes that enclose the content of a `.glb` or multi-root instance. A stable identity,
   // since it keys the provider below.
   const contentScenePaths = useMemo(
     () => (loadPath ? [...enclosingScenePaths, loadPath] : enclosingScenePaths),
@@ -378,7 +378,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   );
 
   // The same merge the tree, inspector and panels make. `effective !== node`
-  // means a single root merged in. A `.glb` or multi-root scene returns `node`.
+  // means a single root `.tscn` merged in. A `.glb` or multi-root scene returns `node`.
   // Memoized ahead of the early returns, so a hover elsewhere does not re-merge
   // this subtree every frame.
   const effective = useMemo(() => {
@@ -425,6 +425,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   if (effective !== node) return <DispatchedNode node={effective} path={path} />;
 
   // A `.glb` mounts at this node's path. A multi-root scene injects its roots as children.
+  const isLoneGlb = loneGlbPath(loadedScene.nodes) !== undefined;
   return (
     <GlbInstanceProvider node={node} path={path}>
       <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
@@ -436,7 +437,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
             {loadedScene.nodes.map((child, i) => (
               <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
                 <TreeOrderProvider order={injectedOrders.roots[i]!}>
-                  {child.type === GLB_SCENE_ROOT_TYPE ? (
+                  {isLoneGlb ? (
                     <GlbRootNode node={child} />
                   ) : (
                     <DispatchedNode node={child} path={joinPath(path, child.name)} />

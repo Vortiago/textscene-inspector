@@ -11,3 +11,11 @@ export const GLB_SCENE_ROOT_TYPE = 'GLBSceneRoot';
 export function glbPathOf(node: { type: string; properties: object }): string | undefined {
   return node.type === GLB_SCENE_ROOT_TYPE ? (node.properties as { glbPath?: string }).glbPath : undefined;
 }
+
+/** The `.glb` path of a sub-scene whose only root is a `GLBSceneRoot`, else undefined. */
+export function loneGlbPath(
+  contentRoots: readonly { type: string; properties: object }[]
+): string | undefined {
+  const root = contentRoots.length === 1 ? contentRoots[0]! : undefined;
+  return root && glbPathOf(root);
+}

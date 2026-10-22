@@ -11,7 +11,7 @@ import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
-import { glbPathOf } from '../resources/glbSceneRoot.js';
+import { glbPathOf, loneGlbPath } from '../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -133,8 +133,8 @@ export interface LiveChildGroup {
   /** Both pools this group's children resolve their own refs against, as a {@link SceneScope}. */
   scope: SceneScope;
   /**
-   * `merged` groups only: the collapsed node the instance became, so a caller
-   * skips a second `mergeInstanceRoot` pass. On every other origin the raw
+   * The first group of a collapsed instance only (`merged`, or `glb` for a merged GLB): the node
+   * the instance became, so a caller skips a second `mergeInstanceRoot` pass. Without it the raw
    * node is the effective node.
    */
   mergedNode?: LiveNode;
@@ -144,9 +144,9 @@ export interface LiveChildGroup {
  * What is below a node: one `inline` group for a non-instance, one `merged`
  * group for a single-root instance, `inline` plus `subscene` for a multi-root
  * instance, and one `glb` group for a GLBSceneRoot. The node that instances a lone GLB is the
- * GLB root, so a loaded GLB's objects are its `glb` group, before its `inline` group. `scope` is the group's the
- * node sits in, which the node's own `scope` replaces. A sub-scene's groups read the
- * sub-scene's pools from the cache, and their `instancedScenePaths` gain the
+ * GLB root, so a loaded GLB's objects are its `glb` group, before its `inline` group. `scope` is
+ * the one of the group the node sits in, which the node's own `scope` replaces. A sub-scene's
+ * groups read the sub-scene's pools from the cache, and their `instancedScenePaths` gain the
  * sub-scene. An instance of a scene that already encloses it (cyclic instancing)
  * gets one `inline` group.
  */
@@ -162,9 +162,7 @@ export function liveChildGroups(
   // GLB nodes carry no instance refs, so they stay in the outer scope.
   const glbPath = glbPathOf(node);
   const glbObject = glbPath ? glbCache?.getCached(glbPath) : undefined;
-  if (glbObject) {
-    return [{ origin: 'glb', children: glbSceneRootChildren(glbObject, node.children), scope: own }];
-  }
+  if (glbObject) return glbInstanceGroups(glbObject, node.children, own);
 
   if (!node.instance) return inlineOnly();
 
@@ -231,12 +229,6 @@ function instancedGlbObject(
   if (!scenePath || (scope.instancedScenePaths ?? []).includes(scenePath)) return undefined;
   const glbPath = loneGlbPath(sceneCache.getCached(scenePath)?.nodes ?? []);
   return glbPath ? (glbCache?.getCached(glbPath) ?? undefined) : undefined;
-}
-
-/** The `.glb` path of a sub-scene whose only root is a `GLBSceneRoot`, else undefined. */
-function loneGlbPath(contentRoots: readonly TscnNode[]): string | undefined {
-  const root = contentRoots.length === 1 ? contentRoots[0]! : undefined;
-  return root && glbPathOf(root);
 }
 
 /**

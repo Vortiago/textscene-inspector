@@ -22,6 +22,9 @@ interface InstanceContent {
   glbCache: CachedGlbSource | undefined;
 }
 
+/** What the second load takes for a row whose instance did not merge: no ref, so no load. */
+const NOT_MERGED: Pick<TscnNode, 'instance'> = {};
+
 export function useInstanceContent(node: TscnNode, scope: SceneScope): InstanceContent {
   const scenePath = node.instance ? resolveInstancePath(node.instance, scope.externalResources) : null;
   const subScene = useSubSceneChildren(node, scope.externalResources);
@@ -29,20 +32,24 @@ export function useInstanceContent(node: TscnNode, scope: SceneScope): InstanceC
     () => collapseLiveNode(node, scope, singleSceneCache(scenePath, subScene)),
     [node, scope, scenePath, subScene]
   );
-  const mergedScope = useMemo(() => scopeOf(merged, scope), [merged, scope]);
-  const mergedScenePath = merged.instance
-    ? resolveInstancePath(merged.instance, mergedScope.externalResources)
-    : null;
-  const mergedSubScene = useSubSceneChildren(merged, mergedScope.externalResources);
+  const isMerged = merged !== node;
+  const mergedScope = scopeOf(merged, scope);
+  const mergedScenePath =
+    isMerged && merged.instance ? resolveInstancePath(merged.instance, mergedScope.externalResources) : null;
+  const instancedByMerged = useSubSceneChildren(
+    isMerged ? merged : NOT_MERGED,
+    mergedScope.externalResources
+  );
+  const mergedSubScene = isMerged ? instancedByMerged : subScene;
   const glbCache = useInstancedGlbCache(mergedSubScene);
   const sceneCache = useMemo<CachedSceneSource>(
     () => ({
       getCached: (path) => {
         if (path === scenePath) return subScene ?? undefined;
-        return path === mergedScenePath ? (mergedSubScene ?? undefined) : undefined;
+        return path === mergedScenePath ? (instancedByMerged ?? undefined) : undefined;
       },
     }),
-    [scenePath, subScene, mergedScenePath, mergedSubScene]
+    [scenePath, subScene, mergedScenePath, instancedByMerged]
   );
   return { sceneCache, glbCache };
 }

@@ -18,7 +18,7 @@ export interface SubSceneChildren {
 }
 
 export function useSubSceneChildren(
-  node: TscnNode,
+  node: Pick<TscnNode, 'instance'>,
   externalResources: readonly TscnExternalResource[]
 ): SubSceneChildren | null {
   const scenePath = node.instance ? resolveInstancePath(node.instance, externalResources) : null;

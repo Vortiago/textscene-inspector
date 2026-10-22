@@ -124,8 +124,8 @@ function TreeNodeImpl({
   }, [node, scope, sceneCache, glbChildren, glbCache]);
 
   // Instance root merge (ADR-0013), the same decision the viewport and inspector
-  // make, for the row header. It reads the `merged` group, so the merge runs once
-  // per row. Every other origin keeps the raw node, as `collapseLiveNode` does.
+  // make, for the row header. It reads the first group's `mergedNode`, so this adds no merge.
+  // Every other group keeps the raw node, as `collapseLiveNode` does.
   const effective = useMemo(() => mergedNodeOf(groups) ?? node, [groups, node]);
 
   const hasChildren = groups.some((g) => g.children.length > 0);
