@@ -40,6 +40,10 @@ const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[
     rules: ['cpuparticles2d-nondeterministic-emission-shape'],
     reason: 'named for the advisory it carries; it is the fixture',
   },
+  'unit-cpuparticles2d-crossed-range.tscn': {
+    rules: ['cpuparticles2d-param-min-above-max'],
+    reason: 'the crossed velocity pair is the fixture, held so the range Godot loads can be measured',
+  },
   'unit-label-autowrap-in-container.tscn': {
     rules: ['label-autowrap-needs-custom-minimum-size'],
     reason:
