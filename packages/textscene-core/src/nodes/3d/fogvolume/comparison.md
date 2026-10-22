@@ -46,7 +46,7 @@ The lenient parser clamps each negative `size` component to 0, as `set_size` doe
 
 ## Known limitations
 
-- **Editor only** Godot's editor draws the box faintly for every volume that is not WORLD, but ADR-0018 draws it only for the selected node.
+- **Editor only** Godot's editor also draws the box of an unselected volume at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.
 - **Shader missing** A volume whose material is a fog `ShaderMaterial` adds no fog, where Godot runs its fog shader.
 - **Approximated** A fog shader with a compile error adds no fog, where Godot draws its default fog.
 - **Approximated** A fog shader whose `shader_type` comes from an `#include` or a macro draws the default fog, where Godot runs its fog shader.

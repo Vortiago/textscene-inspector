@@ -113,7 +113,10 @@ export function FogVolume({ node, children }: NodeComponentProps) {
     z: v[2] ?? 0,
   }));
   // An animated size clamps as an authored one does.
-  const size = animatedSize ? fogVolumeSize(animatedSize) : properties.size;
+  const size = useMemo(
+    () => (animatedSize ? fogVolumeSize(animatedSize) : properties.size),
+    [animatedSize, properties.size]
+  );
   const gizmoVisible = useGizmoVisible();
 
   return (

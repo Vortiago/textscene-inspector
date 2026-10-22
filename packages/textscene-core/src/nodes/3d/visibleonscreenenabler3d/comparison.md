@@ -36,4 +36,4 @@ The lenient parser reads `aabb` as the notifier does, for the gizmo. It keeps ev
 
 ## Known limitations
 
-- **Editor only** Godot's editor draws the edges and the axes faintly for every enabler, but ADR-0018 draws them only for the selected node.
+- **Editor only** Godot's editor also draws the edges and axes of an unselected enabler at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.

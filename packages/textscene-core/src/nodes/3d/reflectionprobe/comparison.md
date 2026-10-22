@@ -74,4 +74,5 @@ The lenient parser reads every property above. A malformed value keeps Godot's d
 
 ## Known limitations
 
+- **Editor only** Godot's editor also draws the blend box and origin cross of an unselected probe at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.
 - **Approximated** A probe that updates ALWAYS captures once, so it does not follow a moving node.

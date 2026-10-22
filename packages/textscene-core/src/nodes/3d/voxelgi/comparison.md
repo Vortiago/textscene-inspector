@@ -43,4 +43,5 @@ The lenient parser reads `size` and `subdiv` for the gizmo. It raises each side 
 
 ## Known limitations
 
+- **Editor only** Godot's editor also draws the box and cells of an unselected VoxelGI at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.
 - **Not drawn** Godot lights dynamic objects from the baked probe, but the previewer applies no indirect light from it.

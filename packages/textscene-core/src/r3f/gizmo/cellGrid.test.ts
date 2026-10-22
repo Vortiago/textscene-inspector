@@ -1,4 +1,4 @@
-/** The cell grid of a VoxelGI or GPUParticlesCollisionSDF3D gizmo (`voxel_gi_gizmo_plugin.cpp:117-153`). */
+/** The cell grid of a VoxelGI gizmo (`voxel_gi_gizmo_plugin.cpp:117-153`). */
 import { describe, expect, it } from 'vitest';
 import type { Aabb } from '../../godot/math/aabb';
 import { cellGridLines } from './cellGrid';
@@ -42,6 +42,14 @@ describe('cellGridLines', () => {
   it('draws a plane that ends on the size of a shorter axis (edge case)', () => {
     // Cell size 40 / 64 = 0.625: Y and Z reach 10 at the 16th plane, which is not past the size.
     expect(segments(cellGridLines(box(-20, -5, -5, 40, 10, 10), 64))).toHaveLength((63 + 16 + 16) * 4);
+  });
+
+  it('compares in float32, as the engine does: a plane that float32 rounds onto the size is drawn (edge case)', () => {
+    // Math.fround(13.3) / 64 * 5 is 1.0390625 in float32 and a hair above it in float64.
+    // The Y and Z planes 1 to 5 are drawn, and the X planes 1 to 63.
+    expect(cellGridLines(box(0, 0, 0, Math.fround(13.3), 1.0390625, 1.0390625), 64)).toHaveLength(
+      (63 + 5 + 5) * 4 * 6
+    );
   });
 
   it('draws nothing for one subdivision (edge case)', () => {
