@@ -1,28 +1,30 @@
 /**
- * VisibleOnScreenEnabler3D registration: it is parsed, and it draws nothing on purpose (ADR-0008), not for want
- * of an implementation.
+ * VisibleOnScreenEnabler3D registration: it reuses the notifier's parse and component, so it reads
+ * `aabb` and draws the same gizmo (ADR-0018).
  */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { parseNode3D } from '../../base/node3d/parser';
-import { Node3D } from '../../base/node3d/Component';
+import { rendersOwnVisual } from '../../../r3f/nodeSupport';
+import { VisibleOnScreenNotifier3D } from '../visibleonscreennotifier3d/Component';
+import { parseVisibleOnScreenNotifier3D } from '../visibleonscreennotifier3d/parser';
 import './index';
 import './index.r3f';
 
 describe('VisibleOnScreenEnabler3D registration', () => {
-  it('registers the parseNode3D parse it reuses', () => {
-    const registration = nodeRegistry.getRegistration('VisibleOnScreenEnabler3D');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode3D);
+  it("registers the notifier's parser", () => {
+    expect(nodeRegistry.getRegistration('VisibleOnScreenEnabler3D')?.parser).toBe(
+      parseVisibleOnScreenNotifier3D
+    );
   });
 
-  it('reuses the Node3D component so children keep their transform space', () => {
-    expect(nodeComponentRegistry.get('VisibleOnScreenEnabler3D')).toBe(Node3D);
+  it("registers the notifier's component", () => {
+    expect(nodeComponentRegistry.get('VisibleOnScreenEnabler3D')).toBe(VisibleOnScreenNotifier3D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.renderIntentOf('VisibleOnScreenEnabler3D')).toBe('transform-only');
+  it('declares no render intent', () => {
+    expect(nodeComponentRegistry.renderIntentOf('VisibleOnScreenEnabler3D')).toBe('draws');
+    expect(rendersOwnVisual('VisibleOnScreenEnabler3D')).toBe('draws');
   });
 });

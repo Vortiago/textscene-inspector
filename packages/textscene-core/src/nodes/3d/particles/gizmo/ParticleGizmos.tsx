@@ -5,12 +5,11 @@
 
 import { useMemo } from 'react';
 import type { Aabb } from '../../../../godot/math/aabb';
+import { AabbAxesGizmo } from '../../../../r3f/components/AabbAxesGizmo';
 import { AabbGizmo } from '../../../../r3f/components/AabbGizmo';
-import { AabbSolidGizmo } from '../../../../r3f/components/AabbSolidGizmo';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import type { ParticleEmission } from '../emission/types';
-import { centreAxisLines } from './centreAxes';
 import { emissionShapeLines } from './emissionShapeLines';
 
 /** `editors/3d_gizmos/gizmo_colors/particles` (`editor_settings.cpp:886`), which both box gizmos draw in. */
@@ -35,14 +34,7 @@ export function ParticlesBoxGizmo({ box }: { box: Aabb }) {
  * and the faint fill of a selected box (`:100-103`).
  */
 export function CPUParticlesBoxGizmo({ box }: { box: Aabb }) {
-  const axes = useMemo(() => new Float32Array(centreAxisLines(box)), [box]);
-  return (
-    <>
-      <ParticlesBoxGizmo box={box} />
-      <GizmoLine positions={axes} color={useGodotLinearColor(BOX_COLOR)} />
-      <AabbSolidGizmo aabb={box} color={BOX_COLOR} alpha={SOLID_BOX_ALPHA} />
-    </>
-  );
+  return <AabbAxesGizmo aabb={box} color={BOX_COLOR} solidAlpha={SOLID_BOX_ALPHA} />;
 }
 
 export function EmissionShapeGizmo({ emission }: { emission: ParticleEmission }) {
