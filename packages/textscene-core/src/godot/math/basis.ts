@@ -72,3 +72,28 @@ export function basisIsOrthonormal(n: BasisComponents): boolean {
     isZeroApprox(dot(y, z))
   );
 }
+
+/**
+ * `Basis::invert` (`core/math/basis.cpp:36-56`). The editor build checks the determinant
+ * (`MATH_CHECKS`, `math_defs.h:55-57`) and returns early, so a singular basis stays as it is.
+ */
+export function basisInvert(n: BasisComponents): BasisComponents {
+  // `cofac(row1, col1, row2, col2)`, basis.h.
+  const cofac = (row1: number, col1: number, row2: number, col2: number): number =>
+    n[row1 * 3 + col1]! * n[row2 * 3 + col2]! - n[row1 * 3 + col2]! * n[row2 * 3 + col1]!;
+  const co = [cofac(1, 1, 2, 2), cofac(1, 2, 2, 0), cofac(1, 0, 2, 1)] as const;
+  const determinant = n[0] * co[0] + n[1] * co[1] + n[2] * co[2];
+  if (determinant === 0) return n;
+  const s = 1 / determinant;
+  return [
+    co[0] * s,
+    cofac(0, 2, 2, 1) * s,
+    cofac(0, 1, 1, 2) * s,
+    co[1] * s,
+    cofac(0, 0, 2, 2) * s,
+    cofac(0, 2, 1, 0) * s,
+    co[2] * s,
+    cofac(0, 1, 2, 0) * s,
+    cofac(0, 0, 1, 1) * s,
+  ];
+}

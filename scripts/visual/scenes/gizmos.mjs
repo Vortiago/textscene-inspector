@@ -19,6 +19,15 @@ export const GIZMO_SCENES = [
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', select: 'Root/Vehicle/Wheel1' },
   // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
   { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', select: 'Root/MySpringArm3D' },
+  // The particle emitters: the visibility_aabb box and the emission shape lines, with the axes from
+  // the box centre on CPUParticles3D. The GPUParticles3D scene gives its box shape the offset and
+  // scale only a ParticleProcessMaterial has.
+  {
+    name: 'gpuparticles3d-emission-selected',
+    file: 'unit-gpuparticles3d-emission.tscn',
+    select: 'Root/Emitter',
+  },
+  { name: 'cpuparticles3d-selected', file: 'unit-cpuparticles3d-gizmo.tscn', select: 'Root/Emitter' },
 
   // Lights, Camera3D and AudioStreamPlayer3D gizmos. Unselected: the render
   // with ground and shading only, no helper.

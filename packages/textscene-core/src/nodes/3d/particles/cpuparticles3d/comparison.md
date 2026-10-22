@@ -107,9 +107,21 @@ Strict parsing format-checks these `CPUParticles3D` properties, plus 18 inherite
 |  | `cpuparticles3d-param-min-above-max` | warning |
 <!-- lint:end -->
 
-The lenient parser reads the GeometryInstance3D base, `visibility_aabb` and whether a `mesh` is set. Together these give the box that the scene cull measures the emitter by. It reads no other CPUParticles3D key, so a `spread = 400.0` is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
+The lenient parser reads the GeometryInstance3D base, `visibility_aabb`, whether a `mesh` is set, and the emission shape keys. The box is what the scene cull measures the emitter by, and the gizmo draws the authored box. The shape keys are `emission_shape` and the sphere, box and ring keys. It reads no other CPUParticles3D key, so a `spread = 400.0` is dropped silently, and `linter.ts` ports the "no mesh assigned" configuration warning.
+
+## Gizmo
+
+A selected emitter draws these in Godot's editor. Godot's source is `cpu_particles_3d_gizmo_plugin.cpp:62-107` and `particles_3d_emission_shape_gizmo_plugin.cpp:82-339`.
+
+- The 12 edges of `visibility_aabb`, in the editor's particle-box colour. Without an authored box the edges have zero length at the origin.
+- Three unit axis lines from the centre of the box.
+- The lines of the emission shape: three circles for a sphere, the 12 edges of a box, and the tapered cylinder for a ring. A point shape and the point-cloud shapes draw no lines.
+- A fill of the box with an opacity of 0.016.
+
+The previewer draws no billboard icon.
 
 ## Known limitations
 
 - **Not drawn** Godot draws the live particle cloud, but here nothing appears.
 - **Needs runtime** An emitter with a `mesh` and no `visibility_aabb` stays hidden with its visibility dependants, where Godot culls it by its live particles.
+- **Editor only** Godot's editor draws the box and axes faintly for every emitter, but ADR-0018 draws them only for the selected node.
