@@ -55,7 +55,8 @@ interface GlbInstanceProviderProps {
   /** The node that instances the GLB. */
   node: LiveNode;
   path: string;
-  glb: ResourceResult<THREE.Object3D>;
+  /** The GLB this node loaded. Without it, the GLB root loads its own. */
+  glb?: ResourceResult<THREE.Object3D>;
   children: ReactNode;
 }
 
