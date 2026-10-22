@@ -52,6 +52,11 @@
       "types": "./dist/resources/resPath.d.ts",
       "import": "./dist/resources/resPath.js"
     },
+    "./resources/resRoots": {
+      "@textscene/source": "./src/resources/resRoots.ts",
+      "types": "./dist/resources/resRoots.d.ts",
+      "import": "./dist/resources/resRoots.js"
+    },
     "./resources/resourceProviderUtils": {
       "@textscene/source": "./src/resources/resourceProviderUtils.ts",
       "types": "./dist/resources/resourceProviderUtils.d.ts",

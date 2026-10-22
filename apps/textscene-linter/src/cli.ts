@@ -7,6 +7,7 @@
 import { readFileSync } from 'fs';
 import { Command } from 'commander';
 import { formatGithubAnnotations, formatJson } from './format';
+import { createDiskResRoots } from '@textscene/core/resources/diskProject';
 import { collectFileDiagnostics, expandTscnPaths, printFileResult, runLint } from './lint';
 
 /**
@@ -72,15 +73,17 @@ program
     }
 
     const expandedFiles = expandTscnPaths(files);
+    // The working directory is the workspace: a scene outside every project reads its files from its own directory inside it.
+    const resRoots = createDiskResRoots(process.cwd());
 
     if (format === 'text') {
       const hasColor = options.color !== false;
-      const { exitCode } = await runLint(expandedFiles, hasColor, printFileResult);
+      const { exitCode } = await runLint(expandedFiles, hasColor, resRoots, printFileResult);
       process.exit(exitCode);
       return;
     }
 
-    const { exitCode, files: fileResults } = await collectFileDiagnostics(expandedFiles);
+    const { exitCode, files: fileResults } = await collectFileDiagnostics(expandedFiles, resRoots);
 
     if (format === 'json') {
       console.log(formatJson(fileResults));

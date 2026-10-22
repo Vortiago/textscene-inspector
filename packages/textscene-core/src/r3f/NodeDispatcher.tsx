@@ -180,8 +180,8 @@ function OwnResourceScope({ scope, children }: { scope: SceneScope; children: Re
 /**
  * The node without its deep children, whose parent path descends into this
  * instance's content. Here they would take the instance's transform, so they render
- * nowhere. `GlbInstanceProvider` still gets them all. A typed deep child does not
- * render: it needs portalling onto the matched GLB object.
+ * nowhere. `GlbInstanceProvider` still gets them all, and `GlbAttachedChildren` mounts each
+ * typed one under the GLB object its path names.
  */
 function withoutDeepChildren(node: TscnNode): TscnNode {
   // `some` before `filter`: most nodes have no deep children, and the same

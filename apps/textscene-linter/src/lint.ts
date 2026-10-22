@@ -5,7 +5,7 @@ import { readFile } from 'fs/promises';
 import { join, resolve } from 'path';
 import { Linter, type Diagnostic } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
-import { resProviderForFile } from '@textscene/core/resources/diskProject';
+import type { ResRoots } from '@textscene/core/resources/resRoots';
 import { escapeControlCharacters, formatDiagnostics, formatError } from './format';
 
 /** Lint outcome for a single file, with output split by target stream. */
@@ -107,17 +107,17 @@ const linter = new Linter();
 /**
  * Reads and lints a single TSCN file, returning raw diagnostics with no
  * presentation applied. It also reads the files the scene uses from its
- * `res://` root: its Godot project, or its own directory when no project holds
- * it and it lies under the working directory, the CLI's workspace. Read
+ * `res://` root, which `resRoots` finds: its Godot project, or its own directory
+ * when no project holds it and it lies under the workspace of `resRoots`. Read
  * failures (missing file, permissions) are captured as `readError` rather than
  * thrown.
  */
-export async function lintFileDiagnostics(filePath: string): Promise<FileDiagnostics> {
+export async function lintFileDiagnostics(filePath: string, resRoots: ResRoots): Promise<FileDiagnostics> {
   try {
     const absolutePath = resolve(filePath);
     const content = await readFile(absolutePath, 'utf-8');
-    const provider = await resProviderForFile(absolutePath, process.cwd());
-    return { filePath, diagnostics: await linter.lintComplete(content, provider) };
+    const root = await resRoots.rootOf(absolutePath);
+    return { filePath, diagnostics: await linter.lintComplete(content, root) };
   } catch (error) {
     return {
       filePath,
@@ -141,8 +141,12 @@ function hasErrorSeverity(result: FileDiagnostics): boolean {
  * as errors. The path and the read error reach stderr with their control
  * characters escaped.
  */
-export async function lintFile(filePath: string, hasColor: boolean): Promise<FileLintResult> {
-  const result = await lintFileDiagnostics(filePath);
+export async function lintFile(
+  filePath: string,
+  hasColor: boolean,
+  resRoots: ResRoots
+): Promise<FileLintResult> {
+  const result = await lintFileDiagnostics(filePath, resRoots);
 
   if (result.readError !== undefined) {
     return {
@@ -183,13 +187,14 @@ export function printFileResult(result: FileLintResult): void {
 export async function runLint(
   filePaths: string[],
   hasColor: boolean,
+  resRoots: ResRoots,
   onResult?: (result: FileLintResult) => void
 ): Promise<LintRunResult> {
   const results: FileLintResult[] = [];
   let hasErrors = false;
 
   for (const filePath of filePaths) {
-    const result = await lintFile(filePath, hasColor);
+    const result = await lintFile(filePath, hasColor, resRoots);
     results.push(result);
     if (result.hasErrors) {
       hasErrors = true;
@@ -206,9 +211,12 @@ export async function runLint(
  * a large tree, each file with its dependencies, can exhaust the process's file
  * handles. The exit code follows `runLint`.
  */
-export async function collectFileDiagnostics(filePaths: string[]): Promise<CollectDiagnosticsResult> {
+export async function collectFileDiagnostics(
+  filePaths: string[],
+  resRoots: ResRoots
+): Promise<CollectDiagnosticsResult> {
   const files: FileDiagnostics[] = [];
-  for (const filePath of filePaths) files.push(await lintFileDiagnostics(filePath));
+  for (const filePath of filePaths) files.push(await lintFileDiagnostics(filePath, resRoots));
   const exitCode = files.some(hasErrorSeverity) ? 1 : 0;
 
   return { exitCode, files };

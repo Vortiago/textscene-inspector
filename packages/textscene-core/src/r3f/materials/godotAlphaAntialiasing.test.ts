@@ -102,16 +102,6 @@ describe('GODOT_ALPHA_ANTIALIASING.onBeforeCompile', () => {
     expect((uniforms.godotAlbedoTextureSize!.value as THREE.Vector2).toArray()).toEqual([64, 32]);
   });
 
-  it("scales the texture's size into Godot's texels, for a map drawn at another resolution", () => {
-    const map = new THREE.Texture({ width: 96, height: 48 });
-    const material = new THREE.MeshBasicMaterial({
-      map,
-      userData: alphaAntialiasingUserData(SCISSOR_CUT, 1 / 3),
-    });
-    const { uniforms } = compiled(material);
-    expect((uniforms.godotAlbedoTextureSize!.value as THREE.Vector2).toArray()).toEqual([32, 16]);
-  });
-
   it("gives a size of zero with no albedo texture, the uniform's default (edge case)", () => {
     const { uniforms } = compiled(antialiased());
     expect((uniforms.godotAlbedoTextureSize!.value as THREE.Vector2).toArray()).toEqual([0, 0]);

@@ -113,10 +113,12 @@ reads. `later` is null when no read is necessary, and resolves to null when a ne
 overtakes it. `Linter.lintComplete` gives the full list in one answer. The `Linter` keeps
 each read under the provider's `stamp` (`linter/stampedReads.ts`). The CLI, VS Code (the preview
 and the editor features) and the `tscn-lsp` server root their providers at the scene's `res://`
-root (`findResRoot` in `resources/resPath.ts`): the nearest `project.godot`, or the scene's own
-directory when the scene lies inside the workspace. The CLI's workspace is the directory it runs
-from. Outside every project and the workspace, a scene has no root and lints with no provider. The
-web previewer roots its provider at its corpus root.
+root: the nearest `project.godot`, or the scene's own directory when the scene lies inside the
+workspace. The CLI and the server ask `ResRoots` (`resources/resRoots.ts`), which owns the root
+caches and gives each root as a provider, over the `node:fs` adapter in `resources/diskProject.ts`.
+VS Code walks `Uri`s through `findResRoot` in `resources/resPath.ts`. The CLI's workspace is the
+directory it runs from. Outside every project and the workspace, a scene has no root and lints with
+no provider. The web previewer roots its provider at its corpus root.
 
 ## Vertical slices and registries
 

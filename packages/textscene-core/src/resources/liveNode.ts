@@ -21,6 +21,11 @@ export interface LiveNode extends TscnNode {
   readonly uniqueNames?: UniqueNameTable;
   /** Set by the merge on a collapsed instance: `GraftedInstance.uniqueParentPlacements`. */
   readonly uniqueParentPlacements?: ReadonlyMap<string, string>;
+  /**
+   * Set on a typed node attached into a GLB: the `relPath` of the GLB object its `instanceSubPath`
+   * matched, so the tree finds its row by that key and matches nothing again.
+   */
+  readonly glbTargetRelPath?: string;
 }
 
 /**

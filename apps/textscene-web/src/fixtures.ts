@@ -628,6 +628,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Typed Child",
+    "file": "unit-glb-typed-child.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Viewport Texture",
     "file": "unit-glb-viewport-texture.tscn",
     "category": "Other"
