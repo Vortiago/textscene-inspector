@@ -43,7 +43,8 @@ function holdsProjectFile(dir: vscode.Uri): Promise<boolean> {
 /**
  * Forgets every directory's answer, so the next walk asks `stat` again. The extension calls it on each `project.godot`
  * event and when the window gains focus, since a directory above the workspace has no watcher. `TscnDiagnostics` calls
- * it before the walks it starts on a `project.godot` event, and when it drops a project root.
+ * it before the walks it starts on a `project.godot` event, and on each deleted path, since a deleted folder reports
+ * no event for the `project.godot` inside it.
  */
 export function forgetProjectFiles(): void {
   projectFileByDir.clear();

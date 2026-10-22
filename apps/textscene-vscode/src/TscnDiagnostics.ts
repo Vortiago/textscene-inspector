@@ -279,7 +279,9 @@ export class TscnDiagnostics implements vscode.Disposable {
    * found one, is scheduled for a lint. The other watchers cover a single file, and this covers a whole folder.
    */
   private _onPathDeleted(uri: vscode.Uri): void {
-    // Before the enabled check: a walk running when diagnostics went off can still fill the maps.
+    // Before the enabled check: a walk running when diagnostics went off can still fill the maps. A deleted folder
+    // reports no event for the `project.godot` inside it, so every deleted path forgets the shared answers.
+    forgetProjectFiles();
     const gone = this._dropProvidersWithin(uri);
     if (!this._enabled) return;
     for (const document of vscode.workspace.textDocuments) {
@@ -291,7 +293,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
   }
 
-  /** Forgets each provider rooted at or under `dir`, and every directory answer if one went. Returns those it forgot. */
+  /** Forgets each provider rooted at or under `dir`. Returns those it forgot. */
   private _dropProvidersWithin(dir: vscode.Uri): Set<LintResourceProvider> {
     const gone = new Set<LintResourceProvider>();
     for (const [key, provider] of this._providers) {
@@ -299,7 +301,6 @@ export class TscnDiagnostics implements vscode.Disposable {
       this._providers.delete(key);
       gone.add(provider);
     }
-    if (gone.size > 0) forgetProjectFiles();
     return gone;
   }
 
