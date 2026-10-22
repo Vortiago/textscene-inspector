@@ -10,9 +10,17 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from 'node:os';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { CompletionItemKind, SymbolKind, type Range } from 'vscode-languageserver/node';
+import { CompletionItemKind, SymbolKind, type Location, type Range } from 'vscode-languageserver/node';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { cursorIn, loadAnswers, rangeTuple, sortedRanges, type CursorSpec } from '@textscene/dev-kit';
+import {
+  cursorIn,
+  loadAnswers,
+  rangeTuple,
+  sortedFileRanges,
+  sortedRanges,
+  type CursorSpec,
+  type FileRange,
+} from '@textscene/dev-kit';
 import { FIXTURE_DIR, PROJECT_DIR, projectText } from './languageFeatureAnswers.testkit';
 import {
   BUILD_SERVER_COMMAND,
@@ -113,6 +121,7 @@ describe('tscn-lsp end-to-end', () => {
           foldingRangeProvider: true,
           documentSymbolProvider: true,
           definitionProvider: true,
+          referencesProvider: true,
           documentHighlightProvider: true,
           documentLinkProvider: { resolveProvider: false },
         });
@@ -152,6 +161,19 @@ function openAt(client: LspClient, at: CursorSpec, projectDir = PROJECT_DIR, dir
 /** Runs `use` against a fresh server rooted at the committed fixture project. */
 function inProject(use: (client: LspClient) => Promise<void>): Promise<void> {
   return withInitializedServer(pathToFileURL(PROJECT_DIR).toString(), use);
+}
+
+/** The params of a references request at a cursor. The cursor's own occurrence counts either way. */
+function referencesParams(cursor: Pick<ReturnType<typeof openAt>, 'textDocument' | 'position'>) {
+  return { ...cursor, context: { includeDeclaration: true } };
+}
+
+/** The locations a references request answered, as project files and ranges. */
+function fileRangesOf(projectDir: string, locations: readonly Location[] | null): FileRange[] {
+  return (locations ?? []).map(({ uri, range }) => ({
+    file: projectPath(projectDir, uri),
+    range: rangeTuple(range),
+  }));
 }
 
 function labelsOf(items: ReadonlyArray<{ label: string }> | null): string[] {
@@ -251,6 +273,23 @@ describe('tscn-lsp gives the shared answers for the fixture project', () => {
               ? []
               : [{ file: projectPath(PROJECT_DIR, location.uri), range: rangeTuple(location.range) }];
           expect(targets).toEqual(answer.targets);
+        }),
+      SERVER_TIMEOUT_MS
+    );
+  }
+
+  for (const answer of answers.references) {
+    it(
+      `references: ${answer.name}`,
+      () =>
+        inProject(async (client) => {
+          const locations = await client.result<Location[] | null>(
+            'textDocument/references',
+            referencesParams(openAt(client, answer.at))
+          );
+          expect(sortedFileRanges(fileRangesOf(PROJECT_DIR, locations))).toEqual(
+            sortedFileRanges(answer.locations)
+          );
         }),
       SERVER_TIMEOUT_MS
     );
@@ -381,6 +420,86 @@ describe('tscn-lsp gives the shared answers for the fixture project', () => {
       SERVER_TIMEOUT_MS
     );
   }
+});
+
+describe('tscn-lsp finds references across the project', () => {
+  const gridAnswer = answers.references[0]!;
+
+  /** The cursor on the grid path in `main.tscn`, whose text starts with `extraLines` extra lines. */
+  function gridCursor(extraLines: number) {
+    const { line, character } = cursorIn(projectText(gridAnswer.at.file).split('\n'), gridAnswer.at);
+    return { line: line + extraLines, character };
+  }
+
+  it(
+    "reads an open document's unsaved text in place of its file, so a range lands where the editor shows it",
+    () =>
+      inProject(async (client) => {
+        const uri = fileUri(PROJECT_DIR, gridAnswer.at.file);
+        client.notify('textDocument/didOpen', {
+          textDocument: {
+            uri,
+            languageId: 'tscn',
+            version: 1,
+            text: `; one unsaved line\n${projectText(gridAnswer.at.file)}`,
+          },
+        });
+
+        const locations = await client.result<Location[]>(
+          'textDocument/references',
+          referencesParams({ textDocument: { uri }, position: gridCursor(1) })
+        );
+
+        const inMain = fileRangesOf(PROJECT_DIR, locations).filter(({ file }) => file === gridAnswer.at.file);
+        expect(inMain.map(({ range }) => range[0])).toEqual([3, 16]);
+      }),
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'lists a scene created after the first request, once the client reports it',
+    async () => {
+      const projectDir = join(mkdtempSync(join(tmpdir(), 'tscn-lsp-references-')), 'project');
+      cpSync(PROJECT_DIR, projectDir, { recursive: true });
+      try {
+        await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
+          const params = referencesParams(openAt(client, gridAnswer.at, projectDir));
+          const before = await client.result<Location[]>('textDocument/references', params);
+          writeFileSync(join(projectDir, 'created.tscn'), 'metadata/frame = "res://textures/grid.png"\n');
+          client.notify('workspace/didChangeWatchedFiles', {
+            changes: [{ uri: fileUri(projectDir, 'created.tscn'), type: 1 }],
+          });
+
+          const after = await client.result<Location[]>('textDocument/references', params);
+          expect(after.length).toBe(before.length + 1);
+          expect(fileRangesOf(projectDir, after)).toContainEqual({
+            file: 'created.tscn',
+            range: [0, 18, 0, 41],
+          });
+        });
+      } finally {
+        rmSync(join(projectDir, '..'), { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'answers null for a document the client never opened',
+    () =>
+      inProject(async (client) => {
+        const locations = await client.result(
+          'textDocument/references',
+          referencesParams({
+            textDocument: { uri: fileUri(PROJECT_DIR, 'main.tscn') },
+            position: gridCursor(0),
+          })
+        );
+
+        expect(locations).toBeNull();
+      }),
+    SERVER_TIMEOUT_MS
+  );
 });
 
 describe('tscn-lsp path completion through a symlinked directory', () => {

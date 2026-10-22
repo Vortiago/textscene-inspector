@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles3d Gizmo",
+    "file": "unit-cpuparticles3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Damped Spring Joint 2d",
     "file": "unit-damped-spring-joint-2d.tscn",
     "category": "Other"
@@ -735,6 +740,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Gpu Particles Collision Sphere 3d",
     "file": "unit-gpu-particles-collision-sphere-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpuparticles3d Emission",
+    "file": "unit-gpuparticles3d-emission.tscn",
     "category": "Other"
   },
   {
@@ -2138,6 +2148,12 @@ export const fixtures: Fixture[] = [
     "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
     "category": "Other",
     "root": "glow-linear-upscale"
+  },
+  {
+    "name": "Label3d Glyph Mipmaps",
+    "file": "label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn",
+    "category": "Other",
+    "root": "label3d-glyph-mipmaps"
   },
   {
     "name": "Msaa 2d",
@@ -3566,6 +3582,12 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Mipmap Bias",
+    "file": "mipmap-bias/unit-material-mipmap-bias.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
   },
   {
     "name": "Navigation Agent 2d",

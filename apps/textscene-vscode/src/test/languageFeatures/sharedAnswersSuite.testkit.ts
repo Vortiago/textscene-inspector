@@ -18,6 +18,7 @@ import {
   loadAnswers,
   projectPath,
   rangeTuple,
+  sortedFileRanges,
   sortedRanges,
   type CursorSpec,
 } from './answers';
@@ -167,6 +168,27 @@ export function defineSharedAnswersSuite(projectDir: string): void {
         assert.deepStrictEqual(
           found.map((target) => targetOf(projectDir, target)),
           answer.targets
+        );
+      });
+    }
+
+    for (const answer of answers.references) {
+      test(`references: ${answer.name}`, async () => {
+        const { document, position } = await openAt(answer.at);
+        const found = await vscode.commands.executeCommand<vscode.Location[]>(
+          'vscode.executeReferenceProvider',
+          document.uri,
+          position
+        );
+
+        assert.deepStrictEqual(
+          sortedFileRanges(
+            found.map((location) => ({
+              file: projectPath(projectDir, location.uri.fsPath),
+              range: rangeTuple(location.range),
+            }))
+          ),
+          sortedFileRanges(answer.locations)
         );
       });
     }

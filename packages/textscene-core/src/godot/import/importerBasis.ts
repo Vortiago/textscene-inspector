@@ -5,7 +5,7 @@
  * Godot's operation order, since the unwrap cache is keyed on the bits of what follows.
  */
 
-import { normalizedVector3 } from '../math/vector.js';
+import { normalizedVector3, vector3Dot } from '../math/vector.js';
 
 /** A `Basis`'s nine `real_t` components, row-major: `rows[i][j]` is at `3i + j`. */
 export type Basis32 = readonly number[];
@@ -161,20 +161,16 @@ function multiply(left: Basis32, right: Basis32): Basis32 {
 /** `Basis::orthonormalize` (`basis.cpp:56-72`), Gram-Schmidt over the columns. */
 function orthonormalized(basis: Basis32): Basis32 {
   const x = normalizedVector3(...column(basis, 0));
-  const y = normalizedVector3(...subtract(column(basis, 1), scaled(x, dot(x, column(basis, 1)))));
+  const y = normalizedVector3(...subtract(column(basis, 1), scaled(x, vector3Dot(x, column(basis, 1)))));
   const zColumn = column(basis, 2);
   const z = normalizedVector3(
-    ...subtract(subtract(zColumn, scaled(x, dot(x, zColumn))), scaled(y, dot(y, zColumn)))
+    ...subtract(subtract(zColumn, scaled(x, vector3Dot(x, zColumn))), scaled(y, vector3Dot(y, zColumn)))
   );
   return [x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2]];
 }
 
 function column(basis: Basis32, axis: number): Triple {
   return [basis[axis]!, basis[axis + 3]!, basis[axis + 6]!];
-}
-
-function dot(a: Triple, b: Triple): number {
-  return f(f(f(a[0] * b[0]) + f(a[1] * b[1])) + f(a[2] * b[2]));
 }
 
 function scaled(v: Triple, s: number): Triple {
@@ -187,5 +183,5 @@ function subtract(a: Triple, b: Triple): Triple {
 
 /** `Vector3::length` (`vector3.h:532-538`). */
 function length(v: Triple): number {
-  return f(Math.sqrt(dot(v, v)));
+  return f(Math.sqrt(vector3Dot(v, v)));
 }

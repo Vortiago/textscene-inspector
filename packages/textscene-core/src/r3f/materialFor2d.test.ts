@@ -23,6 +23,7 @@ const DEFAULTS: MaterialFor2dInput = {
   doubleSided: true,
   noDepthTest: false,
   textureFilter: TextureFilter.LINEAR_WITH_MIPMAPS,
+  anisotropicFilteringLevel: 2,
 };
 
 const materialWith = (overrides: Partial<MaterialFor2dInput>) => materialFor2d({ ...DEFAULTS, ...overrides });
@@ -133,6 +134,15 @@ describe('materialFor2d sampler', () => {
   it('hands both nodes the one sampler state of the filter', () => {
     expect(
       materialWith({ textureFilter: TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC }).textureFilter
-    ).toBe(godotTextureFilterState(TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC));
+    ).toBe(godotTextureFilterState(TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC, 2));
+  });
+
+  it('takes the anisotropy of an anisotropic filter from the viewport level', () => {
+    expect(
+      materialWith({
+        textureFilter: TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
+        anisotropicFilteringLevel: 4,
+      }).textureFilter.anisotropy
+    ).toBe(16);
   });
 });

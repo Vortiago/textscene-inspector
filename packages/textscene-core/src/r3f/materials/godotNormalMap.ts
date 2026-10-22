@@ -7,7 +7,7 @@
 
 import type * as THREE from 'three';
 import { editedChunk, type TextEdit } from '../shaderPatch/chunkPatch';
-import { composeInjections, defining, injectProgram, type ProgramInjection } from '../materialProgramInputs';
+import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 
 const PARS_CHUNK_NAME = 'normalmap_pars_fragment';
 const PARS_INCLUDE = `#include <${PARS_CHUNK_NAME}>`;
@@ -50,14 +50,4 @@ export const GODOT_NORMAL_MAP_READ = composeInjections([
  */
 export function importedNormalMapRead(material: THREE.Material): ProgramInjection | undefined {
   return (material as THREE.MeshStandardMaterial).normalMap ? GODOT_NORMAL_MAP_READ : undefined;
-}
-
-/**
- * Gives a copy of a glTF material its normal map read, and returns it. A copy carries no
- * `onBeforeCompile`, so each copy takes the read again.
- */
-export function withImportedNormalMapRead(material: THREE.Material): THREE.Material {
-  const read = importedNormalMapRead(material);
-  if (read) injectProgram(material, read);
-  return material;
 }

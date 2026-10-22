@@ -29,6 +29,7 @@ import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
 import {
+  applyTextureFilterState,
   godotTextureFilterState,
   type TextureFilterState,
 } from '../../../../resources/textures/godotTextureFilter';
@@ -106,11 +107,17 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * The raster texture's filter: Label3D's `texture_filter` (`label_3d.h:140`).
-   * The default is Godot's default filter. Canvas runs only: the MSDF atlas is
-   * always sampled linearly.
+   * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
+   * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
+   * Canvas runs only: the MSDF atlas is always sampled linearly.
    */
   textureFilter?: TextureFilterState;
+  /**
+   * Builds a mip chain for the raster, as Godot does for a font with `generate_mipmaps`
+   * (`text_server_adv.cpp:3121`), and samples it at the viewport's mipmap bias. Canvas runs
+   * drawn in 3D only. Omitted, the raster has no chain, as a font without that flag has none.
+   */
+  mipmapped?: boolean;
   /**
    * The `BaseMaterial3D::Transparency` this surface paints in, from a 3D caller's
    * `alpha_cut` (`label_3d.cpp:386-393`), in each pass its GeometryInstance3D's fade can draw it
@@ -165,6 +172,7 @@ function buildTextRun(
   distanceBias: number,
   strokeWidthPx: number,
   textureFilter: TextureFilterState,
+  mipmapped: boolean,
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
@@ -183,18 +191,24 @@ function buildTextRun(
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
     // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
     texture.colorSpace = THREE.SRGBColorSpace;
-    // No mip chain for any filter: Godot's glyph atlas has none unless the font sets
-    // `generate_mipmaps` (default off: `text_server_adv.cpp:3528`). Only the nearest/linear
-    // bit applies, so `minFilter` takes `magFilter`.
-    texture.generateMipmaps = false;
-    texture.minFilter = textureFilter.magFilter;
-    texture.magFilter = textureFilter.magFilter;
+    // No chain unless the caller asks: Godot's default font generates none
+    // (`text_server.cpp:2387`), and a raster rebuilt on every text or size change is costly to mipmap.
+    texture.generateMipmaps = mipmapped;
+    applyTextureFilterState(texture, textureFilter);
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
     const opacity = tint.a;
     const paint = (blend: SurfaceBlend | undefined) =>
-      createCanvasTextMaterial({ map: texture, opacity, clippingPlanes, depthTest, side, ...blend });
+      createCanvasTextMaterial({
+        map: texture,
+        opacity,
+        clippingPlanes,
+        depthTest,
+        side,
+        mipmapped,
+        ...blend,
+      });
     return { geometry: geo, paint, ownedTexture: texture };
   }
 
@@ -237,6 +251,7 @@ export function TextRun({
   side,
   strokeWidthPx = 0,
   textureFilter = godotTextureFilterState(undefined),
+  mipmapped = false,
   blends,
   shadow,
   layers,
@@ -258,6 +273,7 @@ export function TextRun({
         distanceBias,
         strokeWidthPx,
         textureFilter,
+        mipmapped,
         outlineColor,
         outlineWidthPx
       ),
@@ -278,6 +294,7 @@ export function TextRun({
       side,
       strokeWidthPx,
       textureFilter,
+      mipmapped,
       outlineColor?.r,
       outlineColor?.g,
       outlineColor?.b,

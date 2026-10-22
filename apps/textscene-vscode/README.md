@@ -28,6 +28,7 @@ Each `.tscn` file can have its own preview.
 - **Outline:** the scene tree of the file. Click an entry to jump to its line.
 - **`res://` links:** Ctrl-click (Cmd-click on macOS) a path to open the file.
 - **Go to Definition** on `SubResource("id")` and `ExtResource("id")` goes to the heading that declares the id. On a node path in `parent=`, `from=` or `to=`, it goes to the `[node]` heading that the path names.
+- **Find All References** on a `res://` path lists every place that names the same path in a `.tscn` or `.tres` file under the same `res://` root. It matches the whole path in a heading, a value, a comment or prose, and it counts the unsaved text of an open file. It reads the path text only: an `ext_resource` whose `uid=` names the file but whose `path=` is stale is not found.
 - **Hover:** shows a class's base chain and a link to its reference page. On a property, it shows the type, the declaring class and the accepted values. On a resource id, it shows the declaration.
 - **Completion:** node and resource classes, property names, enum values, resource ids and `res://` paths. Completion marks a deprecated property name.
 - **Quick fixes:** rename a deprecated property name, or repair a typo in a property name or a class name.
