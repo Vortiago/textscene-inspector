@@ -54,28 +54,21 @@ export const GLTF_SURFACE = 'gltf';
  */
 export type TexturedSurface = TscnInternalResource | typeof GLTF_SURFACE;
 
-interface SurfaceTextures {
-  /** What each slot draws once bound and on the GPU, or a stand-in while its map arrives. */
-  textures: ResolvedTextures;
-  /**
-   * A slot's file could not load, or the albedo slot names a ViewportTexture whose pass is
-   * cyclic. Either texture never draws, so the surface takes `MISSING_TEXTURE_MATERIAL`.
-   */
-  isUnresolved: boolean;
-}
-
 /**
  * Resolve every texture slot of one StandardMaterial3D, from gated references through
  * loads, precedence and binding to the slot's drawn map. Each reference resolves in
  * `tables`, the material's own file, whichever file that is. A triplanar material tiles
  * per world unit, so a PlaneMesh `surface` folds in its size. CSG and an ArrayMesh pass
  * nothing and get the material's own `uv1_scale`.
+ *
+ * Null when a slot's file could not load, or the albedo slot names a ViewportTexture whose pass
+ * is cyclic. Either texture never draws, so the surface takes `MISSING_TEXTURE_MATERIAL`.
  */
 export function useSurfaceTextures(
   scalars: StandardMaterial3DScalars | null,
   tables: MaterialTables | null,
   surface?: TexturedSurface
-): SurfaceTextures {
+): ResolvedTextures | null {
   const resourceTables = tables ?? NO_TABLES;
 
   // The decode's gated table, never the raw property bag: Godot declares and
@@ -84,6 +77,7 @@ export function useSurfaceTextures(
   // `normal_enabled` reaches no shader at all.
   const references = scalars?.textureSlots;
 
+  // One call per slot, unrolled: hooks cannot run in a loop.
   const sources: Readonly<Record<TextureSlot, SlotTexture>> = {
     albedo_texture: useSlotTexture(references, resourceTables, 'albedo_texture'),
     normal_texture: useSlotTexture(references, resourceTables, 'normal_texture'),
@@ -129,13 +123,16 @@ export function useSurfaceTextures(
   );
 
   const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing || sources[slot].cyclic);
-  return { textures, isUnresolved };
+  return isUnresolved ? null : textures;
 }
 
 interface SlotTexture extends Texture2DResult {
   /** The slot names a ViewportTexture whose target sits in a pass cycle, so it is never written. */
   cyclic: boolean;
 }
+
+/** What a slot draws from: its texture, null while it arrives, and whether one is on its way. */
+type SlotMap = Pick<SlotTexture, 'texture' | 'isArriving'>;
 
 /**
  * One slot's texture, through every form a Texture2D slot takes, null while it arrives. A material
@@ -173,7 +170,7 @@ function textureSlotReference(
  * re-upload, and only that one waits for a map that is arriving. The slot depends on the two
  * values the repack reads, not their wrapper.
  */
-function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotTexture {
+function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
   const { texture } = flowmap;
   const repacked = useMemo(
     () => (isSampled && texture ? repackAnisotropyFlowmap(texture) : undefined),
@@ -181,7 +178,7 @@ function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotTextu
   );
   // This module allocated the repack, and no binding releases it.
   useDisposeOnRelease(repacked);
-  return { ...flowmap, texture: repacked ?? null, isArriving: flowmap.isArriving && isSampled };
+  return { texture: repacked ?? null, isArriving: flowmap.isArriving && isSampled };
 }
 
 /**
@@ -192,7 +189,7 @@ function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotTextu
  */
 function useDrawnSlot(
   slot: TextureSlot,
-  { texture, isArriving }: SlotTexture,
+  { texture, isArriving }: SlotMap,
   states: MaterialTextureStates | null
 ): THREE.Texture | undefined {
   const bound = useMemo(() => transformedTexture(texture, states, slot), [texture, states, slot]);

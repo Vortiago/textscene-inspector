@@ -29,7 +29,6 @@ interface StandardMaterialSlotProps {
 
 export function StandardMaterialSlot({ bags, attach, pointDraw }: StandardMaterialSlotProps) {
   const lightmap = useLightmapAssignment();
-
   return (
     <FadedMaterials attach={attach}>
       {(pass, mount) =>

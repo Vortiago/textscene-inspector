@@ -13,7 +13,7 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
-import type { MaterialSource } from './materialSource';
+import { inlineMaterialSource, type MaterialSource } from './materialSource';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 
@@ -65,10 +65,7 @@ albedo_texture = SubResource("Ramp")
 `;
 
 const ARRIVALS: Record<string, MaterialSource> = {
-  inline: {
-    kind: 'inline',
-    material: { resource: SCENE[2]!, internalResources: SCENE, externalResources: [] },
-  },
+  inline: inlineMaterialSource(SCENE[2]!, SCENE, []),
   '.tres': { kind: 'file', path: TRES_PATH },
   '.tres::sub': { kind: 'file', path: `${TRES_PATH}::Inner` },
 };

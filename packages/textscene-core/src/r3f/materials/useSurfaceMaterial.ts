@@ -39,12 +39,9 @@ export function useSurfaceMaterial(
   const loaded = useMaterial(source);
   const material = readyMaterial(loaded);
   const scalars = useDecodedScalars(material);
-  const { textures, isUnresolved } = useSurfaceTextures(scalars, material, surface);
+  const textures = useSurfaceTextures(scalars, material, surface);
   // No bags while unresolved, so a late map leaves the placeholder material as it is.
-  const bags = useMemo(
-    () => (isUnresolved ? null : standardMaterialBags(scalars, textures)),
-    [isUnresolved, scalars, textures]
-  );
+  const bags = useMemo(() => textures && standardMaterialBags(scalars, textures), [scalars, textures]);
   return { scalars, isAbsent: loaded.status === 'absent', bags };
 }
 

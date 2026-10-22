@@ -10,8 +10,9 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import type { MaterialSource } from '../../../r3f/materials/materialSource';
+import { inlineMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
 import { parseTresFile } from '../../../parser/parsedResource';
+import { subResource } from '../../../testing/subResource';
 import { ResourceLoaderProvider } from '../../ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../testing/createFakeResourceLoader';
 import { resolveExtResourcePath } from '../../SubResourceResolver';
@@ -336,18 +337,11 @@ async function renderArrival(testCase: ParityCase, arrival: Arrival): Promise<TH
   fake.resources.seed(STANDALONE_PATH, parseTresFile(standaloneTres(testCase)));
   fake.resources.seed(MESH_PATH, parseTresFile(meshTresCarryingIt(testCase)));
   const sources: Record<Arrival, MaterialSource> = {
-    inline: {
-      kind: 'inline',
-      material: {
-        resource: {
-          id: 'Mat_inline',
-          type: testCase.resourceType ?? 'StandardMaterial3D',
-          data: testCase.properties,
-        },
-        internalResources: [],
-        externalResources: testCase.extResources ?? [],
-      },
-    },
+    inline: inlineMaterialSource(
+      subResource(testCase.resourceType ?? 'StandardMaterial3D', 'Mat_inline', testCase.properties),
+      [],
+      testCase.extResources ?? []
+    ),
     '.tres': { kind: 'file', path: STANDALONE_PATH },
     '.tres::sub': { kind: 'file', path: `${MESH_PATH}::Mat_surface` },
   };

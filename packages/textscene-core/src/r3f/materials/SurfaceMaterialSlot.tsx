@@ -5,6 +5,7 @@
  * for any surface count.
  */
 
+import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import type { TscnInternalResource } from '../../parser/types';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
@@ -38,7 +39,10 @@ export function SurfaceMaterialSlot({
 }: SurfaceMaterialSlotProps) {
   const { scalars, bags } = useSurfaceMaterial(source, triplanarMesh);
   const pixelRatio = useThree((state) => state.viewport.dpr);
-  const pointDraw = drawsPoints ? pointDrawOf(scalars, pixelRatio) : undefined;
+  const pointDraw = useMemo(
+    () => (drawsPoints ? pointDrawOf(scalars, pixelRatio) : undefined),
+    [drawsPoints, scalars, pixelRatio]
+  );
   if (!bags) return materialBagElement(withPointDraw(MISSING_TEXTURE_MATERIAL, pointDraw), attach, null);
   return <StandardMaterialSlot bags={bags} attach={attach} pointDraw={pointDraw} />;
 }
