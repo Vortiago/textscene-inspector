@@ -442,10 +442,16 @@ describe('tscn-lsp reads the project again after a change on disk', () => {
     return labelsOf(await client.result<Array<{ label: string }>>('textDocument/completion', params));
   }
 
+  /** A watched-file change type of the protocol, which a client reports for each file it sees change. */
+  const FILE_CREATED = 1;
+  const FILE_DELETED = 3;
+
+  function reportChange(client: LspClient, projectDir: string, file: string, type: number): void {
+    client.notify('workspace/didChangeWatchedFiles', { changes: [{ uri: fileUri(projectDir, file), type }] });
+  }
+
   function reportCreated(client: LspClient, projectDir: string, file: string): void {
-    client.notify('workspace/didChangeWatchedFiles', {
-      changes: [{ uri: fileUri(projectDir, file), type: 1 }],
-    });
+    reportChange(client, projectDir, file, FILE_CREATED);
   }
 
   it(
@@ -487,6 +493,28 @@ describe('tscn-lsp reads the project again after a change on disk', () => {
 
           const target = await client.result<{ uri: string } | null>('textDocument/definition', params);
           expect(target && projectPath(projectDir, target.uri)).toBe(linkAt!.targets[0]!.file);
+        });
+      } finally {
+        rmSync(join(projectDir, '..'), { recursive: true, force: true });
+      }
+    },
+    SERVER_TIMEOUT_MS
+  );
+
+  it(
+    'moves a scene back to its own directory when its project.godot is deleted, once the client reports it',
+    async () => {
+      const projectDir = projectCopy();
+      try {
+        await withInitializedServer(pathToFileURL(projectDir).toString(), async (client) => {
+          // One level down, so only the project.godot above the scene links the target.
+          const params = openAt(client, linkAt!.at, projectDir, 'scenes');
+          const target = await client.result<{ uri: string } | null>('textDocument/definition', params);
+          expect(target && projectPath(projectDir, target.uri)).toBe(linkAt!.targets[0]!.file);
+          rmSync(join(projectDir, 'project.godot'));
+          reportChange(client, projectDir, 'project.godot', FILE_DELETED);
+
+          expect(await client.result('textDocument/definition', params)).toBeNull();
         });
       } finally {
         rmSync(join(projectDir, '..'), { recursive: true, force: true });

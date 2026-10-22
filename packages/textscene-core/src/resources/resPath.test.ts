@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   comparablePath,
   findResRoot,
+  isWalkEnd,
   isWithinRoot,
   normalizeRelativePath,
   parentDir,
@@ -27,6 +28,24 @@ describe('comparablePath', () => {
 
   it('turns backslashes into forward slashes and lowers the case', () => {
     expect(comparablePath('C:\\Users\\Me\\Proj')).toBe('c:/users/me/proj');
+  });
+});
+
+describe('isWalkEnd', () => {
+  it('ends at the bound itself', () => {
+    expect(isWalkEnd('/w/game', '/w/game', 'sensitive')).toBe(true);
+  });
+
+  it('ends at a directory outside the bound, which is checked alone', () => {
+    expect(isWalkEnd('/w/game', '/w/other/scenes', 'sensitive')).toBe(true);
+  });
+
+  it('goes on inside the bound', () => {
+    expect(isWalkEnd('/w/game', '/w/game/scenes', 'sensitive')).toBe(false);
+  });
+
+  it('reads two spellings that differ in case as one directory on a case-insensitive filesystem', () => {
+    expect(isWalkEnd('/w/Game', '/w/game', 'insensitive')).toBe(true);
   });
 });
 
