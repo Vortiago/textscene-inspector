@@ -1,6 +1,6 @@
 /** ParticleProcessMaterial decode: the emission shape with its offset and scale. */
 import { describe, expect, it } from 'vitest';
-import { decodeParticleProcessMaterial } from './processMaterial';
+import { decodeParticleProcessMaterial } from './decode';
 
 describe('decodeParticleProcessMaterial', () => {
   it('reads an empty material as Godot constructs it (`particle_process_material.cpp:2405-2414`)', () => {

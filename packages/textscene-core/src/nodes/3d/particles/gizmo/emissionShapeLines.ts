@@ -16,7 +16,7 @@ import {
   type Vector3,
 } from '../../../../godot/math/vector';
 import { EmissionShape } from '../../../../godot/scene/particles3d';
-import type { ParticleEmission } from '../emission/types';
+import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
 
 /** The circles run `i = 0..120` of 3 degrees, so the last segment overlaps the first. */
 const LAST_CIRCLE_SEGMENT = 120;

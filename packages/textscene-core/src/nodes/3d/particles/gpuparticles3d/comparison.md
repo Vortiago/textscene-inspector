@@ -65,6 +65,8 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 
 The lenient parser reads the GeometryInstance3D base, `visibility_aabb` and the `process_material` reference. `visibility_aabb` is the box the scene cull measures the emitter by, and the gizmo draws it. The emission shape keys come from a ParticleProcessMaterial that the parser reads from its resource. The parser never reads `amount`, `lifetime` or `draw_pass_1`, so an invalid or missing value has no lenient-side effect, and only strict reports it.
 
+Strict parsing also checks all 96 properties of a ParticleProcessMaterial `[sub_resource]` or `.tres`, against `particle_process_material.cpp`. A setter assigns every value bare except `emission_shape`, so a value outside a property's range warns, and an `emission_shape` past the enum errors. The `particleprocessmaterial-param-min-above-max` rule warns on a `_min` above its `_max`, where one of the two loads as the other.
+
 ## Gizmo
 
 A selected emitter draws two sets of lines. Godot draws both only while the node is selected. Godot's source is `gpu_particles_3d_gizmo_plugin.cpp:61-84` and `particles_3d_emission_shape_gizmo_plugin.cpp:82-339`.

@@ -100,6 +100,26 @@ describe('parseCPUParticles2D', () => {
     expect(result.params[CPUParticlesParameter.ANIM_OFFSET]).toEqual({ min: 0, max: 1 });
   });
 
+  it('loads a crossed range as the key listed last, as the paired setters leave it (`cpu_particles_2d.cpp:352-376`)', () => {
+    const minFirst = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
+      angle_min: '5.0',
+      angle_max: '2.0',
+    });
+    const maxFirst = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
+      angle_max: '2.0',
+      angle_min: '5.0',
+    });
+
+    expect(minFirst.params[CPUParticlesParameter.ANGLE]).toEqual({ min: 2, max: 2 });
+    expect(maxFirst.params[CPUParticlesParameter.ANGLE]).toEqual({ min: 5, max: 5 });
+  });
+
+  it('moves the default of a range with one key authored (measured: scale_amount_min = 3 loads max 3)', () => {
+    const result = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), { scale_amount_min: '3.0' });
+
+    expect(result.params[CPUParticlesParameter.SCALE]).toEqual({ min: 3, max: 3 });
+  });
+
   it('clamps `amount` into Godot’s 1..1,000,000 range (edge case)', () => {
     const tooMany = parseCPUParticles2D(heading('CPUParticles2D', { name: 'P' }), {
       amount: '5000000',

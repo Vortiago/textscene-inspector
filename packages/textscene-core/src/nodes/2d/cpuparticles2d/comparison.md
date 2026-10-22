@@ -143,6 +143,10 @@ default. `lifetime` reads as `1.0`, `spread` as `45.0`, a malformed `gravity` as
 clamps to `1`. `draw_order` is not range-checked, since Godot's setter accepts any int
 and reads everything but `1` as `Index`.
 
+A `_min` above its `_max` loads as Godot's paired setters leave it. The key the file lists last wins,
+so `angle_min = 5` then `angle_max = 2` gives a range of 2 to 2. A pair with one key written moves
+the default of the other: `scale_amount_min = 3` gives 3 to 3 (`cpu_particles_2d.cpp:352-376`).
+
 ## Known limitations
 
 - **Needs runtime** The emitter runs in Godot and freezes here, at Godot's own
