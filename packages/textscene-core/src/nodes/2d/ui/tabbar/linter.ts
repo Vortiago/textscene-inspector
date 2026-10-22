@@ -5,10 +5,10 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
-import { listWrittenIndices, writesPastFamilyCount } from '../../../../linter/reportedIndices.js';
+import { pastCountDiagnostic } from '../../../../linter/reportedIndices.js';
 import { TAB_BAR_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -31,9 +31,8 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
 
   // Absent means 0: `tabs` is default-constructed empty
   // (doc/classes/TabBar.xml:282 records the same default).
-  const pastCount = writesPastFamilyCount(props, TAB_BAR_TABS);
-  if (pastCount === null) return diagnostics;
-  const { count, offending } = pastCount;
+  const count = ruleCount(props[TAB_BAR_TABS.countKey.key]);
+  if (count === null) return diagnostics;
 
   // Either order drops the write. `tab_count` first flips `initialized` (tab_bar.cpp:778-779),
   // so `set_current_tab` fails `ERR_FAIL_INDEX` (tab_bar.cpp:804). `current_tab` first, the
@@ -63,18 +62,17 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
   // index at or past the length getter (property_list_helper.cpp:58), here `get_tab_count`
   // (tab_bar.cpp:2189). Only TabContainer enables out-of-bounds assign (tab_container.cpp:1294).
   // Godot's saver never writes this: `tabs.resize(p_count)` (tab_bar.cpp:755) keeps both in step.
-  if (offending.size > 0) {
-    const indices = listWrittenIndices(offending);
-    reportArm(
-      diagnostics,
-      arms.tabIndexOutOfRange,
-      node,
+  const pastCount = pastCountDiagnostic(
+    node,
+    TAB_BAR_TABS,
+    arms.tabIndexOutOfRange,
+    (indices) =>
       `TabBar '${node.name}' sets properties on tab index(es) ${indices} but declares only ${count} tab(s) (tab_count). ` +
-        'PropertyListHelper::_get_property returns null for an index at or past the array length ' +
-        '(property_list_helper.cpp:58) and TabBar never enables out-of-bounds assignment, so these ' +
-        'tab_<idx>/… values are silently dropped on load.'
-    );
-  }
+      'PropertyListHelper::_get_property returns null for an index at or past the array length ' +
+      '(property_list_helper.cpp:58) and TabBar never enables out-of-bounds assignment, so these ' +
+      'tab_<idx>/… values are silently dropped on load.'
+  );
+  if (pastCount) diagnostics.push(pastCount);
 
   return diagnostics;
 }

@@ -1,12 +1,14 @@
 /**
- * The indices of an indexed family that one diagnostic names: which, how many, and how spelled, and
- * the error that refuses a negative one.
+ * The indices of an indexed family that one diagnostic names: which, how many, and how spelled, the
+ * error that refuses a negative one, and the diagnostic of a write past the family's count.
  */
 import { IS_VALID_INT_RE, stringToInt } from '../godot/string/string.js';
 import { ruleCount } from '../godot/variant/int.js';
 import { visitIndexedKeys, type IndexParse } from '../godot/classdb/indexedKey.js';
 import type { IndexedFamily } from '../godot/classdb/indexedFamily.js';
-import type { ParseError } from './types.js';
+import type { Diagnostic, ParseError, RuleArm } from './types.js';
+import type { RawNode } from '../parser/types.js';
+import { armDiagnostic } from './ruleArms.js';
 import { keyShapeError } from './validators/propertyError.js';
 
 /**
@@ -158,12 +160,11 @@ function indicesPastCount(
 
 /**
  * The writes a `PropertyListHelper` family makes past its own count, with the count they are
- * measured against: the input of every past-count rule. Null when the family drops nothing (it
- * assigns past its length, or serialises no count), or when the count is malformed or non-finite,
- * which its own validator reports and no message can name. An absent count is 0, the empty array
- * the serialiser omits.
+ * measured against. Null when the family drops nothing (it assigns past its length, or serialises
+ * no count), or when the count is malformed or non-finite, which its own validator reports and no
+ * message can name. An absent count is 0, the empty array the serialiser omits.
  */
-export function writesPastFamilyCount(
+function writesPastFamilyCount(
   properties: Readonly<Record<string, string>>,
   family: IndexedFamily
 ): { count: number; offending: Map<string, number> } | null {
@@ -172,6 +173,22 @@ export function writesPastFamilyCount(
   const count = ruleCount(properties[countKey.key]);
   if (count === null) return null;
   return { count, offending: indicesPastCount(properties, family.prefix, family.indexParse, count) };
+}
+
+/**
+ * The one diagnostic of a past-count rule: the writes `family` makes on `node` past its own count,
+ * reported through `arm`. `message` receives the indices as {@link listWrittenIndices} names them,
+ * and the count. Null when the family drops no write.
+ */
+export function pastCountDiagnostic(
+  node: RawNode,
+  family: IndexedFamily,
+  arm: RuleArm,
+  message: (indices: string, count: number) => string
+): Diagnostic | null {
+  const pastCount = writesPastFamilyCount(node.rawProperties, family);
+  if (pastCount === null || pastCount.offending.size === 0) return null;
+  return armDiagnostic(arm, node, message(listWrittenIndices(pastCount.offending), pastCount.count));
 }
 
 /**

@@ -8,11 +8,13 @@ import {
   listIndices,
   listWrittenIndices,
   negativeIndexError,
+  pastCountDiagnostic,
   unsatisfiedIndices,
-  writesPastFamilyCount,
   writtenIndex,
 } from './reportedIndices.js';
 import { ITEM_LIST_ITEMS, TAB_CONTAINER_TABS } from '../godot/classdb/propertyListFamilies.js';
+import type { IndexedFamily } from '../godot/classdb/indexedFamily.js';
+import type { RawNode } from '../parser/types.js';
 
 describe('listIndices', () => {
   it('names every index while they fit', () => {
@@ -132,49 +134,70 @@ function spellFirst(
   );
 }
 
-describe('writesPastFamilyCount', () => {
-  const offendingOf = (properties: Record<string, string>) =>
-    writesPastFamilyCount(properties, ITEM_LIST_ITEMS)?.offending;
-
-  it('maps each written index at or past the count to the index it resolves to', () => {
-    expect(
-      offendingOf({ item_count: '2', 'item_1/text': '"a"', 'item_2/text': '"b"', 'item_+3/icon': 'null' })
-    ).toEqual(
-      new Map([
-        ['2', 2],
-        ['+3', 3],
-      ])
-    );
+describe('pastCountDiagnostic', () => {
+  const ARM = {
+    severity: 'error',
+    ruleName: 'test-index-out-of-range',
+    grounding: { kind: 'engine', at: 'x.cpp:1' },
+  } as const;
+  const nodeWith = (rawProperties: Record<string, string>): RawNode => ({
+    name: 'List',
+    type: 'ItemList',
+    children: [],
+    rawProperties,
   });
+  /** The message the rule writes, with the indices and the count it was handed. */
+  const messageOf = (rawProperties: Record<string, string>, family: IndexedFamily = ITEM_LIST_ITEMS) =>
+    pastCountDiagnostic(nodeWith(rawProperties), family, ARM, (indices, count) => `${indices} | ${count}`)
+      ?.message;
 
-  it('measures against an absent count as 0', () => {
-    expect(writesPastFamilyCount({ 'item_0/text': '"a"' }, ITEM_LIST_ITEMS)).toEqual({
-      count: 0,
-      offending: new Map([['0', 0]]),
+  it('reports through the arm, on the node', () => {
+    expect(
+      pastCountDiagnostic(nodeWith({ 'item_0/text': '"a"' }), ITEM_LIST_ITEMS, ARM, () => 'past')
+    ).toEqual({
+      severity: 'error',
+      message: 'past',
+      nodeName: 'List',
+      nodeType: 'ItemList',
+      ruleName: 'test-index-out-of-range',
     });
   });
 
+  it('names each written index at or past the count', () => {
+    expect(
+      messageOf({ item_count: '2', 'item_1/text': '"a"', 'item_2/text': '"b"', 'item_+3/icon': 'null' })
+    ).toBe('2, +3 | 2');
+  });
+
+  it('measures against an absent count as 0', () => {
+    expect(messageOf({ 'item_0/text': '"a"' })).toBe('0 | 0');
+  });
+
+  it('reports nothing when every write is inside the count', () => {
+    expect(messageOf({ item_count: '2', 'item_1/text': '"a"' })).toBeUndefined();
+  });
+
   it('leaves a negative index to the dispatcher that already reports it', () => {
-    expect(offendingOf({ item_count: '0', 'item_-4/text': '"a"' })?.size).toBe(0);
+    expect(messageOf({ item_count: '0', 'item_-4/text': '"a"' })).toBeUndefined();
   });
 
   it('names one text once, whatever its leaves', () => {
     expect(
-      offendingOf({ item_count: '2', 'item_4294967299/text': '"a"', 'item_4294967299/icon': 'null' })
-    ).toEqual(new Map([['4294967299', 3]]));
+      messageOf({ item_count: '2', 'item_4294967299/text': '"a"', 'item_4294967299/icon': 'null' })
+    ).toBe('4294967299 (stored as 3) | 2');
   });
 
   // `int index = ….to_int()` (property_list_helper.cpp:57) keeps the low 32 bits.
   it('measures the index Godot stores, not the number the text spells', () => {
-    expect(offendingOf({ item_count: '1', 'item_4294967296/text': '"a"' })?.size).toBe(0);
+    expect(messageOf({ item_count: '1', 'item_4294967296/text': '"a"' })).toBeUndefined();
   });
 
   it('says nothing for a count its own validator reports', () => {
-    expect(offendingOf({ item_count: 'inf', 'item_3/text': '"a"' })).toBeUndefined();
+    expect(messageOf({ item_count: 'inf', 'item_3/text': '"a"' })).toBeUndefined();
   });
 
   it('says nothing for a family that assigns past its length', () => {
-    expect(writesPastFamilyCount({ 'tab_3/title': '"a"' }, TAB_CONTAINER_TABS)).toBeNull();
+    expect(messageOf({ 'tab_3/title': '"a"' }, TAB_CONTAINER_TABS)).toBeUndefined();
   });
 });
 

@@ -70,12 +70,13 @@ export function parseItemList(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): ItemListProperties {
-  const itemCount = slotCount(properties.item_count) ?? 0;
+  const rawItemCount = properties[ITEM_LIST_ITEMS.countKey.key];
+  const itemCount = slotCount(rawItemCount) ?? 0;
   // Godot's own saver never writes both forms: item_count/item_N/* replaced
   // `items` outright. So a file carrying `item_count` always wins, and the
   // legacy array is read only for a pure old-format file.
   const legacyItems =
-    properties.item_count === undefined && properties.items !== undefined
+    rawItemCount === undefined && properties.items !== undefined
       ? parseDeprecatedItems(properties.items)
       : null;
   return {
@@ -92,7 +93,7 @@ export function parseItemList(
     tileScrollHint: parseOptionalBool(properties.tile_scroll_hint),
     sameColumnWidth: parseOptionalBool(properties.same_column_width),
     maxTextLines: parseOptionalInt(properties.max_text_lines),
-    itemCount: parseOptionalInt(properties.item_count),
+    itemCount: parseOptionalInt(rawItemCount),
     maxColumns: parseOptionalInt(properties.max_columns),
     fixedColumnWidth: parseOptionalInt(properties.fixed_column_width),
     iconScale: parseOptionalFloat(properties.icon_scale),
