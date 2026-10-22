@@ -54,6 +54,28 @@ describe('useNearestAnisotropy', () => {
     expect(texture.onUpdate).toBe(original);
   });
 
+  it("keeps a later hook's wrapper when an earlier hook on the same texture unmounts first", () => {
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: false });
+    const texture = textureWith();
+    const first = renderHook(() => useNearestAnisotropy(texture), { wrapper });
+    renderHook(() => useNearestAnisotropy(texture), { wrapper });
+
+    first.unmount();
+    texture.onUpdate!(texture);
+
+    expect(gl.texParameterf).toHaveBeenCalled();
+  });
+
+  it('writes nothing on a GPU without the anisotropic extension', () => {
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true, hasAnisotropyExtension: false });
+    const texture = textureWith();
+    const original = texture.onUpdate;
+    renderHook(() => useNearestAnisotropy(texture), { wrapper });
+
+    expect(gl.texParameterf).not.toHaveBeenCalled();
+    expect(texture.onUpdate).toBe(original);
+  });
+
   it('writes no more than the GPU supports', () => {
     const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true });
     renderHook(() => useNearestAnisotropy(textureWith({ anisotropy: 16 })), { wrapper });

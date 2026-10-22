@@ -16,8 +16,17 @@ interface FakeCanvasRenderer {
   wrapper: (props: { children: ReactNode }) => ReactNode;
 }
 
-/** `isAllocated`: three has already made GPU storage for every texture. */
-export function fakeCanvasRenderer({ isAllocated }: { isAllocated: boolean }): FakeCanvasRenderer {
+/**
+ * `isAllocated`: three has already made GPU storage for every texture. `hasAnisotropyExtension`:
+ * the GPU supports `EXT_texture_filter_anisotropic`, else three's `extensions.get` returns null.
+ */
+export function fakeCanvasRenderer({
+  isAllocated,
+  hasAnisotropyExtension = true,
+}: {
+  isAllocated: boolean;
+  hasAnisotropyExtension?: boolean;
+}): FakeCanvasRenderer {
   const storage = { name: 'storage' };
   const gl = { ...FAKE_GL, texParameterf: vi.fn() };
   const properties: { __webglTexture?: object } = isAllocated ? { __webglTexture: storage } : {};
@@ -25,7 +34,9 @@ export function fakeCanvasRenderer({ isAllocated }: { isAllocated: boolean }): F
     getContext: () => gl,
     state: { bindTexture: vi.fn() },
     properties: { get: () => properties },
-    extensions: { get: () => ({ TEXTURE_MAX_ANISOTROPY_EXT: MAX_ANISOTROPY_PARAMETER }) },
+    extensions: {
+      get: () => (hasAnisotropyExtension ? { TEXTURE_MAX_ANISOTROPY_EXT: MAX_ANISOTROPY_PARAMETER } : null),
+    },
     capabilities: { getMaxAnisotropy: () => 8 },
   };
   const store = { getState: () => ({ gl: renderer }) };

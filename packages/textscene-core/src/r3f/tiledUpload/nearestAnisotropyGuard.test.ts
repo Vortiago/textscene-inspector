@@ -3,9 +3,9 @@
  * through the tiled upload, since three leaves the anisotropy of filter 4 unwritten. A source scan,
  * because the next painter that samples a texture is the one to catch.
  */
-import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { isProductionSource, offendingLines, repoPath, walkSources } from '../testing/sourceScan';
 
 const SRC = path.resolve(import.meta.dirname, '../..');
 
@@ -19,28 +19,21 @@ const FILTER_DEFINERS = new Set([
 const SETS_FILTER = /\b(?:applyTextureFilterState|applyCanvasItemSampler|applyCanvasItemFilter)\(/;
 const WRITES_ANISOTROPY = /\buseNearestAnisotropy\(|\buseUploadedClone\(|\buseTiledUpload\(/;
 
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return sourceFiles(full);
-    const isSource = /\.tsx?$/.test(entry.name) && !/\.(test|testkit)\.tsx?$/.test(entry.name);
-    return isSource ? [full] : [];
-  });
-}
+const isCode = (source: string, pattern: RegExp): boolean => offendingLines(source, pattern).length > 0;
 
 describe('files that set a texture filter', () => {
-  const files = sourceFiles(SRC)
-    .map((file) => ({
-      file: path.relative(SRC, file).split(path.sep).join('/'),
-      text: readFileSync(file, 'utf8'),
-    }))
-    .filter(({ file, text }) => !FILTER_DEFINERS.has(file) && SETS_FILTER.test(text));
+  const files = walkSources([SRC], isProductionSource).filter(
+    ({ file, source }) =>
+      !FILTER_DEFINERS.has(path.relative(SRC, file).split(path.sep).join('/')) && isCode(source, SETS_FILTER)
+  );
 
   it('finds the filter sites, so the scan is not blind', () => {
     expect(files.length).toBeGreaterThanOrEqual(8);
   });
 
   it('writes the anisotropy of filter 4 for every one', () => {
-    expect(files.filter(({ text }) => !WRITES_ANISOTROPY.test(text)).map(({ file }) => file)).toEqual([]);
+    expect(
+      files.filter(({ source }) => !isCode(source, WRITES_ANISOTROPY)).map(({ file }) => repoPath(file))
+    ).toEqual([]);
   });
 });

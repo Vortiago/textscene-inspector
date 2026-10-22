@@ -27,19 +27,22 @@ export function useNearestAnisotropy(texture: THREE.Texture | null): void {
   const renderer = useContext(context)?.getState().gl;
   useEffect(() => {
     if (!texture || !renderer || !needsNearestAnisotropy(texture)) return;
-    const gl = renderer.getContext();
+    // three returns null for an extension the GPU lacks, and has nothing to write then.
     const extension = renderer.extensions.get(
       'EXT_texture_filter_anisotropic'
-    ) as EXT_texture_filter_anisotropic;
+    ) as EXT_texture_filter_anisotropic | null;
+    if (!extension) return;
+    const gl = renderer.getContext();
     const anisotropy = Math.min(texture.anisotropy, renderer.capabilities.getMaxAnisotropy());
     const writeToBound = () =>
       gl.texParameterf(gl.TEXTURE_2D, extension.TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
 
     const previous = texture.onUpdate;
-    texture.onUpdate = (uploaded) => {
+    const onUpdate: THREE.Texture['onUpdate'] = (uploaded) => {
       previous?.(uploaded);
       writeToBound();
     };
+    texture.onUpdate = onUpdate;
 
     const storage = handleOf(renderer, texture).__webglTexture;
     if (storage) {
@@ -48,7 +51,8 @@ export function useNearestAnisotropy(texture: THREE.Texture | null): void {
       writeToBound();
     }
     return () => {
-      texture.onUpdate = previous;
+      // Another hook may have wrapped this one since: its chain still reaches ours, so leave it.
+      if (texture.onUpdate === onUpdate) texture.onUpdate = previous;
     };
   }, [texture, renderer]);
 }
