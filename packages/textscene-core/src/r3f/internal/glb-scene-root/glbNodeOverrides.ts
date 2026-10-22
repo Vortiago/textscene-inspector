@@ -48,14 +48,30 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
  * `children` with each node written below a property override lifted to the instance, as the
  * node its parent path names, which is how Godot adds it. The scene tree builder nests such a node
  * below the override heading that its parent path passes through, where only the instance
- * itself can reach the GLB.
+ * itself can reach the GLB. Every reader of a GLB instance's children asks through here.
  */
-export function liftOverrideChildren(children: readonly LiveNode[], anchor?: string): LiveNode[] {
+export function liftOverrideChildren(children: readonly LiveNode[]): LiveNode[] {
+  let lifted = liftedByChildren.get(children);
+  if (!lifted) {
+    lifted = liftBelow(children, undefined);
+    liftedByChildren.set(children, lifted);
+  }
+  return lifted;
+}
+
+/** Written only by `liftOverrideChildren`, so each reader asking about one list gets one answer. */
+const liftedByChildren = new WeakMap<readonly LiveNode[], LiveNode[]>();
+
+/**
+ * `anchor` is the sub-path of the override the children are written below, undefined at the top.
+ * A node below an override has no sub-path of its own, and an empty one means the same.
+ */
+function liftBelow(children: readonly LiveNode[], anchor: string | undefined): LiveNode[] {
   return children.flatMap((child) => {
     const placed =
       anchor === undefined || child.instanceSubPath ? child : { ...child, instanceSubPath: anchor };
     if (!placed.overridesExistingNode || placed.children.length === 0) return [placed];
-    const below = liftOverrideChildren(placed.children, joinPath(placed.instanceSubPath ?? '', placed.name));
+    const below = liftBelow(placed.children, joinPath(placed.instanceSubPath ?? '', placed.name));
     return [{ ...placed, children: [] }, ...below];
   });
 }

@@ -173,6 +173,15 @@ function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly Live
  */
 const plainChildren = new WeakMap<THREE.Object3D, TscnNode[]>();
 
+/** The shared answer is read by every consumer of the GLB, so a write to it throws. */
+function freezeNodes(nodes: TscnNode[]): TscnNode[] {
+  for (const node of nodes) {
+    freezeNodes(node.children);
+    Object.freeze(node);
+  }
+  return Object.freeze(nodes) as TscnNode[];
+}
+
 function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
   const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));
   addAttachedChildren(nodes, attached);
@@ -203,7 +212,7 @@ export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly Li
   if (attached.length > 0) return buildGlbSceneRootChildren(root, attached);
   let children = plainChildren.get(root);
   if (!children) {
-    children = buildGlbSceneRootChildren(root, attached);
+    children = freezeNodes(buildGlbSceneRootChildren(root, attached));
     plainChildren.set(root, children);
   }
   return children;

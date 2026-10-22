@@ -2,6 +2,7 @@
 
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 
+/** The fake loader answers from its seeded cache, so a load ends within a few microtasks. The wait is a margin, not a measured time. */
 const LOAD_SETTLE_MS = 10;
 
 export async function settleLoads(): Promise<void> {

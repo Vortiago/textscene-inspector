@@ -198,6 +198,8 @@ function withoutDeepChildren(node: TscnNode): TscnNode {
  * `GlbInstanceProvider` hands it to the GLB, which applies it.
  */
 function withoutPropertyOverrides(node: TscnNode): TscnNode {
+  // Same reference when no child overrides, so the `useMemo([node])`s in `PlainNode` stay valid.
+  if (!node.children.some((c) => c.overridesExistingNode)) return node;
   const children = liftOverrideChildren(node.children).filter((c) => !c.overridesExistingNode);
   return { ...node, children };
 }

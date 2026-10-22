@@ -170,6 +170,12 @@ describe('glbSceneRootChildren per GLB', () => {
     expect(glbSceneRootChildren(root)).toBe(glbSceneRootChildren(root));
   });
 
+  it('refuses a write to the children it shares', () => {
+    const children = glbSceneRootChildren(rootWithBody());
+    expect(() => children.push(children[0]!)).toThrow(TypeError);
+    expect(() => children[0]!.children.push(children[0]!)).toThrow(TypeError);
+  });
+
   it('builds its own children for each of two GLBs', () => {
     expect(glbSceneRootChildren(rootWithBody())).not.toBe(glbSceneRootChildren(rootWithBody()));
   });
