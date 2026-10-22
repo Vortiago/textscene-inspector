@@ -11,6 +11,8 @@ import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbRoot } from './GlbInstanceContext';
 import { useGlbGeometryInstances } from './glbGeometryInstances';
+import { glbNodeLinks } from './glbNodeLinks';
+import { useUniqueNamePaths } from '../../useUniqueNames';
 import { useInstancingNodeTransform } from './instancingNodeTransform';
 import { applyGlbNodeOverrides, isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
@@ -68,7 +70,12 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
   useInstancingNodeTransform(object, root.rawProperties);
-  useGlbGeometryInstances(object, entries, root);
+  const uniquePaths = useUniqueNamePaths(root.path);
+  const links = useMemo(
+    () => (object ? glbNodeLinks(object, entries, root, uniquePaths) : []),
+    [object, entries, root, uniquePaths]
+  );
+  useGlbGeometryInstances(object, entries, root, links);
 
   // Registers each GLB object under the tree's relPath scheme, so the SceneTreeViewer can select
   // and hide it.
@@ -190,7 +197,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     <primitive object={object}>
       {importMaterials}
       {materialOverrides}
-      <GlbAttachedChildren object={object} entries={entries} root={root} nodePath={nodePath} />
+      <GlbAttachedChildren entries={entries} links={links} root={root} nodePath={nodePath} />
       {children}
     </primitive>
   );

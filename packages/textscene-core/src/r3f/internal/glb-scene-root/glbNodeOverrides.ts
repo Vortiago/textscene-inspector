@@ -44,10 +44,26 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
   return !override.instanceSubPath || override.overridesExistingNode === true;
 }
 
+/** Finds the GLB object a Godot path names: `matchGlbTarget`, which logs how, or a quiet lookup. */
+type GlbTargetLookup = (entries: readonly GlbObjectEntry[], godotPath: string) => GlbObjectEntry | null;
+
 /**
- * The instancing scene's typed nodes whose parent path names a GLB object, which Godot adds
- * to that object (`packed_scene.cpp:157-165`, `:541`), and the rest of `children`. A typed node
- * whose path names none stays among the rest, where the tree has always listed it.
+ * The GLB object a typed node of the instancing scene is added to: the one its parent path names,
+ * as Godot adds it (`packed_scene.cpp:157-165`, `:541`). Null for an override, which names an
+ * existing node, and for a path that names no object.
+ */
+export function glbAttachTarget(
+  entries: readonly GlbObjectEntry[],
+  child: TscnNode,
+  lookup: GlbTargetLookup
+): GlbObjectEntry | null {
+  return isApplicableGlbOverride(child) ? null : lookup(entries, child.instanceSubPath!);
+}
+
+/**
+ * The instancing scene's typed nodes that {@link glbAttachTarget} places on a GLB object, and the
+ * rest of `children`. A typed node whose path names none stays among the rest, where the tree has
+ * always listed it. It looks up through the quiet `findGlbTarget`.
  *
  * Each attached node comes back with `glbTargetRelPath` set, so the tree's next step
  * (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
@@ -61,9 +77,7 @@ export function splitAttachedChildren(
   const attached: LiveNode[] = [];
   const rest: LiveNode[] = [];
   for (const child of children) {
-    const entry = isApplicableGlbOverride(child)
-      ? null
-      : findGlbTarget(entries, child.instanceSubPath!).entry;
+    const entry = glbAttachTarget(entries, child, (all, path) => findGlbTarget(all, path).entry);
     if (entry) attached.push({ ...child, glbTargetRelPath: entry.relPath });
     else rest.push(child);
   }

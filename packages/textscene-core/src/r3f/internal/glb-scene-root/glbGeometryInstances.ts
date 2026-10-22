@@ -23,10 +23,9 @@ import type { InstancePlacement } from '../../visibilityRange/placements';
 import { visibleInTree } from '../../visibleInTree';
 import type { NodePlace } from '../../visibilityRange/visibilityScene';
 import { childOrders, useTreeOrder, type TreeOrder } from '../../contexts/TreeOrderContext';
-import { useUniqueNamePaths } from '../../useUniqueNames';
 import { lightmapsOf, type LightmapAssignment } from '../../lightmap/sceneLightmaps';
 import { glbObjectName, type GlbObjectEntry } from './glbHierarchy';
-import { glbNodeLinks } from './glbNodeLinks';
+import type { GlbNodeLink } from './glbNodeLinks';
 import type { GlbRoot } from './GlbInstanceContext';
 
 /** A MeshInstance3D of a GLB, with its node data. */
@@ -37,18 +36,17 @@ interface GlbMeshInstance {
 }
 
 /**
- * Each MeshInstance3D of `object`, the GLB root, then each under it in `entries` order, which is
+ * Each MeshInstance3D of `object`, the GLB root, then each under it in `links` order, which is
  * the GLB's tree order below `rootOrder`. The root is the node that instances the GLB, with its
  * properties.
  */
 function glbMeshInstances(
   object: THREE.Object3D,
-  entries: readonly GlbObjectEntry[],
+  links: readonly GlbNodeLink[],
   root: GlbRoot,
-  rootOrder: TreeOrder,
-  uniquePaths: ReadonlyMap<string, string> | undefined
+  rootOrder: TreeOrder
 ): GlbMeshInstance[] {
-  const orders = childOrders(rootOrder, entries.length);
+  const orders = childOrders(rootOrder, links.length);
   const instances: GlbMeshInstance[] = [];
   if (isMeshInstance(object)) {
     instances.push({
@@ -60,7 +58,7 @@ function glbMeshInstances(
       ),
     });
   }
-  glbNodeLinks(object, entries, root, uniquePaths).forEach(({ entry, properties, place }, i) => {
+  links.forEach(({ entry, properties, place }, i) => {
     if (!isMeshInstance(entry.object)) return;
     instances.push({ object: entry.object, place: { ...place, order: orders[i]! }, properties });
   });
@@ -69,22 +67,22 @@ function glbMeshInstances(
 
 /**
  * Registers each MeshInstance3D of the mounted GLB `object` with the scene cull, and gives it the
- * lightmap of the LightmapGI that names it. Each keeps one instance while its object is mounted,
+ * lightmap of the LightmapGI that names it. `links` are `entries` as `glbNodeLinks` reads them. Each keeps one instance while its object is mounted,
  * as an authored MeshInstance3D does, so a scene edit keeps the instance's previous visibility per
  * camera and its faded materials.
  */
 export function useGlbGeometryInstances(
   object: THREE.Object3D | undefined,
   entries: readonly GlbObjectEntry[],
-  root: GlbRoot
+  root: GlbRoot,
+  links: readonly GlbNodeLink[]
 ): void {
   const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
-  const uniquePaths = useUniqueNamePaths(root.path);
   const rootOrder = useTreeOrder();
   const instances = useMemo(
-    () => (object ? glbMeshInstances(object, entries, root, rootOrder, uniquePaths) : []),
-    [object, entries, root, rootOrder, uniquePaths]
+    () => (object ? glbMeshInstances(object, links, root, rootOrder) : []),
+    [object, links, root, rootOrder]
   );
   const culled = useRef(new Map<THREE.Object3D, CulledMeshInstance>());
   useLayoutEffect(() => {

@@ -6,7 +6,9 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyGlbNodeOverrides } from './glbNodeOverrides';
+import { applyGlbNodeOverrides, glbAttachTarget } from './glbNodeOverrides';
+import { flattenGlbObjects } from './glbHierarchy';
+import { findGlbTarget } from './matchGlbTarget';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
 import { buildTestGlbGraph } from './glbGraph.testkit';
@@ -173,5 +175,30 @@ describe('applyGlbNodeOverrides', () => {
     const applied = applyGlbNodeOverrides(root, [override('Robot', { rawProperties: { layers: '2' } })]);
 
     expect(applied.has('Robot')).toBe(false);
+  });
+});
+
+describe('glbAttachTarget', () => {
+  const quietLookup = (entries: Parameters<typeof findGlbTarget>[0], path: string) =>
+    findGlbTarget(entries, path).entry;
+  const typed = (name: string, instanceSubPath: string): TscnNode =>
+    override(name, { type: 'Node3D', instanceSubPath, overridesExistingNode: false });
+
+  it('names the GLB object a typed child is added to, across the level Godot synthesised', () => {
+    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+    expect(glbAttachTarget(entries, typed('Lamp', 'Skeleton/Skeleton3D/Robot'), quietLookup)?.relPath).toBe(
+      'Skeleton/Robot'
+    );
+  });
+
+  it('names none for an override, which names an existing node rather than adding one', () => {
+    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+    const deepOverride = override('Robot', { instanceSubPath: 'Skeleton' });
+    expect(glbAttachTarget(entries, deepOverride, quietLookup)).toBeNull();
+  });
+
+  it('names none for a path that names no GLB object (error case)', () => {
+    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+    expect(glbAttachTarget(entries, typed('Lamp', 'NoSuch'), quietLookup)).toBeNull();
   });
 });
