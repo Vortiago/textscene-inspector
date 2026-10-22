@@ -1,0 +1,15 @@
+; A res:// root of its own, because `rendering/textures/default_filters/texture_mipmap_bias` is a
+; PROJECT setting and no .tscn can carry one. Kept in a subdirectory rather than at
+; scenes/fixtures: a project.godot there would apply to every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="Texture mipmap bias"
+run/main_scene="res://unit-material-mipmap-bias.tscn"
+config/features=PackedStringArray("4.6")
+
+[rendering]
+
+textures/default_filters/texture_mipmap_bias=-0.5

@@ -54,6 +54,8 @@ export interface ResRoot extends ResourceProvider {
   stamp(resPath: string): Promise<string | null>;
   /** The host path of the file `resPath` names, or null for a path outside the root or a file it does not hold. */
   resolve(resPath: string): Promise<string | null>;
+  /** The host path `resPath` names, whether or not a file is there, or null for a path outside the root. No `stat`. */
+  pathOf(resPath: string): string | null;
   /** The `res://` path of every file the editor's scan reaches under the root, sorted, for path completion. */
   listPaths(): Promise<readonly string[]>;
   /** Overrides the provider's optional listing: a root always lists. */
@@ -143,6 +145,7 @@ function createRoot(port: ResRootsPort, path: string): RootEntry {
       const stat = file === null ? null : await port.stat(file);
       return stat === null ? null : fileStamp(stat.mtimeMs, stat.size);
     },
+    pathOf: (resPath) => resolveResPath(path, resPath),
     async resolve(resPath) {
       const file = resolveResPath(path, resPath);
       return file !== null && (await port.stat(file))?.isFile === true ? file : null;

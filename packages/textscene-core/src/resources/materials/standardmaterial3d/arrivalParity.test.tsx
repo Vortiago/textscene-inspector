@@ -24,6 +24,7 @@ import { buildMaterial } from './buildMaterial.testkit';
 import { standardMaterialBags, type StandardMaterialBag, type StandardMaterialClass } from './materialBag';
 import { GODOT_ALPHA_HASH } from '../../../r3f/materials/godotAlphaHash';
 import { alphaAntialiasingOf, GODOT_ALPHA_ANTIALIASING } from '../../../r3f/materials/godotAlphaAntialiasing';
+import { mipmapBiasInjection } from '../../../r3f/materials/godotMipmapBias';
 import type { ProgramInjection, ProgramShader } from '../../../r3f/materialProgramInputs';
 import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import { parseStandardMaterial3DScalars } from './scalars';
@@ -595,6 +596,8 @@ function bagInjections(bag: StandardMaterialBag): CompileHook[] {
   if (bag.props.alphaHash === true) hooks.push(GODOT_ALPHA_HASH.onBeforeCompile);
   if (alphaAntialiasingOf({ userData: bag.props.userData ?? {} }))
     hooks.push(GODOT_ALPHA_ANTIALIASING.onBeforeCompile);
+  const mipmapBias = mipmapBiasInjection(bag.props);
+  if (mipmapBias) hooks.push(mipmapBias.onBeforeCompile);
   return hooks;
 }
 

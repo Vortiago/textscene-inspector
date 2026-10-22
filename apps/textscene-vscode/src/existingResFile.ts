@@ -7,11 +7,16 @@
 import * as vscode from 'vscode';
 import { resRelativePath } from '@textscene/core/resources/resPath';
 
+/** The place `resPath` names under `resRoot`, a file or not, or null for a path that is not `res://` or climbs out of the root. */
+export function resPathUri(resRoot: vscode.Uri, resPath: string): vscode.Uri | null {
+  const relativePath = resRelativePath(resPath);
+  return relativePath === null ? null : vscode.Uri.joinPath(resRoot, relativePath);
+}
+
 /** The file `resPath` names under `resRoot`, or null for a path that is not `res://`, a missing file or a directory. */
 export async function existingResFile(resRoot: vscode.Uri, resPath: string): Promise<vscode.Uri | null> {
-  const relativePath = resRelativePath(resPath);
-  if (relativePath === null) return null;
-  const file = vscode.Uri.joinPath(resRoot, relativePath);
+  const file = resPathUri(resRoot, resPath);
+  if (file === null) return null;
   try {
     const { type } = await vscode.workspace.fs.stat(file);
     return type & vscode.FileType.File ? file : null;

@@ -14,8 +14,8 @@ import {
   textureFilterMatches,
 } from './godotTextureFilter';
 
-/** The anisotropy ceiling the previewer pins: `anisotropic_filtering_level` 4, so `1 << 4`. */
-const GODOT_ANISOTROPY_MAX = 16;
+/** The anisotropy ceiling of Godot's default `anisotropic_filtering_level` 2 (`rendering_server.cpp:3750`): `1 << 2`. */
+const GODOT_ANISOTROPY_MAX = 4;
 
 /**
  * Godot's six sampler states. `min_filter` there is the within-level filter and
@@ -57,6 +57,24 @@ describe('godotTextureFilterState', () => {
       });
     }
   );
+
+  it.each([
+    [0, 1],
+    [1, 2],
+    [3, 8],
+    [4, 16],
+  ])(
+    'lets anisotropic_filtering_level %i raise the anisotropic rows to %i (material_storage.cpp:2461)',
+    (level, anisotropy) => {
+      expect(godotTextureFilterState(5, level).anisotropy).toBe(anisotropy);
+      expect(godotTextureFilterState(4, level).anisotropy).toBe(anisotropy);
+    }
+  );
+
+  it('leaves the rows without anisotropy at 1 whatever the level', () => {
+    expect(godotTextureFilterState(3, 4).anisotropy).toBe(1);
+    expect(godotTextureFilterState(1, 4).anisotropy).toBe(1);
+  });
 
   it("falls back to Godot's default for an absent or out-of-range value", () => {
     // `BaseMaterial3D::texture_filter = TEXTURE_FILTER_LINEAR_WITH_MIPMAPS`.

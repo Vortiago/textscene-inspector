@@ -1,6 +1,6 @@
 /**
- * The language-feature engine: hover, completion, quick fixes, folding, highlights, the outline
- * and navigation for a `.tscn`, over the same parser and ClassDB captures the linter reads. It is
+ * The language-feature engine: hover, completion, quick fixes, folding, highlights, the outline,
+ * navigation and `res://` references for a `.tscn`, over the same parser and ClassDB captures the linter reads. It is
  * React- and THREE-free, so the `tscn-lsp` server and the VS Code extension host process both
  * import it. Every result is host-neutral, with zero-based ranges (`types.ts`). This entry point
  * exports only what a host calls.
@@ -24,6 +24,7 @@ export {
   resPathOccurrences,
   type ResPathOccurrence,
 } from './navigation.js';
+export { resPathReferencesAt, type ReferenceSource, type ResPathReference } from './references.js';
 export type {
   CodeAction,
   CompletionItem,

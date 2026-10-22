@@ -188,6 +188,7 @@
       "exactly": [
         "res://deprecated.tscn",
         "res://fixes.tscn",
+        "res://grid_material.tres",
         "res://ids.tscn",
         "res://legacy_ids.tscn",
         "res://links.tscn",
@@ -544,6 +545,309 @@
         "inside": "Missing"
       },
       "targets": []
+    }
+  ],
+  "references": [
+    {
+      "name": "an ext_resource path lists the path in every scene and resource of the project, and in no nested project, .gdignore directory or dot-named directory",
+      "at": {
+        "file": "main.tscn",
+        "line": "[ext_resource",
+        "inside": "res://textures/grid.png"
+      },
+      "locations": [
+        {
+          "file": "grid_material.tres",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "legacy_ids.tscn",
+          "range": [
+            2,
+            20,
+            2,
+            43
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            4,
+            22,
+            4,
+            45
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            9,
+            27,
+            9,
+            50
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            10,
+            18,
+            10,
+            41
+          ]
+        },
+        {
+          "file": "main.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "main.tscn",
+          "range": [
+            15,
+            25,
+            15,
+            48
+          ]
+        },
+        {
+          "file": "missing.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "typing.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a path in a string value finds the same locations, those in an escaped string, prose and before :: included",
+      "at": {
+        "file": "main.tscn",
+        "line": "metadata/texture_path = ",
+        "inside": "res://textures/grid.png"
+      },
+      "locations": [
+        {
+          "file": "grid_material.tres",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "legacy_ids.tscn",
+          "range": [
+            2,
+            20,
+            2,
+            43
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            4,
+            22,
+            4,
+            45
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            9,
+            27,
+            9,
+            50
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            10,
+            18,
+            10,
+            41
+          ]
+        },
+        {
+          "file": "main.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "main.tscn",
+          "range": [
+            15,
+            25,
+            15,
+            48
+          ]
+        },
+        {
+          "file": "missing.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "typing.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a path in prose finds the same locations",
+      "at": {
+        "file": "links.tscn",
+        "line": "editor_description",
+        "inside": "res://textures/grid.png"
+      },
+      "locations": [
+        {
+          "file": "grid_material.tres",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "legacy_ids.tscn",
+          "range": [
+            2,
+            20,
+            2,
+            43
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            4,
+            22,
+            4,
+            45
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            9,
+            27,
+            9,
+            50
+          ]
+        },
+        {
+          "file": "links.tscn",
+          "range": [
+            10,
+            18,
+            10,
+            41
+          ]
+        },
+        {
+          "file": "main.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "main.tscn",
+          "range": [
+            15,
+            25,
+            15,
+            48
+          ]
+        },
+        {
+          "file": "missing.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        },
+        {
+          "file": "typing.tscn",
+          "range": [
+            2,
+            37,
+            2,
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a path that one file names finds that one occurrence",
+      "at": {
+        "file": "fixes.tscn",
+        "line": "[ext_resource",
+        "inside": "res://mover.gd"
+      },
+      "locations": [
+        {
+          "file": "fixes.tscn",
+          "range": [
+            2,
+            34,
+            2,
+            48
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a cursor off every res:// path finds nothing",
+      "at": {
+        "file": "main.tscn",
+        "line": "[node name=\"Box\"",
+        "inside": "MeshInstance3D"
+      },
+      "locations": []
     }
   ],
   "highlights": [

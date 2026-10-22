@@ -98,5 +98,6 @@ export const mockLanguages: any = {
   registerCodeActionsProvider: vi.fn(),
   registerFoldingRangeProvider: vi.fn(),
   registerDocumentHighlightProvider: vi.fn(),
+  registerReferenceProvider: vi.fn(),
   createDiagnosticCollection: vi.fn((name: string) => createMockDiagnosticCollection(name)),
 };

@@ -61,6 +61,12 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 `--rendering-driver opengl3` gives 77, and so does the previewer's WebGL clear. This
 1/255 gap is not a parity defect.
 
+## Why anisotropic filtering differs from the Godot reference
+
+`pnpm ref:godot` samples on lavapipe, which implements the anisotropic algorithm that the Vulkan specification suggests. It takes `ceil(rho_max / rho_min)` taps, capped at `1 << anisotropic_filtering_level`, spaced `1 / (N + 1)` of the longer screen-space gradient apart. Each tap is trilinear at the level of `rho_max / N` (`lp_bld_sample.c:266-358`, `lp_bld_sample_soa.c:2186-2330`, Mesa 25.2.8).
+
+The previewer asks the browser's driver for the same maximum and takes that driver's own tap pattern, so `texture_filter` 4 and 5 read 1.6 to 2.2 per channel (/255) from Godot at level 1 and above. A shader that ports the lavapipe taps into the previewer measures 0.563, 0.544, 0.548 and 0.550 at levels 1 to 4, against 2.179, 1.899, 1.625 and 1.605 for the browser's own taps. Level 0 measures 0.525. The port is an experiment and is not shipped. Godot asks the driver for a maximum and names no pattern, so a GPU's pattern differs from lavapipe's as well. This gap is not a parity defect.
+
 ## 3D
 
 - [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md): nothing yet, Godot rotates a bone toward its target, the previewer does not

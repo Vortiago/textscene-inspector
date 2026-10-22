@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitmatmipbias"]
+
+; One variable: the project's `rendering/textures/default_filters/texture_mipmap_bias`, -0.5, set in
+; this directory's project.godot. An unshaded 256 x 256 checker (8-texel squares, mipmaps on) tiles a
+; floor seen at the editor view's oblique angle, so the far squares fall to coarse mip levels. A bias of -0.5
+; picks a sharper level and resolves squares that a bias of 0 blends to purple. No other golden
+; minifies a mipmapped 3D material texture at a project bias, so none shows a regression in it.
+
+[ext_resource type="Texture2D" path="res://checker.png" id="1_checker"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+shading_mode = 0
+albedo_texture = ExtResource("1_checker")
+uv1_scale = Vector3(10, 10, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector2(40, 40)
+
+[node name="MipmapBias" type="Node3D"]
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_floor")

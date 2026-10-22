@@ -21,6 +21,7 @@ import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { installShaderPatches } from './shaderPatch/installShaderPatches.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
+import { SceneMipmapBias } from './materials/SceneMipmapBias.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
 import { ScreenshotBridge } from './ScreenshotBridge.js';
 import { TiledUploadDriver } from './tiledUpload/TiledUploadDriver.js';
@@ -66,6 +67,7 @@ export function TscnSceneContents() {
         />
         <ViewportPassOrchestrator />
         <SceneShadowFitter />
+        <SceneMipmapBias />
         <SceneDepthPrepass />
         <SelectionHighlight />
         <HoverHighlight />
