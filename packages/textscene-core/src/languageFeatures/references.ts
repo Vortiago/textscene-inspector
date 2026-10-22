@@ -33,10 +33,9 @@ export interface ResPathReference {
  */
 const READS_IN_FLIGHT = 32;
 
-/** `visit` over `items`, with at most `limit` calls in flight. The results come back in the order of `items`. */
+/** `visit` over `items`, with at most {@link READS_IN_FLIGHT} calls in flight. The results come back in the order of `items`. */
 async function mapBounded<Item, Result>(
   items: readonly Item[],
-  limit: number,
   visit: (item: Item) => Promise<Result>
 ): Promise<Result[]> {
   const results = new Array<Result>(items.length);
@@ -46,7 +45,7 @@ async function mapBounded<Item, Result>(
       results[index] = await visit(items[index]!);
     }
   };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, work));
+  await Promise.all(Array.from({ length: Math.min(READS_IN_FLIGHT, items.length) }, work));
   return results;
 }
 
@@ -72,7 +71,7 @@ export async function resPathReferencesAt(
   const target = resPathAt(document, position);
   if (target === undefined) return [];
   const files = (await source.listPaths()).filter(isGodotTextResourcePath);
-  const perFile = await mapBounded(files, READS_IN_FLIGHT, async (file) => {
+  const perFile = await mapBounded(files, async (file) => {
     const text = await source.readText(file);
     return text === null ? [] : occurrencesOf(target.path, text).map((range) => ({ file, range }));
   });

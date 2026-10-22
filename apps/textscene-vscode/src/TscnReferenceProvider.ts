@@ -31,7 +31,10 @@ async function readReferenceText(root: vscode.Uri, path: string): Promise<string
 export class TscnReferenceProvider implements vscode.ReferenceProvider {
   constructor(private readonly pathListing: ResPathListing) {}
 
-  /** The occurrence under the cursor is always one of the references, so the context's `includeDeclaration` is not read. */
+  /**
+   * The occurrence under the cursor is one of the references when its file is in the listing, so the context's
+   * `includeDeclaration` is not read. A file the listing skips, such as one under a `.gdignore`, reports none.
+   */
   async provideReferences(
     document: vscode.TextDocument,
     position: vscode.Position
