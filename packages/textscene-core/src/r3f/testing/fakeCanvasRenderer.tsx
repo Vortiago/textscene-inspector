@@ -3,14 +3,21 @@
  * for a test that draws a texture without a WebGL context.
  */
 import { createElement, type ReactNode } from 'react';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 import { context } from '@react-three/fiber';
 
 export const FAKE_GL = { TEXTURE_2D: 0x0de1, TEXTURE0: 0x84c0 };
 export const MAX_ANISOTROPY_PARAMETER = 0x84fe;
 
+interface FakeCanvasRenderer {
+  gl: typeof FAKE_GL & { texParameterf: Mock };
+  renderer: { state: { bindTexture: Mock }; initTexture: Mock };
+  storage: object;
+  wrapper: (props: { children: ReactNode }) => ReactNode;
+}
+
 /** `isAllocated`: three has already made GPU storage for every texture. */
-export function fakeCanvasRenderer({ isAllocated }: { isAllocated: boolean }) {
+export function fakeCanvasRenderer({ isAllocated }: { isAllocated: boolean }): FakeCanvasRenderer {
   const storage = { name: 'storage' };
   const gl = { ...FAKE_GL, texParameterf: vi.fn() };
   const properties = isAllocated ? { __webglTexture: storage } : {};
