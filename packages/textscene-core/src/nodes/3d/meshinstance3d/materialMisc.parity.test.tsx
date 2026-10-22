@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import { standardMaterialBags } from '../../../resources/materials/standardmaterial3d/materialBag';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
@@ -59,7 +60,7 @@ describe('StandardMaterialSlot vertexColors', () => {
     const scalars = parseStandardMaterial3DScalars({ vertex_color_use_as_albedo: 'true' });
     const r = await ReactThreeTestRenderer.create(
       <mesh>
-        <StandardMaterialSlot scalars={scalars} />
+        <StandardMaterialSlot bags={standardMaterialBags(scalars)} />
       </mesh>
     );
     const m = findMesh(r.scene).material as THREE.MeshStandardMaterial;
@@ -73,7 +74,7 @@ describe('StandardMaterialSlot vertexColors', () => {
     });
     const r = await ReactThreeTestRenderer.create(
       <mesh>
-        <StandardMaterialSlot scalars={scalars} />
+        <StandardMaterialSlot bags={standardMaterialBags(scalars)} />
       </mesh>
     );
     const m = findMesh(r.scene).material as THREE.MeshBasicMaterial;
@@ -92,7 +93,7 @@ describe('StandardMaterialSlot vertexColors', () => {
     });
     const r = await ReactThreeTestRenderer.create(
       <mesh>
-        <StandardMaterialSlot scalars={scalars} />
+        <StandardMaterialSlot bags={standardMaterialBags(scalars)} />
       </mesh>
     );
     const m = findMesh(r.scene).material as THREE.Material;

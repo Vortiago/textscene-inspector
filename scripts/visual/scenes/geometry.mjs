@@ -164,6 +164,9 @@ export const GEOMETRY_SCENES = [
   // depth prepass cast, and a blended surface or one with no depth test casts nothing.
   { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
+  // The default font's glyph pages with a mip chain (`gui/theme/default_font_generate_mipmaps`), seen
+  // small at a project mipmap bias of -1. A raster without the chain draws the same text sparkling.
+  { name: 'label3d-glyph-mipmaps', file: 'label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn' },
   // A whole-node FIXED_Y billboard takes the camera's axes, so sprites off the screen centre
   // face the camera's forward axis, and a turned parent leaves no trace.
   { name: 'sprite3d-billboard-fixed-y', file: 'unit-sprite3d-billboard-fixed-y.tscn' },

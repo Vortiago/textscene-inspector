@@ -11,6 +11,7 @@ import { GODOT_DEFAULT_ALBEDO } from './godotDefaultMaterial';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
+import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 
 function linear(color: THREE.Color) {
@@ -70,6 +71,6 @@ describe('<SurfaceMaterialSlot> fallback', () => {
 
 describe('<StandardMaterialSlot> fallback', () => {
   it('agrees with the shared constant for a surface with no scalars', async () => {
-    expectGodotDefault(await renderSlot(<StandardMaterialSlot scalars={null} />));
+    expectGodotDefault(await renderSlot(<StandardMaterialSlot bags={standardMaterialBags(null)} />));
   });
 });

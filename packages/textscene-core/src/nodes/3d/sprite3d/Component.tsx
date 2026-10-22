@@ -15,7 +15,8 @@ import { frameSizePx, frameUvWindow, spriteSamplerClone, spriteWrapMode } from '
 import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
 import { useUvWindow } from '../../../r3f/useUvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
+import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
+import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import type { FadePass } from '../../../r3f/materials/fadeVariants';
 import { opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
@@ -85,6 +86,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     doubleSided: properties.double_sided,
     noDepthTest: properties.no_depth_test,
     textureFilter: properties.texture_filter,
+    anisotropicFilteringLevel: useAnisotropicFilteringLevel(),
   });
   // The shared `r3f/spriteFrame` module (Sprite2D and Sprite3D) clones the texture with its
   // sampler state. The sprite's material samples `texture_albedo` (`sprite_3d.cpp:306`), a
@@ -204,7 +206,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
       antialiasing,
       opaquePrepass,
     } = blends[pass];
-    const program = materialProgramInputs({
+    const program = viewportProgramInputs({
       props: {
         attach,
         map: displayedTexture,

@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { NodePathProvider } from '../contexts/NodePathContext';
@@ -30,7 +31,7 @@ async function materialAt(path: string, data: Record<string, string> = {}): Prom
   const renderer = await ReactThreeTestRenderer.create(
     <NodePathProvider path={path}>
       <mesh>
-        <StandardMaterialSlot scalars={parseStandardMaterial3DScalars(data)} />
+        <StandardMaterialSlot bags={standardMaterialBags(parseStandardMaterial3DScalars(data))} />
       </mesh>
     </NodePathProvider>
   );

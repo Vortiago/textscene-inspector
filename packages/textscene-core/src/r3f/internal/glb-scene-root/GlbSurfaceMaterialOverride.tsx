@@ -6,19 +6,11 @@
 
 import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
-import {
-  MISSING_TEXTURE_MATERIAL,
-  standardMaterialBags,
-} from '../../../resources/materials/standardmaterial3d/materialBag.js';
+import { MISSING_TEXTURE_MATERIAL } from '../../../resources/materials/standardmaterial3d/materialBag.js';
 import { materialFromBag } from '../../../resources/materials/standardmaterial3d/build.js';
-import { resolvedTexturesFromMaps } from '../../materials/materialTextureMaps.js';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials.js';
-import {
-  GLTF_SURFACE,
-  useMaterialScalars,
-  useMaterialTextures,
-} from '../../materials/SurfaceMaterialSlot.js';
-import { readyMaterial, useMaterial } from '../../materials/useMaterial.js';
+import { GLTF_SURFACE } from '../../materials/surfaceTextures.js';
+import { useSurfaceMaterial } from '../../materials/useSurfaceMaterial.js';
 import type { MaterialSource } from '../../materials/materialSource.js';
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease.js';
@@ -33,30 +25,19 @@ interface GlbSurfaceMaterialOverrideProps {
 }
 
 /**
- * The override material, built and disposed here, whichever file it came from. Not
- * `<StandardMaterialSlot>`: the target is inside a cloned GLB with no R3F element. It shares
- * that slot's derivation, so the adapters stay two (ADR-0039). A material this previewer
- * cannot build still replaced the glTF's own, so the surface is Godot's default (ADR-0041).
- * One still loading, or one that never loads, replaces nothing, as Godot's null material does.
- * One whose texture never draws takes the magenta placeholder, as `<SurfaceMaterialSlot>` does.
+ * The override material, built and disposed here: the target is a cloned GLB with no R3F element,
+ * so it installs the bags of `useSurfaceMaterial` itself (ADR-0039). A material this previewer
+ * cannot build still replaces the glTF's own with Godot's default (ADR-0041). One still loading,
+ * or one that never loads, replaces nothing, as Godot's null does. A missing texture draws magenta.
  */
 export function GlbSurfaceMaterialOverride({
   target,
   source,
   replaces = everySurface,
 }: GlbSurfaceMaterialOverrideProps) {
-  const loaded = useMaterial(source);
-  const ready = readyMaterial(loaded);
-  const scalars = useMaterialScalars(ready);
   // The geometry is the glTF's: no Godot mesh sub-resource for a triplanar material to tile
   // against, and UVs in Godot's top-down V.
-  const { maps, isUnresolved } = useMaterialTextures(scalars, ready, GLTF_SURFACE);
-  const isAbsent = loaded.status === 'absent';
-  // No bags while unresolved, so a late map leaves the placeholder material as it is.
-  const bags = useMemo(
-    () => (isUnresolved ? null : standardMaterialBags(scalars, resolvedTexturesFromMaps(maps))),
-    [isUnresolved, scalars, maps]
-  );
+  const { isAbsent, bags } = useSurfaceMaterial(source, GLTF_SURFACE);
   const material = useMemo(() => {
     if (isAbsent) return null;
     if (!bags) return materialFromBag(MISSING_TEXTURE_MATERIAL);
