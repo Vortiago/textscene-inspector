@@ -12,12 +12,12 @@ import { undrawnGeometryInstance } from '../../geometryinstance3d/Component';
 import { EmissionShapeGizmo, ParticlesBoxGizmo } from '../gizmo/ParticleGizmos';
 import { useGPUParticles3DAabb } from './ownAabb';
 import type { GPUParticles3DProperties } from './types';
-import { useProcessMaterial } from './useProcessMaterial';
+import { useProcessMaterialEmission } from './useProcessMaterialEmission';
 
 const UndrawnGPUParticles3D = undrawnGeometryInstance(useGPUParticles3DAabb);
 
 function Gizmos({ properties }: { properties: GPUParticles3DProperties }) {
-  const emission = useProcessMaterial(properties.processMaterial);
+  const emission = useProcessMaterialEmission(properties.processMaterial);
   return (
     <>
       <ParticlesBoxGizmo box={properties.visibilityAabb} />

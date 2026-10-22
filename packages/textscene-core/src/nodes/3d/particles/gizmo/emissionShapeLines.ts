@@ -15,6 +15,7 @@ import type { ParticleEmission } from '../emission/types';
 /** The circles run `i = 0..120` of 3 degrees, so the last segment overlaps the first. */
 const LAST_CIRCLE_SEGMENT = 120;
 const DEGREES_PER_SEGMENT = 3;
+const AXES = ['x', 'y', 'z'] as const;
 /** The ring's vertical lines stand at every 30th segment: 0, 90, 180, 270 and 360 degrees. */
 const RING_LINE_SEGMENT_STEP = 30;
 
@@ -68,8 +69,6 @@ function sphereLines(radius: number, offset: Vector3, scale: Vector3): number[] 
   }
   return points;
 }
-
-const AXES = ['x', 'y', 'z'] as const;
 
 function boxLines(extents: Vector3, offset: Vector3, scale: Vector3): number[] {
   return aabbEdges(UNIT_BOX_AABB).map((coordinate, i) => {

@@ -11,7 +11,7 @@ import { useResourceResolution } from '../../../../resources/useSubOrExtResource
  * unreadable, and for any other material type: a ShaderMaterial draws no emission shape
  * (`particles_3d_emission_shape_gizmo_plugin.cpp:88-89`).
  */
-export function useProcessMaterial(reference: string | undefined): ParticleEmission | null {
+export function useProcessMaterialEmission(reference: string | undefined): ParticleEmission | null {
   const { scoped } = useResourceResolution(reference, useSceneResources());
   const resource = scoped?.resource;
   return useMemo(
