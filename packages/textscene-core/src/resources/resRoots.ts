@@ -214,7 +214,7 @@ class PortResRoots implements ResRoots {
 
   /** The root found from `start` upward, where `isLoose` says whether a directory may serve as a loose root. */
   private async rootFrom(start: string, isLoose: (dir: string) => boolean): Promise<ResRoot | null> {
-    const rootDir = await findResRoot(start, parentDir, () => false, this.hasProjectFile, isLoose);
+    const rootDir = await findResRoot(start, parentDir, this.hasProjectFile, isLoose);
     return rootDir === null ? null : this.rootAt(rootDir);
   }
 

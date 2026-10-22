@@ -1,5 +1,5 @@
 /**
- * Tests for the `res://` root walk: up from a document for project.godot, bounded by the workspace root, with the
+ * Tests for the `res://` root walk: up from a document for project.godot, past the workspace root, with the
  * document's own directory outside every project.
  */
 
@@ -32,12 +32,12 @@ describe('findResRootIn', () => {
     expect(result?.fsPath).toBe('/workspace/isometric');
   });
 
-  it("gives the document's own directory when the only project.godot lies above the workspace root", async () => {
+  it('gives the project.godot directory above the workspace root, as the Node hosts do', async () => {
     const holds = async (dir: ReturnType<typeof createMockUri>) => dir.fsPath === '/';
 
     const result = await findResRootIn(workspaceRoot, createMockUri('/workspace/scenes/Door.tscn'), holds);
 
-    expect(result?.fsPath).toBe('/workspace/scenes');
+    expect(result?.fsPath).toBe('/');
   });
 
   it('gives null for a document outside the workspace root', async () => {
@@ -65,7 +65,7 @@ describe('findResRootIn', () => {
     expect(result?.fsPath).toBe('/workspace');
   });
 
-  it('asks about each directory from the document up to the workspace root, and none above it', async () => {
+  it('asks about each directory from the document up to the top', async () => {
     const asked: string[] = [];
     const holds = async (dir: ReturnType<typeof createMockUri>) => {
       asked.push(dir.fsPath);
@@ -74,7 +74,7 @@ describe('findResRootIn', () => {
 
     await findResRootIn(workspaceRoot, createMockUri('/workspace/a/b/Door.tscn'), holds);
 
-    expect(asked).toEqual(['/workspace/a/b', '/workspace/a', '/workspace']);
+    expect(asked).toEqual(['/workspace/a/b', '/workspace/a', '/workspace', '/']);
   });
 });
 

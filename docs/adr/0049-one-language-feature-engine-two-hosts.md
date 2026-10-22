@@ -39,8 +39,13 @@ property tables, hints and deprecated aliases, and the copies would drift.
   rule: the nearest `project.godot` directory, or the scene's own directory outside every
   project. Godot has no `res://` there, but a loose scene, such as one from a vendored demo,
   names its files from its own directory. So links, definitions, path completion, the preview
-  and cross-file lints work for it. The fallback holds only inside the workspace, so no listing
-  walks `/tmp` or a home directory. The CLI's workspace is the directory it runs from.
+  and cross-file lints work for it. The walk for `project.godot` does not stop at the workspace:
+  in every host it goes up to the filesystem root, so a workspace opened on a folder inside a
+  project takes that project's root. The fallback holds only inside the workspace, so no listing
+  walks `/tmp` or a home directory. The CLI's workspace is the directory it runs from. The VS Code
+  watchers see only the workspace, so the extension learns of no change to a `project.godot`
+  above it. A root found there stays until a cache clears for another reason or the window
+  reloads.
   The server and the CLI ask one `ResRoots` (`resources/resRoots.ts`), which owns every answer it
   reads from the disk and drops what a change affects (`invalidate`). The adapter for `node:fs` is
   `createDiskResRoots` in `@textscene/core/resources/diskProject`. An ESLint rule keeps that
