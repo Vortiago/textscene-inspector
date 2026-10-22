@@ -47,6 +47,12 @@ A SubViewport's target in the emission slot, over a black albedo. A material bin
 
 - **Approximated** The tilted texel shades darker than Godot's, while the flat texel matches.
 
+## Roughness limiter on a normal map
+
+<!-- compare: image=unit-material-roughness-limiter-derivative status=done fixture=unit-material-roughness-limiter-derivative.tscn -->
+
+A smooth metal sphere under a bumpy normal map, lit by the sun. Godot's screen-space roughness limiter spreads the highlight by the difference of the normal between the two pixels of a pair (`scene_forward_clustered.glsl:1660`). WebGL 2 has no fine derivative, so the previewer reads the normal map one texel along the pair and takes the same difference.
+
 ## Clearcoat
 
 <!-- compare: image=unit-material-clearcoat status=done fixture=unit-material-clearcoat.tscn -->

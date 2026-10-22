@@ -3402,6 +3402,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Roughness Limiter Derivative",
+    "file": "unit-material-roughness-limiter-derivative.tscn",
+    "category": "Unit - Materials"
+  },
+  {
     "name": "Material Roughness Limiter",
     "file": "unit-material-roughness-limiter.tscn",
     "category": "Unit - Materials"

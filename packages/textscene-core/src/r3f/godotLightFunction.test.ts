@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import { threeAnisotropy, installGodotLightFunction } from './godotLightFunction';
 import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
 import { installGodotLightSize } from './lightSize/lightSizeChunk';
+import { installGodotNormalMapRead } from './materials/godotNormalMap';
 import { warningsOf } from './testing/logWarnings';
 import { preprocessorBranch } from './testing/glslSource';
 import { installedShaderChunks } from './testing/shaderPatches';
@@ -29,6 +30,8 @@ function installedChunks(): Record<LightChunk, string> {
 
 const threeChunks = installedChunks();
 const threeLightChunks = {
+  normalmap_pars_fragment: THREE.ShaderChunk.normalmap_pars_fragment,
+  normal_fragment_maps: THREE.ShaderChunk.normal_fragment_maps,
   lights_pars_begin: THREE.ShaderChunk.lights_pars_begin,
   lights_fragment_begin: THREE.ShaderChunk.lights_fragment_begin,
 };
@@ -119,6 +122,26 @@ describe('the installed light function', () => {
     );
   });
 
+  it("limits roughness by the normal map's paired texel difference, as a fine derivative takes it", () => {
+    // `scene_forward_clustered.glsl:1660`; WebGL 2 has no `dFdxFine`.
+    const mapped = preprocessorBranch(godotChunks()[SETUP_CHUNK], '#ifdef USE_NORMALMAP_TANGENTSPACE');
+    expect(mapped).toContain('vec2 godotPair = 1.0 - 2.0 * mod( floor( gl_FragCoord.xy ), 2.0 );');
+    expect(mapped).toContain(
+      'vec3 godotDndu = godotPair.x * ( godotMapNormal( vNormalMapUv + godotPair.x * godotUvDx, godotUvDx, godotUvDy, tbn + godotPair.x * godotTbnDx ) - normal );'
+    );
+    expect(mapped).toContain(
+      'vec3 godotDndv = godotPair.y * ( godotMapNormal( vNormalMapUv + godotPair.y * godotUvDy, godotUvDx, godotUvDy, tbn + godotPair.y * godotTbnDy ) - normal );'
+    );
+    expect(mapped).not.toContain('dFdx( normal )');
+  });
+
+  it('keeps the screen derivative of the normal when no tangent-space map perturbs it (edge case)', () => {
+    const limiter = godotChunks()[SETUP_CHUNK].split('#ifdef USE_NORMALMAP_TANGENTSPACE')[1]!;
+    const unmapped = preprocessorBranch(limiter, '#else');
+    expect(unmapped).toContain('vec3 godotDndu = dFdx( normal );');
+    expect(unmapped).toContain('vec3 godotDndv = dFdy( normal );');
+  });
+
   it("stretches the anisotropic lobe by Godot's aspect ratio of its roughness", () => {
     // `scene_forward_lights_inc.glsl:241-245`.
     const setup = godotChunks()[SETUP_CHUNK];
@@ -162,6 +185,7 @@ describe('installGodotLightFunction', () => {
   beforeEach(() => {
     installGodotLightSpecular();
     installGodotLightSize();
+    installGodotNormalMapRead();
   });
 
   it('writes Godot’s roughness and light function into all three chunks', () => {
@@ -207,6 +231,15 @@ describe('installGodotLightFunction', () => {
   it("leaves three's chunks alone before the light size it reads, and warns (error case)", () => {
     Object.assign(THREE.ShaderChunk, threeLightChunks);
     installGodotLightSpecular();
+
+    expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
+    expect(installedChunks()).toEqual(threeChunks);
+  });
+
+  it("leaves three's chunks alone before the normal map read it calls, and warns (error case)", () => {
+    Object.assign(THREE.ShaderChunk, threeLightChunks);
+    installGodotLightSpecular();
+    installGodotLightSize();
 
     expect(warningsOf(installGodotLightFunction)).toHaveLength(1);
     expect(installedChunks()).toEqual(threeChunks);

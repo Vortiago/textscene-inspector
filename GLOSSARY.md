@@ -39,6 +39,11 @@ _Avoid_: "mipmaps" for a chain the GPU generates.
 
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
+_Avoid_: the bare name for the **Screen-space roughness limiter**.
+
+**Screen-space roughness limiter** (`r3f/godotLightFunction.ts`):
+The shader step that raises a pixel's roughness by how far its normal differs from the normal of its pixel pair.
+Godot takes a fine derivative. WebGL 2 has none, so a pixel with a normal map reads the map one texel along its pair.
 
 **Unwrap cache**:
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.

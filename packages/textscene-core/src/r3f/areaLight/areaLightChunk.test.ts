@@ -8,6 +8,7 @@ import { installGodotAreaLight } from './areaLightChunk';
 import { installGodotLightFunction } from '../godotLightFunction';
 import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk';
 import { installGodotLightSize } from '../lightSize/lightSizeChunk';
+import { installGodotNormalMapRead } from '../materials/godotNormalMap';
 import { installGodotLightAttenuation } from '../godotLightAttenuation';
 import { ltcTables } from '../../godot/rendering/lights/ltc';
 import { warningsOf } from '../testing/logWarnings';
@@ -24,6 +25,7 @@ afterEach(() => {
 function installWithItsPrerequisites(): void {
   installGodotLightSpecular();
   installGodotLightSize();
+  installGodotNormalMapRead();
   installGodotLightFunction();
   installGodotLightAttenuation();
   installGodotAreaLight();
@@ -220,6 +222,7 @@ describe('installGodotAreaLight', () => {
   it('leaves the chunks alone when one lacks a replaced text, and warns (error case)', () => {
     installGodotLightSpecular();
     installGodotLightSize();
+    installGodotNormalMapRead();
     installGodotLightFunction();
     installGodotLightAttenuation();
     const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;

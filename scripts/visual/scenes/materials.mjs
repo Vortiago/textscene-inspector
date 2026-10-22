@@ -101,6 +101,9 @@ export const MATERIAL_SCENES = [
   // The roughness limiter on an imported roughness map's chain: the left sphere's sidecar names its
   // normal map, so its minified highlight spreads and dims. A chain left unlimited keeps it tight.
   { name: 'material-roughness-limiter', file: 'unit-material-roughness-limiter.tscn' },
+  // The limiter's derivative of a normal-mapped normal, on a map too large to minify: a coarse
+  // derivative spreads the sun's highlight in 2 x 2 blocks, a per-pair difference as Godot's fine one does.
+  { name: 'material-roughness-limiter-derivative', file: 'unit-material-roughness-limiter-derivative.tscn' },
   // The channel a roughness or metallic map is read from: one map holds red 20 and green and blue
   // 235, read from red. A green roughness read turns the left sphere matte, and a blue metallic read
   // turns the right one metal.

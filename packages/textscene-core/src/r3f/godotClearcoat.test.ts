@@ -9,6 +9,7 @@ import { installGodotClearcoat } from './godotClearcoat';
 import { installGodotLightFunction } from './godotLightFunction';
 import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
 import { installGodotLightSize } from './lightSize/lightSizeChunk';
+import { installGodotNormalMapRead } from './materials/godotNormalMap';
 import { installGodotSkyLighting } from './godotSkyLighting';
 import { warningsOf } from './testing/logWarnings';
 import { functionBody } from './testing/glslSource';
@@ -25,6 +26,7 @@ afterEach(() => {
 function installWithItsPrerequisites(): void {
   installGodotLightSpecular();
   installGodotLightSize();
+  installGodotNormalMapRead();
   installGodotLightFunction();
   installGodotSkyLighting();
   installGodotClearcoat();
@@ -144,6 +146,7 @@ describe('installGodotClearcoat', () => {
     THREE.ShaderLib.physical.fragmentShader = 'void main() {}';
     installGodotLightSpecular();
     installGodotLightSize();
+    installGodotNormalMapRead();
     installGodotLightFunction();
     installGodotSkyLighting();
     const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;

@@ -11,6 +11,7 @@ import { installGodotClearcoat } from '../godotClearcoat.js';
 import { installGodotLightAttenuation } from '../godotLightAttenuation.js';
 import { installGodotIndirectSpecular } from '../godotIndirectSpecular.js';
 import { installGodotLightFunction } from '../godotLightFunction.js';
+import { installGodotNormalMapRead } from '../materials/godotNormalMap.js';
 import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk.js';
 import { installGodotLightSize } from '../lightSize/lightSizeChunk.js';
 import { installGodotSkyLighting } from '../godotSkyLighting.js';
@@ -26,6 +27,7 @@ export function installShaderPatches(): void {
   installGodotIndirectSpecular();
   installGodotLightSpecular();
   installGodotLightSize();
+  installGodotNormalMapRead();
   installGodotLightFunction();
   installGodotLightAttenuation();
   installGodotSkyLighting();
