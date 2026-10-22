@@ -134,6 +134,7 @@ Strict parsing format-checks these `CPUParticles2D` properties, plus 12 inherite
 | `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 | `valid-cpuparticles2d-properties` | `cpuparticles2d-nondeterministic-emission-shape` | info |
+|  | `cpuparticles2d-non-finite-param-bound` | info |
 |  | `cpuparticles2d-param-min-above-max` | warning |
 <!-- lint:end -->
 
@@ -146,6 +147,8 @@ and reads everything but `1` as `Index`.
 A `_min` above its `_max` loads as Godot's paired setters leave it. The key the file lists last wins,
 so `angle_min = 5` then `angle_max = 2` gives a range of 2 to 2. A pair with one key written moves
 the default of the other: `scale_amount_min = 3` gives 3 to 3 (`cpu_particles_2d.cpp:352-376`).
+A bound that is `inf` or `nan` is not read: the previewer keeps the default for it, and
+`cpuparticles2d-non-finite-param-bound` reports it. Godot loads the non-finite value.
 
 ## Known limitations
 

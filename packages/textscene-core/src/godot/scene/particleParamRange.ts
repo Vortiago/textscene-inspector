@@ -79,6 +79,22 @@ export function loadedParamRange(
   return settledParamRange(properties, stem, fallback, writtenFiniteReal);
 }
 
+/** The keys of `stems` that the file writes as a non-finite real, which {@link loadedParamRange} skips. */
+export function nonFiniteParamBounds(properties: Record<string, string>, stems: readonly string[]): string[] {
+  return stems
+    .flatMap((stem) => [`${stem}_min`, `${stem}_max`])
+    .filter((key) => writtenReal(properties[key]) !== null && writtenFiniteReal(properties[key]) === null);
+}
+
+/** `properties` without the keys {@link nonFiniteParamBounds} names, in the order the file lists the rest. */
+export function finiteParamBounds(
+  properties: Record<string, string>,
+  stems: readonly string[]
+): Record<string, string> {
+  const skipped = new Set(nonFiniteParamBounds(properties, stems));
+  return Object.fromEntries(Object.entries(properties).filter(([key]) => !skipped.has(key)));
+}
+
 /**
  * Every pair of `stems` whose authored `_min` is above its authored `_max`. The key the file lists
  * first loads as the other key's value. One authored key alone moves only the default, so it never
