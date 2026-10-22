@@ -61,7 +61,7 @@ export class TscnResPathListing implements ResPathListing {
       // No exclude, as the linter's own search does: `.gdignore` is itself dot-named.
       vscode.workspace.findFiles(new vscode.RelativePattern(root, SCAN_STOP_FILES_PATTERN), null),
     ]);
-    return scannedResPaths(root, files, stopFiles).sort((a, b) => a.localeCompare(b));
+    return scannedResPaths(root, files, stopFiles);
   }
 
   /** Drops every listing and root, so a created or deleted file is offered on the next completion. */

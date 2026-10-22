@@ -11,7 +11,7 @@ import type { Position, Range } from './types.js';
 
 /** What a host gives {@link resPathReferencesAt}: the project's files, the text of each, and the request's state. */
 export interface ReferenceSource {
-  /** The `res://` path of every file of the project, as path completion lists them. */
+  /** The `res://` path of every file of the project, as path completion lists them, in any order. */
   listPaths(): Promise<readonly string[]>;
   /**
    * The unsaved text of an open editor that holds the file at a `res://` path, or undefined when none does. It wins
@@ -62,11 +62,11 @@ function occurrencesOf(path: string, text: string): Range[] {
 }
 
 /**
- * Every occurrence of the `res://` path under the cursor, in the order the source lists its files, then in line order.
- * It matches the whole path, so `res://a.tscn` finds neither `res://a.tscn.import` nor `res://dir/a.tscn`. It reads
- * the path's text only: an `ext_resource` whose `uid=` names the file but whose `path=` is stale is not found. A
- * cursor off a `res://` path gives none, and reads nothing. A cancelled request gives whatever the reads before the
- * cancel found, which the host drops.
+ * Every occurrence of the `res://` path under the cursor, sorted by the path of its file, then in line order, so each
+ * host gives one order whatever order its listing walks in. It matches the whole path, so `res://a.tscn` finds neither
+ * `res://a.tscn.import` nor `res://dir/a.tscn`. It reads the path's text only: an `ext_resource` whose `uid=` names the
+ * file but whose `path=` is stale is not found. A cursor off a `res://` path gives none, and reads nothing. A
+ * cancelled request gives whatever the reads before the cancel found, which the host drops.
  */
 export async function resPathReferencesAt(
   document: LanguageDocument,
@@ -75,7 +75,8 @@ export async function resPathReferencesAt(
 ): Promise<readonly ResPathReference[]> {
   const target = resPathAt(document, position);
   if (target === undefined) return [];
-  const files = (await source.listPaths()).filter(isGodotTextResourcePath);
+  // Code-unit order, not `localeCompare`: the order must not move with the user's locale.
+  const files = (await source.listPaths()).filter(isGodotTextResourcePath).sort();
   const perFile = await mapBounded(files, async (file) => {
     if (source.isCancelled()) return [];
     const text = source.openText(file) ?? (await source.readFile(file));
