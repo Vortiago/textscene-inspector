@@ -103,9 +103,9 @@ async function render(opts: RenderOptions) {
  * A receiver on Godot render layer 2, the layer Truck Town's blob shadows exclude. Big enough to
  * straddle the decal's default 2x2x2 box.
  */
-function Receiver() {
+function Receiver({ visible = true, y = 0 }: { visible?: boolean; y?: number }) {
   return (
-    <mesh name="receiver" userData={{ godotLayers: 2 }}>
+    <mesh name="receiver" userData={{ godotLayers: 2 }} visible={visible} position={[0, y, 0]}>
       <boxGeometry args={[4, 0.1, 4]} />
       <meshBasicMaterial />
     </mesh>
@@ -304,6 +304,43 @@ describe('<Decal>', () => {
     await ReactThreeTestRenderer.act(async () => fireSceneRender(scene, farCamera()));
 
     expect(projections(renderer).length).toBeGreaterThan(0);
+  });
+
+  describe('a receiver edited in place, with no remount', () => {
+    const externals = [extRef('1_tex', TEXTURE_PATH)];
+    /** A scene edit parses every node afresh, the decal's too. */
+    const parsedDecal = () => makeNode({ texture_albedo: 'ExtResource("1_tex")' });
+    const loader = () => seededLoader([{ path: TEXTURE_PATH, texture: makeTexture() }]);
+
+    async function editAndRender(before: React.ReactElement, after: React.ReactElement) {
+      const sharedLoader = loader();
+      const renderer = await ReactThreeTestRenderer.create(
+        decalTree({ node: parsedDecal(), externals, children: before }, sharedLoader)
+      );
+      await renderer.update(decalTree({ node: parsedDecal(), externals, children: after }, sharedLoader));
+      const scene = renderer.scene.instance as THREE.Scene;
+      scene.updateMatrixWorld();
+      await ReactThreeTestRenderer.act(async () => fireSceneRender(scene, farCamera()));
+      return renderer;
+    }
+
+    it('stops projecting onto a receiver that is hidden', async () => {
+      const renderer = await editAndRender(<Receiver />, <Receiver visible={false} />);
+
+      expect(projections(renderer)).toEqual([]);
+    });
+
+    it('projects onto a receiver that is shown', async () => {
+      const renderer = await editAndRender(<Receiver visible={false} />, <Receiver />);
+
+      expect(projections(renderer).length).toBeGreaterThan(0);
+    });
+
+    it('projects onto a receiver that moves into the box', async () => {
+      const renderer = await editAndRender(<Receiver y={50} />, <Receiver y={0} />);
+
+      expect(projections(renderer).length).toBeGreaterThan(0);
+    });
   });
 
   it('keeps a receiver that stays mounted baked once, across renders', async () => {
