@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addAtIndex, insertAtIndex } from './siblingIndex';
+import { addAtIndex, insertAtIndex, orderAmongPlaced } from './siblingIndex';
 
 const named = (name: string, index?: number) => ({ name, ...(index === undefined ? {} : { index }) });
 const namesOf = (nodes: readonly { name: string }[]) => nodes.map((n) => n.name);
@@ -37,5 +37,20 @@ describe('insertAtIndex', () => {
     insertAtIndex(siblings, named('N', 1));
     insertAtIndex(siblings, named('M'));
     expect(namesOf(siblings)).toEqual(['A', 'N', 'B', 'M']);
+  });
+});
+
+describe('orderAmongPlaced', () => {
+  it('keeps the written order for nodes that state no index', () => {
+    expect(namesOf(orderAmongPlaced([named('A'), named('B')], 2))).toEqual(['A', 'B']);
+  });
+
+  it('puts a node that states index=0 before the node written above it', () => {
+    expect(namesOf(orderAmongPlaced([named('A'), named('B', 0)], 2))).toEqual(['B', 'A']);
+  });
+
+  it('counts the placed siblings, so an index past them keeps the written order', () => {
+    expect(namesOf(orderAmongPlaced([named('A'), named('B', 2)], 1))).toEqual(['A', 'B']);
+    expect(namesOf(orderAmongPlaced([named('A'), named('B', 1)], 1))).toEqual(['B', 'A']);
   });
 });

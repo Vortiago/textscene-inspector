@@ -57,6 +57,9 @@ import {
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { liftOverrideChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
+import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
+import { orderAmongPlaced } from '../godot/scene/siblingIndex.js';
+import { useResource } from '../resources/useResource.js';
 import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
 import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
@@ -189,6 +192,16 @@ function withoutDeepChildren(node: TscnNode): TscnNode {
   // reference keeps the `useMemo([node])`s in `PlainNode` valid.
   if (!node.children.some((c) => c.instanceSubPath)) return node;
   return { ...node, children: node.children.filter((c) => !c.instanceSubPath) };
+}
+
+/**
+ * The node without its property overrides and what is written below them. Where the instanced
+ * scene is unknown or missing, nothing takes an override, so it draws nothing: Godot skips a node
+ * it cannot find (`packed_scene.cpp:310`).
+ */
+function withoutOverrideSubtrees(node: TscnNode): TscnNode {
+  if (!node.children.some((c) => c.overridesExistingNode)) return node;
+  return { ...node, children: node.children.filter((c) => !c.overridesExistingNode) };
 }
 
 /**
@@ -390,11 +403,19 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
 
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
   // stripped node is a new object.
-  const isLoneGlb = loneGlbRootPath(loadedScene?.nodes ?? []) !== undefined;
-  const shallow = useMemo(
-    () => withoutDeepChildren(isLoneGlb ? withoutPropertyOverrides(node) : node),
-    [node, isLoneGlb]
-  );
+  const glbPath = loneGlbRootPath(loadedScene?.nodes ?? []);
+  const isLoneGlb = glbPath !== undefined;
+  // Loaded here, not by the GLB root, for the count of its top-level objects: the host children
+  // move to their `index=` among them (`packed_scene.cpp:541-544`). The root takes this load.
+  const glb = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
+  const shallow = useMemo(() => {
+    const stripped = withoutDeepChildren(isLoneGlb ? withoutPropertyOverrides(node) : node);
+    if (!glb.value) return stripped;
+    const objectCount = glbSceneRootChildren(glb.value, []).length;
+    return { ...stripped, children: orderAmongPlaced(stripped.children, objectCount) };
+  }, [node, isLoneGlb, glb.value]);
+  // What the node draws while its instanced scene is unknown or missing.
+  const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);
   const order = useTreeOrder();
   const injectedOrders = useMemo(() => {
     const groups = childOrders(order, 2);
@@ -411,11 +432,12 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     [paintRange, shallow, loadedScene?.nodes]
   );
 
-  // Unresolvable ref, cycle or failed load: keep the node visible with a
-  // magenta placeholder child, matching the missing-texture UX.
+  // Unresolvable ref, cycle or failed load: keep the node visible with a magenta placeholder
+  // child, matching the missing-texture UX. Godot's editor makes a `MissingNode` here
+  // (`packed_scene.cpp:267-269`), which the host's own children hang below.
   if (!loadPath || result.status === 'unavailable') {
     return (
-      <PlainNode node={shallow} path={path}>
+      <PlainNode node={held} path={path}>
         <MissingResourcePlaceholder shape="box" />
       </PlainNode>
     );
@@ -423,7 +445,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Still loading: render the instancing node's own subtree; the merged
   // result swaps in once the sub-scene arrives.
   if (result.status === 'pending' || !loadedScene) {
-    return <PlainNode node={shallow} path={path} />;
+    return <PlainNode node={held} path={path} />;
   }
 
   // The merged node carries the sub-scene's scope, which `DispatchedNode` provides.
@@ -431,7 +453,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
 
   // A `.glb` mounts at this node's path. A multi-root scene injects its roots as children.
   return (
-    <GlbInstanceProvider node={node} path={path}>
+    <GlbInstanceProvider node={node} path={path} glb={glb}>
       <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}

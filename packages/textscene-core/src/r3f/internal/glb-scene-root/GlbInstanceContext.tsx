@@ -5,7 +5,9 @@
  * GLB root.
  */
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import type * as THREE from 'three';
 import type { LiveNode } from '../../../resources/liveNode';
+import type { ResourceResult } from '../../../resources/useResource';
 import { parseNode3D } from '../../../nodes/base/node3d/parser';
 import { useUniqueNamePaths } from '../../useUniqueNames';
 import { liftOverrideChildren } from './glbNodeOverrides';
@@ -20,6 +22,11 @@ interface GlbInstance {
   overrides: readonly LiveNode[];
   /** The visibility parent the GLB root passes on to its nodes, or null for none. */
   visibilityParent: string | null;
+  /**
+   * The GLB the instancing node loaded, for the order of its own children. Absent for a GLB opened
+   * as the scene, which loads its own.
+   */
+  glb?: ResourceResult<THREE.Object3D>;
 }
 
 /** The GLB root as Godot holds it: the node that instances the GLB, or the scene's root. */
@@ -48,10 +55,11 @@ interface GlbInstanceProviderProps {
   /** The node that instances the GLB. */
   node: LiveNode;
   path: string;
+  glb: ResourceResult<THREE.Object3D>;
   children: ReactNode;
 }
 
-export function GlbInstanceProvider({ node, path, children }: GlbInstanceProviderProps) {
+export function GlbInstanceProvider({ node, path, glb, children }: GlbInstanceProviderProps) {
   // The GLB root is a Node3D in Godot, so it passes on a visibility parent.
   const inherited = useVisibilityParent();
   const uniquePaths = useUniqueNamePaths(path);
@@ -65,8 +73,9 @@ export function GlbInstanceProvider({ node, path, children }: GlbInstanceProvide
       rawProperties: node.rawProperties,
       overrides: liftOverrideChildren(node.children),
       visibilityParent,
+      glb,
     }),
-    [node.rawProperties, node.children, visibilityParent]
+    [node.rawProperties, node.children, visibilityParent, glb]
   );
   return <GlbInstanceContext.Provider value={instance}>{children}</GlbInstanceContext.Provider>;
 }

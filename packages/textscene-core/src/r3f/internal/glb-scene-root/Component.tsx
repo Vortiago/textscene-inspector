@@ -48,12 +48,15 @@ interface GLBSceneRootProperties {
 export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // createSceneProcessor fills `properties` as a Record, so cast through unknown.
   const props = node.properties as unknown as GLBSceneRootProperties;
-  const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'glb');
 
   // The instancing scene's inline override children target nodes inside this GLB, by name, so
   // a baked translation is overridden as in Godot.
   const nodePath = useNodePath();
   const root = useGlbRoot(nodePath);
+  // An instancing node loads its GLB itself, to order its own children, and hands it down. A GLB
+  // opened as the scene loads its own, and an empty path requests nothing.
+  const ownLoad = useResource<THREE.Object3D>(root.glb ? '' : (props.glbPath ?? ''), 'glb');
+  const result = root.glb ?? ownLoad;
   const { overrides } = root;
   const object = result.value;
 
