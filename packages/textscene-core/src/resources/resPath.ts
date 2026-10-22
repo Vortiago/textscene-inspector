@@ -26,14 +26,6 @@ export function forwardSlashes(path: string): string {
   return trimmed === '' || /^[A-Za-z]:$/.test(trimmed) ? `${trimmed}/` : trimmed;
 }
 
-/**
- * `path` as two host paths compare: forward slashes, lowercased. Case-insensitive because the default Windows and
- * macOS filesystems are, and a watcher can report either spelling.
- */
-export function comparablePath(path: string): string {
-  return forwardSlashes(path).toLowerCase();
-}
-
 /** Whether a host's filesystem tells apart two spellings of a path that differ only in case. */
 export type PathCase = 'sensitive' | 'insensitive';
 
@@ -46,9 +38,13 @@ export function pathCaseOf(platform: string | undefined): PathCase {
   return platform === 'win32' || platform === 'darwin' ? 'insensitive' : 'sensitive';
 }
 
-/** `path` as a filesystem with `pathCase` compares it: two paths that name one place share a key. */
-function pathKey(path: string, pathCase: PathCase): string {
-  return pathCase === 'insensitive' ? comparablePath(path) : forwardSlashes(path);
+/**
+ * `path` as a filesystem with `pathCase` compares it, for a map keyed by path: two paths that name one place share a
+ * key. Forward slashes, and lowercased on a filesystem that ignores case.
+ */
+export function pathKey(path: string, pathCase: PathCase): string {
+  const slashed = forwardSlashes(path);
+  return pathCase === 'insensitive' ? slashed.toLowerCase() : slashed;
 }
 
 /** Whether `a` and `b` name one path on a filesystem with `pathCase`. */

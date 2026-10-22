@@ -14,7 +14,7 @@ import {
 } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { error as logError } from '@textscene/core/logger';
-import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
+import { isSamePath, isWithinRoot } from '@textscene/core/resources/resPath';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { toVscodeRange } from './languageFeatureRanges';
 import { LintResourceProvider } from './LintResourceProvider';
@@ -253,14 +253,13 @@ export class TscnDiagnostics implements vscode.Disposable {
   /** Schedules a lint of each open document whose last lint read `uri`, debounced like an edit. */
   private _onDependencyChanged(uri: vscode.Uri): void {
     if (!this._enabled) return;
-    const changed = comparablePath(uri.fsPath);
     for (const document of vscode.workspace.textDocuments) {
       const record = this._documents.get(document.uri.toString());
       const provider = record?.provider;
       if (!provider) continue;
       const read = record.session.reads.some((path) => {
         const file = provider.fileOf(path);
-        return file !== null && comparablePath(file.fsPath) === changed;
+        return file !== null && isSamePath(file.fsPath, uri.fsPath, HOST_PATH_CASE);
       });
       if (read) this._scheduleLint(document);
     }

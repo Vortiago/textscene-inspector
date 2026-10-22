@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  comparablePath,
   findResRoot,
   isWithinRoot,
   normalizeRelativePath,
   parentDir,
+  pathKey,
   pathCaseOf,
   projectFileIn,
   resRelativePath,
@@ -16,17 +16,21 @@ function projectsAt(...dirs: string[]): (dir: string) => Promise<boolean> {
   return async (dir) => dirs.includes(dir);
 }
 
-describe('comparablePath', () => {
+describe('pathKey', () => {
   it('trims trailing slashes in linear time, however many slashes the path holds', () => {
     // A backtracking `/\/+$/` spends about 3 s on this path, which a host passes unchecked.
     const manySlashes = `${'/'.repeat(100_000)}a`;
     const startedAt = performance.now();
-    expect(comparablePath(`${manySlashes}///`)).toBe(manySlashes);
+    expect(pathKey(`${manySlashes}///`, 'insensitive')).toBe(manySlashes);
     expect(performance.now() - startedAt).toBeLessThan(500);
   });
 
-  it('turns backslashes into forward slashes and lowers the case', () => {
-    expect(comparablePath('C:\\Users\\Me\\Proj')).toBe('c:/users/me/proj');
+  it('turns backslashes into forward slashes and lowers the case on a case-insensitive filesystem', () => {
+    expect(pathKey('C:\\Users\\Me\\Proj', 'insensitive')).toBe('c:/users/me/proj');
+  });
+
+  it('keeps the case on a case-sensitive filesystem', () => {
+    expect(pathKey('/Users/Me/Proj/', 'sensitive')).toBe('/Users/Me/Proj');
   });
 });
 

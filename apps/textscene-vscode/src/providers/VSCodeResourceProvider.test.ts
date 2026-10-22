@@ -308,16 +308,30 @@ describe('VSCodeResourceProvider', () => {
       expect(resPath).toBe('res://textures/wood.png');
     });
 
-    it('matches a served resource regardless of fsPath casing (case-insensitive filesystem)', async () => {
-      vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('texture data'));
+    it.runIf(HOST_PATH_CASE === 'insensitive')(
+      'matches a served resource in any case of its path',
+      async () => {
+        vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('texture data'));
 
-      // Requested with mixed case; the watcher later reports the on-disk path lowercased.
-      await provider.loadResource('res://Textures/Wood.png', 'Texture2D');
+        // Requested with mixed case; the watcher later reports the on-disk path lowercased.
+        await provider.loadResource('res://Textures/Wood.png', 'Texture2D');
 
-      const resPath = provider.getServedResPath(createMockUri('/workspace/textures/wood.png'));
-      // The original served string, not a re-derivation from the lowercase watcher path.
-      expect(resPath).toBe('res://Textures/Wood.png');
-    });
+        const resPath = provider.getServedResPath(createMockUri('/workspace/textures/wood.png'));
+        // The original served string, not a re-derivation from the lowercase watcher path.
+        expect(resPath).toBe('res://Textures/Wood.png');
+      }
+    );
+
+    it.runIf(HOST_PATH_CASE === 'sensitive')(
+      'tells apart two files whose paths differ only in case on a case-sensitive filesystem',
+      async () => {
+        vscode.workspace.fs.readFile.mockResolvedValueOnce(createMockFileData('texture data'));
+
+        await provider.loadResource('res://Textures/Wood.png', 'Texture2D');
+
+        expect(provider.getServedResPath(createMockUri('/workspace/textures/wood.png'))).toBeNull();
+      }
+    );
 
     it("records the fsPath under a loose scene's own directory, so it round-trips on later invalidation", async () => {
       vscode.workspace.fs.stat.mockImplementation(statWithProjectAt(null));

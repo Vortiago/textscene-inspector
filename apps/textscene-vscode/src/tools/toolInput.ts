@@ -5,6 +5,8 @@
  */
 
 import * as vscode from 'vscode';
+import { isSamePath } from '@textscene/core/resources/resPath';
+import { HOST_PATH_CASE } from '../hostPathCase';
 
 /** The input every scene tool takes. */
 export interface ScenePathToolInput {
@@ -24,9 +26,11 @@ export function resolveToolUri(inputPath: string): vscode.Uri | undefined {
   return vscode.Uri.joinPath(folder.uri, ...inputPath.split(/[\\/]/));
 }
 
-/** The open editors' documents by URI. Taken once per request, so a lookup per path costs no scan. */
-export function openSceneDocuments(): ReadonlyMap<string, vscode.TextDocument> {
-  return new Map(vscode.workspace.textDocuments.map((document) => [document.uri.toString(), document]));
+/** The open editor's document at `file`, by the host's path case, as the `tscn-lsp` server matches it. */
+export function openDocumentAt(file: vscode.Uri): vscode.TextDocument | undefined {
+  return vscode.workspace.textDocuments.find((document) =>
+    isSamePath(document.uri.fsPath, file.fsPath, HOST_PATH_CASE)
+  );
 }
 
 /** The text of the file at `uri` on disk. It opens no document, so it starts no lint. */
@@ -39,5 +43,5 @@ export async function readSceneFileText(uri: vscode.Uri): Promise<string> {
  * Problems panel lints it, else the file on disk.
  */
 export async function readSceneText(uri: vscode.Uri): Promise<string> {
-  return openSceneDocuments().get(uri.toString())?.getText() ?? (await readSceneFileText(uri));
+  return openDocumentAt(uri)?.getText() ?? (await readSceneFileText(uri));
 }
