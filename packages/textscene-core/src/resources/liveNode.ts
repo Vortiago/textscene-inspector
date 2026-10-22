@@ -5,6 +5,7 @@
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { UniqueNameTable } from './instanceNameTable.js';
+import { resolveInstancePath } from './SubResourceResolver.js';
 
 export interface LiveNode extends TscnNode {
   /**
@@ -34,4 +35,14 @@ export interface LiveNode extends TscnNode {
  */
 export function scopeOf(node: LiveNode, groupScope: SceneScope): SceneScope {
   return node.scope ?? groupScope;
+}
+
+/**
+ * The `res://` path of the scene `node` instances, its ref resolved in the scope of the file that
+ * authored it ({@link scopeOf}). Null for a node with no instance ref, or a ref that scope does not
+ * declare.
+ */
+export function liveInstancePath(node: LiveNode, groupScope: SceneScope): string | null {
+  if (!node.instance) return null;
+  return resolveInstancePath(node.instance, scopeOf(node, groupScope).externalResources);
 }

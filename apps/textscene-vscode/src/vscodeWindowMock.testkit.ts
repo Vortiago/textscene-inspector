@@ -20,6 +20,8 @@ export const mockWindow: any = {
 
   activeTextEditor: undefined,
 
+  onDidChangeWindowState: vi.fn(() => ({ dispose: vi.fn() })),
+
   /** No editor tabs open. A test that needs some assigns its own `all`. */
   tabGroups: { all: [] },
 

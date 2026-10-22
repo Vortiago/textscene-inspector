@@ -12,10 +12,10 @@ export function glbPathOf(node: { type: string; properties: object }): string | 
   return node.type === GLB_SCENE_ROOT_TYPE ? (node.properties as { glbPath?: string }).glbPath : undefined;
 }
 
-/** The `.glb` path of a sub-scene whose only root is a `GLBSceneRoot`, else undefined. */
-export function loneGlbPath(
-  contentRoots: readonly { type: string; properties: object }[]
-): string | undefined {
-  const root = contentRoots.length === 1 ? contentRoots[0]! : undefined;
-  return root && glbPathOf(root);
+/**
+ * The `.glb` path of a sub-scene whose only root is a synthesised GLB root, an instanced `.glb`, or
+ * undefined for any other sub-scene. Only such a sub-scene takes a host's typed children into its nodes.
+ */
+export function loneGlbRootPath(roots: readonly { type: string; properties: object }[]): string | undefined {
+  return roots.length === 1 ? glbPathOf(roots[0]!) : undefined;
 }

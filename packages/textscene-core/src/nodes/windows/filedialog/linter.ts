@@ -8,9 +8,9 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
-import { listWrittenIndices, writesPastFamilyCount } from '../../../linter/reportedIndices.js';
+import { pastCountDiagnostic } from '../../../linter/reportedIndices.js';
 import { FILE_DIALOG_OPTIONS } from '../../../godot/classdb/propertyListFamilies.js';
-import { armEmits, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armEmits, type RuleArms } from '../../../linter/ruleArms.js';
 
 const arms = {
   optionIndexOutOfRange: {
@@ -20,35 +20,19 @@ const arms = {
   },
 } as const satisfies RuleArms<string>;
 
-function checkFileDialog(context: RuleContext): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
-  const { node } = context;
-  const rawProps = node.rawProperties;
-
-  // An absent `option_count` is Godot's default 0 (the XML's `default="0"`, the empty
-  // `Vector<Option> options` the class constructs with). Resolved as `_get_property` resolves it, so a
-  // key with no leaf, such as `option_3/`, names no option. Only the `>= option_count` half is this
-  // rule's: a negative index is the dispatcher's branch in linterParser.ts, so one refusal is not
-  // reported twice.
-  const pastCount = writesPastFamilyCount(rawProps, FILE_DIALOG_OPTIONS);
-  if (pastCount === null || pastCount.offending.size === 0) return diagnostics;
-  const { count, offending } = pastCount;
-
-  // Godot's saver never writes this: `option_count` (`ADD_ARRAY_COUNT`) precedes
-  // the leaves (object.h, `_get_property_listv`) and `options.resize(p_count)`
-  // keeps them in step, so only a hand edit reaches here.
-  const indices = listWrittenIndices(offending);
-  reportArm(
-    diagnostics,
-    arms.optionIndexOutOfRange,
+// Godot's saver never writes this: `option_count` (`ADD_ARRAY_COUNT`) precedes
+// the leaves (object.h, `_get_property_listv`) and `options.resize(p_count)`
+// keeps them in step, so only a hand edit reaches here.
+function checkFileDialog({ node }: RuleContext): Diagnostic[] {
+  // An absent `option_count` is Godot's default 0, the empty `Vector<Option> options` the class
+  // constructs with. A key with no leaf, such as `option_3/`, names no option. A negative index is
+  // the dispatcher's branch in linterParser.ts, so one refusal is not reported twice.
+  return pastCountDiagnostic(
     node,
-    `FileDialog option index(es) ${indices} fall outside option_count (${count}). ` +
-      `PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ` +
-      'an index >= the array length, so FileDialog never calls the ' +
-      'matching setter and these option_<N>/… values are silently dropped on load.'
+    FILE_DIALOG_OPTIONS,
+    arms.optionIndexOutOfRange,
+    (indices, count) => `FileDialog option index(es) ${indices} fall outside option_count (${count}).`
   );
-
-  return diagnostics;
 }
 
 const fileDialogValidationRule: LintRule = {

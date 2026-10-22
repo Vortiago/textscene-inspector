@@ -37,7 +37,7 @@ import {
   InstancedScenePathsProvider,
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
-import { collapseLiveNode, singleSceneCache } from './liveSceneTree.js';
+import { collapseLiveNode, singlePathCache } from './liveSceneTree.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
@@ -58,7 +58,7 @@ import {
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { liftOverrideChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
-import { loneGlbPath } from '../resources/glbSceneRoot.js';
+import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
@@ -385,12 +385,12 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const effective = useMemo(() => {
     if (!loadedScene) return node;
     const scope: SceneScope = { ...ambientScope, instancedScenePaths: enclosingScenePaths };
-    return collapseLiveNode(node, scope, singleSceneCache(loadPath, loadedScene));
+    return collapseLiveNode(node, scope, singlePathCache(loadPath, loadedScene));
   }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene]);
 
   // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
   // stripped node is a new object.
-  const isLoneGlb = loneGlbPath(loadedScene?.nodes ?? []) !== undefined;
+  const isLoneGlb = loneGlbRootPath(loadedScene?.nodes ?? []) !== undefined;
   const shallow = useMemo(
     () => withoutDeepChildren(isLoneGlb ? withoutPropertyOverrides(node) : node),
     [node, isLoneGlb]

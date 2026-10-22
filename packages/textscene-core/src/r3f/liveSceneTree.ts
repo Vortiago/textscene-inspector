@@ -6,12 +6,11 @@
  */
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { scopeOf, type LiveNode } from '../resources/liveNode.js';
-import { resolveInstancePath } from '../resources/SubResourceResolver.js';
+import { liveInstancePath, scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
-import { glbPathOf, loneGlbPath } from '../resources/glbSceneRoot.js';
+import { glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { addAtIndex } from '../godot/scene/siblingIndex.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
@@ -49,16 +48,16 @@ export interface LiveTreeEntry {
 }
 
 /**
- * A {@link CachedSceneSource} that answers for one path, so a React walker can
- * hand `collapseLiveNode` the one sub-scene it loaded. Any other path returns
- * `undefined`, which keeps each mount's scope to itself (ADR-0009). A scene that
- * is still loading or failed reads as not cached, so the node stays uncollapsed.
+ * A cache source that answers for one path, so a React walker can hand the walk the one
+ * sub-scene or GLB it loaded. Any other path returns `undefined`, which keeps each mount's scope
+ * to itself (ADR-0009). A value that is still loading or failed reads as not cached, so the node
+ * stays uncollapsed.
  */
-export function singleSceneCache(
+export function singlePathCache<T>(
   path: string | null | undefined,
-  scene: (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined
-): CachedSceneSource {
-  return { getCached: (p) => (p === path ? (scene ?? undefined) : undefined) };
+  value: T | null | undefined
+): { getCached: (path: string) => T | undefined } {
+  return { getCached: (p) => (p === path ? (value ?? undefined) : undefined) };
 }
 
 /**
@@ -74,9 +73,8 @@ export function singleSceneCache(
  * scene that inherits or instances itself ends.
  */
 export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
-  if (!node.instance) return node;
+  const scenePath = liveInstancePath(node, scope);
   const outer = scopeOf(node, scope);
-  const scenePath = resolveInstancePath(node.instance, outer.externalResources);
   const enclosingScenePaths = outer.instancedScenePaths ?? [];
   if (!scenePath || enclosingScenePaths.includes(scenePath)) return node;
   const cached = sceneCache.getCached(scenePath);
@@ -165,9 +163,7 @@ export function liveChildGroups(
   const glbObject = glbPath ? glbCache?.getCached(glbPath) : undefined;
   if (glbObject) return glbInstanceGroups(glbObject, node.children, own);
 
-  if (!node.instance) return inlineOnly();
-
-  const scenePath = resolveInstancePath(node.instance, own.externalResources);
+  const scenePath = liveInstancePath(node, scope);
   if (!scenePath) return inlineOnly();
 
   // Cyclic instancing: Godot never loads the scene here, so nothing of it is below.
@@ -183,7 +179,7 @@ export function liveChildGroups(
   // A lone GLB is the instancing node's own content: its objects sit directly below that node, as
   // the GLB root's children do in Godot (packed_scene.cpp:261-264). Until the GLB loads, the
   // node's children stay inline.
-  const instancedGlbPath = loneGlbPath(cached.nodes);
+  const instancedGlbPath = loneGlbRootPath(cached.nodes);
   if (instancedGlbPath) {
     const object = glbCache?.getCached(instancedGlbPath);
     return object ? glbInstanceGroups(object, node.children, own) : inlineOnly();
@@ -225,9 +221,9 @@ function instancedGlbObject(
   sceneCache: CachedSceneSource,
   glbCache?: CachedGlbSource
 ): THREE.Object3D | undefined {
-  const scenePath = node.instance && resolveInstancePath(node.instance, scope.externalResources);
+  const scenePath = liveInstancePath(node, scope);
   if (!scenePath || (scope.instancedScenePaths ?? []).includes(scenePath)) return undefined;
-  const glbPath = loneGlbPath(sceneCache.getCached(scenePath)?.nodes ?? []);
+  const glbPath = loneGlbRootPath(sceneCache.getCached(scenePath)?.nodes ?? []);
   return glbPath ? (glbCache?.getCached(glbPath) ?? undefined) : undefined;
 }
 

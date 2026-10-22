@@ -5,7 +5,6 @@
  * `scripts/renderer-consumer` renders the same tarball in a browser.
  */
 
-import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -13,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { declaredExports } from '@textscene/dev-kit';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
-import { packTarball } from '../../../scripts/packTarball.mjs';
+import { packTarball, run } from '../../../scripts/packTarball.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
@@ -47,9 +46,6 @@ let metafile: Metafile;
 let tarballDir: string;
 let tarballEntries: string[];
 let packedManifest: { peerDependencies: Record<string, string>; dependencies: Record<string, string> };
-
-const run = (command: string, args: string[], cwd: string) =>
-  execFileSync(command, args, { cwd, encoding: 'utf8', stdio: 'pipe' });
 
 /** The package name of a bare specifier: `three/examples/jsm/x.js` is `three`, `@a/b/c` is `@a/b`. */
 function packageOf(specifier: string): string {

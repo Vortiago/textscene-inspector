@@ -16,6 +16,8 @@ import { lightBakeModeUserData } from '../../../../r3f/lightBakeMode/lightBakeMo
 import { lightSizeUserData } from '../../../../r3f/lightSize/lightSize';
 import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
 import { usePositionalShadowUserData } from './positionalShadowDeclaration';
+import { positionalShadowNear } from '../../../../godot/rendering/lights/positionalShadow';
+import { lightBufferRange } from '../../../../godot/rendering/lights/lightBufferRange';
 import type { PositionalLightProperties } from './types';
 
 interface PositionalLight {
@@ -60,4 +62,17 @@ export function usePositionalLight(
     ]
   );
   return { intensity, shadowOpacity, userData };
+}
+
+/**
+ * The reach and shadow camera planes of an omni or spot light of range `range`. The range is floored
+ * as the shader's falloff and shadow lookup read it, since three takes a distance of 0 as no cutoff.
+ */
+export function positionalLightRange(range: number): {
+  distance: number;
+  shadowNear: number;
+  shadowFar: number;
+} {
+  const distance = lightBufferRange(range);
+  return { distance, shadowNear: positionalShadowNear(distance), shadowFar: distance };
 }

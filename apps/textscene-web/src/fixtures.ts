@@ -1033,6 +1033,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Light Range Floor",
+    "file": "unit-light-range-floor.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Light Specular",
     "file": "unit-light-specular.tscn",
     "category": "Other"

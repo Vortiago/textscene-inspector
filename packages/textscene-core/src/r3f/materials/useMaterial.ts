@@ -8,7 +8,7 @@ import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { TscnInternalResource } from '../../parser/types';
-import { findSectionResource } from '../../resources/resourceSection';
+import { fileResources, findSectionResource } from '../../resources/resourceSection';
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
 import { useMissingReport } from '../contexts/MissingResourcesContext';
@@ -55,11 +55,7 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
       });
     }
     if (!file || !body) return ABSENT;
-    return ready({
-      resource: body,
-      internalResources: file.subResources,
-      externalResources: file.extResources,
-    });
+    return ready({ resource: body, ...fileResources(file) });
   }, [inlineResource, inlineInternal, inlineExternal, file, body]);
 
   useEffect(() => {

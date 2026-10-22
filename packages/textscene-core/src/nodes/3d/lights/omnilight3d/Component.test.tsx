@@ -72,6 +72,16 @@ describe('<OmniLight3D>', () => {
     expect(instanceAs<THREE.PointLight>(light).distance).toBe(12);
   });
 
+  it('cuts a zero omni_range off at the light buffer’s 0.001, not at no distance', async () => {
+    // three reads a distance of 0 as no cutoff. Godot floors the range (`light_storage.cpp:895`).
+    const renderer = await ReactThreeTestRenderer.create(
+      <OmniLight3D node={makeNode({ shadow_enabled: true, omni_range: 0 })} />
+    );
+    const light = instanceAs<THREE.PointLight>(renderer.scene.findByType('PointLight'));
+    expect(light.distance).toBe(0.001);
+    expect(light.shadow.camera.far).toBe(0.001);
+  });
+
   it('maps omni_attenuation to decay', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <OmniLight3D node={makeNode({ omni_attenuation: 3 })} />

@@ -5,6 +5,8 @@
  * `Gradient.interpolation_color_space` is always sRGB, so OKLab differs mid-stop.
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../../../godot/math/real';
 import { cubicInterpolatef, lerpf } from '../../../godot/math/math';
 
 import type { Gradient, GradientTexture2D } from './types';
@@ -14,8 +16,6 @@ import {
   GradientInterpolationMode,
   GradientTexture2DRepeat,
 } from '../../../godot/scene/gradientTexture';
-
-const f = Math.fround;
 
 /**
  * The normalised gradient offset at integer pixel `(x, y)`, mirroring Godot's

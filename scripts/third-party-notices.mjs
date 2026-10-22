@@ -8,6 +8,9 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { REPO_ROOT } from './repoRoot.mjs';
 
+const NOTICES_FILE = 'THIRD-PARTY-NOTICES.md';
+const ROOT_NOTICES = resolve(REPO_ROOT, NOTICES_FILE);
+
 /**
  * Each third party: its `## ` section in THIRD-PARTY-NOTICES.md, and the line that every file
  * derived from it carries. The bundler strips the inline notice, so this line finds the files in a
@@ -86,11 +89,39 @@ export function bundledSourceFiles(metafile, { packageDir, ownSourceDir }) {
 
 /** Writes the `THIRD-PARTY-NOTICES.md` of a package whose bundle holds the inputs of `metafile`. */
 export function writeBundledNotices(metafile, { packageDir, ownSourceDir }) {
-  const rootNotices = readFileSync(resolve(REPO_ROOT, 'THIRD-PARTY-NOTICES.md'), 'utf8');
   writeFileSync(
-    resolve(packageDir, 'THIRD-PARTY-NOTICES.md'),
-    bundledNotices(rootNotices, bundledSourceFiles(metafile, { packageDir, ownSourceDir }))
+    resolve(packageDir, NOTICES_FILE),
+    bundledNotices(
+      readFileSync(ROOT_NOTICES, 'utf8'),
+      bundledSourceFiles(metafile, { packageDir, ownSourceDir })
+    )
   );
+}
+
+/**
+ * One metafile whose inputs are every file input of `metafiles`, for a package that ships several
+ * bundles. A plugin's virtual module, such as `texture-worker-source:virtual:texture-worker-source`,
+ * names no file and is left out.
+ *
+ * @param {{ inputs: Record<string, unknown> }[]} metafiles
+ * @returns {{ inputs: Record<string, unknown> }}
+ */
+export function mergedFileInputs(metafiles) {
+  const inputs = Object.assign({}, ...metafiles.map((metafile) => metafile.inputs));
+  return {
+    inputs: Object.fromEntries(Object.entries(inputs).filter(([input]) => !isNamespacedInput(input))),
+  };
+}
+
+/**
+ * Whether an input is in a plugin's namespace, `namespace:path`. Two characters at least before the
+ * colon: a Windows input on another drive than the working directory, such as `D:/…`, is a file.
+ *
+ * @param {string} input
+ * @returns {boolean}
+ */
+function isNamespacedInput(input) {
+  return /^[\w-]{2,}:/.test(input);
 }
 
 /**

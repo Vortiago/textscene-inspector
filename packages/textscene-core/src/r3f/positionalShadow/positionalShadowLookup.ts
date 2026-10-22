@@ -103,7 +103,9 @@ export const ATLAS_SAMPLING = `
  * A light with a penumbra searches its slot for blockers (`:789-837`). Its penumbra size is half the
  * light's size over its range, over the cone's slope, in units of the atlas (`light_storage.cpp:1019`).
  * `lightDepth` is the receiver's depth along the light's axis, the w of its unbiased coordinate. The
- * slot is centred on the light's axis, which the matrix maps to the axis's vanishing point.
+ * slot is centred on the light's axis, which the matrix maps to the axis's vanishing point. Only an
+ * authored SpotLight3D casts a shadow, and `positionalLightRange` floors its range, so the search
+ * divides by a `light.distance` that is never 0.
  */
 export const SPOT_LOOKUP = `
 		vec4 godotSpotDepthBias( vec4 shadowCoord, float depthBias ) {
@@ -128,7 +130,6 @@ export const SPOT_LOOKUP = `
 			return vec4( axis.xy / axis.w - size * 0.5, size );
 		}
 		float godotSpotSoftShadow( vec3 coord, float lightDepth, SpotLight light, mat4 lightMatrix, SpotLightShadow shadow ) {
-			if ( light.distance <= 0.0 ) return 1.0;
 			vec4 slotRect = godotSpotSlotRect( lightMatrix, light.direction, shadow.shadowMapSize );
 			float coneSlope = sqrt( 1.0 - light.coneCos * light.coneCos ) / light.coneCos;
 			float zNorm = lightDepth / light.distance;

@@ -5,6 +5,9 @@
  * (`servers/rendering/renderer_rd/shaders/scene_forward_lights_inc.glsl:278-281`, `:343-350`).
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../../math/real.js';
+
 /**
  * Soft Low's `soft_shadow_samples` (`renderer_scene_render_rd.cpp:1157-1160`), the default of
  * `rendering/lights_and_shadows/positional_shadow/soft_shadow_filter_quality`
@@ -26,7 +29,6 @@ const VOGEL_GOLDEN_ANGLE = 2.4;
  * of the kernel's radius. Each value is the float Godot computes and stores.
  */
 export function vogelDisk(count: number): [number, number][] {
-  const f = Math.fround;
   return Array.from({ length: count }, (_, i) => {
     const r = f(f(Math.sqrt(f(i + 0.5))) / f(Math.sqrt(count)));
     const theta = f(i * f(VOGEL_GOLDEN_ANGLE));

@@ -1,0 +1,48 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitlightrangefloor"]
+
+; An omni and a spot light at range 0 on the left, and at range 0.3 on the right. Godot floors the
+; range at 0.001 (`light_storage.cpp:895`), so the left pair lights nothing and the right pair lights
+; a small pool each. three reads a distance of 0 as no cutoff, so a missing floor lights the whole
+; ground. No other golden sets a range under 1. The dark sun keeps the editor's preview sun out.
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(4, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+roughness = 1.0
+
+[node name="Root" type="Node3D"]
+
+[node name="DarkSun" type="DirectionalLight3D" parent="."]
+light_energy = 0.0
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="OmniZero" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 0.5, 0)
+light_color = Color(1, 0.6, 0.3, 1)
+light_energy = 4.0
+omni_range = 0.0
+
+[node name="SpotZero" type="SpotLight3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 0, 1, 0, 1, 0, -0.5, 0.5, 0)
+light_color = Color(0.3, 0.6, 1, 1)
+light_energy = 4.0
+spot_range = 0.0
+spot_angle = 60.0
+
+[node name="OmniTiny" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.1, 0)
+light_color = Color(1, 0.6, 0.3, 1)
+light_energy = 4.0
+omni_range = 0.3
+
+[node name="SpotTiny" type="SpotLight3D" parent="."]
+transform = Transform3D(-1, 0, 0, 0, 0, 1, 0, 1, 0, 1.5, 0.1, 0)
+light_color = Color(0.3, 0.6, 1, 1)
+light_energy = 4.0
+spot_range = 0.3
+spot_angle = 60.0
