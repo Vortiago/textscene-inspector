@@ -1,6 +1,7 @@
 /** The shared crossed-range warning: one diagnostic per crossed pair, under the caller's arm. */
 import { describe, it, expect } from 'vitest';
 import type { RawNode } from '../parser/types.js';
+import { CPU_PARTICLES_PARAMS } from '../godot/scene/cpuParticles.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from './particleParamRanges.js';
 
 const node: RawNode = { name: 'Fx', type: 'CPUParticles2D', rawProperties: {}, children: [] };
@@ -18,7 +19,9 @@ describe('paramMinAboveMaxArm', () => {
 
 describe('paramMinAboveMaxDiagnostics', () => {
   it('reports a crossed pair through the arm', () => {
-    expect(paramMinAboveMaxDiagnostics(node, { angle_min: '10', angle_max: '-10' }, arm)).toEqual([
+    expect(
+      paramMinAboveMaxDiagnostics(node, { angle_min: '10', angle_max: '-10' }, CPU_PARTICLES_PARAMS, arm)
+    ).toEqual([
       {
         severity: 'warning',
         message:
@@ -31,11 +34,18 @@ describe('paramMinAboveMaxDiagnostics', () => {
   });
 
   it('names stored values in their shortest single-precision text', () => {
-    const [diagnostic] = paramMinAboveMaxDiagnostics(node, { damping_min: '0.3', damping_max: '0.1' }, arm);
+    const [diagnostic] = paramMinAboveMaxDiagnostics(
+      node,
+      { damping_min: '0.3', damping_max: '0.1' },
+      CPU_PARTICLES_PARAMS,
+      arm
+    );
     expect(diagnostic?.message).toContain("'damping_min' 0.3 is above 'damping_max' 0.1");
   });
 
   it('reports nothing for a range that is not crossed', () => {
-    expect(paramMinAboveMaxDiagnostics(node, { angle_min: '-10', angle_max: '10' }, arm)).toEqual([]);
+    expect(
+      paramMinAboveMaxDiagnostics(node, { angle_min: '-10', angle_max: '10' }, CPU_PARTICLES_PARAMS, arm)
+    ).toEqual([]);
   });
 });

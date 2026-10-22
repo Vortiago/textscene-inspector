@@ -91,11 +91,11 @@ property line). Only `Control` and `Range` are confirmed reachable from a `.tscn
 
 `[sub_resource]` blocks parse through the same `TscnParserCore` loop and get the same
 order-preserving raw bag (`parseInternalResource`). A resource with a side-effecting
-setter (`ParticleProcessMaterial::set_param_min`/`set_param_max`,
-`BaseMaterial3D::set_on_top_of_alpha`, `Theme::set_theme_item`, …) is exposed to the same
-class of bug in a hand-edited `.tres` or inline resource. This ADR covers node property
-blocks only. The same reasoning and the same `linter/propertyOrder.ts` helper apply to
-resources.
+setter (`BaseMaterial3D::set_on_top_of_alpha`, `Theme::set_theme_item`, …) is exposed to the
+same class of bug in a hand-edited `.tres` or inline resource. This ADR covers node property
+blocks only. The `particleprocessmaterial-param-min-above-max` resource rule covers
+`ParticleProcessMaterial::set_param_min`/`set_param_max`. The same reasoning and the same
+`linter/propertyOrder.ts` helper apply to the other resources.
 
 ## Enumerated cost
 

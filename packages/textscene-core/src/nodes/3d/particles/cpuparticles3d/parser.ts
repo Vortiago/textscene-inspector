@@ -3,7 +3,7 @@
 import type { ParsedHeading } from '../../../../parser/utils';
 import { holdsResource } from '../../../../godot/scene/resourceLiteral';
 import { parseNonEmptyAabb } from '../../../../parser/valueParsers';
-import { readParticleEmission } from '../emission/emission';
+import { readParticleEmission } from '../../../../resources/materials/particleprocessmaterial/emission';
 import { parseGeometryInstance3D } from '../../geometryinstance3d/parser';
 import type { CPUParticles3DProperties } from './types';
 

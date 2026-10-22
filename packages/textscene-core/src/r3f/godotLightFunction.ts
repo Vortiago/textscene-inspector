@@ -6,6 +6,7 @@
  */
 
 import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { NORMAL_MAP_READ_MARK } from './materials/godotNormalMap.js';
 import { LIGHT_SIZE_MARK } from './lightSize/lightSizeChunk.js';
 import { LIGHT_SPECULAR_MARK } from './lightSpecular/lightSpecularChunk.js';
 import { ROUGHNESS_LIMITER_AMOUNT, ROUGHNESS_LIMITER_LIMIT } from '../godot/rendering/roughnessLimiter.js';
@@ -18,14 +19,33 @@ const MAPS_CHUNK = 'lights_fragment_maps';
 const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 
 /**
+ * Godot's limiter reads the fine `dFdx( normal )` (`scene_forward_clustered.glsl:1660`), but WebGL 2
+ * has none: a coarse one spans a 2 x 2 quad. A mapped normal takes its pixel pair's difference from
+ * the map read one texel along the pair. Roughness 1 stays 1, so that pixel skips the reads.
+ */
+const NORMAL_DERIVATIVES = /* glsl */ `#ifdef USE_NORMALMAP_TANGENTSPACE
+mat3 godotTbnDx = mat3( dFdx( tbn[ 0 ] ), dFdx( tbn[ 1 ] ), dFdx( tbn[ 2 ] ) );
+mat3 godotTbnDy = mat3( dFdy( tbn[ 0 ] ), dFdy( tbn[ 1 ] ), dFdy( tbn[ 2 ] ) );
+vec2 godotPair = 1.0 - 2.0 * mod( floor( gl_FragCoord.xy ), 2.0 );
+vec3 godotDndu = vec3( 0.0 );
+vec3 godotDndv = vec3( 0.0 );
+if ( roughnessFactor < 1.0 ) {
+	godotDndu = godotPair.x * ( godotMapNormal( vNormalMapUv + godotPair.x * godotUvDx, godotUvDx, godotUvDy, tbn + godotPair.x * godotTbnDx ) - normal );
+	godotDndv = godotPair.y * ( godotMapNormal( vNormalMapUv + godotPair.y * godotUvDy, godotUvDx, godotUvDy, tbn + godotPair.y * godotTbnDy ) - normal );
+}
+#else
+vec3 godotDndu = dFdx( normal );
+vec3 godotDndv = dFdy( normal );
+#endif`;
+
+/**
  * The roughness Godot's light functions and sky reflection read: the limiter at its project
  * defaults, with no floor. three's own `material.roughness` floors at 0.0525 and stays for the
  * terms the patches leave to three. Godot snaps a roughness below 1e-8 to 0, where GGX would
  * divide by a collapsed alpha (`scene_forward_clustered.glsl:1667-1671`).
  */
 const GODOT_ROUGHNESS = /* glsl */ `${ROUGHNESS_SETUP}
-vec3 godotDndu = dFdx( normal );
-vec3 godotDndv = dFdy( normal );
+${NORMAL_DERIVATIVES}
 float godotVariance = ${glslFloat(ROUGHNESS_LIMITER_AMOUNT)} * ( dot( godotDndu, godotDndu ) + dot( godotDndv, godotDndv ) );
 float godotKernelRoughness2 = min( 2.0 * godotVariance, ${glslFloat(ROUGHNESS_LIMITER_LIMIT)} );
 material.godotRoughness = sqrt( min( 1.0, roughnessFactor * roughnessFactor + godotKernelRoughness2 ) );
@@ -275,7 +295,10 @@ export function installGodotLightFunction(): void {
     isApplied: (chunks) => chunks[CHUNK].includes(LIGHT_FUNCTION_MARK),
     apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
     missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
-    requires: { lights_pars_begin: [LIGHT_SPECULAR_MARK, LIGHT_SIZE_MARK] },
+    requires: {
+      lights_pars_begin: [LIGHT_SPECULAR_MARK, LIGHT_SIZE_MARK],
+      normalmap_pars_fragment: NORMAL_MAP_READ_MARK,
+    },
   });
 }
 

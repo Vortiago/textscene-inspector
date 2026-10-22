@@ -3,7 +3,7 @@
  * the scale that only the material has (`particle_process_material.cpp:2413-2414`).
  */
 
-import { PARTICLE_EMISSION_DEFAULTS as DEFAULTS } from '../../../../godot/scene/particles3d';
+import { PARTICLE_EMISSION_DEFAULTS as DEFAULTS } from '../../../godot/scene/particles3d';
 import { readParticleEmission, vector } from './emission';
 import type { ParticleEmission } from './types';
 
