@@ -8,11 +8,12 @@ import { centredAabb } from '../../../godot/math/aabb';
 import type { Vector3 } from '../../../godot/math/vector';
 import { FogVolumeShape } from '../../../godot/rendering/environment/fogVolume';
 import { AabbGizmo } from '../../../r3f/components/AabbGizmo';
+import type { FogVolumeProperties } from './types';
 
 /** `editors/3d_gizmos/gizmo_colors/fog_volume` (`editor_settings.cpp:885`). */
 const GIZMO_COLOR = Object.freeze({ r: 0.5, g: 0.7, b: 1 });
 
-export function FogVolumeGizmo({ size, shape }: { size: Vector3; shape: FogVolumeShape | number }) {
+export function FogVolumeGizmo({ size, shape }: { size: Vector3; shape: FogVolumeProperties['shape'] }) {
   const box = useMemo(() => centredAabb(size), [size]);
   if (shape === FogVolumeShape.WORLD) return null;
   return <AabbGizmo aabb={box} color={GIZMO_COLOR} />;
