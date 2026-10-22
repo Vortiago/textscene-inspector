@@ -184,8 +184,7 @@ function buildTextRun(
     // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
     texture.colorSpace = THREE.SRGBColorSpace;
     // No mip chain for any filter: Godot's glyph atlas has none unless the font sets
-    // `generate_mipmaps` (default off: `text_server_adv.cpp:3528`). Measured, a chain here
-    // moved a minified label from 1.03 to 1.11/255 away from Godot. Only the nearest/linear
+    // `generate_mipmaps` (default off: `text_server_adv.cpp:3528`). Only the nearest/linear
     // bit applies, so `minFilter` takes `magFilter`.
     texture.generateMipmaps = false;
     texture.minFilter = textureFilter.magFilter;
