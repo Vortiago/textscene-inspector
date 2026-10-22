@@ -27,6 +27,16 @@ floor, the glowing box and the background where its reflection leaves the box.
 
 One probe sets its ambient to red. The floor inside its box takes the red as its ambient light.
 
+## Gizmo
+
+A selected probe draws the gizmo of Godot's editor in the probe colour. Godot's source is `reflection_probe_gizmo_plugin.cpp:149-212`. Godot draws the lines only for the selected node (`:152`).
+
+- The 12 edges of the box inset by `blend_distance`. A `blend_distance` of 0 draws no box.
+- Eight lines at half opacity, from each corner of the inset box to the matching corner of the outer box.
+- A cross of three segments of 0.5 centred on `origin_offset`, drawn only when the offset is not 0.
+
+Godot draws no edge of the outer box. An axis where the inset passes the middle of the box collapses to the middle, with a size of 0. The previewer draws no edit handles and no billboard icon.
+
 ## Linting
 
 <!-- lint:begin ReflectionProbe -->

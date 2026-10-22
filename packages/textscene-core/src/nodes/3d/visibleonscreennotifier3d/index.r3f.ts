@@ -1,13 +1,12 @@
 /**
- * VisibleOnScreenNotifier3D draws nothing of its own (ADR-0008). It reuses the Node3D component so
- * its children still land in the right transform space.
+ * VisibleOnScreenNotifier3D draws nothing at runtime, so it declares no render intent. Its component
+ * draws the editor gizmo of the box it watches while the node is selected (ADR-0018).
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node3D } from '../../base/node3d/Component';
+import { VisibleOnScreenNotifier3D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'VisibleOnScreenNotifier3D',
-  Component: Node3D,
-  renderIntent: 'transform-only',
+  Component: VisibleOnScreenNotifier3D,
 });

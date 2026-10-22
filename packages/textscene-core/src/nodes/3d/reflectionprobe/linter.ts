@@ -12,7 +12,7 @@ import { loadedOriginOffset, REFLECTION_PROBE_DEFAULTS } from '../../../godot/sc
 import { ReflectionProbeAmbientMode } from '../../../godot/rendering/environment/reflectionProbe.js';
 import { formatReal, storedVector3 } from '../../../godot/math/real.js';
 import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
-import type { Vector3 } from '../../../godot/math/vector.js';
+import { VECTOR3_AXES, type Vector3 } from '../../../godot/math/vector.js';
 
 const arms = {
   ambientColorNoEffect: groundedArm('reflectionprobe-ambient-color-no-effect', {
@@ -54,10 +54,8 @@ function checkAmbientMode(node: RuleContext['node'], props: Record<string, strin
   return diagnostics;
 }
 
-const AXES = ['x', 'y', 'z'] as const;
-
 const formatVector3 = (v: Vector3): string =>
-  `Vector3(${AXES.map((axis) => formatReal(v[axis])).join(', ')})`;
+  `Vector3(${VECTOR3_AXES.map((axis) => formatReal(v[axis])).join(', ')})`;
 const sameReal = (a: number, b: number): boolean => a === b || (Number.isNaN(a) && Number.isNaN(b));
 
 /**
@@ -84,7 +82,7 @@ function checkOriginOffset(node: RuleContext['node'], rawProps: Record<string, s
   const replayed = replayOriginOffset(rawProps);
   if (!replayed) return [];
   const { written, loaded } = replayed;
-  if (AXES.every((axis) => sameReal(written[axis], loaded[axis]))) return [];
+  if (VECTOR3_AXES.every((axis) => sameReal(written[axis], loaded[axis]))) return [];
   return [
     armDiagnostic(
       arms.originOffsetClamped,

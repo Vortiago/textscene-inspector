@@ -1,0 +1,25 @@
+; A VoxelGI with 64 subdivisions on a box of 12 x 6 x 8, for the one variable no other golden moves:
+; its editor gizmo (the box edges and the faint grid of cells). The previewer gates the gizmo on
+; selection (ADR-0018), so only the `select:` golden has it. A small box sits at two opposite corners
+; of the box to frame the whole gizmo. The empty VoxelGIData keeps `voxelgi-missing-data` quiet.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="BoxMesh" id="Corner_1"]
+size = Vector3(0.2, 0.2, 0.2)
+
+[sub_resource type="VoxelGIData" id="VoxelGIData_1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Voxels" type="VoxelGI" parent="."]
+size = Vector3(12, 6, 8)
+subdiv = 0
+data = SubResource("VoxelGIData_1")
+
+[node name="NearCorner" type="MeshInstance3D" parent="Voxels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, -3, -4)
+mesh = SubResource("Corner_1")
+
+[node name="FarCorner" type="MeshInstance3D" parent="Voxels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 3, 4)
+mesh = SubResource("Corner_1")

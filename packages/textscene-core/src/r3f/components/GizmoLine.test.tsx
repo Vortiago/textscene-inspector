@@ -7,9 +7,13 @@ import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { GizmoLine } from './GizmoLine';
 
-async function render(positions: number[], colors?: number[]) {
+async function render(positions: number[], colors?: number[], opacity?: number) {
   return ReactThreeTestRenderer.create(
-    <GizmoLine positions={new Float32Array(positions)} colors={colors && new Float32Array(colors)} />
+    <GizmoLine
+      positions={new Float32Array(positions)}
+      colors={colors && new Float32Array(colors)}
+      opacity={opacity}
+    />
   );
 }
 
@@ -51,5 +55,18 @@ describe('<GizmoLine>', () => {
       [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0]
     );
     expect(colors).toEqual([1, 0, 0, 1, 0, 0]);
+  });
+
+  it('draws at full opacity unless it is given one', async () => {
+    const renderer = await render([0, 0, 0, 0, 0, 4]);
+    const line = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    expect((line.material as THREE.LineBasicMaterial).opacity).toBe(1);
+  });
+
+  it('draws at the opacity given, blended over the scene', async () => {
+    const renderer = await render([0, 0, 0, 0, 0, 4], undefined, 0.02);
+    const line = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    const material = line.material as THREE.LineBasicMaterial;
+    expect([material.opacity, material.transparent]).toEqual([0.02, true]);
   });
 });
