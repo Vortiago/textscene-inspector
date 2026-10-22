@@ -1,10 +1,8 @@
 /** The lines of the editor gizmo of a ReflectionProbe (`reflection_probe_gizmo_plugin.cpp:149-212`). */
 
 import { aabbEdges, aabbEndpoint, centredAabb, type Aabb } from '../../../godot/math/aabb';
-import type { Vector3 } from '../../../godot/math/vector';
+import { VECTOR3_AXES, type Vector3 } from '../../../godot/math/vector';
 import type { ReflectionProbeProperties } from './types';
-
-const AXES = ['x', 'y', 'z'] as const;
 
 /** Half the length of each segment of the origin cross (`reflection_probe_gizmo_plugin.cpp:193-197`). */
 const ORIGIN_CROSS_HALF_LENGTH = 0.25;
@@ -26,7 +24,7 @@ interface ReflectionProbeGizmoLines {
 function blendBox(outer: Aabb, blendDistance: number): Aabb {
   const position = { ...outer.position };
   const size = { ...outer.size };
-  for (const axis of AXES) {
+  for (const axis of VECTOR3_AXES) {
     position[axis] = outer.position[axis] + blendDistance;
     size[axis] = outer.size[axis] - blendDistance * 2;
     if (size[axis] < position[axis]) {
@@ -39,7 +37,7 @@ function blendBox(outer: Aabb, blendDistance: number): Aabb {
 
 /** Three segments centred on `offset`, one along each axis (`:190-199`). */
 function originCross(offset: Vector3): number[] {
-  return AXES.flatMap((axis) => {
+  return VECTOR3_AXES.flatMap((axis) => {
     const start = { ...offset };
     const end = { ...offset };
     start[axis] -= ORIGIN_CROSS_HALF_LENGTH;

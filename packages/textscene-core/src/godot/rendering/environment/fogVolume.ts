@@ -6,7 +6,7 @@
 import { enumNamesByValue } from '../../classdb/enumNames.js';
 import { clamp } from '../../math/math.js';
 import type { HalfExtents, VolumetricFogGrid } from './volumetricFog.js';
-import { vector3Maxf, type Vector3 } from '../../math/vector.js';
+import { VECTOR3_AXES, vector3Maxf, type Vector3 } from '../../math/vector.js';
 
 /** `RS::FogVolumeShape` (`servers/rendering_server.h`), the values `FogVolume.shape` stores. */
 export enum FogVolumeShape {
@@ -109,7 +109,7 @@ export function isCameraNearFogVolume(
   corners: readonly Vector3[],
   nearCornerDistance: number
 ): boolean {
-  return (['x', 'y', 'z'] as const).every((axis) => {
+  return VECTOR3_AXES.every((axis) => {
     const values = corners.map((corner) => corner[axis]);
     return (
       camera[axis] > Math.min(...values) - nearCornerDistance &&

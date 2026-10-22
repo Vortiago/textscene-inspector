@@ -33,13 +33,13 @@ function hasNonFiniteVertex(positions: Float32Array, start: number): boolean {
 
 /** The segments that have no `inf` or `nan` vertex. The same arrays when every segment has none. */
 function finiteSegments(positions: Float32Array, colors: Float32Array | undefined) {
+  if (positions.every(Number.isFinite)) return { positions, colors };
   const segmentCount = Math.floor(positions.length / FLOATS_PER_SEGMENT);
   const keptStarts: number[] = [];
   for (let segment = 0; segment < segmentCount; segment++) {
     const start = segment * FLOATS_PER_SEGMENT;
     if (!hasNonFiniteVertex(positions, start)) keptStarts.push(start);
   }
-  if (keptStarts.length === segmentCount) return { positions, colors };
   const onlyKept = (array: Float32Array) => {
     const kept = new Float32Array(keptStarts.length * FLOATS_PER_SEGMENT);
     keptStarts.forEach((start, index) =>

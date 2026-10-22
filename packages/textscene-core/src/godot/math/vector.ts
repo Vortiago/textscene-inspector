@@ -13,6 +13,9 @@ export interface Vector3 {
   z: number;
 }
 
+/** The components of a `Vector3`, in the order Godot indexes them (`v[0]`, `v[1]`, `v[2]`). */
+export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
+
 /** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
 const f = Math.fround;
 

@@ -4,8 +4,7 @@
  */
 
 import { aabbLongestAxisSize, type Aabb } from '../../godot/math/aabb';
-
-const AXES = ['x', 'y', 'z'] as const;
+import { VECTOR3_AXES } from '../../godot/math/vector';
 
 /** The engine holds the cell size and the sizes it compares as `float`: a plane can round onto a size. */
 const f = Math.fround;
@@ -20,10 +19,10 @@ export function cellGridLines(box: Aabb, subdivisions: number): number[] {
   const cellSize = f(f(aabbLongestAxisSize(box)) / subdivisions);
   const lines: number[] = [];
   for (let plane = 1; plane < subdivisions; plane++) {
-    AXES.forEach((axis, index) => {
+    VECTOR3_AXES.forEach((axis, index) => {
       if (f(cellSize * plane) > f(size[axis])) return;
-      const first = AXES[(index + 1) % 3]!;
-      const second = AXES[(index + 2) % 3]!;
+      const first = VECTOR3_AXES[(index + 1) % 3]!;
+      const second = VECTOR3_AXES[(index + 2) % 3]!;
       for (let corner = 0; corner < 4; corner++) {
         const from = { ...position };
         const to = { ...position };
