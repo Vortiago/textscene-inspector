@@ -1,6 +1,6 @@
 # @textscene/renderer
 
-`@textscene/renderer` draws a parsed Godot `.tscn` scene in a React app. It is the renderer of the
+`@textscene/renderer` draws a Godot `.tscn` scene in a React app. It is the renderer of the
 [TextScene Inspector](https://github.com/Vortiago/textscene-inspector): a react-three-fiber canvas,
 bundled into one ES module. React and three.js are peer dependencies, so your app keeps one copy of
 each.
@@ -13,10 +13,10 @@ links every one of them.
 ## Install
 
 ```bash
-npm install @textscene/renderer @textscene/tscn react react-dom three @react-three/fiber @react-three/drei @react-three/postprocessing postprocessing
+npm install @textscene/renderer react react-dom three @react-three/fiber @react-three/drei @react-three/postprocessing postprocessing
 ```
 
-`@textscene/tscn` is the parser. The renderer takes the scene it returns. The peer dependencies are
+The renderer takes the text of a scene and parses it itself. The peer dependencies are
 `react`, `react-dom`, `three`, `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing`
 and `postprocessing`. `package.json` names the supported versions. The renderer patches three.js
 shaders, so a `three` version outside that range can draw wrongly.
@@ -24,10 +24,7 @@ shaders, so a `three` version outside that range can draw wrongly.
 ## Use
 
 ```tsx
-import { TscnParser } from '@textscene/tscn';
 import { TscnCanvas, TscnSceneProvider, type ResourceProvider } from '@textscene/renderer';
-
-const scene = new TscnParser().parse(source);
 
 // Loads a scene's `res://` files: text for a text file, bytes for any other file, null for a miss.
 const provider: ResourceProvider = {
@@ -38,9 +35,10 @@ const provider: ResourceProvider = {
   },
 };
 
-export function SceneView() {
+// `source` is the text of a `.tscn` file.
+export function SceneView({ source }: { source: string }) {
   return (
-    <TscnSceneProvider scene={scene} provider={provider}>
+    <TscnSceneProvider source={source} provider={provider}>
       <div style={{ width: 640, height: 480 }}>
         <TscnCanvas />
       </div>
@@ -58,10 +56,9 @@ The package exports four names.
 
 - `TscnCanvas`: the canvas. It reads the scene, the resources and the selection from
   `<TscnSceneProvider>`.
-- `TscnSceneProvider`: mounts what the canvas reads. Its props are `scene` (a parsed scene),
+- `TscnSceneProvider`: mounts what the canvas reads. Its props are `source` (the text of a `.tscn` scene),
   `provider` (a `ResourceProvider`), `rootScenePath` (the `res://` path the scene opens under,
-  optional) and `children`. A new `provider` starts a new resource loader. The provider moves the
-  target of a `RemoteTransform` in the `scene` object, so parse one scene for each provider.
+  optional) and `children`. A new `provider` starts a new resource loader.
 - `ResourceProvider` (a type): `loadResource(path, type?)` returns the file as a string or an
   `ArrayBuffer`, or `null` when the file is missing.
 - `useSelection`: the selected node path and the functions that change it. Call it in a component

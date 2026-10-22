@@ -1,14 +1,13 @@
 /**
- * `<TscnSceneProvider>` mounts the contexts `<TscnCanvas>` reads, from a parsed scene and a
+ * `<TscnSceneProvider>` mounts the contexts `<TscnCanvas>` reads, from the text of a scene and a
  * `ResourceProvider`. It is the preview shell's provider stack with the shell's defaults, so a
  * canvas inside it behaves as the shell's canvas does, with none of the shell's UI around it.
  */
 import { useId, useMemo, type ReactNode } from 'react';
-import type { TscnScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { createResourcePipeline } from '../resources/createResourcePipeline.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
-import { toSceneGraph } from './hooks/useParsedScene.js';
+import { useParsedScene } from './hooks/useParsedScene.js';
 import { SceneChangeResetter } from './components/TscnPreviewShell/SceneChangeResetter.js';
 import {
   DEFAULT_ROOT_SCENE_PATH,
@@ -17,10 +16,10 @@ import {
 
 interface TscnSceneProviderProps {
   /**
-   * The scene to draw, as `TscnParser` returns it. The provider moves the targets of its
-   * RemoteTransform nodes in this object, so parse one scene for each provider.
+   * The text of the `.tscn` scene to draw. The provider parses it itself, since drawing a scene
+   * moves the targets of its RemoteTransform nodes.
    */
-  scene: TscnScene;
+  source: string;
   /** How the scene's `res://` resources load. Another provider starts another resource loader. */
   provider: ResourceProvider;
   /** The path the scene opens under. */
@@ -29,21 +28,20 @@ interface TscnSceneProviderProps {
 }
 
 export function TscnSceneProvider({
-  scene,
+  source,
   provider,
   rootScenePath = DEFAULT_ROOT_SCENE_PATH,
   children,
 }: TscnSceneProviderProps) {
   const panelId = useId();
-  const hierarchyValue = useMemo(
-    () => ({ sceneGraph: toSceneGraph(rootScenePath, scene), panelId }),
-    [rootScenePath, scene, panelId]
-  );
+  const { sceneGraph, error } = useParsedScene(source, rootScenePath);
+  if (error) throw new Error(`expected the text of a .tscn scene, got: ${error}`);
+  const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
   const { loader } = useMemo(() => createResourcePipeline(provider), [provider]);
 
   const withProviders = previewShellProviders({ hierarchyValue, panelId, rootScenePath });
 
-  // The resetter clears the selection when `scene` changes, or the highlight draws a removed node.
+  // The resetter clears the selection when `source` changes, or the highlight draws a removed node.
   return (
     <ResourceLoaderProvider loader={loader}>
       {withProviders(

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * `pnpm test:renderer-consumer`: installs the packed `@textscene/renderer` and `@textscene/tscn`
+ * `pnpm test:renderer-consumer`: installs the packed `@textscene/renderer`
  * into a plain Vite React app with its own React and three.js, type-checks and builds the app,
  * and renders a fixture scene in headless Chromium. The app sets no `@textscene/source`
  * condition and no CSS-module support, so a bundle that needs either fails here.
@@ -39,16 +39,10 @@ function installedVersion(name, base) {
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
 
-/** The tarballs of both packages, by package name. */
-function packBoth(destination) {
-  // One package at a time: each build's prebuild hook builds core, and two at once write its dist together.
-  for (const packageDir of ['./apps/textscene-tscn', './apps/textscene-renderer']) {
-    run('pnpm', ['--filter', packageDir, 'build'], REPO_ROOT);
-  }
-  return {
-    '@textscene/tscn': packTarball(join(REPO_ROOT, 'apps/textscene-tscn'), destination),
-    '@textscene/renderer': packTarball(join(REPO_ROOT, 'apps/textscene-renderer'), destination),
-  };
+/** The tarballs to install, by package name. */
+function packRenderer(destination) {
+  run('pnpm', ['--filter', './apps/textscene-renderer', 'build'], REPO_ROOT);
+  return { '@textscene/renderer': packTarball(join(REPO_ROOT, 'apps/textscene-renderer'), destination) };
 }
 
 /**
@@ -130,7 +124,7 @@ function failures({ ink, hasCanvasStyles, errors }) {
 
 const work = mkdtempSync(join(tmpdir(), 'renderer-consumer-'));
 try {
-  const tarballs = packBoth(mkdtempSync(join(work, 'tarballs-')));
+  const tarballs = packRenderer(mkdtempSync(join(work, 'tarballs-')));
   const app = join(work, 'app');
   writeConsumer(app, tarballs);
   buildConsumer(app);

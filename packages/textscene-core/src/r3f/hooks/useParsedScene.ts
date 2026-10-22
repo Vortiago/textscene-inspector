@@ -49,11 +49,6 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
 }
 
 function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
-  return { sceneGraph: toSceneGraph(rootScenePath, tscnScene), error: null };
-}
-
-/** A parsed scene as the graph every panel reads, the registered scene passes applied. */
-export function toSceneGraph(rootScenePath: string, tscnScene: TscnScene): SceneGraph {
   // Every registered `NodeComponentRegistration.scenePass`, transforms before paths, rewrites the
   // parsed tree, so render, gizmos, bounds, selection, tree and inspector read one result.
   let nodes = tscnScene.nodes;
@@ -66,7 +61,7 @@ export function toSceneGraph(rootScenePath: string, tscnScene: TscnScene): Scene
     tscnScene.externalResources,
     tscnScene.internalResources
   );
-  return buildSceneGraph(parsedScene);
+  return { sceneGraph: buildSceneGraph(parsedScene), error: null };
 }
 
 /** Re-parses only when `content` or `rootScenePath` changes. */

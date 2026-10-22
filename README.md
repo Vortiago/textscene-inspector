@@ -59,7 +59,7 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm test:perf` | Work budgets: each budget scene's draw calls and render step runs per frame, against `scripts/perf/budgets.json` |
 | `pnpm test:perf:update` | Rewrite the work budgets from a run |
 | `pnpm test:gpu` | The sky layer passes in headless Chromium: a uniform sky keeps its colour, and no layer goes below black |
-| `pnpm test:renderer-consumer` | The packed `@textscene/renderer` and `@textscene/tscn` in a plain Vite React app: it builds and renders a scene in headless Chromium |
+| `pnpm test:renderer-consumer` | The packed `@textscene/renderer` in a plain Vite React app: it builds and renders a scene in headless Chromium |
 | `pnpm test:vscode:csp` | The preview draws in the real VS Code webview, under its CSP |
 | `pnpm --filter textscene-inspector test:integration` | VS Code integration tests |
 | `TEXTSCENE_VSCODE_VERSION=min pnpm --filter textscene-inspector test:integration` | The same tests on the oldest VS Code that `engines.vscode` accepts |
