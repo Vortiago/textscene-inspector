@@ -21,12 +21,12 @@ export interface SubSceneChildren {
  * `externalResources` are the tables it resolved in, which register the scene's ExtResource.
  */
 export function useSubSceneChildren(
-  node: Pick<TscnNode, 'instance'>,
+  instance: string | undefined,
   externalResources: readonly TscnExternalResource[],
   scenePath: string | null
 ): SubSceneChildren | null {
   // The viewport skips a sub-scene it never renders, so the row registers it too.
-  const result = useInstancedScene(node.instance ?? '', externalResources, scenePath);
+  const result = useInstancedScene(instance ?? '', externalResources, scenePath);
 
   // A stable identity, since callers feed it into useMemo deps.
   return useMemo(() => {

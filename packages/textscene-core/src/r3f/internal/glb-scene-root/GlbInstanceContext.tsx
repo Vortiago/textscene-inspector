@@ -1,7 +1,7 @@
 /**
  * Carries the node that instances a GLB to the `GLBSceneRoot` of that GLB: its inline override
- * children and the visibility parent it passes on. `InstancedSceneSubtree` renders the
- * GLB in a separate synthesised scene, so the root cannot see that node. In Godot that node is the
+ * children and the visibility parent it passes on. The instancing node and the synthesised
+ * `GLBSceneRoot` are two components, so the root cannot see that node. In Godot that node is the
  * GLB root.
  */
 import { createContext, useContext, useMemo, type ReactNode } from 'react';

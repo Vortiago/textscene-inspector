@@ -50,7 +50,8 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
  * below the override heading that its parent path passes through, where only the instance
  * itself can reach the GLB. Every reader of a GLB instance's children asks through here.
  */
-export function liftOverrideChildren(children: readonly LiveNode[]): LiveNode[] {
+export function liftOverrideChildren(children: readonly LiveNode[]): readonly LiveNode[] {
+  if (!children.some((child) => child.overridesExistingNode)) return children;
   let lifted = liftedByChildren.get(children);
   if (!lifted) {
     lifted = liftBelow(children, undefined);

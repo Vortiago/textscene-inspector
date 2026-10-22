@@ -10,7 +10,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { LiveNode } from '../../../resources/liveNode.js';
 import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
 import type { GltfNodeRole } from '../../../godot/import/gltfImportNames.js';
-import { addAtIndex } from '../../../godot/scene/siblingIndex.js';
+import { insertAtIndex } from '../../../godot/scene/siblingIndex.js';
 
 interface GlbHierarchyNode {
   /** Display name, from `glbObjectName`. */
@@ -165,7 +165,7 @@ function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly Live
   index(nodes);
   for (const child of attached) {
     const target = byRelPath.get(child.glbTargetRelPath!);
-    if (target) target.children = addAtIndex(target.children, child);
+    if (target) insertAtIndex(target.children, child);
   }
 }
 
@@ -211,7 +211,7 @@ function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly Live
  * returns them) below the objects their parent paths name, plus an `AnimationPlayer` when it has
  * clips. `liveChildGroups` alone calls it, so the tree's rows and `resolveLiveEntry` see the same children.
  */
-export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[] = []): TscnNode[] {
+export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
   // Attaching writes into the nodes, so an attached list builds its own copy.
   if (attached.length > 0) return buildGlbSceneRootChildren(root, attached);
   let children = plainChildren.get(root);

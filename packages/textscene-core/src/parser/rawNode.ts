@@ -8,17 +8,17 @@ import { isPropertyOverrideHeading, type ParsedHeading } from './utils.js';
 import { parseHeadingIndex } from './valueParsers.js';
 import { INSTANCE_PLACEHOLDER_TYPE, parseIdTrail, parseUniqueId } from '../godot/scene/packedScene.js';
 
-/**
- * A **Raw view** node, built without NodeRegistry, so without three.js. It has no typed `properties`: a helper the
- * linter and the renderer share reads `rawProperties`, which holds the same literals on either tree
- * (`parser/rawPropertyParity.test.ts`).
- */
 /** The `index` field a heading's `index=` gives its node, or none. */
 export function headingIndexField(heading: ParsedHeading): { index?: number } {
   const index = parseHeadingIndex(heading.attributes.index);
   return index === undefined ? {} : { index };
 }
 
+/**
+ * A **Raw view** node, built without NodeRegistry, so without three.js. It has no typed `properties`: a helper the
+ * linter and the renderer share reads `rawProperties`, which holds the same literals on either tree
+ * (`parser/rawPropertyParity.test.ts`).
+ */
 export function createRawNode(heading: ParsedHeading, rawProperties: Record<string, string>): RawNode {
   const node: RawNode = {
     name: heading.attributes.name || '',

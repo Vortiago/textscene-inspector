@@ -29,7 +29,7 @@ function displayTypeOf(node: TscnNode): unknown {
 function displayTypeFor(object: THREE.Object3D): unknown {
   const root = new THREE.Group();
   root.add(object);
-  return displayTypeOf(glbSceneRootChildren(root)[0]!);
+  return displayTypeOf(glbSceneRootChildren(root, [])[0]!);
 }
 
 /** `object` as glTF node 0, which Godot names `godotName`. */
@@ -56,7 +56,9 @@ describe('glbSceneRootChildren paths', () => {
   it("paths each node by Godot's name", () => {
     const root = new THREE.Group();
     root.add(godotNamed(named(new THREE.Mesh(), 'Cube001'), 'Cube_001'));
-    expect(glbSceneRootChildren(root).map((n) => [n.name, relPathOf(n)])).toEqual([['Cube_001', 'Cube_001']]);
+    expect(glbSceneRootChildren(root, []).map((n) => [n.name, relPathOf(n)])).toEqual([
+      ['Cube_001', 'Cube_001'],
+    ]);
   });
 
   it('walks children in order with nested relative paths', () => {
@@ -65,7 +67,7 @@ describe('glbSceneRootChildren paths', () => {
     armature.add(named(new THREE.Mesh(), 'hand'));
     root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Bone(), 'spine'), armature);
 
-    const nodes = glbSceneRootChildren(root);
+    const nodes = glbSceneRootChildren(root, []);
     expect(nodes.map(relPathOf)).toEqual(['body', 'spine', 'Armature']);
     expect(relPathOf(nodes[2]!.children[0]!)).toBe('Armature/hand');
   });
@@ -77,13 +79,13 @@ describe('glbSceneRootChildren paths', () => {
       named(new THREE.Mesh(), 'body'),
       named(new THREE.Mesh(), 'body')
     );
-    expect(glbSceneRootChildren(root).map(relPathOf)).toEqual(['body', 'body@1', 'body@2']);
+    expect(glbSceneRootChildren(root, []).map(relPathOf)).toEqual(['body', 'body@1', 'body@2']);
   });
 
   it('falls back to the THREE type for an unnamed node', () => {
     const root = new THREE.Group();
     root.add(new THREE.Mesh());
-    const [node] = glbSceneRootChildren(root);
+    const [node] = glbSceneRootChildren(root, []);
     expect(node!.name).toBe('Mesh');
     expect(relPathOf(node!)).toBe('Mesh');
   });
@@ -95,7 +97,7 @@ describe('glbSceneRootChildren paths', () => {
     root.add(g);
     const paths = (nodes: readonly TscnNode[]): unknown[] =>
       nodes.flatMap((n) => [relPathOf(n), ...paths(n.children)]);
-    expect(paths(glbSceneRootChildren(root.clone(true)))).toEqual(paths(glbSceneRootChildren(root)));
+    expect(paths(glbSceneRootChildren(root.clone(true), []))).toEqual(paths(glbSceneRootChildren(root, [])));
   });
 
   it('names each node by its disambiguated path segment, so joining names reproduces the path', () => {
@@ -104,7 +106,7 @@ describe('glbSceneRootChildren paths', () => {
     armature.add(named(new THREE.Mesh(), 'hand'));
     root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Mesh(), 'body'), armature);
 
-    const nodes = glbSceneRootChildren(root);
+    const nodes = glbSceneRootChildren(root, []);
     expect(nodes.map((n) => n.name)).toEqual(['body', 'body@1', 'Armature']);
     expect(nodes.map((n) => n.type)).toEqual(['GLBMesh', 'GLBMesh', 'GLBNode']);
     expect(nodes[2]!.children[0]!.name).toBe('hand');
@@ -141,7 +143,7 @@ describe('glbSceneRootChildren animation player', () => {
       new THREE.AnimationClip('run', 1, []),
     ];
 
-    const nodes = glbSceneRootChildren(root);
+    const nodes = glbSceneRootChildren(root, []);
     expect(nodes.map((n) => n.name)).toEqual(['body', GLB_ANIMATION_PLAYER_NAME]);
     const ap = nodes.at(-1)!;
     // `GLB`-prefixed, so `rendersOwnVisual` reports it as drawing.
@@ -153,7 +155,7 @@ describe('glbSceneRootChildren animation player', () => {
   it('omits the AnimationPlayer node when the GLB has no clips', () => {
     const root = new THREE.Group();
     root.add(named(new THREE.Mesh(), 'body'));
-    const nodes = glbSceneRootChildren(root);
+    const nodes = glbSceneRootChildren(root, []);
     expect(nodes.map((n) => n.name)).toEqual(['body']);
   });
 });
@@ -167,17 +169,17 @@ describe('glbSceneRootChildren per GLB', () => {
 
   it('builds the children of one GLB once', () => {
     const root = rootWithBody();
-    expect(glbSceneRootChildren(root)).toBe(glbSceneRootChildren(root));
+    expect(glbSceneRootChildren(root, [])).toBe(glbSceneRootChildren(root, []));
   });
 
   it('refuses a write to the children it shares', () => {
-    const children = glbSceneRootChildren(rootWithBody());
+    const children = glbSceneRootChildren(rootWithBody(), []);
     expect(() => children.push(children[0]!)).toThrow(TypeError);
     expect(() => children[0]!.children.push(children[0]!)).toThrow(TypeError);
   });
 
   it('builds its own children for each of two GLBs', () => {
-    expect(glbSceneRootChildren(rootWithBody())).not.toBe(glbSceneRootChildren(rootWithBody()));
+    expect(glbSceneRootChildren(rootWithBody(), [])).not.toBe(glbSceneRootChildren(rootWithBody(), []));
   });
 
   it('leaves the shared children without a node attached for one call', () => {
@@ -185,7 +187,7 @@ describe('glbSceneRootChildren per GLB', () => {
     const marker = { ...makeNode('Marker', 'Node'), glbTargetRelPath: 'body' };
 
     expect(glbSceneRootChildren(root, [marker])[0]!.children).toHaveLength(1);
-    expect(glbSceneRootChildren(root)[0]!.children).toHaveLength(0);
+    expect(glbSceneRootChildren(root, [])[0]!.children).toHaveLength(0);
   });
 });
 

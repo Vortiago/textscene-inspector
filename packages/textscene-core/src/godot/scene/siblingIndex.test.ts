@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addAtIndex } from './siblingIndex';
+import { addAtIndex, insertAtIndex } from './siblingIndex';
 
 const named = (name: string, index?: number) => ({ name, ...(index === undefined ? {} : { index }) });
 const namesOf = (nodes: readonly { name: string }[]) => nodes.map((n) => n.name);
@@ -28,5 +28,14 @@ describe('addAtIndex', () => {
   it('leaves the siblings it was given as they were', () => {
     addAtIndex(siblings, named('N', 0));
     expect(namesOf(siblings)).toEqual(['A', 'B', 'C']);
+  });
+});
+
+describe('insertAtIndex', () => {
+  it('places the node in the array it was given', () => {
+    const siblings = [named('A'), named('B')];
+    insertAtIndex(siblings, named('N', 1));
+    insertAtIndex(siblings, named('M'));
+    expect(namesOf(siblings)).toEqual(['A', 'N', 'B', 'M']);
   });
 });

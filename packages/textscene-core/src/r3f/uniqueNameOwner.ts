@@ -196,7 +196,7 @@ class OwnerWalk {
       group,
       owner:
         instanceOwner && holdsInstanceContent(group)
-          ? { ...instanceOwner, ...(group.mergedNode ? { composed: group.mergedNode.uniqueNames } : {}) }
+          ? { ...instanceOwner, composed: group.mergedNode?.uniqueNames }
           : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));

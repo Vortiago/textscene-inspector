@@ -115,8 +115,8 @@ function TreeNodeImpl({
   );
 
   // Instance root merge (ADR-0013), the same decision the viewport and inspector
-  // make, for the row header. It reads the first group's `mergedNode`, so this adds no merge
-  // beyond the one `useInstanceContent` makes to find what the merged node instances.
+  // make, for the row header. It reads the first group's `mergedNode`, so this adds no merge.
+  // `useInstanceContent` merges once more, to find what the merged node instances.
   // Every other group keeps the raw node, as `collapseLiveNode` does.
   const effective = useMemo(() => mergedNodeOf(groups) ?? node, [groups, node]);
 

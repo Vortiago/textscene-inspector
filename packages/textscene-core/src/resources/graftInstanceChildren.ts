@@ -18,7 +18,7 @@ import {
 } from './instanceNameTable';
 import { UNIQUE_NODE_PREFIX } from '../godot/string/nodePath';
 import { joinPath } from '../utils/nodePath';
-import { addAtIndex } from '../godot/scene/siblingIndex';
+import { addAtIndex, insertAtIndex } from '../godot/scene/siblingIndex';
 
 /** The two scopes a graft joins. */
 export interface InstanceScopes {
@@ -71,7 +71,7 @@ export function graftInstanceChildren(
       const folded = child.overridesExistingNode ? foldOrWarn(grafted, stamped, scopes.content) : null;
       if (folded) grafted = folded;
       else if (child.overridesExistingNode) misplaced.push(stamped);
-      else grafted = addAtIndex(grafted, stamped);
+      else insertAtIndex(grafted, stamped);
       continue;
     }
 

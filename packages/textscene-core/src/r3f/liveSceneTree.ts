@@ -11,7 +11,7 @@ import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
 import { glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
-import { addAtIndex } from '../godot/scene/siblingIndex.js';
+import { insertAtIndex } from '../godot/scene/siblingIndex.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -143,7 +143,8 @@ export interface LiveChildGroup {
  * What is below a node: one `inline` group for a non-instance, one `merged`
  * group for a single-root instance, `inline` plus `subscene` for a multi-root
  * instance, and one `glb` group for a GLBSceneRoot. The node that instances a lone GLB is the
- * GLB root, so a loaded GLB's objects are its `glb` group, before its `inline` group. `scope` is
+ * GLB root, so a loaded GLB's objects are `glb` groups and its own children `inline` groups, in
+ * the order `index=` gives. `scope` is
  * the one of the group the node sits in, which the node's own `scope` replaces. A sub-scene's
  * groups read the sub-scene's pools from the cache, and their `instancedScenePaths` gain the
  * sub-scene. An instance of a scene that already encloses it (cyclic instancing)
@@ -240,10 +241,11 @@ function glbInstanceGroups(
 ): LiveChildGroup[] {
   const { attached, rest } = splitAttachedChildren(object, hostChildren);
   const stamped = attached.map((child) => (child.scope ? child : { ...child, scope: hostScope }));
-  const ordered = rest.reduce<readonly TscnNode[]>(
-    (siblings, child) => addAtIndex(siblings, child),
-    glbSceneRootChildren(object, stamped)
-  );
+  const objects = glbSceneRootChildren(object, stamped);
+  if (rest.length === 0) return [{ origin: 'glb', children: objects, scope: hostScope }];
+  // A copy: without attached children the objects are the GLB's shared, frozen answer.
+  const ordered = [...objects];
+  for (const child of rest) insertAtIndex(ordered, child);
   const hostOwn = new Set<TscnNode>(rest);
   const runs: { origin: 'glb' | 'inline'; children: TscnNode[] }[] = [];
   for (const child of ordered) {
