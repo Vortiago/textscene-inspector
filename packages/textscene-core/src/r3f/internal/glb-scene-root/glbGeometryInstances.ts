@@ -24,7 +24,7 @@ import { visibleInTree } from '../../visibleInTree';
 import type { NodePlace } from '../../visibilityRange/visibilityScene';
 import { childOrders, useTreeOrder, type TreeOrder } from '../../contexts/TreeOrderContext';
 import { lightmapsOf, type LightmapAssignment } from '../../lightmap/sceneLightmaps';
-import { glbObjectName, type GlbObjectEntry } from './glbHierarchy';
+import { glbObjectName } from './glbHierarchy';
 import type { GlbNodeLink } from './glbNodeLinks';
 import type { GlbRoot } from './GlbInstanceContext';
 
@@ -67,13 +67,13 @@ function glbMeshInstances(
 
 /**
  * Registers each MeshInstance3D of the mounted GLB `object` with the scene cull, and gives it the
- * lightmap of the LightmapGI that names it. `links` are `entries` as `glbNodeLinks` reads them. Each keeps one instance while its object is mounted,
- * as an authored MeshInstance3D does, so a scene edit keeps the instance's previous visibility per
- * camera and its faded materials.
+ * lightmap of the LightmapGI that names it. `links` are the objects below `object` as
+ * `glbNodeLinks` reads them. Each keeps one instance while its object is mounted, as an authored
+ * MeshInstance3D does, so a scene edit keeps the instance's previous visibility per camera and its
+ * faded materials.
  */
 export function useGlbGeometryInstances(
   object: THREE.Object3D | undefined,
-  entries: readonly GlbObjectEntry[],
   root: GlbRoot,
   links: readonly GlbNodeLink[]
 ): void {
@@ -85,18 +85,18 @@ export function useGlbGeometryInstances(
     [object, links, root, rootOrder]
   );
   const culled = useRef(new Map<THREE.Object3D, CulledMeshInstance>());
+  // Keyed on the object, not `links`: a scene edit makes new links, and must keep each instance.
   useLayoutEffect(() => {
     if (!object) return;
-    const meshes = [object, ...entries.map((entry) => entry.object)].filter(isMeshInstance);
-    const releases = meshes.map((mesh) => cullMeshInstance(scene, mesh, culled.current));
+    const releases = meshInstancesIn(object).map((mesh) => cullMeshInstance(scene, mesh, culled.current));
     return () => releases.forEach((release) => release());
-  }, [scene, object, entries]);
+  }, [scene, object]);
   // After the effect above on the same commit, so a remounted instance takes its node data at once.
   useLayoutEffect(() => {
     for (const { object: meshObject, place, properties } of instances) {
       culled.current.get(meshObject)?.update(place, properties);
     }
-  }, [scene, object, entries, instances]);
+  }, [scene, object, instances]);
   useLayoutEffect(() => {
     const lightmaps = lightmapsOf(scene);
     const assignLightmaps = () => {
@@ -110,6 +110,15 @@ export function useGlbGeometryInstances(
     assignLightmaps();
     return lightmaps.subscribe(assignLightmaps);
   }, [scene, instances, invalidate]);
+}
+
+/** `object` and each MeshInstance3D below it, in the pre-order `flattenGlbObjects` lists them in. */
+function meshInstancesIn(object: THREE.Object3D): THREE.Object3D[] {
+  const meshes: THREE.Object3D[] = [];
+  object.traverse((node) => {
+    if (isMeshInstance(node)) meshes.push(node);
+  });
+  return meshes;
 }
 
 /** One MeshInstance3D's cull instance and the faded materials of its surfaces, kept while its object is mounted. */

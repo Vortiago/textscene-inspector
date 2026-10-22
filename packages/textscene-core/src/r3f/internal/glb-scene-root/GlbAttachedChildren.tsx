@@ -37,20 +37,21 @@ interface AttachedChild {
 }
 
 interface GlbAttachedChildrenProps {
-  /** The mounted GLB flattened by `flattenGlbObjects`, which `root.overrides` address into. */
-  entries: readonly GlbObjectEntry[];
-  /** `entries` as `glbNodeLinks` reads them, one link per entry. */
+  /**
+   * The mounted GLB's objects as `glbNodeLinks` reads them, one link per `flattenGlbObjects`
+   * entry, which `root.overrides` address into.
+   */
   links: readonly GlbNodeLink[];
   root: GlbRoot;
   /** The GLB scene root's own node path, which each GLB object's `relPath` continues. */
   nodePath: string | null;
 }
 
-export function GlbAttachedChildren({ entries, links, root, nodePath }: GlbAttachedChildrenProps): ReactNode {
+export function GlbAttachedChildren({ links, root, nodePath }: GlbAttachedChildrenProps): ReactNode {
   const rootOrder = useTreeOrder();
   const attached = useMemo(
-    () => attachedChildren(entries, links, root, nodePath, rootOrder),
-    [entries, links, root, nodePath, rootOrder]
+    () => attachedChildren(links, root, nodePath, rootOrder),
+    [links, root, nodePath, rootOrder]
   );
   if (attached.length === 0 || nodePath === null || root.path === null) return null;
   return (
@@ -75,7 +76,6 @@ export function GlbAttachedChildren({ entries, links, root, nodePath }: GlbAttac
  * order. A path that names no object drops its node, and `matchGlbTarget` warns once for it.
  */
 function attachedChildren(
-  entries: readonly GlbObjectEntry[],
   links: readonly GlbNodeLink[],
   root: GlbRoot,
   nodePath: string | null,
@@ -84,6 +84,7 @@ function attachedChildren(
   // The common GLB has none, so nothing below runs for it. A GLB opened as the scene has no
   // instancing node to address into it.
   if (nodePath === null || root.path === null || root.overrides.every(isApplicableGlbOverride)) return [];
+  const entries = links.map((link) => link.entry);
   const orders = childOrders(rootOrder, entries.length);
   const attachedBelow = new Map<number, number>();
   const attached: AttachedChild[] = [];
