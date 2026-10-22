@@ -19,7 +19,7 @@ import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicF
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import type { FadePass } from '../../../r3f/materials/fadeVariants';
-import { opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
+import { passBlendMaterialProps } from '../../../r3f/materials/surfaceBlend';
 import type { MaterialAttach } from '../../../r3f/materials/swappedMaterials';
 import { FadedMaterials } from '../../../r3f/materials/FadedMaterials';
 import { useSpriteBase3DColorAccum } from '../../../r3f/spriteBase3DColorAccum';
@@ -27,11 +27,6 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import { sourceColorSpace } from '../../../resources/textures/sourceColorSpace';
 import { applyTextureFilterState } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
-import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
-import {
-  alphaAntialiasingProps,
-  alphaAntialiasingUserData,
-} from '../../../r3f/materials/godotAlphaAntialiasing';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
@@ -195,40 +190,18 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   }
 
   const material = (pass: FadePass, attach: string | MaterialAttach | undefined) => {
-    const {
-      transparent,
-      depthWrite,
-      alphaTest,
-      alphaHash,
-      blending,
-      injection,
-      alphaHashScale,
-      antialiasing,
-      opaquePrepass,
-    } = blends[pass];
+    const blend = blends[pass];
     const program = viewportProgramInputs({
       props: {
         attach,
         map: displayedTexture,
         color,
         opacity,
-        transparent,
-        depthWrite,
-        alphaTest,
-        alphaHash,
-        blending,
-        injection,
-        ...alphaAntialiasingProps(antialiasing),
+        ...passBlendMaterialProps(blend),
+        injection: blend.injection,
         // FLAG_DISABLE_DEPTH_TEST → `render_mode depth_test_disabled` (`material.cpp:863`).
         depthTest,
         side,
-        // `sprite_3d.cpp:281-283` hands the threshold, the scale and the edge to every mode's
-        // material. Only HASH reads the scale, and only an antialiased cut the edge.
-        userData: {
-          ...alphaHashScaleUserData(alphaHashScale),
-          ...alphaAntialiasingUserData(antialiasing),
-          ...opaquePrepassUserData(opaquePrepass),
-        },
       },
       merge: [properties.shaded ? SHADED_SCALARS : undefined],
     });
