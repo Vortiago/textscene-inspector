@@ -12,6 +12,7 @@ import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
 import { glbPathOf, loneGlbPath } from '../resources/glbSceneRoot.js';
+import { addAtIndex } from '../godot/scene/siblingIndex.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
 import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -133,9 +134,9 @@ export interface LiveChildGroup {
   /** Both pools this group's children resolve their own refs against, as a {@link SceneScope}. */
   scope: SceneScope;
   /**
-   * The first group of a collapsed instance only (`merged`, or `glb` for a merged GLB): the node
-   * the instance became, so a caller skips a second `mergeInstanceRoot` pass. Without it the raw
-   * node is the effective node.
+   * Every group of a collapsed instance (`merged`, or `glb` and `inline` for a merged GLB): the
+   * node the instance became, so a caller skips a second `mergeInstanceRoot` pass. Without it the
+   * raw node is the effective node.
    */
   mergedNode?: LiveNode;
 }
@@ -214,8 +215,7 @@ function mergedGroups(
   const scope = scopeOf(merged, outer);
   const object = instancedGlbObject(merged, scope, sceneCache, glbCache);
   if (!object) return [{ origin: 'merged', children: merged.children, scope, mergedNode: merged }];
-  const [objects, ...rest] = glbInstanceGroups(object, merged.children, scope);
-  return [{ ...objects!, mergedNode: merged }, ...rest];
+  return glbInstanceGroups(object, merged.children, scope).map((group) => ({ ...group, mergedNode: merged }));
 }
 
 /** The loaded GLB `node` instances as the only root of its sub-scene, or undefined. */
@@ -233,9 +233,9 @@ function instancedGlbObject(
 
 /**
  * The groups of a node that instances a lone GLB: the GLB's objects, with the host's typed children
- * below the GLB nodes their parent paths name, then the host's other children. Each typed child
- * takes the host's scope when it carries none, since the GLB scene's pools are not the ones it was
- * authored against.
+ * below the GLB nodes their parent paths name, and the host's other children after them, or at the
+ * `index=` they state. Each typed child takes the host's scope when it carries none, since the GLB
+ * scene's pools are not the ones it was authored against.
  */
 function glbInstanceGroups(
   object: THREE.Object3D,
@@ -244,14 +244,21 @@ function glbInstanceGroups(
 ): LiveChildGroup[] {
   const { attached, rest } = splitAttachedChildren(object, hostChildren);
   const stamped = attached.map((child) => (child.scope ? child : { ...child, scope: hostScope }));
-  const groups: LiveChildGroup[] = [
-    { origin: 'glb', children: glbSceneRootChildren(object, stamped), scope: hostScope },
-  ];
-  if (rest.length > 0) groups.push({ origin: 'inline', children: rest, scope: hostScope });
-  return groups;
+  const ordered = rest.reduce<readonly TscnNode[]>(
+    (siblings, child) => addAtIndex(siblings, child),
+    glbSceneRootChildren(object, stamped)
+  );
+  const hostOwn = new Set<TscnNode>(rest);
+  const runs: { origin: 'glb' | 'inline'; children: TscnNode[] }[] = [];
+  for (const child of ordered) {
+    const origin = hostOwn.has(child) ? 'inline' : 'glb';
+    if (runs.at(-1)?.origin === origin) runs.at(-1)!.children.push(child);
+    else runs.push({ origin, children: [child] });
+  }
+  return runs.map((run) => ({ ...run, scope: hostScope }));
 }
 
-/** The collapsed node the first group carries (`merged`, or `glb` for a merged GLB), so a walker merges each instance once. */
+/** The collapsed node a group of a merged instance carries (the first group answers), so a walker merges each instance once. */
 export function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
   return groups[0]?.mergedNode;
 }

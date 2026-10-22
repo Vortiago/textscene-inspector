@@ -28,6 +28,7 @@ import { reparentedName } from '../godot/scene/packedScene.js';
 import { idTrailEnd, ownerTrailEnd } from './idTrail.js';
 import { refusesToInstantiate } from './instantiateRefusal.js';
 import { isTypeUnknowable } from './typeUnknowable.js';
+import { addAtIndex } from '../godot/scene/siblingIndex.js';
 
 /**
  * The one walk over a seated scene. Paths are relative to the root: "." is the root, "Foo/Bar" is
@@ -154,7 +155,10 @@ function seatBelowParent<N extends SceneNode<N>>(
   const parentNode = tables.byPath.get(parentPath);
   if (parentNode) {
     const seat = seatCopy(tables, node, owner);
-    parentNode.children.push(seat);
+    // An instance's own nodes are not in this list, so an `index=` below one is no place in it.
+    // A wide parent appends in place: a copy for each child would be quadratic.
+    if (parentNode.instance || seat.index === undefined) parentNode.children.push(seat);
+    else parentNode.children = addAtIndex(parentNode.children, seat);
     register(tables, parentPath, seat, parentNode);
     return true;
   }

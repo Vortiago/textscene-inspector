@@ -73,6 +73,44 @@ describe('an instanced GLB, in the live tree', () => {
   });
 });
 
+describe('a node that states index=, in the live tree of an instanced GLB', () => {
+  it('sits among the GLB nodes of its parent at that index (packed_scene.cpp:543-544)', () => {
+    const first = { ...typed('First', 'Skeleton'), index: 0 };
+    const between = { ...typed('Between', 'Skeleton'), index: 1 };
+
+    expect(pathsOfMarkers([first, between])).toEqual(['Rig/Skeleton/First', 'Rig/Skeleton/Between']);
+    expect(
+      pathsBelowRig([first, between], () => true).filter((path) => path.startsWith('Rig/Skeleton/'))
+    ).toEqual(['Rig/Skeleton/First', 'Rig/Skeleton/Between', 'Rig/Skeleton/Torso', 'Rig/Skeleton/Arm']);
+  });
+
+  it('sits before the GLB objects when the instancing node holds it at index 0', () => {
+    const marker = { ...makeNode('Marker', 'Marker3D'), index: 0 };
+
+    expect(pathsBelowRig([marker], () => true)).toEqual([
+      'Rig',
+      'Rig/Marker',
+      'Rig/Skeleton',
+      'Rig/Skeleton/Torso',
+      'Rig/Skeleton/Arm',
+      'Rig/AnimationPlayer',
+    ]);
+  });
+
+  it('sits before the AnimationPlayer at index 1', () => {
+    const marker = { ...makeNode('Marker', 'Marker3D'), index: 1 };
+
+    expect(pathsBelowRig([marker], () => true)).toEqual([
+      'Rig',
+      'Rig/Skeleton',
+      'Rig/Skeleton/Torso',
+      'Rig/Skeleton/Arm',
+      'Rig/Marker',
+      'Rig/AnimationPlayer',
+    ]);
+  });
+});
+
 describe('a property override of an instanced GLB, in the live tree', () => {
   /** `[node name="Torso" parent="Skeleton"]`: Godot takes the node by name and adds none (`packed_scene.cpp:280-283`). */
   function override(name: string, instanceSubPath?: string): TscnNode {

@@ -10,6 +10,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { LiveNode } from '../../../resources/liveNode.js';
 import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
 import type { GltfNodeRole } from '../../../godot/import/gltfImportNames.js';
+import { addAtIndex } from '../../../godot/scene/siblingIndex.js';
 
 interface GlbHierarchyNode {
   /** Display name, from `glbObjectName`. */
@@ -162,7 +163,10 @@ function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly Live
     }
   };
   index(nodes);
-  for (const child of attached) byRelPath.get(child.glbTargetRelPath!)?.children.push(child);
+  for (const child of attached) {
+    const target = byRelPath.get(child.glbTargetRelPath!);
+    if (target) target.children = addAtIndex(target.children, child);
+  }
 }
 
 /**
