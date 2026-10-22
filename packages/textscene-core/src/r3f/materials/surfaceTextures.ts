@@ -72,17 +72,7 @@ export function useSurfaceTextures(
   // `normal_texture` without `normal_enabled` reaches no shader.
   const references = scalars?.textureSlots;
 
-  // One call per slot, unrolled: hooks cannot run in a loop.
-  const sources: Readonly<Record<TextureSlot, SlotTexture>> = {
-    albedo_texture: useSlotTexture(references, resourceTables, 'albedo_texture'),
-    normal_texture: useSlotTexture(references, resourceTables, 'normal_texture'),
-    roughness_texture: useSlotTexture(references, resourceTables, 'roughness_texture'),
-    metallic_texture: useSlotTexture(references, resourceTables, 'metallic_texture'),
-    emission_texture: useSlotTexture(references, resourceTables, 'emission_texture'),
-    ao_texture: useSlotTexture(references, resourceTables, 'ao_texture'),
-    heightmap_texture: useSlotTexture(references, resourceTables, 'heightmap_texture'),
-    anisotropy_flowmap: useSlotTexture(references, resourceTables, 'anisotropy_flowmap'),
-  };
+  const sources = useEachSlot(useSlotTexture, references, resourceTables);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `bindSlotTexture`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
@@ -93,32 +83,34 @@ export function useSurfaceTextures(
   );
 
   const flowmap = useRepackedFlowmap(sources.anisotropy_flowmap, scalars !== null && isAnisotropic(scalars));
-  const albedo = useDrawnSlot('albedo_texture', sources.albedo_texture, states);
-  const normal = useDrawnSlot('normal_texture', sources.normal_texture, states);
-  const roughness = useDrawnSlot('roughness_texture', sources.roughness_texture, states);
-  const metallic = useDrawnSlot('metallic_texture', sources.metallic_texture, states);
-  const emission = useDrawnSlot('emission_texture', sources.emission_texture, states);
-  const ao = useDrawnSlot('ao_texture', sources.ao_texture, states);
-  const heightmap = useDrawnSlot('heightmap_texture', sources.heightmap_texture, states);
-  const anisotropy = useDrawnSlot('anisotropy_flowmap', flowmap, states);
+  const drawn = useEachSlot(useDrawnSlot, { ...sources, anisotropy_flowmap: flowmap }, states);
 
+  const albedoTargetUv = drawn.albedo_texture?.isRenderTargetTexture ? states?.uv1.uv : undefined;
+  const maps = TEXTURE_SLOTS.map((slot) => drawn[slot]);
   const textures = useMemo(
-    (): ResolvedTextures => ({
-      albedo_texture: albedo,
-      normal_texture: normal,
-      roughness_texture: roughness,
-      metallic_texture: metallic,
-      emission_texture: emission,
-      ao_texture: ao,
-      heightmap_texture: heightmap,
-      anisotropy_flowmap: anisotropy,
-      albedoTargetUv: albedo?.isRenderTargetTexture ? states?.uv1.uv : undefined,
-    }),
-    [states, albedo, normal, roughness, metallic, emission, ao, heightmap, anisotropy]
+    (): ResolvedTextures => ({ ...drawn, albedoTargetUv }),
+    // `maps` has one entry per slot, a fixed length, and stands for `drawn`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [...maps, albedoTargetUv]
   );
 
   const isUnresolved = TEXTURE_SLOTS.some((slot) => sources[slot].missing || sources[slot].cyclic);
   return isUnresolved ? null : textures;
+}
+
+/**
+ * `use(slot, ...args)` for each texture slot, in `TEXTURE_SLOTS` order, keyed by slot. The list
+ * has a fixed length, so every render calls the hooks in the same order.
+ */
+function useEachSlot<Args extends unknown[], T>(
+  use: (slot: TextureSlot, ...args: Args) => T,
+  ...args: Args
+): Readonly<Record<TextureSlot, T>> {
+  const results: Partial<Record<TextureSlot, T>> = {};
+  for (const slot of TEXTURE_SLOTS) {
+    results[slot] = use(slot, ...args);
+  }
+  return results as Record<TextureSlot, T>;
 }
 
 interface SlotTexture extends Texture2DResult {
@@ -136,9 +128,9 @@ type SlotMap = Pick<SlotTexture, 'texture' | 'isArriving'>;
  * live registry.
  */
 function useSlotTexture(
+  slot: TextureSlot,
   references: TextureSlotReferences | undefined,
-  { externalResources, internalResources }: MaterialTables,
-  slot: TextureSlot
+  { externalResources, internalResources }: MaterialTables
 ): SlotTexture {
   const ref = textureSlotReference(references, slot);
   const isViewport = isViewportTextureRef(ref, internalResources);
@@ -183,9 +175,10 @@ function useRepackedFlowmap(flowmap: SlotTexture, isSampled: boolean): SlotMap {
  */
 function useDrawnSlot(
   slot: TextureSlot,
-  { texture, isArriving }: SlotMap,
+  maps: Readonly<Record<TextureSlot, SlotMap>>,
   states: MaterialTextureStates | null
 ): THREE.Texture | undefined {
+  const { texture, isArriving } = maps[slot];
   const bound = useMemo(() => transformedTexture(texture, states, slot), [texture, states, slot]);
   const drawn = useTiledUpload(bound ?? null, releaseBoundTexture) ?? undefined;
   if (drawn) return drawn;
@@ -229,8 +222,8 @@ function onGltfUvs(state: UVSetState): UVSetState {
 }
 
 /**
- * A triplanar state tiled to the mesh's size. PARITY LIMITATION (offset + world-triplanar):
- * three applies `offset` in UV space, Godot's world-triplanar offset is in world units.
+ * A triplanar state tiled to the mesh's size. PARITY LIMITATION (offset + world-triplanar): three
+ * applies `offset` in UV space, Godot's world-triplanar offset is in world units. #819 ports it.
  */
 function planeTiled(state: UVSetState, mesh: TscnInternalResource): UVSetState {
   return { ...state, uv: { scale: triplanarPlaneScale(mesh, state.uv.scale), offset: state.uv.offset } };

@@ -85,6 +85,12 @@ describe('useSurfaceMaterial bags', () => {
 
     expect(result.current.bags).toBe(first);
   });
+
+  it('starts no upload for a material with no maps, whose slots are all empty', () => {
+    const { uploads } = renderSurface(inlineMaterial({ roughness: '0.3' }), true);
+
+    expect(uploads).toHaveLength(0);
+  });
 });
 
 describe('useSurfaceMaterial with an anisotropy flowmap', () => {
@@ -118,6 +124,16 @@ describe('useSurfaceMaterial with an anisotropy flowmap', () => {
 
     expect(unfadedProps(result.current).anisotropyMap).toBeInstanceOf(THREE.DataTexture);
     expect(unfadedProps(result.current).anisotropyMap).not.toBe(pendingMapStandIn('anisotropy_flowmap'));
+  });
+
+  it('starts no upload for a flowmap the material never samples (edge case)', () => {
+    const { fake, uploads } = renderSurface(
+      inlineMaterial({ ...ANISOTROPIC, anisotropy: '0' }, [], EXTERNAL),
+      true
+    );
+    act(() => fake.textures._resolve(FLOWMAP_PATH, flowmap()));
+
+    expect(uploads).toHaveLength(0);
   });
 
   it('binds no stand-in for a flowmap the material never samples (edge case)', () => {
