@@ -6,9 +6,10 @@
 
 import * as vscode from 'vscode';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
-import { isWithinRoot, resRelativePath } from '@textscene/core/resources/resPath';
+import { isWithinRoot } from '@textscene/core/resources/resPath';
 import { fileStamp, resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 import { anyCase } from './anyCaseGlob';
+import { resPathUri } from './existingResFile';
 import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { readWorkspaceFile } from './readWorkspaceFile';
@@ -19,7 +20,7 @@ export class LintResourceProvider implements ResourceProvider {
   private _listed: readonly string[] = [];
 
   /** @param resRoot - The directory that holds `project.godot`, or a scene's own directory outside every project. */
-  constructor(private readonly resRoot: vscode.Uri) {}
+  constructor(readonly resRoot: vscode.Uri) {}
 
   /** The `res://` paths the last listing that answered found, so a host can tell when one of them goes. */
   get listed(): readonly string[] {
@@ -27,7 +28,7 @@ export class LintResourceProvider implements ResourceProvider {
   }
 
   async loadResource(resPath: string, type = ''): Promise<string | ArrayBuffer | null> {
-    const file = this.fileOf(resPath);
+    const file = resPathUri(this.resRoot, resPath);
     if (file === null) return null;
     let bytes: Uint8Array;
     try {
@@ -42,7 +43,7 @@ export class LintResourceProvider implements ResourceProvider {
 
   /** The file's modification time and size, one `stat`, so the linter reads an unchanged file once. */
   async stamp(resPath: string): Promise<string | null> {
-    const file = this.fileOf(resPath);
+    const file = resPathUri(this.resRoot, resPath);
     if (file === null) return null;
     try {
       const { mtime, size } = await vscode.workspace.fs.stat(file);
@@ -81,11 +82,5 @@ export class LintResourceProvider implements ResourceProvider {
   /** Whether the root is `dir` or lies under it. */
   isRootedWithin(dir: vscode.Uri): boolean {
     return isWithinRoot(dir.fsPath, this.resRoot.fsPath, HOST_PATH_CASE);
-  }
-
-  /** The workspace file `resPath` names, or null for a path that is not `res://` or escapes the root. */
-  fileOf(resPath: string): vscode.Uri | null {
-    const relative = resRelativePath(resPath);
-    return relative === null ? null : vscode.Uri.joinPath(this.resRoot, relative);
   }
 }

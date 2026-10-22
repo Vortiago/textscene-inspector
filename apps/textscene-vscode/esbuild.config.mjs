@@ -7,11 +7,16 @@ import * as esbuild from 'esbuild';
 import { rm, writeFile } from 'node:fs/promises';
 import cssModulesPlugin from 'esbuild-css-modules-plugin';
 import { globSync } from 'glob';
+import { resolve } from 'node:path';
+import { mergedFileInputs, writeBundledNotices } from '../../scripts/third-party-notices.mjs';
 import { textureWorkerPlugin } from './src/bundler/textureWorkerPlugin.mjs';
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 const skipTests = process.argv.includes('--skip-tests');
+
+/** The job worker's metafile, written by the worker plugin each time the webview build loads the worker. */
+let workerMetafile = { inputs: {} };
 
 // esbuild never deletes old outputs. Content-hashed chunks pile up in dist/webview
 // and get packaged into the VSIX.
@@ -82,6 +87,8 @@ const webviewOptions = {
   sourcemap: !production,
   minify: production,
   logLevel: 'info',
+  // The notices name the third-party code the bundle holds, which the metafile lists.
+  metafile: true,
   plugins: [
     cssModulesPlugin({
       // Emit a separate dist/webview/webview.css that the HTML links
@@ -91,7 +98,12 @@ const webviewOptions = {
       emitDeclarationFile: true,
     }),
     // The job worker, as one script string the webview starts from a blob URL.
-    textureWorkerPlugin({ minify: production }),
+    textureWorkerPlugin({
+      minify: production,
+      onMetafile: (metafile) => {
+        workerMetafile = metafile;
+      },
+    }),
   ],
   loader: {
     '.css': 'css',
@@ -181,10 +193,18 @@ if (watch) {
     builds.push(esbuild.build(testOptions), esbuild.build(webTestOptions));
   }
 
-  const [extensionResult, extensionWebResult] = await Promise.all(builds);
+  const [extensionResult, extensionWebResult, webviewResult] = await Promise.all(builds);
   // Persist the host builds' metafiles for the host-bundle guard.
   await Promise.all([
     writeFile('dist/extension.meta.json', JSON.stringify(extensionResult.metafile)),
     writeFile('dist/extension.web.meta.json', JSON.stringify(extensionWebResult.metafile)),
   ]);
+  // `vsce package` runs this production build, and ships the notices beside package.json.
+  if (production) {
+    const shipped = [extensionResult, extensionWebResult, webviewResult].map((result) => result.metafile);
+    writeBundledNotices(mergedFileInputs([...shipped, workerMetafile]), {
+      packageDir: import.meta.dirname,
+      ownSourceDir: resolve(import.meta.dirname, 'src'),
+    });
+  }
 }

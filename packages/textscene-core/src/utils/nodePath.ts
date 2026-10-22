@@ -8,6 +8,14 @@ export function joinPath(parentPath: string, childName: string): string {
   return parentPath ? `${parentPath}/${childName}` : childName;
 }
 
+/**
+ * A root-relative path placed below the node at `parentPath`. The root, at {@link SCENE_ROOT_PATH},
+ * lands on `parentPath` itself.
+ */
+export function pathUnder(parentPath: string, rootRelativePath: string): string {
+  return rootRelativePath === SCENE_ROOT_PATH ? parentPath : joinPath(parentPath, rootRelativePath);
+}
+
 /** The path from the node at `from` to the node at `to`, climbing with `..` where `to` is not below. */
 export function pathBetween(from: string, to: string): string {
   const fromSegments = from.split('/');

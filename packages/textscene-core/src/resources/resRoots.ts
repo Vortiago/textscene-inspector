@@ -56,7 +56,7 @@ export interface ResRoot extends ResourceProvider {
   resolve(resPath: string): Promise<string | null>;
   /** The host path `resPath` names, whether or not a file is there, or null for a path outside the root. No `stat`. */
   pathOf(resPath: string): string | null;
-  /** The `res://` path of every file the editor's scan reaches under the root, sorted, for path completion. */
+  /** The `res://` path of every file the editor's scan reaches under the root, in walk order, for path completion. */
   listPaths(): Promise<readonly string[]>;
   /** Overrides the provider's optional listing: a root always lists. */
   listFiles(extension: string): Promise<readonly string[]>;
@@ -124,16 +124,12 @@ const EVERY_FILE = '';
 
 /** A root over `path`, read through `port`. */
 function createRoot(port: ResRootsPort, path: string): RootEntry {
-  /** Each listing, sorted, under its key: written by `listing` and cleared by `forgetListings`. */
+  /** Each listing under its key: written by `listing` and cleared by `forgetListings`. */
   const listings = new Map<string, Promise<readonly string[]>>();
   /** Written by the walks of `listings`, and cleared with them. */
   const linkedDirectories = new Set<string>();
   const listing = (key: string, extension?: string) =>
-    memo(listings, key, () =>
-      listScannedFiles(directoryReader(port, path, linkedDirectories), extension).then((paths) =>
-        paths.sort()
-      )
-    );
+    memo(listings, key, () => listScannedFiles(directoryReader(port, path, linkedDirectories), extension));
   const root: ResRoot = {
     async loadResource(resPath, type = '') {
       const file = resolveResPath(path, resPath);
@@ -218,7 +214,7 @@ class PortResRoots implements ResRoots {
 
   /** The root found from `start` upward, where `isLoose` says whether a directory may serve as a loose root. */
   private async rootFrom(start: string, isLoose: (dir: string) => boolean): Promise<ResRoot | null> {
-    const rootDir = await findResRoot(start, parentDir, () => false, this.hasProjectFile, isLoose);
+    const rootDir = await findResRoot(start, parentDir, this.hasProjectFile, isLoose);
     return rootDir === null ? null : this.rootAt(rootDir);
   }
 

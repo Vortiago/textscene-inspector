@@ -4,6 +4,8 @@
  * Godot's sky ambient reads the last layer (`scene_forward_clustered.glsl:1744-1756`).
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../../math/real.js';
 import { TAU } from '../../math/math.js';
 
 /** `Sky::REAL_TIME_SIZE` (`sky.h:248`): a real-time sky bakes at this size whatever its `radiance_size`. */
@@ -128,7 +130,6 @@ export function layerSamples(layout: SkyOctmapLayout, layer: number): LayerSampl
   const roughness4 = roughness ** 4;
   const solidAngleTexel = (4 * Math.PI) / (layerSize * layerSize);
 
-  const f = Math.fround;
   const samples: LayerSample[] = [];
   for (let i = 0; i < total; i += 1) {
     const cosTheta = f(Math.sqrt(f((1 - radicalInverse(i)) / (1 + (roughness4 - 1) * radicalInverse(i)))));

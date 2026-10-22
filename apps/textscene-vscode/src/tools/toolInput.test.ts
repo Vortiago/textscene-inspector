@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createMockFileData, createMockUri, vscode as vscodeMocks } from '../test-setup';
-import { readSceneText, resolveToolUri } from './toolInput';
+import { openDocumentLookup, readSceneText, resolveToolUri } from './toolInput';
 
 describe('resolveToolUri', () => {
   it('joins a relative path onto the first workspace folder', () => {
@@ -54,5 +54,42 @@ describe('readSceneText', () => {
   it('rejects when the file cannot be read', async () => {
     vscodeMocks.workspace.fs.readFile.mockRejectedValue(new Error('Not found'));
     await expect(readSceneText(createMockUri('/game/Missing.tscn'))).rejects.toThrow('Not found');
+  });
+});
+
+describe('openDocumentLookup', () => {
+  const main = { uri: createMockUri('/game/Main.tscn'), getText: () => 'main' };
+
+  it('finds the open document at a file', () => {
+    vscodeMocks.workspace.textDocuments = [main];
+    expect(openDocumentLookup()(createMockUri('/game/Main.tscn'))).toBe(main);
+  });
+
+  it("skips a diff view's committed copy, which shares the file's fsPath", () => {
+    const committed = { uri: { ...createMockUri('/game/Main.tscn'), scheme: 'git' }, getText: () => 'HEAD' };
+    vscodeMocks.workspace.textDocuments = [committed, main];
+    expect(openDocumentLookup()(createMockUri('/game/Main.tscn'))).toBe(main);
+  });
+
+  it('reads the open documents once for every lookup it answers', () => {
+    let reads = 0;
+    Object.defineProperty(vscodeMocks.workspace, 'textDocuments', {
+      configurable: true,
+      get: () => {
+        reads++;
+        return [main];
+      },
+    });
+    const lookup = openDocumentLookup();
+
+    lookup(createMockUri('/game/Main.tscn'));
+    lookup(createMockUri('/game/Other.tscn'));
+
+    expect(reads).toBe(1);
+    Object.defineProperty(vscodeMocks.workspace, 'textDocuments', {
+      configurable: true,
+      writable: true,
+      value: [],
+    });
   });
 });

@@ -138,6 +138,8 @@ function writeRow(light: THREE.Light, camera: THREE.Camera): boolean {
   if (kind === FogLightKind.AREA) return writeArea(light as THREE.RectAreaLight, camera);
   const { x, y, z } = viewPosition(light, camera);
   const positional = light as THREE.PointLight | THREE.SpotLight;
+  // A GLB light keeps GLTFLoader's distance, 0 for a light with no `range`, so it needs the floor
+  // that `positionalLightRange` gives an authored light.
   writeVec4(row, FogLightTexel.POSITION, x, y, z, 1 / lightBufferRange(positional.distance));
   row[FogLightTexel.COLOR * 4 + 3] = positional.decay;
   if (kind === FogLightKind.OMNI) {

@@ -84,6 +84,15 @@ describe('parseItemList', () => {
     ]);
   });
 
+  it('reads a null or nil item icon as no icon, as the variant parser reads both as null (variant_parser.cpp:699)', () => {
+    const result = parseItemList(heading, {
+      item_count: '2',
+      'item_0/icon': 'null',
+      'item_1/icon': 'nil',
+    });
+    expect(result.items).toEqual([{}, {}]);
+  });
+
   // item_list.cpp:2242-2259 -- the deprecated `items = [text, icon, disabled, …]`
   // triple array, only when the file has no `item_count` at all.
   describe('the deprecated items compat array', () => {
@@ -96,6 +105,11 @@ describe('parseItemList', () => {
         { text: 'Shield', disabled: true },
       ]);
       expect(result.itemCount).toBe(2);
+    });
+
+    it('reads a nil icon as no icon, as the variant parser reads it as null (variant_parser.cpp:699)', () => {
+      const result = parseItemList(heading, { items: '["Shield", nil, false]' });
+      expect(result.items).toEqual([{ text: 'Shield' }]);
     });
 
     it('a wrong arity drops every row, matching ERR_FAIL_COND_V before clear() (error path)', () => {

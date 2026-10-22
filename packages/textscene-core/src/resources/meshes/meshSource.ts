@@ -51,6 +51,5 @@ export function primitiveMaterialAddress(
 ): string | undefined {
   const ref = resource.data['material'];
   if (!path) return ref;
-  const tables = { extResources: resources.externalResources, subResources: resources.internalResources };
-  return materialPathInFile(ref, tables, resourceFilePath(path)) ?? undefined;
+  return materialPathInFile(ref, resources, resourceFilePath(path)) ?? undefined;
 }

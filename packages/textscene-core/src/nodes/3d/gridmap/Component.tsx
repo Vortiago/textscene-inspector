@@ -32,34 +32,13 @@ import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { pointsAtCells } from './pointCells';
 import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { drawsAsOneBatch } from '../../../r3f/surfaceDrawHooks';
+import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 
 /** Where each cell sits in the grid, and how much its mesh scales. */
 type CellGrid = Pick<GridMapProperties, 'cellSize' | 'cellCenter' | 'cellScale'>;
 
 /** Literal-only, so the key is constant and the placeholder batch never remounts its material. */
 const PLACEHOLDER_TILE_MATERIAL = wireGizmoProgram(0x4488cc);
-
-/** Godot Transform3D (basis rows + origin) → THREE.Matrix4. */
-function transform3DToMatrix4(t: Transform3D): THREE.Matrix4 {
-  return new THREE.Matrix4().set(
-    t.basis_x.x,
-    t.basis_x.y,
-    t.basis_x.z,
-    t.origin.x,
-    t.basis_y.x,
-    t.basis_y.y,
-    t.basis_y.z,
-    t.origin.y,
-    t.basis_z.x,
-    t.basis_z.y,
-    t.basis_z.z,
-    t.origin.z,
-    0,
-    0,
-    0,
-    1
-  );
-}
 
 /** Written only by `cellMatrix`. `Matrix4.scale` reads it at once, so a large grid allocates none. */
 const cellScaleVector = new THREE.Vector3();
@@ -103,7 +82,7 @@ function cellMatrix(cell: GridMapCell, grid: CellGrid, meshTransform: Transform3
   );
   const matrix = cellOrigin(cell, grid);
   matrix.scale(cellScaleVector.setScalar(grid.cellScale)).multiply(orient);
-  if (meshTransform) matrix.multiply(transform3DToMatrix4(meshTransform));
+  if (meshTransform) matrix.multiply(transform3DToMatrix(meshTransform));
   return matrix;
 }
 

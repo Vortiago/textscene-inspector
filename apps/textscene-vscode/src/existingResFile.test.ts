@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { existingResFile } from './existingResFile';
+import { existingResFile, resPathUri } from './existingResFile';
 import { createMockUri, vscode as vscodeMocks } from './test-setup';
 
 const ROOT = createMockUri('/game');
@@ -12,6 +12,14 @@ function arrangeDisk(): void {
     return Promise.reject(new Error('Not found'));
   });
 }
+
+describe('resPathUri', () => {
+  it('names the place a res:// path names under the root, and nothing for one that escapes the root', () => {
+    expect(resPathUri(ROOT, 'res://models/tree.glb')?.fsPath).toBe('/game/models/tree.glb');
+    expect(resPathUri(ROOT, 'res://../secret.txt')).toBeNull();
+    expect(resPathUri(ROOT, '/game/secret.txt')).toBeNull();
+  });
+});
 
 describe('existingResFile', () => {
   it('answers the file a res:// path names under the project root', async () => {

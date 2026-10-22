@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { ParsedResource } from '../../parser/parsedResource';
+import type { SceneResources } from '../../r3f/SceneResourcesContext';
 import { materialPathInFile } from './materialPathInFile';
 
-const FILE: ParsedResource = {
-  resourceType: 'BoxMesh',
-  properties: {},
-  extResources: [{ id: '1_mat', type: 'StandardMaterial3D', path: 'res://red.tres' }],
-  subResources: [
+const FILE: SceneResources = {
+  externalResources: [{ id: '1_mat', type: 'StandardMaterial3D', path: 'res://red.tres' }],
+  internalResources: [
     { id: 'Own', type: 'StandardMaterial3D', data: {} },
     { id: 'Noise', type: 'NoiseTexture2D', data: {} },
   ],

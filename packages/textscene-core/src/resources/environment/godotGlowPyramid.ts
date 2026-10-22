@@ -7,7 +7,7 @@
  */
 
 import { brightPassGlsl, type GlowParams } from './godotGlow';
-import { bicubicWeightsGlsl } from '../../utils/bicubicWeightsGlsl';
+import { bicubicFilterGlsl } from '../../utils/bicubicFilterGlsl';
 import { glslFloat } from '../../utils/glslLiterals';
 
 /** The texture a blur pass reads: the frame for level 0, the level before it for the rest. */
@@ -142,30 +142,13 @@ export function laterLevelBlurGlsl(params: GlowParams): LevelBlurGlsl {
  * size of the missing level, read from the last mip. A size under 1px clamps to 1px, where Godot
  * divides by zero.
  */
-const BICUBIC_GLSL = /* glsl */ `
-${bicubicWeightsGlsl('godotGlow')}
-vec3 godotGlowBicubic(sampler2D tex, vec2 uv, int lod) {
-  vec2 size = max(vec2(ivec2(${GLOW_TEXTURE_SIZE_UNIFORM}) >> lod), vec2(1.0));
-  vec2 pixelSize = vec2(1.0) / size;
-  uv = uv * size + 0.5;
-  vec2 whole = floor(uv);
-  vec2 fraction = fract(uv);
-  float g0x = godotGlowG0(fraction.x);
-  float g1x = godotGlowG1(fraction.x);
-  float h0x = godotGlowH0(fraction.x);
-  float h1x = godotGlowH1(fraction.x);
-  float g0y = godotGlowG0(fraction.y);
-  float g1y = godotGlowG1(fraction.y);
-  float h0y = godotGlowH0(fraction.y);
-  float h1y = godotGlowH1(fraction.y);
-  vec2 p0 = (vec2(whole.x + h0x, whole.y + h0y) - 0.5) * pixelSize;
-  vec2 p1 = (vec2(whole.x + h1x, whole.y + h0y) - 0.5) * pixelSize;
-  vec2 p2 = (vec2(whole.x + h0x, whole.y + h1y) - 0.5) * pixelSize;
-  vec2 p3 = (vec2(whole.x + h1x, whole.y + h1y) - 0.5) * pixelSize;
-  return g0y * (g0x * texture2D(tex, p0).rgb + g1x * texture2D(tex, p1).rgb)
-       + g1y * (g0x * texture2D(tex, p2).rgb + g1x * texture2D(tex, p3).rgb);
-}
-`;
+const BICUBIC_GLSL = bicubicFilterGlsl({
+  prefix: 'godotGlow',
+  params: 'sampler2D tex, vec2 uv, int lod',
+  uv: 'uv',
+  size: `max(vec2(ivec2(${GLOW_TEXTURE_SIZE_UNIFORM}) >> lod), vec2(1.0))`,
+  fetch: (texelUv) => `texture2D(tex, ${texelUv}).rgb`,
+});
 
 /**
  * Godot's `gather_glow` (`tonemap.glsl:376-410`): the sum of each gathered level at its weight,

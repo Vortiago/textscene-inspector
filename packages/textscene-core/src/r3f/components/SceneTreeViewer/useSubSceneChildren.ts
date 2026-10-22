@@ -5,7 +5,6 @@
  */
 import { useMemo } from 'react';
 import type { TscnNode, TscnExternalResource } from '../../../parser/types';
-import { resolveInstancePath } from '../../../resources/SubResourceResolver';
 import { useInstancedScene } from '../../hooks/useInstancedScene';
 
 /**
@@ -17,12 +16,15 @@ export interface SubSceneChildren {
   externalResources: readonly TscnExternalResource[];
 }
 
+/**
+ * `scenePath` is the path the row's instance ref resolves to (`liveInstancePath`), null for none.
+ * `externalResources` are the tables it resolved in, which register the scene's ExtResource.
+ */
 export function useSubSceneChildren(
   node: TscnNode,
-  externalResources: readonly TscnExternalResource[]
+  externalResources: readonly TscnExternalResource[],
+  scenePath: string | null
 ): SubSceneChildren | null {
-  const scenePath = node.instance ? resolveInstancePath(node.instance, externalResources) : null;
-
   // The viewport skips a sub-scene it never renders, so the row registers it too.
   const result = useInstancedScene(node.instance ?? '', externalResources, scenePath);
 
