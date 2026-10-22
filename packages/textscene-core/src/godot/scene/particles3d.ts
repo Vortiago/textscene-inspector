@@ -29,8 +29,11 @@ const GpuDrawOrder = {
 /** Each GPUParticles3D draw order by its integer, spelled as its constant (`gpu_particles_3d.cpp:843` is the hint site, bound at `:857-860`). */
 export const GPU_PARTICLES_3D_DRAW_ORDER_NAMES = enumNamesByValue(GpuDrawOrder);
 
-/** `CPUParticles3D::EmissionShape` (`cpu_particles_3d.h:73-82`), `EMISSION_SHAPE_MAX` left out. */
-const EmissionShape = {
+/**
+ * `CPUParticles3D::EmissionShape` (`cpu_particles_3d.h:73-82`), which `ParticleProcessMaterial`
+ * declares alike (`particle_process_material.h:82-89`), `EMISSION_SHAPE_MAX` left out.
+ */
+export const EmissionShape = {
   POINT: 0,
   SPHERE: 1,
   SPHERE_SURFACE: 2,
@@ -40,7 +43,7 @@ const EmissionShape = {
   RING: 6,
 } as const;
 
-/** Each emission shape by its integer, spelled as its constant. */
+/** Each emission shape by its integer, spelled as its constant, for both particle emitters and ParticleProcessMaterial. */
 export const CPU_PARTICLES_3D_EMISSION_SHAPE_NAMES = enumNamesByValue(EmissionShape);
 
 /**
@@ -59,3 +62,21 @@ const GpuTransformAlign = {
 
 /** Each transform alignment by its integer, spelled as its constant. */
 export const GPU_PARTICLES_3D_TRANSFORM_ALIGN_NAMES = enumNamesByValue(GpuTransformAlign);
+
+/**
+ * The emission keys of a new `CPUParticles3D` (`cpu_particles_3d.cpp:1810-1817`) and a new
+ * `ParticleProcessMaterial` (`particle_process_material.cpp:2405-2414`), which agree. The offset
+ * and the scale belong to the material alone.
+ */
+export const PARTICLE_EMISSION_DEFAULTS = Object.freeze({
+  shape: EmissionShape.POINT as number,
+  sphereRadius: 1,
+  boxExtents: Object.freeze({ x: 1, y: 1, z: 1 }),
+  ringAxis: Object.freeze({ x: 0, y: 0, z: 1 }),
+  ringHeight: 1,
+  ringRadius: 1,
+  ringInnerRadius: 0,
+  ringConeAngle: 90,
+  shapeOffset: Object.freeze({ x: 0, y: 0, z: 0 }),
+  shapeScale: Object.freeze({ x: 1, y: 1, z: 1 }),
+});

@@ -1,4 +1,4 @@
-/** The render state of a GPUParticles3D: its GeometryInstance3D state and its box. */
+/** The render state of a GPUParticles3D: its GeometryInstance3D state, its box and its process material. */
 
 import type { Aabb } from '../../../../godot/math/aabb';
 import type { GeometryInstance3DProperties } from '../../geometryinstance3d/types';
@@ -9,4 +9,6 @@ export interface GPUParticles3DProperties extends GeometryInstance3DProperties {
    * authored `AABB()` stays empty, as the particles keep it.
    */
   visibilityAabb: Aabb;
+  /** The raw `process_material` reference, which the emission gizmo resolves. Undefined for none. */
+  processMaterial: string | undefined;
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aabbCenter,
+  aabbEdges,
   aabbOfPoints,
   EMPTY_AABB,
   hasSurface,
@@ -86,5 +88,49 @@ describe('aabbOfPoints', () => {
 
   it('is AABB() for no points (edge case)', () => {
     expect(aabbOfPoints([])).toBe(EMPTY_AABB);
+  });
+});
+
+describe('aabbEdges', () => {
+  it('lists the 12 edges of AABB::get_edge in order, each from its start to its end', () => {
+    expect(aabbEdges(box(-1, 0, -1, 2, 3, 2))).toEqual([
+      ...[1, 0, -1, -1, 0, -1],
+      ...[1, 0, 1, 1, 0, -1],
+      ...[-1, 0, 1, 1, 0, 1],
+      ...[-1, 0, -1, -1, 0, 1],
+      ...[-1, 3, -1, 1, 3, -1],
+      ...[1, 3, -1, 1, 3, 1],
+      ...[1, 3, 1, -1, 3, 1],
+      ...[-1, 3, 1, -1, 3, -1],
+      ...[-1, 0, 1, -1, 3, 1],
+      ...[-1, 0, -1, -1, 3, -1],
+      ...[1, 0, -1, 1, 3, -1],
+      ...[1, 0, 1, 1, 3, 1],
+    ]);
+  });
+
+  it('draws the default GPUParticles3D box from -4 to 4', () => {
+    const edges = aabbEdges(box(-4, -4, -4, 8, 8, 8));
+    expect(edges.slice(0, 6)).toEqual([4, -4, -4, -4, -4, -4]);
+    expect(Math.max(...edges)).toBe(4);
+    expect(Math.min(...edges)).toBe(-4);
+  });
+
+  it('collapses every edge onto the origin for AABB() (edge case)', () => {
+    expect(aabbEdges(EMPTY_AABB)).toEqual(new Array(72).fill(0));
+  });
+
+  it('keeps a negative size as the engine does: the far corner lies below the near one (edge case)', () => {
+    expect(aabbEdges(box(0, 0, 0, -2, 1, 1)).slice(0, 6)).toEqual([-2, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe('aabbCenter', () => {
+  it('is the position plus half the size (AABB::get_center)', () => {
+    expect(aabbCenter(box(-2, 0, 4, 4, 2, 2))).toEqual({ x: 0, y: 1, z: 5 });
+  });
+
+  it('is the origin for AABB() (edge case)', () => {
+    expect(aabbCenter(EMPTY_AABB)).toEqual({ x: 0, y: 0, z: 0 });
   });
 });

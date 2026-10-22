@@ -9,16 +9,7 @@ import * as THREE from 'three';
 import { editorHelperUserData } from '../editorHelpers';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-
-/** Render order for selection-gated gizmos, above ordinary scene content. */
-const GIZMO_RENDER_ORDER = 10;
-
-/**
- * The group order a gizmo draws at, above every canvas item. A gizmo is editor
- * chrome, not a CanvasItem, and three compares the nearest group's order first,
- * so at its node's canvas key it would fall behind anything authored after it.
- */
-const GIZMO_GROUP_ORDER = Number.MAX_SAFE_INTEGER;
+import { GIZMO_GROUP_ORDER, GIZMO_RENDER_ORDER } from './gizmoRenderOrder';
 
 interface GizmoLineProps {
   /** Flat line-segment vertex positions `[x0,y0,z0, x1,y1,z1, …]`. */
@@ -29,11 +20,35 @@ interface GizmoLineProps {
   color?: THREE.ColorRepresentation;
 }
 
+const FLOATS_PER_SEGMENT = 6;
+
+/** The segments that have no `inf` or `nan` vertex. The same arrays when every segment has none. */
+function finiteSegments(positions: Float32Array, colors: Float32Array | undefined) {
+  const segmentCount = Math.floor(positions.length / FLOATS_PER_SEGMENT);
+  const isFiniteSegment = (segment: number): boolean =>
+    positions
+      .subarray(segment * FLOATS_PER_SEGMENT, (segment + 1) * FLOATS_PER_SEGMENT)
+      .every(Number.isFinite);
+  const kept = Array.from({ length: segmentCount }, (_, segment) => segment).filter(isFiniteSegment);
+  if (kept.length === segmentCount) return { positions, colors };
+  const onlyKept = (array: Float32Array) =>
+    Float32Array.from(
+      kept.flatMap((segment) =>
+        Array.from(array.subarray(segment * FLOATS_PER_SEGMENT, (segment + 1) * FLOATS_PER_SEGMENT))
+      )
+    );
+  return { positions: onlyKept(positions), colors: colors && onlyKept(colors) };
+}
+
 /**
- * Draws nothing when a vertex is `inf` or `nan`: Godot draws no pixel for such a line, and
- * three.js warns about a NaN bounding sphere.
+ * Draws each segment that has no `inf` or `nan` vertex. Godot draws no pixel for a line with
+ * one, and its finite neighbours still draw. three.js warns about a NaN bounding sphere.
  */
-export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
+export function GizmoLine({ positions: allPositions, colors: allColors, color }: GizmoLineProps) {
+  const { positions, colors } = useMemo(
+    () => finiteSegments(allPositions, allColors),
+    [allPositions, allColors]
+  );
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -57,7 +72,7 @@ export function GizmoLine({ positions, colors, color }: GizmoLineProps) {
     },
   });
 
-  if (!positions.every(Number.isFinite)) return null;
+  if (positions.length === 0) return null;
 
   return (
     <group renderOrder={GIZMO_GROUP_ORDER} userData={helperUserData}>

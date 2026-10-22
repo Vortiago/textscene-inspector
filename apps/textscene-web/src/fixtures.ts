@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles3d Gizmo",
+    "file": "unit-cpuparticles3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Damped Spring Joint 2d",
     "file": "unit-damped-spring-joint-2d.tscn",
     "category": "Other"
@@ -730,6 +735,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Gpu Particles Collision Sphere 3d",
     "file": "unit-gpu-particles-collision-sphere-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpuparticles3d Emission",
+    "file": "unit-gpuparticles3d-emission.tscn",
     "category": "Other"
   },
   {
