@@ -35,6 +35,12 @@ import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
+import {
+  applyTextureFilterState,
+  godotTextureFilterState,
+  type TextureFilterState,
+} from '../../../../resources/textures/godotTextureFilter';
+import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 
 /** One rectangle of a hex-code box in local Godot px, +Y down, the space of `buildGlyphQuadArrays`' `topPx` before the Y negation. */
@@ -102,11 +108,11 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * The raster texture's filter: Label3D's `texture_filter` (`label_3d.h:140`).
-   * The default `'linear'` is the nearest/linear bit of Godot's default. Canvas
-   * runs only: the MSDF atlas is always sampled linearly.
+   * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). Omitted, it is
+   * LINEAR. A mipmapped row samples a mip chain only where `mipmapped` built one. Canvas runs
+   * only: the MSDF atlas is always sampled linearly.
    */
-  textureFilter?: 'nearest' | 'linear';
+  textureFilter?: TextureFilterState;
   /**
    * Builds a mip chain for the raster, as Godot does for a font with `generate_mipmaps`
    * (`text_server_adv.cpp:3121`), and samples it at the viewport's mipmap bias. Canvas runs
@@ -166,7 +172,7 @@ function buildTextRun(
   skew: number,
   distanceBias: number,
   strokeWidthPx: number,
-  textureFilter: 'nearest' | 'linear',
+  textureFilter: TextureFilterState,
   mipmapped: boolean,
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
@@ -188,14 +194,8 @@ function buildTextRun(
     texture.colorSpace = THREE.SRGBColorSpace;
     // No chain unless the caller asks: Godot's default font generates none
     // (`text_server.cpp:2387`), and a raster rebuilt on every text or size change is costly to mipmap.
-    const filter = textureFilter === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
     texture.generateMipmaps = mipmapped;
-    texture.minFilter = !mipmapped
-      ? filter
-      : textureFilter === 'nearest'
-        ? THREE.NearestMipmapLinearFilter
-        : THREE.LinearMipmapLinearFilter;
-    texture.magFilter = filter;
+    applyTextureFilterState(texture, textureFilter);
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
@@ -240,6 +240,9 @@ function buildTextRun(
   return { geometry: geo, paint: () => createMsdfMaterial(options) };
 }
 
+/** A run with no authored filter samples its raster LINEAR. */
+const LINEAR_RASTER_FILTER = godotTextureFilterState(TextureFilter.LINEAR);
+
 export function TextRun({
   layout,
   fontSizePx,
@@ -251,7 +254,7 @@ export function TextRun({
   depthTest,
   side,
   strokeWidthPx = 0,
-  textureFilter = 'linear',
+  textureFilter = LINEAR_RASTER_FILTER,
   mipmapped = false,
   blends,
   shadow,

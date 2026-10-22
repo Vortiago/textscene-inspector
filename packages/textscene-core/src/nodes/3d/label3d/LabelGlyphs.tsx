@@ -28,8 +28,12 @@ import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLa
 import { type Label3DProperties } from './types';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import { useProjectDefaultFontGeneratesMipmaps } from './useProjectDefaultFontGeneratesMipmaps';
-import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
+import {
+  projectAnisotropicFilteringLevel,
+  projectDefaultFontGeneratesMipmaps,
+} from '../../../parser/projectSettingsParser';
+import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
+import { godotTextureFilterState } from '../../../resources/textures/godotTextureFilter';
 
 export interface LabelGlyphsProps {
   /** The label's node group, whose parent places it for the scene cull. */
@@ -129,12 +133,14 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   const blends = labelBlends(cut, depthTest, properties.alpha_hash_scale);
   const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass(cut, depthTest) };
 
-  // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
-  // members are the nearest ones whatever their mipmap/anisotropy suffix.
-  const textureFilter = properties.texture_filter % 2 === TextureFilter.NEAREST ? 'nearest' : 'linear';
-  // Only a mipmapped filter reads the chain a font with `generate_mipmaps` gives its glyph pages.
-  const generatesGlyphMipmaps = useProjectDefaultFontGeneratesMipmaps();
-  const mipmapped = generatesGlyphMipmaps && properties.texture_filter >= TextureFilter.NEAREST_WITH_MIPMAPS;
+  // The glyph pages carry a mip chain only for a font with `generate_mipmaps`, and a mipmapped
+  // `texture_filter` then samples it. The row says which; the project says whether the chain exists.
+  const settings = useProjectSettings().settings;
+  const textureFilter = godotTextureFilterState(
+    properties.texture_filter,
+    projectAnisotropicFilteringLevel(settings)
+  );
+  const mipmapped = projectDefaultFontGeneratesMipmaps(settings);
 
   // Nothing renders before the family registers: `ctx.fillText` against an
   // unregistered one rasterises a system font, frame-stable, so no golden catches it.

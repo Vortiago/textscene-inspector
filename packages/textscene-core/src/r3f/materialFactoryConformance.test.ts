@@ -275,6 +275,33 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
 };
 
+/**
+ * A 3D texture sample reads the viewport's mipmap bias only when its material carries the
+ * viewport marker (`godotMipmapBias.ts`). A 3D call of the plain factory leaves the marker
+ * off, so these files are the ones that may call it, each with the reason it samples no
+ * viewport-biased texture.
+ */
+const PLAIN_FACTORY_CALL = /\b(?:materialProgramInputs|injectProgram)\(/;
+const VIEWPORT_SCOPES = ['nodes/3d/', 'resources/'].map((dir) => `${RENDERER_ROOT}/${dir}`);
+const PLAIN_FACTORY_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
+    'the untextured box edges of the editor outline',
+  'packages/textscene-core/src/nodes/3d/navigationregion3d/Component.tsx':
+    'the untextured navigation faces of the editor outline',
+  'packages/textscene-core/src/resources/materials/standardmaterial3d/build.ts':
+    'takes the marker from the bag it builds, which materialBag.ts derives',
+};
+
+/** The only files that name the marker: its owner, the two factories and the bag. */
+const MARKER_USERS = new Set(
+  [
+    'r3f/materials/godotMipmapBias.ts',
+    'r3f/materialProgramInputs.ts',
+    'resources/materials/standardmaterial3d/materialBag.ts',
+  ].map((file) => `${RENDERER_ROOT}/${file}`)
+);
+const MARKER_NAME = /\bviewportSamplersUserData\b/;
+
 /** One walk per shape, over its corpus. An assignment or a `new` reads the whole repo. */
 const TAGS = JSX_SOURCES.map(({ file, source }) => ({ file, tags: materialTags(source) }));
 const CONSTRUCTOR_SITES = SOURCES.map(({ file, source }) => ({
@@ -293,6 +320,15 @@ const OFF_TAG_SITES = RENDERER_JSX.map(({ file, source }) => ({
   file,
   mounts: offTagMounts(source),
 })).filter(({ mounts }) => mounts.length > 0);
+const PLAIN_FACTORY_SITES = SOURCES.filter(({ file }) =>
+  VIEWPORT_SCOPES.some((scope) => repoPath(file).startsWith(scope))
+)
+  .map(({ file, source }) => ({ file, lines: offendingLines(source, PLAIN_FACTORY_CALL) }))
+  .filter(({ lines }) => lines.length > 0);
+const MARKER_SITES = SOURCES.map(({ file, source }) => ({
+  file,
+  lines: offendingLines(source, MARKER_NAME),
+})).filter(({ lines }) => lines.length > 0);
 /** Every host element the off-tag scan read, offending or not. */
 const HOST_TAG_COUNT = RENDERER_JSX.reduce((n, { source }) => n + jsxTags(source, HOST_TAG).length, 0);
 
@@ -349,6 +385,42 @@ describe('Material factory conformance', () => {
     expect(
       offenders,
       `a material mounted through a \`material\` prop, a spread or an unslotted \`<primitive>\` never passes the factory — render it from materialProgramInputs(), or add it to OFF_TAG_EXEMPTIONS with the reason it cannot go stale: ${offenders.join(', ')}`
+    ).toEqual([]);
+  });
+
+  it('calls the plain factory in 3D only where no viewport-biased texture is sampled', () => {
+    const offenders = PLAIN_FACTORY_SITES.filter(
+      ({ file }) => PLAIN_FACTORY_EXEMPTIONS[repoPath(file)] === undefined
+    ).flatMap(({ file, lines }) => lines.map((line) => `${repoPath(file)}:${line}`));
+
+    expect(
+      offenders,
+      `a 3D material built without the viewport marker ignores texture_mipmap_bias — call viewportProgramInputs() or injectViewportProgram(), or add the file to PLAIN_FACTORY_EXEMPTIONS with its reason: ${offenders.join(', ')}`
+    ).toEqual([]);
+  });
+
+  it('keeps no plain-factory exemption that has stopped calling the factory', () => {
+    const live = new Set(PLAIN_FACTORY_SITES.map(({ file }) => repoPath(file)));
+    const stale = Object.keys(PLAIN_FACTORY_EXEMPTIONS).filter((file) => !live.has(file));
+
+    expect(stale, `these exemptions no longer describe anything — drop them: ${stale.join(', ')}`).toEqual(
+      []
+    );
+  });
+
+  it('writes the viewport marker only through its owner, the factories and the bag', () => {
+    const offenders = MARKER_SITES.filter(({ file }) => !MARKER_USERS.has(repoPath(file))).flatMap(
+      ({ file, lines }) => lines.map((line) => `${repoPath(file)}:${line}`)
+    );
+
+    expect(
+      offenders,
+      `a hand-written marker is a second owner of the rule — use viewportProgramInputs() or injectViewportProgram(): ${offenders.join(', ')}`
+    ).toEqual([]);
+    const live = new Set(MARKER_SITES.map(({ file }) => repoPath(file)));
+    expect(
+      [...MARKER_USERS].filter((file) => !live.has(file)),
+      'stale marker user'
     ).toEqual([]);
   });
 

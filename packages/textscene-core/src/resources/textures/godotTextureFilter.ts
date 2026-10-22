@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
 import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../parser/projectSettingsParser';
 
-interface TextureFilterState {
+export interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;
   minFilter: THREE.MinificationTextureFilter;
   generateMipmaps: boolean;
@@ -76,6 +76,9 @@ const STATES: Record<number, TextureFilterState> = {
  */
 const ANISOTROPIC_FILTERS: ReadonlySet<number> = new Set([4, 5]);
 
+/** Each anisotropic state by row and level, written only by `godotTextureFilterState`, so a caller's memo sees one identity. */
+const anisotropicStates = new Map<number, TextureFilterState>();
+
 /**
  * The sampler state for a `texture_filter` ordinal. An absent or out-of-range
  * value resolves to Godot's default, matching how the engine treats anything
@@ -88,7 +91,14 @@ export function godotTextureFilterState(
   const defaultFilter = BASE_MATERIAL_3D_DEFAULTS.textureFilter;
   const row = filter !== undefined && filter in STATES ? filter : defaultFilter;
   if (!ANISOTROPIC_FILTERS.has(row)) return STATES[row]!;
-  return { ...STATES[row]!, anisotropy: 1 << Math.max(0, anisotropicFilteringLevel) };
+  const level = Math.max(0, anisotropicFilteringLevel);
+  const key = row * 64 + level;
+  let state = anisotropicStates.get(key);
+  if (!state) {
+    state = { ...STATES[row]!, anisotropy: 1 << level };
+    anisotropicStates.set(key, state);
+  }
+  return state;
 }
 
 /**

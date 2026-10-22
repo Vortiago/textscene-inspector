@@ -4,6 +4,8 @@
  * golden-image concern.
  */
 import { describe, expect, it } from 'vitest';
+import { godotTextureFilterState } from '../../../../resources/textures/godotTextureFilter';
+import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TextRun, type TextRunProps } from './TextRun';
@@ -138,17 +140,17 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
   });
 
   it.each([
-    ['linear', THREE.LinearMipmapLinearFilter],
-    ['nearest', THREE.NearestMipmapLinearFilter],
+    [TextureFilter.LINEAR_WITH_MIPMAPS, THREE.LinearMipmapLinearFilter],
+    [TextureFilter.NEAREST_WITH_MIPMAPS, THREE.NearestMipmapLinearFilter],
   ] as const)(
-    'builds a mip chain for a %s raster that Godot would mipmap (text_server_adv.cpp:3121)',
-    async (textureFilter, minFilter) => {
+    'builds a mip chain for a mipmapped filter %i raster (text_server_adv.cpp:3121)',
+    async (filter, minFilter) => {
       const renderer = await ReactThreeTestRenderer.create(
         <TextRun
           layout={canvasLayoutFor('Hi')}
           fontSizePx={16}
           tint={WHITE}
-          textureFilter={textureFilter}
+          textureFilter={godotTextureFilterState(filter)}
           mipmapped
         />
       );
