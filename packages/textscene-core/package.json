@@ -32,6 +32,11 @@
       "types": "./dist/languageFeatures/index.d.ts",
       "import": "./dist/languageFeatures/index.js"
     },
+    "./renderer": {
+      "@textscene/source": "./src/r3f/renderer.ts",
+      "types": "./dist/r3f/renderer.d.ts",
+      "import": "./dist/r3f/renderer.js"
+    },
     "./worker": {
       "@textscene/source": "./src/worker.ts",
       "types": "./dist/worker.d.ts",

@@ -10,6 +10,7 @@ import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext.j
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext.js';
 import { UndrawnMeshesProvider } from '../../contexts/UndrawnMeshesContext.js';
 import {
+  DEFAULT_VIEWPORT,
   ViewportModeProvider,
   type PersistedViewport,
   type ViewportMode,
@@ -24,14 +25,16 @@ import { AnimationTransportProvider } from '../../contexts/AnimationTransportCon
 import { composeProviders } from '../../composeProviders.js';
 import { FrameStatsProvider } from '../../frameProfile/FrameStatsContext.js';
 
+export const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
+
 interface PreviewShellProviderOptions {
   hierarchyValue: HierarchyContextValue;
-  initialActiveCameraPath: string | null | undefined;
-  onMissingPathsChange: ((paths: ReadonlySet<string>) => void) | undefined;
+  initialActiveCameraPath?: string | null;
+  onMissingPathsChange?: (paths: ReadonlySet<string>) => void;
   /** The host's forced viewport mode, if it named one. */
-  initialViewportMode: ViewportMode | undefined;
+  initialViewportMode?: ViewportMode;
   /** The mode, grid, framing, fog and performance overlay persisted last session. */
-  initialViewport: PersistedViewport;
+  initialViewport?: PersistedViewport;
   panelId: string;
   rootScenePath: string;
 }
@@ -45,7 +48,7 @@ export function previewShellProviders({
   initialActiveCameraPath,
   onMissingPathsChange,
   initialViewportMode,
-  initialViewport,
+  initialViewport = DEFAULT_VIEWPORT,
   panelId,
   rootScenePath,
 }: PreviewShellProviderOptions): (children: ReactNode) => ReactNode {
