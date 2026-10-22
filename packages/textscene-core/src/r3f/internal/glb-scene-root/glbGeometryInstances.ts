@@ -7,7 +7,6 @@
 import { useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import type { LiveNode } from '../../../resources/liveNode';
 import { parseGeometryInstance3D } from '../../../nodes/3d/geometryinstance3d/parser';
 import type { GeometryInstance3DProperties } from '../../../nodes/3d/geometryinstance3d/types';
 import {
@@ -16,8 +15,6 @@ import {
   type MeshSurface,
 } from '../../../resources/formats/glb/meshInstances';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
-import { visibilityParentOf } from '../../../godot/scene/visibilityParent';
-import { joinPath } from '../../../utils/nodePath';
 import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from '../../shadowCasting';
 import { FadedMeshMaterials } from '../../materials/fadedMeshMaterials';
 import { CulledInstance } from '../../visibilityRange/culledInstance';
@@ -29,8 +26,8 @@ import { childOrders, useTreeOrder, type TreeOrder } from '../../contexts/TreeOr
 import { useUniqueNamePaths } from '../../useUniqueNames';
 import { lightmapsOf, type LightmapAssignment } from '../../lightmap/sceneLightmaps';
 import { glbObjectName, type GlbObjectEntry } from './glbHierarchy';
+import { glbNodeLinks } from './glbNodeLinks';
 import type { GlbRoot } from './GlbInstanceContext';
-import { isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 
 /** A MeshInstance3D of a GLB, with its node data. */
 interface GlbMeshInstance {
@@ -42,8 +39,7 @@ interface GlbMeshInstance {
 /**
  * Each MeshInstance3D of `object`, the GLB root, then each under it in `entries` order, which is
  * the GLB's tree order below `rootOrder`. The root is the node that instances the GLB, with its
- * properties. A node without an override of its own is at its `relPath` under the root, and takes
- * its parent's visibility parent (`node_3d.cpp:1307-1318`).
+ * properties.
  */
 function glbMeshInstances(
   object: THREE.Object3D,
@@ -53,8 +49,6 @@ function glbMeshInstances(
   uniquePaths: ReadonlyMap<string, string> | undefined
 ): GlbMeshInstance[] {
   const orders = childOrders(rootOrder, entries.length);
-  const overrides = overridesByTarget(object, entries, root.overrides);
-  const passedOn = new Map<THREE.Object3D, string | null>();
   const instances: GlbMeshInstance[] = [];
   if (isMeshInstance(object)) {
     instances.push({
@@ -66,46 +60,11 @@ function glbMeshInstances(
       ),
     });
   }
-  entries.forEach((entry, i) => {
-    const override = overrides.get(entry.object);
-    const path =
-      root.path === null
-        ? null
-        : joinPath(
-            root.path,
-            override ? joinPath(override.instanceSubPath ?? '', override.name) : entry.relPath
-          );
-    const properties = parseGeometryInstance3D(
-      { type: 'node', attributes: { name: glbObjectName(entry.object) } },
-      override?.rawProperties ?? {}
-    );
-    // `has`, not `??`: a parent whose own link resolves to none passes none on.
-    const parent = entry.object.parent!;
-    const inherited = passedOn.has(parent) ? (passedOn.get(parent) ?? null) : root.visibilityParent;
-    const parentPath =
-      path === null
-        ? inherited
-        : visibilityParentOf(path, properties.visibility_parent, inherited, uniquePaths);
-    passedOn.set(entry.object, parentPath);
+  glbNodeLinks(object, entries, root, uniquePaths).forEach(({ entry, properties, place }, i) => {
     if (!isMeshInstance(entry.object)) return;
-    instances.push({ object: entry.object, place: { path, parentPath, order: orders[i]! }, properties });
+    instances.push({ object: entry.object, place: { ...place, order: orders[i]! }, properties });
   });
   return instances;
-}
-
-/** Each GLB object an override node applies to, with the first override that names it. */
-function overridesByTarget(
-  object: THREE.Object3D,
-  entries: readonly GlbObjectEntry[],
-  overrides: readonly LiveNode[]
-): Map<THREE.Object3D, LiveNode> {
-  const byTarget = new Map<THREE.Object3D, LiveNode>();
-  for (const override of overrides) {
-    if (!isApplicableGlbOverride(override)) continue;
-    const target = resolveGlbOverrideTarget(object, entries, override);
-    if (target && !byTarget.has(target)) byTarget.set(target, override);
-  }
-  return byTarget;
 }
 
 /**

@@ -10,6 +10,7 @@ import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot.js';
 import { scopeOf } from '../../../resources/liveNode.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import { useGlbChildren } from './useGlbChildren.js';
+import { useInstancedGlbCache } from './useInstancedGlbCache.js';
 import styles from './SceneTreeViewer.module.css';
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
@@ -113,6 +114,9 @@ function TreeNodeImpl({
   // Null for a non-GLB row. The hook re-renders the row when the GLB arrives.
   const glbChildren = useGlbChildren(node);
 
+  // Undefined unless the sub-scene is an instanced `.glb` that has loaded.
+  const instancedGlb = useInstancedGlbCache(subScene);
+
   // What lives below this node, and in what resource scope. A GLB row reuses
   // the list `useGlbChildren` already built, not a second walk. The memo keeps
   // the groups stable across selection and hover, so `effective` reuses one merge.
@@ -120,8 +124,8 @@ function TreeNodeImpl({
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
       return [{ origin: 'glb' as const, children: glbChildren, scope }];
     }
-    return liveChildGroups(node, scope, singleSceneCache(scenePath, subScene));
-  }, [node, scope, scenePath, subScene, glbChildren]);
+    return liveChildGroups(node, scope, singleSceneCache(scenePath, subScene), instancedGlb);
+  }, [node, scope, scenePath, subScene, glbChildren, instancedGlb]);
 
   // Instance root merge (ADR-0013), the same decision the viewport and inspector
   // make, for the row header. It reads the `merged` group, so the merge runs once
