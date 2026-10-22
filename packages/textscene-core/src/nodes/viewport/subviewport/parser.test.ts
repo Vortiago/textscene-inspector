@@ -175,6 +175,13 @@ describe('parseSubViewport', () => {
       expect(parse('0').anisotropic_filtering_level).toBe(0);
     });
 
+    it.each(['5', '-1', '99'])('stays absent for level %s, which the enum does not name', (level) => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {
+        anisotropic_filtering_level: level,
+      });
+      expect(result.anisotropic_filtering_level).toBeUndefined();
+    });
+
     it('stays absent when authored not at all, so the project level holds', () => {
       const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {});
       expect(result.anisotropic_filtering_level).toBeUndefined();

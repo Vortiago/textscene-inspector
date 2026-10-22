@@ -1,7 +1,7 @@
 /**
- * A SubViewport samples its own world's textures at its own `anisotropic_filtering_level`, which
- * defaults to the project setting (`viewport.cpp:5384`). Content a shared world draws inline is
- * the main view's, and takes the project's.
+ * A SubViewport samples the textures that only its pass draws at its own `anisotropic_filtering_level`,
+ * which defaults to the project setting (`viewport.cpp:5384`), never to an outer viewport's. Content
+ * that draws inline in the main view takes the project's.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -39,6 +39,29 @@ texture = ExtResource("1")
 texture_filter = 5
 
 [node name="Camera3D" type="Camera3D" parent="Viewport"]
+`;
+
+/** A SubViewport with its own world inside another, the sprite in the inner one. */
+const nested = (outerProps: string) => `[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="${TEXTURE}" id="1"]
+
+[node name="Root" type="Node3D"]
+
+[node name="Outer" type="SubViewport" parent="."]
+own_world_3d = true
+${outerProps}
+
+[node name="OuterCamera" type="Camera3D" parent="Outer"]
+
+[node name="Inner" type="SubViewport" parent="Outer"]
+own_world_3d = true
+
+[node name="Sprite" type="Sprite3D" parent="Outer/Inner"]
+texture = ExtResource("1")
+texture_filter = 5
+
+[node name="Camera3D" type="Camera3D" parent="Outer/Inner"]
 `;
 
 const textureOf = (root: THREE.Object3D): THREE.Texture | null => {
@@ -106,7 +129,11 @@ describe('<SubViewport> anisotropic_filtering_level', () => {
     ).toBe(1);
   });
 
-  it('leaves content a shared world draws inline at the project level', async () => {
+  it('leaves content that draws inline in the main view at the project level', async () => {
     expect(await spriteAnisotropy(scene('anisotropic_filtering_level = 4'), PROJECT_LEVEL)).toBe(2);
+  });
+
+  it('takes the project level, not that of the outer viewport, in a viewport it nests', async () => {
+    expect(await spriteAnisotropy(nested('anisotropic_filtering_level = 4'), PROJECT_LEVEL)).toBe(2);
   });
 });

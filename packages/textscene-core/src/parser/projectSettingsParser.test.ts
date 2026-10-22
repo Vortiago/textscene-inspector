@@ -589,6 +589,10 @@ describe('projectAnisotropicFilteringLevel', () => {
   it('keeps the default for a malformed value (edge case)', () => {
     expect(projectAnisotropicFilteringLevel({ [KEY]: 'sharp' })).toBe(2);
   });
+
+  it.each(['5', '-1', '99'])('keeps the default for level %s, which the enum does not name', (level) => {
+    expect(projectAnisotropicFilteringLevel({ [KEY]: level })).toBe(2);
+  });
 });
 
 describe('projectDefaultFontGeneratesMipmaps', () => {

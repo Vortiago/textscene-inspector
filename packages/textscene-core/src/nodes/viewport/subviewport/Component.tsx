@@ -15,8 +15,6 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { AnisotropicFilteringProvider } from '../../../r3f/contexts/AnisotropicFilteringContext';
-import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
-import { projectAnisotropicFilteringLevel } from '../../../parser/projectSettingsParser';
 import { CanvasWorkspaceProvider, useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { useSceneShadowFit } from '../../../r3f/SceneShadowFitter';
@@ -138,9 +136,6 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   const shadowAtlas = useViewportShadowAtlas(properties);
   const projectMipmapBias = useProjectTextureMipmapBias();
   const mipmapBias = properties.texture_mipmap_bias ?? projectMipmapBias;
-  const projectSettings = useProjectSettings().settings;
-  const anisotropicFilteringLevel =
-    properties.anisotropic_filtering_level ?? projectAnisotropicFilteringLevel(projectSettings);
 
   // A persistent camera for 2D-world content. Godot draws a viewport's canvas
   // through its canvas transform, the identity until a Camera2D in the subtree
@@ -244,7 +239,7 @@ function OffscreenViewport({ node, path, kind, rendersInline, children }: Offscr
   // WorldEnvironment inside applies to.
   return createPortal(
     <CanvasWorkspaceProvider workspace={kind === '3d' ? '3d' : '2d'}>
-      <AnisotropicFilteringProvider level={anisotropicFilteringLevel}>
+      <AnisotropicFilteringProvider level={properties.anisotropic_filtering_level}>
         <WorldRootProvider value={portalScene}>
           <WorldEnvironmentScope world="subViewport">
             <CanvasSpaceProvider value={null}>{children}</CanvasSpaceProvider>
