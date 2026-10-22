@@ -20,6 +20,7 @@ import {
   projectTransparentBackground,
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
+  projectTextureMipmapBias,
   projectViewportSize,
   projectVolumetricFogSettings,
 } from './projectSettingsParser';
@@ -516,5 +517,31 @@ describe('projectExtensionListPath', () => {
   it('is under res://godot when the project turns the hidden data directory off', () => {
     const settings = parseProjectSettings('[application]\nconfig/use_hidden_project_data_directory=false\n');
     expect(projectExtensionListPath(settings)).toBe('res://godot/extension_list.cfg');
+  });
+});
+
+describe('projectTextureMipmapBias', () => {
+  const KEY = 'rendering/textures/default_filters/texture_mipmap_bias';
+
+  it('reads the bias from a project.godot line', () => {
+    const settings = parseProjectSettings(
+      `[rendering]\n\ntextures/default_filters/texture_mipmap_bias=-0.5\n`
+    );
+
+    expect(projectTextureMipmapBias(settings)).toBe(-0.5);
+  });
+
+  it("is 0 with no project or no key, Godot's default (rendering_server.cpp:3803)", () => {
+    expect(projectTextureMipmapBias(null)).toBe(0);
+    expect(projectTextureMipmapBias({ 'rendering/other': '1' })).toBe(0);
+  });
+
+  it('passes a value past the -2..2 hint through, as the setter does not clamp (viewport.cpp:4904-4911)', () => {
+    expect(projectTextureMipmapBias({ [KEY]: '3' })).toBe(3);
+    expect(projectTextureMipmapBias({ [KEY]: '-4.25' })).toBe(-4.25);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectTextureMipmapBias({ [KEY]: 'sharp' })).toBe(0);
   });
 });

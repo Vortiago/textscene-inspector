@@ -11,6 +11,7 @@ import {
   coverOneSampleTarget,
   GODOT_ALPHA_ANTIALIASING,
 } from './materials/godotAlphaAntialiasing';
+import { mipmapBiasInjection } from './materials/godotMipmapBias';
 
 /** The subset of three's `onBeforeCompile` argument an injection may touch. */
 export interface ProgramShader {
@@ -196,11 +197,17 @@ export function injectProgram(material: THREE.Material, injection: ProgramInject
   material.customProgramCacheKey = cacheKeyThunk(composed.cacheKey);
 }
 
-/** The injections a material's own state turns on: Godot's hash, then its edge ramp. */
+/**
+ * The injections a material's own state turns on: Godot's hash, its edge ramp, then the mipmap
+ * bias. The bias comes last, as it inlines the chunks that sample a texture, which the patches
+ * before it match by their `#include`.
+ */
 function stateInjections(state: { alphaHash?: unknown; userData?: unknown }): ProgramInjection[] {
   const injections: ProgramInjection[] = [];
   if (state.alphaHash === true) injections.push(GODOT_ALPHA_HASH);
   if (recordsAlphaAntialiasing(state.userData)) injections.push(GODOT_ALPHA_ANTIALIASING);
+  const bias = mipmapBiasInjection(state);
+  if (bias) injections.push(bias);
   return injections;
 }
 

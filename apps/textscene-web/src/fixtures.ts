@@ -3542,6 +3542,12 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Materials"
   },
   {
+    "name": "Material Mipmap Bias",
+    "file": "mipmap-bias/unit-material-mipmap-bias.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
+  },
+  {
     "name": "Navigation Agent 2d",
     "file": "unit-navigation-agent-2d.tscn",
     "category": "Unit - Navigation"

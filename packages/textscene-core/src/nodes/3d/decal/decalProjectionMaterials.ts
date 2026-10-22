@@ -12,6 +12,7 @@ import {
   disablesSpecularOcclusion,
   specularOcclusionUserData,
 } from '../../../r3f/godotIndirectSpecular';
+import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
 import {
   drawsLightModesOf,
   lightModesInjection,
@@ -101,6 +102,7 @@ function projectionMaterial(look: DecalProjectionLook, shading: ReceiverShading)
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -1,
     userData: {
+      ...viewportSamplersUserData(),
       ...lightModesUserData(shading.lightModes),
       ...specularOcclusionUserData(shading.disablesSpecularOcclusion),
     },

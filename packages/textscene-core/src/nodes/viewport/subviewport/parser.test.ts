@@ -167,6 +167,25 @@ describe('parseSubViewport', () => {
     });
   });
 
+  describe('texture_mipmap_bias', () => {
+    it('parses an authored bias, a value past the -2..2 hint included (viewport.cpp:4904-4911)', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), { texture_mipmap_bias: '-3.5' });
+      expect(result.texture_mipmap_bias).toBe(-3.5);
+    });
+
+    it('leaves an absent bias unset, so the viewport takes the project setting (viewport.cpp:5383)', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {});
+      expect(result.texture_mipmap_bias).toBeUndefined();
+    });
+
+    it('leaves an unreadable bias unset (error case)', () => {
+      const result = parseSubViewport(heading('SubViewport', { name: 'V' }), {
+        texture_mipmap_bias: 'sharp',
+      });
+      expect(result.texture_mipmap_bias).toBeUndefined();
+    });
+  });
+
   it('handles a heading with no attributes at all (edge case)', () => {
     const result = parseSubViewport({ type: 'node', attributes: {} }, {});
     expect(result.name).toBe('');

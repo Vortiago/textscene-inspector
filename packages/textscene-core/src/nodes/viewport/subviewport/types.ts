@@ -39,6 +39,8 @@ export interface SubViewportProperties extends Omit<NodeProperties, 'transform'>
   audio_listener_enable_2d: boolean;
   canvas_item_default_texture_filter: number;
   gui_embed_subwindows: boolean;
+  /** The mipmap bias of the viewport's 3D material samplers. Absent takes the project setting. */
+  texture_mipmap_bias?: number;
   /** The side of the viewport's positional shadow atlas. Absent keeps the Viewport default, 2048. */
   positional_shadow_atlas_size?: number;
   /** Each quadrant's `PositionalShadowAtlasQuadrantSubdiv`. Absent keeps the default. */

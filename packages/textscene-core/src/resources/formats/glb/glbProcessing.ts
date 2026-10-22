@@ -18,7 +18,9 @@ import {
   type GltfNamingOptions,
 } from '../../../godot/import/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
-import { withImportedNormalMapRead } from '../../../r3f/materials/godotNormalMap';
+import { importedNormalMapRead } from '../../../r3f/materials/godotNormalMap';
+import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
+import { injectProgram } from '../../../r3f/materialProgramInputs';
 import type { GltfExtensionRules } from './types';
 import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 import { usesGodotSingleRoot } from '../../../godot/import/gltf';
@@ -199,6 +201,17 @@ function importBlendAsDepthPrepass(object: THREE.Object3D): void {
   });
 }
 
+/**
+ * A glTF material copy as Godot's import builds it: a StandardMaterial3D, which samples its textures
+ * through the viewport's samplers, with its normal map read (`gltf_document.cpp:2939-2940`). A copy
+ * carries no `onBeforeCompile`, so each copy takes its programs again.
+ */
+function importedSurfaceMaterial(copy: THREE.Material): THREE.Material {
+  Object.assign(copy.userData, viewportSamplersUserData());
+  injectProgram(copy, importedNormalMapRead(copy));
+  return copy;
+}
+
 /** Clone an Object3D and its materials, since an Object3D has one parent. */
 export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
   // SkeletonUtils, not `clone(true)`: a plain clone leaves a SkinnedMesh bound to the
@@ -207,7 +220,7 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
 
   // SkeletonUtils shares material references, so clone every slot the sidecar writer
   // can reach, and a per-instance material change stays in its instance.
-  forEachSurfaceMaterial(cloned, (material, assign) => assign(withImportedNormalMapRead(material.clone())));
+  forEachSurfaceMaterial(cloned, (material, assign) => assign(importedSurfaceMaterial(material.clone())));
 
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {

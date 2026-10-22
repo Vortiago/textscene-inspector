@@ -108,6 +108,14 @@ export function hasMipChain(texture: THREE.Texture): boolean {
   return texture.generateMipmaps || texture.mipmaps.length > 1;
 }
 
+/**
+ * Whether `texture` samples between mip levels: a mipmap minification filter over a chain that
+ * exists. A mipmap bias changes the sample only then.
+ */
+export function samplesMipChain(texture: THREE.Texture): boolean {
+  return texture.minFilter in WITHOUT_MIPMAPS && hasMipChain(texture);
+}
+
 /** Whether a texture already samples the way this state asks, so no clone is needed. */
 export function textureFilterMatches(texture: THREE.Texture, state: TextureFilterState): boolean {
   const wanted = effectiveState(texture, state);

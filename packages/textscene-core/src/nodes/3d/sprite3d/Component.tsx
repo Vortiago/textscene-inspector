@@ -30,6 +30,7 @@ import {
 } from '../../../resources/textures/godotTextureFilter';
 import type { Sprite3DProperties } from './types';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
 import {
   alphaAntialiasingProps,
   alphaAntialiasingUserData,
@@ -207,6 +208,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         // `sprite_3d.cpp:281-283` hands the threshold, the scale and the edge to every mode's
         // material. Only HASH reads the scale, and only an antialiased cut the edge.
         userData: {
+          ...viewportSamplersUserData(),
           ...alphaHashScaleUserData(properties.alpha_hash_scale),
           ...alphaAntialiasingUserData(cut.antialiasing),
           ...opaquePrepassUserData(prepasses[pass]),

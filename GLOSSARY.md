@@ -50,6 +50,11 @@ _Avoid_: "mipmaps" for a chain the GPU generates.
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
 
+**Mipmap bias** (`r3f/materials/godotMipmapBias.ts`):
+The offset a viewport adds to the mip level that each of its 3D material samplers picks: the project's `texture_mipmap_bias`, or a SubViewport's own.
+It changes only a texture that has levels to choose between.
+_Avoid_: "LOD bias", which suggests mesh level of detail.
+
 **Unwrap cache**:
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
 Like an **Import sidecar**, no scene references it, and a missing one is an ordinary outcome.

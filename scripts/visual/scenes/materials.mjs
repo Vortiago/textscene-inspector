@@ -104,6 +104,9 @@ export const MATERIAL_SCENES = [
   // averages its bytes to a dark yellow, and a normal map renormalises each level. A chain averaged
   // in linear space brightens the checker, and one left unnormalised tilts the lit strip less.
   { name: 'material-mipmap-import', file: 'unit-material-mipmap-import.tscn' },
+  // The project's `texture_mipmap_bias` of -0.5 on a mipmapped checker floor seen at a grazing angle:
+  // Godot samples a sharper level, so the far squares stay crisp. An unbiased floor blurs to grey sooner.
+  { name: 'material-mipmap-bias', file: 'mipmap-bias/unit-material-mipmap-bias.tscn' },
   // The roughness limiter on an imported roughness map's chain: the left sphere's sidecar names its
   // normal map, so its minified highlight spreads and dims. A chain left unlimited keeps it tight.
   { name: 'material-roughness-limiter', file: 'unit-material-roughness-limiter.tscn' },
