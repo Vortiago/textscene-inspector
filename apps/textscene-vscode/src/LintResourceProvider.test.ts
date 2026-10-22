@@ -96,14 +96,6 @@ describe('LintResourceProvider', () => {
     expect(await providerForLevel().loadResource('res://models/tree.glb', 'PackedScene')).toBeNull();
     expect(vscode.workspace.fs.readFile).not.toHaveBeenCalled();
   });
-
-  it('names the workspace file of a res:// path, and nothing for one that escapes the root', () => {
-    expect(providerForLevel().fileOf('res://models/tree.glb')?.fsPath).toBe(
-      '/workspace/game/models/tree.glb'
-    );
-    expect(providerForLevel().fileOf('res://../secret.txt')).toBeNull();
-    expect(providerForLevel().fileOf('/workspace/secret.txt')).toBeNull();
-  });
 });
 
 describe('LintResourceProvider holds', () => {

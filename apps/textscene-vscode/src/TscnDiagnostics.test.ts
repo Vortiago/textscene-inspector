@@ -651,7 +651,7 @@ describe('TscnDiagnostics', () => {
 
       const provider = await diagnostics.providerFor(createMockUri('/workspace/isometric/dungeon.tscn'));
 
-      expect(provider?.fileOf('res://tree.glb')?.fsPath).toBe('/workspace/isometric/tree.glb');
+      expect(provider?.resRoot.fsPath).toBe('/workspace/isometric');
       diagnostics.dispose();
     });
 
@@ -660,7 +660,7 @@ describe('TscnDiagnostics', () => {
 
       const provider = await diagnostics.providerFor(createMockUri('/workspace/scenes/level.tscn'));
 
-      expect(provider?.fileOf('res://tree.glb')?.fsPath).toBe('/workspace/tree.glb');
+      expect(provider?.resRoot.fsPath).toBe('/workspace');
       diagnostics.dispose();
     });
 

@@ -15,6 +15,7 @@ import {
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { error as logError } from '@textscene/core/logger';
 import { isSamePath, isWithinRoot } from '@textscene/core/resources/resPath';
+import { resPathUri } from './existingResFile';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { toVscodeRange } from './languageFeatureRanges';
 import { LintResourceProvider } from './LintResourceProvider';
@@ -258,7 +259,7 @@ export class TscnDiagnostics implements vscode.Disposable {
       const provider = record?.provider;
       if (!provider) continue;
       const read = record.session.reads.some((path) => {
-        const file = provider.fileOf(path);
+        const file = resPathUri(provider.resRoot, path);
         return file !== null && isSamePath(file.fsPath, uri.fsPath, HOST_PATH_CASE);
       });
       if (read) this._scheduleLint(document);
@@ -315,7 +316,7 @@ export class TscnDiagnostics implements vscode.Disposable {
   private _readsUnder(record: DocumentLint, provider: LintResourceProvider, dir: vscode.Uri): boolean {
     const { reads } = record.session;
     const under = (path: string) => {
-      const file = provider.fileOf(path);
+      const file = resPathUri(provider.resRoot, path);
       return file !== null && isWithinRoot(dir.fsPath, file.fsPath, HOST_PATH_CASE);
     };
     return reads.some(under) || (reads.length > 0 && provider.listed.some(under));
