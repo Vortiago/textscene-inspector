@@ -63,7 +63,7 @@ const NO_MATCHES: readonly RawNode[] = Object.freeze([]);
  * O(matches x nodes); this, {@link countNodesOfType} and {@link firstNodeOfType} read the
  * cached index. Exact-name: Godot compares `get_class()` or scans a type-keyed group.
  */
-export function nodesOfType(roots: RawNode[], type: string): readonly RawNode[] {
+export function nodesOfType(roots: readonly RawNode[], type: string): readonly RawNode[] {
   return getSceneIndex(roots).nodesByType.get(type) ?? NO_MATCHES;
 }
 
@@ -73,7 +73,7 @@ export function nodesOfType(roots: RawNode[], type: string): readonly RawNode[] 
  * what it is named. A class the catalog does not know inherits nothing. Each call walks the tree
  * once, so a rule that asks per node caches the answer per tree, as the audio checks do.
  */
-export function nodesDescendingFrom(roots: RawNode[], base: string): readonly RawNode[] {
+export function nodesDescendingFrom(roots: readonly RawNode[], base: string): readonly RawNode[] {
   const index = getSceneIndex(roots);
   // One ancestry test per distinct class, not per node: a scene repeats its classes.
   const heirClasses = new Set<string>();
@@ -116,7 +116,7 @@ export function firstNodeOfType(
  * The parent of `target`, or null for a root or an absent node, in O(1) from the
  * cached index. Outside tests only `parentType.ts` calls it, and every rule asks `parentType.ts`.
  */
-export function findParentNode(nodes: RawNode[], target: RawNode): RawNode | null {
+export function findParentNode(nodes: readonly RawNode[], target: RawNode): RawNode | null {
   return getSceneIndex(nodes).parentOf.get(target) ?? null;
 }
 
