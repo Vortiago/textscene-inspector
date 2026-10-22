@@ -3,7 +3,7 @@
  * them: a builder that resolves an ExtResource, or a CSG root whose subtree reads many `.tres`.
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
 import type { ResourceLoader } from './ResourceLoader';
 import type { ResourceType } from './ResourceEventBus';
@@ -46,7 +46,9 @@ export function useLoadedFiles(plan: (loadedFile: LoadedFile) => readonly string
     [plan, loader, version]
   );
   const paths = useStableList(planned);
-  useEffect(() => {
+  // A layout effect, not `useEffect`: a load that lands between the render and a later passive
+  // effect would miss `readPaths`, and `onlyReadKeys` would leave the file loading for good.
+  useLayoutEffect(() => {
     readPaths.current = new Set(paths);
   }, [paths]);
   useRequestedFiles(loader, paths);
@@ -114,7 +116,7 @@ function useRequestedFiles(loader: ResourceLoader | null, paths: readonly string
  */
 function useMissingFiles(files: ReadonlyMap<string, CachedFile>): void {
   const { report, clear, markUploaded } = useMissingResources();
-  const failed = useMemo(() => [...files].filter(([, file]) => file === null).map(([path]) => path), [files]);
+  const failed = useStableList([...files].filter(([, file]) => file === null).map(([path]) => path));
   const reported = useRef<ReadonlySet<string>>(NO_PATHS);
 
   useEffect(() => {
