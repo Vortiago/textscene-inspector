@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { bottomUpV } from '../../godot/math/uv.js';
 import { UV2_ATTRIBUTE } from './uv2.js';
 
-/** One triangle surface as Godot's mesh arrays hold it: front faces clockwise, UV with V down. */
+/** One surface as Godot's mesh arrays hold it: front faces clockwise, UV with V down. */
 export interface GodotSurface {
   /** `xyz` per vertex. */
   positions: Float32Array;
@@ -20,11 +20,44 @@ export interface GodotSurface {
   uvs?: Float32Array;
   /** `uv` per vertex with V down, or undefined for a surface with no ARRAY_TEX_UV2. */
   uv2s?: Float32Array;
-  /** Three per triangle. */
+  /** Three per triangle, or one per drawn point. */
   indices: ArrayLike<number>;
+  /** Godot's `PRIMITIVE_POINTS`: one point per index, drawn at the material's point size. */
+  isPoints?: boolean;
 }
 
+/** Set on the geometry of points surfaces, which a drawer mounts as `THREE.Points`. */
+const DRAWS_POINTS = 'godotDrawsPoints';
+
+/** Whether `godotSurfacesGeometry` built `geometry` from points surfaces. */
+export function geometryDrawsPoints(geometry: THREE.BufferGeometry): boolean {
+  return geometry.userData[DRAWS_POINTS] === true;
+}
+
+/** The surfaces one three object draws, as one geometry with a draw group per surface, in order. */
+export interface SurfacePart<S extends GodotSurface> {
+  geometry: THREE.BufferGeometry;
+  surfaces: readonly S[];
+}
+
+/**
+ * Godot draws every surface of a mesh, but a three object draws one primitive type. So triangle
+ * surfaces and points surfaces each become a part, triangles first, and a mesh of one kind has one.
+ */
+export function godotSurfaceParts<S extends GodotSurface>(surfaces: readonly S[]): SurfacePart<S>[] {
+  const triangles = surfaces.filter((surface) => !surface.isPoints);
+  const points = surfaces.filter((surface) => surface.isPoints);
+  return [triangles, points]
+    .filter((part) => part.length > 0)
+    .map((part) => ({ geometry: godotSurfacesGeometry(part), surfaces: part }));
+}
+
+/**
+ * The surfaces of one primitive type as one geometry: all triangles or all points. Points draw as
+ * `THREE.Points`, with their indices kept in order and a normal for every vertex.
+ */
 export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.BufferGeometry {
+  const isPoints = surfaces.length > 0 && surfaces.every((s) => s.isPoints);
   const geometry = new THREE.BufferGeometry();
 
   const vertexCountOf = (surface: GodotSurface) => surface.positions.length / 3;
@@ -41,11 +74,11 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   // UV2 keeps Godot's top-down V, which the UV2 binding samples, and a surface without one keeps
   // (0, 0), where Godot samples it.
   const uv2s = surfaces.some((s) => s.uv2s) ? new Float32Array(totalVertices * 2) : undefined;
-  const normals = useDecodedNormals ? new Float32Array(totalVertices * 3) : undefined;
+  const normals = useDecodedNormals || isPoints ? new Float32Array(totalVertices * 3) : undefined;
   // three builds `vBitangent = cross(normal, tangent) * w`, Godot's binormal
   // (`scene_forward_clustered.glsl:756`), so the tangents pass through as Godot wrote them.
   const tangents = useDecodedTangents ? new Float32Array(totalVertices * 4) : undefined;
-  const indices = totalVertices > 65535 ? new Uint32Array(totalIndices) : new Uint16Array(totalIndices);
+  const indices = indexArray(totalIndices, totalVertices);
 
   let vertexBase = 0;
   let indexBase = 0;
@@ -64,15 +97,22 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
       }
     }
     if (uv2s && surface.uv2s) uv2s.set(surface.uv2s, vertexBase * 2);
-    if (normals && surface.normals) normals.set(surface.normals, vertexBase * 3);
+    if (normals) {
+      if (surface.normals) normals.set(surface.normals, vertexBase * 3);
+      else setDefaultPointNormals(normals, vertexBase, vertexCount);
+    }
     if (tangents && surface.tangents) tangents.set(surface.tangents, vertexBase * 4);
-    // Re-base each surface's indices into the merged vertex array and reverse
-    // each triangle's winding: Godot fronts triangles clockwise and three.js
-    // counter-clockwise, so without the swap every face is back-culled.
-    for (let i = 0; i + 2 < indexCount; i += 3) {
-      indices[indexBase + i] = surface.indices[i]! + vertexBase;
-      indices[indexBase + i + 1] = surface.indices[i + 2]! + vertexBase;
-      indices[indexBase + i + 2] = surface.indices[i + 1]! + vertexBase;
+    // Re-base each surface's indices into the merged vertex array. A triangle's winding reverses:
+    // Godot fronts triangles clockwise and three.js counter-clockwise, so without the swap every
+    // face is back-culled. A point has no winding.
+    if (isPoints) {
+      for (let i = 0; i < indexCount; i++) indices[indexBase + i] = surface.indices[i]! + vertexBase;
+    } else {
+      for (let i = 0; i + 2 < indexCount; i += 3) {
+        indices[indexBase + i] = surface.indices[i]! + vertexBase;
+        indices[indexBase + i + 1] = surface.indices[i + 2]! + vertexBase;
+        indices[indexBase + i + 2] = surface.indices[i + 1]! + vertexBase;
+      }
     }
     geometry.addGroup(indexBase, indexCount, surfaceIndex);
     vertexBase += vertexCount;
@@ -89,6 +129,24 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     geometry.computeVertexNormals();
   }
   if (tangents) geometry.setAttribute('tangent', new THREE.BufferAttribute(tangents, 4));
+  if (isPoints) geometry.userData[DRAWS_POINTS] = true;
 
   return geometry;
+}
+
+/** An index array of `length`, wide enough to address `vertexCount` vertices. */
+function indexArray(length: number, vertexCount: number): Uint16Array | Uint32Array {
+  return vertexCount > 65535 ? new Uint32Array(length) : new Uint16Array(length);
+}
+
+/**
+ * What Godot lights a surface with no ARRAY_NORMAL with, in node space. Measured with `pnpm ref:godot`
+ * under ten light directions. Godot binds a default buffer for the missing normal
+ * (`mesh_storage.cpp:61-70`) and decodes it in the shader (`scene_forward_clustered.glsl:742`).
+ */
+const DEFAULT_NORMAL_Z = 1;
+
+/** Gives `count` vertices from `firstVertex` the normal Godot lights a surface with no ARRAY_NORMAL with. */
+function setDefaultPointNormals(normals: Float32Array, firstVertex: number, count: number): void {
+  for (let i = 0; i < count; i++) normals[(firstVertex + i) * 3 + 2] = DEFAULT_NORMAL_Z;
 }

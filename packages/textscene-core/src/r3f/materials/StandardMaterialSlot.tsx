@@ -17,6 +17,7 @@ import { resolvedTexturesFromMaps, type MaterialTextureMaps } from './materialTe
 import type { MaterialAttach } from './swappedMaterials';
 import { FadedMaterials } from './FadedMaterials';
 import { bindHeightmap } from './godotParallax';
+import { withPointDraw, type PointDraw } from './godotPoint';
 import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/lightmapProgram';
 import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
 import { useLightmapAssignment } from '../lightmap/useLightmapAssignment';
@@ -30,6 +31,8 @@ export interface StandardMaterialSlotProps extends MaterialTextureMaps {
   scalars: StandardMaterial3DScalars | null;
   /** R3F attach key: `material-0` for multi-surface meshes. */
   attach?: string;
+  /** How the material draws the points of a surface that draws `THREE.Points`. */
+  pointDraw?: PointDraw;
 }
 
 export function StandardMaterialSlot({
@@ -44,6 +47,7 @@ export function StandardMaterialSlot({
   anisotropyMap,
   albedoTargetUv,
   attach,
+  pointDraw,
 }: StandardMaterialSlotProps) {
   const lightmap = useLightmapAssignment();
   // A null `scalars` is the derivation's "no material" case: Godot's default 3D
@@ -65,7 +69,9 @@ export function StandardMaterialSlot({
 
   return (
     <FadedMaterials attach={attach}>
-      {(pass, mount) => materialBagElement(bags[pass], mount, pass === 'unfaded' ? lightmap : null)}
+      {(pass, mount) =>
+        materialBagElement(withPointDraw(bags[pass], pointDraw), mount, pass === 'unfaded' ? lightmap : null)
+      }
     </FadedMaterials>
   );
 }

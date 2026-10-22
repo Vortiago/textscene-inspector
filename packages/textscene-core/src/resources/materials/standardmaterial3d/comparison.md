@@ -93,8 +93,6 @@ The left plate reads a checkerboard AO map at `ao_light_affect = 1.0`, and the r
 
 `specular_mode` picks the light's specular term: SchlickGGX, toon and disabled, left to right. Both engines draw a soft highlight, a hard-edged toon disc and no highlight. Toon writes to the diffuse, so the albedo tints it.
 
-- **Approximated** The preview glow spreads the toon disc's halo less than Godot's.
-
 ## Refraction
 
 <!-- compare: image=unit-material-refraction status=limitation fixture=unit-material-refraction.tscn -->
@@ -117,6 +115,18 @@ Both engines shift every texture coordinate by the depth the heightmap reads, al
 
 - **Approximated** Nearest sampling with anisotropy takes the property but not the anisotropy, since three skips it under `NearestFilter`.
 - **Approximated** `anisotropic_filtering_level` is pinned at 16x rather than read from the project.
+
+## Point size
+
+<!-- compare: image=unit-point-mesh status=done fixture=unit-point-mesh.tscn -->
+
+A PointMesh draws one square per vertex, and `use_point_size` with `point_size` sets its side in pixels. Without the flag a point is one pixel. A textured point samples its albedo across the square, as Godot does. A point carries no normal array, so Godot lights it as a normal along +Z in node space, and both sides do the same. Cull mode does not turn a point's normal and does not hide the point. Godot hides a front-culled point only in the first frames, while its pipeline compiles. A point casts a shadow of its point size, as Godot draws it under a directional, a spot or an omni light.
+
+## Point shadow under an omni light
+
+<!-- compare: image=unit-point-mesh-omni-shadow status=done fixture=unit-point-mesh-omni-shadow.tscn -->
+
+A 40 px point that draws shadows only hangs under an omni light, above a floor the camera looks straight down at. Both engines cast a faint square of the point's size on the floor, beside the darker square of the previewer's sun.
 
 ## Linting
 

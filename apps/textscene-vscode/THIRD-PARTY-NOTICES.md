@@ -31,6 +31,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
 | `packages/textscene-core/src/godot/rendering/environment/toneMapping.ts` | `servers/rendering/storage/environment_storage.cpp` (`environment_get_white` and the white of `environment_get_tonemap_parameters`) |
 | `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
+| `packages/textscene-core/src/resources/environment/godotGlowPyramid.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GAUSSIAN_BLUR` under `MODE_GLOW`, the pyramid's blur) and `.../effects/tonemap.glsl` (`gather_glow` and the bicubic glow sample) |
 | `packages/textscene-core/src/utils/colorSpace.ts` | `core/math/color.h` (`Color::srgb_to_linear`, `Color::linear_to_srgb`) |
 | `packages/textscene-core/src/godot/math/color.ts` | `core/math/color_names.inc` (the X11 named-colour table, transcribed verbatim) and `core/math/color.cpp` (`Color::find_named_color`'s name normalisation, `Color::named`) |
 | `packages/textscene-core/src/resources/materials/standardmaterial3d/emission.ts` | `scene/resources/material.cpp` (`BaseMaterial3D::_update_shader` emission block, `set_emission_energy_multiplier`) |
@@ -48,6 +49,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/cylindermesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CylinderMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/torusmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TorusMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/prismmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrismMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/pointmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PointMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/lightmapSizeHint.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_update_lightmap_size` and the setters that call it) |

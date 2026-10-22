@@ -93,6 +93,23 @@ export function rangedShadowCastingEffects(
   return castEffects(castSettingOf(value), instance);
 }
 
+/**
+ * What every object that draws part of a mesh sets: `cast_shadow` and the per-surface draw hooks.
+ * three fires them per draw group, the shadow pair after `getDepthMaterial` has set the side
+ * (`WebGLShadowMap.js:488,546,560`): the only per-surface reach into a draw of an object whose
+ * materials and depth material three shares.
+ */
+export function drawHookProps(shadow: ShadowCastingEffects) {
+  return {
+    castShadow: shadow.castShadow,
+    receiveShadow: true,
+    onBeforeRender: shadow.onBeforeRender,
+    onAfterRender: shadow.onAfterRender,
+    onBeforeShadow: shadow.onBeforeShadow,
+    onAfterShadow: shadow.onAfterShadow,
+  };
+}
+
 /** The JSX props, applied to an object built outside JSX, such as a GLB's meshes. */
 export function applyShadowCasting(object: THREE.Object3D, effects: ShadowCastingEffects): void {
   object.castShadow = effects.castShadow;

@@ -1,7 +1,7 @@
 ---
 type: Material Feature Showcase
 category: Complex Scenes
-status: limitation
+status: done
 fixture: integration-material-features.tscn
 image: complex-materials
 camera: Root/Camera3D
@@ -33,9 +33,5 @@ show the same whole scene from real Godot and from this previewer.
   two independent fit-to-bounds passes.
 
 The layout, every Label3D caption, the plain PBR spheres and their colours match. The
-emissive spheres bloom on both sides, with Godot's cyan-green halo and cyan-white cores.
-
-## Known limitations
-
-- **Approximated** The 13-tap glow kernel is not Godot's gaussian, so the halos round the emissive
-  spheres and the chrome highlight read brighter and wider.
+emissive spheres bloom on both sides, with Godot's cyan-green halo and cyan-white cores, and the
+chrome highlight glows as wide as Godot's.

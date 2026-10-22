@@ -18,6 +18,7 @@ import {
   projectThemeScale,
   projectClearColor,
   projectTransparentBackground,
+  projectGlowUsesBicubicUpscale,
   projectUsesLightmapBicubicFilter,
   projectMsaaModes,
   projectTextureMipmapBias,
@@ -543,5 +544,22 @@ describe('projectTextureMipmapBias', () => {
 
   it('keeps the default for a malformed value (edge case)', () => {
     expect(projectTextureMipmapBias({ [KEY]: 'sharp' })).toBe(0);
+  });
+});
+
+describe('projectGlowUsesBicubicUpscale', () => {
+  const KEY = 'rendering/environment/glow/upscale_mode';
+
+  it('reads Linear (0) as a bilinear read and Bicubic (1) as a bicubic one', () => {
+    expect(projectGlowUsesBicubicUpscale({ [KEY]: '0' })).toBe(false);
+    expect(projectGlowUsesBicubicUpscale({ [KEY]: '1' })).toBe(true);
+  });
+
+  it("reads bicubic with no project, Godot's default (rendering_server.cpp:3809)", () => {
+    expect(projectGlowUsesBicubicUpscale(null)).toBe(true);
+  });
+
+  it('keeps the default for a malformed value (edge case)', () => {
+    expect(projectGlowUsesBicubicUpscale({ [KEY]: 'sharp' })).toBe(true);
   });
 });

@@ -9,13 +9,13 @@ import * as THREE from 'three';
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
 import { ARRAY_MESH_TYPES, decodeArrayMesh } from '../meshes/arraymesh/decode';
-import { godotSurfacesGeometry } from '../meshes/godotSurface';
+import { godotSurfaceParts } from '../meshes/godotSurface';
 import type { SectionLoaderFn } from '../resourceSection';
 import { arrayMeshAabb } from '../meshes/arraymesh/meshAabb';
 import type { Aabb } from '../../godot/math/aabb';
 
-/** Decoded ArrayMesh: merged geometry plus one material path per surface (group). */
-export interface ArrayMeshResource {
+/** The surfaces of one primitive type: one geometry, and each draw group's material path and surface index. */
+export interface ArrayMeshPart {
   geometry: THREE.BufferGeometry;
   /** `materialPaths[i]` is the res:// material for draw group `i` (null = none). */
   materialPaths: (string | null)[];
@@ -25,6 +25,11 @@ export interface ArrayMeshResource {
    * `surface_material_override/N` addresses.
    */
   surfaceIndices: number[];
+}
+
+/** Decoded ArrayMesh: a part for its triangle surfaces and one for its points surfaces, when it has them. */
+export interface ArrayMeshResource {
+  parts: ArrayMeshPart[];
   /** The mesh's box as the rendering server holds it, which a multimesh box reads. */
   aabb: Aabb;
 }
@@ -41,12 +46,14 @@ export function createArrayMeshProcessor(
       const section = await loadSection(path, ARRAY_MESH_TYPES);
       const mesh = decodeArrayMesh(section, path);
       return {
-        geometry: godotSurfacesGeometry(mesh.surfaces),
-        materialPaths: mesh.surfaces.map((s) => s.materialPath ?? null),
-        surfaceIndices: mesh.surfaces.map((s) => s.surfaceIndex),
+        parts: godotSurfaceParts(mesh.surfaces).map(({ geometry, surfaces }) => ({
+          geometry,
+          materialPaths: surfaces.map((s) => s.materialPath ?? null),
+          surfaceIndices: surfaces.map((s) => s.surfaceIndex),
+        })),
         aabb: arrayMeshAabb(section.properties),
       };
     },
-    dispose: (resource) => resource.geometry.dispose(),
+    dispose: (resource) => resource.parts.forEach((part) => part.geometry.dispose()),
   });
 }
