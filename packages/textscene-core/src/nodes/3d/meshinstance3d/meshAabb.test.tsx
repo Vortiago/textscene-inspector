@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
+import { MissingResourcesProvider } from '../../../r3f/contexts/MissingResourcesContext';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import {
@@ -119,6 +120,41 @@ describe('useMeshAabb over a TubeTrailMesh', () => {
     expect(result.current?.size.x).toBeCloseTo(1, 5);
 
     rerender({ resources: inScene('3') });
+    expect(result.current?.size.x).toBeCloseTo(3, 5);
+  });
+});
+
+describe('useMeshAabb over a TubeTrailMesh whose Curve is a .tres', () => {
+  const CURVE_PATH = 'res://grow.tres';
+  const resources: SceneResources = {
+    internalResources: [
+      { id: 'tube', type: 'TubeTrailMesh', data: { ...COARSE_TUBE, curve: 'ExtResource("1")' } },
+    ],
+    externalResources: [{ id: '1', type: 'Curve', path: CURVE_PATH }],
+  };
+  const renderTubeAabb = (fake: FakeResourceLoader) =>
+    renderHook(() => useMeshAabb('SubResource("tube")', resources), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <MissingResourcesProvider>
+          <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+        </MissingResourcesProvider>
+      ),
+    }).result;
+
+  it('is unknown while the Curve file loads, then bounds the tube by it', () => {
+    const fake = createFakeResourceLoader();
+    const result = renderTubeAabb(fake);
+    expect(result.current).toBeNull();
+
+    act(() =>
+      fake.resources._resolve(CURVE_PATH, {
+        resourceType: 'Curve',
+        properties: curveEndingAt('3'),
+        extResources: [],
+        subResources: [],
+      })
+    );
+
     expect(result.current?.size.x).toBeCloseTo(3, 5);
   });
 });

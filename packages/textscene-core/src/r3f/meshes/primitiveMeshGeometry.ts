@@ -8,9 +8,9 @@ import { parseNonEmptyAabb } from '../../parser/valueParsers';
 import { aabbOfPoints, EMPTY_AABB, type Aabb } from '../../godot/math/aabb';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMesh';
 import { godotSurfacesGeometry } from '../../resources/meshes/godotSurface';
+import type { ResolvableResource } from '../../resources/scopedResource';
 import { meshContentKey } from '../../resources/meshes/meshSource';
 import { isPrimitiveMeshType, primitiveMeshSurface } from '../../resources/meshes/primitivemesh/surface';
-import type { ScopedResource } from '../../resources/useSubOrExtResource';
 
 /**
  * Written only by `primitiveMeshGeometry`. An entry leaves when its geometry is disposed, which
@@ -24,7 +24,10 @@ const sharedGeometries = new Map<string, WeakRef<THREE.BufferGeometry>>();
  * draws one resource as one mesh, whichever MeshLibrary item or node holds it. Null for a mesh
  * Godot builds no surface for.
  */
-export function primitiveMeshGeometry(mesh: ScopedResource, texelSize: number): THREE.BufferGeometry | null {
+export function primitiveMeshGeometry(
+  mesh: ResolvableResource,
+  texelSize: number
+): THREE.BufferGeometry | null {
   const key = `${texelSize}|${meshContentKey(mesh)}`;
   const shared = sharedGeometries.get(key)?.deref();
   if (shared) return shared;
@@ -47,7 +50,7 @@ function forgetSharedGeometry(key: string, geometry: THREE.BufferGeometry): void
  * vertices it builds (`mesh_storage.cpp:705-712`). A mesh Godot builds no surface for is `AABB()`.
  * Null for a type with no slice here.
  */
-export function primitiveMeshAabb(mesh: ScopedResource): Aabb | null {
+export function primitiveMeshAabb(mesh: ResolvableResource): Aabb | null {
   if (!isPrimitiveMeshType(mesh.resource.type)) return null;
   const custom = parseNonEmptyAabb(mesh.resource.data['custom_aabb'], 'custom_aabb');
   if (custom) return custom;

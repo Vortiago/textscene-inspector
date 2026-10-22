@@ -4,7 +4,6 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { CurveTangentMode, DEFAULT_BAKE_RESOLUTION, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 import { settableIntOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real.js';
@@ -50,17 +49,9 @@ function decodeCurve(data: Record<string, string>): Curve {
   return curve;
 }
 
-/**
- * The `Curve` a `SubResource("id")` property names, or null when the reference
- * is absent, is not a SubResource, names nothing, or names something else.
- */
-export function resolveCurve(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): Curve | null {
-  const resource = resolveSubResourceRef(ref, internalResources);
-  if (resource?.type !== 'Curve') return null;
-  return decodeCurve(resource.data);
+/** The `Curve` a resource holds, or null for no resource or one of another type. */
+export function decodeCurveResource(resource: TscnInternalResource | null): Curve | null {
+  return resource?.type === 'Curve' ? decodeCurve(resource.data) : null;
 }
 
 function parsePoints(value: string | undefined): CurvePoint[] {

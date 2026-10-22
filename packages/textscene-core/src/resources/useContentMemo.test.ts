@@ -1,16 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { TscnInternalResource } from '../parser/types';
-import { resourceContentKey } from './resourceContentKey';
+import { NO_RESOURCES } from '../r3f/SceneResourcesContext';
+import type { ResolvableResource } from './scopedResource';
+import { NO_FILES } from './testing/noFiles';
 import { useContentMemo } from './useContentMemo';
 
-const box = (size: string): TscnInternalResource => ({ id: 'b', type: 'BoxMesh', data: { size } });
+const box = (size: string): ResolvableResource => ({
+  resource: { id: 'b', type: 'BoxMesh', data: { size } },
+  resources: NO_RESOURCES,
+  loadedFile: NO_FILES,
+});
 
-function renderMemo(initial: TscnInternalResource | null) {
-  const build = vi.fn((resource: TscnInternalResource) => ({ size: resource.data['size'] }));
-  const hook = renderHook(({ resource }) => useContentMemo(resource, resourceContentKey, build), {
-    initialProps: { resource: initial },
-  });
+function renderMemo(initial: ResolvableResource | null) {
+  const build = vi.fn((mesh: ResolvableResource) => ({ size: mesh.resource.data['size'] }));
+  const hook = renderHook(({ mesh }) => useContentMemo(mesh, build), { initialProps: { mesh: initial } });
   return { ...hook, build };
 }
 
@@ -18,37 +22,41 @@ describe('useContentMemo', () => {
   it('keeps what it built while a fresh resource holds the same content', () => {
     const { result, rerender, build } = renderMemo(box('Vector3(1, 1, 1)'));
     const first = result.current;
-    rerender({ resource: box('Vector3(1, 1, 1)') });
+    rerender({ mesh: box('Vector3(1, 1, 1)') });
     expect(result.current).toBe(first);
     expect(build).toHaveBeenCalledTimes(1);
   });
 
   it('builds again when the content changes', () => {
     const { result, rerender } = renderMemo(box('Vector3(1, 1, 1)'));
-    rerender({ resource: box('Vector3(2, 2, 2)') });
+    rerender({ mesh: box('Vector3(2, 2, 2)') });
     expect(result.current).toEqual({ size: 'Vector3(2, 2, 2)' });
+  });
+
+  it('builds again when a Curve the mesh names changes content', () => {
+    const tube = (curve: TscnInternalResource): ResolvableResource => ({
+      resource: { id: 't', type: 'TubeTrailMesh', data: { curve: 'SubResource("c")' } },
+      resources: { ...NO_RESOURCES, internalResources: [curve] },
+      loadedFile: NO_FILES,
+    });
+    const curve = (bakeResolution: string): TscnInternalResource => ({
+      id: 'c',
+      type: 'Curve',
+      data: { bake_resolution: bakeResolution },
+    });
+    const build = vi.fn((mesh: ResolvableResource) => mesh.resources.internalResources[0]!.data);
+    const { result, rerender } = renderHook(({ mesh }) => useContentMemo(mesh, build), {
+      initialProps: { mesh: tube(curve('10')) },
+    });
+
+    rerender({ mesh: tube(curve('11')) });
+
+    expect(result.current).toEqual({ bake_resolution: '11' });
   });
 
   it('is null for no resource, and builds nothing', () => {
     const { result, build } = renderMemo(null);
     expect(result.current).toBeNull();
     expect(build).not.toHaveBeenCalled();
-  });
-});
-
-describe('useContentMemo over another input', () => {
-  it('keeps what it built while the key holds, and builds again when it changes', () => {
-    const build = vi.fn((input: { id: string; body: string }) => ({ built: input.body }));
-    const { result, rerender } = renderHook(({ input }) => useContentMemo(input, (i) => i.body, build), {
-      initialProps: { input: { id: 'a', body: 'x' } },
-    });
-    const first = result.current;
-
-    rerender({ input: { id: 'b', body: 'x' } });
-    expect(result.current).toBe(first);
-
-    rerender({ input: { id: 'b', body: 'y' } });
-    expect(result.current).toEqual({ built: 'y' });
-    expect(build).toHaveBeenCalledTimes(2);
   });
 });

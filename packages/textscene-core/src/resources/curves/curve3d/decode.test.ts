@@ -205,3 +205,25 @@ describe('tessellateCurve3D', () => {
     expect(s.z).toBe(4);
   });
 });
+
+describe('tessellateCurve3D in single precision', () => {
+  // `Curve3D.sample(0, t)` in Godot 4.6.3 for the same two points, printed at full precision.
+  const GODOT_SAMPLES: ReadonlyArray<readonly [step: number, x: number, y: number, z: number]> = [
+    [10, 1.3336999416351318, -0.23709999024868011, -0.06439995765686035],
+    [25, 3.1765623092651367, 0.007812477648258209, 0.7093749046325684],
+    [37, 4.616637706756592, 0.8584815263748169, 1.204367756843567],
+    [50, 6.112500190734863, 2.1625001430511475, 1.6499998569488525],
+    [73, 8.50400161743164, 4.605401992797852, 2.3109140396118164],
+    [90, 9.979299545288086, 5.7621002197265625, 2.7883996963500977],
+  ];
+
+  it.each(GODOT_SAMPLES)("gives Godot's float point at step %i of 100", (step, x, y, z) => {
+    const points = pointsOf(
+      'PackedVector3Array(-3.3, 1.7, 0.9, 4.1, -2.9, 2.3, 0.1, 0.3, -0.7, -2.2, 0.4, -1.1, 1.3, 7.7, 0.2, 10.7, 5.9, 3.1)'
+    );
+
+    const { points: flat } = tessellateCurve3D(points, 100);
+
+    expect([flat[step * 3], flat[step * 3 + 1], flat[step * 3 + 2]]).toEqual([x, y, z]);
+  });
+});

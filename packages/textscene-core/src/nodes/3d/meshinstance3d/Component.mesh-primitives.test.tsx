@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
 import { COARSE_TUBE, curveEndingAt } from '../../../resources/meshes/primitivemesh/surface.testkit';
@@ -124,6 +126,31 @@ describe('Mesh primitives (assertions 48–59)', () => {
     );
     // 2 tall, and as wide as the bottom row: three times the radius of 0.5, twice.
     expectSize(geom, [3, 2, 3]);
+  });
+
+  it('TubeTrailMesh.curve scales the radius along the tube when the Curve is a .tres', async () => {
+    const CURVE_PATH = 'res://grow.tres';
+    const fake = createFakeResourceLoader();
+    fake.resources.seed(CURVE_PATH, {
+      resourceType: 'Curve',
+      properties: curveEndingAt('3'),
+      extResources: [],
+      subResources: [],
+    });
+    const renderer = await ReactThreeTestRenderer.create(
+      <ResourceLoaderProvider loader={fake.loader}>
+        <SceneResourcesProvider
+          internalResources={[
+            subResource('TubeTrailMesh', 'Tube', { ...COARSE_TUBE, curve: 'ExtResource("1")' }),
+          ]}
+          externalResources={[{ id: '1', type: 'Curve', path: CURVE_PATH }]}
+        >
+          <MeshInstance3D node={makeNode('Tube')} />
+        </SceneResourcesProvider>
+      </ResourceLoaderProvider>
+    );
+
+    expectSize((renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry, [3, 2, 3]);
   });
 
   it('#59 PrismMesh.size → a triangular prism filling that box', async () => {

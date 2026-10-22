@@ -3,7 +3,9 @@
 import { expect } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types.js';
 import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext.js';
-import type { ScopedResource } from '../../useSubOrExtResource.js';
+import type { ParsedResource } from '../../../parser/parsedResource.js';
+import type { LoadedFile, ResolvableResource } from '../../scopedResource.js';
+import { NO_FILES } from '../../testing/noFiles.js';
 import type { GodotSurface } from '../godotSurface.js';
 
 /** Vertex `vertex` of an array that holds `size` numbers per vertex. */
@@ -44,8 +46,17 @@ export function expectClockwiseFronts(surface: GodotSurface): void {
 export function scopedMesh(
   resource: TscnInternalResource,
   ...internalResources: TscnInternalResource[]
-): ScopedResource {
-  return { resource, resources: { ...NO_RESOURCES, internalResources } };
+): ResolvableResource {
+  return { resource, resources: { ...NO_RESOURCES, internalResources }, loadedFile: NO_FILES };
+}
+
+/** `mesh` with the files in `parsed` loaded, keyed by path. */
+export function withLoadedFiles(
+  mesh: ResolvableResource,
+  parsed: Record<string, ParsedResource>
+): ResolvableResource {
+  const loadedFile: LoadedFile = (path) => parsed[path];
+  return { ...mesh, loadedFile };
 }
 
 /** The data of a TubeTrailMesh two sections long, with one ring each and four steps round. */

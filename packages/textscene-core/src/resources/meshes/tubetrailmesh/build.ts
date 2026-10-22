@@ -40,6 +40,13 @@ import type { TubeTrailMeshProperties } from './types.js';
 /** The tangent of every cap vertex (`:2587`). */
 const CAP_TANGENT: Vec4 = [1, 0, 0, 1];
 
+/** Column `i` of every ring: its point on the unit circle, and its U. */
+interface RimColumn {
+  x: number;
+  z: number;
+  u: number;
+}
+
 /**
  * No UV2: `PrimitiveMesh::_update` makes it from UV. No bone arrays: nothing here skins a primitive,
  * and Godot draws a mesh with no skin at the rest positions.
@@ -48,12 +55,26 @@ export function buildTubeTrailMeshSurface(p: TubeTrailMeshProperties): GodotSurf
   const depth = storedReal(p.sectionLength * p.sections);
   // A curve with no point scales nothing (`:2552`).
   const radiusScale = p.curve && p.curve.points.length > 0 ? bakedCurveSampler(p.curve) : () => 1;
+  // Each ring repeats the columns, so they are computed once.
+  const rim = rimColumns(p.radialSteps);
 
   const writer = new SurfaceWriter(false);
-  writeBody(writer, p, depth, radiusScale);
-  if (p.capTop) writeTopCap(writer, p, depth, radiusScale(0));
-  if (p.capBottom) writeBottomCap(writer, p, depth, radiusScale(1));
+  writeBody(writer, p, rim, depth, radiusScale);
+  // A cap is built only where the curve leaves a scale above `CMP_EPSILON` (`:2596`, `:2680`).
+  const topScale = radiusScale(0);
+  const bottomScale = radiusScale(1);
+  if (p.capTop && topScale > CMP_EPSILON)
+    writeTopCap(writer, rim, depth * 0.5, storedReal(p.radius * topScale));
+  if (p.capBottom && bottomScale > CMP_EPSILON)
+    writeBottomCap(writer, rim, depth * -0.5, storedReal(p.radius * bottomScale));
   return writer.surface();
+}
+
+function rimColumns(radialSteps: number): RimColumn[] {
+  return Array.from({ length: radialSteps + 1 }, (_, i) => {
+    const [x, z] = rimPoint(i, radialSteps);
+    return { x, z, u: storedReal(i / radialSteps) };
+  });
 }
 
 type RadiusScale = (v: number) => number;
@@ -62,44 +83,32 @@ type RadiusScale = (v: number) => number;
 function writeBody(
   writer: SurfaceWriter,
   p: TubeTrailMeshProperties,
+  rim: readonly RimColumn[],
   depth: number,
   radiusScale: RadiusScale
 ): void {
-  const { radius, radialSteps } = p;
   const totalRings = p.sectionRings * p.sections;
   let thisrow = 0;
   let prevrow = 0;
   for (let j = 0; j <= totalRings; j++) {
     const v = storedReal(j / totalRings);
     const y = storedReal(depth * 0.5 - storedReal(depth * v));
-    const rowRadius = storedReal(radius * radiusScale(v));
+    const rowRadius = storedReal(p.radius * radiusScale(v));
 
-    for (let i = 0; i <= radialSteps; i++) {
-      const [x, z] = rimPoint(i, radialSteps);
-      writer.vertex(
-        [x * rowRadius, y, z * rowRadius],
-        [x, 0, z],
-        [z, 0, -x, 1],
-        [storedReal(i / radialSteps), v * 0.5],
-        [0, 0]
-      );
+    rim.forEach(({ x, z, u }, i) => {
+      writer.vertex([x * rowRadius, y, z * rowRadius], [x, 0, z], [z, 0, -x, 1], [u, v * 0.5], [0, 0]);
       if (i > 0 && j > 0) writer.quadBetweenRows(prevrow, thisrow, i);
-    }
+    });
     prevrow = thisrow;
     thisrow = writer.vertexCount;
   }
 }
 
-/** A fan facing up, centred on (0.25, 0.75) in UV (`:2596-2677`). Built when the curve leaves a radius above `CMP_EPSILON`. */
-function writeTopCap(writer: SurfaceWriter, p: TubeTrailMeshProperties, depth: number, scale: number): void {
-  if (scale <= CMP_EPSILON) return;
-  const { radialSteps } = p;
-  const capRadius = storedReal(p.radius * scale);
-  const y = depth * 0.5;
+/** A fan facing up, centred on (0.25, 0.75) in UV (`:2596-2677`). */
+function writeTopCap(writer: SurfaceWriter, rim: readonly RimColumn[], y: number, capRadius: number): void {
   const centre = writer.vertexCount;
   writer.vertex([0, y, 0], [0, 1, 0], CAP_TANGENT, [0.25, 0.75], [0, 0]);
-  for (let i = 0; i <= radialSteps; i++) {
-    const [x, z] = rimPoint(i, radialSteps);
+  rim.forEach(({ x, z }, i) => {
     writer.vertex(
       [x * capRadius, y, z * capRadius],
       [0, 1, 0],
@@ -109,24 +118,19 @@ function writeTopCap(writer: SurfaceWriter, p: TubeTrailMeshProperties, depth: n
     );
     const point = writer.vertexCount;
     if (i > 0) writer.triangle(centre, point - 1, point - 2);
-  }
+  });
 }
 
 /** A fan facing down, centred on (0.75, 0.75) in UV with V mirrored (`:2680-2732`). */
 function writeBottomCap(
   writer: SurfaceWriter,
-  p: TubeTrailMeshProperties,
-  depth: number,
-  scale: number
+  rim: readonly RimColumn[],
+  y: number,
+  capRadius: number
 ): void {
-  if (scale <= CMP_EPSILON) return;
-  const { radialSteps } = p;
-  const capRadius = storedReal(p.radius * scale);
-  const y = depth * -0.5;
   const centre = writer.vertexCount;
   writer.vertex([0, y, 0], [0, -1, 0], CAP_TANGENT, [0.75, 0.75], [0, 0]);
-  for (let i = 0; i <= radialSteps; i++) {
-    const [x, z] = rimPoint(i, radialSteps);
+  rim.forEach(({ x, z }, i) => {
     writer.vertex(
       [x * capRadius, y, z * capRadius],
       [0, -1, 0],
@@ -136,5 +140,5 @@ function writeBottomCap(
     );
     const point = writer.vertexCount;
     if (i > 0) writer.triangle(centre, point - 2, point - 1);
-  }
+  });
 }

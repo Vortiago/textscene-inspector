@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCurve } from './decode';
-import { resolveOnlySubResource } from '../../../testing/subResource';
+import { decodeCurveResource } from './decode';
+import { subResource } from '../../../testing/subResource';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { sampleCurve } from './sample';
 import { CurveTangentMode, EMPTY_CURVE, type Curve } from './types';
@@ -17,10 +17,10 @@ const CANDLE_SPARKLE = {
 
 /** The Curve a sub-resource with this body decodes to. */
 function decode(data: Record<string, string>): Curve {
-  return resolveOnlySubResource('Curve', data, resolveCurve)!;
+  return decodeCurveResource(subResource('Curve', 'only', data))!;
 }
 
-describe('the Curve body resolveCurve decodes', () => {
+describe('the Curve body decodeCurveResource decodes', () => {
   it('reads every point of a three-point `_data` array (happy path)', () => {
     const curve = decode(CANDLE_SPARKLE);
 
@@ -259,21 +259,18 @@ const CURVE_RESOURCE: TscnInternalResource = {
   data: { ...CANDLE_SPARKLE },
 };
 
-describe('resolveCurve', () => {
-  it('decodes the Curve a SubResource reference names (happy path)', () => {
-    const curve = resolveCurve('SubResource("4")', [CURVE_RESOURCE]);
-    expect(curve?.points).toHaveLength(3);
+describe('decodeCurveResource', () => {
+  it('decodes the Curve a resource holds (happy path)', () => {
+    expect(decodeCurveResource(CURVE_RESOURCE)?.points).toHaveLength(3);
   });
 
-  it('returns null when the reference names a different resource type (error path)', () => {
+  it('returns null for a resource of a different type (error path)', () => {
     const gradient: TscnInternalResource = { type: 'Gradient', id: '4', data: {} };
-    expect(resolveCurve('SubResource("4")', [gradient])).toBeNull();
+    expect(decodeCurveResource(gradient)).toBeNull();
   });
 
-  it('returns null for an absent or non-SubResource reference (edge case)', () => {
-    expect(resolveCurve(undefined, [CURVE_RESOURCE])).toBeNull();
-    expect(resolveCurve('ExtResource("4")', [CURVE_RESOURCE])).toBeNull();
-    expect(resolveCurve('SubResource("nope")', [CURVE_RESOURCE])).toBeNull();
+  it('returns null for no resource (edge case)', () => {
+    expect(decodeCurveResource(null)).toBeNull();
   });
 });
 

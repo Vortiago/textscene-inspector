@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { resolveOnlySubResource } from '../../../testing/subResource';
-import { resolveCurve } from './decode';
+import { subResource } from '../../../testing/subResource';
+import { decodeCurveResource } from './decode';
 import { sampleCurve } from './sample';
 import { curveOf, point } from './curve.testkit';
 import { EMPTY_CURVE } from './types';
@@ -77,22 +77,18 @@ describe('sampleCurve', () => {
 describe('sampleCurve in single precision', () => {
   // Godot 4.6.3 prints each value to 14 digits: its `real_t` is a float, so the points, the offset
   // and every step of the Bézier round to single precision, and rounding the print recovers the float.
-  const WAVE = resolveOnlySubResource(
-    'Curve',
-    {
+  const WAVE = decodeCurveResource(
+    subResource('Curve', 'wave', {
       _data:
         '[Vector2(0, 0.3), 0.0, 0.5, 0, 0, Vector2(0.5, 1), 0.2, -0.4, 0, 0, Vector2(1, 0), -1.0, 0.0, 0, 0]',
-    },
-    resolveCurve
+    })
   )!;
-  const SPARKLE = resolveOnlySubResource(
-    'Curve',
-    {
+  const SPARKLE = decodeCurveResource(
+    subResource('Curve', 'sparkle', {
       _data:
         '[Vector2(0, 0), 0.0, 1.36377, 0, 0, Vector2(0.262376, 0.188182), 0.41974, 0.41974, 0, 0, ' +
         'Vector2(1, 0.0295454), -1.06101, 0.0, 0, 0]',
-    },
-    resolveCurve
+    })
   )!;
 
   it.each([

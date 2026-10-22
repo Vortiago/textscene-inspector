@@ -8,7 +8,7 @@ import type { ParsedResource } from '../parser/parsedResource.js';
 import type { TscnInternalResource } from '../parser/types.js';
 import { findSubResource } from './SubResourceResolver.js';
 import { parseSubResourcePath } from './subResourcePath.js';
-import type { ScopedResource } from './useSubOrExtResource.js';
+import type { ScopedResource } from './scopedResource.js';
 
 /**
  * The parsed file that owns `path`, a plain path or a **Sub-resource path**, from the

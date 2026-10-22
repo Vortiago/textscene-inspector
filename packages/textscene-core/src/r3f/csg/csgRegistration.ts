@@ -5,13 +5,13 @@
  */
 
 import type * as THREE from 'three';
-import type { ParsedResource } from '../../parser/parsedResource';
+import type { LoadedFile } from '../../resources/scopedResource';
 import type { SceneResources } from '../SceneResourcesContext';
 import type { CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgGeometryContext extends SceneResources {
   /** A `.tres` the shape's `readsFiles` named, or undefined while it loads or after it failed. */
-  file: (path: string) => ParsedResource | undefined;
+  file: LoadedFile;
 }
 
 /**
@@ -46,8 +46,15 @@ export interface CsgShapeRegistration {
    * context of `geometry`, since a CSGMesh3D `mesh` reference stays the same while its sub-resource changes.
    */
   geometryKey?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => string;
-  /** The `.tres` paths `geometry` reads through `ctx.file`, which load before it can build. */
-  readsFiles?: (properties: Record<string, unknown>, pools: SceneResources) => readonly string[];
+  /**
+   * The `.tres` paths `geometry` reads through `ctx.file`, which load before it can build. A path
+   * that only a loaded file names is listed once `loadedFile` holds that file.
+   */
+  readsFiles?: (
+    properties: Record<string, unknown>,
+    pools: SceneResources,
+    loadedFile: LoadedFile
+  ) => readonly string[];
   /** The type of the mesh `geometry` reads, which the node's details name when no slice builds it. */
   meshType?: (properties: Record<string, unknown>, ctx: CsgGeometryContext) => string | null;
 }

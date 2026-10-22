@@ -10,6 +10,9 @@ import type { CsgGeometryBuilder, CsgGeometryContext, CsgSolid } from '../../../
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
 import { meshContentKey } from '../../../../resources/meshes/meshSource';
+import { primitiveMeshFiles } from '../../../../resources/meshes/primitivemesh/surface';
+import { resolveReference } from '../../../../resources/resolveReference';
+import type { LoadedFile } from '../../../../resources/scopedResource';
 import { applyCsgNormals } from '../smoothNormals';
 import { meshFilePath, meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
@@ -33,9 +36,16 @@ export function csgMesh3DMeshType(
   return resolveMesh((properties as unknown as CSGMesh3DProperties).mesh, ctx)?.resource.type ?? null;
 }
 
-export function csgMesh3DReadsFiles(properties: Record<string, unknown>, pools: SceneResources): string[] {
-  const path = meshFilePath((properties as unknown as CSGMesh3DProperties).mesh, pools);
-  return path ? [path] : [];
+export function csgMesh3DReadsFiles(
+  properties: Record<string, unknown>,
+  pools: SceneResources,
+  loadedFile: LoadedFile
+): string[] {
+  const { mesh: meshRef } = properties as unknown as CSGMesh3DProperties;
+  const path = meshFilePath(meshRef, pools);
+  const scoped = resolveReference(meshRef, pools, loadedFile);
+  // The files a PrimitiveMesh reads join once the mesh itself has loaded.
+  return [...(path ? [path] : []), ...(scoped ? primitiveMeshFiles(scoped) : [])];
 }
 
 /** Written only by `fileKey`. A reload parses a new object, so it takes a new key. */

@@ -10,18 +10,18 @@ import { isEqualApprox } from '../../../godot/math/math.js';
 import { storedReal } from '../../../godot/math/real.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { floatOr, settableIntOr } from '../../../parser/valueParsers';
-import { resolveCurve } from '../../curves/curve/decode';
+import { decodeCurveResource } from '../../curves/curve/decode';
 import type { TubeTrailMeshProperties } from './types';
 
 const DEFAULT_RADIUS = 0.5;
 
-/** The property that names the one sub-resource the builder reads. */
+/** The property that names the one resource the builder reads. */
 export const CURVE_PROPERTY = 'curve';
 
-/** `internalResources` is the table the mesh's `curve` reference resolves in. */
+/** `curve` is the resource the mesh's `curve` property names, or null when it names none. */
 export function decodeTubeTrailMesh(
   properties: Record<string, string>,
-  internalResources: readonly TscnInternalResource[]
+  curve: TscnInternalResource | null
 ): TubeTrailMeshProperties {
   const radius = storedReal(floatOr(properties.radius, DEFAULT_RADIUS, 'TubeTrailMesh radius'));
   return {
@@ -42,6 +42,6 @@ export function decodeTubeTrailMesh(
     ),
     capTop: boolSlotValue(properties.cap_top) !== false,
     capBottom: boolSlotValue(properties.cap_bottom) !== false,
-    curve: resolveCurve(properties[CURVE_PROPERTY], internalResources),
+    curve: decodeCurveResource(curve),
   };
 }

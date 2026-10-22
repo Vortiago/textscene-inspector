@@ -148,28 +148,10 @@ export function smoothstep(from: number, to: number, x: number): number {
 }
 
 /**
- * `Math::bezier_interpolate` (math_funcs.h:442-451): one component of the cubic Bézier through
- * `start`, the two control values and `end`, at `t` in [0, 1]. The terms keep the engine's order,
- * so a curve sampled here rounds as Godot's does.
- */
-export function bezierInterpolate(
-  start: number,
-  control1: number,
-  control2: number,
-  end: number,
-  t: number
-): number {
-  const omt = 1 - t;
-  const omt2 = omt * omt;
-  const omt3 = omt2 * omt;
-  const t2 = t * t;
-  const t3 = t2 * t;
-  return start * omt3 + control1 * omt2 * t * 3 + control2 * omt * t2 * 3 + end * t3;
-}
-
-/**
- * The float overload of `Math::bezier_interpolate` (`core/math/math_funcs.h:452-461`), which the
- * `real_t` arguments of `Curve` pick: the same terms, each operation rounded to single precision.
+ * `Math::bezier_interpolate` for `real_t` (`core/math/math_funcs.h:452-461`), which `Curve`,
+ * `Vector2` and `Vector3` pick: one component of the cubic Bézier through `start`, the two control
+ * values and `end`, at `t` in [0, 1]. The terms keep the engine's order and each operation rounds to
+ * single precision.
  */
 export function bezierInterpolatef(
   start: number,

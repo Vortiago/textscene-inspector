@@ -67,6 +67,60 @@ curve = SubResource("Curve_item")`),
   });
 });
 
+describe('<GridMap> item with a TubeTrailMesh whose Curve is a .tres', () => {
+  const GROWING_CURVE_FILE = `[gd_resource type="Curve" format=3]
+
+[resource]
+_data = [Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 3), 0.0, 0.0, 0, 0]
+`;
+  const TUBE_BODY = `radial_steps = 4
+sections = 2
+section_length = 1.0
+section_rings = 1`;
+
+  it("draws the tube scaled by the Curve file the library's own table names", async () => {
+    const tile = await renderInstancedTile({
+      library: `[gd_resource type="MeshLibrary" format=3]
+
+[ext_resource type="Curve" path="res://stage/meshes/grow.tres" id="1_curve"]
+
+[sub_resource type="TubeTrailMesh" id="Mesh_item"]
+${TUBE_BODY}
+curve = ExtResource("1_curve")
+
+[resource]
+item/0/mesh = SubResource("Mesh_item")
+`,
+      files: { 'res://stage/meshes/grow.tres': GROWING_CURVE_FILE },
+    });
+    expect(geometrySize(tile)).toEqual([3, 2, 3]);
+  });
+
+  it('draws a .tres tube scaled by the Curve file that .tres names', async () => {
+    const tile = await renderInstancedTile({
+      library: `[gd_resource type="MeshLibrary" format=3]
+
+[ext_resource type="TubeTrailMesh" path="res://stage/meshes/tube.tres" id="1_tube"]
+
+[resource]
+item/0/mesh = ExtResource("1_tube")
+`,
+      files: {
+        'res://stage/meshes/tube.tres': `[gd_resource type="TubeTrailMesh" format=3]
+
+[ext_resource type="Curve" path="res://stage/meshes/grow.tres" id="1_curve"]
+
+[resource]
+${TUBE_BODY}
+curve = ExtResource("1_curve")
+`,
+        'res://stage/meshes/grow.tres': GROWING_CURVE_FILE,
+      },
+    });
+    expect(geometrySize(tile)).toEqual([3, 2, 3]);
+  });
+});
+
 describe('<GridMap> item whose mesh is a PrimitiveMesh .tres', () => {
   it('draws the BoxMesh the file holds', async () => {
     const tile = await renderInstancedTile({

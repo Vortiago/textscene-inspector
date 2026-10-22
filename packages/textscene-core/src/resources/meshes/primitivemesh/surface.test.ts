@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { buildPrismMeshSurface } from '../prismmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
+import { parseTresFile } from '../../../parser/parsedResource';
 import { subResource } from '../../../testing/subResource';
 import { meshContentKey } from '../meshSource';
-import { isPrimitiveMeshType, primitiveMeshSurface } from './surface';
-import { COARSE_TUBE, expectClose, scopedMesh, vertexOf } from './surface.testkit';
+import type { ResolvableResource } from '../../scopedResource';
+import { isPrimitiveMeshType, primitiveMeshFiles, primitiveMeshSurface } from './surface';
+import {
+  COARSE_TUBE,
+  curveEndingAt,
+  expectClose,
+  scopedMesh,
+  vertexOf,
+  withLoadedFiles,
+} from './surface.testkit';
 
 const TEXEL_SIZE = 0.2;
 /** Four segments round and one ring: vertex 6 sits on the equator, a quarter turn from the seam. */
@@ -106,6 +115,47 @@ describe('primitiveMeshSurface TubeTrailMesh', () => {
     expectClose(vertexOf(primitiveMeshSurface(mesh, TEXEL_SIZE)!.positions, 10), [0, -1, 0.5]);
   });
 
+  describe('with a Curve in a .tres', () => {
+    const CURVE_PATH = 'res://shrink.tres';
+    const CURVE_FILE = parseTresFile(
+      `[gd_resource type="Curve" format=3]\n\n[resource]\n_data = ${SHRINKING_BODY._data}\n`
+    );
+    const TUBE_WITH_FILE_CURVE: ResolvableResource = {
+      ...scopedMesh(tube({ curve: 'ExtResource("1_curve")' })),
+      resources: {
+        internalResources: [],
+        externalResources: [{ id: '1_curve', type: 'Curve', path: CURVE_PATH }],
+      },
+    };
+
+    it('names the file as one the build reads', () => {
+      expect(primitiveMeshFiles(TUBE_WITH_FILE_CURVE)).toEqual([CURVE_PATH]);
+    });
+
+    it('scales the rows by the Curve once the file has loaded', () => {
+      const mesh = withLoadedFiles(TUBE_WITH_FILE_CURVE, { [CURVE_PATH]: CURVE_FILE });
+
+      expectClose(vertexOf(primitiveMeshSurface(mesh, TEXEL_SIZE)!.positions, 10), [0, -1, 0.1]);
+    });
+
+    it('draws the tube unscaled while the file has not loaded', () => {
+      expectClose(
+        vertexOf(primitiveMeshSurface(TUBE_WITH_FILE_CURVE, TEXEL_SIZE)!.positions, 10),
+        [0, -1, 0.5]
+      );
+    });
+
+    it('builds again once the file arrives, for the same resource', () => {
+      const pending = primitiveMeshSurface(TUBE_WITH_FILE_CURVE, TEXEL_SIZE);
+      const loaded = primitiveMeshSurface(
+        withLoadedFiles(TUBE_WITH_FILE_CURVE, { [CURVE_PATH]: CURVE_FILE }),
+        TEXEL_SIZE
+      );
+
+      expect(loaded).not.toBe(pending);
+    });
+  });
+
   it("makes the UV2 from the UV over Godot's reference size of 1024 texels without a lightmap_size_hint", () => {
     const surface = primitiveMeshSurface(scopedMesh(tube({ add_uv2: 'true' })), TEXEL_SIZE)!;
 
@@ -158,6 +208,22 @@ describe('meshContentKey', () => {
 });
 
 describe('primitiveMeshSurface sharing', () => {
+  it('keeps one entry per mesh when its Curve is edited, so the earlier build is not kept', () => {
+    const resource = {
+      id: 'tube',
+      type: 'TubeTrailMesh',
+      data: { ...COARSE_TUBE, curve: 'SubResource("c")' },
+    };
+    const withCurve = (end: string) => scopedMesh(resource, subResource('Curve', 'c', curveEndingAt(end)));
+
+    const first = primitiveMeshSurface(withCurve('0.2'), TEXEL_SIZE);
+    const edited = primitiveMeshSurface(withCurve('0.4'), TEXEL_SIZE);
+
+    expect(edited).not.toBe(first);
+    expect(primitiveMeshSurface(withCurve('0.4'), TEXEL_SIZE)).toBe(edited);
+    expect(primitiveMeshSurface(withCurve('0.2'), TEXEL_SIZE)).not.toBe(first);
+  });
+
   it('builds a resource once per texel size', () => {
     const resource = sphere();
 

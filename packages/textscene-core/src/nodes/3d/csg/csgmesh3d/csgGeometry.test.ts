@@ -19,11 +19,29 @@ import { meshSurfaces } from './meshSurfaces';
 
 const TWO_BOXES_PATH = 'res://two-boxes.tres';
 const BOX_PATH = 'res://box.tres';
+const GROWING_CURVE_PATH = 'res://grow.tres';
+const FILE_TUBE_PATH = 'res://tube.tres';
 const EXT: TscnExternalResource[] = [
   { id: '1', type: 'ArrayMesh', path: TWO_BOXES_PATH },
   { id: '2', type: 'BoxMesh', path: BOX_PATH },
   { id: '3', type: 'PackedScene', path: 'res://rock.glb' },
+  { id: '4', type: 'Curve', path: GROWING_CURVE_PATH },
+  { id: '5', type: 'TubeTrailMesh', path: FILE_TUBE_PATH },
 ];
+
+/** A `.tres` Curve that runs from 1 at the top to 3 at the bottom, as {@link curveEndingAt} does. */
+const GROWING_CURVE_FILE = parseTresFile(
+  `[gd_resource type="Curve" format=3]\n\n[resource]\n_data = ${curveEndingAt('3')._data}\npoint_count = 2\n`
+);
+
+/** A `.tres` TubeTrailMesh whose own `curve` names the growing Curve as the file's ExtResource. */
+const FILE_TUBE = parseTresFile(
+  `[gd_resource type="TubeTrailMesh" format=3]\n\n` +
+    `[ext_resource type="Curve" path="${GROWING_CURVE_PATH}" id="1_curve"]\n\n[resource]\n` +
+    Object.entries({ ...COARSE_TUBE, curve: 'ExtResource("1_curve")' })
+      .map(([name, value]) => `${name} = ${value}\n`)
+      .join('')
+);
 
 function fixture(name: string): ParsedResource {
   return parseTresFile(readFileSync(join(fixturesDir(), name), 'utf8'));
@@ -32,6 +50,8 @@ function fixture(name: string): ParsedResource {
 const FILES = {
   [TWO_BOXES_PATH]: fixture('unit-csg-mesh-sources-two-boxes.tres'),
   [BOX_PATH]: fixture('unit-csg-mesh-sources-box.tres'),
+  [GROWING_CURVE_PATH]: GROWING_CURVE_FILE,
+  [FILE_TUBE_PATH]: FILE_TUBE,
 };
 
 const INLINE_BOX: TscnInternalResource = { id: 'Box', type: 'BoxMesh', data: { size: 'Vector3(2, 2, 2)' } };
@@ -40,6 +60,11 @@ const INLINE_TUBE: TscnInternalResource = {
   id: 'Tube',
   type: 'TubeTrailMesh',
   data: { ...COARSE_TUBE, curve: 'SubResource("Grow")' },
+};
+const INLINE_TUBE_WITH_FILE_CURVE: TscnInternalResource = {
+  id: 'TubeFile',
+  type: 'TubeTrailMesh',
+  data: { ...COARSE_TUBE, curve: 'ExtResource("4")' },
 };
 const growingCurve = (end: string): TscnInternalResource => ({
   id: 'Grow',
@@ -69,6 +94,7 @@ const CTX = csgGeometryContext({
     INLINE_POINTS,
     INLINE_QUADS,
     INLINE_TUBE,
+    INLINE_TUBE_WITH_FILE_CURVE,
     growingCurve('3'),
   ],
   externalResources: EXT,
@@ -154,10 +180,26 @@ describe('csgMesh3DGeometry: mesh sources', () => {
     expect(geometry.boundingBox!.getSize(new THREE.Vector3()).x).toBeCloseTo(3, 5);
   });
 
+  it('builds an inline TubeTrailMesh whose Curve is a .tres, once that file has loaded', () => {
+    const { geometry } = build('SubResource("TubeFile")')!;
+    geometry.computeBoundingBox();
+
+    expect(geometry.boundingBox!.getSize(new THREE.Vector3()).x).toBeCloseTo(3, 5);
+  });
+
+  it('builds a .tres TubeTrailMesh whose Curve is a .tres of its own', () => {
+    const { geometry } = build('ExtResource("5")')!;
+    geometry.computeBoundingBox();
+
+    expect(geometry.boundingBox!.getSize(new THREE.Vector3()).x).toBeCloseTo(3, 5);
+  });
+
   // The brush builder skips every surface that is not PRIMITIVE_TRIANGLES (`csg_shape.cpp:1148-1150`).
   it('builds nothing for a PointMesh, whose surface is points', () => {
     expect(build('SubResource("Point")')).toBeNull();
-    expect(meshSurfaces({ resource: INLINE_POINT, resources: CTX, file: null })).toEqual([]);
+    expect(
+      meshSurfaces({ resource: INLINE_POINT, resources: CTX, loadedFile: CTX.file, file: null })
+    ).toEqual([]);
   });
 
   it('builds nothing for an ArrayMesh whose surface is points', () => {
@@ -236,6 +278,20 @@ describe('csgMesh3DGeometryKey', () => {
     expect(key('SubResource("Tube")', withCurve('2'))).not.toBe(key('SubResource("Tube")', withCurve('3')));
   });
 
+  it('changes when the .tres Curve of a TubeTrailMesh arrives', () => {
+    const pending = csgGeometryContext({
+      internalResources: [INLINE_TUBE_WITH_FILE_CURVE],
+      externalResources: EXT,
+    });
+    const loaded = csgGeometryContext({
+      internalResources: [INLINE_TUBE_WITH_FILE_CURVE],
+      externalResources: EXT,
+      files: { [GROWING_CURVE_PATH]: GROWING_CURVE_FILE },
+    });
+
+    expect(key('SubResource("TubeFile")', loaded)).not.toBe(key('SubResource("TubeFile")', pending));
+  });
+
   it('stays the same while an inline TubeTrailMesh and its Curve hold their content', () => {
     const withCurve = () =>
       csgGeometryContext({ internalResources: [{ ...INLINE_TUBE }, growingCurve('2')] });
@@ -249,18 +305,32 @@ describe('csgMesh3DGeometryKey', () => {
 });
 
 describe('csgMesh3DReadsFiles', () => {
-  const pools = { internalResources: [], externalResources: EXT };
+  const pools = { internalResources: [INLINE_TUBE_WITH_FILE_CURVE], externalResources: EXT };
+  const readsFiles = (properties: Record<string, unknown>, loaded: Record<string, ParsedResource> = {}) =>
+    csgMesh3DReadsFiles(properties, pools, (path) => loaded[path]);
 
   it('names the .tres an external mesh loads', () => {
-    expect(csgMesh3DReadsFiles({ mesh: 'ExtResource("1")' }, pools)).toEqual([TWO_BOXES_PATH]);
+    expect(readsFiles({ mesh: 'ExtResource("1")' })).toEqual([TWO_BOXES_PATH]);
   });
 
-  it('names no file for an inline mesh, or for a file no processor reads', () => {
-    expect(csgMesh3DReadsFiles({ mesh: 'SubResource("Box")' }, pools)).toEqual([]);
-    expect(csgMesh3DReadsFiles({ mesh: 'ExtResource("3")' }, pools)).toEqual([]);
+  it('names no file for an inline mesh that reads none, or for a file no processor reads', () => {
+    expect(readsFiles({ mesh: 'SubResource("Box")' })).toEqual([]);
+    expect(readsFiles({ mesh: 'ExtResource("3")' })).toEqual([]);
   });
 
   it('names no file for a node with no mesh', () => {
-    expect(csgMesh3DReadsFiles({}, pools)).toEqual([]);
+    expect(readsFiles({})).toEqual([]);
+  });
+
+  it('names the .tres Curve an inline TubeTrailMesh reads', () => {
+    expect(readsFiles({ mesh: 'SubResource("TubeFile")' })).toEqual([GROWING_CURVE_PATH]);
+  });
+
+  it('names the .tres Curve of a .tres TubeTrailMesh only once the mesh file has loaded', () => {
+    expect(readsFiles({ mesh: 'ExtResource("5")' })).toEqual([FILE_TUBE_PATH]);
+    expect(readsFiles({ mesh: 'ExtResource("5")' }, { [FILE_TUBE_PATH]: FILE_TUBE })).toEqual([
+      FILE_TUBE_PATH,
+      GROWING_CURVE_PATH,
+    ]);
   });
 });

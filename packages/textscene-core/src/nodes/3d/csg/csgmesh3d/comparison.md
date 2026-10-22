@@ -39,4 +39,3 @@ The lenient parser copies `mesh` through only when present. An absent one leaves
 ## Known limitations
 
 - **Resource gap** A mesh the previewer does not build (RibbonTrailMesh or TextMesh) adds nothing to the solid, and the node's details name the type.
-- **Resource gap** A TubeTrailMesh whose `curve` is an ExtResource draws with no curve, because the previewer reads a Curve only from the mesh's own resources.

@@ -12,7 +12,6 @@ import {
   lerpColor,
   lerpf,
   CMP_EPSILON,
-  bezierInterpolate,
   bezierInterpolatef,
   isZeroApprox,
   isEqualApprox,
@@ -148,21 +147,6 @@ describe('smoothstep', () => {
   });
 });
 
-describe('bezierInterpolate', () => {
-  it('starts at the first control value and ends at the last', () => {
-    expect(bezierInterpolate(1, 5, -3, 7, 0)).toBe(1);
-    expect(bezierInterpolate(1, 5, -3, 7, 1)).toBe(7);
-  });
-
-  it('weights the four control values 1:3:3:1 at the midpoint', () => {
-    expect(bezierInterpolate(0, 8, 16, 8, 0.5)).toBe((0 + 3 * 8 + 3 * 16 + 8) / 8);
-  });
-
-  it('is linear when the handles sit a third of the way along a straight span (edge case)', () => {
-    expect(bezierInterpolate(0, 10, 20, 30, 0.25)).toBeCloseTo(7.5, 12);
-  });
-});
-
 describe('snapped', () => {
   it('rounds to the nearest multiple of the step', () => {
     expect(snapped(7.4, 2)).toBe(8);
@@ -263,12 +247,17 @@ describe('bezierInterpolatef', () => {
     expect(bezierInterpolatef(1, 5, -3, 7, 1)).toBe(7);
   });
 
-  it('rounds the result to single precision, where the double overload does not', () => {
+  it('rounds the result to single precision', () => {
     const single = bezierInterpolatef(0, 0.1, 0.2, 1, 0.3);
 
     expect(single).toBe(Math.fround(single));
-    expect(bezierInterpolate(0, 0.1, 0.2, 1, 0.3)).not.toBe(
-      Math.fround(bezierInterpolate(0, 0.1, 0.2, 1, 0.3))
-    );
+  });
+
+  it('weights the four control values 1:3:3:1 at the midpoint', () => {
+    expect(bezierInterpolatef(0, 8, 16, 8, 0.5)).toBe((0 + 3 * 8 + 3 * 16 + 8) / 8);
+  });
+
+  it('is linear when the handles sit a third of the way along a straight span (edge case)', () => {
+    expect(bezierInterpolatef(0, 10, 20, 30, 0.25)).toBeCloseTo(7.5, 5);
   });
 });

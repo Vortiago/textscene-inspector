@@ -23,7 +23,7 @@ const SHRINKING_CURVE = subResource('Curve', 'shrink', {
 
 describe('decodeTubeTrailMesh', () => {
   it('falls back to the Godot defaults when everything is absent, silently', () => {
-    expect(decodeTubeTrailMesh({}, [])).toEqual({
+    expect(decodeTubeTrailMesh({}, null)).toEqual({
       radius: 0.5,
       radialSteps: 8,
       sections: 5,
@@ -48,7 +48,7 @@ describe('decodeTubeTrailMesh', () => {
         cap_bottom: 'false',
         curve: 'SubResource("shrink")',
       },
-      [SHRINKING_CURVE]
+      SHRINKING_CURVE
     );
 
     expect(p).toMatchObject({
@@ -64,50 +64,47 @@ describe('decodeTubeTrailMesh', () => {
   });
 
   it('holds the radius and the section length as single-precision floats', () => {
-    const p = decodeTubeTrailMesh({ radius: '0.1', section_length: '0.1' }, []);
+    const p = decodeTubeTrailMesh({ radius: '0.1', section_length: '0.1' }, null);
 
     expect(p.radius).toBe(Math.fround(0.1));
     expect(p.sectionLength).toBe(Math.fround(0.1));
   });
 
   it('keeps the default radius for a value approximately equal to it, as set_radius returns early', () => {
-    expect(decodeTubeTrailMesh({ radius: '0.500001' }, []).radius).toBe(0.5);
+    expect(decodeTubeTrailMesh({ radius: '0.500001' }, null).radius).toBe(0.5);
   });
 
   it('keeps the default radial_steps outside 3 to 128', () => {
     for (const refused of ['2', '129', '0', '-4']) {
-      expect(decodeTubeTrailMesh({ radial_steps: refused }, []).radialSteps).toBe(8);
+      expect(decodeTubeTrailMesh({ radial_steps: refused }, null).radialSteps).toBe(8);
     }
-    expect(decodeTubeTrailMesh({ radial_steps: '3' }, []).radialSteps).toBe(3);
-    expect(decodeTubeTrailMesh({ radial_steps: '128' }, []).radialSteps).toBe(128);
+    expect(decodeTubeTrailMesh({ radial_steps: '3' }, null).radialSteps).toBe(3);
+    expect(decodeTubeTrailMesh({ radial_steps: '128' }, null).radialSteps).toBe(128);
   });
 
   it('keeps the default sections outside 2 to 128', () => {
     for (const refused of ['1', '129', '0']) {
-      expect(decodeTubeTrailMesh({ sections: refused }, []).sections).toBe(5);
+      expect(decodeTubeTrailMesh({ sections: refused }, null).sections).toBe(5);
     }
-    expect(decodeTubeTrailMesh({ sections: '2' }, []).sections).toBe(2);
-    expect(decodeTubeTrailMesh({ sections: '128' }, []).sections).toBe(128);
+    expect(decodeTubeTrailMesh({ sections: '2' }, null).sections).toBe(2);
+    expect(decodeTubeTrailMesh({ sections: '128' }, null).sections).toBe(128);
   });
 
   it('keeps the default section_rings outside 1 to 1024', () => {
     for (const refused of ['0', '1025', '-1']) {
-      expect(decodeTubeTrailMesh({ section_rings: refused }, []).sectionRings).toBe(3);
+      expect(decodeTubeTrailMesh({ section_rings: refused }, null).sectionRings).toBe(3);
     }
-    expect(decodeTubeTrailMesh({ section_rings: '1' }, []).sectionRings).toBe(1);
-    expect(decodeTubeTrailMesh({ section_rings: '1024' }, []).sectionRings).toBe(1024);
+    expect(decodeTubeTrailMesh({ section_rings: '1' }, null).sectionRings).toBe(1);
+    expect(decodeTubeTrailMesh({ section_rings: '1024' }, null).sectionRings).toBe(1024);
   });
 
-  it('reads a curve that is missing, not a Curve or an ExtResource as no curve', () => {
-    expect(decodeTubeTrailMesh({ curve: 'SubResource("none")' }, [SHRINKING_CURVE]).curve).toBeNull();
-    expect(decodeTubeTrailMesh({ curve: 'ExtResource("1")' }, [SHRINKING_CURVE]).curve).toBeNull();
-    expect(
-      decodeTubeTrailMesh({ curve: 'SubResource("g")' }, [subResource('Gradient', 'g')]).curve
-    ).toBeNull();
+  it('reads no curve for no resource, or for one that is not a Curve', () => {
+    expect(decodeTubeTrailMesh({}, null).curve).toBeNull();
+    expect(decodeTubeTrailMesh({}, subResource('Gradient', 'g')).curve).toBeNull();
   });
 
   it('warns then falls back per property for malformed values (never NaN)', () => {
-    const p = decodeTubeTrailMesh({ radius: 'nope', sections: 'nope' }, []);
+    const p = decodeTubeTrailMesh({ radius: 'nope', sections: 'nope' }, null);
 
     expect(p.radius).toBe(0.5);
     expect(p.sections).toBe(5);

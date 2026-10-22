@@ -10,14 +10,13 @@ import type { ParsedResource } from '../../../../parser/parsedResource';
 import type { CsgGeometryContext } from '../../../../r3f/csg/csgRegistration';
 import type { CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveSubResourceRef, parsedResourcePath } from '../../../../resources/SubResourceResolver';
 import { decodeArrayMesh, decodeSceneArrayMesh } from '../../../../resources/meshes/arraymesh/decode';
 import type { ArrayMeshData } from '../../../../resources/meshes/arraymesh/types';
 import type { GodotSurface } from '../../../../resources/meshes/godotSurface';
-import { scopedSection } from '../../../../resources/resourceSection';
-import { meshKind, primitiveMaterialAddress, type MeshSource } from '../../../../resources/meshes/meshSource';
+import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
+import type { ResolvableResource } from '../../../../resources/scopedResource';
+import { meshKind, primitiveMaterialAddress } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshSurface } from '../../../../resources/meshes/primitivemesh/surface';
-import type { ScopedResource } from '../../../../resources/useSubOrExtResource';
 
 /** The arrays of a Godot surface the brush builder reads, and the surface's material. */
 export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normals' | 'uvs' | 'indices'> {
@@ -25,25 +24,23 @@ export interface CsgMeshSurface extends Pick<GodotSurface, 'positions' | 'normal
 }
 
 /** A mesh, and for one in a file where it loads from, whose parse keys the brush. */
-export interface CsgMesh extends Omit<MeshSource, 'path'> {
+export interface CsgMesh extends ResolvableResource {
   /** Null for a mesh in the scene. */
   file: { path: string; parsed: ParsedResource } | null;
 }
 
 /** The `.tres` a mesh reference loads, or null for an inline mesh or a file no processor reads. */
 export function meshFilePath(meshRef: string | undefined, pools: SceneResources): string | null {
-  return parsedResourcePath(meshRef, pools.externalResources);
+  return referencedFilePath(meshRef, pools);
 }
 
 /** The mesh `meshRef` names, or null for none, an unknown id, or a file not loaded yet. */
 export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext): CsgMesh | null {
-  const inline = resolveSubResourceRef(meshRef, ctx.internalResources);
-  if (inline) return { resource: inline, resources: ctx, file: null };
+  const scoped = resolveReference(meshRef, ctx, ctx.file);
+  if (!scoped) return null;
   const path = meshFilePath(meshRef, ctx);
   const parsed = path ? ctx.file(path) : undefined;
-  const scoped = path && parsed ? scopedSection(parsed, path) : undefined;
-  if (!path || !parsed || !scoped) return null;
-  return { ...scoped, file: { path, parsed } };
+  return { ...scoped, loadedFile: ctx.file, file: path && parsed ? { path, parsed } : null };
 }
 
 /**
@@ -52,13 +49,10 @@ export function resolveMesh(meshRef: string | undefined, ctx: CsgGeometryContext
  * (ADR-0046).
  */
 export function meshSurfaces(mesh: CsgMesh): CsgMeshSurface[] {
-  const { resource, resources, file } = mesh;
+  const { resource, file } = mesh;
   switch (meshKind(resource.type)) {
     case 'primitive':
-      return primitiveMeshSurfaces(
-        mesh,
-        primitiveMaterialAddress({ resource, resources, path: file?.path ?? null })
-      );
+      return primitiveMeshSurfaces(mesh, primitiveMaterialAddress(mesh, file?.path ?? null));
     case 'arrayMesh':
       if (file) {
         const section = { file: file.parsed, type: resource.type, properties: resource.data };
@@ -112,7 +106,7 @@ function arrayMeshSurfaces(
  * answers it for surface 0), in Godot's arrays as the brush builder reads them. A points surface
  * adds nothing: the brush builder skips every surface that is not triangles (`csg_shape.cpp:1148-1150`).
  */
-function primitiveMeshSurfaces(mesh: ScopedResource, material: CsgMaterialAddress): CsgMeshSurface[] {
+function primitiveMeshSurfaces(mesh: ResolvableResource, material: CsgMaterialAddress): CsgMeshSurface[] {
   // The brush reads no UV2 (`csg_shape.cpp:1147-1172`), the only array the texel size scales.
   const surface = primitiveMeshSurface(mesh, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
   if (!surface || surface.isPoints) return [];

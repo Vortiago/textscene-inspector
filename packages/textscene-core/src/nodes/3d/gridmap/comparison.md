@@ -51,4 +51,3 @@ Strict parsing format-checks these `GridMap` properties, plus 17 inherited from 
 ## Known limitations
 
 - **Resource gap** An item mesh the previewer does not build (RibbonTrailMesh or TextMesh) draws as a wireframe box in each cell, and the node's details name the type.
-- **Resource gap** A TubeTrailMesh whose `curve` is an ExtResource draws with no curve, because the previewer reads a Curve only from the mesh's own resources.
