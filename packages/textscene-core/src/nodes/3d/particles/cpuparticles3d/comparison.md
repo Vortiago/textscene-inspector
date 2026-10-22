@@ -118,7 +118,7 @@ A selected emitter draws these in Godot's editor. Godot's source is `cpu_particl
 - The lines of the emission shape: three circles for a sphere, the 12 edges of a box, and the tapered cylinder for a ring. A point shape and the point-cloud shapes draw no lines.
 - A fill of the box with an opacity of 0.016.
 
-The previewer draws no billboard icon and no emission point handles.
+The previewer draws no billboard icon.
 
 ## Known limitations
 

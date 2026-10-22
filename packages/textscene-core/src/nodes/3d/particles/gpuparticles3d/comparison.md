@@ -75,7 +75,7 @@ A selected emitter draws two sets of lines. Godot draws both only while the node
 
 Godot reads the shape only from a ParticleProcessMaterial. A ShaderMaterial or an empty `process_material` draws the box and no shape lines. A ring with a radius of 0 draws the lines that stay finite, as Godot does.
 
-The previewer draws no billboard icon and no emission point handles.
+The previewer draws no billboard icon.
 
 ## Known limitations
 
