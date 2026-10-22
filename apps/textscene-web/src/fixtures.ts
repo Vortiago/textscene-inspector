@@ -628,6 +628,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Property Override",
+    "file": "unit-glb-property-override.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Surface Material Override",
     "file": "unit-glb-surface-material-override.tscn",
     "category": "Other"

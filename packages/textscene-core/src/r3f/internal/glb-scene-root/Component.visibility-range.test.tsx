@@ -9,6 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { settleLoads } from '../../testing/settleLoads';
 import { TscnParser } from '../../../parser/TscnParser';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { unfadedMaterial } from '../../materials/fadedMeshMaterials';
@@ -65,9 +66,7 @@ async function render(lines: string, proxyLines = '', glbNodes = SINGLE_GLB_NODE
   fake.glbMeshes.seed(GLB_PATH, await createGLBMesh(nodesGlb(glbNodes, glbExtra), NO_SIDECAR));
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(hostTree(fake, lines, proxyLines), { camera });
-  await ReactThreeTestRenderer.act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  });
+  await settleLoads();
   await renderScene(renderer, camera);
   const scene = renderer.scene.instance as THREE.Scene;
   const objectNamed = (name: string) => scene.getObjectByName(name) as THREE.Mesh;

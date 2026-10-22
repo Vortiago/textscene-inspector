@@ -74,7 +74,7 @@ describe('an instanced GLB, in the live tree', () => {
 });
 
 describe('a property override of an instanced GLB, in the live tree', () => {
-  /** `[node name="Torso" parent="Skeleton"]`: Godot takes the node by name and adds none (`packed_scene.cpp:290-296`). */
+  /** `[node name="Torso" parent="Skeleton"]`: Godot takes the node by name and adds none (`packed_scene.cpp:280-283`). */
   function override(name: string, instanceSubPath?: string): TscnNode {
     return { ...makeNode(name, 'Node'), overridesExistingNode: true, instanceSubPath };
   }
@@ -84,6 +84,27 @@ describe('a property override of an instanced GLB, in the live tree', () => {
       'Rig',
       'Rig/Skeleton',
       'Rig/Skeleton/Torso',
+      'Rig/Skeleton/Arm',
+      'Rig/AnimationPlayer',
+    ]);
+  });
+});
+
+describe('nodes below a property override of an instanced GLB, in the live tree', () => {
+  it('sit where Godot adds them: below the GLB node the override chain names', () => {
+    const override = (name: string, children: TscnNode[]): TscnNode => ({
+      ...makeNode(name, 'Node'),
+      overridesExistingNode: true,
+      children,
+    });
+    const marker = makeNode('Marker', 'Marker3D');
+    const nested = [override('Skeleton', [override('Torso', [marker])])];
+
+    expect(pathsBelowRig(nested, () => true)).toEqual([
+      'Rig',
+      'Rig/Skeleton',
+      'Rig/Skeleton/Torso',
+      'Rig/Skeleton/Torso/Marker',
       'Rig/Skeleton/Arm',
       'Rig/AnimationPlayer',
     ]);

@@ -35,6 +35,9 @@ export const SCENE_COMPOSITION_SCENES = [
   // The same attached nodes name a proxy by `%Name` as their visibility parent: the red box names
   // the proxy that draws and hides, the green box names the one that hides and draws.
   { name: 'glb-typed-child-visibility-parent', file: 'unit-glb-typed-child-visibility-parent.tscn' },
+  // A type-less override of a GLB node sets its properties and adds no node: the model moves to the
+  // right and its torso halves.
+  { name: 'glb-property-override', file: 'unit-glb-property-override.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // Collision gizmos on: `physics-bodies` leaves the toggle off. Catches a

@@ -16,7 +16,8 @@ import { SceneStack } from '../../testing/SceneStack';
 import { useSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { visibleInTree } from '../../visibleInTree';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
+import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
+import { settleLoads } from '../../testing/settleLoads';
 import * as logger from '../../../logger';
 
 import '../../nodes/index';
@@ -42,22 +43,6 @@ function rigGlb(): THREE.Object3D {
   skeleton.add(torso);
   root.add(skeleton);
   return root;
-}
-
-function synthesisedGlbScene(): TscnScene {
-  return {
-    nodes: [
-      {
-        rawProperties: {},
-        name: 'rig',
-        type: GLB_SCENE_ROOT_TYPE,
-        children: [],
-        properties: { glbPath: GLB_PATH } as Record<string, unknown>,
-      },
-    ],
-    externalResources: [],
-    internalResources: [],
-  };
 }
 
 /** A typed MeshInstance3D whose parent path descends `subPath` into the GLB. */
@@ -114,8 +99,7 @@ interface SceneSetup {
 
 async function renderScene({ roots, externalResources, subScenes = new Map() }: SceneSetup) {
   const fake = createFakeResourceLoader();
-  fake.scenes.seed(GLB_PATH, synthesisedGlbScene());
-  fake.glbMeshes.seed(GLB_PATH, rigGlb());
+  seedGlbInstance(fake, GLB_PATH, rigGlb());
   for (const [path, scene] of subScenes) fake.scenes.seed(path, scene);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={{ internalResources: [BOX_MESH], externalResources }}>
@@ -123,9 +107,7 @@ async function renderScene({ roots, externalResources, subScenes = new Map() }: 
       <NodeDispatcher nodes={roots} />
     </SceneStack>
   );
-  await ReactThreeTestRenderer.act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  });
+  await settleLoads();
   renderer.scene.instance.updateMatrixWorld(true);
   return renderer;
 }
@@ -299,6 +281,23 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
 
     expect(selection.nodeObjectMap.get('Rig/Skeleton')).toBe(glbObject(renderer, 'Skeleton'));
     expect(glbObject(renderer, 'Skeleton').position.y).toBeCloseTo(5, 5);
+  });
+
+  it('applies an override written below another override, and mounts a typed node below it', async () => {
+    const nested = {
+      ...override('Skeleton', '', {}),
+      children: [
+        {
+          ...override('Torso', '', { transform: translated(0, 5, 0) }),
+          children: [{ ...typedMesh('Marker', ''), instanceSubPath: undefined }],
+        },
+      ],
+    };
+    const renderer = await render([nested]);
+
+    expect(glbObject(renderer, 'Torso').position.y).toBeCloseTo(5, 5);
+    expect(hasAncestor(onlyMesh(renderer), glbObject(renderer, 'Torso'))).toBe(true);
+    expect(selection.nodeObjectMap.get('Rig/Skeleton/Torso')).toBe(glbObject(renderer, 'Torso'));
   });
 
   it('is hidden with a hidden GLB ancestor', async () => {

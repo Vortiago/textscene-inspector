@@ -8,6 +8,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { LiveNode } from '../../../resources/liveNode';
 import { parseNode3D } from '../../../nodes/base/node3d/parser';
 import { useUniqueNamePaths } from '../../useUniqueNames';
+import { liftOverrideChildren } from './glbNodeOverrides';
 import { visibilityParentOf } from '../../../godot/scene/visibilityParent';
 import { useVisibilityParent } from '../../visibilityRange/VisibilityParentContext';
 
@@ -60,7 +61,11 @@ export function GlbInstanceProvider({ node, path, children }: GlbInstanceProvide
   ).visibility_parent;
   const visibilityParent = visibilityParentOf(path, own, inherited, uniquePaths);
   const instance = useMemo(
-    () => ({ rawProperties: node.rawProperties, overrides: node.children, visibilityParent }),
+    () => ({
+      rawProperties: node.rawProperties,
+      overrides: liftOverrideChildren(node.children),
+      visibilityParent,
+    }),
     [node.rawProperties, node.children, visibilityParent]
   );
   return <GlbInstanceContext.Provider value={instance}>{children}</GlbInstanceContext.Provider>;

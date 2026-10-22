@@ -8,10 +8,11 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
-import type { TscnNode, TscnScene } from '../../../parser/types';
+import type { TscnNode } from '../../../parser/types';
 import { NodeDispatcher } from '../../NodeDispatcher';
 import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
 import {
   AnimationTransportProvider,
@@ -20,7 +21,6 @@ import {
 } from '../../contexts/AnimationTransportContext';
 import { useOptionalSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { AnimationDriverProvider } from '../../contexts/AnimationDriverContext';
-import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 
 // Register node-type components (Node3D / GLBSceneRoot / …).
 import '../../nodes/index';
@@ -38,27 +38,9 @@ function makeAnimatedGlb(): THREE.Object3D {
   return root;
 }
 
-/** The synthesised single-node GLBSceneRoot scene a .glb PackedScene yields. */
-function makeSynthScene(): TscnScene {
-  return {
-    nodes: [
-      {
-        rawProperties: {},
-        name: 'player', // basename of player.glb
-        type: GLB_SCENE_ROOT_TYPE,
-        children: [],
-        properties: { glbPath: GLB_PATH } as Record<string, unknown>,
-      },
-    ],
-    externalResources: [],
-    internalResources: [],
-  };
-}
-
 function makeLoader(): ResourceLoader {
   const fake = createFakeResourceLoader();
-  fake.scenes.seed(GLB_PATH, makeSynthScene());
-  fake.glbMeshes.seed(GLB_PATH, makeAnimatedGlb());
+  seedGlbInstance(fake, GLB_PATH, makeAnimatedGlb());
   return fake.loader;
 }
 

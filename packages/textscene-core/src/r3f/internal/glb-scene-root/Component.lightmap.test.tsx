@@ -8,6 +8,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createGLBMesh } from '../../../resources/formats/glb/glbProcessing';
 import { nodesGlb } from '../../../resources/formats/glb/testing/nodesGlb';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
+import { settleLoads } from '../../testing/settleLoads';
 import type { TscnNode } from '../../../parser/types';
 import { SceneStack } from '../../testing/SceneStack';
 import { manualCameraAt, renderScene } from '../../testing/renderScene';
@@ -114,8 +116,8 @@ const MARKER: TscnNode = {
 describe('a lightmap user path naming a typed node attached into a GLB', () => {
   async function markerMaterial(named: string): Promise<THREE.Material> {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed(GLB_PATH, { nodes: [GLB_ROOT], externalResources: [], internalResources: [] });
-    fake.glbMeshes.seed(
+    seedGlbInstance(
+      fake,
       GLB_PATH,
       Object.assign(new THREE.Group(), { children: [Object.assign(new THREE.Group(), { name: 'Group' })] })
     );
@@ -142,9 +144,7 @@ describe('a lightmap user path naming a typed node attached into a GLB', () => {
       [{ path: `../${named}`, uvScale: { x: 0, y: 0, width: 1, height: 1 }, sliceIndex: 0, subInstance: -1 }],
       undefined
     );
-    await ReactThreeTestRenderer.act(async () => {
-      await new Promise<void>((resolve) => setTimeout(resolve, 10));
-    });
+    await settleLoads();
     await ReactThreeTestRenderer.act(async () => {
       lightmapsOf(renderer.scene.instance as THREE.Scene).add(lightmap);
     });

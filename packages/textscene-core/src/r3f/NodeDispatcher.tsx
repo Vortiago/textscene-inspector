@@ -27,7 +27,6 @@ import {
   usePaintRange,
 } from './contexts/PaintOrderContext.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
@@ -44,8 +43,7 @@ import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
-import { ErrorBoundary } from './components/ErrorBoundary.js';
-import { fallbackTransform } from './nodeFallbackTransform.js';
+import { GuardedNodeComponent } from './components/GuardedNodeComponent.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
@@ -58,6 +56,7 @@ import {
   WorldRoot,
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
+import { liftOverrideChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
 import { loneGlbPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
@@ -193,13 +192,14 @@ function withoutDeepChildren(node: TscnNode): TscnNode {
 }
 
 /**
- * The node without its property overrides, `[node name="Torso" parent="."]`. Godot takes the
- * existing node by name and adds none (`packed_scene.cpp:290-296`), so an override of an instanced
- * GLB's object draws no node: `GlbInstanceProvider` hands it to the GLB, which applies it.
+ * The node without its property overrides, `[node name="Torso" parent="."]`, and with the nodes
+ * written below them lifted to the instance. Godot takes the existing node by name and adds none
+ * (`packed_scene.cpp:280-283`), so an override of an instanced GLB's object draws no node:
+ * `GlbInstanceProvider` hands it to the GLB, which applies it.
  */
 function withoutPropertyOverrides(node: TscnNode): TscnNode {
-  if (!node.children.some((c) => c.overridesExistingNode)) return node;
-  return { ...node, children: node.children.filter((c) => !c.overridesExistingNode) };
+  const children = liftOverrideChildren(node.children).filter((c) => !c.overridesExistingNode);
+  return { ...node, children };
 }
 
 interface PlainNodeProps extends DispatchedNodeProps {
@@ -215,8 +215,6 @@ interface PlainNodeProps extends DispatchedNodeProps {
  * fallback. A merged instance root renders here like an authored node.
  */
 function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }: PlainNodeProps): ReactNode {
-  // An unregistered type renders the fallback, so it stays visible.
-  const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const ownOrder = useTreeOrder();
   const inlineBase = inlineChildrenOrder ?? ownOrder;
   const inlineOrders = useMemo(
@@ -282,8 +280,6 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
 
   // The wrapper is registered both ways: the pointer root resolves a hit mesh to
   // its nearest registered ancestor, and the highlights find a path's Object3D.
-  // `<ErrorBoundary>` keeps a render error to this node: uncaught, it blanks the
-  // viewport, since `<Canvas>` is its own reconciler root. A new `node` resets it.
   return (
     <ParentSpaceScope node={node}>
       <NodePathProvider path={path}>
@@ -297,42 +293,35 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
               parent is no CanvasItem left them all in `<ParentSpaceScope>`. */}
             <TopLevelScope node={node}>
               <CanvasRootScope node={node} parentIsCanvasItem={parentIsCanvasItem}>
-                <ErrorBoundary
-                  resetKeys={[node]}
-                  fallback={() => (
-                    <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
-                  )}
-                >
-                  {/* The cast each descendant the component renders runs against this node
-                    (`node_3d.cpp:150`, `canvas_item.cpp:565-571`), answered with its type: for a
-                    merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
-                    every level it lifts past is a CanvasItem. */}
-                  <ParentTypeProvider value={node.type}>
-                    <Component node={node}>
-                      {children.length > 0 ? (
-                        /* At every level, so a non-sprite parent overwrites with white:
-                         `sprite_3d.cpp:75` accumulates from the immediate parent only. */
-                        <SpriteBase3DChildAccum node={node}>
-                          {startsCanvas ? (
-                            <CanvasLayerScope node={node}>
-                              {/* `<CanvasLayerScope>` is shared with the Control walk's
-                                `CanvasLayer` painter. A canvas root below draws on this
-                                layer's canvas (`canvas_item.cpp:246-252`), so a node that
-                                escapes inside it stays under the layer's own group. */}
-                              <WorldRoot>
-                                <CanvasRootRangesProvider value={canvasRoots}>
-                                  {children}
-                                </CanvasRootRangesProvider>
-                              </WorldRoot>
-                            </CanvasLayerScope>
-                          ) : (
-                            <>{children}</>
-                          )}
-                        </SpriteBase3DChildAccum>
-                      ) : null}
-                    </Component>
-                  </ParentTypeProvider>
-                </ErrorBoundary>
+                {/* The cast each descendant the component renders runs against this node
+                  (`node_3d.cpp:150`, `canvas_item.cpp:565-571`), answered with its type: for a
+                  merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
+                  every level it lifts past is a CanvasItem. */}
+                <ParentTypeProvider value={node.type}>
+                  <GuardedNodeComponent node={node}>
+                    {children.length > 0 ? (
+                      /* At every level, so a non-sprite parent overwrites with white:
+                       `sprite_3d.cpp:75` accumulates from the immediate parent only. */
+                      <SpriteBase3DChildAccum node={node}>
+                        {startsCanvas ? (
+                          <CanvasLayerScope node={node}>
+                            {/* `<CanvasLayerScope>` is shared with the Control walk's
+                              `CanvasLayer` painter. A canvas root below draws on this
+                              layer's canvas (`canvas_item.cpp:246-252`), so a node that
+                              escapes inside it stays under the layer's own group. */}
+                            <WorldRoot>
+                              <CanvasRootRangesProvider value={canvasRoots}>
+                                {children}
+                              </CanvasRootRangesProvider>
+                            </WorldRoot>
+                          </CanvasLayerScope>
+                        ) : (
+                          <>{children}</>
+                        )}
+                      </SpriteBase3DChildAccum>
+                    ) : null}
+                  </GuardedNodeComponent>
+                </ParentTypeProvider>
               </CanvasRootScope>
             </TopLevelScope>
           </group>
@@ -401,7 +390,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // stripped node is a new object.
   const isLoneGlb = loneGlbPath(loadedScene?.nodes ?? []) !== undefined;
   const shallow = useMemo(
-    () => (isLoneGlb ? withoutPropertyOverrides(withoutDeepChildren(node)) : withoutDeepChildren(node)),
+    () => withoutDeepChildren(isLoneGlb ? withoutPropertyOverrides(node) : node),
     [node, isLoneGlb]
   );
   const order = useTreeOrder();

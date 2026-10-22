@@ -166,11 +166,14 @@ function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly Live
 }
 
 /**
- * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren` returns them) below the objects their
- * parent paths name, plus an `AnimationPlayer` when it has clips. One source, so `useGlbChildren`
- * and `resolveLiveEntry` produce the same children.
+ * The children of a GLB with nothing attached, built once per GLB object. Written only by
+ * `glbSceneRootChildren`. A GLB object read here is a loader copy no consumer changes the
+ * structure of, so its hierarchy does not change, and a tree walk asks again for each path it
+ * resolves. Entries leave with their object.
  */
-export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[] = []): TscnNode[] {
+const plainChildren = new WeakMap<THREE.Object3D, TscnNode[]>();
+
+function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
   const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));
   addAttachedChildren(nodes, attached);
   const clips = root.animations;
@@ -188,4 +191,20 @@ export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly Li
     });
   }
   return nodes;
+}
+
+/**
+ * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren`
+ * returns them) below the objects their parent paths name, plus an `AnimationPlayer` when it has
+ * clips. One source, so `useGlbChildren` and `resolveLiveEntry` produce the same children.
+ */
+export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[] = []): TscnNode[] {
+  // Attaching writes into the nodes, so an attached list builds its own copy.
+  if (attached.length > 0) return buildGlbSceneRootChildren(root, attached);
+  let children = plainChildren.get(root);
+  if (!children) {
+    children = buildGlbSceneRootChildren(root, attached);
+    plainChildren.set(root, children);
+  }
+  return children;
 }

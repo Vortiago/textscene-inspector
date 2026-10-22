@@ -45,10 +45,26 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
 }
 
 /**
+ * `children` with each node written below a property override lifted to the instance, as the
+ * node its parent path names, which is how Godot adds it. The scene tree builder nests such a node
+ * below the override heading that its parent path passes through, where only the instance
+ * itself can reach the GLB.
+ */
+export function liftOverrideChildren(children: readonly LiveNode[], anchor?: string): LiveNode[] {
+  return children.flatMap((child) => {
+    const placed =
+      anchor === undefined || child.instanceSubPath ? child : { ...child, instanceSubPath: anchor };
+    if (!placed.overridesExistingNode || placed.children.length === 0) return [placed];
+    const below = liftOverrideChildren(placed.children, joinPath(placed.instanceSubPath ?? '', placed.name));
+    return [{ ...placed, children: [] }, ...below];
+  });
+}
+
+/**
  * The instancing scene's typed nodes whose parent path names a GLB object, which Godot adds
  * to that object (`packed_scene.cpp:157-165`, `:541`), and the rest of `children`. A typed node
  * whose path names none stays among the rest, where the tree has always listed it. A property
- * override is no node: Godot takes the existing node by name and adds none (`packed_scene.cpp:290-296`),
+ * override is no node: Godot takes the existing node by name and adds none (`packed_scene.cpp:280-283`),
  * so it is in neither list.
  *
  * Each attached node comes back with `glbTargetRelPath` set, so the tree's next step
@@ -58,7 +74,7 @@ export function splitAttachedChildren(
   root: THREE.Object3D,
   children: readonly LiveNode[]
 ): { attached: LiveNode[]; rest: LiveNode[] } {
-  const nodes = children.filter((child) => !child.overridesExistingNode);
+  const nodes = liftOverrideChildren(children).filter((child) => !child.overridesExistingNode);
   if (nodes.every(isApplicableGlbOverride)) return { attached: [], rest: nodes };
   const entries = flattenGlbObjects(root);
   const attached: LiveNode[] = [];

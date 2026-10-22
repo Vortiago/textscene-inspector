@@ -9,9 +9,9 @@ import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit.js';
 import { TscnParser } from '../parser/TscnParser.js';
-import { synthesiseGLBScene } from '../resources/processors/createSceneProcessor.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader.js';
+import { seedGlbInstance } from '../resources/testing/seedGlbInstance.js';
 import { HierarchyProvider } from './contexts/HierarchyContext.js';
 import { useLocalScene, useUniqueNamePaths } from './useUniqueNames.js';
 
@@ -138,12 +138,12 @@ unique_name_in_owner = true
 [node name="Marker" type="Node3D" parent="Rig/Skeleton"]
 unique_name_in_owner = true
 `);
-    const { loader, scenes, glbMeshes } = createFakeResourceLoader();
-    scenes.seed('res://rig.glb', synthesiseGLBScene('res://rig.glb'));
+    const fake = createFakeResourceLoader();
+    const { loader } = fake;
     const named = (name: string) => Object.assign(new THREE.Group(), { name });
     const rig = named('Scene');
     rig.add(named('Skeleton'));
-    glbMeshes.seed('res://rig.glb', rig);
+    seedGlbInstance(fake, 'res://rig.glb', rig);
     const sceneGraph = createSceneGraphFromTscnScene(host);
 
     const { result } = renderHook(() => useUniqueNamePaths('Root/Rig/Skeleton/Marker'), {

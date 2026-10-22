@@ -1,6 +1,8 @@
 /** `glbSceneRootChildren`: a loaded GLB as tree nodes with stable, disambiguated relative paths. */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
+import { makeNode } from '../../../parser/testing/parserKit';
+import '../../../nodes/node/index';
 import type { TscnNode } from '../../../parser/types';
 import {
   flattenGlbObjects,
@@ -153,6 +155,31 @@ describe('glbSceneRootChildren animation player', () => {
     root.add(named(new THREE.Mesh(), 'body'));
     const nodes = glbSceneRootChildren(root);
     expect(nodes.map((n) => n.name)).toEqual(['body']);
+  });
+});
+
+describe('glbSceneRootChildren per GLB', () => {
+  function rootWithBody(): THREE.Group {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'));
+    return root;
+  }
+
+  it('builds the children of one GLB once', () => {
+    const root = rootWithBody();
+    expect(glbSceneRootChildren(root)).toBe(glbSceneRootChildren(root));
+  });
+
+  it('builds its own children for each of two GLBs', () => {
+    expect(glbSceneRootChildren(rootWithBody())).not.toBe(glbSceneRootChildren(rootWithBody()));
+  });
+
+  it('leaves the shared children without a node attached for one call', () => {
+    const root = rootWithBody();
+    const marker = { ...makeNode('Marker', 'Node'), glbTargetRelPath: 'body' };
+
+    expect(glbSceneRootChildren(root, [marker])[0]!.children).toHaveLength(1);
+    expect(glbSceneRootChildren(root)[0]!.children).toHaveLength(0);
   });
 });
 

@@ -9,7 +9,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../parser/TscnParser';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { synthesiseGLBScene } from '../../../resources/processors/createSceneProcessor';
+import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
+import { settleLoads } from '../../testing/settleLoads';
 import { HierarchyProvider } from '../../contexts/HierarchyContext';
 import { NodeDispatcher } from '../../NodeDispatcher';
 import { SceneStack } from '../../testing/SceneStack';
@@ -48,10 +49,9 @@ visibility_parent = NodePath("%Proxy")
 async function renderDetail(): Promise<THREE.Mesh> {
   const scene = new TscnParser().parse(HOST);
   const fake = createFakeResourceLoader();
-  fake.scenes.seed(GLB_PATH, synthesiseGLBScene(GLB_PATH));
   const glb = new THREE.Group();
   glb.add(Object.assign(new THREE.Group(), { name: 'Group' }));
-  fake.glbMeshes.seed(GLB_PATH, glb);
+  seedGlbInstance(fake, GLB_PATH, glb);
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(
     <HierarchyProvider value={{ sceneGraph: createSceneGraphFromTscnScene(scene), panelId: 'p' }}>
@@ -61,9 +61,7 @@ async function renderDetail(): Promise<THREE.Mesh> {
     </HierarchyProvider>,
     { camera }
   );
-  await ReactThreeTestRenderer.act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  });
+  await settleLoads();
   await renderScene(renderer, camera);
   const meshes = renderer.scene.findAllByType('Mesh').map((mesh) => mesh.instance as THREE.Mesh);
   return meshes.find((mesh) => mesh.parent?.parent?.parent?.name === 'Group')!;

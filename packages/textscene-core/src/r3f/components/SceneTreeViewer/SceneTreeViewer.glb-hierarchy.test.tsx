@@ -12,9 +12,9 @@ import { SelectionProvider } from '../../contexts/SelectionContext';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import type { TscnScene } from '../../../parser/types';
 import '../../../nodes/node/index';
 
 function named<T extends THREE.Object3D>(o: T, name: string): T {
@@ -63,21 +63,6 @@ function glbGraph() {
 
 const RIG_PATH = 'res://rig.glb';
 
-/** The GLB scene root a `.glb` instance loads as, which the instancing node's sub-scene holds. */
-const RIG_SCENE: TscnScene = {
-  nodes: [
-    {
-      rawProperties: {},
-      name: 'rig',
-      type: 'GLBSceneRoot',
-      children: [],
-      properties: { glbPath: RIG_PATH } as Record<string, unknown>,
-    },
-  ],
-  externalResources: [],
-  internalResources: [],
-};
-
 function expandRow(name: string) {
   const row = screen.getByText(name).closest('[data-node-path]') as HTMLElement;
   act(() => fireEvent.click(within(row).getAllByRole('button', { name: /expand/i })[0]!));
@@ -98,8 +83,7 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
 
   it('lists a typed node the instancing scene adds inside the GLB under the GLB row it addresses', () => {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed(RIG_PATH, RIG_SCENE);
-    fake.glbMeshes.seed(RIG_PATH, fakeGlb());
+    seedGlbInstance(fake, RIG_PATH, fakeGlb());
     const marker = {
       rawProperties: {},
       name: 'Marker',
@@ -133,8 +117,7 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
 
   it('lists the GLB a sub-scene’s root instances below the node that instances the sub-scene', () => {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed(RIG_PATH, RIG_SCENE);
-    fake.glbMeshes.seed(RIG_PATH, fakeGlb());
+    seedGlbInstance(fake, RIG_PATH, fakeGlb());
     fake.scenes.seed('res://wrapper.tscn', {
       nodes: [
         {
