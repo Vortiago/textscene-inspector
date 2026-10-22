@@ -1,4 +1,7 @@
-/** The member names of a numeric TypeScript enum, keyed by the integer Godot stores. */
+/** The member names of an enum object, keyed by the integer Godot stores. */
+
+/** The integers an `as const` enum object holds, as the type of a property that stores one. */
+export type EnumValue<T extends object> = T[keyof T];
 
 /**
  * Each member name by its integer, as a validator or an inspector names it. The numeric members

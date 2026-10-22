@@ -3,7 +3,9 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import { AnimationProcessMode, type AnimationPlayerProperties, MethodCallMode } from './types';
+import { type AnimationPlayerProperties } from './types';
+import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function formatAnimationPlayerProperties(properties: AnimationPlayerProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -45,24 +47,24 @@ export function formatAnimationPlayerProperties(properties: AnimationPlayerPrope
   return sections;
 }
 
-function processModeName(mode: AnimationProcessMode): string {
+function processModeName(mode: EnumValue<typeof AnimationCallbackModeProcess>): string {
   switch (mode) {
-    case AnimationProcessMode.PHYSICS:
+    case AnimationCallbackModeProcess.PHYSICS:
       return 'Physics';
-    case AnimationProcessMode.IDLE:
+    case AnimationCallbackModeProcess.IDLE:
       return 'Idle';
-    case AnimationProcessMode.MANUAL:
+    case AnimationCallbackModeProcess.MANUAL:
       return 'Manual';
     default:
       return 'Unknown';
   }
 }
 
-function methodCallModeName(mode: MethodCallMode): string {
+function methodCallModeName(mode: EnumValue<typeof AnimationCallbackModeMethod>): string {
   switch (mode) {
-    case MethodCallMode.DEFERRED:
+    case AnimationCallbackModeMethod.DEFERRED:
       return 'Deferred';
-    case MethodCallMode.IMMEDIATE:
+    case AnimationCallbackModeMethod.IMMEDIATE:
       return 'Immediate';
     default:
       return 'Unknown';

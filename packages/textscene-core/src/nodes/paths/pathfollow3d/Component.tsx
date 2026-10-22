@@ -14,7 +14,8 @@ import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { useParentPath3DCurve } from '../../../r3f/contexts/Path3DCurveContext';
 import { transformFromNode3DProperties, type Vec3Tuple } from '../../../r3f/nodeTransform';
 import type { Curve3DSampler } from '../../../resources/curves/curve3d';
-import { RotationMode, type PathFollow3DProperties } from './types';
+import { type PathFollow3DProperties } from './types';
+import { PathFollow3DRotationMode } from '../../../godot/scene/pathFollow3d';
 
 /** Godot editor path-follow handle colour. */
 const FOLLOW_COLOR = 0xffa733;
@@ -75,7 +76,7 @@ function computeFollowTransform(
   // Approximation: every non-NONE rotation_mode aligns the model front (-Z, or +Z with
   // `use_model_front`) to the tangent, so Y/XY/XYZ/ORIENTED look alike, and the curve's per-point
   // tilt (roll) is not applied.
-  if (props.rotation_mode !== RotationMode.NONE && forward.lengthSq() > 0) {
+  if (props.rotation_mode !== PathFollow3DRotationMode.NONE && forward.lengthSq() > 0) {
     // setFromUnitVectors gives the minimal rotation onto the tangent, leaving roll free.
     const modelFront = new THREE.Vector3(0, 0, props.use_model_front ? 1 : -1);
     quaternion.setFromUnitVectors(modelFront, forward.clone().normalize());

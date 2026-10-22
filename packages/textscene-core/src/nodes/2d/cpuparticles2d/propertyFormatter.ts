@@ -7,27 +7,12 @@
 import type { PropertySection } from '../../../core/NodeRegistry';
 import { formatColorRgba } from '../../../utils/colorParser';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
+import { type CPUParticles2DProperties, PARAM_SLOTS } from './types';
 import {
-  CPUParticles2DDrawOrder,
+  CPU_PARTICLES_2D_DRAW_ORDER_HINT_NAMES,
+  CPU_PARTICLES_2D_EMISSION_SHAPE_HINT_NAMES,
   CPUParticles2DEmissionShape,
-  type CPUParticles2DProperties,
-  PARAM_SLOTS,
-} from './types';
-
-const SHAPE_LABELS: Record<number, string> = {
-  [CPUParticles2DEmissionShape.Point]: 'Point',
-  [CPUParticles2DEmissionShape.Sphere]: 'Sphere',
-  [CPUParticles2DEmissionShape.SphereSurface]: 'Sphere Surface',
-  [CPUParticles2DEmissionShape.Rectangle]: 'Rectangle',
-  [CPUParticles2DEmissionShape.Points]: 'Points',
-  [CPUParticles2DEmissionShape.DirectedPoints]: 'Directed Points',
-  [CPUParticles2DEmissionShape.Ring]: 'Ring',
-};
-
-const DRAW_ORDER_LABELS: Record<number, string> = {
-  [CPUParticles2DDrawOrder.Index]: 'Index',
-  [CPUParticles2DDrawOrder.Lifetime]: 'Lifetime',
-};
+} from '../../../godot/scene/particles2d';
 
 export function formatCPUParticles2DProperties(props: CPUParticles2DProperties): PropertySection[] {
   const sections: PropertySection[] = [
@@ -52,7 +37,7 @@ export function formatCPUParticles2DProperties(props: CPUParticles2DProperties):
         { label: 'Local Coords', value: props.local_coords ? 'Yes' : 'No' },
         {
           label: 'Draw Order',
-          value: DRAW_ORDER_LABELS[props.draw_order] ?? String(props.draw_order),
+          value: CPU_PARTICLES_2D_DRAW_ORDER_HINT_NAMES[props.draw_order] ?? String(props.draw_order),
         },
       ],
     },
@@ -61,7 +46,8 @@ export function formatCPUParticles2DProperties(props: CPUParticles2DProperties):
       items: [
         {
           label: 'Shape',
-          value: SHAPE_LABELS[props.emission_shape] ?? String(props.emission_shape),
+          value:
+            CPU_PARTICLES_2D_EMISSION_SHAPE_HINT_NAMES[props.emission_shape] ?? String(props.emission_shape),
         },
         ...emissionShapeItems(props),
         { label: 'Direction', value: `(${props.direction.x}, ${props.direction.y})` },
@@ -90,17 +76,17 @@ export function formatCPUParticles2DProperties(props: CPUParticles2DProperties):
 
 function emissionShapeItems(props: CPUParticles2DProperties): Array<{ label: string; value: string }> {
   switch (props.emission_shape) {
-    case CPUParticles2DEmissionShape.Sphere:
-    case CPUParticles2DEmissionShape.SphereSurface:
+    case CPUParticles2DEmissionShape.SPHERE:
+    case CPUParticles2DEmissionShape.SPHERE_SURFACE:
       return [{ label: 'Sphere Radius', value: props.emission_sphere_radius.toFixed(2) }];
-    case CPUParticles2DEmissionShape.Rectangle:
+    case CPUParticles2DEmissionShape.RECTANGLE:
       return [
         {
           label: 'Rect Extents',
           value: `(${props.emission_rect_extents.x}, ${props.emission_rect_extents.y})`,
         },
       ];
-    case CPUParticles2DEmissionShape.Ring:
+    case CPUParticles2DEmissionShape.RING:
       return [
         { label: 'Ring Radius', value: props.emission_ring_radius.toFixed(2) },
         { label: 'Ring Inner Radius', value: props.emission_ring_inner_radius.toFixed(2) },

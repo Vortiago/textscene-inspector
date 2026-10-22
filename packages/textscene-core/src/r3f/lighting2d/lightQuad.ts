@@ -22,20 +22,10 @@ import {
 } from './lightQuadShaders.js';
 import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
 import type { Rgba } from '../../godot/math/math.js';
+import { Light2DBlendMode } from '../../godot/scene/light2d.js';
+import { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
 export { updateShadowPolarTexture, type ShadowSampling } from './shadowSampling.js';
-
-/** Godot `Light2D.BlendMode`. */
-export enum Light2DBlendMode {
-  ADD = 0,
-  SUB = 1,
-  MIX = 2,
-}
-
-/** Godot `Light2D.ShadowFilter`. NONE keeps the stencil path; the rest sample the map. */
-export const SHADOW_FILTER_NONE = 0;
-export const SHADOW_FILTER_PCF5 = 1;
-export const SHADOW_FILTER_PCF13 = 2;
 
 /**
  * `light_blend_compute`'s modes are one fixed-function blend each: ADD is SrcAlpha/One with add,
@@ -74,7 +64,9 @@ type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
  */
 export function shadowColorContributes(shadowColor: Rgba, filter: number): boolean {
   if (shadowColor.a > 0) return true;
-  return filter !== SHADOW_FILTER_NONE && (shadowColor.r !== 0 || shadowColor.g !== 0 || shadowColor.b !== 0);
+  return (
+    filter !== Light2DShadowFilter.NONE && (shadowColor.r !== 0 || shadowColor.g !== 0 || shadowColor.b !== 0)
+  );
 }
 
 /** The colour with its rgb zeroed: a quad of it carries only its alpha, the factor MIX scales by. */

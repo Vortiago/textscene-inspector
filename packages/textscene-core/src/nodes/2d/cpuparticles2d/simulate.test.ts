@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { parseCPUParticles2D } from './parser';
 import { simulateFrozenPose, type ParticleSimInput } from './simulate';
-import { CPUParticles2DParam, type CPUParticles2DProperties } from './types';
+import { type CPUParticles2DProperties } from './types';
 import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../../../godot/math/transform2d.js';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 import { GradientInterpolationMode } from '../../../resources/textures/gradienttexture2d/types';
 import { CurveTangentMode, type Curve } from '../../../resources/curves/curve/types';
+import { CPUParticlesParameter } from '../../../godot/scene/cpuParticles';
 
 const NO_CURVES: (Curve | null)[] = Array.from({ length: 12 }, () => null);
 
@@ -428,7 +429,7 @@ describe('simulateFrozenPose', () => {
       maxDomain: 1,
     };
     const curves = NO_CURVES.slice();
-    curves[CPUParticles2DParam.Scale] = shrinking;
+    curves[CPUParticlesParameter.SCALE] = shrinking;
 
     const pose = simulateFrozenPose(input({ props: props({ amount: '24', lifetime: '1' }), curves }));
     // A steady-state emitter holds particles at every age, so the curve must

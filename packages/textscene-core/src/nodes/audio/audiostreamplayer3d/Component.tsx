@@ -10,13 +10,15 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import type { AudioStreamPlayer3DProperties } from './types';
-import { AttenuationModel } from './types';
+
 import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { degToRad, TAU } from '../../../godot/math/math.js';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
+import { AttenuationModel } from '../../../godot/scene/audio';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** Editor-only gizmo colour: yellow, to match the light helpers. */
 const GIZMO_COLOR = 0xffff00;
@@ -122,7 +124,7 @@ function RangeCircle({ radius }: RangeCircleProps) {
 }
 
 function audibleRangeRadius(properties: AudioStreamPlayer3DProperties): number | null {
-  const disabled = properties.attenuation_model === AttenuationModel.ATTENUATION_DISABLED;
+  const disabled = properties.attenuation_model === AttenuationModel.DISABLED;
   if (disabled && properties.max_distance <= 0) return null;
   const radius = properties.unit_size * SOFT_MULTIPLIER[properties.attenuation_model];
   const clamped = properties.max_distance > 0 ? Math.min(radius, properties.max_distance) : radius;
@@ -130,11 +132,11 @@ function audibleRangeRadius(properties: AudioStreamPlayer3DProperties): number |
 }
 
 /** `soft_multiplier` per attenuation model, from the gizmo plugin source. */
-const SOFT_MULTIPLIER: Record<AttenuationModel, number> = {
-  [AttenuationModel.ATTENUATION_INVERSE_DISTANCE]: 12,
-  [AttenuationModel.ATTENUATION_INVERSE_SQUARE_DISTANCE]: 4,
-  [AttenuationModel.ATTENUATION_LOGARITHMIC]: 3.25,
-  [AttenuationModel.ATTENUATION_DISABLED]: 10000,
+const SOFT_MULTIPLIER: Record<EnumValue<typeof AttenuationModel>, number> = {
+  [AttenuationModel.INVERSE_DISTANCE]: 12,
+  [AttenuationModel.INVERSE_SQUARE_DISTANCE]: 4,
+  [AttenuationModel.LOGARITHMIC]: 3.25,
+  [AttenuationModel.DISABLED]: 10000,
 };
 
 interface EmissionConeProps {

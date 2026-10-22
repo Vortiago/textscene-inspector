@@ -3,13 +3,14 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import {
-  AnimationTreeProcessMode,
-  type AnimationTreeProperties,
-  CallbackModeDiscrete,
-  CallbackModeMethod,
-} from './types';
+import { type AnimationTreeProperties } from './types';
 import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
+import {
+  AnimationCallbackModeProcess,
+  AnimationCallbackModeDiscrete,
+  AnimationCallbackModeMethod,
+} from '../../../godot/scene/animation';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function formatAnimationTreeProperties(properties: AnimationTreeProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -56,37 +57,37 @@ function extractNodePath(raw: string): string {
   return nodePathLiteral(raw) ?? raw;
 }
 
-function processModeName(mode: AnimationTreeProcessMode): string {
+function processModeName(mode: EnumValue<typeof AnimationCallbackModeProcess>): string {
   switch (mode) {
-    case AnimationTreeProcessMode.PHYSICS:
+    case AnimationCallbackModeProcess.PHYSICS:
       return 'Physics';
-    case AnimationTreeProcessMode.IDLE:
+    case AnimationCallbackModeProcess.IDLE:
       return 'Idle';
-    case AnimationTreeProcessMode.MANUAL:
+    case AnimationCallbackModeProcess.MANUAL:
       return 'Manual';
     default:
       return 'Unknown';
   }
 }
 
-function methodModeName(mode: CallbackModeMethod): string {
+function methodModeName(mode: EnumValue<typeof AnimationCallbackModeMethod>): string {
   switch (mode) {
-    case CallbackModeMethod.DEFERRED:
+    case AnimationCallbackModeMethod.DEFERRED:
       return 'Deferred';
-    case CallbackModeMethod.IMMEDIATE:
+    case AnimationCallbackModeMethod.IMMEDIATE:
       return 'Immediate';
     default:
       return 'Unknown';
   }
 }
 
-function discreteModeName(mode: CallbackModeDiscrete): string {
+function discreteModeName(mode: EnumValue<typeof AnimationCallbackModeDiscrete>): string {
   switch (mode) {
-    case CallbackModeDiscrete.DOMINANT:
+    case AnimationCallbackModeDiscrete.DOMINANT:
       return 'Dominant';
-    case CallbackModeDiscrete.RECESSIVE:
+    case AnimationCallbackModeDiscrete.RECESSIVE:
       return 'Recessive';
-    case CallbackModeDiscrete.FORCE_CONTINUOUS:
+    case AnimationCallbackModeDiscrete.FORCE_CONTINUOUS:
       return 'Force Continuous';
     default:
       return 'Unknown';

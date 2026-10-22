@@ -8,47 +8,8 @@ import type { Node2DProperties } from '../../base/node2d/types';
 import { CPU_PARTICLES_PARAMS, type CpuParticlesParam } from '../../../godot/scene/cpuParticles';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
-
-/** Godot `CPUParticles2D.EmissionShape`. */
-export enum CPUParticles2DEmissionShape {
-  Point = 0,
-  Sphere = 1,
-  SphereSurface = 2,
-  Rectangle = 3,
-  /** Positions sampled from `emission_points`. Not previewed (see linter.ts). */
-  Points = 4,
-  /** As Points, but the normal also steers the initial velocity. Not previewed. */
-  DirectedPoints = 5,
-  /** An annulus between the inner and outer radius. Not previewed. */
-  Ring = 6,
-}
-
-/** Godot `CPUParticles2D.DrawOrder`. */
-export enum CPUParticles2DDrawOrder {
-  /** Draw in particle-index order. */
-  Index = 0,
-  /** Draw oldest first, so younger particles land on top. */
-  Lifetime = 1,
-}
-
-/**
- * Godot `CPUParticles2D.Parameter`. Every one is `lerp(min, max, random) *
- * curve.sample(t)`.
- */
-export enum CPUParticles2DParam {
-  InitialLinearVelocity = 0,
-  AngularVelocity = 1,
-  OrbitVelocity = 2,
-  LinearAccel = 3,
-  RadialAccel = 4,
-  TangentialAccel = 5,
-  Damping = 6,
-  Angle = 7,
-  Scale = 8,
-  HueVariation = 9,
-  AnimSpeed = 10,
-  AnimOffset = 11,
-}
+import { CPUParticles2DEmissionShape, CPUParticles2DDrawOrder } from '../../../godot/scene/particles2d';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** `PARAM_MAX`: the length of every parameter array. */
 export const CPU_PARTICLES_2D_PARAM_COUNT = CPU_PARTICLES_PARAMS.length;
@@ -119,9 +80,9 @@ export interface CPUParticles2DProperties extends Node2DProperties {
   fract_delta: boolean;
   /** When false (Godot's default) particles live in canvas space, not node space. */
   local_coords: boolean;
-  draw_order: CPUParticles2DDrawOrder;
+  draw_order: EnumValue<typeof CPUParticles2DDrawOrder>;
 
-  emission_shape: CPUParticles2DEmissionShape;
+  emission_shape: EnumValue<typeof CPUParticles2DEmissionShape>;
   emission_sphere_radius: number;
   emission_rect_extents: Vector2;
   emission_ring_radius: number;

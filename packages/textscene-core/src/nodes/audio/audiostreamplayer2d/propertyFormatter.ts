@@ -5,9 +5,11 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import { PlaybackType, type AudioStreamPlayer2DProperties } from './types';
+import { type AudioStreamPlayer2DProperties } from './types';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
 import { audioMixingSection, audioStreamSection } from '../audioStreamSection';
+import { PlaybackType } from '../../../godot/audio/audioServer';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function formatAudioStreamPlayer2DProperties(
   properties: AudioStreamPlayer2DProperties
@@ -30,7 +32,7 @@ export function formatAudioStreamPlayer2DProperties(
   return sections;
 }
 
-function playbackTypeName(type: PlaybackType): string {
+function playbackTypeName(type: EnumValue<typeof PlaybackType>): string {
   switch (type) {
     case PlaybackType.DEFAULT:
       return 'Default';

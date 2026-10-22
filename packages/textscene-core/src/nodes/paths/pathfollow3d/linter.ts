@@ -10,6 +10,7 @@ import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { hiddenOrUnknowableInTree, parentTypeVerdict, placementPhrase } from '../../../linter/parentType.js';
 import { resolveSubResourceRef } from '../../../resources/SubResourceResolver.js';
 import { ruleInt } from '../../../godot/variant/intSlots.js';
+import { PathFollow3DRotationMode } from '../../../godot/scene/pathFollow3d.js';
 import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
 import type { RawNode, RawScene } from '../../../parser/types.js';
@@ -31,9 +32,6 @@ const arms = {
     kind: 'configuration-warning',
   }),
 } as const satisfies RuleArms<string>;
-
-/** `PathFollow3D::ROTATION_ORIENTED` (path_3d.h), the mode that needs up vectors. */
-const ROTATION_ORIENTED = 4;
 
 /**
  * True only when the parent Path3D's curve is in this file and says
@@ -113,7 +111,7 @@ function checkPathFollow3D(context: RuleContext): Diagnostic[] {
   // readable here and say up vectors are off.
   if (
     !gated &&
-    ruleInt(rawProps.rotation_mode ?? '') === ROTATION_ORIENTED &&
+    ruleInt(rawProps.rotation_mode ?? '') === PathFollow3DRotationMode.ORIENTED &&
     placement.kind === 'satisfied' &&
     parentCurveDisablesUpVector(scene, placement.parent)
   ) {

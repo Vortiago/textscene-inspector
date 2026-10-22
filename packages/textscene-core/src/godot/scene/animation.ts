@@ -11,7 +11,7 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
 export const DEFAULT_ANIMATION_NAME = 'default';
 
 /** `AnimationMixer::AnimationCallbackModeProcess` (`scene/animation/animation_mixer.h:54-58`). */
-const AnimationCallbackModeProcess = {
+export const AnimationCallbackModeProcess = {
   PHYSICS: 0,
   IDLE: 1,
   MANUAL: 2,
@@ -24,7 +24,7 @@ const AnimationCallbackModeProcess = {
 export const ANIMATION_CALLBACK_MODE_PROCESS_NAMES = enumNamesByValue(AnimationCallbackModeProcess);
 
 /** `AnimationMixer::AnimationCallbackModeMethod` (`animation_mixer.h:60-63`). */
-const AnimationCallbackModeMethod = {
+export const AnimationCallbackModeMethod = {
   DEFERRED: 0,
   IMMEDIATE: 1,
 } as const;
@@ -33,7 +33,7 @@ const AnimationCallbackModeMethod = {
 export const ANIMATION_CALLBACK_MODE_METHOD_NAMES = enumNamesByValue(AnimationCallbackModeMethod);
 
 /** `AnimationMixer::AnimationCallbackModeDiscrete` (`animation_mixer.h:65-69`). */
-const AnimationCallbackModeDiscrete = {
+export const AnimationCallbackModeDiscrete = {
   DOMINANT: 0,
   RECESSIVE: 1,
   FORCE_CONTINUOUS: 2,
