@@ -59,7 +59,7 @@ export function GlbAttachedChildren({
     () => attachedChildren(object, entries, root, nodePath, rootOrder, uniquePaths),
     [object, entries, root, nodePath, rootOrder, uniquePaths]
   );
-  if (nodePath === null || root.path === null) return null;
+  if (attached.length === 0 || nodePath === null || root.path === null) return null;
   return (
     <CullPathProvider selection={nodePath} godot={root.path}>
       {attached.map(({ node, path, target, order, visibilityParent }) => (
