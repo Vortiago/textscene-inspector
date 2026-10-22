@@ -41,11 +41,10 @@ const versionsOf = (names, base) =>
 
 /** The tarballs of both packages, by package name. */
 function packBoth(destination) {
-  run(
-    'pnpm',
-    ['--filter', './apps/textscene-tscn', '--filter', './apps/textscene-renderer', 'build'],
-    REPO_ROOT
-  );
+  // One package at a time: each build's prebuild hook builds core, and two at once write its dist together.
+  for (const packageDir of ['./apps/textscene-tscn', './apps/textscene-renderer']) {
+    run('pnpm', ['--filter', packageDir, 'build'], REPO_ROOT);
+  }
   return {
     '@textscene/tscn': packTarball(join(REPO_ROOT, 'apps/textscene-tscn'), destination),
     '@textscene/renderer': packTarball(join(REPO_ROOT, 'apps/textscene-renderer'), destination),

@@ -4,7 +4,7 @@
  * code the bundle holds.
  */
 
-import { writeFileSync } from 'node:fs';
+import { rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -16,6 +16,8 @@ const ownSourceDir = resolve(packageDir, 'src');
 const entry = resolve(ownSourceDir, 'index.ts');
 const outDir = resolve(packageDir, 'dist');
 
+// A clean dist, so no file of an earlier build reaches the tarball.
+rmSync(outDir, { recursive: true, force: true });
 const { metafile } = await build({
   absWorkingDir: packageDir,
   entryPoints: [entry],

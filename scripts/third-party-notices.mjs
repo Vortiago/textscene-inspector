@@ -5,7 +5,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { dirname, relative, resolve, sep } from 'node:path';
 import { REPO_ROOT } from './repoRoot.mjs';
 
 /**
@@ -99,7 +99,8 @@ export function writeBundledNotices(metafile, { packageDir, ownSourceDir }) {
  * fails the build.
  */
 function sourceOf(compiled, ownSourceDir) {
-  if (compiled.startsWith(`${ownSourceDir}/`) || compiled.includes('/node_modules/')) return compiled;
+  const isOwnSource = !relative(ownSourceDir, compiled).startsWith('..');
+  if (isOwnSource || compiled.split(sep).includes('node_modules')) return compiled;
   const mapPath = `${compiled}.map`;
   if (!existsSync(mapPath)) throw new Error(`expected a source map at ${mapPath}, found none`);
   const [source] = JSON.parse(readFileSync(mapPath, 'utf8')).sources;
