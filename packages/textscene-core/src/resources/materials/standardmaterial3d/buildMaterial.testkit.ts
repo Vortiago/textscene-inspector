@@ -1,7 +1,7 @@
 /**
- * The imperative adapter as a caller drives it: each texture bound to its slot with the
- * material's own state, then the derived bag constructed as a `THREE.Material`, as the GLB
- * surface-material override does with the maps `useMaterialTextures` binds.
+ * A material as a caller drives the adapters: each texture bound to its slot with the material's
+ * own state, derived into bags, and the unfaded bag constructed as a `THREE.Material`.
+ * `useSurfaceMaterial` does the same with the maps it resolves.
  */
 import type * as THREE from 'three';
 import { materialFromBag } from './build';
@@ -10,7 +10,7 @@ import { bindSlotTexture, materialTextureStates } from './textureBinding';
 import type { ResolvedTextureSlots, StandardMaterial3DScalars, TextureSlot } from './types';
 
 /** Each populated slot's texture put through the material's own binding. */
-export function boundTextureSlots(
+function boundTextureSlots(
   scalars: StandardMaterial3DScalars,
   textures: ResolvedTextureSlots
 ): ResolvedTextureSlots {

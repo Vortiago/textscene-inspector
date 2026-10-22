@@ -18,10 +18,10 @@ import type { MaterialSource } from '../../../r3f/materials/materialSource';
 import { useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
 import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
-import { SurfaceMaterialSlot, useMaterialScalars } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
+import { useSurfaceScalars } from '../../../r3f/materials/useSurfaceMaterial';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
-import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { surfaceBillboard } from '../../../resources/materials/standardmaterial3d/materialBag';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../../godot/math/transform3d';
@@ -280,7 +280,7 @@ interface SurfaceDraw {
  * surface is one `THREE.Points`. The decoded material decides, as the drawn one exists only inside a slot.
  */
 function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
-  const scalars = useMaterialScalars(readyMaterial(useMaterial(draw.source)));
+  const scalars = useSurfaceScalars(draw.source);
   if (geometryDrawsPoints(draw.geometry)) return <PointTiles draw={draw} />;
   if (drawsAsOneBatch(surfaceBillboard(scalars))) return <BatchedTiles draw={draw} matrices={matrices} />;
   return (

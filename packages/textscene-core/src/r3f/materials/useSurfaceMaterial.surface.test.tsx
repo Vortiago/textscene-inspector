@@ -9,12 +9,14 @@ import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import type { TscnInternalResource } from '../../parser/types';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { UV2_CHANNEL } from '../../resources/meshes/uv2';
-import { GLTF_SURFACE, useMaterialTextures, type TexturedSurface } from './SurfaceMaterialSlot';
+import type { UVTransform } from '../../resources/textures/applyTextureState';
+import { GLTF_SURFACE, type TexturedSurface } from './surfaceTextures';
 import { NodePathProvider } from '../contexts/NodePathContext';
-import type { MaterialTextureMaps } from './materialTextureMaps';
+import { renderTargetMapUserData } from './renderTargetMap';
+import { inlineMaterial, unfadedProps } from './surfaceMaterial.testkit';
+import { useSurfaceMaterial } from './useSurfaceMaterial';
 import { ViewportTextureProvider } from '../contexts/ViewportTextureContext';
 import { ViewportTexturePublisher, countingView, viewportEntry } from '../testing/ViewportTexturePublisher';
 
@@ -28,35 +30,32 @@ const GRADIENT: TscnInternalResource[] = [
 ];
 
 /**
- * The maps a material with `properties` binds on `surface`, its references resolved in
+ * The props a material with `properties` derives on `surface`, its references resolved in
  * `resources`, with the hook mounted inside `around`.
  */
-function materialMaps(
+function materialProps(
   properties: Record<string, string>,
   resources: TscnInternalResource[],
   surface?: TexturedSurface,
   around: (children: ReactNode) => ReactNode = (children) => children
-): MaterialTextureMaps {
-  const scalars = parseStandardMaterial3DScalars(properties);
+): THREE.MeshPhysicalMaterialParameters {
+  const source = inlineMaterial(properties, resources);
   const { loader } = createFakeResourceLoader();
-  const { result } = renderHook(
-    () => useMaterialTextures(scalars, { internalResources: resources, externalResources: [] }, surface),
-    {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <ResourceLoaderProvider loader={loader}>{around(children)}</ResourceLoaderProvider>
-      ),
-    }
-  );
-  return result.current.maps;
+  const { result } = renderHook(() => useSurfaceMaterial(source, surface), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <ResourceLoaderProvider loader={loader}>{around(children)}</ResourceLoaderProvider>
+    ),
+  });
+  return unfadedProps(result.current);
 }
 
 /** The emission map a material with `properties` binds on `surface`. */
 function emissionMap(properties: Record<string, string>, surface?: TexturedSurface): THREE.Texture {
   const emission = { emission_enabled: 'true', emission_texture: 'SubResource("GradientTexture2D_a")' };
-  return materialMaps({ ...emission, ...properties }, GRADIENT, surface).emissiveMap!;
+  return materialProps({ ...emission, ...properties }, GRADIENT, surface).emissiveMap!;
 }
 
-describe('useMaterialTextures on a glTF surface', () => {
+describe('useSurfaceMaterial on a glTF surface', () => {
   it("samples the glTF surface's top-down V", () => {
     const map = emissionMap({}, GLTF_SURFACE);
 
@@ -101,9 +100,27 @@ const VIEWPORT: TscnInternalResource[] = [
   { id: 'ViewportTexture_a', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
 ];
 
-/** The maps a material whose albedo is the SubViewport's render target binds on `surface`. */
-function viewportMaps(properties: Record<string, string>, surface?: TexturedSurface) {
-  return targetMaps({ albedo_texture: 'SubResource("ViewportTexture_a")', ...properties }, surface);
+/** The props a material whose albedo is the SubViewport's render target derives on `surface`. */
+function viewportProps(properties: Record<string, string>, surface?: TexturedSurface) {
+  return targetProps({ albedo_texture: 'SubResource("ViewportTexture_a")', ...properties }, surface);
+}
+
+const TARGET_SAMPLER_KEYS = Object.keys(
+  renderTargetMapUserData({
+    uv: { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } },
+    repeats: true,
+    isNearest: false,
+  })
+);
+
+/** Whether the material records a render-target albedo sampler, which only an albedo target earns. */
+function recordsTargetSampler({ userData }: THREE.MeshPhysicalMaterialParameters): boolean {
+  return TARGET_SAMPLER_KEYS.every((key) => key in (userData ?? {}));
+}
+
+/** The sampler a render-target albedo with this transform records on its material. */
+function targetSampler(uv: UVTransform) {
+  return renderTargetMapUserData({ uv, repeats: true, isNearest: false });
 }
 
 /**
@@ -115,14 +132,14 @@ function renderTargetTexture(): THREE.Texture {
 }
 
 /**
- * The maps a material with `properties`, which name the SubViewport's render target, binds. The
+ * The props a material with `properties`, which name the SubViewport's render target, derives. The
  * target publishes a decoding view apart from its plain view, as a canvas-content target does.
  */
-function targetMaps(properties: Record<string, string>, surface?: TexturedSurface) {
+function targetProps(properties: Record<string, string>, surface?: TexturedSurface) {
   const target = renderTargetTexture();
   const decoding = renderTargetTexture();
   const { view, retainers } = countingView(decoding);
-  const maps = materialMaps(properties, VIEWPORT, surface, (children) => (
+  const props = materialProps(properties, VIEWPORT, surface, (children) => (
     <ViewportTextureProvider>
       <ViewportTexturePublisher
         path="Root/SubViewport"
@@ -131,58 +148,58 @@ function targetMaps(properties: Record<string, string>, surface?: TexturedSurfac
       <NodePathProvider path="Root/Mesh">{children}</NodePathProvider>
     </ViewportTextureProvider>
   ));
-  return { maps, target, decoding, retainers };
+  return { props, target, decoding, retainers };
 }
 
-describe('useMaterialTextures with a render-target albedo', () => {
+describe('useSurfaceMaterial with a render-target albedo', () => {
   /** A `source_color` sampler reads the sRGB view (`material_storage.cpp:1067,1073`). */
   it('binds the decoding view and hands its UV transform to the material', () => {
-    const { maps, decoding } = viewportMaps({ uv1_scale: 'Vector3(2, 3, 1)' });
+    const { props, decoding } = viewportProps({ uv1_scale: 'Vector3(2, 3, 1)' });
 
-    expect(maps.albedoMap).toBe(decoding);
-    expect(maps.albedoTargetUv).toEqual({ scale: { x: 2, y: 3 }, offset: { x: 0, y: 0 } });
+    expect(props.map).toBe(decoding);
+    expect(props.userData).toMatchObject(targetSampler({ scale: { x: 2, y: 3 }, offset: { x: 0, y: 0 } }));
   });
 
   it("flips the target's V on a glTF surface, as for any other map", () => {
-    const { maps } = viewportMaps({}, GLTF_SURFACE);
+    const { props } = viewportProps({}, GLTF_SURFACE);
 
-    expect(maps.albedoTargetUv).toEqual({ scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } });
+    expect(props.userData).toMatchObject(targetSampler({ scale: { x: 1, y: -1 }, offset: { x: 0, y: 1 } }));
   });
 
   it('hands no UV transform for a file albedo, which carries its own (edge case)', () => {
-    const maps = materialMaps({ albedo_texture: 'SubResource("GradientTexture2D_a")' }, GRADIENT);
+    const props = materialProps({ albedo_texture: 'SubResource("GradientTexture2D_a")' }, GRADIENT);
 
-    expect(maps.albedoTargetUv).toBeUndefined();
+    expect(recordsTargetSampler(props)).toBe(false);
   });
 });
 
-describe('useMaterialTextures with a render target in another slot', () => {
+describe('useSurfaceMaterial with a render target in another slot', () => {
   it('binds the decoding view in an emission slot, a `source_color` sampler too', () => {
-    const { maps, decoding } = targetMaps({
+    const { props, decoding } = targetProps({
       emission_enabled: 'true',
       emission_texture: 'SubResource("ViewportTexture_a")',
     });
 
-    expect(maps.emissiveMap).toBe(decoding);
+    expect(props.emissiveMap).toBe(decoding);
   });
 
   it('keeps the decoding view filled while a `source_color` slot binds it', () => {
-    const { retainers } = viewportMaps({});
+    const { retainers } = viewportProps({});
 
     expect(retainers.count).toBe(1);
   });
 
   it('binds the plain view in a normal slot, which reads raw', () => {
-    const { maps, target } = targetMaps({
+    const { props, target } = targetProps({
       normal_enabled: 'true',
       normal_texture: 'SubResource("ViewportTexture_a")',
     });
 
-    expect(maps.normalMap).toBe(target);
+    expect(props.normalMap).toBe(target);
   });
 
   it('fills no decoding view for a slot that reads raw (edge case)', () => {
-    const { retainers } = targetMaps({
+    const { retainers } = targetProps({
       normal_enabled: 'true',
       normal_texture: 'SubResource("ViewportTexture_a")',
     });
@@ -191,12 +208,12 @@ describe('useMaterialTextures with a render target in another slot', () => {
   });
 
   it('hands the albedo UV transform to no other slot (edge case)', () => {
-    const { maps } = targetMaps({
+    const { props } = targetProps({
       emission_enabled: 'true',
       emission_texture: 'SubResource("ViewportTexture_a")',
       uv1_scale: 'Vector3(2, 3, 1)',
     });
 
-    expect(maps.albedoTargetUv).toBeUndefined();
+    expect(recordsTargetSampler(props)).toBe(false);
   });
 });

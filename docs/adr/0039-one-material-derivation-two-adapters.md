@@ -57,9 +57,12 @@ The discrimination makes that checkable. The class and the parameters it was der
 travel in the same value, so an adapter cannot pair `'physical'` with a bag built for
 `'standard'`: the type refuses it in both adapters, for a later class arm as much as for
 the three that exist. What the adapters may still hold on their own is what is theirs.
-`attach` is the mount's prop. Each adapter crosses the texture binding seam
-(`textureBinding.ts`) before it calls in, because what a slot needs of the texture it
-samples is per-material state that lands on a `THREE.Texture`, not on the bag.
+`attach` is the mount's prop. Neither adapter loads, binds or derives. The hook
+`useSurfaceMaterial` (`r3f/materials/useSurfaceMaterial.ts`) takes a material source and a
+surface, crosses the texture binding seam (`textureBinding.ts`) for every slot, and returns
+the scalars with the two bags. The adapters only install those bags. A slot needs per-material
+state on its `THREE.Texture`, not on the bag, so the binding comes before the derivation.
+The test kit `buildMaterial.testkit.ts` binds and derives the same way for a test without React.
 
 The guard is `arrivalParity.test.tsx`: one material text, its three arrival paths (an
 inline `[sub_resource]`, a standalone `.tres`, a `[sub_resource]` of another `.tres`), and
@@ -119,7 +122,7 @@ uniform, geometry or object state that a mounted material may change freely.
 | `specular_mode` | program input | A define from a `ProgramInjection` picks Godot's term in the patched lighting chunk (`godotLightFunction.ts`). SchlickGGX, the default, takes no define. |
 | `billboard_mode` | neither | A vertex-shader term in Godot. Here it is no program input: the derivation records it on the material's `userData`, and `r3f/surfaceDrawHooks.ts` swaps the world matrix around each draw group whose material billboards, per surface as Godot's shader does. |
 | `detail_blend_mode` | unimplemented | With the detail layer. |
-| `roughness_channel` | unimplemented | A stated parity limitation: Godot reads the channel named by `roughness_texture_channel`/`metallic_texture_channel` (default RED). three's `roughnessMap`/`metalnessMap` read fixed G/B (`SurfaceMaterialSlot.tsx`). |
+| `roughness_channel` | program input | A bound roughness or metalness map adds a `ProgramInjection` (`godotMetallicRoughnessChannels.ts`) that reads the channel `roughness_texture_channel` or `metallic_texture_channel` names, red by default (`material.cpp:1685`, `:1725`). The masks ride on the material's `userData`. |
 | `emission_op` | uniform | Resolved on the CPU into `emissive` + `emissiveIntensity` (`emission.ts`), and only where a texture is known to have landed: the operator is unobservable without one. |
 | `distance_fade` | program input, indirectly | `distance_fade_mode` is decoded and read only by `alphaPassMembership`: PIXEL_ALPHA puts the surface in the alpha pass. The fade itself is unimplemented. |
 | `stencil_mode`, `stencil_flags`, `stencil_compare`, `stencil_reference` | unimplemented | Nothing in the repo reads any of them. |
@@ -163,7 +166,7 @@ Carried:
 - `FLAG_USE_SHADOW_TO_OPACITY` → read by `alphaPassMembership` only, so it reaches the
   program indirectly, and its shading effect is unimplemented.
 - `FLAG_UV1_USE_TRIPLANAR` → one `triplanar` scalar folded into the per-surface UV
-  transform, with its own recorded `uv1_offset` limitation (`SurfaceMaterialSlot.tsx`).
+  transform, with its own recorded `uv1_offset` limitation (`surfaceTextures.ts`).
   It also turns height mapping off. `FLAG_UV1_USE_WORLD_TRIPLANAR` only picks the space of
   a triplanar mapping, so alone it changes nothing.
 - `FLAG_INVERT_HEIGHTMAP` → a define from the parallax `ProgramInjection`, which reads the
