@@ -10,7 +10,11 @@ import type { RawNode } from '../parser/types.js';
 export function perTree<T>(build: (roots: readonly RawNode[]) => T): (roots: readonly RawNode[]) => T {
   const built = new WeakMap<readonly RawNode[], T>();
   return (roots) => {
-    if (!built.has(roots)) built.set(roots, build(roots));
-    return built.get(roots)!;
+    // `has` only on a miss: a build may return undefined, and that is a table too.
+    const table = built.get(roots);
+    if (table !== undefined || built.has(roots)) return table as T;
+    const fresh = build(roots);
+    built.set(roots, fresh);
+    return fresh;
   };
 }
