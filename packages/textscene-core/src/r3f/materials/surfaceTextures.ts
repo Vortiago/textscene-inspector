@@ -224,8 +224,8 @@ function onGltfUvs(state: UVSetState): UVSetState {
 }
 
 /**
- * A triplanar state tiled to the mesh's size. PARITY LIMITATION (offset + world-triplanar): three
- * applies `offset` in UV space, Godot's world-triplanar offset is in world units. #819 ports it.
+ * A triplanar state tiled to the mesh's size. PARITY LIMITATION (offset + world-triplanar):
+ * three applies `offset` in UV space, Godot's world-triplanar offset is in world units.
  */
 function planeTiled(state: UVSetState, mesh: TscnInternalResource): UVSetState {
   return { ...state, uv: { scale: triplanarPlaneScale(mesh, state.uv.scale), offset: state.uv.offset } };
