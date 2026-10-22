@@ -8,6 +8,7 @@
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { CPU_PARTICLES_PARAMS } from '../../../godot/scene/cpuParticles.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
 import { ruleInt } from '../../../godot/variant/intSlots.js';
 import { CPU_PARTICLES_2D_EMISSION_SHAPE_NAMES } from '../../../godot/scene/particles2d.js';
@@ -55,7 +56,7 @@ function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const props = node.rawProperties;
   return [
     ...checkPreviewLimits(node, props),
-    ...paramMinAboveMaxDiagnostics(node, props, arms.paramMinAboveMax),
+    ...paramMinAboveMaxDiagnostics(node, props, CPU_PARTICLES_PARAMS, arms.paramMinAboveMax),
   ];
 }
 

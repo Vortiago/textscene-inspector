@@ -6,7 +6,6 @@
 import type { Diagnostic } from './types.js';
 import { armDiagnostic, type RuleArm } from './ruleArms.js';
 import { crossedParamRanges } from '../godot/scene/particleParamRange.js';
-import { CPU_PARTICLES_PARAMS } from '../godot/scene/cpuParticles.js';
 import { formatReal } from '../godot/math/real.js';
 import type { RawNode } from '../parser/types.js';
 
@@ -30,12 +29,12 @@ export function paramMinAboveMaxFindings(
   }));
 }
 
+/** One diagnostic on `node` per crossed pair of `stems`. */
 export function paramMinAboveMaxDiagnostics(
   node: RawNode,
   properties: Record<string, string>,
+  stems: readonly string[],
   arm: RuleArm
 ): Diagnostic[] {
-  return paramMinAboveMaxFindings(properties, CPU_PARTICLES_PARAMS).map(({ message }) =>
-    armDiagnostic(arm, node, message)
-  );
+  return paramMinAboveMaxFindings(properties, stems).map(({ message }) => armDiagnostic(arm, node, message));
 }

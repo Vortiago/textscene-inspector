@@ -21,34 +21,9 @@ export interface CrossedParamRange {
   readonly loadedValue: number;
 }
 
-/**
- * Every pair of `stems` whose authored `_min` is above its authored `_max`. `set_param_min` raises
- * the max to a min above it and `set_param_max` lowers the min to a max below it, in the order the
- * file lists the keys. One authored key alone moves only the default, so it never appears here.
- */
-export function crossedParamRanges(
-  properties: Record<string, string>,
-  stems: readonly string[]
-): CrossedParamRange[] {
-  const crossed: CrossedParamRange[] = [];
-  for (const stem of stems) {
-    const minKey = `${stem}_min`;
-    const maxKey = `${stem}_max`;
-    const writtenMin = scalarSlotValue(properties[minKey] ?? '');
-    const writtenMax = scalarSlotValue(properties[maxKey] ?? '');
-    if (writtenMin === null || writtenMax === null) continue;
-    const min = storedReal(writtenMin);
-    const max = storedReal(writtenMax);
-    if (!(min > max)) continue;
-
-    const isMaxLater = replayPositions(properties, minKey, [maxKey])[maxKey]!.late;
-    crossed.push(
-      isMaxLater
-        ? { minKey, maxKey, min, max, movedKey: minKey, loadedValue: max }
-        : { minKey, maxKey, min, max, movedKey: maxKey, loadedValue: min }
-    );
-  }
-  return crossed;
+/** The float a slot takes from `value`, or null for an absent key and for a value the slot refuses. */
+function writtenReal(value: string | undefined): number | null {
+  return value === undefined ? null : scalarSlotValue(value);
 }
 
 /**
@@ -62,19 +37,62 @@ export function loadedParamRange(
   stem: string,
   fallback: number
 ): { min: number; max: number } {
+  const minKey = `${stem}_min`;
+  const maxKey = `${stem}_max`;
+  const writtenMin = writtenReal(properties[minKey]);
+  const writtenMax = writtenReal(properties[maxKey]);
   let min = fallback;
   let max = fallback;
-  for (const [key, value] of Object.entries(properties)) {
-    if (key !== `${stem}_min` && key !== `${stem}_max`) continue;
-    const written = scalarSlotValue(value);
-    if (written === null) continue;
-    if (key === `${stem}_min`) {
-      min = storedReal(written);
-      if (min > max) max = min;
-    } else {
-      max = storedReal(written);
-      if (min > max) min = max;
-    }
-  }
+  const setMin = (value: number) => {
+    min = storedReal(value);
+    if (min > max) max = min;
+  };
+  const setMax = (value: number) => {
+    max = storedReal(value);
+    if (min > max) min = max;
+  };
+
+  // The file's order matters only when both keys are written, and then the scan is for this pair alone.
+  const isMaxFirst =
+    writtenMin !== null &&
+    writtenMax !== null &&
+    !replayPositions(properties, minKey, [maxKey])[maxKey]!.late;
+  if (isMaxFirst) setMax(writtenMax);
+  if (writtenMin !== null) setMin(writtenMin);
+  if (writtenMax !== null && !isMaxFirst) setMax(writtenMax);
   return { min, max };
+}
+
+/**
+ * Every pair of `stems` whose authored `_min` is above its authored `_max`. The key the file lists
+ * first loads as the other key's value. One authored key alone moves only the default, so it never
+ * appears here.
+ */
+export function crossedParamRanges(
+  properties: Record<string, string>,
+  stems: readonly string[]
+): CrossedParamRange[] {
+  const crossed: CrossedParamRange[] = [];
+  for (const stem of stems) {
+    const minKey = `${stem}_min`;
+    const maxKey = `${stem}_max`;
+    const writtenMin = writtenReal(properties[minKey]);
+    const writtenMax = writtenReal(properties[maxKey]);
+    if (writtenMin === null || writtenMax === null) continue;
+    const min = storedReal(writtenMin);
+    const max = storedReal(writtenMax);
+    if (!(min > max)) continue;
+
+    const loaded = loadedParamRange(properties, stem, min);
+    const isMinMoved = loaded.min !== min;
+    crossed.push({
+      minKey,
+      maxKey,
+      min,
+      max,
+      movedKey: isMinMoved ? minKey : maxKey,
+      loadedValue: isMinMoved ? loaded.min : loaded.max,
+    });
+  }
+  return crossed;
 }
