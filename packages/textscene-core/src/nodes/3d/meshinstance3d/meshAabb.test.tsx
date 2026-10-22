@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
@@ -8,6 +8,13 @@ import {
   createFakeResourceLoader,
   type FakeResourceLoader,
 } from '../../../resources/testing/createFakeResourceLoader';
+import {
+  COARSE_TUBE,
+  curveEndingAt,
+  curveFile,
+} from '../../../resources/meshes/primitivemesh/surface.testkit';
+import { missingResourcesWrapper } from '../../../resources/testing/missingResourcesWrapper';
+import { subResource } from '../../../testing/subResource';
 import { useMeshAabb } from './meshAabb';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: { size: 'Vector3(2, 2, 2)' } };
@@ -92,5 +99,55 @@ describe('useMeshAabb over a mesh with no surfaces', () => {
 
   it('is AABB() for an ImmediateMesh', () => {
     expect(renderMeshAabb('SubResource("immediate")').current?.size).toEqual({ x: 0, y: 0, z: 0 });
+  });
+});
+
+describe('useMeshAabb over a TubeTrailMesh', () => {
+  // Two sections of length 1, four steps round: the tube is 2 tall, as wide as its widest row.
+  const TUBE: TscnInternalResource = {
+    id: 'tube',
+    type: 'TubeTrailMesh',
+    data: { ...COARSE_TUBE, curve: 'SubResource("c")' },
+  };
+  const inScene = (end: string): SceneResources => ({
+    internalResources: [TUBE, subResource('Curve', 'c', curveEndingAt(end))],
+    externalResources: [],
+  });
+
+  it('bounds the tube by the radii its Curve gives, and again once the Curve changes', () => {
+    const { result, rerender } = renderHook(
+      ({ resources }) => useMeshAabb('SubResource("tube")', resources),
+      {
+        initialProps: { resources: inScene('1') },
+      }
+    );
+    expect(result.current?.size.x).toBeCloseTo(1, 5);
+
+    rerender({ resources: inScene('3') });
+    expect(result.current?.size.x).toBeCloseTo(3, 5);
+  });
+});
+
+describe('useMeshAabb over a TubeTrailMesh whose Curve is a .tres', () => {
+  const CURVE_PATH = 'res://grow.tres';
+  const resources: SceneResources = {
+    internalResources: [
+      { id: 'tube', type: 'TubeTrailMesh', data: { ...COARSE_TUBE, curve: 'ExtResource("1")' } },
+    ],
+    externalResources: [{ id: '1', type: 'Curve', path: CURVE_PATH }],
+  };
+  const renderTubeAabb = (fake: FakeResourceLoader) =>
+    renderHook(() => useMeshAabb('SubResource("tube")', resources), {
+      wrapper: missingResourcesWrapper(fake.loader),
+    }).result;
+
+  it('is unknown while the Curve file loads, then bounds the tube by it', () => {
+    const fake = createFakeResourceLoader();
+    const result = renderTubeAabb(fake);
+    expect(result.current).toBeNull();
+
+    act(() => fake.resources._resolve(CURVE_PATH, curveFile('3')));
+
+    expect(result.current?.size.x).toBeCloseTo(3, 5);
   });
 });

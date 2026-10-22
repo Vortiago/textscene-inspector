@@ -3,6 +3,7 @@
  * the count, apart from how `decode.ts` reads the `_data` literal. No THREE.
  */
 import { clamp } from '../../../godot/math/math.js';
+import { storedReal } from '../../../godot/math/real.js';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { curveIndex } from './sample';
 import { type Curve, type CurvePoint } from './types';
@@ -76,8 +77,8 @@ function updateAutoTangents(points: CurvePoint[], index: number): void {
 }
 
 /**
- * `v.y / v.x` for `v = (from - to).normalized()`, or null for a non-finite slope (two
- * points at one offset, or a vertical span). Godot stores either, but `sampleCurve`
+ * `v.y / v.x` for `v = (from - to).normalized()`, held as a float, or null for a non-finite slope
+ * (two points at one offset, or a vertical span). Godot stores either, but `sampleCurve`
  * would multiply it into the geometry, so the endpoint keeps its old tangent.
  */
 function slope(from: CurvePoint, to: CurvePoint): number | null {
@@ -85,6 +86,6 @@ function slope(from: CurvePoint, to: CurvePoint): number | null {
   const dy = from.position.y - to.position.y;
   const length = Math.sqrt(dx * dx + dy * dy);
   if (length === 0) return null;
-  const aimed = dy / length / (dx / length);
+  const aimed = storedReal(dy / length / (dx / length));
   return Number.isFinite(aimed) ? aimed : null;
 }

@@ -9,7 +9,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { bezierInterpolate, degToRad } from '../../../../godot/math/math.js';
+import { bezierInterpolatef, degToRad } from '../../../../godot/math/math.js';
+import { storedReal, storedVector2 } from '../../../../godot/math/real.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 
 /** `MAX_CONNECTION_LINE_CURVE_TESSELATION_STAGES` (`graph_edit.cpp:54`). */
@@ -36,17 +37,19 @@ export function connectionControlPoints(
   let cpOffset = xDiff * curvature;
   if (xDiff < 0) cpOffset = -cpOffset;
   return {
-    p0: from,
-    p1: { x: from.x + cpOffset, y: from.y },
-    p2: { x: to.x - cpOffset, y: to.y },
-    p3: to,
+    p0: storedVector2(from),
+    p1: storedVector2({ x: from.x + cpOffset, y: from.y }),
+    p2: storedVector2({ x: to.x - cpOffset, y: to.y }),
+    p3: storedVector2(to),
   };
 }
 
-function bezierPoint(cp: ConnectionCurveControlPoints, t: number): Vector2 {
+/** `Vector2::bezier_interpolate` (`vector2.h:307-312`): the float `Math::bezier_interpolate` of each component. */
+function bezierPoint(cp: ConnectionCurveControlPoints, offset: number): Vector2 {
+  const t = storedReal(offset);
   return {
-    x: bezierInterpolate(cp.p0.x, cp.p1.x, cp.p2.x, cp.p3.x, t),
-    y: bezierInterpolate(cp.p0.y, cp.p1.y, cp.p2.y, cp.p3.y, t),
+    x: bezierInterpolatef(cp.p0.x, cp.p1.x, cp.p2.x, cp.p3.x, t),
+    y: bezierInterpolatef(cp.p0.y, cp.p1.y, cp.p2.y, cp.p3.y, t),
   };
 }
 
