@@ -55,6 +55,14 @@ const parse = (source: string) => new TscnParser().parse(source);
 
 const emptyProvider = (): ResourceProvider => ({ loadResource: vi.fn(async () => null) });
 
+/** A child that records each resource loader it reads. */
+function loaderProbe(loaders: Set<unknown>) {
+  return function LoaderProbe() {
+    loaders.add(useContext(ResourceLoaderContext));
+    return null;
+  };
+}
+
 describe('<TscnSceneProvider>', () => {
   it('lets the canvas contents draw the scene it was given', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -96,10 +104,7 @@ describe('<TscnSceneProvider>', () => {
   it('keeps one resource loader while the provider stays the same', () => {
     const provider = emptyProvider();
     const loaders = new Set<unknown>();
-    function LoaderProbe() {
-      loaders.add(useContext(ResourceLoaderContext));
-      return null;
-    }
+    const LoaderProbe = loaderProbe(loaders);
     const scene = parse(BOX_SCENE);
     const tree = (
       <TscnSceneProvider scene={scene} provider={provider}>
@@ -116,10 +121,7 @@ describe('<TscnSceneProvider>', () => {
 
   it('gives the canvas a fresh resource loader for another provider', () => {
     const loaders = new Set<unknown>();
-    function LoaderProbe() {
-      loaders.add(useContext(ResourceLoaderContext));
-      return null;
-    }
+    const LoaderProbe = loaderProbe(loaders);
     const scene = parse(BOX_SCENE);
     const withProvider = (provider: ResourceProvider) => (
       <TscnSceneProvider scene={scene} provider={provider}>

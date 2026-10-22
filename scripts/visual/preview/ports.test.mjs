@@ -9,8 +9,8 @@ const HARNESSES = [
   'perf',
   'skyLayersGpu',
   'e2eWeb',
-  'rendererConsumer',
   'uniformVectors',
+  'rendererConsumer',
   'showcase',
 ];
 

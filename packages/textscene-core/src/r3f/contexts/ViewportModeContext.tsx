@@ -78,7 +78,7 @@ interface ViewportModeValue {
 }
 
 const DEFAULT_VALUE: ViewportModeValue = {
-  mode: '3D',
+  ...DEFAULT_VIEWPORT,
   setMode: () => {},
   showCollisions: false,
   setShowCollisions: () => {},
@@ -86,17 +86,13 @@ const DEFAULT_VALUE: ViewportModeValue = {
   setShowLabels: () => {},
   showNavigation: true,
   setShowNavigation: () => {},
-  showGrid: false,
   setShowGrid: () => {},
   showPreviewSun: true,
   setShowPreviewSun: () => {},
   showPreviewEnvironment: true,
   setShowPreviewEnvironment: () => {},
-  frameOnOpen: false,
   setFrameOnOpen: () => {},
-  showFog: true,
   setShowFog: () => {},
-  showPerformance: false,
   setShowPerformance: () => {},
 };
 

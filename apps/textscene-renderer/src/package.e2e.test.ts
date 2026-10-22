@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { declaredExports } from '@textscene/dev-kit';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
+import { packTarball } from '../../../scripts/packTarball.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
@@ -63,9 +64,7 @@ beforeAll(() => {
   run('pnpm', ['--filter', '@textscene/renderer', 'build'], repoRoot);
   metafile = JSON.parse(readFileSync(join(distDir, 'index.meta.json'), 'utf8'));
   tarballDir = mkdtempSync(join(tmpdir(), 'renderer-tarball-'));
-  run('pnpm', ['pack', '--pack-destination', tarballDir], packageDir);
-  const [tarball] = readdirSync(tarballDir);
-  const tarballPath = join(tarballDir, tarball!);
+  const tarballPath = packTarball(packageDir, tarballDir);
   tarballEntries = run('tar', ['-tzf', tarballPath], tarballDir).split('\n').filter(Boolean);
   packedManifest = JSON.parse(run('tar', ['-xzOf', tarballPath, 'package/package.json'], tarballDir));
 }, 180_000);

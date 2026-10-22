@@ -5,13 +5,14 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { declaredExports } from '@textscene/dev-kit';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
+import { packTarball } from '../../../scripts/packTarball.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
@@ -63,11 +64,10 @@ const run = (command: string, args: string[], cwd: string) =>
 beforeAll(() => {
   run('pnpm', ['--filter', '@textscene/tscn', 'build'], repoRoot);
   const tarballDir = mkdtempSync(join(tmpdir(), 'tscn-tarball-'));
-  run('pnpm', ['pack', '--pack-destination', tarballDir], packageDir);
-  const [tarball] = readdirSync(tarballDir);
+  const tarballPath = packTarball(packageDir, tarballDir);
   consumerDir = mkdtempSync(join(tmpdir(), 'tscn-consumer-'));
   writeFileSync(join(consumerDir, 'package.json'), JSON.stringify({ name: 'consumer', type: 'module' }));
-  run('npm', ['install', '--no-audit', '--no-fund', join(tarballDir, tarball!)], consumerDir);
+  run('npm', ['install', '--no-audit', '--no-fund', tarballPath], consumerDir);
   writeFileSync(join(consumerDir, 'use.mjs'), CONSUMER_SCRIPT);
   writeFileSync(join(consumerDir, 'types.mts'), CONSUMER_TYPES);
   writeFileSync(join(consumerDir, 'tsconfig.json'), JSON.stringify(CONSUMER_TSCONFIG));

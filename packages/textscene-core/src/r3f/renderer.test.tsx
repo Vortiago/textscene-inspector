@@ -1,6 +1,6 @@
 /**
- * The renderer entry is the public API of `@textscene/renderer`: each name it exports is a promise
- * to every consumer, so the list changes in this test first.
+ * The renderer entry is the public API of `@textscene/renderer`. The package test in
+ * `apps/textscene-renderer` pins its export list.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -9,10 +9,6 @@ import * as renderer from './renderer';
 import { TscnSceneContents } from './TscnCanvas';
 
 describe('the renderer entry', () => {
-  it('exports exactly the public values', () => {
-    expect(Object.keys(renderer).sort()).toEqual(['TscnCanvas', 'TscnSceneProvider', 'useSelection']);
-  });
-
   it('registers the node components, so a scene it is given draws', async () => {
     const scene = new TscnParser().parse(`[gd_scene format=3]
 

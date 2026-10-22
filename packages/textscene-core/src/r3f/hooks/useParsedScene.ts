@@ -21,7 +21,7 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
   // createSceneProcessor's instanced path uses. The node fetches the bytes through
   // useResource('GLBMesh').
   if (isGltfPath(rootScenePath)) {
-    return { sceneGraph: toSceneGraph(rootScenePath, synthesiseGLBScene(rootScenePath)), error: null };
+    return toParseResult(rootScenePath, synthesiseGLBScene(rootScenePath));
   }
   if (!content) {
     return { sceneGraph: null, error: null };
@@ -39,13 +39,17 @@ export function parseTscnContent(content: string, rootScenePath: string): ParseR
       };
     }
 
-    return { sceneGraph: toSceneGraph(rootScenePath, tscnScene), error: null };
+    return toParseResult(rootScenePath, tscnScene);
   } catch (err) {
     return {
       sceneGraph: null,
       error: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult {
+  return { sceneGraph: toSceneGraph(rootScenePath, tscnScene), error: null };
 }
 
 /** A parsed scene as the graph every panel reads, the registered scene passes applied. */

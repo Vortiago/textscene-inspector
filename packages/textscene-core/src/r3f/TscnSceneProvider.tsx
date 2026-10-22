@@ -8,7 +8,6 @@ import type { TscnScene } from '../parser/types.js';
 import type { ResourceProvider } from '../resources/ResourceProvider.js';
 import { createResourcePipeline } from '../resources/createResourcePipeline.js';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext.js';
-import { DEFAULT_VIEWPORT } from './contexts/ViewportModeContext.js';
 import { toSceneGraph } from './hooks/useParsedScene.js';
 import {
   DEFAULT_ROOT_SCENE_PATH,
@@ -32,19 +31,13 @@ export function TscnSceneProvider({
   children,
 }: TscnSceneProviderProps) {
   const panelId = useId();
-  const sceneGraph = useMemo(() => toSceneGraph(rootScenePath, scene), [rootScenePath, scene]);
-  const hierarchyValue = useMemo(() => ({ sceneGraph, panelId }), [sceneGraph, panelId]);
+  const hierarchyValue = useMemo(
+    () => ({ sceneGraph: toSceneGraph(rootScenePath, scene), panelId }),
+    [rootScenePath, scene, panelId]
+  );
   const { loader } = useMemo(() => createResourcePipeline(provider), [provider]);
 
-  const withProviders = previewShellProviders({
-    hierarchyValue,
-    initialActiveCameraPath: undefined,
-    onMissingPathsChange: undefined,
-    initialViewportMode: undefined,
-    initialViewport: DEFAULT_VIEWPORT,
-    panelId,
-    rootScenePath,
-  });
+  const withProviders = previewShellProviders({ hierarchyValue, panelId, rootScenePath });
 
   return <ResourceLoaderProvider loader={loader}>{withProviders(children)}</ResourceLoaderProvider>;
 }

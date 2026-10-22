@@ -6,13 +6,14 @@
  * condition and no CSS-module support, so a bundle that needs either fails here.
  */
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createRequire, findPackageJSON } from 'node:module';
+import { findPackageJSON } from 'node:module';
 import { preview } from 'vite';
 import { launchSwiftShaderBrowser } from '../showcase/browser.mjs';
-import { REPO_ROOT, previewPort } from '../visual/previewServer.mjs';
+import { packTarball } from '../packTarball.mjs';
+import { REPO_ROOT, attachDiagnostics, loggedErrors, previewPort } from '../visual/previewServer.mjs';
 import { inkStats } from '../vscode/pixels.mjs';
 import { consumerManifest } from './consumerManifest.mjs';
 
@@ -25,38 +26,29 @@ const APP_DIR = join(import.meta.dirname, 'app');
 const INK_FLOOR = 2000;
 /** Software GL draws the first frame slowly. */
 const RENDER_TIMEOUT_MS = 90_000;
+const POLL_INTERVAL_MS = 500;
 
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, encoding: 'utf8', stdio: 'pipe' });
 
 /** The version of `name` that the workspace package at `base` tests against. */
 function installedVersion(name, base) {
-  const manifest = createRequire(import.meta.url)(
-    findPackageJSON(name, join(REPO_ROOT, base, 'package.json'))
-  );
-  return manifest.version;
+  const manifestPath = findPackageJSON(name, join(REPO_ROOT, base, 'package.json'));
+  return JSON.parse(readFileSync(manifestPath, 'utf8')).version;
 }
 
 const versionsOf = (names, base) =>
   Object.fromEntries(names.map((name) => [name, installedVersion(name, base)]));
 
-function packTarball(packageDir, destination) {
-  run('pnpm', ['--filter', `./${packageDir}`, 'build'], REPO_ROOT);
-  run('pnpm', ['pack', '--pack-destination', destination], join(REPO_ROOT, packageDir));
-}
-
-/** The tarballs of both packages, by package name. The directory holds only these two. */
+/** The tarballs of both packages, by package name. */
 function packBoth(destination) {
-  packTarball('apps/textscene-tscn', destination);
-  packTarball('apps/textscene-renderer', destination);
-  const files = readdirSync(destination);
-  const pathOf = (prefix) =>
-    join(
-      destination,
-      files.find((file) => file.startsWith(prefix))
-    );
+  run(
+    'pnpm',
+    ['--filter', './apps/textscene-tscn', '--filter', './apps/textscene-renderer', 'build'],
+    REPO_ROOT
+  );
   return {
-    '@textscene/tscn': pathOf('textscene-tscn-'),
-    '@textscene/renderer': pathOf('textscene-renderer-'),
+    '@textscene/tscn': packTarball(join(REPO_ROOT, 'apps/textscene-tscn'), destination),
+    '@textscene/renderer': packTarball(join(REPO_ROOT, 'apps/textscene-renderer'), destination),
   };
 }
 
@@ -80,12 +72,11 @@ function writeConsumer(directory, tarballs) {
   writeFileSync(join(directory, 'package.json'), JSON.stringify(manifest, null, 2));
 }
 
-/** Installs, type-checks and builds the app as a user does, then returns where its build is. */
+/** Installs, type-checks and builds the app as a user does. */
 function buildConsumer(directory) {
   run('npm', ['install', '--no-audit', '--no-fund'], directory);
   run('node', ['node_modules/typescript/bin/tsc', '-p', '.'], directory);
   run('node', ['node_modules/vite/bin/vite.js', 'build'], directory);
-  return directory;
 }
 
 /** What the page drew in the viewport, and what it threw. Polls, since software GL is slow. */
@@ -100,9 +91,7 @@ async function renderInBrowser(directory) {
   const browser = await launchSwiftShaderBrowser();
   try {
     const page = await browser.newPage();
-    const errors = [];
-    page.on('pageerror', (error) => errors.push(error.message));
-    page.on('console', (message) => message.type() === 'error' && errors.push(message.text()));
+    const diagnostics = attachDiagnostics(page);
     await page.goto(`http://localhost:${port}/`);
     const ink = await pollInk(page);
     const hasCanvasStyles = await page.evaluate(() => {
@@ -111,7 +100,7 @@ async function renderInBrowser(directory) {
       }
       return false;
     });
-    return { ink, hasCanvasStyles, errors };
+    return { ink, hasCanvasStyles, errors: loggedErrors(diagnostics) };
   } finally {
     await browser.close();
     await server.close();
@@ -121,9 +110,9 @@ async function renderInBrowser(directory) {
 async function pollInk(page) {
   const viewport = page.locator('#viewport');
   const deadline = Date.now() + RENDER_TIMEOUT_MS;
-  let ink = 0;
+  let ink = inkStats(await viewport.screenshot()).ink;
   while (ink < INK_FLOOR && Date.now() < deadline) {
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(POLL_INTERVAL_MS);
     ink = inkStats(await viewport.screenshot()).ink;
   }
   return ink;
@@ -145,7 +134,8 @@ try {
   const tarballs = packBoth(mkdtempSync(join(work, 'tarballs-')));
   const app = join(work, 'app');
   writeConsumer(app, tarballs);
-  const found = failures(await renderInBrowser(buildConsumer(app)));
+  buildConsumer(app);
+  const found = failures(await renderInBrowser(app));
   for (const failure of found) console.error(`[renderer-consumer] ${failure}`);
   console.log(`[renderer-consumer] ${found.length === 0 ? 'the fixture scene rendered' : 'failed'}`);
   process.exitCode = found.length === 0 ? 0 : 1;

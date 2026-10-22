@@ -4,13 +4,12 @@
  * code the bundle holds.
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { generateDtsBundle } from 'dts-bundle-generator';
-import { REPO_ROOT } from '../../../scripts/repoRoot.mjs';
-import { bundledNotices, bundledSourceFiles } from '../../../scripts/third-party-notices.mjs';
+import { writeBundledNotices } from '../../../scripts/third-party-notices.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ownSourceDir = resolve(packageDir, 'src');
@@ -36,10 +35,4 @@ const [declarations] = generateDtsBundle(
 );
 writeFileSync(resolve(outDir, 'index.d.ts'), declarations);
 
-writeFileSync(
-  resolve(packageDir, 'THIRD-PARTY-NOTICES.md'),
-  bundledNotices(
-    readFileSync(resolve(REPO_ROOT, 'THIRD-PARTY-NOTICES.md'), 'utf8'),
-    bundledSourceFiles(metafile, { packageDir, ownSourceDir })
-  )
-);
+writeBundledNotices(metafile, { packageDir, ownSourceDir });

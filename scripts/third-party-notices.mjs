@@ -4,7 +4,7 @@
  * the code derives its own notices from it, so they never name code the package lacks.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 import { REPO_ROOT } from './repoRoot.mjs';
 
@@ -75,10 +75,22 @@ export function bundledSourceFiles(metafile, { packageDir, ownSourceDir }) {
     .map((input) => {
       const compiled = resolve(packageDir, input);
       return {
-        path: relative(REPO_ROOT, sourceOf(compiled, ownSourceDir)),
+        // A getter, so a source map is read only for a file that carries a copyright line.
+        get path() {
+          return relative(REPO_ROOT, sourceOf(compiled, ownSourceDir));
+        },
         text: readFileSync(compiled, 'utf8'),
       };
     });
+}
+
+/** Writes the `THIRD-PARTY-NOTICES.md` of a package whose bundle holds the inputs of `metafile`. */
+export function writeBundledNotices(metafile, { packageDir, ownSourceDir }) {
+  const rootNotices = readFileSync(resolve(REPO_ROOT, 'THIRD-PARTY-NOTICES.md'), 'utf8');
+  writeFileSync(
+    resolve(packageDir, 'THIRD-PARTY-NOTICES.md'),
+    bundledNotices(rootNotices, bundledSourceFiles(metafile, { packageDir, ownSourceDir }))
+  );
 }
 
 /**

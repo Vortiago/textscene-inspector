@@ -43,7 +43,7 @@ interface RelayProps {
 
 /**
  * Resolve every RemoteTransform in `nodes`, mutating each target's transform in place, and return
- * the same array. It runs once, after parse and before the SceneGraph (`useParsedScene.toParseResult`),
+ * the same array. It runs once, after parse and before the SceneGraph (`useParsedScene.toSceneGraph`),
  * so every consumer reads the moved target. The parse is memoized per content, so a re-run is idempotent.
  */
 export function applyRemoteTransforms(nodes: TscnNode[]): TscnNode[] {

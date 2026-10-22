@@ -9,18 +9,22 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve, sep } from 'node:path';
-import { NOTICE_SOURCES, bundledNotices, bundledSourceFiles } from './third-party-notices.mjs';
+import {
+  NOTICE_SOURCES,
+  bundledNotices,
+  bundledSourceFiles,
+  writeBundledNotices,
+} from './third-party-notices.mjs';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const NOTICES = join(REPO_ROOT, 'THIRD-PARTY-NOTICES.md');
 const VSCODE_COPY = join(REPO_ROOT, 'apps', 'textscene-vscode', 'THIRD-PARTY-NOTICES.md');
 
 const GODOT_COPYRIGHT = NOTICE_SOURCES.find(({ section }) => section === 'Godot Engine').copyright;
-const COPYRIGHTS = NOTICE_SOURCES.map(({ section, copyright }) => [section, copyright]);
+const copyrightPairs = (sources) => sources.map(({ section, copyright }) => [section, copyright]);
+const COPYRIGHTS = copyrightPairs(NOTICE_SOURCES);
 /** The third parties whose code the repository's own sources carry, not an installed package's. */
-const SOURCE_COPYRIGHTS = NOTICE_SOURCES.filter(({ isInstalled }) => !isInstalled).map(
-  ({ section, copyright }) => [section, copyright]
-);
+const SOURCE_COPYRIGHTS = copyrightPairs(NOTICE_SOURCES.filter(({ isInstalled }) => !isInstalled));
 
 /** Trees that can contain derived source. `node_modules` and build output excluded. */
 const SEARCH_ROOTS = ['packages', 'scripts', 'apps'];
@@ -185,11 +189,30 @@ describe('bundledSourceFiles', () => {
     expect(files.map(({ path }) => path)).not.toContain(pathOf('core/dist/style.module.css'));
   });
 
-  it('fails for a compiled file with no source map', () => {
+  it('fails for a compiled file with no source map, when its path is read', () => {
     write('core/dist/bare.js', 'compiled');
+    const [bare] = bundledSourceFiles({ inputs: { 'core/dist/bare.js': {} } }, where);
 
-    expect(() => bundledSourceFiles({ inputs: { 'core/dist/bare.js': {} } }, where)).toThrow(
-      'expected a source map'
+    expect(bare.text).toBe('compiled');
+    expect(() => bare.path).toThrow('expected a source map');
+  });
+});
+
+describe('writeBundledNotices', () => {
+  const root = mkdtempSync(join(tmpdir(), 'written-notices-'));
+  afterAll(() => rmSync(root, { recursive: true }));
+
+  it('writes the notices of the bundled code beside the package', () => {
+    mkdirSync(join(root, 'src'));
+    writeFileSync(join(root, 'src', 'index.ts'), '// Copyright(c) 2023 Jordan Peck');
+
+    writeBundledNotices(
+      { inputs: { 'src/index.ts': {} } },
+      { packageDir: root, ownSourceDir: join(root, 'src') }
     );
+
+    const notices = readFileSync(join(root, 'THIRD-PARTY-NOTICES.md'), 'utf8');
+    expect(notices).toContain('## FastNoiseLite');
+    expect(notices).not.toContain('## Godot Engine');
   });
 });
