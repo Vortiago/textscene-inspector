@@ -44,24 +44,17 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
   return !override.instanceSubPath || override.overridesExistingNode === true;
 }
 
-/** Finds the GLB object a Godot path names: `matchGlbTarget`, which logs how, or a quiet lookup. */
-type GlbTargetLookup = (entries: readonly GlbObjectEntry[], godotPath: string) => GlbObjectEntry | null;
-
 /**
- * The GLB object a typed node of the instancing scene is added to: the one its parent path names,
- * as Godot adds it (`packed_scene.cpp:157-165`, `:541`). Null for an override, which names an
- * existing node, and for a path that names no object.
+ * The Godot path of the GLB object a typed node of the instancing scene is added to: its parent
+ * path, as Godot adds it (`packed_scene.cpp:157-165`, `:541`). Null for an override, which names
+ * an existing node. Each caller resolves the path with its own lookup.
  */
-export function glbAttachTarget(
-  entries: readonly GlbObjectEntry[],
-  child: TscnNode,
-  lookup: GlbTargetLookup
-): GlbObjectEntry | null {
-  return isApplicableGlbOverride(child) ? null : lookup(entries, child.instanceSubPath!);
+export function glbAttachPath(child: TscnNode): string | null {
+  return isApplicableGlbOverride(child) ? null : child.instanceSubPath!;
 }
 
 /**
- * The instancing scene's typed nodes that {@link glbAttachTarget} places on a GLB object, and the
+ * The instancing scene's typed nodes that {@link glbAttachPath} places on a GLB object, and the
  * rest of `children`. A typed node whose path names none stays among the rest, where the tree has
  * always listed it. It looks up through the quiet `findGlbTarget`.
  *
@@ -77,7 +70,8 @@ export function splitAttachedChildren(
   const attached: LiveNode[] = [];
   const rest: LiveNode[] = [];
   for (const child of children) {
-    const entry = glbAttachTarget(entries, child, (all, path) => findGlbTarget(all, path).entry);
+    const path = glbAttachPath(child);
+    const entry = path === null ? null : findGlbTarget(entries, path).entry;
     if (entry) attached.push({ ...child, glbTargetRelPath: entry.relPath });
     else rest.push(child);
   }

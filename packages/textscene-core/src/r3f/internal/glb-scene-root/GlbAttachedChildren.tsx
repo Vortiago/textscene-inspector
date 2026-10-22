@@ -20,7 +20,7 @@ import {
 import type { GlbRoot } from './GlbInstanceContext';
 import type { GlbObjectEntry } from './glbHierarchy';
 import type { GlbNodeLink } from './glbNodeLinks';
-import { glbAttachTarget, isApplicableGlbOverride } from './glbNodeOverrides';
+import { glbAttachPath, isApplicableGlbOverride } from './glbNodeOverrides';
 import { matchGlbTarget } from './matchGlbTarget';
 
 /** A GLB object is a Node3D in Godot, so a child of another family escapes it as it escapes a Node3D. */
@@ -88,7 +88,8 @@ function attachedChildren(
   const attachedBelow = new Map<number, number>();
   const attached: AttachedChild[] = [];
   for (const node of root.overrides) {
-    const target = glbAttachTarget(entries, node, matchGlbTarget);
+    const path = glbAttachPath(node);
+    const target = path === null ? null : matchGlbTarget(entries, path);
     if (!target) continue;
     // After the target's whole subtree, in the flat order its entries hold, and after the nodes
     // already attached there.

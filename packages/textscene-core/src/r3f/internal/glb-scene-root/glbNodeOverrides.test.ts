@@ -6,9 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyGlbNodeOverrides, glbAttachTarget } from './glbNodeOverrides';
-import { flattenGlbObjects } from './glbHierarchy';
-import { findGlbTarget } from './matchGlbTarget';
+import { applyGlbNodeOverrides, glbAttachPath } from './glbNodeOverrides';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
 import { buildTestGlbGraph } from './glbGraph.testkit';
@@ -178,27 +176,17 @@ describe('applyGlbNodeOverrides', () => {
   });
 });
 
-describe('glbAttachTarget', () => {
-  const quietLookup = (entries: Parameters<typeof findGlbTarget>[0], path: string) =>
-    findGlbTarget(entries, path).entry;
-  const typed = (name: string, instanceSubPath: string): TscnNode =>
-    override(name, { type: 'Node3D', instanceSubPath, overridesExistingNode: false });
-
-  it('names the GLB object a typed child is added to, across the level Godot synthesised', () => {
-    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
-    expect(glbAttachTarget(entries, typed('Lamp', 'Skeleton/Skeleton3D/Robot'), quietLookup)?.relPath).toBe(
-      'Skeleton/Robot'
-    );
+describe('glbAttachPath', () => {
+  it('names the parent path a typed child is added under', () => {
+    const typed = override('Lamp', {
+      type: 'Node3D',
+      instanceSubPath: 'Skeleton/Skeleton3D/Robot',
+      overridesExistingNode: false,
+    });
+    expect(glbAttachPath(typed)).toBe('Skeleton/Skeleton3D/Robot');
   });
 
   it('names none for an override, which names an existing node rather than adding one', () => {
-    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
-    const deepOverride = override('Robot', { instanceSubPath: 'Skeleton' });
-    expect(glbAttachTarget(entries, deepOverride, quietLookup)).toBeNull();
-  });
-
-  it('names none for a path that names no GLB object (error case)', () => {
-    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
-    expect(glbAttachTarget(entries, typed('Lamp', 'NoSuch'), quietLookup)).toBeNull();
+    expect(glbAttachPath(override('Robot', { instanceSubPath: 'Skeleton' }))).toBeNull();
   });
 });
