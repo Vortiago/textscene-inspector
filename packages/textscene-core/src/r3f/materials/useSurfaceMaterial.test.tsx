@@ -4,7 +4,7 @@
  * flowmap included.
  */
 import { describe, expect, it } from 'vitest';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
 import { parseTresFile } from '../../parser/parsedResource';
@@ -25,12 +25,20 @@ const PAINT_TRES = '[gd_resource type="StandardMaterial3D" format=3]\n\n[resourc
 const FLOWMAP_PATH = 'res://flow.png';
 const EXTERNAL: TscnExternalResource[] = [{ id: '1_flow', type: 'Texture2D', path: FLOWMAP_PATH }];
 
-function renderSurface(source: MaterialSource | undefined, withUploads = false) {
+function renderSurface(
+  source: MaterialSource | undefined,
+  withUploads = false,
+  Outer: (props: { children: ReactNode }) => ReactNode = Fragment
+) {
   const fake = createFakeResourceLoader();
   const uploads = fakeTiledUploads();
   const hook = renderHook(() => useSurfaceMaterial(source), {
     wrapper: ({ children }: { children: ReactNode }) => {
-      const tree = <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>;
+      const tree = (
+        <Outer>
+          <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+        </Outer>
+      );
       return withUploads ? <uploads.wrapper>{tree}</uploads.wrapper> : tree;
     },
   });
@@ -152,23 +160,14 @@ describe('useSurfaceMaterial with Nearest with Mipmaps and Anisotropic', () => {
 
   it('writes the anisotropy onto the albedo texture, which three skips under a nearest magnification', () => {
     const canvas = fakeCanvasRenderer({ isAllocated: true });
-    const fake = createFakeResourceLoader();
-    renderHook(
-      () =>
-        useSurfaceMaterial(
-          inlineMaterial(
-            { albedo_texture: 'ExtResource("1_albedo")', texture_filter: NEAREST_WITH_MIPMAPS_ANISOTROPIC },
-            [],
-            ALBEDO
-          )
-        ),
-      {
-        wrapper: ({ children }: { children: ReactNode }) => (
-          <canvas.wrapper>
-            <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
-          </canvas.wrapper>
-        ),
-      }
+    const { fake } = renderSurface(
+      inlineMaterial(
+        { albedo_texture: 'ExtResource("1_albedo")', texture_filter: NEAREST_WITH_MIPMAPS_ANISOTROPIC },
+        [],
+        ALBEDO
+      ),
+      false,
+      canvas.wrapper
     );
     act(() => fake.textures._resolve(ALBEDO_PATH, new THREE.Texture()));
 

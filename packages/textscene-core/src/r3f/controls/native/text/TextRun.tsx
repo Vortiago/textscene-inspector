@@ -41,6 +41,7 @@ import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
+import { useNearestAnisotropy } from '../../../nearestAnisotropy';
 
 /** One rectangle of a hex-code box in local Godot px, +Y down, the space of `buildGlyphQuadArrays`' `topPx` before the Y negation. */
 export interface HexCodeBoxAbsoluteRect {
@@ -321,6 +322,7 @@ export function TextRun({
   useDisposeOnRelease(run.geometry);
   // The canvas path's raster texture is fresh per rebuild, unlike the shared atlas.
   useDisposeOnRelease(run.ownedTexture);
+  useNearestAnisotropy(run.ownedTexture ?? null);
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
   // this run's `tint`, converted to linear once as for every `ControlQuad`.

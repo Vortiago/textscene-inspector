@@ -1,67 +1,81 @@
-/**
- * Godot's Nearest with Mipmaps and Anisotropic filters anisotropically under a nearest
- * magnification filter. three writes `TEXTURE_MAX_ANISOTROPY_EXT` only under a linear one
- * (`WebGLTextures.js:695`), so the draw site writes it onto the texture's GPU storage.
- */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import { useNearestAnisotropy } from './nearestAnisotropy';
-import {
-  FAKE_GL as GL,
-  MAX_ANISOTROPY_PARAMETER as MAX_ANISOTROPY,
-  fakeCanvasRenderer as fakeCanvas,
-} from './testing/fakeCanvasRenderer';
+import { FAKE_GL, MAX_ANISOTROPY_PARAMETER, fakeCanvasRenderer } from './testing/fakeCanvasRenderer';
 
-function nearestMipAnisotropic(anisotropy = 4): THREE.Texture {
+interface TextureFilters {
+  anisotropy: number;
+  magFilter: THREE.MagnificationTextureFilter;
+  minFilter: THREE.MinificationTextureFilter;
+}
+
+/** Godot's filter 4 by default: a nearest sampler with a mip chain and 4 taps. */
+function textureWith(filters: Partial<TextureFilters> = {}): THREE.Texture {
   const texture = new THREE.Texture();
+  texture.anisotropy = 4;
   texture.magFilter = THREE.NearestFilter;
   texture.minFilter = THREE.NearestMipmapLinearFilter;
-  texture.anisotropy = anisotropy;
-  return texture;
+  return Object.assign(texture, filters);
 }
 
 describe('useNearestAnisotropy', () => {
-  it('writes the anisotropy onto the storage three allocated, which it skips under a nearest magnification', () => {
-    const { gl, renderer, storage, wrapper } = fakeCanvas({ isAllocated: true });
-    renderHook(() => useNearestAnisotropy(nearestMipAnisotropic(4)), { wrapper });
+  it('writes the anisotropy onto a texture that is already on the GPU, as a tiled one is', () => {
+    const { gl, renderer, storage, wrapper } = fakeCanvasRenderer({ isAllocated: true });
+    renderHook(() => useNearestAnisotropy(textureWith()), { wrapper });
 
-    expect(renderer.state.bindTexture).toHaveBeenCalledWith(GL.TEXTURE_2D, storage, GL.TEXTURE0);
-    expect(gl.texParameterf).toHaveBeenCalledWith(GL.TEXTURE_2D, MAX_ANISOTROPY, 4);
+    expect(renderer.state.bindTexture).toHaveBeenCalledWith(FAKE_GL.TEXTURE_2D, storage, FAKE_GL.TEXTURE0);
+    expect(gl.texParameterf).toHaveBeenCalledWith(FAKE_GL.TEXTURE_2D, MAX_ANISOTROPY_PARAMETER, 4);
   });
 
-  it('allocates a texture that has no storage yet, so there is something to write to', () => {
-    const { gl, renderer, wrapper } = fakeCanvas({ isAllocated: false });
-    const texture = nearestMipAnisotropic();
+  it('writes it after each upload of a texture that is not on the GPU yet, and starts no upload itself', () => {
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: false });
+    const texture = textureWith();
     renderHook(() => useNearestAnisotropy(texture), { wrapper });
+    expect(gl.texParameterf).not.toHaveBeenCalled();
 
-    expect(renderer.initTexture).toHaveBeenCalledWith(texture);
-    expect(gl.texParameterf).toHaveBeenCalledTimes(1);
+    texture.onUpdate!(texture);
+    texture.onUpdate!(texture);
+
+    expect(gl.texParameterf).toHaveBeenCalledTimes(2);
+    expect(gl.texParameterf).toHaveBeenCalledWith(FAKE_GL.TEXTURE_2D, MAX_ANISOTROPY_PARAMETER, 4);
+  });
+
+  it('keeps the upload callback the texture had, and restores it on unmount', () => {
+    const { wrapper } = fakeCanvasRenderer({ isAllocated: false });
+    const texture = textureWith();
+    const original = vi.fn();
+    texture.onUpdate = original;
+    const { unmount } = renderHook(() => useNearestAnisotropy(texture), { wrapper });
+
+    texture.onUpdate!(texture);
+    expect(original).toHaveBeenCalledWith(texture);
+    unmount();
+    expect(texture.onUpdate).toBe(original);
   });
 
   it('writes no more than the GPU supports', () => {
-    const { gl, wrapper } = fakeCanvas({ isAllocated: true });
-    renderHook(() => useNearestAnisotropy(nearestMipAnisotropic(16)), { wrapper });
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true });
+    renderHook(() => useNearestAnisotropy(textureWith({ anisotropy: 16 })), { wrapper });
 
-    expect(gl.texParameterf).toHaveBeenCalledWith(GL.TEXTURE_2D, MAX_ANISOTROPY, 8);
+    expect(gl.texParameterf).toHaveBeenCalledWith(FAKE_GL.TEXTURE_2D, MAX_ANISOTROPY_PARAMETER, 8);
   });
 
-  it.each([
-    ['a linear magnification, which three handles', THREE.LinearFilter, THREE.LinearMipmapLinearFilter, 4],
-    ['one tap', THREE.NearestFilter, THREE.NearestMipmapLinearFilter, 1],
-    ['no mip chain to filter', THREE.NearestFilter, THREE.NearestFilter, 4],
-  ])('leaves a texture with %s alone', (_name, magFilter, minFilter, anisotropy) => {
-    const { gl, renderer, wrapper } = fakeCanvas({ isAllocated: true });
-    const texture = nearestMipAnisotropic(anisotropy);
-    texture.magFilter = magFilter;
-    texture.minFilter = minFilter;
+  it.each<[string, Partial<TextureFilters>]>([
+    ['a linear magnification, which three handles', { magFilter: THREE.LinearFilter }],
+    ['one tap', { anisotropy: 1 }],
+    ['no mip chain to filter', { minFilter: THREE.NearestFilter }],
+  ])('leaves a texture with %s alone', (_name, filters) => {
+    const { gl, wrapper } = fakeCanvasRenderer({ isAllocated: true });
+    const texture = textureWith(filters);
+    const original = texture.onUpdate;
     renderHook(() => useNearestAnisotropy(texture), { wrapper });
 
     expect(gl.texParameterf).not.toHaveBeenCalled();
-    expect(renderer.initTexture).not.toHaveBeenCalled();
+    expect(texture.onUpdate).toBe(original);
   });
 
   it('does nothing outside a Canvas, where no renderer exists', () => {
-    expect(() => renderHook(() => useNearestAnisotropy(nearestMipAnisotropic()))).not.toThrow();
+    expect(() => renderHook(() => useNearestAnisotropy(textureWith()))).not.toThrow();
   });
 });

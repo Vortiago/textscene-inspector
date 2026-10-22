@@ -9,6 +9,7 @@ import { renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import { useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
+import { fakeCanvasRenderer } from '../../testing/fakeCanvasRenderer';
 import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem';
 import type { ThemedIconRef } from './solveTree';
@@ -77,6 +78,30 @@ describe('useIconTexture', () => {
       THREE.NearestFilter,
     ]);
     expect(result.current.wrapS).toBe(THREE.RepeatWrapping);
+  });
+
+  it('writes the anisotropy of a Nearest with Mipmaps and Anisotropic owner after each upload', () => {
+    const canvas = fakeCanvasRenderer({ isAllocated: false });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(
+        canvas.wrapper,
+        null,
+        createElement(
+          TextureSampler2DContext.Provider,
+          {
+            value: {
+              filter: CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
+              repeat: CanvasItemTextureRepeat.DISABLED,
+            },
+          },
+          children
+        )
+      );
+    const { result } = renderHook(() => useIconTexture(ICON), { wrapper });
+
+    result.current.onUpdate!(result.current);
+
+    expect(canvas.gl.texParameterf).toHaveBeenCalledTimes(1);
   });
 
   it('disposes the texture when the icon turns off, rather than leaking it', () => {

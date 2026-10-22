@@ -11,7 +11,7 @@ export const MAX_ANISOTROPY_PARAMETER = 0x84fe;
 
 interface FakeCanvasRenderer {
   gl: typeof FAKE_GL & { texParameterf: Mock };
-  renderer: { state: { bindTexture: Mock }; initTexture: Mock };
+  renderer: { state: { bindTexture: Mock } };
   storage: object;
   wrapper: (props: { children: ReactNode }) => ReactNode;
 }
@@ -20,16 +20,13 @@ interface FakeCanvasRenderer {
 export function fakeCanvasRenderer({ isAllocated }: { isAllocated: boolean }): FakeCanvasRenderer {
   const storage = { name: 'storage' };
   const gl = { ...FAKE_GL, texParameterf: vi.fn() };
-  const properties = isAllocated ? { __webglTexture: storage } : {};
+  const properties: { __webglTexture?: object } = isAllocated ? { __webglTexture: storage } : {};
   const renderer = {
     getContext: () => gl,
     state: { bindTexture: vi.fn() },
     properties: { get: () => properties },
     extensions: { get: () => ({ TEXTURE_MAX_ANISOTROPY_EXT: MAX_ANISOTROPY_PARAMETER }) },
     capabilities: { getMaxAnisotropy: () => 8 },
-    initTexture: vi.fn(() => {
-      (properties as { __webglTexture?: unknown }).__webglTexture = storage;
-    }),
   };
   const store = { getState: () => ({ gl: renderer }) };
   const wrapper = ({ children }: { children: ReactNode }) =>

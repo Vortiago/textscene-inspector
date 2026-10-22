@@ -7,6 +7,7 @@ import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { pinNoColorSpace, useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
 import { applyCanvasItemSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
+import { useNearestAnisotropy } from '../../nearestAnisotropy';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { ThemedIconRef } from './solveTree';
@@ -29,6 +30,7 @@ export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | 
     return pinNoColorSpace(tex);
   }, [dataUrl, sampler]);
   useEffect(() => (texture ? () => texture.dispose() : undefined), [texture]);
+  useNearestAnisotropy(texture);
   return texture;
 }
 
