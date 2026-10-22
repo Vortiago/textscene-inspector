@@ -24,11 +24,11 @@ const arms = {
 // the leaves (object.h, `_get_property_listv`) and `options.resize(p_count)`
 // keeps them in step, so only a hand edit reaches here.
 function checkFileDialog({ node }: RuleContext): Diagnostic[] {
-  const diagnostic = pastCountDiagnostic(
+  // An absent `option_count` is Godot's default 0, the empty `Vector<Option> options` the class
+  // constructs with. A key with no leaf, such as `option_3/`, names no option. A negative index is
+  // the dispatcher's branch in linterParser.ts, so one refusal is not reported twice.
+  return pastCountDiagnostic(
     node,
-    // An absent `option_count` is Godot's default 0, the empty `Vector<Option> options` the class
-    // constructs with. A key with no leaf, such as `option_3/`, names no option. A negative index is
-    // the dispatcher's branch in linterParser.ts, so one refusal is not reported twice.
     FILE_DIALOG_OPTIONS,
     arms.optionIndexOutOfRange,
     (indices, count) =>
@@ -37,7 +37,6 @@ function checkFileDialog({ node }: RuleContext): Diagnostic[] {
       'an index >= the array length, so FileDialog never calls the ' +
       'matching setter and these option_<N>/… values are silently dropped on load.'
   );
-  return diagnostic ? [diagnostic] : [];
 }
 
 const fileDialogValidationRule: LintRule = {

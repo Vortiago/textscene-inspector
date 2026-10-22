@@ -31,7 +31,7 @@ const arms = {
  * helper drops the write (property_list_helper.cpp:58). linterParser.ts reports a negative index.
  */
 function checkItemIndices({ node }: RuleContext): Diagnostic[] {
-  const diagnostic = pastCountDiagnostic(
+  return pastCountDiagnostic(
     node,
     OPTION_BUTTON_ITEMS,
     arms.itemIndexOutOfRange,
@@ -42,7 +42,6 @@ function checkItemIndices({ node }: RuleContext): Diagnostic[] {
       'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +
       'silently dropped on load.'
   );
-  return diagnostic ? [diagnostic] : [];
 }
 
 function checkSelected(context: RuleContext): Diagnostic[] {

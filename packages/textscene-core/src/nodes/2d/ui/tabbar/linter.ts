@@ -62,17 +62,18 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
   // index at or past the length getter (property_list_helper.cpp:58), here `get_tab_count`
   // (tab_bar.cpp:2189). Only TabContainer enables out-of-bounds assign (tab_container.cpp:1294).
   // Godot's saver never writes this: `tabs.resize(p_count)` (tab_bar.cpp:755) keeps both in step.
-  const pastCount = pastCountDiagnostic(
-    node,
-    TAB_BAR_TABS,
-    arms.tabIndexOutOfRange,
-    (indices) =>
-      `TabBar '${node.name}' sets properties on tab index(es) ${indices} but declares only ${count} tab(s) (tab_count). ` +
-      'PropertyListHelper::_get_property returns null for an index at or past the array length ' +
-      '(property_list_helper.cpp:58) and TabBar never enables out-of-bounds assignment, so these ' +
-      'tab_<idx>/… values are silently dropped on load.'
+  diagnostics.push(
+    ...pastCountDiagnostic(
+      node,
+      TAB_BAR_TABS,
+      arms.tabIndexOutOfRange,
+      (indices) =>
+        `TabBar '${node.name}' sets properties on tab index(es) ${indices} but declares only ${count} tab(s) (tab_count). ` +
+        'PropertyListHelper::_get_property returns null for an index at or past the array length ' +
+        '(property_list_helper.cpp:58) and TabBar never enables out-of-bounds assignment, so these ' +
+        'tab_<idx>/… values are silently dropped on load.'
+    )
   );
-  if (pastCount) diagnostics.push(pastCount);
 
   return diagnostics;
 }

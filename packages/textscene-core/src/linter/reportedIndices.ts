@@ -178,17 +178,17 @@ function writesPastFamilyCount(
 /**
  * The one diagnostic of a past-count rule: the writes `family` makes on `node` past its own count,
  * reported through `arm`. `message` receives the indices as {@link listWrittenIndices} names them,
- * and the count. Null when the family drops no write.
+ * and the count. Empty when the family drops no write.
  */
 export function pastCountDiagnostic(
   node: RawNode,
   family: IndexedFamily,
   arm: RuleArm,
   message: (indices: string, count: number) => string
-): Diagnostic | null {
+): Diagnostic[] {
   const pastCount = writesPastFamilyCount(node.rawProperties, family);
-  if (pastCount === null || pastCount.offending.size === 0) return null;
-  return armDiagnostic(arm, node, message(listWrittenIndices(pastCount.offending), pastCount.count));
+  if (pastCount === null || pastCount.offending.size === 0) return [];
+  return [armDiagnostic(arm, node, message(listWrittenIndices(pastCount.offending), pastCount.count))];
 }
 
 /**

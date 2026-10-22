@@ -25,7 +25,7 @@ const arms = {
 // empty `Vector<Item> items`. Godot's saver writes the count first, so only a hand-edited scene fires this
 // rule, and only the high end: linterParser.ts's family dispatcher reports a negative index.
 function checkMenuButton({ node }: RuleContext): Diagnostic[] {
-  const diagnostic = pastCountDiagnostic(
+  return pastCountDiagnostic(
     node,
     MENU_BUTTON_ITEMS,
     arms.itemIndexOutOfRange,
@@ -36,7 +36,6 @@ function checkMenuButton({ node }: RuleContext): Diagnostic[] {
       'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +
       'silently dropped on load.'
   );
-  return diagnostic ? [diagnostic] : [];
 }
 
 const menuButtonValidationRule: LintRule = {

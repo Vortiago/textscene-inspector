@@ -25,23 +25,22 @@ const arms = {
 // `index < 0 || (!p_allow_oob && index >= _call_array_length_getter())`. Only
 // TabContainer enables `p_allow_oob` (tab_container.cpp:1294).
 function checkItemList({ node }: RuleContext): Diagnostic[] {
-  const diagnostic = pastCountDiagnostic(
+  // An absent item_count is the default 0 (doc/classes/ItemList.xml): an empty `Vector<Item> items`,
+  // so every item key is out of range. The family dispatcher in linterParser.ts reports a negative
+  // index, so only the high end is this rule's.
+  // `ItemList::_set` (item_list.cpp:2237-2240) calls `property_set_value`, which returns
+  // false for that index (property_list_helper.cpp:166-175), so no `set_item_*` setter
+  // runs and nothing is logged: the silently dropped write ADR-0032 grounds on.
+  return pastCountDiagnostic(
     node,
-    // An absent item_count is the default 0 (doc/classes/ItemList.xml): an empty `Vector<Item> items`,
-    // so every item key is out of range. The family dispatcher in linterParser.ts reports a negative
-    // index, so only the high end is this rule's.
     ITEM_LIST_ITEMS,
     arms.itemIndexOutOfRange,
-    // `ItemList::_set` (item_list.cpp:2237-2240) calls `property_set_value`, which returns
-    // false for that index (property_list_helper.cpp:166-175), so no `set_item_*` setter
-    // runs and nothing is logged: the silently dropped write ADR-0032 grounds on.
     (indices, count) =>
       `ItemList item index(es) ${indices} fall outside item_count (${count}). ` +
       'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for ' +
       'an index >= the array length, so ItemList never calls the matching setter and ' +
       'these item_<N>/… values are silently dropped on load.'
   );
-  return diagnostic ? [diagnostic] : [];
 }
 
 const itemListValidationRule: LintRule = {

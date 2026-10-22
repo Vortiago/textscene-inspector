@@ -148,19 +148,32 @@ describe('pastCountDiagnostic', () => {
   });
   /** The message the rule writes, with the indices and the count it was handed. */
   const messageOf = (rawProperties: Record<string, string>, family: IndexedFamily = ITEM_LIST_ITEMS) =>
-    pastCountDiagnostic(nodeWith(rawProperties), family, ARM, (indices, count) => `${indices} | ${count}`)
+    pastCountDiagnostic(nodeWith(rawProperties), family, ARM, (indices, count) => `${indices} | ${count}`)[0]
       ?.message;
 
   it('reports through the arm, on the node', () => {
     expect(
       pastCountDiagnostic(nodeWith({ 'item_0/text': '"a"' }), ITEM_LIST_ITEMS, ARM, () => 'past')
-    ).toEqual({
-      severity: 'error',
-      message: 'past',
-      nodeName: 'List',
-      nodeType: 'ItemList',
-      ruleName: 'test-index-out-of-range',
-    });
+    ).toEqual([
+      {
+        severity: 'error',
+        message: 'past',
+        nodeName: 'List',
+        nodeType: 'ItemList',
+        ruleName: 'test-index-out-of-range',
+      },
+    ]);
+  });
+
+  it('reports no diagnostic when the family drops no write', () => {
+    expect(
+      pastCountDiagnostic(
+        nodeWith({ item_count: '1', 'item_0/text': '"a"' }),
+        ITEM_LIST_ITEMS,
+        ARM,
+        () => 'past'
+      )
+    ).toEqual([]);
   });
 
   it('names each written index at or past the count', () => {
