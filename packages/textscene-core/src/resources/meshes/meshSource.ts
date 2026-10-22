@@ -3,17 +3,14 @@
  * mesh in. Which kind of mesh it is, and where its own material lives, follow from it.
  */
 
-import type { TscnInternalResource } from '../../parser/types.js';
-import type { SceneResources } from '../../r3f/SceneResourcesContext.js';
 import { materialPathInFile } from '../materials/materialPathInFile.js';
+import type { ResolvableResource, ScopedResource } from '../scopedResource.js';
 import { resourceFilePath } from '../subResourcePath.js';
 import { ARRAY_MESH_TYPES } from './arraymesh/decode.js';
-import { isPrimitiveMeshType } from './primitivemesh/surface.js';
+import { resourceContentKey } from '../resourceContentKey.js';
+import { isPrimitiveMeshType, referencesKey } from './primitivemesh/surface.js';
 
-export interface MeshSource {
-  resource: TscnInternalResource;
-  /** The tables the mesh's own references resolve in. */
-  resources: SceneResources;
+export interface MeshSource extends ResolvableResource {
   /** The path the mesh loads from, a file or a **Sub-resource path**. Null for a mesh in the scene. */
   path: string | null;
 }
@@ -34,13 +31,25 @@ export function meshKind(type: string): MeshKind | null {
 }
 
 /**
+ * A key over everything `mesh` builds from, for memoising what is built from it: a fresh parse of
+ * equal content gives an equal key. A PrimitiveMesh follows the resources its builder reads.
+ */
+export function meshContentKey(mesh: ResolvableResource): string {
+  const references = referencesKey(mesh);
+  const own = resourceContentKey(mesh.resource);
+  return references ? `${own}|${references}` : own;
+}
+
+/**
  * A PrimitiveMesh's one surface material, its own `material` as `surface_get_material` answers it
  * (`primitive_meshes.cpp:204`). A mesh in a file names it by path, as an ArrayMesh's surfaces do,
  * so one material has one identity (ADR-0046). A mesh in the scene keeps the scene's reference.
  */
-export function primitiveMaterialAddress({ resource, resources, path }: MeshSource): string | undefined {
+export function primitiveMaterialAddress(
+  { resource, resources }: ScopedResource,
+  path: string | null
+): string | undefined {
   const ref = resource.data['material'];
   if (!path) return ref;
-  const tables = { extResources: resources.externalResources, subResources: resources.internalResources };
-  return materialPathInFile(ref, tables, resourceFilePath(path)) ?? undefined;
+  return materialPathInFile(ref, resources, resourceFilePath(path)) ?? undefined;
 }

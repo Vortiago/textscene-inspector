@@ -6,7 +6,8 @@
  */
 
 import * as THREE from 'three';
-import { CanvasItemBlendMode } from './types';
+import { CanvasItemMaterialBlendMode } from '../../../godot/scene/canvasItemMaterial';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export interface CanvasItemBlendState {
   blending: THREE.Blending;
@@ -34,8 +35,8 @@ const MIX: CanvasItemBlendState = {
 };
 
 /** Godot's per-mode factors, colour pair then alpha pair. Three has no preset for these. */
-const CUSTOM: Partial<Record<CanvasItemBlendMode, CanvasItemBlendState>> = {
-  [CanvasItemBlendMode.ADD]: {
+const CUSTOM: Partial<Record<EnumValue<typeof CanvasItemMaterialBlendMode>, CanvasItemBlendState>> = {
+  [CanvasItemMaterialBlendMode.ADD]: {
     blending: THREE.CustomBlending,
     blendEquation: THREE.AddEquation,
     blendSrc: THREE.SrcAlphaFactor,
@@ -45,7 +46,7 @@ const CUSTOM: Partial<Record<CanvasItemBlendMode, CanvasItemBlendState>> = {
     blendDstAlpha: THREE.OneFactor,
     premultipliedAlpha: false,
   },
-  [CanvasItemBlendMode.SUB]: {
+  [CanvasItemMaterialBlendMode.SUB]: {
     blending: THREE.CustomBlending,
     blendEquation: THREE.ReverseSubtractEquation,
     blendSrc: THREE.SrcAlphaFactor,
@@ -55,7 +56,7 @@ const CUSTOM: Partial<Record<CanvasItemBlendMode, CanvasItemBlendState>> = {
     blendDstAlpha: THREE.OneFactor,
     premultipliedAlpha: false,
   },
-  [CanvasItemBlendMode.MUL]: {
+  [CanvasItemMaterialBlendMode.MUL]: {
     blending: THREE.CustomBlending,
     blendEquation: THREE.AddEquation,
     blendSrc: THREE.DstColorFactor,
@@ -65,7 +66,7 @@ const CUSTOM: Partial<Record<CanvasItemBlendMode, CanvasItemBlendState>> = {
     blendDstAlpha: THREE.ZeroFactor,
     premultipliedAlpha: false,
   },
-  [CanvasItemBlendMode.PREMULT_ALPHA]: {
+  [CanvasItemMaterialBlendMode.PREMULT_ALPHA]: {
     blending: THREE.CustomBlending,
     blendEquation: THREE.AddEquation,
     blendSrc: THREE.OneFactor,
@@ -80,6 +81,8 @@ const CUSTOM: Partial<Record<CanvasItemBlendMode, CanvasItemBlendState>> = {
   },
 };
 
-export function canvasItemBlendState(mode: CanvasItemBlendMode): CanvasItemBlendState {
+export function canvasItemBlendState(
+  mode: EnumValue<typeof CanvasItemMaterialBlendMode>
+): CanvasItemBlendState {
   return CUSTOM[mode] ?? MIX;
 }

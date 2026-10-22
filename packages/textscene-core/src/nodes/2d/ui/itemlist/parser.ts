@@ -10,10 +10,11 @@ import {
 import { parseControl } from '../control/parser';
 import { arrayLiteralBody } from '../../../../godot/variant/variantParser.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
+import { holdsResource } from '../../../../godot/scene/resourceLiteral.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { ITEM_LIST_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
-import { slotCount } from '../../../../godot/variant/int.js';
+import { slotCount } from '../../../../godot/variant/intSlots.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { ItemListItem, ItemListProperties } from './types';
 
@@ -33,7 +34,7 @@ function parseItems(properties: Record<string, string>, itemCount: number): Item
     const rawText = leaves?.get('text');
     if (rawText !== undefined) item.text = unquoteString(rawText);
     const rawIcon = leaves?.get('icon');
-    if (rawIcon !== undefined) item.icon = rawIcon;
+    if (holdsResource(rawIcon)) item.icon = rawIcon;
     const rawSelectable = leaves?.get('selectable');
     if (rawSelectable !== undefined) item.selectable = boolSlotValue(rawSelectable) === true;
     const rawDisabled = leaves?.get('disabled');
@@ -58,7 +59,7 @@ function parseDeprecatedItems(value: string): ItemListItem[] | null {
   for (let i = 0; i < entries.length; i += 3) {
     const icon = entries[i + 1]!.trim();
     const item: ItemListItem = { text: unquoteString(entries[i]!.trim()) };
-    if (icon !== 'null') item.icon = icon;
+    if (holdsResource(icon)) item.icon = icon;
     if (boolSlotValue(entries[i + 2]!.trim()) === true) item.disabled = true;
     items.push(item);
   }
@@ -69,12 +70,13 @@ export function parseItemList(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): ItemListProperties {
-  const itemCount = slotCount(properties.item_count) ?? 0;
+  const rawItemCount = properties[ITEM_LIST_ITEMS.countKey.key];
+  const itemCount = slotCount(rawItemCount) ?? 0;
   // Godot's own saver never writes both forms: item_count/item_N/* replaced
   // `items` outright. So a file carrying `item_count` always wins, and the
   // legacy array is read only for a pure old-format file.
   const legacyItems =
-    properties.item_count === undefined && properties.items !== undefined
+    rawItemCount === undefined && properties.items !== undefined
       ? parseDeprecatedItems(properties.items)
       : null;
   return {
@@ -91,7 +93,7 @@ export function parseItemList(
     tileScrollHint: parseOptionalBool(properties.tile_scroll_hint),
     sameColumnWidth: parseOptionalBool(properties.same_column_width),
     maxTextLines: parseOptionalInt(properties.max_text_lines),
-    itemCount: parseOptionalInt(properties.item_count),
+    itemCount: parseOptionalInt(rawItemCount),
     maxColumns: parseOptionalInt(properties.max_columns),
     fixedColumnWidth: parseOptionalInt(properties.fixed_column_width),
     iconScale: parseOptionalFloat(properties.icon_scale),

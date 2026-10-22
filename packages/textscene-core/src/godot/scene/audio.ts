@@ -13,7 +13,7 @@ const MixTarget = {
 export const AUDIO_STREAM_PLAYER_MIX_TARGET_NAMES = enumNamesByValue(MixTarget);
 
 /** `AudioStreamPlayer3D::AttenuationModel` (`scene/3d/audio_stream_player_3d.h:49-54`). */
-const AttenuationModel = {
+export const AttenuationModel = {
   INVERSE_DISTANCE: 0,
   INVERSE_SQUARE_DISTANCE: 1,
   LOGARITHMIC: 2,
@@ -29,7 +29,7 @@ export const AUDIO_STREAM_PLAYER_3D_ATTENUATION_MODEL_NAMES = enumNamesByValue(A
  * members and no `*_MAX` sentinel, so 2 is the real ceiling and one table serves `doppler_tracking`
  * on all three.
  */
-const DopplerTracking = {
+export const DopplerTracking = {
   DISABLED: 0,
   IDLE_STEP: 1,
   PHYSICS_STEP: 2,

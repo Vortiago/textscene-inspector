@@ -10,10 +10,11 @@ import { decodeSphereMesh } from '../../resources/meshes/spheremesh/decode';
 import { decodeCylinderMesh } from '../../resources/meshes/cylindermesh/decode';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMesh';
 import { primitiveMeshGeometry } from './primitiveMeshGeometry';
+import { scopedMesh } from '../../resources/meshes/primitivemesh/surface.testkit';
 import type { TscnInternalResource } from '../../parser/types';
 
 function geomFor(resource: TscnInternalResource): THREE.BufferGeometry {
-  return primitiveMeshGeometry(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)!;
+  return primitiveMeshGeometry(scopedMesh(resource), DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)!;
 }
 
 describe('mesh feature parity — parsers', () => {

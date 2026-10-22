@@ -1,7 +1,6 @@
 /**
- * Lists the files under a document's `res://` root as `res://` paths, the seam the engine's
- * path completion reads. It caches one listing per root, so a completion does not walk the
- * workspace on every keystroke.
+ * Lists the files under a document's `res://` root as `res://` paths, the seam the engine's path completion and
+ * reference search read. It caches one listing per root, so a request does not walk the workspace again.
  */
 
 import * as vscode from 'vscode';
@@ -15,17 +14,18 @@ import { SCAN_STOP_FILES_PATTERN } from './watchPatterns';
  */
 const DOT_DIRECTORIES = '**/.*/**';
 
-export class TscnResPathListing {
+/** Lists the `res://` paths under the document's root, the seam path completion and Find All References read. */
+export interface ResPathListing {
+  pathsFor(document: vscode.TextDocument): Promise<readonly string[]>;
+}
+
+export class TscnResPathListing implements ResPathListing {
   /** Each `res://` root's listing, written by `pathsFor` and dropped by `clear`. */
   private readonly _listingByRoot = new Map<string, Promise<readonly string[]>>();
-  /**
-   * Each document's `res://` root, null outside every workspace folder, written by `pathsFor` and dropped by `clear`.
-   */
-  private readonly _rootByDocument = new Map<string, Promise<vscode.Uri | null>>();
 
   /** The files under the document's `res://` root as `res://` paths, or none outside every workspace folder. */
   async pathsFor(document: vscode.TextDocument): Promise<readonly string[]> {
-    const root = await this._rootOf(document.uri);
+    const root = await resRootOf(document.uri);
     if (!root) return [];
     const key = root.toString();
     // The promise is cached, not its value: two completions before the walk ends share it.
@@ -35,16 +35,6 @@ export class TscnResPathListing {
     const listing = this._list(root);
     this._listingByRoot.set(key, listing);
     return listing;
-  }
-
-  private _rootOf(documentUri: vscode.Uri): Promise<vscode.Uri | null> {
-    const key = documentUri.toString();
-    let root = this._rootByDocument.get(key);
-    if (!root) {
-      root = resRootOf(documentUri);
-      this._rootByDocument.set(key, root);
-    }
-    return root;
   }
 
   /**
@@ -57,12 +47,11 @@ export class TscnResPathListing {
       // No exclude, as the linter's own search does: `.gdignore` is itself dot-named.
       vscode.workspace.findFiles(new vscode.RelativePattern(root, SCAN_STOP_FILES_PATTERN), null),
     ]);
-    return scannedResPaths(root, files, stopFiles).sort((a, b) => a.localeCompare(b));
+    return scannedResPaths(root, files, stopFiles);
   }
 
-  /** Drops every listing and root, so a created or deleted file is offered on the next completion. */
+  /** Drops every listing, so a created or deleted file is offered on the next completion. */
   clear(): void {
     this._listingByRoot.clear();
-    this._rootByDocument.clear();
   }
 }

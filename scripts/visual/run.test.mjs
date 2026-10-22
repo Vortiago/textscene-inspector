@@ -37,50 +37,36 @@ function uniformPngBuffer(width, height, [r, g, b, a] = [30, 60, 90, 255]) {
   return PNG.sync.write(png);
 }
 
-describe('captureScene seam selection', () => {
-  function fakePages() {
-    return {
-      default: { page: { name: '3d-page' }, diagnostics: emptyDiagnostics() },
-      canvas2D: { page: { name: '2d-page' }, diagnostics: emptyDiagnostics() },
-    };
-  }
+describe('captureScene scene options', () => {
+  const pageState = { page: { name: 'a-page' }, diagnostics: emptyDiagnostics() };
 
   function stubHappyCapture() {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
   }
 
-  it('routes a mode: "2d" scene through the canvas2D page and target', async () => {
+  it('opens a mode: "2d" scene as a 2D scene on the page it is given', async () => {
     stubHappyCapture();
-    const pages = fakePages();
     const scene = { name: 'two-d-scene', file: 'unit-two-d.tscn', mode: '2d' };
 
-    const result = await captureScene(pages, 'http://localhost:1', scene);
+    const result = await captureScene(pageState, 'http://localhost:1', scene);
 
     expect(result.buffer).not.toBeNull();
-    expect(openScene).toHaveBeenCalledWith(pages.canvas2D.page, 'http://localhost:1', 'unit-two-d.tscn', {
+    expect(openScene).toHaveBeenCalledWith(pageState.page, 'http://localhost:1', 'unit-two-d.tscn', {
       canvas2D: true,
       camera: undefined,
       onSlow: expect.any(Function),
     });
-    expect(settleCanvas).toHaveBeenCalledWith(pages.canvas2D.page, expect.anything(), expect.anything());
-    // Never touches the 3D page at all.
-    expect(openScene).not.toHaveBeenCalledWith(
-      pages.default.page,
-      expect.anything(),
-      expect.anything(),
-      expect.anything()
-    );
+    expect(settleCanvas).toHaveBeenCalledWith(pageState.page, expect.anything(), expect.anything());
   });
 
-  it('routes a scene with no mode field through the default 3D page and target', async () => {
+  it('opens a scene with no mode field as a 3D scene', async () => {
     stubHappyCapture();
-    const pages = fakePages();
     const scene = { name: 'three-d-scene', file: 'unit-three-d.tscn' };
 
-    await captureScene(pages, 'http://localhost:1', scene);
+    await captureScene(pageState, 'http://localhost:1', scene);
 
-    expect(openScene).toHaveBeenCalledWith(pages.default.page, 'http://localhost:1', 'unit-three-d.tscn', {
+    expect(openScene).toHaveBeenCalledWith(pageState.page, 'http://localhost:1', 'unit-three-d.tscn', {
       canvas2D: false,
       camera: undefined,
       onSlow: expect.any(Function),
@@ -89,43 +75,32 @@ describe('captureScene seam selection', () => {
 
   it('opens a scene that names a camera through that Camera3D', async () => {
     stubHappyCapture();
-    const pages = fakePages();
     const scene = { name: 'ortho', file: 'unit-ortho.tscn', camera: 'Root/Camera3D' };
 
-    await captureScene(pages, 'http://localhost:1', scene);
+    await captureScene(pageState, 'http://localhost:1', scene);
 
-    expect(openScene).toHaveBeenLastCalledWith(pages.default.page, 'http://localhost:1', 'unit-ortho.tscn', {
+    expect(openScene).toHaveBeenLastCalledWith(pageState.page, 'http://localhost:1', 'unit-ortho.tscn', {
       canvas2D: false,
       camera: 'Root/Camera3D',
       onSlow: expect.any(Function),
     });
   });
-
-  it('throws rather than silently falling back to 3D when no canvas2D context exists', async () => {
-    stubHappyCapture();
-    const pages = { default: { page: {}, diagnostics: emptyDiagnostics() }, canvas2D: null };
-    const scene = { name: 'two-d-scene', file: 'unit-two-d.tscn', mode: '2d' };
-
-    await expect(captureScene(pages, 'http://localhost:1', scene)).rejects.toThrow(
-      /canvas2D capture context/
-    );
-  });
 });
 
 describe('captureScene settle timeout', () => {
-  const pages = { default: { page: {}, diagnostics: emptyDiagnostics() }, canvas2D: null };
+  const pageState = { page: {}, diagnostics: emptyDiagnostics() };
 
   it('gives each screenshot the time a scene declares in settleTimeout', async () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
 
-    await captureScene(pages, 'http://localhost:1', {
+    await captureScene(pageState, 'http://localhost:1', {
       name: 'game-world',
       file: 'unit-game-world.tscn',
       settleTimeout: 120000,
     });
 
-    expect(settleCanvas).toHaveBeenLastCalledWith(pages.default.page, expect.anything(), {
+    expect(settleCanvas).toHaveBeenLastCalledWith(pageState.page, expect.anything(), {
       screenshotTimeout: 120000,
     });
   });
@@ -134,9 +109,9 @@ describe('captureScene settle timeout', () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
 
-    await captureScene(pages, 'http://localhost:1', { name: 'small', file: 'unit-small.tscn' });
+    await captureScene(pageState, 'http://localhost:1', { name: 'small', file: 'unit-small.tscn' });
 
-    expect(settleCanvas).toHaveBeenLastCalledWith(pages.default.page, expect.anything(), {
+    expect(settleCanvas).toHaveBeenLastCalledWith(pageState.page, expect.anything(), {
       screenshotTimeout: undefined,
     });
   });
@@ -145,18 +120,15 @@ describe('captureScene settle timeout', () => {
 describe('captureScene console-error gate', () => {
   it('fails a scene whose capture logged a console error, even though it settled', async () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
-    const pages = {
-      default: { page: {}, diagnostics: emptyDiagnostics() },
-      canvas2D: null,
-    };
+    const pageState = { page: {}, diagnostics: emptyDiagnostics() };
     // A pageerror listener fires during the settle, after captureScene has cleared the lists for
     // this scene, as a real page event would.
     settleCanvas.mockImplementation(async () => {
-      pages.default.diagnostics.pageErrors.push('TypeError: something.broke is not a function');
+      pageState.diagnostics.pageErrors.push('TypeError: something.broke is not a function');
       return { buffer: Buffer.from('captured'), reason: null };
     });
 
-    const result = await captureScene(pages, 'http://localhost:1', {
+    const result = await captureScene(pageState, 'http://localhost:1', {
       name: 'noisy-scene',
       file: 'unit-noisy.tscn',
     });
@@ -168,9 +140,9 @@ describe('captureScene console-error gate', () => {
   it('passes a scene whose capture logged no console errors', async () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
-    const pages = { default: { page: {}, diagnostics: emptyDiagnostics() }, canvas2D: null };
+    const pageState = { page: {}, diagnostics: emptyDiagnostics() };
 
-    const result = await captureScene(pages, 'http://localhost:1', {
+    const result = await captureScene(pageState, 'http://localhost:1', {
       name: 'quiet-scene',
       file: 'unit-quiet.tscn',
     });
@@ -181,15 +153,12 @@ describe('captureScene console-error gate', () => {
   it('clears errors left over from a PREVIOUS scene captured on the same page', async () => {
     openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
     settleCanvas.mockResolvedValue({ buffer: Buffer.from('captured'), reason: null });
-    const pages = {
-      default: {
-        page: {},
-        diagnostics: { ...emptyDiagnostics(), consoleErrors: ['stale error from a previous scene'] },
-      },
-      canvas2D: null,
+    const pageState = {
+      page: {},
+      diagnostics: { ...emptyDiagnostics(), consoleErrors: ['stale error from a previous scene'] },
     };
 
-    const result = await captureScene(pages, 'http://localhost:1', {
+    const result = await captureScene(pageState, 'http://localhost:1', {
       name: 'next-scene',
       file: 'unit-next.tscn',
     });

@@ -21,17 +21,9 @@ function withoutTrailingSlashes(path: string): string {
 }
 
 /** `path` with forward slashes and no trailing one, unless it is a filesystem root such as `/` or `c:/`. */
-function forwardSlashes(path: string): string {
+export function forwardSlashes(path: string): string {
   const trimmed = withoutTrailingSlashes(path.replace(/\\/g, '/'));
   return trimmed === '' || /^[A-Za-z]:$/.test(trimmed) ? `${trimmed}/` : trimmed;
-}
-
-/**
- * `path` as two host paths compare: forward slashes, lowercased. Case-insensitive because the default Windows and
- * macOS filesystems are, and a watcher can report either spelling.
- */
-export function comparablePath(path: string): string {
-  return forwardSlashes(path).toLowerCase();
 }
 
 /** Whether a host's filesystem tells apart two spellings of a path that differ only in case. */
@@ -47,13 +39,26 @@ export function pathCaseOf(platform: string | undefined): PathCase {
 }
 
 /**
+ * `path` as a filesystem with `pathCase` compares it, for a map keyed by path: two paths that name one place share a
+ * key. Forward slashes, and lowercased on a filesystem that ignores case.
+ */
+export function pathKey(path: string, pathCase: PathCase): string {
+  const slashed = forwardSlashes(path);
+  return pathCase === 'insensitive' ? slashed.toLowerCase() : slashed;
+}
+
+/** Whether `a` and `b` name one path on a filesystem with `pathCase`. */
+export function isSamePath(a: string, b: string, pathCase: PathCase): boolean {
+  return pathKey(a, pathCase) === pathKey(b, pathCase);
+}
+
+/**
  * Whether `candidate` is `root` or under it. The separator is the boundary, so `/proj-other` is not under `/proj`.
  * Case counts unless `pathCase` is insensitive, so on Linux `/w/game` is not under `/w/Game`.
  */
 export function isWithinRoot(root: string, candidate: string, pathCase: PathCase): boolean {
-  const keyOf = pathCase === 'insensitive' ? comparablePath : forwardSlashes;
-  const rootKey = keyOf(root);
-  const candidateKey = keyOf(candidate);
+  const rootKey = pathKey(root, pathCase);
+  const candidateKey = pathKey(candidate, pathCase);
   if (candidateKey === rootKey) return true;
   const prefix = rootKey.endsWith('/') ? rootKey : `${rootKey}/`;
   return candidateKey.startsWith(prefix);
@@ -89,6 +94,14 @@ export function normalizeRelativePath(relative: string): string | null {
 }
 
 /**
+ * `paths` in code-unit order, so every host lists them alike: `localeCompare` would order them by
+ * the host's locale.
+ */
+export function inPathOrder(paths: Iterable<string>): string[] {
+  return [...paths].sort();
+}
+
+/**
  * `resPath` relative to its project root, or null for a path that is not `res://` or that escapes the root. For a host
  * whose paths are not strings, such as VS Code's `Uri`.
  */
@@ -104,18 +117,16 @@ export function resolveResPath(projectRoot: string, resPath: string): string | n
 
 /**
  * The nearest directory, from `start` upward through `parent`, where `hasProjectFile` finds a `project.godot`, or null
- * for none. The walk ends after the first directory `isStop` accepts, or at the top, where `parent` gives null. Generic
- * over the directory handle, so each host walks its own kind: a string path, or a `Uri` that keeps its scheme.
+ * for none. The walk ends only at the top, where `parent` gives null, so no host's workspace bounds it. Generic over
+ * the directory handle, so each host walks its own kind: a string path, or a `Uri` that keeps its scheme.
  */
 async function findProjectRoot<Dir>(
   start: Dir,
   parent: (dir: Dir) => Dir | null,
-  isStop: (dir: Dir) => boolean,
   hasProjectFile: (dir: Dir) => Promise<boolean>
 ): Promise<Dir | null> {
   for (let dir: Dir | null = start; dir !== null; dir = parent(dir)) {
     if (await hasProjectFile(dir)) return dir;
-    if (isStop(dir)) return null;
   }
   return null;
 }
@@ -129,11 +140,10 @@ async function findProjectRoot<Dir>(
 export async function findResRoot<Dir>(
   sceneDir: Dir,
   parent: (dir: Dir) => Dir | null,
-  isStop: (dir: Dir) => boolean,
   hasProjectFile: (dir: Dir) => Promise<boolean>,
   isInWorkspace: (dir: Dir) => boolean
 ): Promise<Dir | null> {
-  const project = await findProjectRoot(sceneDir, parent, isStop, hasProjectFile);
+  const project = await findProjectRoot(sceneDir, parent, hasProjectFile);
   if (project !== null) return project;
   return isInWorkspace(sceneDir) ? sceneDir : null;
 }

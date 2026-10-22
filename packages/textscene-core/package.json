@@ -32,6 +32,11 @@
       "types": "./dist/languageFeatures/index.d.ts",
       "import": "./dist/languageFeatures/index.js"
     },
+    "./renderer": {
+      "@textscene/source": "./src/r3f/renderer.ts",
+      "types": "./dist/r3f/renderer.d.ts",
+      "import": "./dist/r3f/renderer.js"
+    },
     "./worker": {
       "@textscene/source": "./src/worker.ts",
       "types": "./dist/worker.d.ts",
@@ -51,6 +56,11 @@
       "@textscene/source": "./src/resources/resPath.ts",
       "types": "./dist/resources/resPath.d.ts",
       "import": "./dist/resources/resPath.js"
+    },
+    "./resources/resRoots": {
+      "@textscene/source": "./src/resources/resRoots.ts",
+      "types": "./dist/resources/resRoots.d.ts",
+      "import": "./dist/resources/resRoots.js"
     },
     "./resources/resourceProviderUtils": {
       "@textscene/source": "./src/resources/resourceProviderUtils.ts",

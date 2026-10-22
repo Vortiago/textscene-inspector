@@ -6,13 +6,13 @@
  */
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode, TscnExternalResource, TscnInternalResource } from '../parser/types.js';
-import { scopeOf, type LiveNode } from '../resources/liveNode.js';
-import { resolveInstancePath } from '../resources/SubResourceResolver.js';
+import { liveInstancePath, scopeOf, type LiveNode } from '../resources/liveNode.js';
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 // Re-exported here, where every walker already reaches for it.
 export type { SceneScope };
-import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
+import { glbPathOf, loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
+import { splitAttachedChildren } from './internal/glb-scene-root/glbNodeOverrides.js';
 import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 
@@ -47,16 +47,16 @@ export interface LiveTreeEntry {
 }
 
 /**
- * A {@link CachedSceneSource} that answers for one path, so a React walker can
- * hand `collapseLiveNode` the one sub-scene it loaded. Any other path returns
- * `undefined`, which keeps each mount's scope to itself (ADR-0009). A scene that
- * is still loading or failed reads as not cached, so the node stays uncollapsed.
+ * A cache source that answers for one path, so a React walker can hand the walk the one
+ * sub-scene or GLB it loaded. Any other path returns `undefined`, which keeps each mount's scope
+ * to itself (ADR-0009). A value that is still loading or failed reads as not cached, so the node
+ * stays uncollapsed.
  */
-export function singleSceneCache(
+export function singlePathCache<T>(
   path: string | null | undefined,
-  scene: (Partial<SceneScope> & { nodes: readonly TscnNode[] }) | null | undefined
-): CachedSceneSource {
-  return { getCached: (p) => (p === path ? (scene ?? undefined) : undefined) };
+  value: T | null | undefined
+): { getCached: (path: string) => T | undefined } {
+  return { getCached: (p) => (p === path ? (value ?? undefined) : undefined) };
 }
 
 /**
@@ -72,9 +72,8 @@ export function singleSceneCache(
  * scene that inherits or instances itself ends.
  */
 export function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
-  if (!node.instance) return node;
+  const scenePath = liveInstancePath(node, scope);
   const outer = scopeOf(node, scope);
-  const scenePath = resolveInstancePath(node.instance, outer.externalResources);
   const enclosingScenePaths = outer.instancedScenePaths ?? [];
   if (!scenePath || enclosingScenePaths.includes(scenePath)) return node;
   const cached = sceneCache.getCached(scenePath);
@@ -158,17 +157,13 @@ export function liveChildGroups(
   const inlineOnly = (): LiveChildGroup[] => [{ origin: 'inline', children: node.children, scope: own }];
 
   // GLB nodes carry no instance refs, so they stay in the outer scope.
-  if (node.type === GLB_SCENE_ROOT_TYPE && glbCache) {
-    const glbPath = (node.properties as Record<string, unknown>).glbPath as string | undefined;
-    const object = glbPath ? glbCache.getCached(glbPath) : undefined;
-    if (object) {
-      return [{ origin: 'glb', children: glbSceneRootChildren(object), scope: own }];
-    }
+  const glbPath = glbPathOf(node);
+  const glbObject = glbPath ? glbCache?.getCached(glbPath) : undefined;
+  if (glbObject) {
+    return [{ origin: 'glb', children: glbSceneRootChildren(glbObject, node.children), scope: own }];
   }
 
-  if (!node.instance) return inlineOnly();
-
-  const scenePath = resolveInstancePath(node.instance, own.externalResources);
+  const scenePath = liveInstancePath(node, scope);
   if (!scenePath) return inlineOnly();
 
   // Cyclic instancing: Godot never loads the scene here, so nothing of it is below.
@@ -183,22 +178,59 @@ export function liveChildGroups(
     return [{ origin: 'merged', children: merged.children, scope: scopeOf(merged, own), mergedNode: merged }];
   }
 
-  // Inline children are authored in the host scene, so they keep the outer scope.
+  // Inline children are authored in the host scene, so they keep the outer scope. A typed child
+  // addressed into a GLB moves below the GLB node its path names, where Godot adds it.
+  const { glbRoot, attached, rest } = placeInGlb(node.children, cached.nodes, own, glbCache);
   const groups: LiveChildGroup[] = [];
-  if (node.children.length > 0) {
-    groups.push({ origin: 'inline', children: node.children, scope: own });
+  if (rest.length > 0) {
+    groups.push({ origin: 'inline', children: rest, scope: own });
   }
   groups.push({
     origin: 'subscene',
-    children: cached.nodes,
+    children: glbRoot ? [{ ...glbRoot, children: attached }] : cached.nodes,
     scope: contentScopeOf(cached, [...enclosingScenePaths, scenePath]),
   });
   return groups;
 }
 
+/**
+ * The host's children split for an instance of a lone GLB: those below the GLB's nodes, each stamped
+ * with the host's scope since the GLB scene's pools are not the ones it was authored against, and
+ * the rest. `glbRoot` is the GLB's synthetic root, absent for any other instance.
+ */
+function placeInGlb(
+  hostChildren: LiveNode[],
+  contentRoots: readonly TscnNode[],
+  hostScope: SceneScope,
+  glbCache: CachedGlbSource | undefined
+): { glbRoot?: LiveNode; attached: LiveNode[]; rest: LiveNode[] } {
+  const glbPath = loneGlbRootPath(contentRoots);
+  const object = glbPath ? glbCache?.getCached(glbPath) : undefined;
+  if (!object) return { attached: [], rest: hostChildren };
+  const { attached, rest } = splitAttachedChildren(object, hostChildren);
+  return {
+    glbRoot: contentRoots[0] as LiveNode,
+    attached: attached.map((child) => (child.scope ? child : { ...child, scope: hostScope })),
+    rest,
+  };
+}
+
 /** The collapsed node a `merged` group carries, so a walker merges each instance once. */
 export function mergedNodeOf(groups: readonly LiveChildGroup[]): LiveNode | undefined {
   return groups[0]?.mergedNode;
+}
+
+/**
+ * The scope the refs of `node` as the tree shows it resolve against, given its
+ * `groups` from {@link liveChildGroups}: the merged instance's, else the node's own,
+ * else the one of the group it sits in (`groupScope`).
+ */
+export function liveNodeScope(
+  node: LiveNode,
+  groupScope: SceneScope,
+  groups: readonly LiveChildGroup[]
+): SceneScope {
+  return mergedNodeOf(groups) ? groups[0]!.scope : scopeOf(node, groupScope);
 }
 
 /**

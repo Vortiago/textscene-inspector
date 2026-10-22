@@ -3,7 +3,11 @@ import * as THREE from 'three';
 import { canvasItemMaterialOf } from './decode';
 import { canvasItemBlendState } from './build';
 import { parseTresFile } from '../../../parser/parsedResource';
-import { CanvasItemBlendMode, CanvasItemLightMode, type CanvasItemMaterialProperties } from './types';
+import { type CanvasItemMaterialProperties } from './types';
+import {
+  CanvasItemMaterialBlendMode,
+  CanvasItemMaterialLightMode,
+} from '../../../godot/scene/canvasItemMaterial';
 
 /** The CanvasItemMaterial a resource with this property bag draws as. */
 function decode(data: Record<string, string>): CanvasItemMaterialProperties {
@@ -13,8 +17,8 @@ function decode(data: Record<string, string>): CanvasItemMaterialProperties {
 describe('the CanvasItemMaterial canvasItemMaterialOf decodes', () => {
   it('defaults to MIX blending, NORMAL lighting and no particle animation', () => {
     const m = decode({});
-    expect(m.blendMode).toBe(CanvasItemBlendMode.MIX);
-    expect(m.lightMode).toBe(CanvasItemLightMode.NORMAL);
+    expect(m.blendMode).toBe(CanvasItemMaterialBlendMode.MIX);
+    expect(m.lightMode).toBe(CanvasItemMaterialLightMode.NORMAL);
     expect(m.particlesAnimation).toBe(false);
     expect(m.particlesAnimHFrames).toBe(1);
     expect(m.particlesAnimVFrames).toBe(1);
@@ -24,8 +28,8 @@ describe('the CanvasItemMaterial canvasItemMaterialOf decodes', () => {
   it('reads the enums the isometric dungeon authors', () => {
     // A polygon can carry both at once: additive and unshaded.
     const m = decode({ blend_mode: '1', light_mode: '1' });
-    expect(m.blendMode).toBe(CanvasItemBlendMode.ADD);
-    expect(m.lightMode).toBe(CanvasItemLightMode.UNSHADED);
+    expect(m.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
+    expect(m.lightMode).toBe(CanvasItemMaterialLightMode.UNSHADED);
   });
 
   it('reads the particle-sheet fields', () => {
@@ -42,9 +46,9 @@ describe('the CanvasItemMaterial canvasItemMaterialOf decodes', () => {
   });
 
   it('falls back to the default for an out-of-range or unparseable enum', () => {
-    expect(decode({ blend_mode: '9' }).blendMode).toBe(CanvasItemBlendMode.MIX);
-    expect(decode({ blend_mode: '-1' }).blendMode).toBe(CanvasItemBlendMode.MIX);
-    expect(decode({ light_mode: 'nope' }).lightMode).toBe(CanvasItemLightMode.NORMAL);
+    expect(decode({ blend_mode: '9' }).blendMode).toBe(CanvasItemMaterialBlendMode.MIX);
+    expect(decode({ blend_mode: '-1' }).blendMode).toBe(CanvasItemMaterialBlendMode.MIX);
+    expect(decode({ light_mode: 'nope' }).lightMode).toBe(CanvasItemMaterialLightMode.NORMAL);
   });
 
   it('is null for a material of another type, which draws with no blend state of its own', () => {

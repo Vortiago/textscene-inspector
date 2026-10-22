@@ -12,46 +12,34 @@ import * as THREE from 'three';
 import type { TextLayoutResult } from './textLayout';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import { canvasItemFacing } from '../../../canvasItemFacing';
-import { injectProgram, type ProgramInjection } from '../../../materialProgramInputs';
-import { alphaHashScaleUserData } from '../../../materials/godotAlphaHash';
-import { alphaAntialiasingProps, alphaAntialiasingUserData } from '../../../materials/godotAlphaAntialiasing';
-import type { AlphaAntialiasingCut } from '../../../../godot/rendering/materials/alphaAntialiasing';
-import {
-  NO_OPAQUE_PREPASS,
-  opaquePrepassUserData,
-  type OpaquePrepass,
-} from '../../../materials/opaquePrepass';
+import { injectProgram, injectViewportProgram } from '../../../materialProgramInputs';
+import { NO_OPAQUE_PREPASS } from '../../../materials/opaquePrepass';
+import { passBlendMaterialProps, type SurfaceBlend } from '../../../materials/surfaceBlend';
 import { CANVAS_SRGB_DEFINES } from '../../../canvasSrgbMultiply';
 import type { Rgba } from '../../../../godot/math/math';
 
-/** Fixed raster supersampling factor: canvas text has no distance field to stay crisp when magnified, so this trades memory and fill rate for sharpness at typical zoom. */
-const CANVAS_TEXT_SUPERSAMPLE = 3;
-
-/** Fixed vertical pad, CSS px before supersampling, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
+/** Fixed vertical pad, CSS px, on every raster edge: anti-aliased ink can overshoot a glyph's ascent/descent box. The quad is this much taller than `layout.heightPx` on both edges. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
 /**
- * The whole supersampled device pixels a CSS-px extent needs. The quad samples
- * the whole canvas, so rounding once, here, for both halves keeps the content box
- * at the quad origin for every padding, and Label3D's outline and fill line up.
+ * The whole raster pixels a CSS-px extent needs, one texel per font pixel as Godot caches a glyph
+ * (`label_3d.cpp:345-350`). The quad samples the whole canvas, so rounding once, here, for both
+ * halves keeps the content box at the quad origin for every padding, and Label3D's outline and
+ * fill line up.
  */
-function wholeDevicePx(cssPx: number): number {
-  return Math.max(1, Math.ceil(cssPx * CANVAS_TEXT_SUPERSAMPLE));
+function wholeRasterPx(cssPx: number): number {
+  return Math.max(1, Math.ceil(cssPx));
 }
 
 interface CanvasTextCanvasLayout {
-  /** Raster canvas width, CSS px before supersampling: `layout.widthPx` plus twice `offsetXPx`, rounded up to a whole device pixel. */
+  /** `HTMLCanvasElement#width`: `layout.widthPx` plus twice `offsetXPx`, rounded up to a whole pixel. */
   canvasWidthPx: number;
-  /** Raster canvas height, CSS px before supersampling: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole device pixel. */
+  /** `HTMLCanvasElement#height`: `layout.heightPx` plus twice `offsetYPx`, rounded up to a whole pixel. */
   canvasHeightPx: number;
   /** Left padding, CSS px: where the unpadded content box (x=0 in `layout`) sits in the raster. Shear reach plus stroke reach, mirrored on the right. */
   offsetXPx: number;
   /** Top padding, CSS px: `CANVAS_TEXT_VERTICAL_PAD_PX` plus any outline-stroke reach. */
   offsetYPx: number;
-  /** `HTMLCanvasElement#width` in whole supersampled device pixels, rounded here so the painter never re-rounds `canvasWidthPx` differently. */
-  deviceWidthPx: number;
-  /** `HTMLCanvasElement#height`, likewise. */
-  deviceHeightPx: number;
 }
 
 /**
@@ -73,15 +61,11 @@ export function computeCanvasTextCanvasLayout(
   const strokePadPx = strokeWidthPx / 2;
   const offsetXPx = shearPadPx + strokePadPx;
   const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + strokePadPx;
-  const deviceWidthPx = wholeDevicePx(layout.widthPx + 2 * offsetXPx);
-  const deviceHeightPx = wholeDevicePx(layout.heightPx + 2 * offsetYPx);
   return {
-    canvasWidthPx: deviceWidthPx / CANVAS_TEXT_SUPERSAMPLE,
-    canvasHeightPx: deviceHeightPx / CANVAS_TEXT_SUPERSAMPLE,
+    canvasWidthPx: wholeRasterPx(layout.widthPx + 2 * offsetXPx),
+    canvasHeightPx: wholeRasterPx(layout.heightPx + 2 * offsetYPx),
     offsetXPx,
     offsetYPx,
-    deviceWidthPx,
-    deviceHeightPx,
   };
 }
 
@@ -146,13 +130,12 @@ export function paintSceneFontCanvas(
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = canvasLayout.deviceWidthPx;
-  canvas.height = canvasLayout.deviceHeightPx;
+  canvas.width = canvasLayout.canvasWidthPx;
+  canvas.height = canvasLayout.canvasHeightPx;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return canvas; // happy-dom/vitest only.
 
-  ctx.scale(CANVAS_TEXT_SUPERSAMPLE, CANVAS_TEXT_SUPERSAMPLE);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.font = `${fontSizePx}px "${metrics.cssFontFamily}"`;
@@ -178,7 +161,7 @@ export function paintSceneFontCanvas(
     ctx.save();
     if (skew !== 0) {
       // x' = x - skew * (y - baselineY), y' = y: the MSDF path's per-vertex
-      // shear (TextRun.tsx's `dx`), composed onto the supersampled transform.
+      // shear (TextRun.tsx's `dx`).
       ctx.transform(1, 0, -skew, 1, skew * baselineY, 0);
     }
     for (const gp of line.glyphs) {
@@ -192,28 +175,7 @@ export function paintSceneFontCanvas(
   return canvas;
 }
 
-/**
- * One `BaseMaterial3D::Transparency` (`material.h:200-207`) in three's terms: what
- * a 3D text surface's `alpha_cut` selects (`label_3d.cpp:386-393`). A 2D Control
- * always paints `TRANSPARENCY_ALPHA`, every field's default below.
- */
-export interface CanvasTextBlend {
-  transparent: boolean;
-  depthWrite: boolean;
-  alphaTest: number;
-  alphaHash: boolean;
-  /** `alpha_hash_scale`, the grain of the hash. Omitted, Godot's default of 1. */
-  alphaHashScale?: number;
-  /** How Godot's depth passes treat the surface. Omitted, it has no opaque prepass. */
-  opaquePrepass?: OpaquePrepass;
-  /** What the surface's blend needs so three blends the alpha Godot writes (`surfaceAlphaPatch.ts`). */
-  blending?: THREE.Blending;
-  /** The cut's alpha antialiasing. Omitted, the surface runs none. */
-  antialiasing?: AlphaAntialiasingCut | null;
-  injection?: ProgramInjection;
-}
-
-interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
+interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   map: THREE.Texture;
   /** Multiplies the raster's anti-aliasing alpha. The raster is opaque, so this is the only place `tint.a` applies. */
   opacity: number;
@@ -222,6 +184,8 @@ interface CanvasTextMaterialOptions extends Partial<CanvasTextBlend> {
   /** Omitted, it takes `canvasItemFacing()`'s side, like `createMsdfMaterial`. */
   side?: THREE.Side;
   clippingPlanes?: readonly THREE.Plane[];
+  /** The raster carries a mip chain and draws in 3D, so it samples at the viewport's mipmap bias. */
+  mipmapped?: boolean;
 }
 
 /**
@@ -250,31 +214,31 @@ export function createCanvasTextMaterial(options: CanvasTextMaterialOptions): TH
     blending = THREE.NormalBlending,
     antialiasing = null,
     injection,
+    mipmapped = false,
   } = options;
   const material = new THREE.MeshBasicMaterial({
     map,
-    transparent,
     opacity,
-    depthWrite,
     depthTest,
-    alphaTest,
-    alphaHash,
-    blending,
-    ...alphaAntialiasingProps(antialiasing),
+    ...passBlendMaterialProps({
+      transparent,
+      depthWrite,
+      alphaTest,
+      alphaHash,
+      blending,
+      alphaHashScale,
+      opaquePrepass,
+      antialiasing,
+    }),
     // Unlike `defines` below, `forceSinglePass` IS a property `THREE.Material`'s
     // constructor declares, so `setValues` assigns it from this object.
     ...canvasItemFacing(side),
     clippingPlanes: [...clippingPlanes],
   });
-  material.userData = {
-    ...alphaHashScaleUserData(alphaHashScale),
-    ...opaquePrepassUserData(opaquePrepass),
-    // Godot caches a Label3D glyph at its font size, one texel per font pixel (`label_3d.cpp:345-350`).
-    ...alphaAntialiasingUserData(antialiasing, 1 / CANVAS_TEXT_SUPERSAMPLE),
-  };
   if (map.colorSpace === THREE.NoColorSpace) {
     material.defines = { ...CANVAS_SRGB_DEFINES };
   }
-  injectProgram(material, injection);
+  if (mipmapped) injectViewportProgram(material, injection);
+  else injectProgram(material, injection);
   return material;
 }

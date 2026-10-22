@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { applyShadowCasting, rangedShadowCastingEffects, shadowCastingEffects } from './shadowCasting';
 import { GODOT_ALPHA_HASH } from './materials/godotAlphaHash';
+import { withPointDraw } from './materials/godotPoint';
 import type { ProgramShader } from './materialProgramInputs';
 import { drawsAsOneBatch } from './surfaceDrawHooks';
 import { instanceLayers, shownProbes } from './reflectionProbe/probeSlots';
@@ -227,6 +228,31 @@ describe('surfaceDrawHooks — shadow alpha cut', () => {
   it("leaves an uncut surface to three's depth material (edge case)", () => {
     const { castsOwn, threeDraws } = shadowDraw(surfacesMesh(), OPAQUE);
     expect([castsOwn, threeDraws]).toEqual([false, true]);
+  });
+});
+
+describe('surfaceDrawHooks — point shadow', () => {
+  /** A THREE.Points of one surface sized `pixels`, which casts, typed as the mesh the helpers take. */
+  function pointsSurface(): THREE.Mesh {
+    const userData = withPointDraw(
+      { materialClass: 'standard', props: {} },
+      { pixels: 100, pixelRatio: 1, samplesAlbedoAtPointCoord: false }
+    ).props.userData;
+    const points = new THREE.Points(new THREE.BufferGeometry(), new THREE.MeshStandardMaterial({ userData }));
+    applyShadowCasting(points, shadowCastingEffects(ShadowCastingSetting.ON));
+    return points as unknown as THREE.Mesh;
+  }
+
+  // Godot rasterises a point into its shadow map at the material's point size.
+  it("casts a point's shadow with its own depth material, which writes the point size", () => {
+    const { cast, castsOwn, threeDraws } = shadowDraw(pointsSurface());
+    const shader = { ...THREE.ShaderLib.depth, uniforms: {} } as unknown as ProgramShader;
+    cast.onBeforeCompile.call(cast, shader as never, undefined as never);
+    expect([castsOwn, threeDraws, shader.vertexShader]).toEqual([
+      true,
+      false,
+      expect.stringContaining('gl_PointSize = godotPointSize;'),
+    ]);
   });
 });
 

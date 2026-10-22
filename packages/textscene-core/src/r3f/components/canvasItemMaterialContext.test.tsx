@@ -14,10 +14,11 @@ import {
   createFakeResourceLoader,
   type FakeResourceLoader,
 } from '../../resources/testing/createFakeResourceLoader';
-import { CanvasItemBlendMode } from '../../resources/materials/canvasitemmaterial/types';
+
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { useCanvasItemMaterial, useCanvasItemMaterialFile } from './canvasItemMaterialContext';
 import '../../resources/formats/binaryresource/index';
+import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 
 const ADD_TRES = parseTresFile(`[gd_resource type="CanvasItemMaterial" format=3]
 
@@ -65,7 +66,7 @@ const materialFile = (path: string | null) =>
 
 describe('useCanvasItemMaterialFile', () => {
   it('reads a CanvasItemMaterial .tres to its properties', () => {
-    expect(materialFile('res://add.tres')?.blendMode).toBe(CanvasItemBlendMode.ADD);
+    expect(materialFile('res://add.tres')?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
   });
 
   it('gives null for a file that failed to load', () => {
@@ -77,7 +78,7 @@ describe('useCanvasItemMaterialFile', () => {
   });
 
   it('reads a CanvasItemMaterial saved as a binary .res', () => {
-    expect(materialFile('res://add.res')?.blendMode).toBe(CanvasItemBlendMode.ADD);
+    expect(materialFile('res://add.res')?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
   });
 
   it('gives null for a path no resource file has, such as an image (edge case)', () => {
@@ -91,15 +92,21 @@ const nodeMaterial = (props: Partial<Node2DProperties>) =>
 
 describe('useCanvasItemMaterial', () => {
   it("reads a node's ExtResource material from its .tres", () => {
-    expect(nodeMaterial({ materialPath: 'ExtResource("m")' })?.blendMode).toBe(CanvasItemBlendMode.ADD);
+    expect(nodeMaterial({ materialPath: 'ExtResource("m")' })?.blendMode).toBe(
+      CanvasItemMaterialBlendMode.ADD
+    );
   });
 
   it("reads a node's SubResource material", () => {
-    expect(nodeMaterial({ materialPath: 'SubResource("sub")' })?.blendMode).toBe(CanvasItemBlendMode.SUB);
+    expect(nodeMaterial({ materialPath: 'SubResource("sub")' })?.blendMode).toBe(
+      CanvasItemMaterialBlendMode.SUB
+    );
   });
 
   it("reads a node's ExtResource material from its binary .res", () => {
-    expect(nodeMaterial({ materialPath: 'ExtResource("bin")' })?.blendMode).toBe(CanvasItemBlendMode.ADD);
+    expect(nodeMaterial({ materialPath: 'ExtResource("bin")' })?.blendMode).toBe(
+      CanvasItemMaterialBlendMode.ADD
+    );
   });
 
   it('gives null for an ExtResource id the scene does not declare', () => {

@@ -24,7 +24,6 @@ import {
   findSubResource,
   parseResourceReference,
   resolveExtResourceFilePath,
-  resolveInstancePath,
   resolveTexture2DPath,
   parsedResourcePath,
   unwrapCanvasTextureRef,
@@ -53,7 +52,14 @@ import {
 import { onSceneFontMetricsSettled } from './text/sceneFontLoader';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { useOptionalSelection } from '../../contexts/SelectionContext';
-import { liveChildGroups, type CachedSceneSource, type SceneScope } from '../../liveSceneTree';
+import {
+  liveChildGroups,
+  liveNodeScope,
+  mergedNodeOf,
+  type CachedSceneSource,
+  type SceneScope,
+} from '../../liveSceneTree';
+import { liveInstancePath, scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
@@ -591,7 +597,6 @@ function buildForest(
      */
     childVisibility: ReadonlyMap<TscnNode, boolean> | undefined
   ): WalkResult {
-    const { externalResources: ext } = scope;
     const out: SolveNode[] = [];
     const hoisted: SolveNode[] = [];
     for (const [index, node] of list.entries()) {
@@ -602,12 +607,15 @@ function buildForest(
 
       const path = joinPath(parentPath, node.name);
 
-      const scenePath = node.instance ? resolveInstancePath(node.instance, ext) : null;
+      // A grafted node's instance ref names an id in the file that authored it.
+      const authored = scopeOf(node, scope);
+      const scenePath = liveInstancePath(node, scope);
       if (scenePath && sceneCache.getCached(scenePath) === undefined) {
         // The ExtResource too, since the load checks its type. A raw `res://`
         // instance has none to register, and is still requested.
         const parsed = node.instance ? parseResourceReference(node.instance) : null;
-        const entry = parsed?.type === 'ExtResource' ? findExtResource(ext, parsed.id) : undefined;
+        const entry =
+          parsed?.type === 'ExtResource' ? findExtResource(authored.externalResources, parsed.id) : undefined;
         // One path can be reached both ways in a single walk; an ExtResource already
         // recorded for it is never overwritten by a raw-path node's absent one.
         if (!pendingScenes.get(scenePath)?.ext) {
@@ -616,12 +624,9 @@ function buildForest(
       }
 
       const groups = liveChildGroups(node, scope, sceneCache);
-      const mergedGroup = groups.find((g) => g.origin === 'merged');
-      const collapsed = mergedGroup?.mergedNode ?? node;
+      const collapsed = mergedNodeOf(groups) ?? node;
 
-      // A collapsed instance's own properties came from the sub-scene, so its
-      // ids resolve there; every other node keeps the scope it was authored in.
-      const ownScope = mergedGroup ? mergedGroup.scope : scope;
+      const ownScope = liveNodeScope(node, scope, groups);
 
       const isControl = TWO_D_UI_TYPES.has(collapsed.type);
 

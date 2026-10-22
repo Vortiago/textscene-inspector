@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  comparablePath,
   findResRoot,
   isWithinRoot,
   normalizeRelativePath,
   parentDir,
+  pathKey,
   pathCaseOf,
   projectFileIn,
   resRelativePath,
@@ -16,17 +16,21 @@ function projectsAt(...dirs: string[]): (dir: string) => Promise<boolean> {
   return async (dir) => dirs.includes(dir);
 }
 
-describe('comparablePath', () => {
+describe('pathKey', () => {
   it('trims trailing slashes in linear time, however many slashes the path holds', () => {
     // A backtracking `/\/+$/` spends about 3 s on this path, which a host passes unchecked.
     const manySlashes = `${'/'.repeat(100_000)}a`;
     const startedAt = performance.now();
-    expect(comparablePath(`${manySlashes}///`)).toBe(manySlashes);
+    expect(pathKey(`${manySlashes}///`, 'insensitive')).toBe(manySlashes);
     expect(performance.now() - startedAt).toBeLessThan(500);
   });
 
-  it('turns backslashes into forward slashes and lowers the case', () => {
-    expect(comparablePath('C:\\Users\\Me\\Proj')).toBe('c:/users/me/proj');
+  it('turns backslashes into forward slashes and lowers the case on a case-insensitive filesystem', () => {
+    expect(pathKey('C:\\Users\\Me\\Proj', 'insensitive')).toBe('c:/users/me/proj');
+  });
+
+  it('keeps the case on a case-sensitive filesystem', () => {
+    expect(pathKey('/Users/Me/Proj/', 'sensitive')).toBe('/Users/Me/Proj');
   });
 });
 
@@ -136,13 +140,9 @@ describe('parentDir', () => {
   });
 });
 
-/** An upward walk over string paths that `isStop` ends, from a scene outside any workspace. */
-function walk(
-  start: string,
-  hasProjectFile: (dir: string) => Promise<boolean>,
-  isStop = (_dir: string) => false
-) {
-  return findResRoot(start, parentDir, isStop, hasProjectFile, () => false);
+/** An upward walk over string paths, from a scene outside any workspace. */
+function walk(start: string, hasProjectFile: (dir: string) => Promise<boolean>) {
+  return findResRoot(start, parentDir, hasProjectFile, () => false);
 }
 
 describe('findResRoot, the walk up to project.godot', () => {
@@ -162,20 +162,6 @@ describe('findResRoot, the walk up to project.godot', () => {
     expect(await walk('/proj/scenes', projectsAt())).toBeNull();
   });
 
-  it('checks the stop directory, then ends, even with project.godot above it', async () => {
-    const asked: string[] = [];
-    const hasProjectFile = async (dir: string) => {
-      asked.push(dir);
-      return dir === '/';
-    };
-    expect(await walk('/ws/scenes', hasProjectFile, (dir) => dir === '/ws')).toBeNull();
-    expect(asked).toEqual(['/ws/scenes', '/ws']);
-  });
-
-  it('finds project.godot in the stop directory itself', async () => {
-    expect(await walk('/ws/scenes', projectsAt('/ws'), (dir) => dir === '/ws')).toBe('/ws');
-  });
-
   it('walks any directory handle its parent step understands', async () => {
     interface Dir {
       name: string;
@@ -185,7 +171,6 @@ describe('findResRoot, the walk up to project.godot', () => {
     const root = await findResRoot(
       deep,
       (dir) => dir.up,
-      () => false,
       async (dir) => dir.name === 'proj',
       () => false
     );
@@ -198,26 +183,15 @@ describe('findResRoot', () => {
   const outsideWorkspace = () => false;
 
   it('gives the project root when an ancestor holds project.godot', async () => {
-    expect(
-      await findResRoot('/proj/scenes', parentDir, () => false, projectsAt('/proj'), outsideWorkspace)
-    ).toBe('/proj');
+    expect(await findResRoot('/proj/scenes', parentDir, projectsAt('/proj'), outsideWorkspace)).toBe('/proj');
   });
 
   it("gives the scene's own directory when no ancestor holds project.godot", async () => {
-    expect(await findResRoot('/demo/dungeon', parentDir, () => false, projectsAt(), inWorkspace)).toBe(
-      '/demo/dungeon'
-    );
-  });
-
-  it("gives the scene's own directory when the only project.godot lies above the stop directory", async () => {
-    const isStop = (dir: string) => dir === '/ws';
-    expect(await findResRoot('/ws/scenes', parentDir, isStop, projectsAt('/'), inWorkspace)).toBe(
-      '/ws/scenes'
-    );
+    expect(await findResRoot('/demo/dungeon', parentDir, projectsAt(), inWorkspace)).toBe('/demo/dungeon');
   });
 
   it('gives null for a loose scene outside the workspace', async () => {
-    expect(await findResRoot('/tmp', parentDir, () => false, projectsAt(), outsideWorkspace)).toBeNull();
+    expect(await findResRoot('/tmp', parentDir, projectsAt(), outsideWorkspace)).toBeNull();
   });
 });
 

@@ -17,7 +17,7 @@ import {
   POSITIONAL_SHADOW_ATLAS_UNIFORM,
 } from './shadowAtlasTarget.js';
 import { LIGHT_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
-import { PARABOLOID_UV_GLSL } from './paraboloidUv.js';
+import { OMNI_SLOT_GLSL, PARABOLOID_UV_GLSL } from './paraboloidUv.js';
 
 const ATLAS = POSITIONAL_SHADOW_ATLAS_UNIFORM;
 const ATLAS_COLOUR = POSITIONAL_SHADOW_ATLAS_COLOUR_UNIFORM;
@@ -41,6 +41,7 @@ export const ATLAS_SAMPLING = `
 		vec2 godotAtlasTexel() {
 			return 1.0 / vec2( textureSize( ${ATLAS}, 0 ) );
 		}
+		${OMNI_SLOT_GLSL}
 		float godotOmniPcf( float blurScale, vec2 coord, vec4 uvRect, vec2 flipOffset, float depth ) {
 			mat2 rotation = godotDiskRotation();
 			vec2 offsetScale = blurScale * 2.0 * godotAtlasTexel() / uvRect.zw;
@@ -102,7 +103,9 @@ export const ATLAS_SAMPLING = `
  * A light with a penumbra searches its slot for blockers (`:789-837`). Its penumbra size is half the
  * light's size over its range, over the cone's slope, in units of the atlas (`light_storage.cpp:1019`).
  * `lightDepth` is the receiver's depth along the light's axis, the w of its unbiased coordinate. The
- * slot is centred on the light's axis, which the matrix maps to the axis's vanishing point.
+ * slot is centred on the light's axis, which the matrix maps to the axis's vanishing point. Only an
+ * authored SpotLight3D casts a shadow, and `positionalLightRange` floors its range, so the search
+ * divides by a `light.distance` that is never 0.
  */
 export const SPOT_LOOKUP = `
 		vec4 godotSpotDepthBias( vec4 shadowCoord, float depthBias ) {
@@ -127,7 +130,6 @@ export const SPOT_LOOKUP = `
 			return vec4( axis.xy / axis.w - size * 0.5, size );
 		}
 		float godotSpotSoftShadow( vec3 coord, float lightDepth, SpotLight light, mat4 lightMatrix, SpotLightShadow shadow ) {
-			if ( light.distance <= 0.0 ) return 1.0;
 			vec4 slotRect = godotSpotSlotRect( lightMatrix, light.direction, shadow.shadowMapSize );
 			float coneSlope = sqrt( 1.0 - light.coneCos * light.coneCos ) / light.coneCos;
 			float zNorm = lightDepth / light.distance;
@@ -182,9 +184,8 @@ export const OMNI_LOOKUP = `
 		float godotOmniShadow( mat4 shadowMatrix, vec3 localVert, vec3 localNormal, PointLightShadow pointShadow ) {
 			vec2 texel = godotAtlasTexel();
 			vec4 slot = vec4( shadowMatrix[ 0 ][ 3 ], shadowMatrix[ 1 ][ 3 ], shadowMatrix[ 2 ][ 3 ], shadowMatrix[ 3 ][ 3 ] );
-			vec2 flipOffset = slot.zw;
-			float slotSize = max( flipOffset.x, flipOffset.y );
-			vec4 uvRect = vec4( slot.xy + texel, vec2( slotSize ) - texel * 2.0 );
+			vec2 flipOffset;
+			vec4 uvRect = godotOmniSlot( slot, texel, flipOffset );
 			float shadowLength = length( localVert );
 			vec3 shadowDir = normalize( localVert );
 			vec3 normalBias = localNormal * pointShadow.shadowNormalBias * ( 1.0 - abs( dot( localNormal, shadowDir ) ) );

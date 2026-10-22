@@ -62,6 +62,14 @@ describe('writeAreaLightShadowUniforms', () => {
     expect(at(AREA_LIGHT_SHADOW_RECTS, 0, 4)).toEqual([0.5, 0.5, 0.25, 0.25]);
   });
 
+  it('writes an empty slot for a casting light without one, over the last light’s (edge case)', () => {
+    writeAreaLightShadowUniforms([castingLight()], camera());
+    const unplaced = castingLight();
+    unplaced.shadow.place(null);
+    writeAreaLightShadowUniforms([unplaced], camera());
+    expect(at(AREA_LIGHT_SHADOW_RECTS, 0, 4)).toEqual([0, 0, 0, 0]);
+  });
+
   it('writes the matrix from view space into the light’s own', () => {
     writeAreaLightShadowUniforms([castingLight()], camera());
     const matrix = new THREE.Matrix4().fromArray(at(AREA_LIGHT_SHADOW_MATRICES, 0, 16));

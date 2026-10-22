@@ -18,8 +18,13 @@ export interface GlowParams {
    * spreads a haze over the whole frame.
    */
   levels: number[];
-  /** Highest level index carrying weight. Mips past it are never rendered. */
+  /** Highest level index above the pyramid cutoff. Mips past it are never rendered. */
   maxLevel: number;
+  /**
+   * The levels the composite samples: built, and above the gather cutoff. Finest first. At most
+   * seven, one sampler uniform each.
+   */
+  gatheredLevels: number[];
   /** Peak HDR channel where the bright-pass knee starts. */
   hdrThreshold: number;
   /** Knee width above the threshold. */
@@ -56,34 +61,41 @@ export interface GlowParams {
 }
 
 /**
- * Godot skips a level whose weight is at or below this, so a level under it
- * contributes nothing and need not be rendered.
+ * Godot renders the pyramid down to the coarsest level above this weight
+ * (`renderer_scene_render_rd.cpp:587`), so a lighter level is never drawn.
  */
-const LEVEL_EPSILON = 0.0001;
+const PYRAMID_LEVEL_CUTOFF = 0.01;
+
+/** The composite skips a level at or below this weight (`tonemap.glsl:380`). */
+const GATHER_LEVEL_CUTOFF = 0.0001;
 
 /**
- * How much smaller than the frame glow level 0 is. Godot allocates its glow buffer
- * at half the render size, and the gather pass box-samples level 0 at half of that.
- * A chain that starts at half resolution is one octave too fine at every level, so
- * its halo reads tight and bright where Godot's reads wide and flat.
- */
-const GLOW_FIRST_LEVEL_DIVISOR = 4;
-
-/**
- * The pixel size of one glow level, given the frame it is built from. Each level
- * halves again from `GLOW_FIRST_LEVEL_DIVISOR`, and never falls below 1px, since a
- * zero-sized render target is not renderable.
+ * The pixel size of one glow level, given the frame it is built from. The glow texture is half
+ * the frame (`render_scene_buffers_rd.cpp:531`) and each level is one mip of it, so level 0 is
+ * half the frame and each level halves again. A level never falls below 1px, since a zero-sized
+ * render target is not renderable.
  */
 export function glowLevelSize(
   width: number,
   height: number,
   level: number
 ): { width: number; height: number } {
-  const divisor = GLOW_FIRST_LEVEL_DIVISOR * Math.pow(2, level);
+  const divisor = Math.pow(2, level + 1);
   return {
     width: Math.max(1, Math.floor(width / divisor)),
     height: Math.max(1, Math.floor(height / divisor)),
   };
+}
+
+/**
+ * The highest level index the glow texture has for a frame. Godot allocates it with one mip fewer
+ * than the frame's halvings to 1px (`render_scene_buffers_rd.cpp:521,531`) and builds no level past
+ * the last mip (`renderer_scene_render_rd.cpp:593`), so the top index is the halvings less two.
+ * Level 0 stays for a frame too small to halve.
+ */
+export function glowLevelCap(width: number, height: number): number {
+  const halvingsToOnePixel = Math.floor(Math.log2(Math.max(width, height)));
+  return Math.max(0, halvingsToOnePixel - 2);
 }
 
 /**
@@ -99,15 +111,21 @@ export function glowParamsFor(settings: EnvironmentSettings): GlowParams | null 
   const levels = glow.levels;
   let maxLevel = -1;
   for (let i = 0; i < levels.length; i++) {
-    if ((levels[i] ?? 0) > LEVEL_EPSILON) maxLevel = i;
+    if ((levels[i] ?? 0) > PYRAMID_LEVEL_CUTOFF) maxLevel = i;
   }
 
   if (maxLevel < 0) return null;
+
+  const gatheredLevels: number[] = [];
+  for (let i = 0; i <= maxLevel; i++) {
+    if ((levels[i] ?? 0) > GATHER_LEVEL_CUTOFF) gatheredLevels.push(i);
+  }
 
   const blendMode = glow.blendMode;
   return {
     levels,
     maxLevel,
+    gatheredLevels,
     hdrThreshold: Math.max(0, glow.hdrThreshold),
     hdrScale: Math.max(0, glow.hdrScale),
     bloom: clamp(glow.bloom, 0, 1),
@@ -139,7 +157,7 @@ export function blendsAfterToneMapping(params: GlowParams): boolean {
 }
 
 /**
- * Godot's bright pass (`copy.glsl`, `MODE_GLOW` under `FLAG_GLOW_FIRST_PASS`). It
+ * Godot's bright pass (`copy.glsl:183-200`, `MODE_GLOW` under `FLAG_GLOW_FIRST_PASS`). It
  * gates on the peak RGB channel, not Rec. 709 luminance, so a saturated blue emissive
  * still blooms. It multiplies the colour by the knee rather than subtracting the
  * threshold, and `glow_bloom` floors the knee: at 1.0 every pixel glows.
@@ -183,7 +201,7 @@ ${body(params, white)}
 /**
  * Smallest value safe to bake where GLSL divides by it: `smoothstep(e, e, x)` is
  * undefined at zero width, and SCREEN divides by the white point, which a scene can
- * author as zero. Not `LEVEL_EPSILON`, though equal: that is Godot's weight cutoff,
+ * author as zero. Not `GATHER_LEVEL_CUTOFF`, though equal: that is Godot's weight cutoff,
  * and merging them couples a parity value to a codegen guard.
  */
 const GLSL_EPSILON = 1e-4;

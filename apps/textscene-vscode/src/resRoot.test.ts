@@ -1,10 +1,10 @@
 /**
- * Tests for the `res://` root walk: up from a document for project.godot, bounded by the workspace root, with the
+ * Tests for the `res://` root walk: up from a document for project.godot, past the workspace root, with the
  * document's own directory outside every project.
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { findResRootIn, hasProjectFile, resRootOf } from './resRoot';
+import { findResRootIn, forgetProjectFiles, resRootOf } from './resRoot';
 import { createMockUri, vscode } from './test-setup';
 
 describe('findResRootIn', () => {
@@ -32,12 +32,12 @@ describe('findResRootIn', () => {
     expect(result?.fsPath).toBe('/workspace/isometric');
   });
 
-  it("gives the document's own directory when the only project.godot lies above the workspace root", async () => {
+  it('gives the project.godot directory above the workspace root, as the Node hosts do', async () => {
     const holds = async (dir: ReturnType<typeof createMockUri>) => dir.fsPath === '/';
 
     const result = await findResRootIn(workspaceRoot, createMockUri('/workspace/scenes/Door.tscn'), holds);
 
-    expect(result?.fsPath).toBe('/workspace/scenes');
+    expect(result?.fsPath).toBe('/');
   });
 
   it('gives null for a document outside the workspace root', async () => {
@@ -65,7 +65,7 @@ describe('findResRootIn', () => {
     expect(result?.fsPath).toBe('/workspace');
   });
 
-  it('asks about each directory from the document up to the workspace root, and none above it', async () => {
+  it('asks about each directory from the document up to the top', async () => {
     const asked: string[] = [];
     const holds = async (dir: ReturnType<typeof createMockUri>) => {
       asked.push(dir.fsPath);
@@ -74,7 +74,7 @@ describe('findResRootIn', () => {
 
     await findResRootIn(workspaceRoot, createMockUri('/workspace/a/b/Door.tscn'), holds);
 
-    expect(asked).toEqual(['/workspace/a/b', '/workspace/a', '/workspace']);
+    expect(asked).toEqual(['/workspace/a/b', '/workspace/a', '/workspace', '/']);
   });
 });
 
@@ -111,20 +111,44 @@ describe('resRootOf', () => {
   });
 });
 
-describe('hasProjectFile', () => {
-  it('is true when stat finds project.godot in the directory', async () => {
-    vscode.workspace.fs.stat.mockImplementation((uri: ReturnType<typeof createMockUri>) =>
-      uri.fsPath === '/workspace/project.godot'
-        ? Promise.resolve({ type: 1, ctime: 0, mtime: 0, size: 1 })
-        : Promise.reject(new Error('Not found'))
-    );
+describe('the project.godot answers resRootOf shares', () => {
+  /** A scene three directories below the workspace root, in no project. */
+  const DEEP_SCENE = '/workspace/a/b/c/scene.tscn';
+  const statCalls = () => vscode.workspace.fs.stat.mock.calls.length;
 
-    expect(await hasProjectFile(createMockUri('/workspace'))).toBe(true);
+  function noProjectAnywhere(): void {
+    (vscode.workspace.getWorkspaceFolder as ReturnType<typeof vi.fn>).mockReturnValue({
+      uri: createMockUri('/workspace'),
+    });
+    vscode.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+  }
+
+  it('asks stat once for each directory from the scene up to the top', async () => {
+    noProjectAnywhere();
+
+    await resRootOf(createMockUri(DEEP_SCENE));
+
+    expect(statCalls()).toBe(5);
   });
 
-  it('is false when stat rejects', async () => {
-    vscode.workspace.fs.stat.mockRejectedValue(new Error('Not found'));
+  it('asks stat nothing more for a second lookup', async () => {
+    noProjectAnywhere();
+    await resRootOf(createMockUri(DEEP_SCENE));
+    const afterFirst = statCalls();
 
-    expect(await hasProjectFile(createMockUri('/workspace'))).toBe(false);
+    await resRootOf(createMockUri(DEEP_SCENE));
+
+    expect(statCalls()).toBe(afterFirst);
+  });
+
+  it('walks again after forgetProjectFiles', async () => {
+    noProjectAnywhere();
+    await resRootOf(createMockUri(DEEP_SCENE));
+    const afterFirst = statCalls();
+
+    forgetProjectFiles();
+    await resRootOf(createMockUri(DEEP_SCENE));
+
+    expect(statCalls()).toBe(2 * afterFirst);
   });
 });

@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import { waitFor } from '../../waitFor';
 import { assertEqual } from './assertEqual';
-import { CLEAN_SCENE, DANGLING_SCENE } from '../../smokeProject/scenes';
+import { CLEAN_SCENE, DANGLING_SCENE, MATERIAL_FILE, MATERIAL_USER_SCENES } from '../../smokeProject/scenes';
 import {
   extensionUnderTest,
   lintCodes,
@@ -74,6 +74,28 @@ suite('Web extension', () => {
       symbols?.map((symbol) => symbol.name),
       ['Scene'],
       'the Outline symbols'
+    );
+  });
+
+  test('Find All References on a res:// path lists every scene that names it', async () => {
+    const [firstUser] = MATERIAL_USER_SCENES;
+    const document = await openSceneAndActivate(firstUser!);
+    const line = document
+      .getText()
+      .split('\n')
+      .findIndex((text) => text.includes(MATERIAL_FILE));
+    const character = document.lineAt(line).text.indexOf(MATERIAL_FILE);
+
+    const found = await vscode.commands.executeCommand<vscode.Location[]>(
+      'vscode.executeReferenceProvider',
+      document.uri,
+      new vscode.Position(line, character)
+    );
+
+    assertEqual(
+      found.map((location) => location.uri.path.split('/').pop()).sort(),
+      [...MATERIAL_USER_SCENES].sort(),
+      'the scenes that name the material'
     );
   });
 

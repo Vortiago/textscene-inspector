@@ -19,6 +19,31 @@ export const GIZMO_SCENES = [
   { name: 'vehiclewheel3d-selected', file: 'unit-physics-vehicle.tscn', select: 'Root/Vehicle/Wheel1' },
   // The SpringArm3D length line: one segment from the origin along +Z, spring_length long.
   { name: 'spring-arm-3d-selected', file: 'unit-spring-arm-3d.tscn', select: 'Root/MySpringArm3D' },
+  // The particle emitters: the visibility_aabb box and the emission shape lines, with the axes from
+  // the box centre on CPUParticles3D. The GPUParticles3D scene gives its box shape the offset and
+  // scale only a ParticleProcessMaterial has.
+  {
+    name: 'gpuparticles3d-emission-selected',
+    file: 'unit-gpuparticles3d-emission.tscn',
+    select: 'Root/Emitter',
+  },
+  { name: 'cpuparticles3d-selected', file: 'unit-cpuparticles3d-gizmo.tscn', select: 'Root/Emitter' },
+  // The box gizmos of the types whose Godot editor gizmo is a box volume. VisibleOnScreenNotifier3D and
+  // its Enabler draw the box, the axes and a faint fill. ReflectionProbe draws the blend box, the lines
+  // to the outer box and the origin cross. VoxelGI draws the box and its cell grid. FogVolume draws the box.
+  {
+    name: 'visibleonscreennotifier3d-selected',
+    file: 'unit-visibleonscreennotifier3d-gizmo.tscn',
+    select: 'Root/Notifier',
+  },
+  {
+    name: 'visibleonscreenenabler3d-selected',
+    file: 'unit-visibleonscreenenabler3d-gizmo.tscn',
+    select: 'Root/Enabler',
+  },
+  { name: 'reflectionprobe-selected', file: 'unit-reflectionprobe-gizmo.tscn', select: 'Root/Probe' },
+  { name: 'voxelgi-selected', file: 'unit-voxelgi-gizmo.tscn', select: 'Root/Voxels' },
+  { name: 'fogvolume-selected', file: 'unit-fogvolume-gizmo.tscn', select: 'Root/Fog' },
 
   // Lights, Camera3D and AudioStreamPlayer3D gizmos. Unselected: the render
   // with ground and shading only, no helper.

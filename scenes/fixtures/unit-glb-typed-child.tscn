@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3]
+
+; One variable: a node that declares a `type=` under a path inside an instanced `.glb`. Godot adds
+; it to the node that path resolves to (`packed_scene.cpp:157-165`, `:541`), so the red box takes the
+; transform of `Torso`: moved left, turned 45 degrees about Y and halved, with its own offset and
+; stretch on top. Rendered as a child of `Body` instead, it sits at the instance's origin at full
+; size, and rendered nowhere the frame holds the grey torso alone.
+
+[ext_resource type="PackedScene" path="res://meshes/unit-glb-rig.glb" id="1_glb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
+albedo_color = Color(0.85, 0.12, 0.1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_marker"]
+material = SubResource("StandardMaterial3D_marker")
+size = Vector3(1.6, 1.6, 1.6)
+
+[node name="GlbTypedChild" type="Node3D"]
+
+[node name="Body" parent="." instance=ExtResource("1_glb")]
+
+[node name="Marker" type="MeshInstance3D" parent="Body/Rig/Torso"]
+transform = Transform3D(1, 0, 0, 0, 1.5, 0, 0, 0, 1, 2.5, 0, 0)
+mesh = SubResource("BoxMesh_marker")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 3, 0)

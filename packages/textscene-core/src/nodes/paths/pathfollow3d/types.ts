@@ -2,15 +2,6 @@
 
 import type { Node3DProperties } from '../../base/node3d/types';
 
-/** Godot PathFollow3D.RotationMode. */
-export const RotationMode = {
-  NONE: 0,
-  Y: 1,
-  XY: 2,
-  XYZ: 3,
-  ORIENTED: 4,
-} as const;
-
 export interface PathFollow3DProperties extends Node3DProperties {
   /** Absolute distance along the curve, world units. Undefined when unset. */
   progress?: number;

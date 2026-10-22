@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseGodotFloat, TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
+import { parseGodotFloat, TSCN_FLOAT_PATTERN_SOURCE } from '../../godot/variant/number.js';
 import { makeFloatTupleRegex } from './floatTupleValidator.js';
 import { v } from './v.js';
 import { maybeFinite, maybeNan } from './v/grounding.js';

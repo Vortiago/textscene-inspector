@@ -17,6 +17,7 @@ import { billboardWorldMatrix } from './surfaceBillboard';
 import { restoreInstanceLayers, showInstanceLayers } from './reflectionProbe/instanceLayers';
 import { alignAlphaHash } from './materials/godotAlphaHash';
 import { opaquePrepassOf } from './materials/opaquePrepass';
+import { pointShadowSizeInjection } from './materials/godotPoint';
 import { surfaceDepthMaterial, syncSurfaceDepth } from './materials/surfaceDepthMaterial';
 import { SHADOW_PASS_OPAQUE_THRESHOLD } from '../godot/rendering/opaquePrepass';
 
@@ -158,10 +159,10 @@ function shadowAlphaCut(material: THREE.Material): number {
 }
 
 /**
- * Draws a surface whose shadow cuts its alpha with its own depth material, and makes three's draw
- * draw nothing. three's would cut the texture alpha alone, and at the scissor only.
+ * Draws a surface whose shadow needs its own depth material, and makes three's draw draw nothing.
+ * three's would cut the texture alpha alone, and at the scissor only, and write no point size.
  */
-function castCutShadow(
+function castOwnShadow(
   renderer: THREE.WebGLRenderer,
   object: THREE.Object3D,
   shadowCamera: THREE.Camera,
@@ -192,6 +193,11 @@ function lightState(renderer: THREE.WebGLRenderer, material: THREE.Material): { 
 /** Whether a shadow draw of `material` cuts its alpha anywhere. */
 function cutsShadow(material: THREE.Material): boolean {
   return material.alphaHash || shadowAlphaCut(material) > 0;
+}
+
+/** Whether three's depth material cannot draw `material`'s shadow: it cuts alpha, or sizes points. */
+function needsOwnDepth(material: THREE.Material): boolean {
+  return cutsShadow(material) || pointShadowSizeInjection(material.userData) !== undefined;
 }
 
 function closeDraw(): void {
@@ -262,11 +268,11 @@ export function surfaceDrawHooks(rule: CastRule, instance: DrawnInstance): Surfa
         viewedModelView.copy(drawn.modelViewMatrix);
         drawn.modelViewMatrix.multiplyMatrices(shadowCamera.matrixWorldInverse, drawn.matrixWorld);
       }
-      if (!cutsShadow(material)) return;
+      if (!needsOwnDepth(material)) return;
       const shadowDepth = depthMaterial as THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
       // three passes the geometry group, or null for one material, typed as a `Group`.
       const drawnGroup = group as unknown as THREE.GeometryGroup;
-      castCutShadow(renderer, drawn, shadowCamera, geometry, shadowDepth, material, drawnGroup, instance);
+      castOwnShadow(renderer, drawn, shadowCamera, geometry, shadowDepth, material, drawnGroup, instance);
     },
     onAfterShadow: closeDraw,
   };

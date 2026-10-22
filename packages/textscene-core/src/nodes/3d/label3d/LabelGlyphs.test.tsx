@@ -31,9 +31,6 @@ import {
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
-/** The canvas text painter's raster supersampling factor. */
-const CANVAS_TEXT_SUPERSAMPLE = 3;
-
 /** The painter's fixed anti-aliasing pad on each vertical raster edge, CSS px. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
@@ -67,6 +64,18 @@ async function render(p: Label3DProperties) {
   return ReactThreeTestRenderer.create(<ScopedGlyphs node={node} />);
 }
 
+type Rendered = Awaited<ReturnType<typeof render>>;
+
+/** The one glyph mesh of a single-line label. */
+function meshOf(renderer: Rendered): THREE.Mesh {
+  return renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+}
+
+async function renderGlyphMesh(properties: Label3DProperties) {
+  const mesh = meshOf(await render(properties));
+  return { mesh, map: (mesh.material as THREE.MeshBasicMaterial).map! };
+}
+
 /** One group per line, inside the group the visibility range shows or hides. */
 function lineGroups(renderer: Awaited<ReturnType<typeof render>>): THREE.Group[] {
   return renderer.scene.children[0]!.children.map((c) => c.instance as THREE.Group);
@@ -75,7 +84,7 @@ function lineGroups(renderer: Awaited<ReturnType<typeof render>>): THREE.Group[]
 describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
   it('paints through the canvas rasteriser, not the MSDF atlas (Godot default project font is not MSDF: text_server.cpp:2386)', async () => {
     const renderer = await render(labelProperties({ text: 'Hi' }));
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const mesh = meshOf(renderer);
     const material = mesh.material as THREE.MeshBasicMaterial;
     expect(material.type).toBe('MeshBasicMaterial');
     expect(material.map).toBeTruthy();
@@ -88,28 +97,49 @@ describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
   });
 });
 
+describe('<LabelGlyphs> — the glyph raster', () => {
+  // The mesh is in font pixels, as `pixel_size` scales its parent group. `label_3d.cpp:345-350`
+  // asks the text server for the glyph at `font_size`, which rasterises at that size and no
+  // larger (`text_server_adv.h:406-413`).
+  it.each([16, 32, 128])('has one texel per font pixel at font_size %i', async (fontSize) => {
+    const { mesh, map } = await renderGlyphMesh(
+      labelProperties({ text: 'Hello', font_size: fontSize, outline_size: 0 })
+    );
+    const raster = map.image as HTMLCanvasElement;
+    const quad = boundingSize(mesh);
+    expect([raster.width, raster.height]).toEqual([quad.x, quad.y]);
+  });
+
+  // Godot's glyph atlas has no mip chain unless the font sets `generate_mipmaps`,
+  // which defaults off (`text_server_adv.h:333`, `font.cpp:1426`, `text_server_adv.cpp:3528`).
+  it('builds no mip chain for the default LINEAR_WITH_MIPMAPS filter', async () => {
+    const { map } = await renderGlyphMesh(labelProperties({ text: 'Hello' }));
+    expect(map.generateMipmaps).toBe(false);
+  });
+});
+
 describe('<LabelGlyphs>', () => {
   it('renders a Mesh with a non-empty BufferGeometry for non-empty text', async () => {
     const renderer = await render(labelProperties({ text: 'Hi' }));
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const mesh = meshOf(renderer);
     expect(mesh.geometry.type).toBe('BufferGeometry');
     expect(mesh.geometry.getAttribute('position').count).toBeGreaterThan(0);
   });
 
   it('renders no glyph ink for empty text — a zero-width content box, no throw', async () => {
     const renderer = await render(labelProperties({ text: '' }));
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const mesh = meshOf(renderer);
     // The raster painter always emits its one quad. "No ink" is the quad at
-    // the one device pixel a canvas must have, since with no outline stroke
+    // the one pixel a canvas must have, since with no outline stroke
     // and no skew no horizontal pad widens it.
-    expect(boundingSize(mesh).x).toBeCloseTo(1 / CANVAS_TEXT_SUPERSAMPLE, 6);
+    expect(boundingSize(mesh).x).toBeCloseTo(1, 6);
   });
 
   it('scales glyph geometry with font_size — to within the whole-pixel advance round, which is not proportional', async () => {
     const small = await render(labelProperties({ text: 'Hello', font_size: 32 }));
     const large = await render(labelProperties({ text: 'Hello', font_size: 64 }));
-    const smallMesh = small.scene.findByType('Mesh').instance as THREE.Mesh;
-    const largeMesh = large.scene.findByType('Mesh').instance as THREE.Mesh;
+    const smallMesh = meshOf(small);
+    const largeMesh = meshOf(large);
     const smallSize = boundingSize(smallMesh);
     const largeSize = boundingSize(largeMesh);
     // Both sizes are above SUBPIXEL_POSITIONING_ONE_HALF_MAX_SIZE, so each advance
@@ -126,7 +156,7 @@ describe('<LabelGlyphs>', () => {
 
   it("applies modulate's alpha as the material opacity (its rgb is baked into the raster, sRGB, and decoded by the texture's own tag)", async () => {
     const renderer = await render(labelProperties({ modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 } }));
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const mesh = meshOf(renderer);
     const material = mesh.material as THREE.MeshBasicMaterial;
     expect(material.opacity).toBeCloseTo(0.5, 6);
     expect(material.map!.colorSpace).toBe(THREE.SRGBColorSpace);
@@ -134,30 +164,22 @@ describe('<LabelGlyphs>', () => {
 
   it('uses a transparent material, so a translucent modulate blends over what is behind it', async () => {
     const renderer = await render(labelProperties());
-    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const mesh = meshOf(renderer);
     expect((mesh.material as THREE.Material).transparent).toBe(true);
   });
 
   it('no_depth_test=true → material.depthTest === false; default false → true', async () => {
     const on = await render(labelProperties({ no_depth_test: true }));
     const off = await render(labelProperties({ no_depth_test: false }));
-    expect(((on.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).depthTest).toBe(
-      false
-    );
-    expect(((off.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).depthTest).toBe(
-      true
-    );
+    expect((meshOf(on).material as THREE.Material).depthTest).toBe(false);
+    expect((meshOf(off).material as THREE.Material).depthTest).toBe(true);
   });
 
   it('double_sided=false → FrontSide material; default true → DoubleSide', async () => {
     const front = await render(labelProperties({ double_sided: false }));
     const double = await render(labelProperties({ double_sided: true }));
-    expect(((front.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side).toBe(
-      THREE.FrontSide
-    );
-    expect(((double.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.Material).side).toBe(
-      THREE.DoubleSide
-    );
+    expect((meshOf(front).material as THREE.Material).side).toBe(THREE.FrontSide);
+    expect((meshOf(double).material as THREE.Material).side).toBe(THREE.DoubleSide);
   });
 
   describe('outline pass', () => {
@@ -217,8 +239,7 @@ describe('<LabelGlyphs>', () => {
     // `label_3d.h:140` defaults to LINEAR_WITH_MIPMAPS. The enum's even members
     // are the NEAREST ones (`material.h:172-177`).
     const mapFilters = (renderer: Awaited<ReturnType<typeof render>>) => {
-      const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
-        .material as THREE.MeshBasicMaterial;
+      const material = meshOf(renderer).material as THREE.MeshBasicMaterial;
       return { mag: material.map!.magFilter, min: material.map!.minFilter };
     };
 
@@ -362,7 +383,7 @@ describe('<LabelGlyphs>', () => {
     });
 
     it("measures the edge's mip level in Godot's glyph texels, one per font pixel", async () => {
-      // `label_3d.cpp:345-350` caches the glyph at its font size; the raster supersamples it.
+      // `label_3d.cpp:345-350` caches the glyph at its font size, and the raster paints it at that size.
       const cut = scissorAntialiasing(AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, 0.5, 0);
       const renderer = await render(
         labelProperties({
@@ -371,7 +392,7 @@ describe('<LabelGlyphs>', () => {
         })
       );
       const [material] = materials(renderer);
-      expect(material!.userData).toMatchObject(alphaAntialiasingUserData(cut, 1 / CANVAS_TEXT_SUPERSAMPLE));
+      expect(material!.userData).toMatchObject(alphaAntialiasingUserData(cut));
     });
 
     it('HASH under ALPHA_TO_COVERAGE_AND_TO_ONE overwrites the colour with the coverage blend', async () => {
@@ -452,7 +473,7 @@ describe('<LabelGlyphs>', () => {
     it('sizes each line-group from ITS OWN width, not the concatenated string — the widest line bounds the whole label', async () => {
       const oneLine = await render(labelProperties({ text: 'ABCDEFG' }));
       const twoLines = await render(labelProperties({ text: 'AB\nCDEFG' }));
-      const oneMesh = oneLine.scene.findByType('Mesh').instance as THREE.Mesh;
+      const oneMesh = meshOf(oneLine);
       const twoMeshes = twoLines.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
       // "AB\nCDEFG" has the same 7 glyphs as "ABCDEFG", so one merged geometry
       // would report one width for both. Each line is its own mesh, so no line

@@ -6,6 +6,7 @@ import {
   basisGetScale,
   basisGetScaleAbs,
   basisHasUnitScale,
+  basisInvert,
   basisIsOrthonormal,
 } from './basis.js';
 
@@ -81,5 +82,33 @@ describe('basisIsOrthonormal', () => {
     expect(basisIsOrthonormal(SHEARED)).toBe(false);
     expect(basisIsOrthonormal(infFirst(Infinity))).toBe(false);
     expect(basisIsOrthonormal(infFirst(NaN))).toBe(false);
+  });
+});
+
+describe('basisInvert', () => {
+  /** Equal to 12 places, so a `-0` from a cofactor reads as the `0` it is. */
+  const expectInverse = (basis: BasisComponents, expected: readonly number[]): void => {
+    expected.forEach((value, i) => expect(basisInvert(basis)[i]).toBeCloseTo(value, 12));
+  };
+
+  it('turns a quarter turn about Z into its transpose', () => {
+    expectInverse([0, -1, 0, 1, 0, 0, 0, 0, 1], [0, 1, 0, -1, 0, 0, 0, 0, 1]);
+  });
+
+  it('divides a scale: diag(2, 4, 5) inverts to diag(0.5, 0.25, 0.2 in float)', () => {
+    expectInverse([2, 0, 0, 0, 4, 0, 0, 0, 5], [0.5, 0, 0, 0, 0.25, 0, 0, 0, Math.fround(0.2)]);
+  });
+
+  it('undoes a shear', () => {
+    expectInverse(SHEARED, [1, -0.5, 0, 0, 1, 0, 0, 0, 1]);
+  });
+
+  it('rounds each step to float, as `real_t` does', () => {
+    expect(basisInvert([3, 0, 0, 0, 1, 0, 0, 0, 1])[0]).toBe(Math.fround(1 / 3));
+  });
+
+  it('leaves a singular basis as it is, as the editor build does (edge case)', () => {
+    const singular: BasisComponents = [0, 0, 0, 0, 1, 0, 0, 0, 0];
+    expect(basisInvert(singular)).toBe(singular);
   });
 });

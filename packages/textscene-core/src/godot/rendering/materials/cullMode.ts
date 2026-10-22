@@ -7,10 +7,10 @@ import { enumNamesByValue } from '../../classdb/enumNames.js';
  * stores for `cull_mode`. BACK culls back faces, so it draws the front. The default is BACK
  * (`material.h:605`).
  */
-export enum CullMode {
-  BACK = 0,
-  FRONT = 1,
-  DISABLED = 2,
-}
+export const CullMode = {
+  BACK: 0,
+  FRONT: 1,
+  DISABLED: 2,
+} as const;
 
 export const CULL_MODE_NAMES = enumNamesByValue(CullMode);

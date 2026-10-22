@@ -6,15 +6,9 @@
 
 import * as THREE from 'three';
 import { BASE_MATERIAL_3D_DEFAULTS } from '../../godot/scene/baseMaterial3D';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../godot/scene/viewport';
 
-/**
- * Godot's anisotropy ceiling is `1 << anisotropic_filtering_level`, a project
- * setting whose default is level 2 (4x). Pinned at 16 (level 4), not plumbed:
- * three clamps to the GPU maximum at upload, so this is a ceiling, never an error.
- */
-const GODOT_ANISOTROPY_MAX = 16;
-
-interface TextureFilterState {
+export interface TextureFilterState {
   magFilter: THREE.MagnificationTextureFilter;
   minFilter: THREE.MinificationTextureFilter;
   generateMipmaps: boolean;
@@ -65,25 +59,45 @@ const STATES: Record<number, TextureFilterState> = {
     magFilter: THREE.NearestFilter,
     minFilter: THREE.NearestMipmapLinearFilter,
     generateMipmaps: true,
-    anisotropy: GODOT_ANISOTROPY_MAX,
+    anisotropy: 1,
   },
   // LINEAR_WITH_MIPMAPS_ANISOTROPIC
   5: {
     magFilter: THREE.LinearFilter,
     minFilter: THREE.LinearMipmapLinearFilter,
     generateMipmaps: true,
-    anisotropy: GODOT_ANISOTROPY_MAX,
+    anisotropy: 1,
   },
 };
 
 /**
+ * The rows whose sampler uses anisotropy (`material_storage.cpp:2489-2504`). They sample at
+ * `1 << anisotropic_filtering_level` (`:2461`), which three clamps to the GPU maximum at upload.
+ */
+const ANISOTROPIC_FILTERS: ReadonlySet<number> = new Set([4, 5]);
+
+/** Each anisotropic state by row and level, written only by `godotTextureFilterState`, so a caller's memo sees one identity. */
+const anisotropicStates = new Map<string, TextureFilterState>();
+
+/**
  * The sampler state for a `texture_filter` ordinal. An absent or out-of-range
  * value resolves to Godot's default, matching how the engine treats anything
- * outside `TEXTURE_FILTER_MAX`.
+ * outside `TEXTURE_FILTER_MAX`. The level is one `parseAnisotropicFilteringLevel` accepted.
  */
-export function godotTextureFilterState(filter: number | undefined): TextureFilterState {
+export function godotTextureFilterState(
+  filter: number | undefined,
+  anisotropicFilteringLevel: number = DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+): TextureFilterState {
   const defaultFilter = BASE_MATERIAL_3D_DEFAULTS.textureFilter;
-  return STATES[filter ?? defaultFilter] ?? STATES[defaultFilter]!;
+  const row = filter !== undefined && filter in STATES ? filter : defaultFilter;
+  if (!ANISOTROPIC_FILTERS.has(row)) return STATES[row]!;
+  const key = `${row}:${anisotropicFilteringLevel}`;
+  let state = anisotropicStates.get(key);
+  if (!state) {
+    state = { ...STATES[row]!, anisotropy: 1 << anisotropicFilteringLevel };
+    anisotropicStates.set(key, state);
+  }
+  return state;
 }
 
 /**
@@ -106,6 +120,14 @@ function effectiveState(texture: THREE.Texture, state: TextureFilterState): Text
  */
 export function hasMipChain(texture: THREE.Texture): boolean {
   return texture.generateMipmaps || texture.mipmaps.length > 1;
+}
+
+/**
+ * Whether `texture` samples between mip levels: a mipmap minification filter over a chain that
+ * exists. A mipmap bias changes the sample only then.
+ */
+export function samplesMipChain(texture: THREE.Texture): boolean {
+  return texture.minFilter in WITHOUT_MIPMAPS && hasMipChain(texture);
 }
 
 /** Whether a texture already samples the way this state asks, so no clone is needed. */

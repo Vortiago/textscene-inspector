@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { rangeRatio, type RangeProperties, type RangeValueOrder } from './range';
 import type { Vector2 } from '../../../../godot/math/vector';

@@ -61,6 +61,12 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 `--rendering-driver opengl3` gives 77, and so does the previewer's WebGL clear. This
 1/255 gap is not a parity defect.
 
+## Why anisotropic filtering differs from the Godot reference
+
+`pnpm ref:godot` samples on lavapipe, which implements the anisotropic algorithm that the Vulkan specification suggests. It takes `ceil(rho_max / rho_min)` taps, capped at `1 << anisotropic_filtering_level`, spaced `1 / (N + 1)` of the longer screen-space gradient apart. Each tap is trilinear at the level of `rho_max / N` (`lp_bld_sample.c:266-358`, `lp_bld_sample_soa.c:2186-2330`, Mesa 25.2.8).
+
+The previewer asks the browser's driver for the same maximum and takes that driver's own tap pattern, so `texture_filter` 4 and 5 read 1.6 to 2.2 per channel (/255) from Godot at level 1 and above. A shader that ports the lavapipe taps into the previewer measures 0.563, 0.544, 0.548 and 0.550 at levels 1 to 4, against 2.179, 1.899, 1.625 and 1.605 for the browser's own taps. Level 0 measures 0.525. The port is an experiment and is not shipped. Godot asks the driver for a maximum and names no pattern, so a GPU's pattern differs from lavapipe's as well. This gap is not a parity defect.
+
 ## 3D
 
 - [AimModifier3D](../../packages/textscene-core/src/nodes/3d/skeleton/aimmodifier3d/comparison.md): nothing yet, Godot rotates a bone toward its target, the previewer does not
@@ -105,7 +111,7 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [GPUParticlesCollisionHeightField3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionheightfield3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSDF3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsdf3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/comparison.md): nothing yet, not implemented
-- [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, or a mesh per cell when that surface's material billboards
+- [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface, or a mesh per cell when that surface's material billboards
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md): nothing (a transform-only group)
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not
@@ -163,8 +169,8 @@ so the driver picks the byte. In float32, 0.3 × 255 is exactly 76.5, a tie.
 - [TwoBoneIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/twoboneik3d/comparison.md): nothing yet, Godot poses its two-bone chain onto the target, the previewer does not
 - [VehicleBody3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclebody3d/comparison.md): an invisible transform-only group
 - [VehicleWheel3D](../../packages/textscene-core/src/nodes/physics/3d/vehiclewheel3d/comparison.md): a transform group with a selection-gated wheel gizmo
-- [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md): nothing (a transform-only group)
-- [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md): nothing (a transform-only group)
+- [VisibleOnScreenEnabler3D](../../packages/textscene-core/src/nodes/3d/visibleonscreenenabler3d/comparison.md): a selection-gated box gizmo
+- [VisibleOnScreenNotifier3D](../../packages/textscene-core/src/nodes/3d/visibleonscreennotifier3d/comparison.md): a selection-gated box gizmo
 - [VisualInstance3D](../../packages/textscene-core/src/nodes/3d/visualinstance3d/comparison.md): a transform-only group
 - [VoxelGI](../../packages/textscene-core/src/nodes/3d/voxelgi/comparison.md): nothing yet, Godot lights the scene from its voxel bake, the previewer does not
 - [WorldEnvironment](../../packages/textscene-core/src/nodes/3d/worldenvironment/comparison.md): the scene's background and environment lighting

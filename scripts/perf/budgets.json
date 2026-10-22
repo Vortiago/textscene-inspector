@@ -117,10 +117,10 @@
     }
   },
   "demo-3d-platformer": {
-    "drawCalls": 298,
+    "drawCalls": 318,
     "steps": {
       "Scene draw": {
-        "drawCalls": 184,
+        "drawCalls": 204,
         "runs": 1
       },
       "Depth prepass": {

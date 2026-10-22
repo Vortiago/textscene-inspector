@@ -18,6 +18,8 @@ export class TrackedObjects<Tracked extends THREE.Object3D> {
   private readonly trackedIndex = new Map<THREE.Object3D, number>();
   /** Every object that carries this tracker's two listeners. */
   private readonly watched = new Set<THREE.Object3D>();
+  /** Changes whenever an object enters or leaves the list, so a caller skips a frame that changed none. */
+  version = 0;
   /** Set by the first `current()`, cleared by `dispose`. */
   private hasWalkedRoot = false;
 
@@ -50,6 +52,7 @@ export class TrackedObjects<Tracked extends THREE.Object3D> {
     this.tracked.length = 0;
     this.trackedIndex.clear();
     this.hasWalkedRoot = false;
+    this.version++;
   }
 
   private track(subtree: THREE.Object3D): void {
@@ -61,6 +64,7 @@ export class TrackedObjects<Tracked extends THREE.Object3D> {
       if (!this.isTracked(object)) return;
       this.trackedIndex.set(object, this.tracked.length);
       this.tracked.push(object);
+      this.version++;
     });
   }
 
@@ -76,6 +80,7 @@ export class TrackedObjects<Tracked extends THREE.Object3D> {
     const index = this.trackedIndex.get(object);
     if (index === undefined) return;
     this.trackedIndex.delete(object);
+    this.version++;
     const last = this.tracked.pop()!;
     if (last === object) return;
     this.tracked[index] = last;

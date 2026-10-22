@@ -18,7 +18,7 @@ import {
   withAdditionalClipPlanes,
   worldClipRect,
 } from './controlClipGeometry';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 
 /**
  * What a clipping Control publishes to its subtree. `rect` is the rounded clip in

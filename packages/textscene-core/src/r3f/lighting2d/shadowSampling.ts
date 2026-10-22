@@ -12,10 +12,8 @@
 
 import * as THREE from 'three';
 import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
-// Type-only, so the pair of modules never form a runtime cycle: the filter
-// constants are declared beside the quads that branch on them.
-import type { SHADOW_FILTER_PCF5, SHADOW_FILTER_PCF13 } from './lightQuad.js';
 import type { Rgba } from '../../godot/math/math.js';
+import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
 /**
  * `rasterizer_canvas_gles3.cpp:182`:
@@ -30,8 +28,8 @@ export function shadowPixelSize(smooth: number): number {
 export interface ShadowSampling {
   /** The light's polar map, from `updateShadowPolarTexture`. */
   readonly map: THREE.Texture;
-  /** `Light2D.shadow_filter`. `SHADOW_FILTER_NONE` never reaches here. */
-  readonly filter: typeof SHADOW_FILTER_PCF5 | typeof SHADOW_FILTER_PCF13;
+  /** `Light2D.shadow_filter`. `Light2DShadowFilter.NONE` never reaches here. */
+  readonly filter: typeof Light2DShadowFilter.PCF5 | typeof Light2DShadowFilter.PCF13;
   /** `Light2D.shadow_filter_smooth`, widening the kernel. */
   readonly smooth: number;
   /** Previewer world → light-local, Godot's `xform_cache.affine_inverse()`. */

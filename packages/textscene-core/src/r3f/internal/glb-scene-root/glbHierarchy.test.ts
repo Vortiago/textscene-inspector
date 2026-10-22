@@ -2,7 +2,12 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
-import { glbObjectName, glbSceneRootChildren, GLB_ANIMATION_PLAYER_NAME } from './glbHierarchy';
+import {
+  flattenGlbObjects,
+  glbObjectName,
+  glbSceneRootChildren,
+  GLB_ANIMATION_PLAYER_NAME,
+} from './glbHierarchy';
 import { tagGodotNodeNames } from '../../../resources/formats/glb/nodeNames';
 
 function named<T extends THREE.Object3D>(obj: T, name: string): T {
@@ -148,5 +153,17 @@ describe('glbSceneRootChildren animation player', () => {
     root.add(named(new THREE.Mesh(), 'body'));
     const nodes = glbSceneRootChildren(root);
     expect(nodes.map((n) => n.name)).toEqual(['body']);
+  });
+});
+
+describe('flattenGlbObjects', () => {
+  it('lists a node, then everything below it, before its next sibling', () => {
+    // `GlbAttachedChildren` finds the end of a node's subtree by scanning on from it.
+    const root = new THREE.Group();
+    const first = named(new THREE.Group(), 'first');
+    first.add(named(new THREE.Group(), 'inner'));
+    root.add(first, named(new THREE.Group(), 'second'));
+
+    expect(flattenGlbObjects(root).map((entry) => entry.relPath)).toEqual(['first', 'first/inner', 'second']);
   });
 });

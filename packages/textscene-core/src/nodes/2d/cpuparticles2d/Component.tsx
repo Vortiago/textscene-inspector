@@ -5,13 +5,14 @@
  * Godot's `_update_internal` returns early, but the node still positions children.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useLoadedFiles } from '../../../resources/useLoadedFiles';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -20,7 +21,7 @@ import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasI
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useEmissionTransform } from './emissionTransform';
 import { buildParticleGeometry, type ParticleFlipbook } from './particleGeometry';
-import { resolveParticleCurves, resolveParticleGradient } from './sceneResources';
+import { particleFiles, resolveParticleCurves, resolveParticleGradient } from './sceneResources';
 import { simulateFrozenPose } from './simulate';
 import type { CPUParticles2DProperties } from './types';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
@@ -79,7 +80,8 @@ function ParticleField({
   material: CanvasItemMaterialProperties | null;
   pixelMaterial: CanvasItemPixelMaterial;
 }) {
-  const { externalResources, internalResources } = useSceneResources();
+  const pools = useSceneResources();
+  const { externalResources, internalResources } = pools;
   const flipbook = useMemo(() => particleFlipbook(material), [material]);
   const { texture: resolvedTexture, missing } = useTexture2D(
     props.texture,
@@ -93,17 +95,19 @@ function ParticleField({
   const [container, setContainer] = useState<THREE.Group | null>(null);
   const emissionTransform = useEmissionTransform(container, props.local_coords);
 
+  const planFiles = useCallback(() => particleFiles(props, pools), [props, pools]);
+  const { loadedFile } = useLoadedFiles(planFiles);
   const curves = useMemo(
-    () => resolveParticleCurves(props.params, internalResources),
-    [props.params, internalResources]
+    () => resolveParticleCurves(props.params, pools, loadedFile),
+    [props.params, pools, loadedFile]
   );
   const colorRamp = useMemo(
-    () => resolveParticleGradient(props.color_ramp, internalResources),
-    [props.color_ramp, internalResources]
+    () => resolveParticleGradient(props.color_ramp, pools, loadedFile),
+    [props.color_ramp, pools, loadedFile]
   );
   const colorInitialRamp = useMemo(
-    () => resolveParticleGradient(props.color_initial_ramp, internalResources),
-    [props.color_initial_ramp, internalResources]
+    () => resolveParticleGradient(props.color_initial_ramp, pools, loadedFile),
+    [props.color_initial_ramp, pools, loadedFile]
   );
 
   const pose = useMemo(

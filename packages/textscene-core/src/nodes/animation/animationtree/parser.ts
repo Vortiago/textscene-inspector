@@ -9,12 +9,12 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode } from '../../node/parser';
 import { boolOr, enumOr, intOr } from '../../../parser/valueParsers';
+import { type AnimationTreeProperties } from './types';
 import {
-  AnimationTreeProcessMode,
-  type AnimationTreeProperties,
-  CallbackModeDiscrete,
-  CallbackModeMethod,
-} from './types';
+  AnimationCallbackModeProcess,
+  AnimationCallbackModeDiscrete,
+  AnimationCallbackModeMethod,
+} from '../../../godot/scene/animation';
 
 export function parseAnimationTree(
   heading: ParsedHeading,
@@ -30,29 +30,33 @@ export function parseAnimationTree(
     // default, so an absent key means active. A false default would leave every
     // authored AnimationTree inert.
     active: boolOr(properties.active, true),
-    process_callback: enumOr(properties.process_callback, AnimationTreeProcessMode.IDLE, [
-      AnimationTreeProcessMode.PHYSICS,
-      AnimationTreeProcessMode.IDLE,
-      AnimationTreeProcessMode.MANUAL,
+    process_callback: enumOr(properties.process_callback, AnimationCallbackModeProcess.IDLE, [
+      AnimationCallbackModeProcess.PHYSICS,
+      AnimationCallbackModeProcess.IDLE,
+      AnimationCallbackModeProcess.MANUAL,
     ]),
-    callback_mode_process: enumOr(properties.callback_mode_process, AnimationTreeProcessMode.IDLE, [
-      AnimationTreeProcessMode.PHYSICS,
-      AnimationTreeProcessMode.IDLE,
-      AnimationTreeProcessMode.MANUAL,
+    callback_mode_process: enumOr(properties.callback_mode_process, AnimationCallbackModeProcess.IDLE, [
+      AnimationCallbackModeProcess.PHYSICS,
+      AnimationCallbackModeProcess.IDLE,
+      AnimationCallbackModeProcess.MANUAL,
     ]),
-    callback_mode_method: enumOr(properties.callback_mode_method, CallbackModeMethod.DEFERRED, [
-      CallbackModeMethod.DEFERRED,
-      CallbackModeMethod.IMMEDIATE,
+    callback_mode_method: enumOr(properties.callback_mode_method, AnimationCallbackModeMethod.DEFERRED, [
+      AnimationCallbackModeMethod.DEFERRED,
+      AnimationCallbackModeMethod.IMMEDIATE,
     ]),
     // AnimationTree overrides two AnimationMixer defaults, and its own XML carries
     // `overrides="AnimationMixer"` on both: callback_mode_discrete is 2
     // (FORCE_CONTINUOUS, "the default behavior for AnimationTree") where the
     // mixer's is 1, and `deterministic` is true where the mixer's is false.
-    callback_mode_discrete: enumOr(properties.callback_mode_discrete, CallbackModeDiscrete.FORCE_CONTINUOUS, [
-      CallbackModeDiscrete.DOMINANT,
-      CallbackModeDiscrete.RECESSIVE,
-      CallbackModeDiscrete.FORCE_CONTINUOUS,
-    ]),
+    callback_mode_discrete: enumOr(
+      properties.callback_mode_discrete,
+      AnimationCallbackModeDiscrete.FORCE_CONTINUOUS,
+      [
+        AnimationCallbackModeDiscrete.DOMINANT,
+        AnimationCallbackModeDiscrete.RECESSIVE,
+        AnimationCallbackModeDiscrete.FORCE_CONTINUOUS,
+      ]
+    ),
     root_motion_track: properties.root_motion_track ?? 'NodePath("")',
     // class_animationtree.html: NodePath("."). The mixer's NodePath("..") is the
     // default of `root_node`, a different property.

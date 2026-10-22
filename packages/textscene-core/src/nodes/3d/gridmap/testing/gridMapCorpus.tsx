@@ -96,6 +96,8 @@ export interface GridMapCorpus {
 export interface MountedGridMap {
   /** Every mesh the GridMap mounts now, with world matrices brought up to date. */
   tiles(): THREE.Mesh[];
+  /** Every THREE.Points the GridMap mounts now, with world matrices brought up to date. */
+  points(): THREE.Points[];
 }
 
 const EXT: TscnExternalResource[] = [{ id: '1_lib', path: LIBRARY_PATH, type: 'MeshLibrary' }];
@@ -158,16 +160,15 @@ export async function mountGridMap({
     await new Promise<void>((r) => setTimeout(r, 20));
     await renderer.update(tree);
   }
-  return {
-    tiles: () => {
-      const tiles = renderer.scene.findAllByType('Mesh').map((m) => instanceAs<THREE.Mesh>(m));
-      // No frame has run, so the world matrices are brought up to date from the root.
-      let root: THREE.Object3D | undefined = tiles[0];
-      while (root?.parent) root = root.parent;
-      root?.updateMatrixWorld(true);
-      return tiles;
-    },
+  // No frame has run, so the world matrices are brought up to date from the root.
+  const drawn = <T extends THREE.Object3D>(type: 'Mesh' | 'Points'): T[] => {
+    const objects = renderer.scene.findAllByType(type).map((m) => instanceAs<T>(m));
+    let root: THREE.Object3D | undefined = objects[0];
+    while (root?.parent) root = root.parent;
+    root?.updateMatrixWorld(true);
+    return objects;
   };
+  return { tiles: () => drawn<THREE.Mesh>('Mesh'), points: () => drawn<THREE.Points>('Points') };
 }
 
 /** Every mesh the GridMap mounts once its loads resolve, or once the held load stops them. */

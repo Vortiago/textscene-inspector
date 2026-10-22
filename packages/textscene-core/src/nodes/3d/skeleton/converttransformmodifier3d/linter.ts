@@ -11,7 +11,7 @@ import { armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
 import { rangeAdvisories, type RangeThreshold } from '../../../../linter/rangeAdvisory.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
 import { RADIAN_ROUNDTRIP_EPSILON } from '../../../../linter/validators/v.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { firstSegment, indexedElements, indexedKeyRegex } from '../../../../godot/classdb/indexedKey.js';
 import { TransformMode } from '../../../../godot/scene/skeletonModifier.js';
 import { stringToInt } from '../../../../godot/string/string.js';

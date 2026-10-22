@@ -3,6 +3,7 @@
  * editor scan makes (`godot/project/editorScan.ts`), over a directory reader the host supplies.
  */
 import { SCAN_STOP_FILES, isScannedDirectoryName } from '../godot/project/editorScan.js';
+import { RES_SCHEME } from './resPath.js';
 
 /** One entry of a directory, as a host's reader reports it. */
 export interface DirectoryEntry {
@@ -14,11 +15,9 @@ export interface DirectoryEntry {
 /** Reads the entries of the directory at a `res://` path, `res://` itself for the root. */
 export type DirectoryReader = (directory: string) => Promise<readonly DirectoryEntry[]>;
 
-const ROOT = 'res://';
-
 /** The `res://` path of `name` inside `directory`. */
 function childPath(directory: string, name: string): string {
-  return directory === ROOT ? `${ROOT}${name}` : `${directory}/${name}`;
+  return directory === RES_SCHEME ? `${RES_SCHEME}${name}` : `${directory}/${name}`;
 }
 
 /**
@@ -45,6 +44,6 @@ export async function listScannedFiles(
       await walk(path, children);
     }
   };
-  await walk(ROOT, await readDirectory(ROOT));
+  await walk(RES_SCHEME, await readDirectory(RES_SCHEME));
   return found;
 }

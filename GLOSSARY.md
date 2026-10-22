@@ -23,6 +23,11 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
+**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveNodeScope`):
+The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
+Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
+_Avoid_: resolving a grafted node's ids in the sub-scene's pools.
+
 **Instance name table** (`resources/instanceNameTable.ts`):
 An instance root's `%Name` table, which the merge composes as instantiate builds it: the sub-scene's own names, then each host `unique_name_in_owner` setting at its heading, in file order.
 The merged node keeps it, and the render path's per-owner tables read it.
@@ -44,6 +49,15 @@ _Avoid_: "mipmaps" for a chain the GPU generates.
 
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
+
+**Mipmap bias** (`r3f/materials/godotMipmapBias.ts`):
+The offset a viewport adds to the mip level that each of its 3D material samplers picks: the project's `texture_mipmap_bias`, or a SubViewport's own.
+It changes only a texture that has levels to choose between.
+_Avoid_: "LOD bias", which suggests mesh level of detail.
+
+**Anisotropic filtering level** (`r3f/contexts/AnisotropicFilteringContext.tsx`):
+The `Viewport.AnisotropicFiltering` value, 0 to 4, that sets `1 << level` taps for a texture on an anisotropic `texture_filter`: the project's `anisotropic_filtering_level`, or a SubViewport's own for the textures that only its pass draws.
+Unlike the **Mipmap bias**, the texture carries it, so it cannot change between passes.
 
 **Unwrap cache**:
 The `.unwrap_cache` file Godot's importer writes beside a source asset it unwraps for lightmaps: each mesh's UV2 layout, keyed by the MD5 of the mesh as the unwrap received it.
@@ -187,10 +201,15 @@ _Avoid_: a per-viewport rule scoped to the whole scene.
 ### Language features
 
 **Language-feature engine** (`languageFeatures/`):
-The React- and THREE-free core area that answers editor requests for one `.tscn`: hover, completion, quick fixes, folding and document highlights.
+The React- and THREE-free core area that answers editor requests for one `.tscn`: hover, completion, quick fixes, folding, document highlights and the references of a `res://` path.
 It reads the text through a **ParseObserver** on the scanning loop, seats the `[node]` headings through the **Seating**, and reads the `godot/` captures.
 Every result is host-neutral with zero-based ranges, so the VS Code extension and the `tscn-lsp` server share it (ADR-0049).
 _Avoid_: "LSP" for the engine. LSP names the protocol, which the `tscn-lsp` server speaks. "Language service".
+
+**Res root** (`resources/resRoots.ts`):
+The directory a scene's `res://` paths resolve under: the nearest `project.godot` above the scene, else the scene's own directory when it lies inside the workspace, else none.
+A scene with the second kind is a loose scene, and Godot has no `res://` for it.
+_Avoid_: "project root" for the second kind.
 
 **Agent tool**:
 A tool the VS Code extension registers through `vscode.lm` for a coding agent in chat.
@@ -211,6 +230,7 @@ _Avoid_: "processor" for the slice. A hollow `decode.ts` on a foreign format.
 **Godot surface**:
 One triangle surface in Godot's mesh arrays: positions, normals, tangents, UV and UV2, with front faces clockwise and V from the image top.
 A decoded ArrayMesh, a PrimitiveMesh builder and a CSGMesh3D brush share it, and `godotSurfacesGeometry` alone turns it into three's winding and V.
+A PointMesh builds the one surface that is not triangles: a single position with no indices, flagged `isPoints`, which three draws as `THREE.Points`.
 _Avoid_: "three-space surface". "mesh data".
 
 **React-free linter boundary**:
@@ -243,7 +263,7 @@ How much behaviour a caller or test can exercise per unit of interface it must l
 _Avoid_: bare "depth" for a dependency-chain distance or a test suite's size.
 
 **Conformance guard**:
-A test that walks a registry or scrapes source to prove every registered thing has its promised shape (`barrelCompleteness`, `parserBarrelCompleteness`, `resourceSliceConformance`, `baseChainCompleteness`, `reactFree`, `noDependencies`, `packageExports`).
+A test that walks a registry or scrapes source to prove every registered thing has its promised shape (`barrelCompleteness`, `parserBarrelCompleteness`, `resourceSliceConformance`, `baseChainCompleteness`, `reactFree`, `noDependencies`, `engineFactRoutes`, `packageExports`).
 Its failure list is the work list, and a green guard proves only what it scraped.
 _Avoid_: a per-slice test as a substitute. "coverage" for a guard.
 

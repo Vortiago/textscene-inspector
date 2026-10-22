@@ -5,7 +5,12 @@
 import { describe, it, expect } from 'vitest';
 import { formatAnimationTreeProperties } from './propertyFormatter';
 import type { AnimationTreeProperties } from './types';
-import { AnimationTreeProcessMode, CallbackModeDiscrete, CallbackModeMethod } from './types';
+
+import {
+  AnimationCallbackModeProcess,
+  AnimationCallbackModeDiscrete,
+  AnimationCallbackModeMethod,
+} from '../../../godot/scene/animation';
 
 function makeProps(overrides: Partial<AnimationTreeProperties> = {}): AnimationTreeProperties {
   return {
@@ -13,10 +18,10 @@ function makeProps(overrides: Partial<AnimationTreeProperties> = {}): AnimationT
     active: false,
     parameters: {},
     anim_player: 'NodePath("..")',
-    process_callback: AnimationTreeProcessMode.IDLE,
-    callback_mode_process: AnimationTreeProcessMode.IDLE,
-    callback_mode_method: CallbackModeMethod.DEFERRED,
-    callback_mode_discrete: CallbackModeDiscrete.DOMINANT,
+    process_callback: AnimationCallbackModeProcess.IDLE,
+    callback_mode_process: AnimationCallbackModeProcess.IDLE,
+    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
+    callback_mode_discrete: AnimationCallbackModeDiscrete.DOMINANT,
     root_motion_track: 'NodePath("")',
     advance_expression_base_node: 'NodePath("..")',
     audio_max_polyphony: 32,
@@ -91,7 +96,7 @@ describe('formatAnimationTreeProperties', () => {
 
   it('shows process callback as human-readable string', () => {
     const sections = formatAnimationTreeProperties(
-      makeProps({ process_callback: AnimationTreeProcessMode.PHYSICS })
+      makeProps({ process_callback: AnimationCallbackModeProcess.PHYSICS })
     );
     const main = sections.find((s) => s.title === 'AnimationTree');
     const cbItem = main?.items.find((i) => i.label === 'Process Callback');

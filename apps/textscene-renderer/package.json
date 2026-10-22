@@ -1,0 +1,88 @@
+{
+  "name": "@textscene/renderer",
+  "version": "0.0.0",
+  "description": "A react-three-fiber renderer for Godot .tscn scenes. React and three.js are peer dependencies.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/*.meta.json",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prebuild": "pnpm --filter @textscene/core build",
+    "build": "node scripts/build.mjs",
+    "clean": "rimraf dist THIRD-PARTY-NOTICES.md",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "pretype-check": "pnpm --filter @textscene/core build && pnpm --filter @textscene/dev-kit build",
+    "type-check": "tsc --noEmit",
+    "type-check:tests": "tsc --noEmit"
+  },
+  "keywords": [
+    "godot",
+    "tscn",
+    "renderer",
+    "react",
+    "react-three-fiber",
+    "three.js",
+    "godot4",
+    "gamedev"
+  ],
+  "author": "Vortiago",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vortiago/textscene-inspector.git",
+    "directory": "apps/textscene-renderer"
+  },
+  "homepage": "https://github.com/Vortiago/textscene-inspector#readme",
+  "bugs": {
+    "url": "https://github.com/Vortiago/textscene-inspector/issues"
+  },
+  "dependencies": {
+    "fzstd": "catalog:",
+    "three-bvh-csg": "catalog:",
+    "three-mesh-bvh": "catalog:"
+  },
+  "peerDependencies": {
+    "@react-three/drei": "catalog:",
+    "@react-three/fiber": "catalog:",
+    "@react-three/postprocessing": "catalog:",
+    "postprocessing": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "three": "catalog:"
+  },
+  "devDependencies": {
+    "@react-three/drei": "catalog:",
+    "@react-three/fiber": "catalog:",
+    "@react-three/postprocessing": "catalog:",
+    "@textscene/core": "workspace:*",
+    "@textscene/dev-kit": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@types/three": "catalog:",
+    "dts-bundle-generator": "catalog:",
+    "esbuild": "catalog:",
+    "fastnoise-lite": "catalog:",
+    "postprocessing": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "rimraf": "catalog:",
+    "three": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

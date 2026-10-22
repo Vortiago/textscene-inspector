@@ -8,12 +8,12 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { createCasterMotionWatch } from './shadowCasterMotion';
 import { createShadowCasterRegistry, type ShadowCaster } from './shadowCasterRegistry';
-import { OCCLUDER_CULL_DISABLED } from './shadowVolumes';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 function caster(object: THREE.Object3D): ShadowCaster {
   return {
     segments: new Float32Array([0, 0, 0, 10, 0, 0]),
-    cullMode: OCCLUDER_CULL_DISABLED,
+    cullMode: OccluderPolygon2DCullMode.DISABLED,
     occluderLightMask: 1,
     object,
   };

@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { parentTypeVerdict } from '../../../../linter/parentType.js';
 import { matchVector2 } from '../../../../linter/validators/index.js';
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums.js';
 

@@ -4,7 +4,7 @@
  * and from pixels measured through real Godot, never from our own renderer.
  */
 import { describe, expect, it } from 'vitest';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import {
   snapControlsToPixelsEnabled,
   snappedControlOrigin,

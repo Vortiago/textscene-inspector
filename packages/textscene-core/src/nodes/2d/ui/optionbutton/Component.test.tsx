@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';

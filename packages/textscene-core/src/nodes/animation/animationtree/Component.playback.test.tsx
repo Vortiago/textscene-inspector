@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationTree } from './Component';
 import type { AnimationTreeProperties } from './types';
-import { AnimationTreeProcessMode, CallbackModeDiscrete, CallbackModeMethod } from './types';
+
 import type { TscnNode, TscnInternalResource } from '../../../parser/types';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import {
@@ -26,6 +26,11 @@ import {
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { AnimationDriverProvider, useRegisterDriver } from '../../../r3f/contexts/AnimationDriverContext';
 import { subtreeObjects } from '../../../r3f/animation/poseSnapshot';
+import {
+  AnimationCallbackModeProcess,
+  AnimationCallbackModeDiscrete,
+  AnimationCallbackModeMethod,
+} from '../../../godot/scene/animation';
 
 const TREE_PATH = 'Root/Tree';
 const DRIVER_PATH = 'Root/Player';
@@ -115,10 +120,10 @@ function makeTreeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNod
     tree_root: 'SubResource("tree")',
     parameters: {},
     anim_player: 'NodePath("../Player")',
-    process_callback: AnimationTreeProcessMode.IDLE,
-    callback_mode_process: AnimationTreeProcessMode.IDLE,
-    callback_mode_method: CallbackModeMethod.DEFERRED,
-    callback_mode_discrete: CallbackModeDiscrete.DOMINANT,
+    process_callback: AnimationCallbackModeProcess.IDLE,
+    callback_mode_process: AnimationCallbackModeProcess.IDLE,
+    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
+    callback_mode_discrete: AnimationCallbackModeDiscrete.DOMINANT,
     root_motion_track: 'NodePath("")',
     advance_expression_base_node: 'NodePath("..")',
     audio_max_polyphony: 32,

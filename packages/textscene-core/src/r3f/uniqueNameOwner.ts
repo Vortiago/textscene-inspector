@@ -8,15 +8,15 @@
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
-import { resolveInstancePath } from '../resources/SubResourceResolver.js';
-import { joinPath } from '../utils/nodePath.js';
+import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
+import { belowRoot, joinPath, pathBetween, pathUnder } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import {
   cachedUniqueNameLivePaths,
   cachedUniqueNameOwnership,
   cachedUniqueNamesBelowRoot,
-  perTree,
 } from '../utils/uniqueNames.js';
+import { perTree } from '../utils/perTree.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
@@ -43,13 +43,13 @@ interface ClaimOwner {
 /** A composed live path spelled the way `owner`'s own file spells it. */
 function fileLocalPath(owner: ClaimOwner, livePath: string): string {
   if (!owner.parent) return livePath;
-  return owner.roots[0]!.name + livePath.slice(owner.path.length);
+  return pathUnder(owner.roots[0]!.name, pathBetween(owner.path, livePath));
 }
 
 /** The inverse: a live path from `owner`'s file, composed under its render path. */
 function composedPath(owner: ClaimOwner, fileLivePath: string): string {
   if (!owner.parent) return fileLivePath;
-  return owner.path + fileLivePath.slice(fileLivePath.indexOf('/'));
+  return pathUnder(owner.path, belowRoot(fileLivePath));
 }
 
 /** Which of a file's headings inside instances a question counts. */
@@ -277,12 +277,11 @@ export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
 }
 
 function cachedSubRoots(
-  node: TscnNode,
+  node: LiveNode,
   scope: SceneScope,
   ctx: LiveTreeContext
 ): readonly TscnNode[] | undefined {
-  if (!node.instance) return undefined;
-  const scenePath = resolveInstancePath(node.instance, scope.externalResources);
+  const scenePath = liveInstancePath(node, scope);
   return scenePath ? ctx.sceneCache.getCached(scenePath)?.nodes : undefined;
 }
 

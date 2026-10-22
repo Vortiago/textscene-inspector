@@ -7,6 +7,7 @@ import { TscnPreviewPanel } from './TscnPreviewPanel';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
+import { TscnReferenceProvider } from './TscnReferenceProvider';
 import { TscnHoverProvider } from './TscnHoverProvider';
 import { COMPLETION_TRIGGER_CHARACTERS } from '@textscene/core/languageFeatures';
 import { TscnCompletionItemProvider } from './TscnCompletionItemProvider';
@@ -20,6 +21,7 @@ import { initLogger, dispose as disposeLogger } from './logger';
 import { copyNodePathAtCursor } from './copyNodePath';
 import { isUri } from './uriArgument';
 import { PROJECT_FILE_PATTERN, RESOURCE_FILES_PATTERN, SCAN_STOP_FILES_PATTERN } from './watchPatterns';
+import { forgetProjectFiles } from './resRoot';
 
 export function activate(context: vscode.ExtensionContext) {
   initLogger('TextScene Inspector');
@@ -93,6 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
   // serves the previews and the linter diagnostics in the Problems panel.
   const resourceWatcher = vscode.workspace.createFileSystemWatcher(RESOURCE_FILES_PATTERN);
   const projectFileWatcher = vscode.workspace.createFileSystemWatcher(PROJECT_FILE_PATTERN);
+  context.subscriptions.push(...forgetProjectFilesOnChange(projectFileWatcher));
   const diagnostics = new TscnDiagnostics(resourceWatcher, projectFileWatcher);
 
   registerTscnTools(context, {
@@ -161,6 +164,10 @@ export function activate(context: vscode.ExtensionContext) {
 function registerLanguageFeatureProviders(resPathListing: TscnResPathListing): vscode.Disposable[] {
   return [
     vscode.languages.registerHoverProvider({ language: 'tscn' }, new TscnHoverProvider()),
+    vscode.languages.registerReferenceProvider(
+      { language: 'tscn' },
+      new TscnReferenceProvider(resPathListing)
+    ),
     vscode.languages.registerCompletionItemProvider(
       { language: 'tscn' },
       new TscnCompletionItemProvider(resPathListing),
@@ -174,6 +181,21 @@ function registerLanguageFeatureProviders(resPathListing: TscnResPathListing): v
       { language: 'tscn' },
       new TscnDocumentHighlightProvider()
     ),
+  ];
+}
+
+/**
+ * Forgets the shared `project.godot` answers on each event of the watcher, subscribed before every walk that follows the
+ * same event. A directory above the workspace has no watcher, so a return to the window forgets them too.
+ */
+function forgetProjectFilesOnChange(projectFileWatcher: vscode.FileSystemWatcher): vscode.Disposable[] {
+  return [
+    projectFileWatcher.onDidCreate(forgetProjectFiles),
+    projectFileWatcher.onDidChange(forgetProjectFiles),
+    projectFileWatcher.onDidDelete(forgetProjectFiles),
+    vscode.window.onDidChangeWindowState((state) => {
+      if (state.focused) forgetProjectFiles();
+    }),
   ];
 }
 

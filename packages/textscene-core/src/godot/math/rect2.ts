@@ -1,6 +1,8 @@
 /**
- * `Rect2` (`core/math/rect2.h`) as position and size. A rect from an empty bounding box is
- * inverted, with an infinite position and a negative infinite size, and meets nothing.
+ * `Rect2` (`core/math/rect2.h`) as position and size, in Godot pixels with +Y down. A rect from an
+ * empty bounding box is inverted, with an infinite position and a negative infinite size, and
+ * meets nothing. A Control rect stays +Y down: the walker flips a solved rect to a three.js
+ * position (`[rect.x, -rect.y, 0]`).
  */
 
 export interface Rect2 {

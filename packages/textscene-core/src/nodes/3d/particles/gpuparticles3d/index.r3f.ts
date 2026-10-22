@@ -1,16 +1,14 @@
 /**
- * No particles are drawn, so the intent is `pending` and the badge reads
- * "not implemented". The GeometryInstance3D base still mounts: it carries
- * `visible`, keeps the emitter's subtree in the 3D workspace and holds its place in the scene cull,
- * none of which survives falling through to `GenericNodeFallback`.
+ * GPUParticles3D draws no particles, so the badge reads "not implemented". Its component mounts the
+ * GeometryInstance3D base for `visible`, the workspace split and the scene cull, and its selected
+ * editor gizmos.
  */
 
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
-import { undrawnGeometryInstance } from '../../geometryinstance3d/Component';
-import { useGPUParticles3DAabb } from './ownAabb';
+import { GPUParticles3D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'GPUParticles3D',
-  Component: undrawnGeometryInstance(useGPUParticles3DAabb),
+  Component: GPUParticles3D,
   renderIntent: 'pending',
 });

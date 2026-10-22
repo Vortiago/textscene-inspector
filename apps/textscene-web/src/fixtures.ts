@@ -423,6 +423,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles3d Gizmo",
+    "file": "unit-cpuparticles3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Damped Spring Joint 2d",
     "file": "unit-damped-spring-joint-2d.tscn",
     "category": "Other"
@@ -588,6 +593,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Fogvolume Gizmo",
+    "file": "unit-fogvolume-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Foldable Container Rtl",
     "file": "unit-foldable-container-rtl.tscn",
     "category": "Other"
@@ -620,6 +630,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Glb Surface Material Override",
     "file": "unit-glb-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Typed Child",
+    "file": "unit-glb-typed-child.tscn",
     "category": "Other"
   },
   {
@@ -730,6 +745,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Gpu Particles Collision Sphere 3d",
     "file": "unit-gpu-particles-collision-sphere-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Gpuparticles3d Emission",
+    "file": "unit-gpuparticles3d-emission.tscn",
     "category": "Other"
   },
   {
@@ -1000,6 +1020,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Light Base Properties",
     "file": "unit-light-base-properties.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Light Range Floor",
+    "file": "unit-light-range-floor.tscn",
     "category": "Other"
   },
   {
@@ -1338,6 +1363,21 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Point Mesh Gridmap",
+    "file": "unit-point-mesh-gridmap.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Point Mesh Omni Shadow",
+    "file": "unit-point-mesh-omni-shadow.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Point Mesh",
+    "file": "unit-point-mesh.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Pointlight2d Blend",
     "file": "unit-pointlight2d-blend.tscn",
     "category": "Other"
@@ -1505,6 +1545,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Reflection Probe",
     "file": "unit-reflection-probe.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Reflectionprobe Gizmo",
+    "file": "unit-reflectionprobe-gizmo.tscn",
     "category": "Other"
   },
   {
@@ -1913,6 +1958,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tube Trail Mesh Texture Uv",
+    "file": "unit-tube-trail-mesh-texture-uv.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Two Bone Ik 3d",
     "file": "unit-two-bone-ik-3d.tscn",
     "category": "Other"
@@ -1993,6 +2043,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Visibleonscreenenabler3d Gizmo",
+    "file": "unit-visibleonscreenenabler3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Visibleonscreennotifier3d Gizmo",
+    "file": "unit-visibleonscreennotifier3d-gizmo.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Visual Instance 3d",
     "file": "unit-visual-instance-3d.tscn",
     "category": "Other"
@@ -2020,6 +2080,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Voxel Gi",
     "file": "unit-voxel-gi.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Voxelgi Gizmo",
+    "file": "unit-voxelgi-gizmo.tscn",
     "category": "Other"
   },
   {
@@ -2112,6 +2177,18 @@ export const fixtures: Fixture[] = [
     "file": "alpha-antialiasing/unit-alpha-antialiasing.tscn",
     "category": "Other",
     "root": "alpha-antialiasing"
+  },
+  {
+    "name": "Glow Linear Upscale",
+    "file": "glow-linear-upscale/unit-glow-linear-upscale.tscn",
+    "category": "Other",
+    "root": "glow-linear-upscale"
+  },
+  {
+    "name": "Label3d Glyph Mipmaps",
+    "file": "label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn",
+    "category": "Other",
+    "root": "label3d-glyph-mipmaps"
   },
   {
     "name": "Msaa 2d",
@@ -3540,6 +3617,12 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Mipmap Bias",
+    "file": "mipmap-bias/unit-material-mipmap-bias.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
   },
   {
     "name": "Navigation Agent 2d",

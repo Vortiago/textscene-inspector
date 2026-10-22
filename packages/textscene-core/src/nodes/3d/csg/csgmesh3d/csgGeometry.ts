@@ -9,9 +9,12 @@ import { isEqualApprox } from '../../../../godot/math/math';
 import type { CsgGeometryBuilder, CsgGeometryContext, CsgSolid } from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resourceContentKey } from '../../../../resources/resourceContentKey';
+import { meshContentKey } from '../../../../resources/meshes/meshSource';
+import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
+import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
+import type { LoadedFile } from '../../../../resources/scopedResource';
 import { applyCsgNormals } from '../smoothNormals';
-import { meshFilePath, meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
+import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
 
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
@@ -33,9 +36,16 @@ export function csgMesh3DMeshType(
   return resolveMesh((properties as unknown as CSGMesh3DProperties).mesh, ctx)?.resource.type ?? null;
 }
 
-export function csgMesh3DReadsFiles(properties: Record<string, unknown>, pools: SceneResources): string[] {
-  const path = meshFilePath((properties as unknown as CSGMesh3DProperties).mesh, pools);
-  return path ? [path] : [];
+export function csgMesh3DReadsFiles(
+  properties: Record<string, unknown>,
+  pools: SceneResources,
+  loadedFile: LoadedFile
+): string[] {
+  const { mesh: meshRef } = properties as unknown as CSGMesh3DProperties;
+  const path = referencedFilePath(meshRef, pools);
+  const scoped = resolveReference(meshRef, pools, loadedFile);
+  // The files a PrimitiveMesh reads join once the mesh itself has loaded.
+  return [...(path ? [path] : []), ...(scoped ? primitiveMeshFiles(scoped) : [])];
 }
 
 /** Written only by `fileKey`. A reload parses a new object, so it takes a new key. */
@@ -51,9 +61,13 @@ function fileKey(file: object): number {
   return key;
 }
 
-/** A scene mesh keys on its content, since the parser allocates a fresh one per reparse. */
+/**
+ * A scene mesh keys on its content, and on the resources it builds from, since the parser allocates a
+ * fresh one per reparse. A mesh in a file keys on that parse and on the files its build reads.
+ */
 function meshKey(mesh: CsgMesh): string {
-  return mesh.file ? `${mesh.file.path}#${fileKey(mesh.file.parsed)}` : resourceContentKey(mesh.resource);
+  if (!mesh.file) return meshContentKey(mesh);
+  return `${mesh.file.path}#${fileKey(mesh.file.parsed)}|${referencesKey(mesh)}`;
 }
 
 /** The faces of every surface in turn, with the index of each face's material in `materials`. */

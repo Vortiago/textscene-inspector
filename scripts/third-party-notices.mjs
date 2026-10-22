@@ -4,11 +4,19 @@
  * the code derives its own notices from it, so they never name code the package lacks.
  */
 
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, relative, resolve, sep } from 'node:path';
+import { REPO_ROOT } from './repoRoot.mjs';
+
+const NOTICES_FILE = 'THIRD-PARTY-NOTICES.md';
+const ROOT_NOTICES = resolve(REPO_ROOT, NOTICES_FILE);
+
 /**
- * Each third party: its `## ` section in THIRD-PARTY-NOTICES.md, and the copyright line that every
- * source file derived from it carries. The bundler strips the inline notice, so this line finds
- * the files in a source tree and in a bundle's inputs. `listFiles` swaps the section's file list
- * for the bundled files; only Godot's section lists files.
+ * Each third party: its `## ` section in THIRD-PARTY-NOTICES.md, and the line that every file
+ * derived from it carries. The bundler strips the inline notice, so this line finds the files in a
+ * source tree and in a bundle's inputs. `listFiles` swaps the section's file list for the bundled
+ * files; only Godot's section lists files. `isInstalled` marks code that lives in an installed
+ * package, which no scan of the repository's sources finds.
  */
 export const NOTICE_SOURCES = [
   {
@@ -16,8 +24,12 @@ export const NOTICE_SOURCES = [
     copyright: /Copyright \(c\) 2007-2014 Juan Linietsky, Ariel Manzur/,
     listFiles: listBundledGodotFiles,
   },
+  { section: 'Open Sans font', copyright: /OFL-1\.1/ },
+  { section: 'Activision fast filter coefficients', copyright: /Copyright 2016 Activision\sPublishing/ },
+  { section: 'PCG random number generator', copyright: /thirdparty\/misc\/pcg\.cpp/ },
   { section: 'bcdec block decoder', copyright: /Copyright \(c\) 2022 Sergii Kudlai/ },
   { section: 'FastLZ', copyright: /Copyright \(C\) 2005-2020 Ariya Hidayat/ },
+  { section: 'FastNoiseLite', copyright: /Copyright\(c\) 2023 Jordan Peck/, isInstalled: true },
 ];
 
 /**
@@ -48,4 +60,80 @@ function listBundledGodotFiles(section, files) {
   }
   const list = files.map((path) => `- \`${path}\``).join('\n');
   return `${section.slice(0, fileList)}### Bundled source\n\n${list}\n\n${section.slice(licence)}`;
+}
+
+/**
+ * The files a package's bundle holds, as `bundledNotices` reads them. A compiled file of core keeps
+ * the copyright line of its source, and the notices name the source, which its source map gives.
+ * A file of an installed package is named where it stands.
+ *
+ * @param {{ inputs: Record<string, unknown> }} metafile - the esbuild metafile of the bundle.
+ * @param {{ packageDir: string, ownSourceDir: string }} where - the package, and its own TypeScript.
+ * @returns {{ path: string, text: string }[]}
+ */
+export function bundledSourceFiles(metafile, { packageDir, ownSourceDir }) {
+  // A stylesheet holds no code, and core's build copies it without a source map.
+  return Object.keys(metafile.inputs)
+    .filter((input) => !input.endsWith('.css'))
+    .map((input) => {
+      const compiled = resolve(packageDir, input);
+      return {
+        // A getter, so a source map is read only for a file that carries a copyright line.
+        get path() {
+          return relative(REPO_ROOT, sourceOf(compiled, ownSourceDir));
+        },
+        text: readFileSync(compiled, 'utf8'),
+      };
+    });
+}
+
+/** Writes the `THIRD-PARTY-NOTICES.md` of a package whose bundle holds the inputs of `metafile`. */
+export function writeBundledNotices(metafile, { packageDir, ownSourceDir }) {
+  writeFileSync(
+    resolve(packageDir, NOTICES_FILE),
+    bundledNotices(
+      readFileSync(ROOT_NOTICES, 'utf8'),
+      bundledSourceFiles(metafile, { packageDir, ownSourceDir })
+    )
+  );
+}
+
+/**
+ * One metafile whose inputs are every file input of `metafiles`, for a package that ships several
+ * bundles. A plugin's virtual module, such as `texture-worker-source:virtual:texture-worker-source`,
+ * names no file and is left out.
+ *
+ * @param {{ inputs: Record<string, unknown> }[]} metafiles
+ * @returns {{ inputs: Record<string, unknown> }}
+ */
+export function mergedFileInputs(metafiles) {
+  const inputs = Object.assign({}, ...metafiles.map((metafile) => metafile.inputs));
+  return {
+    inputs: Object.fromEntries(Object.entries(inputs).filter(([input]) => !isNamespacedInput(input))),
+  };
+}
+
+/**
+ * Whether an input is in a plugin's namespace, `namespace:path`. Two characters at least before the
+ * colon: a Windows input on another drive than the working directory, such as `D:/…`, is a file.
+ *
+ * @param {string} input
+ * @returns {boolean}
+ */
+function isNamespacedInput(input) {
+  return /^[\w-]{2,}:/.test(input);
+}
+
+/**
+ * The package's own TypeScript has no source map and is its own source, as is a file of an
+ * installed package. Any other file without a map would put a `dist/` path in the notices, so it
+ * fails the build.
+ */
+function sourceOf(compiled, ownSourceDir) {
+  const isOwnSource = !relative(ownSourceDir, compiled).startsWith('..');
+  if (isOwnSource || compiled.split(sep).includes('node_modules')) return compiled;
+  const mapPath = `${compiled}.map`;
+  if (!existsSync(mapPath)) throw new Error(`expected a source map at ${mapPath}, found none`);
+  const [source] = JSON.parse(readFileSync(mapPath, 'utf8')).sources;
+  return resolve(dirname(compiled), source);
 }

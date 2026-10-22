@@ -172,6 +172,7 @@ describe('the compositor’s tone pass', () => {
         toneMapping,
         exposure: 1,
         transparentBackground: false,
+        usesBicubicGlowUpscale: true,
       }).fragmentShader;
       expect(functionBody(composite, 'vec3 godotToneMap'), `mode ${mode}`).toBe(
         curveAfterExposure(functionBody(installedChunk(), 'vec3 CustomToneMapping'))

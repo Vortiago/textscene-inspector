@@ -31,13 +31,11 @@ Geometry, framing, tree scale, the sky, the fog, the ground and the override mat
 - **Needs runtime** The town has no vehicles. The game spawns them at runtime.
 
 ## Trailer truck
-<!-- compare: image=complex-truck-town-trailer status=limitation fixture=demos/3d/truck_town/vehicles/trailer_truck.tscn -->
+<!-- compare: image=complex-truck-town-trailer status=done fixture=demos/3d/truck_town/vehicles/trailer_truck.tscn -->
 
 A cab and a trailer built from external compressed ArrayMeshes, with a livery decal and
-three blob-shadow decals. Every part sits where Godot puts it, and the shading matches.
-
-- **Approximated** The "GODOT" livery lettering is thinner and less blue than Godot's.
-  WebGL2 has no texture LOD bias, so `texture_mipmap_bias` is not applied.
+three blob-shadow decals. Every part sits where Godot puts it, and the shading matches. The
+project's `texture_mipmap_bias` of -0.5 sharpens the livery lettering, on the decal as on a material.
 
 ## Tow truck
 <!-- compare: image=complex-truck-town-tow status=done fixture=demos/3d/truck_town/vehicles/tow_truck.tscn -->
@@ -45,8 +43,3 @@ three blob-shadow decals. Every part sits where Godot puts it, and the shading m
 A tow truck and the towed vehicle. One mesh mixes compressed and uncompressed surfaces.
 Every part sits where Godot puts it, and each blob shadow reaches the ground and never the
 bodywork (`Decal.cull_mask`). The shading and the grey metal chain links match.
-
-## Known limitations
-
-- **Not drawn** A typed node placed inside instanced content does not render, where a
-  type-less override does, and the town uses only overrides.

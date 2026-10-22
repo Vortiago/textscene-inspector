@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';

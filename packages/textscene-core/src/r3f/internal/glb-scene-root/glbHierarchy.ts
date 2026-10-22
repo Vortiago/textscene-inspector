@@ -7,6 +7,7 @@
 
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types.js';
+import type { LiveNode } from '../../../resources/liveNode.js';
 import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
 import type { GltfNodeRole } from '../../../godot/import/gltfImportNames.js';
 
@@ -148,11 +149,30 @@ export const GLB_ANIMATION_PLAYER_NAME = 'AnimationPlayer';
 const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
 
 /**
- * A `GLBSceneRoot`'s tree children: the GLB hierarchy, plus an `AnimationPlayer` when it has clips.
- * One source, so `useGlbChildren` and `resolveLiveEntry` produce the same children.
+ * Adds each of `attached` below the synthetic node whose `relPath` is its `glbTargetRelPath`, which
+ * `splitAttachedChildren` sets.
  */
-export function glbSceneRootChildren(root: THREE.Object3D): TscnNode[] {
+function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly LiveNode[]): void {
+  if (attached.length === 0) return;
+  const byRelPath = new Map<string, TscnNode>();
+  const index = (list: readonly TscnNode[]): void => {
+    for (const node of list) {
+      byRelPath.set((node.properties as Record<string, unknown>).glbRelPath as string, node);
+      index(node.children);
+    }
+  };
+  index(nodes);
+  for (const child of attached) byRelPath.get(child.glbTargetRelPath!)?.children.push(child);
+}
+
+/**
+ * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren` returns them) below the objects their
+ * parent paths name, plus an `AnimationPlayer` when it has clips. `liveChildGroups` alone calls it,
+ * so the tree's rows and `resolveLiveEntry` see the same children.
+ */
+export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[] = []): TscnNode[] {
   const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));
+  addAttachedChildren(nodes, attached);
   const clips = root.animations;
   if (clips.length > 0) {
     nodes.push({

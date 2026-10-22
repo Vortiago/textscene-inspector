@@ -73,8 +73,19 @@ describe('resource-slice claim coverage', () => {
       // busType null means the loader never serves it and no ParsedResource
       // section reaches it (ViewportTexture decodes a NodePath), so a decode.ts
       // would have nothing to consume.
-      if (reg.kind === 'godot-text' && reg.busType !== null && !existsSync(join(dir, 'decode.ts'))) {
+      if (
+        reg.kind === 'godot-text' &&
+        reg.busType !== null &&
+        !reg.declaresNoProperties &&
+        !existsSync(join(dir, 'decode.ts'))
+      ) {
         failures.push(`${reg.slice}: godot-text slice without decode.ts`);
+      }
+      // A decode.ts of a type with no property of its own would return nothing: a hollow file.
+      if (reg.declaresNoProperties && existsSync(join(dir, 'decode.ts'))) {
+        failures.push(
+          `${reg.slice}: slice that declares no properties with a decode.ts (the hollow-file smell)`
+        );
       }
       if (reg.kind === 'foreign-format' && existsSync(join(dir, 'decode.ts'))) {
         failures.push(`${reg.slice}: foreign-format slice with a decode.ts (the hollow-file smell)`);

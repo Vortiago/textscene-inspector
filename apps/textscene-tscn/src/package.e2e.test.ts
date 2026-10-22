@@ -4,14 +4,14 @@
  * condition, so a bundle that leans on either fails here.
  */
 
-import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import ts from 'typescript';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { declaredExports } from '@textscene/dev-kit';
 import { findForbiddenHostInputs } from '../../../scripts/check-bundle-size/hostBundles.mjs';
+import { packTarball, run } from '../../../scripts/packTarball.mjs';
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(packageDir, '../..');
@@ -29,35 +29,6 @@ const PUBLIC_TYPE_EXPORTS = [
   'TscnNode',
   'TscnScene',
 ];
-
-function isExported(statement: ts.Statement): boolean {
-  return (
-    ts.canHaveModifiers(statement) &&
-    (ts.getModifiers(statement) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
-  );
-}
-
-/** The names a declaration file exports, whether it declares them or re-exports them. */
-function declaredExports(declarationPath: string): string[] {
-  const source = ts.createSourceFile(
-    declarationPath,
-    readFileSync(declarationPath, 'utf8'),
-    ts.ScriptTarget.ES2022
-  );
-  const names: string[] = [];
-  for (const statement of source.statements) {
-    if (
-      ts.isExportDeclaration(statement) &&
-      statement.exportClause &&
-      ts.isNamedExports(statement.exportClause)
-    ) {
-      names.push(...statement.exportClause.elements.map((element) => element.name.text));
-    } else if (isExported(statement) && 'name' in statement) {
-      names.push((statement.name as ts.Identifier).text);
-    }
-  }
-  return names.sort();
-}
 
 const CONSUMER_SCRIPT = `
 import { TscnParser } from '@textscene/tscn';
@@ -86,17 +57,13 @@ const CONSUMER_TSCONFIG = {
 
 let consumerDir: string;
 
-const run = (command: string, args: string[], cwd: string) =>
-  execFileSync(command, args, { cwd, encoding: 'utf8', stdio: 'pipe' });
-
 beforeAll(() => {
   run('pnpm', ['--filter', '@textscene/tscn', 'build'], repoRoot);
   const tarballDir = mkdtempSync(join(tmpdir(), 'tscn-tarball-'));
-  run('pnpm', ['pack', '--pack-destination', tarballDir], packageDir);
-  const [tarball] = readdirSync(tarballDir);
+  const tarballPath = packTarball(packageDir, tarballDir);
   consumerDir = mkdtempSync(join(tmpdir(), 'tscn-consumer-'));
   writeFileSync(join(consumerDir, 'package.json'), JSON.stringify({ name: 'consumer', type: 'module' }));
-  run('npm', ['install', '--no-audit', '--no-fund', join(tarballDir, tarball!)], consumerDir);
+  run('npm', ['install', '--no-audit', '--no-fund', tarballPath], consumerDir);
   writeFileSync(join(consumerDir, 'use.mjs'), CONSUMER_SCRIPT);
   writeFileSync(join(consumerDir, 'types.mts'), CONSUMER_TYPES);
   writeFileSync(join(consumerDir, 'tsconfig.json'), JSON.stringify(CONSUMER_TSCONFIG));

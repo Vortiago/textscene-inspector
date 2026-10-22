@@ -7,13 +7,12 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor } from '../../../utils/colorParser';
-import { boolOr, enumOr, floatOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
+import { parseMaterialFor2dFields } from '../../../parser/materialFor2dParser';
+import { boolOr, intOr, parseOptionalRect2 } from '../../../parser/valueParsers';
 import { type Sprite3DProperties } from './types';
 import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 import { frameCoords, replaySpriteFrames } from '../../../godot/scene/spriteFrames.js';
 import { parseSpriteQuad } from './quadParser';
-import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export function parseSprite3D(
   heading: ParsedHeading,
@@ -25,12 +24,6 @@ export function parseSprite3D(
   const result: Sprite3DProperties = {
     ...baseProps,
     ...parseSpriteQuad(properties, 'Sprite3D'),
-    alpha_cut: enumOr(properties.alpha_cut, AlphaCutMode.DISABLED, [
-      AlphaCutMode.DISABLED,
-      AlphaCutMode.DISCARD,
-      AlphaCutMode.OPAQUE_PREPASS,
-      AlphaCutMode.HASH,
-    ]),
     // The grid and frame Godot holds after replaying the body in file order:
     // a count below 1 is refused, a refused `frame` stays 0, a later `hframes`
     // re-maps one that landed (godot/scene/spriteFrames.ts).
@@ -39,43 +32,13 @@ export function parseSprite3D(
     frame: frames.frame,
     flip_h: boolOr(properties.flip_h, false),
     flip_v: boolOr(properties.flip_v, false),
-    double_sided: boolOr(properties.double_sided, true),
     transparent: boolOr(properties.transparent, true),
     region_enabled: boolOr(properties.region_enabled, false),
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
-    // The material half of `get_material_for_2d`'s parameters (`material.cpp:3021`).
     // The `SpriteBase3D()` flag loop leaves every flag but TRANSPARENT and
     // DOUBLE_SIDED false (`sprite_3d.cpp:712-714`).
     shaded: boolOr(properties.shaded, false, 'Sprite3D shaded'),
-    no_depth_test: boolOr(properties.no_depth_test, false, 'Sprite3D no_depth_test'),
-    fixed_size: boolOr(properties.fixed_size, false, 'Sprite3D fixed_size'),
-    // `sprite_3d.h:89-94`.
-    alpha_scissor_threshold: floatOr(
-      properties.alpha_scissor_threshold,
-      0.5,
-      'Sprite3D alpha_scissor_threshold'
-    ),
-    alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'Sprite3D alpha_hash_scale'),
-    // `set_alpha_antialiasing` stores any value (`sprite_3d.cpp:571-578`), and any but OFF ramps the edge.
-    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, 'Sprite3D alpha_antialiasing_mode'),
-    alpha_antialiasing_edge: floatOr(
-      properties.alpha_antialiasing_edge,
-      0,
-      'Sprite3D alpha_antialiasing_edge'
-    ),
-    texture_filter: enumOr(
-      properties.texture_filter,
-      TextureFilter.LINEAR_WITH_MIPMAPS,
-      [
-        TextureFilter.NEAREST,
-        TextureFilter.LINEAR,
-        TextureFilter.NEAREST_WITH_MIPMAPS,
-        TextureFilter.LINEAR_WITH_MIPMAPS,
-        TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
-        TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC,
-      ],
-      'Sprite3D texture_filter'
-    ),
+    ...parseMaterialFor2dFields(properties, 'Sprite3D'),
     render_priority: intOr(properties.render_priority, 0),
   };
 

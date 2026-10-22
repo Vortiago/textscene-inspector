@@ -11,9 +11,9 @@ import { hintedBitField, maskedBitField, v } from '../../../../linter/validators
 import {
   AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
-  BREAK_TRIM_LABELS,
+  BREAK_TRIM_NAMES,
   BREAK_TRIM_MASK,
-  JUSTIFICATION_HINTED_BITS,
+  JUSTIFICATION_HINTED_NAMES,
   STRUCTURED_TEXT_PARSER_NAMES,
   TEXT_DIRECTION_NAMES,
   VISIBLE_CHARACTERS_BEHAVIOR_NAMES,
@@ -47,7 +47,7 @@ validatorRegistry.registerAll('RichTextLabel', {
   // offered by the inspector.
   autowrap_trim_flags: maskedBitField('autowrap_trim_flags', BREAK_TRIM_MASK, {
     enforced: 'rich_text_label.cpp:7390',
-    labels: BREAK_TRIM_LABELS,
+    labels: BREAK_TRIM_NAMES,
     hintedBits: BREAK_TRIM_HINTED_BITS,
   }),
   // rich_text_label.cpp:7763: PROPERTY_HINT_RANGE "0,24,1", both ends closed.
@@ -76,7 +76,7 @@ validatorRegistry.registerAll('RichTextLabel', {
   // kept but unreachable from the inspector: the hint's warning tier.
   justification_flags: hintedBitField('justification_flags', {
     hinted: 'rich_text_label.cpp:7769',
-    labels: JUSTIFICATION_HINTED_BITS,
+    labels: JUSTIFICATION_HINTED_NAMES,
   }),
   // rich_text_label.cpp:7770: Variant::PACKED_FLOAT32_ARRAY, no hint.
   // set_tab_stops (rich_text_label.cpp:7295-7308) assigns with no per-element

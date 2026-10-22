@@ -7,13 +7,14 @@
  */
 import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
+import type { LiveNode } from '../../../resources/liveNode';
 import type { Node3DProperties } from '../../../nodes/base/node3d/types';
 import { decomposeForR3F } from '../../nodeTransform';
 import { parseOptionalInt } from '../../../parser/valueParsers';
 import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInstances';
 import { joinPath } from '../../../utils/nodePath';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
-import { matchGlbTarget } from './matchGlbTarget.js';
+import { findGlbTarget, matchGlbTarget } from './matchGlbTarget.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /**
@@ -41,6 +42,40 @@ export function resolveGlbOverrideTarget(
  */
 export function isApplicableGlbOverride(override: TscnNode): boolean {
   return !override.instanceSubPath || override.overridesExistingNode === true;
+}
+
+/**
+ * The Godot path of the GLB object a typed node of the instancing scene is added to: its parent
+ * path, as Godot adds it (`packed_scene.cpp:157-165`, `:541`). Null for an override, which names
+ * an existing node. Each caller resolves the path with its own lookup.
+ */
+export function glbAttachPath(child: TscnNode): string | null {
+  return isApplicableGlbOverride(child) ? null : child.instanceSubPath!;
+}
+
+/**
+ * The instancing scene's typed nodes that {@link glbAttachPath} places on a GLB object, and the
+ * rest of `children`. A typed node whose path names none stays among the rest, where the tree has
+ * always listed it. It looks up through the quiet `findGlbTarget`.
+ *
+ * Each attached node comes back with `glbTargetRelPath` set, so the tree's next step
+ * (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
+ */
+export function splitAttachedChildren(
+  root: THREE.Object3D,
+  children: readonly LiveNode[]
+): { attached: LiveNode[]; rest: LiveNode[] } {
+  if (children.every(isApplicableGlbOverride)) return { attached: [], rest: [...children] };
+  const entries = flattenGlbObjects(root);
+  const attached: LiveNode[] = [];
+  const rest: LiveNode[] = [];
+  for (const child of children) {
+    const path = glbAttachPath(child);
+    const entry = path === null ? null : findGlbTarget(entries, path).entry;
+    if (entry) attached.push({ ...child, glbTargetRelPath: entry.relPath });
+    else rest.push(child);
+  }
+  return { attached, rest };
 }
 
 /**

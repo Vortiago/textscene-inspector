@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   createConnection,
   DidChangeWatchedFilesNotification,
+  FileChangeType,
   ProposedFeatures,
   TextDocumentSyncKind,
   TextDocuments,
@@ -36,6 +37,7 @@ import {
   hoverAt,
   resPathAt,
   resPathOccurrences,
+  resPathReferencesAt,
   type LanguageDocument,
 } from '@textscene/core/languageFeatures';
 import {
@@ -47,15 +49,9 @@ import {
   toLspHover,
   toLspSymbol,
 } from './lspConvert';
-import {
-  forgetDiskState,
-  isFile,
-  listProjectPaths,
-  providerForRoot,
-  resRootForDir,
-  resRootForFile,
-} from '@textscene/core/resources/diskProject';
-import { resolveResPath } from '@textscene/core/resources/resPath';
+import { DISK_PATH_CASE, createDiskResRoots } from '@textscene/core/resources/diskProject';
+import type { ResRoot, ResRoots } from '@textscene/core/resources/resRoots';
+import { isSamePath } from '@textscene/core/resources/resPath';
 
 /** Wait after the last edit before a lint, so a burst of keystrokes lints once. */
 const LINT_DEBOUNCE_MS = 300;
@@ -67,17 +63,15 @@ const connection = createConnection(ProposedFeatures.all, process.stdin, process
 const documents = new TextDocuments(TextDocument);
 const linter = new Linter();
 
-/** The client's root URI, the fallback project for a document with no file path. */
-let workspaceRoot: string | null = null;
+/**
+ * The roots of the open documents' scenes, every answer read from the disk. Written by `onInitialize`, once the
+ * client's root URI is known, and read by the requests that follow.
+ */
+let resRoots: ResRoots = createDiskResRoots(null);
 
 /** Whether the client registers a file watcher at the server's request. Written once, by `onInitialize`. */
 let canWatchFiles = false;
 
-/**
- * Each open document's `res://` root, so a request does not walk the tree again. Written by
- * `rootForUri`, and cleared on close and by `forgetProjects`.
- */
-const rootByUri = new Map<string, Promise<string | null>>();
 /**
  * Each open document's model at its latest version, written by `modelOf` and cleared on
  * close. A client sends several requests per edit, and they share one parse.
@@ -103,29 +97,13 @@ function workspaceRootOf(params: InitializeParams): string | null {
   return uri === null ? null : filePathOf(uri);
 }
 
-function rootForUri(uri: string): Promise<string | null> {
-  const cached = rootByUri.get(uri);
-  if (cached !== undefined) return cached;
-  const root = uncachedResRootOf(uri);
-  rootByUri.set(uri, root);
-  return root;
-}
-
 /**
  * The `res://` root of the document's file: its project, or its own directory inside the workspace. A document
  * with no file path has no directory, so it takes the workspace's project, or none.
  */
-function uncachedResRootOf(uri: string): Promise<string | null> {
+function rootForUri(uri: string): Promise<ResRoot | null> {
   const path = filePathOf(uri);
-  if (path !== null) return resRootForFile(path, workspaceRoot);
-  if (workspaceRoot !== null) return resRootForDir(workspaceRoot, null);
-  return Promise.resolve(null);
-}
-
-/** Drops every project answer, from the disk and per document, so the next request reads the project again. */
-function forgetProjects(): void {
-  forgetDiskState();
-  rootByUri.clear();
+  return path === null ? resRoots.workspaceRoot() : resRoots.rootOf(path);
 }
 
 /** The model a request reads, or undefined for a document the client never opened. */
@@ -140,9 +118,23 @@ function modelOf(uri: string): LanguageDocument | undefined {
 }
 
 /** The file URL a `res://` path names, or undefined for a path with no file in the project. */
-async function resPathFileUrl(root: string | null, path: string): Promise<string | undefined> {
-  const file = root === null ? null : resolveResPath(root, path);
-  return file !== null && (await isFile(file)) ? pathToFileURL(file).toString() : undefined;
+async function resPathFileUrl(root: ResRoot | null, path: string): Promise<string | undefined> {
+  const file = root === null ? null : await root.resolve(path);
+  return file === null ? undefined : pathToFileURL(file).toString();
+}
+
+/** The text on disk of the file at `path` under `root`, or null for a file that is no text resource. */
+async function readFileText(root: ResRoot, path: string): Promise<string | null> {
+  const content = await root.loadResource(path);
+  return typeof content === 'string' ? content : null;
+}
+
+/** The open documents that have a file path, each beside that path. Taken once per request. */
+function openDocumentFiles(): { file: string; document: TextDocument }[] {
+  return documents.all().flatMap((document) => {
+    const file = filePathOf(document.uri);
+    return file === null ? [] : [{ file, document }];
+  });
 }
 
 function scheduleLint(document: TextDocument): void {
@@ -170,10 +162,7 @@ function cancelLint(uri: string): void {
 async function lintDocument(document: TextDocument): Promise<void> {
   const version = document.version;
   const root = await rootForUri(document.uri);
-  const diagnostics = await linter.lintComplete(
-    document.getText(),
-    root === null ? null : providerForRoot(root)
-  );
+  const diagnostics = await linter.lintComplete(document.getText(), root);
   const current = documents.get(document.uri);
   if (current === undefined || current.version !== version) return;
   connection.sendDiagnostics({
@@ -183,7 +172,7 @@ async function lintDocument(document: TextDocument): Promise<void> {
 }
 
 connection.onInitialize((params: InitializeParams): InitializeResult => {
-  workspaceRoot = workspaceRootOf(params);
+  resRoots = createDiskResRoots(workspaceRootOf(params));
   canWatchFiles = params.capabilities.workspace?.didChangeWatchedFiles?.dynamicRegistration === true;
   return {
     capabilities: {
@@ -197,6 +186,7 @@ connection.onInitialize((params: InitializeParams): InitializeResult => {
       foldingRangeProvider: true,
       documentSymbolProvider: true,
       definitionProvider: true,
+      referencesProvider: true,
       documentHighlightProvider: true,
       documentLinkProvider: { resolveProvider: false },
     },
@@ -214,8 +204,13 @@ connection.onInitialized(() => {
     });
 });
 
-connection.onDidChangeWatchedFiles(() => {
-  forgetProjects();
+connection.onDidChangeWatchedFiles(({ changes }) => {
+  for (const { uri, type } of changes) {
+    // A saved file keeps its place in every root and listing. Only a file that appears or goes changes one.
+    if (type === FileChangeType.Changed) continue;
+    const path = filePathOf(uri);
+    if (path !== null) resRoots.invalidate(path);
+  }
   for (const document of documents.all()) scheduleLint(document);
 });
 
@@ -228,7 +223,7 @@ connection.onCompletion(async (params): Promise<CompletionItem[] | null> => {
   if (model === undefined) return null;
   const listPaths = async (): Promise<readonly string[]> => {
     const root = await rootForUri(params.textDocument.uri);
-    return root === null ? [] : listProjectPaths(root);
+    return root === null ? [] : root.listPaths();
   };
   return (await completionsAt(model, params.position, { listPaths })).map(toLspCompletion);
 });
@@ -269,6 +264,28 @@ connection.onDefinition(async (params): Promise<Location | null> => {
   return target === undefined ? null : { uri: target, range: FILE_START };
 });
 
+connection.onReferences(async (params, token): Promise<Location[] | null> => {
+  const model = modelOf(params.textDocument.uri);
+  if (model === undefined) return null;
+  const root = await rootForUri(params.textDocument.uri);
+  if (root === null) return [];
+  const openFiles = openDocumentFiles();
+  const references = await resPathReferencesAt(model, params.position, {
+    listPaths: () => root.listPaths(),
+    openText: (path) => {
+      const file = root.pathOf(path);
+      if (file === null) return undefined;
+      return openFiles.find((open) => isSamePath(open.file, file, DISK_PATH_CASE))?.document.getText();
+    },
+    readFile: (path) => readFileText(root, path),
+    isCancelled: () => token.isCancellationRequested,
+  });
+  return references.flatMap(({ file, range }) => {
+    const path = root.pathOf(file);
+    return path === null ? [] : [{ uri: pathToFileURL(path).toString(), range }];
+  });
+});
+
 connection.onDocumentHighlight((params) => {
   const model = modelOf(params.textDocument.uri);
   return model === undefined ? null : documentHighlights(model, params.position).map(toLspHighlight);
@@ -290,9 +307,10 @@ connection.onDocumentLinks(async (params): Promise<DocumentLink[]> => {
   });
 });
 
-// A client that watches no files still sees a change on disk once it opens a document again.
+// A watcher cannot see a project.godot created above the workspace, so opening a document reads the disk again. This
+// also covers a client that watches no files.
 documents.onDidOpen(() => {
-  forgetProjects();
+  resRoots.invalidateAll();
 });
 
 documents.onDidChangeContent((event) => {
@@ -301,7 +319,6 @@ documents.onDidChangeContent((event) => {
 
 documents.onDidClose((event) => {
   cancelLint(event.document.uri);
-  rootByUri.delete(event.document.uri);
   modelByUri.delete(event.document.uri);
   connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });

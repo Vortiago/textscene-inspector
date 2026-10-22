@@ -104,8 +104,9 @@ jobs:
       # The prebuild hook builds @textscene/core.
       - run: pnpm build:linter
 
-      # check:package below reads the parser package's dist.
+      # check:package below reads the dist of the parser and renderer packages.
       - run: pnpm build:tscn
+      - run: pnpm build:renderer
 
       # Lints with the binary this run built. The vendored demos are scenes Godot itself
       # opens, so an error here is a false positive in a rule.
@@ -218,6 +219,18 @@ jobs:
         env:
           VISUAL_SKIP_BUILD: '1'
 
+  # Installs the packed renderer into a plain Vite React app with its own React and three.js, as a
+  # user does, and renders a scene in Chromium. A job of its own: it installs from the npm registry.
+  renderer-consumer:
+    name: Renderer in a plain Vite app
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright
+      - run: pnpm test:renderer-consumer
+
   integration:
     name: Integration tests (${{ matrix.os }}, VS Code ${{ matrix.vscode }})
     runs-on: ${{ matrix.os }}
@@ -275,7 +288,7 @@ jobs:
         run: |
           vsix=$(ls *.vsix)
           for entry in extension/dist/extension.js extension/dist/extension.web.js \
-            extension/package.json extension.vsixmanifest; do
+            extension/package.json extension/THIRD-PARTY-NOTICES.md extension.vsixmanifest; do
             unzip -l "$vsix" | grep -q "$entry" || { echo "::error::$entry is missing from $vsix"; exit 1; }
           done
           # The browser entry point runs the extension on vscode.dev.
@@ -353,6 +366,7 @@ jobs:
         web-previewer,
         visual-regression,
         e2e-web,
+        renderer-consumer,
         integration,
         vsix,
         installed,

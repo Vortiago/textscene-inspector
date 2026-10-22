@@ -142,6 +142,6 @@ function showBackground(scene: THREE.Scene, texture: THREE.Texture, intensity: n
   };
 }
 
-function showsBackgroundColor(mode: BackgroundMode): boolean {
+function showsBackgroundColor(mode: number): boolean {
   return mode === BackgroundMode.BG_COLOR || mode === BackgroundMode.BG_CLEAR_COLOR;
 }

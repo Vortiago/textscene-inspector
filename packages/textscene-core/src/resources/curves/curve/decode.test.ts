@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { resolveCurve } from './decode';
-import { resolveOnlySubResource } from '../../../testing/subResource';
+import { decodeCurveResource } from './decode';
+import { subResource } from '../../../testing/subResource';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 import { sampleCurve } from './sample';
-import { CurveTangentMode, EMPTY_CURVE, type Curve } from './types';
+import { EMPTY_CURVE, type Curve } from './types';
 import type { TscnInternalResource } from '../../../parser/types';
+import { CurveTangentMode } from '../../../godot/scene/curve';
 
 /** The `scale_amount_curve` the isometric candle's Sparkle emitter carries. */
 const CANDLE_SPARKLE = {
@@ -17,10 +18,10 @@ const CANDLE_SPARKLE = {
 
 /** The Curve a sub-resource with this body decodes to. */
 function decode(data: Record<string, string>): Curve {
-  return resolveOnlySubResource('Curve', data, resolveCurve)!;
+  return decodeCurveResource(subResource('Curve', 'only', data))!;
 }
 
-describe('the Curve body resolveCurve decodes', () => {
+describe('the Curve body decodeCurveResource decodes', () => {
   it('reads every point of a three-point `_data` array (happy path)', () => {
     const curve = decode(CANDLE_SPARKLE);
 
@@ -28,18 +29,18 @@ describe('the Curve body resolveCurve decodes', () => {
     expect(curve.points[0]).toEqual({
       position: { x: 0, y: 0 },
       leftTangent: 0,
-      rightTangent: 1.36377,
-      leftMode: CurveTangentMode.Free,
-      rightMode: CurveTangentMode.Free,
+      rightTangent: Math.fround(1.36377),
+      leftMode: CurveTangentMode.FREE,
+      rightMode: CurveTangentMode.FREE,
     });
-    expect(curve.points[1]!.position).toEqual({ x: 0.262376, y: 0.188182 });
+    expect(curve.points[1]!.position).toEqual({ x: Math.fround(0.262376), y: Math.fround(0.188182) });
     expect(curve.points[2]!.leftTangent).toBeCloseTo(-1.06101, 5);
   });
 
   it('reads the four-element `_limits` as min/max value then min/max domain', () => {
     const curve = decode(CANDLE_SPARKLE);
     expect(curve.minValue).toBe(0);
-    expect(curve.maxValue).toBe(0.3);
+    expect(curve.maxValue).toBe(Math.fround(0.3));
     expect(curve.minDomain).toBe(0);
     expect(curve.maxDomain).toBe(1);
   });
@@ -54,8 +55,8 @@ describe('the Curve body resolveCurve decodes', () => {
 
   it('reads non-Free tangent modes', () => {
     const curve = decode({ _data: '[Vector2(0, 0), 0.0, 0.0, 1, 1]' });
-    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.Linear);
-    expect(curve.points[0]!.rightMode).toBe(CurveTangentMode.Linear);
+    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.LINEAR);
+    expect(curve.points[0]!.rightMode).toBe(CurveTangentMode.LINEAR);
   });
 
   it('truncates to `point_count` when the property disagrees with `_data`', () => {
@@ -157,6 +158,7 @@ describe('the Curve body resolveCurve decodes', () => {
       maxValue: 1,
       minDomain: 0,
       maxDomain: 1,
+      bakeResolution: 100,
     });
   });
 
@@ -173,8 +175,8 @@ describe('`point_count` resizes the decoded point list', () => {
     position: { x: 0, y: 0 },
     leftTangent: 0,
     rightTangent: 0,
-    leftMode: CurveTangentMode.Free,
-    rightMode: CurveTangentMode.Free,
+    leftMode: CurveTangentMode.FREE,
+    rightMode: CurveTangentMode.FREE,
   };
 
   it('pads with Godot’s default point when the count exceeds `_data`', () => {
@@ -190,8 +192,8 @@ describe('`point_count` resizes the decoded point list', () => {
       position: { x: 1, y: 1 },
       leftTangent: 1,
       rightTangent: 0.5,
-      leftMode: CurveTangentMode.Linear,
-      rightMode: CurveTangentMode.Linear,
+      leftMode: CurveTangentMode.LINEAR,
+      rightMode: CurveTangentMode.LINEAR,
     });
   });
 
@@ -258,21 +260,18 @@ const CURVE_RESOURCE: TscnInternalResource = {
   data: { ...CANDLE_SPARKLE },
 };
 
-describe('resolveCurve', () => {
-  it('decodes the Curve a SubResource reference names (happy path)', () => {
-    const curve = resolveCurve('SubResource("4")', [CURVE_RESOURCE]);
-    expect(curve?.points).toHaveLength(3);
+describe('decodeCurveResource', () => {
+  it('decodes the Curve a resource holds (happy path)', () => {
+    expect(decodeCurveResource(CURVE_RESOURCE)?.points).toHaveLength(3);
   });
 
-  it('returns null when the reference names a different resource type (error path)', () => {
+  it('returns null for a resource of a different type (error path)', () => {
     const gradient: TscnInternalResource = { type: 'Gradient', id: '4', data: {} };
-    expect(resolveCurve('SubResource("4")', [gradient])).toBeNull();
+    expect(decodeCurveResource(gradient)).toBeNull();
   });
 
-  it('returns null for an absent or non-SubResource reference (edge case)', () => {
-    expect(resolveCurve(undefined, [CURVE_RESOURCE])).toBeNull();
-    expect(resolveCurve('ExtResource("4")', [CURVE_RESOURCE])).toBeNull();
-    expect(resolveCurve('SubResource("nope")', [CURVE_RESOURCE])).toBeNull();
+  it('returns null for no resource (edge case)', () => {
+    expect(decodeCurveResource(null)).toBeNull();
   });
 });
 
@@ -302,6 +301,42 @@ describe('a Variant number Godot reads differently from `parseInt`', () => {
     // load at all.
     const curve = decode({ ...CANDLE_SPARKLE, _data: '[Vector2(0, 0), 0.0, 0.0, 1abc, 0]' });
 
-    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.Free);
+    expect(curve.points[0]!.leftMode).toBe(CurveTangentMode.FREE);
+  });
+});
+
+describe('`bake_resolution`, which `Curve.sample_baked` reads', () => {
+  // `set_bake_resolution` ERR_FAILs outside 1 to 1000 (`curve.cpp:526-527`) and keeps the default 100 (`curve.h:163`).
+  it('defaults to 100', () => {
+    expect(decode({}).bakeResolution).toBe(100);
+  });
+
+  it('reads an authored value', () => {
+    expect(decode({ bake_resolution: '12' }).bakeResolution).toBe(12);
+  });
+
+  it('keeps the default for a value the setter refuses', () => {
+    expect(decode({ bake_resolution: '0' }).bakeResolution).toBe(100);
+    expect(decode({ bake_resolution: '1001' }).bakeResolution).toBe(100);
+    expect(decode({ bake_resolution: '1000' }).bakeResolution).toBe(1000);
+  });
+});
+
+describe('the floats a Curve holds', () => {
+  // Every position, tangent and limit is a `real_t`, which an official build keeps as a float.
+  it('rounds each position and tangent to single precision', () => {
+    const point = decode({ _data: '[Vector2(0.1, 0.3), 0.7, 0.9, 0, 0]' }).points[0]!;
+
+    expect(point.position).toEqual({ x: Math.fround(0.1), y: Math.fround(0.3) });
+    expect(point.leftTangent).toBe(Math.fround(0.7));
+    expect(point.rightTangent).toBe(Math.fround(0.9));
+  });
+
+  it('rounds the limits to single precision', () => {
+    const curve = decode({ _limits: '[0.1, 0.7, 0.2, 0.9]' });
+
+    expect([curve.minValue, curve.maxValue, curve.minDomain, curve.maxDomain]).toEqual(
+      [0.1, 0.7, 0.2, 0.9].map(Math.fround)
+    );
   });
 });

@@ -9,7 +9,7 @@ renders_as: canvas-rasterised glyph quads, billboard-able
 
 # Label3D
 
-Draws a single line of text on a flat plane in 3D space. The previewer rasterises each label to a canvas texture and maps it onto a transparent plane sized by `pixel_size`. It tints the plane by `modulate` and orients it by the node's `billboard` mode.
+Draws a single line of text on a flat plane in 3D space. The previewer rasterises each label to a canvas texture, one texel per font pixel at `font_size` as Godot caches a glyph (`label_3d.cpp:345-350`). It maps the texture onto a transparent plane sized by `pixel_size`. It tints the plane by `modulate` and orients it by the node's `billboard` mode.
 
 A label casts no shadow by default, as its constructor turns `cast_shadow` off (`label_3d.cpp:1090`). With it on, the glyphs cast when Godot files their surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut surface, or an `OPAQUE_PREPASS` one, with the depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended label, the default `alpha_cut`, casts nothing. The `label3d-shadow` golden pins this.
 
@@ -65,13 +65,15 @@ Strict parsing format-checks these `Label3D` properties, plus 18 inherited from 
 
 `pixel_size`, `outline_size`, `font_size`, `line_spacing` and `alpha_antialiasing_edge` warn and fall back through `floatOr` to `0.005`, `12`, `32`, `0` and `0`. `alpha_antialiasing_mode` warns and falls back to `OFF`. A malformed `transparency` keeps Godot's default (`0`) silently, which draws the label opaque. A `billboard` outside `0` to `2` keeps `DISABLED`, as Godot's setter refuses it. `no_depth_test` reads every spelling a BOOL slot converts, so `1` is true. Text no BOOL slot reads renders false without a warning. `modulate` and `outline_modulate` fall back silently to opaque white and opaque black on a malformed `Color`.
 
+The glyph raster has a mip chain only when `gui/theme/default_font_generate_mipmaps` is on and `texture_filter` is mipmapped, as Godot's default font builds one only then (`text_server.cpp:2387`, `text_server_adv.cpp:3121`). The project's `texture_mipmap_bias` then offsets it.
+
 ## Known limitations
 
 - **Approximated** `width` and `autowrap_mode` are not read, so a long label runs on one
   line where Godot wraps it.
-- **Approximated** The glyph texture carries no mipmaps, so a label seen small sparkles
-  where Godot's stays smooth.
-- **Approximated** Godot draws the glyphs softer, and an `outline_size = 8` outline as a faint grey halo, where here it is a crisp black ring.
+- **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
+- **Approximated** A font resource's own `generate_mipmaps` is not read, as `font` is not read.
+- **Approximated** Godot's font rasteriser differs from the browser's, so the glyph edges and the `outline_size` outline differ slightly from Godot's.
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).

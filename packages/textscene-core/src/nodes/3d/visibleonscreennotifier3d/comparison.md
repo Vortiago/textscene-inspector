@@ -1,16 +1,26 @@
 ---
 type: VisibleOnScreenNotifier3D
 category: 3D
-status: linter-only
+status: limitation
 fixture: unit-visible-on-screen-notifier-3d.tscn
 # image: unit-visible-on-screen-notifier-3d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a selection-gated box gizmo
 ---
 
 # VisibleOnScreenNotifier3D
 
-Reports whether its `aabb` is on screen through `screen_entered` and `screen_exited` signals. It draws nothing at runtime, so the previewer renders it as a transform-only group (ADR-0008). Unlike its 2D sibling, this class has no draw call at all.
+Reports whether its `aabb` is on screen through `screen_entered` and `screen_exited` signals. It draws nothing at runtime. Godot's editor draws a gizmo of the box, and the previewer draws it while the node is selected (ADR-0018). Unlike its 2D sibling, this class has no draw call at all.
+
+## Gizmo
+
+A selected notifier draws the gizmo of Godot's editor. Godot's source is `visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`.
+
+- The 12 edges of `aabb`, in the editor's notifier colour.
+- Three segments of length 1 from the centre of the box, along +X, +Y and +Z.
+- A fill of the box with an opacity of 0.1.
+
+An unauthored box is Godot's default, an AABB from (-1, -1, -1) of size 2. The previewer draws the lines and the fill in the local space of the node, so they follow its transform. It draws no edit handles and no billboard icon.
 
 ## Linting
 
@@ -27,4 +37,8 @@ Strict parsing format-checks these `VisibleOnScreenNotifier3D` properties, plus 
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser (`parseNode3D`) never reads `aabb`, so a malformed value is ignored rather than substituted or reported. `layers` is inherited from VisualInstance3D and is covered on that sheet.
+The lenient parser reads `aabb` for the gizmo. A malformed value keeps Godot's default box, and only strict reports it. `layers` is inherited from VisualInstance3D and is covered on that sheet.
+
+## Known limitations
+
+- **Editor only** Godot's editor also draws the edges and axes of an unselected notifier at 0.3 alpha (`node_3d_editor_gizmos.cpp:919-920`), where ADR-0018 draws it only when selected.

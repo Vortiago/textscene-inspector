@@ -7,6 +7,7 @@ import type { HorizontalAlignment } from '../../../godot/math/alignment';
 import type { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import type { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export interface Label3DProperties extends GeometryInstance3DProperties {
   text: string;
@@ -18,7 +19,7 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
    * Billboard mode. Default BILLBOARD_DISABLED, as for Sprite3D
    * (`Component.parity.test.tsx`).
    */
-  billboard: BillboardMode;
+  billboard: EnumValue<typeof BillboardMode>;
 
   /** Text tint (default white). */
   modulate: Rgba;
@@ -54,7 +55,7 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   outline_render_priority: number;
 
   /** Transparency mode (`label_3d.h:61`, default DISABLED). */
-  alpha_cut: AlphaCutMode;
+  alpha_cut: EnumValue<typeof AlphaCutMode>;
 
   /** Scissor cut used by `alpha_cut` DISCARD (`label_3d.h:62`, default 0.5). */
   alpha_scissor_threshold: number;
@@ -63,7 +64,7 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   alpha_hash_scale: number;
 
   /** Alpha antialiasing of a DISCARD or HASH cut (`label_3d.h:64`, default OFF). */
-  alpha_antialiasing_mode: AlphaAntiAliasing;
+  alpha_antialiasing_mode: EnumValue<typeof AlphaAntiAliasing>;
 
   /** Where the antialiased cut's edge sits (`label_3d.h:65`, default 0). */
   alpha_antialiasing_edge: number;
@@ -72,5 +73,5 @@ export interface Label3DProperties extends GeometryInstance3DProperties {
   fixed_size: boolean;
 
   /** Glyph-texture sampling (`label_3d.h:140`, default LINEAR_WITH_MIPMAPS). */
-  texture_filter: TextureFilter;
+  texture_filter: EnumValue<typeof TextureFilter>;
 }

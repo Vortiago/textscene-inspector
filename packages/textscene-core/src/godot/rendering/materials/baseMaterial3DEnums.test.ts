@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { BLEND_MODE_NAMES } from './blendMode';
+import { BASE_MATERIAL_3D_BLEND_MODE_NAMES } from './blendMode';
 import { CULL_MODE_NAMES, CullMode } from './cullMode';
 import { DEPTH_DRAW_MODE_NAMES, DepthDrawMode } from './depthDrawMode';
 import { DEPTH_TEST_NAMES } from './depthTest';
 import { DISTANCE_FADE_MODE_NAMES, DistanceFadeMode } from './distanceFadeMode';
 import { SHADING_MODE_NAMES, ShadingMode } from './shadingMode';
-import { STENCIL_COMPARE_NAMES, STENCIL_FLAG_LABELS, STENCIL_MODE_NAMES, StencilFlag } from './stencil';
+import { STENCIL_COMPARE_NAMES, STENCIL_FLAG_NAMES, STENCIL_MODE_NAMES, StencilFlag } from './stencil';
 import { TRANSPARENCY_NAMES, Transparency } from './transparency';
 
 /** The BaseMaterial3D enums of `scene/resources/material.h:187-352`, as the integers a `.tscn` stores. */
@@ -22,7 +22,13 @@ describe('BaseMaterial3D enums', () => {
   });
 
   it('names the five blend modes of material.h:227-233', () => {
-    expect(BLEND_MODE_NAMES).toEqual({ 0: 'MIX', 1: 'ADD', 2: 'SUB', 3: 'MUL', 4: 'PREMULT_ALPHA' });
+    expect(BASE_MATERIAL_3D_BLEND_MODE_NAMES).toEqual({
+      0: 'MIX',
+      1: 'ADD',
+      2: 'SUB',
+      3: 'MUL',
+      4: 'PREMULT_ALPHA',
+    });
   });
 
   it('stores CullMode as BACK, FRONT, DISABLED (material.h:249-254)', () => {
@@ -71,7 +77,7 @@ describe('BaseMaterial3D enums', () => {
   });
 
   it('stores StencilFlag as the bits 1, 2 and 4 (material.h:339-344)', () => {
-    expect(STENCIL_FLAG_LABELS).toEqual({ 1: 'READ', 2: 'WRITE', 4: 'WRITE_DEPTH_FAIL' });
+    expect(STENCIL_FLAG_NAMES).toEqual({ 1: 'READ', 2: 'WRITE', 4: 'WRITE_DEPTH_FAIL' });
     expect(StencilFlag.WRITE_DEPTH_FAIL).toBe(4);
   });
 });

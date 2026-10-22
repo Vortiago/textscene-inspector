@@ -13,7 +13,7 @@
 import { isZeroApprox } from '../../../../godot/math/math';
 import type { ControlProperties } from '../control/types';
 import type { FlowContainerProperties } from './types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {

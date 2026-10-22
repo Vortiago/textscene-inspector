@@ -12,7 +12,7 @@ import { WHITE_MODULATE } from '../../../canvasItemModulate';
 import { godotColorToLinear } from '../../../godotColor';
 import type { NativeControlComponentProps } from '../../ControlComponentRegistry';
 import type { ControlOwnTint } from '../controlTint';
-import type { Rect2 } from '../rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();

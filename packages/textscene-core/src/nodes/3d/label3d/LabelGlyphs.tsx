@@ -12,14 +12,11 @@ import {
   onSceneFontMetricsSettled,
   peekBundledCanvasFontMetrics,
 } from '../../../r3f/controls/native/text/sceneFontLoader';
-import {
-  alphaCutSurface,
-  joinsShadowPass,
-  NO_TRANSPARENT_FLAG,
-  type AlphaCutSurface,
-} from '../../../r3f/godotAlphaCut';
-import { cutBlends, cutOpaquePrepasses, type FadeVariants } from '../../../r3f/materials/fadeVariants';
-import type { CanvasTextBlend } from '../../../r3f/controls/native/text/canvasTextPainter';
+import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
+import { projectDefaultFontGeneratesMipmaps } from '../../../parser/projectSettingsParser';
+import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext';
+import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
+import { materialFor2d } from '../../../r3f/materialFor2d';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
@@ -28,7 +25,6 @@ import { label3DAabb, layoutLabel3DLines, outlineStrokeWidthPx } from './glyphLa
 import { type Label3DProperties } from './types';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
-import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
 
 export interface LabelGlyphsProps {
   /** The label's node group, whose parent places it for the scene cull. */
@@ -91,8 +87,27 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   ]);
   const shadow = useGeometryInstance(placement);
 
-  const depthTest = !properties.no_depth_test;
-  const side = properties.double_sided === false ? THREE.FrontSide : THREE.DoubleSide;
+  // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
+  // equal-valued one rebuilds nothing.
+  const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
+  const { blends, joinsShadowPass, side, depthTest, textureFilter } = materialFor2d({
+    alphaCut: properties.alpha_cut,
+    alphaScissorThreshold: properties.alpha_scissor_threshold,
+    // Label3D's DrawFlags have no FLAG_TRANSPARENT (`label_3d.h:42-47`).
+    transparentFlag: NO_TRANSPARENT_FLAG,
+    alphaHashScale: properties.alpha_hash_scale,
+    alphaAntialiasingMode: properties.alpha_antialiasing_mode,
+    alphaAntialiasingEdge: properties.alpha_antialiasing_edge,
+    doubleSided: properties.double_sided,
+    noDepthTest: properties.no_depth_test,
+    textureFilter: properties.texture_filter,
+    anisotropicFilteringLevel,
+  });
+  // The glyph pages carry a mip chain only for a font with `generate_mipmaps`; the filter row
+  // says whether a mipmapped sampler reads it.
+  const { settings } = useProjectSettings();
+  const mipmapped = projectDefaultFontGeneratesMipmaps(settings);
+  const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass };
 
   // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs
   // are `TRANSPARENCY_ALPHA` (`label_3d.cpp:386`) on one cached shader (`:396`),
@@ -112,25 +127,6 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
   });
   const outlineSurface = surface(properties.outline_render_priority);
   const fillSurface = surface(properties.render_priority);
-
-  // Not memoised: `TextRun` keys its material off this object's fields, not its
-  // identity, so a fresh equal-valued one rebuilds nothing.
-  const cut = alphaCutSurface({
-    mode: properties.alpha_cut,
-    scissorThreshold: properties.alpha_scissor_threshold,
-    // Label3D's DrawFlags have no FLAG_TRANSPARENT (`label_3d.h:42-47`).
-    transparentFlag: NO_TRANSPARENT_FLAG,
-    antialiasing: { mode: properties.alpha_antialiasing_mode, edge: properties.alpha_antialiasing_edge },
-  });
-  // `label_3d.cpp:386` never gates on modulate alpha: whatever reaches the
-  // blended pass is transparent. The geometry instance's fade can move both surfaces
-  // there, and scales each surface's alpha by one fade alpha.
-  const blends = labelBlends(cut, depthTest, properties.alpha_hash_scale);
-  const surfaceShadow = { ...shadow, castShadow: shadow.castShadow && joinsShadowPass(cut, depthTest) };
-
-  // `material.h:172-177`: the enum alternates NEAREST, LINEAR, so the even
-  // members are the nearest ones whatever their mipmap/anisotropy suffix.
-  const textureFilter = properties.texture_filter % 2 === TextureFilter.NEAREST ? 'nearest' : 'linear';
 
   // Nothing renders before the family registers: `ctx.fillText` against an
   // unregistered one rasterises a system font, frame-stable, so no golden catches it.
@@ -156,6 +152,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   side={side}
                   renderOrder={outlineSurface.renderOrder}
                   textureFilter={textureFilter}
+                  mipmapped={mipmapped}
                   blends={blends}
                   shadow={surfaceShadow}
                   layers={properties.layers}
@@ -172,6 +169,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 side={side}
                 renderOrder={fillSurface.renderOrder}
                 textureFilter={textureFilter}
+                mipmapped={mipmapped}
                 blends={blends}
                 shadow={surfaceShadow}
                 layers={properties.layers}
@@ -183,22 +181,4 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
       })}
     </group>
   );
-}
-
-/**
- * Each pass's blend, with its opaque prepass, at the label's `alpha_hash_scale` and alpha
- * antialiasing, which `label_3d.cpp:379-397` hands every surface.
- */
-function labelBlends(
-  cut: AlphaCutSurface,
-  depthTest: boolean,
-  alphaHashScale: number
-): FadeVariants<CanvasTextBlend> {
-  const blends = cutBlends(cut);
-  const prepasses = cutOpaquePrepasses(cut, depthTest);
-  const { antialiasing } = cut;
-  return {
-    unfaded: { ...blends.unfaded, alphaHashScale, antialiasing, opaquePrepass: prepasses.unfaded },
-    alphaPass: { ...blends.alphaPass, alphaHashScale, antialiasing, opaquePrepass: prepasses.alphaPass },
-  };
 }

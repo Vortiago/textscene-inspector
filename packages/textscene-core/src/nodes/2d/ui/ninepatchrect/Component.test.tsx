@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';

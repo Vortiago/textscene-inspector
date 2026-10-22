@@ -11,7 +11,7 @@ import type { TscnNode } from '../../../../parser/types';
 import { TscnParser } from '../../../../parser/TscnParser';
 import { fixturesDir } from '../../../../parser/testing/parserKit';
 import { joinPath } from '../../../../utils/nodePath';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';

@@ -25,6 +25,7 @@ import {
   isIncompleteState,
   INITIAL_SCAN_STATE,
   stripLineComment,
+  splitLines,
 } from './utils.js';
 import type { ParsedHeading, ValueScanState } from './utils.js';
 import { parseExternalResource, parseInternalResource } from './resourceParsers.js';
@@ -113,9 +114,7 @@ export class TscnParserCore {
   ): CoreParseResult<N> {
     // Debug, not info: an editor host parses on each keystroke.
     logger.debug('[Parser] Starting TSCN parsing');
-    // Split on CRLF or LF: a trailing \r on each line of a Windows-authored file
-    // would corrupt accumulated multi-line string values.
-    const lines = content.split(/\r?\n/);
+    const lines = splitLines(content);
 
     // Every node beside its heading's line, in scan order. The line stays off the node:
     // the orphan report reads it here, and a strict observer gets it from `onSectionBuilt`.

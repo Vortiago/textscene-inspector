@@ -1,0 +1,166 @@
+; Twelve lit 8 px points of different shader features, then a 40 px unshaded green point with cull_mode = CULL_FRONT at the centre.
+; The features queue many pipelines, so the green point's pipeline lands late. While it compiles, Godot draws the
+; ubershader, which culls by gl_FrontFacing, true for a point, so a cull-front point is missing from an early capture.
+; The pair calibrates the harness: a capture that waited for the pipelines matches point-cull-back.
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="Feature_0"]
+emission_enabled = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_0"]
+material = SubResource("Feature_0")
+
+[sub_resource type="StandardMaterial3D" id="Feature_1"]
+rim_enabled = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_1"]
+material = SubResource("Feature_1")
+
+[sub_resource type="StandardMaterial3D" id="Feature_2"]
+clearcoat_enabled = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_2"]
+material = SubResource("Feature_2")
+
+[sub_resource type="StandardMaterial3D" id="Feature_3"]
+anisotropy_enabled = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_3"]
+material = SubResource("Feature_3")
+
+[sub_resource type="StandardMaterial3D" id="Feature_4"]
+backlight_enabled = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_4"]
+material = SubResource("Feature_4")
+
+[sub_resource type="StandardMaterial3D" id="Feature_5"]
+subsurf_scatter_enabled = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_5"]
+material = SubResource("Feature_5")
+
+[sub_resource type="StandardMaterial3D" id="Feature_6"]
+heightmap_enabled = false
+refraction_enabled = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_6"]
+material = SubResource("Feature_6")
+
+[sub_resource type="StandardMaterial3D" id="Feature_7"]
+disable_receive_shadows = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_7"]
+material = SubResource("Feature_7")
+
+[sub_resource type="StandardMaterial3D" id="Feature_8"]
+vertex_color_use_as_albedo = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_8"]
+material = SubResource("Feature_8")
+
+[sub_resource type="StandardMaterial3D" id="Feature_9"]
+proximity_fade_enabled = true
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_9"]
+material = SubResource("Feature_9")
+
+[sub_resource type="StandardMaterial3D" id="Feature_10"]
+distance_fade_mode = 1
+distance_fade_max_distance = 50.0
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_10"]
+material = SubResource("Feature_10")
+
+[sub_resource type="StandardMaterial3D" id="Feature_11"]
+billboard_mode = 1
+use_point_size = true
+point_size = 8.0
+
+[sub_resource type="PointMesh" id="Mesh_11"]
+material = SubResource("Feature_11")
+
+[sub_resource type="StandardMaterial3D" id="Material_green"]
+shading_mode = 0
+albedo_color = Color(0.2, 1, 0.2, 1)
+cull_mode = 1
+use_point_size = true
+point_size = 40.0
+
+[sub_resource type="PointMesh" id="PointMesh_dot"]
+material = SubResource("Material_green")
+
+[node name="Root" type="Node3D"]
+
+[node name="Feature0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.20, 0.6, 0)
+mesh = SubResource("Mesh_0")
+
+[node name="Feature1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.98, 0.6, 0)
+mesh = SubResource("Mesh_1")
+
+[node name="Feature2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.76, 0.6, 0)
+mesh = SubResource("Mesh_2")
+
+[node name="Feature3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.54, 0.6, 0)
+mesh = SubResource("Mesh_3")
+
+[node name="Feature4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.6, 0)
+mesh = SubResource("Mesh_4")
+
+[node name="Feature5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.10, 0.6, 0)
+mesh = SubResource("Mesh_5")
+
+[node name="Feature6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.6, 0)
+mesh = SubResource("Mesh_6")
+
+[node name="Feature7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.34, 0.6, 0)
+mesh = SubResource("Mesh_7")
+
+[node name="Feature8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.56, 0.6, 0)
+mesh = SubResource("Mesh_8")
+
+[node name="Feature9" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.78, 0.6, 0)
+mesh = SubResource("Mesh_9")
+
+[node name="Feature10" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.00, 0.6, 0)
+mesh = SubResource("Mesh_10")
+
+[node name="Feature11" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.22, 0.6, 0)
+mesh = SubResource("Mesh_11")
+
+[node name="Dot" type="MeshInstance3D" parent="."]
+mesh = SubResource("PointMesh_dot")

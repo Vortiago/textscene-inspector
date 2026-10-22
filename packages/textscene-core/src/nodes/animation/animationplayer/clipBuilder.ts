@@ -19,6 +19,7 @@ import {
 import type { GodotAnimation, GodotKeyframe, GodotTrack } from './animationResolver';
 import { warn } from '../../../logger';
 import { degToRad } from '../../../godot/math/math.js';
+import { VECTOR3_AXES } from '../../../godot/math/vector.js';
 
 /**
  * Maps a track's NodePath to its target's scene path, or `null` when the walk leaves the scene, as
@@ -134,7 +135,7 @@ function rotationTracks(
   }
 
   if (Array.isArray(first) && first.length === 3) {
-    return (['x', 'y', 'z'] as const).map(
+    return VECTOR3_AXES.map(
       (axis, i) =>
         new NumberKeyframeTrack(
           `${prefix}.rotation[${axis}]`,

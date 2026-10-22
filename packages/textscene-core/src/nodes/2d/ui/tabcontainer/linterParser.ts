@@ -14,10 +14,7 @@ import {
   TAB_BAR_ALIGNMENT_HINT_NAMES,
   TAB_CONTAINER_TABS_POSITION_NAMES,
 } from '../../../../godot/scene/tabs.js';
-import {
-  propertyListFamilyKey,
-  propertyListFamilyValidator,
-} from '../../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../../linter/validators/indexedFamily.js';
 import { TAB_CONTAINER_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 
 /** The `tab_<idx>/<leaf>` leaves: the four `register_property` calls at tab_container.cpp:1272-1275. */
@@ -33,7 +30,7 @@ const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   hidden: v.boolean('hidden'),
 };
 
-const tabValidator = propertyListFamilyValidator(TAB_CONTAINER_TABS, {
+const tabFamilyEntry = propertyListFamilyEntry(TAB_CONTAINER_TABS, {
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TABCONTAINER_TAB_KEY',
   describes: 'tab',
@@ -45,7 +42,7 @@ const tabValidator = propertyListFamilyValidator(TAB_CONTAINER_TABS, {
   },
 });
 
-validatorRegistry.registerAll('TabContainer', {
+validatorRegistry.registerAll('TabContainer', tabFamilyEntry, {
   // tab_container.cpp:1208, PROPERTY_HINT_ENUM "Left,Center,Right". TabBar::set_tab_alignment's
   // `ERR_FAIL_INDEX(p_alignment, ALIGNMENT_MAX)` (tab_bar.cpp:1671, ALIGNMENT_MAX=3) agrees with the hint.
   tab_alignment: v.enumInt('tab_alignment', TAB_BAR_ALIGNMENT_HINT_NAMES, { enforced: 'tab_bar.cpp:1671' }),
@@ -102,7 +99,4 @@ validatorRegistry.registerAll('TabContainer', {
   // tab_container.cpp:1219, plain BOOL, no hint. set_deselect_enabled
   // delegates to TabBar's own, which bare-assigns (tab_bar.cpp:2038).
   deselect_enabled: v.boolean('deselect_enabled'),
-
-  // tab_container.cpp:1270-1276: see tabValidator.
-  [propertyListFamilyKey(TAB_CONTAINER_TABS)]: tabValidator,
 });

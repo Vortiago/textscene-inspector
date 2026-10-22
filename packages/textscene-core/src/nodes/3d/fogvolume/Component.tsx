@@ -1,7 +1,8 @@
 /**
  * <FogVolume>: puts a fog volume into the scene at the node's transform, which the volumetric fog
  * finds and draws (`r3f/fog/fogVolumeRows.ts`). It draws nothing of its own, so it draws nothing
- * where the Environment's volumetric fog is off, as in Godot.
+ * where the Environment's volumetric fog is off, as in Godot. Godot's editor gizmo of the box draws
+ * while the node is selected (ADR-0018).
  */
 
 import { useEffect, useMemo } from 'react';
@@ -13,6 +14,7 @@ import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { literalText, stringToInt } from '../../../godot/string/string';
 import * as logger from '../../../logger';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
+import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import {
   DEFAULT_FOG_VOLUME_FILL,
   FogVolumeObject,
@@ -22,19 +24,24 @@ import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { decodeFogMaterial } from '../../../resources/materials/fogmaterial/decode';
-import { useResourceResolution, type ScopedResource } from '../../../resources/useSubOrExtResource';
+import type { ScopedResource } from '../../../resources/scopedResource';
+import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { useTexture3D } from '../../../resources/useTexture3D';
 import { Node3D } from '../../base/node3d/Component';
+import { FogVolumeGizmo } from './Gizmo';
 import type { FogVolumeProperties } from './types';
 import type { Vector3 } from '../../../godot/math/vector';
+import { enumMember, type EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
 const FogVolumeElement = extend(FogVolumeObject);
 
 /** The mode `shader` runs in, or null before it has loaded. */
-function shaderModeOfResource(shader: TscnInternalResource | null): ShaderMode | null {
+function shaderModeOfResource(shader: TscnInternalResource | null): EnumValue<typeof ShaderMode> | null {
   if (!shader) return null;
-  if (shader.type === 'VisualShader') return stringToInt(shader.data['mode'] ?? '0');
+  // `VisualShader::set_mode` refuses an out-of-range mode (`visual_shader.cpp:1436`), so it keeps the default.
+  if (shader.type === 'VisualShader')
+    return enumMember(ShaderMode, stringToInt(shader.data['mode'] ?? '0')) ?? ShaderMode.SPATIAL;
   return shaderModeOf(literalText(shader.data['code'] ?? ''));
 }
 
@@ -110,11 +117,16 @@ export function FogVolume({ node, children }: NodeComponentProps) {
     z: v[2] ?? 0,
   }));
   // An animated size clamps as an authored one does.
-  const size = animatedSize ? fogVolumeSize(animatedSize) : properties.size;
+  const size = useMemo(
+    () => (animatedSize ? fogVolumeSize(animatedSize) : properties.size),
+    [animatedSize, properties.size]
+  );
+  const gizmoVisible = useGizmoVisible();
 
   return (
     <Node3D node={node}>
       <FogVolumeElement size={[size.x, size.y, size.z]} shape={properties.shape} fill={fill} />
+      {gizmoVisible && <FogVolumeGizmo size={size} shape={properties.shape} />}
       {children}
     </Node3D>
   );

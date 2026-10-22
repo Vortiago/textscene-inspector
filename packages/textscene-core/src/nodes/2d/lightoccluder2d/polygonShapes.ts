@@ -1,9 +1,7 @@
 import { intOr } from '../../../parser/valueParsers';
-import {
-  OCCLUDER_CULL_COUNTER_CLOCKWISE,
-  OCCLUDER_CULL_DISABLED,
-  type OccluderCullMode,
-} from '../../../r3f/lighting2d/shadowVolumes';
+import type { OccluderCullMode } from '../../../r3f/lighting2d/shadowVolumes';
+import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
+import { enumMember } from '../../../godot/classdb/enumNames';
 
 /**
  * A flat `PackedVector2Array` `[x0,y0, x1,y1, …]` as flat `[ax,ay,0, bx,by,0, …]`
@@ -42,8 +40,6 @@ export function polygonToSegments(points: ArrayLike<number>, closed: boolean): F
  * which casts from every edge, so a garbled value still shadows.
  */
 export function parseOccluderCullMode(raw: string | undefined): OccluderCullMode {
-  const value = intOr(raw, OCCLUDER_CULL_DISABLED, 'OccluderPolygon2D.cull_mode');
-  return value >= OCCLUDER_CULL_DISABLED && value <= OCCLUDER_CULL_COUNTER_CLOCKWISE
-    ? (value as OccluderCullMode)
-    : OCCLUDER_CULL_DISABLED;
+  const value = intOr(raw, OccluderPolygon2DCullMode.DISABLED, 'OccluderPolygon2D.cull_mode');
+  return enumMember(OccluderPolygon2DCullMode, value) ?? OccluderPolygon2DCullMode.DISABLED;
 }

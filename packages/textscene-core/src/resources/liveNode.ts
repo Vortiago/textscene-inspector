@@ -5,6 +5,7 @@
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { UniqueNameTable } from './instanceNameTable.js';
+import { resolveInstancePath } from './SubResourceResolver.js';
 
 export interface LiveNode extends TscnNode {
   /**
@@ -21,9 +22,27 @@ export interface LiveNode extends TscnNode {
   readonly uniqueNames?: UniqueNameTable;
   /** Set by the merge on a collapsed instance: `GraftedInstance.uniqueParentPlacements`. */
   readonly uniqueParentPlacements?: ReadonlyMap<string, string>;
+  /**
+   * Set on a typed node attached into a GLB: the `relPath` of the GLB object its `instanceSubPath`
+   * matched, so the tree finds its row by that key and matches nothing again.
+   */
+  readonly glbTargetRelPath?: string;
 }
 
-/** The scope a node's refs and its children's resolve against: its own, else its group's. */
+/**
+ * The scope a node's refs and its children's resolve against: its own, else its group's.
+ * A group does not stamp its children with it: solve-tree maps key on the raw node, and a copy breaks them.
+ */
 export function scopeOf(node: LiveNode, groupScope: SceneScope): SceneScope {
   return node.scope ?? groupScope;
+}
+
+/**
+ * The `res://` path of the scene `node` instances, its ref resolved in the scope of the file that
+ * authored it ({@link scopeOf}). Null for a node with no instance ref, or a ref that scope does not
+ * declare.
+ */
+export function liveInstancePath(node: LiveNode, groupScope: SceneScope): string | null {
+  if (!node.instance) return null;
+  return resolveInstancePath(node.instance, scopeOf(node, groupScope).externalResources);
 }

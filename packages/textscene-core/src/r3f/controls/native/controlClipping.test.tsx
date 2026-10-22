@@ -8,7 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useEffect, type ReactElement, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { ControlClipProvider, useControlClipPlanes, useWorldClipPlanes } from './controlClipping';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 
 const renderers: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>[] = [];
 

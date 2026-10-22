@@ -8,13 +8,8 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { boolOr, enumOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
 import { colorOr } from '../../../utils/colorParser';
-import {
-  CPUParticles2DDrawOrder,
-  CPUParticles2DEmissionShape,
-  type CPUParticles2DProperties,
-  type ParticleParam,
-  PARAM_SLOTS,
-} from './types';
+import { type CPUParticles2DProperties, type ParticleParam, PARAM_SLOTS } from './types';
+import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
 
 /** Godot's inspector range for `amount` is `1,1000000,1,exp` (`cpu_particles_2d.cpp:1492`). */
 const MAX_PARTICLE_AMOUNT = 1_000_000;
@@ -46,22 +41,22 @@ export function parseCPUParticles2D(
     local_coords: boolOr(properties.local_coords, false, context),
     draw_order: enumOr(
       properties.draw_order,
-      CPUParticles2DDrawOrder.Index,
-      [CPUParticles2DDrawOrder.Index, CPUParticles2DDrawOrder.Lifetime] as const,
+      CPUParticles2DDrawOrder.INDEX,
+      [CPUParticles2DDrawOrder.INDEX, CPUParticles2DDrawOrder.LIFETIME] as const,
       `${context}.draw_order`
     ),
 
     emission_shape: enumOr(
       properties.emission_shape,
-      CPUParticles2DEmissionShape.Point,
+      CPUParticles2DEmissionShape.POINT,
       [
-        CPUParticles2DEmissionShape.Point,
-        CPUParticles2DEmissionShape.Sphere,
-        CPUParticles2DEmissionShape.SphereSurface,
-        CPUParticles2DEmissionShape.Rectangle,
-        CPUParticles2DEmissionShape.Points,
-        CPUParticles2DEmissionShape.DirectedPoints,
-        CPUParticles2DEmissionShape.Ring,
+        CPUParticles2DEmissionShape.POINT,
+        CPUParticles2DEmissionShape.SPHERE,
+        CPUParticles2DEmissionShape.SPHERE_SURFACE,
+        CPUParticles2DEmissionShape.RECTANGLE,
+        CPUParticles2DEmissionShape.POINTS,
+        CPUParticles2DEmissionShape.DIRECTED_POINTS,
+        CPUParticles2DEmissionShape.RING,
       ] as const,
       `${context}.emission_shape`
     ),

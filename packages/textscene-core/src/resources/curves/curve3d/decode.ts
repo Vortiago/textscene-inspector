@@ -7,7 +7,8 @@
 
 import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector3Array } from '../../shapes/packedArray';
-import { bezierInterpolate } from '../../../godot/math/math.js';
+import { bezierInterpolatef } from '../../../godot/math/math.js';
+import { storedReal, storedVector3 } from '../../../godot/math/real.js';
 import { CURVE3D_DATA } from '../shared/bezierData';
 import { resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
 import type { Curve3DControlPoint, Curve3DSample, Curve3DSampler } from './types';
@@ -99,6 +100,11 @@ export function tessellateCurve3D(points: Curve3DControlPoint[], segmentsPerSpan
   return { points: flat, length, sampleAt };
 }
 
+/**
+ * Append a span's vertices (excluding its start, already pushed) to `flat`. Each point is a
+ * `Vector3` of floats and `Vector3::bezier_interpolate` (`vector3.h:322-328`) takes the float
+ * `Math::bezier_interpolate`, so the points and each step round to single precision.
+ */
 function appendSpan(
   flat: number[],
   a: Curve3DControlPoint,
@@ -111,17 +117,19 @@ function appendSpan(
     flat.push(b.position.x, b.position.y, b.position.z);
     return;
   }
-  const p0 = a.position;
-  const p1 = { x: a.position.x + a.out.x, y: a.position.y + a.out.y, z: a.position.z + a.out.z };
-  const p2 = { x: b.position.x + b.in.x, y: b.position.y + b.in.y, z: b.position.z + b.in.z };
-  const p3 = b.position;
+  const p0 = storedVector3(a.position);
+  const out = storedVector3(a.out);
+  const p3 = storedVector3(b.position);
+  const inHandle = storedVector3(b.in);
+  const p1 = storedVector3({ x: p0.x + out.x, y: p0.y + out.y, z: p0.z + out.z });
+  const p2 = storedVector3({ x: p3.x + inHandle.x, y: p3.y + inHandle.y, z: p3.z + inHandle.z });
   const steps = Math.max(1, segmentsPerSpan);
   for (let s = 1; s <= steps; s++) {
-    const t = s / steps;
+    const t = storedReal(s / steps);
     flat.push(
-      bezierInterpolate(p0.x, p1.x, p2.x, p3.x, t),
-      bezierInterpolate(p0.y, p1.y, p2.y, p3.y, t),
-      bezierInterpolate(p0.z, p1.z, p2.z, p3.z, t)
+      bezierInterpolatef(p0.x, p1.x, p2.x, p3.x, t),
+      bezierInterpolatef(p0.y, p1.y, p2.y, p3.y, t),
+      bezierInterpolatef(p0.z, p1.z, p2.z, p3.z, t)
     );
   }
 }

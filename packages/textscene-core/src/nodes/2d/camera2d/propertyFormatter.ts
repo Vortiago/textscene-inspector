@@ -1,8 +1,9 @@
 /** Camera2D property formatter: the view-framing properties for the details panel. */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import { Camera2DAnchorMode, type Camera2DProperties } from './types';
+import { type Camera2DProperties } from './types';
 import { formatNode2DProperties } from '../../base/node2d/propertyFormatter';
+import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
 
 export function formatCamera2DProperties(properties: Camera2DProperties): PropertySection[] {
   const sections: PropertySection[] = [];

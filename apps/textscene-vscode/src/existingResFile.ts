@@ -1,17 +1,22 @@
 /**
- * The file a `res://` path names under its root, for a definition or a link to open. Both hosts
- * answer only a file that exists: a missing one would open an empty editor, and a directory
- * cannot open as a document.
+ * The place a `res://` path names under its root, for the linter, the reference search, a definition and a link. For a
+ * definition or a link to open, both hosts answer only a file that exists: a missing one would open an empty editor,
+ * and a directory cannot open as a document.
  */
 
 import * as vscode from 'vscode';
 import { resRelativePath } from '@textscene/core/resources/resPath';
 
+/** The place `resPath` names under `resRoot`, a file or not, or null for a path that is not `res://` or climbs out of the root. */
+export function resPathUri(resRoot: vscode.Uri, resPath: string): vscode.Uri | null {
+  const relativePath = resRelativePath(resPath);
+  return relativePath === null ? null : vscode.Uri.joinPath(resRoot, relativePath);
+}
+
 /** The file `resPath` names under `resRoot`, or null for a path that is not `res://`, a missing file or a directory. */
 export async function existingResFile(resRoot: vscode.Uri, resPath: string): Promise<vscode.Uri | null> {
-  const relativePath = resRelativePath(resPath);
-  if (relativePath === null) return null;
-  const file = vscode.Uri.joinPath(resRoot, relativePath);
+  const file = resPathUri(resRoot, resPath);
+  if (file === null) return null;
   try {
     const { type } = await vscode.workspace.fs.stat(file);
     return type & vscode.FileType.File ? file : null;
