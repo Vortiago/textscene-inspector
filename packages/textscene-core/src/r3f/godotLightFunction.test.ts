@@ -9,10 +9,9 @@ import * as THREE from 'three';
 import { threeAnisotropy, installGodotLightFunction } from './godotLightFunction';
 import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
 import { installGodotLightSize } from './lightSize/lightSizeChunk';
-import { installGodotNormalMapRead } from './materials/godotNormalMap';
 import { warningsOf } from './testing/logWarnings';
 import { preprocessorBranch } from './testing/glslSource';
-import { installedShaderChunks } from './testing/shaderPatches';
+import { installLightFunctionPrerequisites, installedShaderChunks } from './testing/shaderPatches';
 
 const CHUNK = 'lights_physical_pars_fragment';
 const SETUP_CHUNK = 'lights_physical_fragment';
@@ -127,10 +126,10 @@ describe('the installed light function', () => {
     const mapped = preprocessorBranch(godotChunks()[SETUP_CHUNK], '#ifdef USE_NORMALMAP_TANGENTSPACE');
     expect(mapped).toContain('vec2 godotPair = 1.0 - 2.0 * mod( floor( gl_FragCoord.xy ), 2.0 );');
     expect(mapped).toContain(
-      'vec3 godotDndu = godotPair.x * ( godotMapNormal( vNormalMapUv + godotPair.x * godotUvDx, godotUvDx, godotUvDy, tbn + godotPair.x * godotTbnDx ) - normal );'
+      'godotDndu = godotPair.x * ( godotMapNormal( vNormalMapUv + godotPair.x * godotUvDx, godotUvDx, godotUvDy, tbn + godotPair.x * godotTbnDx ) - normal );'
     );
     expect(mapped).toContain(
-      'vec3 godotDndv = godotPair.y * ( godotMapNormal( vNormalMapUv + godotPair.y * godotUvDy, godotUvDx, godotUvDy, tbn + godotPair.y * godotTbnDy ) - normal );'
+      'godotDndv = godotPair.y * ( godotMapNormal( vNormalMapUv + godotPair.y * godotUvDy, godotUvDx, godotUvDy, tbn + godotPair.y * godotTbnDy ) - normal );'
     );
     expect(mapped).not.toContain('dFdx( normal )');
   });
@@ -183,9 +182,7 @@ describe('the installed light function', () => {
 
 describe('installGodotLightFunction', () => {
   beforeEach(() => {
-    installGodotLightSpecular();
-    installGodotLightSize();
-    installGodotNormalMapRead();
+    installLightFunctionPrerequisites();
   });
 
   it('writes Godot’s roughness and light function into all three chunks', () => {

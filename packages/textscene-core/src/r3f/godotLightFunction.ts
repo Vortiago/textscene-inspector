@@ -19,9 +19,9 @@ const MAPS_CHUNK = 'lights_fragment_maps';
 const ROUGHNESS_SETUP = 'material.roughness = min( material.roughness, 1.0 );';
 
 /**
- * Godot's limiter reads the fine `dFdx( normal )` (`scene_forward_clustered.glsl:1660`), and WebGL 2
- * has no fine derivative: a coarse one spans a 2 x 2 quad. A mapped normal takes its pixel pair's
- * difference instead, from the map read one texel along the pair, as the fine derivative does.
+ * Godot's limiter reads the fine `dFdx( normal )` (`scene_forward_clustered.glsl:1660`), but WebGL 2
+ * has none: a coarse one spans a 2 x 2 quad. A mapped normal takes its pixel pair's difference from
+ * the map read one texel along the pair. Roughness 1 stays 1, so that pixel skips the reads.
  */
 const NORMAL_DERIVATIVES = /* glsl */ `#ifdef USE_NORMALMAP_TANGENTSPACE
 vec2 godotUvDx = dFdx( vNormalMapUv );
@@ -29,8 +29,12 @@ vec2 godotUvDy = dFdy( vNormalMapUv );
 mat3 godotTbnDx = mat3( dFdx( tbn[ 0 ] ), dFdx( tbn[ 1 ] ), dFdx( tbn[ 2 ] ) );
 mat3 godotTbnDy = mat3( dFdy( tbn[ 0 ] ), dFdy( tbn[ 1 ] ), dFdy( tbn[ 2 ] ) );
 vec2 godotPair = 1.0 - 2.0 * mod( floor( gl_FragCoord.xy ), 2.0 );
-vec3 godotDndu = godotPair.x * ( godotMapNormal( vNormalMapUv + godotPair.x * godotUvDx, godotUvDx, godotUvDy, tbn + godotPair.x * godotTbnDx ) - normal );
-vec3 godotDndv = godotPair.y * ( godotMapNormal( vNormalMapUv + godotPair.y * godotUvDy, godotUvDx, godotUvDy, tbn + godotPair.y * godotTbnDy ) - normal );
+vec3 godotDndu = vec3( 0.0 );
+vec3 godotDndv = vec3( 0.0 );
+if ( roughnessFactor < 1.0 ) {
+	godotDndu = godotPair.x * ( godotMapNormal( vNormalMapUv + godotPair.x * godotUvDx, godotUvDx, godotUvDy, tbn + godotPair.x * godotTbnDx ) - normal );
+	godotDndv = godotPair.y * ( godotMapNormal( vNormalMapUv + godotPair.y * godotUvDy, godotUvDx, godotUvDy, tbn + godotPair.y * godotTbnDy ) - normal );
+}
 #else
 vec3 godotDndu = dFdx( normal );
 vec3 godotDndv = dFdy( normal );
