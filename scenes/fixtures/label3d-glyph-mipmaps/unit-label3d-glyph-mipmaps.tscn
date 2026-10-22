@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://unitlabelglyphmip"]
+
+; One variable: the project's `gui/theme/default_font_generate_mipmaps`, true, set in this
+; directory's project.godot. The default font then builds a mip chain for its glyph pages
+; (`text_server_adv.cpp:3121`), and a `texture_filter` of 3 samples it. The text is minified,
+; and the project's `texture_mipmap_bias` of -1 picks a sharper level. No other golden gives a
+; Label3D a mip chain, so none shows a regression in it.
+
+[node name="Label3DGlyphMipmaps" type="Node3D"]
+
+[node name="Label" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.8, 0.6, 0, -0.6, 0.8, 0, 0, 0)
+pixel_size = 0.000625
+shaded = false
+double_sided = true
+texture_filter = 3
+font_size = 256
+text = "Mipmaps keep small text smooth. Mipmaps keep small text smooth."

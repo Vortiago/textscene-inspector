@@ -1,0 +1,14 @@
+config_version=5
+
+[application]
+
+config/name="label3d-glyph-mipmaps"
+config/features=PackedStringArray("4.6")
+
+[gui]
+
+theme/default_font_generate_mipmaps=true
+
+[rendering]
+
+textures/default_filters/texture_mipmap_bias=-1.0

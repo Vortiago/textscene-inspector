@@ -6,7 +6,7 @@
  */
 
 import * as THREE from 'three';
-import { composeInjections, injectProgram } from '../../../r3f/materialProgramInputs';
+import { composeInjections, injectViewportProgram } from '../../../r3f/materialProgramInputs';
 import {
   SPECULAR_OCCLUSION_DISABLED,
   disablesSpecularOcclusion,
@@ -105,7 +105,7 @@ function projectionMaterial(look: DecalProjectionLook, shading: ReceiverShading)
       ...specularOcclusionUserData(shading.disablesSpecularOcclusion),
     },
   });
-  injectProgram(
+  injectViewportProgram(
     material,
     composeInjections([
       lightModesInjection(shading.lightModes),

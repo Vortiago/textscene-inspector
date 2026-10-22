@@ -214,6 +214,57 @@ export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
 }
 
 /**
+ * `gui/theme/default_font_generate_mipmaps`, which the default font takes (`theme_db.cpp:64`). Off
+ * by default (`text_server.cpp:2387`), so its glyph pages carry no mip chain.
+ */
+export function projectDefaultFontGeneratesMipmaps(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['gui/theme/default_font_generate_mipmaps']) ?? false;
+}
+
+/** Godot's default `rendering/textures/default_filters/anisotropic_filtering_level`, 4x (`rendering_server.cpp:3750`). */
+export const DEFAULT_ANISOTROPIC_FILTERING_LEVEL = 2;
+
+/** `RS::VIEWPORT_ANISOTROPY_16X`, the last level `Viewport.AnisotropicFiltering` names. */
+const MAX_ANISOTROPIC_FILTERING_LEVEL = 4;
+
+/**
+ * An authored `anisotropic_filtering_level` that names a `Viewport.AnisotropicFiltering` value, or
+ * undefined. Godot shifts `1 << level` unchecked (`material_storage.cpp:2461`), so a level outside
+ * the enum has no defined meaning to render.
+ */
+export function parseAnisotropicFilteringLevel(raw: string | undefined): number | undefined {
+  const level = parseOptionalInt(raw);
+  return level !== undefined && level >= 0 && level <= MAX_ANISOTROPIC_FILTERING_LEVEL ? level : undefined;
+}
+
+/**
+ * `rendering/textures/default_filters/anisotropic_filtering_level`, which every viewport takes at
+ * construction (`viewport.cpp:5384`). An anisotropic sampler reads `1 << level` taps at most.
+ */
+export function projectAnisotropicFilteringLevel(settings: ProjectSettings | null): number {
+  return (
+    parseAnisotropicFilteringLevel(
+      settings?.['rendering/textures/default_filters/anisotropic_filtering_level']
+    ) ?? DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+  );
+}
+
+/** Godot's default `rendering/textures/default_filters/texture_mipmap_bias` (`rendering_server.cpp:3803`). */
+const DEFAULT_TEXTURE_MIPMAP_BIAS = 0;
+
+/**
+ * `rendering/textures/default_filters/texture_mipmap_bias`, which every viewport takes at
+ * construction (`viewport.cpp:5383`). The setter does not clamp to the `-2..2` hint
+ * (`viewport.cpp:4904-4911`), so a larger value passes through.
+ */
+export function projectTextureMipmapBias(settings: ProjectSettings | null): number {
+  return (
+    parseOptionalFloat(settings?.['rendering/textures/default_filters/texture_mipmap_bias']) ??
+    DEFAULT_TEXTURE_MIPMAP_BIAS
+  );
+}
+
+/**
  * `rendering/viewport/transparent_background`, which the root viewport takes
  * (`scene/main/scene_tree.cpp:2085-2086`). A transparent root clears to `Color(0, 0, 0, 0)`, not
  * the clear colour (`renderer_viewport.cpp:371`).

@@ -2150,6 +2150,12 @@ export const fixtures: Fixture[] = [
     "root": "glow-linear-upscale"
   },
   {
+    "name": "Label3d Glyph Mipmaps",
+    "file": "label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn",
+    "category": "Other",
+    "root": "label3d-glyph-mipmaps"
+  },
+  {
     "name": "Msaa 2d",
     "file": "msaa-2d/unit-msaa-2d.tscn",
     "category": "Other",
@@ -3576,6 +3582,12 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Mipmap Bias",
+    "file": "mipmap-bias/unit-material-mipmap-bias.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
   },
   {
     "name": "Navigation Agent 2d",
