@@ -34,7 +34,7 @@ function parseItems(properties: Record<string, string>, itemCount: number): Item
     const rawText = leaves?.get('text');
     if (rawText !== undefined) item.text = unquoteString(rawText);
     const rawIcon = leaves?.get('icon');
-    if (rawIcon !== undefined) item.icon = rawIcon;
+    if (holdsResource(rawIcon)) item.icon = rawIcon;
     const rawSelectable = leaves?.get('selectable');
     if (rawSelectable !== undefined) item.selectable = boolSlotValue(rawSelectable) === true;
     const rawDisabled = leaves?.get('disabled');

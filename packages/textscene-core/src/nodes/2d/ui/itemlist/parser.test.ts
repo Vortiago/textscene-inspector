@@ -84,6 +84,15 @@ describe('parseItemList', () => {
     ]);
   });
 
+  it('reads a null or nil item icon as no icon, as the variant parser reads both as null (variant_parser.cpp:699)', () => {
+    const result = parseItemList(heading, {
+      item_count: '2',
+      'item_0/icon': 'null',
+      'item_1/icon': 'nil',
+    });
+    expect(result.items).toEqual([{}, {}]);
+  });
+
   // item_list.cpp:2242-2259 -- the deprecated `items = [text, icon, disabled, …]`
   // triple array, only when the file has no `item_count` at all.
   describe('the deprecated items compat array', () => {
