@@ -599,6 +599,12 @@ describe('seatScene: index=', () => {
     expect(seated!.children.map((c) => c.name)).toEqual(['A', 'B']);
   });
 
+  it('moves a re-rooted node to its index among the root children', () => {
+    const [seated] = build([root, node('A', '.'), node('B', '.'), { ...node('C', 'Missing'), index: 0 }]);
+
+    expect(seated!.children.map((c) => c.name)).toEqual(['Missing#C', 'A', 'B']);
+  });
+
   it('leaves the index to the instanced scene when the parent instances one', () => {
     const body = { ...node('Body', '.'), instance: 'ExtResource("1")' };
     const [seated] = build([root, body, node('A', 'Body'), { ...node('B', 'Body'), index: 0 }]);

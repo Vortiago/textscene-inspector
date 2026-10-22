@@ -4,9 +4,9 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { liveChildGroups, mergedNodeOf, type LiveChildGroup } from '../../liveSceneTree.js';
+import { mergedNodeOf } from '../../liveSceneTree.js';
 import { liveInstancePath, scopeOf } from '../../../resources/liveNode.js';
-import { useInstanceContent } from './useInstanceContent.js';
+import { useLiveChildGroups } from './useLiveChildGroups.js';
 import styles from './SceneTreeViewer.module.css';
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
@@ -103,20 +103,12 @@ function TreeNodeImpl({
   const scenePath = liveInstancePath(node, scope);
   const instanceScenePath = onOpenSubScene ? scenePath : null;
 
-  // Nothing is cached for a non-instance row or while its sub-scene loads. The hook re-renders
-  // the row when the sub-scene or GLB arrives.
-  const { sceneCache, glbCache } = useInstanceContent(node, scope);
-
-  // What lives below this node, and in what resource scope. The memo keeps the groups stable
+  // What lives below this node, and in what resource scope. The hook keeps the groups stable
   // across selection and hover, so `effective` reuses one merge.
-  const groups: readonly LiveChildGroup[] = useMemo(
-    () => liveChildGroups(node, scope, sceneCache, glbCache),
-    [node, scope, sceneCache, glbCache]
-  );
+  const groups = useLiveChildGroups(node, scope);
 
   // Instance root merge (ADR-0013), the same decision the viewport and inspector
   // make, for the row header. It reads the first group's `mergedNode`, so this adds no merge.
-  // `useInstanceContent` merges once more, to find what the merged node instances.
   // Every other group keeps the raw node, as `collapseLiveNode` does.
   const effective = useMemo(() => mergedNodeOf(groups) ?? node, [groups, node]);
 

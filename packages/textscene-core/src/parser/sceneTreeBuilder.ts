@@ -181,7 +181,7 @@ function reRoot<N extends SceneNode<N>>(tables: SeatingTables<N>, node: N, owner
   const seat = seatCopy(tables, node, owner);
   seat.authoredName = node.name;
   seat.name = serialChildName(reparentedName(node.parent!, node.name), tables.rootChildNames);
-  tables.root.children.push(seat);
+  insertAtIndex(tables.root.children, seat);
   register(tables, SCENE_ROOT_PATH, seat, tables.root);
 }
 
