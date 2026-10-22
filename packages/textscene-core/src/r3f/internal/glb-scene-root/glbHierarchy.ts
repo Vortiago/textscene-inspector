@@ -149,8 +149,8 @@ export const GLB_ANIMATION_PLAYER_NAME = 'AnimationPlayer';
 const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
 
 /**
- * Adds each of `attached` below the synthetic node whose `relPath` its `instanceSubPath` holds,
- * which `splitAttachedChildren` sets to the object the node matched.
+ * Adds each of `attached` below the synthetic node whose `relPath` is its `glbTargetRelPath`, which
+ * `splitAttachedChildren` sets.
  */
 function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly LiveNode[]): void {
   if (attached.length === 0) return;
@@ -162,7 +162,7 @@ function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly Live
     }
   };
   index(nodes);
-  for (const child of attached) byRelPath.get(child.instanceSubPath!)?.children.push(child);
+  for (const child of attached) byRelPath.get(child.glbTargetRelPath!)?.children.push(child);
 }
 
 /**

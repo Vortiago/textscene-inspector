@@ -49,8 +49,8 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
  * to that object (`packed_scene.cpp:157-165`, `:541`), and the rest of `children`. A typed node
  * whose path names none stays among the rest, where the tree has always listed it.
  *
- * Each attached node comes back with `instanceSubPath` set to the `relPath` it matched, so the
- * tree's next step (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
+ * Each attached node comes back with `glbTargetRelPath` set, so the tree's next step
+ * (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
  */
 export function splitAttachedChildren(
   root: THREE.Object3D,
@@ -64,7 +64,7 @@ export function splitAttachedChildren(
     const entry = isApplicableGlbOverride(child)
       ? null
       : findGlbTarget(entries, child.instanceSubPath!).entry;
-    if (entry) attached.push({ ...child, instanceSubPath: entry.relPath });
+    if (entry) attached.push({ ...child, glbTargetRelPath: entry.relPath });
     else rest.push(child);
   }
   return { attached, rest };
