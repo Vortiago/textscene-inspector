@@ -56,15 +56,18 @@ export function splitAttachedChildren(
   root: THREE.Object3D,
   children: readonly LiveNode[]
 ): { attached: LiveNode[]; rest: LiveNode[] } {
-  const typed = children.filter((child) => !isApplicableGlbOverride(child));
-  if (typed.length === 0) return { attached: [], rest: [...children] };
+  if (children.every(isApplicableGlbOverride)) return { attached: [], rest: [...children] };
   const entries = flattenGlbObjects(root);
-  const attached = new Map<LiveNode, LiveNode>();
-  for (const child of typed) {
-    const { entry } = findGlbTarget(entries, child.instanceSubPath!);
-    if (entry) attached.set(child, { ...child, instanceSubPath: entry.relPath });
+  const attached: LiveNode[] = [];
+  const rest: LiveNode[] = [];
+  for (const child of children) {
+    const entry = isApplicableGlbOverride(child)
+      ? null
+      : findGlbTarget(entries, child.instanceSubPath!).entry;
+    if (entry) attached.push({ ...child, instanceSubPath: entry.relPath });
+    else rest.push(child);
   }
-  return { attached: [...attached.values()], rest: children.filter((child) => !attached.has(child)) };
+  return { attached, rest };
 }
 
 /**

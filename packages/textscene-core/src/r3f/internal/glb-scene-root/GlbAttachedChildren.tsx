@@ -60,20 +60,21 @@ export function GlbAttachedChildren({
     [object, entries, root, nodePath, rootOrder, uniquePaths]
   );
   if (nodePath === null || root.path === null) return null;
-  const godotPath = root.path;
-  return attached.map(({ node, path, target, order, visibilityParent }) => (
-    <AttachedToObject key={path} target={target}>
-      <ParentTypeProvider value={GLB_OBJECT_TYPE}>
-        <VisibilityParentProvider value={visibilityParent}>
-          <CullPathProvider selection={nodePath} godot={godotPath}>
-            <TreeOrderProvider order={order}>
-              <DispatchedNode node={node} path={path} />
-            </TreeOrderProvider>
-          </CullPathProvider>
-        </VisibilityParentProvider>
-      </ParentTypeProvider>
-    </AttachedToObject>
-  ));
+  return (
+    <CullPathProvider selection={nodePath} godot={root.path}>
+      {attached.map(({ node, path, target, order, visibilityParent }) => (
+        <AttachedToObject key={path} target={target}>
+          <ParentTypeProvider value={GLB_OBJECT_TYPE}>
+            <VisibilityParentProvider value={visibilityParent}>
+              <TreeOrderProvider order={order}>
+                <DispatchedNode node={node} path={path} />
+              </TreeOrderProvider>
+            </VisibilityParentProvider>
+          </ParentTypeProvider>
+        </AttachedToObject>
+      ))}
+    </CullPathProvider>
+  );
 }
 
 /**

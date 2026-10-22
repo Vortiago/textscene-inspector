@@ -5,8 +5,9 @@
  * `visibility_parent` paths authors write agree with the GLB's own objects.
  */
 
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useNodePath } from '../contexts/NodePathContext';
+import { joinPath } from '../../utils/nodePath';
 
 interface CullPathPrefix {
   /** The selection path the attached nodes sit below, such as `Rig/rig`. */
@@ -15,16 +16,24 @@ interface CullPathPrefix {
   godot: string;
 }
 
+const SLASH = 47;
+
 const CullPathContext = createContext<CullPathPrefix | null>(null);
 CullPathContext.displayName = 'CullPathContext';
 
 export function CullPathProvider({ selection, godot, children }: CullPathPrefix & { children: ReactNode }) {
-  return <CullPathContext.Provider value={{ selection, godot }}>{children}</CullPathContext.Provider>;
+  // Stable while both paths hold, so the meshes below an attached node do not render again.
+  const prefix = useMemo(() => ({ selection, godot }), [selection, godot]);
+  return <CullPathContext.Provider value={prefix}>{children}</CullPathContext.Provider>;
 }
 
 function toGodotPath(prefix: CullPathPrefix | null, path: string): string {
-  if (!prefix || !path.startsWith(`${prefix.selection}/`)) return path;
-  return `${prefix.godot}${path.slice(prefix.selection.length)}`;
+  if (!prefix) return path;
+  const { selection, godot } = prefix;
+  if (path === selection) return godot;
+  // Compared in place, so a mesh below an attached node allocates no string to test.
+  if (!path.startsWith(selection) || path.charCodeAt(selection.length) !== SLASH) return path;
+  return joinPath(godot, path.slice(selection.length + 1));
 }
 
 /** `path` as the cull and `visibility_parent` resolution see it. Unchanged outside a mapped place. */
