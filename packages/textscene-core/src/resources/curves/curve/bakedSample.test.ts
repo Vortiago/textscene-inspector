@@ -5,17 +5,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { bakedCurveSampler } from './bakedSample';
-import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
-
-function point(x: number, y: number): CurvePoint {
-  return {
-    position: { x, y },
-    leftTangent: 0,
-    rightTangent: 0,
-    leftMode: CurveTangentMode.Free,
-    rightMode: CurveTangentMode.Free,
-  };
-}
+import { point } from './curve.testkit';
+import { EMPTY_CURVE, type Curve } from './types';
 
 /** Two points as `Curve.add_point` makes them: Free, with no tangent. */
 const SHRINKING: Curve = { ...EMPTY_CURVE, points: [point(0, 1), point(1, 0.2)] };

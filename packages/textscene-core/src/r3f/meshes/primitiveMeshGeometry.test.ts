@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EMPTY_AABB } from '../../godot/math/aabb';
 import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
 import { primitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
-import { scopedMesh } from '../../resources/meshes/primitivemesh/surface.testkit';
+import { COARSE_TUBE, curveEndingAt, scopedMesh } from '../../resources/meshes/primitivemesh/surface.testkit';
 import { subResource } from '../../testing/subResource';
 
 const TEXEL_SIZE = 0.2;
@@ -53,18 +53,9 @@ describe('primitiveMeshGeometry over a mesh that names a Curve', () => {
   const tube = {
     id: 'tube',
     type: 'TubeTrailMesh',
-    data: {
-      radial_steps: '4',
-      sections: '2',
-      section_length: '1',
-      section_rings: '1',
-      curve: 'SubResource("c")',
-    },
+    data: { ...COARSE_TUBE, curve: 'SubResource("c")' },
   };
-  const curve = (end: string) =>
-    subResource('Curve', 'c', {
-      _data: `[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, ${end}), 0.0, 0.0, 0, 0]`,
-    });
+  const curve = (end: string) => subResource('Curve', 'c', curveEndingAt(end));
 
   it('gives every holder of an equal mesh and an equal Curve one geometry', () => {
     expect(primitiveMeshGeometry(scopedMesh({ ...tube }, curve('0.25')), TEXEL_SIZE)).toBe(

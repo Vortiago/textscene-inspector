@@ -10,7 +10,7 @@ import { resourceFilePath } from '../subResourcePath.js';
 import { ARRAY_MESH_TYPES } from './arraymesh/decode.js';
 import { resourceContentKey } from '../resourceContentKey.js';
 import type { ScopedResource } from '../useSubOrExtResource.js';
-import { isPrimitiveMeshType, primitiveMeshContentKey } from './primitivemesh/surface.js';
+import { isPrimitiveMeshType, subResourceKey } from './primitivemesh/surface.js';
 
 export interface MeshSource {
   resource: TscnInternalResource;
@@ -40,9 +40,9 @@ export function meshKind(type: string): MeshKind | null {
  * equal content gives an equal key. A PrimitiveMesh follows the sub-resources its builder reads.
  */
 export function meshContentKey(mesh: ScopedResource): string {
-  return meshKind(mesh.resource.type) === 'primitive'
-    ? primitiveMeshContentKey(mesh)
-    : resourceContentKey(mesh.resource);
+  const subResources = subResourceKey(mesh);
+  const own = resourceContentKey(mesh.resource);
+  return subResources ? `${own}|${subResources}` : own;
 }
 
 /**

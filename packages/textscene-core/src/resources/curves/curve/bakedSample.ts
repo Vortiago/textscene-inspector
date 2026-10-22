@@ -41,9 +41,9 @@ import type { Curve } from './types';
  * offset with 0 (`curve.cpp:536`). A curve with no points answers 0.
  */
 export function bakedCurveSampler(curve: Curve): (offset: number) => number {
-  const cache = bake(curve);
-  const last = cache.length - 1;
   const domainRange = storedReal(curve.maxDomain - curve.minDomain);
+  const cache = bake(curve, domainRange);
+  const last = cache.length - 1;
 
   return (offset) => {
     if (!Number.isFinite(offset)) return 0;
@@ -63,10 +63,9 @@ export function bakedCurveSampler(curve: Curve): (offset: number) => number {
 }
 
 /** `Curve::_bake` (`curve.cpp:506-523`): entries are `real_t`, so a `Float32Array` stores them as Godot does. */
-function bake(curve: Curve): Float32Array {
+function bake(curve: Curve, domainRange: number): Float32Array {
   const cache = new Float32Array(curve.bakeResolution);
   const last = cache.length - 1;
-  const domainRange = storedReal(curve.maxDomain - curve.minDomain);
   for (let i = 1; i < last; i++) {
     const x = storedReal(storedReal(storedReal(domainRange * i) / last) + curve.minDomain);
     cache[i] = sampleCurve(curve, x);

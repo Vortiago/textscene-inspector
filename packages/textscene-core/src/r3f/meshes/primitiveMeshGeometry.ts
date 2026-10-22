@@ -8,11 +8,8 @@ import { parseNonEmptyAabb } from '../../parser/valueParsers';
 import { aabbOfPoints, EMPTY_AABB, type Aabb } from '../../godot/math/aabb';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMesh';
 import { godotSurfacesGeometry } from '../../resources/meshes/godotSurface';
-import {
-  isPrimitiveMeshType,
-  primitiveMeshContentKey,
-  primitiveMeshSurface,
-} from '../../resources/meshes/primitivemesh/surface';
+import { meshContentKey } from '../../resources/meshes/meshSource';
+import { isPrimitiveMeshType, primitiveMeshSurface } from '../../resources/meshes/primitivemesh/surface';
 import type { ScopedResource } from '../../resources/useSubOrExtResource';
 
 /**
@@ -28,7 +25,7 @@ const sharedGeometries = new Map<string, WeakRef<THREE.BufferGeometry>>();
  * Godot builds no surface for.
  */
 export function primitiveMeshGeometry(mesh: ScopedResource, texelSize: number): THREE.BufferGeometry | null {
-  const key = `${texelSize}|${primitiveMeshContentKey(mesh)}`;
+  const key = `${texelSize}|${meshContentKey(mesh)}`;
   const shared = sharedGeometries.get(key)?.deref();
   if (shared) return shared;
   const surface = primitiveMeshSurface(mesh, texelSize);

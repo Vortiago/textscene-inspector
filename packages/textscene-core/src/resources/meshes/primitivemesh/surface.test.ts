@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { buildPrismMeshSurface } from '../prismmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
 import { subResource } from '../../../testing/subResource';
-import { isPrimitiveMeshType, primitiveMeshContentKey, primitiveMeshSurface } from './surface';
-import { expectClose, scopedMesh, vertexOf } from './surface.testkit';
+import { meshContentKey } from '../meshSource';
+import { isPrimitiveMeshType, primitiveMeshSurface } from './surface';
+import { COARSE_TUBE, expectClose, scopedMesh, vertexOf } from './surface.testkit';
 
 const TEXEL_SIZE = 0.2;
 /** Four segments round and one ring: vertex 6 sits on the equator, a quarter turn from the seam. */
@@ -84,7 +85,6 @@ describe('primitiveMeshSurface UV2', () => {
 
 describe('primitiveMeshSurface TubeTrailMesh', () => {
   /** Two sections of length 1 with one ring each, four steps round: the vertex of the bottom row on +Z is 10. */
-  const COARSE_TUBE = { radial_steps: '4', sections: '2', section_length: '1', section_rings: '1' };
   const SHRINKING_BODY = { _data: '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.2), 0.0, 0.0, 0, 0]' };
 
   function tube(data: Record<string, string> = {}) {
@@ -122,7 +122,7 @@ describe('primitiveMeshSurface TubeTrailMesh', () => {
   });
 });
 
-describe('primitiveMeshContentKey', () => {
+describe('meshContentKey', () => {
   const curveRef = { curve: 'SubResource("shrink")' };
   const mesh = { id: 'tube', type: 'TubeTrailMesh', data: curveRef };
 
@@ -130,14 +130,14 @@ describe('primitiveMeshContentKey', () => {
     const before = scopedMesh(mesh, subResource('Curve', 'shrink', { bake_resolution: '10' }));
     const after = scopedMesh(mesh, subResource('Curve', 'shrink', { bake_resolution: '11' }));
 
-    expect(primitiveMeshContentKey(after)).not.toBe(primitiveMeshContentKey(before));
+    expect(meshContentKey(after)).not.toBe(meshContentKey(before));
   });
 
   it('is the same for equal content, whichever objects hold it', () => {
     const curve = () => subResource('Curve', 'shrink', { bake_resolution: '10' });
 
-    expect(primitiveMeshContentKey(scopedMesh({ ...mesh }, curve()))).toBe(
-      primitiveMeshContentKey(scopedMesh({ ...mesh }, curve()))
+    expect(meshContentKey(scopedMesh({ ...mesh }, curve()))).toBe(
+      meshContentKey(scopedMesh({ ...mesh }, curve()))
     );
   });
 
@@ -145,14 +145,14 @@ describe('primitiveMeshContentKey', () => {
     const before = scopedMesh(mesh, subResource('Curve', 'other', { bake_resolution: '10' }));
     const after = scopedMesh(mesh, subResource('Curve', 'other', { bake_resolution: '11' }));
 
-    expect(primitiveMeshContentKey(after)).toBe(primitiveMeshContentKey(before));
+    expect(meshContentKey(after)).toBe(meshContentKey(before));
   });
 
   it('follows only the mesh itself for a type that names no sub-resource to build', () => {
     const material = subResource('StandardMaterial3D', 'm', {});
 
-    expect(primitiveMeshContentKey(scopedMesh(sphere({ material: 'SubResource("m")' }), material))).toBe(
-      primitiveMeshContentKey(scopedMesh(sphere({ material: 'SubResource("m")' })))
+    expect(meshContentKey(scopedMesh(sphere({ material: 'SubResource("m")' }), material))).toBe(
+      meshContentKey(scopedMesh(sphere({ material: 'SubResource("m")' })))
     );
   });
 });

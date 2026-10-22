@@ -15,6 +15,9 @@ import type { TubeTrailMeshProperties } from './types';
 
 const DEFAULT_RADIUS = 0.5;
 
+/** The property that names the one sub-resource the builder reads. */
+export const CURVE_PROPERTY = 'curve';
+
 /** `internalResources` is the table the mesh's `curve` reference resolves in. */
 export function decodeTubeTrailMesh(
   properties: Record<string, string>,
@@ -39,6 +42,6 @@ export function decodeTubeTrailMesh(
     ),
     capTop: boolSlotValue(properties.cap_top) !== false,
     capBottom: boolSlotValue(properties.cap_bottom) !== false,
-    curve: resolveCurve(properties.curve, internalResources),
+    curve: resolveCurve(properties[CURVE_PROPERTY], internalResources),
   };
 }

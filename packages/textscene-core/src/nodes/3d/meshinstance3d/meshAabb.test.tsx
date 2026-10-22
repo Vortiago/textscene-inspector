@@ -8,6 +8,8 @@ import {
   createFakeResourceLoader,
   type FakeResourceLoader,
 } from '../../../resources/testing/createFakeResourceLoader';
+import { COARSE_TUBE, curveEndingAt } from '../../../resources/meshes/primitivemesh/surface.testkit';
+import { subResource } from '../../../testing/subResource';
 import { useMeshAabb } from './meshAabb';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: { size: 'Vector3(2, 2, 2)' } };
@@ -100,21 +102,10 @@ describe('useMeshAabb over a TubeTrailMesh', () => {
   const TUBE: TscnInternalResource = {
     id: 'tube',
     type: 'TubeTrailMesh',
-    data: {
-      radial_steps: '4',
-      sections: '2',
-      section_length: '1',
-      section_rings: '1',
-      curve: 'SubResource("c")',
-    },
+    data: { ...COARSE_TUBE, curve: 'SubResource("c")' },
   };
-  const curveEndingAt = (end: string): TscnInternalResource => ({
-    id: 'c',
-    type: 'Curve',
-    data: { _data: `[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, ${end}), 0.0, 0.0, 0, 0]` },
-  });
-  const inScene = (curve: TscnInternalResource): SceneResources => ({
-    internalResources: [TUBE, curve],
+  const inScene = (end: string): SceneResources => ({
+    internalResources: [TUBE, subResource('Curve', 'c', curveEndingAt(end))],
     externalResources: [],
   });
 
@@ -122,12 +113,12 @@ describe('useMeshAabb over a TubeTrailMesh', () => {
     const { result, rerender } = renderHook(
       ({ resources }) => useMeshAabb('SubResource("tube")', resources),
       {
-        initialProps: { resources: inScene(curveEndingAt('1')) },
+        initialProps: { resources: inScene('1') },
       }
     );
     expect(result.current?.size.x).toBeCloseTo(1, 5);
 
-    rerender({ resources: inScene(curveEndingAt('3')) });
+    rerender({ resources: inScene('3') });
     expect(result.current?.size.x).toBeCloseTo(3, 5);
   });
 });

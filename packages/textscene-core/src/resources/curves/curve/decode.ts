@@ -85,6 +85,12 @@ function parsePoints(value: string | undefined): CurvePoint[] {
   return points;
 }
 
+/** A float as the engine stores a `real_t`, or null when the text is not one. */
+function parseStoredReal(entry: string): number | null {
+  const parsed = parseGodotFloat(entry);
+  return parsed === null ? null : storedReal(parsed);
+}
+
 /** `[a, b, c]` of plain floats, or null when the literal is absent/malformed. */
 function parseFloatArray(value: string | undefined): number[] | null {
   const entries = splitArrayLiteral(value);
@@ -92,10 +98,7 @@ function parseFloatArray(value: string | undefined): number[] | null {
   // `parseGodotFloat`, not `parseFloat`, which reads `5abc` as 5. Finite, since a
   // non-finite limit clamps every padded point onto Infinity and scales every sample by it.
   // Each limit is a `real_t`, so it rounds to single precision before the test.
-  const numbers = entries.map((e) => {
-    const parsed = parseGodotFloat(e);
-    return parsed === null ? null : storedReal(parsed);
-  });
+  const numbers = entries.map(parseStoredReal);
   return numbers.some((n) => n === null || !Number.isFinite(n)) ? null : (numbers as number[]);
 }
 
@@ -141,8 +144,7 @@ function parseVector2Entry(entry: string): { x: number; y: number } | null {
  * to the particle geometry.
  */
 function numberOr(entry: string, fallback: number): number {
-  const parsed = parseGodotFloat(entry);
-  const num = parsed === null ? null : storedReal(parsed);
+  const num = parseStoredReal(entry);
   return num !== null && Number.isFinite(num) ? num : fallback;
 }
 

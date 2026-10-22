@@ -47,16 +47,16 @@ const CAP_TANGENT: Vec4 = [1, 0, 0, 1];
 export function buildTubeTrailMeshSurface(p: TubeTrailMeshProperties): GodotSurface {
   const depth = storedReal(p.sectionLength * p.sections);
   // A curve with no point scales nothing (`:2552`).
-  const radiusScale = p.curve && p.curve.points.length > 0 ? bakedCurveSampler(p.curve) : null;
+  const radiusScale = p.curve && p.curve.points.length > 0 ? bakedCurveSampler(p.curve) : () => 1;
 
   const writer = new SurfaceWriter(false);
   writeBody(writer, p, depth, radiusScale);
-  if (p.capTop) writeTopCap(writer, p, depth, radiusScale?.(0) ?? 1);
-  if (p.capBottom) writeBottomCap(writer, p, depth, radiusScale?.(1) ?? 1);
+  if (p.capTop) writeTopCap(writer, p, depth, radiusScale(0));
+  if (p.capBottom) writeBottomCap(writer, p, depth, radiusScale(1));
   return writer.surface();
 }
 
-type RadiusScale = ((v: number) => number) | null;
+type RadiusScale = (v: number) => number;
 
 /** The tube as rows from the top down, one per ring (`:2536-2578`). */
 function writeBody(
@@ -72,7 +72,7 @@ function writeBody(
   for (let j = 0; j <= totalRings; j++) {
     const v = storedReal(j / totalRings);
     const y = storedReal(depth * 0.5 - storedReal(depth * v));
-    const rowRadius = radiusScale ? storedReal(radius * radiusScale(v)) : radius;
+    const rowRadius = storedReal(radius * radiusScale(v));
 
     for (let i = 0; i <= radialSteps; i++) {
       const [x, z] = rimPoint(i, radialSteps);

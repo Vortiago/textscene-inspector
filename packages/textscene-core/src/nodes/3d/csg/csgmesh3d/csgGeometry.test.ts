@@ -12,6 +12,7 @@ import type { TscnExternalResource, TscnInternalResource } from '../../../../par
 import { fixturesDir } from '../../../../parser/testing/parserKit';
 import type { CsgSolid } from '../../../../r3f/csg/csgRegistration';
 import { csgGeometryContext } from '../../../../r3f/csg/testing/csgGeometryContext';
+import { COARSE_TUBE, curveEndingAt } from '../../../../resources/meshes/primitivemesh/surface.testkit';
 import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
 import { csgMesh3DGeometry, csgMesh3DGeometryKey, csgMesh3DReadsFiles } from './csgGeometry';
 import { meshSurfaces } from './meshSurfaces';
@@ -38,18 +39,12 @@ const INLINE_CAPSULE: TscnInternalResource = { id: 'Capsule', type: 'CapsuleMesh
 const INLINE_TUBE: TscnInternalResource = {
   id: 'Tube',
   type: 'TubeTrailMesh',
-  data: {
-    radial_steps: '4',
-    sections: '2',
-    section_length: '1',
-    section_rings: '1',
-    curve: 'SubResource("Grow")',
-  },
+  data: { ...COARSE_TUBE, curve: 'SubResource("Grow")' },
 };
 const growingCurve = (end: string): TscnInternalResource => ({
   id: 'Grow',
   type: 'Curve',
-  data: { _data: `[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, ${end}), 0.0, 0.0, 0, 0]` },
+  data: curveEndingAt(end),
 });
 const INLINE_POINT: TscnInternalResource = { id: 'Point', type: 'PointMesh', data: {} };
 const INLINE_QUADS: TscnInternalResource = {

@@ -5,7 +5,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from '../../curves/curve/types';
+import { curveOf, point } from '../../curves/curve/curve.testkit';
+import { EMPTY_CURVE } from '../../curves/curve/types';
 import { expectClockwiseFronts, expectClose, vertexOf } from '../primitivemesh/surface.testkit';
 import { buildTubeTrailMeshSurface } from './build';
 import type { TubeTrailMeshProperties } from './types';
@@ -24,20 +25,6 @@ const COARSE: TubeTrailMeshProperties = {
 
 const BODY_VERTICES = 15;
 const CAP_VERTICES = 6;
-
-function point(x: number, y: number): CurvePoint {
-  return {
-    position: { x, y },
-    leftTangent: 0,
-    rightTangent: 0,
-    leftMode: CurveTangentMode.Free,
-    rightMode: CurveTangentMode.Free,
-  };
-}
-
-function curveOf(...points: CurvePoint[]): Curve {
-  return { ...EMPTY_CURVE, points };
-}
 
 const SHRINKING = curveOf(point(0, 1), point(1, 0.2));
 

@@ -33,7 +33,7 @@ import { buildTorusMeshSurface } from '../torusmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
 import { buildPrismMeshSurface } from '../prismmesh/build';
 import { buildPointMeshSurface } from '../pointmesh/build';
-import { decodeTubeTrailMesh } from '../tubetrailmesh/decode';
+import { CURVE_PROPERTY, decodeTubeTrailMesh } from '../tubetrailmesh/decode';
 import { buildTubeTrailMeshSurface } from '../tubetrailmesh/build';
 
 /**
@@ -71,7 +71,7 @@ const BUILDERS: Record<string, SurfaceBuilder> = {
  * leaves that sub-resource out, so a key over the mesh follows these too.
  */
 const SUB_RESOURCE_PROPERTIES: ReadonlyMap<string, readonly string[]> = new Map([
-  ['TubeTrailMesh', ['curve']],
+  ['TubeTrailMesh', [CURVE_PROPERTY]],
 ]);
 
 /** A type's `lightmap_size_hint` once Godot's loader has set its properties in file order. */
@@ -108,16 +108,17 @@ export function isPrimitiveMeshType(type: string): boolean {
 const builtSurfaces = new WeakMap<TscnInternalResource, Map<string, GodotSurface | null>>();
 
 /**
- * A key over everything the mesh builds from: its own content, and the content of each
- * sub-resource its builder reads. A fresh parse of equal content gives an equal key. A sub-resource
- * the tables do not hold is part of the key as missing.
+ * A key over the content of each sub-resource the mesh's builder reads, empty for a type that
+ * reads none. A sub-resource the tables do not hold is part of the key as missing.
  */
-export function primitiveMeshContentKey({ resource, resources }: ScopedResource): string {
-  const subResources = (SUB_RESOURCE_PROPERTIES.get(resource.type) ?? []).map((property) => {
-    const named = resolveSubResourceRef(resource.data[property], resources.internalResources);
-    return named ? resourceContentKey(named) : 'missing';
-  });
-  return [resourceContentKey(resource), ...subResources].join('|');
+export function subResourceKey({ resource, resources }: ScopedResource): string {
+  const properties = SUB_RESOURCE_PROPERTIES.get(resource.type) ?? [];
+  return properties
+    .map((property) => {
+      const named = resolveSubResourceRef(resource.data[property], resources.internalResources);
+      return named ? resourceContentKey(named) : 'missing';
+    })
+    .join('|');
 }
 
 /**
@@ -130,11 +131,12 @@ export function primitiveMeshContentKey({ resource, resources }: ScopedResource)
 export function primitiveMeshSurface(mesh: ScopedResource, texelSize: number): GodotSurface | null {
   const { resource } = mesh;
   if (!isPrimitiveMeshType(resource.type)) return null;
-  let byContent = builtSurfaces.get(resource);
-  if (!byContent) builtSurfaces.set(resource, (byContent = new Map()));
-  const key = `${texelSize}|${primitiveMeshContentKey(mesh)}`;
-  if (!byContent.has(key)) byContent.set(key, buildSurface(mesh, texelSize));
-  return byContent.get(key)!;
+  let byKey = builtSurfaces.get(resource);
+  if (!byKey) builtSurfaces.set(resource, (byKey = new Map()));
+  const key = `${texelSize}|${subResourceKey(mesh)}`;
+  let surface = byKey.get(key);
+  if (surface === undefined) byKey.set(key, (surface = buildSurface(mesh, texelSize)));
+  return surface;
 }
 
 function buildSurface({ resource, resources }: ScopedResource, texelSize: number): GodotSurface | null {

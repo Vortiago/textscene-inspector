@@ -47,3 +47,11 @@ export function scopedMesh(
 ): ScopedResource {
   return { resource, resources: { ...NO_RESOURCES, internalResources } };
 }
+
+/** The data of a TubeTrailMesh two sections long, with one ring each and four steps round. */
+export const COARSE_TUBE = { radial_steps: '4', sections: '2', section_length: '1', section_rings: '1' };
+
+/** The data of a Curve that runs from 1 at the top to `end` at the bottom. */
+export function curveEndingAt(end: string): { _data: string } {
+  return { _data: `[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, ${end}), 0.0, 0.0, 0, 0]` };
+}

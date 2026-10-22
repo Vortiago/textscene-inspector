@@ -2,21 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { resolveOnlySubResource } from '../../../testing/subResource';
 import { resolveCurve } from './decode';
 import { sampleCurve } from './sample';
-import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
-
-function point(x: number, y: number, left = 0, right = 0): CurvePoint {
-  return {
-    position: { x, y },
-    leftTangent: left,
-    rightTangent: right,
-    leftMode: CurveTangentMode.Free,
-    rightMode: CurveTangentMode.Free,
-  };
-}
-
-function curveOf(...points: CurvePoint[]): Curve {
-  return { ...EMPTY_CURVE, points };
-}
+import { curveOf, point } from './curve.testkit';
+import { EMPTY_CURVE } from './types';
 
 describe('sampleCurve', () => {
   it('interpolates a flat-tangent span as Godot’s cubic Bézier (happy path)', () => {
