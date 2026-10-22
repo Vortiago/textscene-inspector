@@ -224,8 +224,9 @@ flowchart TD
   processor accepts.
 - **Imports.** `.import` sidecars and `project.godot` load through `tryLoad` (ADR-0028).
 - **Clones.** A cached Object3D is cloned per consumer. Textures and materials are shared.
-- **Materials.** `resolveMaterialSource`, `useMaterial` and `SurfaceMaterialSlot` give every
-  material one path to a surface (ADR-0041).
+- **Materials.** `resolveMaterialSource` and `useSurfaceMaterial` give every material one path
+  to a surface: the source loads, every texture binds, and the two bags come out. `SurfaceMaterialSlot`
+  and the GLB override only install those bags (ADR-0039, ADR-0041).
 - **Procedural textures.** A NoiseTexture2D builds as a job in a worker (`workers/jobs.ts`,
   ADR-0042). A large texture uploads in bands (`r3f/tiledUpload/`).
 
