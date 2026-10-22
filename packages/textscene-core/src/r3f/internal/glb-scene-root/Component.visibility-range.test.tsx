@@ -213,6 +213,34 @@ describe('a GLB mesh as a visibility parent or a dependant', () => {
     expect(drawsColour(objectNamed('Detail'))).toBe(false);
   });
 
+  const GROUP_OF_SINGLE: Parameters<typeof nodesGlb>[0] = [
+    { name: 'Group', children: [1] },
+    { name: 'Single', mesh: 0 },
+  ];
+
+  it('hides a typed node whose own visibility parent names a GLB node, by the path Godot gives both', async () => {
+    const { objectNamed } = await render(
+      '\n[node name="Single" parent="Lamp/Group"]\nvisibility_range_begin = 5.0\nvisibility_range_fade_mode = 2\n\n' +
+        '[node name="Detail" type="MeshInstance3D" parent="Lamp/Group"]\nmesh = SubResource("Box_1")\n' +
+        'visibility_parent = NodePath("../Single")\n',
+      '',
+      GROUP_OF_SINGLE
+    );
+    expect(drawsColour(objectNamed('Detail'))).toBe(false);
+  });
+
+  it('hides a host node that names a typed node under a GLB node as its visibility parent', async () => {
+    const { objectNamed } = await render(
+      '\n[node name="Detail" type="MeshInstance3D" parent="Lamp/Group"]\nmesh = SubResource("Box_1")\n' +
+        'visibility_range_begin = 5.0\nvisibility_range_fade_mode = 2\n\n' +
+        '[node name="Far" type="MeshInstance3D" parent="."]\nmesh = SubResource("Box_1")\n' +
+        'visibility_parent = NodePath("../Lamp/Group/Detail")\n',
+      '',
+      GROUP_OF_SINGLE
+    );
+    expect(drawsColour(objectNamed('Far'))).toBe(false);
+  });
+
   it('gives a typed node no visibility parent under a GLB node whose own names itself (edge case)', async () => {
     const { objectNamed } = await render(
       'visibility_parent = NodePath("../Proxy")\n\n[node name="Group" parent="Lamp"]\n' +

@@ -9,6 +9,7 @@ import type { LiveNode } from '../../../resources/liveNode';
 import { joinPath } from '../../../utils/nodePath';
 import { DispatchedNode } from '../../NodeDispatcher';
 import { AttachedToObject, ParentTypeProvider } from '../../parentSpaceScope';
+import { CullPathProvider } from '../../visibilityRange/CullPathContext';
 import { VisibilityParentProvider } from '../../visibilityRange/VisibilityParentContext';
 import { useUniqueNamePaths } from '../../useUniqueNames';
 import {
@@ -58,13 +59,17 @@ export function GlbAttachedChildren({
     () => attachedChildren(object, entries, root, nodePath, rootOrder, uniquePaths),
     [object, entries, root, nodePath, rootOrder, uniquePaths]
   );
+  if (nodePath === null || root.path === null) return null;
+  const godotPath = root.path;
   return attached.map(({ node, path, target, order, visibilityParent }) => (
     <AttachedToObject key={path} target={target}>
       <ParentTypeProvider value={GLB_OBJECT_TYPE}>
         <VisibilityParentProvider value={visibilityParent}>
-          <TreeOrderProvider order={order}>
-            <DispatchedNode node={node} path={path} />
-          </TreeOrderProvider>
+          <CullPathProvider selection={nodePath} godot={godotPath}>
+            <TreeOrderProvider order={order}>
+              <DispatchedNode node={node} path={path} />
+            </TreeOrderProvider>
+          </CullPathProvider>
         </VisibilityParentProvider>
       </ParentTypeProvider>
     </AttachedToObject>

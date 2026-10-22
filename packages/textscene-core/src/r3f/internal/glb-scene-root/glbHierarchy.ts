@@ -10,7 +10,6 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { LiveNode } from '../../../resources/liveNode.js';
 import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
 import type { GltfNodeRole } from '../../../godot/import/gltfImportNames.js';
-import { matchGlbTarget } from './matchGlbTarget.js';
 
 interface GlbHierarchyNode {
   /** Display name, from `glbObjectName`. */
@@ -149,14 +148,12 @@ function glbHierarchyToTscnNodes(nodes: readonly GlbHierarchyNode[]): TscnNode[]
 export const GLB_ANIMATION_PLAYER_NAME = 'AnimationPlayer';
 const GLB_ANIMATION_PLAYER_TYPE = 'GLBAnimationPlayer';
 
-/** Adds each of `attached` below the synthetic node of the GLB object its parent path names. */
-function addAttachedChildren(
-  root: THREE.Object3D,
-  nodes: readonly TscnNode[],
-  attached: readonly LiveNode[]
-): void {
+/**
+ * Adds each of `attached` below the synthetic node whose `relPath` its `instanceSubPath` holds,
+ * which `splitAttachedChildren` sets to the object the node matched.
+ */
+function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly LiveNode[]): void {
   if (attached.length === 0) return;
-  const entries = flattenGlbObjects(root);
   const byRelPath = new Map<string, TscnNode>();
   const index = (list: readonly TscnNode[]): void => {
     for (const node of list) {
@@ -165,20 +162,17 @@ function addAttachedChildren(
     }
   };
   index(nodes);
-  for (const child of attached) {
-    const target = matchGlbTarget(entries, child.instanceSubPath!, { isQuiet: true });
-    if (target) byRelPath.get(target.relPath)?.children.push(child);
-  }
+  for (const child of attached) byRelPath.get(child.instanceSubPath!)?.children.push(child);
 }
 
 /**
- * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` below the objects their
+ * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren` returns them) below the objects their
  * parent paths name, plus an `AnimationPlayer` when it has clips. One source, so `useGlbChildren`
  * and `resolveLiveEntry` produce the same children.
  */
 export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[] = []): TscnNode[] {
   const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));
-  addAttachedChildren(root, nodes, attached);
+  addAttachedChildren(nodes, attached);
   const clips = root.animations;
   if (clips.length > 0) {
     nodes.push({

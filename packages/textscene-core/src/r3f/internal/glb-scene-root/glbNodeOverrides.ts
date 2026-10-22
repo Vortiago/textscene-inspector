@@ -14,7 +14,7 @@ import { parseOptionalInt } from '../../../parser/valueParsers';
 import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInstances';
 import { joinPath } from '../../../utils/nodePath';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
-import { matchGlbTarget } from './matchGlbTarget.js';
+import { findGlbTarget, matchGlbTarget } from './matchGlbTarget.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /**
@@ -48,6 +48,9 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
  * The instancing scene's typed nodes whose parent path names a GLB object, which Godot adds
  * to that object (`packed_scene.cpp:157-165`, `:541`), and the rest of `children`. A typed node
  * whose path names none stays among the rest, where the tree has always listed it.
+ *
+ * Each attached node comes back with `instanceSubPath` set to the `relPath` it matched, so the
+ * tree's next step (`glbSceneRootChildren`) finds its row by that key and matches nothing again.
  */
 export function splitAttachedChildren(
   root: THREE.Object3D,
@@ -56,12 +59,12 @@ export function splitAttachedChildren(
   const typed = children.filter((child) => !isApplicableGlbOverride(child));
   if (typed.length === 0) return { attached: [], rest: [...children] };
   const entries = flattenGlbObjects(root);
-  // The viewport reports a path that matches nothing, so the tree asks quietly.
-  const attached = typed.filter((child) =>
-    matchGlbTarget(entries, child.instanceSubPath!, { isQuiet: true })
-  );
-  const isAttached = new Set(attached);
-  return { attached, rest: children.filter((child) => !isAttached.has(child)) };
+  const attached = new Map<LiveNode, LiveNode>();
+  for (const child of typed) {
+    const { entry } = findGlbTarget(entries, child.instanceSubPath!);
+    if (entry) attached.set(child, { ...child, instanceSubPath: entry.relPath });
+  }
+  return { attached: [...attached.values()], rest: children.filter((child) => !attached.has(child)) };
 }
 
 /**

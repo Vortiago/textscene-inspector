@@ -231,6 +231,20 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
     expect(hasAncestor(armMarker!, glbObject(renderer, 'Arm'))).toBe(true);
   });
 
+  it('mounts a child of an attached node once, below that node', async () => {
+    const marker = {
+      ...typedMesh('Marker', 'Skeleton/Torso'),
+      children: [parsedNode({ name: 'Child', type: 'MeshInstance3D' }, { mesh: 'SubResource("Box")' })],
+    };
+    const renderer = await render([marker]);
+
+    let meshes = 0;
+    renderer.scene.instance.traverse((object) => {
+      if ((object as THREE.Mesh).isMesh) meshes++;
+    });
+    expect(meshes).toBe(2);
+  });
+
   it('reaches the object a type-less override of the same path moves, and leaves its transform alone', async () => {
     const moved = translated(0, 5, 0);
     const renderer = await render([
