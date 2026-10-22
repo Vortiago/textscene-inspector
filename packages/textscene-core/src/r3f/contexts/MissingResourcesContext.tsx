@@ -16,7 +16,8 @@ import {
   type ReactNode,
 } from 'react';
 import { resourceFilePath } from '../../resources/subResourcePath.js';
-import { useCountedReports, withKey, withoutKey } from '../hooks/useCountedReports.js';
+import { useCountedReports } from '../hooks/useCountedReports.js';
+import { withKey, withoutKey } from '../../utils/keySet.js';
 import type { ResourceStatus } from '../../resources/useResource.js';
 
 export interface MissingResourcesContextValue {
