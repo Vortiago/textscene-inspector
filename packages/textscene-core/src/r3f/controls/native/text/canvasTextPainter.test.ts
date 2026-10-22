@@ -27,8 +27,8 @@ function layoutFor(text: string, lineSpacingPx = 3) {
 
 /**
  * Where the raster pixel for content-box x=0 (or y=0) lands in the quad's space:
- * the painter draws at CSS `offsetXPx`/`offsetYPx` on a `deviceWidthPx` x
- * `deviceHeightPx` canvas, and the quad samples that whole canvas.
+ * the painter draws at `offsetXPx`/`offsetYPx` on a `canvasWidthPx` x
+ * `canvasHeightPx` canvas, and the quad samples that whole canvas.
  */
 function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCanvasLayout>): {
   x: number;
@@ -37,15 +37,12 @@ function contentOriginOnQuad(canvasLayout: ReturnType<typeof computeCanvasTextCa
   const { positions } = buildCanvasTextQuadArrays(canvasLayout);
   const [left, top] = [positions[0]!, positions[1]!];
   const [right, bottom] = [positions[3]!, positions[7]!];
-  const { deviceWidthPx: deviceW, deviceHeightPx: deviceH } = canvasLayout;
-  const supersample = deviceW / canvasLayout.canvasWidthPx;
-  const col = canvasLayout.offsetXPx * supersample;
-  const row = canvasLayout.offsetYPx * supersample;
+  const { canvasWidthPx, canvasHeightPx, offsetXPx, offsetYPx } = canvasLayout;
   return {
-    x: left + (col / deviceW) * (right - left),
+    x: left + (offsetXPx / canvasWidthPx) * (right - left),
     // Quad Y is negated Godot Y (`buildCanvasTextQuadArrays`), so the
     // content-box top is the largest y.
-    y: -(top + (row / deviceH) * (bottom - top)),
+    y: -(top + (offsetYPx / canvasHeightPx) * (bottom - top)),
   };
 }
 
