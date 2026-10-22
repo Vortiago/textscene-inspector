@@ -25,6 +25,7 @@ import {
 } from '../godot/rendering/environment/volumetricFog.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import type { Rgba } from '../godot/math/math.js';
+import { GlowUpscaleMode } from '../godot/rendering/environment/glow.js';
 import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
 
 /**
@@ -156,6 +157,16 @@ export function projectUsesLightmapBicubicFilter(settings: ProjectSettings | nul
     boolSlotValue(settings?.['rendering/lightmapping/lightmap_gi/use_bicubic_filter']) ??
     LIGHTMAP_BICUBIC_FILTER_DEFAULT
   );
+}
+
+/**
+ * `rendering/environment/glow/upscale_mode`, which every glow read takes
+ * (`renderer_scene_render_rd.cpp:1717`): bicubic for any mode above Linear, and for an absent or
+ * malformed value, as Godot's default is.
+ */
+export function projectGlowUsesBicubicUpscale(settings: ProjectSettings | null): boolean {
+  const mode = parseOptionalInt(settings?.['rendering/environment/glow/upscale_mode']);
+  return (mode ?? GlowUpscaleMode.BICUBIC) > GlowUpscaleMode.LINEAR;
 }
 
 /**

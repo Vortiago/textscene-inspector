@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
 import { GLOW_MAP_UNIFORM } from '../../resources/environment/godotCompositor';
+import { GLOW_TEXTURE_SIZE_UNIFORM, glowLevelUniform } from '../../resources/environment/godotGlowPyramid';
 import { glowParamsFor } from '../../resources/environment/godotGlow';
 import { decodeEnvironment } from '../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../resources/environment/build';
@@ -24,6 +25,7 @@ function effectWith(properties: Record<string, string>) {
     toneMapping: { mode: ToneMapper.FILMIC, white: 1 },
     exposure: 1,
     transparentBackground: false,
+    usesBicubicGlowUpscale: true,
   });
 }
 
@@ -76,5 +78,69 @@ describe('GodotToneMapEffect.setGlowMap', () => {
     const effect = effectWith({});
     effect.setGlowMap(srgbTexture());
     expect(effect.uniforms.has(GLOW_MAP_UNIFORM)).toBe(false);
+  });
+});
+
+describe('GodotToneMapEffect glow levels', () => {
+  const sizeOfLevel = (effect: GodotToneMapEffect, level: number) => {
+    const { image } = effect.uniforms.get(glowLevelUniform(level))!.value as THREE.Texture<{
+      width: number;
+      height: number;
+    }>;
+    return [image.width, image.height];
+  };
+
+  it('binds each gathered level to its own texture, one mip below the one before', () => {
+    const effect = effectWith({});
+    effect.setSize(800, 600);
+    expect(sizeOfLevel(effect, 1)).toEqual([200, 150]);
+    expect(sizeOfLevel(effect, 2)).toEqual([100, 75]);
+    expect(sizeOfLevel(effect, 3)).toEqual([50, 37]);
+  });
+
+  it('binds no level the weights leave out', () => {
+    const effect = effectWith({});
+    expect(effect.uniforms.has(glowLevelUniform(0))).toBe(false);
+    expect(effect.uniforms.has(glowLevelUniform(4))).toBe(false);
+  });
+
+  const DEEPEST = { 'glow_levels/7': '0.5' };
+
+  it('reads the deepest level of a full-size frame from its own texture', () => {
+    const effect = effectWith(DEEPEST);
+    effect.setSize(800, 600);
+    expect(sizeOfLevel(effect, 6)).toEqual([6, 4]);
+  });
+
+  it('reads a level the small frame has no mip for from the last level it has, as textureLod clamps', () => {
+    // 200x100 has levels 0 to 5 (`glowLevelCap`), so level 6 reads level 5: 100x50 >> 5.
+    const effect = effectWith(DEEPEST);
+    effect.setSize(200, 100);
+    expect(sizeOfLevel(effect, 6)).toEqual([3, 1]);
+  });
+
+  it('reads a level from its own texture again once the frame grows back', () => {
+    const effect = effectWith(DEEPEST);
+    effect.setSize(200, 100);
+    effect.setSize(800, 600);
+    expect(sizeOfLevel(effect, 6)).toEqual([6, 4]);
+  });
+});
+
+describe('GodotToneMapEffect glow texture size', () => {
+  const textureSize = (effect: GodotToneMapEffect) =>
+    (effect.uniforms.get(GLOW_TEXTURE_SIZE_UNIFORM)!.value as THREE.Vector2).toArray();
+
+  it('is the half-size glow texture, which the bicubic read halves again for each level', () => {
+    const effect = effectWith({});
+    effect.setSize(800, 600);
+    expect(textureSize(effect)).toEqual([400, 300]);
+  });
+
+  it('follows a resize', () => {
+    const effect = effectWith({});
+    effect.setSize(800, 600);
+    effect.setSize(201, 101);
+    expect(textureSize(effect)).toEqual([100, 50]);
   });
 });

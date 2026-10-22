@@ -12,7 +12,8 @@ import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import {
   CANVAS_2D_CAPTURE,
-  CANVAS_2D_CHROME,
+  CANVAS_CAPTURE,
+  SHELL_CHROME,
   canvas2DViewportFor,
   FIXTURE_LOADING_TESTID,
   PERFORMANCE_TESTIDS,
@@ -463,8 +464,8 @@ describe('canvas2DViewportFor', () => {
    */
   it('grows the window so a frame larger than the default still fits the stage', () => {
     const viewport = canvas2DViewportFor({ width: 1280, height: 720 });
-    expect(viewport.width - CANVAS_2D_CHROME.width).toBeGreaterThanOrEqual(1280);
-    expect(viewport.height - CANVAS_2D_CHROME.height).toBeGreaterThanOrEqual(720);
+    expect(viewport.width - SHELL_CHROME.width).toBeGreaterThanOrEqual(1280);
+    expect(viewport.height - SHELL_CHROME.height).toBeGreaterThanOrEqual(720);
   });
 
   /**
@@ -475,5 +476,12 @@ describe('canvas2DViewportFor', () => {
   it('keeps the default window for a frame that already fits', () => {
     expect(canvas2DViewportFor(CANVAS_2D_CAPTURE)).toEqual(CANVAS_2D_CAPTURE.viewport);
     expect(canvas2DViewportFor(null)).toEqual(CANVAS_2D_CAPTURE.viewport);
+  });
+});
+
+describe('the 3D canvas size', () => {
+  // The committed 3D goldens and the Godot probes address this size.
+  it('is the 955 by 756 the default window leaves after the shell chrome', () => {
+    expect(CANVAS_CAPTURE).toEqual({ width: 955, height: 756 });
   });
 });
