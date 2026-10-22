@@ -49,6 +49,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/meshes/capsulemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CapsuleMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/cylindermesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CylinderMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/torusmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TorusMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/tubetrailmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TubeTrailMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/prismmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrismMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/pointmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PointMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
@@ -163,6 +164,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/textureprogressbar/ninePatchProgress.ts` | `scene/gui/texture_progress_bar.cpp` (`draw_nine_patch_stretched`) and `scene/resources/texture.cpp` (the region a stretched progress patch samples) |
 | `packages/textscene-core/src/nodes/2d/ui/textureprogressbar/radialFill.ts` | `scene/gui/texture_progress_bar.cpp` (`get_relative_center`, `draw_circular_progress` and its `radial_initial_angle`/`radial_fill_degrees` fan) and `core/math/math_funcs.h` (`Math::fposmod`) |
 | `packages/textscene-core/src/resources/curves/curve/sample.ts` | `scene/resources/curve.cpp` (`Curve::sample`, `Curve::sample_local_nocheck`, `Curve::get_index`) and `core/math/math_funcs.h` (`Math::bezier_interpolate`) |
+| `packages/textscene-core/src/resources/curves/curve/bakedSample.ts` | `scene/resources/curve.cpp` (`Curve::_bake`, `Curve::sample_baked`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) and `scene/2d/cpu_particles_2d.cpp` (`idhash`, `rand_from_seed`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (the `_update_internal` preprocess loop and its fixed-step evaluation window) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/particlesProcess.ts` | `scene/2d/cpu_particles_2d.cpp` (`CPUParticles2D::_particles_process`'s per-frame loop: cycle bookkeeping, restart phase, the emission transform) |

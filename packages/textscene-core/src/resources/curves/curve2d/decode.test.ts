@@ -190,3 +190,25 @@ describe('tessellateCurve2D', () => {
     expect(one.sampleAt(10)).toEqual({ x: 5, y: 7, angle: 0 });
   });
 });
+
+describe('tessellateCurve2D in single precision', () => {
+  // `Curve2D.sample(0, t)` in Godot 4.6.3 for the same two points, printed at full precision.
+  const GODOT_SAMPLES: ReadonlyArray<readonly [step: number, x: number, y: number]> = [
+    [10, 1.3336999416351318, -0.23709999024868011],
+    [25, 3.1765623092651367, 0.007812477648258209],
+    [37, 4.616637706756592, 0.8584815263748169],
+    [50, 6.112500190734863, 2.1625001430511475],
+    [73, 8.50400161743164, 4.605401992797852],
+    [90, 9.979299545288086, 5.7621002197265625],
+  ];
+
+  it.each(GODOT_SAMPLES)("gives Godot's float point at step %i of 100", (step, x, y) => {
+    const points = pointsOf(
+      'PackedVector2Array(-3.3, 1.7, 4.1, -2.9, 0.1, 0.3, -2.2, 0.4, 1.3, 7.7, 10.7, 5.9)'
+    );
+
+    const { points: flat } = tessellateCurve2D(points, 100);
+
+    expect([flat[step * 2], flat[step * 2 + 1]]).toEqual([x, y]);
+  });
+});

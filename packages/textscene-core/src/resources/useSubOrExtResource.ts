@@ -7,19 +7,13 @@
 
 import { useMemo } from 'react';
 import type { ParsedResource } from '../parser/parsedResource';
-import type { TscnInternalResource } from '../parser/types';
 import type { SceneResources } from '../r3f/SceneResourcesContext';
 import { resolveSubResourceRef, parsedResourcePath } from './SubResourceResolver';
 import { useResource, type ResourceStatus } from './useResource';
 import { scopedSection } from './resourceSection';
 import { resourceFilePath } from './subResourcePath';
 import { holdsResource } from '../godot/scene/resourceLiteral';
-
-export interface ScopedResource {
-  resource: TscnInternalResource;
-  /** The pools the resource's own references resolve against. */
-  resources: SceneResources;
-}
+import type { ScopedResource } from './scopedResource';
 
 /** The resource `ref` names in `pools`, with whether it has loaded. */
 export interface ResourceResolution {

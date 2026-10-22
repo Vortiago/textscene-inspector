@@ -77,36 +77,45 @@ const sha256 = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest(
 
 const APP_ROOT = path.resolve(import.meta.dirname, '../..');
 
-/** The worker source exactly as the webview bundle embeds it. */
-async function builtWorkerSource(): Promise<string> {
+/** The worker source exactly as the webview bundle embeds it, and the worker bundle's metafile. */
+async function buildWorker(): Promise<{ source: string; metafile: esbuild.Metafile }> {
+  let metafile: esbuild.Metafile = { inputs: {}, outputs: {} };
   const result = await esbuild.build({
     stdin: {
       contents: `import source from '${TEXTURE_WORKER_MODULE}'; globalThis.__source = source;`,
       resolveDir: APP_ROOT,
     },
+    absWorkingDir: APP_ROOT,
     bundle: true,
     write: false,
     format: 'iife',
     platform: 'browser',
-    plugins: [textureWorkerPlugin({ minify: false })],
+    plugins: [
+      textureWorkerPlugin({
+        minify: false,
+        onMetafile: (workerMetafile) => {
+          metafile = workerMetafile;
+        },
+      }),
+    ],
     logLevel: 'silent',
   });
   const sandbox: { __source?: string } = {};
   vm.runInNewContext(result.outputFiles[0]!.text, { globalThis: sandbox });
   if (typeof sandbox.__source !== 'string')
     throw new Error('expected the bundle to embed a worker source string');
-  return sandbox.__source;
+  return { source: sandbox.__source, metafile };
 }
 
 describe('textureWorkerPlugin', () => {
   it('embeds a worker script with no import or require left in it', async () => {
-    const source = await builtWorkerSource();
+    const { source } = await buildWorker();
     expect(source).not.toMatch(/\bimport\s*[({'"]/);
     expect(source).not.toMatch(/\brequire\(/);
   }, 60_000);
 
   it("embeds a worker that answers a noise job with the bytes core's own job gives", async () => {
-    const source = await builtWorkerSource();
+    const { source } = await buildWorker();
     const embedded = answer((self) =>
       vm.runInNewContext(source, { self, Math, Float32Array, Uint8Array, Int32Array, Error, RangeError })
     );
@@ -115,5 +124,10 @@ describe('textureWorkerPlugin', () => {
     expect(embedded.ok).toBe(true);
     expect(embedded.output.pixels).toHaveLength(33 * 17 * 4);
     expect(sha256(embedded.output.pixels)).toBe(sha256(inProcess.output.pixels));
+  }, 60_000);
+
+  it('hands over the metafile of the worker bundle, which lists the worker entry', async () => {
+    const { metafile } = await buildWorker();
+    expect(Object.keys(metafile.inputs)).toContain('src/webview/textureWorker.ts');
   }, 60_000);
 });

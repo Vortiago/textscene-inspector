@@ -92,7 +92,7 @@ describe('glowGatherGlsl', () => {
     const glsl = glowGatherGlsl(glowOn(), true);
     expect(glsl).toContain('( 1.0 / 6.0 ) * ( a * a * a )');
     expect(glsl).toContain('vec2 size = max(vec2(ivec2(godotGlowTextureSize) >> lod), vec2(1.0));');
-    expect(glsl).toContain('uv * size + 0.5');
+    expect(glsl).toContain('uv * size + vec2( 0.5 )');
     expect(glsl.match(/texture2D\(tex, p[0-3]\)/g)).toHaveLength(4);
   });
 });

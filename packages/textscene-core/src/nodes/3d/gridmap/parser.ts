@@ -10,6 +10,7 @@ import type { GridMapProperties } from './types';
 import { readCellsField } from './cellData.js';
 import { splitTopLevel } from '../../../godot/string/string.js';
 import { arrayLiteralBody } from '../../../godot/variant/variantParser.js';
+import { holdsResource } from '../../../godot/scene/resourceLiteral.js';
 import type { Vector3 } from '../../../godot/math/vector.js';
 
 const DEFAULT_CELL_SIZE: Vector3 = { x: 2, y: 2, z: 2 };
@@ -66,6 +67,6 @@ function bakedMeshRefs(raw: string | undefined): string[] {
   const body = raw === undefined ? null : arrayLiteralBody(raw);
   if (body === null) return [];
   return splitTopLevel(body)
-    .map((element) => element.trim())
-    .filter((element) => element !== 'null');
+    .filter((element) => holdsResource(element))
+    .map((element) => element.trim());
 }

@@ -68,7 +68,7 @@ export interface MaterialTextureStates {
  */
 export function materialTextureStates(
   scalars: StandardMaterial3DScalars,
-  anisotropicFilteringLevel?: number
+  anisotropicFilteringLevel: number
 ): MaterialTextureStates {
   const sampler = {
     filter:

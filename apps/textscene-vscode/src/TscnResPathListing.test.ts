@@ -52,7 +52,7 @@ describe('TscnResPathListing', () => {
   it('maps the project files under the Godot root to res:// paths', async () => {
     arrangeProject();
     const paths = await new TscnResPathListing().pathsFor(sceneInProject());
-    expect(paths).toEqual(['res://icon.svg', 'res://scenes/Door.tscn']);
+    expect([...paths].sort()).toEqual(['res://icon.svg', 'res://scenes/Door.tscn']);
   });
 
   it('lists once per project root, so a completion does not walk the workspace', async () => {

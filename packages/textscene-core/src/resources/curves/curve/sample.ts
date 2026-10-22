@@ -33,22 +33,25 @@
  */
 
 import type { Curve, CurvePoint } from './types';
-import { CMP_EPSILON, bezierInterpolate } from '../../../godot/math/math.js';
+import { CMP_EPSILON, bezierInterpolatef } from '../../../godot/math/math.js';
+import { storedReal } from '../../../godot/math/real.js';
 
 /**
  * `Curve::sample`: the value at `offset`. An out-of-range offset clamps to the first
  * or last point's value. An empty curve answers 0, which a caller must not confuse
- * with a flat 1.
+ * with a flat 1. The arithmetic is single precision, as Godot's `real_t` is: the offset, each
+ * subtraction and each step of the Bézier round to a float.
  */
 export function sampleCurve(curve: Curve, offset: number): number {
   const points = curve.points;
   if (points.length === 0) return 0;
   if (points.length === 1) return points[0]!.position.y;
 
-  const index = curveIndex(points, offset);
+  const at = storedReal(offset);
+  const index = curveIndex(points, at);
   if (index === points.length - 1) return points[index]!.position.y;
 
-  const local = offset - points[index]!.position.x;
+  const local = storedReal(at - points[index]!.position.x);
   if (index === 0 && local <= 0) return points[0]!.position.y;
 
   return sampleLocalNoCheck(points, index, local);
@@ -83,15 +86,15 @@ function sampleLocalNoCheck(points: readonly CurvePoint[], index: number, localO
   const a = points[index]!;
   const b = points[index + 1]!;
 
-  let d = b.position.x - a.position.x;
-  if (Math.abs(d) < CMP_EPSILON) return b.position.y;
+  const span = storedReal(b.position.x - a.position.x);
+  if (Math.abs(span) < CMP_EPSILON) return b.position.y;
 
-  const t = localOffset / d;
+  const t = storedReal(localOffset / span);
   // The control points are placed at a third of the span; the tangents are
   // slopes, so the vertical lift is `slope * (span / 3)`.
-  d /= 3;
-  const yac = a.position.y + d * a.rightTangent;
-  const ybc = b.position.y - d * b.leftTangent;
+  const third = storedReal(span / 3);
+  const yac = storedReal(a.position.y + storedReal(third * a.rightTangent));
+  const ybc = storedReal(b.position.y - storedReal(third * b.leftTangent));
 
-  return bezierInterpolate(a.position.y, yac, ybc, b.position.y, t);
+  return bezierInterpolatef(a.position.y, yac, ybc, b.position.y, t);
 }

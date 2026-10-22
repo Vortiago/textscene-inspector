@@ -13,10 +13,9 @@ import {
   parseResourceReference,
 } from '../../resources/SubResourceResolver';
 import { BUILDABLE_MATERIAL_TYPES } from '../../resources/materials/buildableMaterialTypes';
+import { RES_SCHEME } from '../../resources/resPath';
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { findSubResource, type SceneResources } from '../SceneResourcesContext';
-
-const RES_PATH = 'res://';
 
 /** A material body and the resource tables its references resolve in: its owning file's. */
 export interface MaterialResource {
@@ -43,7 +42,7 @@ export function resolveMaterialSource(
   { internalResources, externalResources }: SceneResources
 ): MaterialSource | undefined {
   if (!ref) return undefined;
-  if (ref.startsWith(RES_PATH)) return fileMaterialSource(ref);
+  if (ref.startsWith(RES_SCHEME)) return fileMaterialSource(ref);
   const parsed = parseResourceReference(ref);
   if (!parsed) return undefined;
 

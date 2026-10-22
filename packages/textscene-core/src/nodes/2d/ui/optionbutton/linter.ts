@@ -9,7 +9,7 @@ import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { ruleCount, ruleInt } from '../../../../godot/variant/intSlots.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
-import { listWrittenIndices, writesPastFamilyCount } from '../../../../linter/reportedIndices.js';
+import { droppedByPopup, pastCountDiagnostic } from '../../../../linter/reportedIndices.js';
 import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 
 const arms = {
@@ -30,21 +30,14 @@ const arms = {
  * length (property_list_helper.cpp:118-135), and forwards to the popup (option_button.cpp:168), whose
  * helper drops the write (property_list_helper.cpp:58). linterParser.ts reports a negative index.
  */
-function checkItemIndices(context: RuleContext): Diagnostic[] {
-  const { node } = context;
-  const pastCount = writesPastFamilyCount(node.rawProperties, OPTION_BUTTON_ITEMS);
-  if (pastCount === null || pastCount.offending.size === 0) return [];
-  return [
-    armDiagnostic(
-      arms.itemIndexOutOfRange,
-      node,
-      `OptionButton item index(es) ${listWrittenIndices(pastCount.offending)} fall outside item_count (${pastCount.count}). ` +
-        'OptionButton forwards the write to its popup (option_button.cpp:168), whose ' +
-        'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an ' +
-        'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +
-        'silently dropped on load.'
-    ),
-  ];
+function checkItemIndices({ node }: RuleContext): Diagnostic[] {
+  return pastCountDiagnostic(
+    node,
+    OPTION_BUTTON_ITEMS,
+    arms.itemIndexOutOfRange,
+    (indices, count) => `OptionButton item index(es) ${indices} fall outside item_count (${count}).`,
+    droppedByPopup(OPTION_BUTTON_ITEMS, 'its popup (option_button.cpp:168)')
+  );
 }
 
 function checkSelected(context: RuleContext): Diagnostic[] {

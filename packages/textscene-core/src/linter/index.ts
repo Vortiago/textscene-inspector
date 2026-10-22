@@ -161,6 +161,7 @@ import '../resources/sky/index.linter.js';
 import '../resources/meshlibrary/index.linter.js';
 import '../resources/tileset/index.linter.js';
 import '../resources/meshes/planemesh/linterValidators.js';
+import '../resources/meshes/tubetrailmesh/linterValidators.js';
 import '../resources/meshes/mesh/linterValidators.js';
 import '../resources/meshes/primitivemesh/linterValidators.js';
 import '../resources/meshes/multimesh/linterValidators.js';

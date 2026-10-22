@@ -39,11 +39,11 @@ async function referencesFrom(source: ReferenceSource): Promise<string[]> {
 }
 
 describe('resPathReferencesAt', () => {
-  it('lists the path in every scene and resource that names it, in listing order', async () => {
+  it('lists the path in every scene and resource that names it, in path order', async () => {
     const source = memorySource({
-      'res://main.tscn': CURSOR_SCENE,
-      'res://other.tscn': `[gd_scene format=3]\n\n[ext_resource path="res://textures/grid.png" id=1]\n`,
       'res://style.tres': `[gd_resource type="Resource" format=3]\n\n[resource]\nmetadata/icon = Resource("res://textures/grid.png")\n`,
+      'res://other.tscn': `[gd_scene format=3]\n\n[ext_resource path="res://textures/grid.png" id=1]\n`,
+      'res://main.tscn': CURSOR_SCENE,
     });
 
     expect(await referencesFrom(source)).toEqual([

@@ -134,6 +134,14 @@ describe('scrapeParserReads', () => {
     expect([...scrapeParserReads(parser)].sort()).toEqual(['a']);
   });
 
+  it("reads an indexed family's count key through the family's declaration", () => {
+    const parser = seed({
+      'slice/parser.ts':
+        'export const parse = (properties) => properties[ITEM_LIST_ITEMS.countKey.key] ?? properties.a;',
+    });
+    expect([...scrapeParserReads(parser)].sort()).toEqual(['a', 'item_count']);
+  });
+
   it('terminates on an import cycle', () => {
     const parser = seed({
       'slice/parser.ts':

@@ -30,7 +30,7 @@ export function parseTabBar(heading: ParsedHeading, properties: Record<string, s
   // Dense one slot per index, same shape as OptionButton's `item_N/*` walk:
   // `current_tab` can point past the last NAMED index, and alignment with it
   // matters more than trimming a tail nothing reads.
-  const tabCount = slotCount(properties.tab_count) ?? 0;
+  const tabCount = slotCount(properties[TAB_BAR_TABS.countKey.key]) ?? 0;
   const declared = indexedElements(properties, TAB_BAR_TABS.prefix, TAB_BAR_TABS.indexParse);
   let observed = -1;
   for (const index of declared.keys()) if (index > observed) observed = index;

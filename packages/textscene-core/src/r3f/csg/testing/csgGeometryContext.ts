@@ -12,5 +12,5 @@ export function csgGeometryContext({
   externalResources?: readonly TscnExternalResource[];
   files?: Readonly<Record<string, ParsedResource>>;
 } = {}): CsgGeometryContext {
-  return { internalResources, externalResources, file: (path) => files[path] };
+  return { internalResources, externalResources, loadedFile: (path) => files[path] };
 }
