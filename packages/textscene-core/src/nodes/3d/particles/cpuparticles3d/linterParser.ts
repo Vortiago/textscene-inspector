@@ -10,7 +10,7 @@ import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
 import { v } from '../../../../linter/validators/index.js';
 import {
   CPU_PARTICLES_3D_DRAW_ORDER_NAMES,
-  CPU_PARTICLES_3D_EMISSION_SHAPE_NAMES,
+  PARTICLE_EMISSION_SHAPE_NAMES,
 } from '../../../../godot/scene/particles3d.js';
 
 // Every member is an `ADD_PROPERTY*` in `cpu_particles_3d.cpp`'s `_bind_methods` (lines
@@ -84,7 +84,7 @@ validatorRegistry.registerAll('CPUParticles3D', {
   // cpu_particles_3d.cpp:1666: ADD_GROUP("Emission Shape", "emission_").
   // cpu_particles_3d.cpp:1667: PROPERTY_HINT_ENUM, Point..Ring. set_emission_shape:423-426
   // refuses with ERR_FAIL_INDEX(p_shape, EMISSION_SHAPE_MAX).
-  emission_shape: v.enumInt('emission_shape', CPU_PARTICLES_3D_EMISSION_SHAPE_NAMES, {
+  emission_shape: v.enumInt('emission_shape', PARTICLE_EMISSION_SHAPE_NAMES, {
     enforced: 'cpu_particles_3d.cpp:424',
   }),
   // cpu_particles_3d.cpp:1668: "0.01,128,0.01". set_emission_sphere_radius:429-432 is bare.

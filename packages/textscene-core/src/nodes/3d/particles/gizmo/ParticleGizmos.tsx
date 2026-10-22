@@ -9,7 +9,7 @@ import { AabbAxesGizmo } from '../../../../r3f/components/AabbAxesGizmo';
 import { AabbGizmo } from '../../../../r3f/components/AabbGizmo';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
 import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import type { ParticleEmission } from '../emission/types';
+import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
 import { emissionShapeLines } from './emissionShapeLines';
 
 /** `editors/3d_gizmos/gizmo_colors/particles` (`editor_settings.cpp:886`), which both box gizmos draw in. */

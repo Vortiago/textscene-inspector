@@ -10,6 +10,7 @@ import { boolOr, enumOr, floatOr, intOr, vec2Or } from '../../../parser/valuePar
 import { colorOr } from '../../../utils/colorParser';
 import { type CPUParticles2DProperties, type ParticleParam, PARAM_SLOTS } from './types';
 import { CPUParticles2DDrawOrder, CPUParticles2DEmissionShape } from '../../../godot/scene/particles2d';
+import { loadedParamRange } from '../../../godot/scene/particleParamRange';
 
 /** Godot's inspector range for `amount` is `1,1000000,1,exp` (`cpu_particles_2d.cpp:1492`). */
 const MAX_PARTICLE_AMOUNT = 1_000_000;
@@ -71,10 +72,7 @@ export function parseCPUParticles2D(
     gravity: vec2Or(properties.gravity, { x: 0, y: 980 }, `${context}.gravity`),
 
     params: PARAM_SLOTS.map(({ prefix, def, curve }) => {
-      const param: ParticleParam = {
-        min: floatOr(properties[`${prefix}_min`], def, `${context}.${prefix}_min`),
-        max: floatOr(properties[`${prefix}_max`], def, `${context}.${prefix}_max`),
-      };
+      const param: ParticleParam = loadedParamRange(properties, prefix, def);
       const ref = curve ? properties[`${prefix}_curve`] : undefined;
       if (ref) param.curve = ref;
       return param;

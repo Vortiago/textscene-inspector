@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import { PARTICLE_EMISSION_DEFAULTS } from '../../../../godot/scene/particles3d';
 import type { Vector3 } from '../../../../godot/math/vector';
-import type { ParticleEmission } from '../emission/types';
+import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
 import { emissionShapeLines } from './emissionShapeLines';
 
 const SPHERE = 1;
