@@ -15,7 +15,7 @@ validatorRegistry.registerAll('RibbonTrailMesh', {
   // primitive_meshes.cpp:3025. `set_shape` (:2788) is a bare assignment.
   shape: v.enumInt('shape', RIBBON_TRAIL_MESH_SHAPE_NAMES, { hinted: 'primitive_meshes.cpp:3025' }),
   // primitive_meshes.cpp:3026 hints "0.001,100.0,…,or_greater", so the ceiling is open. `set_size`
-  // (:2799) is a bare assignment, so the floor is the hint's.
+  // (:2799) stores any value but one `is_equal_approx` to the held one (:2800), so the floor is the hint's.
   size: v.float('size', { min: 0.001, hinted: 'primitive_meshes.cpp:3026' }),
   // primitive_meshes.cpp:3027. `set_sections` (:2810) ERR_FAILs outside 2 to 128.
   sections: v.int('sections', { min: 2, max: 128, enforced: 'primitive_meshes.cpp:2814' }),
