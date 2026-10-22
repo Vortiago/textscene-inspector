@@ -4,24 +4,19 @@
  * code the bundle holds.
  */
 
-import { rmSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { build } from 'esbuild';
-import { generateDtsBundle } from 'dts-bundle-generator';
-import { writeBundledNotices } from '../../../scripts/third-party-notices.mjs';
+import { packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
 
-const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const ownSourceDir = resolve(packageDir, 'src');
-const entry = resolve(ownSourceDir, 'index.ts');
-const outDir = resolve(packageDir, 'dist');
+const layout = packageLayout(import.meta.url);
 
 // A clean dist, so no file of an earlier build reaches the tarball.
-rmSync(outDir, { recursive: true, force: true });
+rmSync(layout.outDir, { recursive: true, force: true });
 const { metafile } = await build({
-  absWorkingDir: packageDir,
-  entryPoints: [entry],
-  outfile: resolve(outDir, 'index.js'),
+  absWorkingDir: layout.packageDir,
+  entryPoints: [layout.entry],
+  outfile: resolve(layout.outDir, 'index.js'),
   bundle: true,
   platform: 'neutral',
   format: 'esm',
@@ -29,12 +24,4 @@ const { metafile } = await build({
   legalComments: 'inline',
   metafile: true,
 });
-writeFileSync(resolve(outDir, 'index.meta.json'), JSON.stringify(metafile));
-
-const [declarations] = generateDtsBundle(
-  [{ filePath: entry, output: { noBanner: true, exportReferencedTypes: false } }],
-  { preferredConfigPath: resolve(packageDir, 'tsconfig.json') }
-);
-writeFileSync(resolve(outDir, 'index.d.ts'), declarations);
-
-writeBundledNotices(metafile, { packageDir, ownSourceDir });
+writeBesideBundle(layout, metafile);

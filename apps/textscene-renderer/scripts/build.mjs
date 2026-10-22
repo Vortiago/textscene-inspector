@@ -6,25 +6,20 @@
  */
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { build } from 'esbuild';
-import { generateDtsBundle } from 'dts-bundle-generator';
-import { writeBundledNotices } from '../../../scripts/third-party-notices.mjs';
+import { packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
 import { injectStyles } from './injectStyles.mjs';
 
-const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const ownSourceDir = resolve(packageDir, 'src');
-const entry = resolve(ownSourceDir, 'index.ts');
-const outDir = resolve(packageDir, 'dist');
+const layout = packageLayout(import.meta.url);
 
-const manifest = JSON.parse(readFileSync(resolve(packageDir, 'package.json'), 'utf8'));
+const manifest = JSON.parse(readFileSync(resolve(layout.packageDir, 'package.json'), 'utf8'));
 const external = [...Object.keys(manifest.peerDependencies), ...Object.keys(manifest.dependencies)];
 
 const { metafile, outputFiles } = await build({
-  absWorkingDir: packageDir,
-  entryPoints: [entry],
-  outfile: resolve(outDir, 'index.js'),
+  absWorkingDir: layout.packageDir,
+  entryPoints: [layout.entry],
+  outfile: resolve(layout.outDir, 'index.js'),
   bundle: true,
   write: false,
   platform: 'browser',
@@ -37,16 +32,11 @@ const { metafile, outputFiles } = await build({
 
 // esbuild emits the CSS Modules of the bundle as one stylesheet. The bundle adds it to the page
 // itself, so a consumer needs no CSS handling.
-rmSync(outDir, { recursive: true, force: true });
-mkdirSync(outDir, { recursive: true });
+rmSync(layout.outDir, { recursive: true, force: true });
+mkdirSync(layout.outDir, { recursive: true });
 const output = (extension) => outputFiles.find(({ path }) => path.endsWith(extension));
-writeFileSync(resolve(outDir, 'index.js'), injectStyles(output('.js').text, output('.css')?.text ?? ''));
-writeFileSync(resolve(outDir, 'index.meta.json'), JSON.stringify(metafile));
-
-const [declarations] = generateDtsBundle(
-  [{ filePath: entry, output: { noBanner: true, exportReferencedTypes: false } }],
-  { preferredConfigPath: resolve(packageDir, 'tsconfig.json') }
+writeFileSync(
+  resolve(layout.outDir, 'index.js'),
+  injectStyles(output('.js').text, output('.css')?.text ?? '')
 );
-writeFileSync(resolve(outDir, 'index.d.ts'), declarations);
-
-writeBundledNotices(metafile, { packageDir, ownSourceDir });
+writeBesideBundle(layout, metafile);
