@@ -1,0 +1,29 @@
+; A CPUParticles3D with a ring emission shape and a visibility_aabb, for the one variable no other
+; golden moves: its editor gizmo (the box, the three axes from the box centre and the ring lines).
+; The previewer gates the gizmo on selection (ADR-0018), so only the `select:` golden has it. A small
+; box sits at two opposite corners of the visibility_aabb to frame the whole gizmo.
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxMesh" id="Corner_1"]
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Root" type="Node3D"]
+
+[node name="Emitter" type="CPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+visibility_aabb = AABB(-2, -2, -2, 4, 4, 4)
+mesh = SubResource("Corner_1")
+emission_shape = 6
+emission_ring_axis = Vector3(0, 1, 0)
+emission_ring_height = 2.0
+emission_ring_radius = 1.5
+emission_ring_inner_radius = 0.5
+emission_ring_cone_angle = 45.0
+
+[node name="NearCorner" type="MeshInstance3D" parent="Emitter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, -2, -2)
+mesh = SubResource("Corner_1")
+
+[node name="FarCorner" type="MeshInstance3D" parent="Emitter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 2, 2)
+mesh = SubResource("Corner_1")

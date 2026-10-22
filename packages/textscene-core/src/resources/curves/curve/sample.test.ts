@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { sampleCurve } from './sample';
-import { CurveTangentMode, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+import { EMPTY_CURVE, type Curve, type CurvePoint } from './types';
+import { CurveTangentMode } from '../../../godot/scene/curve';
 
 function point(x: number, y: number, left = 0, right = 0): CurvePoint {
   return {
     position: { x, y },
     leftTangent: left,
     rightTangent: right,
-    leftMode: CurveTangentMode.Free,
-    rightMode: CurveTangentMode.Free,
+    leftMode: CurveTangentMode.FREE,
+    rightMode: CurveTangentMode.FREE,
   };
 }
 

@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Rgba } from '../../../../godot/math/math';
+import { TAU } from '../../../../godot/math/math.js';
 
 interface Lab {
   L: number;
@@ -293,8 +294,8 @@ export function okhslToSrgb(h: number, s: number, l: number): Rgba {
   if (l === 1) return { r: 1, g: 1, b: 1, a: 1 };
   if (l === 0) return { r: 0, g: 0, b: 0, a: 1 };
 
-  const a_ = Math.cos(2 * Math.PI * h);
-  const b_ = Math.sin(2 * Math.PI * h);
+  const a_ = Math.cos(TAU * h);
+  const b_ = Math.sin(TAU * h);
   const L = toeInv(l);
 
   const { C_0, C_mid, C_max } = getCs(L, a_, b_);

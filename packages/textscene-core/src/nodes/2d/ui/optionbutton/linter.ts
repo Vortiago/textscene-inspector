@@ -7,8 +7,10 @@
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleCount, ruleInt } from '../../../../godot/variant/intSlots.js';
 import { armDiagnostic, armEmits, type RuleArms } from '../../../../linter/ruleArms.js';
+import { listWrittenIndices, writesPastFamilyCount } from '../../../../linter/reportedIndices.js';
+import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 
 const arms = {
   selectedOutOfRange: {
@@ -16,9 +18,36 @@ const arms = {
     ruleName: 'optionbutton-selected-out-of-range',
     grounding: { kind: 'engine', at: 'option_button.cpp:436' },
   },
+  itemIndexOutOfRange: {
+    severity: 'error',
+    ruleName: 'optionbutton-item-index-out-of-range',
+    grounding: { kind: 'engine', at: OPTION_BUTTON_ITEMS.outOfBounds.at },
+  },
 } as const satisfies RuleArms<string>;
 
-function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
+/**
+ * A `popup/item_<N>` key at or past `item_count`. `_set` gates on `is_property_valid`, which checks no
+ * length (property_list_helper.cpp:118-135), and forwards to the popup (option_button.cpp:168), whose
+ * helper drops the write (property_list_helper.cpp:58). linterParser.ts reports a negative index.
+ */
+function checkItemIndices(context: RuleContext): Diagnostic[] {
+  const { node } = context;
+  const pastCount = writesPastFamilyCount(node.rawProperties, OPTION_BUTTON_ITEMS);
+  if (pastCount === null || pastCount.offending.size === 0) return [];
+  return [
+    armDiagnostic(
+      arms.itemIndexOutOfRange,
+      node,
+      `OptionButton item index(es) ${listWrittenIndices(pastCount.offending)} fall outside item_count (${pastCount.count}). ` +
+        'OptionButton forwards the write to its popup (option_button.cpp:168), whose ' +
+        'PropertyListHelper::_get_property (property_list_helper.cpp:58) returns null for an ' +
+        'index >= the array length, so no setter runs and these popup/item_<N>/… values are ' +
+        'silently dropped on load.'
+    ),
+  ];
+}
+
+function checkSelected(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const props = node.rawProperties;
 
@@ -44,15 +73,19 @@ function checkOptionButtonSelected(context: RuleContext): Diagnostic[] {
   ];
 }
 
-const optionButtonSelectedRule: LintRule = {
+function checkOptionButton(context: RuleContext): Diagnostic[] {
+  return [...checkSelected(context), ...checkItemIndices(context)];
+}
+
+const optionButtonRule: LintRule = {
   meta: {
-    name: 'valid-optionbutton-selected',
-    description: "Flags an OptionButton 'selected' index that item_count never provides",
+    name: 'valid-optionbutton-properties',
+    description: "Flags an OptionButton 'selected' or popup/item_<N> index that item_count never provides",
     category: 'validation',
-    applicableNodeTypes: ['OptionButton'],
+    applicableNodeTypes: [OPTION_BUTTON_ITEMS.owner],
     emits: armEmits(arms),
   },
-  check: checkOptionButtonSelected,
+  check: checkOptionButton,
 };
 
-ruleRegistry.register(optionButtonSelectedRule);
+ruleRegistry.register(optionButtonRule);

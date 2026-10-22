@@ -129,6 +129,15 @@ describe('Extension', () => {
       );
     });
 
+    it('should register copyNodePath command', () => {
+      activate(mockContext);
+
+      expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
+        'textscene.copyNodePath',
+        expect.any(Function)
+      );
+    });
+
     it('should register onDidSaveTextDocument listener', () => {
       activate(mockContext);
 
@@ -138,11 +147,20 @@ describe('Extension', () => {
     it('should add disposables to context subscriptions', () => {
       activate(mockContext);
 
-      // Command, symbol, definition, document link, hover, completion, code action,
-      // folding and highlight providers, five agent tools, diagnostics, save listener,
+      // Commands, symbol, definition, document link, hover, completion, code action,
+      // folding, highlight and reference providers, five agent tools, diagnostics, save listener,
       // each of the two watchers itself plus its three handlers, and the stop-file
       // watcher itself plus its two handlers.
-      expect(mockContext.subscriptions.length).toBe(27);
+      expect(mockContext.subscriptions.length).toBe(29);
+    });
+
+    it('should register a reference provider for Find All References on a res:// path', () => {
+      activate(mockContext);
+
+      expect(vscode.languages.registerReferenceProvider).toHaveBeenCalledWith(
+        { language: 'tscn' },
+        expect.any(Object)
+      );
     });
 
     it('should register a document link provider for res:// references', () => {

@@ -9,6 +9,7 @@ import { graftInstanceChildren, type InstanceScopes } from './graftInstanceChild
 import { rehomeOverride } from './rehomeOverride.js';
 import { layerRawOverride } from './layerRawOverride.js';
 import { GLB_SCENE_ROOT_TYPE } from './glbSceneRoot.js';
+import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
 
 /**
  * The instance node's keys were written against the outer scope, the root's against the
@@ -24,7 +25,8 @@ function mergeProperties(instanceNode: LiveNode, root: LiveNode, scopes: Instanc
  * Fold a single-root `.tscn` sub-scene into its instance Node. Returns `null`
  * for a scene without exactly one top-level node, or a lone `GLBSceneRoot`, and
  * the caller keeps the nested-injection form. The merged Node takes the root's
- * `type`, `children` and own `instance` ref, so a nested root collapses again.
+ * `type`, `children` and `instance` ref. An inherited root arrives composed over its base
+ * already, carrying the table that composition built, which the host's settings land on.
  */
 export function mergeInstanceRoot(
   instanceNode: LiveNode,
@@ -38,16 +40,26 @@ export function mergeInstanceRoot(
   if (root.type === GLB_SCENE_ROOT_TYPE) return null;
 
   const merged = mergeProperties(instanceNode, root, scopes);
+  // The graft below lands these settings. A root that inherits a base the cache could not
+  // compose it over (the dispatcher's one-scene cache) carries its own file's settings on, so
+  // the next collapse over that base lands them. A composed root carries none.
+  const { instanceNameSettings: settings = [], ...host } = instanceNode;
+  const composed = root.uniqueNames;
+  const own = composed ? () => composed.paths() : () => cachedUniqueNamesBelowRoot(loadedScene.nodes);
+  // A host child whose parent path descends into this instance is grafted at
+  // the sub-path it names (`graftInstanceChildren`). Direct children append.
+  const graft = graftInstanceChildren(root.children, instanceNode.children, scopes, { own, settings });
 
   return {
-    ...instanceNode,
+    ...host,
     type: root.type,
     // The instance node's own ref is consumed here. The tree's badge and
     // open-standalone affordance read the originating ref in the caller's scope.
     instance: root.instance,
+    ...(root.instanceNameSettings ? { instanceNameSettings: root.instanceNameSettings } : {}),
     ...merged,
-    // A host child whose parent path descends into this instance is grafted at
-    // the sub-path it names (`graftInstanceChildren`). Direct children append.
-    children: graftInstanceChildren(root.children, instanceNode.children, scopes),
+    children: graft.children,
+    uniqueNames: graft.uniqueNames,
+    uniqueParentPlacements: graft.uniqueParentPlacements,
   };
 }

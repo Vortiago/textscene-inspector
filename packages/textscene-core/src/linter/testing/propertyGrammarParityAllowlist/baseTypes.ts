@@ -9,10 +9,9 @@ import type { AsymmetryEntry } from './types.js';
 /**
  * Light3D base validators, registered under 'Light3D' in
  * 3d/lights/shared/linterParser.ts, that the shared parser helpers never read:
- * bake, cull and fine shadow tuning with no effect on the static preview.
+ * cull and fine shadow tuning with no effect on the static preview.
  */
 const LIGHT3D_LINTER_ONLY_KEYS = [
-  'light_bake_mode',
   'light_cull_mask',
   'light_indirect_energy',
   'shadow_reverse_cull_face',
@@ -140,15 +139,14 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     renderGap: [
       // Image-forming settings the previewer does not read: antialiasing and
       // scaling, the shadow atlas depth, VRS, the 2D-lighting SDF, snapping,
-      // mipmaps, culling, and the World3D the viewport renders against (apart
-      // from the `own_world_3d` flag, the atlas layout, `msaa_2d` and `msaa_3d`, which are parsed).
+      // culling, and the World3D the viewport renders against (apart from the
+      // `own_world_3d` flag, the atlas layout, `msaa_2d`, `msaa_3d`, `texture_mipmap_bias`
+      // and `anisotropic_filtering_level`, which are parsed).
       'screen_space_aa',
       'use_taa',
       'scaling_3d_mode',
       'scaling_3d_scale',
       'fsr_sharpness',
-      'texture_mipmap_bias',
-      'anisotropic_filtering_level',
       'positional_shadow_atlas_16_bits',
       'vrs_mode',
       'vrs_update_mode',

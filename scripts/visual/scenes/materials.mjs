@@ -11,6 +11,9 @@ export const MATERIAL_SCENES = [
   // A normal map with blue 0: Godot rebuilds blue from red and green, so the flat texel shades as the
   // bare plane. A read of the stored blue turns that half dark.
   { name: 'material-normal-map-blue', file: 'unit-material-normal-map-blue.tscn' },
+  // A 2 by 4 quad, so the UV density differs per axis: each texel tilts by its authored angle on
+  // both axes. A tangent frame scaled by the longer axis shades the X tilts flatter.
+  { name: 'material-normal-map-uv-density', file: 'unit-material-normal-map-uv-density.tscn' },
   { name: 'material-textured', file: 'unit-material-textured.tscn' },
   { name: 'material-override', file: 'unit-material-override.tscn' },
   { name: 'surface-material-override', file: 'unit-surface-material-override.tscn' },
@@ -79,6 +82,9 @@ export const MATERIAL_SCENES = [
     name: 'glb-surface-material-override',
     file: 'unit-glb-surface-material-override.tscn',
   },
+  // A `.glb` primitive with no glTF material, lit and not overridden: the importer's own
+  // non-metallic StandardMaterial3D.
+  { name: 'glb-default-material', file: 'unit-glb-default-material.tscn' },
   // An emission map drawn through the UV2 Godot's importer unwrapped into the `.glb`'s unwrap
   // cache, the only scene that samples UV2. Each face shows its own patch of the gradient bands.
   { name: 'glb-lightmap-uv2', file: 'unit-glb-lightmap-uv2.tscn' },
@@ -98,6 +104,9 @@ export const MATERIAL_SCENES = [
   // averages its bytes to a dark yellow, and a normal map renormalises each level. A chain averaged
   // in linear space brightens the checker, and one left unnormalised tilts the lit strip less.
   { name: 'material-mipmap-import', file: 'unit-material-mipmap-import.tscn' },
+  // The project's `texture_mipmap_bias` of -0.5 on a mipmapped checker floor seen at a grazing angle:
+  // Godot samples a sharper level, so the far squares stay crisp. An unbiased floor blurs to grey sooner.
+  { name: 'material-mipmap-bias', file: 'mipmap-bias/unit-material-mipmap-bias.tscn' },
   // The roughness limiter on an imported roughness map's chain: the left sphere's sidecar names its
   // normal map, so its minified highlight spreads and dims. A chain left unlimited keeps it tight.
   { name: 'material-roughness-limiter', file: 'unit-material-roughness-limiter.tscn' },

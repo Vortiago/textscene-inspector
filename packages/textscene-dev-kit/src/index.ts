@@ -7,6 +7,14 @@ export {
 } from './importClosure';
 export type { ImportClosure, WalkImportClosureOptions } from './importClosure';
 export { commentSpans, stripComments } from './commentSpans';
+export { declaredExports } from './declaredExports';
 export { escapeRegExp } from './regExp';
-export { answersFixtureDir, cursorIn, loadAnswers, rangeTuple, sortedRanges } from './languageFeatureAnswers';
-export type { CursorSpec, LanguageFeatureAnswers, RangeTuple } from './languageFeatureAnswers';
+export {
+  answersFixtureDir,
+  cursorIn,
+  loadAnswers,
+  rangeTuple,
+  sortedFileRanges,
+  sortedRanges,
+} from './languageFeatureAnswers';
+export type { CursorSpec, FileRange, LanguageFeatureAnswers, RangeTuple } from './languageFeatureAnswers';

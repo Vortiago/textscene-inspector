@@ -5,6 +5,8 @@
  * linter entry point can read it. Each slice's `index.ts` registers itself.
  */
 
+import { fileExtension } from './fileExtension';
+
 /**
  * The processor slots, named for the cached artifact they produce. A slice
  * claims the slot whose artifact kind it resolves to; several Godot-text
@@ -12,7 +14,7 @@
  * meaning in their own decode.
  */
 export type ResourceBusType =
-  'texture' | 'texture3d' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
+  'texture' | 'texture3d' | 'texture2darray' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
 
 interface ResourceSliceRegistration {
   /** Slice folder name under `resources/<category>/`, for example 'standardmaterial3d'. */
@@ -33,6 +35,11 @@ interface ResourceSliceRegistration {
    * clone (an `Object3D` has one parent). Read by `useResource` per bus.
    */
   clonePerConsumer?: boolean;
+  /**
+   * The type declares no property of its own (PointMesh), so the slice has nothing to decode and
+   * no decode.ts. The conformance guard reads it.
+   */
+  declaresNoProperties?: boolean;
   /**
    * Which processor slot serves this slice's claims. Null for the types the
    * loader never serves (ViewportTexture resolves by NodePath, not by file).
@@ -73,13 +80,22 @@ export function registerResourceSlice(registration: ResourceSliceRegistration): 
  * the generic `resource` bus slot. No `extensions`: every Godot-text slice shares
  * `.tres`, and a duplicate extension claim throws, so these route by `type=` name.
  */
-export function registerGenericResourceSlice(slice: string, typeNames: readonly string[]): void {
-  registerResourceSlice({ slice, kind: 'godot-text', typeNames, busType: 'resource' });
+export function registerGenericResourceSlice(
+  slice: string,
+  typeNames: readonly string[],
+  { declaresNoProperties = false } = {}
+): void {
+  registerResourceSlice({ slice, kind: 'godot-text', typeNames, busType: 'resource', declaresNoProperties });
 }
 
 export const resourceSliceRegistry = {
   byTypeName: (typeName: string): ResourceSliceRegistration | null => byTypeName.get(typeName) ?? null,
   byExtension: (extension: string): ResourceSliceRegistration | null => byExtension.get(extension) ?? null,
+  /** The slot the slice claiming the path's extension loads it on, or null when no slice claims it. */
+  busTypeOfPath: (path: string): ResourceBusType | null => {
+    const extension = fileExtension(path);
+    return (extension !== null && byExtension.get(extension)?.busType) || null;
+  },
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
   clonesPerConsumer: (busType: ResourceBusType): boolean =>
     all.some((r) => r.busType === busType && r.clonePerConsumer === true),

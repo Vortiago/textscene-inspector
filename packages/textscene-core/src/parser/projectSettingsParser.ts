@@ -25,6 +25,9 @@ import {
 } from '../godot/rendering/environment/volumetricFog.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import type { Rgba } from '../godot/math/math.js';
+import { GlowUpscaleMode } from '../godot/rendering/environment/glow.js';
+import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../godot/scene/viewport.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -117,18 +120,14 @@ export interface ProjectViewportSize {
 
 /**
  * `display/window/size/viewport_*`: the rect a 2D scene is composed against and a root
- * Control anchors to. Per axis, as Godot falls back per setting. A non-finite or
+ * Control anchors to. Per axis, as Godot falls back per setting. Both settings are INT
+ * (`project_settings.cpp:1711-1712`), so a fraction truncates. An unreadable or
  * non-positive value takes the default: a zero-width viewport cannot be laid out.
  */
 export function projectViewportSize(settings: ProjectSettings | null): ProjectViewportSize {
   const axis = (key: string, fallback: number): number => {
-    const raw = settings?.[key];
-    if (raw === undefined || raw.trim() === '') return fallback;
-    const value = Number(raw);
-    if (!Number.isFinite(value) || value <= 0) return fallback;
-    // Godot stores these as ints; a fractional override would put the capture
-    // frame on a half pixel and resample every comparison made against it.
-    return Math.round(value);
+    const value = parseOptionalInt(settings?.[key]);
+    return value === undefined || value <= 0 ? fallback : value;
   };
   return {
     width: axis('display/window/size/viewport_width', DEFAULT_VIEWPORT_WIDTH),
@@ -148,6 +147,27 @@ export function projectClearColor(settings: ProjectSettings | null): Rgba {
 export function projectPrimitiveMeshTexelSize(settings: ProjectSettings | null): number {
   const setting = parseOptionalFloat(settings?.['rendering/lightmapping/primitive_meshes/texel_size']);
   return primitiveMeshTexelSize(setting ?? DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+}
+
+/**
+ * `rendering/lightmapping/lightmap_gi/use_bicubic_filter`, which every lightmap read takes
+ * (`renderer_scene_render_rd.cpp:1732`), or Godot's default for an absent or malformed value.
+ */
+export function projectUsesLightmapBicubicFilter(settings: ProjectSettings | null): boolean {
+  return (
+    boolSlotValue(settings?.['rendering/lightmapping/lightmap_gi/use_bicubic_filter']) ??
+    LIGHTMAP_BICUBIC_FILTER_DEFAULT
+  );
+}
+
+/**
+ * `rendering/environment/glow/upscale_mode`, which every glow read takes
+ * (`renderer_scene_render_rd.cpp:1717`): bicubic for any mode above Linear, and for an absent or
+ * malformed value, as Godot's default is.
+ */
+export function projectGlowUsesBicubicUpscale(settings: ProjectSettings | null): boolean {
+  const mode = parseOptionalInt(settings?.['rendering/environment/glow/upscale_mode']);
+  return (mode ?? GlowUpscaleMode.BICUBIC) > GlowUpscaleMode.LINEAR;
 }
 
 /**
@@ -192,6 +212,54 @@ export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
     msaa2D: mode('rendering/anti_aliasing/quality/msaa_2d'),
     msaa3D: mode('rendering/anti_aliasing/quality/msaa_3d'),
   };
+}
+
+/**
+ * `gui/theme/default_font_generate_mipmaps`, which the default font takes (`theme_db.cpp:64`). Off
+ * by default (`text_server.cpp:2387`), so its glyph pages carry no mip chain.
+ */
+export function projectDefaultFontGeneratesMipmaps(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['gui/theme/default_font_generate_mipmaps']) ?? false;
+}
+
+/** `RS::VIEWPORT_ANISOTROPY_16X`, the last level `Viewport.AnisotropicFiltering` names. */
+const MAX_ANISOTROPIC_FILTERING_LEVEL = 4;
+
+/**
+ * An authored `anisotropic_filtering_level` that names a `Viewport.AnisotropicFiltering` value, or
+ * undefined. Godot shifts `1 << level` unchecked (`material_storage.cpp:2461`), so a level outside
+ * the enum has no defined meaning to render.
+ */
+export function parseAnisotropicFilteringLevel(raw: string | undefined): number | undefined {
+  const level = parseOptionalInt(raw);
+  return level !== undefined && level >= 0 && level <= MAX_ANISOTROPIC_FILTERING_LEVEL ? level : undefined;
+}
+
+/**
+ * `rendering/textures/default_filters/anisotropic_filtering_level`, which every viewport takes at
+ * construction (`viewport.cpp:5384`). An anisotropic sampler reads `1 << level` taps at most.
+ */
+export function projectAnisotropicFilteringLevel(settings: ProjectSettings | null): number {
+  return (
+    parseAnisotropicFilteringLevel(
+      settings?.['rendering/textures/default_filters/anisotropic_filtering_level']
+    ) ?? DEFAULT_ANISOTROPIC_FILTERING_LEVEL
+  );
+}
+
+/** Godot's default `rendering/textures/default_filters/texture_mipmap_bias` (`rendering_server.cpp:3803`). */
+const DEFAULT_TEXTURE_MIPMAP_BIAS = 0;
+
+/**
+ * `rendering/textures/default_filters/texture_mipmap_bias`, which every viewport takes at
+ * construction (`viewport.cpp:5383`). The setter does not clamp to the `-2..2` hint
+ * (`viewport.cpp:4904-4911`), so a larger value passes through.
+ */
+export function projectTextureMipmapBias(settings: ProjectSettings | null): number {
+  return (
+    parseOptionalFloat(settings?.['rendering/textures/default_filters/texture_mipmap_bias']) ??
+    DEFAULT_TEXTURE_MIPMAP_BIAS
+  );
 }
 
 /**

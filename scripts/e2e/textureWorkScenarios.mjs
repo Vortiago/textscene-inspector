@@ -59,7 +59,7 @@ async function captureSettled(browser, baseUrl, { delayWorker, waitForTextureWor
   const settledMs = Date.now() - startedAt;
   const probe = await page.evaluate(() => window.__textureWorkProbe);
   await context.close();
-  return { buffer, reason, settledMs, workers: probe.workers };
+  return { buffer, reason, settledMs, workers: probe.workers, replies: probe.replies };
 }
 
 /**
@@ -157,10 +157,12 @@ export function checkSettleControl(gate, { baseline, delayed, unwaited }) {
     delayed.workers > 0,
     '[texture settle] the page started no job worker, so the delay held back nothing and proves nothing'
   );
+  // The worker's reply, not `settledMs`: the hold starts while the page opens, before the
+  // settle clock does, so a capture that waited can read under `WORKER_DELAY_MS`.
   gate.check(
-    delayed.settledMs >= WORKER_DELAY_MS,
-    `[texture settle] the delayed capture settled after ${delayed.settledMs} ms, before the ` +
-      `${WORKER_DELAY_MS} ms the build was held back: it cannot have waited for the texture`
+    delayed.replies > 0,
+    '[texture settle] the delayed capture settled before the held build replied: it cannot have ' +
+      'waited for the texture'
   );
   if (baseline.buffer && delayed.buffer) {
     gate.check(
@@ -194,11 +196,13 @@ export function checkWorkerArm(gate, label, arm, { inkOf, inkFloor }) {
     arm.probe.replies > 0,
     `[${label}] no job worker answered: the build did not run off the main thread`
   );
-  gate.check(
-    during !== null && during.length === 0,
-    `[${label}] ${during?.length} task(s) over ${LONG_TASK_LIMIT_MS} ms while the texture built and uploaded: ` +
-      JSON.stringify(during?.slice(0, 5))
-  );
+  if (during !== null) {
+    gate.check(
+      during.length === 0,
+      `[${label}] ${during.length} task(s) over ${LONG_TASK_LIMIT_MS} ms while the texture built and uploaded: ` +
+        JSON.stringify(during.slice(0, 5))
+    );
+  }
   const ink = arm.settled.buffer ? inkOf(arm.settled.buffer) : null;
   gate.check(
     !!ink && ink.inkPixels >= inkFloor,

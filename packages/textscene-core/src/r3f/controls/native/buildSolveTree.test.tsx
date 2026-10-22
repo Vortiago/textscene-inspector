@@ -25,11 +25,13 @@ import { peekSceneFontMetrics } from './text/sceneFontLoader';
 import { useBuildSolveTree } from './buildSolveTree';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parsedNode } from '../../../parser/testing/parserKit';
+import { resolveInstancePath } from '../../../resources/SubResourceResolver';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { themeResource } from './testing/themeResource';
-import type { Rect2 } from './rect';
+import { CAPTION_PATH, HOST_LEAF_PATH, hostScene, scenesByPath } from '../../testing/graftedScopeFixture';
+import type { Rect2 } from '../../../godot/math/rect2';
 // Side-effect imports: the node parsers that turn the `.tscn` text below into
 // typed Control properties, and the solvers/minimum-size functions the solved
 // rects come from.
@@ -2230,5 +2232,21 @@ describe("useBuildSolveTree — a Label's own label_settings", () => {
     });
 
     expect(result.current.tree[0]?.labelSettings).toBeNull();
+  });
+});
+
+describe('useBuildSolveTree — a node grafted into an instanced sub-scene', () => {
+  it('resolves its refs in the host file when both files declare the id', () => {
+    const loader = createFakeResourceLoader();
+    for (const [path, grafted] of Object.entries(scenesByPath)) loader.scenes.seed(path, grafted);
+
+    const { result } = renderHook(
+      () => useBuildSolveTree(hostScene.nodes, hostScene.externalResources, hostScene.internalResources),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+
+    const slot = result.current.tree[0]!.children[0]!.children[0]!;
+    const caption = slot.children.find((c) => c.path === CAPTION_PATH)!;
+    expect(resolveInstancePath('ExtResource("2")', caption.resources.externalResources)).toBe(HOST_LEAF_PATH);
   });
 });

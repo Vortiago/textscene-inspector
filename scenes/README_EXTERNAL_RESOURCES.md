@@ -18,6 +18,9 @@ The scenes in `scenes/fixtures/` that test `[ext_resource]` loading and sub-scen
 | `integration-parent-child-scene.tscn` | One `PackedScene` beside local geometry |
 | `integration-multiple-externals.tscn` | A scene referenced twice loads once |
 | `integration-instanced-subscene.tscn` | Instanced roots collapse into the parent (ADR-0013). It has a golden image. |
+| `integration-instanced-unique-parent.tscn`, `unit-unique-name-pivot.tscn` | A host node seated through a `%Name` inside an instance (`parent="Player/%Pivot"`). It has a golden image. |
+| `integration-instanced-unique-parent-released.tscn` | A `%Name` claim seated through `Player/%Pivot`, which a later heading releases. It has a golden image. |
+| `integration-instanced-inherited-unique-viewport.tscn`, `unit-unique-viewport-inherited.tscn`, `unit-unique-viewport-base.tscn` | An instance of an inherited scene reads its base's `%View`. It has a golden image. |
 
 ## Missing on purpose
 

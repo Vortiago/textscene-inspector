@@ -13,6 +13,7 @@ import { installGodotIndirectSpecular } from '../godotIndirectSpecular.js';
 import { installGodotLightFunction } from '../godotLightFunction.js';
 import { installGodotNormalMapRead } from '../materials/godotNormalMap.js';
 import { installGodotLightSpecular } from '../lightSpecular/lightSpecularChunk.js';
+import { installGodotLightBakeMode } from '../lightBakeMode/lightBakeModeChunk.js';
 import { installGodotLightSize } from '../lightSize/lightSizeChunk.js';
 import { installGodotSkyLighting } from '../godotSkyLighting.js';
 import { installGodotReflectionProbes } from '../reflectionProbe/probeShaderChunk.js';
@@ -26,6 +27,7 @@ import { installSkyDebanding } from '../sky/skyDebanding.js';
 export function installShaderPatches(): void {
   installGodotIndirectSpecular();
   installGodotLightSpecular();
+  installGodotLightBakeMode();
   installGodotLightSize();
   installGodotNormalMapRead();
   installGodotLightFunction();

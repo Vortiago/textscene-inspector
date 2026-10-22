@@ -117,10 +117,12 @@ which display real content.
   the main canvas does (`renderer_canvas_render_rd.cpp:671,729`). A canvas consumer, the
   container or a `Sprite2D`, filters the plain view's bytes and multiplies them in sRGB
   (`texture_storage.cpp:754`).
-- WebGL2 has no texture views, so a canvas target serves its sRGB view as an SRGB8_ALPHA8
-  copy, filled after each render of the pass while a `source_color` material slot
-  samples it (`material_storage.cpp:1067,1073`). A 3D-content target stores its tonemapped
-  render in SRGB8_ALPHA8 and serves that one texture as both views.
+- WebGL2 has no texture views, so a target serves the view its storage is not as a copy,
+  filled after each render of the pass while a consumer samples it. A canvas target
+  serves its sRGB view as an SRGB8_ALPHA8 copy for a `source_color` material slot
+  (`material_storage.cpp:1067,1073`). A 3D-content target stores its tonemapped
+  render in SRGB8_ALPHA8 (`renderer_scene_render_rd.cpp:744`), which is its sRGB view, and
+  serves an RGBA8 copy of the same bytes as its plain view for a canvas consumer.
 - A sub-viewport that contains Controls publishes its texture through a native offscreen
   pass in the same `ControlCanvasWalker` as each other Control (ADR-0037).
 - A Camera2D frames only a sub-viewport, since the 2D stage frames the project viewport.

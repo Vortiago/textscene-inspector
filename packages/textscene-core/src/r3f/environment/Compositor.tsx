@@ -14,10 +14,14 @@ import { useTexture2D } from '../../resources/useTexture2D';
 import { releaseBoundTexture } from '../../resources/textures/applyTextureState';
 import type { SceneResources } from '../SceneResourcesContext';
 import { GodotToneMapEffect, glowMapView } from './GodotToneMapEffect';
-import { projectTransparentBackground } from '../../parser/projectSettingsParser';
+import {
+  projectGlowUsesBicubicUpscale,
+  projectTransparentBackground,
+} from '../../parser/projectSettingsParser';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import { SCENE_BUFFER_TYPE, type CompositorPass } from './useCompositorPass';
 import { SubscriberStep } from '../frameProfile/FrameProfiler';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 
 /** The composer's `useFrame` priority. A positive one takes the canvas's render over from R3F. */
 const COMPOSER_PRIORITY = 1;
@@ -37,7 +41,9 @@ export function Compositor({ pass, adjustments, toneMapping, resources }: Compos
   const { mode, white, exposure, agxContrast } = toneMapping;
   const glowMap = useGlowMap(glow, resources);
   // The composer draws the canvas, which is the root window's surface.
-  const transparentBackground = projectTransparentBackground(useProjectSettings().settings);
+  const { settings: projectSettings } = useProjectSettings();
+  const transparentBackground = projectTransparentBackground(projectSettings);
+  const usesBicubicGlowUpscale = projectGlowUsesBicubicUpscale(projectSettings);
 
   // Typed as the base `Effect`: with the library's `declaration: true`, a class
   // extending postprocessing's `Effect` does not carry its inherited members
@@ -51,10 +57,11 @@ export function Compositor({ pass, adjustments, toneMapping, resources }: Compos
         toneMapping: { mode, white, agxContrast },
         exposure,
         transparentBackground,
+        usesBicubicGlowUpscale,
       }) as Effect,
-    [glow, adjustments, mode, white, exposure, agxContrast, transparentBackground]
+    [glow, adjustments, mode, white, exposure, agxContrast, transparentBackground, usesBicubicGlowUpscale]
   );
-  useEffect(() => () => effect.dispose(), [effect]);
+  useDisposeOnRelease(effect);
   // A uniform, not an effect rebuild: the map's arrival changes no shader.
   useEffect(() => {
     const toneMap = effect as GodotToneMapEffect;

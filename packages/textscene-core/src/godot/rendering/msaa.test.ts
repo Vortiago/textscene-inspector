@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { MSAA_MODE_LABELS, MSAA_MODES, msaaSampleCount, supportedSampleCount } from './msaa';
+import { MSAA_MODE_NAMES, MSAA_MODES, msaaSampleCount, supportedSampleCount } from './msaa';
 
 describe('MSAA modes', () => {
   it('lists the four modes Godot binds, DISABLED to 8X', () => {
-    expect(MSAA_MODE_LABELS).toEqual({ 0: 'DISABLED', 1: '2X', 2: '4X', 3: '8X' });
+    expect(MSAA_MODE_NAMES).toEqual({ 0: 'DISABLED', 1: '2X', 2: '4X', 3: '8X' });
   });
 
   it('accepts every mode value from DISABLED to 8X', () => {

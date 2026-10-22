@@ -1,5 +1,5 @@
 /**
- * The preview command is offered only where it opens something. It accepts `.tscn`
+ * The preview and copy-path commands are offered only where they work. Each accepts `.tscn`
  * alone, while the `tscn` language also claims `.tres`, so a `when` clause on
  * `editorLangId == tscn` offers it on a `.tres` it refuses.
  */
@@ -19,6 +19,14 @@ const manifest = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'packag
   };
 };
 
+const GATED_COMMANDS = new Set(['textscene.openPreviewToSide', 'textscene.copyNodePath']);
+
+/**
+ * Four menus and one keybinding for the preview, two menus for the copy. The floor stops a
+ * manifest reshuffle that the scan misses from passing as "every clause is correct".
+ */
+const MIN_CONTRIBUTIONS = 7;
+
 /** The gate, spelled by the file's extension rather than by its language. */
 const GATE = 'resourceExtname == .tscn';
 
@@ -29,12 +37,10 @@ describe('preview command gating', () => {
       items.map((item) => ({ where: `menus.${menu}`, ...item }))
     ),
     ...keybindings.map((binding) => ({ where: 'keybindings', ...binding })),
-  ].filter((entry) => entry.command === 'textscene.openPreviewToSide');
+  ].filter((entry) => GATED_COMMANDS.has(entry.command));
 
   it('gates every contribution on the extension the command accepts', () => {
-    // Four menus and one keybinding. The floor stops a manifest reshuffle that this
-    // scan misses from passing as "every clause is correct".
-    expect(gated.length).toBeGreaterThanOrEqual(5);
+    expect(gated.length).toBeGreaterThanOrEqual(MIN_CONTRIBUTIONS);
     const wrong = gated.filter((e) => e.when !== GATE).map((e) => `${e.where}: ${e.when}`);
     expect(wrong).toEqual([]);
   });

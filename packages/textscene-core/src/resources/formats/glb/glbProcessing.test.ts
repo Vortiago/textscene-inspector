@@ -11,10 +11,15 @@ import { cloneWithMaterials, createGLBMesh, disposeClonedMaterials } from './glb
 // Statically, so the identity check below is immune to the `vi.resetModules()` calls in
 // this file: a dynamic import after a reset yields a fresh instance.
 import * as processingShim from '../../processing/glbProcessing';
+import { dropMipChain } from '../../textures/godotTextureFilter';
 import { standardMaterial } from '../../materials/standardmaterial3d/testing/standardMaterial';
 import { glbOfChunks, jsonChunk, triangleGlb } from './testing/triangleGlb';
 import { NO_SIDECAR } from './testing/noSidecar';
-import { REBUILDS_NORMAL_MAP_BLUE, patchedFragment } from '../../../r3f/testing/patchedFragment';
+import {
+  REBUILDS_NORMAL_MAP_BLUE,
+  UNIT_TANGENT_FRAME,
+  patchedFragment,
+} from '../../../r3f/testing/patchedFragment';
 import { nodesGlb } from './testing/nodesGlb';
 import {
   DRAWN_OPAQUE_PREPASS,
@@ -131,6 +136,27 @@ describe('createGLBMesh alpha modes', () => {
 
   it('imports OPAQUE with no depth prepass (edge case)', async () => {
     expect(opaquePrepassOf(await importedMaterial('OPAQUE'))).toBe(NO_OPAQUE_PREPASS);
+  });
+});
+
+describe('createGLBMesh surface materials', () => {
+  async function importedMaterial(material?: Record<string, unknown>): Promise<THREE.MeshStandardMaterial> {
+    const object = await createGLBMesh(triangleGlb({ material }), NO_SIDECAR);
+    const mesh = object.getObjectByProperty('isMesh', true) as THREE.Mesh;
+    return mesh.material as THREE.MeshStandardMaterial;
+  }
+
+  it('gives a primitive with no material a non-metallic one, as Godot makes a new StandardMaterial3D', async () => {
+    // `gltf_document.cpp:1929-1935`.
+    expect((await importedMaterial()).metalness).toBe(0);
+  });
+
+  it("keeps a material's own metallic factor", async () => {
+    expect((await importedMaterial({ pbrMetallicRoughness: { metallicFactor: 0.25 } })).metalness).toBe(0.25);
+  });
+
+  it('keeps the glTF default metallic factor of 1 for a material that names none (edge case)', async () => {
+    expect((await importedMaterial({})).metalness).toBe(1);
   });
 });
 
@@ -260,6 +286,30 @@ describe('cloneWithMaterials', () => {
     (meshSingle.material as THREE.MeshStandardMaterial).normalMap = new THREE.Texture();
     const cloned = findMesh(cloneWithMaterials(root), 'single');
     expect(patchedFragment(cloned.material as THREE.Material)).toContain(REBUILDS_NORMAL_MAP_BLUE);
+  });
+
+  it('gives the tangent and the binormal of a glTF normal map unit length, whatever the UV density', () => {
+    const { root, meshSingle } = makeSource();
+    (meshSingle.material as THREE.MeshStandardMaterial).normalMap = new THREE.Texture();
+    const fragment = patchedFragment(findMesh(cloneWithMaterials(root), 'single').material as THREE.Material);
+    expect(fragment).not.toContain('#include <normalmap_pars_fragment>');
+    expect(fragment).toContain(UNIT_TANGENT_FRAME);
+  });
+
+  it('biases the mip levels of a glTF material texture, as Godot imports it into its viewport samplers', () => {
+    const { root, meshSingle } = makeSource();
+    (meshSingle.material as THREE.MeshStandardMaterial).map = new THREE.Texture();
+    const cloned = findMesh(cloneWithMaterials(root), 'single');
+    expect(patchedFragment(cloned.material as THREE.Material)).toContain('godotMipmapBiased( map,');
+  });
+
+  it('does not bias a glTF texture that Godot imports without a mip chain', () => {
+    const { root, meshSingle } = makeSource();
+    const map = new THREE.Texture();
+    dropMipChain(map);
+    (meshSingle.material as THREE.MeshStandardMaterial).map = map;
+    const cloned = findMesh(cloneWithMaterials(root), 'single');
+    expect(patchedFragment(cloned.material as THREE.Material)).not.toContain('godotMipmapBias');
   });
 
   it('patches no glTF material without a normal map', () => {

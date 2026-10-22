@@ -52,7 +52,7 @@ validatorRegistry.registerAll('Area3D', {
   }),
   // `Variant::INT` with `set_priority(int)` (area_3d.cpp:775). `or_greater,or_less` opens
   // both hint ends, so the int slot is the only authority.
-  priority: v.strictInt('priority'),
+  priority: v.int('priority'),
   audio_bus_override: v.boolean('audio_bus_override'),
   // area_3d.cpp:800 declares Variant::STRING_NAME, and the getter returns
   // StringName (area_3d.cpp:601), so the serialised form is &"Master" or the

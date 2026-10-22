@@ -6,11 +6,10 @@
 import { describe, expect, it } from 'vitest';
 import { alphaCutSurface, joinsShadowPass, NO_TRANSPARENT_FLAG } from './godotAlphaCut';
 import { AlphaAntiAliasing } from '../godot/rendering/materials/alphaAntialiasing';
+import { AlphaCutMode } from '../godot/rendering/materials/alphaCut';
+import type { EnumValue } from '../godot/classdb/enumNames.js';
 
-const DISABLED = 0;
-const DISCARD = 1;
-const OPAQUE_PREPASS = 2;
-const HASH = 3;
+const { DISABLED, DISCARD, OPAQUE_PREPASS, HASH } = AlphaCutMode;
 
 const OFF = { mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_OFF, edge: 0.4 };
 const TO_COVERAGE = { mode: AlphaAntiAliasing.ALPHA_ANTIALIASING_ALPHA_TO_COVERAGE, edge: 0.4 };
@@ -91,7 +90,12 @@ describe('alphaCutSurface', () => {
   it('an out-of-range mode falls to the DISABLED arm', () => {
     // `sprite_3d.cpp:292` is an `else`, not a fourth comparison.
     expect(
-      alphaCutSurface({ antialiasing: OFF, mode: 99, scissorThreshold: 0.25, transparentFlag: true })
+      alphaCutSurface({
+        antialiasing: OFF,
+        mode: 99 as EnumValue<typeof AlphaCutMode>,
+        scissorThreshold: 0.25,
+        transparentFlag: true,
+      })
     ).toEqual(
       alphaCutSurface({ antialiasing: OFF, mode: DISABLED, scissorThreshold: 0.25, transparentFlag: true })
     );
@@ -133,8 +137,10 @@ describe('alphaCutSurface', () => {
 });
 
 describe('alphaCutSurface under alpha antialiasing', () => {
-  const antialiasedCut = (mode: number, transparentFlag: boolean | typeof NO_TRANSPARENT_FLAG = true) =>
-    alphaCutSurface({ mode, scissorThreshold: 0.25, transparentFlag, antialiasing: TO_COVERAGE });
+  const antialiasedCut = (
+    mode: EnumValue<typeof AlphaCutMode>,
+    transparentFlag: boolean | typeof NO_TRANSPARENT_FLAG = true
+  ) => alphaCutSurface({ mode, scissorThreshold: 0.25, transparentFlag, antialiasing: TO_COVERAGE });
 
   it('DISCARD blends its ramp through a depth prepass, the scissor moved into the ramp', () => {
     // `uses_alpha_antialiasing` re-admits the cut to the alpha pass and `uses_depth_in_alpha_pass`
@@ -180,7 +186,7 @@ describe('alphaCutSurface under alpha antialiasing', () => {
 });
 
 describe('joinsShadowPass', () => {
-  const cut = (mode: number) =>
+  const cut = (mode: EnumValue<typeof AlphaCutMode>) =>
     alphaCutSurface({ antialiasing: OFF, mode, scissorThreshold: 0.5, transparentFlag: true });
 
   it('takes a cut surface, which the opaque list draws', () => {

@@ -9,6 +9,7 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { EXTENSION_ID } from '../smokeProject/sceneEditor';
+import { quickFixesAt } from '../quickFixes';
 import { waitFor } from '../waitFor';
 import {
   copyFixtureProject,
@@ -17,6 +18,7 @@ import {
   loadAnswers,
   projectPath,
   rangeTuple,
+  sortedFileRanges,
   sortedRanges,
   type CursorSpec,
 } from './answers';
@@ -170,6 +172,27 @@ export function defineSharedAnswersSuite(projectDir: string): void {
       });
     }
 
+    for (const answer of answers.references) {
+      test(`references: ${answer.name}`, async () => {
+        const { document, position } = await openAt(answer.at);
+        const found = await vscode.commands.executeCommand<vscode.Location[]>(
+          'vscode.executeReferenceProvider',
+          document.uri,
+          position
+        );
+
+        assert.deepStrictEqual(
+          sortedFileRanges(
+            found.map((location) => ({
+              file: projectPath(projectDir, location.uri.fsPath),
+              range: rangeTuple(location.range),
+            }))
+          ),
+          sortedFileRanges(answer.locations)
+        );
+      });
+    }
+
     for (const answer of answers.highlights) {
       test(`highlights: ${answer.name}`, async () => {
         const { document, position } = await openAt(answer.at);
@@ -256,10 +279,10 @@ export function defineSharedAnswersSuite(projectDir: string): void {
           content: committed.getText(),
         });
         const position = cursorIn(document, answer.at);
-        const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-          'vscode.executeCodeActionProvider',
+        const actions = await quickFixesAt(
           document.uri,
-          new vscode.Range(position, position)
+          new vscode.Range(position, position),
+          (fixes) => fixes.length === answer.titles.length
         );
 
         assert.deepStrictEqual(

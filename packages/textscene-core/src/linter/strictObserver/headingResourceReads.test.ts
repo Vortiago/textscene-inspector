@@ -30,11 +30,11 @@ describe('headingResourceReads', () => {
     });
   });
 
-  it('records which uid paths a connection heading carries', () => {
+  it('reads the id trail of each uid path a connection heading carries', () => {
     const [connection] = readsOf(
-      '[connection signal="ready" from="." to="." method="go" to_uid_path=PackedInt32Array(1)]'
+      '[connection signal="ready" from="." to="." method="go" to_uid_path=PackedInt32Array(1, 2)]'
     ).connections;
-    expect(connection).toMatchObject({ hasFromUidPath: false, hasToUidPath: true });
+    expect(connection).toMatchObject({ fromIdTrail: undefined, toIdTrail: [1, 2] });
   });
 
   it('collects an instance on a node heading that follows no other node', () => {

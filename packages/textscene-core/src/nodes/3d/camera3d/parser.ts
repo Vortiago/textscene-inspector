@@ -4,12 +4,13 @@
 
 import type { ParsedHeading } from '../../../parser/utils';
 import type { Camera3DProperties } from './types';
-import { ProjectionMode, KeepAspectMode } from './types';
 import { parseNode3D } from '../../base/node3d/parser';
 import { floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import { slotInt } from '../../../godot/variant/int.js';
+import { slotInt } from '../../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { GODOT_EDITOR_LAYERS_MASK } from '../../../godot/scene/visualLayers.js';
+import { Camera3DProjectionType, Camera3DKeepAspect } from '../../../godot/scene/camera3d';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function parseCamera3D(
   heading: ParsedHeading,
@@ -34,12 +35,12 @@ export function parseCamera3D(
   };
 }
 
-function parseProjectionMode(value: string | undefined): ProjectionMode {
+function parseProjectionMode(value: string | undefined): EnumValue<typeof Camera3DProjectionType> {
   const num = slotInt(value);
-  if (num === null) return ProjectionMode.PROJECTION_PERSPECTIVE;
-  if (num === 1) return ProjectionMode.PROJECTION_ORTHOGONAL;
-  if (num === 2) return ProjectionMode.PROJECTION_FRUSTUM;
-  return ProjectionMode.PROJECTION_PERSPECTIVE;
+  if (num === null) return Camera3DProjectionType.PERSPECTIVE;
+  if (num === 1) return Camera3DProjectionType.ORTHOGONAL;
+  if (num === 2) return Camera3DProjectionType.FRUSTUM;
+  return Camera3DProjectionType.PERSPECTIVE;
 }
 
 /**
@@ -47,6 +48,6 @@ function parseProjectionMode(value: string | undefined): ProjectionMode {
  * anything that is not KEEP_WIDTH as KEEP_HEIGHT, so an out-of-range value loads and behaves as
  * KEEP_HEIGHT. There is no third mode: `camera_3d.h:50-53` declares two.
  */
-function parseKeepAspectMode(value: string | undefined): KeepAspectMode {
-  return slotInt(value) === 0 ? KeepAspectMode.KEEP_WIDTH : KeepAspectMode.KEEP_HEIGHT;
+function parseKeepAspectMode(value: string | undefined): EnumValue<typeof Camera3DKeepAspect> {
+  return slotInt(value) === 0 ? Camera3DKeepAspect.KEEP_WIDTH : Camera3DKeepAspect.KEEP_HEIGHT;
 }

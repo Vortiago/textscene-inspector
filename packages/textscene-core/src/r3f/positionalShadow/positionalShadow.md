@@ -137,6 +137,9 @@ the range plus half the rectangle's diagonal (4.7.2 `scene_forward_clustered.gls
 - `sample_pcf_shadow` for a spot light: `soft_shadow_scale` atlas texels (`:310-335`, `:847`).
 - `sample_omni_pcf_shadow` for an omni light, inside a paraboloid inset one texel per side. A tap
   that leaves the unit disc reads the other paraboloid (`:337-379`, `:476-478`).
+  The volumetric fog reads the same slot without the inset, as Godot's fog does (4.7.2
+  `volumetric_fog_process.glsl:502-511`). `godotOmniSlot` in `paraboloidUv.ts` decodes the slot for
+  both, with the inset as its argument.
 - The blocker search of a light with a `light_size` and a `shadow_blur`: eight taps of the Soft Low
   penumbra kernel find the blockers, and eight more spread the penumbra by their average depth
   (`:491-570`, `:789-837`, `renderer_scene_render_rd.cpp:1158`). It reads four texels of the

@@ -12,7 +12,7 @@ import type { TscnNode } from '../../../parser/types';
 import { parseHiddenNode } from '../testing/probeScene';
 import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
 import { solveNode } from './testing/solveNode';
 

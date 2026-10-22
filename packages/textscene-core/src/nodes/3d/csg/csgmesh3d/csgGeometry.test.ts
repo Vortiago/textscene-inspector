@@ -14,6 +14,7 @@ import type { CsgSolid } from '../../../../r3f/csg/csgRegistration';
 import { csgGeometryContext } from '../../../../r3f/csg/testing/csgGeometryContext';
 import { wallQuadSurfaces } from '../../../../resources/testing/arrayMeshSurfaces';
 import { csgMesh3DGeometry, csgMesh3DGeometryKey, csgMesh3DReadsFiles } from './csgGeometry';
+import { meshSurfaces } from './meshSurfaces';
 
 const TWO_BOXES_PATH = 'res://two-boxes.tres';
 const BOX_PATH = 'res://box.tres';
@@ -34,6 +35,7 @@ const FILES = {
 
 const INLINE_BOX: TscnInternalResource = { id: 'Box', type: 'BoxMesh', data: { size: 'Vector3(2, 2, 2)' } };
 const INLINE_CAPSULE: TscnInternalResource = { id: 'Capsule', type: 'CapsuleMesh', data: {} };
+const INLINE_POINT: TscnInternalResource = { id: 'Point', type: 'PointMesh', data: {} };
 const INLINE_QUADS: TscnInternalResource = {
   id: 'Quads',
   type: 'ArrayMesh',
@@ -42,8 +44,14 @@ const INLINE_QUADS: TscnInternalResource = {
   },
 };
 
+const INLINE_POINTS: TscnInternalResource = {
+  id: 'Points',
+  type: 'ArrayMesh',
+  data: { _surfaces: wallQuadSurfaces({ primitive: 0 }) },
+};
+
 const CTX = csgGeometryContext({
-  internalResources: [INLINE_BOX, INLINE_CAPSULE, INLINE_QUADS],
+  internalResources: [INLINE_BOX, INLINE_CAPSULE, INLINE_POINT, INLINE_POINTS, INLINE_QUADS],
   externalResources: EXT,
   files: FILES,
 });
@@ -98,8 +106,15 @@ describe('csgMesh3DGeometry: mesh sources', () => {
     expect(frontsOutward(solid.geometry, new THREE.Vector3())).toBe(true);
   });
 
-  it('fronts an inline PrimitiveMesh outward, as three built it', () => {
+  it('fronts an inline PrimitiveMesh outward', () => {
     expect(frontsOutward(build('SubResource("Box")')!.geometry, new THREE.Vector3())).toBe(true);
+  });
+
+  it("carries an inline BoxMesh's UVs in Godot's 3x2 atlas, a third of the image per face", () => {
+    const uv = build('SubResource("Box")')!.geometry.getAttribute('uv');
+    const columns = new Set(Array.from({ length: uv.count }, (_, i) => Math.round(uv.getX(i) * 3)));
+
+    expect([...columns].sort()).toEqual([0, 1, 2, 3]);
   });
 
   it('takes an inline ArrayMesh’s surface materials as references into the scene', () => {
@@ -110,6 +125,16 @@ describe('csgMesh3DGeometry: mesh sources', () => {
 
   it('builds nothing while the .tres loads', () => {
     expect(build('ExtResource("1")', {}, csgGeometryContext({ externalResources: EXT }))).toBeNull();
+  });
+
+  // The brush builder skips every surface that is not PRIMITIVE_TRIANGLES (`csg_shape.cpp:1148-1150`).
+  it('builds nothing for a PointMesh, whose surface is points', () => {
+    expect(build('SubResource("Point")')).toBeNull();
+    expect(meshSurfaces({ resource: INLINE_POINT, resources: CTX, file: null })).toEqual([]);
+  });
+
+  it('builds nothing for an ArrayMesh whose surface is points', () => {
+    expect(build('SubResource("Points")')).toBeNull();
   });
 
   it('builds nothing for a mesh no slice here reads, nor for no mesh', () => {

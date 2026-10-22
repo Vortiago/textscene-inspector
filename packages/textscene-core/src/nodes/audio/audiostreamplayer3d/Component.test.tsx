@@ -13,8 +13,9 @@ import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
 import type { TscnNode } from '../../../parser/types';
 import type { AudioStreamPlayer3DProperties } from './types';
-import { AttenuationModel, DopplerTracking } from './types';
+
 import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { AttenuationModel, DopplerTracking } from '../../../godot/scene/audio';
 
 /**
  * The speaker and range gizmos are selection-gated, so the scaffolding places the component in a
@@ -37,13 +38,13 @@ function makeNode(overrides: Partial<AudioStreamPlayer3DProperties> = {}): TscnN
     playing: false,
     autoplay: false,
     stream_paused: false,
-    attenuation_model: AttenuationModel.ATTENUATION_INVERSE_DISTANCE,
+    attenuation_model: AttenuationModel.INVERSE_DISTANCE,
     unit_size: 10,
     max_distance: 0,
     max_db: 3,
     attenuation_filter_cutoff_hz: 5000,
     attenuation_filter_db: -24,
-    doppler_tracking: DopplerTracking.DOPPLER_TRACKING_DISABLED,
+    doppler_tracking: DopplerTracking.DISABLED,
     panning_strength: 1,
     area_mask: 1,
     emission_angle_enabled: false,
@@ -106,7 +107,7 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(group).toBeDefined();
     // Godot draws a camera-facing circle of lines at `unit_size x soft_multiplier`, and the default
     // INVERSE_DISTANCE multiplier is 12, so 25 x 12 = 300. Traversed, not indexed: `<GizmoLine>`
-    // wraps its line in a group that carries the gizmo's draw order (`GIZMO_GROUP_ORDER`).
+    // wraps its line in a `<GizmoGroup>`.
     let line: THREE.Line | undefined;
     (group!.instance as unknown as THREE.Object3D).traverse((o) => {
       if (!line && (o as THREE.Line).isLine) line = o as THREE.Line;

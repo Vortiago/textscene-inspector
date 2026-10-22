@@ -20,6 +20,14 @@ describe('releaseSources', () => {
     expect(releaseSources('linter')).toEqual(['apps/textscene-linter', 'packages/textscene-core']);
   });
 
+  it('lists core for the parser package, which bundles it', () => {
+    expect(releaseSources('tscn')).toEqual(['apps/textscene-tscn', 'packages/textscene-core']);
+  });
+
+  it('lists core for the renderer package, which bundles it', () => {
+    expect(releaseSources('renderer')).toEqual(['apps/textscene-renderer', 'packages/textscene-core']);
+  });
+
   it('includes the web previewer in the extension release, which ships its build', () => {
     expect(releaseSources('vscode')).toContain('apps/textscene-web');
   });

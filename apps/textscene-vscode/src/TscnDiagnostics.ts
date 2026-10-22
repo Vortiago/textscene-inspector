@@ -16,6 +16,7 @@ import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { error as logError } from '@textscene/core/logger';
 import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
 import { HOST_PATH_CASE } from './hostPathCase';
+import { toVscodeRange } from './languageFeatureRanges';
 import { LintResourceProvider } from './LintResourceProvider';
 import { hasProjectFile, resRootOf } from './resRoot';
 import {
@@ -82,13 +83,11 @@ export function toVsCodeDiagnostic(
 }
 
 function rangeForDiagnostic(diagnostic: TscnLintDiagnostic, document: DocumentLineSource): vscode.Range {
-  const { start, end } = diagnosticRange(diagnostic, {
-    lineCount: document.lineCount,
-    lineLength: (line) => document.lineAt(line).text.length,
-  });
-  return new vscode.Range(
-    new vscode.Position(start.line, start.character),
-    new vscode.Position(end.line, end.character)
+  return toVscodeRange(
+    diagnosticRange(diagnostic, {
+      lineCount: document.lineCount,
+      lineLength: (line) => document.lineAt(line).text.length,
+    })
   );
 }
 

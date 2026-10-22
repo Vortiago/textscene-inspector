@@ -5,10 +5,12 @@ import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver.js';
-import { liveChildGroups, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
+import { liveChildGroups, mergedNodeOf, singleSceneCache, type LiveChildGroup } from '../../liveSceneTree.js';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot.js';
+import { scopeOf } from '../../../resources/liveNode.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 import { useGlbChildren } from './useGlbChildren.js';
+import { useInstancedGlbCache } from './useInstancedGlbCache.js';
 import styles from './SceneTreeViewer.module.css';
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
@@ -96,36 +98,39 @@ function TreeNodeImpl({
   isDefaultFocusable = false,
 }: TreeNodeProps) {
   const nodePath = joinPath(parentPath, node.name);
-  const scenePath = node.instance ? resolveInstancePath(node.instance, externalResources) : null;
+  // The tree renders rows and resolves instance refs. It never reads a SubResource id, so it
+  // declares an empty pool explicitly. A grafted node's own scope replaces the group's.
+  const scope = useMemo(
+    () => scopeOf(node, { externalResources, internalResources: [], instancedScenePaths }),
+    [node, externalResources, instancedScenePaths]
+  );
+  const scenePath = node.instance ? resolveInstancePath(node.instance, scope.externalResources) : null;
   const instanceScenePath = onOpenSubScene ? scenePath : null;
 
   // Null for a non-instance row or while the sub-scene loads. The hook
   // re-renders the row when the sub-scene arrives.
-  const subScene = useSubSceneChildren(node, externalResources);
+  const subScene = useSubSceneChildren(node, scope.externalResources);
 
   // Null for a non-GLB row. The hook re-renders the row when the GLB arrives.
   const glbChildren = useGlbChildren(node);
+
+  // Undefined unless the sub-scene is an instanced `.glb` that has loaded.
+  const instancedGlb = useInstancedGlbCache(subScene);
 
   // What lives below this node, and in what resource scope. A GLB row reuses
   // the list `useGlbChildren` already built, not a second walk. The memo keeps
   // the groups stable across selection and hover, so `effective` reuses one merge.
   const groups: readonly LiveChildGroup[] = useMemo(() => {
-    // The tree renders rows and resolves instance refs. It never reads a
-    // SubResource id, so it declares an empty pool explicitly.
-    const scope: SceneScope = { externalResources, internalResources: [], instancedScenePaths };
     if (node.type === GLB_SCENE_ROOT_TYPE && glbChildren) {
       return [{ origin: 'glb' as const, children: glbChildren, scope }];
     }
-    return liveChildGroups(node, scope, singleSceneCache(scenePath, subScene));
-  }, [node, externalResources, instancedScenePaths, scenePath, subScene, glbChildren]);
+    return liveChildGroups(node, scope, singleSceneCache(scenePath, subScene), instancedGlb);
+  }, [node, scope, scenePath, subScene, glbChildren, instancedGlb]);
 
   // Instance root merge (ADR-0013), the same decision the viewport and inspector
   // make, for the row header. It reads the `merged` group, so the merge runs once
   // per row. Every other origin keeps the raw node, as `collapseLiveNode` does.
-  const effective = useMemo(
-    () => groups.find((g) => g.origin === 'merged')?.mergedNode ?? node,
-    [groups, node]
-  );
+  const effective = useMemo(() => mergedNodeOf(groups) ?? node, [groups, node]);
 
   const hasChildren = groups.some((g) => g.children.length > 0);
 

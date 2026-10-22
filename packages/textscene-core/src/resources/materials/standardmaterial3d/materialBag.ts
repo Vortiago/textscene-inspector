@@ -16,6 +16,7 @@ import { BASE_MATERIAL_3D_DEFAULTS } from '../../../godot/scene/baseMaterial3D';
 import { surfaceFadeVariants, type FadeVariants, type PassAlpha } from '../../../r3f/materials/fadeVariants';
 import { composeInjections, type ProgramInjection } from '../../../r3f/materialProgramInputs';
 import { alphaHashScaleUserData } from '../../../r3f/materials/godotAlphaHash';
+import { viewportSamplersUserData } from '../../../r3f/materials/godotMipmapBias';
 import {
   alphaAntialiasingProps,
   alphaAntialiasingUserData,
@@ -27,7 +28,7 @@ import {
 } from '../../../r3f/materials/emissionTextureAdd';
 import { threeAnisotropy } from '../../../r3f/godotLightFunction';
 import { lightModesInjection, lightModesUserData } from '../../../r3f/lightModes';
-import { GODOT_NORMAL_MAP_READ } from '../../../r3f/materials/godotNormalMap';
+import { GODOT_NORMAL_MAP_READ, GODOT_UNIT_TANGENT_FRAME } from '../../../r3f/materials/godotNormalMap';
 import { SPECULAR_OCCLUSION_DISABLED, specularOcclusionUserData } from '../../../r3f/godotIndirectSpecular';
 import {
   heightmapUserData,
@@ -99,7 +100,7 @@ function noMaterialBag(): StandardMaterialBag {
       metalness: DEFAULT_MATERIAL_METALLIC,
       roughness: DEFAULT_MATERIAL_ROUGHNESS,
       side: THREE.FrontSide,
-      userData: lightModesUserData(GODOT_DEFAULT_LIGHT_MODES),
+      userData: { ...lightModesUserData(GODOT_DEFAULT_LIGHT_MODES), ...viewportSamplersUserData() },
     },
     injection: lightModesInjection(GODOT_DEFAULT_LIGHT_MODES),
   };
@@ -215,6 +216,7 @@ function surfaceUserData(scalars: StandardMaterial3DScalars): Record<string, unk
     ...lightModesUserData(scalars),
     ...specularOcclusionUserData(scalars.disablesSpecularOcclusion),
     ...heightmapUserData(scalars.heightmap),
+    ...viewportSamplersUserData(),
   };
 }
 
@@ -393,6 +395,7 @@ function classBag(scalars: StandardMaterial3DScalars, textures: ResolvedTextures
     aoMap ? GODOT_AMBIENT_OCCLUSION : undefined,
     pbr.roughnessMap || pbr.metalnessMap ? GODOT_METALLIC_ROUGHNESS_CHANNELS : undefined,
     pbr.normalMap ? GODOT_NORMAL_MAP_READ : undefined,
+    isAnisotropic(scalars) ? GODOT_UNIT_TANGENT_FRAME : undefined,
     scalars.disablesSpecularOcclusion ? SPECULAR_OCCLUSION_DISABLED : undefined,
     heightmap ? parallaxInjection(heightmap) : undefined,
     emissionTextureAddInjection(emission.addedTextureEnergy),

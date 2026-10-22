@@ -24,7 +24,7 @@ describe('decodePlaneMesh', () => {
       subdivideWidth: 0,
       subdivideDepth: 0,
       orientation: 1,
-      centerOffset: undefined,
+      centerOffset: { x: 0, y: 0, z: 0 },
     });
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -58,8 +58,8 @@ describe('decodePlaneMesh', () => {
     expect(decodePlaneMesh({ size: 'Vector2(--1, 2)' }).size).toEqual({ x: 2, y: 2 });
   });
 
-  it('warns then leaves center_offset unset for a malformed vector', () => {
-    expect(decodePlaneMesh({ center_offset: 'Vector3(1, 2)' }).centerOffset).toBeUndefined();
+  it('warns then keeps a zero center_offset for a malformed vector', () => {
+    expect(decodePlaneMesh({ center_offset: 'Vector3(1, 2)' }).centerOffset).toEqual({ x: 0, y: 0, z: 0 });
     expect(warnSpy).toHaveBeenCalled();
   });
 

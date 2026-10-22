@@ -18,7 +18,8 @@ import {
   type GltfNamingOptions,
 } from '../../../godot/import/gltfImportNames';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassUserData } from '../../../r3f/materials/opaquePrepass';
-import { withImportedNormalMapRead } from '../../../r3f/materials/godotNormalMap';
+import { importedNormalMapRead } from '../../../r3f/materials/godotNormalMap';
+import { injectViewportProgram } from '../../../r3f/materialProgramInputs';
 import type { GltfExtensionRules } from './types';
 import type { GLTF, GLTFLoaderPlugin, GLTFParser } from 'three/addons/loaders/GLTFLoader.js';
 import { usesGodotSingleRoot } from '../../../godot/import/gltf';
@@ -138,6 +139,7 @@ export async function createGLBMesh(
   nameClips(root.animations, names.animations);
   tagMeshInstances(root, gltf.parser.associations);
   tagGodotNodeNames(root, gltf.parser.associations, names.nodes);
+  importMissingMaterialsAsGodotDefault(root, gltf.parser.associations);
   importBlendAsDepthPrepass(root);
   return root;
 }
@@ -170,6 +172,25 @@ async function godotSceneRoot(gltf: GLTF): Promise<THREE.Object3D> {
 }
 
 /**
+ * Godot gives a primitive with no material a new StandardMaterial3D, which is not metallic
+ * (`gltf_document.cpp:1929-1935`). GLTFLoader's stand-in, the one material no glTF index names, is
+ * fully metallic, so it would draw no diffuse light and no lightmap.
+ */
+function importMissingMaterialsAsGodotDefault(
+  object: THREE.Object3D,
+  associations: GLTFParser['associations']
+): void {
+  forEachSurfaceMaterial(object, (material) => {
+    if (
+      material instanceof THREE.MeshStandardMaterial &&
+      associations.get(material)?.materials === undefined
+    ) {
+      material.metalness = 0;
+    }
+  });
+}
+
+/**
  * Godot imports glTF `alphaMode` BLEND as ALPHA_DEPTH_PRE_PASS (`gltf_document.cpp:3117-3118`),
  * so the depth prepass draws it. GLTFLoader marks only BLEND `transparent`.
  */
@@ -177,6 +198,16 @@ function importBlendAsDepthPrepass(object: THREE.Object3D): void {
   forEachSurfaceMaterial(object, (material) => {
     if (material.transparent) Object.assign(material.userData, opaquePrepassUserData(DRAWN_OPAQUE_PREPASS));
   });
+}
+
+/**
+ * A glTF material copy as Godot's import builds it: a StandardMaterial3D, which samples its textures
+ * through the viewport's samplers, with its normal map read (`gltf_document.cpp:2939-2940`). A copy
+ * carries no `onBeforeCompile`, so each copy takes its programs again.
+ */
+function importedSurfaceMaterial(copy: THREE.Material): THREE.Material {
+  injectViewportProgram(copy, importedNormalMapRead(copy));
+  return copy;
 }
 
 /** Clone an Object3D and its materials, since an Object3D has one parent. */
@@ -187,7 +218,7 @@ export function cloneWithMaterials(mesh: THREE.Object3D): THREE.Object3D {
 
   // SkeletonUtils shares material references, so clone every slot the sidecar writer
   // can reach, and a per-instance material change stays in its instance.
-  forEachSurfaceMaterial(cloned, (material, assign) => assign(withImportedNormalMapRead(material.clone())));
+  forEachSurfaceMaterial(cloned, (material, assign) => assign(importedSurfaceMaterial(material.clone())));
 
   cloned.traverse((node) => {
     if (node instanceof THREE.Mesh) {

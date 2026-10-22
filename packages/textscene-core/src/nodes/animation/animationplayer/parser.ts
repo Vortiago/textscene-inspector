@@ -10,12 +10,8 @@ import { parseNode } from '../../node/parser';
 import { boolOr, enumOr, floatOr } from '../../../parser/valueParsers';
 import { dictSubResourceEntries, resourceRef } from '../../../godot/variant/resourceRef.js';
 import { literalText } from '../../../godot/string/string.js';
-import {
-  type AnimationLibraryRef,
-  AnimationProcessMode,
-  type AnimationPlayerProperties,
-  MethodCallMode,
-} from './types';
+import { type AnimationLibraryRef, type AnimationPlayerProperties } from './types';
+import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
 
 export function parseAnimationPlayer(
   heading: ParsedHeading,
@@ -35,13 +31,17 @@ export function parseAnimationPlayer(
     // prefers the canonical key.
     callback_mode_process: enumOr(
       properties.callback_mode_process ?? properties.playback_process_mode,
-      AnimationProcessMode.IDLE,
-      [AnimationProcessMode.PHYSICS, AnimationProcessMode.IDLE, AnimationProcessMode.MANUAL]
+      AnimationCallbackModeProcess.IDLE,
+      [
+        AnimationCallbackModeProcess.PHYSICS,
+        AnimationCallbackModeProcess.IDLE,
+        AnimationCallbackModeProcess.MANUAL,
+      ]
     ),
     callback_mode_method: enumOr(
       properties.callback_mode_method ?? properties.method_call_mode,
-      MethodCallMode.DEFERRED,
-      [MethodCallMode.DEFERRED, MethodCallMode.IMMEDIATE]
+      AnimationCallbackModeMethod.DEFERRED,
+      [AnimationCallbackModeMethod.DEFERRED, AnimationCallbackModeMethod.IMMEDIATE]
     ),
     active: isActive(properties),
     autoplay: literalText(properties.autoplay ?? ''),
@@ -78,8 +78,8 @@ export function extractLibraries(properties: Record<string, string>): AnimationL
 
   // Dictionary form (Godot 4's serialisation), possibly multi-line:
   //   libraries = { "": SubResource("AnimationLibrary_x"), "combat": SubResource("…") }
-  // Only inline SubResource libraries are captured; ExtResource entries point to
-  // external (often binary .res) libraries the previewer cannot resolve.
+  // Only inline SubResource libraries are captured. An ExtResource entry names a library
+  // file, which `animationResolver.ts` leaves out of the clip set.
   const dict = properties.libraries;
   if (dict !== undefined) {
     for (const { key, id } of dictSubResourceEntries(dict)) {

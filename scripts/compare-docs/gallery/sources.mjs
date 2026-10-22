@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { REPO_ROOT, findImage } from '../sheetSources.mjs';
 import { CATEGORY_ORDER } from './vocabulary.mjs';
+import { CATALOG_OUT } from '../build-node-catalog/paths.mjs';
 
 /** The generators write their JSON beside `build-gallery.mjs`, one level up. */
 const COMPARE_DOCS = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,7 +31,7 @@ export function imageSrc(basename, side, inlineImages) {
  * group and support, which groups the nav and makes the "Not implemented" cards.
  */
 export function loadCatalog() {
-  const file = join(COMPARE_DOCS, 'node-catalog.json');
+  const file = CATALOG_OUT;
   return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { nodes: [], resources: [] };
 }
 

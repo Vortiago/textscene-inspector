@@ -11,9 +11,10 @@ import type {
 import type { Vector3 } from '../../../godot/math/vector';
 import type { Node3DProperties } from '../../base/node3d/types';
 import type { Rgba } from '../../../godot/math/math';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export interface ReflectionProbeProperties extends Node3DProperties {
-  updateMode: ReflectionProbeUpdateMode;
+  updateMode: EnumValue<typeof ReflectionProbeUpdateMode>;
   intensity: number;
   blendDistance: number;
   maxDistance: number;
@@ -28,7 +29,7 @@ export interface ReflectionProbeProperties extends Node3DProperties {
   cullMask: number;
   /** The layers whose surfaces read the probe. */
   reflectionMask: number;
-  ambientMode: ReflectionProbeAmbientMode;
+  ambientMode: EnumValue<typeof ReflectionProbeAmbientMode>;
   /** As written, in sRGB. */
   ambientColor: Rgba;
   ambientColorEnergy: number;

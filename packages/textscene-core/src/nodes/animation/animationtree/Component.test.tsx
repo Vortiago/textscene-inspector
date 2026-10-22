@@ -9,7 +9,12 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationTree } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { AnimationTreeProperties } from './types';
-import { AnimationTreeProcessMode, CallbackModeDiscrete, CallbackModeMethod } from './types';
+
+import {
+  AnimationCallbackModeProcess,
+  AnimationCallbackModeDiscrete,
+  AnimationCallbackModeMethod,
+} from '../../../godot/scene/animation';
 
 function makeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNode {
   const props: AnimationTreeProperties = {
@@ -17,10 +22,10 @@ function makeNode(overrides: Partial<AnimationTreeProperties> = {}): TscnNode {
     active: false,
     parameters: {},
     anim_player: 'NodePath("..")',
-    process_callback: AnimationTreeProcessMode.IDLE,
-    callback_mode_process: AnimationTreeProcessMode.IDLE,
-    callback_mode_method: CallbackModeMethod.DEFERRED,
-    callback_mode_discrete: CallbackModeDiscrete.DOMINANT,
+    process_callback: AnimationCallbackModeProcess.IDLE,
+    callback_mode_process: AnimationCallbackModeProcess.IDLE,
+    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
+    callback_mode_discrete: AnimationCallbackModeDiscrete.DOMINANT,
     root_motion_track: 'NodePath("")',
     advance_expression_base_node: 'NodePath("..")',
     audio_max_polyphony: 32,

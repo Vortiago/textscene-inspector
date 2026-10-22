@@ -12,7 +12,8 @@ import { arrayLiteralBody } from '../../../../godot/variant/variantParser.js';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
-import { slotCount } from '../../../../godot/variant/int.js';
+import { ITEM_LIST_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
+import { slotCount } from '../../../../godot/variant/intSlots.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
 import type { ItemListItem, ItemListProperties } from './types';
 
@@ -24,7 +25,7 @@ import type { ItemListItem, ItemListProperties } from './types';
 function parseItems(properties: Record<string, string>, itemCount: number): ItemListItem[] {
   const count = Math.min(itemCount, MAX_WALKED_ELEMENTS);
   if (count <= 0) return [];
-  const declared = indexedElements(properties, 'item_', 'is_valid_int');
+  const declared = indexedElements(properties, ITEM_LIST_ITEMS.prefix, ITEM_LIST_ITEMS.indexParse);
   const items: ItemListItem[] = [];
   for (let i = 0; i < count; i++) {
     const leaves = declared.get(i);

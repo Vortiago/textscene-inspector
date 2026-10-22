@@ -18,7 +18,7 @@ describe('primitive mesh Godot default parity', () => {
 
   it('CylinderMesh defaults: radial_segments=64, rings=4', () => {
     const p = decodeCylinderMesh({});
-    expect(p.radial_segments).toBe(64);
+    expect(p.radialSegments).toBe(64);
     expect(p.rings).toBe(4);
   });
 

@@ -17,6 +17,12 @@ export const LIGHTING_SCENES = [
   { name: 'glow-normalized', file: 'unit-glow-normalized.tscn' },
   { name: 'glow-agx', file: 'unit-glow-agx.tscn' },
   { name: 'glow-exposure', file: 'unit-glow-exposure.tscn' },
+  // The Linear upscale mode, from a Fixture project's project.godot: a bilinear read of each level.
+  { name: 'glow-linear-upscale', file: 'glow-linear-upscale/unit-glow-linear-upscale.tscn' },
+  // A frame under 256 px has fewer glow levels, and a weighted level past the last reads that one:
+  // unit-glow-authored weights its two coarsest levels. 96 px clamps both, 200 px clamps the last.
+  { name: 'glow-small-frame-96', file: 'unit-glow-authored.tscn', canvas: { width: 96, height: 96 } },
+  { name: 'glow-small-frame-200', file: 'unit-glow-authored.tscn', canvas: { width: 200, height: 156 } },
   // `tonemap_exposure` under LINEAR with no compositor: three draws the curve per material.
   { name: 'environment-linear-exposure', file: 'unit-environment-linear-exposure.tscn' },
   { name: 'glow-specular', file: 'unit-glow-specular.tscn' },
@@ -68,6 +74,9 @@ export const LIGHTING_SCENES = [
   // A FogVolume whose ShaderMaterial Godot cannot run as fog. The header states why no other
   // golden shows it.
   { name: 'fog-volume-shader-material', file: 'unit-fog-volume-shader-material.tscn' },
+  // A FogVolume whose ShaderMaterial holds a null shader. The header states why no other golden
+  // shows it.
+  { name: 'fog-volume-shader-null', file: 'unit-fog-volume-shader-null.tscn' },
   // Godot's editor preview sun and environment on a scene that declares neither
   // (ADR-0025). Godot's render of it is at
   // scripts/godot-ref/reference/preview-lighting.png. Shadow-bearing.
@@ -114,6 +123,13 @@ export const LIGHTING_SCENES = [
   { name: 'reflection-probe-box-projection', file: 'unit-reflection-probe-box-projection.tscn' },
   // AMBIENT_COLOR on one ReflectionProbe: the floor in its box takes a red ambient.
   { name: 'reflection-probe-ambient-color', file: 'unit-reflection-probe-ambient-color.tscn' },
+  // A LightmapGI bake lights a box and the ground: a Static sun's light, its shadow and a red
+  // bounce, all read from the atlas through UV2. The headers state why no other golden shows it.
+  { name: 'lightmap-gi-baked', file: 'unit-lightmap-gi-baked.tscn' },
+  // The same scene baked directional: the read weighs four spherical-harmonics layers by the normal.
+  { name: 'lightmap-gi-directional', file: 'unit-lightmap-gi-directional.tscn' },
+  // A baked GridMap: its baked meshes draw in place of the cells, each lit by its sub-instance.
+  { name: 'lightmap-gi-gridmap', file: 'unit-lightmap-gi-gridmap.tscn' },
   // BG_SKY over a gold sky with AMBIENT_SOURCE_COLOR (grey 0.6, sky_contribution
   // 0) and AgX. The shadowed grass stays grey, with no sky IBL in diffuse, while
   // the metallic sphere reflects the gold sky in full. Matches Godot to ≤6/255,

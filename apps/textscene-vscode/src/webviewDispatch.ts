@@ -47,19 +47,14 @@ const isString = (v: unknown): v is string => typeof v === 'string';
 /**
  * One payload check per message type, exhaustive like {@link WebviewMessageHandlers},
  * so a type without one fails to compile. An optional field is checked only when
- * present: `jumpToNode.parent` is absent for a root node.
+ * present.
  */
 const CARRIES_ITS_PAYLOAD: {
   [K in WebviewToHostMessage['type']]: (msg: Record<string, unknown>) => boolean;
 } = {
   webviewReady: () => true,
-  // `path` and `parent` are both checked only when present: a legacy webview
-  // sends `nodeName` alone, and the handler's documented fallback is to take the
-  // first name match. `nodeName` is the one field it cannot work without.
-  jumpToNode: (m) =>
-    isString(m.nodeName) &&
-    (m.path === undefined || isString(m.path)) &&
-    (m.parent === undefined || isString(m.parent)),
+  jumpToNode: (m) => isString(m.nodeName) && isString(m.path),
+  copyNodePath: (m) => isString(m.nodePath),
   // `resourceType` only when present: the byte layer requests a file it knows no type for.
   loadResource: (m) =>
     isString(m.path) && (m.resourceType === undefined || isString(m.resourceType)) && isString(m.requestId),

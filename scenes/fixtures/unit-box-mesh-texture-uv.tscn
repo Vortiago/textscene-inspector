@@ -1,0 +1,44 @@
+[gd_scene load_steps=6 format=3 uid="uid://unitboxmeshtextureuv"]
+
+; The one variable: where a texture lands on a BoxMesh. Godot packs the six faces into a 3x2 atlas,
+; so each face shows one cell of the stepped gradient, which runs red, green, blue along the U + V
+; diagonal. A face mapped to the whole image shows all three bands. The CSGMesh3D carries the same
+; surface into its brush, and the subdivided, flat box keeps each face in its cell. Every other BoxMesh scene draws a flat colour, where the UV layout is
+; invisible.
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="BoxMesh" id="BoxMesh_uv"]
+material = SubResource("StandardMaterial3D_uv")
+
+[sub_resource type="BoxMesh" id="BoxMesh_subdivided"]
+material = SubResource("StandardMaterial3D_uv")
+size = Vector3(1.5, 0.4, 1)
+subdivide_width = 2
+subdivide_height = 1
+subdivide_depth = 3
+
+[node name="Root" type="Node3D"]
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, -0.9, 0, 0)
+mesh = SubResource("BoxMesh_uv")
+
+[node name="CSGBox" type="CSGMesh3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0.9, 0, 0)
+mesh = SubResource("BoxMesh_uv")
+
+[node name="Subdivided" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 0, -1.1, 0)
+mesh = SubResource("BoxMesh_subdivided")

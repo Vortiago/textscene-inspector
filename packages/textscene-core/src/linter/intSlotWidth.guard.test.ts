@@ -12,7 +12,7 @@ import { validatorRegistry } from './ValidatorRegistry.js';
 import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
 import { everyValidator } from './testing/registryPopulation.js';
 import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
-import type { IntWidth } from '../godot/variant/int.js';
+import type { IntWidth } from '../godot/variant/intWidth.js';
 import './index.js'; // side-effect: every slice registers its validators
 
 /**

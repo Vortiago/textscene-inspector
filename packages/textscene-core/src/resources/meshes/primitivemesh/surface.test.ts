@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildPrismMeshSurface } from '../prismmesh/build';
 import { decodePrismMesh } from '../prismmesh/decode';
 import { isPrimitiveMeshType, primitiveMeshSurface } from './surface';
+import { expectClose, vertexOf } from './surface.testkit';
 
 const TEXEL_SIZE = 0.2;
 /** Four segments round and one ring: vertex 6 sits on the equator, a quarter turn from the seam. */
@@ -31,31 +32,50 @@ describe('primitiveMeshSurface', () => {
     expect(flipped.tangents).toEqual(plain.tangents);
   });
 
-  it('flips a primitive still built by three too (edge case)', () => {
-    const plain = primitiveMeshSurface({ id: 'box', type: 'BoxMesh', data: {} }, TEXEL_SIZE)!;
-    const flipped = primitiveMeshSurface(
-      { id: 'box', type: 'BoxMesh', data: { flip_faces: 'true' } },
-      TEXEL_SIZE
-    )!;
-
-    expect(flipped.normals![0]).toBe(-plain.normals![0]!);
-    expect(Array.from(flipped.indices).slice(0, 3)).toEqual([
-      plain.indices[1],
-      plain.indices[0],
-      plain.indices[2],
-    ]);
-  });
-
-  it("hands on a ported builder's surface as it is", () => {
+  it("hands on a builder's surface as it is", () => {
     const data = { size: 'Vector3(2, 1, 1)', left_to_right: '0.25' };
 
     const surface = primitiveMeshSurface({ id: 'prism', type: 'PrismMesh', data }, TEXEL_SIZE)!;
 
-    expect(surface).toEqual(buildPrismMeshSurface(decodePrismMesh(data)));
+    expect(surface).toEqual(buildPrismMeshSurface(decodePrismMesh(data), null));
   });
 
   it('is null for a type with no slice here', () => {
     expect(primitiveMeshSurface({ id: 'text', type: 'TextMesh', data: {} }, TEXEL_SIZE)).toBeNull();
+  });
+});
+
+describe('primitiveMeshSurface UV2', () => {
+  // Godot 4.6.3 writes each expected UV2 for the same properties.
+  it("makes a PlaneMesh's UV2 from its UV, scaled by uv2_padding over the lightmap size hint", () => {
+    const data = { add_uv2: 'true', uv2_padding: '7.0', size: 'Vector2(3, 1.3)' };
+
+    const surface = primitiveMeshSurface({ id: 'plane', type: 'PlaneMesh', data }, TEXEL_SIZE)!;
+
+    expectClose(vertexOf(surface.uv2s, 0, 2), [0.681818, 0.461538]);
+  });
+
+  it("makes a QuadMesh's UV2 from its own default size", () => {
+    const surface = primitiveMeshSurface(
+      { id: 'quad', type: 'QuadMesh', data: { add_uv2: 'true' } },
+      TEXEL_SIZE
+    )!;
+
+    expectClose(vertexOf(surface.uv2s, 0, 2), [0.714286, 0.714286]);
+  });
+
+  it('scales by a stored lightmap_size_hint that no change follows', () => {
+    const data = { add_uv2: 'true', lightmap_size_hint: 'Vector2i(50, 60)' };
+
+    const surface = primitiveMeshSurface({ id: 'plane', type: 'PlaneMesh', data }, TEXEL_SIZE)!;
+
+    expectClose(vertexOf(surface.uv2s, 0, 2), [0.96, 0.966667]);
+  });
+
+  it('makes no UV2 without add_uv2', () => {
+    expect(
+      primitiveMeshSurface({ id: 'plane', type: 'PlaneMesh', data: {} }, TEXEL_SIZE)!.uv2s
+    ).toBeUndefined();
   });
 });
 

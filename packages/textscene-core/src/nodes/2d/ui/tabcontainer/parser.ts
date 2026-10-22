@@ -4,6 +4,7 @@ import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
+import { TAB_CONTAINER_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { parseControl } from '../control/parser';
 import type { TabContainerProperties, TabContainerTabOverride } from './types';
 
@@ -27,7 +28,7 @@ export function parseTabContainer(
   result.deselectEnabled = boolSlotValue(properties.deselect_enabled);
 
   // Sparse, keyed by the raw index: `types.ts` says why no `tab_count` sizes this family.
-  const declared = indexedElements(properties, 'tab_', 'is_valid_int');
+  const declared = indexedElements(properties, TAB_CONTAINER_TABS.prefix, TAB_CONTAINER_TABS.indexParse);
   if (declared.size > 0) {
     const overrides: Record<number, TabContainerTabOverride> = {};
     for (const [index, leaves] of declared) {

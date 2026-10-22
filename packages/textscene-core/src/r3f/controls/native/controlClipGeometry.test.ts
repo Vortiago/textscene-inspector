@@ -10,7 +10,7 @@ import {
   withAdditionalClipPlanes,
   worldClipRect,
 } from './controlClipGeometry';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 
 describe('withAdditionalClipPlanes', () => {
   it('returns the SAME inherited array when nothing new is added (edge: no re-render churn)', () => {

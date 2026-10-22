@@ -4,7 +4,7 @@
  * position, so a renumbering mesh such as `ShapeGeometry` would mismatch them.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -20,6 +20,7 @@ import { polygonRings, type PolygonRings } from './polygonShapes';
 import { quantizeVertexColor } from './vertexColorQuantize';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import type { Vector2 } from '../../../godot/math/vector';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
@@ -51,7 +52,7 @@ export function Polygon2D({ node, children }: NodeComponentProps) {
     [rings, props, textureSize]
   );
   // R3F does not dispose a geometry passed through `attach`, so release it on rebuild.
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   return (
     <CanvasItem2D

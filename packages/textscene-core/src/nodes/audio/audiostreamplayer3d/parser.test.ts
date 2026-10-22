@@ -8,7 +8,8 @@
 import { describe, it, expect } from 'vitest';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseAudioStreamPlayer3D } from './parser';
-import { AttenuationModel, DopplerTracking } from './types';
+
+import { AttenuationModel, DopplerTracking } from '../../../godot/scene/audio';
 
 const HEADING: ParsedHeading = {
   type: 'node',
@@ -23,13 +24,13 @@ describe('parseAudioStreamPlayer3D defaults', () => {
     expect(props.playing).toBe(false);
     expect(props.autoplay).toBe(false);
     expect(props.stream_paused).toBe(false);
-    expect(props.attenuation_model).toBe(AttenuationModel.ATTENUATION_INVERSE_DISTANCE);
+    expect(props.attenuation_model).toBe(AttenuationModel.INVERSE_DISTANCE);
     expect(props.unit_size).toBe(10);
     expect(props.max_distance).toBe(0);
     expect(props.max_db).toBe(3);
     expect(props.attenuation_filter_cutoff_hz).toBe(5000);
     expect(props.attenuation_filter_db).toBe(-24);
-    expect(props.doppler_tracking).toBe(DopplerTracking.DOPPLER_TRACKING_DISABLED);
+    expect(props.doppler_tracking).toBe(DopplerTracking.DISABLED);
     expect(props.panning_strength).toBe(1);
     expect(props.area_mask).toBe(1);
     expect(props.emission_angle_enabled).toBe(false);
@@ -75,23 +76,23 @@ describe('parseAudioStreamPlayer3D properties', () => {
 
   it('parses attenuation_model enum (and rejects out-of-range)', () => {
     expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '2' }).attenuation_model).toBe(
-      AttenuationModel.ATTENUATION_LOGARITHMIC
+      AttenuationModel.LOGARITHMIC
     );
     expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '3' }).attenuation_model).toBe(
-      AttenuationModel.ATTENUATION_DISABLED
+      AttenuationModel.DISABLED
     );
     // Out of range → fallback to default.
     expect(parseAudioStreamPlayer3D(HEADING, { attenuation_model: '9' }).attenuation_model).toBe(
-      AttenuationModel.ATTENUATION_INVERSE_DISTANCE
+      AttenuationModel.INVERSE_DISTANCE
     );
   });
 
   it('parses doppler_tracking enum', () => {
     expect(parseAudioStreamPlayer3D(HEADING, { doppler_tracking: '1' }).doppler_tracking).toBe(
-      DopplerTracking.DOPPLER_TRACKING_IDLE_STEP
+      DopplerTracking.IDLE_STEP
     );
     expect(parseAudioStreamPlayer3D(HEADING, { doppler_tracking: '2' }).doppler_tracking).toBe(
-      DopplerTracking.DOPPLER_TRACKING_PHYSICS_STEP
+      DopplerTracking.PHYSICS_STEP
     );
   });
 

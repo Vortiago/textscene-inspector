@@ -4,7 +4,7 @@
  * assign, so `min > max` reaches nothing but still costs its pass.
  */
 
-import { ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { LIGHT_2D_RANGE_DEFAULTS } from './types.js';
 
 interface RangeWindow {

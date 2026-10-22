@@ -6,15 +6,18 @@
  */
 
 /** Godot Mesh.ArrayFormat flags. */
-const ARRAY_FORMAT_NORMAL = 1 << 1;
-const ARRAY_FORMAT_TANGENT = 1 << 2;
+export const ARRAY_FORMAT_VERTEX = 1 << 0;
+export const ARRAY_FORMAT_NORMAL = 1 << 1;
+export const ARRAY_FORMAT_TANGENT = 1 << 2;
 const ARRAY_FORMAT_COLOR = 1 << 3;
 const ARRAY_FORMAT_TEX_UV = 1 << 4;
 const ARRAY_FORMAT_TEX_UV2 = 1 << 5;
+/** Positions are 2×float32, not 3 (`rendering_server.h:339`). */
+export const ARRAY_FLAG_USE_2D_VERTICES = 1 << 25;
 /**
- * Attributes are quantised. `&` coerces to int32, so it reads only bits below 32,
- * never `ARRAY_FLAG_FORMAT_VERSION_2` (1 << 35). Nothing here reads that flag:
- * bit 29 alone selects the layout, so a fixture can omit the version flag.
+ * Attributes are quantised. `&` coerces to int32, so it reads only bits below 32, never
+ * `ARRAY_FLAG_FORMAT_VERSION_2` (1 << 35): `surfaceVersion.ts` reads the version and upgrades an
+ * older surface first.
  */
 const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
 
@@ -22,10 +25,11 @@ const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
 const COLOR_BYTES = 4;
 
 /**
- * Godot `Mesh.PrimitiveType.PRIMITIVE_TRIANGLES` (`servers/rendering_server.h`:
- * POINTS 0, LINES 1, LINE_STRIP 2, TRIANGLES 3, TRIANGLE_STRIP 4), the only one
- * this decoder reads. Any other read as triangles fabricates faces.
+ * Godot `Mesh.PrimitiveType` (`servers/rendering_server.h`: POINTS 0, LINES 1, LINE_STRIP 2,
+ * TRIANGLES 3, TRIANGLE_STRIP 4), the two this decoder reads. Any other read as triangles
+ * fabricates faces.
  */
+export const PRIMITIVE_POINTS = 0;
 export const PRIMITIVE_TRIANGLES = 3;
 
 /**

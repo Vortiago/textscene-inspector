@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { CSG_MERGE_TOLERANCE } from '../../../godot/scene/csg';
 import { applyCsgNormals, type CsgFaceSoup } from './smoothNormals';
+import { TAU } from '../../../godot/math/math.js';
 
 /** Build a soup from triangles given as flat vertex triples. */
 function soupOf(
@@ -45,7 +46,7 @@ const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 function coneTriangles(segments = 8): Array<[THREE.Vector3, THREE.Vector3, THREE.Vector3]> {
   const apex = v(0, 0.5, 0);
   const ring = Array.from({ length: segments }, (_, i) => {
-    const a = (i / segments) * Math.PI * 2;
+    const a = (i / segments) * TAU;
     return v(0.4 * Math.cos(a), -0.5, 0.4 * Math.sin(a));
   });
   return ring.map(

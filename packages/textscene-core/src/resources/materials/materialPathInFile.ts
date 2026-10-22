@@ -4,13 +4,13 @@
  * id, or a sub-resource no material builder reads.
  */
 
-import type { ParsedResource } from '../../parser/parsedResource.js';
+import type { TscnExternalResource, TscnInternalResource } from '../../parser/types.js';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../subResourcePath.js';
 import { BUILDABLE_MATERIAL_TYPES } from './buildableMaterialTypes.js';
 
 export function materialPathInFile(
   ref: string | undefined,
-  file: ParsedResource,
+  file: { extResources: readonly TscnExternalResource[]; subResources: readonly TscnInternalResource[] },
   filePath: string
 ): string | null {
   return resolveRefToResourcePath(

@@ -3,7 +3,7 @@
 import { enumNamesByValue } from '../classdb/enumNames.js';
 
 /** `PathFollow3D::RotationMode` (`scene/3d/path_3d.h:76-82`). */
-const RotationMode = {
+export const PathFollow3DRotationMode = {
   NONE: 0,
   Y: 1,
   XY: 2,
@@ -12,4 +12,4 @@ const RotationMode = {
 } as const;
 
 /** Each rotation mode by its integer, spelled as its constant without `ROTATION_` (`path_3d.cpp:436`). */
-export const PATH_FOLLOW_3D_ROTATION_MODE_NAMES = enumNamesByValue(RotationMode);
+export const PATH_FOLLOW_3D_ROTATION_MODE_NAMES = enumNamesByValue(PathFollow3DRotationMode);

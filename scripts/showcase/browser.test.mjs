@@ -1,7 +1,7 @@
 /**
- * How each capture that measures against Godot launches its browser. The launch needs Chromium,
- * so the seam under test is each capture's source: it opens its session with the shared launch.
- * A capture is any script under godot-ref or compare-docs that opens a preview session.
+ * How each harness launches its browser. The launch needs Chromium, so the seam under test is each
+ * harness's source: it calls a launch from `browser.mjs`. A capture that measures against Godot is
+ * any script under godot-ref or compare-docs that opens a preview session.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -35,5 +35,15 @@ describe('a capture that measures against Godot', () => {
 
   it.each(GODOT_COMPARISON_CAPTURES)('%s builds no launch of its own', (capture) => {
     expect(source(capture)).not.toMatch(/chromium\.launch\(/);
+  });
+});
+
+describe('a Chromium launch', () => {
+  const launchers = sourceFiles(SCRIPTS)
+    .filter((path) => /chromium\.launch\(/.test(readFileSync(path, 'utf8')))
+    .map((path) => relative(SCRIPTS, path));
+
+  it('lives only in browser.mjs, so each flag set has one launch', () => {
+    expect(launchers).toEqual(['showcase/browser.mjs']);
   });
 });

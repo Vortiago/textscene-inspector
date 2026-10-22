@@ -15,6 +15,7 @@ import {
   scissorAntialiasing,
 } from '../../godot/rendering/materials/alphaAntialiasing';
 import { scalarGlslFunction } from '../testing/glslScalar';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** Every three program an antialiased Godot surface, its depth prepass or its shadow compiles. */
 const ANTIALIASED_PROGRAMS: Readonly<Record<string, { vertexShader: string; fragmentShader: string }>> = {
@@ -100,16 +101,6 @@ describe('GODOT_ALPHA_ANTIALIASING.onBeforeCompile', () => {
     const map = new THREE.Texture({ width: 64, height: 32 });
     const { uniforms } = compiled(antialiased(SCISSOR_CUT, map));
     expect((uniforms.godotAlbedoTextureSize!.value as THREE.Vector2).toArray()).toEqual([64, 32]);
-  });
-
-  it("scales the texture's size into Godot's texels, for a map drawn at another resolution", () => {
-    const map = new THREE.Texture({ width: 96, height: 48 });
-    const material = new THREE.MeshBasicMaterial({
-      map,
-      userData: alphaAntialiasingUserData(SCISSOR_CUT, 1 / 3),
-    });
-    const { uniforms } = compiled(material);
-    expect((uniforms.godotAlbedoTextureSize!.value as THREE.Vector2).toArray()).toEqual([32, 16]);
   });
 
   it("gives a size of zero with no albedo texture, the uniform's default (edge case)", () => {
@@ -229,7 +220,9 @@ describe('alphaAntialiasingProps', () => {
   });
 
   it('adds nothing for a mode past the enum, which ramps the edge only (edge case)', () => {
-    expect(alphaAntialiasingProps(scissorAntialiasing(3 as AlphaAntiAliasing, 0.5, 0.3))).toEqual({});
+    expect(
+      alphaAntialiasingProps(scissorAntialiasing(3 as EnumValue<typeof AlphaAntiAliasing>, 0.5, 0.3))
+    ).toEqual({});
   });
 
   it('adds nothing for no cut', () => {

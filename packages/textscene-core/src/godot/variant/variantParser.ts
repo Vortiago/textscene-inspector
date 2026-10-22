@@ -144,6 +144,11 @@ export function dictNumberField(key: string, global = false): RegExp {
   return new RegExp(`"${key}"${WS}:${WS}(${TSCN_FLOAT_PATTERN_SOURCE})${WS}(?=[,}])`, global ? 'g' : '');
 }
 
+/** A serialised Dictionary's `"key":`, to test that the key is present whatever its value. */
+export function dictKey(key: string): RegExp {
+  return new RegExp(`"${key}"${WS}:`);
+}
+
 /**
  * A field of a serialised Dictionary whose value is one string literal, `[1]` the literal with its
  * quotes and any `&` (StringName) or `@` sigil, for the caller's unquote to strip. The value runs

@@ -5,10 +5,11 @@
  * target's own texture, as three allocates it, and the depth storage DEPTH_COMPONENT24.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { msaaSampleCount, supportedSampleCount } from '../godot/rendering/msaa';
+import { useDisposeOnRelease } from './useDisposeOnRelease';
 
 /** What decides a target's colour storage, which a texture carries. */
 type TargetTexture = Pick<THREE.Texture, 'type' | 'colorSpace' | 'internalFormat'>;
@@ -30,7 +31,7 @@ export function useMultisampledTarget<Target extends THREE.WebGLRenderTarget>(
     built.samples = deviceSampleCount(gl, mode, colourStorage(built.texture));
     return built;
   }, [gl, mode, create]);
-  useEffect(() => () => target.dispose(), [target]);
+  useDisposeOnRelease(target);
   return target;
 }
 

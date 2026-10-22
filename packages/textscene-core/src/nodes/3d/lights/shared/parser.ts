@@ -1,7 +1,7 @@
 /** Parsing shared by the light nodes. */
 
 import type { BaseLightProperties, BaseLightWithNormalBias, PositionalLightProperties } from './types';
-import { floatOr, parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
+import { floatOr, intOr, parseOptionalBool, parseOptionalFloat } from '../../../../parser/valueParsers';
 import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 import { parseVisualLayers } from '../../visualinstance3d/parser';
 import { LIGHT_3D_DEFAULTS } from '../../../../godot/scene/light';
@@ -12,6 +12,7 @@ function parseBaseLightProperties(properties: Record<string, string>): BaseLight
     layers: parseVisualLayers(properties),
     light_color: properties.light_color || LIGHT_3D_DEFAULTS.color,
     light_energy: floatOr(properties.light_energy, LIGHT_3D_DEFAULTS.energy, 'light_energy'),
+    light_bake_mode: intOr(properties.light_bake_mode, LIGHT_3D_DEFAULTS.bakeMode, 'light_bake_mode'),
     light_negative: parseOptionalBool(properties.light_negative),
     light_specular: parseOptionalFloat(properties.light_specular),
     light_volumetric_fog_energy: parseOptionalFloat(properties.light_volumetric_fog_energy),

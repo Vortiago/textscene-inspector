@@ -63,6 +63,9 @@ export const TILE_AND_TARGET_SCENES = [
   // target's SRGB8 storage decodes before the filter, whatever tag the consumer stamps. Within 1%
   // linear per sample of Godot 4.6.3.
   { name: 'sub-viewport-texture', file: 'unit-sub-viewport-texture.tscn' },
+  // The sampler state of the material on a ViewportTexture: the default repeat wraps the blend
+  // at the edge, `uv1_scale` tiles the target and `texture_filter = 0` keeps its texels as blocks.
+  { name: 'sub-viewport-texture-sampler', file: 'unit-sub-viewport-texture-sampler.tscn' },
   // Control content with a translucent fill on the albedo, through the Control target's decoding
   // view. Godot 4.6.3: the Panel at (480,320) rgb(84,84,84), the backdrop at (370,240) rgb(162).
   { name: 'sub-viewport-control-texture', file: 'unit-sub-viewport-control-texture.tscn' },

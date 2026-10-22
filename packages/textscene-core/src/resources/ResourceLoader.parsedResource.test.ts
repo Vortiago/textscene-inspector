@@ -68,7 +68,7 @@ describe('ResourceLoader: processors read the cached ParsedResource', () => {
     const loaded = loader.eventBus.once<ArrayMeshResource>('arraymesh', 'loaded', address, 2000);
     loader.arrayMeshes.request(address);
 
-    expect((await loaded).geometry.getAttribute('position').count).toBe(4);
+    expect((await loaded).parts[0]!.geometry.getAttribute('position').count).toBe(4);
   });
 
   it("fails with the cached parse's own reason when that parse failed earlier", async () => {

@@ -9,11 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
-import {
-  CanvasItemLightMode,
-  type CanvasItemMaterialProperties,
-  CanvasItemBlendMode,
-} from '../../resources/materials/canvasitemmaterial/types';
+import { type CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import { useCanvasItemLighting } from './useCanvasItemLighting';
 import {
   CanvasLighting2DContext,
@@ -23,6 +19,13 @@ import {
 } from './lightPassContext';
 import { placementId, type ItemPlacement } from './itemLightList';
 import type { CappedItem } from './itemLightCap';
+import {
+  CanvasItemMaterialLightMode,
+  CanvasItemMaterialBlendMode,
+} from '../../godot/scene/canvasItemMaterial';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
+
+type LightMode = EnumValue<typeof CanvasItemMaterialLightMode>;
 
 const PLACEMENT: ItemPlacement = { lightMask: 1, z: 0, layer: 0, positionalLights: null };
 
@@ -50,9 +53,9 @@ function list(): CanvasLightList {
   };
 }
 
-function material(lightMode: CanvasItemLightMode): CanvasItemMaterialProperties {
+function material(lightMode: EnumValue<typeof CanvasItemMaterialLightMode>): CanvasItemMaterialProperties {
   return {
-    blendMode: CanvasItemBlendMode.MIX,
+    blendMode: CanvasItemMaterialBlendMode.MIX,
     lightMode,
     particlesAnimation: false,
     particlesAnimHFrames: 1,
@@ -75,50 +78,54 @@ function boundUniforms({ props }: ReturnType<typeof useCanvasItemLighting>) {
 describe('useCanvasItemLighting', () => {
   it("returns the SAME props object when an item's light_mode changes", () => {
     const { result, rerender } = renderHook(
-      ({ mode }: { mode: CanvasItemLightMode }) => useCanvasItemLighting(material(mode)),
-      { initialProps: { mode: CanvasItemLightMode.NORMAL } }
+      ({ mode }: { mode: LightMode }) => useCanvasItemLighting(material(mode)),
+      { initialProps: { mode: CanvasItemMaterialLightMode.NORMAL as LightMode } }
     );
 
     const first = result.current.props;
     expect(first.injection.onBeforeCompile).toBeTypeOf('function');
 
-    rerender({ mode: CanvasItemLightMode.UNSHADED });
+    rerender({ mode: CanvasItemMaterialLightMode.UNSHADED });
     expect(result.current.props).toBe(first);
 
-    rerender({ mode: CanvasItemLightMode.LIGHT_ONLY });
+    rerender({ mode: CanvasItemMaterialLightMode.LIGHT_ONLY });
     expect(result.current.props).toBe(first);
 
-    rerender({ mode: CanvasItemLightMode.NORMAL });
+    rerender({ mode: CanvasItemMaterialLightMode.NORMAL });
     expect(result.current.props).toBe(first);
   });
 
   it('publishes the light mode into the uniforms it already bound', () => {
     const { result, rerender } = renderHook(
-      ({ mode }: { mode: CanvasItemLightMode | null }) =>
+      ({ mode }: { mode: EnumValue<typeof CanvasItemMaterialLightMode> | null }) =>
         useCanvasItemLighting(mode === null ? null : material(mode)),
-      { initialProps: { mode: CanvasItemLightMode.NORMAL as CanvasItemLightMode | null } }
+      {
+        initialProps: {
+          mode: CanvasItemMaterialLightMode.NORMAL as EnumValue<typeof CanvasItemMaterialLightMode> | null,
+        },
+      }
     );
 
     // Bound once, at the item's only compile; the values move underneath.
     const mode = boundUniforms(result.current).uLightMode!;
-    expect(mode.value).toBe(CanvasItemLightMode.NORMAL);
+    expect(mode.value).toBe(CanvasItemMaterialLightMode.NORMAL);
 
-    rerender({ mode: CanvasItemLightMode.UNSHADED });
-    expect(mode.value).toBe(CanvasItemLightMode.UNSHADED);
+    rerender({ mode: CanvasItemMaterialLightMode.UNSHADED });
+    expect(mode.value).toBe(CanvasItemMaterialLightMode.UNSHADED);
 
-    rerender({ mode: CanvasItemLightMode.LIGHT_ONLY });
-    expect(mode.value).toBe(CanvasItemLightMode.LIGHT_ONLY);
+    rerender({ mode: CanvasItemMaterialLightMode.LIGHT_ONLY });
+    expect(mode.value).toBe(CanvasItemMaterialLightMode.LIGHT_ONLY);
 
     // No material is Godot's default light mode, not a fourth state.
     rerender({ mode: null });
-    expect(mode.value).toBe(CanvasItemLightMode.NORMAL);
+    expect(mode.value).toBe(CanvasItemMaterialLightMode.NORMAL);
   });
 });
 
 describe('useCanvasItemLighting reads its light list', () => {
   it('declares its placement and light mode to the pass', () => {
     const { wrapper, registerItem } = lighting(list());
-    renderHook(() => useCanvasItemLighting(material(CanvasItemLightMode.LIGHT_ONLY), 1), { wrapper });
+    renderHook(() => useCanvasItemLighting(material(CanvasItemMaterialLightMode.LIGHT_ONLY), 1), { wrapper });
     expect(registerItem).toHaveBeenCalledWith(PLACEMENT, true);
   });
 
@@ -135,9 +142,12 @@ describe('useCanvasItemLighting reads its light list', () => {
   it('binds the unmodulated buffer for a Light Only item', () => {
     const published = list();
     const { wrapper } = lighting(published);
-    const { result } = renderHook(() => useCanvasItemLighting(material(CanvasItemLightMode.LIGHT_ONLY), 1), {
-      wrapper,
-    });
+    const { result } = renderHook(
+      () => useCanvasItemLighting(material(CanvasItemMaterialLightMode.LIGHT_ONLY), 1),
+      {
+        wrapper,
+      }
+    );
     expect(boundUniforms(result.current).uLightList!.value).toBe(published.lightOnlyBuffer);
   });
 

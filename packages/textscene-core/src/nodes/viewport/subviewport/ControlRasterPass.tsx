@@ -20,7 +20,7 @@ import { useBuildSolveTree } from '../../../r3f/controls/native/buildSolveTree.j
 import { ControlCanvasWalker } from '../../../r3f/controls/native/ControlCanvasWalker.js';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme.js';
 import { measureText } from '../../../r3f/controls/native/text/measurer.js';
-import type { Rect2 } from '../../../r3f/controls/native/rect.js';
+import type { Rect2 } from '../../../godot/math/rect2.js';
 import {
   applyOrthoFrame,
   createCanvasTarget,

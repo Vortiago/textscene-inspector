@@ -10,7 +10,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
@@ -20,7 +20,6 @@ import {
   buildCanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
-  type CanvasTextBlend,
 } from './canvasTextPainter';
 import { isCanvasFontMetrics } from './runtimeFontMetrics';
 import type { TextLayoutResult } from './textLayout';
@@ -29,12 +28,19 @@ import { buildGlyphQuadArrays } from './glyphQuads';
 import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { CanvasItemGroup } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
+import {
+  applyTextureFilterState,
+  godotTextureFilterState,
+  type TextureFilterState,
+} from '../../../../resources/textures/godotTextureFilter';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
+import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
+import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 
 /** One rectangle of a hex-code box in local Godot px, +Y down, the space of `buildGlyphQuadArrays`' `topPx` before the Y negation. */
 export interface HexCodeBoxAbsoluteRect {
@@ -101,18 +107,24 @@ export interface TextRunProps {
    */
   strokeWidthPx?: number;
   /**
-   * The raster texture's filter: Label3D's `texture_filter` (`label_3d.h:140`).
-   * The default `'linear'` is the nearest/linear bit of Godot's default. Canvas
-   * runs only: the MSDF atlas is always sampled linearly.
+   * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
+   * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
+   * Canvas runs only: the MSDF atlas is always sampled linearly.
    */
-  textureFilter?: 'nearest' | 'linear';
+  textureFilter?: TextureFilterState;
+  /**
+   * Builds a mip chain for the raster, as Godot does for a font with `generate_mipmaps`
+   * (`text_server_adv.cpp:3121`), and samples it at the viewport's mipmap bias. Canvas runs
+   * drawn in 3D only. Omitted, the raster has no chain, as a font without that flag has none.
+   */
+  mipmapped?: boolean;
   /**
    * The `BaseMaterial3D::Transparency` this surface paints in, from a 3D caller's
    * `alpha_cut` (`label_3d.cpp:386-393`), in each pass its GeometryInstance3D's fade can draw it
    * in. Canvas runs inside a GeometryInstance3D drawer only. Omitted, it paints
    * `TRANSPARENCY_ALPHA`, a Control's only mode.
    */
-  blends?: FadeVariants<CanvasTextBlend>;
+  blends?: FadeVariants<SurfaceBlend>;
   /**
    * The draw hooks of the GeometryInstance3D the run draws for, with `castShadow` for this
    * surface (Label3D only). Omitted, the run casts nothing and draws in every pass.
@@ -135,7 +147,7 @@ export interface TextRunProps {
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
-  paint: (blend: CanvasTextBlend | undefined) => THREE.Material;
+  paint: (blend: SurfaceBlend | undefined) => THREE.Material;
   ownedTexture?: THREE.Texture;
 }
 
@@ -159,7 +171,8 @@ function buildTextRun(
   skew: number,
   distanceBias: number,
   strokeWidthPx: number,
-  textureFilter: 'nearest' | 'linear',
+  textureFilter: TextureFilterState,
+  mipmapped: boolean,
   outlineColor: Rgba | undefined,
   outlineWidthPx: number
 ): BuiltTextRun {
@@ -178,20 +191,24 @@ function buildTextRun(
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
     // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
     texture.colorSpace = THREE.SRGBColorSpace;
-    // `generateMipmaps` stays off for every filter: Godot's own default asks
-    // for mipmaps, but a per-label raster rebuilt on every text/size change
-    // is the wrong thing to build a chain for, so the minified case samples
-    // the base level. Only the nearest/linear bit is honoured.
-    texture.generateMipmaps = false;
-    const filter = textureFilter === 'nearest' ? THREE.NearestFilter : THREE.LinearFilter;
-    texture.minFilter = filter;
-    texture.magFilter = filter;
+    // No chain unless the caller asks: Godot's default font generates none
+    // (`text_server.cpp:2387`), and a raster rebuilt on every text or size change is costly to mipmap.
+    texture.generateMipmaps = mipmapped;
+    applyTextureFilterState(texture, textureFilter);
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
 
     const opacity = tint.a;
-    const paint = (blend: CanvasTextBlend | undefined) =>
-      createCanvasTextMaterial({ map: texture, opacity, clippingPlanes, depthTest, side, ...blend });
+    const paint = (blend: SurfaceBlend | undefined) =>
+      createCanvasTextMaterial({
+        map: texture,
+        opacity,
+        clippingPlanes,
+        depthTest,
+        side,
+        mipmapped,
+        ...blend,
+      });
     return { geometry: geo, paint, ownedTexture: texture };
   }
 
@@ -233,7 +250,8 @@ export function TextRun({
   depthTest,
   side,
   strokeWidthPx = 0,
-  textureFilter = 'linear',
+  textureFilter = godotTextureFilterState(undefined),
+  mipmapped = false,
   blends,
   shadow,
   layers,
@@ -255,6 +273,7 @@ export function TextRun({
         distanceBias,
         strokeWidthPx,
         textureFilter,
+        mipmapped,
         outlineColor,
         outlineWidthPx
       ),
@@ -275,6 +294,7 @@ export function TextRun({
       side,
       strokeWidthPx,
       textureFilter,
+      mipmapped,
       outlineColor?.r,
       outlineColor?.g,
       outlineColor?.b,
@@ -298,9 +318,9 @@ export function TextRun({
 
   // R3F does not dispose a geometry or material passed as a prop, so both leak
   // on every rebuild without this, and a Label re-shapes on every rect or font change.
-  useEffect(() => () => run.geometry.dispose(), [run]);
+  useDisposeOnRelease(run.geometry);
   // The canvas path's raster texture is fresh per rebuild, unlike the shared atlas.
-  useEffect(() => () => run.ownedTexture?.dispose(), [run]);
+  useDisposeOnRelease(run.ownedTexture);
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
   // this run's `tint`, converted to linear once as for every `ControlQuad`.
@@ -361,12 +381,12 @@ function AtlasPending(): null {
 }
 
 /** The run's material for `blend`. */
-function usePaintedMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material {
+function usePaintedMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material {
   return useOwnedMaterial(run, blend, () => run.paint(blend));
 }
 
 /** The run's alpha-pass material, or null for a run that never fades. */
-function useAlphaPassMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefined): THREE.Material | null {
+function useAlphaPassMaterial(run: BuiltTextRun, blend: SurfaceBlend | undefined): THREE.Material | null {
   return useOwnedMaterial(run, blend, () => (blend ? run.paint(blend) : null));
 }
 
@@ -376,7 +396,7 @@ function useAlphaPassMaterial(run: BuiltTextRun, blend: CanvasTextBlend | undefi
  */
 function useOwnedMaterial<M extends THREE.Material | null>(
   run: BuiltTextRun,
-  blend: CanvasTextBlend | undefined,
+  blend: SurfaceBlend | undefined,
   paint: () => M
 ): M {
   const material = useMemo(
@@ -398,6 +418,6 @@ function useOwnedMaterial<M extends THREE.Material | null>(
       blend?.injection,
     ]
   );
-  useEffect(() => () => material?.dispose(), [material]);
+  useDisposeOnRelease(material);
   return material;
 }

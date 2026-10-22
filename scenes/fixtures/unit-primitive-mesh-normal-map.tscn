@@ -1,0 +1,66 @@
+[gd_scene load_steps=7 format=3 uid="uid://unitprimitivemeshnormalmap"]
+
+; The one variable: the tangent frame each PrimitiveMesh carries under a normal map. Godot writes
+; one constant tangent per face of the PlaneMesh and the BoxMesh, and one round the axis of the
+; CylinderMesh and the TorusMesh. A directional, an omni and a spot light each shade the bumps
+; through it. The only other normal-mapped PlaneMesh is overexposed, so its bumps barely show, and
+; no other scene normal-maps a BoxMesh, a CylinderMesh or a TorusMesh.
+
+[ext_resource type="Texture2D" path="res://textures/normal-bumps.png" id="1_n"]
+
+[sub_resource type="StandardMaterial3D" id="M"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+normal_enabled = true
+normal_texture = ExtResource("1_n")
+normal_scale = 2.0
+roughness = 0.4
+
+[sub_resource type="PlaneMesh" id="P"]
+material = SubResource("M")
+size = Vector2(1.6, 1.6)
+
+[sub_resource type="BoxMesh" id="B"]
+material = SubResource("M")
+
+[sub_resource type="CylinderMesh" id="C"]
+material = SubResource("M")
+top_radius = 0.35
+bottom_radius = 0.35
+height = 0.9
+
+[sub_resource type="TorusMesh" id="T"]
+material = SubResource("M")
+inner_radius = 0.2
+outer_radius = 0.5
+
+[node name="Root" type="Node3D"]
+
+[node name="Plane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, -0.5, 0)
+mesh = SubResource("P")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 1, 0, 0)
+mesh = SubResource("B")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 4, 0)
+
+[node name="Omni" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.5, 1.2, 1.2)
+light_color = Color(1, 0.6, 0.3, 1)
+omni_range = 4.0
+
+[node name="Spot" type="SpotLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 1.5, 2, 1.2)
+light_color = Color(0.3, 0.6, 1, 1)
+spot_range = 6.0
+spot_angle = 40.0
+
+[node name="Cylinder" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.2)
+mesh = SubResource("C")
+
+[node name="Torus" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, -0.866025, 0, 0.866025, 0.5, 0, 0.9, 0.6)
+mesh = SubResource("T")

@@ -1,6 +1,6 @@
 /**
- * A `[node]` whose `parent=` path names nothing still gets a diagnostic: `buildSceneTree` cannot place it, so every
- * semantic rule would skip it and its descendants silently. Godot warns "Parent path '…' for node '…' has vanished when
+ * A `[node]` whose `parent=` path names nothing still gets a diagnostic. Where Godot does not re-root it, `seatScene`
+ * cannot place it, so every semantic rule would skip it and its descendants silently. Godot warns "Parent path '…' for node '…' has vanished when
  * instantiating" and re-parents it to the scene root as `<parent path>#<name>` (`packed_scene.cpp:208-215`, `:561-563`),
  * so the tier is a warning.
  */
@@ -52,15 +52,22 @@ describe('a parent path this file never defines', () => {
     expect(orphans[0]?.location?.line).toBe(5);
   });
 
-  it('says the semantic rules did not run on it', () => {
+  it('runs the semantic rules on a node the builder re-rooted', () => {
+    const shapeless = lint(dangling).filter((d) => d.ruleName === NEEDS_SHAPE);
+    expect(shapeless.map((d) => d.nodeName)).toEqual(['NoSuchNode#Body']);
+    expect(orphansIn(dangling)[0]?.message).not.toContain('No semantic rule ran');
+  });
+
+  it('says the semantic rules did not run on a node Godot does not re-root', () => {
     // The claim has to be this narrow: property validation happens during the
     // scan, so Phase 1 still covered the node's own values.
-    expect(lint(dangling).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(false);
-    const placed = scene(
+    const refused = scene(
       node('Node2D', {}, { name: 'Root' }),
-      node('StaticBody2D', {}, { name: 'Body', parent: '.' })
+      node('Node2D', {}, { name: 'Stray' }),
+      node('StaticBody2D', {}, { name: 'Body', parent: 'NoSuchNode' })
     );
-    expect(lint(placed).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(true);
+    expect(lint(refused).some((d) => d.ruleName === NEEDS_SHAPE)).toBe(false);
+    expect(orphansIn(refused)[0]?.message).toContain('No semantic rule ran on it');
   });
 
   it('reports every node in the stranded subtree, as Godot warns per node', () => {
@@ -170,6 +177,26 @@ describe('a parent path this file never defines', () => {
     );
   });
 
+  it('leaves a %Name parent only an inherited base can claim alone', () => {
+    // The instanced root's own table holds the base scene's claims (node.cpp:1930-1933), which this file cannot read.
+    expectNoDiagnostic(
+      scene(packedScene, instanced('Root'), node('Sprite2D', {}, { name: 'Hat', parent: '%BaseClaim' })),
+      { ruleName: ORPHAN }
+    );
+  });
+
+  it('leaves a %Name parent read inside an instance alone', () => {
+    expectNoDiagnostic(
+      scene(
+        packedScene,
+        node('Node2D', {}, { name: 'Root' }),
+        instanced('Player', { parent: '.' }),
+        node('Sprite2D', {}, { name: 'Hat', parent: 'Player/%Head' })
+      ),
+      { ruleName: ORPHAN }
+    );
+  });
+
   it('warns on a %Name whose claim is declared later, as Godot does', () => {
     // Same two headings, swapped: the claim table holds only what the earlier
     // headings seated, so 4.7.2 warns the path vanished and renames the node.
@@ -236,6 +263,15 @@ describe('a parent path this file never defines', () => {
       const message = messageOf(
         '[node name="Mid" type="Node2D" parent="."]',
         '[node name="Leaf" type="Node2D" parent="Mid" unique_id=20]',
+        headingWithTrail('20')
+      );
+      expect(message).toContain('lands under "Mid/Leaf"');
+    });
+
+    it('names the path a heading is seated at, not the spelling of its parent=', () => {
+      const message = messageOf(
+        '[node name="Mid" type="Node2D" parent="."]\nunique_name_in_owner = true',
+        '[node name="Leaf" type="Node2D" parent="%Mid" unique_id=20]',
         headingWithTrail('20')
       );
       expect(message).toContain('lands under "Mid/Leaf"');
@@ -348,7 +384,7 @@ describe('a parent path this file never defines', () => {
   });
 
   it('reports an empty parent= the tree build seated as a root, not only a stranded one', () => {
-    // `parent=""` leaves `node.parent` unset, so `buildSceneTree` picks this
+    // `parent=""` leaves `node.parent` unset, so `seatScene` picks this
     // heading as its root and nothing strands it, while the loader faults on
     // it all the same. Verified against Godot 4.7.2: `load()` crashes.
     const source = scene(
@@ -435,7 +471,7 @@ describe('a root heading that declares a parent', () => {
   });
 
   it('names the FIRST heading, not whichever one the tree build rooted at', () => {
-    // `buildSceneTree` prefers a parentless heading wherever it sits, so here it
+    // `seatScene` prefers a parentless heading wherever it sits, so here it
     // roots at `Root` and seats `A` beneath it, a tree with nothing wrong in
     // it. Godot's root is `i == 0` regardless, so `A` is still the refusal.
     const errors = rootErrors(

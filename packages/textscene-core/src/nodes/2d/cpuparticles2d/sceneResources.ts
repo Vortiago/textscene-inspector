@@ -14,7 +14,7 @@ import { CPU_PARTICLES_2D_PARAM_COUNT, type ParticleParam } from './types';
 /**
  * One decoded `Curve` per parameter slot, `null` where the slot names none.
  * Always `CPU_PARTICLES_2D_PARAM_COUNT` long, so the simulation can index it
- * by `CPUParticles2DParam` without a bounds check.
+ * by `CPUParticlesParameter` without a bounds check.
  */
 export function resolveParticleCurves(
   params: readonly ParticleParam[],

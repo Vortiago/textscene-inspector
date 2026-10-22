@@ -1,13 +1,13 @@
 /**
  * The TileSet slice's decode (ADR-0031): a TileSet's properties to the
- * `TileSetModel`. `tileSetFromScene` and `tileSetFromTres` differ only in which
+ * `TileSetModel`. `tileSetFromScene` and `tileSetFromFile` differ only in which
  * tables resolve a reference, and the decode never forks. Lenient: silent on
  * absent properties, warn-then-skip on malformed ones, never throws.
  */
 
 import { warn } from '../../logger';
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
-import { slotInt } from '../../godot/variant/int.js';
+import { slotInt } from '../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import { stringToInt } from '../../godot/string/string.js';
 import type { ParsedResource } from '../../parser/parsedResource';
@@ -32,6 +32,7 @@ import type {
 } from './types';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Vector2 } from '../../godot/math/vector.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** Context-independent view of a TileSet resource and its surroundings. */
 interface TileSetSourceData {
@@ -86,18 +87,19 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     warn(`[TileSet] unknown tile_shape ${shape} — cells will place on a square grid`);
   }
 
+  // `set_tile_layout` and `set_tile_offset_axis` store any int (`tile_set.cpp:368-371`, `:376-379`).
   return {
     shape,
     layout: intEnumOr(
       data.properties.tile_layout,
       TileLayout.TILE_LAYOUT_STACKED,
       'tile_layout'
-    ) as TileLayout,
+    ) as EnumValue<typeof TileLayout>,
     offsetAxis: intEnumOr(
       data.properties.tile_offset_axis,
       TileOffsetAxis.TILE_OFFSET_AXIS_HORIZONTAL,
       'tile_offset_axis'
-    ) as TileOffsetAxis,
+    ) as EnumValue<typeof TileOffsetAxis>,
     tileSize: tileSetVec2i(data.properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
   };
@@ -113,8 +115,8 @@ function intEnumOr(value: string | undefined, fallback: number, label: string): 
   return n;
 }
 
-/** Adapter: a TileSet from an external .tres file, or null for another type. */
-export function tileSetFromTres(parsed: ParsedResource): TileSetModel | null {
+/** Adapter: a TileSet from its own resource file, or null for another type. */
+export function tileSetFromFile(parsed: ParsedResource): TileSetModel | null {
   if (parsed.resourceType !== 'TileSet') return null;
   return resolveTileSetModel({
     properties: parsed.properties,

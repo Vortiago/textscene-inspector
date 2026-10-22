@@ -4,7 +4,8 @@
 
 import type { PropertyValidator } from '../../ValidatorRegistry.js';
 import { propertyError } from '../propertyError.js';
-import { parseGodotFloat, statedFromFloat, TSCN_FLOAT_RE } from '../commonValidators.js';
+import { parseGodotFloat, TSCN_FLOAT_RE } from '../../../godot/variant/number.js';
+import { statedFromFloat } from '../../../godot/variant/intReader.js';
 import {
   packedArrayBody,
   packedArrayForms,
@@ -12,7 +13,7 @@ import {
   packedElementType,
   STRING_ARRAY_FORMS,
 } from '../../../godot/variant/variantParser.js';
-import { readerLimitedInt, type IntWidth } from '../../../godot/variant/int.js';
+import { readerLimitedInt, type IntWidth } from '../../../godot/variant/intWidth.js';
 import { splitTopLevel, stringLiteralBodies } from '../../../godot/string/string.js';
 import { compositeSpellings } from '../../../godot/variant/variantConversion.js';
 import type { ParseError } from '../../types.js';

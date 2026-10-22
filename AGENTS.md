@@ -4,8 +4,10 @@ TextScene Inspector parses, lints and renders Godot `.tscn` files with react-thr
 pnpm monorepo holds `packages/textscene-core` (parser, linter, r3f components),
 `packages/textscene-dev-kit` (shared test helpers, never published), `apps/textscene-web` (web
 previewer), `apps/textscene-vscode` (VS Code extension), `apps/textscene-lsp` (`tscn-lsp`
-language server) and `apps/textscene-linter` (CLI linter). The CLI linter and the language server
-are free of React and THREE.
+language server), `apps/textscene-linter` (CLI linter), `apps/textscene-tscn` (`@textscene/tscn`,
+the parser as an npm package) and `apps/textscene-renderer` (`@textscene/renderer`, the renderer as
+an npm package). The CLI linter, the language server and the parser package are free of React and
+THREE.
 
 ## Docs
 
@@ -170,8 +172,10 @@ an arm with `groundedArm(ruleName, grounding)`. Only an `engine` arm writes its 
   for the engine area it ports (ARCHITECTURE.md lists them). A group has no `index.ts`. Import a
   fact from its file. `godot/index.ts` serves only the `./godot` package export, so it re-exports
   only what a package outside core imports.
-- A Godot enum lives in `godot/` once. When its member names are the labels a validator prints,
-  its label table is `enumNamesByValue(<Enum>)`.
+- A Godot enum lives in `godot/` once, as an `as const` object, with its Godot cite. Write its
+  type as `EnumValue<typeof Name>`. Never copy its values into a slice, and never re-export a
+  `godot/` name: `engineFactRoutes.test.ts` fails both. When its member names are the labels a
+  validator prints, its label table is `enumNamesByValue(<Enum>)`, named `<CLASS>_<ENUM>_NAMES`.
 - Web tests run under happy-dom, so never assert rendered geometry. Read a `.module.css`
   source through `import.meta.dirname`, never `process.cwd()`.
 - `useResource.ts` clones a cached Object3D per consumer. Assert identity only for textures

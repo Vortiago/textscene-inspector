@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
+  ANIMATION_CALLBACK_MODE_DISCRETE_HINT_NAMES,
   ANIMATION_CALLBACK_MODE_DISCRETE_NAMES,
+  ANIMATION_CALLBACK_MODE_METHOD_HINT_NAMES,
   ANIMATION_CALLBACK_MODE_METHOD_NAMES,
+  ANIMATION_CALLBACK_MODE_PROCESS_HINT_NAMES,
   ANIMATION_CALLBACK_MODE_PROCESS_NAMES,
 } from './animation.js';
 
@@ -19,6 +22,16 @@ describe('AnimationMixer callback mode names', () => {
       0: 'DOMINANT',
       1: 'RECESSIVE',
       2: 'FORCE_CONTINUOUS',
+    });
+  });
+
+  it('names each mode as the inspector hint prints it (animation_mixer.cpp:2471-2473)', () => {
+    expect(ANIMATION_CALLBACK_MODE_PROCESS_HINT_NAMES).toEqual({ 0: 'Physics', 1: 'Idle', 2: 'Manual' });
+    expect(ANIMATION_CALLBACK_MODE_METHOD_HINT_NAMES).toEqual({ 0: 'Deferred', 1: 'Immediate' });
+    expect(ANIMATION_CALLBACK_MODE_DISCRETE_HINT_NAMES).toEqual({
+      0: 'Dominant',
+      1: 'Recessive',
+      2: 'Force Continuous',
     });
   });
 });

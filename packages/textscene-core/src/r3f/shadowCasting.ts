@@ -15,6 +15,7 @@ import {
   type DrawnInstance,
   type SurfaceDrawHooks,
 } from './surfaceDrawHooks';
+import type { EnumValue } from '../godot/classdb/enumNames.js';
 
 /** What every GeometryInstance3D consumer mounts: `castShadow` and the four draw hooks. */
 export interface ShadowCastingEffects extends SurfaceDrawHooks {
@@ -47,7 +48,7 @@ interface CastSetting {
   rule: CastRule;
 }
 
-const CAST_SETTINGS: Readonly<Record<ShadowCastingSetting, CastSetting>> = {
+const CAST_SETTINGS: Readonly<Record<EnumValue<typeof ShadowCastingSetting>, CastSetting>> = {
   [ShadowCastingSetting.OFF]: {
     castShadow: false,
     rule: { colourDraw: poseColourDraw, shadowSide: materialCull },
@@ -68,7 +69,9 @@ const CAST_SETTINGS: Readonly<Record<ShadowCastingSetting, CastSetting>> = {
 
 /** Absent or unrecognised `cast_shadow` is Godot's default, ON. */
 function castSettingOf(value: number | undefined): CastSetting {
-  return CAST_SETTINGS[value as ShadowCastingSetting] ?? CAST_SETTINGS[ShadowCastingSetting.ON];
+  return (
+    CAST_SETTINGS[value as EnumValue<typeof ShadowCastingSetting>] ?? CAST_SETTINGS[ShadowCastingSetting.ON]
+  );
 }
 
 function castEffects({ castShadow, rule }: CastSetting, instance: DrawnInstance): ShadowCastingEffects {
@@ -91,6 +94,23 @@ export function rangedShadowCastingEffects(
   instance: DrawnInstance
 ): ShadowCastingEffects {
   return castEffects(castSettingOf(value), instance);
+}
+
+/**
+ * What every object that draws part of a mesh sets: `cast_shadow` and the per-surface draw hooks.
+ * three fires them per draw group, the shadow pair after `getDepthMaterial` has set the side
+ * (`WebGLShadowMap.js:488,546,560`): the only per-surface reach into a draw of an object whose
+ * materials and depth material three shares.
+ */
+export function drawHookProps(shadow: ShadowCastingEffects) {
+  return {
+    castShadow: shadow.castShadow,
+    receiveShadow: true,
+    onBeforeRender: shadow.onBeforeRender,
+    onAfterRender: shadow.onAfterRender,
+    onBeforeShadow: shadow.onBeforeShadow,
+    onAfterShadow: shadow.onAfterShadow,
+  };
 }
 
 /** The JSX props, applied to an object built outside JSX, such as a GLB's meshes. */

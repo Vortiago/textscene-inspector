@@ -5,12 +5,12 @@ import {
   compositeTypeName,
   isConvertedSpelling,
 } from '../../godot/variant/variantConversion.js';
-import { slotComponentsAltered } from '../../godot/variant/int.js';
+import { slotComponentsAltered } from '../../godot/variant/intSlots.js';
 import { truncatedComponent } from './intSlot.js';
 import type { PropertyValidator } from '../ValidatorRegistry.js';
 import { propertyError } from './propertyError.js';
 import { valueCode } from './v/codes.js';
-import { TSCN_FLOAT_PATTERN_SOURCE } from './commonValidators.js';
+import { TSCN_FLOAT_PATTERN_SOURCE } from '../../godot/variant/number.js';
 
 /**
  * The anchored regex for a fixed-arity float tuple like `Vector3(x, y, z)`, one

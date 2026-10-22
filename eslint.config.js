@@ -91,6 +91,8 @@ export default [
       // `scripts/fonts/bake-metrics.mjs`; drift is caught by its `--check`
       // mode, not by lint.
       'packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts',
+      // The consumer app is copied into a temporary project, which type-checks and builds it.
+      'scripts/renderer-consumer/app/',
     ],
   },
 
@@ -111,6 +113,8 @@ export default [
       'apps/textscene-vscode/src/**/*.ts',
       'apps/textscene-linter/src/**/*.ts',
       'apps/textscene-lsp/src/**/*.ts',
+      'apps/textscene-tscn/src/**/*.ts',
+      'apps/textscene-renderer/src/**/*.ts',
       'packages/textscene-dev-kit/src/**/*.ts',
       '**/*.config.ts',
       'vitest.shared.ts',

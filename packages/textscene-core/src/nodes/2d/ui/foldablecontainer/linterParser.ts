@@ -19,7 +19,7 @@ import {
   HORIZONTAL_ALIGNMENT_LEFT,
   HORIZONTAL_ALIGNMENT_NAMES,
   HORIZONTAL_ALIGNMENT_RIGHT,
-} from '../../../../godot/math/math.js';
+} from '../../../../godot/math/alignment.js';
 
 validatorRegistry.registerAll('FoldableContainer', {
   // foldable_container.cpp:558, PROPERTY_HINT_NONE. set_folded

@@ -17,6 +17,7 @@ import {
   depthFogRange,
   GLOW_BLEND_MODE_DEFAULT,
 } from '../../godot/scene/environment.js';
+import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
 /** `Environment`'s constructor weights, finest mip first. */
 const DEFAULT_GLOW_LEVELS = [0.0, 0.8, 0.4, 0.1, 0.0, 0.0, 0.0];
@@ -39,12 +40,12 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     end: parseOptionalFloat(properties.fog_depth_end),
   });
   return {
-    // Background
+    // Background. `set_background` and `set_ambient_source` store any int (`environment.cpp:43-50`, `:151-155`).
     background_mode: intOr(
       properties.background_mode,
       BackgroundMode.BG_CLEAR_COLOR,
       'background_mode'
-    ) as BackgroundMode,
+    ) as EnumValue<typeof BackgroundMode>,
     background_color: colorOr(properties.background_color, { r: 0, g: 0, b: 0, a: 1 }),
     background_energy_multiplier: floatOr(
       properties.background_energy_multiplier,
@@ -68,7 +69,11 @@ export function decodeEnvironment(properties: Record<string, string>): Environme
     tonemap_exposure: floatOr(properties.tonemap_exposure, 1.0, 'tonemap_exposure'),
 
     // Ambient lighting: Godot's default ambient_light_color is black, no ambient.
-    ambient_light_source: intOr(properties.ambient_light_source, AmbientSource.BG, 'ambient_light_source'),
+    ambient_light_source: intOr(
+      properties.ambient_light_source,
+      AmbientSource.BG,
+      'ambient_light_source'
+    ) as EnumValue<typeof AmbientSource>,
     ambient_light_color: colorOr(properties.ambient_light_color, { r: 0, g: 0, b: 0, a: 1 }),
     ambient_light_energy: floatOr(properties.ambient_light_energy, 1.0, 'ambient_light_energy'),
     ambient_light_sky_contribution: floatOr(

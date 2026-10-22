@@ -2,8 +2,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { LanguageDocument } from './document';
-import { NODE_TREE_HEAD } from './fixtures.testkit';
-import { definitionRangeAt, resPathAt, resPathOccurrences } from './navigation';
+import { INSTANCED_TREE, NODE_TREE_HEAD } from './fixtures.testkit';
+import { definitionRangeAt, nodeDeclarationRange, resPathAt, resPathOccurrences } from './navigation';
 
 const SCENE = `[gd_scene format=3]
 
@@ -205,5 +205,133 @@ describe('definitionRangeAt of a node path under a %Name parent', () => {
     const character = unique.lines[4]!.indexOf('Player/Hand') + 1;
 
     expect(definitionRangeAt(unique, { line: 4, character })?.start.line).toBe(3);
+  });
+});
+
+describe('definitionRangeAt of a node path under an instanced scene', () => {
+  const instanced = new LanguageDocument(INSTANCED_TREE);
+  const definitionLine = (line: number, value: string): number | undefined =>
+    definitionRangeAt(instanced, { line, character: instanced.lines[line]!.indexOf(value) + 1 })?.start.line;
+
+  it('resolves a parent= to the heading seated under the instance', () => {
+    expect(definitionLine(8, 'Inst/Sub/X')).toBe(6);
+  });
+
+  it('resolves a to= to the heading seated under the instance', () => {
+    expect(definitionLine(10, 'Inst/Sub/X')).toBe(6);
+  });
+
+  it('gives nothing for a path into the instanced scene that no heading declares', () => {
+    expect(definitionLine(6, 'Inst/Sub')).toBe(undefined);
+  });
+});
+
+describe('definitionRangeAt of a node path that Godot seats differently from its spelling', () => {
+  /** The heading line that the path `value` on the last line resolves to. */
+  function definitionLine(lines: readonly string[], value: string): number | undefined {
+    const document = new LanguageDocument(lines.join('\n'));
+    const line = lines.length - 1;
+    const character = lines[line]!.lastIndexOf(`"${value}"`) + 1;
+    return definitionRangeAt(document, { line, character })?.start.line;
+  }
+
+  it('resolves a path to the later of two siblings sharing a name', () => {
+    // `_add_child_nocheck` inserts the later node over the earlier in the child lookup (node.cpp:1656).
+    const lines = [
+      '[node name="Root" type="Node3D"]',
+      '[node name="A" type="Node3D" parent="."]',
+      '[node name="A" type="Node2D" parent="."]',
+      '[node name="B" type="Node3D" parent="A"]',
+    ];
+    expect(definitionLine(lines, 'A')).toBe(2);
+  });
+
+  it('resolves . to heading 0 when every heading declares a parent', () => {
+    // Heading 0 is the root (packed_scene.cpp:218-219).
+    const lines = ['[node name="Root" type="Node3D" parent="."]', '[node name="A" type="Node3D" parent="."]'];
+    expect(definitionLine(lines, '.')).toBe(0);
+  });
+
+  it('resolves a connection path that walks only once simplified', () => {
+    // The loader stores `from.simplified()` (resource_format_text.cpp:370), so `Gone` is never looked up.
+    const lines = [
+      '[node name="Root" type="Node3D"]',
+      '[node name="Button" type="Node3D" parent="."]',
+      '[connection signal="ready" from="Gone/../Button" to="." method="_on_ready"]',
+    ];
+    expect(definitionLine(lines, 'Gone/../Button')).toBe(1);
+  });
+
+  it('gives nothing for a parent= that walks only once simplified, which the loader never simplifies', () => {
+    const lines = [
+      '[node name="Root" type="Node3D"]',
+      '[node name="Button" type="Node3D" parent="."]',
+      '[node name="Child" type="Node3D" parent="Gone/../Button"]',
+    ];
+    expect(definitionLine(lines, 'Gone/../Button')).toBe(undefined);
+  });
+});
+
+describe('nodeDeclarationRange', () => {
+  const tree = new LanguageDocument(NODE_TREE_HEAD.join('\n'));
+
+  it('gives the heading line of the node a path names', () => {
+    expect(nodeDeclarationRange(tree, 'Player/Sprite')?.start.line).toBe(6);
+  });
+
+  it('gives the root heading for .', () => {
+    expect(nodeDeclarationRange(tree, '.')?.start.line).toBe(2);
+  });
+
+  it('gives nothing for a path no heading declares', () => {
+    expect(nodeDeclarationRange(tree, 'Player/Missing')).toBeUndefined();
+  });
+});
+
+describe('definitionRangeAt of a node path to a re-rooted node', () => {
+  const REROOTED = [
+    '[node name="Root" type="Node3D"]',
+    '[node name="Orphan" type="Node3D" parent="Gone"]',
+    '[node name="Kid" type="Node3D" parent="Gone#Orphan"]',
+    '[connection signal="s" from="Gone#Orphan" to="." method="m"]',
+    '[connection signal="s" from="Orphan" to="." method="m"]',
+  ];
+
+  /** The line of the heading the path in `lines[line]` names, or undefined. */
+  function headingLineOfPath(lines: string[], line: number, value: string): number | undefined {
+    const scene = new LanguageDocument(lines.join('\n'));
+    const character = scene.lines[line]!.indexOf(value) + 1;
+    return definitionRangeAt(scene, { line, character })?.start.line;
+  }
+
+  it('resolves a from= spelling the rename to the re-rooted heading', () => {
+    expect(headingLineOfPath(REROOTED, 3, 'Gone#Orphan')).toBe(1);
+  });
+
+  it('resolves a parent= below the re-rooted node to its heading', () => {
+    expect(headingLineOfPath(REROOTED, 2, 'Gone#Orphan')).toBe(1);
+  });
+
+  it('gives nothing for the authored name, which Godot no longer finds (edge case)', () => {
+    expect(headingLineOfPath(REROOTED, 4, '"Orphan"')).toBeUndefined();
+  });
+
+  it('gives nothing where a later heading declares no parent, so Godot re-roots nothing (edge case)', () => {
+    const refused = [...REROOTED.slice(0, 2), '[node name="Stray" type="Node3D"]', ...REROOTED.slice(2)];
+    expect(headingLineOfPath(refused, 4, 'Gone#Orphan')).toBeUndefined();
+  });
+
+  it('resolves the rename where a parent_id_path names no node, so Godot re-roots it (edge case)', () => {
+    // The trail lookup misses, so `nparent` stays null and the re-root runs (packed_scene.cpp:161-163, :208-215).
+    const trailed = [...REROOTED];
+    trailed[1] = '[node name="Orphan" type="Node3D" parent="Gone" parent_id_path=PackedInt32Array(7)]';
+    expect(headingLineOfPath(trailed, 3, 'Gone#Orphan')).toBe(1);
+  });
+
+  it('gives nothing for the rename where the parent_id_path lands, so Godot seats the node there', () => {
+    const trailed = [...REROOTED];
+    trailed[0] = '[node name="Root" type="Node3D" unique_id=7]';
+    trailed[1] = '[node name="Orphan" type="Node3D" parent="Gone" parent_id_path=PackedInt32Array(7)]';
+    expect(headingLineOfPath(trailed, 3, 'Gone#Orphan')).toBeUndefined();
   });
 });

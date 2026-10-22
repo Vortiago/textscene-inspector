@@ -11,6 +11,7 @@ import type { WorldEnvironmentProperties } from './types';
 import { instanceAs } from '../testing/reactThreeTestInstance';
 import { subResource } from '../../../testing/subResource';
 import { textureTexel } from '../../../r3f/testing/backgroundTexel';
+import { TAU } from '../../../godot/math/math.js';
 
 function makeNode(envRef = 'SubResource("Env")'): TscnNode {
   const properties: WorldEnvironmentProperties = { name: 'WE', environment: envRef };
@@ -103,7 +104,7 @@ describe('WorldEnvironment (assertions 81–87)', () => {
     // its unscaled irradiance by albedo/PI. So a white energy-2.0 ambient lands a Lambertian surface
     // at 2x its albedo with intensity energy * PI, asserted against PI, not the constant, which
     // would only restate the source line.
-    expect(intensity).toBeCloseTo(2 * Math.PI, 6);
+    expect(intensity).toBeCloseTo(TAU, 6);
   });
 
   it('#86 fog_enabled=false → scene.fog === null', async () => {

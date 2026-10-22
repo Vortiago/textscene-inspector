@@ -4,7 +4,13 @@
  * gives a wrong baseline, and its comment names the race.
  */
 
-import { openScene, setDisplayToggle, settleCanvas } from '../previewServer.mjs';
+import {
+  clearDiagnostics,
+  loggedErrors,
+  openScene,
+  setDisplayToggle,
+  settleCanvas,
+} from '../previewServer.mjs';
 
 // Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
 // render-loop latency under host contention.
@@ -13,20 +19,12 @@ const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
 /**
  * Navigates to a scene and captures its target after two byte-identical screenshots. Returns the
  * PNG buffer, or null with a reason when the scene never settles or logs a console error.
- * `pages.default` holds the framed 3D view and `pages.canvas2D` the 2D parity frame, which exists
- * only when a scene sets `mode: '2d'` and which such a scene both navigates and screenshots.
+ * `pageState` is the page the scene captures on (see `pagePool.mjs`).
  */
-export async function captureScene(pages, baseUrl, scene) {
+export async function captureScene(pageState, baseUrl, scene) {
   const canvas2D = scene.mode === '2d';
-  const pageState = canvas2D ? pages.canvas2D : pages.default;
-  if (!pageState) {
-    throw new Error(
-      `scene "${scene.name}" needs the canvas2D capture context, which this run did not create`
-    );
-  }
-  const { page, errors } = pageState;
-  // Cleared here, so an error left from the previous scene on this page is not blamed on this one.
-  errors.length = 0;
+  const { page, diagnostics } = pageState;
+  clearDiagnostics(diagnostics);
 
   // A silent stalled resource chain would become a baseline, so it is logged.
   const { target: canvas, reason: canvasReason } = await openScene(page, baseUrl, scene.file, {
@@ -79,6 +77,7 @@ export async function captureScene(pages, baseUrl, scene) {
 
   const result = await settleCanvas(page, canvas, { screenshotTimeout: scene.settleTimeout });
   if (!result.buffer) return result;
+  const errors = loggedErrors(diagnostics);
   if (errors.length > 0) {
     // A console error in a settled, plausible capture is still a broken render: pixels cannot see a
     // swallowed resource failure that leaves the previous frame on screen.
@@ -89,18 +88,4 @@ export async function captureScene(pages, baseUrl, scene) {
     };
   }
   return result;
-}
-
-/**
- * The fail-on-console-error gate of every capture page: a scene that logs an error or throws is a
- * broken render, however plausible its pixels. Returns the mutable array `captureScene` checks and
- * clears per scene.
- */
-export function attachConsoleGate(page) {
-  const errors = [];
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(msg.text());
-  });
-  page.on('pageerror', (err) => errors.push(String(err)));
-  return errors;
 }

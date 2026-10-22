@@ -4,6 +4,7 @@ import { type ParsedHeading, unquoteString } from '../../../parser/utils';
 import type { Label3DProperties } from './types';
 import { parseGeometryInstance3D } from '../geometryinstance3d/parser';
 import { parseColor, colorOr } from '../../../utils/colorParser';
+import { parseAlphaAntialiasing } from '../../../parser/alphaAntialiasingParser';
 import { enumOr, floatOr, intOr, parseOptionalInt } from '../../../parser/valueParsers';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -12,10 +13,11 @@ import {
   HORIZONTAL_ALIGNMENT_FILL,
   HORIZONTAL_ALIGNMENT_LEFT,
   type HorizontalAlignment,
-} from '../../../godot/math/math';
+} from '../../../godot/math/alignment';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { TextureFilter } from '../../../godot/rendering/materials/textureFilter';
+import { enumMember, type EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export function parseLabel3D(heading: ParsedHeading, properties: Record<string, string>): Label3DProperties {
   const baseProps = parseGeometryInstance3D(heading, properties);
@@ -50,26 +52,20 @@ export function parseLabel3D(heading: ParsedHeading, properties: Record<string, 
     alpha_cut: parseAlphaCutMode(properties.alpha_cut),
     alpha_scissor_threshold: floatOr(properties.alpha_scissor_threshold, 0.5, 'alpha_scissor_threshold'),
     alpha_hash_scale: floatOr(properties.alpha_hash_scale, 1, 'alpha_hash_scale'),
-    // `set_alpha_antialiasing` stores any value (`label_3d.cpp:1058-1063`), and any but OFF ramps the edge.
-    alpha_antialiasing_mode: intOr(properties.alpha_antialiasing_mode, 0, 'alpha_antialiasing_mode'),
-    alpha_antialiasing_edge: floatOr(properties.alpha_antialiasing_edge, 0, 'alpha_antialiasing_edge'),
+    ...parseAlphaAntialiasing(properties),
     fixed_size: boolSlotValue(properties.fixed_size) === true,
     texture_filter: parseTextureFilter(properties.texture_filter),
   };
 }
 
-function parseAlphaCutMode(value: string | undefined): AlphaCutMode {
+function parseAlphaCutMode(value: string | undefined): EnumValue<typeof AlphaCutMode> {
   const num = intOr(value, AlphaCutMode.DISABLED, 'alpha_cut');
-  return num >= AlphaCutMode.DISABLED && num <= AlphaCutMode.HASH
-    ? (num as AlphaCutMode)
-    : AlphaCutMode.DISABLED;
+  return enumMember(AlphaCutMode, num) ?? AlphaCutMode.DISABLED;
 }
 
-function parseTextureFilter(value: string | undefined): TextureFilter {
+function parseTextureFilter(value: string | undefined): EnumValue<typeof TextureFilter> {
   const num = intOr(value, TextureFilter.LINEAR_WITH_MIPMAPS, 'texture_filter');
-  return num >= TextureFilter.NEAREST && num <= TextureFilter.LINEAR_WITH_MIPMAPS_ANISOTROPIC
-    ? (num as TextureFilter)
-    : TextureFilter.LINEAR_WITH_MIPMAPS;
+  return enumMember(TextureFilter, num) ?? TextureFilter.LINEAR_WITH_MIPMAPS;
 }
 
 function parseHorizontalAlignment(value: string | undefined): HorizontalAlignment {

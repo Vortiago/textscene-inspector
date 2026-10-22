@@ -73,6 +73,8 @@ describe('labeler.yml', () => {
     [`${slice}/linterParser.ts`, 'linter'],
     [`${slice}/index.linter.ts`, 'linter'],
     ['apps/textscene-linter/src/cli.ts', 'linter'],
+    ['apps/textscene-tscn/scripts/build.mjs', 'parser'],
+    ['apps/textscene-renderer/scripts/build.mjs', 'renderer'],
     [`${core}/godot/classdb/nodeBaseTypes.ts`, 'core'],
     [`${core}/core/NodeRegistry.ts`, 'core'],
     [`${slice}/index.ts`, 'core'],

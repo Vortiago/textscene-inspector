@@ -9,7 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import {
@@ -56,7 +56,7 @@ async function mountContainer(tint = painterTint()) {
       />
     </ViewportTextureProvider>
   );
-  const quad = quadsSampling(renderer.scene, entry.texture)[0];
+  const quad = quadsSampling(renderer.scene, entry.plain.texture)[0];
   return quad!.material as THREE.MeshBasicMaterial;
 }
 
@@ -96,7 +96,8 @@ describe('<SubViewportContainer> modulate / self_modulate', () => {
       </ViewportTextureProvider>
     );
 
-    const material = quadsSampling(renderer.scene, entry.texture)[0]!.material as THREE.MeshBasicMaterial;
+    const material = quadsSampling(renderer.scene, entry.plain.texture)[0]!
+      .material as THREE.MeshBasicMaterial;
     expect(material.color.r).toBeCloseTo(srgbToLinear(0.25), 4);
 
     controlComponentRegistry.clear();

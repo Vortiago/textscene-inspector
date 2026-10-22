@@ -4,7 +4,7 @@
  * each interior corner.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -15,6 +15,7 @@ import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { Line2DProperties } from './types';
 import { jointWedge, type JointOptions } from './lineJoints';
 import { LineJointMode } from '../../../godot/scene/line2d.js';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
@@ -29,7 +30,7 @@ export function Line2D({ node, children }: NodeComponentProps) {
       }),
     [props.points, props.width, props.closed, props.jointMode, props.sharpLimit, props.roundPrecision]
   );
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   return (
     <CanvasItem2D

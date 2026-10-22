@@ -11,6 +11,15 @@ renders_as: nothing yet, Godot lights the scene from its voxel bake, the preview
 
 A real-time global illumination probe that bakes indirect light from static geometry into an octree. The previewer parses and validates it but does not run the bake or draw the probe volume. It draws nothing, and its children still show.
 
+## Gizmo
+
+A selected VoxelGI draws the gizmo of Godot's editor in the VoxelGI colour. Godot's source is `voxel_gi_gizmo_plugin.cpp:96-164`. Godot draws the lines only for the selected node (`:99`).
+
+- The 12 edges of the box, a box of `size` centred on the node.
+- The grid of its cells at an opacity of 0.02. The longest side holds 64, 128, 256 or 512 cells by `subdiv`, and each plane inside the box draws four segments.
+
+The previewer draws no edit handles and no billboard icon.
+
 ## Linting
 
 <!-- lint:begin VoxelGI -->
@@ -30,7 +39,7 @@ Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from V
 | `valid-voxelgi-data` | `voxelgi-missing-data` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode3D`, which reads only `transform` and `visible`. A malformed `subdiv` or `size` sits untouched in the raw property bag with no substitution, since nothing here draws from it.
+The lenient parser reads `size` and `subdiv` for the gizmo. It raises each side of `size` below 1 to 1, as `set_size` does. A malformed value or a `subdiv` outside 0 to 3 keeps Godot's default.
 
 ## Known limitations
 

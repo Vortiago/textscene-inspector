@@ -197,7 +197,7 @@ export function ground(
   // carrying only one is bounded and owes a citation.
   const isBounded = hasMin || hasMax || bounds.enforcedMin !== undefined || bounds.enforcedMax !== undefined;
   // Here, not in the range factories: every combinator passes through this
-  // function, including those built from an inline arrow, such as `v.strictInt`.
+  // function, including those built from an inline arrow, such as `v.enumInt`.
   if (isBounded) {
     validator.bounds = bounds;
     // The tier of the outer end, the hint's, for a value between it and the

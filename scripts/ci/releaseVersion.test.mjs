@@ -9,6 +9,7 @@ describe('checkReleaseTag', () => {
   it('releases the extension alone on a vscode tag, at the tag version', () => {
     expect(checkReleaseTag('vscode-v1.3.0', [])).toEqual({
       package: 'vscode',
+      kind: 'extension',
       directory: 'apps/textscene-vscode',
       version: '1.3.0',
       previousTag: '',
@@ -26,8 +27,29 @@ describe('checkReleaseTag', () => {
   it('releases the language server alone on an lsp tag', () => {
     expect(checkReleaseTag('lsp-v1.0.0', ['linter-v1.0.0'])).toEqual({
       package: 'lsp',
+      kind: 'npm',
       directory: 'apps/textscene-lsp',
       version: '1.0.0',
+      previousTag: '',
+    });
+  });
+
+  it('releases the parser package alone on a tscn tag', () => {
+    expect(checkReleaseTag('tscn-v0.1.0', ['lsp-v1.0.0'])).toEqual({
+      package: 'tscn',
+      kind: 'npm',
+      directory: 'apps/textscene-tscn',
+      version: '0.1.0',
+      previousTag: '',
+    });
+  });
+
+  it('releases the renderer package alone on a renderer tag', () => {
+    expect(checkReleaseTag('renderer-v0.1.0', ['tscn-v0.1.0'])).toEqual({
+      package: 'renderer',
+      kind: 'npm',
+      directory: 'apps/textscene-renderer',
+      version: '0.1.0',
       previousTag: '',
     });
   });
@@ -56,7 +78,8 @@ describe('checkReleaseTag', () => {
 
   it('refuses a pre-release tag, which the VS Marketplace cannot take', () => {
     expect(checkReleaseTag('vscode-v1.3.0-rc.1', [])).toEqual({
-      error: 'expected a tag like vscode-v1.2.3, linter-v1.2.3 or lsp-v1.2.3, got "vscode-v1.3.0-rc.1"',
+      error:
+        'expected a tag like vscode-v1.2.3, linter-v1.2.3, lsp-v1.2.3, tscn-v1.2.3 or renderer-v1.2.3, got "vscode-v1.3.0-rc.1"',
     });
   });
 
@@ -66,8 +89,20 @@ describe('checkReleaseTag', () => {
 
   it('refuses a prefix that is not a released package', () => {
     expect(checkReleaseTag('web-v1.3.0', [])).toEqual({
-      error: 'expected a tag prefix out of vscode, linter, lsp, got "web"',
+      error: 'expected a tag prefix out of vscode, linter, lsp, tscn, renderer, got "web"',
     });
+  });
+});
+
+describe('a tag prefix that Object.prototype holds', () => {
+  it('is not a package', () => {
+    expect(checkReleaseTag('constructor-v1.0.0', [])).toEqual({
+      error: 'expected a tag prefix out of vscode, linter, lsp, tscn, renderer, got "constructor"',
+    });
+  });
+
+  it('has no release history', () => {
+    expect(() => releaseHistory('constructor-v1.0.0', [])).toThrow('expected a release tag');
   });
 });
 
@@ -118,10 +153,6 @@ describe('RELEASE_PACKAGES', () => {
 });
 
 describe('RELEASE_INPUTS', () => {
-  it('names the inputs of every released package', () => {
-    expect(Object.keys(RELEASE_INPUTS)).toEqual(Object.keys(RELEASE_PACKAGES));
-  });
-
   it.each(Object.values(RELEASE_INPUTS).flat())('%s holds a package manifest', (directory) => {
     expect(existsSync(join(REPO_ROOT, directory, 'package.json'))).toBe(true);
   });

@@ -16,7 +16,7 @@ import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
 import { warn } from '../../../logger';
 import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { useShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
-import { OCCLUDER_CULL_DISABLED } from '../../../r3f/lighting2d/shadowVolumes';
+import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 import type { LightOccluder2DProperties } from './types';
 import { parseOccluderCullMode, polygonToSegments } from './polygonShapes';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -50,7 +50,9 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
 
   const cullMode = useMemo(
     () =>
-      occluderResource ? parseOccluderCullMode(occluderResource.data.cull_mode) : OCCLUDER_CULL_DISABLED,
+      occluderResource
+        ? parseOccluderCullMode(occluderResource.data.cull_mode)
+        : OccluderPolygon2DCullMode.DISABLED,
     [occluderResource]
   );
 

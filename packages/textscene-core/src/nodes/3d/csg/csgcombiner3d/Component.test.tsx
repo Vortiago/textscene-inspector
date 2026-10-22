@@ -8,6 +8,7 @@ import { visibleInTree } from '../../../../r3f/visibleInTree';
 import { parseCSGCombiner3D } from './parser';
 import './index.r3f';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
+import { drawnMeshes } from '../../testing/reactThreeTestInstance';
 
 const CSGCombiner3D = registeredComponent('CSGCombiner3D');
 // Imports the wired slice, not the bare component: CsgPrimitive builds the solid
@@ -26,7 +27,7 @@ describe('<CSGCombiner3D>', () => {
     // Godot's combiner has no shape: _build_brush() returns an empty brush. It is the
     // node whose boolean fold of its children becomes the shape.
     const renderer = await ReactThreeTestRenderer.create(<CSGCombiner3D node={makeNode()} />);
-    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+    expect(drawnMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('positions children at its transform', async () => {

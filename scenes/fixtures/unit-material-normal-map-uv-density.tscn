@@ -1,0 +1,34 @@
+[gd_scene format=3]
+
+; One variable: the UV density per axis. The quad is 2 wide and 4 tall, so a texel of the normal map
+; spans twice the length along Y as along X. A tangent and a binormal of unit length, as Godot's
+; (`scene_forward_clustered.glsl:1437-1442`), tilt each texel by its authored angle on both axes. A
+; frame scaled by the longer axis squashes the tangent to half, and the X tilts shade as 27 degrees.
+; The other normal map goldens map a square or a 2:1 quad and tilt one axis, so none shows the squash.
+
+[ext_resource type="Texture2D" path="res://textures/normal-tilts.png" id="1_normal"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_plane"]
+size = Vector2(2, 4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_normal"]
+albedo_color = Color(0.4, 0.4, 0.4, 1)
+diffuse_mode = 1
+specular_mode = 2
+normal_enabled = true
+normal_texture = ExtResource("1_normal")
+texture_filter = 0
+
+[node name="NormalMapUvDensity" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+projection = 1
+size = 5.0
+
+[node name="Plane" type="MeshInstance3D" parent="."]
+mesh = SubResource("QuadMesh_plane")
+surface_material_override/0 = SubResource("StandardMaterial3D_normal")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.5, 0, 0.866025, 0, 1, 0, -0.866025, 0, 0.5, 0, 0, 0)

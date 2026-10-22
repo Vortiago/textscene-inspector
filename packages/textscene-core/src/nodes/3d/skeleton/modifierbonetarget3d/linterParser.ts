@@ -18,6 +18,6 @@ validatorRegistry.registerAll('ModifierBoneTarget3D', {
   // modifier_bone_target_3d.cpp:97, INT, PROPERTY_HINT_NONE, PROPERTY_USAGE_NO_EDITOR, which is
   // STORAGE (object.h:132). -1 is the unset default (modifier_bone_target_3d.h:39). set_bone (:58-60)
   // alters anything below it to -1 inside `if (sk)`, and _validate_bone_names re-runs it from
-  // skeleton_modifier_3d.cpp:68. The live bone count is the ceiling. `strictInt`: Variant truncates.
-  bone: v.strictInt('bone', { min: -1, enforced: 'modifier_bone_target_3d.cpp:58-60' }),
+  // skeleton_modifier_3d.cpp:68. The live bone count is the ceiling. `v.int` warns on a decimal, which Variant truncates.
+  bone: v.int('bone', { min: -1, enforced: 'modifier_bone_target_3d.cpp:58-60' }),
 });

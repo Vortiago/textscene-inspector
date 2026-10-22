@@ -5,6 +5,9 @@ node_modules/
 
 # Build outputs
 dist/
+# Written by the @textscene/tscn and @textscene/renderer builds from the notices at the repository root.
+apps/textscene-tscn/THIRD-PARTY-NOTICES.md
+apps/textscene-renderer/THIRD-PARTY-NOTICES.md
 out/
 build/
 *.tsbuildinfo
@@ -74,6 +77,7 @@ apps/textscene-web/public/parity/
 /scenes/isometric/*
 !/scenes/isometric/previews/
 /scenes/.vendor-godot-demos.lock
+/scenes/.vendor-godot-games.lock
 
 # On-demand open-source games corpus — fetched locally with `pnpm vendor:games`,
 # never committed (keeps the repo lean). The generated games manifest is written

@@ -4,6 +4,8 @@
  * golden-image concern.
  */
 import { describe, expect, it } from 'vitest';
+import { godotTextureFilterState } from '../../../../resources/textures/godotTextureFilter';
+import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TextRun, type TextRunProps } from './TextRun';
@@ -135,6 +137,41 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
     const geometry = (meshes[0]!.instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     expect(geometry.getAttribute('position').count).toBe(4);
     expect(geometry.getIndex()!.count).toBe(6);
+  });
+
+  it.each([
+    [TextureFilter.LINEAR_WITH_MIPMAPS, THREE.LinearMipmapLinearFilter],
+    [TextureFilter.NEAREST_WITH_MIPMAPS, THREE.NearestMipmapLinearFilter],
+  ] as const)(
+    'builds a mip chain for a mipmapped filter %i raster (text_server_adv.cpp:3121)',
+    async (filter, minFilter) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextRun
+          layout={canvasLayoutFor('Hi')}
+          fontSizePx={16}
+          tint={WHITE}
+          textureFilter={godotTextureFilterState(filter)}
+          mipmapped
+        />
+      );
+      const map = (
+        (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial
+      ).map!;
+
+      expect(map.generateMipmaps).toBe(true);
+      expect(map.minFilter).toBe(minFilter);
+    }
+  );
+
+  it('builds no mip chain unless the caller asks, as a font without generate_mipmaps has none', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextRun layout={canvasLayoutFor('Hi')} fontSizePx={16} tint={WHITE} />
+    );
+    const map = (
+      (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial
+    ).map!;
+
+    expect(map.generateMipmaps).toBe(false);
   });
 
   it('uses a plain textured material (no MSDF uniforms/shader), sourced from a canvas texture', async () => {

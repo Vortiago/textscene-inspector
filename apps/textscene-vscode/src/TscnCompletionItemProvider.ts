@@ -13,6 +13,7 @@ import {
 } from '@textscene/core/languageFeatures';
 import { languageDocumentOf } from './languageDocumentOf';
 import { toVscodeRange } from './languageFeatureRanges';
+import type { ResPathListing } from './TscnResPathListing';
 
 /** The icon for each engine completion kind. A `Record`, so a new kind does not compile until it has one. */
 const COMPLETION_KIND: Record<CompletionKind, vscode.CompletionItemKind> = {
@@ -33,11 +34,6 @@ function toCompletionItem(item: EngineCompletionItem): vscode.CompletionItem {
   if (item.deprecated) completion.tags = [vscode.CompletionItemTag.Deprecated];
   if (item.replaces) completion.range = toVscodeRange(item.replaces);
   return completion;
-}
-
-/** Lists the `res://` paths under the document's root, the seam the engine's path completion reads. */
-export interface ResPathListing {
-  pathsFor(document: vscode.TextDocument): Promise<readonly string[]>;
 }
 
 export class TscnCompletionItemProvider implements vscode.CompletionItemProvider {

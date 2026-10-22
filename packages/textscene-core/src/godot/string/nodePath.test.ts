@@ -3,9 +3,10 @@ import {
   nodePathNames,
   nodePathWalkNames,
   resolveNodePathLiteral,
-  resolveParentPath,
   resolveRelativePath,
+  simplifiedNodePath,
   unclaimedUniqueNames,
+  walkFromRoot,
 } from './nodePath.js';
 
 describe('nodePathNames', () => {
@@ -115,68 +116,84 @@ describe('resolveNodePathLiteral with unique names', () => {
   });
 });
 
-describe('resolveParentPath', () => {
+describe('walkFromRoot', () => {
   const seated = new Set(['', 'Mid', 'Mid/Leaf', 'Other']);
   const inTree = {
     exists: (path: string) => seated.has(path),
+    isOpaque: (path: string) => path === 'Other',
     uniquePaths: new Map([['%Hud', 'Mid/Leaf']]),
   };
 
   it('resolves the scene root to the empty path', () => {
     // Paths here omit the root's own name, so the root is the empty path: `SCENE_ROOT_PATH`.
-    expect(resolveParentPath('.', inTree)).toBe('');
+    expect(walkFromRoot('.', inTree)).toBe('');
   });
 
   it('descends from the root without naming it', () => {
-    expect(resolveParentPath('Mid/Leaf', inTree)).toBe('Mid/Leaf');
+    expect(walkFromRoot('Mid/Leaf', inTree)).toBe('Mid/Leaf');
   });
 
   it.each([['Mid'], ['./Mid'], ['Mid/'], ['Mid//'], ['./Mid/.'], ['Mid:position']])(
     'folds %s onto the one node Godot resolves it to',
     (path) => {
-      expect(resolveParentPath(path, inTree)).toBe('Mid');
+      expect(walkFromRoot(path, inTree)).toBe('Mid');
     }
   );
 
   it('steps back through a name the tree holds', () => {
-    expect(resolveParentPath('Other/../Mid', inTree)).toBe('Mid');
+    expect(walkFromRoot('Other/../Mid', inTree)).toBe('Mid');
   });
 
   it('stops at a name the tree does not hold, rather than folding past it', () => {
     // `children.getptr(name)` misses and returns nullptr on the spot
     // (node.cpp:1941-1946), so the `..` behind it never runs.
-    expect(resolveParentPath('Missing/../Mid', inTree)).toBeNull();
+    expect(walkFromRoot('Missing/../Mid', inTree)).toBeNull();
   });
 
-  it('folds without a tree, which is the wider answer a caller with none gets', () => {
-    expect(resolveParentPath('Missing/../Mid')).toBe('Mid');
-  });
-
-  it.each([[undefined], ['']])('addresses nothing for %s', (path) => {
-    expect(resolveParentPath(path, inTree)).toBeNull();
+  it('addresses nothing for an empty path', () => {
+    expect(walkFromRoot('', inTree)).toBeNull();
   });
 
   it('refuses an absolute path, which instantiate cannot measure off-tree', () => {
-    expect(resolveParentPath('/root/Mid', inTree)).toBeNull();
+    expect(walkFromRoot('/root/Mid', inTree)).toBeNull();
   });
 
   it('refuses a .. that steps above the root', () => {
-    expect(resolveParentPath('../Mid', inTree)).toBeNull();
+    expect(walkFromRoot('../Mid', inTree)).toBeNull();
   });
 
   it('jumps a %Name to the path claiming it, rather than descending onto it', () => {
     // `get_node_or_null` reads the owner's table and continues from what it
     // finds (node.cpp:1930-1938), so the walk restarts there.
-    expect(resolveParentPath('%Hud', inTree)).toBe('Mid/Leaf');
-    expect(resolveParentPath('%Hud/..', inTree)).toBe('Mid');
+    expect(walkFromRoot('%Hud', inTree)).toBe('Mid/Leaf');
+    expect(walkFromRoot('%Hud/..', inTree)).toBe('Mid');
   });
 
   it('refuses a %Name no node claims', () => {
-    expect(resolveParentPath('%Missing', inTree)).toBeNull();
+    expect(walkFromRoot('%Missing', inTree)).toBeNull();
   });
 
-  it('refuses a %Name when the caller holds no tree at all', () => {
-    expect(resolveParentPath('%Hud')).toBeNull();
+  it('cannot say what a claimed %Name names from an opaque node below the root, whose own table it reads first', () => {
+    // node.cpp:1930-1933 reads the reached node's `owned_unique_nodes` before its owner's.
+    expect(walkFromRoot('Other/%Hud', inTree)).toEqual({ unlisted: 'Other/%Hud' });
+  });
+
+  it('cannot say what an unclaimed %Name names from an opaque node, whose own table another file fills', () => {
+    expect(walkFromRoot('Other/%Missing/Leaf', inTree)).toEqual({ unlisted: 'Other/%Missing/Leaf' });
+  });
+});
+
+describe('walkFromRoot without a tree', () => {
+  it('folds a missing name away, the wider answer a caller with no tree gets', () => {
+    expect(walkFromRoot('Missing/../Mid')).toBe('Mid');
+  });
+
+  it.each([[undefined], [''], ['/root/Mid'], ['../Mid']])('addresses nothing for %s', (path) => {
+    expect(walkFromRoot(path)).toBeNull();
+  });
+
+  it('refuses a %Name, which no table answers', () => {
+    expect(walkFromRoot('%Hud')).toBeNull();
   });
 });
 
@@ -208,4 +225,39 @@ describe('unclaimedUniqueNames', () => {
       expect(unclaimedUniqueNames(raw, claims)).toEqual([]);
     }
   );
+});
+
+describe('simplifiedNodePath', () => {
+  it.each([
+    ['Gone/../Button', 'Button'],
+    ['./A', 'A'],
+    ['A/./B', 'A/B'],
+    ['A/B/../../C', 'C'],
+    ['./..', '..'],
+  ])('folds %s to %s, as NodePath::simplify does', (path, simplified) => {
+    // `.` is dropped and a name followed by `..` cancels with it (node_path.cpp:331-355).
+    expect(simplifiedNodePath(path)).toBe(simplified);
+  });
+
+  it.each([
+    ['A/..', '.'],
+    ['A/./..', '.'],
+  ])('leaves . for %s, which cancels to nothing', (path, simplified) => {
+    expect(simplifiedNodePath(path)).toBe(simplified);
+  });
+
+  it.each([['.'], ['..'], ['../X'], ['../..'], ['Button']])(
+    'keeps %s, which holds nothing to fold',
+    (path) => {
+      expect(simplifiedNodePath(path)).toBe(path);
+    }
+  );
+
+  it('keeps the absolute marker and the :subname', () => {
+    expect(simplifiedNodePath('/root/./A:position:x')).toBe('/root/A:position:x');
+  });
+
+  it('keeps an empty path empty', () => {
+    expect(simplifiedNodePath('')).toBe('');
+  });
 });

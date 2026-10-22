@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 import { PROJECT_FILE_NAME } from '@textscene/core/godot';
-import { comparablePath, findResRoot, isWithinRoot } from '@textscene/core/resources/resPath';
+import { findResRoot, isWalkEnd, isWithinRoot } from '@textscene/core/resources/resPath';
 import { HOST_PATH_CASE } from './hostPathCase';
 
 /**
@@ -24,9 +24,7 @@ export function directoryOf(documentUri: vscode.Uri): vscode.Uri {
 
 /** Whether the walk ends at a directory: the workspace root itself, or one outside it. */
 function stopsAt(workspaceRoot: vscode.Uri): (dir: vscode.Uri) => boolean {
-  const rootKey = comparablePath(workspaceRoot.fsPath);
-  return (dir) =>
-    comparablePath(dir.fsPath) === rootKey || !isWithinRoot(workspaceRoot.fsPath, dir.fsPath, HOST_PATH_CASE);
+  return (dir) => isWalkEnd(workspaceRoot.fsPath, dir.fsPath, HOST_PATH_CASE);
 }
 
 /** Whether `dir` holds `project.godot`, one `stat`. */

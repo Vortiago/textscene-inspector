@@ -14,6 +14,10 @@ export const CANVAS_2D_SCENES = [
   // later sibling, and rotation 1 rad. Godot probes: (230,160) white, (550,160) green and (900,324)
   // blue. Read as 0, the first is black, the second yellow and the bar lies flat.
   { name: 'bool-numeric-slots', file: 'unit-bool-numeric-slots.tscn', mode: '2d' },
+  // A `parent=` path that names no node re-roots under the scene root. Godot probes: (40,40) red, the
+  // orphan; (120,40) green, its child re-rooted on its own; (40,120) blue, below a moved parent that
+  // does not apply. Dropped, all three are the grey background.
+  { name: 'orphan-reroot', file: 'unit-orphan-reroot.tscn', mode: '2d' },
   // Two chained Bone2Ds, each turned and moved, with a bar under each. Godot
   // probes: (387,210) orange, mid upper arm, and (473,340) blue, mid forearm.
   // A bone drawn as an untransformed group stacks both bars at the skeleton.
@@ -295,6 +299,21 @@ export const CANVAS_2D_SCENES = [
   {
     name: 'sub-viewport-container-translucent',
     file: 'unit-sub-viewport-container-translucent.tscn',
+    mode: '2d',
+  },
+  // The same magnified edge with a 3D subtree as the content: the SRGB8 target serves a plain view
+  // of its bytes, which the container filters raw. Godot 4.6.3 `--mode 2d`: (199,180) rgb(210,96,19)
+  // and (200,180) rgb(121,83,57), within 1/255.
+  {
+    name: 'sub-viewport-container-shrink-3d-content',
+    file: 'unit-sub-viewport-container-shrink-3d-content.tscn',
+    mode: '2d',
+  },
+  // A translucent 3D surface blends in linear light inside the target. Godot 4.6.3 `--mode 2d`:
+  // (170,180) rgb(193,90,54), within 1/255.
+  {
+    name: 'sub-viewport-container-translucent-3d-content',
+    file: 'unit-sub-viewport-container-translucent-3d-content.tscn',
     mode: '2d',
   },
   // The one scene with a TouchScreenButton, which draws `texture_normal` at its origin in the

@@ -21,7 +21,7 @@ import {
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { JustificationFlag, fitLineToWidth } from '../../../../r3f/controls/native/text/textJustify';
+import { fitLineToWidth } from '../../../../r3f/controls/native/text/textJustify';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -35,6 +35,7 @@ import {
   AutowrapMode,
   OverrunBehavior,
   VisibleCharactersBehavior,
+  JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */

@@ -10,16 +10,19 @@ import { join, relative } from 'node:path';
 import { TscnParser } from './TscnParser';
 import { TscnParserCore } from './TscnParserCore';
 import { parseNodeWithRegistry } from '../core/NodeRegistry';
-import { strandedNodes } from './sceneTreeBuilder';
+import { orphanedNodes } from './sceneTreeBuilder';
 import { sceneFiles, scenesDir } from './testing/parserKit.js';
 
 const SCENES = scenesDir();
 
-/** The one fixture whose whole purpose is an unresolvable parent path. */
-const INTENTIONAL_ORPHANS = new Set(['fixtures/edge-missing-parent.tscn']);
+/** The fixtures whose whole purpose is an unresolvable parent path. */
+const INTENTIONAL_ORPHANS = new Set([
+  'fixtures/edge-missing-parent.tscn',
+  'fixtures/unit-orphan-reroot.tscn',
+]);
 
-describe('buildSceneTree over the whole corpus', () => {
-  it('orphans nothing except the fixture that exists to be orphaned', () => {
+describe('seatScene over the whole corpus', () => {
+  it('orphans nothing except the fixtures that exist to be orphaned', () => {
     const scenes = sceneFiles(SCENES, (path) => path.endsWith('.tscn'));
     expect(scenes.length).toBeGreaterThan(200);
 
@@ -29,16 +32,16 @@ describe('buildSceneTree over the whole corpus', () => {
     for (const file of scenes) {
       const rel = relative(SCENES, file);
       // The renderer's node creator, so the tree under test is the one the previewer draws.
-      const { scene, origins } = new TscnParserCore().parse(
+      const { origins, seating } = new TscnParserCore().parse(
         readFileSync(file, 'utf8'),
         parseNodeWithRegistry
       );
-      if (strandedNodes(origins, scene.nodes).length === 0) continue;
+      if (orphanedNodes(origins, seating).length === 0) continue;
       (INTENTIONAL_ORPHANS.has(rel) ? intentional : offenders).push(rel);
     }
 
     expect(offenders.sort()).toEqual([]);
-    // And the negative fixture must still be doing its job.
+    // And the negative fixtures must still be doing their job.
     expect(intentional).toEqual([...INTENTIONAL_ORPHANS]);
   });
 

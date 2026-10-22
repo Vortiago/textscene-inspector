@@ -7,8 +7,8 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D } from '../../base/node2d/parser';
 import { enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseAudioBase } from '../parseAudioBase';
-import { PlaybackType } from './types';
 import type { AudioStreamPlayer2DProperties } from './types';
+import { PlaybackType } from '../../../godot/audio/audioServer';
 
 export function parseAudioStreamPlayer2D(
   heading: ParsedHeading,

@@ -6,7 +6,7 @@
  * its shadow samples a parallel map (`directionalShadowMap.ts`) built over the view.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
@@ -17,7 +17,7 @@ import { directionalLightCullKey } from '../../../r3f/lighting2d/lightCullKey';
 import { useDirectionalLightSlot } from '../../../r3f/lighting2d/useLightSequence';
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
-import { Light2DBlendMode, shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
+import { shadowColorContributes } from '../../../r3f/lighting2d/lightQuad';
 import { buildDirectionalShadowMap } from '../../../r3f/lighting2d/directionalShadowMap';
 import { useDirectionalShadowView, useNdcToShadow } from '../../../r3f/lighting2d/directionalShadowView';
 import { FullScreenQuad } from '../../../r3f/lighting2d/fullScreenQuad';
@@ -28,6 +28,8 @@ import {
   writeDirectionalShadowMap,
   type DirectionalShadowSampling,
 } from '../../../r3f/lighting2d/directionalLightQuad';
+import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { Light2DBlendMode } from '../../../godot/scene/light2d';
 
 export function DirectionalLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as DirectionalLight2DProperties;
@@ -101,7 +103,7 @@ function DirectionalLightQuads({
   // One texture for the light's lifetime, filled at commit: a write from a render React discards
   // would reach the materials already on screen.
   const [shadowMap] = useState(createDirectionalShadowTexture);
-  useEffect(() => () => shadowMap.dispose(), [shadowMap]);
+  useDisposeOnRelease(shadowMap);
   useLayoutEffect(() => {
     if (map) writeDirectionalShadowMap(shadowMap, map.bins);
   }, [map, shadowMap]);
@@ -125,7 +127,7 @@ function DirectionalLightQuads({
     () => createDirectionalLightMaterial({ color, energy, blendMode, shadow: sampling }),
     [color, energy, blendMode, sampling]
   );
-  useEffect(() => () => material.dispose(), [material]);
+  useDisposeOnRelease(material);
 
   // A MIX light scales the tint buffer under it by its alpha, so it draws there untinted too.
   const drawsTint = blendMode === Light2DBlendMode.MIX || (!!sampling && tintsShadow);
@@ -134,7 +136,7 @@ function DirectionalLightQuads({
       drawsTint ? createDirectionalShadowColorMaterial({ color, energy, blendMode, shadow: sampling }) : null,
     [drawsTint, sampling, color, energy, blendMode]
   );
-  useEffect(() => () => shadowMaterial?.dispose(), [shadowMaterial]);
+  useDisposeOnRelease(shadowMaterial);
 
   const litRef = usePassMeshRef<THREE.Mesh>(ordinal, 'lit', setQuad);
   const tintRef = usePassMeshRef<THREE.Mesh>(ordinal, 'tint');

@@ -1,13 +1,17 @@
 /**
  * Where a node's material lives. A material reference names a scene `[sub_resource]`
- * or an `ExtResource` `.tres`, and `useMaterial` loads either into the same shape, so
+ * or an `ExtResource` resource file, and `useMaterial` loads either into the same shape, so
  * no slot renders differently for the file a material came from. Every node type with
  * a material reference reads this one choice, since each Godot setter takes a
  * `Ref<Material>` whatever its origin.
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
-import { findExtResource, parseResourceReference } from '../../resources/SubResourceResolver';
+import {
+  findExtResource,
+  isResourceFilePath,
+  parseResourceReference,
+} from '../../resources/SubResourceResolver';
 import { BUILDABLE_MATERIAL_TYPES } from '../../resources/materials/buildableMaterialTypes';
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { findSubResource, type SceneResources } from '../SceneResourcesContext';
@@ -24,12 +28,12 @@ export interface MaterialResource {
 export type MaterialSource =
   /** A material the scene already holds, with the scene's tables. */
   | { kind: 'inline'; material: MaterialResource }
-  /** A `.tres` file, or a `file.tres::SubId` address into one, that `useMaterial` loads. */
+  /** A resource file, or a `file.res::SubId` address into one, that `useMaterial` loads. */
   | { kind: 'file'; path: string };
 
 /**
  * The source `ref` names, or undefined when it names no material. `ref` is a reference in the
- * scene's tables, or a `res://` path such as a material inside a mesh `.tres`. Undefined leaves the
+ * scene's tables, or a `res://` path such as a material inside a mesh resource file. Undefined leaves the
  * slot empty, as Godot's invalid RID does, so an override that names nothing keeps what
  * the surface had. A material this previewer cannot build still fills the slot, and
  * `useMaterial` answers with Godot's default surface for it (ADR-0041).
@@ -61,9 +65,9 @@ export function fileMaterialSources(
 }
 
 /**
- * The source for a material file, or undefined for one that is no `.tres` document.
+ * The source for a material file, or undefined for a path that is no resource file.
  * Minting an address the loader must refuse buys a failed load and the same default surface.
  */
 function fileMaterialSource(path: string): MaterialSource | undefined {
-  return resourceFilePath(path).endsWith('.tres') ? { kind: 'file', path } : undefined;
+  return isResourceFilePath(resourceFilePath(path)) ? { kind: 'file', path } : undefined;
 }

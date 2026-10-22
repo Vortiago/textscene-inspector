@@ -32,7 +32,7 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { CodeHighlighterColorSpan } from '../../../../resources/styles/codehighlighter/highlight';
 import type { TextEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';

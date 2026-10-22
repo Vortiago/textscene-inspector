@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ControlProperties } from '../control/types';
 import type { ScrollContainerProperties } from './types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';

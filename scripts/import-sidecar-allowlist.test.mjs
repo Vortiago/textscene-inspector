@@ -13,7 +13,10 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { READ_IMPORTERS, sidecarImporter } from './vendor-prune.mjs';
 import { TEXTURE_IMPORTER } from '../packages/textscene-core/src/godot/import/textureImport.ts';
-import { TEXTURE_3D_IMPORTER } from '../packages/textscene-core/src/godot/import/texture3DImport.ts';
+import {
+  TEXTURE_2D_ARRAY_IMPORTER,
+  TEXTURE_3D_IMPORTER,
+} from '../packages/textscene-core/src/godot/import/layeredTextureImport.ts';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 const SCENES = join(REPO_ROOT, 'scenes');
@@ -35,12 +38,15 @@ const HONOURED = new Set([
 ]);
 
 /**
- * The `3d_texture` importer's parameters, reviewed for that importer alone: a `texture` importer's
- * mipmaps change how a 2D texture samples. The slice grid is how the previewer cuts the source
- * image into slices. The storage is inert: the previewer reads the source image, and a fog density
- * texture is sampled in a compute shader, so at mipmap 0 (`fog_material.cpp:161`).
+ * The layered importer's parameters, for its `3d_texture` and `2d_array_texture` modes alone: a
+ * `texture` importer's mipmaps change how a 2D texture samples. The slice grid is how the
+ * previewer cuts the source image into layers. The storage is inert: the previewer reads the
+ * source image. A fog density texture is sampled in a compute shader, so at mipmap 0
+ * (`fog_material.cpp:161`), and a lightmap at mipmap 0 too (`scene_forward_clustered.glsl:1856,1873`).
  */
-const TEXTURE_3D_PARAMS = new Set([
+const LAYERED_TEXTURE_IMPORTERS = new Set([TEXTURE_3D_IMPORTER, TEXTURE_2D_ARRAY_IMPORTER]);
+
+const LAYERED_TEXTURE_PARAMS = new Set([
   'slices/horizontal',
   'slices/vertical',
   'compress/mode',
@@ -328,7 +334,7 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
 
   it('keeps the sidecars of every importer core reads', () => {
     expect(
-      [TEXTURE_IMPORTER, TEXTURE_3D_IMPORTER].filter((importer) => !READ_IMPORTERS.has(importer))
+      [TEXTURE_IMPORTER, ...LAYERED_TEXTURE_IMPORTERS].filter((importer) => !READ_IMPORTERS.has(importer))
     ).toEqual([]);
   });
 
@@ -345,7 +351,7 @@ describe('.import sidecar allowlist (ADR-0028)', () => {
       const { importer } = READ.get(file);
       for (const key of Object.keys(readParams(file))) {
         if (HONOURED.has(key) || INERT.has(key) || MUST_BE_DEFAULT.has(key)) continue;
-        if (importer === TEXTURE_3D_IMPORTER && TEXTURE_3D_PARAMS.has(key)) continue;
+        if (LAYERED_TEXTURE_IMPORTERS.has(importer) && LAYERED_TEXTURE_PARAMS.has(key)) continue;
         if (importer === TEXTURE_IMPORTER && (TEXTURE_PARAMS.has(key) || TEXTURE_MUST_BE_DEFAULT.has(key)))
           continue;
         unknown.push(`${rel(file)}: ${key}`);

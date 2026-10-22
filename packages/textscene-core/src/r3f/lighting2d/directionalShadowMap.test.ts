@@ -11,14 +11,8 @@ import {
   ndcToShadowTransform,
   type DirectionalShadowView,
 } from './directionalShadowMap';
-import {
-  OCCLUDER_CULL_DISABLED,
-  OCCLUDER_CULL_CLOCKWISE,
-  OCCLUDER_CULL_COUNTER_CLOCKWISE,
-  type OccluderCullMode,
-  type Quad2,
-  type ShadowCasterEdges,
-} from './shadowVolumes';
+import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from './shadowVolumes';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 /**
  * A 1000 px square view, the light travelling straight down (previewer -Y). The centre is
@@ -41,7 +35,7 @@ function segment(
   ay: number,
   bx: number,
   by: number,
-  cullMode: OccluderCullMode = OCCLUDER_CULL_DISABLED
+  cullMode: OccluderCullMode = OccluderPolygon2DCullMode.DISABLED
 ): ShadowCasterEdges {
   return { segments: [ax, ay, bx, by], cullMode, bounds: segmentBounds(ax, ay, bx, by) };
 }
@@ -192,16 +186,16 @@ describe('buildDirectionalShadowMap: cull_mode', () => {
 
   it('casts from the far edge alone under CULL_CLOCKWISE', () => {
     const { bins } = buildDirectionalShadowMap(squareView(), [
-      top(OCCLUDER_CULL_CLOCKWISE),
-      bottom(OCCLUDER_CULL_CLOCKWISE),
+      top(OccluderPolygon2DCullMode.CLOCKWISE),
+      bottom(OccluderPolygon2DCullMode.CLOCKWISE),
     ]);
     expect(bins[binAt(500)]).toBeCloseTo(0.6, 6);
   });
 
   it('casts from the near edge under CULL_COUNTER_CLOCKWISE', () => {
     const { bins } = buildDirectionalShadowMap(squareView(), [
-      top(OCCLUDER_CULL_COUNTER_CLOCKWISE),
-      bottom(OCCLUDER_CULL_COUNTER_CLOCKWISE),
+      top(OccluderPolygon2DCullMode.COUNTER_CLOCKWISE),
+      bottom(OccluderPolygon2DCullMode.COUNTER_CLOCKWISE),
     ]);
     expect(bins[binAt(500)]).toBeCloseTo(0.4, 6);
   });

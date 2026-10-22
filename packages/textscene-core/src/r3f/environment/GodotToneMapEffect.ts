@@ -7,15 +7,22 @@
 
 import { BlendFunction, Effect } from 'postprocessing';
 import * as THREE from 'three';
-import { brightPassGlsl, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
+import { glowLevelCap, glowLevelSize, type GlowParams } from '../../resources/environment/godotGlow';
+import {
+  BLUR_BLURRED_UNIFORM,
+  BLUR_SOURCE_UNIFORM,
+  firstLevelBlurGlsl,
+  GLOW_TEXTURE_SIZE_UNIFORM,
+  glowLevelUniform,
+  laterLevelBlurGlsl,
+  type LevelBlurGlsl,
+} from '../../resources/environment/godotGlowPyramid';
 import {
   compositeProgram,
-  GLOW_BUFFER_UNIFORM,
   GLOW_MAP_UNIFORM,
   type CompositeOptions,
 } from '../../resources/environment/godotCompositor';
 import { applyTextureState } from '../../resources/textures/applyTextureState';
-import { glslFloat } from '../../utils/glslLiterals';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture';
 import { drawFullScreen, fullScreenPass } from '../fullScreenPass';
 import { drawOffscreen } from '../offscreen';
@@ -34,7 +41,7 @@ export class GodotToneMapEffect extends Effect {
     });
 
     this.clearGlowMap();
-    this.pyramid = options.glow ? new GlowPyramid(options.glow) : null;
+    this.pyramid = options.glow ? new GlowPyramid(options.glow, this.uniforms) : null;
   }
 
   /** Samples `map` as the glow map. The caller owns `map`. A no-op when the composite samples no map. */
@@ -52,10 +59,9 @@ export class GodotToneMapEffect extends Effect {
     this.pyramid?.setSize(width, height);
   }
 
-  /** Builds the pyramid, then hands the composite shader the weighted sum. */
+  /** Builds the pyramid the composite shader gathers from. */
   override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
-    if (!this.pyramid) return;
-    this.uniforms.get(GLOW_BUFFER_UNIFORM)!.value = this.pyramid.gather(renderer, inputBuffer);
+    this.pyramid?.build(renderer, inputBuffer);
   }
 
   override dispose(): void {
@@ -74,114 +80,118 @@ export function glowMapView(glowMap: THREE.Texture): THREE.Texture {
 }
 
 /**
- * The glow buffers and passes, owned as `BloomEffect` owns its own. Not a `BloomEffect`: Godot
- * weights its seven levels apart (`[0, 0.8, 0.4, 0.1, 0, 0, 0]` by default), while `MipmapBlurPass`
- * has one radius for every level, which gives a haze instead of a halo.
+ * The glow levels and the passes that build them, owned as `BloomEffect` owns its own. Not a
+ * `BloomEffect`: Godot weights its seven levels apart (`[0, 0.8, 0.4, 0.1, 0, 0, 0]` by default),
+ * while `MipmapBlurPass` has one radius for every level, which gives a haze instead of a halo.
  */
 class GlowPyramid {
   private readonly levelTargets: THREE.WebGLRenderTarget[] = [];
-  private readonly accumulationTargets: THREE.WebGLRenderTarget[] = [];
-  private readonly brightPassMaterial: THREE.ShaderMaterial;
-  private readonly downsampleMaterial: THREE.ShaderMaterial;
-  private readonly accumulateMaterial: THREE.ShaderMaterial;
-  private readonly weights: number[];
+  /** Each level's horizontal blur, which its vertical pass reads. */
+  private readonly horizontalTargets: THREE.WebGLRenderTarget[] = [];
+  private readonly firstBlur: LevelBlur;
+  private readonly laterBlur: LevelBlur;
   private readonly maxLevel: number;
+  private readonly gatheredLevels: number[];
+  /** The highest level built and read for the frame size, which `setSize` lowers for a small frame. */
+  private topLevel: number;
+  /** The composite's size uniform, which `setSize` writes. Null under the Linear upscale mode. */
+  private readonly textureSize: THREE.Vector2 | null;
 
-  constructor(glow: GlowParams) {
+  /** Binds each gathered level's sampler in `compositeUniforms`, and rebinds it on every resize. */
+  constructor(
+    glow: GlowParams,
+    private readonly compositeUniforms: Map<string, THREE.Uniform>
+  ) {
     // `glowParamsFor` returns null rather than an empty pyramid, so a `GlowParams`
     // that exists always has at least one weighted level.
     this.maxLevel = glow.maxLevel;
-    this.weights = glow.levels;
+    this.topLevel = glow.maxLevel;
+    this.gatheredLevels = glow.gatheredLevels;
+    this.firstBlur = new LevelBlur('First', firstLevelBlurGlsl(glow));
+    this.laterBlur = new LevelBlur('Later', laterLevelBlurGlsl(glow));
 
-    this.brightPassMaterial = fullScreenPass('GodotGlow.BrightPass', brightPassFragmentShader(glow), {
-      inputBuffer: { value: null },
-      texelSize: { value: new THREE.Vector2() },
-    });
-    this.downsampleMaterial = fullScreenPass('GodotGlow.Downsample', downsampleFragmentShader(glow), {
-      inputBuffer: { value: null },
-      texelSize: { value: new THREE.Vector2() },
-    });
-    this.accumulateMaterial = fullScreenPass('GodotGlow.Accumulate', ACCUMULATE_FRAGMENT_SHADER, {
-      coarserBuffer: { value: null },
-      levelBuffer: { value: null },
-      levelWeight: { value: 0 },
-      // Zero on the coarsest rung, which has nothing summed below it. A uniform
-      // rather than a `#define` so walking the pyramid does not recompile the
-      // shader once per level per frame.
-      coarserFactor: { value: 0 },
-      texelSize: { value: new THREE.Vector2() },
-    });
-
-    // Two parallel chains, not a ping-pong pair: the coarse-to-fine sum writes
-    // rung L while reading rung L+1, and every rung is a different resolution, so
-    // reusing one set would mean reallocating at each step.
     for (let level = 0; level <= this.maxLevel; level++) {
       this.levelTargets.push(createTarget(`GodotGlow.Level${level}`));
-      this.accumulationTargets.push(createTarget(`GodotGlow.Accumulation${level}`));
+      this.horizontalTargets.push(createTarget(`GodotGlow.Horizontal${level}`));
+    }
+    const sizeUniform = compositeUniforms.get(GLOW_TEXTURE_SIZE_UNIFORM);
+    this.textureSize = sizeUniform ? (sizeUniform.value = new THREE.Vector2()) : null;
+    this.rebindLevels();
+  }
+
+  /**
+   * A level past the cap reads the last level there is. Godot's `textureLod` clamps a lod to the
+   * last mip of the glow texture the same way (`tonemap.glsl:384-406`).
+   */
+  private rebindLevels(): void {
+    for (const level of this.gatheredLevels) {
+      this.compositeUniforms.get(glowLevelUniform(level))!.value =
+        this.levelTargets[Math.min(level, this.topLevel)]!.texture;
     }
   }
 
   setSize(width: number, height: number): void {
+    this.topLevel = Math.min(this.maxLevel, glowLevelCap(width, height));
+    const glowTexture = glowLevelSize(width, height, 0);
+    this.textureSize?.set(glowTexture.width, glowTexture.height);
     for (let level = 0; level < this.levelTargets.length; level++) {
       const size = glowLevelSize(width, height, level);
       this.levelTargets[level]!.setSize(size.width, size.height);
-      this.accumulationTargets[level]!.setSize(size.width, size.height);
+      this.horizontalTargets[level]!.setSize(size.width, size.height);
     }
+    this.rebindLevels();
   }
 
-  /**
-   * Builds the pyramid and returns the sum `weight[i] * level[i]` that Godot's `gather_glow` reads at
-   * one uv. Accumulating coarse to fine, upsampling the sum and adding the next level, holds two
-   * textures live instead of binding all seven as samplers.
-   */
-  gather(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): THREE.Texture {
+  /** Blurs the frame into level 0 and each level into the next (`renderer_scene_render_rd.cpp:603-613`). */
+  build(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget): void {
     drawOffscreen(renderer, () => {
-      const brightUniforms = this.brightPassMaterial.uniforms;
-      brightUniforms['inputBuffer']!.value = inputBuffer.texture;
-      setTexelSize(brightUniforms, inputBuffer);
-      drawFullScreen(renderer, this.brightPassMaterial, this.levelTargets[0]!);
-
-      const downsampleUniforms = this.downsampleMaterial.uniforms;
-      for (let level = 1; level <= this.maxLevel; level++) {
-        const source = this.levelTargets[level - 1]!;
-        downsampleUniforms['inputBuffer']!.value = source.texture;
-        setTexelSize(downsampleUniforms, source);
-        drawFullScreen(renderer, this.downsampleMaterial, this.levelTargets[level]!);
-      }
-
-      const uniforms = this.accumulateMaterial.uniforms;
-      for (let level = this.maxLevel; level >= 0; level--) {
-        const coarser = level === this.maxLevel ? null : this.accumulationTargets[level + 1]!;
-        // On the coarsest rung `coarserFactor` zeroes the contribution, but the binding must be valid:
-        // an unbound sampler2D is undefined, not zero. Its own level serves, and cannot alias, since
-        // this pass writes an accumulation target.
-        uniforms['coarserBuffer']!.value = (coarser ?? this.levelTargets[level]!).texture;
-        uniforms['coarserFactor']!.value = coarser ? 1 : 0;
-        uniforms['levelBuffer']!.value = this.levelTargets[level]!.texture;
-        uniforms['levelWeight']!.value = this.weights[level]!;
-        setTexelSize(uniforms, coarser ?? this.levelTargets[level]!);
-        drawFullScreen(renderer, this.accumulateMaterial, this.accumulationTargets[level]!);
+      for (let level = 0; level <= this.topLevel; level++) {
+        const source = level === 0 ? inputBuffer : this.levelTargets[level - 1]!;
+        const blur = level === 0 ? this.firstBlur : this.laterBlur;
+        blur.draw(renderer, source, this.horizontalTargets[level]!, this.levelTargets[level]!);
       }
     });
-    return this.accumulationTargets[0]!.texture;
   }
 
   dispose(): void {
-    for (const target of [...this.levelTargets, ...this.accumulationTargets]) {
+    for (const target of [...this.levelTargets, ...this.horizontalTargets]) {
       target.dispose();
     }
-    this.brightPassMaterial.dispose();
-    this.downsampleMaterial.dispose();
-    this.accumulateMaterial.dispose();
+    this.firstBlur.dispose();
+    this.laterBlur.dispose();
   }
 }
 
-/** Confines the `IUniform` cast the three pyramid passes would each repeat. */
-function setTexelSize(
-  uniforms: Record<string, THREE.IUniform>,
-  source: { width: number; height: number }
-): void {
-  (uniforms['texelSize']!.value as THREE.Vector2).set(1 / source.width, 1 / source.height);
+/** One level's two passes: each pass reads the texture the one before wrote. */
+class LevelBlur {
+  private readonly horizontal: THREE.ShaderMaterial;
+  private readonly vertical: THREE.ShaderMaterial;
+
+  constructor(name: string, glsl: LevelBlurGlsl) {
+    this.horizontal = fullScreenPass(`GodotGlow.${name}Horizontal`, glsl.horizontal, {
+      [BLUR_SOURCE_UNIFORM]: { value: null },
+    });
+    this.vertical = fullScreenPass(`GodotGlow.${name}Vertical`, glsl.vertical, {
+      [BLUR_BLURRED_UNIFORM]: { value: null },
+    });
+  }
+
+  draw(
+    renderer: THREE.WebGLRenderer,
+    source: THREE.WebGLRenderTarget,
+    horizontalTarget: THREE.WebGLRenderTarget,
+    destination: THREE.WebGLRenderTarget
+  ): void {
+    this.horizontal.uniforms[BLUR_SOURCE_UNIFORM]!.value = source.texture;
+    drawFullScreen(renderer, this.horizontal, horizontalTarget);
+    this.vertical.uniforms[BLUR_BLURRED_UNIFORM]!.value = horizontalTarget.texture;
+    drawFullScreen(renderer, this.vertical, destination);
+  }
+
+  dispose(): void {
+    this.horizontal.dispose();
+    this.vertical.dispose();
+  }
 }
 
 function createTarget(name: string): THREE.WebGLRenderTarget {
@@ -195,89 +205,3 @@ function createTarget(name: string): THREE.WebGLRenderTarget {
   target.texture.name = name;
   return target;
 }
-
-/**
- * Level 0 goes from the frame to a quarter of it, a 4x reduction where later levels do 2x. Godot's
- * raster glow takes four bilinear taps per 4x4 block, and its compute glow, run on every desktop
- * target, a separable gaussian. Neither transplants to normalised UV, so this uses the 13-tap one.
- */
-function brightPassFragmentShader(glow: GlowParams): string {
-  return /* glsl */ `
-${DOWNSAMPLE_TAPS}
-${brightPassGlsl(glow)}
-void main() {
-  gl_FragColor = vec4(godotGlowBrightPass(max(downsample13(), 0.0)), 1.0);
-}
-`;
-}
-
-/**
- * The standard 13-tap pyramid downsample, since Godot's integer-pixel kernel does not transplant to
- * normalised UV; the ported per-level weights decide the halo shape. It halves resolution without
- * the aliasing that makes a small bright object flicker, and declares the uniforms it reads.
- */
-const DOWNSAMPLE_TAPS = /* glsl */ `
-uniform sampler2D inputBuffer;
-uniform vec2 texelSize;
-varying vec2 vUv;
-
-vec3 tap(vec2 offset) {
-  return texture2D(inputBuffer, vUv + offset * texelSize).rgb;
-}
-
-vec3 downsample13() {
-  vec3 inner = tap(vec2(-1.0, -1.0)) + tap(vec2(1.0, -1.0))
-             + tap(vec2(-1.0, 1.0)) + tap(vec2(1.0, 1.0));
-  vec3 corners = tap(vec2(-2.0, -2.0)) + tap(vec2(2.0, -2.0))
-               + tap(vec2(-2.0, 2.0)) + tap(vec2(2.0, 2.0));
-  vec3 edges = tap(vec2(0.0, -2.0)) + tap(vec2(-2.0, 0.0))
-             + tap(vec2(2.0, 0.0)) + tap(vec2(0.0, 2.0));
-  vec3 center = tap(vec2(0.0));
-  return inner * 0.125 + corners * 0.03125 + edges * 0.0625 + center * 0.125;
-}
-`;
-
-/**
- * Godot multiplies the glow buffer by `glow_strength` at every pyramid pass, after the bright pass
- * applied its own, so each downsample carries one more factor: `strength^(i+1)` at level `i`.
- */
-function downsampleFragmentShader(glow: GlowParams): string {
-  return /* glsl */ `
-${DOWNSAMPLE_TAPS}
-void main() {
-  gl_FragColor = vec4(downsample13() * ${glslFloat(glow.strength)}, 1.0);
-}
-`;
-}
-
-/**
- * One rung of the coarse-to-fine sum: a 9-tap tent upsample of everything
- * summed so far, plus this level at its own weight.
- */
-const ACCUMULATE_FRAGMENT_SHADER = /* glsl */ `
-uniform sampler2D coarserBuffer;
-uniform sampler2D levelBuffer;
-uniform float levelWeight;
-uniform float coarserFactor;
-uniform vec2 texelSize;
-varying vec2 vUv;
-
-vec3 tentUpsample(sampler2D tex, vec2 uv) {
-  vec3 sum = texture2D(tex, uv).rgb * 0.25;
-  sum += texture2D(tex, uv + vec2(-texelSize.x, 0.0)).rgb * 0.125;
-  sum += texture2D(tex, uv + vec2(texelSize.x, 0.0)).rgb * 0.125;
-  sum += texture2D(tex, uv + vec2(0.0, -texelSize.y)).rgb * 0.125;
-  sum += texture2D(tex, uv + vec2(0.0, texelSize.y)).rgb * 0.125;
-  sum += texture2D(tex, uv + vec2(-texelSize.x, -texelSize.y)).rgb * 0.0625;
-  sum += texture2D(tex, uv + vec2(texelSize.x, -texelSize.y)).rgb * 0.0625;
-  sum += texture2D(tex, uv + vec2(-texelSize.x, texelSize.y)).rgb * 0.0625;
-  sum += texture2D(tex, uv + vec2(texelSize.x, texelSize.y)).rgb * 0.0625;
-  return sum;
-}
-
-void main() {
-  vec3 accumulated = tentUpsample(coarserBuffer, vUv) * coarserFactor;
-  accumulated += texture2D(levelBuffer, vUv).rgb * levelWeight;
-  gl_FragColor = vec4(accumulated, 1.0);
-}
-`;

@@ -142,7 +142,7 @@ background_mode = 1
     });
   });
 
-  it('holds exactly one entry for every node of the tree', () => {
+  it('holds an entry for every node of the tree and for the heading node it was copied from', () => {
     const { lines, scene } = parse(`[gd_scene format=3]
 
 [node name="Root" type="Node3D"]
@@ -155,6 +155,6 @@ background_mode = 1
       nodes.flatMap((node) => [node, ...walk(node.children)]);
 
     expect(walk(scene!.nodes).map((node) => lines.get(node)?.heading)).toEqual([3, 5, 7]);
-    expect(lines.size).toBe(3);
+    expect(lines.size).toBe(6);
   });
 });

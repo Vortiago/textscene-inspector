@@ -14,7 +14,8 @@ import { multiplyModulate } from '../../canvasItemModulate';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { shapeText, type TextLayoutResult } from './text/textLayout';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
+import { type Rgba } from '../../../godot/math/math';
 import {
   HORIZONTAL_ALIGNMENT_CENTER,
   HORIZONTAL_ALIGNMENT_LEFT,
@@ -22,10 +23,10 @@ import {
   VERTICAL_ALIGNMENT_BOTTOM,
   VERTICAL_ALIGNMENT_CENTER,
   VERTICAL_ALIGNMENT_TOP,
-  type Rgba,
-} from '../../../godot/math/math';
+} from '../../../godot/math/alignment';
 import type { Vector2 } from '../../../godot/math/vector';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
 
@@ -89,7 +90,7 @@ export function shapeButtonLabel(
   fontSizePx: number,
   fontMetrics: FontMetrics,
   boxWidthPx = 0,
-  autowrapMode: AutowrapMode = AutowrapMode.AUTOWRAP_OFF,
+  autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF,
   autowrapTrimFlags?: number
 ): TextLayoutResult {
   return shapeText(text, {

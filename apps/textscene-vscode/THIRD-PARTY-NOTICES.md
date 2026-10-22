@@ -4,7 +4,8 @@ TextScene Inspector is MIT licensed (see `LICENSE`). It additionally contains, a
 distributes, material from the third parties below.
 
 Runtime npm dependencies are not enumerated here; each carries its own licence in its
-published package.
+published package. FastNoiseLite is the exception, since its package keeps the licence in a
+source comment that a bundler strips.
 
 ---
 
@@ -31,6 +32,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
 | `packages/textscene-core/src/godot/rendering/environment/toneMapping.ts` | `servers/rendering/storage/environment_storage.cpp` (`environment_get_white` and the white of `environment_get_tonemap_parameters`) |
 | `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
+| `packages/textscene-core/src/resources/environment/godotGlowPyramid.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GAUSSIAN_BLUR` under `MODE_GLOW`, the pyramid's blur) and `.../effects/tonemap.glsl` (`gather_glow` and the bicubic glow sample) |
 | `packages/textscene-core/src/utils/colorSpace.ts` | `core/math/color.h` (`Color::srgb_to_linear`, `Color::linear_to_srgb`) |
 | `packages/textscene-core/src/godot/math/color.ts` | `core/math/color_names.inc` (the X11 named-colour table, transcribed verbatim) and `core/math/color.cpp` (`Color::find_named_color`'s name normalisation, `Color::named`) |
 | `packages/textscene-core/src/resources/materials/standardmaterial3d/emission.ts` | `scene/resources/material.cpp` (`BaseMaterial3D::_update_shader` emission block, `set_emission_energy_multiplier`) |
@@ -45,7 +47,18 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/csg/csgtorus3d/torusGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGTorus3D::_build_brush`) |
 | `packages/textscene-core/src/resources/meshes/spheremesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`SphereMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/capsulemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CapsuleMesh::create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/cylindermesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`CylinderMesh::create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/torusmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`TorusMesh::_create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/prismmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrismMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/pointmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PointMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
+| `packages/textscene-core/src/resources/meshes/planemesh/lightmapSizeHint.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_update_lightmap_size` and the setters that call it) |
+| `packages/textscene-core/src/resources/meshes/primitivemesh/fallbackUv2.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrimitiveMesh::_update`'s UV2 fallback and `get_uv2_scale`) |
+| `packages/textscene-core/src/resources/formats/binaryresource/parse.ts` | `core/io/resource_format_binary.cpp` (`ResourceLoaderBinary::open` and `::load`) |
+| `packages/textscene-core/src/resources/formats/binaryresource/compressedStream.ts` | `core/io/file_access_compressed.cpp` (`FileAccessCompressed::open_after_magic` and its block reads) and `core/io/compression.cpp` (`Compression::decompress`) |
+| `packages/textscene-core/src/resources/formats/binaryresource/variants.ts` | `core/io/resource_format_binary.cpp` (`ResourceLoaderBinary::parse_variant`) and `core/variant/variant_parser.cpp` (`VariantWriter::write`) |
+| `packages/textscene-core/src/r3f/lightmap/lightmapProgram.ts` | `servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl` (the bicubic lightmap filter and the lightmap read, spherical harmonics included) |
 | `packages/textscene-core/src/resources/meshes/primitivemesh/flipFaces.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PrimitiveMesh::_update`'s `flip_faces` block) |
 | `packages/textscene-core/src/r3f/lighting2d/CanvasLighting2D.tsx` | `drivers/gles3/shaders/canvas.glsl` (the canvas light pass: `base_color`, `canvas_modulation`, the light loop) and `servers/rendering/renderer_canvas_cull.cpp` (`light->item_mask & ci->light_mask`) |
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemLighting.ts` | `drivers/gles3/shaders/canvas.glsl` (`MODE_UNSHADED` / `MODE_LIGHT_ONLY` guards, `light_only_alpha`) and `servers/rendering/renderer_canvas_cull.cpp` (the item cull-mask test) |
@@ -290,10 +303,11 @@ vendors the identical font Godot ships rather than substituting a system or web 
 `packages/textscene-core/assets/fonts/OpenSans_SemiBold.woff2` is an unmodified copy of
 Godot 4.6.3's vendored file. `scripts/fonts/bake-metrics.mjs` reads it at build time
 (decompressing to a TTF in memory, since neither the metrics tool nor the atlas tool
-decompresses real Brotli woff2 itself) and bakes the two committed artifacts
-`openSansMetrics.ts` (font-wide scalar metrics + kerning table) and `openSansAtlas.ts`
+decompresses real Brotli woff2 itself) and bakes the three committed artifacts
+`openSansMetrics.ts` (font-wide scalar metrics + kerning table), `openSansAtlas.ts`
 (the pre-baked MSDF glyph atlas — see ADR-0003 and `packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts`'s own citation of why a
-pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows).
+pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows) and
+`packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face).
 
 Per Godot's own `COPYRIGHT.txt` (`Files: thirdparty/fonts/OpenSans*.woff2`) and
 `thirdparty/README.md`:
@@ -486,6 +500,76 @@ copies or substantial portions of the Software.
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+---
+
+## FastLZ
+
+<https://github.com/ariya/FastLZ>
+
+`packages/textscene-core/src/resources/formats/binaryresource/fastlz.ts` ports FastLZ's level 1
+decompressor, because Godot compresses a binary resource saved in FastLZ mode with it
+(`core/io/compression.cpp`). Godot vendors it as `thirdparty/misc/fastlz.c`. It is by Ariya
+Hidayat and is licensed MIT, separately from Godot's own MIT licence above.
+
+```
+Copyright (C) 2005-2020 Ariya Hidayat <ariya.hidayat@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+---
+
+## FastNoiseLite
+
+<https://github.com/Auburn/FastNoiseLite>
+
+The `fastnoise-lite` npm package (1.1.1) is the JavaScript port of FastNoiseLite, the noise library
+Godot vendors as `thirdparty/misc/FastNoiseLite.h`. NoiseTexture2D and NoiseTexture3D draw their
+noise with it. The package ships its licence as a comment in its source, which a bundler strips, so
+a bundle that holds the package carries the notice here. It is by Jordan Peck and is licensed MIT,
+separately from Godot's own MIT licence above.
+
+```
+MIT License
+
+Copyright(c) 2023 Jordan Peck (jordan.me2@gmail.com)
+Copyright(c) 2023 Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files(the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and / or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions :
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE

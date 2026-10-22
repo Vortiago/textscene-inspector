@@ -10,7 +10,8 @@
 // so an authored value is overwritten, not refused, as with `SpinBox.exp_edit` and `FileDialog.dialog_text`.
 import '../button/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../../linter/validators/indexedFamily.js';
+import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
@@ -37,14 +38,10 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
   separator: v.boolean('separator'),
 };
 
-const itemValidator = indexedFamilyValidator({
-  prefix: 'popup/item_',
+const itemFamilyEntry = propertyListFamilyEntry(OPTION_BUTTON_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
   describes: 'item',
-  // `_set` gates on `property_helper.is_property_valid` (option_button.cpp:166), which needs an
-  // `is_valid_int()` index (property_list_helper.cpp:126), so a non-numeric index is a dropped write.
-  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_ITEM_INDEX',
@@ -53,7 +50,7 @@ const itemValidator = indexedFamilyValidator({
   },
 });
 
-validatorRegistry.registerAll('OptionButton', {
+validatorRegistry.registerAll('OptionButton', itemFamilyEntry, {
   // option_button.cpp:601, PROPERTY_HINT_NONE. `_select_int` (option_button.cpp:432-443) drops a write
   // below NONE_SELECTED (-1, option_button.cpp:433), so the floor is enforced. The high end, against the
   // sibling count, is the cross-field rule in linter.ts (ADR-0032).
@@ -67,6 +64,4 @@ validatorRegistry.registerAll('OptionButton', {
   // option_button.cpp:604, ADD_ARRAY_COUNT, PROPERTY_HINT_NONE. set_item_count (option_button.cpp:309-310)
   // enforces `ERR_FAIL_COND(p_count < 0)`, and nothing sets a ceiling.
   item_count: v.int('item_count', { min: 0, enforced: 'option_button.cpp:310' }),
-
-  'popup/item_#/*': itemValidator,
 });

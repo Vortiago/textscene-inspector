@@ -2,26 +2,46 @@
 /**
  * Reads a release tag before anything is built: which package it releases, and at which
  * version. The tag is the version's only source: the release jobs write it into the
- * package's manifest before they pack. Prints `package`, `directory`, `version` and
+ * package's manifest before they pack. Prints `package`, `kind`, `directory`, `version` and
  * `previous_tag` lines for $GITHUB_OUTPUT, or the error on stderr and exits 1.
  */
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
-/** Each tag prefix, and the repo-relative directory of the one package that tag releases. */
-export const RELEASE_PACKAGES = {
-  vscode: 'apps/textscene-vscode',
-  linter: 'apps/textscene-linter',
-  lsp: 'apps/textscene-lsp',
+/**
+ * Each tag prefix, and what its tag releases:
+ * - `directory`: the repo-relative directory of the one package.
+ * - `kind`: `npm` ships a tarball on GitHub and on npm; `extension` ships a .vsix to the
+ *   marketplaces. The release workflow reads the kind, so it names no package.
+ * - `inputs`: the workspace directories the package bundles, besides its own. Its release notes
+ *   cover them.
+ */
+const RELEASE_TARGETS = {
+  vscode: {
+    directory: 'apps/textscene-vscode',
+    kind: 'extension',
+    inputs: ['packages/textscene-core', 'apps/textscene-web'],
+  },
+  linter: { directory: 'apps/textscene-linter', kind: 'npm', inputs: ['packages/textscene-core'] },
+  lsp: { directory: 'apps/textscene-lsp', kind: 'npm', inputs: ['packages/textscene-core'] },
+  tscn: { directory: 'apps/textscene-tscn', kind: 'npm', inputs: ['packages/textscene-core'] },
+  renderer: { directory: 'apps/textscene-renderer', kind: 'npm', inputs: ['packages/textscene-core'] },
 };
 
-/** The workspace directories each package bundles, besides its own. Its release notes cover them. */
-export const RELEASE_INPUTS = {
-  vscode: ['packages/textscene-core', 'apps/textscene-web'],
-  linter: ['packages/textscene-core'],
-  lsp: ['packages/textscene-core'],
-};
+/** One field of `RELEASE_TARGETS`, keyed by tag prefix. */
+const field = (name) => Object.fromEntries(Object.entries(RELEASE_TARGETS).map(([tag, t]) => [tag, t[name]]));
+
+export const RELEASE_PACKAGES = field('directory');
+export const RELEASE_INPUTS = field('inputs');
+
+/** Own keys only: a tag like `constructor-v1.0.0` must not find `Object.prototype.constructor`. */
+function releaseTarget(name) {
+  return Object.hasOwn(RELEASE_TARGETS, name) ? RELEASE_TARGETS[name] : undefined;
+}
+
+/** Joins the example tags with "or", without the serial comma of American English. */
+const DISJUNCTION = new Intl.ListFormat('en-GB', { type: 'disjunction' });
 
 /**
  * `<package>-v<major>.<minor>.<patch>` only. The VS Marketplace refuses a semver pre-release
@@ -60,19 +80,18 @@ function sameSeries(release, tags) {
 /**
  * @param {string} tag - the pushed tag name, as `GITHUB_REF_NAME` gives it.
  * @param {string[]} tags - every tag in the repository.
- * @returns {{ package: string, directory: string, version: string, previousTag: string }
+ * @returns {{ package: string, kind: string, directory: string, version: string, previousTag: string }
  *   | { error: string }} `previousTag` is the base the release notes compare against, or ''
  *   for a package's first release.
  */
 export function checkReleaseTag(tag, tags) {
   const release = parseReleaseTag(tag);
   if (!release) {
-    return {
-      error: `expected a tag like vscode-v1.2.3, linter-v1.2.3 or lsp-v1.2.3, got ${JSON.stringify(tag)}`,
-    };
+    const examples = Object.keys(RELEASE_PACKAGES).map((name) => `${name}-v1.2.3`);
+    return { error: `expected a tag like ${DISJUNCTION.format(examples)}, got ${JSON.stringify(tag)}` };
   }
-  const directory = RELEASE_PACKAGES[release.package];
-  if (!directory) {
+  const target = releaseTarget(release.package);
+  if (!target) {
     const known = Object.keys(RELEASE_PACKAGES).join(', ');
     return { error: `expected a tag prefix out of ${known}, got ${JSON.stringify(release.package)}` };
   }
@@ -81,7 +100,13 @@ export function checkReleaseTag(tag, tags) {
   if (newest && compareParts(newest.release.parts, release.parts) > 0) {
     return { error: `expected a version above the newest ${release.package} tag ${newest.name}, got ${tag}` };
   }
-  return { package: release.package, directory, version: release.version, previousTag: newest?.name ?? '' };
+  return {
+    package: release.package,
+    kind: target.kind,
+    directory: target.directory,
+    version: release.version,
+    previousTag: newest?.name ?? '',
+  };
 }
 
 /**
@@ -93,7 +118,7 @@ export function checkReleaseTag(tag, tags) {
  */
 export function releaseHistory(tag, tags) {
   const release = parseReleaseTag(tag);
-  if (!RELEASE_PACKAGES[release?.package]) {
+  if (!releaseTarget(release?.package)) {
     throw new Error(`expected a release tag like vscode-v1.2.3, got ${JSON.stringify(tag)}`);
   }
   const lower = sameSeries(release, tags).filter(
@@ -120,6 +145,7 @@ function main() {
     process.exit(1);
   }
   console.log(`package=${result.package}`);
+  console.log(`kind=${result.kind}`);
   console.log(`directory=${result.directory}`);
   console.log(`version=${result.version}`);
   console.log(`previous_tag=${result.previousTag}`);

@@ -8,6 +8,7 @@ import type { Aabb } from '../../../godot/math/aabb';
 import { spriteBillboardAabb } from '../../../godot/scene/billboard';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import type { Sprite3DProperties } from './types';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** The quad's size in world units: the frame's pixels times `pixel_size`. */
 interface QuadSize {
@@ -38,7 +39,10 @@ export function spriteQuadRect(
  * The quad on the plane `axis` faces, with its normal along the axis (`sprite_3d.cpp:166-198`).
  * AXIS_Y takes the rect's Y to -Z and AXIS_X takes its X to -Z.
  */
-export function spriteQuadGeometry({ position, size }: Aabb, axis: Vector3Axis): THREE.PlaneGeometry {
+export function spriteQuadGeometry(
+  { position, size }: Aabb,
+  axis: EnumValue<typeof Vector3Axis>
+): THREE.PlaneGeometry {
   const geometry = new THREE.PlaneGeometry(size.x, size.y);
   geometry.translate(position.x + size.x / 2, position.y + size.y / 2, 0);
   if (axis === Vector3Axis.Y) geometry.rotateX(-Math.PI / 2);
@@ -47,11 +51,11 @@ export function spriteQuadGeometry({ position, size }: Aabb, axis: Vector3Axis):
 }
 
 /** The quad's AABB in node space under `billboard`, as `_draw` sets it (`sprite_3d.cpp:252-273`). */
-export function spriteQuadAabb(rect: Aabb, axis: Vector3Axis, billboard: number): Aabb {
+export function spriteQuadAabb(rect: Aabb, axis: EnumValue<typeof Vector3Axis>, billboard: number): Aabb {
   return spriteBillboardAabb(quadOnAxis(rect, axis), rect, billboard, axis);
 }
 
-function quadOnAxis({ position, size }: Aabb, axis: Vector3Axis): Aabb {
+function quadOnAxis({ position, size }: Aabb, axis: EnumValue<typeof Vector3Axis>): Aabb {
   switch (axis) {
     case Vector3Axis.Y:
       return {

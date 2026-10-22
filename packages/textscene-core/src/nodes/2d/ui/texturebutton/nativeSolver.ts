@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { TscnNode } from '../../../../parser/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type {
   MinimumSizeFn,
   TextureSlotRequest,

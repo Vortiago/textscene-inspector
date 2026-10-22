@@ -5,9 +5,10 @@
  */
 
 import type { Diagnostic, LintRule, RuleContext } from '../../../../linter/types.js';
-import { indicesPastCount, listWrittenIndices } from '../../../../linter/reportedIndices.js';
+import { listWrittenIndices, writesPastFamilyCount } from '../../../../linter/reportedIndices.js';
+import { TAB_BAR_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
-import { ruleCount, ruleInt } from '../../../../linter/validators/commonValidators.js';
+import { ruleInt } from '../../../../godot/variant/intSlots.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 
 const arms = {
@@ -19,16 +20,9 @@ const arms = {
   tabIndexOutOfRange: {
     severity: 'error',
     ruleName: 'tabbar-tab-index-out-of-range',
-    grounding: { kind: 'engine', at: 'property_list_helper.cpp:58' },
+    grounding: { kind: 'engine', at: TAB_BAR_TABS.outOfBounds.at },
   },
 } as const satisfies RuleArms<string>;
-
-/**
- * The family's prefix. The `tab_` scalars (`tab_alignment`, `tab_count`) carry no `/`, so they
- * name no index. TabBar's `PropertyListHelper` (tab_bar.cpp) gates the index on
- * `String::is_valid_int()` (property_list_helper.cpp:53).
- */
-const TAB_PREFIX = 'tab_';
 
 function checkTabBar(context: RuleContext): Diagnostic[] {
   const diagnostics: Diagnostic[] = [];
@@ -37,11 +31,9 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
 
   // Absent means 0: `tabs` is default-constructed empty
   // (doc/classes/TabBar.xml:282 records the same default).
-  const count = ruleCount(props.tab_count);
-  // A malformed tab_count is already reported by its own validator, and a
-  // non-finite one is altered at parse to a number the file does not state;
-  // neither is a count this rule can name in a message.
-  if (count === null) return diagnostics;
+  const pastCount = writesPastFamilyCount(props, TAB_BAR_TABS);
+  if (pastCount === null) return diagnostics;
+  const { count, offending } = pastCount;
 
   // Either order drops the write. `tab_count` first flips `initialized` (tab_bar.cpp:778-779),
   // so `set_current_tab` fails `ERR_FAIL_INDEX` (tab_bar.cpp:804). `current_tab` first, the
@@ -71,8 +63,6 @@ function checkTabBar(context: RuleContext): Diagnostic[] {
   // index at or past the length getter (property_list_helper.cpp:58), here `get_tab_count`
   // (tab_bar.cpp:2189). Only TabContainer enables out-of-bounds assign (tab_container.cpp:1294).
   // Godot's saver never writes this: `tabs.resize(p_count)` (tab_bar.cpp:755) keeps both in step.
-  const offending = indicesPastCount(props, TAB_PREFIX, 'is_valid_int', count);
-
   if (offending.size > 0) {
     const indices = listWrittenIndices(offending);
     reportArm(
@@ -94,7 +84,7 @@ const tabBarValidationRule: LintRule = {
     name: 'valid-tabbar-properties',
     description: "Validates TabBar's current_tab and tab_<idx>/… indices against tab_count",
     category: 'validation',
-    applicableNodeTypes: ['TabBar'],
+    applicableNodeTypes: [TAB_BAR_TABS.owner],
     emits: armEmits(arms),
   },
   check: checkTabBar,

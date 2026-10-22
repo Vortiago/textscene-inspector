@@ -79,6 +79,11 @@ export const mockCommands: any = {
   registerCommand: vi.fn(),
 };
 
+/** `vscode.env`: the clipboard the copy commands write. */
+export const mockEnv: any = {
+  clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+};
+
 /** `vscode.lm`: `registerTool` only, which the tools feature-detect. */
 export const mockLm: any = {
   registerTool: vi.fn(() => ({ dispose: vi.fn() })),
@@ -93,5 +98,6 @@ export const mockLanguages: any = {
   registerCodeActionsProvider: vi.fn(),
   registerFoldingRangeProvider: vi.fn(),
   registerDocumentHighlightProvider: vi.fn(),
+  registerReferenceProvider: vi.fn(),
   createDiagnosticCollection: vi.fn((name: string) => createMockDiagnosticCollection(name)),
 };

@@ -25,7 +25,7 @@ function expectTangents(tangents: Float32Array | undefined, expected: number[]):
 }
 
 /**
- * scenes/demos/3d/platformer/stage/meshes/wall.tres: a 4-vertex quad, one
+ * scenes/demos/3d/platformer/stage/meshes/wall.res: a 4-vertex quad, one
  * surface, one material. format 34359742487 = VERTEX|NORMAL|TANGENT|TEX_UV|INDEX,
  * uncompressed (no ARRAY_FLAG_COMPRESS_ATTRIBUTES). vertex 0 = (-1,-1,1).
  */
@@ -87,10 +87,10 @@ describe('decodeArrayMesh', () => {
     }
   });
 
-  it('decodes indices with byte-width auto-detection (uint16 here)', () => {
+  it('decodes 2-byte index_data into the one index width every surface carries', () => {
     const surface = decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!;
 
-    expect(surface.indices).toBeInstanceOf(Uint16Array);
+    expect(surface.indices).toBeInstanceOf(Uint32Array);
     expect(Array.from(surface.indices)).toEqual([2, 0, 3, 2, 1, 0]);
   });
 
@@ -211,8 +211,8 @@ blend_shape_mode = 0
 `;
 
 /**
- * Hand-built, compressed with NORMAL and no TANGENT: format 536875011 = VERTEX|NORMAL|INDEX
- * + ARRAY_FLAG_COMPRESS_ATTRIBUTES. With no tangent the octahedral pair (the inverse of
+ * Hand-built, compressed with NORMAL and no TANGENT: format 34896613379 = VERTEX|NORMAL|INDEX
+ * + ARRAY_FLAG_COMPRESS_ATTRIBUTES + ARRAY_FLAG_FORMAT_VERSION_2. With no tangent the octahedral pair (the inverse of
  * `octToVec3`) is the normal itself, +Y, +X and +Z, and the angle slot stays zero. The
  * axis-angle path would read that zero as `abs(0 * 2 - 1) * PI`, a half-turn, and tilt them.
  */
@@ -221,7 +221,7 @@ const COMPRESSED_NO_TANGENT_TRES = `[gd_resource type="ArrayMesh" format=4]
 [resource]
 _surfaces = [{
 "aabb": AABB(0, 0, 0, 1, 1, 1),
-"format": 536875011,
+"format": 34896613379,
 "index_count": 3,
 "index_data": PackedByteArray("AAABAAIA"),
 "name": "no_tangent",
@@ -374,7 +374,7 @@ blend_shape_mode = 0
 `;
 
 /**
- * scenes/demos/3d/truck_town/vehicles/meshes/truck_trailer.tres, its
+ * scenes/demos/3d/truck_town/vehicles/meshes/truck_trailer.res, its
  * `truck_trailer` surface verbatim: a compressed surface that also carries
  * TEX_UV. format 34896613399 adds TEX_UV to the compressed set, so
  * `attribute_data` is 4 B/vertex.
@@ -552,7 +552,7 @@ describe('attribute_data layout', () => {
   it('reads UV1 past the vertex colour instead of decoding the colour as u', () => {
     // Godot orders the attribute record COLOR, UV1, UV2: vertex colours put 4
     // RGBA8 bytes ahead of UV1, so reading from offset 0 decodes the colour as
-    // `u`. godot_ball.tres has such a surface (12-byte record).
+    // `u`. godot_ball.res has such a surface (12-byte record).
     const surface = decodeArrayMeshTres(COLOR_UV_TRES, 'res://mesh.tres').surfaces[0]!;
 
     expect(Array.from(surface.uvs!)).toEqual([0.25, 0.5, 0.75, 1]);
@@ -684,8 +684,50 @@ const LINES_SECOND_SURFACE_TRES = TWO_SURFACE_TRES.replace(
   '"material": ExtResource("2_b"),\n"primitive": 1,'
 );
 
+/** WALL_TRES's only surface declared as POINTS (primitive 0): Godot's `Mesh.PRIMITIVE_POINTS`. */
+const POINTS_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 0,');
+
+/** TWO_SURFACE_TRES with its second surface declared as POINTS. */
+const POINTS_SECOND_SURFACE_TRES = TWO_SURFACE_TRES.replace(
+  '"material": ExtResource("2_b"),\n"primitive": 3,',
+  '"material": ExtResource("2_b"),\n"primitive": 0,'
+);
+
 /** WALL_TRES's only surface declared as a LINE_STRIP (primitive 2). */
 const LINE_STRIP_ONLY_TRES = WALL_TRES.replace('"primitive": 3,', '"primitive": 2,');
+
+describe('POINTS primitive', () => {
+  it('decodes a points surface, flagged, with the indices that pick its points', () => {
+    const surface = decodeArrayMeshTres(POINTS_ONLY_TRES, 'res://mesh.tres').surfaces[0]!;
+
+    expect(surface.isPoints).toBe(true);
+    expect(surface.vertexCount).toBe(4);
+    expect([...surface.indices]).toEqual([2, 0, 3, 2, 1, 0]);
+  });
+
+  it('flags no triangle surface as points', () => {
+    expect(decodeArrayMeshTres(WALL_TRES, 'res://mesh.tres').surfaces[0]!.isPoints).toBeUndefined();
+  });
+
+  it('draws a points surface saved with no indices as every vertex, in order (edge case)', () => {
+    const unindexed = POINTS_ONLY_TRES.replace('"index_count": 6,\n', '').replace(
+      /"index_data": PackedByteArray\("[^"]*"\),\n/,
+      ''
+    );
+    expect([...decodeArrayMeshTres(unindexed, 'res://mesh.tres').surfaces[0]!.indices]).toEqual([0, 1, 2, 3]);
+  });
+
+  // Godot draws every surface of an ArrayMesh, whatever its primitive.
+  it('keeps a points surface beside a triangle surface, in surface order', () => {
+    const mesh = decodeArrayMeshTres(POINTS_SECOND_SURFACE_TRES, 'res://mesh.tres');
+
+    expect(mesh.surfaces.map((s) => [s.surfaceIndex, s.isPoints === true])).toEqual([
+      [0, false],
+      [1, true],
+    ]);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
 
 describe('non-triangle primitives', () => {
   it('skips a non-triangle surface and keeps the triangle ones', () => {

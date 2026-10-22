@@ -68,3 +68,26 @@ describe('optionbutton-selected-out-of-range', () => {
     expect(findings(readFileSync(fixturePath, 'utf8'))).toHaveLength(0);
   });
 });
+
+describe('optionbutton-item-index-out-of-range', () => {
+  const findings = (content: string) =>
+    lint(content).filter((d) => d.ruleName === 'optionbutton-item-index-out-of-range');
+
+  it('reports a popup/item_<N> key at or past item_count, which the popup helper drops', () => {
+    const found = findings(scene(node('OptionButton', { item_count: 1, 'popup/item_3/text': '"Late"' })));
+    expect(found).toHaveLength(1);
+    expect(found[0]).toBeAtTier('error');
+    expect(found[0]!.message).toContain('3');
+    expect(found[0]!.message).toContain('item_count (1)');
+  });
+
+  it('reports a key when item_count is absent, since the popup then holds no item', () => {
+    expect(findings(scene(node('OptionButton', { 'popup/item_0/text': '"Late"' })))).toHaveLength(1);
+  });
+
+  it('stays silent on an index inside item_count', () => {
+    expect(
+      findings(scene(node('OptionButton', { item_count: 2, 'popup/item_1/text': '"Ok"' })))
+    ).toHaveLength(0);
+  });
+});

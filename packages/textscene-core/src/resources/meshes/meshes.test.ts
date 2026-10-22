@@ -1,5 +1,5 @@
 /**
- * The primitive-mesh slices' routing claims (ADR-0031), one table over the eight.
+ * The primitive-mesh slices' routing claims (ADR-0031), one table over the nine.
  * Importing a slice index registers it. ArrayMesh claims its own `arraymesh` bus
  * slot and is asserted in `arraymesh/registration.test.ts`.
  */
@@ -15,6 +15,7 @@ import './cylindermesh';
 import './capsulemesh';
 import './torusmesh';
 import './prismmesh';
+import './pointmesh';
 
 /** Every primitive-mesh type this package claims, with the slice that claims it. */
 const CLAIMS: readonly (readonly [string, string])[] = [
@@ -26,6 +27,7 @@ const CLAIMS: readonly (readonly [string, string])[] = [
   ['CapsuleMesh', 'capsulemesh'],
   ['TorusMesh', 'torusmesh'],
   ['PrismMesh', 'prismmesh'],
+  ['PointMesh', 'pointmesh'],
 ];
 
 describe('primitive-mesh slice registrations', () => {

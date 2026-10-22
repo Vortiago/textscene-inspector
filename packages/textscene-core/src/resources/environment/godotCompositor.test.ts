@@ -6,21 +6,31 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { compositeProgram, GLOW_BUFFER_UNIFORM, GLOW_MAP_UNIFORM } from './godotCompositor';
-import { glowParamsFor, type GlowParams } from './godotGlow';
+import { compositeProgram, GLOW_MAP_UNIFORM } from './godotCompositor';
+import { GLOW_TEXTURE_SIZE_UNIFORM, glowLevelUniform } from './godotGlowPyramid';
+import type { GlowParams } from './godotGlow';
 import { GlowBlendMode } from '../../godot/rendering/environment/glow.js';
 import { ToneMapper } from '../../godot/rendering/environment/toneMapping.js';
 import type { EnvironmentAdjustments } from './types';
-import type { CompositeToneMapping } from './godotCompositor';
-import { environmentSettingsOf } from './testing/environmentSettings';
+import type { CompositeOptions, CompositeToneMapping } from './godotCompositor';
+import { glowOn } from './testing/glowParams';
 
-function glowOn(extra: Record<string, string> = {}): GlowParams {
-  const params = glowParamsFor(environmentSettingsOf({ glow_enabled: 'true', ...extra }));
-  if (!params) throw new Error('expected glow to be enabled');
-  return params;
-}
+/** The levels the default weights `[0, 0.8, 0.4, 0.1, 0, 0, 0]` gather. */
+const DEFAULT_GATHERED_LEVELS = [1, 2, 3];
 
 const FILMIC: CompositeToneMapping = { mode: ToneMapper.FILMIC, white: 1 };
+
+/** The composite options of a project that upscales glow linearly. */
+function linearOptions(): CompositeOptions {
+  return {
+    glow: glowOn(),
+    toneMapping: FILMIC,
+    adjustments: null,
+    exposure: 1,
+    transparentBackground: false,
+    usesBicubicGlowUpscale: false,
+  };
+}
 
 /** The whole shader with `FLAG_USE_BCS` clear. */
 function composite(glow: GlowParams | null, toneMapping: CompositeToneMapping = FILMIC): string {
@@ -32,8 +42,14 @@ function shaderOf(
   toneMapping: CompositeToneMapping,
   adjustments: EnvironmentAdjustments | null
 ): string {
-  return compositeProgram({ glow, toneMapping, adjustments, exposure: 1, transparentBackground: false })
-    .fragmentShader;
+  return compositeProgram({
+    glow,
+    toneMapping,
+    adjustments,
+    exposure: 1,
+    transparentBackground: false,
+    usesBicubicGlowUpscale: true,
+  }).fragmentShader;
 }
 
 /** `mainImage`'s body: above it sit the definitions, not the call order. */
@@ -51,14 +67,27 @@ describe('compositeProgram — the shader it emits', () => {
     // The effect compiles this one string. A function it only calls would be a
     // link error at shader-compile time: a black frame.
     const glsl = composite(glowOn());
-    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
     expect(glsl).toContain('vec3 godotGlowBlend(vec3 color, vec3 glow)');
     expect(glsl).toContain('void mainImage(const in vec4 inputColor, const in vec2 uv,');
   });
 
-  it('declares the two uniforms the pass feeds it', () => {
+  it('declares the glow texture size for the bicubic read, and not for the linear one', () => {
+    expect(composite(glowOn())).toContain(`uniform vec2 ${GLOW_TEXTURE_SIZE_UNIFORM};`);
+    expect(compositeProgram(linearOptions()).fragmentShader).not.toContain(GLOW_TEXTURE_SIZE_UNIFORM);
+  });
+
+  it('gathers each level with one bilinear fetch when the project upscales glow linearly', () => {
+    const glsl = compositeProgram(linearOptions()).fragmentShader;
+    expect(glsl).toContain(`texture2D(${glowLevelUniform(1)}, uv).rgb`);
+    expect(glsl).not.toContain('godotGlowBicubic');
+  });
+
+  it('declares the exposure and one sampler for each gathered glow level', () => {
     const glsl = composite(glowOn());
-    expect(glsl).toContain('uniform sampler2D godotGlowBuffer;');
+    for (const level of DEFAULT_GATHERED_LEVELS)
+      expect(glsl).toContain(`uniform sampler2D ${glowLevelUniform(level)};`);
+    expect(glsl).not.toContain(`uniform sampler2D ${glowLevelUniform(0)};`);
     expect(glsl).toContain('uniform float godotExposure;');
   });
 
@@ -73,21 +102,22 @@ describe('compositeProgram — the shader it emits', () => {
       adjustments: null,
       exposure: 1,
       transparentBackground: true,
+      usesBicubicGlowUpscale: true,
     });
     expect(fragmentShader).toContain('outputColor = vec4(color, inputColor.a);');
   });
 });
 
 describe('compositeProgram — the glow gather', () => {
-  it('scales the gathered buffer by glow_intensity, as gather_glow’s caller does', () => {
-    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain('texture2D(godotGlowBuffer, uv).rgb * 0.75');
+  it('scales the gathered levels by glow_intensity, as gather_glow’s caller does', () => {
+    expect(body(glowOn({ glow_intensity: '0.75' }))).toContain('godotGlowGather(uv) * 0.75');
   });
 
   it('gives MIX the glow_mix factor in the intensity slot Godot reuses', () => {
     // Godot fills the same uniform from `glow_mix` under MIX and lerps against
     // it, so the scale on the buffer and the lerp factor are one value.
     const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.MIX), glow_mix: '0.4' }));
-    expect(glsl).toContain('texture2D(godotGlowBuffer, uv).rgb * 0.4');
+    expect(glsl).toContain('godotGlowGather(uv) * 0.4');
   });
 });
 
@@ -119,7 +149,7 @@ describe('compositeProgram — exposure', () => {
   it('exposes the scene colour and leaves the glow alone, pre-tonemap modes', () => {
     const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SCREEN) }));
     expect(glsl).toContain('* godotExposure');
-    expect(glsl).toContain('godotToneMap(color, 1.0)');
+    expect(glsl).toContain('godotToneMap(color)');
     expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
   });
 
@@ -130,23 +160,23 @@ describe('compositeProgram — exposure', () => {
     }
   });
 
-  it('calls the curve with an exposure of 1.0 — each operand is exposed already', () => {
+  it('tonemaps operands that are exposed already', () => {
     const glsl = body(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
-    expect(glsl).toContain('godotToneMap(glow, 1.0)');
-    expect(glsl).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0)');
+    expect(glsl).toContain('godotToneMap(glow)');
+    expect(glsl).toContain('godotToneMap(inputColor.rgb * godotExposure)');
   });
 
-  it('clamps the scene colour non-negative before the curve, as apply_tonemapping does', () => {
-    // Godot: "Ensure color values passed to tonemappers are positive. They can
-    // be negative in the case of negative lights".
-    expect(body(glowOn())).toContain('max(inputColor.rgb, 0.0)');
+  it('blends the scene colour unclamped, so a negative channel lowers the glow as in Godot', () => {
+    // `tonemap.glsl:875,892`: only `apply_tonemapping` clamps, after the blend. The sky's dither
+    // leaves a channel below zero, and a clamp before the blend raises the sum by that much.
+    expect(body(glowOn())).toContain('godotGlowBlend(inputColor.rgb * godotExposure, glow)');
   });
 });
 
 describe('compositeProgram — which side of the tone curve the blend falls on', () => {
   it('tonemaps both operands and neither twice, SOFTLIGHT', () => {
     const glsl = composite(glowOn({ glow_blend_mode: String(GlowBlendMode.SOFTLIGHT) }));
-    expect(glsl).toContain('godotToneMap(glow, 1.0)');
+    expect(glsl).toContain('godotToneMap(glow)');
     expect(glsl).not.toMatch(/glow[^;]*godotExposure/);
   });
 
@@ -244,13 +274,12 @@ describe('compositeProgram — with the glow flag clear', () => {
   const tone = { mode: ToneMapper.FILMIC, white: 1 };
 
   it('exposes the scene colour and applies the curve, in that order', () => {
-    expect(body(null, tone)).toContain('godotToneMap(max(inputColor.rgb, 0.0) * godotExposure, 1.0)');
+    expect(body(null, tone)).toContain('godotToneMap(inputColor.rgb * godotExposure)');
   });
 
   it('gathers no glow and declares no buffer to gather from', () => {
     const glsl = composite(null, tone);
-    expect(glsl).not.toContain('godotGlowBuffer');
-    expect(glsl).not.toContain('godotGlowBlend');
+    expect(glsl).not.toContain('godotGlow');
     expect(glsl).toContain('uniform float godotExposure;');
   });
 
@@ -260,7 +289,7 @@ describe('compositeProgram — with the glow flag clear', () => {
 
   it('still emits a real curve under LINEAR, which is exposure and nothing else', () => {
     const glsl = composite(null, { mode: ToneMapper.LINEAR, white: 1 });
-    expect(glsl).toContain('vec3 godotToneMap(vec3 color, float exposure)');
+    expect(glsl).toContain('vec3 godotToneMap(vec3 color)');
     expect(glsl).toContain('* godotExposure');
   });
 });
@@ -340,6 +369,7 @@ describe('compositeProgram — the uniforms it returns', () => {
       adjustments: null,
       exposure,
       transparentBackground: false,
+      usesBicubicGlowUpscale: true,
     });
   }
 
@@ -365,19 +395,20 @@ describe('compositeProgram — the uniforms it returns', () => {
     expect(Object.keys(uniforms).sort()).toEqual(declaredUniforms(fragmentShader).sort());
   });
 
-  it('adds the glow buffer with a glow and the glow map with a map', () => {
-    expect(Object.keys(program(glowOn()).uniforms)).toEqual(['godotExposure', GLOW_BUFFER_UNIFORM]);
-    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([
+  it('adds a sampler per gathered level and the glow size with a glow, and the glow map with a map', () => {
+    const glowUniforms = [
       'godotExposure',
-      GLOW_BUFFER_UNIFORM,
-      GLOW_MAP_UNIFORM,
-    ]);
+      ...DEFAULT_GATHERED_LEVELS.map(glowLevelUniform),
+      GLOW_TEXTURE_SIZE_UNIFORM,
+    ];
+    expect(Object.keys(program(glowOn()).uniforms)).toEqual(glowUniforms);
+    expect(Object.keys(program(glowOn(GLOW_MAP)).uniforms)).toEqual([...glowUniforms, GLOW_MAP_UNIFORM]);
   });
 
   it('starts the exposure at the authored value and each texture unbound', () => {
     const { uniforms } = program(glowOn(GLOW_MAP), 2.5);
     expect(uniforms['godotExposure']).toBe(2.5);
-    expect(uniforms[GLOW_BUFFER_UNIFORM]).toBeNull();
+    expect(uniforms[glowLevelUniform(1)]).toBeNull();
     expect(uniforms[GLOW_MAP_UNIFORM]).toBeNull();
   });
 });

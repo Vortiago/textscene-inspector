@@ -33,16 +33,10 @@ async function render(node: TscnNode, internalResources: TscnInternalResource[] 
 
 describe('<MeshInstance3D>', () => {
   describe('placeholder paths', () => {
-    it('renders a magenta wireframe placeholder when no mesh property is set', async () => {
+    it('draws nothing when no mesh property is set, as Godot does', async () => {
       const renderer = await render(makeNode());
       const mesh = findMesh(renderer.scene);
-      expect(mesh.geometry.type).toBe('BoxGeometry');
-      const material = mesh.material as unknown as {
-        color: { getHex(): number };
-        wireframe: boolean;
-      };
-      expect(material.wireframe).toBe(true);
-      expect(material.color.getHex()).toBe(0xff00ff);
+      expect(mesh.geometry.attributes.position).toBeUndefined();
     });
 
     it('renders placeholder when mesh reference cannot be resolved', async () => {

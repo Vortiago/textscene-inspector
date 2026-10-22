@@ -1,10 +1,10 @@
 /**
  * The Control rect solver is pure TS: no React, no THREE, anywhere in
- * `native/{rect,solveTree,nativeTheme,solverRegistry,controlRectSolver,solveHandoff}.ts`.
+ * `native/{solveTree,nativeTheme,solverRegistry,controlRectSolver,solveHandoff}.ts`.
  */
-// Six separate entries: most references between them are `import type`, which
+// Five separate entries: most references between them are `import type`, which
 // the walker skips, so a closure rooted at one file never reaches `nativeTheme.ts`.
-// The union of the six closures is what ships.
+// The union of the five closures is what ships.
 import { describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +13,6 @@ import { walkImportClosure, bareSpecifiers, tsxFiles, FRAMEWORK_BARE_RE } from '
 const here = dirname(fileURLToPath(import.meta.url));
 
 const entries = [
-  'rect.ts',
   'solveTree.ts',
   'nativeTheme.ts',
   'solverRegistry.ts',
@@ -30,13 +29,13 @@ describe('native Control rect solver stays React/THREE-free', () => {
     }
   });
 
-  it('reaches no .tsx render component from any of the six modules', () => {
+  it('reaches no .tsx render component from any of the five modules', () => {
     for (const closure of closures) {
       expect(tsxFiles(closure)).toEqual([]);
     }
   });
 
-  it('value-imports no react/react-dom/@react-three/three from any of the six modules', () => {
+  it('value-imports no react/react-dom/@react-three/three from any of the five modules', () => {
     for (const closure of closures) {
       expect(bareSpecifiers(closure).filter((s) => FRAMEWORK_BARE_RE.some((re) => re.test(s)))).toEqual([]);
     }

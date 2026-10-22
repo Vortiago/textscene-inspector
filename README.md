@@ -17,6 +17,8 @@ TextScene Inspector renders Godot `.tscn` scenes in 3D and 2D from the text alon
 | Web previewer | [Open in the browser](https://vortiago.github.io/textscene-inspector/) | [Web guide](./docs/user-guide-web.md) |
 | CLI linter for `.tscn` and `.tres` | `npm install --global @textscene/linter` | [Linter README](./apps/textscene-linter/README.md) |
 | Language server for any editor | `npm install --global @textscene/lsp` | [Language server README](./apps/textscene-lsp/README.md) |
+| `.tscn` parser for Node and the browser | `npm install @textscene/tscn` | [Parser README](./apps/textscene-tscn/README.md) |
+| Scene renderer for a React app | `npm install @textscene/renderer` | [Renderer README](./apps/textscene-renderer/README.md) |
 
 Dev edition, with the test scenes: [textscene-inspector.pages.dev](https://textscene-inspector.pages.dev/).
 
@@ -47,6 +49,8 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm build:pages` | Build the public edition, without dev content |
 | `pnpm build:linter` | Build the CLI linter |
 | `pnpm build:lsp` | Build the `tscn-lsp` language server |
+| `pnpm build:tscn` | Build the `@textscene/tscn` parser package |
+| `pnpm build:renderer` | Build the `@textscene/renderer` package |
 | `pnpm lint:tscn <paths>` | Lint `.tscn` and `.tres` paths |
 | `pnpm test` | Unit tests |
 | `pnpm test:visual` | Golden images, exact pixel match |
@@ -55,6 +59,7 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm test:perf` | Work budgets: each budget scene's draw calls and render step runs per frame, against `scripts/perf/budgets.json` |
 | `pnpm test:perf:update` | Rewrite the work budgets from a run |
 | `pnpm test:gpu` | The sky layer passes in headless Chromium: a uniform sky keeps its colour, and no layer goes below black |
+| `pnpm test:renderer-consumer` | The packed `@textscene/renderer` in a plain Vite React app: it builds and renders a scene in headless Chromium |
 | `pnpm test:vscode:csp` | The preview draws in the real VS Code webview, under its CSP |
 | `pnpm --filter textscene-inspector test:integration` | VS Code integration tests |
 | `TEXTSCENE_VSCODE_VERSION=min pnpm --filter textscene-inspector test:integration` | The same tests on the oldest VS Code that `engines.vscode` accepts |

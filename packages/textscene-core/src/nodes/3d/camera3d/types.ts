@@ -3,22 +3,12 @@
  */
 
 import type { Node3DProperties } from '../../base/node3d/types';
-
-export enum ProjectionMode {
-  PROJECTION_PERSPECTIVE = 0,
-  PROJECTION_ORTHOGONAL = 1,
-  PROJECTION_FRUSTUM = 2,
-}
-
-/** camera_3d.h:50-53: two members, and no third label exists. */
-export enum KeepAspectMode {
-  KEEP_WIDTH = 0,
-  KEEP_HEIGHT = 1,
-}
+import { Camera3DProjectionType, Camera3DKeepAspect } from '../../../godot/scene/camera3d';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export interface Camera3DProperties extends Node3DProperties {
   // Projection
-  projection: ProjectionMode;
+  projection: EnumValue<typeof Camera3DProjectionType>;
 
   // Perspective properties
   fov: number;
@@ -29,7 +19,7 @@ export interface Camera3DProperties extends Node3DProperties {
   // Common properties
   near: number;
   far: number;
-  keep_aspect: KeepAspectMode;
+  keep_aspect: EnumValue<typeof Camera3DKeepAspect>;
 
   // Offsets
   h_offset: number;

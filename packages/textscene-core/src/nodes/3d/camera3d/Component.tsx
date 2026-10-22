@@ -9,13 +9,13 @@ import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import type { Camera as FiberCamera } from '@react-three/fiber';
 import type { Camera3DProperties } from './types';
-import { ProjectionMode } from './types';
 import { fitToAspect, fittedAspect, setLens, type CameraLens } from './projectionFit';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useGizmoVisible } from '../lights/shared/lightHelpers';
 import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../r3f/hooks/useTHREEHelper';
+import { Camera3DProjectionType } from '../../../godot/scene/camera3d';
 
 const DEFAULT_ASPECT = 16 / 9;
 
@@ -61,9 +61,7 @@ export function Camera3D({ node, children }: NodeComponentProps) {
     ]
   );
   const CameraElement =
-    properties.projection === ProjectionMode.PROJECTION_ORTHOGONAL
-      ? 'orthographicCamera'
-      : 'perspectiveCamera';
+    properties.projection === Camera3DProjectionType.ORTHOGONAL ? 'orthographicCamera' : 'perspectiveCamera';
 
   // PROJECTION_FRUSTUM draws through a perspective camera with a view offset. A new three camera
   // class remounts, through the key, the tag, the lens fit and the gizmo with it.

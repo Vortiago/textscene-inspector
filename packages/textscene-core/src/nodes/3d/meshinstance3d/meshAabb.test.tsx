@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { ReactNode } from 'react';
-import * as THREE from 'three';
 import { renderHook } from '@testing-library/react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
@@ -21,7 +20,16 @@ const EXTERNAL: TscnExternalResource[] = [
   { id: '1', type: 'ArrayMesh', path: 'res://rock.tres' },
   { id: '2', type: 'BoxMesh', path: 'res://crate.tres' },
 ];
-const RESOURCES: SceneResources = { internalResources: [BOX, ARRAY_MESH], externalResources: EXTERNAL };
+const PLACEHOLDER: TscnInternalResource = {
+  id: 'placeholder',
+  type: 'PlaceholderMesh',
+  data: { aabb: 'AABB(-1, 0, -1, 2, 6, 2)' },
+};
+const IMMEDIATE: TscnInternalResource = { id: 'immediate', type: 'ImmediateMesh', data: {} };
+const RESOURCES: SceneResources = {
+  internalResources: [BOX, ARRAY_MESH, PLACEHOLDER, IMMEDIATE],
+  externalResources: EXTERNAL,
+};
 
 function renderMeshAabb(meshRef: string | undefined, fake: FakeResourceLoader = createFakeResourceLoader()) {
   return renderHook(() => useMeshAabb(meshRef, RESOURCES), {
@@ -50,9 +58,7 @@ describe('useMeshAabb', () => {
     });
     const rockAabb = { position: { x: -1, y: 0, z: -1 }, size: { x: 2, y: 3, z: 2 } };
     fake.arrayMeshes.seed('res://rock.tres', {
-      geometry: new THREE.BufferGeometry(),
-      materialPaths: [],
-      surfaceIndices: [],
+      parts: [],
       aabb: rockAabb,
     });
     expect(renderMeshAabb('ExtResource("1")', fake).current).toBe(rockAabb);
@@ -75,5 +81,16 @@ describe('useMeshAabb', () => {
 
   it('is unknown for no mesh', () => {
     expect(renderMeshAabb(undefined).current).toBeNull();
+  });
+});
+
+describe('useMeshAabb over a mesh with no surfaces', () => {
+  // A PlaceholderMesh answers its own `aabb` (`scene/resources/mesh.h:430`).
+  it('takes a PlaceholderMesh’s aabb', () => {
+    expect(renderMeshAabb('SubResource("placeholder")').current?.size).toEqual({ x: 2, y: 6, z: 2 });
+  });
+
+  it('is AABB() for an ImmediateMesh', () => {
+    expect(renderMeshAabb('SubResource("immediate")').current?.size).toEqual({ x: 0, y: 0, z: 0 });
   });
 });

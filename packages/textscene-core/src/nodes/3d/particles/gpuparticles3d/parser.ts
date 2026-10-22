@@ -1,4 +1,4 @@
-/** The render parse of a GPUParticles3D: its instance state and its `visibility_aabb`. */
+/** The render parse of a GPUParticles3D: its instance state, its `visibility_aabb` and its `process_material` reference. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalAabb } from '../../../../parser/valueParsers';
@@ -15,5 +15,6 @@ export function parseGPUParticles3D(
     visibilityAabb:
       parseOptionalAabb(properties.visibility_aabb, 'visibility_aabb') ??
       GPU_PARTICLES_DEFAULT_VISIBILITY_AABB,
+    processMaterial: properties.process_material,
   };
 }

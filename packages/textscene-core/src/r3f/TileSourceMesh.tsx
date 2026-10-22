@@ -3,7 +3,8 @@
  * 2D material of Sprite2D. It owns the source's texture load.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
 import { useResource } from '../resources/useResource';
 import { buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
@@ -60,10 +61,7 @@ export function TileSourceMesh({
     return geom;
   }, [cells, source, grid, texW, texH]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
-  useEffect(() => {
-    if (!geometry) return;
-    return () => geometry.dispose();
-  }, [geometry]);
+  useDisposeOnRelease(geometry);
 
   // A source with no texture draws nothing (`tile_map_layer.cpp:724`). A failed load gets one
   // placeholder for the whole source (the panel row comes from useResource's missing-path report).

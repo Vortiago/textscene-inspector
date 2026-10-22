@@ -15,7 +15,7 @@ import { parseWithChild } from '../testing/probeScene';
 import { joinPath } from '../../../utils/nodePath';
 import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
 import { solveNode } from './testing/solveNode';
 

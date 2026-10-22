@@ -11,9 +11,9 @@ import type { DirectionalLight3DProperties } from '../directionallight3d/types';
 import type { OmniLight3DProperties } from '../omnilight3d/types';
 import type { SpotLight3DProperties } from '../spotlight3d/types';
 import type { Camera3DProperties } from '../../camera3d/types';
-import { KeepAspectMode, ProjectionMode } from '../../camera3d/types';
+
 import type { AudioStreamPlayer3DProperties } from '../../../audio/audiostreamplayer3d/types';
-import { AttenuationModel, DopplerTracking } from '../../../audio/audiostreamplayer3d/types';
+
 import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { TscnSceneContents } from '../../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../../r3f/contexts/HierarchyContext';
@@ -23,6 +23,8 @@ import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
 
 import '../../../../r3f/nodes/index';
+import { Camera3DKeepAspect, Camera3DProjectionType } from '../../../../godot/scene/camera3d';
+import { AttenuationModel, DopplerTracking } from '../../../../godot/scene/audio';
 
 function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> = {}): TscnNode {
   const props: DirectionalLight3DProperties = {
@@ -30,6 +32,7 @@ function dirNode(name: string, overrides: Partial<DirectionalLight3DProperties> 
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: 2,
     shadow_enabled: false,
     ...overrides,
   };
@@ -42,6 +45,7 @@ function omniNode(name: string, overrides: Partial<OmniLight3DProperties> = {}):
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: 2,
     shadow_enabled: false,
     omni_range: 5,
     omni_attenuation: 2,
@@ -56,6 +60,7 @@ function spotNode(name: string, overrides: Partial<SpotLight3DProperties> = {}):
     layers: 1,
     light_color: 'Color(1, 1, 1, 1)',
     light_energy: 1,
+    light_bake_mode: 2,
     shadow_enabled: false,
     spot_range: 10,
     spot_angle: 30,
@@ -340,10 +345,10 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
 function cameraNode(name: string, overrides: Partial<Camera3DProperties> = {}): TscnNode {
   const props: Camera3DProperties = {
     name,
-    projection: ProjectionMode.PROJECTION_PERSPECTIVE,
+    projection: Camera3DProjectionType.PERSPECTIVE,
     fov: 75,
     size: 1,
-    keep_aspect: KeepAspectMode.KEEP_HEIGHT,
+    keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT,
     near: 0.05,
     far: 4000,
     h_offset: 0,
@@ -493,13 +498,13 @@ function audioNode(name: string, overrides: Partial<AudioStreamPlayer3DPropertie
     playing: false,
     autoplay: false,
     stream_paused: false,
-    attenuation_model: AttenuationModel.ATTENUATION_INVERSE_DISTANCE,
+    attenuation_model: AttenuationModel.INVERSE_DISTANCE,
     unit_size: 10,
     max_distance: 0,
     max_db: 3,
     attenuation_filter_cutoff_hz: 5000,
     attenuation_filter_db: -24,
-    doppler_tracking: DopplerTracking.DOPPLER_TRACKING_DISABLED,
+    doppler_tracking: DopplerTracking.DISABLED,
     panning_strength: 1,
     area_mask: 1,
     emission_angle_enabled: false,

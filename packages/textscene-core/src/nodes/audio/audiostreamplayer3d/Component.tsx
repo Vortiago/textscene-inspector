@@ -10,13 +10,14 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import type { AudioStreamPlayer3DProperties } from './types';
-import { AttenuationModel } from './types';
 import { useGizmoVisible } from '../../3d/lights/shared/lightHelpers';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import { degToRad } from '../../../godot/math/math.js';
+import { degToRad, TAU } from '../../../godot/math/math.js';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
+import { AttenuationModel } from '../../../godot/scene/audio';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** Editor-only gizmo colour: yellow, to match the light helpers. */
 const GIZMO_COLOR = 0xffff00;
@@ -104,8 +105,8 @@ function RangeCircle({ radius }: RangeCircleProps) {
   const positions = useMemo(() => {
     const verts = new Float32Array(RANGE_CIRCLE_SEGMENTS * 6);
     for (let i = 0; i < RANGE_CIRCLE_SEGMENTS; i++) {
-      const a = (i / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
-      const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
+      const a = (i / RANGE_CIRCLE_SEGMENTS) * TAU;
+      const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * TAU;
       verts.set(
         [Math.cos(a) * radius, Math.sin(a) * radius, 0, Math.cos(b) * radius, Math.sin(b) * radius, 0],
         i * 6
@@ -122,7 +123,7 @@ function RangeCircle({ radius }: RangeCircleProps) {
 }
 
 function audibleRangeRadius(properties: AudioStreamPlayer3DProperties): number | null {
-  const disabled = properties.attenuation_model === AttenuationModel.ATTENUATION_DISABLED;
+  const disabled = properties.attenuation_model === AttenuationModel.DISABLED;
   if (disabled && properties.max_distance <= 0) return null;
   const radius = properties.unit_size * SOFT_MULTIPLIER[properties.attenuation_model];
   const clamped = properties.max_distance > 0 ? Math.min(radius, properties.max_distance) : radius;
@@ -130,11 +131,11 @@ function audibleRangeRadius(properties: AudioStreamPlayer3DProperties): number |
 }
 
 /** `soft_multiplier` per attenuation model, from the gizmo plugin source. */
-const SOFT_MULTIPLIER: Record<AttenuationModel, number> = {
-  [AttenuationModel.ATTENUATION_INVERSE_DISTANCE]: 12,
-  [AttenuationModel.ATTENUATION_INVERSE_SQUARE_DISTANCE]: 4,
-  [AttenuationModel.ATTENUATION_LOGARITHMIC]: 3.25,
-  [AttenuationModel.ATTENUATION_DISABLED]: 10000,
+const SOFT_MULTIPLIER: Record<EnumValue<typeof AttenuationModel>, number> = {
+  [AttenuationModel.INVERSE_DISTANCE]: 12,
+  [AttenuationModel.INVERSE_SQUARE_DISTANCE]: 4,
+  [AttenuationModel.LOGARITHMIC]: 3.25,
+  [AttenuationModel.DISABLED]: 10000,
 };
 
 interface EmissionConeProps {
@@ -156,12 +157,12 @@ function EmissionCone({ radius, angleDegrees }: EmissionConeProps) {
     const base = radius * Math.tan(degToRad(clamped));
     const ribs: number[] = [];
     for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2;
+      const a = (i / 4) * TAU;
       ribs.push(0, 0, 0, Math.cos(a) * base, Math.sin(a) * base, -radius);
     }
     for (let i = 0; i < RANGE_CIRCLE_SEGMENTS; i++) {
-      const a = (i / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
-      const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * Math.PI * 2;
+      const a = (i / RANGE_CIRCLE_SEGMENTS) * TAU;
+      const b = ((i + 1) / RANGE_CIRCLE_SEGMENTS) * TAU;
       ribs.push(
         Math.cos(a) * base,
         Math.sin(a) * base,

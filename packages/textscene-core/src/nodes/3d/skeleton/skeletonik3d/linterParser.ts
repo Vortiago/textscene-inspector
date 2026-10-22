@@ -50,9 +50,9 @@ validatorRegistry.registerAll('SkeletonIK3D', {
   min_distance: v.float('min_distance'),
   // skeleton_ik_3d.cpp:361, Variant::INT, no hint. set_max_iterations (skeleton_ik_3d.cpp:474-476)
   // assigns, and `reload_chain` copies the value to the solver unchanged (skeleton_ik_3d.cpp:528).
-  // `v.strictInt` (an INT slot, not `formatOnly`): an iteration count is discrete, so `10.5` is
+  // `v.int` (an INT slot, not `formatOnly`): an iteration count is discrete, so `10.5` is
   // reported.
-  max_iterations: v.strictInt('max_iterations'),
+  max_iterations: v.int('max_iterations'),
   // No `interpolation` (skeleton_ik_3d.cpp:366): PROPERTY_USAGE_NONE has no STORAGE bit, and the
   // setter only forwards to `set_influence` (skeleton_ik_3d.cpp:419), SkeletonModifier3D's key.
   // `_set_interpolation` and `_get_target_transform` are private helpers, not `Object::_set`/`_get`.

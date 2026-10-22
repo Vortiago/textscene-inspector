@@ -23,8 +23,59 @@ export function nodePathWalkNames(path: string): string[] {
   return nodePathNames(path.split(':')[0]!);
 }
 
+/**
+ * `String(NodePath(path).simplified())` (node_path.cpp:331-355): each `.` dropped and each name
+ * followed by `..` cancelled with it, with `.` left where everything cancels. The text loader
+ * stores a `[connection]`'s `from=` and `to=` this way (resource_format_text.cpp:370-371).
+ */
+export function simplifiedNodePath(path: string): string {
+  const colon = path.indexOf(':');
+  const namesText = colon === -1 ? path : path.slice(0, colon);
+  const subnames = colon === -1 ? '' : path.slice(colon);
+  const absolute = namesText.startsWith('/') ? '/' : '';
+  return absolute + simplifiedNames(nodePathNames(namesText)).join('/') + subnames;
+}
+
+/** `NodePath::simplify` over the names alone, a single name never touched (node_path.cpp:336-338). */
+function simplifiedNames(names: string[]): string[] {
+  const kept = [...names];
+  for (let i = 0; i < kept.length && kept.length > 1; i++) {
+    if (kept[i] === '.') {
+      kept.splice(i, 1);
+      i--;
+    } else if (i > 0 && kept[i] === '..' && kept[i - 1] !== '.' && kept[i - 1] !== '..') {
+      kept.splice(i - 1, 2);
+      i -= 2;
+      if (kept.length === 0) return ['.'];
+    }
+  }
+  return kept;
+}
+
 /** `UNIQUE_NODE_PREFIX` (string_name.h:36). */
 export const UNIQUE_NODE_PREFIX = '%';
+
+/** A walk that reached content this file does not list, where Godot may yet find a node. */
+export interface UnlistedEnd {
+  /**
+   * The opaque node the walk stopped at, spelt as the walk spells paths, then the rest from the
+   * `%Name` that node's own table answers, which the instanced scene resolves once grafted in.
+   */
+  readonly unlisted: string;
+}
+
+/**
+ * The tables Godot's walk reads over the scene seated so far. {@link walk} takes each as optional,
+ * for a caller that holds no tree.
+ */
+export interface RootWalkTables {
+  /** Whether a path names a node yet: the child lookup at each descent. */
+  readonly exists: (path: string) => boolean;
+  /** Whether the node at a path keeps children or `%Name` claims another file lists. */
+  readonly isOpaque: (path: string) => boolean;
+  /** `%Name` to the path of the node claiming it, in the scene root's table. */
+  readonly uniquePaths: Pick<ReadonlyMap<string, string>, 'get'>;
+}
 
 /**
  * Walks `relative` from `base` as `Node::get_node_or_null` walks a NodePath (node.cpp:1912-1949),
@@ -37,11 +88,11 @@ function walk(
   base: readonly string[],
   relative: string,
   floor: number,
-  uniquePaths?: ReadonlyMap<string, string>,
-  exists?: (path: string) => boolean
-): string[] | null {
+  { uniquePaths, exists, isOpaque }: Partial<RootWalkTables> = {}
+): string[] | null | UnlistedEnd {
   let segments = [...base];
-  for (const part of nodePathWalkNames(relative)) {
+  const parts = nodePathWalkNames(relative);
+  for (const [index, part] of parts.entries()) {
     if (part === '.') continue;
     if (part === '..') {
       // Nothing above the root: `!current->data.parent` returns nullptr (node.cpp:1919-1922).
@@ -51,9 +102,13 @@ function walk(
     }
     if (part.startsWith(UNIQUE_NODE_PREFIX)) {
       // A jump through the owner's claim table (node.cpp:1930-1938): the walk restarts at the
-      // claimed path, so a following `..` steps up from there. Without a table it is null.
-      const claimed = uniquePaths?.get(part);
-      if (!claimed) return null;
+      // claimed path, so a following `..` steps up from there. An opaque node reads its own table
+      // first, which another file fills. Below the root that table shadows any claim here. At the
+      // root it holds this file's claims too, so a claim here seats as Godot seats it unshadowed.
+      const current = segments.join('/');
+      const isOpaqueHere = isOpaque?.(current) === true;
+      const claimed = isOpaqueHere && segments.length > floor ? undefined : uniquePaths?.get(part);
+      if (!claimed) return isOpaqueHere ? { unlisted: [...segments, ...parts.slice(index)].join('/') } : null;
       segments = claimed.split('/');
       continue;
     }
@@ -77,40 +132,43 @@ export function resolveRelativePath(
   uniquePaths?: ReadonlyMap<string, string>
 ): string | null {
   if (relative.startsWith('/')) return null;
-  return walk(basePath.split('/'), relative, 1, uniquePaths)?.join('/') ?? null;
+  const end = walk(basePath.split('/'), relative, 1, { uniquePaths });
+  return Array.isArray(end) ? end.join('/') : null;
 }
 
 /**
- * The two tables Godot's walk reads for `resolveParentPath`. Without them, the answer is the
- * wider folded one: it resolves `Missing/../Real`, which `get_node_or_null` refuses at `Missing`.
+ * Whether a path is one the root can walk: an empty `NodePath("")` returns nullptr (node.cpp:1894),
+ * and the root, off-tree while instantiate runs, refuses an absolute `/root/…` (node.cpp:1898).
  */
-export interface ParentPathTree {
-  /** Whether a path names a node yet: the child lookup at each descent. */
-  readonly exists: (path: string) => boolean;
-  /** `%Name` to the path of the node claiming it, in the scene root's table. */
-  readonly uniquePaths: ReadonlyMap<string, string>;
+function isRootWalkable(path: string | undefined): path is string {
+  return path !== undefined && path !== '' && !path.startsWith('/');
 }
 
 /**
- * The node a `[node]` heading's `parent=` names, spelt from the root without its name (the root is
- * the empty path), or null when it addresses no node in this file. A `.tscn` stores a path
- * (`resource_format_text.cpp:212`) that instantiate resolves from the root with `get_node_or_null`
- * (`packed_scene.cpp:161`), so the root is the floor and paths omit its name.
+ * The node a root-relative path names, spelt from the root without its name (the root is the
+ * empty path), null when Godot's walk finds nothing, or {@link UnlistedEnd}. A `.tscn` stores a
+ * `parent=`, `from=` and `to=` path (`resource_format_text.cpp:212`) that instantiate resolves from
+ * the root with `get_node_or_null` (`packed_scene.cpp:161`), so the root is the floor. Without a
+ * `tree`, a missing name folds away under a later `..`, the wider answer, and a `%Name` is null.
  */
-export function resolveParentPath(parentPath: string | undefined, tree?: ParentPathTree): string | null {
-  // An empty `NodePath("")` returns nullptr (node.cpp:1894), and instantiate refuses an absolute
-  // `/root/…` off-tree (node.cpp:1898). The walk adds the rest. The saver never writes a `%Name`
-  // (resource_format_text.cpp:2018), yet on 4.7.2 the loader seats `parent="%Player"` under its
-  // claimant and warns only when nothing claims it.
-  if (!parentPath || parentPath.startsWith('/')) return null;
-  return walk([], parentPath, 0, tree?.uniquePaths, tree?.exists)?.join('/') ?? null;
+export function walkFromRoot(path: string | undefined, tree?: RootWalkTables): string | null | UnlistedEnd {
+  // The saver never writes a `%Name` (resource_format_text.cpp:2018), yet on 4.7.2 the loader seats
+  // `parent="%Player"` under its claimant and warns only when nothing claims it.
+  if (!isRootWalkable(path)) return null;
+  const end = walk([], path, 0, tree);
+  return Array.isArray(end) ? end.join('/') : end;
+}
+
+/** The path a walk ended on, the unlisted rest for an {@link UnlistedEnd}, or null where it found nothing. */
+export function walkedPath(end: string | null | UnlistedEnd): string | null {
+  return end === null || typeof end === 'string' ? end : end.unlisted;
 }
 
 /**
  * A raw `NodePath("…")` property value on the node at `basePath`, resolved against that node as
  * `get_node_or_null` resolves it, or null when it addresses no other node in the scene.
  *
- * @param uniquePaths `%Name` to its claiming path, from `uniqueNameClaims` over the same tree.
+ * @param uniquePaths `%Name` to its claiming path, from `uniqueNamePaths` over the same tree.
  *   Without it a `%Name` is null: `%` is invalid in a node name (ustring.cpp:5071), so a child
  *   lookup for it never hits.
  */

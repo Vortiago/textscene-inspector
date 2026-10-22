@@ -9,7 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -31,11 +31,12 @@ import {
 } from '../../../../r3f/controls/native/themeIcons';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { ResolvedConnection } from './connectionEndpoints';
 import type { MinimapTransform, GraphScrollBounds, MinimapElement } from './minimap';
 import { minimapCameraRect, minimapNodeRect } from './minimap';
 import type { Rgba } from '../../../../godot/math/math';
+import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
 
 /** `draw_polyline_colors(points, colors, 0.5, lines_antialiased)` (`graph_edit.cpp:1611`). */
 const MINIMAP_LINE_WIDTH = 0.5;
@@ -103,7 +104,7 @@ function MinimapConnections({
     geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(colors), 4));
     return geo;
   }, [connections, transform, bounds, curvature, antialiased, lineTint]);
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  useDisposeOnRelease(geometry);
 
   if (!geometry) return null;
 

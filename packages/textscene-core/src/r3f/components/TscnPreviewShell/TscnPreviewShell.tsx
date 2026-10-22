@@ -7,6 +7,7 @@
  */
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
+  DEFAULT_VIEWPORT,
   FRAME_ON_OPEN_STORAGE_KEY,
   SHOW_FOG_STORAGE_KEY,
   SHOW_GRID_STORAGE_KEY,
@@ -40,14 +41,12 @@ import { HelpLink } from './HelpLink.js';
 import { AnimationTabWatcher } from './AnimationTabWatcher.js';
 import { DetailTabs, type DetailTab } from './DetailTabs.js';
 import { SceneTreePane } from './SceneTreePane.js';
-import { previewShellProviders } from './previewShellProviders.js';
+import { DEFAULT_ROOT_SCENE_PATH, previewShellProviders } from './previewShellProviders.js';
 import { CaptureStateReporter } from './CaptureStateReporter.js';
 import type { TscnPreviewShellProps } from './previewShellProps.js';
 import styles from './TscnPreviewShell.module.css';
 
 export type { TscnPreviewShellProps } from './previewShellProps.js';
-
-const DEFAULT_ROOT_SCENE_PATH = 'res://__inline__.tscn';
 
 // A persisted value of an unexpected shape falls back to the hook's default.
 function isFiniteNumber(value: unknown): value is number {
@@ -73,6 +72,7 @@ export function TscnPreviewShell({
   initialViewportMode,
   initialActiveCameraPath,
   onCaptureStateChange,
+  onCopyNodePath,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
 
@@ -102,11 +102,11 @@ export function TscnPreviewShell({
   // toolbar's click handlers write back, so a programmatic mode change never
   // persists.
   const [initialViewport] = useState<PersistedViewport>(() => ({
-    mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, '3D', isViewportMode),
-    showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, false, isBoolean),
-    frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, false, isBoolean),
-    showFog: readPersisted(SHOW_FOG_STORAGE_KEY, true, isBoolean),
-    showPerformance: readPersisted(SHOW_PERFORMANCE_STORAGE_KEY, false, isBoolean),
+    mode: readPersisted<ViewportMode>(VIEWPORT_MODE_STORAGE_KEY, DEFAULT_VIEWPORT.mode, isViewportMode),
+    showGrid: readPersisted(SHOW_GRID_STORAGE_KEY, DEFAULT_VIEWPORT.showGrid, isBoolean),
+    frameOnOpen: readPersisted(FRAME_ON_OPEN_STORAGE_KEY, DEFAULT_VIEWPORT.frameOnOpen, isBoolean),
+    showFog: readPersisted(SHOW_FOG_STORAGE_KEY, DEFAULT_VIEWPORT.showFog, isBoolean),
+    showPerformance: readPersisted(SHOW_PERFORMANCE_STORAGE_KEY, DEFAULT_VIEWPORT.showPerformance, isBoolean),
   }));
 
   const withProviders = previewShellProviders({
@@ -197,6 +197,7 @@ export function TscnPreviewShell({
                   treeShare={treeShare}
                   onResourceUpload={onResourceUpload}
                   onResourceRemove={onResourceRemove}
+                  onCopyNodePath={onCopyNodePath}
                 />
               </section>
             </>

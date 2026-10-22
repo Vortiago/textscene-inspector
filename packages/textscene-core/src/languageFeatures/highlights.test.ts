@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LanguageDocument } from './document';
-import { LINE, NODE_TREE_HEAD, SCENE } from './fixtures.testkit';
+import { INSTANCED_TREE, LINE, NODE_TREE_HEAD, SCENE } from './fixtures.testkit';
 import { documentHighlights } from './highlights';
 
 describe('documentHighlights', () => {
@@ -109,5 +109,16 @@ describe('documentHighlights of a node path', () => {
       '[node name="A"]\n\n[connection signal="a" from="B" to="A" method="m"]'
     );
     expect(documentHighlights(missing, { line: 2, character: 28 })).toEqual([]);
+  });
+});
+
+describe('documentHighlights of a node under an instanced scene', () => {
+  it('marks the name= and every path that resolves to the node', () => {
+    const document = new LanguageDocument(INSTANCED_TREE);
+    const lines = documentHighlights(document, { line: 6, character: document.lines[6]!.indexOf('X') + 1 })
+      .map(({ range }) => range.start.line)
+      .sort((a, b) => a - b);
+
+    expect(lines).toEqual([6, 8, 10]);
   });
 });

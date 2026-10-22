@@ -27,6 +27,53 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'mesh_lod_threshold picks the mesh LOD a capture draws, and the previewer draws every mesh at full detail.',
   },
 
+  VoxelGI: {
+    linterOnly: [
+      // voxel_gi.cpp:525-531: the exposure the bake runs at. The previewer runs no bake.
+      'camera_attributes',
+    ],
+    renderGap: [
+      // voxel_gi.cpp:269-279: the baked probe data the frame lights from. The previewer lights
+      // nothing from it (renderIntent 'pending').
+      'data',
+    ],
+    reason: 'VoxelGI is a gap: the gizmo reads size and subdiv, and the bake and its data are not drawn.',
+  },
+
+  LightmapGI: {
+    linterOnly: [
+      // Bake inputs: `LightmapGI::bake` reads them, and the frame reads only the bake in
+      // `light_data` (lightmap_gi.cpp:1507-1567).
+      'bias',
+      'bounce_indirect_energy',
+      'bounces',
+      'camera_attributes',
+      'denoiser_range',
+      'denoiser_strength',
+      'directional',
+      'environment_custom_color',
+      'environment_custom_energy',
+      'environment_custom_sky',
+      'environment_mode',
+      'generate_probes_subdiv',
+      'interior',
+      'max_texture_size',
+      'quality',
+      'supersampling',
+      'supersampling_factor',
+      'texel_scale',
+      'use_denoiser',
+      'use_texture_for_bounces',
+    ],
+    renderGap: [
+      // lightmap_gi.cpp:1659-1663: how the baked shadowmask mixes with the real-time shadow. The
+      // previewer reads no shadowmask.
+      'shadowmask_mode',
+    ],
+    reason:
+      'Every LightmapGI key but light_data and shadowmask_mode is a bake input, which the drawn frame never reads. shadowmask_mode mixes a shadowmask the previewer does not read yet.',
+  },
+
   MeshInstance3D: {
     parserOnly: [
       // Deprecated: `scene/3d/visual_instance_3d.cpp` binds `gi_lightmap_scale`
@@ -104,17 +151,9 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'damping_min',
       'direction',
       'draw_order',
-      'emission_box_extents',
       'emission_colors',
       'emission_normals',
       'emission_points',
-      'emission_ring_axis',
-      'emission_ring_cone_angle',
-      'emission_ring_height',
-      'emission_ring_inner_radius',
-      'emission_ring_radius',
-      'emission_shape',
-      'emission_sphere_radius',
       'emitting',
       'explosiveness',
       'fixed_fps',
@@ -160,7 +199,7 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'use_fixed_seed',
     ],
     reason:
-      'CPUParticles3D is not simulated, so nothing reads the emission, motion and appearance keys. Its parser reads only visibility_aabb and mesh, which give its scene-cull box.',
+      'CPUParticles3D is not simulated, so nothing reads the motion and appearance keys, or the emission points, normals and colours. Its parser reads visibility_aabb and mesh, which give its scene-cull box, and the emission shape keys its gizmo draws.',
   },
 
   GPUParticles3D: {
@@ -185,7 +224,6 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'local_coords',
       'one_shot',
       'preprocess',
-      'process_material',
       'randomness',
       'seed',
       'speed_scale',
@@ -196,7 +234,7 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'use_fixed_seed',
     ],
     reason:
-      'GPUParticles3D is not simulated, so nothing reads the emission, draw-pass and trail keys. Its parser reads only visibility_aabb, its scene-cull box.',
+      'GPUParticles3D is not simulated, so nothing reads the draw-pass and trail keys. Its parser reads visibility_aabb, its scene-cull box, and process_material, which its emission gizmo resolves.',
   },
 
   // Lights: the shared validators and parseBaseLight* helpers are walked through

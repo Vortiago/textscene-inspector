@@ -5,9 +5,9 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { boolOr, enumOr, parseOptionalInt, vec2iOr } from '../../../parser/valueParsers';
+import { parseAnisotropicFilteringLevel } from '../../../parser/projectSettingsParser';
+import { boolOr, enumOr, parseOptionalFloat, parseOptionalInt, vec2iOr } from '../../../parser/valueParsers';
 import { parseNode } from '../../node/parser';
-import { enumValues } from '../../../godot/classdb/enumNames';
 import { MSAA_DISABLED, MSAA_MODES } from '../../../godot/rendering/msaa';
 import {
   VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER,
@@ -17,8 +17,8 @@ import {
 } from '../../../godot/scene/viewport';
 import type { SubViewportProperties } from './types';
 
-const UPDATE_MODES = enumValues(SubViewportUpdateMode);
-const CLEAR_MODES = enumValues(SubViewportClearMode);
+const UPDATE_MODES = Object.values(SubViewportUpdateMode);
+const CLEAR_MODES = Object.values(SubViewportClearMode);
 
 /** `Viewport.DefaultCanvasItemTextureFilter`: NEAREST, LINEAR and the mipmap variants. */
 const TEXTURE_FILTERS = [
@@ -70,6 +70,8 @@ export function parseSubViewport(
       context
     ),
     gui_embed_subwindows: boolOr(properties.gui_embed_subwindows, false, context),
+    texture_mipmap_bias: parseOptionalFloat(properties.texture_mipmap_bias),
+    anisotropic_filtering_level: parseAnisotropicFilteringLevel(properties.anisotropic_filtering_level),
     positional_shadow_atlas_size: parseOptionalInt(properties.positional_shadow_atlas_size),
     positional_shadow_atlas_quad_0: parseOptionalInt(properties.positional_shadow_atlas_quad_0),
     positional_shadow_atlas_quad_1: parseOptionalInt(properties.positional_shadow_atlas_quad_1),

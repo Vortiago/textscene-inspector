@@ -43,7 +43,7 @@ validatorRegistry.registerAll('Parallax2D', {
   // parallax_2d.cpp:294, a bare Variant::INT with no hint. set_repeat_times
   // (:176-183) clamps anything below 1 up to 1 (`MAX(p_repeat_times, 1)`): an
   // enforced floor, error tier per ADR-0032.
-  repeat_times: v.strictInt('repeat_times', { min: 1, enforced: 'parallax_2d.cpp:181' }),
+  repeat_times: v.int('repeat_times', { min: 1, enforced: 'parallax_2d.cpp:181' }),
   // parallax_2d.cpp:297, PROPERTY_HINT_NONE. set_limit_begin (:233-235) assigns
   // straight through.
   // No cross-field rule: `_update_scroll` (parallax_2d.cpp:108-116) skips an

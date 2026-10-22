@@ -21,9 +21,12 @@ export const FIT_ON_OPEN_2D_STORAGE_KEY = 'tsi.fitOnOpen2D';
  * capture opens in the 3D workspace.
  */
 export const VIEWPORT_MODE_STORAGE_KEY = 'tsi.viewportMode';
-/** `SHOW_PERFORMANCE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the Performance toggle. */
+/**
+ * `SHOW_PERFORMANCE_STORAGE_KEY` in r3f/contexts/ViewportModeContext.tsx: the Performance toggle.
+ * `previewServer.test.mjs` pins it.
+ */
 export const SHOW_PERFORMANCE_STORAGE_KEY = 'tsi.showPerformance';
-/** The Performance overlay's testids, in r3f/frameProfile/PerformancePanel.tsx. */
+/** The Performance overlay's testids, in r3f/frameProfile/performanceTestIds.ts. */
 export const PERFORMANCE_TESTIDS = {
   overlay: 'performance-overlay',
   frameMs: 'performance-frame',
@@ -46,8 +49,16 @@ export const CANVAS_2D_CAPTURE = {
   viewport: { width: 1600, height: 900 },
 };
 
-/** What the shell's dock and top bar take out of the window before the stage. */
-export const CANVAS_2D_CHROME = { width: 325, height: 44 };
+/** What the shell's dock and top bar take out of the window before the stage or canvas. */
+export const SHELL_CHROME = { width: 325, height: 44 };
+
+/** The browser window whose 3D canvas is `canvas` pixels, the shell's chrome included. */
+export function windowForCanvas(canvas) {
+  return {
+    width: canvas.width + SHELL_CHROME.width,
+    height: canvas.height + SHELL_CHROME.height,
+  };
+}
 
 /**
  * The browser window a 2D capture of a frame this size needs. The stage lays the project rect out
@@ -58,8 +69,8 @@ export function canvas2DViewportFor(frame) {
   const { width, height } = CANVAS_2D_CAPTURE.viewport;
   if (!frame) return { width, height };
   return {
-    width: Math.max(width, Math.ceil(frame.width) + CANVAS_2D_CHROME.width),
-    height: Math.max(height, Math.ceil(frame.height) + CANVAS_2D_CHROME.height),
+    width: Math.max(width, Math.ceil(frame.width) + SHELL_CHROME.width),
+    height: Math.max(height, Math.ceil(frame.height) + SHELL_CHROME.height),
   };
 }
 
@@ -74,11 +85,13 @@ export const CANVAS_2D_TESTIDS = {
 };
 
 /**
- * The canvas element's size inside VIEWPORT after the shell's chrome, as `settleCanvas`
- * returns it. Measured from the CSS layout, so a change to VIEWPORT means a new measurement. The
- * Godot harness defaults to it, so a probe at (x, y) addresses the same point on both sides.
+ * The canvas element's size inside VIEWPORT after the shell's chrome, as `settleCanvas` returns it.
+ * The Godot harness defaults to it, so a probe at (x, y) addresses the same point on both sides.
  */
-export const CANVAS_CAPTURE = { width: 955, height: 756 };
+export const CANVAS_CAPTURE = {
+  width: VIEWPORT.width - SHELL_CHROME.width,
+  height: VIEWPORT.height - SHELL_CHROME.height,
+};
 export const NETWORK_IDLE_MS = 20000; // Ceiling for the app's own resource chain to go quiet.
 // Covers CameraFit's last fit timer at 1100 ms. Its fit on a loader settle can come later, and
 // changes the frame, so the convergence loop below waits that one out.
@@ -94,7 +107,8 @@ export const SETTLE_MAX_ATTEMPTS = 12;
  * to detach, because a texture that lands later gives a stable, wrong frame.
  */
 export const TEXTURE_WORK_STATUS_TESTID = 'texture-work-status';
-// Ceiling for that wait. A 4096² seamless noise texture builds and uploads in well under it.
+// Ceiling for a wait on the texture work alone. A 4096² seamless noise texture builds and uploads
+// in well under it. A capture waits on every loading status at once, under SCENE_LOAD_WAIT_MS.
 export const TEXTURE_WORK_WAIT_MS = 120000;
 
 /**

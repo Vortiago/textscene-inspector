@@ -10,7 +10,7 @@ import { dimSuffix } from './dim.js';
 import { descendsFromClass } from '../../godot/classdb/classBaseTypes.js';
 import { basisColumnScalesGodotFloat } from './basisColumnScales.js';
 import { matchVector2 } from '../validators/vectorValidators.js';
-import { ruleInt } from '../validators/commonValidators.js';
+import { ruleInt } from '../../godot/variant/intSlots.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 
 /**

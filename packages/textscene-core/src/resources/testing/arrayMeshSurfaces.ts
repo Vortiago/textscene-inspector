@@ -10,6 +10,8 @@ export interface SurfaceKeys {
   material?: string | null;
   /** The `"name"` value, written as a quoted string. */
   name?: string | null;
+  /** The `"primitive"` value, Godot's `Mesh.PrimitiveType`. A surface is triangles, 3, when absent. */
+  primitive?: number;
 }
 
 /**
@@ -18,15 +20,17 @@ export interface SurfaceKeys {
  * writes them.
  */
 function surfaceWriter(head: string, tail: string): (keys?: SurfaceKeys) => string {
-  return ({ material, name } = {}) => {
+  return ({ material, name, primitive } = {}) => {
     const materialLine = material == null ? '' : `"material": ${material},\n`;
     const nameLine = name == null ? '' : `"name": "${name}",\n`;
-    return `{\n${head}\n${materialLine}${nameLine}${tail}\n}`;
+    const primitiveTail =
+      primitive === undefined ? tail : tail.replace('"primitive": 3,', `"primitive": ${primitive},`);
+    return `{\n${head}\n${materialLine}${nameLine}${primitiveTail}\n}`;
   };
 }
 
 /**
- * The one surface of `scenes/demos/3d/platformer/stage/meshes/wall.tres`: a 4-vertex quad, format
+ * The one surface of `scenes/demos/3d/platformer/stage/meshes/wall.res`: a 4-vertex quad, format
  * 34359742487 = VERTEX|NORMAL|TANGENT|TEX_UV|INDEX, uncompressed.
  */
 export const wallQuadSurface = surfaceWriter(
@@ -47,7 +51,7 @@ export function wallQuadSurfaces(...surfaces: SurfaceKeys[]): string {
 }
 
 /**
- * The `headlights` surface of `scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.tres`. format
+ * The `headlights` surface of `scenes/demos/3d/truck_town/vehicles/meshes/truck_cab.res`. format
  * 34896613383 = VERTEX|NORMAL|TANGENT|INDEX + ARRAY_FLAG_COMPRESS_ATTRIBUTES +
  * ARRAY_FLAG_FORMAT_VERSION_2, 12 B/vertex: an 8 B position record, then a 4 B normal region.
  */

@@ -34,12 +34,13 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { ItemListProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 // --- Enum literals ------------------------------------------------------
 
@@ -199,7 +200,7 @@ function adjustToMaxSize(size: Vector2, maxSize: Vector2): Rect2 {
  * has only `AutowrapMode.AUTOWRAP_WORD`, so an unbreakable word overflows its column where
  * Godot breaks it mid-word (`comparison.md`).
  */
-function itemListAutowrapMode(iconMode: number, maxTextLines: number): AutowrapMode {
+function itemListAutowrapMode(iconMode: number, maxTextLines: number): EnumValue<typeof AutowrapMode> {
   return iconMode === ICON_MODE_TOP && maxTextLines > 0
     ? AutowrapMode.AUTOWRAP_WORD
     : AutowrapMode.AUTOWRAP_OFF;

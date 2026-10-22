@@ -6,13 +6,14 @@
 
 import '../control/linterParser.js';
 import { validatorRegistry } from '../../../../linter/ValidatorRegistry.js';
-import { indexedFamilyValidator } from '../../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../../linter/validators/indexedFamily.js';
+import { TAB_BAR_TABS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { v } from '../../../../linter/validators/index.js';
+import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import {
   TAB_BAR_ALIGNMENT_NAMES,
   TAB_BAR_CLOSE_BUTTON_DISPLAY_POLICY_NAMES,
 } from '../../../../godot/scene/tabs.js';
-import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 
 /**
  * The `tab_<idx>/<leaf>` leaves: only the four `register_property` calls at
@@ -39,14 +40,10 @@ const TAB_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * require an integer before a `/`, and the registry tries exact keys first, so
  * the three scalars keep their own validators.
  */
-const tabValidator = indexedFamilyValidator({
-  prefix: 'tab_',
+const tabFamilyEntry = propertyListFamilyEntry(TAB_BAR_TABS, {
   leaves: TAB_LEAVES,
   unknownCode: 'INVALID_TAB_KEY',
   describes: 'tab',
-  // `_set` is `property_helper.property_set_value` (tab_bar.h:208), which drops an
-  // index that fails `is_valid_int()` (property_list_helper.cpp:53-55).
-  indexParse: 'is_valid_int',
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_TAB_INDEX',
@@ -55,7 +52,7 @@ const tabValidator = indexedFamilyValidator({
   },
 });
 
-validatorRegistry.registerAll('TabBar', {
+validatorRegistry.registerAll('TabBar', tabFamilyEntry, {
   // tab_bar.cpp:2123, PROPERTY_HINT_RANGE "-1,4096,1". Below -1, `ERR_FAIL_INDEX`
   // (tab_bar.cpp:804) refuses the write. -1 meets `_can_deselect()` (tab_bar.cpp:798), a
   // sibling-tab check no validator sees, which passes while the tab vector is empty at
@@ -101,6 +98,4 @@ validatorRegistry.registerAll('TabBar', {
   // (class_db.cpp:1492). `set_tab_count` refuses `p_count < 0` (tab_bar.cpp:745),
   // and nothing bounds the ceiling.
   tab_count: v.int('tab_count', { min: 0, enforced: 'tab_bar.cpp:745' }),
-
-  'tab_#/*': tabValidator,
 });

@@ -27,6 +27,6 @@ The scene-font canvas texture is `SRGBColorSpace`, not the 2D-canvas rule's `NoC
 - Godot's glyph texture is `FORMAT_LA8`: a constant 255 colour with the coverage in alpha
   (`modules/text_server_adv/text_server_adv.cpp` `rasterize_bitmap`, about `:1170-1174`). So no
   RGB pair blends in the wrong order.
-- This raster bakes ink into RGB. At 3x an `(0,0)` texel sits beside `(ink,255)`, and the
+- This raster bakes ink into RGB. An `(0,0)` texel sits beside an `(ink,255)` texel, and the
   pre-filter decode hides that fringe.
 - A raster split into coverage plus a modulated colour would reopen this choice.

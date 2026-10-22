@@ -9,8 +9,9 @@ import { warn } from '../logger';
 // stay in their slice.
 import { parseVector2, parseVector3 } from './vectors';
 import { slotTupleRegex, allFinite } from '../godot/variant/number.js';
-import { slotComponents, storedFromFloat, storedVector2i, type IntWidth } from '../godot/variant/int.js';
-import type { Aabb } from '../godot/math/aabb.js';
+import { slotComponents, slotInt, storedVector2i } from '../godot/variant/intSlots.js';
+import { type IntWidth } from '../godot/variant/intWidth.js';
+import { isEmptyAabb, type Aabb } from '../godot/math/aabb.js';
 import { nodePathLiteral } from '../godot/variant/variantParser.js';
 import { stringToInt } from '../godot/string/string.js';
 import { boolSlotValue, scalarSlotValue } from '../godot/variant/variantBool.js';
@@ -26,17 +27,6 @@ import type { Vector2, Vector3 } from '../godot/math/vector.js';
 function finiteScalar(value: string): number | null {
   const num = scalarSlotValue(value);
   return num !== null && Number.isFinite(num) ? num : null;
-}
-
-/**
- * The same, as the integer the slot stores. Narrowed so the previewer and the linter
- * read one number from one literal: `z_index = 4294967295` is the -1 Godot holds.
- */
-function finiteIntScalar(value: string, width: IntWidth): number | null {
-  const num = finiteScalar(value);
-  if (num === null) return null;
-  const stored = storedFromFloat(num, value, width);
-  return Number.isNaN(stored) ? null : stored;
 }
 
 export interface Rect2Value {
@@ -90,6 +80,15 @@ export function parseOptionalAabb(value: string | undefined, context = 'value'):
   return { position: { x: c[0]!, y: c[1]!, z: c[2]! }, size: { x: c[3]!, y: c[4]!, z: c[5]! } };
 }
 
+/**
+ * A box that an `AABB()` clears, such as `custom_aabb` (`renderer_scene_cull.cpp:1093`,
+ * `mesh_storage.cpp:705-712`, `:2236`): the box, or null where it is absent, malformed or empty.
+ */
+export function parseNonEmptyAabb(value: string | undefined, context: string): Aabb | null {
+  const box = parseOptionalAabb(value, context);
+  return box && !isEmptyAabb(box) ? box : null;
+}
+
 export function floatOr(value: string | undefined, fallback: number, context = 'value'): number {
   if (value === undefined) return fallback;
   // Anchored, so `1.2.3` and `1abc` are refused, not read as 1.2 and 1. A non-finite
@@ -115,8 +114,9 @@ export function intOr(
   width: IntWidth = 'int32'
 ): number {
   if (value === undefined) return fallback;
-  // The whole token parses, so `hframes = 2e1` is the 20 Godot and the linter read.
-  const parsed = finiteIntScalar(value, width);
+  // The whole token parses, so `hframes = 2e1` is the 20 Godot and the linter read, and
+  // `z_index = 4294967295` is the -1 Godot holds.
+  const parsed = slotInt(value, null, width);
   if (parsed === null) {
     warn(`${context}: invalid int "${value}", using ${fallback}`);
     return fallback;
@@ -223,7 +223,7 @@ export function enumOr<T extends number>(
 ): T {
   if (value === undefined) return fallback;
   // An enum constant is an `int` in every BIND_ENUM_CONSTANT.
-  const parsed = finiteIntScalar(value, 'int32') as T | null;
+  const parsed = slotInt(value) as T | null;
   if (parsed === null || !allowed.includes(parsed)) {
     warn(`${context}: invalid enum "${value}", using ${fallback}`);
     return fallback;
@@ -285,7 +285,7 @@ export function parseOptionalVector2i(value: string | undefined, context = 'valu
  */
 export function parseOptionalInt(value: string | undefined, width: IntWidth = 'int32'): number | undefined {
   if (value === undefined) return undefined;
-  return finiteIntScalar(value, width) ?? undefined;
+  return slotInt(value, null, width) ?? undefined;
 }
 
 /**

@@ -19,6 +19,8 @@ completion. A host supplies files and a place to draw or edit.
 | `apps/textscene-vscode` | VS Code extension: preview webview and language features | esbuild |
 | `apps/textscene-lsp` | `tscn-lsp` language server for any LSP client | esbuild |
 | `apps/textscene-linter` | `tscn-lint` CLI | esbuild |
+| `apps/textscene-tscn` | `@textscene/tscn`: core's parser as one npm bundle | esbuild |
+| `apps/textscene-renderer` | `@textscene/renderer`: core's renderer as one npm bundle, with React and three.js as peers | esbuild |
 
 Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
 `pnpm-workspace.yaml` catalog holds every shared dependency version.
@@ -29,7 +31,7 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `linter/` | The strict parser, the rule and validator registries, the `Linter` |
 | `core/` | `SceneGraph`, `NodeRegistry` and the registry factory |
 | `godot/` | Engine facts: constants and pure functions. It imports nothing. |
-| `languageFeatures/` | Hover, completion, quick fixes, folding and document highlights over the scanning loop |
+| `languageFeatures/` | Hover, completion, quick fixes, folding, document highlights and `res://` references over the scanning loop |
 | `nodes/` | One vertical slice per Godot node type |
 | `resources/` | The resource loader, and one slice per resource type |
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
@@ -43,8 +45,12 @@ even when its class lives in `scene/`. So `scene/` imports from `rendering/`, an
 not import from `scene/`. `noDependencies.test.ts` checks that direction.
 
 A test sits beside its file. Core imports each fact from its file under a group. The root keeps
-`noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which re-exports only what
-a package outside core imports.
+`noDependencies.test.ts`, `engineFactRoutes.test.ts` and `index.ts`, the package's `./godot` export,
+which re-exports only what a package outside core imports.
+
+Each Godot enum is declared once, as an `as const` object. Its type is `EnumValue<typeof Name>`,
+because a type alias with the object's name fails the `no-redeclare` lint rule. A table of
+labels for one enum ends in `_NAMES` and starts with its Godot class.
 
 | `godot/` group | Ports from Godot's |
 | --- | --- |
@@ -92,8 +98,9 @@ resource section of its type. This path imports no React and no three.js, so the
 the VS Code extension host bundle it alone.
 
 **Language features.** `languageFeatures/` (`createLanguageDocument`) parses the text through
-the same scanning loop with a `ParseObserver`, then answers hover, completion, quick fixes,
-folding and document highlights. It reads the same `godot/` ClassDB captures and the same
+the same scanning loop with a `ParseObserver`, seats the `[node]` headings as the parsers do
+(`seatScene`), then answers hover, completion, quick fixes, folding, document highlights, go to
+definition, the references of a `res://` path and the outline. It reads the same `godot/` ClassDB captures and the same
 deprecated-alias table as the linter, so each engine fact has one source in `godot/`. It imports
 no React and no three.js, and every result is host-neutral with zero-based ranges (ADR-0049).
 
@@ -111,10 +118,12 @@ reads. `later` is null when no read is necessary, and resolves to null when a ne
 overtakes it. `Linter.lintComplete` gives the full list in one answer. The `Linter` keeps
 each read under the provider's `stamp` (`linter/stampedReads.ts`). The CLI, VS Code (the preview
 and the editor features) and the `tscn-lsp` server root their providers at the scene's `res://`
-root (`findResRoot` in `resources/resPath.ts`): the nearest `project.godot`, or the scene's own
-directory when the scene lies inside the workspace. The CLI's workspace is the directory it runs
-from. Outside every project and the workspace, a scene has no root and lints with no provider. The
-web previewer roots its provider at its corpus root.
+root: the nearest `project.godot`, or the scene's own directory when the scene lies inside the
+workspace. The CLI and the server ask `ResRoots` (`resources/resRoots.ts`), which owns the root
+caches and gives each root as a provider, over the `node:fs` adapter in `resources/diskProject.ts`.
+VS Code walks `Uri`s through `findResRoot` in `resources/resPath.ts`. The CLI's workspace is the
+directory it runs from. Outside every project and the workspace, a scene has no root and lints with
+no provider. The web previewer roots its provider at its corpus root.
 
 ## Vertical slices and registries
 
@@ -170,6 +179,8 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
   (`ViewportPassRegistryContext.tsx`).
 - **Shadows.** `<SceneShadowFitter>` fits each declared shadow
   (`r3f/directionalShadow/directionalShadow.md`, `r3f/positionalShadow/positionalShadow.md`).
+- **Baked lightmaps.** Each LightmapGI registers its bake with `r3f/lightmap/`, and a lit surface
+  of a node it names reads the **Lightmap atlas** through UV2 (ADR-0054).
 - **Frame profile.** The Display menu's Performance toggle times each render step on the CPU and
   the GPU and counts its draw calls, and the overlay shows the result (`r3f/frameProfile/`,
   ADR-0053). `pnpm test:perf` holds the counts of a set of scenes to their work budget.
@@ -217,8 +228,9 @@ flowchart TD
   processor accepts.
 - **Imports.** `.import` sidecars and `project.godot` load through `tryLoad` (ADR-0028).
 - **Clones.** A cached Object3D is cloned per consumer. Textures and materials are shared.
-- **Materials.** `resolveMaterialSource`, `useMaterial` and `SurfaceMaterialSlot` give every
-  material one path to a surface (ADR-0041).
+- **Materials.** `resolveMaterialSource` and `useSurfaceMaterial` give every material one path
+  to a surface: the source loads, every texture binds, and the two bags come out. `SurfaceMaterialSlot`
+  and the GLB override only install those bags (ADR-0039, ADR-0041).
 - **Procedural textures.** A NoiseTexture2D builds as a job in a worker (`workers/jobs.ts`,
   ADR-0042). A large texture uploads in bands (`r3f/tiledUpload/`).
 
@@ -252,6 +264,7 @@ A test or a script fails when one of these rules breaks.
 | The linter and the lenient parser import no React or three.js | `linter/reactFree.test.ts`, an ESLint `no-restricted-imports` rule |
 | The language-feature engine and the `tscn-lsp` server import no React or three.js | `languageFeatures/reactFree.test.ts`, an ESLint `no-restricted-imports` rule, `apps/textscene-lsp/src/reactFree.test.ts` |
 | `godot/` imports nothing | `noDependencies.test.ts` |
+| No module outside `godot/` re-exports a `godot/` name, no group has a barrel, and no enum outside `godot/` copies a `godot/` enum | `engineFactRoutes.test.ts` |
 | Every slice is wired into its barrels | `barrelCompleteness`, `parserBarrelCompleteness` |
 | Core imports each engine fact from its file, and `godot/index.ts` and the root `index.ts` re-export only what a package outside core imports | `packageExports.test.ts` |
 | No value export exists for tests alone. An entry point's export counts only when the apps, the dev kit or the scripts import it | `scripts/testOnlyExports.test.mjs` |

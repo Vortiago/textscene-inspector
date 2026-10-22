@@ -6,7 +6,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { slotInt } from '../../../godot/variant/int.js';
+import { slotInt } from '../../../godot/variant/intSlots.js';
 import { findSubResourceOfType, parseResourceReference } from '../../SubResourceResolver';
 import { readBezierData, type BezierDataFormat } from './bezierData';
 import { resizeBezierPoints } from './pointCount';

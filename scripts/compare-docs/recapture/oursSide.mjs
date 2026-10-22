@@ -4,14 +4,13 @@ import { launchGodotComparisonBrowser } from '../../showcase/browser.mjs';
 import {
   createCaptureContext,
   openScene,
+  previewPort,
   readViewportMode,
   settleCanvas,
   withPreviewBrowser,
   writeCaptureImage,
 } from '../../visual/previewServer.mjs';
 import { imgPath, modeOfExistingGodot } from './targets.mjs';
-
-const PORT = Number(process.env.COMPARE_PORT) || 4321;
 
 export async function captureOurs(targets, godotModes) {
   const failures = [];
@@ -28,7 +27,7 @@ export async function captureOurs(targets, godotModes) {
   if (!withMode.length) return failures;
 
   await withPreviewBrowser(
-    { port: PORT, portEnvName: 'COMPARE_PORT', launchBrowser: launchGodotComparisonBrowser },
+    { ...previewPort('compareDocs'), launchBrowser: launchGodotComparisonBrowser },
     async (browser, baseUrl) => {
       let done = 0;
       for (const mode of ['3d', '2d']) {

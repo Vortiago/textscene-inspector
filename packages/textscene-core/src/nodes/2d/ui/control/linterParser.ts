@@ -22,7 +22,7 @@ import {
   GrowDirection,
   LAYOUT_DIRECTION_NAMES,
   MOUSE_FILTER_NAMES,
-  SIZE_FLAGS_LABELS,
+  SIZE_FLAGS_NAMES,
 } from '../../../../godot/scene/control.js';
 import { AUTO_TRANSLATE_MODE_NAMES } from '../../../../godot/scene/node.js';
 import { dropTrailingComma, splitTopLevel } from '../../../../godot/string/string.js';
@@ -131,11 +131,11 @@ validatorRegistry.registerAll(
     // so an unhinted bit is kept: `hintedBitField`'s warning, not `maskedBitField`'s error.
     size_flags_horizontal: hintedBitField('size_flags_horizontal', {
       hinted: 'control.cpp:4275',
-      labels: SIZE_FLAGS_LABELS,
+      labels: SIZE_FLAGS_NAMES,
     }),
     size_flags_vertical: hintedBitField('size_flags_vertical', {
       hinted: 'control.cpp:4276',
-      labels: SIZE_FLAGS_LABELS,
+      labels: SIZE_FLAGS_NAMES,
     }),
     // control.cpp:4277, "0,20,0.01,or_greater": only the 0 floor is closed.
     // set_stretch_ratio (control.cpp:1868-1875) assigns unconditionally.

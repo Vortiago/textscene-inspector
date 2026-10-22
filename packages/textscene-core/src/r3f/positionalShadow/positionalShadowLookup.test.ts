@@ -9,6 +9,7 @@ import {
 } from '../areaLight/areaLightShadowUniforms';
 import { LIGHT_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch';
 import { withoutBlock } from '../testing/glslSource';
+import { OMNI_SLOT_GLSL } from './paraboloidUv';
 
 describe('the positional shadow lookups', () => {
   it('declare the atlas, and leave Godot’s soft shadow filter to its own install', () => {
@@ -102,5 +103,16 @@ describe('the area shadow lookup', () => {
 
   it('reads a light without opacity as lit (edge case)', () => {
     expect(AREA_LOOKUP).toContain('if ( terms.x <= 0.001 ) return 1.0;');
+  });
+});
+
+describe('the omni slot decode, shared with the volumetric fog', () => {
+  it('declares the decode once, in the atlas sampling', () => {
+    expect(ATLAS_SAMPLING).toContain(OMNI_SLOT_GLSL);
+    expect(OMNI_LOOKUP).not.toContain('max( flipOffset.x, flipOffset.y )');
+  });
+
+  it('insets the slot by one atlas texel, as the surface does (scene_forward_lights_inc.glsl:505-507)', () => {
+    expect(OMNI_LOOKUP).toContain('godotOmniSlot( slot, texel, flipOffset )');
   });
 });

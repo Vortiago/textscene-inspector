@@ -46,6 +46,18 @@ describe('parseGridMap', () => {
     expect(result.meshLibrary).toBeUndefined();
   });
 
+  it('defaults cell_scale to 1, as grid_map.h:174 does', () => {
+    expect(parseGridMap(heading('GridMap', { name: 'G' }), {}).cellScale).toBe(1);
+  });
+
+  it('reads cell_scale', () => {
+    expect(parseGridMap(heading('GridMap', { name: 'G' }), { cell_scale: '0.25' }).cellScale).toBe(0.25);
+  });
+
+  it('falls back to a cell_scale of 1 on a malformed value (error path)', () => {
+    expect(parseGridMap(heading('GridMap', { name: 'G' }), { cell_scale: 'big' }).cellScale).toBe(1);
+  });
+
   it('defaults every cell_center axis to TRUE — Godot only writes them when off', () => {
     const result = parseGridMap(heading('GridMap', { name: 'G' }), {});
     expect(result.cellCenter).toEqual({ x: true, y: true, z: true });
@@ -74,5 +86,24 @@ describe('parseGridMap', () => {
     const read = (value: string) => parseGridMap(heading('GridMap', { name: 'G' }), { data: value });
     expect(read(data).cells).toBe('');
     expect(msToRead(read, data)).toBeLessThan(LINEAR_SCAN_CEILING_MS);
+  });
+
+  it('reads each baked mesh the GridMap draws in place of its cells', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'Grid' }), {
+      baked_meshes: '[SubResource("ArrayMesh_a"), SubResource("ArrayMesh_b")]',
+    });
+    expect(result.bakedMeshes).toEqual(['SubResource("ArrayMesh_a")', 'SubResource("ArrayMesh_b")']);
+  });
+
+  it('drops a null baked mesh, which the setter skips so every later index moves up (edge case)', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'Grid' }), {
+      baked_meshes: '[null, SubResource("ArrayMesh_b")]',
+    });
+    expect(result.bakedMeshes).toEqual(['SubResource("ArrayMesh_b")']);
+  });
+
+  it('reads no baked mesh from a value that is not an array (error case)', () => {
+    const result = parseGridMap(heading('GridMap', { name: 'Grid' }), { baked_meshes: 'SubResource("x")' });
+    expect(result.bakedMeshes).toEqual([]);
   });
 });

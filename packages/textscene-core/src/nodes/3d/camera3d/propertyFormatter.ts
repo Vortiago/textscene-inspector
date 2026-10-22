@@ -4,22 +4,26 @@
 
 import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Camera3DProperties } from './types';
-import { ProjectionMode, KeepAspectMode } from './types';
 import { formatNode3DProperties } from '../../base/node3d/propertyFormatter';
+import {
+  CAMERA_3D_KEEP_ASPECT_HINT_NAMES,
+  CAMERA_3D_PROJECTION_HINT_NAMES,
+  Camera3DProjectionType,
+} from '../../../godot/scene/camera3d';
 
 export function formatCamera3DProperties(properties: Camera3DProperties): PropertySection[] {
   const sections: PropertySection[] = [];
 
   // Camera section
   const cameraItems: PropertySection['items'] = [
-    { label: 'Projection', value: getProjectionModeName(properties.projection) },
-    { label: 'Keep Aspect', value: getKeepAspectModeName(properties.keep_aspect) },
+    { label: 'Projection', value: CAMERA_3D_PROJECTION_HINT_NAMES[properties.projection] ?? 'Unknown' },
+    { label: 'Keep Aspect', value: CAMERA_3D_KEEP_ASPECT_HINT_NAMES[properties.keep_aspect] ?? 'Unknown' },
   ];
 
   // Add projection-specific properties
-  if (properties.projection === ProjectionMode.PROJECTION_PERSPECTIVE) {
+  if (properties.projection === Camera3DProjectionType.PERSPECTIVE) {
     cameraItems.push({ label: 'FOV', value: `${properties.fov.toFixed(1)}°` });
-  } else if (properties.projection === ProjectionMode.PROJECTION_ORTHOGONAL) {
+  } else if (properties.projection === Camera3DProjectionType.ORTHOGONAL) {
     cameraItems.push({ label: 'Size', value: properties.size.toFixed(2) });
   }
 
@@ -80,28 +84,4 @@ export function formatCamera3DProperties(properties: Camera3DProperties): Proper
   sections.push(...formatNode3DProperties(properties));
 
   return sections;
-}
-
-function getProjectionModeName(mode: ProjectionMode): string {
-  switch (mode) {
-    case ProjectionMode.PROJECTION_PERSPECTIVE:
-      return 'Perspective';
-    case ProjectionMode.PROJECTION_ORTHOGONAL:
-      return 'Orthogonal';
-    case ProjectionMode.PROJECTION_FRUSTUM:
-      return 'Frustum';
-    default:
-      return 'Unknown';
-  }
-}
-
-function getKeepAspectModeName(mode: KeepAspectMode): string {
-  switch (mode) {
-    case KeepAspectMode.KEEP_WIDTH:
-      return 'Keep Width';
-    case KeepAspectMode.KEEP_HEIGHT:
-      return 'Keep Height';
-    default:
-      return 'Unknown';
-  }
 }

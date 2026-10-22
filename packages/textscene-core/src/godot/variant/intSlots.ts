@@ -1,6 +1,6 @@
 /**
  * Integer readers for rules and for the components of an `i`-suffixed
- * composite in a float slot. See `int.ts` for the whole picture.
+ * composite in a float slot. `intReader.ts` has the engine conversion they build on.
  */
 
 import { matchedFloat, slotTupleRegex } from './number.js';
@@ -111,11 +111,6 @@ export function slotCount(raw: string | undefined, whenAbsent = 0): number | nul
   return nonNegativeCount(slotInt(raw, whenAbsent), whenAbsent);
 }
 
-/** A capture the finite grammar matched, read as a double: one reader for the stored and altered questions. */
-function componentFloat(text: string | undefined): number {
-  return parseFloat(text ?? '');
-}
-
 /**
  * One matched component of an `i`-suffixed composite as the int32 Godot stores (`vector2i.h:56-57`),
  * or `null` when no int32 holds it. Narrowed, so renderer and linter read one number. It takes a
@@ -127,7 +122,7 @@ export function storedInt(
   /** See {@link storedFromFloat}: set for a component of a float-typed composite. */
   alwaysFloatBranch = false
 ): number | null {
-  const num = componentFloat(text);
+  const num = matchedFloat(text ?? '');
   if (!Number.isFinite(num)) return null;
   const stored = storedFromFloat(num, text ?? '', 'int32', alwaysFloatBranch);
   return Number.isNaN(stored) ? null : stored;
@@ -191,7 +186,7 @@ export function slotComponentsAltered(
   captures: readonly (string | undefined)[]
 ): boolean {
   if (!isConvertedSpelling(floatTypeName, compositeTypeName(literal))) return false;
-  return captures.some((capture) => isAlteredInt(componentFloat(capture), capture ?? '', 'int32'));
+  return captures.some((capture) => isAlteredInt(matchedFloat(capture ?? ''), capture ?? '', 'int32'));
 }
 
 /** A composite literal in a FLOAT slot, as every reader of one sees it. */

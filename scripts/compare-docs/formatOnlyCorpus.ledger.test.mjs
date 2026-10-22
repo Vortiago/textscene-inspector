@@ -11,9 +11,8 @@ import { requireFreshDist } from '../distFreshness.mjs';
 import { loadCoreLinter } from './loadCoreLinter.mjs';
 import { applicableEntries, corpusRefusals } from './formatOnlyCorpus.mjs';
 import { FORMAT_ONLY_CORPUS, SETTER_TYPES } from './formatOnlyCorpus.data.mjs';
+import { PROPS_OUT, RESOURCE_PROPS_OUT } from './build-node-catalog/paths.mjs';
 
-const PROPS = join(import.meta.dirname, 'node-properties.json');
-const RESOURCE_PROPS = join(import.meta.dirname, 'resource-properties.json');
 const CORE = join(import.meta.dirname, '../../packages/textscene-core');
 
 /**
@@ -23,8 +22,8 @@ const CORE = join(import.meta.dirname, '../../packages/textscene-core');
  */
 function capturedRows() {
   const engine = {
-    ...JSON.parse(readFileSync(PROPS, 'utf8')),
-    ...JSON.parse(readFileSync(RESOURCE_PROPS, 'utf8')),
+    ...JSON.parse(readFileSync(PROPS_OUT, 'utf8')),
+    ...JSON.parse(readFileSync(RESOURCE_PROPS_OUT, 'utf8')),
   };
   return Object.entries(engine).flatMap(([nodeType, properties]) =>
     properties.map((p) => ({

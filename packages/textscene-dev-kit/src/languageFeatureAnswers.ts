@@ -31,6 +31,12 @@ interface Named {
   readonly at: CursorSpec;
 }
 
+/** A span in a project file, the file with forward slashes below the project directory. */
+export interface FileRange {
+  readonly file: string;
+  readonly range: RangeTuple;
+}
+
 export interface LanguageFeatureAnswers {
   /** A null `markdown` means the position has no hover. */
   readonly hover: ReadonlyArray<Named & { readonly markdown: string | null; readonly range?: RangeTuple }>;
@@ -45,9 +51,9 @@ export interface LanguageFeatureAnswers {
       readonly replaces?: RangeTuple;
     }
   >;
-  readonly definition: ReadonlyArray<
-    Named & { readonly targets: ReadonlyArray<{ readonly file: string; readonly range: RangeTuple }> }
-  >;
+  readonly definition: ReadonlyArray<Named & { readonly targets: readonly FileRange[] }>;
+  /** Every place the `res://` path under the cursor is named, as a set: neither host promises an order. */
+  readonly references: ReadonlyArray<Named & { readonly locations: readonly FileRange[] }>;
   readonly highlights: ReadonlyArray<Named & { readonly ranges: readonly RangeTuple[] }>;
   readonly folding: { readonly file: string; readonly ranges: ReadonlyArray<[number, number]> };
   /** Every link of a file, in order. A null `target` is a link with no file to open. */
@@ -116,6 +122,13 @@ export function rangeTuple(range: {
   readonly end: { readonly line: number; readonly character: number };
 }): RangeTuple {
   return [range.start.line, range.start.character, range.end.line, range.end.character];
+}
+
+/** Spans in file and document order, since neither host promises an order for references. */
+export function sortedFileRanges(locations: readonly FileRange[]): FileRange[] {
+  return [...locations].sort(
+    (a, b) => a.file.localeCompare(b.file) || a.range[0] - b.range[0] || a.range[1] - b.range[1]
+  );
 }
 
 /** Ranges in document order, since neither host promises an order for highlights. */

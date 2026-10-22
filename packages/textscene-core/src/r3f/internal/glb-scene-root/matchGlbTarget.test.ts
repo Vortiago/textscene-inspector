@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { matchGlbTarget } from './matchGlbTarget';
+import { findGlbTarget, matchGlbTarget } from './matchGlbTarget';
 import { flattenGlbObjects } from './glbHierarchy';
 import { buildTestGlbGraph } from './glbGraph.testkit';
 import * as logger from '../../../logger';
@@ -89,5 +89,23 @@ describe('matchGlbTarget', () => {
         'Skeleton/Robot'
       );
     });
+  });
+});
+
+describe('findGlbTarget', () => {
+  const entries = () => flattenGlbObjects(buildTestGlbGraph(['root/root_001/Body']));
+
+  it.each([
+    ['root/root_001/Body', 'exact'],
+    ['root/Skeleton3D/root_001/Body', 'subsequence'],
+    ['root/root_001/Skeleton3D', 'ancestor'],
+    ['Nowhere/Else', 'none'],
+  ])('reports how "%s" matched, and logs nothing', (path, kind) => {
+    const info = vi.spyOn(logger, 'info').mockImplementation(() => {});
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+    expect(findGlbTarget(entries(), path).kind).toBe(kind);
+    expect(info).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
   });
 });
