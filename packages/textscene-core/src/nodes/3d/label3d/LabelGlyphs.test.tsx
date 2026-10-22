@@ -85,6 +85,26 @@ describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
   });
 });
 
+describe('<LabelGlyphs> — the glyph raster', () => {
+  // `label_3d.cpp:345-350` asks the text server for the glyph at `font_size`, which
+  // rasterises at that size and no larger (`text_server_adv.h:406-413`).
+  it.each([16, 32, 128])('has one texel per font pixel at font_size %i', async (fontSize) => {
+    const renderer = await render(labelProperties({ text: 'Hello', font_size: fontSize, outline_size: 0 }));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const raster = (mesh.material as THREE.MeshBasicMaterial).map!.image as HTMLCanvasElement;
+    const quad = boundingSize(mesh);
+    expect([raster.width, raster.height]).toEqual([quad.x, quad.y]);
+  });
+
+  // Godot's glyph atlas has no mip chain unless the font sets `generate_mipmaps`,
+  // which defaults off (`text_server_adv.h:333`, `font.cpp:1426`, `text_server_adv.cpp:3528`).
+  it('builds no mip chain for the default LINEAR_WITH_MIPMAPS filter', async () => {
+    const renderer = await render(labelProperties({ text: 'Hello' }));
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    expect((mesh.material as THREE.MeshBasicMaterial).map!.generateMipmaps).toBe(false);
+  });
+});
+
 describe('<LabelGlyphs>', () => {
   it('renders a Mesh with a non-empty BufferGeometry for non-empty text', async () => {
     const renderer = await render(labelProperties({ text: 'Hi' }));

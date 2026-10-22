@@ -183,11 +183,10 @@ function buildTextRun(
     // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
     // gives the engine lines, and why a raster split into coverage plus colour would reopen this.
     texture.colorSpace = THREE.SRGBColorSpace;
-    // `generateMipmaps` stays off for every filter: Godot's own default asks
-    // for mipmaps, but a per-label raster rebuilt on every text/size change
-    // is the wrong thing to build a chain for, so the minified case samples
-    // the base level. Only the nearest/linear bit is honoured, so minFilter takes magFilter,
-    // never the state's mipmapped minFilter.
+    // No mip chain for any filter: Godot's glyph atlas has none unless the font sets
+    // `generate_mipmaps` (default off: `text_server_adv.cpp:3528`). Measured, a chain here
+    // moved a minified label from 1.03 to 1.11/255 away from Godot. Only the nearest/linear
+    // bit applies, so `minFilter` takes `magFilter`.
     texture.generateMipmaps = false;
     texture.minFilter = textureFilter.magFilter;
     texture.magFilter = textureFilter.magFilter;
