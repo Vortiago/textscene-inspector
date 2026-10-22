@@ -108,7 +108,20 @@ export function writeBundledNotices(metafile, { packageDir, ownSourceDir }) {
  */
 export function mergedFileInputs(metafiles) {
   const inputs = Object.assign({}, ...metafiles.map((metafile) => metafile.inputs));
-  return { inputs: Object.fromEntries(Object.entries(inputs).filter(([input]) => !/^[\w-]+:/.test(input))) };
+  return {
+    inputs: Object.fromEntries(Object.entries(inputs).filter(([input]) => !isNamespacedInput(input))),
+  };
+}
+
+/**
+ * Whether an input is in a plugin's namespace, `namespace:path`. Two characters at least before the
+ * colon: a Windows input on another drive than the working directory, such as `D:/…`, is a file.
+ *
+ * @param {string} input
+ * @returns {boolean}
+ */
+function isNamespacedInput(input) {
+  return /^[\w-]{2,}:/.test(input);
 }
 
 /**

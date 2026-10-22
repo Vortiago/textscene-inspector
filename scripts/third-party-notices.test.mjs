@@ -232,4 +232,10 @@ describe('mergedFileInputs', () => {
 
     expect(Object.keys(merged.inputs)).toEqual(['src/webview/webview.ts']);
   });
+
+  it('keeps a Windows input on another drive, whose drive letter is no namespace (edge case)', () => {
+    const merged = mergedFileInputs([{ inputs: { 'D:/deps/three/build/three.module.js': {} } }]);
+
+    expect(Object.keys(merged.inputs)).toEqual(['D:/deps/three/build/three.module.js']);
+  });
 });
