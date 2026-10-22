@@ -16,8 +16,10 @@ import {
 } from '../shaderPatch/chunkPatch';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 
-const PARS_CHUNK_NAME = 'normalmap_pars_fragment';
-const PARS_INCLUDE = `#include <${PARS_CHUNK_NAME}>`;
+const PARS_CHUNK = 'normalmap_pars_fragment';
+const MAPS_CHUNK = 'normal_fragment_maps';
+const BEGIN_CHUNK = 'normal_fragment_begin';
+const PARS_INCLUDE = `#include <${PARS_CHUNK}>`;
 
 /**
  * three's frame scales both axes by the longer one, so a quad with a UV density that differs per
@@ -40,7 +42,7 @@ const UNIT_TANGENT_FRAME_EDIT: TextEdit = {
 export const GODOT_UNIT_TANGENT_FRAME: ProgramInjection = {
   cacheKey: 'unit-tangent-frame',
   onBeforeCompile(shader) {
-    const edited = editedChunk(PARS_CHUNK_NAME, UNIT_TANGENT_FRAME_EDIT);
+    const edited = editedChunk(PARS_CHUNK, UNIT_TANGENT_FRAME_EDIT);
     // A replacement function, not a string: a `$` in GLSL stays literal.
     shader.fragmentShader = shader.fragmentShader.replace(PARS_INCLUDE, () => edited);
   },
@@ -58,10 +60,6 @@ export const GODOT_NORMAL_MAP_READ = composeInjections([
 export function importedNormalMapRead(material: THREE.Material): ProgramInjection | undefined {
   return (material as THREE.MeshStandardMaterial).normalMap ? GODOT_NORMAL_MAP_READ : undefined;
 }
-
-const PARS_CHUNK = 'normalmap_pars_fragment';
-const MAPS_CHUNK = 'normal_fragment_maps';
-const BEGIN_CHUNK = 'normal_fragment_begin';
 
 const THREE_NON_PERTURBED_NORMAL = 'vec3 nonPerturbedNormal = normal;';
 
