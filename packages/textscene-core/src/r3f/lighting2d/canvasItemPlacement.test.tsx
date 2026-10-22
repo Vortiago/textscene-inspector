@@ -8,14 +8,13 @@
 import { describe, it, expect } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import {
-  CANVAS_ITEM_Z_MAX,
-  CANVAS_ITEM_Z_MIN,
   CanvasLayerIndexProvider,
   EffectiveZProvider,
   accumulateCanvasItemZ,
   useCanvasLayerIndex,
   useEffectiveZ,
 } from './canvasItemPlacement';
+import { CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../../godot/rendering/rendering';
 
 describe('accumulateCanvasItemZ', () => {
   it("adds a relative z_index onto the parent's", () => {

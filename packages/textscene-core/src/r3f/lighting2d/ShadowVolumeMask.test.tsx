@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { litQuadRenderOrder, litQuadStencilProps, ShadowVolumeMask } from './ShadowVolumeMask';
-import { OCCLUDER_CULL_DISABLED, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
+import { type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
 import { worldEdges } from './testing/worldEdges';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 const LIGHT: ShadowLight = {
   x: 0,
@@ -18,7 +19,10 @@ const SHADOW_STENCIL_REFS = 255;
 /** The stencil value light `ordinal`'s cookie quad tests. */
 const shadowStencilRef = (ordinal: number) => litQuadStencilProps(ordinal).stencilRef;
 
-const CASTER: ShadowCasterEdges = worldEdges(new Float32Array([100, -50, 100, 50]), OCCLUDER_CULL_DISABLED);
+const CASTER: ShadowCasterEdges = worldEdges(
+  new Float32Array([100, -50, 100, 50]),
+  OccluderPolygon2DCullMode.DISABLED
+);
 
 async function renderMask(props: Partial<Parameters<typeof ShadowVolumeMask>[0]> = {}) {
   return ReactThreeTestRenderer.create(
@@ -97,7 +101,10 @@ describe('<ShadowVolumeMask>', () => {
   });
 
   it('renders nothing when the occluder is outside the light rect', async () => {
-    const far: ShadowCasterEdges = worldEdges(new Float32Array([900, -50, 900, 50]), OCCLUDER_CULL_DISABLED);
+    const far: ShadowCasterEdges = worldEdges(
+      new Float32Array([900, -50, 900, 50]),
+      OccluderPolygon2DCullMode.DISABLED
+    );
     expect(maskMesh(await renderMask({ casters: [far] }))).toBeNull();
   });
 

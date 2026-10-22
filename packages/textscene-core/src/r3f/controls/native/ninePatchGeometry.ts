@@ -5,9 +5,10 @@
  */
 
 import { AxisStretchMode } from '../../../godot/scene/gui';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** A stored axis stretch mode, with an absent or unknown value read as `STRETCH`. */
-export function axisStretchModeOf(value: number | undefined): AxisStretchMode {
+export function axisStretchModeOf(value: number | undefined): EnumValue<typeof AxisStretchMode> {
   return value === AxisStretchMode.TILE || value === AxisStretchMode.TILE_FIT
     ? value
     : AxisStretchMode.STRETCH;
@@ -36,8 +37,8 @@ export interface NinePatchInput {
   /** The source window's size; equals `textureSize` when no region is authored. */
   regionSize: { x: number; y: number };
   margin: NinePatchMargins;
-  axisH: AxisStretchMode;
-  axisV: AxisStretchMode;
+  axisH: EnumValue<typeof AxisStretchMode>;
+  axisV: EnumValue<typeof AxisStretchMode>;
   drawCenter: boolean;
 }
 
@@ -71,7 +72,7 @@ function solveAxisCells(
   marginEnd: number,
   regionOrigin: number,
   regionSize: number,
-  mode: AxisStretchMode
+  mode: EnumValue<typeof AxisStretchMode>
 ): AxisCell[] {
   const cells: AxisCell[] = [];
   if (drawSize <= 0 || regionSize <= 0) return cells;

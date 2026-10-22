@@ -9,7 +9,7 @@ import {
   LTR_LAYOUT_ENV,
   MOUSE_FILTER_NAMES,
   resolveLayoutRtl,
-  SIZE_FLAGS_LABELS,
+  SIZE_FLAGS_NAMES,
   type LayoutDirectionEnv,
 } from './control.js';
 import { AUTO_TRANSLATE_MODE_NAMES, NODE_AUTO_TRANSLATE_MODE_NAMES } from './node.js';
@@ -90,9 +90,9 @@ describe('resolveLayoutRtl — the deterministic arms', () => {
   });
 });
 
-describe('SIZE_FLAGS_LABELS', () => {
+describe('SIZE_FLAGS_NAMES', () => {
   it('prints the four size flag bits with the SIZE_ prefix (control.cpp:4388-4392)', () => {
-    expect(SIZE_FLAGS_LABELS).toEqual({
+    expect(SIZE_FLAGS_NAMES).toEqual({
       1: 'SIZE_FILL',
       2: 'SIZE_EXPAND',
       4: 'SIZE_SHRINK_CENTER',

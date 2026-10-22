@@ -8,66 +8,66 @@
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
+import { type FastNoiseLiteData } from './types';
 import {
-  CellularDistanceFunction,
-  CellularReturnType,
-  DomainWarpFractalType,
-  DomainWarpType,
-  NoiseFractalType,
-  NoiseType,
-  type FastNoiseLiteData,
-} from './types';
+  FastNoiseLiteCellularDistanceFunction,
+  FastNoiseLiteCellularReturnType,
+  FastNoiseLiteDomainWarpFractalType,
+  FastNoiseLiteDomainWarpType,
+  FastNoiseLiteFractalType,
+  FastNoiseLiteNoiseType,
+} from '../../../godot/scene/fastNoiseLite';
 
 const NOISE_TYPES = [
-  NoiseType.SIMPLEX,
-  NoiseType.SIMPLEX_SMOOTH,
-  NoiseType.CELLULAR,
-  NoiseType.PERLIN,
-  NoiseType.VALUE_CUBIC,
-  NoiseType.VALUE,
+  FastNoiseLiteNoiseType.SIMPLEX,
+  FastNoiseLiteNoiseType.SIMPLEX_SMOOTH,
+  FastNoiseLiteNoiseType.CELLULAR,
+  FastNoiseLiteNoiseType.PERLIN,
+  FastNoiseLiteNoiseType.VALUE_CUBIC,
+  FastNoiseLiteNoiseType.VALUE,
 ] as const;
 
 const FRACTAL_TYPES = [
-  NoiseFractalType.NONE,
-  NoiseFractalType.FBM,
-  NoiseFractalType.RIDGED,
-  NoiseFractalType.PING_PONG,
+  FastNoiseLiteFractalType.NONE,
+  FastNoiseLiteFractalType.FBM,
+  FastNoiseLiteFractalType.RIDGED,
+  FastNoiseLiteFractalType.PING_PONG,
 ] as const;
 
 const DISTANCE_FUNCTIONS = [
-  CellularDistanceFunction.EUCLIDEAN,
-  CellularDistanceFunction.EUCLIDEAN_SQUARED,
-  CellularDistanceFunction.MANHATTAN,
-  CellularDistanceFunction.HYBRID,
+  FastNoiseLiteCellularDistanceFunction.EUCLIDEAN,
+  FastNoiseLiteCellularDistanceFunction.EUCLIDEAN_SQUARED,
+  FastNoiseLiteCellularDistanceFunction.MANHATTAN,
+  FastNoiseLiteCellularDistanceFunction.HYBRID,
 ] as const;
 
 const RETURN_TYPES = [
-  CellularReturnType.CELL_VALUE,
-  CellularReturnType.DISTANCE,
-  CellularReturnType.DISTANCE2,
-  CellularReturnType.DISTANCE2_ADD,
-  CellularReturnType.DISTANCE2_SUB,
-  CellularReturnType.DISTANCE2_MUL,
-  CellularReturnType.DISTANCE2_DIV,
+  FastNoiseLiteCellularReturnType.CELL_VALUE,
+  FastNoiseLiteCellularReturnType.DISTANCE,
+  FastNoiseLiteCellularReturnType.DISTANCE2,
+  FastNoiseLiteCellularReturnType.DISTANCE2_ADD,
+  FastNoiseLiteCellularReturnType.DISTANCE2_SUB,
+  FastNoiseLiteCellularReturnType.DISTANCE2_MUL,
+  FastNoiseLiteCellularReturnType.DISTANCE2_DIV,
 ] as const;
 
 const WARP_TYPES = [
-  DomainWarpType.SIMPLEX,
-  DomainWarpType.SIMPLEX_REDUCED,
-  DomainWarpType.BASIC_GRID,
+  FastNoiseLiteDomainWarpType.SIMPLEX,
+  FastNoiseLiteDomainWarpType.SIMPLEX_REDUCED,
+  FastNoiseLiteDomainWarpType.BASIC_GRID,
 ] as const;
 
 const WARP_FRACTAL_TYPES = [
-  DomainWarpFractalType.NONE,
-  DomainWarpFractalType.PROGRESSIVE,
-  DomainWarpFractalType.INDEPENDENT,
+  FastNoiseLiteDomainWarpFractalType.NONE,
+  FastNoiseLiteDomainWarpFractalType.PROGRESSIVE,
+  FastNoiseLiteDomainWarpFractalType.INDEPENDENT,
 ] as const;
 
 export function decodeFastNoiseLite(properties: Record<string, string>): FastNoiseLiteData {
   return {
     noiseType: enumOr(
       properties.noise_type,
-      NoiseType.SIMPLEX_SMOOTH,
+      FastNoiseLiteNoiseType.SIMPLEX_SMOOTH,
       NOISE_TYPES,
       'FastNoiseLite noise_type'
     ),
@@ -77,7 +77,7 @@ export function decodeFastNoiseLite(properties: Record<string, string>): FastNoi
 
     fractalType: enumOr(
       properties.fractal_type,
-      NoiseFractalType.FBM,
+      FastNoiseLiteFractalType.FBM,
       FRACTAL_TYPES,
       'FastNoiseLite fractal_type'
     ),
@@ -97,13 +97,13 @@ export function decodeFastNoiseLite(properties: Record<string, string>): FastNoi
 
     cellularDistanceFunction: enumOr(
       properties.cellular_distance_function,
-      CellularDistanceFunction.EUCLIDEAN,
+      FastNoiseLiteCellularDistanceFunction.EUCLIDEAN,
       DISTANCE_FUNCTIONS,
       'FastNoiseLite cellular_distance_function'
     ),
     cellularReturnType: enumOr(
       properties.cellular_return_type,
-      CellularReturnType.DISTANCE,
+      FastNoiseLiteCellularReturnType.DISTANCE,
       RETURN_TYPES,
       'FastNoiseLite cellular_return_type'
     ),
@@ -112,7 +112,7 @@ export function decodeFastNoiseLite(properties: Record<string, string>): FastNoi
     domainWarpEnabled: boolOr(properties.domain_warp_enabled, false, 'FastNoiseLite domain_warp_enabled'),
     domainWarpType: enumOr(
       properties.domain_warp_type,
-      DomainWarpType.SIMPLEX,
+      FastNoiseLiteDomainWarpType.SIMPLEX,
       WARP_TYPES,
       'FastNoiseLite domain_warp_type'
     ),
@@ -124,7 +124,7 @@ export function decodeFastNoiseLite(properties: Record<string, string>): FastNoi
     ),
     domainWarpFractalType: enumOr(
       properties.domain_warp_fractal_type,
-      DomainWarpFractalType.PROGRESSIVE,
+      FastNoiseLiteDomainWarpFractalType.PROGRESSIVE,
       WARP_FRACTAL_TYPES,
       'FastNoiseLite domain_warp_fractal_type'
     ),

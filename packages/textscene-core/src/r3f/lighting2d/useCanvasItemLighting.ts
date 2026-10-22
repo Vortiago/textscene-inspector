@@ -8,10 +8,7 @@
 import { useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import { useCanvasModulate } from '../canvasModulate.js';
-import {
-  CanvasItemLightMode,
-  type CanvasItemMaterialProperties,
-} from '../../resources/materials/canvasitemmaterial/types.js';
+import { type CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types.js';
 import { useCanvasLighting2D, useCapItemLights, useRegisterLitItem } from './CanvasLighting2D.js';
 import {
   canvasItemLightingProps,
@@ -21,6 +18,7 @@ import {
 import { placementId } from './itemLightList.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { useCanvasLayerIndex, useEffectiveZ } from './canvasItemPlacement.js';
+import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
 
 export type { CanvasItemLightingProps };
 
@@ -42,7 +40,7 @@ function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
     isLit: { value: 0 },
     resolution: { value: resolution },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
-    lightMode: { value: CanvasItemLightMode.NORMAL },
+    lightMode: { value: CanvasItemMaterialLightMode.NORMAL },
   };
 }
 
@@ -75,8 +73,8 @@ export function useCanvasItemLighting(
   // The raw canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
   const canvasModulate = useCanvasModulate();
-  const lightMode = material?.lightMode ?? CanvasItemLightMode.NORMAL;
-  const lightOnly = lightMode === CanvasItemLightMode.LIGHT_ONLY;
+  const lightMode = material?.lightMode ?? CanvasItemMaterialLightMode.NORMAL;
+  const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
 
   // Godot's cull test (`light_mask`, `z_final` and the canvas layer, at
   // `renderer_canvas_render_rd.cpp:2366` and `renderer_viewport.cpp:672`) picks the item's light

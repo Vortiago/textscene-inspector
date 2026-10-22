@@ -4,10 +4,8 @@
  * for the light that scatters more than once (`scene_forward_clustered.glsl:2224-2231`).
  */
 
-import { DFG_SIZE, DFG_TABLE_BASE64 } from './dfgTable.generated.js';
+import { DFG_TABLE_BASE64 } from './dfgTable.generated.js';
 import { decodeBase64Bytes } from '../../variant/packedBytes.js';
-
-export { DFG_SIZE };
 
 /**
  * The table as the half floats Godot stores it in: `[fresnel, total]` per texel, a row per

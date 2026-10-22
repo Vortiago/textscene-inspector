@@ -5,15 +5,15 @@
  * (`renderer_scene_cull.cpp:1851`).
  */
 
-import { enumNamesByValue } from '../classdb/enumNames.js';
+import { enumNamesByValue, type EnumValue } from '../classdb/enumNames.js';
 import { smoothstep } from '../math/math.js';
 
 /** `RS::VisibilityRangeFadeMode` (`rendering_server.h:1501-1505`), as a `.tscn` stores it. */
-export enum VisibilityRangeFadeMode {
-  DISABLED = 0,
-  SELF = 1,
-  DEPENDENCIES = 2,
-}
+export const VisibilityRangeFadeMode = {
+  DISABLED: 0,
+  SELF: 1,
+  DEPENDENCIES: 2,
+} as const;
 
 /** Each `VisibilityRangeFadeMode` name by its integer, as a validator names it. */
 export const VISIBILITY_RANGE_FADE_MODE_NAMES = enumNamesByValue(VisibilityRangeFadeMode);
@@ -24,7 +24,7 @@ export interface VisibilityRange {
   beginMargin: number;
   end: number;
   endMargin: number;
-  fadeMode: VisibilityRangeFadeMode;
+  fadeMode: EnumValue<typeof VisibilityRangeFadeMode>;
 }
 
 /** Godot's defaults (`visual_instance_3d.h:126-130`): no range, so the instance always draws. */
@@ -42,16 +42,16 @@ export function hasVisibilityRange(range: VisibilityRange): boolean {
 }
 
 /** `_visibility_range_check`'s return value (`renderer_scene_cull.cpp:2759-2797`). */
-export enum RangeCheck {
-  BEYOND_END = -1,
-  IN_RANGE = 0,
-  SHORT_OF_BEGIN = 1,
+export const RangeCheck = {
+  BEYOND_END: -1,
+  IN_RANGE: 0,
+  SHORT_OF_BEGIN: 1,
   /** Inside a margin of a SELF or DEPENDENCIES range, where the dependants show. */
-  IN_FADE_MARGIN = 2,
-}
+  IN_FADE_MARGIN: 2,
+} as const;
 
 interface RangeCheckResult {
-  check: RangeCheck;
+  check: EnumValue<typeof RangeCheck>;
   /**
    * The alpha the instance gives its visibility dependants inside a DEPENDENCIES margin, linear
    * across both edges of the margin. 1 everywhere else.
@@ -89,7 +89,7 @@ export function checkVisibilityRange(
   return checked(RangeCheck.IN_RANGE);
 }
 
-function checked(check: RangeCheck): RangeCheckResult {
+function checked(check: EnumValue<typeof RangeCheck>): RangeCheckResult {
   return { check, childrenFade: 1 };
 }
 

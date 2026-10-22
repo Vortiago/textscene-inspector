@@ -45,8 +45,12 @@ even when its class lives in `scene/`. So `scene/` imports from `rendering/`, an
 not import from `scene/`. `noDependencies.test.ts` checks that direction.
 
 A test sits beside its file. Core imports each fact from its file under a group. The root keeps
-`noDependencies.test.ts` and `index.ts`, the package's `./godot` export, which re-exports only what
-a package outside core imports.
+`noDependencies.test.ts`, `engineFactRoutes.test.ts` and `index.ts`, the package's `./godot` export,
+which re-exports only what a package outside core imports.
+
+Each Godot enum is declared once, as an `as const` object. Its type is `EnumValue<typeof Name>`,
+because a type alias with the object's name fails the `no-redeclare` lint rule. A table of
+labels for one enum ends in `_NAMES` and starts with its Godot class.
 
 | `godot/` group | Ports from Godot's |
 | --- | --- |
@@ -260,6 +264,7 @@ A test or a script fails when one of these rules breaks.
 | The linter and the lenient parser import no React or three.js | `linter/reactFree.test.ts`, an ESLint `no-restricted-imports` rule |
 | The language-feature engine and the `tscn-lsp` server import no React or three.js | `languageFeatures/reactFree.test.ts`, an ESLint `no-restricted-imports` rule, `apps/textscene-lsp/src/reactFree.test.ts` |
 | `godot/` imports nothing | `noDependencies.test.ts` |
+| No module outside `godot/` re-exports a `godot/` name, no group has a barrel, and no enum outside `godot/` copies a `godot/` enum | `engineFactRoutes.test.ts` |
 | Every slice is wired into its barrels | `barrelCompleteness`, `parserBarrelCompleteness` |
 | Core imports each engine fact from its file, and `godot/index.ts` and the root `index.ts` re-export only what a package outside core imports | `packageExports.test.ts` |
 | No value export exists for tests alone. An entry point's export counts only when the apps, the dev kit or the scripts import it | `scripts/testOnlyExports.test.mjs` |

@@ -23,7 +23,7 @@ import {
   VRS_MODE_NAMES,
   VRS_UPDATE_MODE_NAMES,
 } from '../../../godot/scene/viewport.js';
-import { MSAA_MODE_LABELS } from '../../../godot/rendering/msaa.js';
+import { MSAA_MODE_NAMES } from '../../../godot/rendering/msaa.js';
 
 const shadowAtlasQuadrant = (key: string) =>
   v.enumInt(key, POSITIONAL_SHADOW_ATLAS_QUADRANT_SUBDIV_NAMES, { enforced: 'viewport.cpp:1413' });
@@ -39,7 +39,7 @@ validatorRegistry.registerAll('Viewport', {
   // viewport.cpp:5166: PROPERTY_HINT_ENUM, 4 labels. set_msaa_3d
   // (viewport.cpp:3763) enforces `ERR_FAIL_INDEX(p_msaa, MSAA_MAX)`, with
   // MSAA_MAX=4 (scene/main/viewport.h:119-125).
-  msaa_3d: v.enumInt('msaa_3d', MSAA_MODE_LABELS, {
+  msaa_3d: v.enumInt('msaa_3d', MSAA_MODE_NAMES, {
     enforced: 'viewport.cpp:3763',
   }),
   // viewport.cpp:3968 `ERR_FAIL_INDEX(p_filter, DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_MAX)`, MAX = 4.
@@ -61,7 +61,7 @@ validatorRegistry.registerAll('Viewport', {
   // "Rendering" group, viewport.cpp:5164-5173.
   // viewport.cpp:3748: `ERR_FAIL_INDEX(p_msaa, MSAA_MAX)`, same enum and
   // guard shape as msaa_3d above.
-  msaa_2d: v.enumInt('msaa_2d', MSAA_MODE_LABELS, {
+  msaa_2d: v.enumInt('msaa_2d', MSAA_MODE_NAMES, {
     enforced: 'viewport.cpp:3748',
   }),
   // viewport.cpp:3778: `ERR_FAIL_INDEX(p_screen_space_aa, SCREEN_SPACE_AA_MAX)`.

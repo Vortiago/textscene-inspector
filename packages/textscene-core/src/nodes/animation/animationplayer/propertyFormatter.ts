@@ -3,7 +3,11 @@
  */
 
 import type { PropertySection } from '../../../core/NodeRegistry';
-import { AnimationProcessMode, type AnimationPlayerProperties, MethodCallMode } from './types';
+import { type AnimationPlayerProperties } from './types';
+import {
+  ANIMATION_CALLBACK_MODE_METHOD_HINT_NAMES,
+  ANIMATION_CALLBACK_MODE_PROCESS_HINT_NAMES,
+} from '../../../godot/scene/animation';
 
 export function formatAnimationPlayerProperties(properties: AnimationPlayerProperties): PropertySection[] {
   const sections: PropertySection[] = [];
@@ -22,8 +26,14 @@ export function formatAnimationPlayerProperties(properties: AnimationPlayerPrope
         label: 'Blend Time (s)',
         value: properties.playback_default_blend_time.toFixed(3),
       },
-      { label: 'Process Mode', value: processModeName(properties.callback_mode_process) },
-      { label: 'Method Call Mode', value: methodCallModeName(properties.callback_mode_method) },
+      {
+        label: 'Process Mode',
+        value: ANIMATION_CALLBACK_MODE_PROCESS_HINT_NAMES[properties.callback_mode_process] ?? 'Unknown',
+      },
+      {
+        label: 'Method Call Mode',
+        value: ANIMATION_CALLBACK_MODE_METHOD_HINT_NAMES[properties.callback_mode_method] ?? 'Unknown',
+      },
     ],
   });
 
@@ -43,28 +53,4 @@ export function formatAnimationPlayerProperties(properties: AnimationPlayerPrope
   }
 
   return sections;
-}
-
-function processModeName(mode: AnimationProcessMode): string {
-  switch (mode) {
-    case AnimationProcessMode.PHYSICS:
-      return 'Physics';
-    case AnimationProcessMode.IDLE:
-      return 'Idle';
-    case AnimationProcessMode.MANUAL:
-      return 'Manual';
-    default:
-      return 'Unknown';
-  }
-}
-
-function methodCallModeName(mode: MethodCallMode): string {
-  switch (mode) {
-    case MethodCallMode.DEFERRED:
-      return 'Deferred';
-    case MethodCallMode.IMMEDIATE:
-      return 'Immediate';
-    default:
-      return 'Unknown';
-  }
 }

@@ -67,12 +67,12 @@ export const ENGINE_MAJOR_VERSION = 4;
 export const FORMAT_VERSION_NO_NODEPATH_PROPERTY = 3;
 
 /** `ResourceFormatSaverBinaryInstance`'s header flags (`.h:169-172`). */
-export enum BinaryFormatFlag {
-  NamedSceneIds = 1,
-  Uids = 2,
-  RealTIsDouble = 4,
-  HasScriptClass = 8,
-}
+export const BinaryFormatFlag = {
+  NamedSceneIds: 1,
+  Uids: 2,
+  RealTIsDouble: 4,
+  HasScriptClass: 8,
+} as const;
 
 /** `RESERVED_FIELDS` (`.h:175`): u32 fields the header skips. */
 export const RESERVED_FIELDS = 11;
@@ -84,58 +84,58 @@ export const LOCAL_RESOURCE_PREFIX = 'local://';
 export const SUB_RESOURCE_SEPARATOR = '::';
 
 /** The variant tags (`.cpp:45-88`). */
-export enum VariantTag {
-  Nil = 1,
-  Bool = 2,
-  Int = 3,
-  Float = 4,
-  String = 5,
-  Vector2 = 10,
-  Rect2 = 11,
-  Vector3 = 12,
-  Plane = 13,
-  Quaternion = 14,
-  Aabb = 15,
-  Basis = 16,
-  Transform3D = 17,
-  Transform2D = 18,
-  Color = 20,
-  NodePath = 22,
-  Rid = 23,
-  Object = 24,
-  InputEvent = 25,
-  Dictionary = 26,
-  Array = 30,
-  PackedByteArray = 31,
-  PackedInt32Array = 32,
-  PackedFloat32Array = 33,
-  PackedStringArray = 34,
-  PackedVector3Array = 35,
-  PackedColorArray = 36,
-  PackedVector2Array = 37,
-  Int64 = 40,
-  Double = 41,
-  Callable = 42,
-  Signal = 43,
-  StringName = 44,
-  Vector2i = 45,
-  Rect2i = 46,
-  Vector3i = 47,
-  PackedInt64Array = 48,
-  PackedFloat64Array = 49,
-  Vector4 = 50,
-  Vector4i = 51,
-  Projection = 52,
-  PackedVector4Array = 53,
-}
+export const VariantTag = {
+  Nil: 1,
+  Bool: 2,
+  Int: 3,
+  Float: 4,
+  String: 5,
+  Vector2: 10,
+  Rect2: 11,
+  Vector3: 12,
+  Plane: 13,
+  Quaternion: 14,
+  Aabb: 15,
+  Basis: 16,
+  Transform3D: 17,
+  Transform2D: 18,
+  Color: 20,
+  NodePath: 22,
+  Rid: 23,
+  Object: 24,
+  InputEvent: 25,
+  Dictionary: 26,
+  Array: 30,
+  PackedByteArray: 31,
+  PackedInt32Array: 32,
+  PackedFloat32Array: 33,
+  PackedStringArray: 34,
+  PackedVector3Array: 35,
+  PackedColorArray: 36,
+  PackedVector2Array: 37,
+  Int64: 40,
+  Double: 41,
+  Callable: 42,
+  Signal: 43,
+  StringName: 44,
+  Vector2i: 45,
+  Rect2i: 46,
+  Vector3i: 47,
+  PackedInt64Array: 48,
+  PackedFloat64Array: 49,
+  Vector4: 50,
+  Vector4i: 51,
+  Projection: 52,
+  PackedVector4Array: 53,
+} as const;
 
 /** How an object property names its resource (`.cpp:89-92`). */
-export enum ObjectRef {
-  Empty = 0,
-  ExternalResource = 1,
-  InternalResource = 2,
-  ExternalResourceIndex = 3,
-}
+export const ObjectRef = {
+  Empty: 0,
+  ExternalResource: 1,
+  InternalResource: 2,
+  ExternalResourceIndex: 3,
+} as const;
 
 /** The top bit of an array or dictionary length marks it shared (`.cpp:589`, `:604`), not counted. */
 export const SHARED_LENGTH_MASK = 0x7fffffff;

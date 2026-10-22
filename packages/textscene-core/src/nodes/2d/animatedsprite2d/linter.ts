@@ -9,7 +9,7 @@ import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter
 import { heldResource } from '../../../linter/resourceChecker.js';
 import { DEFAULT_ANIMATION_NAME } from '../../../godot/scene/animation.js';
 import { literalText } from '../../../godot/string/string.js';
-import { ruleInt } from '../../../godot/variant/int.js';
+import { ruleInt } from '../../../godot/variant/intSlots.js';
 
 const arms = {
   missingSpriteFrames: groundedArm('animatedsprite2d-requires-spriteframes', {

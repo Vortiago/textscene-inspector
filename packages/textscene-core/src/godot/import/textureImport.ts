@@ -4,6 +4,7 @@
  */
 
 import { storesAlpha, type ImageSourceFormat } from './imageSourceFormat.js';
+import { enumMember, type EnumValue } from '../classdb/enumNames.js';
 
 /** The importer a sidecar names for a 2D texture (`resource_importer_texture.cpp:164-166`). */
 export const TEXTURE_IMPORTER = 'texture';
@@ -24,21 +25,21 @@ export const TEXTURE_COMPRESS_MODES = [
 export type TextureCompressMode = (typeof TEXTURE_COMPRESS_MODES)[number];
 
 /** `compress/normal_map` (`resource_importer_texture.cpp:242`). */
-export enum TextureNormalMapMode {
-  Detect = 0,
-  Enable = 1,
-  Disabled = 2,
-}
+export const TextureNormalMapMode = {
+  Detect: 0,
+  Enable: 1,
+  Disabled: 2,
+} as const;
 
 /** `Image::RoughnessChannel` (`core/io/image.h:153-159`): the channel the roughness limiter raises. */
-export enum RoughnessChannel {
-  R = 0,
-  G = 1,
-  B = 2,
-  A = 3,
+export const RoughnessChannel = {
+  R: 0,
+  G: 1,
+  B: 2,
+  A: 3,
   /** The grey of red, green and blue. */
-  L = 4,
-}
+  L: 4,
+} as const;
 
 /** `roughness/mode` from Red on, as `Image::RoughnessChannel` (`resource_importer_texture.cpp:247`, `:783`). */
 const ROUGHNESS_MODE_FIRST_CHANNEL = 2;
@@ -52,13 +53,13 @@ export function roughnessLimitOption(
   normalPath: string | undefined
 ): RoughnessLimitOption | null {
   if (mode === undefined || !normalPath) return null;
-  const channel = mode - ROUGHNESS_MODE_FIRST_CHANNEL;
-  return channel >= RoughnessChannel.R && channel <= RoughnessChannel.L ? { channel, normalPath } : null;
+  const channel = enumMember(RoughnessChannel, mode - ROUGHNESS_MODE_FIRST_CHANNEL);
+  return channel === null ? null : { channel, normalPath };
 }
 
 /** The roughness channel the limiter raises, and the path of the normal map it reads. */
 export interface RoughnessLimitOption {
-  channel: RoughnessChannel;
+  channel: EnumValue<typeof RoughnessChannel>;
   normalPath: string;
 }
 

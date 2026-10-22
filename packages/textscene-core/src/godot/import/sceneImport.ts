@@ -1,22 +1,22 @@
 /** The scene importer's lightmap options (`editor/import/3d/resource_importer_scene.{h,cpp}`). */
 
 /** `LightBakeMode` (`resource_importer_scene.h:159-164`). */
-export enum LightBakeMode {
-  Disabled = 0,
-  Static = 1,
-  StaticLightmaps = 2,
-  Dynamic = 3,
-}
+export const LightBakeMode = {
+  Disabled: 0,
+  Static: 1,
+  StaticLightmaps: 2,
+  Dynamic: 3,
+} as const;
 
 /** `meshes/light_baking`'s default (`resource_importer_scene.cpp:2527`). */
 export const DEFAULT_LIGHT_BAKE_MODE = LightBakeMode.Static;
 
 /** `MeshOverride` (`resource_importer_scene.h:186-190`), a mesh's `generate/lightmap_uv`. */
-export enum MeshOverride {
-  Default = 0,
-  Enable = 1,
-  Disable = 2,
-}
+export const MeshOverride = {
+  Default: 0,
+  Enable: 1,
+  Disable: 2,
+} as const;
 
 /** `meshes/lightmap_texel_size`'s default (`resource_importer_scene.cpp:2528`). */
 export const DEFAULT_LIGHTMAP_TEXEL_SIZE = 0.2;

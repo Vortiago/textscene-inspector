@@ -27,6 +27,7 @@ import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import type { Rgba } from '../godot/math/math.js';
 import { GlowUpscaleMode } from '../godot/rendering/environment/glow.js';
 import { LIGHTMAP_BICUBIC_FILTER_DEFAULT } from '../godot/scene/lightmapGi.js';
+import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../godot/scene/viewport.js';
 
 /**
  * A `key=value` line as `parse_tag_assign_eof` reads it (`variant_parser.cpp:1932-1950`): blanks may precede the `=`,
@@ -220,9 +221,6 @@ export function projectMsaaModes(settings: ProjectSettings | null): MsaaModes {
 export function projectDefaultFontGeneratesMipmaps(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['gui/theme/default_font_generate_mipmaps']) ?? false;
 }
-
-/** Godot's default `rendering/textures/default_filters/anisotropic_filtering_level`, 4x (`rendering_server.cpp:3750`). */
-export const DEFAULT_ANISOTROPIC_FILTERING_LEVEL = 2;
 
 /** `RS::VIEWPORT_ANISOTROPY_16X`, the last level `Viewport.AnisotropicFiltering` names. */
 const MAX_ANISOTROPIC_FILTERING_LEVEL = 4;

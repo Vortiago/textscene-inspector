@@ -10,9 +10,15 @@ import { OPEN_SANS_METRICS } from './openSansMetrics';
 import type { FontMetrics } from './fontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 /** Every line's rendered text, in order. */
-function lineTexts(text: string, boxWidthPx: number, autowrapMode: AutowrapMode, fontSizePx = 16): string[] {
+function lineTexts(
+  text: string,
+  boxWidthPx: number,
+  autowrapMode: EnumValue<typeof AutowrapMode>,
+  fontSizePx = 16
+): string[] {
   return shapeText(text, { fontSizePx, boxWidthPx, autowrapMode, lineSpacingPx: 3 }).lines.map((l) => l.text);
 }
 

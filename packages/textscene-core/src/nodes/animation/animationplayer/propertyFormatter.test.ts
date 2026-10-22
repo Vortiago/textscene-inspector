@@ -5,15 +5,16 @@
 import { describe, it, expect } from 'vitest';
 import { formatAnimationPlayerProperties } from './propertyFormatter';
 import type { AnimationPlayerProperties } from './types';
-import { AnimationProcessMode, MethodCallMode } from './types';
+
+import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
 
 function makeProps(overrides: Partial<AnimationPlayerProperties> = {}): AnimationPlayerProperties {
   return {
     name: 'AnimationPlayer',
     speed_scale: 1.0,
     playback_default_blend_time: 0.0,
-    callback_mode_process: AnimationProcessMode.IDLE,
-    callback_mode_method: MethodCallMode.DEFERRED,
+    callback_mode_process: AnimationCallbackModeProcess.IDLE,
+    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
     active: true,
     autoplay: '',
     current_animation: '',
@@ -79,7 +80,7 @@ describe('formatAnimationPlayerProperties', () => {
 
   it('shows process mode as human-readable string', () => {
     const sections = formatAnimationPlayerProperties(
-      makeProps({ callback_mode_process: AnimationProcessMode.PHYSICS })
+      makeProps({ callback_mode_process: AnimationCallbackModeProcess.PHYSICS })
     );
     const playback = sections.find((s) => s.title === 'Playback');
     const modeItem = playback?.items.find((i) => i.label === 'Process Mode');

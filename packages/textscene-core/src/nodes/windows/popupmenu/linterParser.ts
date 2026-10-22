@@ -7,10 +7,7 @@
 
 import '../window/linterParser.js';
 import { validatorRegistry } from '../../../linter/ValidatorRegistry.js';
-import {
-  propertyListFamilyKey,
-  propertyListFamilyValidator,
-} from '../../../linter/validators/indexedFamily.js';
+import { propertyListFamilyEntry } from '../../../linter/validators/indexedFamily.js';
 import { POPUP_MENU_ITEMS } from '../../../godot/classdb/propertyListFamilies.js';
 import { ITEM_CHECKABLE_TYPE_NAMES, OFFERED_SYSTEM_MENU_NAMES } from '../../../godot/scene/popupMenu.js';
 
@@ -52,12 +49,12 @@ const ITEM_LEAVES: Readonly<Record<string, PropertyValidator>> = {
  * The per-item family: `base_property_helper.register_property` (popup_menu.cpp:3317-3328)
  * with no `ADD_PROPERTY`, since popup_menu.h:258-260 delegate `_get_property_list`,
  * `_set` and `_get` to `property_helper`. `item_0/text` glues the index to the prefix
- * (property_list_helper.cpp:149), hence `item_#/*` (ValidatorRegistry.findOwnValidator).
+ * (property_list_helper.cpp:149).
  */
-const itemValidator = propertyListFamilyValidator(POPUP_MENU_ITEMS, {
+const itemFamilyEntry = propertyListFamilyEntry(POPUP_MENU_ITEMS, {
   leaves: ITEM_LEAVES,
   unknownCode: 'INVALID_ITEM_KEY',
-  describes: 'item_<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed)',
+  describes: `${POPUP_MENU_ITEMS.prefix}<index>/<leaf> (see popup_menu.cpp, PropertyListHelper-backed)`,
   negativeIndex: {
     cite: 'property_list_helper.cpp:58',
     code: 'INVALID_ITEM_INDEX',
@@ -66,7 +63,7 @@ const itemValidator = propertyListFamilyValidator(POPUP_MENU_ITEMS, {
   },
 });
 
-validatorRegistry.registerAll('PopupMenu', {
+validatorRegistry.registerAll('PopupMenu', itemFamilyEntry, {
   // popup_menu.cpp:3257, Variant::BOOL, no hint. set_hide_on_item_selection
   // (popup_menu.cpp:3016-3018) is a bare assignment.
   hide_on_item_selection: v.boolean('hide_on_item_selection'),
@@ -106,6 +103,4 @@ validatorRegistry.registerAll('PopupMenu', {
   // (popup_menu.cpp:2697-2698) is `ERR_FAIL_COND(p_count < 0)`: the floor is
   // enforced; there is no ceiling anywhere.
   item_count: v.int('item_count', { min: 0, enforced: 'popup_menu.cpp:2698' }),
-
-  [propertyListFamilyKey(POPUP_MENU_ITEMS)]: itemValidator,
 });

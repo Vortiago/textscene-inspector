@@ -11,7 +11,7 @@
  */
 
 import type { ControlProperties } from '../control/types';
-import type { Rect2 } from '../../../../r3f/controls/native/rect';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {

@@ -5,7 +5,7 @@ import {
   COMPOSITION_SWIZZLE_NAMES,
   COMPOSITION_WRAP_NAMES,
   HAND_BONE_UPDATE_NAMES,
-  HAND_NAMES,
+  OPEN_XR_HAND_NAMES,
   MOTION_RANGE_NAMES,
   RENDER_MODEL_TRACKER_NAMES,
   SKELETON_RIG_NAMES,
@@ -44,7 +44,7 @@ describe('OpenXRCompositionLayer swapchain names', () => {
 
 describe('OpenXRHand names', () => {
   it('names each hand as `openxr_hand.cpp:55` hints it', () => {
-    expect(HAND_NAMES).toEqual({ 0: 'Left', 1: 'Right' });
+    expect(OPEN_XR_HAND_NAMES).toEqual({ 0: 'Left', 1: 'Right' });
   });
 
   it('names each motion range as `openxr_hand.cpp:56` hints it', () => {

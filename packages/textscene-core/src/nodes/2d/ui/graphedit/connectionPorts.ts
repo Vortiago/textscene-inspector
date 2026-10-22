@@ -18,7 +18,7 @@ import {
 import type { TextMeasurer } from '../../../../r3f/controls/native/solverRegistry.js';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme.js';
-import type { Rect2 } from '../../../../r3f/controls/native/rect.js';
+import type { Rect2 } from '../../../../godot/math/rect2.js';
 import { graphNodeDrawRows, graphNodeStyles } from '../graphnode/nativeSolver.js';
 import type { GraphNodeProperties } from '../graphnode/types.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';

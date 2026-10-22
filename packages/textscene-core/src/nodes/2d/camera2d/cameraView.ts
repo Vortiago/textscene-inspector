@@ -5,7 +5,8 @@
  * FIXED_TOP_LEFT puts the camera at its corner.
  */
 import { isZeroApprox } from '../../../godot/math/math.js';
-import { Camera2DAnchorMode, type Camera2DProperties } from './types';
+import { type Camera2DProperties } from './types';
+import { Camera2DAnchorMode } from '../../../godot/scene/camera2d.js';
 
 interface Camera2DView {
   /** View center in Godot canvas pixels. */

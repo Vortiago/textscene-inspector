@@ -11,14 +11,9 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
-import { DEFAULT_CANVAS_LAYER } from '../godot/rendering/rendering';
+import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
-import {
-  CANVAS_ITEM_Z_MAX,
-  CANVAS_ITEM_Z_MIN,
-  clampCanvasItemZ,
-  WORLD_CANVAS_LAYER,
-} from './lighting2d/canvasItemPlacement';
+import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
 
 /** How many distinct `z_final` buckets one canvas has. */
 const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;

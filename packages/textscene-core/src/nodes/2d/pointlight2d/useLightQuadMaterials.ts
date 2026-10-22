@@ -10,12 +10,12 @@ import {
   alphaOnly,
   createLightQuadMaterial,
   createShadowColorQuadMaterial,
-  Light2DBlendMode,
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
 import { litQuadStencilProps, shadowColorQuadStencilProps } from '../../../r3f/lighting2d/ShadowVolumeMask';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { Light2DBlendMode } from '../../../godot/scene/light2d';
 
 interface LightQuadMaterialOptions {
   readonly cookie: THREE.Texture;

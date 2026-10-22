@@ -5,13 +5,8 @@
  */
 
 import { warnOnce } from './polygonSweepFrames';
-import {
-  MAX_PATH_EXTRUSIONS,
-  PathIntervalType,
-  PathRotation,
-  PolygonMode,
-  type CsgPolygonSpec,
-} from './polygonSweepSpec';
+import { MAX_PATH_EXTRUSIONS, type CsgPolygonSpec } from './polygonSweepSpec';
+import { PathIntervalType, PathRotation, PolygonMode } from '../../../../godot/scene/csg';
 
 interface ExtrusionCounts {
   extrusions: number;

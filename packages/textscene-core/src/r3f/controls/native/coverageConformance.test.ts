@@ -17,7 +17,7 @@ import { parseBareNode } from '../testing/probeScene';
 import { controlSolverRegistry } from './solverRegistry';
 import { createSolveContext, solveControlTree } from './controlRectSolver';
 import { nativeTheme } from './nativeTheme';
-import type { Rect2 } from './rect';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
 import { solveNode } from './testing/solveNode';
 

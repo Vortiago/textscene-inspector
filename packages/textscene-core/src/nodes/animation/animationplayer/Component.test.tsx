@@ -9,15 +9,16 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationPlayer } from './Component';
 import type { TscnNode } from '../../../parser/types';
 import type { AnimationPlayerProperties } from './types';
-import { AnimationProcessMode, MethodCallMode } from './types';
+
+import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
 
 function makeNode(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
   const props: AnimationPlayerProperties = {
     name: overrides.name ?? 'AnimationPlayer',
     speed_scale: 1.0,
     playback_default_blend_time: 0.0,
-    callback_mode_process: AnimationProcessMode.IDLE,
-    callback_mode_method: MethodCallMode.DEFERRED,
+    callback_mode_process: AnimationCallbackModeProcess.IDLE,
+    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
     active: true,
     autoplay: '',
     current_animation: '',

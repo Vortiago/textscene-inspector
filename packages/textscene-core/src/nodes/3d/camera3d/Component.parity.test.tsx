@@ -8,9 +8,10 @@ import { describe, it, expect } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Camera3D } from './Component';
-import { ProjectionMode, KeepAspectMode } from './types';
+
 import type { TscnNode } from '../../../parser/types';
 import { instanceAs } from '../testing/reactThreeTestInstance';
+import { Camera3DProjectionType, Camera3DKeepAspect } from '../../../godot/scene/camera3d';
 
 function makeNode(props: Record<string, unknown> = {}): TscnNode {
   return {
@@ -25,7 +26,7 @@ function makeNode(props: Record<string, unknown> = {}): TscnNode {
 describe('Camera3D projection parity', () => {
   it('orthographic size is the full dimension → half-extent = size/2', async () => {
     const r = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ projection: ProjectionMode.PROJECTION_ORTHOGONAL, size: 4 })} />
+      <Camera3D node={makeNode({ projection: Camera3DProjectionType.ORTHOGONAL, size: 4 })} />
     );
     const o = instanceAs<THREE.OrthographicCamera>(r.scene.findByType('OrthographicCamera'));
     expect(o.top).toBeCloseTo(2, 5); // size 4 → half-height 2
@@ -34,7 +35,7 @@ describe('Camera3D projection parity', () => {
 
   it('perspective fov with KEEP_WIDTH is converted from horizontal to vertical', async () => {
     const r = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ fov: 90, keep_aspect: KeepAspectMode.KEEP_WIDTH })} />
+      <Camera3D node={makeNode({ fov: 90, keep_aspect: Camera3DKeepAspect.KEEP_WIDTH })} />
     );
     const cam = instanceAs<THREE.PerspectiveCamera>(r.scene.findByType('PerspectiveCamera'));
     expect(cam.fov).toBeCloseTo(58.7155, 3);
@@ -44,7 +45,7 @@ describe('Camera3D projection parity', () => {
   it('perspective fov with KEEP_WIDTH rounds as Projection::get_fovy does', async () => {
     // Dividing by the aspect and multiplying by 180 last gives ...277; Godot's expression gives ...273.
     const r = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ fov: 31, keep_aspect: KeepAspectMode.KEEP_WIDTH })} />
+      <Camera3D node={makeNode({ fov: 31, keep_aspect: Camera3DKeepAspect.KEEP_WIDTH })} />
     );
     const cam = instanceAs<THREE.PerspectiveCamera>(r.scene.findByType('PerspectiveCamera'));
     expect(cam.fov).toBe(17.732799010746273);
@@ -52,7 +53,7 @@ describe('Camera3D projection parity', () => {
 
   it('perspective fov with KEEP_HEIGHT (default) is used verbatim', async () => {
     const r = await ReactThreeTestRenderer.create(
-      <Camera3D node={makeNode({ fov: 60, keep_aspect: KeepAspectMode.KEEP_HEIGHT })} />
+      <Camera3D node={makeNode({ fov: 60, keep_aspect: Camera3DKeepAspect.KEEP_HEIGHT })} />
     );
     const cam = instanceAs<THREE.PerspectiveCamera>(r.scene.findByType('PerspectiveCamera'));
     expect(cam.fov).toBe(60);

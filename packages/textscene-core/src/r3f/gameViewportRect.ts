@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
-import type { Rect2 } from './controls/native/rect.js';
+import type { Rect2 } from '../godot/math/rect2.js';
 
 export function useGameViewportRect(): Rect2 {
   const { width, height } = useProjectSettings().viewportSize;

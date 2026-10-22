@@ -12,6 +12,7 @@ import type { Vector3Axis } from '../../../godot/math/vector3Axis';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
+import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /**
  * Rect2 (Godot rect resource): a rectangle in 2D space with float coords.
@@ -28,13 +29,13 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   texture?: string;
 
   /** Billboard mode (default: DISABLED, as for Label3D). */
-  billboard: BillboardMode;
+  billboard: EnumValue<typeof BillboardMode>;
 
   /** Alpha-cut mode (default: DISABLED). */
-  alpha_cut: AlphaCutMode;
+  alpha_cut: EnumValue<typeof AlphaCutMode>;
 
   /** The axis the sprite faces (default: Z, `sprite_3d.h:77`). */
-  axis: Vector3Axis;
+  axis: EnumValue<typeof Vector3Axis>;
 
   /** Size of one texture pixel in 3D world units (default: 0.01). */
   pixel_size: number;
@@ -98,13 +99,13 @@ export interface Sprite3DProperties extends GeometryInstance3DProperties {
   alpha_hash_scale: number;
 
   /** Alpha antialiasing mode (`sprite_3d.h:91`). Default OFF. */
-  alpha_antialiasing_mode: AlphaAntiAliasing;
+  alpha_antialiasing_mode: EnumValue<typeof AlphaAntiAliasing>;
 
   /** Alpha-to-coverage edge (`sprite_3d.h:92`). Default 0.0. */
   alpha_antialiasing_edge: number;
 
   /** Sampler filter for the sprite texture (`sprite_3d.h:94`). Default LINEAR_WITH_MIPMAPS. */
-  texture_filter: TextureFilter;
+  texture_filter: EnumValue<typeof TextureFilter>;
 
   /** Render priority within the alpha-blended bucket (default: 0). */
   render_priority: number;

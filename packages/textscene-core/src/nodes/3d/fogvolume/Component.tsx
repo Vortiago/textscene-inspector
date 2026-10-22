@@ -30,14 +30,17 @@ import { Node3D } from '../../base/node3d/Component';
 import { FogVolumeGizmo } from './Gizmo';
 import type { FogVolumeProperties } from './types';
 import type { Vector3 } from '../../../godot/math/vector';
+import { enumMember, type EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
 const FogVolumeElement = extend(FogVolumeObject);
 
 /** The mode `shader` runs in, or null before it has loaded. */
-function shaderModeOfResource(shader: TscnInternalResource | null): ShaderMode | null {
+function shaderModeOfResource(shader: TscnInternalResource | null): EnumValue<typeof ShaderMode> | null {
   if (!shader) return null;
-  if (shader.type === 'VisualShader') return stringToInt(shader.data['mode'] ?? '0');
+  // `VisualShader::set_mode` refuses an out-of-range mode (`visual_shader.cpp:1436`), so it keeps the default.
+  if (shader.type === 'VisualShader')
+    return enumMember(ShaderMode, stringToInt(shader.data['mode'] ?? '0')) ?? ShaderMode.SPATIAL;
   return shaderModeOf(literalText(shader.data['code'] ?? ''));
 }
 

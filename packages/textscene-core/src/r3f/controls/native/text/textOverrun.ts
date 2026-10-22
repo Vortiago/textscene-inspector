@@ -35,7 +35,7 @@ const NO_TRIM_FLAGS: OverrunTrimFlags = {
 };
 
 /** `TextServer::get_overrun_flags_from_behavior` (`text_server.cpp:2399-2432`). */
-export function overrunFlagsForBehavior(behavior: OverrunBehavior): OverrunTrimFlags {
+export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
   switch (behavior) {
     case OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE:
       return {

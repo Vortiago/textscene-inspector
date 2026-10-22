@@ -263,7 +263,7 @@ How much behaviour a caller or test can exercise per unit of interface it must l
 _Avoid_: bare "depth" for a dependency-chain distance or a test suite's size.
 
 **Conformance guard**:
-A test that walks a registry or scrapes source to prove every registered thing has its promised shape (`barrelCompleteness`, `parserBarrelCompleteness`, `resourceSliceConformance`, `baseChainCompleteness`, `reactFree`, `noDependencies`, `packageExports`).
+A test that walks a registry or scrapes source to prove every registered thing has its promised shape (`barrelCompleteness`, `parserBarrelCompleteness`, `resourceSliceConformance`, `baseChainCompleteness`, `reactFree`, `noDependencies`, `engineFactRoutes`, `packageExports`).
 Its failure list is the work list, and a green guard proves only what it scraped.
 _Avoid_: a per-slice test as a substitute. "coverage" for a guard.
 

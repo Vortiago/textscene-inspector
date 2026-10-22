@@ -15,13 +15,12 @@ import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
 import {
   convexBoundsTest,
   edgeNormals,
-  OCCLUDER_CULL_CLOCKWISE,
-  OCCLUDER_CULL_COUNTER_CLOCKWISE,
   type OccluderCullMode,
   type Quad2,
   type ShadowCasterEdges,
 } from './shadowVolumes';
 import type { Vector2 } from '../../godot/math/vector.js';
+import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
 /** What the map is built from, all in the previewer's 2D world space (Y up). */
 export interface DirectionalShadowView {
@@ -118,8 +117,8 @@ function edgeCastsDirectionalShadow(
 ): boolean {
   const facing = direction.x * edgeY - direction.y * edgeX;
   if (!Number.isFinite(facing) || facing === 0) return false;
-  if (cullMode === OCCLUDER_CULL_CLOCKWISE) return facing < 0;
-  if (cullMode === OCCLUDER_CULL_COUNTER_CLOCKWISE) return facing > 0;
+  if (cullMode === OccluderPolygon2DCullMode.CLOCKWISE) return facing < 0;
+  if (cullMode === OccluderPolygon2DCullMode.COUNTER_CLOCKWISE) return facing > 0;
   return true;
 }
 

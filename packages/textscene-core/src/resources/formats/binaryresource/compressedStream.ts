@@ -6,8 +6,11 @@
  */
 
 import { CompressionMode } from '../../../godot/project/compressedFile';
+import { enumNamesByValue } from '../../../godot/classdb/enumNames';
 import { ByteReader } from './byteReader';
 import { decompressFastLz } from './fastlz';
+
+const COMPRESSION_MODE_NAMES = enumNamesByValue(CompressionMode);
 
 /** Inflates one block to exactly `size` bytes. */
 type BlockInflater = (block: Uint8Array, size: number) => Uint8Array;
@@ -31,9 +34,12 @@ export async function inflateCompressedStream(reader: ByteReader): Promise<Uint8
     try {
       stream.set(inflate(block, size), start);
     } catch (error) {
-      throw new Error(`block ${index} of ${blockCount} in a ${CompressionMode[mode]} stream: ${error}`, {
-        cause: error,
-      });
+      throw new Error(
+        `block ${index} of ${blockCount} in a ${COMPRESSION_MODE_NAMES[mode]} stream: ${error}`,
+        {
+          cause: error,
+        }
+      );
     }
   });
   return stream;
