@@ -4,7 +4,7 @@
  * modifiers store it as `primary_rotation_axis`.
  */
 
-import { enumNamesByValue } from '../classdb/enumNames.js';
+import { enumNamesByValue, relabelEnumNames } from '../classdb/enumNames.js';
 
 export enum Vector3Axis {
   X = 0,
@@ -14,3 +14,6 @@ export enum Vector3Axis {
 
 /** Each axis named as its enum hint names it, "X,Y,Z". */
 export const VECTOR3_AXIS_NAMES = enumNamesByValue(Vector3Axis);
+
+/** Each axis named with an `_AXIS` suffix, `X_AXIS`, as a Sprite3D diagnostic names its `axis` (`sprite_3d.cpp:683`). */
+export const VECTOR3_AXIS_SUFFIXED_NAMES = relabelEnumNames(VECTOR3_AXIS_NAMES, (axis) => `${axis}_AXIS`);

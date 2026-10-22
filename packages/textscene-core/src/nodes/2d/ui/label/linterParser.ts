@@ -11,9 +11,9 @@ import { hintedBitField, maskedBitField, v } from '../../../../linter/validators
 import {
   AUTOWRAP_MODE_NAMES,
   BREAK_TRIM_HINTED_BITS,
-  BREAK_TRIM_LABELS,
+  BREAK_TRIM_NAMES,
   BREAK_TRIM_MASK,
-  JUSTIFICATION_HINTED_BITS,
+  JUSTIFICATION_HINTED_NAMES,
   OVERRUN_BEHAVIOR_NAMES,
   STRUCTURED_TEXT_PARSER_NAMES,
   TEXT_DIRECTION_NAMES,
@@ -70,7 +70,7 @@ validatorRegistry.registerAll('Label', {
   // so BREAK_TRIM_INDENT is kept but not offered by the inspector.
   autowrap_trim_flags: maskedBitField('autowrap_trim_flags', BREAK_TRIM_MASK, {
     enforced: 'label.cpp:63',
-    labels: BREAK_TRIM_LABELS,
+    labels: BREAK_TRIM_NAMES,
     hintedBits: BREAK_TRIM_HINTED_BITS,
   }),
   // label.cpp:1437: PROPERTY_HINT_FLAGS naming 6 of the 8 JustificationFlag bits.
@@ -79,7 +79,7 @@ validatorRegistry.registerAll('Label', {
   // warning tier and not the mask's error tier (contrast autowrap_trim_flags).
   justification_flags: hintedBitField('justification_flags', {
     hinted: 'label.cpp:1437',
-    labels: JUSTIFICATION_HINTED_BITS,
+    labels: JUSTIFICATION_HINTED_NAMES,
   }),
   // label.cpp:1438: Variant::STRING, PROPERTY_HINT_NONE. set_paragraph_separator
   // (label.cpp:1198-1205) assigns unconditionally.

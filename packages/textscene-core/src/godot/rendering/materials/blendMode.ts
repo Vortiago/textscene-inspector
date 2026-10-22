@@ -14,7 +14,7 @@ export enum BlendMode {
   PREMULT_ALPHA = 4,
 }
 
-export const BLEND_MODE_NAMES = enumNamesByValue(BlendMode);
+export const BASE_MATERIAL_3D_BLEND_MODE_NAMES = enumNamesByValue(BlendMode);
 
 /** `RD::BlendOperation`, only the two values the attachments use. */
 export type GodotBlendOp = 'add' | 'reverse-subtract';

@@ -18,7 +18,7 @@ export enum SizeFlags {
 export const DEFAULT_SIZE_FLAGS = SizeFlags.FILL;
 
 /** The labels the `size_flags_*` hints print (`control.cpp:4388-4392`). */
-export const SIZE_FLAGS_LABELS = relabelEnumNames(enumNamesByValue(SizeFlags), (name) => `SIZE_${name}`);
+export const SIZE_FLAGS_NAMES = relabelEnumNames(enumNamesByValue(SizeFlags), (name) => `SIZE_${name}`);
 
 /**
  * `Control::CURSOR_ARROW` (`scene/gui/control.h:101`), the first `CursorShape` and the field's

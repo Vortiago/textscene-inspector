@@ -13,4 +13,4 @@ export const PlaybackType = {
   SAMPLE: 2,
 } as const;
 
-export const PLAYBACK_TYPE_NAMES = enumNamesByValue(PlaybackType);
+export const AUDIO_SERVER_PLAYBACK_TYPE_NAMES = enumNamesByValue(PlaybackType);

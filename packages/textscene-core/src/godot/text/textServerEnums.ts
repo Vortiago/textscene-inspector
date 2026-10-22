@@ -58,7 +58,7 @@ export const JustificationFlag = {
  * `CONSTRAIN_ELLIPSIS` (16) are ones the setters keep but no hint lists, so `hintedBitField`
  * reports them.
  */
-export const JUSTIFICATION_HINTED_BITS = flagLabels(JustificationFlag, 'JUSTIFICATION_', [
+export const JUSTIFICATION_HINTED_NAMES = flagLabels(JustificationFlag, 'JUSTIFICATION_', [
   'KASHIDA',
   'WORD_BOUND',
   'AFTER_LAST_TAB',
@@ -92,7 +92,7 @@ export const BREAK_TRIM_MASK =
   LineBreakFlag.TRIM_INDENT | LineBreakFlag.TRIM_START_EDGE_SPACES | LineBreakFlag.TRIM_END_EDGE_SPACES;
 
 /** The three bits `BREAK_TRIM_MASK` keeps (servers/text/text_server.h:116-118). */
-export const BREAK_TRIM_LABELS = flagLabels(LineBreakFlag, 'BREAK_', [
+export const BREAK_TRIM_NAMES = flagLabels(LineBreakFlag, 'BREAK_', [
   'TRIM_INDENT',
   'TRIM_START_EDGE_SPACES',
   'TRIM_END_EDGE_SPACES',

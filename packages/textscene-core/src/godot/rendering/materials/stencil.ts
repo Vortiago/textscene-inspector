@@ -26,7 +26,7 @@ export enum StencilFlag {
 }
 
 /** Each flag's name by its bit, as the inspector hint lists them (`material.cpp:3776`). */
-export const STENCIL_FLAG_LABELS = enumNamesByValue(StencilFlag);
+export const STENCIL_FLAG_NAMES = enumNamesByValue(StencilFlag);
 
 /**
  * `BaseMaterial3D::StencilCompare` (`scene/resources/material.h:347-355`), as the integers a

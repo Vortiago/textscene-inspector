@@ -18,11 +18,7 @@ import {
   ShadowCasterProvider,
   worldShadowCasters,
 } from '../../../r3f/lighting2d/shadowCasterRegistry';
-import {
-  OCCLUDER_CULL_CLOCKWISE,
-  OCCLUDER_CULL_COUNTER_CLOCKWISE,
-  OCCLUDER_CULL_DISABLED,
-} from '../../../r3f/lighting2d/shadowVolumes';
+import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 import { fixturesDir } from '../../../parser/testing/parserKit';
 import { parseOccluderCullMode, polygonToSegments } from './polygonShapes';
 
@@ -81,19 +77,19 @@ describe('polygonToSegments', () => {
 
 describe('parseOccluderCullMode', () => {
   it('defaults to CULL_DISABLED when the property is absent', () => {
-    expect(parseOccluderCullMode(undefined)).toBe(OCCLUDER_CULL_DISABLED);
+    expect(parseOccluderCullMode(undefined)).toBe(OccluderPolygon2DCullMode.DISABLED);
   });
 
   it('reads the enum ordinals Godot writes', () => {
-    expect(parseOccluderCullMode('0')).toBe(OCCLUDER_CULL_DISABLED);
-    expect(parseOccluderCullMode('1')).toBe(OCCLUDER_CULL_CLOCKWISE);
-    expect(parseOccluderCullMode('2')).toBe(OCCLUDER_CULL_COUNTER_CLOCKWISE);
+    expect(parseOccluderCullMode('0')).toBe(OccluderPolygon2DCullMode.DISABLED);
+    expect(parseOccluderCullMode('1')).toBe(OccluderPolygon2DCullMode.CLOCKWISE);
+    expect(parseOccluderCullMode('2')).toBe(OccluderPolygon2DCullMode.COUNTER_CLOCKWISE);
   });
 
   it('falls back to CULL_DISABLED for an out-of-range or unreadable value', () => {
-    expect(parseOccluderCullMode('3')).toBe(OCCLUDER_CULL_DISABLED);
-    expect(parseOccluderCullMode('-1')).toBe(OCCLUDER_CULL_DISABLED);
-    expect(parseOccluderCullMode('clockwise')).toBe(OCCLUDER_CULL_DISABLED);
+    expect(parseOccluderCullMode('3')).toBe(OccluderPolygon2DCullMode.DISABLED);
+    expect(parseOccluderCullMode('-1')).toBe(OccluderPolygon2DCullMode.DISABLED);
+    expect(parseOccluderCullMode('clockwise')).toBe(OccluderPolygon2DCullMode.DISABLED);
   });
 });
 
@@ -159,7 +155,7 @@ describe('LightOccluder2D publishes to the shadow-caster registry', () => {
 
   it('carries cull_mode from the OccluderPolygon2D sub-resource', async () => {
     const registry = await renderIntoRegistry(occScene('cull_mode = 2'));
-    expect(worldShadowCasters(registry, 1)[0]!.cullMode).toBe(OCCLUDER_CULL_COUNTER_CLOCKWISE);
+    expect(worldShadowCasters(registry, 1)[0]!.cullMode).toBe(OccluderPolygon2DCullMode.COUNTER_CLOCKWISE);
   });
 
   it('gates on occluder_light_mask, not on the CanvasItem light_mask', async () => {

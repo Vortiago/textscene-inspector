@@ -11,7 +11,7 @@ import { propertyError } from '../../../linter/validators/propertyError.js';
 import { parseSlotInt } from '../../../godot/variant/intReader.js';
 import {
   STENCIL_COMPARE_NAMES,
-  STENCIL_FLAG_LABELS,
+  STENCIL_FLAG_NAMES,
   STENCIL_MODE_NAMES,
   StencilFlag,
 } from '../../../godot/rendering/materials/stencil.js';
@@ -21,7 +21,7 @@ const STENCIL_WRITE_FLAGS = StencilFlag.WRITE | StencilFlag.WRITE_DEPTH_FAIL;
 function stencilFlags(): PropertyValidator {
   const listed = hintedBitField('stencil_flags', {
     hinted: 'material.cpp:3776',
-    labels: STENCIL_FLAG_LABELS,
+    labels: STENCIL_FLAG_NAMES,
   });
 
   const validator: PropertyValidator = (key, value, line) => {
