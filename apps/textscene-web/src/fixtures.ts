@@ -383,6 +383,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Crossed Range",
+    "file": "unit-cpuparticles2d-crossed-range.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Curves",
     "file": "unit-cpuparticles2d-curves.tscn",
     "category": "Other"

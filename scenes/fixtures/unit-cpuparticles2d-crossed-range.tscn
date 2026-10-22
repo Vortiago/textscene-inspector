@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: a `_min` that the file writes above the `_max`, and a `_min` with no `_max`.
+; Godot's paired setters pull one bound onto the other (`cpu_particles_2d.cpp:352-376`), so
+; `initial_velocity_min = 200` then `initial_velocity_max = 100` loads 100 and 100, and a lone
+; `scale_amount_min = 6` loads 6 and 6. Every other emitter fixture authors an ordered pair, so
+; none of them shows the load. Measure with `pnpm ref:godot unit-cpuparticles2d-crossed-range.tscn
+; --mode 2d --particles 0`.
+
+[ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.1, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="Crossed" type="CPUParticles2D" parent="."]
+position = Vector2(420, 324)
+amount = 24
+texture = ExtResource("1_ball")
+lifetime = 2.0
+preprocess = 2.0
+use_fixed_seed = true
+seed = 99
+fixed_fps = 30
+local_coords = true
+direction = Vector2(1, 0)
+spread = 0.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 200.0
+initial_velocity_max = 100.0
+scale_amount_min = 6.0
