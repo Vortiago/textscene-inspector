@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+; One variable: the LightmapGI's shadowmask_mode, Only, on the bake of
+; `unit-lightmap-gi-shadowmask-replace.tscn`. Only skips the real-time shadow: the sun, the first
+; directional light, takes the baked shadow at every distance. The inspector offers no Only, so a
+; script stores it. The three scenes differ in this mode only. No other scene reads a shadowmask,
+; so none shows a wrong Only.
+
+[ext_resource type="LightmapGIData" uid="uid://dxg6fbyot05ji" path="res://unit-lightmap-gi-shadowmask.lmbake" id="1_x2f8l"]
+
+[sub_resource type="StandardMaterial3D" id="ground_mat"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="PlaneMesh" id="ground"]
+lightmap_size_hint = Vector2i(42, 42)
+material = SubResource("ground_mat")
+add_uv2 = true
+size = Vector2(8, 8)
+
+[sub_resource type="StandardMaterial3D" id="box_mat"]
+albedo_color = Color(0.9, 0.15, 0.1, 1)
+
+[sub_resource type="BoxMesh" id="box"]
+lightmap_size_hint = Vector2i(19, 28)
+material = SubResource("box_mat")
+add_uv2 = true
+size = Vector3(1.5, 1.5, 1.5)
+
+[node name="Root" type="Node3D" unique_id=14239888]
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=1093224813]
+mesh = SubResource("ground")
+
+[node name="Box" type="MeshInstance3D" parent="." unique_id=540151005]
+transform = Transform3D(0.866025, 0, -0.5, 0, 1, 0, 0.5, 0, 0.866025, 0, 0.75, 0)
+mesh = SubResource("box")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(0.87758, -0.22985, 0.42074, 0, 0.87758, 0.47943, -0.47943, -0.42074, 0.77015, 1.683, 1.918, 3.081)
+fov = 70.0
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=482812242]
+transform = Transform3D(-0.707107, 0.5, -0.5, 0, 0.707107, 0.707107, 0.707107, 0.5, -0.5, 0, 4, 0)
+shadow_enabled = true
+directional_shadow_max_distance = 3.0
+
+[node name="LightmapGI" type="LightmapGI" parent="." unique_id=399270176]
+quality = 0
+shadowmask_mode = 3
+environment_mode = 0
+light_data = ExtResource("1_x2f8l")
