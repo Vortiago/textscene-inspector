@@ -2,6 +2,8 @@
  * Takes over the 2D canvas's render and draws each frame through the canvas frame, whose rows the
  * y-down camera (`world2DCamera.ts`) holds upside down. The project's `msaa_2d` sets the frame's
  * sample count: off, or on a device with no count at or below the mode's, the frame is single-sampled.
+ * The camera and this component go together: a `World2DCamera` drawn straight to the drawing buffer
+ * shows the canvas upside down.
  */
 
 import { useFrame, useThree } from '@react-three/fiber';

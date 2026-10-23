@@ -31,7 +31,10 @@ The 2D canvas always draws through a `CanvasFrame`, whatever `msaa_2d` says.
 - Passes that read `gl_FragCoord` or project through the camera, such as the window scissor and the
   canvas item lighting, run on the same flipped target. They need no change.
 
-A SubViewport's canvas pass, the 3D canvas and picking (ADR-0006) keep their own frames.
+A SubViewport's canvas pass, the 3D canvas and picking (ADR-0006) keep their own frames. Godot's
+SubViewport canvas also puts the canvas top on row 0, so a quad on a pixel centre inside a
+SubViewport still draws one row off. Issue #852 puts that pass out of scope, and it needs its own
+change.
 
 ## Consequences
 
