@@ -25,6 +25,7 @@ describe('rendersInSoftware by renderer name', () => {
     'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)',
     'llvmpipe (LLVM 15.0.7, 256 bits)',
     'ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0, D3D11)',
+    'Apple Software Renderer',
   ])('names %s a software renderer', (name) => {
     expect(namedInSoftware(name)).toBe(true);
   });
@@ -49,6 +50,17 @@ describe('rendersInSoftware', () => {
 
   it('reads the plain renderer where the debug extension is missing', () => {
     expect(rendersInSoftware(namingContext('SwiftShader', { unmasked: false }))).toBe(true);
+  });
+
+  it('asks for no debug extension where the plain renderer is unmasked, as Firefox deprecates it', () => {
+    const requested: string[] = [];
+    const firefox = {
+      RENDERER,
+      getExtension: (name: string) => (requested.push(name), { UNMASKED_RENDERER_WEBGL }),
+      getParameter: (parameter: number) => (parameter === RENDERER ? 'llvmpipe' : null),
+    };
+    expect(rendersInSoftware(firefox as unknown as WebGL2RenderingContext)).toBe(true);
+    expect(requested).toEqual([]);
   });
 
   it('is false for a context that reports no renderer (error case)', () => {

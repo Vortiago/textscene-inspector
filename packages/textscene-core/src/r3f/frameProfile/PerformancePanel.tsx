@@ -50,7 +50,7 @@ function WindowStats({ stats }: { stats: FrameStats }) {
           <span
             className={styles.software}
             data-testid="performance-software"
-            title="The browser has turned its GPU off and draws WebGL on the CPU. Turn on graphics acceleration in its settings."
+            title="The browser draws WebGL on the CPU, not on a GPU. Turn on graphics acceleration in its settings."
           >
             Software WebGL
           </span>

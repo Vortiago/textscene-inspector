@@ -324,7 +324,7 @@ A heuristic on the scene root type picks the default, and the toolbar toggle ove
 _Avoid_: "2D mode" alone.
 
 **Frame profile** (`r3f/frameProfile/`):
-The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053). It also says when the browser draws WebGL in software, where every time runs many times its GPU time.
+The measurement of every frame on one renderer while the Performance toggle is on: frame rate, frame interval, and the CPU time, GPU time and draw calls of each **render step**, averaged over half a second (ADR-0053). It also says when the browser draws WebGL in software, where every time runs many times what a GPU takes.
 _Avoid_: "profiler" for the overlay. "stats" for the timing itself.
 
 **Render step**:
