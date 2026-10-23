@@ -78,7 +78,10 @@ describe('LIGHTMAP_PROGRAM shaders', () => {
 
   it('places the UV2 in the atlas by the user rect and slice', () => {
     expect(functionBody(fragment, 'vec3 godotLightmapUvw')).toContain(
-      'return vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, godotLightmapSlice );'
+      'return vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, layer );'
+    );
+    expect(functionBody(fragment, 'vec3 godotLightmapUvw')).toContain(
+      'float layer = godotLightmapSlice * ( godotLightmapUsesSH ? 4.0 : 1.0 );'
     );
   });
 
@@ -91,7 +94,6 @@ describe('LIGHTMAP_PROGRAM shaders', () => {
 
   it('reads four layers per slice of directional data, and lights the L1 bands along the normal', () => {
     const ambient = functionBody(fragment, 'vec3 godotLightmapAmbient');
-    expect(ambient).toContain('uvw.z *= 4.0;');
     expect(ambient).toContain(
       'return l0 + l1n1 * n.y * ( l0 * 4.0 ) + l1z * n.z * ( l0 * 4.0 ) + l1p1 * n.x * ( l0 * 4.0 );'
     );
@@ -163,8 +165,7 @@ describe('the shadowmask mix', () => {
 describe('the shadowmask read', () => {
   const read = functionBody(fragment, 'float godotLightmapShadowmask');
 
-  it('reads the first layer of a slice of directional data, as the alpha of the lightmap atlas', () => {
-    expect(read).toContain('if ( godotLightmapUsesSH ) uvw.z *= 4.0;');
+  it('reads the alpha of the lightmap atlas, at the first layer of a slice of directional data', () => {
     expect(read).toContain('textureLod( godotLightmap, uvw, 0.0 ).a');
   });
 

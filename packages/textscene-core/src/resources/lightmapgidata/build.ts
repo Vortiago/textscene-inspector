@@ -49,7 +49,7 @@ export function atlasWithShadowmask(
   const light = atlas.image.data;
   if (!(light instanceof Uint16Array) || !(mask.data instanceof Uint8Array)) return null;
   if (mask.width !== width || mask.height !== height || mask.depth * layersPerSlice !== depth) return null;
-  const texels = Uint16Array.from(light);
+  const texels = light.slice();
   const sliceTexels = width * height;
   for (let slice = 0; slice < mask.depth; slice++) {
     const lightFirst = slice * layersPerSlice * sliceTexels;

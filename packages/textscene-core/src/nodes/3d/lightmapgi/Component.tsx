@@ -7,7 +7,7 @@
 import { useThree } from '@react-three/fiber';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import type * as THREE from 'three';
-import { ShadowmaskMode } from '../../../godot/scene/lightmapGi';
+import { LIGHTMAP_SH_LAYERS_PER_SLICE, ShadowmaskMode } from '../../../godot/scene/lightmapGi';
 import { projectUsesLightmapBicubicFilter } from '../../../parser/projectSettingsParser';
 import { atlasWithShadowmask, combinedAtlas } from '../../../resources/lightmapgidata/build';
 import { decodeLightmapGIData } from '../../../resources/lightmapgidata/decode';
@@ -23,6 +23,8 @@ import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useUniqueNamePaths } from '../../../r3f/useUniqueNames';
 import { Node3D } from '../../base/node3d/Component';
 import type { LightmapGIProperties } from './types';
+
+const NO_PATHS: readonly string[] = [];
 
 export function LightmapGI({ node, children }: NodeComponentProps) {
   const { lightData, shadowmaskMode } = node.properties as LightmapGIProperties;
@@ -59,8 +61,14 @@ function BakedLightmap({
   const lightmapLoads = useLoadedTextures();
   const shadowmaskLoads = useLoadedTextures();
   const lightmapAtlas = useAtlas(data.lightmapTextures, lightmapLoads.loaded);
-  const shadowmaskAtlas = useAtlas(data.shadowmaskTextures, shadowmaskLoads.loaded);
-  const maskedAtlas = useMaskedAtlas(lightmapAtlas, shadowmaskAtlas, data.usesSphericalHarmonics ? 4 : 1);
+  // A bake with mode None never reads its shadowmask, so it loads, copies and uploads none.
+  const shadowmaskPaths = shadowmaskMode === ShadowmaskMode.NONE ? NO_PATHS : data.shadowmaskTextures;
+  const shadowmaskAtlas = useAtlas(shadowmaskPaths, shadowmaskLoads.loaded);
+  const maskedAtlas = useMaskedAtlas(
+    lightmapAtlas,
+    shadowmaskAtlas,
+    data.usesSphericalHarmonics ? LIGHTMAP_SH_LAYERS_PER_SLICE : 1
+  );
   const atlas = maskedAtlas ?? lightmapAtlas;
   const [object, setObject] = useState<THREE.Object3D | null>(null);
   const instance = useMemo(() => object && new LightmapInstance(object), [object]);
@@ -96,7 +104,7 @@ function BakedLightmap({
       {data.lightmapTextures.map((texturePath) => (
         <AtlasTextureLoad key={`lightmap:${texturePath}`} path={texturePath} report={lightmapLoads.report} />
       ))}
-      {data.shadowmaskTextures.map((texturePath) => (
+      {shadowmaskPaths.map((texturePath) => (
         <AtlasTextureLoad
           key={`shadowmask:${texturePath}`}
           path={texturePath}
@@ -169,7 +177,8 @@ function useAtlas(
 
 /**
  * The lightmap atlas with the shadowmask in its alpha, once both have loaded: the program reads
- * both through one sampler. Null while either is missing. The copy is this component's own.
+ * both through one sampler. Null while either is missing. The copy is this component's own, so it
+ * disposes it.
  */
 function useMaskedAtlas(
   lightmap: THREE.DataArrayTexture | null,

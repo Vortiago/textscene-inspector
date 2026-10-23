@@ -8,7 +8,7 @@
 
 import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
-import { ShadowmaskMode } from '../../godot/scene/lightmapGi';
+import { LIGHTMAP_SH_LAYERS_PER_SLICE, ShadowmaskMode } from '../../godot/scene/lightmapGi';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
 import type { LightmapAssignment } from './sceneLightmaps';
@@ -62,13 +62,13 @@ ${bicubicFilterGlsl({
   fetch: (texelUv) => `vec3( texture( godotLightmap, vec3( ${texelUv}, uvw.z ) ).a )`,
 })}
 vec3 godotLightmapUvw() {
-	return vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, godotLightmapSlice );
+	float layer = godotLightmapSlice * ( godotLightmapUsesSH ? ${LIGHTMAP_SH_LAYERS_PER_SLICE}.0 : 1.0 );
+	return vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, layer );
 }
 
 vec3 godotLightmapAmbient( vec3 worldNormal ) {
 	vec3 uvw = godotLightmapUvw();
 	if ( ! godotLightmapUsesSH ) return godotLightmapTexel( uvw );
-	uvw.z *= 4.0;
 	vec3 l0 = godotLightmapTexel( uvw );
 	vec3 l1n1 = ( godotLightmapTexel( uvw + vec3( 0.0, 0.0, 1.0 ) ) - vec3( 0.5 ) ) * 2.0;
 	vec3 l1z = ( godotLightmapTexel( uvw + vec3( 0.0, 0.0, 2.0 ) ) - vec3( 0.5 ) ) * 2.0;
@@ -79,7 +79,6 @@ vec3 godotLightmapAmbient( vec3 worldNormal ) {
 
 float godotLightmapShadowmask() {
 	vec3 uvw = godotLightmapUvw();
-	if ( godotLightmapUsesSH ) uvw.z *= 4.0;
 	return godotLightmapUsesBicubic ? godotShadowmaskBicubic( uvw ).x : textureLod( godotLightmap, uvw, 0.0 ).a;
 }
 
@@ -200,8 +199,7 @@ function lightmapUniforms(material: Material): Record<string, IUniform> {
         return object ? normalBasis.setFromMatrix4(object.matrixWorld).transpose() : normalBasis.identity();
       },
     },
-    // A bake with no shadowmask binds Godot a white array, which mixes as None in both modes. The
-    // component holds that as mode None.
+    // A bake with no shadowmask binds Godot a white array, which mixes as None in both modes.
     godotShadowmaskMode: {
       get value() {
         return bound()?.lightmap.shadowmaskMode ?? ShadowmaskMode.NONE;

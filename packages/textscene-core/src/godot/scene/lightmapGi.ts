@@ -55,6 +55,9 @@ export const LIGHTMAP_GI_SHADOWMASK_MODE_NAMES = enumNamesByValue({
   OVERLAY: ShadowmaskMode.OVERLAY,
 });
 
+/** Layers of a directional lightmap for each slice: L0 and the three L1 bands (`scene_forward_clustered.glsl:1849-1854`). */
+export const LIGHTMAP_SH_LAYERS_PER_SLICE = 4;
+
 /** `rendering/lightmapping/lightmap_gi/use_bicubic_filter` (`rendering_server.cpp:3822`). */
 export const LIGHTMAP_BICUBIC_FILTER_DEFAULT = true;
 

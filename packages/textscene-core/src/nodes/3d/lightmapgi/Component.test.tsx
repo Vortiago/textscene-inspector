@@ -88,10 +88,16 @@ describe('<LightmapGI>', () => {
   it('holds the shadowmask in the alpha of the atlas, with the light unchanged', async () => {
     const atlas = dataArrayTexture(new Uint16Array([5, 6, 7, 8]), 1, 1, 1);
     const shadowmask = dataArrayTexture(new Uint8Array([51]), 1, 1, 1);
-    const { lightmaps } = await mount({ atlas, shadowmask });
+    const { lightmaps } = await mount({ atlas, shadowmask, lightmapLines: 'shadowmask_mode = 1\n' });
     const drawn = lightmaps.assignmentFor('Root/Floor')!.lightmap.atlas!;
     expect(drawn).not.toBe(atlas);
     expect([...(drawn.image.data as Uint16Array)]).toEqual([5, 6, 7, THREE.DataUtils.toHalfFloat(51 / 255)]);
+  });
+
+  it('draws from the lightmap texture itself in mode None, which never reads the shadowmask', async () => {
+    const atlas = oneLayer();
+    const { lightmaps } = await mount({ atlas, shadowmask: oneMaskLayer() });
+    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.atlas).toBe(atlas);
   });
 
   it('draws from the lightmap texture itself for a bake that saved no shadowmask (edge case)', async () => {

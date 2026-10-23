@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import {
   installSunShadowUniforms,
   SLOT_MATRIX_ROWS,
-  SUN_RANGE_BEGINS,
   SUN_DRAWN_FIRST,
+  SUN_RANGE_BEGINS,
   SUN_SHADOW_FADES,
   SUN_SHADOW_ROWS,
   SUN_SOFT_SHADOWS,
