@@ -23,12 +23,17 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
+**Live step** (`LiveStep` in `r3f/liveSceneTree.ts`, from `liveStep`):
+One node of the **Live scene tree** as a reader needs it: the node as shown, the **Authored scope** its refs resolve in, and the child groups below it.
+A reader takes all three from the one call, because the authored node and its group's scope are the wrong ones for an instance root and for a grafted node.
+_Avoid_: reading a node's merge, scope or children in separate calls.
+
 **Live tree snapshot** (`LiveTreeContext` in `r3f/liveSceneTree.ts`, shared by `useSharedLiveTree`):
 One read of the loader's scene cache that every question over the **Live scene tree** shares until the next scene or GLB load.
 It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
 _Avoid_: a live tree or a context per consumer, per question.
 
-**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveNodeScope`):
+**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveStep`):
 The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
 Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
 _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
@@ -51,6 +56,9 @@ _Avoid_: "import file" for the asset itself.
 The levels Godot's texture importer builds on the CPU for an image whose **Import sidecar** sets `mipmaps/generate`: each level averages the bytes of the one above, renormalised for a normal map.
 The texture carries them as its own levels, so the GPU builds no chain over them.
 _Avoid_: "mipmaps" for a chain the GPU generates.
+
+**Noise mip chain** (`resources/textures/noisetexture2d/pixels.ts`):
+The **Imported mip chain** of a NoiseTexture2D whose `generate_mipmaps` is on, built in the worker job beside the pixels. No level is renormalised.
 
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
@@ -89,6 +97,14 @@ The LightmapGI a node takes its light from, with the node's entry in that bake: 
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.
 _Avoid_: "config file" for a `.tscn`. A general settings store.
+
+**Project default font** (`resources/fonts/font/projectDefaultFont.ts`):
+The font that the **Project settings** name in `gui/theme/custom_font`. A font lookup that no theme answers ends at it, before the bundled Open Sans. A path that does not load keeps the bundled font and is a **Missing resource**.
+_Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback font" for the bundled one.
+
+**Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
+The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
+_Avoid_: "synthetic bold" for a face a theme sets.
 
 **Asset re-import**:
 What the previewer does in place of Godot's import pipeline: it loads the source asset (`.gltf`, `.glb`, `.obj`) and re-derives the scene from it.

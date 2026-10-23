@@ -171,6 +171,28 @@ describe('tabContentBand', () => {
   });
 });
 
+describe('the page a TabContainer shows', () => {
+  const childVisibility = controlSolverRegistry.childVisibility('TabContainer')!;
+  const pages = [page('A'), page('B'), page('C')];
+
+  function visiblePages(props: Partial<TabContainerProperties>): string[] {
+    const container = tabContainer('T', props, pages).node;
+    return pages.filter((p, i) => childVisibility(container, p.node, i, pages.length)).map((p) => p.path);
+  }
+
+  it('is the first page when no current_tab is authored (the first add_tab selects it, tab_bar.cpp:1324-1331)', () => {
+    expect(visiblePages({})).toEqual(['A']);
+  });
+
+  it('is no page when deselect_enabled is on and no current_tab is authored', () => {
+    expect(visiblePages({ deselectEnabled: true })).toEqual([]);
+  });
+
+  it('is the authored page', () => {
+    expect(visiblePages({ currentTab: 2 })).toEqual(['C']);
+  });
+});
+
 describe('tabContainerMinimumSize', () => {
   it('floors the width to the current (visible) page alone when use_hidden_tabs_for_min_size is false', () => {
     const wide = page('Wide', { customMinimumSize: { x: 300, y: 10 } });

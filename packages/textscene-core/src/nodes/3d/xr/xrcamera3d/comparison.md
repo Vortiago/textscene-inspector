@@ -5,12 +5,12 @@ status: unreviewed
 fixture: unit-xr-camera-3d.tscn
 # image: unit-xr-camera-3d
 visual: false
-renders_as: a selection-gated frustum gizmo, as Camera3D
+renders_as: a frustum gizmo for the selected node, as Camera3D
 ---
 
 # XRCamera3D
 
-The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D, and the previewer treats it as one: the same selection-gated frustum gizmo (ADR-0018) from the same component.
+The headset's eye, which XRServer drives from tracking data at runtime. It is a Camera3D, and the previewer treats it as one: the same frustum gizmo for the selected node (ADR-0056) from the same component.
 
 ## Linting
 
@@ -31,4 +31,4 @@ XRCamera3D has no `linterParser.ts` of its own, so strict parsing validates what
 
 ## Known limitations
 
-- **Editor only** The frustum gizmo draws only for the selected node, so a plain capture shows nothing for the camera.
+- **Editor only** The frustum gizmo draws for the selected node when the Gizmos toggle is on, which a capture keeps off.

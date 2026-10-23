@@ -12,7 +12,7 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  getFontGlyphAdvancePx,
+  getFontEmboldenedAdvancePx,
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -224,7 +224,7 @@ export function textEditTabStopsPx(
   const size = tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE;
   // `tab_size <= 0` skips tab alignment, and `[]` is `shapeText`'s no-op input.
   if (size <= 0) return [];
-  return [Math.max(1, size * getFontGlyphAdvancePx(fontMetrics, ' ', fontSizePx))];
+  return [Math.max(1, size * getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx))];
 }
 
 /**

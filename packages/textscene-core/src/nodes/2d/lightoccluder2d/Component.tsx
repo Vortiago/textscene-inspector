@@ -1,6 +1,6 @@
 /**
- * <LightOccluder2D> draws its OccluderPolygon2D outline as a <GizmoLine> while
- * selected, and always publishes the segments, `cull_mode` and
+ * <LightOccluder2D> draws its OccluderPolygon2D outline as a <GizmoLine> for every node
+ * (`light_occluder_2d.cpp:183`, ADR-0056), and always publishes the segments, `cull_mode` and
  * `occluder_light_mask` to the shadow-caster registry, since Godot's occluders are
  * invisible and always cast. With no light pass mounted above, that is a no-op.
  */
@@ -12,7 +12,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { warn } from '../../../logger';
 import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { useShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
@@ -24,7 +24,7 @@ import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 export function LightOccluder2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as LightOccluder2DProperties;
   const sceneResources = useSceneResources();
-  const visible = useGizmoVisible();
+  const drawsOutline = useGizmoDrawn('every-node');
   // A callback ref, not useRef, so the caster re-registers once the anchor exists:
   // an effect reading a ref would see null on the mount pass.
   const [anchor, setAnchor] = useState<THREE.Group | null>(null);
@@ -80,7 +80,7 @@ export function LightOccluder2D({ node, children }: NodeComponentProps) {
           {/* paint-order-safe: an empty anchor the shadow pass reads a world
               transform from. It draws nothing, so it orders nothing. */}
           <group ref={setAnchor} />
-          {visible && positions ? <GizmoLine positions={positions} /> : null}
+          {drawsOutline && positions ? <GizmoLine positions={positions} /> : null}
         </>
       )}
     >

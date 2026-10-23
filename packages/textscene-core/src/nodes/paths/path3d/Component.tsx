@@ -1,14 +1,16 @@
 /**
  * <Path3D>: a Node3D that holds a Curve3D. It always provides the tessellated curve through
- * Path3DCurveProvider, so a PathFollow3D child follows it whatever the selection. It draws the
- * curve as a white polyline gizmo only while selected, like Godot's 3D editor (ADR-0018).
+ * Path3DCurveProvider, so a PathFollow3D child follows it whatever the selection or the Gizmos
+ * toggle. It draws the curve as a white polyline gizmo for every node, faint while unselected, like
+ * Godot's 3D editor (`path_3d_editor_plugin.cpp:320`, ADR-0056).
  */
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import type { GizmoVariant } from '../../../r3f/gizmo/gizmoVariant';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { resolveCurve3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
@@ -20,7 +22,7 @@ const PATH_COLOR = 0xffffff;
 export function Path3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Path3DProperties;
   const { internalResources } = useSceneResources();
-  const gizmoVisible = useGizmoVisible();
+  const gizmoState = useGizmoState('every-node');
 
   // Godot 3D space is three.js space (right-handed Y-up), so curve points need no conjugation,
   // unlike the 2D twin. A missing, ExtResource or unfound curve gives a null sampler:
@@ -33,15 +35,15 @@ export function Path3D({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      {gizmoVisible && sampler && <PathCurveGizmo sampler={sampler} />}
+      {gizmoState !== 'hidden' && sampler && <PathCurveGizmo sampler={sampler} variant={gizmoState} />}
       <Path3DCurveProvider value={sampler}>{children}</Path3DCurveProvider>
     </Node3D>
   );
 }
 
-function PathCurveGizmo({ sampler }: { sampler: Curve3DSampler }) {
+function PathCurveGizmo({ sampler, variant }: { sampler: Curve3DSampler; variant: GizmoVariant }) {
   const positions = useMemo(() => buildPolylineSegments(sampler.points), [sampler]);
-  return <GizmoLine positions={positions} color={PATH_COLOR} />;
+  return <GizmoLine positions={positions} color={PATH_COLOR} variant={variant} />;
 }
 
 /** Turn the flat polyline `[x0,y0,z0,…]` into LineSegments vertex position pairs. */

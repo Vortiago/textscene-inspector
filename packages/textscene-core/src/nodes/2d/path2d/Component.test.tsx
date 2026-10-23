@@ -1,7 +1,7 @@
 /**
- * <Path2D> draws a selection-gated white polyline gizmo from its Curve2D, and
- * degrades to nothing when the curve is absent. The curve sampler is always
- * provided to descendants (covered by the PathFollow2D tests).
+ * <Path2D> draws a white polyline gizmo from its Curve2D for every node, in full colour whether or
+ * not it is selected (`path_2d.cpp:148`), and degrades to nothing when the curve is absent. The
+ * curve sampler is always provided to descendants (covered by the PathFollow2D tests).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -9,9 +9,8 @@ import type { TscnNode, TscnInternalResource } from '../../../parser/types';
 import { Path2D } from './Component';
 import { parsePath2D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
+import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
 
 // A simple 3-point open path: (0,0) → (100,0) → (100,100), zero tangents.
 const CURVE: TscnInternalResource = {
@@ -36,29 +35,47 @@ function pathNode(name = 'MyPath', props: Record<string, string> = {}): TscnNode
 async function renderPath(
   selectedPath: string | null,
   props: Record<string, string>,
-  internalResources: TscnInternalResource[] = [CURVE]
+  internalResources: TscnInternalResource[] = [CURVE],
+  showGizmos = true
 ) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <SceneResourcesProvider internalResources={internalResources} externalResources={[]}>
-        <NodePathProvider path="MyPath">
-          <Path2D node={pathNode('MyPath', props)} />
-        </NodePathProvider>
-      </SceneResourcesProvider>
-    </SelectionProvider>
+    <SceneResourcesProvider internalResources={internalResources} externalResources={[]}>
+      <GizmoScene nodePath="MyPath" selectedPath={selectedPath} showGizmos={showGizmos}>
+        <Path2D node={pathNode('MyPath', props)}>
+          <CurveReader />
+        </Path2D>
+      </GizmoScene>
+    </SceneResourcesProvider>
   );
 }
 
-describe('<Path2D>', () => {
-  it('draws the curve polyline gizmo when selected and a curve is present', async () => {
-    const renderer = await renderPath('MyPath', { curve: 'SubResource("Curve2D_1")' });
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
-  });
+/** Publishes the curve its Path2D parent provides, as a PathFollow2D child reads it. */
+function CurveReader() {
+  const curve = useParentPath2DCurve();
+  return <group name="CurveReader" userData={{ hasCurve: curve !== null }} />;
+}
 
-  it('hides the gizmo when not selected', async () => {
-    const renderer = await renderPath(null, { curve: 'SubResource("Curve2D_1")' });
+function hasCurve(renderer: Awaited<ReturnType<typeof renderPath>>): boolean {
+  const reader = renderer.scene.findByProps({ name: 'CurveReader' }).instance;
+  return reader.userData['hasCurve'] === true;
+}
+
+describe('<Path2D>', () => {
+  it.each([
+    ['selected', 'MyPath'],
+    ['not selected', null],
+  ])(
+    'draws the curve polyline gizmo in full colour when %s and a curve is present',
+    async (_label, selected) => {
+      const renderer = await renderPath(selected, { curve: 'SubResource("Curve2D_1")' });
+      expect(lineOpacities(renderer)).toEqual([1]);
+    }
+  );
+
+  it('draws no curve with the Gizmos toggle off, yet still provides it to a PathFollow2D child', async () => {
+    const renderer = await renderPath('MyPath', { curve: 'SubResource("Curve2D_1")' }, [CURVE], false);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+    expect(hasCurve(renderer)).toBe(true);
   });
 
   it('draws nothing when the curve is missing, even if selected (edge)', async () => {

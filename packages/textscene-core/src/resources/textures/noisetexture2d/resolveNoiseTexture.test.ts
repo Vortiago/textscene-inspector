@@ -5,13 +5,15 @@
  * texture, since the pipeline is the same at any size. The build runs as a worker
  * job, here through the in-thread runner, which runs the same job.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import { WorkerJobRunner } from '../../../workers/WorkerJobRunner';
-import { resetProceduralTextures } from '../proceduralBuilds';
+import { resetProceduralTextures, type JobRunner } from '../proceduralBuilds';
 import { resolveNoiseTexture2D } from './resolveNoiseTexture';
+import { applyTextureState } from '../applyTextureState';
+import { godotTextureFilterState, samplesMipChain } from '../godotTextureFilter';
 
 const ICE = `[gd_resource type="StandardMaterial3D" format=3]
 
@@ -53,6 +55,16 @@ normal_texture = SubResource("NoiseTexture2D_gyhec")
 
 const ice = parseTresFile(ICE);
 const runner = new WorkerJobRunner();
+
+/** The file with the albedo's `generate_mipmaps` off, which changes no pixel of its base. */
+function withoutMipmaps() {
+  return parseTresFile(
+    ICE.replace(
+      'seamless = true\n\n[sub_resource type="FastNoiseLite" id="FastNoiseLite_5tmlw"]',
+      'seamless = true\ngenerate_mipmaps = false\n\n[sub_resource type="FastNoiseLite" id="FastNoiseLite_5tmlw"]'
+    )
+  );
+}
 
 const ALBEDO = 'SubResource("NoiseTexture2D_m8iqd")';
 const NORMAL = 'SubResource("NoiseTexture2D_gyhec")';
@@ -120,6 +132,44 @@ describe('resolveNoiseTexture2D — the ice.tres shape', () => {
     expect(reparsed?.status === 'ready' && reparsed.texture).toBe(texture);
   });
 
+  it('carries the chain of its size', async () => {
+    const { texture } = await built(ALBEDO);
+    expect(texture.mipmaps).toHaveLength(6);
+  });
+
+  it('carries no chain with generate_mipmaps off', async () => {
+    const { texture } = await built(ALBEDO, withoutMipmaps().subResources);
+    expect(texture.mipmaps).toHaveLength(0);
+  });
+
+  it('keys the texture without a chain apart from the one the job builds', () => {
+    const chained = resolveNoiseTexture2D(ALBEDO, ice.subResources);
+    const unchained = resolveNoiseTexture2D(ALBEDO, withoutMipmaps().subResources);
+    expect(unchained?.key).toBe(`${chained?.key}:without-mipmaps`);
+  });
+
+  it('drops the chain without sampling again when generate_mipmaps goes off', async () => {
+    const { texture } = await built(ALBEDO);
+    const run = vi.fn(runner.run.bind(runner)) as JobRunner['run'];
+    const lookup = resolveNoiseTexture2D(ALBEDO, withoutMipmaps().subResources);
+    if (lookup?.status !== 'pending') throw new Error(`expected a pending build, got ${lookup?.status}`);
+
+    const unchained = await lookup.start({ run }).settled;
+
+    expect(run).not.toHaveBeenCalled();
+    expect([unchained?.mipmaps.length, (unchained as THREE.DataTexture).image.data]).toEqual([
+      0,
+      texture.image.data,
+    ]);
+  });
+
+  it('is ready at once, with the chain, when generate_mipmaps goes on', async () => {
+    const { texture } = await built(ALBEDO, withoutMipmaps().subResources);
+    const lookup = resolveNoiseTexture2D(ALBEDO, ice.subResources);
+    expect(lookup?.status === 'ready' && lookup.texture.mipmaps).toHaveLength(6);
+    expect(lookup?.status === 'ready' && lookup.texture).not.toBe(texture);
+  });
+
   it('builds again after an edit to its noise', () => {
     const edited = parseTresFile(
       ICE.replace(
@@ -182,4 +232,42 @@ albedo_texture = SubResource("wide")
 `);
     expect(resolveNoiseTexture2D('SubResource("wide")', oversized.subResources)).toBeNull();
   });
+});
+
+describe('a NoiseTexture2D in a 3D texture slot', () => {
+  const bound = async (filter?: number) => {
+    const { texture } = await built(ALBEDO);
+    return applyTextureState(texture, { colorSpace: THREE.SRGBColorSpace, filter });
+  };
+
+  it('samples between its levels under the default texture_filter (LINEAR_WITH_MIPMAPS)', async () => {
+    const texture = await bound();
+    expect(texture.minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    expect(samplesMipChain(texture)).toBe(true);
+  });
+
+  it.each([2, 3, 4, 5])(
+    'samples between its levels under the mipmapped texture_filter %i',
+    async (filter) => {
+      const texture = await bound(filter);
+      expect(samplesMipChain(texture)).toBe(true);
+      expect(texture.generateMipmaps).toBe(false);
+      expect(texture.minFilter).toBe(godotTextureFilterState(filter).minFilter);
+    }
+  );
+
+  it.each([0, 1])('samples its base level only under texture_filter %i', async (filter) => {
+    const texture = await bound(filter);
+    expect(samplesMipChain(texture)).toBe(false);
+    expect(texture.minFilter).toBe(godotTextureFilterState(filter).minFilter);
+  });
+
+  it.each([0, 1])(
+    'uploads no levels under texture_filter %i, and the shared texture keeps its chain',
+    async (filter) => {
+      const { texture: shared } = await built(ALBEDO);
+      const texture = applyTextureState(shared, { colorSpace: THREE.SRGBColorSpace, filter });
+      expect([texture.mipmaps.length, shared.mipmaps.length]).toEqual([0, 6]);
+    }
+  );
 });

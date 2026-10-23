@@ -44,6 +44,12 @@ describe('createMsdfMaterial', () => {
     expect(mat.fragmentShader).toContain('uDistanceBias');
   });
 
+  it('fades the fill out where the field is empty, so a bias does not fill the whole glyph quad', () => {
+    const mat = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
+    expect(mat.fragmentShader).toMatch(/inRange\s*=\s*smoothstep\(0\.0,\s*0\.04,\s*m\)/);
+    expect(mat.fragmentShader).toMatch(/fillCoverage\s*=[^;]*\*\s*inRange/);
+  });
+
   it('defaults the outline width to zero and reflects an explicit outline', () => {
     const plain = createMsdfMaterial({ map: new THREE.Texture(), color: RED, opacity: 1, pxRange: 4 });
     expect(plain.uniforms.uOutlineWidthPx!.value).toBe(0);

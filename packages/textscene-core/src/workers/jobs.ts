@@ -4,7 +4,8 @@
  * functions, so both paths give the same bytes (ADR-0042).
  */
 
-import { noiseTexture2DPixels, type NoiseTexture2DInput } from '../resources/textures/noisetexture2d/pixels';
+import { noiseTexture2DLevels, type NoiseTexture2DInput } from '../resources/textures/noisetexture2d/pixels';
+import type { MipLevel } from '../resources/processing/mipChain';
 import { noiseTexture3DTexels, type NoiseTexture3DInput } from '../resources/textures/noisetexture3d/texels';
 
 export interface WorkerJob<Input, Output> {
@@ -13,8 +14,8 @@ export interface WorkerJob<Input, Output> {
   transfer(output: Output): Transferable[];
 }
 
-interface PixelsOutput {
-  pixels: Uint8Array;
+interface LevelsOutput {
+  levels: MipLevel[];
 }
 
 interface TexelsOutput {
@@ -23,8 +24,8 @@ interface TexelsOutput {
 
 export const WORKER_JOBS = {
   'noise-texture-2d': {
-    run: (input: NoiseTexture2DInput): PixelsOutput => ({ pixels: noiseTexture2DPixels(input) }),
-    transfer: (output: PixelsOutput) => [output.pixels.buffer],
+    run: (input: NoiseTexture2DInput): LevelsOutput => ({ levels: noiseTexture2DLevels(input) }),
+    transfer: (output: LevelsOutput) => output.levels.map(({ data }) => data.buffer),
   },
   'noise-texture-3d': {
     run: (input: NoiseTexture3DInput): TexelsOutput => ({ texels: noiseTexture3DTexels(input) }),

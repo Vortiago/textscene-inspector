@@ -22,6 +22,7 @@ const NOISE_JOB_INPUT = {
     seamlessBlendSkirt: 0.1,
     asNormalMap: false,
     bumpStrength: 8,
+    generateMipmaps: true,
     noise: null,
     colorRamp: null,
   },
@@ -53,7 +54,7 @@ const NOISE_JOB_INPUT = {
 
 interface Reply {
   ok: boolean;
-  output: { pixels: Uint8Array };
+  output: { levels: { data: Uint8Array }[] };
 }
 
 /** Sends one noise job to a worker scope and returns its reply. */
@@ -122,8 +123,11 @@ describe('textureWorkerPlugin', () => {
     const inProcess = answer(installWorkerJobs);
 
     expect(embedded.ok).toBe(true);
-    expect(embedded.output.pixels).toHaveLength(33 * 17 * 4);
-    expect(sha256(embedded.output.pixels)).toBe(sha256(inProcess.output.pixels));
+    expect(embedded.output.levels).toHaveLength(6);
+    expect(embedded.output.levels[0]!.data).toHaveLength(33 * 17 * 4);
+    expect(embedded.output.levels.map(({ data }) => sha256(data))).toEqual(
+      inProcess.output.levels.map(({ data }) => sha256(data))
+    );
   }, 60_000);
 
   it('hands over the metafile of the worker bundle, which lists the worker entry', async () => {

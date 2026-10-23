@@ -142,6 +142,7 @@ function ViewportSurfaceNative({
       labelSettings: null,
       themeChain: [],
       projectTheme: null,
+      projectDefaultFont: null,
       colors: {},
       constants: {},
       icons: {},

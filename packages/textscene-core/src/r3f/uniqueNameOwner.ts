@@ -6,9 +6,8 @@
  * over a cache snapshot, like `liveSceneTree.ts`, and the React hooks supply reactivity.
  */
 
-import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { TscnNode } from '../parser/types.js';
 import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
-import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { belowRoot, joinPath, pathBetween, pathUnder } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import {
@@ -20,9 +19,8 @@ import { perTree } from '../utils/perTree.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
+  holdsInstanceContent,
   liveTreeOf,
-  mergedNodeOf,
-  rootGroups,
   snapshotScenes,
   type LiveChildGroup,
   type LiveTreeContext,
@@ -101,7 +99,7 @@ class PlacedLiveTree {
     for (let depth = 0; depth < segments.length; depth++) {
       const link = this.tree.at(segments.slice(0, depth + 1).join('/'));
       if (!link) break;
-      const placements = mergedNodeOf(link.groups)?.uniqueParentPlacements;
+      const placements = link.step.node.uniqueParentPlacements;
       if (placements) {
         segments = [...segments.slice(0, depth + 1), ...placedBelow(placements, segments.slice(depth + 1))];
       }
@@ -158,9 +156,9 @@ class OwnerWalk {
   private readonly root: Reached;
 
   constructor(readonly live: PlacedLiveTree) {
-    const { roots, ctx } = live.tree;
+    const { roots, rootGroups } = live.tree;
     const outer: ClaimOwner = { path: roots[0]?.name ?? '', roots, live };
-    const candidates = rootGroups(roots, ctx).map((group) => ({ group, owner: outer }));
+    const candidates = rootGroups.map((group) => ({ group, owner: outer }));
     this.root = { owner: outer, into: outer, candidates };
   }
 
@@ -182,23 +180,23 @@ class OwnerWalk {
   private step(from: Reached, livePath: string): Reached | null {
     const { live } = this;
     const link = live.tree.at(livePath);
-    const found = link && from.candidates.find((candidate) => candidate.group.children.includes(link.node));
+    const found = link && from.candidates.find((candidate) => candidate.group === link.group);
     if (!link || !found) return null;
-    const node = link.node;
+    const node = link.raw;
     // A node the file above grafted in is that file's own, however deep it sits.
     const owner = fileSeating(found.owner, livePath, ROOT_OWNED);
-    const subRoots = cachedSubRoots(node, link.scope, live.tree.ctx);
+    const subRoots = cachedSubRoots(link.step.instancePath, live.tree.ctx);
     const contentOwner: ClaimOwner = found.rootOf
       ? { path: livePath, roots: found.rootOf, parent: owner, live }
       : owner;
     // The instance node is the root of what it instances, so it owns the GLB's objects too: they sit
     // directly below it (packed_scene.cpp:261-264).
     const instanceOwner = subRoots && { path: livePath, roots: subRoots, parent: owner, live };
-    const candidates = link.groups.map((group) => ({
+    const candidates = link.step.groups.map((group) => ({
       group,
       owner:
         instanceOwner && holdsInstanceContent(group)
-          ? { ...instanceOwner, composed: group.mergedNode?.uniqueNames }
+          ? { ...instanceOwner, composed: link.step.node.uniqueNames }
           : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
@@ -207,11 +205,6 @@ class OwnerWalk {
       : owner;
     return { owner, into, node, candidates };
   }
-}
-
-/** A group of what the node instances, which the instance node owns as the root of it. */
-function holdsInstanceContent(group: LiveChildGroup): boolean {
-  return group.origin === 'merged' || group.origin === 'glb';
 }
 
 /** Written only by {@link ownerWalkOf}, keyed by the live tree it steps over. */
@@ -291,12 +284,7 @@ export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
   return new Map([...ownerUniquePaths(scene.parent), ...own]);
 }
 
-function cachedSubRoots(
-  node: LiveNode,
-  scope: SceneScope,
-  ctx: LiveTreeContext
-): readonly TscnNode[] | undefined {
-  const scenePath = liveInstancePath(node, scope);
+function cachedSubRoots(scenePath: string | null, ctx: LiveTreeContext): readonly TscnNode[] | undefined {
   return scenePath ? snapshotScenes(ctx).getCached(scenePath)?.nodes : undefined;
 }
 
@@ -329,6 +317,5 @@ function rebased(paths: UniqueNamePaths, path: string): UniqueNamePaths {
 function inheritedRootTable(outer: ClaimOwner): UniqueNameTable | undefined {
   const root = outer.roots[0];
   if (!root?.instance) return undefined;
-  const link = outer.live.tree.at(root.name);
-  return link ? mergedNodeOf(link.groups)?.uniqueNames : undefined;
+  return outer.live.tree.at(root.name)?.step.node.uniqueNames;
 }

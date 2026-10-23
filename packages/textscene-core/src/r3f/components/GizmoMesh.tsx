@@ -1,6 +1,7 @@
 /**
- * A selection-gated fill gizmo: a geometry drawn as an unlit translucent `<mesh>` over the scene.
- * The caller builds and memoises the geometry.
+ * A fill gizmo: a geometry drawn as an unlit translucent `<mesh>` over the scene. Godot adds a fill
+ * only to a selected gizmo, so the caller draws it for the selected state alone (ADR-0056). The caller
+ * builds and memoises the geometry.
  */
 
 import type * as THREE from 'three';

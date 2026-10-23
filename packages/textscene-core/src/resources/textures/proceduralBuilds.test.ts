@@ -37,7 +37,7 @@ const plan = (properties: Record<string, string>): ProceduralBuildPlan<'noise-te
         job: 'noise-texture-2d',
         input: pixelCase,
         contentKey: `FakeTexture:${properties.seed}`,
-        wrap: ({ pixels }) => new THREE.DataTexture(pixels, 1, 1),
+        wrap: ({ levels }) => new THREE.DataTexture(levels[0]!.data, 1, 1),
       };
 
 function lookup(
@@ -54,7 +54,7 @@ function pendingLookup(resources: TscnInternalResource[]) {
 }
 
 function output(): WorkerJobOutput<'noise-texture-2d'> {
-  return { pixels: new Uint8Array(4) };
+  return { levels: [{ data: new Uint8Array(4), width: 1, height: 1 }] };
 }
 
 /** Lets microtasks and promise callbacks run. */
@@ -230,5 +230,98 @@ describe('resolveProceduralSubResourceAsync', () => {
 
   it('declines what the plan declines', () => {
     expect(lookup(scene('declined'))).toBeNull();
+  });
+});
+
+describe('a plan with a derived texture', () => {
+  /** The built texture, then `derive` of it: the texture a holder that wants more draws. */
+  const derivedPlan =
+    (derive: (built: THREE.Texture) => THREE.Texture) => (properties: Record<string, string>) =>
+      plan(properties) && {
+        ...plan(properties)!,
+        derived: { suffix: ':derived', derive },
+      };
+
+  const cloned = (built: THREE.Texture) => built.clone();
+
+  function derivedLookup(resources: TscnInternalResource[], derive = cloned) {
+    return resolveProceduralSubResourceAsync(
+      'SubResource("tex")',
+      resources,
+      'FakeTexture',
+      derivedPlan(derive)
+    );
+  }
+
+  function pendingDerived(resources: TscnInternalResource[], derive = cloned) {
+    const found = derivedLookup(resources, derive);
+    if (found?.status !== 'pending') throw new Error(`expected a pending lookup, got ${found?.status}`);
+    return found;
+  }
+
+  it('keys the derived texture apart from the built one', () => {
+    expect([pendingDerived(scene('1')).key, pendingLookup(scene('1')).key]).toEqual([
+      'FakeTexture:1:derived',
+      'FakeTexture:1',
+    ]);
+  });
+
+  it('settles on the derived texture, and caches the built one beside it', async () => {
+    const { runner, runs } = fakeRunner();
+    const resources = scene('1');
+    const handle = pendingDerived(resources).start(runner);
+    runs[0]?.resolve(output());
+    const derived = await handle.settled;
+
+    const built = lookup(scene('1'));
+    expect(built?.status === 'ready' && built.texture).not.toBe(derived);
+    expect(derivedLookup(resources)).toMatchObject({ status: 'ready', texture: derived });
+  });
+
+  it('derives from the cached built texture without a run when only the derivation is new', async () => {
+    const { runner, runs } = fakeRunner();
+    const resources = scene('1');
+    const first = pendingLookup(resources).start(runner);
+    runs[0]?.resolve(output());
+    const built = await first.settled;
+    const derive = vi.fn(cloned);
+
+    const handle = pendingDerived(scene('1'), derive).start(runner);
+    await handle.settled;
+
+    expect(runs).toHaveLength(1);
+    expect(derive).toHaveBeenCalledWith(built);
+  });
+
+  it('runs one build for a holder that derives and a holder that does not', async () => {
+    const { runner, runs } = fakeRunner();
+    const withDerived = pendingDerived(scene('1')).start(runner);
+    const without = pendingLookup(scene('1')).start(runner);
+    runs[0]?.resolve(output());
+
+    expect(runs).toHaveLength(1);
+    expect(await withDerived.settled).not.toBe(await without.settled);
+  });
+
+  it('derives once for two holders of the same derived texture', async () => {
+    const { runner, runs } = fakeRunner();
+    const derive = vi.fn(cloned);
+    const first = pendingDerived(scene('1'), derive).start(runner);
+    const second = pendingDerived(scene('1'), derive).start(runner);
+    runs[0]?.resolve(output());
+
+    expect(await first.settled).toBe(await second.settled);
+    expect(derive).toHaveBeenCalledTimes(1);
+  });
+
+  it('settles null, with a warning, when the derived texture cannot be allocated', async () => {
+    const { runner, runs } = fakeRunner();
+    const handle = pendingDerived(scene('1'), () => {
+      throw new RangeError('Array buffer allocation failed');
+    }).start(runner);
+    runs[0]?.resolve(output());
+
+    expect(await handle.settled).toBeNull();
+    expect(warn).toHaveBeenCalledOnce();
   });
 });

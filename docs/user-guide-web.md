@@ -10,7 +10,7 @@ The web previewer renders a Godot `.tscn` scene in the browser.
 ## Open a scene
 
 - Click **Open .tscn** and pick a file.
-- Drag files onto the page. Drop a scene and its textures together. Add `project.godot` for the project's settings, and a model's `.import` file for its import settings.
+- Drag files onto the page. Drop a scene and its textures together. Add `project.godot` for the project's settings, such as `gui/theme/custom_font`, the default font of every Control, and a model's `.import` file for its import settings.
 - Press <kbd>Ctrl/Cmd+K</kbd> to open the scene palette. The dev edition also lists the built-in scenes.
 
 The app reopens your last scene on the next visit.
@@ -41,7 +41,7 @@ The right dock holds the scene tree above three tabs.
 - **Cameras:** view the scene through one of its Camera3D nodes.
 
 A click on a mesh in the viewport also selects it.
-Lights, cameras and particle emitters show a wireframe gizmo, because they have no geometry. An emitter shows its gizmo while it is selected. A visibility notifier, a reflection probe, a VoxelGI and a fog volume show the lines of their box while they are selected.
+Lights, cameras and particle emitters have no geometry, so they show a wireframe gizmo. The **Gizmos** toggle in **Display** shows or hides every gizmo, and it is on by default. As in Godot, some gizmos draw for every node and fade when the node is not selected: an emitter box, a path curve, a spring arm, a vehicle wheel, a decal box, a visibility notifier and a fog volume. A marker, a 2D path and a light occluder draw at full colour. Lights, cameras, audio players, reflection probes and VoxelGI draw their gizmo only for the selected node.
 
 ## Fix a missing file
 
@@ -77,5 +77,5 @@ The page fits a phone screen. The layout also applies to a narrow VS Code previe
 ## Other tools
 
 - **Timeline:** select an AnimationPlayer, AnimationTree or AnimatedSprite2D to play, pause and scrub it.
-- **Display:** show or hide the viewport overlays.
+- **Display:** show or hide the viewport overlays, such as the gizmos, the collision shapes and the grid.
 - **Screenshot:** save the rendered scene in the current view, 3D or 2D, as a PNG. The 2D frame, axes and size label are not part of it.

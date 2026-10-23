@@ -4,12 +4,12 @@ category: 3D
 status: done
 fixture: unit-audio-stream-player.tscn
 image: unit-audio-stream-player
-renders_as: a selection-gated speaker gizmo
+renders_as: a speaker gizmo for the selected node
 ---
 
 # AudioStreamPlayer3D
 
-A positional audio source with no runtime visual. The previewer draws a speaker gizmo with a range circle and emission cone, gated on selection like the camera and light gizmos. Both images show only the ground plane and the preview sky.
+A positional audio source with no runtime visual. The previewer draws a speaker gizmo with a range circle and emission cone, for the selected node only, like the camera and light gizmos (ADR-0056). Both images show only the ground plane and the preview sky.
 
 ## Linting
 
@@ -52,4 +52,4 @@ Every numeric property defaults through `floatOr` without strict's range checks:
 
 ## Known limitations
 
-- **Editor only** The speaker gizmo draws only for the selected node, so a plain capture shows nothing for the three speakers.
+- **Editor only** The speaker gizmo draws for the selected node when the Gizmos toggle is on, which a capture keeps off.

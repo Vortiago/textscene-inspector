@@ -2,7 +2,8 @@
  * The golden-scene manifest: WebGL-canvas scenes only, with no 2D DOM overlay, so the image depends
  * on the renderer alone. A resource load must resolve from local fixtures and settle (`arraymesh`,
  * `decal`). `file` is the fixture filename exactly as in apps/textscene-web/src/fixtures.ts. An
- * entry may set `mode: '2d'`, `collisions: true`, `navigation: true`, `select: <node path>`,
+ * entry may set `mode: '2d'`, `collisions: true`, `navigation: true`, `gizmos: true`, which turns the
+ * Gizmos toggle on (off in every other capture), `select: <node path>`,
  * `camera: <Camera3D node path>`, which the previewer looks through as `?camera=` opens it, or
  * `canvas: { width, height }`, the 3D canvas size a small frame renders at, or `settleTimeout: <ms>`,
  * each screenshot's limit where one frame outlasts Playwright's default.
@@ -27,7 +28,7 @@ export const GOLDEN_SCENES = [
   ...GEOMETRY_SCENES,
   ...LIGHTING_SCENES,
   ...SCENE_COMPOSITION_SCENES,
-  // The `*-selected` scenes are the only real-browser guard for selection-gated gizmos.
+  // The scenes with `gizmos: true` are the only real-browser guard for the editor gizmos.
   ...GIZMO_SCENES,
   ...PRIMITIVE_SCENES,
   ...CANVAS_2D_SCENES,

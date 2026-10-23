@@ -1,5 +1,5 @@
 /**
- * <LightOccluder2D>: topology, gizmo gate, absent resource, and publication to the
+ * <LightOccluder2D>: topology, gizmo state, absent resource, and publication to the
  * shadow-caster registry. It mirrors lightoccluder2d-contract.test.tsx but
  * imports nothing from it.
  */
@@ -135,7 +135,7 @@ async function renderIntoRegistry(tscn: string) {
 }
 
 describe('LightOccluder2D publishes to the shadow-caster registry', () => {
-  it('registers one caster even though the outline gizmo stays unselected', async () => {
+  it('registers one caster whatever the outline gizmo draws', async () => {
     expect((await renderIntoRegistry(occScene())).casters()).toHaveLength(1);
   });
 

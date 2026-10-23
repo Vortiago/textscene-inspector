@@ -3,15 +3,16 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { Aabb } from '../../godot/math/aabb';
+import type { GizmoVariant } from '../gizmo/gizmoVariant';
 import { godotColorToLinear } from '../godotColor';
 import { AabbAxesGizmo } from './AabbAxesGizmo';
 
 const COLOR = { r: 0.8, g: 0.5, b: 0.7 };
 const BOX: Aabb = { position: { x: -1, y: -1, z: -1 }, size: { x: 2, y: 2, z: 2 } };
 
-async function render() {
+async function render(variant: GizmoVariant = 'selected') {
   const renderer = await ReactThreeTestRenderer.create(
-    <AabbAxesGizmo aabb={BOX} color={COLOR} solidAlpha={0.1} />
+    <AabbAxesGizmo aabb={BOX} color={COLOR} solidAlpha={0.1} variant={variant} />
   );
   return {
     lines: renderer.scene.findAllByType('LineSegments').map((found) => found.instance as THREE.LineSegments),
@@ -43,5 +44,16 @@ describe('<AabbAxesGizmo>', () => {
       0.1,
       godotColorToLinear(COLOR).toArray(),
     ]);
+  });
+
+  it('draws the edges and the axes of an unselected box at 0.3 of the colour alpha', async () => {
+    const { lines } = await render('unselected');
+    expect(lines.map((line) => (line.material as THREE.LineBasicMaterial).opacity)).toEqual([0.3, 0.3]);
+  });
+
+  it('adds the fill only to a selected box, as Godot adds its solid box only when selected', async () => {
+    expect(
+      [(await render('selected')).fills, (await render('unselected')).fills].map((f) => f.length)
+    ).toEqual([1, 0]);
   });
 });

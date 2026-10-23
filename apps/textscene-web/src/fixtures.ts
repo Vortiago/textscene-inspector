@@ -983,6 +983,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Bundled Embolden",
+    "file": "unit-label-font-variation-bundled-embolden.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Font Variation Embolden",
+    "file": "unit-label-font-variation-embolden.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Label Settings Tres",
     "file": "unit-label-label-settings-tres.tscn",
     "category": "Other"
@@ -1280,6 +1290,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Noisetexture2d Domain Warp",
     "file": "unit-noisetexture2d-domain-warp.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Noisetexture2d Mipmaps",
+    "file": "unit-noisetexture2d-mipmaps.tscn",
     "category": "Other"
   },
   {
@@ -2251,6 +2266,18 @@ export const fixtures: Fixture[] = [
     "file": "msaa-3d/unit-msaa-3d.tscn",
     "category": "Other",
     "root": "msaa-3d"
+  },
+  {
+    "name": "Label Project Default Font",
+    "file": "project-default-font/unit-label-project-default-font.tscn",
+    "category": "Other",
+    "root": "project-default-font"
+  },
+  {
+    "name": "Label Variation Default Base",
+    "file": "project-default-font/unit-label-variation-default-base.tscn",
+    "category": "Other",
+    "root": "project-default-font"
   },
   {
     "name": "Subviewport Snap Off",
@@ -3266,6 +3293,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Rich Text Label Style Fonts",
+    "file": "unit-rich-text-label-style-fonts.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Rich Text Label",
     "file": "unit-rich-text-label.tscn",
     "category": "Unit - 2D UI Controls"
@@ -3702,6 +3734,12 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Mipmap Bias Normal",
+    "file": "mipmap-bias/unit-material-mipmap-bias-normal.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
   },
   {
     "name": "Material Mipmap Bias",

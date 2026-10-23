@@ -1,0 +1,58 @@
+[gd_scene load_steps=4 format=3]
+
+; The one variable: a `FontVariation` with no `base_font`, at embolden 0, 1.2 and 0.6. It wraps the
+; theme's default font, here Godot's bundled one (`FontVariation::_get_base_font_or_default`). The 0
+; row is the unemboldened floor.
+
+[sub_resource type="FontVariation" id="FontVariation_none"]
+
+[sub_resource type="FontVariation" id="FontVariation_1_2"]
+variation_embolden = 1.2
+
+[sub_resource type="FontVariation" id="FontVariation_0_6"]
+variation_embolden = 0.6
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="NoEmbolden" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 1100.0
+offset_bottom = 110.0
+theme_override_fonts/font = SubResource("FontVariation_none")
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123 0"
+
+[node name="Embolden12" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 130.0
+offset_right = 1100.0
+offset_bottom = 210.0
+theme_override_fonts/font = SubResource("FontVariation_1_2")
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123 1.2"
+
+[node name="Embolden06" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 230.0
+offset_right = 1100.0
+offset_bottom = 310.0
+theme_override_fonts/font = SubResource("FontVariation_0_6")
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123 0.6"
+
+[node name="SmallEmbolden12" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 340.0
+offset_right = 1100.0
+offset_bottom = 380.0
+theme_override_fonts/font = SubResource("FontVariation_1_2")
+theme_override_font_sizes/font_size = 18
+text = "Hog Wave 123 at 18 px, embolden 1.2"
