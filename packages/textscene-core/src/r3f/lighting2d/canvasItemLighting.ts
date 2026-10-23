@@ -12,6 +12,7 @@
 
 import type * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs.js';
+import { editedProgram } from '../shaderPatch/chunkPatch.js';
 import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
 
@@ -116,9 +117,16 @@ export function canvasItemLightingProps(uniforms: CanvasItemLightingUniforms): C
         shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
         shader.uniforms.uLightMode = uniforms.lightMode;
 
-        shader.fragmentShader = shader.fragmentShader
-          .replace('void main() {', UNIFORM_PREAMBLE)
-          .replace('#include <colorspace_fragment>', LIGHT_INJECTION);
+        editedProgram(
+          shader,
+          {
+            fragment: [
+              { three: 'void main() {', godot: UNIFORM_PREAMBLE },
+              { three: '#include <colorspace_fragment>', godot: LIGHT_INJECTION },
+            ],
+          },
+          'canvas item lighting'
+        );
       },
     },
   };

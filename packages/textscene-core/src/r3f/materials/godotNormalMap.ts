@@ -10,6 +10,7 @@ import type * as THREE from 'three';
 import {
   applyChunkEdits,
   editedChunk,
+  editedProgram,
   installChunkPatch,
   type ChunkEdit,
   type TextEdit,
@@ -42,9 +43,8 @@ const UNIT_TANGENT_FRAME_EDIT: TextEdit = {
 export const GODOT_UNIT_TANGENT_FRAME: ProgramInjection = {
   cacheKey: 'unit-tangent-frame',
   onBeforeCompile(shader) {
-    const edited = editedChunk(PARS_CHUNK, UNIT_TANGENT_FRAME_EDIT);
-    // A replacement function, not a string: a `$` in GLSL stays literal.
-    shader.fragmentShader = shader.fragmentShader.replace(PARS_INCLUDE, () => edited);
+    const godot = editedChunk(PARS_CHUNK, UNIT_TANGENT_FRAME_EDIT);
+    editedProgram(shader, { fragment: [{ three: PARS_INCLUDE, godot }] }, 'unit tangent frame');
   },
 };
 

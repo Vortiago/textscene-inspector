@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
+import { editedChunk, editedProgram } from '../shaderPatch/chunkPatch';
 import type { UVTransform } from '../../resources/textures/applyTextureState';
 import { recordedOn } from './recordedOnMaterial';
 
@@ -65,9 +66,16 @@ const TARGET_MAP_UV: ProgramInjection = {
   cacheKey: 'godot-target-map-uv',
   onBeforeCompile(shader) {
     shader.uniforms['godotTargetMapTransform'] = targetMapTransform(this);
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <uv_pars_vertex>', UV_PARS)
-      .replace('#include <uv_vertex>', UV);
+    editedProgram(
+      shader,
+      {
+        vertex: [
+          { three: '#include <uv_pars_vertex>', godot: UV_PARS },
+          { three: '#include <uv_vertex>', godot: UV },
+        ],
+      },
+      'render target map transform'
+    );
   },
 };
 
@@ -116,8 +124,20 @@ vec4 godotTargetMapSample( const in vec2 uv ) {
 const TARGET_MAP_SAMPLE: ProgramInjection = {
   cacheKey: 'godot-target-map-sample',
   onBeforeCompile(shader) {
-    const mapFragment = THREE.ShaderChunk.map_fragment.replace(MAP_SAMPLE, 'godotTargetMapSample( vMapUv )');
-    shader.fragmentShader = shader.fragmentShader.replace(MAP_PARS, SAMPLE_PARS).replace(MAP, mapFragment);
+    const mapFragment = editedChunk('map_fragment', {
+      three: MAP_SAMPLE,
+      godot: 'godotTargetMapSample( vMapUv )',
+    });
+    editedProgram(
+      shader,
+      {
+        fragment: [
+          { three: MAP_PARS, godot: SAMPLE_PARS },
+          { three: MAP, godot: mapFragment },
+        ],
+      },
+      'render target map sampler'
+    );
   },
 };
 

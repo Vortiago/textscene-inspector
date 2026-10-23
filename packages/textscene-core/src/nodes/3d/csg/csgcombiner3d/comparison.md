@@ -9,16 +9,19 @@ renders_as: a grouping node whose children fold into one solid
 The only CSG node with no shape of its own. It exists so a set of CSG children folds into one solid, which then combines into its parent by its own `operation`. The previewer evaluates the boolean at the CSG root (ADR-0027), so only the root draws a mesh. Clicking the result selects the root, as in Godot's editor.
 
 ## Grouping and visibility
+
 <!-- compare: image=unit-csg-combiner status=done fixture=unit-csg-combiner.tscn -->
 
 A combiner under a StaticBody3D holding two CSGBox3D children, plus a hidden combiner whose sphere never draws. Both images show the slab, the raised step and no sphere.
 
 ## Union, subtraction, intersection
+
 <!-- compare: image=unit-csg-boolean-ops status=done fixture=unit-csg-boolean-ops.tscn -->
 
 Three identical box-plus-sphere pairs differing only in the sphere's `operation`. Left to right: union bulges out of the box, subtraction bites a cavity into it, intersection leaves only the lens where the two overlap.
 
 ## One surface per material
+
 <!-- compare: image=unit-csg-multi-material status=limitation fixture=unit-csg-multi-material.tscn -->
 
 Three contributions with three materials come out as three surfaces on one mesh, as Godot interns each material per root. The subtracted cavity carries the subtracting node's red, not the shell's green.
@@ -26,6 +29,7 @@ Three contributions with three materials come out as three surfaces on one mesh,
 - **Approximated** The rim's shadow along the top of the cavity reaches further towards the left than in Godot.
 
 ## Transparency through a boolean result
+
 <!-- compare: image=unit-csg-transparency status=done fixture=unit-csg-transparency.tscn -->
 
 A subtraction whose result carries a transparent material, so the hole is seen through glass. The glass panel, the hole and the opaque half match in both images.

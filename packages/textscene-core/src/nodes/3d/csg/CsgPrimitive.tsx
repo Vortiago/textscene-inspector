@@ -13,10 +13,12 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
+import { EmptyShapeBranch, useReportEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { CsgSubtreeProvider, useCsgSubtree } from '../../../r3f/contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { buildCsgPlan } from '../../../r3f/csg/csgPlan';
+import { hasFaces } from '../../../r3f/csg/csgRegistration';
 import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
@@ -29,12 +31,12 @@ const NO_PATHS: ReadonlySet<string> = new Set();
 /**
  * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's AABB for a visible
  * contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). A node with no brush,
- * an invisible one the recursion never reached or one with no shape, gets a zero-size proxy, the
- * point Godot has for it. It is also all a combiner root has to frame on while the library loads.
+ * an open one, an invisible one the recursion never reached or one with no shape, gets a zero-size
+ * proxy, the point Godot has for it. A combiner root frames on it while the library loads.
  */
 const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
-/** The point an empty brush bounds to: a skipped node's, or one whose shape builds nothing. */
+/** The point an empty brush bounds to: a skipped node's, an open one's or a shape that builds nothing. */
 const EMPTY_BRUSH = <boxGeometry args={[0, 0, 0]} />;
 
 interface CsgPrimitiveProps {
@@ -81,11 +83,22 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
   useUndrawnMeshReport(registration?.meshType?.(builderProps, ctx) ?? null);
-  const ownSolid = useMemo(
-    () => (skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null)),
+  const { ownSolid, isOpen, hasNoFaces } = useMemo(
+    () => {
+      const built = skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
+      // An open brush, or one with no face, is empty: it draws nothing and bounds to a point.
+      // Only that fact is kept, not an open geometry. Null is no brush yet.
+      const isOpen = built !== null && !built.isClosed;
+      const hasNoFaces = built !== null && !isOpen && !hasFaces(built);
+      return { ownSolid: built && !isOpen && !hasNoFaces ? built : null, isOpen, hasNoFaces };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
     [ownKey, properties.materialPath, skipped]
   );
+  // Godot warns on a shape whose folded brush has no face (`csg_shape.cpp:981`). An open brush
+  // empties its whole fold, but a node with no face of its own is filled by its CSG children.
+  const hasCsgChildren = node.children.some((child) => nodeComponentRegistry.getCsgShape(child.type));
+  const isEmptyShape = useReportEmptyShape(isOpen || (hasNoFaces && !hasCsgChildren));
   const geometry = ownSolid ? <primitive object={ownSolid.geometry} attach="geometry" /> : null;
 
   // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a CSG
@@ -132,7 +145,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
           },
     [plan, subtree, ctx]
   );
-  const scope = <CsgSubtreeProvider value={publishedSubtree}>{children}</CsgSubtreeProvider>;
+  const shapeChildren = <EmptyShapeBranch isEmpty={isEmptyShape}>{children}</EmptyShapeBranch>;
+  const scope = <CsgSubtreeProvider value={publishedSubtree}>{shapeChildren}</CsgSubtreeProvider>;
 
   const combining = plan !== null && plan.geometryCount > 1;
   // A root's own: a contributor's solid, and its range and transparency with it, belong to the
@@ -191,7 +205,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
           meshRef={drawnRef}
           fallback={ownMesh}
         >
-          {children}
+          {shapeChildren}
         </CsgRootMesh>
       </group>
     );

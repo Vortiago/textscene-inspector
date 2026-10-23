@@ -44,6 +44,9 @@ export const PRIMITIVE_SCENES = [
   // The mesh sources: a .tres ArrayMesh, a .tres PrimitiveMesh and an inline ArrayMesh,
   // each drawn under its own surface materials, alone and inside a boolean.
   { name: 'csg-mesh-sources', file: 'unit-csg-mesh-sources.tscn' },
+  // An open brush is an empty manifold: the quad and the open cylinder draw nothing, the
+  // box beside them draws, and an open quad under a subtraction removes nothing.
+  { name: 'csg-mesh-open-brush', file: 'unit-csg-mesh-open-brush.tscn' },
   // A texture on a brush: each shape's V must run the way Godot's does.
   { name: 'csg-texture-uv', file: 'unit-csg-texture-uv.tscn' },
   // DEPTH extrudes to local -Z over [-depth, 0], not to +Z and not centred. The

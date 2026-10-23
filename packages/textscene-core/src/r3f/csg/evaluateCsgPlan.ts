@@ -9,7 +9,7 @@ import { warn } from '../../logger';
 import { type CsgContribution, type CsgPlan } from './csgPlan';
 import { CsgOperation } from '../../godot/scene/csg';
 import type { CsgModule } from './csgModule';
-import type { CsgSolid } from './csgRegistration';
+import { hasFaces, type CsgSolid } from './csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgEvaluation {
@@ -88,40 +88,49 @@ export function evaluateCsgPlan(
     const evaluator = new csg.Evaluator();
     evaluator.useGroups = true;
 
+    const run = (a: THREE.Mesh, b: THREE.Mesh, operation: number): THREE.Mesh => {
+      const result = evaluator.evaluate(a, b, godotToLibraryOperation(operation, csg)) as THREE.Mesh;
+      result.updateMatrixWorld(true);
+      return result;
+    };
+
+    /**
+     * `accumulator` with `brush` folded in by `operation`, where null is Godot's empty manifold:
+     * it joins nothing, subtracts nothing, and leaves nothing to subtract from or intersect.
+     */
+    const fold = (accumulator: THREE.Mesh | null, brush: THREE.Mesh | null, operation: number) => {
+      if (operation === CsgOperation.INTERSECTION) {
+        return accumulator && brush ? run(accumulator, brush, operation) : null;
+      }
+      if (!brush) return accumulator;
+      if (!accumulator) return operation === CsgOperation.SUBTRACTION ? null : brush;
+      return run(accumulator, brush, operation);
+    };
+
     /**
      * One node's brush: its own solid, then each child folded in by the child's operation
-     * (csg_shape.cpp:472,481). A node with no solid is seeded by its first child, so a combiner's
-     * own operation applies to the whole fold, not to its first child.
+     * (csg_shape.cpp:472,481). A node with no solid starts empty, as a combiner does, so its own
+     * operation applies to the whole fold, not to its first child. An open solid is empty and
+     * empties the whole fold of its node, children included, as manifold's error status does.
      */
     const brushOf = (contribution: CsgContribution): THREE.Mesh | null => {
+      const own = contribution.hasGeometry ? resolveSolid(contribution) : null;
+      if (own && !own.isClosed) return null;
+
       let accumulator: THREE.Mesh | null = null;
-      if (contribution.hasGeometry) {
-        const own = resolveSolid(contribution);
-        if (own && (own.geometry.getAttribute('position')?.count ?? 0) > 0) {
-          // Bake the root-local matrix in so every brush sits at identity: the library
-          // copies brush A's world transform onto the result, so mixing baked and
-          // transformed brushes would leave the output in whichever space A was in.
-          accumulator = new csg.Brush(
-            own.geometry.clone().applyMatrix4(contribution.matrix),
-            sentinels.brushMaterial(own)
-          );
-          accumulator.updateMatrixWorld(true);
-        }
+      if (own && hasFaces(own)) {
+        // Bake the root-local matrix in so every brush sits at identity: the library
+        // copies brush A's world transform onto the result, so mixing baked and
+        // transformed brushes would leave the output in whichever space A was in.
+        accumulator = new csg.Brush(
+          own.geometry.clone().applyMatrix4(contribution.matrix),
+          sentinels.brushMaterial(own)
+        );
+        accumulator.updateMatrixWorld(true);
       }
 
       for (const child of contribution.children) {
-        const brush = brushOf(child);
-        if (!brush) continue;
-        if (!accumulator) {
-          accumulator = brush;
-          continue;
-        }
-        accumulator = evaluator.evaluate(
-          accumulator,
-          brush,
-          godotToLibraryOperation(child.operation, csg)
-        ) as THREE.Mesh;
-        accumulator.updateMatrixWorld(true);
+        accumulator = fold(accumulator, brushOf(child), child.operation);
       }
       return accumulator;
     };

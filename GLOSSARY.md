@@ -403,6 +403,10 @@ One **geometry contributor**'s solid in CSG-root-local space, with its `operatio
 It is distinct from `three-bvh-csg`'s `Brush` and from Godot's `CSGBrush`.
 _Avoid_: "brush".
 
+**Open brush**:
+A CSG shape's own solid whose edges, after `isClosedBrush` welds every vertex within `CSG_MERGE_TOLERANCE`, do not each carry faces that run both ways along them. Godot's manifold packs it as empty, so it draws nothing and empties the whole fold of its node.
+_Avoid_: "non-manifold brush", since the previewer finds only this form of non-manifold input.
+
 **CSG plan**:
 The pure, React-free description of a **CSG root**'s subtree that `evaluateCsgPlan` consumes: contributions in evaluation order with matrices, operations, materials and a cache key.
 _Avoid_: "CSG tree".

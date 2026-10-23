@@ -140,14 +140,15 @@ describe('canvasItemLightingProps', () => {
     expect(shader.fragmentShader).toContain('godotToSrgb(gl_FragColor.rgb) / max(lightSeed');
   });
 
-  it('leaves a shader with no colorspace hook untouched rather than throwing', () => {
+  it('throws, naming the hook, for a shader with no colorspace hook (error case)', () => {
     const props = canvasItemLightingProps(uniforms());
     const shader = {
       vertexShader: '',
       fragmentShader: 'void other() {}',
       uniforms: {} as Record<string, THREE.IUniform>,
     };
-    expect(() => props.injection.onBeforeCompile.call(new THREE.MeshBasicMaterial(), shader)).not.toThrow();
-    expect(shader.fragmentShader).toBe('void other() {}');
+    expect(() => props.injection.onBeforeCompile.call(new THREE.MeshBasicMaterial(), shader)).toThrow(
+      'expected the fragment shader of the canvas item lighting to hold "void main() {" once'
+    );
   });
 });

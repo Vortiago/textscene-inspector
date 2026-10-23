@@ -3,6 +3,7 @@
  * `useLiveNode` over the live scene tree, so it shows the same identity as
  * the outliner and the viewport.
  */
+import type { ReactNode } from 'react';
 import { nodeRegistry } from '../../../core/NodeRegistry.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { isCamera3DType } from '../../cameraNodeTypes.js';
@@ -10,6 +11,7 @@ import { useSelection } from '../../contexts/SelectionContext.js';
 import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useLiveNode } from '../../useLiveSceneTree.js';
 import { useUndrawnMeshTypes } from '../../contexts/UndrawnMeshesContext.js';
+import { useIsEmptyShape } from '../../contexts/EmptyShapesContext.js';
 import { spelledLiveNodePath } from '../../../utils/nodePath.js';
 import { PropertySection } from './PropertySection.js';
 import type { PropertySection as PropertySectionData } from '../../../core/NodeRegistry.js';
@@ -60,16 +62,16 @@ export function NodeDetailsPanel({ onCopyNodePath }: NodeDetailsPanelProps) {
         validated properties. The Type row below states the type.
       */}
       {isNotRendered && (
-        <div className={`${styles.section} ${styles.warningSection}`}>
-          <h4 className={styles.sectionTitle}>Not Implemented</h4>
+        <WarningSection title="Not Implemented">
           <p className={styles.warningText}>
             This node type is not yet drawn by the previewer. It is preserved in the tree and its properties
             are parsed, but nothing appears in the viewport.
           </p>
-        </div>
+        </WarningSection>
       )}
 
       <UndrawnMeshNotice nodePath={path} />
+      <EmptyShapeNotice nodePath={path} />
 
       <div className={styles.section}>
         <div className={styles.row}>
@@ -145,18 +147,48 @@ function authoredSections(
   }));
 }
 
+function WarningSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className={`${styles.section} ${styles.warningSection}`}>
+      <h4 className={styles.sectionTitle}>{title}</h4>
+      {children}
+    </div>
+  );
+}
+
 /** Names each mesh type the node holds that the previewer does not draw. */
 function UndrawnMeshNotice({ nodePath }: { nodePath: string }) {
   const types = useUndrawnMeshTypes(nodePath);
   if (types.length === 0) return null;
   const meshes = types.length === 1 ? `${types[0]} mesh is` : `${types.join(', ')} meshes are`;
   return (
-    <div className={`${styles.section} ${styles.warningSection}`}>
-      <h4 className={styles.sectionTitle}>Mesh Not Drawn</h4>
+    <WarningSection title="Mesh Not Drawn">
       <p className={styles.warningText}>
         Its {meshes} not yet drawn by the previewer. The viewport shows a wireframe box, or nothing, where
         Godot draws it.
       </p>
-    </div>
+    </WarningSection>
+  );
+}
+
+/** `CSGShape3D::get_configuration_warnings`, line for line (`csg_shape.cpp:982`). */
+const EMPTY_SHAPE_WARNING = [
+  'The CSGShape3D has an empty shape.',
+  'CSGShape3D empty shapes typically occur because the mesh is not manifold.',
+  'A manifold mesh forms a solid object without gaps, holes, or loose edges.',
+  'Each edge must be a member of exactly two faces.',
+];
+
+/** Godot's warning for a CSG shape whose brush is empty, such as an open one. */
+function EmptyShapeNotice({ nodePath }: { nodePath: string }) {
+  if (!useIsEmptyShape(nodePath)) return null;
+  return (
+    <WarningSection title="Empty Shape">
+      {EMPTY_SHAPE_WARNING.map((line) => (
+        <p key={line} className={styles.warningText}>
+          {line}
+        </p>
+      ))}
+    </WarningSection>
   );
 }
