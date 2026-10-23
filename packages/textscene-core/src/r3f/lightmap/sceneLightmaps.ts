@@ -10,6 +10,7 @@ import { EMPTY_AABB, hasSurface, type Aabb } from '../../godot/math/aabb';
 import { LIGHTMAP_BICUBIC_FILTER_DEFAULT, LIGHTMAP_NODE_ITSELF } from '../../godot/scene/lightmapGi';
 import { resolveRelativePath } from '../../godot/string/nodePath';
 import type { LightmapUser } from '../../resources/lightmapgidata/types';
+import { perObject } from '../../utils/perObject';
 import { cameraFrustum } from '../cameraFrustum';
 import { compareReadyOrder, type TreeOrder } from '../contexts/TreeOrderContext';
 import { observeSceneCamera } from '../sceneRenderCamera';
@@ -142,15 +143,5 @@ function isCulledIn({ atlas, bounds, object }: LightmapInstance): boolean {
   return frustum.intersectsBox(worldBounds);
 }
 
-/** Written only by `lightmapsOf`, and collected with its scene. */
-const lightmapsByScene = new WeakMap<THREE.Scene, SceneLightmaps>();
-
-/** The LightmapGIs of `scene`. */
-export function lightmapsOf(scene: THREE.Scene): SceneLightmaps {
-  let lightmaps = lightmapsByScene.get(scene);
-  if (!lightmaps) {
-    lightmaps = new SceneLightmaps(scene);
-    lightmapsByScene.set(scene, lightmaps);
-  }
-  return lightmaps;
-}
+/** The LightmapGIs of `scene`, collected with its scene. */
+export const lightmapsOf = perObject((scene: THREE.Scene) => new SceneLightmaps(scene));

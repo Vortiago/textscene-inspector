@@ -157,12 +157,11 @@ function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly Live
 }
 
 /**
- * The children of a GLB with nothing attached, built once per GLB object. Written only by
- * `glbSceneRootChildren`. A GLB object read here is a loader copy no consumer changes the
- * structure of, so its hierarchy does not change, and a tree walk asks again for each path it
- * resolves. Entries leave with their object.
+ * The children of a GLB with nothing attached, built once per GLB object. A GLB object read here
+ * is a loader copy no consumer changes the structure of, so its hierarchy does not change, and a
+ * tree walk asks again for each path it resolves. Entries leave with their object.
  */
-const plainChildren = new WeakMap<THREE.Object3D, TscnNode[]>();
+const plainChildren = perObject((root: THREE.Object3D) => freezeNodes(buildGlbSceneRootChildren(root, [])));
 
 /** The shared answer is read by every consumer of the GLB, so a write to it throws. */
 function freezeNodes(nodes: TscnNode[]): TscnNode[] {
@@ -206,11 +205,5 @@ export function glbSceneRootChildCount(root: THREE.Object3D): number {
  */
 export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
   // Attaching writes into the nodes, so an attached list builds its own copy.
-  if (attached.length > 0) return buildGlbSceneRootChildren(root, attached);
-  let children = plainChildren.get(root);
-  if (!children) {
-    children = freezeNodes(buildGlbSceneRootChildren(root, attached));
-    plainChildren.set(root, children);
-  }
-  return children;
+  return attached.length > 0 ? buildGlbSceneRootChildren(root, attached) : plainChildren(root);
 }

@@ -8,6 +8,7 @@ import { createRawNode, nodeOrigin } from '../parser/rawNode.js';
 import { seatScene, type SceneSeating } from '../parser/sceneTreeBuilder.js';
 import type { RawNode } from '../parser/types.js';
 import type { ParsedHeading } from '../parser/utils.js';
+import { perObject } from '../utils/perObject.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
 
 /** A `[node]` heading with the headings Godot seats under it. */
@@ -25,9 +26,6 @@ interface DocumentSeating {
   /** The root-relative path of each seated heading with a name. Built on the first read: the outline never reads it. */
   paths(): ReadonlyMap<DocumentSection, string>;
 }
-
-/** Written only by {@link seatingOf}. An entry lives as long as its document. */
-const seatings = new WeakMap<LanguageDocument, DocumentSeating>();
 
 /** A `[node]` section's properties, keyed as the parser's bag keys them. */
 function rawPropertiesOf(section: DocumentSection): Record<string, string> {
@@ -64,14 +62,8 @@ function seat(document: LanguageDocument): DocumentSeating {
   };
 }
 
-function seatingOf(document: LanguageDocument): DocumentSeating {
-  let seating = seatings.get(document);
-  if (!seating) {
-    seating = seat(document);
-    seatings.set(document, seating);
-  }
-  return seating;
-}
+/** An entry lives as long as its document. */
+const seatingOf = perObject(seat);
 
 /** The `[node]` headings as Godot seats them: the scene root, then each heading left out of the tree, in line order. */
 export function seatedNodeTree(document: LanguageDocument): readonly SeatedSection[] {

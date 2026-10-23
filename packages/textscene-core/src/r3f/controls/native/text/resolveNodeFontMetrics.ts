@@ -16,27 +16,22 @@ import {
 import { peekSceneFontMetrics } from './sceneFontLoader';
 import type { FontMetrics } from './fontMetrics';
 import type { FontResource } from '../../../../resources/fonts/font/types';
+import { perObject } from '../../../../utils/perObject';
 
 /**
  * The type-dependency chain and theme search order depend on the node alone, so one build serves
  * both passes and both lookups. Keyed by `SolveNode` identity: `buildForest` mints a new node per
  * walk, so a new generation never hits and an old one is collected with its nodes.
  */
-const scopeCache = new WeakMap<ShareNode, ThemeResolutionScope>();
-
-function scopeFor(n: ShareNode): ThemeResolutionScope {
-  const cached = scopeCache.get(n);
-  if (cached) return cached;
-  const scope = themeResolutionScope(
+const scopeFor = perObject((n: ShareNode): ThemeResolutionScope =>
+  themeResolutionScope(
     n.node.type,
     controlProps(n).themeTypeVariation,
     n.themeChain,
     n.projectTheme,
     n.projectDefaultFont
-  );
-  scopeCache.set(n, scope);
-  return scope;
-}
+  )
+);
 
 /**
  * Resolves the font of `n` for `themeKey` into a `FontMetrics`: the bundled default while a scene

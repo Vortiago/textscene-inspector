@@ -19,6 +19,7 @@ import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
 import { findExtResource, parseResourceReference } from '../../../../resources/SubResourceResolver';
 import type { LoadedFile } from '../../../../resources/scopedResource';
+import { perObject } from '../../../../utils/perObject';
 import { emptyBrush, shadeCsgFaces } from '../smoothNormals';
 import { meshSurfaces, resolveMesh, type CsgMesh, type CsgMeshSurface } from './meshSurfaces';
 import type { CSGMesh3DProperties } from './types';
@@ -69,18 +70,10 @@ export function csgMesh3DReadsFiles(
   return [...(path ? [path] : []), ...(scoped ? primitiveMeshFiles(scoped) : [])];
 }
 
-/** Written only by `fileKey`. A reload parses a new object, so it takes a new key. */
-const fileKeys = new WeakMap<object, number>();
+/** A number for each parsed file. A reload parses a new object, so it takes a new key. */
+const fileKey = perObject<object, number>(() => nextFileKey++);
+/** Written only by `fileKey`, once per new file. It never resets. */
 let nextFileKey = 0;
-
-function fileKey(file: object): number {
-  let key = fileKeys.get(file);
-  if (key === undefined) {
-    key = nextFileKey++;
-    fileKeys.set(file, key);
-  }
-  return key;
-}
 
 /**
  * A scene mesh keys on its content, and on the resources it builds from, since the parser allocates a

@@ -6,7 +6,7 @@
  * over a cache snapshot, like `liveSceneTree.ts`, and the React hooks supply reactivity.
  */
 
-import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { RawNode, SceneScope, TscnNode } from '../parser/types.js';
 import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
 import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { belowRoot, joinPath, pathBetween, pathUnder } from '../utils/nodePath.js';
@@ -16,7 +16,6 @@ import {
   cachedUniqueNameOwnership,
   cachedUniqueNamesBelowRoot,
 } from '../utils/uniqueNames.js';
-import { perTree } from '../utils/perTree.js';
 import { perObject } from '../utils/perObject.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
@@ -70,8 +69,11 @@ function seatsInsideInstance(owner: ClaimOwner, livePath: string, counts: Counts
 }
 
 /** A file's headings inside instances whose live paths pass through a `%Name`. */
-const uniqueSpeltHeadings = perTree((roots): readonly (readonly [string, HeadingsInsideInstance])[] =>
-  [...cachedUniqueNameOwnership(roots).insideInstances].filter(([path]) => path.includes(UNIQUE_NODE_PREFIX))
+const uniqueSpeltHeadings = perObject(
+  (roots: readonly RawNode[]): readonly (readonly [string, HeadingsInsideInstance])[] =>
+    [...cachedUniqueNameOwnership(roots).insideInstances].filter(([path]) =>
+      path.includes(UNIQUE_NODE_PREFIX)
+    )
 );
 
 /** The nearest file above `owner` that seats a heading `counts` at `livePath`, else `owner`. */

@@ -13,6 +13,7 @@ import { decomposeForR3F } from '../../nodeTransform';
 import { parseOptionalInt } from '../../../parser/valueParsers';
 import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInstances';
 import { joinPath } from '../../../utils/nodePath';
+import { perObject } from '../../../utils/perObject';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
 import { findGlbTarget, matchGlbTarget } from './matchGlbTarget.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -51,17 +52,11 @@ export function isApplicableGlbOverride(override: TscnNode): boolean {
  * itself can reach the GLB. Every reader of a GLB instance's children asks through here.
  */
 export function liftOverrideChildren(children: readonly LiveNode[]): readonly LiveNode[] {
-  if (!children.some((child) => child.overridesExistingNode)) return children;
-  let lifted = liftedByChildren.get(children);
-  if (!lifted) {
-    lifted = liftBelow(children, undefined);
-    liftedByChildren.set(children, lifted);
-  }
-  return lifted;
+  return children.some((child) => child.overridesExistingNode) ? liftedTopLevel(children) : children;
 }
 
-/** Written only by `liftOverrideChildren`, so each reader asking about one list gets one answer. */
-const liftedByChildren = new WeakMap<readonly LiveNode[], LiveNode[]>();
+/** Built once for each list, so each reader asking about one list gets one answer. */
+const liftedTopLevel = perObject((children: readonly LiveNode[]) => liftBelow(children, undefined));
 
 /**
  * `anchor` is the sub-path of the override the children are written below, undefined at the top.
