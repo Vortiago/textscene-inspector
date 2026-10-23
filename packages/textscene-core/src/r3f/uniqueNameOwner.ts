@@ -17,6 +17,7 @@ import {
   cachedUniqueNamesBelowRoot,
 } from '../utils/uniqueNames.js';
 import { perTree } from '../utils/perTree.js';
+import { perObject } from '../utils/perObject.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
@@ -214,18 +215,12 @@ function holdsInstanceContent(group: LiveChildGroup): boolean {
   return group.origin === 'merged' || group.origin === 'glb';
 }
 
-/** Written only by {@link ownerWalkOf}, keyed by the live tree it steps over. */
-const ownerWalks = new WeakMap<LiveTree, OwnerWalk>();
+/** The owner walk over one live tree, built once for it. */
+const ownerWalkOver = perObject((tree: LiveTree) => new OwnerWalk(new PlacedLiveTree(tree)));
 
 /** The owner walk every question over `ctx` takes, so each walk shares each step. */
 function ownerWalkOf(roots: readonly TscnNode[], ctx: LiveTreeContext): OwnerWalk {
-  const tree = liveTreeOf(roots, ctx);
-  let walk = ownerWalks.get(tree);
-  if (!walk) {
-    walk = new OwnerWalk(new PlacedLiveTree(tree));
-    ownerWalks.set(tree, walk);
-  }
-  return walk;
+  return ownerWalkOver(liveTreeOf(roots, ctx));
 }
 
 /**

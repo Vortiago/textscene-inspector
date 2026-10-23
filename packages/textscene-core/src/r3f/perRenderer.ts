@@ -5,15 +5,9 @@
  */
 
 import type * as THREE from 'three';
+import { perObject } from '../utils/perObject.js';
 
 /** The value `create` makes for each renderer, the same value on every later ask. */
 export function perRenderer<T extends object>(create: () => T): (renderer: THREE.WebGLRenderer) => T {
-  const values = new WeakMap<THREE.WebGLRenderer, T>();
-  return (renderer) => {
-    const cached = values.get(renderer);
-    if (cached) return cached;
-    const value = create();
-    values.set(renderer, value);
-    return value;
-  };
+  return perObject<THREE.WebGLRenderer, T>(create);
 }
