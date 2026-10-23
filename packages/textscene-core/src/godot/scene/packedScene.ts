@@ -84,13 +84,59 @@ export function recoverByIdTrail(
   headings: readonly IdHeading[],
   builtCount: number
 ): IdTrailEnd | undefined {
-  const [firstId] = trail;
+  return recoverByIdTrailOver(trail, headings, (index) => headings[index]!, builtCount);
+}
+
+/**
+ * {@link recoverByIdTrail} over `ids`, the headings' unique ids, with `headingAt` building only the
+ * heading the trail names, so the cost does not grow with the other headings.
+ */
+export function recoverByIdTrailOver(
+  trail: readonly number[],
+  ids: readonly HasUniqueId[],
+  headingAt: (index: number) => IdHeading,
+  builtCount: number
+): IdTrailEnd | undefined {
   // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
-  if (firstId === undefined) return undefined;
-  // `ids.find` returns the first match, so id `0` names the first heading with no `unique_id=`.
-  const index = headings.findIndex((heading) => heading.uniqueId === firstId);
-  const named = headings[index];
-  if (named === undefined) return undefined;
+  if (trail.length === 0) return undefined;
+  const index = firstIndexWithId(ids, trail[0]!);
+  if (index === undefined) return undefined;
+  return idTrailEndAt(trail, index, headingAt(index), builtCount);
+}
+
+type HasUniqueId = Pick<IdHeading, 'uniqueId'>;
+
+/**
+ * Written only by {@link firstIndexWithId}, keyed by the headings of one scene, which nothing
+ * changes after the scan. An entry clears when nothing holds that array any more.
+ */
+const firstIndexes = new WeakMap<readonly HasUniqueId[], ReadonlyMap<number, number>>();
+
+/**
+ * The index of the first heading carrying `id`, or undefined where none does. `ids.find` returns
+ * the first match, so id `0` names the first heading with no `unique_id=`. The index is built on
+ * the first lookup, so a scene with many trails reads each id once.
+ */
+function firstIndexWithId(headings: readonly HasUniqueId[], id: number): number | undefined {
+  let indexes = firstIndexes.get(headings);
+  if (!indexes) {
+    const built = new Map<number, number>();
+    for (let index = 0; index < headings.length; index++) {
+      const { uniqueId } = headings[index]!;
+      if (!built.has(uniqueId)) built.set(uniqueId, index);
+    }
+    indexes = built;
+    firstIndexes.set(headings, indexes);
+  }
+  return indexes.get(id);
+}
+
+function idTrailEndAt(
+  trail: readonly number[],
+  index: number,
+  named: IdHeading,
+  builtCount: number
+): IdTrailEnd | undefined {
   if (trail.length === 1) {
     return index < builtCount && named.isPlaced ? { kind: 'lands', heading: index } : undefined;
   }
