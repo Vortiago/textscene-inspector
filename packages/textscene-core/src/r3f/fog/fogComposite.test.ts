@@ -3,38 +3,20 @@
  * every fog program reads one shared set of fog uniforms. The tests read the installed three, so a
  * release that rewrites a replaced line fails here, not in a golden.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installFogComposite } from './fogComposite';
 import { GODOT_FOG_PARS_CHUNK } from './fogChunks';
 import { fogUniforms } from './fogUniforms';
 import { GODOT_SKY_VIEW_RAY } from '../sky/skyProjection';
 import { warningsOf } from '../testing/logWarnings';
+import { restoreShaderGlobalsAfterEach } from '../testing/shaderPatches';
 
-const threeChunks = {
-  fog_pars_vertex: THREE.ShaderChunk.fog_pars_vertex,
-  fog_vertex: THREE.ShaderChunk.fog_vertex,
-  fog_pars_fragment: THREE.ShaderChunk.fog_pars_fragment,
-  fog_fragment: THREE.ShaderChunk.fog_fragment,
-  tonemapping_fragment: THREE.ShaderChunk.tonemapping_fragment,
-  backgroundCube_frag: THREE.ShaderChunk.backgroundCube_frag,
-  background_vert: THREE.ShaderChunk.background_vert,
-  background_frag: THREE.ShaderChunk.background_frag,
-};
+const threeChunks = { ...THREE.ShaderChunk };
 const backgroundCube = THREE.ShaderLib.backgroundCube!;
 const backgroundPlane = THREE.ShaderLib.background!;
-const threeBackgroundShaders = {
-  cube: backgroundCube.fragmentShader,
-  planeVertex: backgroundPlane.vertexShader,
-  planeFragment: backgroundPlane.fragmentShader,
-};
 
-afterEach(() => {
-  Object.assign(THREE.ShaderChunk, threeChunks);
-  backgroundCube.fragmentShader = threeBackgroundShaders.cube;
-  backgroundPlane.vertexShader = threeBackgroundShaders.planeVertex;
-  backgroundPlane.fragmentShader = threeBackgroundShaders.planeFragment;
-});
+restoreShaderGlobalsAfterEach();
 
 describe('installFogComposite', () => {
   it('draws the fog ahead of the tone curve, in place of three’s', () => {

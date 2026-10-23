@@ -15,6 +15,7 @@ import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { FogVolume } from './Component';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { parseFogVolume } from './parser';
 
 const FOG_MATERIAL: TscnInternalResource = {
@@ -141,8 +142,7 @@ async function mountedVolume(
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
-  // Lets the density texture's build land.
-  await ReactThreeTestRenderer.act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+  await settleLoads();
   const volumes: FogVolumeObject[] = [];
   renderer.scene.instance.traverse((object) => {
     if (object instanceof FogVolumeObject) volumes.push(object);
