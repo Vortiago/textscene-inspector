@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../parser/types';
 import { Marker2D } from './Component';
 import { parseMarker2D } from './parser';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import { describeGizmoToggle, type GizmoNodeCase } from '../../../r3f/testing/gizmoContract';
 
 function markerNode(name = 'MyMarker', props: Record<string, string> = {}): TscnNode {
   return {
@@ -32,6 +33,13 @@ async function renderMarker(
   );
 }
 
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'MyMarker',
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos }) => renderMarker(selectedPath, {}, showGizmos),
+};
+describeGizmoToggle('<Marker2D>', GIZMO_CASE);
+
 describe('<Marker2D>', () => {
   it.each([
     ['the node is selected', 'MyMarker'],
@@ -39,14 +47,6 @@ describe('<Marker2D>', () => {
     ['selection points at a different node', 'SomethingElse'],
   ])('draws the cross in full colour when %s', async (_label, selectedPath) => {
     expect(lineOpacities(await renderMarker(selectedPath))).toEqual([1]);
-  });
-
-  it.each([
-    ['selected', 'MyMarker'],
-    ['unselected', null],
-  ])('draws no cross with the Gizmos toggle off, %s', async (_label, selectedPath) => {
-    const renderer = await renderMarker(selectedPath, {}, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('always renders a positioning group for children, selected or not', async () => {

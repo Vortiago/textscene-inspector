@@ -24,12 +24,12 @@ export interface ParsedScene {
   readonly path: string;
   /** Root nodes in this scene (original TSCN nodes, not mutated) */
   readonly nodes: ReadonlyArray<TscnNode>;
-  /** External scene references (instances) */
-  readonly externalScenes: ReadonlyArray<ExternalSceneRef>;
   /** Internal resource definitions, such as embedded materials and meshes. */
   readonly internalResources: ReadonlyArray<SubResource>;
   /** External resource references, such as textures and materials. */
   readonly externalResources: ReadonlyArray<ExtResource>;
+  /** The `[editable]` paths of this scene's file, root-relative. Absent where it has none. */
+  readonly editableInstances?: ReadonlyArray<string>;
 }
 
 /**
@@ -48,34 +48,20 @@ export interface SceneNode {
   readonly parent: string | null;
 }
 
-/**
- * External scene reference (before/after resolution).
- * Tracks the status of external scene instances.
- */
-interface ExternalSceneRef {
-  /** Node name for this instance in parent scene */
-  readonly nodeName: string;
-  /** Path to external scene file, such as "res://enemy.tscn". */
-  readonly scenePath: string;
-  /** Resolved scene data (if loaded) */
-  readonly resolvedScene?: ParsedScene;
-  readonly resolutionStatus: 'pending' | 'resolved' | 'failed';
-}
-
 /** Wrap a TscnScene's parts in a ParsedScene, without copying them. */
 export function tscnSceneToParsedScene(
   path: string,
   nodes: TscnNode[],
   externalResources: ExtResource[],
   internalResources: SubResource[],
-  externalScenes: ExternalSceneRef[] = []
+  editableInstances?: readonly string[]
 ): ParsedScene {
   return {
     path,
     nodes,
-    externalScenes,
     internalResources,
     externalResources,
+    ...(editableInstances ? { editableInstances } : {}),
   };
 }
 

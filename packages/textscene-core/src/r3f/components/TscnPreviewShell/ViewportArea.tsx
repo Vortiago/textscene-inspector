@@ -43,6 +43,7 @@ export function ViewportArea({
           nodes={rootScene?.nodes ?? []}
           internalResources={rootScene?.internalResources ?? []}
           externalResources={rootScene?.externalResources ?? []}
+          editableInstances={rootScene?.editableInstances}
           scenePath={scenePath}
         />
         <ViewportControlsHelp mode="2D" />

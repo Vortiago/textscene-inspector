@@ -25,7 +25,12 @@ export function VoxelGIGizmo({ voxelGi }: { voxelGi: VoxelGIProperties }) {
   return (
     <>
       <AabbGizmo aabb={box} color={GIZMO_COLOR} variant="selected" />
-      <GizmoLine positions={grid} color={useGodotLinearColor(GIZMO_COLOR)} opacity={GRID_ALPHA} />
+      <GizmoLine
+        positions={grid}
+        color={useGodotLinearColor(GIZMO_COLOR)}
+        opacity={GRID_ALPHA}
+        variant="selected"
+      />
     </>
   );
 }

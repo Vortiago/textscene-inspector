@@ -32,6 +32,7 @@ import { parseExternalResource, parseInternalResource } from './resourceParsers.
 import { seatScene, type SceneSeating } from './sceneTreeBuilder.js';
 import * as logger from '../logger.js';
 import { nodeOrigin } from './rawNode.js';
+import { simplifiedNodePath } from '../godot/string/nodePath.js';
 
 export type SectionType = 'none' | 'node' | 'ext_resource' | 'sub_resource' | 'resource';
 
@@ -125,6 +126,7 @@ export class TscnParserCore {
     // One per file: the loader refuses any tag after the `[resource]` body
     // (`resource_format_text.cpp:837-841`), so a later one is a corrupt file, and the last one read stays.
     let mainResource: TscnMainResource | undefined;
+    const editableInstances: string[] = [];
 
     let currentSection: SectionType = 'none';
     let currentHeading: ParsedHeading | null = null;
@@ -244,6 +246,9 @@ export class TscnParserCore {
           if (currentHeading.type === 'gd_resource') {
             headerResourceType = currentHeading.attributes.type;
           }
+          const editablePath =
+            currentHeading.type === 'editable' ? currentHeading.attributes.path : undefined;
+          if (editablePath !== undefined) editableInstances.push(simplifiedNodePath(editablePath));
           observer?.onSectionStart?.(currentHeading, currentSection, lineNumber);
         } else {
           observer?.onError?.({
@@ -325,6 +330,7 @@ export class TscnParserCore {
         externalResources,
         internalResources,
         ...(headerResourceType !== undefined ? { resourceType: headerResourceType } : {}),
+        ...(editableInstances.length > 0 ? { editableInstances } : {}),
         ...(mainResource ? { mainResource } : {}),
       },
       origins,

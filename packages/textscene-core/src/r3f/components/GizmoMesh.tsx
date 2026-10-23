@@ -4,10 +4,13 @@
  * builds and memoises the geometry.
  */
 
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { canvasItemFacing } from '../canvasItemFacing';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
+import type { GizmoVariant } from '../gizmo/gizmoVariant';
+import { useGizmoLook } from '../gizmo/useGizmoLook';
 import { GIZMO_RENDER_ORDER, GizmoGroup } from './GizmoGroup';
 
 interface GizmoMeshProps {
@@ -16,17 +19,23 @@ interface GizmoMeshProps {
   color: THREE.ColorRepresentation;
   /** The opacity of the fill, from 0 to 1. */
   alpha: number;
+  /** The look of a Godot gizmo-plugin material, as on `GizmoLine`. Left out, the fill is no plugin material. */
+  variant?: GizmoVariant;
 }
 
-export function GizmoMesh({ geometry, color, alpha }: GizmoMeshProps) {
+export function GizmoMesh({ geometry, color: ownColor, alpha: ownAlpha, variant }: GizmoMeshProps) {
+  const { color, opacity } = useGizmoLook(variant, ownColor, ownAlpha);
   useDisposeOnRelease(geometry);
-  if (!geometry) return null;
-
   // Godot's gizmo material culls no face (`node_3d_editor_gizmos.cpp:927`), so one pass draws both.
-  const program = materialProgramInputs({
-    props: { color, opacity: alpha, transparent: true, depthWrite: false, fog: false },
-    merge: [canvasItemFacing()],
-  });
+  const program = useMemo(
+    () =>
+      materialProgramInputs({
+        props: { color, opacity, transparent: true, depthWrite: false, fog: false },
+        merge: [canvasItemFacing()],
+      }),
+    [color, opacity]
+  );
+  if (!geometry) return null;
 
   return (
     <GizmoGroup>

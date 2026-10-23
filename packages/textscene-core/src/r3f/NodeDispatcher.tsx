@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { LiveNode } from '../resources/liveNode.js';
-import { joinPath } from '../utils/nodePath.js';
+import { belowRoot, joinPath } from '../utils/nodePath.js';
 import {
   allocateNodePaintRange,
   allocatePaintRange,
@@ -37,6 +37,7 @@ import {
   InstancedScenePathsProvider,
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
+import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
 import { collapseLiveNode, singlePathCache } from './liveSceneTree.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
@@ -452,31 +453,39 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   }
 
   // The merged node carries the sub-scene's scope, which `DispatchedNode` provides.
-  if (effective !== node) return <DispatchedNode node={effective} path={path} />;
+  if (effective !== node) {
+    return (
+      <InstanceOwnerProvider path={belowRoot(path)} editablePaths={loadedScene.editableInstances}>
+        <DispatchedNode node={effective} path={path} />
+      </InstanceOwnerProvider>
+    );
+  }
 
   // A `.glb` mounts at this node's path. A multi-root scene injects its roots as children.
   return (
-    <GlbInstanceProvider node={node} path={path} glb={glbPath !== undefined ? glb : undefined}>
-      <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
-        <SceneResourcesProvider
-          internalResources={loadedScene.internalResources}
-          externalResources={loadedScene.externalResources}
-        >
-          <InstancedScenePathsProvider paths={contentScenePaths}>
-            {loadedScene.nodes.map((child, i) => (
-              <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
-                <TreeOrderProvider order={injectedOrders.roots[i]!}>
-                  {glbPath !== undefined ? (
-                    <GlbRootNode node={child} />
-                  ) : (
-                    <DispatchedNode node={child} path={joinPath(path, child.name)} />
-                  )}
-                </TreeOrderProvider>
-              </PaintRangeProvider>
-            ))}
-          </InstancedScenePathsProvider>
-        </SceneResourcesProvider>
-      </PlainNode>
-    </GlbInstanceProvider>
+    <InstanceOwnerProvider path={belowRoot(path)} editablePaths={loadedScene.editableInstances}>
+      <GlbInstanceProvider node={node} path={path} glb={glbPath !== undefined ? glb : undefined}>
+        <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
+          <SceneResourcesProvider
+            internalResources={loadedScene.internalResources}
+            externalResources={loadedScene.externalResources}
+          >
+            <InstancedScenePathsProvider paths={contentScenePaths}>
+              {loadedScene.nodes.map((child, i) => (
+                <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
+                  <TreeOrderProvider order={injectedOrders.roots[i]!}>
+                    {glbPath !== undefined ? (
+                      <GlbRootNode node={child} />
+                    ) : (
+                      <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                    )}
+                  </TreeOrderProvider>
+                </PaintRangeProvider>
+              ))}
+            </InstancedScenePathsProvider>
+          </SceneResourcesProvider>
+        </PlainNode>
+      </GlbInstanceProvider>
+    </InstanceOwnerProvider>
   );
 }

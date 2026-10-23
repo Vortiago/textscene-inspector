@@ -13,7 +13,12 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Decal } from './Component';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { lineOpacities } from '../../../r3f/testing/GizmoScene';
+import { InsideLockedInstance, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../r3f/testing/gizmoContract';
 import {
   AnimatedValueProvider,
   useAnimatedValueRegistry,
@@ -74,10 +79,13 @@ interface RenderOptions {
   selectedPath?: string;
   /** The Gizmos toggle. On unless a test turns it off. */
   showGizmos?: boolean;
+  /** Places the decal inside an instance the edited scene does not list as editable. */
+  instantiated?: boolean;
 }
 
 /** The mounted tree, separated from `create` so a test can re-render it. */
 function decalTree(opts: RenderOptions, loader: ReturnType<typeof createFakeResourceLoader>['loader']) {
+  const decal = <Decal node={opts.node}>{opts.children}</Decal>;
   return (
     <SceneStack
       loader={loader}
@@ -86,7 +94,7 @@ function decalTree(opts: RenderOptions, loader: ReturnType<typeof createFakeReso
       showGizmos={opts.showGizmos ?? true}
     >
       <NodePathProvider path={opts.node.name}>
-        <Decal node={opts.node}>{opts.children}</Decal>
+        {opts.instantiated ? <InsideLockedInstance>{decal}</InsideLockedInstance> : decal}
       </NodePathProvider>
     </SceneStack>
   );
@@ -127,6 +135,15 @@ function projections(renderer: { scene: { instance: THREE.Object3D } }): THREE.M
   return found;
 }
 
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: NODE_NAME,
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos, instantiated }) =>
+    render({ node: makeNode(), selectedPath: selectedPath ?? undefined, showGizmos, instantiated }),
+};
+describeGizmoToggle('<Decal>', GIZMO_CASE);
+describeInstantiatedGizmo('<Decal>', GIZMO_CASE);
+
 describe('<Decal>', () => {
   it('draws the box gizmo at its colour alpha 0.9 when the node is selected', async () => {
     const renderer = await render({ node: makeNode(), selectedPath: NODE_NAME });
@@ -140,11 +157,6 @@ describe('<Decal>', () => {
     const renderer = await render({ node: makeNode(), selectedPath });
     expect(lineOpacities(renderer)).toHaveLength(1);
     expect(lineOpacities(renderer)[0]).toBeCloseTo(0.27, 10);
-  });
-
-  it('draws no box gizmo with the Gizmos toggle off, selected', async () => {
-    const renderer = await render({ node: makeNode(), selectedPath: NODE_NAME, showGizmos: false });
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('scales the box gizmo by size', async () => {

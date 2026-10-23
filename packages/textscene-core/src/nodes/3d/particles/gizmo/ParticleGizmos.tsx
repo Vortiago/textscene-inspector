@@ -41,5 +41,7 @@ export function CPUParticlesBoxGizmo({ box, variant }: { box: Aabb; variant: Giz
 
 export function EmissionShapeGizmo({ emission }: { emission: ParticleEmission }) {
   const positions = useMemo(() => new Float32Array(emissionShapeLines(emission)), [emission]);
-  return <GizmoLine positions={positions} color={useGodotLinearColor(EMISSION_SHAPE_COLOR)} />;
+  return (
+    <GizmoLine positions={positions} color={useGodotLinearColor(EMISSION_SHAPE_COLOR)} variant="selected" />
+  );
 }

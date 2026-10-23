@@ -56,6 +56,37 @@ so their unselected lines draw at 0.126.
 The Camera3D frustum stays selected-only until its Godot pyramid lands (#908). The
 PathFollow handle is a previewer addition, since Godot draws no gizmo for a follower.
 
+### The instantiated look
+
+Godot gives a gizmo material four variants: selected or not, editable or not
+(`node_3d_editor_gizmos.cpp:43-60`). A node is editable when the edited scene owns it. A node that
+comes from an instanced sub-scene is not editable, unless an `[editable path="..."]` line of the
+scene file lists it. The non-editable variants replace the plugin colour and alpha with
+rgba(0.7, 0.7, 0.7, 0.6) (`node_3d_editor_gizmos.cpp:907-917`, `editor_settings.cpp:879`). The
+unselected variant then multiplies the alpha by 0.3 as before.
+
+The parser reads each `[editable]` heading into `TscnScene.editableInstances`
+(`resource_format_text.cpp:400`). The file stores the paths in the simplified form. Any scene file
+along an instantiation chain can set the flag, with paths relative to its own root
+(`packed_scene.cpp:691-695`). `r3f/instanceOwners.ts` keeps this as a stack of owners, and
+`InstanceOwnerProvider` pushes one for each instance. `useIsInstantiated` answers for the node in
+scope, and `useGizmoLook` turns that and the variant into the colour and opacity of a part.
+
+A part that has a `variant` wears the grey. A part with none keeps its own colour, because its Godot
+material is not a plugin material: the 2D helpers, PathFollow2D and PathFollow3D, and Marker3D
+(`marker_3d_gizmo_plugin.cpp:80-92`) never turn grey.
+
+Value check, over the 0.3 grey clear: the unselected line of a locked CPUParticles3D draws
+rgb(105, 105, 105), as the blend gives. The editable sibling draws rgb(132, 119, 85), the plain
+unselected particles colour. The fill of the selected locked emitter draws rgb(167, 167, 167), two
+faces at alpha 0.6. The two goldens `cpuparticles3d-instanced-unselected` and
+`cpuparticles3d-instanced-selected` show both cases. The selected line over that fill was not
+isolated.
+
+The Light helpers and the Camera3D helper are three.js helpers, not Godot gizmo materials, and #908
+rebuilds them through `GizmoLine`. The audio speaker silhouettes are previewer shapes. Nodes inside
+a GLB scene root are not wired to the owner stack. None of these takes the grey yet.
+
 ### What the toggle and the selection do not change
 
 PathFollow child placement is scene state. Path2D and Path3D always provide their curve to
@@ -78,8 +109,6 @@ The green channel differs by one level, where 0.7 × 255 = 178.5 rounds the othe
 
 Open divergences:
 
-- Godot colours the gizmos of a node inside an instanced sub-scene grey. The parser does not read
-  `[editable]`, so the previewer cannot tell which nodes it is.
 - Godot draws edit handles for the selected, editable node (`node_3d_editor_gizmos.cpp:405`). The
   previewer edits nothing and draws none.
 - 3D follow orientation of a PathFollow3D is an approximation: ADR-0018 aligned the model-front

@@ -684,3 +684,50 @@ second"
     });
   });
 });
+
+describe('TscnParserCore editable instances', () => {
+  const parser = new TscnParserCore();
+  const creator: NodeCreator<RawNode> = (heading, properties) => ({
+    rawProperties: properties,
+    name: heading.attributes.name || '',
+    type: heading.attributes.type || '',
+    parent: heading.attributes.parent,
+    children: [],
+  });
+
+  it('lists the path of each [editable] heading, in file order', () => {
+    const content = `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[editable path="First"]
+[editable path="First/Inner"]
+`;
+
+    expect(parser.parse(content, creator).scene.editableInstances).toEqual(['First', 'First/Inner']);
+  });
+
+  it('stores each path simplified, as the text loader does (resource_format_text.cpp:400)', () => {
+    const content = `[node name="Root" type="Node3D"]
+
+[editable path="./Wrapper/../First"]
+`;
+
+    expect(parser.parse(content, creator).scene.editableInstances).toEqual(['First']);
+  });
+
+  it('lists nothing for an [editable] heading without a path', () => {
+    const content = `[node name="Root" type="Node3D"]
+
+[editable]
+`;
+
+    expect(parser.parse(content, creator).scene.editableInstances).toBeUndefined();
+  });
+
+  it('leaves the field out of a scene with no [editable] heading', () => {
+    expect(parser.parse(`[node name="Root" type="Node3D"]\n`, creator).scene).not.toHaveProperty(
+      'editableInstances'
+    );
+  });
+});

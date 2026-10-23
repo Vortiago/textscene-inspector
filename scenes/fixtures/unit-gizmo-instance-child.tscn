@@ -1,0 +1,20 @@
+; The sub-scene of unit-gizmo-instance.tscn: a CPUParticles3D whose gizmo is the box and the three
+; axes from its centre. A small box sits at two opposite corners of the visibility_aabb to frame it.
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="BoxMesh" id="Corner_1"]
+size = Vector3(0.2, 0.2, 0.2)
+
+[node name="Body" type="Node3D"]
+
+[node name="Emitter" type="CPUParticles3D" parent="."]
+visibility_aabb = AABB(-1, -1, -1, 2, 2, 2)
+mesh = SubResource("Corner_1")
+
+[node name="NearCorner" type="MeshInstance3D" parent="Emitter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, -1, -1)
+mesh = SubResource("Corner_1")
+
+[node name="FarCorner" type="MeshInstance3D" parent="Emitter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1)
+mesh = SubResource("Corner_1")

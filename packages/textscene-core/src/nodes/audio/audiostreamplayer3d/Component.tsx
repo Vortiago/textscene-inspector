@@ -117,7 +117,7 @@ function RangeCircle({ radius }: RangeCircleProps) {
 
   return (
     <group ref={groupRef} userData={{ isAudioRangeSphere: true }}>
-      <GizmoLine positions={positions} color={GIZMO_COLOR} />
+      <GizmoLine positions={positions} color={GIZMO_COLOR} variant="selected" />
     </group>
   );
 }
@@ -177,7 +177,7 @@ function EmissionCone({ radius, angleDegrees }: EmissionConeProps) {
 
   return (
     <group userData={{ isAudioEmissionCone: true }}>
-      <GizmoLine positions={positions} color={GIZMO_COLOR} />
+      <GizmoLine positions={positions} color={GIZMO_COLOR} variant="selected" />
     </group>
   );
 }

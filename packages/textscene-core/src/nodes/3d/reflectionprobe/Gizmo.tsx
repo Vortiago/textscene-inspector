@@ -24,8 +24,8 @@ export function ReflectionProbeGizmo({ probe }: { probe: ReflectionProbeProperti
   const color = useGodotLinearColor(GIZMO_COLOR);
   return (
     <>
-      <GizmoLine positions={lines} color={color} />
-      <GizmoLine positions={internalLines} color={color} opacity={INTERNAL_LINES_ALPHA} />
+      <GizmoLine positions={lines} color={color} variant="selected" />
+      <GizmoLine positions={internalLines} color={color} opacity={INTERNAL_LINES_ALPHA} variant="selected" />
     </>
   );
 }

@@ -13,6 +13,11 @@ import { heading } from '../../../../parser/testing/parserKit';
 import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../../r3f/testing/gizmoContract';
 
 function armNode(props: Record<string, string> = {}): TscnNode {
   return {
@@ -24,9 +29,19 @@ function armNode(props: Record<string, string> = {}): TscnNode {
   } as TscnNode;
 }
 
-async function renderArm(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
+async function renderArm(
+  selectedPath: string | null,
+  props: Record<string, string> = {},
+  showGizmos = true,
+  instantiated = false
+) {
   return ReactThreeTestRenderer.create(
-    <GizmoScene nodePath="Arm" selectedPath={selectedPath} showGizmos={showGizmos}>
+    <GizmoScene
+      nodePath="Arm"
+      selectedPath={selectedPath}
+      showGizmos={showGizmos}
+      instantiated={instantiated}
+    >
       <SpringArm3D node={armNode(props)}>
         <group name="Child" />
       </SpringArm3D>
@@ -59,11 +74,6 @@ describe('<SpringArm3D> gizmo state', () => {
     expect(opacity).toBeCloseTo(DEFAULT_COLLISION_DEBUG_COLOR.a * 0.3, 10);
   });
 
-  it('draws no length line with the Gizmos toggle off, selected', async () => {
-    const renderer = await renderArm('Arm', {}, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
-  });
-
   it('keeps its children in the Node3D transform space, selected or not', async () => {
     for (const selected of [null, 'Arm']) {
       const renderer = await renderArm(selected);
@@ -72,6 +82,15 @@ describe('<SpringArm3D> gizmo state', () => {
     }
   });
 });
+
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'Arm',
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos, instantiated }) =>
+    renderArm(selectedPath, {}, showGizmos, instantiated),
+};
+describeGizmoToggle('<SpringArm3D>', GIZMO_CASE);
+describeInstantiatedGizmo('<SpringArm3D>', GIZMO_CASE);
 
 describe('<SpringArm3D> length line', () => {
   it.each([

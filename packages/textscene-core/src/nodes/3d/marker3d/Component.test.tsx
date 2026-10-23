@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../parser/types';
 import { Marker3D } from './Component';
 import { parseMarker3D } from './parser';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
+import { describeGizmoToggle, type GizmoNodeCase } from '../../../r3f/testing/gizmoContract';
 
 function markerNode(name = 'MyMarker', props: Record<string, string> = {}): TscnNode {
   return {
@@ -30,6 +31,14 @@ async function renderMarker(selectedPath: string | null, showGizmos = true) {
   );
 }
 
+// Not an instantiated case: Godot's Marker3D material has no variants (`marker_3d_gizmo_plugin.cpp:80-92`).
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'MyMarker',
+  drawnFor: 'every-node',
+  mount: ({ selectedPath, showGizmos }) => renderMarker(selectedPath, showGizmos),
+};
+describeGizmoToggle('<Marker3D>', GIZMO_CASE);
+
 describe('<Marker3D>', () => {
   it.each([
     ['the node is selected', 'MyMarker'],
@@ -37,14 +46,6 @@ describe('<Marker3D>', () => {
     ['another node is selected', 'Other'],
   ])('draws the cross in full colour when %s', async (_label, selectedPath) => {
     expect(lineOpacities(await renderMarker(selectedPath))).toEqual([1]);
-  });
-
-  it.each([
-    ['selected', 'MyMarker'],
-    ['unselected', null],
-  ])('draws no cross with the Gizmos toggle off, %s', async (_label, selectedPath) => {
-    const renderer = await renderMarker(selectedPath, false);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('positions its children with the Gizmos toggle off', async () => {

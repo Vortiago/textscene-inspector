@@ -10,6 +10,7 @@ import type { OrthographicCamera } from 'three';
 import type { TscnNode, TscnExternalResource, TscnInternalResource } from '../../../parser/types.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import { CanvasWorkspaceProvider } from '../../contexts/CanvasWorkspaceContext.js';
+import { EditedRootProvider } from '../../contexts/InstanceOwnersContext.js';
 import { SceneResourcesProvider } from '../../SceneResourcesContext.js';
 import { NodeDispatcher } from '../../NodeDispatcher.js';
 import { world2DCameraPose } from './world2DCamera.js';
@@ -34,6 +35,7 @@ export interface World2DCanvasProps {
   nodes: readonly TscnNode[];
   internalResources: readonly TscnInternalResource[];
   externalResources: readonly TscnExternalResource[];
+  editableInstances?: readonly string[];
   pan: Vector2;
   zoom: number;
 }
@@ -56,6 +58,7 @@ export function World2DContents({
   nodes,
   internalResources,
   externalResources,
+  editableInstances,
   pan,
   zoom,
 }: World2DCanvasProps) {
@@ -64,25 +67,27 @@ export function World2DContents({
     <TiledUploadDriver>
       <CanvasWorkspaceProvider workspace="2d">
         <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
-          <CameraRig pan={pan} zoom={zoom} />
-          <ProjectClearColor />
-          <CanvasMsaa />
-          {/* The light accumulator starts from the canvas tint, the same pure
+          <EditedRootProvider editableInstances={editableInstances}>
+            <CameraRig pan={pan} zoom={zoom} />
+            <ProjectClearColor />
+            <CanvasMsaa />
+            {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
-          <CanvasLighting2DProvider canvasModulate={canvasModulate}>
-            <NodeDispatcher nodes={nodes} />
-            {/* Inside the lighting provider, so a 2D light reaches a Control. */}
-            <PendingSuspense>
-              <ControlCanvasLayer nodes={nodes} />
-            </PendingSuspense>
-            {/* A `ViewportTexture` consumer may sample its target whoever draws
+            <CanvasLighting2DProvider canvasModulate={canvasModulate}>
+              <NodeDispatcher nodes={nodes} />
+              {/* Inside the lighting provider, so a 2D light reaches a Control. */}
+              <PendingSuspense>
+                <ControlCanvasLayer nodes={nodes} />
+              </PendingSuspense>
+              {/* A `ViewportTexture` consumer may sample its target whoever draws
                 the on-screen Controls. */}
-            <ControlRasterLayer
-              nodes={nodes}
-              internalResources={internalResources}
-              externalResources={externalResources}
-            />
-          </CanvasLighting2DProvider>
+              <ControlRasterLayer
+                nodes={nodes}
+                internalResources={internalResources}
+                externalResources={externalResources}
+              />
+            </CanvasLighting2DProvider>
+          </EditedRootProvider>
         </SceneResourcesProvider>
         <ViewportPassOrchestrator />
         <ScreenshotBridge />

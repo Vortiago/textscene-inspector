@@ -15,7 +15,6 @@ function emptySceneGraph(): SceneGraph {
   return buildSceneGraph({
     path: 'res://main.tscn',
     nodes: [],
-    externalScenes: [],
     internalResources: [],
     externalResources: [],
   });

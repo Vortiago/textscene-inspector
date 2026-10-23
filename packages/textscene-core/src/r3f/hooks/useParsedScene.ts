@@ -59,7 +59,8 @@ function toParseResult(rootScenePath: string, tscnScene: TscnScene): ParseResult
     rootScenePath,
     nodes,
     tscnScene.externalResources,
-    tscnScene.internalResources
+    tscnScene.internalResources,
+    tscnScene.editableInstances
   );
   return { sceneGraph: buildSceneGraph(parsedScene), error: null };
 }

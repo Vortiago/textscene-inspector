@@ -10,6 +10,11 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
+import {
+  describeGizmoToggle,
+  describeInstantiatedGizmo,
+  type GizmoNodeCase,
+} from '../../../r3f/testing/gizmoContract';
 import type { TscnNode } from '../../../parser/types';
 import type { AudioStreamPlayer3DProperties } from './types';
 
@@ -60,6 +65,24 @@ function makeNode(overrides: Partial<AudioStreamPlayer3DProperties> = {}): TscnN
   };
 }
 
+const GIZMO_CASE: GizmoNodeCase = {
+  nodePath: 'Audio',
+  drawnFor: 'selected-only',
+  mount: ({ selectedPath, showGizmos, instantiated }) =>
+    ReactThreeTestRenderer.create(
+      <GizmoScene
+        nodePath="Audio"
+        selectedPath={selectedPath}
+        showGizmos={showGizmos}
+        instantiated={instantiated}
+      >
+        <AudioStreamPlayer3D node={makeNode({ emission_angle_enabled: true })} />
+      </GizmoScene>
+    ),
+};
+describeGizmoToggle('<AudioStreamPlayer3D>', GIZMO_CASE);
+describeInstantiatedGizmo('<AudioStreamPlayer3D>', GIZMO_CASE);
+
 describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
   it('renders a gizmo group tagged userData.isAudioGizmo', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -93,12 +116,11 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     expect(sphere).toBeUndefined();
   });
 
-  it('renders no gizmo with the Gizmos toggle off, selected', async () => {
+  it('renders no speaker silhouette with the Gizmos toggle off, selected', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />, false)
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('renders the range circle scaled by the attenuation model when selected (WI-UX-14)', async () => {
