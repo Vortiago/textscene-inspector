@@ -148,7 +148,7 @@ _Avoid_: "callback API", "strict mode flag".
 
 **Seating** (`seatScene` in `parser/sceneTreeBuilder.ts`):
 The scene tree the `[node]` headings form once each sits under the node its `parent=` names, in declaration order as instantiate places them, every owner's `%Name` claims and releases in file order, and the one walk that resolves a root-relative node path over it.
-Both parsers seat through it, the linter and the **Language-feature engine** resolve `parent=` and every **Connection end** through its walk, and every `%Name` reader, the instance graft included, reads its claims.
+Both parsers seat through it, the linter and the **Language-feature engine** read the node each heading sits under (`seatedParents`) for `parent=` and resolve every **Connection end** through its walk, and every `%Name` reader, the instance graft included, reads its claims.
 _Avoid_: a second path table or `%Name` claim table over the headings.
 
 **Connection end** (`connectionEndResolver` in `parser/connectionEnd.ts`):
@@ -199,6 +199,11 @@ _Avoid_: putting a linter-only field on `TscnScene`.
 A node whose `parent=` path names nothing and which Godot moves under the scene root, renamed `<path>#<name>`. The tree builder does the same on a copy of the heading's node, which keeps the heading's name in `authoredName`.
 A node below it re-roots on its own, since the old path no longer exists. Godot does not re-root in a scene it refuses to instantiate, nor where a `parent_id_path=` lands the node.
 _Avoid_: "dropped node", which names a node left out of the tree.
+
+**Landed node** (`seatLanded` in `parser/sceneTreeBuilder.ts`):
+A node whose `parent=` path names nothing and whose `parent_id_path=` finds a heading of this file. Godot seats it under that heading and keeps its name (`packed_scene.cpp:161-163`).
+The **Seating** does the same, and still counts the node among the orphans, since it is not at the path it declares.
+_Avoid_: "re-rooted node" for a node that keeps its name.
 
 **Rule arm** (`linter/ruleArms.ts`):
 One diagnostic a **Lint rule** or a **Resource rule** can report, declared with its rule name, its **Severity** and the `EmitGrounding` that fixes that severity.
