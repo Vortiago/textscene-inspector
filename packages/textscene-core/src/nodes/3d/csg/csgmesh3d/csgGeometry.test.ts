@@ -111,6 +111,11 @@ const CTX = csgGeometryContext({
   files: FILES,
 });
 
+/** The vertex count of `solid`'s geometry, so a brush with no face reads 0. */
+function positionCount(solid: CsgSolid | null): number {
+  return solid!.geometry.getAttribute('position').count;
+}
+
 function build(mesh: string, overrides: Record<string, unknown> = {}, ctx = CTX): CsgSolid | null {
   return csgMesh3DGeometry({ mesh, flipFaces: false, ...overrides }, ctx);
 }
@@ -213,21 +218,28 @@ describe('csgMesh3DGeometry: mesh sources', () => {
   });
 
   // The brush builder skips every surface that is not PRIMITIVE_TRIANGLES (`csg_shape.cpp:1148-1150`).
-  it('builds nothing for a PointMesh, whose surface is points', () => {
-    expect(build('SubResource("Point")')).toBeNull();
+  it('builds an empty brush for a PointMesh, whose surface is points', () => {
+    expect(positionCount(build('SubResource("Point")'))).toBe(0);
     expect(
       meshSurfaces({ resource: INLINE_POINT, resources: CTX, loadedFile: CTX.loadedFile, file: null })
     ).toEqual([]);
   });
 
-  it('builds nothing for an ArrayMesh whose surface is points', () => {
-    expect(build('SubResource("Points")')).toBeNull();
+  it('builds an empty brush for an ArrayMesh whose surface is points', () => {
+    expect(positionCount(build('SubResource("Points")'))).toBe(0);
   });
 
-  it('builds nothing for a mesh no slice here reads, nor for no mesh', () => {
-    expect(build('ExtResource("3")')).toBeNull();
-    expect(build('SubResource("Missing")')).toBeNull();
-    expect(csgMesh3DGeometry({ flipFaces: false }, CTX)).toBeNull();
+  // A shape with no brush warns in Godot (`csg_shape.cpp:981`), so these differ from a mesh not built.
+  it('builds an empty brush for a reference that names no mesh, and for no mesh', () => {
+    expect(positionCount(build('ExtResource("3")'))).toBe(0);
+    expect(positionCount(build('SubResource("Missing")'))).toBe(0);
+    expect(positionCount(csgMesh3DGeometry({ flipFaces: false }, CTX))).toBe(0);
+  });
+
+  it('builds no brush for a mesh type no slice builds, whose faces Godot would draw', () => {
+    const ctx = csgGeometryContext({ internalResources: [{ id: 'Text', type: 'TextMesh', data: {} }] });
+
+    expect(build('SubResource("Text")', {}, ctx)).toBeNull();
   });
 });
 

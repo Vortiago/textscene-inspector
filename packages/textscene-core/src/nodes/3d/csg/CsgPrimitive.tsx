@@ -82,17 +82,19 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const builderProps = properties as unknown as Record<string, unknown>;
   const ownKey = registration?.geometryKey?.(builderProps, ctx) ?? node.type;
   useUndrawnMeshReport(registration?.meshType?.(builderProps, ctx) ?? null);
-  const { ownSolid, isOpen } = useMemo(
+  const { ownSolid, hasEmptyBrush } = useMemo(
     () => {
       const built = skipped ? null : (registration?.geometry?.(builderProps, ctx) ?? null);
-      // An open brush is empty: it draws nothing and bounds to a point, as no solid does. Only
-      // that fact is kept, so its geometry is not held for the life of the node.
-      return { ownSolid: built?.isClosed ? built : null, isOpen: built !== null && !built.isClosed };
+      // An open brush, or one with no face, is empty (`csg_shape.cpp:981`): it draws nothing and
+      // bounds to a point. Only that fact is kept, not an open geometry. Null is no brush yet.
+      const isEmpty =
+        built !== null && (!built.isClosed || built.geometry.getAttribute('position').count === 0);
+      return { ownSolid: built && !isEmpty ? built : null, hasEmptyBrush: isEmpty };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `ownKey` and `materialPath` are the builder's inputs.
     [ownKey, properties.materialPath, skipped]
   );
-  const isEmptyShape = useReportEmptyShape(isOpen);
+  const isEmptyShape = useReportEmptyShape(hasEmptyBrush);
   const geometry = ownSolid ? <primitive object={ownSolid.geometry} attach="geometry" /> : null;
 
   // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a CSG

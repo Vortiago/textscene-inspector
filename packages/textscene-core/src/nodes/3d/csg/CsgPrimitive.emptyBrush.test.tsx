@@ -14,6 +14,7 @@ import { frameSceneBounds } from '../../../r3f/frameSceneBounds';
 import './csgbox3d/index.r3f';
 import './csgcombiner3d/index.r3f';
 import './csgmesh3d/index.r3f';
+import './csgsphere3d/index.r3f';
 import '../../base/node3d/index.r3f';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
 import { drawnMeshes } from '../testing/reactThreeTestInstance';
@@ -54,6 +55,28 @@ ${QUAD_MESH}
 [node name="OpenMesh" type="CSGMesh3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, ${offset})
 mesh = SubResource("Quad")
+`;
+
+const TEXT_MESH_SCENE = `[gd_scene format=3]
+
+[sub_resource type="TextMesh" id="Text"]
+
+[node name="Root" type="CSGCombiner3D"]
+
+[node name="Box" type="CSGBox3D" parent="."]
+
+[node name="Text" type="CSGMesh3D" parent="."]
+mesh = SubResource("Text")
+`;
+
+const DEGENERATE_SPHERE_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="CSGCombiner3D"]
+
+[node name="Box" type="CSGBox3D" parent="."]
+
+[node name="Sphere" type="CSGSphere3D" parent="."]
+radial_segments = 2
 `;
 
 const OPEN_ROOT_WITH_CHILD_SCENE = `[gd_scene format=3]
@@ -146,6 +169,24 @@ describe('a CSG node with an empty brush', () => {
     const seen = await emptyShapes(OPEN_CONTRIBUTOR_SCENE, ['Root/OpenMesh', 'Root/Box']);
 
     expect(seen).toEqual({ 'Root/OpenMesh': true, 'Root/Box': false });
+  });
+
+  it('warns on a mesh node with no mesh, whose brush is empty (csg_shape.cpp:981)', async () => {
+    const seen = await emptyShapes(CONTRIBUTOR_SCENE, ['Root/NoMesh']);
+
+    expect(seen['Root/NoMesh']).toBe(true);
+  });
+
+  it('warns on a sphere too coarse to build a face', async () => {
+    const seen = await emptyShapes(DEGENERATE_SPHERE_SCENE, ['Root/Sphere']);
+
+    expect(seen['Root/Sphere']).toBe(true);
+  });
+
+  it('does not warn on a mesh type the previewer does not build, which Godot draws', async () => {
+    const seen = await emptyShapes(TEXT_MESH_SCENE, ['Root/Text']);
+
+    expect(seen['Root/Text']).toBe(false);
   });
 
   it('warns on an open lone root', async () => {

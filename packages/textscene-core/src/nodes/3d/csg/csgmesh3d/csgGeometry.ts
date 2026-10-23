@@ -8,13 +8,14 @@ import type * as THREE from 'three';
 import { isEqualApprox } from '../../../../godot/math/math';
 import {
   csgSolid,
+  emptySolid,
   type CsgGeometryBuilder,
   type CsgGeometryContext,
   type CsgSolid,
 } from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
-import { meshContentKey } from '../../../../resources/meshes/meshSource';
+import { meshContentKey, meshKind } from '../../../../resources/meshes/meshSource';
 import { primitiveMeshFiles, referencesKey } from '../../../../resources/meshes/primitivemesh/surface';
 import { referencedFilePath, resolveReference } from '../../../../resources/resolveReference';
 import type { LoadedFile } from '../../../../resources/scopedResource';
@@ -25,7 +26,13 @@ import type { CSGMesh3DProperties } from './types';
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const p = properties as unknown as CSGMesh3DProperties;
   const mesh = resolveMesh(p.mesh, ctx);
-  return mesh ? buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces) : null;
+  if (mesh) {
+    return meshKind(mesh.resource.type) === null
+      ? null
+      : buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
+  }
+  // A file that has not loaded yet is not built. A reference that names no mesh has an empty brush.
+  return referencedFilePath(p.mesh, ctx) === null ? emptySolid() : null;
 };
 
 export function csgMesh3DGeometryKey(properties: Record<string, unknown>, ctx: CsgGeometryContext): string {
@@ -84,14 +91,14 @@ interface MeshFaces {
   materials: CsgMaterialAddress[];
 }
 
-/** Null for a mesh with no faces, which Godot builds as an empty brush (`csg_shape.cpp:1265-1267`). */
+/** The empty solid for a mesh with no faces, which Godot builds as an empty brush (`csg_shape.cpp:1265-1267`). */
 function buildMeshBrush(
   surfaces: readonly CsgMeshSurface[],
   nodeMaterial: CsgMaterialAddress,
   flipFaces: boolean
-): CsgSolid | null {
+): CsgSolid {
   const faces = meshFaces(surfaces, nodeMaterial);
-  if (faces.smooth.length === 0) return null;
+  if (faces.smooth.length === 0) return emptySolid();
   const brush = shadeCsgFaces({ ...faces, invert: flipFaces });
   if (faces.materials.length > 1) addMaterialGroups(brush.geometry, faces.faceMaterials);
   return csgSolid(brush, faces.materials);
