@@ -124,7 +124,9 @@ describe('installFogComposite', () => {
 
     const warnings = warningsOf(installFogComposite);
 
-    expect(warnings).toContain("[Shading] three's fog_vertex has no vFogDepth = - mvPosition.z;");
+    expect(warnings).toContain(
+      "[Shading] three's fog_vertex or fog_fragment lacks a line the fog patch replaces"
+    );
     expect(THREE.ShaderChunk.tonemapping_fragment).toBe(threeChunks.tonemapping_fragment);
   });
 });

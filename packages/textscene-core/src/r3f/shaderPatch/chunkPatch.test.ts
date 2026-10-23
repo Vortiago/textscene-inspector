@@ -1,17 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import {
-  applyChunkEdits,
   applyEdits,
   editedChunk,
   editedProgram,
   editedShader,
   installChunkEdits,
-  installChunkPatch,
-  onChunk,
   rewrittenShader,
+  swappedChunk,
   type ChunkEdit,
-  type ChunkPatch,
 } from './chunkPatch';
 import { warningsOf } from '../testing/logWarnings';
 
@@ -25,39 +22,6 @@ afterEach(() => {
   THREE.ShaderChunk[CHUNK] = threeChunk;
   THREE.ShaderChunk[REQUIRED_CHUNK] = threeRequiredChunk;
   THREE.ShaderLib.basic.fragmentShader = threeBasicShader;
-});
-
-/** A patch of the test chunk that swaps `from` for `to`. */
-function swapPatch(from: string, to: string): ChunkPatch<typeof CHUNK> {
-  return {
-    names: [CHUNK],
-    isApplied: (chunks) => chunks[CHUNK].includes(to),
-    apply: (chunks) => applyChunkEdits(chunks, [{ chunk: CHUNK, three: from, godot: to }]),
-    missing: `${CHUNK} has no ${from}`,
-  };
-}
-
-describe('applyChunkEdits', () => {
-  it('replaces each edit’s text in its chunk, in order', () => {
-    const patched = applyChunkEdits({ [CHUNK]: 'a b' }, [
-      { chunk: CHUNK, three: 'a', godot: 'c' },
-      { chunk: CHUNK, three: 'c b', godot: 'd' },
-    ]);
-    expect(patched).toEqual({ [CHUNK]: 'd' });
-  });
-
-  it('keeps a `$` in the replacement literal (edge case)', () => {
-    const patched = applyChunkEdits({ [CHUNK]: 'a' }, [{ chunk: CHUNK, three: 'a', godot: "$&$'" }]);
-    expect(patched![CHUNK]).toBe("$&$'");
-  });
-
-  it('is null for a text missing from its chunk (error case)', () => {
-    expect(applyChunkEdits({ [CHUNK]: 'a' }, [{ chunk: CHUNK, three: 'b', godot: 'c' }])).toBeNull();
-  });
-
-  it('is null for a text that occurs twice (error case)', () => {
-    expect(applyChunkEdits({ [CHUNK]: 'a a' }, [{ chunk: CHUNK, three: 'a', godot: 'c' }])).toBeNull();
-  });
 });
 
 describe('applyEdits', () => {
@@ -81,6 +45,18 @@ describe('applyEdits', () => {
 
   it('is the text itself for no edits (edge case)', () => {
     expect(applyEdits('a', [])).toBe('a');
+  });
+
+  it('replaces a block from its start through the first end after it', () => {
+    expect(applyEdits('] a [ b ] c ]', [{ three: '[', until: ']', godot: 'd' }])).toBe('] a d c ]');
+  });
+
+  it('is null for a block whose end is missing after its start (error case)', () => {
+    expect(applyEdits('] a [ b', [{ three: '[', until: ']', godot: 'd' }])).toBeNull();
+  });
+
+  it('keeps a `$` in the replacement literal (edge case)', () => {
+    expect(applyEdits('a', [{ three: 'a', godot: "$&$'" }])).toBe("$&$'");
   });
 });
 
@@ -163,6 +139,28 @@ describe('rewrittenShader', () => {
   });
 });
 
+describe('swappedChunk', () => {
+  it('writes the text into three and is true', () => {
+    expect(swappedChunk(CHUNK, 'two', 'test chunk has no stub')).toBe(true);
+    expect(THREE.ShaderChunk[CHUNK]).toBe('two');
+  });
+
+  it('is false and warns nothing for the text the chunk holds (edge case)', () => {
+    THREE.ShaderChunk[CHUNK] = 'two';
+    expect(
+      warningsOf(() => expect(swappedChunk(CHUNK, 'two', 'test chunk has no stub')).toBe(false))
+    ).toEqual([]);
+  });
+
+  it('keeps the chunk, warns and is false for no text (error case)', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    expect(warningsOf(() => swappedChunk(CHUNK, null, 'test chunk has no stub'))).toEqual([
+      "[Shading] three's test chunk has no stub",
+    ]);
+    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
+  });
+});
+
 describe('editedChunk', () => {
   // No installed patch edits `roughnessmap_fragment`, so three's own text stands in every test.
   const ROUGHNESS_READ = 'roughnessFactor *= texelRoughness.g;';
@@ -185,96 +183,6 @@ describe('editedChunk', () => {
   });
 });
 
-describe('onChunk', () => {
-  it('applies a patch of one chunk’s text to the record', () => {
-    expect(onChunk(CHUNK, (chunk) => `${chunk}!`)({ [CHUNK]: 'a' })).toEqual({ [CHUNK]: 'a!' });
-  });
-
-  it('is null when the patch is null (error case)', () => {
-    expect(onChunk(CHUNK, () => null)({ [CHUNK]: 'a' })).toBeNull();
-  });
-});
-
-describe('installChunkPatch', () => {
-  it('writes the patched chunk into three and is true', () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    expect(installChunkPatch(swapPatch('one', 'two'))).toBe(true);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('two');
-  });
-
-  it('is true and changes nothing for a chunk that already holds the patch (edge case)', () => {
-    THREE.ShaderChunk[CHUNK] = 'two one';
-    const warnings = warningsOf(() => {
-      expect(installChunkPatch(swapPatch('one', 'two'))).toBe(true);
-    });
-    expect(warnings).toEqual([]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('two one');
-  });
-
-  it('leaves the chunk alone, warns and is false when three lacks the text (error case)', () => {
-    THREE.ShaderChunk[CHUNK] = 'three';
-    let installed = true;
-    const warnings = warningsOf(() => {
-      installed = installChunkPatch(swapPatch('one', 'two'));
-    });
-    expect(installed).toBe(false);
-    expect(warnings).toEqual([`[Shading] three's ${CHUNK} has no one`]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('three');
-  });
-
-  it("writes a program's fragment shader edits with the chunks", () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    THREE.ShaderLib.basic.fragmentShader = 'basic';
-    installChunkPatch({
-      ...swapPatch('one', 'two'),
-      fragmentShaders: { basic: [{ three: 'basic', godot: 'godot' }] },
-    });
-    expect(THREE.ShaderLib.basic.fragmentShader).toBe('godot');
-  });
-
-  it("leaves the chunks alone and warns when a program lacks an edit's text (error case)", () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    const patch = {
-      ...swapPatch('one', 'two'),
-      fragmentShaders: { basic: [{ three: 'absent', godot: 'godot' }] },
-    };
-    expect(warningsOf(() => installChunkPatch(patch))).toEqual([`[Shading] three's ${CHUNK} has no one`]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
-  });
-
-  it('installs once each chunk holds the text of a patch it requires', () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    THREE.ShaderChunk[REQUIRED_CHUNK] = 'earlier patch';
-    expect(installChunkPatch({ ...swapPatch('one', 'two'), requires: { [REQUIRED_CHUNK]: 'earlier' } })).toBe(
-      true
-    );
-  });
-
-  it('installs once one chunk holds the text of every patch it requires there', () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    THREE.ShaderChunk[REQUIRED_CHUNK] = 'earlier patch, later patch';
-    const patch = { ...swapPatch('one', 'two'), requires: { [REQUIRED_CHUNK]: ['earlier', 'later'] } };
-    expect(installChunkPatch(patch)).toBe(true);
-  });
-
-  it('leaves the chunks alone when one chunk lacks one of the patches it requires (edge case)', () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    THREE.ShaderChunk[REQUIRED_CHUNK] = 'earlier patch';
-    const patch = { ...swapPatch('one', 'two'), requires: { [REQUIRED_CHUNK]: ['earlier', 'later'] } };
-    expect(warningsOf(() => installChunkPatch(patch))).toHaveLength(1);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
-  });
-
-  it('leaves the chunks alone and names the chunk that lacks a required patch (error case)', () => {
-    THREE.ShaderChunk[CHUNK] = 'one';
-    const patch = { ...swapPatch('one', 'two'), requires: { [REQUIRED_CHUNK]: 'earlier' } };
-    expect(warningsOf(() => installChunkPatch(patch))).toEqual([
-      `[Shading] the patch of ${CHUNK} reads a patch missing from ${REQUIRED_CHUNK}`,
-    ]);
-    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
-  });
-});
-
 describe('installChunkEdits', () => {
   const swapEdits = [
     { chunk: CHUNK, three: 'one', godot: 'two' },
@@ -288,11 +196,39 @@ describe('installChunkEdits', () => {
     expect([THREE.ShaderChunk[CHUNK], THREE.ShaderChunk[REQUIRED_CHUNK]]).toEqual(['two', 'four']);
   });
 
-  it('changes nothing when the chunk an edit writes the mark into holds it (edge case)', () => {
+  it('changes nothing and warns nothing when the chunk an edit writes the mark into holds it (edge case)', () => {
     THREE.ShaderChunk[CHUNK] = 'two one';
     THREE.ShaderChunk[REQUIRED_CHUNK] = 'three';
-    expect(installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap' })).toBe(true);
+    const warnings = warningsOf(() => {
+      expect(installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap' })).toBe(true);
+    });
+    expect(warnings).toEqual([]);
     expect([THREE.ShaderChunk[CHUNK], THREE.ShaderChunk[REQUIRED_CHUNK]]).toEqual(['two one', 'three']);
+  });
+
+  it('leaves every chunk alone and is false when one lacks its text (error case)', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[REQUIRED_CHUNK] = 'absent';
+    let installed = true;
+    warningsOf(() => {
+      installed = installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap' });
+    });
+    expect(installed).toBe(false);
+    expect([THREE.ShaderChunk[CHUNK], THREE.ShaderChunk[REQUIRED_CHUNK]]).toEqual(['one', 'absent']);
+  });
+
+  it('cuts a block from its start through its end', () => {
+    THREE.ShaderChunk[CHUNK] = 'keep #if one #endif rest';
+    const edits = [{ chunk: CHUNK, three: '#if', until: '#endif ', godot: 'two ' }] as const;
+    installChunkEdits({ edits, mark: 'two', patch: 'cut' });
+    expect(THREE.ShaderChunk[CHUNK]).toBe('keep two rest');
+  });
+
+  it('prepends each text after the edits', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[REQUIRED_CHUNK] = 'three';
+    installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', prepend: { [CHUNK]: 'head ' } });
+    expect(THREE.ShaderChunk[CHUNK]).toBe('head two');
   });
 
   it('appends each text after the edits', () => {
@@ -310,6 +246,44 @@ describe('installChunkEdits', () => {
     ];
     installChunkEdits({ edits, mark: 'two', patch: 'swap', append: { [REQUIRED_CHUNK]: ' tail' } });
     expect(THREE.ShaderChunk[REQUIRED_CHUNK]).toBe('head tail');
+  });
+
+  it("writes a program's fragment shader edits with the chunks", () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[REQUIRED_CHUNK] = 'three';
+    THREE.ShaderLib.basic.fragmentShader = 'basic';
+    const fragmentShaders = { basic: [{ three: 'basic', godot: 'godot' }] };
+    installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', fragmentShaders });
+    expect(THREE.ShaderLib.basic.fragmentShader).toBe('godot');
+  });
+
+  it("leaves the chunks alone when a program lacks an edit's text (error case)", () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[REQUIRED_CHUNK] = 'three';
+    const fragmentShaders = { basic: [{ three: 'absent', godot: 'godot' }] };
+    expect(
+      warningsOf(() => installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', fragmentShaders }))
+    ).toHaveLength(1);
+    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
+  });
+
+  it('installs once each chunk holds the text of every patch it requires there', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[REQUIRED_CHUNK] = 'three, earlier patch, later patch';
+    const requires = { [REQUIRED_CHUNK]: ['earlier', 'later'] };
+    expect(installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', requires })).toBe(true);
+  });
+
+  it('leaves the chunks alone and names the chunk that lacks a required patch (error case)', () => {
+    THREE.ShaderChunk[CHUNK] = 'one';
+    THREE.ShaderChunk[REQUIRED_CHUNK] = 'three, earlier patch';
+    const requires = { [REQUIRED_CHUNK]: ['earlier', 'later'] };
+    expect(
+      warningsOf(() => installChunkEdits({ edits: swapEdits, mark: 'two', patch: 'swap', requires }))
+    ).toEqual([
+      `[Shading] the patch of ${CHUNK}, ${REQUIRED_CHUNK} reads a patch missing from ${REQUIRED_CHUNK}`,
+    ]);
+    expect(THREE.ShaderChunk[CHUNK]).toBe('one');
   });
 
   it('names every edited chunk, each edited program and the patch when a text is missing (error case)', () => {
