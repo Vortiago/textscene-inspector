@@ -117,7 +117,7 @@ const firstIndexes = new WeakMap<readonly HasUniqueId[], ReadonlyMap<number, num
  * the first match, so id `0` names the first heading with no `unique_id=`. The index is built on
  * the first lookup, so a scene with many trails reads each id once.
  */
-export function firstIndexWithId(headings: readonly HasUniqueId[], id: number): number | undefined {
+function firstIndexWithId(headings: readonly HasUniqueId[], id: number): number | undefined {
   let indexes = firstIndexes.get(headings);
   if (!indexes) {
     const built = new Map<number, number>();

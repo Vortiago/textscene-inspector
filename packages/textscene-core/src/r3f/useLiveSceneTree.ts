@@ -139,15 +139,21 @@ function sharedTreeAt(
   return tree;
 }
 
+/** The scene graph in context, or null with none, and the loader. */
+function useSceneGraphAndLoader() {
+  // Optional so viewport-level readers (the preview lighting) work in the
+  // empty-canvas and test-renderer cases, where no scene is mounted at all.
+  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
+  const loader = useResourceLoader();
+  return { sceneGraph, loader };
+}
+
 /**
  * The live tree of the scene graph in context, or null with no root scene. Every reader asks for
  * the one the graph, loader and load tick give, so a node collapses once however many ask.
  */
 export function useSharedLiveTree(): SharedLiveTree | null {
-  // Optional so viewport-level readers (the preview lighting) work in the
-  // empty-canvas and test-renderer cases, where no scene is mounted at all.
-  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
-  const loader = useResourceLoader();
+  const { sceneGraph, loader } = useSceneGraphAndLoader();
   const version = useLiveTreeVersion(loader);
   return useMemo(
     () => (sceneGraph ? sharedTreeAt(sceneGraph, loader, version) : null),
@@ -168,8 +174,7 @@ export function useLiveTreeSelection<T>(
   select: (tree: SharedLiveTree) => T | undefined,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
-  const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
-  const loader = useResourceLoader();
+  const { sceneGraph, loader } = useSceneGraphAndLoader();
   const ticks = loadTicksOf(loader);
   const getSnapshot = useMemo(() => {
     let known: { version: number; value: T | undefined } | undefined;
