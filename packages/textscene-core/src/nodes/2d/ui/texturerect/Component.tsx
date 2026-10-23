@@ -7,14 +7,13 @@
 
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
-import { applyCanvasItemSampler, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { textureRectDraw, textureRectUvWindow } from './nativeSolver';
+import { textureRectDraw } from './nativeSolver';
+import { rectTexture } from './rectTexture';
 import type { TextureRectProperties } from './types';
 import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 
@@ -43,27 +42,12 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
     return { textureSize, ...textureRectDraw({ x: rect.w, y: rect.h }, textureSize, props.stretchMode) };
   }, [rawTexture, rect.w, rect.h, props.stretchMode]);
 
-  // Clone: the resolved texture is a shared cache entry (the loader's or the procedural cache's),
-  // and every mutation below (filter, wrap, UV repeat and offset for a crop, tile or flip) is
-  // per-consumer state, as in `composeFrameTexture` (`r3f/spriteFrame.ts`).
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !draw) return null;
-    const cloned = rawTexture.clone();
-    // NoColorSpace: the 2D canvas filters undecoded sRGB bytes (`canvas2DTextureDecode.ts`), and
-    // `ControlQuad` decodes the filtered sample. Pinned, because this clone reaches the `map` JSX
-    // prop, whose `@react-three/fiber` sRGB auto-tagging would overwrite a plain assignment.
-    pinNoColorSpace(cloned);
-
-    applyCanvasItemSampler(cloned, sampler);
-
-    // STRETCH_TILE forces repeat wrapping for this draw whatever the node's
-    // texture_repeat: `draw_texture_rect(texture, rect, tile=true)` is a per-call override.
-    if (draw.tile) cloned.wrapS = cloned.wrapT = THREE.RepeatWrapping;
-    const { repeat, offset } = textureRectUvWindow(draw, props.flipH === true, props.flipV === true);
-    cloned.repeat.set(repeat.x, repeat.y);
-    cloned.offset.set(offset.x, offset.y);
-    cloned.needsUpdate = true;
-    return cloned;
+    return rectTexture(rawTexture, draw, sampler, {
+      flipH: props.flipH === true,
+      flipV: props.flipV === true,
+    });
   }, [rawTexture, draw, sampler, props.flipH, props.flipV]);
 
   const drawnTexture = useUploadedClone(preparedTexture);

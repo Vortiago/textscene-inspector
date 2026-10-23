@@ -12,13 +12,15 @@ const SRC = path.resolve(import.meta.dirname, '../..');
 
 /** Pure helpers that make a clone for a caller to own; the guard checks their callers. */
 const CLONE_HELPERS = new Set([
+  'nodes/2d/ui/texturerect/rectTexture.ts',
   'r3f/spriteFrame.ts',
   'r3f/undecodedTexture.ts',
   'resources/textures/applyTextureState.ts',
 ]);
 
 /** A texture clone: a `.clone()` on a texture-named value, or a call to a clone helper. */
-const DRAWN_CLONE = /\b(?:\w*[Tt]exture|decoded)\.clone\(\)|\b(?:spriteSamplerClone|undecodedClone)\(/;
+const DRAWN_CLONE =
+  /\b(?:\w*[Tt]exture|decoded)\.clone\(\)|\b(?:spriteSamplerClone|undecodedClone|rectTexture)\(/;
 const ROUTED = /\buseUploadedClone\(|\buseTiledUpload\(/;
 
 function sourceFiles(dir: string): string[] {

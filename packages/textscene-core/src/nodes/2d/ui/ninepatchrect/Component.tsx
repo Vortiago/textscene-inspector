@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { pinNoColorSpace, useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
+import { useCanvasSrgbDefines } from '../../../../r3f/canvas2DTextureDecode';
+import { undecodedClone } from '../../../../r3f/undecodedTexture';
 import { applyCanvasItemFilter, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { canvasItemFacing } from '../../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
@@ -92,16 +93,14 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
   useDisposeOnRelease(geometry);
 
   // Clone: the resolved texture is a shared cache entry, and this sets colour space and filter per
-  // consumer, as `texturerect/Component.tsx` does.
+  // consumer, as `texturerect/rectTexture.ts` does.
   const preparedTexture = useMemo(() => {
     if (!rawTexture || !geometry) return null;
-    const cloned = rawTexture.clone();
-    pinNoColorSpace(cloned);
+    const cloned = undecodedClone(rawTexture);
     applyCanvasItemFilter(cloned, sampler.filter);
     // Every UV stays inside the texture or region: TILE and TILE_FIT emit repeated quads, not a wrapping
     // sampler, so a clamp is right whatever the item's `texture_repeat`.
     cloned.wrapS = cloned.wrapT = THREE.ClampToEdgeWrapping;
-    cloned.needsUpdate = true;
     return cloned;
   }, [rawTexture, geometry, sampler.filter]);
   const drawnTexture = useUploadedClone(preparedTexture);
