@@ -60,6 +60,7 @@ import {
   type CachedSceneSource,
   type SceneScope,
 } from '../../liveSceneTree';
+import { recordingReads } from '../../cacheSources';
 import { liveInstancePath, scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
@@ -347,26 +348,15 @@ function buildForest(
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
   const readKeys = new Set<string>();
-  const reading =
-    <T>(read: (path: string) => T) =>
-    (path: string): T => {
-      readKeys.add(path);
-      return read(path);
-    };
+  const recordRead = (path: string) => readKeys.add(path);
 
   const sceneCache: CachedSceneSource = loader
-    ? { getCached: reading((p) => loader.scenes.getCached(p)) }
+    ? recordingReads(loader.scenes, recordRead)
     : EMPTY_SCENE_CACHE;
-  const textureCache = loader
-    ? { getCached: reading((p) => loader.textures.getCached(p)) }
-    : NO_TEXTURE_CACHE;
-  const resourceCache = loader
-    ? { getCached: reading((p) => loader.resources.getCached(p)) }
-    : NO_RESOURCE_CACHE;
-  const themeCache = loader ? { getCached: reading((p) => loader.themes.getCached(p)) } : NO_THEME_CACHE;
-  const fontCache: FontCacheReader = loader
-    ? { getCached: reading((p) => loader.fonts.getCached(p)) }
-    : NO_FONT_CACHE;
+  const textureCache = loader ? recordingReads(loader.textures, recordRead) : NO_TEXTURE_CACHE;
+  const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NO_RESOURCE_CACHE;
+  const themeCache = loader ? recordingReads(loader.themes, recordRead) : NO_THEME_CACHE;
+  const fontCache: FontCacheReader = loader ? recordingReads(loader.fonts, recordRead) : NO_FONT_CACHE;
 
   /**
    * A Control's own `theme` (`Control::get_theme()`, `scene/gui/control.h`). An

@@ -9,13 +9,8 @@ import { useMemo } from 'react';
 import type { SceneScope, TscnNode } from '../../../parser/types.js';
 import { glbPathOf, loneGlbRootPath } from '../../../resources/glbSceneRoot.js';
 import { liveInstancePath, scopeOf } from '../../../resources/liveNode.js';
-import {
-  liveChildGroups,
-  mergedNodeOf,
-  singlePathCache,
-  type CachedSceneSource,
-  type LiveChildGroup,
-} from '../../liveSceneTree.js';
+import { liveChildGroups, mergedNodeOf, singlePathCache, type LiveChildGroup } from '../../liveSceneTree.js';
+import { firstCached } from '../../cacheSources.js';
 import { useGlbCache } from './useGlbCache.js';
 import { useSubSceneChildren } from './useSubSceneChildren.js';
 
@@ -43,12 +38,10 @@ export function useLiveChildGroups(node: TscnNode, scope: SceneScope): readonly 
 
   return useMemo(() => {
     if (!glbCache) return withoutGlb;
-    const sceneCache: CachedSceneSource = {
-      getCached: (path) => {
-        if (path === scenePath) return subScene ?? undefined;
-        return path === mergedScenePath ? (instancedByMerged ?? undefined) : undefined;
-      },
-    };
+    const sceneCache = firstCached(
+      singlePathCache(scenePath, subScene),
+      singlePathCache(mergedScenePath, instancedByMerged)
+    );
     return liveChildGroups(node, scope, sceneCache, glbCache);
   }, [glbCache, withoutGlb, node, scope, scenePath, subScene, mergedScenePath, instancedByMerged]);
 }
