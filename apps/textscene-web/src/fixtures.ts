@@ -388,6 +388,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Cpuparticles2d Crossed Range",
+    "file": "unit-cpuparticles2d-crossed-range.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Cpuparticles2d Curves",
     "file": "unit-cpuparticles2d-curves.tscn",
     "category": "Other"
@@ -633,8 +638,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Glb Property Override",
+    "file": "unit-glb-property-override.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Glb Surface Material Override",
     "file": "unit-glb-surface-material-override.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Glb Typed Child Visibility Parent",
+    "file": "unit-glb-typed-child-visibility-parent.tscn",
     "category": "Other"
   },
   {
@@ -3621,6 +3636,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Material Rim",
     "file": "unit-material-rim.tscn",
+    "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Roughness Limiter Derivative",
+    "file": "unit-material-roughness-limiter-derivative.tscn",
     "category": "Unit - Materials"
   },
   {

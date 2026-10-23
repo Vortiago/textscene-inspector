@@ -108,6 +108,9 @@ export const CANVAS_2D_SCENES = [
   { name: 'cpuparticles2d', file: 'unit-cpuparticles2d.tscn', mode: '2d' },
   { name: 'cpuparticles2d-emission-shapes', file: 'unit-cpuparticles2d-emission-shapes.tscn', mode: '2d' },
   { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn', mode: '2d' },
+  // A crossed `_min`/`_max` pair and a lone `_min` load as Godot's paired setters leave them:
+  // 100 and 100 for the velocity, 6 and 6 for the scale.
+  { name: 'cpuparticles2d-crossed-range', file: 'unit-cpuparticles2d-crossed-range.tscn', mode: '2d' },
   { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn', mode: '2d' },
   // A scaled emitter whose particles must not scale with it: Godot's default
   // `local_coords = false` emits into world space.

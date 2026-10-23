@@ -1,5 +1,6 @@
 /**
- * A node that declares a `type=` under a path inside an instanced GLB is a new node of that GLB
+ * The node that instances a GLB is the GLB root, so each GLB object and each typed node attached
+ * into the GLB has one path: the instancing node's path and the object's own. A node that declares a `type=` under a path inside an instanced GLB is a new node of that GLB
  * object. Godot adds it to the node its parent path resolves to (`packed_scene.cpp:157-165`,
  * `:541`), so the typed node takes that object's transform and visibility.
  */
@@ -15,7 +16,8 @@ import { SceneStack } from '../../testing/SceneStack';
 import { useSelection, type SelectionContextValue } from '../../contexts/SelectionContext';
 import { visibleInTree } from '../../visibleInTree';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
+import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
+import { settleLoads } from '../../testing/settleLoads';
 import * as logger from '../../../logger';
 
 import '../../nodes/index';
@@ -41,22 +43,6 @@ function rigGlb(): THREE.Object3D {
   skeleton.add(torso);
   root.add(skeleton);
   return root;
-}
-
-function synthesisedGlbScene(): TscnScene {
-  return {
-    nodes: [
-      {
-        rawProperties: {},
-        name: 'rig',
-        type: GLB_SCENE_ROOT_TYPE,
-        children: [],
-        properties: { glbPath: GLB_PATH } as Record<string, unknown>,
-      },
-    ],
-    externalResources: [],
-    internalResources: [],
-  };
 }
 
 /** A typed MeshInstance3D whose parent path descends `subPath` into the GLB. */
@@ -113,8 +99,7 @@ interface SceneSetup {
 
 async function renderScene({ roots, externalResources, subScenes = new Map() }: SceneSetup) {
   const fake = createFakeResourceLoader();
-  fake.scenes.seed(GLB_PATH, synthesisedGlbScene());
-  fake.glbMeshes.seed(GLB_PATH, rigGlb());
+  seedGlbInstance(fake, GLB_PATH, rigGlb());
   for (const [path, scene] of subScenes) fake.scenes.seed(path, scene);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={{ internalResources: [BOX_MESH], externalResources }}>
@@ -122,9 +107,7 @@ async function renderScene({ roots, externalResources, subScenes = new Map() }: 
       <NodeDispatcher nodes={roots} />
     </SceneStack>
   );
-  await ReactThreeTestRenderer.act(async () => {
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
-  });
+  await settleLoads();
   renderer.scene.instance.updateMatrixWorld(true);
   return renderer;
 }
@@ -205,15 +188,50 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
     const mesh = onlyMesh(renderer);
     expect(hasAncestor(mesh, glbObject(renderer, 'Torso'))).toBe(true);
     expect(mesh.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(TORSO_SCALE, 5);
-    expect(hasAncestor(mesh, selection.nodeObjectMap.get('Lamp/Mesh/rig/Skeleton/Torso/Marker')!)).toBe(true);
+    expect(hasAncestor(mesh, selection.nodeObjectMap.get('Lamp/Mesh/Skeleton/Torso/Marker')!)).toBe(true);
+  });
+
+  it('registers the GLB objects at the merged node when a sub-scene’s root instances the GLB', async () => {
+    const LAMP_PATH = 'res://lamp.tscn';
+    const lamp: TscnScene = {
+      nodes: [parsedNode({ name: 'LampRoot', type: 'Node', instance: 'ExtResource("rig")' })],
+      externalResources: [{ id: 'rig', path: GLB_PATH, type: 'PackedScene' }],
+      internalResources: [],
+    };
+    await renderScene({
+      roots: [parsedNode({ name: 'Lamp', type: 'Node', instance: 'ExtResource("lamp")' })],
+      externalResources: [{ id: 'lamp', path: LAMP_PATH, type: 'PackedScene' }],
+      subScenes: new Map([[LAMP_PATH, lamp]]),
+    });
+
+    expect([...selection.nodeObjectMap.keys()].filter((path) => path.endsWith('Torso'))).toEqual([
+      'Lamp/Skeleton/Torso',
+    ]);
   });
 
   it('registers exactly one object for the node’s path', async () => {
     const renderer = await render([typedMesh('Marker', 'Skeleton/Torso')]);
 
-    expect(
-      hasAncestor(onlyMesh(renderer), selection.nodeObjectMap.get('Rig/rig/Skeleton/Torso/Marker')!)
-    ).toBe(true);
+    expect(hasAncestor(onlyMesh(renderer), selection.nodeObjectMap.get('Rig/Skeleton/Torso/Marker')!)).toBe(
+      true
+    );
+  });
+
+  it('hides the GLB object its eye toggle names, at the path the tree shows it', async () => {
+    const renderer = await render([]);
+
+    expect(glbObject(renderer, 'Torso').visible).toBe(true);
+    await ReactThreeTestRenderer.act(async () => selection.toggleHidden('Rig/Skeleton/Torso'));
+
+    expect(glbObject(renderer, 'Torso').visible).toBe(false);
+    expect(glbObject(renderer, 'Skeleton').visible).toBe(true);
+  });
+
+  it('registers each GLB object once, at the instancing node’s path and its own', async () => {
+    await render([]);
+
+    expect(selection.nodeObjectMap.get('Rig/Skeleton/Torso')).toBeInstanceOf(THREE.Object3D);
+    expect(selection.nodeObjectMap.has('Rig/rig')).toBe(false);
   });
 
   it('registers two nodes of one name under different GLB nodes at their own paths', async () => {
@@ -223,8 +241,8 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
     ]);
 
     const [torsoMarker, armMarker] = [
-      selection.nodeObjectMap.get('Rig/rig/Skeleton/Torso/Marker'),
-      selection.nodeObjectMap.get('Rig/rig/Skeleton/Torso/Arm/Marker'),
+      selection.nodeObjectMap.get('Rig/Skeleton/Torso/Marker'),
+      selection.nodeObjectMap.get('Rig/Skeleton/Torso/Arm/Marker'),
     ];
     expect(meshesOf(renderer)).toHaveLength(2);
     expect(torsoMarker).not.toBe(armMarker);
@@ -256,6 +274,30 @@ describe('GLBSceneRoot — a typed node addressed into the GLB', () => {
     expect(torso.position.y).toBeCloseTo(5, 5);
     expect(torso.position.z).toBeCloseTo(0, 5);
     expect(hasAncestor(onlyMesh(renderer), torso)).toBe(true);
+  });
+
+  it('draws no node for a type-less override of a top-level GLB object', async () => {
+    const renderer = await render([override('Skeleton', '', { transform: translated(0, 5, 0) })]);
+
+    expect(selection.nodeObjectMap.get('Rig/Skeleton')).toBe(glbObject(renderer, 'Skeleton'));
+    expect(glbObject(renderer, 'Skeleton').position.y).toBeCloseTo(5, 5);
+  });
+
+  it('applies an override written below another override, and mounts a typed node below it', async () => {
+    const nested = {
+      ...override('Skeleton', '', {}),
+      children: [
+        {
+          ...override('Torso', '', { transform: translated(0, 5, 0) }),
+          children: [{ ...typedMesh('Marker', ''), instanceSubPath: undefined }],
+        },
+      ],
+    };
+    const renderer = await render([nested]);
+
+    expect(glbObject(renderer, 'Torso').position.y).toBeCloseTo(5, 5);
+    expect(hasAncestor(onlyMesh(renderer), glbObject(renderer, 'Torso'))).toBe(true);
+    expect(selection.nodeObjectMap.get('Rig/Skeleton/Torso')).toBe(glbObject(renderer, 'Torso'));
   });
 
   it('is hidden with a hidden GLB ancestor', async () => {

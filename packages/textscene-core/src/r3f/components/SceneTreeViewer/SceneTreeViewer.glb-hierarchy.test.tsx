@@ -12,9 +12,10 @@ import { SelectionProvider } from '../../contexts/SelectionContext';
 import { MissingResourcesProvider } from '../../contexts/MissingResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { seedGlbInstance } from '../../../resources/testing/seedGlbInstance';
 import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 import type { ResourceLoader } from '../../../resources/ResourceLoader';
-import type { TscnScene } from '../../../parser/types';
+import '../../../nodes/node/index';
 
 function named<T extends THREE.Object3D>(o: T, name: string): T {
   o.name = name;
@@ -62,21 +63,6 @@ function glbGraph() {
 
 const RIG_PATH = 'res://rig.glb';
 
-/** The GLB scene root a `.glb` instance loads as, which the instancing node's sub-scene holds. */
-const RIG_SCENE: TscnScene = {
-  nodes: [
-    {
-      rawProperties: {},
-      name: 'rig',
-      type: 'GLBSceneRoot',
-      children: [],
-      properties: { glbPath: RIG_PATH } as Record<string, unknown>,
-    },
-  ],
-  externalResources: [],
-  internalResources: [],
-};
-
 function expandRow(name: string) {
   const row = screen.getByText(name).closest('[data-node-path]') as HTMLElement;
   act(() => fireEvent.click(within(row).getAllByRole('button', { name: /expand/i })[0]!));
@@ -97,8 +83,7 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
 
   it('lists a typed node the instancing scene adds inside the GLB under the GLB row it addresses', () => {
     const fake = createFakeResourceLoader();
-    fake.scenes.seed(RIG_PATH, RIG_SCENE);
-    fake.glbMeshes.seed(RIG_PATH, fakeGlb());
+    seedGlbInstance(fake, RIG_PATH, fakeGlb());
     const marker = {
       rawProperties: {},
       name: 'Marker',
@@ -123,9 +108,48 @@ describe('<SceneTreeViewer> WI-C — GLB internal hierarchy', () => {
     });
 
     const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
-    for (const name of ['Rig', 'rig', 'Armature']) expandRow(name);
+    for (const name of ['Rig', 'Armature']) expandRow(name);
 
-    expect(container.querySelector('[data-node-path="Rig/rig/Armature/Marker"]')).not.toBeNull();
+    expect(container.querySelector('[data-node-path="Rig/Armature/Marker"]')).not.toBeNull();
+    expect(container.querySelector('[data-node-path="Rig/rig"]')).toBeNull();
     expect(container.querySelector('[data-node-path="Rig/Marker"]')).toBeNull();
+  });
+
+  it('lists the GLB a sub-scene’s root instances below the node that instances the sub-scene', () => {
+    const fake = createFakeResourceLoader();
+    seedGlbInstance(fake, RIG_PATH, fakeGlb());
+    fake.scenes.seed('res://wrapper.tscn', {
+      nodes: [
+        {
+          rawProperties: {},
+          name: 'WrapperRoot',
+          type: 'Node',
+          instance: 'ExtResource("rig")',
+          children: [],
+          properties: {} as Record<string, unknown>,
+        },
+      ],
+      externalResources: [{ id: 'rig', path: RIG_PATH, type: 'PackedScene' }],
+      internalResources: [],
+    });
+    const graph = createSceneGraphFromTscnScene({
+      nodes: [
+        {
+          rawProperties: {},
+          name: 'Body',
+          type: 'Node',
+          instance: 'ExtResource("wrapper")',
+          children: [],
+          properties: {} as Record<string, unknown>,
+        },
+      ],
+      externalResources: [{ id: 'wrapper', path: 'res://wrapper.tscn', type: 'PackedScene' }],
+      internalResources: [],
+    });
+
+    const { container } = render(<SceneTreeViewer />, { wrapper: wrap(fake.loader, graph) });
+    expandRow('Body');
+
+    expect(container.querySelector('[data-node-path="Body/Armature"]')).not.toBeNull();
   });
 });

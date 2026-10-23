@@ -114,6 +114,12 @@ export interface RawNode {
    */
   overridesExistingNode?: boolean;
   /**
+   * The heading's `index=`: where Godot moves the node among its parent's children once it adds
+   * it (`packed_scene.cpp:543-544`). Godot writes it only for a node whose parent comes from an
+   * instanced scene (`packed_scene.cpp:820-830`). Unset when the heading has none.
+   */
+  index?: number;
+  /**
    * The heading's `owner=` NodePath, root-relative. The loader sets the owner from it
    * (resource_format_text.cpp:257-262), which decides the table a `%Name` registers on. Godot's own
    * writer never emits it (packed_scene.cpp:1036-1044). A seated node holds it walked from the root

@@ -4,10 +4,10 @@
  * the enum (`particle_process_material.cpp:1630`, `cpu_particles_3d.cpp:424`).
  */
 
-import { enumOr, floatOr, vec3Or } from '../../../../parser/valueParsers';
-import { storedReal, storedVector3 } from '../../../../godot/math/real';
-import type { Vector3 } from '../../../../godot/math/vector';
-import { EmissionShape, PARTICLE_EMISSION_DEFAULTS as DEFAULTS } from '../../../../godot/scene/particles3d';
+import { enumOr, floatOr, vec3Or } from '../../../parser/valueParsers';
+import { storedReal, storedVector3 } from '../../../godot/math/real';
+import type { Vector3 } from '../../../godot/math/vector';
+import { EmissionShape, PARTICLE_EMISSION_DEFAULTS as DEFAULTS } from '../../../godot/scene/particles3d';
 import type { ParticleEmission } from './types';
 
 const SHAPES = Object.values(EmissionShape);

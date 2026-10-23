@@ -8,6 +8,7 @@
 import './materials/standardmaterial3d/index.js';
 import './materials/canvasitemmaterial/index.js';
 import './materials/fogmaterial/index.js';
+import './materials/particleprocessmaterial/index.js';
 
 // Styles
 import './styles/stylebox/index.js';

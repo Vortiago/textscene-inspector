@@ -546,8 +546,7 @@ function buildForest(
     const sortable: { raw: TscnNode; live: TscnNode }[] = [];
     for (const group of groups) {
       for (const child of group.children) {
-        const merged = liveChildGroups(child, group.scope, sceneCache).find((g) => g.origin === 'merged');
-        const live = merged?.mergedNode ?? child;
+        const live = mergedNodeOf(liveChildGroups(child, group.scope, sceneCache)) ?? child;
         if (isSortableChild(live)) sortable.push({ raw: child, live });
       }
     }

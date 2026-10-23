@@ -1,7 +1,7 @@
 /** The render state of a CPUParticles3D: its GeometryInstance3D state, what its box reads and its emission. */
 
 import type { Aabb } from '../../../../godot/math/aabb';
-import type { ParticleEmission } from '../emission/types';
+import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
 import type { GeometryInstance3DProperties } from '../../geometryinstance3d/types';
 
 export interface CPUParticles3DProperties extends GeometryInstance3DProperties {

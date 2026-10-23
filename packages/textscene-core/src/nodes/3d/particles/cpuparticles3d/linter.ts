@@ -8,6 +8,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { heldResource } from '../../../../linter/resourceChecker.js';
 import { armDiagnostic, armEmits, groundedArm, type RuleArms } from '../../../../linter/ruleArms.js';
+import { CPU_PARTICLES_PARAMS } from '../../../../godot/scene/cpuParticles.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../../linter/particleParamRanges.js';
 
 const arms = {
@@ -29,7 +30,7 @@ function checkCPUParticles3D(context: RuleContext): Diagnostic[] {
   const rawProps = node.rawProperties;
   return [
     ...checkMissingMesh(node, rawProps),
-    ...paramMinAboveMaxDiagnostics(node, rawProps, arms.paramMinAboveMax),
+    ...paramMinAboveMaxDiagnostics(node, rawProps, CPU_PARTICLES_PARAMS, arms.paramMinAboveMax),
   ];
 }
 

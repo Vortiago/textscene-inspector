@@ -27,7 +27,6 @@ import {
   usePaintRange,
 } from './contexts/PaintOrderContext.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { GenericNodeFallback } from './internal/generic-node-fallback/index';
 import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
@@ -44,8 +43,7 @@ import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
 import { useSelection } from './contexts/SelectionContext.js';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder.js';
-import { ErrorBoundary } from './components/ErrorBoundary.js';
-import { fallbackTransform } from './nodeFallbackTransform.js';
+import { GuardedNodeComponent } from './components/GuardedNodeComponent.js';
 import { canvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
 import { SpriteBase3DChildAccum } from './spriteBase3DColorAccum.js';
 import { CanvasLayerScope } from './canvasLayerScope.js';
@@ -58,6 +56,12 @@ import {
   WorldRoot,
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
+import { liftedWithoutOverrides } from './internal/glb-scene-root/glbNodeOverrides.js';
+import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
+import { orderAmongPlaced } from '../godot/scene/siblingIndex.js';
+import { useResource } from '../resources/useResource.js';
+import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
+import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
@@ -178,16 +182,43 @@ function OwnResourceScope({ scope, children }: { scope: SceneScope; children: Re
 }
 
 /**
+ * The node without the children `isDropped` names, and the same reference when it names none, so
+ * the `useMemo([node])`s in `PlainNode` stay valid. `some` comes before `filter` since most nodes
+ * drop nothing.
+ */
+function withoutChildrenWhere(node: TscnNode, isDropped: (child: TscnNode) => boolean): TscnNode {
+  if (!node.children.some(isDropped)) return node;
+  return { ...node, children: node.children.filter((child) => !isDropped(child)) };
+}
+
+/**
  * The node without its deep children, whose parent path descends into this
  * instance's content. Here they would take the instance's transform, so they render
  * nowhere. `GlbInstanceProvider` still gets them all, and `GlbAttachedChildren` mounts each
  * typed one under the GLB object its path names.
  */
 function withoutDeepChildren(node: TscnNode): TscnNode {
-  // `some` before `filter`: most nodes have no deep children, and the same
-  // reference keeps the `useMemo([node])`s in `PlainNode` valid.
-  if (!node.children.some((c) => c.instanceSubPath)) return node;
-  return { ...node, children: node.children.filter((c) => !c.instanceSubPath) };
+  return withoutChildrenWhere(node, (child) => !!child.instanceSubPath);
+}
+
+/**
+ * The node without its property overrides and what is written below them. Where the instanced
+ * scene is unknown or missing, nothing takes an override, so it draws nothing: Godot skips a node
+ * it cannot find (`packed_scene.cpp:310`).
+ */
+function withoutOverrideSubtrees(node: TscnNode): TscnNode {
+  return withoutChildrenWhere(node, (child) => child.overridesExistingNode === true);
+}
+
+/**
+ * The node without its property overrides, `[node name="Torso" parent="."]`, and with the nodes
+ * written below them lifted to the instance. Godot takes the existing node by name and adds none
+ * (`packed_scene.cpp:280-283`), so an override of an instanced GLB's object draws no node:
+ * `GlbInstanceProvider` hands it to the GLB, which applies it.
+ */
+function withoutPropertyOverrides(node: TscnNode): TscnNode {
+  if (!node.children.some((child) => child.overridesExistingNode)) return node;
+  return { ...node, children: liftedWithoutOverrides(node.children) };
 }
 
 interface PlainNodeProps extends DispatchedNodeProps {
@@ -203,8 +234,6 @@ interface PlainNodeProps extends DispatchedNodeProps {
  * fallback. A merged instance root renders here like an authored node.
  */
 function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }: PlainNodeProps): ReactNode {
-  // An unregistered type renders the fallback, so it stays visible.
-  const Component = nodeComponentRegistry.get(node.type) ?? GenericNodeFallback;
   const ownOrder = useTreeOrder();
   const inlineBase = inlineChildrenOrder ?? ownOrder;
   const inlineOrders = useMemo(
@@ -270,8 +299,6 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
 
   // The wrapper is registered both ways: the pointer root resolves a hit mesh to
   // its nearest registered ancestor, and the highlights find a path's Object3D.
-  // `<ErrorBoundary>` keeps a render error to this node: uncaught, it blanks the
-  // viewport, since `<Canvas>` is its own reconciler root. A new `node` resets it.
   return (
     <ParentSpaceScope node={node}>
       <NodePathProvider path={path}>
@@ -285,42 +312,35 @@ function PlainNode({ node, path, children: extraChildren, inlineChildrenOrder }:
               parent is no CanvasItem left them all in `<ParentSpaceScope>`. */}
             <TopLevelScope node={node}>
               <CanvasRootScope node={node} parentIsCanvasItem={parentIsCanvasItem}>
-                <ErrorBoundary
-                  resetKeys={[node]}
-                  fallback={() => (
-                    <MissingResourcePlaceholder shape="box" name={node.name} {...fallbackTransform(node)} />
-                  )}
-                >
-                  {/* The cast each descendant the component renders runs against this node
-                    (`node_3d.cpp:150`, `canvas_item.cpp:565-571`), answered with its type: for a
-                    merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
-                    every level it lifts past is a CanvasItem. */}
-                  <ParentTypeProvider value={node.type}>
-                    <Component node={node}>
-                      {children.length > 0 ? (
-                        /* At every level, so a non-sprite parent overwrites with white:
-                         `sprite_3d.cpp:75` accumulates from the immediate parent only. */
-                        <SpriteBase3DChildAccum node={node}>
-                          {startsCanvas ? (
-                            <CanvasLayerScope node={node}>
-                              {/* `<CanvasLayerScope>` is shared with the Control walk's
-                                `CanvasLayer` painter. A canvas root below draws on this
-                                layer's canvas (`canvas_item.cpp:246-252`), so a node that
-                                escapes inside it stays under the layer's own group. */}
-                              <WorldRoot>
-                                <CanvasRootRangesProvider value={canvasRoots}>
-                                  {children}
-                                </CanvasRootRangesProvider>
-                              </WorldRoot>
-                            </CanvasLayerScope>
-                          ) : (
-                            <>{children}</>
-                          )}
-                        </SpriteBase3DChildAccum>
-                      ) : null}
-                    </Component>
-                  </ParentTypeProvider>
-                </ErrorBoundary>
+                {/* The cast each descendant the component renders runs against this node
+                  (`node_3d.cpp:150`, `canvas_item.cpp:565-571`), answered with its type: for a
+                  merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
+                  every level it lifts past is a CanvasItem. */}
+                <ParentTypeProvider value={node.type}>
+                  <GuardedNodeComponent node={node}>
+                    {children.length > 0 ? (
+                      /* At every level, so a non-sprite parent overwrites with white:
+                       `sprite_3d.cpp:75` accumulates from the immediate parent only. */
+                      <SpriteBase3DChildAccum node={node}>
+                        {startsCanvas ? (
+                          <CanvasLayerScope node={node}>
+                            {/* `<CanvasLayerScope>` is shared with the Control walk's
+                              `CanvasLayer` painter. A canvas root below draws on this
+                              layer's canvas (`canvas_item.cpp:246-252`), so a node that
+                              escapes inside it stays under the layer's own group. */}
+                            <WorldRoot>
+                              <CanvasRootRangesProvider value={canvasRoots}>
+                                {children}
+                              </CanvasRootRangesProvider>
+                            </WorldRoot>
+                          </CanvasLayerScope>
+                        ) : (
+                          <>{children}</>
+                        )}
+                      </SpriteBase3DChildAccum>
+                    ) : null}
+                  </GuardedNodeComponent>
+                </ParentTypeProvider>
               </CanvasRootScope>
             </TopLevelScope>
           </group>
@@ -341,9 +361,9 @@ const INSTANCING_SCENE_NODES = 1;
 /**
  * Loads the PackedScene a node's `instance` ref names and composes it into the
  * tree. A single-root `.tscn` merges into the instance node at the same path
- * (ADR-0013). A `.glb` or multi-root scene injects its roots as children. Either
- * way the loaded scene's resources are scoped to the subtree. An instance of a
- * scene that already encloses it (cyclic instancing) renders as a failed load.
+ * (ADR-0013). A `.glb` is the instance node's own content, mounted at its path. A multi-root
+ * scene injects its roots as children. Either way the loaded scene's resources are scoped to the
+ * subtree. An instance of a scene that already encloses it (cyclic instancing) renders as a failed load.
  */
 function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const ambientScope = useSceneResources();
@@ -368,7 +388,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const result = useInstancedScene(instanceRef, externalResources, loadPath);
   const loadedScene = result.status === 'loaded' ? (result.value ?? null) : null;
 
-  // The scenes that enclose a multi-root or GLB instance's content. A stable identity,
+  // The scenes that enclose the content of a `.glb` or multi-root instance. A stable identity,
   // since it keys the provider below.
   const contentScenePaths = useMemo(
     () => (loadPath ? [...enclosingScenePaths, loadPath] : enclosingScenePaths),
@@ -376,7 +396,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   );
 
   // The same merge the tree, inspector and panels make. `effective !== node`
-  // means a single root merged in. A `.glb` or multi-root scene returns `node`.
+  // means a single root `.tscn` merged in. A `.glb` or multi-root scene returns `node`.
   // Memoized ahead of the early returns, so a hover elsewhere does not re-merge
   // this subtree every frame.
   const effective = useMemo(() => {
@@ -385,9 +405,20 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     return collapseLiveNode(node, scope, singlePathCache(loadPath, loadedScene));
   }, [node, ambientScope, enclosingScenePaths, loadPath, loadedScene]);
 
-  // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a
-  // stripped node is a new object.
-  const shallow = useMemo(() => withoutDeepChildren(node), [node]);
+  const glbPath = loneGlbRootPath(loadedScene?.nodes ?? []);
+  // Loaded here, not by the GLB root, for the count of its top-level objects: the host children
+  // move to their `index=` among them (`packed_scene.cpp:541-544`). The root takes this load.
+  const glb = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
+  // Memoized: `PlainNode` memoizes a subtree scan on node identity, and a stripped node is a new
+  // object. The objects are counted only for a child that states an `index=`.
+  const shallow = useMemo(() => {
+    const stripped = withoutDeepChildren(glbPath !== undefined ? withoutPropertyOverrides(node) : node);
+    if (!glb.value || !stripped.children.some((child) => child.index !== undefined)) return stripped;
+    const objectCount = glbSceneRootChildren(glb.value, []).length;
+    return { ...stripped, children: orderAmongPlaced(stripped.children, objectCount) };
+  }, [node, glbPath, glb.value]);
+  // What the node draws while its instanced scene is unknown or missing. Memoized like `shallow`.
+  const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);
   const order = useTreeOrder();
   const injectedOrders = useMemo(() => {
     const groups = childOrders(order, 2);
@@ -404,11 +435,12 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
     [paintRange, shallow, loadedScene?.nodes]
   );
 
-  // Unresolvable ref, cycle or failed load: keep the node visible with a
-  // magenta placeholder child, matching the missing-texture UX.
+  // Unresolvable ref, cycle or failed load: keep the node visible with a magenta placeholder
+  // child, matching the missing-texture UX. Godot's editor makes a `MissingNode` here
+  // (`packed_scene.cpp:267-269`), which the host's own children hang below.
   if (!loadPath || result.status === 'unavailable') {
     return (
-      <PlainNode node={shallow} path={path}>
+      <PlainNode node={held} path={path}>
         <MissingResourcePlaceholder shape="box" />
       </PlainNode>
     );
@@ -416,15 +448,15 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   // Still loading: render the instancing node's own subtree; the merged
   // result swaps in once the sub-scene arrives.
   if (result.status === 'pending' || !loadedScene) {
-    return <PlainNode node={shallow} path={path} />;
+    return <PlainNode node={held} path={path} />;
   }
 
   // The merged node carries the sub-scene's scope, which `DispatchedNode` provides.
   if (effective !== node) return <DispatchedNode node={effective} path={path} />;
 
-  // A `.glb` or multi-root scene: the loaded roots are injected as children.
+  // A `.glb` mounts at this node's path. A multi-root scene injects its roots as children.
   return (
-    <GlbInstanceProvider node={node} path={path}>
+    <GlbInstanceProvider node={node} path={path} glb={glbPath !== undefined ? glb : undefined}>
       <PlainNode node={shallow} path={path} inlineChildrenOrder={injectedOrders.authored}>
         <SceneResourcesProvider
           internalResources={loadedScene.internalResources}
@@ -434,7 +466,11 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
             {loadedScene.nodes.map((child, i) => (
               <PaintRangeProvider key={child.name} value={injectedRanges[i]!}>
                 <TreeOrderProvider order={injectedOrders.roots[i]!}>
-                  <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                  {glbPath !== undefined ? (
+                    <GlbRootNode node={child} />
+                  ) : (
+                    <DispatchedNode node={child} path={joinPath(path, child.name)} />
+                  )}
                 </TreeOrderProvider>
               </PaintRangeProvider>
             ))}

@@ -7,9 +7,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { installGodotClearcoat } from './godotClearcoat';
 import { installGodotLightFunction } from './godotLightFunction';
-import { installGodotLightSpecular } from './lightSpecular/lightSpecularChunk';
-import { installGodotLightSize } from './lightSize/lightSizeChunk';
 import { installGodotSkyLighting } from './godotSkyLighting';
+import { installLightFunctionPrerequisites } from './testing/shaderPatches';
 import { warningsOf } from './testing/logWarnings';
 import { functionBody } from './testing/glslSource';
 
@@ -23,8 +22,7 @@ afterEach(() => {
 
 /** The patches the clearcoat calls, then the clearcoat, as `installShaderPatches` orders them. */
 function installWithItsPrerequisites(): void {
-  installGodotLightSpecular();
-  installGodotLightSize();
+  installLightFunctionPrerequisites();
   installGodotLightFunction();
   installGodotSkyLighting();
   installGodotClearcoat();
@@ -142,8 +140,7 @@ describe('installGodotClearcoat', () => {
 
   it('leaves the chunks and the fragment shader alone when the shader lacks a replaced line, and warns (error case)', () => {
     THREE.ShaderLib.physical.fragmentShader = 'void main() {}';
-    installGodotLightSpecular();
-    installGodotLightSize();
+    installLightFunctionPrerequisites();
     installGodotLightFunction();
     installGodotSkyLighting();
     const lightFunction = THREE.ShaderChunk.lights_physical_pars_fragment;

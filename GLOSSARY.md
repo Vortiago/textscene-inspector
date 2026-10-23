@@ -49,6 +49,11 @@ _Avoid_: "mipmaps" for a chain the GPU generates.
 
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
+_Avoid_: the bare name for the **Screen-space roughness limiter**.
+
+**Screen-space roughness limiter** (`r3f/godotLightFunction.ts`):
+The shader step that raises a pixel's roughness by how far its normal differs from the normal of its pixel pair.
+Godot takes a fine derivative. WebGL 2 has none, so a pixel with a normal map reads the map one texel along its pair.
 
 **Mipmap bias** (`r3f/materials/godotMipmapBias.ts`):
 The offset a viewport adds to the mip level that each of its 3D material samplers picks: the project's `texture_mipmap_bias`, or a SubViewport's own.
@@ -511,8 +516,12 @@ _Avoid_: "include", "prefab".
 
 **Instance root merge** (`mergeInstanceRoot`, applied through `collapseLiveNode`):
 The collapse of a single-root `.tscn` instance, where the instance Node becomes the sub-scene's root and its own properties win per key.
-Every consumer calls `collapseLiveNode` so node paths agree, and a `.glb` or multi-root instance is not merged.
+Every consumer calls `collapseLiveNode` so node paths agree. A multi-root instance and a lone `.glb` instance are not merged: the node that instances a `.glb` is the **GLB root**.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
+
+**GLB root**:
+The node that instances a lone `.glb`, as in Godot. Each GLB object has the path of that node followed by its own, and no row stands for the **GLBSceneRoot**.
+_Avoid_: A path segment for the GLB file name. Two paths for one GLB object.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).
