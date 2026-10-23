@@ -125,9 +125,8 @@ describe('applyTextureFilterState', () => {
 });
 
 describe('a texture with no mipmaps', () => {
-  // Godot's procedural textures never call `generate_mipmaps`
-  // (`scene/resources/gradient_texture.cpp`), so a `*_WITH_MIPMAPS` filter
-  // samples the base level only.
+  // GradientTexture2D never calls `generate_mipmaps` (`scene/resources/gradient_texture.cpp`),
+  // so a `*_WITH_MIPMAPS` filter samples its base level only.
   it('keeps a mipless texture mipless and degrades the min filter', () => {
     const texture = new THREE.DataTexture(new Uint8Array(4), 1, 1);
     texture.magFilter = THREE.LinearFilter;

@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
   NOISE_PIXEL_CASES,
-  PINNED_PIXEL_HASHES,
+  PINNED_LEVEL_HASHES,
 } from '../resources/textures/noisetexture2d/pixelCases.testkit';
 import { decodeFastNoiseLite } from '../resources/noise/fastnoiselite/decode';
 import { decodeNoiseTexture3D } from '../resources/textures/noisetexture3d/decode';
@@ -18,14 +18,17 @@ if (!firstCase) throw new Error('expected at least one noise pixel case');
 describe('noise-texture-2d job', () => {
   const job = WORKER_JOBS['noise-texture-2d'];
 
-  it.each(NOISE_PIXEL_CASES)('gives the pinned bytes for $name', ({ name, tex, noise, colorRamp }) => {
-    const { pixels } = job.run({ tex, noise, colorRamp });
-    expect(createHash('sha256').update(pixels).digest('hex')).toBe(PINNED_PIXEL_HASHES[name]);
+  it.each(NOISE_PIXEL_CASES)('gives the pinned levels for $name', ({ name, tex, noise, colorRamp }) => {
+    const { levels } = job.run({ tex, noise, colorRamp });
+    expect(levels.map(({ data }) => createHash('sha256').update(data).digest('hex'))).toEqual(
+      PINNED_LEVEL_HASHES[name]
+    );
   });
 
-  it('transfers exactly the pixel buffer', () => {
+  it('transfers exactly the level buffers', () => {
     const output = job.run(firstCase);
-    expect(job.transfer(output)).toEqual([output.pixels.buffer]);
+    expect(output.levels.length).toBeGreaterThan(1);
+    expect(job.transfer(output)).toEqual(output.levels.map(({ data }) => data.buffer));
   });
 
   it('takes an input that survives a structured clone unchanged', () => {

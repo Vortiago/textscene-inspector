@@ -37,7 +37,7 @@ const plan = (properties: Record<string, string>): ProceduralBuildPlan<'noise-te
         job: 'noise-texture-2d',
         input: pixelCase,
         contentKey: `FakeTexture:${properties.seed}`,
-        wrap: ({ pixels }) => new THREE.DataTexture(pixels, 1, 1),
+        wrap: ({ levels }) => new THREE.DataTexture(levels[0]!.data, 1, 1),
       };
 
 function lookup(
@@ -54,7 +54,7 @@ function pendingLookup(resources: TscnInternalResource[]) {
 }
 
 function output(): WorkerJobOutput<'noise-texture-2d'> {
-  return { pixels: new Uint8Array(4) };
+  return { levels: [{ data: new Uint8Array(4), width: 1, height: 1 }] };
 }
 
 /** Lets microtasks and promise callbacks run. */

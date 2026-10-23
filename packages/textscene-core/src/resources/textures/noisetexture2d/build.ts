@@ -10,6 +10,8 @@ import type { NoiseTexture2DData } from './types';
 import type { NoiseTexture2DInput } from './pixels';
 import { seamlessSource } from '../../noise/image/noiseImage';
 import { colourDataTexture } from '../colourDataTexture';
+import { carryMipChain } from '../texelTexture';
+import type { MipLevel } from '../../processing/mipChain';
 
 /**
  * Whether the previewer rasterises this texture. It refuses an axis past the WebGL ceiling it
@@ -29,10 +31,18 @@ export function noiseTextureFits({
   );
 }
 
-/** Bottom-up `pixels`, computed from `input`, as the texture Godot builds from it. */
-export function noiseDataTexture(pixels: Uint8Array, input: NoiseTexture2DInput): THREE.DataTexture {
+/**
+ * Bottom-up `levels`, computed from `input`, as the texture Godot builds from it. Several levels
+ * are its mip chain, which the default sampler (`LINEAR_WITH_MIPMAPS`, `material.h:573`)
+ * minifies between.
+ */
+export function noiseDataTexture(levels: MipLevel[], input: NoiseTexture2DInput): THREE.DataTexture {
   const { tex } = input;
-  const texture = colourDataTexture(pixels, tex.width, tex.height, imageFormat(input));
+  const [base] = levels;
+  if (!base) throw new Error('expected at least one level, got none');
+  const texture = colourDataTexture(base.data, tex.width, tex.height, imageFormat(input));
+  carryMipChain(texture, levels);
+  if (levels.length > 1) texture.minFilter = THREE.LinearMipmapLinearFilter;
   // A normal map carries directions, not colour, so it starts raw, as its normal slot reads it.
   if (tex.asNormalMap) texture.colorSpace = THREE.NoColorSpace;
   // A seamless image tiles. A non-seamless one clamps like every other procedural texture.

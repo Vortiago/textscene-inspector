@@ -1268,6 +1268,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Noisetexture2d Mipmaps",
+    "file": "unit-noisetexture2d-mipmaps.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Noisetexture2d Normal",
     "file": "unit-noisetexture2d-normal.tscn",
     "category": "Other"
