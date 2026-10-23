@@ -1,13 +1,13 @@
 /**
  * The root `createSceneProcessor` synthesises for a `.glb` or `.gltf` PackedScene. It loads the
- * GLB through `useResource('GLBMesh', path)`, renders it as a `<primitive>`, and drives its clips
+ * GLB through `useGlb(path)`, renders it as a `<primitive>`, and drives its clips
  * (ADR-0012) through a `THREE.AnimationMixer` rooted on the GLB object, since the clips bind to
  * the GLB's own node names.
  */
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
-import { useResource } from '../../../resources/useResource';
+import { useGlb } from '../../../resources/useGlb';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbRoot } from './GlbInstanceContext';
 import { useGlbGeometryInstances } from './glbGeometryInstances';
@@ -55,7 +55,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   const root = useGlbRoot(nodePath);
   // An instancing node loads its GLB itself, to order its own children, and hands it down. A GLB
   // opened as the scene loads its own, and an empty path requests nothing.
-  const ownLoad = useResource<THREE.Object3D>(root.glb ? '' : (props.glbPath ?? ''), 'glb');
+  const ownLoad = useGlb(root.glb ? undefined : props.glbPath);
   const result = root.glb ?? ownLoad;
   const { overrides } = root;
   const object = result.value;
@@ -195,7 +195,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   if (result.status === 'pending' || !object) {
     return <>{children}</>;
   }
-  // useResource clones the Object3D per consumer, so the value mounts directly.
+  // useGlb clones the Object3D per consumer, so the value mounts directly.
   return (
     <primitive object={object}>
       {importMaterials}

@@ -5,12 +5,11 @@
  * until it arrives.
  */
 import { useMemo } from 'react';
-import type * as THREE from 'three';
-import { useResource } from '../../../resources/useResource.js';
+import { useGlb } from '../../../resources/useGlb.js';
 import { singlePathCache, type CachedGlbSource } from '../../liveSceneTree.js';
 
 export function useGlbCache(glbPath: string | undefined): CachedGlbSource | undefined {
-  const result = useResource<THREE.Object3D>(glbPath ?? '', 'glb');
+  const result = useGlb(glbPath);
 
   return useMemo(() => {
     if (!glbPath || result.status !== 'loaded' || !result.value) return undefined;
