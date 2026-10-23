@@ -8,8 +8,14 @@ import type { SolveNode } from '../solveTree';
 import { controlNode, solveNode } from '../testing/solveNode';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { FontResource } from '../../../../resources/fonts/font/types';
-import { resolveNodeFont, resolveNodeFontMetrics, resolveNodeFontSizePx } from './resolveNodeFontMetrics';
+import {
+  resolveNodeFont,
+  resolveNodeFontMetrics,
+  resolveNodeFontMetricsOr,
+  resolveNodeFontSizePx,
+} from './resolveNodeFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
+import { withVariation, type FontMetrics } from './fontMetrics';
 import * as logger from '../../../../logger';
 import * as themeLookup from '../../../../resources/styles/theme/lookup';
 import * as sceneFontLoader from './sceneFontLoader';
@@ -128,6 +134,65 @@ describe('resolveNodeFont — the project default font as the last rung', () => 
   it("answers for RichTextLabel's normal_font key too, which bold and italic synthesise over", () => {
     const n = labelNode({ projectDefaultFont: projectFont });
     expect(resolveNodeFont(n, 'normal_font')).toBe(projectFont);
+  });
+});
+
+describe('resolveNodeFontMetricsOr — a last rung of its own for a key no theme or override defines', () => {
+  const embolden = (value: string): FontResource => ({
+    kind: 'variation',
+    baseFont: null,
+    properties: { variation_embolden: value },
+  });
+
+  /** A last rung that records the default face it is given, and answers a face of embolden 3. */
+  function lastRung() {
+    const received: FontMetrics[] = [];
+    const build = (defaultFace: FontMetrics): FontMetrics => {
+      received.push(defaultFace);
+      return withVariation(defaultFace, { embolden: 3 });
+    };
+    return { received, build };
+  }
+
+  it("answers the last rung where nothing defines the key, and gives it the project default font's face", () => {
+    const rung = lastRung();
+    const metrics = resolveNodeFontMetricsOr(
+      labelNode({ projectDefaultFont: embolden('0.5') }),
+      'bold_font',
+      rung.build
+    );
+    expect(metrics.embolden).toBe(3);
+    expect(rung.received.map((face) => face.embolden)).toEqual([0.5]);
+  });
+
+  it('gives the last rung the bundled face where the project sets no default font', () => {
+    const rung = lastRung();
+    resolveNodeFontMetricsOr(labelNode(), 'bold_font', rung.build);
+    expect(rung.received).toEqual([OPEN_SANS_FONT_METRICS]);
+  });
+
+  it('prefers a node override, an ancestor theme font and the project theme font to the last rung', () => {
+    const rung = lastRung();
+    const themeWith = (value: string): ThemeResource => ({
+      ...emptyTheme(),
+      fonts: { Label: { bold_font: embolden(value) } },
+    });
+    const emboldenOf = (n: SolveNode) => resolveNodeFontMetricsOr(n, 'bold_font', rung.build).embolden;
+    expect(emboldenOf(labelNode({ fontOverrides: { bold_font: embolden('1') } }))).toBe(1);
+    expect(emboldenOf(labelNode({ themeChain: [themeWith('2')] }))).toBe(2);
+    expect(emboldenOf(labelNode({ projectTheme: themeWith('4') }))).toBe(4);
+    expect(rung.received).toEqual([]);
+  });
+
+  it('keeps a node override authored to nothing: the bundled font, not the last rung', () => {
+    const rung = lastRung();
+    const metrics = resolveNodeFontMetricsOr(
+      labelNode({ fontOverrides: { bold_font: null } }),
+      'bold_font',
+      rung.build
+    );
+    expect(metrics).toBe(OPEN_SANS_FONT_METRICS);
+    expect(rung.received).toEqual([]);
   });
 });
 

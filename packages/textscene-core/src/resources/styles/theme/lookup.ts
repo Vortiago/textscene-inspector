@@ -4,6 +4,7 @@
  */
 
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
+import { withDefaultBaseFont } from '../../fonts/font/defaultBaseFont';
 import type { FontResource } from '../../fonts/font/types';
 import type { ThemeResource } from './types';
 
@@ -101,6 +102,26 @@ export interface ThemeResolutionScope {
   readonly searchOrder: readonly ThemeResource[];
   /** The font a lookup reaches after every theme: the default theme's `default_font`. Null draws the bundled font. */
   readonly projectDefaultFont: FontResource | null;
+  /** The base of a `FontVariation` with no `base_font` (`variationBaseFont`). Null is the bundled font. */
+  readonly variationBaseFont: FontResource | null;
+}
+
+/**
+ * `FontVariation::_get_base_font_or_default` (`scene/resources/font.cpp:2987-3039`) asks the default
+ * theme context for `font` on `FontVariation`: the project theme, then the default theme, whose
+ * `default_font` is `projectDefaultFont`. A scene ancestor's theme is not in that context.
+ */
+function variationBaseFont(
+  projectTheme: ThemeResource | null,
+  projectDefaultFont: FontResource | null
+): FontResource | null {
+  if (projectTheme) {
+    for (const type of nativeTypeChain('FontVariation')) {
+      const found = fontInTheme(projectTheme, type, 'font');
+      if (found !== undefined) return found;
+    }
+  }
+  return projectDefaultFont;
 }
 
 export function themeResolutionScope(
@@ -114,14 +135,14 @@ export function themeResolutionScope(
     typeChain: buildThemeTypeChain(nativeType, typeVariation, ancestorThemes, projectTheme),
     searchOrder: themeSearchOrder(ancestorThemes, projectTheme),
     projectDefaultFont,
+    variationBaseFont: variationBaseFont(projectTheme, projectDefaultFont),
   };
 }
 
 /**
- * A Control's resolved theme font (`Control::get_theme_font`,
- * `scene/gui/control.cpp:3083-3103`; `ThemeOwner::get_theme_item_in_types`,
- * `scene/theme/theme_owner.cpp:227-254`). Null when nothing defines it, not even the
- * project's default font: the painter then draws its bundled default face.
+ * The font a theme or an override defines for `name`, or `undefined` where none does. A caller
+ * with its own last rung uses this: RichTextLabel's `bold_font` ends at a bold built over the
+ * default font, not at the default font itself (`default_theme.cpp:1195`).
  *
  * @param override The node's own `theme_override_fonts/<name>`, which wins once
  *   declared with no validity check (`control.cpp:3089-3093`). `undefined` means
@@ -131,12 +152,12 @@ export function themeResolutionScope(
  *   (`gui/theme/custom`). Themes outer, types inner (`theme_owner.cpp:236-245`),
  *   so any `default_font` shadows a `<baseType>/fonts/<name>` on a farther ancestor.
  */
-export function resolveThemeFontIn(
+export function findThemeFontIn(
   scope: ThemeResolutionScope,
   name: string,
   override: FontResource | null | undefined
-): FontResource | null {
-  if (override !== undefined) return override;
+): FontResource | null | undefined {
+  if (override !== undefined) return withDefaultBaseFont(override, scope.variationBaseFont);
 
   // Resolved, not usable: a `SystemFont` has no bytes in a browser. The painter
   // checks bytes with `resolveFontFileBytes` (`r3f/controls/native/text/sceneFontResolution.ts`),
@@ -144,12 +165,28 @@ export function resolveThemeFontIn(
   for (const theme of scope.searchOrder) {
     for (const type of scope.typeChain) {
       const found = fontInTheme(theme, type, name);
-      if (found !== undefined) return found;
+      if (found !== undefined) return withDefaultBaseFont(found, scope.variationBaseFont);
     }
   }
+  return undefined;
+}
+
+/**
+ * A Control's resolved theme font (`Control::get_theme_font`,
+ * `scene/gui/control.cpp:3083-3103`; `ThemeOwner::get_theme_item_in_types`,
+ * `scene/theme/theme_owner.cpp:227-254`). Null when nothing defines it, not even the
+ * project's default font: the painter then draws its bundled default face. The arguments are
+ * those of `findThemeFontIn`.
+ */
+export function resolveThemeFontIn(
+  scope: ThemeResolutionScope,
+  name: string,
+  override: FontResource | null | undefined
+): FontResource | null {
+  const found = findThemeFontIn(scope, name, override);
   // The default theme's `default_font`, which the project font replaces
   // (`default_theme.cpp:1371-1373`), is the last rung (`theme_owner.cpp:227-254`).
-  return scope.projectDefaultFont;
+  return found === undefined ? scope.projectDefaultFont : found;
 }
 
 /**

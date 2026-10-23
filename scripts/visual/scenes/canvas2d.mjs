@@ -236,6 +236,28 @@ export const CANVAS_2D_SCENES = [
   // The one variable: `FontVariation.variation_embolden` over a scene font at 0, 1.2 and 2.0, which
   // grows the outline and widens each advance, as the bold of a RichTextLabel does.
   { name: 'label-font-variation-embolden', file: 'unit-label-font-variation-embolden.tscn', mode: '2d' },
+  // The one variable: the font of each RichTextLabel style. The default theme's bold, italics and bold
+  // italics over the default font, a node's own `bold_font` and `italics_font`, and bare variations
+  // that draw the default font itself.
+  {
+    name: 'richtext-label-style-fonts',
+    file: 'unit-rich-text-label-style-fonts.tscn',
+    mode: '2d',
+  },
+  // The one variable: a `FontVariation` with no `base_font`, at embolden 0, 1.2 and 0.6, over the
+  // bundled default font, which the `0` row leaves unemboldened.
+  {
+    name: 'label-font-variation-bundled-embolden',
+    file: 'unit-label-font-variation-bundled-embolden.tscn',
+    mode: '2d',
+  },
+  // The one variable: the same bare variations in a project whose `gui/theme/custom_font` is the
+  // default font they wrap.
+  {
+    name: 'label-variation-default-base',
+    file: 'project-default-font/unit-label-variation-default-base.tscn',
+    mode: '2d',
+  },
   // RichTextLabel's supported bbcode subset in one pass: bold by embolden,
   // italic by skew, the underline rule and a colour span. The styled runs keep a
   // sub-pixel vertical residual against Godot, a FreeType light-hinting limit

@@ -9,7 +9,7 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { shapeText, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { getFontAscentPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
@@ -18,29 +18,30 @@ import * as resolveNodeFontMetricsModule from '../../../../r3f/controls/native/t
 import type { RichTextLabelProperties } from './types';
 import {
   richTextLabelMinimumSize,
-  RICH_TEXT_LABEL_THEME_FONT_KEY,
   richTextLabelTextTheme,
   styledTextRuns,
-  fontSizePxAtFromRuns,
-  emboldenAtFromRuns,
   layoutRichTextRuns,
   richTextUnderlineMetrics,
   underlineRectPx,
-  imageObjectFontMetrics,
   richTextLabelTextureSlots,
-  BOLD_DISTANCE_BIAS,
-  ITALIC_SKEW,
+  shapeRichText,
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
-  richTextTabStopsPx,
 } from './nativeSolver';
-import { getFontGlyphAdvancePx } from '../../../../r3f/controls/native/text/fontMetrics';
-import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment } from './bbcode';
+import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { resolveRichTextFaces } from './styleFaces';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+
+const ALL_STYLES = [
+  { bold: false, italic: false },
+  { bold: true, italic: false },
+  { bold: false, italic: true },
+  { bold: true, italic: true },
+];
 
 type StyledTextRun = ReturnType<typeof styledTextRuns>[number];
 
@@ -250,7 +251,7 @@ describe('richTextLabelMinimumSize (rich_text_label.cpp:8036-8047)', () => {
   });
 });
 
-describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRAPH theme font key ("${RICH_TEXT_LABEL_THEME_FONT_KEY}", default_theme.cpp:1194)`, () => {
+describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRAPH theme font key ("normal_font", default_theme.cpp:1194)`, () => {
   // An unresolvable font's warn is the observable proof here, as
   // `resolveNodeFontMetrics.test.ts` explains.
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -265,7 +266,7 @@ describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRA
     const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
     const n: SolveNode = {
       ...node({ fitContent: true, text: 'A' }),
-      fontOverrides: { [RICH_TEXT_LABEL_THEME_FONT_KEY]: systemFont },
+      fontOverrides: { normal_font: systemFont },
     };
     richTextLabelMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -276,6 +277,35 @@ describe(`richTextLabelMinimumSize — resolves this RichTextLabel's own PARAGRA
     const n: SolveNode = { ...node({ fitContent: true, text: 'A' }), fontOverrides: { font: systemFont } };
     richTextLabelMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
+  const text = '[b]ABABABAB[/b]';
+  const bareVariation: FontResource = { kind: 'variation', baseFont: null, properties: {} };
+
+  function widthOf(overrides: Partial<SolveNode> = {}) {
+    const n = {
+      ...node({ fitContent: true, text, bbcodeEnabled: true, autowrapMode: AutowrapMode.AUTOWRAP_OFF }),
+      ...overrides,
+    };
+    return richTextLabelMinimumSize(n, ctx()).x;
+  }
+
+  it("measures a [b] span in the default theme's bold, which adds embolden * size / 64 to each advance (text_server_adv.cpp:3238-3239)", () => {
+    // Eight 'A'/'B' advances of 1354 and 1350 units at 16px: 84.5px plain, and 8 * 0.3 more emboldened.
+    expect(widthOf({ fontOverrides: { bold_font: bareVariation } })).toBe(85);
+    expect(widthOf()).toBe(87);
+  });
+
+  it("measures a [b] span in the node's bold_font, not the default bold, when it sets one", () => {
+    const emboldened: FontResource = {
+      kind: 'variation',
+      baseFont: null,
+      properties: { variation_embolden: '3' },
+    };
+    // 3 * 16 / 64 = 0.75px more per advance: 84.5 + 6 = 90.5.
+    expect(widthOf({ fontOverrides: { bold_font: emboldened } })).toBe(91);
   });
 });
 
@@ -832,90 +862,101 @@ describe('richTextLabelTextureSlots (rich_text_label.cpp:4120-4155 _get_image_si
   });
 });
 
-describe('imageObjectFontMetrics — exact-advance round-trip through the SHARED fontMetrics.ts chain (getFontGlyphAdvancePx)', () => {
-  const decorated = imageObjectFontMetrics(OPEN_SANS_FONT_METRICS);
+/** The paragraph at `FONT_SIZE`, wrapped at `boxWidthPx` (0 is unwrapped), as the solve and the painter shape it. */
+const FONT_SIZE = 16;
+const ALL_FACES = resolveRichTextFaces(node({}), ALL_STYLES);
 
-  it.each([24, 100, 33.5, 21, 0, 1])(
-    'shapes IMAGE_OBJECT_CHAR at "size" %dpx to an advance of exactly %dpx — getGlyphAdvanceUnits(IMAGE_OBJECT_CHAR) === unitsPerEm makes the FreeType/HarfBuzz chain (fontMetrics.ts:228-234) reduce to the requested size, rounded to the nearest 1/64px',
+function shapeRuns(
+  runs: Parameters<typeof shapeRichText>[0],
+  options: {
+    boxWidthPx?: number;
+    autowrapMode?: EnumValue<typeof AutowrapMode>;
+    faces?: ReturnType<typeof resolveRichTextFaces>;
+    tabStopsPx?: number[];
+    tabSize?: number;
+  } = {}
+): TextLayoutResult {
+  const { boxWidthPx = 0, autowrapMode = AutowrapMode.AUTOWRAP_OFF, faces = ALL_FACES } = options;
+  return shapeRichText(runs, faces, {
+    fontSizePx: FONT_SIZE,
+    boxWidthPx,
+    autowrapMode,
+    tabStopsPx: options.tabStopsPx,
+    tabSize: options.tabSize,
+  });
+}
+
+function bareImageRun(widthPx: number) {
+  return textRun({
+    text: IMAGE_OBJECT_CHAR,
+    fontSizePx: widthPx, // The placeholder shapes at the image width.
+    image: { spec: {} as ParsedImgTag, sizePx: { x: widthPx, y: widthPx } },
+  });
+}
+
+describe('shapeRichText — an [img] placeholder', () => {
+  it.each([24, 100, 33.5, 21, 1])(
+    'advances by exactly the %dpx image width, rounded to the nearest 1/64px',
     (width) => {
-      expect(getFontGlyphAdvancePx(decorated, IMAGE_OBJECT_CHAR, width)).toBe(width);
+      const [glyph] = shapeRuns([bareImageRun(width)]).lines[0]!.glyphs;
+      expect(glyph!.advance).toBe(width);
     }
   );
 
-  it("never touches a real character's own advance — delegates to the base metrics unchanged", () => {
-    expect(decorated.getGlyphAdvanceUnits('A')).toBe(OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits('A'));
+  it('takes the normal face without embolden or skew, even beside a bold run', () => {
+    const glyphs = shapeRuns([textRun({ text: 'b', bold: true, fontSizePx: FONT_SIZE }), bareImageRun(24)])
+      .lines[0]!.glyphs;
+    const faces = ALL_FACES;
+    expect([glyphs[0]!.fontMetrics, glyphs[1]!.fontMetrics?.embolden, glyphs[1]!.fontMetrics?.skew]).toEqual([
+      faces.bold,
+      0,
+      0,
+    ]);
   });
 
-  it('suppresses kerning on EITHER side of IMAGE_OBJECT_CHAR, even where the base metrics would have a real pair', () => {
-    expect(decorated.getKerningAdjustmentUnits(IMAGE_OBJECT_CHAR, 'A')).toBe(0);
-    expect(decorated.getKerningAdjustmentUnits('A', IMAGE_OBJECT_CHAR)).toBe(0);
-  });
-});
-
-describe('fontSizePxAtFromRuns', () => {
-  it("maps each character index to its OWN run's fontSizePx, in concatenation order", () => {
-    const runs = [
-      textRun({ text: 'ab', color: { r: 1, g: 1, b: 1, a: 1 }, fontSizePx: 18 }),
-      textRun({ text: 'CD', bold: true, color: { r: 1, g: 1, b: 1, a: 1 }, fontSizePx: 16 }),
-    ];
-    const sizeAt = fontSizePxAtFromRuns(runs);
-    expect(sizeAt(0)).toBe(18);
-    expect(sizeAt(1)).toBe(18);
-    expect(sizeAt(2)).toBe(16);
-    expect(sizeAt(3)).toBe(16);
-  });
-
-  it("an out-of-range index (shapeText's own trailing terminator glyph) falls back to the LAST run's size rather than throwing", () => {
-    const runs = [textRun({ text: 'a', color: { r: 1, g: 1, b: 1, a: 1 }, fontSizePx: 18 })];
-    expect(fontSizePxAtFromRuns(runs)(1)).toBe(18);
-  });
-
-  it('is 0 for a totally empty run list — nothing to index, never NaN/undefined leaking into shapeText', () => {
-    expect(fontSizePxAtFromRuns([])(0)).toBe(0);
+  it('suppresses kerning on either side of the placeholder', () => {
+    const kerned = { ...OPEN_SANS_FONT_METRICS, getKerningAdjustmentUnits: () => 100 };
+    const faces = { ...ALL_FACES, normal: kerned };
+    const advanceOfA = (text: string) =>
+      shapeRuns([textRun({ text, fontSizePx: FONT_SIZE })], { faces }).lines[0]!.glyphs[0]!.advance;
+    const [before] = shapeRuns([textRun({ text: 'A', fontSizePx: FONT_SIZE }), bareImageRun(24)], { faces })
+      .lines[0]!.glyphs;
+    expect(advanceOfA('AV')).not.toBe(before!.advance);
+    expect(advanceOfA('A')).toBe(before!.advance);
   });
 });
 
-describe('emboldenAtFromRuns', () => {
-  const WHITE_RUN = { r: 1, g: 1, b: 1, a: 1 };
+describe('shapeRichText — faces and sizes by character', () => {
+  const faces = ALL_FACES;
 
-  it('is 1.2, the default theme bold embolden (default_theme.cpp:1394), for a [b] character and nothing for a plain one', () => {
-    const runs = [
-      textRun({ text: 'ab', color: WHITE_RUN, fontSizePx: 18 }),
-      textRun({ text: 'CD', bold: true, color: WHITE_RUN, fontSizePx: 16 }),
-    ];
-    const emboldenAt = emboldenAtFromRuns(runs);
-    expect([0, 1, 2, 3].map(emboldenAt)).toEqual([undefined, undefined, 1.2, 1.2]);
+  it("shapes each character at its own run's size, in concatenation order", () => {
+    const glyphs = shapeRuns([
+      textRun({ text: 'ab', fontSizePx: 18 }),
+      textRun({ text: 'CD', bold: true, fontSizePx: 16 }),
+    ]).lines[0]!.glyphs;
+    const at18 = shapeRuns([textRun({ text: 'ab', fontSizePx: 18 })]).lines[0]!.glyphs;
+    expect([glyphs[0]!.advance, glyphs[1]!.advance]).toEqual(at18.slice(0, 2).map((g) => g.advance));
   });
 
-  it("an out-of-range index takes the last run's value, as the size lookup does", () => {
-    const runs = [textRun({ text: 'a', bold: true, color: WHITE_RUN, fontSizePx: 18 })];
-    expect(emboldenAtFromRuns(runs)(1)).toBe(1.2);
+  it("shapes each character in its own run's face: normal, bold, italics and bold italics", () => {
+    const glyphs = shapeRuns([
+      textRun({ text: 'a', fontSizePx: 16 }),
+      textRun({ text: 'b', bold: true, fontSizePx: 16 }),
+      textRun({ text: 'c', italic: true, fontSizePx: 16 }),
+      textRun({ text: 'd', bold: true, italic: true, fontSizePx: 16 }),
+    ]).lines[0]!.glyphs;
+    expect(glyphs.slice(0, 4).map((g) => g.fontMetrics)).toEqual([
+      faces.normal,
+      faces.bold,
+      faces.italic,
+      faces.boldItalic,
+    ]);
+    expect(glyphs[1]!.fontMetrics!.embolden).toBe(1.2);
   });
 
-  it('is undefined for an empty run list', () => {
-    expect(emboldenAtFromRuns([])(0)).toBeUndefined();
+  it('shapes nothing for an empty run list', () => {
+    expect(shapeRuns([]).lines[0]!.glyphs).toEqual([]);
   });
-});
-
-describe('BOLD_DISTANCE_BIAS / ITALIC_SKEW', () => {
-  it('are non-zero (a zero value would be indistinguishable from the un-styled default)', () => {
-    expect(BOLD_DISTANCE_BIAS).not.toBe(0);
-    expect(ITALIC_SKEW).not.toBe(0);
-  });
-
-  it("ITALIC_SKEW matches default_theme.cpp:1399/1403's Transform2D(1.0, 0.2, ...) shear coefficient exactly", () => {
-    expect(ITALIC_SKEW).toBe(0.2);
-  });
-
-  it(
-    'BOLD_DISTANCE_BIAS is tuned to a real Godot 4.6.3 measurement, not the earlier unmeasured 0.08 placeholder — ' +
-      "pnpm ref:godot on unit-rich-text-label.tscn's [b]Bold[/b] span, a horizontal transect through the 'l' " +
-      "stem's half-max crossings, reads 3.04px there; 0.35 is the bias this module's own doc pins as reproducing " +
-      'that (own doc has the full worked measurement)',
-    () => {
-      expect(BOLD_DISTANCE_BIAS).toBe(0.35);
-    }
-  );
 });
 
 describe('RICH_TEXT_LABEL_UNDERLINE_ALPHA', () => {
@@ -925,7 +966,6 @@ describe('RICH_TEXT_LABEL_UNDERLINE_ALPHA', () => {
 });
 
 describe('layoutRichTextRuns', () => {
-  const FONT_SIZE = 16;
   const BLACK = { r: 0, g: 0, b: 0, a: 1 };
 
   function shape(
@@ -934,22 +974,6 @@ describe('layoutRichTextRuns', () => {
     autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF
   ): TextLayoutResult {
     return shapeText(text, { fontSizePx: FONT_SIZE, boxWidthPx, autowrapMode, lineSpacingPx: 0 });
-  }
-
-  /** `shape`, with each character at its run's size, so a line can carry a size the paragraph key never names. */
-  function shapeMixed(
-    text: string,
-    runs: Parameters<typeof fontSizePxAtFromRuns>[0],
-    boxWidthPx = 0,
-    autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF
-  ): TextLayoutResult {
-    return shapeText(text, {
-      fontSizePx: FONT_SIZE,
-      boxWidthPx,
-      autowrapMode,
-      lineSpacingPx: 0,
-      fontSizePxAt: fontSizePxAtFromRuns(runs),
-    });
   }
 
   it('returns no placements for empty text (one line, zero glyphs, nothing to attribute)', () => {
@@ -962,7 +986,6 @@ describe('layoutRichTextRuns', () => {
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(1);
     expect(placements[0]!.lineIndex).toBe(0);
-    expect(placements[0]!.bold).toBe(false);
     expect(placements[0]!.color).toEqual(WHITE);
     expect(placements[0]!.layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['A', 'B']);
   });
@@ -975,11 +998,41 @@ describe('layoutRichTextRuns', () => {
     const layout = shape('plainBOLD');
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(2);
-    expect(placements[0]!.bold).toBe(false);
     expect(placements[0]!.layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['p', 'l', 'a', 'i', 'n']);
-    expect(placements[1]!.bold).toBe(true);
     expect(placements[1]!.color).toEqual(BLACK);
     expect(placements[1]!.layout.lines[0]!.glyphs.map((g) => g.char)).toEqual(['B', 'O', 'L', 'D']);
+  });
+
+  it("draws each placement in the face its glyphs were shaped in: the run's bold or italics face, not the paragraph's", () => {
+    const runs = [
+      textRun({ text: 'plain', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'BOLD', bold: true, fontSizePx: FONT_SIZE }),
+      textRun({ text: 'ital', italic: true, fontSizePx: FONT_SIZE }),
+    ];
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs));
+    expect(placements.map((p) => p.layout.fontMetrics)).toEqual([
+      ALL_FACES.normal,
+      ALL_FACES.bold,
+      ALL_FACES.italic,
+    ]);
+  });
+
+  it("takes a line's ascent and descent from each run's OWN face, so a taller bold_font makes a taller line (text_server_adv.cpp:5486-5487)", () => {
+    const tallFace: FontMetrics = {
+      ...OPEN_SANS_FONT_METRICS,
+      ascent: 4096,
+      descent: 1024,
+      getGlyphAdvanceUnits: (ch) => OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch),
+      getKerningAdjustmentUnits: () => 0,
+    };
+    const faces = { ...ALL_FACES, bold: tallFace };
+    const runs = [
+      textRun({ text: 'plain', fontSizePx: FONT_SIZE }),
+      textRun({ text: 'BOLD', bold: true, fontSizePx: FONT_SIZE }),
+    ];
+    const placements = layoutRichTextRuns(runs, shapeRuns(runs, { faces }));
+    // ceil(4096 * 16 / 2048) = 32 above the baseline: both runs share it.
+    expect(placements.map((p) => p.layout.baselineOffsetPx)).toEqual([32, 32]);
   });
 
   it("a run's layout is wide enough for its glyphs, which keep their line-origin x (a canvas painter sizes its raster from it)", () => {
@@ -1007,15 +1060,15 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.underline).toBe(true);
   });
 
-  it('a single run whose text WRAPS across two lines produces one placement per line, same style on both', () => {
+  it('a single run whose text WRAPS across two lines produces one placement per line, in its face on both', () => {
     const runs = [textRun({ text: 'AAAA BBBB', bold: true, fontSizePx: FONT_SIZE })];
     // Narrow enough that 'AAAA' and 'BBBB' land on separate lines (see textLayout.test.ts's own break-point fixtures for this shape).
-    const layout = shape('AAAA BBBB', 60, AutowrapMode.AUTOWRAP_WORD);
+    const layout = shapeRuns(runs, { boxWidthPx: 60, autowrapMode: AutowrapMode.AUTOWRAP_WORD });
     expect(layout.lines.length).toBeGreaterThan(1);
     const placements = layoutRichTextRuns(runs, layout);
     expect(placements).toHaveLength(layout.lines.length);
     expect(new Set(placements.map((p) => p.lineIndex))).toEqual(new Set(layout.lines.map((_, i) => i)));
-    for (const p of placements) expect(p.bold).toBe(true);
+    for (const p of placements) expect(p.layout.fontMetrics).toBe(ALL_FACES.bold);
   });
 
   it('a style change exactly at a wrap boundary keeps each line single-run (no spurious split within a line)', () => {
@@ -1072,7 +1125,7 @@ describe('layoutRichTextRuns', () => {
     // 'AAAA' at 18 wraps onto its own line, 'BBBB' at 16 onto the next
     // (same break-point shape as the wrap fixtures above).
     const runs = [textRun({ text: 'AAAA ', fontSizePx: 18 }), textRun({ text: 'BBBB', fontSizePx: 16 })];
-    const layout = shapeMixed('AAAA BBBB', runs, 60, AutowrapMode.AUTOWRAP_WORD);
+    const layout = shapeRuns(runs, { boxWidthPx: 60, autowrapMode: AutowrapMode.AUTOWRAP_WORD });
     expect(layout.lines).toHaveLength(2);
 
     // ceil(2189*18/2048)=20, ceil(600*18/2048)=6; ceil(2189*16/2048)=18, ceil(600*16/2048)=5.
@@ -1149,26 +1202,9 @@ describe('layoutRichTextRuns', () => {
       });
     }
 
-    /** `shape`, decorated so an image placeholder shapes at the image width, as Component.tsx does. */
-    function shapeWithImages(
-      text: string,
-      runs: Parameters<typeof fontSizePxAtFromRuns>[0],
-      boxWidthPx = 0,
-      autowrapMode: EnumValue<typeof AutowrapMode> = AutowrapMode.AUTOWRAP_OFF
-    ): TextLayoutResult {
-      return shapeText(text, {
-        fontSizePx: FONT_SIZE,
-        boxWidthPx,
-        autowrapMode,
-        lineSpacingPx: 0,
-        fontSizePxAt: fontSizePxAtFromRuns(runs),
-        fontMetrics: imageObjectFontMetrics(OPEN_SANS_FONT_METRICS),
-      });
-    }
-
     it("an image-only line places the quad at the line's own top-left, sized exactly to sizePx", () => {
       const runs = [imageRun(10, 10)];
-      const layout = shapeWithImages(IMAGE_OBJECT_CHAR, runs);
+      const layout = shapeRuns(runs);
       const placements = layoutRichTextRuns(runs, layout);
       expect(placements).toHaveLength(1);
       expect(placements[0]!.image).toEqual({
@@ -1182,7 +1218,7 @@ describe('layoutRichTextRuns', () => {
 
     it('an image-only line has no text ascent or descent, so a center/center image straddles the baseline h/2 either side', () => {
       const runs = [imageRun(10, 10)];
-      const placements = layoutRichTextRuns(runs, shapeWithImages(IMAGE_OBJECT_CHAR, runs), BOTTOM_OF_100);
+      const placements = layoutRichTextRuns(runs, shapeRuns(runs), BOTTOM_OF_100);
       expect(placements[0]!.layout.baselineOffsetPx).toBe(5);
       expect(placements[0]!.lineTopPx).toBe(100 - 10);
     });
@@ -1192,7 +1228,7 @@ describe('layoutRichTextRuns', () => {
     describe('a 10px image beside 16px text, by InlineAlignment', () => {
       function imageTop(alignment: ParsedImageAlignment): number {
         const runs = [{ ...TEXT_RUN }, imageRun(10, 10, alignment)];
-        const placements = layoutRichTextRuns(runs, shapeWithImages(`hi${IMAGE_OBJECT_CHAR}`, runs));
+        const placements = layoutRichTextRuns(runs, shapeRuns(runs));
         return placements.find((p) => p.image)!.image!.yPx;
       }
 
@@ -1216,8 +1252,7 @@ describe('layoutRichTextRuns', () => {
 
     it("a small (10px) centered image on a line with 16px text does not grow the line — it fits entirely within the text's own ascent/descent", () => {
       const runs = [textRun({ text: 'hi', fontSizePx: FONT_SIZE }), imageRun(10, 10)];
-      const text = `hi${IMAGE_OBJECT_CHAR}`;
-      const layout = shapeWithImages(text, runs);
+      const layout = shapeRuns(runs);
       // ascentPx=18, descentPx=5 at 16px (getFontAscentPx(OPEN_SANS,16), fontMetrics.ts's own formula).
       const placements = layoutRichTextRuns(runs, layout, BOTTOM_OF_100);
       expect(placements[0]!.layout.baselineOffsetPx).toBe(18);
@@ -1226,7 +1261,7 @@ describe('layoutRichTextRuns', () => {
 
     it("a large (40px) centered image on a 16px text line GROWS the line beyond the text's own ascent/descent", () => {
       const runs = [textRun({ text: 'hi', fontSizePx: FONT_SIZE }), imageRun(40, 40)];
-      const layout = shapeWithImages(`hi${IMAGE_OBJECT_CHAR}`, runs);
+      const layout = shapeRuns(runs);
       // yOffset = (-18+5)/2 - 20 = -26.5; ascent = max(18, 26.5) = 26.5; descent = max(5, -26.5+40) = 13.5.
       const placements = layoutRichTextRuns(runs, layout, BOTTOM_OF_100);
       expect(placements[0]!.layout.baselineOffsetPx).toBe(26.5);
@@ -1246,11 +1281,10 @@ describe('layoutRichTextRuns', () => {
           imageRun(100, 10),
           textRun({ text: ' Bye', fontSizePx: FONT_SIZE }),
         ];
-        const text = `Hi ${IMAGE_OBJECT_CHAR} Bye`;
-        const fitsBeside = shapeWithImages(text, runs, 130, AutowrapMode.AUTOWRAP_WORD);
+        const fitsBeside = shapeRuns(runs, { boxWidthPx: 130, autowrapMode: AutowrapMode.AUTOWRAP_WORD });
         expect(fitsBeside.lines.map((l) => l.text)).toEqual([`Hi ${IMAGE_OBJECT_CHAR}`, 'Bye']);
 
-        const ownLine = shapeWithImages(text, runs, 110, AutowrapMode.AUTOWRAP_WORD);
+        const ownLine = shapeRuns(runs, { boxWidthPx: 110, autowrapMode: AutowrapMode.AUTOWRAP_WORD });
         expect(ownLine.lines.map((l) => l.text)).toEqual(['Hi', IMAGE_OBJECT_CHAR, 'Bye']);
 
         const placements = layoutRichTextRuns(runs, ownLine);
@@ -1511,26 +1545,26 @@ describe('RichTextLabel paragraph alignment', () => {
   });
 });
 
-describe('richTextTabStopsPx (rich_text_label.cpp:479-482)', () => {
+describe('shapeRichText — tab stops (rich_text_label.cpp:479-482)', () => {
+  /** The pen x of the glyph after a tab in `a<TAB>b`. */
+  function xAfterTab(options: { tabStopsPx?: number[]; tabSize?: number }): number {
+    return shapeRuns([textRun({ text: 'a\tb', fontSizePx: 16 })], options).lines[0]!.glyphs[2]!.x;
+  }
+
   it('an explicit tab_stops array wins outright, ignoring tab_size', () => {
-    expect(richTextTabStopsPx([10, 20], 8, OPEN_SANS_FONT_METRICS, 16)).toEqual([10, 20]);
+    expect(xAfterTab({ tabStopsPx: [50, 80], tabSize: 8 })).toBe(50);
   });
 
   it('falls back to ONE stop derived from tab_size * the space glyph advance when tab_stops is empty', () => {
-    // Space glyph advance at size 16 (openSansMetrics.ts's own 532 design
-    // units, unitsPerEm 2048): 532*16/2048 = 4.15625px; tab_size 4 -> 16.625.
-    expect(richTextTabStopsPx(undefined, 4, OPEN_SANS_FONT_METRICS, 16)).toEqual([16.625]);
+    // Space advance at size 16 (532 design units of 2048): 4.15625px; tab_size 4 -> 16.625.
+    expect(xAfterTab({ tabStopsPx: [], tabSize: 4 })).toBe(16.625);
   });
 
   it('undefined tab_size falls back to the Godot default of 4', () => {
-    expect(richTextTabStopsPx([], undefined, OPEN_SANS_FONT_METRICS, 16)).toEqual([16.625]);
+    expect(xAfterTab({})).toBe(16.625);
   });
 
   it('tab_size <= 0 disables inline tab alignment entirely (no stops)', () => {
-    expect(richTextTabStopsPx(undefined, 0, OPEN_SANS_FONT_METRICS, 16)).toEqual([]);
-  });
-
-  it('floors the derived stop at 1px even for a tiny font size', () => {
-    expect(richTextTabStopsPx(undefined, 1, OPEN_SANS_FONT_METRICS, 1)).toEqual([1]);
+    expect(xAfterTab({ tabSize: 0 })).not.toBe(16.625);
   });
 });

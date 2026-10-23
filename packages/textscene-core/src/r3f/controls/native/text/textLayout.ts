@@ -75,12 +75,13 @@ export interface ShapeTextOptions {
    */
   fontSizePxAt?: (charIndex: number) => number;
   /**
-   * Per-character `FontVariation.variation_embolden`, keyed like `fontSizePxAt`: RichTextLabel `[b]`
-   * spans take the default theme's bold, an embolden of 1.2 (`default_theme.cpp:1394`). Undefined
-   * leaves the character at its face's own `FontMetrics.embolden`. Each value is its own shaped run,
-   * so kerning and the rounding remainder stop at a change.
+   * Per-character face, keyed like `fontSizePxAt`: RichTextLabel `[b]`/`[i]` spans shape in their own
+   * `bold_font`/`italics_font` (`rich_text_label.cpp:3226-3296`). A character takes its advance, its
+   * kerning, its atlas bitmap and its embolden (`FontMetrics.embolden`) from its face. Each face is
+   * its own shaped run, so kerning and the rounding remainder stop at a change. Undefined shapes every
+   * character in `fontMetrics`, which also sets the line pitch and the baseline.
    */
-  emboldenAt?: (charIndex: number) => number | undefined;
+  fontMetricsAt?: (charIndex: number) => FontMetrics;
   /** The `FontMetrics` to shape against, by default `OPEN_SANS_FONT_METRICS`. Only an `'atlas'` font gets `GlyphPlacement.glyph`. */
   fontMetrics?: FontMetrics;
   /**
@@ -130,6 +131,8 @@ export interface GlyphPlacement {
   controlCodepoint?: number;
   /** How far the embolden grows this glyph's outline at its own size, px. Absent for a glyph with none. */
   emboldenGrowthPx?: number;
+  /** The face `shapeText` shaped this glyph in. Absent on an ellipsis glyph `textOverrun` appends, which takes the layout's. */
+  fontMetrics?: FontMetrics;
 }
 
 export interface TextLineLayout {
@@ -178,12 +181,14 @@ export interface TextLayoutResult {
 /**
  * Re-wraps one shaped line as a one-line result drawn from y = 0; the caller's `<group>` supplies
  * the cumulative Y. It bypasses `shapeText`, so it echoes the parent's `fontMetrics` and baseline.
- * Override `baselineOffsetPx` for a RichTextLabel `[b]`/`[i]` run shaped at its own size.
+ * Override `baselineOffsetPx` and `fontMetrics` for a RichTextLabel `[b]`/`[i]` run shaped at its own
+ * size, in its own face.
  */
 export function soloLineLayout(
   line: TextLineLayout,
   parent: TextLayoutResult,
-  baselineOffsetPx: number = parent.baselineOffsetPx
+  baselineOffsetPx: number = parent.baselineOffsetPx,
+  fontMetrics: FontMetrics = parent.fontMetrics
 ): TextLayoutResult {
   return {
     lines: [line],
@@ -191,7 +196,7 @@ export function soloLineLayout(
     widthPx: line.widthPx,
     heightPx: parent.linePitchPx,
     baselineOffsetPx,
-    fontMetrics: parent.fontMetrics,
+    fontMetrics,
   };
 }
 
@@ -281,12 +286,12 @@ interface BreakGlyph {
  */
 interface RunStyle {
   sizes: readonly number[];
-  emboldens: readonly number[];
+  faces: readonly FontMetrics[];
 }
 
-/** Whether character `i` starts a run: its size or embolden differs from the character before it. */
+/** Whether character `i` starts a run: its size or face differs from the character before it. */
 function startsNewRun(style: RunStyle, i: number): boolean {
-  return i > 0 && (style.sizes[i] !== style.sizes[i - 1] || style.emboldens[i] !== style.emboldens[i - 1]);
+  return i > 0 && (style.sizes[i] !== style.sizes[i - 1] || style.faces[i] !== style.faces[i - 1]);
 }
 
 /**
@@ -323,15 +328,10 @@ function kerningAdjustmentPx(a: string, b: string, fontSizePx: number, metrics: 
 
 /**
  * One glyph per character, plus the zero-advance whitespace terminator Label appends
- * (`label.cpp:164`). `style` sets the size and embolden of each character.
+ * (`label.cpp:164`). `style` sets the size and face of each character.
  */
-function toBreakGlyphs(
-  text: string,
-  metrics: FontMetrics,
-  style: RunStyle,
-  preserveControl = false
-): BreakGlyph[] {
-  const { sizes, emboldens } = style;
+function toBreakGlyphs(text: string, style: RunStyle, preserveControl = false): BreakGlyph[] {
+  const { sizes, faces } = style;
   const glyphs: BreakGlyph[] = [];
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]!;
@@ -359,8 +359,9 @@ function toBreakGlyphs(
         advance = 0;
       }
     } else {
-      advance = glyphAdvancePx(ch, sizes[i]!, metrics) + getFontExtraAdvancePx(emboldens[i]!, sizes[i]!);
-      emboldenGrowthPx = getFontEmboldenGrowthPx(emboldens[i]!, sizes[i]!);
+      const embolden = faces[i]!.embolden ?? 0;
+      advance = glyphAdvancePx(ch, sizes[i]!, faces[i]!) + getFontExtraAdvancePx(embolden, sizes[i]!);
+      emboldenGrowthPx = getFontEmboldenGrowthPx(embolden, sizes[i]!);
     }
     glyphs.push({
       start: i,
@@ -378,7 +379,7 @@ function toBreakGlyphs(
   // reads it. Where HarfBuzz quantises the pair is not pinned, as the vendored font has no kerning.
   for (let i = 0; i + 1 < text.length; i++) {
     if (startsNewRun(style, i + 1)) continue;
-    glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizes[i]!, metrics);
+    glyphs[i]!.advance += kerningAdjustmentPx(text[i]!, text[i + 1]!, sizes[i]!, faces[i]!);
   }
   roundAdvancesToWholePixels(glyphs, text, style);
   glyphs.push({
@@ -593,7 +594,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     uppercase = false,
     lineSpacingPx,
     fontSizePxAt,
-    emboldenAt,
+    fontMetricsAt,
     fontMetrics = OPEN_SANS_FONT_METRICS,
     paragraphSeparator,
     tabStopsPx,
@@ -616,10 +617,6 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
 
   const linePitchPx = getFontLinePitchPx(fontMetrics, fontSizePx, lineSpacingPx);
 
-  // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
-  const isAtlasFont = fontMetrics.kind === 'atlas';
-  const faceEmbolden = fontMetrics.embolden ?? 0;
-
   const lines: TextLineLayout[] = [];
   for (const para of splitParagraphs(transformed, paragraphSeparator)) {
     // The terminator is in the shaped text but not the source, so the per-character closures, keyed
@@ -630,12 +627,11 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       sizes: Array.from({ length: paraText.length }, (_v, i) =>
         fontSizePxAt ? fontSizePxAt(sourceIndex(i)) : fontSizePx
       ),
-      emboldens: Array.from(
-        { length: paraText.length },
-        (_v, i) => (emboldenAt ? emboldenAt(sourceIndex(i)) : undefined) ?? faceEmbolden
+      faces: Array.from({ length: paraText.length }, (_v, i) =>
+        fontMetricsAt ? fontMetricsAt(sourceIndex(i)) : fontMetrics
       ),
     };
-    const breakGlyphs = toBreakGlyphs(paraText, fontMetrics, runStyle, preserveControl);
+    const breakGlyphs = toBreakGlyphs(paraText, runStyle, preserveControl);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
       const paragraphEntries = Array.from(paraText, (char, i) => ({
@@ -672,9 +668,11 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
           char: ch,
           x: penX,
           advance,
-          glyph: isAtlasFont ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
+          // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
+          glyph: runStyle.faces[idx]!.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null,
           controlCodepoint: breakGlyphs[idx]!.controlCodepoint,
           emboldenGrowthPx: breakGlyphs[idx]!.emboldenGrowthPx || undefined,
+          fontMetrics: runStyle.faces[idx]!,
         });
         penX += advance;
       }

@@ -108,6 +108,32 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
     );
   });
 
+  it('wraps the bundled face, silently and at once, for a variation with no base_font (#955)', () => {
+    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    try {
+      const metrics = peekSceneFontMetrics(variation(null, { variation_embolden: '1.2' }), 'Root/Bare');
+      expect(metrics.embolden).toBe(1.2);
+      expect(metrics.kind).toBe(OPEN_SANS_FONT_METRICS.kind);
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("takes the outer variation's embolden over a bare variation, and the bundled face with none", () => {
+    const bare = variation(null, { variation_embolden: '2.0' });
+    expect(peekSceneFontMetrics(variation(bare, { variation_embolden: '1.2' }), 'Root/Over').embolden).toBe(
+      1.2
+    );
+    expect(peekSceneFontMetrics(variation(null, {}), 'Root/Plain')).toBe(OPEN_SANS_FONT_METRICS);
+  });
+
+  it("carries the variation's variation_transform skew, on a settled face and on the bundled one", async () => {
+    const transform = { variation_transform: 'Transform2D(1, 0.2, 0, 1, 0, 0)' };
+    expect((await settledPeek(variation(fontFile(bytes), transform))).skew).toBe(0.2);
+    expect(peekSceneFontMetrics(variation(null, transform), 'Root/Bare').skew).toBe(0.2);
+  });
+
   it('draws the bundled face with no embolden while the base face is still loading', () => {
     const metrics = peekSceneFontMetrics(
       variation(fontFile(new ArrayBuffer(4)), { variation_embolden: '1.2' }),

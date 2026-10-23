@@ -34,6 +34,12 @@ export interface FontMetrics {
   readonly averageAdvanceUnits: number;
   /** `FontVariation.variation_embolden` of this face. Absent is 0, no embolden. */
   readonly embolden?: number;
+  /**
+   * The shear of `FontVariation.variation_transform` of this face: its `Transform2D` x basis `y`,
+   * `FT_Matrix.xy` (`text_server_adv.cpp:1318-1320`). A glyph moves right by `skew` per px above
+   * the baseline. Absent is 0, upright.
+   */
+  readonly skew?: number;
 }
 
 /**
@@ -149,20 +155,30 @@ export function getFontGlyphAdvancePx(metrics: FontMetrics, ch: string, fontSize
   return advance26_6 / 64;
 }
 
-/** One wrapper per face and embolden, so a layout memoised on `FontMetrics` identity keeps its hits. */
-const emboldenedFaces = new WeakMap<FontMetrics, Map<number, FontMetrics>>();
+/**
+ * Written only by `withVariation`, never cleared. One wrapper per face, embolden and skew, so a
+ * layout memoised on `FontMetrics` identity keeps its hits.
+ */
+const variedFaces = new WeakMap<FontMetrics, Map<string, FontMetrics>>();
 
 /**
- * `metrics` with `embolden` set. The wrapper reads every other field through the face, so a live
- * getter stays live. An embolden of 0 is the face itself.
+ * `metrics` with a `FontVariation`'s `embolden` and `skew` set. The wrapper reads every other field
+ * through the face, so a live getter stays live. With neither, it is the face itself.
  */
-export function withEmbolden(metrics: FontMetrics, embolden: number): FontMetrics {
-  if (embolden === 0) return metrics;
-  let byEmbolden = emboldenedFaces.get(metrics);
-  if (!byEmbolden) emboldenedFaces.set(metrics, (byEmbolden = new Map()));
-  let wrapped = byEmbolden.get(embolden);
+export function withVariation(
+  metrics: FontMetrics,
+  { embolden = 0, skew = 0 }: { embolden?: number; skew?: number }
+): FontMetrics {
+  if (embolden === 0 && skew === 0) return metrics;
+  let byVariation = variedFaces.get(metrics);
+  if (!byVariation) variedFaces.set(metrics, (byVariation = new Map()));
+  const key = `${embolden}/${skew}`;
+  let wrapped = byVariation.get(key);
   if (!wrapped)
-    byEmbolden.set(embolden, (wrapped = Object.create(metrics, { embolden: { value: embolden } })));
+    byVariation.set(
+      key,
+      (wrapped = Object.create(metrics, { embolden: { value: embolden }, skew: { value: skew } }))
+    );
   return wrapped!;
 }
 

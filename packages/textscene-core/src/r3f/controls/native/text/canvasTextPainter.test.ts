@@ -6,6 +6,7 @@ import {
   createCanvasTextMaterial,
   paintSceneFontCanvas,
 } from './canvasTextPainter';
+import { withVariation } from './fontMetrics';
 import { shapeText } from './textLayout';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
@@ -81,9 +82,8 @@ function boldLayoutFor(text: string, embolden: number) {
     fontSizePx: 16,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-    fontMetrics: CANVAS_METRICS,
+    fontMetrics: withVariation(CANVAS_METRICS, { embolden }),
     lineSpacingPx: 0,
-    emboldenAt: () => embolden,
   });
 }
 

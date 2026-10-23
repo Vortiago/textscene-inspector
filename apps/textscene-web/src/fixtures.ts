@@ -983,6 +983,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Font Variation Bundled Embolden",
+    "file": "unit-label-font-variation-bundled-embolden.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Font Variation Embolden",
     "file": "unit-label-font-variation-embolden.tscn",
     "category": "Other"
@@ -2249,6 +2254,12 @@ export const fixtures: Fixture[] = [
     "root": "project-default-font"
   },
   {
+    "name": "Label Variation Default Base",
+    "file": "project-default-font/unit-label-variation-default-base.tscn",
+    "category": "Other",
+    "root": "project-default-font"
+  },
+  {
     "name": "Subviewport Snap Off",
     "file": "subviewport-snap-off/unit-subviewport-snap-off.tscn",
     "category": "Other",
@@ -3259,6 +3270,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Rich Text Label Rtl",
     "file": "unit-rich-text-label-rtl.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Rich Text Label Style Fonts",
+    "file": "unit-rich-text-label-style-fonts.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

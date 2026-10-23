@@ -7,6 +7,7 @@
 
 import { controlProps, type ShareNode } from '../solveTree';
 import {
+  findThemeFontIn,
   resolveThemeFontIn,
   resolveThemeFontSizeIn,
   themeResolutionScope,
@@ -44,6 +45,23 @@ function scopeFor(n: ShareNode): ThemeResolutionScope {
  */
 export function resolveNodeFontMetrics(n: ShareNode, themeKey: string): FontMetrics {
   return peekSceneFontMetrics(resolveNodeFont(n, themeKey), n.path);
+}
+
+/**
+ * `resolveNodeFontMetrics` for a key whose last rung is a face of its own, not the default font:
+ * RichTextLabel's `bold_font` ends at a `FontVariation` over the default font
+ * (`default_theme.cpp:1195`). `lastRung` gets the metrics of the default font and answers only
+ * where no override, no ancestor theme and no project theme defines `themeKey`.
+ */
+export function resolveNodeFontMetricsOr(
+  n: ShareNode,
+  themeKey: string,
+  lastRung: (defaultFace: FontMetrics) => FontMetrics
+): FontMetrics {
+  const scope = scopeFor(n);
+  const found = findThemeFontIn(scope, themeKey, n.fontOverrides[themeKey]);
+  if (found !== undefined) return peekSceneFontMetrics(found, n.path);
+  return lastRung(peekSceneFontMetrics(scope.projectDefaultFont, n.path));
 }
 
 /**

@@ -84,6 +84,7 @@ is already applied. Every real Godot save guarantees that, since `text` is the f
   `text_overrun_behavior` puts the ellipsis after the last kept glyph, where Godot
   re-justifies the line.
 - **Not drawn** `label_settings.font`, so every Label shapes in its theme font.
+- **Approximated** An embolden above about 1.4 over the bundled font differs from FreeType, since the atlas rounds corners and holds limited growth.
 - **Not drawn** `label_settings.paragraph_spacing`.
 - **Not drawn** The stacked-outline and stacked-shadow arrays of `label_settings`, while
   its single outline and shadow and the theme's own draw.

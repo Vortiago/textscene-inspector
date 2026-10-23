@@ -46,12 +46,21 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 export function resolveTabBarCurrentTab(
   authored: number | undefined,
   deselectEnabled: boolean | undefined,
-  tabs: readonly Pick<TabBarTabProperties, 'disabled' | 'hidden'>[]
+  tabCount: number,
+  isUnselectable: (index: number) => boolean
 ): number {
-  if (tabs.length === 0) return -1;
-  if (authored !== undefined && authored >= 0 && authored < tabs.length) return authored;
-  const canDeselect = deselectEnabled === true || tabs.every((tab) => tab.disabled || tab.hidden === true);
-  return canDeselect ? -1 : 0;
+  if (tabCount === 0) return -1;
+  if (authored !== undefined && authored >= 0 && authored < tabCount) return authored;
+  if (deselectEnabled === true) return -1;
+  for (let i = 0; i < tabCount; i++) {
+    if (!isUnselectable(i)) return 0;
+  }
+  return -1;
+}
+
+/** Whether a tab can never be the current one: disabled or hidden (`tab_bar.cpp:1862-1873`). */
+export function isTabUnselectable(tab: Pick<TabBarTabProperties, 'disabled' | 'hidden'>): boolean {
+  return tab.disabled || tab.hidden === true;
 }
 
 export type TabDrawState = 'selected' | 'unselected' | 'disabled';
@@ -353,7 +362,9 @@ export function shapeTabLabel(
 export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
   const props = n.node.properties as TabBarProperties;
   const tabs = props.tabs ?? [];
-  const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs);
+  const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs.length, (i) =>
+    isTabUnselectable(tabs[i]!)
+  );
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
   const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
   const iconMaxWidth = n.constants.icon_max_width ?? 0;

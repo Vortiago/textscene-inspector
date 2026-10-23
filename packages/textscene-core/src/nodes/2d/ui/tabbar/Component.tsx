@@ -36,6 +36,7 @@ import {
   pickTabStyleBox,
   reconstructThemeScale,
   resolveTabDrawState,
+  isTabUnselectable,
   resolveTabBarCurrentTab,
   shapeTabLabel,
   tabBarFontColor,
@@ -70,7 +71,9 @@ interface ComputedTab {
 export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TabBarProperties>(solveNode);
   const tabs = props.tabs ?? EMPTY_TABS;
-  const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs);
+  const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs.length, (i) =>
+    isTabUnselectable(tabs[i]!)
+  );
   const alignment = props.tabAlignment ?? TAB_ALIGNMENT_LEFT;
   const clipTabs = props.clipTabs ?? true;
   const maxTabWidth = props.maxTabWidth ?? 0;

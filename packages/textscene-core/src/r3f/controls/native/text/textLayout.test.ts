@@ -7,7 +7,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { shapeText, shapedTextSizeWidthPx, soloLineLayout } from './textLayout';
 import { OPEN_SANS_METRICS } from './openSansMetrics';
-import type { FontMetrics } from './fontMetrics';
+import { withVariation, type FontMetrics } from './fontMetrics';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
@@ -308,18 +309,21 @@ describe('shapeText — fontSizePxAt (per-character size override)', () => {
 
 // FontVariation embolden widens every advance by `embolden * size / 64` px: `_get_extra_advance`
 // (`text_server_adv.cpp:3231-3243`) adds it to `x_advance` at `:7077`, before the whole-pixel round.
+// A face carries its embolden, so a character's embolden is that of the face `fontMetricsAt` names.
 describe('shapeText — embolden (extra advance per glyph)', () => {
   afterEach(() => {
     delete OPEN_SANS_METRICS.kerning.AB;
   });
 
-  function shapeBold(text: string, fontSizePx: number, emboldenAt?: (i: number) => number | undefined) {
+  /** Shapes `text` with each character's face emboldened by `emboldenAt`; none is the plain face. */
+  function shapeBold(text: string, fontSizePx: number, emboldenAt?: (i: number) => number) {
     return shapeText(text, {
       fontSizePx,
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
-      emboldenAt,
+      fontMetricsAt:
+        emboldenAt && ((i) => withVariation(OPEN_SANS_FONT_METRICS, { embolden: emboldenAt(i) })),
     }).lines[0]!.glyphs;
   }
 
@@ -338,7 +342,7 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
     expect(shapeBold('A', 16, () => 2.5)[0]!.advance - shapeBold('A', 16)[0]!.advance).toBeCloseTo(0.625, 10);
   });
 
-  it('adds nothing for an embolden of 0, or with no emboldenAt', () => {
+  it('adds nothing for an embolden of 0, or with no fontMetricsAt', () => {
     expect(shapeBold('AB', 16, () => 0)).toEqual(shapeBold('AB', 16));
   });
 
@@ -349,7 +353,7 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
     expect(advances).toEqual([27, 27, 28, 27]);
   });
 
-  it('restarts the carried remainder where the embolden changes (a new shaped run)', () => {
+  it('restarts the carried remainder where the face changes (a new shaped run)', () => {
     // The first two glyphs round to 27 and 27 (remainder 0.40625). A new run starts at 0, so the
     // plain 'A' is 26.453125 -> 26 (remainder 0.453125) and the last is 26.90625 -> 27.
     const advances = shapeBold('AAAA', 40, (i) => (i < 2 ? 1.2 : 0)).map((g) => g.advance);
@@ -359,6 +363,19 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
   it('skips kerning across an embolden boundary, as across a size boundary', () => {
     OPEN_SANS_METRICS.kerning.AB = -256;
     const [a] = shapeBold('AB', 16, (i) => (i === 0 ? 0 : 1.2));
+    expect(a!.advance).toBeCloseTo(677 / 64, 10);
+  });
+
+  it('skips kerning and restarts the remainder between two faces that differ only in identity', () => {
+    OPEN_SANS_METRICS.kerning.AB = -256;
+    const other: FontMetrics = { ...OPEN_SANS_FONT_METRICS };
+    const [a] = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetricsAt: (i) => (i === 0 ? OPEN_SANS_FONT_METRICS : other),
+    }).lines[0]!.glyphs;
     expect(a!.advance).toBeCloseTo(677 / 64, 10);
   });
 
@@ -375,12 +392,12 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 0,
       fontSizePxAt: (i) => (i === 0 ? 16 : 32),
-      emboldenAt: () => 1.2,
+      fontMetricsAt: () => withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 }),
     }).lines[0]!.glyphs;
     expect(glyphs.map((g) => g.emboldenGrowthPx)).toEqual([1.2, 2.4]);
   });
 
-  it("takes a face's own embolden from its FontMetrics when emboldenAt names none", () => {
+  it("takes a face's own embolden from its FontMetrics when fontMetricsAt names none", () => {
     const boldFace: FontMetrics = {
       kind: 'canvas',
       unitsPerEm: 1000,
@@ -401,6 +418,56 @@ describe('shapeText — embolden (extra advance per glyph)', () => {
     // 500 units at 1000 per em, 16 px: 8 px, plus 0.3.
     expect(glyphs[0]!.advance).toBeCloseTo(8.3, 10);
     expect(glyphs[0]!.emboldenGrowthPx).toBeCloseTo(1.2, 10);
+  });
+});
+
+// RichTextLabel shapes each style in its own font (`rich_text_label.cpp:3226-3296`), so one layout
+// advances and draws each character by its own face.
+describe('shapeText — a face for each character', () => {
+  const wideFace: CanvasFontMetrics = {
+    kind: 'canvas',
+    unitsPerEm: 1000,
+    ascent: 800,
+    descent: 200,
+    getGlyphAdvanceUnits: () => 1000,
+    getKerningAdjustmentUnits: () => 0,
+    averageAdvanceUnits: 1000,
+    cssFontFamily: 'wide-face',
+  };
+
+  function shapeFaces(text: string, faceAt: (i: number) => FontMetrics) {
+    return shapeText(text, {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetricsAt: faceAt,
+    }).lines[0]!.glyphs;
+  }
+
+  it("advances each character by its own face's glyph advance", () => {
+    const glyphs = shapeFaces('AA', (i) => (i === 0 ? OPEN_SANS_FONT_METRICS : wideFace));
+    expect(glyphs[0]!.advance).toBeCloseTo(677 / 64, 10);
+    expect(glyphs[1]!.advance).toBe(16);
+  });
+
+  it('gives an atlas bitmap only to a character in an atlas face', () => {
+    const glyphs = shapeFaces('AA', (i) => (i === 0 ? OPEN_SANS_FONT_METRICS : wideFace));
+    expect(glyphs[0]!.glyph).not.toBeNull();
+    expect(glyphs[1]!.glyph).toBeNull();
+  });
+
+  it('records the face each glyph was shaped in, and the layout face for a text with one face', () => {
+    const glyphs = shapeFaces('AA', (i) => (i === 0 ? OPEN_SANS_FONT_METRICS : wideFace));
+    expect([glyphs[0]!.fontMetrics, glyphs[1]!.fontMetrics]).toEqual([OPEN_SANS_FONT_METRICS, wideFace]);
+    const plain = shapeText('A', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics: wideFace,
+    });
+    expect(plain.lines[0]!.glyphs[0]!.fontMetrics).toBe(wideFace);
   });
 });
 
@@ -548,6 +615,18 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
     const solo = soloLineLayout(parent.lines[0]!, parent, 99);
     expect(solo.baselineOffsetPx).toBe(99);
     expect(solo.fontMetrics).toBe(parent.fontMetrics);
+  });
+
+  it('takes the face a caller names: a RichTextLabel run draws in its own face, not the paragraph one', () => {
+    const parent = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+    });
+    const bold = withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 });
+    const solo = soloLineLayout(parent.lines[0]!, parent, parent.baselineOffsetPx, bold);
+    expect(solo.fontMetrics).toBe(bold);
   });
 });
 

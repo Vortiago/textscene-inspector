@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { shapeText } from './textLayout';
-import { getFontEmboldenedAdvancePx, withEmbolden } from './fontMetrics';
+import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { overrunFlagsForBehavior, trimLineToWidth, type OverrunTrimFlags } from './textOverrun';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
@@ -94,7 +94,7 @@ describe('trimLineToWidth', () => {
   });
 
   it('draws the ellipsis of an emboldened face with the widened advance and the outline growth', () => {
-    const fontMetrics = withEmbolden(OPEN_SANS_FONT_METRICS, 1.2);
+    const fontMetrics = withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 });
     const shaped = shapeText('AAAAAAAAAAAA', {
       fontSizePx: FONT_SIZE_PX,
       boxWidthPx: 0,

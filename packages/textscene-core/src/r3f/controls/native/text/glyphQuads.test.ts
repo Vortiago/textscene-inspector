@@ -4,7 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { buildGlyphQuadArrays } from './glyphQuads';
+import { withVariation } from './fontMetrics';
 import { shapeText } from './textLayout';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { OPEN_SANS_ATLAS_GLYPHS, OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
@@ -131,7 +133,7 @@ describe('buildGlyphQuadArrays — embolden', () => {
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
-      emboldenAt: () => embolden,
+      fontMetrics: withVariation(OPEN_SANS_FONT_METRICS, { embolden }),
     });
   }
 

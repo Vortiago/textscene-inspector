@@ -96,7 +96,12 @@ const NO_THEME_CACHE = { getCached: (): ThemeResource | null | undefined => unde
 const NO_FONT_CACHE: FontCacheReader = { getCached: (): FontResource | null | undefined => undefined };
 
 /** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
-const NO_THEME_SCOPE: ThemeResolutionScope = { typeChain: [], searchOrder: [], projectDefaultFont: null };
+const NO_THEME_SCOPE: ThemeResolutionScope = {
+  typeChain: [],
+  searchOrder: [],
+  projectDefaultFont: null,
+  variationBaseFont: null,
+};
 
 /**
  * A theme's `styles` refs, resolved against that theme's own sub-resource pool,

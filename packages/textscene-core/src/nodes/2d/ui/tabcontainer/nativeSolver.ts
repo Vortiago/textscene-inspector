@@ -29,6 +29,7 @@ import {
   TAB_BAR_THEME_FONT_KEY,
   TAB_BAR_THEME_FONT_SIZE_KEY,
   reconstructThemeScale,
+  isTabUnselectable,
   resolveTabBarCurrentTab,
   tabBarMinimumSize,
 } from '../tabbar/nativeSolver';
@@ -46,11 +47,12 @@ import type { TabContainerProperties, TabContainerTabOverride } from './types';
  * (`tab_container.cpp:743-746`) until `NOTIFICATION_ENTER_TREE` (`:222-225`).
  */
 function tabContainerCurrentTab(props: TabContainerProperties, tabCount: number): number {
-  const tabs = Array.from({ length: tabCount }, (_unused, i) => ({
-    disabled: props.tabOverrides?.[i]?.disabled === true,
-    hidden: props.tabOverrides?.[i]?.hidden === true,
-  }));
-  return resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs);
+  return resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabCount, (i) =>
+    isTabUnselectable({
+      disabled: props.tabOverrides?.[i]?.disabled === true,
+      hidden: props.tabOverrides?.[i]?.hidden === true,
+    })
+  );
 }
 
 /**

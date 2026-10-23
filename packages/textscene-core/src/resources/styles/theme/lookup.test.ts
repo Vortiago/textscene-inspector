@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
+  findThemeFontIn,
   mergeThemedRecord,
   resolveThemeFontIn,
   resolveThemeFontSizeIn,
   themeResolutionScope,
 } from './lookup';
 import type { ThemeResource } from './types';
-import type { FontResource } from '../../fonts/font/types';
+import type { FontResource, FontVariationResource } from '../../fonts/font/types';
 
 const FONT_A: FontResource = {
   kind: 'file',
@@ -210,6 +211,64 @@ describe('resolveThemeFontIn', () => {
         undefined
       )
     ).toBe(FONT_A);
+  });
+});
+
+/** A `FontVariation` that names no `base_font`. */
+const BARE_VARIATION: FontVariationResource = {
+  kind: 'variation',
+  baseFont: null,
+  properties: { variation_embolden: '1.2' },
+};
+
+describe('findThemeFontIn', () => {
+  it('is undefined where no theme and no override define the font', () => {
+    expect(
+      findThemeFontIn(themeResolutionScope('Label', undefined, [], null, FONT_A), 'font', undefined)
+    ).toBe(undefined);
+  });
+
+  it('is the font a theme defines, and the override that wins, null included', () => {
+    const ancestor = theme({ fonts: { Label: { font: FONT_B } } });
+    const scope = themeResolutionScope('Label', undefined, [ancestor], null, FONT_A);
+    expect(findThemeFontIn(scope, 'font', undefined)).toBe(FONT_B);
+    expect(findThemeFontIn(scope, 'font', null)).toBeNull();
+  });
+});
+
+// `FontVariation::_get_base_font_or_default` (`font.cpp:2987-3039`) asks the default theme context,
+// which holds the project theme and the default theme, never a scene ancestor.
+describe('resolveThemeFontIn — a FontVariation with no base_font', () => {
+  function baseOf(font: FontResource | null): FontResource | null {
+    return (font as FontVariationResource).baseFont;
+  }
+
+  it("takes the project's custom_font as its base", () => {
+    const scope = themeResolutionScope('Label', undefined, [], null, FONT_A);
+    expect(baseOf(resolveThemeFontIn(scope, 'font', BARE_VARIATION))).toBe(FONT_A);
+  });
+
+  it("takes the project theme's default_font before the project's custom_font", () => {
+    const project = theme({ defaultFont: FONT_B });
+    const scope = themeResolutionScope('Label', undefined, [], project, FONT_A);
+    expect(baseOf(resolveThemeFontIn(scope, 'font', BARE_VARIATION))).toBe(FONT_B);
+  });
+
+  it('does not take an ancestor theme default_font, since a scene ancestor is not in the default context', () => {
+    const ancestor = theme({ defaultFont: FONT_B });
+    const scope = themeResolutionScope('Label', undefined, [ancestor], null, FONT_A);
+    expect(baseOf(resolveThemeFontIn(scope, 'font', BARE_VARIATION))).toBe(FONT_A);
+  });
+
+  it('applies to a variation a theme supplies, not only to an override', () => {
+    const ancestor = theme({ fonts: { Label: { font: BARE_VARIATION } } });
+    const scope = themeResolutionScope('Label', undefined, [ancestor], null, FONT_A);
+    expect(baseOf(resolveThemeFontIn(scope, 'font', undefined))).toBe(FONT_A);
+  });
+
+  it('stays bare when the project sets no custom_font, the bundled font being its base', () => {
+    const scope = themeResolutionScope('Label', undefined, [], null, null);
+    expect(resolveThemeFontIn(scope, 'font', BARE_VARIATION)).toBe(BARE_VARIATION);
   });
 });
 

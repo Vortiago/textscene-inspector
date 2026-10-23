@@ -13,6 +13,8 @@ import { TextRun, type TextRunProps } from './TextRun';
 import { shapeText } from './textLayout';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
 import { createRuntimeFontMetrics } from './runtimeFontMetrics';
+import { withVariation } from './fontMetrics';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
@@ -54,10 +56,42 @@ describe('<TextRun>', () => {
     expect(mat.uniforms.uOpacity!.value).toBe(0.75);
   });
 
-  it('forwards distanceBias to the material', async () => {
-    const renderer = await renderTextRun({ distanceBias: 0.1 });
+  it('gives the material no distance bias for a layout with no embolden', async () => {
+    const renderer = await renderTextRun();
     const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.uniforms.uDistanceBias!.value).toBe(0.1);
+    expect(mat.uniforms.uDistanceBias!.value).toBe(0);
+  });
+
+  it("derives the material's distance bias from the embolden of the layout's face", async () => {
+    const layout = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 }),
+    });
+    const renderer = await renderTextRun({ layout });
+    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    expect(mat.uniforms.uDistanceBias!.value).toBeCloseTo(0.39375, 10);
+  });
+
+  it("shears the glyphs by the skew of the layout's face: the top moves right, the bottom stays", async () => {
+    const skewedLayout = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 3,
+      fontMetrics: withVariation(OPEN_SANS_FONT_METRICS, { skew: 0.2 }),
+    });
+    const positionsOf = async (layout: ReturnType<typeof layoutFor>) => {
+      const renderer = await renderTextRun({ layout });
+      return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry.getAttribute('position');
+    };
+    const upright = await positionsOf(layoutFor('AB'));
+    const skewed = await positionsOf(skewedLayout);
+    const topShiftPx = skewed.getX(0) - upright.getX(0);
+    const bottomShiftPx = skewed.getX(2) - upright.getX(2);
+    expect(topShiftPx).toBeGreaterThan(bottomShiftPx + 1);
   });
 
   it('forwards outlineColor/outlineWidthPx to the material, sRGB-converted like tint', async () => {
