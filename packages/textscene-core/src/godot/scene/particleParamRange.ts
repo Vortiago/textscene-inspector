@@ -5,7 +5,7 @@
  * serialised stems of each class are the caller's.
  */
 
-import { scalarSlotValue } from '../variant/variantBool.js';
+import { writtenScalarSlotValue } from '../variant/variantBool.js';
 import { storedReal } from '../math/real.js';
 
 /** A `_min` above its `_max`, and the bound Godot moves onto the other at load. */
@@ -20,18 +20,13 @@ export interface CrossedParamRange {
   readonly loadedValue: number;
 }
 
-/** The float a slot takes from `value`, or null for an absent key and for a value the slot refuses. */
-function writtenReal(value: string | undefined): number | null {
-  return value === undefined ? null : scalarSlotValue(value);
-}
-
 /**
- * As {@link writtenReal}, but null for a value that is non-finite once stored: the renderer cannot
- * draw it. The stored form is tested, since `1e39` is finite as a double and `inf` as a `real_t`.
+ * As {@link writtenScalarSlotValue}, but undefined for a value that is non-finite once stored as a
+ * `real_t`: the renderer cannot draw it. `1e39` is finite as a double and inf as a `real_t`.
  */
-function writtenFiniteReal(value: string | undefined): number | null {
-  const real = writtenReal(value);
-  return real !== null && Number.isFinite(storedReal(real)) ? real : null;
+function writtenRealFiniteOnceStored(value: string | undefined): number | undefined {
+  const written = writtenScalarSlotValue(value);
+  return written !== undefined && Number.isFinite(storedReal(written)) ? written : undefined;
 }
 
 /**
@@ -42,7 +37,7 @@ function settledParamRange(
   properties: Record<string, string>,
   stem: string,
   fallback: number,
-  read: (value: string | undefined) => number | null
+  read: (value: string | undefined) => number | undefined
 ): { min: number; max: number } {
   const minKey = `${stem}_min`;
   const maxKey = `${stem}_max`;
@@ -52,7 +47,7 @@ function settledParamRange(
   for (const [key, value] of Object.entries(properties)) {
     if (key !== minKey && key !== maxKey) continue;
     const written = read(value);
-    if (written === null) continue;
+    if (written === undefined) continue;
     if (key === minKey) {
       min = storedReal(written);
       if (min > max) max = min;
@@ -76,14 +71,18 @@ export function loadedParamRange(
   stem: string,
   fallback: number
 ): { min: number; max: number } {
-  return settledParamRange(properties, stem, fallback, writtenFiniteReal);
+  return settledParamRange(properties, stem, fallback, writtenRealFiniteOnceStored);
 }
 
 /** The keys of `stems` that the file writes as a non-finite real, which {@link loadedParamRange} skips. */
 export function nonFiniteParamBounds(properties: Record<string, string>, stems: readonly string[]): string[] {
   return stems
     .flatMap((stem) => [`${stem}_min`, `${stem}_max`])
-    .filter((key) => writtenReal(properties[key]) !== null && writtenFiniteReal(properties[key]) === null);
+    .filter(
+      (key) =>
+        writtenScalarSlotValue(properties[key]) !== undefined &&
+        writtenRealFiniteOnceStored(properties[key]) === undefined
+    );
 }
 
 /** `properties` without the keys {@link nonFiniteParamBounds} names, in the order the file lists the rest. */
@@ -108,15 +107,15 @@ export function crossedParamRanges(
   for (const stem of stems) {
     const minKey = `${stem}_min`;
     const maxKey = `${stem}_max`;
-    const writtenMin = writtenReal(properties[minKey]);
-    const writtenMax = writtenReal(properties[maxKey]);
-    if (writtenMin === null || writtenMax === null) continue;
+    const writtenMin = writtenScalarSlotValue(properties[minKey]);
+    const writtenMax = writtenScalarSlotValue(properties[maxKey]);
+    if (writtenMin === undefined || writtenMax === undefined) continue;
     const min = storedReal(writtenMin);
     const max = storedReal(writtenMax);
     if (!(min > max)) continue;
 
     // A crossed pair settles on one value: the bound the file lists last.
-    const loadedValue = settledParamRange(properties, stem, min, writtenReal).min;
+    const loadedValue = settledParamRange(properties, stem, min, writtenScalarSlotValue).min;
     crossed.push({ minKey, maxKey, min, max, movedKey: loadedValue === min ? maxKey : minKey, loadedValue });
   }
   return crossed;

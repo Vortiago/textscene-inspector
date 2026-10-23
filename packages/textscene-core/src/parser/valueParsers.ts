@@ -299,19 +299,13 @@ export function parseOptionalBool(value: string | undefined): boolean | undefine
   return boolSlotValue(value) === true;
 }
 
-/** `parseOptionalInt` for floats. */
+/**
+ * `parseOptionalInt` for floats. Finite means finite as a double, so `1e39` passes, though a
+ * `real_t` stores it as inf. `writtenScalarSlotValue` keeps the non-finite literals.
+ */
 export function parseOptionalFloat(value: string | undefined): number | undefined {
   if (value === undefined) return undefined;
   return finiteScalar(value) ?? undefined;
-}
-
-/**
- * `parseOptionalFloat` that keeps `inf`, `inf_neg` and `nan`, for a property whose consumer
- * draws what Godot draws for them.
- */
-export function parseOptionalGodotFloat(value: string | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  return scalarSlotValue(value) ?? undefined;
 }
 
 /**
