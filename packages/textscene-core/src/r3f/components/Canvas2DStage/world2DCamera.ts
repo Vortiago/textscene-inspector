@@ -27,7 +27,8 @@ export class World2DCamera extends THREE.OrthographicCamera {
   override updateProjectionMatrix(): void {
     super.updateProjectionMatrix();
     this.projectionMatrix.premultiply(FLIP_Y);
-    this.projectionMatrixInverse.copy(this.projectionMatrix).invert();
+    // The flip is its own inverse, so (F·P)⁻¹ = P⁻¹·F and `super` already inverted P.
+    this.projectionMatrixInverse.multiply(FLIP_Y);
   }
 }
 
