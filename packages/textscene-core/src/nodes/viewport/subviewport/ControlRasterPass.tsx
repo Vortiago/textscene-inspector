@@ -18,6 +18,7 @@ import { useProjectSettings } from '../../../r3f/contexts/ProjectSettingsContext
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
 import { useBuildSolveTree } from '../../../r3f/controls/native/buildSolveTree.js';
 import { ControlCanvasWalker } from '../../../r3f/controls/native/ControlCanvasWalker.js';
+import { SubViewportSamplerScope } from './SubViewportSamplerScope';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme.js';
 import { measureText } from '../../../r3f/controls/native/text/measurer.js';
 import type { Rect2 } from '../../../godot/math/rect2.js';
@@ -121,18 +122,20 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   return createPortal(
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
-      <ControlCanvasWalker
-        tree={tree}
-        generation={generation}
-        viewport={solveViewport}
-        theme={theme}
-        measurer={measureText}
-        // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on
-        // every Viewport, and only the root window gets
-        // `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so a project
-        // that opts out leaves a SubViewport's own Controls snapped.
-        snapToPixels
-      />
+      <SubViewportSamplerScope properties={node.properties as SubViewportProperties}>
+        <ControlCanvasWalker
+          tree={tree}
+          generation={generation}
+          viewport={solveViewport}
+          theme={theme}
+          measurer={measureText}
+          // `scene/main/viewport.h`: `bool snap_controls_to_pixels = true` on
+          // every Viewport, and only the root window gets
+          // `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so a project
+          // that opts out leaves a SubViewport's own Controls snapped.
+          snapToPixels
+        />
+      </SubViewportSamplerScope>
     </SceneResourcesProvider>,
     portalScene
   );

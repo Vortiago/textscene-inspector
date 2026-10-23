@@ -8,6 +8,7 @@ import { godotTextureFilterState } from '../../../../resources/textures/godotTex
 import { TextureFilter } from '../../../../godot/rendering/materials/textureFilter';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { fakeCanvasRenderer } from '../../../testing/fakeCanvasRenderer';
 import { TextRun, type TextRunProps } from './TextRun';
 import { shapeText } from './textLayout';
 import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
@@ -162,6 +163,28 @@ describe('<TextRun> — internal dispatch to the canvas painter for a "canvas"-k
       expect(map.minFilter).toBe(minFilter);
     }
   );
+
+  it('writes the anisotropy of a Nearest with Mipmaps and Anisotropic raster after each upload', async () => {
+    const canvas = fakeCanvasRenderer({ isAllocated: false });
+    const renderer = await ReactThreeTestRenderer.create(
+      <canvas.wrapper>
+        <TextRun
+          layout={canvasLayoutFor('Hi')}
+          fontSizePx={16}
+          tint={WHITE}
+          textureFilter={godotTextureFilterState(TextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC)}
+          mipmapped
+        />
+      </canvas.wrapper>
+    );
+    const map = (
+      (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial
+    ).map!;
+
+    map.onUpdate!(map);
+
+    expect(canvas.gl.texParameterf).toHaveBeenCalledTimes(1);
+  });
 
   it('builds no mip chain unless the caller asks, as a font without generate_mipmaps has none', async () => {
     const renderer = await ReactThreeTestRenderer.create(

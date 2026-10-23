@@ -95,7 +95,9 @@ gives the same input hash but 91265 vertices against the cache's 91276, with 3.6
 corners at the same UV2. The bake shipped with a demo matches its cached layout, so the cache
 is the only input that reproduces it. Godot keys each entry by the MD5 of the unwrap input,
 so the previewer rebuilds that input in float32 in Godot's operation order and looks the hash
-up. A mesh without a matching entry keeps the GLB's own attributes, and one log line names it.
+up. A mesh without a matching entry keeps the GLB's own attributes and reads no lightmap, so it
+draws with real-time light, Static lights included, in place of a bake that would not line up
+with its UV2. One log line names it.
 
 - **The cache is fetched like the sidecar.** It is found by convention and its absence is
   ordinary, so it is read through the FileEventBus, only when the sidecar unwraps a mesh, and

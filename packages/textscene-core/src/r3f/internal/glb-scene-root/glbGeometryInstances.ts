@@ -12,6 +12,7 @@ import type { GeometryInstance3DProperties } from '../../../nodes/3d/geometryins
 import {
   isMeshInstance,
   meshInstanceSurfaces,
+  readsNoLightmap,
   type MeshSurface,
 } from '../../../resources/formats/glb/meshInstances';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
@@ -105,9 +106,8 @@ export function useGlbGeometryInstances(
     const lightmaps = lightmapsOf(scene);
     const assignLightmaps = () => {
       for (const { object: meshObject, place } of instances) {
-        culled.current
-          .get(meshObject)
-          ?.setLightmap(place.path === null ? null : lightmaps.assignmentFor(place.path));
+        const path = readsNoLightmap(meshObject) ? null : place.path;
+        culled.current.get(meshObject)?.setLightmap(path === null ? null : lightmaps.assignmentFor(path));
       }
       invalidate();
     };

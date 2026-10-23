@@ -25,10 +25,9 @@ import { multiplyModulate, WHITE_MODULATE } from '../../canvasItemModulate';
 import { canvasItemFacing } from '../../canvasItemFacing';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import { CANVAS_SRGB_DEFINES } from '../../canvasSrgbMultiply';
-import { pinNoColorSpace, useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
+import { useOwnerCanvas2DTexture, useCanvasSrgbDefines } from '../../canvas2DTextureDecode';
 import { useGodotLinearColor } from '../../godotColor';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import { useUploadedClone } from '../../tiledUpload/useTiledUpload';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 
@@ -249,21 +248,8 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
   }, [rawTexture, rect, texture]);
   useDisposeOnRelease(geometry);
 
-  // A clone: the cached texture is shared, and this mutates colour space and
-  // filter. Linear and clamp-to-edge, the `Viewport::default_canvas_item_texture_filter`
-  // class default: a StyleBoxTexture can land on any Control, and none hands
-  // this quad its own sampler.
-  const preparedTexture = useMemo(() => {
-    if (!rawTexture || !geometry) return null;
-    const cloned = rawTexture.clone();
-    pinNoColorSpace(cloned);
-    cloned.magFilter = THREE.LinearFilter;
-    cloned.minFilter = THREE.LinearFilter;
-    cloned.wrapS = cloned.wrapT = THREE.ClampToEdgeWrapping;
-    cloned.needsUpdate = true;
-    return cloned;
-  }, [rawTexture, geometry]);
-  const drawnTexture = useUploadedClone(preparedTexture);
+  // The owner's own sampler, as every canvas painter takes it.
+  const drawnTexture = useOwnerCanvas2DTexture(geometry ? rawTexture : null);
 
   // The last `canvas_item_add_nine_patch` argument, `modulate_color`
   // (`style_box_texture.cpp:183`), times the owner's accumulated modulate.

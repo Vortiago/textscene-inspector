@@ -13,7 +13,9 @@ import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
+import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
+import { useUvWindow } from '../../../../r3f/useUvWindow';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode, shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -35,7 +37,6 @@ import {
   type RichTextImagePlacement,
 } from './nativeSolver';
 import type { RichTextLabelProperties } from './types';
-import { useUploadedClone } from '../../../../r3f/tiledUpload/useTiledUpload';
 import type { Rgba } from '../../../../godot/math/math';
 
 interface ImageLike {
@@ -63,25 +64,23 @@ function RichTextImage({
   const { externalResources, internalResources } = resources;
   const { texture: rawTexture } = useTexture2D(spec.path, externalResources, internalResources);
 
-  const preparedTexture = useMemo(() => {
-    if (!rawTexture) return null;
-    const cloned = rawTexture.clone();
-    // `ControlQuad` decodes the sample itself, so it must arrive as undecoded sRGB.
-    pinNoColorSpace(cloned);
-    if (spec.region) {
-      const image = rawTexture.image as ImageLike | undefined;
-      const textureW = image?.width ?? 0;
-      const textureH = image?.height ?? 0;
-      if (textureW > 0 && textureH > 0) {
-        cloned.repeat.set(spec.region.w / textureW, spec.region.h / textureH);
-        cloned.offset.set(spec.region.x / textureW, 1 - (spec.region.y + spec.region.h) / textureH);
-      }
-    }
-    cloned.needsUpdate = true;
-    return cloned;
-  }, [rawTexture, spec.region]);
-
-  const drawnTexture = useUploadedClone(preparedTexture);
+  // `ControlQuad` decodes the sample itself, so the clone arrives as undecoded sRGB.
+  const drawnTexture = useOwnerCanvas2DTexture(rawTexture);
+  const regionWindow = useMemo(
+    () =>
+      frameUvWindow(rawTexture ?? undefined, {
+        ...WHOLE_FRAME,
+        region_enabled: spec.region !== undefined,
+        region_rect: spec.region && {
+          x: spec.region.x,
+          y: spec.region.y,
+          width: spec.region.w,
+          height: spec.region.h,
+        },
+      }),
+    [rawTexture, spec.region]
+  );
+  useUvWindow(drawnTexture, regionWindow);
 
   if (!rawTexture || !drawnTexture) return null;
 

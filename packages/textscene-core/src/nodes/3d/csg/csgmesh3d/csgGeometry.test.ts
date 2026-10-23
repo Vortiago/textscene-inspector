@@ -65,6 +65,11 @@ const INLINE_TUBE: TscnInternalResource = {
   type: 'TubeTrailMesh',
   data: { ...COARSE_TUBE, curve: 'SubResource("Grow")' },
 };
+const INLINE_RIBBON: TscnInternalResource = {
+  id: 'Ribbon',
+  type: 'RibbonTrailMesh',
+  data: { sections: '2', section_length: '1', section_segments: '1', curve: 'SubResource("Grow")' },
+};
 const INLINE_TUBE_WITH_FILE_CURVE: TscnInternalResource = {
   id: 'TubeFile',
   type: 'TubeTrailMesh',
@@ -98,6 +103,7 @@ const CTX = csgGeometryContext({
     INLINE_POINTS,
     INLINE_QUADS,
     INLINE_TUBE,
+    INLINE_RIBBON,
     INLINE_TUBE_WITH_FILE_CURVE,
     growingCurve('3'),
   ],
@@ -181,6 +187,14 @@ describe('csgMesh3DGeometry: mesh sources', () => {
     geometry.computeBoundingBox();
 
     // The Curve grows the bottom row to three times the radius of 0.5.
+    expect(geometry.boundingBox!.getSize(new THREE.Vector3()).x).toBeCloseTo(3, 5);
+  });
+
+  it('builds an inline RibbonTrailMesh whose Curve it reads from the scene', () => {
+    const { geometry } = build('SubResource("Ribbon")')!;
+    geometry.computeBoundingBox();
+
+    // The Curve grows the bottom row to three times the size of 1.
     expect(geometry.boundingBox!.getSize(new THREE.Vector3()).x).toBeCloseTo(3, 5);
   });
 

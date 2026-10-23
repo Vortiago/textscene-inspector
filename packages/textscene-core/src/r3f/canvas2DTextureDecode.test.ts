@@ -10,6 +10,9 @@ import * as THREE from 'three';
 import { pinNoColorSpace, useCanvas2DTexture, useCanvasSrgbDefines } from './canvas2DTextureDecode';
 import { markSrgbBytes } from './srgbByteTextures';
 
+/** Linear and Disabled, the viewport defaults (`viewport.h:419-420`). */
+const DEFAULT_SAMPLER = { filter: 2, repeat: 1 };
+
 function makeTexture(colorSpace: THREE.ColorSpace = THREE.SRGBColorSpace): THREE.Texture {
   const texture = new THREE.Texture();
   texture.colorSpace = colorSpace;
@@ -37,7 +40,7 @@ describe('pinNoColorSpace', () => {
 
 describe('useCanvas2DTexture', () => {
   it('returns null for a null/undefined input, allocating nothing', () => {
-    const { result } = renderHook(({ tex }) => useCanvas2DTexture(tex), {
+    const { result } = renderHook(({ tex }) => useCanvas2DTexture(tex, DEFAULT_SAMPLER), {
       initialProps: { tex: null as THREE.Texture | null },
     });
     expect(result.current).toBeNull();
@@ -45,7 +48,7 @@ describe('useCanvas2DTexture', () => {
 
   it('clones the input and pins the clone to NoColorSpace, leaving the source untouched', () => {
     const source = makeTexture(THREE.SRGBColorSpace);
-    const { result } = renderHook(({ tex }) => useCanvas2DTexture(tex), {
+    const { result } = renderHook(({ tex }) => useCanvas2DTexture(tex, DEFAULT_SAMPLER), {
       initialProps: { tex: source as THREE.Texture | null },
     });
     expect(result.current).not.toBeNull();
@@ -56,7 +59,7 @@ describe('useCanvas2DTexture', () => {
 
   it('is immune to a downstream reassignment, e.g. from applyProps auto-tagging', () => {
     const source = makeTexture();
-    const { result } = renderHook(({ tex }) => useCanvas2DTexture(tex), {
+    const { result } = renderHook(({ tex }) => useCanvas2DTexture(tex, DEFAULT_SAMPLER), {
       initialProps: { tex: source as THREE.Texture | null },
     });
     const clone = result.current!;
@@ -67,12 +70,28 @@ describe('useCanvas2DTexture', () => {
   it('re-clones when the source texture identity changes', () => {
     const first = makeTexture();
     const second = makeTexture();
-    const { result, rerender } = renderHook(({ tex }) => useCanvas2DTexture(tex), {
+    const { result, rerender } = renderHook(({ tex }) => useCanvas2DTexture(tex, DEFAULT_SAMPLER), {
       initialProps: { tex: first as THREE.Texture | null },
     });
     const firstClone = result.current;
     rerender({ tex: second });
     expect(result.current).not.toBe(firstClone);
+  });
+});
+
+describe('useCanvas2DTexture sampler', () => {
+  it("samples the clone with the item's filter and repeat, whatever the source was handed over with", () => {
+    const NEAREST = 1;
+    const REPEAT_MIRROR = 3;
+    const source = makeTexture();
+    source.wrapS = source.wrapT = THREE.RepeatWrapping;
+    const { result } = renderHook(() =>
+      useCanvas2DTexture(source, { filter: NEAREST, repeat: REPEAT_MIRROR })
+    );
+    const clone = result.current!;
+    expect([clone.magFilter, clone.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+    expect([clone.wrapS, clone.wrapT]).toEqual([THREE.MirroredRepeatWrapping, THREE.MirroredRepeatWrapping]);
+    expect([source.magFilter, source.wrapS]).toEqual([THREE.LinearFilter, THREE.RepeatWrapping]);
   });
 });
 
@@ -82,7 +101,7 @@ describe('useCanvas2DTexture in a canvas', () => {
     const source = makeTexture();
     source.name = 'large';
     source.wrapS = source.wrapT = THREE.RepeatWrapping;
-    const { result } = renderHook(() => useCanvas2DTexture(source), { wrapper });
+    const { result } = renderHook(() => useCanvas2DTexture(source, DEFAULT_SAMPLER), { wrapper });
 
     const [upload] = pending;
     expect(upload?.texture.wrapS).toBe(THREE.ClampToEdgeWrapping);

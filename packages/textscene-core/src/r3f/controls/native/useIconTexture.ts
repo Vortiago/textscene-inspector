@@ -5,18 +5,20 @@
  */
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { pinNoColorSpace } from '../../canvas2DTextureDecode';
-import { useUndecodedTexture } from '../../undecodedTexture';
+import { pinNoColorSpace, useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
+import { applyCanvasItemSampler, useResolvedTextureSampler } from '../../canvasItemTextureSampler';
+import { useNearestAnisotropy } from '../../nearestAnisotropy';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { ThemedIconRef } from './solveTree';
 
 /**
- * Memoised on the URL and disposed on unmount or URL change. `null` allocates nothing: hook order
- * is fixed, so a conditionally drawn icon (the SplitContainer grabber, hidden by the default
- * `autohide`) would otherwise decode an image for a quad it never renders.
+ * Sampled with the owner's filter and repeat, memoised on the URL and sampler, and disposed on unmount
+ * or change. `null` allocates nothing: hook order is fixed, so a conditionally drawn icon (the
+ * SplitContainer grabber, hidden by the default `autohide`) would decode an image it never renders.
  */
 export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | null {
+  const sampler = useResolvedTextureSampler();
   const texture = useMemo(() => {
     if (dataUrl === null) return null;
     // With `hdr_2d` off (`rendering_server.cpp:3771`) Godot's canvas samples the non-sRGB view
@@ -24,9 +26,11 @@ export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | 
     // `SRGB8_ALPHA8` upload that decodes first. Pinned, since fiber re-tags a `map` on each commit,
     // and `ControlQuad` applies the matching decode. The loader bypasses `res://`, so it tags here.
     const tex = new THREE.TextureLoader().load(dataUrl);
+    applyCanvasItemSampler(tex, sampler);
     return pinNoColorSpace(tex);
-  }, [dataUrl]);
+  }, [dataUrl, sampler]);
   useEffect(() => (texture ? () => texture.dispose() : undefined), [texture]);
+  useNearestAnisotropy(texture);
   return texture;
 }
 
@@ -56,7 +60,7 @@ export function useNodeIcon(
     themed?.resources.externalResources ?? NO_EXT_RESOURCES,
     themed?.resources.internalResources ?? NO_INT_RESOURCES
   );
-  const themedTexture = useUndecodedTexture(themed ? themedResult.texture : null);
+  const themedTexture = useOwnerCanvas2DTexture(themed ? themedResult.texture : null);
   const themedWins = themed !== undefined && !themedResult.missing;
   const vendoredTexture = useOptionalIconTexture(themedWins ? null : vendoredUrl);
   return themedWins ? themedTexture : vendoredTexture;

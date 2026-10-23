@@ -51,6 +51,13 @@ export interface Node2DProperties {
    * Per-item and not inherited by children.
    */
   light_mask: number;
+  /**
+   * CanvasItem `texture_filter` (`scene/main/canvas_item.h:52-60`). `0` is PARENT_NODE, the
+   * default (`canvas_item.h:123`): the nearest ancestor's concrete value, else the viewport's.
+   */
+  texture_filter: number;
+  /** CanvasItem `texture_repeat` (`canvas_item.h:63-69`). `0` is PARENT_NODE, the default (`canvas_item.h:124`). */
+  texture_repeat: number;
 
   /** When true, CanvasItem descendants are sorted by their world-space Y position. */
   y_sort_enabled: boolean;

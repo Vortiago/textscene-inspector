@@ -26,6 +26,7 @@ import '../../../nodes/3d/meshinstance3d/index';
 import '../../../nodes/node/index';
 import { unfadedMaterial } from '../../materials/fadedMeshMaterials';
 import { UV2_ATTRIBUTE } from '../../../resources/meshes/uv2';
+import { markReadsNoLightmap } from '../../../resources/formats/glb/meshInstances';
 
 const GLB_PATH = 'res://lamp.glb';
 
@@ -67,13 +68,21 @@ function withUv2(glb: THREE.Object3D): THREE.Object3D {
   return glb;
 }
 
+async function lampGlb(): Promise<THREE.Object3D> {
+  return withUv2(await createGLBMesh(nodesGlb([{ name: 'Single', mesh: 0 }]), NO_SIDECAR));
+}
+
+/** `lampGlb` as the importer leaves a mesh it unwrapped and the previewer could not rebuild. */
+async function unrebuiltLampGlb(): Promise<THREE.Object3D> {
+  const glb = await lampGlb();
+  glb.traverse(markReadsNoLightmap);
+  return glb;
+}
+
 /** The material Lamp's GLB mesh Single draws with, once a LightmapGI names `named`. */
-async function singleMaterial(named: string): Promise<THREE.Material> {
+async function singleMaterial(named: string, glb = lampGlb()): Promise<THREE.Material> {
   const fake = createFakeResourceLoader();
-  fake.glbMeshes.seed(
-    GLB_PATH,
-    withUv2(await createGLBMesh(nodesGlb([{ name: 'Single', mesh: 0 }]), NO_SIDECAR))
-  );
+  fake.glbMeshes.seed(GLB_PATH, await glb);
   const camera = manualCameraAt({ x: 0.5, y: 0.5, z: 11 });
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={{ internalResources: [] }}>
@@ -99,6 +108,11 @@ describe('a GLB mesh lightmap', () => {
     const material = await singleMaterial('Root/Lamp/Single');
     expect(unfadedMaterial(material)).not.toBe(material);
     expect(material.customProgramCacheKey()).toContain('godot-lightmap-read');
+  });
+
+  it('draws its own material when the importer unwrapped the mesh and the previewer cannot rebuild it', async () => {
+    const material = await singleMaterial('Root/Lamp/Single', unrebuiltLampGlb());
+    expect(material.customProgramCacheKey()).not.toContain('godot-lightmap-read');
   });
 
   it('draws its own material when no LightmapGI names it (edge case)', async () => {

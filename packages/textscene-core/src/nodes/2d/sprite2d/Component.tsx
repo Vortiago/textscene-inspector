@@ -10,10 +10,10 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
-import { frameSizePx, frameUvWindow, spriteSamplerClone } from '../../../r3f/spriteFrame';
-import { useUploadedClone } from '../../../r3f/tiledUpload/useTiledUpload';
+import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
+import { useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 import { useUvWindow } from '../../../r3f/useUvWindow';
-import { useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
+import { useCanvas2DTexture, useCanvasSrgbDefines } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
@@ -53,17 +53,10 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     internalResources
   );
 
-  // 'clamp': the 2D canvas disables texture-repeat, so an overrunning
-  // region_rect stretches its edge texels, where Sprite3D tiles. NoColorSpace:
-  // the canvas filter blends undecoded sRGB bytes (`canvas2DTextureDecode.ts`),
-  // and QuadMesh multiplies the filtered sample in sRGB through `useCanvasSrgbDefines`.
-  const samplerClone = useMemo(
-    () => (sourceTexture ? spriteSamplerClone(sourceTexture, 'clamp', THREE.NoColorSpace) : undefined),
-    [sourceTexture]
-  );
-  // One clone per texture, not per frame: `useUploadedClone` uploads a large one in
-  // bands once, and disposes it once it no longer draws.
-  const drawnTexture = useUploadedClone(samplerClone ?? null);
+  // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
+  // where Sprite3D tiles.
+  const sampler = useNode2DTextureSampler(props);
+  const drawnTexture = useCanvas2DTexture(sourceTexture, sampler);
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const frameWindow = useMemo(() => {

@@ -1,0 +1,36 @@
+[gd_scene load_steps=4 format=3]
+
+; One variable: `texture_filter` on the Node2D parent. Both AnimatedSprite2Ds magnify the same 8x8
+; frame 8x, and neither sets its own filter. Under the Nearest parent the half-black, half-white
+; edge stays a hard step. Under the default parent the project's Linear filter blends it.
+
+[ext_resource type="Texture2D" path="res://textures/hard-edge-split.png" id="1_split"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_split"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_split")
+}],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}]
+
+[node name="World" type="Node2D"]
+
+; `texture_filter` 1 is TEXTURE_FILTER_NEAREST.
+[node name="NearestParent" type="Node2D" parent="."]
+texture_filter = 1
+
+[node name="Nearest" type="AnimatedSprite2D" parent="NearestParent"]
+position = Vector2(288, 324)
+scale = Vector2(8, 8)
+sprite_frames = SubResource("SpriteFrames_split")
+
+[node name="DefaultParent" type="Node2D" parent="."]
+
+[node name="Default" type="AnimatedSprite2D" parent="DefaultParent"]
+position = Vector2(864, 324)
+scale = Vector2(8, 8)
+sprite_frames = SubResource("SpriteFrames_split")

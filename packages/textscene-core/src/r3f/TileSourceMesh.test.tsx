@@ -33,8 +33,11 @@ function sourceOf(usesTexturePadding: boolean): AtlasSourceModel {
   };
 }
 
+/** Linear and Disabled, the viewport defaults (`viewport.h:419-420`). */
+const DEFAULT_SAMPLER = { filter: 2, repeat: 1 };
+
 /** `texture` null seeds a texture that fails to load. */
-async function render(source: AtlasSourceModel, texture: THREE.Texture | null) {
+async function render(source: AtlasSourceModel, texture: THREE.Texture | null, sampler = DEFAULT_SAMPLER) {
   const fake = createFakeResourceLoader();
   fake.textures.seed(TEXTURE, texture);
   return ReactThreeTestRenderer.create(
@@ -49,6 +52,7 @@ async function render(source: AtlasSourceModel, texture: THREE.Texture | null) {
             color={new THREE.Color(1, 1, 1)}
             opacity={1}
             pixelMaterial={pixelMaterial}
+            sampler={sampler}
           />
         )}
       </LitCanvasItemPixels>
@@ -89,5 +93,19 @@ describe('TileSourceMesh without a usable texture', () => {
     const renderer = await render(sourceOf(false), null);
     const material = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
     expect((material.material as THREE.MeshBasicMaterial).color.getHexString()).toBe('ff00ff');
+  });
+});
+
+describe('TileSourceMesh texture sampler', () => {
+  it("samples the atlas with the tile layer's filter and repeat", async () => {
+    const texture = new THREE.Texture();
+    (texture as unknown as { image: { width: number; height: number } }).image = { width: 32, height: 16 };
+    const NEAREST = 1;
+    const REPEAT_ENABLED = 2;
+    const renderer = await render(sourceOf(false), texture, { filter: NEAREST, repeat: REPEAT_ENABLED });
+    const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+    const map = (mesh.material as THREE.MeshBasicMaterial).map!;
+    expect([map.magFilter, map.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+    expect([map.wrapS, map.wrapT]).toEqual([THREE.RepeatWrapping, THREE.RepeatWrapping]);
   });
 });

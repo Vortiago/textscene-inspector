@@ -1,0 +1,38 @@
+[gd_scene load_steps=2 format=3]
+
+; One variable: `texture_filter` on each Sprite3D, over stripes 4 texels tall seen at a grazing angle.
+; Left to right: Nearest with Mipmaps (2), Linear with Mipmaps (3), Nearest with Mipmaps and
+; Anisotropic (4), Linear with Mipmaps and Anisotropic (5). The two anisotropic ones keep the stripes
+; the isotropic ones blur.
+
+[ext_resource type="Texture2D" path="res://textures/aniso-stripes.png" id="1_stripes"]
+
+[node name="Scene" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9396926, 0.3420201, 0, -0.3420201, 0.9396926, 0, 1.5, 3)
+fov = 70.0
+
+[node name="NearestMipmaps" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.207912, -0.978148, 0, 0.978148, 0.207912, -2.1, 0, -1)
+texture = ExtResource("1_stripes")
+pixel_size = 0.01
+texture_filter = 2
+
+[node name="LinearMipmaps" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.207912, -0.978148, 0, 0.978148, 0.207912, -0.7, 0, -1)
+texture = ExtResource("1_stripes")
+pixel_size = 0.01
+texture_filter = 3
+
+[node name="NearestMipmapsAnisotropic" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.207912, -0.978148, 0, 0.978148, 0.207912, 0.7, 0, -1)
+texture = ExtResource("1_stripes")
+pixel_size = 0.01
+texture_filter = 4
+
+[node name="LinearMipmapsAnisotropic" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.207912, -0.978148, 0, 0.978148, 0.207912, 2.1, 0, -1)
+texture = ExtResource("1_stripes")
+pixel_size = 0.01
+texture_filter = 5

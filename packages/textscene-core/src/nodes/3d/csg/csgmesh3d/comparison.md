@@ -40,4 +40,5 @@ A `mesh` that is an open brush adds nothing to the solid, as in Godot. A PlaneMe
 
 ## Known limitations
 
-- **Resource gap** A mesh the previewer does not build (RibbonTrailMesh or TextMesh) adds nothing to the solid, and the node's details name the type.
+- **Resource gap** A mesh the previewer does not build (TextMesh) adds nothing to the solid, and the node's details name the type.
+- **Approximated** A RibbonTrailMesh adds its ribbon to the solid, where Godot adds nothing because manifold refuses an open brush.

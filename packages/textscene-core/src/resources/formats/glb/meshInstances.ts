@@ -16,6 +16,7 @@ export type MeshSurface = THREE.Object3D & {
 };
 
 const MESH_INSTANCE_KEY = 'textsceneMeshInstance';
+const READS_NO_LIGHTMAP_KEY = 'textsceneReadsNoLightmap';
 
 /**
  * Tags each object under `root` that stands for a glTF node's mesh, from the parser's
@@ -41,6 +42,19 @@ function isPrimitiveGroup(association: GLTFReference | undefined): boolean {
 /** Whether Godot imports `object` as a MeshInstance3D. */
 export function isMeshInstance(object: THREE.Object3D): boolean {
   return object.userData[MESH_INSTANCE_KEY] === true;
+}
+
+/**
+ * Whether the importer unwrapped `object`'s glTF mesh and the previewer could not rebuild the
+ * unwrap, so no LightmapGI lightmap fits it. A clone keeps the mark, as it lives in `userData`.
+ */
+export function readsNoLightmap(object: THREE.Object3D): boolean {
+  return object.userData[READS_NO_LIGHTMAP_KEY] === true;
+}
+
+/** Marks `object` as `readsNoLightmap`. */
+export function markReadsNoLightmap(object: THREE.Object3D): void {
+  object.userData[READS_NO_LIGHTMAP_KEY] = true;
 }
 
 /** The surfaces a MeshInstance3D object draws, or none for any other object. */

@@ -8,6 +8,7 @@ import type * as THREE from 'three';
 import type { GLTF, GLTFReference } from 'three/addons/loaders/GLTFLoader.js';
 import { GLTF_MODE_TRIANGLES, gltfObjects, targetCount } from '../../../../godot/import/gltf';
 import { meshSurfaces } from '../godotPrimitives';
+import { markReadsNoLightmap } from '../meshInstances';
 import {
   IDENTITY_BASIS,
   gltfNodeBasis,
@@ -34,8 +35,9 @@ export interface LightmapUvImport {
 }
 
 /**
- * Gives each mesh under `root` that Godot unwraps its cached UV2. `gltf` is the loaded file, and
- * `meshIds` holds each glTF mesh's import id.
+ * Gives each mesh under `root` that Godot unwraps its cached UV2, and marks a mesh whose unwrap
+ * the cache cannot rebuild as reading no lightmap. `gltf` is the loaded file, and `meshIds` holds
+ * each glTF mesh's import id.
  */
 export async function applyLightmapUv(
   gltf: GLTF,
@@ -45,23 +47,34 @@ export async function applyLightmapUv(
 ): Promise<void> {
   const entries = readEntries(lightmapUv);
   const rebuiltMeshes = new Map<number, RebuiltPrimitives>();
+  const unrebuiltMeshes = new Set<number>();
   for (const [mesh, node] of firstMeshNodes(root, gltf.parser.associations)) {
     const meshId = meshIds[mesh] ?? '';
     if (!lightmapUv.unwrap.unwraps(meshId)) continue;
     const surfaces = await unwrappableSurfaces(gltf, mesh);
     if (!surfaces) continue;
-    const rebuilt = rebuiltSurfaces(
+    const rebuild = rebuiltSurfaces(
       [...surfaces.values()],
       placement(gltf, root, node, lightmapUv.rootScale),
       entries,
       meshId,
       lightmapUv
     );
-    if (rebuilt)
-      rebuiltMeshes.set(mesh, new Map([...surfaces.keys()].map((primitive, i) => [primitive, rebuilt[i]!])));
+    if (rebuild === UNREBUILT) unrebuiltMeshes.add(mesh);
+    else if (rebuild)
+      rebuiltMeshes.set(mesh, new Map([...surfaces.keys()].map((primitive, i) => [primitive, rebuild[i]!])));
   }
   if (rebuiltMeshes.size > 0) replaceSurfaces(root, gltf.parser.associations, rebuiltMeshes);
+  if (unrebuiltMeshes.size > 0) markUnrebuiltMeshes(root, gltf.parser.associations, unrebuiltMeshes);
 }
+
+/**
+ * What `rebuiltSurfaces` returns for a mesh Godot unwraps and the cache cannot rebuild. Godot
+ * would unwrap it afresh with xatlas (`xatlas_unwrap/register_types.cpp:138`), which the previewer
+ * does not run: a fresh unwrap of `zdm2.glb` gives 91265 vertices against the cache's 91276
+ * (ADR-0028). A mesh with no unwrap input is `null`: Godot does not unwrap it.
+ */
+const UNREBUILT = Symbol('unrebuilt');
 
 /** Each kept primitive's rebuilt geometry, or null for one the unwrapped mesh drops. */
 type RebuiltPrimitives = ReadonlyMap<number, THREE.BufferGeometry | null>;
@@ -159,7 +172,7 @@ function rebuiltSurfaces(
   entries: ReadonlyMap<string, UnwrapCacheEntry>,
   meshId: string,
   { unwrap, path }: LightmapUvImport
-): (THREE.BufferGeometry | null)[] | null {
+): (THREE.BufferGeometry | null)[] | typeof UNREBUILT | null {
   const input = unwrapInput(surfaces, where, unwrap.texelSize);
   if (!input) {
     logger.info(
@@ -169,19 +182,16 @@ function rebuiltSurfaces(
   }
   const entry = entries.get(input.hash);
   if (!entry) {
-    // Godot would unwrap it afresh with xatlas, whose layout the previewer cannot reproduce.
     logger.info(
-      `[GLBProcessor] ${path}: the unwrap cache has no entry for mesh '${meshId}', so it keeps the GLB's own UV2`
+      `[GLBProcessor] ${path}: the unwrap cache has no entry for mesh '${meshId}', so it reads no lightmap`
     );
-    return null;
+    return UNREBUILT;
   }
   try {
     return rebuildSurfaces(surfaces, input, entry);
   } catch (error) {
-    logger.warn(
-      `[GLBProcessor] ${path}: ${(error as Error).message}; mesh '${meshId}' keeps the GLB's own UV2`
-    );
-    return null;
+    logger.warn(`[GLBProcessor] ${path}: ${(error as Error).message}; mesh '${meshId}' reads no lightmap`);
+    return UNREBUILT;
   }
 }
 
@@ -211,4 +221,16 @@ function replaceSurfaces(
   // GLTFLoader shares one geometry between meshes with the same accessors, so keep one still drawn.
   root.traverse((object) => replaced.delete((object as THREE.Mesh).geometry));
   for (const geometry of replaced) geometry.dispose();
+}
+
+/** Marks every object that draws a glTF mesh of `meshes` as reading no lightmap. */
+function markUnrebuiltMeshes(
+  root: THREE.Object3D,
+  associations: ReadonlyMap<unknown, GLTFReference>,
+  meshes: ReadonlySet<number>
+): void {
+  root.traverse((object) => {
+    const mesh = associations.get(object)?.meshes;
+    if (mesh !== undefined && meshes.has(mesh)) markReadsNoLightmap(object);
+  });
 }
