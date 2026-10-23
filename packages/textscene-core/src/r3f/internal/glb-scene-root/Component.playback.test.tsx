@@ -27,10 +27,11 @@ import { AnimationLoopMode } from '../../../godot/scene/animation';
 import { setImportedLoopMode } from '../../../resources/formats/glb/importedLoopMode';
 
 const GLB_PATH = 'res://player.glb';
-const GLB_NODE_PATH = 'Root/player';
+// A .glb opened as the scene is its own root, named after the file.
+const GLB_NODE_PATH = 'player';
 // As in Godot, clips surface on an AnimationPlayer child, so selecting this path, not the GLB
 // root, activates the driver.
-const GLB_ANIM_PATH = 'Root/player/AnimationPlayer';
+const GLB_ANIM_PATH = 'player/AnimationPlayer';
 
 /** A GLB-like object: a Scene group with a movable child, carrying clips. 'slide' imports as `slideLoopMode`. */
 function makeAnimatedGlb(slideLoopMode: number): THREE.Object3D {

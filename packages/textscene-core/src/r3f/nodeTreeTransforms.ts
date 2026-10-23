@@ -1,6 +1,6 @@
 /**
  * Transform maths over the parsed node tree, shared by the passes that run before
- * anything mounts: `remoteTransforms.ts` and `csgPolygonPaths.ts`. `basis_x/y/z`
+ * anything mounts and by the components that place a parsed transform. `basis_x/y/z`
  * are rows, not columns (`utils/transform.ts`), and read the other way they give a
  * transposed matrix that looks plausible until something rotates.
  */

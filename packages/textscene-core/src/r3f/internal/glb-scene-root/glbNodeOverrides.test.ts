@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { applyGlbNodeOverrides } from './glbNodeOverrides';
+import { applyGlbNodeOverrides, glbAttachPath } from './glbNodeOverrides';
 import { visualLayersOf } from '../../visualLayers';
 import type { TscnNode } from '../../../parser/types';
 import { buildTestGlbGraph } from './glbGraph.testkit';
@@ -173,5 +173,20 @@ describe('applyGlbNodeOverrides', () => {
     const applied = applyGlbNodeOverrides(root, [override('Robot', { rawProperties: { layers: '2' } })]);
 
     expect(applied.has('Robot')).toBe(false);
+  });
+});
+
+describe('glbAttachPath', () => {
+  it('names the parent path a typed child is added under', () => {
+    const typed = override('Lamp', {
+      type: 'Node3D',
+      instanceSubPath: 'Skeleton/Skeleton3D/Robot',
+      overridesExistingNode: false,
+    });
+    expect(glbAttachPath(typed)).toBe('Skeleton/Skeleton3D/Robot');
+  });
+
+  it('names none for an override, which names an existing node rather than adding one', () => {
+    expect(glbAttachPath(override('Robot', { instanceSubPath: 'Skeleton' }))).toBeNull();
   });
 });

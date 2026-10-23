@@ -14,11 +14,12 @@ import {
 } from '@textscene/core/linter';
 import { isGodotTextResourcePath } from '@textscene/core/godot';
 import { error as logError } from '@textscene/core/logger';
-import { comparablePath, isWithinRoot } from '@textscene/core/resources/resPath';
+import { isSamePath, isWithinRoot } from '@textscene/core/resources/resPath';
+import { resPathUri } from './existingResFile';
 import { HOST_PATH_CASE } from './hostPathCase';
 import { toVscodeRange } from './languageFeatureRanges';
 import { LintResourceProvider } from './LintResourceProvider';
-import { hasProjectFile, resRootOf } from './resRoot';
+import { forgetProjectFiles, resRootOf } from './resRoot';
 import {
   ANY_PATH_PATTERN,
   EXTENSION_LIST_PATTERN,
@@ -155,12 +156,6 @@ export class TscnDiagnostics implements vscode.Disposable {
    * deleted when its root is deleted, cleared by `_clearAll`.
    */
   private readonly _providers = new Map<string, LintResourceProvider>();
-  /**
-   * Whether each directory holds `project.godot`, so the walks of a project's documents share their answers.
-   * Written by `_holdsProjectFile`, cleared on any `project.godot` event, on a delete that holds a project root, and by
-   * `_clearAll`.
-   */
-  private readonly _projectFileByDir = new Map<string, Promise<boolean>>();
   private _enabled: boolean;
   private _debounceMs: number;
 
@@ -253,14 +248,13 @@ export class TscnDiagnostics implements vscode.Disposable {
   /** Schedules a lint of each open document whose last lint read `uri`, debounced like an edit. */
   private _onDependencyChanged(uri: vscode.Uri): void {
     if (!this._enabled) return;
-    const changed = comparablePath(uri.fsPath);
     for (const document of vscode.workspace.textDocuments) {
       const record = this._documents.get(document.uri.toString());
       const provider = record?.provider;
       if (!provider) continue;
       const read = record.session.reads.some((path) => {
-        const file = provider.fileOf(path);
-        return file !== null && comparablePath(file.fsPath) === changed;
+        const file = resPathUri(provider.resRoot, path);
+        return file !== null && isSamePath(file.fsPath, uri.fsPath, HOST_PATH_CASE);
       });
       if (read) this._scheduleLint(document);
     }
@@ -285,7 +279,9 @@ export class TscnDiagnostics implements vscode.Disposable {
    * found one, is scheduled for a lint. The other watchers cover a single file, and this covers a whole folder.
    */
   private _onPathDeleted(uri: vscode.Uri): void {
-    // Before the enabled check: a walk running when diagnostics went off can still fill the maps.
+    // Before the enabled check: a walk running when diagnostics went off can still fill the maps. A deleted folder
+    // reports no event for the `project.godot` inside it, so every deleted path forgets the shared answers.
+    forgetProjectFiles();
     const gone = this._dropProvidersWithin(uri);
     if (!this._enabled) return;
     for (const document of vscode.workspace.textDocuments) {
@@ -297,7 +293,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
   }
 
-  /** Forgets each provider rooted at or under `dir`, and every directory answer if one went. Returns those it forgot. */
+  /** Forgets each provider rooted at or under `dir`. Returns those it forgot. */
   private _dropProvidersWithin(dir: vscode.Uri): Set<LintResourceProvider> {
     const gone = new Set<LintResourceProvider>();
     for (const [key, provider] of this._providers) {
@@ -305,7 +301,6 @@ export class TscnDiagnostics implements vscode.Disposable {
       this._providers.delete(key);
       gone.add(provider);
     }
-    if (gone.size > 0) this._projectFileByDir.clear();
     return gone;
   }
 
@@ -316,7 +311,7 @@ export class TscnDiagnostics implements vscode.Disposable {
   private _readsUnder(record: DocumentLint, provider: LintResourceProvider, dir: vscode.Uri): boolean {
     const { reads } = record.session;
     const under = (path: string) => {
-      const file = provider.fileOf(path);
+      const file = resPathUri(provider.resRoot, path);
       return file !== null && isWithinRoot(dir.fsPath, file.fsPath, HOST_PATH_CASE);
     };
     return reads.some(under) || (reads.length > 0 && provider.listed.some(under));
@@ -327,8 +322,9 @@ export class TscnDiagnostics implements vscode.Disposable {
    * would root, and lints each once its walk answers. A provider whose root is unchanged stays, verdicts included.
    */
   private _onProjectFileChanged(uri: vscode.Uri): void {
-    // Before the enabled check: a walk running when diagnostics went off can still fill the map.
-    this._projectFileByDir.clear();
+    // Before the walks below, which must not wait on the extension's own listener. Before the enabled check too: a
+    // walk running when diagnostics went off can still fill the answers.
+    forgetProjectFiles();
     if (!this._enabled) return;
     const projectDir = vscode.Uri.joinPath(uri, '..').fsPath;
     for (const document of vscode.workspace.textDocuments) {
@@ -371,7 +367,7 @@ export class TscnDiagnostics implements vscode.Disposable {
    * Problems panel's verdict.
    */
   async providerFor(uri: vscode.Uri): Promise<LintResourceProvider | null> {
-    const root = await resRootOf(uri, (dir) => this._holdsProjectFile(dir));
+    const root = await resRootOf(uri);
     if (!root) return null;
     const key = root.toString();
     let provider = this._providers.get(key);
@@ -380,16 +376,6 @@ export class TscnDiagnostics implements vscode.Disposable {
       this._providers.set(key, provider);
     }
     return provider;
-  }
-
-  private _holdsProjectFile(dir: vscode.Uri): Promise<boolean> {
-    const key = dir.toString();
-    let answer = this._projectFileByDir.get(key);
-    if (!answer) {
-      answer = hasProjectFile(dir);
-      this._projectFileByDir.set(key, answer);
-    }
-    return answer;
   }
 
   private _recordOf(document: vscode.TextDocument): DocumentLint {
@@ -472,7 +458,7 @@ export class TscnDiagnostics implements vscode.Disposable {
     }
     this._documents.clear();
     this._providers.clear();
-    this._projectFileByDir.clear();
+    forgetProjectFiles();
   }
 
   public dispose(): void {

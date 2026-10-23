@@ -5,6 +5,8 @@
  * guarded, as in Godot: an input that divides by zero leaves NaN vertices in the result.
  */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from '../../../../godot/math/real';
 import { aabbEdges, type Aabb } from '../../../../godot/math/aabb';
 import { basisInvert, type BasisComponents } from '../../../../godot/math/basis';
 import { degToRad } from '../../../../godot/math/math';
@@ -16,7 +18,7 @@ import {
   type Vector3,
 } from '../../../../godot/math/vector';
 import { EmissionShape } from '../../../../godot/scene/particles3d';
-import type { ParticleEmission } from '../emission/types';
+import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
 
 /** The circles run `i = 0..120` of 3 degrees, so the last segment overlaps the first. */
 const LAST_CIRCLE_SEGMENT = 120;
@@ -126,9 +128,6 @@ function ringLines(ring: ParticleEmission, offset: Vector3, scale: Vector3): num
   }
   return points;
 }
-
-/** Single precision: each `f(...)` rounds as a C++ `float` operation does. */
-const f = Math.fround;
 
 /**
  * The basis that carries the ring's own axes onto its `ring_axis`, built as the plugin builds it

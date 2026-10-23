@@ -8,15 +8,15 @@
 
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { NO_OWNER, type HeadingsInsideInstance } from '../parser/nodeOwner.js';
-import { resolveInstancePath } from '../resources/SubResourceResolver.js';
-import { joinPath } from '../utils/nodePath.js';
+import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
+import { belowRoot, joinPath, pathBetween, pathUnder } from '../utils/nodePath.js';
 import { UNIQUE_NODE_PREFIX, nodePathWalkNames, simplifiedNodePath } from '../godot/string/nodePath.js';
 import {
   cachedUniqueNameLivePaths,
   cachedUniqueNameOwnership,
   cachedUniqueNamesBelowRoot,
-  perTree,
 } from '../utils/uniqueNames.js';
+import { perTree } from '../utils/perTree.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
@@ -25,7 +25,6 @@ import {
   type LiveChildGroup,
   type LiveTreeContext,
 } from './liveSceneTree.js';
-import { GLB_SCENE_ROOT_TYPE } from '../resources/glbSceneRoot.js';
 
 interface ClaimOwner {
   /** Live path of the node this owner's root renders at. */
@@ -43,13 +42,13 @@ interface ClaimOwner {
 /** A composed live path spelled the way `owner`'s own file spells it. */
 function fileLocalPath(owner: ClaimOwner, livePath: string): string {
   if (!owner.parent) return livePath;
-  return owner.roots[0]!.name + livePath.slice(owner.path.length);
+  return pathUnder(owner.roots[0]!.name, pathBetween(owner.path, livePath));
 }
 
 /** The inverse: a live path from `owner`'s file, composed under its render path. */
 function composedPath(owner: ClaimOwner, fileLivePath: string): string {
   if (!owner.parent) return fileLivePath;
-  return owner.path + fileLivePath.slice(fileLivePath.indexOf('/'));
+  return pathUnder(owner.path, belowRoot(fileLivePath));
 }
 
 /** Which of a file's headings inside instances a question counts. */
@@ -168,7 +167,7 @@ class OwnerWalk {
     let parentPath = '';
     for (const segment of path.split('/')) {
       const livePath = joinPath(parentPath, segment);
-      if (!this.reached.has(livePath)) this.reached.set(livePath, this.step(reached, parentPath, livePath));
+      if (!this.reached.has(livePath)) this.reached.set(livePath, this.step(reached, livePath));
       const next = this.reached.get(livePath);
       if (!next) return { owner: reached.owner, into: reached.owner };
       reached = next;
@@ -177,8 +176,8 @@ class OwnerWalk {
     return reached;
   }
 
-  /** The walk one segment on from `from`, at `parentPath`, to `livePath`, or null where none is there. */
-  private step(from: Reached, parentPath: string, livePath: string): Reached | null {
+  /** The walk one segment on from `from` to `livePath`, or null where none is there. */
+  private step(from: Reached, livePath: string): Reached | null {
     const { live } = this;
     const link = live.tree.at(livePath);
     const found = link && from.candidates.find((candidate) => candidate.group.children.includes(link.node));
@@ -187,25 +186,30 @@ class OwnerWalk {
     // A node the file above grafted in is that file's own, however deep it sits.
     const owner = fileSeating(found.owner, livePath, ROOT_OWNED);
     const subRoots = cachedSubRoots(node, link.scope, live.tree.ctx);
-    // In Godot a GLB root is its instance node, which owns the imported nodes. This tree renders
-    // the GLB root one segment below the instance, so the owner's path is the instance's, `parentPath`.
-    const isGlbRoot = found.rootOf !== undefined && node.type === GLB_SCENE_ROOT_TYPE;
     const contentOwner: ClaimOwner = found.rootOf
-      ? { path: isGlbRoot ? parentPath : livePath, roots: found.rootOf, parent: owner, live }
+      ? { path: livePath, roots: found.rootOf, parent: owner, live }
       : owner;
+    // The instance node is the root of what it instances, so it owns the GLB's objects too: they sit
+    // directly below it (packed_scene.cpp:261-264).
+    const instanceOwner = subRoots && { path: livePath, roots: subRoots, parent: owner, live };
     const candidates = link.groups.map((group) => ({
       group,
       owner:
-        group.origin === 'merged' && subRoots
-          ? { path: livePath, roots: subRoots, parent: owner, live, composed: group.mergedNode?.uniqueNames }
+        instanceOwner && holdsInstanceContent(group)
+          ? { ...instanceOwner, composed: group.mergedNode?.uniqueNames }
           : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
-    const into = isGlbRoot
-      ? contentOwner
-      : (candidates.find((c) => c.group.origin === 'merged')?.owner ?? owner);
+    const into = instanceOwner
+      ? (candidates.find((c) => holdsInstanceContent(c.group))?.owner ?? owner)
+      : owner;
     return { owner, into, node, candidates };
   }
+}
+
+/** A group of what the node instances, which the instance node owns as the root of it. */
+function holdsInstanceContent(group: LiveChildGroup): boolean {
+  return group.origin === 'merged' || group.origin === 'glb';
 }
 
 /** The owner walk one question takes, so every walk it makes shares each step. */
@@ -277,12 +281,11 @@ export function localSceneUniquePaths(scene: ClaimOwner): UniqueNamePaths {
 }
 
 function cachedSubRoots(
-  node: TscnNode,
+  node: LiveNode,
   scope: SceneScope,
   ctx: LiveTreeContext
 ): readonly TscnNode[] | undefined {
-  if (!node.instance) return undefined;
-  const scenePath = resolveInstancePath(node.instance, scope.externalResources);
+  const scenePath = liveInstancePath(node, scope);
   return scenePath ? ctx.sceneCache.getCached(scenePath)?.nodes : undefined;
 }
 

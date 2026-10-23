@@ -64,18 +64,21 @@ function decodeGradient(data: Record<string, string>): Gradient {
   };
 }
 
+/** The `Gradient` a resource holds, or null for no resource or one of another type. */
+export function decodeGradientResource(resource: TscnInternalResource | null): Gradient | null {
+  return resource?.type === 'Gradient' ? decodeGradient(resource.data) : null;
+}
+
 /**
- * The `Gradient` a `SubResource("id")` property names, or null for anything else.
- * CPUParticles2D takes a bare `Gradient`, not a `GradientTexture1D`, so its
- * colour ramp resolves here, not through the texture path.
+ * The `Gradient` a `SubResource("id")` property names, or null for anything else, an ExtResource
+ * included: the texture and noise callers hold no loaded files. {@link decodeGradientResource}
+ * decodes a resource a caller resolved itself, as CPUParticles2D does for a `.tres` ramp.
  */
 export function resolveGradient(
   ref: string | undefined,
   internalResources: readonly TscnInternalResource[]
 ): Gradient | null {
-  const resource = resolveSubResourceRef(ref, internalResources);
-  if (resource?.type !== 'Gradient') return null;
-  return decodeGradient(resource.data);
+  return decodeGradientResource(resolveSubResourceRef(ref, internalResources) ?? null);
 }
 
 /** `width = 64` and `height = 64` (`gradient_texture.h:92-93`). */

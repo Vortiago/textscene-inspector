@@ -21,6 +21,13 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// The shared `project.godot` answers outlive a test, so each test starts with none. A happy-dom webview test
+// cannot resolve `vscode`, and loads no module that walks for a root.
+if (typeof window === 'undefined') {
+  const { forgetProjectFiles } = await import('./resRoot');
+  afterEach(forgetProjectFiles);
+}
+
 /**
  * The objects the module mock is built from, by name: a test arranges
  * `vscode.workspace.fs.readFile` through here, not through the mocked import.

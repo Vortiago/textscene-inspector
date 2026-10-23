@@ -8,6 +8,7 @@
 import './materials/standardmaterial3d/index.js';
 import './materials/canvasitemmaterial/index.js';
 import './materials/fogmaterial/index.js';
+import './materials/particleprocessmaterial/index.js';
 
 // Styles
 import './styles/stylebox/index.js';
@@ -34,6 +35,7 @@ import './meshes/capsulemesh/index.js';
 import './meshes/torusmesh/index.js';
 import './meshes/prismmesh/index.js';
 import './meshes/pointmesh/index.js';
+import './meshes/tubetrailmesh/index.js';
 import './meshes/multimesh/index.js';
 
 // Collision shapes

@@ -10,6 +10,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { LiveNode } from '../../../resources/liveNode.js';
 import { godotNodeName, godotNodeRole } from '../../../resources/formats/glb/nodeNames.js';
 import type { GltfNodeRole } from '../../../godot/import/gltfImportNames.js';
+import { insertAtIndex } from '../../../godot/scene/siblingIndex.js';
 
 interface GlbHierarchyNode {
   /** Display name, from `glbObjectName`. */
@@ -162,15 +163,30 @@ function addAttachedChildren(nodes: readonly TscnNode[], attached: readonly Live
     }
   };
   index(nodes);
-  for (const child of attached) byRelPath.get(child.glbTargetRelPath!)?.children.push(child);
+  for (const child of attached) {
+    const target = byRelPath.get(child.glbTargetRelPath!);
+    if (target) insertAtIndex(target.children, child);
+  }
 }
 
 /**
- * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren` returns them) below the objects their
- * parent paths name, plus an `AnimationPlayer` when it has clips. One source, so `useGlbChildren`
- * and `resolveLiveEntry` produce the same children.
+ * The children of a GLB with nothing attached, built once per GLB object. Written only by
+ * `glbSceneRootChildren`. A GLB object read here is a loader copy no consumer changes the
+ * structure of, so its hierarchy does not change, and a tree walk asks again for each path it
+ * resolves. Entries leave with their object.
  */
-export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[] = []): TscnNode[] {
+const plainChildren = new WeakMap<THREE.Object3D, TscnNode[]>();
+
+/** The shared answer is read by every consumer of the GLB, so a write to it throws. */
+function freezeNodes(nodes: TscnNode[]): TscnNode[] {
+  for (const node of nodes) {
+    freezeNodes(node.children);
+    Object.freeze(node);
+  }
+  return Object.freeze(nodes) as TscnNode[];
+}
+
+function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
   const nodes = glbHierarchyToTscnNodes(buildGlbHierarchy(root));
   addAttachedChildren(nodes, attached);
   const clips = root.animations;
@@ -188,4 +204,21 @@ export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly Li
     });
   }
   return nodes;
+}
+
+/**
+ * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren`
+ * returns them) below the objects their parent paths name, plus an `AnimationPlayer` when it has
+ * clips. `liveChildGroups` and the instancing node's `index=` count call it, so the tree's rows,
+ * `resolveLiveEntry` and the viewport see the same children.
+ */
+export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
+  // Attaching writes into the nodes, so an attached list builds its own copy.
+  if (attached.length > 0) return buildGlbSceneRootChildren(root, attached);
+  let children = plainChildren.get(root);
+  if (!children) {
+    children = freezeNodes(buildGlbSceneRootChildren(root, attached));
+    plainChildren.set(root, children);
+  }
+  return children;
 }

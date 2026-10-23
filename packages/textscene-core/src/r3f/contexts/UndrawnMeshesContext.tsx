@@ -2,17 +2,9 @@
  * The mesh types each node holds that no slice here builds, for the node's details. A mesh reader
  * reports its mesh's type through `useUndrawnMeshReport`. With no provider a report does nothing.
  */
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { meshKind } from '../../resources/meshes/meshSource.js';
+import { useCountedReports } from '../hooks/useCountedReports.js';
 import { useNodePath } from './NodePathContext.js';
 
 interface UndrawnMeshReports {
@@ -34,31 +26,8 @@ function undrawnKey(nodePath: string, type: string): string {
 }
 
 export function UndrawnMeshesProvider({ children }: { children: ReactNode }) {
-  const [undrawn, setUndrawn] = useState<ReadonlySet<string>>(() => new Set());
-  /** Open reports per key, written only by `report` and `clear`: several cells can hold one type. */
-  const reportCounts = useRef(new Map<string, number>());
-
-  const report = useCallback((key: string) => {
-    const count = (reportCounts.current.get(key) ?? 0) + 1;
-    reportCounts.current.set(key, count);
-    if (count === 1) setUndrawn((prev) => new Set(prev).add(key));
-  }, []);
-
-  const clear = useCallback((key: string) => {
-    const count = reportCounts.current.get(key);
-    if (count === undefined) return;
-    if (count > 1) {
-      reportCounts.current.set(key, count - 1);
-      return;
-    }
-    reportCounts.current.delete(key);
-    setUndrawn((prev) => {
-      const next = new Set(prev);
-      next.delete(key);
-      return next;
-    });
-  }, []);
-
+  // Several cells can hold one type, so a key stays while any of them reports it.
+  const { reported: undrawn, report, clear } = useCountedReports();
   const reports = useMemo(() => ({ report, clear }), [report, clear]);
   return (
     <UndrawnReportsContext.Provider value={reports}>

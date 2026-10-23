@@ -8,6 +8,7 @@ import type { RawNode } from '../parser/types.js';
 import type { UniqueNameOwnership } from '../parser/nodeOwner.js';
 import { sceneSeating } from '../parser/sceneTreeBuilder.js';
 import { belowRoot } from './nodePath.js';
+import { perTree } from './perTree.js';
 
 /** The root's `%Name` claims in `roots`, keyed with the prefix on. One object per tree. */
 export function cachedUniqueNameOwnership(roots: readonly RawNode[]): UniqueNameOwnership {
@@ -22,15 +23,6 @@ export function uniqueNamePaths(roots: readonly RawNode[]): Map<string, string> 
   const paths = new Map<string, string>();
   for (const [key, claim] of cachedUniqueNameOwnership(roots).claims) paths.set(key, claim.path);
   return paths;
-}
-
-/** A per-tree table, built once for each roots array the returned reader is called with. */
-export function perTree<T>(build: (roots: readonly RawNode[]) => T): (roots: readonly RawNode[]) => T {
-  const built = new WeakMap<readonly RawNode[], T>();
-  return (roots) => {
-    if (!built.has(roots)) built.set(roots, build(roots));
-    return built.get(roots)!;
-  };
 }
 
 /** The same reduction onto `livePath`, for the composed render tree. One object per tree. */

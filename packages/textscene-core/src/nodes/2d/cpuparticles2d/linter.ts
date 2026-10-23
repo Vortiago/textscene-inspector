@@ -7,8 +7,12 @@
 
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
-import { armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { armDiagnostic, armEmits, groundedArm, reportArm, type RuleArms } from '../../../linter/ruleArms.js';
+import { CPU_PARTICLES_PARAMS } from '../../../godot/scene/cpuParticles.js';
 import { paramMinAboveMaxArm, paramMinAboveMaxDiagnostics } from '../../../linter/particleParamRanges.js';
+import { finiteParamBounds, nonFiniteParamBounds } from '../../../godot/scene/particleParamRange.js';
+import { formatReal, storedReal } from '../../../godot/math/real.js';
+import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import { ruleInt } from '../../../godot/variant/intSlots.js';
 import { CPU_PARTICLES_2D_EMISSION_SHAPE_NAMES } from '../../../godot/scene/particles2d.js';
 
@@ -17,6 +21,11 @@ const arms = {
     kind: 'no-engine-counterpart',
     scope: 'previewer-limitation',
     because: 'the emitter samples an unserialised global RNG, so no static pose can place it',
+  }),
+  nonFiniteParamBound: groundedArm('cpuparticles2d-non-finite-param-bound', {
+    kind: 'no-engine-counterpart',
+    scope: 'previewer-limitation',
+    because: 'the previewer cannot draw a particle whose range has an infinite or NaN bound',
   }),
   paramMinAboveMax: paramMinAboveMaxArm('cpuparticles2d', 'cpu_particles_2d.cpp:352-376'),
 } as const satisfies RuleArms<string>;
@@ -50,12 +59,29 @@ function checkPreviewLimits(node: RuleContext['node'], props: Record<string, str
   return diagnostics;
 }
 
+function checkNonFiniteBounds(node: RuleContext['node'], props: Record<string, string>): Diagnostic[] {
+  return nonFiniteParamBounds(props, CPU_PARTICLES_PARAMS).map((key) => {
+    const stored = formatReal(storedReal(scalarSlotValue(props[key]!)!));
+    return armDiagnostic(
+      arms.nonFiniteParamBound,
+      node,
+      `CPUParticles2D '${key}' is ${stored}. The previewer cannot draw a non-finite range, so it uses the default for '${key}'.`
+    );
+  });
+}
+
 function checkCPUParticles2D(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const props = node.rawProperties;
   return [
     ...checkPreviewLimits(node, props),
-    ...paramMinAboveMaxDiagnostics(node, props, arms.paramMinAboveMax),
+    ...checkNonFiniteBounds(node, props),
+    ...paramMinAboveMaxDiagnostics(
+      node,
+      finiteParamBounds(props, CPU_PARTICLES_PARAMS),
+      CPU_PARTICLES_PARAMS,
+      arms.paramMinAboveMax
+    ),
   ];
 }
 
@@ -63,7 +89,7 @@ const cpuParticles2DValidationRule: LintRule = {
   meta: {
     name: 'valid-cpuparticles2d-properties',
     description:
-      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce (global-RNG emission shapes), and a *_min above its *_max, where one of the two loads as the other',
+      'Flags CPUParticles2D settings the previewer’s frozen pose cannot reproduce (global-RNG emission shapes), and a *_min above its *_max, where one of the two loads as the other, and a bound the previewer cannot draw because it is non-finite',
     category: 'validation',
     applicableNodeTypes: ['CPUParticles2D'],
     emits: armEmits(arms),

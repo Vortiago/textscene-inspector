@@ -1,5 +1,8 @@
 /** Godot's vector types as plain components, for engine facts that import nothing. */
 
+// Float arithmetic: each `f(...)` rounds as a C++ `float` operation does.
+import { storedReal as f } from './real.js';
+
 /** A point, a size or a direction: two components, as Godot's `Vector2` and `Vector2i` hold them. */
 export interface Vector2 {
   x: number;
@@ -15,9 +18,6 @@ export interface Vector3 {
 
 /** The components of a `Vector3`, in the order Godot indexes them (`v[0]`, `v[1]`, `v[2]`). */
 export const VECTOR3_AXES = ['x', 'y', 'z'] as const;
-
-/** Float arithmetic: each `f(...)` rounds as a C++ `float` operation does. */
-const f = Math.fround;
 
 /** `Vector3::normalize` (`core/math/vector3.h:548-558`) in `real_t` float: a zero vector stays zero. */
 export function normalizedVector3(x: number, y: number, z: number): [number, number, number] {

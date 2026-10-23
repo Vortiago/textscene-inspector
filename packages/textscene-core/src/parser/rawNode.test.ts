@@ -22,6 +22,14 @@ describe('createRawNode', () => {
     expect(nodeOf({ name: 'Inner', parent: 'Door' }).overridesExistingNode).toBe(true);
   });
 
+  it('takes the sibling index the heading states', () => {
+    expect(nodeOf({ name: 'Box', type: 'Node3D', parent: 'Body', index: '2' }).index).toBe(2);
+  });
+
+  it('leaves the index unset for a heading with none', () => {
+    expect(nodeOf({ name: 'Box', type: 'Node3D', parent: 'Body' }).index).toBeUndefined();
+  });
+
   it('leaves the parent unset for an empty parent=', () => {
     expect(nodeOf({ name: 'Box', type: 'Node3D', parent: '' }).parent).toBeUndefined();
   });

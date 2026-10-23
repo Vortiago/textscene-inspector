@@ -2,8 +2,8 @@
 
 import { useMemo } from 'react';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { decodeParticleProcessMaterial } from '../emission/processMaterial';
-import type { ParticleEmission } from '../emission/types';
+import { decodeParticleProcessMaterial } from '../../../../resources/materials/particleprocessmaterial/decode';
+import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
 import { useResourceResolution } from '../../../../resources/useSubOrExtResource';
 
 /**

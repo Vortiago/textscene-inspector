@@ -17,6 +17,7 @@ import {
 } from './classInfo.js';
 import type { DocumentSection, LanguageDocument, PropertyLocation } from './document.js';
 import { enumEntriesOf } from './hints.js';
+import { inPathOrder } from '../resources/resPath.js';
 import { declaredResources, openReferenceAt, type ResourceRefKind } from './resourceRefs.js';
 import { seatedNodePaths } from './nodeSeating.js';
 import { SCENE_ROOT_PATH } from '../utils/nodePath.js';
@@ -106,14 +107,16 @@ function resourceIdItems(
   return items;
 }
 
-/** Paths under `res://` that start with the prefix already typed. */
+/** Paths under `res://` that start with the prefix already typed, in path order. */
 async function pathItems(
   listPaths: () => Promise<readonly string[]>,
   prefix: string
 ): Promise<readonly CompletionItem[]> {
-  return (await listPaths())
-    .filter((path) => path.startsWith(prefix))
-    .map((path) => ({ label: path, kind: 'path', insertText: path }));
+  return inPathOrder((await listPaths()).filter((path) => path.startsWith(prefix))).map((path) => ({
+    label: path,
+    kind: 'path',
+    insertText: path,
+  }));
 }
 
 function classNameItems(section: DocumentSection): readonly CompletionItem[] {

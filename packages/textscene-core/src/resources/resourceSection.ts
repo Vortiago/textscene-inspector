@@ -8,7 +8,8 @@ import type { ParsedResource } from '../parser/parsedResource.js';
 import type { TscnInternalResource } from '../parser/types.js';
 import { findSubResource } from './SubResourceResolver.js';
 import { parseSubResourcePath } from './subResourcePath.js';
-import type { ScopedResource } from './useSubOrExtResource.js';
+import type { ScopedResource } from './scopedResource.js';
+import type { SceneResources } from '../r3f/SceneResourcesContext.js';
 
 /**
  * The parsed file that owns `path`, a plain path or a **Sub-resource path**, from the
@@ -37,14 +38,32 @@ export function findSectionResource(file: ParsedResource, path: string): TscnInt
   return section && { id: path, type: section.type, data: section.properties };
 }
 
-/** {@link findSectionResource}, scoped to the tables of `file` that its references resolve in. */
+/**
+ * Written only by `scopedSection`: the scoped sections of each parsed file by path. A parse drops
+ * its entries when it goes, and a reload parses a new object, so an entry never outlives its file.
+ */
+const scopedSections = new WeakMap<ParsedResource, Map<string, ScopedResource | undefined>>();
+
+/**
+ * {@link findSectionResource}, scoped to the tables of `file` that its references resolve in. One
+ * parse answers a path with one object, so a content key over the section is read once.
+ */
 export function scopedSection(file: ParsedResource, path: string): ScopedResource | undefined {
+  let byPath = scopedSections.get(file);
+  if (!byPath) scopedSections.set(file, (byPath = new Map()));
+  if (!byPath.has(path)) byPath.set(path, buildScopedSection(file, path));
+  return byPath.get(path);
+}
+
+function buildScopedSection(file: ParsedResource, path: string): ScopedResource | undefined {
   const resource = findSectionResource(file, path);
   if (!resource) return undefined;
-  return {
-    resource,
-    resources: { internalResources: file.subResources, externalResources: file.extResources },
-  };
+  return { resource, resources: fileResources(file) };
+}
+
+/** The tables of `file` that its references resolve in. */
+export function fileResources(file: ParsedResource): SceneResources {
+  return { internalResources: file.subResources, externalResources: file.extResources };
 }
 
 /**

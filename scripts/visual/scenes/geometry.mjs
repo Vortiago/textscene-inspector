@@ -48,6 +48,9 @@ export const GEOMETRY_SCENES = [
   // PCF kernel.
   { name: 'omni-light-shadow-blur', file: 'unit-omni-light-shadow-blur.tscn' },
   { name: 'spot-light-shadow-blur', file: 'unit-spot-light-shadow-blur.tscn' },
+  // An omni and a spot light at range 0, which light nothing, and at range 0.3, which light a
+  // small pool each. The header states why no other golden shows it.
+  { name: 'light-range-floor', file: 'unit-light-range-floor.tscn' },
   // A Sky Only sun and a Light Only sun, both in view. Only the first draws in
   // the sky, and only the second lights the box and ground.
   { name: 'directional-light-sky-mode', file: 'unit-directional-light-sky-mode.tscn' },

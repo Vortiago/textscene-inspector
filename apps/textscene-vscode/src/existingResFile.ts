@@ -1,7 +1,7 @@
 /**
- * The file a `res://` path names under its root, for a definition or a link to open. Both hosts
- * answer only a file that exists: a missing one would open an empty editor, and a directory
- * cannot open as a document.
+ * The place a `res://` path names under its root, for the linter, the reference search, a definition and a link. For a
+ * definition or a link to open, both hosts answer only a file that exists: a missing one would open an empty editor,
+ * and a directory cannot open as a document.
  */
 
 import * as vscode from 'vscode';

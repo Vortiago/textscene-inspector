@@ -1,6 +1,7 @@
 /**
- * Godot 4.6.3's CPUParticles3D and GPUParticles3D facts a scene's properties carry, except where a
- * table names its newer source (ADR-0032: the newer release wins where the two differ).
+ * Godot 4.6.3's CPUParticles3D, GPUParticles3D and ParticleProcessMaterial facts a scene's
+ * properties carry, except where a table names its newer source (ADR-0032: the newer release wins
+ * where the two differ).
  */
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
@@ -44,7 +45,33 @@ export const EmissionShape = {
 } as const;
 
 /** Each emission shape by its integer, spelled as its constant. */
-export const CPU_PARTICLES_3D_EMISSION_SHAPE_NAMES = enumNamesByValue(EmissionShape);
+export const PARTICLE_EMISSION_SHAPE_NAMES = enumNamesByValue(EmissionShape);
+
+/**
+ * `ParticleProcessMaterial::SubEmitterMode` (`particle_process_material.h:93-100`),
+ * `SUB_EMITTER_MAX` left out. The hint lists `At Start:4` before `At End:2`
+ * (`particle_process_material.cpp:2312`), and the integers follow this declaration.
+ */
+const SubEmitterMode = {
+  DISABLED: 0,
+  CONSTANT: 1,
+  AT_END: 2,
+  AT_COLLISION: 3,
+  AT_START: 4,
+} as const;
+
+/** Each sub-emitter mode by its integer, spelled as its constant. */
+export const PARTICLE_SUB_EMITTER_MODE_NAMES = enumNamesByValue(SubEmitterMode);
+
+/** `ParticleProcessMaterial::CollisionMode` (`particle_process_material.h:103-108`), `COLLISION_MAX` left out. */
+const CollisionMode = {
+  DISABLED: 0,
+  RIGID: 1,
+  HIDE_ON_CONTACT: 2,
+} as const;
+
+/** Each collision mode by its integer, spelled as its constant. */
+export const PARTICLE_COLLISION_MODE_NAMES = enumNamesByValue(CollisionMode);
 
 /**
  * `GPUParticles3D::TransformAlign` from Godot 4.7.2 (`scene/3d/gpu_particles_3d.h:50-56`, bound at
@@ -80,3 +107,28 @@ export const PARTICLE_EMISSION_DEFAULTS = Object.freeze({
   shapeOffset: Object.freeze({ x: 0, y: 0, z: 0 }),
   shapeScale: Object.freeze({ x: 1, y: 1, z: 1 }),
 });
+
+/**
+ * The serialised stem of each `ParticleProcessMaterial::Parameter` that has a `_min` and a `_max`
+ * key, in enum order (`particle_process_material.h:49-68`). `PARAM_TURB_INFLUENCE_OVER_LIFE` has a
+ * curve alone, and `PARAM_SCALE` serialises as `scale`.
+ */
+export const PARTICLE_PROCESS_MATERIAL_PARAMS = [
+  'initial_velocity',
+  'angular_velocity',
+  'orbit_velocity',
+  'linear_accel',
+  'radial_accel',
+  'tangential_accel',
+  'damping',
+  'angle',
+  'scale',
+  'hue_variation',
+  'anim_speed',
+  'anim_offset',
+  'turbulence_influence',
+  'turbulence_initial_displacement',
+  'radial_velocity',
+  'directional_velocity',
+  'scale_over_velocity',
+] as const;

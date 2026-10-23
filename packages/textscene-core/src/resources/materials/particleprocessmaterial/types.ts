@@ -1,6 +1,6 @@
 /** The emission of a ParticleProcessMaterial or a CPUParticles3D as the editor gizmo reads it. */
 
-import type { Vector3 } from '../../../../godot/math/vector';
+import type { Vector3 } from '../../../godot/math/vector';
 
 /** The emission keys that ParticleProcessMaterial and CPUParticles3D declare alike. */
 export interface ParticleEmission {

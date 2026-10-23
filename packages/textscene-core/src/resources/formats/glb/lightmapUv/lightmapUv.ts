@@ -14,9 +14,9 @@ import {
   gltfNodeBasis,
   rowScaledBasis,
   transformChainScale,
-  type Basis32,
   type GltfNodeTransform,
 } from '../../../../godot/import/importerBasis';
+import type { BasisComponents } from '../../../../godot/math/basis';
 import type { LightmapUnwrap } from '../../../../parser/importParser';
 import type { RootScale } from '../types';
 import { parseUnwrapCache, type UnwrapCacheEntry } from './unwrapCache';
@@ -151,7 +151,7 @@ function placement(
   rootScale: RootScale | null
 ): UnwrapPlacement {
   const nodes = gltfObjects(gltf.parser.json['nodes']) as GltfNodeTransform[];
-  const chain: Basis32[] = [];
+  const chain: BasisComponents[] = [];
   for (let object: THREE.Object3D | null = node; object; object = object === root ? null : object.parent) {
     const index = gltf.parser.associations.get(object)?.nodes;
     if (index !== undefined) chain.push(gltfNodeBasis(nodes[index] ?? {}));

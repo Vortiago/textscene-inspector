@@ -24,7 +24,6 @@ import {
   findSubResource,
   parseResourceReference,
   resolveExtResourceFilePath,
-  resolveInstancePath,
   resolveTexture2DPath,
   parsedResourcePath,
   unwrapCanvasTextureRef,
@@ -60,7 +59,7 @@ import {
   type CachedSceneSource,
   type SceneScope,
 } from '../../liveSceneTree';
-import { scopeOf } from '../../../resources/liveNode';
+import { liveInstancePath, scopeOf } from '../../../resources/liveNode';
 import { isViewportBoundary } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type ChildVisibilityFn } from './solverRegistry';
@@ -541,8 +540,7 @@ function buildForest(
     const sortable: { raw: TscnNode; live: TscnNode }[] = [];
     for (const group of groups) {
       for (const child of group.children) {
-        const merged = liveChildGroups(child, group.scope, sceneCache).find((g) => g.origin === 'merged');
-        const live = merged?.mergedNode ?? child;
+        const live = mergedNodeOf(liveChildGroups(child, group.scope, sceneCache)) ?? child;
         if (isSortableChild(live)) sortable.push({ raw: child, live });
       }
     }
@@ -610,7 +608,7 @@ function buildForest(
 
       // A grafted node's instance ref names an id in the file that authored it.
       const authored = scopeOf(node, scope);
-      const scenePath = node.instance ? resolveInstancePath(node.instance, authored.externalResources) : null;
+      const scenePath = liveInstancePath(node, scope);
       if (scenePath && sceneCache.getCached(scenePath) === undefined) {
         // The ExtResource too, since the load checks its type. A raw `res://`
         // instance has none to register, and is still requested.

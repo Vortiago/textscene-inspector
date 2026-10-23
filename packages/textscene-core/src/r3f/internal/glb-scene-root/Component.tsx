@@ -11,6 +11,8 @@ import { useResource } from '../../../resources/useResource';
 import { MissingResourcePlaceholder } from '../../components/MissingResourcePlaceholder';
 import { useGlbRoot } from './GlbInstanceContext';
 import { useGlbGeometryInstances } from './glbGeometryInstances';
+import { glbNodeLinks } from './glbNodeLinks';
+import { useUniqueNamePaths } from '../../useUniqueNames';
 import { useInstancingNodeTransform } from './instancingNodeTransform';
 import { applyGlbNodeOverrides, isApplicableGlbOverride, resolveGlbOverrideTarget } from './glbNodeOverrides';
 import { flattenGlbObjects, GLB_ANIMATION_PLAYER_NAME, type GlbObjectEntry } from './glbHierarchy';
@@ -46,12 +48,15 @@ interface GLBSceneRootProperties {
 export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   // createSceneProcessor fills `properties` as a Record, so cast through unknown.
   const props = node.properties as unknown as GLBSceneRootProperties;
-  const result = useResource<THREE.Object3D>(props.glbPath ?? '', 'glb');
 
   // The instancing scene's inline override children target nodes inside this GLB, by name, so
   // a baked translation is overridden as in Godot.
   const nodePath = useNodePath();
   const root = useGlbRoot(nodePath);
+  // An instancing node loads its GLB itself, to order its own children, and hands it down. A GLB
+  // opened as the scene loads its own, and an empty path requests nothing.
+  const ownLoad = useResource<THREE.Object3D>(root.glb ? '' : (props.glbPath ?? ''), 'glb');
+  const result = root.glb ?? ownLoad;
   const { overrides } = root;
   const object = result.value;
 
@@ -68,7 +73,12 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
   const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
   useInstancingNodeTransform(object, root.rawProperties);
-  useGlbGeometryInstances(object, entries, root);
+  const uniquePaths = useUniqueNamePaths(root.path);
+  const links = useMemo(
+    () => (object ? glbNodeLinks(object, entries, root, uniquePaths) : []),
+    [object, entries, root, uniquePaths]
+  );
+  useGlbGeometryInstances(object, entries, root, links);
 
   // Registers each GLB object under the tree's relPath scheme, so the SceneTreeViewer can select
   // and hide it.
@@ -190,7 +200,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     <primitive object={object}>
       {importMaterials}
       {materialOverrides}
-      <GlbAttachedChildren object={object} entries={entries} root={root} nodePath={nodePath} />
+      <GlbAttachedChildren links={links} root={root} />
       {children}
     </primitive>
   );

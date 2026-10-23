@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+; One variable: the screen-space roughness limiter's derivative of a normal-mapped normal. A smooth
+; metal sphere tiles a bumpy normal map at (4, 2), so the map is not minified: each pixel's normal
+; differs from its neighbour's, and the limiter spreads the sun's highlight by that difference.
+; unit-material-roughness-limiter.tscn minifies its maps too far to show this per-pixel pattern.
+
+[ext_resource type="Texture2D" path="res://textures/rough-limit-normal.png" id="1_normal"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.6
+height = 1.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bumpy"]
+metallic = 1.0
+roughness = 0.05
+normal_enabled = true
+normal_texture = ExtResource("1_normal")
+uv1_scale = Vector3(4, 2, 1)
+
+[node name="RoughnessLimiterDerivative" type="Node3D"]
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = SubResource("StandardMaterial3D_bumpy")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.25, 0.433013, 0, 0.866025, 0.5, -0.5, -0.433013, 0.75, 0, 0, 0)

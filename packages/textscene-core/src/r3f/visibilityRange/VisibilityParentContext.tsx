@@ -6,7 +6,6 @@ import { visibilityParentOf } from '../../godot/scene/visibilityParent';
 import type { TscnNode } from '../../parser/types';
 import type { Node3DProperties } from '../../nodes/base/node3d/types';
 import { useUniqueNamePaths } from '../useUniqueNames';
-import { useCullPathOf } from './CullPathContext';
 
 const VisibilityParentContext = createContext<string | null>(null);
 VisibilityParentContext.displayName = 'VisibilityParentContext';
@@ -41,7 +40,7 @@ function OwnVisibilityParent({
   relative: string;
   children: ReactNode;
 }) {
-  const visibilityParent = visibilityParentOf(useCullPathOf(path), relative, null, useUniqueNamePaths(path));
+  const visibilityParent = visibilityParentOf(path, relative, null, useUniqueNamePaths(path));
   return (
     <VisibilityParentContext.Provider value={visibilityParent}>{children}</VisibilityParentContext.Provider>
   );

@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE } from '../../godot/scene/primitiveMesh';
 import { primitiveMeshGeometry } from './primitiveMeshGeometry';
+import { scopedMesh } from '../../resources/meshes/primitivemesh/surface.testkit';
 import type { TscnInternalResource } from '../../parser/types';
 
 function sub(type: string, data: Record<string, string> = {}): TscnInternalResource {
@@ -15,7 +16,7 @@ function sub(type: string, data: Record<string, string> = {}): TscnInternalResou
 }
 
 function renderGeometry(resource: TscnInternalResource): THREE.BufferGeometry {
-  const geometry = primitiveMeshGeometry(resource, DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
+  const geometry = primitiveMeshGeometry(scopedMesh(resource), DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE);
   if (!geometry) throw new Error(`expected a geometry for ${resource.type}, got none`);
   return geometry;
 }
@@ -45,7 +46,7 @@ describe('primitiveMeshGeometry dispatch', () => {
   });
 
   it('builds nothing for a type no PrimitiveMesh slice builds', () => {
-    expect(primitiveMeshGeometry(sub('ArrayMesh'), DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)).toBeNull();
+    expect(primitiveMeshGeometry(scopedMesh(sub('ArrayMesh')), DEFAULT_PRIMITIVE_MESH_TEXEL_SIZE)).toBeNull();
   });
 });
 

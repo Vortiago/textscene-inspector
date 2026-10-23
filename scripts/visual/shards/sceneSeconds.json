@@ -72,6 +72,7 @@
   "control-top-level": 2.5,
   "cpuparticles2d": 2.9,
   "cpuparticles2d-color-ramp": 3,
+  "cpuparticles2d-crossed-range": 2.8,
   "cpuparticles2d-curves": 2.8,
   "cpuparticles2d-emission-shapes": 2.8,
   "cpuparticles2d-local-coords": 3.5,
