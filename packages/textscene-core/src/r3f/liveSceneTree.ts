@@ -140,6 +140,12 @@ interface Composition {
 }
 
 /**
+ * The sources that ask about one scene in one chain at once: the loader's cache, and the
+ * single-path source of a tree row. Two keep each from replacing the other's composition.
+ */
+const COMPOSITIONS_PER_CHAIN = 2;
+
+/**
  * Written only by {@link composedSubScene}, keyed by the cached scene object. The entries clear
  * when nothing holds that object any more. A scene composes once for each chain of scenes that
  * encloses it, since the cyclic-instancing check reads that chain.
@@ -149,9 +155,8 @@ const compositions = new WeakMap<CachedScene, Composition[]>();
 /**
  * A loaded sub-scene as it instantiates by itself: its sole root collapsed over the base it
  * inherits, or the scene as cached where nothing collapses. A composition is reused while the
- * cache answers the objects it read, so each instance of an inherited scene shares one and its
- * `%Name` table stays one object. The reads are re-checked because a source may be the loader's
- * live cache, which changes in place.
+ * cache still answers what it read, so every instance shares one `%Name` table. The source may be
+ * the loader's live cache, which changes in place.
  */
 function composedSubScene(
   cached: CachedScene,
@@ -162,8 +167,9 @@ function composedSubScene(
   if (cached.nodes.length !== 1 || !root?.instance) return cached;
   const enclosing = content.instancedScenePaths ?? [];
   const stored = compositions.get(cached) ?? [];
-  const known = stored.find((c) => sameElements(c.instancedScenePaths, enclosing));
-  if (known && stillAnswered(known.reads, sceneCache)) return known.composed;
+  const sameChain = stored.filter((c) => sameElements(c.instancedScenePaths, enclosing));
+  const known = sameChain.find((c) => stillAnswered(c.reads, sceneCache));
+  if (known) return known.composed;
 
   const reads = new Map<string, CacheAnswer>();
   // The recorder also sees the reads of a base's own composition, so a change of any base ends this entry.
@@ -177,10 +183,8 @@ function composedSubScene(
   const collapsed = collapseLiveNode(root, content, recorder);
   const composed = collapsed === root ? cached : { nodes: [collapsed] };
   const composition: Composition = { instancedScenePaths: enclosing, reads, composed };
-  compositions.set(
-    cached,
-    known ? stored.map((c) => (c === known ? composition : c)) : [...stored, composition]
-  );
+  const otherChains = stored.filter((c) => !sameChain.includes(c));
+  compositions.set(cached, [...otherChains, ...sameChain.slice(1 - COMPOSITIONS_PER_CHAIN), composition]);
   return composed;
 }
 

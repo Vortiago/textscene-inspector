@@ -218,4 +218,18 @@ describe('the composition of an inherited sub-scene', () => {
 
     expect(reads.filter((path) => path === 'res://kid.tscn')).toHaveLength(1);
   });
+
+  it('keeps a composition for each of two sources that ask in turn', () => {
+    const main = parse(MAIN);
+    const scenes = sceneRecord();
+    const full = contextOver(main, scenes);
+    const kidOnly: LiveTreeContext = {
+      ...full,
+      sceneCache: { getCached: (path) => (path === 'res://kid.tscn' ? scenes[path] : undefined) },
+    };
+    const fullTable = tableOf(main, full, 'Main/K0');
+    tableOf(main, kidOnly, 'Main/K0');
+
+    expect(tableOf(main, contextOver(main, scenes), 'Main/K0')).toBe(fullTable);
+  });
 });

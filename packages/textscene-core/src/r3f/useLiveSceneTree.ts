@@ -65,8 +65,8 @@ const NO_LOAD_TICKS: LoadTicks = { version: 0, subscribe: () => () => {}, getVer
 
 /**
  * The one load counter of a loader, which every reader of its live tree shares. A handler sits on
- * the loader's bus only while a reader is mounted. The version moves when the last reader leaves,
- * since loads then go unseen and a reader that mounts next must not trust a tree built before.
+ * the loader's bus only while a reader is mounted, so loads go unseen before the first subscribe
+ * and after the last unsubscribe. The version moves at both, so no reader trusts a tree built then.
  */
 function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
   if (!loader) return NO_LOAD_TICKS;
@@ -78,6 +78,7 @@ function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
       version: 0,
       getVersion: () => created.version,
       subscribe: (onChange) => {
+        if (listeners.size === 0) created.version++;
         listeners.add(onChange);
         stopListening ??= loader.eventBus.onChange(LIVE_TREE_BUSES, ({ event }) => {
           if (event === 'invalidated') return;

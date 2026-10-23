@@ -34,9 +34,9 @@ unique_name_in_owner = true
 
 const HEAD = 'Main/K0/Arm/Head';
 
-function mount() {
+function mount({ seeded = true } = {}) {
   const fake = createFakeResourceLoader();
-  fake.scenes.seed('res://kid.tscn', new TscnParser().parse(KID));
+  if (seeded) fake.scenes.seed('res://kid.tscn', new TscnParser().parse(KID));
   const sceneGraph = createSceneGraphFromTscnScene(new TscnParser().parse(MAIN));
   const wrapper = ({ children }: { children: ReactNode }) => (
     <HierarchyProvider value={{ sceneGraph, panelId: 'p' }}>
@@ -78,5 +78,19 @@ describe('the live tree shared by its consumers', () => {
     renderHook(() => useLocalScene(HEAD), { wrapper });
 
     expect(reads()).toBeGreaterThan(afterFirst);
+  });
+
+  it('shows a sub-scene that loads between the first render and the first subscription', () => {
+    const { fake, wrapper } = mount({ seeded: false });
+    const LoadsAfterRender = () => {
+      fake.scenes.seed('res://kid.tscn', new TscnParser().parse(KID));
+      return null;
+    };
+    const wrapperWithLateLoad = ({ children }: { children: ReactNode }) =>
+      wrapper({ children: [children, <LoadsAfterRender key="late" />] });
+
+    const { result } = renderHook(() => useLiveNode(HEAD), { wrapper: wrapperWithLateLoad });
+
+    expect(result.current?.node.name).toBe('Head');
   });
 });

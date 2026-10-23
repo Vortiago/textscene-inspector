@@ -84,12 +84,24 @@ export function recoverByIdTrail(
   headings: readonly IdHeading[],
   builtCount: number
 ): IdTrailEnd | undefined {
-  const index = trail[0] === undefined ? undefined : firstIndexWithId(headings, trail[0]);
-  return idTrailEndAt(
-    trail,
-    index === undefined ? undefined : { index, named: headings[index]! },
-    builtCount
-  );
+  return recoverByIdTrailOver(trail, headings, (index) => headings[index]!, builtCount);
+}
+
+/**
+ * {@link recoverByIdTrail} over `ids`, the headings' unique ids, with `headingAt` building only the
+ * heading the trail names, so the cost does not grow with the other headings.
+ */
+export function recoverByIdTrailOver(
+  trail: readonly number[],
+  ids: readonly HasUniqueId[],
+  headingAt: (index: number) => IdHeading,
+  builtCount: number
+): IdTrailEnd | undefined {
+  // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
+  if (trail.length === 0) return undefined;
+  const index = firstIndexWithId(ids, trail[0]!);
+  if (index === undefined) return undefined;
+  return idTrailEndAt(trail, index, headingAt(index), builtCount);
 }
 
 type HasUniqueId = Pick<IdHeading, 'uniqueId'>;
@@ -119,18 +131,12 @@ export function firstIndexWithId(headings: readonly HasUniqueId[], id: number): 
   return indexes.get(id);
 }
 
-/**
- * {@link recoverByIdTrail} once the heading the trail's first id names is found: `first`, or
- * undefined where no heading carries the id.
- */
-export function idTrailEndAt(
+function idTrailEndAt(
   trail: readonly number[],
-  first: { readonly index: number; readonly named: IdHeading } | undefined,
+  index: number,
+  named: IdHeading,
   builtCount: number
 ): IdTrailEnd | undefined {
-  // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
-  if (trail.length === 0 || first === undefined) return undefined;
-  const { index, named } = first;
   if (trail.length === 1) {
     return index < builtCount && named.isPlaced ? { kind: 'lands', heading: index } : undefined;
   }
