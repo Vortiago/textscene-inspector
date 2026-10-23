@@ -33,8 +33,8 @@ const JSX_SOURCES = SOURCES.filter(({ file }) => file.endsWith('.tsx'));
  * slot. Scoped by corpus, not by tag name: a name list would have to track
  * three's and R3F's element sets.
  */
-const RENDERER_ROOT = 'packages/textscene-core/src';
-const RENDERER_JSX = JSX_SOURCES.filter(({ file }) => repoPath(file).startsWith(`${RENDERER_ROOT}/`));
+const CORE_SOURCE_ROOT = 'packages/textscene-core/src';
+const RENDERER_JSX = JSX_SOURCES.filter(({ file }) => repoPath(file).startsWith(`${CORE_SOURCE_ROOT}/`));
 
 /** Any R3F material element: `meshBasicMaterial`, `shaderMaterial`, `pointsMaterial` and so on. */
 const MATERIAL_TAG = /<[a-z][A-Za-z0-9]*Material(?![A-Za-z0-9])/;
@@ -282,7 +282,7 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
  * viewport-biased texture.
  */
 const PLAIN_FACTORY_CALL = /\b(?:materialProgramInputs|injectProgram)\b\s*(?:<[^>(]*>)?\(/;
-const VIEWPORT_SCOPES = ['nodes/3d/', 'resources/'].map((dir) => `${RENDERER_ROOT}/${dir}`);
+const VIEWPORT_SCOPES = ['nodes/3d/', 'resources/'].map((dir) => `${CORE_SOURCE_ROOT}/${dir}`);
 const PLAIN_FACTORY_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/3d/navigationregion3d/Component.tsx':
     'the untextured navigation faces of the editor outline',
@@ -296,7 +296,7 @@ const MARKER_USERS = new Set(
     'r3f/materials/godotMipmapBias.ts',
     'r3f/materialProgramInputs.ts',
     'resources/materials/standardmaterial3d/materialBag.ts',
-  ].map((file) => `${RENDERER_ROOT}/${file}`)
+  ].map((file) => `${CORE_SOURCE_ROOT}/${file}`)
 );
 const MARKER_NAME = /\bviewportSamplersUserData\b/;
 
@@ -620,7 +620,7 @@ describe('Material factory conformance', () => {
     // Each renderer subtree separately: `r3f/` alone would clear a total.
     for (const dir of ['nodes', 'r3f', 'resources']) {
       expect(
-        RENDERER_JSX.some(({ file }) => repoPath(file).startsWith(`${RENDERER_ROOT}/${dir}/`)),
+        RENDERER_JSX.some(({ file }) => repoPath(file).startsWith(`${CORE_SOURCE_ROOT}/${dir}/`)),
         dir
       ).toBe(true);
     }
