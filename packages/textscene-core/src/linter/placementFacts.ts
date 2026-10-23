@@ -72,7 +72,7 @@ function reRootedNames(
   const names = new Map<NodeOrigin<RawNode>, string>();
   for (const origin of orphaned) {
     const seat = seated.get(origin.node);
-    if (seat) names.set(origin, seat.name);
+    if (seat?.authoredName !== undefined) names.set(origin, seat.name);
   }
   return names;
 }

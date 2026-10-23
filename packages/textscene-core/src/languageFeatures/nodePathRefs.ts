@@ -1,13 +1,14 @@
 /**
  * The node paths a heading spells in `parent=`, `from=` and `to=`, and the `[node]` heading each
- * one names. The loader stores a `parent=` as written (`resource_format_text.cpp:205-212`).
- * Instantiate walks each from the scene root with `get_node_or_null` (`packed_scene.cpp:157-165`),
- * so the seated scene's one walk resolves it. A connection end falls back to its uid path there.
+ * one names. A `parent=` names the node the heading sits under in the seating, which walked the
+ * path while the headings above were built (`packed_scene.cpp:157-165`) and fell back to the
+ * `parent_id_path=`. A connection end walks the finished scene, simplified (`resource_format_text.cpp:370-371`),
+ * and falls back to its uid path.
  */
 
 import { parseIdTrail } from '../godot/scene/packedScene.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
-import { nodeSectionOfConnectionEnd, nodeSectionOfPath } from './nodeSeating.js';
+import { nodeSectionOfConnectionEnd, nodeSectionOfParent } from './nodeSeating.js';
 import { headingAttribute, lineRange, lineRangeContains } from './ranges.js';
 import type { Position, Range } from './types.js';
 
@@ -33,6 +34,8 @@ const PATH_ATTRIBUTES: ReadonlyMap<string, readonly PathAttribute[]> = new Map([
 
 /** A node path as the heading writes it, and where its value sits. */
 interface NodePathReference {
+  /** The heading that holds the value. */
+  readonly heading: DocumentSection;
   readonly path: string;
   readonly range: Range;
   readonly kind: PathAttribute['kind'];
@@ -54,6 +57,7 @@ function referencesOnHeading(section: DocumentSection, lineText: string): NodePa
     if (!attribute) return [];
     return [
       {
+        heading: section,
         path: attribute.value,
         range: lineRange(line, attribute.span),
         kind: pathAttribute.kind,
@@ -69,11 +73,11 @@ function referencesOnHeading(section: DocumentSection, lineText: string): NodePa
 /** The `[node]` heading a reference names, or undefined where this file seats none there. */
 export function nodeOfReference(
   document: LanguageDocument,
-  { path, idTrail, kind }: NodePathReference
+  { heading, path, idTrail, kind }: NodePathReference
 ): DocumentSection | undefined {
   return kind === 'connectionEnd'
     ? nodeSectionOfConnectionEnd(document, path, idTrail)
-    : nodeSectionOfPath(document, path);
+    : nodeSectionOfParent(document, heading);
 }
 
 function buildNodeUses(document: LanguageDocument): NodeUses {

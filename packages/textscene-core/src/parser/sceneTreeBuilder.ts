@@ -53,6 +53,11 @@ export interface SceneSeating<N extends RawNode> extends SeatedPaths<N> {
   readonly seated: ReadonlyMap<N, N>;
   /** The root-relative path of each seated copy with a name, a copy a later sibling of its name replaced included. */
   readonly pathOf: ReadonlyMap<N, string>;
+  /**
+   * The headings a `parent_id_path=` seated under the heading it names, because their `parent=` path
+   * did not walk. Their copy lives there, not at the path the heading declares.
+   */
+  readonly landed: ReadonlySet<N>;
 }
 
 export const MISSING = { status: 'missing' } as const;
@@ -77,6 +82,7 @@ function noScene<N extends RawNode>(): SceneSeating<N> {
     roots: [],
     seated: new Map(),
     pathOf: new Map(),
+    landed: new Set(),
     resolve: () => MISSING,
     ownership: emptyOwnership(),
   };
@@ -115,11 +121,16 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     // An unlisted end passed content another file lists, where Godot may still find the
     // parent, so nothing here says the path vanished and it never re-roots.
     if (end !== null && typeof end !== 'string') continue;
-    // The path has vanished. A `parent_id_path=` is tried first (`:161-163`) and, where it
-    // lands, seats the node somewhere this parse cannot name, so that node, like every node
-    // of a refused file, stays out of the tree for `orphanedNodes`.
+    // The path has vanished. A `parent_id_path=` is tried first (`:161-163`). Where it lands in
+    // this file, the node sits under that heading. Where it enters an instance, the node sits
+    // somewhere this parse cannot name, so it stays out of the tree like every node of a refused file.
     if (!reRootsVanished) continue;
-    if (idTrailEnd(origins, index, isPlaced)) continue;
+    const recovered = idTrailEnd(origins, index, isPlaced);
+    if (recovered) {
+      if (recovered.kind === 'lands')
+        seatLanded(tables, node, origins[recovered.heading]!.node, resolveOwner);
+      continue;
+    }
     reRoot(tables, node, resolveOwner);
   }
 
@@ -127,6 +138,7 @@ function seatHeadings<N extends SceneNode<N>>(origins: readonly NodeOrigin<N>[])
     roots: [tables.root],
     seated: tables.seated,
     pathOf: tables.pathOf,
+    landed: tables.landed,
     resolve: seatedResolver(tables),
     ownership: tables.ownership,
   };
@@ -172,6 +184,22 @@ function seatBelowParent<N extends SceneNode<N>>(
   anchor.node.children.push(seat);
   register(tables, anchor.foldedParentPath, seat, anchor.node);
   return true;
+}
+
+/**
+ * Seats a heading under the heading its `parent_id_path=` landed on, at the path that heading's
+ * node has in the tree (`packed_scene.cpp:161-163`, `:1985-2005`). A heading with no name has no
+ * path to continue from, and this parse leaves the node out.
+ */
+function seatLanded<N extends SceneNode<N>>(
+  tables: SeatingTables<N>,
+  node: N,
+  landedOn: N,
+  resolveOwner: () => string | undefined
+): void {
+  const parentPath = tables.pathOf.get(tables.seated.get(landedOn)!);
+  if (parentPath === undefined || !seatBelowParent(tables, node, parentPath, resolveOwner)) return;
+  tables.landed.add(node);
 }
 
 /**
@@ -238,6 +266,8 @@ interface SeatingTables<N> {
   readonly byPath: Map<string, N>;
   /** The inverse of `byPath`, keeping a node a later sibling replaced there. */
   readonly pathOf: Map<N, string>;
+  /** Written only by `seatLanded`: the headings a `parent_id_path=` seated. */
+  readonly landed: Set<N>;
   /** `%Name` to that path, for the nodes claiming one in the root's table. */
   readonly uniquePaths: Map<string, string>;
   /** Each seated node's place, both spellings from the root's own name ({@link UniqueNameClaim}). */
@@ -268,6 +298,7 @@ function newTables<N extends SceneNode<N>>(rootNode: N): SeatingTables<N> {
     rootChildNames: new Set(),
     byPath,
     pathOf: new Map([[root, SCENE_ROOT_PATH]]),
+    landed: new Set(),
     uniquePaths,
     places: new Map([[root, { path: root.name, livePath: root.name }]]),
     enclosingInstances: new Map(),
@@ -558,7 +589,7 @@ function findInstanceAnchor<N extends RawNode>(
  */
 export function orphanedNodes<N extends RawNode, H extends { readonly node: N }>(
   all: readonly H[],
-  seating: Pick<SceneSeating<N>, 'seated'>
+  seating: Pick<SceneSeating<N>, 'seated' | 'landed'>
 ): H[] {
   // Each node arrives with its line: a lookup would need a fallback, and line 0 reads
   // as a real location in an editor gutter.
@@ -567,12 +598,31 @@ export function orphanedNodes<N extends RawNode, H extends { readonly node: N }>
 
 /**
  * Whether the heading's node sits at the path its `parent=` names. A re-rooted copy keeps its
- * `authoredName`, and a node the seating left out has no copy.
+ * `authoredName`, a landed one lives under the heading its trail named, and a node the seating left
+ * out has no copy.
  */
 export function isSeatedAtOwnPath<N extends RawNode>(
   node: N,
-  { seated }: Pick<SceneSeating<N>, 'seated'>
+  { seated, landed }: Pick<SceneSeating<N>, 'seated' | 'landed'>
 ): boolean {
   const seat = seated.get(node);
-  return seat !== undefined && seat.authoredName === undefined;
+  return seat !== undefined && seat.authoredName === undefined && !landed.has(node);
+}
+
+/**
+ * The seated node each seated copy sits under because its `parent=` names it, or its
+ * `parent_id_path=` landed it there. A re-rooted copy has none, since its path vanished, and a copy
+ * seated below an instance for a path into that instance has none, since no heading of this file is
+ * the node the path names.
+ */
+export function seatedParents<N extends SceneNode<N>>(roots: readonly N[]): Map<N, N> {
+  const parents = new Map<N, N>();
+  const pending = [...roots];
+  for (let parent = pending.pop(); parent; parent = pending.pop()) {
+    for (const child of parent.children) {
+      if (child.authoredName === undefined && child.instanceSubPath === undefined) parents.set(child, parent);
+      pending.push(child);
+    }
+  }
+  return parents;
 }

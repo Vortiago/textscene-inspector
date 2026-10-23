@@ -3,29 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { connectionEndResolver } from './connectionEnd';
 import { seatScene } from './sceneTreeBuilder';
-import type { NodeOrigin, TscnNode } from './types';
-
-function node(name: string, parent?: string, extras: Partial<TscnNode> = {}): TscnNode {
-  const heading: TscnNode = {
-    rawProperties: {},
-    type: 'Node3D',
-    name,
-    properties: {},
-    children: [],
-    ...extras,
-  };
-  return parent === undefined ? heading : { ...heading, parent };
-}
-
-/** One origin per node, in order, each with the `unique_id=` its entry in `ids` gives (0 where absent). */
-function originsOf(nodes: TscnNode[], ids: Record<string, number>): NodeOrigin<TscnNode>[] {
-  return nodes.map((heading, i) => ({
-    node: heading,
-    line: i + 1,
-    declaredParent: heading.parent,
-    uniqueId: ids[heading.name] ?? 0,
-  }));
-}
+import { node, originsOf } from './testing/seatingKit';
 
 /** A root, `Button` (id 7), the instance `Body` (id 9) and `Lost` (id 5), whose `parent=` names nothing. */
 const button = node('Button', '.');

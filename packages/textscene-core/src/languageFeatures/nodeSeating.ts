@@ -6,7 +6,7 @@
 
 import { connectionEndResolver, type ConnectionEndResolver } from '../parser/connectionEnd.js';
 import { createRawNode, nodeOrigin } from '../parser/rawNode.js';
-import { seatScene, type SceneSeating } from '../parser/sceneTreeBuilder.js';
+import { seatedParents, seatScene, type SceneSeating } from '../parser/sceneTreeBuilder.js';
 import type { NodePathResolution, RawNode } from '../parser/types.js';
 import type { ParsedHeading } from '../parser/utils.js';
 import type { DocumentSection, LanguageDocument } from './document.js';
@@ -26,6 +26,10 @@ interface DocumentSeating {
   readonly tree: readonly SeatedSection[];
   /** The root-relative path of each seated heading with a name. Built on the first read: the outline never reads it. */
   paths(): ReadonlyMap<DocumentSection, string>;
+  /** The node each `[node]` heading sits under (`seatedParents`). Built on the first read: the outline never reads it. */
+  parents(): ReadonlyMap<RawNode, RawNode>;
+  /** Each `[node]` heading's node. */
+  readonly nodeBySection: ReadonlyMap<DocumentSection, RawNode>;
 }
 
 /** Written only by {@link seatingOf}. An entry lives as long as its document. */
@@ -57,6 +61,7 @@ function seat(document: LanguageDocument): DocumentSeating {
   });
   const unseated = headings.filter(({ node }) => !seating.seated.has(node)).map(({ node }) => node);
   let paths: ReadonlyMap<DocumentSection, string> | undefined;
+  let parents: ReadonlyMap<RawNode, RawNode> | undefined;
   return {
     seating,
     resolveConnectionEnd: connectionEndResolver(headings, seating),
@@ -64,6 +69,8 @@ function seat(document: LanguageDocument): DocumentSeating {
     tree: [...seating.roots, ...unseated].map(seated),
     paths: () =>
       (paths ??= new Map([...seating.pathOf].map(([node, path]) => [sectionByNode.get(node)!, path]))),
+    parents: () => (parents ??= seatedParents(seating.roots)),
+    nodeBySection: new Map(headings.map(({ section, node }) => [section, node])),
   };
 }
 
@@ -90,6 +97,21 @@ export function seatedNodePaths(document: LanguageDocument): ReadonlyMap<Documen
 export function nodeSectionOfPath(document: LanguageDocument, path: string): DocumentSection | undefined {
   const seating = seatingOf(document);
   return sectionOf(seating, seating.seating.resolve(path));
+}
+
+/**
+ * The `[node]` heading that `heading` sits under, as its `parent=` names it or its `parent_id_path=`
+ * lands it. Undefined where the path vanished, names a heading built later, or enters an instance.
+ */
+export function nodeSectionOfParent(
+  document: LanguageDocument,
+  heading: DocumentSection
+): DocumentSection | undefined {
+  const seating = seatingOf(document);
+  const node = seating.nodeBySection.get(heading);
+  const seat = node && seating.seating.seated.get(node);
+  const parent = seat && seating.parents().get(seat);
+  return parent && seating.sectionByNode.get(parent);
 }
 
 /**

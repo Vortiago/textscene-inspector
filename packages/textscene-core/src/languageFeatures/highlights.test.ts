@@ -66,6 +66,16 @@ describe('documentHighlights', () => {
     expect(highlights.map(({ range }) => range.start.line)).toEqual([1, 2]);
   });
 
+  it('marks a parent= that only its parent_id_path recovers, as a use of the node it lands on', () => {
+    const text = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Door" type="Node3D" parent="." unique_id=7]',
+      '[node name="Orphan" type="Node3D" parent="Gone" parent_id_path=PackedInt32Array(7)]',
+    ].join('\n');
+    const highlights = documentHighlights(new LanguageDocument(text), { line: 1, character: 12 });
+    expect(highlights.map(({ range }) => range.start.line)).toEqual([1, 2]);
+  });
+
   it('highlights nothing away from a reference', () => {
     const document = new LanguageDocument(SCENE);
     expect(documentHighlights(document, { line: 1, character: 0 })).toEqual([]);
