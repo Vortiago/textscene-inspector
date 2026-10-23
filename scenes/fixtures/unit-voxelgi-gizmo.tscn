@@ -1,6 +1,6 @@
 ; A VoxelGI with 64 subdivisions on a box of 12 x 6 x 8, for the one variable no other golden moves:
 ; its editor gizmo (the box edges and the faint grid of cells). The previewer gates the gizmo on
-; selection (ADR-0018), so only the `select:` golden has it. A small box sits at two opposite corners
+; selection (ADR-0056), so only the `select:` golden has it. A small box sits at two opposite corners
 ; of the box to frame the whole gizmo. The empty VoxelGIData keeps `voxelgi-missing-data` quiet.
 [gd_scene load_steps=3 format=3]
 

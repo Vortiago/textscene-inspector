@@ -1,7 +1,8 @@
 ; A cylinder FogVolume in a scene with no volumetric fog, for the one variable no other golden moves:
 ; its editor gizmo (the 12 edges of the box, which Godot draws for every shape but WORLD). The
-; previewer gates the gizmo on selection (ADR-0018), so only the `select:` golden has it. A small box
-; sits at two opposite corners of the box to frame the whole gizmo.
+; previewer draws the box faint for every volume and in full colour for the selected one (ADR-0056),
+; so only a golden with `gizmos: true` has it. A small box sits at two opposite corners of the box to
+; frame the whole gizmo.
 [gd_scene load_steps=2 format=3]
 
 [sub_resource type="BoxMesh" id="Corner_1"]

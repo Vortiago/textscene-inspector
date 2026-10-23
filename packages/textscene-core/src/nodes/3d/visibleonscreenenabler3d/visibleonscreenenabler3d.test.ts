@@ -1,6 +1,6 @@
 /**
  * VisibleOnScreenEnabler3D registration: it reuses the notifier's parse and component, so it reads
- * `aabb` and draws the same gizmo (ADR-0018).
+ * `aabb` and draws the same gizmo (ADR-0056).
  */
 
 import { describe, expect, it } from 'vitest';

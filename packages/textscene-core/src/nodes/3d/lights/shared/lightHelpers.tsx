@@ -1,18 +1,14 @@
 /**
  * Editor gizmos for the three light types: `<*LightGizmo lightRef={ref}>` attaches
- * a `THREE.*LightHelper` to the light. Only the selected light shows one, since
- * many lights would bury the scene in cones. Hover shows `HoverHighlight` instead.
+ * a `THREE.*LightHelper` to the light. Only the selected light shows one, as in Godot
+ * (`light_3d_gizmo_plugin.cpp:160,200,243`). Hover shows `HoverHighlight` instead.
  * Outside a NodeDispatcher, `useNodePath()` is `null` and the gizmo stays hidden.
  */
 
 import type { RefObject } from 'react';
 import * as THREE from 'three';
 import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../../r3f/hooks/useTHREEHelper';
-
-// Re-exported for the camera and audio gizmos.
-import { useGizmoVisible } from '../../../../r3f/hooks/useGizmoVisible';
-
-export { useGizmoVisible };
+import { useGizmoDrawn } from '../../../../r3f/hooks/useGizmoState';
 
 const HELPER_COLOR = 0xffff00;
 const DIRECTIONAL_HELPER_SIZE = 1.0;
@@ -27,7 +23,7 @@ function LightGizmoCommon<
   L extends THREE.Light,
   H extends THREE.Object3D & { update?: () => void; dispose?: () => void },
 >(props: { lightRef: RefObject<L | null>; make: (light: L) => H }) {
-  const visible = useGizmoVisible();
+  const visible = useGizmoDrawn('selected-only');
   const helper = usePrimitiveHelper<H>(() => {
     if (!visible) return null;
     const light = props.lightRef.current;

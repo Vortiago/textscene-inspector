@@ -1,11 +1,12 @@
 /**
  * <VisibleOnScreenNotifier3D> and <VisibleOnScreenEnabler3D> draw nothing at runtime. Godot's editor
- * draws the box they watch, and here `useGizmoVisible()` shows it only while selected (ADR-0018).
+ * draws the box they watch for every node, faint while unselected, and a fill for the selected node
+ * (`visible_on_screen_notifier_3d_gizmo_plugin.cpp:185-191`, ADR-0056).
  */
 
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { AabbAxesGizmo } from '../../../r3f/components/AabbAxesGizmo';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
 import { Node3D } from '../../base/node3d/Component';
 import type { VisibleOnScreenNotifier3DProperties } from './types';
 
@@ -17,10 +18,12 @@ const SOLID_ALPHA = 0.1;
 
 export function VisibleOnScreenNotifier3D({ node, children }: NodeComponentProps) {
   const { aabb } = node.properties as VisibleOnScreenNotifier3DProperties;
-  const gizmoVisible = useGizmoVisible();
+  const gizmoState = useGizmoState('every-node');
   return (
     <Node3D node={node}>
-      {gizmoVisible && <AabbAxesGizmo aabb={aabb} color={GIZMO_COLOR} solidAlpha={SOLID_ALPHA} />}
+      {gizmoState !== 'hidden' && (
+        <AabbAxesGizmo aabb={aabb} color={GIZMO_COLOR} solidAlpha={SOLID_ALPHA} variant={gizmoState} />
+      )}
       {children}
     </Node3D>
   );

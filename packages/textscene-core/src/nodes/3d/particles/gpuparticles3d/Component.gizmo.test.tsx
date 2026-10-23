@@ -1,5 +1,6 @@
 /**
- * <GPUParticles3D> draws Godot's editor gizmos only while it is selected (ADR-0018): the
+ * <GPUParticles3D> draws Godot's editor gizmos only while it is selected and the Gizmos toggle is
+ * on (`gpu_particles_3d_gizmo_plugin.cpp:64`): the
  * `visibility_aabb` box (`gpu_particles_3d_gizmo_plugin.cpp:61-84`) and the emission shape of its
  * ParticleProcessMaterial (`particles_3d_emission_shape_gizmo_plugin.cpp:85-217`).
  */
@@ -9,10 +10,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../../parser/types';
 import { heading } from '../../../../parser/testing/parserKit';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
+import { GizmoScene } from '../../../../r3f/testing/GizmoScene';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
@@ -65,7 +64,7 @@ function emitter(props: Record<string, string>): TscnNode {
   } as TscnNode;
 }
 
-async function render(selectedPath: string | null, props: Record<string, string> = {}) {
+async function render(selectedPath: string | null, props: Record<string, string> = {}, showGizmos = true) {
   const fake = createFakeResourceLoader();
   fake.resources.seed(FILE_PATH, {
     resourceType: 'ParticleProcessMaterial',
@@ -76,14 +75,11 @@ async function render(selectedPath: string | null, props: Record<string, string>
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={RESOURCES} externalResources={EXTERNAL_RESOURCES}>
-        <SelectionProvider>
-          {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-          <NodePathProvider path="Sparks">
-            <GPUParticles3D node={emitter(props)}>
-              <group name="Child" />
-            </GPUParticles3D>
-          </NodePathProvider>
-        </SelectionProvider>
+        <GizmoScene nodePath="Sparks" selectedPath={selectedPath} showGizmos={showGizmos}>
+          <GPUParticles3D node={emitter(props)}>
+            <group name="Child" />
+          </GPUParticles3D>
+        </GizmoScene>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );
@@ -109,6 +105,11 @@ describe('<GPUParticles3D> gizmo gate', () => {
   ])('draws the box only when %s', async (_label, selectedPath, expected) => {
     const renderer = await render(selectedPath);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(expected);
+  });
+
+  it('draws nothing with the Gizmos toggle off, selected', async () => {
+    const renderer = await render('Sparks', { process_material: 'SubResource("Process_sphere")' }, false);
+    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 
   it('keeps its children in the node transform, selected or not', async () => {

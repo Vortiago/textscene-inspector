@@ -15,6 +15,8 @@ export interface NoiseTexture2DData {
   seamlessBlendSkirt: number;
   asNormalMap: boolean;
   bumpStrength: number;
+  /** Build the CPU mip chain `Image::generate_mipmaps` makes (Godot default true). */
+  generateMipmaps: boolean;
   /** Raw `noise` ref: a `SubResource` naming a Noise resource, or null. */
   noise: string | null;
   /** Raw `color_ramp` ref: a `SubResource` naming a Gradient, or null. */

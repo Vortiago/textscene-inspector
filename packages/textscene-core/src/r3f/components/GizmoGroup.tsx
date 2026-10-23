@@ -1,5 +1,5 @@
 /**
- * The group every selection-gated gizmo draws in: tagged as editor chrome, and ordered above
+ * The group every gizmo draws in: tagged as editor chrome, and ordered above
  * ordinary scene content and every canvas item.
  */
 

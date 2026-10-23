@@ -6,6 +6,7 @@
 
 import { normalizedVector3 } from '../../godot/math/vector';
 import { channelToByte } from '../../utils/colorSpace';
+import { reversedRows } from '../../utils/reversedRows';
 
 /** One level of an RGBA8 image, top row first. Its shape is the entry three reads from `Texture.mipmaps`. */
 export interface MipLevel {
@@ -15,6 +16,11 @@ export interface MipLevel {
 }
 
 export const RGBA_BYTES = 4;
+
+/** `level` with its rows in reverse order: top-down as Godot holds it, or bottom-up as a `DataTexture` uploads it. */
+export function reversedLevel({ data, width, height }: MipLevel): MipLevel {
+  return { data: reversedRows(data, width, height), width, height };
+}
 
 /**
  * Every level of `base`'s chain, `base` first, down to 1 × 1 (`image.cpp:1885-1945`). With

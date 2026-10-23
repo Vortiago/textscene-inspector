@@ -5,14 +5,14 @@ status: done
 fixture: unit-path2d.tscn
 image: unit-path2d
 visual: false
-renders_as: nothing at runtime, a selection-gated curve gizmo
+renders_as: nothing at runtime, a curve gizmo for every node
 ---
 
 # Path2D
 
 Path2D carries a `Curve2D` for children to follow. It has no runtime visual. The
-previewer draws the curve only as a selection-gated white polyline (ADR-0018), so a
-plain capture is empty on both sides.
+previewer draws the curve only as a white polyline for every node (ADR-0056). A capture keeps the
+Gizmos toggle off, so a plain capture is empty on both sides.
 
 ## Linting
 

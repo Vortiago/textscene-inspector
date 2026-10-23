@@ -11,6 +11,7 @@ import {
   FIT_ON_OPEN_2D_STORAGE_KEY,
   FRAME_ON_OPEN_STORAGE_KEY,
   PERFORMANCE_TESTIDS,
+  SHOW_GIZMOS_STORAGE_KEY,
   SHOW_PERFORMANCE_STORAGE_KEY,
   SOURCE_PANE_STORAGE_KEY,
   VIEWPORT,
@@ -23,11 +24,19 @@ import {
  * explicitly. `canvas2DFrame` is the project-viewport rect, which widens the window only when it
  * does not fit the default one. `viewport` is the 3D window, which a scene shrinks to render a
  * small frame, and a 2D context ignores it. `showPerformance` turns the frame profile on, and its
- * overlay is painted out too.
+ * overlay is painted out too. `showGizmos` turns the editor gizmos on. They are off by default, so no
+ * golden or comparison capture draws one that Godot's running game does not.
  */
 export async function createCaptureContext(
   browser,
-  { frameOnOpen, canvas2D = false, canvas2DFrame = null, viewport = VIEWPORT, showPerformance = false }
+  {
+    frameOnOpen,
+    canvas2D = false,
+    canvas2DFrame = null,
+    viewport = VIEWPORT,
+    showPerformance = false,
+    showGizmos = false,
+  }
 ) {
   const context = await browser.newContext({
     viewport: canvas2D ? canvas2DViewportFor(canvas2DFrame) : viewport,
@@ -40,6 +49,10 @@ export async function createCaptureContext(
   await context.addInitScript(
     ([key, value]) => window.localStorage.setItem(key, value),
     [FRAME_ON_OPEN_STORAGE_KEY, frameOnOpen ? 'true' : 'false']
+  );
+  await context.addInitScript(
+    ([key, value]) => window.localStorage.setItem(key, value),
+    [SHOW_GIZMOS_STORAGE_KEY, showGizmos ? 'true' : 'false']
   );
   if (showPerformance) {
     await context.addInitScript(

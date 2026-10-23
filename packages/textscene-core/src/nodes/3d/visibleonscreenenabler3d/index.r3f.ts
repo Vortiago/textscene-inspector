@@ -1,6 +1,6 @@
 /**
  * VisibleOnScreenEnabler3D draws nothing at runtime, so it declares no render intent. It mounts its
- * base class's component, which draws the editor gizmo of the watched box while selected (ADR-0018).
+ * base class's component, which draws the editor gizmo of the watched box for every node (ADR-0056).
  */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';

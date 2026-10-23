@@ -4,14 +4,14 @@ category: 2D
 status: done
 fixture: unit-pathfollow2d.tscn
 image: unit-pathfollow2d
-renders_as: a transform-only follower with a selection-gated dot
+renders_as: a transform-only follower with a dot for the selected node
 ---
 
 # PathFollow2D
 
 PathFollow2D places its children along the parent Path2D's curve and draws nothing
-itself. Its follow-point dot is selection-gated (ADR-0018), and the previewer positions
-the children from `progress` alone, as Godot does on load.
+itself. Its follow-point dot is a previewer addition for the selected node (ADR-0056).
+The previewer positions the children from `progress` alone, as Godot does on load.
 
 ## Linting
 

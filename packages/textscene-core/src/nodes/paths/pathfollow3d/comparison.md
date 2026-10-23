@@ -43,6 +43,6 @@ Strict parsing format-checks these `PathFollow3D` properties, plus 17 inherited 
 
 ## Known limitations
 
-- **Editor only** The follow-point gizmo draws only for the selected node.
+- **Editor only** The follow-point gizmo is a previewer addition that draws for the selected node when the Gizmos toggle is on.
 - **Approximated** Every `rotation_mode` except NONE turns the node to face along the curve in the same way, so Y, XY, XYZ and ORIENTED look alike.
 - **Approximated** The curve's per-point tilt is not applied, so a banked curve turns the node with no roll.

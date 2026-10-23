@@ -5,12 +5,12 @@ status: done
 fixture: unit-marker-3d.tscn
 image: unit-marker-3d
 visual: false
-renders_as: a selection-gated axis-cross gizmo
+renders_as: an axis-cross gizmo for every node
 ---
 
 # Marker3D
 
-A Node3D anchor that positions its children and shows a three-axis cross at its origin in the editor. The previewer draws that cross only when the node is selected (ADR-0018), so a plain capture shows nothing for it.
+A Node3D anchor that positions its children and shows a three-axis cross at its origin in the editor. The previewer draws that cross for every node, in full colour (ADR-0056). A capture keeps the Gizmos toggle off, so a plain capture shows nothing for it.
 
 ## Linting
 
@@ -31,4 +31,4 @@ The lenient parser reads `gizmo_extents` through `floatOr`, so a non-numeric val
 
 ## Known limitations
 
-- **Editor only** The axis cross appears only in Godot's editor, but here it is selection-gated.
+- **Editor only** The axis cross appears only in Godot's editor, and here it draws when the Gizmos toggle is on.

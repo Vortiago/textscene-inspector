@@ -1278,6 +1278,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Noisetexture2d Mipmaps",
+    "file": "unit-noisetexture2d-mipmaps.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Noisetexture2d Normal",
     "file": "unit-noisetexture2d-normal.tscn",
     "category": "Other"
@@ -3714,6 +3719,12 @@ export const fixtures: Fixture[] = [
     "name": "Material Textured",
     "file": "unit-material-textured.tscn",
     "category": "Unit - Materials"
+  },
+  {
+    "name": "Material Mipmap Bias Normal",
+    "file": "mipmap-bias/unit-material-mipmap-bias-normal.tscn",
+    "category": "Unit - Materials",
+    "root": "mipmap-bias"
   },
   {
     "name": "Material Mipmap Bias",

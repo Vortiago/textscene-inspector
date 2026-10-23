@@ -1,6 +1,6 @@
 # Non-visual nodes render as invisible transform-only groups; no viewport placeholder
 
-- Status: Accepted. Partly amended by ADR-0018, by the Label3D parity amendment, by the
+- Status: Accepted. Partly amended by ADR-0018 and ADR-0056, by the Label3D parity amendment, by the
   render-intent split amendment, by the parent-space amendment and by ADR-0045 (all below).
 - Generalises ADR-0005 (physics bodies as transform-only groups).
 - Related: ADR-0006 (viewport-mode seam, `showCollisions` toggle).
@@ -28,8 +28,8 @@ accident of a missing registration:
    `RigidBody3D`, `CharacterBody3D`, `Area3D`), `Skeleton3D`, `Path3D` and `PathFollow3D`. They render
    as transform-only groups that reuse the Node3D transform parse (per ADR-0005), beside
    `Node3D`/`Node2D`. The physics bodies and `Skeleton3D` register `renderIntent: 'transform-only'`
-   (see the render-intent split amendment). `Path3D` and `PathFollow3D` have selection-gated gizmos
-   (ADR-0018).
+   (see the render-intent split amendment). `Path3D` and `PathFollow3D` have gizmos
+   (ADR-0056).
 3. **Not-implemented types** also render as invisible transform-only groups: children still show, and
    the node itself draws nothing. `GPUParticles3D` is one. Godot rasterises a particle cloud at runtime
    and the previewer draws nothing, so it registers `renderIntent: 'pending'`, never
@@ -52,11 +52,12 @@ omission.
   when absent). Children of an unparsed unknown type therefore land at the origin of their parent.
   That is acceptable: the alternative was a misplaced grey box.
 
-> **Amendment (ADR-0018):** `Marker3D`, `Path3D` and `PathFollow3D` draw a **selection-gated** gizmo
-> (marker cross, curve polyline, follow handle), and PathFollow3D follows the parent curve. The gizmo
-> shows only while the node is selected, so the clutter this ADR fought does not return. They still
-> position their children identically (the transform-only guarantee holds). The physics bodies,
-> `Skeleton3D` and the not-implemented types are unchanged.
+> **Amendment (ADR-0018, replaced by ADR-0056):** `Marker3D`, `Path3D` and `PathFollow3D` draw a
+> gizmo (marker cross, curve polyline, follow handle), and PathFollow3D follows the parent curve.
+> ADR-0056 gives the state of each gizmo: the cross and the curve draw for every node, and the
+> follow handle draws only while its node is selected. The Gizmos toggle hides all of them. They
+> still position their children identically (the transform-only guarantee holds). The physics
+> bodies, `Skeleton3D` and the not-implemented types are unchanged.
 
 > **Amendment (Label3D parity):** `showLabels` defaults **on** (context default plus provider
 > `initialShowLabels`). Godot always rasterises `Label3D` text at runtime, so a viewport that hides it
@@ -84,7 +85,7 @@ omission.
 > the second group: Godot rasterises a particle cloud at runtime (`unit-gpuparticles3d-godot.png`)
 > and the previewer draws nothing, so it is a gap, not a node that draws nothing by nature. The
 > physics bodies and `Skeleton3D` stay in the first, as do `Path3D` and `PathFollow3D` at runtime.
-> Their runtime output is empty, and what an editor draws for them is the business of ADR-0018.
+> Their runtime output is empty, and what an editor draws for them is the business of ADR-0056.
 
 > **Amendment (parent space):** a transform-only group positions its children only where Godot
 > links them to it. Godot links a Node3D to its parent only when the parent is a Node3D

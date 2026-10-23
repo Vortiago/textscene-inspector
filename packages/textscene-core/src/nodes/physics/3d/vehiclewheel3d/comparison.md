@@ -4,7 +4,7 @@ category: 3D
 status: done
 fixture: unit-physics-vehicle.tscn
 image: unit-physics-vehicle
-renders_as: a transform group with a selection-gated wheel gizmo
+renders_as: a transform group with a wheel gizmo for every wheel
 ---
 
 # VehicleWheel3D
@@ -44,4 +44,4 @@ The lenient parser reads every strict-validated property, and an unauthored key 
 
 ## Known limitations
 
-- **Editor only** Godot's editor draws the wheel gizmo for every wheel, but here it draws only for the selected node (ADR-0018).
+- **Editor only** The wheel gizmo draws for every wheel, faint while unselected (ADR-0056), when the Gizmos toggle is on, which a capture keeps off.

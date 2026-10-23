@@ -1,7 +1,7 @@
 /**
- * <VehicleWheel3D> draws its wheel gizmo only while the node is selected
- * (ADR-0018), and positions its children either way. Godot's own gizmo
- * (editor/scene/3d/gizmos/physics/vehicle_body_3d_gizmo_plugin.cpp) is always on.
+ * <VehicleWheel3D> draws its wheel gizmo for every node, faint while unselected
+ * (editor/scene/3d/gizmos/physics/vehicle_body_3d_gizmo_plugin.cpp:100), and positions its
+ * children either way.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -10,9 +10,8 @@ import type { TscnNode } from '../../../../parser/types';
 import { VehicleWheel3D } from './Component';
 import { parseVehicleWheel3D } from './parser';
 import { heading } from '../../../../parser/testing/parserKit';
-import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
-import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
+import { GizmoScene, lineOpacities } from '../../../../r3f/testing/GizmoScene';
+import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../shared/debugColor';
 
 function wheelNode(props: Record<string, string> = {}): TscnNode {
   return {
@@ -24,14 +23,15 @@ function wheelNode(props: Record<string, string> = {}): TscnNode {
   } as TscnNode;
 }
 
-async function renderWheel(selectedPath: string | null, props: Record<string, string> = {}) {
+async function renderWheel(
+  selectedPath: string | null,
+  props: Record<string, string> = {},
+  showGizmos = true
+) {
   return ReactThreeTestRenderer.create(
-    <SelectionProvider>
-      {selectedPath !== null && <SelectSeeder path={selectedPath} />}
-      <NodePathProvider path="Wheel1">
-        <VehicleWheel3D node={wheelNode(props)} />
-      </NodePathProvider>
-    </SelectionProvider>
+    <GizmoScene nodePath="Wheel1" selectedPath={selectedPath} showGizmos={showGizmos}>
+      <VehicleWheel3D node={wheelNode(props)} />
+    </GizmoScene>
   );
 }
 
@@ -58,19 +58,21 @@ function containsPoint(positions: Float32Array, [x, y, z]: [number, number, numb
   return false;
 }
 
-describe('<VehicleWheel3D> gizmo gate', () => {
-  it('hides the wheel gizmo when not selected', async () => {
-    const renderer = await renderWheel(null);
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+describe('<VehicleWheel3D> gizmo state', () => {
+  it('draws the wheel gizmo at the alpha of the collision colour, 0.42, when selected', async () => {
+    expect(lineOpacities(await renderWheel('Wheel1'))).toEqual([DEFAULT_COLLISION_DEBUG_COLOR.a]);
   });
 
-  it('draws the wheel gizmo when selected', async () => {
-    const renderer = await renderWheel('Wheel1');
-    expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(1);
+  it.each([
+    ['nothing is selected', null],
+    ['another node is selected', 'Other'],
+  ])('draws the wheel gizmo at 0.3 of that alpha, 0.126, when %s', async (_label, selectedPath) => {
+    const [opacity] = lineOpacities(await renderWheel(selectedPath));
+    expect(opacity).toBeCloseTo(DEFAULT_COLLISION_DEBUG_COLOR.a * 0.3, 10);
   });
 
-  it('hides the gizmo when a different node is selected', async () => {
-    const renderer = await renderWheel('Other');
+  it('draws no wheel gizmo with the Gizmos toggle off, selected', async () => {
+    const renderer = await renderWheel('Wheel1', {}, false);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
   });
 

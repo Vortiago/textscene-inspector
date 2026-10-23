@@ -52,6 +52,19 @@ describe('pageSpecFor', () => {
     expect(spec.options.viewport).toEqual({ width: 525, height: 200 });
   });
 
+  it('opens a scene that sets gizmos on a page with the Gizmos toggle on, apart from the other pages', () => {
+    const plain = pageSpecFor(scene('plain'));
+    const gizmos = pageSpecFor(scene('selected', { gizmos: true }));
+    expect(gizmos.options).toEqual({ ...plain.options, showGizmos: true });
+    expect(gizmos.key).not.toBe(plain.key);
+  });
+
+  it('opens a 2D scene that sets gizmos on a 2D page with the Gizmos toggle on', () => {
+    const spec = pageSpecFor(scene('flat-selected', { mode: '2d', gizmos: true }));
+    expect(spec.options).toEqual({ frameOnOpen: false, canvas2D: true, showGizmos: true });
+    expect(spec.key).not.toBe('2d');
+  });
+
   it('rejects a 2D scene that names a canvas, naming the mode and the canvas', () => {
     expect(() => pageSpecFor(scene('both', { mode: '2d', canvas: { width: 96, height: 96 } }))).toThrow(
       /expected no canvas with mode "2d", got 96x96/

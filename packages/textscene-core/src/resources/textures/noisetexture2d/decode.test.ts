@@ -17,9 +17,14 @@ describe('decodeNoiseTexture2D', () => {
       seamlessBlendSkirt: 0.1,
       asNormalMap: false,
       bumpStrength: 8,
+      generateMipmaps: true,
       noise: null,
       colorRamp: null,
     });
+  });
+
+  it('reads generate_mipmaps off', () => {
+    expect(decodeNoiseTexture2D({ generate_mipmaps: 'false' }).generateMipmaps).toBe(false);
   });
 
   it('reads the ice.tres albedo texture', () => {
