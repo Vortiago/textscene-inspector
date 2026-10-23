@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSoftwareRendererName, rendersInSoftware } from './softwareRenderer';
+import { rendersInSoftware } from './softwareRenderer';
 
 const UNMASKED_RENDERER_WEBGL = 0x9246;
 const RENDERER = 0x1f01;
@@ -15,14 +15,16 @@ function namingContext(renderer: string, { unmasked }: { unmasked: boolean }): W
   } as unknown as WebGL2RenderingContext;
 }
 
-describe('isSoftwareRendererName', () => {
+describe('the renderer names that draw on the CPU', () => {
+  const namesSoftware = (name: string): boolean => rendersInSoftware(namingContext(name, { unmasked: true }));
+
   it.each([
     'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)',
     'llvmpipe (LLVM 15.0.7, 256 bits)',
     'ANGLE (Microsoft, Microsoft Basic Render Driver Direct3D11 vs_5_0 ps_5_0, D3D11)',
     'Apple Software Renderer',
   ])('names %s a software renderer', (name) => {
-    expect(isSoftwareRendererName(name)).toBe(true);
+    expect(namesSoftware(name)).toBe(true);
   });
 
   it.each([
@@ -30,11 +32,11 @@ describe('isSoftwareRendererName', () => {
     'ANGLE (Apple, ANGLE Metal Renderer: Apple M2, Unspecified Version)',
     'Mesa Intel(R) Iris(R) Xe Graphics (TGL GT2)',
   ])('names %s a GPU', (name) => {
-    expect(isSoftwareRendererName(name)).toBe(false);
+    expect(namesSoftware(name)).toBe(false);
   });
 
   it('names an empty string a GPU, since nothing says otherwise (edge case)', () => {
-    expect(isSoftwareRendererName('')).toBe(false);
+    expect(namesSoftware('')).toBe(false);
   });
 });
 

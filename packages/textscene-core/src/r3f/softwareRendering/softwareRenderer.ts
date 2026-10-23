@@ -17,7 +17,7 @@ const SOFTWARE_RENDERER =
 const MASKED_RENDERER = 'WebKit WebGL';
 
 /** Whether `name`, a context's renderer, is one that rasterises on the CPU. */
-export function isSoftwareRendererName(name: string): boolean {
+function isSoftwareRendererName(name: string): boolean {
   return SOFTWARE_RENDERER.test(name);
 }
 
