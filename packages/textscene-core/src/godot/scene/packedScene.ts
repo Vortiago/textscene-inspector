@@ -85,30 +85,34 @@ export function recoverByIdTrail(
   builtCount: number
 ): IdTrailEnd | undefined {
   const index = trail[0] === undefined ? undefined : firstIndexWithId(headings, trail[0]);
-  return idTrailEndAt(trail, index ?? -1, headings[index ?? -1], builtCount);
+  return idTrailEndAt(
+    trail,
+    index === undefined ? undefined : { index, named: headings[index]! },
+    builtCount
+  );
 }
+
+type HasUniqueId = Pick<IdHeading, 'uniqueId'>;
 
 /**
  * Written only by {@link firstIndexWithId}, keyed by the headings of one scene, which nothing
  * changes after the scan. An entry clears when nothing holds that array any more.
  */
-const firstIndexes = new WeakMap<readonly object[], ReadonlyMap<number, number>>();
+const firstIndexes = new WeakMap<readonly HasUniqueId[], ReadonlyMap<number, number>>();
 
 /**
  * The index of the first heading carrying `id`, or undefined where none does. `ids.find` returns
  * the first match, so id `0` names the first heading with no `unique_id=`. The index is built on
  * the first lookup, so a scene with many trails reads each id once.
  */
-export function firstIndexWithId(
-  headings: readonly { readonly uniqueId: number }[],
-  id: number
-): number | undefined {
+export function firstIndexWithId(headings: readonly HasUniqueId[], id: number): number | undefined {
   let indexes = firstIndexes.get(headings);
   if (!indexes) {
     const built = new Map<number, number>();
-    headings.forEach(({ uniqueId }, index) => {
+    for (let index = 0; index < headings.length; index++) {
+      const { uniqueId } = headings[index]!;
       if (!built.has(uniqueId)) built.set(uniqueId, index);
-    });
+    }
     indexes = built;
     firstIndexes.set(headings, indexes);
   }
@@ -116,17 +120,17 @@ export function firstIndexWithId(
 }
 
 /**
- * {@link recoverByIdTrail} once the heading the trail's first id names is found: `named`, at
- * `index`, or undefined where no heading carries the id.
+ * {@link recoverByIdTrail} once the heading the trail's first id names is found: `first`, or
+ * undefined where no heading carries the id.
  */
 export function idTrailEndAt(
   trail: readonly number[],
-  index: number,
-  named: IdHeading | undefined,
+  first: { readonly index: number; readonly named: IdHeading } | undefined,
   builtCount: number
 ): IdTrailEnd | undefined {
   // An empty trail builds an empty path, which `get_node_or_null` resolves to null (`node.cpp:1894`).
-  if (trail.length === 0 || named === undefined) return undefined;
+  if (trail.length === 0 || first === undefined) return undefined;
+  const { index, named } = first;
   if (trail.length === 1) {
     return index < builtCount && named.isPlaced ? { kind: 'lands', heading: index } : undefined;
   }

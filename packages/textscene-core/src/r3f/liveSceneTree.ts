@@ -436,8 +436,11 @@ export interface LiveLink {
 export class LiveTree {
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
-  /** Written only by `groupsOf`: the groups of a node under each scope it was asked in. */
-  private readonly groups = new WeakMap<LiveNode, { scope: SceneScope; groups: LiveChildGroup[] }[]>();
+  /**
+   * Written only by `groupsOf`: the groups of a node under each scope it was asked in. It holds one
+   * entry per visited node for as long as the tree lives, which is as long as its context.
+   */
+  private readonly groupsByNode = new Map<LiveNode, { scope: SceneScope; groups: LiveChildGroup[] }[]>();
 
   private readonly scenes: CachedSceneSource;
 
@@ -467,21 +470,24 @@ export class LiveTree {
    */
   groupsOf(node: LiveNode, scope: SceneScope): LiveChildGroup[] {
     const own = scopeOf(node, scope);
-    const found = this.groups.get(node);
-    const known = found?.find((entry) => sameScope(entry.scope, own));
+    const entries = this.groupsByNode.get(node) ?? [];
+    const known = entries.find((entry) => sameScope(entry.scope, own));
     if (known) return known.groups;
     const groups = liveChildGroups(node, own, this.scenes, this.ctx.glbCache);
-    this.groups.set(node, [...(found ?? []), { scope: own, groups }]);
+    entries.push({ scope: own, groups });
+    this.groupsByNode.set(node, entries);
     return groups;
   }
 }
+
+const NO_PATHS: readonly string[] = [];
 
 function sameScope(a: SceneScope, b: SceneScope): boolean {
   return (
     a === b ||
     (a.externalResources === b.externalResources &&
       a.internalResources === b.internalResources &&
-      sameElements(a.instancedScenePaths ?? [], b.instancedScenePaths ?? []))
+      sameElements(a.instancedScenePaths ?? NO_PATHS, b.instancedScenePaths ?? NO_PATHS))
   );
 }
 

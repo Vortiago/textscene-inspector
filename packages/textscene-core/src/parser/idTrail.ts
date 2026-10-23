@@ -50,8 +50,11 @@ function trailEnd<N extends RawNode>(
   builtCount: number
 ): IdTrailEnd | undefined {
   const index = trail[0] === undefined ? undefined : firstIndexWithId(origins, trail[0]);
-  const named = index === undefined ? undefined : headingOf(origins[index]!, isPlaced);
-  return idTrailEndAt(trail, index ?? -1, named, builtCount);
+  return idTrailEndAt(
+    trail,
+    index === undefined ? undefined : { index, named: headingOf(origins[index]!, isPlaced) },
+    builtCount
+  );
 }
 
 /** Each heading as `recoverByIdTrail` reads it, placed where `isPlaced` says. */
