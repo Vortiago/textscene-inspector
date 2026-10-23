@@ -10,8 +10,23 @@ export interface GodotImage {
   data: Uint8Array | Uint8ClampedArray;
 }
 
+/**
+ * Each texture's last read, so an atlas rebuild reads again only a texture whose pixels changed:
+ * a read of a decoded image is a GPU readback. Written only by `godotImage`, and collected with
+ * its texture.
+ */
+const reads = new WeakMap<THREE.Texture, { version: number; image: GodotImage | undefined }>();
+
 /** Undefined when `texture`'s pixels cannot be read, as before its image decodes. */
 export function godotImage(texture: THREE.Texture): GodotImage | undefined {
+  const read = reads.get(texture);
+  if (read?.version === texture.version) return read.image;
+  const image = readGodotImage(texture);
+  reads.set(texture, { version: texture.version, image });
+  return image;
+}
+
+function readGodotImage(texture: THREE.Texture): GodotImage | undefined {
   const pixels = readImagePixels(texture.image);
   if (!pixels) return undefined;
   if (!isBottomUp(texture)) return pixels;
@@ -20,4 +35,14 @@ export function godotImage(texture: THREE.Texture): GodotImage | undefined {
     height: pixels.height,
     data: reversedRows(pixels.data, pixels.width, pixels.height),
   };
+}
+
+/** The textures of `textures` whose pixels can be read, each with its image, in the order given. */
+export function readableTextures(
+  textures: readonly THREE.Texture[]
+): { texture: THREE.Texture; image: GodotImage }[] {
+  return textures.flatMap((texture) => {
+    const image = godotImage(texture);
+    return image ? [{ texture, image }] : [];
+  });
 }

@@ -12,36 +12,29 @@ import { buildAreaLightAtlas, type AreaLightAtlas, type AreaTexturePlacement } f
 import { mipSize } from './atlasMipmaps.js';
 import { AtlasHolders } from '../textureAtlas/atlasHolders.js';
 import { AtlasTexture } from '../textureAtlas/atlasTexture.js';
-import { godotImage } from '../textureAtlas/godotImage.js';
+import { readableTextures } from '../textureAtlas/godotImage.js';
 import { installLitUniform, installedUniformValue } from '../shaderPatch/litUniform.js';
 import { AREA_LIGHT_ATLAS_UNIFORM } from './areaTextureFetch.js';
 
-/** The atlas every lit material and the fog pass sample, refilled in place. */
-class AreaLightAtlasTexture extends AtlasTexture {
-  constructor() {
-    super('AreaLightAtlas', THREE.NoColorSpace);
-  }
-
-  /** Holds `atlas`'s mips. */
-  holdAtlas(atlas: AreaLightAtlas): void {
-    this.hold(
-      atlas.mipmaps.map((data, level) => ({
-        data,
-        width: mipSize(atlas.width, level),
-        height: mipSize(atlas.height, level),
-      }))
-    );
-  }
-}
-
 /**
- * The atlas an earlier evaluation of this module gave the lit materials, as after a dev server
- * reloads it. A reload of `sharedTexture.ts` starts an empty release list, so the reused atlas joins it.
+ * The atlas every lit material and the fog pass sample, refilled in place. It is the one an earlier
+ * evaluation of this module gave the lit materials, as after a dev server reloads it. A reload of
+ * `sharedTexture.ts` starts an empty release list, so the reused atlas joins it.
  */
 const atlasTexture = releasedOnUnmount(
-  (installedUniformValue(AREA_LIGHT_ATLAS_UNIFORM) as AreaLightAtlasTexture | undefined) ??
-    new AreaLightAtlasTexture()
+  (installedUniformValue(AREA_LIGHT_ATLAS_UNIFORM) as AtlasTexture | undefined) ??
+    new AtlasTexture('AreaLightAtlas', THREE.NoColorSpace)
 );
+
+function holdAtlas(atlas: AreaLightAtlas): void {
+  atlasTexture.hold(
+    atlas.mipmaps.map((data, level) => ({
+      data,
+      width: mipSize(atlas.width, level),
+      height: mipSize(atlas.height, level),
+    }))
+  );
+}
 
 /** Each held texture, as Godot's map keeps them. */
 const holders = new AtlasHolders();
@@ -54,7 +47,7 @@ let placements = new Map<THREE.Texture, AreaTexturePlacement>();
 
 /** The one atlas, an empty one until a texture joins it. Its identity never changes. */
 export function areaLightAtlasTexture(): THREE.Texture {
-  if (atlasTexture.mipmaps.length === 0) atlasTexture.holdAtlas(buildAreaLightAtlas([]));
+  if (atlasTexture.mipmaps.length === 0) holdAtlas(buildAreaLightAtlas([]));
   return atlasTexture;
 }
 
@@ -99,11 +92,8 @@ export function areaTexturePlacement(light: THREE.Object3D): AreaTexturePlacemen
 export function updateAreaLightAtlas(): void {
   const changed = holders.takeChanged();
   if (!changed) return;
-  const readable = changed.flatMap((texture) => {
-    const image = godotImage(texture);
-    return image ? [{ texture, image }] : [];
-  });
+  const readable = readableTextures(changed);
   const atlas = buildAreaLightAtlas(readable.map(({ image }) => image));
   placements = new Map(readable.map(({ texture }, index) => [texture, atlas.placements[index]!]));
-  atlasTexture.holdAtlas(atlas);
+  holdAtlas(atlas);
 }

@@ -16,50 +16,73 @@
 
 import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
 
-/** A block of whole cells to place. The packer writes `x` and `y`. */
-export interface PackedCell {
+/** A block of whole cells to place. */
+export interface CellSize {
   width: number;
   height: number;
+}
+
+/** The cell a block starts at. */
+export interface CellPosition {
   x: number;
   y: number;
 }
 
+/** The atlas in texels, and where each block starts, in the order the blocks were given. */
+export interface PackedAtlas {
+  width: number;
+  height: number;
+  positions: CellPosition[];
+}
+
 /**
- * Places each cell at the lowest column span that holds it, and returns the height used. Godot's
+ * Places each block at the lowest column span that holds it, and returns the height used. Godot's
  * sort runs as an insertion sort below 17 items, which keeps equal sizes in the order given, as
  * this stable sort does at any count.
  */
-function packInto(cells: PackedCell[], columns: number): number {
+function packInto(blocks: readonly Block[], columns: number, positions: CellPosition[]): number {
   const columnHeights = new Array<number>(columns).fill(0);
   let usedHeight = 0;
-  for (const cell of cells) {
+  for (const { index, size } of blocks) {
     let bestColumn = 0;
     let bestHeight = Infinity;
-    for (let column = 0; column <= columns - cell.width; column++) {
-      const height = Math.max(...columnHeights.slice(column, column + cell.width));
+    for (let column = 0; column <= columns - size.width; column++) {
+      let height = 0;
+      for (let at = column; at < column + size.width; at++) height = Math.max(height, columnHeights[at]!);
       if (height < bestHeight) {
         bestHeight = height;
         bestColumn = column;
       }
     }
-    columnHeights.fill(bestHeight + cell.height, bestColumn, bestColumn + cell.width);
-    cell.x = bestColumn;
-    cell.y = bestHeight;
-    usedHeight = Math.max(usedHeight, bestHeight + cell.height);
+    columnHeights.fill(bestHeight + size.height, bestColumn, bestColumn + size.width);
+    positions[index] = { x: bestColumn, y: bestHeight };
+    usedHeight = Math.max(usedHeight, bestHeight + size.height);
   }
   return usedHeight;
 }
 
+interface Block {
+  index: number;
+  size: CellSize;
+}
+
 /**
- * Packs `cells` and returns the atlas's columns and rows. The columns start at the power of two
- * that holds the widest cell, and at least `minColumns`.
+ * Packs `cells` into an atlas of `border`-texel cells, with no cell fewer than `minColumns` columns
+ * wide. The columns start at the power of two that holds the widest cell, and double until the rows
+ * are at most twice the columns. With no cell the atlas is one cell.
  */
-export function packCells(cells: PackedCell[], minColumns: number): { columns: number; rows: number } {
-  const sorted = [...cells].sort((a, b) => b.height - a.height || b.width - a.width);
+export function packCells(cells: readonly CellSize[], minColumns: number, border: number): PackedAtlas {
+  if (cells.length === 0) return { width: border, height: border, positions: [] };
+  const blocks = cells
+    .map((size, index): Block => ({ index, size }))
+    .sort((a, b) => b.size.height - a.size.height || b.size.width - a.size.width);
   let columns = nextPowerOfTwo(Math.max(minColumns, ...cells.map((cell) => cell.width)));
+  const positions: CellPosition[] = [];
   for (;;) {
-    const rows = packInto(sorted, columns);
-    if (rows <= columns * 2) return { columns, rows };
+    const rows = packInto(blocks, columns, positions);
+    if (rows <= columns * 2) {
+      return { width: columns * border, height: nextPowerOfTwo(rows * border), positions };
+    }
     columns *= 2;
   }
 }

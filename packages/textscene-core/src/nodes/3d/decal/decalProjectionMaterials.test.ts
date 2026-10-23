@@ -186,19 +186,23 @@ describe('DecalProjectionMaterials', () => {
       const decal = materials();
       const mesh = decal.project(projectedGeometry(), lambertReceiver());
 
-      expect(decal.placeInAtlas(rect)).toBe(true);
+      decal.placeInAtlas(rect);
 
       // uv * size + position: (0, 0) -> (0.25, 0.5), (1, 0) -> (0.375, 0.5), (0.5, 1) -> (0.3125, 0.75).
       expect(uvOf(mesh)).toEqual([0.25, 0.5, 0.375, 0.5, 0.3125, 0.75]);
       expect(mesh.visible).toBe(true);
     });
 
-    it('reports no change for a rectangle it already holds', () => {
+    it('moves nothing for the rectangle it already holds', () => {
       const decal = materials();
-      decal.project(projectedGeometry(), lambertReceiver());
+      const mesh = decal.project(projectedGeometry(), lambertReceiver());
+      decal.placeInAtlas(rect);
+      const placed = uvOf(mesh);
+      (mesh.geometry.getAttribute('uv').array as Float32Array).fill(9);
+
       decal.placeInAtlas(rect);
 
-      expect(decal.placeInAtlas({ ...rect })).toBe(false);
+      expect(uvOf(mesh)).not.toEqual(placed);
     });
 
     it('moves a projection to a new rectangle from the texture UVs, not from the last rectangle', () => {
@@ -226,7 +230,8 @@ describe('DecalProjectionMaterials', () => {
       const mesh = decal.project(projectedGeometry(), lambertReceiver());
       decal.placeInAtlas(rect);
 
-      expect(decal.placeInAtlas(undefined)).toBe(true);
+      decal.placeInAtlas(undefined);
+
       expect(mesh.visible).toBe(false);
     });
   });

@@ -4,6 +4,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useThree } from '@react-three/fiber';
 import { waitFor } from '@testing-library/react';
 import { CanvasMsaa } from './CanvasMsaa';
+import { patchesContext } from '../../testing/patchesContext';
 import { withProject } from '../../testing/ProjectFixture';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 
@@ -24,14 +25,9 @@ const FOUR_SAMPLES_ONLY = [4];
 
 /** Lists `counts` as the samples every renderbuffer format supports on the test canvas's context. */
 function listSampleCounts(counts: number[]) {
-  return (canvas: HTMLCanvasElement) => {
-    const getContext = canvas.getContext.bind(canvas) as (id: string) => WebGL2RenderingContext;
-    canvas.getContext = ((id: string) => {
-      const context = getContext(id);
-      context.getInternalformatParameter = () => Int32Array.from(counts);
-      return context;
-    }) as typeof canvas.getContext;
-  };
+  return patchesContext((context) => {
+    context.getInternalformatParameter = () => Int32Array.from(counts);
+  });
 }
 
 /** R3F's render priority under `project`: above 0, a frame callback owns the render. */

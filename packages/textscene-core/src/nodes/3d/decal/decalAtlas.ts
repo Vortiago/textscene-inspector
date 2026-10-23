@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { releasedOnUnmount } from '../../../r3f/sharedTexture.js';
 import { AtlasHolders } from '../../../r3f/textureAtlas/atlasHolders.js';
 import { AtlasTexture } from '../../../r3f/textureAtlas/atlasTexture.js';
-import { godotImage, type GodotImage } from '../../../r3f/textureAtlas/godotImage.js';
+import { readableTextures } from '../../../r3f/textureAtlas/godotImage.js';
 import { fitDecalAtlas, packDecalAtlas, type DecalAtlasLayout } from './decalAtlasLayout.js';
 import { decalAtlasLevels } from './decalAtlasLevels.js';
 
@@ -35,7 +35,7 @@ let rects = new Map<THREE.Texture, DecalAtlasRect>();
 
 /** The one atlas, an empty one until a texture joins it. Its identity never changes. */
 export function decalAtlasTexture(): THREE.Texture {
-  if (atlasTexture.mipmaps.length === 0) holdLayout(packDecalAtlas([]), []);
+  if (atlasTexture.mipmaps.length === 0) atlasTexture.hold(decalAtlasLevels(packDecalAtlas([]), []));
   return atlasTexture;
 }
 
@@ -62,10 +62,7 @@ export function decalAtlasRect(texture: THREE.Texture): DecalAtlasRect | undefin
 export function updateDecalAtlas(maxTextureSize: number): void {
   const changed = holders.takeChanged();
   if (!changed) return;
-  const readable = changed.flatMap((texture) => {
-    const image = godotImage(texture);
-    return image ? [{ texture, image }] : [];
-  });
+  const readable = readableTextures(changed);
   const { layout, wanted } = fitDecalAtlas(
     readable.map(({ image }) => image),
     maxTextureSize
@@ -78,17 +75,15 @@ export function updateDecalAtlas(maxTextureSize: number): void {
   }
   const placed = readable.slice(0, layout.rects.length);
   rects = new Map(placed.map(({ texture }, index) => [texture, fractionsOf(layout, index)]));
-  holdLayout(
-    layout,
-    placed.map(({ image }) => image)
+  atlasTexture.hold(
+    decalAtlasLevels(
+      layout,
+      placed.map(({ image }) => image)
+    )
   );
 }
 
 function fractionsOf({ width, height, rects: pixels }: DecalAtlasLayout, index: number): DecalAtlasRect {
   const rect = pixels[index]!;
   return { x: rect.x / width, y: rect.y / height, width: rect.width / width, height: rect.height / height };
-}
-
-function holdLayout(layout: DecalAtlasLayout, images: readonly GodotImage[]): void {
-  atlasTexture.hold(decalAtlasLevels(layout, images));
 }

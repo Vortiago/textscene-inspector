@@ -15,13 +15,14 @@ export class AtlasTexture extends sharedTexture(THREE.DataTexture) {
   }
 
   /**
-   * Holds `levels`, the largest first. A texture's GPU storage keeps its first size, so the old
-   * storage goes before the new levels upload.
+   * Holds `levels`, the largest first. A texture's GPU storage keeps its first size, so a new size
+   * drops the old storage before the levels upload. The same size uploads into it.
    */
   hold(levels: readonly MipLevel[]): void {
-    this.dispose();
+    const [base] = levels;
+    if (base && (base.width !== this.image.width || base.height !== this.image.height)) this.dispose();
     this.mipmaps = [...levels];
-    this.image = this.mipmaps[0] as unknown as typeof this.image;
+    this.image = base as unknown as typeof this.image;
     this.needsUpdate = true;
   }
 }

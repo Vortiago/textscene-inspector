@@ -15,7 +15,7 @@
  */
 
 import { nextPowerOfTwo } from '../../godot/math/powerOfTwo.js';
-import { packCells, type PackedCell } from '../textureAtlas/atlasPacking.js';
+import { packCells, type CellSize } from '../textureAtlas/atlasPacking.js';
 import type { GodotImage } from '../textureAtlas/godotImage.js';
 import { areaTextureMipmaps, type PlacedTexture } from './atlasMipmaps.js';
 import { AREA_LIGHT_ATLAS_MIPMAPS } from '../../godot/rendering/lights/areaLightAtlas.js';
@@ -41,7 +41,7 @@ export interface AreaLightAtlas {
 const BORDER = 1 << (AREA_LIGHT_ATLAS_MIPMAPS - 1);
 
 /** A texture's cells, border cell included. */
-interface Cell extends PackedCell {
+interface Cell extends CellSize {
   /** The texels the texture fills, which `copy_to_atlas_fb` stretches it to. */
   pixelWidth: number;
   pixelHeight: number;
@@ -56,8 +56,6 @@ function cellOf(image: GodotImage): Cell {
     height: cellsY + 1,
     pixelWidth: image.width < BORDER ? nextPowerOfTwo(image.width) : cellsX * BORDER,
     pixelHeight: image.height < BORDER ? nextPowerOfTwo(image.height) : cellsY * BORDER,
-    x: 0,
-    y: 0,
   };
 }
 
@@ -73,13 +71,11 @@ function maxMipmapOf(texture: PlacedTexture): number {
  */
 export function buildAreaLightAtlas(images: readonly GodotImage[]): AreaLightAtlas {
   const cells = images.map(cellOf);
-  const { columns, rows } = cells.length > 0 ? packCells(cells, 1) : { columns: 1, rows: 1 };
-  const width = columns * BORDER;
-  const height = cells.length > 0 ? nextPowerOfTwo(rows * BORDER) : BORDER;
+  const { width, height, positions } = packCells(cells, 1, BORDER);
   const placed = cells.map((cell, index): PlacedTexture => ({
     image: images[index]!,
-    x: cell.x * BORDER,
-    y: cell.y * BORDER,
+    x: positions[index]!.x * BORDER,
+    y: positions[index]!.y * BORDER,
     width: cell.pixelWidth,
     height: cell.pixelHeight,
   }));

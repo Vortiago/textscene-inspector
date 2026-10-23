@@ -125,12 +125,6 @@ interface Projection {
   textureUv: Float32Array;
 }
 
-/** Whether two rectangles, or the lack of one, are the same. */
-function isSameRect(a: DecalAtlasRect | undefined, b: DecalAtlasRect | undefined): boolean {
-  if (!a || !b) return a === b;
-  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
-}
-
 /**
  * Maps the projection's texture UVs into `rect`, as the shader of Godot's decal does
  * (`scene_forward_clustered.glsl:1604`), and shows it. Without a rectangle the projection has no
@@ -170,12 +164,14 @@ export class DecalProjectionMaterials {
     return mesh;
   }
 
-  /** Moves every projection onto `rect`, the decal's texture in the atlas, and is true when that changed one. */
-  placeInAtlas(rect: DecalAtlasRect | undefined): boolean {
-    if (isSameRect(rect, this.rect)) return false;
+  /**
+   * Moves every projection onto `rect`, the decal's texture in the atlas. The atlas hands out the
+   * same rectangle until it rebuilds, so one that is the same object moves nothing.
+   */
+  placeInAtlas(rect: DecalAtlasRect | undefined): void {
+    if (rect === this.rect) return;
     this.rect = rect;
     for (const projection of this.projections) placeIn(rect, projection);
-    return true;
   }
 
   /**

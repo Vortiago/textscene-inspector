@@ -1,39 +1,59 @@
 import { describe, expect, it } from 'vitest';
-import { packCells, type PackedCell } from './atlasPacking';
+import { packCells } from './atlasPacking';
 
-function cell(width: number, height: number): PackedCell {
-  return { width, height, x: 0, y: 0 };
-}
+/** One texel a cell, so the atlas size reads as columns and rows. */
+const UNIT_BORDER = 1;
 
 describe('packCells', () => {
   it('starts the columns at the power of two that holds the widest cell', () => {
-    expect(packCells([cell(5, 2)], 1)).toEqual({ columns: 8, rows: 2 });
+    // 5 cells wide round up to 8 columns, and 2 rows round up to 2 texels.
+    expect(packCells([{ width: 5, height: 2 }], 1, UNIT_BORDER)).toEqual({
+      width: 8,
+      height: 2,
+      positions: [{ x: 0, y: 0 }],
+    });
   });
 
   it('starts the columns at the minimum for narrow cells', () => {
-    expect(packCells([cell(3, 3)], 8)).toEqual({ columns: 8, rows: 3 });
-    expect(packCells([cell(3, 3)], 1)).toEqual({ columns: 4, rows: 3 });
+    const cells = [{ width: 3, height: 3 }];
+
+    // 3 rows round up to 4 texels. 3 columns round up to 4, or the minimum 8.
+    expect(packCells(cells, 8, UNIT_BORDER)).toMatchObject({ width: 8, height: 4 });
+    expect(packCells(cells, 1, UNIT_BORDER)).toMatchObject({ width: 4, height: 4 });
   });
 
   it('places the tallest cell first, and each cell in the lowest span that holds it', () => {
-    const wide = cell(5, 2);
-    const tall = cell(3, 3);
+    const wide = { width: 5, height: 2 };
+    const tall = { width: 3, height: 3 };
 
-    packCells([wide, tall], 8);
+    const { positions } = packCells([wide, tall], 8, UNIT_BORDER);
 
-    expect([tall.x, tall.y]).toEqual([0, 0]);
-    expect([wide.x, wide.y]).toEqual([3, 0]);
+    // The tall cell fills columns 0-2 to height 3, so the wide cell takes columns 3-7 at height 0.
+    expect(positions).toEqual([
+      { x: 3, y: 0 },
+      { x: 0, y: 0 },
+    ]);
   });
 
   it('keeps equal cells in the order given', () => {
-    const [first, second] = [cell(3, 3), cell(3, 3)];
+    const cell = { width: 3, height: 3 };
 
-    packCells([first, second], 8);
+    const { positions } = packCells([cell, cell], 8, UNIT_BORDER);
 
-    expect([first.x, second.x]).toEqual([0, 3]);
+    expect(positions.map(({ x }) => x)).toEqual([0, 3]);
   });
 
   it('doubles the columns until the rows are at most twice the columns', () => {
-    expect(packCells([cell(3, 21)], 8)).toEqual({ columns: 16, rows: 21 });
+    // 21 rows are over 2 × 8 columns and within 2 × 16, and round up to 32 texels.
+    expect(packCells([{ width: 3, height: 21 }], 8, UNIT_BORDER)).toMatchObject({ width: 16, height: 32 });
+  });
+
+  it('scales the atlas by the border texels of a cell', () => {
+    // 8 columns × 32 texels, and 2 rows × 32 texels.
+    expect(packCells([{ width: 5, height: 2 }], 1, 32)).toMatchObject({ width: 256, height: 64 });
+  });
+
+  it('is one cell with no cell to place (edge case)', () => {
+    expect(packCells([], 8, 32)).toEqual({ width: 32, height: 32, positions: [] });
   });
 });

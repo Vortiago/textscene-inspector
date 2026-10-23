@@ -14,8 +14,7 @@
  */
 
 import { DECAL_ATLAS_BORDER, DECAL_ATLAS_MIN_COLUMNS } from '../../../godot/rendering/decalAtlas.js';
-import { nextPowerOfTwo } from '../../../godot/math/powerOfTwo.js';
-import { packCells, type PackedCell } from '../../../r3f/textureAtlas/atlasPacking.js';
+import { packCells, type CellSize } from '../../../r3f/textureAtlas/atlasPacking.js';
 
 export interface TextureSize {
   width: number;
@@ -34,12 +33,10 @@ export interface DecalAtlasLayout extends TextureSize {
 }
 
 /** A texture's cells: `(size / 32) + 1`, the integer division of `:3059-3060`. */
-function cellOf({ width, height }: TextureSize): PackedCell {
+function cellOf({ width, height }: TextureSize): CellSize {
   return {
     width: Math.floor(width / DECAL_ATLAS_BORDER) + 1,
     height: Math.floor(height / DECAL_ATLAS_BORDER) + 1,
-    x: 0,
-    y: 0,
   };
 }
 
@@ -48,23 +45,20 @@ function cellOf({ width, height }: TextureSize): PackedCell {
  * square, which still holds every mip (`:3144-3153`).
  */
 export function packDecalAtlas(sizes: readonly TextureSize[]): DecalAtlasLayout {
-  if (sizes.length === 0) return { width: DECAL_ATLAS_BORDER, height: DECAL_ATLAS_BORDER, rects: [] };
-  const cells = sizes.map(cellOf);
-  const { columns, rows } = packCells(cells, DECAL_ATLAS_MIN_COLUMNS);
-  const rects = cells.map((cell, index): PixelRect => ({
-    x: cell.x * DECAL_ATLAS_BORDER + DECAL_ATLAS_BORDER / 2,
-    y: cell.y * DECAL_ATLAS_BORDER + DECAL_ATLAS_BORDER / 2,
+  const { width, height, positions } = packCells(
+    sizes.map(cellOf),
+    DECAL_ATLAS_MIN_COLUMNS,
+    DECAL_ATLAS_BORDER
+  );
+  const rects = positions.map((position, index): PixelRect => ({
+    x: position.x * DECAL_ATLAS_BORDER + DECAL_ATLAS_BORDER / 2,
+    y: position.y * DECAL_ATLAS_BORDER + DECAL_ATLAS_BORDER / 2,
     width: sizes[index]!.width,
     height: sizes[index]!.height,
   }));
-  return {
-    width: columns * DECAL_ATLAS_BORDER,
-    height: nextPowerOfTwo(rows * DECAL_ATLAS_BORDER),
-    rects,
-  };
+  return { width, height, rects };
 }
 
-/** The atlas of the earliest textures of `sizes` that fit `maxTextureSize`, and the size the whole set wanted when it did not. */
 export interface FittedDecalAtlas {
   layout: DecalAtlasLayout;
   /** Undefined when every texture fit. */
@@ -73,7 +67,8 @@ export interface FittedDecalAtlas {
 
 /**
  * Packs `sizes`, and drops the textures that joined last until the atlas fits `maxTextureSize`,
- * since a GPU texture is no larger. Godot has no such limit to meet.
+ * since a GPU texture is no larger. Godot has no such limit to meet. `wanted` is the size the whole
+ * set needed.
  */
 export function fitDecalAtlas(sizes: readonly TextureSize[], maxTextureSize: number): FittedDecalAtlas {
   const full = packDecalAtlas(sizes);
