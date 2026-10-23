@@ -5,6 +5,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { Aabb } from '../../godot/math/aabb';
 import type { GizmoVariant } from '../gizmo/gizmoVariant';
 import { godotColorToLinear } from '../godotColor';
+import { GizmoPartScene } from '../testing/GizmoScene';
 import { AabbAxesGizmo } from './AabbAxesGizmo';
 
 const COLOR = { r: 0.8, g: 0.5, b: 0.7 };
@@ -12,7 +13,9 @@ const BOX: Aabb = { position: { x: -1, y: -1, z: -1 }, size: { x: 2, y: 2, z: 2 
 
 async function render(variant: GizmoVariant = 'selected') {
   const renderer = await ReactThreeTestRenderer.create(
-    <AabbAxesGizmo aabb={BOX} color={COLOR} solidAlpha={0.1} variant={variant} />
+    <GizmoPartScene variant={variant}>
+      <AabbAxesGizmo aabb={BOX} color={COLOR} solidAlpha={0.1} />
+    </GizmoPartScene>
   );
   return {
     lines: renderer.scene.findAllByType('LineSegments').map((found) => found.instance as THREE.LineSegments),

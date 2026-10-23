@@ -10,6 +10,8 @@ import { InstanceOwnerProvider } from '../contexts/InstanceOwnersContext';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { SelectionProvider } from '../contexts/SelectionContext';
 import { ViewportModeProvider } from '../contexts/ViewportModeContext';
+import type { GizmoVariant } from '../gizmo/gizmoVariant';
+import { PluginGizmo } from '../gizmo/PluginGizmo';
 import { SelectSeeder } from './SelectSeeder';
 
 interface GizmoSceneProps {
@@ -50,6 +52,15 @@ export function GizmoScene({
         {instantiated ? <InsideLockedInstance>{node}</InsideLockedInstance> : node}
       </SelectionProvider>
     </ViewportModeProvider>
+  );
+}
+
+/** A gizmo part drawn for every node in `variant`, inside its node's `PluginGizmo`. */
+export function GizmoPartScene({ variant, children }: { variant: GizmoVariant; children: ReactNode }) {
+  return (
+    <GizmoScene nodePath="Node" selectedPath={variant === 'selected' ? 'Node' : null}>
+      <PluginGizmo drawnFor="every-node">{children}</PluginGizmo>
+    </GizmoScene>
   );
 }
 

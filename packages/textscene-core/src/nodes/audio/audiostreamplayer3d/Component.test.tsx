@@ -10,6 +10,8 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
+import { INSTANTIATED_GIZMO_COLOUR } from '../../../r3f/gizmo/gizmoVariant';
+import { godotColorToLinear } from '../../../r3f/godotColor';
 import {
   describeGizmoToggle,
   describeInstantiatedGizmo,
@@ -102,6 +104,36 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
     // only while the audio node is selected.
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  describe('the speaker silhouette', () => {
+    async function speakerMaterials(instantiated: boolean) {
+      const renderer = await ReactThreeTestRenderer.create(
+        <GizmoScene nodePath="Audio" selectedPath="Audio" instantiated={instantiated}>
+          <AudioStreamPlayer3D node={makeNode()} />
+        </GizmoScene>
+      );
+      return renderer.scene
+        .findAllByType('Mesh')
+        .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial);
+    }
+
+    it('draws in the gizmo yellow, opaque, when the edited scene owns the node', async () => {
+      const materials = await speakerMaterials(false);
+      expect(materials.map((m) => [m.color.getHex(), m.opacity, m.transparent])).toEqual([
+        [0xffff00, 1, false],
+        [0xffff00, 1, false],
+      ]);
+    });
+
+    it('draws in the instantiated grey, at its alpha, inside an instance the scene does not own', async () => {
+      const materials = await speakerMaterials(true);
+      const grey = godotColorToLinear(INSTANTIATED_GIZMO_COLOUR).toArray();
+      expect(materials.map((m) => [m.color.toArray(), m.opacity, m.transparent])).toEqual([
+        [grey, INSTANTIATED_GIZMO_COLOUR.a, true],
+        [grey, INSTANTIATED_GIZMO_COLOUR.a, true],
+      ]);
+    });
   });
 
   it('does NOT render the range sphere when unit_size is the default (10)', async () => {

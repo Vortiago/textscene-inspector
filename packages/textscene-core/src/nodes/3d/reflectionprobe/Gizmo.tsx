@@ -1,6 +1,6 @@
 /**
  * The editor gizmo of a ReflectionProbe: the blend box and the origin cross in the probe colour,
- * and the lines to the outer box at half that opacity. The component gates it with `useGizmoState`.
+ * and the lines to the outer box at half that opacity. The component mounts it in a selected-only `PluginGizmo`.
  */
 
 import { useMemo } from 'react';
@@ -24,8 +24,8 @@ export function ReflectionProbeGizmo({ probe }: { probe: ReflectionProbeProperti
   const color = useGodotLinearColor(GIZMO_COLOR);
   return (
     <>
-      <GizmoLine positions={lines} color={color} variant="selected" />
-      <GizmoLine positions={internalLines} color={color} opacity={INTERNAL_LINES_ALPHA} variant="selected" />
+      <GizmoLine positions={lines} color={color} />
+      <GizmoLine positions={internalLines} color={color} opacity={INTERNAL_LINES_ALPHA} />
     </>
   );
 }

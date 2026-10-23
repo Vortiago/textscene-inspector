@@ -30,7 +30,5 @@ function isFiniteBox({ position, size }: Aabb): boolean {
 
 export function AabbSolidGizmo({ aabb, color, alpha }: AabbSolidGizmoProps) {
   const geometry = useMemo(() => (isFiniteBox(aabb) ? solidBoxGeometry(aabb) : null), [aabb]);
-  return (
-    <GizmoMesh geometry={geometry} color={useGodotLinearColor(color)} alpha={alpha} variant="selected" />
-  );
+  return <GizmoMesh geometry={geometry} color={useGodotLinearColor(color)} alpha={alpha} />;
 }

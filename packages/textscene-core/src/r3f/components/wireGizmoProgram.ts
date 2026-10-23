@@ -6,5 +6,7 @@
 import type { ColorRepresentation } from 'three';
 import { materialProgramInputs } from '../materialProgramInputs';
 
-export const wireGizmoProgram = (color: ColorRepresentation) =>
-  materialProgramInputs({ props: { color, wireframe: true } });
+export const wireGizmoProgram = (color: ColorRepresentation, opacity = 1) =>
+  materialProgramInputs({
+    props: { color, wireframe: true, ...(opacity < 1 ? { opacity, transparent: true } : {}) },
+  });

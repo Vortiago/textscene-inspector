@@ -3,6 +3,7 @@
  * one. Godot's gizmo plugins draw some parts for every node and others only for the selected node,
  * and each part says which (ADR-0056). Hover does not show a gizmo: `HoverHighlight` is the hover
  * cue. Outside a NodeDispatcher the path is null, so no node owns the gizmo and it stays hidden.
+ * `PluginGizmo` reads it for a gizmo-plugin gizmo, and `useGizmoDrawn` for the rest.
  */
 
 import { useNodePath } from '../contexts/NodePathContext';

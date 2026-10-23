@@ -30,12 +30,18 @@ Collisions toggle.
 
 A Godot gizmo material has a selected and an unselected variant. The unselected variant multiplies
 the colour alpha by 0.3 (`node_3d_editor_gizmos.cpp:919-920`). `gizmoAlpha` in
-`r3f/gizmo/gizmoVariant.ts` is the one place that holds the factor. `GizmoLine` and the box
-gizmos take a `variant`, and no node computes the factor.
+`r3f/gizmo/gizmoVariant.ts` is the one place that holds the factor, and no node computes it.
 
 `useGizmoState(drawnFor)` gives each gizmo part one of three states: hidden, unselected or selected.
 A part declares whether Godot draws it for every node (`'every-node'`) or only for the selected node
 (`'selected-only'`).
+
+`<PluginGizmo drawnFor>` is the one gate of a Godot gizmo-plugin gizmo. It is the only caller of
+`useGizmoState` for such a gizmo. It mounts its children for a visible state and hands them the
+look of their node through a context, so `GizmoLine` and `GizmoMesh` take no `variant` prop. A part
+that is no plugin material, such as the 2D helpers, the follower handles and Marker3D, draws outside
+every gate and keeps its own colour. A part that Godot draws for the selected node only, inside a
+gizmo that is drawn for every node, sits in `<SelectedOnly>`.
 
 ### The split
 
@@ -70,22 +76,35 @@ The parser reads each `[editable]` heading into `TscnScene.editableInstances`
 along an instantiation chain can set the flag, with paths relative to its own root
 (`packed_scene.cpp:691-695`). `r3f/instanceOwners.ts` keeps this as a stack of owners, and
 `InstanceOwnerProvider` pushes one for each instance. `useIsInstantiated` answers for the node in
-scope, and `useGizmoLook` turns that and the variant into the colour and opacity of a part.
+scope. `PluginGizmo` reads it once for its node, and `useGizmoLook` turns that and the variant into
+the colour and opacity of a part.
 
-A part that has a `variant` wears the grey. A part with none keeps its own colour, because its Godot
-material is not a plugin material: the 2D helpers, PathFollow2D and PathFollow3D, and Marker3D
+A part inside a gate wears the grey. A part outside every gate keeps its own colour, because its
+Godot material is not a plugin material: the 2D helpers, PathFollow2D and PathFollow3D, and Marker3D
 (`marker_3d_gizmo_plugin.cpp:80-92`) never turn grey.
 
-Value check, over the 0.3 grey clear: the unselected line of a locked CPUParticles3D draws
-rgb(105, 105, 105), as the blend gives. The editable sibling draws rgb(132, 119, 85), the plain
-unselected particles colour. The fill of the selected locked emitter draws rgb(167, 167, 167), two
-faces at alpha 0.6. The two goldens `cpuparticles3d-instanced-unselected` and
-`cpuparticles3d-instanced-selected` show both cases. The selected line over that fill was not
-isolated.
+A node that the edited scene authors under an instanced GLB takes the level of the scene that
+instances the GLB, not the GLB's, so its gizmo keeps its colour. `GlbInstanceProvider` holds that
+level for `GlbAttachedChildren`. The GLB code draws no gizmo of its own.
+
+Value check, over a flat 0.3 clear. A Godot scene draws three runtime lines with the gizmo material:
+unshaded, alpha blend, albedo rgb(0.7, 0.7, 0.7), alpha 0.18, 0.6 and 1. They render as rgb(105),
+rgb(148) and rgb(178) over a clear of 76.
+
+A locked SpringArm3D draws its line over two pixel rows here. The rows are 78 and 103 unselected, and
+81 and 143 selected, over a clear of 77. In linear light the rows sum to 94 % and 93 % of one full
+line, which is the pixel rgb(105) and rgb(149).
+
+The one level between 148 and 149 comes from the clear. The blend gives 148.36 over 76 and 148.53
+over 77. Godot truncates 0.3 × 255 = 76.5 to 76, and this previewer rounds it to 77.
+
+The editable sibling of the particles emitter draws rgb(132, 119, 85), the plain unselected
+particles colour. The fill of the selected locked emitter draws rgb(167), two faces at alpha 0.6.
+The goldens `cpuparticles3d-instanced-unselected` and `cpuparticles3d-instanced-selected` show both cases.
 
 The Light helpers and the Camera3D helper are three.js helpers, not Godot gizmo materials, and #908
-rebuilds them through `GizmoLine`. The audio speaker silhouettes are previewer shapes. Nodes inside
-a GLB scene root are not wired to the owner stack. None of these takes the grey yet.
+rebuilds them through `GizmoLine`. They keep their colour until then. The audio speaker silhouette
+is a previewer shape, and it takes the look of the node's gizmo.
 
 ### What the toggle and the selection do not change
 

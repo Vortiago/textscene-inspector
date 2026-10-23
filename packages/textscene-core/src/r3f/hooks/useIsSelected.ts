@@ -4,10 +4,8 @@
  */
 
 import { useNodePath } from '../contexts/NodePathContext';
-import { useOptionalSelection } from '../contexts/SelectionContext';
+import { useIsSelectedPath } from '../contexts/SelectionContext';
 
 export function useIsSelected(): boolean {
-  const nodePath = useNodePath();
-  const selectedNodePath = useOptionalSelection()?.selectedNodePath ?? null;
-  return nodePath !== null && nodePath === selectedNodePath;
+  return useIsSelectedPath(useNodePath());
 }

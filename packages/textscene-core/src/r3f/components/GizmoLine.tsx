@@ -1,15 +1,14 @@
 /**
  * A line gizmo: a BufferGeometry from flat `positions` and optional `colors`, drawn as an unlit
- * transparent `<lineSegments>` over the scene. The caller gates it with `useGizmoState` and passes
- * the state it got as `variant`. R3F does not dispose an attached geometry, so the gizmo disposes
- * it on rebuild.
+ * transparent `<lineSegments>` over the scene. A Godot gizmo-plugin gizmo mounts it inside a
+ * `PluginGizmo`, which gives it the look of its node. R3F does not dispose an attached geometry, so
+ * the gizmo disposes it on rebuild.
  */
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
-import type { GizmoVariant } from '../gizmo/gizmoVariant';
 import { useGizmoLook } from '../gizmo/useGizmoLook';
 import { GIZMO_RENDER_ORDER, GizmoGroup } from './GizmoGroup';
 
@@ -22,11 +21,6 @@ interface GizmoLineProps {
   color?: THREE.ColorRepresentation;
   /** The opacity of the lines, from 0 to 1: the alpha of the colour a Godot gizmo material has. */
   opacity?: number;
-  /**
-   * The look of a Godot gizmo-plugin material: faint for a node that is not selected, grey inside an
-   * instance. Left out, the lines are no plugin material and draw in `color` at `opacity`.
-   */
-  variant?: GizmoVariant;
 }
 
 const FLOATS_PER_SEGMENT = 6;
@@ -67,9 +61,8 @@ export function GizmoLine({
   colors: allColors,
   color: ownColor,
   opacity: ownOpacity = 1,
-  variant,
 }: GizmoLineProps) {
-  const { color, opacity } = useGizmoLook(variant, ownColor ?? 0xffffff, ownOpacity);
+  const { color, opacity } = useGizmoLook(ownColor ?? 0xffffff, ownOpacity);
   const { positions, colors } = useMemo(
     () => finiteSegments(allPositions, allColors),
     [allPositions, allColors]
