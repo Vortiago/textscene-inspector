@@ -15,7 +15,6 @@ import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import type { Marker3DProperties } from './types';
 
 const { X, Y, Z } = Vector3Axis;
-const DEFAULT_EXTENTS = 0.25;
 
 export function Marker3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Marker3DProperties;
@@ -29,9 +28,6 @@ export function Marker3D({ node, children }: NodeComponentProps) {
 }
 
 function AxisCross({ extents }: { extents: number }) {
-  const { positions, colors } = useMemo(
-    () => axisCross(extents > 0 ? extents : DEFAULT_EXTENTS, [X, Y, Z]),
-    [extents]
-  );
+  const { positions, colors } = useMemo(() => axisCross(extents, [X, Y, Z]), [extents]);
   return <GizmoLine positions={positions} colors={colors} />;
 }

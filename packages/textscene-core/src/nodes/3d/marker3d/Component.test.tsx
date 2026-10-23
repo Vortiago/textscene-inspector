@@ -23,10 +23,14 @@ function markerNode(name = 'MyMarker', props: Record<string, string> = {}): Tscn
   };
 }
 
-async function renderMarker(selectedPath: string | null, showGizmos = true) {
+async function renderMarker(
+  selectedPath: string | null,
+  props: Record<string, string> = {},
+  showGizmos = true
+) {
   return ReactThreeTestRenderer.create(
     <GizmoScene nodePath="MyMarker" selectedPath={selectedPath} showGizmos={showGizmos}>
-      <Marker3D node={markerNode('MyMarker')}>
+      <Marker3D node={markerNode('MyMarker', props)}>
         <group name="Child" />
       </Marker3D>
     </GizmoScene>
@@ -37,7 +41,7 @@ async function renderMarker(selectedPath: string | null, showGizmos = true) {
 const GIZMO_CASE: GizmoNodeCase = {
   nodePath: 'MyMarker',
   drawnFor: 'every-node',
-  mount: ({ selectedPath, showGizmos }) => renderMarker(selectedPath, showGizmos),
+  mount: ({ selectedPath, showGizmos }) => renderMarker(selectedPath, {}, showGizmos),
 };
 describeGizmoToggle('<Marker3D>', GIZMO_CASE);
 
@@ -65,8 +69,17 @@ describe('<Marker3D>', () => {
     );
   });
 
+  // `marker_3d_gizmo_plugin.cpp:110-111` scales the cross by `gizmo_extents` with no fallback.
+  it('draws a cross of zero length for gizmo_extents 0', async () => {
+    const renderer = await renderMarker('MyMarker', { gizmo_extents: '0' });
+    const cross = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    expect(Array.from(cross.geometry.getAttribute('position').array).every((value) => value === 0)).toBe(
+      true
+    );
+  });
+
   it('positions its children with the Gizmos toggle off', async () => {
-    const renderer = await renderMarker(null, false);
+    const renderer = await renderMarker(null, {}, false);
     expect(renderer.scene.findByProps({ name: 'Child' })).toBeTruthy();
   });
 });

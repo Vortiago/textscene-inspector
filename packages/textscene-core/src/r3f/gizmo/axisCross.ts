@@ -16,7 +16,7 @@ const AXIS_COLORS = [
   { r: 0.16, g: 0.55, b: 0.96 },
 ];
 const NEGATIVE_ARM_DARKENING = 0.5;
-const FLOATS_PER_VERTEX = 3;
+export const FLOATS_PER_VERTEX = 3;
 const VERTICES_PER_AXIS = 4;
 
 /** `Color::darkened` (`color.h:119`): the channels shrink by `amount`, before the linear convert. */

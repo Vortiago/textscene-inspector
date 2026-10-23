@@ -37,8 +37,8 @@ fought. A field with many markers or paths otherwise fills the viewport.
 The 2D and 3D transform/path nodes render editor gizmos, each **gated on selection**: visible only while
 its owning node is the `SelectionContext.selectedNodePath`.
 
-- **Marker2D**: a "+" cross sized by `gizmo_extents`. **Marker3D**: a 3-axis cross (X red, Y green,
-  Z blue) sized by `gizmo_extents`.
+- **Marker2D**: a "+" cross sized by `gizmo_extents`. **Marker3D**: a 3-axis cross sized by
+  `gizmo_extents`. Both colour each axis, with the negative arm darker (ADR-0056).
 - **Path2D / Path3D**: the tessellated Curve2D/Curve3D as a polyline.
 - **PathFollow2D / PathFollow3D**: a small handle at the follow point. Godot draws nothing for the
   follower itself, but the handle marks where the follower is when you inspect the node.

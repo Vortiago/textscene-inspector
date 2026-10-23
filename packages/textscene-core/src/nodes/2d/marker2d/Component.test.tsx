@@ -61,6 +61,15 @@ describe('<Marker2D>', () => {
     expect(positions).toEqual(expected.map((value) => expect.closeTo(value, 6)));
   });
 
+  // `marker_2d.cpp:32-43` guards no `gizmo_extents`: 0 draws a cross of zero length.
+  it('draws a cross of zero length for gizmo_extents 0', async () => {
+    const renderer = await renderMarker('MyMarker', { gizmo_extents: '0' });
+    const cross = renderer.scene.findByType('LineSegments').instance as THREE.LineSegments;
+    expect(Array.from(cross.geometry.getAttribute('position').array).every((value) => value === 0)).toBe(
+      true
+    );
+  });
+
   it('always renders a positioning group for children, selected or not', async () => {
     const renderer = await renderMarker(null, {}, false);
     expect(renderer.scene.findAllByType('Group').length).toBeGreaterThan(0);
