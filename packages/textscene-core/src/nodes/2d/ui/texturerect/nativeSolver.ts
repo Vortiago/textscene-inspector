@@ -16,7 +16,7 @@ import type { TextureRectProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
 import { TextureRectExpandMode } from '../../../../godot/scene/gui';
-import { flippedUvWindow, regionUvWindow, type UvWindow } from '../../../../r3f/uvWindow';
+import { FULL_UV_WINDOW, flippedUvWindow, regionUvWindow, type UvWindow } from '../../../../r3f/uvWindow';
 
 /**
  * `TextureRect::get_minimum_size()` (`texture_rect.cpp:107-133`): `Size2()` (`:132`) until a texture
@@ -165,16 +165,13 @@ export interface SampledDraw extends TextureRectDraw {
 
 /**
  * The window over the texture before the flip. STRETCH_TILE repeats the texture over the drawn size
- * from the rect's top-left: three's `v` runs bottom-up, so `1 - repeat.y` puts `v = 1` on the image's
- * top row. KEEP_ASPECT_COVERED samples its crop region.
+ * from the rect's top-left, a region of that size under `RepeatWrapping`. KEEP_ASPECT_COVERED
+ * samples its crop region.
  */
 function unflippedUvWindow({ tile, size, textureSize, region }: SampledDraw): UvWindow {
-  if (tile) {
-    const repeat = { x: size.x / textureSize.x, y: size.y / textureSize.y };
-    return { repeat, offset: { x: 0, y: 1 - repeat.y } };
-  }
+  if (tile) return regionUvWindow({ x: 0, y: 0, w: size.x, h: size.y }, textureSize);
   if (region) return regionUvWindow(region, textureSize);
-  return { repeat: { x: 1, y: 1 }, offset: { x: 0, y: 0 } };
+  return FULL_UV_WINDOW;
 }
 
 /**
