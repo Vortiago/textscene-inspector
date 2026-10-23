@@ -13,13 +13,15 @@ function cellHash(x: number, y: number, z: number): number {
 
 /**
  * Each corner of the triangles `isWelded` names, as the first corner it welds to. Manifold welds
- * every point within `CSG_MERGE_TOLERANCE` of another. The grid's cells are that wide, so a partner
- * lies in the corner's own cell or a neighbour. A corner of any other triangle reads -1.
+ * every point within `CSG_MERGE_TOLERANCE` of another. The grid's cells are twice that wide, so a
+ * partner lies in the corner's own cell or the neighbour on the side it leans to, on each axis:
+ * 8 cells, not 27. A corner of any other triangle reads -1.
  */
 export function weldCorners(positions: Float32Array, isWelded: (triangle: number) => boolean): Int32Array {
   const welds = new Int32Array(Math.floor(positions.length / 9) * 3).fill(-1);
   const cells = new Map<number, number[]>();
   const toleranceSq = CSG_MERGE_TOLERANCE ** 2;
+  const cellWidth = 2 * CSG_MERGE_TOLERANCE;
   const partnerIn = (hash: number, x: number, y: number, z: number): number => {
     const members = cells.get(hash);
     if (!members) return -1;
@@ -36,15 +38,15 @@ export function weldCorners(positions: Float32Array, isWelded: (triangle: number
     const x = positions[corner * 3]!;
     const y = positions[corner * 3 + 1]!;
     const z = positions[corner * 3 + 2]!;
-    const cx = Math.round(x / CSG_MERGE_TOLERANCE);
-    const cy = Math.round(y / CSG_MERGE_TOLERANCE);
-    const cz = Math.round(z / CSG_MERGE_TOLERANCE);
+    const [fx, fy, fz] = [x / cellWidth, y / cellWidth, z / cellWidth];
+    const [cx, cy, cz] = [Math.floor(fx), Math.floor(fy), Math.floor(fz)];
+    // A corner in the lower half of its cell leans to the cell below, in the upper half to the cell above.
+    const [lx, ly, lz] = [fx - cx < 0.5 ? -1 : 1, fy - cy < 0.5 ? -1 : 1, fz - cz < 0.5 ? -1 : 1];
     const own = cellHash(cx, cy, cz);
     let weld = partnerIn(own, x, y, z);
-    for (let n = 0; weld === -1 && n < 27; n++) {
-      if (n === 13) continue;
+    for (let n = 1; weld === -1 && n < 8; n++) {
       weld = partnerIn(
-        cellHash(cx + ((n / 9) | 0) - 1, cy + (((n / 3) | 0) % 3) - 1, cz + (n % 3) - 1),
+        cellHash(cx + (n & 1 ? lx : 0), cy + (n & 2 ? ly : 0), cz + (n & 4 ? lz : 0)),
         x,
         y,
         z

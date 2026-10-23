@@ -151,7 +151,7 @@ describe('applyCsgNormals', () => {
     });
   });
 
-  describe('manifold weld (csg_shape.cpp:427, tolerance 2 * FLT_EPSILON)', () => {
+  describe('manifold weld (csg_shape.cpp:425, tolerance 2 * FLT_EPSILON)', () => {
     /** The cone, with apex corner `i` moved to `x(i)` along X. */
     function apexShiftedTriangles(
       x: (i: number) => number

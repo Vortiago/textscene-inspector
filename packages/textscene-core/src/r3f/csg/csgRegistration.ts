@@ -35,6 +35,9 @@ export interface CsgSolid {
 
 /** A solid over a non-indexed `geometry`, three positions to a triangle, as `applyCsgNormals` emits. */
 export function csgSolid(geometry: THREE.BufferGeometry, materials: readonly CsgMaterialAddress[]): CsgSolid {
+  if (geometry.index) {
+    throw new Error(`expected a non-indexed geometry, got ${geometry.index.count} indices`);
+  }
   const positions = geometry.getAttribute('position').array as Float32Array;
   return { geometry, materials, isClosed: isClosedBrush(positions) };
 }

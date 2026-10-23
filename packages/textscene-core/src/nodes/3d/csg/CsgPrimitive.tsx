@@ -30,11 +30,11 @@ const NO_PATHS: ReadonlySet<string> = new Set();
  * Marks the invisible bounds proxy, which `frameSceneBounds` counts: Godot's AABB for a visible
  * contributor is its unevaluated brush (`modules/csg/csg_shape.cpp:470,507`). A node with no brush,
  * an open one, an invisible one the recursion never reached or one with no shape, gets a zero-size
- * proxy, the point Godot has for it. It is also all a combiner root has to frame on while the library loads.
+ * proxy, the point Godot has for it. A combiner root frames on it while the library loads.
  */
 const CSG_BOUNDS_PROXY = { tscnBoundsProxy: true } as const;
 
-/** The point an empty brush bounds to: a skipped node's, an open brush's, or one whose shape builds nothing. */
+/** The point an empty brush bounds to: a skipped node's, an open one's or a shape that builds nothing. */
 const EMPTY_BRUSH = <boxGeometry args={[0, 0, 0]} />;
 
 interface CsgPrimitiveProps {
