@@ -40,7 +40,7 @@ export const LIGHTMAP_GI_ENVIRONMENT_MODE_NAMES = enumNamesByValue(EnvironmentMo
  * `LightmapGI::ShadowmaskMode` (`lightmap_gi.h:46-51`) also declares `ONLY = 3`, but the hint at
  * `lightmap_gi.cpp:1925` offers "None,Replace,Overlay", so the table stops at 2.
  */
-const ShadowmaskMode = {
+export const ShadowmaskMode = {
   NONE: 0,
   REPLACE: 1,
   OVERLAY: 2,

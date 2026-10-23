@@ -372,14 +372,12 @@ describe('the soft split shadow', () => {
     );
     expect(compiled).not.toContain(DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM);
     expect(compiled).not.toContain('godotSunSoftShadow(');
-    expect(compiled).toContain(
-      'return mix( godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );'
-    );
+    expect(compiled).toContain('return godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex );');
   });
 
   it('replaces the PCF for a sun with an angle', () => {
     expect(chunk()).toContain(
-      'if ( godotSunSoftShadows[ shadowIndex ].w > 0.0 ) return mix( godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );'
+      'if ( godotSunSoftShadows[ shadowIndex ].w > 0.0 ) return godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex );'
     );
   });
 
@@ -477,16 +475,31 @@ describe('the sun shadow fade', () => {
     expect(installedChunk()).toContain(`uniform vec2 ${SUN_SHADOW_FADES}[ NUM_SUN_LIGHT_SHADOWS ];`);
   });
 
-  it('mixes the split shadow towards unshadowed by the fade', () => {
-    expect(functionBody(installedChunk(), 'float getSunShadow')).toContain(
-      'return mix( godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );'
+  it('mixes the lookup towards unshadowed by the fade', () => {
+    expect(functionBody(installedChunk(), 'float godotSunShadowFaded')).toContain(
+      'return mix( shadow, 1.0, fadeOut );'
     );
   });
 
   it('samples nothing past the fade (edge case)', () => {
     expect(functionBody(installedChunk(), 'float getSunShadow')).toContain(
-      'if ( fadeOut >= 1.0 ) return 1.0;'
+      'float shadow = fadeOut >= 1.0 ? 1.0 : godotSunShadowBeforeFade( shadowMap, sunLightShadow, shadowIndex );'
     );
+  });
+
+  it('hands a lightmapped program the lookup, its fade and the light’s opacity, for the shadowmask', () => {
+    const lookup = functionBody(installedChunk(), 'float getSunShadow');
+    expect(lookup).toContain('#ifdef GODOT_LIGHTMAP');
+    expect(lookup).toContain(
+      'return godotLightmapSunShadow( shadow, fadeOut, sunLightShadow.shadowIntensity );'
+    );
+  });
+
+  it('declares the lightmapped sun shadow ahead of the lookup that calls it', () => {
+    const chunk = installedChunk();
+    const declaration = 'float godotLightmapSunShadow( float shadow, float fadeOut, float opacity );';
+    expect(chunk.indexOf(declaration)).toBeGreaterThan(-1);
+    expect(chunk.indexOf(declaration)).toBeLessThan(chunk.indexOf('float getSunShadow('));
   });
 
   it('fades a ShadowMaterial receiver, whose shadow mask reads the same sun lookup', () => {

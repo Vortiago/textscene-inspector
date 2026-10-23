@@ -7,7 +7,12 @@
 
 import * as THREE from 'three';
 import { EMPTY_AABB, hasSurface, type Aabb } from '../../godot/math/aabb';
-import { LIGHTMAP_BICUBIC_FILTER_DEFAULT, LIGHTMAP_NODE_ITSELF } from '../../godot/scene/lightmapGi';
+import type { EnumValue } from '../../godot/classdb/enumNames';
+import {
+  LIGHTMAP_BICUBIC_FILTER_DEFAULT,
+  LIGHTMAP_NODE_ITSELF,
+  ShadowmaskMode,
+} from '../../godot/scene/lightmapGi';
 import { resolveRelativePath } from '../../godot/string/nodePath';
 import type { LightmapUser } from '../../resources/lightmapgidata/types';
 import { cameraFrustum } from '../cameraFrustum';
@@ -23,6 +28,9 @@ export class LightmapInstance {
   users: ReadonlyMap<string, LightmapUser> = new Map();
   /** The atlas, every layer of every lightmap texture in order. Null until it loads. */
   atlas: THREE.DataArrayTexture | null = null;
+  /** The shadowmask atlas, one byte layer for each slice. Null until it loads, or when the bake has none. */
+  shadowmaskAtlas: THREE.DataArrayTexture | null = null;
+  shadowmaskMode: EnumValue<typeof ShadowmaskMode> = ShadowmaskMode.NONE;
   usesSphericalHarmonics = false;
   usesBicubicFilter: boolean = LIGHTMAP_BICUBIC_FILTER_DEFAULT;
   /** The bake's capture bounds, in the LightmapGI's space (`lightmap_gi.cpp:229`). */

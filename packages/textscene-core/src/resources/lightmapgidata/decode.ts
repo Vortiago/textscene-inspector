@@ -35,10 +35,11 @@ export function decodeLightmapGIData(
   const isAssignable = !usesSphericalHarmonics || usesPackedDirectional;
   return {
     // An older bake spells it `light_textures`, which the setter hands on (`:317-318`).
-    lightmapTextures: lightmapTexturePaths(
+    lightmapTextures: texturePaths(
       properties.lightmap_textures ?? properties.light_textures,
       externalResources
     ),
+    shadowmaskTextures: texturePaths(properties.shadowmask_textures, externalResources),
     usesSphericalHarmonics,
     users: isAssignable ? lightmapUsers(properties.user_data) : [],
     bounds: captureBounds(properties.probe_data),
@@ -63,10 +64,7 @@ function captureBounds(probeData: string | undefined): Aabb {
 }
 
 /** The path of each external TextureLayered the array names, in order. */
-function lightmapTexturePaths(
-  raw: string | undefined,
-  externalResources: readonly TscnExternalResource[]
-): string[] {
+function texturePaths(raw: string | undefined, externalResources: readonly TscnExternalResource[]): string[] {
   const body = raw === undefined ? null : arrayLiteralBody(raw);
   if (body === null) return [];
   return splitTopLevel(body).flatMap(

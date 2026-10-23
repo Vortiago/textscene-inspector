@@ -175,9 +175,11 @@ const GODOT_SUN_FADE = `
 `;
 
 /**
- * The replacement. `getSunShadow` takes the soft shadow for a sun with an angle, else the split
- * lookup (`:2408-2478`), and fades either out, so a fragment past the fade samples nothing.
- * `directionalShadow.md` (The split lookup) gives the split choice, filter radius and blend band.
+ * The replacement. `godotSunShadowBeforeFade` takes the soft shadow for a sun with an angle, else
+ * the split lookup (`:2408-2478`), and `getSunShadow` fades it out, so a fragment past the fade
+ * samples nothing. A lightmapped program finishes the mix itself, since its shadowmask replaces or
+ * darkens the fade (`lightmapProgram.ts`). `directionalShadow.md` (The split lookup) gives the
+ * split choice, filter radius and blend band.
  */
 const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOKUP}
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
@@ -243,6 +245,33 @@ const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOK
 \t\t}
 ${GODOT_SUN_SOFT_SHADOW}
 ${GODOT_SUN_FADE}
+\t\tfloat godotSunShadowBeforeFade(
+\t\t\t#if defined( SHADOWMAP_TYPE_PCF )
+\t\t\t\tsampler2DShadow shadowMap,
+\t\t\t#else
+\t\t\t\tsampler2D shadowMap,
+\t\t\t#endif
+\t\t\tSunLightShadow sunLightShadow,
+\t\t\tint shadowIndex
+\t\t) {
+
+\t\t\t${SOFT_SHADOW_BLOCK}
+\t\t\t\tif ( ${SUN_SOFT_SHADOWS}[ shadowIndex ].w > 0.0 ) return godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex );
+\t\t\t#endif
+\t\t\treturn godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex );
+
+\t\t}
+
+\t\tfloat godotSunShadowFaded( float shadow, float fadeOut ) {
+
+\t\t\treturn mix( shadow, 1.0, fadeOut );
+
+\t\t}
+
+\t\t#ifdef GODOT_LIGHTMAP
+\t\t\tfloat godotLightmapSunShadow( float shadow, float fadeOut, float opacity );
+\t\t#endif
+
 \t\tfloat getSunShadow(
 \t\t\t#if defined( SHADOWMAP_TYPE_PCF )
 \t\t\t\tsampler2DShadow shadowMap,
@@ -254,11 +283,12 @@ ${GODOT_SUN_FADE}
 \t\t) {
 
 \t\t\tfloat fadeOut = godotSunShadowFadeOut( shadowIndex );
-\t\t\tif ( fadeOut >= 1.0 ) return 1.0;
-\t\t\t${SOFT_SHADOW_BLOCK}
-\t\t\t\tif ( ${SUN_SOFT_SHADOWS}[ shadowIndex ].w > 0.0 ) return mix( godotSunSoftShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );
+\t\t\tfloat shadow = fadeOut >= 1.0 ? 1.0 : godotSunShadowBeforeFade( shadowMap, sunLightShadow, shadowIndex );
+\t\t\t#ifdef GODOT_LIGHTMAP
+\t\t\t\treturn godotLightmapSunShadow( shadow, fadeOut, sunLightShadow.shadowIntensity );
+\t\t\t#else
+\t\t\t\treturn godotSunShadowFaded( shadow, fadeOut );
 \t\t\t#endif
-\t\t\treturn mix( godotSunSplitShadow( shadowMap, sunLightShadow, shadowIndex ), 1.0, fadeOut );
 
 \t\t}
 `;

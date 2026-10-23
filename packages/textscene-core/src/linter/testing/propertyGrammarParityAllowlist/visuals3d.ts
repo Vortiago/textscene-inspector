@@ -65,13 +65,8 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'use_denoiser',
       'use_texture_for_bounces',
     ],
-    renderGap: [
-      // lightmap_gi.cpp:1659-1663: how the baked shadowmask mixes with the real-time shadow. The
-      // previewer reads no shadowmask.
-      'shadowmask_mode',
-    ],
     reason:
-      'Every LightmapGI key but light_data and shadowmask_mode is a bake input, which the drawn frame never reads. shadowmask_mode mixes a shadowmask the previewer does not read yet.',
+      'Every LightmapGI key but light_data and shadowmask_mode is a bake input, which the drawn frame never reads.',
   },
 
   MeshInstance3D: {

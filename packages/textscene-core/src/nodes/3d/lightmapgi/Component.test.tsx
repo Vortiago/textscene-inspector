@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../../parser/TscnParser';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { ShadowmaskMode } from '../../../godot/scene/lightmapGi';
 import { dataArrayTexture } from '../../../resources/textures/dataArrayTexture';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { NodeTree } from '../../../r3f/testing/NodeTree';
@@ -15,14 +16,20 @@ import '../../base/node3d/index';
 import '../../base/node3d/index.r3f';
 
 const ATLAS_PATH = 'res://bake.exr';
+const SHADOWMASK_PATH = 'res://bake_shadow.png';
 
-/** A scene whose LightmapGI holds data that names `../Floor` in slice 1, with `lightmapLines` on it. */
-function scene(lightmapLines = '') {
+/**
+ * A scene whose LightmapGI holds data that names `../Floor` in slice 1, with `lightmapLines` on it
+ * and `dataLines` in its data.
+ */
+function scene(lightmapLines: string, dataLines: string) {
   return new TscnParser().parse(
     `[gd_scene format=3]\n\n` +
-      `[ext_resource type="CompressedTexture2DArray" path="${ATLAS_PATH}" id="1_atlas"]\n\n` +
+      `[ext_resource type="CompressedTexture2DArray" path="${ATLAS_PATH}" id="1_atlas"]\n` +
+      `[ext_resource type="CompressedTexture2DArray" path="${SHADOWMASK_PATH}" id="2_mask"]\n\n` +
       `[sub_resource type="LightmapGIData" id="Data_1"]\n` +
       `lightmap_textures = [ExtResource("1_atlas")]\n` +
+      dataLines +
       `user_data = [NodePath("../Floor"), Rect2(0.25, 0, 0.5, 0.5), 1, -1]\n\n` +
       `[node name="Root" type="Node3D"]\n\n` +
       `[node name="Floor" type="Node3D" parent="."]\n\n` +
@@ -30,10 +37,19 @@ function scene(lightmapLines = '') {
   );
 }
 
-async function mount(atlas: THREE.DataArrayTexture | null, lightmapLines = '') {
+interface Bake {
+  atlas: THREE.DataArrayTexture | null;
+  /** Undefined for a bake that saved no shadowmask, null for one whose texture is missing. */
+  shadowmask?: THREE.DataArrayTexture | null;
+  lightmapLines?: string;
+}
+
+async function mount({ atlas, shadowmask, lightmapLines = '' }: Bake) {
   const fake = createFakeResourceLoader();
   if (atlas) fake.textureArrays.seed(ATLAS_PATH, atlas);
-  const parsed = scene(lightmapLines);
+  if (shadowmask) fake.textureArrays.seed(SHADOWMASK_PATH, shadowmask);
+  const dataLines = shadowmask === undefined ? '' : `shadowmask_textures = [ExtResource("2_mask")]\n`;
+  const parsed = scene(lightmapLines, dataLines);
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack loader={fake.loader} scene={parsed}>
       <NodeTree node={parsed.nodes[0]!} path="Root" />
@@ -47,10 +63,11 @@ async function mount(atlas: THREE.DataArrayTexture | null, lightmapLines = '') {
 }
 
 const oneLayer = () => dataArrayTexture(new Uint16Array(4), 1, 1, 1);
+const oneMaskLayer = () => dataArrayTexture(new Uint8Array(1), 1, 1, 1);
 
 describe('<LightmapGI>', () => {
   it('assigns each node its data names its rect and slice', async () => {
-    const { lightmaps } = await mount(oneLayer());
+    const { lightmaps } = await mount({ atlas: oneLayer() });
     expect(lightmaps.assignmentFor('Root/Floor')?.user).toMatchObject({
       uvScale: { x: 0.25, y: 0, width: 0.5, height: 0.5 },
       sliceIndex: 1,
@@ -59,17 +76,51 @@ describe('<LightmapGI>', () => {
 
   it('draws from the atlas its lightmap texture loads', async () => {
     const atlas = oneLayer();
-    const { lightmaps } = await mount(atlas);
+    const { lightmaps } = await mount({ atlas });
     expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.atlas).toBe(atlas);
   });
 
   it('holds no atlas while its lightmap texture is missing (error case)', async () => {
-    const { lightmaps } = await mount(null);
+    const { lightmaps } = await mount({ atlas: null });
     expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.atlas).toBeNull();
   });
 
+  it('shadows from the shadowmask its texture loads', async () => {
+    const shadowmask = dataArrayTexture(new Uint8Array(4), 1, 1, 1);
+    const { lightmaps } = await mount({ atlas: oneLayer(), shadowmask });
+    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.shadowmaskAtlas).toBe(shadowmask);
+  });
+
+  it('holds no shadowmask for a bake that saved none (edge case)', async () => {
+    const { lightmaps } = await mount({ atlas: oneLayer() });
+    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.shadowmaskAtlas).toBeNull();
+  });
+
+  it('holds no shadowmask while its texture is missing (error case)', async () => {
+    const { lightmaps } = await mount({ atlas: oneLayer(), shadowmask: null });
+    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.shadowmaskAtlas).toBeNull();
+  });
+
+  it('takes the shadowmask mode from the node, not from the data', async () => {
+    const { lightmaps } = await mount({
+      atlas: oneLayer(),
+      shadowmask: oneMaskLayer(),
+      lightmapLines: 'shadowmask_mode = 2\n',
+    });
+    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.shadowmaskMode).toBe(ShadowmaskMode.OVERLAY);
+  });
+
+  it('applies no shadowmask mode to a bake that saved none, which Godot binds a white array for', async () => {
+    const { lightmaps } = await mount({
+      atlas: oneLayer(),
+      shadowmask: null,
+      lightmapLines: 'shadowmask_mode = 1\n',
+    });
+    expect(lightmaps.assignmentFor('Root/Floor')?.lightmap.shadowmaskMode).toBe(ShadowmaskMode.NONE);
+  });
+
   it('assigns nothing once it leaves the scene (edge case)', async () => {
-    const { renderer, lightmaps } = await mount(oneLayer());
+    const { renderer, lightmaps } = await mount({ atlas: oneLayer() });
     await ReactThreeTestRenderer.act(async () => {
       await renderer.unmount();
     });

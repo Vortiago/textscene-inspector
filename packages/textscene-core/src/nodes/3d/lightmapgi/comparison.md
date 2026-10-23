@@ -9,7 +9,7 @@ renders_as: the baked lightmap on each mesh its data names
 
 # LightmapGI
 
-Applies a lightmap baked in Godot. Each mesh its `light_data` names reads its light from the bake's atlas through its second UV, in place of its ambient light. A Static light no longer lights that mesh in real time. The previewer reads the bake. It does not bake.
+Applies a lightmap baked in Godot. Each mesh that `light_data` names reads its light from the bake's atlas through its second UV, not from its ambient light. A Static light no longer lights that mesh in real time. With shadowmask mode Replace or Overlay, the bake's shadowmask replaces or darkens the shadow of each sun that is not Static. The previewer reads the bake. It does not bake.
 
 ## Linting
 
@@ -47,11 +47,10 @@ Strict parsing format-checks these `LightmapGI` properties, plus 1 inherited fro
 | `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
 <!-- lint:end -->
 
-The lenient parser reads `light_data` as written and leaves the bake settings in the raw property bag, since only a bake reads them. A `light_data` that resolves to no LightmapGIData, such as `light_data = 3`, applies no lightmap and logs nothing.
+The lenient parser reads `light_data` as written, and `shadowmask_mode` as an integer from 0 to 2, where any other value reads as None. It leaves the other bake settings in the raw property bag, since only a bake reads them. A `light_data` that resolves to no LightmapGIData, such as `light_data = 3`, applies no lightmap and logs nothing.
 
 ## Known limitations
 
 - **Not drawn** An object the bake does not name keeps its ambient light, where Godot lights it from the bake's light probes.
-- **Not drawn** The baked shadowmask is not read, so `shadowmask_mode` changes nothing.
-- **Approximated** The atlas is read at full float precision, where Godot reads its VRAM-compressed import, so a soft shadow edge can differ by a few levels.
+- **Approximated** The previewer reads the source `.exr` and `_shadow.png` where Godot reads their VRAM-compressed imports, so a soft shadow edge can differ by a few levels.
 - **Approximated** A glTF mesh that Godot unwraps and the project's `.unwrap_cache` lacks draws with real-time light, as the previewer does not run xatlas.

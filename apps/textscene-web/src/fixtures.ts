@@ -1093,6 +1093,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Lightmap Gi Shadowmask Overlay",
+    "file": "unit-lightmap-gi-shadowmask-overlay.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Lightmap Gi Shadowmask Replace",
+    "file": "unit-lightmap-gi-shadowmask-replace.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Lightmap Gi",
     "file": "unit-lightmap-gi.tscn",
     "category": "Other"

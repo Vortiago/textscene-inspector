@@ -78,6 +78,10 @@ _Avoid_: "lightmap cache", which suggests the baked lightmap.
 Every layer of a bake's lightmap textures, stacked in order into one texture array. A surface reads its own slice of it through UV2.
 _Avoid_: "lightmap texture" for the whole stack: a bake can save several.
 
+**Shadowmask** (`r3f/lightmap/lightmapProgram.ts`):
+The second atlas a bake saves, one byte per texel: how much of a sun's light reaches that texel. A LightmapGI's shadowmask mode sets how it meets the sun's real-time shadow. Replace puts it in the place of the real-time shadow where that fades out, and Overlay multiplies it with the real-time shadow.
+_Avoid_: "shadow map", which is the real-time depth map of a light.
+
 **Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
 The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054).
 
