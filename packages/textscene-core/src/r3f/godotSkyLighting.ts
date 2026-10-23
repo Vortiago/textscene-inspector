@@ -4,7 +4,7 @@
  * mip the screen derivatives of the direction pick (`scene_forward_clustered.glsl:1704-1756`).
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 import { installLitUniform } from './shaderPatch/litUniform.js';
 import { MAX_ROUGHNESS_LOD } from '../godot/rendering/environment/skyReflection.js';
 import { OCTMAP_GLSL } from '../resources/sky/skyLayerShaders.js';
@@ -151,12 +151,10 @@ export const SKY_LIGHTING_MARK = GODOT_IBL_RADIANCE;
  * release. A second call changes nothing.
  */
 export function installGodotSkyLighting(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_fragment_maps', 'envmap_physical_pars_fragment'],
-    isApplied: (chunks) => chunks.envmap_physical_pars_fragment.includes(SKY_LIGHTING_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, SKY_LIGHTING_EDITS),
-    missing:
-      'lights_fragment_maps or envmap_physical_pars_fragment lacks a line the sky lighting patch replaces',
+  const isPatched = installChunkEdits({
+    edits: SKY_LIGHTING_EDITS,
+    mark: SKY_LIGHTING_MARK,
+    patch: 'sky lighting',
   });
   if (!isPatched) return;
   installLitUniform(layers, skyLayersSlot);

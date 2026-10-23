@@ -9,7 +9,7 @@ import { ReflectionProbeAmbientMode } from '../../godot/rendering/environment/re
 import { MAX_ROUGHNESS_LOD } from '../../godot/rendering/environment/skyReflection.js';
 import { glslFloat } from '../../utils/glslLiterals.js';
 import { OCTMAP_GLSL } from '../../resources/sky/skyLayerShaders.js';
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installLitUniform } from '../shaderPatch/litUniform.js';
 import { atlasSlot, instanceLayers, REFLECTION_PROBE_UNIFORMS, rowsSlot, shownProbes } from './probeSlots.js';
 
@@ -140,18 +140,11 @@ const EDITS: readonly ChunkEdit<ProbeChunk>[] = [
  * and `probeShaderChunk.test.ts` fails on that release. A second call changes nothing.
  */
 export function installGodotReflectionProbes(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_physical_pars_fragment', 'lights_fragment_end'],
-    isApplied: (chunks) => chunks.lights_fragment_end.includes(GATHER_PROBES),
-    apply: (chunks) => {
-      const patched = applyChunkEdits(chunks, EDITS);
-      if (patched === null) return null;
-      return {
-        ...patched,
-        lights_physical_pars_fragment: `${patched.lights_physical_pars_fragment}${REFLECTION_PROBE_GLSL}`,
-      };
-    },
-    missing: 'lights_fragment_end lacks the line the reflection probe patch gathers before',
+  const isPatched = installChunkEdits({
+    edits: EDITS,
+    mark: GATHER_PROBES,
+    patch: 'reflection probe',
+    append: { lights_physical_pars_fragment: REFLECTION_PROBE_GLSL },
   });
   if (!isPatched) return;
   installLitUniform(atlas, atlasSlot);

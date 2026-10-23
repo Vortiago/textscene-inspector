@@ -7,12 +7,7 @@
  * reflection, so three's own term for it stays empty.
  */
 
-import {
-  applyChunkEdits,
-  installChunkPatch,
-  type ChunkEdit,
-  type TextEdit,
-} from './shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit, type TextEdit } from './shaderPatch/chunkPatch.js';
 import { LIGHT_FUNCTION_MARK, RE_DIRECT } from './godotLightFunction.js';
 import { SKY_LIGHTING_MARK, THREE_IBL_RADIANCE_FUNCTION } from './godotSkyLighting.js';
 
@@ -165,18 +160,11 @@ const LAYERING_EDITS: readonly TextEdit[] = [
  * that release. A second call changes nothing.
  */
 export function installGodotClearcoat(): void {
-  installChunkPatch({
-    names: [
-      'lights_physical_fragment',
-      'lights_physical_pars_fragment',
-      'lights_fragment_maps',
-      'lights_fragment_end',
-      'envmap_physical_pars_fragment',
-    ],
-    isApplied: (chunks) => chunks.lights_physical_pars_fragment.includes(CLEARCOAT_BRDF),
-    apply: (chunks) => applyChunkEdits(chunks, CLEARCOAT_EDITS),
+  installChunkEdits({
+    edits: CLEARCOAT_EDITS,
+    mark: CLEARCOAT_BRDF,
+    patch: 'clearcoat',
     fragmentShaders: { physical: LAYERING_EDITS },
-    missing: 'lighting chunks or physical fragment shader lack a line the clearcoat patch replaces',
     requires: {
       lights_physical_pars_fragment: LIGHT_FUNCTION_MARK,
       envmap_physical_pars_fragment: SKY_LIGHTING_MARK,

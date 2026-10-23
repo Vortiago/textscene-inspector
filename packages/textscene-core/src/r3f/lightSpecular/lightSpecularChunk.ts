@@ -5,7 +5,7 @@
  * `:234`, `:263`).
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { LIGHT_SLOT_LOOPS, LIGHTS_PARS_ANCHOR, slotArrayDeclaration } from '../lightSlots.js';
 import { installLightSpecularUniforms, LIGHT_SPECULARS } from './lightSpecular.js';
 
@@ -42,11 +42,10 @@ export const LIGHT_SPECULAR_MARK = SPECULAR_DECLARATIONS;
  * nothing.
  */
 export function installGodotLightSpecular(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_pars_begin', 'lights_fragment_begin'],
-    isApplied: (chunks) => chunks.lights_pars_begin.includes(LIGHT_SPECULAR_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, LIGHT_SPECULAR_EDITS),
-    missing: 'lights_pars_begin or lights_fragment_begin lacks a line the light specular patch replaces',
+  const isPatched = installChunkEdits({
+    edits: LIGHT_SPECULAR_EDITS,
+    mark: LIGHT_SPECULAR_MARK,
+    patch: 'light specular',
   });
   if (isPatched) installLightSpecularUniforms();
 }

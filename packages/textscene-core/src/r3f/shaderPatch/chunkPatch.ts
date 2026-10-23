@@ -213,3 +213,59 @@ export function installChunkPatch<Name extends ChunkName>(patch: ChunkPatch<Name
   for (const { program, fragmentShader } of programs) program.fragmentShader = fragmentShader;
   return true;
 }
+
+/** A patch made of chunk edits, as `installChunkEdits` installs it. */
+export interface ChunkEditsPatch<Name extends ChunkName> {
+  edits: readonly ChunkEdit<Name>[];
+  /** The text that proves the patch installed. An edit writes it, and that edit's chunk is checked. */
+  mark: string;
+  /** The patch's name in the warning, before "patch". */
+  patch: string;
+  /** Text added at the end of a chunk after the edits, for a block that no three line anchors. */
+  append?: Partial<Record<Name, string>>;
+  fragmentShaders?: ChunkPatch<Name>['fragmentShaders'];
+  requires?: ChunkPatch<Name>['requires'];
+}
+
+/** The items as an English list that ends with "or". */
+function alternatives(items: readonly string[]): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} or ${items.at(-1)}`;
+}
+
+/** The chunk whose edit writes the mark, which an installed patch holds. */
+function markedChunk<Name extends ChunkName>({ edits, mark, patch }: ChunkEditsPatch<Name>): Name {
+  const marked = edits.find((edit) => edit.godot.includes(mark));
+  if (!marked)
+    throw new Error(`expected an edit of the ${patch} patch to write its mark "${mark}", got none`);
+  return marked.chunk;
+}
+
+/** The chunks with every edit applied and each appended text added, or null as `applyChunkEdits`. */
+function appliedEdits<Name extends ChunkName>(
+  chunks: Chunks<Name>,
+  { edits, append = {} }: ChunkEditsPatch<Name>
+): Chunks<Name> | null {
+  const patched = applyChunkEdits(chunks, edits);
+  if (patched === null) return null;
+  for (const [name, text] of Object.entries(append) as [Name, string][]) patched[name] += text;
+  return patched;
+}
+
+/**
+ * `installChunkPatch` for a patch of chunk edits. The chunk names, the check and the warning come
+ * from the edits.
+ */
+export function installChunkEdits<Name extends ChunkName>(patch: ChunkEditsPatch<Name>): boolean {
+  const edited = [...new Set(patch.edits.map((edit) => edit.chunk))];
+  const appended = Object.keys(patch.append ?? {}) as Name[];
+  const marked = markedChunk(patch);
+  const programs = Object.keys(patch.fragmentShaders ?? {}).map((name) => `${name} fragment shader`);
+  return installChunkPatch({
+    names: [...new Set([...edited, ...appended])],
+    isApplied: (chunks) => chunks[marked].includes(patch.mark),
+    apply: (chunks) => appliedEdits(chunks, patch),
+    fragmentShaders: patch.fragmentShaders,
+    missing: `${alternatives([...edited, ...programs])} lacks a line the ${patch.patch} patch replaces`,
+    requires: patch.requires,
+  });
+}

@@ -8,10 +8,9 @@
 
 import type * as THREE from 'three';
 import {
-  applyChunkEdits,
   editedChunk,
   editedProgram,
-  installChunkPatch,
+  installChunkEdits,
   type ChunkEdit,
   type TextEdit,
 } from '../shaderPatch/chunkPatch';
@@ -115,10 +114,5 @@ export const NORMAL_MAP_READ_MARK = 'vec3 godotMapNormal(';
  * release that rewrites the lines keeps its own chunks, and `godotNormalMap.test.ts` fails on it.
  */
 export function installGodotNormalMapRead(): void {
-  installChunkPatch({
-    names: [PARS_CHUNK, BEGIN_CHUNK, MAPS_CHUNK],
-    isApplied: (chunks) => chunks[PARS_CHUNK].includes(NORMAL_MAP_READ_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, GODOT_NORMAL_MAP_EDITS),
-    missing: `${PARS_CHUNK}, ${BEGIN_CHUNK} or ${MAPS_CHUNK} lacks a line the normal map read patch replaces`,
-  });
+  installChunkEdits({ edits: GODOT_NORMAL_MAP_EDITS, mark: NORMAL_MAP_READ_MARK, patch: 'normal map read' });
 }

@@ -4,7 +4,7 @@
  * smoothstep across its penumbra, and Godot with a power of the angle from the axis.
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from './shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from './shaderPatch/chunkPatch.js';
 
 /**
  * Godot's distance falloff. three's own clamps the falloff at 100, where Godot clamps the distance
@@ -59,10 +59,5 @@ export const LIGHT_ATTENUATION_MARK = SPOT_CONE;
  * release. A second call changes nothing.
  */
 export function installGodotLightAttenuation(): void {
-  installChunkPatch({
-    names: ['lights_pars_begin'],
-    isApplied: (chunks) => chunks.lights_pars_begin.includes(LIGHT_ATTENUATION_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, ATTENUATION_EDITS),
-    missing: 'lights_pars_begin lacks a line the light attenuation patch replaces',
-  });
+  installChunkEdits({ edits: ATTENUATION_EDITS, mark: LIGHT_ATTENUATION_MARK, patch: 'light attenuation' });
 }

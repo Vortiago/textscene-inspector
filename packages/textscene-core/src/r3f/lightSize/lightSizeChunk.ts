@@ -6,7 +6,7 @@
  * (`scene_forward_clustered.glsl:2617`).
  */
 
-import { applyChunkEdits, installChunkPatch, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
+import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import {
   isPositionalKind,
   LIGHT_SLOT_LOOPS,
@@ -56,11 +56,10 @@ export const LIGHT_SIZE_MARK = SIZE_DECLARATIONS;
  * and `lightSizeChunk.test.ts` fails on that release. A second call changes nothing.
  */
 export function installGodotLightSize(): void {
-  const isPatched = installChunkPatch({
-    names: ['lights_pars_begin', 'lights_fragment_begin'],
-    isApplied: (chunks) => chunks.lights_pars_begin.includes(LIGHT_SIZE_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, LIGHT_SIZE_EDITS),
-    missing: 'lights_pars_begin or lights_fragment_begin lacks a line the light size patch replaces',
+  const isPatched = installChunkEdits({
+    edits: LIGHT_SIZE_EDITS,
+    mark: LIGHT_SIZE_MARK,
+    patch: 'light size',
   });
   if (isPatched) installLightSizeUniforms();
 }

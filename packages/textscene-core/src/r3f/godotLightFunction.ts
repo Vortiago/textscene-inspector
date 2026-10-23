@@ -5,13 +5,7 @@
  * `scene_forward_clustered.glsl:2165`), where three r186 weights it by what the specular reflects.
  */
 
-import {
-  applyChunkEdits,
-  editedShader,
-  installChunkPatch,
-  type ChunkEdit,
-  type TextEdit,
-} from './shaderPatch/chunkPatch.js';
+import { editedShader, installChunkEdits, type ChunkEdit, type TextEdit } from './shaderPatch/chunkPatch.js';
 import { NORMAL_MAP_READ_MARK } from './materials/godotNormalMap.js';
 import { LIGHT_SIZE_MARK } from './lightSize/lightSizeChunk.js';
 import { LIGHT_SPECULAR_MARK } from './lightSpecular/lightSpecularChunk.js';
@@ -303,12 +297,11 @@ export const LIGHT_FUNCTION_MARK = DIFFUSE_NL;
  * second call changes nothing, whatever other patches have changed since.
  */
 export function installGodotLightFunction(): void {
-  installChunkPatch({
-    names: [CHUNK, SETUP_CHUNK, MAPS_CHUNK],
+  installChunkEdits({
+    edits: GODOT_LIGHT_FUNCTION_EDITS,
     // One sentinel, as the other patches check: they may edit next to this patch's lines.
-    isApplied: (chunks) => chunks[CHUNK].includes(LIGHT_FUNCTION_MARK),
-    apply: (chunks) => applyChunkEdits(chunks, GODOT_LIGHT_FUNCTION_EDITS),
-    missing: `${CHUNK}, ${SETUP_CHUNK} or ${MAPS_CHUNK} lacks a line the light function patch replaces`,
+    mark: LIGHT_FUNCTION_MARK,
+    patch: 'light function',
     requires: {
       lights_pars_begin: [LIGHT_SPECULAR_MARK, LIGHT_SIZE_MARK],
       normalmap_pars_fragment: NORMAL_MAP_READ_MARK,
