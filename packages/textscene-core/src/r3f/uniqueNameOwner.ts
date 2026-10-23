@@ -20,8 +20,8 @@ import { perTree } from '../utils/perTree.js';
 import type { UniqueNamePaths, UniqueNameTable } from '../resources/instanceNameTable.js';
 import {
   LiveTree,
+  holdsInstanceContent,
   liveTreeOf,
-  mergedNodeOf,
   rootGroups,
   snapshotScenes,
   type LiveChildGroup,
@@ -101,7 +101,7 @@ class PlacedLiveTree {
     for (let depth = 0; depth < segments.length; depth++) {
       const link = this.tree.at(segments.slice(0, depth + 1).join('/'));
       if (!link) break;
-      const placements = mergedNodeOf(link.groups)?.uniqueParentPlacements;
+      const placements = link.step.node.uniqueParentPlacements;
       if (placements) {
         segments = [...segments.slice(0, depth + 1), ...placedBelow(placements, segments.slice(depth + 1))];
       }
@@ -194,11 +194,11 @@ class OwnerWalk {
     // The instance node is the root of what it instances, so it owns the GLB's objects too: they sit
     // directly below it (packed_scene.cpp:261-264).
     const instanceOwner = subRoots && { path: livePath, roots: subRoots, parent: owner, live };
-    const candidates = link.groups.map((group) => ({
+    const candidates = link.step.groups.map((group) => ({
       group,
       owner:
         instanceOwner && holdsInstanceContent(group)
-          ? { ...instanceOwner, composed: group.mergedNode?.uniqueNames }
+          ? { ...instanceOwner, composed: link.step.node.uniqueNames }
           : contentOwner,
       ...(group.origin === 'subscene' && subRoots ? { rootOf: subRoots } : {}),
     }));
@@ -207,11 +207,6 @@ class OwnerWalk {
       : owner;
     return { owner, into, node, candidates };
   }
-}
-
-/** A group of what the node instances, which the instance node owns as the root of it. */
-function holdsInstanceContent(group: LiveChildGroup): boolean {
-  return group.origin === 'merged' || group.origin === 'glb';
 }
 
 /** Written only by {@link ownerWalkOf}, keyed by the live tree it steps over. */
@@ -329,6 +324,5 @@ function rebased(paths: UniqueNamePaths, path: string): UniqueNamePaths {
 function inheritedRootTable(outer: ClaimOwner): UniqueNameTable | undefined {
   const root = outer.roots[0];
   if (!root?.instance) return undefined;
-  const link = outer.live.tree.at(root.name);
-  return link ? mergedNodeOf(link.groups)?.uniqueNames : undefined;
+  return outer.live.tree.at(root.name)?.step.node.uniqueNames;
 }

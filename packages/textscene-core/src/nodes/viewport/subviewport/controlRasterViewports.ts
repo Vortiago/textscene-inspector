@@ -9,8 +9,7 @@ import type { TscnNode } from '../../../parser/types.js';
 import type { ControlProperties } from '../../2d/ui/control/types.js';
 import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
-import { liveChildGroups, liveNodeScope, mergedNodeOf, type SceneScope } from '../../../r3f/liveSceneTree.js';
-import { joinPath } from '../../../utils/nodePath.js';
+import { foldLiveTree, type LiveTreeContext, type SceneScope } from '../../../r3f/liveSceneTree.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 
@@ -18,7 +17,7 @@ import { resolveViewportSubtree, viewportContentKind } from './viewportContent.j
  * Read surface for the loader's PackedScene cache. Structural rather than the
  * concrete `ResourceLoader`, so the walk stays pure and a test supplies a map.
  * Every cached scene carries both resource pools, so this satisfies
- * `liveChildGroups`' `CachedSceneSource` surface without an adapter.
+ * `LiveTreeContext`'s `CachedSceneSource` surface without an adapter.
  */
 export interface SceneScopeSource {
   getCached: (path: string) => (SceneScope & { nodes: readonly TscnNode[] }) | null | undefined;
@@ -51,65 +50,39 @@ export function collectControlRasterViewports(
   layoutDirectionEnv: LayoutDirectionEnv = LTR_LAYOUT_ENV
 ): ControlRasterViewport[] {
   const found: ControlRasterViewport[] = [];
+  const ctx: LiveTreeContext = {
+    externalResources: scope.externalResources,
+    internalResources: scope.internalResources,
+    sceneCache,
+  };
 
-  const walk = (
-    nodes: readonly TscnNode[],
-    parentPath: string,
-    current: SceneScope,
-    /** What the rtl climb would find above `nodes` (`ControlRasterViewport.inheritedRtl`). */
-    inheritedRtl: boolean | null
-  ): void => {
-    for (const node of nodes) {
-      const path = joinPath(parentPath, node.name);
+  // The step decides instance-collapse and per-group resource scope, the same decision
+  // `useBuildSolveTree`'s walk makes for the on-screen pass.
+  foldLiveTree<boolean | null, void>(roots, ctx, null, ({ step, path }, inheritedRtl, descend) => {
+    // Classified on the resolved subtree, as `useViewportContentKind` does: a
+    // raw `instance=` child reads as 3D, so both owners of this key would
+    // decline and leave the consumer blank.
+    if (
+      isViewportBoundary(step.node.type) &&
+      viewportContentKind(resolveViewportSubtree(step.node, step.scope.externalResources, sceneCache)) ===
+        'dom'
+    ) {
+      found.push({ path, node: step.node, inheritedRtl, ...step.scope });
+    }
 
-      // liveChildGroups decides instance-collapse and per-group resource scope,
-      // the same decision `useBuildSolveTree`'s walk makes for the on-screen pass.
-      // A single-root instance puts all its children in the sub-scene's scope. A
-      // multi-root one keeps its authored children in the outer scope.
-      const groups = liveChildGroups(node, current, sceneCache);
-      // A collapsed single-root instance (ADR-0013) becomes its sub-scene
-      // root. Every other origin leaves the node's own identity alone.
-      const effective = mergedNodeOf(groups) ?? node;
-
-      const effectiveScope = liveNodeScope(node, current, groups);
-
-      // Classified on the resolved subtree, as `useViewportContentKind` does: a
-      // raw `instance=` child reads as 3D, so both owners of this key would
-      // decline and leave the consumer blank.
-      if (
-        isViewportBoundary(effective.type) &&
-        viewportContentKind(
-          resolveViewportSubtree(effective, effectiveScope.externalResources, sceneCache)
-        ) === 'dom'
-      ) {
-        found.push({
-          path,
-          node: effective,
-          inheritedRtl,
-          ...effectiveScope,
-        });
-      }
-
-      // `TWO_D_UI_TYPES` is this codebase's set of Control-like types
-      // (`buildSolveTree.ts` reads it too). `CanvasLayer` is in it and states no
-      // direction, which costs nothing: an unset `layout_direction` is inherited
-      // and relays what it was given (`control.cpp:3555`).
-      const childRtl = TWO_D_UI_TYPES.has(effective.type)
+    // `TWO_D_UI_TYPES` is this codebase's set of Control-like types
+    // (`buildSolveTree.ts` reads it too). `CanvasLayer` is in it and states no
+    // direction, which costs nothing: an unset `layout_direction` is inherited
+    // and relays what it was given (`control.cpp:3555`).
+    descend(
+      TWO_D_UI_TYPES.has(step.node.type)
         ? resolveLayoutRtl(
-            (effective.properties as ControlProperties).layoutDirection,
+            (step.node.properties as ControlProperties).layoutDirection,
             inheritedRtl,
             layoutDirectionEnv
           )
-        : inheritedRtl;
-
-      // Every group descends in its own scope: the sub-scene's for
-      // `merged`/`subscene`, the outer one for `inline`/`glb`.
-      for (const group of groups) {
-        walk(group.children, path, group.scope, childRtl);
-      }
-    }
-  };
-
-  walk(roots, '', scope, null);
+        : inheritedRtl
+    );
+  });
   return found;
 }

@@ -4,9 +4,8 @@ import type { SceneScope, TscnNode, TscnExternalResource } from '../../../parser
 import { joinPath } from '../../../utils/nodePath.js';
 import { rendersOwnVisual } from '../../nodeSupport.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { mergedNodeOf } from '../../liveSceneTree.js';
 import { liveInstancePath, scopeOf } from '../../../resources/liveNode.js';
-import { useLiveChildGroups } from './useLiveChildGroups.js';
+import { useLiveStep } from './useLiveStep.js';
 import styles from './SceneTreeViewer.module.css';
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
@@ -103,14 +102,10 @@ function TreeNodeImpl({
   const scenePath = liveInstancePath(node, scope);
   const instanceScenePath = onOpenSubScene ? scenePath : null;
 
-  // What lives below this node, and in what resource scope. The hook keeps the groups stable
-  // across selection and hover, so `effective` reuses one merge.
-  const groups = useLiveChildGroups(node, scope);
-
-  // Instance root merge (ADR-0013), the same decision the viewport and inspector
-  // make, for the row header. It reads the first group's `mergedNode`, so this adds no merge.
-  // Every other group keeps the raw node, as `collapseLiveNode` does.
-  const effective = useMemo(() => mergedNodeOf(groups) ?? node, [groups, node]);
+  // The node as the tree shows it, and what lives below it. Instance root merge (ADR-0013), the
+  // same decision the viewport and inspector make, for the row header. The hook keeps the step
+  // stable across selection and hover, so the row reuses one merge.
+  const { node: effective, groups } = useLiveStep(node, scope);
 
   const hasChildren = groups.some((g) => g.children.length > 0);
 
