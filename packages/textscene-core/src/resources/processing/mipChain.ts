@@ -24,10 +24,11 @@ export function mipSize(size: number, level: number): number {
 }
 
 /** The sizes of the levels below `top`, largest first, down to 1 × 1: none for a 1 × 1 `top` (`image.cpp:1885-1945`). */
-export function lowerLevelSizes({ width, height }: ImageSize): ImageSize[] {
+export function lowerLevelSizes(top: ImageSize): ImageSize[] {
   const sizes: ImageSize[] = [];
-  for (let level = 1; mipSize(Math.max(width, height), level - 1) > 1; level++) {
-    sizes.push({ width: mipSize(width, level), height: mipSize(height, level) });
+  for (let size = top; size.width > 1 || size.height > 1;) {
+    size = { width: mipSize(size.width, 1), height: mipSize(size.height, 1) };
+    sizes.push(size);
   }
   return sizes;
 }

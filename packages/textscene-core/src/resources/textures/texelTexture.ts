@@ -1,4 +1,4 @@
-/** A texture rebuilt from RGBA8 bytes the CPU wrote, with any mip chain the CPU built for it. */
+/** A texture rebuilt from texels the CPU holds, with any mip chain the CPU built or the file stored. */
 
 import * as THREE from 'three';
 import { copySampling } from './copySampling';

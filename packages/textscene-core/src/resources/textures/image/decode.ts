@@ -86,14 +86,18 @@ export interface DecodedLevel extends ImageSize {
   data: Uint8Array | Float32Array;
 }
 
-/** The top level, the format it was saved in, and the levels the file stores below it. */
+/** The top level and the format it was saved in. */
 export interface DecodedImage extends DecodedLevel {
   /** The name `Image::format_names` gives the saved format. */
   format: string;
-  /**
-   * The Stored mip chain, largest first, down to 1 × 1, as saved: Godot never rebuilds it. Empty
-   * for an image saved without mipmaps, and for one whose bytes end before its last level.
-   */
+}
+
+/**
+ * An image with the Stored mip chain: the levels below the top one, largest first, down to
+ * 1 × 1, as saved. Godot never rebuilds them. Empty for an image saved without mipmaps, and for
+ * one whose bytes end before its last level.
+ */
+export interface MipmappedImage extends DecodedImage {
   levels: DecodedLevel[];
 }
 
@@ -103,13 +107,26 @@ const readFormat = dictStringField('format');
 const readMipmaps = dictBoolField('mipmaps');
 const readData = dictCallField('data', 'PackedByteArray');
 
-/** The `Image` sub-resource `ref` names, decoded. Null for a reference to anything else. */
+/** The top level of the `Image` sub-resource `ref` names. Null for a reference to anything else. */
 export function decodeImageRef(
   ref: string | undefined,
   resources: readonly TscnInternalResource[]
 ): DecodedImage | null {
-  const image = resolveSubResourceRef(ref, resources);
-  return image?.type === 'Image' ? decodeImage(image.data) : null;
+  return openImageRef(ref, resources)?.image ?? null;
+}
+
+/**
+ * The `Image` sub-resource `ref` names, with the levels it stores below the top one. Unlike
+ * `initialize_data`, it accepts bytes short of the levels, and keeps the top level alone.
+ */
+export function decodeMipmappedImageRef(
+  ref: string | undefined,
+  resources: readonly TscnInternalResource[]
+): MipmappedImage | null {
+  const open = openImageRef(ref, resources);
+  if (!open) return null;
+  const { image, reader, bytes, hasMipmaps } = open;
+  return { ...image, levels: hasMipmaps ? decodeLevels(bytes, image, reader) : [] };
 }
 
 /** The size of the `Image` sub-resource `ref` names, read without its pixels. */
@@ -118,50 +135,56 @@ export function imageRefSize(
   resources: readonly TscnInternalResource[]
 ): ImageSize | null {
   const image = resolveSubResourceRef(ref, resources);
-  const header = image?.type === 'Image' ? readHeader(image.data) : null;
+  const header = image?.type === 'Image' ? readHeader(image.data.data ?? '') : null;
   return header && { width: header.width, height: header.height };
 }
 
 interface ImageHeader extends ImageSize {
   format: string;
-  /** Whether the bytes hold every level below the top one. */
-  hasMipmaps: boolean;
   /** The text between the data's `PackedByteArray(…)` parentheses. */
   body: string;
 }
 
 /** Null without every key, where `_set_data` fails, or with a size below one texel. */
-function readHeader(data: Record<string, string>): ImageHeader | null {
-  const dictionary = data.data ?? '';
+function readHeader(dictionary: string): ImageHeader | null {
   const width = parseGodotInt(readWidth.exec(dictionary)?.[1] ?? '');
   const height = parseGodotInt(readHeight.exec(dictionary)?.[1] ?? '');
   const format = readFormat.exec(dictionary)?.[1];
   const body = readData(dictionary);
   if (!width || !height || width < 1 || height < 1 || !format || body === null) return null;
-  const hasMipmaps = boolSlotValue(readMipmaps.exec(dictionary)?.[1]) === true;
-  return { width, height, format: literalText(format), hasMipmaps, body };
+  return { width, height, format: literalText(format), body };
+}
+
+/** An `Image` whose top level is decoded, with what a read of its lower levels needs. */
+interface OpenImage {
+  image: DecodedImage;
+  reader: FormatReader;
+  bytes: Uint8Array;
+  hasMipmaps: boolean;
 }
 
 /**
- * The image's top level and the levels it stores, or null for an image Godot refuses
- * (`initialize_data` fails without enough bytes) or one in a format this does not decode: the
- * integer formats, which a float sampler cannot read, and the block formats no decoder handles.
- * Unlike `initialize_data`, it accepts bytes short of the levels, and keeps the top level alone.
+ * Null for a reference to anything but an `Image`, for an image Godot refuses (`initialize_data`
+ * fails without enough bytes) or for one in a format this does not decode: the integer formats,
+ * which a float sampler cannot read, and the block formats no decoder handles.
  */
-function decodeImage(data: Record<string, string>): DecodedImage | null {
-  const header = readHeader(data);
-  if (!header) return null;
-  const { width, height, format, hasMipmaps, body } = header;
+function openImageRef(ref: string | undefined, resources: readonly TscnInternalResource[]): OpenImage | null {
+  const resource = resolveSubResourceRef(ref, resources);
+  const dictionary = resource?.type === 'Image' ? (resource.data.data ?? '') : null;
+  const header = dictionary === null ? null : readHeader(dictionary);
+  if (dictionary === null || !header) return null;
+  const { width, height, format, body } = header;
   const reader = formatReader(format);
   if (!reader) {
     warn(`[Image] the ${format} format is not decoded, so its image draws nothing`);
     return null;
   }
   const bytes = parsePackedByteArrayBody(body);
-  const pixels = bytes && reader.decode(bytes, { width, height });
-  if (!bytes || !pixels) return null;
-  const levels = hasMipmaps ? decodeLevels(bytes, { width, height }, reader) : [];
-  return { data: pixels, width, height, format, levels };
+  if (!bytes) return null;
+  const pixels = reader.decode(bytes, { width, height });
+  if (!pixels) return null;
+  const hasMipmaps = boolSlotValue(readMipmaps.exec(dictionary)?.[1]) === true;
+  return { image: { data: pixels, width, height, format }, reader, bytes, hasMipmaps };
 }
 
 /**
@@ -170,16 +193,18 @@ function decodeImage(data: Record<string, string>): DecodedImage | null {
  * with a level missing is incomplete, so bytes that end early leave the top level alone.
  */
 function decodeLevels(bytes: Uint8Array, top: ImageSize, reader: FormatReader): DecodedLevel[] {
-  const levels: DecodedLevel[] = [];
-  let offset = reader.byteLength(top);
-  for (const size of lowerLevelSizes(top)) {
-    const end = offset + reader.byteLength(size);
-    const data = reader.decode(bytes.subarray(offset, end), size);
-    if (!data) return [];
-    levels.push({ data, ...size });
-    offset = end;
-  }
-  return levels;
+  let end = reader.byteLength(top);
+  const spans = lowerLevelSizes(top).map((size) => {
+    const start = end;
+    end += reader.byteLength(size);
+    return { size, start, end };
+  });
+  // Checked before any decode, so a short image wastes no level.
+  if (bytes.length < end) return [];
+  return spans.map(({ size, start, end: stop }) => ({
+    data: reader.decode(bytes.subarray(start, stop), size)!,
+    ...size,
+  }));
 }
 
 /** Decodes a level, or gives null for data shorter than it. */
@@ -191,18 +216,24 @@ interface FormatReader {
   decode: PixelDecoder;
 }
 
+/** The bytes of a level of `pixelSize`-byte texels. */
+const texelBytes =
+  (pixelSize: number) =>
+  ({ width, height }: ImageSize) =>
+    width * height * pixelSize;
+
 function formatReader(format: string): FormatReader | null {
   const byteLayout = BYTE_LAYOUTS[format];
   if (byteLayout) {
     return {
-      byteLength: ({ width, height }) => width * height * byteLayout.size,
+      byteLength: texelBytes(byteLayout.size),
       decode: (bytes, size) => expandBytes(bytes, size, byteLayout),
     };
   }
   const floatLayout = FLOAT_LAYOUTS[format];
   if (floatLayout) {
     return {
-      byteLength: ({ width, height }) => width * height * floatLayout.size,
+      byteLength: texelBytes(floatLayout.size),
       decode: (bytes, size) => unpackFloats(bytes, size, floatLayout),
     };
   }
