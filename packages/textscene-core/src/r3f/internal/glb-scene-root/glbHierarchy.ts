@@ -206,11 +206,16 @@ function buildGlbSceneRootChildren(root: THREE.Object3D, attached: readonly Live
   return nodes;
 }
 
+/** How many children {@link glbSceneRootChildren} gives the root, with nothing attached, without building them. */
+export function glbSceneRootChildCount(root: THREE.Object3D): number {
+  return root.children.length + (root.animations.length > 0 ? 1 : 0);
+}
+
 /**
  * A `GLBSceneRoot`'s tree children: the GLB hierarchy, with `attached` (as `splitAttachedChildren`
  * returns them) below the objects their parent paths name, plus an `AnimationPlayer` when it has
- * clips. `liveChildGroups` and the instancing node's `index=` count call it, so the tree's rows,
- * `resolveLiveEntry` and the viewport see the same children.
+ * clips. `liveChildGroups` calls it, so the tree's rows, `resolveLiveEntry` and the viewport see
+ * the same children.
  */
 export function glbSceneRootChildren(root: THREE.Object3D, attached: readonly LiveNode[]): TscnNode[] {
   // Attaching writes into the nodes, so an attached list builds its own copy.

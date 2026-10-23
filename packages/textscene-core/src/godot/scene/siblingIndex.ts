@@ -10,10 +10,13 @@ export function insertAtIndex<T extends { index?: number }>(siblings: T[], node:
   else siblings.splice(index, 0, node);
 }
 
-/** `siblings` with `node` added, as a new array: the siblings may be a shared cache entry. */
-export function addAtIndex<T extends { index?: number }>(siblings: readonly T[], node: T): T[] {
+/**
+ * `siblings` with each of `nodes` added in turn, as a new array: the siblings may be a shared cache
+ * entry, such as the frozen objects of a GLB.
+ */
+export function addAtIndex<T extends { index?: number }>(siblings: readonly T[], ...nodes: T[]): T[] {
   const placed = [...siblings];
-  insertAtIndex(placed, node);
+  for (const node of nodes) insertAtIndex(placed, node);
   return placed;
 }
 
@@ -26,7 +29,6 @@ export function orderAmongPlaced<T extends { index?: number }>(
   placedCount: number
 ): T[] {
   const placeholder = {};
-  const siblings: { index?: number }[] = Array.from({ length: placedCount }, () => placeholder);
-  for (const node of nodes) insertAtIndex(siblings, node);
-  return siblings.filter((sibling): sibling is T => sibling !== placeholder);
+  const placed: { index?: number }[] = Array.from({ length: placedCount }, () => placeholder);
+  return addAtIndex(placed, ...nodes).filter((sibling): sibling is T => sibling !== placeholder);
 }

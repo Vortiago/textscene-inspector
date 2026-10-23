@@ -57,7 +57,7 @@ import {
 } from './parentSpaceScope.js';
 import { GlbInstanceProvider } from './internal/glb-scene-root/GlbInstanceContext.js';
 import { liftedWithoutOverrides } from './internal/glb-scene-root/glbNodeOverrides.js';
-import { glbSceneRootChildren } from './internal/glb-scene-root/glbHierarchy.js';
+import { glbSceneRootChildCount } from './internal/glb-scene-root/glbHierarchy.js';
 import { orderAmongPlaced } from '../godot/scene/siblingIndex.js';
 import { useResource } from '../resources/useResource.js';
 import { GlbRootNode } from './internal/glb-scene-root/GlbRootNode.js';
@@ -414,8 +414,7 @@ function InstancedNode({ node, path }: DispatchedNodeProps): ReactNode {
   const shallow = useMemo(() => {
     const stripped = withoutDeepChildren(glbPath !== undefined ? withoutPropertyOverrides(node) : node);
     if (!glb.value || !stripped.children.some((child) => child.index !== undefined)) return stripped;
-    const objectCount = glbSceneRootChildren(glb.value, []).length;
-    return { ...stripped, children: orderAmongPlaced(stripped.children, objectCount) };
+    return { ...stripped, children: orderAmongPlaced(stripped.children, glbSceneRootChildCount(glb.value)) };
   }, [node, glbPath, glb.value]);
   // What the node draws while its instanced scene is unknown or missing. Memoized like `shallow`.
   const held = useMemo(() => withoutDeepChildren(withoutOverrideSubtrees(node)), [node]);

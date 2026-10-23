@@ -7,6 +7,7 @@ import type { TscnNode } from '../../../parser/types';
 import {
   flattenGlbObjects,
   glbObjectName,
+  glbSceneRootChildCount,
   glbSceneRootChildren,
   GLB_ANIMATION_PLAYER_NAME,
 } from './glbHierarchy';
@@ -157,6 +158,21 @@ describe('glbSceneRootChildren animation player', () => {
     root.add(named(new THREE.Mesh(), 'body'));
     const nodes = glbSceneRootChildren(root, []);
     expect(nodes.map((n) => n.name)).toEqual(['body']);
+  });
+});
+
+describe('glbSceneRootChildCount', () => {
+  it('counts the top-level objects and the AnimationPlayer the clips add', () => {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'), named(new THREE.Group(), 'arm'));
+    root.animations = [new THREE.AnimationClip('idle', 1, [])];
+    expect(glbSceneRootChildCount(root)).toBe(3);
+  });
+
+  it('counts no AnimationPlayer for a GLB with no clips (edge case)', () => {
+    const root = new THREE.Group();
+    root.add(named(new THREE.Mesh(), 'body'));
+    expect(glbSceneRootChildCount(root)).toBe(1);
   });
 });
 
