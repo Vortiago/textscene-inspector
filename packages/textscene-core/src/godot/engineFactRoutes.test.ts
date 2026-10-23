@@ -20,7 +20,10 @@ function sourceFiles(): string[] {
   );
 }
 
-/** Memoised by text: each sweep reads every file, and a parse of about 3,100 files costs seconds. */
+/**
+ * Memoised by text. Each sweep also tests a file's text first and parses only a file that can hold
+ * its pattern: a parse of all 3,100 files takes about 5 s, the whole limit of one test.
+ */
 const parsedBySource = new Map<string, ts.SourceFile>();
 
 function parse(source: string): ts.SourceFile {
@@ -56,6 +59,7 @@ function importedNames(file: ts.SourceFile): Map<string, string> {
  * name. A constant that names an imported fact for its own use (`export const A = B`) is not one.
  */
 function reExportedModules(source: string): string[] {
+  if (!/\bexport\s*(?:type\s*)?[*{]/.test(source)) return [];
   const file = parse(source);
   const imported = importedNames(file);
   const reached: string[] = [];
@@ -117,6 +121,7 @@ function objectLiteralMembers(literal: ts.ObjectLiteralExpression): ReadonlyMap<
 
 /** The integer-valued `as const` objects a file declares at its top level. */
 function objectEnumsIn(source: string): EnumMembers[] {
+  if (!/^(?:export\s+)?(?:const|let|var)\s+\w+[^=\n]*=\s*\(?\s*\{/m.test(source)) return [];
   const objects: EnumMembers[] = [];
   for (const statement of parse(source).statements) {
     if (!ts.isVariableStatement(statement)) continue;
@@ -132,6 +137,7 @@ function objectEnumsIn(source: string): EnumMembers[] {
 
 /** The name of each TypeScript `enum` a file declares at its top level, `const enum` included. */
 function tsEnumNames(source: string): string[] {
+  if (!/\benum\s+\w/.test(source)) return [];
   return parse(source)
     .statements.filter(ts.isEnumDeclaration)
     .map((declaration) => declaration.name.text);
