@@ -1,0 +1,27 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitmatmipbiasnrm"]
+
+; One variable: the project's `texture_mipmap_bias`, -0.5, on a normal map's reads. A 256 x 256 map
+; of 8-texel stripes leaning 45 degrees towards +X and -X tiles a lit grey floor at the editor view's
+; oblique angle. Each level averages the stripes towards flat, so the bias keeps the far stripes'
+; light and dark bands where a bias of 0 lets them fade to an even grey. No other golden biases a
+; normal map.
+
+[ext_resource type="Texture2D" path="res://normal-stripes.png" id="1_normal"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_floor"]
+albedo_color = Color(0.6, 0.6, 0.6, 1)
+normal_enabled = true
+normal_texture = ExtResource("1_normal")
+uv1_scale = Vector3(10, 10, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+material = SubResource("StandardMaterial3D_floor")
+size = Vector2(40, 40)
+
+[node name="MipmapBiasNormal" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0, 0.5, -0.866025, 0, 0.866025, 0.5, 1, 0, 0, 0, 4, 0)
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_floor")
