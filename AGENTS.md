@@ -209,8 +209,8 @@ copy beside it. Paths are under `packages/textscene-core/src/`.
   `godot/classdb/enumNames.ts` and `enumOr` in `parser/valueParsers.ts`.
 - A cache keyed by an object: `perObject` in `utils/perObject.ts`. It holds a WeakMap, and a
   build that throws stores nothing.
-- The index of an entry by its key in a frozen table: `firstWith` and `lastWith` in
-  `utils/keyedLookup.ts`. They build one Map for each table.
+- An entry by its key in a frozen table: `firstWith` and `lastWith` in `utils/keyedLookup.ts`, and
+  `firstIndexWith` for its index. They build one Map for each table.
 - A `getCached` reader for a walk: `firstCached` and `recordingReads` in `r3f/cacheSources.ts`.
 - The parent of a node path: `parentPathOf` in `utils/nodePath.ts`.
 - `res://` roots: `ResRoots` in `resources/resRoots.ts`.

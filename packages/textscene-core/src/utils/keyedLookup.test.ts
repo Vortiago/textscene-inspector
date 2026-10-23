@@ -1,30 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { firstWith, lastWith } from './keyedLookup.js';
+import { firstIndexWith, firstWith, lastWith } from './keyedLookup.js';
+import { countedTable } from '../resources/testing/countedTable.js';
 
 interface Entry {
   readonly id: string;
 }
 
 const entries = (...ids: string[]): Entry[] => ids.map((id) => ({ id }));
-
-/** `ids` as a table that counts each read of an entry. */
-function countedTable(ids: string[]): { table: Entry[]; reads: () => number } {
-  const table = entries(...ids);
-  let reads = 0;
-  const counted = new Proxy(table, {
-    get(target, property, receiver) {
-      if (typeof property === 'string' && /^\d+$/.test(property)) reads++;
-      return Reflect.get(target, property, receiver);
-    },
-  });
-  return { table: counted, reads: () => reads };
-}
+const idOf = (entry: Entry) => entry.id;
 
 describe('firstWith', () => {
-  const firstWithId = firstWith((entry: Entry) => entry.id);
+  const firstWithId = firstWith(idOf);
 
-  it('finds the index of the first entry carrying a repeated key', () => {
-    expect(firstWithId(entries('a', 'b', 'a'), 'a')).toBe(0);
+  it('finds the first entry carrying a repeated key', () => {
+    const table = entries('a', 'b', 'a');
+    expect(firstWithId(table, 'a')).toBe(table[0]);
   });
 
   it('finds nothing for a key no entry carries (edge case)', () => {
@@ -32,15 +22,21 @@ describe('firstWith', () => {
   });
 
   it('reads each entry once however many lookups it answers', () => {
-    const { table, reads } = countedTable(Array.from({ length: 500 }, (_, i) => `id${i}`));
+    const { table, entryReads } = countedTable(entries(...Array.from({ length: 500 }, (_, i) => `id${i}`)));
     for (let i = 0; i < 500; i++) firstWithId(table, `id${i}`);
-    expect(reads()).toBe(table.length);
+    expect(entryReads()).toBe(table.length);
   });
 });
 
 describe('lastWith', () => {
-  it('finds the index of the last entry carrying a repeated key', () => {
-    const lastWithId = lastWith((entry: Entry) => entry.id);
-    expect(lastWithId(entries('a', 'b', 'a'), 'a')).toBe(2);
+  it('finds the last entry carrying a repeated key', () => {
+    const table = entries('a', 'b', 'a');
+    expect(lastWith(idOf)(table, 'a')).toBe(table[2]);
+  });
+});
+
+describe('firstIndexWith', () => {
+  it('finds the index of the first entry carrying a repeated key', () => {
+    expect(firstIndexWith(idOf)(entries('b', 'a', 'a'), 'a')).toBe(1);
   });
 });

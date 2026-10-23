@@ -320,12 +320,12 @@ describe('findExtResource', () => {
     expect(findExtResource([first, repeated], '1')).toBe(repeated);
   });
 
-  it('answers from its id map: a repeated lookup reads only the entry it answers with', () => {
+  it('answers from its id map: a repeated lookup reads no entry of the table', () => {
     const { table, entryReads } = countedTable(externalResources);
     expect(findExtResource(table, '1_cube')?.path).toBe('res://child_cube.tscn');
     const readsAfterIndexing = entryReads();
     for (let i = 0; i < 100; i += 1) findExtResource(table, i % 2 ? '1_cube' : '2_frame');
-    expect(entryReads()).toBe(readsAfterIndexing + 100);
+    expect(entryReads()).toBe(readsAfterIndexing);
   });
 });
 
@@ -357,12 +357,12 @@ describe('findSubResource', () => {
     expect(findSubResource([box], 'Other_1')).toBeUndefined();
   });
 
-  it('answers from its id map: a repeated lookup reads only the entry it answers with', () => {
+  it('answers from its id map: a repeated lookup reads no entry of the table', () => {
     const { table, entryReads } = countedTable(internalResources);
     expect(findSubResource(table, 'mesh_2')?.type).toBe('ArrayMesh');
     const readsAfterIndexing = entryReads();
     for (let i = 0; i < 100; i += 1) findSubResource(table, i % 2 ? 'Box_1' : 'mesh_2');
-    expect(entryReads()).toBe(readsAfterIndexing + 100);
+    expect(entryReads()).toBe(readsAfterIndexing);
   });
 });
 

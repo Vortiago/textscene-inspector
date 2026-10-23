@@ -414,9 +414,7 @@ describe('TileSet source lookups', () => {
     return Object.fromEntries(ATLAS_IDS.map((id, i) => [`sources/${i}`, `SubResource("${id}")`]));
   }
 
-  // A scan per lookup reads every entry ahead of the one it finds. The index reads each entry
-  // once, and then the one entry each lookup names.
-  it('reads each entry of the scene table once, and each named one again, however many sources the TileSet names', () => {
+  it('reads each entry of the scene table once, however many sources the TileSet names', () => {
     const { table, entryReads } = countedTable([
       ...atlasSources(),
       { id: 'ts', type: 'TileSet', data: { ...tileSetBody() } },
@@ -424,10 +422,10 @@ describe('TileSet source lookups', () => {
     const model = tileSetFromScene('SubResource("ts")', table, externals);
 
     expect([...model!.sources.keys()]).toEqual([0, 1, 2, 3]);
-    expect(entryReads()).toBe(2 * table.length);
+    expect(entryReads()).toBe(table.length);
   });
 
-  it('reads each entry of a .tres table once, and each named one again, however many sources it names', () => {
+  it('reads each entry of a .tres table once, however many sources it names', () => {
     const { table, entryReads } = countedTable(atlasSources());
     const model = tileSetFromFile({
       resourceType: 'TileSet',
@@ -437,7 +435,7 @@ describe('TileSet source lookups', () => {
     });
 
     expect([...model!.sources.keys()]).toEqual([0, 1, 2, 3]);
-    expect(entryReads()).toBe(2 * table.length);
+    expect(entryReads()).toBe(table.length);
   });
 
   it('skips a source whose id names nothing, as before (error path)', () => {

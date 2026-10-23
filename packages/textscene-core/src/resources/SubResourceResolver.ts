@@ -31,11 +31,7 @@ export function findExtResource(
 ): TscnExternalResource | undefined {
   // An empty table answers nothing, and a caller's `?? []` is a fresh array per call.
   if (externalResources.length === 0) return undefined;
-  return entryAt(externalResources, lastExternalWithId(externalResources, id));
-}
-
-function entryAt<T>(table: readonly T[], index: number | undefined): T | undefined {
-  return index === undefined ? undefined : table[index];
+  return lastExternalWithId(externalResources, id);
 }
 
 export function parseResourceReference(
@@ -96,7 +92,7 @@ export function findSubResource(
   id: string
 ): TscnInternalResource | undefined {
   if (internalResources.length === 0) return undefined;
-  return entryAt(internalResources, firstInternalWithId(internalResources, id));
+  return firstInternalWithId(internalResources, id);
 }
 
 /**
