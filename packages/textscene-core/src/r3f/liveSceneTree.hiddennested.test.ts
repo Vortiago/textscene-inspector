@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../parser/TscnParser';
-import { collapseLiveNode, liveChildGroups, type CachedSceneSource } from './liveSceneTree';
+import { collapseLiveNode, liveStep, type CachedSceneSource } from './liveSceneTree';
 import '../parser/TscnParser';
 
 const LEAF = `[gd_scene load_steps=1 format=3]
@@ -63,8 +63,7 @@ describe('an instance chain collapses to fixed point', () => {
     expect(collapseLiveNode(hidden, scope, cache).instance).toBeFalsy();
   });
 
-  it('reports the same collapsed node through liveChildGroups', () => {
-    const merged = liveChildGroups(hidden, scope, cache).find((g) => g.origin === 'merged');
-    expect(merged?.mergedNode?.properties.visible).toBe(false);
+  it('reports the same collapsed node through liveStep', () => {
+    expect(liveStep(hidden, scope, cache).node.properties.visible).toBe(false);
   });
 });

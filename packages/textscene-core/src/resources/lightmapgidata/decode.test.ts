@@ -14,7 +14,8 @@ import { decodeLightmapGIData } from './decode';
 function decodeText(body: string) {
   const { properties, extResources } = parseTresFile(
     '[gd_resource type="LightmapGIData" format=3]\n\n' +
-      '[ext_resource type="CompressedTexture2DArray" path="res://bake.exr" id="1_tex"]\n\n' +
+      '[ext_resource type="CompressedTexture2DArray" path="res://bake.exr" id="1_tex"]\n' +
+      '[ext_resource type="CompressedTexture2DArray" path="res://bake_shadow.png" id="2_mask"]\n\n' +
       `[resource]\n${body}\n`
   );
   return decodeLightmapGIData(properties, extResources);
@@ -53,6 +54,10 @@ describe('decodeLightmapGIData on the ragdoll bake', () => {
     expect((await bake()).lightmapTextures).toEqual(['res://ragdoll_physics.exr']);
   });
 
+  it('reads no shadowmask textures from a bake that saved none', async () => {
+    expect((await bake()).shadowmaskTextures).toEqual([]);
+  });
+
   it('reads the capture bounds the renderer culls the lightmap by', async () => {
     expect((await bake()).bounds).toEqual({
       position: { x: -8.023788, y: -0.6158713, z: -8.023788 },
@@ -72,6 +77,16 @@ describe('decodeLightmapGIData on text', () => {
     expect(decodeText('light_textures = [ExtResource("1_tex")]').lightmapTextures).toEqual([
       'res://bake.exr',
     ]);
+  });
+
+  it('reads the typed array Godot writes for the shadowmask textures', () => {
+    expect(
+      decodeText('shadowmask_textures = Array[TextureLayered]([ExtResource("2_mask")])').shadowmaskTextures
+    ).toEqual(['res://bake_shadow.png']);
+  });
+
+  it('reads no shadowmask textures from a bake with none, which Godot draws as no shadowmask (edge case)', () => {
+    expect(decodeText('lightmap_textures = [ExtResource("1_tex")]').shadowmaskTextures).toEqual([]);
   });
 
   it('simplifies a texture path as Godot simplifies every resource path', () => {

@@ -23,12 +23,17 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
+**Live step** (`LiveStep` in `r3f/liveSceneTree.ts`, from `liveStep`):
+One node of the **Live scene tree** as a reader needs it: the node as shown, the **Authored scope** its refs resolve in, and the child groups below it.
+A reader takes all three from the one call, because the authored node and its group's scope are the wrong ones for an instance root and for a grafted node.
+_Avoid_: reading a node's merge, scope or children in separate calls.
+
 **Live tree snapshot** (`LiveTreeContext` in `r3f/liveSceneTree.ts`, shared by `useSharedLiveTree`):
 One read of the loader's scene cache that every question over the **Live scene tree** shares until the next scene or GLB load.
 It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
 _Avoid_: a live tree or a context per consumer, per question.
 
-**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveNodeScope`):
+**Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveStep`):
 The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
 Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
 _Avoid_: resolving a grafted node's ids in the sub-scene's pools.
@@ -80,6 +85,10 @@ _Avoid_: "lightmap cache", which suggests the baked lightmap.
 **Lightmap atlas** (`resources/lightmapgidata/build.ts`):
 Every layer of a bake's lightmap textures, stacked in order into one texture array. A surface reads its own slice of it through UV2.
 _Avoid_: "lightmap texture" for the whole stack: a bake can save several.
+
+**Shadowmask** (`r3f/lightmap/lightmapProgram.ts`):
+The second atlas a bake saves, one byte per texel: how much of a sun's light reaches that texel. A LightmapGI's shadowmask mode sets how it meets the sun's real-time shadow. Replace puts it in the place of the real-time shadow where that fades out, Overlay multiplies it with the real-time shadow, and Only uses it alone.
+_Avoid_: "shadow map", which is the real-time depth map of a light.
 
 **Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
 The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054).

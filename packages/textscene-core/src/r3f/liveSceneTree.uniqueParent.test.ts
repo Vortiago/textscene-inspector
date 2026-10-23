@@ -8,7 +8,7 @@ import * as logger from '../logger';
 import { TscnParser } from '../parser/TscnParser';
 import type { TscnNode, TscnScene } from '../parser/types';
 import { scopeOf } from '../resources/liveNode';
-import { collapseLiveNode, liveChildGroups, rootScope, singlePathCache } from './liveSceneTree';
+import { collapseLiveNode, liveStep, rootScope, singlePathCache } from './liveSceneTree';
 import { contextOver } from './liveSceneTree.testkit';
 
 const host = new TscnParser().parse(`[gd_scene format=3]
@@ -43,8 +43,7 @@ const unclaimed = new TscnParser().parse(`[gd_scene format=3]
 function composedPlayer(host: TscnScene, scenes: Record<string, TscnScene>): TscnNode {
   const ctx = contextOver(host, scenes);
   const instance = host.nodes[0]!.children.find((n) => n.name === 'Player')!;
-  const [group] = liveChildGroups(instance, rootScope(ctx), ctx.sceneCache);
-  return group!.mergedNode!;
+  return liveStep(instance, rootScope(ctx), ctx.sceneCache).node;
 }
 
 function childNames(node: TscnNode, name: string): string[] {

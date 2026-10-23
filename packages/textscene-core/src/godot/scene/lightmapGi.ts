@@ -36,18 +36,27 @@ const EnvironmentMode = {
 /** Each environment mode by its integer, spelled as its constant without `ENVIRONMENT_MODE_`. */
 export const LIGHTMAP_GI_ENVIRONMENT_MODE_NAMES = enumNamesByValue(EnvironmentMode);
 
-/**
- * `LightmapGI::ShadowmaskMode` (`lightmap_gi.h:46-51`) also declares `ONLY = 3`, but the hint at
- * `lightmap_gi.cpp:1925` offers "None,Replace,Overlay", so the table stops at 2.
- */
-const ShadowmaskMode = {
+/** `LightmapGI::ShadowmaskMode` (`lightmap_gi.h:46-51`). */
+export const ShadowmaskMode = {
   NONE: 0,
   REPLACE: 1,
   OVERLAY: 2,
+  ONLY: 3,
 } as const;
 
-/** Each shadowmask mode the hint offers by its integer, spelled as its constant without `SHADOWMASK_MODE_`. */
-export const LIGHTMAP_GI_SHADOWMASK_MODE_NAMES = enumNamesByValue(ShadowmaskMode);
+/**
+ * Each shadowmask mode the hint offers by its integer, spelled as its constant without
+ * `SHADOWMASK_MODE_`. The hint at `lightmap_gi.cpp:1925` is "None,Replace,Overlay", so a scene
+ * stores Only (3) only from a script, and the renderer still draws it.
+ */
+export const LIGHTMAP_GI_SHADOWMASK_MODE_NAMES = enumNamesByValue({
+  NONE: ShadowmaskMode.NONE,
+  REPLACE: ShadowmaskMode.REPLACE,
+  OVERLAY: ShadowmaskMode.OVERLAY,
+});
+
+/** Layers of a directional lightmap for each slice: L0 and the three L1 bands (`scene_forward_clustered.glsl:1849-1854`). */
+export const LIGHTMAP_SH_LAYERS_PER_SLICE = 4;
 
 /** `rendering/lightmapping/lightmap_gi/use_bicubic_filter` (`rendering_server.cpp:3822`). */
 export const LIGHTMAP_BICUBIC_FILTER_DEFAULT = true;

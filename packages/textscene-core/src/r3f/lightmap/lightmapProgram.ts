@@ -2,15 +2,23 @@
  * Godot's lightmap read in three's lit programs: a lightmapped surface's ambient is its texel of the
  * atlas, at its UV2 placed by its user rect and slice (`scene_forward_clustered.glsl:1835-1876`).
  * Scene and sky ambient give way to it (`:1739-1759`), and so does a ReflectionProbe's
- * (`probeShaderChunk.ts`). three's irradiance is Godot's ambient times PI.
+ * (`probeShaderChunk.ts`). three's irradiance is Godot's ambient times PI. The bake's shadowmask
+ * replaces or darkens a sun's real-time shadow at the same UV2 (`:2252-2273`, `:2483-2492`).
  */
 
 import * as THREE from 'three';
 import type { IUniform, Material } from 'three';
+import { LIGHTMAP_SH_LAYERS_PER_SLICE, ShadowmaskMode } from '../../godot/scene/lightmapGi';
 import { composeInjections, defining, type ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
 import type { LightmapAssignment } from './sceneLightmaps';
 import { bicubicFilterGlsl } from '../../utils/bicubicFilterGlsl';
+
+/**
+ * A light whose shadow opacity is at most this floor skips its shadow block, shadowmask included
+ * (`scene_forward_clustered.glsl:2298`). Mode Only has no such skip (`:2510-2517`).
+ */
+const SHADOW_OPACITY_FLOOR = '0.001';
 
 /** The last declaration before `main`. */
 const PARS_ANCHOR = '#include <clipping_planes_pars_fragment>';
@@ -31,6 +39,7 @@ uniform bool godotLightmapUsesSH;
 uniform bool godotLightmapUsesBicubic;
 uniform vec2 godotLightmapTextureSize;
 uniform mat3 godotLightmapNormalBasis;
+uniform int godotShadowmaskMode;
 varying vec2 vGodotLightmapUv;
 
 ${bicubicFilterGlsl({
@@ -44,17 +53,60 @@ vec3 godotLightmapTexel( vec3 uvw ) {
 	return godotLightmapUsesBicubic ? godotLightmapBicubic( uvw ) : textureLod( godotLightmap, uvw, 0.0 ).rgb;
 }
 
+${bicubicFilterGlsl({
+  prefix: 'godotShadowmask',
+  params: 'vec3 uvw',
+  uv: 'uvw.xy',
+  // Godot sizes the mask with the lightmap's texture size (`scene_forward_clustered.glsl:2268`).
+  size: 'godotLightmapTextureSize',
+  fetch: (texelUv) => `vec3( texture( godotLightmap, vec3( ${texelUv}, uvw.z ) ).a )`,
+})}
+vec3 godotLightmapUvw() {
+	float layer = godotLightmapSlice * ( godotLightmapUsesSH ? ${LIGHTMAP_SH_LAYERS_PER_SLICE}.0 : 1.0 );
+	return vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, layer );
+}
+
 vec3 godotLightmapAmbient( vec3 worldNormal ) {
-	vec3 uvw = vec3( vGodotLightmapUv * godotLightmapUvScale.zw + godotLightmapUvScale.xy, godotLightmapSlice );
+	vec3 uvw = godotLightmapUvw();
 	if ( ! godotLightmapUsesSH ) return godotLightmapTexel( uvw );
-	uvw.z *= 4.0;
 	vec3 l0 = godotLightmapTexel( uvw );
 	vec3 l1n1 = ( godotLightmapTexel( uvw + vec3( 0.0, 0.0, 1.0 ) ) - vec3( 0.5 ) ) * 2.0;
 	vec3 l1z = ( godotLightmapTexel( uvw + vec3( 0.0, 0.0, 2.0 ) ) - vec3( 0.5 ) ) * 2.0;
 	vec3 l1p1 = ( godotLightmapTexel( uvw + vec3( 0.0, 0.0, 3.0 ) ) - vec3( 0.5 ) ) * 2.0;
 	vec3 n = normalize( godotLightmapNormalBasis * worldNormal );
 	return l0 + l1n1 * n.y * ( l0 * 4.0 ) + l1z * n.z * ( l0 * 4.0 ) + l1p1 * n.x * ( l0 * 4.0 );
-}`;
+}
+
+float godotLightmapShadowmask() {
+	vec3 uvw = godotLightmapUvw();
+	return godotLightmapUsesBicubic ? godotShadowmaskBicubic( uvw ).x : textureLod( godotLightmap, uvw, 0.0 ).a;
+}
+
+float godotShadowmaskReplace( float shadow, float shadowmask, float fadeOut, float opacity ) {
+	return mix( shadow, mix( 1.0, shadowmask, opacity ), fadeOut );
+}
+
+float godotShadowmaskOverlay( float shadow, float shadowmask, float fadeOut, float opacity ) {
+	float unshadowed = 1.0 - opacity;
+	return unshadowed + shadowmask * ( ( 1.0 - fadeOut ) * ( shadow - unshadowed ) + opacity * fadeOut );
+}
+
+float godotShadowmaskOnly( float shadowmask, float isDrawnFirst, float opacity ) {
+	float shadow = isDrawnFirst * trunc( clamp( shadowmask * 255.0, 0.0, 255.0 ) ) / 255.0;
+	return mix( 1.0, shadow, opacity );
+}
+
+#if defined( USE_SHADOWMAP ) && NUM_SUN_LIGHT_SHADOWS > 0
+float godotLightmapSunShadow( float shadow, float fadeOut, float opacity, float isDrawnFirst ) {
+	if ( ! godotLightmapActive || godotShadowmaskMode == ${ShadowmaskMode.NONE} ) return godotSunShadowFaded( shadow, fadeOut );
+	if ( godotShadowmaskMode == ${ShadowmaskMode.ONLY} ) return godotShadowmaskOnly( godotLightmapShadowmask(), isDrawnFirst, opacity );
+	if ( opacity <= ${SHADOW_OPACITY_FLOOR} ) return 1.0;
+	float shadowmask = godotLightmapShadowmask();
+	return godotShadowmaskMode == ${ShadowmaskMode.REPLACE}
+		? godotShadowmaskReplace( shadow, shadowmask, fadeOut, opacity )
+		: godotShadowmaskOverlay( shadow, shadowmask, fadeOut, opacity );
+}
+#endif`;
 
 /** After three's maps have added the sky's irradiance, which the lightmap replaces. */
 const LIGHTMAP_AMBIENT = /* glsl */ `${MAPS_ANCHOR}
@@ -145,6 +197,12 @@ function lightmapUniforms(material: Material): Record<string, IUniform> {
       get value() {
         const object = bound()?.lightmap.object;
         return object ? normalBasis.setFromMatrix4(object.matrixWorld).transpose() : normalBasis.identity();
+      },
+    },
+    // A bake with no shadowmask binds Godot a white array, which mixes as None in both modes.
+    godotShadowmaskMode: {
+      get value() {
+        return bound()?.lightmap.shadowmaskMode ?? ShadowmaskMode.NONE;
       },
     },
   };

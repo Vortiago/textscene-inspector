@@ -8,7 +8,7 @@ import { TscnParser } from '../parser/TscnParser';
 import type { TscnScene } from '../parser/types';
 import {
   collectLiveNodes,
-  liveChildGroups,
+  liveStep,
   rootScope,
   walkLiveTree,
   type CachedSceneSource,
@@ -207,7 +207,7 @@ describe('the composition of an inherited sub-scene', () => {
     const ctx = { ...contextOver(main, scenes), sceneCache };
     const instance = main.nodes[0]!.children.find((n) => n.name === 'K0')!;
 
-    liveChildGroups(instance, rootScope(ctx), sceneCache);
+    liveStep(instance, rootScope(ctx), sceneCache);
 
     expect(reads.filter((path) => path === 'res://kid.tscn')).toHaveLength(1);
   });
