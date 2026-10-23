@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { CSG_MERGE_TOLERANCE } from '../../godot/scene/csg';
+import { CSG_MERGE_TOLERANCE } from '../../../godot/scene/csg';
 import { isClosedBrush, weldCorners } from './brushManifold';
 
 type Point = readonly [number, number, number];

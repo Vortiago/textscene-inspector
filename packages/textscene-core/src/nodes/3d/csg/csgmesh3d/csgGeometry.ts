@@ -38,7 +38,8 @@ function namesNoMesh(meshRef: string | undefined, ctx: CsgGeometryContext): bool
 export const csgMesh3DGeometry: CsgGeometryBuilder = (properties, ctx) => {
   const p = properties as unknown as CSGMesh3DProperties;
   const mesh = resolveMesh(p.mesh, ctx);
-  if (!mesh) return namesNoMesh(p.mesh, ctx) ? emptySolid() : null;
+  // A mesh that names nothing builds Godot's empty brush (`csg_shape.cpp:1126-1128`).
+  if (!mesh) return namesNoMesh(p.mesh, ctx) ? csgSolid(emptyBrush(), []) : null;
   if (meshKind(mesh.resource.type) === null) return null;
   return buildMeshBrush(meshSurfaces(mesh), p.materialPath, p.flipFaces);
 };
@@ -99,19 +100,17 @@ interface MeshFaces {
   materials: CsgMaterialAddress[];
 }
 
-/** Godot's empty brush: a closed solid with no face. */
-function emptySolid(): CsgSolid {
-  return csgSolid(emptyBrush(), []);
-}
-
-/** The empty solid for a mesh with no faces (`csg_shape.cpp:1265-1267`). */
+/**
+ * The solid of every surface's triangles, each with its material, flipped with `flipFaces`
+ * (`csg_shape.cpp:1136-1269`). A mesh with no triangle builds the empty brush (`:1265-1267`).
+ */
 function buildMeshBrush(
   surfaces: readonly CsgMeshSurface[],
   nodeMaterial: CsgMaterialAddress,
   flipFaces: boolean
 ): CsgSolid {
   const faces = meshFaces(surfaces, nodeMaterial);
-  if (faces.smooth.length === 0) return emptySolid();
+  if (faces.smooth.length === 0) return csgSolid(emptyBrush(), []);
   const brush = shadeCsgFaces({ ...faces, invert: flipFaces });
   if (faces.materials.length > 1) addMaterialGroups(brush.geometry, faces.faceMaterials);
   return csgSolid(brush, faces.materials);
@@ -158,7 +157,7 @@ function normalsAgree(normals: Float32Array | undefined, u: number, v: number): 
   return true;
 }
 
-/** One draw group per run of faces that share a material. `applyCsgNormals` keeps the face order. */
+/** One draw group per run of faces that share a material. `shadeCsgFaces` keeps the face order. */
 function addMaterialGroups(geometry: THREE.BufferGeometry, faceMaterials: readonly number[]): void {
   let start = 0;
   for (let face = 1; face <= faceMaterials.length; face++) {
