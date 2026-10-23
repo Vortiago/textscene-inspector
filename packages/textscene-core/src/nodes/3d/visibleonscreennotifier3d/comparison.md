@@ -25,16 +25,18 @@ An unauthored box is Godot's default, an AABB from (-1, -1, -1) of size 2. The p
 ## Linting
 
 <!-- lint:begin VisibleOnScreenNotifier3D -->
+
 Strict parsing format-checks these `VisibleOnScreenNotifier3D` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `aabb` | AABB(x, y, z, w, h, d) |  |
+| Property | Accepts                | Out of range |
+| -------- | ---------------------- | ------------ |
+| `aabb`   | AABB(x, y, z, w, h, d) |              |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| Rule                                          | Reports                     | Severity |
+| --------------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes)       | `binary-resource-reference` | info     |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`   | error    |
+
 <!-- lint:end -->
 
 The lenient parser reads `aabb` for the gizmo. A malformed value keeps Godot's default box, and only strict reports it. `layers` is inherited from VisualInstance3D and is covered on that sheet.

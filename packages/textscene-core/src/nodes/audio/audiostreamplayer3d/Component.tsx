@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import type { AudioStreamPlayer3DProperties } from './types';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useBillboard } from '../../../r3f/hooks/useBillboard';
 import { degToRad, TAU } from '../../../godot/math/math.js';
@@ -46,7 +46,7 @@ export function AudioStreamPlayer3D({ node, children }: NodeComponentProps) {
 
   // Godot adds the speaker and range gizmos only for the selected node (`audio_stream_player_3d_gizmo_plugin.cpp:127`),
   // as for Camera3D and the lights. The `<group>` stays mounted, so the children keep their transform context.
-  const gizmoVisible = useGizmoState('selected-only') === 'selected';
+  const gizmoVisible = useGizmoDrawn('selected-only');
 
   return (
     <group

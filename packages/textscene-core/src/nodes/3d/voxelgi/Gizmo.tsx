@@ -24,7 +24,7 @@ export function VoxelGIGizmo({ voxelGi }: { voxelGi: VoxelGIProperties }) {
   const grid = useMemo(() => new Float32Array(cellGridLines(box, voxelGiCells(subdiv))), [box, subdiv]);
   return (
     <>
-      <AabbGizmo aabb={box} color={GIZMO_COLOR} />
+      <AabbGizmo aabb={box} color={GIZMO_COLOR} variant="selected" />
       <GizmoLine positions={grid} color={useGodotLinearColor(GIZMO_COLOR)} opacity={GRID_ALPHA} />
     </>
   );

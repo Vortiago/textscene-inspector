@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useParentPath3DCurve } from '../../../r3f/contexts/Path3DCurveContext';
 import { transformFromNode3DProperties, type Vec3Tuple } from '../../../r3f/nodeTransform';
 import type { Curve3DSampler } from '../../../resources/curves/curve3d';
@@ -35,7 +35,7 @@ interface FollowTransform {
 export function PathFollow3D({ node, children }: NodeComponentProps) {
   const props = node.properties as PathFollow3DProperties;
   const sampler = useParentPath3DCurve();
-  const gizmoVisible = useGizmoState('selected-only') === 'selected';
+  const gizmoVisible = useGizmoDrawn('selected-only');
 
   const follow = useMemo(() => computeFollowTransform(sampler, props), [sampler, props]);
   const dot = gizmoVisible ? <FollowCross /> : null;

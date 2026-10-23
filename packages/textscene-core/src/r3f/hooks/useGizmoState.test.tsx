@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { NodePathProvider } from '../contexts/NodePathContext';
-import { SelectionProvider } from '../contexts/SelectionContext';
-import { ViewportModeProvider } from '../contexts/ViewportModeContext';
-import { SelectSeeder } from '../testing/SelectSeeder';
-import { useGizmoState, type GizmoDrawnFor } from './useGizmoState';
+import { GizmoScene } from '../testing/GizmoScene';
+import { useGizmoDrawn, useGizmoState, type GizmoDrawnFor } from './useGizmoState';
 
 interface Scene {
   showGizmos?: boolean;
@@ -13,23 +10,22 @@ interface Scene {
   nodePath?: string | null;
 }
 
-function stateIn(
-  drawnFor: GizmoDrawnFor,
+function inScene<T>(
+  hook: () => T,
   { showGizmos = true, selectedPath = null, nodePath = 'Root/Lamp' }: Scene
-) {
+): T {
   function Wrapper({ children }: { children: ReactNode }) {
-    const inNode =
-      nodePath === null ? children : <NodePathProvider path={nodePath}>{children}</NodePathProvider>;
     return (
-      <ViewportModeProvider initialShowGizmos={showGizmos}>
-        <SelectionProvider>
-          <SelectSeeder path={selectedPath} />
-          {inNode}
-        </SelectionProvider>
-      </ViewportModeProvider>
+      <GizmoScene nodePath={nodePath} selectedPath={selectedPath} showGizmos={showGizmos}>
+        {children}
+      </GizmoScene>
     );
   }
-  return renderHook(() => useGizmoState(drawnFor), { wrapper: Wrapper }).result.current;
+  return renderHook(hook, { wrapper: Wrapper }).result.current;
+}
+
+function stateIn(drawnFor: GizmoDrawnFor, scene: Scene) {
+  return inScene(() => useGizmoState(drawnFor), scene);
 }
 
 describe('useGizmoState', () => {
@@ -60,5 +56,16 @@ describe('useGizmoState', () => {
 
   it('is hidden outside a node dispatcher, where no path says which node it belongs to', () => {
     expect(stateIn('every-node', { nodePath: null })).toBe('hidden');
+  });
+});
+
+describe('useGizmoDrawn', () => {
+  it('is true when the gizmo has a look to draw and false when it is hidden', () => {
+    expect([
+      inScene(() => useGizmoDrawn('every-node'), { selectedPath: null }),
+      inScene(() => useGizmoDrawn('selected-only'), { selectedPath: 'Root/Lamp' }),
+      inScene(() => useGizmoDrawn('selected-only'), { selectedPath: null }),
+      inScene(() => useGizmoDrawn('every-node'), { showGizmos: false }),
+    ]).toEqual([true, true, false, false]);
   });
 });

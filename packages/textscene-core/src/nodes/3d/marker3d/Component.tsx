@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import type { Marker3DProperties } from './types';
 
 // Per-vertex axis colours, X red, Y green, Z blue, whatever the size.
@@ -16,7 +16,7 @@ const AXIS_COLORS = new Float32Array([1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 
 
 export function Marker3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Marker3DProperties;
-  const drawsCross = useGizmoState('every-node') !== 'hidden';
+  const drawsCross = useGizmoDrawn('every-node');
   return (
     <Node3D node={node}>
       {drawsCross && <AxisCross extents={props.gizmo_extents} />}

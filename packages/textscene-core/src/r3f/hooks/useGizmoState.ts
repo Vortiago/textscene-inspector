@@ -23,3 +23,8 @@ export function useGizmoState(drawnFor: GizmoDrawnFor): GizmoState {
   if (selection?.selectedNodePath === path) return 'selected';
   return drawnFor === 'every-node' ? 'unselected' : 'hidden';
 }
+
+/** Whether a gizmo that has no unselected look draws at all: for the parts that ignore the variant. */
+export function useGizmoDrawn(drawnFor: GizmoDrawnFor): boolean {
+  return useGizmoState(drawnFor) !== 'hidden';
+}

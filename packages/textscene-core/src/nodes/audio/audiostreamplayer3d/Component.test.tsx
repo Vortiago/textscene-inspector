@@ -9,25 +9,21 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AudioStreamPlayer3D } from './Component';
-import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { SelectionProvider } from '../../../r3f/contexts/SelectionContext';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 import type { TscnNode } from '../../../parser/types';
 import type { AudioStreamPlayer3DProperties } from './types';
 
-import { SelectSeeder } from '../../../r3f/testing/SelectSeeder';
 import { AttenuationModel, DopplerTracking } from '../../../godot/scene/audio';
 
 /**
- * The speaker and range gizmos are selection-gated, so the scaffolding places the component in a
+ * The speaker and range gizmos draw for the selected node only, so the scaffolding places the component in a
  * NodePathProvider and sets `selectedNodePath` to the same path through SelectionProvider.
  */
-function withSelectedAudio(path: string, children: ReactNode): ReactNode {
+function withSelectedAudio(path: string, children: ReactNode, showGizmos = true): ReactNode {
   return (
-    <SelectionProvider>
-      <SelectSeeder path={path} />
-      <NodePathProvider path={path}>{children}</NodePathProvider>
-    </SelectionProvider>
+    <GizmoScene nodePath={path} selectedPath={path} showGizmos={showGizmos}>
+      {children}
+    </GizmoScene>
   );
 }
 
@@ -99,9 +95,7 @@ describe('<AudioStreamPlayer3D> (WI-R3F-16 slice B)', () => {
 
   it('renders no gizmo with the Gizmos toggle off, selected', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <ViewportModeProvider initialShowGizmos={false}>
-        {withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />)}
-      </ViewportModeProvider>
+      withSelectedAudio('Audio', <AudioStreamPlayer3D node={makeNode()} />, false)
     );
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);

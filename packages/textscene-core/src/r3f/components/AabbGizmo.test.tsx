@@ -9,7 +9,7 @@ import { AabbGizmo } from './AabbGizmo';
 
 const COLOR = { r: 0.8, g: 0.7, b: 0.4 };
 
-async function line(aabb: Aabb, variant?: GizmoVariant) {
+async function line(aabb: Aabb, variant: GizmoVariant = 'selected') {
   const renderer = await ReactThreeTestRenderer.create(
     <AabbGizmo aabb={aabb} color={COLOR} variant={variant} />
   );

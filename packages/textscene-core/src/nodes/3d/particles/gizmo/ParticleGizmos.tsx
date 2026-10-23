@@ -28,7 +28,7 @@ const EMISSION_SHAPE_COLOR = Object.freeze({ r: 0.5, g: 0.7, b: 1 });
 
 /** The 12 edges of the box (`gpu_particles_3d_gizmo_plugin.cpp:67-80`). */
 export function ParticlesBoxGizmo({ box }: { box: Aabb }) {
-  return <AabbGizmo aabb={box} color={BOX_COLOR} />;
+  return <AabbGizmo aabb={box} color={BOX_COLOR} variant="selected" />;
 }
 
 /**

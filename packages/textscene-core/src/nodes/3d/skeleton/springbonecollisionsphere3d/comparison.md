@@ -15,18 +15,20 @@ The sphere collider a SpringBoneSimulator3D consults while resolving its spring 
 ## Linting
 
 <!-- lint:begin SpringBoneCollisionSphere3D -->
+
 Strict parsing format-checks these `SpringBoneCollisionSphere3D` properties, plus 4 inherited from SpringBoneCollision3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `inside` | true or false |  |
-| `radius` | float >= 0 | warning below |
+| Property | Accepts       | Out of range  |
+| -------- | ------------- | ------------- |
+| `inside` | true or false |               |
+| `radius` | float >= 0    | warning below |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-springbonecollision3d-parent` (type-family match) | `springbonecollision3d-outside-springbonesimulator3d` | warning |
+| Rule                                                     | Reports                                               | Severity |
+| -------------------------------------------------------- | ----------------------------------------------------- | -------- |
+| `binary-resource-reference` (all nodes)                  | `binary-resource-reference`                           | info     |
+| `valid-node3d-visibility` (type-family match)            | `valid-node3d-visibility`                             | error    |
+| `valid-springbonecollision3d-parent` (type-family match) | `springbonecollision3d-outside-springbonesimulator3d` | warning  |
+
 <!-- lint:end -->
 
 SpringBoneCollisionSphere3D registers `parseNode3D` directly, so neither `radius` nor `inside` is ever read. A `radius = wide` or `inside = 1` is dropped silently rather than substituted, and only strict reports it.

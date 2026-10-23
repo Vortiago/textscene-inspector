@@ -27,19 +27,21 @@ The previewer draws no edit handles and no billboard icon.
 ## Linting
 
 <!-- lint:begin FogVolume -->
+
 Strict parsing format-checks these `FogVolume` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `material` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `shape` | enum 0-4 (ELLIPSOID/CONE/CYLINDER/BOX/WORLD) | warning |
-| `size` | Vector3(x, y, z), each >= 0 (>= 0.01 recommended; 1024 ceiling is or_greater, so unbounded above) | warning below |
+| Property   | Accepts                                                                                           | Out of range  |
+| ---------- | ------------------------------------------------------------------------------------------------- | ------------- |
+| `material` | null, SubResource("id"), ExtResource("id") or Resource("path")                                    |               |
+| `shape`    | enum 0-4 (ELLIPSOID/CONE/CYLINDER/BOX/WORLD)                                                      | warning       |
+| `size`     | Vector3(x, y, z), each >= 0 (>= 0.01 recommended; 1024 ceiling is or_greater, so unbounded above) | warning below |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-fogvolume-size` | `fogvolume-size-ignored-for-world-shape` | info |
+| Rule                                          | Reports                                  | Severity |
+| --------------------------------------------- | ---------------------------------------- | -------- |
+| `binary-resource-reference` (all nodes)       | `binary-resource-reference`              | info     |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`                | error    |
+| `valid-fogvolume-size`                        | `fogvolume-size-ignored-for-world-shape` | info     |
+
 <!-- lint:end -->
 
 The lenient parser clamps each negative `size` component to 0, as `set_size` does. It keeps an out-of-range `shape`, which then has no surface, and the default size for a malformed one.

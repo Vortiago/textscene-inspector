@@ -8,8 +8,7 @@
 import type { RefObject } from 'react';
 import * as THREE from 'three';
 import { usePrimitiveHelper, correctHelperForParentGroup } from '../../../../r3f/hooks/useTHREEHelper';
-
-import { useGizmoState } from '../../../../r3f/hooks/useGizmoState';
+import { useGizmoDrawn } from '../../../../r3f/hooks/useGizmoState';
 
 const HELPER_COLOR = 0xffff00;
 const DIRECTIONAL_HELPER_SIZE = 1.0;
@@ -24,7 +23,7 @@ function LightGizmoCommon<
   L extends THREE.Light,
   H extends THREE.Object3D & { update?: () => void; dispose?: () => void },
 >(props: { lightRef: RefObject<L | null>; make: (light: L) => H }) {
-  const visible = useGizmoState('selected-only') === 'selected';
+  const visible = useGizmoDrawn('selected-only');
   const helper = usePrimitiveHelper<H>(() => {
     if (!visible) return null;
     const light = props.lightRef.current;

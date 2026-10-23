@@ -15,20 +15,22 @@ An editor-only helper that draws a fading grid under an AnimationMixer to visual
 ## Linting
 
 <!-- lint:begin RootMotionView -->
+
 Strict parsing format-checks these `RootMotionView` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `animation_path` | NodePath("path/to/node") |  |
-| `cell_size` | float >= 0.1 | warning below |
-| `color` | Color(r, g, b, a), or the colour string or int it converts |  |
-| `radius` | float >= 0.1 | warning below |
-| `zero_y` | true or false |  |
+| Property         | Accepts                                                    | Out of range  |
+| ---------------- | ---------------------------------------------------------- | ------------- |
+| `animation_path` | NodePath("path/to/node")                                   |               |
+| `cell_size`      | float >= 0.1                                               | warning below |
+| `color`          | Color(r, g, b, a), or the colour string or int it converts |               |
+| `radius`         | float >= 0.1                                               | warning below |
+| `zero_y`         | true or false                                              |               |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
+| Rule                                          | Reports                     | Severity |
+| --------------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes)       | `binary-resource-reference` | info     |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`   | error    |
+
 <!-- lint:end -->
 
 `index.ts` registers `parseNode3D`, which reads only `transform` and `visible`. A malformed `cell_size = "banana"` or an unquoted `animation_path` parses with no error and no substitution, and only strict reports it.

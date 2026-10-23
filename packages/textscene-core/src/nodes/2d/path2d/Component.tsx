@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { resolveCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
@@ -20,7 +20,7 @@ const PATH_COLOR = 0xffffff;
 export function Path2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Path2DProperties;
   const { internalResources } = useSceneResources();
-  const drawsCurve = useGizmoState('every-node') !== 'hidden';
+  const drawsCurve = useGizmoDrawn('every-node');
 
   const sampler = useMemo<Curve2DSampler | null>(() => {
     // Only an embedded SubResource Curve2D resolves synchronously. Any other

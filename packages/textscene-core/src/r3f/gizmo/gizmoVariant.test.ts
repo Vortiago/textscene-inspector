@@ -9,8 +9,4 @@ describe('gizmoAlpha', () => {
   it('multiplies the colour alpha of an unselected gizmo by 0.3', () => {
     expect(gizmoAlpha('unselected', 0.5)).toBeCloseTo(0.15, 10);
   });
-
-  it('takes an opaque colour when no alpha is given', () => {
-    expect([gizmoAlpha('selected'), gizmoAlpha('unselected')]).toEqual([1, 0.3]);
-  });
 });

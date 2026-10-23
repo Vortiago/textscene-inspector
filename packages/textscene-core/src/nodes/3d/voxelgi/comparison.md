@@ -23,20 +23,22 @@ The previewer draws no edit handles and no billboard icon.
 ## Linting
 
 <!-- lint:begin VoxelGI -->
+
 Strict parsing format-checks these `VoxelGI` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `camera_attributes` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `data` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `size` | Vector3(x, y, z), each float >= 1 | error below |
-| `subdiv` | enum 0-3 (SUBDIV_64/SUBDIV_128/SUBDIV_256/SUBDIV_512) | error |
+| Property            | Accepts                                                        | Out of range |
+| ------------------- | -------------------------------------------------------------- | ------------ |
+| `camera_attributes` | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
+| `data`              | null, SubResource("id"), ExtResource("id") or Resource("path") |              |
+| `size`              | Vector3(x, y, z), each float >= 1                              | error below  |
+| `subdiv`            | enum 0-3 (SUBDIV_64/SUBDIV_128/SUBDIV_256/SUBDIV_512)          | error        |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-voxelgi-data` | `voxelgi-missing-data` | warning |
+| Rule                                          | Reports                     | Severity |
+| --------------------------------------------- | --------------------------- | -------- |
+| `binary-resource-reference` (all nodes)       | `binary-resource-reference` | info     |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`   | error    |
+| `valid-voxelgi-data`                          | `voxelgi-missing-data`      | warning  |
+
 <!-- lint:end -->
 
 The lenient parser reads `size` and `subdiv` for the gizmo. It raises each side of `size` below 1 to 1, as `set_size` does. A malformed value or a `subdiv` outside 0 to 3 keeps Godot's default.

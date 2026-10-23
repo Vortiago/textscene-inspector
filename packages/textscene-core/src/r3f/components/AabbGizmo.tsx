@@ -13,7 +13,7 @@ interface AabbGizmoProps {
   aabb: Aabb;
   /** The sRGB colour Godot draws the edges in. */
   color: { r: number; g: number; b: number };
-  variant?: GizmoVariant;
+  variant: GizmoVariant;
 }
 
 export function AabbGizmo({ aabb, color, variant }: AabbGizmoProps) {

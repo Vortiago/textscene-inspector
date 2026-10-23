@@ -12,7 +12,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { warn } from '../../../logger';
 import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { useShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
@@ -24,7 +24,7 @@ import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 export function LightOccluder2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as LightOccluder2DProperties;
   const sceneResources = useSceneResources();
-  const drawsOutline = useGizmoState('every-node') !== 'hidden';
+  const drawsOutline = useGizmoDrawn('every-node');
   // A callback ref, not useRef, so the caster re-registers once the anchor exists:
   // an effect reading a ref would see null on the mount pass.
   const [anchor, setAnchor] = useState<THREE.Group | null>(null);

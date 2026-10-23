@@ -11,8 +11,8 @@ import { ViewportModeProvider } from '../contexts/ViewportModeContext';
 import { SelectSeeder } from './SelectSeeder';
 
 interface GizmoSceneProps {
-  /** The path of the node under test. */
-  nodePath: string;
+  /** The path of the node under test, or null for a gizmo outside a node dispatcher. */
+  nodePath: string | null;
   /** The selected path, or null for no selection. */
   selectedPath: string | null;
   showGizmos?: boolean;
@@ -24,7 +24,7 @@ export function GizmoScene({ nodePath, selectedPath, showGizmos = true, children
     <ViewportModeProvider initialShowGizmos={showGizmos}>
       <SelectionProvider>
         <SelectSeeder path={selectedPath} />
-        <NodePathProvider path={nodePath}>{children}</NodePathProvider>
+        {nodePath === null ? children : <NodePathProvider path={nodePath}>{children}</NodePathProvider>}
       </SelectionProvider>
     </ViewportModeProvider>
   );

@@ -9,6 +9,6 @@ export type GizmoVariant = 'selected' | 'unselected';
 const UNSELECTED_ALPHA_FACTOR = 0.3;
 
 /** The opacity of a gizmo part whose Godot colour has alpha `colourAlpha`, in `variant`. */
-export function gizmoAlpha(variant: GizmoVariant, colourAlpha = 1): number {
+export function gizmoAlpha(variant: GizmoVariant, colourAlpha: number): number {
   return variant === 'unselected' ? colourAlpha * UNSELECTED_ALPHA_FACTOR : colourAlpha;
 }

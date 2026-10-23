@@ -13,7 +13,6 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Decal } from './Component';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
 import { lineOpacities } from '../../../r3f/testing/GizmoScene';
 import {
   AnimatedValueProvider,
@@ -80,17 +79,16 @@ interface RenderOptions {
 /** The mounted tree, separated from `create` so a test can re-render it. */
 function decalTree(opts: RenderOptions, loader: ReturnType<typeof createFakeResourceLoader>['loader']) {
   return (
-    <ViewportModeProvider initialShowGizmos={opts.showGizmos ?? true}>
-      <SceneStack
-        loader={loader}
-        scene={{ externalResources: opts.externals ?? [], internalResources: opts.internals ?? [] }}
-        selectedPath={opts.selectedPath}
-      >
-        <NodePathProvider path={opts.node.name}>
-          <Decal node={opts.node}>{opts.children}</Decal>
-        </NodePathProvider>
-      </SceneStack>
-    </ViewportModeProvider>
+    <SceneStack
+      loader={loader}
+      scene={{ externalResources: opts.externals ?? [], internalResources: opts.internals ?? [] }}
+      selectedPath={opts.selectedPath}
+      showGizmos={opts.showGizmos ?? true}
+    >
+      <NodePathProvider path={opts.node.name}>
+        <Decal node={opts.node}>{opts.children}</Decal>
+      </NodePathProvider>
+    </SceneStack>
   );
 }
 

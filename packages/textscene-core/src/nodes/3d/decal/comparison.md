@@ -29,34 +29,36 @@ The decal atlas gives each decal a mip chain, even over an import without one. I
 ## Linting
 
 <!-- lint:begin Decal -->
+
 Strict parsing format-checks these `Decal` properties, plus 1 inherited from VisualInstance3D, 17 inherited from Node3D, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `albedo_mix` | float 0-1 | warning |
-| `cull_mask` | 32-bit layer mask (layers 1-32) |  |
-| `distance_fade_begin` | float >= 0 | warning below |
-| `distance_fade_enabled` | true or false |  |
-| `distance_fade_length` | float >= 0 | warning below |
-| `emission_energy` | float >= 0 | warning below |
-| `lower_fade` | float >= 0 | error below |
-| `modulate` | Color(r, g, b, a), or the colour string or int it converts |  |
-| `normal_fade` | float 0-0.999 | warning |
-| `size` | Vector3(x, y, z), each float >= 0.001 | error below |
-| `sorting_offset` | float |  |
-| `texture_albedo` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `texture_emission` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `texture_normal` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `texture_orm` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `upper_fade` | float >= 0 | error below |
+| Property                | Accepts                                                        | Out of range  |
+| ----------------------- | -------------------------------------------------------------- | ------------- |
+| `albedo_mix`            | float 0-1                                                      | warning       |
+| `cull_mask`             | 32-bit layer mask (layers 1-32)                                |               |
+| `distance_fade_begin`   | float >= 0                                                     | warning below |
+| `distance_fade_enabled` | true or false                                                  |               |
+| `distance_fade_length`  | float >= 0                                                     | warning below |
+| `emission_energy`       | float >= 0                                                     | warning below |
+| `lower_fade`            | float >= 0                                                     | error below   |
+| `modulate`              | Color(r, g, b, a), or the colour string or int it converts     |               |
+| `normal_fade`           | float 0-0.999                                                  | warning       |
+| `size`                  | Vector3(x, y, z), each float >= 0.001                          | error below   |
+| `sorting_offset`        | float                                                          |               |
+| `texture_albedo`        | null, SubResource("id"), ExtResource("id") or Resource("path") |               |
+| `texture_emission`      | null, SubResource("id"), ExtResource("id") or Resource("path") |               |
+| `texture_normal`        | null, SubResource("id"), ExtResource("id") or Resource("path") |               |
+| `texture_orm`           | null, SubResource("id"), ExtResource("id") or Resource("path") |               |
+| `upper_fade`            | float >= 0                                                     | error below   |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility` | error |
-| `valid-decal-resources` | `decal-requires-texture` | warning |
-|  | `decal-normal-orm-without-albedo` | warning |
-|  | `decal-empty-cull-mask` | warning |
+| Rule                                          | Reports                           | Severity |
+| --------------------------------------------- | --------------------------------- | -------- |
+| `binary-resource-reference` (all nodes)       | `binary-resource-reference`       | info     |
+| `valid-node3d-visibility` (type-family match) | `valid-node3d-visibility`         | error    |
+| `valid-decal-resources`                       | `decal-requires-texture`          | warning  |
+|                                               | `decal-normal-orm-without-albedo` | warning  |
+|                                               | `decal-empty-cull-mask`           | warning  |
+
 <!-- lint:end -->
 
 The linter warns (`resource-type-excluded-by-hint`) when one of the four `texture_*` slots holds a class its hint excludes, such as an `AtlasTexture`. Godot's editor never offers such a class, and the setter keeps it with a debug warning (`decal.cpp:49-58`).

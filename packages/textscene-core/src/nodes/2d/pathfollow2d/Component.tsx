@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
 import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';
 import { useCanvasItemRenderOrder } from '../../../r3f/contexts/PaintOrderContext';
@@ -31,7 +31,7 @@ const FOLLOW_DOT_POSITIONS = new Float32Array([
 export function PathFollow2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PathFollow2DProperties;
   const sampler = useParentPath2DCurve();
-  const gizmoVisible = useGizmoState('selected-only') === 'selected';
+  const gizmoVisible = useGizmoDrawn('selected-only');
 
   const parentModulate = useParentModulate();
   const modulate = useMemo(

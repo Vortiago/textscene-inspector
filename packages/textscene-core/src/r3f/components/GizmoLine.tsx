@@ -77,19 +77,23 @@ export function GizmoLine({
     return g;
   }, [positions, colors]);
   useDisposeOnRelease(geometry);
-  if (!geometry) return null;
-
+  const hasColors = colors !== undefined;
   // `vertexColors` is a program input (`WebGLPrograms.js:308`), and a gizmo that
   // gains or loses its colour attribute would otherwise keep the first program.
-  const program = materialProgramInputs({
-    props: {
-      color: color ?? 0xffffff,
-      opacity: gizmoAlpha(variant, opacity),
-      vertexColors: !!colors,
-      depthWrite: false,
-      transparent: true,
-    },
-  });
+  const program = useMemo(
+    () =>
+      materialProgramInputs({
+        props: {
+          color: color ?? 0xffffff,
+          opacity: gizmoAlpha(variant, opacity),
+          vertexColors: hasColors,
+          depthWrite: false,
+          transparent: true,
+        },
+      }),
+    [color, variant, opacity, hasColors]
+  );
+  if (!geometry) return null;
 
   return (
     <GizmoGroup>
