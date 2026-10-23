@@ -48,9 +48,7 @@ The texture carries them as its own levels, so the GPU builds no chain over them
 _Avoid_: "mipmaps" for a chain the GPU generates.
 
 **Noise mip chain** (`resources/textures/noisetexture2d/pixels.ts`):
-The levels a NoiseTexture2D builds on the CPU when its `generate_mipmaps` is on: each level averages the bytes of the one above, as the **Imported mip chain** does, and no level is renormalised.
-The texture carries them as its own levels, so the GPU builds no chain over them.
-_Avoid_: "mipmaps" for a chain the GPU generates.
+The **Imported mip chain** of a NoiseTexture2D whose `generate_mipmaps` is on, built when the texture is rasterised. No level is renormalised.
 
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.

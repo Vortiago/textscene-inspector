@@ -3,6 +3,8 @@
  * that must produce the same bytes: the in-thread build, the worker job and the
  * shipped worker bundle. Each case moves one input of the pipeline.
  */
+import { createHash } from 'node:crypto';
+import type { MipLevel } from '../../processing/mipChain';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
 import { gradientOf } from '../gradienttexture2d/gradient.testkit';
@@ -52,26 +54,6 @@ export const NOISE_PIXEL_CASES: readonly NoisePixelCase[] = [
   noiseCase('one texel', { width: '1', height: '1' }),
   noiseCase('one texel tall', { width: '6', height: '1' }),
 ];
-
-/** SHA-256 of each case's bottom-up RGBA bytes: the bytes Godot's pipeline order gives. */
-export const PINNED_PIXEL_HASHES: Readonly<Record<string, string>> = {
-  plain: '9ffc20780ebeca805ac9071bff38106902bad800bcbdc514f8eda1261f489393',
-  'plain inverted': '12824c1681f8db9b0c876ac4a2c026fd94cb3036ecead7ebaaa513d39839cd3b',
-  'raw range': 'a467d08140e2e13ed7279a3f857e99df6a61dcd60b66bc60ab33b0e29ac182ee',
-  'raw range inverted': 'bdb9ef419fc55020214f39ae977f94c403e04e67f495658050ed8a918443a3ec',
-  seamless: '94a9a2cdf89e78a485fc8abe8b1836837606eb5ffc00e71233d14980e52e226f',
-  'seamless inverted': 'e318101f675047943e5bb3e150e52c1174c93dcae05647fc64413dbfc84788c3',
-  'seamless raw range': '599a0b00113d3ca75e688a1fb71142e3c3517e085a7955635e9445381c2ea4a9',
-  'seamless minimum skirt': 'cc49240cd00fc2127562311c933a1d07d29b40df15e407fce25d8c3de297084a',
-  'seamless skirt past half': 'e965753eab458f07f4a67da10b7c863d7c02039595d3c96a1ccff87a4559517b',
-  'colour ramp': 'e22ddba9837fe70c5d9247d6f5397f06a8a7212d4fd4c746e7ebdf37eb417fbd',
-  'normal map': '28e6f7bfec700912222420c7aa61a04d2f2f31168822730ccc2f1ead9d637050',
-  'normal map over a ramp': '20b2b5e68ecb159bad9e76cf7602aff9c00701552f0b8487c0732b746b40a8b2',
-  'five by three': 'bcbfecba48dcd93ef5a0b2eef6825d374b0e6bd99ce86ca6a842eacbbf121d40',
-  'one texel wide': '41612067cb82466e6520a623b0d5d2f48b656e884d0ebcc4046f5787850d3249',
-  'one texel': 'e3820096cb82366b860b8a4e668453a7aaaf423af03bdf289fa308ea03a79332',
-  'one texel tall': '13cfd58fc3d5f4a4519ab71ba757bf6a123b129e51a7cb08d72e7ffc4a766b4e',
-};
 
 /**
  * SHA-256 of each level's bottom-up RGBA bytes, base first: `NoiseTexture2D.get_image()` after
@@ -193,3 +175,13 @@ export const PINNED_LEVEL_HASHES: Readonly<Record<string, readonly string[]>> = 
     '5d99bebb39884386b0bfa9219bff14ef27c391c53f638fcc689f899c8a99b835', // 1x1
   ],
 };
+
+/** SHA-256 of each case's base level, the bytes `generate_mipmaps` off leaves. */
+export const PINNED_PIXEL_HASHES: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(PINNED_LEVEL_HASHES).map(([name, [base]]) => [name, base!])
+);
+
+/** The SHA-256 of each level's bytes, base first: the shape `PINNED_LEVEL_HASHES` pins. */
+export function levelHashes(levels: readonly Pick<MipLevel, 'data'>[]): string[] {
+  return levels.map(({ data }) => createHash('sha256').update(data).digest('hex'));
+}

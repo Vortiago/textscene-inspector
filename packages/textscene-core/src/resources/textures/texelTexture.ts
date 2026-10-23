@@ -28,12 +28,13 @@ export function texelTexture(source: THREE.Texture, levels: MipLevel[]): THREE.D
 /**
  * Hands three the whole chain `levels` holds, so it uploads them as they stand and builds none.
  * One level is no chain: `texture` keeps its sampler and the GPU's choice. The first level holds
- * `texture`'s own bytes.
+ * `texture`'s own bytes. Returns whether a chain was attached.
  */
-export function carryMipChain(texture: THREE.DataTexture, levels: MipLevel[]): void {
-  if (levels.length < 2) return;
+export function carryMipChain(texture: THREE.DataTexture, levels: MipLevel[]): boolean {
+  if (levels.length < 2) return false;
   texture.mipmaps = levels;
   texture.generateMipmaps = false;
+  return true;
 }
 
 /**

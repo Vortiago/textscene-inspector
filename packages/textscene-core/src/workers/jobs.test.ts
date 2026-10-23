@@ -2,9 +2,9 @@
  * The worker job registry: each job is a pure function whose input survives a
  * structured clone and whose output buffers transfer back.
  */
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import {
+  levelHashes,
   NOISE_PIXEL_CASES,
   PINNED_LEVEL_HASHES,
 } from '../resources/textures/noisetexture2d/pixelCases.testkit';
@@ -20,9 +20,7 @@ describe('noise-texture-2d job', () => {
 
   it.each(NOISE_PIXEL_CASES)('gives the pinned levels for $name', ({ name, tex, noise, colorRamp }) => {
     const { levels } = job.run({ tex, noise, colorRamp });
-    expect(levels.map(({ data }) => createHash('sha256').update(data).digest('hex'))).toEqual(
-      PINNED_LEVEL_HASHES[name]
-    );
+    expect(levelHashes(levels)).toEqual(PINNED_LEVEL_HASHES[name]);
   });
 
   it('transfers exactly the level buffers', () => {

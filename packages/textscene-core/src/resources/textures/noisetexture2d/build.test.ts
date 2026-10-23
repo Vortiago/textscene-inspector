@@ -4,7 +4,6 @@
  * normalization, the seam blend, the bump conversion's channel and the row order.
  * The generator is the official JS port, so it is not re-tested here.
  */
-import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { noiseTextureFits, noiseDataTexture } from './build';
@@ -15,7 +14,7 @@ import { noiseImage, seamlessNoiseImage, seamlessSource } from '../../noise/imag
 import { decodeNoiseTexture2D } from './decode';
 import { noiseTexture2DLevels } from './pixels';
 import type { MipLevel } from '../../processing/mipChain';
-import { PINNED_LEVEL_HASHES, NOISE_PIXEL_CASES } from './pixelCases.testkit';
+import { levelHashes, NOISE_PIXEL_CASES, PINNED_LEVEL_HASHES } from './pixelCases.testkit';
 import type { NoiseTexture2DData } from './types';
 import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
 import type { FastNoiseLiteData } from '../../noise/fastnoiselite/types';
@@ -279,55 +278,45 @@ describe('noiseTexture2DLevels in a noiseDataTexture', () => {
       .data as Uint8Array;
     expect([...a]).not.toEqual([...b]);
   });
-});
 
-describe('a noiseDataTexture of a mip chain', () => {
-  const noise = decodeFastNoiseLite({ frequency: '0.05' });
+  describe('with a mip chain', () => {
+    const chained = (properties: Record<string, string>) =>
+      rasterized(decodeNoiseTexture2D(properties), noise, null);
 
-  function chained(properties: Record<string, string>): THREE.DataTexture {
-    const input = { tex: decodeNoiseTexture2D(properties), noise, colorRamp: null };
-    return noiseDataTexture(noiseTexture2DLevels(input), input);
-  }
+    const sizes = (texture: THREE.Texture) =>
+      texture.mipmaps.map(({ width, height }) => `${width}x${height}`);
 
-  const levelAt = (texture: THREE.Texture, index: number) => texture.mipmaps[index] as MipLevel;
+    it('carries log2(max side) + 1 levels, which three uploads as they stand', () => {
+      const texture = chained({ width: '16', height: '8' });
+      expect(sizes(texture)).toEqual(['16x8', '8x4', '4x2', '2x1', '1x1']);
+      expect(texture.generateMipmaps).toBe(false);
+    });
 
-  const sizes = (texture: THREE.Texture) => texture.mipmaps.map(({ width, height }) => `${width}x${height}`);
+    it('shares its base bytes between the image and the first level', () => {
+      const texture = chained({ width: '16', height: '8' });
+      expect((texture.mipmaps[0] as MipLevel).data).toBe(texture.image.data);
+    });
 
-  it('carries log2(max side) + 1 levels, which three uploads as they stand', () => {
-    const texture = chained({ width: '16', height: '8' });
-    expect(sizes(texture)).toEqual(['16x8', '8x4', '4x2', '2x1', '1x1']);
-    expect(texture.generateMipmaps).toBe(false);
-  });
+    it('minifies between levels, so the default sampler reads them', () => {
+      expect(chained({ width: '16', height: '8' }).minFilter).toBe(THREE.LinearMipmapLinearFilter);
+    });
 
-  it('shares its base bytes between the image and the first level', () => {
-    const texture = chained({ width: '16', height: '8' });
-    expect(levelAt(texture, 0).data).toBe(texture.image.data);
-  });
+    it("holds Godot's bottom row out of an odd height, in the bottom-up upload", () => {
+      const odd = NOISE_PIXEL_CASES.find(({ name }) => name === 'five by three')!;
+      const texture = noiseDataTexture(noiseTexture2DLevels(odd), odd);
+      expect(sizes(texture)).toEqual(['5x3', '2x1', '1x1']);
+      expect(levelHashes(texture.mipmaps as MipLevel[])).toEqual(PINNED_LEVEL_HASHES['five by three']);
+    });
 
-  it('minifies between levels, so the default sampler reads them', () => {
-    expect(chained({ width: '16', height: '8' }).minFilter).toBe(THREE.LinearMipmapLinearFilter);
-  });
-
-  it("holds Godot's bottom row out of an odd height, in the bottom-up upload", () => {
-    const odd = NOISE_PIXEL_CASES.find(({ name }) => name === 'five by three')!;
-    const texture = noiseDataTexture(noiseTexture2DLevels(odd), odd);
-    expect(sizes(texture)).toEqual(['5x3', '2x1', '1x1']);
-    expect(createHash('sha256').update(levelAt(texture, 1).data).digest('hex')).toBe(
-      PINNED_LEVEL_HASHES['five by three']![1]
-    );
-  });
-
-  it('carries one level and no chain with generate_mipmaps off', () => {
-    const texture = chained({ width: '16', height: '8', generate_mipmaps: 'false' });
-    expect(texture.mipmaps).toHaveLength(0);
-    expect(texture.generateMipmaps).toBe(false);
-    expect(texture.minFilter).toBe(THREE.LinearFilter);
-  });
-
-  it('carries one level for a 1 x 1 texture, which has nothing to average', () => {
-    const texture = chained({ width: '1', height: '1' });
-    expect(texture.mipmaps).toHaveLength(0);
-    expect(texture.generateMipmaps).toBe(false);
+    it.each([
+      ['generate_mipmaps off', { width: '16', height: '8', generate_mipmaps: 'false' }],
+      ['a 1 x 1 texture, which has nothing to average', { width: '1', height: '1' }],
+    ])('carries no chain with %s', (_, properties) => {
+      const texture = chained(properties);
+      expect(texture.mipmaps).toHaveLength(0);
+      expect(texture.generateMipmaps).toBe(false);
+      expect(texture.minFilter).toBe(THREE.LinearFilter);
+    });
   });
 });
 

@@ -12,7 +12,8 @@ import { grayToRgba, modulateWithGradient } from '../../noise/image/gradientModu
 import { noiseSampler } from '../../noise/image/noiseSampler';
 import { noiseImage, seamlessNoiseImage } from '../../noise/image/noiseImage';
 import { bumpMapToNormalMap } from './normalMap';
-import { mipChain, reversedLevel, type MipLevel } from '../../processing/mipChain';
+import { mipChain, type MipLevel } from '../../processing/mipChain';
+import { reverseRowsInPlace } from '../../../utils/reversedRows';
 
 /** Everything the pixels depend on, already decoded and resolved: a structured-clone value. */
 export interface NoiseTexture2DInput {
@@ -32,7 +33,10 @@ export function noiseTexture2DLevels({ tex, noise, colorRamp }: NoiseTexture2DIn
   const { width, height } = tex;
   const base = { data: rgbaPixels(tex, noise, colorRamp), width, height };
   const levels = tex.generateMipmaps ? mipChain(base, false) : [base];
-  return levels.map(reversedLevel);
+  // In place, after the chain: the rows are top-down until it is built, and a second copy of
+  // each level would raise the worker's peak memory from 1.33 to 2.67 times the base.
+  for (const level of levels) reverseRowsInPlace(level.data, level.width, level.height);
+  return levels;
 }
 
 /** The noise image, then the colour ramp, then the bump-to-normal pass, as top-down RGBA. */

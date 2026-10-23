@@ -26,6 +26,19 @@ export function reversedRows<Source extends Pixels>(
   return reversed as ReversedPixels<Source>;
 }
 
+/** Reverses the rows of `rgba` where they lie, through one row of scratch: no second buffer. */
+export function reverseRowsInPlace(rgba: Pixels, width: number, height: number): void {
+  const rowTexels = width * 4;
+  const scratch = emptyLike(rgba).subarray(0, rowTexels);
+  for (let top = 0, bottom = height - 1; top < bottom; top++, bottom--) {
+    const topRow = rgba.subarray(top * rowTexels, (top + 1) * rowTexels);
+    const bottomRow = rgba.subarray(bottom * rowTexels, (bottom + 1) * rowTexels);
+    scratch.set(topRow);
+    topRow.set(bottomRow);
+    bottomRow.set(scratch);
+  }
+}
+
 function emptyLike(rgba: Pixels): Uint8Array | Uint16Array | Float32Array {
   if (rgba instanceof Float32Array) return new Float32Array(rgba.length);
   if (rgba instanceof Uint16Array) return new Uint16Array(rgba.length);
