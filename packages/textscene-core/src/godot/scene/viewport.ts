@@ -224,8 +224,29 @@ export const DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT_NAMES = enumNamesByValue(Default
 
 export const DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NAMES = enumNamesByValue(DefaultCanvasItemTextureFilter);
 
+/** The filters 4.6.3's setter accepts (`viewport.cpp:3968`): every value but 4.7's PARENT_NODE. */
+export const VIEWPORT_TEXTURE_FILTERS = [
+  DefaultCanvasItemTextureFilter.NEAREST,
+  DefaultCanvasItemTextureFilter.LINEAR,
+  DefaultCanvasItemTextureFilter.LINEAR_WITH_MIPMAPS,
+  DefaultCanvasItemTextureFilter.NEAREST_WITH_MIPMAPS,
+] as const;
+
+/** The repeats 4.6.3's setter accepts (`viewport.cpp:3999`): every value but 4.7's PARENT_NODE. */
+export const VIEWPORT_TEXTURE_REPEATS = [
+  DefaultCanvasItemTextureRepeat.DISABLED,
+  DefaultCanvasItemTextureRepeat.ENABLED,
+  DefaultCanvasItemTextureRepeat.MIRROR,
+] as const;
+
+type ViewportTextureFilter = (typeof VIEWPORT_TEXTURE_FILTERS)[number];
+type ViewportTextureRepeat = (typeof VIEWPORT_TEXTURE_REPEATS)[number];
+
 /** A Viewport's default filter for a CanvasItem that defers to its ancestors (`viewport.h:419`). */
 export const VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER = DefaultCanvasItemTextureFilter.LINEAR;
+
+/** A Viewport's default repeat for a CanvasItem that defers to its ancestors (`viewport.h:420`). */
+export const VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT = DefaultCanvasItemTextureRepeat.DISABLED;
 
 /** What a CanvasItem at PARENT_NODE with no ancestor to defer to resolves to: the viewport's default. */
 export interface CanvasItemTextureDefaults {
@@ -233,22 +254,28 @@ export interface CanvasItemTextureDefaults {
   repeat: EnumValue<typeof CanvasItemTextureRepeat>;
 }
 
-const CANVAS_ITEM_FILTER_OF_DEFAULT: readonly EnumValue<typeof CanvasItemTextureFilter>[] = [
-  CanvasItemTextureFilter.NEAREST,
-  CanvasItemTextureFilter.LINEAR,
-  CanvasItemTextureFilter.LINEAR_WITH_MIPMAPS,
-  CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS,
-];
+const CANVAS_ITEM_FILTER_OF_DEFAULT: Record<
+  ViewportTextureFilter,
+  EnumValue<typeof CanvasItemTextureFilter>
+> = {
+  [DefaultCanvasItemTextureFilter.NEAREST]: CanvasItemTextureFilter.NEAREST,
+  [DefaultCanvasItemTextureFilter.LINEAR]: CanvasItemTextureFilter.LINEAR,
+  [DefaultCanvasItemTextureFilter.LINEAR_WITH_MIPMAPS]: CanvasItemTextureFilter.LINEAR_WITH_MIPMAPS,
+  [DefaultCanvasItemTextureFilter.NEAREST_WITH_MIPMAPS]: CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS,
+};
 
-const CANVAS_ITEM_REPEAT_OF_DEFAULT: readonly EnumValue<typeof CanvasItemTextureRepeat>[] = [
-  CanvasItemTextureRepeat.DISABLED,
-  CanvasItemTextureRepeat.ENABLED,
-  CanvasItemTextureRepeat.MIRROR,
-];
+const CANVAS_ITEM_REPEAT_OF_DEFAULT: Record<
+  ViewportTextureRepeat,
+  EnumValue<typeof CanvasItemTextureRepeat>
+> = {
+  [DefaultCanvasItemTextureRepeat.DISABLED]: CanvasItemTextureRepeat.DISABLED,
+  [DefaultCanvasItemTextureRepeat.ENABLED]: CanvasItemTextureRepeat.ENABLED,
+  [DefaultCanvasItemTextureRepeat.MIRROR]: CanvasItemTextureRepeat.MIRROR,
+};
 
-/** The table entry at `index`, `undefined` for no index or one outside the table. */
-function entryAt<T>(table: readonly T[], index: number | undefined): T | undefined {
-  return index === undefined ? undefined : table[index];
+/** `value` when `accepted` holds it, else `initial`, as a setter that refuses the value keeps it. */
+function acceptedOr<T extends number>(accepted: readonly T[], value: number | undefined, initial: T): T {
+  return accepted.find((candidate) => candidate === value) ?? initial;
 }
 
 /**
@@ -262,8 +289,14 @@ export function viewportCanvasItemTextureDefaults(
   repeat: number | undefined
 ): CanvasItemTextureDefaults {
   return {
-    filter: entryAt(CANVAS_ITEM_FILTER_OF_DEFAULT, filter) ?? CanvasItemTextureFilter.LINEAR,
-    repeat: entryAt(CANVAS_ITEM_REPEAT_OF_DEFAULT, repeat) ?? CanvasItemTextureRepeat.DISABLED,
+    filter:
+      CANVAS_ITEM_FILTER_OF_DEFAULT[
+        acceptedOr(VIEWPORT_TEXTURE_FILTERS, filter, VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_FILTER)
+      ],
+    repeat:
+      CANVAS_ITEM_REPEAT_OF_DEFAULT[
+        acceptedOr(VIEWPORT_TEXTURE_REPEATS, repeat, VIEWPORT_DEFAULT_CANVAS_ITEM_TEXTURE_REPEAT)
+      ],
   };
 }
 
