@@ -87,16 +87,24 @@ A node that the edited scene authors under an instanced GLB takes the level of t
 instances the GLB, not the GLB's, so its gizmo keeps its colour. `GlbInstanceProvider` holds that
 level for `GlbAttachedChildren`. The GLB code draws no gizmo of its own.
 
-Value check, over a flat 0.3 clear. A Godot scene draws three runtime lines with the gizmo material:
-unshaded, alpha blend, albedo rgb(0.7, 0.7, 0.7), alpha 0.18, 0.6 and 1. They render as rgb(105),
-rgb(148) and rgb(178) over a clear of 76.
+Value check, over a flat 0.3 clear, on the same camera. A Godot scene replicates each gizmo with the
+gizmo material: unshaded, alpha blend, no culling, albedo rgb(0.7, 0.7, 0.7). `ref:godot` renders it,
+and the previewer renders the locked node through the Godot comparison browser, with the selection
+highlight off. Both are neutral grey, so the three channels are equal.
 
-A locked SpringArm3D draws its line over two pixel rows here. The rows are 78 and 103 unselected, and
-81 and 143 selected, over a clear of 77. In linear light the rows sum to 94 % and 93 % of one full
-line, which is the pixel rgb(105) and rgb(149).
+- The locked SpringArm3D length line, unselected (alpha 0.18): 189 pixels read rgb(105) in both.
+- The same line, selected (alpha 0.6): 189 pixels read rgb(148) and 11 read rgb(145) in both.
+- The fill of the selected locked CPUParticles3D, two faces at alpha 0.6: 310 125 interior pixels
+  read rgb(167) in both. The previewer's own box edges, at alpha 0.6 over the fill, read rgb(174).
 
-The one level between 148 and 149 comes from the clear. The blend gives 148.36 over 76 and 148.53
-over 77. Godot truncates 0.3 × 255 = 76.5 to 76, and this previewer rounds it to 77.
+The clear is rgb(76) in Godot and rgb(77) here. Godot truncates 0.3 × 255 = 76.5, and this previewer
+rounds it. The blend gives 148.36 over 76 and 148.53 over 77, so the line reads 148 in both.
+
+Godot draws 61 more pixels along the line than the previewer, where the line steps to the next row.
+The other 189 pixels match in position and value, so the line differs in coverage, not in colour.
+The visual baselines carry a ring of about 6 % outside a hard top and left edge, from the software
+compositor (`launchGodotComparisonBrowser`). A line on a golden reads about 103 beside a faint 78,
+and the comparison browser reads 105.
 
 The editable sibling of the particles emitter draws rgb(132, 119, 85), the plain unselected
 particles colour. The fill of the selected locked emitter draws rgb(167), two faces at alpha 0.6.
