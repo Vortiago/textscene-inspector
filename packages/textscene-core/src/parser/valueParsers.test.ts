@@ -26,6 +26,9 @@ import {
   parseOptionalAabb,
   parseOptionalRect2,
   parseHeadingIndex,
+  realOr,
+  realVec2Or,
+  realVec3Or,
 } from './valueParsers';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -506,5 +509,48 @@ describe('parseHeadingIndex', () => {
 
   it('keeps the low 32 bits of an index past the int', () => {
     expect(parseHeadingIndex('4294967299')).toBe(3);
+  });
+});
+
+describe('realOr', () => {
+  it('stores the value at single precision', () => {
+    expect(realOr('0.1', 0, 'x')).toBe(Math.fround(0.1));
+  });
+
+  it('keeps the fallback for an absent value (edge case)', () => {
+    expect(realOr(undefined, 0.5, 'x')).toBe(0.5);
+  });
+
+  it('warns and keeps the fallback for a value it cannot read (error case)', () => {
+    expect(realOr('fast', 0.5, 'x')).toBe(0.5);
+    expect(warnSpy).toHaveBeenCalledWith('x: invalid float "fast", using 0.5');
+  });
+
+  it('reads a double past the single range as the inf a real_t stores (edge case)', () => {
+    expect(realOr('1e39', 0.5, 'x')).toBe(Infinity);
+  });
+});
+
+describe('realVec2Or', () => {
+  it('stores each component at single precision', () => {
+    expect(realVec2Or('Vector2(0.1, 2)', { x: 0, y: 0 }, 'x')).toEqual({ x: Math.fround(0.1), y: 2 });
+  });
+
+  it('keeps the fallback for a value it cannot read (error case)', () => {
+    expect(realVec2Or('Vector2(a)', { x: 1, y: 1 }, 'x')).toEqual({ x: 1, y: 1 });
+  });
+});
+
+describe('realVec3Or', () => {
+  it('stores each component at single precision', () => {
+    expect(realVec3Or('Vector3(0.1, 2, 0.3)', { x: 0, y: 0, z: 0 }, 'x')).toEqual({
+      x: Math.fround(0.1),
+      y: 2,
+      z: Math.fround(0.3),
+    });
+  });
+
+  it('keeps the fallback for a value it cannot read (error case)', () => {
+    expect(realVec3Or('Vector3(a)', { x: 1, y: 1, z: 1 }, 'x')).toEqual({ x: 1, y: 1, z: 1 });
   });
 });
