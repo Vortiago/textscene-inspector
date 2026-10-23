@@ -25,7 +25,6 @@ import { GODOT_ALPHA_HASH } from '../materials/godotAlphaHash';
 import { GODOT_AMBIENT_OCCLUSION } from '../materials/godotAmbientOcclusion';
 import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRoughnessChannels';
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
-import { GODOT_UNIT_TANGENT_FRAME } from '../materials/godotNormalMap';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
 import { withPointDraw } from '../materials/godotPoint';
 import { renderTargetMapInjection, renderTargetMapUserData } from '../materials/renderTargetMap';
@@ -154,7 +153,6 @@ const INJECTIONS: readonly InjectionCase[] = [
     LIT,
     () => GODOT_METALLIC_ROUGHNESS_CHANNELS
   ),
-  injected('materials/godotNormalMap.ts', 'unit tangent frame', LIT, () => GODOT_UNIT_TANGENT_FRAME),
   injected(
     'materials/godotMipmapBias.ts',
     'mipmap bias',
