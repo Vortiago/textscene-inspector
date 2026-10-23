@@ -18,7 +18,7 @@ export function reversedRows<Source extends Pixels>(
   width: number,
   height: number
 ): ReversedPixels<Source> {
-  const reversed = emptyLike(rgba);
+  const reversed = emptyLike(rgba, rgba.length);
   const rowTexels = width * 4;
   for (let row = 0; row < height; row++) {
     reversed.set(rgba.subarray(row * rowTexels, (row + 1) * rowTexels), (height - 1 - row) * rowTexels);
@@ -29,7 +29,7 @@ export function reversedRows<Source extends Pixels>(
 /** Reverses the rows of `rgba` where they lie, through one row of scratch: no second buffer. */
 export function reverseRowsInPlace(rgba: Pixels, width: number, height: number): void {
   const rowTexels = width * 4;
-  const scratch = emptyLike(rgba).subarray(0, rowTexels);
+  const scratch = emptyLike(rgba, rowTexels);
   for (let top = 0, bottom = height - 1; top < bottom; top++, bottom--) {
     const topRow = rgba.subarray(top * rowTexels, (top + 1) * rowTexels);
     const bottomRow = rgba.subarray(bottom * rowTexels, (bottom + 1) * rowTexels);
@@ -39,10 +39,10 @@ export function reverseRowsInPlace(rgba: Pixels, width: number, height: number):
   }
 }
 
-function emptyLike(rgba: Pixels): Uint8Array | Uint16Array | Float32Array {
-  if (rgba instanceof Float32Array) return new Float32Array(rgba.length);
-  if (rgba instanceof Uint16Array) return new Uint16Array(rgba.length);
-  return new Uint8Array(rgba.length);
+function emptyLike(rgba: Pixels, length: number): Uint8Array | Uint16Array | Float32Array {
+  if (rgba instanceof Float32Array) return new Float32Array(length);
+  if (rgba instanceof Uint16Array) return new Uint16Array(length);
+  return new Uint8Array(length);
 }
 
 /**

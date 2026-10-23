@@ -26,9 +26,11 @@ describe('NoiseTexture2D levels', () => {
     }
   );
 
-  it('computes the base level alone with generate_mipmaps off', () => {
-    const { name, tex, noise, colorRamp } = NOISE_PIXEL_CASES[0]!;
-    const levels = noiseTexture2DLevels({ tex: { ...tex, generateMipmaps: false }, noise, colorRamp });
-    expect(levelHashes(levels)).toEqual([PINNED_PIXEL_HASHES[name]]);
-  });
+  it.each(NOISE_PIXEL_CASES)(
+    'computes the base level alone with generate_mipmaps off for $name',
+    ({ name, tex, noise, colorRamp }) => {
+      const levels = noiseTexture2DLevels({ tex: { ...tex, generateMipmaps: false }, noise, colorRamp });
+      expect(levelHashes(levels)).toEqual([PINNED_PIXEL_HASHES[name]]);
+    }
+  );
 });

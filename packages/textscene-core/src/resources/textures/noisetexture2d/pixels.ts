@@ -35,6 +35,7 @@ export function noiseTexture2DLevels({ tex, noise, colorRamp }: NoiseTexture2DIn
   const levels = tex.generateMipmaps ? mipChain(base, false) : [base];
   // In place, after the chain: the rows are top-down until it is built, and a second copy of
   // each level would raise the worker's peak memory from 1.33 to 2.67 times the base.
+  // `rgbaPixels` returns a fresh array each call, so the shared base is safe to reverse.
   for (const level of levels) reverseRowsInPlace(level.data, level.width, level.height);
   return levels;
 }
