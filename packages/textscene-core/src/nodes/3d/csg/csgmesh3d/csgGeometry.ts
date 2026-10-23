@@ -6,7 +6,12 @@
 
 import type * as THREE from 'three';
 import { isEqualApprox } from '../../../../godot/math/math';
-import type { CsgGeometryBuilder, CsgGeometryContext, CsgSolid } from '../../../../r3f/csg/csgRegistration';
+import {
+  csgSolid,
+  type CsgGeometryBuilder,
+  type CsgGeometryContext,
+  type CsgSolid,
+} from '../../../../r3f/csg/csgRegistration';
 import { internMaterial, type CsgMaterialAddress } from '../../../../r3f/csg/csgMaterials';
 import type { SceneResources } from '../../../../r3f/SceneResourcesContext';
 import { meshContentKey } from '../../../../resources/meshes/meshSource';
@@ -89,7 +94,7 @@ function buildMeshBrush(
   if (faces.smooth.length === 0) return null;
   const geometry = applyCsgNormals({ ...faces, invert: flipFaces });
   if (faces.materials.length > 1) addMaterialGroups(geometry, faces.faceMaterials);
-  return { geometry, materials: faces.materials };
+  return csgSolid(geometry, faces.materials);
 }
 
 function meshFaces(surfaces: readonly CsgMeshSurface[], nodeMaterial: CsgMaterialAddress): MeshFaces {

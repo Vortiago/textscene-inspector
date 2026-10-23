@@ -7,6 +7,7 @@
 import type * as THREE from 'three';
 import type { LoadedFile } from '../../resources/scopedResource';
 import type { SceneResources } from '../SceneResourcesContext';
+import { isClosedBrush } from './brushManifold';
 import type { CsgMaterialAddress } from './csgMaterials';
 
 export interface CsgGeometryContext extends SceneResources {
@@ -25,12 +26,23 @@ export interface CsgGeometryContext extends SceneResources {
 export interface CsgSolid {
   geometry: THREE.BufferGeometry;
   materials: readonly CsgMaterialAddress[];
+  /**
+   * Whether Godot's manifold keeps the brush. An open brush is empty: it draws nothing, bounds to
+   * a point and empties the whole fold of its node (`csg_shape.cpp:431,977-988`).
+   */
+  isClosed: boolean;
+}
+
+/** A solid over a non-indexed `geometry`, three positions to a triangle, as `applyCsgNormals` emits. */
+export function csgSolid(geometry: THREE.BufferGeometry, materials: readonly CsgMaterialAddress[]): CsgSolid {
+  const positions = geometry.getAttribute('position').array as Float32Array;
+  return { geometry, materials, isClosed: isClosedBrush(positions) };
 }
 
 /**
- * `null` contributes nothing (an unresolved mesh, a degenerate polygon, equal torus radii). The
- * plan drops it rather than treat it as an empty solid, since intersecting with an empty solid
- * differs from intersecting with nothing.
+ * `null` is an empty brush (an unresolved mesh, a degenerate polygon, equal torus radii). It adds
+ * nothing to a union, removes nothing in a subtraction and empties an intersection, as Godot's
+ * empty manifold does.
  */
 export type CsgGeometryBuilder = (
   properties: Record<string, unknown>,
@@ -67,5 +79,5 @@ export function primitiveSolid(
   geometry: THREE.BufferGeometry,
   properties: { materialPath?: string }
 ): CsgSolid {
-  return { geometry, materials: [properties.materialPath] };
+  return csgSolid(geometry, [properties.materialPath]);
 }

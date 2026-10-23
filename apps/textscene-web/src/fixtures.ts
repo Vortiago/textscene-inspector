@@ -3409,6 +3409,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - CSG Primitives"
   },
   {
+    "name": "Csg Mesh Open Brush",
+    "file": "unit-csg-mesh-open-brush.tscn",
+    "category": "Unit - CSG Primitives"
+  },
+  {
     "name": "Csg Mesh Sources",
     "file": "unit-csg-mesh-sources.tscn",
     "category": "Unit - CSG Primitives"

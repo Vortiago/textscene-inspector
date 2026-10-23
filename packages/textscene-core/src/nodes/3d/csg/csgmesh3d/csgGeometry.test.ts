@@ -366,3 +366,38 @@ describe('csgMesh3DReadsFiles', () => {
     ]);
   });
 });
+
+describe('csgMesh3DGeometry: a manifold brush', () => {
+  /** Whether the brush of a CSGMesh3D over one inline mesh of `type` is closed, as Godot's manifold needs. */
+  function isClosed(type: string, data: Record<string, string> = {}): boolean {
+    const ctx = csgGeometryContext({ internalResources: [{ id: 'Mesh', type, data }] });
+    return build('SubResource("Mesh")', {}, ctx)!.isClosed;
+  }
+
+  it.each([
+    ['BoxMesh', 'BoxMesh', {}],
+    ['CylinderMesh', 'CylinderMesh', {}],
+    ['CylinderMesh with one apex', 'CylinderMesh', { top_radius: '0.0' }],
+    ['CapsuleMesh', 'CapsuleMesh', {}],
+    ['SphereMesh', 'SphereMesh', {}],
+    ['TorusMesh', 'TorusMesh', {}],
+    ['PrismMesh', 'PrismMesh', {}],
+  ])('closes the brush of a %s, whose seams weld', (_label, type, data) => {
+    expect(isClosed(type, data)).toBe(true);
+  });
+
+  it.each([
+    ['PlaneMesh', 'PlaneMesh', {}],
+    ['QuadMesh', 'QuadMesh', {}],
+    ['CylinderMesh with cap_top off', 'CylinderMesh', { cap_top: 'false' }],
+    ['CylinderMesh with cap_bottom off', 'CylinderMesh', { cap_bottom: 'false' }],
+  ])('opens the brush of a %s', (_label, type, data) => {
+    expect(isClosed(type, data)).toBe(false);
+  });
+
+  it('closes a brush that the node flips, since the faces run both ways along each edge still', () => {
+    const ctx = csgGeometryContext({ internalResources: [INLINE_BOX] });
+
+    expect(build('SubResource("Box")', { flipFaces: true }, ctx)!.isClosed).toBe(true);
+  });
+});

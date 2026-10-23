@@ -34,7 +34,9 @@ Strict parsing format-checks these `CSGMesh3D` properties, plus 1 inherited from
 
 The linter warns (`resource-type-excluded-by-hint`) when `mesh` holds a class its hint excludes: a `PlaneMesh`, `PointMesh`, `QuadMesh` or `RibbonTrailMesh`. Godot's editor never offers such a class, and the setter keeps it without a warning (`csg_shape.cpp:1302-1316`). A `PointMesh` adds nothing to the solid, as in Godot, whose brush builder skips every surface that is not triangles (`csg_shape.cpp:1148-1150`).
 
-The lenient parser copies `mesh` through only when present. An absent one leaves the node with no solid, which is Godot's empty brush and not an error. `flip_faces` warns then falls back to `false` when unparseable. Neither side rejects a non-manifold `mesh` such as PlaneMesh, since Godot excludes those only in its property hint.
+The lenient parser copies `mesh` through only when present. An absent one leaves the node with no solid, which is Godot's empty brush and not an error. `flip_faces` warns then falls back to `false` when unparseable.
+
+A `mesh` that is an open brush adds nothing to the solid, as in Godot. A PlaneMesh, a QuadMesh and a CylinderMesh with a cap off are open. The node's own open brush also empties everything folded into it, its children included. Neither side rejects such a `mesh` when it parses, since Godot excludes those meshes only in its property hint.
 
 ## Known limitations
 
