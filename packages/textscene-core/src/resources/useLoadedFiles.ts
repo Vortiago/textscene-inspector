@@ -12,6 +12,7 @@ import type { LoadedFile } from './scopedResource';
 import { useCacheVersion } from './useCacheVersion';
 import { usePendingWhile } from './usePendingWhile';
 import { useResourceLoader } from './useResource';
+import { sameEntries } from '../utils/sameEntries';
 
 export interface LoadedFiles {
   /** The parse of a file the plan named, or undefined while it loads or after it failed. */
@@ -87,14 +88,6 @@ function useStableEntries(files: ReadonlyMap<string, CachedFile>): ReadonlyMap<s
     last.current = stable;
   }, [stable]);
   return stable;
-}
-
-function sameEntries(a: ReadonlyMap<string, CachedFile>, b: ReadonlyMap<string, CachedFile>): boolean {
-  if (a.size !== b.size) return false;
-  for (const [path, file] of b) {
-    if (!a.has(path) || a.get(path) !== file) return false;
-  }
-  return true;
 }
 
 /** Requests each file not yet cached, and pins each so LRU eviction spares it while mounted. */

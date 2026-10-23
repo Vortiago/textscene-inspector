@@ -29,6 +29,7 @@ import { WorkspaceAutoSelect } from './WorkspaceAutoSelect.js';
 import { SceneStats } from './SceneStats.js';
 import { SceneLoadStatus } from './SceneLoadStatus.js';
 import { TextureWorkStatus } from './TextureWorkStatus.js';
+import { SoftwareRenderingStatus } from '../../softwareRendering/SoftwareRenderingStatus.js';
 import {
   CollapsedDock,
   isNarrowPane,
@@ -122,7 +123,7 @@ export function TscnPreviewShell({
   return withProviders(
     <>
       {/* A host-forced mode turns auto-select off, or the root's claim overrides it. */}
-      {initialViewportMode === undefined && <WorkspaceAutoSelect sceneGraph={sceneGraph} />}
+      {initialViewportMode === undefined && <WorkspaceAutoSelect />}
       <SceneChangeResetter sceneGraph={sceneGraph} />
       <AnimationTabWatcher onVisibleChange={setAnimationTabVisible} />
       <CaptureStateReporter onCaptureStateChange={onCaptureStateChange} viewportError={viewportError} />
@@ -134,6 +135,7 @@ export function TscnPreviewShell({
           <div className={styles.topSpacer} />
           <SceneLoadStatus viewportError={viewportError} />
           <TextureWorkStatus />
+          <SoftwareRenderingStatus />
           <SceneStats />
           <HelpLink />
         </header>

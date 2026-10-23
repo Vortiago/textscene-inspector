@@ -7,8 +7,7 @@ import type { TscnNode, TscnExternalResource } from '../../../parser/types.js';
 import { getAncestorPaths } from '../../../utils/nodePath.js';
 import { useHierarchy } from '../../contexts/HierarchyContext.js';
 import { useSelection } from '../../contexts/SelectionContext.js';
-import { useResourceLoader } from '../../../resources/useResource.js';
-import { liveTreeContext, useLiveTreeVersion } from '../../useLiveSceneTree.js';
+import { useSharedLiveTree } from '../../useLiveSceneTree.js';
 import { walkLiveTree } from '../../liveSceneTree.js';
 import { TreeNode } from './TreeNode.js';
 import styles from './SceneTreeViewer.module.css';
@@ -39,8 +38,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
     setSelectedNodePath,
     toggleExpandedNodePath,
   } = useSelection();
-  const loader = useResourceLoader();
-  const version = useLiveTreeVersion(loader);
+  const liveTree = useSharedLiveTree();
 
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -60,13 +58,12 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
 
   // Search and expand walk the live tree, so a node inside an instance is
   // reachable. `matchingPaths` holds every match and its ancestors, and null
-  // means no search. It recomputes on the live-tree version tick.
+  // means no search. It recomputes on each load tick, which gives a new live tree.
   const matchingPaths = useMemo<ReadonlySet<string> | null>(() => {
     if (!term) return null;
-    const lt = liveTreeContext(sceneGraph, loader);
-    if (!lt) return new Set<string>();
+    if (!liveTree) return new Set<string>();
     const found = new Set<string>();
-    walkLiveTree(lt.roots, lt.ctx, ({ node, path }) => {
+    walkLiveTree(liveTree.roots, liveTree.ctx, ({ node, path }) => {
       if (node.name.toLowerCase().includes(term) || node.type.toLowerCase().includes(term)) {
         found.add(path);
         for (let slash = path.lastIndexOf('/'); slash > 0; slash = path.lastIndexOf('/', slash - 1)) {
@@ -75,9 +72,7 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
       }
     });
     return found;
-    // `version` is a cache-buster: it increments when a sub-scene or GLB loads.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [term, sceneGraph, loader, version]);
+  }, [term, liveTree]);
 
   const matches = useCallback(
     (path: string): boolean => matchingPaths === null || matchingPaths.has(path),
@@ -85,12 +80,11 @@ export function SceneTreeViewer({ onNodeReveal, onOpenSubScene }: SceneTreeViewe
   );
 
   const handleExpandAll = useCallback(() => {
-    const lt = liveTreeContext(sceneGraph, loader);
-    if (!lt) return;
+    if (!liveTree) return;
     const all = new Set<string>();
-    walkLiveTree(lt.roots, lt.ctx, ({ path }) => all.add(path));
+    walkLiveTree(liveTree.roots, liveTree.ctx, ({ path }) => all.add(path));
     setExpandedNodePaths(all);
-  }, [sceneGraph, loader, setExpandedNodePaths]);
+  }, [liveTree, setExpandedNodePaths]);
 
   const handleCollapseAll = useCallback(() => {
     setExpandedNodePaths(new Set());
