@@ -20,7 +20,8 @@ import {
 import type { GlbRoot } from './GlbInstanceContext';
 import type { GlbObjectEntry } from './glbHierarchy';
 import type { GlbNodeLink } from './glbNodeLinks';
-import { isApplicableGlbOverride, resolveGlbAttachments } from './glbNodeOverrides';
+import { isApplicableGlbOverride, resolveGlbAttachments, type GlbAttachment } from './glbNodeOverrides';
+import { reportIndirectMatch } from './matchGlbTarget';
 import { insertAtIndex } from '../../../godot/scene/siblingIndex';
 import { warn } from '../../../logger';
 
@@ -78,6 +79,8 @@ function attachedChildren(
   const entries = links.map((link) => link.entry);
   const { attached: placed, rest } = resolveGlbAttachments(entries, root.overrides);
   warnUnattached(rest);
+  for (const { node, target, match } of placed)
+    reportIndirectMatch(node.instanceSubPath!, entries[target]!, match);
   const orders = attachedOrders(entries, childOrders(rootOrder, entries.length), placed);
   return placed.map(({ node, target }) => ({
     node,
@@ -98,12 +101,6 @@ function warnUnattached(unattached: readonly LiveNode[]): void {
   }
 }
 
-/** An attached node, with the index of the entry of the GLB object it is added to. */
-interface PlacedNode {
-  node: LiveNode;
-  target: number;
-}
-
 /**
  * A GLB object's child, as the index of its entry, or a node attached to that object. An object
  * states no `index=`, as it is in place before any node is added.
@@ -118,7 +115,7 @@ type Sibling = { entry: number } | LiveNode;
 function attachedOrders(
   entries: readonly GlbObjectEntry[],
   entryOrders: readonly TreeOrder[],
-  placed: readonly PlacedNode[]
+  placed: readonly GlbAttachment[]
 ): Map<LiveNode, TreeOrder> {
   const siblingsOf = new Map<number, Sibling[]>();
   for (const { node, target } of placed) {

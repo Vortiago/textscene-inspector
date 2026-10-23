@@ -15,7 +15,7 @@ import { stampMeshInstanceLayers } from '../../../resources/formats/glb/meshInst
 import { joinPath } from '../../../utils/nodePath';
 import { perObject } from '../../../utils/perObject';
 import { flattenGlbObjects, glbObjectName, type GlbObjectEntry } from './glbHierarchy.js';
-import { findGlbTarget, matchGlbTarget } from './matchGlbTarget.js';
+import { findGlbTarget, matchGlbTarget, type GlbTargetMatchKind } from './matchGlbTarget.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 /**
@@ -86,10 +86,17 @@ function glbAttachPath(child: TscnNode): string | null {
   return isApplicableGlbOverride(child) ? null : child.instanceSubPath!;
 }
 
-/** A typed node of the instancing scene, with the index of the entry of the GLB object it is added to. */
-interface GlbAttachment {
+/** The lookup result of an override, which attaches to no object. */
+const NO_TARGET = { entry: null, kind: 'none' } as const;
+
+/**
+ * A typed node of the instancing scene, with the index of the entry of the GLB object it is added
+ * to, and how its path matched that entry.
+ */
+export interface GlbAttachment {
   node: LiveNode;
   target: number;
+  match: GlbTargetMatchKind;
 }
 
 /**
@@ -106,9 +113,9 @@ export function resolveGlbAttachments(
   const rest: LiveNode[] = [];
   for (const node of nodes) {
     const path = glbAttachPath(node);
-    const target = path === null ? null : findGlbTarget(entries, path).entry;
+    const { entry, kind } = path === null ? NO_TARGET : findGlbTarget(entries, path);
     // `indexOf` costs one more pass of the scan `findGlbTarget` has made, for a node that attaches.
-    if (target) attached.push({ node, target: entries.indexOf(target) });
+    if (entry) attached.push({ node, target: entries.indexOf(entry), match: kind });
     else rest.push(node);
   }
   return { attached, rest };

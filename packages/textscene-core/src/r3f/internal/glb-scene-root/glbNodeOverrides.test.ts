@@ -191,6 +191,17 @@ describe('resolveGlbAttachments', () => {
     ]);
   });
 
+  it('says how each path matched, so the viewport can report a match across added levels', () => {
+    const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
+
+    const { attached } = resolveGlbAttachments(entries, [
+      lamp('Skeleton/Skeleton3D/Robot'),
+      lamp('Skeleton'),
+    ]);
+
+    expect(attached.map(({ match }) => match)).toEqual(['subsequence', 'exact']);
+  });
+
   it('attaches no override, which names an existing node rather than adding one', () => {
     const entries = flattenGlbObjects(buildTestGlbGraph(['Skeleton/Robot']));
     const robot = override('Robot', { instanceSubPath: 'Skeleton' });
