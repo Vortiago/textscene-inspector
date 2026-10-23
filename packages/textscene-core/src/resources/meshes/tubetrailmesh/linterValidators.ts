@@ -12,7 +12,7 @@ import { v } from '../../../linter/validators/index.js';
 
 validatorRegistry.registerAll('TubeTrailMesh', {
   // primitive_meshes.cpp:2768 hints "0.001,100.0,…,or_greater", so the ceiling is open. `set_radius`
-  // (:2387) is a bare assignment, so the floor is the hint's.
+  // (:2387) stores any value but one `is_equal_approx` to the held one (:2388), so the floor is the hint's.
   radius: v.float('radius', { min: 0.001, hinted: 'primitive_meshes.cpp:2768' }),
   // primitive_meshes.cpp:2770. `set_radial_steps` (:2402) ERR_FAILs outside 3 to 128.
   radial_steps: v.int('radial_steps', { min: 3, max: 128, enforced: 'primitive_meshes.cpp:2402' }),

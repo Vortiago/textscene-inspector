@@ -152,6 +152,31 @@ describe('Mesh primitives (assertions 48–59)', () => {
     expectSize((renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry, [3, 2, 3]);
   });
 
+  it('RibbonTrailMesh.shape draws a flat ribbon, or a cross of two', async () => {
+    const body = { sections: '2', section_length: '1', section_segments: '1' };
+    const flat = await renderGeometry(subResource('RibbonTrailMesh', 'R', { ...body, shape: '0' }));
+    const cross = await renderGeometry(subResource('RibbonTrailMesh', 'R', body));
+
+    expectSize(flat, [1, 2, 0]);
+    expect(flat.getIndex()!.count).toBe(12);
+    expectSize(cross, [1, 2, 1]);
+    expect(cross.getIndex()!.count).toBe(24);
+  });
+
+  it('RibbonTrailMesh.curve scales the width along the ribbon, the Curve read from the same scene', async () => {
+    const geom = await renderGeometry(
+      subResource('RibbonTrailMesh', 'R', {
+        sections: '2',
+        section_length: '1',
+        section_segments: '1',
+        curve: 'SubResource("C")',
+      }),
+      subResource('Curve', 'C', curveEndingAt('3'))
+    );
+
+    expectSize(geom, [3, 2, 3]);
+  });
+
   it('#59 PrismMesh.size → a triangular prism filling that box', async () => {
     const geom = await renderGeometry(subResource('PrismMesh', 'Pr', { size: 'Vector3(2, 2, 2)' }));
 
