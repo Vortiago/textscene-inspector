@@ -70,13 +70,13 @@ function injected(
   name: string,
   programs: readonly ProgramName[],
   build: () => ProgramInjection | undefined,
-  acceptsUnmatchedProgram?: true
+  options: { acceptsUnmatchedProgram?: true } = {}
 ): InjectionCase {
   return {
     module,
     name,
     programs,
-    acceptsUnmatchedProgram,
+    ...options,
     compile: (program, shader) => {
       const injection = build();
       if (!injection) throw new Error(`expected the ${name} case to build an injection`);
@@ -139,7 +139,7 @@ const INJECTIONS: readonly InjectionCase[] = [
     'alpha antialiasing',
     SURFACE_AND_DEPTH,
     () => GODOT_ALPHA_ANTIALIASING,
-    true
+    { acceptsUnmatchedProgram: true }
   ),
   injected('materials/godotAmbientOcclusion.ts', 'ambient occlusion', LIT, () => GODOT_AMBIENT_OCCLUSION),
   injected(
@@ -154,7 +154,7 @@ const INJECTIONS: readonly InjectionCase[] = [
     'mipmap bias',
     SURFACE_AND_DEPTH,
     () => mipmapBiasInjection({ userData: viewportSamplersUserData(), map: mipmappedTexture() }),
-    true
+    { acceptsUnmatchedProgram: true }
   ),
   injected('materials/godotParallax.ts', 'parallax', LIT, () => parallaxInjection(HEIGHTMAP_DEFAULTS)),
   injected('materials/godotParallax.ts', 'unshaded parallax', ['basic'], () =>

@@ -58,7 +58,7 @@ export function applyEdits(text: string, edits: readonly TextEdit[]): string | n
 /**
  * `text` of the shader named `shader` with every edit applied in order. It throws when an edit's
  * text is missing or occurs more than once, so a three that moved the text fails loudly, not with a
- * silently unpatched program. Every splice of a program's text goes through this or `rewrittenShader`.
+ * silently unpatched program. Every splice of a program's text goes through this, `editedProgram` or `rewrittenShader`.
  */
 export function editedShader(text: string, edits: readonly TextEdit[], shader: string): string {
   const { text: edited, missing } = applyEditsUntilMissing(text, edits);

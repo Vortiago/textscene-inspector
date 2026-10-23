@@ -55,7 +55,7 @@ const SURFACE_ALPHA: ProgramInjection = {
           },
         ],
       },
-      'surface alpha'
+      'depth material surface alpha'
     );
   },
 };

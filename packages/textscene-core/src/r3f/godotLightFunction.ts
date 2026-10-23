@@ -228,7 +228,7 @@ const THREE_IBL_RADIANCE =
 const THREE_IBL_RETRO_RADIANCE =
   'vec3 retroIBLRadiance = getIBLAnisotropyRetroRadiance( geometryViewDir, geometryNormal, material.roughness, material.anisotropyB, material.anisotropy );';
 
-/** The reflection line bent about Godot's direction. */
+/** The edit that bends an anisotropic reflection line about Godot's direction. */
 const IBL_DIRECTION_EDIT: TextEdit = {
   three: 'material.anisotropyB',
   godot: 'GODOT_IBL_ANISOTROPIC_DIRECTION',
