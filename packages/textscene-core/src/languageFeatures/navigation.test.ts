@@ -262,6 +262,25 @@ describe('definitionRangeAt of a node path that Godot seats differently from its
     expect(definitionLine(lines, 'Gone/../Button')).toBe(1);
   });
 
+  it('resolves a connection end that only its uid path recovers', () => {
+    // A path that misses falls back to the id trail (packed_scene.cpp:161-163, :657-658).
+    const lines = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Button" type="Node3D" parent="." unique_id=7]',
+      '[connection signal="ready" from="Gone" to="." method="_on_ready" from_uid_path=PackedInt32Array(7)]',
+    ];
+    expect(definitionLine(lines, 'Gone')).toBe(1);
+  });
+
+  it('gives nothing for a connection end whose uid path names no heading', () => {
+    const lines = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Button" type="Node3D" parent="." unique_id=7]',
+      '[connection signal="ready" from="Gone" to="." method="_on_ready" from_uid_path=PackedInt32Array(99)]',
+    ];
+    expect(definitionLine(lines, 'Gone')).toBe(undefined);
+  });
+
   it('gives nothing for a parent= that walks only once simplified, which the loader never simplifies', () => {
     const lines = [
       '[node name="Root" type="Node3D"]',

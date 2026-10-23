@@ -4,6 +4,7 @@
  * editor requests never read it.
  */
 
+import { connectionEndResolver, type ConnectionEndResolver } from '../parser/connectionEnd.js';
 import { createRawNode, nodeOrigin } from '../parser/rawNode.js';
 import { seatScene, type SceneSeating } from '../parser/sceneTreeBuilder.js';
 import type { RawNode } from '../parser/types.js';
@@ -18,6 +19,7 @@ export interface SeatedSection {
 
 interface DocumentSeating {
   readonly seating: SceneSeating<RawNode>;
+  readonly resolveConnectionEnd: ConnectionEndResolver<RawNode>;
   /** Each seated tree node, and each unseated heading's node, to its heading. */
   readonly sectionByNode: ReadonlyMap<RawNode, DocumentSection>;
   /** The scene root, then each heading left out of the tree, in line order. */
@@ -57,6 +59,7 @@ function seat(document: LanguageDocument): DocumentSeating {
   let paths: ReadonlyMap<DocumentSection, string> | undefined;
   return {
     seating,
+    resolveConnectionEnd: connectionEndResolver(headings, seating),
     sectionByNode,
     tree: [...seating.roots, ...unseated].map(seated),
     paths: () =>
@@ -87,5 +90,19 @@ export function seatedNodePaths(document: LanguageDocument): ReadonlyMap<Documen
 export function nodeSectionOfPath(document: LanguageDocument, path: string): DocumentSection | undefined {
   const { seating, sectionByNode } = seatingOf(document);
   const resolution = seating.resolve(path);
+  return resolution.status === 'found' ? sectionByNode.get(resolution.node) : undefined;
+}
+
+/**
+ * The `[node]` heading a `[connection]` end names: the node its written path walks to, else the one
+ * its `from_uid_path=` or `to_uid_path=` lands on. The linter resolves an end the same way.
+ */
+export function nodeSectionOfConnectionEnd(
+  document: LanguageDocument,
+  path: string,
+  idTrail: readonly number[] | undefined
+): DocumentSection | undefined {
+  const { resolveConnectionEnd, sectionByNode } = seatingOf(document);
+  const resolution = resolveConnectionEnd(path, idTrail);
   return resolution.status === 'found' ? sectionByNode.get(resolution.node) : undefined;
 }

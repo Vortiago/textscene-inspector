@@ -10,7 +10,8 @@ import {
   rootDeclaringParent,
 } from '../parser/instantiateRefusal.js';
 import { orphanedNodes, type SceneSeating } from '../parser/sceneTreeBuilder.js';
-import { idHeadingsOf, idTrailEnd } from '../parser/idTrail.js';
+import { connectionEndResolver } from '../parser/connectionEnd.js';
+import { idTrailEnd } from '../parser/idTrail.js';
 
 type PlacementFacts = Pick<
   HeadingFacts,
@@ -20,7 +21,7 @@ type PlacementFacts = Pick<
   | 'emptyParentHeadings'
   | 'refusesToInstantiate'
   | 'idRecoveries'
-  | 'idHeadings'
+  | 'resolveConnectionEnd'
 >;
 
 /**
@@ -40,9 +41,7 @@ export function placementFacts(
     emptyParentHeadings: emptyParentHeadings(origins),
     refusesToInstantiate: refusesToInstantiate(origins),
     idRecoveries: idRecoveries(origins, isOrphan, seating),
-    // An id trail finds a heading at the path it declares (`packed_scene.cpp:1985-2005`), so an
-    // orphan, re-rooted or recovered elsewhere, is not there.
-    idHeadings: idHeadingsOf(origins, (origin) => !isOrphan.has(origin)),
+    resolveConnectionEnd: connectionEndResolver(origins, seating),
   };
 }
 

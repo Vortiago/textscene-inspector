@@ -56,6 +56,16 @@ describe('documentHighlights', () => {
     expect(highlights.map((highlight) => highlight.range.start.line).sort((a, b) => a - b)).toEqual([0, 3]);
   });
 
+  it('marks a connection end that only its uid path recovers, as a use of the node it lands on', () => {
+    const text = [
+      '[node name="Root" type="Node3D" unique_id=1]',
+      '[node name="Button" type="Node3D" parent="." unique_id=7]',
+      '[connection signal="ready" from="Gone" to="." method="_on_ready" from_uid_path=PackedInt32Array(7)]',
+    ].join('\n');
+    const highlights = documentHighlights(new LanguageDocument(text), { line: 1, character: 12 });
+    expect(highlights.map(({ range }) => range.start.line)).toEqual([1, 2]);
+  });
+
   it('highlights nothing away from a reference', () => {
     const document = new LanguageDocument(SCENE);
     expect(documentHighlights(document, { line: 1, character: 0 })).toEqual([]);

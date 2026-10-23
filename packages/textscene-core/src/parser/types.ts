@@ -4,7 +4,7 @@
 
 import type { Node3DProperties } from '../nodes/base/node3d/types';
 import type { InstanceNameSetting } from './nodeOwner';
-import type { IdHeading } from '../godot/scene/packedScene.js';
+import type { ConnectionEndResolver } from './connectionEnd.js';
 
 /**
  * One `[node]` heading as the scan saw it, before `seatScene` placed it. Kept off
@@ -208,8 +208,8 @@ export interface HeadingFacts {
    * An orphan absent here is re-rooted, or has no trail.
    */
   idRecoveries: ReadonlyMap<NodeOrigin<RawNode>, IdRecovery>;
-  /** Every `[node]` heading in file order, as an id trail reads it (`packed_scene.cpp:1947-2005`). */
-  idHeadings: readonly IdHeading[];
+  /** The node a `[connection]` end names, by its path and then its id trail. */
+  resolveConnectionEnd: ConnectionEndResolver<RawNode>;
   /** Each `[connection]` heading, in file order. */
   connections: readonly ConnectionHeading[];
   /**

@@ -148,8 +148,13 @@ _Avoid_: "callback API", "strict mode flag".
 
 **Seating** (`seatScene` in `parser/sceneTreeBuilder.ts`):
 The scene tree the `[node]` headings form once each sits under the node its `parent=` names, in declaration order as instantiate places them, every owner's `%Name` claims and releases in file order, and the one walk that resolves a root-relative node path over it.
-Both parsers seat through it, the linter and the **Language-feature engine** resolve `parent=`, `from=` and `to=` through its walk, and every `%Name` reader, the instance graft included, reads its claims.
+Both parsers seat through it, the linter and the **Language-feature engine** resolve `parent=` and every **Connection end** through its walk, and every `%Name` reader, the instance graft included, reads its claims.
 _Avoid_: a second path table or `%Name` claim table over the headings.
+
+**Connection end** (`connectionEndResolver` in `parser/connectionEnd.ts`):
+The `from=` or `to=` of a `[connection]` heading, and the node it names: the node its simplified path walks to in the **Seating**, else the heading its `from_uid_path=` or `to_uid_path=` lands on.
+The linter and the **Language-feature engine** both resolve an end through the one resolver.
+_Avoid_: resolving an end by path alone in one reader and with the id trail in another.
 
 **Value decoder** (`parser/valueParsers.ts`):
 The lenient parser's shared primitives (`intOr`, `floatOr`, `parseOptionalFloat` and the others) that read a raw property string into a typed scalar or vector.
@@ -186,7 +191,7 @@ A node or scene with `rawProperties` and no `properties`, which is what a **Lint
 _Avoid_: reading `properties` in a rule, or casting it to a string map.
 
 **Heading facts** (`HeadingFacts` in `parser/types.ts`):
-What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, each connection heading and instances outside a node body.
+What the `[node]` and `[connection]` headings state that the scene tree does not hold: orphaned nodes, a root with a `parent=`, `parent=""` headings, each connection heading, the **Connection end** resolver over them and instances outside a node body.
 Only the linter reads them, so only the strict parser's `StrictScene` carries them. The strict parser builds them from the headings the core returns beside the scene and from its own observer.
 _Avoid_: putting a linter-only field on `TscnScene`.
 

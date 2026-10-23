@@ -42,22 +42,8 @@ describe('placementFacts', () => {
       emptyParentHeadings: [],
       refusesToInstantiate: false,
       idRecoveries: new Map(),
-      idHeadings: [
-        { uniqueId: 0, instance: undefined, isPlaced: true },
-        { uniqueId: 0, instance: undefined, isPlaced: true },
-      ],
+      resolveConnectionEnd: expect.any(Function),
     });
-  });
-
-  it('marks a re-rooted heading unplaced, as an id trail looks it up by its authored path', () => {
-    // `_recover_node_path_index` rebuilds the path the heading declares (`packed_scene.cpp:1985-2005`),
-    // and the re-rooted node lives at `Missing#Orphan`, not there.
-    expect(factsOf(['Root'], ['Orphan', 'Missing']).idHeadings.map((h) => h.isPlaced)).toEqual([true, false]);
-  });
-
-  it('marks a heading unplaced where Godot refuses the scene and re-roots nothing', () => {
-    const facts = factsOf(['Root'], ['Orphan', 'Missing'], ['Stray']);
-    expect(facts.idHeadings.map((h) => h.isPlaced)).toEqual([true, false, false]);
   });
 
   it("follows an orphan's id trail to the heading it names", () => {
