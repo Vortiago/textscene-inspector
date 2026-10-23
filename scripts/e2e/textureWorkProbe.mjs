@@ -34,9 +34,9 @@ export function installTextureWorkProbe(statusTestId) {
     constructor(...args) {
       super(...args);
       probe.workers += 1;
-      // A reply that carries pixels is a job the worker ran, not only one it was sent.
+      // A reply that carries levels is a job the worker ran, not only one it was sent.
       this.addEventListener('message', (event) => {
-        if (!event.data?.output?.pixels) return;
+        if (!event.data?.output?.levels) return;
         probe.replies += 1;
         probe.replyTimes.push(performance.now());
       });
@@ -81,7 +81,7 @@ export function installReplyStall(stallMs) {
     constructor(...args) {
       super(...args);
       this.addEventListener('message', (event) => {
-        if (stalled || !event.data?.output?.pixels) return;
+        if (stalled || !event.data?.output?.levels) return;
         stalled = true;
         const until = performance.now() + stallMs;
         while (performance.now() < until) {

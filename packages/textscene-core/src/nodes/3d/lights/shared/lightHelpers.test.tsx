@@ -1,7 +1,7 @@
 /**
- * Light, camera and audio gizmos show only for the selected node: no selection
- * gives no helpers however many lights exist, and a light's path gives that
- * light's helper alone. Hover is not a trigger.
+ * Light, camera and audio gizmos show only for the selected node while the Gizmos toggle is on
+ * (`light_3d_gizmo_plugin.cpp:160,200,243`): no selection gives no helpers however many lights
+ * exist, and a light's path gives that light's helper alone. Hover is not a trigger.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -18,6 +18,7 @@ import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
 import { TscnSceneContents } from '../../../../r3f/TscnCanvas';
 import { HierarchyProvider } from '../../../../r3f/contexts/HierarchyContext';
 import { SelectionProvider } from '../../../../r3f/contexts/SelectionContext';
+import { ViewportModeProvider } from '../../../../r3f/contexts/ViewportModeContext';
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
 import { HoverSeeder } from '../../../../r3f/testing/HoverSeeder';
 import { SelectSeeder } from '../../../../r3f/testing/SelectSeeder';
@@ -150,6 +151,25 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
         const scene = renderer.scene.instance as unknown as THREE.Scene;
         const helpers = findHelpersOfType(scene, c.helperCtor);
         expect(helpers).toHaveLength(1);
+      });
+
+      it('renders zero helpers when the Gizmos toggle is off, selected', async () => {
+        const graph = createSceneGraphFromTscnScene({ nodes: c.nodes });
+        const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
+
+        const renderer = await ReactThreeTestRenderer.create(
+          <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+            <ViewportModeProvider initialShowGizmos={false}>
+              <SelectionProvider>
+                <SelectSeeder path={c.selectedPath} />
+                <NodeDispatcher nodes={rootNodes} />
+              </SelectionProvider>
+            </ViewportModeProvider>
+          </HierarchyProvider>
+        );
+
+        const scene = renderer.scene.instance as unknown as THREE.Scene;
+        expect(findHelpersOfType(scene, c.helperCtor)).toHaveLength(0);
       });
 
       it('tears the helper down when selection moves to a different node', async () => {
@@ -341,7 +361,7 @@ describe('Light gizmos — selection gating (WI-UX-14)', () => {
   });
 });
 
-/** Camera3D's `THREE.CameraHelper` frustum is gated by `useGizmoVisible()` too. */
+/** Camera3D's `THREE.CameraHelper` frustum is gated by `useGizmoState()` too. */
 function cameraNode(name: string, overrides: Partial<Camera3DProperties> = {}): TscnNode {
   const props: Camera3DProperties = {
     name,
@@ -363,6 +383,25 @@ function cameraNode(name: string, overrides: Partial<Camera3DProperties> = {}): 
 }
 
 describe('Camera3D gizmo — selection gating (WI-UX-14 scope expansion)', () => {
+  it('renders zero CameraHelper frusta when the Gizmos toggle is off, selected', async () => {
+    const graph = createSceneGraphFromTscnScene({ nodes: [cameraNode('CamA')] });
+    const rootNodes = graph.scenes.get(graph.rootScene)?.nodes ?? [];
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <HierarchyProvider value={{ sceneGraph: graph, panelId: 'p' }}>
+        <ViewportModeProvider initialShowGizmos={false}>
+          <SelectionProvider>
+            <SelectSeeder path="CamA" />
+            <NodeDispatcher nodes={rootNodes} />
+          </SelectionProvider>
+        </ViewportModeProvider>
+      </HierarchyProvider>
+    );
+
+    const scene = renderer.scene.instance as unknown as THREE.Scene;
+    expect(findHelpersOfType(scene, THREE.CameraHelper)).toHaveLength(0);
+  });
+
   it('renders zero CameraHelper frusta when nothing is selected', async () => {
     const graph = createSceneGraphFromTscnScene({
       nodes: [cameraNode('CamA'), cameraNode('CamB')],

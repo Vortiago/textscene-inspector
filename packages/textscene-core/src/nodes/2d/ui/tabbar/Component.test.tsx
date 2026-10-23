@@ -107,6 +107,40 @@ describe('<TabBar> (isolated painter contract)', () => {
     expect(meshes.some((m) => hasFillRGBA(m, 0, 0.6))).toBe(true);
   });
 
+  describe('a bar whose scene authors no current_tab', () => {
+    const tabs = [
+      { title: 'A', tooltip: '', disabled: false },
+      { title: 'B', tooltip: '', disabled: false },
+    ];
+
+    async function drawsSelectedFill(properties: Partial<TabBarProperties>): Promise<boolean> {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TabBar
+          {...painterEnv()}
+          solveNode={solveNode({ tabs, ...properties })}
+          rect={RECT}
+          theme={THEME}
+          renderOrder={0}
+        />
+      );
+      // tab_selected fills with style_normal_color (0.1, 0.1, 0.1, 0.6), tab_unselected with (0, 0, 0, 0.6).
+      return findChromeMeshes(renderer.scene).some((mesh) => {
+        const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
+        return Array.from({ length: color.count }, (_unused, i) => i).some(
+          (i) => Math.abs(color.getX(i) - 0.1) < 1e-5 && Math.abs(color.getW(i) - 0.6) < 1e-5
+        );
+      });
+    }
+
+    it('selects the first tab, as set_tab_count does (tab_bar.cpp:763-767)', async () => {
+      expect(await drawsSelectedFill({})).toBe(true);
+    });
+
+    it('selects none under deselect_enabled', async () => {
+      expect(await drawsSelectedFill({ deselectEnabled: true })).toBe(false);
+    });
+  });
+
   it('a disabled tab draws tab_disabled even when it is the current tab (tab_bar.cpp:558)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TabBar

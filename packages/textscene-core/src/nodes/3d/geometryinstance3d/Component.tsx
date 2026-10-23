@@ -9,7 +9,8 @@ import type * as THREE from 'three';
 import { Node3D } from '../../base/node3d/Component';
 import type { NodeComponent, NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { boxPlacement } from '../../../r3f/visibilityRange/placements';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
+import { useGizmoState, type GizmoDrawnFor } from '../../../r3f/hooks/useGizmoState';
+import type { GizmoVariant } from '../../../r3f/gizmo/gizmoVariant';
 import { invisibleBase } from '../../../r3f/invisibleBase';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
@@ -37,20 +38,31 @@ export function undrawnGeometryInstance(useOwnAabb: UseOwnAabb): NodeComponent {
   return invisibleBase(UndrawnGeometryInstance);
 }
 
+/** What `undrawnGeometryInstanceWithGizmos` mounts: the type's gizmos in the variant its node is in. */
+export interface GeometryInstanceGizmosProps<Properties> {
+  /** The node's properties, which are `Properties` for the type that registers the gizmos. */
+  properties: Properties;
+  variant: GizmoVariant;
+}
+
 /**
- * An undrawn GeometryInstance3D that carries its editor gizmos while it is selected (ADR-0018).
- * `Gizmos` reads the node's properties, which are `Properties` for the type that registers it.
+ * An undrawn GeometryInstance3D that carries its editor gizmos (ADR-0056). `drawnFor` says which
+ * nodes Godot draws the gizmo plugin for. `Gizmos` is mounted for those nodes, and draws the parts
+ * that only a selected gizmo has when its `variant` is selected.
  */
 export function undrawnGeometryInstanceWithGizmos<Properties>(
   useOwnAabb: UseOwnAabb,
-  Gizmos: ComponentType<{ properties: Properties }>
+  Gizmos: ComponentType<GeometryInstanceGizmosProps<Properties>>,
+  drawnFor: GizmoDrawnFor
 ): NodeComponent {
   const Undrawn = undrawnGeometryInstance(useOwnAabb);
   function UndrawnGeometryInstanceWithGizmos({ node, children }: NodeComponentProps) {
-    const gizmoVisible = useGizmoVisible();
+    const gizmoState = useGizmoState(drawnFor);
     return (
       <Undrawn node={node}>
-        {gizmoVisible && <Gizmos properties={node.properties as Properties} />}
+        {gizmoState !== 'hidden' && (
+          <Gizmos properties={node.properties as Properties} variant={gizmoState} />
+        )}
         {children}
       </Undrawn>
     );

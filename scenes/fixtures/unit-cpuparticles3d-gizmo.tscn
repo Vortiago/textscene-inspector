@@ -1,7 +1,8 @@
 ; A CPUParticles3D with a ring emission shape and a visibility_aabb, for the one variable no other
 ; golden moves: its editor gizmo (the box, the three axes from the box centre and the ring lines).
-; The previewer gates the gizmo on selection (ADR-0018), so only the `select:` golden has it. A small
-; box sits at two opposite corners of the visibility_aabb to frame the whole gizmo.
+; The previewer draws the faint box and axes for every emitter and the ring only for the selected one
+; (ADR-0056), so the `select:` and `unselected` goldens show the two. A small box sits at two opposite
+; corners of the visibility_aabb to frame the whole gizmo.
 [gd_scene load_steps=2 format=3]
 
 [sub_resource type="BoxMesh" id="Corner_1"]

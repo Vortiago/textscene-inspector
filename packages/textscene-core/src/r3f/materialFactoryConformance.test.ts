@@ -284,8 +284,6 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
 const PLAIN_FACTORY_CALL = /\b(?:materialProgramInputs|injectProgram)\b\s*(?:<[^>(]*>)?\(/;
 const VIEWPORT_SCOPES = ['nodes/3d/', 'resources/'].map((dir) => `${RENDERER_ROOT}/${dir}`);
 const PLAIN_FACTORY_EXEMPTIONS: Readonly<Record<string, string>> = {
-  'packages/textscene-core/src/nodes/3d/decal/Component.tsx':
-    'the untextured box edges of the editor outline',
   'packages/textscene-core/src/nodes/3d/navigationregion3d/Component.tsx':
     'the untextured navigation faces of the editor outline',
   'packages/textscene-core/src/resources/materials/standardmaterial3d/build.ts':

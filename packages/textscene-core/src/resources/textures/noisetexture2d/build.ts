@@ -10,6 +10,9 @@ import type { NoiseTexture2DData } from './types';
 import type { NoiseTexture2DInput } from './pixels';
 import { seamlessSource } from '../../noise/image/noiseImage';
 import { colourDataTexture } from '../colourDataTexture';
+import { carryMipChain } from '../texelTexture';
+import { godotTextureFilterState } from '../godotTextureFilter';
+import type { MipLevel } from '../../processing/mipChain';
 
 /**
  * Whether the previewer rasterises this texture. It refuses an axis past the WebGL ceiling it
@@ -29,10 +32,16 @@ export function noiseTextureFits({
   );
 }
 
-/** Bottom-up `pixels`, computed from `input`, as the texture Godot builds from it. */
-export function noiseDataTexture(pixels: Uint8Array, input: NoiseTexture2DInput): THREE.DataTexture {
+/**
+ * Bottom-up `levels`, computed from `input`, as the texture Godot builds from it. Several levels
+ * are its mip chain, which the default sampler (`LINEAR_WITH_MIPMAPS`, `material.h:573`)
+ * minifies between.
+ */
+export function noiseDataTexture(levels: MipLevel[], input: NoiseTexture2DInput): THREE.DataTexture {
   const { tex } = input;
-  const texture = colourDataTexture(pixels, tex.width, tex.height, imageFormat(input));
+  const texture = colourDataTexture(levels[0]!.data, tex.width, tex.height, imageFormat(input));
+  // The producer sets the default sampler's minification itself: no material authored it yet.
+  if (carryMipChain(texture, levels)) texture.minFilter = godotTextureFilterState(undefined).minFilter;
   // A normal map carries directions, not colour, so it starts raw, as its normal slot reads it.
   if (tex.asNormalMap) texture.colorSpace = THREE.NoColorSpace;
   // A seamless image tiles. A non-seamless one clamps like every other procedural texture.
@@ -40,6 +49,15 @@ export function noiseDataTexture(pixels: Uint8Array, input: NoiseTexture2DInput)
   texture.wrapS = wrap;
   texture.wrapT = wrap;
   return texture;
+}
+
+/**
+ * `full` without its chain, over the same bytes, for a NoiseTexture2D whose `generate_mipmaps` is
+ * off. The default sampler then reads its base level alone, as Godot's does.
+ */
+export function baseNoiseTexture(full: THREE.DataTexture, input: NoiseTexture2DInput): THREE.DataTexture {
+  const { width, height } = full.image;
+  return noiseDataTexture([{ data: full.image.data as Uint8Array, width, height }], input);
 }
 
 /**

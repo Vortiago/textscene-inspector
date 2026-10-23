@@ -1,6 +1,6 @@
 /**
  * PathFollow3D registration: the parser. PathFollow3D positions its children along the parent
- * Path3D's curve and draws a selection-gated handle (ADR-0018).
+ * Path3D's curve and draws a handle while selected (ADR-0056).
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';

@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { shapeText } from './textLayout';
+import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { overrunFlagsForBehavior, trimLineToWidth, type OverrunTrimFlags } from './textOverrun';
 import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
@@ -90,6 +91,24 @@ describe('trimLineToWidth', () => {
     const result = trim('AAAAAAAAAAAA', 100, overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS));
     expect(result.text).toBe('AAAAAAAA…');
     expect(result.widthPx).toBeCloseTo(8 * 10.578125 + 13.0625, 10);
+  });
+
+  it('draws the ellipsis of an emboldened face with the widened advance and the outline growth', () => {
+    const fontMetrics = withVariation(OPEN_SANS_FONT_METRICS, { embolden: 1.2 });
+    const shaped = shapeText('AAAAAAAAAAAA', {
+      fontSizePx: FONT_SIZE_PX,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      lineSpacingPx: 0,
+      fontMetrics,
+    }).lines[0]!;
+    const flags = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+    const ellipsis = trimLineToWidth(shaped, 100, flags, { fontMetrics, fontSizePx: FONT_SIZE_PX }).glyphs.at(
+      -1
+    )!;
+    expect(ellipsis.char).toBe('…');
+    expect(ellipsis.advance).toBeCloseTo(getFontEmboldenedAdvancePx(fontMetrics, '…', FONT_SIZE_PX), 10);
+    expect(ellipsis.emboldenGrowthPx).toBeCloseTo(1.2, 10);
   });
 
   it('TRIM_WORD_ELLIPSIS only cuts at a space, inserting one before the ellipsis (text_server_adv.cpp:6081-6091,6124-6135)', () => {

@@ -88,7 +88,7 @@ with a **Needs runtime** line.
 `VisibleOnScreenNotifier3D` and `VisibleOnScreenEnabler3D` have no runtime effect on the screen, and
 Godot's editor draws a box gizmo for them (`visible_on_screen_notifier_3d_gizmo_plugin.cpp:149-194`).
 A node whose own drawing is its editor gizmo registers a component that draws, with no `renderIntent`,
-as `Marker3D` does (ADR-0018). Its sheet is not `linter-only`, because that status needs a
+as `Marker3D` does (ADR-0056). Its sheet is not `linter-only`, because that status needs a
 `transform-only` registration. A gizmo is not the Godot effect of a node, so a gizmo changes no
 `pending` registration and no `unimplemented` sheet: `ReflectionProbe`, `VoxelGI`, `FogVolume` and the
 particle emitters keep the intent and the status their effect has.

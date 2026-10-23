@@ -52,6 +52,9 @@ The levels Godot's texture importer builds on the CPU for an image whose **Impor
 The texture carries them as its own levels, so the GPU builds no chain over them.
 _Avoid_: "mipmaps" for a chain the GPU generates.
 
+**Noise mip chain** (`resources/textures/noisetexture2d/pixels.ts`):
+The **Imported mip chain** of a NoiseTexture2D whose `generate_mipmaps` is on, built in the worker job beside the pixels. No level is renormalised.
+
 **Roughness limiter** (`resources/processing/roughnessLimit.ts`):
 The pass Godot's texture importer runs on a roughness map's **Imported mip chain** when its **Import sidecar** names a normal map: each level's roughness rises by the spread of the normals it covers.
 _Avoid_: the bare name for the **Screen-space roughness limiter**.
@@ -85,6 +88,14 @@ The LightmapGI a node takes its light from, with the node's entry in that bake: 
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
 Only settings the previewer honours get a typed reader, and a scene without the file renders at Godot's defaults.
 _Avoid_: "config file" for a `.tscn`. A general settings store.
+
+**Project default font** (`resources/fonts/font/projectDefaultFont.ts`):
+The font that the **Project settings** name in `gui/theme/custom_font`. A font lookup that no theme answers ends at it, before the bundled Open Sans. A path that does not load keeps the bundled font and is a **Missing resource**.
+_Avoid_: "custom font", which a node's `theme_override_fonts` also is. "fallback font" for the bundled one.
+
+**Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
+The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
+_Avoid_: "synthetic bold" for a face a theme sets.
 
 **Asset re-import**:
 What the previewer does in place of Godot's import pipeline: it loads the source asset (`.gltf`, `.glb`, `.obj`) and re-derives the scene from it.

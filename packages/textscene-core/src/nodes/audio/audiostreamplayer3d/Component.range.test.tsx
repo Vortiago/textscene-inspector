@@ -26,7 +26,7 @@ function node(raw: Record<string, string> = {}): TscnNode {
   };
 }
 
-/** The gizmo is selection-gated, so render it as the selected node. */
+/** The gizmo draws for the selected node only, so render it as the selected node. */
 async function render(raw: Record<string, string> = {}) {
   return ReactThreeTestRenderer.create(
     <SelectionProvider>

@@ -160,6 +160,11 @@ export interface SolveNode {
    */
   projectTheme: ThemeResource | null;
   /**
+   * The font `gui/theme/custom_font` names, or `null` when unset, still loading or failed. Every font
+   * lookup ends at it, before the bundled one. Required, like `fontOverrides`.
+   */
+  projectDefaultFont: FontResource | null;
+  /**
    * Resolved theme colours by `get_theme_color(name, type)` name, merged like
    * `styleBoxes` over `theme.colors`. A painter falls back to the default
    * theme's colour on a miss.

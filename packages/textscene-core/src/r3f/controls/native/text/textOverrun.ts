@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
-import { getFontGlyphAdvancePx, type FontMetrics } from './fontMetrics';
+import { getFontEmboldenedAdvancePx, getFontEmboldenGrowthPx, type FontMetrics } from './fontMetrics';
 import { isWhitespace, type GlyphPlacement, type TextLineLayout } from './textLayout';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
@@ -160,8 +160,11 @@ export function trimLineToWidth(
   const dotChar = foundElChar ? ellipsisChar : '.';
   const dotRepeat = foundElChar ? 1 : 3;
   const dotAdvancePx =
-    flags.addEllipsis || flags.enforceEllipsis ? getFontGlyphAdvancePx(fontMetrics, dotChar, fontSizePx) : 0;
-  const whitespaceAdvancePx = getFontGlyphAdvancePx(fontMetrics, ' ', fontSizePx);
+    flags.addEllipsis || flags.enforceEllipsis
+      ? getFontEmboldenedAdvancePx(fontMetrics, dotChar, fontSizePx)
+      : 0;
+  const whitespaceAdvancePx = getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx);
+  const emboldenGrowthPx = getFontEmboldenGrowthPx(fontMetrics.embolden ?? 0, fontSizePx) || undefined;
   // :6044-6046 -- `int ellipsis_width` truncates.
   const ellipsisWidthPx = flags.addEllipsis
     ? Math.trunc(dotRepeat * dotAdvancePx + (flags.trimWordOnly ? whitespaceAdvancePx : 0))
@@ -243,6 +246,7 @@ export function trimLineToWidth(
         x: penX,
         advance: dotAdvancePx,
         glyph: atlasGlyphFor(fontMetrics, dotChar),
+        emboldenGrowthPx,
       });
       penX += dotAdvancePx;
     }

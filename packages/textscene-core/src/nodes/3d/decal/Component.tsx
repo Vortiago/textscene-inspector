@@ -5,7 +5,7 @@
  * normal/ORM/emission maps and `emission_energy`, which Godot's distance fade also scales.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -13,8 +13,8 @@ import { Node3D } from '../../base/node3d/Component';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { useGizmoVisible } from '../../../r3f/hooks/useGizmoVisible';
-import { editorHelperUserData } from '../../../r3f/editorHelpers';
+import { useGizmoState } from '../../../r3f/hooks/useGizmoState';
+import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { useLiveTreeVersion } from '../../../r3f/useLiveSceneTree';
 import { useResourceLoader } from '../../../resources/useResource';
 import { useTexture2DRid } from '../../../resources/useTexture2D';
@@ -24,34 +24,31 @@ import type { DecalGeometricFade } from './decalFade';
 import { distanceFade } from '../../../godot/rendering/distanceFade';
 import { TrackedObjects } from '../../../r3f/trackedObjects';
 import { cameraDistance, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
-import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { DecalProjectionMaterials, type DecalProjectionLook } from './decalProjectionMaterials';
 import {
   buildDecalProjectionGeometry,
   collectDecalReceivers,
   computeDecalBoxWorldAABB,
 } from './decalProjection';
+import { aabbEdges, centredAabb } from '../../../godot/math/aabb';
 import { clamp } from '../../../godot/math/math';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector3 } from '../../../godot/math/vector';
-import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { sameElements } from '../../../utils/sameElements';
 
-/** Wireframe colour for the (selection-gated) projection-box gizmo. */
+/** Wireframe colour and colour alpha of the projection-box gizmo. */
 const BOX_COLOR = '#ff9d3b';
+const BOX_ALPHA = 0.9;
 
-/** Literal-only, so the key is constant and the gizmo never remounts. */
-const BOX_EDGES_MATERIAL = materialProgramInputs({
-  props: { color: BOX_COLOR, transparent: true, opacity: 0.9, depthWrite: false },
-});
+/** The edges of a unit cube. `size` scales the gizmo group, so animating `size` stays a cheap scale write. */
+const UNIT_BOX_EDGES = new Float32Array(aabbEdges(centredAabb({ x: 1, y: 1, z: 1 })));
 
 export function Decal({ node, children }: NodeComponentProps) {
   const properties = node.properties as DecalProperties;
   const { externalResources, internalResources } = useSceneResources();
-  // Godot's editor outlines the projector box but its runtime, which the reference renders, draws
-  // none, so the wireframe is selection-gated (ADR-0018), as for Marker3D and Path3D.
-  const gizmoVisible = useGizmoVisible();
-  const helperUserData = useMemo(editorHelperUserData, []);
+  // Godot's editor outlines the projector box for every decal, faint while it is not selected
+  // (`decal_gizmo_plugin.cpp:128`), and its runtime, which the reference renders, draws none.
+  const gizmoState = useGizmoState('every-node');
 
   const scene = useThree((s) => s.scene);
   const invalidate = useThree((s) => s.invalidate);
@@ -66,17 +63,6 @@ export function Decal({ node, children }: NodeComponentProps) {
   const meshesRef = useRef<TrackedObjects<THREE.Mesh> | null>(null);
   // Counts the bakes a late receiver asked for. It only changes the bake effect's dependencies.
   const [lateReceiverBakes, setLateReceiverBakes] = useState(0);
-
-  // Unit-cube projection-volume wireframe. `size` scales the gizmo group, so animating `size`
-  // (ADR-0017) stays a cheap scale write. R3F's `primitive` does not auto-dispose, so this
-  // releases it on unmount.
-  const boxEdges = useMemo(() => {
-    const box = new THREE.BoxGeometry(1, 1, 1);
-    const edges = new THREE.EdgesGeometry(box);
-    box.dispose();
-    return edges;
-  }, []);
-  useDisposeOnRelease(boxEdges);
 
   // By RID, as `Decal::set_texture` passes it (`scene/3d/decal.cpp:46`): an AtlasTexture projects
   // its whole sheet, and a CanvasTexture, a RID the decal atlas refuses (`texture_storage.cpp:2941`),
@@ -263,12 +249,9 @@ export function Decal({ node, children }: NodeComponentProps) {
 
   return (
     <Node3D node={node}>
-      {gizmoVisible && (
-        <group scale={[size.x, size.y, size.z]} userData={helperUserData}>
-          <lineSegments userData={{ cullMask: properties.cull_mask }}>
-            <primitive object={boxEdges} attach="geometry" />
-            <lineBasicMaterial key={BOX_EDGES_MATERIAL.key} {...BOX_EDGES_MATERIAL.props} />
-          </lineSegments>
+      {gizmoState !== 'hidden' && (
+        <group scale={[size.x, size.y, size.z]}>
+          <GizmoLine positions={UNIT_BOX_EDGES} color={BOX_COLOR} opacity={BOX_ALPHA} variant={gizmoState} />
         </group>
       )}
       {/* Projection meshes attach here imperatively, to an unscaled group, so

@@ -36,7 +36,7 @@ function fakeScope() {
 }
 
 describe('installWorkerJobs', () => {
-  it('answers a job with its output and transfers the pixel buffer', () => {
+  it('answers a job with its output and transfers the level buffers', () => {
     const { deliver, posted } = fakeScope();
     deliver({ id: 3, job: 'noise-texture-2d', input: firstCase });
 
@@ -44,8 +44,8 @@ describe('installWorkerJobs', () => {
     const [reply] = posted;
     const output = WORKER_JOBS['noise-texture-2d'].run(firstCase);
     expect(reply?.message).toEqual({ id: 3, ok: true, output });
-    const sent = reply?.message as { output: { pixels: Uint8Array } };
-    expect(reply?.transfer).toEqual([sent.output.pixels.buffer]);
+    const sent = reply?.message as { output: { levels: { data: Uint8Array }[] } };
+    expect(reply?.transfer).toEqual(sent.output.levels.map(({ data }) => data.buffer));
   });
 
   it('answers an unknown job with an error under the same id', () => {

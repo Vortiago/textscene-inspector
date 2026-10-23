@@ -66,8 +66,11 @@ Godot imports a glTF image through the same texture importer, as the file it ext
 A green disc with a three-texel alpha ramp, inside transparent magenta texels, drawn 20 times larger. The default alpha-border pass gives each texel below alpha 20 the RGB of its nearest opaque neighbour, as `Image::fix_alpha_edges` does (`core/io/image.cpp`). The previewer runs it on a texture with partial alpha too. It reads the decoded bytes unpremultiplied, so the ramp keeps its colour. With the pass off, the edge of the disc takes a magenta tint in both engines.
 
 ## NoiseTexture2D
+<!-- compare: image=unit-noisetexture2d-mipmaps status=done fixture=unit-noisetexture2d-mipmaps.tscn -->
 
 A field baked from a FastNoiseLite, most often as a normal map. A `seamless` bake wraps its opposite edges and tiles. A plain one clamps, so UVs past the tile smear its edge texels. Under a StandardMaterial3D both tile, because `texture_repeat` defaults on (`material.cpp:4005`) and the sampler hint adds `repeat_enable` (`material.cpp:760-765`).
+
+A minified NoiseTexture2D samples the mip chain Godot builds on the CPU when `generate_mipmaps` is on, the default. Each level averages the bytes of the level above, so the noise fades to a flat tone as the quad shrinks. A 256 × 256 normal map draws unshaded on a 1 × 1 and a 0.4 × 0.4 quad, and both engines sample the same levels. With `generate_mipmaps` off, a minified texture samples only its base level and aliases, in both engines.
 
 ## Linting
 

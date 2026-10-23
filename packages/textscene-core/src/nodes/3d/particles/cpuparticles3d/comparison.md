@@ -111,7 +111,7 @@ The lenient parser reads the GeometryInstance3D base, `visibility_aabb`, whether
 
 ## Gizmo
 
-A selected emitter draws these in Godot's editor. Godot's source is `cpu_particles_3d_gizmo_plugin.cpp:62-107` and `particles_3d_emission_shape_gizmo_plugin.cpp:82-339`.
+An emitter draws these in Godot's editor. Godot draws the box and the axes for every emitter, faint while unselected, and the emission shape and the fill only for the selected one. Godot's source is `cpu_particles_3d_gizmo_plugin.cpp:62-107` and `particles_3d_emission_shape_gizmo_plugin.cpp:82-339`.
 
 - The 12 edges of `visibility_aabb`, in the editor's particle-box colour. Without an authored box the edges have zero length at the origin.
 - Three unit axis lines from the centre of the box.
@@ -124,4 +124,4 @@ The previewer draws no billboard icon.
 
 - **Not drawn** Godot draws the live particle cloud, but here nothing appears.
 - **Needs runtime** An emitter with a `mesh` and no `visibility_aabb` stays hidden with its visibility dependants, where Godot culls it by its live particles.
-- **Editor only** Godot's editor draws the box and axes faintly for every emitter, but ADR-0018 draws them only for the selected node.
+- **Editor only** The box and axes draw at 0.3 alpha while unselected (ADR-0056) when the Gizmos toggle is on, which a capture keeps off.

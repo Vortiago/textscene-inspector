@@ -50,7 +50,7 @@ describe('WorkerJobRunner through a worker', () => {
     await settle();
     workers[0]?.respond();
 
-    expect(sha256((await result).pixels)).toBe(PINNED_PIXEL_HASHES[firstCase.name]);
+    expect(sha256((await result).levels[0]!.data)).toBe(PINNED_PIXEL_HASHES[firstCase.name]);
   });
 
   it('starts no worker before the first job', () => {
@@ -69,7 +69,7 @@ describe('WorkerJobRunner through a worker', () => {
     await settle();
     workers[0]?.respond();
 
-    expect(sha256((await second).pixels)).toBe(PINNED_PIXEL_HASHES[secondCase.name]);
+    expect(sha256((await second).levels[0]!.data)).toBe(PINNED_PIXEL_HASHES[secondCase.name]);
     expect(workers).toHaveLength(1);
   });
 
@@ -124,7 +124,7 @@ describe('WorkerJobRunner cancellation', () => {
     expect(workers[0]?.terminated).toBe(true);
     await settle();
     workers[1]?.respond();
-    expect(sha256((await second).pixels)).toBe(PINNED_PIXEL_HASHES[secondCase.name]);
+    expect(sha256((await second).levels[0]!.data)).toBe(PINNED_PIXEL_HASHES[secondCase.name]);
   });
 
   it('terminates a worker that finishes starting after its job was aborted, and does not fall back', async () => {
@@ -178,9 +178,9 @@ describe('WorkerJobRunner cancellation', () => {
 describe('WorkerJobRunner in-thread fallback', () => {
   it('runs in-thread when the host gives no worker, with no warning', async () => {
     const runner = new WorkerJobRunner();
-    const { pixels } = await runner.run('noise-texture-2d', firstCase);
+    const { levels } = await runner.run('noise-texture-2d', firstCase);
 
-    expect(sha256(pixels)).toBe(PINNED_PIXEL_HASHES[firstCase.name]);
+    expect(sha256(levels[0]!.data)).toBe(PINNED_PIXEL_HASHES[firstCase.name]);
     expect(warn).not.toHaveBeenCalled();
   });
 
@@ -209,8 +209,8 @@ describe('WorkerJobRunner in-thread fallback', () => {
     const first = await runner.run('noise-texture-2d', firstCase);
     const second = await runner.run('noise-texture-2d', secondCase);
 
-    expect(sha256(first.pixels)).toBe(PINNED_PIXEL_HASHES[firstCase.name]);
-    expect(sha256(second.pixels)).toBe(PINNED_PIXEL_HASHES[secondCase.name]);
+    expect(sha256(first.levels[0]!.data)).toBe(PINNED_PIXEL_HASHES[firstCase.name]);
+    expect(sha256(second.levels[0]!.data)).toBe(PINNED_PIXEL_HASHES[secondCase.name]);
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
@@ -220,7 +220,7 @@ describe('WorkerJobRunner in-thread fallback', () => {
     await settle();
     workers[0]?.fail('worker script refused');
 
-    expect(sha256((await result).pixels)).toBe(PINNED_PIXEL_HASHES[firstCase.name]);
+    expect(sha256((await result).levels[0]!.data)).toBe(PINNED_PIXEL_HASHES[firstCase.name]);
     expect(workers[0]?.terminated).toBe(true);
     await runner.run('noise-texture-2d', secondCase);
     expect(workers).toHaveLength(1);

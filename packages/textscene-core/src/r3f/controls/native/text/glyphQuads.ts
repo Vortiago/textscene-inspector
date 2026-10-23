@@ -73,8 +73,11 @@ export function buildGlyphQuadArrays(
       const glyph = gp.glyph;
       if (!glyph || glyph.width <= 0 || glyph.height <= 0) continue;
 
-      const leftPx = gp.x + glyph.xoffset * scale;
-      const topPx = baselinePx - bakeAnchorPx + glyph.yoffset * scale;
+      // FreeType keeps an emboldened glyph's left and bottom edges and grows it right and up. The
+      // material's bias grows it on every side, so the quad moves half the growth to match.
+      const shiftPx = (gp.emboldenGrowthPx ?? 0) / 2;
+      const leftPx = gp.x + glyph.xoffset * scale + shiftPx;
+      const topPx = baselinePx - bakeAnchorPx + glyph.yoffset * scale - shiftPx;
       const rightPx = leftPx + glyph.width * scale;
       const bottomPx = topPx + glyph.height * scale;
 
