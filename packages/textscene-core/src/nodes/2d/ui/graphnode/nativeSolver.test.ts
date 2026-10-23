@@ -17,6 +17,7 @@ import { graphNodeDrawRows } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 import { SizeFlags } from '../../../../godot/scene/control';
+import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
 
 const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;
 const graphNodeMinimumSize = controlSolverRegistry.minimumSize('GraphNode')!;
@@ -45,6 +46,7 @@ function promotedLeaf(name: string, props: Partial<ControlProperties> = {}): Sol
       transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
       modulate: { r: 1, g: 1, b: 1, a: 1 },
       z: [],
+      sampler: ROOT_TEXTURE_SAMPLER,
     },
   };
 }

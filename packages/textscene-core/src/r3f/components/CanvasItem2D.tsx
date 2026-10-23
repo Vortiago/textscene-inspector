@@ -12,6 +12,7 @@ import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
 import { Modulate2DContext, useCanvasItemTint, type CanvasItemTint } from '../canvasItemModulate';
 import { useCanvasModulateFor } from '../canvasModulate';
+import { TextureSampler2DContext, useNode2DTextureSampler } from '../canvasItemTextureSampler';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
 import { EffectiveZProvider, accumulateCanvasItemZ, useEffectiveZ } from '../lighting2d/canvasItemPlacement';
 import { useCanvasItemRenderOrder } from '../contexts/PaintOrderContext';
@@ -63,6 +64,9 @@ export function CanvasItem2D({ node, props, body, ownItems, children }: CanvasIt
   // back out, so both come from the one hook.
   const canvasModulate = useCanvasModulateFor(material);
   const tint = useCanvasItemTint(props, canvasModulate);
+  // What this node's descendants inherit. Its own pixels sample through the same fold, which the
+  // node's component takes before this group exists, so it repeats the call on its own properties.
+  const sampler = useNode2DTextureSampler(props);
   // Godot's `z_final`: the integer z_index accumulated down the tree and
   // clamped, which is both what a light's z window is tested against and the
   // bucket the draw-order key below sorts by.
@@ -89,7 +93,9 @@ export function CanvasItem2D({ node, props, body, ownItems, children }: CanvasIt
             resolved, a null included, which stops an inherited material. */}
         <EffectiveZProvider value={effectiveZ}>
           <CanvasItemMaterialProvider value={material}>
-            <CanvasSpaceProvider value={canvasSpace}>{children}</CanvasSpaceProvider>
+            <TextureSampler2DContext.Provider value={sampler}>
+              <CanvasSpaceProvider value={canvasSpace}>{children}</CanvasSpaceProvider>
+            </TextureSampler2DContext.Provider>
           </CanvasItemMaterialProvider>
         </EffectiveZProvider>
       </Modulate2DContext.Provider>

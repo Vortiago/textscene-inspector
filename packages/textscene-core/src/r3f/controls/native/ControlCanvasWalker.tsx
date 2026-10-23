@@ -111,7 +111,11 @@ function ControlNodeGroup({
   const tint = useControlOwnTint(inheritedModulate, solveNode);
   // Own-or-ambient, not multiplicative: neither property has a self-only layer,
   // so one fold serves this painter and the descendants.
-  const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
+  const sampler = useInheritedTextureSampler(
+    props.textureFilter,
+    props.textureRepeat,
+    solveNode.skippedAncestors?.sampler
+  );
   // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
   // Both halves come from the solve, which read `hiddenNodePaths`: a skipped
   // Node2D mounts no group, and a hoisted `top_level` or chain-broken Control is a

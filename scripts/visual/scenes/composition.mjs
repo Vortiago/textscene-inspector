@@ -32,6 +32,12 @@ export const SCENE_COMPOSITION_SCENES = [
   // (moved, turned and halved), not the instance's. Rendered nowhere, the frame holds the grey
   // torso alone. Measured against Godot 4.6.3.
   { name: 'glb-typed-child', file: 'unit-glb-typed-child.tscn' },
+  // The same attached nodes name a proxy by `%Name` as their visibility parent: the red box names
+  // the proxy that draws and hides, the green box names the one that hides and draws.
+  { name: 'glb-typed-child-visibility-parent', file: 'unit-glb-typed-child-visibility-parent.tscn' },
+  // A type-less override of a GLB node sets its properties and adds no node: the model moves to the
+  // right and its torso halves.
+  { name: 'glb-property-override', file: 'unit-glb-property-override.tscn' },
   // Thin collision-gizmo lines are the most AA-sensitive content in the set.
   { name: 'physics-bodies', file: 'unit-physics-bodies.tscn' },
   // Collision gizmos on: `physics-bodies` leaves the toggle off. Catches a
@@ -57,6 +63,9 @@ export const SCENE_COMPOSITION_SCENES = [
   // per-material texture cloning. The loader caches one THREE.Texture per path,
   // so filter state written onto it renders both quads the same.
   { name: 'material-texture-filter', file: 'unit-material-texture-filter.tscn' },
+  // The one variable: `texture_filter` 2 to 5 over stripes at a grazing angle. Nearest with Mipmaps and
+  // Anisotropic needs the draw-site anisotropy write, which three skips under a nearest magnification.
+  { name: 'material-texture-filter-anisotropic', file: 'unit-material-texture-filter-anisotropic.tscn' },
   // `anisotropy_flowmap` as a real PNG: the one scene where a decoded image
   // reaches the repack (Godot keeps strength in alpha, three.js reads blue),
   // through a canvas readback no headless unit test can do. Without it the right

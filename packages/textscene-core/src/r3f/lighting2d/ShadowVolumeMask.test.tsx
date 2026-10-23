@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { litQuadRenderOrder, litQuadStencilProps, ShadowVolumeMask } from './ShadowVolumeMask';
@@ -153,5 +153,89 @@ describe('<ShadowVolumeMask>', () => {
 
   it('skips frustum culling, since the volumes extend past the light', async () => {
     expect(maskMesh(await renderMask())!.frustumCulled).toBe(false);
+  });
+});
+
+/**
+ * Only the light's own quads read the stencil its volumes stamp, and they lie inside its rect, so
+ * a volume draws under a scissor to that rect. A software rasteriser pays for every pixel it fills.
+ */
+describe("the scissor around a light's volumes", () => {
+  /** A light whose rect is world 10..30 x 10..15, and an occluder inside it. */
+  const SMALL_LIGHT: ShadowLight = { x: 15, y: 12, rect: { minX: 10, minY: 10, maxX: 30, maxY: 15 } };
+  const INSIDE = worldEdges(new Float32Array([25, 11, 25, 14]), OccluderPolygon2DCullMode.DISABLED);
+
+  /** A 2D view of world x in [0, 100] and y in [0, 50]. */
+  function viewCamera(): THREE.OrthographicCamera {
+    const view = new THREE.OrthographicCamera(0, 100, 50, 0, -10, 10);
+    view.updateMatrixWorld();
+    return view;
+  }
+
+  /** A 200x100 target whose own scissor is `x, y, width, height`, tested when `isTested`. */
+  function scissoredTarget(
+    scissor: readonly [number, number, number, number] = [0, 0, 200, 100],
+    isTested = true
+  ): THREE.WebGLRenderTarget {
+    const target = new THREE.WebGLRenderTarget(200, 100);
+    target.scissor.fromArray(scissor);
+    target.scissorTest = isTested;
+    return target;
+  }
+
+  /** The scissors the mask sets while it draws into `target`, and after it draws. */
+  async function scissorsAround(target = scissoredTarget(undefined, false)) {
+    const mesh = maskMesh(await renderMask({ light: SMALL_LIGHT, casters: [INSIDE] }))!;
+    const renderer = new THREE.WebGLRenderer();
+    vi.spyOn(renderer, 'getRenderTarget').mockReturnValue(target);
+    const scissor = vi.spyOn(renderer.state, 'scissor');
+    const scissorTest = vi.spyOn(renderer.state, 'setScissorTest');
+    const draw = [
+      renderer,
+      new THREE.Scene(),
+      viewCamera(),
+      mesh.geometry,
+      mesh.material as THREE.Material,
+      new THREE.Group(),
+    ] as const;
+    mesh.onBeforeRender(...draw);
+    const during = { scissor: scissor.mock.lastCall![0].clone(), test: scissorTest.mock.lastCall![0] };
+    mesh.onAfterRender(...draw);
+    const after = { scissor: scissor.mock.lastCall![0].clone(), test: scissorTest.mock.lastCall![0] };
+    renderer.dispose();
+    target.dispose();
+    return { during, after };
+  }
+
+  it("confines the volumes to the light's rect, with a pixel or two to spare", async () => {
+    // World 10..30 x 10..15 lands on pixels 20..60 x 20..30.
+    const { during } = await scissorsAround();
+    const [x, y, width, height] = during.scissor.toArray();
+    expect(during.test).toBe(true);
+    for (const [edge, from, to] of [
+      [x, 18, 19],
+      [y, 18, 19],
+      [x + width, 61, 62],
+      [y + height, 31, 32],
+    ] as const) {
+      expect(edge).toBeGreaterThanOrEqual(from);
+      expect(edge).toBeLessThanOrEqual(to);
+    }
+  });
+
+  it("stays inside the target's own scissor", async () => {
+    const { during } = await scissorsAround(scissoredTarget([0, 0, 40, 100]));
+    expect(during.scissor.x + during.scissor.z).toBe(40);
+  });
+
+  it("is empty when the light's rect misses the target's scissor (edge case)", async () => {
+    const { during } = await scissorsAround(scissoredTarget([100, 0, 50, 100]));
+    expect(during.scissor.z * during.scissor.w).toBe(0);
+  });
+
+  it('gives the target its own scissor back once the volumes have drawn', async () => {
+    const { after } = await scissorsAround(scissoredTarget([5, 6, 70, 80], false));
+    expect(after.scissor.toArray()).toEqual([5, 6, 70, 80]);
+    expect(after.test).toBe(false);
   });
 });

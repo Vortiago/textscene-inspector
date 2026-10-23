@@ -584,6 +584,35 @@ describe('seatScene', () => {
   });
 });
 
+describe('seatScene: index=', () => {
+  const root = node('Root');
+
+  it('moves a node to the index it states among its parent children (packed_scene.cpp:543-544)', () => {
+    const [seated] = build([root, node('A', '.'), node('B', '.'), { ...node('C', '.'), index: 0 }]);
+
+    expect(seated!.children.map((c) => c.name)).toEqual(['C', 'A', 'B']);
+  });
+
+  it('keeps a node in the order of its heading when it states no index', () => {
+    const [seated] = build([root, node('A', '.'), node('B', '.')]);
+
+    expect(seated!.children.map((c) => c.name)).toEqual(['A', 'B']);
+  });
+
+  it('moves a re-rooted node to its index among the root children', () => {
+    const [seated] = build([root, node('A', '.'), node('B', '.'), { ...node('C', 'Missing'), index: 0 }]);
+
+    expect(seated!.children.map((c) => c.name)).toEqual(['Missing#C', 'A', 'B']);
+  });
+
+  it('leaves the index to the instanced scene when the parent instances one', () => {
+    const body = { ...node('Body', '.'), instance: 'ExtResource("1")' };
+    const [seated] = build([root, body, node('A', 'Body'), { ...node('B', 'Body'), index: 0 }]);
+
+    expect(seated!.children[0]!.children.map((c) => c.name)).toEqual(['A', 'B']);
+  });
+});
+
 describe('seatScene resolve', () => {
   const claiming = (name: string, parent: string, fields: Partial<TscnNode> = {}): TscnNode => ({
     ...node(name, parent),

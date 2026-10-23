@@ -5,6 +5,7 @@
  */
 
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
+import { headingIndexField } from '../parser/rawNode';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene';
 import type { TscnNode } from '../parser/types';
 import { warn } from '../logger';
@@ -115,6 +116,7 @@ export function parseNodeWithRegistry(
 
     if (isPropertyOverrideHeading(heading)) node.overridesExistingNode = true;
     if (heading.attributes.owner) node.owner = heading.attributes.owner;
+    Object.assign(node, headingIndexField(heading));
 
     if (hasInstanceAttribute) {
       node.instance = instanceRef;
@@ -138,6 +140,7 @@ export function parseNodeWithRegistry(
   };
 
   if (heading.attributes.owner) node.owner = heading.attributes.owner;
+  Object.assign(node, headingIndexField(heading));
 
   // `instance` can be a heading attribute or a body property.
   if (heading.attributes.instance) {

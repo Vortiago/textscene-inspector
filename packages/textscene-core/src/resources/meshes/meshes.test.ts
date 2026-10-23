@@ -17,6 +17,7 @@ import './torusmesh';
 import './prismmesh';
 import './pointmesh';
 import './tubetrailmesh';
+import './ribbontrailmesh';
 
 /** Every primitive-mesh type this package claims, with the slice that claims it. */
 const CLAIMS: readonly (readonly [string, string])[] = [
@@ -30,6 +31,7 @@ const CLAIMS: readonly (readonly [string, string])[] = [
   ['PrismMesh', 'prismmesh'],
   ['PointMesh', 'pointmesh'],
   ['TubeTrailMesh', 'tubetrailmesh'],
+  ['RibbonTrailMesh', 'ribbontrailmesh'],
 ];
 
 describe('primitive-mesh slice registrations', () => {

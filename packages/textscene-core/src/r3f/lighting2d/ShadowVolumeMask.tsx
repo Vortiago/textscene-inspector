@@ -7,7 +7,13 @@
 
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { buildShadowVolumes, type ShadowCasterEdges, type ShadowLight } from './shadowVolumes';
+import {
+  buildShadowVolumes,
+  type LightRect,
+  type ShadowCasterEdges,
+  type ShadowLight,
+} from './shadowVolumes';
+import { intersectScissor, windowScissor } from './lightListWindow';
 import { canvasItemFacing } from '../canvasItemFacing';
 import { materialProgramInputs } from '../materialProgramInputs';
 import { usePassMeshRef } from './lightPassDeclarations';
@@ -72,6 +78,39 @@ export function shadowColorQuadStencilProps(ordinal: number) {
   } as const;
 }
 
+/**
+ * Written only by `scissorToRect`'s `onBeforeRender`, and read within that call, so every volume's
+ * draw reuses them and a frame of lights allocates no scissor.
+ */
+const volumeScissor = new THREE.Vector4();
+const targetSize = new THREE.Vector2();
+
+/**
+ * Draw hooks that scissor a light's volumes to its rect, within the target's own scissor. Only the
+ * light's quads read the stencil, and they lie inside the rect, so the rest is fill a software
+ * rasteriser pays for. A scissor, not a clip of the geometry: a clipped triangle has new endpoints,
+ * and they move the shadow's edge pixels.
+ */
+function scissorToRect({ minX, minY, maxX, maxY }: LightRect) {
+  const rect = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  return {
+    onBeforeRender(renderer: THREE.WebGLRenderer, _scene: THREE.Scene, camera: THREE.Camera) {
+      const target = renderer.getRenderTarget();
+      if (!target) return;
+      windowScissor(rect, camera, targetSize.set(target.width, target.height), volumeScissor);
+      if (target.scissorTest) intersectScissor(volumeScissor, target.scissor);
+      renderer.state.scissor(volumeScissor);
+      renderer.state.setScissorTest(true);
+    },
+    onAfterRender(renderer: THREE.WebGLRenderer) {
+      const target = renderer.getRenderTarget();
+      if (!target) return;
+      renderer.state.scissor(target.scissor);
+      renderer.state.setScissorTest(target.scissorTest);
+    },
+  };
+}
+
 interface ShadowVolumeMaskProps {
   /** Shadow origin and the rect the light reaches, in the previewer's 2D world space. */
   light: ShadowLight;
@@ -90,6 +129,7 @@ interface ShadowVolumeMaskProps {
 export function ShadowVolumeMask({ light, casters, ordinal, sequence }: ShadowVolumeMaskProps) {
   const meshRef = usePassMeshRef<THREE.Mesh>(ordinal, 'volume');
   const positions = useMemo(() => buildShadowVolumes(light, casters), [light, casters]);
+  const scissor = useMemo(() => scissorToRect(light.rect), [light.rect]);
 
   const geometry = useMemo(() => {
     if (!positions) return null;
@@ -133,6 +173,8 @@ export function ShadowVolumeMask({ light, casters, ordinal, sequence }: ShadowVo
       // CanvasItem chain applies twice. three's `updateMatrixWorld` recurses only into a child
       // that opts in, so nothing forces an update past this flag.
       matrixWorldAutoUpdate={false}
+      onBeforeRender={scissor.onBeforeRender}
+      onAfterRender={scissor.onAfterRender}
     >
       <primitive object={geometry} attach="geometry" />
       <meshBasicMaterial key={program.key} {...program.props} />

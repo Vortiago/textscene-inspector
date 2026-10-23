@@ -172,6 +172,44 @@ describe('primitiveMeshSurface TubeTrailMesh', () => {
   });
 });
 
+describe('primitiveMeshSurface RibbonTrailMesh', () => {
+  /** Two sections of length 1 with one segment each: the last row's right vertex is 5. */
+  const COARSE_RIBBON = { shape: '0', sections: '2', section_length: '1', section_segments: '1' };
+  const GROWING = { _data: '[Vector2(0, 1), 0.0, 0.0, 0, 0, Vector2(1, 3), 0.0, 0.0, 0, 0]' };
+
+  function ribbon(data: Record<string, string> = {}) {
+    return { id: 'ribbon', type: 'RibbonTrailMesh', data: { ...COARSE_RIBBON, ...data } };
+  }
+
+  it('scales the rows by the Curve the mesh names in the tables it holds', () => {
+    const mesh = scopedMesh(ribbon({ curve: 'SubResource("grow")' }), subResource('Curve', 'grow', GROWING));
+
+    expectClose(vertexOf(primitiveMeshSurface(mesh, TEXEL_SIZE)!.positions, 5), [1.5, -1, 0]);
+  });
+
+  it('draws the ribbon unscaled when the tables hold no such Curve', () => {
+    const mesh = scopedMesh(ribbon({ curve: 'SubResource("grow")' }));
+
+    expectClose(vertexOf(primitiveMeshSurface(mesh, TEXEL_SIZE)!.positions, 5), [0.5, -1, 0]);
+  });
+
+  it('makes the UV2 from the UV, padded by the authored lightmap size hint', () => {
+    const mesh = scopedMesh(
+      ribbon({ add_uv2: 'true', uv2_padding: '16', lightmap_size_hint: 'Vector2i(64, 32)' })
+    );
+
+    // The last vertex has UV (1, 1): one less 16 texels over 64, and over 32.
+    expectClose(vertexOf(primitiveMeshSurface(mesh, TEXEL_SIZE)!.uv2s, 5, 2), [0.75, 0.5]);
+  });
+
+  it('reads the Curve into the key of its geometry', () => {
+    const mesh = (end: string) =>
+      scopedMesh(ribbon({ curve: 'SubResource("c")' }), subResource('Curve', 'c', curveEndingAt(end)));
+
+    expect(referencesKey(mesh('0.2'))).not.toBe(referencesKey(mesh('0.4')));
+  });
+});
+
 describe('meshContentKey', () => {
   const curveRef = { curve: 'SubResource("shrink")' };
   const mesh = { id: 'tube', type: 'TubeTrailMesh', data: curveRef };

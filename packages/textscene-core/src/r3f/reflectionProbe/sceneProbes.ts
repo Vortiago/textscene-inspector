@@ -31,6 +31,7 @@ import { stageCapture } from './captureStage.js';
 import { PROBE_ROW_TEXELS, probeRows, type DrawnProbe } from './probeRows.js';
 import { atlasSlot, rowsSlot, shownProbes } from './probeSlots.js';
 import { isReflectionProbe, type ReflectionProbeObject } from './reflectionProbeObject.js';
+import { sameElements } from '../../utils/sameElements.js';
 
 /** What a probe's capture shows: changed, it captures again. */
 interface Capture {
@@ -111,7 +112,7 @@ export class SceneProbes {
       endStep(this.renderer, 'Reflection probes');
     }
     const captured = probes.filter((probe) => this.captures.has(probe));
-    if (stale !== -1 || !sameProbes(captured, this.packed)) this.pack(captured);
+    if (stale !== -1 || !sameElements(captured, this.packed)) this.pack(captured);
     return stale !== -1;
   }
 
@@ -274,8 +275,4 @@ function rowsTexture(rows: Float32Array): THREE.DataTexture {
   const texture = new THREE.DataTexture(rows, PROBE_ROW_TEXELS, height, THREE.RGBAFormat, THREE.FloatType);
   texture.needsUpdate = true;
   return texture;
-}
-
-function sameProbes(a: readonly ReflectionProbeObject[], b: readonly ReflectionProbeObject[]): boolean {
-  return a.length === b.length && a.every((probe, index) => probe === b[index]);
 }

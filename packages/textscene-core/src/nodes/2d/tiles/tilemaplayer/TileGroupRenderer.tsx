@@ -7,6 +7,7 @@
 import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../../../../parser/types.js';
 import { useCanvasItemTint } from '../../../../r3f/canvasItemModulate.js';
+import { useNode2DTextureSampler } from '../../../../r3f/canvasItemTextureSampler.js';
 import { useCanvasItemMaterial } from '../../../../r3f/components/canvasItemMaterialContext.js';
 import { canvasRenderOrder } from '../../../../r3f/canvasPaintOrder.js';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup.js';
@@ -39,6 +40,7 @@ export function TileGroupRenderer({
   const zFinal = accumulateCanvasItemZ(useEffectiveZ(), tileProps);
   const renderOrder = canvasRenderOrder({ layerRank, zFinal, sequence });
   const { model, status } = useTileSetModel(tileProps.tile_set);
+  const sampler = useNode2DTextureSampler(tileProps);
   // The same material and tint the component body receives. Each tile item applies the canvas
   // tint its own material admits.
   const material = useCanvasItemMaterial(tileProps);
@@ -80,6 +82,7 @@ export function TileGroupRenderer({
           lightMask={tileProps.light_mask}
           zFinal={zFinal}
           name={node.name}
+          sampler={sampler}
         />
       )}
     </CanvasItemGroup>

@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+; One variable: `texture_filter` on the Node2D ancestor of a Control. Both CheckBoxes magnify the
+; vendored `checked.svg` icon 8x, and neither sets its own filter. Under the Nearest ancestor the
+; icon's edges stay hard steps. Under the default ancestor the project's Linear filter blends them.
+; `text` is unset, so the icon is the only texture.
+
+[node name="World" type="Node2D"]
+
+; `texture_filter` 1 is TEXTURE_FILTER_NEAREST.
+[node name="NearestAncestor" type="Node2D" parent="."]
+texture_filter = 1
+
+[node name="Nearest" type="CheckBox" parent="NearestAncestor"]
+offset_left = 160.0
+offset_top = 240.0
+offset_right = 200.0
+offset_bottom = 270.0
+scale = Vector2(8, 8)
+button_pressed = true
+
+[node name="DefaultAncestor" type="Node2D" parent="."]
+
+[node name="Default" type="CheckBox" parent="DefaultAncestor"]
+offset_left = 704.0
+offset_top = 240.0
+offset_right = 744.0
+offset_bottom = 270.0
+scale = Vector2(8, 8)
+button_pressed = true

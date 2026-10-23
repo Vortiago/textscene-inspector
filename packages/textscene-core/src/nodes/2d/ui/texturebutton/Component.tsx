@@ -12,11 +12,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { pinNoColorSpace } from '../../../../r3f/canvas2DTextureDecode';
-import {
-  canvasItemThreeFilter,
-  canvasItemThreeWrap,
-  useInheritedTextureSampler,
-} from '../../../../r3f/canvasItemTextureSampler';
+import { applyCanvasItemSampler, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
 import { applyFlip } from '../texturerect/nativeSolver';
 import {
@@ -76,9 +72,7 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     // `@react-three/fiber` sRGB auto-tagging would overwrite it on commit.
     pinNoColorSpace(cloned);
 
-    const filter = canvasItemThreeFilter(sampler.filter);
-    cloned.magFilter = filter;
-    cloned.minFilter = filter;
+    applyCanvasItemSampler(cloned, sampler);
 
     let repeat = { x: 1, y: 1 };
     let offset = { x: 0, y: 0 };
@@ -91,17 +85,14 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
       // zero offset would anchor the pattern at the bottom. `1 - repeat.y` puts
       // `v = 1` (the quad's top edge) on the image's top row.
       offset = { x: 0, y: 1 - repeat.y };
-    } else {
-      cloned.wrapS = cloned.wrapT = canvasItemThreeWrap(sampler.repeat);
-      if (draw.region) {
-        // Texture-pixel-space crop (KEEP_ASPECT_COVERED) -> normalized UV
-        // repeat/offset; three.js UV-Y is bottom-left, image-Y is top-left.
-        repeat = { x: draw.region.w / draw.textureSize.x, y: draw.region.h / draw.textureSize.y };
-        offset = {
-          x: draw.region.x / draw.textureSize.x,
-          y: 1 - (draw.region.y + draw.region.h) / draw.textureSize.y,
-        };
-      }
+    } else if (draw.region) {
+      // Texture-pixel-space crop (KEEP_ASPECT_COVERED) -> normalized UV
+      // repeat/offset; three.js UV-Y is bottom-left, image-Y is top-left.
+      repeat = { x: draw.region.w / draw.textureSize.x, y: draw.region.h / draw.textureSize.y };
+      offset = {
+        x: draw.region.x / draw.textureSize.x,
+        y: 1 - (draw.region.y + draw.region.h) / draw.textureSize.y,
+      };
     }
 
     const flipped = applyFlip(repeat, offset, props.flipH === true, props.flipV === true);
@@ -109,7 +100,7 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
     cloned.offset.set(flipped.offset.x, flipped.offset.y);
     cloned.needsUpdate = true;
     return cloned;
-  }, [rawTexture, draw, sampler.filter, sampler.repeat, props.flipH, props.flipV]);
+  }, [rawTexture, draw, sampler, props.flipH, props.flipV]);
 
   const drawnTexture = useUploadedClone(preparedTexture);
 

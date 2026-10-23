@@ -11,11 +11,13 @@ import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
+import { useNode2DTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
+  const sampler = useNode2DTextureSampler(props);
   const cells = props.cells ?? null;
   const {
     y_sort_enabled: ySortEnabled,
@@ -47,6 +49,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
             lightMask={props.light_mask}
             zFinal={zFinal}
             name={node.name}
+            sampler={sampler}
           />
         ) : null
       }

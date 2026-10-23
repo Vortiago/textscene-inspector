@@ -446,3 +446,28 @@ function deepFreeze(nodes: readonly TscnNode[]): readonly TscnNode[] {
   }
   return Object.freeze(nodes);
 }
+
+describe('graftInstanceChildren: index=', () => {
+  const root = [node('A'), node('B')];
+  const namesOf = (children: readonly LiveNode[]) => children.map((c) => c.name);
+
+  it('places a direct child at the index its heading states (packed_scene.cpp:543-544)', () => {
+    expect(namesOf(graft(root, [node('C', { index: 0 })]))).toEqual(['C', 'A', 'B']);
+    expect(namesOf(graft(root, [node('C', { index: 1 })]))).toEqual(['A', 'C', 'B']);
+  });
+
+  it('keeps a direct child last when its index is the last place', () => {
+    expect(namesOf(graft(root, [node('C', { index: 2 })]))).toEqual(['A', 'B', 'C']);
+  });
+
+  it('counts the host children already added, in file order', () => {
+    expect(namesOf(graft(root, [node('C'), node('D', { index: 0 })]))).toEqual(['D', 'A', 'B', 'C']);
+  });
+
+  it('places a child grafted deeper among the children of the node it names', () => {
+    const deep = [node('Arm', { children: [node('Hand'), node('Glove')] })];
+    const grafted = graft(deep, [node('Ring', { instanceSubPath: 'Arm', index: 1 })]);
+
+    expect(namesOf(grafted[0]!.children)).toEqual(['Hand', 'Ring', 'Glove']);
+  });
+});

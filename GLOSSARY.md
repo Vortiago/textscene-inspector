@@ -23,6 +23,11 @@ The runtime tree the user navigates: the **SceneGraph** roots with **PackedScene
 Every consumer that renders a subtree descends this tree, because a **SceneGraph** child list shows an instance as a childless node.
 _Avoid_: **SceneGraph** or "scene tree" for this tree.
 
+**Live tree snapshot** (`LiveTreeContext` in `r3f/liveSceneTree.ts`, shared by `useSharedLiveTree`):
+One read of the loader's scene cache that every question over the **Live scene tree** shares until the next scene or GLB load.
+It reads each scene path once, composes each inherited sub-scene once, and holds the one tree and owner walk that every path question asks.
+_Avoid_: a live tree or a context per consumer, per question.
+
 **Authored scope** (`LiveNode.scope`, read through `scopeOf` and `liveNodeScope`):
 The resource pools of the file that wrote a node. A host node grafted into an instanced sub-scene keeps the host's, so its ids resolve there although both files number their resources from 1.
 Every reader of the **Live scene tree** resolves a node's refs in its **Authored scope**, never in the pools of the group the node sits in.
@@ -516,8 +521,12 @@ _Avoid_: "include", "prefab".
 
 **Instance root merge** (`mergeInstanceRoot`, applied through `collapseLiveNode`):
 The collapse of a single-root `.tscn` instance, where the instance Node becomes the sub-scene's root and its own properties win per key.
-Every consumer calls `collapseLiveNode` so node paths agree, and a `.glb` or multi-root instance is not merged.
+Every consumer calls `collapseLiveNode` so node paths agree. A multi-root instance and a lone `.glb` instance are not merged: the node that instances a `.glb` is the **GLB root**.
 _Avoid_: "wrapper node", "prefab flattening", "compose". A merge decision derived again in a consumer.
+
+**GLB root**:
+The node that instances a lone `.glb`, as in Godot. Each GLB object has the path of that node followed by its own, and no row stands for the **GLBSceneRoot**.
+_Avoid_: A path segment for the GLB file name. Two paths for one GLB object.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).

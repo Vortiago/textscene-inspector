@@ -4,30 +4,47 @@
  * `scene/main/canvas_item.h:52-69`) defers to the ambient, and a concrete value
  * wins. `ControlCanvasWalker.test.tsx` covers the propagation through the walker.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import {
   ROOT_TEXTURE_SAMPLER,
-  canvasItemThreeFilter,
-  canvasItemThreeWrap,
   TextureSampler2DContext,
+  ViewportSamplerProvider,
+  applyCanvasItemSampler,
+  inheritTextureSampler,
   useInheritedTextureSampler,
-  type CanvasItemTextureSampler,
+  type AmbientTextureSampler,
 } from './canvasItemTextureSampler';
+
+// The root viewport takes its default from the project settings; nothing here needs the real provider's load.
+const projectSettingsMock = vi.hoisted(() => ({ settings: null as Record<string, string> | null }));
+
+vi.mock('./contexts/ProjectSettingsContext', () => ({
+  useProjectSettings: () => projectSettingsMock,
+}));
+
+beforeEach(() => {
+  projectSettingsMock.settings = null;
+});
 
 const PARENT_NODE = 0; // TEXTURE_FILTER_PARENT_NODE and TEXTURE_REPEAT_PARENT_NODE, canvas_item.h:52-69
 const NEAREST = 1; // TEXTURE_FILTER_NEAREST
 const LINEAR = 2; // TEXTURE_FILTER_LINEAR
+const NEAREST_WITH_MIPMAPS = 3;
+const LINEAR_WITH_MIPMAPS = 4;
+const NEAREST_WITH_MIPMAPS_ANISOTROPIC = 5;
+const LINEAR_WITH_MIPMAPS_ANISOTROPIC = 6;
+const REPEAT_DISABLED = 1; // TEXTURE_REPEAT_DISABLED
 const REPEAT_ENABLED = 2; // TEXTURE_REPEAT_ENABLED
 const REPEAT_MIRROR = 3; // TEXTURE_REPEAT_MIRROR
 
 function resolveUnder(
-  ambient: CanvasItemTextureSampler,
+  ambient: AmbientTextureSampler,
   ownFilter: number | undefined,
   ownRepeat: number | undefined
-): CanvasItemTextureSampler {
+) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <TextureSampler2DContext.Provider value={ambient}>{children}</TextureSampler2DContext.Provider>
   );
@@ -57,39 +74,140 @@ describe('useInheritedTextureSampler', () => {
     expect(resolveUnder(middle, PARENT_NODE, PARENT_NODE).filter).toBe(NEAREST);
   });
 
-  it('resolves to undefined when no ancestor names a value, the cue for the viewport default', () => {
-    expect(resolveUnder(ROOT_TEXTURE_SAMPLER, PARENT_NODE, PARENT_NODE)).toEqual(ROOT_TEXTURE_SAMPLER);
+  it('resolves filter and repeat independently', () => {
+    const ambient = { filter: LINEAR, repeat: REPEAT_MIRROR };
+    expect(resolveUnder(ambient, NEAREST, PARENT_NODE)).toEqual({ filter: NEAREST, repeat: REPEAT_MIRROR });
   });
 
-  it('resolves filter and repeat independently', () => {
-    expect(resolveUnder(ROOT_TEXTURE_SAMPLER, NEAREST, PARENT_NODE)).toEqual({
-      filter: NEAREST,
-      repeat: undefined,
+  describe('where no ancestor names a value', () => {
+    it('ends at Linear and Disabled with no project (viewport.h:419-420)', () => {
+      expect(resolveUnder(ROOT_TEXTURE_SAMPLER, PARENT_NODE, PARENT_NODE)).toEqual({
+        filter: LINEAR,
+        repeat: REPEAT_DISABLED,
+      });
+    });
+
+    it("ends at the project's canvas texture defaults (editor_node.cpp:451-460)", () => {
+      projectSettingsMock.settings = {
+        'rendering/textures/canvas_textures/default_texture_filter': '0',
+        'rendering/textures/canvas_textures/default_texture_repeat': '1',
+      };
+      expect(resolveUnder(ROOT_TEXTURE_SAMPLER, PARENT_NODE, PARENT_NODE)).toEqual({
+        filter: NEAREST,
+        repeat: REPEAT_ENABLED,
+      });
+    });
+
+    it('lets a concrete own value beat the project default', () => {
+      projectSettingsMock.settings = { 'rendering/textures/canvas_textures/default_texture_filter': '0' };
+      expect(resolveUnder(ROOT_TEXTURE_SAMPLER, LINEAR, PARENT_NODE).filter).toBe(LINEAR);
+    });
+
+    it("ends at a SubViewport's own default, not the project's, inside it", () => {
+      projectSettingsMock.settings = { 'rendering/textures/canvas_textures/default_texture_filter': '0' };
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <ViewportSamplerProvider value={{ filter: LINEAR_WITH_MIPMAPS, repeat: REPEAT_MIRROR }}>
+          {children}
+        </ViewportSamplerProvider>
+      );
+      const { result } = renderHook(() => useInheritedTextureSampler(PARENT_NODE, PARENT_NODE), { wrapper });
+      expect(result.current).toEqual({ filter: LINEAR_WITH_MIPMAPS, repeat: REPEAT_MIRROR });
     });
   });
 });
 
-describe('canvasItemThreeFilter', () => {
-  it('samples a nearest filter with three.js NearestFilter', () => {
-    expect(canvasItemThreeFilter(NEAREST)).toBe(THREE.NearestFilter);
-  });
-
-  it('samples a linear filter with three.js LinearFilter', () => {
-    expect(canvasItemThreeFilter(LINEAR)).toBe(THREE.LinearFilter);
-  });
-
-  it('samples linearly where no ancestor names a filter (edge case)', () => {
-    expect(canvasItemThreeFilter(undefined)).toBe(THREE.LinearFilter);
+describe('inheritTextureSampler', () => {
+  it('lets a concrete own value win and defers PARENT_NODE, each property on its own', () => {
+    const ambient = { filter: LINEAR, repeat: undefined };
+    expect(inheritTextureSampler({ filter: PARENT_NODE, repeat: REPEAT_ENABLED }, ambient)).toEqual({
+      filter: LINEAR,
+      repeat: REPEAT_ENABLED,
+    });
   });
 });
 
-describe('canvasItemThreeWrap', () => {
-  it('wraps an enabled repeat with RepeatWrapping and a mirror with MirroredRepeatWrapping', () => {
-    expect(canvasItemThreeWrap(REPEAT_ENABLED)).toBe(THREE.RepeatWrapping);
-    expect(canvasItemThreeWrap(REPEAT_MIRROR)).toBe(THREE.MirroredRepeatWrapping);
+/** A mipmapped image: three would build a GPU chain for it, as for a texture imported with mipmaps. */
+function mipmappedTexture(): THREE.Texture {
+  const texture = new THREE.Texture();
+  texture.generateMipmaps = true;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  return texture;
+}
+
+/** An image imported without mipmaps (the importer's default): a single level. */
+function singleLevelTexture(): THREE.Texture {
+  const texture = new THREE.Texture();
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  return texture;
+}
+
+describe('applyCanvasItemSampler', () => {
+  const sampleWith = (texture: THREE.Texture, filter: number, repeat = REPEAT_DISABLED) => {
+    applyCanvasItemSampler(texture, { filter, repeat });
+    return texture;
+  };
+
+  it('samples Nearest and Linear without mipmaps, even from a mipmapped texture (material_storage.cpp:2467-2476)', () => {
+    const nearest = sampleWith(mipmappedTexture(), NEAREST);
+    expect([nearest.magFilter, nearest.minFilter, nearest.generateMipmaps]).toEqual([
+      THREE.NearestFilter,
+      THREE.NearestFilter,
+      false,
+    ]);
+    const linear = sampleWith(mipmappedTexture(), LINEAR);
+    expect([linear.magFilter, linear.minFilter, linear.generateMipmaps]).toEqual([
+      THREE.LinearFilter,
+      THREE.LinearFilter,
+      false,
+    ]);
   });
 
-  it('clamps where no ancestor names a repeat (edge case)', () => {
-    expect(canvasItemThreeWrap(undefined)).toBe(THREE.ClampToEdgeWrapping);
+  it('reads the mip chain of a mipmapped texture under the mipmap filters (material_storage.cpp:2477-2489)', () => {
+    const linear = sampleWith(mipmappedTexture(), LINEAR_WITH_MIPMAPS);
+    expect([linear.magFilter, linear.minFilter, linear.generateMipmaps]).toEqual([
+      THREE.LinearFilter,
+      THREE.LinearMipmapLinearFilter,
+      true,
+    ]);
+    const nearest = sampleWith(mipmappedTexture(), NEAREST_WITH_MIPMAPS);
+    expect([nearest.magFilter, nearest.minFilter, nearest.generateMipmaps]).toEqual([
+      THREE.NearestFilter,
+      THREE.NearestMipmapLinearFilter,
+      true,
+    ]);
+  });
+
+  it('samples a texture with a single level the same under every mipmap filter, which has no chain to read', () => {
+    const linear = sampleWith(singleLevelTexture(), LINEAR_WITH_MIPMAPS);
+    expect([linear.minFilter, linear.generateMipmaps]).toEqual([THREE.LinearFilter, false]);
+    const nearest = sampleWith(singleLevelTexture(), NEAREST_WITH_MIPMAPS);
+    expect([nearest.magFilter, nearest.minFilter]).toEqual([THREE.NearestFilter, THREE.NearestFilter]);
+  });
+
+  it('samples the two anisotropic filters at 4 taps (material_storage.cpp:2490-2506)', () => {
+    const linear = sampleWith(mipmappedTexture(), LINEAR_WITH_MIPMAPS_ANISOTROPIC);
+    expect([linear.minFilter, linear.anisotropy]).toEqual([THREE.LinearMipmapLinearFilter, 4]);
+    const nearest = sampleWith(mipmappedTexture(), NEAREST_WITH_MIPMAPS_ANISOTROPIC);
+    expect([nearest.magFilter, nearest.minFilter, nearest.anisotropy]).toEqual([
+      THREE.NearestFilter,
+      THREE.NearestMipmapLinearFilter,
+      4,
+    ]);
+  });
+
+  it('applies no anisotropy under the four other filters', () => {
+    expect(sampleWith(mipmappedTexture(), LINEAR_WITH_MIPMAPS).anisotropy).toBe(1);
+    expect(sampleWith(mipmappedTexture(), NEAREST).anisotropy).toBe(1);
+  });
+
+  it('wraps an Enabled repeat with RepeatWrapping, a Mirror with MirroredRepeatWrapping, and clamps Disabled', () => {
+    const wrapOf = (repeat: number) => {
+      const texture = sampleWith(singleLevelTexture(), LINEAR, repeat);
+      return [texture.wrapS, texture.wrapT];
+    };
+    expect(wrapOf(REPEAT_ENABLED)).toEqual([THREE.RepeatWrapping, THREE.RepeatWrapping]);
+    expect(wrapOf(REPEAT_MIRROR)).toEqual([THREE.MirroredRepeatWrapping, THREE.MirroredRepeatWrapping]);
+    expect(wrapOf(REPEAT_DISABLED)).toEqual([THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping]);
   });
 });

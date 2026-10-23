@@ -69,6 +69,22 @@ describe('recoverByIdTrail', () => {
   const plain = (uniqueId: number): IdHeading => ({ uniqueId, instance: undefined, isPlaced: true });
   const orphan = plain(0);
 
+  it('reads each heading id a bounded number of times however many trails it follows', () => {
+    let reads = 0;
+    const counted = (uniqueId: number): IdHeading =>
+      Object.defineProperty({ instance: undefined, isPlaced: true } as IdHeading, 'uniqueId', {
+        get: () => {
+          reads++;
+          return uniqueId;
+        },
+      });
+    const headings = Array.from({ length: 500 }, (_, i) => counted(i + 1));
+
+    for (let i = 0; i < 500; i++) recoverByIdTrail([i + 1], headings, headings.length);
+
+    expect(reads).toBeLessThanOrEqual(2 * headings.length);
+  });
+
   it('lands under the heading a one-id trail names, when it comes first and is placed', () => {
     const headings = [plain(10), plain(20), orphan];
     expect(recoverByIdTrail([20], headings, 2)).toEqual({ kind: 'lands', heading: 1 });
